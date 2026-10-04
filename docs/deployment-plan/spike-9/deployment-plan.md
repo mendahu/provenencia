@@ -451,8 +451,8 @@ In order; each brief sits just above the PR it gates.
 - [x] S9-09 — Persons list → [`completed.md`](completed.md)
 - [x] S9-10 — Promote write + reads: existing target → [`completed.md`](completed.md)
 - [x] S9-34a — Handle search from cached values + kinds filter → [`completed.md`](completed.md)
-- [ ] ✎ S9-D9 — Design: Promote shell + choose target
-- [ ] S9-11 — Promote shell + choose target
+- [x] ✎ S9-D9 — Design: Promote shell + choose target → [`completed.md`](completed.md)
+- [x] S9-11 — Promote shell + choose target → [`completed.md`](completed.md)
 - [ ] ✎ S9-D10 — Design: Promote claim fields
 - [ ] S9-12 — Promote claim fields + save
 - [ ] S9-13 — Name auto-reconciler
@@ -642,6 +642,12 @@ Researcher's decision while revising **S9-D1**: two configuration views get plai
 | **Depends on** | S9-06 |
 
 #### S9-11 — Promote shell + choose target
+
+**Done.** See [`completed.md`](completed.md#s9-11--promote-shell--choose-target). Brief archived: [`design/archive/S9-D9-promote-target.md`](design/archive/S9-D9-promote-target.md). Promote is a workspace place (`SourceSurface.promote`, `PromoteView` / `PromoteModel` in `Features/Promote/`).
+- **S9-12:** insert the claim step before the save in `PromoteModel.next()`. Grades come from `listClaimConfidenceGrades`; pass `confidenceGradeID` and `argument`. Restore the board's footer hints ("A new Person goes straight to its claim fields").
+- **S9-19:** the join path gets Compare between choosing and claiming. Restore the board's hint ("James Robins will be compared with the 2 members of PER-…"). The step row already shows Compare.
+- **S9-29 / S9-30:** the walk. Add a "Related to {ref}" group above Suggested (frame 06), the "N saved" footer badge, and the walk sentence in the leave guard; the next subject's header replaces this one in the same place.
+- **S9-32:** life years and places in the candidate rows and the search's person rows (`PVComboBoxOption.detail`).
 
 | | |
 | --- | --- |

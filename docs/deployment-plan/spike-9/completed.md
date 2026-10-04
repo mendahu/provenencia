@@ -23,6 +23,8 @@ IDs stay stable (`S9-NN`, `S9-DN`). Do not renumber when moving steps here.
 | S9-09 | PR | Persons list |
 | S9-10 | PR | Promote write + reads: existing target |
 | S9-34a | PR | Handle search from cached values + kinds filter |
+| S9-D9 | Design | Promote shell + choose target |
+| S9-11 | PR | Promote shell + choose target |
 
 ## Steps
 
@@ -375,3 +377,73 @@ Catalog search can now find Persons, Events and Places, on request. This was pul
 - Header-built documents ("Birth of James Robins", life dates and places) and header dependents (**S9-34**).
 - Omnibar rows for handle kinds (**S9-35**).
 - Event search is thin until the Event composer and `event_name` exist (**S9-20**, **S9-22**): it matches by type, year or ref.
+
+### S9-D9 — Design: Promote shell + choose target
+
+**Board:** Claude Design project *Promote flow* (`bc84685e-bbc3-4053-a5c9-0f5ac7a13ccd`), `Promote flow.dc.html`, frames 01–06.
+
+- **Shell decision (PT-7): a workspace place, not a sheet.** The walk (S9-D12) can run for many subjects, and compare (S9-D11) needs the page's width. A sheet would hold the graph hostage and cap the width at a dialog's. Promote follows the citation composer: it pushes onto history, the toolbar's Back returns to the graph, and the graph redraws with the subjects filed.
+- **The shell on every step:**
+  - the subject (ref, label, Source) in a header band in the kind's wash;
+  - step progress, composed from text and one chevron icon (no stepper component);
+  - Done;
+  - the leave guard.
+
+  Back and Done both ask first when the step holds an unsaved choice.
+- **Steps:** mint is Choose a Person → Claim fields; join is Choose a Person → Compare → Claim fields. The row grows when Existing is chosen.
+- **Choose target:**
+  - kit radios **New Person** / **Existing Person**, each with a description;
+  - Existing indents a kit ComboBox (person rows) and a **Suggested** group: section header with count and "Ranked by name, dates, place and event type";
+  - candidates are the D2 list row (tile, name, years, italic place · members line, trailing ref) with a leading radio;
+  - Next is disabled until a row or a search result is chosen;
+  - a failed search keeps the suggestions visible;
+  - no suggestions: a compact EmptyState in a dashed frame.
+- **Leave guard (frame 05):**
+  - kit Confirm, irreversible tone, cancel first;
+  - "Leave Promote without filing James Robins?" / "Leave Promote" / "Keep promoting";
+  - leaving with no choice, or right after a save, doesn't ask.
+- **During a walk (frame 06):** a "Related to PER-…" group comes first, a "1 saved" footer badge appears, and the header changes to the next subject. Ships with S9-29 / S9-30.
+
+Brief archived: [`design/archive/S9-D9-promote-target.md`](design/archive/S9-D9-promote-target.md).
+
+### S9-11 — Promote shell + choose target
+
+The graph card's Promote now opens the Promote place: choose a new or existing handle, then file the subject.
+
+**What shipped**
+
+- **Place:**
+  - `SourceSurface.promote`, `PlaceID` / presentation `sourcePromote`, and `WorkspaceLocation.promote(…)`. The subject's kind travels as `subjectTypeKey`.
+  - A registry spec at priority 120, keyed on `sourceGraph`, `sourcesList` and the new `promoteTargets(project:subjectId:)` (`listPromoteTargetSuggestions`, invalidated on `conclusionTriggers`).
+  - A host arm with a frozen `PromoteEntry` (fail-closed).
+  - Breadcrumbs `Sources › Evidence graph for {Source} › Promote {ref}`.
+  - A subject that is gone or already promoted returns to the graph.
+- **`Features/Promote`:**
+  - `PromoteView`: header band, step row and footer.
+  - `PromoteTargetStep`: radios, search, Suggested rows and the empty state.
+  - `PromoteModel`:
+    - choice and target, with Next disabled until the choice is complete;
+    - debounced search through catalog search with `kinds: [kind]` (S9-34a);
+    - the save: `promoteSubject`, then `.promotedSubject`, then counts refresh, then back to the graph;
+    - the `WorkspaceLeaveGuard`.
+- **Kit:**
+  - `PVRadio` and `PVRadioMark`, ported from `PVRadio.jsx`.
+  - `PVComboBox` gains the person row kind and **remote results** (`onQueryChange`, `emptyText`).
+  - `PVEmptyState(verbatimTitle:)`.
+  - `PVSymbol.userSearch`.
+- **Engine:** `PromoteTargetSuggestion.member_count`, for the "N members" line.
+- **Graph:**
+  - The card's Promote (pointer and VoiceOver) returns the Promote location.
+  - The S9-04 confirm, its `promoteConfirm*` / `promoteCancel` / `promoteFirstMember` strings, and `EvidenceGraphModel.catalogCounts` are removed.
+- **Copy:** `L10n.Promote`, with person / event / place variants.
+
+**Deviations from the board (interim)**
+
+- **Next files the claim straight away** (accepted, no confidence or argument), because the claim step (S9-12) and compare (S9-19) don't exist yet. The step row shows them as drawn. The footer hints say what happens now ("A new Person is filed when you press Next"; "James Robins will join PER-… and its 2 members") until those PRs restore the board's copy.
+- The leave guard leaves out the walk sentence until S9-30.
+- **Candidate rows:** no life years or place until S9-32. The line under the name shows only the member count.
+- Events and Places use the same flow with their own copy. Their candidates show label or ref until their header composers exist (S9-22, S9-25).
+
+**What stayed out**
+
+- Claim fields (**S9-12**), compare (**S9-19**), the walk and related-first ordering (**S9-29**, **S9-30**).
