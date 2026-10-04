@@ -19,6 +19,13 @@ Copy the stub. Surface + what got in the way is enough. A wanted fix is optional
 
 <!-- add below this line -->
 
+### Evidence graph viewport resets after visiting the composer
+
+- **Date:** 2026-10-04
+- **Where:** Evidence graph ↔ Citation composer
+- **Annoyance:** I pan around the Evidence graph, zoom into a card, open the composer to add a property, then go back. The graph's view has been reset instead of staying where I left it, which is disorienting. This happens whether I use the back button or the breadcrumbs.
+- **Wanted:** Coming back puts me at the exact same center coordinates and zoom level. Longer term, the last viewport for each Evidence graph (center + zoom) should be saved persistently per user, either in a dedicated table or by reusing wherever card coordinates are already stored.
+
 ### Omnibar ranks fuzzy name matches above exact title words
 
 - **Date:** 2026-10-04
