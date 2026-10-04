@@ -211,7 +211,7 @@ func key(valueType string, v Value) (string, error) {
 		if v.Name == nil {
 			return "", ErrValueMismatch
 		}
-		return normalizeForm(v.Name.Form), nil
+		return NormalizeForm(v.Name.Form), nil
 	case properties.ValueTypeDate:
 		if v.Date == nil {
 			return "", ErrValueMismatch
@@ -231,7 +231,7 @@ func SortKey(valueType string, v Value) (key string, ok bool) {
 		if v.Name == nil {
 			return "", false
 		}
-		return normalizeForm(v.Name.Form), true
+		return NormalizeForm(v.Name.Form), true
 	case properties.ValueTypeText:
 		if !v.HasText {
 			return "", false
@@ -247,8 +247,9 @@ func SortKey(valueType string, v Value) (key string, ok bool) {
 	return "", false
 }
 
-// normalizeForm ignores case, punctuation, and whitespace differences.
-func normalizeForm(form string) string {
+// NormalizeForm ignores case, punctuation, and whitespace differences: the
+// name cluster key and sort key, and the text core/match tokenizes.
+func NormalizeForm(form string) string {
 	var b strings.Builder
 	space := false
 	for _, r := range form {

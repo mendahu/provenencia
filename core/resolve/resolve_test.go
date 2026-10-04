@@ -189,8 +189,8 @@ func TestNormalizeForm(t *testing.T) {
 		"ÉMILE\tZOLA":       "émile zola",
 		"":                  "",
 	} {
-		if got := normalizeForm(in); got != want {
-			t.Errorf("normalizeForm(%q) = %q, want %q", in, got, want)
+		if got := NormalizeForm(in); got != want {
+			t.Errorf("NormalizeForm(%q) = %q, want %q", in, got, want)
 		}
 	}
 }
