@@ -290,7 +290,7 @@ struct CitationComposerFormPane: View {
             enabled
                 ? Text(L10n.CitationComposer.pasteTranscription)
                 : Text(verbatim: L10n.CitationComposer.pasteUnavailable(
-                    hint: String(localized: model.transcriptionActionHint)
+                    hint: model.transcriptionActionHint
                 ))
         )
     }

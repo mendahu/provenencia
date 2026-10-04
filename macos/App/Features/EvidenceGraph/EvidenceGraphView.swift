@@ -256,7 +256,7 @@ private struct EvidenceGraphContent: View {
     private var subjectCountLabel: some View {
         HStack(alignment: .firstTextBaseline, spacing: 0) {
             Text(verbatim: "(")
-            Text(L10n.EvidenceGraph.subjectCount(count: subjects.count + bridges.count))
+            Text(verbatim: L10n.EvidenceGraph.subjectCount(count: subjects.count + bridges.count))
             Text(verbatim: ")")
         }
         .font(PVFont.mono(size: PVTypeScale.caption))

@@ -889,18 +889,18 @@ enum L10n {
         )
 
         /// Persons list header meta: "1 person" / "N persons".
-        static func personCount(_ count: Int) -> LocalizedStringResource {
+        static func personCount(_ count: Int) -> String {
             count == 1
-                ? LocalizedStringResource(
+                ? L10n.string(LocalizedStringResource(
                     "workspace.persons.countOne",
                     defaultValue: "1 person",
                     comment: "Persons list header meta when there is exactly one Person"
-                )
-                : LocalizedStringResource(
+                ))
+                : L10n.format(LocalizedStringResource(
                     "workspace.persons.countOther",
-                    defaultValue: "\(count) persons",
+                    defaultValue: "%lld persons",
                     comment: "Persons list header meta; argument is how many Persons are listed"
-                )
+                ), count)
         }
 
         /// Header meta while a stale list reloads: "N persons · refreshing".
@@ -909,7 +909,7 @@ enum L10n {
                 "workspace.persons.countRefreshing",
                 defaultValue: "%@ · refreshing",
                 comment: "Persons list header meta while the list reloads; argument is the person count text"
-            ), String(localized: personCount(count)))
+            ), personCount(count))
         }
 
         static let personsEmptyTitle = LocalizedStringResource(
@@ -1820,8 +1820,8 @@ enum L10n {
             ), phrase, ref)
         }
 
-        static func subjectCount(count: Int) -> LocalizedStringResource {
-            count == 1 ? subjectCountOne : subjectCountOther(count: count)
+        static func subjectCount(count: Int) -> String {
+            count == 1 ? L10n.string(subjectCountOne) : subjectCountOther(count: count)
         }
 
         private static let subjectCountOne = LocalizedStringResource(
@@ -1830,12 +1830,12 @@ enum L10n {
             comment: "Evidence graph header count when exactly one placed primary is on the canvas"
         )
 
-        private static func subjectCountOther(count: Int) -> LocalizedStringResource {
-            LocalizedStringResource(
+        private static func subjectCountOther(count: Int) -> String {
+            L10n.format(LocalizedStringResource(
                 "evidenceGraph.header.subjectCountOther",
-                defaultValue: "\(count) subjects",
+                defaultValue: "%lld subjects",
                 comment: "Evidence graph header count; argument is how many placed primaries are on the canvas"
-            )
+            ), count)
         }
     }
 
@@ -2202,28 +2202,28 @@ enum L10n {
             ), position, count, typeLabel)
         }
 
-        static func partMoveUp(position: Int) -> LocalizedStringResource {
-            LocalizedStringResource(
+        static func partMoveUp(position: Int) -> String {
+            L10n.format(LocalizedStringResource(
                 "a11y.nameValue.part.moveUp",
-                defaultValue: "Move part \(position) up",
+                defaultValue: "Move part %lld up",
                 comment: "VoiceOver for move-up; argument is 1-based part index"
-            )
+            ), position)
         }
 
-        static func partMoveDown(position: Int) -> LocalizedStringResource {
-            LocalizedStringResource(
+        static func partMoveDown(position: Int) -> String {
+            L10n.format(LocalizedStringResource(
                 "a11y.nameValue.part.moveDown",
-                defaultValue: "Move part \(position) down",
+                defaultValue: "Move part %lld down",
                 comment: "VoiceOver for move-down; argument is 1-based part index"
-            )
+            ), position)
         }
 
-        static func partRemove(position: Int) -> LocalizedStringResource {
-            LocalizedStringResource(
+        static func partRemove(position: Int) -> String {
+            L10n.format(LocalizedStringResource(
                 "a11y.nameValue.part.remove",
-                defaultValue: "Remove part \(position)",
+                defaultValue: "Remove part %lld",
                 comment: "VoiceOver for remove; argument is 1-based part index"
-            )
+            ), position)
         }
 
         static func partMoved(position: Int, of count: Int) -> String {
@@ -2275,12 +2275,12 @@ enum L10n {
             comment: "Artifact viewer: increase magnification"
         )
 
-        static func zoomPercent(percent: Int) -> LocalizedStringResource {
-            LocalizedStringResource(
+        static func zoomPercent(percent: Int) -> String {
+            L10n.format(LocalizedStringResource(
                 "artifactViewer.zoomPercent",
-                defaultValue: "Zoom \(percent) percent",
+                defaultValue: "Zoom %lld percent",
                 comment: "VoiceOver label for the live zoom percentage"
-            )
+            ), percent)
         }
 
         static let canvasAccessibility = LocalizedStringResource(
@@ -2355,12 +2355,12 @@ enum L10n {
             comment: "Commits the current viewer page into the citation locator"
         )
 
-        static func pageSet(page: Int) -> LocalizedStringResource {
-            LocalizedStringResource(
+        static func pageSet(page: Int) -> String {
+            L10n.format(LocalizedStringResource(
                 "artifactViewer.pageSet",
-                defaultValue: "Page \(page) set",
+                defaultValue: "Page %lld set",
                 comment: "Set page button after the locator page matches the viewer; argument is page number"
-            )
+            ), page)
         }
 
         static let regionRectangle = LocalizedStringResource(
@@ -2885,20 +2885,20 @@ enum L10n {
             comment: "Hint when every PDF page has empty extractable text"
         )
 
-        static func pasteHintSelected(lines: Int, page: Int) -> LocalizedStringResource {
-            LocalizedStringResource(
+        static func pasteHintSelected(lines: Int, page: Int) -> String {
+            L10n.format(LocalizedStringResource(
                 "citationComposer.pasteHintSelected",
-                defaultValue: "Pastes the \(lines) lines selected on page \(page)",
+                defaultValue: "Pastes the %1$lld lines selected on page %2$lld",
                 comment: "Hint when an I-beam selection can be pasted; arguments are line count and page"
-            )
+            ), lines, page)
         }
 
-        static func pasteHintAfter(page: Int) -> LocalizedStringResource {
-            LocalizedStringResource(
+        static func pasteHintAfter(page: Int) -> String {
+            L10n.format(LocalizedStringResource(
                 "citationComposer.pasteHintAfter",
-                defaultValue: "Pasted from page \(page). Check it against the page, then Save citation",
+                defaultValue: "Pasted from page %lld. Check it against the page, then Save citation",
                 comment: "Hint after a successful paste; argument is the selection page"
-            )
+            ), page)
         }
 
         static func pasteUnavailable(hint: String) -> String {
@@ -3550,12 +3550,12 @@ enum L10n {
             comment: "Accessibility label and tooltip for the pill marking a Provenencia-seeded row in a vocabulary list"
         )
 
-        static func pluginPill(pluginID: String) -> LocalizedStringResource {
-            LocalizedStringResource(
+        static func pluginPill(pluginID: String) -> String {
+            L10n.format(LocalizedStringResource(
                 "origin.pill.plugin",
-                defaultValue: "Supplied by the \(pluginID) plugin",
+                defaultValue: "Supplied by the %@ plugin",
                 comment: "Accessibility label and tooltip for the pill marking a plugin-owned row in a vocabulary list; argument is the plugin id"
-            )
+            ), pluginID)
         }
     }
 
@@ -3706,12 +3706,12 @@ enum L10n {
             comment: "Sources list graph-zone subject count when exactly one canvas subject"
         )
 
-        private static func subjectCountOther(count: Int) -> LocalizedStringResource {
-            LocalizedStringResource(
+        private static func subjectCountOther(count: Int) -> String {
+            L10n.format(LocalizedStringResource(
                 "sources.list.subjectCountOther",
-                defaultValue: "\(count) subjects",
+                defaultValue: "%lld subjects",
                 comment: "Sources list graph-zone subject count; argument is canvas subject count"
-            )
+            ), count)
         }
 
         private static let observationCountOne = LocalizedStringResource(
@@ -3720,22 +3720,22 @@ enum L10n {
             comment: "Sources list graph-zone observation count when exactly one Observation"
         )
 
-        private static func observationCountOther(count: Int) -> LocalizedStringResource {
-            LocalizedStringResource(
+        private static func observationCountOther(count: Int) -> String {
+            L10n.format(LocalizedStringResource(
                 "sources.list.observationCountOther",
-                defaultValue: "\(count) observations",
+                defaultValue: "%lld observations",
                 comment: "Sources list graph-zone observation count; argument is Observation count"
-            )
+            ), count)
         }
 
         static func graphSubjectCount(_ count: Int) -> String {
             if count == 1 { return L10n.string(subjectCountOne) }
-            return String(localized: subjectCountOther(count: count))
+            return subjectCountOther(count: count)
         }
 
         static func graphObservationCount(_ count: Int) -> String {
             if count == 1 { return L10n.string(observationCountOne) }
-            return String(localized: observationCountOther(count: count))
+            return observationCountOther(count: count)
         }
 
         static func graphCountLine(subjects: Int, observations: Int) -> String {
@@ -5323,12 +5323,12 @@ enum L10n {
             defaultValue: "New property",
             comment: "Toolbar button to open create Property sheet"
         )
-        static func addPropertyPlaceholder(typeLabel: String) -> LocalizedStringResource {
-            LocalizedStringResource(
+        static func addPropertyPlaceholder(typeLabel: String) -> String {
+            L10n.format(LocalizedStringResource(
                 "properties.toolbar.addPropertyPlaceholder",
-                defaultValue: "Add a property to \(typeLabel)",
+                defaultValue: "Add a property to %@",
                 comment: "ComboBox placeholder when a subject type is focused; argument is type label"
-            )
+            ), typeLabel)
         }
         static let addPropertyEmpty = LocalizedStringResource(
             "properties.toolbar.addPropertyEmpty",
@@ -5691,10 +5691,10 @@ enum L10n {
             comment: "Hint under the key on an existing type's detail panel"
         )
 
-        static func usage(count: Int) -> LocalizedStringResource {
+        static func usage(count: Int) -> String {
             switch count {
-            case 0: usageNone
-            case 1: usageOne
+            case 0: L10n.string(usageNone)
+            case 1: L10n.string(usageOne)
             default: usageOther(count: count)
             }
         }
@@ -5711,12 +5711,12 @@ enum L10n {
             comment: "Line under a type's title when exactly one source is classified as it"
         )
 
-        private static func usageOther(count: Int) -> LocalizedStringResource {
-            LocalizedStringResource(
+        private static func usageOther(count: Int) -> String {
+            L10n.format(LocalizedStringResource(
                 "sourceTypes.detail.usageOther",
-                defaultValue: "in use on \(count) sources",
+                defaultValue: "in use on %lld sources",
                 comment: "Line under a type's title; argument is how many sources are classified as it"
-            )
+            ), count)
         }
 
         static let panelEmptyTitle = LocalizedStringResource(
@@ -5891,8 +5891,8 @@ enum L10n {
             comment: "Hint under the suggested fields section label"
         )
 
-        static func assignedCount(count: Int) -> LocalizedStringResource {
-            count == 1 ? assignedCountOne : assignedCountOther(count: count)
+        static func assignedCount(count: Int) -> String {
+            count == 1 ? L10n.string(assignedCountOne) : assignedCountOther(count: count)
         }
 
         private static let assignedCountOne = LocalizedStringResource(
@@ -5901,12 +5901,12 @@ enum L10n {
             comment: "Count beside the suggested fields section label when the type suggests exactly one field"
         )
 
-        private static func assignedCountOther(count: Int) -> LocalizedStringResource {
-            LocalizedStringResource(
+        private static func assignedCountOther(count: Int) -> String {
+            L10n.format(LocalizedStringResource(
                 "sourceTypes.suggested.countOther",
-                defaultValue: "\(count) fields",
+                defaultValue: "%lld fields",
                 comment: "Count beside the suggested fields section label; argument is how many fields the type suggests"
-            )
+            ), count)
         }
 
         static let noAssignedBody = LocalizedStringResource(
@@ -5939,12 +5939,12 @@ enum L10n {
             comment: "Spoken label for the assign button when no field is picked yet"
         )
 
-        static func assignFieldNamed(field: String, type: String) -> LocalizedStringResource {
-            LocalizedStringResource(
+        static func assignFieldNamed(field: String, type: String) -> String {
+            L10n.format(LocalizedStringResource(
                 "sourceTypes.suggested.assignFieldNamed",
-                defaultValue: "Assign field \(field) to \(type)",
+                defaultValue: "Assign field %1$@ to %2$@",
                 comment: "Spoken label for the assign button; arguments are the picked field label then the type label"
-            )
+            ), field, type)
         }
 
         static let assignTipPoolEmpty = LocalizedStringResource(
@@ -5959,12 +5959,12 @@ enum L10n {
             comment: "Tooltip on the disabled assign button before a field is picked"
         )
 
-        static func assignTipField(label: String) -> LocalizedStringResource {
-            LocalizedStringResource(
+        static func assignTipField(label: String) -> String {
+            L10n.format(LocalizedStringResource(
                 "sourceTypes.suggested.assignTipField",
-                defaultValue: "Assign \(label) to this type",
+                defaultValue: "Assign %@ to this type",
                 comment: "Tooltip on the enabled assign button; argument is the picked field label"
-            )
+            ), label)
         }
 
         static let poolHint = LocalizedStringResource(
@@ -5979,12 +5979,12 @@ enum L10n {
             comment: "Hint under the assign-field picker when nothing is left to assign"
         )
 
-        static func removeSuggestion(label: String) -> LocalizedStringResource {
-            LocalizedStringResource(
+        static func removeSuggestion(label: String) -> String {
+            L10n.format(LocalizedStringResource(
                 "sourceTypes.suggested.remove",
-                defaultValue: "Remove \(label) from this type",
+                defaultValue: "Remove %@ from this type",
                 comment: "Accessibility label and tooltip on the control that detaches one suggested field; argument is the field label"
-            )
+            ), label)
         }
 
         static let toastAssignedTitle = LocalizedStringResource(

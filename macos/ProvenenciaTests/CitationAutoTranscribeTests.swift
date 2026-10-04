@@ -28,7 +28,7 @@ struct CitationAutoTranscribeTests {
         #expect(engine.recognizeCount == 0)
         #expect(!model.canPasteTranscription)
         #expect(
-            String(localized: model.transcriptionActionHint)
+            model.transcriptionActionHint
                 == String(localized: L10n.CitationComposer.pasteHintSelect)
         )
     }
@@ -54,8 +54,8 @@ struct CitationAutoTranscribeTests {
         #expect(model.artifactViewer.userSelectionPage == 3)
         #expect(engine.recognizeCount == 0)
         #expect(
-            String(localized: model.transcriptionActionHint)
-                == String(localized: L10n.CitationComposer.pasteHintAfter(page: 3))
+            model.transcriptionActionHint
+                == L10n.CitationComposer.pasteHintAfter(page: 3)
         )
     }
 
@@ -112,7 +112,7 @@ struct CitationAutoTranscribeTests {
         model.requestPasteTranscription()
         #expect(model.transcription.isEmpty)
         #expect(
-            String(localized: model.transcriptionActionHint)
+            model.transcriptionActionHint
                 == String(localized: L10n.CitationComposer.pasteHintNoTextLayer)
         )
         #expect(engine.recognizeCount == 0)
@@ -147,7 +147,7 @@ struct CitationAutoTranscribeTests {
         model.requestAutoTranscribe()
         #expect(engine.recognizeCount == 0)
         #expect(
-            String(localized: model.autoTranscribeHint)
+            model.autoTranscribeHint
                 == String(localized: L10n.CitationComposer.autoTranscribeHintMissingFile)
         )
     }
@@ -163,7 +163,7 @@ struct CitationAutoTranscribeTests {
         model.requestAutoTranscribe()
         #expect(engine.recognizeCount == 0)
         #expect(
-            String(localized: model.autoTranscribeHint)
+            model.autoTranscribeHint
                 == String(localized: L10n.CitationComposer.autoTranscribeHintAudio)
         )
     }

@@ -353,9 +353,9 @@ final class CitationComposerModel {
 
     var canPasteTranscription: Bool { transcriptions.canPasteTranscription }
 
-    var transcriptionActionHint: LocalizedStringResource { transcriptions.actionHint }
+    var transcriptionActionHint: String { transcriptions.actionHint }
 
-    var autoTranscribeHint: LocalizedStringResource { transcriptions.autoTranscribeHint }
+    var autoTranscribeHint: String { transcriptions.autoTranscribeHint }
 
     var needsWholePageWarning: Bool { transcriptions.needsWholePageWarning }
 

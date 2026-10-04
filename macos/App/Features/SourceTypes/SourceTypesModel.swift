@@ -196,15 +196,15 @@ final class SourceTypesModel {
         assignPool.first { $0.id == assignPick }
     }
 
-    var assignTooltip: LocalizedStringResource {
-        if assignPool.isEmpty { return L10n.SourceTypes.assignTipPoolEmpty }
-        guard let field = pickedField else { return L10n.SourceTypes.assignTipChoose }
+    var assignTooltip: String {
+        if assignPool.isEmpty { return L10n.string(L10n.SourceTypes.assignTipPoolEmpty) }
+        guard let field = pickedField else { return L10n.string(L10n.SourceTypes.assignTipChoose) }
         return L10n.SourceTypes.assignTipField(label: field.label)
     }
 
-    var assignAccessibilityLabel: LocalizedStringResource {
+    var assignAccessibilityLabel: String {
         guard let field = pickedField, let type = selectedType else {
-            return L10n.SourceTypes.assignField
+            return L10n.string(L10n.SourceTypes.assignField)
         }
         return L10n.SourceTypes.assignFieldNamed(field: field.label, type: type.label)
     }

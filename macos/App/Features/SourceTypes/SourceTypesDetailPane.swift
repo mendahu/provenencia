@@ -104,7 +104,7 @@ struct SourceTypesDetailPane: View {
             keyText: panelKey,
             iconKey: panelIconKey,
             usageLine: model.isAdding ? nil : model.selectedType.map {
-                String(localized: L10n.SourceTypes.usage(count: $0.usedBy))
+                L10n.SourceTypes.usage(count: $0.usedBy)
             },
             keyHint: model.isAdding ? L10n.SourceTypes.keyHintAdd : L10n.SourceTypes.keyHintEdit,
             showsDelete: model.showsDelete,
@@ -316,7 +316,7 @@ struct SourceTypesDetailPane: View {
                     .pvMicroCaps()
                     .foregroundStyle(PVColor.textMuted)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                Text(L10n.SourceTypes.assignedCount(count: model.suggestions.count))
+                Text(verbatim: L10n.SourceTypes.assignedCount(count: model.suggestions.count))
                     .font(PVFont.mono(size: PVTypeScale.micro))
                     .foregroundStyle(PVColor.textFaint)
                     .accessibilityIdentifier("sourceTypes.suggested.count")

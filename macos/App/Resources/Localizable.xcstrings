@@ -13129,7 +13129,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pastes the %lld lines selected on page %lld"
+            "value": "Pastes the %1$lld lines selected on page %2$lld"
           }
         }
       }

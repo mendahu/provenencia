@@ -8,6 +8,10 @@ Provenencia keys must be semantic dotted names (onboarding.welcomeTitle).
 Every LocalizedStringResource key in the app must also be in the catalog.
 L10n.string resolves through Bundle.localizedString, which ignores the
 resource's defaultValue and shows the raw key when the catalog lacks it.
+
+No LocalizedStringResource may interpolate (defaultValue: "\\(count) items").
+Copy with arguments is a catalog format filled by an L10n format function
+returning String, so every resource stays safe to resolve with L10n.string.
 """
 
 from __future__ import annotations
@@ -26,6 +30,22 @@ KEY_RE = re.compile(r"^[a-z][a-zA-Z0-9._]*$")
 
 # The first argument of LocalizedStringResource(...): its catalog key.
 RESOURCE_KEY_RE = re.compile(r'LocalizedStringResource\(\s*"([^"\\]+)"')
+
+
+# A LocalizedStringResource whose key or defaultValue literal interpolates.
+INTERPOLATED_RESOURCE_RE = re.compile(
+    r'LocalizedStringResource\(\s*"[^"\n]*(?:\\\(|"\s*,\s*defaultValue:\s*"[^"\n]*\\\()'
+)
+
+
+def interpolated_resources() -> list[tuple[Path, int]]:
+    """(file, line) of every LocalizedStringResource that interpolates a value."""
+    hits: list[tuple[Path, int]] = []
+    for path in sorted(APP_SOURCES.rglob("*.swift")):
+        text = path.read_text(encoding="utf-8")
+        for match in INTERPOLATED_RESOURCE_RE.finditer(text):
+            hits.append((path, text.count("\n", 0, match.start()) + 1))
+    return hits
 
 
 def resource_keys() -> dict[str, Path]:
@@ -83,6 +103,13 @@ def main() -> int:
                 f"{key!r}: used in {path.relative_to(ROOT)} but missing from the "
                 f"catalog — L10n.string would show the raw key"
             )
+
+    for path, line in interpolated_resources():
+        problems.append(
+            f"{path.relative_to(ROOT)}:{line}: LocalizedStringResource interpolates a "
+            f"value — give it a %@ / %lld catalog format and an L10n format "
+            f"function returning String"
+        )
 
     if problems:
         print(

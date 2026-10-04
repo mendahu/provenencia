@@ -23,6 +23,16 @@ struct L10nResolutionTests {
         #expect(L10n.DesignSystem.selectOptionPosition(current: 2, count: 5) == "2 of 5")
     }
 
+    @Test func formerlyInterpolatedCopyFormatsItsArguments() {
+        #expect(L10n.NameValue.partMoveUp(position: 3) == "Move part 3 up")
+        #expect(L10n.CitationComposer.pasteHintSelected(lines: 4, page: 12) == "Pastes the 4 lines selected on page 12")
+        #expect(L10n.SourceTypes.assignFieldNamed(field: "Author", type: "Book") == "Assign field Author to Book")
+        #expect(L10n.Workspace.personCount(1) == "1 person")
+        #expect(L10n.Workspace.personCount(3) == "3 persons")
+        #expect(L10n.SourceTypes.usage(count: 0) == "no sources yet")
+        #expect(L10n.SourceTypes.usage(count: 7) == "in use on 7 sources")
+    }
+
     @Test func formatWithExplicitLocaleUsesIt() {
         #expect(
             L10n.Dates.displayBetween(start: "1850", end: "1860", locale: Locale(identifier: "en_US"))

@@ -10,7 +10,7 @@ import SwiftUI
 /// pattern this follows.
 struct PVField<Content: View>: View {
     private let label: LocalizedStringResource?
-    private let hint: LocalizedStringResource?
+    private let hint: Text?
     /// Plain `String`, not `LocalizedStringResource` — unlike `label`/`hint`,
     /// an error is always dynamic content (a validation message, a mapped
     /// FFI error code), already resolved via `String(localized:)` or
@@ -22,13 +22,13 @@ struct PVField<Content: View>: View {
 
     init(
         label: LocalizedStringResource? = nil,
-        hint: LocalizedStringResource? = nil,
+        hint: (any PVCopy)? = nil,
         error: String? = nil,
         required: Bool = false,
         @ViewBuilder content: () -> Content
     ) {
         self.label = label
-        self.hint = hint
+        self.hint = hint?.pvText
         self.error = error
         self.required = required
         self.content = content()
@@ -54,7 +54,7 @@ struct PVField<Content: View>: View {
                     .font(PVFont.body(size: PVTypeScale.micro))
                     .foregroundStyle(PVColor.danger)
             } else if let hint {
-                Text(hint)
+                hint
                     .font(PVFont.body(size: PVTypeScale.micro, italic: true))
                     .foregroundStyle(PVColor.textMuted)
             }

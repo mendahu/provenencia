@@ -282,6 +282,7 @@
 		A70500000000000000000007 /* PropertiesSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70500000000000000000003 /* PropertiesSnapshot.swift */; };
 		A70500000000000000000008 /* PropertiesModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70500000000000000000004 /* PropertiesModelTests.swift */; };
 		BE57602FF7EBA86C1DEE63FF /* PVBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3E732F3D44BB89512758F85 /* PVBadge.swift */; };
+		AA0000000000000000000676 /* PVCopy.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000675 /* PVCopy.swift */; };
 		A1B2C3D4E5F60718293A4B5E /* PVDivider.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2C3D4E5F60718293A4B5E01 /* PVDivider.swift */; };
 		CA918E2A0BCB420DA8CD87E5 /* PVButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0AE6B1748FA280F95478205 /* PVButton.swift */; };
 		CE7E43F00CA602E2794E0ADA /* MetadataModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F0CB87F6EC5759DF8D0A7AF /* MetadataModelTests.swift */; };
@@ -602,6 +603,7 @@
 		F03B00F6F0D021AFCDAD2DEB /* WorkspaceModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkspaceModel.swift; sourceTree = "<group>"; };
 		F10C63066463B02E05808F78 /* PreviewFixtures.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PreviewFixtures.swift; sourceTree = "<group>"; };
 		F3E732F3D44BB89512758F85 /* PVBadge.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVBadge.swift; sourceTree = "<group>"; };
+		AA0000000000000000000675 /* PVCopy.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVCopy.swift; sourceTree = "<group>"; };
 		B2C3D4E5F60718293A4B5E01 /* PVDivider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVDivider.swift; sourceTree = "<group>"; };
 		F56B617548A3EF65699270F8 /* SignOutCoordinator.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SignOutCoordinator.swift; sourceTree = "<group>"; };
 		A7B8C9D0E1F203948576A1B0 /* NavigationCoordinator.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NavigationCoordinator.swift; sourceTree = "<group>"; };
@@ -1201,6 +1203,15 @@
 			path = Badge;
 			sourceTree = "<group>";
 		};
+		AA0000000000000000000674 /* Copy */ = {
+			isa = PBXGroup;
+			children = (
+				AA0000000000000000000675 /* PVCopy.swift */,
+			);
+			name = Copy;
+			path = Copy;
+			sourceTree = "<group>";
+		};
 		D5C00000000000000000000C /* Divider */ = {
 			isa = PBXGroup;
 			children = (
@@ -1457,6 +1468,7 @@
 				D5C00000000000000000000F /* IconButton */,
 				D5C000000000000000000015 /* HoverEffect */,
 				D5C000000000000000000008 /* Badge */,
+				AA0000000000000000000674 /* Copy */,
 				D5C00000000000000000000C /* Divider */,
 				D5C00000000000000000001A /* Thumbnail */,
 				A90900000000000000000010 /* List */,
@@ -1751,6 +1763,7 @@
 				A790E2993DB9D42163403BA3 /* PreviewFixtures.swift in Sources */,
 				9BCF5ECCD155C02B71931BB5 /* FieldSlug.swift in Sources */,
 				BE57602FF7EBA86C1DEE63FF /* PVBadge.swift in Sources */,
+				AA0000000000000000000676 /* PVCopy.swift in Sources */,
 				A1B2C3D4E5F60718293A4B5E /* PVDivider.swift in Sources */,
 				89CEBFA09358C67639951CE0 /* PVEmptyState.swift in Sources */,
 				AA00000000000000000000C6 /* PVConfirm.swift in Sources */,

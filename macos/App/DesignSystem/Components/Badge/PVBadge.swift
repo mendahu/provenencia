@@ -25,7 +25,7 @@ struct PVBadge: View {
     private let icon: PVSymbol?
     private let subtle: Bool
     /// Only set for the icon-only badge, which has no text to read out.
-    private let iconLabel: LocalizedStringResource?
+    private let iconLabel: Text?
     /// Text / glyph colour override; the tone still owns fill and outline.
     private var foreground: Color?
 
@@ -58,12 +58,12 @@ struct PVBadge: View {
 
     /// Glyph-only pill — `PVIcon` is `accessibilityHidden`, so `label` carries
     /// the meaning for VoiceOver and doubles as the hover tooltip.
-    init(icon: PVSymbol, label: LocalizedStringResource, tone: PVBadgeTone = .neutral, subtle: Bool = false) {
+    init(icon: PVSymbol, label: some PVCopy, tone: PVBadgeTone = .neutral, subtle: Bool = false) {
         self.label = nil
         self.tone = tone
         self.icon = icon
         self.subtle = subtle
-        iconLabel = label
+        iconLabel = label.pvText
     }
 
     var body: some View {
@@ -94,14 +94,14 @@ struct PVBadge: View {
 /// Applies the VoiceOver label + tooltip a glyph-only badge needs, and is a
 /// no-op for the text badges (which read out their own label).
 private struct PVBadgeIconLabel: ViewModifier {
-    let label: LocalizedStringResource?
+    let label: Text?
 
     func body(content: Content) -> some View {
         if let label {
             content
                 .accessibilityElement()
-                .accessibilityLabel(Text(label))
-                .help(Text(label))
+                .accessibilityLabel(label)
+                .help(label)
         } else {
             content
         }
