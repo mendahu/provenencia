@@ -33,6 +33,13 @@ Accents, scripts, non-Western name structures and nickname tables are in [`inter
   - Later, accepted and rejected claims are labels.
   - Fellegi–Sunter record linkage learns per-feature agree/disagree weights from exactly that, and our additive points already have its shape.
 - **Event types and places relate.** Birth vs baptism, death vs burial should partly match. That's a term-affinity table, the same pattern as name roles. Places need their hierarchy and renamings (York → Toronto) from the Place work (S9-25); flat text can't do it.
+- **Date precision below the year (S9-21).** Spans and gaps are counted in whole years:
+  - December 1817 vs January 1818 is "a year apart" (0.53), lower than May vs September of the same year (0.6).
+  - Ranges ignore their months and days: "BET MAR 1817 AND JUN 1817" reads as all of 1817.
+
+  When S9-21 adds date windows, measure spans and gaps in days or months from the windows.
+- **ABT on spans.** "About" doubles the tolerance only when both dates are points. "ABT 1817" against a range or bound uses the normal tolerance.
+- **Calendars and double dating.** Julian vs Gregorian (the 1752 switch in Britain and its colonies, at different times elsewhere) and "1717/18" double dating are ignored. This belongs with the international work ([`international-names.md`](international-names.md)), since calendars vary by place and church.
 - **Cross-property dates.** An event's `date` is never compared with another's `start_date` / `end_date`. When S9-21 adds date windows, compare by window overlap across these properties.
 - **Researcher-defined properties.** `ComparerFor` exists, but default profiles only list product properties. A profile could include user properties (occupation, residence text) at a modest default weight, or let a project opt them in.
 
