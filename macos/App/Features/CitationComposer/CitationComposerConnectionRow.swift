@@ -25,15 +25,22 @@ struct CitationComposerConnectionRow: View {
                         .font(PVFont.body(size: PVTypeScale.caption))
                         .foregroundStyle(PVColor.textMuted)
                 } else if let _ = row.termProperty {
-                    PVComboBox(
-                        selection: termBinding,
-                        options: termOptions,
-                        size: .sm,
-                        placeholder: L10n.CitationComposer.termPlaceholder,
-                        emptyLabel: L10n.CitationComposer.termEmpty,
-                        label: termLabelResource,
-                        accessibilityIdentifierPrefix: "citationComposer.connection.term.\(row.id.uuidString)"
-                    )
+                    HStack(alignment: .center, spacing: PVSpacing.space3) {
+                        Text(termLabelResource)
+                            .font(PVFont.body(size: PVTypeScale.caption, weight: PVFontWeight.medium))
+                            .foregroundStyle(PVColor.textSecondary)
+                            .fixedSize()
+                            .accessibilityHidden(true)
+                        PVComboBox(
+                            selection: termBinding,
+                            options: termOptions,
+                            size: .sm,
+                            placeholder: L10n.CitationComposer.termPlaceholder,
+                            emptyLabel: L10n.CitationComposer.termEmpty,
+                            label: termLabelResource,
+                            accessibilityIdentifierPrefix: "citationComposer.connection.term.\(row.id.uuidString)"
+                        )
+                    }
                 }
                 if let error = row.error {
                     PVCallout(tone: .danger, message: error, compact: true)
