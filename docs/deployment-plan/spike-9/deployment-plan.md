@@ -447,7 +447,7 @@ In order; each brief sits just above the PR it gates.
 - [x] S9-08 — Sidebar sections: Source, Conclude, Configure → [`completed.md`](completed.md)
 - [x] ✎ S9-D2 — Design: Persons list → [`completed.md`](completed.md)
 - [x] S9-09 — Persons list → [`completed.md`](completed.md)
-- [ ] S9-10 — Promote write + reads: existing target
+- [x] S9-10 — Promote write + reads: existing target → [`completed.md`](completed.md)
 - [ ] ✎ S9-D9 — Design: Promote shell + choose target
 - [ ] S9-11 — Promote shell + choose target
 - [ ] ✎ S9-D10 — Design: Promote claim fields
@@ -610,6 +610,8 @@ Researcher's decision while revising **S9-D1**: two configuration views get plai
 ### Slice 3 — Join an existing Person
 
 #### S9-10 — Promote write + reads: existing target
+
+**Done.** See [`completed.md`](completed.md#s9-10--promote-write--reads-existing-target). For **S9-11**: `listPromoteTargetSuggestions` gives the *Suggested* rows (`CatalogPersonHeader`, best first); search the existing `.personsList` for the picker; join by passing `entityID` to `promoteSubject`. For **S9-12**: grades come from `listClaimConfidenceGrades`; pass `confidenceGradeID` / `argument` on the same `promoteSubject` call. For **S9-22 / S9-25**: add Event / Place header lists to `ListPromoteTargetSuggestionsResponse` beside `persons`, with their resemblance keys (S9-20 / S9-21).
 
 | | |
 | --- | --- |

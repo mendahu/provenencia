@@ -21,6 +21,7 @@ IDs stay stable (`S9-NN`, `S9-DN`). Do not renumber when moving steps here.
 | S9-08 | PR | Sidebar sections: Source, Conclude, Configure |
 | S9-D2 | Design | Persons list |
 | S9-09 | PR | Persons list |
+| S9-10 | PR | Promote write + reads: existing target |
 
 ## Steps
 
@@ -306,3 +307,24 @@ The Persons page now lists every Person, one row per handle, and each row opens 
 - Life dates and places in rows (**S9-32**); the Person page itself (**S9-16**); Events and Places lists (**S9-23**, **S9-26**)
 - Mixed markers in rows (descoped, see S9-D2)
 - **Known limit:** the card's name comes with that Source's graph load. A name edit made on *another* Source reaches this card when its graph next reloads, because the graph key is per Source.
+
+### S9-10 — Promote write + reads: existing target
+
+Promote can now file a Subject onto an existing handle, carry a confidence grade and argument, and suggest which handles to join. Engine and store only; the flow UI is S9-11 / S9-12.
+
+**What shipped**
+
+- **Join:** `promote.Input.EntityID` (nil mints). A join loads the handle, refuses a missing or merged one (`promote.invalid`) and one of another type (`identityclaims.type_mismatch`), and writes the claim only — one `promote_subject` revision with one change. The handle's cache is recomputed as on a mint.
+- **Claim fields:** `ConfidenceGradeID` (optional) and `Argument` reach the claim on both paths; an unknown grade is `identityclaims.invalid`.
+- **Rebuild equals upkeep:** the seeded sequences join same-kind handles (and fail if a seed never joins); scenario *joining a second member merges its name, then disagrees*.
+- **Suggestions:** `core/database/promotetargets.Suggest(q, subjectID, limit)` — unmerged handles of the Subject's type, never its own, matched on the Subject's name Observations against cached name `sort_key`s at any rank. Exact match first, then a shared word (two or more letters, so initials alone never suggest); within a tier by support, then list order. Default limit 10; constant query count. Non-primary kinds are `promote.unsupported_type`. `promote.PrimaryKind` is the shared kind check.
+- `conclusionheaders.PersonsByIDs` — the list header for a set of ids, in list order, one query.
+- **FFI:** `PromoteSubjectRequest` gains `entity_id`, `confidence_grade_id`, `argument`; `IdentityClaim` gains `confidence_grade_id`, `argument`. New `METHOD_LIST_PROMOTE_TARGET_SUGGESTIONS` (`persons` = `PersonHeader`s) and `METHOD_LIST_CLAIM_CONFIDENCE_GRADES` (`ClaimConfidenceGrade`).
+- **Swift:** `promoteSubject(…, entityID:, confidenceGradeID:, argument:)` (a protocol extension keeps the mint-only call), `listPromoteTargetSuggestions`, `listClaimConfidenceGrades`, `CatalogClaimConfidenceGrade`; `CatalogIdentityClaim` carries the grade and argument. FakeStore mirrors the join, the tiers and the three grades. No query key: S9-11 decides whether suggestions are a key or a model fetch.
+
+**What stayed out**
+
+- Pins and backfill (**S9-17**); related-first suggestions during a walk (**S9-29**)
+- Event and Place suggestions — they wait for their header composers (**S9-22**, **S9-25**) and resemblance keys (event name **S9-20**, dates **S9-21**); toponym and event-type resemblance with them
+- Search-index resemblance (R8, **S9-34**): the shared-word tier scans the type's cached names
+- The Promote flow, picker and claim fields (**S9-11**, **S9-12**)
