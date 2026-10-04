@@ -717,11 +717,21 @@ struct GoStore: GenealogyStore {
         )
     }
 
-    func promoteSubject(projectDir: String, userID: String, subjectID: String) async throws -> CatalogPromoteResult {
+    func promoteSubject(
+        projectDir: String,
+        userID: String,
+        subjectID: String,
+        entityID: String?,
+        confidenceGradeID: String?,
+        argument: String
+    ) async throws -> CatalogPromoteResult {
         var req = Provenencia_Engine_V1_PromoteSubjectRequest()
         req.projectDir = projectDir
         req.userID = userID
         req.subjectID = subjectID
+        req.entityID = entityID ?? ""
+        req.confidenceGradeID = confidenceGradeID ?? ""
+        req.argument = argument
         let resp: Provenencia_Engine_V1_PromoteSubjectResponse = try await provenenciaCall(
             method: CoreMethod.promoteSubject,
             request: req
@@ -732,9 +742,35 @@ struct GoStore: GenealogyStore {
                 id: resp.claim.id,
                 subjectID: resp.claim.subjectID,
                 entityID: resp.claim.entityID,
-                status: resp.claim.status
+                status: resp.claim.status,
+                confidenceGradeID: resp.claim.confidenceGradeID.isEmpty ? nil : resp.claim.confidenceGradeID,
+                argument: resp.claim.argument
             )
         )
+    }
+
+    func listPromoteTargetSuggestions(projectDir: String, subjectID: String, limit: Int) async throws -> [CatalogPersonHeader] {
+        var req = Provenencia_Engine_V1_ListPromoteTargetSuggestionsRequest()
+        req.projectDir = projectDir
+        req.subjectID = subjectID
+        req.limit = Int32(clamping: limit)
+        let resp: Provenencia_Engine_V1_ListPromoteTargetSuggestionsResponse = try await provenenciaCall(
+            method: CoreMethod.listPromoteTargetSuggestions,
+            request: req
+        )
+        return resp.persons.map(Self.mapPersonHeader)
+    }
+
+    func listClaimConfidenceGrades(projectDir: String) async throws -> [CatalogClaimConfidenceGrade] {
+        var req = Provenencia_Engine_V1_ListClaimConfidenceGradesRequest()
+        req.projectDir = projectDir
+        let resp: Provenencia_Engine_V1_ListClaimConfidenceGradesResponse = try await provenenciaCall(
+            method: CoreMethod.listClaimConfidenceGrades,
+            request: req
+        )
+        return resp.grades.map { g in
+            CatalogClaimConfidenceGrade(id: g.id, key: g.key, origin: g.origin, label: g.label, sortOrder: Int(g.sortOrder))
+        }
     }
 
     func listSubjectMemberships(projectDir: String, sourceID: String) async throws -> [CatalogSubjectMembership] {
@@ -763,13 +799,15 @@ struct GoStore: GenealogyStore {
             method: CoreMethod.listPersonHeaders,
             request: req
         )
-        return resp.headers.map { h in
-            CatalogPersonHeader(
-                entity: Self.mapCanonicalEntity(h.entity),
-                name: h.hasName ? Self.mapNameValue(h.name) : nil,
-                nameClusterCount: Int(h.nameClusterCount)
-            )
-        }
+        return resp.headers.map(Self.mapPersonHeader)
+    }
+
+    private static func mapPersonHeader(_ h: Provenencia_Engine_V1_PersonHeader) -> CatalogPersonHeader {
+        CatalogPersonHeader(
+            entity: mapCanonicalEntity(h.entity),
+            name: h.hasName ? mapNameValue(h.name) : nil,
+            nameClusterCount: Int(h.nameClusterCount)
+        )
     }
 
     private static func mapNameValue(_ n: Provenencia_Engine_V1_NameValueInput) -> CatalogNameValue {

@@ -95,6 +95,8 @@ const (
 	MethodPromoteSubject                    = int32(engine.Method_METHOD_PROMOTE_SUBJECT)
 	MethodListSubjectMemberships            = int32(engine.Method_METHOD_LIST_SUBJECT_MEMBERSHIPS)
 	MethodListPersonHeaders                 = int32(engine.Method_METHOD_LIST_PERSON_HEADERS)
+	MethodListPromoteTargetSuggestions      = int32(engine.Method_METHOD_LIST_PROMOTE_TARGET_SUGGESTIONS)
+	MethodListClaimConfidenceGrades         = int32(engine.Method_METHOD_LIST_CLAIM_CONFIDENCE_GRADES)
 )
 
 // Call routes one coarse FFI operation to api/ffi/handlers.
@@ -270,6 +272,10 @@ func Call(method int32, in []byte) ([]byte, error) {
 		return handlers.ListSubjectMemberships(in)
 	case MethodListPersonHeaders:
 		return handlers.ListPersonHeaders(in)
+	case MethodListPromoteTargetSuggestions:
+		return handlers.ListPromoteTargetSuggestions(in)
+	case MethodListClaimConfidenceGrades:
+		return handlers.ListClaimConfidenceGrades(in)
 	default:
 		return nil, apperr.New(apperr.CodeInternalUnknownMethod, apperr.KindInternal, strconv.Itoa(int(method)))
 	}

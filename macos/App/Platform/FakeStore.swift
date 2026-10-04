@@ -1164,10 +1164,17 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         }
     }
 
-    func promoteSubject(projectDir: String, userID _: String, subjectID: String) async throws -> CatalogPromoteResult {
+    func promoteSubject(
+        projectDir: String,
+        userID _: String,
+        subjectID: String,
+        entityID: String?,
+        confidenceGradeID: String?,
+        argument: String
+    ) async throws -> CatalogPromoteResult {
         return try withState {
             markCatalogSessionHeld(projectDir)
-            recordedCalls.append("promoteSubject id=\(subjectID)")
+            recordedCalls.append("promoteSubject id=\(subjectID)" + (entityID.map { " entity=\($0)" } ?? ""))
             guard let subject = subjectsBySource.values.flatMap({ $0 }).first(where: { $0.id == subjectID }),
                   let type = subjectTypesByProject[projectDir]?.first(where: { $0.id == subject.subjectTypeID })
             else {
@@ -1179,17 +1186,30 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             if membershipBySubject[subjectID] != nil {
                 throw CoreInvokeError.coded(status: 1, code: "identityclaims.already_member", kind: .conflict, params: [])
             }
-            let entity = CatalogCanonicalEntity(
-                id: UUID().uuidString.lowercased(),
-                ref: "\(type.refPrefix)-FAKE\(membershipBySubject.count + 1)",
-                subjectTypeID: type.id,
-                label: ""
-            )
+            let entity: CatalogCanonicalEntity
+            if let entityID {
+                guard let existing = membershipBySubject.values.first(where: { $0.entity.id == entityID })?.entity else {
+                    throw CoreInvokeError.coded(status: 1, code: "promote.invalid", kind: .user, params: [])
+                }
+                guard existing.subjectTypeID == type.id else {
+                    throw CoreInvokeError.coded(status: 1, code: "identityclaims.type_mismatch", kind: .user, params: [])
+                }
+                entity = existing
+            } else {
+                entity = CatalogCanonicalEntity(
+                    id: UUID().uuidString.lowercased(),
+                    ref: "\(type.refPrefix)-FAKE\(membershipBySubject.count + 1)",
+                    subjectTypeID: type.id,
+                    label: ""
+                )
+            }
             let claim = CatalogIdentityClaim(
                 id: UUID().uuidString.lowercased(),
                 subjectID: subjectID,
                 entityID: entity.id,
-                status: "accepted"
+                status: "accepted",
+                confidenceGradeID: confidenceGradeID,
+                argument: argument.trimmingCharacters(in: .whitespacesAndNewlines)
             )
             membershipBySubject[subjectID] = CatalogSubjectMembership(
                 subjectID: subjectID,
@@ -1198,6 +1218,53 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 kind: type.key
             )
             return CatalogPromoteResult(entity: entity, claim: claim)
+        }
+    }
+
+    /// Mirrors the Go tiers loosely: Persons whose resolved name equals one of the
+    /// Subject's names (case-folded) first, then those sharing a word of two or more letters.
+    func listPromoteTargetSuggestions(projectDir: String, subjectID: String, limit: Int) async throws -> [CatalogPersonHeader] {
+        // A read: no `recordedCalls`.
+        return withState {
+            markCatalogSessionHeld(projectDir)
+            let own = membershipBySubject[subjectID]?.entity.id
+            let names = observationsBySource.values.flatMap { $0 }
+                .filter { $0.subjectID == subjectID && $0.propertyKey == "name" && !$0.nameForm.isEmpty }
+                .map { Self.foldName($0.nameForm) }
+            guard !names.isEmpty else { return [] }
+            let words = Set(names.flatMap(Self.nameWords))
+            let ranked = personHeaders().compactMap { header -> (tier: Int, header: CatalogPersonHeader)? in
+                guard header.entity.id != own, let name = header.name.map({ Self.foldName($0.form) }) else { return nil }
+                if names.contains(name) { return (0, header) }
+                if !words.isDisjoint(with: Self.nameWords(name)) { return (1, header) }
+                return nil
+            }
+            let sorted = ranked.enumerated().sorted { a, b in
+                a.element.tier != b.element.tier ? a.element.tier < b.element.tier : a.offset < b.offset
+            }
+            return sorted.prefix(limit > 0 ? limit : 10).map(\.element.header)
+        }
+    }
+
+    private static func foldName(_ form: String) -> String {
+        form.lowercased()
+            .filter { !$0.isPunctuation }
+            .split(whereSeparator: \.isWhitespace)
+            .joined(separator: " ")
+    }
+
+    private static func nameWords(_ folded: String) -> [String] {
+        folded.split(separator: " ").map(String.init).filter { $0.count >= 2 }
+    }
+
+    func listClaimConfidenceGrades(projectDir: String) async throws -> [CatalogClaimConfidenceGrade] {
+        return withState {
+            markCatalogSessionHeld(projectDir)
+            return [
+                CatalogClaimConfidenceGrade(id: "cg-low", key: "low_confidence", origin: "provenencia", label: "Low confidence", sortOrder: 1),
+                CatalogClaimConfidenceGrade(id: "cg-mod", key: "moderate", origin: "provenencia", label: "Moderate", sortOrder: 2),
+                CatalogClaimConfidenceGrade(id: "cg-high", key: "high_confidence", origin: "provenencia", label: "High confidence", sortOrder: 3),
+            ]
         }
     }
 

@@ -97,6 +97,8 @@ enum Method {
   METHOD_PROMOTE_SUBJECT = 85;
   METHOD_LIST_SUBJECT_MEMBERSHIPS = 86;
   METHOD_LIST_PERSON_HEADERS = 87;
+  METHOD_LIST_PROMOTE_TARGET_SUGGESTIONS = 88;
+  METHOD_LIST_CLAIM_CONFIDENCE_GRADES = 89;
 }
 
 message PingRequest {
@@ -902,14 +904,39 @@ message IdentityClaim {
   string subject_id = 2;
   string entity_id = 3;
   string status = 4; // provisional | accepted | rejected
+  string confidence_grade_id = 5; // empty = no grade
+  string argument = 6;
 }
 
-// PromoteSubject v1 mints a handle of the Subject's type and files an
-// accepted claim, one transaction. Refuses members and non-primary kinds.
+// ClaimConfidenceGrade is one claim_confidence_grades vocabulary row: the
+// confidence scale on Identity Claims (not Source credibility).
+message ClaimConfidenceGrade {
+  string id = 1;
+  string key = 2;
+  string origin = 3;
+  string label = 4;
+  int32 sort_order = 5;
+}
+
+message ListClaimConfidenceGradesRequest {
+  string project_dir = 1;
+}
+
+message ListClaimConfidenceGradesResponse {
+  repeated ClaimConfidenceGrade grades = 1;
+}
+
+// PromoteSubject files an accepted claim for the Subject, one transaction:
+// onto a newly minted handle of its type when entity_id is empty, else onto
+// that existing handle (same type, unmerged; claim only). Refuses members and
+// non-primary kinds.
 message PromoteSubjectRequest {
   string project_dir = 1;
   string user_id = 2;
   string subject_id = 3;
+  string entity_id = 4; // empty = mint a new handle
+  string confidence_grade_id = 5; // empty = no grade
+  string argument = 6;
 }
 
 message PromoteSubjectResponse {
@@ -958,6 +985,20 @@ message ListPersonHeadersRequest {
 
 message ListPersonHeadersResponse {
   repeated PersonHeader headers = 1;
+}
+
+// ListPromoteTargetSuggestions returns existing handles a Subject could join,
+// best first: same type, unmerged, not its own handle, resembling it. Only the
+// header list for the Subject's kind is filled (Persons for now; Events and
+// Places arrive with their composers). limit 0 = the engine default.
+message ListPromoteTargetSuggestionsRequest {
+  string project_dir = 1;
+  string subject_id = 2;
+  int32 limit = 3;
+}
+
+message ListPromoteTargetSuggestionsResponse {
+  repeated PersonHeader persons = 1;
 }
 
 message ListSubjectsRequest {
