@@ -971,7 +971,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         let wanted = Set(kinds)
         var hits: [CatalogSearchHit] = []
         if !wanted.isDisjoint(with: handleKinds) {
-            hits += withState {
+            hits += try withState {
+                if let searchCatalogError { throw searchCatalogError }
                 markCatalogSessionHeld(projectDir)
                 return handleSearchHits(query: query, kinds: wanted.intersection(handleKinds))
             }
@@ -1302,7 +1303,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                     similarity: similarity, contribution: 10 * similarity
                 )
                 return CatalogPromoteTargetSuggestion(
-                    entity: header.entity, score: 10 * similarity, reasons: [reason], person: header
+                    entity: header.entity, score: 10 * similarity, reasons: [reason], person: header,
+                    memberCount: membershipBySubject.values.filter { $0.entity.id == header.entity.id }.count
                 )
             }
             let sorted = scored.sorted { a, b in

@@ -8656,6 +8656,7 @@ type PromoteTargetSuggestion struct {
 	Score         float64                `protobuf:"fixed64,2,opt,name=score,proto3" json:"score,omitempty"`
 	Reasons       []*MatchReason         `protobuf:"bytes,3,rep,name=reasons,proto3" json:"reasons,omitempty"`
 	Person        *PersonHeader          `protobuf:"bytes,4,opt,name=person,proto3" json:"person,omitempty"`
+	MemberCount   int32                  `protobuf:"varint,5,opt,name=member_count,json=memberCount,proto3" json:"member_count,omitempty"` // accepted members of the handle
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -8716,6 +8717,13 @@ func (x *PromoteTargetSuggestion) GetPerson() *PersonHeader {
 		return x.Person
 	}
 	return nil
+}
+
+func (x *PromoteTargetSuggestion) GetMemberCount() int32 {
+	if x != nil {
+		return x.MemberCount
+	}
+	return 0
 }
 
 type ListPromoteTargetSuggestionsResponse struct {
@@ -14365,12 +14373,13 @@ const file_engine_proto_rawDesc = "" +
 	"\n" +
 	"similarity\x18\x03 \x01(\x01R\n" +
 	"similarity\x12\"\n" +
-	"\fcontribution\x18\x04 \x01(\x01R\fcontribution\"\xea\x01\n" +
+	"\fcontribution\x18\x04 \x01(\x01R\fcontribution\"\x8d\x02\n" +
 	"\x17PromoteTargetSuggestion\x12>\n" +
 	"\x06entity\x18\x01 \x01(\v2&.provenencia.engine.v1.CanonicalEntityR\x06entity\x12\x14\n" +
 	"\x05score\x18\x02 \x01(\x01R\x05score\x12<\n" +
 	"\areasons\x18\x03 \x03(\v2\".provenencia.engine.v1.MatchReasonR\areasons\x12;\n" +
-	"\x06person\x18\x04 \x01(\v2#.provenencia.engine.v1.PersonHeaderR\x06person\"x\n" +
+	"\x06person\x18\x04 \x01(\v2#.provenencia.engine.v1.PersonHeaderR\x06person\x12!\n" +
+	"\fmember_count\x18\x05 \x01(\x05R\vmemberCount\"x\n" +
 	"$ListPromoteTargetSuggestionsResponse\x12P\n" +
 	"\vsuggestions\x18\x01 \x03(\v2..provenencia.engine.v1.PromoteTargetSuggestionR\vsuggestions\"S\n" +
 	"\x13ListSubjectsRequest\x12\x1f\n" +

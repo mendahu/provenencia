@@ -1018,6 +1018,7 @@ message PromoteTargetSuggestion {
   double score = 2;
   repeated MatchReason reasons = 3;
   PersonHeader person = 4;
+  int32 member_count = 5; // accepted members of the handle
 }
 
 message ListPromoteTargetSuggestionsResponse {

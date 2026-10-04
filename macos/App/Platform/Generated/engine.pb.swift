@@ -3310,6 +3310,9 @@ public nonisolated struct Provenencia_Engine_V1_PromoteTargetSuggestion: Sendabl
   /// Clears the value of `person`. Subsequent reads from it will return its default value.
   public mutating func clearPerson() {self._person = nil}
 
+  /// accepted members of the handle
+  public var memberCount: Int32 = 0
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -10608,7 +10611,7 @@ nonisolated extension Provenencia_Engine_V1_MatchReason: SwiftProtobuf.Message, 
 
 nonisolated extension Provenencia_Engine_V1_PromoteTargetSuggestion: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".PromoteTargetSuggestion"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}entity\0\u{1}score\0\u{1}reasons\0\u{1}person\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}entity\0\u{1}score\0\u{1}reasons\0\u{1}person\0\u{3}member_count\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -10620,6 +10623,7 @@ nonisolated extension Provenencia_Engine_V1_PromoteTargetSuggestion: SwiftProtob
       case 2: try { try decoder.decodeSingularDoubleField(value: &self.score) }()
       case 3: try { try decoder.decodeRepeatedMessageField(value: &self.reasons) }()
       case 4: try { try decoder.decodeSingularMessageField(value: &self._person) }()
+      case 5: try { try decoder.decodeSingularInt32Field(value: &self.memberCount) }()
       default: break
       }
     }
@@ -10642,6 +10646,9 @@ nonisolated extension Provenencia_Engine_V1_PromoteTargetSuggestion: SwiftProtob
     try { if let v = self._person {
       try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
     } }()
+    if self.memberCount != 0 {
+      try visitor.visitSingularInt32Field(value: self.memberCount, fieldNumber: 5)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -10650,6 +10657,7 @@ nonisolated extension Provenencia_Engine_V1_PromoteTargetSuggestion: SwiftProtob
     if lhs.score != rhs.score {return false}
     if lhs.reasons != rhs.reasons {return false}
     if lhs._person != rhs._person {return false}
+    if lhs.memberCount != rhs.memberCount {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

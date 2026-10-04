@@ -776,7 +776,8 @@ struct GoStore: GenealogyStore {
                         contribution: r.contribution
                     )
                 },
-                person: sg.hasPerson ? Self.mapPersonHeader(sg.person) : nil
+                person: sg.hasPerson ? Self.mapPersonHeader(sg.person) : nil,
+                memberCount: Int(sg.memberCount)
             )
         }
     }

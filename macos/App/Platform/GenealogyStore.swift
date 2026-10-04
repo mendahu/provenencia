@@ -193,6 +193,8 @@ struct CatalogPromoteTargetSuggestion: Sendable, Equatable, Identifiable {
     var score: Double
     var reasons: [CatalogMatchReason]
     var person: CatalogPersonHeader?
+    /// Accepted members of the handle.
+    var memberCount: Int = 0
 
     var id: String { entity.id }
 }
