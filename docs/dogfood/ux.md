@@ -19,6 +19,15 @@ Copy the stub. Surface + what got in the way is enough. A wanted fix is optional
 
 <!-- add below this line -->
 
+### Evidence graph button hit boxes are wrong
+
+- **Date:** 2026-10-04
+- **Where:** Evidence graph (toolbar, bridge cards)
+- **Annoyance:** Button hit boxes still don't match the buttons. Two cases stand out:
+  - **Toolbar (top left):** Add a place, Add a person, Add an event, Connect. Only the text or icon takes the click. The rest of the button does nothing.
+  - **Bridge cards:** the button that opens the citation for the bridge relationship has a hit box shifted about one button-width to the left. Clicking the button does nothing; clicking the empty space to its left opens the citation.
+- **Wanted:** The whole visible button accepts the click, and the hit box sits exactly on the button.
+
 ### Evidence graph viewport resets after visiting the composer
 
 - **Date:** 2026-10-04
