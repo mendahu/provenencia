@@ -252,6 +252,8 @@ struct EvidenceSubjectCard: View {
     }
 
     let placed: SourceGraphPlacedSubject
+    /// Copy formatted with the graph snapshot (``EvidenceGraphText``).
+    let text: EvidenceCardText
     /// Registry presentation when available (S7-09).
     var presentation: CatalogSubjectTypePresentation?
     /// Current target — click, rotor, and VoiceOver share this look.
@@ -292,7 +294,7 @@ struct EvidenceSubjectCard: View {
         .offset(dragOffset)
         .zIndex(isDragging || isActivated ? 1 : 0)
         .accessibilityElement(children: .contain)
-        .accessibilityLabel(Text(verbatim: Self.accessibilityLabel(for: placed)))
+        .accessibilityLabel(Text(verbatim: text.accessibilityLabel))
         .accessibilityAddTraits((isSelected || isActivated) ? .isSelected : [])
         .accessibilityIdentifier("evidenceGraph.subject.\(placed.id)")
     }

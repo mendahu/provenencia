@@ -78,7 +78,7 @@ struct EvidenceCardLayoutTests {
 
     private func measureSubject(_ p: SourceGraphPlacedSubject) async throws -> (EvidenceCardLayout, CGFloat) {
         try await measure { report in
-            EvidenceSubjectCard(placed: p, isSelected: false, isActivated: false, onLayout: report)
+            EvidenceSubjectCard(placed: p, text: EvidenceCardText(subject: p), isSelected: false, isActivated: false, onLayout: report)
         }
     }
 
@@ -145,7 +145,7 @@ struct EvidenceCardLayoutTests {
         )
         let snapshot = SourceGraphSnapshot(sourceId: "x", bridges: [bridge])
         let (layout, drawn) = try await measure { report in
-            EvidenceBridgeCard(placed: bridge, snapshot: snapshot, isSelected: false, isActivated: false,
+            EvidenceBridgeCard(placed: bridge, text: EvidenceCardText(bridge: bridge, in: snapshot), isSelected: false, isActivated: false,
                                canCite: true, onLayout: report)
         }
         #expect(abs(layout.size.height - drawn) < 0.5)

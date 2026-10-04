@@ -120,6 +120,10 @@ private struct EvidenceGraphContent: View {
         snapshot.bridges
     }
 
+    private var text: EvidenceGraphText {
+        model.displayText(rows: graphHandle.value, types: fieldsHandle.value?.types ?? [])
+    }
+
     private var sheetPresented: Binding<Bool> {
         Binding(
             get: { model.isSheetPresented },
@@ -144,7 +148,7 @@ private struct EvidenceGraphContent: View {
         .accessibilityRotor(L10n.string(L10n.EvidenceGraph.subjectsRotor)) {
             ForEach(subjects) { placed in
                 AccessibilityRotorEntry(
-                    EvidenceSubjectCard.accessibilityLabel(for: placed),
+                    text[subject: placed].accessibilityLabel,
                     id: placed.id
                 ) {
                     model.selectSubject(id: placed.id)
@@ -154,7 +158,7 @@ private struct EvidenceGraphContent: View {
         .accessibilityRotor(L10n.string(L10n.EvidenceGraph.linksRotor)) {
             ForEach(bridges) { placed in
                 AccessibilityRotorEntry(
-                    EvidenceBridgeCard.accessibilityLabel(for: placed, in: snapshot),
+                    text[bridge: placed, in: snapshot].accessibilityLabel,
                     id: placed.id
                 ) {
                     model.selectSubject(id: placed.id)
@@ -531,6 +535,11 @@ private struct EvidenceGraphDocumentBody: View {
         snapshot.bridges
     }
 
+    /// Card copy formatted with the snapshot; card views format nothing.
+    private var text: EvidenceGraphText {
+        model.displayText(rows: graphHandle.value, types: fieldsHandle.value?.types ?? [])
+    }
+
     private var inputMode: EvidenceCanvasInputMode {
         model.inputMode
     }
@@ -728,8 +737,10 @@ private struct EvidenceGraphDocumentBody: View {
     private func cardView(for placed: SourceGraphPlacedSubject) -> some View {
         let layout = EvidenceSubjectCard.topLeadingOffset(gridX: placed.gridX, gridY: placed.gridY)
         let drag = pointer.offsets[placed.id] ?? .zero
+        let cardText = text[subject: placed]
         EvidenceSubjectCard(
             placed: placed,
+            text: cardText,
             presentation: model.presentation(for: placed.kind.rawValue),
             isSelected: model.selectedSubjectID == placed.id,
             isActivated: model.activatedSubjectID == placed.id,
@@ -752,18 +763,14 @@ private struct EvidenceGraphDocumentBody: View {
                 navigation.go(to: location)
             }
         }
-        .accessibilityAction(named: Text(verbatim: EvidenceSubjectCard.footerAccessibilityActionName(for: placed))) {
+        .accessibilityAction(named: Text(verbatim: cardText.footerActionName ?? "")) {
             if placed.membership == nil {
                 model.beginPromote(subjectID: placed.id)
             } else if let location = model.openHandle(subjectID: placed.id) {
                 navigation.go(to: location)
             }
         }
-        .accessibilityAction(named: Text(verbatim: L10n.EvidenceGraph.deleteAccessibility(
-            kind: placed.kind.rawValue,
-            label: placed.subject.label.isEmpty ? placed.subject.ref : placed.subject.label,
-            ref: placed.subject.ref
-        ))) {
+        .accessibilityAction(named: Text(verbatim: cardText.deleteActionName)) {
             Task { await model.beginDelete(subjectID: placed.id) }
         }
         .accessibilityAction(named: Text(L10n.EvidenceGraph.editPropertyAccessibility)) {
@@ -783,9 +790,10 @@ private struct EvidenceGraphDocumentBody: View {
     private func bridgeCardView(for placed: SourceGraphPlacedBridge) -> some View {
         let layout = EvidenceBridgeCard.topLeadingOffset(gridX: placed.gridX, gridY: placed.gridY)
         let drag = pointer.offsets[placed.id] ?? .zero
+        let cardText = text[bridge: placed, in: snapshot]
         EvidenceBridgeCard(
             placed: placed,
-            snapshot: snapshot,
+            text: cardText,
             isSelected: model.selectedSubjectID == placed.id,
             isActivated: model.activatedSubjectID == placed.id,
             dragOffset: drag,
@@ -808,11 +816,7 @@ private struct EvidenceGraphDocumentBody: View {
                 navigation.go(to: location)
             }
         }
-        .accessibilityAction(named: Text(verbatim: L10n.EvidenceGraph.deleteAccessibility(
-            kind: placed.kind.rawValue,
-            label: EvidenceBridgeEdgeSummary.sentence(for: placed, in: snapshot),
-            ref: placed.subject.ref
-        ))) {
+        .accessibilityAction(named: Text(verbatim: cardText.deleteActionName)) {
             Task { await model.beginDelete(subjectID: placed.id) }
         }
         .offset(x: layout.width, y: layout.height)

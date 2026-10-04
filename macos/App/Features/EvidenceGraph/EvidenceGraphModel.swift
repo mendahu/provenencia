@@ -64,7 +64,8 @@ final class EvidenceGraphModel {
         rows: SourceGraphRows,
         types: [CatalogSubjectType],
         rules: [CatalogConnectRule],
-        value: SourceGraphSnapshot
+        value: SourceGraphSnapshot,
+        text: EvidenceGraphText
     )?
     /// Subject pending DeleteImpact confirm or notice.
     let deleteImpact = DeleteImpactFlow()
@@ -205,8 +206,15 @@ final class EvidenceGraphModel {
             types: types,
             rules: rules
         )
-        snapshotMemo = (normalized, types, rules, value)
+        snapshotMemo = (normalized, types, rules, value, EvidenceGraphText(snapshot: value))
         return value
+    }
+
+    /// Card copy for the same snapshot as ``displaySnapshot(rows:types:)``,
+    /// formatted once when that snapshot is built.
+    func displayText(rows: SourceGraphRows?, types: [CatalogSubjectType]) -> EvidenceGraphText {
+        _ = displaySnapshot(rows: rows, types: types)
+        return snapshotMemo?.text ?? EvidenceGraphText(snapshot: displaySnapshot(rows: rows, types: types))
     }
 
     func prepare() async {
