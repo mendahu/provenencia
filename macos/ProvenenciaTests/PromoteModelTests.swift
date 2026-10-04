@@ -117,7 +117,7 @@ struct PromoteModelTests {
         #expect(model.steps.count == 2)
         #expect(model.stepText == L10n.Promote.stepOf(current: 1, total: 2))
         #expect(model.hint == L10n.string(L10n.Promote.hintChoose(.person)))
-        #expect(!model.hasUnsavedChoice)
+        #expect(!model.hasUnsavedWork)
     }
 
     @Test func newIsACompleteChoice() {
@@ -126,7 +126,7 @@ struct PromoteModelTests {
         #expect(model.canAdvance)
         #expect(model.steps.count == 2)
         #expect(model.hint == L10n.string(L10n.Promote.hintNew(.person)))
-        #expect(model.hasUnsavedChoice)
+        #expect(model.hasUnsavedWork)
     }
 
     @Test func existingAddsCompareAndWaitsForAHandle() {
@@ -223,8 +223,9 @@ struct PromoteModelTests {
         #expect(store.recordedCalls.contains("promoteSubject id=sub-1"))
         #expect(store.membershipBySubject["sub-1"]?.entity.ref.hasPrefix("PER-") == true)
         #expect(counts.persons == 1)
-        #expect(model.saved)
-        #expect(!model.hasUnsavedChoice)
+        #expect(model.flow.phase == .finished)
+        #expect(model.flow.savedCount == 1)
+        #expect(!model.hasUnsavedWork)
         #expect(navigation.currentLocation == model.entry.graphLocation)
         #expect(navigation.heldNavigation == nil)
     }
@@ -259,8 +260,10 @@ struct PromoteModelTests {
         model.choose(.new)
         #expect(!(await model.next()))
         #expect(model.saveError?.isEmpty == false)
-        #expect(!model.saved)
+        #expect(model.flow.phase == .editing)
+        #expect(model.flow.savedCount == 0)
         #expect(model.choice == .new)
+        #expect(model.canAdvance)
         #expect(navigation.currentLocation == before)
     }
 
@@ -325,10 +328,36 @@ struct PromoteModelTests {
         #expect(model.subjectStatus(rows: promoted) == .alreadyPromoted)
     }
 
+    @Test func ourOwnSaveDoesNotBounceTheGraphReload() async {
+        let (model, navigation) = makeModel(store: makeStore())
+        model.choose(.new)
+        #expect(await model.next())
+        // The reloaded graph now shows the subject promoted; the flow is
+        // finished, so the status change does nothing further.
+        navigation.go(to: .sectionRoot(.persons))
+        model.subjectStatusChanged(.alreadyPromoted)
+        #expect(navigation.currentLocation == .sectionRoot(.persons))
+    }
+
+    @Test func aNavigationDuringTheWriteWaitsForIt() async {
+        let store = makeStore()
+        let (model, navigation) = makeModel(store: store)
+        model.choose(.new)
+        store.promoteSubjectDelayNanoseconds = 50_000_000
+        let writing = Task { await model.next() }
+        #expect(await waitUntil { model.isSaving })
+        navigation.go(to: .sectionRoot(.persons))
+        #expect(navigation.heldNavigation == .location(.sectionRoot(.persons)))
+        #expect(model.pendingLeave == nil)
+        _ = await writing.value
+        #expect(model.flow.phase == .finished)
+        #expect(navigation.currentLocation == .sectionRoot(.persons))
+    }
+
     @Test func aGoneSubjectReturnsToTheGraphWithoutAsking() {
         let (model, navigation) = makeModel(store: makeStore())
         model.choose(.new)
-        model.returnToGraph()
+        model.subjectStatusChanged(.missing)
         #expect(navigation.heldNavigation == nil)
         #expect(navigation.currentLocation == model.entry.graphLocation)
     }

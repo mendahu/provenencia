@@ -66,37 +66,26 @@ extension WorkspaceLocation {
     }
 }
 
-/// The Promote flow: choose where the subject goes, then file it (S9-D9).
-///
-/// S9-11 has one step. Next files the claim straight away (accepted, no
-/// confidence or argument) and returns to the graph; S9-12 inserts the claim
-/// step before the save and S9-19 the compare step on the join path. The step
-/// row already shows them.
+/// Runs the Promote place. `flow` (`PromoteFlow`) is the single source of
+/// truth for progress, the draft, and what is in flight; this model sends it
+/// events and performs the effects it returns — the write, the refresh after
+/// it, and navigation. It also holds the picker's search results, which are
+/// transient view data rather than flow progress.
 @MainActor
 @Observable
 final class PromoteModel {
-    enum Choice: Equatable, Sendable {
-        case none, new, existing
+    typealias Choice = PromoteFlow.Choice
+    typealias Target = PromoteFlow.Target
+
+    /// The guard's question for the confirm sheet, stable while it is open.
+    struct PendingLeave: Identifiable, Equatable {
+        let navigation: PendingNavigation
+        var id: String { String(describing: navigation) }
     }
 
-    /// An existing handle the subject would join.
-    struct Target: Equatable, Sendable {
-        let entityID: String
-        let ref: String
-        let title: String
-        let memberCount: Int
-    }
-
-    /// Where the subject stands on its graph. Anything but `.promotable` sends
-    /// the place back to the graph.
+    /// Where the current subject stands on its graph.
     enum SubjectStatus: Equatable, Sendable {
         case loading, promotable, missing, alreadyPromoted
-    }
-
-    /// The navigation the leave guard is holding.
-    struct PendingLeave: Identifiable, Equatable {
-        let id = UUID()
-        let navigation: PendingNavigation
     }
 
     let entry: PromoteEntry
@@ -106,15 +95,9 @@ final class PromoteModel {
     let catalogCounts: CatalogCounts?
     weak var navigation: WorkspaceNavigation?
 
-    private(set) var choice: Choice = .none
-    private(set) var target: Target?
+    private(set) var flow: PromoteFlow
     private(set) var searchResults: [CatalogSearchHit] = []
     private(set) var searchFailed = false
-    private(set) var isSaving = false
-    private(set) var saveError: String?
-    /// True once this step is filed: leaving never asks after a save.
-    private(set) var saved = false
-    var pendingLeave: PendingLeave?
 
     /// Typing pause before a search runs. Tests set it to zero.
     var searchDebounce: Duration = .milliseconds(200)
@@ -132,38 +115,45 @@ final class PromoteModel {
         self.store = store
         self.userID = userID
         self.catalogCounts = catalogCounts
+        flow = PromoteFlow(subject: PromoteFlow.Subject(
+            id: entry.subjectID,
+            ref: entry.subjectRef,
+            name: entry.subjectName,
+            kind: entry.kind
+        ))
     }
 
-    var kind: EvidencePrimaryKind { entry.kind }
+    // MARK: Reading the flow
+
+    var subject: PromoteFlow.Subject { flow.subject }
+    var kind: EvidencePrimaryKind { flow.subject.kind }
+    var choice: Choice { flow.draft.choice }
+    var target: Target? { flow.draft.target }
+    var canAdvance: Bool { flow.canAdvance }
+    var isSaving: Bool { flow.isSaving }
+    var saveError: String? { flow.error }
+    var hasUnsavedWork: Bool { flow.hasUnsavedWork }
+    var pendingLeave: PendingLeave? { flow.pendingLeave.map(PendingLeave.init(navigation:)) }
 
     var suggestionsKey: CatalogQueryKey {
-        .promoteTargets(project: session.projectKey, subjectId: entry.subjectID)
+        .promoteTargets(project: session.projectKey, subjectId: flow.subject.id)
     }
 
     var graphKey: CatalogQueryKey {
         .sourceGraph(project: session.projectKey, sourceId: entry.sourceID)
     }
 
-    // MARK: Steps
+    /// The step row: the plan as designed (later steps show before they are
+    /// built), and where the flow is in it.
+    var steps: [LocalizedStringResource] { flow.plan.map(label(for:)) }
+    var currentStepIndex: Int { flow.stepNumber - 1 }
+    var stepText: String { L10n.Promote.stepOf(current: flow.stepNumber, total: flow.plan.count) }
 
-    /// The step row: the join path has a compare step, the mint path doesn't.
-    /// Until Existing is chosen the row shows the mint path.
-    var steps: [LocalizedStringResource] {
-        let choose = L10n.Promote.chooseStep(kind)
-        return choice == .existing
-            ? [choose, L10n.Promote.compareStep, L10n.Promote.claimStep]
-            : [choose, L10n.Promote.claimStep]
-    }
-
-    var stepText: String { L10n.Promote.stepOf(current: 1, total: steps.count) }
-
-    /// Next is live once the choice is complete: New, or Existing with a handle.
-    var canAdvance: Bool {
-        guard !isSaving, !saved else { return false }
-        switch choice {
-        case .new: return true
-        case .existing: return target != nil
-        case .none: return false
+    private func label(for step: PromoteStep) -> LocalizedStringResource {
+        switch step {
+        case .chooseTarget: L10n.Promote.chooseStep(kind)
+        case .compare: L10n.Promote.compareStep
+        case .claim: L10n.Promote.claimStep
         }
     }
 
@@ -176,7 +166,7 @@ final class PromoteModel {
         case .existing:
             guard let target else { return L10n.string(L10n.Promote.hintChoose(kind)) }
             return L10n.Promote.hintExisting(
-                name: entry.subjectName,
+                name: subject.name,
                 ref: target.ref,
                 members: Self.members(target.memberCount)
             )
@@ -189,39 +179,108 @@ final class PromoteModel {
         count == 1 ? L10n.Promote.memberOne(count: count) : L10n.Promote.memberOther(count: count)
     }
 
-    // MARK: Subject
+    var leaveTitle: String { L10n.Promote.leaveTitle(name: subject.name) }
+
+    var leaveMessage: String {
+        switch choice {
+        case .new:
+            return L10n.Promote.leaveMessageNew(kind, subjectRef: subject.ref)
+        case .existing:
+            if let target {
+                return L10n.Promote.leaveMessageExisting(target: target.ref, subjectRef: subject.ref)
+            }
+            return L10n.Promote.leaveMessageUnchosen(subjectRef: subject.ref)
+        case .none:
+            return L10n.Promote.leaveMessageUnchosen(subjectRef: subject.ref)
+        }
+    }
+
+    // MARK: Events
+
+    func choose(_ choice: Choice) { send(.choose(choice)) }
+    func select(_ target: Target) { send(.selectTarget(target)) }
+    func done() { send(.done) }
+    func leave() { send(.leaveConfirmed) }
+    func keepPromoting() { send(.leaveCancelled) }
+
+    /// Next: the following step, or the write. Returns once any write and its
+    /// follow-up have run; true when the flow moved on.
+    @discardableResult
+    func next() async -> Bool {
+        let before = flow
+        await perform(flow.send(.advance))
+        return flow.savedCount > before.savedCount || flow.step != before.step
+    }
+
+    /// Feeds the graph's view of the current subject to the flow.
+    func subjectStatusChanged(_ status: SubjectStatus) {
+        if status == .missing || status == .alreadyPromoted {
+            send(.subjectUnavailable)
+        }
+    }
 
     func subjectStatus(rows: SourceGraphRows?) -> SubjectStatus {
         guard let rows else { return .loading }
-        guard rows.subjects.contains(where: { $0.id == entry.subjectID }) else { return .missing }
-        if !saved, rows.memberships.contains(where: { $0.subjectID == entry.subjectID }) {
-            return .alreadyPromoted
-        }
+        let id = flow.subject.id
+        guard rows.subjects.contains(where: { $0.id == id }) else { return .missing }
+        if rows.memberships.contains(where: { $0.subjectID == id }) { return .alreadyPromoted }
         return .promotable
     }
 
-    /// The subject left the graph or was promoted elsewhere: back to the graph.
-    func returnToGraph() {
-        saved = true
-        navigation?.go(to: entry.graphLocation)
-    }
-
-    // MARK: Choosing
-
-    func choose(_ newChoice: Choice) {
-        guard choice != newChoice else { return }
-        choice = newChoice
-        saveError = nil
-        if newChoice != .existing {
-            target = nil
+    /// Sends an event from the view. Navigation effects run in the same turn
+    /// so the place reacts at once; an event that starts a write runs its
+    /// effects in order on a task.
+    private func send(_ event: PromoteFlow.Event) {
+        let effects = flow.send(event)
+        if effects.contains(where: \.isAsync) {
+            Task { await perform(effects) }
+        } else {
+            effects.forEach(runNavigation)
         }
     }
 
-    func select(_ newTarget: Target) {
-        choice = .existing
-        target = newTarget
-        saveError = nil
+    /// Runs effects in order, awaiting the write and the refresh after it.
+    private func perform(_ effects: [PromoteFlow.Effect]) async {
+        for effect in effects {
+            switch effect {
+            case .save(let save):
+                await write(save)
+            case .refreshAfterSave:
+                session.apply(.promotedSubject(sourceId: entry.sourceID))
+                await catalogCounts?.refreshAll()
+            case .navigateToGraph, .resumeNavigation, .cancelNavigation:
+                runNavigation(effect)
+            }
+        }
     }
+
+    private func runNavigation(_ effect: PromoteFlow.Effect) {
+        switch effect {
+        case .navigateToGraph: navigation?.go(to: entry.graphLocation)
+        case .resumeNavigation: navigation?.resumeHeldNavigation()
+        case .cancelNavigation: navigation?.cancelHeldNavigation()
+        case .save, .refreshAfterSave: break
+        }
+    }
+
+    private func write(_ save: PromoteFlow.Save) async {
+        do {
+            _ = try await store.promoteSubject(
+                projectDir: session.projectKey.projectDir,
+                userID: userID,
+                subjectID: save.subjectID,
+                entityID: save.entityID,
+                confidenceGradeID: save.confidenceGradeID,
+                argument: save.argument
+            )
+        } catch {
+            await perform(flow.send(.saveFailed(message: L10n.Errors.message(for: error))))
+            return
+        }
+        await perform(flow.send(.saveSucceeded))
+    }
+
+    // MARK: Targets
 
     static func target(for suggestion: CatalogPromoteTargetSuggestion) -> Target {
         Target(
@@ -255,8 +314,6 @@ final class PromoteModel {
         return options
     }
 
-    /// The handle the search field shows as chosen, if it came from search or
-    /// is a suggestion.
     var searchSelection: String { target?.entityID ?? "" }
 
     func updateQuery(_ query: String) {
@@ -297,84 +354,24 @@ final class PromoteModel {
 
     /// The ComboBox committed a value.
     func selectSearchResult(_ entityID: String) {
-        guard !entityID.isEmpty else { return }
-        if let hit = searchResults.first(where: { $0.id == entityID }) {
-            select(Target(entityID: hit.id, ref: hit.ref, title: hit.title, memberCount: hit.memberCount))
-        }
-    }
-
-    // MARK: Saving
-
-    /// Files the claim — onto a new handle, or the chosen one — then returns
-    /// to the graph, which redraws with the subject filed. A failure keeps the
-    /// step and shows why.
-    @discardableResult
-    func next() async -> Bool {
-        guard canAdvance else { return false }
-        isSaving = true
-        defer { isSaving = false }
-        do {
-            _ = try await store.promoteSubject(
-                projectDir: session.projectKey.projectDir,
-                userID: userID,
-                subjectID: entry.subjectID,
-                entityID: choice == .existing ? target?.entityID : nil,
-                confidenceGradeID: nil,
-                argument: ""
-            )
-        } catch {
-            saveError = L10n.Errors.message(for: error)
-            return false
-        }
-        saved = true
-        saveError = nil
-        session.apply(.promotedSubject(sourceId: entry.sourceID))
-        await catalogCounts?.refreshAll()
-        navigation?.go(to: entry.graphLocation)
-        return true
-    }
-
-    /// Done leaves the flow; the leave guard asks first if a choice is unsaved.
-    func done() {
-        navigation?.go(to: entry.graphLocation)
-    }
-
-    // MARK: Leave guard
-
-    var hasUnsavedChoice: Bool { !saved && choice != .none }
-
-    var leaveTitle: String { L10n.Promote.leaveTitle(name: entry.subjectName) }
-
-    var leaveMessage: String {
-        switch choice {
-        case .new:
-            return L10n.Promote.leaveMessageNew(kind, subjectRef: entry.subjectRef)
-        case .existing:
-            if let target {
-                return L10n.Promote.leaveMessageExisting(target: target.ref, subjectRef: entry.subjectRef)
-            }
-            return L10n.Promote.leaveMessageUnchosen(subjectRef: entry.subjectRef)
-        case .none:
-            return L10n.Promote.leaveMessageUnchosen(subjectRef: entry.subjectRef)
-        }
-    }
-
-    func leave() {
-        pendingLeave = nil
-        saved = true
-        navigation?.resumeHeldNavigation()
-    }
-
-    func keepPromoting() {
-        pendingLeave = nil
-        navigation?.cancelHeldNavigation()
+        guard !entityID.isEmpty,
+              let hit = searchResults.first(where: { $0.id == entityID })
+        else { return }
+        select(Target(entityID: hit.id, ref: hit.ref, title: hit.title, memberCount: hit.memberCount))
     }
 }
 
 extension PromoteModel: WorkspaceLeaveGuard {
     func shouldHoldNavigation(_ pending: PendingNavigation) -> Bool {
-        guard hasUnsavedChoice else { return false }
-        pendingLeave = PendingLeave(navigation: pending)
-        return true
+        flow.requestLeave(pending) == .hold
+    }
+}
+
+private extension PromoteFlow.Effect {
+    var isAsync: Bool {
+        switch self {
+        case .save, .refreshAfterSave: true
+        case .navigateToGraph, .resumeNavigation, .cancelNavigation: false
+        }
     }
 }

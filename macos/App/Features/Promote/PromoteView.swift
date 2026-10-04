@@ -27,7 +27,12 @@ struct PromoteView: View {
     var body: some View {
         let model = model
         VStack(spacing: 0) {
-            PromoteHeader(entry: model.entry, steps: model.steps)
+            PromoteHeader(
+                subject: model.subject,
+                sourceTitle: model.entry.sourceTitle,
+                steps: model.steps,
+                currentStep: model.currentStepIndex
+            )
             ScrollView {
                 PromoteTargetStep(
                     model: model,
@@ -104,22 +109,21 @@ struct PromoteView: View {
         }
     }
 
+    /// The flow owns the question; dismissing the sheet answers "keep promoting".
     private var leaveBinding: Binding<PromoteModel.PendingLeave?> {
         Binding(
             get: { model.pendingLeave },
             set: { newValue in
-                if newValue == nil {
+                if newValue == nil, model.pendingLeave != nil {
                     model.keepPromoting()
-                } else {
-                    model.pendingLeave = newValue
                 }
             }
         )
     }
 }
 
-/// Sends the place back to the graph when its subject is gone or was
-/// promoted elsewhere.
+/// Tells the flow when the current subject is gone or was promoted elsewhere;
+/// the flow sends the place back to the graph.
 private struct PromoteSubjectWatch: View {
     @Bindable var handle: QueryHandle<SourceGraphRows>
     let model: PromoteModel
@@ -127,9 +131,7 @@ private struct PromoteSubjectWatch: View {
     var body: some View {
         Color.clear
             .onChange(of: model.subjectStatus(rows: handle.value), initial: true) { _, status in
-                if status == .missing || status == .alreadyPromoted {
-                    model.returnToGraph()
-                }
+                model.subjectStatusChanged(status)
             }
     }
 }
@@ -137,31 +139,33 @@ private struct PromoteSubjectWatch: View {
 /// Subject header band: the kind's wash, a tile with its mark, the eyebrow,
 /// name and ref, the Source, and the step row on the right.
 struct PromoteHeader: View {
-    let entry: PromoteEntry
+    let subject: PromoteFlow.Subject
+    let sourceTitle: String?
     let steps: [LocalizedStringResource]
+    let currentStep: Int
 
-    private var style: EvidenceSubjectKindStyle { .forKind(entry.kind) }
+    private var style: EvidenceSubjectKindStyle { .forKind(subject.kind) }
 
     var body: some View {
         HStack(alignment: .center, spacing: PVSpacing.space6) {
-            PromoteKindTile(kind: entry.kind, size: 40, markSize: 20, background: style.chip)
+            PromoteKindTile(kind: subject.kind, size: 40, markSize: 20, background: style.chip)
             VStack(alignment: .leading, spacing: PVSpacing.space2) {
-                Text(L10n.Promote.eyebrow(entry.kind))
+                Text(L10n.Promote.eyebrow(subject.kind))
                     .font(PVFont.body(size: PVTypeScale.micro, weight: PVFontWeight.semibold))
                     .tracking(PVTypeScale.micro * PVTracking.caps)
                     .textCase(.uppercase)
                     .foregroundStyle(style.ink)
                 HStack(alignment: .firstTextBaseline, spacing: 10) {
-                    Text(verbatim: entry.subjectName)
+                    Text(verbatim: subject.name)
                         .font(PVFont.display(size: 24, weight: PVFontWeight.medium))
                         .tracking(24 * PVTracking.display)
                         .foregroundStyle(PVColor.textDisplay)
                         .lineLimit(1)
-                    Text(verbatim: entry.subjectRef)
+                    Text(verbatim: subject.ref)
                         .font(PVFont.mono(size: 12))
                         .foregroundStyle(style.ink)
                 }
-                if let source = entry.sourceTitle {
+                if let source = sourceTitle {
                     Text(verbatim: source)
                         .font(PVFont.body(size: PVTypeScale.caption, italic: true))
                         .foregroundStyle(PVColor.textSecondary)
@@ -170,7 +174,7 @@ struct PromoteHeader: View {
             }
             .accessibilityElement(children: .combine)
             Spacer(minLength: PVSpacing.space6)
-            PromoteStepRow(steps: steps, current: 0, ink: style.ink, line: style.line)
+            PromoteStepRow(steps: steps, current: currentStep, ink: style.ink, line: style.line)
         }
         .padding(.horizontal, PVSpacing.space10)
         .padding(.vertical, 18)

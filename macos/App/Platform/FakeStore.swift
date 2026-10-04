@@ -46,6 +46,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var recordedCalls: [String] = []
     /// Optional delay before each `createCitationWithObservations` (race tests).
     var createCitationDelayNanoseconds: UInt64 = 0
+    /// Holds `promoteSubject` open this long, for tests of in-flight writes.
+    var promoteSubjectDelayNanoseconds: UInt64 = 0
     /// When set, `listSources` throws instead of returning the in-memory list.
     var listSourcesError: Error?
     var listSubjectsCalls = 0
@@ -1222,6 +1224,10 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         confidenceGradeID: String?,
         argument: String
     ) async throws -> CatalogPromoteResult {
+        let delay = withState { promoteSubjectDelayNanoseconds }
+        if delay > 0 {
+            try? await Task.sleep(nanoseconds: delay)
+        }
         return try withState {
             markCatalogSessionHeld(projectDir)
             recordedCalls.append("promoteSubject id=\(subjectID)" + (entityID.map { " entity=\($0)" } ?? ""))

@@ -421,11 +421,12 @@ The graph card's Promote now opens the Promote place: choose a new or existing h
 - **`Features/Promote`:**
   - `PromoteView`: header band, step row and footer.
   - `PromoteTargetStep`: radios, search, Suggested rows and the empty state.
-  - `PromoteModel`:
-    - choice and target, with Next disabled until the choice is complete;
-    - debounced search through catalog search with `kinds: [kind]` (S9-34a);
-    - the save: `promoteSubject`, then `.promotedSubject`, then counts refresh, then back to the graph;
-    - the `WorkspaceLeaveGuard`.
+  - **`PromoteFlow`, the state machine:** a pure value and the single source of truth.
+    - It holds a queue of subjects (the walk), the current step and its plan (the steps the choice implies, as designed), the draft, and a phase: editing, saving (with any navigation held until the write lands), confirming leave, or finished.
+    - `send(event)` returns the effects to run: save, refresh after save, navigate to the graph, resume or cancel navigation.
+    - `requestLeave` answers the leave guard.
+    - Advancing skips steps that aren't built yet (`PromoteStep.built`), so later PRs add a step by building it.
+  - **`PromoteModel`:** sends events and runs effects (the write, `.promotedSubject`, counts refresh, navigation). It also holds the debounced search results, as view data rather than flow state.
 - **Kit:**
   - `PVRadio` and `PVRadioMark`, ported from `PVRadio.jsx`.
   - `PVComboBox` is content-agnostic: rows (`row`) and the empty line (`empty`, given the typed query) are caller-built views. The kit keeps only the generic plain row, and gains **remote results** (`onQueryChange`). Promote's search row (`PromoteSearchRow`) lives in the feature.

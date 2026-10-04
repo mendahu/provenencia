@@ -304,6 +304,8 @@
 		B91100000000000000000008 /* PromoteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B91100000000000000000007 /* PromoteView.swift */; };
 		B9110000000000000000000A /* PromoteTargetStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = B91100000000000000000009 /* PromoteTargetStep.swift */; };
 		B9110000000000000000000C /* PromoteModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9110000000000000000000B /* PromoteModelTests.swift */; };
+		B9110000000000000000000E /* PromoteFlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9110000000000000000000D /* PromoteFlow.swift */; };
+		B91100000000000000000010 /* PromoteFlowTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9110000000000000000000F /* PromoteFlowTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -631,6 +633,8 @@
 		B91100000000000000000007 /* PromoteView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PromoteView.swift; sourceTree = "<group>"; };
 		B91100000000000000000009 /* PromoteTargetStep.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PromoteTargetStep.swift; sourceTree = "<group>"; };
 		B9110000000000000000000B /* PromoteModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PromoteModelTests.swift; sourceTree = "<group>"; };
+		B9110000000000000000000D /* PromoteFlow.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PromoteFlow.swift; sourceTree = "<group>"; };
+		B9110000000000000000000F /* PromoteFlowTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PromoteFlowTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -1169,6 +1173,7 @@
 				A71000000000000000000005 /* PropertyTermDisplayTests.swift */,
 				AA0000000000000000000232 /* PVComboBoxTests.swift */,
 				B9110000000000000000000B /* PromoteModelTests.swift */,
+				B9110000000000000000000F /* PromoteFlowTests.swift */,
 			);
 			path = ProvenenciaTests;
 			sourceTree = "<group>";
@@ -1551,6 +1556,7 @@
 				B91100000000000000000005 /* PromoteModel.swift */,
 				B91100000000000000000007 /* PromoteView.swift */,
 				B91100000000000000000009 /* PromoteTargetStep.swift */,
+				B9110000000000000000000D /* PromoteFlow.swift */,
 			);
 			path = Promote;
 			sourceTree = "<group>";
@@ -1906,6 +1912,7 @@
 				B91100000000000000000006 /* PromoteModel.swift in Sources */,
 				B91100000000000000000008 /* PromoteView.swift in Sources */,
 				B9110000000000000000000A /* PromoteTargetStep.swift in Sources */,
+				B9110000000000000000000E /* PromoteFlow.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1983,6 +1990,7 @@
 				A80600000000000000000006 /* EvidenceCitedPropertyMarksTests.swift in Sources */,
 				A71000000000000000000006 /* PropertyTermDisplayTests.swift in Sources */,
 				B9110000000000000000000C /* PromoteModelTests.swift in Sources */,
+				B91100000000000000000010 /* PromoteFlowTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

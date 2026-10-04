@@ -16,7 +16,7 @@ struct PromoteTargetStep: View {
             VStack(alignment: .leading, spacing: 14) {
                 PVRadio(
                     verbatim: L10n.string(L10n.Promote.newOption(kind)),
-                    description: L10n.Promote.newDescription(kind, name: model.entry.subjectName),
+                    description: L10n.Promote.newDescription(kind, name: model.subject.name),
                     isSelected: model.choice == .new
                 ) {
                     model.choose(.new)
@@ -32,7 +32,7 @@ struct PromoteTargetStep: View {
                 .accessibilityIdentifier("promote.choice.existing")
             }
             .accessibilityElement(children: .contain)
-            .accessibilityLabel(Text(verbatim: L10n.Promote.choiceLabel(name: model.entry.subjectName)))
+            .accessibilityLabel(Text(verbatim: L10n.Promote.choiceLabel(name: model.subject.name)))
 
             if model.choice == .existing {
                 VStack(alignment: .leading, spacing: 18) {
@@ -118,7 +118,7 @@ private struct PromoteSuggestions: View {
                 if rows.isEmpty {
                     PVEmptyState(
                         icon: .userSearch,
-                        verbatimTitle: L10n.Promote.noSuggestionsTitle(model.kind, name: model.entry.subjectName),
+                        verbatimTitle: L10n.Promote.noSuggestionsTitle(model.kind, name: model.subject.name),
                         message: L10n.string(L10n.Promote.noSuggestionsMessage(model.kind)),
                         compact: true
                     )

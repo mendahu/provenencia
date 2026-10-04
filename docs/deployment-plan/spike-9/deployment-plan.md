@@ -644,9 +644,10 @@ Researcher's decision while revising **S9-D1**: two configuration views get plai
 #### S9-11 — Promote shell + choose target
 
 **Done.** See [`completed.md`](completed.md#s9-11--promote-shell--choose-target). Brief archived: [`design/archive/S9-D9-promote-target.md`](design/archive/S9-D9-promote-target.md). Promote is a workspace place (`SourceSurface.promote`, `PromoteView` / `PromoteModel` in `Features/Promote/`).
-- **S9-12:** insert the claim step before the save in `PromoteModel.next()`. Grades come from `listClaimConfidenceGrades`; pass `confidenceGradeID` and `argument`. Restore the board's footer hints ("A new Person goes straight to its claim fields").
-- **S9-19:** the join path gets Compare between choosing and claiming. Restore the board's hint ("James Robins will be compared with the 2 members of PER-…"). The step row already shows Compare.
-- **S9-29 / S9-30:** the walk. Add a "Related to {ref}" group above Suggested (frame 06), the "N saved" footer badge, and the walk sentence in the leave guard; the next subject's header replaces this one in the same place.
+- **The flow is a state machine:** `PromoteFlow` (`Features/Promote/PromoteFlow.swift`) is the single source of truth for steps, the draft, writes in flight, the leave guard and the walk. `PromoteModel` sends it events and runs the effects it returns. A new step is a case on `PromoteStep`, its screen, and its draft fields; it isn't new plumbing.
+- **S9-12:** add `.claim` to `PromoteStep.built`, its screen, and read `confidenceGradeID` / `argument` from `PromoteFlow.Draft` (already sent in the save). Grades come from `listClaimConfidenceGrades`. Restore the board's footer hints ("A new Person goes straight to its claim fields").
+- **S9-19:** add `.compare` to `PromoteStep.built` and its screen; confirmed pairs go on the draft. Restore the board's hint ("James Robins will be compared with the 2 members of PER-…").
+- **S9-29 / S9-30:** the walk is `PromoteFlow.enqueue` (a queue of subjects; after each save the flow moves to the next subject and `savedCount` counts them). Add the "Related to {ref}" group (frame 06), the "N saved" badge and the walk sentence in the leave guard.
 - **S9-32:** life years and places in the candidate rows (`PromoteCandidateRow`) and the search rows (`PromoteSearchRow`), both in `Features/Promote`.
 
 | | |
