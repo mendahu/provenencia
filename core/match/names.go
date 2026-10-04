@@ -1,6 +1,8 @@
 package match
 
 import (
+	"math"
+	"sort"
 	"strings"
 
 	"github.com/mendahu/provenencia/core/database/namevalues"
@@ -61,7 +63,8 @@ func splitWords(s string) []string {
 //   - Surname and given name are scored separately and blended by
 //     surnameShare (default 0.6 surname, 0.4 given). A role only one side
 //     has counts as half credit: "Robins" alone resembles "James Robins"
-//     but less than "James Robins" does.
+//     but less than "James Robins" does. A role neither has is left out,
+//     so "James" against "James" is 1.
 //   - Given names: the first given name (or a nickname, either side) counts
 //     most; the rest, initials included, refine it. "J." ~ "James" is half
 //     a match; "James K." ~ "James" is close.
@@ -76,23 +79,48 @@ func (c NameComparer) compareStructured(a, b *namevalues.Value, floor float64) (
 		return 0, false
 	}
 	surnameShare := orDefault(c.SurnameShare, defaultSurnameShare)
-
-	surname, surnameKnown := unknownRoleCredit, false
-	if len(ra.surnames) > 0 && len(rb.surnames) > 0 {
-		surname, surnameKnown = wordDice(ra.surnames, rb.surnames, floor, false), true
+	surname := roleScore(ra.surnames, rb.surnames)
+	given := roleScore(ra.given, rb.given)
+	if surname.both {
+		surname.sim = wordDice(ra.surnames, rb.surnames, floor, false)
 	}
-	given := unknownRoleCredit
-	if len(ra.given) > 0 && len(rb.given) > 0 {
-		given = givenSimilarity(ra, rb, floor)
-		if surnameKnown && surname == 0 {
-			given *= orDefault(c.GivenOnlyFactor, defaultGivenOnlyFactor)
+	if given.both {
+		given.sim = givenSimilarity(ra, rb, floor)
+		if surname.both && surname.sim == 0 {
+			given.sim *= orDefault(c.GivenOnlyFactor, defaultGivenOnlyFactor)
 		}
 	}
-	sim := surnameShare*surname + (1-surnameShare)*given
+	// A role neither name has is left out and the other takes its share.
+	var sim float64
+	switch {
+	case surname.neither:
+		sim = given.sim
+	case given.neither:
+		sim = surname.sim
+	default:
+		sim = surnameShare*surname.sim + (1-surnameShare)*given.sim
+	}
 	if len(ra.suffixes) > 0 && len(rb.suffixes) > 0 && !sharesAny(ra.suffixes, rb.suffixes) {
 		sim *= orDefault(c.SuffixConflict, defaultSuffixConflict)
 	}
 	return sim, true
+}
+
+// role is one role's comparison: both names have it (sim to be computed),
+// only one does (half credit), or neither (left out of the blend).
+type role struct {
+	sim           float64
+	both, neither bool
+}
+
+func roleScore(a, b []string) role {
+	switch {
+	case len(a) > 0 && len(b) > 0:
+		return role{both: true}
+	case len(a) == 0 && len(b) == 0:
+		return role{neither: true}
+	}
+	return role{sim: unknownRoleCredit}
 }
 
 // givenSimilarity weighs the first given name (or any nickname as an
@@ -110,29 +138,80 @@ func givenSimilarity(a, b nameRoles, floor float64) float64 {
 	return firstGivenShare*first + (1-firstGivenShare)*wordDice(a.given, b.given, floor, true)
 }
 
-// wordDice is the Dice overlap of two word lists over best pairings.
+// wordDice is the Dice overlap of two word lists under their best one-to-one
+// pairing: 2 × (sum of paired word similarities) / (total words). The
+// pairing is the exact maximum, so the result is symmetric.
 func wordDice(wa, wb []string, floor float64, initials bool) float64 {
 	if len(wa) == 0 || len(wb) == 0 {
 		return 0
 	}
-	used := make([]bool, len(wb))
-	var shared float64
-	for _, x := range wa {
-		bestJ, bestS := -1, 0.0
+	return 2 * bestPairing(wa, wb, floor, initials) / float64(len(wa)+len(wb))
+}
+
+// maxPairedWords bounds the exact search (2^n states over the shorter list);
+// longer lists pair greedily by best score first. Names never get close.
+const maxPairedWords = 12
+
+// bestPairing is the largest total similarity over one-to-one word pairings.
+func bestPairing(wa, wb []string, floor float64, initials bool) float64 {
+	if len(wa) < len(wb) {
+		wa, wb = wb, wa
+	}
+	score := make([][]float64, len(wa))
+	for i, x := range wa {
+		score[i] = make([]float64, len(wb))
 		for j, y := range wb {
-			if used[j] {
-				continue
-			}
-			if s := wordSimilarity(x, y, floor, initials); s > bestS {
-				bestJ, bestS = j, s
-			}
-		}
-		if bestJ >= 0 {
-			used[bestJ] = true
-			shared += bestS
+			score[i][j] = wordSimilarity(x, y, floor, initials)
 		}
 	}
-	return 2 * shared / float64(len(wa)+len(wb))
+	if len(wb) > maxPairedWords {
+		return greedyPairing(score)
+	}
+	// best[mask] = best total with the shorter list's words in mask used.
+	best := make([]float64, 1<<len(wb))
+	for i := range wa {
+		next := append([]float64(nil), best...)
+		for mask, v := range best {
+			for j := range wb {
+				if mask&(1<<j) == 0 && score[i][j] > 0 {
+					if t := v + score[i][j]; t > next[mask|1<<j] {
+						next[mask|1<<j] = t
+					}
+				}
+			}
+		}
+		best = next
+	}
+	var top float64
+	for _, v := range best {
+		top = math.Max(top, v)
+	}
+	return top
+}
+
+func greedyPairing(score [][]float64) float64 {
+	type pair struct {
+		i, j int
+		s    float64
+	}
+	var pairs []pair
+	for i := range score {
+		for j, s := range score[i] {
+			if s > 0 {
+				pairs = append(pairs, pair{i, j, s})
+			}
+		}
+	}
+	sort.Slice(pairs, func(a, b int) bool { return pairs[a].s > pairs[b].s })
+	usedI, usedJ := map[int]bool{}, map[int]bool{}
+	var total float64
+	for _, p := range pairs {
+		if !usedI[p.i] && !usedJ[p.j] {
+			usedI[p.i], usedJ[p.j] = true, true
+			total += p.s
+		}
+	}
+	return total
 }
 
 func sharesAny(a, b []string) bool {

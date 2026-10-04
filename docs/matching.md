@@ -54,9 +54,11 @@ A candidate is returned when its total reaches `MinScore`. Results are sorted by
 | Given | `given`, `initial`, plus `nick` as an alternative first name | The first given name (or a nickname, on either side) counts 70%; the whole given set, initials included, counts 30%. |
 | Suffix | `suffix` | Both present and different (Jr. vs Sr.) multiplies the score by `SuffixConflict` (0.3). |
 
-- **Blending:** the surname is `SurnameShare` (0.6) of the score and the given name the rest. A role only one side has gets half credit.
+- **Blending:** the surname is `SurnameShare` (0.6) of the score and the given name the rest. A role only one side has gets half credit. A role neither side has is left out, so "James" vs "James" scores 1.
 - **Surnames that share nothing:** the given-name match counts at `GivenOnlyFactor` (0.5). A surname can change at marriage, but a shared "James" alone is weak.
 - **Words** match when equal (1), as an initial and the word it begins (0.5), or as a near spelling at or above `FuzzyFloor` (0.8, edit-distance ratio).
+- **Initials** are lone cased letters ("J"). A lone character in an uncased script (蒋, 王) is a whole word, so single-character names match only themselves.
+- **Pairing:** word lists are paired by the exact best one-to-one pairing, so scores are symmetric.
 - **Titles and untyped parts** (`prefix`, `undetermined`, no type) carry no role.
 - **When it falls back to `form`:** a name with no surname or given part on either side.
 
@@ -71,8 +73,23 @@ Worked examples, all scored by parts:
 | James Robins Jr. vs James Robins Sr. | 0.3 |
 | James Smith vs James Robins | 0.2 |
 
+Tests: [`core/match/names_test.go`](../core/match/names_test.go) has three layers:
+- **Exact scores per rule:** identity and normalization, surname, given, a surname conflict, suffix, role-less parts, the form fallback, and the tuning knobs.
+- **Ladders:** which name must outrank which, so they hold when weights are retuned.
+- **Generated permutations from fixed seeds**, checked for:
+  - symmetry;
+  - a score between 0 and 1;
+  - every name matching itself at 1;
+  - the form not mattering once both names have parts;
+  - the order of parts across roles not mattering;
+  - a suffix conflict never raising a score;
+  - titles and untyped parts never moving a score.
+
+When a seed finds a bug, shrink it into an exact-score case.
+
 Not yet handled:
 - Nickname equivalence (Jim ↔ James) and phonetic matching.
+- Accent folding: "José" vs "Jose" is not a match. Normalization keeps diacritics, and the two words are too short for the near-spelling floor.
 - Patronymics, and name changes as their own signals.
 - Culture-specific roles from name format profiles.
 

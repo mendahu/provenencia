@@ -2,6 +2,7 @@ package match
 
 import (
 	"strings"
+	"unicode"
 
 	"github.com/mendahu/provenencia/core/database/properties"
 )
@@ -205,17 +206,15 @@ func compareForms(a, b string, partial, fuzzyFloor float64, initials bool) (floa
 }
 
 // wordSimilarity: 1 for the same word, 0.5 for an initial and a word it
-// begins, the edit-distance ratio for spelling variants at or above floor,
-// else 0. A lone letter matches only as an initial.
+// begins (when initials count), the edit-distance ratio for spelling
+// variants at or above floor, else 0. An initial is a lone cased letter
+// ("J"); a lone character in an uncased script (蒋, 王) is a whole word.
 func wordSimilarity(x, y string, floor float64, initials bool) float64 {
 	if x == y {
-		if len([]rune(x)) == 1 && !initials {
-			return 0
-		}
 		return 1
 	}
 	rx, ry := []rune(x), []rune(y)
-	if len(rx) == 1 || len(ry) == 1 {
+	if isInitial(rx) || isInitial(ry) {
 		if initials && rx[0] == ry[0] {
 			return 0.5
 		}
@@ -233,6 +232,10 @@ func wordSimilarity(x, y string, floor float64, initials bool) float64 {
 		return 0
 	}
 	return ratio
+}
+
+func isInitial(r []rune) bool {
+	return len(r) == 1 && unicode.ToUpper(r[0]) != unicode.ToLower(r[0])
 }
 
 func levenshtein(a, b []rune) int {

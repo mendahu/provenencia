@@ -2,7 +2,6 @@ package match
 
 import (
 	"fmt"
-	"strings"
 	"math"
 	"testing"
 
@@ -17,17 +16,6 @@ func integer(n int64) Value  { return Value{Integer: n, HasInteger: true} }
 func ip(n int) *int          { return &n }
 func approx(near float64) func(float64) bool {
 	return func(got float64) bool { return math.Abs(got-near) < 1e-9 }
-}
-
-// parts builds a NameValue from "type:value" pairs; its form is deliberately
-// unhelpful so structured comparison has to carry the test.
-func parts(pairs ...string) Value {
-	n := &namevalues.Value{Form: "(as written)"}
-	for i, p := range pairs {
-		typ, val, _ := strings.Cut(p, ":")
-		n.Parts = append(n.Parts, namevalues.Part{Idx: i, Type: typ, Value: val})
-	}
-	return Value{Name: n}
 }
 
 func date(y int, m, d *int) Value {
@@ -52,30 +40,11 @@ func TestComparers(t *testing.T) {
 		{"name: custom partial", NameComparer{Partial: 0.5}, name("Mary Robins"), name("James Robins"), 0.25, true},
 		{"name: missing", NameComparer{}, name("James"), Value{}, 0, false},
 
-		{"parts: same given and surname, form ignored", NameComparer{}, parts("given:James", "surname:Robins"), parts("surname:ROBINS", "given:james"), 1, true},
-		{"parts: same surname, other given", NameComparer{}, parts("given:Mary", "surname:Robins"), parts("given:James", "surname:Robins"), 0.6, true},
-		{"parts: same given, other surname", NameComparer{}, parts("given:James", "surname:Smith"), parts("given:James", "surname:Robins"), 0.4 * 0.5, true},
-		{"parts: surname only is half credit for given", NameComparer{}, parts("surname:Robins"), parts("given:James", "surname:Robins"), 0.6 + 0.4*0.5, true},
-		{"parts: initial for given", NameComparer{}, parts("initial:J.", "surname:Robins"), parts("given:James", "surname:Robins"), 0.6 + 0.4*0.5, true},
-		{"parts: extra middle initial", NameComparer{}, parts("given:James", "initial:K.", "surname:Robins"), parts("given:James", "surname:Robins"), 0.6 + 0.4*(0.7+0.3*2.0/3), true},
-		{"parts: nickname stands in for the first given", NameComparer{}, parts("given:James", "nick:Jim", "surname:Robins"), parts("given:Jim", "surname:Robins"), 0.6 + 0.4*0.7, true},
-		{"parts: surname spelling variant", NameComparer{}, parts("given:James", "surname:Robbins"), parts("given:James", "surname:Robins"), 0.6*6.0/7 + 0.4, true},
-		{"parts: different suffixes", NameComparer{}, parts("given:James", "surname:Robins", "suffix:Jr."), parts("given:James", "surname:Robins", "suffix:Sr"), 0.3, true},
-		{"parts: same suffix", NameComparer{}, parts("given:James", "surname:Robins", "suffix:Jr."), parts("given:James", "surname:Robins", "suffix:Jr"), 1, true},
-		{"parts: surname prefix not compared", NameComparer{}, parts("surname_prefix:van", "surname:Gogh"), parts("surname:Gogh"), 0.6 + 0.4*0.5, true},
-		{"parts: dual surname", NameComparer{}, parts("surname:Silva Costa"), parts("surname:Costa"), 0.6*2.0/3 + 0.4*0.5, true},
-		{"parts: custom surname share", NameComparer{SurnameShare: 0.5}, parts("given:Mary", "surname:Robins"), parts("given:James", "surname:Robins"), 0.5, true},
-		{"parts: one side form-only falls back to form", NameComparer{}, Value{Name: &namevalues.Value{Form: "James Robins", Parts: []namevalues.Part{
-			{Idx: 0, Type: "given", Value: "James"}, {Idx: 1, Type: "surname", Value: "Robins"},
-		}}}, name("james robins"), 1, true},
-		{"parts: untyped parts fall back to form", NameComparer{}, Value{Name: &namevalues.Value{Form: "Mary Robins", Parts: []namevalues.Part{
-			{Idx: 0, Value: "Mary"}, {Idx: 1, Type: "undetermined", Value: "Robins"},
-		}}}, name("James Robins"), 0.4, true},
-		{"name: punctuation only", NameComparer{}, name("—"), name("James"), 0, false},
-
 		{"text: same", TextComparer{}, text("York"), text("york"), 1, true},
 		{"text: contained", TextComparer{}, text("York, Upper Canada"), text("York"), 0.35, true},
-		{"text: lone letters are not initials", TextComparer{}, text("A"), text("A Street"), 0, true},
+		{"text: lone letters are not initials", TextComparer{}, text("A"), text("Abbey Street"), 0, true},
+		{"text: long text pairs greedily", TextComparer{}, text("a1 b2 c3 d4 e5 f6 g7 h8 i9 j10 k11 l12 m13 n14"), text("n14 m13 l12 k11 j10 i9 h8 g7 f6 e5 d4 c3 b2 a1"), 0.7, true},
+		{"text: a lone letter matches itself", TextComparer{}, text("Lot A"), text("Lot A"), 1, true},
 		{"text: different", TextComparer{}, text("York"), text("Toronto"), 0, true},
 
 		{"term: same", TermComparer{}, term("male"), term("male"), 1, true},
