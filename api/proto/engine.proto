@@ -988,17 +988,35 @@ message ListPersonHeadersResponse {
 }
 
 // ListPromoteTargetSuggestions returns existing handles a Subject could join,
-// best first: same type, unmerged, not its own handle, resembling it. Only the
-// header list for the Subject's kind is filled (Persons for now; Events and
-// Places arrive with their composers). limit 0 = the engine default.
+// best first: same type, unmerged, not its own handle, scored by the type's
+// match profile (core/match). limit 0 = the engine default.
 message ListPromoteTargetSuggestionsRequest {
   string project_dir = 1;
   string subject_id = 2;
   int32 limit = 3;
 }
 
+// MatchReason is one Property's part in a match score: its best similarity
+// (0…1) and the points it added (negative for a clear disagreement).
+message MatchReason {
+  string property_key = 1;
+  string property_origin = 2;
+  double similarity = 3;
+  double contribution = 4;
+}
+
+// PromoteTargetSuggestion is one handle the Subject could join. person is
+// the row header for Person handles; Events and Places carry the handle
+// alone until their header composers land.
+message PromoteTargetSuggestion {
+  CanonicalEntity entity = 1;
+  double score = 2;
+  repeated MatchReason reasons = 3;
+  PersonHeader person = 4;
+}
+
 message ListPromoteTargetSuggestionsResponse {
-  repeated PersonHeader persons = 1;
+  repeated PromoteTargetSuggestion suggestions = 1;
 }
 
 message ListSubjectsRequest {

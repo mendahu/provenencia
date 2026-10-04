@@ -174,6 +174,27 @@ struct CatalogIdentityClaim: Sendable, Equatable, Identifiable {
     var argument: String = ""
 }
 
+/// One Property's part in a match score (core/match): its best similarity,
+/// 0…1, and the points it added (negative for a clear disagreement).
+struct CatalogMatchReason: Sendable, Equatable {
+    var propertyKey: String
+    var propertyOrigin: String
+    var similarity: Double
+    var contribution: Double
+}
+
+/// One existing handle a Subject could join in Promote, best first. `person`
+/// is the row header for Person handles; Events and Places carry the handle
+/// alone until their header composers land.
+struct CatalogPromoteTargetSuggestion: Sendable, Equatable, Identifiable {
+    var entity: CatalogCanonicalEntity
+    var score: Double
+    var reasons: [CatalogMatchReason]
+    var person: CatalogPersonHeader?
+
+    var id: String { entity.id }
+}
+
 /// One claim confidence grade (Low / Moderate / High): the scale on Identity
 /// Claims. Not Source credibility, though the shape matches.
 struct CatalogClaimConfidenceGrade: Sendable, Equatable, Identifiable {
@@ -762,8 +783,12 @@ protocol GenealogyStore: Sendable {
         confidenceGradeID: String?,
         argument: String
     ) async throws -> CatalogPromoteResult
-    /// Existing handles the Subject could join, best first (same type, resembling it). Persons only for now.
-    func listPromoteTargetSuggestions(projectDir: String, subjectID: String, limit: Int) async throws -> [CatalogPersonHeader]
+    /// Existing handles the Subject could join, best first: same type, scored by the type's match profile.
+    func listPromoteTargetSuggestions(
+        projectDir: String,
+        subjectID: String,
+        limit: Int
+    ) async throws -> [CatalogPromoteTargetSuggestion]
     /// The claim confidence scale, in order.
     func listClaimConfidenceGrades(projectDir: String) async throws -> [CatalogClaimConfidenceGrade]
     /// Accepted handle of every promoted Subject on one Source's Evidence graph.

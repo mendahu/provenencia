@@ -3229,9 +3229,8 @@ public nonisolated struct Provenencia_Engine_V1_ListPersonHeadersResponse: Senda
 }
 
 /// ListPromoteTargetSuggestions returns existing handles a Subject could join,
-/// best first: same type, unmerged, not its own handle, resembling it. Only the
-/// header list for the Subject's kind is filled (Persons for now; Events and
-/// Places arrive with their composers). limit 0 = the engine default.
+/// best first: same type, unmerged, not its own handle, scored by the type's
+/// match profile (core/match). limit 0 = the engine default.
 public nonisolated struct Provenencia_Engine_V1_ListPromoteTargetSuggestionsRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -3248,12 +3247,70 @@ public nonisolated struct Provenencia_Engine_V1_ListPromoteTargetSuggestionsRequ
   public init() {}
 }
 
+/// MatchReason is one Property's part in a match score: its best similarity
+/// (0…1) and the points it added (negative for a clear disagreement).
+public nonisolated struct Provenencia_Engine_V1_MatchReason: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var propertyKey: String = String()
+
+  public var propertyOrigin: String = String()
+
+  public var similarity: Double = 0
+
+  public var contribution: Double = 0
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+/// PromoteTargetSuggestion is one handle the Subject could join. person is
+/// the row header for Person handles; Events and Places carry the handle
+/// alone until their header composers land.
+public nonisolated struct Provenencia_Engine_V1_PromoteTargetSuggestion: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var entity: Provenencia_Engine_V1_CanonicalEntity {
+    get {_entity ?? Provenencia_Engine_V1_CanonicalEntity()}
+    set {_entity = newValue}
+  }
+  /// Returns true if `entity` has been explicitly set.
+  public var hasEntity: Bool {self._entity != nil}
+  /// Clears the value of `entity`. Subsequent reads from it will return its default value.
+  public mutating func clearEntity() {self._entity = nil}
+
+  public var score: Double = 0
+
+  public var reasons: [Provenencia_Engine_V1_MatchReason] = []
+
+  public var person: Provenencia_Engine_V1_PersonHeader {
+    get {_person ?? Provenencia_Engine_V1_PersonHeader()}
+    set {_person = newValue}
+  }
+  /// Returns true if `person` has been explicitly set.
+  public var hasPerson: Bool {self._person != nil}
+  /// Clears the value of `person`. Subsequent reads from it will return its default value.
+  public mutating func clearPerson() {self._person = nil}
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+
+  fileprivate var _entity: Provenencia_Engine_V1_CanonicalEntity? = nil
+  fileprivate var _person: Provenencia_Engine_V1_PersonHeader? = nil
+}
+
 public nonisolated struct Provenencia_Engine_V1_ListPromoteTargetSuggestionsResponse: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var persons: [Provenencia_Engine_V1_PersonHeader] = []
+  public var suggestions: [Provenencia_Engine_V1_PromoteTargetSuggestion] = []
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -10474,9 +10531,9 @@ nonisolated extension Provenencia_Engine_V1_ListPromoteTargetSuggestionsRequest:
   }
 }
 
-nonisolated extension Provenencia_Engine_V1_ListPromoteTargetSuggestionsResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".ListPromoteTargetSuggestionsResponse"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}persons\0")
+nonisolated extension Provenencia_Engine_V1_MatchReason: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".MatchReason"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}property_key\0\u{3}property_origin\0\u{1}similarity\0\u{1}contribution\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -10484,21 +10541,115 @@ nonisolated extension Provenencia_Engine_V1_ListPromoteTargetSuggestionsResponse
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeRepeatedMessageField(value: &self.persons) }()
+      case 1: try { try decoder.decodeSingularStringField(value: &self.propertyKey) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.propertyOrigin) }()
+      case 3: try { try decoder.decodeSingularDoubleField(value: &self.similarity) }()
+      case 4: try { try decoder.decodeSingularDoubleField(value: &self.contribution) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.persons.isEmpty {
-      try visitor.visitRepeatedMessageField(value: self.persons, fieldNumber: 1)
+    if !self.propertyKey.isEmpty {
+      try visitor.visitSingularStringField(value: self.propertyKey, fieldNumber: 1)
+    }
+    if !self.propertyOrigin.isEmpty {
+      try visitor.visitSingularStringField(value: self.propertyOrigin, fieldNumber: 2)
+    }
+    if self.similarity.bitPattern != 0 {
+      try visitor.visitSingularDoubleField(value: self.similarity, fieldNumber: 3)
+    }
+    if self.contribution.bitPattern != 0 {
+      try visitor.visitSingularDoubleField(value: self.contribution, fieldNumber: 4)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Provenencia_Engine_V1_MatchReason, rhs: Provenencia_Engine_V1_MatchReason) -> Bool {
+    if lhs.propertyKey != rhs.propertyKey {return false}
+    if lhs.propertyOrigin != rhs.propertyOrigin {return false}
+    if lhs.similarity != rhs.similarity {return false}
+    if lhs.contribution != rhs.contribution {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Provenencia_Engine_V1_PromoteTargetSuggestion: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".PromoteTargetSuggestion"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}entity\0\u{1}score\0\u{1}reasons\0\u{1}person\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularMessageField(value: &self._entity) }()
+      case 2: try { try decoder.decodeSingularDoubleField(value: &self.score) }()
+      case 3: try { try decoder.decodeRepeatedMessageField(value: &self.reasons) }()
+      case 4: try { try decoder.decodeSingularMessageField(value: &self._person) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    try { if let v = self._entity {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
+    } }()
+    if self.score.bitPattern != 0 {
+      try visitor.visitSingularDoubleField(value: self.score, fieldNumber: 2)
+    }
+    if !self.reasons.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.reasons, fieldNumber: 3)
+    }
+    try { if let v = self._person {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
+    } }()
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Provenencia_Engine_V1_PromoteTargetSuggestion, rhs: Provenencia_Engine_V1_PromoteTargetSuggestion) -> Bool {
+    if lhs._entity != rhs._entity {return false}
+    if lhs.score != rhs.score {return false}
+    if lhs.reasons != rhs.reasons {return false}
+    if lhs._person != rhs._person {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Provenencia_Engine_V1_ListPromoteTargetSuggestionsResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".ListPromoteTargetSuggestionsResponse"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}suggestions\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeRepeatedMessageField(value: &self.suggestions) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.suggestions.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.suggestions, fieldNumber: 1)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Provenencia_Engine_V1_ListPromoteTargetSuggestionsResponse, rhs: Provenencia_Engine_V1_ListPromoteTargetSuggestionsResponse) -> Bool {
-    if lhs.persons != rhs.persons {return false}
+    if lhs.suggestions != rhs.suggestions {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

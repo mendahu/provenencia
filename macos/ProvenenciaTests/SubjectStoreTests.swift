@@ -148,7 +148,7 @@ struct SubjectStoreTests {
         #expect(grades.map(\.key) == ["low_confidence", "moderate", "high_confidence"])
     }
 
-    @Test func promoteTargetSuggestionsRankExactThenSharedWord() async throws {
+    @Test func promoteTargetSuggestionsScoreExactThenSharedWord() async throws {
         let store = storeWithPersonType()
         var subjects: [String: String] = [:]
         var observations: [CatalogObservation] = []
@@ -174,6 +174,9 @@ struct SubjectStoreTests {
         let me = try #require(subjects["me"])
         let got = try await store.listPromoteTargetSuggestions(projectDir: projectDir, subjectID: me, limit: 0)
         #expect(got.map(\.entity.ref) == [refs["exact"], refs["shared"]])
+        #expect(got.map(\.score) == [10, 4])
+        #expect(got[0].person?.name?.form == "James Robins")
+        #expect(got[0].reasons.map(\.propertyKey) == ["name"])
         let one = try await store.listPromoteTargetSuggestions(projectDir: projectDir, subjectID: me, limit: 1)
         #expect(one.map(\.entity.ref) == [refs["exact"]])
     }

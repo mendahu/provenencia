@@ -1221,9 +1221,13 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         }
     }
 
-    /// Mirrors the Go tiers loosely: Persons whose resolved name equals one of the
-    /// Subject's names (case-folded) first, then those sharing a word of two or more letters.
-    func listPromoteTargetSuggestions(projectDir: String, subjectID: String, limit: Int) async throws -> [CatalogPersonHeader] {
+    /// A stand-in for core/match's person profile, close enough for UI tests: the
+    /// same case-folded name scores 10; a shared word of two or more letters scores 4.
+    func listPromoteTargetSuggestions(
+        projectDir: String,
+        subjectID: String,
+        limit: Int
+    ) async throws -> [CatalogPromoteTargetSuggestion] {
         // A read: no `recordedCalls`.
         return withState {
             markCatalogSessionHeld(projectDir)
@@ -1233,16 +1237,28 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 .map { Self.foldName($0.nameForm) }
             guard !names.isEmpty else { return [] }
             let words = Set(names.flatMap(Self.nameWords))
-            let ranked = personHeaders().compactMap { header -> (tier: Int, header: CatalogPersonHeader)? in
+            let scored = personHeaders().compactMap { header -> CatalogPromoteTargetSuggestion? in
                 guard header.entity.id != own, let name = header.name.map({ Self.foldName($0.form) }) else { return nil }
-                if names.contains(name) { return (0, header) }
-                if !words.isDisjoint(with: Self.nameWords(name)) { return (1, header) }
-                return nil
+                let similarity: Double
+                if names.contains(name) {
+                    similarity = 1
+                } else if !words.isDisjoint(with: Self.nameWords(name)) {
+                    similarity = 0.4
+                } else {
+                    return nil
+                }
+                let reason = CatalogMatchReason(
+                    propertyKey: "name", propertyOrigin: "provenencia",
+                    similarity: similarity, contribution: 10 * similarity
+                )
+                return CatalogPromoteTargetSuggestion(
+                    entity: header.entity, score: 10 * similarity, reasons: [reason], person: header
+                )
             }
-            let sorted = ranked.enumerated().sorted { a, b in
-                a.element.tier != b.element.tier ? a.element.tier < b.element.tier : a.offset < b.offset
+            let sorted = scored.sorted { a, b in
+                a.score != b.score ? a.score > b.score : a.entity.ref < b.entity.ref
             }
-            return sorted.prefix(limit > 0 ? limit : 10).map(\.element.header)
+            return Array(sorted.prefix(limit > 0 ? limit : 10))
         }
     }
 

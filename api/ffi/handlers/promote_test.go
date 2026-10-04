@@ -311,19 +311,22 @@ func TestListPromoteTargetSuggestions(t *testing.T) {
 		{name: "bad proto", raw: []byte{0xff}, wantErr: true},
 		{name: "bad subject id", req: &engine.ListPromoteTargetSuggestionsRequest{ProjectDir: first.GetProjectDir(), SubjectId: "nope"}, wantErr: true},
 		{
-			name: "exact name first, then a shared word",
+			name: "scored best first, with reasons and the person header",
 			req:  &engine.ListPromoteTargetSuggestionsRequest{ProjectDir: first.GetProjectDir(), SubjectId: james},
 			after: func(t *testing.T, out []byte, _ proto.Message) {
 				var resp engine.ListPromoteTargetSuggestionsResponse
 				if err := proto.Unmarshal(out, &resp); err != nil {
 					t.Fatal(err)
 				}
-				p := resp.GetPersons()
-				if len(p) != 2 || p[0].Entity.GetRef() != exact.Entity.GetRef() || p[1].Entity.GetRef() != shared.Entity.GetRef() {
-					t.Fatalf("%+v", p)
+				s := resp.GetSuggestions()
+				if len(s) != 2 || s[0].Entity.GetRef() != exact.Entity.GetRef() || s[1].Entity.GetRef() != shared.Entity.GetRef() {
+					t.Fatalf("%+v", s)
 				}
-				if p[0].GetName().GetForm() != "James Robins" || p[0].GetNameClusterCount() != 1 {
-					t.Fatalf("header %+v", p[0])
+				if s[0].GetScore() != 10 || s[0].GetPerson().GetName().GetForm() != "James Robins" || s[0].GetPerson().GetNameClusterCount() != 1 {
+					t.Fatalf("top %+v", s[0])
+				}
+				if r := s[0].GetReasons(); len(r) != 1 || r[0].GetPropertyKey() != "name" || r[0].GetSimilarity() != 1 || r[0].GetContribution() != 10 {
+					t.Fatalf("reasons %+v", r)
 				}
 			},
 		},
@@ -335,8 +338,8 @@ func TestListPromoteTargetSuggestions(t *testing.T) {
 				if err := proto.Unmarshal(out, &resp); err != nil {
 					t.Fatal(err)
 				}
-				if len(resp.GetPersons()) != 1 {
-					t.Fatalf("%+v", resp.GetPersons())
+				if len(resp.GetSuggestions()) != 1 {
+					t.Fatalf("%+v", resp.GetSuggestions())
 				}
 			},
 		},
