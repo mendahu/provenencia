@@ -7,7 +7,7 @@
 Names are compared, clustered, sorted and displayed with assumptions that hold mainly for Western, Latin-script names:
 
 - **Accents break matches.** "José" vs "Jose" and "Müller" vs "Muller" don't match. `resolve.NormalizeForm` keeps diacritics, and short words fall below the near-spelling floor. Records disagree on accents all the time: clerks, transcribers and OCR drop or add them.
-- **Only Western roles exist.** `core/match` compares names word by word with part types as data (S9-10). Mismatched types discount, they don't block. But the only role map is `WesternPartRoles`. That's right for "James K. Robins" and incomplete for many others (below).
+- **Only Western roles exist.** `core/match` compares names word by word with part types as data (S9-10). Mismatched types discount, they don't block. Culture-specific rules live in a `NamePattern` fetched through a `NamePatterns` source, but the only pattern so far is `western`, built in. That's right for "James K. Robins" and incomplete for many others (below).
 - **Only one profile exists.** Name format profiles are designed to carry culture, but only `western` is seeded, and nothing reads a profile yet.
 
 ## Part 1: accent and character folding
@@ -44,7 +44,11 @@ Matching should take its roles from the Person's **name format profile**, not fr
 - role affinity discounts mismatched types.
 
 What's left here:
-- **Profiles supply the role map.** Each name format profile maps part types to roles (family, given, lineage, generation, ignored) and can tune weights, for example a maternal surname weighing less. `NameComparer.PartRoles` already takes the map; `WesternPartRoles` is the default.
+- **Profiles supply the pattern.** Each name format profile becomes a `NamePattern`: part type → role (family, given, lineage, generation, ignored), plus role weights, for example a maternal surname weighing less. What's ready:
+  - the seam: a `NamePatterns` source on `NameComparer`, today `BuiltinNamePatterns` in `core/match/registry.go`;
+  - `Value.NamePattern`, which picks each name's pattern.
+
+  What's left: a source that reads `name_format_profiles`, and loaders that set each name's pattern from its Person's name format.
 - **Which profile applies** when the two names have different formats: each name's words take roles from its own profile, so no single profile has to win.
 - **New part types** (`patronymic`, perhaps `maternal_surname`) go through the compiled `namevalues` registry and [`seeded-vocabulary.md`](../seeded-vocabulary.md) §4.1. GEDCOM has no patronymic type, so export needs a mapping. A `lineage` role might pair a patronymic with the father's given name, at a discount.
 

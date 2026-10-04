@@ -2,33 +2,53 @@ package match
 
 import "github.com/mendahu/provenencia/core/database/datevalues"
 
-// Default DateComparer tolerance, in years.
-const defaultDateTolerance = 2
-
-// DateComparer compares dates as spans of years.
+// DateComparer compares dates as spans of years. Settings default to
+// DefaultDates (registry.go), where each one is described.
 //
 //   - Identical dates score 1 at any precision ("1817" against "1817",
 //     "BEF 1820" against "BEF 1820"); only differing precision costs.
 //   - Two exact points (or ABT points) compare by year, refined by month and
-//     day: the same month with a day missing on one side 0.9; the same year
-//     with a month missing on one side 0.8; the same month but different known days
-//     0.7; different known months 0.6. Years apart within Tolerance fall off
-//     linearly from 0.8; beyond it is a disagreement (0). ABT on either side
-//     doubles the tolerance.
+//     day: MissingDay, MissingMonth, OtherDay, OtherMonth within the same
+//     year; years apart fall off linearly from YearsApartFrom within
+//     Tolerance; beyond it is a disagreement (0). ABT on either side
+//     multiplies the tolerance by ApproxToleranceFactor.
 //   - When either side is a range (FROM / TO / BET) or a bound (BEF, AFT),
-//     identical spans are 1. Otherwise overlapping spans are consistent, and
-//     how much that says depends on the wider span: 0.8 for one year, 0.05
-//     less per extra year, never below 0.2; an open span (BEF, AFT, FROM
-//     without TO) says little and is 0.2. Spans apart fall off from that
-//     score by the years between them within Tolerance; beyond it is a
-//     disagreement. "BEF 1820" against 1823 is 3 years apart, not an
-//     approximate match.
+//     overlapping spans are consistent, judged by the wider span:
+//     SpanOneYear, less SpanPerExtraYear per extra year, never below
+//     SpanFloor; an open span (BEF, AFT, FROM without TO) is SpanFloor. Spans
+//     apart fall off from that within Tolerance; beyond it is a disagreement.
+//     "BEF 1820" against 1823 is 3 years apart, not an approximate match.
 //
 // A date with no year (a phrase) is not comparable.
 type DateComparer struct {
-	// Tolerance is how many years apart still resemble. Default 2; Set(0)
-	// requires the same year (or overlapping spans).
-	Tolerance *int
+	Tolerance, ApproxToleranceFactor *int
+
+	MissingDay, MissingMonth, OtherDay, OtherMonth, YearsApartFrom *float64
+
+	SpanOneYear, SpanPerExtraYear, SpanFloor *float64
+}
+
+// dateRules are DateComparer settings resolved against the registry.
+type dateRules struct {
+	tol, approx                                               int
+	missingDay, missingMonth, otherDay, otherMonth, apartFrom float64
+	spanOne, spanStep, spanFloor                              float64
+}
+
+func (c DateComparer) resolve() dateRules {
+	d := DefaultDates
+	return dateRules{
+		tol:          setting(c.Tolerance, *d.Tolerance),
+		approx:       setting(c.ApproxToleranceFactor, *d.ApproxToleranceFactor),
+		missingDay:   setting(c.MissingDay, *d.MissingDay),
+		missingMonth: setting(c.MissingMonth, *d.MissingMonth),
+		otherDay:     setting(c.OtherDay, *d.OtherDay),
+		otherMonth:   setting(c.OtherMonth, *d.OtherMonth),
+		apartFrom:    setting(c.YearsApartFrom, *d.YearsApartFrom),
+		spanOne:      setting(c.SpanOneYear, *d.SpanOneYear),
+		spanStep:     setting(c.SpanPerExtraYear, *d.SpanPerExtraYear),
+		spanFloor:    setting(c.SpanFloor, *d.SpanFloor),
+	}
 }
 
 // yearSpan is a date's years, lo…hi; an open end is unbounded (BEF, AFT,
@@ -74,16 +94,8 @@ func spanOf(d *datevalues.Value) (yearSpan, bool) {
 	return yearSpan{lo: *y, hi: *y, point: true, approx: d.Qualifier != "", month: m, day: day}, true
 }
 
-// Span scoring: a one-year span is as good as a same-year point (0.8); each
-// extra year of width costs spanStep, down to spanFloor, which open spans get.
-const (
-	spanBest  = 0.8
-	spanStep  = 0.05
-	spanFloor = 0.2
-)
-
 // spanScore is what overlapping spans are worth, judged by the wider one.
-func spanScore(a, b yearSpan) float64 {
+func (r dateRules) spanScore(a, b yearSpan) float64 {
 	width := func(s yearSpan) (int, bool) {
 		if s.openLo || s.openHi {
 			return 0, false
@@ -93,10 +105,10 @@ func spanScore(a, b yearSpan) float64 {
 	wa, okA := width(a)
 	wb, okB := width(b)
 	if !okA || !okB {
-		return spanFloor
+		return r.spanFloor
 	}
 	w := max(wa, wb)
-	return max(spanBest-spanStep*float64(w-1), spanFloor)
+	return max(r.spanOne-r.spanStep*float64(w-1), r.spanFloor)
 }
 
 // sameOptional: both missing, or both present and equal.
@@ -127,7 +139,8 @@ func (c DateComparer) Compare(a, b Value) (float64, bool) {
 	if !okA || !okB {
 		return 0, false
 	}
-	tol := setting(c.Tolerance, defaultDateTolerance)
+	r := c.resolve()
+	tol := r.tol
 	gap := yearsApart(sa, sb)
 
 	if !sa.point || !sb.point {
@@ -137,25 +150,25 @@ func (c DateComparer) Compare(a, b Value) (float64, bool) {
 		if gap > tol {
 			return 0, true
 		}
-		return spanScore(sa, sb) * (1 - float64(gap)/float64(tol+1)), true
+		return r.spanScore(sa, sb) * (1 - float64(gap)/float64(tol+1)), true
 	}
 	if sa.approx || sb.approx {
-		tol *= 2
+		tol *= r.approx
 	}
 	sameMonth := sa.month != nil && sb.month != nil && *sa.month == *sb.month
 	switch {
 	case gap == 0 && sameOptional(sa.month, sb.month) && sameOptional(sa.day, sb.day):
 		return 1, true
 	case gap == 0 && sameMonth && sa.day != nil && sb.day != nil:
-		return 0.7, true
+		return r.otherDay, true
 	case gap == 0 && sameMonth:
-		return 0.9, true
+		return r.missingDay, true
 	case gap == 0 && sa.month != nil && sb.month != nil:
-		return 0.6, true
+		return r.otherMonth, true
 	case gap == 0:
-		return 0.8, true
+		return r.missingMonth, true
 	case gap <= tol:
-		return 0.8 * (1 - float64(gap)/float64(tol+1)), true
+		return r.apartFrom * (1 - float64(gap)/float64(tol+1)), true
 	}
 	return 0, true
 }

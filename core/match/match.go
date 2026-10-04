@@ -38,6 +38,9 @@ type Value struct {
 	Term       string
 	Date       *datevalues.Value
 	Name       *namevalues.Value
+	// NamePattern is the name pattern key for Name (its Person's name
+	// format, once loaders supply it); empty uses the comparer's pattern.
+	NamePattern string
 }
 
 // Values are a thing's values, every Property it has, each possibly several

@@ -20,9 +20,6 @@ import (
 	"github.com/mendahu/provenencia/core/match"
 )
 
-// DefaultLimit caps suggestions when the caller passes no limit.
-const DefaultLimit = 10
-
 // Suggestion is one handle the Subject could join.
 type Suggestion struct {
 	Entity  canonicalentities.Entity
@@ -32,7 +29,8 @@ type Suggestion struct {
 	Person *conclusionheaders.PersonHeader
 }
 
-// Suggest returns up to limit handles the Subject could join, best first.
+// Suggest returns up to limit handles the Subject could join, best first;
+// limit <= 0 uses match.DefaultSuggestionLimit.
 // An unknown Subject is promote.ErrInvalid; a kind Promote refuses is
 // promote.ErrUnsupportedType.
 func Suggest(q matching.Querier, subjectID []byte, limit int) ([]Suggestion, error) {
@@ -40,7 +38,7 @@ func Suggest(q matching.Querier, subjectID []byte, limit int) ([]Suggestion, err
 		return nil, promote.ErrInvalid
 	}
 	if limit <= 0 {
-		limit = DefaultLimit
+		limit = match.DefaultSuggestionLimit
 	}
 	res, err := matching.ForSubject(q, subjectID, matching.Options{Limit: limit})
 	if errors.Is(err, sql.ErrNoRows) {

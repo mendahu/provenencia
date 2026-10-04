@@ -19,6 +19,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
+	"github.com/mendahu/provenencia/core/match"
 	"github.com/mendahu/provenencia/core/ref"
 )
 
@@ -133,10 +134,10 @@ func TestSuggestPersons(t *testing.T) {
 
 func TestSuggestDefaultLimit(t *testing.T) {
 	f := newFixture(t)
-	for i := 0; i < promotetargets.DefaultLimit+2; i++ {
+	for i := 0; i < match.DefaultSuggestionLimit+2; i++ {
 		f.handle("person", fmt.Sprintf("James Robins %d", i))
 	}
-	if got := f.suggest(f.subject("person", "James Robins"), 0); len(got) != promotetargets.DefaultLimit {
+	if got := f.suggest(f.subject("person", "James Robins"), 0); len(got) != match.DefaultSuggestionLimit {
 		t.Fatalf("got %d", len(got))
 	}
 }

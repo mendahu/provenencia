@@ -2,6 +2,7 @@ package match
 
 import (
 	"fmt"
+	"maps"
 	"math"
 	"math/rand"
 	"strings"
@@ -35,6 +36,16 @@ var partCodes = map[string]string{
 	"g": namevalues.PartTypeGiven, "i": namevalues.PartTypeInitial, "n": namevalues.PartTypeNick,
 	"s": namevalues.PartTypeSurname, "sp": namevalues.PartTypeSurnamePrefix, "x": namevalues.PartTypeSuffix,
 	"p": namevalues.PartTypePrefix, "u": namevalues.PartTypeUndetermined, "_": "",
+}
+
+// patterned is a comparer whose pattern is a copy of the Western one,
+// changed by edit.
+func patterned(edit func(*NamePattern)) NameComparer {
+	p := WesternNamePattern
+	p.Key = "test"
+	p.PartRoles = maps.Clone(p.PartRoles)
+	edit(&p)
+	return NameComparer{Patterns: NamePatternSet{"test": p}, Pattern: Set("test")}
 }
 
 // formOnly is a name with no parts.
@@ -140,8 +151,12 @@ var nameCases = []nameCase{
 	{"cross-format", "typed vs untyped parts", NameComparer{}, nv("g=James|s=Robins"), nv("_=James|u=Robins"), (0.8*(G1+U) + 0.8*(F+U)) / (G1 + F + 2*U)},
 	{"cross-format", "an extra untyped word", NameComparer{}, nv("g=James|u=Kendall|s=Robins"), nv("g=James|s=Robins"), (2*G1 + 2*F) / (G1 + U + F + G1 + F)},
 	{"cross-format", "surname-first entry typed by position", NameComparer{}, nv("g=Wang|s=Fang"), nv("s=Wang|g=Fang"), 0.5},
-	{"cross-format", "a profile's own roles", NameComparer{PartRoles: map[string]NameRole{"given": RoleGiven, "undetermined": RoleFamily}}, nv("g=Anders|u=Jonsson"), nv("g=Anders|u=Jonsson"), 1},
-	{"cross-format", "a profile's role for an unknown type", NameComparer{PartRoles: map[string]NameRole{"given": RoleGiven, "undetermined": RoleFamily}}, nv("g=Anders|u=Jonsson"), nv("g=Anders|s=Jonsson"), (2*G1 + 0.8*(F+U)) / (G1 + F + G1 + U)},
+	{"cross-format", "a profile's own roles", patterned(func(p *NamePattern) {
+		p.PartRoles = map[string]NameRole{"given": RoleGiven, "undetermined": RoleFamily}
+	}), nv("g=Anders|u=Jonsson"), nv("g=Anders|u=Jonsson"), 1},
+	{"cross-format", "a profile's role for an unknown type", patterned(func(p *NamePattern) {
+		p.PartRoles = map[string]NameRole{"given": RoleGiven, "undetermined": RoleFamily}
+	}), nv("g=Anders|u=Jonsson"), nv("g=Anders|s=Jonsson"), (2*G1 + 0.8*(F+U)) / (G1 + F + G1 + U)},
 
 	// A shared given name with unrelated surnames is weak.
 	{"surname conflict", "same given, unrelated surname", NameComparer{}, nv("g=James|s=Smith"), nv("g=James|s=Robins"), 2 * G1 / (2 * (G1 + F)) * 0.5},
@@ -166,7 +181,7 @@ var nameCases = []nameCase{
 	// Names with no typed parts are read from their form as untyped words.
 	{"form", "spelling variant", NameComparer{}, formOnly("James Robbins"), formOnly("James Robins"), (2*U + robbins*2*U) / (4 * U)},
 	{"form", "not a variant", NameComparer{}, formOnly("Mary"), formOnly("Mark"), 0},
-	{"form", "fuzzy off", NameComparer{FuzzyFloor: Set(1.0)}, formOnly("Robbins"), formOnly("Robins"), 0},
+	{"form", "fuzzy off", NameComparer{Words: WordRules{FuzzyFloor: Set(1.0)}}, formOnly("Robbins"), formOnly("Robins"), 0},
 	{"form", "both form-only, same", NameComparer{}, formOnly("James Robins"), formOnly("james  robins."), 1},
 	{"form", "both form-only, reordered", NameComparer{}, formOnly("Robins, James"), formOnly("James Robins"), 1},
 	{"form", "both form-only, shared surname", NameComparer{}, formOnly("Mary Robins"), formOnly("James Robins"), 0.5},
@@ -174,13 +189,13 @@ var nameCases = []nameCase{
 	{"form", "only a title and suffix parts", NameComparer{}, withForm(nv("p=Rev.|x=Jr."), "Rev. Robins Jr."), formOnly("Robins"), 2 * U / (4 * U)},
 
 	// Tuning knobs.
-	{"tuning", "equal weights", NameComparer{FamilyWeight: Set(1.0)}, nv("g=Mary|s=Robins"), nv("g=James|s=Robins"), 0.5},
+	{"tuning", "equal weights", patterned(func(p *NamePattern) { p.Weights.Family = 1 }), nv("g=Mary|s=Robins"), nv("g=James|s=Robins"), 0.5},
 	{"tuning", "cross-role at full", NameComparer{CrossRole: Set(1.0)}, nv("g=Robins|s=James"), nv("g=James|s=Robins"), 1},
 	{"tuning", "cross-role zero: types are strict", NameComparer{CrossRole: Set(0.0)}, nv("g=Robins|s=James"), nv("g=James|s=Robins"), 0},
-	{"tuning", "fuzzy off also stops short-word variants", NameComparer{FuzzyFloor: Set(1.0)}, nv("g=Ann|s=Robins"), nv("g=Anne|s=Robins"), 2 * F / (2 * (G1 + F))},
+	{"tuning", "fuzzy off also stops short-word variants", NameComparer{Words: WordRules{FuzzyFloor: Set(1.0)}}, nv("g=Ann|s=Robins"), nv("g=Anne|s=Robins"), 2 * F / (2 * (G1 + F))},
 	{"tuning", "untyped at full", NameComparer{UntypedAffinity: Set(1.0)}, withForm(nv("g=James|s=Robins"), "x"), formOnly("James Robins"), 1},
-	{"tuning", "fuzzy off", NameComparer{FuzzyFloor: Set(1.0)}, nv("g=James|s=Robbins"), nv("g=James|s=Robins"), 2 * G1 / (2 * (G1 + F)) * 0.5},
-	{"tuning", "looser fuzzy floor", NameComparer{FuzzyFloor: Set(0.7)}, nv("g=Mary|s=Robins"), nv("g=Mark|s=Robins"), (0.75*2*G1 + 2*F) / (2 * (G1 + F))},
+	{"tuning", "fuzzy off", NameComparer{Words: WordRules{FuzzyFloor: Set(1.0)}}, nv("g=James|s=Robbins"), nv("g=James|s=Robins"), 2 * G1 / (2 * (G1 + F)) * 0.5},
+	{"tuning", "looser fuzzy floor", NameComparer{Words: WordRules{FuzzyFloor: Set(0.7)}}, nv("g=Mary|s=Robins"), nv("g=Mark|s=Robins"), (0.75*2*G1 + 2*F) / (2 * (G1 + F))},
 }
 
 func TestNameComparerScores(t *testing.T) {
@@ -293,7 +308,9 @@ func TestNameComparerInvariants(t *testing.T) {
 	}
 	codes := []string{"g", "g", "i", "n", "s", "s", "sp", "x", "p", "u", "_"}
 	forms := []string{"James Robins", "J. Robins", "Mary Smith", "(as written)", ""}
-	cmps := []NameComparer{{}, {FamilyWeight: Set(3.0), CrossRole: Set(0.2), GivenOnlyFactor: Set(1.0), SuffixConflict: Set(0.9)}, {FuzzyFloor: Set(1.0)}}
+	heavy := patterned(func(p *NamePattern) { p.Weights.Family = 3 })
+	heavy.CrossRole, heavy.GivenOnlyFactor, heavy.SuffixConflict = Set(0.2), Set(1.0), Set(0.9)
+	cmps := []NameComparer{{}, heavy, {Words: WordRules{FuzzyFloor: Set(1.0)}}}
 
 	for _, seed := range []int64{1, 2, 3, 4} {
 		rng := rand.New(rand.NewSource(seed))
@@ -355,7 +372,7 @@ func TestNameComparerInvariants(t *testing.T) {
 // partWords reports whether a name's parts yield comparable words (so its
 // form is not read).
 func partWords(v Value) bool {
-	words, _ := (NameComparer{}).nameWords(withForm(v, "").Name)
+	words, _ := nameWords(withForm(v, "").Name, WesternNamePattern)
 	return len(words) > 0
 }
 
@@ -373,7 +390,7 @@ func untyped(v Value) Value {
 	n := *v.Name
 	n.Parts = nil
 	for _, p := range v.Name.Parts {
-		if r := WesternPartRoles[p.Type]; r != RoleIgnored && r != RoleGeneration {
+		if r := WesternNamePattern.role(p.Type); r != RoleIgnored && r != RoleGeneration {
 			p.Type = ""
 		}
 		n.Parts = append(n.Parts, p)
@@ -405,4 +422,48 @@ func addPart(v Value, code, value string) Value {
 	n := *v.Name
 	n.Parts = append(append([]namevalues.Part(nil), v.Name.Parts...), namevalues.Part{Idx: len(v.Name.Parts), Type: partCodes[code], Value: value})
 	return Value{Name: &n}
+}
+
+// Each name takes roles from its own pattern, so names under different
+// patterns still compare. "flipped" is a stand-in culture whose part types
+// mean the opposite roles.
+func TestNameComparerPatterns(t *testing.T) {
+	flipped := WesternNamePattern
+	flipped.Key = "flipped"
+	flipped.PartRoles = maps.Clone(WesternNamePattern.PartRoles)
+	flipped.PartRoles["given"], flipped.PartRoles["surname"] = RoleFamily, RoleGiven
+	cmp := NameComparer{Patterns: NamePatternSet{WesternPattern: WesternNamePattern, "flipped": flipped}}
+	in := func(pattern string, v Value) Value { v.NamePattern = pattern; return v }
+
+	tests := []struct {
+		name string
+		a, b Value
+		want float64
+	}{
+		{"each name under its own pattern", in("flipped", nv("g=Robins|s=James")), nv("g=James|s=Robins"), 1},
+		{"both under the comparer's pattern", nv("g=Robins|s=James"), nv("g=James|s=Robins"), 0.5},
+		{"an unknown pattern key falls back", in("missing", nv("g=James|s=Robins")), nv("g=James|s=Robins"), 1},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, ok := cmp.Compare(tt.a, tt.b)
+			if !ok || math.Abs(got-tt.want) > 1e-9 {
+				t.Fatalf("got %.4f %v, want %.4f", got, ok, tt.want)
+			}
+		})
+	}
+
+	t.Run("the comparer's pattern applies to unlabelled names", func(t *testing.T) {
+		c := cmp
+		c.Pattern = Set("flipped")
+		if got, _ := c.Compare(nv("g=Robins|s=James"), in(WesternPattern, nv("g=James|s=Robins"))); math.Abs(got-1) > 1e-9 {
+			t.Fatalf("got %.4f", got)
+		}
+	})
+	t.Run("an unknown comparer pattern falls back to the registry's", func(t *testing.T) {
+		c := NameComparer{Pattern: Set("missing")}
+		if got, _ := c.Compare(nv("g=James|s=Robins"), nv("g=James|s=Robins")); got != 1 {
+			t.Fatalf("got %.4f", got)
+		}
+	})
 }

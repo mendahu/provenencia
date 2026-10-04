@@ -323,8 +323,10 @@ Promote can now file a Subject onto an existing handle, carry a confidence grade
   - Word matching counts an adjacent-letter swap as one edit and allows one added or dropped letter in short names. Dashes separate words; this is a shared-normalizer change, so it comes with resolved-values `CacheVersion` 2.
   - Other comparers: text, term (with neutral terms), date (spans of years: points, ranges and BEF/AFT bounds, with tolerance and ABT widening) and integer.
   - Comparer settings are pointers set with `match.Set`, so zero is a real setting.
+  - **One registry** (`core/match/registry.go`) holds every weight, score and limit, the built-in name patterns, and the default profiles. Comparers fall back to it, and guard tests keep it complete.
+  - Culture-specific name logic lives in a `NamePattern` from a `NamePatterns` source. Only `western` is built in; a data-driven source replaces it later.
   - The adversarial review's remaining items are shelved in [`ideas/name-matching-enhancements.md`](../../ideas/name-matching-enhancements.md).
-  - Default profiles for person (name, sex at birth), event (type, date, start / end) and place (toponym). They are tunable per call through `Profile.With`, or in `profiles.go`.
+  - Default profiles for person (name, sex at birth), event (type, date, start / end) and place (toponym). They are tunable per call through `Profile.With`, or in `core/match/registry.go`.
   - `resolve.NormalizeForm` is exported so names compare exactly as the cache keys them.
 - **`core/database/matching`:** `ForSubject` (Observations as the probe; never the Subject's own handle) and `ForEntity` (a handle's cached values as the probe; merge hints). Candidates are every unmerged same-type handle's cached values at every rank, with a constant query count. `loadCandidates` is the seam for blocking.
 - **`promotetargets.Suggest`:** shapes `ForSubject` for the picker. Each suggestion has the entity, score, reasons, and a `PersonHeader` for Persons. Events and Places are suggested too, as the handle alone. Default limit 10. Non-primary kinds are `promote.unsupported_type`; `promote.PrimaryKind` is the shared check.

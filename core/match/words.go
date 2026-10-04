@@ -12,6 +12,34 @@ import (
 // Word-level comparison shared by NameComparer and TextComparer: splitting,
 // word similarity (initials, spelling variants), and best one-to-one pairing.
 
+// WordRules are how two words compare. Nil settings take DefaultWordRules.
+type WordRules struct {
+	// FuzzyFloor is the least edit-distance ratio for a spelling variant,
+	// 0…1; 1 turns fuzzy matching off (short-word variants included).
+	FuzzyFloor *float64
+	// InitialCredit is an initial against a word it begins ("J." ~ "James").
+	InitialCredit *float64
+	// ShortVariantMinLength: words at least this long may differ by one
+	// added or dropped letter below FuzzyFloor (Ann ~ Anne).
+	ShortVariantMinLength *int
+}
+
+// wordRules are WordRules resolved against the registry.
+type wordRules struct {
+	floor, initialCredit float64
+	shortMin             int
+	initials             bool // whether lone letters match as initials
+}
+
+func (r WordRules) resolve(initials bool) wordRules {
+	return wordRules{
+		floor:         setting(r.FuzzyFloor, *DefaultWordRules.FuzzyFloor),
+		initialCredit: setting(r.InitialCredit, *DefaultWordRules.InitialCredit),
+		shortMin:      setting(r.ShortVariantMinLength, *DefaultWordRules.ShortVariantMinLength),
+		initials:      initials,
+	}
+}
+
 func splitWords(s string) []string {
 	n := resolve.NormalizeForm(s)
 	if n == "" {
@@ -23,7 +51,7 @@ func splitWords(s string) []string {
 // compareForms is 1 for the same normalized form, else partial × the share
 // of words the two forms have in common (wordDice). Empty forms are not
 // comparable.
-func compareForms(a, b string, partial, fuzzyFloor float64, initials bool) (float64, bool) {
+func compareForms(a, b string, partial float64, r wordRules) (float64, bool) {
 	wa, wb := splitWords(a), splitWords(b)
 	if len(wa) == 0 || len(wb) == 0 {
 		return 0, false
@@ -31,29 +59,29 @@ func compareForms(a, b string, partial, fuzzyFloor float64, initials bool) (floa
 	if strings.Join(wa, " ") == strings.Join(wb, " ") {
 		return 1, true
 	}
-	return partial * wordDice(wa, wb, fuzzyFloor, initials), true
+	return partial * wordDice(wa, wb, r), true
 }
 
-// wordSimilarity: 1 for the same word, 0.5 for an initial and a word it
-// begins (when initials count), else the spelling-variant ratio
+// wordSimilarity: 1 for the same word, InitialCredit for an initial and a
+// word it begins (when initials count), else the spelling-variant ratio
 // (1 − edits / longer length, an adjacent swap being one edit) when it
-// reaches floor — or, for short words, when they differ by one added or
-// dropped letter (Ann ~ Anne, Jon ~ John: 0.75), since one edit is a larger
-// share of a short word. A one-letter substitution in a short word is a
+// reaches FuzzyFloor — or, for words of ShortVariantMinLength or more, when
+// they differ by one added or dropped letter (Ann ~ Anne, Jon ~ John: 0.75),
+// since one edit is a larger share of a short word. A one-letter substitution in a short word is a
 // different name (Mary ~ Mark). An initial is a lone cased letter ("J"); a
 // lone character in an uncased script (蒋, 王) is a whole word.
-func wordSimilarity(x, y string, floor float64, initials bool) float64 {
+func wordSimilarity(x, y string, r wordRules) float64 {
 	if x == y {
 		return 1
 	}
 	rx, ry := []rune(x), []rune(y)
 	if isInitial(rx) || isInitial(ry) {
-		if initials && rx[0] == ry[0] {
-			return 0.5
+		if r.initials && rx[0] == ry[0] {
+			return r.initialCredit
 		}
 		return 0
 	}
-	if floor >= 1 {
+	if r.floor >= 1 {
 		return 0
 	}
 	longest, shortest := len(rx), len(ry)
@@ -62,10 +90,10 @@ func wordSimilarity(x, y string, floor float64, initials bool) float64 {
 	}
 	edits := editDistance(rx, ry)
 	ratio := 1 - float64(edits)/float64(longest)
-	if ratio >= floor {
+	if ratio >= r.floor {
 		return ratio
 	}
-	if edits == 1 && longest == shortest+1 && shortest >= 3 {
+	if edits == 1 && longest == shortest+1 && shortest >= r.shortMin {
 		return ratio
 	}
 	return 0
@@ -104,7 +132,7 @@ func editDistance(a, b []rune) int {
 
 // wordDice is the Dice overlap of two unweighted word lists under their best
 // one-to-one pairing (free text).
-func wordDice(wa, wb []string, floor float64, initials bool) float64 {
+func wordDice(wa, wb []string, r wordRules) float64 {
 	if len(wa) == 0 || len(wb) == 0 {
 		return 0
 	}
@@ -112,15 +140,11 @@ func wordDice(wa, wb []string, floor float64, initials bool) float64 {
 	for i, x := range wa {
 		score[i] = make([]float64, len(wb))
 		for j, y := range wb {
-			score[i][j] = wordSimilarity(x, y, floor, initials)
+			score[i][j] = wordSimilarity(x, y, r)
 		}
 	}
 	return 2 * bestPairing(score) / float64(len(wa)+len(wb))
 }
-
-// maxPairedWords bounds the exact search (2^n states over the shorter side);
-// longer lists pair greedily by best score first. Names never get close.
-const maxPairedWords = 12
 
 // bestPairing is the largest total over one-to-one pairings of rows with
 // columns. Exact, so it does not depend on which side is the row.
@@ -134,7 +158,7 @@ func bestPairing(score [][]float64) float64 {
 		rows, cols = cols, rows
 		at = func(i, j int) float64 { return score[j][i] }
 	}
-	if cols > maxPairedWords {
+	if cols > MaxExactPairing {
 		return greedyPairing(rows, cols, at)
 	}
 	// best[mask] = best total with the shorter side's words in mask used.

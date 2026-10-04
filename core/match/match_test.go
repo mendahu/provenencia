@@ -39,7 +39,7 @@ func TestComparers(t *testing.T) {
 
 		{"integer: equal", IntegerComparer{}, integer(40), integer(40), 1, true},
 		{"integer: off by one", IntegerComparer{}, integer(40), integer(41), 0, true},
-		{"integer: within tolerance", IntegerComparer{Tolerance: 1}, integer(40), integer(41), 0.5, true},
+		{"integer: within tolerance", IntegerComparer{Tolerance: Set(int64(1))}, integer(40), integer(41), 0.5, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

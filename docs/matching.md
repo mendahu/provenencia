@@ -9,9 +9,10 @@ Code: [`core/match`](../core/match) (the algorithm) and [`core/database/matching
 | File | Holds |
 | --- | --- |
 | `match.go` | Values, candidates, `Score`, `Rank` |
-| `profiles.go` | Features, profiles, default profiles |
+| `registry.go` | **Every tunable number, the built-in name patterns, and the default profiles.** The one place to configure. |
+| `profiles.go` | The `Feature` and `Profile` types |
 | `compare.go` | The `Comparer` interface, `ComparerFor`, `Set`, and the simple comparers (text, term, integer) |
-| `names.go` | `NameComparer`: roles, weights, affinities, conflicts |
+| `names.go` | `NameComparer`, roles, `NamePattern` and the `NamePatterns` source. No culture-specific logic. |
 | `dates.go` | `DateComparer`: spans, precision, tolerance |
 | `words.go` | Word handling shared by names and text: splitting, similarity, edit distance, best pairing |
 
@@ -59,7 +60,10 @@ A candidate is returned when its total reaches `MinScore`. Results are sorted by
 
 `form` is the name as written, closer to a transcription. Typed parts are what can be computed on ([`structured-name-model.md`](structured-name-model.md)). `NameComparer` compares names **word by word**, and uses each word's part type as data:
 
-- **Roles.** Each part type maps to a role through `PartRoles`. The default is `WesternPartRoles`; a name format profile can supply its own map, for a patronymic or a maternal surname.
+- **Roles come from a name pattern.** A `NamePattern` holds everything culture-specific: which part type plays which role, and each role's word weight. The comparer holds none of it.
+  - Each name takes its pattern from `Value.NamePattern` (its Person's name format, once loaders supply it); otherwise it uses the comparer's pattern.
+  - Patterns come through a `NamePatterns` source. Today that's `BuiltinNamePatterns` in the registry, with only `western`; later it becomes a read of `name_format_profiles`.
+  - Because each name uses its own pattern, names under different patterns still compare.
 
   | Role | Default part types | Word weight |
   | --- | --- | --- |
@@ -130,7 +134,7 @@ Not yet handled:
 
 ## Default profiles
 
-These live in [`core/match/profiles.go`](../core/match/profiles.go). They are the one place to tune.
+These live in [`core/match/registry.go`](../core/match/registry.go), with every other tunable number.
 
 | Kind | Features (Weight / Contradiction) | MinScore |
 | --- | --- | --- |
@@ -145,9 +149,28 @@ Worked examples:
 ## Configuring
 
 - **Per call:** `matching.Options{Profile: &p}` replaces the default profile. `Profile.With(feature)` copies a default and replaces or adds one Feature.
-- **Comparer settings** are pointers set with `match.Set`. Nil takes the default, and zero is a real value: `NameComparer{CrossRole: match.Set(0.0)}` makes types strict, and `DateComparer{Tolerance: match.Set(0)}` requires the same year.
-- **Shipped defaults:** edit `DefaultProfile`. Every consumer reads it unless it passes its own Profile.
-- **Not yet:** researcher-facing tuning, or profiles persisted per project. When that lands, `matching.start` is where a stored profile replaces the default.
+- **One registry:** [`core/match/registry.go`](../core/match/registry.go) holds everything:
+  - word rules (`DefaultWordRules`)
+  - name affinities and conflict factors (`DefaultNames`)
+  - name patterns (`WesternNamePattern`, `BuiltinNamePatterns`)
+  - date scores and span scoring (`DefaultDates`)
+  - text and integer settings
+  - neutral terms
+  - default profiles
+  - the suggestion limit
+
+  Comparers fall back to these values, so a bare `NameComparer{}` scores exactly like `DefaultNames`, and no number is written twice.
+- **Guard tests** (`registry_test.go`):
+  - Every comparer setting must have a registry value.
+  - Bare comparers must score like the registry's.
+  - Default profiles must use the registry's comparers.
+  - The Western pattern must give every product part type a role.
+- **Comparer settings** are pointers set with `match.Set`. Nil takes the registry value, and zero is a real value: `NameComparer{CrossRole: match.Set(0.0)}` makes types strict, and `DateComparer{Tolerance: match.Set(0)}` requires the same year.
+- **Not yet:** researcher-facing tuning, profiles persisted per project, and data-driven name patterns.
+  - **Stored profiles** replace `DefaultProfile` in `matching.start`.
+  - **A stored-pattern source** replaces `BuiltinNamePatterns` as `NameComparer.Patterns`.
+
+  Both use the same shapes, so scoring code doesn't change.
 
 ## Extending
 

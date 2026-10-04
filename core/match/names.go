@@ -6,10 +6,9 @@ import (
 	"github.com/mendahu/provenencia/core/database/namevalues"
 )
 
-// NameRole is what a name part means for matching. Part types map to roles
-// through NameComparer.PartRoles, so a name format profile can supply its
-// own mapping (a patronymic, a maternal surname) without new comparer code.
-// Roles never stop two words from pairing; they only weigh and discount.
+// NameRole is what a name part means for matching. A name pattern maps part
+// types to roles, so cultures differ in data, not in comparer code. Roles
+// never stop two words from pairing; they only weigh and discount.
 type NameRole string
 
 const (
@@ -21,80 +20,111 @@ const (
 	RoleIgnored    NameRole = "ignored"    // titles, surname particles
 )
 
-// WesternPartRoles maps the product part types (namevalues) to roles. Types
-// missing from a map are untyped.
-var WesternPartRoles = map[string]NameRole{
-	namevalues.PartTypeSurname:       RoleFamily,
-	namevalues.PartTypeGiven:         RoleGiven,
-	namevalues.PartTypeInitial:       RoleGiven,
-	namevalues.PartTypeNick:          RoleNick,
-	namevalues.PartTypeSuffix:        RoleGeneration,
-	namevalues.PartTypePrefix:        RoleIgnored,
-	namevalues.PartTypeSurnamePrefix: RoleIgnored,
-	namevalues.PartTypeUndetermined:  RoleUntyped,
-	"":                               RoleUntyped,
+// NameWeights are what a matched word of each role earns and what an
+// unmatched one costs. FirstGiven is the first given word in part order;
+// OtherGiven every later one (middle names, initials).
+type NameWeights struct {
+	Family, FirstGiven, OtherGiven, Nick, Untyped float64
+}
+
+// NamePattern is everything culture-specific about comparing names: which
+// part type plays which role, and how much each role weighs. The built-in
+// Western pattern is in the registry; more patterns are data, not code.
+type NamePattern struct {
+	Key string
+	// PartRoles maps part types to roles; a type missing here is untyped.
+	PartRoles map[string]NameRole
+	Weights   NameWeights
+}
+
+func (p NamePattern) role(partType string) NameRole {
+	if r, ok := p.PartRoles[partType]; ok {
+		return r
+	}
+	return RoleUntyped
+}
+
+func (p NamePattern) weight(role NameRole, firstGiven bool) float64 {
+	switch role {
+	case RoleFamily:
+		return p.Weights.Family
+	case RoleGiven:
+		if firstGiven {
+			return p.Weights.FirstGiven
+		}
+		return p.Weights.OtherGiven
+	case RoleNick:
+		return p.Weights.Nick
+	}
+	return p.Weights.Untyped
+}
+
+// NamePatterns supplies name patterns by key. Today it is BuiltinNamePatterns;
+// it is the seam where a catalog read of name format profiles plugs in.
+type NamePatterns interface {
+	NamePattern(key string) (NamePattern, bool)
+}
+
+// NamePatternSet is a fixed set of patterns by key.
+type NamePatternSet map[string]NamePattern
+
+func (s NamePatternSet) NamePattern(key string) (NamePattern, bool) {
+	p, ok := s[key]
+	return p, ok
 }
 
 // NameComparer compares NameValues word by word, using part types as data
-// rather than as gates (compareNames in names.go). Each word carries a role
-// (from PartRoles) and a weight; any word may pair with any word of the other
-// name, discounted when their roles differ, so names entered in different
-// formats still connect. A name with no typed parts is read from its form as
-// untyped words.
+// rather than as gates. Each name's words take their roles and weights from
+// its name pattern (Value.NamePattern, else Pattern); any word may pair with
+// any word of the other name, discounted when their roles differ, so names
+// entered in different formats, or under different patterns, still connect.
+// A name with no typed parts is read from its form as untyped words.
 //
-// Word matching: an equal word is 1, an initial against a word it begins
-// ("J." ~ "James") 0.5, a near spelling ("Robins" ~ "Robbins") its
-// edit-distance ratio when at least FuzzyFloor.
-//
-// Nil settings take their defaults; set one with Set.
+// Nothing here is culture-specific; that is the pattern's job. Settings
+// default to DefaultNames (registry.go).
 type NameComparer struct {
-	// PartRoles maps part types to roles. Default WesternPartRoles; a name
-	// format profile may supply its own.
-	PartRoles map[string]NameRole
+	// Patterns supplies name patterns.
+	Patterns NamePatterns
+	// Pattern is the pattern key for names that don't name their own.
+	Pattern *string
 
-	// Word weights by role. Defaults: family 1.5, first given 1, other given
-	// (middle names, initials) 0.5, nick 0.3, untyped 1.
-	FamilyWeight, FirstGivenWeight, OtherGivenWeight, NickWeight, UntypedWeight *float64
-
-	// Role affinities for pairs whose roles differ. Defaults: a typed word
-	// against an untyped one 0.8, a nickname against a given name 0.9, any
-	// other mismatch (a surname against a given name) 0.5.
+	// Affinities for pairs whose roles differ: a typed word against an
+	// untyped one, a nickname against a given name, any other mismatch.
 	UntypedAffinity, NickAffinity, CrossRole *float64
-
 	// GivenOnlyFactor scales the score when both names have family words and
-	// none resembles any word of the other name. Default 0.5.
+	// none resembles any word of the other name.
 	GivenOnlyFactor *float64
 	// SuffixConflict scales the score when both names carry generation words
-	// (Jr., Sr.) and share none. Default 0.3.
+	// and share none.
 	SuffixConflict *float64
-	// FuzzyFloor is the least edit-distance ratio two words need to count as
-	// a spelling variant, 0…1. Default 0.8 (Robins ~ Robbins, not Mary ~ Mark);
-	// 1 turns fuzzy matching off. Short words may also differ by one added or
-	// dropped letter (Ann ~ Anne, Jon ~ John); see wordSimilarity.
-	FuzzyFloor *float64
+
+	Words WordRules
 }
 
 func (c NameComparer) Compare(a, b Value) (float64, bool) {
 	if a.Name == nil || b.Name == nil {
 		return 0, false
 	}
-	return c.compareNames(a.Name, b.Name)
+	return c.compareNames(a.Name, c.pattern(a.NamePattern), b.Name, c.pattern(b.NamePattern))
 }
 
-// Defaults for NameComparer. Weights are relative: what a matched word of
-// that role earns, and what an unmatched one costs.
-const (
-	defaultFamilyWeight     = 1.5
-	defaultFirstGivenWeight = 1
-	defaultOtherGivenWeight = 0.5
-	defaultNickWeight       = 0.3
-	defaultUntypedWeight    = 1
-	defaultCrossRole        = 0.5
-	defaultUntypedAffinity  = 0.8
-	defaultNickAffinity     = 0.9
-	defaultGivenOnlyFactor  = 0.5
-	defaultSuffixConflict   = 0.3
-)
+// pattern resolves a name's pattern: its own key if the source has it, else
+// the comparer's pattern, else the registry's default, else Western.
+func (c NameComparer) pattern(key string) NamePattern {
+	src := c.Patterns
+	if src == nil {
+		src = DefaultNames.Patterns
+	}
+	for _, k := range []string{key, setting(c.Pattern, *DefaultNames.Pattern), *DefaultNames.Pattern} {
+		if k == "" {
+			continue
+		}
+		if p, ok := src.NamePattern(k); ok {
+			return p
+		}
+	}
+	return WesternNamePattern
+}
 
 // nameWord is one comparable word of a name.
 type nameWord struct {
@@ -103,27 +133,20 @@ type nameWord struct {
 	weight float64
 }
 
-// nameWords splits a name into weighted, role-tagged words. Parts give the
-// roles; a name whose parts yield no comparable word is read from its form
+// nameWords splits a name into weighted, role-tagged words under its
+// pattern. A name whose parts yield no comparable word is read from its form
 // as untyped words. Generation words come back separately.
-func (c NameComparer) nameWords(n *namevalues.Value) (words []nameWord, generation []string) {
-	roles := c.PartRoles
-	if roles == nil {
-		roles = WesternPartRoles
-	}
+func nameWords(n *namevalues.Value, p NamePattern) (words []nameWord, generation []string) {
 	firstGiven := true
-	for _, p := range n.Parts {
-		role, ok := roles[p.Type]
-		if !ok {
-			role = RoleUntyped
-		}
-		for _, w := range splitWords(p.Value) {
+	for _, part := range n.Parts {
+		role := p.role(part.Type)
+		for _, w := range splitWords(part.Value) {
 			switch role {
 			case RoleIgnored:
 			case RoleGeneration:
 				generation = append(generation, w)
 			default:
-				words = append(words, nameWord{text: w, role: role, weight: c.weight(role, firstGiven)})
+				words = append(words, nameWord{text: w, role: role, weight: p.weight(role, firstGiven)})
 				if role == RoleGiven {
 					firstGiven = false
 				}
@@ -132,25 +155,10 @@ func (c NameComparer) nameWords(n *namevalues.Value) (words []nameWord, generati
 	}
 	if len(words) == 0 {
 		for _, w := range splitWords(n.Form) {
-			words = append(words, nameWord{text: w, role: RoleUntyped, weight: c.weight(RoleUntyped, false)})
+			words = append(words, nameWord{text: w, role: RoleUntyped, weight: p.weight(RoleUntyped, false)})
 		}
 	}
 	return words, generation
-}
-
-func (c NameComparer) weight(role NameRole, firstGiven bool) float64 {
-	switch role {
-	case RoleFamily:
-		return setting(c.FamilyWeight, defaultFamilyWeight)
-	case RoleGiven:
-		if firstGiven {
-			return setting(c.FirstGivenWeight, defaultFirstGivenWeight)
-		}
-		return setting(c.OtherGivenWeight, defaultOtherGivenWeight)
-	case RoleNick:
-		return setting(c.NickWeight, defaultNickWeight)
-	}
-	return setting(c.UntypedWeight, defaultUntypedWeight)
 }
 
 // affinity is how far two words' roles agree: 1 for the same role, less when
@@ -160,11 +168,11 @@ func (c NameComparer) affinity(a, b NameRole) float64 {
 	case a == b:
 		return 1
 	case a == RoleUntyped || b == RoleUntyped:
-		return setting(c.UntypedAffinity, defaultUntypedAffinity)
+		return setting(c.UntypedAffinity, *DefaultNames.UntypedAffinity)
 	case (a == RoleNick && b == RoleGiven) || (a == RoleGiven && b == RoleNick):
-		return setting(c.NickAffinity, defaultNickAffinity)
+		return setting(c.NickAffinity, *DefaultNames.NickAffinity)
 	}
-	return setting(c.CrossRole, defaultCrossRole)
+	return setting(c.CrossRole, *DefaultNames.CrossRole)
 }
 
 // compareNames scores two names over all their words, whatever their types.
@@ -182,10 +190,10 @@ func (c NameComparer) affinity(a, b NameRole) float64 {
 //     "James" alone is weak, though a surname can change at marriage.
 //   - When both carry generation words (Jr., Sr.) and share none, the score
 //     is scaled by SuffixConflict: likely father and son.
-func (c NameComparer) compareNames(a, b *namevalues.Value) (float64, bool) {
-	floor := setting(c.FuzzyFloor, defaultFuzzyFloor)
-	wa, ga := c.nameWords(a)
-	wb, gb := c.nameWords(b)
+func (c NameComparer) compareNames(a *namevalues.Value, pa NamePattern, b *namevalues.Value, pb NamePattern) (float64, bool) {
+	r := c.Words.resolve(true)
+	wa, ga := nameWords(a, pa)
+	wb, gb := nameWords(b, pb)
 	if len(wa) == 0 || len(wb) == 0 {
 		return 0, false
 	}
@@ -195,7 +203,7 @@ func (c NameComparer) compareNames(a, b *namevalues.Value) (float64, bool) {
 		sim[i] = make([]float64, len(wb))
 		earned[i] = make([]float64, len(wb))
 		for j, y := range wb {
-			sim[i][j] = wordSimilarity(x.text, y.text, floor, true)
+			sim[i][j] = wordSimilarity(x.text, y.text, r)
 			earned[i][j] = sim[i][j] * c.affinity(x.role, y.role) * (x.weight + y.weight)
 		}
 	}
@@ -207,11 +215,11 @@ func (c NameComparer) compareNames(a, b *namevalues.Value) (float64, bool) {
 		total += w.weight
 	}
 	s := bestPairing(earned) / total
-	if familyConflict(wa, wb, floor) {
-		s *= setting(c.GivenOnlyFactor, defaultGivenOnlyFactor)
+	if familyConflict(wa, wb, r) {
+		s *= setting(c.GivenOnlyFactor, *DefaultNames.GivenOnlyFactor)
 	}
 	if len(ga) > 0 && len(gb) > 0 && !sharesAny(ga, gb) {
-		s *= setting(c.SuffixConflict, defaultSuffixConflict)
+		s *= setting(c.SuffixConflict, *DefaultNames.SuffixConflict)
 	}
 	return math.Min(s, 1), true
 }
@@ -219,10 +227,11 @@ func (c NameComparer) compareNames(a, b *namevalues.Value) (float64, bool) {
 // familyConflict: both names have family words, and no family word on
 // either side resembles any word of the other name. An initial does not count
 // as resembling here ("S." says nothing about "Smith").
-func familyConflict(wa, wb []nameWord, floor float64) bool {
+func familyConflict(wa, wb []nameWord, r wordRules) bool {
+	r.initials = false
 	resembles := func(f nameWord, others []nameWord) bool {
 		for _, o := range others {
-			if wordSimilarity(f.text, o.text, floor, false) > 0 {
+			if wordSimilarity(f.text, o.text, r) > 0 {
 				return true
 			}
 		}
