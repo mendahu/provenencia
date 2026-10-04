@@ -89,6 +89,7 @@ var tables = []tableSpec{
 	{Name: "file_derivatives", Bucket: BucketOwnedOutbound},
 	{Name: "audit_transactions", Bucket: BucketSkip},
 	{Name: "audit_changes", Bucket: BucketSkip},
+	{Name: "audit_transaction_scopes", Bucket: BucketSkip},
 	{Name: "catalog_search_docs", Bucket: BucketSkip},
 	{Name: "catalog_search_meta", Bucket: BucketSkip},
 	{Name: "conclusion_resolved_values", Bucket: BucketSkip},
@@ -100,6 +101,7 @@ var foreignKeys = []fkSpec{
 	{FromTable: "project", FromCol: "updated_by", ToTable: "users", OnDelete: "NO ACTION", Bucket: BucketSkip},
 	{FromTable: "audit_transactions", FromCol: "user_id", ToTable: "users", OnDelete: "NO ACTION", Bucket: BucketSkip},
 	{FromTable: "audit_changes", FromCol: "audit_transaction_id", ToTable: "audit_transactions", OnDelete: "NO ACTION", Bucket: BucketSkip},
+	{FromTable: "audit_transaction_scopes", FromCol: "audit_transaction_id", ToTable: "audit_transactions", OnDelete: "NO ACTION", Bucket: BucketSkip},
 
 	{FromTable: "sources", FromCol: "source_type_id", ToTable: "source_types", OnDelete: "NO ACTION", Bucket: BucketResource},
 	{FromTable: "sources", FromCol: "primary_artifact_id", ToTable: "artifacts", OnDelete: "SET NULL", Bucket: BucketOptional},

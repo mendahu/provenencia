@@ -451,6 +451,46 @@ struct CatalogQueryRegistryTests {
         #expect(handle.value?.map(\.title) == ["New Row", "Alpha"])
     }
 
+    /// Work under a Source moves its "Updated" revision, but a canvas write
+    /// must not refetch the list: it goes stale and reloads on the next query.
+    @Test func applySourceGraphWriteStalesListUntilNextQuery() async {
+        let store = FakeStore()
+        seedStore(store)
+        let session = makeSession(store: store)
+        let key = CatalogQueryKey.sourcesList(project: session.projectKey)
+
+        let handle: QueryHandle<[CatalogSource]> = session.query(key)
+        await waitForFetchComplete(handle)
+        store.sourcesByProject[projectDir]?[0].updatedRevision = 42
+        store.heldCatalogProjectDir = nil
+
+        session.apply(.savedCitation(sourceId: "s1"))
+        await Task.yield()
+        #expect(store.heldCatalogProjectDir == nil)
+        #expect(handle.value?.first?.updatedRevision == 0)
+
+        let _: QueryHandle<[CatalogSource]> = session.query(key)
+        await waitForFetchComplete(handle)
+        #expect(handle.value?.first?.updatedRevision == 42)
+    }
+
+    @Test func sourceWritesMarkListStaleWithoutInvalidating() {
+        let registry = CatalogQueryRegistry.standard
+        let project = ProjectKey(projectDir: projectDir)
+        let list = CatalogQueryInvalidation.key(.sourcesList(project: project))
+        let writes: [CatalogMutation] = [
+            .mutatedSourceWorkspace(sourceId: "s1"), .mutatedSourceMetadata(sourceId: "s1"),
+            .mutatedSourceGraph(sourceId: "s1"), .deletedSubject(sourceId: "s1"),
+            .savedCitation(sourceId: "s1"),
+        ]
+        for mutation in writes {
+            #expect(registry.staleMarks(by: mutation, project: project) == [list], "\(mutation)")
+            #expect(!registry.invalidations(by: mutation, project: project).contains(list), "\(mutation)")
+        }
+        // Conclusion-layer work does not move a Source's "Updated" revision.
+        #expect(registry.staleMarks(by: .promotedSubject(sourceId: "s1"), project: project).isEmpty)
+    }
+
     @Test func applyFieldCRUDInvalidatesMetadataList() async {
         let store = FakeStore()
         seedStore(store)

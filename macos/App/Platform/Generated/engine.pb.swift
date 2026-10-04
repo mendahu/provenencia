@@ -898,8 +898,8 @@ public nonisolated struct Provenencia_Engine_V1_Source: Sendable {
   /// Used by Sources list Evidence graph gate — not cover presence.
   public var hasArtifact_p: Bool = false
 
-  /// Max audit_transactions.revision for entity_type=source on this id.
-  /// Sources list "Updated" sort; create-only Sources use their create revision.
+  /// Max audit_transactions.revision scoped to this Source (audit_transaction_scopes):
+  /// its row and any work under it. Sources list "Updated" sort.
   public var updatedRevision: Int64 = 0
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()

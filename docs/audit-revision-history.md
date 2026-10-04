@@ -314,6 +314,23 @@ This preserves two complementary views of history:
 
 The first is useful to humans. The second makes the history lossless and replayable.
 
+## 4.1 Scopes
+
+A revision is also tagged with the aggregates it worked on, so "when did anything under X last change" is one indexed lookup instead of a walk through row-level changes (whose parents may since have been deleted).
+
+```sql
+CREATE TABLE audit_transaction_scopes (
+	audit_transaction_id BLOB NOT NULL REFERENCES audit_transactions(id),
+	scope_type           TEXT NOT NULL,
+	scope_id             BLOB NOT NULL,
+	PRIMARY KEY (scope_type, scope_id, audit_transaction_id)
+) STRICT;
+```
+
+Scopes are derived inside `audit.Record`, not passed by callers: each entity type has a resolver (`core/database/audit/scopes.go`) that maps a change to its scopes using the change's own fields, the live row, or — for parents deleted in the same revision — the old values of that parent's delete change. Record rejects an entity type with no resolver, and a test fails if an audited type lacks one.
+
+Today the only scope type is `source`: a Source's row and everything under it (notes, metadata, layout, credibility, artifacts and their files, subjects, citations, observations, their notes and values). It drives the Sources list "Updated" sort. Vocabulary and conclusion-layer changes (identity claims, evidence pins, canonical entities) carry no Source scope. A new scope type is one resolver plus a backfill migration.
+
 ---
 
 # 5. Atomicity requirements

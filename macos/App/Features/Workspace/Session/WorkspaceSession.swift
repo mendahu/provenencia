@@ -101,8 +101,26 @@ final class WorkspaceSession {
         if let source = mutation.patchedSource {
             patchUpdatedSource(source)
         }
+        let keys = cachedKeys(for: registry.invalidations(by: mutation, project: projectKey))
+        for key in keys {
+            invalidate(key)
+        }
+        for key in keys {
+            revalidate(key)
+        }
+        // Stale-on-next-query only: the loaded value stays on screen and the
+        // next `query` (e.g. the Sources list reappearing) reloads it.
+        for key in cachedKeys(for: registry.staleMarks(by: mutation, project: projectKey))
+            where handles[key] != nil && !keys.contains(key)
+        {
+            invalidatedKeys.insert(key)
+        }
+        refreshSourceGraphProgress(for: mutation)
+    }
+
+    private func cachedKeys(for invalidations: [CatalogQueryInvalidation]) -> [CatalogQueryKey] {
         var keys: [CatalogQueryKey] = []
-        for invalidation in registry.invalidations(by: mutation, project: projectKey) {
+        for invalidation in invalidations {
             switch invalidation {
             case .key(let key):
                 keys.append(key)
@@ -112,13 +130,7 @@ final class WorkspaceSession {
                 })
             }
         }
-        for key in keys {
-            invalidate(key)
-        }
-        for key in keys {
-            revalidate(key)
-        }
-        refreshSourceGraphProgress(for: mutation)
+        return keys
     }
 
     /// Surgical Get-one + map merge. Skips when the list never warmed the map.
@@ -270,7 +282,7 @@ final class WorkspaceSession {
            let index = sources.firstIndex(where: { $0.id == source.id }) {
             sources[index] = source
             listHandle.applySuccess(sources)
-            invalidatedKeys.remove(listKey)
+            // Leave any stale flag: other rows may still owe a reload.
         }
 
         let workspaceKey = CatalogQueryKey.sourceWorkspace(project: projectKey, sourceId: source.id)

@@ -43,24 +43,25 @@ const (
 		cover_mode, primary_artifact_id
 		FROM sources WHERE ref = ?`
 	// Newest-first by UUIDv7 id (create time). updated_revision is the latest
-	// audit revision for this source entity (create or later update_source /
-	// set_source_cover), used by the Sources list "Updated" sort.
+	// audit revision scoped to this Source: its own row and any work under it
+	// (notes, metadata, artifacts, files, the evidence graph). Used by the
+	// Sources list "Updated" sort.
 	// has_artifact gates the Evidence graph zone without a per-row query.
 	sqlList = `SELECT s.id, s.ref, s.source_type_id, s.title, COALESCE(s.description, ''),
 		s.cover_mode, s.primary_artifact_id,
 		COALESCE((
 			SELECT MAX(t.revision)
-			FROM audit_changes c
-			JOIN audit_transactions t ON t.id = c.audit_transaction_id
-			WHERE c.entity_type = 'source' AND c.entity_id = s.id
+			FROM audit_transaction_scopes sc
+			JOIN audit_transactions t ON t.id = sc.audit_transaction_id
+			WHERE sc.scope_type = 'source' AND sc.scope_id = s.id
 		), 0),
 		EXISTS (SELECT 1 FROM artifacts a WHERE a.source_id = s.id)
 		FROM sources s
 		ORDER BY s.id DESC`
 	sqlLatestRevision = `SELECT COALESCE(MAX(t.revision), 0)
-		FROM audit_changes c
-		JOIN audit_transactions t ON t.id = c.audit_transaction_id
-		WHERE c.entity_type = 'source' AND c.entity_id = ?`
+		FROM audit_transaction_scopes sc
+		JOIN audit_transactions t ON t.id = sc.audit_transaction_id
+		WHERE sc.scope_type = 'source' AND sc.scope_id = ?`
 	sqlCount            = `SELECT COUNT(*) FROM sources`
 	sqlDelete           = `DELETE FROM sources WHERE id = ?`
 	sqlTypeExists       = `SELECT 1 FROM source_types WHERE id = ?`
@@ -77,7 +78,8 @@ type Source struct {
 	Description       string
 	CoverMode         string
 	PrimaryArtifactID []byte // nil when CoverModeTypeIcon
-	// UpdatedRevision is the latest audit revision for this source entity.
+	// UpdatedRevision is the latest audit revision of any work scoped to this
+	// Source (its row, children, and evidence graph).
 	// Filled by List and by AttachLatestRevision; zero means unset.
 	UpdatedRevision int64
 	// HasArtifact is true when at least one artifacts row exists for this Source.
@@ -463,7 +465,7 @@ func List(c *database.Catalog) ([]Source, error) {
 	return out, rows.Err()
 }
 
-// AttachLatestRevision sets UpdatedRevision from the source entity's audit trail.
+// AttachLatestRevision sets UpdatedRevision from the Source's audit scope.
 func AttachLatestRevision(c *database.Catalog, s *Source) error {
 	if s == nil || len(s.ID) != 16 {
 		return ErrInvalid
