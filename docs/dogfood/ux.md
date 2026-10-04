@@ -19,6 +19,13 @@ Copy the stub. Surface + what got in the way is enough. A wanted fix is optional
 
 <!-- add below this line -->
 
+### Structured date modal should open focused on Year
+
+- **Date:** 2026-10-04
+- **Where:** Structured date modal
+- **Annoyance:** When the modal opens, focus isn't on the Year field. The year is what you usually type first, much more often than the modifiers above it.
+- **Wanted:** The modal opens with focus on the Year field.
+
 ### Add Observation should focus the property search
 
 - **Date:** 2026-10-04
