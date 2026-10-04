@@ -47,12 +47,12 @@ final class CitationFieldsDraft {
 
     var statusText: String {
         if citationID == nil {
-            return String(localized: L10n.CitationComposer.citationStatusNew)
+            return L10n.string(L10n.CitationComposer.citationStatusNew)
         }
         if isDirty {
-            return String(localized: L10n.CitationComposer.citationStatusDirty)
+            return L10n.string(L10n.CitationComposer.citationStatusDirty)
         }
-        return String(localized: L10n.CitationComposer.citationStatusSaved)
+        return L10n.string(L10n.CitationComposer.citationStatusSaved)
     }
 
     private weak var context: CitationComposerContext?
@@ -111,7 +111,7 @@ final class CitationFieldsDraft {
                 _ = try await context.ensureCitationID()
             }
         } catch is CitationComposerNeedArtifact {
-            error = String(localized: L10n.CitationComposer.needArtifact)
+            error = L10n.string(L10n.CitationComposer.needArtifact)
         } catch {
             self.error = L10n.Errors.message(for: error)
         }

@@ -83,7 +83,7 @@ struct CatalogCountsTests {
         let counts = makeCounts(store: store)
         await counts.refreshAll()
 
-        #expect(counts.lastRefreshError == String(localized: L10n.Errors.unknown))
+        #expect(counts.lastRefreshError == L10n.string(L10n.Errors.unknown))
         #expect(counts.sources == nil)
         #expect(counts.sourceTypes == nil)
         #expect(counts.metadata == nil)

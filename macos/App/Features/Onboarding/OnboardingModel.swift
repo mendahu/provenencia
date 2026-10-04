@@ -171,8 +171,8 @@ final class OnboardingModel {
         panel.canChooseDirectories = true
         panel.allowsMultipleSelection = false
         panel.treatsFilePackagesAsDirectories = true
-        panel.prompt = String(localized: L10n.Onboarding.openPanelPrompt)
-        panel.message = String(localized: L10n.Onboarding.openPanelMessage)
+        panel.prompt = L10n.string(L10n.Onboarding.openPanelPrompt)
+        panel.message = L10n.string(L10n.Onboarding.openPanelMessage)
         guard panel.runModal() == .OK, let url = panel.url else {
             return
         }
@@ -367,6 +367,6 @@ private struct LocalizedMessageError: LocalizedError {
     }
 
     var errorDescription: String? {
-        String(localized: resource)
+        L10n.string(resource)
     }
 }

@@ -128,7 +128,7 @@ struct EvidenceBridgeEdgeSummaryTests {
             observation(propertyKey: "event", valueSubjectID: "e1"),
             observation(propertyKey: "place", valueSubjectID: "pl1"),
         ])
-        #expect(EvidenceBridgeEdgeSummary.phrase(for: placed) == String(localized: L10n.EvidenceGraph.bridgeSummaryLocationBare))
+        #expect(EvidenceBridgeEdgeSummary.phrase(for: placed) == L10n.string(L10n.EvidenceGraph.bridgeSummaryLocationBare))
     }
 
     @Test func workingLabelBecomesNoun() {
@@ -197,7 +197,7 @@ struct EvidenceBridgeEdgeSummaryTests {
         #expect(
             EvidenceBridgeEdgeSummary.sentence(for: placed, in: snap)
                 == L10n.EvidenceGraph.bridgeNameKindAndRef(
-                    phrase: String(localized: L10n.EvidenceGraph.bridgeSummaryParticipationBare),
+                    phrase: L10n.string(L10n.EvidenceGraph.bridgeSummaryParticipationBare),
                     ref: "CPA-1"
                 )
         )

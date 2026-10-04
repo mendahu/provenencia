@@ -141,7 +141,7 @@ private struct EvidenceGraphContent: View {
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel(accessibilityGraphLabel)
-        .accessibilityRotor(String(localized: L10n.EvidenceGraph.subjectsRotor)) {
+        .accessibilityRotor(L10n.string(L10n.EvidenceGraph.subjectsRotor)) {
             ForEach(subjects) { placed in
                 AccessibilityRotorEntry(
                     EvidenceSubjectCard.accessibilityLabel(for: placed),
@@ -151,7 +151,7 @@ private struct EvidenceGraphContent: View {
                 }
             }
         }
-        .accessibilityRotor(String(localized: L10n.EvidenceGraph.linksRotor)) {
+        .accessibilityRotor(L10n.string(L10n.EvidenceGraph.linksRotor)) {
             ForEach(bridges) { placed in
                 AccessibilityRotorEntry(
                     EvidenceBridgeCard.accessibilityLabel(for: placed, in: snapshot),
@@ -330,7 +330,7 @@ private struct EvidenceGraphContent: View {
         PVCallout(
             tone: .warning,
             title: L10n.EvidenceGraph.noArtifactTitle,
-            message: String(localized: L10n.EvidenceGraph.noArtifactMessage)
+            message: L10n.string(L10n.EvidenceGraph.noArtifactMessage)
         ) {
             PVButton(L10n.EvidenceGraph.noArtifactAction, variant: .secondary, size: .sm) {
                 navigation.go(
@@ -443,7 +443,7 @@ private struct EvidenceGraphContent: View {
     }
     private func styleTypeLabel(_ kind: EvidencePrimaryKind) -> String {
         model.typeLabelByKind[kind.rawValue]
-            ?? String(localized: model.toolName(for: kind))
+            ?? L10n.string(model.toolName(for: kind))
     }
 
     private func handleKey(_ press: KeyPress) -> KeyPress.Result {
@@ -826,7 +826,7 @@ private struct EvidenceGraphDocumentBody: View {
         PVEmptyState(
             icon: .shapes,
             title: L10n.EvidenceGraph.emptyTitle,
-            message: String(localized: L10n.EvidenceGraph.emptyMessage)
+            message: L10n.string(L10n.EvidenceGraph.emptyMessage)
         )
         .frame(width: 420)
         .position(x: contentSize.width / 2, y: contentSize.height / 2)

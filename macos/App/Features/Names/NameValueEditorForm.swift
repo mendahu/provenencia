@@ -130,7 +130,7 @@ struct NameValueEditorForm: View {
     private func partRow(at index: Int) -> some View {
         let part = draft.parts[index]
         let count = draft.parts.count
-        let typeLabel = String(localized: NamePartType.label(forRaw: part.type))
+        let typeLabel = L10n.string(NamePartType.label(forRaw: part.type))
         let groupLabel = L10n.NameValue.partAccessibility(
             position: index + 1,
             of: count,

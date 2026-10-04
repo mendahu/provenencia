@@ -166,7 +166,7 @@ private struct OmnibarResultsPanel: View {
     private var errorState: some View {
         PVCallout(
             tone: .danger,
-            message: results.searchError ?? String(localized: L10n.Workspace.omnibarSearchFailed)
+            message: results.searchError ?? L10n.string(L10n.Workspace.omnibarSearchFailed)
         )
         .padding(.horizontal, 9)
         .padding(.vertical, 8)

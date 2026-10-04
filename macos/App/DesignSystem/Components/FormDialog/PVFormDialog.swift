@@ -94,7 +94,7 @@ struct PVFormDialogContent<Form: View>: View {
         } footer: {
             HStack(spacing: PVSpacing.space5) {
                 Spacer(minLength: PVSpacing.space8)
-                Button(String(localized: copy.cancel)) { onCancel() }
+                Button(L10n.string(copy.cancel)) { onCancel() }
                     .buttonStyle(.pv(.secondary, size: .lg))
                     .keyboardShortcut(.cancelAction)
                     .disabled(PVFormDialogControls.isCancelDisabled(isRunning: isRunning))
@@ -103,7 +103,7 @@ struct PVFormDialogContent<Form: View>: View {
                         prefix: accessibilityIdentifierPrefix,
                         suffix: "cancel"
                     ))
-                Button(String(localized: copy.confirm)) { onConfirm() }
+                Button(L10n.string(copy.confirm)) { onConfirm() }
                     .buttonStyle(.pv(.primary, size: .lg))
                     .keyboardShortcut(.defaultAction)
                     .disabled(PVFormDialogControls.isConfirmDisabled(

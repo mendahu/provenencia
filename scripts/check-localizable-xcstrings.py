@@ -9,6 +9,10 @@ Every LocalizedStringResource key in the app must also be in the catalog.
 L10n.string resolves through Bundle.localizedString, which ignores the
 resource's defaultValue and shows the raw key when the catalog lacks it.
 
+No Swift code may call String(localized:). Resolving a LocalizedStringResource
+that way re-parses the whole strings table on every call (~1.5 ms); L10n.string
+and the L10n format functions use the bundle's cached table instead.
+
 No LocalizedStringResource may interpolate (defaultValue: "\\(count) items").
 Copy with arguments is a catalog format filled by an L10n format function
 returning String, so every resource stays safe to resolve with L10n.string.
@@ -24,6 +28,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 CATALOG = ROOT / "macos" / "App" / "Resources" / "Localizable.xcstrings"
 APP_SOURCES = ROOT / "macos" / "App"
+TEST_SOURCES = ROOT / "macos" / "ProvenenciaTests"
+# Compares L10n.string against Foundation's own resolution on purpose.
+STRING_LOCALIZED_ALLOWED = {TEST_SOURCES / "L10nResolutionTests.swift"}
+STRING_LOCALIZED_RE = re.compile(r"\bString\(localized:")
 
 # Product keys: start with a letter, then letters / digits / . / _
 KEY_RE = re.compile(r"^[a-z][a-zA-Z0-9._]*$")
@@ -45,6 +53,20 @@ def interpolated_resources() -> list[tuple[Path, int]]:
         text = path.read_text(encoding="utf-8")
         for match in INTERPOLATED_RESOURCE_RE.finditer(text):
             hits.append((path, text.count("\n", 0, match.start()) + 1))
+    return hits
+
+
+def string_localized_calls() -> list[tuple[Path, int]]:
+    """(file, line) of every String(localized:) call outside comments."""
+    hits: list[tuple[Path, int]] = []
+    for root in (APP_SOURCES, TEST_SOURCES):
+        for path in sorted(root.rglob("*.swift")):
+            if path in STRING_LOCALIZED_ALLOWED:
+                continue
+            for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+                code = line.split("//", 1)[0]
+                if STRING_LOCALIZED_RE.search(code):
+                    hits.append((path, number))
     return hits
 
 
@@ -109,6 +131,12 @@ def main() -> int:
             f"{path.relative_to(ROOT)}:{line}: LocalizedStringResource interpolates a "
             f"value — give it a %@ / %lld catalog format and an L10n format "
             f"function returning String"
+        )
+
+    for path, line in string_localized_calls():
+        problems.append(
+            f"{path.relative_to(ROOT)}:{line}: String(localized:) re-parses the strings "
+            f"table on every call — use L10n.string(_:) or an L10n format function"
         )
 
     if problems:

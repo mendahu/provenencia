@@ -76,7 +76,7 @@ struct SourceTypesListPane: View {
                 Text(
                     type.suggestedFieldCount > 0
                         ? "\(type.suggestedFieldCount)"
-                        : String(localized: L10n.SourceTypes.fieldCountNone)
+                        : L10n.string(L10n.SourceTypes.fieldCountNone)
                 )
                 .font(PVFont.mono(size: PVTypeScale.micro))
                 .foregroundStyle(type.suggestedFieldCount > 0 ? PVColor.textSecondary : PVColor.textFaint)

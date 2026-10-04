@@ -120,7 +120,7 @@ struct DateValueDraft: Equatable, Sendable {
         guard kind == "range" else { return nil }
         guard startSideHasYear, endSideHasYear else { return nil }
         guard !Self.sideLessOrEqual(startSide, endSide) else { return nil }
-        return String(localized: L10n.Sources.dateRangeOrderError)
+        return L10n.string(L10n.Sources.dateRangeOrderError)
     }
 
     /// Out-of-range message for one cascade field, if its stored value is invalid.
@@ -129,25 +129,25 @@ struct DateValueDraft: Equatable, Sendable {
         switch component {
         case .year:
             guard let y = side.year else { return nil }
-            return (1...9999).contains(y) ? nil : String(localized: L10n.Sources.dateYearOutOfRange)
+            return (1...9999).contains(y) ? nil : L10n.string(L10n.Sources.dateYearOutOfRange)
         case .month:
             guard let m = side.month else { return nil }
-            return (1...12).contains(m) ? nil : String(localized: L10n.Sources.dateMonthOutOfRange)
+            return (1...12).contains(m) ? nil : L10n.string(L10n.Sources.dateMonthOutOfRange)
         case .day:
             guard let d = side.day else { return nil }
-            return (1...31).contains(d) ? nil : String(localized: L10n.Sources.dateDayOutOfRange)
+            return (1...31).contains(d) ? nil : L10n.string(L10n.Sources.dateDayOutOfRange)
         case .hour:
             guard let h = side.hour else { return nil }
-            return (0...23).contains(h) ? nil : String(localized: L10n.Sources.dateHourOutOfRange)
+            return (0...23).contains(h) ? nil : L10n.string(L10n.Sources.dateHourOutOfRange)
         case .minute:
             guard let mi = side.minute else { return nil }
-            return (0...59).contains(mi) ? nil : String(localized: L10n.Sources.dateMinuteOutOfRange)
+            return (0...59).contains(mi) ? nil : L10n.string(L10n.Sources.dateMinuteOutOfRange)
         case .second:
             guard let s = side.second else { return nil }
-            return (0...59).contains(s) ? nil : String(localized: L10n.Sources.dateSecondOutOfRange)
+            return (0...59).contains(s) ? nil : L10n.string(L10n.Sources.dateSecondOutOfRange)
         case .millisecond:
             guard let ms = side.millisecond else { return nil }
-            return (0...999).contains(ms) ? nil : String(localized: L10n.Sources.dateMillisecondOutOfRange)
+            return (0...999).contains(ms) ? nil : L10n.string(L10n.Sources.dateMillisecondOutOfRange)
         }
     }
 

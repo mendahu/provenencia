@@ -665,7 +665,7 @@ struct CitationComposerModelTests {
                     description: "", valueType: "term"
                 ),
                 roleTermID: "", termTouched: false, isSaving: false
-            ).termFieldLabel == String(localized: L10n.CitationComposer.connectionRole)
+            ).termFieldLabel == L10n.string(L10n.CitationComposer.connectionRole)
         )
         #expect(
             ConnectionRow(
@@ -676,17 +676,17 @@ struct CitationComposerModelTests {
                     label: "Type", description: "", valueType: "term"
                 ),
                 roleTermID: "", termTouched: false, isSaving: false
-            ).termFieldLabel == String(localized: L10n.CitationComposer.connectionRelationship)
+            ).termFieldLabel == L10n.string(L10n.CitationComposer.connectionRelationship)
         )
     }
 
     @Test func polarityMenuTitleFollowsPolarity() {
         var row = ObservationRow.draft(subjectID: subjectID)
         #expect(!row.isNegated)
-        #expect(row.polarityMenuTitle == String(localized: L10n.CitationComposer.negateObservation))
+        #expect(row.polarityMenuTitle == L10n.string(L10n.CitationComposer.negateObservation))
         row.polarity = ObservationPolarity.negative.rawValue
         #expect(row.isNegated)
-        #expect(row.polarityMenuTitle == String(localized: L10n.CitationComposer.affirmObservation))
+        #expect(row.polarityMenuTitle == L10n.string(L10n.CitationComposer.affirmObservation))
     }
 
     @Test func nameDialogApplyOnlyUpdatesRow() async {
@@ -901,7 +901,7 @@ struct CitationComposerModelTests {
         await model.prepare()
         #expect(model.phase == .loadFailed)
         #expect(model.loadFailureIsMissingCitation)
-        #expect(model.loadError == String(localized: L10n.CitationComposer.citationMissing))
+        #expect(model.loadError == L10n.string(L10n.CitationComposer.citationMissing))
     }
 
     @Test func missingSubjectFallsBackWithoutCompose() async {

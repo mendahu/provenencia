@@ -26,7 +26,8 @@ Copy and track:
 - [ ] No bare Text("…") / Text("\(…)") — glyphs, brand, numbers, and other non-copy use Text(verbatim:)
 - [ ] Unused L10n members and catalog keys pruned together
 - [ ] Localizable.xcstrings still passes: python3 scripts/check-localizable-xcstrings.py
-- [ ] Tests that asserted old English compare via String(localized: L10n.…)
+- [ ] Copy needed as a `String` uses `L10n.string(…)` or an `L10n` format function — never `String(localized:)`
+- [ ] Tests that asserted old English compare via `L10n.string(L10n.…)` or the format function
 ```
 
 Do **not** edit only `L10n.swift` or only the catalog.
@@ -37,7 +38,7 @@ Do **not** edit only `L10n.swift` or only the catalog.
 
 | Intent | Use |
 | --- | --- |
-| User-facing words (titles, buttons, hints, errors) | `Text(L10n.…)` / `String(localized: L10n.…)` |
+| User-facing words (titles, buttons, hints, errors) | `Text(L10n.…)` / `L10n.string(L10n.…)` |
 | User-facing words with arguments | `L10n` helper + `%@` in the catalog — **not** `"\(name)"` inside `Text` |
 | Numbers, ordinals, refs, paths, punctuation, brand | `Text(verbatim: "\(index + 1)")`, `Text(verbatim: "—")`, `Text(verbatim: "Provenencia")` |
 | Optional String in `Text` | `if let s = value { Text(verbatim: s) }` — **never** `Text(value ?? "")` or even `Text(verbatim: value ?? "")` (the `""` literal can still be extracted as catalog key `""`) |
@@ -83,33 +84,34 @@ static let welcomeTitle = LocalizedStringResource(
 )
 ```
 
-4. For **one argument** (`%@`), keep a static catalog key and format in the helper (do not interpolate into the `LocalizedStringResource` key — that requires `StaticString`):
+4. For copy **with arguments**, keep a static catalog key with `%@` / `%lld` placeholders and write a format function that returns `String` through `L10n.format`. Use positional placeholders (`%1$@`, `%2$lld`) when there is more than one argument, so translators can reorder them. **Never** interpolate into a `LocalizedStringResource` (`defaultValue: "\(count) items"`): `L10n.string` cannot read the arguments and would show the raw `%lld items`. CI rejects it.
 
 ```swift
 static func bodySignedIn(displayName: String) -> String {
-    let format = String(localized: LocalizedStringResource(
+    L10n.format(LocalizedStringResource(
         "onboarding.chooseFile.bodySignedIn",
         defaultValue: "You're signed in as %@. Open a project you already have, or create a new one.",
         comment: "…; argument is display name"
-    ))
-    return String(format: format, locale: .current, displayName)
+    ), displayName)
 }
 ```
 
-Catalog `value` must use the same `%@` placeholders.
+Catalog `value` must use the same placeholders. `L10n.format` picks a formatting locale that matches the resolved localization, so plural variations choose the right form — don't call `String(format:)` on copy yourself.
 
 5. Add/update the key in `Localizable.xcstrings` (`extractionState: "manual"`, `en` `state: "translated"`, same comment/value as `defaultValue`). For Info.plist TCC/copy keys, use `InfoPlist.xcstrings` instead (e.g. `NSDocumentsFolderUsageDescription`) — do not put those only in `INFOPLIST_KEY_*` build settings.
 6. Call sites:
 
 ```swift
 Text(L10n.Onboarding.welcomeTitle)
-Button(String(localized: L10n.Onboarding.continueAction)) { … }
-TextField(String(localized: L10n.Onboarding.researcherName), text: $name, prompt: Text(L10n.Onboarding.researcherNamePrompt))
-panel.prompt = String(localized: L10n.Onboarding.openPanelPrompt)
+Button(L10n.string(L10n.Onboarding.continueAction)) { … }
+TextField(L10n.string(L10n.Onboarding.researcherName), text: $name, prompt: Text(L10n.Onboarding.researcherNamePrompt))
+panel.prompt = L10n.string(L10n.Onboarding.openPanelPrompt)
+PVIconButton(.dismiss, label: L10n.NameValue.partRemoveLabel) { … }          // PVCopy: static resource
+PVIconButton(.dismiss, label: L10n.NameValue.partRemove(position: 2)) { … }  // PVCopy: formatted String
 // Prefer storing Error? (LocalizedError) for toast display rather than a raw String
 ```
 
-`Text(…)` accepts `LocalizedStringResource`. `Button` / `TextField` / `Picker` title inits on our macOS 14 deployment target need `StringProtocol` — wrap with `String(localized:)`.
+`Text(…)` accepts `LocalizedStringResource`. `Button` / `TextField` / `Picker` title inits on our macOS 14 deployment target need `StringProtocol` — wrap with `L10n.string(…)`. **Never** `String(localized:)`: it re-reads and re-parses the whole strings table on every call (~1.5 ms), which drops frames when it runs in a view body. CI rejects it. Design-system labels and hints take `PVCopy`, so pass a static resource or a format function's `String` directly.
 7. Accessibility: keep `.accessibilityIdentifier("dotted.name")`. Do not UI-test by localized title. For interpolated a11y *values*, use `Text(verbatim:)` (same extractor trap as ordinals).
 8. Go/FFI failures arrive as protobuf `Error` codes. Add `L10n.Errors` + catalog keys (`error.<domain>.<name>`) when introducing a new user-visible code; map via `L10n.Errors.message`.
 

@@ -99,7 +99,7 @@ struct EvidenceSubjectCardFooterTests {
         #expect(copy.title == L10n.EvidenceGraph.promoteConfirmTitle(kind: .event, ref: "CEV-D2M8Q"))
         #expect(copy.title.contains("Event"))
         #expect(copy.message.contains("Enumeration, 1871") && copy.message.contains("EVT-"))
-        #expect(copy.confirm == String(localized: L10n.EvidenceGraph.promoteConfirmAction(kind: .event)))
-        #expect(copy.cancel == String(localized: L10n.EvidenceGraph.promoteCancel))
+        #expect(copy.confirm == L10n.string(L10n.EvidenceGraph.promoteConfirmAction(kind: .event)))
+        #expect(copy.cancel == L10n.string(L10n.EvidenceGraph.promoteCancel))
     }
 }

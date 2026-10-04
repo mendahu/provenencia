@@ -16,11 +16,23 @@ extension L10n {
     /// arguments carries values this lookup cannot read, so give it a `%@`
     /// catalog format and a ``format(_:_:)`` helper instead. Every key must be
     /// in the catalog (checked by `scripts/check-localizable-xcstrings.py`);
-    /// a missing key resolves to the key itself.
+    /// a missing key resolves to the key itself, as it does in Foundation.
     static func string(_ resource: LocalizedStringResource) -> String {
         let resolved = Bundle.main.localizedString(forKey: resource.key, value: nil, table: resource.table)
-        assert(resolved != resource.key, "L10n key missing from the String Catalog: \(resource.key)")
+        // Only semantic keys (`evidenceGraph.subject.addProperty`) belong in the
+        // catalog; English-as-key resources in previews and test fixtures
+        // ("Delete field") resolve to their key by design.
+        assert(
+            resolved != resource.key || !isSemanticKey(resource.key),
+            "L10n key missing from the String Catalog: \(resource.key)"
+        )
         return resolved
+    }
+
+    /// A dotted catalog key such as `evidenceGraph.subject.addProperty`, as
+    /// `scripts/check-localizable-xcstrings.py` defines it.
+    private static func isSemanticKey(_ key: String) -> Bool {
+        key.first?.isLowercase == true && key.contains(".") && !key.contains(" ")
     }
 
     /// Resolves the catalog format behind `resource` and fills in `arguments`,

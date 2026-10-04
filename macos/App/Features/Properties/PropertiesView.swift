@@ -379,11 +379,11 @@ private struct PropertiesContent: View {
     ) -> String {
         var parts = [property.label]
         parts.append(bound
-            ? String(localized: L10n.Properties.bindingBound)
-            : String(localized: L10n.Properties.bindingNotBound))
+            ? L10n.string(L10n.Properties.bindingBound)
+            : L10n.string(L10n.Properties.bindingNotBound))
         parts.append(type.label)
         if locked {
-            parts.append(String(localized: L10n.Properties.bindingLocked))
+            parts.append(L10n.string(L10n.Properties.bindingLocked))
         }
         return parts.joined(separator: ", ")
     }
@@ -416,7 +416,7 @@ private struct PropertiesContent: View {
 
     private func rowAccessibilityLabel(_ property: CatalogProperty) -> String {
         let bound = model.snapshot.boundTypes(for: property.id)
-        let valueType = String(localized: SubjectPropertyValueType.label(property.valueType))
+        let valueType = L10n.string(SubjectPropertyValueType.label(property.valueType))
         let boundText = L10n.Properties.rowBoundAnnouncement(count: bound.count)
         return "\(property.label), \(valueType), \(property.origin), \(boundText)"
     }
@@ -567,8 +567,8 @@ private struct PropertiesContent: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(
-            "\(type.label), \(bound ? String(localized: L10n.Properties.bindingBound) : String(localized: L10n.Properties.bindingNotBound))"
-            + (locked ? ", \(String(localized: L10n.Properties.bindingLocked))" : "")
+            "\(type.label), \(bound ? L10n.string(L10n.Properties.bindingBound) : L10n.string(L10n.Properties.bindingNotBound))"
+            + (locked ? ", \(L10n.string(L10n.Properties.bindingLocked))" : "")
         )
     }
 }

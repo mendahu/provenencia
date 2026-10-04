@@ -165,7 +165,7 @@ final class PropertiesModel {
 
     var deleteAccessibilityLabel: String {
         guard let property = selectedProperty else {
-            return String(localized: L10n.Properties.deleteProperty)
+            return L10n.string(L10n.Properties.deleteProperty)
         }
         return L10n.Properties.deletePropertyAccessibility(label: property.label)
     }
@@ -341,7 +341,7 @@ final class PropertiesModel {
             session.apply(.updatedProperty)
             isEditingIdentity = false
             toast = VocabularyToast(
-                title: String(localized: L10n.Properties.toastUpdatedTitle),
+                title: L10n.string(L10n.Properties.toastUpdatedTitle),
                 body: L10n.Properties.toastUpdatedBody(label: updated.label, key: updated.key),
                 tone: .success
             )
@@ -387,7 +387,7 @@ final class PropertiesModel {
             formError = nil
             cancelEdit()
             toast = VocabularyToast(
-                title: String(localized: L10n.Properties.toastDeletedTitle),
+                title: L10n.string(L10n.Properties.toastDeletedTitle),
                 body: L10n.Properties.toastDeletedBody(label: property.label),
                 tone: .success
             )
@@ -415,11 +415,11 @@ final class PropertiesModel {
         guard let draft = incoming ?? draft else { return nil }
         let label = draft.label.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !label.isEmpty else {
-            formError = String(localized: L10n.Properties.errorLabelRequired)
+            formError = L10n.string(L10n.Properties.errorLabelRequired)
             return nil
         }
         guard SubjectPropertyValueType.researcherCreatable.contains(draft.valueType) else {
-            formError = String(localized: L10n.Properties.errorValueType)
+            formError = L10n.string(L10n.Properties.errorValueType)
             return nil
         }
         isSaving = true
@@ -449,7 +449,7 @@ final class PropertiesModel {
             closeCreate()
             selectedPropertyID = created.id
             toast = VocabularyToast(
-                title: String(localized: L10n.Properties.toastCreatedTitle),
+                title: L10n.string(L10n.Properties.toastCreatedTitle),
                 body: L10n.Properties.toastCreatedBody(label: created.label),
                 tone: .success
             )

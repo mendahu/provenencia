@@ -350,7 +350,7 @@ struct SourceGraphSnapshotTests {
         let label = EvidenceSubjectCard.accessibilityLabel(for: placed)
         #expect(label.contains("Person"))
         #expect(label.contains("Wm Robins"))
-        #expect(label.contains(String(localized: L10n.EvidenceGraph.uncitedAccessibility)))
+        #expect(label.contains(L10n.string(L10n.EvidenceGraph.uncitedAccessibility)))
     }
 
     @Test func accessibilityLabelIncludesCited() {
@@ -370,7 +370,7 @@ struct SourceGraphSnapshotTests {
             isCited: true
         )
         let label = EvidenceSubjectCard.accessibilityLabel(for: placed)
-        #expect(label.contains(String(localized: L10n.EvidenceGraph.citedAccessibility)))
+        #expect(label.contains(L10n.string(L10n.EvidenceGraph.citedAccessibility)))
     }
 
     @Test func buildAttachesMembershipToPrimariesAndBridges() {

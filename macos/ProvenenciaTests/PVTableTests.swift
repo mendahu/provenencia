@@ -110,7 +110,7 @@ struct PVTableFilterSelectTests {
     @Test func filterColumnLabelNamesTheAxis() {
         #expect(
             L10n.DesignSystem.tableFilterColumn(column: "Data type")
-                == String(format: String(localized: LocalizedStringResource(
+                == String(format: L10n.string(LocalizedStringResource(
                     "designSystem.table.filterColumn",
                     defaultValue: "Filter %@",
                     comment: "Accessibility label for a PVTable column's filter menu; argument is the column title"

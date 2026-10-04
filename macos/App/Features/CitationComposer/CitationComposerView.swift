@@ -148,7 +148,7 @@ struct CitationComposerView: View {
             item: leaveBinding,
             copy: { _ in
                 PVConfirmCopy(
-                    title: String(localized: L10n.CitationComposer.leaveTitle),
+                    title: L10n.string(L10n.CitationComposer.leaveTitle),
                     message: model.unsavedSummary,
                     confirm: L10n.CitationComposer.leaveDiscard,
                     cancel: L10n.CitationComposer.leaveKeepEditing
@@ -234,7 +234,7 @@ struct CitationComposerView: View {
             let page = pending.pastePage ?? 1
             let lines = pending.pasteLineCount ?? 1
             return PVConfirmCopy(
-                title: String(localized: L10n.CitationComposer.autoTranscribeReplaceTitle),
+                title: L10n.string(L10n.CitationComposer.autoTranscribeReplaceTitle),
                 message: L10n.CitationComposer.pasteReplaceMessage(selectedLines: lines, page: page),
                 confirm: L10n.CitationComposer.pasteReplaceConfirm,
                 cancel: L10n.CitationComposer.autoTranscribeKeep
@@ -254,8 +254,8 @@ struct CitationComposerView: View {
             message = L10n.CitationComposer.autoTranscribeWholePageMessage
         }
         return PVConfirmCopy(
-            title: String(localized: title),
-            message: String(localized: message),
+            title: L10n.string(title),
+            message: L10n.string(message),
             confirm: L10n.CitationComposer.autoTranscribeConfirm,
             cancel: replacing
                 ? L10n.CitationComposer.autoTranscribeKeep
@@ -288,7 +288,7 @@ struct CitationComposerView: View {
             PVCallout(
                 tone: .neutral,
                 title: L10n.CitationComposer.noArtifactsTitle,
-                message: String(localized: L10n.CitationComposer.noArtifactsCallout)
+                message: L10n.string(L10n.CitationComposer.noArtifactsCallout)
             ) {
                 PVButton(L10n.CitationComposer.goToSourcePage, variant: .secondary, size: .sm) {
                     navigation.go(to: model.sourcePageLocation())

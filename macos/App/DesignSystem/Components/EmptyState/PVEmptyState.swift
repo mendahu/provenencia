@@ -4,7 +4,7 @@ import SwiftUI
 /// (dashed border, faint icon, display-font title, muted prose body, optional
 /// `action` slot). `message` is a plain `String` (like `PVToast`'s) since
 /// callers often interpolate dynamic content (e.g. a search query) into it;
-/// pass `String(localized: …)` for fixed copy.
+/// pass `L10n.string(…)` for fixed copy.
 struct PVEmptyState<Action: View>: View {
     private let icon: PVSymbol
     private let title: LocalizedStringResource?

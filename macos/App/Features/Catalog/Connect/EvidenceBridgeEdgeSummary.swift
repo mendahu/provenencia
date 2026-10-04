@@ -38,17 +38,17 @@ enum EvidenceBridgeEdgeSummary {
     static func phrase(kind: EvidenceBridgeKind, term: String?) -> String {
         switch kind {
         case .location:
-            return String(localized: L10n.EvidenceGraph.bridgeSummaryLocationBare)
+            return L10n.string(L10n.EvidenceGraph.bridgeSummaryLocationBare)
         case .relationship:
             if let term {
                 return L10n.EvidenceGraph.bridgeSummaryRelationshipTypeOnly(type: term)
             }
-            return String(localized: L10n.EvidenceGraph.bridgeSummaryRelationshipBare)
+            return L10n.string(L10n.EvidenceGraph.bridgeSummaryRelationshipBare)
         case .participation:
             if let term {
                 return L10n.EvidenceGraph.bridgeSummaryParticipationRoleOnly(role: term)
             }
-            return String(localized: L10n.EvidenceGraph.bridgeSummaryParticipationBare)
+            return L10n.string(L10n.EvidenceGraph.bridgeSummaryParticipationBare)
         }
     }
 
@@ -74,7 +74,7 @@ enum EvidenceBridgeEdgeSummary {
         if let event, let place {
             return L10n.EvidenceGraph.bridgeSummaryLocation(event: event, place: place)
         }
-        return String(localized: L10n.EvidenceGraph.bridgeSummaryLocationBare)
+        return L10n.string(L10n.EvidenceGraph.bridgeSummaryLocationBare)
     }
 
     private static func relationshipSentence(person: String?, related: String?, type: String?) -> String {

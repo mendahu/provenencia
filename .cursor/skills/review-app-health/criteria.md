@@ -137,7 +137,7 @@ Fight the grain = debt.
 - New store APIs without FakeStore + model tests where behavior is non-trivial
 - Handlers without `runRPC`-style coverage for happy path + important errors
 - Gaps: error paths, session lifecycle, ingest policy, search mapping, navigation restore
-- Brittle tests asserting raw English instead of `String(localized: L10n.…)`
+- Brittle tests asserting raw English instead of `L10n.string(L10n.…)` or the `L10n` format function
 - Tests that hit dylib / real SQLite from Mac unit target (should not)
 
 **Balance** — Do not demand 100% lines. Demand coverage on **boundaries and rules** that AI edits tend to break.

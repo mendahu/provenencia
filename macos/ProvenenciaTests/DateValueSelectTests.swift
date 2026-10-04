@@ -10,10 +10,10 @@ struct DateValueSelectTests {
         #expect(
             DateValueSelectOptions.calendars.map(\.label)
                 == [
-                    String(localized: L10n.Sources.dateCalendarGregorian),
-                    String(localized: L10n.Sources.dateCalendarJulian),
-                    String(localized: L10n.Sources.dateCalendarFrenchRepublican),
-                    String(localized: L10n.Sources.dateCalendarHebrew),
+                    L10n.string(L10n.Sources.dateCalendarGregorian),
+                    L10n.string(L10n.Sources.dateCalendarJulian),
+                    L10n.string(L10n.Sources.dateCalendarFrenchRepublican),
+                    L10n.string(L10n.Sources.dateCalendarHebrew),
                 ]
         )
     }
@@ -21,9 +21,9 @@ struct DateValueSelectTests {
     @Test func monthOptionsAreEmptyPlusOneThroughTwelve() {
         let values = DateValueSelectOptions.months.map(\.id)
         #expect(values == ["", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"])
-        #expect(DateValueSelectOptions.months[0].label == String(localized: L10n.Sources.dateMonthNone))
-        #expect(DateValueSelectOptions.months[1].label == String(localized: L10n.Sources.dateMonthJanuary))
-        #expect(DateValueSelectOptions.months[12].label == String(localized: L10n.Sources.dateMonthDecember))
+        #expect(DateValueSelectOptions.months[0].label == L10n.string(L10n.Sources.dateMonthNone))
+        #expect(DateValueSelectOptions.months[1].label == L10n.string(L10n.Sources.dateMonthJanuary))
+        #expect(DateValueSelectOptions.months[12].label == L10n.string(L10n.Sources.dateMonthDecember))
     }
 
     @Test func applyingAMonthOptionStillCascadesTheDraft() {

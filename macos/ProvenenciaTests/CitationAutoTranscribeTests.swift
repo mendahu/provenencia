@@ -29,7 +29,7 @@ struct CitationAutoTranscribeTests {
         #expect(!model.canPasteTranscription)
         #expect(
             model.transcriptionActionHint
-                == String(localized: L10n.CitationComposer.pasteHintSelect)
+                == L10n.string(L10n.CitationComposer.pasteHintSelect)
         )
     }
 
@@ -113,7 +113,7 @@ struct CitationAutoTranscribeTests {
         #expect(model.transcription.isEmpty)
         #expect(
             model.transcriptionActionHint
-                == String(localized: L10n.CitationComposer.pasteHintNoTextLayer)
+                == L10n.string(L10n.CitationComposer.pasteHintNoTextLayer)
         )
         #expect(engine.recognizeCount == 0)
     }
@@ -148,7 +148,7 @@ struct CitationAutoTranscribeTests {
         #expect(engine.recognizeCount == 0)
         #expect(
             model.autoTranscribeHint
-                == String(localized: L10n.CitationComposer.autoTranscribeHintMissingFile)
+                == L10n.string(L10n.CitationComposer.autoTranscribeHintMissingFile)
         )
     }
 
@@ -164,7 +164,7 @@ struct CitationAutoTranscribeTests {
         #expect(engine.recognizeCount == 0)
         #expect(
             model.autoTranscribeHint
-                == String(localized: L10n.CitationComposer.autoTranscribeHintAudio)
+                == L10n.string(L10n.CitationComposer.autoTranscribeHintAudio)
         )
     }
 
@@ -204,7 +204,7 @@ struct CitationAutoTranscribeTests {
         #expect(model.transcription == "kept")
         #expect(
             model.transcriptionOCRMessage
-                == String(localized: L10n.CitationComposer.autoTranscribeNothingFound)
+                == L10n.string(L10n.CitationComposer.autoTranscribeNothingFound)
         )
     }
 
@@ -223,7 +223,7 @@ struct CitationAutoTranscribeTests {
         #expect(model.transcription == "kept")
         #expect(
             model.transcriptionOCRMessage
-                == String(localized: L10n.CitationComposer.autoTranscribeFailed)
+                == L10n.string(L10n.CitationComposer.autoTranscribeFailed)
         )
     }
 

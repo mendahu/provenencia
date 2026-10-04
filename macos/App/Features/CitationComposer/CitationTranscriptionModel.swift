@@ -148,14 +148,14 @@ final class CitationTranscriptionModel {
     func runAutoTranscribe() async {
         guard canAutoTranscribe, let nsImage = imageRaster else { return }
         guard let cgImage = OCRImage.cgImage(from: nsImage) else {
-            ocrMessage = String(localized: L10n.CitationComposer.autoTranscribeFailed)
+            ocrMessage = L10n.string(L10n.CitationComposer.autoTranscribeFailed)
             return
         }
         let source: CGImage
         if let region = fields.locator.region, region.isValid {
             let bounds = ArtifactRegionGeometry.boundingRect(of: region.points)
             guard let cropped = OCRImage.crop(cgImage, normalizedRect: bounds) else {
-                ocrMessage = String(localized: L10n.CitationComposer.autoTranscribeFailed)
+                ocrMessage = L10n.string(L10n.CitationComposer.autoTranscribeFailed)
                 return
             }
             source = cropped
@@ -168,13 +168,13 @@ final class CitationTranscriptionModel {
             let text = try await ocrEngine.recognizeText(in: source)
                 .trimmingCharacters(in: .whitespacesAndNewlines)
             if text.isEmpty {
-                ocrMessage = String(localized: L10n.CitationComposer.autoTranscribeNothingFound)
+                ocrMessage = L10n.string(L10n.CitationComposer.autoTranscribeNothingFound)
                 return
             }
             fields.transcription = text
             ocrMessage = nil
         } catch {
-            ocrMessage = String(localized: L10n.CitationComposer.autoTranscribeFailed)
+            ocrMessage = L10n.string(L10n.CitationComposer.autoTranscribeFailed)
         }
     }
 }

@@ -71,7 +71,7 @@ private struct PersonsListContent: View {
                 PVEmptyState(
                     icon: .person,
                     title: L10n.Workspace.personsEmptyTitle,
-                    message: String(localized: L10n.Workspace.personsEmptyMessage)
+                    message: L10n.string(L10n.Workspace.personsEmptyMessage)
                 )
                 .accessibilityIdentifier("persons.empty")
             case .failed(let message):

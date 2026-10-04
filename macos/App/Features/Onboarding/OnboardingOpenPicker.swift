@@ -11,7 +11,7 @@ struct OnboardingOpenPicker: View {
     }
 
     private var projectOptions: [PVSelectOption] {
-        [PVSelectOption(value: "", label: String(localized: L10n.Onboarding.selectProject))]
+        [PVSelectOption(value: "", label: L10n.string(L10n.Onboarding.selectProject))]
             + model.availableProjects.map { PVSelectOption(value: $0.path, label: $0.lastPathComponent) }
     }
 

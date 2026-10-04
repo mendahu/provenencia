@@ -18,7 +18,7 @@ struct SourcePageNotesView: View {
                 PVEmptyState(
                     icon: .penLine,
                     title: L10n.Sources.notesEmptyTitle,
-                    message: String(localized: L10n.Sources.notesEmptyMessage),
+                    message: L10n.string(L10n.Sources.notesEmptyMessage),
                     compact: true
                 )
                 .accessibilityIdentifier("sources.page.notes.empty")

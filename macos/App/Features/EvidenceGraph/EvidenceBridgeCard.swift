@@ -127,7 +127,7 @@ struct EvidenceBridgeCard: View {
     ) -> CGFloat {
         let text = placed.isCited
             ? EvidenceBridgeEdgeSummary.sentence(for: placed, in: snapshot)
-            : String(localized: L10n.EvidenceGraph.bridgeHonestyBody)
+            : L10n.string(L10n.EvidenceGraph.bridgeHonestyBody)
         let font = placed.isCited
             ? PVFont.nsDisplay(size: 14.5, weight: PVFontWeight.medium)
             : PVFont.nsBody(size: 11.5, weight: PVFontWeight.regular, italic: true)
@@ -291,7 +291,7 @@ struct EvidenceBridgeCard: View {
         }
         let trimmed = placed.subject.label.trimmingCharacters(in: .whitespacesAndNewlines)
         let name = trimmed.isEmpty ? placed.typeLabel : trimmed
-        let honesty = String(localized: L10n.EvidenceGraph.bridgeHonestyAccessibility)
+        let honesty = L10n.string(L10n.EvidenceGraph.bridgeHonestyAccessibility)
         if ref.isEmpty {
             return "\(placed.typeLabel), \(name), \(honesty)"
         }

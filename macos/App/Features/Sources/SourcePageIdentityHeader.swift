@@ -58,7 +58,7 @@ struct SourcePageIdentityHeader: View {
             typeIconKey: identityCover.typeIconKey,
             size: 72
         )
-        .accessibilityHint(String(localized: L10n.Sources.thumbnailMenuHint))
+        .accessibilityHint(L10n.string(L10n.Sources.thumbnailMenuHint))
         .accessibilityIdentifier("sources.page.cover")
         .pvContextMenuTrigger($coverMenu)
         .onChange(of: coverMenu.isPresented) { _, open in
@@ -69,7 +69,7 @@ struct SourcePageIdentityHeader: View {
                 )
             }
         }
-        .help(String(localized: L10n.Sources.thumbnailMenuHint))
+        .help(L10n.string(L10n.Sources.thumbnailMenuHint))
     }
 
     private var coverMenuPanel: some View {
@@ -206,8 +206,8 @@ struct SourcePageIdentityHeader: View {
         .disabled(location == nil)
         .help(
             location == nil
-                ? String(localized: L10n.Sources.needsArtifactTooltip)
-                : String(localized: L10n.Sources.jumpToEvidenceGraph)
+                ? L10n.string(L10n.Sources.needsArtifactTooltip)
+                : L10n.string(L10n.Sources.jumpToEvidenceGraph)
         )
         .accessibilityIdentifier("sources.page.jumpToEvidenceGraph")
     }

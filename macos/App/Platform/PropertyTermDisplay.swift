@@ -5,7 +5,7 @@ import Foundation
 enum PropertyTermDisplay {
     static func name(key: String, propertyKey: String, catalogLabel: String) -> String {
         if let resource = L10n.PropertyTerm.resource(propertyKey: propertyKey, termKey: key) {
-            return String(localized: resource)
+            return L10n.string(resource)
         }
         let trimmed = catalogLabel.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? key : trimmed

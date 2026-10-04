@@ -39,12 +39,12 @@ struct CitationComposerArtifactMenuRow: View {
     private var kindLabel: String {
         let media = artifact.file?.mediaType ?? ""
         if media.localizedCaseInsensitiveContains("pdf") {
-            return String(localized: L10n.CitationComposer.artifactKindPDF)
+            return L10n.string(L10n.CitationComposer.artifactKindPDF)
         }
         if media.hasPrefix("image/") {
-            return String(localized: L10n.CitationComposer.artifactKindImage)
+            return L10n.string(L10n.CitationComposer.artifactKindImage)
         }
-        return String(localized: L10n.CitationComposer.artifactKindUnknown)
+        return L10n.string(L10n.CitationComposer.artifactKindUnknown)
     }
 }
 

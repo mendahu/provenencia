@@ -127,7 +127,7 @@ struct SourcesSplitRow: View {
             .padding(.vertical, PVSpacing.space5 + PVSpacing.spacePx)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
             .background(PVColor.surfaceSunken)
-            .help(String(localized: L10n.Sources.needsArtifactTooltip))
+            .help(L10n.string(L10n.Sources.needsArtifactTooltip))
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(Text(L10n.Sources.needsArtifact))
             .accessibilityHint(Text(L10n.Sources.needsArtifactTooltip))

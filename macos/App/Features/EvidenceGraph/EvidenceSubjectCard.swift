@@ -336,8 +336,8 @@ struct EvidenceSubjectCard: View {
         let trimmed = placed.subject.label.trimmingCharacters(in: .whitespacesAndNewlines)
         let name = trimmed.isEmpty ? placed.typeLabel : trimmed
         let citation = placed.isCited
-            ? String(localized: L10n.EvidenceGraph.citedAccessibility)
-            : String(localized: L10n.EvidenceGraph.uncitedAccessibility)
+            ? L10n.string(L10n.EvidenceGraph.citedAccessibility)
+            : L10n.string(L10n.EvidenceGraph.uncitedAccessibility)
         let ref = placed.subject.ref.trimmingCharacters(in: .whitespacesAndNewlines)
         if ref.isEmpty {
             return "\(placed.typeLabel), \(name), \(citation)"

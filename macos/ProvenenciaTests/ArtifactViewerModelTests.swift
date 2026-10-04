@@ -296,7 +296,7 @@ struct ArtifactViewerModelTests {
         model.openFind()
         #expect(model.isFindPresented)
         #expect(model.findNote == .noTextLayer)
-        #expect(model.findStatusNote == String(localized: L10n.ArtifactViewer.findNoteNoTextLayer))
+        #expect(model.findStatusNote == L10n.string(L10n.ArtifactViewer.findNoteNoTextLayer))
         model.findQuery = "Alice"
         #expect(model.findMatchCount == 0)
         #expect(model.page == 1)

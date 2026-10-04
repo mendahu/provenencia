@@ -187,7 +187,7 @@ private struct SourcesListContent: View {
     private var filterMenu: some View {
         let options = [PVSelectOption(
             value: "",
-            label: String(localized: L10n.Sources.filterAllTypes),
+            label: L10n.string(L10n.Sources.filterAllTypes),
             accessibilityIdentifier: "sources.filter.all"
         )] + model.types.map {
             PVSelectOption(
@@ -211,7 +211,7 @@ private struct SourcesListContent: View {
         let options = SourcesModel.Sort.allCases.map {
             PVSelectOption(
                 value: $0.rawValue,
-                label: String(localized: $0.label),
+                label: L10n.string($0.label),
                 accessibilityIdentifier: "sources.sort.\($0.rawValue)"
             )
         }
@@ -236,7 +236,7 @@ private struct SourcesListContent: View {
             PVEmptyState(
                 icon: .filter,
                 title: L10n.Sources.noFilterMatchesTitle,
-                message: String(localized: L10n.Sources.noFilterMatchesMessage),
+                message: L10n.string(L10n.Sources.noFilterMatchesMessage),
                 compact: true
             )
             .padding(.horizontal, PVSpacing.gutterPage)
@@ -307,7 +307,7 @@ private struct SourcesListContent: View {
         PVEmptyState(
             icon: .scrollText,
             title: L10n.Sources.emptyTitle,
-            message: String(localized: L10n.Sources.emptyMessage)
+            message: L10n.string(L10n.Sources.emptyMessage)
         )
         .padding(.horizontal, PVSpacing.gutterPage)
         .padding(.top, PVSpacing.space8)

@@ -198,7 +198,7 @@ final class SourcePageModel {
                 )
             }
             context.toast = VocabularyToast(
-                title: String(localized: L10n.Sources.toastArtifactDeletedTitle),
+                title: L10n.string(L10n.Sources.toastArtifactDeletedTitle),
                 body: L10n.Sources.toastArtifactDeletedBody(ref: target.ref),
                 tone: .success
             )

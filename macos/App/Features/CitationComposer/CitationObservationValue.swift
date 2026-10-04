@@ -111,18 +111,18 @@ enum CitationObservationValue {
     static func message(for failure: Failure) -> String {
         switch failure {
         case .invalidInteger:
-            return String(localized: L10n.CitationComposer.invalidIntegerError)
+            return L10n.string(L10n.CitationComposer.invalidIntegerError)
         case .invalidDate:
-            return String(localized: L10n.CitationComposer.invalidDateError)
+            return L10n.string(L10n.CitationComposer.invalidDateError)
         case .unsupported:
-            return String(localized: L10n.CitationComposer.unsupportedValueTypeError)
+            return L10n.string(L10n.CitationComposer.unsupportedValueTypeError)
         }
     }
 
     private static func dateSummary(_ draft: DateValueDraft) -> String {
         let formatted = DateValueDisplay.string(for: draft)
         if formatted.isEmpty {
-            return String(localized: L10n.CitationComposer.dateUnset)
+            return L10n.string(L10n.CitationComposer.dateUnset)
         }
         return formatted
     }

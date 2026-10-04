@@ -194,7 +194,7 @@ struct SourceTypesModelTests {
         #expect(model.suggestions.map(\.field.id) == ["f2", "f1"])
         #expect(model.assignPick.isEmpty)
         #expect(model.types.first { $0.id == "t1" }?.suggestedFieldCount == 2)
-        #expect(model.toast?.title == String(localized: L10n.SourceTypes.toastAssignedTitle))
+        #expect(model.toast?.title == L10n.string(L10n.SourceTypes.toastAssignedTitle))
     }
 
     @Test func removingASuggestionKeepsTheFieldInThePool() async {
@@ -214,7 +214,7 @@ struct SourceTypesModelTests {
         #expect(model.types.first { $0.id == "t1" }?.suggestedFieldCount == 0)
         // The vocabulary row survives, so the field is assignable again.
         #expect(model.assignPool.map(\.id) == ["f1"])
-        #expect(model.toast?.title == String(localized: L10n.SourceTypes.toastRemovedTitle))
+        #expect(model.toast?.title == L10n.string(L10n.SourceTypes.toastRemovedTitle))
         // T-20: the copy must not imply the existing values went with it.
         #expect(model.toast?.body.contains("3") == true)
     }
@@ -253,7 +253,7 @@ struct SourceTypesModelTests {
         #expect(model.selectedType?.origin == "user")
         #expect(model.selectedType?.iconKey == PVMarkKey.defaultTypeMark.rawValue)
         #expect(model.suggestions.isEmpty)
-        #expect(model.toast?.title == String(localized: L10n.SourceTypes.toastAddedTitle))
+        #expect(model.toast?.title == L10n.string(L10n.SourceTypes.toastAddedTitle))
         #expect(counts.sourceTypes?.total == 2)
         #expect(counts.sourceTypes?.user == 1)
     }
@@ -278,7 +278,7 @@ struct SourceTypesModelTests {
         #expect(!model.canSubmit)
         await model.submit()
 
-        #expect(model.formError == String(localized: L10n.SourceTypes.errorLabelRequired))
+        #expect(model.formError == L10n.string(L10n.SourceTypes.errorLabelRequired))
         #expect(model.types.isEmpty)
     }
 
@@ -290,7 +290,7 @@ struct SourceTypesModelTests {
 
         await model.submit()
 
-        #expect(model.formError == String(localized: L10n.SourceTypes.errorUnslugifiable))
+        #expect(model.formError == L10n.string(L10n.SourceTypes.errorUnslugifiable))
         #expect(model.types.isEmpty)
     }
 
@@ -332,7 +332,7 @@ struct SourceTypesModelTests {
 
         #expect(model.selectedType?.label == "Printed book")
         #expect(model.selectedType?.key == "book")
-        #expect(model.toast?.title == String(localized: L10n.SourceTypes.toastUpdatedTitle))
+        #expect(model.toast?.title == L10n.string(L10n.SourceTypes.toastUpdatedTitle))
     }
 
     @Test func changingIconMarksDirtyAndPersists() async {
@@ -492,7 +492,7 @@ struct SourceTypesModelTests {
         #expect(model.selectedType == nil)
         #expect(model.suggestions.isEmpty)
         #expect(model.pendingDeleteType == nil)
-        #expect(model.toast?.title == String(localized: L10n.SourceTypes.toastDeletedTitle))
+        #expect(model.toast?.title == L10n.string(L10n.SourceTypes.toastDeletedTitle))
         // The suggestion join cascades; the field vocabulary row does not.
         #expect(store.fieldsByProject[projectDir]?.map(\.id) == ["f1"])
         #expect(counts.sourceTypes?.total == 0)

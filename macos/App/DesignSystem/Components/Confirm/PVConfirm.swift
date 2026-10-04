@@ -46,8 +46,8 @@ struct PVConfirmCopy {
     ) {
         self.title = title
         self.message = message
-        self.confirm = String(localized: confirm)
-        self.cancel = String(localized: cancel)
+        self.confirm = L10n.string(confirm)
+        self.cancel = L10n.string(cancel)
     }
 
     init(

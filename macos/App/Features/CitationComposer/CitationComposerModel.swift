@@ -406,14 +406,14 @@ final class CitationComposerModel {
     var dialogPropertyError: String? {
         guard let draft = observationDialog, draft.showValidation else { return nil }
         return draft.propertyID.isEmpty
-            ? String(localized: L10n.CitationComposer.dialogPropertyRequired)
+            ? L10n.string(L10n.CitationComposer.dialogPropertyRequired)
             : nil
     }
 
     var dialogValueError: String? {
         guard let draft = observationDialog, draft.showValidation, dialogPropertyError == nil
         else { return nil }
-        return canConfirmObservation ? nil : String(localized: L10n.CitationComposer.dialogValueRequired)
+        return canConfirmObservation ? nil : L10n.string(L10n.CitationComposer.dialogValueRequired)
     }
 
     func catalogProperty(id: String) -> CatalogProperty? { vocabulary.property(id: id) }
@@ -509,7 +509,7 @@ final class CitationComposerModel {
                 } catch {
                     resetComposerIdentity(keepLocator: false)
                     loadFailureIsMissingCitation = true
-                    loadError = String(localized: L10n.CitationComposer.citationMissing)
+                    loadError = L10n.string(L10n.CitationComposer.citationMissing)
                     phase = .loadFailed
                     return
                 }
@@ -544,7 +544,7 @@ final class CitationComposerModel {
             phase = .compose
         } catch is CatalogWarmError {
             loadFailureIsMissingCitation = false
-            loadError = String(localized: L10n.CitationComposer.catalogUnavailable)
+            loadError = L10n.string(L10n.CitationComposer.catalogUnavailable)
             phase = .loadFailed
         } catch {
             loadFailureIsMissingCitation = false
@@ -568,7 +568,7 @@ final class CitationComposerModel {
             kind: "citation",
             id: id,
             ref: activeCitationRef.isEmpty ? id : activeCitationRef,
-            title: snippet.isEmpty ? String(localized: L10n.CitationComposer.untitledCitation) : snippet
+            title: snippet.isEmpty ? L10n.string(L10n.CitationComposer.untitledCitation) : snippet
         )
     }
 
@@ -1098,7 +1098,7 @@ final class CitationComposerModel {
         } else if let artifact = selectedArtifact {
             identityAnnouncement = L10n.CitationComposer.identityChangedArtifact(title: artifact.label)
         } else {
-            identityAnnouncement = String(localized: L10n.CitationComposer.identityChangedNew)
+            identityAnnouncement = L10n.string(L10n.CitationComposer.identityChangedNew)
         }
     }
 

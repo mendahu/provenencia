@@ -7,7 +7,7 @@ struct PropertyTermDisplayTests {
     @Test func productTermUsesL10n() {
         #expect(
             PropertyTermDisplay.name(key: "father", propertyKey: "role", catalogLabel: "Dad")
-                == String(localized: L10n.PropertyTerm.roleFather)
+                == L10n.string(L10n.PropertyTerm.roleFather)
         )
     }
 

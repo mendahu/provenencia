@@ -228,12 +228,12 @@ final class SourceMetadataSection {
         addFieldError = nil
         addValueError = nil
         if addFieldID.isEmpty {
-            addFieldError = String(localized: L10n.Sources.metadataFieldRequired)
+            addFieldError = L10n.string(L10n.Sources.metadataFieldRequired)
             return
         }
         let value = addValue.trimmingCharacters(in: .whitespacesAndNewlines)
         if value.isEmpty {
-            addValueError = String(localized: L10n.Sources.metadataValueRequired)
+            addValueError = L10n.string(L10n.Sources.metadataValueRequired)
             return
         }
         isSavingAdd = true

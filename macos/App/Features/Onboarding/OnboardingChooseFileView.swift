@@ -9,7 +9,7 @@ struct OnboardingChooseFileView: View {
                 L10n.Onboarding.welcomeTitle,
                 body: model.researcherLocked
                     ? L10n.Onboarding.bodySignedIn(displayName: model.displayName)
-                    : String(localized: L10n.Onboarding.bodyChoose)
+                    : L10n.string(L10n.Onboarding.bodyChoose)
             )
             HStack(spacing: PVSpacing.space6) {
                 OnboardingFileChoice(

@@ -28,7 +28,7 @@ struct SourcePageMetadataView: View {
                 PVEmptyState(
                     icon: .list,
                     title: L10n.Sources.metadataEmptyTitle,
-                    message: String(localized: L10n.Sources.metadataEmptyMessage),
+                    message: L10n.string(L10n.Sources.metadataEmptyMessage),
                     compact: true
                 ) {
                     PVButton(L10n.Sources.addMetadata, variant: .primary, size: .sm, icon: .plus) {
@@ -296,7 +296,7 @@ private struct SourcePageMetadataTextEditor: View {
             .buttonStyle(.plain)
             .sourcePageMetadataValueChrome()
             .accessibilityIdentifier("sources.page.metadata.\(fieldID).value")
-            .help(String(localized: L10n.Sources.openMetadataURL))
+            .help(L10n.string(L10n.Sources.openMetadataURL))
         } else {
             Text(verbatim: entry.valueText)
                 .font(PVFont.mono(size: PVTypeScale.caption))

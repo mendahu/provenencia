@@ -68,7 +68,7 @@ struct SourcePageDescriptionView: View {
                 PVEmptyState(
                     icon: .scrollText,
                     title: L10n.Sources.descriptionEmptyTitle,
-                    message: String(localized: L10n.Sources.descriptionEmptyMessage),
+                    message: L10n.string(L10n.Sources.descriptionEmptyMessage),
                     compact: true
                 ) {
                     PVButton(

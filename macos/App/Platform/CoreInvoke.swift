@@ -33,7 +33,7 @@ extension CoreInvokeError: LocalizedError {
         case .coded(_, let code, _, let params):
             return L10n.Errors.message(code: code, params: params)
         case .failed:
-            return String(localized: L10n.Errors.unknown)
+            return L10n.string(L10n.Errors.unknown)
         }
     }
 }

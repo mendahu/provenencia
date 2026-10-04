@@ -297,7 +297,7 @@ struct EvidenceGraphModelTests {
         #expect(handle?.value?.positions.first?.gridX == 1)
         #expect(handle?.value?.positions.first?.gridY == 2)
         #expect(model.toast?.tone == .danger)
-        #expect(model.toast?.title == String(localized: L10n.EvidenceGraph.positionPersistFailedTitle))
+        #expect(model.toast?.title == L10n.string(L10n.EvidenceGraph.positionPersistFailedTitle))
     }
 
     @Test func updatingPositionPatchesSnapshot() {
@@ -482,7 +482,7 @@ struct EvidenceGraphModelTests {
         #expect(model.armedConnect == true)
         #expect(model.connectOriginID == "p1")
         #expect(model.toast?.tone == .danger)
-        #expect(String(localized: L10n.EvidenceGraph.connectInvalidPairBody).contains("Person and place"))
+        #expect(L10n.string(L10n.EvidenceGraph.connectInvalidPairBody).contains("Person and place"))
     }
 
     @Test func invalidConnectPairToastsAndKeepsOrigin() async {
