@@ -6,7 +6,7 @@ extension L10n {
     /// Resolves `resource` to a `String` through the bundle's cached string table.
     ///
     /// Use this, not `String(localized:)`, whenever copy is needed as a `String`.
-    /// `L10n.string(LocalizedStringResource)` asks the bundle for explicit
+    /// `String(localized: LocalizedStringResource)` asks the bundle for explicit
     /// localizations, a path that re-reads and re-parses the whole
     /// `Localizable.strings` table on every call (~1.5 ms against ~1 µs here).
     /// Called from view bodies, that cost lands on every frame. `Text(resource)`
