@@ -89,7 +89,7 @@ struct OnboardingModelTests {
         await model.load()
         #expect(model.phase == .chooseFile)
         #expect(store.activeProjectDir == nil)
-        #expect(model.error?.localizedDescription == String(localized: L10n.Onboarding.missingProject))
+        #expect(model.error?.localizedDescription == L10n.string(L10n.Onboarding.missingProject))
         #expect(model.researcherLocked)
     }
 
@@ -100,7 +100,7 @@ struct OnboardingModelTests {
         await model.load()
         #expect(model.phase == .chooseFile)
         #expect(store.activeProjectDir == nil)
-        #expect(model.error?.localizedDescription == String(localized: L10n.Onboarding.missingProject))
+        #expect(model.error?.localizedDescription == L10n.string(L10n.Onboarding.missingProject))
         #expect(model.researcherLocked)
     }
 
@@ -109,7 +109,7 @@ struct OnboardingModelTests {
         let model = OnboardingModel(store: ThrowingStore(), folders: folders)
         await model.load()
         #expect(model.phase == .chooseFile)
-        #expect(model.error?.localizedDescription == String(localized: L10n.Errors.unknown))
+        #expect(model.error?.localizedDescription == L10n.string(L10n.Errors.unknown))
     }
 
     @Test func canContinueCreateOpenAndIdentify() async throws {

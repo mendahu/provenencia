@@ -42,8 +42,8 @@ enum PVIconButtonTone {
 /// tooltip rather than a custom hover card).
 struct PVIconButton: View {
     private let icon: PVSymbol
-    private let label: LocalizedStringResource
-    private let accessibilityLabel: LocalizedStringResource?
+    private let label: Text
+    private let accessibilityLabel: Text?
     private let size: PVControlSize
     private let tone: PVIconButtonTone
     private let isSelected: Bool
@@ -55,16 +55,16 @@ struct PVIconButton: View {
     /// this type"), where a spoken label has to name its target in full.
     init(
         _ icon: PVSymbol,
-        label: LocalizedStringResource,
-        accessibilityLabel: LocalizedStringResource? = nil,
+        label: some PVCopy,
+        accessibilityLabel: (any PVCopy)? = nil,
         size: PVControlSize = .md,
         tone: PVIconButtonTone = .neutral,
         isSelected: Bool = false,
         action: @escaping () -> Void
     ) {
         self.icon = icon
-        self.label = label
-        self.accessibilityLabel = accessibilityLabel
+        self.label = label.pvText
+        self.accessibilityLabel = accessibilityLabel?.pvText
         self.size = size
         self.tone = tone
         self.isSelected = isSelected
@@ -76,13 +76,13 @@ struct PVIconButton: View {
             PVIcon(icon, size: size.iconGlyphSize)
         }
         .buttonStyle(PVIconButtonStyle(size: size, tone: tone, isSelected: isSelected))
-        .accessibilityLabel(Text(accessibilityLabel ?? label))
+        .accessibilityLabel(accessibilityLabel ?? label)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
         // `.help` on the button itself stops firing once it is disabled, and
         // the disabled tooltip is exactly where the reason lives — so the
         // hit area carries it instead.
         .contentShape(Rectangle())
-        .help(Text(label))
+        .help(label)
     }
 }
 

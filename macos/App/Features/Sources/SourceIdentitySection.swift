@@ -78,7 +78,7 @@ final class SourceIdentitySection {
         guard !isSaving else { return }
         let trimmed = titleDraft.trimmingCharacters(in: .whitespacesAndNewlines)
         if trimmed.isEmpty {
-            titleError = String(localized: L10n.Sources.pageTitleRequired)
+            titleError = L10n.string(L10n.Sources.pageTitleRequired)
             return
         }
         titleError = await save(
@@ -154,7 +154,7 @@ final class SourceIdentitySection {
     /// Returns a localized error message on failure, nil on success (or no-op).
     private func save(title: String, description: String, sourceTypeID: String) async -> String? {
         if title.isEmpty {
-            return String(localized: L10n.Sources.pageTitleRequired)
+            return L10n.string(L10n.Sources.pageTitleRequired)
         }
         guard let current = context.workspace?.source else { return nil }
         if title == current.title,

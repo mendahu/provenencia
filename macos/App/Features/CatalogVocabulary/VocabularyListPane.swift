@@ -65,7 +65,7 @@ struct VocabularyListPane<Row: CatalogVocabularyRow>: View {
             PVEmptyState(
                 icon: strings.emptyIcon,
                 title: strings.emptyTitle,
-                message: String(localized: strings.emptyBody)
+                message: L10n.string(strings.emptyBody)
             )
             .padding(PVSpacing.space9)
         }

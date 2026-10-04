@@ -190,7 +190,7 @@ struct WorkspaceToolbar: View {
         for location: WorkspaceLocation,
         goTo: @escaping (WorkspaceLocation) -> Void
     ) -> [PVBreadcrumbItem] {
-        let sectionLabel = String(localized: location.section.label)
+        let sectionLabel = L10n.string(location.section.label)
         let isDeep = location.sourceId != nil || location.fieldId != nil || location.typeId != nil
             || location.subjectTypeKey != nil || location.propertyId != nil || location.entityId != nil
         if !isDeep {
@@ -215,7 +215,7 @@ struct WorkspaceToolbar: View {
             if let sourceTitle = location.sourceTitle.flatMap({ $0.nilIfEmpty }) {
                 graphLabel = L10n.Workspace.evidenceGraphFor(sourceTitle: sourceTitle)
             } else {
-                graphLabel = String(localized: L10n.Workspace.evidenceGraphTitle)
+                graphLabel = L10n.string(L10n.Workspace.evidenceGraphTitle)
             }
             items.append(
                 PVBreadcrumbItem(
@@ -244,7 +244,7 @@ struct WorkspaceToolbar: View {
 
         let leaf: String
         if location.sourceSurface == .graph, location.sourceId != nil {
-            leaf = String(localized: L10n.Workspace.evidenceGraphTitle)
+            leaf = L10n.string(L10n.Workspace.evidenceGraphTitle)
         } else {
             leaf = location.ref.flatMap { $0.nilIfEmpty }
                 ?? location.title.flatMap { $0.nilIfEmpty }
@@ -407,7 +407,7 @@ private struct HistoryJumpRow: Identifiable {
     var icon: PVSymbol { location.section.icon }
 
     var rootLabel: String {
-        String(localized: location.section.label)
+        L10n.string(location.section.label)
     }
 
     var leafLabel: String? {

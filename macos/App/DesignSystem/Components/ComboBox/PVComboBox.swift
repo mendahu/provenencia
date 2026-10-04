@@ -216,13 +216,13 @@ struct PVComboBox<Row: View>: View {
     @Binding var selection: String
     let options: [PVComboBoxOption]
     var size: PVControlSize = .md
-    var placeholder: LocalizedStringResource?
+    var placeholder: (any PVCopy)?
     var emptyLabel: LocalizedStringResource
     var isInvalid: Bool = false
     var maxListHeight: CGFloat = 288
     /// Accessibility label for the field and its list — components never
     /// invent their own (`docs/macos-client-patterns.md` §5).
-    let label: LocalizedStringResource
+    let label: any PVCopy
     var accessibilityIdentifierPrefix: String?
     /// When true, focus the field and open the list as soon as the control
     /// appears — for edit-in-place flows that swap a chip for a blank picker.
@@ -332,7 +332,7 @@ struct PVComboBox<Row: View>: View {
     // MARK: Field
 
     private var field: some View {
-        TextField(text: typedText, prompt: placeholder.map { Text($0) }) {
+        TextField(text: typedText, prompt: placeholder?.pvText) {
             EmptyView()
         }
             .textFieldStyle(.plain)
@@ -357,7 +357,7 @@ struct PVComboBox<Row: View>: View {
             .simultaneousGesture(TapGesture().onEnded {
                 if !isOpen { open() }
             })
-            .accessibilityLabel(Text(label))
+            .accessibilityLabel(label.pvText)
             .accessibilityIdentifier(accessibilityIdentifierPrefix ?? "")
     }
 
@@ -399,7 +399,7 @@ struct PVComboBox<Row: View>: View {
             // No `.pvShadow` here: the popup is its own window, so AppKit
             // casts the shadow from the window's alpha — see
             // `DesignSystem/README.md` § "Platform deviations".
-            .accessibilityLabel(Text(label))
+            .accessibilityLabel(label.pvText)
             .accessibilityIdentifier(identifier("list") ?? "")
     }
 
@@ -613,11 +613,11 @@ extension PVComboBox where Row == PVComboBoxPlainRow {
         selection: Binding<String>,
         options: [PVComboBoxOption],
         size: PVControlSize = .md,
-        placeholder: LocalizedStringResource? = nil,
+        placeholder: (any PVCopy)? = nil,
         emptyLabel: LocalizedStringResource,
         isInvalid: Bool = false,
         maxListHeight: CGFloat = 288,
-        label: LocalizedStringResource,
+        label: any PVCopy,
         accessibilityIdentifierPrefix: String? = nil,
         activateOnAppear: Bool = false
     ) {

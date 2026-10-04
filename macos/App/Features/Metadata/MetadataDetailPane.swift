@@ -25,7 +25,7 @@ struct MetadataDetailPane: View {
             PVEmptyState(
                 icon: .tag,
                 title: L10n.Metadata.panelEmptyTitle,
-                message: String(localized: L10n.Metadata.panelEmptyBody),
+                message: L10n.string(L10n.Metadata.panelEmptyBody),
                 compact: true
             )
             .padding(PVSpacing.space9)
@@ -82,7 +82,7 @@ struct MetadataDetailPane: View {
     private var panelTitle: String {
         if model.isAdding {
             let label = model.draft?.label.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-            return label.isEmpty ? String(localized: L10n.Metadata.detailEyebrowNewField) : label
+            return label.isEmpty ? L10n.string(L10n.Metadata.detailEyebrowNewField) : label
         }
         return model.selectedField?.label ?? ""
     }
@@ -108,7 +108,7 @@ struct MetadataDetailPane: View {
                         .foregroundStyle(PVColor.textPrimary)
                 }
                 VocabularyLabeledSection(label: L10n.Metadata.descriptionSectionLabel) {
-                    Text(field.description.isEmpty ? String(localized: L10n.Metadata.descriptionEmptyPlaceholder) : field.description)
+                    Text(field.description.isEmpty ? L10n.string(L10n.Metadata.descriptionEmptyPlaceholder) : field.description)
                         .font(PVFont.body(size: PVTypeScale.bodySmall))
                         .foregroundStyle(PVColor.textSecondary)
                 }
@@ -128,8 +128,8 @@ struct MetadataDetailPane: View {
 
     private var dataTypeOptions: [PVSelectOption] {
         [
-            PVSelectOption(value: CatalogFieldDataType.text, label: String(localized: L10n.Metadata.dataTypeText)),
-            PVSelectOption(value: CatalogFieldDataType.url, label: String(localized: L10n.Metadata.dataTypeUrl)),
+            PVSelectOption(value: CatalogFieldDataType.text, label: L10n.string(L10n.Metadata.dataTypeText)),
+            PVSelectOption(value: CatalogFieldDataType.url, label: L10n.string(L10n.Metadata.dataTypeUrl)),
         ]
     }
 

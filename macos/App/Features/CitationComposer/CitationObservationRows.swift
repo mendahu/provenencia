@@ -105,9 +105,9 @@ struct ObservationRow: Identifiable, Equatable {
 
     var polarityMenuTitle: String {
         if isNegated {
-            return String(localized: L10n.CitationComposer.affirmObservation)
+            return L10n.string(L10n.CitationComposer.affirmObservation)
         }
-        return String(localized: L10n.CitationComposer.negateObservation)
+        return L10n.string(L10n.CitationComposer.negateObservation)
     }
 
     mutating func deriveState() {
@@ -180,7 +180,7 @@ struct ObservationRow: Identifiable, Equatable {
 
     func asDraft(property: CatalogProperty) -> (CatalogObservationDraft?, String?) {
         if values.subjectID.isEmpty {
-            return (nil, String(localized: L10n.CitationComposer.subjectRequiredError))
+            return (nil, L10n.string(L10n.CitationComposer.subjectRequiredError))
         }
         var draft = CatalogObservationDraft(
             subjectID: values.subjectID,
@@ -201,7 +201,7 @@ struct ObservationRow: Identifiable, Equatable {
 
     func asCatalogObservation(property: CatalogProperty) -> (CatalogObservation?, String?) {
         guard let persistedID, let persistedRef else {
-            return (nil, String(localized: L10n.CitationComposer.missingPropertyError))
+            return (nil, L10n.string(L10n.CitationComposer.missingPropertyError))
         }
         let (draft, message) = asDraft(property: property)
         if let message { return (nil, message) }
@@ -287,7 +287,7 @@ final class CitationObservationRows {
             if !allowed.contains(row.propertyID) {
                 row.propertyID = ""
                 clearValue(&row)
-                row.propertyError = String(localized: L10n.CitationComposer.propertyRequiredAfterSubject)
+                row.propertyError = L10n.string(L10n.CitationComposer.propertyRequiredAfterSubject)
             } else {
                 row.propertyError = nil
             }
@@ -300,7 +300,7 @@ final class CitationObservationRows {
             row.propertyID = propertyID
             clearValue(&row)
             row.propertyError = propertyID.isEmpty
-                ? String(localized: L10n.CitationComposer.dialogPropertyRequired)
+                ? L10n.string(L10n.CitationComposer.dialogPropertyRequired)
                 : nil
             row.deriveState()
         }
@@ -384,7 +384,7 @@ final class CitationObservationRows {
         guard let index = rows.firstIndex(where: { $0.id == rowID }) else { return }
         let row = rows[index]
         guard let property = context.vocabulary.property(id: row.propertyID) else {
-            markError(rowID: rowID, message: String(localized: L10n.CitationComposer.missingPropertyError))
+            markError(rowID: rowID, message: L10n.string(L10n.CitationComposer.missingPropertyError))
             return
         }
         let (draftOrNil, draftError) = row.asDraft(property: property)
@@ -405,7 +405,7 @@ final class CitationObservationRows {
                 if let written = written.first {
                     markSaved(rowID: rowID, id: written.id, ref: written.ref)
                 } else {
-                    markError(rowID: rowID, message: String(localized: L10n.CitationComposer.rowStateError))
+                    markError(rowID: rowID, message: L10n.string(L10n.CitationComposer.rowStateError))
                 }
                 context.applySavedCitation()
             } else {
@@ -424,11 +424,11 @@ final class CitationObservationRows {
                     markSaved(rowID: rowID, id: written.id, ref: written.ref)
                     context.applySavedCitation()
                 } else {
-                    markError(rowID: rowID, message: String(localized: L10n.CitationComposer.rowStateError))
+                    markError(rowID: rowID, message: L10n.string(L10n.CitationComposer.rowStateError))
                 }
             }
         } catch is CitationComposerNeedArtifact {
-            markError(rowID: rowID, message: String(localized: L10n.CitationComposer.needArtifact))
+            markError(rowID: rowID, message: L10n.string(L10n.CitationComposer.needArtifact))
         } catch {
             markError(rowID: rowID, message: L10n.Errors.message(for: error))
         }

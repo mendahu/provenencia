@@ -31,7 +31,7 @@ struct OnboardingHeader: View {
 
     init(_ title: LocalizedStringResource, body: LocalizedStringResource) {
         self.title = title
-        self.bodyText = String(localized: body)
+        self.bodyText = L10n.string(body)
     }
 
     var body: some View {

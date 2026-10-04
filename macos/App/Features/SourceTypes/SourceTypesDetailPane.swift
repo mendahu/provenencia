@@ -53,7 +53,7 @@ struct SourceTypesDetailPane: View {
             PVEmptyState(
                 icon: .library,
                 title: L10n.SourceTypes.panelEmptyTitle,
-                message: String(localized: L10n.SourceTypes.panelEmptyBody),
+                message: L10n.string(L10n.SourceTypes.panelEmptyBody),
                 compact: true
             )
             .padding(PVSpacing.space9)
@@ -104,7 +104,7 @@ struct SourceTypesDetailPane: View {
             keyText: panelKey,
             iconKey: panelIconKey,
             usageLine: model.isAdding ? nil : model.selectedType.map {
-                String(localized: L10n.SourceTypes.usage(count: $0.usedBy))
+                L10n.SourceTypes.usage(count: $0.usedBy)
             },
             keyHint: model.isAdding ? L10n.SourceTypes.keyHintAdd : L10n.SourceTypes.keyHintEdit,
             showsDelete: model.showsDelete,
@@ -126,7 +126,7 @@ struct SourceTypesDetailPane: View {
     private var panelTitle: String {
         if model.isAdding {
             let label = model.draft?.label.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-            return label.isEmpty ? String(localized: L10n.SourceTypes.detailEyebrowNewType) : label
+            return label.isEmpty ? L10n.string(L10n.SourceTypes.detailEyebrowNewType) : label
         }
         return model.selectedType?.label ?? ""
     }
@@ -153,7 +153,7 @@ struct SourceTypesDetailPane: View {
                 )
                 VocabularyLabeledSection(label: L10n.SourceTypes.descriptionSectionLabel) {
                     Text(type.description.isEmpty
-                        ? String(localized: L10n.SourceTypes.descriptionEmptyPlaceholder)
+                        ? L10n.string(L10n.SourceTypes.descriptionEmptyPlaceholder)
                         : type.description)
                         .font(PVFont.body(size: PVTypeScale.bodySmall))
                         .foregroundStyle(PVColor.textSecondary)
@@ -269,7 +269,7 @@ struct SourceTypesDetailPane: View {
         .buttonStyle(.plain)
         .accessibilityLabel(
             L10n.SourceTypes.formIconChangeAccessibility(
-                name: String(localized: key.typePickerTitle)
+                name: L10n.string(key.typePickerTitle)
             )
         )
         .accessibilityIdentifier("sourceTypes.form.icon")
@@ -298,7 +298,7 @@ struct SourceTypesDetailPane: View {
         PVCallout(
             tone: .neutral,
             icon: .info,
-            message: String(localized: L10n.SourceTypes.addSuggestionsNote),
+            message: L10n.string(L10n.SourceTypes.addSuggestionsNote),
             compact: true
         )
         .padding(.top, PVSpacing.space7)
@@ -316,7 +316,7 @@ struct SourceTypesDetailPane: View {
                     .pvMicroCaps()
                     .foregroundStyle(PVColor.textMuted)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                Text(L10n.SourceTypes.assignedCount(count: model.suggestions.count))
+                Text(verbatim: L10n.SourceTypes.assignedCount(count: model.suggestions.count))
                     .font(PVFont.mono(size: PVTypeScale.micro))
                     .foregroundStyle(PVColor.textFaint)
                     .accessibilityIdentifier("sourceTypes.suggested.count")

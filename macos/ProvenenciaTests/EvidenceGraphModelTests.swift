@@ -163,6 +163,43 @@ struct EvidenceGraphModelTests {
         )
     }
 
+    /// Card copy is formatted once per snapshot, matches the card formatters,
+    /// and rebuilds when the graph rows change.
+    @Test func displayTextFollowsTheSnapshot() throws {
+        let store = makeStore()
+        let model = makeModel(store: store)
+        let types = store.subjectTypesByProject[projectDir] ?? []
+        func rows(label: String) -> SourceGraphRows {
+            SourceGraphRows(
+                sourceId: sourceID,
+                subjects: [CatalogSubject(
+                    id: "s1",
+                    ref: "CPR-1",
+                    sourceID: sourceID,
+                    subjectTypeID: personTypeID,
+                    label: label,
+                    description: ""
+                )],
+                positions: [CatalogSubjectPosition(subjectID: "s1", gridX: 0, gridY: 0)]
+            )
+        }
+
+        let first = rows(label: "Wm Robins")
+        let placed = try #require(model.displaySnapshot(rows: first, types: types).subjects.first)
+        let text = model.displayText(rows: first, types: types)[subject: placed]
+        #expect(text.accessibilityLabel == EvidenceSubjectCard.accessibilityLabel(for: placed))
+        #expect(text.footerActionName == EvidenceSubjectCard.footerAccessibilityActionName(for: placed))
+        #expect(text.deleteActionName == L10n.EvidenceGraph.deleteAccessibility(
+            kind: "person", label: "Wm Robins", ref: "CPR-1"
+        ))
+        #expect(model.displayText(rows: first, types: types) == model.displayText(rows: first, types: types))
+
+        let renamed = rows(label: "William Robins")
+        let renamedPlaced = try #require(model.displaySnapshot(rows: renamed, types: types).subjects.first)
+        #expect(model.displayText(rows: renamed, types: types)[subject: renamedPlaced].accessibilityLabel
+            .contains("William Robins"))
+    }
+
     @Test func prepareCachesPrimaryTypeIDs() async {
         let store = makeStore()
         let model = makeModel(store: store)
@@ -297,7 +334,7 @@ struct EvidenceGraphModelTests {
         #expect(handle?.value?.positions.first?.gridX == 1)
         #expect(handle?.value?.positions.first?.gridY == 2)
         #expect(model.toast?.tone == .danger)
-        #expect(model.toast?.title == String(localized: L10n.EvidenceGraph.positionPersistFailedTitle))
+        #expect(model.toast?.title == L10n.string(L10n.EvidenceGraph.positionPersistFailedTitle))
     }
 
     @Test func updatingPositionPatchesSnapshot() {
@@ -482,7 +519,7 @@ struct EvidenceGraphModelTests {
         #expect(model.armedConnect == true)
         #expect(model.connectOriginID == "p1")
         #expect(model.toast?.tone == .danger)
-        #expect(String(localized: L10n.EvidenceGraph.connectInvalidPairBody).contains("Person and place"))
+        #expect(L10n.string(L10n.EvidenceGraph.connectInvalidPairBody).contains("Person and place"))
     }
 
     @Test func invalidConnectPairToastsAndKeepsOrigin() async {

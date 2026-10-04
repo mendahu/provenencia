@@ -72,11 +72,11 @@ struct PVTableColumnFilter {
             let label: String
             if let count = option.count {
                 label = L10n.DesignSystem.tableFilterOptionCount(
-                    label: String(localized: option.label),
+                    label: L10n.string(option.label),
                     count: count
                 )
             } else {
-                label = String(localized: option.label)
+                label = L10n.string(option.label)
             }
             return PVSelectOption(value: option.value, label: label)
         }
@@ -290,7 +290,7 @@ struct PVTable<Row: Identifiable, Content: View>: View {
             menuWidth: 200,
             fillsWidth: false,
             accessibilitySpokenLabel: L10n.DesignSystem.tableFilterColumn(
-                column: String(localized: column.title)
+                column: L10n.string(column.title)
             )
         )
         .fixedSize()

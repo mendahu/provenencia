@@ -28,8 +28,8 @@ struct CitationAutoTranscribeTests {
         #expect(engine.recognizeCount == 0)
         #expect(!model.canPasteTranscription)
         #expect(
-            String(localized: model.transcriptionActionHint)
-                == String(localized: L10n.CitationComposer.pasteHintSelect)
+            model.transcriptionActionHint
+                == L10n.string(L10n.CitationComposer.pasteHintSelect)
         )
     }
 
@@ -54,8 +54,8 @@ struct CitationAutoTranscribeTests {
         #expect(model.artifactViewer.userSelectionPage == 3)
         #expect(engine.recognizeCount == 0)
         #expect(
-            String(localized: model.transcriptionActionHint)
-                == String(localized: L10n.CitationComposer.pasteHintAfter(page: 3))
+            model.transcriptionActionHint
+                == L10n.CitationComposer.pasteHintAfter(page: 3)
         )
     }
 
@@ -112,8 +112,8 @@ struct CitationAutoTranscribeTests {
         model.requestPasteTranscription()
         #expect(model.transcription.isEmpty)
         #expect(
-            String(localized: model.transcriptionActionHint)
-                == String(localized: L10n.CitationComposer.pasteHintNoTextLayer)
+            model.transcriptionActionHint
+                == L10n.string(L10n.CitationComposer.pasteHintNoTextLayer)
         )
         #expect(engine.recognizeCount == 0)
     }
@@ -147,8 +147,8 @@ struct CitationAutoTranscribeTests {
         model.requestAutoTranscribe()
         #expect(engine.recognizeCount == 0)
         #expect(
-            String(localized: model.autoTranscribeHint)
-                == String(localized: L10n.CitationComposer.autoTranscribeHintMissingFile)
+            model.autoTranscribeHint
+                == L10n.string(L10n.CitationComposer.autoTranscribeHintMissingFile)
         )
     }
 
@@ -163,8 +163,8 @@ struct CitationAutoTranscribeTests {
         model.requestAutoTranscribe()
         #expect(engine.recognizeCount == 0)
         #expect(
-            String(localized: model.autoTranscribeHint)
-                == String(localized: L10n.CitationComposer.autoTranscribeHintAudio)
+            model.autoTranscribeHint
+                == L10n.string(L10n.CitationComposer.autoTranscribeHintAudio)
         )
     }
 
@@ -204,7 +204,7 @@ struct CitationAutoTranscribeTests {
         #expect(model.transcription == "kept")
         #expect(
             model.transcriptionOCRMessage
-                == String(localized: L10n.CitationComposer.autoTranscribeNothingFound)
+                == L10n.string(L10n.CitationComposer.autoTranscribeNothingFound)
         )
     }
 
@@ -223,7 +223,7 @@ struct CitationAutoTranscribeTests {
         #expect(model.transcription == "kept")
         #expect(
             model.transcriptionOCRMessage
-                == String(localized: L10n.CitationComposer.autoTranscribeFailed)
+                == L10n.string(L10n.CitationComposer.autoTranscribeFailed)
         )
     }
 

@@ -1,5 +1,94 @@
 import Foundation
 
+// MARK: - Resolution
+
+extension L10n {
+    /// Resolves `resource` to a `String` through the bundle's cached string table.
+    ///
+    /// Use this, not `String(localized:)`, whenever copy is needed as a `String`.
+    /// `String(localized: LocalizedStringResource)` asks the bundle for explicit
+    /// localizations, a path that re-reads and re-parses the whole
+    /// `Localizable.strings` table on every call (~1.5 ms against ~1 µs here).
+    /// Called from view bodies, that cost lands on every frame. `Text(resource)`
+    /// resolves through SwiftUI and does not need this.
+    ///
+    /// Only static resources resolve here: a resource with interpolated
+    /// arguments carries values this lookup cannot read, so give it a `%@`
+    /// catalog format and a ``format(_:_:)`` helper instead. Every key must be
+    /// in the catalog (checked by `scripts/check-localizable-xcstrings.py`);
+    /// a missing key resolves to the key itself, as it does in Foundation.
+    static func string(_ resource: LocalizedStringResource) -> String {
+        string(resource, in: .main)
+    }
+
+    /// ``string(_:)`` against a specific bundle — the seam tests use to resolve
+    /// through a bundle with other localizations.
+    static func string(_ resource: LocalizedStringResource, in bundle: Bundle) -> String {
+        let resolved = bundle.localizedString(forKey: resource.key, value: nil, table: resource.table)
+        // Only semantic keys (`evidenceGraph.subject.addProperty`) belong in the
+        // catalog; English-as-key resources in previews and test fixtures
+        // ("Delete field") resolve to their key by design.
+        assert(
+            resolved != resource.key || !isSemanticKey(resource.key),
+            "L10n key missing from the String Catalog: \(resource.key)"
+        )
+        return resolved
+    }
+
+    /// A dotted catalog key such as `evidenceGraph.subject.addProperty`, as
+    /// `scripts/check-localizable-xcstrings.py` defines it.
+    private static func isSemanticKey(_ key: String) -> Bool {
+        key.first?.isLowercase == true && key.contains(".") && !key.contains(" ")
+    }
+
+    /// Resolves the catalog format behind `resource` and fills in `arguments`,
+    /// in a locale whose language matches the localization that was resolved.
+    ///
+    /// Plural and other catalog variations pick their form from the locale's
+    /// language, so formatting with a locale in another language silently applies
+    /// the wrong rules. Always format L10n copy here rather than calling
+    /// `String(format:)` yourself.
+    static func format(_ resource: LocalizedStringResource, _ arguments: any CVarArg...) -> String {
+        format(resource, in: .main, locale: formattingLocale, arguments: arguments)
+    }
+
+    /// ``format(_:_:)`` with a caller-chosen formatting locale, for helpers whose
+    /// callers format values (such as dates) for a specific locale. The copy itself
+    /// still resolves from the bundle's localization.
+    static func format(_ resource: LocalizedStringResource, locale: Locale, _ arguments: any CVarArg...) -> String {
+        format(resource, in: .main, locale: locale, arguments: arguments)
+    }
+
+    /// The one place L10n copy is formatted. `locale` must share the language of
+    /// the localization `bundle` resolves, or plural variations pick the wrong form.
+    static func format(
+        _ resource: LocalizedStringResource,
+        in bundle: Bundle,
+        locale: Locale,
+        arguments: [any CVarArg]
+    ) -> String {
+        String(format: string(resource, in: bundle), locale: locale, arguments: arguments)
+    }
+
+    /// `Locale.current`, with its language replaced by the bundle's resolved
+    /// localization when the two differ (for example, a per-app language set in
+    /// System Settings). Region formatting preferences are kept.
+    static var formattingLocale: Locale {
+        formattingLocale(current: .current, resolvedLocalization: Bundle.main.preferredLocalizations.first)
+    }
+
+    static func formattingLocale(current: Locale, resolvedLocalization: String?) -> Locale {
+        guard let resolvedLocalization else { return current }
+        let resolved = Locale.Language(identifier: resolvedLocalization)
+        guard current.language.languageCode != resolved.languageCode else { return current }
+        var components = Locale.Components(locale: current)
+        // Language and script only: languageComponents also carries the region.
+        components.languageComponents.languageCode = resolved.languageCode
+        components.languageComponents.script = resolved.script
+        return Locale(components: components)
+    }
+}
+
 enum L10n {
     enum DesignSystem {
         static let requiredMarker = LocalizedStringResource(
@@ -39,12 +128,11 @@ enum L10n {
         )
 
         static func tableFilterColumn(column: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "designSystem.table.filterColumn",
                 defaultValue: "Filter %@",
                 comment: "Accessibility label for a PVTable column's filter menu; argument is the column title"
-            ))
-            return String(format: format, locale: .current, column)
+            ), column)
         }
 
         static let selectState = LocalizedStringResource(
@@ -72,21 +160,19 @@ enum L10n {
         )
 
         static func selectOptionPosition(current: Int, count: Int) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "designSystem.select.optionPosition",
                 defaultValue: "%1$lld of %2$lld",
                 comment: "VoiceOver position of the highlighted PVSelect option; arguments are 1-based index and count"
-            ))
-            return String(format: format, locale: .current, current, count)
+            ), current, count)
         }
 
         static func tableFilterOptionCount(label: String, count: Int) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "designSystem.table.filterOptionCount",
                 defaultValue: "%1$@ (%2$lld)",
                 comment: "A PVTable filter menu option with its row count; arguments are the option label and the count"
-            ))
-            return String(format: format, locale: .current, label, count)
+            ), label, count)
         }
 
         static let thumbnailEmpty = LocalizedStringResource(
@@ -502,12 +588,11 @@ enum L10n {
         )
 
         static func bodySignedIn(displayName: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "onboarding.chooseFile.bodySignedIn",
                 defaultValue: "You're signed in as %@. Open a project you already have, or create a new one.",
                 comment: "Onboarding choose-file body when researcher is locked; argument is display name"
-            ))
-            return String(format: format, locale: .current, displayName)
+            ), displayName)
         }
 
         static let bodyChoose = LocalizedStringResource(
@@ -595,12 +680,11 @@ enum L10n {
         )
 
         static func folderNamePreview(folderName: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "onboarding.identify.folderNamePreview",
                 defaultValue: "Folder: %@",
                 comment: "Live preview of kebab-case project folder name; argument is folder basename"
-            ))
-            return String(format: format, locale: .current, folderName)
+            ), folderName)
         }
 
         static let whoAreYouTitle = LocalizedStringResource(
@@ -616,33 +700,30 @@ enum L10n {
         )
 
         static func contributorsBody(projectName: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "onboarding.identify.contributorsBody",
                 defaultValue: "These are the contributors already in %@. Choose yourself to keep the same ID, or add a new contributor.",
                 comment: "Open-mode identify body; argument is project folder name"
-            ))
-            return String(format: format, locale: .current, projectName)
+            ), projectName)
         }
 
         static func contributorOption(displayName: String, ref: String) -> String {
             if ref.isEmpty {
                 return displayName
             }
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "onboarding.identify.contributorOption",
-                defaultValue: "%@ (%@)",
+                defaultValue: "%1$@ (%2$@)",
                 comment: "Contributor accessibility/combined label; arguments are display name then USR-… ref"
-            ))
-            return String(format: format, locale: .current, displayName, ref)
+            ), displayName, ref)
         }
 
         static func contributorRef(ref: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "onboarding.identify.contributorRef",
                 defaultValue: "(%@)",
                 comment: "Parenthesized short ref beside a display name; argument is USR-… ref"
-            ))
-            return String(format: format, locale: .current, ref)
+            ), ref)
         }
 
         static let notListed = LocalizedStringResource(
@@ -658,47 +739,42 @@ enum L10n {
         )
 
         static func homeFolder(folderName: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "onboarding.home.folder",
                 defaultValue: "Folder: %@",
                 comment: "Home screen project folder line; argument is folder basename"
-            ))
-            return String(format: format, locale: .current, folderName)
+            ), folderName)
         }
 
         static func homeCreated(date: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "onboarding.home.created",
                 defaultValue: "Created %@",
                 comment: "Home screen created date; argument is localized date"
-            ))
-            return String(format: format, locale: .current, date)
+            ), date)
         }
 
         static func homeUpdated(date: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "onboarding.home.updated",
                 defaultValue: "Updated %@",
                 comment: "Home screen updated date; argument is localized date"
-            ))
-            return String(format: format, locale: .current, date)
+            ), date)
         }
 
         static func homeUpdatedBy(displayName: String, ref: String) -> String {
             if ref.isEmpty {
-                let format = String(localized: LocalizedStringResource(
+                return L10n.format(LocalizedStringResource(
                     "onboarding.home.updatedByName",
                     defaultValue: "Last edited by %@",
                     comment: "Home screen last editor without ref; argument is display name"
-                ))
-                return String(format: format, locale: .current, displayName)
+                ), displayName)
             }
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "onboarding.home.updatedBy",
-                defaultValue: "Last edited by %@ (%@)",
+                defaultValue: "Last edited by %1$@ (%2$@)",
                 comment: "Home screen last editor; arguments are display name then USR-… ref"
-            ))
-            return String(format: format, locale: .current, displayName, ref)
+            ), displayName, ref)
         }
 
         static let projectFolder = LocalizedStringResource(
@@ -842,28 +918,21 @@ enum L10n {
         )
 
         /// Persons list header meta: "1 person" / "N persons".
-        static func personCount(_ count: Int) -> LocalizedStringResource {
-            count == 1
-                ? LocalizedStringResource(
-                    "workspace.persons.countOne",
-                    defaultValue: "1 person",
-                    comment: "Persons list header meta when there is exactly one Person"
-                )
-                : LocalizedStringResource(
-                    "workspace.persons.countOther",
-                    defaultValue: "\(count) persons",
-                    comment: "Persons list header meta; argument is how many Persons are listed"
-                )
+        static func personCount(_ count: Int) -> String {
+            L10n.format(LocalizedStringResource(
+                "workspace.persons.count",
+                defaultValue: "%lld persons",
+                comment: "Persons list header meta; argument is how many Persons are listed"
+            ), count)
         }
 
         /// Header meta while a stale list reloads: "N persons · refreshing".
         static func personCountRefreshing(_ count: Int) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "workspace.persons.countRefreshing",
                 defaultValue: "%@ · refreshing",
                 comment: "Persons list header meta while the list reloads; argument is the person count text"
-            ))
-            return String(format: format, locale: .current, String(localized: personCount(count)))
+            ), personCount(count))
         }
 
         static let personsEmptyTitle = LocalizedStringResource(
@@ -880,21 +949,19 @@ enum L10n {
 
         /// VoiceOver label for one Persons row: "James Robins, PER-7KD45".
         static func personRowAccessibility(title: String, ref: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "workspace.persons.rowAccessibility",
                 defaultValue: "%1$@, %2$@",
                 comment: "VoiceOver label for a Persons list row; arguments are the title and the ref"
-            ))
-            return String(format: format, locale: .current, title, ref)
+            ), title, ref)
         }
 
         static func personDetailStubMessage(ref: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "workspace.persons.detailStubMessage",
                 defaultValue: "The page for %@ is on its way. It will show this Person's name, life dates and places, and the evidence behind them.",
                 comment: "Placeholder body on a Person detail page until it ships; argument is the Person ref"
-            ))
-            return String(format: format, locale: .current, ref)
+            ), ref)
         }
 
         static let personsStubMessage = LocalizedStringResource(
@@ -910,12 +977,11 @@ enum L10n {
         )
 
         static func evidenceGraphFor(sourceTitle: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "workspace.section.evidenceGraph.forSource",
                 defaultValue: "Evidence graph for %@",
                 comment: "Composer breadcrumb segment; argument is the Source title"
-            ))
-            return String(format: format, locale: .current, sourceTitle)
+            ), sourceTitle)
         }
 
         static let evidenceGraphStubBody = LocalizedStringResource(
@@ -1015,12 +1081,11 @@ enum L10n {
         )
 
         static func omnibarNoMatchesTitle(query: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "workspace.omnibar.noMatchesTitle",
                 defaultValue: "No matches for “%@”.",
                 comment: "Omnibar empty-state title; argument is the typed query"
-            ))
-            return String(format: format, locale: .current, query)
+            ), query)
         }
 
         static let omnibarNoMatchesHint = LocalizedStringResource(
@@ -1049,32 +1114,29 @@ enum L10n {
 
         /// Omnibar match-context line for a note body hit; argument is the raw snippet.
         static func omnibarMatchNote(snippet: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "workspace.omnibar.match.note",
                 defaultValue: "Note: %@",
                 comment: "Omnibar match context when the query hit a Source note; argument is a short snippet"
-            ))
-            return String(format: format, locale: .current, snippet)
+            ), snippet)
         }
 
         /// Omnibar match-context line for metadata text; argument is the raw snippet.
         static func omnibarMatchMetadata(snippet: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "workspace.omnibar.match.metadata",
                 defaultValue: "Metadata: %@",
                 comment: "Omnibar match context when the query hit Source metadata; argument is a short snippet"
-            ))
-            return String(format: format, locale: .current, snippet)
+            ), snippet)
         }
 
         /// Omnibar match-context line for a filename/artifact label; argument is the raw snippet.
         static func omnibarMatchFilename(snippet: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "workspace.omnibar.match.filename",
                 defaultValue: "Filename: %@",
                 comment: "Omnibar match context when the query hit a filename or artifact label; argument is a short snippet"
-            ))
-            return String(format: format, locale: .current, snippet)
+            ), snippet)
         }
 
         static let omnibarMatchDescription = LocalizedStringResource(
@@ -1273,12 +1335,11 @@ enum L10n {
 
         /// VoiceOver for card trash: "Delete {kind} {label or sentence}, {ref}".
         static func deleteAccessibility(kind: String, label: String, ref: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "evidenceGraph.subject.deleteAccessibility",
-                defaultValue: "Delete %@ %@, %@",
+                defaultValue: "Delete %1$@ %2$@, %3$@",
                 comment: "VoiceOver for graph card trash; arguments are kind, label or sentence, catalog ref"
-            ))
-            return String(format: format, locale: .current, kind, label, ref)
+            ), kind, label, ref)
         }
 
         static let addProperty = LocalizedStringResource(
@@ -1314,12 +1375,11 @@ enum L10n {
         )
 
         static func promoteAccessibility(label: String, ref: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "evidenceGraph.subject.promoteAccessibility",
                 defaultValue: "Promote %1$@, %2$@",
                 comment: "VoiceOver for the Promote footer; arguments are the subject label and its candidate ref"
-            ))
-            return String(format: format, locale: .current, label, ref)
+            ), label, ref)
         }
 
         static func promoteHelp(kind: EvidencePrimaryKind) -> LocalizedStringResource {
@@ -1366,7 +1426,7 @@ enum L10n {
                     comment: "v1 Promote confirm title; argument is the subject candidate ref"
                 )
             }
-            return String(format: String(localized: resource), locale: .current, ref)
+            return L10n.format(resource, ref)
         }
 
         static func promoteConfirmMessage(kind: EvidencePrimaryKind, label: String, refPrefix: String) -> String {
@@ -1390,7 +1450,7 @@ enum L10n {
                     comment: "v1 Promote confirm consequence; arguments are the subject label and the new handle ref prefix (PER)"
                 )
             }
-            return String(format: String(localized: resource), locale: .current, label, refPrefix)
+            return L10n.format(resource, label, refPrefix)
         }
 
         static func promoteConfirmAction(kind: EvidencePrimaryKind) -> LocalizedStringResource {
@@ -1460,7 +1520,7 @@ enum L10n {
                     comment: "VoiceOver action on a promoted card that opens its handle page; argument is the handle ref"
                 )
             }
-            return String(format: String(localized: resource), locale: .current, ref)
+            return L10n.format(resource, ref)
         }
 
         static let jumpToSourcePage = LocalizedStringResource(
@@ -1470,12 +1530,11 @@ enum L10n {
         )
 
         static func jumpToSourcePageAccessibility(title: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "evidenceGraph.header.jumpToSourcePageAccessibility",
                 defaultValue: "Jump to Source page — %@",
                 comment: "VoiceOver for the header jump; argument is the Source title"
-            ))
-            return String(format: format, locale: .current, title)
+            ), title)
         }
 
         static let negatedPrefix = LocalizedStringResource(
@@ -1491,12 +1550,11 @@ enum L10n {
         )
 
         static func conflictOneOf(count: Int) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "evidenceGraph.row.conflictOneOf",
                 defaultValue: "one of %lld values",
                 comment: "VoiceOver fragment when a cited row shares its Property; argument is how many"
-            ))
-            return String(format: format, locale: .current, count)
+            ), count)
         }
 
         static let citedRowEditHint = LocalizedStringResource(
@@ -1663,12 +1721,11 @@ enum L10n {
 
         /// Location: "{event} took place in {place}".
         static func bridgeSummaryLocation(event: String, place: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "evidenceGraph.bridge.summary.location",
-                defaultValue: "%@ took place in %@",
+                defaultValue: "%1$@ took place in %2$@",
                 comment: "Location edge summary; arguments are event label then place label"
-            ))
-            return String(format: format, locale: .current, event, place)
+            ), event, place)
         }
 
         /// Location mid-phrase when endpoint labels are incomplete.
@@ -1680,32 +1737,29 @@ enum L10n {
 
         /// Relationship: "{person} is the {type} of {related_to}".
         static func bridgeSummaryRelationship(person: String, type: String, related: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "evidenceGraph.bridge.summary.relationship",
-                defaultValue: "%@ is the %@ of %@",
+                defaultValue: "%1$@ is the %2$@ of %3$@",
                 comment: "Relationship edge summary; arguments are person, relationship_type, related_to"
-            ))
-            return String(format: format, locale: .current, person, type, related)
+            ), person, type, related)
         }
 
         /// Relationship without type: "{person} is related to {related_to}".
         static func bridgeSummaryRelationshipFallback(person: String, related: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "evidenceGraph.bridge.summary.relationshipFallback",
-                defaultValue: "%@ is related to %@",
+                defaultValue: "%1$@ is related to %2$@",
                 comment: "Relationship edge summary without relationship_type; person then related_to"
-            ))
-            return String(format: format, locale: .current, person, related)
+            ), person, related)
         }
 
         /// Relationship mid-phrase when only the type term is known.
         static func bridgeSummaryRelationshipTypeOnly(type: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "evidenceGraph.bridge.summary.relationshipTypeOnly",
                 defaultValue: "Is the %@ of",
                 comment: "Relationship edge summary when endpoint labels are missing; argument is type"
-            ))
-            return String(format: format, locale: .current, type)
+            ), type)
         }
 
         static let bridgeSummaryRelationshipBare = LocalizedStringResource(
@@ -1716,32 +1770,29 @@ enum L10n {
 
         /// Participation with role: "{person} participated as {role} at {event}".
         static func bridgeSummaryParticipation(person: String, role: String, event: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "evidenceGraph.bridge.summary.participation",
-                defaultValue: "%@ participated as %@ at %@",
+                defaultValue: "%1$@ participated as %2$@ at %3$@",
                 comment: "Participation edge summary; arguments are person, role, event"
-            ))
-            return String(format: format, locale: .current, person, role, event)
+            ), person, role, event)
         }
 
         /// Participation without role: "{person} participated in {event}".
         static func bridgeSummaryParticipationFallback(person: String, event: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "evidenceGraph.bridge.summary.participationFallback",
-                defaultValue: "%@ participated in %@",
+                defaultValue: "%1$@ participated in %2$@",
                 comment: "Participation edge summary without role; arguments are person then event"
-            ))
-            return String(format: format, locale: .current, person, event)
+            ), person, event)
         }
 
         /// Participation mid-phrase when only the role term is known.
         static func bridgeSummaryParticipationRoleOnly(role: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "evidenceGraph.bridge.summary.participationRoleOnly",
                 defaultValue: "Participated as %@",
                 comment: "Participation edge summary when endpoint labels are missing; argument is role"
-            ))
-            return String(format: format, locale: .current, role)
+            ), role)
         }
 
         static let bridgeSummaryParticipationBare = LocalizedStringResource(
@@ -1776,40 +1827,28 @@ enum L10n {
 
         /// Endpoint noun fallback: "{type} {ref}".
         static func bridgeNounTypeAndRef(type: String, ref: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "evidenceGraph.bridge.nounTypeAndRef",
-                defaultValue: "%@ %@",
+                defaultValue: "%1$@ %2$@",
                 comment: "Bridge endpoint noun when the working label is blank; type label then ref"
-            ))
-            return String(format: format, locale: .current, type, ref)
+            ), type, ref)
         }
 
         /// Whole-name fallback: "{kind phrase} · {ref}".
         static func bridgeNameKindAndRef(phrase: String, ref: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "evidenceGraph.bridge.nameKindAndRef",
-                defaultValue: "%@ · %@",
+                defaultValue: "%1$@ · %2$@",
                 comment: "Bridge name when edges cannot be read; kind phrase then bridge ref"
-            ))
-            return String(format: format, locale: .current, phrase, ref)
+            ), phrase, ref)
         }
 
-        static func subjectCount(count: Int) -> LocalizedStringResource {
-            count == 1 ? subjectCountOne : subjectCountOther(count: count)
-        }
-
-        private static let subjectCountOne = LocalizedStringResource(
-            "evidenceGraph.header.subjectCountOne",
-            defaultValue: "1 subject",
-            comment: "Evidence graph header count when exactly one placed primary is on the canvas"
-        )
-
-        private static func subjectCountOther(count: Int) -> LocalizedStringResource {
-            LocalizedStringResource(
-                "evidenceGraph.header.subjectCountOther",
-                defaultValue: "\(count) subjects",
+        static func subjectCount(count: Int) -> String {
+            L10n.format(LocalizedStringResource(
+                "evidenceGraph.header.subjectCount",
+                defaultValue: "%lld subjects",
                 comment: "Evidence graph header count; argument is how many placed primaries are on the canvas"
-            )
+            ), count)
         }
     }
 
@@ -1934,43 +1973,39 @@ enum L10n {
     /// Shared genealogical DateValue display (list rows, previews). Not Source-page-owned.
     enum Dates {
         static func displayAbout(_ date: String, locale: Locale = .autoupdatingCurrent) -> String {
-            var resource = LocalizedStringResource(
+            let resource = LocalizedStringResource(
                 "dates.display.about",
                 defaultValue: "About %@",
                 comment: "DateValue summary prefix for ABT; argument is the formatted point date"
             )
-            resource.locale = locale
-            return String(format: String(localized: resource), locale: locale, date)
+            return L10n.format(resource, locale: locale, date)
         }
 
         static func displayBefore(_ date: String, locale: Locale = .autoupdatingCurrent) -> String {
-            var resource = LocalizedStringResource(
+            let resource = LocalizedStringResource(
                 "dates.display.before",
                 defaultValue: "Before %@",
                 comment: "DateValue summary prefix for BEF; argument is the formatted point date"
             )
-            resource.locale = locale
-            return String(format: String(localized: resource), locale: locale, date)
+            return L10n.format(resource, locale: locale, date)
         }
 
         static func displayAfter(_ date: String, locale: Locale = .autoupdatingCurrent) -> String {
-            var resource = LocalizedStringResource(
+            let resource = LocalizedStringResource(
                 "dates.display.after",
                 defaultValue: "After %@",
                 comment: "DateValue summary prefix for AFT; argument is the formatted point date"
             )
-            resource.locale = locale
-            return String(format: String(localized: resource), locale: locale, date)
+            return L10n.format(resource, locale: locale, date)
         }
 
         static func displayBetween(start: String, end: String, locale: Locale = .autoupdatingCurrent) -> String {
-            var resource = LocalizedStringResource(
+            let resource = LocalizedStringResource(
                 "dates.display.between",
-                defaultValue: "Between %@ and %@",
+                defaultValue: "Between %1$@ and %2$@",
                 comment: "DateValue summary for a range; arguments are formatted start then end"
             )
-            resource.locale = locale
-            return String(format: String(localized: resource), locale: locale, start, end)
+            return L10n.format(resource, locale: locale, start, end)
         }
     }
 
@@ -2049,25 +2084,17 @@ enum L10n {
 
         static func partsCount(_ count: Int) -> String {
             if count == 0 {
-                return String(localized: LocalizedStringResource(
+                return L10n.string(LocalizedStringResource(
                     "nameValue.parts.count.none",
                     defaultValue: "none",
                     comment: "Parts heading count when the NameValue has no parts"
                 ))
             }
-            if count == 1 {
-                return String(localized: LocalizedStringResource(
-                    "nameValue.parts.count.one",
-                    defaultValue: "1 part",
-                    comment: "Parts heading count for a single NameValue part"
-                ))
-            }
-            let format = String(localized: LocalizedStringResource(
-                "nameValue.parts.count.other",
+            return L10n.format(LocalizedStringResource(
+                "nameValue.parts.count",
                 defaultValue: "%lld parts",
                 comment: "Parts heading count; argument is the part count"
-            ))
-            return String(format: format, locale: .current, count)
+            ), count)
         }
         static let partsHint = LocalizedStringResource(
             "nameValue.parts.hint",
@@ -2166,54 +2193,51 @@ enum L10n {
         )
 
         static func partEmptyValue(position: Int) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "nameValue.part.error.emptyValue",
                 defaultValue: "Part %lld cannot be empty — remove it instead.",
                 comment: "Validation when a NameValue part value is blank; argument is 1-based index"
-            ))
-            return String(format: format, locale: .current, position)
+            ), position)
         }
 
         static func partAccessibility(position: Int, of count: Int, typeLabel: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "a11y.nameValue.part",
                 defaultValue: "Part %1$lld of %2$lld, %3$@",
                 comment: "VoiceOver name for a NameValue part row; arguments are index, count, type label"
-            ))
-            return String(format: format, locale: .current, position, count, typeLabel)
+            ), position, count, typeLabel)
         }
 
-        static func partMoveUp(position: Int) -> LocalizedStringResource {
-            LocalizedStringResource(
+        static func partMoveUp(position: Int) -> String {
+            L10n.format(LocalizedStringResource(
                 "a11y.nameValue.part.moveUp",
-                defaultValue: "Move part \(position) up",
+                defaultValue: "Move part %lld up",
                 comment: "VoiceOver for move-up; argument is 1-based part index"
-            )
+            ), position)
         }
 
-        static func partMoveDown(position: Int) -> LocalizedStringResource {
-            LocalizedStringResource(
+        static func partMoveDown(position: Int) -> String {
+            L10n.format(LocalizedStringResource(
                 "a11y.nameValue.part.moveDown",
-                defaultValue: "Move part \(position) down",
+                defaultValue: "Move part %lld down",
                 comment: "VoiceOver for move-down; argument is 1-based part index"
-            )
+            ), position)
         }
 
-        static func partRemove(position: Int) -> LocalizedStringResource {
-            LocalizedStringResource(
+        static func partRemove(position: Int) -> String {
+            L10n.format(LocalizedStringResource(
                 "a11y.nameValue.part.remove",
-                defaultValue: "Remove part \(position)",
+                defaultValue: "Remove part %lld",
                 comment: "VoiceOver for remove; argument is 1-based part index"
-            )
+            ), position)
         }
 
         static func partMoved(position: Int, of count: Int) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "a11y.nameValue.part.moved",
                 defaultValue: "Part moved to position %1$lld of %2$lld",
                 comment: "Announcement after Option-arrow reorder; arguments are new index and count"
-            ))
-            return String(format: format, locale: .current, position, count)
+            ), position, count)
         }
     }
 
@@ -2238,12 +2262,11 @@ enum L10n {
         )
 
         static func pageOf(total: Int) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "artifactViewer.pageOf",
                 defaultValue: "of %lld",
                 comment: "Artifact viewer page count suffix; argument is total pages"
-            ))
-            return String(format: format, locale: .current, total)
+            ), total)
         }
 
         static let zoomOut = LocalizedStringResource(
@@ -2258,12 +2281,12 @@ enum L10n {
             comment: "Artifact viewer: increase magnification"
         )
 
-        static func zoomPercent(percent: Int) -> LocalizedStringResource {
-            LocalizedStringResource(
+        static func zoomPercent(percent: Int) -> String {
+            L10n.format(LocalizedStringResource(
                 "artifactViewer.zoomPercent",
-                defaultValue: "Zoom \(percent) percent",
+                defaultValue: "Zoom %lld percent",
                 comment: "VoiceOver label for the live zoom percentage"
-            )
+            ), percent)
         }
 
         static let canvasAccessibility = LocalizedStringResource(
@@ -2338,12 +2361,12 @@ enum L10n {
             comment: "Commits the current viewer page into the citation locator"
         )
 
-        static func pageSet(page: Int) -> LocalizedStringResource {
-            LocalizedStringResource(
+        static func pageSet(page: Int) -> String {
+            L10n.format(LocalizedStringResource(
                 "artifactViewer.pageSet",
-                defaultValue: "Page \(page) set",
+                defaultValue: "Page %lld set",
                 comment: "Set page button after the locator page matches the viewer; argument is page number"
-            )
+            ), page)
         }
 
         static let regionRectangle = LocalizedStringResource(
@@ -2425,12 +2448,11 @@ enum L10n {
         )
 
         static func findMatchOf(current: Int, total: Int) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "artifactViewer.findMatchOf",
-                defaultValue: "%lld of %lld",
+                defaultValue: "%1$lld of %2$lld",
                 comment: "Find field suffix; arguments are current match index then total matches"
-            ))
-            return String(format: format, locale: .current, current, total)
+            ), current, total)
         }
 
         static let findNoteNoTextLayer = LocalizedStringResource(
@@ -2440,60 +2462,54 @@ enum L10n {
         )
 
         static func findNoteNoMatches(pageCount: Int) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "artifactViewer.findNoteNoMatches",
                 defaultValue: "No matches in %lld pages",
                 comment: "PDF Find note when the query hits nothing; argument is page count"
-            ))
-            return String(format: format, locale: .current, pageCount)
+            ), pageCount)
         }
 
         static func findNoteJumped(page: Int) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "artifactViewer.findNoteJumped",
                 defaultValue: "Jumped to page %lld.",
                 comment: "PDF Find note after the active hit changes the viewer page"
-            ))
-            return String(format: format, locale: .current, page)
+            ), page)
         }
 
         static func findNoteNextPage(page: Int) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "artifactViewer.findNoteNextPage",
                 defaultValue: "Next match is on page %lld.",
                 comment: "PDF Find note when the following hit is on another page"
-            ))
-            return String(format: format, locale: .current, page)
+            ), page)
         }
 
         static func findNoteWrappedFirst(page: Int) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "artifactViewer.findNoteWrappedFirst",
                 defaultValue: "Wrapped to the first match, page %lld",
                 comment: "PDF Find note after next wraps from the last hit to the first"
-            ))
-            return String(format: format, locale: .current, page)
+            ), page)
         }
 
         static func findNoteWrappedLast(page: Int) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "artifactViewer.findNoteWrappedLast",
                 defaultValue: "Wrapped to the last match, page %lld",
                 comment: "PDF Find note after previous wraps from the first hit to the last"
-            ))
-            return String(format: format, locale: .current, page)
+            ), page)
         }
     }
 
     /// Citation composer place (S7-08 thin submit path; board-aligned shell).
     enum CitationComposer {
         static func breadcrumbCitationFor(scope: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "citationComposer.breadcrumb.citationFor",
                 defaultValue: "Citation for %@",
                 comment: "Composer breadcrumb leaf; argument is subject label or bridge edge sentence"
-            ))
-            return String(format: format, locale: .current, scope)
+            ), scope)
         }
 
         static let accessibilityTitle = LocalizedStringResource(
@@ -2515,12 +2531,11 @@ enum L10n {
         )
 
         static func deleteCitationAccessibility(ref: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "citationComposer.deleteCitationAccessibility",
                 defaultValue: "Delete citation %@",
                 comment: "VoiceOver for Delete citation; argument is CIT-…"
-            ))
-            return String(format: format, locale: .current, ref)
+            ), ref)
         }
 
         static let done = LocalizedStringResource(
@@ -2722,12 +2737,11 @@ enum L10n {
         )
 
         static func newSubject(typeKey: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "citationComposer.newSubjectOption",
                 defaultValue: "New %@…",
                 comment: "Subject picker option; argument is person, event, or place"
-            ))
-            return String(format: format, locale: .current, typeKey)
+            ), typeKey)
         }
 
         static func unsavedSummary(
@@ -2737,40 +2751,32 @@ enum L10n {
         ) -> String {
             var parts: [String] = []
             if citationDirty {
-                parts.append(String(localized: LocalizedStringResource(
+                parts.append(L10n.string(LocalizedStringResource(
                     "citationComposer.unsavedCitationPart",
                     defaultValue: "the citation",
                     comment: "Unsaved-summary clause for dirty citation fields"
                 )))
             }
-            if observationCount == 1 {
-                parts.append(String(localized: LocalizedStringResource(
-                    "citationComposer.unsavedObservationOne",
-                    defaultValue: "1 observation",
-                    comment: "Unsaved-summary clause for one dirty observation row"
-                )))
-            } else if observationCount > 1 {
-                let format = String(localized: LocalizedStringResource(
-                    "citationComposer.unsavedObservationMany",
+            if observationCount > 0 {
+                parts.append(L10n.format(LocalizedStringResource(
+                    "citationComposer.unsavedObservations",
                     defaultValue: "%lld observations",
-                    comment: "Unsaved-summary clause for several dirty observation rows"
-                ))
-                parts.append(String(format: format, locale: .current, observationCount))
+                    comment: "Unsaved-summary clause for dirty observation rows; argument is how many"
+                ), observationCount))
             }
             if connectionTouched {
-                parts.append(String(localized: LocalizedStringResource(
+                parts.append(L10n.string(LocalizedStringResource(
                     "citationComposer.unsavedConnectionPart",
                     defaultValue: "a new connection",
                     comment: "Unsaved-summary clause for a touched pending connection"
                 )))
             }
             let joined = parts.joined(separator: ", ")
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "citationComposer.unsavedSummary",
                 defaultValue: "Unsaved: %@",
                 comment: "Footer and leave-guard body; argument is the joined unsaved parts"
-            ))
-            return String(format: format, locale: .current, joined)
+            ), joined)
         }
 
         static func connectionAccessibility(
@@ -2779,30 +2785,27 @@ enum L10n {
             term: String,
             status: String
         ) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "citationComposer.connectionAccessibility",
-                defaultValue: "Connection, %@. %@ %@. %@",
+                defaultValue: "Connection, %1$@. %2$@ %3$@. %4$@",
                 comment: "VoiceOver for a relationship or participation connection"
-            ))
-            return String(format: format, locale: .current, sentence, termLabel, term, status)
+            ), sentence, termLabel, term, status)
         }
 
         static func connectionAccessibilityLocation(status: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "citationComposer.connectionAccessibilityLocation",
                 defaultValue: "Connection, Location. %@",
                 comment: "VoiceOver for a location connection; argument is New/Edited/Saved ref"
-            ))
-            return String(format: format, locale: .current, status)
+            ), status)
         }
 
         static func connectionSavedStatus(ref: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "citationComposer.connectionSavedStatus",
                 defaultValue: "Saved, %@",
                 comment: "VoiceOver status for a saved connection; argument is the bridge ref"
-            ))
-            return String(format: format, locale: .current, ref)
+            ), ref)
         }
 
         static let cancel = LocalizedStringResource(
@@ -2882,29 +2885,28 @@ enum L10n {
             comment: "Hint when every PDF page has empty extractable text"
         )
 
-        static func pasteHintSelected(lines: Int, page: Int) -> LocalizedStringResource {
-            LocalizedStringResource(
+        static func pasteHintSelected(lines: Int, page: Int) -> String {
+            L10n.format(LocalizedStringResource(
                 "citationComposer.pasteHintSelected",
-                defaultValue: "Pastes the \(lines) lines selected on page \(page)",
+                defaultValue: "Pastes the %1$lld lines selected on page %2$lld",
                 comment: "Hint when an I-beam selection can be pasted; arguments are line count and page"
-            )
+            ), lines, page)
         }
 
-        static func pasteHintAfter(page: Int) -> LocalizedStringResource {
-            LocalizedStringResource(
+        static func pasteHintAfter(page: Int) -> String {
+            L10n.format(LocalizedStringResource(
                 "citationComposer.pasteHintAfter",
-                defaultValue: "Pasted from page \(page). Check it against the page, then Save citation",
+                defaultValue: "Pasted from page %lld. Check it against the page, then Save citation",
                 comment: "Hint after a successful paste; argument is the selection page"
-            )
+            ), page)
         }
 
         static func pasteUnavailable(hint: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "citationComposer.pasteUnavailable",
                 defaultValue: "Paste transcription from selection, unavailable. %@",
                 comment: "VoiceOver when Paste is disabled; argument is the current field hint"
-            ))
-            return String(format: format, locale: .current, hint)
+            ), hint)
         }
 
         static let pasteReplaceConfirm = LocalizedStringResource(
@@ -2914,12 +2916,11 @@ enum L10n {
         )
 
         static func pasteReplaceMessage(selectedLines: Int, page: Int) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "citationComposer.pasteReplaceMessage",
-                defaultValue: "Paste replaces the text already in the field with the %lld lines selected on page %lld. The current text isn’t kept. Nothing is written until Save citation.",
+                defaultValue: "Paste replaces the text already in the field with the %1$lld lines selected on page %2$lld. The current text isn’t kept. Nothing is written until Save citation.",
                 comment: "Confirm message when paste would overwrite; arguments are selected line count then page"
-            ))
-            return String(format: format, locale: .current, selectedLines, page)
+            ), selectedLines, page)
         }
 
         static let autoTranscribeHintAudio = LocalizedStringResource(
@@ -3163,12 +3164,11 @@ enum L10n {
         )
 
         static func artifactIndexOf(index: Int, total: Int, kind: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "citationComposer.artifactIndexOf",
-                defaultValue: "Artifact %lld of %lld · %@",
+                defaultValue: "Artifact %1$lld of %2$lld · %3$@",
                 comment: "Viewer header index; arguments are 1-based index, total, and media kind"
-            ))
-            return String(format: format, locale: .current, index, total, kind)
+            ), index, total, kind)
         }
 
         static let artifactKindPDF = LocalizedStringResource(
@@ -3208,21 +3208,19 @@ enum L10n {
         )
 
         static func mediaCaptionNoFileDetail(detail: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "citationComposer.mediaCaptionNoFileDetail",
                 defaultValue: "No file · %@",
                 comment: "Caption under a fileless Artifact tile; argument is the Artifact description"
-            ))
-            return String(format: format, locale: .current, detail)
+            ), detail)
         }
 
         static func locatorPage(_ page: Int) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "citationComposer.locatorPage",
                 defaultValue: "Page %lld",
                 comment: "Locator list row for a committed page; argument is page number"
-            ))
-            return String(format: format, locale: .current, page)
+            ), page)
         }
 
         static let clearMenu = LocalizedStringResource(
@@ -3268,12 +3266,11 @@ enum L10n {
         )
 
         static func locatorPoints(_ count: Int) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "citationComposer.locatorPoints",
                 defaultValue: "%lld points",
                 comment: "Locator list helper for a region; argument is vertex count"
-            ))
-            return String(format: format, locale: .current, count)
+            ), count)
         }
 
         static let locatorRectangle = LocalizedStringResource(
@@ -3301,12 +3298,11 @@ enum L10n {
         )
 
         static func removePage(_ page: Int) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "citationComposer.removePage",
                 defaultValue: "Remove page %lld",
                 comment: "Accessibility name to remove a page locator; argument is page number"
-            ))
-            return String(format: format, locale: .current, page)
+            ), page)
         }
 
         static let removeRegion = LocalizedStringResource(
@@ -3484,57 +3480,51 @@ enum L10n {
         )
 
         static func artifactMenuLabel(title: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "citationComposer.artifactMenuLabel",
                 defaultValue: "Artifact, %@",
                 comment: "VoiceOver name for the Artifact identity control; argument is Artifact title"
-            ))
-            return String(format: format, locale: .current, title)
+            ), title)
         }
 
         static func artifactMenuMeta(kind: String, count: Int) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "citationComposer.artifactMenuMeta",
-                defaultValue: "%@ · %lld citations",
+                defaultValue: "%1$@ · %2$lld citations",
                 comment: "Artifact menu row meta; arguments are media kind and citation count"
-            ))
-            return String(format: format, locale: .current, kind, count)
+            ), kind, count)
         }
 
         static func citationMenuCount(count: Int) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "citationComposer.citationMenuCount",
                 defaultValue: "%lld obs",
                 comment: "Observation count on a Citation menu row; argument is count"
-            ))
-            return String(format: format, locale: .current, count)
+            ), count)
         }
 
         static func citationMenuRef(ref: String, count: Int) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "citationComposer.citationMenuRef",
-                defaultValue: "Citation, %@, %lld observations",
+                defaultValue: "Citation, %1$@, %2$lld observations",
                 comment: "VoiceOver name for the Citation identity control; arguments are ref and count"
-            ))
-            return String(format: format, locale: .current, ref, count)
+            ), ref, count)
         }
 
         static func identityChangedCitation(ref: String, count: Int) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "citationComposer.identityChangedCitation",
-                defaultValue: "Now citing %@, %lld observations",
+                defaultValue: "Now citing %1$@, %2$lld observations",
                 comment: "VoiceOver announcement after switching Citation; arguments are ref and count"
-            ))
-            return String(format: format, locale: .current, ref, count)
+            ), ref, count)
         }
 
         static func identityChangedArtifact(title: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "citationComposer.identityChangedArtifact",
                 defaultValue: "Now citing %@",
                 comment: "VoiceOver announcement after switching Artifact; argument is Artifact title"
-            ))
-            return String(format: format, locale: .current, title)
+            ), title)
         }
 
     }
@@ -3560,12 +3550,12 @@ enum L10n {
             comment: "Accessibility label and tooltip for the pill marking a Provenencia-seeded row in a vocabulary list"
         )
 
-        static func pluginPill(pluginID: String) -> LocalizedStringResource {
-            LocalizedStringResource(
+        static func pluginPill(pluginID: String) -> String {
+            L10n.format(LocalizedStringResource(
                 "origin.pill.plugin",
-                defaultValue: "Supplied by the \(pluginID) plugin",
+                defaultValue: "Supplied by the %@ plugin",
                 comment: "Accessibility label and tooltip for the pill marking a plugin-owned row in a vocabulary list; argument is the plugin id"
-            )
+            ), pluginID)
         }
     }
 
@@ -3579,21 +3569,19 @@ enum L10n {
         )
 
         static func countLine(total: Int) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "sources.list.countLine",
                 defaultValue: "%lld sources",
                 comment: "Sources list count when unfiltered; argument is total"
-            ))
-            return String(format: format, locale: .current, total)
+            ), total)
         }
 
         static func countLineFiltered(visible: Int, total: Int) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "sources.list.countLineFiltered",
-                defaultValue: "%lld of %lld sources",
+                defaultValue: "%1$lld of %2$lld sources",
                 comment: "Sources list count when search/filter narrows the list; arguments are visible then total"
-            ))
-            return String(format: format, locale: .current, visible, total)
+            ), visible, total)
         }
 
         static let addSource = LocalizedStringResource(
@@ -3657,12 +3645,11 @@ enum L10n {
         )
 
         static func sortedBy(_ label: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "sources.list.sortedBy",
                 defaultValue: "Sorted by %@",
                 comment: "Sources sort control label; argument is the active sort option in lowercase"
-            ))
-            return String(format: format, locale: .current, label)
+            ), label)
         }
 
         static let emptyTitle = LocalizedStringResource(
@@ -3713,42 +3700,20 @@ enum L10n {
             comment: "VoiceOver while Sources list graph-progress counts have not arrived"
         )
 
-        private static let subjectCountOne = LocalizedStringResource(
-            "sources.list.subjectCountOne",
-            defaultValue: "1 subject",
-            comment: "Sources list graph-zone subject count when exactly one canvas subject"
-        )
-
-        private static func subjectCountOther(count: Int) -> LocalizedStringResource {
-            LocalizedStringResource(
-                "sources.list.subjectCountOther",
-                defaultValue: "\(count) subjects",
-                comment: "Sources list graph-zone subject count; argument is canvas subject count"
-            )
-        }
-
-        private static let observationCountOne = LocalizedStringResource(
-            "sources.list.observationCountOne",
-            defaultValue: "1 observation",
-            comment: "Sources list graph-zone observation count when exactly one Observation"
-        )
-
-        private static func observationCountOther(count: Int) -> LocalizedStringResource {
-            LocalizedStringResource(
-                "sources.list.observationCountOther",
-                defaultValue: "\(count) observations",
-                comment: "Sources list graph-zone observation count; argument is Observation count"
-            )
-        }
-
         static func graphSubjectCount(_ count: Int) -> String {
-            if count == 1 { return String(localized: subjectCountOne) }
-            return String(localized: subjectCountOther(count: count))
+            L10n.format(LocalizedStringResource(
+                "sources.list.subjectCount",
+                defaultValue: "%lld subjects",
+                comment: "Sources list graph-zone subject count; argument is canvas subject count"
+            ), count)
         }
 
         static func graphObservationCount(_ count: Int) -> String {
-            if count == 1 { return String(localized: observationCountOne) }
-            return String(localized: observationCountOther(count: count))
+            L10n.format(LocalizedStringResource(
+                "sources.list.observationCount",
+                defaultValue: "%lld observations",
+                comment: "Sources list graph-zone observation count; argument is Observation count"
+            ), count)
         }
 
         static func graphCountLine(subjects: Int, observations: Int) -> String {
@@ -3759,13 +3724,13 @@ enum L10n {
             progress: SourceGraphProgress?,
             countsLoading: Bool
         ) -> String {
-            let open = String(localized: openGraph)
+            let open = L10n.string(openGraph)
             if countsLoading && progress == nil {
-                return "\(open), \(String(localized: graphCountsLoading))"
+                return "\(open), \(L10n.string(graphCountsLoading))"
             }
             let subjects = progress?.subjectCount ?? 0
             if subjects == 0 {
-                return "\(open), \(graphSubjectCount(0)), \(String(localized: graphNotStarted))"
+                return "\(open), \(graphSubjectCount(0)), \(L10n.string(graphNotStarted))"
             }
             return [
                 open,
@@ -3871,21 +3836,19 @@ enum L10n {
         )
 
         static func toastCreatedTitle(ref: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "sources.add.toastCreatedTitle",
                 defaultValue: "%@",
                 comment: "Toast title after creating a Source; argument is the SRC- ref"
-            ))
-            return String(format: format, locale: .current, ref)
+            ), ref)
         }
 
         static func toastCreatedBody(title: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "sources.add.toastCreatedBody",
                 defaultValue: "%@. Opening its Source page.",
                 comment: "Toast body after creating a Source; argument is the title"
-            ))
-            return String(format: format, locale: .current, title)
+            ), title)
         }
 
         // MARK: Source page (S2-18)
@@ -4005,12 +3968,11 @@ enum L10n {
         )
 
         static func deleteMetadataConfirmTitle(label: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "sources.page.deleteMetadataConfirmTitle",
                 defaultValue: "Delete %@?",
                 comment: "Confirm title when clearing a saved metadata value; argument is the field label"
-            ))
-            return String(format: format, locale: .current, label)
+            ), label)
         }
 
         static let deleteMetadataConfirmMessage = LocalizedStringResource(
@@ -4050,12 +4012,11 @@ enum L10n {
         )
 
         static func toastArtifactDeletedBody(ref: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "sources.page.toastArtifactDeletedBody",
                 defaultValue: "%@ was erased from this source.",
                 comment: "Toast body after Artifact erase; argument is ART-…"
-            ))
-            return String(format: format, locale: .current, ref)
+            ), ref)
         }
 
         static let deleteNoteConfirmTitle = LocalizedStringResource(
@@ -4426,35 +4387,19 @@ enum L10n {
         )
 
         static func metadataFieldCount(_ count: Int) -> String {
-            if count == 1 {
-                return String(localized: LocalizedStringResource(
-                    "sources.page.metadataFieldCountOne",
-                    defaultValue: "1 field",
-                    comment: "Metadata section count when exactly one saved field"
-                ))
-            }
-            let format = String(localized: LocalizedStringResource(
-                "sources.page.metadataFieldCountMany",
-                defaultValue: "%d fields",
+            return L10n.format(LocalizedStringResource(
+                "sources.page.metadataFieldCount",
+                defaultValue: "%lld fields",
                 comment: "Metadata section count; argument is saved field count"
-            ))
-            return String(format: format, locale: .current, count)
+            ), count)
         }
 
         static func artifactsCount(_ count: Int) -> String {
-            if count == 1 {
-                return String(localized: LocalizedStringResource(
-                    "sources.page.artifactsCountOne",
-                    defaultValue: "1 artifact",
-                    comment: "Artifacts section count when exactly one"
-                ))
-            }
-            let format = String(localized: LocalizedStringResource(
-                "sources.page.artifactsCountMany",
-                defaultValue: "%d artifacts",
+            return L10n.format(LocalizedStringResource(
+                "sources.page.artifactsCount",
+                defaultValue: "%lld artifacts",
                 comment: "Artifacts section count; argument is artifact count"
-            ))
-            return String(format: format, locale: .current, count)
+            ), count)
         }
 
         static let metadataHeading = LocalizedStringResource(
@@ -4681,12 +4626,11 @@ enum L10n {
 
         /// Composer byline beside the draft field (`Jake Robins · now`).
         static func noteComposerAttribution(displayName: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "sources.page.noteComposerAttribution",
                 defaultValue: "%@ · now",
                 comment: "Note composer byline; argument is the session display name"
-            ))
-            return String(format: format, locale: .current, displayName)
+            ), displayName)
         }
 
         static let addNote = LocalizedStringResource(
@@ -4828,39 +4772,37 @@ enum L10n {
         )
 
         static func toastArtifactCreatedTitle(ref: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "sources.page.toastArtifactCreatedTitle",
                 defaultValue: "%@",
                 comment: "Toast title after creating an Artifact; argument is ART- ref"
-            ))
-            return String(format: format, locale: .current, ref)
+            ), ref)
         }
 
-        static let toastArtifactCreatedFileless = String(localized: LocalizedStringResource(
+        static let toastArtifactCreatedFileless = L10n.string(LocalizedStringResource(
             "sources.page.toastArtifactCreatedFileless",
             defaultValue: "Created with no file yet — physical only.",
             comment: "Toast body after creating a fileless Artifact"
         ))
 
-        static let toastArtifactCreatedWithFile = String(localized: LocalizedStringResource(
+        static let toastArtifactCreatedWithFile = L10n.string(LocalizedStringResource(
             "sources.page.toastArtifactCreatedWithFile",
             defaultValue: "Created and the file was ingested.",
             comment: "Toast body after creating an Artifact with a file"
         ))
 
-        static let toastFileAttachedTitle = String(localized: LocalizedStringResource(
+        static let toastFileAttachedTitle = L10n.string(LocalizedStringResource(
             "sources.page.toastFileAttachedTitle",
             defaultValue: "File attached",
             comment: "Toast title after first-attach ingest"
         ))
 
         static func toastFileAttachedBody(name: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "sources.page.toastFileAttachedBody",
                 defaultValue: "%@ was ingested into the project.",
                 comment: "Toast body after ingest; argument is original filename"
-            ))
-            return String(format: format, locale: .current, name)
+            ), name)
         }
 
         static let coverBadge = LocalizedStringResource(
@@ -4899,22 +4841,21 @@ enum L10n {
             comment: "Disabled context menu item when the type icon is already the cover"
         )
 
-        static let toastThumbnailUpdatedTitle = String(localized: LocalizedStringResource(
+        static let toastThumbnailUpdatedTitle = L10n.string(LocalizedStringResource(
             "sources.page.toastThumbnailUpdatedTitle",
             defaultValue: "Thumbnail updated",
             comment: "Toast title after changing Source cover"
         ))
 
         static func toastThumbnailUpdatedArtifactBody(ref: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "sources.page.toastThumbnailUpdatedArtifactBody",
                 defaultValue: "Using %@ as the Source thumbnail.",
                 comment: "Toast body after pinning an Artifact; argument is ART- ref"
-            ))
-            return String(format: format, locale: .current, ref)
+            ), ref)
         }
 
-        static let toastThumbnailUpdatedTypeIconBody = String(localized: LocalizedStringResource(
+        static let toastThumbnailUpdatedTypeIconBody = L10n.string(LocalizedStringResource(
             "sources.page.toastThumbnailUpdatedTypeIconBody",
             defaultValue: "Using the Source type icon as the thumbnail.",
             comment: "Toast body after reverting cover to the type icon"
@@ -4929,21 +4870,19 @@ enum L10n {
         )
 
         static func countLine(total: Int, seeded: Int, user: Int) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "metadata.list.countLine",
-                defaultValue: "%lld fields · %lld seeded · %lld yours",
+                defaultValue: "%1$lld fields · %2$lld seeded · %3$lld yours",
                 comment: "Metadata count summary; arguments are total, seeded (provenencia), and user field counts"
-            ))
-            return String(format: format, locale: .current, total, seeded, user)
+            ), total, seeded, user)
         }
 
         static func countLineWithPlugin(total: Int, seeded: Int, user: Int, plugin: Int) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "metadata.list.countLineWithPlugin",
-                defaultValue: "%lld fields · %lld seeded · %lld yours · %lld plugin",
+                defaultValue: "%1$lld fields · %2$lld seeded · %3$lld yours · %4$lld plugin",
                 comment: "Metadata count summary including plugin-origin fields; arguments are total, seeded, user, and plugin field counts"
-            ))
-            return String(format: format, locale: .current, total, seeded, user, plugin)
+            ), total, seeded, user, plugin)
         }
 
         static let addField = LocalizedStringResource(
@@ -4995,12 +4934,11 @@ enum L10n {
         )
 
         static func deleteFieldAccessibility(label: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "metadata.delete.accessibility",
                 defaultValue: "Delete field %@",
                 comment: "VoiceOver for Metadata trash; argument is the field label"
-            ))
-            return String(format: format, locale: .current, label)
+            ), label)
         }
 
         static let toastDeletedTitle = LocalizedStringResource(
@@ -5010,12 +4948,11 @@ enum L10n {
         )
 
         static func toastDeletedBody(label: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "metadata.toast.deletedBody",
                 defaultValue: "%@ is no longer in this project's vocabulary.",
                 comment: "Toast body after a metadata field is deleted; argument is the field label"
-            ))
-            return String(format: format, locale: .current, label)
+            ), label)
         }
 
         static let emptyProjectTitle = LocalizedStringResource(
@@ -5031,12 +4968,11 @@ enum L10n {
         )
 
         static func resultLine(shown: Int, total: Int) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "metadata.list.resultLineAll",
                 defaultValue: "%lld fields",
                 comment: "Footer result count for the Metadata list; argument is the total"
-            ))
-            return String(format: format, locale: .current, total)
+            ), total)
         }
 
         static let detailEyebrowField = LocalizedStringResource(
@@ -5064,12 +5000,11 @@ enum L10n {
         )
 
         static func lockedNotePlugin(pluginID: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "metadata.detail.lockedNotePlugin",
                 defaultValue: "Supplied by the %@ plugin. The plugin owns this definition — Provenencia will not edit it.",
                 comment: "Callout explaining why a plugin-origin field can't be edited; argument is the plugin id"
-            ))
-            return String(format: format, locale: .current, pluginID)
+            ), pluginID)
         }
 
         static let dataTypeSectionLabel = LocalizedStringResource(
@@ -5193,12 +5128,11 @@ enum L10n {
         )
 
         static func toastAddedBody(label: String, key: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "metadata.toast.addedBody",
-                defaultValue: "%@ is in this project’s vocabulary as %@.",
+                defaultValue: "%1$@ is in this project’s vocabulary as %2$@.",
                 comment: "Success toast body after creating a Metadata field; arguments are label then minted key"
-            ))
-            return String(format: format, locale: .current, label, key)
+            ), label, key)
         }
 
         static let toastUpdatedTitle = LocalizedStringResource(
@@ -5208,12 +5142,11 @@ enum L10n {
         )
 
         static func toastUpdatedBody(label: String, key: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "metadata.toast.updatedBody",
-                defaultValue: "%@ — the key stays %@.",
+                defaultValue: "%1$@ — the key stays %2$@.",
                 comment: "Success toast body after editing a Metadata field; arguments are label then key"
-            ))
-            return String(format: format, locale: .current, label, key)
+            ), label, key)
         }
     }
 
@@ -5239,12 +5172,11 @@ enum L10n {
             comment: "Accessibility label for the type strip pressed-button group"
         )
         static func stripFieldCount(count: Int) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "properties.strip.fieldCount",
                 defaultValue: "%lld fields",
                 comment: "Type strip count under a subject type; argument is binding count"
-            ))
-            return String(format: format, locale: .current, count)
+            ), count)
         }
         static let searchPlaceholder = LocalizedStringResource(
             "properties.search.placeholder",
@@ -5317,36 +5249,33 @@ enum L10n {
             comment: "Properties table column: bound subject types"
         )
         static func boundOverflow(count: Int) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "properties.table.boundOverflow",
                 defaultValue: "+%lld",
                 comment: "Overflow when more than three Bound-to chips; argument is remaining count"
-            ))
-            return String(format: format, locale: .current, count)
+            ), count)
         }
         static func rowBoundAnnouncement(count: Int) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "properties.table.rowBoundAnnouncement",
                 defaultValue: "bound to %lld types",
                 comment: "VoiceOver fragment for how many types a property is bound to"
-            ))
-            return String(format: format, locale: .current, count)
+            ), count)
         }
         static func emptySearchTitle(query: String) -> String {
             let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
             if trimmed.isEmpty {
-                return String(localized: LocalizedStringResource(
+                return L10n.string(LocalizedStringResource(
                     "properties.table.emptySearchTitle",
                     defaultValue: "No properties match",
                     comment: "Empty table title when no properties are visible"
                 ))
             }
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "properties.table.emptySearchTitleQuery",
                 defaultValue: "No property matches “%@”",
                 comment: "Empty table title when search matches nothing; argument is the query"
-            ))
-            return String(format: format, locale: .current, trimmed)
+            ), trimmed)
         }
         static let emptySearch = LocalizedStringResource(
             "properties.table.emptySearch",
@@ -5358,12 +5287,12 @@ enum L10n {
             defaultValue: "New property",
             comment: "Toolbar button to open create Property sheet"
         )
-        static func addPropertyPlaceholder(typeLabel: String) -> LocalizedStringResource {
-            LocalizedStringResource(
+        static func addPropertyPlaceholder(typeLabel: String) -> String {
+            L10n.format(LocalizedStringResource(
                 "properties.toolbar.addPropertyPlaceholder",
-                defaultValue: "Add a property to \(typeLabel)",
+                defaultValue: "Add a property to %@",
                 comment: "ComboBox placeholder when a subject type is focused; argument is type label"
-            )
+            ), typeLabel)
         }
         static let addPropertyEmpty = LocalizedStringResource(
             "properties.toolbar.addPropertyEmpty",
@@ -5411,12 +5340,11 @@ enum L10n {
             comment: "Inspector meta label: observation count for the selected property"
         )
         static func usedOnCount(count: Int) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "properties.inspector.usedOnCount",
                 defaultValue: "%lld observations",
                 comment: "Inspector observation count; argument is UsedBy"
-            ))
-            return String(format: format, locale: .current, count)
+            ), count)
         }
         static let bindingsSection = LocalizedStringResource(
             "properties.inspector.bindings",
@@ -5429,12 +5357,11 @@ enum L10n {
             comment: "Accessibility label for the Bound-to checkbox list"
         )
         static func bindCount(bound: Int, total: Int) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "properties.inspector.bindCount",
-                defaultValue: "%lld of %lld",
+                defaultValue: "%1$lld of %2$lld",
                 comment: "Inspector bound-type count beside Bound to; bound, then total types"
-            ))
-            return String(format: format, locale: .current, bound, total)
+            ), bound, total)
         }
         static let termNote = LocalizedStringResource(
             "properties.inspector.termNote",
@@ -5447,12 +5374,11 @@ enum L10n {
             comment: "Tooltip on the Properties inspector trash"
         )
         static func deletePropertyAccessibility(label: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "properties.delete.accessibility",
                 defaultValue: "Delete property %@",
                 comment: "VoiceOver for Properties trash; argument is the property label"
-            ))
-            return String(format: format, locale: .current, label)
+            ), label)
         }
         static let editAction = LocalizedStringResource(
             "properties.edit.action",
@@ -5470,12 +5396,11 @@ enum L10n {
             comment: "Cancel tooltip for in-place property label/description edit"
         )
         static func editKeyStays(key: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "properties.edit.keyStays",
                 defaultValue: "The key stays %@ — Observations already cite it",
                 comment: "Lock line under the label input while editing; argument is the property key"
-            ))
-            return String(format: format, locale: .current, key)
+            ), key)
         }
         static let editDescriptionPlaceholder = LocalizedStringResource(
             "properties.edit.descriptionPlaceholder",
@@ -5483,12 +5408,11 @@ enum L10n {
             comment: "Placeholder for the in-place property description textarea"
         )
         static func lockedBindingReason(typeLabel: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "properties.inspector.lockedBinding",
                 defaultValue: "The Interpretation subject registry requires this property on %@. The binding cannot be removed.",
                 comment: "Callout when activating a locked binding; argument is subject type label"
-            ))
-            return String(format: format, locale: .current, typeLabel)
+            ), typeLabel)
         }
         static let bindingLocked = LocalizedStringResource(
             "properties.inspector.bindingLocked",
@@ -5601,12 +5525,11 @@ enum L10n {
             comment: "Success toast title after creating a property"
         )
         static func toastCreatedBody(label: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "properties.toast.createdBody",
                 defaultValue: "%@ is ready to bind.",
                 comment: "Success toast body after creating a property; argument is label"
-            ))
-            return String(format: format, locale: .current, label)
+            ), label)
         }
         static let toastDeletedTitle = LocalizedStringResource(
             "properties.toast.deletedTitle",
@@ -5614,12 +5537,11 @@ enum L10n {
             comment: "Success toast title after deleting a property"
         )
         static func toastDeletedBody(label: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "properties.toast.deletedBody",
                 defaultValue: "%@ was removed from this project.",
                 comment: "Success toast body after deleting a property; argument is label"
-            ))
-            return String(format: format, locale: .current, label)
+            ), label)
         }
         static let toastUpdatedTitle = LocalizedStringResource(
             "properties.toast.updatedTitle",
@@ -5627,12 +5549,11 @@ enum L10n {
             comment: "Success toast title after editing a property label or description"
         )
         static func toastUpdatedBody(label: String, key: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "properties.toast.updatedBody",
-                defaultValue: "%@ — the key stays %@.",
+                defaultValue: "%1$@ — the key stays %2$@.",
                 comment: "Success toast body after editing a property; arguments are label then key"
-            ))
-            return String(format: format, locale: .current, label, key)
+            ), label, key)
         }
     }
 
@@ -5645,21 +5566,19 @@ enum L10n {
         )
 
         static func countLine(total: Int, seeded: Int, user: Int) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "sourceTypes.list.countLine",
-                defaultValue: "%lld types · %lld seeded · %lld yours",
+                defaultValue: "%1$lld types · %2$lld seeded · %3$lld yours",
                 comment: "Source types count summary; arguments are total, seeded (provenencia), and user type counts"
-            ))
-            return String(format: format, locale: .current, total, seeded, user)
+            ), total, seeded, user)
         }
 
         static func countLineWithPlugin(total: Int, seeded: Int, user: Int, plugin: Int) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "sourceTypes.list.countLineWithPlugin",
-                defaultValue: "%lld types · %lld seeded · %lld yours · %lld plugin",
+                defaultValue: "%1$lld types · %2$lld seeded · %3$lld yours · %4$lld plugin",
                 comment: "Source types count summary including plugin-origin types; arguments are total, seeded, user, and plugin type counts"
-            ))
-            return String(format: format, locale: .current, total, seeded, user, plugin)
+            ), total, seeded, user, plugin)
         }
 
         static let addType = LocalizedStringResource(
@@ -5693,12 +5612,11 @@ enum L10n {
         )
 
         static func resultLine(shown: Int, total: Int) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "sourceTypes.list.resultLineAll",
                 defaultValue: "%lld types",
                 comment: "Footer result count for the Source types list; argument is the total"
-            ))
-            return String(format: format, locale: .current, total)
+            ), total)
         }
 
         static let emptyProjectTitle = LocalizedStringResource(
@@ -5737,11 +5655,14 @@ enum L10n {
             comment: "Hint under the key on an existing type's detail panel"
         )
 
-        static func usage(count: Int) -> LocalizedStringResource {
+        static func usage(count: Int) -> String {
             switch count {
-            case 0: usageNone
-            case 1: usageOne
-            default: usageOther(count: count)
+            case 0: L10n.string(usageNone)
+            default: L10n.format(LocalizedStringResource(
+                "sourceTypes.detail.usage",
+                defaultValue: "in use on %lld sources",
+                comment: "Line under a type's title; argument is how many sources are classified as it"
+            ), count)
             }
         }
 
@@ -5750,20 +5671,6 @@ enum L10n {
             defaultValue: "no sources yet",
             comment: "Line under a type's title when no source is classified as it"
         )
-
-        private static let usageOne = LocalizedStringResource(
-            "sourceTypes.detail.usageOne",
-            defaultValue: "in use on 1 source",
-            comment: "Line under a type's title when exactly one source is classified as it"
-        )
-
-        private static func usageOther(count: Int) -> LocalizedStringResource {
-            LocalizedStringResource(
-                "sourceTypes.detail.usageOther",
-                defaultValue: "in use on \(count) sources",
-                comment: "Line under a type's title; argument is how many sources are classified as it"
-            )
-        }
 
         static let panelEmptyTitle = LocalizedStringResource(
             "sourceTypes.detail.panelEmptyTitle",
@@ -5778,12 +5685,11 @@ enum L10n {
         )
 
         static func lockedNotePlugin(pluginID: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "sourceTypes.detail.lockedNotePlugin",
                 defaultValue: "Supplied by the %@ plugin. The plugin owns this type, its description and the fields it suggests — Provenencia will not edit or delete them.",
                 comment: "Callout explaining why a plugin-origin type can't be edited; argument is the plugin id"
-            ))
-            return String(format: format, locale: .current, pluginID)
+            ), pluginID)
         }
 
         static let descriptionSectionLabel = LocalizedStringResource(
@@ -5847,12 +5753,11 @@ enum L10n {
         )
 
         static func formIconChangeAccessibility(name: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "sourceTypes.form.iconChangeAccessibility",
                 defaultValue: "Icon: %@ — choose a different one",
                 comment: "Accessibility label for the icon field button; argument is the current mark name"
-            ))
-            return String(format: format, locale: .current, name)
+            ), name)
         }
 
         static let iconPickerTitle = LocalizedStringResource(
@@ -5939,22 +5844,12 @@ enum L10n {
             comment: "Hint under the suggested fields section label"
         )
 
-        static func assignedCount(count: Int) -> LocalizedStringResource {
-            count == 1 ? assignedCountOne : assignedCountOther(count: count)
-        }
-
-        private static let assignedCountOne = LocalizedStringResource(
-            "sourceTypes.suggested.countOne",
-            defaultValue: "1 field",
-            comment: "Count beside the suggested fields section label when the type suggests exactly one field"
-        )
-
-        private static func assignedCountOther(count: Int) -> LocalizedStringResource {
-            LocalizedStringResource(
-                "sourceTypes.suggested.countOther",
-                defaultValue: "\(count) fields",
+        static func assignedCount(count: Int) -> String {
+            L10n.format(LocalizedStringResource(
+                "sourceTypes.suggested.count",
+                defaultValue: "%lld fields",
                 comment: "Count beside the suggested fields section label; argument is how many fields the type suggests"
-            )
+            ), count)
         }
 
         static let noAssignedBody = LocalizedStringResource(
@@ -5987,12 +5882,12 @@ enum L10n {
             comment: "Spoken label for the assign button when no field is picked yet"
         )
 
-        static func assignFieldNamed(field: String, type: String) -> LocalizedStringResource {
-            LocalizedStringResource(
+        static func assignFieldNamed(field: String, type: String) -> String {
+            L10n.format(LocalizedStringResource(
                 "sourceTypes.suggested.assignFieldNamed",
-                defaultValue: "Assign field \(field) to \(type)",
+                defaultValue: "Assign field %1$@ to %2$@",
                 comment: "Spoken label for the assign button; arguments are the picked field label then the type label"
-            )
+            ), field, type)
         }
 
         static let assignTipPoolEmpty = LocalizedStringResource(
@@ -6007,12 +5902,12 @@ enum L10n {
             comment: "Tooltip on the disabled assign button before a field is picked"
         )
 
-        static func assignTipField(label: String) -> LocalizedStringResource {
-            LocalizedStringResource(
+        static func assignTipField(label: String) -> String {
+            L10n.format(LocalizedStringResource(
                 "sourceTypes.suggested.assignTipField",
-                defaultValue: "Assign \(label) to this type",
+                defaultValue: "Assign %@ to this type",
                 comment: "Tooltip on the enabled assign button; argument is the picked field label"
-            )
+            ), label)
         }
 
         static let poolHint = LocalizedStringResource(
@@ -6027,12 +5922,12 @@ enum L10n {
             comment: "Hint under the assign-field picker when nothing is left to assign"
         )
 
-        static func removeSuggestion(label: String) -> LocalizedStringResource {
-            LocalizedStringResource(
+        static func removeSuggestion(label: String) -> String {
+            L10n.format(LocalizedStringResource(
                 "sourceTypes.suggested.remove",
-                defaultValue: "Remove \(label) from this type",
+                defaultValue: "Remove %@ from this type",
                 comment: "Accessibility label and tooltip on the control that detaches one suggested field; argument is the field label"
-            )
+            ), label)
         }
 
         static let toastAssignedTitle = LocalizedStringResource(
@@ -6042,12 +5937,11 @@ enum L10n {
         )
 
         static func toastAssignedBody(field: String, type: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "sourceTypes.toast.assignedBody",
                 defaultValue: "%1$@ is now suggested for %2$@.",
                 comment: "Toast body after attaching a field to a type; arguments are the field label then the type label"
-            ))
-            return String(format: format, locale: .current, field, type)
+            ), field, type)
         }
 
         static let toastRemovedTitle = LocalizedStringResource(
@@ -6060,9 +5954,9 @@ enum L10n {
         /// neither the field nor the values sources already hold for it.
         static func toastRemovedBody(field: String, type: String, valueCount: Int) -> String {
             if valueCount == 0 {
-                return String(format: String(localized: removedBodyNoValues), locale: .current, field, type)
+                return L10n.format(removedBodyNoValues, field, type)
             }
-            return String(format: String(localized: removedBodyWithValues), locale: .current, field, type, valueCount)
+            return L10n.format(removedBodyWithValues, field, type, valueCount)
         }
 
         private static let removedBodyNoValues = LocalizedStringResource(
@@ -6084,12 +5978,11 @@ enum L10n {
         )
 
         static func toastAddedBody(label: String, key: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "sourceTypes.toast.addedBody",
                 defaultValue: "%1$@ is in this project’s vocabulary as %2$@. Assign the fields it should suggest.",
                 comment: "Success toast body after creating a Source type; arguments are label then minted key"
-            ))
-            return String(format: format, locale: .current, label, key)
+            ), label, key)
         }
 
         static let toastUpdatedTitle = LocalizedStringResource(
@@ -6099,12 +5992,11 @@ enum L10n {
         )
 
         static func toastUpdatedBody(label: String, key: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "sourceTypes.toast.updatedBody",
                 defaultValue: "%1$@ — the key stays %2$@.",
                 comment: "Success toast body after editing a Source type; arguments are label then key"
-            ))
-            return String(format: format, locale: .current, label, key)
+            ), label, key)
         }
 
         static let deleteType = LocalizedStringResource(
@@ -6114,12 +6006,11 @@ enum L10n {
         )
 
         static func deleteTypeAccessibility(label: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "sourceTypes.delete.accessibility",
                 defaultValue: "Delete type %@",
                 comment: "VoiceOver for Source types trash; argument is the type label"
-            ))
-            return String(format: format, locale: .current, label)
+            ), label)
         }
 
         static let toastDeletedTitle = LocalizedStringResource(
@@ -6129,12 +6020,11 @@ enum L10n {
         )
 
         static func toastDeletedBody(label: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "sourceTypes.toast.deletedBody",
                 defaultValue: "%@ is no longer in this project’s vocabulary. Its field suggestions went with it; the fields did not.",
                 comment: "Toast body after a source type is deleted; argument is the type label"
-            ))
-            return String(format: format, locale: .current, label)
+            ), label)
         }
     }
 
@@ -6181,7 +6071,7 @@ enum L10n {
             default:
                 pair = (nounItem, nounItems)
             }
-            return String(localized: count == 1 ? pair.0 : pair.1)
+            return L10n.string(count == 1 ? pair.0 : pair.1)
         }
 
         static let nounSource = LocalizedStringResource(
@@ -6376,42 +6266,38 @@ enum L10n {
         )
 
         static func confirmTitle(noun: String, ref: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "deleteImpact.confirm.title",
                 defaultValue: "Delete %1$@ %2$@?",
                 comment: "Allowed-delete confirm title; arguments are kind noun and ref"
-            ))
-            return String(format: format, locale: .current, noun, ref)
+            ), noun, ref)
         }
 
         /// Allowed Subject delete: the handle(s) the Subject leaves. Arguments: handle refs (joined).
         static func leavesHandle(handleRefs: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "deleteImpact.confirm.leavesHandle",
                 defaultValue: "It’s removed from %@. That record stays.",
                 comment: "Allowed Subject delete confirm, appended after the consequence; argument is the handle ref(s), e.g. PER-7KD45"
-            ))
-            return String(format: format, locale: .current, handleRefs)
+            ), handleRefs)
         }
 
         /// Fallback for a cascade via the Mac has no specific copy for. Arguments: kind noun, refs.
         static func alsoAffects(noun: String, refs: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "deleteImpact.confirm.alsoAffects",
                 defaultValue: "This also changes %1$@ %2$@.",
                 comment: "Allowed-delete confirm line for a non-blocking cascade without specific copy; arguments are kind noun and ref list"
-            ))
-            return String(format: format, locale: .current, noun, refs)
+            ), noun, refs)
         }
 
         /// Allowed Observation delete: the handle(s) whose claims pinned it. Arguments: handle refs (joined).
         static func leavesEvidence(handleRefs: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "deleteImpact.confirm.leavesEvidence",
                 defaultValue: "It’s also removed from the evidence for %@. Those claims stay, with less evidence.",
                 comment: "Allowed Observation delete confirm, appended after the consequence; argument is the handle ref(s) whose Identity Claims pinned it"
-            ))
-            return String(format: format, locale: .current, handleRefs)
+            ), handleRefs)
         }
 
         static let confirmMessage = LocalizedStringResource(
@@ -6427,30 +6313,27 @@ enum L10n {
         )
 
         static func deleteAction(noun: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "deleteImpact.confirm.delete",
                 defaultValue: "Delete %@",
                 comment: "Allowed-delete confirm button; argument is kind noun"
-            ))
-            return String(format: format, locale: .current, noun)
+            ), noun)
         }
 
         static func keepAction(noun: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "deleteImpact.confirm.keep",
                 defaultValue: "Keep %@",
                 comment: "Allowed-delete keep button; argument is kind noun"
-            ))
-            return String(format: format, locale: .current, noun)
+            ), noun)
         }
 
         static func noticeTitle(noun: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "deleteImpact.notice.title",
                 defaultValue: "You can’t delete this %@",
                 comment: "Blocked-delete notice title; argument is kind noun"
-            ))
-            return String(format: format, locale: .current, noun)
+            ), noun)
         }
 
         static let noticeSubtitle = LocalizedStringResource(
@@ -6466,19 +6349,16 @@ enum L10n {
         )
 
         static func overflow(count: Int, kind: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "deleteImpact.overflow",
                 defaultValue: "And %1$lld more %2$@",
                 comment: "Overflow under a capped inbound list; arguments are remainder and plural kind noun"
-            ))
-            return String(format: format, locale: .current, count, noun(kind, count: count))
+            ), count, noun(kind, count: count))
         }
 
         static func viaHeading(via: String, kind: String, total: Int) -> String {
-            let oneOther = viaFormats[via]
-            if let oneOther {
-                let format = String(localized: total == 1 ? oneOther.0 : oneOther.1)
-                return String(format: format, locale: .current, total)
+            if let format = viaFormats[via] {
+                return L10n.format(format, total)
             }
             return viaFallback(kind: kind, total: total)
         }
@@ -6499,178 +6379,79 @@ enum L10n {
         )
 
         static func viaFallback(kind: String, total: Int) -> String {
-            let format = String(localized: total == 1 ? viaUnknownOne : viaUnknownOther)
-            return String(format: format, locale: .current, total, noun(kind, count: total))
+            return L10n.format(total == 1 ? viaUnknownOne : viaUnknownOther, total, noun(kind, count: total))
         }
 
-        private static let viaFormats: [String: (LocalizedStringResource, LocalizedStringResource)] = [
-            "observations.citation_id": (
-                LocalizedStringResource(
-                    "deleteImpact.via.observationsCitationId.one",
-                    defaultValue: "%lld observation still belongs to this",
-                    comment: "Inbound heading for observations.citation_id, singular"
-                ),
-                LocalizedStringResource(
-                    "deleteImpact.via.observationsCitationId.other",
-                    defaultValue: "%lld observations still belong to this",
-                    comment: "Inbound heading for observations.citation_id, plural"
-                )
+        private static let viaFormats: [String: LocalizedStringResource] = [
+            "observations.citation_id": LocalizedStringResource(
+                "deleteImpact.via.observationsCitationId",
+                defaultValue: "%lld observations still belong to this",
+                comment: "Inbound heading for observations.citation_id; argument is how many"
             ),
-            "observations.subject_id": (
-                LocalizedStringResource(
-                    "deleteImpact.via.observationsSubjectId.one",
-                    defaultValue: "This subject has %lld observation",
-                    comment: "Inbound heading for observations.subject_id, singular"
-                ),
-                LocalizedStringResource(
-                    "deleteImpact.via.observationsSubjectId.other",
-                    defaultValue: "This subject has %lld observations",
-                    comment: "Inbound heading for observations.subject_id, plural"
-                )
+            "observations.subject_id": LocalizedStringResource(
+                "deleteImpact.via.observationsSubjectId",
+                defaultValue: "This subject has %lld observations",
+                comment: "Inbound heading for observations.subject_id; argument is how many"
             ),
-            "observations.value_subject_id": (
-                LocalizedStringResource(
-                    "deleteImpact.via.observationsValueSubjectId.one",
-                    defaultValue: "%lld observation uses this as an endpoint",
-                    comment: "Inbound heading for observations.value_subject_id, singular"
-                ),
-                LocalizedStringResource(
-                    "deleteImpact.via.observationsValueSubjectId.other",
-                    defaultValue: "%lld observations use this as an endpoint",
-                    comment: "Inbound heading for observations.value_subject_id, plural"
-                )
+            "observations.value_subject_id": LocalizedStringResource(
+                "deleteImpact.via.observationsValueSubjectId",
+                defaultValue: "%lld observations use this as an endpoint",
+                comment: "Inbound heading for observations.value_subject_id; argument is how many"
             ),
-            "artifacts.source_id": (
-                LocalizedStringResource(
-                    "deleteImpact.via.artifactsSourceId.one",
-                    defaultValue: "%lld artifact belongs to this source",
-                    comment: "Inbound heading for artifacts.source_id, singular"
-                ),
-                LocalizedStringResource(
-                    "deleteImpact.via.artifactsSourceId.other",
-                    defaultValue: "%lld artifacts belong to this source",
-                    comment: "Inbound heading for artifacts.source_id, plural"
-                )
+            "artifacts.source_id": LocalizedStringResource(
+                "deleteImpact.via.artifactsSourceId",
+                defaultValue: "%lld artifacts belong to this source",
+                comment: "Inbound heading for artifacts.source_id; argument is how many"
             ),
-            "subjects.source_id": (
-                LocalizedStringResource(
-                    "deleteImpact.via.subjectsSourceId.one",
-                    defaultValue: "%lld subject belongs to this source",
-                    comment: "Inbound heading for subjects.source_id, singular"
-                ),
-                LocalizedStringResource(
-                    "deleteImpact.via.subjectsSourceId.other",
-                    defaultValue: "%lld subjects belong to this source",
-                    comment: "Inbound heading for subjects.source_id, plural"
-                )
+            "subjects.source_id": LocalizedStringResource(
+                "deleteImpact.via.subjectsSourceId",
+                defaultValue: "%lld subjects belong to this source",
+                comment: "Inbound heading for subjects.source_id; argument is how many"
             ),
-            "citations.artifact_id": (
-                LocalizedStringResource(
-                    "deleteImpact.via.citationsArtifactId.one",
-                    defaultValue: "%lld citation is drawn from this artifact",
-                    comment: "Inbound heading for citations.artifact_id, singular"
-                ),
-                LocalizedStringResource(
-                    "deleteImpact.via.citationsArtifactId.other",
-                    defaultValue: "%lld citations are drawn from this artifact",
-                    comment: "Inbound heading for citations.artifact_id, plural"
-                )
+            "citations.artifact_id": LocalizedStringResource(
+                "deleteImpact.via.citationsArtifactId",
+                defaultValue: "%lld citations are drawn from this artifact",
+                comment: "Inbound heading for citations.artifact_id; argument is how many"
             ),
-            "sources.source_type_id": (
-                LocalizedStringResource(
-                    "deleteImpact.via.sourcesSourceTypeId.one",
-                    defaultValue: "%lld source has this type",
-                    comment: "Inbound heading for sources.source_type_id, singular"
-                ),
-                LocalizedStringResource(
-                    "deleteImpact.via.sourcesSourceTypeId.other",
-                    defaultValue: "%lld sources have this type",
-                    comment: "Inbound heading for sources.source_type_id, plural"
-                )
+            "sources.source_type_id": LocalizedStringResource(
+                "deleteImpact.via.sourcesSourceTypeId",
+                defaultValue: "%lld sources have this type",
+                comment: "Inbound heading for sources.source_type_id; argument is how many"
             ),
-            "source_metadata.field_id": (
-                LocalizedStringResource(
-                    "deleteImpact.via.sourceMetadataFieldId.one",
-                    defaultValue: "%lld source records a value for this field",
-                    comment: "Inbound heading for source_metadata.field_id, singular"
-                ),
-                LocalizedStringResource(
-                    "deleteImpact.via.sourceMetadataFieldId.other",
-                    defaultValue: "%lld sources record a value for this field",
-                    comment: "Inbound heading for source_metadata.field_id, plural"
-                )
+            "source_metadata.field_id": LocalizedStringResource(
+                "deleteImpact.via.sourceMetadataFieldId",
+                defaultValue: "%lld sources record a value for this field",
+                comment: "Inbound heading for source_metadata.field_id; argument is how many"
             ),
-            "source_credibility_assessments.credibility_grade_id": (
-                LocalizedStringResource(
-                    "deleteImpact.via.credibilityGradeId.one",
-                    defaultValue: "%lld source uses this grade",
-                    comment: "Inbound heading for source_credibility_assessments.credibility_grade_id, singular"
-                ),
-                LocalizedStringResource(
-                    "deleteImpact.via.credibilityGradeId.other",
-                    defaultValue: "%lld sources use this grade",
-                    comment: "Inbound heading for source_credibility_assessments.credibility_grade_id, plural"
-                )
+            "source_credibility_assessments.credibility_grade_id": LocalizedStringResource(
+                "deleteImpact.via.credibilityGradeId",
+                defaultValue: "%lld sources use this grade",
+                comment: "Inbound heading for source_credibility_assessments.credibility_grade_id; argument is how many"
             ),
-            "subjects.subject_type_id": (
-                LocalizedStringResource(
-                    "deleteImpact.via.subjectsSubjectTypeId.one",
-                    defaultValue: "%lld subject has this type",
-                    comment: "Inbound heading for subjects.subject_type_id, singular"
-                ),
-                LocalizedStringResource(
-                    "deleteImpact.via.subjectsSubjectTypeId.other",
-                    defaultValue: "%lld subjects have this type",
-                    comment: "Inbound heading for subjects.subject_type_id, plural"
-                )
+            "subjects.subject_type_id": LocalizedStringResource(
+                "deleteImpact.via.subjectsSubjectTypeId",
+                defaultValue: "%lld subjects have this type",
+                comment: "Inbound heading for subjects.subject_type_id; argument is how many"
             ),
-            "observations.property_id": (
-                LocalizedStringResource(
-                    "deleteImpact.via.observationsPropertyId.one",
-                    defaultValue: "%lld observation uses this property",
-                    comment: "Inbound heading for observations.property_id, singular"
-                ),
-                LocalizedStringResource(
-                    "deleteImpact.via.observationsPropertyId.other",
-                    defaultValue: "%lld observations use this property",
-                    comment: "Inbound heading for observations.property_id, plural"
-                )
+            "observations.property_id": LocalizedStringResource(
+                "deleteImpact.via.observationsPropertyId",
+                defaultValue: "%lld observations use this property",
+                comment: "Inbound heading for observations.property_id; argument is how many"
             ),
-            "property_terms.property_id": (
-                LocalizedStringResource(
-                    "deleteImpact.via.propertyTermsPropertyId.one",
-                    defaultValue: "%lld term belongs to this property",
-                    comment: "Inbound heading for property_terms.property_id, singular"
-                ),
-                LocalizedStringResource(
-                    "deleteImpact.via.propertyTermsPropertyId.other",
-                    defaultValue: "%lld terms belong to this property",
-                    comment: "Inbound heading for property_terms.property_id, plural"
-                )
+            "property_terms.property_id": LocalizedStringResource(
+                "deleteImpact.via.propertyTermsPropertyId",
+                defaultValue: "%lld terms belong to this property",
+                comment: "Inbound heading for property_terms.property_id; argument is how many"
             ),
-            "observations.value_term_id": (
-                LocalizedStringResource(
-                    "deleteImpact.via.observationsValueTermId.one",
-                    defaultValue: "%lld observation uses this term",
-                    comment: "Inbound heading for observations.value_term_id, singular"
-                ),
-                LocalizedStringResource(
-                    "deleteImpact.via.observationsValueTermId.other",
-                    defaultValue: "%lld observations use this term",
-                    comment: "Inbound heading for observations.value_term_id, plural"
-                )
+            "observations.value_term_id": LocalizedStringResource(
+                "deleteImpact.via.observationsValueTermId",
+                defaultValue: "%lld observations use this term",
+                comment: "Inbound heading for observations.value_term_id; argument is how many"
             ),
-            "artifacts.file_id": (
-                LocalizedStringResource(
-                    "deleteImpact.via.artifactsFileId.one",
-                    defaultValue: "%lld artifact uses this file",
-                    comment: "Inbound heading for artifacts.file_id, singular"
-                ),
-                LocalizedStringResource(
-                    "deleteImpact.via.artifactsFileId.other",
-                    defaultValue: "%lld artifacts use this file",
-                    comment: "Inbound heading for artifacts.file_id, plural"
-                )
+            "artifacts.file_id": LocalizedStringResource(
+                "deleteImpact.via.artifactsFileId",
+                defaultValue: "%lld artifacts use this file",
+                comment: "Inbound heading for artifacts.file_id; argument is how many"
             ),
         ]
 
@@ -6680,12 +6461,11 @@ enum L10n {
             comment: "Extra-gate title for not_found"
         )
         static func gateNotFoundBody(ref: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "deleteImpact.gate.notFound.body",
                 defaultValue: "%@ no longer exists. There is nothing left to delete.",
                 comment: "Extra-gate body for not_found; argument is the target ref"
-            ))
-            return String(format: format, locale: .current, ref)
+            ), ref)
         }
 
         static let gateEdgeLockedTitle = LocalizedStringResource(
@@ -6727,57 +6507,51 @@ enum L10n {
             comment: "Fallback extra-gate title"
         )
         static func gateUnknownBody(ref: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "deleteImpact.gate.unknown.body",
                 defaultValue: "%@ can’t be deleted right now.",
                 comment: "Fallback extra-gate body; argument is the target ref"
-            ))
-            return String(format: format, locale: .current, ref)
+            ), ref)
         }
 
         static func summaryAllowed(noun: String, ref: String, title: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "deleteImpact.summary.allowed",
                 defaultValue: "Delete %1$@ %2$@, %3$@. This erases it and can’t be undone.",
                 comment: "VoiceOver for allowed delete; arguments are noun, ref, title"
-            ))
-            return String(format: format, locale: .current, noun, ref, title)
+            ), noun, ref, title)
         }
 
         static func summaryBlocked(noun: String, ref: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "deleteImpact.summary.blocked",
                 defaultValue: "Blocked. You can’t delete %1$@ %2$@.",
                 comment: "VoiceOver lead-in for a blocked delete; arguments are noun and ref"
-            ))
-            return String(format: format, locale: .current, noun, ref)
+            ), noun, ref)
         }
 
         static func summaryGroup(heading: String, refs: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "deleteImpact.summary.group",
                 defaultValue: "%1$@: %2$@.",
                 comment: "VoiceOver one inbound group; arguments are heading and comma-separated refs"
-            ))
-            return String(format: format, locale: .current, heading, refs)
+            ), heading, refs)
         }
 
         static func summaryMore(count: Int) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "deleteImpact.summary.more",
                 defaultValue: ", and %lld more",
                 comment: "VoiceOver remainder after the first named refs"
-            ))
-            return String(format: format, locale: .current, count)
+            ), count)
         }
 
         static func rowAccessibility(ref: String, title: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "deleteImpact.row.goTo",
                 defaultValue: "%1$@, %2$@. Go to it.",
                 comment: "Blocker row accessibility; arguments are ref and title"
-            ))
-            return String(format: format, locale: .current, ref, title)
+            ), ref, title)
         }
     }
 
@@ -6798,12 +6572,11 @@ enum L10n {
             comment: "FFI error catalog.not_a_project"
         )
         static func catalogUnsupportedVersion(version: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "error.catalog.unsupported_version",
                 defaultValue: "Unsupported catalog version (%@).",
                 comment: "FFI error catalog.unsupported_version; argument is catalog user_version"
-            ))
-            return String(format: format, locale: .current, version)
+            ), version)
         }
         static let catalogInvalidFolderName = LocalizedStringResource(
             "error.catalog.invalid_folder_name",
@@ -7141,73 +6914,72 @@ enum L10n {
             case .office:
                 return IngestCallout(
                     title: ingestUnsupportedOfficeTitle,
-                    message: String(localized: ingestUnsupportedOfficeHelp)
+                    message: L10n.string(ingestUnsupportedOfficeHelp)
                 )
             case .archive:
                 return IngestCallout(
                     title: ingestUnsupportedArchiveTitle,
-                    message: String(localized: ingestUnsupportedArchiveHelp)
+                    message: L10n.string(ingestUnsupportedArchiveHelp)
                 )
             case .executable:
                 return IngestCallout(
                     title: ingestUnsupportedExecutableTitle,
-                    message: String(localized: ingestUnsupportedExecutableHelp)
+                    message: L10n.string(ingestUnsupportedExecutableHelp)
                 )
             case .empty:
                 return IngestCallout(
                     title: ingestEmptyTitle,
-                    message: String(localized: ingestEmptyHelp)
+                    message: L10n.string(ingestEmptyHelp)
                 )
             case .tooLarge:
                 let size = sizeLabel ?? "?"
-                let format = String(localized: ingestTooLargeHelp)
                 return IngestCallout(
                     title: ingestTooLargeTitle,
-                    message: String(format: format, locale: .current, size)
+                    message: L10n.format(ingestTooLargeHelp, size)
                 )
             case .unidentified:
                 return IngestCallout(
                     title: ingestUnidentifiedTitle,
-                    message: String(localized: ingestUnidentifiedHelp)
+                    message: L10n.string(ingestUnidentifiedHelp)
                 )
             case .disallowedSniff, .genericType:
                 if let typeLabel, !typeLabel.isEmpty, typeLabel != "That" {
                     return IngestCallout(
                         title: ingestUnsupportedTypeGenericTitle,
-                        message: String(format: String(localized: LocalizedStringResource(
+                        message: L10n.format(LocalizedStringResource(
                             "error.ingest.unsupported_type.helpWithLabel",
                             defaultValue: "%@ files aren’t accepted. Artifacts hold images, PDFs, Word documents, plain text (including CSV and Markdown), audio, or video — up to 512 MB. Choose a different file.",
                             comment: "Callout help for unsupported type with label; argument is short type"
-                        )), locale: .current, typeLabel)
+                        ), typeLabel)
                     )
                 }
                 return IngestCallout(
                     title: ingestUnsupportedTypeGenericTitle,
-                    message: String(localized: ingestUnsupportedTypeHelp)
+                    message: L10n.string(ingestUnsupportedTypeHelp)
                 )            case .notAFile:
                 return IngestCallout(
                     title: ingestNotAFileTitle,
-                    message: String(localized: ingestNotAFileHelp)
+                    message: L10n.string(ingestNotAFileHelp)
                 )
             case .symlink:
                 return IngestCallout(
                     title: ingestSymlinkTitle,
-                    message: String(localized: ingestSymlinkHelp)
+                    message: L10n.string(ingestSymlinkHelp)
                 )
             case .missing:
                 return IngestCallout(
                     title: ingestMissingTitle,
-                    message: String(localized: ingestMissingHelp)
+                    message: L10n.string(ingestMissingHelp)
                 )
             case .permission, .unreadable:
                 return IngestCallout(
                     title: ingestPermissionDeniedTitle,
-                    message: String(localized: ingestPermissionDeniedHelp)
+                    message: L10n.string(ingestPermissionDeniedHelp)
                 )
             case .multiFile:
                 return IngestCallout(
                     title: ingestMultiFileTitle,
-                    message: String(localized: ingestMultiFileHelp)
+                    message: L10n.string(ingestMultiFileHelp)
                 )
             }
         }
@@ -7243,7 +7015,7 @@ enum L10n {
                         defaultValue: "Could not ingest that file",
                         comment: "Callout title for ingest.invalid"
                     ),
-                    message: String(localized: ingestInvalid)
+                    message: L10n.string(ingestInvalid)
                 )
             default:
                 return nil
@@ -7265,12 +7037,11 @@ enum L10n {
             comment: "FFI error sourcetypes.origin_locked"
         )
         static func sourceTypesDuplicateKey(key: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "error.sourcetypes.duplicate_key",
                 defaultValue: "You already have a type with the key %@. Give this one a different label.",
                 comment: "FFI error sourcetypes.duplicate_key; argument is the colliding key"
-            ))
-            return String(format: format, locale: .current, key)
+            ), key)
         }
         static let metadataInvalid = LocalizedStringResource(
             "error.metadatafields.invalid",
@@ -7278,12 +7049,11 @@ enum L10n {
             comment: "FFI error metadatafields.invalid"
         )
         static func metadataDuplicateKey(key: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "error.metadatafields.duplicate_key",
                 defaultValue: "You already have a field with the key %@. Give this one a different label.",
                 comment: "FFI error metadatafields.duplicate_key; argument is the colliding key"
-            ))
-            return String(format: format, locale: .current, key)
+            ), key)
         }
         static let metadataInUse = LocalizedStringResource(
             "error.metadatafields.in_use",
@@ -7306,12 +7076,11 @@ enum L10n {
             comment: "FFI error properties.invalid"
         )
         static func propertiesDuplicateKey(key: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "error.properties.duplicate_key",
                 defaultValue: "You already have a property with the key %@. Give this one a different label.",
                 comment: "FFI error properties.duplicate_key; argument is the colliding key"
-            ))
-            return String(format: format, locale: .current, key)
+            ), key)
         }
         static let propertiesInUse = LocalizedStringResource(
             "error.properties.in_use",
@@ -7329,12 +7098,11 @@ enum L10n {
             comment: "FFI error propertyterms.invalid"
         )
         static func propertyTermsDuplicateKey(key: String) -> String {
-            let format = String(localized: LocalizedStringResource(
+            return L10n.format(LocalizedStringResource(
                 "error.propertyterms.duplicate_key",
                 defaultValue: "You already have a term with the key %@. Give this one a different label.",
                 comment: "FFI error propertyterms.duplicate_key; argument is the colliding key"
-            ))
-            return String(format: format, locale: .current, key)
+            ), key)
         }
         static let propertyTermsLocked = LocalizedStringResource(
             "error.propertyterms.locked",
@@ -7447,183 +7215,183 @@ enum L10n {
         static func message(code: String, params: [String] = []) -> String {
             switch code {
             case "catalog.already_exists":
-                return String(localized: catalogAlreadyExists)
+                return L10n.string(catalogAlreadyExists)
             case "catalog.already_open":
-                return String(localized: catalogAlreadyOpen)
+                return L10n.string(catalogAlreadyOpen)
             case "catalog.not_a_project":
-                return String(localized: catalogNotAProject)
+                return L10n.string(catalogNotAProject)
             case "catalog.unsupported_version":
                 return catalogUnsupportedVersion(version: params.first ?? "?")
             case "catalog.invalid_folder_name":
-                return String(localized: catalogInvalidFolderName)
+                return L10n.string(catalogInvalidFolderName)
             case "catalog.closed":
-                return String(localized: catalogClosed)
+                return L10n.string(catalogClosed)
             case "catalog.schema_mismatch":
-                return String(localized: catalogSchemaMismatch)
+                return L10n.string(catalogSchemaMismatch)
             case "project.invalid_metadata":
-                return String(localized: projectInvalidMetadata)
+                return L10n.string(projectInvalidMetadata)
             case "project.missing_metadata":
-                return String(localized: projectMissingMetadata)
+                return L10n.string(projectMissingMetadata)
             case "users.invalid":
-                return String(localized: usersInvalid)
+                return L10n.string(usersInvalid)
             case "audit.invalid":
-                return String(localized: auditInvalid)
+                return L10n.string(auditInvalid)
             case "identity.not_found":
-                return String(localized: identityNotFound)
+                return L10n.string(identityNotFound)
             case "identity.invalid_name":
-                return String(localized: identityInvalidName)
+                return L10n.string(identityInvalidName)
             case "identity.invalid_id":
-                return String(localized: identityInvalidID)
+                return L10n.string(identityInvalidID)
             case "identity.invalid_ref":
-                return String(localized: identityInvalidRef)
+                return L10n.string(identityInvalidRef)
             case "install.not_found":
-                return String(localized: installNotFound)
+                return L10n.string(installNotFound)
             case "install.invalid":
-                return String(localized: installInvalid)
+                return L10n.string(installInvalid)
             case "onboarding.blank_name":
-                return String(localized: onboardingBlankName)
+                return L10n.string(onboardingBlankName)
             case "onboarding.invalid_family_name":
-                return String(localized: onboardingInvalidFamilyName)
+                return L10n.string(onboardingInvalidFamilyName)
             case "onboarding.unknown_user":
-                return String(localized: onboardingUnknownUser)
+                return L10n.string(onboardingUnknownUser)
             case "file.not_found":
-                return String(localized: fileNotFound)
+                return L10n.string(fileNotFound)
             case "sources.invalid":
-                return String(localized: sourcesInvalid)
+                return L10n.string(sourcesInvalid)
             case "sources.in_use":
-                return String(localized: sourcesInUse)
+                return L10n.string(sourcesInUse)
             case "subjects.invalid":
-                return String(localized: subjectsInvalid)
+                return L10n.string(subjectsInvalid)
             case "subjects.in_use":
-                return String(localized: subjectsInUse)
+                return L10n.string(subjectsInUse)
             case "identityclaims.invalid":
-                return String(localized: identityClaimsInvalid)
+                return L10n.string(identityClaimsInvalid)
             case "identityclaims.already_member":
-                return String(localized: identityClaimsAlreadyMember)
+                return L10n.string(identityClaimsAlreadyMember)
             case "identityclaims.type_mismatch":
-                return String(localized: identityClaimsTypeMismatch)
+                return L10n.string(identityClaimsTypeMismatch)
             case "canonicalentities.invalid":
-                return String(localized: canonicalEntitiesInvalid)
+                return L10n.string(canonicalEntitiesInvalid)
             case "promote.invalid":
-                return String(localized: promoteInvalid)
+                return L10n.string(promoteInvalid)
             case "promote.unsupported_type":
-                return String(localized: promoteUnsupportedType)
+                return L10n.string(promoteUnsupportedType)
             case "subjectpositions.invalid":
-                return String(localized: subjectPositionsInvalid)
+                return L10n.string(subjectPositionsInvalid)
             case "subjecttypes.invalid":
-                return String(localized: subjectTypesInvalid)
+                return L10n.string(subjectTypesInvalid)
             case "subjecttypes.duplicate_prefix":
-                return String(localized: subjectTypesDuplicatePrefix)
+                return L10n.string(subjectTypesDuplicatePrefix)
             case "artifacts.invalid":
-                return String(localized: artifactsInvalid)
+                return L10n.string(artifactsInvalid)
             case "artifacts.in_use":
-                return String(localized: artifactsInUse)
+                return L10n.string(artifactsInUse)
             case "artifacts.file_already_attached":
-                return String(localized: artifactsFileAlreadyAttached)
+                return L10n.string(artifactsFileAlreadyAttached)
             case "sourcecredibility.invalid":
-                return String(localized: sourceCredibilityInvalid)
+                return L10n.string(sourceCredibilityInvalid)
             case "sourcemetadata.invalid":
-                return String(localized: sourceMetadataInvalid)
+                return L10n.string(sourceMetadataInvalid)
             case "files.invalid":
-                return String(localized: filesInvalid)
+                return L10n.string(filesInvalid)
             case "ingest.invalid":
-                return String(localized: ingestInvalid)
+                return L10n.string(ingestInvalid)
             case "ingest.permission_denied":
-                return String(localized: ingestPermissionDenied)
+                return L10n.string(ingestPermissionDenied)
             case "ingest.unsupported_office":
-                return String(localized: ingestUnsupportedOfficeHelp)
+                return L10n.string(ingestUnsupportedOfficeHelp)
             case "ingest.unsupported_archive":
-                return String(localized: ingestUnsupportedArchiveHelp)
+                return L10n.string(ingestUnsupportedArchiveHelp)
             case "ingest.unsupported_executable":
-                return String(localized: ingestUnsupportedExecutableHelp)
+                return L10n.string(ingestUnsupportedExecutableHelp)
             case "ingest.unsupported_type":
                 return ingestCallout(reason: .disallowedSniff, typeLabel: params.first).message
             case "ingest.unidentified":
-                return String(localized: ingestUnidentifiedHelp)
+                return L10n.string(ingestUnidentifiedHelp)
             case "ingest.empty":
-                return String(localized: ingestEmptyHelp)
+                return L10n.string(ingestEmptyHelp)
             case "ingest.too_large":
                 return ingestCallout(reason: .tooLarge, sizeLabel: params.first).message
             case "ingest.not_a_file":
-                return String(localized: ingestNotAFileHelp)
+                return L10n.string(ingestNotAFileHelp)
             case "ingest.symlink":
-                return String(localized: ingestSymlinkHelp)
+                return L10n.string(ingestSymlinkHelp)
             case "ingest.missing":
-                return String(localized: ingestMissingHelp)
+                return L10n.string(ingestMissingHelp)
             case "sourcetypes.invalid":
-                return String(localized: sourceTypesInvalid)
+                return L10n.string(sourceTypesInvalid)
             case "sourcetypes.in_use":
-                return String(localized: sourceTypesInUse)
+                return L10n.string(sourceTypesInUse)
             case "sourcetypes.origin_locked":
-                return String(localized: sourceTypesOriginLocked)
+                return L10n.string(sourceTypesOriginLocked)
             case "sourcetypes.duplicate_key":
                 return sourceTypesDuplicateKey(key: params.first ?? "?")
             case "metadatafields.invalid":
-                return String(localized: metadataInvalid)
+                return L10n.string(metadataInvalid)
             case "metadatafields.duplicate_key":
                 return metadataDuplicateKey(key: params.first ?? "?")
             case "metadatafields.in_use":
-                return String(localized: metadataInUse)
+                return L10n.string(metadataInUse)
             case "metadatafields.origin_locked":
-                return String(localized: metadataOriginLocked)
+                return L10n.string(metadataOriginLocked)
             case "sourcevocab.invalid":
-                return String(localized: sourceVocabInvalid)
+                return L10n.string(sourceVocabInvalid)
             case "properties.invalid":
-                return String(localized: propertiesInvalid)
+                return L10n.string(propertiesInvalid)
             case "properties.duplicate_key":
                 return propertiesDuplicateKey(key: params.first ?? "?")
             case "properties.in_use":
-                return String(localized: propertiesInUse)
+                return L10n.string(propertiesInUse)
             case "properties.origin_locked":
-                return String(localized: propertiesOriginLocked)
+                return L10n.string(propertiesOriginLocked)
             case "propertyterms.invalid":
-                return String(localized: propertyTermsInvalid)
+                return L10n.string(propertyTermsInvalid)
             case "propertyterms.duplicate_key":
                 return propertyTermsDuplicateKey(key: params.first ?? "?")
             case "propertyterms.locked":
-                return String(localized: propertyTermsLocked)
+                return L10n.string(propertyTermsLocked)
             case "propertyterms.in_use":
-                return String(localized: propertyTermsInUse)
+                return L10n.string(propertyTermsInUse)
             case "subjectvocab.invalid":
-                return String(localized: subjectVocabInvalid)
+                return L10n.string(subjectVocabInvalid)
             case "subjectvocab.locked":
-                return String(localized: subjectVocabLocked)
+                return L10n.string(subjectVocabLocked)
             case "connect.invalid":
-                return String(localized: connectInvalid)
+                return L10n.string(connectInvalid)
             case "connect.refused":
-                return String(localized: connectRefused)
+                return L10n.string(connectRefused)
             case "locator.invalid":
-                return String(localized: locatorInvalid)
+                return L10n.string(locatorInvalid)
             case "citations.invalid":
-                return String(localized: citationsInvalid)
+                return L10n.string(citationsInvalid)
             case "citations.in_use":
-                return String(localized: citationsInUse)
+                return L10n.string(citationsInUse)
             case "observations.invalid":
-                return String(localized: observationsInvalid)
+                return L10n.string(observationsInvalid)
             case "observations.edge_locked":
-                return String(localized: observationsEdgeLocked)
+                return L10n.string(observationsEdgeLocked)
             case "observations.in_use":
-                return String(localized: observationsInUse)
+                return L10n.string(observationsInUse)
             case "datevalues.invalid":
-                return String(localized: dateValuesInvalid)
+                return L10n.string(dateValuesInvalid)
             case "namevalues.invalid":
-                return String(localized: nameValuesInvalid)
+                return L10n.string(nameValuesInvalid)
             case "deleteimpact.invalid":
-                return String(localized: deleteImpactInvalid)
+                return L10n.string(deleteImpactInvalid)
             case "filederivatives.invalid":
-                return String(localized: fileDerivativesInvalid)
+                return L10n.string(fileDerivativesInvalid)
             case "filederivatives.unprocessable":
-                return String(localized: fileDerivativesUnprocessable)
+                return L10n.string(fileDerivativesUnprocessable)
             case "filederivatives.corrupt_object":
-                return String(localized: fileDerivativesCorruptObject)
+                return L10n.string(fileDerivativesCorruptObject)
             case "internal.unknown":
-                return String(localized: unknown)
+                return L10n.string(unknown)
             case "internal.unknown_method":
-                return String(localized: internalUnknownMethod)
+                return L10n.string(internalUnknownMethod)
             case "internal.migrations":
-                return String(localized: internalMigrations)
+                return L10n.string(internalMigrations)
             default:
-                return String(localized: unknown)
+                return L10n.string(unknown)
             }
         }
 
@@ -7633,10 +7401,10 @@ enum L10n {
                 case .coded(_, let code, _, let params):
                     return message(code: code, params: params)
                 case .failed:
-                    return String(localized: unknown)
+                    return L10n.string(unknown)
                 }
             }
-            return String(localized: unknown)
+            return L10n.string(unknown)
         }
 
         /// `ref.invalid` / `ref.invalid_prefix` / `ref.reserved_prefix` are

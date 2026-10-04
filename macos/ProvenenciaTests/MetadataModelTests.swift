@@ -104,7 +104,7 @@ struct MetadataModelTests {
         #expect(model.fields.first?.label == "Author renamed")
         #expect(model.fields.first?.key == "author")
         #expect(model.fields.first?.origin == "provenencia")
-        #expect(model.toast?.title == String(localized: L10n.Metadata.toastUpdatedTitle))
+        #expect(model.toast?.title == L10n.string(L10n.Metadata.toastUpdatedTitle))
     }
 
     @Test func seededAndUserFieldsAreEditedTheSameWay() async {
@@ -162,7 +162,7 @@ struct MetadataModelTests {
         #expect(model.fields.count == 1)
         #expect(model.fields.first?.key == "grandmas-album-code")
         #expect(model.fields.first?.origin == "user")
-        #expect(model.toast?.title == String(localized: L10n.Metadata.toastAddedTitle))
+        #expect(model.toast?.title == L10n.string(L10n.Metadata.toastAddedTitle))
         #expect(model.selectedField?.key == "grandmas-album-code")
         #expect(counts.metadata?.total == 1)
         #expect(counts.metadata?.user == 1)
@@ -213,7 +213,7 @@ struct MetadataModelTests {
         #expect(model.formError == nil)
         #expect(model.fields.first?.label == "Grandma's photo album code")
         #expect(model.fields.first?.key == "grandmas-album-code")
-        #expect(model.toast?.title == String(localized: L10n.Metadata.toastUpdatedTitle))
+        #expect(model.toast?.title == L10n.string(L10n.Metadata.toastUpdatedTitle))
         #expect(counts.metadata?.total == totalBefore)
     }
 
@@ -386,7 +386,7 @@ struct MetadataModelTests {
         #expect(model.selectedField == nil)
         #expect(model.pendingDeleteField == nil)
         #expect(!model.isDeleting)
-        #expect(model.toast?.title == String(localized: L10n.Metadata.toastDeletedTitle))
+        #expect(model.toast?.title == L10n.string(L10n.Metadata.toastDeletedTitle))
         #expect(counts.metadata?.total == 1)
         #expect(counts.metadata?.seeded == 1)
         #expect(counts.metadata?.user == 0)

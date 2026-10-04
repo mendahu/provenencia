@@ -73,7 +73,7 @@ struct WorkspaceView: View {
             await catalogCounts.refreshAll()
             if let message = catalogCounts.lastRefreshError {
                 countsToast = VocabularyToast(
-                    title: String(localized: L10n.Workspace.countsRefreshFailedTitle),
+                    title: L10n.string(L10n.Workspace.countsRefreshFailedTitle),
                     body: message,
                     tone: .danger
                 )
@@ -134,14 +134,14 @@ struct WorkspaceView: View {
         switch issue {
         case .loadFailed:
             countsToast = VocabularyToast(
-                title: String(localized: L10n.Workspace.navigationHistoryLoadFailedTitle),
-                body: String(localized: L10n.Workspace.navigationHistoryLoadFailedBody),
+                title: L10n.string(L10n.Workspace.navigationHistoryLoadFailedTitle),
+                body: L10n.string(L10n.Workspace.navigationHistoryLoadFailedBody),
                 tone: .danger
             )
         case .persistFailed:
             countsToast = VocabularyToast(
-                title: String(localized: L10n.Workspace.navigationHistoryPersistFailedTitle),
-                body: String(localized: L10n.Workspace.navigationHistoryPersistFailedBody),
+                title: L10n.string(L10n.Workspace.navigationHistoryPersistFailedTitle),
+                body: L10n.string(L10n.Workspace.navigationHistoryPersistFailedBody),
                 tone: .danger
             )
         }

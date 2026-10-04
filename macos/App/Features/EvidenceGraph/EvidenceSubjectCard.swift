@@ -252,6 +252,8 @@ struct EvidenceSubjectCard: View {
     }
 
     let placed: SourceGraphPlacedSubject
+    /// Copy formatted with the graph snapshot (``EvidenceGraphText``).
+    let text: EvidenceCardText
     /// Registry presentation when available (S7-09).
     var presentation: CatalogSubjectTypePresentation?
     /// Current target — click, rotor, and VoiceOver share this look.
@@ -262,18 +264,15 @@ struct EvidenceSubjectCard: View {
     var isConnectingFrom: Bool = false
     /// When false, Add property paints disabled (No-Artifact gate).
     var canCite: Bool = true
-    /// Live document-space drag offset from AppKit pointer ownership.
-    var dragOffset: CGSize = .zero
+    /// Being dragged: lifted paint. AppKit moves the card's view; the card
+    /// never offsets itself.
+    var isDragging: Bool = false
     /// Nested action id currently under the pointer (idle hover), if any.
     var hoveredActionID: String? = nil
     /// Nested action id held down by the pointer, if any (pressed paint).
     var pressedActionID: String? = nil
     /// Receives the painted layout (card size + tagged hit regions) for hit targets and edges.
     var onLayout: ((EvidenceCardLayout) -> Void)? = nil
-
-    private var isDragging: Bool {
-        dragOffset != .zero
-    }
 
     var body: some View {
         EvidenceSubjectCardChrome(
@@ -289,10 +288,8 @@ struct EvidenceSubjectCard: View {
         )
         .reportsEvidenceCardLayout(onLayout)
         .opacity(ghostOpacity)
-        .offset(dragOffset)
-        .zIndex(isDragging || isActivated ? 1 : 0)
         .accessibilityElement(children: .contain)
-        .accessibilityLabel(Text(verbatim: Self.accessibilityLabel(for: placed)))
+        .accessibilityLabel(Text(verbatim: text.accessibilityLabel))
         .accessibilityAddTraits((isSelected || isActivated) ? .isSelected : [])
         .accessibilityIdentifier("evidenceGraph.subject.\(placed.id)")
     }
@@ -336,8 +333,8 @@ struct EvidenceSubjectCard: View {
         let trimmed = placed.subject.label.trimmingCharacters(in: .whitespacesAndNewlines)
         let name = trimmed.isEmpty ? placed.typeLabel : trimmed
         let citation = placed.isCited
-            ? String(localized: L10n.EvidenceGraph.citedAccessibility)
-            : String(localized: L10n.EvidenceGraph.uncitedAccessibility)
+            ? L10n.string(L10n.EvidenceGraph.citedAccessibility)
+            : L10n.string(L10n.EvidenceGraph.uncitedAccessibility)
         let ref = placed.subject.ref.trimmingCharacters(in: .whitespacesAndNewlines)
         if ref.isEmpty {
             return "\(placed.typeLabel), \(name), \(citation)"

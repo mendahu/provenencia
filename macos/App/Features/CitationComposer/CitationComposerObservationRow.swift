@@ -225,9 +225,9 @@ struct CitationComposerObservationRow: View {
             actionsMenu.dismiss()
             return
         }
-        var titles = [String(localized: polarityActionTitle)]
+        var titles = [L10n.string(polarityActionTitle)]
         if row.persistedID != nil {
-            titles.append(String(localized: L10n.CitationComposer.removeObservation))
+            titles.append(L10n.string(L10n.CitationComposer.removeObservation))
         }
         actionsKeyboard = PVContextMenuKeyboard(
             itemCount: titles.count,

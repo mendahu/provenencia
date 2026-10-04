@@ -23,7 +23,7 @@ struct SourcePageArtifactsView: View {
                 PVEmptyState(
                     icon: .photo,
                     title: L10n.Sources.artifactsEmptyTitle,
-                    message: String(localized: L10n.Sources.artifactsEmptyMessage),
+                    message: L10n.string(L10n.Sources.artifactsEmptyMessage),
                     compact: true
                 ) {
                     PVButton(L10n.Sources.addArtifact, variant: .primary, size: .sm, icon: .plus) {
@@ -99,7 +99,7 @@ struct SourcePageArtifactsView: View {
         VStack(alignment: .leading, spacing: PVSpacing.space6) {
             PVCallout(
                 tone: .info,
-                message: String(localized: L10n.Sources.addFileFirstAttachHint),
+                message: L10n.string(L10n.Sources.addFileFirstAttachHint),
                 compact: true
             )
             if !model.artifacts.attachDraft.artifactRef.isEmpty {
@@ -283,7 +283,7 @@ struct SourcePageArtifactsView: View {
             } else {
                 PVCallout(
                     tone: .neutral,
-                    message: String(localized: L10n.Sources.filelessHint),
+                    message: L10n.string(L10n.Sources.filelessHint),
                     compact: true
                 )
                 PVButton(L10n.Sources.addFile, variant: .primary, size: .sm, icon: .fileUp) {

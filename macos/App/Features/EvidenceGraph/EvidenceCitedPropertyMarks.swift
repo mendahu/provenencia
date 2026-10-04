@@ -103,8 +103,8 @@ enum EvidenceCitedPropertyMarks {
             parts.append(L10n.EvidenceGraph.conflictOneOf(count: conflictCount))
         }
         if isNegated {
-            parts.append(String(localized: L10n.EvidenceGraph.negatedAccessibility))
+            parts.append(L10n.string(L10n.EvidenceGraph.negatedAccessibility))
         }
-        return "\(parts.joined(separator: ", ")). \(String(localized: L10n.EvidenceGraph.citedRowEditHint))"
+        return "\(parts.joined(separator: ", ")). \(L10n.string(L10n.EvidenceGraph.citedRowEditHint))"
     }
 }

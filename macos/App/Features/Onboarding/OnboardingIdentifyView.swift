@@ -41,7 +41,7 @@ struct OnboardingIdentifyView: View {
                     L10n.Onboarding.whoAreYouTitle,
                     body: L10n.Onboarding.contributorsBody(
                         projectName: model.selectedProject?.lastPathComponent
-                            ?? String(localized: L10n.Onboarding.thisProject)
+                            ?? L10n.string(L10n.Onboarding.thisProject)
                     )
                 )
                 PVCard {
@@ -62,7 +62,7 @@ struct OnboardingIdentifyView: View {
                             .accessibilityIdentifier("onboarding.contributor.\(user.userID)")
                         }
                         OnboardingContributorRow(
-                            title: String(localized: L10n.Onboarding.notListed),
+                            title: L10n.string(L10n.Onboarding.notListed),
                             selected: model.selectedContributorID == OnboardingModel.newContributorID,
                             divider: .dashed
                         ) {

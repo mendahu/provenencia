@@ -164,14 +164,14 @@ final class SourcesModel {
 
     var filterLabel: String {
         if typeFilterID.isEmpty {
-            return String(localized: L10n.Sources.filterAllTypes)
+            return L10n.string(L10n.Sources.filterAllTypes)
         }
         return types.first { $0.id == typeFilterID }?.label
-            ?? String(localized: L10n.Sources.filterAllTypes)
+            ?? L10n.string(L10n.Sources.filterAllTypes)
     }
 
     var sortControlLabel: String {
-        L10n.Sources.sortedBy(String(localized: sort.label).lowercased())
+        L10n.Sources.sortedBy(L10n.string(sort.label).lowercased())
     }
 
     var countLine: String {
@@ -233,10 +233,10 @@ final class SourcesModel {
         var typeErr: String?
         var titleErr: String?
         if draft.sourceTypeID.isEmpty {
-            typeErr = String(localized: L10n.Sources.typeRequired)
+            typeErr = L10n.string(L10n.Sources.typeRequired)
         }
         if trimmedTitle.isEmpty {
-            titleErr = String(localized: L10n.Sources.titleRequired)
+            titleErr = L10n.string(L10n.Sources.titleRequired)
         }
         typeError = typeErr
         titleError = titleErr

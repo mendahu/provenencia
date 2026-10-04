@@ -39,7 +39,7 @@ struct NameValueDraft: Equatable, Sendable {
 
     var formError: String? {
         guard trimmedForm.isEmpty, formTouched else { return nil }
-        return String(localized: L10n.NameValue.formErrorMissing)
+        return L10n.string(L10n.NameValue.formErrorMissing)
     }
 
     func partValueError(at index: Int) -> String? {

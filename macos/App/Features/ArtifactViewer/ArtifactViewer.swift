@@ -79,7 +79,7 @@ struct ArtifactViewerToolChrome: View {
         return Button {
             onSetPage?()
         } label: {
-            Text(isSet ? L10n.ArtifactViewer.pageSet(page: model.page) : L10n.ArtifactViewer.setPage)
+            Text(verbatim: isSet ? L10n.ArtifactViewer.pageSet(page: model.page) : L10n.string(L10n.ArtifactViewer.setPage))
                 .font(PVFont.body(size: PVTypeScale.caption, weight: PVFontWeight.medium))
                 .foregroundStyle(isSet ? PVColor.accentSoftForeground : PVColor.textPrimary)
                 .padding(.horizontal, 8)
@@ -146,7 +146,7 @@ struct ArtifactViewerToolChrome: View {
                 .foregroundStyle(PVColor.textSecondary)
                 .frame(minWidth: 36)
                 .accessibilityLabel(
-                    Text(L10n.ArtifactViewer.zoomPercent(percent: Int((model.zoom * 100).rounded())))
+                    Text(verbatim: L10n.ArtifactViewer.zoomPercent(percent: Int((model.zoom * 100).rounded())))
                 )
 
             PVIconButton(.zoomIn, label: L10n.ArtifactViewer.zoomIn, size: .sm) {

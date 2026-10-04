@@ -476,7 +476,7 @@ enum ArtifactFindNote: Equatable {
         case .idle:
             return ""
         case .noTextLayer:
-            return String(localized: L10n.ArtifactViewer.findNoteNoTextLayer)
+            return L10n.string(L10n.ArtifactViewer.findNoteNoTextLayer)
         case .noMatches(let pageCount):
             return L10n.ArtifactViewer.findNoteNoMatches(pageCount: pageCount)
         case .match(let page, let jumped, let nextMatchPage):

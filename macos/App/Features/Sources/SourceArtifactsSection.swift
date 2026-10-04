@@ -120,7 +120,7 @@ final class SourceArtifactsSection {
         let label = (labels[id] ?? art.label).trimmingCharacters(in: .whitespacesAndNewlines)
         let desc = (descriptions[id] ?? art.description).trimmingCharacters(in: .whitespacesAndNewlines)
         if label.isEmpty {
-            fieldErrors[id] = String(localized: L10n.Sources.artifactLabelRequired)
+            fieldErrors[id] = L10n.string(L10n.Sources.artifactLabelRequired)
             return
         }
         fieldErrors[id] = nil
@@ -158,8 +158,8 @@ final class SourceArtifactsSection {
 
     func pickFile() {
         let path = ProjectFiles.pickFileForIngest(
-            prompt: String(localized: L10n.Sources.filePickPrompt),
-            message: String(localized: L10n.Sources.filePickMessage)
+            prompt: L10n.string(L10n.Sources.filePickPrompt),
+            message: L10n.string(L10n.Sources.filePickMessage)
         )
         guard let path else { return }
         applyPickedFile(url: URL(fileURLWithPath: path), into: .create)
@@ -214,7 +214,7 @@ final class SourceArtifactsSection {
         guard !isSavingDraft else { return }
         let label = draft.label.trimmingCharacters(in: .whitespacesAndNewlines)
         if label.isEmpty {
-            draftLabelError = String(localized: L10n.Sources.artifactLabelRequired)
+            draftLabelError = L10n.string(L10n.Sources.artifactLabelRequired)
             return
         }
         guard draft.reject == nil else { return }
@@ -319,8 +319,8 @@ final class SourceArtifactsSection {
 
     func pickAttachFile() {
         let path = ProjectFiles.pickFileForIngest(
-            prompt: String(localized: L10n.Sources.filePickPrompt),
-            message: String(localized: L10n.Sources.filePickMessage)
+            prompt: L10n.string(L10n.Sources.filePickPrompt),
+            message: L10n.string(L10n.Sources.filePickMessage)
         )
         guard let path else { return }
         applyPickedFile(url: URL(fileURLWithPath: path), into: .attach)
@@ -372,7 +372,7 @@ final class SourceArtifactsSection {
         guard let file = art.file, !file.relPath.isEmpty else { return }
         context.clearPageError()
         if !ProjectFiles.openObject(projectDir: context.projectDir, relPath: file.relPath) {
-            context.pageError = String(localized: L10n.Sources.fileOpenMissing)
+            context.pageError = L10n.string(L10n.Sources.fileOpenMissing)
         }
     }
 

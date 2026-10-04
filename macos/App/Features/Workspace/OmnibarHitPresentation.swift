@@ -34,7 +34,7 @@ enum OmnibarHitPresentation {
         case "filename":
             return L10n.Workspace.omnibarMatchFilename(snippet: trimmed)
         case "description":
-            return String(localized: L10n.Workspace.omnibarMatchDescription)
+            return L10n.string(L10n.Workspace.omnibarMatchDescription)
         default:
             return ""
         }
@@ -48,7 +48,7 @@ enum OmnibarHitPresentation {
     static func accessibilityLabel(for hit: CatalogSearchHit) -> String {
         var parts = [
             hit.title,
-            String(localized: kindLabel(for: hit.kind)),
+            L10n.string(kindLabel(for: hit.kind)),
         ]
         let subtitle = hit.subtitle.trimmingCharacters(in: .whitespacesAndNewlines)
         if !subtitle.isEmpty {

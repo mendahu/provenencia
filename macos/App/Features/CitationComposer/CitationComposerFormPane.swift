@@ -104,7 +104,7 @@ struct CitationComposerFormPane: View {
             options: citationOptions,
             size: .sm,
             displayLabel: model.activeCitationRef.isEmpty
-                ? String(localized: L10n.CitationComposer.newCitation)
+                ? L10n.string(L10n.CitationComposer.newCitation)
                 : model.activeCitationRef,
             menuWidth: 400,
             fillsWidth: false,
@@ -112,7 +112,7 @@ struct CitationComposerFormPane: View {
             rowHeight: 68,
             isDisabled: model.identityMenusDisabled,
             accessibilitySpokenLabel: model.activeCitationRef.isEmpty
-                ? String(localized: L10n.CitationComposer.citationMenuNew)
+                ? L10n.string(L10n.CitationComposer.citationMenuNew)
                 : L10n.CitationComposer.citationMenuRef(
                     ref: model.activeCitationRef,
                     count: model.observations.count
@@ -154,7 +154,7 @@ struct CitationComposerFormPane: View {
     private var citationOptions: [PVSelectOption] {
         [PVSelectOption(
             value: "",
-            label: String(localized: L10n.CitationComposer.newCitation),
+            label: L10n.string(L10n.CitationComposer.newCitation),
             accessibilityIdentifier: "citationComposer.citation.new"
         )] + model.listedCitations.map { listed in
             PVSelectOption(
@@ -290,7 +290,7 @@ struct CitationComposerFormPane: View {
             enabled
                 ? Text(L10n.CitationComposer.pasteTranscription)
                 : Text(verbatim: L10n.CitationComposer.pasteUnavailable(
-                    hint: String(localized: model.transcriptionActionHint)
+                    hint: model.transcriptionActionHint
                 ))
         )
     }

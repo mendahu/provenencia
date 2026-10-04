@@ -34,7 +34,7 @@ struct IngestMediaPolicyTests {
 
     @Test func calloutOfficeHasTitleAndHelp() {
         let callout = L10n.Errors.ingestCallout(reason: .office)
-        #expect(String(localized: callout.title).contains("Spreadsheets"))
+        #expect(L10n.string(callout.title).contains("Spreadsheets"))
         #expect(callout.message.contains("Word"))
     }
 
@@ -46,7 +46,7 @@ struct IngestMediaPolicyTests {
     @Test func ffiCodeMapsToCallout() {
         let callout = L10n.Errors.ingestCallout(code: "ingest.unsupported_archive")
         #expect(callout != nil)
-        #expect(String(localized: callout!.title).contains("Archives"))
+        #expect(L10n.string(callout!.title).contains("Archives"))
     }
 
     private func writeTemp(name: String, data: Data) throws -> URL {

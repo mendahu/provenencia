@@ -48,7 +48,7 @@ enum PersonsListPresentation: Equatable {
         guard case .rows(let rows, let refreshing) = self, !rows.isEmpty else { return nil }
         return refreshing
             ? L10n.Workspace.personCountRefreshing(rows.count)
-            : String(localized: L10n.Workspace.personCount(rows.count))
+            : L10n.Workspace.personCount(rows.count)
     }
 }
 
@@ -71,7 +71,7 @@ private struct PersonsListContent: View {
                 PVEmptyState(
                     icon: .person,
                     title: L10n.Workspace.personsEmptyTitle,
-                    message: String(localized: L10n.Workspace.personsEmptyMessage)
+                    message: L10n.string(L10n.Workspace.personsEmptyMessage)
                 )
                 .accessibilityIdentifier("persons.empty")
             case .failed(let message):

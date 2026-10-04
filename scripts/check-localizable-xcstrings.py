@@ -1,9 +1,25 @@
 #!/usr/bin/env python3
-"""Fail when Localizable.xcstrings gains junk auto-extracted keys.
+"""Fail when Localizable.xcstrings gains junk keys or misses L10n keys.
 
 Xcode's SWIFT_EMIT_LOC_STRINGS extractor treats bare Text("—") and
 LocalizedStringKey interpolations like Text("\\(count)") as catalog keys.
 Provenencia keys must be semantic dotted names (onboarding.welcomeTitle).
+
+Every LocalizedStringResource key in the app must also be in the catalog.
+L10n.string resolves through Bundle.localizedString, which ignores the
+resource's defaultValue and shows the raw key when the catalog lacks it.
+
+No Swift code may call String(localized:). Resolving a LocalizedStringResource
+that way re-parses the whole strings table on every call (~1.5 ms); L10n.string
+and the L10n format functions use the bundle's cached table instead.
+
+A catalog value with more than one argument must number them (%1$@ %2$lld),
+so translations can reorder them. Plural substitutions (%#@count@) are bound
+to their argument by argNum and count as numbered.
+
+No LocalizedStringResource may interpolate (defaultValue: "\\(count) items").
+Copy with arguments is a catalog format filled by an L10n format function
+returning String, so every resource stays safe to resolve with L10n.string.
 """
 
 from __future__ import annotations
@@ -15,9 +31,75 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 CATALOG = ROOT / "macos" / "App" / "Resources" / "Localizable.xcstrings"
+APP_SOURCES = ROOT / "macos" / "App"
+TEST_SOURCES = ROOT / "macos" / "ProvenenciaTests"
+# Compares L10n.string against Foundation's own resolution on purpose.
+STRING_LOCALIZED_ALLOWED = {TEST_SOURCES / "L10nResolutionTests.swift"}
+STRING_LOCALIZED_RE = re.compile(r"\bString\(localized:")
 
 # Product keys: start with a letter, then letters / digits / . / _
 KEY_RE = re.compile(r"^[a-z][a-zA-Z0-9._]*$")
+
+# The first argument of LocalizedStringResource(...): its catalog key.
+RESOURCE_KEY_RE = re.compile(r'LocalizedStringResource\(\s*"([^"\\]+)"')
+
+
+# A LocalizedStringResource whose key or defaultValue literal interpolates.
+INTERPOLATED_RESOURCE_RE = re.compile(
+    r'LocalizedStringResource\(\s*"[^"\n]*(?:\\\(|"\s*,\s*defaultValue:\s*"[^"\n]*\\\()'
+)
+
+
+def interpolated_resources() -> list[tuple[Path, int]]:
+    """(file, line) of every LocalizedStringResource that interpolates a value."""
+    hits: list[tuple[Path, int]] = []
+    for path in sorted(APP_SOURCES.rglob("*.swift")):
+        text = path.read_text(encoding="utf-8")
+        for match in INTERPOLATED_RESOURCE_RE.finditer(text):
+            hits.append((path, text.count("\n", 0, match.start()) + 1))
+    return hits
+
+
+# printf-style specifiers; group 1 is the position when numbered, group 2 marks %#@name@.
+FORMAT_SPECIFIER_RE = re.compile(
+    r"%(?:(\d+)\$)?(#@[A-Za-z0-9_]+@|[-+ #0]*\d*(?:\.\d+)?(?:ll|l|hh|h)?[@dDiuUxXoOfeEgGcsSp])"
+)
+
+
+def unnumbered_arguments(value: str) -> bool:
+    """True when `value` takes more than one argument and any of them is unnumbered."""
+    specifiers = [m for m in FORMAT_SPECIFIER_RE.finditer(value.replace("%%", ""))]
+    if len(specifiers) < 2:
+        return False
+    return any(m.group(1) is None and not m.group(2).startswith("#@") for m in specifiers)
+
+
+def string_localized_calls() -> list[tuple[Path, int]]:
+    """(file, line) of every String(localized:) call outside comments."""
+    hits: list[tuple[Path, int]] = []
+    for root in (APP_SOURCES, TEST_SOURCES):
+        for path in sorted(root.rglob("*.swift")):
+            if path in STRING_LOCALIZED_ALLOWED:
+                continue
+            for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+                code = line.split("//", 1)[0]
+                if STRING_LOCALIZED_RE.search(code):
+                    hits.append((path, number))
+    return hits
+
+
+def resource_keys() -> dict[str, Path]:
+    """Every dotted LocalizedStringResource key in the app, with one file that uses it.
+
+    Non-dotted keys are SwiftUI preview placeholders (LocalizedStringResource("Save")),
+    not catalog copy.
+    """
+    keys: dict[str, Path] = {}
+    for path in sorted(APP_SOURCES.rglob("*.swift")):
+        for key in RESOURCE_KEY_RE.findall(path.read_text(encoding="utf-8")):
+            if KEY_RE.match(key) and "." in key:
+                keys.setdefault(key, path)
+    return keys
 
 
 def main() -> int:
@@ -49,11 +131,39 @@ def main() -> int:
                 f"{key!r}: extractionState is extracted_with_value — "
                 f"wire through L10n and set extractionState to manual"
             )
+        en_value = (
+            entry.get("localizations", {}).get("en", {}).get("stringUnit", {}).get("value")
+        )
+        if en_value and unnumbered_arguments(en_value):
+            problems.append(
+                f"{key!r}: {en_value!r} takes several arguments — number them "
+                f"(%1$@ %2$lld) so translations can reorder them"
+            )
         if entry.get("isCommentAutoGenerated") is True:
             problems.append(
                 f"{key!r}: isCommentAutoGenerated — remove this auto-extracted "
                 f"entry and fix the call site (Text(verbatim:) or L10n)"
             )
+
+    for key, path in resource_keys().items():
+        if key not in strings:
+            problems.append(
+                f"{key!r}: used in {path.relative_to(ROOT)} but missing from the "
+                f"catalog — L10n.string would show the raw key"
+            )
+
+    for path, line in interpolated_resources():
+        problems.append(
+            f"{path.relative_to(ROOT)}:{line}: LocalizedStringResource interpolates a "
+            f"value — give it a %@ / %lld catalog format and an L10n format "
+            f"function returning String"
+        )
+
+    for path, line in string_localized_calls():
+        problems.append(
+            f"{path.relative_to(ROOT)}:{line}: String(localized:) re-parses the strings "
+            f"table on every call — use L10n.string(_:) or an L10n format function"
+        )
 
     if problems:
         print(

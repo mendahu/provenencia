@@ -54,7 +54,7 @@ enum PVDeleteImpactCopy {
 
     static func confirmCopy(for target: PVDeleteImpactTarget, report: CatalogDeleteImpact? = nil) -> PVConfirmCopy {
         let noun = noun(target.kind)
-        var message = String(localized: L10n.DeleteImpact.confirmMessage)
+        var message = L10n.string(L10n.DeleteImpact.confirmMessage)
         for line in cascadeLines(report) {
             message += "\n\n" + line
         }
@@ -102,11 +102,11 @@ enum PVDeleteImpactCopy {
         case .notFound:
             return (L10n.DeleteImpact.gateNotFoundTitle, L10n.DeleteImpact.gateNotFoundBody(ref: ref))
         case .edgeLocked:
-            return (L10n.DeleteImpact.gateEdgeLockedTitle, String(localized: L10n.DeleteImpact.gateEdgeLockedBody))
+            return (L10n.DeleteImpact.gateEdgeLockedTitle, L10n.string(L10n.DeleteImpact.gateEdgeLockedBody))
         case .originLocked:
-            return (L10n.DeleteImpact.gateOriginLockedTitle, String(localized: L10n.DeleteImpact.gateOriginLockedBody))
+            return (L10n.DeleteImpact.gateOriginLockedTitle, L10n.string(L10n.DeleteImpact.gateOriginLockedBody))
         case .infra:
-            return (L10n.DeleteImpact.gateInfraTitle, String(localized: L10n.DeleteImpact.gateInfraBody))
+            return (L10n.DeleteImpact.gateInfraTitle, L10n.string(L10n.DeleteImpact.gateInfraBody))
         }
     }
 
@@ -117,7 +117,7 @@ enum PVDeleteImpactCopy {
         }
         var parts = [L10n.DeleteImpact.summaryBlocked(noun: noun, ref: target.ref)]
         if let gate = extraGate(for: report.gate, ref: target.ref) {
-            parts.append(String(localized: gate.title) + ".")
+            parts.append(L10n.string(gate.title) + ".")
         }
         for group in report.groups where group.total > 0 {
             let refs = group.listed.prefix(firstN).map(\.ref)

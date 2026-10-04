@@ -101,14 +101,14 @@ struct EvidenceCitedPropertyRow: View {
     private var valueSummary: String {
         let rendered = ObservationValueDisplay.string(for: observation)
         if rendered.isEmpty {
-            return String(localized: L10n.EvidenceGraph.citedValueUnavailable)
+            return L10n.string(L10n.EvidenceGraph.citedValueUnavailable)
         }
         return rendered
     }
 
     private var spokenValue: String {
         if isNegative {
-            return "\(String(localized: L10n.EvidenceGraph.negatedPrefix)) \(valueSummary)"
+            return "\(L10n.string(L10n.EvidenceGraph.negatedPrefix)) \(valueSummary)"
         }
         return valueSummary
     }

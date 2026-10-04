@@ -5,11 +5,11 @@ enum ConnectionTermCopy {
     static func label(disambiguationKey: String) -> String {
         switch disambiguationKey {
         case "relationship_type":
-            return String(localized: L10n.CitationComposer.connectionRelationship)
+            return L10n.string(L10n.CitationComposer.connectionRelationship)
         case "role":
-            return String(localized: L10n.CitationComposer.connectionRole)
+            return L10n.string(L10n.CitationComposer.connectionRole)
         default:
-            return String(localized: L10n.CitationComposer.connectionNoRole)
+            return L10n.string(L10n.CitationComposer.connectionNoRole)
         }
     }
 }
@@ -61,7 +61,7 @@ struct ConnectionRow: Identifiable, Equatable {
             return L10n.CitationComposer.connectionAccessibilityLocation(status: statusSpoken)
         }
         let term = roleTermID.isEmpty
-            ? String(localized: L10n.CitationComposer.connectionTermNotChosen)
+            ? L10n.string(L10n.CitationComposer.connectionTermNotChosen)
             : termFieldLabel
         return L10n.CitationComposer.connectionAccessibility(
             sentence: sentence,
@@ -73,15 +73,15 @@ struct ConnectionRow: Identifiable, Equatable {
 
     private var statusSpoken: String {
         if isPending {
-            return String(localized: L10n.CitationComposer.rowStateNew)
+            return L10n.string(L10n.CitationComposer.rowStateNew)
         }
         if isTouched {
-            return String(localized: L10n.CitationComposer.rowStateEdited)
+            return L10n.string(L10n.CitationComposer.rowStateEdited)
         }
         if let bridgeRef, !bridgeRef.isEmpty {
             return L10n.CitationComposer.connectionSavedStatus(ref: bridgeRef)
         }
-        return String(localized: L10n.CitationComposer.rowStateSaved)
+        return L10n.string(L10n.CitationComposer.rowStateSaved)
     }
 }
 
@@ -375,7 +375,7 @@ final class CitationConnections {
         } catch is CitationComposerNeedArtifact {
             markError(
                 connectionID: pending.id,
-                message: String(localized: L10n.CitationComposer.needArtifact)
+                message: L10n.string(L10n.CitationComposer.needArtifact)
             )
         } catch {
             markError(connectionID: pending.id, message: L10n.Errors.message(for: error))
@@ -442,7 +442,7 @@ final class CitationConnections {
                 } else {
                     markError(
                         connectionID: connectionID,
-                        message: String(localized: L10n.CitationComposer.rowStateError)
+                        message: L10n.string(L10n.CitationComposer.rowStateError)
                     )
                 }
             }

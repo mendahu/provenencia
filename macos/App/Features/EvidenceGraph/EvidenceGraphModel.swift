@@ -29,8 +29,8 @@ final class EvidenceGraphModel {
                     label: label,
                     refPrefix: handleRefPrefix
                 ),
-                confirmLabel: String(localized: L10n.EvidenceGraph.promoteConfirmAction(kind: kind)),
-                cancelLabel: String(localized: L10n.EvidenceGraph.promoteCancel)
+                confirmLabel: L10n.string(L10n.EvidenceGraph.promoteConfirmAction(kind: kind)),
+                cancelLabel: L10n.string(L10n.EvidenceGraph.promoteCancel)
             )
         }
     }
@@ -64,7 +64,8 @@ final class EvidenceGraphModel {
         rows: SourceGraphRows,
         types: [CatalogSubjectType],
         rules: [CatalogConnectRule],
-        value: SourceGraphSnapshot
+        value: SourceGraphSnapshot,
+        text: EvidenceGraphText
     )?
     /// Subject pending DeleteImpact confirm or notice.
     let deleteImpact = DeleteImpactFlow()
@@ -205,8 +206,15 @@ final class EvidenceGraphModel {
             types: types,
             rules: rules
         )
-        snapshotMemo = (normalized, types, rules, value)
+        snapshotMemo = (normalized, types, rules, value, EvidenceGraphText(snapshot: value))
         return value
+    }
+
+    /// Card copy for the same snapshot as ``displaySnapshot(rows:types:)``,
+    /// formatted once when that snapshot is built.
+    func displayText(rows: SourceGraphRows?, types: [CatalogSubjectType]) -> EvidenceGraphText {
+        _ = displaySnapshot(rows: rows, types: types)
+        return snapshotMemo?.text ?? EvidenceGraphText(snapshot: displaySnapshot(rows: rows, types: types))
     }
 
     func prepare() async {
@@ -220,7 +228,7 @@ final class EvidenceGraphModel {
         _ = await session.readyValue(sourcesListKey) as [CatalogSource]?
         if rules.status == .error, let message = connectRulesError {
             toast = VocabularyToast(
-                title: String(localized: L10n.EvidenceGraph.connectRulesUnavailableTitle),
+                title: L10n.string(L10n.EvidenceGraph.connectRulesUnavailableTitle),
                 body: message,
                 tone: .danger
             )
@@ -258,7 +266,7 @@ final class EvidenceGraphModel {
         guard canCite else { return }
         if let connectRulesError {
             toast = VocabularyToast(
-                title: String(localized: L10n.EvidenceGraph.connectRulesUnavailableTitle),
+                title: L10n.string(L10n.EvidenceGraph.connectRulesUnavailableTitle),
                 body: connectRulesError,
                 tone: .danger
             )
@@ -506,8 +514,8 @@ final class EvidenceGraphModel {
         )
         if rule.refuse || rule.bridgeTypeKey.isEmpty {
             toast = VocabularyToast(
-                title: String(localized: L10n.EvidenceGraph.connectInvalidPairTitle),
-                body: String(localized: L10n.EvidenceGraph.connectInvalidPairBody),
+                title: L10n.string(L10n.EvidenceGraph.connectInvalidPairTitle),
+                body: L10n.string(L10n.EvidenceGraph.connectInvalidPairBody),
                 tone: .danger
             )
             return
@@ -566,7 +574,7 @@ final class EvidenceGraphModel {
         } else {
             let trimmed = draft.label.trimmingCharacters(in: .whitespacesAndNewlines)
             if trimmed.isEmpty {
-                labelError = String(localized: L10n.EvidenceGraph.labelRequired)
+                labelError = L10n.string(L10n.EvidenceGraph.labelRequired)
                 return nil
             }
             storedLabel = trimmed
@@ -805,11 +813,11 @@ final class EvidenceGraphModel {
         guard let kind = armedKind, !isSaving else { return nil }
         let trimmed = draft.label.trimmingCharacters(in: .whitespacesAndNewlines)
         if trimmed.isEmpty {
-            labelError = String(localized: L10n.EvidenceGraph.labelRequired)
+            labelError = L10n.string(L10n.EvidenceGraph.labelRequired)
             return nil
         }
         guard let typeID = typeIDByKind[kind.rawValue] else {
-            createError = String(localized: L10n.EvidenceGraph.typesUnavailable)
+            createError = L10n.string(L10n.EvidenceGraph.typesUnavailable)
             return nil
         }
 
@@ -996,19 +1004,19 @@ final class EvidenceGraphModel {
     }
 
     func toolAccessibilityLabel(for kind: EvidencePrimaryKind, armed: Bool) -> String {
-        let name = String(localized: toolName(for: kind))
+        let name = L10n.string(toolName(for: kind))
         let state = armed
-            ? String(localized: L10n.EvidenceGraph.toolOn)
-            : String(localized: L10n.EvidenceGraph.toolOff)
-        return "\(name), \(String(localized: L10n.EvidenceGraph.toolRole)), \(state)"
+            ? L10n.string(L10n.EvidenceGraph.toolOn)
+            : L10n.string(L10n.EvidenceGraph.toolOff)
+        return "\(name), \(L10n.string(L10n.EvidenceGraph.toolRole)), \(state)"
     }
 
     func connectToolAccessibilityLabel(armed: Bool) -> String {
-        let name = String(localized: L10n.EvidenceGraph.toolConnect)
+        let name = L10n.string(L10n.EvidenceGraph.toolConnect)
         let state = armed
-            ? String(localized: L10n.EvidenceGraph.toolOn)
-            : String(localized: L10n.EvidenceGraph.toolOff)
-        return "\(name), \(String(localized: L10n.EvidenceGraph.toolRole)), \(state)"
+            ? L10n.string(L10n.EvidenceGraph.toolOn)
+            : L10n.string(L10n.EvidenceGraph.toolOff)
+        return "\(name), \(L10n.string(L10n.EvidenceGraph.toolRole)), \(state)"
     }
 
     func toolName(for kind: EvidencePrimaryKind) -> LocalizedStringResource {
@@ -1036,9 +1044,9 @@ final class EvidenceGraphModel {
 
     private func defaultLabel(for kind: EvidencePrimaryKind) -> String {
         switch kind {
-        case .person: String(localized: L10n.EvidenceGraph.defaultLabelPerson)
-        case .event: String(localized: L10n.EvidenceGraph.defaultLabelEvent)
-        case .place: String(localized: L10n.EvidenceGraph.defaultLabelPlace)
+        case .person: L10n.string(L10n.EvidenceGraph.defaultLabelPerson)
+        case .event: L10n.string(L10n.EvidenceGraph.defaultLabelEvent)
+        case .place: L10n.string(L10n.EvidenceGraph.defaultLabelPlace)
         }
     }
 
@@ -1102,7 +1110,7 @@ final class EvidenceGraphModel {
                     gridY: confirmed.gridY
                 )
                 toast = VocabularyToast(
-                    title: String(localized: L10n.EvidenceGraph.positionPersistFailedTitle),
+                    title: L10n.string(L10n.EvidenceGraph.positionPersistFailedTitle),
                     body: L10n.Errors.message(for: error),
                     tone: .danger
                 )

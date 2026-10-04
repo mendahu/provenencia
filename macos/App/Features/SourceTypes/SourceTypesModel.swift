@@ -196,15 +196,15 @@ final class SourceTypesModel {
         assignPool.first { $0.id == assignPick }
     }
 
-    var assignTooltip: LocalizedStringResource {
-        if assignPool.isEmpty { return L10n.SourceTypes.assignTipPoolEmpty }
-        guard let field = pickedField else { return L10n.SourceTypes.assignTipChoose }
+    var assignTooltip: String {
+        if assignPool.isEmpty { return L10n.string(L10n.SourceTypes.assignTipPoolEmpty) }
+        guard let field = pickedField else { return L10n.string(L10n.SourceTypes.assignTipChoose) }
         return L10n.SourceTypes.assignTipField(label: field.label)
     }
 
-    var assignAccessibilityLabel: LocalizedStringResource {
+    var assignAccessibilityLabel: String {
         guard let field = pickedField, let type = selectedType else {
-            return L10n.SourceTypes.assignField
+            return L10n.string(L10n.SourceTypes.assignField)
         }
         return L10n.SourceTypes.assignFieldNamed(field: field.label, type: type.label)
     }
@@ -217,7 +217,7 @@ final class SourceTypesModel {
 
     var deleteAccessibilityLabel: String {
         guard let type = selectedType else {
-            return String(localized: L10n.SourceTypes.deleteType)
+            return L10n.string(L10n.SourceTypes.deleteType)
         }
         return L10n.SourceTypes.deleteTypeAccessibility(label: type.label)
     }
@@ -323,11 +323,11 @@ final class SourceTypesModel {
         guard let draft else { return nil }
         let label = draft.label.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !label.isEmpty else {
-            formError = String(localized: L10n.SourceTypes.errorLabelRequired)
+            formError = L10n.string(L10n.SourceTypes.errorLabelRequired)
             return nil
         }
         if isAdding && FieldSlug.kebab(label).isEmpty {
-            formError = String(localized: L10n.SourceTypes.errorUnslugifiable)
+            formError = L10n.string(L10n.SourceTypes.errorUnslugifiable)
             return nil
         }
         isSaving = true
@@ -347,7 +347,7 @@ final class SourceTypesModel {
                 mode = .editing(id: created.id)
                 self.draft = Draft(label: created.label, description: created.description, iconKey: created.iconKey)
                 toast = VocabularyToast(
-                    title: String(localized: L10n.SourceTypes.toastAddedTitle),
+                    title: L10n.string(L10n.SourceTypes.toastAddedTitle),
                     body: L10n.SourceTypes.toastAddedBody(label: created.label, key: created.key),
                     tone: .success
                 )
@@ -371,7 +371,7 @@ final class SourceTypesModel {
                 mode = .editing(id: updated.id)
                 self.draft = Draft(label: updated.label, description: updated.description, iconKey: updated.iconKey)
                 toast = VocabularyToast(
-                    title: String(localized: L10n.SourceTypes.toastUpdatedTitle),
+                    title: L10n.string(L10n.SourceTypes.toastUpdatedTitle),
                     body: L10n.SourceTypes.toastUpdatedBody(label: updated.label, key: updated.key),
                     tone: .success
                 )
@@ -405,7 +405,7 @@ final class SourceTypesModel {
             }
             assignPick = ""
             toast = VocabularyToast(
-                title: String(localized: L10n.SourceTypes.toastAssignedTitle),
+                title: L10n.string(L10n.SourceTypes.toastAssignedTitle),
                 body: L10n.SourceTypes.toastAssignedBody(field: field.label, type: type.label),
                 tone: .success
             )
@@ -432,7 +432,7 @@ final class SourceTypesModel {
                 }
             }
             toast = VocabularyToast(
-                title: String(localized: L10n.SourceTypes.toastRemovedTitle),
+                title: L10n.string(L10n.SourceTypes.toastRemovedTitle),
                 body: L10n.SourceTypes.toastRemovedBody(
                     field: field.label, type: type.label, valueCount: field.usedBy
                 ),
@@ -476,7 +476,7 @@ final class SourceTypesModel {
             suggestionError = nil
             mode = .empty
             toast = VocabularyToast(
-                title: String(localized: L10n.SourceTypes.toastDeletedTitle),
+                title: L10n.string(L10n.SourceTypes.toastDeletedTitle),
                 body: L10n.SourceTypes.toastDeletedBody(label: type.label),
                 tone: .success
             )

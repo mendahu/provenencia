@@ -168,7 +168,7 @@ private struct SourcePageContent: View {
             copy: { item in
                 PVConfirmCopy(
                     title: L10n.Sources.deleteMetadataConfirmTitle(label: item.label),
-                    message: String(localized: L10n.Sources.deleteMetadataConfirmMessage),
+                    message: L10n.string(L10n.Sources.deleteMetadataConfirmMessage),
                     confirm: L10n.Sources.deleteMetadataConfirm,
                     cancel: L10n.Sources.deleteMetadataKeep
                 )
@@ -186,8 +186,8 @@ private struct SourcePageContent: View {
             ),
             copy: { _ in
                 PVConfirmCopy(
-                    title: String(localized: L10n.Sources.deleteNoteConfirmTitle),
-                    message: String(localized: L10n.Sources.deleteNoteConfirmMessage),
+                    title: L10n.string(L10n.Sources.deleteNoteConfirmTitle),
+                    message: L10n.string(L10n.Sources.deleteNoteConfirmMessage),
                     confirm: L10n.Sources.deleteNoteConfirm,
                     cancel: L10n.Sources.deleteNoteKeep
                 )

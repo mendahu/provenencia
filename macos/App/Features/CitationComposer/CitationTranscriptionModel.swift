@@ -47,40 +47,40 @@ final class CitationTranscriptionModel {
         return OCRImage.isOversized(image.size)
     }
 
-    var actionHint: LocalizedStringResource {
+    var actionHint: String {
         if artifactViewer.kind == .pdf {
             return pasteHint
         }
         return autoTranscribeHint
     }
 
-    var autoTranscribeHint: LocalizedStringResource {
+    var autoTranscribeHint: String {
         switch artifactViewer.kind {
         case .pdf:
             return pasteHint
         case .audio:
-            return L10n.CitationComposer.autoTranscribeHintAudio
+            return L10n.string(L10n.CitationComposer.autoTranscribeHintAudio)
         case .video:
-            return L10n.CitationComposer.autoTranscribeHintVideo
+            return L10n.string(L10n.CitationComposer.autoTranscribeHintVideo)
         case .unsupported:
-            return L10n.CitationComposer.autoTranscribeHintNoRaster
+            return L10n.string(L10n.CitationComposer.autoTranscribeHintNoRaster)
         case .image:
             break
         }
         if imageRaster == nil {
             return artifactViewer.emptyReason == .missingFile
-                ? L10n.CitationComposer.autoTranscribeHintMissingFile
-                : L10n.CitationComposer.autoTranscribeHintNoRaster
+                ? L10n.string(L10n.CitationComposer.autoTranscribeHintMissingFile)
+                : L10n.string(L10n.CitationComposer.autoTranscribeHintNoRaster)
         }
         if fields.locator.hasRegion {
-            return L10n.CitationComposer.autoTranscribeHintRegion
+            return L10n.string(L10n.CitationComposer.autoTranscribeHintRegion)
         }
-        return L10n.CitationComposer.autoTranscribeHintWholeImage
+        return L10n.string(L10n.CitationComposer.autoTranscribeHintWholeImage)
     }
 
-    private var pasteHint: LocalizedStringResource {
+    private var pasteHint: String {
         if !artifactViewer.findHasTextLayer {
-            return L10n.CitationComposer.pasteHintNoTextLayer
+            return L10n.string(L10n.CitationComposer.pasteHintNoTextLayer)
         }
         if let page = lastPastePage, artifactViewer.userSelectionText == lastPasteText {
             return L10n.CitationComposer.pasteHintAfter(page: page)
@@ -91,7 +91,7 @@ final class CitationTranscriptionModel {
                 page: page
             )
         }
-        return L10n.CitationComposer.pasteHintSelect
+        return L10n.string(L10n.CitationComposer.pasteHintSelect)
     }
 
     func noteUserEditedTranscription() {
@@ -148,14 +148,14 @@ final class CitationTranscriptionModel {
     func runAutoTranscribe() async {
         guard canAutoTranscribe, let nsImage = imageRaster else { return }
         guard let cgImage = OCRImage.cgImage(from: nsImage) else {
-            ocrMessage = String(localized: L10n.CitationComposer.autoTranscribeFailed)
+            ocrMessage = L10n.string(L10n.CitationComposer.autoTranscribeFailed)
             return
         }
         let source: CGImage
         if let region = fields.locator.region, region.isValid {
             let bounds = ArtifactRegionGeometry.boundingRect(of: region.points)
             guard let cropped = OCRImage.crop(cgImage, normalizedRect: bounds) else {
-                ocrMessage = String(localized: L10n.CitationComposer.autoTranscribeFailed)
+                ocrMessage = L10n.string(L10n.CitationComposer.autoTranscribeFailed)
                 return
             }
             source = cropped
@@ -168,13 +168,13 @@ final class CitationTranscriptionModel {
             let text = try await ocrEngine.recognizeText(in: source)
                 .trimmingCharacters(in: .whitespacesAndNewlines)
             if text.isEmpty {
-                ocrMessage = String(localized: L10n.CitationComposer.autoTranscribeNothingFound)
+                ocrMessage = L10n.string(L10n.CitationComposer.autoTranscribeNothingFound)
                 return
             }
             fields.transcription = text
             ocrMessage = nil
         } catch {
-            ocrMessage = String(localized: L10n.CitationComposer.autoTranscribeFailed)
+            ocrMessage = L10n.string(L10n.CitationComposer.autoTranscribeFailed)
         }
     }
 }

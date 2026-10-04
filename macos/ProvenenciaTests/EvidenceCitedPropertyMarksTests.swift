@@ -93,7 +93,7 @@ struct EvidenceCitedPropertyMarksTests {
         #expect(conflict.contains("Name"))
         #expect(conflict.contains("Wm Robins"))
         #expect(conflict.contains(L10n.EvidenceGraph.conflictOneOf(count: 2)))
-        #expect(conflict.contains(String(localized: L10n.EvidenceGraph.citedRowEditHint)))
+        #expect(conflict.contains(L10n.string(L10n.EvidenceGraph.citedRowEditHint)))
 
         let negated = EvidenceCitedPropertyMarks.accessibilityLabel(
             propertyLabel: "Birth place",
@@ -102,7 +102,7 @@ struct EvidenceCitedPropertyMarksTests {
             isNegated: true
         )
         #expect(negated.contains("Not Ireland"))
-        #expect(negated.contains(String(localized: L10n.EvidenceGraph.negatedAccessibility)))
+        #expect(negated.contains(L10n.string(L10n.EvidenceGraph.negatedAccessibility)))
     }
 
     @Test func extraRowsOmitSentenceKeys() {

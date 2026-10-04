@@ -141,26 +141,6 @@ private struct EvidenceGraphContent: View {
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel(accessibilityGraphLabel)
-        .accessibilityRotor(String(localized: L10n.EvidenceGraph.subjectsRotor)) {
-            ForEach(subjects) { placed in
-                AccessibilityRotorEntry(
-                    EvidenceSubjectCard.accessibilityLabel(for: placed),
-                    id: placed.id
-                ) {
-                    model.selectSubject(id: placed.id)
-                }
-            }
-        }
-        .accessibilityRotor(String(localized: L10n.EvidenceGraph.linksRotor)) {
-            ForEach(bridges) { placed in
-                AccessibilityRotorEntry(
-                    EvidenceBridgeCard.accessibilityLabel(for: placed, in: snapshot),
-                    id: placed.id
-                ) {
-                    model.selectSubject(id: placed.id)
-                }
-            }
-        }
         .vocabularyToastOverlay($model.toast, identifier: "evidenceGraph.toast")
         .pvFormDialog(
             isPresented: sheetPresented,
@@ -256,7 +236,7 @@ private struct EvidenceGraphContent: View {
     private var subjectCountLabel: some View {
         HStack(alignment: .firstTextBaseline, spacing: 0) {
             Text(verbatim: "(")
-            Text(L10n.EvidenceGraph.subjectCount(count: subjects.count + bridges.count))
+            Text(verbatim: L10n.EvidenceGraph.subjectCount(count: subjects.count + bridges.count))
             Text(verbatim: ")")
         }
         .font(PVFont.mono(size: PVTypeScale.caption))
@@ -283,7 +263,13 @@ private struct EvidenceGraphContent: View {
 
     private var canvasPane: some View {
         ZStack(alignment: .top) {
-            GraphCanvasScrollView(contentSize: contentSize, contentID: sourceID) {
+            // The Subjects and Links rotors live on the canvas group (AppKit),
+            // next to the card views they navigate.
+            GraphCanvasScrollView(
+                contentSize: contentSize,
+                contentID: sourceID,
+                accessibilityLabel: L10n.string(L10n.Workspace.evidenceGraphTitle)
+            ) {
                 EvidenceGraphDocument(
                     graphHandle: graphHandle,
                     fieldsHandle: fieldsHandle,
@@ -330,7 +316,7 @@ private struct EvidenceGraphContent: View {
         PVCallout(
             tone: .warning,
             title: L10n.EvidenceGraph.noArtifactTitle,
-            message: String(localized: L10n.EvidenceGraph.noArtifactMessage)
+            message: L10n.string(L10n.EvidenceGraph.noArtifactMessage)
         ) {
             PVButton(L10n.EvidenceGraph.noArtifactAction, variant: .secondary, size: .sm) {
                 navigation.go(
@@ -443,7 +429,7 @@ private struct EvidenceGraphContent: View {
     }
     private func styleTypeLabel(_ kind: EvidencePrimaryKind) -> String {
         model.typeLabelByKind[kind.rawValue]
-            ?? String(localized: model.toolName(for: kind))
+            ?? L10n.string(model.toolName(for: kind))
     }
 
     private func handleKey(_ press: KeyPress) -> KeyPress.Result {
@@ -487,17 +473,19 @@ private struct EvidenceGraphDocument: View {
     let contentSize: CGSize
     let navigation: WorkspaceNavigation
     @Environment(\.graphCanvasPointer) private var pointer
+    @Environment(\.graphCanvasItems) private var items
 
     var body: some View {
         Group {
-            if let pointer {
+            if let pointer, let items {
                 EvidenceGraphDocumentBody(
                     graphHandle: graphHandle,
                     fieldsHandle: fieldsHandle,
                     model: model,
                     contentSize: contentSize,
                     navigation: navigation,
-                    pointer: pointer
+                    pointer: pointer,
+                    items: items
                 )
             } else {
                 Color.clear
@@ -508,7 +496,14 @@ private struct EvidenceGraphDocument: View {
     }
 }
 
-/// Observes ``GraphCanvasPointerController`` so live drag offsets refresh paint.
+/// The graph's base layer (grid, edges, ghost, rubber band, empty state) and
+/// the controller for its cards.
+///
+/// Cards are ``GraphCanvasItem``s: AppKit hosts and positions each one, and a
+/// drag moves its view without running this body. Nothing here may read
+/// ``GraphCanvasPointerController/offsets`` — observation is per property, so a
+/// read would re-run this body on every pointer event. ``EvidenceGraphEdgesHost``
+/// is the one view that follows live offsets.
 private struct EvidenceGraphDocumentBody: View {
     @Bindable var graphHandle: QueryHandle<SourceGraphRows>
     @Bindable var fieldsHandle: QueryHandle<PropertiesSnapshot>
@@ -516,6 +511,7 @@ private struct EvidenceGraphDocumentBody: View {
     let contentSize: CGSize
     let navigation: WorkspaceNavigation
     @Bindable var pointer: GraphCanvasPointerController
+    let items: GraphCanvasItemLayer
     /// Painted card layouts; hit targets and edges follow these, not constants.
     @State private var cardLayouts = EvidenceCardLayoutStore()
 
@@ -529,6 +525,11 @@ private struct EvidenceGraphDocumentBody: View {
 
     private var bridges: [SourceGraphPlacedBridge] {
         snapshot.bridges
+    }
+
+    /// Card copy formatted with the snapshot; card views format nothing.
+    private var text: EvidenceGraphText {
+        model.displayText(rows: graphHandle.value, types: fieldsHandle.value?.types ?? [])
     }
 
     private var inputMode: EvidenceCanvasInputMode {
@@ -567,14 +568,6 @@ private struct EvidenceGraphDocumentBody: View {
                     .frame(width: contentSize.width, height: contentSize.height)
             }
 
-            ForEach(bridges) { placed in
-                bridgeCardView(for: placed)
-            }
-
-            ForEach(subjects) { placed in
-                cardView(for: placed)
-            }
-
             if let ghost = model.ghostPlacedSubject() {
                 EvidenceSubjectCard.ghost(
                     placed: ghost,
@@ -596,8 +589,12 @@ private struct EvidenceGraphDocumentBody: View {
         .onChange(of: model.canCite) { _, _ in
             publishHitTargets()
         }
-        .onChange(of: pointer.offsets.count) { _, _ in
+        .onChange(of: pointer.draggingItemID) { _, _ in
             publishHitTargets()
+        }
+        // Cards change only when what they draw does — never per drag frame.
+        .onChange(of: cards, initial: true) { _, cards in
+            pushItems(cards)
         }
         .onChange(of: EvidenceGraphHitRefresh.token(subjects: subjects, bridges: bridges)) { _, _ in
             cardLayouts.retain(only: Set(subjects.map(\.id) + bridges.map(\.id)))
@@ -614,6 +611,9 @@ private struct EvidenceGraphDocumentBody: View {
         publishHitTargets()
         let model = model
         let navigation = navigation
+        items.onRotorSelect = { id in
+            model.selectSubject(id: id)
+        }
         pointer.onSelect = { id in
             model.selectSubject(id: id)
         }
@@ -677,17 +677,17 @@ private struct EvidenceGraphDocumentBody: View {
         }
     }
 
+    /// Hit rects at rest. Mid-drag the pointer owns the gesture and never
+    /// hit-tests, and offsets are cleared before the drop's update.
     private func publishHitTargets() {
         var targets: [GraphCanvasHitTarget] = []
         for placed in bridges {
-            let offset = pointer.offsets[placed.id] ?? .zero
             targets.append(
                 GraphCanvasHitTarget(
                     id: placed.id,
                     frame: EvidenceBridgeCard.contentFrame(
                         for: placed,
                         in: snapshot,
-                        dragOffset: offset,
                         layout: cardLayouts.layout(for: placed.id)
                     ),
                     acceptsConnect: false,
@@ -695,27 +695,23 @@ private struct EvidenceGraphDocumentBody: View {
                         for: placed,
                         in: snapshot,
                         canCite: model.canCite,
-                        dragOffset: offset,
                         layout: cardLayouts.layout(for: placed.id)
                     )
                 )
             )
         }
         for placed in subjects {
-            let offset = pointer.offsets[placed.id] ?? .zero
             targets.append(
                 GraphCanvasHitTarget(
                     id: placed.id,
                     frame: EvidenceSubjectCard.edgeFrame(
                         for: placed,
-                        dragOffset: offset,
                         layout: cardLayouts.layout(for: placed.id)
                     ),
                     acceptsConnect: true,
                     actions: EvidenceSubjectCard.actionTargets(
                         for: placed,
                         canCite: model.canCite,
-                        dragOffset: offset,
                         layout: cardLayouts.layout(for: placed.id)
                     )
                 )
@@ -724,109 +720,61 @@ private struct EvidenceGraphDocumentBody: View {
         pointer.hitTargets = targets
     }
 
-    @ViewBuilder
-    private func cardView(for placed: SourceGraphPlacedSubject) -> some View {
-        let layout = EvidenceSubjectCard.topLeadingOffset(gridX: placed.gridX, gridY: placed.gridY)
-        let drag = pointer.offsets[placed.id] ?? .zero
-        EvidenceSubjectCard(
-            placed: placed,
-            presentation: model.presentation(for: placed.kind.rawValue),
-            isSelected: model.selectedSubjectID == placed.id,
-            isActivated: model.activatedSubjectID == placed.id,
-            isConnectingFrom: model.connectOriginID == placed.id,
-            canCite: model.canCite,
-            dragOffset: drag,
-            hoveredActionID: pointer.hoveredCardAction?.cardID == placed.id
-                ? pointer.hoveredCardAction?.actionID
-                : nil,
-            pressedActionID: pointer.pressedCardAction?.cardID == placed.id
-                ? pointer.pressedCardAction?.actionID
-                : nil,
-            onLayout: { [cardLayouts] in cardLayouts.record($0, for: placed.id) }
-        )
-        .accessibilityAction(named: Text(L10n.EvidenceGraph.editAccessibility)) {
-            model.beginEdit(subjectID: placed.id)
+    /// What every card draws, bridges first so subjects paint above them.
+    private var cards: [EvidenceCanvasCard] {
+        let text = text
+        let hovered = pointer.hoveredCardAction
+        let pressed = pointer.pressedCardAction
+        func state(_ id: String) -> EvidenceCanvasCard.State {
+            EvidenceCanvasCard.State(
+                isSelected: model.selectedSubjectID == id,
+                isActivated: model.activatedSubjectID == id,
+                isConnectingFrom: model.connectOriginID == id,
+                isDragging: pointer.draggingItemID == id,
+                canCite: model.canCite,
+                hoveredActionID: hovered?.cardID == id ? hovered?.actionID : nil,
+                pressedActionID: pressed?.cardID == id ? pressed?.actionID : nil
+            )
         }
-        .accessibilityAction(named: Text(addPropertyActionName)) {
-            if let location = model.composerLocation(for: placed.id) {
-                navigation.go(to: location)
-            }
+        return bridges.map { placed in
+            EvidenceCanvasCard(
+                placed: .bridge(placed),
+                text: text[bridge: placed, in: snapshot],
+                state: state(placed.id)
+            )
+        } + subjects.map { placed in
+            EvidenceCanvasCard(
+                placed: .subject(placed, model.presentation(for: placed.kind.rawValue)),
+                text: text[subject: placed],
+                state: state(placed.id)
+            )
         }
-        .accessibilityAction(named: Text(verbatim: EvidenceSubjectCard.footerAccessibilityActionName(for: placed))) {
-            if placed.membership == nil {
-                model.beginPromote(subjectID: placed.id)
-            } else if let location = model.openHandle(subjectID: placed.id) {
-                navigation.go(to: location)
-            }
-        }
-        .accessibilityAction(named: Text(verbatim: L10n.EvidenceGraph.deleteAccessibility(
-            kind: placed.kind.rawValue,
-            label: placed.subject.label.isEmpty ? placed.subject.ref : placed.subject.label,
-            ref: placed.subject.ref
-        ))) {
-            Task { await model.beginDelete(subjectID: placed.id) }
-        }
-        .accessibilityAction(named: Text(L10n.EvidenceGraph.editPropertyAccessibility)) {
-            if let observation = placed.observations.first,
-               let location = model.composerLocation(
-                   forObservationID: observation.id,
-                   subjectID: placed.id
-               )
-            {
-                navigation.go(to: location)
-            }
-        }
-        .offset(x: layout.width, y: layout.height)
     }
 
-    @ViewBuilder
-    private func bridgeCardView(for placed: SourceGraphPlacedBridge) -> some View {
-        let layout = EvidenceBridgeCard.topLeadingOffset(gridX: placed.gridX, gridY: placed.gridY)
-        let drag = pointer.offsets[placed.id] ?? .zero
-        EvidenceBridgeCard(
-            placed: placed,
-            snapshot: snapshot,
-            isSelected: model.selectedSubjectID == placed.id,
-            isActivated: model.activatedSubjectID == placed.id,
-            dragOffset: drag,
-            hoveredActionID: pointer.hoveredCardAction?.cardID == placed.id
-                ? pointer.hoveredCardAction?.actionID
-                : nil,
-            canCite: model.canCite,
-            onLayout: { [cardLayouts] in cardLayouts.record($0, for: placed.id) }
-        )
-        .accessibilityAction(named: Text(L10n.EvidenceGraph.editAccessibility)) {
-            model.beginEdit(subjectID: placed.id)
-        }
-        .accessibilityAction(named: Text(L10n.EvidenceGraph.editCitationAccessibility)) {
-            if let location = model.composerLocationForBridgeCitation(subjectID: placed.id) {
-                navigation.go(to: location)
-            }
-        }
-        .accessibilityAction(named: Text(addPropertyActionName)) {
-            if let location = model.composerLocation(for: placed.id) {
-                navigation.go(to: location)
-            }
-        }
-        .accessibilityAction(named: Text(verbatim: L10n.EvidenceGraph.deleteAccessibility(
-            kind: placed.kind.rawValue,
-            label: EvidenceBridgeEdgeSummary.sentence(for: placed, in: snapshot),
-            ref: placed.subject.ref
-        ))) {
-            Task { await model.beginDelete(subjectID: placed.id) }
-        }
-        .offset(x: layout.width, y: layout.height)
-    }
-
-    private var addPropertyActionName: LocalizedStringResource {
-        model.canCite ? L10n.EvidenceGraph.addProperty : L10n.EvidenceGraph.addPropertyUnavailable
+    private func pushItems(_ cards: [EvidenceCanvasCard]) {
+        let content = EvidenceCanvasCardContent(model: model, navigation: navigation, layouts: cardLayouts)
+        let subjectsRotor = L10n.string(L10n.EvidenceGraph.subjectsRotor)
+        let linksRotor = L10n.string(L10n.EvidenceGraph.linksRotor)
+        items.update(cards.map { card in
+            GraphCanvasItem(
+                id: card.id,
+                origin: card.origin,
+                isRaised: card.state.isDragging || card.state.isActivated,
+                rotor: GraphCanvasRotorEntry(
+                    rotor: card.isBridge ? linksRotor : subjectsRotor,
+                    label: card.text.accessibilityLabel
+                ),
+                model: card,
+                content: { content.view(for: card) }
+            )
+        })
     }
 
     private var emptyOverlay: some View {
         PVEmptyState(
             icon: .shapes,
             title: L10n.EvidenceGraph.emptyTitle,
-            message: String(localized: L10n.EvidenceGraph.emptyMessage)
+            message: L10n.string(L10n.EvidenceGraph.emptyMessage)
         )
         .frame(width: 420)
         .position(x: contentSize.width / 2, y: contentSize.height / 2)

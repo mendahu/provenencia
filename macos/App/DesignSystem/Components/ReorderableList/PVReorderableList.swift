@@ -29,7 +29,7 @@ struct PVReorderHandle: View {
             .foregroundStyle(PVColor.textFaint)
             .frame(width: 20, height: 20)
             .contentShape(Rectangle())
-            .accessibilityLabel(String(localized: L10n.DesignSystem.reorderHandle))
+            .accessibilityLabel(L10n.string(L10n.DesignSystem.reorderHandle))
             .onHover { hovering in
                 if hovering {
                     NSCursor.openHand.set()

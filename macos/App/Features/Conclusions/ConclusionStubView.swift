@@ -21,9 +21,9 @@ struct ConclusionStubView: View {
 
     static func message(for section: WorkspaceSection) -> String {
         switch section {
-        case .events: String(localized: L10n.Workspace.eventsStubMessage)
-        case .places: String(localized: L10n.Workspace.placesStubMessage)
-        default: String(localized: L10n.Workspace.personsStubMessage)
+        case .events: L10n.string(L10n.Workspace.eventsStubMessage)
+        case .places: L10n.string(L10n.Workspace.placesStubMessage)
+        default: L10n.string(L10n.Workspace.personsStubMessage)
         }
     }
 }

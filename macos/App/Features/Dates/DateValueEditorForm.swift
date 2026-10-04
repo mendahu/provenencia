@@ -435,13 +435,13 @@ struct DateValueEditorForm: View {
 enum DateValueSelectOptions {
     static var calendars: [PVSelectOption] {
         [
-            PVSelectOption(value: "gregorian", label: String(localized: L10n.Sources.dateCalendarGregorian)),
-            PVSelectOption(value: "julian", label: String(localized: L10n.Sources.dateCalendarJulian)),
+            PVSelectOption(value: "gregorian", label: L10n.string(L10n.Sources.dateCalendarGregorian)),
+            PVSelectOption(value: "julian", label: L10n.string(L10n.Sources.dateCalendarJulian)),
             PVSelectOption(
                 value: "french-republican",
-                label: String(localized: L10n.Sources.dateCalendarFrenchRepublican)
+                label: L10n.string(L10n.Sources.dateCalendarFrenchRepublican)
             ),
-            PVSelectOption(value: "hebrew", label: String(localized: L10n.Sources.dateCalendarHebrew)),
+            PVSelectOption(value: "hebrew", label: L10n.string(L10n.Sources.dateCalendarHebrew)),
         ]
     }
 
@@ -460,7 +460,7 @@ enum DateValueSelectOptions {
             ("10", L10n.Sources.dateMonthOctober),
             ("11", L10n.Sources.dateMonthNovember),
             ("12", L10n.Sources.dateMonthDecember),
-        ].map { PVSelectOption(value: $0.0, label: String(localized: $0.1)) }
+        ].map { PVSelectOption(value: $0.0, label: L10n.string($0.1)) }
     }
 }
 

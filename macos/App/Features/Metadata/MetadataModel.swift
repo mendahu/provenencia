@@ -131,7 +131,7 @@ final class MetadataModel {
 
     var deleteAccessibilityLabel: String {
         guard let field = selectedField else {
-            return String(localized: L10n.Metadata.deleteField)
+            return L10n.string(L10n.Metadata.deleteField)
         }
         return L10n.Metadata.deleteFieldAccessibility(label: field.label)
     }
@@ -253,7 +253,7 @@ final class MetadataModel {
             formError = nil
             mode = .empty
             toast = VocabularyToast(
-                title: String(localized: L10n.Metadata.toastDeletedTitle),
+                title: L10n.string(L10n.Metadata.toastDeletedTitle),
                 body: L10n.Metadata.toastDeletedBody(label: field.label),
                 tone: .success
             )
@@ -266,11 +266,11 @@ final class MetadataModel {
         guard let draft else { return nil }
         let label = draft.label.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !label.isEmpty else {
-            formError = String(localized: L10n.Metadata.errorLabelRequired)
+            formError = L10n.string(L10n.Metadata.errorLabelRequired)
             return nil
         }
         if isAdding && FieldSlug.kebab(label).isEmpty {
-            formError = String(localized: L10n.Metadata.errorUnslugifiable)
+            formError = L10n.string(L10n.Metadata.errorUnslugifiable)
             return nil
         }
         isSaving = true
@@ -288,7 +288,7 @@ final class MetadataModel {
                 mode = .editing(id: created.id)
                 self.draft = Draft(label: created.label, dataType: created.dataType, description: created.description)
                 toast = VocabularyToast(
-                    title: String(localized: L10n.Metadata.toastAddedTitle),
+                    title: L10n.string(L10n.Metadata.toastAddedTitle),
                     body: L10n.Metadata.toastAddedBody(label: created.label, key: created.key),
                     tone: .success
                 )
@@ -312,7 +312,7 @@ final class MetadataModel {
                 mode = .editing(id: updated.id)
                 self.draft = Draft(label: updated.label, dataType: updated.dataType, description: updated.description)
                 toast = VocabularyToast(
-                    title: String(localized: L10n.Metadata.toastUpdatedTitle),
+                    title: L10n.string(L10n.Metadata.toastUpdatedTitle),
                     body: L10n.Metadata.toastUpdatedBody(label: updated.label, key: updated.key),
                     tone: .success
                 )

@@ -25,7 +25,7 @@ struct CitationComposerViewerPane: View {
                 committedRegion: model.locator.region,
                 onCommitRegion: { model.setRegion($0) },
                 onDisarmRegionTool: { model.disarmRegionTool() },
-                freeformDeleteTooltip: String(localized: L10n.CitationComposer.freeformDeleteVertex)
+                freeformDeleteTooltip: L10n.string(L10n.CitationComposer.freeformDeleteVertex)
             )
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .padding(PVSpacing.space7)
@@ -52,16 +52,16 @@ struct CitationComposerViewerPane: View {
 
     private var artifactIndexCaption: String {
         guard let index = model.selectedArtifactIndex else {
-            return String(localized: L10n.CitationComposer.artifactKindUnknown)
+            return L10n.string(L10n.CitationComposer.artifactKindUnknown)
         }
         let kind: String
         switch model.artifactViewer.kind {
         case .pdf:
-            kind = String(localized: L10n.CitationComposer.artifactKindPDF)
+            kind = L10n.string(L10n.CitationComposer.artifactKindPDF)
         case .image:
-            kind = String(localized: L10n.CitationComposer.artifactKindImage)
+            kind = L10n.string(L10n.CitationComposer.artifactKindImage)
         default:
-            kind = String(localized: L10n.CitationComposer.artifactKindUnknown)
+            kind = L10n.string(L10n.CitationComposer.artifactKindUnknown)
         }
         return L10n.CitationComposer.artifactIndexOf(
             index: index + 1,
@@ -247,8 +247,8 @@ struct CitationComposerViewerPane: View {
             itemCount: 2,
             activeIndex: -1,
             itemTitles: [
-                String(localized: L10n.CitationComposer.clearRegion),
-                String(localized: L10n.CitationComposer.resetToEntireArtifact),
+                L10n.string(L10n.CitationComposer.clearRegion),
+                L10n.string(L10n.CitationComposer.resetToEntireArtifact),
             ]
         )
         clearMenu.present(at: CGPoint(x: 0, y: PVSpacing.controlHeightSmall))
@@ -264,7 +264,7 @@ struct CitationComposerViewerPane: View {
 
             locatorRow(
                 icon: .file,
-                title: String(localized: L10n.CitationComposer.locatorEntireArtifact),
+                title: L10n.string(L10n.CitationComposer.locatorEntireArtifact),
                 helper: artifactHelper,
                 helperMono: false,
                 depth: 0,
@@ -293,7 +293,7 @@ struct CitationComposerViewerPane: View {
                     helper: L10n.CitationComposer.locatorPoints(region.points.count),
                     helperMono: true,
                     depth: depth,
-                    removeLabel: String(localized: L10n.CitationComposer.removeRegion),
+                    removeLabel: L10n.string(L10n.CitationComposer.removeRegion),
                     accessibilityIdentifier: "citationComposer.locator.region",
                     onRemove: { model.removeRegion() }
                 )
@@ -318,13 +318,13 @@ struct CitationComposerViewerPane: View {
     private func regionNoun(_ kind: ArtifactRegionKind) -> String {
         switch kind {
         case .rectangle:
-            return String(localized: L10n.CitationComposer.locatorRectangle)
+            return L10n.string(L10n.CitationComposer.locatorRectangle)
         case .lOpenTopRight, .lOpenTopLeft, .lOpenBottomRight, .lOpenBottomLeft:
-            return String(localized: L10n.CitationComposer.locatorLShape)
+            return L10n.string(L10n.CitationComposer.locatorLShape)
         case .circle:
-            return String(localized: L10n.CitationComposer.locatorCircle)
+            return L10n.string(L10n.CitationComposer.locatorCircle)
         case .freeform:
-            return String(localized: L10n.CitationComposer.locatorPolygon)
+            return L10n.string(L10n.CitationComposer.locatorPolygon)
         }
     }
 

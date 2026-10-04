@@ -110,7 +110,7 @@ struct OmnibarResultsModelTests {
         )
         let label = OmnibarHitPresentation.accessibilityLabel(for: hit)
         #expect(label.contains("Ilminster parish register"))
-        #expect(label.contains(String(localized: L10n.Workspace.omnibarKindSource)))
+        #expect(label.contains(L10n.string(L10n.Workspace.omnibarKindSource)))
         #expect(label.contains("Parish register"))
         #expect(label.contains("SRC-3K9M2"))
         #expect(label.contains(L10n.Workspace.omnibarMatchNote(snippet: "Zemblanity")))
@@ -128,7 +128,7 @@ struct OmnibarResultsModelTests {
         )
         let label = OmnibarHitPresentation.accessibilityLabel(for: hit)
         #expect(label.contains("Citation"))
-        #expect(label.contains(String(localized: L10n.Workspace.omnibarKindMetadataField)))
+        #expect(label.contains(L10n.string(L10n.Workspace.omnibarKindMetadataField)))
         #expect(!label.contains("Note:"))
         #expect(!label.contains("Metadata:"))
     }
@@ -151,7 +151,7 @@ struct OmnibarResultsModelTests {
         )
         #expect(
             OmnibarHitPresentation.matchContextText(field: "description", snippet: "")
-                == String(localized: L10n.Workspace.omnibarMatchDescription)
+                == L10n.string(L10n.Workspace.omnibarMatchDescription)
         )
     }
 

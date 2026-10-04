@@ -81,7 +81,7 @@ final class SourceNotesSection {
         guard !isSaving else { return }
         let trimmed = bodyDraft.trimmingCharacters(in: .whitespacesAndNewlines)
         if trimmed.isEmpty {
-            bodyError = String(localized: L10n.Sources.noteBodyRequired)
+            bodyError = L10n.string(L10n.Sources.noteBodyRequired)
             return
         }
         guard let note = items.first(where: { $0.id == id }) else { return }

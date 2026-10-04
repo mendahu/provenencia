@@ -11,7 +11,7 @@ struct WorkspaceToolbarBreadcrumbTests {
         )
         #expect(items.count == 1)
         #expect(items[0].action == nil)
-        #expect(items[0].label == String(localized: L10n.Workspace.sourceTypesTitle))
+        #expect(items[0].label == L10n.string(L10n.Workspace.sourceTypesTitle))
     }
 
     @Test func deepLocationHasNavigableSectionAndLeaf() {
@@ -83,7 +83,7 @@ struct WorkspaceToolbarBreadcrumbTests {
             goTo: { _ in }
         )
         #expect(items.count == 2)
-        #expect(items[1].label == String(localized: L10n.Workspace.evidenceGraphTitle))
+        #expect(items[1].label == L10n.string(L10n.Workspace.evidenceGraphTitle))
     }
 
     @Test func citationComposerIncludesNavigableEvidenceGraph() {
@@ -100,7 +100,7 @@ struct WorkspaceToolbarBreadcrumbTests {
             goTo: { wentTo = $0 }
         )
         #expect(items.count == 3)
-        #expect(items[0].label == String(localized: L10n.Workspace.sourcesTitle))
+        #expect(items[0].label == L10n.string(L10n.Workspace.sourcesTitle))
         #expect(
             items[1].label
                 == L10n.Workspace.evidenceGraphFor(sourceTitle: "Alderwick family bible")
