@@ -8,14 +8,17 @@ struct PVComboBoxOption: Identifiable, Equatable {
     let value: String
     let label: String
     let subtext: String
+    /// Mono detail beside the label in the `person` row (life years).
+    let detail: String
     let isDisabled: Bool
 
     var id: String { value }
 
-    init(value: String, label: String, subtext: String = "", isDisabled: Bool = false) {
+    init(value: String, label: String, subtext: String = "", detail: String = "", isDisabled: Bool = false) {
         self.value = value
         self.label = label
         self.subtext = subtext
+        self.detail = detail
         self.isDisabled = isDisabled
     }
 }
@@ -170,6 +173,38 @@ struct PVComboBoxPlainRow: View {
     }
 }
 
+/// The `person` row kind (`PVComboBoxRows.jsx`): the name, the life years in
+/// mono beside it, and a muted line under it (place · ref). Both text lines
+/// carry the match highlight.
+struct PVComboBoxPersonRow: View {
+    let option: PVComboBoxOption
+    let query: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 1) {
+            HStack(alignment: .firstTextBaseline, spacing: PVSpacing.space4) {
+                Text(PVComboBoxHighlight.attributed(option.label, query: query))
+                    .font(PVFont.body(size: PVTypeScale.bodySmall))
+                    .foregroundStyle(PVColor.textPrimary)
+                    .lineLimit(1)
+                if !option.detail.isEmpty {
+                    Text(verbatim: option.detail)
+                        .font(PVFont.mono(size: PVTypeScale.micro))
+                        .foregroundStyle(PVColor.textSecondary)
+                        .lineLimit(1)
+                }
+            }
+            if !option.subtext.isEmpty {
+                Text(PVComboBoxHighlight.attributed(option.subtext, query: query))
+                    .font(PVFont.body(size: PVTypeScale.micro))
+                    .foregroundStyle(PVColor.textMuted)
+                    .lineLimit(1)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
 // MARK: - ComboBox
 
 /// A searchable single-select field — the design system's
@@ -208,9 +243,14 @@ struct PVComboBoxPlainRow: View {
 /// window never becomes key, so the text field keeps focus and keeps handling
 /// keys while the list is open.
 ///
+/// **Remote results** (S9-11): set `onQueryChange` and the box stops
+/// filtering — the caller runs the search and passes the results as
+/// `options`, keeping the committed option among them so its label stays in
+/// the field. `emptyText` words the no-match line from the typed query.
+///
 /// **Not ported** (add here on demand, the way `PVSidebarNav` was): the
-/// multi-select token field, the "use what you typed" create row, the
-/// `person` row kind, and async `loading`. No call site needs them yet.
+/// multi-select token field, the "use what you typed" create row, and async
+/// `loading`. No call site needs them yet.
 struct PVComboBox<Row: View>: View {
     /// The committed option's `value`; empty means nothing is chosen.
     @Binding var selection: String
@@ -229,6 +269,12 @@ struct PVComboBox<Row: View>: View {
     /// Default stays false so sheet first-responder (e.g. Add Source) does not
     /// pop the list on open.
     var activateOnAppear: Bool = false
+    /// Remote results: called with each typed query; the caller filters and
+    /// passes the results as `options`. Nil filters locally.
+    var onQueryChange: ((String) -> Void)?
+    /// The no-match line for a typed query (remote or local). Nil uses
+    /// `emptyLabel`.
+    var emptyText: ((String) -> String)?
     @ViewBuilder var row: (PVComboBoxOption, String) -> Row
 
     @State private var query = ""
@@ -272,7 +318,8 @@ struct PVComboBox<Row: View>: View {
     }
 
     private var visibleOptions: [PVComboBoxOption] {
-        hasTypedQuery ? PVComboBoxMatch.filter(options, query: query) : options
+        guard onQueryChange == nil else { return options }
+        return hasTypedQuery ? PVComboBoxMatch.filter(options, query: query) : options
     }
 
     /// The query the rows highlight against — empty unless the user typed.
@@ -378,6 +425,7 @@ struct PVComboBox<Row: View>: View {
                 isDirty = true
                 isOpen = true
                 resetActiveRow()
+                onQueryChange?(typed)
             }
         )
     }
@@ -403,6 +451,13 @@ struct PVComboBox<Row: View>: View {
             .accessibilityIdentifier(identifier("list") ?? "")
     }
 
+    private var emptyLine: Text {
+        if let emptyText, hasTypedQuery {
+            return Text(verbatim: emptyText(query.trimmingCharacters(in: .whitespacesAndNewlines)))
+        }
+        return Text(emptyLabel)
+    }
+
     /// The rows at their natural height. Shared by the scroller and by the
     /// hidden measuring copy behind the field, so the two can never disagree.
     private var rowsStack: some View {
@@ -411,7 +466,7 @@ struct PVComboBox<Row: View>: View {
                 rowView(option, index: index).id(option.id)
             }
             if visibleOptions.isEmpty {
-                Text(emptyLabel)
+                emptyLine
                     .font(PVFont.body(size: PVTypeScale.bodySmall, italic: true))
                     .foregroundStyle(PVColor.textMuted)
                     .fixedSize(horizontal: false, vertical: true)
@@ -604,6 +659,39 @@ struct PVComboBox<Row: View>: View {
 
     private func identifier(_ suffix: String) -> String? {
         accessibilityIdentifierPrefix.map { "\($0).\(suffix)" }
+    }
+}
+
+extension PVComboBox where Row == PVComboBoxPersonRow {
+    /// The `person` row kind — name, life years, and a place · ref line —
+    /// over remote results (`onQueryChange` is required; pass nil to filter
+    /// locally).
+    init(
+        selection: Binding<String>,
+        options: [PVComboBoxOption],
+        size: PVControlSize = .md,
+        placeholder: (any PVCopy)? = nil,
+        emptyLabel: LocalizedStringResource,
+        maxListHeight: CGFloat = 288,
+        label: any PVCopy,
+        accessibilityIdentifierPrefix: String? = nil,
+        onQueryChange: ((String) -> Void)?,
+        emptyText: ((String) -> String)? = nil
+    ) {
+        self.init(
+            selection: selection,
+            options: options,
+            size: size,
+            placeholder: placeholder,
+            emptyLabel: emptyLabel,
+            maxListHeight: maxListHeight,
+            label: label,
+            accessibilityIdentifierPrefix: accessibilityIdentifierPrefix,
+            onQueryChange: onQueryChange,
+            emptyText: emptyText
+        ) { option, query in
+            PVComboBoxPersonRow(option: option, query: query)
+        }
     }
 }
 

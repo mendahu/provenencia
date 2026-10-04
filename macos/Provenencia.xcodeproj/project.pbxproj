@@ -299,6 +299,7 @@
 		AA00000000000000000000C4 /* PVTableTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000000C5 /* PVTableTests.swift */; };
 		E9178C44063AD95B47B5D524 /* PVSidebarNav.swift in Sources */ = {isa = PBXBuildFile; fileRef = E98DA667F92287934B46B640 /* PVSidebarNav.swift */; };
 		ECC25906B62C6453A5CB9D25 /* PVInput.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40F72A548E04F25E0AA30CDB /* PVInput.swift */; };
+		B91100000000000000000003 /* PVRadio.swift in Sources */ = {isa = PBXBuildFile; fileRef = B91100000000000000000002 /* PVRadio.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -621,6 +622,7 @@
 		C9D0E1F203948576A1B2C3D2 /* NavigationHistoryStore.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NavigationHistoryStore.swift; sourceTree = "<group>"; };
 		D0E1F203948576A1B2C3D4E3 /* WorkspaceSection.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkspaceSection.swift; sourceTree = "<group>"; };
 		E1F203948576A1B2C3D4E5F4 /* WorkspaceNavigation.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkspaceNavigation.swift; sourceTree = "<group>"; };
+		B91100000000000000000002 /* PVRadio.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVRadio.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -1508,6 +1510,7 @@
 				D5C000000000000000000018 /* Breadcrumbs */,
 				D5C000000000000000000017 /* Table */,
 				D5C000000000000000000004 /* ReorderableList */,
+				B91100000000000000000001 /* Radio */,
 			);
 			name = Components;
 			path = Components;
@@ -1522,6 +1525,14 @@
 			);
 			name = Recipes;
 			path = Recipes;
+			sourceTree = "<group>";
+		};
+		B91100000000000000000001 /* Radio */ = {
+			isa = PBXGroup;
+			children = (
+				B91100000000000000000002 /* PVRadio.swift */,
+			);
+			path = Radio;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -1871,6 +1882,7 @@
 				AA0000000000000000000467 /* SourcesListNavigation.swift in Sources */,
 				AA0000000000000000000469 /* SourcesSplitRow.swift in Sources */,
 				AA0000000000000000000351 /* TimestampFormat.swift in Sources */,
+				B91100000000000000000003 /* PVRadio.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
