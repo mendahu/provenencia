@@ -299,6 +299,20 @@ struct EvidenceBridgeCard: View {
     }
 }
 
+/// Equality skips `onLayout`; see ``EvidenceSubjectCard``'s conformance.
+extension EvidenceBridgeCard: Equatable {
+    nonisolated static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.placed == rhs.placed
+            && lhs.snapshot == rhs.snapshot
+            && lhs.isSelected == rhs.isSelected
+            && lhs.isActivated == rhs.isActivated
+            && lhs.dragOffset == rhs.dragOffset
+            && lhs.hoveredActionID == rhs.hoveredActionID
+            && lhs.canCite == rhs.canCite
+            && (lhs.onLayout == nil) == (rhs.onLayout == nil)
+    }
+}
+
 private struct EvidenceBridgeCardChrome: View {
     let placed: SourceGraphPlacedBridge
     let snapshot: SourceGraphSnapshot

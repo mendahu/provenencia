@@ -372,6 +372,24 @@ struct EvidenceSubjectCard: View {
     }
 }
 
+/// Equality skips `onLayout`: the parent hands every card a fresh closure on
+/// each render, and closures never compare equal, so without this every card
+/// on the graph repaints (and re-measures) on every drag frame.
+extension EvidenceSubjectCard: Equatable {
+    nonisolated static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.placed == rhs.placed
+            && lhs.presentation == rhs.presentation
+            && lhs.isSelected == rhs.isSelected
+            && lhs.isActivated == rhs.isActivated
+            && lhs.isConnectingFrom == rhs.isConnectingFrom
+            && lhs.canCite == rhs.canCite
+            && lhs.dragOffset == rhs.dragOffset
+            && lhs.hoveredActionID == rhs.hoveredActionID
+            && lhs.pressedActionID == rhs.pressedActionID
+            && (lhs.onLayout == nil) == (rhs.onLayout == nil)
+    }
+}
+
 /// Visual shell shared by live cards and the placement ghost.
 private struct EvidenceSubjectCardChrome: View {
     let placed: SourceGraphPlacedSubject

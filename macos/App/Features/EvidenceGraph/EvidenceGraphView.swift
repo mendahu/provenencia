@@ -744,6 +744,7 @@ private struct EvidenceGraphDocumentBody: View {
                 : nil,
             onLayout: { [cardLayouts] in cardLayouts.record($0, for: placed.id) }
         )
+        .equatable()
         .accessibilityAction(named: Text(L10n.EvidenceGraph.editAccessibility)) {
             model.beginEdit(subjectID: placed.id)
         }
@@ -795,6 +796,7 @@ private struct EvidenceGraphDocumentBody: View {
             canCite: model.canCite,
             onLayout: { [cardLayouts] in cardLayouts.record($0, for: placed.id) }
         )
+        .equatable()
         .accessibilityAction(named: Text(L10n.EvidenceGraph.editAccessibility)) {
             model.beginEdit(subjectID: placed.id)
         }
