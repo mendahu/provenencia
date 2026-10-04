@@ -2650,6 +2650,12 @@ public nonisolated struct Provenencia_Engine_V1_WorkspaceLocation: @unchecked Se
     set {_uniqueStorage()._propertyID = newValue}
   }
 
+  /// Conclusion handle (persons / events / places)
+  public var entityID: String {
+    get {_storage._entityID}
+    set {_uniqueStorage()._entityID = newValue}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -2677,6 +2683,10 @@ public nonisolated struct Provenencia_Engine_V1_SearchCatalogRequest: Sendable {
   /// Clears the value of `location`. Subsequent reads from it will return its default value.
   public mutating func clearLocation() {self._location = nil}
 
+  /// Restrict hits to these kinds. Empty = the omnibar's default set, which
+  /// excludes person / event / place until S9-35.
+  public var kinds: [String] = []
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -2689,7 +2699,7 @@ public nonisolated struct Provenencia_Engine_V1_SearchHit: Sendable {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  /// source | source_type | metadata_field
+  /// source | source_type | metadata_field | person | event | place
   public var kind: String = String()
 
   public var id: String = String()
@@ -2721,6 +2731,9 @@ public nonisolated struct Provenencia_Engine_V1_SearchHit: Sendable {
 
   /// Optional raw snippet for body/rollup matches (notes/metadata/filename). No English prefix.
   public var matchSnippet: String = String()
+
+  /// accepted members, for person / event / place hits
+  public var memberCount: Int32 = 0
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -3296,6 +3309,9 @@ public nonisolated struct Provenencia_Engine_V1_PromoteTargetSuggestion: Sendabl
   public var hasPerson: Bool {self._person != nil}
   /// Clears the value of `person`. Subsequent reads from it will return its default value.
   public mutating func clearPerson() {self._person = nil}
+
+  /// accepted members of the handle
+  public var memberCount: Int32 = 0
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -9173,7 +9189,7 @@ nonisolated extension Provenencia_Engine_V1_CloseCatalogSessionResponse: SwiftPr
 
 nonisolated extension Provenencia_Engine_V1_WorkspaceLocation: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".WorkspaceLocation"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}section\0\u{3}source_id\0\u{3}field_id\0\u{3}type_id\0\u{1}ref\0\u{1}title\0\u{3}subject_id\0\u{3}citation_id\0\u{3}artifact_id\0\u{3}observation_id\0\u{3}source_surface\0\u{3}connect_from_subject_id\0\u{3}connect_to_subject_id\0\u{3}connect_bridge_type_key\0\u{3}source_title\0\u{3}subject_type_key\0\u{3}property_id\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}section\0\u{3}source_id\0\u{3}field_id\0\u{3}type_id\0\u{1}ref\0\u{1}title\0\u{3}subject_id\0\u{3}citation_id\0\u{3}artifact_id\0\u{3}observation_id\0\u{3}source_surface\0\u{3}connect_from_subject_id\0\u{3}connect_to_subject_id\0\u{3}connect_bridge_type_key\0\u{3}source_title\0\u{3}subject_type_key\0\u{3}property_id\0\u{3}entity_id\0")
 
   fileprivate class _StorageClass {
     var _section: String = String()
@@ -9193,6 +9209,7 @@ nonisolated extension Provenencia_Engine_V1_WorkspaceLocation: SwiftProtobuf.Mes
     var _sourceTitle: String = String()
     var _subjectTypeKey: String = String()
     var _propertyID: String = String()
+    var _entityID: String = String()
 
       // This property is used as the initial default value for new instances of the type.
       // The type itself is protecting the reference to its storage via CoW semantics.
@@ -9220,6 +9237,7 @@ nonisolated extension Provenencia_Engine_V1_WorkspaceLocation: SwiftProtobuf.Mes
       _sourceTitle = source._sourceTitle
       _subjectTypeKey = source._subjectTypeKey
       _propertyID = source._propertyID
+      _entityID = source._entityID
     }
   }
 
@@ -9255,6 +9273,7 @@ nonisolated extension Provenencia_Engine_V1_WorkspaceLocation: SwiftProtobuf.Mes
         case 15: try { try decoder.decodeSingularStringField(value: &_storage._sourceTitle) }()
         case 16: try { try decoder.decodeSingularStringField(value: &_storage._subjectTypeKey) }()
         case 17: try { try decoder.decodeSingularStringField(value: &_storage._propertyID) }()
+        case 18: try { try decoder.decodeSingularStringField(value: &_storage._entityID) }()
         default: break
         }
       }
@@ -9314,6 +9333,9 @@ nonisolated extension Provenencia_Engine_V1_WorkspaceLocation: SwiftProtobuf.Mes
       if !_storage._propertyID.isEmpty {
         try visitor.visitSingularStringField(value: _storage._propertyID, fieldNumber: 17)
       }
+      if !_storage._entityID.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._entityID, fieldNumber: 18)
+      }
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -9340,6 +9362,7 @@ nonisolated extension Provenencia_Engine_V1_WorkspaceLocation: SwiftProtobuf.Mes
         if _storage._sourceTitle != rhs_storage._sourceTitle {return false}
         if _storage._subjectTypeKey != rhs_storage._subjectTypeKey {return false}
         if _storage._propertyID != rhs_storage._propertyID {return false}
+        if _storage._entityID != rhs_storage._entityID {return false}
         return true
       }
       if !storagesAreEqual {return false}
@@ -9351,7 +9374,7 @@ nonisolated extension Provenencia_Engine_V1_WorkspaceLocation: SwiftProtobuf.Mes
 
 nonisolated extension Provenencia_Engine_V1_SearchCatalogRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".SearchCatalogRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_dir\0\u{1}query\0\u{1}location\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_dir\0\u{1}query\0\u{1}location\0\u{1}kinds\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -9362,6 +9385,7 @@ nonisolated extension Provenencia_Engine_V1_SearchCatalogRequest: SwiftProtobuf.
       case 1: try { try decoder.decodeSingularStringField(value: &self.projectDir) }()
       case 2: try { try decoder.decodeSingularStringField(value: &self.query) }()
       case 3: try { try decoder.decodeSingularMessageField(value: &self._location) }()
+      case 4: try { try decoder.decodeRepeatedStringField(value: &self.kinds) }()
       default: break
       }
     }
@@ -9381,6 +9405,9 @@ nonisolated extension Provenencia_Engine_V1_SearchCatalogRequest: SwiftProtobuf.
     try { if let v = self._location {
       try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
     } }()
+    if !self.kinds.isEmpty {
+      try visitor.visitRepeatedStringField(value: self.kinds, fieldNumber: 4)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -9388,6 +9415,7 @@ nonisolated extension Provenencia_Engine_V1_SearchCatalogRequest: SwiftProtobuf.
     if lhs.projectDir != rhs.projectDir {return false}
     if lhs.query != rhs.query {return false}
     if lhs._location != rhs._location {return false}
+    if lhs.kinds != rhs.kinds {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -9395,7 +9423,7 @@ nonisolated extension Provenencia_Engine_V1_SearchCatalogRequest: SwiftProtobuf.
 
 nonisolated extension Provenencia_Engine_V1_SearchHit: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".SearchHit"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}kind\0\u{1}id\0\u{1}ref\0\u{1}title\0\u{1}subtitle\0\u{3}match_reason\0\u{1}location\0\u{3}thumbnail_rel_path\0\u{3}icon_key\0\u{3}match_snippet\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}kind\0\u{1}id\0\u{1}ref\0\u{1}title\0\u{1}subtitle\0\u{3}match_reason\0\u{1}location\0\u{3}thumbnail_rel_path\0\u{3}icon_key\0\u{3}match_snippet\0\u{3}member_count\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -9413,6 +9441,7 @@ nonisolated extension Provenencia_Engine_V1_SearchHit: SwiftProtobuf.Message, Sw
       case 8: try { try decoder.decodeSingularStringField(value: &self.thumbnailRelPath) }()
       case 9: try { try decoder.decodeSingularStringField(value: &self.iconKey) }()
       case 10: try { try decoder.decodeSingularStringField(value: &self.matchSnippet) }()
+      case 11: try { try decoder.decodeSingularInt32Field(value: &self.memberCount) }()
       default: break
       }
     }
@@ -9453,6 +9482,9 @@ nonisolated extension Provenencia_Engine_V1_SearchHit: SwiftProtobuf.Message, Sw
     if !self.matchSnippet.isEmpty {
       try visitor.visitSingularStringField(value: self.matchSnippet, fieldNumber: 10)
     }
+    if self.memberCount != 0 {
+      try visitor.visitSingularInt32Field(value: self.memberCount, fieldNumber: 11)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -9467,6 +9499,7 @@ nonisolated extension Provenencia_Engine_V1_SearchHit: SwiftProtobuf.Message, Sw
     if lhs.thumbnailRelPath != rhs.thumbnailRelPath {return false}
     if lhs.iconKey != rhs.iconKey {return false}
     if lhs.matchSnippet != rhs.matchSnippet {return false}
+    if lhs.memberCount != rhs.memberCount {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -10578,7 +10611,7 @@ nonisolated extension Provenencia_Engine_V1_MatchReason: SwiftProtobuf.Message, 
 
 nonisolated extension Provenencia_Engine_V1_PromoteTargetSuggestion: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".PromoteTargetSuggestion"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}entity\0\u{1}score\0\u{1}reasons\0\u{1}person\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}entity\0\u{1}score\0\u{1}reasons\0\u{1}person\0\u{3}member_count\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -10590,6 +10623,7 @@ nonisolated extension Provenencia_Engine_V1_PromoteTargetSuggestion: SwiftProtob
       case 2: try { try decoder.decodeSingularDoubleField(value: &self.score) }()
       case 3: try { try decoder.decodeRepeatedMessageField(value: &self.reasons) }()
       case 4: try { try decoder.decodeSingularMessageField(value: &self._person) }()
+      case 5: try { try decoder.decodeSingularInt32Field(value: &self.memberCount) }()
       default: break
       }
     }
@@ -10612,6 +10646,9 @@ nonisolated extension Provenencia_Engine_V1_PromoteTargetSuggestion: SwiftProtob
     try { if let v = self._person {
       try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
     } }()
+    if self.memberCount != 0 {
+      try visitor.visitSingularInt32Field(value: self.memberCount, fieldNumber: 5)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -10620,6 +10657,7 @@ nonisolated extension Provenencia_Engine_V1_PromoteTargetSuggestion: SwiftProtob
     if lhs.score != rhs.score {return false}
     if lhs.reasons != rhs.reasons {return false}
     if lhs._person != rhs._person {return false}
+    if lhs.memberCount != rhs.memberCount {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

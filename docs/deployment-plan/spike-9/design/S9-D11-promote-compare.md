@@ -11,7 +11,7 @@
 
 Paste this entire document into Claude Design as the requirements for one board/flow. Read shared product facts in [`README.md`](README.md) first.
 
-This brief **extends S9-D9**'s frames. Reuse its layout; change only what this kind needs.
+This brief **extends S9-D9**'s frames. Reuse its layout; change only what this kind needs. The S9-D9 board is Claude Design *Promote flow* (`bc84685e-bbc3-4053-a5c9-0f5ac7a13ccd`), `Promote flow.dc.html`; add these frames to it. It shipped as a workspace place in S9-11 ([`completed.md`](../completed.md#s9-d9--design-promote-shell--choose-target)).
 
 ### Claude Design — do this first (in order)
 

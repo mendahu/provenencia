@@ -208,3 +208,33 @@ func TestSearchLocationProtoRoundTrip(t *testing.T) {
 		})
 	}
 }
+
+func TestSearchCatalogHandleKinds(t *testing.T) {
+	dir, handleRef := namedPerson(t)
+	search := func(kinds ...string) *engine.SearchCatalogResponse {
+		t.Helper()
+		out, err := SearchCatalog(marshalProto(t, &engine.SearchCatalogRequest{ProjectDir: dir, Query: "James Robins", Kinds: kinds}))
+		if err != nil {
+			t.Fatal(err)
+		}
+		var resp engine.SearchCatalogResponse
+		if err := proto.Unmarshal(out, &resp); err != nil {
+			t.Fatal(err)
+		}
+		return &resp
+	}
+	if hits := search().GetHits(); len(hits) != 0 {
+		t.Fatalf("omnibar default returned handles: %+v", hits)
+	}
+	hits := search("person").GetHits()
+	if len(hits) != 1 {
+		t.Fatalf("got %+v", hits)
+	}
+	h := hits[0]
+	if h.GetKind() != "person" || h.GetRef() != handleRef || h.GetMemberCount() != 1 {
+		t.Fatalf("hit %+v", h)
+	}
+	if loc := h.GetLocation(); loc.GetSection() != "persons" || loc.GetEntityId() != h.GetId() {
+		t.Fatalf("location %+v", loc)
+	}
+}

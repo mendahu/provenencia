@@ -16,6 +16,26 @@ struct PlaceRegistry: Sendable {
     /// Higher priority wins when multiple specs could match.
     private let specs: [Spec] = [
         Spec(
+            id: .sourcePromote,
+            presentation: .sourcePromote,
+            priority: 120,
+            matches: {
+                $0.section == .sources
+                    && $0.sourceId != nil
+                    && $0.sourceSurface == .promote
+                    && $0.subjectId != nil
+            },
+            queryKeys: { project, location in
+                guard let sourceId = location.sourceId, let subjectId = location.subjectId else { return [] }
+                return [
+                    .sourceGraph(project: project, sourceId: sourceId),
+                    .sourcesList(project: project),
+                    .promoteTargets(project: project, subjectId: subjectId),
+                ]
+            },
+            deepId: { $0.subjectId }
+        ),
+        Spec(
             id: .sourceCitationComposer,
             presentation: .sourceCitationComposer,
             priority: 120,

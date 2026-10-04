@@ -1152,6 +1152,172 @@ enum L10n {
         )
     }
 
+    /// Promote flow place (S9-11, board S9-D9). Generated table; kind-specific
+    /// copy switches on the subject's kind.
+    enum Promote {
+        static func eyebrow(_ kind: EvidencePrimaryKind) -> LocalizedStringResource {
+            let resource: LocalizedStringResource = switch kind {
+            case .person: LocalizedStringResource("promote.eyebrow.person", defaultValue: "Promoting a person", comment: "Promote place header eyebrow above the subject's name")
+            case .event: LocalizedStringResource("promote.eyebrow.event", defaultValue: "Promoting an event", comment: "Promote place header eyebrow above the subject's name")
+            case .place: LocalizedStringResource("promote.eyebrow.place", defaultValue: "Promoting a place", comment: "Promote place header eyebrow above the subject's name")
+            }
+            return resource
+        }
+        static func chooseStep(_ kind: EvidencePrimaryKind) -> LocalizedStringResource {
+            let resource: LocalizedStringResource = switch kind {
+            case .person: LocalizedStringResource("promote.step.choose.person", defaultValue: "Choose a Person", comment: "Promote step label and section title: choose where the subject goes")
+            case .event: LocalizedStringResource("promote.step.choose.event", defaultValue: "Choose an Event", comment: "Promote step label and section title: choose where the subject goes")
+            case .place: LocalizedStringResource("promote.step.choose.place", defaultValue: "Choose a Place", comment: "Promote step label and section title: choose where the subject goes")
+            }
+            return resource
+        }
+        static let compareStep = LocalizedStringResource("promote.step.compare", defaultValue: "Compare", comment: "Promote step label: compare the subject with an existing handle's members (S9-19)")
+        static let claimStep = LocalizedStringResource("promote.step.claim", defaultValue: "Claim fields", comment: "Promote step label: status, confidence and argument (S9-12)")
+        static func stepOf(current: Int, total: Int) -> String {
+            L10n.format(LocalizedStringResource("promote.stepOf", defaultValue: "Step %1$lld of %2$lld", comment: "Promote step counter; 1 = current step number, 2 = number of steps"), current, total)
+        }
+        static let steps = LocalizedStringResource("promote.steps", defaultValue: "Promote steps", comment: "Accessibility label for the Promote step row")
+        static func newOption(_ kind: EvidencePrimaryKind) -> LocalizedStringResource {
+            let resource: LocalizedStringResource = switch kind {
+            case .person: LocalizedStringResource("promote.new.person", defaultValue: "New Person", comment: "Promote target choice: mint a new handle")
+            case .event: LocalizedStringResource("promote.new.event", defaultValue: "New Event", comment: "Promote target choice: mint a new handle")
+            case .place: LocalizedStringResource("promote.new.place", defaultValue: "New Place", comment: "Promote target choice: mint a new handle")
+            }
+            return resource
+        }
+        static func newDescription(_ kind: EvidencePrimaryKind, name: String) -> String {
+            let resource: LocalizedStringResource = switch kind {
+            case .person: LocalizedStringResource("promote.new.description.person", defaultValue: "Start a new Person with %@ as its first member", comment: "Promote target choice description; argument is the subject's name or ref")
+            case .event: LocalizedStringResource("promote.new.description.event", defaultValue: "Start a new Event with %@ as its first member", comment: "Promote target choice description; argument is the subject's name or ref")
+            case .place: LocalizedStringResource("promote.new.description.place", defaultValue: "Start a new Place with %@ as its first member", comment: "Promote target choice description; argument is the subject's name or ref")
+            }
+            return L10n.format(resource, name)
+        }
+        static func existingOption(_ kind: EvidencePrimaryKind) -> LocalizedStringResource {
+            let resource: LocalizedStringResource = switch kind {
+            case .person: LocalizedStringResource("promote.existing.person", defaultValue: "Existing Person", comment: "Promote target choice: join an existing handle")
+            case .event: LocalizedStringResource("promote.existing.event", defaultValue: "Existing Event", comment: "Promote target choice: join an existing handle")
+            case .place: LocalizedStringResource("promote.existing.place", defaultValue: "Existing Place", comment: "Promote target choice: join an existing handle")
+            }
+            return resource
+        }
+        static func existingDescription(_ kind: EvidencePrimaryKind) -> LocalizedStringResource {
+            let resource: LocalizedStringResource = switch kind {
+            case .person: LocalizedStringResource("promote.existing.description.person", defaultValue: "Join a Person you already have. Its members are compared before you file", comment: "Promote target choice description for joining an existing handle")
+            case .event: LocalizedStringResource("promote.existing.description.event", defaultValue: "Join an Event you already have. Its members are compared before you file", comment: "Promote target choice description for joining an existing handle")
+            case .place: LocalizedStringResource("promote.existing.description.place", defaultValue: "Join a Place you already have. Its members are compared before you file", comment: "Promote target choice description for joining an existing handle")
+            }
+            return resource
+        }
+        static func choiceLabel(name: String) -> String {
+            L10n.format(LocalizedStringResource("promote.choice.label", defaultValue: "Where %@ goes", comment: "Accessibility label for the Promote target choice; argument is the subject's name or ref"), name)
+        }
+        static func searchLabel(_ kind: EvidencePrimaryKind) -> LocalizedStringResource {
+            let resource: LocalizedStringResource = switch kind {
+            case .person: LocalizedStringResource("promote.search.label.person", defaultValue: "Search Persons", comment: "Accessibility label for the Promote search field")
+            case .event: LocalizedStringResource("promote.search.label.event", defaultValue: "Search Events", comment: "Accessibility label for the Promote search field")
+            case .place: LocalizedStringResource("promote.search.label.place", defaultValue: "Search Places", comment: "Accessibility label for the Promote search field")
+            }
+            return resource
+        }
+        static func searchPlaceholder(_ kind: EvidencePrimaryKind) -> LocalizedStringResource {
+            let resource: LocalizedStringResource = switch kind {
+            case .person: LocalizedStringResource("promote.search.placeholder.person", defaultValue: "Search Persons by name, dates or place", comment: "Placeholder for the Promote search field")
+            case .event: LocalizedStringResource("promote.search.placeholder.event", defaultValue: "Search Events by type, date or place", comment: "Placeholder for the Promote search field")
+            case .place: LocalizedStringResource("promote.search.placeholder.place", defaultValue: "Search Places by name", comment: "Placeholder for the Promote search field")
+            }
+            return resource
+        }
+        static func searchPrompt(_ kind: EvidencePrimaryKind) -> LocalizedStringResource {
+            let resource: LocalizedStringResource = switch kind {
+            case .person: LocalizedStringResource("promote.search.prompt.person", defaultValue: "Type to search Persons", comment: "Promote search list before anything is typed")
+            case .event: LocalizedStringResource("promote.search.prompt.event", defaultValue: "Type to search Events", comment: "Promote search list before anything is typed")
+            case .place: LocalizedStringResource("promote.search.prompt.place", defaultValue: "Type to search Places", comment: "Promote search list before anything is typed")
+            }
+            return resource
+        }
+        static func searchNoMatch(_ kind: EvidencePrimaryKind, query: String) -> String {
+            let resource: LocalizedStringResource = switch kind {
+            case .person: LocalizedStringResource("promote.search.noMatch.person", defaultValue: "No Person matches “%@” — check the spelling, or choose New Person", comment: "Promote search list when nothing matches; argument is the typed query")
+            case .event: LocalizedStringResource("promote.search.noMatch.event", defaultValue: "No Event matches “%@” — check the spelling, or choose New Event", comment: "Promote search list when nothing matches; argument is the typed query")
+            case .place: LocalizedStringResource("promote.search.noMatch.place", defaultValue: "No Place matches “%@” — check the spelling, or choose New Place", comment: "Promote search list when nothing matches; argument is the typed query")
+            }
+            return L10n.format(resource, query)
+        }
+        static let suggested = LocalizedStringResource("promote.suggested", defaultValue: "Suggested", comment: "Promote section title for suggested existing handles")
+        static let suggestedAside = LocalizedStringResource("promote.suggested.aside", defaultValue: "Ranked by name, dates, place and event type", comment: "Promote suggested section aside: how suggestions are ranked")
+        static let suggestedLoading = LocalizedStringResource("promote.suggested.loading", defaultValue: "Finding suggestions…", comment: "Promote suggested section while suggestions load")
+        static let suggestedFailed = LocalizedStringResource("promote.suggested.failed", defaultValue: "Suggestions couldn’t be loaded", comment: "Promote suggested section when suggestions fail to load")
+        static func noSuggestionsTitle(_ kind: EvidencePrimaryKind, name: String) -> String {
+            let resource: LocalizedStringResource = switch kind {
+            case .person: LocalizedStringResource("promote.suggested.empty.title.person", defaultValue: "No Person resembles %@ yet", comment: "Promote empty suggestions title; argument is the subject's name or ref")
+            case .event: LocalizedStringResource("promote.suggested.empty.title.event", defaultValue: "No Event resembles %@ yet", comment: "Promote empty suggestions title; argument is the subject's name or ref")
+            case .place: LocalizedStringResource("promote.suggested.empty.title.place", defaultValue: "No Place resembles %@ yet", comment: "Promote empty suggestions title; argument is the subject's name or ref")
+            }
+            return L10n.format(resource, name)
+        }
+        static func noSuggestionsMessage(_ kind: EvidencePrimaryKind) -> LocalizedStringResource {
+            let resource: LocalizedStringResource = switch kind {
+            case .person: LocalizedStringResource("promote.suggested.empty.message.person", defaultValue: "Search above, or choose New Person to start one", comment: "Promote empty suggestions message")
+            case .event: LocalizedStringResource("promote.suggested.empty.message.event", defaultValue: "Search above, or choose New Event to start one", comment: "Promote empty suggestions message")
+            case .place: LocalizedStringResource("promote.suggested.empty.message.place", defaultValue: "Search above, or choose New Place to start one", comment: "Promote empty suggestions message")
+            }
+            return resource
+        }
+        static func memberOne(count: Int) -> String {
+            L10n.format(LocalizedStringResource("promote.members.one", defaultValue: "%lld member", comment: "Member count of a handle, singular"), count)
+        }
+        static func memberOther(count: Int) -> String {
+            L10n.format(LocalizedStringResource("promote.members.other", defaultValue: "%lld members", comment: "Member count of a handle, plural"), count)
+        }
+        static func rowAccessibility(title: String, members: String, ref: String) -> String {
+            L10n.format(LocalizedStringResource("promote.row.accessibility", defaultValue: "%1$@, %2$@, %3$@", comment: "Accessibility label for a Promote candidate row; 1 = title, 2 = member count, 3 = ref"), title, members, ref)
+        }
+        static func hintChoose(_ kind: EvidencePrimaryKind) -> LocalizedStringResource {
+            let resource: LocalizedStringResource = switch kind {
+            case .person: LocalizedStringResource("promote.hint.choose.person", defaultValue: "Choose a Person to continue", comment: "Promote footer hint before a target is chosen")
+            case .event: LocalizedStringResource("promote.hint.choose.event", defaultValue: "Choose an Event to continue", comment: "Promote footer hint before a target is chosen")
+            case .place: LocalizedStringResource("promote.hint.choose.place", defaultValue: "Choose a Place to continue", comment: "Promote footer hint before a target is chosen")
+            }
+            return resource
+        }
+        static func hintNew(_ kind: EvidencePrimaryKind) -> LocalizedStringResource {
+            let resource: LocalizedStringResource = switch kind {
+            case .person: LocalizedStringResource("promote.hint.new.person", defaultValue: "A new Person is filed when you press Next", comment: "Promote footer hint for a new handle (interim until the claim step, S9-12)")
+            case .event: LocalizedStringResource("promote.hint.new.event", defaultValue: "A new Event is filed when you press Next", comment: "Promote footer hint for a new handle (interim until the claim step, S9-12)")
+            case .place: LocalizedStringResource("promote.hint.new.place", defaultValue: "A new Place is filed when you press Next", comment: "Promote footer hint for a new handle (interim until the claim step, S9-12)")
+            }
+            return resource
+        }
+        static func hintExisting(name: String, ref: String, members: String) -> String {
+            L10n.format(LocalizedStringResource("promote.hint.existing", defaultValue: "%1$@ will join %2$@ and its %3$@", comment: "Promote footer hint for an existing handle (interim until compare, S9-19); 1 = subject name, 2 = handle ref, 3 = member count"), name, ref, members)
+        }
+        static let done = LocalizedStringResource("promote.done", defaultValue: "Done", comment: "Promote footer: leave the flow")
+        static let next = LocalizedStringResource("promote.next", defaultValue: "Next", comment: "Promote footer: save this step and continue")
+        static func leaveTitle(name: String) -> String {
+            L10n.format(LocalizedStringResource("promote.leave.title", defaultValue: "Leave Promote without filing %@?", comment: "Promote leave guard title; argument is the subject's name or ref"), name)
+        }
+        static func leaveMessageExisting(target: String, subjectRef: String) -> String {
+            L10n.format(LocalizedStringResource("promote.leave.message.existing", defaultValue: "Your choice of %1$@ is not saved, and %2$@ stays unpromoted.", comment: "Promote leave guard message; 1 = chosen handle ref, 2 = subject ref"), target, subjectRef)
+        }
+        static func leaveMessageNew(_ kind: EvidencePrimaryKind, subjectRef: String) -> String {
+            let resource: LocalizedStringResource = switch kind {
+            case .person: LocalizedStringResource("promote.leave.message.new.person", defaultValue: "Your choice of a new Person is not saved, and %@ stays unpromoted.", comment: "Promote leave guard message for a new handle; argument is the subject ref")
+            case .event: LocalizedStringResource("promote.leave.message.new.event", defaultValue: "Your choice of a new Event is not saved, and %@ stays unpromoted.", comment: "Promote leave guard message for a new handle; argument is the subject ref")
+            case .place: LocalizedStringResource("promote.leave.message.new.place", defaultValue: "Your choice of a new Place is not saved, and %@ stays unpromoted.", comment: "Promote leave guard message for a new handle; argument is the subject ref")
+            }
+            return L10n.format(resource, subjectRef)
+        }
+        static func leaveMessageUnchosen(subjectRef: String) -> String {
+            L10n.format(LocalizedStringResource("promote.leave.message.unchosen", defaultValue: "Nothing is filed, and %@ stays unpromoted.", comment: "Promote leave guard message when Existing is picked but no handle chosen; argument is the subject ref"), subjectRef)
+        }
+        static let leaveConfirm = LocalizedStringResource("promote.leave.confirm", defaultValue: "Leave Promote", comment: "Promote leave guard: leave")
+        static let leaveCancel = LocalizedStringResource("promote.leave.cancel", defaultValue: "Keep promoting", comment: "Promote leave guard: stay")
+        static func breadcrumb(ref: String) -> String {
+            L10n.format(LocalizedStringResource("promote.breadcrumb", defaultValue: "Promote %@", comment: "Toolbar breadcrumb for the Promote place; argument is the subject ref"), ref)
+        }
+    }
+
     enum EvidenceGraph {
         static let emptyTitle = LocalizedStringResource(
             "evidenceGraph.empty.title",
@@ -1362,18 +1528,6 @@ enum L10n {
             comment: "Footer button on an unpromoted primary card that creates its Person, Event or Place"
         )
 
-        static let promoteCancel = LocalizedStringResource(
-            "evidenceGraph.promote.cancel",
-            defaultValue: "Leave unpromoted",
-            comment: "Cancel on the v1 Promote confirm; nothing is written"
-        )
-
-        static let promoteFirstMember = LocalizedStringResource(
-            "evidenceGraph.promote.firstMember",
-            defaultValue: "First member",
-            comment: "Key-chip label on the Promote confirm naming the subject that grounds the new handle"
-        )
-
         static func promoteAccessibility(label: String, ref: String) -> String {
             return L10n.format(LocalizedStringResource(
                 "evidenceGraph.subject.promoteAccessibility",
@@ -1401,77 +1555,6 @@ enum L10n {
                     "evidenceGraph.subject.promoteHelp.place",
                     defaultValue: "Promote to a place",
                     comment: "Tooltip on the Promote footer button"
-                )
-            }
-        }
-
-        static func promoteConfirmTitle(kind: EvidencePrimaryKind, ref: String) -> String {
-            let resource: LocalizedStringResource = switch kind {
-            case .person:
-                LocalizedStringResource(
-                    "evidenceGraph.promote.title.person",
-                    defaultValue: "Create a new Person from %@?",
-                    comment: "v1 Promote confirm title; argument is the subject candidate ref"
-                )
-            case .event:
-                LocalizedStringResource(
-                    "evidenceGraph.promote.title.event",
-                    defaultValue: "Create a new Event from %@?",
-                    comment: "v1 Promote confirm title; argument is the subject candidate ref"
-                )
-            case .place:
-                LocalizedStringResource(
-                    "evidenceGraph.promote.title.place",
-                    defaultValue: "Create a new Place from %@?",
-                    comment: "v1 Promote confirm title; argument is the subject candidate ref"
-                )
-            }
-            return L10n.format(resource, ref)
-        }
-
-        static func promoteConfirmMessage(kind: EvidencePrimaryKind, label: String, refPrefix: String) -> String {
-            let resource: LocalizedStringResource = switch kind {
-            case .person:
-                LocalizedStringResource(
-                    "evidenceGraph.promote.message.person",
-                    defaultValue: "%1$@ becomes the first member of a new Person, and its %2$@- ref is minted when you create it. The subject, its properties and its observations stay exactly as they are.",
-                    comment: "v1 Promote confirm consequence; arguments are the subject label and the new handle ref prefix (PER)"
-                )
-            case .event:
-                LocalizedStringResource(
-                    "evidenceGraph.promote.message.event",
-                    defaultValue: "%1$@ becomes the first member of a new Event, and its %2$@- ref is minted when you create it. The subject, its properties and its observations stay exactly as they are.",
-                    comment: "v1 Promote confirm consequence; arguments are the subject label and the new handle ref prefix (PER)"
-                )
-            case .place:
-                LocalizedStringResource(
-                    "evidenceGraph.promote.message.place",
-                    defaultValue: "%1$@ becomes the first member of a new Place, and its %2$@- ref is minted when you create it. The subject, its properties and its observations stay exactly as they are.",
-                    comment: "v1 Promote confirm consequence; arguments are the subject label and the new handle ref prefix (PER)"
-                )
-            }
-            return L10n.format(resource, label, refPrefix)
-        }
-
-        static func promoteConfirmAction(kind: EvidencePrimaryKind) -> LocalizedStringResource {
-            switch kind {
-            case .person:
-                LocalizedStringResource(
-                    "evidenceGraph.promote.confirm.person",
-                    defaultValue: "Create Person",
-                    comment: "Confirm button on the v1 Promote confirm"
-                )
-            case .event:
-                LocalizedStringResource(
-                    "evidenceGraph.promote.confirm.event",
-                    defaultValue: "Create Event",
-                    comment: "Confirm button on the v1 Promote confirm"
-                )
-            case .place:
-                LocalizedStringResource(
-                    "evidenceGraph.promote.confirm.place",
-                    defaultValue: "Create Place",
-                    comment: "Confirm button on the v1 Promote confirm"
                 )
             }
         }

@@ -328,6 +328,7 @@ SLICE 2 — Persons list
 
 SLICE 3 — Join an existing Person
   S9-10  Promote write + reads: existing target, target suggestions
+  S9-34a Handle search from cached values + kinds filter (pulled forward from Slice 10 for the picker)
   ✎ S9-D9  ──▶ S9-11  Promote shell + choose target (card Promote now opens it)
   ✎ S9-D10 ──▶ S9-12  Claim fields + save
   Check: two records on one Person → one list row; the second card shows the same PER-….
@@ -373,7 +374,7 @@ SLICE 9 — Derived values across the graph
   Check: "Birth of James Robins"; James shows 1817 – 1880 · York → Toronto; timings in the ledger.
 
 SLICE 10 — Search
-  S9-34  Search kinds + documents + reprojection
+  S9-34  Search documents from headers + dependents (S9-34a shipped kinds, cached-value documents, upkeep)
   ✎ S9-D13 ──▶ S9-35  Omnibar Conclusion hits
   Check: PER-7KD45, Jim Robins, Birth of James, a toponym → each finds its handle; a name edit updates the hit.
 
@@ -401,7 +402,8 @@ CLOSE
 | S9-08 Sidebar | **S9-D1** | S9-07, S9-07b |
 | S9-09 Persons list | **S9-D2** | S9-07, S9-08 |
 | S9-10 Promote write + reads: existing target | — | S9-06 |
-| S9-11 Promote shell + choose target | **S9-D9** | S9-04, S9-10 |
+| S9-34a Handle search from cached values | — | S9-06 |
+| S9-11 Promote shell + choose target | **S9-D9** | S9-04, S9-10, S9-34a |
 | S9-12 Claim fields + save | **S9-D10** | S9-11 |
 | S9-13 Name auto-reconciler | — | S9-05 |
 | S9-14 Provenance ranking | — | S9-06 |
@@ -424,7 +426,7 @@ CLOSE
 | S9-31 Composer walks | — | S9-22, S9-25, S9-28 |
 | S9-32 Fill derived cells | (D2 / D3 / D5 / D6) | S9-31, S9-23, S9-24 |
 | S9-33 Deep fixture + timings | — | S9-31 |
-| S9-34 Search kinds + reprojection | — | S9-31 |
+| S9-34 Search documents from headers | — | S9-31, S9-34a |
 | S9-35 Omnibar hits | **S9-D13** | S9-34 |
 | S9-99 Dogfood close | — | all |
 
@@ -448,8 +450,9 @@ In order; each brief sits just above the PR it gates.
 - [x] ✎ S9-D2 — Design: Persons list → [`completed.md`](completed.md)
 - [x] S9-09 — Persons list → [`completed.md`](completed.md)
 - [x] S9-10 — Promote write + reads: existing target → [`completed.md`](completed.md)
-- [ ] ✎ S9-D9 — Design: Promote shell + choose target
-- [ ] S9-11 — Promote shell + choose target
+- [x] S9-34a — Handle search from cached values + kinds filter → [`completed.md`](completed.md)
+- [x] ✎ S9-D9 — Design: Promote shell + choose target → [`completed.md`](completed.md)
+- [x] S9-11 — Promote shell + choose target → [`completed.md`](completed.md)
 - [ ] ✎ S9-D10 — Design: Promote claim fields
 - [ ] S9-12 — Promote claim fields + save
 - [ ] S9-13 — Name auto-reconciler
@@ -480,7 +483,7 @@ In order; each brief sits just above the PR it gates.
 - [ ] S9-31 — Composer walks + header dependents
 - [ ] S9-32 — Fill derived cells in lists and details
 - [ ] S9-33 — Deep fixture + timings
-- [ ] S9-34 — Search kinds + reprojection
+- [ ] S9-34 — Search documents from headers + dependents
 - [ ] ✎ S9-D13 — Design: omnibar hits
 - [ ] S9-35 — Omnibar Conclusion hits
 - [ ] S9-99 — Dogfood close / docs
@@ -624,12 +627,33 @@ Researcher's decision while revising **S9-D1**: two configuration views get plai
 | **Testable** | Join writes a claim onto the existing handle; cache recomputed; suggestions filtered by type. |
 | **Depends on** | S9-06 |
 
+#### S9-34a — Handle search from cached values + kinds filter
+
+**Done.** See [`completed.md`](completed.md#s9-34a--handle-search-from-cached-values--kinds-filter). This was pulled forward from Slice 10 so the Promote picker (S9-11) can search Persons, Events and Places through catalog search. S9-34 as written couldn't go first: S9-34 → S9-31 → S9-28 → S9-12 → S9-11.
+- **S9-11:** search with `searchCatalog(…, kinds: [kind])`; hits carry `memberCount` and a location with `entityId`.
+- **S9-34:** replace the cached-value documents with header-built ones and reproject header dependents; kinds, upkeep, the filter and member counts already exist.
+- **S9-35:** add the kinds to the omnibar's default set (`DefaultInEverything`) once their rows are designed.
+
+| | |
+| --- | --- |
+| **In** | Search index kinds `person` / `event` / `place`. Documents come from `conclusion_resolved_values` (rank-1 name, toponym or event type as the title; other values as secondary; label, then ref, as fallbacks). They are reprojected by `resolvedvalues.RecomputeTx` in the same transaction. Merged handles drop out. `ProjectionVersion` 6. `SearchCatalogRequest.kinds` filter; the omnibar default excludes handle kinds. `SearchHit.member_count`; `WorkspaceLocation.entity_id`. |
+| **Out** | Header-built documents and dependents (S9-34); omnibar rows (S9-35). |
+| **Testable** | Kinds filter; omnibar default excludes; a name edit, join or merge updates the index; rebuild equals upkeep for handle documents. |
+| **Depends on** | S9-06 |
+
 #### S9-11 — Promote shell + choose target
+
+**Done.** See [`completed.md`](completed.md#s9-11--promote-shell--choose-target). Brief archived: [`design/archive/S9-D9-promote-target.md`](design/archive/S9-D9-promote-target.md). Promote is a workspace place (`SourceSurface.promote`, `PromoteView` / `PromoteModel` in `Features/Promote/`).
+- **The flow is a state machine:** `PromoteFlow` (`Features/Promote/PromoteFlow.swift`) is the single source of truth for steps, the draft, writes in flight, the leave guard and the walk. `PromoteModel` sends it events and runs the effects it returns. A new step is a case on `PromoteStep`, its screen, and its draft fields; it isn't new plumbing.
+- **S9-12:** add `.claim` to `PromoteStep.built`, its screen, and read `confidenceGradeID` / `argument` from `PromoteFlow.Draft` (already sent in the save). Grades come from `listClaimConfidenceGrades`. Restore the board's footer hints ("A new Person goes straight to its claim fields").
+- **S9-19:** add `.compare` to `PromoteStep.built` and its screen; confirmed pairs go on the draft. Restore the board's hint ("James Robins will be compared with the 2 members of PER-…").
+- **S9-29 / S9-30:** the walk is `PromoteFlow.enqueue` (a queue of subjects; after each save the flow moves to the next subject and `savedCount` counts them). Add the "Related to {ref}" group (frame 06), the "N saved" badge and the walk sentence in the leave guard.
+- **S9-32:** life years and places in the candidate rows (`PromoteCandidateRow`) and the search rows (`PromoteSearchRow`), both in `Features/Promote`.
 
 | | |
 | --- | --- |
 | **In** | Per **S9-D9**: the Promote place (or sheet) with step navigation and leave guard; choose target (new vs existing, suggestions). The card's Promote now opens it (replaces the S9-04 confirm). |
-| **Depends on** | **S9-D9**, S9-04, S9-10 |
+| **Depends on** | **S9-D9**, S9-04, S9-10, S9-34a |
 
 #### S9-12 — Promote claim fields + save
 
@@ -810,12 +834,14 @@ Researcher's decision while revising **S9-D1**: two configuration views get plai
 
 ### Slice 10 — Search
 
-#### S9-34 — Search kinds + reprojection
+#### S9-34 — Search documents from headers + dependents
+
+S9-34a shipped the kinds, cached-value documents, upkeep through `RecomputeTx`, the kinds filter and member counts. What remains here:
 
 | | |
 | --- | --- |
-| **In** | Registry kinds `person` / `event` / `place`; location mapping; documents from headers (match text only); reprojection of the handle and its header dependents in the write transaction (deletes feed it `Released.Handles`); `SearchHit` carries the structured header; `ProjectionVersion` bump; FakeStore. Existing hit rows render a fallback until S9-35. |
-| **Depends on** | S9-31 |
+| **In** | Documents from the header composers (match text only): "Birth of James Robins", a Person's life dates and places. Reproject a handle's header dependents in the write transaction (deletes feed it `Released.Handles`). `SearchHit` carries the structured header. `ProjectionVersion` bump; FakeStore. Existing hit rows render a fallback until S9-35. |
+| **Depends on** | S9-31, S9-34a |
 
 #### S9-35 — Omnibar Conclusion hits
 
@@ -857,7 +883,7 @@ Honesty pass against the [goal bar](#goal-dogfood-bar); ledger timings recorded;
 3. **The cache is not truth.** Nothing references `conclusion_resolved_values`; synthesized dates and merged names live only there, serialized. No claim, DateValue, or NameValue row is written by resolution ([`seeded-vocabulary.md`](../../seeded-vocabulary.md) §5.3).
 4. **No vocabulary-named columns** in any derived table. If a screen needs a new concept, it is a composer change or a `property_id` row — never a column.
 5. **Upkeep misses are silent.** A trigger the affected-handles function forgets leaves a stale row nobody notices. The rebuild-equals-upkeep test is the guard; every new write path adds its trigger and a test sequence.
-6. **Cascades bypass Go — so Go doesn't rely on them.** Every official delete calls `deleteimpact.ReleaseFacets`, which removes and audits claims, pins, notes, and connection facets before the parent `DELETE` and fails if anything is left for the `CASCADE` backstop. Its `Released.Handles` is how cache upkeep (S9-06) and handle search reprojection (S9-34) learn which handles a delete touched — computed before anything is gone. A new delete path gets this by calling `ReleaseFacets`, not by hand-wiring helpers.
+6. **Cascades bypass Go — so Go doesn't rely on them.** Every official delete calls `deleteimpact.ReleaseFacets`, which removes and audits claims, pins, notes, and connection facets before the parent `DELETE` and fails if anything is left for the `CASCADE` backstop. Its `Released.Handles` is how cache upkeep (S9-06) — and with it handle search reprojection (S9-34a) — learns which handles a delete touched — computed before anything is gone. A new delete path gets this by calling `ReleaseFacets`, not by hand-wiring helpers.
 7. **Promoting a subject can change other handles.** Its Observations' targets and inbound subject-valued Observations re-map; R3's claim trigger covers the second hop.
 8. **One accepted claim per Subject** is a partial unique index. Promote must hide or refuse subjects that are already members, and a step that loses a race fails alone — earlier steps stay saved.
 9. **Composite FKs** carry `subject_type_id` on the claim. A person Subject cannot be claimed onto a Place; the target picker filters by type so the researcher never sees that error.

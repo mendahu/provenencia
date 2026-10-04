@@ -128,4 +128,50 @@ struct SearchCatalogStoreTests {
         #expect(hits.first?.id == "src-1")
         #expect(hits.first?.matchReason == "ref")
     }
+
+    @Test func handleKindsSearchPersonsAndStayOutOfTheOmnibar() async throws {
+        let store = FakeStore()
+        store.subjectTypesByProject[projectDir] = [
+            CatalogSubjectType(
+                id: "type-person", key: "person", origin: "provenencia", label: "Person",
+                description: "", refPrefix: "PER", candidateRefPrefix: "CPR"
+            ),
+        ]
+        store.subjectsBySource["s1"] = [
+            CatalogSubject(id: "sub-1", ref: "CPR-1", sourceID: "s1", subjectTypeID: "type-person", label: "", description: ""),
+            CatalogSubject(id: "sub-2", ref: "CPR-2", sourceID: "s1", subjectTypeID: "type-person", label: "", description: ""),
+        ]
+        store.observationsBySource["s1"] = [
+            CatalogObservation(
+                id: "o1", ref: "OBS-1", citationID: "c1", subjectID: "sub-1", propertyID: "p-name",
+                polarity: "positive", valueText: "James Robins", valueInteger: nil, valueDateID: "",
+                valueNameID: "n-1", nameForm: "James Robins", valueSubjectID: "", valueTermID: "",
+                propertyKey: "name", propertyLabel: "Name", propertyValueType: "name"
+            ),
+        ]
+        let james = try await store.promoteSubject(projectDir: projectDir, userID: "u", subjectID: "sub-1")
+        _ = try await store.promoteSubject(
+            projectDir: projectDir, userID: "u", subjectID: "sub-2",
+            entityID: james.entity.id, confidenceGradeID: nil, argument: ""
+        )
+
+        let omnibar = try await store.searchCatalog(projectDir: projectDir, query: "Robins", location: .sectionRoot(.sources))
+        #expect(omnibar.isEmpty)
+
+        let hits = try await store.searchCatalog(
+            projectDir: projectDir, query: "Robins", location: .sectionRoot(.sources), kinds: ["person"]
+        )
+        #expect(hits.map(\.ref) == [james.entity.ref])
+        #expect(hits.first?.title == "James Robins")
+        #expect(hits.first?.memberCount == 2)
+        #expect(hits.first?.location == WorkspaceLocation(section: .persons, entityId: james.entity.id))
+    }
+
+    @Test func entityIdRoundTripsThroughTheEngineLocation() {
+        let location = WorkspaceLocation(section: .persons, entityId: "e-1", ref: "PER-1", title: "James")
+        var proto = Provenencia_Engine_V1_WorkspaceLocation()
+        proto.section = "persons"
+        proto.entityID = "e-1"
+        #expect(GoStore.mapWorkspaceLocationFromProto(proto) == location)
+    }
 }

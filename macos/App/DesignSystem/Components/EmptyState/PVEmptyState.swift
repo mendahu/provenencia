@@ -7,7 +7,7 @@ import SwiftUI
 /// pass `L10n.string(…)` for fixed copy.
 struct PVEmptyState<Action: View>: View {
     private let icon: PVSymbol
-    private let title: LocalizedStringResource?
+    private let title: Text?
     private let message: String?
     private let compact: Bool
     private let action: Action
@@ -20,7 +20,23 @@ struct PVEmptyState<Action: View>: View {
         @ViewBuilder action: () -> Action
     ) {
         self.icon = icon
-        self.title = title
+        self.title = title.map { Text($0) }
+        self.message = message
+        self.compact = compact
+        self.action = action()
+    }
+
+    /// A title already localized with runtime values ("No Person resembles
+    /// James Robins yet").
+    init(
+        icon: PVSymbol,
+        verbatimTitle: String,
+        message: String? = nil,
+        compact: Bool = false,
+        @ViewBuilder action: () -> Action
+    ) {
+        self.icon = icon
+        self.title = Text(verbatim: verbatimTitle)
         self.message = message
         self.compact = compact
         self.action = action()
@@ -31,7 +47,7 @@ struct PVEmptyState<Action: View>: View {
             PVIcon(icon, size: compact ? 20 : 26)
                 .foregroundStyle(PVColor.textFaint)
             if let title {
-                Text(title)
+                title
                     .font(PVFont.display(size: PVTypeScale.h3))
                     .foregroundStyle(PVColor.textDisplay)
             }
@@ -67,6 +83,12 @@ extension PVEmptyState where Action == EmptyView {
         compact: Bool = false
     ) {
         self.init(icon: icon, title: title, message: message, compact: compact) {
+            EmptyView()
+        }
+    }
+
+    init(icon: PVSymbol, verbatimTitle: String, message: String? = nil, compact: Bool = false) {
+        self.init(icon: icon, verbatimTitle: verbatimTitle, message: message, compact: compact) {
             EmptyView()
         }
     }

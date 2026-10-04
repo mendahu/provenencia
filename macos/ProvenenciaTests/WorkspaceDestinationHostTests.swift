@@ -29,6 +29,14 @@ struct WorkspaceDestinationHostTests {
         )
     }
 
+    @Test func presentationPromote() {
+        let location = WorkspaceLocation.promote(
+            sourceId: "src-1", subjectId: "sub-1", kind: .event, ref: "CEV-1", title: nil, sourceTitle: nil
+        )
+        #expect(presentation(for: location) == .sourcePromote)
+        #expect(WorkspaceDestinationHost.destinationKind(for: .sourcePromote) == .sources)
+    }
+
     @Test func presentationCitationComposer() {
         #expect(
             presentation(
@@ -144,6 +152,6 @@ struct WorkspaceDestinationHostTests {
             }
             #expect(known.contains(place.presentation))
         }
-        #expect(known.count == 11)
+        #expect(known.count == 12)
     }
 }

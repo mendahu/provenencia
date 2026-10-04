@@ -134,6 +134,8 @@ struct CatalogSearchHit: Sendable, Equatable, Identifiable {
     var thumbnailRelPath: String = ""
     /// Source-type icon key (type hits and Source type fallback).
     var iconKey: String = ""
+    /// Accepted members, for `person` / `event` / `place` hits.
+    var memberCount: Int = 0
 }
 
 struct CatalogSubjectType: Sendable, Equatable, Identifiable {
@@ -191,6 +193,8 @@ struct CatalogPromoteTargetSuggestion: Sendable, Equatable, Identifiable {
     var score: Double
     var reasons: [CatalogMatchReason]
     var person: CatalogPersonHeader?
+    /// Accepted members of the handle.
+    var memberCount: Int = 0
 
     var id: String { entity.id }
 }
@@ -748,11 +752,14 @@ protocol GenealogyStore: Sendable {
     /// One catalog open: sidebar / vocabulary-header totals for sources,
     /// types, and fields.
     func workspaceNavCounts(projectDir: String) async throws -> WorkspaceNavCounts
-    /// Omnibar catalog search (S3-07+). Empty / whitespace query → empty hits.
+    /// Catalog search (S3-07+). Empty / whitespace query → empty hits. `kinds`
+    /// restricts hits to those kinds; empty is the omnibar's default set, which
+    /// leaves out `person` / `event` / `place` until S9-35.
     func searchCatalog(
         projectDir: String,
         query: String,
-        location: WorkspaceLocation
+        location: WorkspaceLocation,
+        kinds: [String]
     ) async throws -> [CatalogSearchHit]
 
     func listSubjectTypes(projectDir: String) async throws -> [CatalogSubjectType]
@@ -966,5 +973,12 @@ extension GenealogyStore {
             confidenceGradeID: nil,
             argument: ""
         )
+    }
+}
+
+extension GenealogyStore {
+    /// Omnibar search: the default kind set.
+    func searchCatalog(projectDir: String, query: String, location: WorkspaceLocation) async throws -> [CatalogSearchHit] {
+        try await searchCatalog(projectDir: projectDir, query: query, location: location, kinds: [])
     }
 }

@@ -77,8 +77,9 @@ func ListPromoteTargetSuggestions(in []byte) ([]byte, error) {
 		}
 		for _, sg := range got {
 			ps := &engine.PromoteTargetSuggestion{
-				Entity: canonicalEntityProto(sg.Entity),
-				Score:  sg.Score,
+				Entity:      canonicalEntityProto(sg.Entity),
+				Score:       sg.Score,
+				MemberCount: int32(sg.MemberCount),
 			}
 			for _, r := range sg.Reasons {
 				ps.Reasons = append(ps.Reasons, &engine.MatchReason{

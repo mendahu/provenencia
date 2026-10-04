@@ -22,6 +22,9 @@ IDs stay stable (`S9-NN`, `S9-DN`). Do not renumber when moving steps here.
 | S9-D2 | Design | Persons list |
 | S9-09 | PR | Persons list |
 | S9-10 | PR | Promote write + reads: existing target |
+| S9-34a | PR | Handle search from cached values + kinds filter |
+| S9-D9 | Design | Promote shell + choose target |
+| S9-11 | PR | Promote shell + choose target |
 
 ## Steps
 
@@ -346,3 +349,102 @@ Promote can now file a Subject onto an existing handle, carry a confidence grade
 - Researcher-facing tuning, or profiles persisted per project
 - Blocking candidates through the R8 search index (**S9-34**)
 - The Promote flow, picker and claim fields (**S9-11**, **S9-12**)
+
+### S9-34a — Handle search from cached values + kinds filter
+
+Catalog search can now find Persons, Events and Places, on request. This was pulled forward from Slice 10 for the Promote picker (S9-11). The omnibar doesn't show these kinds yet; S9-35 designs their rows.
+
+**What shipped**
+
+- **Index:** `searchindex.ReprojectHandles` builds one document per unmerged handle from the resolved-values cache, at every rank:
+  - **Person:** rank-1 name as the title; other name groupings as secondary text.
+  - **Place:** rank-1 toponym as the title; other toponyms as secondary text.
+  - **Event:** the event-type term label as the title; other types and date years as secondary text.
+  - The working label, then the ref, are fallbacks. Values are data, not composed sentences.
+  - Merged handles drop out, and `RebuildAll` covers handles.
+  - `ProjectionVersion` 6.
+- **Upkeep:** a single hook. `resolvedvalues.RecomputeTx` reprojects the handles it rewrites, in the same transaction, so every write that changes a handle's values (promote mint or join, Observation writes, Subject delete) updates search. On open, the cache is ensured before the search index.
+- **Rebuild equals upkeep:** the cache's seeded sequences and scenarios now also compare handle search documents with a full rebuild.
+- **Engine:** kinds `person` / `event` / `place`, with `DefaultInEverything: false`. `Query.Kinds` filters candidates in SQL at every retrieval step (ref, full-text, typo shortlist). Locations go to `persons` / `events` / `places` with `entityId`, and `Hit.MemberCount` is filled in one query per page.
+- **Proto, FFI and Swift:**
+  - `SearchCatalogRequest.kinds`, `SearchHit.member_count`, `WorkspaceLocation.entity_id`.
+  - `searchCatalog(…, kinds:)` on the store; a protocol extension keeps the omnibar's call.
+  - `CatalogSearchHit.memberCount`.
+  - FakeStore searches handles by name, ref or label.
+
+**What stayed out**
+
+- Header-built documents ("Birth of James Robins", life dates and places) and header dependents (**S9-34**).
+- Omnibar rows for handle kinds (**S9-35**).
+- Event search is thin until the Event composer and `event_name` exist (**S9-20**, **S9-22**): it matches by type, year or ref.
+
+### S9-D9 — Design: Promote shell + choose target
+
+**Board:** Claude Design project *Promote flow* (`bc84685e-bbc3-4053-a5c9-0f5ac7a13ccd`), `Promote flow.dc.html`, frames 01–06.
+
+- **Shell decision (PT-7): a workspace place, not a sheet.** The walk (S9-D12) can run for many subjects, and compare (S9-D11) needs the page's width. A sheet would hold the graph hostage and cap the width at a dialog's. Promote follows the citation composer: it pushes onto history, the toolbar's Back returns to the graph, and the graph redraws with the subjects filed.
+- **The shell on every step:**
+  - the subject (ref, label, Source) in a header band in the kind's wash;
+  - step progress, composed from text and one chevron icon (no stepper component);
+  - Done;
+  - the leave guard.
+
+  Back and Done both ask first when the step holds an unsaved choice.
+- **Steps:** mint is Choose a Person → Claim fields; join is Choose a Person → Compare → Claim fields. The row grows when Existing is chosen.
+- **Choose target:**
+  - kit radios **New Person** / **Existing Person**, each with a description;
+  - Existing indents a kit ComboBox (person rows) and a **Suggested** group: section header with count and "Ranked by name, dates, place and event type";
+  - candidates are the D2 list row (tile, name, years, italic place · members line, trailing ref) with a leading radio;
+  - Next is disabled until a row or a search result is chosen;
+  - a failed search keeps the suggestions visible;
+  - no suggestions: a compact EmptyState in a dashed frame.
+- **Leave guard (frame 05):**
+  - kit Confirm, irreversible tone, cancel first;
+  - "Leave Promote without filing James Robins?" / "Leave Promote" / "Keep promoting";
+  - leaving with no choice, or right after a save, doesn't ask.
+- **During a walk (frame 06):** a "Related to PER-…" group comes first, a "1 saved" footer badge appears, and the header changes to the next subject. Ships with S9-29 / S9-30.
+
+Brief archived: [`design/archive/S9-D9-promote-target.md`](design/archive/S9-D9-promote-target.md).
+
+### S9-11 — Promote shell + choose target
+
+The graph card's Promote now opens the Promote place: choose a new or existing handle, then file the subject.
+
+**What shipped**
+
+- **Place:**
+  - `SourceSurface.promote`, `PlaceID` / presentation `sourcePromote`, and `WorkspaceLocation.promote(…)`. The subject's kind travels as `subjectTypeKey`.
+  - A registry spec at priority 120, keyed on `sourceGraph`, `sourcesList` and the new `promoteTargets(project:subjectId:)` (`listPromoteTargetSuggestions`, invalidated on `conclusionTriggers`).
+  - A host arm with a frozen `PromoteEntry` (fail-closed).
+  - Breadcrumbs `Sources › Evidence graph for {Source} › Promote {ref}`.
+  - A subject that is gone or already promoted returns to the graph.
+- **`Features/Promote`:**
+  - `PromoteView`: header band, step row and footer.
+  - `PromoteTargetStep`: radios, search, Suggested rows and the empty state.
+  - **`PromoteFlow`, the state machine:** a pure value and the single source of truth.
+    - It holds a queue of subjects (the walk), the current step and its plan (the steps the choice implies, as designed), the draft, and a phase: editing, saving (with any navigation held until the write lands), confirming leave, or finished.
+    - `send(event)` returns the effects to run: save, refresh after save, navigate to the graph, resume or cancel navigation.
+    - `requestLeave` answers the leave guard.
+    - Advancing skips steps that aren't built yet (`PromoteStep.built`), so later PRs add a step by building it.
+  - **`PromoteModel`:** sends events and runs effects (the write, `.promotedSubject`, counts refresh, navigation). It also holds the debounced search results, as view data rather than flow state.
+- **Kit:**
+  - `PVRadio` and `PVRadioMark`, ported from `PVRadio.jsx`.
+  - `PVComboBox` is content-agnostic: rows (`row`) and the empty line (`empty`, given the typed query) are caller-built views. The kit keeps only the generic plain row, and gains **remote results** (`onQueryChange`). Promote's search row (`PromoteSearchRow`) lives in the feature.
+  - `PVEmptyState(verbatimTitle:)`.
+  - `PVSymbol.userSearch`.
+- **Engine:** `PromoteTargetSuggestion.member_count`, for the "N members" line.
+- **Graph:**
+  - The card's Promote (pointer and VoiceOver) returns the Promote location.
+  - The S9-04 confirm, its `promoteConfirm*` / `promoteCancel` / `promoteFirstMember` strings, and `EvidenceGraphModel.catalogCounts` are removed.
+- **Copy:** `L10n.Promote`, with person / event / place variants.
+
+**Deviations from the board (interim)**
+
+- **Next files the claim straight away** (accepted, no confidence or argument), because the claim step (S9-12) and compare (S9-19) don't exist yet. The step row shows them as drawn. The footer hints say what happens now ("A new Person is filed when you press Next"; "James Robins will join PER-… and its 2 members") until those PRs restore the board's copy.
+- The leave guard leaves out the walk sentence until S9-30.
+- **Candidate rows:** no life years or place until S9-32. The line under the name shows only the member count.
+- Events and Places use the same flow with their own copy. Their candidates show label or ref until their header composers exist (S9-22, S9-25).
+
+**What stayed out**
+
+- Claim fields (**S9-12**), compare (**S9-19**), the walk and related-first ordering (**S9-29**, **S9-30**).

@@ -13,6 +13,7 @@ import (
 	"database/sql"
 	"errors"
 
+	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/conclusionheaders"
 	"github.com/mendahu/provenencia/core/database/matching"
@@ -27,6 +28,8 @@ type Suggestion struct {
 	Reasons []match.Reason
 	// Person is the list header when the handle is a Person.
 	Person *conclusionheaders.PersonHeader
+	// MemberCount is the handle's accepted members.
+	MemberCount int
 }
 
 // Suggest returns up to limit handles the Subject could join, best first;
@@ -73,17 +76,45 @@ func Suggest(q matching.Querier, subjectID []byte, limit int) ([]Suggestion, err
 		}
 	}
 
+	members, err := memberCounts(q, ids)
+	if err != nil {
+		return nil, err
+	}
+
 	out := make([]Suggestion, 0, len(res.Matches))
 	for _, m := range res.Matches {
 		e, ok := entities[string(m.EntityID)]
 		if !ok {
 			continue
 		}
-		s := Suggestion{Entity: e, Score: m.Score, Reasons: m.Reasons}
+		s := Suggestion{Entity: e, Score: m.Score, Reasons: m.Reasons, MemberCount: members[string(m.EntityID)]}
 		if h, ok := persons[string(m.EntityID)]; ok {
 			s.Person = &h
 		}
 		out = append(out, s)
 	}
 	return out, nil
+}
+
+// memberCounts is each handle's accepted claims, in one query.
+func memberCounts(q matching.Querier, ids [][]byte) (map[string]int, error) {
+	rows, err := q.Query(`SELECT entity_id, COUNT(*) FROM identity_claims
+		WHERE status = 'accepted' AND entity_id IN (`+database.SQLInPlaceholders(len(ids))+`)
+		GROUP BY entity_id`, database.BlobArgs(ids)...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := map[string]int{}
+	for rows.Next() {
+		var (
+			id []byte
+			n  int
+		)
+		if err := rows.Scan(&id, &n); err != nil {
+			return nil, err
+		}
+		out[string(id)] = n
+	}
+	return out, rows.Err()
 }

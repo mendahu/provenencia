@@ -208,16 +208,27 @@ struct PVComboBoxPlainRow: View {
 /// window never becomes key, so the text field keeps focus and keeps handling
 /// keys while the list is open.
 ///
+/// **Content is the caller's.** The box owns the field, the list window,
+/// keyboard and pointer, highlight and the row / empty-line chrome; what a row
+/// and the empty line *say* comes in through `row` and `empty`. The kit ships
+/// one generic row (`PVComboBoxPlainRow`: label + subtext) and a plain-text
+/// empty line (`emptyLabel` inits); anything domain-shaped — a person row, a
+/// type mark — is a feature view passed as `row`. It never grows row kinds.
+///
+/// **Remote results** (S9-11): set `onQueryChange` and the box stops
+/// filtering — the caller runs the search and passes the results as
+/// `options`, keeping the committed option among them so its label stays in
+/// the field.
+///
 /// **Not ported** (add here on demand, the way `PVSidebarNav` was): the
-/// multi-select token field, the "use what you typed" create row, the
-/// `person` row kind, and async `loading`. No call site needs them yet.
-struct PVComboBox<Row: View>: View {
+/// multi-select token field, the "use what you typed" create row, and async
+/// `loading`. No call site needs them yet.
+struct PVComboBox<Row: View, Empty: View>: View {
     /// The committed option's `value`; empty means nothing is chosen.
     @Binding var selection: String
     let options: [PVComboBoxOption]
     var size: PVControlSize = .md
     var placeholder: (any PVCopy)?
-    var emptyLabel: LocalizedStringResource
     var isInvalid: Bool = false
     var maxListHeight: CGFloat = 288
     /// Accessibility label for the field and its list — components never
@@ -229,7 +240,14 @@ struct PVComboBox<Row: View>: View {
     /// Default stays false so sheet first-responder (e.g. Add Source) does not
     /// pop the list on open.
     var activateOnAppear: Bool = false
+    /// Remote results: called with each typed query; the caller filters and
+    /// passes the results as `options`. Nil filters locally.
+    var onQueryChange: ((String) -> Void)?
+    /// One option's row content, given the typed query to highlight.
     @ViewBuilder var row: (PVComboBoxOption, String) -> Row
+    /// The list's line when no option shows, given the typed query (empty
+    /// when nothing is typed). The box sets its type and frame.
+    @ViewBuilder var empty: (String) -> Empty
 
     @State private var query = ""
     /// Whether the current text came from the keyboard rather than from
@@ -272,7 +290,8 @@ struct PVComboBox<Row: View>: View {
     }
 
     private var visibleOptions: [PVComboBoxOption] {
-        hasTypedQuery ? PVComboBoxMatch.filter(options, query: query) : options
+        guard onQueryChange == nil else { return options }
+        return hasTypedQuery ? PVComboBoxMatch.filter(options, query: query) : options
     }
 
     /// The query the rows highlight against — empty unless the user typed.
@@ -378,6 +397,7 @@ struct PVComboBox<Row: View>: View {
                 isDirty = true
                 isOpen = true
                 resetActiveRow()
+                onQueryChange?(typed)
             }
         )
     }
@@ -411,7 +431,7 @@ struct PVComboBox<Row: View>: View {
                 rowView(option, index: index).id(option.id)
             }
             if visibleOptions.isEmpty {
-                Text(emptyLabel)
+                empty(highlightQuery)
                     .font(PVFont.body(size: PVTypeScale.bodySmall, italic: true))
                     .foregroundStyle(PVColor.textMuted)
                     .fixedSize(horizontal: false, vertical: true)
@@ -607,8 +627,42 @@ struct PVComboBox<Row: View>: View {
     }
 }
 
-extension PVComboBox where Row == PVComboBoxPlainRow {
-    /// The `plain` row kind — label plus optional muted subtext.
+extension PVComboBox where Empty == Text {
+    /// Caller-built rows with a plain-text empty line.
+    init(
+        selection: Binding<String>,
+        options: [PVComboBoxOption],
+        size: PVControlSize = .md,
+        placeholder: (any PVCopy)? = nil,
+        emptyLabel: LocalizedStringResource,
+        isInvalid: Bool = false,
+        maxListHeight: CGFloat = 288,
+        label: any PVCopy,
+        accessibilityIdentifierPrefix: String? = nil,
+        activateOnAppear: Bool = false,
+        onQueryChange: ((String) -> Void)? = nil,
+        @ViewBuilder row: @escaping (PVComboBoxOption, String) -> Row
+    ) {
+        self.init(
+            selection: selection,
+            options: options,
+            size: size,
+            placeholder: placeholder,
+            isInvalid: isInvalid,
+            maxListHeight: maxListHeight,
+            label: label,
+            accessibilityIdentifierPrefix: accessibilityIdentifierPrefix,
+            activateOnAppear: activateOnAppear,
+            onQueryChange: onQueryChange,
+            row: row,
+            empty: { _ in Text(emptyLabel) }
+        )
+    }
+}
+
+extension PVComboBox where Row == PVComboBoxPlainRow, Empty == Text {
+    /// The generic row (label plus optional muted subtext) and a plain-text
+    /// empty line.
     init(
         selection: Binding<String>,
         options: [PVComboBoxOption],

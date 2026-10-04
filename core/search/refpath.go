@@ -30,7 +30,7 @@ func classifyRefQuery(text string) (key string, exact bool) {
 	return "", false
 }
 
-func lookUpRefDocs(ctx context.Context, db *sql.DB, key string, exact bool, limit int) ([]docRow, error) {
+func lookUpRefDocs(ctx context.Context, db *sql.DB, key string, exact bool, limit int, kinds []string) ([]docRow, error) {
 	if err := errIfCancelled(ctx); err != nil {
 		return nil, err
 	}
@@ -41,15 +41,16 @@ func lookUpRefDocs(ctx context.Context, db *sql.DB, key string, exact bool, limi
 		rows *sql.Rows
 		err  error
 	)
+	clause, kindArgs := kindClause("kind", kinds)
 	if exact {
 		rows, err = db.QueryContext(ctx, `
 			SELECT kind, entity_id, display_ref, display_title, display_subtitle,
 				display_icon_key, display_thumbnail_rel_path,
 				title, ref, secondary, body
 			FROM catalog_search_docs
-			WHERE upper(ref) = ?
+			WHERE upper(ref) = ?`+clause+`
 			LIMIT ?
-		`, key, limit)
+		`, append(append([]any{key}, kindArgs...), limit)...)
 	} else {
 		like := escapeLike(key) + "%"
 		rows, err = db.QueryContext(ctx, `
@@ -57,9 +58,9 @@ func lookUpRefDocs(ctx context.Context, db *sql.DB, key string, exact bool, limi
 				display_icon_key, display_thumbnail_rel_path,
 				title, ref, secondary, body
 			FROM catalog_search_docs
-			WHERE upper(ref) LIKE ? ESCAPE '\'
+			WHERE upper(ref) LIKE ? ESCAPE '\'`+clause+`
 			LIMIT ?
-		`, like, limit)
+		`, append(append([]any{like}, kindArgs...), limit)...)
 	}
 	if err != nil {
 		return nil, err

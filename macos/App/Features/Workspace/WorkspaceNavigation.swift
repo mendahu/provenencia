@@ -1,7 +1,7 @@
 import Foundation
 import Observation
 
-enum PendingNavigation: Equatable {
+enum PendingNavigation: Equatable, Sendable {
     case location(WorkspaceLocation)
     case back
     case forward

@@ -1,6 +1,8 @@
 // Package searchindex maintains catalog_search_docs / catalog_search_fts
 // / catalog_search_fts_trigram. Domain mutators call Reproject* in the same
 // transaction; core/search EnsureIndex rebuilds when projection_version lags.
+// Handle documents (handles.go) read the resolved-values cache, so the cache
+// must be current first: open ensures resolvedvalues before this index.
 package searchindex
 
 import (
@@ -22,7 +24,9 @@ const (
 
 // ProjectionVersion is the Go-side projector shape. Bump when rollup columns
 // or document layout change so Open heals old indexes.
-const ProjectionVersion = 5
+//
+//	6: Person, Event and Place handles (S9-34a).
+const ProjectionVersion = 6
 
 // Tagged body line prefixes for Source rollups (parsed by core/search for
 // match field codes + snippets).
@@ -398,6 +402,9 @@ func RebuildAll(q Querier) error {
 		if err := ReprojectSource(q, id); err != nil {
 			return err
 		}
+	}
+	if err := reprojectAllHandles(q); err != nil {
+		return err
 	}
 	return SetProjectionVersion(q, ProjectionVersion)
 }

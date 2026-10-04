@@ -30,8 +30,7 @@ struct EvidenceGraphView: View {
         sourceID: String,
         session: WorkspaceSession,
         store: any GenealogyStore,
-        userID: String,
-        catalogCounts: CatalogCounts? = nil
+        userID: String
     ) {
         self.sourceID = sourceID
         self.session = session
@@ -42,8 +41,7 @@ struct EvidenceGraphView: View {
                 sourceID: sourceID,
                 session: session,
                 store: store,
-                userID: userID,
-                catalogCounts: catalogCounts
+                userID: userID
             )
         )
     }
@@ -182,26 +180,6 @@ private struct EvidenceGraphContent: View {
                 navigation.go(to: location)
             }
         )
-        .pvConfirm(
-            item: $model.pendingPromote,
-            copy: { $0.confirmCopy },
-            tone: .irreversible,
-            isRunning: model.isPromoting,
-            accessibilityIdentifierPrefix: "evidenceGraph.promote",
-            onConfirm: {
-                Task { _ = await model.confirmPromote() }
-            }
-        ) { request in
-            VStack(alignment: .leading, spacing: PVSpacing.space4) {
-                PVConfirmKeyChip(
-                    label: L10n.EvidenceGraph.promoteFirstMember,
-                    value: request.ref
-                )
-                if let error = model.promoteError {
-                    PVCallout(tone: .danger, message: error)
-                }
-            }
-        }
     }
 
     private var accessibilityGraphLabel: Text {

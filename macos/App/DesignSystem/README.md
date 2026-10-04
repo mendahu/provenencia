@@ -169,7 +169,8 @@ red `Text`), plus `Badge`/`EmptyState`/`Callout` (added for the S2-02
 | Confirm | `Components/Confirm/PVConfirm.swift` (added for S2-22's delete confirmation; the macOS answer to `ConfirmDialog.jsx`, which the web spec says not to port — see "Confirmations are system chrome" below) |
 | Panel | `Components/Panel/PVPanel.swift` (sheet content shell: title / subtitle / body / optional footer; no window chrome) |
 | FormDialog | `Components/FormDialog/PVFormDialog.swift` (short create/edit form sheet on `PVPanel`; optional `width`, default 480 — see note below) |
-| ComboBox | `Components/ComboBox/PVComboBox.swift` (added for S2-16's assign-field control, where the pool is the whole Metadata vocabulary; single-select subset only — see "The combo box subset" below) |
+| ComboBox | `Components/ComboBox/PVComboBox.swift` (added for S2-16's assign-field control, where the pool is the whole Metadata vocabulary; single-select subset only — see "The combo box subset" below). The box is content-agnostic: rows (`row`) and the empty line (`empty`, given the typed query) are caller-built views; the kit ships only the generic `PVComboBoxPlainRow` (label + subtext) and a plain-text empty line, and never grows domain row kinds (the web kit's `person` row lives in features as their own `row`). S9-11 added **remote results**: `onQueryChange` hands each typed query to the caller, which passes back the search results as `options`, keeping the committed option among them |
+| Radio | `Components/Radio/PVRadio.swift` (`PVRadio` label + description, and the bare `PVRadioMark` for rows that are themselves the control; added for S9-11's Promote target choice) |
 | List | `Components/List/PVList.swift` (added for S9-09, ported from the kit's `PVList`: navigation rows — thumbnail slot, title, secondary line, trailing mono ref, chevron — as buttons, not selection; one focus stop with ↑/↓ · Home/End · Page Up/Down · Return/Space; `PVListSkeleton` for first load. The counterpart to Table) |
 | Thumbnail | `Components/Thumbnail/PVThumbnail.swift` (added for S2-17 Sources list rows; image / mark / SF glyph / empty / loading tile) |
 | Card | `Components/Card/PVCard.swift` (surface container: tone / border / radius / optional elevation + padding; mirrors web `Card.jsx`; no header/footer slots yet — compose those outside) |
@@ -187,7 +188,6 @@ demand, following the pattern above, when a screen needs one:
 | Tag | Core | Removable/interactive pill with a color dot |
 | Tooltip | Core | Hover label — on macOS this is usually SwiftUI's own `.help()`, which is what `PVIconButton` uses; port the web hover card only if a call site needs richer content |
 | Checkbox | Forms | Checkbox control |
-| Radio | Forms | Radio control |
 | Switch | Forms | Toggle switch |
 | Tabs | Navigation | Tab strip |
 | EvidenceBadge | Research | The 5-grade confidence marker (proven/probable/possible/disputed/undocumented) |

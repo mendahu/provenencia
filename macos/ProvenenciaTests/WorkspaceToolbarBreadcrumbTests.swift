@@ -116,4 +116,22 @@ struct WorkspaceToolbarBreadcrumbTests {
         #expect(wentTo?.sourceSurface == .graph)
         #expect(wentTo?.title == "Alderwick family bible")
     }
+
+    @Test func promoteIncludesNavigableEvidenceGraph() {
+        var wentTo: WorkspaceLocation?
+        let items = WorkspaceToolbar.breadcrumbItems(
+            for: .promote(
+                sourceId: "src-1", subjectId: "sub-1", kind: .person,
+                ref: "CPR-2AB91", title: "James Robins", sourceTitle: "1851 census"
+            ),
+            goTo: { wentTo = $0 }
+        )
+        #expect(items.count == 3)
+        #expect(items[1].label == L10n.Workspace.evidenceGraphFor(sourceTitle: "1851 census"))
+        #expect(items[2].label == L10n.Promote.breadcrumb(ref: "CPR-2AB91"))
+        #expect(items[2].action == nil)
+        items[1].action?()
+        #expect(wentTo?.sourceSurface == .graph)
+        #expect(wentTo?.sourceId == "src-1")
+    }
 }

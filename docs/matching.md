@@ -180,5 +180,5 @@ Worked examples:
   - a Feature in the profile;
   - the adapter putting those values into the probe and the candidates.
   Edge-derived values arrive with S9-28 / S9-29. Related-first ordering during a walk (S9-29) is a Feature or a boost, not a separate path.
-- **Blocking:** candidates are currently every handle of the type with a cached profile value, read in one query (constant query count, but linear rows). When catalogs outgrow that, narrow candidates in `loadCandidates` using the R8 search index (S9-34). Scoring does not change.
+- **Blocking:** candidates are currently every handle of the type with a cached profile value, read in one query (constant query count, but linear rows). When catalogs outgrow that, narrow candidates in `loadCandidates` using the handle search index (S9-34a: `catalog_search_docs` kinds `person` / `event` / `place`, kept current by the cache's upkeep). Scoring does not change.
 - **Merge hints:** `matching.ForEntity(handle)` ranks the other handles of the same type. A merge-hint surface needs only to shape that result.

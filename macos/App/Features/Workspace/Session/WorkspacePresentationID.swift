@@ -6,6 +6,7 @@ enum WorkspacePresentationID: Hashable, Sendable, CaseIterable {
     case sourcePage
     case sourceGraph
     case sourceCitationComposer
+    case sourcePromote
     case metadata
     case sourceTypes
     case properties

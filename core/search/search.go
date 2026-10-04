@@ -13,6 +13,11 @@ const (
 	KindSource        = "source"
 	KindSourceType    = "source_type"
 	KindMetadataField = "metadata_field"
+	// Conclusion handles (S9-34a). Not in the omnibar's default set until
+	// S9-35; callers ask for them with Query.Kinds.
+	KindPerson = "person"
+	KindEvent  = "event"
+	KindPlace  = "place"
 )
 
 // Section values match macOS WorkspaceSection raw values.
@@ -21,6 +26,9 @@ const (
 	SectionSourceTypes = "source-types"
 	SectionMetadata    = "metadata"
 	SectionFiles       = "files"
+	SectionPersons     = "persons"
+	SectionEvents      = "events"
+	SectionPlaces      = "places"
 )
 
 // DefaultHitLimit caps SearchCatalog responses.
@@ -41,6 +49,7 @@ type WorkspaceLocation struct {
 	ConnectBridgeTypeKey string
 	SubjectTypeKey       string
 	PropertyID           string
+	EntityID             string
 	SourceSurface        string
 	Ref                  string
 	Title                string
@@ -52,6 +61,9 @@ type Query struct {
 	Text     string
 	Location WorkspaceLocation
 	Limit    int
+	// Kinds restricts hits to these kinds. Empty means the omnibar's default
+	// set (KindSpec.DefaultInEverything). Unknown kinds are ignored.
+	Kinds []string
 }
 
 // Hit is one navigable search result.
@@ -66,6 +78,7 @@ type Hit struct {
 	Location         WorkspaceLocation
 	ThumbnailRelPath string  // Source cover when a derivative already exists
 	IconKey          string  // Type icon (source type, or source's type)
+	MemberCount      int     // accepted members, for handle kinds
 	Score            float64 // internal; not exposed on the wire
 }
 

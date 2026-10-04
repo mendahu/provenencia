@@ -124,6 +124,9 @@ func TestSuggestPersons(t *testing.T) {
 	if string(top.Entity.ID) != string(exact.Entity.ID) || top.Score != 10 {
 		t.Fatalf("%+v", top)
 	}
+	if top.MemberCount != 1 {
+		t.Fatalf("members %d", top.MemberCount)
+	}
 	if len(top.Reasons) != 1 || top.Reasons[0].Property.Key != "name" || top.Reasons[0].Similarity != 1 {
 		t.Fatalf("reasons %+v", top.Reasons)
 	}

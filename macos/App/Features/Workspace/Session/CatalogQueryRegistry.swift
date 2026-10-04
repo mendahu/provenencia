@@ -137,6 +137,11 @@ struct CatalogQueryRegistry: Sendable {
             stalePolicy: .sessionFresh,
             invalidateOn: CatalogQueryRegistry.conclusionTriggers
         ),
+        Spec(
+            kind: .promoteTargets,
+            stalePolicy: .sessionFresh,
+            invalidateOn: CatalogQueryRegistry.conclusionTriggers
+        ),
     ]
 
     func stalePolicy(for key: CatalogQueryKey) -> CatalogQueryStalePolicy {
@@ -209,6 +214,12 @@ struct CatalogQueryRegistry: Sendable {
             return try await store.getPropertiesWorkspace(projectDir: project.projectDir)
         case .personsList(let project):
             return try await store.listPersonHeaders(projectDir: project.projectDir)
+        case .promoteTargets(let project, let subjectId):
+            return try await store.listPromoteTargetSuggestions(
+                projectDir: project.projectDir,
+                subjectID: subjectId,
+                limit: 0
+            )
         }
     }
 
@@ -284,6 +295,8 @@ private extension CatalogQueryKey.Kind {
             return .key(.sourceGraphProgress(project: project))
         case .personsList:
             return .key(.personsList(project: project))
+        case .promoteTargets:
+            return .allCached(.promoteTargets)
         }
     }
 }

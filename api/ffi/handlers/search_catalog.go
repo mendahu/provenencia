@@ -18,6 +18,7 @@ func SearchCatalog(in []byte) ([]byte, error) {
 		Text:     req.GetQuery(),
 		Location: locationFromProto(req.GetLocation()),
 		Limit:    search.DefaultHitLimit,
+		Kinds:    req.GetKinds(),
 	}
 	var out *engine.SearchCatalogResponse
 	err := withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
@@ -56,6 +57,7 @@ func locationFromProto(loc *engine.WorkspaceLocation) search.WorkspaceLocation {
 		ConnectBridgeTypeKey: loc.GetConnectBridgeTypeKey(),
 		SubjectTypeKey:       loc.GetSubjectTypeKey(),
 		PropertyID:           loc.GetPropertyId(),
+		EntityID:             loc.GetEntityId(),
 		SourceSurface:        loc.GetSourceSurface(),
 		Ref:                  loc.GetRef(),
 		Title:                loc.GetTitle(),
@@ -78,6 +80,7 @@ func locationToProto(loc search.WorkspaceLocation) *engine.WorkspaceLocation {
 		ConnectBridgeTypeKey: loc.ConnectBridgeTypeKey,
 		SubjectTypeKey:       loc.SubjectTypeKey,
 		PropertyId:           loc.PropertyID,
+		EntityId:             loc.EntityID,
 		SourceSurface:        loc.SourceSurface,
 		Ref:                  loc.Ref,
 		Title:                loc.Title,
@@ -97,5 +100,6 @@ func hitToProto(h search.Hit) *engine.SearchHit {
 		Location:         locationToProto(h.Location),
 		ThumbnailRelPath: h.ThumbnailRelPath,
 		IconKey:          h.IconKey,
+		MemberCount:      int32(h.MemberCount),
 	}
 }

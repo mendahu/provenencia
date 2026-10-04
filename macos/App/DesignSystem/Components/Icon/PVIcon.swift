@@ -38,6 +38,8 @@ enum PVSymbol: String {
     case sidebarToggle = "sidebar.left"
     case search = "magnifyingglass"
     case searchEmpty = "text.magnifyingglass"
+    /// Design-system `user-search`: no person found yet.
+    case userSearch = "person.crop.circle.badge.questionmark"
     case zoomOut = "minus.magnifyingglass"
     case zoomIn = "plus.magnifyingglass"
     case plus = "plus"

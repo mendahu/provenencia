@@ -149,7 +149,7 @@ struct EvidenceGraphModelTests {
         )
     }
 
-    private func makeModel(store: FakeStore, catalogCounts: CatalogCounts? = nil) -> EvidenceGraphModel {
+    private func makeModel(store: FakeStore) -> EvidenceGraphModel {
         let session = WorkspaceSession(
             projectKey: ProjectKey(projectDir: projectDir),
             store: store
@@ -158,8 +158,7 @@ struct EvidenceGraphModelTests {
             sourceID: sourceID,
             session: session,
             store: store,
-            userID: "user-1",
-            catalogCounts: catalogCounts
+            userID: "user-1"
         )
     }
 
@@ -1384,20 +1383,15 @@ struct EvidenceGraphModelTests {
 
     // MARK: Promote (S9-04)
 
-    private func promotableModel(
-        storeHasSubject: Bool = true,
-        counts: ((FakeStore) -> CatalogCounts)? = nil
-    ) async -> (FakeStore, EvidenceGraphModel) {
+    private func promotableModel() async -> (FakeStore, EvidenceGraphModel) {
         let store = makeStore()
         let subject = CatalogSubject(
             id: "s-james", ref: "CPR-2AB91", sourceID: sourceID, subjectTypeID: personTypeID,
             label: "James Robins", description: ""
         )
-        if storeHasSubject {
-            store.subjectsBySource[sourceID] = [subject]
-        }
+        store.subjectsBySource[sourceID] = [subject]
         store.subjectPositionsBySubject["s-james"] = CatalogSubjectPosition(subjectID: "s-james", gridX: 1, gridY: 1)
-        let model = makeModel(store: store, catalogCounts: counts?(store))
+        let model = makeModel(store: store)
         await model.prepare()
         model.session.setQueryValue(
             CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID),
@@ -1410,17 +1404,26 @@ struct EvidenceGraphModelTests {
         return (store, model)
     }
 
-    @Test func promoteActionOpensConfirmNamingSubjectAndHandleKind() async {
+    /// The card's Promote opens the Promote place (S9-11) and writes nothing.
+    @Test func promoteActionReturnsThePromoteLocation() async {
         let (store, model) = await promotableModel()
         store.recordedCalls = []
         let location = model.performCardAction(subjectID: "s-james", actionID: EvidenceSubjectCard.promoteActionID)
-        #expect(location == nil)
-        #expect(model.pendingPromote == EvidenceGraphModel.PromoteRequest(
-            id: "s-james", ref: "CPR-2AB91", label: "James Robins", kind: .person, handleRefPrefix: "PER"
-        ))
-        // Opening the confirm writes nothing; Cancel is just clearing the item.
-        model.pendingPromote = nil
+        #expect(location?.section == .sources)
+        #expect(location?.sourceSurface == .promote)
+        #expect(location?.sourceId == sourceID)
+        #expect(location?.subjectId == "s-james")
+        #expect(location?.subjectTypeKey == "person")
+        #expect(location?.ref == "CPR-2AB91")
+        #expect(location?.title == "James Robins")
+        #expect(location.flatMap(PromoteEntry.init(location:))?.kind == .person)
         #expect(!store.recordedCalls.contains { $0.hasPrefix("promoteSubject") })
+    }
+
+    /// Files s-james the way the Promote place does: write, then invalidate.
+    private func promoteJames(_ store: FakeStore, _ model: EvidenceGraphModel) async throws {
+        _ = try await store.promoteSubject(projectDir: projectDir, userID: "user-1", subjectID: "s-james")
+        model.session.apply(.promotedSubject(sourceId: sourceID))
     }
 
     /// A promoted person's membership row opens its Person page (S9-09 stub)
@@ -1436,8 +1439,7 @@ struct EvidenceGraphModelTests {
             ),
         ]
         #expect(model.openHandle(subjectID: "s-james") == nil)
-        model.beginPromote(subjectID: "s-james")
-        #expect(await model.confirmPromote())
+        try? await promoteJames(store, model)
         let key = CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID)
         let loaded = await waitUntil {
             let handle: QueryHandle<SourceGraphRows>? = model.session.queryHandle(key)
@@ -1455,28 +1457,9 @@ struct EvidenceGraphModelTests {
         #expect(location?.title == "James Robins")
     }
 
-    /// The sidebar's Conclude counts are recounted after a Promote (S9-08).
-    @Test func confirmPromoteRefreshesSidebarCounts() async {
-        var counts: CatalogCounts?
-        let (_, model) = await promotableModel(counts: { store in
-            let made = CatalogCounts(projectDir: projectDir, store: store)
-            counts = made
-            return made
-        })
-        await counts?.refreshAll()
-        #expect(counts?.persons == 0)
-        model.beginPromote(subjectID: "s-james")
-        #expect(await model.confirmPromote())
-        #expect(counts?.persons == 1)
-    }
-
-    @Test func confirmPromoteMintsAndReloadsGraphWithMembership() async {
+    @Test func promotedCardShowsMembershipAndNoLongerOffersPromote() async throws {
         let (store, model) = await promotableModel()
-        model.beginPromote(subjectID: "s-james")
-        let ok = await model.confirmPromote()
-        #expect(ok)
-        #expect(model.pendingPromote == nil)
-        #expect(store.recordedCalls.contains("promoteSubject id=s-james"))
+        try await promoteJames(store, model)
         let key = CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID)
         let reloaded = await waitUntil {
             let handle: QueryHandle<SourceGraphRows>? = model.session.queryHandle(key)
@@ -1494,24 +1477,11 @@ struct EvidenceGraphModelTests {
         let ids = card.map { EvidenceSubjectCard.actionTargets(for: $0, canCite: true).map(\.id) } ?? []
         #expect(ids.contains(EvidenceSubjectCard.openHandleActionID))
         // Promote is not offered again.
-        model.beginPromote(subjectID: "s-james")
-        #expect(model.pendingPromote == nil)
-    }
-
-    @Test func promoteFailureKeepsConfirmOpenWithError() async {
-        // The graph shows a subject the store no longer has, so the write fails.
-        let (_, model) = await promotableModel(storeHasSubject: false)
-        model.beginPromote(subjectID: "s-james")
-        let ok = await model.confirmPromote()
-        #expect(!ok)
-        #expect(model.pendingPromote?.id == "s-james")
-        #expect(model.promoteError?.isEmpty == false)
-        #expect(model.isPromoting == false)
+        #expect(model.promoteLocation(for: "s-james") == nil)
     }
 
     @Test func openHandleHasNoPageYet() async {
         let (_, model) = await promotableModel()
         #expect(model.performCardAction(subjectID: "s-james", actionID: EvidenceSubjectCard.openHandleActionID) == nil)
-        #expect(model.pendingPromote == nil)
     }
 }

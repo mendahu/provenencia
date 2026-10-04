@@ -119,6 +119,15 @@ struct PlaceRegistryTests {
     @Test func queryKeysMatchDesignTable() {
         let cases: [(WorkspaceLocation, PlaceID, [CatalogQueryKey])] = [
             (
+                .promote(sourceId: "s1", subjectId: "sub-1", kind: .person, ref: "CPR-1", title: "James", sourceTitle: nil),
+                .sourcePromote,
+                [
+                    .sourceGraph(project: project, sourceId: "s1"),
+                    .sourcesList(project: project),
+                    .promoteTargets(project: project, subjectId: "sub-1"),
+                ]
+            ),
+            (
                 .sectionRoot(.sources),
                 .sourcesList,
                 [
@@ -213,6 +222,8 @@ struct PlaceRegistryTests {
                     subjectId: "sub-1",
                     sourceSurface: .citationComposer
                 )
+            case .sourcePromote:
+                .promote(sourceId: "s1", subjectId: "sub-1", kind: .person, ref: "CPR-1", title: nil, sourceTitle: nil)
             case .metadata: .sectionRoot(.metadata)
             case .sourceTypes: .sectionRoot(.sourceTypes)
             case .sourceTypesDetail: WorkspaceLocation(section: .sourceTypes, typeId: "t1")
@@ -226,6 +237,11 @@ struct PlaceRegistryTests {
             #expect(place?.placeID == id)
             #expect(place != nil)
         }
+    }
+
+    @Test func promoteWithoutSubjectFallsBackToTheSourcePage() {
+        let location = WorkspaceLocation(section: .sources, sourceId: "s1", sourceSurface: .promote)
+        #expect(resolve(location)?.placeID != .sourcePromote)
     }
 
     @Test func conclusionStubsResolveWithNoQueryKeys() {
