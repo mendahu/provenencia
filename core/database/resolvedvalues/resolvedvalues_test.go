@@ -123,6 +123,12 @@ func (f *fixture) promote(s subjects.Subject) []byte {
 	return res.Entity.ID
 }
 
+func (f *fixture) join(s subjects.Subject, entityID []byte) {
+	f.t.Helper()
+	_, err := promote.Save(f.c, userID, promote.Input{SubjectID: s.ID, EntityID: entityID})
+	must(f.t, err)
+}
+
 func nameIn(s subjects.Subject, p properties.Property, form string) observations.Input {
 	return observations.Input{SubjectID: s.ID, PropertyID: p.ID, Name: &namevalues.Value{Form: form}}
 }
@@ -410,6 +416,21 @@ func TestRebuildEqualsUpkeep_Scenarios(t *testing.T) {
 				f.t.Fatal("York / york should be two clusters")
 			}
 		}},
+		{"joining a second member merges its name, then disagrees", func(f *fixture) {
+			a, b := f.subject("person"), f.subject("person")
+			f.cite(nameIn(a, f.props["name"], "James Robins"), nameIn(b, f.props["name"], "james robins"))
+			h := f.promote(a)
+			f.join(b, h)
+			f.assertUpkeepEqualsRebuild("after join")
+			names := rowsFor(f.rows(), h, f.props["name"].ID)
+			if len(names) != 1 || names[0].Support != 2 {
+				f.t.Fatalf("join should merge the names into one cluster of 2: %+v", names)
+			}
+			f.cite(nameIn(b, f.props["name"], "Jim Robins"))
+			if len(rowsFor(f.rows(), h, f.props["name"].ID)) != 2 {
+				f.t.Fatal("a member's new name should add a cluster")
+			}
+		}},
 		{"emptied member subject deleted", func(f *fixture) {
 			p := f.subject("event")
 			obs := f.cite(dateIn(p, f.props["date"], 1985, ip(5), nil))
@@ -434,6 +455,8 @@ func TestRebuildEqualsUpkeep_SeededSequences(t *testing.T) {
 			rng := rand.New(rand.NewSource(seed))
 			var subs []subjects.Subject
 			var obs []observations.Observation
+			handles := map[string][][]byte{}
+			joins := 0
 			kinds := []string{"person", "person", "event", "place"}
 			names := []string{"James Robins", "james robins", "Jim Robins", "J. Robins", "Mary Smith"}
 			toponyms := []string{"York", "york", "Upper Canada", "Toronto"}
@@ -478,8 +501,20 @@ func TestRebuildEqualsUpkeep_SeededSequences(t *testing.T) {
 					s := subs[rng.Intn(len(subs))]
 					obs = append(obs, f.cite(value(s), value(s))...)
 				case op < 6:
-					_, err := promote.Save(f.c, userID, promote.Input{SubjectID: subs[rng.Intn(len(subs))].ID})
+					// Mint, or join a handle of the Subject's kind already minted.
+					s := subs[rng.Intn(len(subs))]
+					in := promote.Input{SubjectID: s.ID}
+					if same := handles[kindOf(f, s)]; len(same) > 0 && rng.Intn(2) == 0 {
+						in.EntityID = same[rng.Intn(len(same))]
+					}
+					res, err := promote.Save(f.c, userID, in)
 					tolerate(err)
+					switch {
+					case err == nil && in.EntityID == nil:
+						handles[kindOf(f, s)] = append(handles[kindOf(f, s)], res.Entity.ID)
+					case err == nil:
+						joins++
+					}
 				case op < 8 && len(obs) > 0:
 					i := rng.Intn(len(obs))
 					s := subjectByID(subs, obs[i].SubjectID)
@@ -508,6 +543,9 @@ func TestRebuildEqualsUpkeep_SeededSequences(t *testing.T) {
 			}
 			if len(f.rows()) == 0 {
 				t.Fatal("sequence never cached anything; the test is not exercising upkeep")
+			}
+			if joins == 0 {
+				t.Fatal("sequence never joined an existing handle")
 			}
 		})
 	}
