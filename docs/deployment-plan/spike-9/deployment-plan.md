@@ -647,7 +647,7 @@ Researcher's decision while revising **S9-D1**: two configuration views get plai
 - **S9-12:** insert the claim step before the save in `PromoteModel.next()`. Grades come from `listClaimConfidenceGrades`; pass `confidenceGradeID` and `argument`. Restore the board's footer hints ("A new Person goes straight to its claim fields").
 - **S9-19:** the join path gets Compare between choosing and claiming. Restore the board's hint ("James Robins will be compared with the 2 members of PER-…"). The step row already shows Compare.
 - **S9-29 / S9-30:** the walk. Add a "Related to {ref}" group above Suggested (frame 06), the "N saved" footer badge, and the walk sentence in the leave guard; the next subject's header replaces this one in the same place.
-- **S9-32:** life years and places in the candidate rows and the search's person rows (`PVComboBoxOption.detail`).
+- **S9-32:** life years and places in the candidate rows (`PromoteCandidateRow`) and the search rows (`PromoteSearchRow`), both in `Features/Promote`.
 
 | | |
 | --- | --- |

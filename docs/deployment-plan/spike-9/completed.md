@@ -428,7 +428,7 @@ The graph card's Promote now opens the Promote place: choose a new or existing h
     - the `WorkspaceLeaveGuard`.
 - **Kit:**
   - `PVRadio` and `PVRadioMark`, ported from `PVRadio.jsx`.
-  - `PVComboBox` gains the person row kind and **remote results** (`onQueryChange`, `emptyText`).
+  - `PVComboBox` is content-agnostic: rows (`row`) and the empty line (`empty`, given the typed query) are caller-built views. The kit keeps only the generic plain row, and gains **remote results** (`onQueryChange`). Promote's search row (`PromoteSearchRow`) lives in the feature.
   - `PVEmptyState(verbatimTitle:)`.
   - `PVSymbol.userSearch`.
 - **Engine:** `PromoteTargetSuggestion.member_count`, for the "N members" line.

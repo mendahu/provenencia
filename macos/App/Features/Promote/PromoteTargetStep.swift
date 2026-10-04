@@ -61,12 +61,41 @@ struct PromoteTargetStep: View {
             ),
             options: model.searchOptions,
             placeholder: L10n.Promote.searchPlaceholder(kind),
-            emptyLabel: L10n.Promote.searchPrompt(kind),
             label: L10n.Promote.searchLabel(kind),
             accessibilityIdentifierPrefix: "promote.search",
             onQueryChange: { model.updateQuery($0) },
-            emptyText: { L10n.Promote.searchNoMatch(kind, query: $0) }
+            row: { option, query in
+                PromoteSearchRow(option: option, query: query)
+            },
+            empty: { query in
+                if query.isEmpty {
+                    Text(L10n.Promote.searchPrompt(kind))
+                } else {
+                    Text(verbatim: L10n.Promote.searchNoMatch(kind, query: query))
+                }
+            }
         )
+    }
+}
+
+/// A search result in the Promote picker: the handle's name, with its ref on
+/// the line under it. Life years and places join the name line with S9-32.
+private struct PromoteSearchRow: View {
+    let option: PVComboBoxOption
+    let query: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 1) {
+            Text(PVComboBoxHighlight.attributed(option.label, query: query))
+                .font(PVFont.body(size: PVTypeScale.bodySmall))
+                .foregroundStyle(PVColor.textPrimary)
+                .lineLimit(1)
+            Text(verbatim: option.subtext)
+                .font(PVFont.mono(size: PVTypeScale.micro))
+                .foregroundStyle(PVColor.textMuted)
+                .lineLimit(1)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
