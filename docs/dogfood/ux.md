@@ -19,6 +19,13 @@ Copy the stub. Surface + what got in the way is enough. A wanted fix is optional
 
 <!-- add below this line -->
 
+### Omnibar ranks fuzzy name matches above exact title words
+
+- **Date:** 2026-10-04
+- **Where:** Omnibar search
+- **Annoyance:** Searched `marriage` expecting a marriage certificate and a newspaper marriage announcement. Both have "marriage" in the title. They landed at the bottom of the results, under obituaries and memorials for someone named **Marion Margaret**. Looks like the shared leading "Mar…" on both names stacked up and beat the real hits. That feels like a bug: I typed the whole word, so an exact word match in a title should win.
+- **Wanted:** A whole-word or exact title match always ranks above fuzzy or prefix matches. Partial matches on several tokens (Marion + Margaret) should not add up to more than one exact hit.
+
 ### Dense Evidence graphs (census-scale)
 
 - **Date:** 2026-09-24
