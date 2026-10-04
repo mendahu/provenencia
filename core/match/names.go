@@ -98,16 +98,16 @@ func (c NameComparer) nameWords(n *namevalues.Value) (words []nameWord, generati
 func (c NameComparer) weight(role NameRole, firstGiven bool) float64 {
 	switch role {
 	case RoleFamily:
-		return orDefault(c.FamilyWeight, defaultFamilyWeight)
+		return setting(c.FamilyWeight, defaultFamilyWeight)
 	case RoleGiven:
 		if firstGiven {
-			return orDefault(c.FirstGivenWeight, defaultFirstGivenWeight)
+			return setting(c.FirstGivenWeight, defaultFirstGivenWeight)
 		}
-		return orDefault(c.OtherGivenWeight, defaultOtherGivenWeight)
+		return setting(c.OtherGivenWeight, defaultOtherGivenWeight)
 	case RoleNick:
-		return orDefault(c.NickWeight, defaultNickWeight)
+		return setting(c.NickWeight, defaultNickWeight)
 	}
-	return orDefault(c.UntypedWeight, defaultUntypedWeight)
+	return setting(c.UntypedWeight, defaultUntypedWeight)
 }
 
 // affinity is how far two words' roles agree: 1 for the same role, less when
@@ -117,11 +117,11 @@ func (c NameComparer) affinity(a, b NameRole) float64 {
 	case a == b:
 		return 1
 	case a == RoleUntyped || b == RoleUntyped:
-		return orDefault(c.UntypedAffinity, defaultUntypedAffinity)
+		return setting(c.UntypedAffinity, defaultUntypedAffinity)
 	case (a == RoleNick && b == RoleGiven) || (a == RoleGiven && b == RoleNick):
-		return orDefault(c.NickAffinity, defaultNickAffinity)
+		return setting(c.NickAffinity, defaultNickAffinity)
 	}
-	return orDefault(c.CrossRole, defaultCrossRole)
+	return setting(c.CrossRole, defaultCrossRole)
 }
 
 func splitWords(s string) []string {
@@ -148,7 +148,7 @@ func splitWords(s string) []string {
 //   - When both carry generation words (Jr., Sr.) and share none, the score
 //     is scaled by SuffixConflict: likely father and son.
 func (c NameComparer) compareNames(a, b *namevalues.Value) (float64, bool) {
-	floor := orDefault(c.FuzzyFloor, defaultFuzzyFloor)
+	floor := setting(c.FuzzyFloor, defaultFuzzyFloor)
 	wa, ga := c.nameWords(a)
 	wb, gb := c.nameWords(b)
 	if len(wa) == 0 || len(wb) == 0 {
@@ -172,37 +172,40 @@ func (c NameComparer) compareNames(a, b *namevalues.Value) (float64, bool) {
 		total += w.weight
 	}
 	s := bestPairing(earned) / total
-	if familyConflict(wa, wb, sim) {
-		s *= orDefault(c.GivenOnlyFactor, defaultGivenOnlyFactor)
+	if familyConflict(wa, wb, floor) {
+		s *= setting(c.GivenOnlyFactor, defaultGivenOnlyFactor)
 	}
 	if len(ga) > 0 && len(gb) > 0 && !sharesAny(ga, gb) {
-		s *= orDefault(c.SuffixConflict, defaultSuffixConflict)
+		s *= setting(c.SuffixConflict, defaultSuffixConflict)
 	}
 	return math.Min(s, 1), true
 }
 
 // familyConflict: both names have family words, and no family word on
-// either side resembles any word of the other name.
-func familyConflict(wa, wb []nameWord, sim [][]float64) bool {
-	var hasA, hasB bool
-	for i, x := range wa {
-		if x.role != RoleFamily {
-			continue
+// either side resembles any word of the other name. An initial does not count
+// as resembling here ("S." says nothing about "Smith").
+func familyConflict(wa, wb []nameWord, floor float64) bool {
+	resembles := func(f nameWord, others []nameWord) bool {
+		for _, o := range others {
+			if wordSimilarity(f.text, o.text, floor, false) > 0 {
+				return true
+			}
 		}
-		hasA = true
-		for j := range wb {
-			if sim[i][j] > 0 {
+		return false
+	}
+	var hasA, hasB bool
+	for _, x := range wa {
+		if x.role == RoleFamily {
+			hasA = true
+			if resembles(x, wb) {
 				return false
 			}
 		}
 	}
-	for j, y := range wb {
-		if y.role != RoleFamily {
-			continue
-		}
-		hasB = true
-		for i := range wa {
-			if sim[i][j] > 0 {
+	for _, y := range wb {
+		if y.role == RoleFamily {
+			hasB = true
+			if resembles(y, wa) {
 				return false
 			}
 		}

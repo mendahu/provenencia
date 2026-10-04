@@ -1221,8 +1221,9 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         }
     }
 
-    /// A stand-in for core/match's person profile, close enough for UI tests: the
-    /// same case-folded name scores 10; a shared word of two or more letters scores 4.
+    /// A stand-in for core/match's person profile on written names (untyped words),
+    /// close enough for UI tests: the same folded name scores 10; a shared word of two
+    /// or more letters scores 5, as "Mary Robins" ~ "James Robins" does in Go.
     func listPromoteTargetSuggestions(
         projectDir: String,
         subjectID: String,
@@ -1243,7 +1244,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 if names.contains(name) {
                     similarity = 1
                 } else if !words.isDisjoint(with: Self.nameWords(name)) {
-                    similarity = 0.4
+                    similarity = 0.5
                 } else {
                     return nil
                 }
@@ -1262,10 +1263,14 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         }
     }
 
+    /// Mirrors resolve.NormalizeForm: dashes and slashes separate words; other
+    /// punctuation is dropped.
     private static func foldName(_ form: String) -> String {
-        form.lowercased()
+        let spaced = String(form.lowercased().map { "-–—/".contains($0) ? " " : $0 })
+        return spaced
             .filter { !$0.isPunctuation }
             .split(whereSeparator: \.isWhitespace)
+            .map(String.init)
             .joined(separator: " ")
     }
 

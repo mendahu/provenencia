@@ -248,12 +248,18 @@ func SortKey(valueType string, v Value) (key string, ok bool) {
 }
 
 // NormalizeForm ignores case, punctuation, and whitespace differences: the
-// name cluster key and sort key, and the text core/match tokenizes.
+// name cluster key and sort key, and the text core/match tokenizes. Dashes
+// and slashes separate words ("Smith-Jones" reads as "smith jones"); other
+// punctuation is dropped, so an apostrophe joins ("O'Brien" reads as
+// "obrien", the same as "OBrien").
 func NormalizeForm(form string) string {
 	var b strings.Builder
 	space := false
 	for _, r := range form {
 		switch {
+		case unicode.Is(unicode.Pd, r) || r == '/':
+			space = b.Len() > 0
+			continue
 		case unicode.IsPunct(r):
 			continue
 		case unicode.IsSpace(r):

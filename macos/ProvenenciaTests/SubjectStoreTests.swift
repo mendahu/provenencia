@@ -174,7 +174,7 @@ struct SubjectStoreTests {
         let me = try #require(subjects["me"])
         let got = try await store.listPromoteTargetSuggestions(projectDir: projectDir, subjectID: me, limit: 0)
         #expect(got.map(\.entity.ref) == [refs["exact"], refs["shared"]])
-        #expect(got.map(\.score) == [10, 4])
+        #expect(got.map(\.score) == [10, 5])
         #expect(got[0].person?.name?.form == "James Robins")
         #expect(got[0].reasons.map(\.propertyKey) == ["name"])
         let one = try await store.listPromoteTargetSuggestions(projectDir: projectDir, subjectID: me, limit: 1)

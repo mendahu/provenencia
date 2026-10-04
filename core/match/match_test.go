@@ -18,6 +18,14 @@ func approx(near float64) func(float64) bool {
 	return func(got float64) bool { return math.Abs(got-near) < 1e-9 }
 }
 
+func span(lo, hi *int) Value {
+	return Value{Date: &datevalues.Value{Kind: datevalues.KindRange, StartYear: lo, EndYear: hi}}
+}
+
+func bound(q string, y int) Value {
+	return Value{Date: &datevalues.Value{Kind: datevalues.KindPoint, Qualifier: q, StartYear: &y}}
+}
+
 func date(y int, m, d *int) Value {
 	return Value{Date: &datevalues.Value{StartYear: &y, StartMonth: m, StartDay: d}}
 }
@@ -36,7 +44,7 @@ func TestComparers(t *testing.T) {
 		{"name: initial is half a word", NameComparer{}, name("J. Robins"), name("James Robins"), 2 * 1.5 / 4, true},
 		{"name: spelling variant", NameComparer{}, name("James Robbins"), name("James Robins"), 2 * (1 + 6.0/7) / 4, true},
 		{"name: not a variant", NameComparer{}, name("Mary"), name("Mark"), 0, true},
-		{"name: fuzzy off", NameComparer{FuzzyFloor: 1}, name("Robbins"), name("Robins"), 0, true},
+		{"name: fuzzy off", NameComparer{FuzzyFloor: Set(1.0)}, name("Robbins"), name("Robins"), 0, true},
 		{"name: missing", NameComparer{}, name("James"), Value{}, 0, false},
 
 		{"text: same", TextComparer{}, text("York"), text("york"), 1, true},
@@ -56,8 +64,19 @@ func TestComparers(t *testing.T) {
 		{"date: same year", DateComparer{}, date(1817, nil, nil), date(1817, ip(9), nil), 0.8, true},
 		{"date: a year apart", DateComparer{}, date(1817, nil, nil), date(1818, nil, nil), 0.8 * 2 / 3, true},
 		{"date: beyond tolerance", DateComparer{}, date(1817, nil, nil), date(1820, nil, nil), 0, true},
-		{"date: wider tolerance", DateComparer{Tolerance: 5}, date(1817, nil, nil), date(1820, nil, nil), 0.8 * 3 / 6, true},
+		{"date: wider tolerance", DateComparer{Tolerance: Set(5)}, date(1817, nil, nil), date(1820, nil, nil), 0.8 * 3 / 6, true},
 		{"date: about widens", DateComparer{}, Value{Date: &datevalues.Value{StartYear: ip(1817), Qualifier: "ABT"}}, date(1820, nil, nil), 0.8 * 2 / 5, true},
+		{"date: range contains the point", DateComparer{}, span(ip(1815), ip(1820)), date(1818, nil, nil), 0.6, true},
+		{"date: point just outside a range", DateComparer{}, span(ip(1815), ip(1820)), date(1822, nil, nil), 0.6 * (1 - 2.0/3), true},
+		{"date: point far outside a range", DateComparer{}, span(ip(1815), ip(1820)), date(1830, nil, nil), 0, true},
+		{"date: overlapping ranges", DateComparer{}, span(ip(1815), ip(1820)), span(ip(1819), ip(1825)), 0.6, true},
+		{"date: open-ended range", DateComparer{}, span(ip(1815), nil), date(1900, nil, nil), 0.6, true},
+		{"date: before, consistent", DateComparer{}, bound("BEF", 1820), date(1815, nil, nil), 0.6, true},
+		{"date: before, impossible", DateComparer{}, bound("BEF", 1820), date(1823, nil, nil), 0, true},
+		{"date: after, a year short", DateComparer{}, bound("AFT", 1820), date(1819, nil, nil), 0.6 * (1 - 1.0/3), true},
+		{"date: before vs after, disjoint", DateComparer{}, bound("BEF", 1800), bound("AFT", 1810), 0, true},
+		{"date: tolerance zero", DateComparer{Tolerance: Set(0)}, date(1817, nil, nil), date(1818, nil, nil), 0, true},
+		{"date: empty range", DateComparer{}, span(nil, nil), date(1818, nil, nil), 0, false},
 		{"date: phrase only", DateComparer{}, Value{Date: &datevalues.Value{Phrase: "spring"}}, date(1817, nil, nil), 0, false},
 
 		{"integer: equal", IntegerComparer{}, integer(40), integer(40), 1, true},

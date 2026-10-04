@@ -4,6 +4,7 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/properties"
 )
 
@@ -34,7 +35,19 @@ func ComparerFor(valueType string) Comparer {
 	return nil
 }
 
-// Defaults applied when a comparer's field is zero.
+// Set returns a pointer to v, for comparer settings. A nil setting takes its
+// default, so an explicit zero is a real value: CrossRole: Set(0.0) makes
+// mismatched name types never pair; Tolerance: Set(0) requires the same year.
+func Set[T any](v T) *T { return &v }
+
+func setting[T any](p *T, def T) T {
+	if p == nil {
+		return def
+	}
+	return *p
+}
+
+// Defaults applied when a comparer's setting is nil.
 const (
 	defaultTextPartial   = 0.7
 	defaultFuzzyFloor    = 0.8
@@ -52,7 +65,7 @@ const (
 // ("J." ~ "James") 0.5, a near spelling ("Robins" ~ "Robbins") its
 // edit-distance ratio when at least FuzzyFloor.
 //
-// Zero fields take their defaults.
+// Nil settings take their defaults; set one with Set.
 type NameComparer struct {
 	// PartRoles maps part types to roles. Default WesternPartRoles; a name
 	// format profile may supply its own.
@@ -60,23 +73,24 @@ type NameComparer struct {
 
 	// Word weights by role. Defaults: family 1.5, first given 1, other given
 	// (middle names, initials) 0.5, nick 0.3, untyped 1.
-	FamilyWeight, FirstGivenWeight, OtherGivenWeight, NickWeight, UntypedWeight float64
+	FamilyWeight, FirstGivenWeight, OtherGivenWeight, NickWeight, UntypedWeight *float64
 
 	// Role affinities for pairs whose roles differ. Defaults: a typed word
 	// against an untyped one 0.8, a nickname against a given name 0.9, any
 	// other mismatch (a surname against a given name) 0.5.
-	UntypedAffinity, NickAffinity, CrossRole float64
+	UntypedAffinity, NickAffinity, CrossRole *float64
 
 	// GivenOnlyFactor scales the score when both names have family words and
 	// none resembles any word of the other name. Default 0.5.
-	GivenOnlyFactor float64
+	GivenOnlyFactor *float64
 	// SuffixConflict scales the score when both names carry generation words
 	// (Jr., Sr.) and share none. Default 0.3.
-	SuffixConflict float64
+	SuffixConflict *float64
 	// FuzzyFloor is the least edit-distance ratio two words need to count as
 	// a spelling variant, 0…1. Default 0.8 (Robins ~ Robbins, not Mary ~ Mark);
-	// 1 turns fuzzy matching off.
-	FuzzyFloor float64
+	// 1 turns fuzzy matching off. Short words may also differ by one added or
+	// dropped letter (Ann ~ Anne, Jon ~ John); see wordSimilarity.
+	FuzzyFloor *float64
 }
 
 func (c NameComparer) Compare(a, b Value) (float64, bool) {
@@ -91,17 +105,17 @@ func (c NameComparer) Compare(a, b Value) (float64, bool) {
 // ("York, Upper Canada" ~ "York").
 type TextComparer struct {
 	// Partial caps non-identical text, 0…1. Default 0.7.
-	Partial float64
+	Partial *float64
 	// FuzzyFloor as for NameComparer. Default 0.8.
-	FuzzyFloor float64
+	FuzzyFloor *float64
 }
 
 func (c TextComparer) Compare(a, b Value) (float64, bool) {
 	if !a.HasText || !b.HasText {
 		return 0, false
 	}
-	return compareForms(a.Text, b.Text, orDefault(c.Partial, defaultTextPartial),
-		orDefault(c.FuzzyFloor, defaultFuzzyFloor), false)
+	return compareForms(a.Text, b.Text, setting(c.Partial, defaultTextPartial),
+		setting(c.FuzzyFloor, defaultFuzzyFloor), false)
 }
 
 // TermComparer compares vocabulary terms by key: the same term is 1, any
@@ -120,43 +134,105 @@ func (c TermComparer) Compare(a, b Value) (float64, bool) {
 	return 0, true
 }
 
-// DateComparer compares dates by their years, refined by month and day.
-// The same day is 1, the same month 0.9, the same year 0.8 (0.6 when the
-// months are known and differ). Years apart within Tolerance fall off
-// linearly from 0.8; beyond it is a disagreement (0). An approximate date
-// (ABT / BEF / AFT) on either side doubles the tolerance. A date with no
-// year (a phrase) is not comparable.
+// DateComparer compares dates as spans of years.
+//
+//   - Two exact points (or ABT points) compare by year, refined by month and
+//     day: the same day is 1, the same month 0.9, the same year 0.8 (0.6 when
+//     both months are known and differ). Years apart within Tolerance fall
+//     off linearly from 0.8; beyond it is a disagreement (0). ABT on either
+//     side doubles the tolerance.
+//   - When either side is a range (FROM / TO / BET) or a bound (BEF, AFT),
+//     overlapping spans are consistent, 0.6: they agree but neither pins the
+//     other. Spans apart fall off from 0.6 by the years between them within
+//     Tolerance; beyond it is a disagreement. "BEF 1820" against 1823 is 3
+//     years apart, not an approximate match.
+//
+// A date with no year (a phrase) is not comparable.
 type DateComparer struct {
-	// Tolerance is how many years apart still resemble. Default 2.
-	Tolerance int
+	// Tolerance is how many years apart still resemble. Default 2; Set(0)
+	// requires the same year (or overlapping spans).
+	Tolerance *int
+}
+
+// yearSpan is a date's years, lo…hi; an open end is unbounded (BEF, AFT,
+// FROM without TO). point marks an exact or ABT point, whose month and day
+// refine the comparison.
+type yearSpan struct {
+	lo, hi         int
+	openLo, openHi bool
+	point, approx  bool
+	month, day     *int
+}
+
+func spanOf(d *datevalues.Value) (yearSpan, bool) {
+	if d.Kind == datevalues.KindRange {
+		if d.StartYear == nil && d.EndYear == nil {
+			return yearSpan{}, false
+		}
+		s := yearSpan{openLo: d.StartYear == nil, openHi: d.EndYear == nil}
+		if d.StartYear != nil {
+			s.lo = *d.StartYear
+		}
+		if d.EndYear != nil {
+			s.hi = *d.EndYear
+		}
+		return s, true
+	}
+	y, m, day := d.StartYear, d.StartMonth, d.StartDay
+	if y == nil {
+		y, m, day = d.EndYear, d.EndMonth, d.EndDay
+	}
+	if y == nil {
+		return yearSpan{}, false
+	}
+	switch d.Qualifier {
+	case datevalues.QualifierBEF:
+		return yearSpan{hi: *y, openLo: true}, true
+	case datevalues.QualifierAFT:
+		return yearSpan{lo: *y, openHi: true}, true
+	}
+	return yearSpan{lo: *y, hi: *y, point: true, approx: d.Qualifier != "", month: m, day: day}, true
+}
+
+// yearsApart is the gap between two spans, 0 when they overlap.
+func yearsApart(a, b yearSpan) int {
+	switch {
+	case !a.openHi && !b.openLo && a.hi < b.lo:
+		return b.lo - a.hi
+	case !b.openHi && !a.openLo && b.hi < a.lo:
+		return a.lo - b.hi
+	}
+	return 0
 }
 
 func (c DateComparer) Compare(a, b Value) (float64, bool) {
 	if a.Date == nil || b.Date == nil {
 		return 0, false
 	}
-	ya, ma, da := dateParts(a)
-	yb, mb, db := dateParts(b)
-	if ya == nil || yb == nil {
+	sa, okA := spanOf(a.Date)
+	sb, okB := spanOf(b.Date)
+	if !okA || !okB {
 		return 0, false
 	}
-	tol := c.Tolerance
-	if tol == 0 {
-		tol = defaultDateTolerance
+	tol := setting(c.Tolerance, defaultDateTolerance)
+	gap := yearsApart(sa, sb)
+
+	if !sa.point || !sb.point {
+		if gap > tol {
+			return 0, true
+		}
+		return 0.6 * (1 - float64(gap)/float64(tol+1)), true
 	}
-	if a.Date.Qualifier != "" || b.Date.Qualifier != "" {
+	if sa.approx || sb.approx {
 		tol *= 2
 	}
-	gap := *ya - *yb
-	if gap < 0 {
-		gap = -gap
-	}
+	sameMonth := sa.month != nil && sb.month != nil && *sa.month == *sb.month
 	switch {
-	case gap == 0 && ma != nil && mb != nil && *ma == *mb && da != nil && db != nil && *da == *db:
+	case gap == 0 && sameMonth && sa.day != nil && sb.day != nil && *sa.day == *sb.day:
 		return 1, true
-	case gap == 0 && ma != nil && mb != nil && *ma == *mb:
+	case gap == 0 && sameMonth:
 		return 0.9, true
-	case gap == 0 && ma != nil && mb != nil:
+	case gap == 0 && sa.month != nil && sb.month != nil:
 		return 0.6, true
 	case gap == 0:
 		return 0.8, true
@@ -164,15 +240,6 @@ func (c DateComparer) Compare(a, b Value) (float64, bool) {
 		return 0.8 * (1 - float64(gap)/float64(tol+1)), true
 	}
 	return 0, true
-}
-
-// dateParts is the date's leading year, month, and day: the start of a
-// range, else its end.
-func dateParts(v Value) (y, m, d *int) {
-	if v.Date.StartYear != nil {
-		return v.Date.StartYear, v.Date.StartMonth, v.Date.StartDay
-	}
-	return v.Date.EndYear, v.Date.EndMonth, v.Date.EndDay
 }
 
 // IntegerComparer compares integers: equal is 1; within Tolerance falls off
@@ -210,9 +277,13 @@ func compareForms(a, b string, partial, fuzzyFloor float64, initials bool) (floa
 }
 
 // wordSimilarity: 1 for the same word, 0.5 for an initial and a word it
-// begins (when initials count), the edit-distance ratio for spelling
-// variants at or above floor, else 0. An initial is a lone cased letter
-// ("J"); a lone character in an uncased script (蒋, 王) is a whole word.
+// begins (when initials count), else the spelling-variant ratio
+// (1 − edits / longer length, an adjacent swap being one edit) when it
+// reaches floor — or, for short words, when they differ by one added or
+// dropped letter (Ann ~ Anne, Jon ~ John: 0.75), since one edit is a larger
+// share of a short word. A one-letter substitution in a short word is a
+// different name (Mary ~ Mark). An initial is a lone cased letter ("J"); a
+// lone character in an uncased script (蒋, 王) is a whole word.
 func wordSimilarity(x, y string, floor float64, initials bool) float64 {
 	if x == y {
 		return 1
@@ -227,44 +298,48 @@ func wordSimilarity(x, y string, floor float64, initials bool) float64 {
 	if floor >= 1 {
 		return 0
 	}
-	longest := len(rx)
-	if len(ry) > longest {
-		longest = len(ry)
+	longest, shortest := len(rx), len(ry)
+	if shortest > longest {
+		longest, shortest = shortest, longest
 	}
-	ratio := 1 - float64(levenshtein(rx, ry))/float64(longest)
-	if ratio < floor {
-		return 0
+	edits := editDistance(rx, ry)
+	ratio := 1 - float64(edits)/float64(longest)
+	if ratio >= floor {
+		return ratio
 	}
-	return ratio
+	if edits == 1 && longest == shortest+1 && shortest >= 3 {
+		return ratio
+	}
+	return 0
 }
 
 func isInitial(r []rune) bool {
 	return len(r) == 1 && unicode.ToUpper(r[0]) != unicode.ToLower(r[0])
 }
 
-func levenshtein(a, b []rune) int {
-	prev := make([]int, len(b)+1)
-	cur := make([]int, len(b)+1)
-	for j := range prev {
-		prev[j] = j
+// editDistance is the optimal-string-alignment distance: insertions,
+// deletions, substitutions, and swaps of adjacent letters ("Robnis" ~
+// "Robins") each cost one.
+func editDistance(a, b []rune) int {
+	d := make([][]int, len(a)+1)
+	for i := range d {
+		d[i] = make([]int, len(b)+1)
+		d[i][0] = i
+	}
+	for j := range d[0] {
+		d[0][j] = j
 	}
 	for i := 1; i <= len(a); i++ {
-		cur[0] = i
 		for j := 1; j <= len(b); j++ {
 			cost := 1
 			if a[i-1] == b[j-1] {
 				cost = 0
 			}
-			cur[j] = min(prev[j]+1, cur[j-1]+1, prev[j-1]+cost)
+			d[i][j] = min(d[i-1][j]+1, d[i][j-1]+1, d[i-1][j-1]+cost)
+			if i > 1 && j > 1 && a[i-1] == b[j-2] && a[i-2] == b[j-1] {
+				d[i][j] = min(d[i][j], d[i-2][j-2]+1)
+			}
 		}
-		prev, cur = cur, prev
 	}
-	return prev[len(b)]
-}
-
-func orDefault(v, def float64) float64 {
-	if v == 0 {
-		return def
-	}
-	return v
+	return d[len(a)][len(b)]
 }
