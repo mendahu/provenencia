@@ -19,6 +19,15 @@ Copy the stub. Surface + what got in the way is enough. A wanted fix is optional
 
 <!-- add below this line -->
 
+### Evidence graph misrenders when zoomed far out
+
+- **Date:** 2026-10-04
+- **Where:** Evidence graph
+- **Annoyance:** Zooming far out breaks the rendering in two ways:
+  - **Background grid:** parts of it turn solid black and the grid disappears in those areas.
+  - **Lines between cards:** past a certain zoom level they start to disappear, but unevenly. Some vanish and others stay.
+- **Wanted:** Zoomed-out views look refined and polished. The grid stays visible (or fades out cleanly), and lines behave the same way at every zoom level.
+
 ### Evidence graph button hit boxes are wrong
 
 - **Date:** 2026-10-04
