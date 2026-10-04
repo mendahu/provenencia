@@ -8,6 +8,8 @@ import Foundation
 /// card on every frame; building it with the snapshot (see
 /// ``EvidenceGraphModel/displayText(rows:types:)``) keeps formatting out of
 /// the per-frame path. Views read these strings and format nothing.
+///
+/// Built on the main actor: the formatters live on the card view types.
 struct EvidenceCardText: Equatable, Sendable {
     /// VoiceOver label for the card and its rotor entry.
     var accessibilityLabel: String
@@ -18,6 +20,7 @@ struct EvidenceCardText: Equatable, Sendable {
     /// Bridge cards: the edge sentence shown when the bridge is cited.
     var summary: String?
 
+    @MainActor
     init(subject placed: SourceGraphPlacedSubject) {
         accessibilityLabel = EvidenceSubjectCard.accessibilityLabel(for: placed)
         deleteActionName = L10n.EvidenceGraph.deleteAccessibility(
@@ -29,6 +32,7 @@ struct EvidenceCardText: Equatable, Sendable {
         summary = nil
     }
 
+    @MainActor
     init(bridge placed: SourceGraphPlacedBridge, in snapshot: SourceGraphSnapshot) {
         let sentence = EvidenceBridgeEdgeSummary.sentence(for: placed, in: snapshot)
         accessibilityLabel = EvidenceBridgeCard.accessibilityLabel(for: placed, in: snapshot)
@@ -46,6 +50,7 @@ struct EvidenceCardText: Equatable, Sendable {
 struct EvidenceGraphText: Equatable, Sendable {
     private var cards: [String: EvidenceCardText]
 
+    @MainActor
     init(snapshot: SourceGraphSnapshot) {
         var cards: [String: EvidenceCardText] = [:]
         cards.reserveCapacity(snapshot.subjects.count + snapshot.bridges.count)
@@ -59,11 +64,13 @@ struct EvidenceGraphText: Equatable, Sendable {
     }
 
     /// Text for a placed subject; built on the spot only if the snapshot lacked it.
+    @MainActor
     subscript(subject placed: SourceGraphPlacedSubject) -> EvidenceCardText {
         cards[placed.id] ?? EvidenceCardText(subject: placed)
     }
 
     /// Text for a placed bridge; built on the spot only if the snapshot lacked it.
+    @MainActor
     subscript(bridge placed: SourceGraphPlacedBridge, in snapshot: SourceGraphSnapshot) -> EvidenceCardText {
         cards[placed.id] ?? EvidenceCardText(bridge: placed, in: snapshot)
     }
