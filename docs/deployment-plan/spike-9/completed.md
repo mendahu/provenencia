@@ -22,6 +22,7 @@ IDs stay stable (`S9-NN`, `S9-DN`). Do not renumber when moving steps here.
 | S9-D2 | Design | Persons list |
 | S9-09 | PR | Persons list |
 | S9-10 | PR | Promote write + reads: existing target |
+| S9-34a | PR | Handle search from cached values + kinds filter |
 
 ## Steps
 
@@ -346,3 +347,31 @@ Promote can now file a Subject onto an existing handle, carry a confidence grade
 - Researcher-facing tuning, or profiles persisted per project
 - Blocking candidates through the R8 search index (**S9-34**)
 - The Promote flow, picker and claim fields (**S9-11**, **S9-12**)
+
+### S9-34a — Handle search from cached values + kinds filter
+
+Catalog search can now find Persons, Events and Places, on request. This was pulled forward from Slice 10 for the Promote picker (S9-11). The omnibar doesn't show these kinds yet; S9-35 designs their rows.
+
+**What shipped**
+
+- **Index:** `searchindex.ReprojectHandles` builds one document per unmerged handle from the resolved-values cache, at every rank:
+  - **Person:** rank-1 name as the title; other name groupings as secondary text.
+  - **Place:** rank-1 toponym as the title; other toponyms as secondary text.
+  - **Event:** the event-type term label as the title; other types and date years as secondary text.
+  - The working label, then the ref, are fallbacks. Values are data, not composed sentences.
+  - Merged handles drop out, and `RebuildAll` covers handles.
+  - `ProjectionVersion` 6.
+- **Upkeep:** a single hook. `resolvedvalues.RecomputeTx` reprojects the handles it rewrites, in the same transaction, so every write that changes a handle's values (promote mint or join, Observation writes, Subject delete) updates search. On open, the cache is ensured before the search index.
+- **Rebuild equals upkeep:** the cache's seeded sequences and scenarios now also compare handle search documents with a full rebuild.
+- **Engine:** kinds `person` / `event` / `place`, with `DefaultInEverything: false`. `Query.Kinds` filters candidates in SQL at every retrieval step (ref, full-text, typo shortlist). Locations go to `persons` / `events` / `places` with `entityId`, and `Hit.MemberCount` is filled in one query per page.
+- **Proto, FFI and Swift:**
+  - `SearchCatalogRequest.kinds`, `SearchHit.member_count`, `WorkspaceLocation.entity_id`.
+  - `searchCatalog(…, kinds:)` on the store; a protocol extension keeps the omnibar's call.
+  - `CatalogSearchHit.memberCount`.
+  - FakeStore searches handles by name, ref or label.
+
+**What stayed out**
+
+- Header-built documents ("Birth of James Robins", life dates and places) and header dependents (**S9-34**).
+- Omnibar rows for handle kinds (**S9-35**).
+- Event search is thin until the Event composer and `event_name` exist (**S9-20**, **S9-22**): it matches by type, year or ref.
