@@ -19,6 +19,13 @@ Copy the stub. Surface + what got in the way is enough. A wanted fix is optional
 
 <!-- add below this line -->
 
+### Add Observation should focus the property search
+
+- **Date:** 2026-10-04
+- **Where:** Citation composer
+- **Annoyance:** After clicking **Add Observation**, keyboard focus doesn't go to the new Observation. I have to click into the property search combo box before I can type.
+- **Wanted:** Clicking **Add Observation** moves focus straight to the new Observation's property search combo box.
+
 ### Name part type dropdown: shifting width and no type-to-cycle
 
 - **Date:** 2026-10-04
