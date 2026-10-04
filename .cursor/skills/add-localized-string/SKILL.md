@@ -96,7 +96,20 @@ static func bodySignedIn(displayName: String) -> String {
 }
 ```
 
-Catalog `value` must use the same placeholders. `L10n.format` picks a formatting locale that matches the resolved localization, so plural variations choose the right form — don't call `String(format:)` on copy yourself.
+Catalog `value` must use the same placeholders.
+
+For a **count with a noun** ("3 fields"), use one key with `plural` variations in the catalog — never two keys picked by `count == 1` in Swift, which only works for English. When the count shares the string with other arguments, give the count a substitution:
+
+```json
+"citationComposer.artifactMenuMeta" : { "localizations" : { "en" : {
+  "stringUnit" : { "state" : "translated", "value" : "%1$@ · %#@citations@" },
+  "substitutions" : { "citations" : { "argNum" : 2, "formatSpecifier" : "lld",
+    "variations" : { "plural" : {
+      "one" : { "stringUnit" : { "state" : "translated", "value" : "%arg citation" } },
+      "other" : { "stringUnit" : { "state" : "translated", "value" : "%arg citations" } } } } } } } } }
+```
+
+The format function is the same `L10n.format(resource, kind, count)`; the catalog picks the form. `L10n.format` picks a formatting locale that matches the resolved localization, so plural variations choose the right form — don't call `String(format:)` on copy yourself.
 
 5. Add/update the key in `Localizable.xcstrings` (`extractionState: "manual"`, `en` `state: "translated"`, same comment/value as `defaultValue`). For Info.plist TCC/copy keys, use `InfoPlist.xcstrings` instead (e.g. `NSDocumentsFolderUsageDescription`) — do not put those only in `INFOPLIST_KEY_*` build settings.
 6. Call sites:

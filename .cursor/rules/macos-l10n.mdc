@@ -20,6 +20,7 @@ Follow the project skill `.cursor/skills/add-localized-string/SKILL.md`. Full no
 - Copy as a `String` (`Button` titles, AppKit, models): `L10n.string(L10n.…)`. **Never** `String(localized:)` — it re-parses the whole strings table on every call (CI rejects it).
 - Copy with arguments: static key + `%@` / `%lld` (positional when 2+) in catalog/`defaultValue`, filled by an `L10n` format function returning `String` via `L10n.format(_:_:)`. **Never** interpolate into a `LocalizedStringResource` (CI rejects it).
 - Design-system labels take `PVCopy`: a static resource or a formatted `String`.
+- Counts with a noun: one key with catalog `plural` variations (substitutions when other arguments share the string), filled by `L10n.format`. **Never** `count == 1 ? oneKey : otherKey` in Swift.
 - Stable `.accessibilityIdentifier` for UI tests — not localized titles.
 - Do not localize by matching English Go strings. FFI failures are protobuf codes → `L10n.Errors`. No SwiftGen.
 

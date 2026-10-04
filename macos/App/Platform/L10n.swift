@@ -18,7 +18,13 @@ extension L10n {
     /// in the catalog (checked by `scripts/check-localizable-xcstrings.py`);
     /// a missing key resolves to the key itself, as it does in Foundation.
     static func string(_ resource: LocalizedStringResource) -> String {
-        let resolved = Bundle.main.localizedString(forKey: resource.key, value: nil, table: resource.table)
+        string(resource, in: .main)
+    }
+
+    /// ``string(_:)`` against a specific bundle — the seam tests use to resolve
+    /// through a bundle with other localizations.
+    static func string(_ resource: LocalizedStringResource, in bundle: Bundle) -> String {
+        let resolved = bundle.localizedString(forKey: resource.key, value: nil, table: resource.table)
         // Only semantic keys (`evidenceGraph.subject.addProperty`) belong in the
         // catalog; English-as-key resources in previews and test fixtures
         // ("Delete field") resolve to their key by design.
@@ -43,14 +49,25 @@ extension L10n {
     /// the wrong rules. Always format L10n copy here rather than calling
     /// `String(format:)` yourself.
     static func format(_ resource: LocalizedStringResource, _ arguments: any CVarArg...) -> String {
-        String(format: string(resource), locale: formattingLocale, arguments: arguments)
+        format(resource, in: .main, locale: formattingLocale, arguments: arguments)
     }
 
     /// ``format(_:_:)`` with a caller-chosen formatting locale, for helpers whose
     /// callers format values (such as dates) for a specific locale. The copy itself
     /// still resolves from the bundle's localization.
     static func format(_ resource: LocalizedStringResource, locale: Locale, _ arguments: any CVarArg...) -> String {
-        String(format: string(resource), locale: locale, arguments: arguments)
+        format(resource, in: .main, locale: locale, arguments: arguments)
+    }
+
+    /// The one place L10n copy is formatted. `locale` must share the language of
+    /// the localization `bundle` resolves, or plural variations pick the wrong form.
+    static func format(
+        _ resource: LocalizedStringResource,
+        in bundle: Bundle,
+        locale: Locale,
+        arguments: [any CVarArg]
+    ) -> String {
+        String(format: string(resource, in: bundle), locale: locale, arguments: arguments)
     }
 
     /// `Locale.current`, with its language replaced by the bundle's resolved
@@ -696,7 +713,7 @@ enum L10n {
             }
             return L10n.format(LocalizedStringResource(
                 "onboarding.identify.contributorOption",
-                defaultValue: "%@ (%@)",
+                defaultValue: "%1$@ (%2$@)",
                 comment: "Contributor accessibility/combined label; arguments are display name then USR-… ref"
             ), displayName, ref)
         }
@@ -755,7 +772,7 @@ enum L10n {
             }
             return L10n.format(LocalizedStringResource(
                 "onboarding.home.updatedBy",
-                defaultValue: "Last edited by %@ (%@)",
+                defaultValue: "Last edited by %1$@ (%2$@)",
                 comment: "Home screen last editor; arguments are display name then USR-… ref"
             ), displayName, ref)
         }
@@ -902,17 +919,11 @@ enum L10n {
 
         /// Persons list header meta: "1 person" / "N persons".
         static func personCount(_ count: Int) -> String {
-            count == 1
-                ? L10n.string(LocalizedStringResource(
-                    "workspace.persons.countOne",
-                    defaultValue: "1 person",
-                    comment: "Persons list header meta when there is exactly one Person"
-                ))
-                : L10n.format(LocalizedStringResource(
-                    "workspace.persons.countOther",
-                    defaultValue: "%lld persons",
-                    comment: "Persons list header meta; argument is how many Persons are listed"
-                ), count)
+            L10n.format(LocalizedStringResource(
+                "workspace.persons.count",
+                defaultValue: "%lld persons",
+                comment: "Persons list header meta; argument is how many Persons are listed"
+            ), count)
         }
 
         /// Header meta while a stale list reloads: "N persons · refreshing".
@@ -1326,7 +1337,7 @@ enum L10n {
         static func deleteAccessibility(kind: String, label: String, ref: String) -> String {
             return L10n.format(LocalizedStringResource(
                 "evidenceGraph.subject.deleteAccessibility",
-                defaultValue: "Delete %@ %@, %@",
+                defaultValue: "Delete %1$@ %2$@, %3$@",
                 comment: "VoiceOver for graph card trash; arguments are kind, label or sentence, catalog ref"
             ), kind, label, ref)
         }
@@ -1712,7 +1723,7 @@ enum L10n {
         static func bridgeSummaryLocation(event: String, place: String) -> String {
             return L10n.format(LocalizedStringResource(
                 "evidenceGraph.bridge.summary.location",
-                defaultValue: "%@ took place in %@",
+                defaultValue: "%1$@ took place in %2$@",
                 comment: "Location edge summary; arguments are event label then place label"
             ), event, place)
         }
@@ -1728,7 +1739,7 @@ enum L10n {
         static func bridgeSummaryRelationship(person: String, type: String, related: String) -> String {
             return L10n.format(LocalizedStringResource(
                 "evidenceGraph.bridge.summary.relationship",
-                defaultValue: "%@ is the %@ of %@",
+                defaultValue: "%1$@ is the %2$@ of %3$@",
                 comment: "Relationship edge summary; arguments are person, relationship_type, related_to"
             ), person, type, related)
         }
@@ -1737,7 +1748,7 @@ enum L10n {
         static func bridgeSummaryRelationshipFallback(person: String, related: String) -> String {
             return L10n.format(LocalizedStringResource(
                 "evidenceGraph.bridge.summary.relationshipFallback",
-                defaultValue: "%@ is related to %@",
+                defaultValue: "%1$@ is related to %2$@",
                 comment: "Relationship edge summary without relationship_type; person then related_to"
             ), person, related)
         }
@@ -1761,7 +1772,7 @@ enum L10n {
         static func bridgeSummaryParticipation(person: String, role: String, event: String) -> String {
             return L10n.format(LocalizedStringResource(
                 "evidenceGraph.bridge.summary.participation",
-                defaultValue: "%@ participated as %@ at %@",
+                defaultValue: "%1$@ participated as %2$@ at %3$@",
                 comment: "Participation edge summary; arguments are person, role, event"
             ), person, role, event)
         }
@@ -1770,7 +1781,7 @@ enum L10n {
         static func bridgeSummaryParticipationFallback(person: String, event: String) -> String {
             return L10n.format(LocalizedStringResource(
                 "evidenceGraph.bridge.summary.participationFallback",
-                defaultValue: "%@ participated in %@",
+                defaultValue: "%1$@ participated in %2$@",
                 comment: "Participation edge summary without role; arguments are person then event"
             ), person, event)
         }
@@ -1818,7 +1829,7 @@ enum L10n {
         static func bridgeNounTypeAndRef(type: String, ref: String) -> String {
             return L10n.format(LocalizedStringResource(
                 "evidenceGraph.bridge.nounTypeAndRef",
-                defaultValue: "%@ %@",
+                defaultValue: "%1$@ %2$@",
                 comment: "Bridge endpoint noun when the working label is blank; type label then ref"
             ), type, ref)
         }
@@ -1827,24 +1838,14 @@ enum L10n {
         static func bridgeNameKindAndRef(phrase: String, ref: String) -> String {
             return L10n.format(LocalizedStringResource(
                 "evidenceGraph.bridge.nameKindAndRef",
-                defaultValue: "%@ · %@",
+                defaultValue: "%1$@ · %2$@",
                 comment: "Bridge name when edges cannot be read; kind phrase then bridge ref"
             ), phrase, ref)
         }
 
         static func subjectCount(count: Int) -> String {
-            count == 1 ? L10n.string(subjectCountOne) : subjectCountOther(count: count)
-        }
-
-        private static let subjectCountOne = LocalizedStringResource(
-            "evidenceGraph.header.subjectCountOne",
-            defaultValue: "1 subject",
-            comment: "Evidence graph header count when exactly one placed primary is on the canvas"
-        )
-
-        private static func subjectCountOther(count: Int) -> String {
             L10n.format(LocalizedStringResource(
-                "evidenceGraph.header.subjectCountOther",
+                "evidenceGraph.header.subjectCount",
                 defaultValue: "%lld subjects",
                 comment: "Evidence graph header count; argument is how many placed primaries are on the canvas"
             ), count)
@@ -2001,7 +2002,7 @@ enum L10n {
         static func displayBetween(start: String, end: String, locale: Locale = .autoupdatingCurrent) -> String {
             let resource = LocalizedStringResource(
                 "dates.display.between",
-                defaultValue: "Between %@ and %@",
+                defaultValue: "Between %1$@ and %2$@",
                 comment: "DateValue summary for a range; arguments are formatted start then end"
             )
             return L10n.format(resource, locale: locale, start, end)
@@ -2089,15 +2090,8 @@ enum L10n {
                     comment: "Parts heading count when the NameValue has no parts"
                 ))
             }
-            if count == 1 {
-                return L10n.string(LocalizedStringResource(
-                    "nameValue.parts.count.one",
-                    defaultValue: "1 part",
-                    comment: "Parts heading count for a single NameValue part"
-                ))
-            }
             return L10n.format(LocalizedStringResource(
-                "nameValue.parts.count.other",
+                "nameValue.parts.count",
                 defaultValue: "%lld parts",
                 comment: "Parts heading count; argument is the part count"
             ), count)
@@ -2456,7 +2450,7 @@ enum L10n {
         static func findMatchOf(current: Int, total: Int) -> String {
             return L10n.format(LocalizedStringResource(
                 "artifactViewer.findMatchOf",
-                defaultValue: "%lld of %lld",
+                defaultValue: "%1$lld of %2$lld",
                 comment: "Find field suffix; arguments are current match index then total matches"
             ), current, total)
         }
@@ -2763,17 +2757,11 @@ enum L10n {
                     comment: "Unsaved-summary clause for dirty citation fields"
                 )))
             }
-            if observationCount == 1 {
-                parts.append(L10n.string(LocalizedStringResource(
-                    "citationComposer.unsavedObservationOne",
-                    defaultValue: "1 observation",
-                    comment: "Unsaved-summary clause for one dirty observation row"
-                )))
-            } else if observationCount > 1 {
+            if observationCount > 0 {
                 parts.append(L10n.format(LocalizedStringResource(
-                    "citationComposer.unsavedObservationMany",
+                    "citationComposer.unsavedObservations",
                     defaultValue: "%lld observations",
-                    comment: "Unsaved-summary clause for several dirty observation rows"
+                    comment: "Unsaved-summary clause for dirty observation rows; argument is how many"
                 ), observationCount))
             }
             if connectionTouched {
@@ -2799,7 +2787,7 @@ enum L10n {
         ) -> String {
             return L10n.format(LocalizedStringResource(
                 "citationComposer.connectionAccessibility",
-                defaultValue: "Connection, %@. %@ %@. %@",
+                defaultValue: "Connection, %1$@. %2$@ %3$@. %4$@",
                 comment: "VoiceOver for a relationship or participation connection"
             ), sentence, termLabel, term, status)
         }
@@ -2930,7 +2918,7 @@ enum L10n {
         static func pasteReplaceMessage(selectedLines: Int, page: Int) -> String {
             return L10n.format(LocalizedStringResource(
                 "citationComposer.pasteReplaceMessage",
-                defaultValue: "Paste replaces the text already in the field with the %lld lines selected on page %lld. The current text isn’t kept. Nothing is written until Save citation.",
+                defaultValue: "Paste replaces the text already in the field with the %1$lld lines selected on page %2$lld. The current text isn’t kept. Nothing is written until Save citation.",
                 comment: "Confirm message when paste would overwrite; arguments are selected line count then page"
             ), selectedLines, page)
         }
@@ -3178,7 +3166,7 @@ enum L10n {
         static func artifactIndexOf(index: Int, total: Int, kind: String) -> String {
             return L10n.format(LocalizedStringResource(
                 "citationComposer.artifactIndexOf",
-                defaultValue: "Artifact %lld of %lld · %@",
+                defaultValue: "Artifact %1$lld of %2$lld · %3$@",
                 comment: "Viewer header index; arguments are 1-based index, total, and media kind"
             ), index, total, kind)
         }
@@ -3502,7 +3490,7 @@ enum L10n {
         static func artifactMenuMeta(kind: String, count: Int) -> String {
             return L10n.format(LocalizedStringResource(
                 "citationComposer.artifactMenuMeta",
-                defaultValue: "%@ · %lld citations",
+                defaultValue: "%1$@ · %2$lld citations",
                 comment: "Artifact menu row meta; arguments are media kind and citation count"
             ), kind, count)
         }
@@ -3518,7 +3506,7 @@ enum L10n {
         static func citationMenuRef(ref: String, count: Int) -> String {
             return L10n.format(LocalizedStringResource(
                 "citationComposer.citationMenuRef",
-                defaultValue: "Citation, %@, %lld observations",
+                defaultValue: "Citation, %1$@, %2$lld observations",
                 comment: "VoiceOver name for the Citation identity control; arguments are ref and count"
             ), ref, count)
         }
@@ -3526,7 +3514,7 @@ enum L10n {
         static func identityChangedCitation(ref: String, count: Int) -> String {
             return L10n.format(LocalizedStringResource(
                 "citationComposer.identityChangedCitation",
-                defaultValue: "Now citing %@, %lld observations",
+                defaultValue: "Now citing %1$@, %2$lld observations",
                 comment: "VoiceOver announcement after switching Citation; arguments are ref and count"
             ), ref, count)
         }
@@ -3591,7 +3579,7 @@ enum L10n {
         static func countLineFiltered(visible: Int, total: Int) -> String {
             return L10n.format(LocalizedStringResource(
                 "sources.list.countLineFiltered",
-                defaultValue: "%lld of %lld sources",
+                defaultValue: "%1$lld of %2$lld sources",
                 comment: "Sources list count when search/filter narrows the list; arguments are visible then total"
             ), visible, total)
         }
@@ -3712,42 +3700,20 @@ enum L10n {
             comment: "VoiceOver while Sources list graph-progress counts have not arrived"
         )
 
-        private static let subjectCountOne = LocalizedStringResource(
-            "sources.list.subjectCountOne",
-            defaultValue: "1 subject",
-            comment: "Sources list graph-zone subject count when exactly one canvas subject"
-        )
-
-        private static func subjectCountOther(count: Int) -> String {
+        static func graphSubjectCount(_ count: Int) -> String {
             L10n.format(LocalizedStringResource(
-                "sources.list.subjectCountOther",
+                "sources.list.subjectCount",
                 defaultValue: "%lld subjects",
                 comment: "Sources list graph-zone subject count; argument is canvas subject count"
             ), count)
         }
 
-        private static let observationCountOne = LocalizedStringResource(
-            "sources.list.observationCountOne",
-            defaultValue: "1 observation",
-            comment: "Sources list graph-zone observation count when exactly one Observation"
-        )
-
-        private static func observationCountOther(count: Int) -> String {
+        static func graphObservationCount(_ count: Int) -> String {
             L10n.format(LocalizedStringResource(
-                "sources.list.observationCountOther",
+                "sources.list.observationCount",
                 defaultValue: "%lld observations",
                 comment: "Sources list graph-zone observation count; argument is Observation count"
             ), count)
-        }
-
-        static func graphSubjectCount(_ count: Int) -> String {
-            if count == 1 { return L10n.string(subjectCountOne) }
-            return subjectCountOther(count: count)
-        }
-
-        static func graphObservationCount(_ count: Int) -> String {
-            if count == 1 { return L10n.string(observationCountOne) }
-            return observationCountOther(count: count)
         }
 
         static func graphCountLine(subjects: Int, observations: Int) -> String {
@@ -4421,31 +4387,17 @@ enum L10n {
         )
 
         static func metadataFieldCount(_ count: Int) -> String {
-            if count == 1 {
-                return L10n.string(LocalizedStringResource(
-                    "sources.page.metadataFieldCountOne",
-                    defaultValue: "1 field",
-                    comment: "Metadata section count when exactly one saved field"
-                ))
-            }
             return L10n.format(LocalizedStringResource(
-                "sources.page.metadataFieldCountMany",
-                defaultValue: "%d fields",
+                "sources.page.metadataFieldCount",
+                defaultValue: "%lld fields",
                 comment: "Metadata section count; argument is saved field count"
             ), count)
         }
 
         static func artifactsCount(_ count: Int) -> String {
-            if count == 1 {
-                return L10n.string(LocalizedStringResource(
-                    "sources.page.artifactsCountOne",
-                    defaultValue: "1 artifact",
-                    comment: "Artifacts section count when exactly one"
-                ))
-            }
             return L10n.format(LocalizedStringResource(
-                "sources.page.artifactsCountMany",
-                defaultValue: "%d artifacts",
+                "sources.page.artifactsCount",
+                defaultValue: "%lld artifacts",
                 comment: "Artifacts section count; argument is artifact count"
             ), count)
         }
@@ -4920,7 +4872,7 @@ enum L10n {
         static func countLine(total: Int, seeded: Int, user: Int) -> String {
             return L10n.format(LocalizedStringResource(
                 "metadata.list.countLine",
-                defaultValue: "%lld fields · %lld seeded · %lld yours",
+                defaultValue: "%1$lld fields · %2$lld seeded · %3$lld yours",
                 comment: "Metadata count summary; arguments are total, seeded (provenencia), and user field counts"
             ), total, seeded, user)
         }
@@ -4928,7 +4880,7 @@ enum L10n {
         static func countLineWithPlugin(total: Int, seeded: Int, user: Int, plugin: Int) -> String {
             return L10n.format(LocalizedStringResource(
                 "metadata.list.countLineWithPlugin",
-                defaultValue: "%lld fields · %lld seeded · %lld yours · %lld plugin",
+                defaultValue: "%1$lld fields · %2$lld seeded · %3$lld yours · %4$lld plugin",
                 comment: "Metadata count summary including plugin-origin fields; arguments are total, seeded, user, and plugin field counts"
             ), total, seeded, user, plugin)
         }
@@ -5178,7 +5130,7 @@ enum L10n {
         static func toastAddedBody(label: String, key: String) -> String {
             return L10n.format(LocalizedStringResource(
                 "metadata.toast.addedBody",
-                defaultValue: "%@ is in this project’s vocabulary as %@.",
+                defaultValue: "%1$@ is in this project’s vocabulary as %2$@.",
                 comment: "Success toast body after creating a Metadata field; arguments are label then minted key"
             ), label, key)
         }
@@ -5192,7 +5144,7 @@ enum L10n {
         static func toastUpdatedBody(label: String, key: String) -> String {
             return L10n.format(LocalizedStringResource(
                 "metadata.toast.updatedBody",
-                defaultValue: "%@ — the key stays %@.",
+                defaultValue: "%1$@ — the key stays %2$@.",
                 comment: "Success toast body after editing a Metadata field; arguments are label then key"
             ), label, key)
         }
@@ -5407,7 +5359,7 @@ enum L10n {
         static func bindCount(bound: Int, total: Int) -> String {
             return L10n.format(LocalizedStringResource(
                 "properties.inspector.bindCount",
-                defaultValue: "%lld of %lld",
+                defaultValue: "%1$lld of %2$lld",
                 comment: "Inspector bound-type count beside Bound to; bound, then total types"
             ), bound, total)
         }
@@ -5599,7 +5551,7 @@ enum L10n {
         static func toastUpdatedBody(label: String, key: String) -> String {
             return L10n.format(LocalizedStringResource(
                 "properties.toast.updatedBody",
-                defaultValue: "%@ — the key stays %@.",
+                defaultValue: "%1$@ — the key stays %2$@.",
                 comment: "Success toast body after editing a property; arguments are label then key"
             ), label, key)
         }
@@ -5616,7 +5568,7 @@ enum L10n {
         static func countLine(total: Int, seeded: Int, user: Int) -> String {
             return L10n.format(LocalizedStringResource(
                 "sourceTypes.list.countLine",
-                defaultValue: "%lld types · %lld seeded · %lld yours",
+                defaultValue: "%1$lld types · %2$lld seeded · %3$lld yours",
                 comment: "Source types count summary; arguments are total, seeded (provenencia), and user type counts"
             ), total, seeded, user)
         }
@@ -5624,7 +5576,7 @@ enum L10n {
         static func countLineWithPlugin(total: Int, seeded: Int, user: Int, plugin: Int) -> String {
             return L10n.format(LocalizedStringResource(
                 "sourceTypes.list.countLineWithPlugin",
-                defaultValue: "%lld types · %lld seeded · %lld yours · %lld plugin",
+                defaultValue: "%1$lld types · %2$lld seeded · %3$lld yours · %4$lld plugin",
                 comment: "Source types count summary including plugin-origin types; arguments are total, seeded, user, and plugin type counts"
             ), total, seeded, user, plugin)
         }
@@ -5706,8 +5658,11 @@ enum L10n {
         static func usage(count: Int) -> String {
             switch count {
             case 0: L10n.string(usageNone)
-            case 1: L10n.string(usageOne)
-            default: usageOther(count: count)
+            default: L10n.format(LocalizedStringResource(
+                "sourceTypes.detail.usage",
+                defaultValue: "in use on %lld sources",
+                comment: "Line under a type's title; argument is how many sources are classified as it"
+            ), count)
             }
         }
 
@@ -5716,20 +5671,6 @@ enum L10n {
             defaultValue: "no sources yet",
             comment: "Line under a type's title when no source is classified as it"
         )
-
-        private static let usageOne = LocalizedStringResource(
-            "sourceTypes.detail.usageOne",
-            defaultValue: "in use on 1 source",
-            comment: "Line under a type's title when exactly one source is classified as it"
-        )
-
-        private static func usageOther(count: Int) -> String {
-            L10n.format(LocalizedStringResource(
-                "sourceTypes.detail.usageOther",
-                defaultValue: "in use on %lld sources",
-                comment: "Line under a type's title; argument is how many sources are classified as it"
-            ), count)
-        }
 
         static let panelEmptyTitle = LocalizedStringResource(
             "sourceTypes.detail.panelEmptyTitle",
@@ -5904,18 +5845,8 @@ enum L10n {
         )
 
         static func assignedCount(count: Int) -> String {
-            count == 1 ? L10n.string(assignedCountOne) : assignedCountOther(count: count)
-        }
-
-        private static let assignedCountOne = LocalizedStringResource(
-            "sourceTypes.suggested.countOne",
-            defaultValue: "1 field",
-            comment: "Count beside the suggested fields section label when the type suggests exactly one field"
-        )
-
-        private static func assignedCountOther(count: Int) -> String {
             L10n.format(LocalizedStringResource(
-                "sourceTypes.suggested.countOther",
+                "sourceTypes.suggested.count",
                 defaultValue: "%lld fields",
                 comment: "Count beside the suggested fields section label; argument is how many fields the type suggests"
             ), count)
@@ -6426,9 +6357,8 @@ enum L10n {
         }
 
         static func viaHeading(via: String, kind: String, total: Int) -> String {
-            let oneOther = viaFormats[via]
-            if let oneOther {
-                return L10n.format(total == 1 ? oneOther.0 : oneOther.1, total)
+            if let format = viaFormats[via] {
+                return L10n.format(format, total)
             }
             return viaFallback(kind: kind, total: total)
         }
@@ -6452,174 +6382,76 @@ enum L10n {
             return L10n.format(total == 1 ? viaUnknownOne : viaUnknownOther, total, noun(kind, count: total))
         }
 
-        private static let viaFormats: [String: (LocalizedStringResource, LocalizedStringResource)] = [
-            "observations.citation_id": (
-                LocalizedStringResource(
-                    "deleteImpact.via.observationsCitationId.one",
-                    defaultValue: "%lld observation still belongs to this",
-                    comment: "Inbound heading for observations.citation_id, singular"
-                ),
-                LocalizedStringResource(
-                    "deleteImpact.via.observationsCitationId.other",
-                    defaultValue: "%lld observations still belong to this",
-                    comment: "Inbound heading for observations.citation_id, plural"
-                )
+        private static let viaFormats: [String: LocalizedStringResource] = [
+            "observations.citation_id": LocalizedStringResource(
+                "deleteImpact.via.observationsCitationId",
+                defaultValue: "%lld observations still belong to this",
+                comment: "Inbound heading for observations.citation_id; argument is how many"
             ),
-            "observations.subject_id": (
-                LocalizedStringResource(
-                    "deleteImpact.via.observationsSubjectId.one",
-                    defaultValue: "This subject has %lld observation",
-                    comment: "Inbound heading for observations.subject_id, singular"
-                ),
-                LocalizedStringResource(
-                    "deleteImpact.via.observationsSubjectId.other",
-                    defaultValue: "This subject has %lld observations",
-                    comment: "Inbound heading for observations.subject_id, plural"
-                )
+            "observations.subject_id": LocalizedStringResource(
+                "deleteImpact.via.observationsSubjectId",
+                defaultValue: "This subject has %lld observations",
+                comment: "Inbound heading for observations.subject_id; argument is how many"
             ),
-            "observations.value_subject_id": (
-                LocalizedStringResource(
-                    "deleteImpact.via.observationsValueSubjectId.one",
-                    defaultValue: "%lld observation uses this as an endpoint",
-                    comment: "Inbound heading for observations.value_subject_id, singular"
-                ),
-                LocalizedStringResource(
-                    "deleteImpact.via.observationsValueSubjectId.other",
-                    defaultValue: "%lld observations use this as an endpoint",
-                    comment: "Inbound heading for observations.value_subject_id, plural"
-                )
+            "observations.value_subject_id": LocalizedStringResource(
+                "deleteImpact.via.observationsValueSubjectId",
+                defaultValue: "%lld observations use this as an endpoint",
+                comment: "Inbound heading for observations.value_subject_id; argument is how many"
             ),
-            "artifacts.source_id": (
-                LocalizedStringResource(
-                    "deleteImpact.via.artifactsSourceId.one",
-                    defaultValue: "%lld artifact belongs to this source",
-                    comment: "Inbound heading for artifacts.source_id, singular"
-                ),
-                LocalizedStringResource(
-                    "deleteImpact.via.artifactsSourceId.other",
-                    defaultValue: "%lld artifacts belong to this source",
-                    comment: "Inbound heading for artifacts.source_id, plural"
-                )
+            "artifacts.source_id": LocalizedStringResource(
+                "deleteImpact.via.artifactsSourceId",
+                defaultValue: "%lld artifacts belong to this source",
+                comment: "Inbound heading for artifacts.source_id; argument is how many"
             ),
-            "subjects.source_id": (
-                LocalizedStringResource(
-                    "deleteImpact.via.subjectsSourceId.one",
-                    defaultValue: "%lld subject belongs to this source",
-                    comment: "Inbound heading for subjects.source_id, singular"
-                ),
-                LocalizedStringResource(
-                    "deleteImpact.via.subjectsSourceId.other",
-                    defaultValue: "%lld subjects belong to this source",
-                    comment: "Inbound heading for subjects.source_id, plural"
-                )
+            "subjects.source_id": LocalizedStringResource(
+                "deleteImpact.via.subjectsSourceId",
+                defaultValue: "%lld subjects belong to this source",
+                comment: "Inbound heading for subjects.source_id; argument is how many"
             ),
-            "citations.artifact_id": (
-                LocalizedStringResource(
-                    "deleteImpact.via.citationsArtifactId.one",
-                    defaultValue: "%lld citation is drawn from this artifact",
-                    comment: "Inbound heading for citations.artifact_id, singular"
-                ),
-                LocalizedStringResource(
-                    "deleteImpact.via.citationsArtifactId.other",
-                    defaultValue: "%lld citations are drawn from this artifact",
-                    comment: "Inbound heading for citations.artifact_id, plural"
-                )
+            "citations.artifact_id": LocalizedStringResource(
+                "deleteImpact.via.citationsArtifactId",
+                defaultValue: "%lld citations are drawn from this artifact",
+                comment: "Inbound heading for citations.artifact_id; argument is how many"
             ),
-            "sources.source_type_id": (
-                LocalizedStringResource(
-                    "deleteImpact.via.sourcesSourceTypeId.one",
-                    defaultValue: "%lld source has this type",
-                    comment: "Inbound heading for sources.source_type_id, singular"
-                ),
-                LocalizedStringResource(
-                    "deleteImpact.via.sourcesSourceTypeId.other",
-                    defaultValue: "%lld sources have this type",
-                    comment: "Inbound heading for sources.source_type_id, plural"
-                )
+            "sources.source_type_id": LocalizedStringResource(
+                "deleteImpact.via.sourcesSourceTypeId",
+                defaultValue: "%lld sources have this type",
+                comment: "Inbound heading for sources.source_type_id; argument is how many"
             ),
-            "source_metadata.field_id": (
-                LocalizedStringResource(
-                    "deleteImpact.via.sourceMetadataFieldId.one",
-                    defaultValue: "%lld source records a value for this field",
-                    comment: "Inbound heading for source_metadata.field_id, singular"
-                ),
-                LocalizedStringResource(
-                    "deleteImpact.via.sourceMetadataFieldId.other",
-                    defaultValue: "%lld sources record a value for this field",
-                    comment: "Inbound heading for source_metadata.field_id, plural"
-                )
+            "source_metadata.field_id": LocalizedStringResource(
+                "deleteImpact.via.sourceMetadataFieldId",
+                defaultValue: "%lld sources record a value for this field",
+                comment: "Inbound heading for source_metadata.field_id; argument is how many"
             ),
-            "source_credibility_assessments.credibility_grade_id": (
-                LocalizedStringResource(
-                    "deleteImpact.via.credibilityGradeId.one",
-                    defaultValue: "%lld source uses this grade",
-                    comment: "Inbound heading for source_credibility_assessments.credibility_grade_id, singular"
-                ),
-                LocalizedStringResource(
-                    "deleteImpact.via.credibilityGradeId.other",
-                    defaultValue: "%lld sources use this grade",
-                    comment: "Inbound heading for source_credibility_assessments.credibility_grade_id, plural"
-                )
+            "source_credibility_assessments.credibility_grade_id": LocalizedStringResource(
+                "deleteImpact.via.credibilityGradeId",
+                defaultValue: "%lld sources use this grade",
+                comment: "Inbound heading for source_credibility_assessments.credibility_grade_id; argument is how many"
             ),
-            "subjects.subject_type_id": (
-                LocalizedStringResource(
-                    "deleteImpact.via.subjectsSubjectTypeId.one",
-                    defaultValue: "%lld subject has this type",
-                    comment: "Inbound heading for subjects.subject_type_id, singular"
-                ),
-                LocalizedStringResource(
-                    "deleteImpact.via.subjectsSubjectTypeId.other",
-                    defaultValue: "%lld subjects have this type",
-                    comment: "Inbound heading for subjects.subject_type_id, plural"
-                )
+            "subjects.subject_type_id": LocalizedStringResource(
+                "deleteImpact.via.subjectsSubjectTypeId",
+                defaultValue: "%lld subjects have this type",
+                comment: "Inbound heading for subjects.subject_type_id; argument is how many"
             ),
-            "observations.property_id": (
-                LocalizedStringResource(
-                    "deleteImpact.via.observationsPropertyId.one",
-                    defaultValue: "%lld observation uses this property",
-                    comment: "Inbound heading for observations.property_id, singular"
-                ),
-                LocalizedStringResource(
-                    "deleteImpact.via.observationsPropertyId.other",
-                    defaultValue: "%lld observations use this property",
-                    comment: "Inbound heading for observations.property_id, plural"
-                )
+            "observations.property_id": LocalizedStringResource(
+                "deleteImpact.via.observationsPropertyId",
+                defaultValue: "%lld observations use this property",
+                comment: "Inbound heading for observations.property_id; argument is how many"
             ),
-            "property_terms.property_id": (
-                LocalizedStringResource(
-                    "deleteImpact.via.propertyTermsPropertyId.one",
-                    defaultValue: "%lld term belongs to this property",
-                    comment: "Inbound heading for property_terms.property_id, singular"
-                ),
-                LocalizedStringResource(
-                    "deleteImpact.via.propertyTermsPropertyId.other",
-                    defaultValue: "%lld terms belong to this property",
-                    comment: "Inbound heading for property_terms.property_id, plural"
-                )
+            "property_terms.property_id": LocalizedStringResource(
+                "deleteImpact.via.propertyTermsPropertyId",
+                defaultValue: "%lld terms belong to this property",
+                comment: "Inbound heading for property_terms.property_id; argument is how many"
             ),
-            "observations.value_term_id": (
-                LocalizedStringResource(
-                    "deleteImpact.via.observationsValueTermId.one",
-                    defaultValue: "%lld observation uses this term",
-                    comment: "Inbound heading for observations.value_term_id, singular"
-                ),
-                LocalizedStringResource(
-                    "deleteImpact.via.observationsValueTermId.other",
-                    defaultValue: "%lld observations use this term",
-                    comment: "Inbound heading for observations.value_term_id, plural"
-                )
+            "observations.value_term_id": LocalizedStringResource(
+                "deleteImpact.via.observationsValueTermId",
+                defaultValue: "%lld observations use this term",
+                comment: "Inbound heading for observations.value_term_id; argument is how many"
             ),
-            "artifacts.file_id": (
-                LocalizedStringResource(
-                    "deleteImpact.via.artifactsFileId.one",
-                    defaultValue: "%lld artifact uses this file",
-                    comment: "Inbound heading for artifacts.file_id, singular"
-                ),
-                LocalizedStringResource(
-                    "deleteImpact.via.artifactsFileId.other",
-                    defaultValue: "%lld artifacts use this file",
-                    comment: "Inbound heading for artifacts.file_id, plural"
-                )
+            "artifacts.file_id": LocalizedStringResource(
+                "deleteImpact.via.artifactsFileId",
+                defaultValue: "%lld artifacts use this file",
+                comment: "Inbound heading for artifacts.file_id; argument is how many"
             ),
         ]
 
