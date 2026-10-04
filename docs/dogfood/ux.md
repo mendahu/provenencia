@@ -19,6 +19,15 @@ Copy the stub. Surface + what got in the way is enough. A wanted fix is optional
 
 <!-- add below this line -->
 
+### Name part type dropdown: shifting width and no type-to-cycle
+
+- **Date:** 2026-10-04
+- **Where:** Citation composer → Observation name parts modal
+- **Annoyance:** Two problems with the name part type dropdown:
+  - **Width:** it sizes to the selected option, so it grows and shrinks as you change the selection. It looks jumpy and tense.
+  - **Hotkeys:** with the dropdown focused, pressing S jumps to the first option starting with S (Surname prefix). Pressing S again stays there instead of moving to the next S option (Surname). You can't cycle through matches with the keyboard.
+- **Wanted:** A fixed width (e.g. sized to the widest option). Pressing the same letter again cycles through every option that starts with it.
+
 ### Evidence graph misrenders when zoomed far out
 
 - **Date:** 2026-10-04
