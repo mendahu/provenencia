@@ -90,6 +90,8 @@ When a seed finds a bug, shrink it into an exact-score case.
 Not yet handled:
 - Nickname equivalence (Jim ↔ James) and phonetic matching.
 - Accent folding: "José" vs "Jose" is not a match. Normalization keeps diacritics, and the two words are too short for the near-spelling floor.
+
+These, together with profile-driven roles for non-Western names (dual surnames, patronymics, name chains) and transliteration, are planned in [`ideas/international-names.md`](ideas/international-names.md).
 - Patronymics, and name changes as their own signals.
 - Culture-specific roles from name format profiles.
 
