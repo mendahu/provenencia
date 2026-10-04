@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/searchindex"
 )
@@ -59,11 +60,15 @@ func (f *FTSSearcher) Search(ctx context.Context, c *database.Catalog, q Query) 
 		return nil, err
 	}
 
+	kinds := effectiveKinds(q.Kinds)
+	if len(kinds) == 0 {
+		return nil, nil
+	}
 	byKey := make(map[string]docRow)
 
 	// Ref fast path: exact / prefix on projected docs (does not depend on FTS tokenization).
 	if key, exact := classifyRefQuery(raw); key != "" {
-		refDocs, err := lookUpRefDocs(ctx, db, key, exact, limit)
+		refDocs, err := lookUpRefDocs(ctx, db, key, exact, limit, kinds)
 		if err != nil {
 			return nil, err
 		}
@@ -77,7 +82,7 @@ func (f *FTSSearcher) Search(ctx context.Context, c *database.Catalog, q Query) 
 		if refKey, _ := classifyRefQuery(raw); refKey == "" {
 			andMatch := buildMatchQuery(tokens, false)
 			if andMatch != "" {
-				if err := mergeFTS(ctx, db, byKey, andMatch); err != nil {
+				if err := mergeFTS(ctx, db, byKey, andMatch, kinds); err != nil {
 					return nil, err
 				}
 			}
@@ -85,14 +90,14 @@ func (f *FTSSearcher) Search(ctx context.Context, c *database.Catalog, q Query) 
 			if len(tokens) >= 2 {
 				orMatch := buildMatchQuery(tokens, true)
 				if orMatch != "" {
-					if err := mergeFTS(ctx, db, byKey, orMatch); err != nil {
+					if err := mergeFTS(ctx, db, byKey, orMatch, kinds); err != nil {
 						return nil, err
 					}
 				}
 			}
 			// Typo shortlist: trigram OR expansion + Jaro–Winkler gate (never full scan).
 			if len(byKey) < limit {
-				if err := mergeFuzzyShortlist(ctx, db, byKey, tokens, limit); err != nil {
+				if err := mergeFuzzyShortlist(ctx, db, byKey, tokens, limit, kinds); err != nil {
 					return nil, err
 				}
 			}
@@ -116,7 +121,7 @@ func (f *FTSSearcher) Search(ctx context.Context, c *database.Catalog, q Query) 
 			return nil, err
 		}
 		spec, ok := kindSpec(d.kind)
-		if !ok || !spec.DefaultInEverything {
+		if !ok || !containsKind(kinds, d.kind) {
 			continue
 		}
 		values := fieldValuesForKind(d.kind, d.title, d.ref, d.secondary, d.body)
@@ -176,10 +181,78 @@ func (f *FTSSearcher) Search(ctx context.Context, c *database.Catalog, q Query) 
 	if len(hits) > limit {
 		hits = hits[:limit]
 	}
+	if err := fillMemberCounts(ctx, db, hits); err != nil {
+		return nil, err
+	}
 	return hits, nil
 }
 
-func mergeFTS(ctx context.Context, db *sql.DB, byKey map[string]docRow, match string) error {
+func kindSQL(kinds []string) string {
+	clause, _ := kindClause("d.kind", kinds)
+	return clause
+}
+
+func kindArgs(kinds []string) []any {
+	_, args := kindClause("d.kind", kinds)
+	return args
+}
+
+func containsKind(kinds []string, kind string) bool {
+	for _, k := range kinds {
+		if k == kind {
+			return true
+		}
+	}
+	return false
+}
+
+func isHandleKind(kind string) bool {
+	return kind == KindPerson || kind == KindEvent || kind == KindPlace
+}
+
+// fillMemberCounts sets MemberCount on handle hits: one query for the page.
+func fillMemberCounts(ctx context.Context, db *sql.DB, hits []Hit) error {
+	var ids []any
+	index := map[string][]int{}
+	for i, h := range hits {
+		if !isHandleKind(h.Kind) {
+			continue
+		}
+		u, err := uuid.Parse(h.ID)
+		if err != nil {
+			continue
+		}
+		if _, seen := index[string(u[:])]; !seen {
+			ids = append(ids, u[:])
+		}
+		index[string(u[:])] = append(index[string(u[:])], i)
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	marks := strings.TrimSuffix(strings.Repeat("?, ", len(ids)), ", ")
+	rows, err := db.QueryContext(ctx, `SELECT entity_id, COUNT(*) FROM identity_claims
+		WHERE status = 'accepted' AND entity_id IN (`+marks+`) GROUP BY entity_id`, ids...)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var (
+			id []byte
+			n  int
+		)
+		if err := rows.Scan(&id, &n); err != nil {
+			return err
+		}
+		for _, i := range index[string(id)] {
+			hits[i].MemberCount = n
+		}
+	}
+	return rows.Err()
+}
+
+func mergeFTS(ctx context.Context, db *sql.DB, byKey map[string]docRow, match string, kinds []string) error {
 	if err := errIfCancelled(ctx); err != nil {
 		return err
 	}
@@ -191,8 +264,8 @@ func mergeFTS(ctx context.Context, db *sql.DB, byKey map[string]docRow, match st
 			bm25(catalog_search_fts, %f, %f, %f, %f) AS rank
 		FROM catalog_search_fts
 		JOIN catalog_search_docs d ON d.rowid = catalog_search_fts.rowid
-		WHERE catalog_search_fts MATCH ?
-	`, w.Title, w.Ref, w.Secondary, w.Body), match)
+		WHERE catalog_search_fts MATCH ?%s
+	`, w.Title, w.Ref, w.Secondary, w.Body, kindSQL(kinds)), append([]any{match}, kindArgs(kinds)...)...)
 	if err != nil {
 		return err
 	}
@@ -226,7 +299,7 @@ func mergeFTS(ctx context.Context, db *sql.DB, byKey map[string]docRow, match st
 
 // mergeFuzzyShortlist expands candidates via trigram OR MATCH, then keeps only
 // rows that pass a Jaro–Winkler gate against identity fields.
-func mergeFuzzyShortlist(ctx context.Context, db *sql.DB, byKey map[string]docRow, tokens []string, limit int) error {
+func mergeFuzzyShortlist(ctx context.Context, db *sql.DB, byKey map[string]docRow, tokens []string, limit int, kinds []string) error {
 	remaining := FuzzyWeights.CandidateCap
 	if remaining <= 0 {
 		return nil
@@ -242,7 +315,7 @@ func mergeFuzzyShortlist(ctx context.Context, db *sql.DB, byKey map[string]docRo
 		if match == "" {
 			continue
 		}
-		added, err := mergeTrigramCandidates(ctx, db, byKey, match, remaining, tokens)
+		added, err := mergeTrigramCandidates(ctx, db, byKey, match, remaining, tokens, kinds)
 		if err != nil {
 			return err
 		}
@@ -251,7 +324,7 @@ func mergeFuzzyShortlist(ctx context.Context, db *sql.DB, byKey map[string]docRo
 	return nil
 }
 
-func mergeTrigramCandidates(ctx context.Context, db *sql.DB, byKey map[string]docRow, match string, capN int, tokens []string) (added int, err error) {
+func mergeTrigramCandidates(ctx context.Context, db *sql.DB, byKey map[string]docRow, match string, capN int, tokens []string, kinds []string) (added int, err error) {
 	if err := errIfCancelled(ctx); err != nil {
 		return 0, err
 	}
@@ -261,9 +334,9 @@ func mergeTrigramCandidates(ctx context.Context, db *sql.DB, byKey map[string]do
 			d.title, d.ref, d.secondary, d.body
 		FROM catalog_search_fts_trigram
 		JOIN catalog_search_docs d ON d.rowid = catalog_search_fts_trigram.rowid
-		WHERE catalog_search_fts_trigram MATCH ?
+		WHERE catalog_search_fts_trigram MATCH ?`+kindSQL(kinds)+`
 		LIMIT ?
-	`, match, capN)
+	`, append(append([]any{match}, kindArgs(kinds)...), capN)...)
 	if err != nil {
 		return 0, err
 	}
@@ -322,6 +395,12 @@ func fieldValuesForKind(kind, title, refCol, secondary, body string) map[string]
 			"key":         secondary,
 			"description": secondary,
 		}
+	case KindPerson, KindEvent, KindPlace:
+		return map[string]string{
+			"title": title,
+			"ref":   refCol,
+			"other": secondary,
+		}
 	default:
 		return map[string]string{
 			"title": title,
@@ -359,6 +438,12 @@ func locationFor(kind, id, refCol, title string) WorkspaceLocation {
 		return WorkspaceLocation{Section: SectionSourceTypes, TypeID: id, Title: title}
 	case KindMetadataField:
 		return WorkspaceLocation{Section: SectionMetadata, FieldID: id, Title: title}
+	case KindPerson:
+		return WorkspaceLocation{Section: SectionPersons, EntityID: id, Ref: refCol, Title: title}
+	case KindEvent:
+		return WorkspaceLocation{Section: SectionEvents, EntityID: id, Ref: refCol, Title: title}
+	case KindPlace:
+		return WorkspaceLocation{Section: SectionPlaces, EntityID: id, Ref: refCol, Title: title}
 	default:
 		return WorkspaceLocation{}
 	}

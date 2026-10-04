@@ -788,6 +788,7 @@ message WorkspaceLocation {
   string source_title = 15;
   string subject_type_key = 16; // Properties type-strip category; empty = All properties
   string property_id = 17;      // Properties inspector row
+  string entity_id = 18;        // Conclusion handle (persons / events / places)
 }
 
 // SearchCatalog finds navigable catalog roots for the omnibar (S3-07+).
@@ -795,10 +796,13 @@ message SearchCatalogRequest {
   string project_dir = 1;
   string query = 2;
   WorkspaceLocation location = 3; // current place; at least section for context boosts
+  // Restrict hits to these kinds. Empty = the omnibar's default set, which
+  // excludes person / event / place until S9-35.
+  repeated string kinds = 4;
 }
 
 message SearchHit {
-  string kind = 1;         // source | source_type | metadata_field
+  string kind = 1;         // source | source_type | metadata_field | person | event | place
   string id = 2;
   string ref = 3;
   string title = 4;
@@ -812,6 +816,7 @@ message SearchHit {
   string icon_key = 9;           // Source type icon, or type hit icon; empty for fields
   // Optional raw snippet for body/rollup matches (notes/metadata/filename). No English prefix.
   string match_snippet = 10;
+  int32 member_count = 11; // accepted members, for person / event / place hits
 }
 
 message SearchCatalogResponse {

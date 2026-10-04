@@ -635,12 +635,14 @@ struct GoStore: GenealogyStore {
     func searchCatalog(
         projectDir: String,
         query: String,
-        location: WorkspaceLocation
+        location: WorkspaceLocation,
+        kinds: [String]
     ) async throws -> [CatalogSearchHit] {
         var req = Provenencia_Engine_V1_SearchCatalogRequest()
         req.projectDir = projectDir
         req.query = query
         req.location = Self.mapWorkspaceLocationToProto(location)
+        req.kinds = kinds
         let resp: Provenencia_Engine_V1_SearchCatalogResponse = try await provenenciaCall(
             method: CoreMethod.searchCatalog,
             request: req
@@ -1351,6 +1353,7 @@ struct GoStore: GenealogyStore {
         p.connectBridgeTypeKey = loc.connectBridgeTypeKey ?? ""
         p.subjectTypeKey = loc.subjectTypeKey ?? ""
         p.propertyID = loc.propertyId ?? ""
+        p.entityID = loc.entityId ?? ""
         p.sourceTitle = loc.sourceTitle ?? ""
         return p
     }
@@ -1373,6 +1376,7 @@ struct GoStore: GenealogyStore {
             connectBridgeTypeKey: p.connectBridgeTypeKey,
             subjectTypeKey: p.subjectTypeKey,
             propertyId: p.propertyID,
+            entityId: p.entityID,
             sourceSurface: SourceSurface(rawValue: p.sourceSurface) ?? .page,
             ref: p.ref,
             title: p.title,
@@ -1405,7 +1409,8 @@ struct GoStore: GenealogyStore {
             matchSnippet: h.matchSnippet,
             location: Self.mapWorkspaceLocationFromProto(h.location),
             thumbnailRelPath: h.thumbnailRelPath,
-            iconKey: h.iconKey
+            iconKey: h.iconKey,
+            memberCount: Int(h.memberCount)
         )
     }
 

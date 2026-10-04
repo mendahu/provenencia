@@ -104,6 +104,55 @@ var Registry = []KindSpec{
 	},
 }
 
+// Handle kinds: searchable on request (Query.Kinds), not in the omnibar's
+// default set until S9-35 designs their rows. Documents come from the
+// resolved-values cache (searchindex/handles.go): title is the rank-1 name,
+// toponym or event type; "other" is every other cached value.
+func init() {
+	for _, k := range []string{KindPerson, KindEvent, KindPlace} {
+		Registry = append(Registry, KindSpec{
+			Kind:                k,
+			DefaultInEverything: false,
+			Fields: []FieldWeight{
+				{Name: "title", Weight: 10},
+				{Name: "ref", Weight: 12},
+				{Name: "other", Weight: 6},
+			},
+		})
+	}
+}
+
+// effectiveKinds is the kinds a query may return: q.Kinds that the registry
+// knows, else every DefaultInEverything kind.
+func effectiveKinds(requested []string) []string {
+	var out []string
+	if len(requested) > 0 {
+		for _, k := range requested {
+			if _, ok := kindSpec(k); ok {
+				out = append(out, k)
+			}
+		}
+		return out
+	}
+	for _, s := range Registry {
+		if s.DefaultInEverything {
+			out = append(out, s.Kind)
+		}
+	}
+	return out
+}
+
+// kindClause is " AND <col> IN (?, …)" for the kinds, with its args.
+func kindClause(col string, kinds []string) (string, []any) {
+	args := make([]any, len(kinds))
+	marks := make([]string, len(kinds))
+	for i, k := range kinds {
+		args[i] = k
+		marks[i] = "?"
+	}
+	return " AND " + col + " IN (" + strings.Join(marks, ", ") + ")", args
+}
+
 func kindSpec(kind string) (KindSpec, bool) {
 	for _, s := range Registry {
 		if s.Kind == kind {

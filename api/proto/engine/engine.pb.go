@@ -6623,6 +6623,7 @@ type WorkspaceLocation struct {
 	SourceTitle          string                 `protobuf:"bytes,15,opt,name=source_title,json=sourceTitle,proto3" json:"source_title,omitempty"`
 	SubjectTypeKey       string                 `protobuf:"bytes,16,opt,name=subject_type_key,json=subjectTypeKey,proto3" json:"subject_type_key,omitempty"` // Properties type-strip category; empty = All properties
 	PropertyId           string                 `protobuf:"bytes,17,opt,name=property_id,json=propertyId,proto3" json:"property_id,omitempty"`               // Properties inspector row
+	EntityId             string                 `protobuf:"bytes,18,opt,name=entity_id,json=entityId,proto3" json:"entity_id,omitempty"`                     // Conclusion handle (persons / events / places)
 	unknownFields        protoimpl.UnknownFields
 	sizeCache            protoimpl.SizeCache
 }
@@ -6776,12 +6777,22 @@ func (x *WorkspaceLocation) GetPropertyId() string {
 	return ""
 }
 
+func (x *WorkspaceLocation) GetEntityId() string {
+	if x != nil {
+		return x.EntityId
+	}
+	return ""
+}
+
 // SearchCatalog finds navigable catalog roots for the omnibar (S3-07+).
 type SearchCatalogRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ProjectDir    string                 `protobuf:"bytes,1,opt,name=project_dir,json=projectDir,proto3" json:"project_dir,omitempty"`
-	Query         string                 `protobuf:"bytes,2,opt,name=query,proto3" json:"query,omitempty"`
-	Location      *WorkspaceLocation     `protobuf:"bytes,3,opt,name=location,proto3" json:"location,omitempty"` // current place; at least section for context boosts
+	state      protoimpl.MessageState `protogen:"open.v1"`
+	ProjectDir string                 `protobuf:"bytes,1,opt,name=project_dir,json=projectDir,proto3" json:"project_dir,omitempty"`
+	Query      string                 `protobuf:"bytes,2,opt,name=query,proto3" json:"query,omitempty"`
+	Location   *WorkspaceLocation     `protobuf:"bytes,3,opt,name=location,proto3" json:"location,omitempty"` // current place; at least section for context boosts
+	// Restrict hits to these kinds. Empty = the omnibar's default set, which
+	// excludes person / event / place until S9-35.
+	Kinds         []string `protobuf:"bytes,4,rep,name=kinds,proto3" json:"kinds,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -6837,9 +6848,16 @@ func (x *SearchCatalogRequest) GetLocation() *WorkspaceLocation {
 	return nil
 }
 
+func (x *SearchCatalogRequest) GetKinds() []string {
+	if x != nil {
+		return x.Kinds
+	}
+	return nil
+}
+
 type SearchHit struct {
 	state    protoimpl.MessageState `protogen:"open.v1"`
-	Kind     string                 `protobuf:"bytes,1,opt,name=kind,proto3" json:"kind,omitempty"` // source | source_type | metadata_field
+	Kind     string                 `protobuf:"bytes,1,opt,name=kind,proto3" json:"kind,omitempty"` // source | source_type | metadata_field | person | event | place
 	Id       string                 `protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty"`
 	Ref      string                 `protobuf:"bytes,3,opt,name=ref,proto3" json:"ref,omitempty"`
 	Title    string                 `protobuf:"bytes,4,opt,name=title,proto3" json:"title,omitempty"`
@@ -6853,6 +6871,7 @@ type SearchHit struct {
 	IconKey          string `protobuf:"bytes,9,opt,name=icon_key,json=iconKey,proto3" json:"icon_key,omitempty"`                              // Source type icon, or type hit icon; empty for fields
 	// Optional raw snippet for body/rollup matches (notes/metadata/filename). No English prefix.
 	MatchSnippet  string `protobuf:"bytes,10,opt,name=match_snippet,json=matchSnippet,proto3" json:"match_snippet,omitempty"`
+	MemberCount   int32  `protobuf:"varint,11,opt,name=member_count,json=memberCount,proto3" json:"member_count,omitempty"` // accepted members, for person / event / place hits
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -6955,6 +6974,13 @@ func (x *SearchHit) GetMatchSnippet() string {
 		return x.MatchSnippet
 	}
 	return ""
+}
+
+func (x *SearchHit) GetMemberCount() int32 {
+	if x != nil {
+		return x.MemberCount
+	}
+	return 0
 }
 
 type SearchCatalogResponse struct {
@@ -14166,7 +14192,7 @@ const file_engine_proto_rawDesc = "" +
 	"\x1aCloseCatalogSessionRequest\x12\x1f\n" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
 	"projectDir\"\x1d\n" +
-	"\x1bCloseCatalogSessionResponse\"\xe4\x04\n" +
+	"\x1bCloseCatalogSessionResponse\"\x81\x05\n" +
 	"\x11WorkspaceLocation\x12\x18\n" +
 	"\asection\x18\x01 \x01(\tR\asection\x12\x1b\n" +
 	"\tsource_id\x18\x02 \x01(\tR\bsourceId\x12\x19\n" +
@@ -14189,12 +14215,14 @@ const file_engine_proto_rawDesc = "" +
 	"\fsource_title\x18\x0f \x01(\tR\vsourceTitle\x12(\n" +
 	"\x10subject_type_key\x18\x10 \x01(\tR\x0esubjectTypeKey\x12\x1f\n" +
 	"\vproperty_id\x18\x11 \x01(\tR\n" +
-	"propertyId\"\x93\x01\n" +
+	"propertyId\x12\x1b\n" +
+	"\tentity_id\x18\x12 \x01(\tR\bentityId\"\xa9\x01\n" +
 	"\x14SearchCatalogRequest\x12\x1f\n" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
 	"projectDir\x12\x14\n" +
 	"\x05query\x18\x02 \x01(\tR\x05query\x12D\n" +
-	"\blocation\x18\x03 \x01(\v2(.provenencia.engine.v1.WorkspaceLocationR\blocation\"\xca\x02\n" +
+	"\blocation\x18\x03 \x01(\v2(.provenencia.engine.v1.WorkspaceLocationR\blocation\x12\x14\n" +
+	"\x05kinds\x18\x04 \x03(\tR\x05kinds\"\xed\x02\n" +
 	"\tSearchHit\x12\x12\n" +
 	"\x04kind\x18\x01 \x01(\tR\x04kind\x12\x0e\n" +
 	"\x02id\x18\x02 \x01(\tR\x02id\x12\x10\n" +
@@ -14206,7 +14234,8 @@ const file_engine_proto_rawDesc = "" +
 	"\x12thumbnail_rel_path\x18\b \x01(\tR\x10thumbnailRelPath\x12\x19\n" +
 	"\bicon_key\x18\t \x01(\tR\aiconKey\x12#\n" +
 	"\rmatch_snippet\x18\n" +
-	" \x01(\tR\fmatchSnippet\"M\n" +
+	" \x01(\tR\fmatchSnippet\x12!\n" +
+	"\fmember_count\x18\v \x01(\x05R\vmemberCount\"M\n" +
 	"\x15SearchCatalogResponse\x124\n" +
 	"\x04hits\x18\x01 \x03(\v2 .provenencia.engine.v1.SearchHitR\x04hits\"\xd0\x01\n" +
 	"\vSubjectType\x12\x0e\n" +

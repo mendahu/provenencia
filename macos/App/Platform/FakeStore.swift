@@ -958,7 +958,56 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         }
     }
 
+    /// Handle kinds: Persons by resolved name or ref, Events and Places by ref or
+    /// label (FakeStore has no event / place values). Other kinds: the omnibar
+    /// fake below, filtered to the requested kinds.
     func searchCatalog(
+        projectDir: String,
+        query: String,
+        location: WorkspaceLocation,
+        kinds: [String]
+    ) async throws -> [CatalogSearchHit] {
+        let handleKinds: Set<String> = ["person", "event", "place"]
+        let wanted = Set(kinds)
+        var hits: [CatalogSearchHit] = []
+        if !wanted.isDisjoint(with: handleKinds) {
+            hits += withState {
+                markCatalogSessionHeld(projectDir)
+                return handleSearchHits(query: query, kinds: wanted.intersection(handleKinds))
+            }
+        }
+        if wanted.isEmpty || !wanted.isSubset(of: handleKinds) {
+            let omnibar = try await omnibarSearchCatalog(projectDir: projectDir, query: query, location: location)
+            hits += wanted.isEmpty ? omnibar : omnibar.filter { wanted.contains($0.kind) }
+        }
+        return hits
+    }
+
+    /// Call inside `withState`.
+    private func handleSearchHits(query: String, kinds: Set<String>) -> [CatalogSearchHit] {
+        let needle = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !needle.isEmpty else { return [] }
+        let names = Dictionary(personHeaders().map { ($0.entity.id, $0.name?.form ?? "") }, uniquingKeysWith: { a, _ in a })
+        var seen = Set<String>()
+        var out: [CatalogSearchHit] = []
+        for membership in membershipBySubject.values.sorted(by: { $0.entity.ref < $1.entity.ref })
+        where kinds.contains(membership.kind) && seen.insert(membership.entity.id).inserted {
+            let entity = membership.entity
+            let name = names[entity.id] ?? ""
+            let title = !name.isEmpty ? name : (!entity.label.isEmpty ? entity.label : entity.ref)
+            guard [title, entity.ref, entity.label].contains(where: { $0.lowercased().contains(needle) }) else { continue }
+            let section: WorkspaceSection = membership.kind == "person" ? .persons : (membership.kind == "event" ? .events : .places)
+            out.append(CatalogSearchHit(
+                kind: membership.kind, id: entity.id, ref: entity.ref, title: title, subtitle: "",
+                matchReason: entity.ref.lowercased().contains(needle) ? "ref" : "title",
+                location: WorkspaceLocation(section: section, entityId: entity.id, ref: entity.ref, title: title),
+                memberCount: membershipBySubject.values.filter { $0.entity.id == entity.id }.count
+            ))
+        }
+        return out
+    }
+
+    private func omnibarSearchCatalog(
         projectDir: String,
         query: String,
         location: WorkspaceLocation
