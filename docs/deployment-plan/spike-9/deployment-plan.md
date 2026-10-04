@@ -235,7 +235,7 @@ The hard part. Model: [`conclusion-layer-data-model.md`](../../conclusion-layer-
 **Promote only creates claims.** It is one-way: nobody comes back into it to edit, re-pin, or remove a claim. Those are a separate workflow with its own place (Spike 10), even though they write the same tables. No resume-midstream affordances.
 
 1. **Entry.** A **Promote** control at the bottom of a subject card on the Evidence graph, for primary kinds (`person`, `event`, `place`) that have no accepted Identity Claim. Bridge cards are not entry points; they join through the walk.
-2. **Choose target.** Mint a new handle, or pick an existing one of the same Subject type. The picker shows R4 headers. Suggestions: handles already related to the one just filed (during the walk), then resemblance (resolved name, date, toponym, event type — via R3 `sort_key` and the R8 index).
+2. **Choose target.** Mint a new handle, or pick an existing one of the same Subject type. The picker shows R4 headers. Suggestions: handles already related to the one just filed (during the walk), then resemblance (resolved name, date, toponym, event type — scored by per-kind match profiles over R3, see [`docs/matching.md`](../../matching.md); the R8 index can narrow candidates).
 3. **Compare (existing handle only).** Line up the incoming Subject's Observations against each accepted member's Observations for the same Property. Compatible pairs start checked (R2 rules); differing pairs start unchecked. Accept all checked for a Property in one gesture, clear a pair, or skip and accept with no pins. Checked pairs are pinned; unchecked pairs are simply not pinned.
    - **Minting a new handle skips this step.** The grounding claim normally has **zero pins**. Its Observations get pinned later, by backfill, when a second Subject joins and confirms against it (§5.1).
 4. **Claim fields.** A **Status** dropdown is in the layout now, with one option — `accepted` (Q7). Later spikes add `provisional` / `rejected` to it without a relayout. Optional confidence grade. `argument` drafted from the confirmed rows when there are any; editable; empty is fine on grounding.
@@ -611,7 +611,11 @@ Researcher's decision while revising **S9-D1**: two configuration views get plai
 
 #### S9-10 — Promote write + reads: existing target
 
-**Done.** See [`completed.md`](completed.md#s9-10--promote-write--reads-existing-target). For **S9-11**: `listPromoteTargetSuggestions` gives the *Suggested* rows (`CatalogPersonHeader`, best first); search the existing `.personsList` for the picker; join by passing `entityID` to `promoteSubject`. For **S9-12**: grades come from `listClaimConfidenceGrades`; pass `confidenceGradeID` / `argument` on the same `promoteSubject` call. For **S9-22 / S9-25**: add Event / Place header lists to `ListPromoteTargetSuggestionsResponse` beside `persons`, with their resemblance keys (S9-20 / S9-21).
+**Done.** See [`completed.md`](completed.md#s9-10--promote-write--reads-existing-target). Matching is its own module: [`docs/matching.md`](../../matching.md).
+- **S9-11:** `listPromoteTargetSuggestions` gives the *Suggested* rows: `CatalogPromoteTargetSuggestion` (score, reasons, `person` header), best first. Search the existing `.personsList` for the picker, and join by passing `entityID` to `promoteSubject`.
+- **S9-12:** grades come from `listClaimConfidenceGrades`; pass `confidenceGradeID` / `argument` on the same `promoteSubject` call.
+- **S9-22 / S9-25:** add an `event` / `place` header to `PromoteTargetSuggestion`; matching for those kinds already ships.
+- **S9-28 / S9-29:** new signals (life dates through edges, related-first ordering) are Features in `core/match` profiles.
 
 | | |
 | --- | --- |
