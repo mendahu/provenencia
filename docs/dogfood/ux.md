@@ -19,6 +19,13 @@ Copy the stub. Surface + what got in the way is enough. A wanted fix is optional
 
 <!-- add below this line -->
 
+### Last updated field on list views
+
+- **Date:** 2026-10-05
+- **Where:** Sources list, People list, Events list, Places list
+- **Annoyance:** None of the lists show when an item was last changed.
+- **Wanted:** A **Last updated** field on the Sources list, and the same on the People, Events, and Places lists.
+
 ### Sources list sort and filter don't persist
 
 - **Date:** 2026-10-05
