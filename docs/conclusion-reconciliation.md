@@ -194,9 +194,7 @@ The rebuild-equals-upkeep tests hold upkeep equal to a full rebuild. Every new t
 
 # 11. Open questions
 
-1. **Places.** Decided in §11.1. Still open:
-   - **Where the link type lives.** A "part of" link carries no period, so it can be a plain subject-valued Property on the Place, except for its type (administrative, geographic, ecclesiastical). It could be one Property per type, or an association handle carrying the type.
-   - **A name for the succession relationship** (§11.1): *became*, *succeeded by*, *renamed*?
+1. **Places.** Decided in §11.1. Still open: the seeded type keys and labels (the succession type's name: *became*, *succeeded by*, *renamed*?).
 2. **Claims for multi-valued Properties.** What a Reconciliation Claim concludes when a Property has several true values.
 
 **Decided 2026-10-05:**
@@ -210,7 +208,21 @@ The rebuild-equals-upkeep tests hold upkeep equal to a full rebuild. Every new t
 
 - **Separate places with relationships, not one composite place.** "Toronto, Ontario, Canada" is three Places linked upward, so queries like "everyone born in Ontario" work.
 - **A place is whatever the research needs.** A township, a county, a region (the Lower Mainland), a family farm. No rules about what can contain what. An optional **kind** is a label for display and filters, not a constraint.
-- **The containment relationship is "part of", with a type** from an open vocabulary: administrative (Guam in the United States), geographic (the Lower Mainland in British Columbia), ecclesiastical (a parish in a diocese). A place may have several parents, so places form a graph, not a tree.
+- **Places relate through a place relationship**, an association kind alongside Location and Participation, with three Properties:
+
+  | Property | Value | Meaning |
+  | --- | --- | --- |
+  | `subject` | place | the part, or the predecessor |
+  | `object` | place | the whole, or the successor |
+  | `place_relationship_type` | term | what the relationship is |
+
+  Each relationship is cited and reconciled like any other evidence; the ends use the subject-valued module (§7). It is a dedicated kind, not the Person Relationship, because its ends are two directional places. It can carry more Properties later without remodelling.
+- **Types are an open, researcher-extensible vocabulary, and each type has a category:**
+  - **hierarchical:** administrative (Guam in the United States), geographic (the Lower Mainland in British Columbia), ecclesiastical (a parish in a diocese), and any a researcher adds. These follow a chain upward ("everyone in Ontario"), hold where the two places' periods overlap, and build display chains ("Toronto, Ontario, Canada"). A place may have several parents, so places form a graph, not a tree.
+  - **temporal:** succession (York → Toronto), and any a researcher adds. These link a lineage that search may follow. They never build a display chain, and containment is not inherited across them.
+
+  The category is data on the vocabulary term (a new field), so a researcher-added type tells the app how to behave.
+- **No loops.** Hierarchical relationships must not form a cycle, and temporal ones are directional. Both are checked in the app layer, not the schema.
 - **Periods live on Places, not on links.** A Place has a **period** when it existed or was meaningful (a city from incorporation, a country from independence, a farm until it was sold). Start and end are both optional structured dates; a place with no period is always valid.
 - **A link holds where the two places' periods overlap.** Toronto (1834–) is part of Upper Canada (1791–1841) until 1841, the Province of Canada (1841–1867) until 1867, and Ontario (1867–) after. So "what is Toronto part of?" needs a date, and the periods answer it.
   - **Accepted imprecision:** when both places persist and the link changes (Guam, Spanish until 1898 and American after), the link reads as holding for the whole overlap, and Guam is part of both. Where that matters, model the jurisdictions as distinct Places with their own periods (the Kingdom of Spain, the American colonies, the United States).
