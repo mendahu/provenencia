@@ -27,6 +27,7 @@ Use this folder when something useful pops up mid-work and would otherwise get l
 - [`international-names.md`](international-names.md)
 - [`name-matching-enhancements.md`](name-matching-enhancements.md)
 - [`evidence-graph-drag-performance.md`](evidence-graph-drag-performance.md)
+- [`place-gazetteer-service.md`](place-gazetteer-service.md)
 
 ## Archived
 

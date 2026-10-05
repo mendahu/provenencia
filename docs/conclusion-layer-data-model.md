@@ -89,7 +89,7 @@ Attribute-level conflicts across member Observations are handled by soft display
 
 ## 2.5 Resolver logic is application-level
 
-The database preserves multiple source-backed values. Resolvers may synthesize display without creating Claims. **Provenencia badges** on a handle (from records / inferred / asserted / unlinked) are computed from whether any accepted Identity Claim exists, whether Reconciliations pin Observations, and whether `argument` is set. They are not a stored enum.
+The database preserves multiple source-backed values. Resolvers may synthesize display without creating Claims. How they do it (the auto-reconcilers, their shared pipeline and their output) is in [`conclusion-reconciliation.md`](conclusion-reconciliation.md). **Provenencia badges** on a handle (from records / inferred / asserted / unlinked) are computed from whether any accepted Identity Claim exists, whether Reconciliations pin Observations, and whether `argument` is set. They are not a stored enum.
 
 ## 2.6 Persistence conventions
 
@@ -406,7 +406,7 @@ Exactly one value representation must be populated, and it must match `propertie
 
 As with Observations, typed-column matching is an **application write invariant** for now. Readers prefer the column matching `value_type` if extras are present. The concluded value may match one exhibit Observation, be copied from a related subject's value, or be synthesized (for example a DateValue spanning Apr–May 1985).
 
-There is at most one Reconciliation Claim per `(entity, property)`. Changing the concluded value, `status`, or confidence grade updates that row (and is audited).
+There is at most one Reconciliation Claim per `(entity, property)`. **Planned change:** for a multi-valued Property (per-Property cardinality), the rule becomes one claim per `(entity, property, value)`; see [`conclusion-reconciliation.md`](conclusion-reconciliation.md) §8. Changing the concluded value, `status`, or confidence grade updates that row (and is audited).
 
 `status` matches Identity Claims: `provisional`, `accepted`, or `rejected`. **Only `accepted` is the committed concluded value.** `provisional` is a persisted working choice the UI should show differently. `rejected` is kept for audit and is not the working value.
 
@@ -439,7 +439,7 @@ See [`structured-name-model.md`](structured-name-model.md).
 | Researcher commits a value (winner, synthesis, `name_format`, or nodeless ends) | Reconciliation Claim, usually `accepted` |
 | Researcher is still weighing a value | Optional claim with `status = provisional` (distinct UI) |
 
-Absence of an **accepted** Reconciliation Claim means “no committed concluded value yet.” The UI may still show member Observations and a stateless merge. For `name_format`, absence of an accepted claim means “use the project default.” For a nodeless Location, absence of accepted `event` or `place` means the edge is not usable yet.
+Absence of an **accepted** Reconciliation Claim means “no committed concluded value yet.” The UI may still show member Observations and a stateless merge; the auto-reconcilers that produce it are in [`conclusion-reconciliation.md`](conclusion-reconciliation.md). For `name_format`, absence of an accepted claim means “use the project default.” For a nodeless Location, absence of accepted `event` or `place` means the edge is not usable yet.
 
 ## 7.1 `reconciliation_claim_evidence`
 
@@ -581,7 +581,7 @@ These are **schema and application invariants** (see §1). Grain, gazetteer use,
 10. Provisional and rejected Identity Claims are not members. Absence of a claim is not a rejection.
 11. Observations always target Subjects and always have a Citation (Interpretation schema). Canonical handles are not Observation subjects.
 12. Creating one canonical entity does not require or imply creating related entities (no cascade in schema).
-13. There is at most one Reconciliation Claim per `(entity_id, property_id)`.
+13. There is at most one Reconciliation Claim per `(entity_id, property_id)` (planned: per value for multi-valued Properties; [`conclusion-reconciliation.md`](conclusion-reconciliation.md) §8).
 14. A Reconciliation Claim's typed value must match `properties.value_type` (application write). For `value_type = 'subject'`, Conclusion uses `value_entity_id`.
 15. Soft display merges are stateless UI projections; only an accepted Reconciliation Claim is a committed concluded value.
 16. Person name format is a Property (`name_format`) or the project default, not a column on `canonical_entities`.
@@ -717,6 +717,7 @@ To avoid competing schema definitions:
 - [`source-layer-data-model.md`](source-layer-data-model.md) is authoritative for Source-layer tables and Artifact/File storage.
 - [`interpretation-layer-data-model.md`](interpretation-layer-data-model.md) is authoritative for Interpretation-layer tables and vocabulary.
 - This document is authoritative for Conclusion-layer tables and Claims.
+- [`conclusion-reconciliation.md`](conclusion-reconciliation.md) is authoritative for how displayed values are derived from member evidence (auto-reconcilers) and how Reconciliation Claims override them.
 - [`structured-date-model.md`](structured-date-model.md) is authoritative for shared DateValue persistence.
 - [`structured-name-model.md`](structured-name-model.md) is authoritative for shared NameValue persistence.
 - [`seeded-vocabulary.md`](seeded-vocabulary.md) is the horizon catalog for intended keys and starter open-vocabulary lists (not a v1 ship list).

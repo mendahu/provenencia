@@ -214,7 +214,7 @@ Observation
     parts: William (given), Robins (surname)
 ```
 
-Search and reconciliation should use parts when present and fall back to `form` (including fuzzy or full-text strategies) when parts are absent or untyped.
+Search and matching should use parts when present and fall back to `form` (including fuzzy or full-text strategies) when parts are absent or untyped. Reconciliation uses parts only: `form` is a transcription, and a name with no parts carries nothing to reconcile ([`conclusion-reconciliation.md`](conclusion-reconciliation.md) §7.2).
 
 Canonical entity `label` is a researcher working identifier, not a genealogical name. Structured NameValue Observations on member Nodes remain authoritative for name evidence. Cultural display/entry ordering for a Person is the concluded Property `name_format` (falling back to the project default).
 
