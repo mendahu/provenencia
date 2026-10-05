@@ -589,32 +589,34 @@ Names now reconcile by their structured parts on the shared pipeline ([`conclusi
 **What shipped**
 
 - **`nameModule`** (`core/resolve/names.go`):
-  - **Split:** one unit per part type; each unit is the type's parts in idx order, normalized (accents kept). `form` is never read; a name with no parts is no evidence.
+  - **Split:** one unit per part type; each unit is the type's **words** in idx order: parts normalized (accents kept) and split on spaces and hyphens, so *Smith-Jones* = *Smith Jones* = *Smith* + *Jones*. The recorded parts are what's displayed. `form` is never read; a name with no parts is no evidence.
   - **Fold:** a unit folds into a fuller one when its parts map, in order, onto a subsequence, each equal or an initial of it (`[J]` → `[James]`, `[James]` → `[James, Kenneth]`).
   - **Majority only outvotes misspellings:** a minority value is outvoted only when it's a spelling variant of the winner (same number of parts, each similar by `SpellingSimilarity`). A different name is never outvoted; weak evidence still drops.
-  - **One name, never mixed:** every displayed record contributes to a single NameValue. Each type keeps every surviving value, best supported first, each distinct part once. Assembled in the type order of the member with the most types, or a member's own value when one carries exactly those parts.
+  - **One name, never mixed:** every displayed record contributes to a single NameValue. Each type keeps every surviving value, best supported first, skipping a recorded part whose words are all present already. Assembled in the type order of the member with the most types, or a member's own value when one carries exactly those parts.
 - **Pipeline hooks** for modules: `oneValue` (every displayed candidate forms one value) and `outvotes` (what majority may remove). Assembly receives every surviving value per unit.
 - **Spelling rule shared with matching:** `resolve.SpellingSimilarity` and `resolve.EditDistance` (moved from `core/match`), thresholds `SpellingFloor` 0.8 and `SpellingShortMin` 3, which the match registry now points at.
-- `resolve.IsInitial` (moved from `core/match`). `CacheVersion = 7`.
+- `resolve.IsInitial` (moved from `core/match`). `CacheVersion = 8`.
 - `namevaluestest.Western` builds given parts and a surname for fixtures. Fixtures in conclusion headers, matching, promote targets, search and FFI use it. Two matching scores move (9.3 → 9.1, 5.0 → 6.0) because both sides are now typed.
 - **Tests:**
   - `TestReconcileNames` (55) and `TestReconcileNamesProvenance` (20), ported from the closed #255 / #256, with each row's reason pinned. 23 expectations changed when names became one structure and were re-reviewed case by case.
   - `TestReconcileNamesCombine` (7): nickname and given name, two given names, a minority different name kept, a married surname kept, a misspelling outvoted, a misspelling tie, weak still dropped.
+  - `TestReconcileNamesWords` (6): hyphenated, spaced and separate given names; the best-ranked spelling displayed; a maiden surname folding into a hyphenated married one; the same words in another order; a misspelt word outvoted; a different second surname kept.
   - `TestSpellingSimilarity`, `TestReconcileNamesValue`, seeded invariants.
   - Cache: an initial expands; a parts-less name isn't cached; deleting the full given name drops back to *J. Robins*; a new given name joins the one name; stale versions 0–6 rebuild.
-  - Mutation checks: no folding fails 19 cases, whole-name keys 34, no one-value 30, outvoting anything 10, outvoting nothing 9.
+  - Mutation checks: no folding fails 19 cases, whole-name keys 34, no one-value 30, outvoting anything 10, outvoting nothing 9, whole parts instead of words 5.
 - Benchmark: about 0.87 ms for 200 names (performance ledger).
 
 **What changed for researchers**
 
 - A Person shows one name. Different given names, nicknames and surnames from different records all appear in it: a married surname beside the birth one, a nickname recorded as a given name beside the given name.
 - A misspelling in the minority (*Robbins* beside two *Robins*) is not shown; it stays cached and searchable.
+- Hyphenated and spaced names match their separate parts: *Mary-Ann* = *Mary Ann*, and *Smith* or *Jones* folds into *Smith-Jones*. *O'Brien* vs *O Brien* still differs (spaced particles, in the name-matching ideas).
 - A name with no parts isn't shown; that Person reads by its label until a member's name has parts.
 - The form reads the parts in order (*Jake James Robins*); display styles will separate alternatives later.
 
 **Deviations from the plan**
 
-- **One name per Person and misspellings-only majority** were decided while building it, after working through examples. The plan had kept competing given names as separate names (mixed).
+- **One name per Person, misspellings-only majority and word comparison** were decided while building it, after working through examples. The plan had kept competing given names as separate names (mixed).
 - The code landed in fewer commits than planned so every commit's tests pass.
 
 **What stayed out**

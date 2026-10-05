@@ -728,7 +728,7 @@ Design: [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md). PR
 
 | | |
 | --- | --- |
-| **In** | The name module on the pipeline (design §7.2): structured parts only (`form` never read; no parts = `no_evidence`); format-agnostic, part types as identifiers; split into one unit per part type, subsumption (`[J]` → `[James]`, `[James]` → `[James, Kenneth]`); **one name per Person, never mixed**: each type keeps every surviving value; majority outvotes **spelling variants only** (decided while building it; a nickname recorded as a given name is never thrown out). Test fixtures that wrote form-only names build parts (`namevaluestest`). Cache version ≥ 5. (`initial` is already retired by S9-13a.) |
+| **In** | The name module on the pipeline (design §7.2): structured parts only (`form` never read; no parts = `no_evidence`); format-agnostic, part types as identifiers; split into one unit per part type, subsumption (`[J]` → `[James]`, `[James]` → `[James, Kenneth]`); **one name per Person, never mixed**: each type keeps every surviving value; majority outvotes **spelling variants only** (decided while building it; a nickname recorded as a given name is never thrown out); parts compare as **words**, so *Smith-Jones* = *Smith* + *Jones*. Test fixtures that wrote form-only names build parts (`namevaluestest`). Cache version ≥ 5. (`initial` is already retired by S9-13a.) |
 | **Testable** | 50+ table cases (the spec), seeded invariants (input order, forms never matter, renaming types renames nothing else). |
 | **Depends on** | S9-13, S9-13a |
 
