@@ -477,7 +477,7 @@ In order; each brief sits just above the PR it gates.
 - [x] ✎ S9-D5 — Design: Person detail (revise for reasoning) → [`completed.md`](completed.md)
 - [x] S9-16 — Person detail → [`completed.md`](completed.md)
 - [x] S9-17 — Compare read + pins + backfill → [`completed.md`](completed.md)
-- [ ] S9-18 — Pinned-Observation delete end to end
+- [x] S9-18 — Pinned-Observation delete end to end → [`completed.md`](completed.md)
 - [ ] ✎ S9-D11 — Design: Promote compare
 - [ ] S9-19 — Promote compare
 - [ ] S9-20 — Seed `event_name`
@@ -776,6 +776,11 @@ Design: [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md). PR
 | **Depends on** | S9-12, S9-13b |
 
 #### S9-18 — Pinned-Observation delete end to end
+
+**Done.** See [`completed.md`](completed.md#s9-18--pinned-observation-delete-end-to-end). No product change was needed: the composer row delete and the graph's Subject delete already went through the shipped confirm, and Go released pins audited. The end-to-end tests are `deleteimpact/pins_e2e_test.go`; the FakeStore models pins (`pinsByClaim`, `releasedPins`).
+- **S9-19:** deletes need nothing more.
+- **Spike 10 review alert:** a claim's exhibit history is the audit replay of `(identity_claim_evidence, claim id)` in revision order: creates from `promote_subject`, deletes from `delete_observation` / `delete_subject`. `pinnedHandle.exhibitHistory` in the test reads it that way.
+- **S9-28:** deleting a bridge Subject's pinned edge Observations is still its own test.
 
 | | |
 | --- | --- |

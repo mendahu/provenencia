@@ -35,6 +35,7 @@ IDs stay stable (`S9-NN`, `S9-DN`). Do not renumber when moving steps here.
 | S9-D5 | Design | Person detail (revised for reasoning) |
 | S9-16 | PR | Person detail |
 | S9-17 | PR | Compare read + pins + backfill |
+| S9-18 | PR | Pinned-Observation delete end to end |
 
 ## Steps
 
@@ -822,3 +823,35 @@ A join can now say which records it was confirmed against. The engine lines the 
 - Cross-property suggestions (a census age against a birth date).
 - Deleting pinned Observations from the composer and FakeStore pin release: **S9-18**.
 - Re-pinning or removing pins after a claim is saved: claim management (Spike 10).
+
+### S9-18 — Pinned-Observation delete end to end
+
+Deleting evidence a claim was confirmed against now has an end-to-end proof. The pins are ones Promote wrote, and the confirm, the release and the audit are checked together, in Go and from the app. No product change was needed.
+
+**What shipped**
+
+- **Go, end to end** (`deleteimpact/pins_e2e_test.go`), on a handle filed through Promote with two confirmed pairs:
+  - a pinned Observation's impact report is allowed and names the handle once, though two claims pin it;
+  - deleting it takes it off both claims, and each keeps every other pin. The member's argument is untouched;
+  - the audit reads back per claim, in revision order: the `promote_subject` creates, then the `delete_observation` removal;
+  - a member emptied of its records names the handle it leaves. Deleting it takes its claim and the backfilled pins with it, audited, while the other member keeps its own;
+  - after each delete, the cache equals a rebuild.
+- The S9-02 release fixture now gets its pins from Promote instead of raw inserts.
+- **FakeStore models pins:**
+  - an Observation delete's impact names the handles whose claims pin it (`identity_claim_evidence.observation_id`);
+  - the delete releases the pins and logs each in `releasedPins`, standing in for the audit;
+  - a Subject delete drops its claim and that claim's pins.
+- **Swift tests:**
+  - the composer's row delete of a pinned record: the confirm says it's removed from the evidence for PER-…, and both claims keep their other pins;
+  - an unpinned delete names nothing;
+  - the graph's delete of a pinned member names the handle it leaves and releases its claim's pins.
+- **Retired:** the `sameness_claim` delete-impact noun, its two catalog keys, and the preview data built on it. The unknown-via preview now uses a narrative.
+
+**What changed for researchers**
+
+- Nothing new on screen. Once S9-19 lets researchers confirm pairs, deleting a confirmed record already says which Person loses it, and the claims stay.
+
+**What stayed out**
+
+- The review alert for weakened claims (model §5.2): Spike 10.
+- Bridge-Subject edge pins: **S9-28**.
