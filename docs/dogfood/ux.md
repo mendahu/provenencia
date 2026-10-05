@@ -19,6 +19,13 @@ Copy the stub. Surface + what got in the way is enough. A wanted fix is optional
 
 <!-- add below this line -->
 
+### Sources list sort and filter don't persist
+
+- **Date:** 2026-10-05
+- **Where:** Sources list
+- **Annoyance:** The sort and filter options I pick in the Sources list don't stick.
+- **Wanted:** The Sources list remembers its sort and filter settings and restores them when I come back.
+
 ### Box-select and move multiple Subject cards on the Evidence graph
 
 - **Date:** 2026-10-04
