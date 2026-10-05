@@ -212,8 +212,8 @@ The rebuild-equals-upkeep tests hold upkeep equal to a full rebuild. Every new t
 
   | Property | Value | Meaning |
   | --- | --- | --- |
-  | `subject` | place | the part, or the predecessor |
-  | `object` | place | the whole, or the successor |
+  | `from` | place | the part, or the predecessor |
+  | `to` | place | the whole, or the successor |
   | `place_relationship_type` | term | what the relationship is |
 
   Each relationship is cited and reconciled like any other evidence; the ends use the subject-valued module (§7). It is a dedicated kind, not the Person Relationship, because its ends are two directional places. It can carry more Properties later without remodelling.
