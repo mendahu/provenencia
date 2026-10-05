@@ -286,6 +286,70 @@ struct CitationComposerModelTests {
         #expect(store.citationsByID["cit-1"] != nil)
     }
 
+    // MARK: Pinned Observations (S9-18)
+
+    /// Two people on one Person: the second joins with both records confirmed
+    /// against the first's, so all four Observations are pinned on both claims.
+    private func seedPinnedHandle(_ store: FakeStore) async throws -> (handle: CatalogPromoteResult, joined: CatalogPromoteResult) {
+        seedArtifact(store)
+        store.subjectsBySource[sourceID]?.append(subject(id: "sub-person-2", typeID: personTypeID, ref: "CPR-2", label: "Margaret"))
+        func occupation(_ id: String, _ subject: String, _ value: String) -> CatalogObservation {
+            var o = occupationObservation(id: id, ref: "OBS-\(id)", citationID: "cit-1")
+            o.subjectID = subject
+            o.valueText = value
+            return o
+        }
+        seedCitation(store, observations: [
+            occupation("obs-1", subjectID, "miller"), occupation("obs-2", subjectID, "farmer"),
+            occupation("obs-3", "sub-person-2", "miller"), occupation("obs-4", "sub-person-2", "farmer"),
+        ])
+        let handle = try await store.promoteSubject(projectDir: projectDir, userID: "user-1", subjectID: "sub-person-2")
+        let joined = try await store.promoteSubject(
+            projectDir: projectDir, userID: "user-1", subjectID: subjectID, entityID: handle.entity.id,
+            confidenceGradeID: nil, argument: "", pairs: [
+                CatalogObservationPair(incomingObservationID: "obs-1", memberObservationID: "obs-3"),
+                CatalogObservationPair(incomingObservationID: "obs-2", memberObservationID: "obs-4"),
+            ]
+        )
+        return (handle, joined)
+    }
+
+    @Test func deletingAPinnedObservationNamesTheHandleAndReleasesItFromBothClaims() async throws {
+        let store = makeStore()
+        let (handle, joined) = try await seedPinnedHandle(store)
+        let all: Set = ["obs-1", "obs-2", "obs-3", "obs-4"]
+        #expect(store.pinsByClaim[handle.claim.id] == all)
+        #expect(store.pinsByClaim[joined.claim.id] == all)
+
+        let model = makeModel(store: store, citationID: "cit-1")
+        await model.prepare()
+        let row = try #require(model.observations.first { $0.persistedID == "obs-1" })
+        await model.askDeleteObservation(rowID: row.id)
+        let pending = try #require(model.pendingImpact)
+        #expect(pending.report.allowed)
+        #expect(pending.report.cascades.map(\.via) == ["identity_claim_evidence.observation_id"])
+        #expect(pending.report.cascades.first?.listed.map(\.ref) == [handle.entity.ref])
+        let message = PVDeleteImpactCopy.confirmCopy(for: pending.target, report: pending.report).message
+        #expect(message.contains(L10n.DeleteImpact.leavesEvidence(handleRefs: handle.entity.ref)))
+
+        await model.confirmPendingImpact()
+        #expect(store.recordedCalls.contains("deleteObservation id=obs-1"))
+        let rest: Set = ["obs-2", "obs-3", "obs-4"]
+        #expect(store.pinsByClaim[handle.claim.id] == rest, "the member's claim keeps its other pins")
+        #expect(store.pinsByClaim[joined.claim.id] == rest, "the new claim keeps its other pins")
+        #expect(Set(store.releasedPins.map(\.claimID)) == [handle.claim.id, joined.claim.id])
+        #expect(store.releasedPins.allSatisfy { $0.observationID == "obs-1" })
+        #expect(!model.observations.contains { $0.persistedID == "obs-1" })
+    }
+
+    @Test func anUnpinnedObservationDeleteNamesNoHandle() async throws {
+        let store = makeStore()
+        _ = try await seedPinnedHandle(store)
+        store.observationsBySource[sourceID]?.append(occupationObservation(id: "obs-5", ref: "OBS-5", citationID: "cit-1"))
+        let report = try await store.getDeleteImpact(projectDir: projectDir, kind: "observation", id: "obs-5")
+        #expect(report.allowed && report.cascades.isEmpty)
+    }
+
     @Test func emptyCitationDeleteConfirmsAndBecomesNew() async {
         let store = makeStore()
         seedArtifact(store)

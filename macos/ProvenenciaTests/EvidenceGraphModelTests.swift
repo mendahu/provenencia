@@ -1404,6 +1404,46 @@ struct EvidenceGraphModelTests {
         return (store, model)
     }
 
+    /// A member emptied of its own records still has a claim pinning the other
+    /// member's (backfill). Its delete names the handle it leaves and takes
+    /// those pins with the claim; the other member keeps its own (S9-18).
+    @Test func deletingAPinnedMemberNamesItsHandleAndReleasesItsClaimsPins() async throws {
+        let (store, model) = await promotableModel()
+        store.subjectsBySource[sourceID]?.append(CatalogSubject(
+            id: "s-mary", ref: "CPR-3", sourceID: sourceID, subjectTypeID: personTypeID, label: "J. Robins", description: ""
+        ))
+        func name(_ id: String, _ subject: String) -> CatalogObservation {
+            CatalogObservation(
+                id: id, ref: "OBS-\(id)", citationID: "c1", subjectID: subject, propertyID: "p-name",
+                polarity: "positive", valueText: "James Robins", valueInteger: nil, valueDateID: "",
+                valueNameID: "n-\(id)", nameForm: "James Robins", valueSubjectID: "", valueTermID: "",
+                propertyKey: "name", propertyLabel: "Name", propertyValueType: "name"
+            )
+        }
+        store.observationsBySource[sourceID] = [name("o-james", "s-james"), name("o-other", "s-mary")]
+        let handle = try await store.promoteSubject(projectDir: projectDir, userID: "user-1", subjectID: "s-mary")
+        let joined = try await store.promoteSubject(
+            projectDir: projectDir, userID: "user-1", subjectID: "s-james", entityID: handle.entity.id,
+            confidenceGradeID: nil, argument: "",
+            pairs: [CatalogObservationPair(incomingObservationID: "o-james", memberObservationID: "o-other")]
+        )
+        // James's own record goes first (it would block the Subject delete).
+        try await store.deleteObservation(projectDir: projectDir, userID: "user-1", observationID: "o-james")
+        #expect(store.pinsByClaim[joined.claim.id] == ["o-other"])
+        model.session.apply(.promotedSubject(sourceId: sourceID))
+
+        await model.beginDelete(subjectID: "s-james")
+        let pending = try #require(model.pendingImpact)
+        #expect(pending.report.allowed)
+        #expect(PVDeleteImpactCopy.cascadeLines(pending.report) == [L10n.DeleteImpact.leavesHandle(handleRefs: handle.entity.ref)])
+        #expect(await model.confirmPendingImpact())
+        #expect(store.recordedCalls.contains("deleteSubject id=s-james"))
+        #expect(store.pinsByClaim[joined.claim.id] == nil)
+        #expect(store.claimBySubject["s-james"] == nil)
+        #expect(store.pinsByClaim[handle.claim.id] == ["o-other"], "the other member keeps its own pin")
+        #expect(store.releasedPins.last == FakeStore.ReleasedPin(claimID: joined.claim.id, observationID: "o-other"))
+    }
+
     /// The card's Promote opens the Promote place (S9-11) and writes nothing.
     @Test func promoteActionReturnsThePromoteLocation() async {
         let (store, model) = await promotableModel()
