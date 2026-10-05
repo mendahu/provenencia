@@ -1,4 +1,4 @@
-package resolve
+package autoreconcile
 
 // Spelling variants: when two normalized words are the same name spelled
 // differently (Robins ~ Robbins, Jon ~ John). Shared by the name module,

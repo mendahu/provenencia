@@ -3131,7 +3131,7 @@ public nonisolated struct Provenencia_Engine_V1_SubjectMembership: Sendable {
 
   public var claimID: String = String()
 
-  /// handle's rank-1 resolved name; absent when none
+  /// handle's displayed auto-reconciled name; absent when none
   public var name: Provenencia_Engine_V1_NameValueInput {
     get {_name ?? Provenencia_Engine_V1_NameValueInput()}
     set {_name = newValue}
@@ -3177,11 +3177,12 @@ public nonisolated struct Provenencia_Engine_V1_ListSubjectMembershipsResponse: 
   public init() {}
 }
 
-/// PersonHeader is one Person as a row, composed from the resolved-values
+/// PersonHeader is one Person as a row, composed from the auto-reconciler's
 /// cache. Structures only: the app formats the title (name, else entity
-/// label, else ref). name is the rank-1 resolved name cluster, absent when no
-/// member names the Person; name_cluster_count > 1 means the members disagree
-/// (mixed), and the extra clusters are the list's +N.
+/// label, else ref). name is the displayed auto-reconciled name, absent when
+/// no member names the Person; name_value_count counts displayed name values
+/// (names are one structure, so at most 1; > 1 would read as mixed, and the
+/// extra values are the list's +N).
 public nonisolated struct Provenencia_Engine_V1_PersonHeader: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -3205,7 +3206,7 @@ public nonisolated struct Provenencia_Engine_V1_PersonHeader: Sendable {
   /// Clears the value of `name`. Subsequent reads from it will return its default value.
   public mutating func clearName() {self._name = nil}
 
-  public var nameClusterCount: Int32 = 0
+  public var nameValueCount: Int32 = 0
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -3216,7 +3217,7 @@ public nonisolated struct Provenencia_Engine_V1_PersonHeader: Sendable {
 }
 
 /// ListPersonHeaders returns every unmerged Person in list order: named
-/// Persons by resolved name, then the rest by ref.
+/// Persons by auto-reconciled name, then the rest by ref.
 public nonisolated struct Provenencia_Engine_V1_ListPersonHeadersRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -10422,7 +10423,7 @@ nonisolated extension Provenencia_Engine_V1_ListSubjectMembershipsResponse: Swif
 
 nonisolated extension Provenencia_Engine_V1_PersonHeader: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".PersonHeader"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}entity\0\u{1}name\0\u{3}name_cluster_count\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}entity\0\u{1}name\0\u{3}name_value_count\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -10432,7 +10433,7 @@ nonisolated extension Provenencia_Engine_V1_PersonHeader: SwiftProtobuf.Message,
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularMessageField(value: &self._entity) }()
       case 2: try { try decoder.decodeSingularMessageField(value: &self._name) }()
-      case 3: try { try decoder.decodeSingularInt32Field(value: &self.nameClusterCount) }()
+      case 3: try { try decoder.decodeSingularInt32Field(value: &self.nameValueCount) }()
       default: break
       }
     }
@@ -10449,8 +10450,8 @@ nonisolated extension Provenencia_Engine_V1_PersonHeader: SwiftProtobuf.Message,
     try { if let v = self._name {
       try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
     } }()
-    if self.nameClusterCount != 0 {
-      try visitor.visitSingularInt32Field(value: self.nameClusterCount, fieldNumber: 3)
+    if self.nameValueCount != 0 {
+      try visitor.visitSingularInt32Field(value: self.nameValueCount, fieldNumber: 3)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -10458,7 +10459,7 @@ nonisolated extension Provenencia_Engine_V1_PersonHeader: SwiftProtobuf.Message,
   public static func ==(lhs: Provenencia_Engine_V1_PersonHeader, rhs: Provenencia_Engine_V1_PersonHeader) -> Bool {
     if lhs._entity != rhs._entity {return false}
     if lhs._name != rhs._name {return false}
-    if lhs.nameClusterCount != rhs.nameClusterCount {return false}
+    if lhs.nameValueCount != rhs.nameValueCount {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

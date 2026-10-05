@@ -10,8 +10,8 @@ import (
 )
 
 // Handle kinds (Conclusion layer). Their documents are built from the
-// resolved-values cache, so they stay current wherever the cache does:
-// resolvedvalues.RecomputeTx reprojects the handles it rewrites, in the same
+// auto-reconciler cache, so they stay current wherever the cache does:
+// autoreconciler.RecomputeTx reprojects the handles it rewrites, in the same
 // transaction. S9-34 replaces these documents with ones built from the
 // header composers once they exist (S9-31).
 const (
@@ -39,7 +39,7 @@ const (
 		WHERE e.id IN (`
 	// Cached values of the Properties handle documents read, terms by label.
 	sqlHandleValues = `SELECT r.entity_id, p.key, r.rank, r.value_text, r.value_name, r.value_date, t.label
-		FROM conclusion_resolved_values r
+		FROM auto_reconciler_values r
 		JOIN properties p ON p.id = r.property_id AND p.origin = 'provenencia'
 		LEFT JOIN property_terms t ON t.id = r.value_term_id
 		WHERE p.key IN ('name', 'toponym', 'event_type', 'date', 'start_date', 'end_date')
@@ -48,7 +48,7 @@ const (
 )
 
 // ReprojectHandles rewrites the search documents of the given handles from
-// the resolved-values cache. Merged handles, unknown ids, and handles of
+// the auto-reconciler cache. Merged handles, unknown ids, and handles of
 // kinds without a document are removed.
 func ReprojectHandles(q Querier, entityIDs [][]byte) error {
 	ids := database.UniqueBlobIDs(entityIDs)

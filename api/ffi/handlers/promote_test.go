@@ -322,7 +322,7 @@ func TestListPromoteTargetSuggestions(t *testing.T) {
 				if len(s) != 2 || s[0].Entity.GetRef() != exact.Entity.GetRef() || s[1].Entity.GetRef() != shared.Entity.GetRef() {
 					t.Fatalf("%+v", s)
 				}
-				if s[0].GetScore() != 10 || s[0].GetPerson().GetName().GetForm() != "James Robins" || s[0].GetPerson().GetNameClusterCount() != 1 {
+				if s[0].GetScore() != 10 || s[0].GetPerson().GetName().GetForm() != "James Robins" || s[0].GetPerson().GetNameValueCount() != 1 {
 					t.Fatalf("top %+v", s[0])
 				}
 				if r := s[0].GetReasons(); len(r) != 1 || r[0].GetPropertyKey() != "name" || r[0].GetSimilarity() != 1 || r[0].GetContribution() != 10 {

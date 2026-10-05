@@ -78,7 +78,7 @@ Add Person, Event, and Place hits to the omnibar results. They use the shipped `
 
 | Fact | UI implication |
 | --- | --- |
-| Alternates match | *Jim Robins* can find a Person resolved as *James Robins*; show why (match context). |
+| Alternates match | *Jim Robins* can find a Person reconciled as *James Robins*; show why (match context). |
 | Structured header | The app formats title and secondary from structures (unlike today's kinds). |
 | Ref match | Exact ref match uses the accent ref style. |
 | Mixed flat ranking | Conclusion hits interleave with Sources etc. by score; no per-kind sections. |

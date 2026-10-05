@@ -14145,7 +14145,7 @@
       }
     },
     "evidenceGraph.subject.openHandlePage.person": {
-      "comment": "Membership row text beside the handle ref until the resolved name lands (S9-09)",
+      "comment": "Membership row text beside the handle ref until the auto-reconciled name lands (S9-09)",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -14157,7 +14157,7 @@
       }
     },
     "evidenceGraph.subject.openHandlePage.event": {
-      "comment": "Membership row text beside the handle ref until the resolved name lands (S9-09)",
+      "comment": "Membership row text beside the handle ref until the auto-reconciled name lands (S9-09)",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -14169,7 +14169,7 @@
       }
     },
     "evidenceGraph.subject.openHandlePage.place": {
-      "comment": "Membership row text beside the handle ref until the resolved name lands (S9-09)",
+      "comment": "Membership row text beside the handle ref until the auto-reconciled name lands (S9-09)",
       "extractionState": "manual",
       "localizations": {
         "en": {

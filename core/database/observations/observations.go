@@ -10,11 +10,11 @@ import (
 	"github.com/mendahu/provenencia/core/connectrules"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/audit"
+	"github.com/mendahu/provenencia/core/database/autoreconciler"
 	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/database/project"
 	"github.com/mendahu/provenencia/core/database/properties"
-	"github.com/mendahu/provenencia/core/database/resolvedvalues"
 	"github.com/mendahu/provenencia/core/ref"
 )
 
@@ -199,7 +199,7 @@ func AddToCitation(c *database.Catalog, userID, citationID []byte, inputs []Inpu
 }
 
 // InsertManyTx inserts Observations for citationID inside an existing transaction
-// and recomputes the resolved values of any handle their Subjects belong to.
+// and recomputes the auto-reconciled values of any handle their Subjects belong to.
 // Returns rows and audit Changes (caller records the revision).
 func InsertManyTx(tx *sql.Tx, citationID []byte, inputs []Input, opts InsertOptions) ([]Observation, []audit.Change, error) {
 	if tx == nil || len(citationID) != 16 || len(inputs) == 0 {
@@ -219,7 +219,7 @@ func InsertManyTx(tx *sql.Tx, citationID []byte, inputs []Input, opts InsertOpti
 	for i, o := range out {
 		subjectIDs[i] = o.SubjectID
 	}
-	if err := resolvedvalues.RecomputeSubjectsTx(tx, subjectIDs); err != nil {
+	if err := autoreconciler.RecomputeSubjectsTx(tx, subjectIDs); err != nil {
 		return nil, nil, err
 	}
 	return out, changes, nil

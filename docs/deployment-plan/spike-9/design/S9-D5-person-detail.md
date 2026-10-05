@@ -152,7 +152,7 @@ This table is **binding**. Instance the Ship kit rows; do not redraw them. Paths
 | Building block | Layer | Status | Home | Notes |
 | --- | --- | --- | --- | --- |
 | Person detail | Snowflake | **New** | `Features/Conclusions/PersonDetailView.swift` | Reads the detail key. |
-| Value-state field row | Snowflake | **New** | `Features/Conclusions/ResolvedValueRow.swift` | Shared by D5–D7. |
+| Value-state field row | Snowflake | **New** | `Features/Conclusions/ReconciledValueRow.swift` | Shared by D5–D7. |
 | Reasoning list (*Why*) | Snowflake | **New** | `Features/Conclusions/ReconciliationReasoningView.swift` | One row per record: Source, value, outcome. Shared by D5–D7. |
 | Outcome phrase | Snowflake | **New** | `Features/Conclusions/ReconciliationOutcome.swift` | Maps the engine's reason keys to L10n phrases and marks. |
 | Field | Component | Ship | `DesignSystem/Components/Field/` | Label + value. |
@@ -166,7 +166,7 @@ This table is **binding**. Instance the Ship kit rows; do not redraw them. Paths
 
 | Do not add | Why |
 | --- | --- |
-| A kit resolved-value or reasoning component | Three call sites in one feature. |
+| A kit reconciled-value or reasoning component | Three call sites in one feature. |
 | Numeric confidence scores | Reconciliation is elimination, not a score; show outcomes and Source counts. |
 
 ---

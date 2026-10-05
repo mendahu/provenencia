@@ -425,7 +425,7 @@ struct WorkspaceSessionTests {
         #expect(handle.value?.observations.count == 1)
     }
 
-    /// Conclusion keys reload from Go's resolved-values cache on any trigger:
+    /// Conclusion keys reload from Go's auto-reconciler cache on any trigger:
     /// a Promote revalidates a warmed Persons list without a second query.
     @Test func applyPromoteRevalidatesWarmedPersonsList() async throws {
         let store = FakeStore()

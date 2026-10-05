@@ -957,7 +957,7 @@ message SubjectMembership {
   CanonicalEntity entity = 2;
   string kind = 3;
   string claim_id = 4;
-  NameValueInput name = 5; // handle's rank-1 resolved name; absent when none
+  NameValueInput name = 5; // handle's displayed auto-reconciled name; absent when none
 }
 
 // ListSubjectMemberships returns the handle of every promoted Subject on one
@@ -971,19 +971,20 @@ message ListSubjectMembershipsResponse {
   repeated SubjectMembership memberships = 1;
 }
 
-// PersonHeader is one Person as a row, composed from the resolved-values
+// PersonHeader is one Person as a row, composed from the auto-reconciler's
 // cache. Structures only: the app formats the title (name, else entity
-// label, else ref). name is the rank-1 resolved name cluster, absent when no
-// member names the Person; name_cluster_count > 1 means the members disagree
-// (mixed), and the extra clusters are the list's +N.
+// label, else ref). name is the displayed auto-reconciled name, absent when
+// no member names the Person; name_value_count counts displayed name values
+// (names are one structure, so at most 1; > 1 would read as mixed, and the
+// extra values are the list's +N).
 message PersonHeader {
   CanonicalEntity entity = 1;
   NameValueInput name = 2;
-  int32 name_cluster_count = 3;
+  int32 name_value_count = 3;
 }
 
 // ListPersonHeaders returns every unmerged Person in list order: named
-// Persons by resolved name, then the rest by ref.
+// Persons by auto-reconciled name, then the rest by ref.
 message ListPersonHeadersRequest {
   string project_dir = 1;
 }

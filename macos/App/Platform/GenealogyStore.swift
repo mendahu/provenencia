@@ -220,7 +220,7 @@ struct CatalogSubjectMembership: Sendable, Equatable {
     var claimID: String
     var entity: CatalogCanonicalEntity
     var kind: String
-    /// The handle's rank-1 resolved name (S9-09); nil when it has none.
+    /// The handle's displayed auto-reconciled name (S9-09); nil when it has none.
     var name: CatalogNameValue? = nil
 }
 
@@ -266,20 +266,20 @@ struct CatalogNameValue: Sendable, Equatable {
     var parts: [CatalogNameValuePart] = []
 }
 
-/// One Person as a row, composed by Go from the resolved-values cache (S9-07).
+/// One Person as a row, composed by Go from the auto-reconciler cache (S9-07).
 /// Structures only; `PersonHeaderDisplay` formats the title.
 struct CatalogPersonHeader: Sendable, Equatable, Identifiable {
     var entity: CatalogCanonicalEntity
-    /// Rank-1 resolved name; `nil` when no member names the Person.
+    /// Displayed auto-reconciled name; `nil` when no member names the Person.
     var name: CatalogNameValue?
-    /// Distinct resolved names across members.
-    var nameClusterCount: Int
+    /// Displayed name values (names are one structure, so at most 1).
+    var nameValueCount: Int
 
     var id: String { entity.id }
     /// Members disagree on the name; the top-ranked one is shown.
-    var isNameMixed: Bool { nameClusterCount > 1 }
-    /// The list's *+N*: resolved names beyond the one shown.
-    var additionalNameCount: Int { max(0, nameClusterCount - 1) }
+    var isNameMixed: Bool { nameValueCount > 1 }
+    /// The list's *+N*: displayed name values beyond the one shown.
+    var additionalNameCount: Int { max(0, nameValueCount - 1) }
 }
 
 /// One Observation row with Property summary (graph / card payloads).

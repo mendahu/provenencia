@@ -1,4 +1,4 @@
-package resolve
+package autoreconcile
 
 import (
 	"fmt"
@@ -47,7 +47,7 @@ func spec(n *namevalues.Value) string {
 	return strings.Join(out, "|")
 }
 
-// cl is one expected cluster: member ids and the reconciled parts.
+// cl is one expected value: member ids and the reconciled parts.
 type cl struct {
 	ids   []byte
 	parts string
@@ -242,12 +242,12 @@ func TestReconcileNames(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.group+"/"+tc.name, func(t *testing.T) {
-			got, err := Resolve(properties.ValueTypeName, tc.in, nil)
+			got, err := Reconcile(properties.ValueTypeName, tc.in, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
 			var have []cl
-			for i, c := range got.Clusters {
+			for i, c := range got.Values {
 				have = append(have, cl{shape(got)[i], spec(c.Value.Name)})
 			}
 			if !reflect.DeepEqual(have, tc.want) {
@@ -265,7 +265,7 @@ func TestReconcileNames(t *testing.T) {
 
 // Provenance helpers: weak evidence each way, high trust, and a negative.
 
-// clAgainst is an expected cluster with its count of negatives against it.
+// clAgainst is an expected value with its count of negatives against it.
 type clAgainst struct {
 	ids     []byte
 	parts   string
@@ -349,12 +349,12 @@ func TestReconcileNamesProvenance(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.group+"/"+tc.name, func(t *testing.T) {
-			got, err := Resolve(properties.ValueTypeName, tc.in, nil)
+			got, err := Reconcile(properties.ValueTypeName, tc.in, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
 			var have []clAgainst
-			for i, c := range got.Clusters {
+			for i, c := range got.Values {
 				have = append(have, clAgainst{shape(got)[i], spec(c.Value.Name), c.Against})
 			}
 			if !reflect.DeepEqual(have, tc.want) {
@@ -370,26 +370,26 @@ func TestReconcileNamesProvenance(t *testing.T) {
 	}
 }
 
-// A cluster whose reconciled parts are exactly one member's is that member's
+// A value whose reconciled parts are exactly one member's is that member's
 // own value, form and all; otherwise the form is the parts in order.
 func TestReconcileNamesValue(t *testing.T) {
 	a := withNameForm(nm(1, "given=J.|surname=Robins"), "J. Robins")
 	b := withNameForm(nm(2, "given=James|surname=Robins"), "Robins, James")
-	got, err := Resolve(properties.ValueTypeName, []Candidate{a, b}, nil)
+	got, err := Reconcile(properties.ValueTypeName, []Candidate{a, b}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.Clusters[0].Value.Name != b.Value.Name {
-		t.Fatalf("want member 2's own value, got %+v", got.Clusters[0].Value.Name)
+	if got.Values[0].Value.Name != b.Value.Name {
+		t.Fatalf("want member 2's own value, got %+v", got.Values[0].Value.Name)
 	}
 
 	c := withNameForm(nm(3, "given=James|surname=Robins|suffix=Jr."), "x")
 	d := withNameForm(nm(4, "given=James|nick=Jim|surname=Robins"), "y")
-	got, err = Resolve(properties.ValueTypeName, []Candidate{c, d}, nil)
+	got, err = Reconcile(properties.ValueTypeName, []Candidate{c, d}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	n := got.Clusters[0].Value.Name
+	n := got.Values[0].Value.Name
 	if n.Form != "James Jim Robins Jr." || len(n.ID) != 0 {
 		t.Fatalf("assembled %+v", n)
 	}
@@ -433,7 +433,7 @@ func TestReconcileNamesInvariants(t *testing.T) {
 				in = append(in, gen(byte(i+1)))
 			}
 			where := fmt.Sprintf("seed %d list %d: %s", seed, list, describe(in))
-			got, err := Resolve(properties.ValueTypeName, in, nil)
+			got, err := Reconcile(properties.ValueTypeName, in, nil)
 			if err != nil {
 				t.Fatalf("%s: %v", where, err)
 			}
@@ -441,14 +441,14 @@ func TestReconcileNamesInvariants(t *testing.T) {
 			// Order independent.
 			shuffled := append([]Candidate(nil), in...)
 			rng.Shuffle(len(shuffled), func(i, j int) { shuffled[i], shuffled[j] = shuffled[j], shuffled[i] })
-			if again, _ := Resolve(properties.ValueTypeName, shuffled, nil); !reflect.DeepEqual(again, got) {
+			if again, _ := Reconcile(properties.ValueTypeName, shuffled, nil); !reflect.DeepEqual(again, got) {
 				t.Fatalf("%s: input order changed the result", where)
 			}
 
-			// Every structured positive candidate in exactly one cluster; no
+			// Every structured positive candidate in exactly one value; no
 			// negative in any.
 			seen := map[byte]int{}
-			for _, c := range got.Clusters {
+			for _, c := range got.Values {
 				for _, oid := range c.ObservationIDs {
 					seen[oid[3]]++
 				}
@@ -459,7 +459,7 @@ func TestReconcileNamesInvariants(t *testing.T) {
 					want = 0
 				}
 				if seen[c.ObservationID[3]] != want {
-					t.Fatalf("%s: candidate %d in %d clusters, want %d", where, c.ObservationID[3], seen[c.ObservationID[3]], want)
+					t.Fatalf("%s: candidate %d in %d values, want %d", where, c.ObservationID[3], seen[c.ObservationID[3]], want)
 				}
 			}
 
@@ -470,7 +470,7 @@ func TestReconcileNamesInvariants(t *testing.T) {
 					had[p.Type+"="+NormalizeForm(p.Value)] = true
 				}
 			}
-			for _, c := range got.Clusters {
+			for _, c := range got.Values {
 				for _, p := range c.Value.Name.Parts {
 					if !had[p.Type+"="+NormalizeForm(p.Value)] {
 						t.Fatalf("%s: invented part %s=%s", where, p.Type, p.Value)
@@ -483,7 +483,7 @@ func TestReconcileNamesInvariants(t *testing.T) {
 			for i, c := range in {
 				reformed[i] = withNameForm(c, "anything "+strings.Repeat("x", i))
 			}
-			if again, _ := Resolve(properties.ValueTypeName, reformed, nil); !reflect.DeepEqual(specs(again), specs(got)) {
+			if again, _ := Reconcile(properties.ValueTypeName, reformed, nil); !reflect.DeepEqual(specs(again), specs(got)) {
 				t.Fatalf("%s: forms changed the result", where)
 			}
 
@@ -499,8 +499,8 @@ func TestReconcileNamesInvariants(t *testing.T) {
 				renamed[i] = c
 				renamed[i].Value = Value{Name: &n}
 			}
-			if again, _ := Resolve(properties.ValueTypeName, renamed, nil); !reflect.DeepEqual(shape(again), shape(got)) {
-				t.Fatalf("%s: renaming types changed the clusters", where)
+			if again, _ := Reconcile(properties.ValueTypeName, renamed, nil); !reflect.DeepEqual(shape(again), shape(got)) {
+				t.Fatalf("%s: renaming types changed the values", where)
 			}
 		}
 	}
@@ -514,10 +514,10 @@ func describe(in []Candidate) string {
 	return strings.Join(out, " ")
 }
 
-// specs is each cluster's ids and parts, without forms.
+// specs is each value's ids and parts, without forms.
 func specs(r Result) []string {
 	var out []string
-	for i, c := range r.Clusters {
+	for i, c := range r.Values {
 		out = append(out, fmt.Sprint(shape(r)[i], signatureOf(c.Value.Name)))
 	}
 	return out
@@ -544,7 +544,7 @@ func BenchmarkReconcileNames(b *testing.B) {
 	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		if _, err := Resolve(properties.ValueTypeName, in, nil); err != nil {
+		if _, err := Reconcile(properties.ValueTypeName, in, nil); err != nil {
 			b.Fatal(err)
 		}
 	}
@@ -562,7 +562,7 @@ func signatureOf(n *namevalues.Value) string {
 
 func reasonsOf(r Result) string {
 	var out []string
-	for _, c := range r.Clusters {
+	for _, c := range r.Values {
 		out = append(out, string(c.Reason))
 	}
 	return strings.Join(out, " ")
@@ -603,12 +603,12 @@ func TestReconcileNamesCombine(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := Resolve(properties.ValueTypeName, tc.in, nil)
+			got, err := Reconcile(properties.ValueTypeName, tc.in, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
 			var have []cl
-			for i, c := range got.Clusters {
+			for i, c := range got.Values {
 				have = append(have, cl{shape(got)[i], spec(c.Value.Name)})
 			}
 			if !reflect.DeepEqual(have, tc.want) {
@@ -655,12 +655,12 @@ func TestReconcileNamesWords(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := Resolve(properties.ValueTypeName, tc.in, nil)
+			got, err := Reconcile(properties.ValueTypeName, tc.in, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
 			var have []cl
-			for i, c := range got.Clusters {
+			for i, c := range got.Values {
 				have = append(have, cl{shape(got)[i], spec(c.Value.Name)})
 			}
 			if !reflect.DeepEqual(have, tc.want) {

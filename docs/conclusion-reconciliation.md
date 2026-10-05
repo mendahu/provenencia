@@ -21,11 +21,22 @@ A canonical entity has many member Subjects, each with many Observations, and an
 
 Names and dates have the most interesting logic because they are structured, but text, integers, terms and subject references need reconciling too. Their candidates can still be weighed by their **evidence**: which Source, how well transcribed, how confident the identity, how many Sources agree.
 
+**Vocabulary.** These names are used everywhere: code, tables, docs.
+
+| Term | Meaning | In code |
+| --- | --- | --- |
+| **auto-reconciler** | the shared pipeline plus its value-type modules | `core/autoreconcile` (`Reconcile`) |
+| **auto-reconciled value** | one distinct value it produced, displayed or not, with its reason | `ReconciledValue`; table `auto_reconciler_values` |
+| **outcome** | what it did with one Observation (kept, folded, outvoted, …) | `Outcome`; table `auto_reconciler_outcomes` |
+| **the auto-reconciler cache** | both tables, derived and rebuildable | `core/database/autoreconciler` |
+
+"Resolve", "resolver", "resolved value" and "cluster" are retired for this concept.
+
 ---
 
 # 2. Principles
 
-1. **Display policy, never truth.** Auto-reconciliation is stateless projection. It never writes a claim, an Observation, a DateValue or a NameValue row ([`conclusion-layer-data-model.md`](conclusion-layer-data-model.md) §2.5, §7). Its output lives only in the derived resolved-values cache, rebuildable from truth tables.
+1. **Display policy, never truth.** Auto-reconciliation is stateless projection. It never writes a claim, an Observation, a DateValue or a NameValue row ([`conclusion-layer-data-model.md`](conclusion-layer-data-model.md) §2.5, §7). Its output lives only in the derived auto-reconciler cache, rebuildable from truth tables.
 2. **No stored scores.** Reconciliation weighs credibility, certainty and confidence but never multiplies them into a stored rollup ([`research-judgment-model.md`](research-judgment-model.md) §1.1). The cache stores order, counts and reasons, not a likelihood.
 3. **A Reconciliation Claim always wins.** An accepted Reconciliation Claim on (entity, Property) is the displayed value, whatever the reconciler would say. A provisional claim is a working choice the UI shows differently. A rejected claim is history only. This holds for **every** value type.
 4. **Be bold, and show why.** Because a researcher can always override with a claim, the reconciler may choose decisively. It must say what it considered and why each candidate won or lost, so the UI can explain it.
@@ -40,7 +51,7 @@ accepted Reconciliation Claim(s) on (entity, Property) → the concluded value(s
 otherwise                                                → the auto-reconciler's output
 ```
 
-The resolver takes the concluded value as an input so the claim plugs in without changing callers. The concluded value joins the cluster it equals, or leads alone with no support.
+A claim's value is **never written into the auto-reconciler cache**: those tables hold only the auto-reconciler's own output. When claims ship, the composers that build lists and pages lay an accepted claim over the auto-reconciled value for that (entity, Property). (`autoreconcile.Reconcile` still accepts a concluded input, which joins the value it equals or leads alone, for callers that want one combined result.)
 
 ---
 
@@ -186,7 +197,7 @@ The model allows a Person with two birth Events, and the reconciler must handle 
 
 # 10. Cache and upkeep
 
-The reconciler's output is stored in the resolved-values cache (Spike 9 R3, `core/database/resolvedvalues`) and rewritten in the transaction of every write that can change it. A change to reconciliation rules is a cache version bump, which rebuilds on open.
+The reconciler's output is stored in the auto-reconciler cache (Spike 9 R3, `core/database/autoreconciler`) and rewritten in the transaction of every write that can change it. A change to reconciliation rules is a cache version bump, which rebuilds on open.
 
 Writes that recompute affected entities:
 
@@ -249,8 +260,8 @@ The rebuild-equals-upkeep tests hold upkeep equal to a full rebuild. Every new t
 
 | Piece | Where | State |
 | --- | --- | --- |
-| Resolver core: exact clusters, support then id, concluded input | `core/resolve` (S9-05) | on `main` |
-| Resolved-values cache and upkeep | `core/database/resolvedvalues` (S9-06) | on `main` |
+| Auto-reconciler core: exact clusters, support then id, concluded input | `core/autoreconcile` (S9-05) | on `main` |
+| Auto-reconciler cache and upkeep | `core/database/autoreconciler` (S9-06) | on `main` |
 | `initial` part type retired (migration 000037); `against` column (000038) | S9-13a | on `main` |
 | Shared pipeline and simple modules; every value cached with its reason (migration 000039) | S9-13 | on `main` |
 | Name module: parts by type, subsumption, one name per Person, majority outvotes misspellings only, parts compared as words; cache version 8 | S9-13b | stacked on S9-13 |

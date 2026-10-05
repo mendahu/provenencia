@@ -86,7 +86,7 @@ A list of every Event. Row: **thumbnail slot · event title · event date · eve
 | Events are rarely named | Titles are **composed**: recorded `event_name` → *{Type} of {subject}* → working label → *{Type} at {place}* / *Unspecified {type}* → ref. Show every case. |
 | Several subjects | *Marriage of A and B*; otherwise *{Type} of {first} et al.* |
 | Unnamed subject | *Birth of unnamed person*. |
-| Date | Resolved `date`, else start–end span. Mixed ⇒ top-ranked value, unmarked (S9-D2 decision: no mixed marker in rows). |
+| Date | Auto-reconciled `date`, else start–end span. Mixed ⇒ top-ranked value, unmarked (S9-D2 decision: no mixed marker in rows). |
 | Place | From the Event's Locations; several ⇒ first + *+N*. |
 | Sort | By date (undated last). |
 

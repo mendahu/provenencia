@@ -1646,19 +1646,19 @@ enum L10n {
                 LocalizedStringResource(
                     "evidenceGraph.subject.openHandlePage.person",
                     defaultValue: "Open person page",
-                    comment: "Membership row text beside the handle ref until the resolved name lands (S9-09)"
+                    comment: "Membership row text beside the handle ref until the auto-reconciled name lands (S9-09)"
                 )
             case .event:
                 LocalizedStringResource(
                     "evidenceGraph.subject.openHandlePage.event",
                     defaultValue: "Open event page",
-                    comment: "Membership row text beside the handle ref until the resolved name lands (S9-09)"
+                    comment: "Membership row text beside the handle ref until the auto-reconciled name lands (S9-09)"
                 )
             case .place:
                 LocalizedStringResource(
                     "evidenceGraph.subject.openHandlePage.place",
                     defaultValue: "Open place page",
-                    comment: "Membership row text beside the handle ref until the resolved name lands (S9-09)"
+                    comment: "Membership row text beside the handle ref until the auto-reconciled name lands (S9-09)"
                 )
             }
         }

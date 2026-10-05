@@ -1,8 +1,8 @@
 // Package searchindex maintains catalog_search_docs / catalog_search_fts
 // / catalog_search_fts_trigram. Domain mutators call Reproject* in the same
 // transaction; core/search EnsureIndex rebuilds when projection_version lags.
-// Handle documents (handles.go) read the resolved-values cache, so the cache
-// must be current first: open ensures resolvedvalues before this index.
+// Handle documents (handles.go) read the auto-reconciler cache, so the cache
+// must be current first: open ensures the autoreconciler cache before this index.
 package searchindex
 
 import (

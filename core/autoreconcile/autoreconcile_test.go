@@ -1,4 +1,4 @@
-package resolve
+package autoreconcile
 
 import (
 	"errors"
@@ -28,10 +28,10 @@ func date(n byte, y int, m, d *int) Candidate {
 	}}}
 }
 
-// shape is a compact view of a Result: each cluster's member ids.
+// shape is a compact view of a Result: each value's member ids.
 func shape(r Result) [][]byte {
 	var out [][]byte
-	for _, c := range r.Clusters {
+	for _, c := range r.Values {
 		var ids []byte
 		for _, oid := range c.ObservationIDs {
 			ids = append(ids, oid[3])
@@ -44,7 +44,7 @@ func shape(r Result) [][]byte {
 	return out
 }
 
-func TestResolve(t *testing.T) {
+func TestReconcile(t *testing.T) {
 	cases := []struct {
 		name       string
 		valueType  string
@@ -103,7 +103,7 @@ func TestResolve(t *testing.T) {
 		{"contained dates stay apart in v1", properties.ValueTypeDate,
 			[]Candidate{date(1, 1985, ip(5), nil), date(2, 1985, ip(5), ip(14))}, nil,
 			[][]byte{{1}, {2}}, StateMixed},
-		{"concluded joins its cluster at rank 1", properties.ValueTypeText,
+		{"concluded joins its value at rank 1", properties.ValueTypeText,
 			[]Candidate{text(1, "A"), text(2, "A"), text(3, "B")}, &Value{Text: "B", HasText: true},
 			[][]byte{{3}, {1, 2}}, StateConcluded},
 		{"concluded with no support leads", properties.ValueTypeText,
@@ -114,12 +114,12 @@ func TestResolve(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := Resolve(tc.valueType, tc.candidates, tc.concluded)
+			got, err := Reconcile(tc.valueType, tc.candidates, tc.concluded)
 			if err != nil {
 				t.Fatal(err)
 			}
 			if s := shape(got); !reflect.DeepEqual(s, tc.want) {
-				t.Fatalf("clusters %v, want %v", s, tc.want)
+				t.Fatalf("values %v, want %v", s, tc.want)
 			}
 			if got.State() != tc.state {
 				t.Fatalf("state %q, want %q", got.State(), tc.state)
@@ -128,29 +128,29 @@ func TestResolve(t *testing.T) {
 	}
 }
 
-func TestResolveRepresentative(t *testing.T) {
-	got, err := Resolve(properties.ValueTypeText, []Candidate{text(9, "York"), text(4, "York ")}, nil)
+func TestReconcileRepresentative(t *testing.T) {
+	got, err := Reconcile(properties.ValueTypeText, []Candidate{text(9, "York"), text(4, "York ")}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if v := got.Clusters[0].Value.Text; v != "York " {
+	if v := got.Values[0].Value.Text; v != "York " {
 		t.Fatalf("representative %q, want the best-ranked member's", v)
 	}
 
 	concluded := &Value{Name: parse("given=JAMES|surname=ROBINS")}
-	got, err = Resolve(properties.ValueTypeName,
+	got, err = Reconcile(properties.ValueTypeName,
 		[]Candidate{nm(9, "given=james|surname=robins"), nm(4, "given=James|surname=Robins")}, concluded)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.Clusters[0].Value.Name != concluded.Name || got.Clusters[0].Support != 2 {
-		t.Fatalf("concluded cluster %+v", got.Clusters[0])
+	if got.Values[0].Value.Name != concluded.Name || got.Values[0].Support != 2 {
+		t.Fatalf("concluded value %+v", got.Values[0])
 	}
 }
 
-func TestResolveOrderIndependent(t *testing.T) {
+func TestReconcileOrderIndependent(t *testing.T) {
 	in := []Candidate{text(1, "A"), text(2, "B"), text(3, "B"), text(4, "C"), text(5, "A"), text(6, "D")}
-	want, err := Resolve(properties.ValueTypeText, in, nil)
+	want, err := Reconcile(properties.ValueTypeText, in, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -160,7 +160,7 @@ func TestResolveOrderIndependent(t *testing.T) {
 		for i, j := range p {
 			shuffled[i] = in[j]
 		}
-		got, err := Resolve(properties.ValueTypeText, shuffled, nil)
+		got, err := Reconcile(properties.ValueTypeText, shuffled, nil)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -170,9 +170,9 @@ func TestResolveOrderIndependent(t *testing.T) {
 	}
 }
 
-func TestResolveDoesNotMutateInput(t *testing.T) {
+func TestReconcileDoesNotMutateInput(t *testing.T) {
 	in := []Candidate{text(3, "A"), text(1, "B")}
-	if _, err := Resolve(properties.ValueTypeText, in, nil); err != nil {
+	if _, err := Reconcile(properties.ValueTypeText, in, nil); err != nil {
 		t.Fatal(err)
 	}
 	if in[0].ObservationID[3] != 3 {
@@ -180,14 +180,14 @@ func TestResolveDoesNotMutateInput(t *testing.T) {
 	}
 }
 
-func TestResolveErrors(t *testing.T) {
-	if _, err := Resolve("colour", nil, nil); !errors.Is(err, ErrUnknownValueType) {
+func TestReconcileErrors(t *testing.T) {
+	if _, err := Reconcile("colour", nil, nil); !errors.Is(err, ErrUnknownValueType) {
 		t.Fatalf("unknown type: %v", err)
 	}
-	if _, err := Resolve(properties.ValueTypeName, []Candidate{text(1, "A")}, nil); !errors.Is(err, ErrValueMismatch) {
+	if _, err := Reconcile(properties.ValueTypeName, []Candidate{text(1, "A")}, nil); !errors.Is(err, ErrValueMismatch) {
 		t.Fatalf("mismatched candidate: %v", err)
 	}
-	if _, err := Resolve(properties.ValueTypeText, nil, &Value{Integer: 1, HasInteger: true}); !errors.Is(err, ErrValueMismatch) {
+	if _, err := Reconcile(properties.ValueTypeText, nil, &Value{Integer: 1, HasInteger: true}); !errors.Is(err, ErrValueMismatch) {
 		t.Fatalf("mismatched concluded: %v", err)
 	}
 }
@@ -214,12 +214,12 @@ func TestSortKey(t *testing.T) {
 	if !ok || k != "obrien mary" {
 		t.Fatalf("name %q %v", k, ok)
 	}
-	got, err := Resolve(properties.ValueTypeName,
+	got, err := Reconcile(properties.ValueTypeName,
 		[]Candidate{nm(1, "given=J.|surname=ROBINS|suffix=Jr."), nm(2, "given=James|surname=Robins")}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if k, _ := SortKey(properties.ValueTypeName, got.Clusters[0].Value); k != "james robins jr" {
+	if k, _ := SortKey(properties.ValueTypeName, got.Values[0].Value); k != "james robins jr" {
 		t.Fatalf("reconciled name sort key %q", k)
 	}
 	k, ok = SortKey(properties.ValueTypeText, Value{Text: " Upper Canada ", HasText: true})

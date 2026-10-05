@@ -17,8 +17,8 @@ type Membership struct {
 	ClaimID   []byte
 	Entity    canonicalentities.Entity
 	Kind      string
-	// Name is the handle's rank-1 resolved name from the resolved-values
-	// cache; nil when it has none (unnamed, or not a person).
+	// Name is the handle's displayed auto-reconciled name; nil when it has
+	// none (unnamed, or not a person).
 	Name *namevalues.Value
 }
 
@@ -31,7 +31,7 @@ const sqlMembershipsBySource = `SELECT s.id, ic.id, e.id, e.subject_type_id, e.r
 	JOIN canonical_entities e ON e.id = ic.entity_id
 	JOIN subject_types st ON st.id = e.subject_type_id
 	LEFT JOIN properties np ON np.key = 'name' AND np.origin = 'provenencia'
-	LEFT JOIN conclusion_resolved_values r
+	LEFT JOIN auto_reconciler_values r
 		ON r.entity_id = e.id AND r.property_id = np.id AND r.rank = 1
 	WHERE s.source_id = ?
 	ORDER BY s.ref COLLATE NOCASE`

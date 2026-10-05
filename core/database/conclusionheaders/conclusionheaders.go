@@ -1,11 +1,11 @@
 // Package conclusionheaders composes the row-shaped header of each canonical
-// Person (and later Event and Place) from the resolved-values cache (Spike 9
+// Person (and later Event and Place) from the auto-reconciler cache (Spike 9
 // R4). One header composer per kind serves every surface that shows a handle
 // as a row: lists, Promote's target picker, omnibar hits, later tree nodes.
 //
 // Headers are composed at read time, never stored, and set-based: a whole
 // list is one query whatever its length. Go returns structures (the rank-1
-// NameValue, cluster counts, label, ref); the app formats text, including
+// NameValue, value counts, label, ref); the app formats text, including
 // the name → label → ref fallback.
 package conclusionheaders
 
@@ -26,25 +26,25 @@ type Querier interface {
 // PersonHeader is one Person as a row.
 type PersonHeader struct {
 	Entity canonicalentities.Entity
-	// Name is the rank-1 resolved name cluster; nil when no member names
+	// Name is the displayed auto-reconciled name; nil when no member names
 	// the Person.
 	Name *namevalues.Value
-	// NameClusterCount is the number of distinct resolved names. More than
-	// one means the members disagree (mixed); the extra clusters are the +N.
-	NameClusterCount int
+	// NameValueCount is the number of displayed name values: names are one
+	// structure, so at most 1. More would read as mixed, the extras as +N.
+	NameValueCount int
 }
 
-// Unmerged Person handles with their rank-1 name row and name cluster count,
+// Unmerged Person handles with their rank-1 name row and displayed name count,
 // named Persons first by name sort key, then by ref (R5).
 const (
 	sqlPersonsSelect = `SELECT e.id, e.subject_type_id, e.ref, COALESCE(e.argument, ''), COALESCE(e.label, ''),
 		r.value_name,
-		(SELECT COUNT(*) FROM conclusion_resolved_values c
-			WHERE c.entity_id = e.id AND c.property_id = np.id AND c.reason = 'kept') AS clusters
+		(SELECT COUNT(*) FROM auto_reconciler_values c
+			WHERE c.entity_id = e.id AND c.property_id = np.id AND c.reason = 'kept') AS name_values
 	FROM canonical_entities e
 	JOIN subject_types st ON st.id = e.subject_type_id
 	LEFT JOIN properties np ON np.key = 'name' AND np.origin = 'provenencia'
-	LEFT JOIN conclusion_resolved_values r
+	LEFT JOIN auto_reconciler_values r
 		ON r.entity_id = e.id AND r.property_id = np.id AND r.rank = 1
 	WHERE st.key = 'person' AND st.origin = 'provenencia' AND e.merged_into_id IS NULL`
 	sqlPersonsOrder = ` ORDER BY r.sort_key IS NULL, r.sort_key, e.ref COLLATE NOCASE`
@@ -80,7 +80,7 @@ func queryPersons(q Querier, query string, args ...any) ([]PersonHeader, error) 
 			nameBlob []byte
 		)
 		e := &h.Entity
-		if err := rows.Scan(&e.ID, &e.SubjectTypeID, &e.Ref, &e.Argument, &e.Label, &nameBlob, &h.NameClusterCount); err != nil {
+		if err := rows.Scan(&e.ID, &e.SubjectTypeID, &e.Ref, &e.Argument, &e.Label, &nameBlob, &h.NameValueCount); err != nil {
 			return nil, err
 		}
 		if nameBlob != nil {

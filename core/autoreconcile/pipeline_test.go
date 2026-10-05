@@ -1,4 +1,4 @@
-package resolve
+package autoreconcile
 
 import (
 	"fmt"
@@ -19,7 +19,7 @@ func highTrust(c Candidate) Candidate        { c.Provenance.Credibility = 1; ret
 func neg(c Candidate) Candidate              { c.Negative = true; return c }
 func prov(c Candidate) Candidate             { c.Provisional = true; return c }
 
-// wantRow is an expected cluster: members, reason, support, against.
+// wantRow is an expected value: members, reason, support, against.
 type wantRow struct {
 	ids     []byte
 	reason  Reason
@@ -29,7 +29,7 @@ type wantRow struct {
 
 func rowsOf(r Result) []wantRow {
 	var out []wantRow
-	for i, c := range r.Clusters {
+	for i, c := range r.Values {
 		out = append(out, wantRow{shape(r)[i], c.Reason, c.Support, c.Against})
 	}
 	return out
@@ -121,7 +121,7 @@ func TestPipeline(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.group+"/"+tc.name, func(t *testing.T) {
-			got, err := Resolve(properties.ValueTypeText, tc.in, nil)
+			got, err := Reconcile(properties.ValueTypeText, tc.in, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -147,42 +147,42 @@ func TestPipelineOutcomes(t *testing.T) {
 		from("x", text(8, "Upper Canada")),         // kept
 		from("x", lowTrust(text(9, "Muddy York"))), // weak
 	}
-	got, err := Resolve(properties.ValueTypeText, in, nil)
+	got, err := Reconcile(properties.ValueTypeText, in, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	want := map[byte]Reason{1: ReasonDenied, 2: ReasonKept, 3: ReasonAgainst, 4: ReasonProvisional, 5: ReasonNoEvidence,
 		6: ReasonWeak, 7: ReasonKept, 8: ReasonKept, 9: ReasonWeak}
-	if len(got.Candidates) != len(in) {
-		t.Fatalf("%d outcomes for %d candidates", len(got.Candidates), len(in))
+	if len(got.Outcomes) != len(in) {
+		t.Fatalf("%d outcomes for %d candidates", len(got.Outcomes), len(in))
 	}
-	for i, o := range got.Candidates {
+	for i, o := range got.Outcomes {
 		n := o.ObservationID[3]
-		if i > 0 && got.Candidates[i-1].ObservationID[3] >= n {
+		if i > 0 && got.Outcomes[i-1].ObservationID[3] >= n {
 			t.Fatalf("outcomes not in id order")
 		}
 		if o.Reason != want[n] {
 			t.Errorf("candidate %d: %q, want %q", n, o.Reason, want[n])
 		}
 		switch {
-		case o.Reason == ReasonNoEvidence && o.Cluster != -1:
-			t.Errorf("candidate %d: no evidence has cluster %d", n, o.Cluster)
-		case o.Reason != ReasonNoEvidence && (o.Cluster < 0 || o.Cluster >= len(got.Clusters)):
-			t.Errorf("candidate %d: cluster %d out of range", n, o.Cluster)
+		case o.Reason == ReasonNoEvidence && o.Value != -1:
+			t.Errorf("candidate %d: no evidence has value %d", n, o.Value)
+		case o.Reason != ReasonNoEvidence && (o.Value < 0 || o.Value >= len(got.Values)):
+			t.Errorf("candidate %d: value %d out of range", n, o.Value)
 		}
 	}
-	york := got.Clusters[got.Candidates[1].Cluster]
+	york := got.Values[got.Outcomes[1].Value]
 	if york.Value.Text != "York" || !york.Displayed() || york.Against != 1 {
-		t.Fatalf("York cluster %+v", york)
+		t.Fatalf("York value %+v", york)
 	}
-	if !reflect.DeepEqual(got.Candidates[0].DeniedBy, id(3)) {
-		t.Fatalf("denied by %v", got.Candidates[0].DeniedBy)
+	if !reflect.DeepEqual(got.Outcomes[0].DeniedBy, id(3)) {
+		t.Fatalf("denied by %v", got.Outcomes[0].DeniedBy)
 	}
 }
 
 func TestPipelineConcluded(t *testing.T) {
 	in := []Candidate{text(1, "A"), text(2, "A"), text(3, "B")}
-	got, err := Resolve(properties.ValueTypeText, in, &Value{Text: "b", HasText: true})
+	got, err := Reconcile(properties.ValueTypeText, in, &Value{Text: "b", HasText: true})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -192,16 +192,16 @@ func TestPipelineConcluded(t *testing.T) {
 	if want := []wantRow{{[]byte{3}, ReasonKept, 1, 0}, {[]byte{1, 2}, ReasonKept, 2, 0}}; !reflect.DeepEqual(rowsOf(got), want) {
 		t.Fatalf("rows %+v", rowsOf(got))
 	}
-	if got.Clusters[0].Value.Text != "b" {
-		t.Fatalf("concluded value %q", got.Clusters[0].Value.Text)
+	if got.Values[0].Value.Text != "b" {
+		t.Fatalf("concluded value %q", got.Values[0].Value.Text)
 	}
-	for _, o := range got.Candidates {
+	for _, o := range got.Outcomes {
 		wantCluster := 1
 		if o.ObservationID[3] == 3 {
 			wantCluster = 0
 		}
-		if o.Cluster != wantCluster {
-			t.Fatalf("candidate %d points at %d after the concluded value moved", o.ObservationID[3], o.Cluster)
+		if o.Value != wantCluster {
+			t.Fatalf("candidate %d points at %d after the concluded value moved", o.ObservationID[3], o.Value)
 		}
 	}
 }
@@ -225,22 +225,22 @@ func TestPipelineInvariants(t *testing.T) {
 				in = append(in, c)
 			}
 			where := fmt.Sprintf("seed %d list %d: %+v", seed, list, in)
-			got, err := Resolve(properties.ValueTypeText, in, nil)
+			got, err := Reconcile(properties.ValueTypeText, in, nil)
 			if err != nil {
 				t.Fatalf("%s: %v", where, err)
 			}
 
 			shuffled := append([]Candidate(nil), in...)
 			rng.Shuffle(len(shuffled), func(i, j int) { shuffled[i], shuffled[j] = shuffled[j], shuffled[i] })
-			if again, _ := Resolve(properties.ValueTypeText, shuffled, nil); !reflect.DeepEqual(again, got) {
+			if again, _ := Reconcile(properties.ValueTypeText, shuffled, nil); !reflect.DeepEqual(again, got) {
 				t.Fatalf("%s: input order changed the result", where)
 			}
 
-			if len(got.Candidates) != len(in) {
-				t.Fatalf("%s: %d outcomes", where, len(got.Candidates))
+			if len(got.Outcomes) != len(in) {
+				t.Fatalf("%s: %d outcomes", where, len(got.Outcomes))
 			}
 			members := map[byte]bool{}
-			for _, c := range got.Clusters {
+			for _, c := range got.Values {
 				if c.Support > len(c.ObservationIDs) {
 					t.Fatalf("%s: support %d over %d members", where, c.Support, len(c.ObservationIDs))
 				}
@@ -254,11 +254,11 @@ func TestPipelineInvariants(t *testing.T) {
 					t.Fatalf("%s: negative %d is a member", where, c.ObservationID[3])
 				}
 			}
-			for _, o := range got.Candidates {
+			for _, o := range got.Outcomes {
 				n := o.ObservationID[3]
 				admitted := o.Reason != ReasonNoEvidence && o.Reason != ReasonAgainst
-				if admitted && (o.Cluster < 0 || o.Cluster >= len(got.Clusters)) {
-					t.Fatalf("%s: candidate %d has no cluster", where, n)
+				if admitted && (o.Value < 0 || o.Value >= len(got.Values)) {
+					t.Fatalf("%s: candidate %d has no value", where, n)
 				}
 				voters = voters || o.Reason == ReasonKept || o.Reason == ReasonOutvoted || o.Reason == ReasonWeak
 			}

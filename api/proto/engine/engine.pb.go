@@ -8191,7 +8191,7 @@ type SubjectMembership struct {
 	Entity        *CanonicalEntity       `protobuf:"bytes,2,opt,name=entity,proto3" json:"entity,omitempty"`
 	Kind          string                 `protobuf:"bytes,3,opt,name=kind,proto3" json:"kind,omitempty"`
 	ClaimId       string                 `protobuf:"bytes,4,opt,name=claim_id,json=claimId,proto3" json:"claim_id,omitempty"`
-	Name          *NameValueInput        `protobuf:"bytes,5,opt,name=name,proto3" json:"name,omitempty"` // handle's rank-1 resolved name; absent when none
+	Name          *NameValueInput        `protobuf:"bytes,5,opt,name=name,proto3" json:"name,omitempty"` // handle's displayed auto-reconciled name; absent when none
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -8359,18 +8359,19 @@ func (x *ListSubjectMembershipsResponse) GetMemberships() []*SubjectMembership {
 	return nil
 }
 
-// PersonHeader is one Person as a row, composed from the resolved-values
+// PersonHeader is one Person as a row, composed from the auto-reconciler's
 // cache. Structures only: the app formats the title (name, else entity
-// label, else ref). name is the rank-1 resolved name cluster, absent when no
-// member names the Person; name_cluster_count > 1 means the members disagree
-// (mixed), and the extra clusters are the list's +N.
+// label, else ref). name is the displayed auto-reconciled name, absent when
+// no member names the Person; name_value_count counts displayed name values
+// (names are one structure, so at most 1; > 1 would read as mixed, and the
+// extra values are the list's +N).
 type PersonHeader struct {
-	state            protoimpl.MessageState `protogen:"open.v1"`
-	Entity           *CanonicalEntity       `protobuf:"bytes,1,opt,name=entity,proto3" json:"entity,omitempty"`
-	Name             *NameValueInput        `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	NameClusterCount int32                  `protobuf:"varint,3,opt,name=name_cluster_count,json=nameClusterCount,proto3" json:"name_cluster_count,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Entity         *CanonicalEntity       `protobuf:"bytes,1,opt,name=entity,proto3" json:"entity,omitempty"`
+	Name           *NameValueInput        `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	NameValueCount int32                  `protobuf:"varint,3,opt,name=name_value_count,json=nameValueCount,proto3" json:"name_value_count,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *PersonHeader) Reset() {
@@ -8417,15 +8418,15 @@ func (x *PersonHeader) GetName() *NameValueInput {
 	return nil
 }
 
-func (x *PersonHeader) GetNameClusterCount() int32 {
+func (x *PersonHeader) GetNameValueCount() int32 {
 	if x != nil {
-		return x.NameClusterCount
+		return x.NameValueCount
 	}
 	return 0
 }
 
 // ListPersonHeaders returns every unmerged Person in list order: named
-// Persons by resolved name, then the rest by ref.
+// Persons by auto-reconciled name, then the rest by ref.
 type ListPersonHeadersRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ProjectDir    string                 `protobuf:"bytes,1,opt,name=project_dir,json=projectDir,proto3" json:"project_dir,omitempty"`
@@ -14351,11 +14352,11 @@ const file_engine_proto_rawDesc = "" +
 	"projectDir\x12\x1b\n" +
 	"\tsource_id\x18\x02 \x01(\tR\bsourceId\"l\n" +
 	"\x1eListSubjectMembershipsResponse\x12J\n" +
-	"\vmemberships\x18\x01 \x03(\v2(.provenencia.engine.v1.SubjectMembershipR\vmemberships\"\xb7\x01\n" +
+	"\vmemberships\x18\x01 \x03(\v2(.provenencia.engine.v1.SubjectMembershipR\vmemberships\"\xb3\x01\n" +
 	"\fPersonHeader\x12>\n" +
 	"\x06entity\x18\x01 \x01(\v2&.provenencia.engine.v1.CanonicalEntityR\x06entity\x129\n" +
-	"\x04name\x18\x02 \x01(\v2%.provenencia.engine.v1.NameValueInputR\x04name\x12,\n" +
-	"\x12name_cluster_count\x18\x03 \x01(\x05R\x10nameClusterCount\";\n" +
+	"\x04name\x18\x02 \x01(\v2%.provenencia.engine.v1.NameValueInputR\x04name\x12(\n" +
+	"\x10name_value_count\x18\x03 \x01(\x05R\x0enameValueCount\";\n" +
 	"\x18ListPersonHeadersRequest\x12\x1f\n" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
 	"projectDir\"Z\n" +

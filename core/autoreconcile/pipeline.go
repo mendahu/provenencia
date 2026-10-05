@@ -1,4 +1,4 @@
-package resolve
+package autoreconcile
 
 import (
 	"bytes"
@@ -26,12 +26,12 @@ import (
 //     evidence drops when a value with non-weak evidence survived.
 //  6. A candidate is displayed when every one of its units survived.
 //     Displayed candidates that agree on every unit they share form one
-//     cluster; one missing a unit joins the agreeing cluster with the most
+//     value; one missing a unit joins the agreeing value with the most
 //     members. A oneValue module (names) puts every displayed candidate in
-//     one cluster instead, with every surviving value of each unit. The
-//     module assembles each cluster's value.
+//     one value instead, with every surviving value of each unit. The
+//     module assembles each value.
 //
-// Nothing is dropped: every value that isn't displayed is still a cluster,
+// Nothing is dropped: every value that isn't displayed is still returned,
 // with the reason, and every candidate gets an Outcome.
 
 // MinMajoritySupport is the least support, in distinct Sources, a value needs
@@ -70,7 +70,7 @@ type unitValue struct {
 	fate      Reason          // ReasonKept, ReasonOutvoted or ReasonWeak
 }
 
-// row is one cluster under construction.
+// row is one auto-reconciled value under construction.
 type row struct {
 	members   []*entry              // supporters, in rank order
 	attached  []*entry              // non-voters with this value (provisional, denied)
@@ -83,7 +83,7 @@ type row struct {
 }
 
 func reconcile(m module, candidates []Candidate, concluded *Value, _ cardinality) Result {
-	res := Result{Candidates: make([]Outcome, len(candidates))}
+	res := Result{Outcomes: make([]Outcome, len(candidates))}
 
 	order := make([]int, len(candidates))
 	for i := range order {
@@ -102,7 +102,7 @@ func reconcile(m module, candidates []Candidate, concluded *Value, _ cardinality
 		c := candidates[i]
 		units, ok := m.split(c.Value)
 		if !ok {
-			res.Candidates[i] = Outcome{ObservationID: c.ObservationID, Reason: ReasonNoEvidence, Cluster: -1}
+			res.Outcomes[i] = Outcome{ObservationID: c.ObservationID, Reason: ReasonNoEvidence, Value: -1}
 			continue
 		}
 		e := &entry{c: c, in: i, rank: rank, units: units, sig: signature(units)}
@@ -236,7 +236,7 @@ func reconcile(m module, candidates []Candidate, concluded *Value, _ cardinality
 
 	// Negatives count against every row with their value.
 	for _, n := range neg {
-		res.Candidates[n.in] = Outcome{ObservationID: n.c.ObservationID, Reason: ReasonAgainst, Cluster: -1}
+		res.Outcomes[n.in] = Outcome{ObservationID: n.c.ObservationID, Reason: ReasonAgainst, Value: -1}
 		for _, r := range append(append([]*row(nil), rows...), hidden...) {
 			if r.sigs[n.sig] {
 				r.against++
@@ -248,15 +248,15 @@ func reconcile(m module, candidates []Candidate, concluded *Value, _ cardinality
 	index := map[*row]int{}
 	for i, r := range ordered {
 		index[r] = i
-		res.Clusters = append(res.Clusters, r.cluster())
+		res.Values = append(res.Values, r.reconciled())
 	}
 	for _, e := range pos {
-		res.Candidates[e.in] = Outcome{ObservationID: e.c.ObservationID, Reason: e.reason, Cluster: index[e.row], DeniedBy: e.deniedBy}
+		res.Outcomes[e.in] = Outcome{ObservationID: e.c.ObservationID, Reason: e.reason, Value: index[e.row], DeniedBy: e.deniedBy}
 	}
 	for _, n := range neg {
 		for _, r := range ordered {
 			if r.sigs[n.sig] {
-				res.Candidates[n.in].Cluster = index[r]
+				res.Outcomes[n.in].Value = index[r]
 				break
 			}
 		}
@@ -265,8 +265,8 @@ func reconcile(m module, candidates []Candidate, concluded *Value, _ cardinality
 	if concluded != nil {
 		applyConcluded(m, &res, ordered, *concluded)
 	}
-	sort.SliceStable(res.Candidates, func(i, j int) bool {
-		return bytes.Compare(res.Candidates[i].ObservationID, res.Candidates[j].ObservationID) < 0
+	sort.SliceStable(res.Outcomes, func(i, j int) bool {
+		return bytes.Compare(res.Outcomes[i].ObservationID, res.Outcomes[j].ObservationID) < 0
 	})
 	return res
 }
@@ -479,8 +479,8 @@ func (r *row) bestRank() int {
 	return best
 }
 
-func (r *row) cluster() Cluster {
-	c := Cluster{Value: r.value, Support: r.support(), Against: r.against, Reason: r.reason}
+func (r *row) reconciled() ReconciledValue {
+	c := ReconciledValue{Value: r.value, Support: r.support(), Against: r.against, Reason: r.reason}
 	for _, e := range r.members {
 		c.ObservationIDs = append(c.ObservationIDs, e.c.ObservationID)
 	}
@@ -490,10 +490,10 @@ func (r *row) cluster() Cluster {
 	return c
 }
 
-// applyConcluded puts a concluded value at rank 1: it takes over the cluster
+// applyConcluded puts a concluded value at rank 1: it takes over the value
 // with the same value, or leads alone with no support.
 func applyConcluded(m module, res *Result, ordered []*row, concluded Value) {
-	top := Cluster{Value: concluded, Reason: ReasonKept}
+	top := ReconciledValue{Value: concluded, Reason: ReasonKept}
 	at := -1
 	if units, ok := m.split(concluded); ok {
 		sig := signature(units)
@@ -506,9 +506,9 @@ func applyConcluded(m module, res *Result, ordered []*row, concluded Value) {
 	}
 	shift := func(i int) int { return i + 1 }
 	if at >= 0 {
-		c := res.Clusters[at]
+		c := res.Values[at]
 		top.ObservationIDs, top.Support, top.Against = c.ObservationIDs, c.Support, c.Against
-		res.Clusters = append(res.Clusters[:at:at], res.Clusters[at+1:]...)
+		res.Values = append(res.Values[:at:at], res.Values[at+1:]...)
 		shift = func(i int) int {
 			switch {
 			case i == at:
@@ -519,10 +519,10 @@ func applyConcluded(m module, res *Result, ordered []*row, concluded Value) {
 			return i
 		}
 	}
-	res.Clusters = append([]Cluster{top}, res.Clusters...)
-	for i := range res.Candidates {
-		if res.Candidates[i].Cluster >= 0 {
-			res.Candidates[i].Cluster = shift(res.Candidates[i].Cluster)
+	res.Values = append([]ReconciledValue{top}, res.Values...)
+	for i := range res.Outcomes {
+		if res.Outcomes[i].Value >= 0 {
+			res.Outcomes[i].Value = shift(res.Outcomes[i].Value)
 		}
 	}
 	res.Concluded = true

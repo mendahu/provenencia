@@ -1,8 +1,8 @@
 package match
 
 import (
+	"github.com/mendahu/provenencia/core/autoreconcile"
 	"github.com/mendahu/provenencia/core/database/namevalues"
-	"github.com/mendahu/provenencia/core/resolve"
 )
 
 // The registry: every number the matching algorithm uses, every built-in name
@@ -27,12 +27,12 @@ var DefaultWordRules = WordRules{
 	// Least edit-distance ratio (1 − edits / longer length) for a spelling
 	// variant: Robins ~ Robbins (0.86) counts, Mary ~ Mark (0.75) does not.
 	// 1 turns fuzzy matching off.
-	FuzzyFloor: Set(resolve.SpellingFloor),
+	FuzzyFloor: Set(autoreconcile.SpellingFloor),
 	// An initial against a word it begins: "J." ~ "James".
 	InitialCredit: Set(0.5),
 	// Words at least this long may differ by one added or dropped letter
 	// below FuzzyFloor (Ann ~ Anne, Jon ~ John).
-	ShortVariantMinLength: Set(resolve.SpellingShortMin),
+	ShortVariantMinLength: Set(autoreconcile.SpellingShortMin),
 }
 
 // MaxExactPairing bounds the exact best-pairing search (2^n states over the

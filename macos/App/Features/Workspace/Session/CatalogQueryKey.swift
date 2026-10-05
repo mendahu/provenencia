@@ -18,7 +18,7 @@ enum CatalogQueryKey: Hashable, Sendable {
     case propertyTerms(project: ProjectKey, propertyId: String)
     case citationsByArtifact(project: ProjectKey, artifactId: String)
     case sourceGraphProgress(project: ProjectKey)
-    /// Every Person header, composed from the resolved-values cache (S9-07).
+    /// Every Person header, composed from the auto-reconciler cache (S9-07).
     case personsList(project: ProjectKey)
     /// Existing handles a Subject could join in Promote, best first (S9-11).
     case promoteTargets(project: ProjectKey, subjectId: String)

@@ -974,7 +974,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         }
     }
 
-    /// Handle kinds: Persons by resolved name or ref, Events and Places by ref or
+    /// Handle kinds: Persons by auto-reconciled name or ref, Events and Places by ref or
     /// label (FakeStore has no event / place values). Other kinds: the omnibar
     /// fake below, filtered to the requested kinds.
     func searchCatalog(
@@ -1337,7 +1337,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         }
     }
 
-    /// Mirrors resolve.NormalizeForm: dashes and slashes separate words; other
+    /// Mirrors autoreconcile.NormalizeForm: dashes and slashes separate words; other
     /// punctuation is dropped.
     private static func foldName(_ form: String) -> String {
         let spaced = String(form.lowercased().map { "-–—/".contains($0) ? " " : $0 })
@@ -1415,7 +1415,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             let top = clusters.enumerated().max { a, b in
                 a.element.support != b.element.support ? a.element.support < b.element.support : a.offset > b.offset
             }?.element
-            return CatalogPersonHeader(entity: entity, name: top?.name, nameClusterCount: clusters.count)
+            return CatalogPersonHeader(entity: entity, name: top?.name, nameValueCount: clusters.count)
         }
         return headers.sorted { a, b in
             switch (a.name, b.name) {

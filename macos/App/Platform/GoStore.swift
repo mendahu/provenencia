@@ -827,7 +827,7 @@ struct GoStore: GenealogyStore {
         CatalogPersonHeader(
             entity: mapCanonicalEntity(h.entity),
             name: h.hasName ? mapNameValue(h.name) : nil,
-            nameClusterCount: Int(h.nameClusterCount)
+            nameValueCount: Int(h.nameValueCount)
         )
     }
 

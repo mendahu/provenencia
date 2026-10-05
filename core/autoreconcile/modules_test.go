@@ -1,4 +1,4 @@
-package resolve
+package autoreconcile
 
 import (
 	"reflect"
@@ -22,9 +22,9 @@ func TestModules(t *testing.T) {
 		module, name string
 		valueType    string
 		in           []Candidate
-		want         [][]byte // displayed and hidden clusters, by member ids
+		want         [][]byte // displayed and hidden values, by member ids
 		state        State
-		displayed    string // the first cluster's text, when checked
+		displayed    string // the first value's text, when checked
 	}{
 		{"text", "trimmed and case-insensitive", properties.ValueTypeText,
 			[]Candidate{text(1, "  York "), text(2, "YORK"), text(3, "york")}, [][]byte{{1, 2, 3}}, StateMerged, "  York "},
@@ -53,18 +53,18 @@ func TestModules(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.module+"/"+tc.name, func(t *testing.T) {
-			got, err := Resolve(tc.valueType, tc.in, nil)
+			got, err := Reconcile(tc.valueType, tc.in, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
 			if s := shape(got); !reflect.DeepEqual(s, tc.want) {
-				t.Fatalf("clusters %v, want %v", s, tc.want)
+				t.Fatalf("values %v, want %v", s, tc.want)
 			}
 			if got.State() != tc.state {
 				t.Fatalf("state %q, want %q", got.State(), tc.state)
 			}
-			if tc.displayed != "" && got.Clusters[0].Value.Text != tc.displayed {
-				t.Fatalf("displayed %q, want %q", got.Clusters[0].Value.Text, tc.displayed)
+			if tc.displayed != "" && got.Values[0].Value.Text != tc.displayed {
+				t.Fatalf("displayed %q, want %q", got.Values[0].Value.Text, tc.displayed)
 			}
 		})
 	}
@@ -78,7 +78,7 @@ func TestModuleFor(t *testing.T) {
 			t.Errorf("%s has no module", vt)
 		}
 	}
-	if _, err := Resolve(properties.ValueTypeName, []Candidate{{ObservationID: id(1), Value: Value{Name: &namevalues.Value{}}}}, nil); err != nil {
+	if _, err := Reconcile(properties.ValueTypeName, []Candidate{{ObservationID: id(1), Value: Value{Name: &namevalues.Value{}}}}, nil); err != nil {
 		t.Fatalf("an empty name is no evidence, not an error: %v", err)
 	}
 }

@@ -85,7 +85,7 @@ func TestListPersonHeaders(t *testing.T) {
 			exact: true,
 		},
 		{
-			name: "promoted Person carries its resolved name and cluster count",
+			name: "promoted Person carries its auto-reconciled name and value count",
 			reqFn: func(t *testing.T) proto.Message {
 				dir, _ := namedPerson(t)
 				return &engine.ListPersonHeadersRequest{ProjectDir: dir}
@@ -100,7 +100,7 @@ func TestListPersonHeaders(t *testing.T) {
 				}
 				h := resp.Headers[0]
 				// James Robins + Jim Robins reconcile into one name (S9-13b).
-				if !strings.HasPrefix(h.Entity.GetRef(), "PER-") || h.GetNameClusterCount() != 1 {
+				if !strings.HasPrefix(h.Entity.GetRef(), "PER-") || h.GetNameValueCount() != 1 {
 					t.Fatalf("%+v", h)
 				}
 				n := h.GetName()
@@ -152,7 +152,7 @@ func TestWorkspaceNavCountsConclusionHandles(t *testing.T) {
 	}
 }
 
-func TestListSubjectMembershipsCarriesResolvedName(t *testing.T) {
+func TestListSubjectMembershipsCarriesAutoReconciledName(t *testing.T) {
 	dir, ref := namedPerson(t)
 	t.Cleanup(func() { _ = catalogsession.CloseAll() })
 	var sourceID string

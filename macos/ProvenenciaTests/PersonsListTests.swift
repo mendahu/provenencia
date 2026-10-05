@@ -8,7 +8,7 @@ struct PersonsListTests {
         CatalogPersonHeader(
             entity: CatalogCanonicalEntity(id: "id-\(ref)", ref: ref, subjectTypeID: "t", label: label),
             name: name.map { CatalogNameValue(form: $0) },
-            nameClusterCount: name == nil ? 0 : 1
+            nameValueCount: name == nil ? 0 : 1
         )
     }
 

@@ -1,5 +1,7 @@
-// Package resolvedvalues maintains conclusion_resolved_values: the resolver's
-// ranked clusters for every Property on every canonical handle (Spike 9 R3).
+// Package autoreconciler stores the auto-reconciler's output (Spike 9 R3):
+// auto_reconciler_values holds every auto-reconciled value for every Property
+// on every canonical handle. core/autoreconcile computes it; this package
+// loads its inputs, writes its output, and keeps it current.
 //
 // The table is derived and rebuildable. Every write that can change a handle's
 // values recomputes the affected handles inside its own transaction
@@ -19,19 +21,19 @@
 // Scope today: positive Observations on accepted members, with each term's
 // key and each name's parts. Sources, provenance, negatives and provisional members load with
 // S9-14; subject-valued Properties with S9-28; date_lo / date_hi with S9-21.
-package resolvedvalues
+package autoreconciler
 
 import (
 	"bytes"
 	"database/sql"
 	"sort"
 
+	"github.com/mendahu/provenencia/core/autoreconcile"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/searchindex"
-	"github.com/mendahu/provenencia/core/resolve"
 	"github.com/mendahu/provenencia/core/valuecodec"
 )
 
@@ -58,9 +60,9 @@ type Querier interface {
 }
 
 const (
-	sqlDeleteFor = `DELETE FROM conclusion_resolved_values WHERE entity_id IN (`
+	sqlDeleteFor = `DELETE FROM auto_reconciler_values WHERE entity_id IN (`
 
-	sqlInsert = `INSERT INTO conclusion_resolved_values
+	sqlInsert = `INSERT INTO auto_reconciler_values
 		(entity_id, property_id, rank, value_text, value_integer, value_term_id,
 		 value_date, value_name, sort_key, support, against, reason)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
@@ -119,7 +121,7 @@ func RecomputeSubjectsTx(q Querier, subjectIDs [][]byte) error {
 
 // Rebuild clears the table, recomputes every handle, and stores CacheVersion.
 func Rebuild(q Querier) error {
-	if _, err := q.Exec(`DELETE FROM conclusion_resolved_values`); err != nil {
+	if _, err := q.Exec(`DELETE FROM auto_reconciler_values`); err != nil {
 		return err
 	}
 	ids, err := listIDs(q, sqlAllEntities)
@@ -129,14 +131,14 @@ func Rebuild(q Querier) error {
 	if err := RecomputeTx(q, ids); err != nil {
 		return err
 	}
-	_, err = q.Exec(`UPDATE conclusion_resolved_meta SET cache_version = ? WHERE id = 1`, CacheVersion)
+	_, err = q.Exec(`UPDATE auto_reconciler_meta SET cache_version = ? WHERE id = 1`, CacheVersion)
 	return err
 }
 
 // StoredVersion returns the cache version the catalog was last built at.
 func StoredVersion(q Querier) (int, error) {
 	var v int
-	err := q.QueryRow(`SELECT cache_version FROM conclusion_resolved_meta WHERE id = 1`).Scan(&v)
+	err := q.QueryRow(`SELECT cache_version FROM auto_reconciler_meta WHERE id = 1`).Scan(&v)
 	return v, err
 }
 
@@ -181,11 +183,11 @@ func recomputeBatch(q Querier, ids [][]byte) error {
 		return err
 	}
 	for _, g := range groups {
-		res, err := resolve.Resolve(g.valueType, g.candidates, nil)
+		res, err := autoreconcile.Reconcile(g.valueType, g.candidates, nil)
 		if err != nil {
 			return err
 		}
-		for i, cl := range res.Clusters {
+		for i, cl := range res.Values {
 			if err := insertRow(q, g, i+1, cl); err != nil {
 				return err
 			}
@@ -199,7 +201,7 @@ type group struct {
 	entityID   []byte
 	propertyID []byte
 	valueType  string
-	candidates []resolve.Candidate
+	candidates []autoreconcile.Candidate
 }
 
 // load reads every candidate for the batch in a fixed number of queries: the
@@ -212,7 +214,7 @@ func load(q Querier, ids [][]byte) ([]*group, error) {
 	}
 	type pending struct {
 		g      *group
-		c      resolve.Candidate
+		c      autoreconcile.Candidate
 		dateID []byte
 		nameID []byte
 	}
@@ -240,7 +242,7 @@ func load(q Querier, ids [][]byte) ([]*group, error) {
 			byKey[k] = g
 			groups = append(groups, g)
 		}
-		c := resolve.Candidate{ObservationID: obsID, Value: resolve.Value{
+		c := autoreconcile.Candidate{ObservationID: obsID, Value: autoreconcile.Value{
 			Text: text.String, HasText: text.Valid,
 			Integer: integer.Int64, HasInteger: integer.Valid,
 			TermID: termID, TermKey: termKey,
@@ -274,7 +276,7 @@ func load(q Querier, ids [][]byte) ([]*group, error) {
 		if n, ok := names[string(p.nameID)]; ok {
 			p.c.Value.Name = &n
 		}
-		// An Observation missing its type's value has nothing to resolve.
+		// An Observation missing its type's value has nothing to autoreconcile.
 		if !hasValue(p.g.valueType, p.c.Value) {
 			continue
 		}
@@ -290,7 +292,7 @@ func load(q Querier, ids [][]byte) ([]*group, error) {
 	return groups, nil
 }
 
-func hasValue(valueType string, v resolve.Value) bool {
+func hasValue(valueType string, v autoreconcile.Value) bool {
 	switch valueType {
 	case properties.ValueTypeText:
 		return v.HasText
@@ -306,7 +308,7 @@ func hasValue(valueType string, v resolve.Value) bool {
 	return false
 }
 
-func insertRow(q Querier, g *group, rank int, cl resolve.Cluster) error {
+func insertRow(q Querier, g *group, rank int, cl autoreconcile.ReconciledValue) error {
 	v := cl.Value
 	var (
 		text, sortKey     any
@@ -337,7 +339,7 @@ func insertRow(q Querier, g *group, rank int, cl resolve.Cluster) error {
 		}
 		nameBlb = b
 	}
-	if k, ok := resolve.SortKey(g.valueType, v); ok {
+	if k, ok := autoreconcile.SortKey(g.valueType, v); ok {
 		sortKey = k
 	}
 	_, err := q.Exec(sqlInsert, g.entityID, g.propertyID, rank, text, integer, termID, dateBlob, nameBlb, sortKey,

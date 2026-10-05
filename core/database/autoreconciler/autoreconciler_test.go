@@ -1,4 +1,4 @@
-package resolvedvalues_test
+package autoreconciler_test
 
 import (
 	"bytes"
@@ -12,6 +12,7 @@ import (
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
+	"github.com/mendahu/provenencia/core/database/autoreconciler"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/namevalues"
@@ -19,7 +20,6 @@ import (
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
-	"github.com/mendahu/provenencia/core/database/resolvedvalues"
 	"github.com/mendahu/provenencia/core/database/searchindex"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
@@ -185,10 +185,10 @@ type row struct {
 	Reason               string
 }
 
-func snapshot(t *testing.T, q resolvedvalues.Querier) []row {
+func snapshot(t *testing.T, q autoreconciler.Querier) []row {
 	t.Helper()
 	rows, err := q.Query(`SELECT entity_id, property_id, rank, value_text, value_integer, value_term_id,
-		value_date, value_name, sort_key, support, against, reason FROM conclusion_resolved_values
+		value_date, value_name, sort_key, support, against, reason FROM auto_reconciler_values
 		ORDER BY entity_id, property_id, rank`)
 	must(t, err)
 	defer rows.Close()
@@ -227,11 +227,11 @@ func (f *fixture) rebuiltSnapshot() []row {
 	tx, err := db.Begin()
 	must(f.t, err)
 	defer func() { _ = tx.Rollback() }()
-	must(f.t, resolvedvalues.Rebuild(tx))
+	must(f.t, autoreconciler.Rebuild(tx))
 	return snapshot(f.t, tx)
 }
 
-func TestResolvedValues(t *testing.T) {
+func TestReconciledValues(t *testing.T) {
 	f := newFixture(t)
 	person := f.subject("person")
 	f.cite(nameIn(person, f.props["name"], "given=James|surname=Robins"), termIn(person, f.props["sex_at_birth"], f.terms["male"]), intIn(person, f.props["age"], 34))
@@ -248,7 +248,7 @@ func TestResolvedValues(t *testing.T) {
 	// James, james and Jim reconcile into one name: Jim is a different given
 	// name, not a misspelling, so it isn't outvoted (S9-13b).
 	if len(names) != 1 || names[0].Support != 3 {
-		t.Fatalf("name clusters %+v", names)
+		t.Fatalf("name values %+v", names)
 	}
 	top, err := valuecodec.UnmarshalName(names[0].Name)
 	must(t, err)
@@ -326,12 +326,12 @@ func TestResolvedValues(t *testing.T) {
 		}
 	})
 
-	f.assertUpkeepEqualsRebuild("TestResolvedValues")
+	f.assertUpkeepEqualsRebuild("TestAutoReconciledValues")
 }
 
 // Every value stays cached with its reason (S9-13): an outvoted toponym
 // keeps its row after the displayed one.
-func TestResolvedValuesKeepEveryValue(t *testing.T) {
+func TestReconciledValuesKeepEveryValue(t *testing.T) {
 	f := newFixture(t)
 	p := f.subject("place")
 	f.cite(textIn(p, f.props["toponym"], "York"))
@@ -343,12 +343,12 @@ func TestResolvedValuesKeepEveryValue(t *testing.T) {
 		rows[1].Reason != "outvoted" || *rows[1].Text != "Muddy York" {
 		t.Fatalf("rows %+v", rows)
 	}
-	f.assertUpkeepEqualsRebuild("TestResolvedValuesKeepEveryValue")
+	f.assertUpkeepEqualsRebuild("TestAutoReconciledValuesKeepEveryValue")
 }
 
 // The cache stores the reconciled name (S9-13b): one row for names that
 // reconcile, parts only, and nothing for a name with no parts.
-func TestResolvedNames(t *testing.T) {
+func TestReconciledNames(t *testing.T) {
 	f := newFixture(t)
 
 	t.Run("an initial expands into the full name", func(t *testing.T) {
@@ -387,9 +387,8 @@ func TestResolvedNames(t *testing.T) {
 		}
 	})
 
-	f.assertUpkeepEqualsRebuild("TestResolvedNames")
+	f.assertUpkeepEqualsRebuild("TestAutoReconciledNames")
 }
-
 
 // A stale cache rebuilds on open: old versions, and the 3 and 4 stamped by
 // the closed PRs' builds, which must never read as current.
@@ -404,23 +403,23 @@ func TestEnsureCatalogRebuildsStaleVersion(t *testing.T) {
 
 			db, err := f.c.DB()
 			must(t, err)
-			_, err = db.Exec(`DELETE FROM conclusion_resolved_values`)
+			_, err = db.Exec(`DELETE FROM auto_reconciler_values`)
 			must(t, err)
-			_, err = db.Exec(`UPDATE conclusion_resolved_meta SET cache_version = ?`, stale)
+			_, err = db.Exec(`UPDATE auto_reconciler_meta SET cache_version = ?`, stale)
 			must(t, err)
-			need, err := resolvedvalues.NeedsRebuild(db)
+			need, err := autoreconciler.NeedsRebuild(db)
 			must(t, err)
 			if !need {
 				t.Fatal("stale version not detected")
 			}
-			must(t, resolvedvalues.EnsureCatalog(f.c))
-			if v, err := resolvedvalues.StoredVersion(db); err != nil || v != resolvedvalues.CacheVersion {
+			must(t, autoreconciler.EnsureCatalog(f.c))
+			if v, err := autoreconciler.StoredVersion(db); err != nil || v != autoreconciler.CacheVersion {
 				t.Fatalf("version %d %v", v, err)
 			}
 			if got := f.rows(); !reflect.DeepEqual(got, want) {
 				t.Fatalf("rebuilt %d rows, want %d", len(got), len(want))
 			}
-			need, err = resolvedvalues.NeedsRebuild(db)
+			need, err = autoreconciler.NeedsRebuild(db)
 			must(t, err)
 			if need {
 				t.Fatal("rebuild did not store the version")
@@ -439,9 +438,9 @@ func TestLoaderQueryCountIsConstant(t *testing.T) {
 	}
 	db, err := f.c.DB()
 	must(t, err)
-	one, err := resolvedvalues.LoadQueryCount(db, handles[:1])
+	one, err := autoreconciler.LoadQueryCount(db, handles[:1])
 	must(t, err)
-	many, err := resolvedvalues.LoadQueryCount(db, handles)
+	many, err := autoreconciler.LoadQueryCount(db, handles)
 	must(t, err)
 	if one != many {
 		t.Fatalf("loader queries: %d for 1 handle, %d for %d", one, many, len(handles))
@@ -470,7 +469,7 @@ func (f *fixture) assertUpkeepEqualsRebuild(at string) {
 }
 
 // handleDocs is every person / event / place search document, as text.
-func handleDocs(t *testing.T, q resolvedvalues.Querier) []string {
+func handleDocs(t *testing.T, q autoreconciler.Querier) []string {
 	t.Helper()
 	rows, err := q.Query(`SELECT kind, entity_id, display_ref, display_title, title, ref, secondary
 		FROM catalog_search_docs WHERE kind IN ('person', 'event', 'place') ORDER BY kind, entity_id`)
@@ -513,7 +512,7 @@ func TestRebuildEqualsUpkeep_Scenarios(t *testing.T) {
 		name string
 		run  func(f *fixture)
 	}{
-		{"edit moves the rank-1 cluster, then its last member is deleted", func(f *fixture) {
+		{"edit moves the rank-1 value, then its last member is deleted", func(f *fixture) {
 			p := f.subject("person")
 			obs := f.cite(nameIn(p, f.props["name"], "given=James|surname=Robins"), nameIn(p, f.props["name"], "given=Jim|surname=Robins"))
 			f.promote(p)
@@ -543,7 +542,7 @@ func TestRebuildEqualsUpkeep_Scenarios(t *testing.T) {
 			f.assertUpkeepEqualsRebuild("after join")
 			names := rowsFor(f.rows(), h, f.props["name"].ID)
 			if len(names) != 1 || names[0].Support != 2 {
-				f.t.Fatalf("join should merge the names into one cluster of 2: %+v", names)
+				f.t.Fatalf("join should merge the names into one value of 2: %+v", names)
 			}
 			f.cite(nameIn(b, f.props["name"], "given=Jim|surname=Robins"))
 			names = rowsFor(f.rows(), h, f.props["name"].ID)

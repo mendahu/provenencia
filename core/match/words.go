@@ -5,7 +5,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/mendahu/provenencia/core/resolve"
+	"github.com/mendahu/provenencia/core/autoreconcile"
 )
 
 // Word-level comparison shared by NameComparer and TextComparer: splitting,
@@ -40,7 +40,7 @@ func (r WordRules) resolve(initials bool) wordRules {
 }
 
 func splitWords(s string) []string {
-	n := resolve.NormalizeForm(s)
+	n := autoreconcile.NormalizeForm(s)
 	if n == "" {
 		return nil
 	}
@@ -73,13 +73,13 @@ func wordSimilarity(x, y string, r wordRules) float64 {
 	if x == y {
 		return 1
 	}
-	if resolve.IsInitial(x) || resolve.IsInitial(y) {
+	if autoreconcile.IsInitial(x) || autoreconcile.IsInitial(y) {
 		if r.initials && []rune(x)[0] == []rune(y)[0] {
 			return r.initialCredit
 		}
 		return 0
 	}
-	return resolve.SpellingSimilarity(x, y, r.floor, r.shortMin)
+	return autoreconcile.SpellingSimilarity(x, y, r.floor, r.shortMin)
 }
 
 // wordDice is the Dice overlap of two unweighted word lists under their best

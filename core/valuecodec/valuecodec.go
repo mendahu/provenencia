@@ -1,7 +1,7 @@
 // Package valuecodec converts structured DateValues and NameValues to and
 // from their protobuf messages (DateValueInput / NameValueInput in
 // engine.proto). The FFI handlers use it at the client boundary; the
-// resolved-values cache uses the Marshal / Unmarshal pairs to store whole
+// auto-reconciler cache uses the Marshal / Unmarshal pairs to store whole
 // values without decoding them in SQL (deployment-plan Spike 9, Q12).
 package valuecodec
 

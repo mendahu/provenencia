@@ -1,4 +1,4 @@
-package resolve
+package autoreconcile
 
 import (
 	"strconv"
@@ -35,7 +35,7 @@ type module interface {
 	// value (names: one structure, several values per part type), rather
 	// than one value per agreeing group.
 	oneValue() bool
-	// assemble builds a cluster's displayed value from its supporting members
+	// assemble builds a value's displayed form from its supporting members
 	// in rank order and, per unit name, the values it settled on (best
 	// supported first). A module without oneValue gets one value per name.
 	assemble(members []Candidate, settled map[string][]unit) Value

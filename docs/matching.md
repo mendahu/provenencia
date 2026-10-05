@@ -29,8 +29,8 @@ handles ┘                    └── Feature: Property · Comparer · Weight
 
 - **Probe:** the thing being matched, as `match.Values` (Property → values).
   - `ForSubject` reads an Interpretation Subject's positive Observations.
-  - `ForEntity` reads a handle's resolved values from the cache, at every rank.
-- **Candidates:** the unmerged handles of the probe's Subject type, with their cached resolved values at every rank. The probe's own handle is never a candidate.
+  - `ForEntity` reads a handle's auto-reconciled values from the cache, at every rank.
+- **Candidates:** the unmerged handles of the probe's Subject type, with their cached auto-reconciled values at every rank. The probe's own handle is never a candidate.
 - **Pure core:** `core/match` has no catalog access. It can be tested with literal values, and can run anywhere a probe and candidates can be built.
 
 ## Scoring
@@ -128,7 +128,7 @@ Not yet handled:
 - **Accents, scripts, non-Western structures, nicknames:** see [`ideas/international-names.md`](ideas/international-names.md).
 - **Abbreviations (Jas., Wm.), name frequency, spaced particles ("O Brien"), sound-alikes, name changes:** see [`ideas/name-matching-enhancements.md`](ideas/name-matching-enhancements.md), with the engine-level items (support weighting, derived features, researcher decisions).
 
-**Resolution is separate.** The reconciler compares names by structured parts only (**S9-13b**, `core/resolve/names.go`): part types are identifiers, initials fold into full parts, and names with no parts are no evidence. Matching still reads `form` when a name has no parts. The cache name `sort_key` (so list order) is the normalized form of the reconciled name, and list and card text shows it, until the name-format work.
+**Resolution is separate.** The reconciler compares names by structured parts only (**S9-13b**, `core/autoreconcile/names.go`): part types are identifiers, initials fold into full parts, and names with no parts are no evidence. Matching still reads `form` when a name has no parts. The cache name `sort_key` (so list order) is the normalized form of the reconciled name, and list and card text shows it, until the name-format work.
 
 `match.ComparerFor(valueType)` gives the default comparer for any Property, so a profile can also weigh researcher-defined Properties.
 

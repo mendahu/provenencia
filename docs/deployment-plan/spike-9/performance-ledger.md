@@ -12,9 +12,9 @@ Every Property on a handle is multi-valued (one list per member, possibly severa
 
 ```text
 Person (m members)
-  name                 → m × name Observations                  → resolver
-  birth date / place   → Participation(subject) → Event (e members) → date Observations → resolver
-                                                  → Location → Place (p members) → toponyms → resolver
+  name                 → m × name Observations                  → auto-reconciler
+  birth date / place   → Participation(subject) → Event (e members) → date Observations → auto-reconciler
+                                                  → Location → Place (p members) → toponyms → auto-reconciler
   death date / place   → same again
   marriage, relationships, … → one more walk each
 ```
@@ -23,12 +23,12 @@ Computed live, a Person on ten Sources reads hundreds of Observations plus Citat
 
 ## Adopted strategy
 
-**One derived cache: resolved values** (R3). The resolver runs at write time, one hop from each write, and stores every ranked cluster per (handle, Property). Association ends are resolved entity-valued Properties, so the canonical graph is the same table with a reverse index. Screens compose from it in Go (R4). Search documents are composed from the same headers (R8).
+**One derived cache: auto-reconciled values** (R3). The auto-reconciler runs at write time, one hop from each write, and stores every auto-reconciled value per (handle, Property). Association ends are auto-reconciled entity-valued Properties, so the canonical graph is the same table with a reverse index. Screens compose from it in Go (R4). Search documents are composed from the same headers (R8).
 
 **Tiers held in reserve** — add only when measurements below say so:
 
 1. **Derived-values table** (life dates, event names, places) if composing list rows is slow. Reintroduces multi-hop dependencies; avoid unless needed.
-2. **Resident in-memory copy** of resolved values for the session if SQLite lookups on R3 dominate.
+2. **Resident in-memory copy** of auto-reconciled values for the session if SQLite lookups on R3 dominate.
 3. **Narrower Swift invalidation** using R3's affected-handles set, if reloads stop being cheap.
 
 ## Hotspots
@@ -38,7 +38,7 @@ Computed live, a Person on ten Sources reads hundreds of Observations plus Citat
 | H1 | Person detail | Fan-out: each Property × members; each derived value walks another handle's members | Absorbed by R3; detail composes from cached clusters. Observation drill-down stays live for one handle. |
 | H2 | Persons list | H1 per row, twice for places (birth, death) | Absorbed by R3 + set-based R4 composition. Measure list composition. |
 | H3 | Events list | Event name needs subject Person's name; event place walks Locations → Places | Composed from R3 lookups. Measure. |
-| H4 | Resolver ranking | Candidate provenance (Citation → Source → assessment, certainty, claim confidence) — extra joins per Observation | Paid at write / rebuild time by the batched loader. Measure single-write upkeep. |
+| H4 | Auto-reconciler ranking | Candidate provenance (Citation → Source → assessment, certainty, claim confidence) — extra joins per Observation | Paid at write / rebuild time by the batched loader. Measure single-write upkeep. |
 | H5 | Swift invalidation | Bust-all on any write | Cheap while reloads read R3. Tier 3 if not. |
 | H6 | Catalog session | Cross-Source reads and full rebuilds on one serialized session | Measure rebuild on open. |
 | H7 | Promote | Target suggestions across all handles of a type; comparison rows (incoming × every member) | Suggestions via R3 `sort_key` + R8 index; comparison live for one handle. |

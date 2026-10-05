@@ -118,14 +118,14 @@ func TestListPersons(t *testing.T) {
 	// Named first by sort key (james < mary), then unnamed by ref. James,
 	// Jim and james reconcile into one name (S9-13b): Jim is a different
 	// given name, so it joins rather than being outvoted.
-	if got[0].Name == nil || got[0].Name.Form != "James Jim Robins" || got[0].NameClusterCount != 1 {
+	if got[0].Name == nil || got[0].Name.Form != "James Jim Robins" || got[0].NameValueCount != 1 {
 		t.Fatalf("first %+v", got[0])
 	}
-	if got[1].Name == nil || got[1].Name.Form != "Mary Smith" || got[1].NameClusterCount != 1 {
+	if got[1].Name == nil || got[1].Name.Form != "Mary Smith" || got[1].NameValueCount != 1 {
 		t.Fatalf("second %+v", got[1])
 	}
 	unnamed := map[string]conclusionheaders.PersonHeader{got[2].Entity.Ref: got[2], got[3].Entity.Ref: got[3]}
-	if h := unnamed[labelled.Ref]; h.Name != nil || h.NameClusterCount != 0 || h.Entity.Label != "Mother of James" {
+	if h := unnamed[labelled.Ref]; h.Name != nil || h.NameValueCount != 0 || h.Entity.Label != "Mother of James" {
 		t.Fatalf("labelled %+v", h)
 	}
 	if h := unnamed[bare.Ref]; h.Name != nil || h.Entity.Label != "" {
@@ -136,13 +136,13 @@ func TestListPersons(t *testing.T) {
 	}
 
 	t.Run("a name edit reaches the header", func(t *testing.T) {
-		// Jim → James merges the two clusters.
+		// Jim → James merges the two values.
 		_, err := observations.Update(f.c, userID, observations.Input{
 			ID: jamesObs[1].ID, SubjectID: jamesObs[1].SubjectID, PropertyID: f.name.ID,
 			Name: namevaluestest.Western("James Robins"),
 		})
 		must(t, err)
-		if h := f.list()[0]; h.Name.Form != "James Robins" || h.NameClusterCount != 1 {
+		if h := f.list()[0]; h.Name.Form != "James Robins" || h.NameValueCount != 1 {
 			t.Fatalf("after edit %+v", h)
 		}
 	})
@@ -157,7 +157,7 @@ func TestPersonNameCountIsDisplayedOnly(t *testing.T) {
 	f.person("Thomas Robins", "thomas robins", "Thomas Robbins")
 	counts := map[string]int{}
 	for _, h := range f.list() {
-		counts[h.Name.Form] = h.NameClusterCount
+		counts[h.Name.Form] = h.NameValueCount
 	}
 	if counts["Ann Anne Lee"] != 1 || counts["Thomas Robins"] != 1 {
 		t.Fatalf("counts %v", counts)

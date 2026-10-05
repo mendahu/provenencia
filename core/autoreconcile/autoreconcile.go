@@ -1,5 +1,6 @@
-// Package resolve reconciles a handle's candidate values for one Property
-// into what the Conclusion layer displays (conclusion-reconciliation.md).
+// Package autoreconcile is the auto-reconciler: it reconciles a handle's
+// candidate values for one Property into what the Conclusion layer displays
+// (conclusion-reconciliation.md).
 //
 // Every Property on a canonical entity is a list: any member Subject may carry
 // it more than once, and a handle has many members. Resolve takes that list
@@ -8,18 +9,18 @@
 // that says when two values are the same, what folds into what, and how a
 // group becomes one value.
 //
-// Nothing is dropped. Every distinct value comes back as a Cluster with a
+// Nothing is dropped. Every distinct value comes back as a ReconciledValue with a
 // Reason: ReasonKept when it is displayed, else why not (outvoted, weak,
 // denied, provisional). Every candidate comes back as an Outcome. The state
 // (single / merged / mixed / concluded) is read off the displayed values.
 //
 // Pure: no catalog access, no SQL, no writes. The output is display policy and
-// lives only in the derived resolved-values cache — never a claim, DateValue,
+// lives only in the auto-reconciler's derived cache — never a claim, DateValue,
 // or NameValue row (seeded-vocabulary §5.3).
 //
 // Names reconcile by structured parts (names.go). Date and subject use
 // interim exact-key modules until their own modules land (S9-21, S9-28).
-package resolve
+package autoreconcile
 
 import (
 	"errors"
@@ -33,7 +34,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/properties"
 )
 
-// State describes how a Property's candidates resolved.
+// State describes how a Property's candidates reconciled.
 type State string
 
 const (
@@ -125,11 +126,11 @@ func (p Provenance) Stronger(q Provenance) bool {
 	return p.ClaimConfidence > q.ClaimConfidence
 }
 
-// Cluster is one distinct value and the Observations behind it.
-type Cluster struct {
+// ReconciledValue is one distinct value and the Observations behind it.
+type ReconciledValue struct {
 	// Value is the displayed value: assembled by the value type's module
 	// (for simple types, the best-ranked member's value), or the concluded
-	// value when this is the concluded cluster.
+	// value when this is the concluded value.
 	Value          Value
 	ObservationIDs [][]byte // members, ascending
 	Support        int      // distinct Sources among the members; 0 for a concluded value no candidate carries
@@ -138,25 +139,25 @@ type Cluster struct {
 	Reason Reason
 }
 
-// Displayed reports whether the cluster is one of the displayed values.
-func (c Cluster) Displayed() bool { return c.Reason == ReasonKept }
+// Displayed reports whether the value is one of the displayed values.
+func (c ReconciledValue) Displayed() bool { return c.Reason == ReasonKept }
 
 // Outcome is what happened to one candidate.
 type Outcome struct {
 	ObservationID []byte
 	Reason        Reason
-	Cluster       int    // index into Result.Clusters; -1 for no_evidence and negatives
+	Value         int    // index into Result.Values; -1 for no_evidence and negatives
 	DeniedBy      []byte // the negative that denied it, for ReasonDenied
 }
 
 // Result is the reconciler's output for one (handle, Property).
 type Result struct {
-	// Clusters holds every distinct value: displayed ones first, then the
+	// Values holds every distinct value: displayed ones first, then the
 	// rest, each group by support descending, then its best-ranked member.
 	// Index 0 is rank 1.
-	Clusters   []Cluster
-	Candidates []Outcome // one per input candidate, ascending Observation id
-	Concluded  bool      // Clusters[0] is the concluded value
+	Values    []ReconciledValue
+	Outcomes  []Outcome // one per input candidate, ascending Observation id
+	Concluded bool      // Values[0] is the concluded value
 }
 
 // State reads the state off the displayed values.
@@ -164,8 +165,8 @@ func (r Result) State() State {
 	if r.Concluded {
 		return StateConcluded
 	}
-	var shown []Cluster
-	for _, c := range r.Clusters {
+	var shown []ReconciledValue
+	for _, c := range r.Values {
 		if c.Displayed() {
 			shown = append(shown, c)
 		}
@@ -182,11 +183,11 @@ func (r Result) State() State {
 	}
 }
 
-// Resolve reconciles candidates for a Property of valueType. The result does
+// Reconcile reconciles candidates for a Property of valueType. The result does
 // not depend on the input order. A non-nil concluded value always takes rank
-// 1: it joins the cluster with the same value, or stands alone with support 0
+// 1: it joins the auto-reconciled value it equals, or stands alone with support 0
 // ahead of the rest.
-func Resolve(valueType string, candidates []Candidate, concluded *Value) (Result, error) {
+func Reconcile(valueType string, candidates []Candidate, concluded *Value) (Result, error) {
 	if !knownValueType(valueType) {
 		return Result{}, fmt.Errorf("%w: %q", ErrUnknownValueType, valueType)
 	}
@@ -232,7 +233,7 @@ func carries(valueType string, v Value) bool {
 	return false
 }
 
-// SortKey is the text a cluster sorts by within its Property (the cache's
+// SortKey is the text a value sorts by within its Property (the cache's
 // sort_key): normalized form for names, case-folded text, and an
 // order-preserving encoding for integers. Other value types have no sort key
 // here (ok = false): dates sort by their window (S9-21), terms by label.
@@ -259,7 +260,7 @@ func SortKey(valueType string, v Value) (key string, ok bool) {
 }
 
 // NormalizeForm ignores case, punctuation, and whitespace differences: the
-// name cluster key and sort key, and the text core/match tokenizes. Dashes
+// name sort key, and the text core/match tokenizes. Dashes
 // and slashes separate words ("Smith-Jones" reads as "smith jones"); other
 // punctuation is dropped, so an apostrophe joins ("O'Brien" reads as
 // "obrien", the same as "OBrien").

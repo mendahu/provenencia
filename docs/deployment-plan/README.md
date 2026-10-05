@@ -10,7 +10,7 @@ Closed spikes under [`archive/`](archive/) keep **themes and decisions**. PR ord
 
 | Spike | Goal |
 | --- | --- |
-| [Spike 9](spike-9/) | **Canonical entities MVP.** Promote Subjects from the Evidence graph into Persons, Events, and Places via Identity Claims; list and detail pages composed from a resolved-values cache; omnibar search. No Reconciliation Claims. Plan: [`spike-9/deployment-plan.md`](spike-9/deployment-plan.md) (requirements, design track, PR sequence). |
+| [Spike 9](spike-9/) | **Canonical entities MVP.** Promote Subjects from the Evidence graph into Persons, Events, and Places via Identity Claims; list and detail pages composed from a auto-reconciler cache; omnibar search. No Reconciliation Claims. Plan: [`spike-9/deployment-plan.md`](spike-9/deployment-plan.md) (requirements, design track, PR sequence). |
 
 Dogfood leftovers: [`docs/dogfood/ux.md`](../dogfood/ux.md). Ideas: [`ideas/`](../ideas/). Claude Design briefs: [`add-design-brief`](../../.cursor/skills/add-design-brief/SKILL.md).
 

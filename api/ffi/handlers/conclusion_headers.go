@@ -36,8 +36,8 @@ func ListPersonHeaders(in []byte) ([]byte, error) {
 
 func personHeaderProto(h conclusionheaders.PersonHeader) *engine.PersonHeader {
 	ph := &engine.PersonHeader{
-		Entity:           canonicalEntityProto(h.Entity),
-		NameClusterCount: int32(h.NameClusterCount),
+		Entity:         canonicalEntityProto(h.Entity),
+		NameValueCount: int32(h.NameValueCount),
 	}
 	if h.Name != nil {
 		ph.Name = valuecodec.NameToProto(*h.Name)
