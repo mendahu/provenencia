@@ -276,6 +276,8 @@ final class WorkspaceSession {
             let _: QueryHandle<[CatalogPersonHeader]> = query(key)
         case .promoteTargets:
             let _: QueryHandle<[CatalogPromoteTargetSuggestion]> = query(key)
+        case .conclusionDetail:
+            let _: QueryHandle<CatalogConclusionDetail> = query(key)
         }
     }
 

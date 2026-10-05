@@ -14024,6 +14024,18 @@
         }
       }
     },
+    "error.conclusiondetails.not_found": {
+      "comment": "FFI error conclusiondetails.not_found: the handle was merged or deleted",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This record no longer exists. It may have been merged into another."
+          }
+        }
+      }
+    },
     "deleteImpact.kind.canonicalEntity.one": {
       "comment": "Singular Impact kind noun for a Conclusion handle (PER-…, EVT-…, PLC-…)",
       "extractionState": "manual",

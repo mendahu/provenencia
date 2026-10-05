@@ -831,6 +831,66 @@ struct GoStore: GenealogyStore {
         )
     }
 
+    func getConclusionDetail(projectDir: String, entityID: String) async throws -> CatalogConclusionDetail {
+        var req = Provenencia_Engine_V1_GetConclusionDetailRequest()
+        req.projectDir = projectDir
+        req.entityID = entityID
+        let resp: Provenencia_Engine_V1_ConclusionDetail = try await provenenciaCall(
+            method: CoreMethod.getConclusionDetail,
+            request: req
+        )
+        return CatalogConclusionDetail(
+            entity: Self.mapCanonicalEntity(resp.entity),
+            fields: resp.fields.map { f in
+                CatalogConclusionField(
+                    propertyID: f.propertyID,
+                    propertyKey: f.propertyKey,
+                    label: f.label,
+                    valueType: f.valueType,
+                    state: f.state,
+                    values: f.values.map { v in
+                        CatalogReconciledValue(
+                            rank: Int(v.rank),
+                            reason: v.reason,
+                            support: Int(v.support),
+                            against: Int(v.against),
+                            value: Self.mapConclusionValue(v.value)
+                        )
+                    },
+                    outcomes: f.outcomes.map { o in
+                        CatalogReconcilerOutcome(
+                            observationID: o.observationID,
+                            observationRef: o.observationRef,
+                            reason: o.reason,
+                            valueRank: o.valueRank > 0 ? Int(o.valueRank) : nil,
+                            deniedByObservationID: o.deniedByObservationID,
+                            recorded: Self.mapConclusionValue(o.recorded),
+                            subjectID: o.subjectID,
+                            subjectRef: o.subjectRef,
+                            citationID: o.citationID,
+                            sourceID: o.sourceID,
+                            sourceTitle: o.sourceTitle,
+                            credibilityKey: o.credibilityKey,
+                            transcriptionUncertain: o.transcriptionUncertain,
+                            claimConfidenceKey: o.claimConfidenceKey
+                        )
+                    }
+                )
+            }
+        )
+    }
+
+    private static func mapConclusionValue(_ v: Provenencia_Engine_V1_ConclusionValue) -> CatalogConclusionValue {
+        switch v.kind {
+        case .text(let t): return .text(t)
+        case .integer(let i): return .integer(i)
+        case .term(let t): return .term(id: t.id, key: t.key, label: t.label)
+        case .date(let d): return .date(mapDateValue(d))
+        case .name(let n): return .name(mapNameValue(n))
+        case nil: return .none
+        }
+    }
+
     private static func mapNameValue(_ n: Provenencia_Engine_V1_NameValueInput) -> CatalogNameValue {
         CatalogNameValue(form: n.form, parts: n.parts.map { CatalogNameValuePart(value: $0.value, type: $0.type) })
     }

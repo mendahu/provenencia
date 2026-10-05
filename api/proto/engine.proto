@@ -99,6 +99,7 @@ enum Method {
   METHOD_LIST_PERSON_HEADERS = 87;
   METHOD_LIST_PROMOTE_TARGET_SUGGESTIONS = 88;
   METHOD_LIST_CLAIM_CONFIDENCE_GRADES = 89;
+  METHOD_GET_CONCLUSION_DETAIL = 90;
 }
 
 message PingRequest {
@@ -991,6 +992,78 @@ message ListPersonHeadersRequest {
 
 message ListPersonHeadersResponse {
   repeated PersonHeader headers = 1;
+}
+
+// ConclusionValue is one Property value; exactly the field for the
+// Property's value type is set.
+message ConclusionValue {
+  oneof kind {
+    string text = 1;
+    int64 integer = 2;
+    ConclusionTerm term = 3;
+    DateValueInput date = 4;
+    NameValueInput name = 5;
+  }
+}
+
+message ConclusionTerm {
+  string id = 1;
+  string key = 2;
+  string label = 3;
+}
+
+// ReconciledValueDetail is one auto-reconciled value of a Property: displayed
+// (reason "kept") or not, and why.
+message ReconciledValueDetail {
+  int32 rank = 1;
+  string reason = 2;
+  int32 support = 3; // distinct Sources
+  int32 against = 4; // negative records that match it
+  ConclusionValue value = 5;
+}
+
+// ReconcilerOutcomeDetail is what the auto-reconciler did with one
+// Observation, with the record's own value and the evidence it weighed.
+message ReconcilerOutcomeDetail {
+  string observation_id = 1;
+  string observation_ref = 2;
+  string reason = 3;      // kept, folded, outvoted, weak, denied, provisional, no_evidence, against
+  int32 value_rank = 4;   // the value it went into; 0 for none
+  string denied_by_observation_id = 5;
+  ConclusionValue recorded = 6;
+  string subject_id = 7;
+  string subject_ref = 8;
+  string citation_id = 9;
+  string source_id = 10;
+  string source_title = 11;
+  string credibility_key = 12;       // "" = no assessment (standard)
+  bool transcription_uncertain = 13;
+  string claim_confidence_key = 14;  // "" = no grade (moderate)
+}
+
+// ConclusionField is one Property of a handle: its state (single, merged,
+// mixed, or "" for empty), every auto-reconciled value, and every outcome.
+message ConclusionField {
+  string property_id = 1;
+  string property_key = 2;
+  string label = 3;
+  string value_type = 4;
+  string state = 5;
+  repeated ReconciledValueDetail values = 6;
+  repeated ReconcilerOutcomeDetail outcomes = 7;
+}
+
+// GetConclusionDetail composes one handle's detail from the auto-reconciler
+// cache (S9-15). Any kind; unknown or merged handles are
+// conclusiondetails.not_found.
+message GetConclusionDetailRequest {
+  string project_dir = 1;
+  string entity_id = 2;
+}
+
+message ConclusionDetail {
+  CanonicalEntity entity = 1;
+  repeated ConclusionField fields = 2;
 }
 
 // ListPromoteTargetSuggestions returns existing handles a Subject could join,

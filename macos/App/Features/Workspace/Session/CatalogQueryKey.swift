@@ -22,6 +22,9 @@ enum CatalogQueryKey: Hashable, Sendable {
     case personsList(project: ProjectKey)
     /// Existing handles a Subject could join in Promote, best first (S9-11).
     case promoteTargets(project: ProjectKey, subjectId: String)
+    /// One handle's detail, any kind (S9-15). Evicted, not revalidated, while
+    /// off screen.
+    case conclusionDetail(project: ProjectKey, entityId: String)
 
     /// Case identity without associated payload — used by `CatalogQueryRegistry` specs.
     enum Kind: Hashable, Sendable {
@@ -41,6 +44,7 @@ enum CatalogQueryKey: Hashable, Sendable {
         case sourceGraphProgress
         case personsList
         case promoteTargets
+        case conclusionDetail
     }
 
     var kind: Kind {
@@ -77,6 +81,8 @@ enum CatalogQueryKey: Hashable, Sendable {
             return .personsList
         case .promoteTargets:
             return .promoteTargets
+        case .conclusionDetail:
+            return .conclusionDetail
         }
     }
 
@@ -97,7 +103,8 @@ enum CatalogQueryKey: Hashable, Sendable {
              .citationsByArtifact(let project, _),
              .sourceGraphProgress(let project),
              .personsList(let project),
-             .promoteTargets(let project, _):
+             .promoteTargets(let project, _),
+             .conclusionDetail(let project, _):
             project
         }
     }
