@@ -26,7 +26,7 @@ type Released struct {
 	// the parent's own delete change in the same revision.
 	Changes []audit.Change
 	// Handles are canonical entities whose membership or evidence changed —
-	// the seam for resolved-value upkeep (S9-06) and search reprojection
+	// the seam for auto-reconciler upkeep (S9-06) and search reprojection
 	// (S9-34). Deduplicated, in first-seen order.
 	Handles [][]byte
 }

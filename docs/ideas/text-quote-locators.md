@@ -43,7 +43,7 @@ They are not exclusive. A locator can already be `page` + `text_quote`, or quote
 ## What this idea still owns
 
 1. **Writer UI** — I-beam selection → append `text_quote` (and keep `page` when paginated). Prefix/suffix from surrounding `PDFSelection` context, as §6 already guessed.
-2. **Resolver / highlight** — reopen a Citation and find the quote on the live page (or fail honestly if the text layer changed).
+2. **Auto-reconciler / highlight** — reopen a Citation and find the quote on the live page (or fail honestly if the text layer changed).
 3. **Image / scan policy** — do not invent a quote from Vision. OCR can fill transcription; it is not a locator unless we decide that later.
 4. **Relationship to transcription** — whether `exact` should stay aligned with the transcription field, and what happens when the researcher edits one and not the other.
 5. **Ambiguous hits** — `exact` matches more than once even with prefix/suffix; researcher pick vs refuse.

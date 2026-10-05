@@ -974,7 +974,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         }
     }
 
-    /// Handle kinds: Persons by resolved name or ref, Events and Places by ref or
+    /// Handle kinds: Persons by auto-reconciled name or ref, Events and Places by ref or
     /// label (FakeStore has no event / place values). Other kinds: the omnibar
     /// fake below, filtered to the requested kinds.
     func searchCatalog(
@@ -1337,7 +1337,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         }
     }
 
-    /// Mirrors resolve.NormalizeForm: dashes and slashes separate words; other
+    /// Mirrors autoreconcile.NormalizeForm: dashes and slashes separate words; other
     /// punctuation is dropped.
     private static func foldName(_ form: String) -> String {
         let spaced = String(form.lowercased().map { "-–—/".contains($0) ? " " : $0 })
@@ -1415,7 +1415,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             let top = clusters.enumerated().max { a, b in
                 a.element.support != b.element.support ? a.element.support < b.element.support : a.offset > b.offset
             }?.element
-            return CatalogPersonHeader(entity: entity, name: top?.name, nameClusterCount: clusters.count)
+            return CatalogPersonHeader(entity: entity, name: top?.name, nameValueCount: clusters.count)
         }
         return headers.sorted { a, b in
             switch (a.name, b.name) {
@@ -1426,6 +1426,104 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             default: return a.entity.ref.localizedCaseInsensitiveCompare(b.entity.ref) == .orderedAscending
             }
         }
+    }
+
+    func getConclusionDetail(projectDir: String, entityID: String) async throws -> CatalogConclusionDetail {
+        // A read: no `recordedCalls`.
+        try withState {
+            markCatalogSessionHeld(projectDir)
+            guard let detail = conclusionDetail(projectDir: projectDir, entityID: entityID) else {
+                throw CoreInvokeError.coded(status: 1, code: "conclusiondetails.not_found", kind: .user, params: [])
+            }
+            return detail
+        }
+    }
+
+    /// A Person's name field, clustered as `personHeaders` does: one value
+    /// per case-folded form, supported by distinct Sources; rank 1 displayed
+    /// (`kept`) and the rest `outvoted`, each Observation an outcome. Other Properties are left out.
+    /// Call inside `withState`.
+    private func conclusionDetail(projectDir: String, entityID: String) -> CatalogConclusionDetail? {
+        let group = membershipBySubject.values.filter { $0.entity.id == entityID }
+        guard let entity = group.first?.entity else { return nil }
+        let memberIDs = Set(group.map(\.subjectID))
+        let sources = sourcesByProject[projectDir] ?? []
+        var values: [CatalogReconciledValue] = []
+        var outcomes: [CatalogReconcilerOutcome] = []
+        var keys: [String] = []
+        var supportingSources: [Set<String>] = []
+        var propertyID = ""
+        for (sourceID, list) in observationsBySource.sorted(by: { $0.key < $1.key }) {
+            for o in list where o.propertyKey == "name" && memberIDs.contains(o.subjectID) && !o.nameForm.isEmpty {
+                propertyID = o.propertyID
+                let name = CatalogNameValue(form: o.nameForm, parts: o.nameParts)
+                let key = o.nameForm.lowercased().trimmingCharacters(in: .whitespaces)
+                if let i = keys.firstIndex(of: key) {
+                    supportingSources[i].insert(sourceID)
+                    values[i].support = supportingSources[i].count
+                } else {
+                    keys.append(key)
+                    supportingSources.append([sourceID])
+                    values.append(CatalogReconciledValue(rank: 0, reason: "", support: 1, against: 0, value: .name(name)))
+                }
+                outcomes.append(CatalogReconcilerOutcome(
+                    observationID: o.id,
+                    observationRef: o.ref,
+                    reason: "",
+                    valueRank: keys.firstIndex(of: key),
+                    deniedByObservationID: "",
+                    recorded: .name(name),
+                    subjectID: o.subjectID,
+                    subjectRef: subjectsBySource[sourceID]?.first { $0.id == o.subjectID }?.ref ?? "",
+                    citationID: o.citationID,
+                    sourceID: sourceID,
+                    sourceTitle: sources.first { $0.id == sourceID }?.title ?? "",
+                    credibilityKey: "",
+                    transcriptionUncertain: false,
+                    claimConfidenceKey: ""
+                ))
+            }
+        }
+        // Rank by support, then first seen; outcomes point at the new ranks.
+        let order = values.indices.sorted { values[$0].support != values[$1].support ? values[$0].support > values[$1].support : $0 < $1 }
+        var rankOf: [Int: Int] = [:]
+        var ranked: [CatalogReconciledValue] = []
+        for (n, i) in order.enumerated() {
+            rankOf[i] = n + 1
+            var v = values[i]
+            v.rank = n + 1
+            v.reason = n == 0 ? "kept" : "outvoted"
+            ranked.append(v)
+        }
+        // Every Source that voted, for the vote an outvoted record lost.
+        let voters = Set(supportingSources.flatMap { $0 }).count
+        for i in outcomes.indices {
+            let rank = outcomes[i].valueRank.flatMap { rankOf[$0] }
+            outcomes[i].valueRank = rank
+            outcomes[i].reason = rank == 1 ? "kept" : "outvoted"
+            if rank != 1 {
+                outcomes[i].voteSupport = ranked.first?.support ?? 0
+                outcomes[i].voteTotal = voters
+            }
+        }
+        let state: String
+        if ranked.isEmpty {
+            state = ""
+        } else if (ranked.first?.support ?? 0) > 1 {
+            state = "merged"
+        } else {
+            state = "single"
+        }
+        let field = CatalogConclusionField(
+            propertyID: propertyID,
+            propertyKey: "name",
+            label: "Name",
+            valueType: "name",
+            state: state,
+            values: ranked,
+            outcomes: outcomes.sorted { ($0.valueRank ?? .max, $0.observationID) < ($1.valueRank ?? .max, $1.observationID) }
+        )
+        return CatalogConclusionDetail(entity: entity, fields: [field], memberCount: group.count)
     }
 
     func deleteSubject(projectDir: String, userID _: String, subjectID: String) async throws {

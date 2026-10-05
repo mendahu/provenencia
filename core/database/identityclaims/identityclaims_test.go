@@ -362,7 +362,7 @@ func TestMembershipsBySource(t *testing.T) {
 		t.Fatalf("provisional-only subject listed: %+v", got)
 	}
 
-	t.Run("carries the handle's rank-1 resolved name", func(t *testing.T) {
+	t.Run("carries the handle's displayed auto-reconciled name", func(t *testing.T) {
 		db, err := f.c.DB()
 		if err != nil {
 			t.Fatal(err)
@@ -376,7 +376,7 @@ func TestMembershipsBySource(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if _, err := db.Exec(`INSERT INTO conclusion_resolved_values (entity_id, property_id, rank, value_name, support)
+			if _, err := db.Exec(`INSERT INTO auto_reconciler_values (entity_id, property_id, rank, value_name, support)
 				VALUES (?, ?, ?, ?, 1)`, f.per1.ID, name.ID, rank+1, blob); err != nil {
 				t.Fatal(err)
 			}

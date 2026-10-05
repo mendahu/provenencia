@@ -1464,7 +1464,7 @@ struct EvidenceGraphModelTests {
     }
 
     /// A promoted person's membership row opens its Person page (S9-09 stub)
-    /// and shows the handle's resolved name.
+    /// and shows the handle's auto-reconciled name.
     @Test func promotedPersonOpensItsPageAndShowsItsName() async {
         let (store, model) = await promotableModel()
         store.observationsBySource[sourceID] = [

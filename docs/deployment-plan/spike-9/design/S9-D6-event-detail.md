@@ -126,7 +126,7 @@ This table is **binding**. Instance the Ship kit rows; do not redraw them. Paths
 | Building block | Layer | Status | Home | Notes |
 | --- | --- | --- | --- | --- |
 | Event detail | Snowflake | **New** | `Features/Conclusions/EventDetailView.swift` | |
-| Value-state field row | Snowflake | Ship (from D5) | `Features/Conclusions/ResolvedValueRow.swift` | |
+| Value-state field row | Snowflake | Ship (from D5) | `Features/Conclusions/ReconciledValueRow.swift` | |
 | Event title formatter | Snowflake | Ship (S9-22) | `Features/Conclusions/` | |
 
 ### Explicit non-goals

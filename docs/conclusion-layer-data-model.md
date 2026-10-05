@@ -23,7 +23,7 @@ This document therefore uses three strengths of “must”:
 | Strength | What it is | If the researcher ignores it |
 |---|---|---|
 | **Schema invariant** | SQLite `NOT NULL`, FKs, `UNIQUE`, `CHECK` | Insert/update fails |
-| **Application invariant** | Writer/resolver rules that keep the generic graph typed (value column matches `value_type`, an accepted Identity Claim is the only membership for that subject, merge re-points claims onto the survivor) | Treat as malformed data (repair, ignore extras, or show an error on *that row*) — not as “you used Places wrong” |
+| **Application invariant** | Writer/auto-reconciler rules that keep the generic graph typed (value column matches `value_type`, an accepted Identity Claim is the only membership for that subject, merge re-points claims onto the survivor) | Treat as malformed data (repair, ignore extras, or show an error on *that row*) — not as “you used Places wrong” |
 | **Convention** | How to get the most from search, maps, merge, and honest reading of Sources | Data remains valid; features may be weaker or the proof harder to trust |
 
 Seeded vocabulary (`location` + `event`/`place`, one-grain Places, gazetteer-as-Source) is convention plus picker defaults, not a closed ontology. Researchers may add Properties and Subject types; first-class UI may only light up for keys it knows.
@@ -87,9 +87,9 @@ Subject identity uses Identity Claims. Absence of a claim is not a rejection. `s
 
 Attribute-level conflicts across member Observations are handled by soft display merges and, when durable, by Reconciliation Claims. That is separate from Observation polarity and from subject identity.
 
-## 2.5 Resolver logic is application-level
+## 2.5 Auto-reconciler logic is application-level
 
-The database preserves multiple source-backed values. Resolvers may synthesize display without creating Claims. How they do it (the auto-reconcilers, their shared pipeline and their output) is in [`conclusion-reconciliation.md`](conclusion-reconciliation.md). **Provenencia badges** on a handle (from records / inferred / asserted / unlinked) are computed from whether any accepted Identity Claim exists, whether Reconciliations pin Observations, and whether `argument` is set. They are not a stored enum.
+The database preserves multiple source-backed values. Auto-reconcilers may synthesize display without creating Claims. How they do it (the auto-reconcilers, their shared pipeline and their output) is in [`conclusion-reconciliation.md`](conclusion-reconciliation.md). **Provenencia badges** on a handle (from records / inferred / asserted / unlinked) are computed from whether any accepted Identity Claim exists, whether Reconciliations pin Observations, and whether `argument` is set. They are not a stored enum.
 
 ## 2.6 Persistence conventions
 

@@ -12,6 +12,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/namevalues"
+	"github.com/mendahu/provenencia/core/database/namevalues/namevaluestest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
@@ -54,7 +55,7 @@ func namedPerson(t *testing.T) (dir, handleRef string) {
 			{SubjectID: subjectID[:], PropertyID: name.ID, Name: &namevalues.Value{Form: "James Robins", Parts: []namevalues.Part{
 				{Idx: 0, Value: "James", Type: namevalues.PartTypeGiven}, {Idx: 1, Value: "Robins", Type: namevalues.PartTypeSurname},
 			}}},
-			{SubjectID: subjectID[:], PropertyID: name.ID, Name: &namevalues.Value{Form: "Jim Robins"}},
+			{SubjectID: subjectID[:], PropertyID: name.ID, Name: namevaluestest.Western("Jim Robins")},
 		})
 		return err
 	}); err != nil {
@@ -84,7 +85,7 @@ func TestListPersonHeaders(t *testing.T) {
 			exact: true,
 		},
 		{
-			name: "promoted Person carries its resolved name and cluster count",
+			name: "promoted Person carries its auto-reconciled name and value count",
 			reqFn: func(t *testing.T) proto.Message {
 				dir, _ := namedPerson(t)
 				return &engine.ListPersonHeadersRequest{ProjectDir: dir}
@@ -98,11 +99,12 @@ func TestListPersonHeaders(t *testing.T) {
 					t.Fatalf("%+v", resp.Headers)
 				}
 				h := resp.Headers[0]
-				if !strings.HasPrefix(h.Entity.GetRef(), "PER-") || h.GetNameClusterCount() != 2 {
+				// James Robins + Jim Robins reconcile into one name (S9-13b).
+				if !strings.HasPrefix(h.Entity.GetRef(), "PER-") || h.GetNameValueCount() != 1 {
 					t.Fatalf("%+v", h)
 				}
 				n := h.GetName()
-				if n.GetForm() != "James Robins" || len(n.GetParts()) != 2 || n.GetParts()[1].GetType() != namevalues.PartTypeSurname {
+				if n.GetForm() != "James Jim Robins" || len(n.GetParts()) != 3 || n.GetParts()[2].GetType() != namevalues.PartTypeSurname {
 					t.Fatalf("name %+v", n)
 				}
 			},
@@ -150,7 +152,7 @@ func TestWorkspaceNavCountsConclusionHandles(t *testing.T) {
 	}
 }
 
-func TestListSubjectMembershipsCarriesResolvedName(t *testing.T) {
+func TestListSubjectMembershipsCarriesAutoReconciledName(t *testing.T) {
 	dir, ref := namedPerson(t)
 	t.Cleanup(func() { _ = catalogsession.CloseAll() })
 	var sourceID string
@@ -177,7 +179,7 @@ func TestListSubjectMembershipsCarriesResolvedName(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(resp.Memberships) != 1 || resp.Memberships[0].Entity.GetRef() != ref ||
-		resp.Memberships[0].GetName().GetForm() != "James Robins" {
+		resp.Memberships[0].GetName().GetForm() != "James Jim Robins" {
 		t.Fatalf("%+v", resp.Memberships)
 	}
 }

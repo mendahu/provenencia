@@ -28,6 +28,7 @@ Use this folder when something useful pops up mid-work and would otherwise get l
 - [`name-matching-enhancements.md`](name-matching-enhancements.md)
 - [`evidence-graph-drag-performance.md`](evidence-graph-drag-performance.md)
 - [`place-gazetteer-service.md`](place-gazetteer-service.md)
+- [`possible-values.md`](possible-values.md)
 
 ## Archived
 

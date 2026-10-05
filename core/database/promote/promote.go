@@ -11,10 +11,10 @@ import (
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/audit"
+	"github.com/mendahu/provenencia/core/database/autoreconciler"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/project"
-	"github.com/mendahu/provenencia/core/database/resolvedvalues"
 	"github.com/mendahu/provenencia/core/database/subjects"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 )
@@ -127,7 +127,7 @@ func Save(c *database.Catalog, userID []byte, in Input) (Result, error) {
 	}); err != nil {
 		return Result{}, err
 	}
-	if err := resolvedvalues.RecomputeTx(tx, [][]byte{entity.ID}); err != nil {
+	if err := autoreconciler.RecomputeTx(tx, [][]byte{entity.ID}); err != nil {
 		return Result{}, err
 	}
 	if err := tx.Commit(); err != nil {

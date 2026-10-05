@@ -6,7 +6,7 @@
 
 Names are compared, clustered, sorted and displayed with assumptions that hold mainly for Western, Latin-script names:
 
-- **Accents break matches.** "José" vs "Jose" and "Müller" vs "Muller" don't match. `resolve.NormalizeForm` keeps diacritics, and short words fall below the near-spelling floor. Records disagree on accents all the time: clerks, transcribers and OCR drop or add them.
+- **Accents break matches.** "José" vs "Jose" and "Müller" vs "Muller" don't match. `autoreconcile.NormalizeForm` keeps diacritics, and short words fall below the near-spelling floor. Records disagree on accents all the time: clerks, transcribers and OCR drop or add them.
 - **Only Western roles exist.** `core/match` compares names word by word with part types as data (S9-10). Mismatched types discount, they don't block. Culture-specific rules live in a `NamePattern` fetched through a `NamePatterns` source, but the only pattern so far is `western`, built in. That's right for "James K. Robins" and incomplete for many others (below).
 - **Only one profile exists.** Name format profiles are designed to carry culture, but only `western` is seeded, and nothing reads a profile yet.
 
@@ -18,7 +18,7 @@ Fold for **comparison**, never for **display**, and don't use one fold for **sor
   - Decompose text (Unicode NFD) and drop combining marks: é→e, ü→u, ñ→n, å→a.
   - A small table for letters that don't decompose: ß→ss, æ→ae, œ→oe, ø→o, ł→l, đ→d, þ→th, ı→i.
   - Needs `golang.org/x/text` (`unicode/norm`) or a hand-written table.
-- **Where (decided): matching only.** "José" and "Jose" match in suggestions but stay separate groupings on a Person's page. The auto-reconciler may grow an accent rule later, but merging them is left to manual reconciliation. Folding therefore lives in `core/match`'s word comparison, not in `resolve.NormalizeForm`: cluster keys and the cache `sort_key` don't change, and no cache bump is needed.
+- **Where (decided): matching only.** "José" and "Jose" match in suggestions but stay separate groupings on a Person's page. The auto-reconciler may grow an accent rule later, but merging them is left to manual reconciliation. Folding therefore lives in `core/match`'s word comparison, not in `autoreconcile.NormalizeForm`: the auto-reconciler and the cache `sort_key` don't change, and no cache bump is needed.
 - **Exact still beats folded.** "José" vs "José" should outrank "José" vs "Jose". One option: a folded-only match scores 0.95 in `wordSimilarity`, so an accent difference is a near-match, not identity.
 - **Sorting is a different problem.** Folding for sort order is wrong in some languages: Swedish files å, ä, ö after z, and Spanish once filed ch and ll as letters. List order wants locale collation (CLDR, via `x/text/collate`), not the comparison fold. **Decided:** the project picks the collation locale (a project setting).
 - **Display never folds.** `form` and part values stay exactly as recorded.

@@ -18,10 +18,10 @@ struct CatalogQueryRegistry: Sendable {
 
     /// Writes that can change any Conclusion value (Spike 9 Q5). Every
     /// Conclusion key — lists now, details from S9-15 — invalidates on this
-    /// one set, because Go's resolved-values cache recomputes on the same
+    /// one set, because Go's auto-reconciler cache recomputes on the same
     /// writes and reloading from it is cheap. `mutatedSourceWorkspace` carries
-    /// credibility changes and over-busts on notes, artifacts, and metadata.
-    /// Certainty joins with S9-14.
+    /// credibility changes and over-busts on notes, artifacts, and metadata;
+    /// a Citation's certainty rides `savedCitation` (S9-14).
     static let conclusionTriggers: Set<CatalogMutationKind> = [
         .savedCitation, .deletedSubject, .promotedSubject, .deletedSource, .mutatedSourceWorkspace,
     ]
@@ -33,6 +33,11 @@ struct CatalogQueryRegistry: Sendable {
         /// Marked stale without a refetch: the next `query` (a place visit)
         /// reloads it. For writes that move a value nobody is looking at yet.
         var markStaleOn: Set<CatalogMutationKind> = []
+        /// An invalidated key that isn't on screen is evicted, not
+        /// revalidated, and reloads when next visited. The exception to
+        /// cache rule 2 for per-handle pages, so one trigger doesn't reload
+        /// every page the researcher has opened.
+        var evictWhenHidden = false
     }
 
     private let specs: [Spec] = [
@@ -158,6 +163,12 @@ struct CatalogQueryRegistry: Sendable {
             stalePolicy: .sessionFresh,
             invalidateOn: CatalogQueryRegistry.conclusionTriggers
         ),
+        Spec(
+            kind: .conclusionDetail,
+            stalePolicy: .sessionFresh,
+            invalidateOn: CatalogQueryRegistry.conclusionTriggers,
+            evictWhenHidden: true
+        ),
     ]
 
     func stalePolicy(for key: CatalogQueryKey) -> CatalogQueryStalePolicy {
@@ -238,6 +249,8 @@ struct CatalogQueryRegistry: Sendable {
                 subjectID: subjectId,
                 limit: 0
             )
+        case .conclusionDetail(let project, let entityId):
+            return try await store.getConclusionDetail(projectDir: project.projectDir, entityID: entityId)
         }
     }
 
@@ -250,6 +263,11 @@ struct CatalogQueryRegistry: Sendable {
     }
 
     /// Keys a mutation leaves stale for their next `query`, without refetching now.
+    /// Whether an invalidated `key` is evicted while off screen (see `Spec`).
+    func evictsWhenHidden(_ key: CatalogQueryKey) -> Bool {
+        specs.first { $0.kind == key.kind }?.evictWhenHidden ?? false
+    }
+
     func staleMarks(by mutation: CatalogMutation, project: ProjectKey) -> [CatalogQueryInvalidation] {
         guard let mutationKind = mutation.invalidationKind else { return [] }
         return specs
@@ -325,6 +343,10 @@ private extension CatalogQueryKey.Kind {
             return .key(.personsList(project: project))
         case .promoteTargets:
             return .allCached(.promoteTargets)
+        case .conclusionDetail:
+            // Any Conclusion edit can touch any handle (a merge, a member's
+            // Observation), so every cached detail is stale.
+            return .allCached(.conclusionDetail)
         }
     }
 }

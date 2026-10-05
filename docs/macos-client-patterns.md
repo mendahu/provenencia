@@ -85,6 +85,7 @@ Destination view  →  reads QueryHandle(s)  →  patches / invalidates on mutat
 1. The registry is the only loader. Features do not rebuild a `CatalogQueryKey` payload from `GenealogyStore`.
 2. `session.apply(mutation)` patches if the mutation says so, then invalidates and **revalidates every already-warmed key**. Features never `session.query` after `apply`.
    A registry `markStaleOn` tag instead only flags a warmed key: no refetch now, the next `query` reloads it. `sourcesList` uses it for writes under a Source, which move that Source's `updatedRevision` (audit scopes) without a list refetch on every canvas write.
+   A registry `evictWhenHidden` tag **evicts** an invalidated key that isn't on screen (its handle dropped, its load cancelled) instead of revalidating it; the next visit loads it afresh. "On screen" is the keys of the place from the last `apply(location:)` (`visibleKeys`). Conclusion detail keys use it (S9-15).
 3. `readyValue` waits out in-flight work, then returns `nil` if the key is still stale.
 4. `setQueryValue` is an overlay (optimistic drag, list-row patch the write returned). It is not a substitute for `apply`.
 5. Views observe handles. Models keep form/interaction state only. Evidence graph cards are a **pure join** of `sourceGraph` (`SourceGraphRows`) and `propertiesWorkspace` types — that join is not a third cache key.
@@ -95,9 +96,12 @@ Destination view  →  reads QueryHandle(s)  →  patches / invalidates on mutat
 
 **Conclusion keys (Spike 9):**
 
-- Every Conclusion key (the Persons list and Promote target suggestions today; Events, Places, and details later) invalidates on one set, `CatalogQueryRegistry.conclusionTriggers`. Go's resolved-values cache recomputes on the same writes, so busting them all together is cheap and never misses a dependency between handles.
-- **Planned exception to rule 2 (S9-15):** Conclusion *detail* keys that aren't on screen are evicted rather than revalidated, so a trigger doesn't reload every Person page the researcher has visited. The visible page revalidates as usual. List keys follow rule 2.
-- **Go returns structures; Swift makes text.** Payloads carry NameValues, DateValues, term ids, and title parts — never display strings. Formatting lives in the app (`NameValueDisplay`, `PersonHeaderDisplay`, later the event-title templates).
+- Every Conclusion key (the Persons list, Promote target suggestions and `conclusionDetail` today; Events and Places later) invalidates on one set, `CatalogQueryRegistry.conclusionTriggers`. Go's auto-reconciler cache recomputes on the same writes, so busting them all together is cheap and never misses a dependency between handles.
+- **Exception to rule 2 (S9-15):** `conclusionDetail` keys are `evictWhenHidden`. A trigger evicts the detail pages that aren't on screen rather than revalidating them, so it doesn't reload every Person page the researcher has visited. The visible page revalidates as usual. List keys follow rule 2.
+- **One detail key for every kind.** `conclusionDetail(project:, entityId:)` reads `GetConclusionDetail`: each bound Property's state, every auto-reconciled value with its reason, and every Observation's outcome with its evidence. Person, Event and Place pages all read it; `ReconciledValueDisplay` words its states and outcomes.
+- **Detail pages show what was recorded (S9-16).** The detail read returns only the Properties a handle's records speak to. A page names the few rows it always shows, empty or not (a Person: name and the four life rows); every other field appears once recorded.
+- **Detail pages share their rows (S9-16).** `ReconciledValueRow` (label · value · state badge · Sources · disclosures) and its Why (`ReconciliationReasoningView`, `ReconciliationOutcome`) are snowflakes in `Features/Conclusions/`, shared by the Person, Event and Place pages rather than promoted to recipes. A Why record's Source opens its Citation in the composer (`ReconciliationRecord.composerLocation`), so Back returns to the page. Disclosures are kit `PVDisclosureButton`s.
+- **Go returns structures; Swift makes text.** Payloads carry NameValues, DateValues, term ids, and title parts — never display strings. Formatting lives in the app (`NameValueDisplay`, `PersonHeaderDisplay`, `ReconciledValueDisplay`, later the event-title templates).
 
 **View rules (required):**
 

@@ -2,9 +2,9 @@ package onboarding
 
 import (
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/autoreconciler"
 	"github.com/mendahu/provenencia/core/database/claimconfidencegrades"
 	"github.com/mendahu/provenencia/core/database/project"
-	"github.com/mendahu/provenencia/core/database/resolvedvalues"
 	"github.com/mendahu/provenencia/core/database/searchindex"
 	"github.com/mendahu/provenencia/core/database/sourcecredibilitygrades"
 	"github.com/mendahu/provenencia/core/database/sourcevocab"
@@ -48,7 +48,7 @@ func createCatalog(parent, folder string) (*database.Catalog, error) {
 		return nil, err
 	}
 	// The cache first: the search index's handle documents read it.
-	if err := resolvedvalues.EnsureCatalog(c); err != nil {
+	if err := autoreconciler.EnsureCatalog(c); err != nil {
 		_ = c.Close()
 		return nil, err
 	}
@@ -76,7 +76,7 @@ func OpenCatalog(projectDir string) (*database.Catalog, error) {
 		return nil, err
 	}
 	// The cache first: the search index's handle documents read it.
-	if err := resolvedvalues.EnsureCatalog(c); err != nil {
+	if err := autoreconciler.EnsureCatalog(c); err != nil {
 		_ = c.Close()
 		return nil, err
 	}

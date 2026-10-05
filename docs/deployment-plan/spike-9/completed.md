@@ -28,6 +28,12 @@ IDs stay stable (`S9-NN`, `S9-DN`). Do not renumber when moving steps here.
 | S9-D10 | Design | Promote claim fields + save |
 | S9-12 | PR | Promote claim fields + save |
 | S9-13a | PR | Land migrations 000037 / 000038 |
+| S9-13 | PR | Reconciler pipeline + text / integer / term modules |
+| S9-13b | PR | Name module |
+| S9-14 | PR | Evidence + reasoning in the auto-reconciler cache |
+| S9-15 | PR | Detail composer + detail read |
+| S9-D5 | Design | Person detail (revised for reasoning) |
+| S9-16 | PR | Person detail |
 
 ## Steps
 
@@ -530,3 +536,246 @@ The first step of the replanned slice 4 ([`conclusion-reconciliation.md`](../../
 
 - Everything else from #255 / #256: the pipeline (**S9-13**), name module (**S9-13b**), evidence and reasoning (**S9-14**).
 
+### S9-13 — Reconciler pipeline + text / integer / term modules
+
+Every value type now goes through one reconciler pipeline ([`conclusion-reconciliation.md`](../../conclusion-reconciliation.md) §5). Nothing the pipeline declines to display is dropped: every value keeps its cache row with the reason.
+
+**What shipped**
+
+- **`core/resolve` pipeline** (`pipeline.go`):
+  - rank by provenance, then id;
+  - admit (no evidence; provisional never displayed);
+  - deny (a stronger negative eliminates the same value; equal or weaker only counts against);
+  - group and fold per unit;
+  - majority in distinct Sources (`MinMajoritySupport` 2 and more than half);
+  - confidence (weak values drop when non-weak evidence survived);
+  - survivors grouped into displayed values.
+- **Result:** `Clusters` holds every value, displayed first, each with `Support` (distinct Sources), `Against` and `Reason`. `Candidates` holds one `Outcome` per candidate. `State()` reads displayed values only.
+- **Candidate inputs:** `SourceID`, `Provenance` (`Weak`, `Stronger`), `Negative`, `Provisional`. An empty `SourceID` counts as its own Source.
+- **Module interface** (`modules.go`): `split` into units, `fold`, `assemble`. The interface is ready for names' per-part-type units.
+  - **Text:** trimmed, **case-insensitive**. This changes S9-05's rule: *York* = *york*.
+  - **Integer.**
+  - **Term:** `NeutralTermKeys` (`unknown`, `indeterminate`) are no evidence.
+  - **Interim** name (normalized form), date (every field) and subject (id) modules keep S9-05's behaviour.
+- **Cache:**
+  - migration **000039** adds `conclusion_resolved_values.reason`;
+  - every value is written, with `support`, `against` and `reason`;
+  - the loader reads each term's key;
+  - `CacheVersion = 5`.
+- **Readers:** the Persons header's *+N* counts displayed names only. Search and matching read every value, so an outvoted name still finds its Person.
+- **Tests:**
+  - `TestPipeline`, 22 cases, mutation-checked: removing majority, confidence, deny, provisional or Source counting fails its group;
+  - `TestPipelineOutcomes`, `TestPipelineConcluded`;
+  - seeded invariants (input order, outcomes, negatives never members);
+  - `TestModules`, `TestProvenance`;
+  - the cache keeps an outvoted row;
+  - stale versions 0, 2, 3 and 4 rebuild;
+  - rebuild-equals-upkeep compares `reason` and `against`;
+  - `+N` counts displayed names only;
+  - search finds an outvoted name.
+
+**What changed for researchers**
+
+- Case-only differences in text values merge (*York* / *york*).
+- With two of three records agreeing, the third value is no longer displayed or counted in *+N*. It keeps its row and stays searchable.
+
+**What stayed out**
+
+- The name module (**S9-13b**), date module (**S9-21**) and subject module (**S9-28**).
+- Loading Sources, provenance, negatives and provisional members (**S9-14**). Until then every candidate is its own Source and of standard strength.
+- The per-candidate reasoning table (**S9-14**, migration 000040).
+- Multi-valued cardinality (**S9-36**).
+
+### S9-13b — Name module
+
+Names now reconcile by their structured parts on the shared pipeline ([`conclusion-reconciliation.md`](../../conclusion-reconciliation.md) §7.2), into **one name per Person**. *J. Robins* and *James Robins* are one *James Robins*; *Jake Robins* and *James Robins* are one *Jake James Robins*.
+
+**What shipped**
+
+- **`nameModule`** (`core/resolve/names.go`):
+  - **Split:** one unit per part type; each unit is the type's **words** in idx order: parts normalized (accents kept) and split on spaces and hyphens, so *Smith-Jones* = *Smith Jones* = *Smith* + *Jones*. The recorded parts are what's displayed. `form` is never read; a name with no parts is no evidence.
+  - **Fold:** a unit folds into a fuller one when its parts map, in order, onto a subsequence, each equal or an initial of it (`[J]` → `[James]`, `[James]` → `[James, Kenneth]`).
+  - **Majority only outvotes misspellings:** a minority value is outvoted only when it's a spelling variant of the winner (same number of parts, each similar by `SpellingSimilarity`). A different name is never outvoted; weak evidence still drops.
+  - **One name, never mixed:** every displayed record contributes to a single NameValue. Each type keeps every surviving value, best supported first, skipping a recorded part whose words are all present already. Assembled in the type order of the member with the most types, or a member's own value when one carries exactly those parts.
+- **Pipeline hooks** for modules: `oneValue` (every displayed candidate forms one value) and `outvotes` (what majority may remove). Assembly receives every surviving value per unit.
+- **Spelling rule shared with matching:** `resolve.SpellingSimilarity` and `resolve.EditDistance` (moved from `core/match`), thresholds `SpellingFloor` 0.8 and `SpellingShortMin` 3, which the match registry now points at.
+- `resolve.IsInitial` (moved from `core/match`). `CacheVersion = 8`.
+- `namevaluestest.Western` builds given parts and a surname for fixtures. Fixtures in conclusion headers, matching, promote targets, search and FFI use it. Two matching scores move (9.3 → 9.1, 5.0 → 6.0) because both sides are now typed.
+- **Tests:**
+  - `TestReconcileNames` (55) and `TestReconcileNamesProvenance` (20), ported from the closed #255 / #256, with each row's reason pinned. 23 expectations changed when names became one structure and were re-reviewed case by case.
+  - `TestReconcileNamesCombine` (7): nickname and given name, two given names, a minority different name kept, a married surname kept, a misspelling outvoted, a misspelling tie, weak still dropped.
+  - `TestReconcileNamesWords` (6): hyphenated, spaced and separate given names; the best-ranked spelling displayed; a maiden surname folding into a hyphenated married one; the same words in another order; a misspelt word outvoted; a different second surname kept.
+  - `TestSpellingSimilarity`, `TestReconcileNamesValue`, seeded invariants.
+  - Cache: an initial expands; a parts-less name isn't cached; deleting the full given name drops back to *J. Robins*; a new given name joins the one name; stale versions 0–6 rebuild.
+  - Mutation checks: no folding fails 19 cases, whole-name keys 34, no one-value 30, outvoting anything 10, outvoting nothing 9, whole parts instead of words 5.
+- Benchmark: about 0.87 ms for 200 names (performance ledger).
+
+**What changed for researchers**
+
+- A Person shows one name. Different given names, nicknames and surnames from different records all appear in it: a married surname beside the birth one, a nickname recorded as a given name beside the given name.
+- A misspelling in the minority (*Robbins* beside two *Robins*) is not shown; it stays cached and searchable.
+- Hyphenated and spaced names match their separate parts: *Mary-Ann* = *Mary Ann*, and *Smith* or *Jones* folds into *Smith-Jones*. *O'Brien* vs *O Brien* still differs (spaced particles, in the name-matching ideas).
+- A name with no parts isn't shown; that Person reads by its label until a member's name has parts.
+- The form reads the parts in order (*Jake James Robins*); display styles will separate alternatives later.
+
+**Deviations from the plan**
+
+- **One name per Person, misspellings-only majority and word comparison** were decided while building it, after working through examples. The plan had kept competing given names as separate names (mixed).
+- The code landed in fewer commits than planned so every commit's tests pass.
+
+**What stayed out**
+
+- Name display styles (natural / sorted) and name format profiles.
+- Accent folding, nicknames dictionaries, phonetic matching ([`ideas/international-names.md`](../../ideas/international-names.md), [`ideas/name-matching-enhancements.md`](../../ideas/name-matching-enhancements.md)).
+- Sources, provenance, negatives and provisional members loaded from the catalog (**S9-14**).
+
+### S9-14 — Evidence + reasoning in the auto-reconciler cache
+
+The auto-reconciler now weighs the real evidence behind each record, stores what it did with each one, and has one name everywhere.
+
+**What shipped**
+
+- **One name: "auto-reconciler"** (decided while planning). Glossary in [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md) §1.
+  - `core/resolve` → `core/autoreconcile` (`Reconcile`, `ReconciledValue`, `Result.Values` / `Outcomes`, `Outcome.Value`).
+  - `core/database/resolvedvalues` → `core/database/autoreconciler`.
+  - Migration **000040** renames `conclusion_resolved_values` / `_meta` → `auto_reconciler_values` / `_meta` (indexes recreated) and adds `auto_reconciler_outcomes`.
+  - `PersonHeader.name_cluster_count` → `name_value_count` (wire-compatible), Swift `nameValueCount`.
+  - Comments, the string catalog and living docs follow.
+  - A Reconciliation Claim is laid over the auto-reconciled value by composers, never written into these tables.
+- **Evidence loaded,** in the same one query per batch: each Observation's Source, polarity, Source credibility, transcription certainty, and claim confidence and status. Provisional members are passed in (reasoning only); rejected members aren't.
+- **Outcomes cached:** one `auto_reconciler_outcomes` row per Observation, with its reason, the rank of its value and the negative that denied it. Rebuild-equals-upkeep compares them.
+- **Upkeep:**
+  - `RecomputeSourceTx` from `sourcecredibility.Upsert` when the grade is set or changed;
+  - `RecomputeCitationTx` from `citations.Update` when certainty flips;
+  - provisional members count as members for upkeep.
+- `CacheVersion = 9`.
+- **Tests:**
+  - `TestReconciledEvidence` (8): low trust, uncertain transcription, one Source one vote, a stronger negative, low claim confidence, a misspelling outvoted across three Sources, provisional and rejected members, outcome rows. Blanking each loaded field (Source, negative, provisional, provenance) fails it.
+  - Three scenarios: lowering credibility, a negative removed, certainty toggled.
+  - Seeded sequences gain credibility, certainty, negative and graded-promote steps across two Sources, checked right after each edit. Replacing either hook with a no-op fails both the scenarios and the sequences.
+  - The cache fixture makes Sources on demand. Tests that meant independent evidence now cite it from separate Sources.
+
+**What changed for researchers**
+
+- Two records from the same Source are one vote, not two.
+- A spelling from a low-trust Source, an uncertain transcription or a low-confidence claim drops when better evidence disagrees, and changing a Source's credibility or a Citation's certainty updates Persons and Places straight away.
+- A stronger record saying "not this" removes the value it denies.
+
+**What stayed out**
+
+- Showing the outcomes (*Why*): **S9-15** / **S9-16**.
+- A claim-confidence or claim-status edit path (none exists; Promote sets confidence and recomputes).
+- Laying Reconciliation Claims over auto-reconciled values (claims are a later spike).
+
+### S9-15 — Detail composer + detail read
+
+One read now gives a handle's page everything the auto-reconciler knows: each field's values and state, the values it didn't show and why, and what it did with every record. Nothing draws it yet; S9-16 does.
+
+**What shipped**
+
+- **Go composer** `core/database/conclusiondetails.ForEntity`, generic over kind:
+  - one field per Property bound to the handle's type, in binding order (subject-valued Properties skipped until S9-28);
+  - the field's state, computed by the `Result.State` rule;
+  - every `auto_reconciler_values` row, with support, `against` and reason;
+  - every `auto_reconciler_outcomes` row, with the record's own value, its Subject, Citation and Source, and the evidence the auto-reconciler weighed (credibility and confidence keys, and `autoreconcile.Provenance` relative to the default grades);
+  - five queries per call whatever the field count (`TestForEntityQueryCountIsConstant`);
+  - unknown, malformed or merged handles are `conclusiondetails.not_found`.
+- **FFI** `GetConclusionDetail` (method 90). A `ConclusionValue` oneof carries text, integer, term, date or name. `runRPC` tests, plus a wire round-trip of every value kind.
+- **Swift:**
+  - `GenealogyStore.getConclusionDetail` → `CatalogConclusionDetail` (GoStore, and a FakeStore that composes a Person's name field from its members);
+  - `CatalogQueryKey.conclusionDetail(project:, entityId:)`, staled by every Conclusion trigger;
+  - the Person detail place loads it (the page is still the stub);
+  - an `L10n.Errors` string for `not_found`.
+- **`ReconciledValueDisplay`** words a field: state line (*1 Source*, *merged · 3 Sources*, *mixed*, *Nothing recorded*), *+N*, each value through the name and date displays, and each outcome (*folded into James Robins*, *weak · low-trust Source*, *denied by OBS-…*, …). New strings live in `L10n.Conclusions`.
+- **Eviction, the rule-2 exception deferred from S9-07:**
+  - `WorkspaceSession.visibleKeys` is the keys of the last `apply(location:)`;
+  - a registry key tagged `evictWhenHidden` that isn't visible is evicted on a trigger (handle dropped, load cancelled);
+  - `conclusionDetail` is tagged; the visible page and list keys revalidate as before;
+  - [`macos-client-patterns.md`](../../macos-client-patterns.md) records the rule.
+- **Tests:**
+  - Go: the composer (merged, folded, outvoted, weak with its provenance, denied and against, `no_evidence`, empty field, binding order, not-found, query count) and the FFI table.
+  - Swift: `ReconciledValueDisplayTests` (every state, plurals, *+N*, every outcome, each weak cause); the registry (the key on every trigger, only detail keys evict, FakeStore load and not-found); the Person place's key; the session (hidden page evicted, visible page and list revalidated, revisit reloads). Disabling eviction fails the session test.
+
+**What changed for researchers**
+
+- Nothing visible yet. Opening a Person now loads its detail in the background, and editing evidence no longer reloads every Person page visited earlier.
+
+**What stayed out**
+
+- The Person page itself: **S9-16**.
+- Event and Place detail places: **S9-22** / **S9-25**.
+- Laying Reconciliation Claims over values (claims are a later spike); the `concluded` state is worded but never sent yet.
+
+### S9-D5 — Design: Person detail (revised for reasoning)
+
+**Board:** Claude Design project *Person Detail* (`c8660cdb-2c61-4c30-bc39-b2411036e6c0`), `Person Detail.dc.html`, frames 1a–1i (rev. 2026-10-05).
+
+- **Each field is one row:** label · lead value · state · support in Sources · disclosures. The state is always text (a *Merged* / *Mixed* / *Concluded* badge, or the Source count alone for a single value), never colour alone. A negative record that eliminated nothing still shows: *1 record disagrees*.
+- **Mixed leads with the first surviving value;** the rest disclose (*1 other value*). There is no "choose" control: that is reconciliation, later.
+- **Why lists every record considered**, as Read as · Source · Outcome. Each outcome is one mark and one phrase, readable without colour:
+
+  | Outcome | Mark | Phrase |
+  | --- | --- | --- |
+  | kept | check | *kept* |
+  | folded | git-merge | *folded into James Robins* |
+  | outvoted | scale | *outvoted (2 of 3 Sources)* |
+  | weak | signal-low | *weak · low-trust Source* (or uncertain transcription, low-confidence claim) |
+  | denied | ban | *denied by Court deposition, 1862* |
+  | against | circle-minus | *disagrees · did not eliminate* (a negative that denied something reads *kept*) |
+  | no usable value | minus | *no usable value* |
+
+- **Room for later:** the Why's empty last column is reserved for "conclude this value", and *Concluded* uses the same row columns, so neither needs a relayout (PD-8).
+- **Header:** 80pt thumbnail slot with the person mark; title name → label → mono ref (the ref isn't repeated when it is the title); b. / d. shorthand saying *date unknown · place unknown* until the life Events exist; ref and member count at the right.
+- **Ship state (frame 1g):** name filled, the four life rows stated empty, so the page keeps its shape when S9-32 fills them.
+- **Member list (frame 1i)** is a stretch slot: deferred, see S9-16.
+
+Brief archived: [`design/archive/S9-D5-person-detail.md`](design/archive/S9-D5-person-detail.md).
+
+### S9-16 — Person detail
+
+Opening a Person now shows their page: every field with its value, how the evidence agrees or disagrees, and, under *Why*, each record behind it and what happened to it.
+
+**What shipped**
+
+- **The vote behind *outvoted*:**
+  - `autoreconcile.Outcome.Vote` records the winning value's Sources of every Source that voted on that unit (for a name, the part it lost on);
+  - migration **000041** stores it (`vote_support`, `vote_total` on `auto_reconciler_outcomes`), and cache version **10** rebuilds on open.
+- **The detail read:**
+  - fields come from the handle's own cache rows (the Properties its records speak to), not from every Property its kind could have, so an unrecorded Property is never read;
+  - each outcome carries its Artifact and vote;
+  - the detail carries the accepted member count (one more query, still constant).
+- **The page** (`Features/Conclusions/`):
+  - `PersonDetailView` replaces the stub on `PlaceID.personDetail`;
+  - the header follows the board;
+  - under *Details*, Name and the four life rows always show, stated empty when nothing is recorded (the life rows until S9-32). Every other field (sex at birth, a custom birth weight) shows only once a record speaks to it, in binding order;
+  - each field is a `ReconciledValueRow`, its Why a `ReconciliationReasoningView` of `ReconciliationOutcome`s;
+  - a Why record's Source opens that Citation in the composer with its Observation in focus; Back returns to the Person.
+  - `PersonDetailContent` and `ReconciledValueDisplay` hold all the wording and are unit-tested; the views only lay it out.
+- **Kit:**
+  - `PVDisclosureButton`: a `PVButton` whose parent owns the expanded state, the chevron and the spoken state. The caller places what it discloses.
+  - `pvExpandedState(_:)` is its VoiceOver half, now also used by `PVSelect` and by the Source page's artifact rows, which expanded silently before. The strings moved to `designSystem.disclosure.*`.
+  - `PVSymbol` gains the outcome and state marks.
+- **Design-system review:** the disclosure was the one piece worth promoting. Sunken panels compose `PVCard`, the caps labels `pvMicroCaps()`, and the Source link `PVButton(.link)`. The row, the Why and the state badges stay snowflakes shared from `Features/Conclusions/` (one feature, three kinds).
+- **Tests:**
+  - Go:
+    - the vote (pipeline, cache with rebuild-equals-upkeep, detail, FFI);
+    - writing no vote fails the cache test.
+  - Swift:
+    - every board phrase, mark and spoken label (frames 1c–1h);
+    - row order and empty text;
+    - the header fallbacks;
+    - the composer location parses as an edit of that Citation;
+    - the disclosure's chevron, toggle and spoken state;
+    - every new SF Symbol resolves on macOS 14.
+
+**What changed for researchers**
+
+- A Person's page shows each value with its state and Source count. *Why* shows every record behind it, including the spellings that lost (*outvoted (2 of 3 Sources)*), the weak ones and the denied ones. A click on a Source opens that record.
+- VoiceOver reads each field's state in words, and says *expanded* or *collapsed* on disclosures, including a Source page's artifact rows.
+
+**What stayed out**
+
+- Life dates and places (rows and header): **S9-32**.
+- The member list (frame 1i): needs a per-handle members read.
+- Concluding a value (the reserved Why column, the *Concluded* badge): Reconciliation Claims, a later spike.
+- Event and Place pages: **S9-24** / **S9-27**, reusing the row and the Why.

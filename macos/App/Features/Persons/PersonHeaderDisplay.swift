@@ -1,7 +1,7 @@
 import Foundation
 
 /// Text for a Person header (S9-07). Go returns structures; this is the one
-/// place a Person's row title is made: resolved name, else the handle's
+/// place a Person's row title is made: auto-reconciled name, else the handle's
 /// label, else its ref. `titleSource` says which, so a row can style each
 /// case (S9-D2: name plain, label italic, ref mono).
 enum PersonHeaderDisplay {

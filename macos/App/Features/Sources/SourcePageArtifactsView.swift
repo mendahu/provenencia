@@ -166,6 +166,7 @@ struct SourcePageArtifactsView: View {
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .pvExpandedState(expanded)
                 .accessibilityIdentifier("sources.page.artifact.\(art.id)")
 
                 // Fixed trailing: pin button (optional) then ART- ref so refs align.

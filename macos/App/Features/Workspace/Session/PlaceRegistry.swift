@@ -179,8 +179,10 @@ struct PlaceRegistry: Sendable {
             presentation: .personDetail,
             priority: 20,
             matches: { $0.section == .persons && $0.entityId != nil },
-            // Stub page: reads nothing until S9-15 adds the detail key.
-            queryKeys: { _, _ in [] },
+            // Still the stub page until S9-16 draws it; the detail loads.
+            queryKeys: { project, location in
+                location.entityId.map { [.conclusionDetail(project: project, entityId: $0)] } ?? []
+            },
             deepId: { $0.entityId }
         ),
         Spec(

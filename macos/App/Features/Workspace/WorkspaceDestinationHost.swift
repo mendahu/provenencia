@@ -85,7 +85,7 @@ struct WorkspaceDestinationHost: View {
             PersonsListView(session: session)
                 .accessibilityIdentifier("workspace.destination.persons")
         case .personDetail:
-            ConclusionStubView(section: .persons, detailRef: navigation.currentLocation.ref)
+            PersonDetailView(session: session, entityId: navigation.currentLocation.entityId ?? "")
                 .accessibilityIdentifier("workspace.destination.personDetail")
         case .eventsList:
             ConclusionStubView(section: .events)

@@ -11,6 +11,7 @@ import (
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/audit"
+	"github.com/mendahu/provenencia/core/database/autoreconciler"
 	"github.com/mendahu/provenencia/core/database/deleteimpact"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/project"
@@ -372,6 +373,12 @@ func Update(c *database.Catalog, userID, citationID []byte, in CitationFieldsInp
 		citationID,
 	); err != nil {
 		return Citation{}, err
+	}
+	// Certainty is part of the evidence of every value this Citation backs.
+	if prev.TranscriptionUncertain != in.TranscriptionUncertain {
+		if err := autoreconciler.RecomputeCitationTx(tx, citationID); err != nil {
+			return Citation{}, err
+		}
 	}
 	if _, err := audit.Record(tx, audit.Revision{
 		UserID:     userID,

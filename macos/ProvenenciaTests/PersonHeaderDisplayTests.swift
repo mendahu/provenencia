@@ -6,7 +6,7 @@ struct PersonHeaderDisplayTests {
         CatalogPersonHeader(
             entity: CatalogCanonicalEntity(id: "e1", ref: "PER-7KD45", subjectTypeID: "t", label: label),
             name: name,
-            nameClusterCount: clusters
+            nameValueCount: clusters
         )
     }
 
@@ -34,7 +34,7 @@ struct PersonHeaderDisplayTests {
         #expect(PersonHeaderDisplay.title(header(name: nil, label: "  ")) == "PER-7KD45")
     }
 
-    @Test func clusterCountDrivesMixedAndPlusN() {
+    @Test func valueCountDrivesMixedAndPlusN() {
         let one = header(name: CatalogNameValue(form: "James Robins"), clusters: 1)
         #expect(!one.isNameMixed && one.additionalNameCount == 0)
         let three = header(name: CatalogNameValue(form: "James Robins"), clusters: 3)

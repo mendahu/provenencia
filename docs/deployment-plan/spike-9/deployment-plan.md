@@ -4,11 +4,11 @@ MVP for the **Conclusion layer**: assemble canonical Persons, Events, and Places
 
 ## Status
 
-**Open.** Slices 1–3 landed. **Replanned 2026-10-05** from slice 4 on: the reconciliation design ([`conclusion-reconciliation.md`](../../conclusion-reconciliation.md)) replaces R2's name / date / ranking plan with one reconciler pipeline for every value type, adds per-Property cardinality, and brings place hierarchy into the spike. Briefs S9-D1…D14 in [`design/`](design/) (D5 and D7 need revising). Landings go in [`completed.md`](completed.md).
+**Open.** Slices 1–3 landed. **Replanned 2026-10-05** from slice 4 on: the reconciliation design ([`conclusion-reconciliation.md`](../../conclusion-reconciliation.md)) replaces R2's name / date / ranking plan with one reconciler pipeline for every value type, adds per-Property cardinality, and brings place hierarchy into the spike. Briefs S9-D1…D14 in [`design/`](design/) (D7 needs revising; D5 was revised and built in S9-16). Landings go in [`completed.md`](completed.md).
 
 > **Goal of this spike:** a researcher can promote Subjects off an Evidence graph into Persons, Events, and Places, and open a page for each that shows who or what it is — name and life dates, event and date, place names and where the place sits — reconciled from every member Subject, with the reasoning shown.
 
-> **Foundation, grown in vertical slices.** The resolved-values cache (R3) is core infrastructure every Conclusion surface reads — lists, details, Promote, search, and later the tree. Build it properly, but grow it slice by slice so each layer is exercised in the app as soon as it lands. Stubs and temporarily incomplete UI along the way are fine; no band-aid caches per screen.
+> **Foundation, grown in vertical slices.** The auto-reconciler cache (R3) is core infrastructure every Conclusion surface reads — lists, details, Promote, search, and later the tree. Build it properly, but grow it slice by slice so each layer is exercised in the app as soon as it lands. Stubs and temporarily incomplete UI along the way are fine; no band-aid caches per screen.
 
 ## Goal (dogfood bar)
 
@@ -23,7 +23,7 @@ MVP for the **Conclusion layer**: assemble canonical Persons, Events, and Places
 7. **Places sit in a hierarchy, the hard way.** On the Evidence graph a researcher draws "part of" (administrative, geographic, ecclesiastical) and "succeeded by" between place subjects, each cited like any evidence. A birth place reads with its chain at the birth date: *Toronto, Province of Canada* in 1850, *Toronto, Ontario, Canada* in 1950; a date that straddles a change shows both (*Toronto, Upper Canada or Province of Canada*).
 8. **The graph knows.** A promoted subject's card shows the handle it belongs to and links to its page. Promote is not offered twice for a subject that is already a member.
 9. **Search finds them.** Typing `PER-7KD45`, *James Robins*, *Jim Robins* (an alternate), *Birth of James*, or a toponym in the omnibar lists the handle with a row that reads like its list row; selecting it opens the detail page. Editing a member's name Observation updates the hit.
-10. **The cache is honest.** A full rebuild of the resolved-values cache produces exactly what incremental upkeep produced, after any sequence of writes (R3 test). Timings on the deep fixture are recorded in the [performance ledger](performance-ledger.md).
+10. **The cache is honest.** A full rebuild of the auto-reconciler cache produces exactly what incremental upkeep produced, after any sequence of writes (R3 test). Timings on the deep fixture are recorded in the [performance ledger](performance-ledger.md).
 
 ---
 
@@ -37,10 +37,10 @@ Interpretation (truth)          Conclusion (truth)
             └────── reconciler (R2) ───────┘
                           │   written in the same transaction as the change (R3)
                           ▼
-            conclusion_resolved_values   ← the one derived cache; rebuildable
+            auto_reconciler_values   ← the one derived cache; rebuildable
               scalar Properties  (name, date, toponym, event_type, role, …)
               entity-valued ends (Participation.person → PER-1, …) = the canonical graph
-            conclusion_resolved_candidates  ← the reasoning: every candidate's outcome
+            auto_reconciler_outcomes  ← the reasoning: every candidate's outcome
                           │
                           ▼
             composers in Go (R4)  — entity headers, walks, naming matrix
@@ -50,7 +50,7 @@ Interpretation (truth)          Conclusion (truth)
 
 - **Truth tables stay truth.** The cache is derived, rebuildable, and never referenced by truth data.
 - **One cache, many compositions.** A new screen adds a composer, not a cache.
-- **Stop at resolved values.** Below them, indexed joins over bounded sets; above them, a few indexed lookups. A second derived tier or an in-memory copy is added only if the ledger's timings demand it.
+- **Stop at auto-reconciled values.** Below them, indexed joins over bounded sets; above them, a few indexed lookups. A second derived tier or an in-memory copy is added only if the ledger's timings demand it.
 - **Go deals in structures; Swift makes text.** Payloads carry DateValues, NameValues, term ids, and title *parts* — never display strings. Formatting a date, a name, or an event title is a UI job ([`L10n`](../../macos-client-patterns.md), naming-matrix templates). The one exception is search: FTS needs text, so Go writes match text into the index (see R8).
 
 ---
@@ -66,7 +66,7 @@ The Conclusion tables do not exist yet. Ship the subset this spike writes.
 | **In** | `claim_confidence_grades` (+ seed §5.5); `canonical_entities`; `identity_claims` (composite FKs on `subject_type_id`, `UNIQUE (subject_id, entity_id)`, partial unique index on one accepted claim per subject); `identity_claim_evidence`. Canonical refs minted from `subject_types.ref_prefix`. Seed Property `event_name` (`text`) bound to `event` (Q13) — in the Install seed and via migration for existing projects. Audit on every write. Go packages + FFI handlers for create / read / list. |
 | **Out** | `reconciliation_claims` and its evidence table; `canonical_entity_notes`; merge re-pointing; `project_settings` / `name_format_profiles`. |
 | **Delete Impact** | Non-blocking `cascades`: a Subject with an Identity Claim names the handle it would leave; a pinned Observation names the handles whose claims lose it. Neither delete is refused. Claims and pins are removed **explicitly** in the delete transaction and audited; the schema `CASCADE`s are backstops. Weakened claims go to the review alert (model §5.2, Spike 10). Replace the stale `ViaSamenessEvidence` reservation. |
-| **Derived** | The resolved-values cache (R3) and search documents (R8). |
+| **Derived** | The auto-reconciler cache (R3) and search documents (R8). |
 
 Skills: [`add-catalog-migration`](../../../.cursor/skills/add-catalog-migration/SKILL.md), [`add-catalog-ref`](../../../.cursor/skills/add-catalog-ref/SKILL.md), [`add-seeded-vocabulary`](../../../.cursor/skills/add-seeded-vocabulary/SKILL.md), [`add-ffi-handler`](../../../.cursor/skills/add-ffi-handler/SKILL.md), [`add-catalog-delete`](../../../.cursor/skills/add-catalog-delete/SKILL.md).
 
@@ -85,36 +85,38 @@ Skills: [`add-catalog-migration`](../../../.cursor/skills/add-catalog-migration/
 
 The modules' *same value* test also drives the Promote comparison's "compatible pairs start checked" (R7 step 3).
 
-### R3 — Resolved-values cache (foundation)
+### R3 — Auto-reconciler cache (foundation)
 
-One derived table holds the resolver's output for every Property on every handle. Everything above it is composition.
+One derived table holds the auto-reconciler's output for every Property on every handle. Everything above it is composition.
 
 ```text
-conclusion_resolved_values
+auto_reconciler_values
   entity_id        BLOB  → canonical_entities (CASCADE)
   property_id      BLOB  → properties         -- vocabulary as a row, never a column
   rank             INT   -- 1 = displayed value; 2..n = other distinct clusters
   value_text / value_integer / value_term_id / value_entity_id
   value_date       BLOB  -- protobuf DateValue (may be synthesized; never a date_values row)
   value_name       BLOB  -- protobuf NameValue (same)
-  date_lo          INT   -- earliest day the resolved date could fall on (ordinal; NULL = open)
+  date_lo          INT   -- earliest day the auto-reconciled date could fall on (ordinal; NULL = open)
   date_hi          INT   -- latest day (ordinal; NULL = open)
   sort_key         TEXT  -- normalized text, or date ordinal
   support          INT   -- distinct Sources backing this value
   against          INT   -- negative candidates that match it
+  reason           TEXT  -- 'kept' when displayed, else why not (outvoted, weak, denied, provisional)
   PRIMARY KEY (entity_id, property_id, rank)
   INDEX (property_id, value_entity_id)   -- reverse edges: who points at PER-1?
   INDEX (property_id, sort_key)          -- sort, resemblance
   INDEX (property_id, date_lo, date_hi)  -- date windows: "born 1800–1850", timelines
 ```
 
-- **Useful for sorting, querying, and resolving (Q12).** Structured values are stored whole as the protobuf messages FFI already uses (`DateValueInput` / `NameValueInput` in [`engine.proto`](../../../api/proto/engine.proto); renaming them to plain value messages is optional cleanup). SQL never decodes them: ordering uses `sort_key`, date range queries use `date_lo` / `date_hi` (the window the date resolver already computes to merge), and the resolver and composers decode in Go. Resolver output is never written to `date_values` / `name_values`.
+- **Useful for sorting, querying, and resolving (Q12).** Structured values are stored whole as the protobuf messages FFI already uses (`DateValueInput` / `NameValueInput` in [`engine.proto`](../../../api/proto/engine.proto); renaming them to plain value messages is optional cleanup). SQL never decodes them: ordering uses `sort_key`, date range queries use `date_lo` / `date_hi` (the window the date auto-reconciler already computes to merge), and the auto-reconciler and composers decode in Go. Auto-reconciler output is never written to `date_values` / `name_values`.
 
-- **State is the shape of the clusters, never stored.** The resolver (S9-05) returns a list of clusters plus a *concluded* flag; readers derive `single` / `merged` / `mixed` from the rows (rank 2 exists → mixed; else rank 1's `support` 1 → single, more → merged). A `concluded` flag column arrives with Reconciliation.
-- **Edges are resolved values.** A Participation's `person` end is its resolved `person` Property with `value_entity_id`. The canonical graph is this table plus its reverse index; there is no separate edges table.
-- **The reasoning is kept beside the values** in `conclusion_resolved_candidates`: one row per candidate (entity, Property, Observation) with its outcome, reason and the rank of the value it supports or folded into. Detail pages explain a value from it without re-running the reconciler. Rewritten with its handle's rows.
-- **Every cluster is kept**, not just the winner: lists get *+N*, search gets alternates (*Jim*), Promote compares against every value, details render clusters without re-resolving.
-- **No vocabulary in the schema.** No `birth_date` columns, no per-kind tables. Genealogical concepts live in Go (resolver, composers, registry of recognized keys) and in `property_id` rows. Labels are not stored (term **ids** are), so relabels need no recompute.
+- **State is the shape of the clusters, never stored.** The auto-reconciler (S9-05) returns a list of clusters plus a *concluded* flag; readers derive `single` / `merged` / `mixed` from the rows (rank 2 exists → mixed; else rank 1's `support` 1 → single, more → merged). A `concluded` flag column arrives with Reconciliation.
+- **Edges are auto-reconciled values.** A Participation's `person` end is its auto-reconciled `person` Property with `value_entity_id`. The canonical graph is this table plus its reverse index; there is no separate edges table.
+- **Nothing is dropped.** Every distinct value is a row, displayed or not; `reason` says which (S9-13). Displayed rows come first, so rank 1 is the first displayed value. State and *+N* read displayed rows; search and matching read every row.
+- **The per-candidate reasoning is kept beside the values** in `auto_reconciler_outcomes` (S9-14): one row per candidate (entity, Property, Observation) with its outcome, reason and the rank of the value it supports or folded into. Detail pages explain a value from it without re-running the reconciler. Rewritten with its handle's rows.
+- **Every value is kept**, not just the displayed one: search gets alternates (*Jim*), Promote compares against every value, details render values without re-resolving.
+- **No vocabulary in the schema.** No `birth_date` columns, no per-kind tables. Genealogical concepts live in Go (auto-reconciler, composers, registry of recognized keys) and in `property_id` rows. Labels are not stored (term **ids** are), so relabels need no recompute.
 - **Maintained in the write transaction.** Every trigger is one hop from the write:
 
   | Write | Recompute |
@@ -124,14 +126,14 @@ conclusion_resolved_values
   | Identity Claim confidence or status change | every Property of that handle (no edit path this spike) |
   | Citation certainty / Source credibility change | handles with member Observations under it |
   | Property cardinality change | every handle carrying that Property |
-  | Reconciliation Claim (later) | (E, P) → `concluded` |
+  | Reconciliation Claim (later) | nothing: claims are laid over the auto-reconciled value by composers, never mirrored into the cache |
   | Term relabel | nothing |
 
   Recompute is **per handle** for now: a trigger rewrites all of the handle's Properties through the same batched loader as rebuild. Narrowing to (E, P) waits for timings that call for it (S9-33).
 
-- **Rebuildable.** A version row (`conclusion_resolved_meta.cache_version` against `resolvedvalues.CacheVersion`, like `catalog_search_meta`); a mismatch on Open rebuilds from truth tables. Bumping the version is the development rebuild — there is no separate command.
+- **Rebuildable.** A version row (`auto_reconciler_meta.cache_version` against `autoreconciler.CacheVersion`, like `catalog_search_meta`); a mismatch on Open rebuilds from truth tables. Bumping the version is the development rebuild — there is no separate command.
 - **Proven.** Rebuild-equals-upkeep tests apply write sequences through the real write APIs, then check incremental upkeep equals a full rebuild: long sequences generated from **fixed** seeds (deterministic; a failure names its seed and step) plus named hand-written scenarios. A failure a seed finds is shrunk into a scenario. Ships in the same PR as the cache.
-- **Batched loading.** The resolver's inputs (members, candidates, provenance) load in a fixed number of set-based queries per batch of handles — no per-Property or per-member loops. The same loader serves rebuild and incremental upkeep.
+- **Batched loading.** The auto-reconciler's inputs (members, candidates, provenance) load in a fixed number of set-based queries per batch of handles — no per-Property or per-member loops. The same loader serves rebuild and incremental upkeep.
 
 ### R4 — Composers (headers, walks, derived values)
 
@@ -139,9 +141,9 @@ Screen-shaped values are **composed in Go** from R3 at read time; they are not s
 
 Walks follow **canonical** edges only (Q3). Birth / death use `role = subject` Participations only (Q4).
 
-- **Person birth / death:** Person ← Participation (`person` end, resolved `role = subject`) → Event with resolved `event_type = birth` / `death` → its resolved `date` (else `start_date`).
+- **Person birth / death:** Person ← Participation (`person` end, auto-reconciled `role = subject`) → Event with auto-reconciled `event_type = birth` / `death` → its auto-reconciled `date` (else `start_date`).
 - **Person birth / death place:** that Event ← Location (`event` end) → Place (`place` end) → its names and its **chain at the Event's date** (R9).
-- **Event date:** resolved `date`, else `start_date`–`end_date`.
+- **Event date:** auto-reconciled `date`, else `start_date`–`end_date`.
 - **Event place:** Event ← Locations → Places → names and chain at the Event's date. Several Locations (York *and* Upper Canada) are all returned.
 - **Event name:** composed from `event_type` and the people on it through the **naming matrix** (below).
 - **Place:** its names, period, and hierarchy (R9).
@@ -154,13 +156,13 @@ Each hop is an indexed lookup on R3. List composers run set-based over the whole
 
 **Precedence.** An event's title is chosen in this order; the first that yields a value wins:
 
-1. **Recorded name** — the resolved `event_name` Property (text; seeded this spike, Q13). For historically named events (*The Great Fire of 1849*), cited like any Observation or, later, concluded by a Reconciliation Claim.
+1. **Recorded name** — the auto-reconciled `event_name` Property (text; seeded this spike, Q13). For historically named events (*The Great Fire of 1849*), cited like any Observation or, later, concluded by a Reconciliation Claim.
 2. **Composed from subjects** — the matrix below, when the event has at least one `subject`.
 3. **`label`** — the researcher's working handle, for events with no recorded name and no subject (*Grandpa's house fire*).
 4. **Composed without subjects** — type and place (*Fire at York*), or *Unspecified fire*.
 5. **`ref`**.
 
-**Matrix.** Go returns the parts (event type key + label, resolved names of the `subject` Persons in a stable order, resolved place); Swift formats them through L10n templates keyed by `event_type`, so the matrix is localizable and lives in one table.
+**Matrix.** Go returns the parts (event type key + label, auto-reconciled names of the `subject` Persons in a stable order, auto-reconciled place); Swift formats them through L10n templates keyed by `event_type`, so the matrix is localizable and lives in one table.
 
 | Case | Template | Example |
 | --- | --- | --- |
@@ -172,8 +174,8 @@ Each hop is an indexed lookup on R3. List composers run set-based over the whole
 | No `event_type` | *Event* (then the rules above) | *Event at York* |
 | Researcher-added type | the same generic templates | *Emigration of James Robins* |
 
-- A subject Person with no resolved name reads as *unnamed person* (*Birth of unnamed person*); the ref stays in the row.
-- Subject order is stable (a resolver test-table decision), so *et al.* always names the same person.
+- A subject Person with no auto-reconciled name reads as *unnamed person* (*Birth of unnamed person*); the ref stays in the row.
+- Subject order is stable (a auto-reconciler test-table decision), so *et al.* always names the same person.
 - Per-term custom templates are later, with term editing.
 - The title does not carry a *mixed* indicator; the Person's or Event's page does.
 
@@ -209,7 +211,7 @@ The hard part. Model: [`conclusion-layer-data-model.md`](../../conclusion-layer-
 **Promote only creates claims.** It is one-way: nobody comes back into it to edit, re-pin, or remove a claim. Those are a separate workflow with its own place (Spike 10), even though they write the same tables. No resume-midstream affordances.
 
 1. **Entry.** A **Promote** control at the bottom of a subject card on the Evidence graph, for primary kinds (`person`, `event`, `place`) that have no accepted Identity Claim. Bridge cards are not entry points; they join through the walk.
-2. **Choose target.** Mint a new handle, or pick an existing one of the same Subject type. The picker shows R4 headers. Suggestions: handles already related to the one just filed (during the walk), then resemblance (resolved name, date, toponym, event type — scored by per-kind match profiles over R3, see [`docs/matching.md`](../../matching.md); the R8 index can narrow candidates).
+2. **Choose target.** Mint a new handle, or pick an existing one of the same Subject type. The picker shows R4 headers. Suggestions: handles already related to the one just filed (during the walk), then resemblance (auto-reconciled name, date, toponym, event type — scored by per-kind match profiles over R3, see [`docs/matching.md`](../../matching.md); the R8 index can narrow candidates).
 3. **Compare (existing handle only).** Line up the incoming Subject's Observations against each accepted member's Observations for the same Property. Compatible pairs start checked (the value-type module's *same value* or *fold*, R2); differing pairs start unchecked. Accept all checked for a Property in one gesture, clear a pair, or skip and accept with no pins. Checked pairs are pinned; unchecked pairs are simply not pinned.
    - **Minting a new handle skips this step.** The grounding claim normally has **zero pins**. Its Observations get pinned later, by backfill, when a second Subject joins and confirms against it (§5.1).
 4. **Claim fields.** A **Status** dropdown is in the layout now, with one option — `accepted` (Q7). Later spikes add `provisional` / `rejected` to it without a relayout. Optional confidence grade. `argument` drafted from the confirmed rows when there are any; editable; empty is fine on grounding.
@@ -228,7 +230,7 @@ Persons, Events, and Places become omnibar hit kinds (Q8). Contract: [`omnibar-s
 
   | Kind | `title` | `secondary` | `body` |
   | --- | --- | --- | --- |
-  | Person | resolved name | birth–death years, birth / death place | every name cluster (so *Jim* finds James), `label` |
+  | Person | auto-reconciled name | birth–death years, birth / death place | every name cluster (so *Jim* finds James), `label` |
   | Event | R4 title (precedence) | date, place | recorded-name clusters, event type label, subject Person names, `label` |
   | Place | first name | parent chain (today's) | every name, `label` |
 
@@ -261,7 +263,7 @@ The Conclusion pages read **across** Sources — every earlier place scoped to o
 - **Query keys:** one list key per kind, one detail key per handle, and the Promote reads (target suggestions, comparison rows for a subject × entity, the neighborhood of a subject). The Promote draft is interaction state, not a cache key.
 - **Swift invalidation: bust all Conclusion keys (Q5).** Any Interpretation or Conclusion write that R3 recomputes marks every cached Conclusion key stale — cheap, because reloading reads R3.
   - **Triggers:** Observation save / delete, Subject delete, bridge create / delete, Source delete, credibility / certainty changes, Property configuration changes, and each Promote step. Shipped in S9-07 as one set, `CatalogQueryRegistry.conclusionTriggers` (`savedCitation`, `deletedSubject`, `promotedSubject`, `deletedSource`, `mutatedSourceWorkspace` — the last carries credibility and over-busts on notes / artifacts / metadata). Certainty already rides `savedCitation`; a cardinality change (S9-37) joins via `updatedProperty`.
-  - **Evict, don't revalidate.** Detail keys are dropped and reload when next visited; the visible page revalidates. A deliberate exception to cache contract rule 2, noted in [`macos-client-patterns.md`](../../macos-client-patterns.md). **Built in S9-15** with the first detail key: the session can't evict or tell which place is visible yet, and list keys (S9-07) follow rule 2 as usual.
+  - **Evict, don't revalidate.** Detail keys are dropped and reload when next visited; the visible page revalidates. A deliberate exception to cache contract rule 2, noted in [`macos-client-patterns.md`](../../macos-client-patterns.md). **Built in S9-15:** the session records the visible place's keys (`visibleKeys`), and a registry key tagged `evictWhenHidden` (`conclusionDetail`) is evicted on a trigger unless it is on screen. List keys (S9-07) follow rule 2 as usual.
   - Narrowing later can reuse R3's affected-handles set; not needed while reloads are cheap.
 - **Measure.** Build the deep fixture (a Person on ~10 Sources; birth, death, marriage events each multi-member, with Locations; a few relationships; scaled to a few hundred handles) and time: rebuild, a single write's upkeep, list composition, detail composition. Record in the [performance ledger](performance-ledger.md).
 
@@ -295,7 +297,7 @@ A brief covers its **whole** view, including cells a first PR leaves empty. Late
 
 ## PR sequence
 
-**Vertical slices.** Every slice ends in something visible in the app, so a mistake in a lower layer (schema, resolver, cache) shows up in the slice that introduces it — not weeks later. The foundation is grown, not front-loaded: the resolver, cache, composers, and formatters each start small in the first slice that needs them and gain capability in later slices. Nothing is throwaway; each PR extends the last.
+**Vertical slices.** Every slice ends in something visible in the app, so a mistake in a lower layer (schema, auto-reconciler, cache) shows up in the slice that introduces it — not weeks later. The foundation is grown, not front-loaded: the auto-reconciler, cache, composers, and formatters each start small in the first slice that needs them and gain capability in later slices. Nothing is throwaway; each PR extends the last.
 
 **✎ = design brief**, run through Claude Design just before the PR it points at. **Check** = what you can verify in the app when the slice lands.
 
@@ -308,8 +310,8 @@ SLICE 1 — Mint from the graph
   Check: Promote a person card → it shows PER-…; delete that subject → Impact names PER-….
 
 SLICE 2 — Persons list
-  S9-05  Resolver core v1: clusters, states, stable order (pure Go)
-  S9-06  Resolved-values cache: table, loader, rebuild, upkeep, rebuild-equals-upkeep test
+  S9-05  Auto-reconciler core v1: clusters, states, stable order (pure Go)
+  S9-06  Auto-reconciler cache: table, loader, rebuild, upkeep, rebuild-equals-upkeep test
   S9-07  Person header composer (name) + list read + Swift store / keys / name formatting
   S9-07b Rename configuration: Source fields → Metadata, Subject fields → Properties (app, Go, FFI, tables)
   ✎ S9-D1 ──▶ S9-08  Sidebar: Source / Conclude sections (Events / Places stubbed); Configure bottom-aligned
@@ -327,7 +329,7 @@ SLICE 4 — Reconciler + Person detail
   S9-13a Land migrations 000037 / 000038: retire `initial`; add `against` (from the closed #255 / #256)
   S9-13  Reconciler pipeline + text / integer / term modules + reasoning (pure Go, table-driven)
   S9-13b Name module (parts only, format-agnostic)
-  S9-14  Evidence + reasoning in the cache: provenance, polarity, Sources; candidates table; credibility / certainty upkeep
+  S9-14  Evidence + reasoning in the auto-reconciler cache: provenance, polarity, Sources; outcomes table; credibility / certainty upkeep; one name for the auto-reconciler
   S9-15  Detail composer + detail read + value-state formatting (with reasoning)
   ✎ S9-D5 ──▶ S9-16  Person detail (name with states, values and why)
   Check: J. Robins + James Robins → one name, merged; James / Jim → mixed; a low-trust
@@ -387,7 +389,7 @@ CLOSE
 - **Slices run in order.** Within a slice, PRs run top to bottom; the Go PRs at the top of a slice can usually go side by side (S9-13b / S9-14; S9-20 / S9-21; S9-36 / S9-25).
 - **Slice 4 is the foundation for the rest.** S9-13 / S9-14 put every value type on the pipeline; slices 5–7 can then swap or run side by side. Slice 9 needs slice 8 (bridges and edges).
 - **Replanned 2026-10-05.** IDs of PRs that keep their purpose stay; new work takes new IDs (S9-13a, S9-13b, S9-36 – S9-40), so handoff notes in [`completed.md`](completed.md) and code comments stay right.
-- **Migrations 000037 / 000038 are fixed.** They first shipped on the closed PRs #255 / #256, and the researcher's local projects already carry them. S9-13a lands them on `main` byte-for-byte so those projects open again; nothing else may take those numbers, and later changes are new migrations (000039 on), never edits. **Cache versions start at 5** after S9-13a: projects may hold a cache stamped 3 or 4 by the closed PRs, and a new meaning must never reuse a stamp.
+- **Migrations 000037 / 000038 are fixed.** They first shipped on the closed PRs #255 / #256, and the researcher's local projects already carry them. S9-13a lands them on `main` byte-for-byte so those projects open again; nothing else may take those numbers, and later changes are new migrations (000039 on), never edits. **000039** is S9-13's `reason` column; **000040** is S9-14's rename to `auto_reconciler_*` and its outcomes table. **000041** is S9-16's vote on outvoted outcomes (cache version 10). The next is **000042**; the next cache version **11**. **Cache versions start at 5** after S9-13a: projects may hold a cache stamped 3 or 4 by the closed PRs, and a new meaning must never reuse a stamp.
 - **The cache is honest from slice 2.** S9-06 ships the rebuild-equals-upkeep test; every later PR that adds a write path or trigger adds to it.
 - **Churn is expected.** A confirm-and-mint Promote button (slice 1), stubbed sidebar items, and empty life-date cells are fine between slices.
 
@@ -399,8 +401,8 @@ CLOSE
 | S9-02 Promote write v1 | — | S9-01 |
 | S9-03 Source graph carries membership | — | S9-01 |
 | S9-04 Graph card: Promote + membership | **S9-D8** | S9-02, S9-03 |
-| S9-05 Resolver core v1 | — | — |
-| S9-06 Resolved-values cache | — | S9-01, S9-05 |
+| S9-05 Auto-reconciler core v1 | — | — |
+| S9-06 Auto-reconciler cache | — | S9-01, S9-05 |
 | S9-07 Person header + list read | — | S9-06 |
 | S9-07b Rename configuration views | — | — |
 | S9-08 Sidebar | **S9-D1** | S9-07, S9-07b |
@@ -453,8 +455,8 @@ In order; each brief sits just above the PR it gates.
 - [x] S9-03 — Source graph carries membership → [`completed.md`](completed.md)
 - [x] ✎ S9-D8 — Design: graph subject card → [`completed.md`](completed.md)
 - [x] S9-04 — Graph card: Promote + membership → [`completed.md`](completed.md)
-- [x] S9-05 — Resolver core v1 → [`completed.md`](completed.md)
-- [x] S9-06 — Resolved-values cache → [`completed.md`](completed.md)
+- [x] S9-05 — Auto-reconciler core v1 → [`completed.md`](completed.md)
+- [x] S9-06 — Auto-reconciler cache → [`completed.md`](completed.md)
 - [x] S9-07 — Person header composer + list read → [`completed.md`](completed.md)
 - [x] ✎ S9-D1 — Design: workspace sidebar → [`completed.md`](completed.md)
 - [x] S9-07b — Rename configuration: Metadata, Properties → [`completed.md`](completed.md)
@@ -468,12 +470,12 @@ In order; each brief sits just above the PR it gates.
 - [x] ✎ S9-D10 — Design: Promote claim fields → [`completed.md`](completed.md)
 - [x] S9-12 — Promote claim fields + save → [`completed.md`](completed.md)
 - [x] S9-13a — Land migrations 000037 / 000038 → [`completed.md`](completed.md)
-- [ ] S9-13 — Reconciler pipeline + text / integer / term modules
-- [ ] S9-13b — Name module
-- [ ] S9-14 — Evidence + reasoning in the cache
-- [ ] S9-15 — Detail composer + detail read
-- [ ] ✎ S9-D5 — Design: Person detail (revise for reasoning)
-- [ ] S9-16 — Person detail
+- [x] S9-13 — Reconciler pipeline + text / integer / term modules → [`completed.md`](completed.md)
+- [x] S9-13b — Name module → [`completed.md`](completed.md)
+- [x] S9-14 — Evidence + reasoning in the auto-reconciler cache → [`completed.md`](completed.md)
+- [x] S9-15 — Detail composer + detail read → [`completed.md`](completed.md)
+- [x] ✎ S9-D5 — Design: Person detail (revise for reasoning) → [`completed.md`](completed.md)
+- [x] S9-16 — Person detail → [`completed.md`](completed.md)
 - [ ] S9-17 — Compare read + pins + backfill
 - [ ] S9-18 — Pinned-Observation delete end to end
 - [ ] ✎ S9-D11 — Design: Promote compare
@@ -561,9 +563,9 @@ In order; each brief sits just above the PR it gates.
 
 ### Slice 2 — Persons list
 
-#### S9-05 — Resolver core v1
+#### S9-05 — Auto-reconciler core v1
 
-**Done.** See [`completed.md`](completed.md#s9-05--resolver-core-v1). `core/resolve.Resolve(valueType, candidates, concluded)` → `Result{Clusters, Concluded}`; state is `Result.State()`. After the replan, S9-13 replaces the per-type cluster key (`key` in `resolve.go`) with the reconciler pipeline and its modules; S9-14 loads the evidence the pipeline weighs.
+**Done.** See [`completed.md`](completed.md#s9-05--resolver-core-v1). `core/autoreconcile.Reconcile(valueType, candidates, concluded)` → `Result{Values, Outcomes, Concluded}`; state is `Result.State()`. After the replan, S9-13 replaces the per-type cluster key with the auto-reconciler pipeline and its modules; S9-14 loads the evidence the pipeline weighs.
 
 | | |
 | --- | --- |
@@ -572,13 +574,13 @@ In order; each brief sits just above the PR it gates.
 | **Testable** | Clustering, states, stable order, concluded input wins. |
 | **Depends on** | — |
 
-#### S9-06 — Resolved-values cache
+#### S9-06 — Auto-reconciler cache
 
-**Done.** See [`completed.md`](completed.md#s9-06--resolved-values-cache). Package `core/database/resolvedvalues`: `RecomputeTx` / `RecomputeSubjectsTx` are the upkeep calls a new write path adds (and an operation in `TestRebuildEqualsUpkeep_SeededSequences`, plus a scenario in `TestRebuildEqualsUpkeep_Scenarios` where it has a characteristic sequence); a resolution change bumps `CacheVersion`. Still NULL: `date_lo` / `date_hi` and date `sort_key` (**S9-21**), `value_entity_id` — subject-valued Properties are not cached yet (**S9-28**). The loader reads no provenance until **S9-14**. Dates and names are protobuf via `core/valuecodec`.
+**Done.** See [`completed.md`](completed.md#s9-06--resolved-values-cache). Package `core/database/autoreconciler`: `RecomputeTx` / `RecomputeSubjectsTx` are the upkeep calls a new write path adds (and an operation in `TestRebuildEqualsUpkeep_SeededSequences`, plus a scenario in `TestRebuildEqualsUpkeep_Scenarios` where it has a characteristic sequence); a resolution change bumps `CacheVersion`. Still NULL: `date_lo` / `date_hi` and date `sort_key` (**S9-21**), `value_entity_id` — subject-valued Properties are not cached yet (**S9-28**). The loader reads no provenance until **S9-14**. Dates and names are protobuf via `core/valuecodec`.
 
 | | |
 | --- | --- |
-| **In** | Migration: `conclusion_resolved_values` (R3 shape, all columns and indexes up front) + version row. Batched loader (members, Observations, provenance in a fixed number of queries per batch). Full rebuild; version check on Open. Upkeep in the write transaction for the write paths that exist now: Promote (claim create), Observation save / delete, Subject delete (affected handles from `deleteimpact.ReleaseFacets` → `Released.Handles`, computed before anything is gone; a member Observation's save / delete recomputes its Subject's handle directly — `Released.Handles` only covers membership and evidence changes). **Rebuild-equals-upkeep test** (fixed-seed sequences + named scenarios). |
+| **In** | Migration: `auto_reconciler_values` (R3 shape, all columns and indexes up front) + version row. Batched loader (members, Observations, provenance in a fixed number of queries per batch). Full rebuild; version check on Open. Upkeep in the write transaction for the write paths that exist now: Promote (claim create), Observation save / delete, Subject delete (affected handles from `deleteimpact.ReleaseFacets` → `Released.Handles`, computed before anything is gone; a member Observation's save / delete recomputes its Subject's handle directly — `Released.Handles` only covers membership and evidence changes). **Rebuild-equals-upkeep test** (fixed-seed sequences + named scenarios). |
 | **Out** | Credibility / certainty triggers (S9-14); inbound-end trigger (S9-28). |
 | **Testable** | Rebuild matches hand-computed rows; version mismatch rebuilds; rebuild-equals-upkeep equivalence; loader query count constant. |
 | **Depends on** | S9-01, S9-05 |
@@ -589,7 +591,7 @@ In order; each brief sits just above the PR it gates.
 
 | | |
 | --- | --- |
-| **In** | Go Person header (resolved name, fallback label → ref) from the cache; set-based list composition; list + count FFI; Swift store, FakeStore, `CatalogQueryKey` + `PlaceRegistry` for Persons (stub view); invalidation (bust all Conclusion keys; evict details). Name formatting from NameValue structures. |
+| **In** | Go Person header (auto-reconciled name, fallback label → ref) from the cache; set-based list composition; list + count FFI; Swift store, FakeStore, `CatalogQueryKey` + `PlaceRegistry` for Persons (stub view); invalidation (bust all Conclusion keys; evict details). Name formatting from NameValue structures. |
 | **Testable** | Header fallbacks; list query count constant; a trigger mutation stales the key. |
 | **Depends on** | S9-06 |
 
@@ -628,7 +630,7 @@ Researcher's decision while revising **S9-D1**: two configuration views get plai
 
 | | |
 | --- | --- |
-| **In** | Per **S9-D2**: rows with thumbnail placeholder, name, ref; empty state. Life-date and place cells render empty until S9-32. The graph card's membership row shows the resolved name. The graph card's membership row swaps *Open person page* for the handle's resolved name — same slot, no relayout (S9-D8). |
+| **In** | Per **S9-D2**: rows with thumbnail placeholder, name, ref; empty state. Life-date and place cells render empty until S9-32. The graph card's membership row shows the auto-reconciled name. The graph card's membership row swaps *Open person page* for the handle's auto-reconciled name — same slot, no relayout (S9-D8). |
 | **Check** | Promoted Persons listed by name; edit a name Observation on a member → row updates. |
 | **Depends on** | **S9-D2**, S9-07, S9-08 |
 
@@ -658,7 +660,7 @@ Researcher's decision while revising **S9-D1**: two configuration views get plai
 
 | | |
 | --- | --- |
-| **In** | Search index kinds `person` / `event` / `place`. Documents come from `conclusion_resolved_values` (rank-1 name, toponym or event type as the title; other values as secondary; label, then ref, as fallbacks). They are reprojected by `resolvedvalues.RecomputeTx` in the same transaction. Merged handles drop out. `ProjectionVersion` 6. `SearchCatalogRequest.kinds` filter; the omnibar default excludes handle kinds. `SearchHit.member_count`; `WorkspaceLocation.entity_id`. |
+| **In** | Search index kinds `person` / `event` / `place`. Documents come from `auto_reconciler_values` (rank-1 name, toponym or event type as the title; other values as secondary; label, then ref, as fallbacks). They are reprojected by `autoreconciler.RecomputeTx` in the same transaction. Merged handles drop out. `ProjectionVersion` 6. `SearchCatalogRequest.kinds` filter; the omnibar default excludes handle kinds. `SearchHit.member_count`; `WorkspaceLocation.entity_id`. |
 | **Out** | Header-built documents and dependents (S9-34); omnibar rows (S9-35). |
 | **Testable** | Kinds filter; omnibar default excludes; a name edit, join or merge updates the index; rebuild equals upkeep for handle documents. |
 | **Depends on** | S9-06 |
@@ -704,33 +706,39 @@ Design: [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md). PR
 
 | | |
 | --- | --- |
-| **In** | Cherry-pick #255's retire-`initial` commit as-is: migration **000037** (`UPDATE name_value_parts SET type = 'given' WHERE type = 'initial';`), `PartTypeInitial` out of the Go registry and the Western name pattern, the Swift enum, L10n key and string-catalog entry, tests and seeded-vocabulary lists. Migration **000038** byte-for-byte from #256 (`ALTER TABLE conclusion_resolved_values ADD COLUMN against INTEGER NOT NULL DEFAULT 0;`); nothing writes it until S9-14. No cache version change (the reconciler hasn't changed). |
+| **In** | Cherry-pick #255's retire-`initial` commit as-is: migration **000037** (`UPDATE name_value_parts SET type = 'given' WHERE type = 'initial';`), `PartTypeInitial` out of the Go registry and the Western name pattern, the Swift enum, L10n key and string-catalog entry, tests and seeded-vocabulary lists. Migration **000038** byte-for-byte from #256 (`ALTER TABLE auto_reconciler_values ADD COLUMN against INTEGER NOT NULL DEFAULT 0;`); nothing writes it until S9-14. No cache version change (the reconciler hasn't changed). |
 | **Why first** | The researcher's projects already ran both migrations from the closed PRs, so `main` refuses to open them (a newer `user_version`). Landing them unchanged makes those projects open, and the open-time schema check passes because the schema text is identical. |
 | **Testable** | `go test` for core (schema hash, Delete Impact honesty), macOS unit tests; an existing project from the closed-PR builds opens. |
 | **Depends on** | — |
 
 #### S9-13 — Reconciler pipeline + text / integer / term modules
 
+**Done.** See [`completed.md`](completed.md#s9-13--reconciler-pipeline--text--integer--term-modules). For **S9-13b**: implement `module` (`core/autoreconcile/modules.go`) for names: `split` into one unit per part type, `fold` for subsumption, `assemble` from the settled units; swap it into `moduleFor`. For **S9-14**: fill `Candidate.SourceID`, `Provenance`, `Negative` and `Provisional` in the loader; the pipeline already uses them. Store `Result.Outcomes` in migration **000040** (done in S9-14).
+
 | | |
 | --- | --- |
-| **In** | Pure Go in `core/resolve`. The shared pipeline (design §5): admit → deny → group (same value, fold) → majority in distinct Sources → confidence → merge; per-candidate outcome and reason (design §6); `against`. A module interface (*same value*, *fold*, *merge*, *no evidence*) that also lets a module **split a candidate into comparable units and reassemble survivors** (names run the passes per part type, then rebuild one name; the simple modules use one unit per candidate). Design the split in now so S9-13b doesn't reshape the interface. The simple modules: **text** (trimmed, case-insensitive; changes S9-05's case-sensitive rule), **integer**, **term** (neutral terms are no evidence). Candidate inputs carry provenance, claim status, polarity and Source id. Cardinality is an input (single only until S9-36). Concluded input kept. Table-driven: the shared passes once, each module's cases separately. |
+| **In** | Pure Go in `core/autoreconcile`. The shared pipeline (design §5): admit → deny → group (same value, fold) → majority in distinct Sources → confidence → merge; per-candidate outcome and reason (design §6); `against`. A module interface (*same value*, *fold*, *merge*, *no evidence*) that also lets a module **split a candidate into comparable units and reassemble survivors** (names run the passes per part type, then rebuild one name; the simple modules use one unit per candidate). Design the split in now so S9-13b doesn't reshape the interface. The simple modules: **text** (trimmed, case-insensitive; changes S9-05's case-sensitive rule), **integer**, **term** (neutral terms are no evidence). Candidate inputs carry provenance, claim status, polarity and Source id. Cardinality is an input (single only until S9-36). Concluded input kept. Table-driven: the shared passes once, each module's cases separately. **Nothing is dropped** (decided while planning): every value keeps a row with its `reason`; migration **000039** adds the column; state and *+N* read displayed rows. |
 | **Out** | Name, date and subject modules (S9-13b, S9-21, S9-28); loading evidence from the catalog (S9-14). |
 | **Testable** | Every pass and reason; majority counts Sources not Observations; provisional always eliminated; a stronger negative denies, an equal one only counts against; order independence; non-name results for unchanged inputs match S9-05 except case folding. |
 | **Depends on** | S9-05 |
 
 #### S9-13b — Name module
 
+**Done.** See [`completed.md`](completed.md#s9-13b--name-module). `nameModule` in `core/autoreconcile/names.go`: one name per Person (`oneValue`), majority outvotes spelling variants only (`outvotes`, `autoreconcile.SpellingSimilarity`); `autoreconcile.IsInitial`; `namevaluestest.Western` builds parts for fixtures. For **S9-17**: a pair is compatible when `nameModule` (through `moduleFor(properties.ValueTypeName)`) gives both the same units or one folds into the other, the same test the Person page uses.
+
 | | |
 | --- | --- |
-| **In** | The name module on the pipeline (design §7.2): structured parts only (`form` never read; no parts = `no_evidence`); format-agnostic, part types as identifiers; split into one unit per part type, subsumption (`[J]` → `[James]`, `[James]` → `[James, Kenneth]`); survivors reassembled into one name; single-valued at the structure level. Test fixtures that wrote form-only names build parts (`namevaluestest`). Cache version ≥ 5. (`initial` is already retired by S9-13a.) |
+| **In** | The name module on the pipeline (design §7.2): structured parts only (`form` never read; no parts = `no_evidence`); format-agnostic, part types as identifiers; split into one unit per part type, subsumption (`[J]` → `[James]`, `[James]` → `[James, Kenneth]`); **one name per Person, never mixed**: each type keeps every surviving value; majority outvotes **spelling variants only** (decided while building it; a nickname recorded as a given name is never thrown out); parts compare as **words**, so *Smith-Jones* = *Smith* + *Jones*. Test fixtures that wrote form-only names build parts (`namevaluestest`). Cache version ≥ 5. (`initial` is already retired by S9-13a.) |
 | **Testable** | 50+ table cases (the spec), seeded invariants (input order, forms never matter, renaming types renames nothing else). |
 | **Depends on** | S9-13, S9-13a |
 
-#### S9-14 — Evidence + reasoning in the cache
+#### S9-14 — Evidence + reasoning in the auto-reconciler cache
+
+**Done.** See [`completed.md`](completed.md#s9-14--evidence--reasoning-in-the-auto-reconciler-cache). Everything the auto-reconciler touches is now named for it: `core/autoreconcile` (`Reconcile`, `ReconciledValue`, `Result.Values` / `Outcomes`), `core/database/autoreconciler`, tables `auto_reconciler_values` / `auto_reconciler_outcomes` / `auto_reconciler_meta`, `PersonHeader.name_value_count`. For **S9-15**: the *Why* rows are `auto_reconciler_outcomes` joined to Observation → Citation → Artifact → Source; the values are `auto_reconciler_values`. When Reconciliation Claims ship, composers lay an accepted claim over the auto-reconciled value; it is never written into these tables.
 
 | | |
 | --- | --- |
-| **In** | Loader reads each candidate's polarity, Source, credibility, certainty, claim confidence and claim status in the existing candidate query (accepted and provisional members; rejected excluded); query count unchanged. `against` (column from S9-13a's migration 000038) is written. New migration **000039**: `conclusion_resolved_candidates` (entity, Property, Observation, outcome, reason, value rank) rewritten with the handle. Upkeep on Source credibility and Citation certainty changes (`RecomputeSourceTx`, `RecomputeCitationTx`). Rebuild-equals-upkeep gains credibility, certainty, negative and graded-promote steps across two Sources, asserted right after each provenance edit. Cache version bump (≥ 5). **Swift:** nothing to wire (certainty rides `savedCitation`, credibility `mutatedSourceWorkspace`). |
+| **In** | Loader reads each candidate's polarity, Source, credibility, certainty, claim confidence and claim status in the existing candidate query (accepted and provisional members; rejected excluded); query count unchanged. `against` (column from S9-13a's migration 000038) is written. Migration **000040**: the cache tables renamed for the auto-reconciler, plus `auto_reconciler_outcomes` (entity, Property, Observation, reason, value rank, denied by) rewritten with the handle. Everything named "resolve" / "resolved value" / "cluster" for this concept is renamed (decided while planning). Upkeep on Source credibility and Citation certainty changes (`RecomputeSourceTx`, `RecomputeCitationTx`). Rebuild-equals-upkeep gains credibility, certainty, negative and graded-promote steps across two Sources, asserted right after each provenance edit. Cache version 9. **Swift:** the `nameValueCount` rename; nothing else to wire (certainty rides `savedCitation`, credibility `mutatedSourceWorkspace`). |
 | **Testable** | Reasons stored; removing either hook fails the sequences; loader query count constant. |
 | **Depends on** | S9-06, S9-13, S9-13a |
 
@@ -741,13 +749,17 @@ Design: [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md). PR
 | **In** | Go detail composer: fields with states, every value with support and `against`, and the reasoning (candidates with their Source, outcome and reason) from the cache. Detail FFI; Swift store + detail key (stub view); value-state formatting (single / merged / mixed / empty, *+N*). **Eviction:** `WorkspaceSession` learns the visible place and evicts non-visible Conclusion detail keys on a Conclusion trigger (the rule-2 exception, deferred from S9-07). |
 | **Depends on** | S9-07, S9-14 |
 
+**Done.** See [`completed.md`](completed.md#s9-15--detail-composer--detail-read). `conclusiondetails.ForEntity` → `GetConclusionDetail` → `CatalogConclusionDetail`, under one key per handle, `conclusionDetail(project:, entityId:)`, for every kind. For **S9-16**: the Person detail place already loads the key; replace `ConclusionStubView` with the page and word it with `ReconciledValueDisplay` (`stateLine`, `additionalLabel`, `string(for:)`, `outcomePhrase`). Outcomes carry the Subject, Citation and Source ids for links. For **S9-22** / **S9-25**: reuse `ForEntity`, the key and the formatting; add the kind's detail place with the key in its `queryKeys`, and eviction comes with it. Fields skip subject-valued Properties until **S9-28**.
+
 #### S9-16 — Person detail
 
 | | |
 | --- | --- |
-| **In** | Per **S9-D5** (revised for the reasoning): header with name, states, values and why; life-date and place rows render empty until S9-32. Replace the Person-detail stub place from S9-09 (`ConclusionStubView` on `PlaceID.personDetail`) and give it the detail key; list rows and the graph card's `.openHandle` already route there. |
-| **Check** | *J. Robins* + *James Robins* → merged; *James* / *Jim* → mixed; lowering one Source to low trust drops its spelling and the page says *weak*. |
+| **In** | Per **S9-D5** (revised for the reasoning): header with name, states, values and why; life-date and place rows render empty until S9-32. Replace the Person-detail stub view from S9-09 (`ConclusionStubView` on `PlaceID.personDetail`); the place already loads the detail key (S9-15), and list rows and the graph card's `.openHandle` already route there. |
+| **Check** | *J. Robins* + *James Robins* → merged; *James* / *Jim* → one name *James Jim Robins*, merged; two of three *Robins* outvote a *Robbins*; lowering one Source to low trust drops its spelling and the page says *weak*. |
 | **Depends on** | **S9-D5**, S9-13b, S9-15 |
+
+**Done.** See [`completed.md`](completed.md#s9-16--person-detail). Board: Claude Design *Person Detail*, frames 1a–1i; brief archived: [`design/archive/S9-D5-person-detail.md`](design/archive/S9-D5-person-detail.md). The page is `PersonDetailView`, its text `PersonDetailContent` / `ReconciledValueDisplay`; each field is a `ReconciledValueRow` with its Why (`ReconciliationReasoningView`, `ReconciliationOutcome`). For **S9-32**: fill the four life rows (`PersonDetailContent.rows`, ids `life.*`) and the header's b. / d. lines from the birth and death Events; the place-chain hint for a straddling date (PD-2, frame 1f) arrives with places. For **S9-22 / S9-25** (with S9-24 / S9-27): reuse `ReconciledValueRow` and the Why from `Features/Conclusions/` and write the kind's own header. When Reconciliation Claims ship: the *Concluded* badge and *by you* are worded; the Why's empty last column is reserved for "conclude this value". Still out: the member list (frame 1i, a stretch slot) needs a per-handle members read.
 
 ### Slice 5 — Compare, pins, backfill
 
@@ -755,7 +767,7 @@ Design: [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md). PR
 
 | | |
 | --- | --- |
-| **In** | Comparison read: incoming Observations × each member's per Property; a pair is compatible when the value-type module says *same value* or *fold*. Promote write takes confirmed pairs: pins on the new claim **and** backfill onto the member's claim, same transaction. |
+| **In** | Comparison read: incoming Observations × each member's per Property; a pair is compatible when the value-type module says *same value* or *fold* (`moduleFor` in `core/autoreconcile/modules.go`; names compare unit by unit, S9-13b). Promote write takes confirmed pairs: pins on the new claim **and** backfill onto the member's claim, same transaction. |
 | **Testable** | Pins on both claims; older `argument` untouched; compatible pairs flagged by the same test the Person page uses. |
 | **Depends on** | S9-12, S9-13b |
 
@@ -970,7 +982,7 @@ Honesty pass against the [goal bar](#goal-dogfood-bar); ledger timings recorded;
 | Names display as the reconciled name (a member's own `form` when one carries exactly its parts, else its parts in order); lists sort by that, normalized | Name display styles (natural / sorted), surname-first sort, profiles — decided in [`structured-name-model.md`](../../structured-name-model.md) §4.5 for a later spike |
 | Reconciler: one pipeline, modules for every value type, reasoning cached; per-Property cardinality | Persisted "auto" claims; scores stored as catalog truth; values that change over time |
 | Place hierarchy the hard way: place relationships (typed, categorized), periods, chains at a date, loop refusal | Gazetteer lookup ([`ideas/place-gazetteer-service.md`](../../ideas/place-gazetteer-service.md)); geometry; place reconciliation across grains |
-| Resolved-values cache with upkeep, rebuild, and rebuild-equals-upkeep test | Per-screen caches; stored derived values (life dates, event names); resident in-memory graph (only if timings demand) |
+| Auto-reconciler cache with upkeep, rebuild, and rebuild-equals-upkeep test | Per-screen caches; stored derived values (life dates, event names); resident in-memory graph (only if timings demand) |
 | Header composers shared by lists, Promote, search | — |
 | Promote from the Evidence graph: per-step saves, walk, Done off-ramp | Stub handles with no Subject; canonical merge |
 | Promote creates claims (one-way) | Editing, re-pinning, or removing Identity Claims; removing a member (Spike 10) |
@@ -978,7 +990,7 @@ Honesty pass against the [goal bar](#goal-dogfood-bar); ledger timings recorded;
 | Person / Event / Place lists and details | Association-kind pages; tree / timeline / map |
 | Thumbnail **slot** with placeholder | Likeness / depiction value type |
 | Delete Impact naming Identity Claims (non-blocking cascades, audited removal) | Review queue / weak-claim alert for claims whose evidence or comparison member left (§5.2, Spike 10) |
-| Omnibar search for Persons / Events / Places (ref + full text on resolved values) | Subjects as hits; cross-root association search |
+| Omnibar search for Persons / Events / Places (ref + full text on auto-reconciled values) | Subjects as hits; cross-root association search |
 
 ---
 
@@ -986,7 +998,7 @@ Honesty pass against the [goal bar](#goal-dogfood-bar); ledger timings recorded;
 
 1. **Persons have no date Properties.** Birth and death dates come through Participation → Event (R4). Do not seed `birth_date` on person to shortcut it.
 2. **`event_name`, not `name`.** Historical event names use the seeded `event_name` text Property (Q13). `name` is a personal NameValue — never bind it to `event`.
-3. **The cache is not truth.** Nothing references `conclusion_resolved_values`; synthesized dates and merged names live only there, serialized. No claim, DateValue, or NameValue row is written by resolution ([`seeded-vocabulary.md`](../../seeded-vocabulary.md) §5.3).
+3. **The cache is not truth.** Nothing references `auto_reconciler_values`; synthesized dates and merged names live only there, serialized. No claim, DateValue, or NameValue row is written by resolution ([`seeded-vocabulary.md`](../../seeded-vocabulary.md) §5.3).
 4. **No vocabulary-named columns** in any derived table. If a screen needs a new concept, it is a composer change or a `property_id` row — never a column.
 5. **Upkeep misses are silent.** A trigger the affected-handles function forgets leaves a stale row nobody notices. The rebuild-equals-upkeep test is the guard; every new write path adds its trigger and a test sequence.
 6. **Cascades bypass Go — so Go doesn't rely on them.** Every official delete calls `deleteimpact.ReleaseFacets`, which removes and audits claims, pins, notes, and connection facets before the parent `DELETE` and fails if anything is left for the `CASCADE` backstop. Its `Released.Handles` is how cache upkeep (S9-06) — and with it handle search reprojection (S9-34a) — learns which handles a delete touched — computed before anything is gone. A new delete path gets this by calling `ReleaseFacets`, not by hand-wiring helpers.
@@ -1015,8 +1027,8 @@ Honesty pass against the [goal bar](#goal-dogfood-bar); ledger timings recorded;
 | Q4 | ~~Which Participation roles count for a Person's birth / death?~~ | **Decided:** `role = subject` only — that is what the role is for. A father on a birth is not his birth. |
 | Q5 | ~~Invalidation scope for Conclusion keys after Interpretation writes.~~ | **Decided:** bust all Swift Conclusion keys (evict details, revalidate the visible page). Cheap because R3 makes reloads cheap. |
 | Q6 | ~~List description line.~~ | **Decided:** row fields per list in R5. |
-| Q7 | ~~Provisional claims in Promote.~~ | **Decided:** Promote writes `accepted` only (optional confidence grade). The UI still ships the Status dropdown with that single option, so the design reserves its place. The `status` column and CHECK ship in R1. A later spike adds a status toggle to Promote along with its supporting work (candidate display, resolver exclusion, graph card state, re-promote rules). |
-| Q8 | ~~Handles in the omnibar.~~ | **Decided — in scope (R8):** refs, full text on resolved values and clusters, hit rows per kind. |
+| Q7 | ~~Provisional claims in Promote.~~ | **Decided:** Promote writes `accepted` only (optional confidence grade). The UI still ships the Status dropdown with that single option, so the design reserves its place. The `status` column and CHECK ship in R1. A later spike adds a status toggle to Promote along with its supporting work (candidate display, auto-reconciler exclusion, graph card state, re-promote rules). |
+| Q8 | ~~Handles in the omnibar.~~ | **Decided — in scope (R8):** refs, full text on auto-reconciled values and clusters, hit rows per kind. |
 | Q9 | ~~Event with two dates.~~ | **Decided:** no different from any single-valued Property: the date module reconciles them (R2). |
 | Q10 | ~~Event naming matrix.~~ | **Decided (R4):** `subject` = principal(s), marriage is two subjects; *et al.* for several; *{Type} at {toponym}* / *Unspecified {type}* with no subject; *unnamed person*; generic templates for researcher-added types; precedence recorded name → composed → label → type/place → ref. |
 | Q11 | ~~Details vs lists.~~ | **Decided:** a detail page is a superset of its list row. Person adds birth / death place; Event adds place(s) (R6). |
@@ -1031,7 +1043,7 @@ Honesty pass against the [goal bar](#goal-dogfood-bar); ledger timings recorded;
 
 ## Docs to update as work lands
 
-- [`conclusion-layer-data-model.md`](../../conclusion-layer-data-model.md): §5.3–§5.4 "future UI" → shipped behavior (per-step saves; grounding with zero pins; create-only). New section: the resolved-values cache as a derived, rebuildable projection; edges as resolved subject-valued Properties.
+- [`conclusion-layer-data-model.md`](../../conclusion-layer-data-model.md): §5.3–§5.4 "future UI" → shipped behavior (per-step saves; grounding with zero pins; create-only). New section: the auto-reconciler cache as a derived, rebuildable projection; edges as auto-reconciled subject-valued Properties.
 - [`research-judgment-model.md`](../../research-judgment-model.md) §1.1: cached order and reasoning are derived, not stored judgment.
 - [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md) §12: implementation status as each module lands.
 - [`conclusion-layer-data-model.md`](../../conclusion-layer-data-model.md) §13: Place `contained_in` question answered by place relationships (R9); new `place_relationship` kind in the kinds list.

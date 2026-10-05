@@ -185,7 +185,7 @@ Every profile therefore defines **both** styles:
 Requirements for the implementation:
 
 1. **One name display entry point** with a style parameter (`natural` / `sorted`). Call sites choose the style; they never assemble parts themselves.
-2. **The sort key comes from the sorted style** (normalized), so a list's order and its rows' text can never disagree. The resolved-values cache `sort_key` for `name` (Spike 9 R3) is that key; changing it is a cache version bump.
+2. **The sort key comes from the sorted style** (normalized), so a list's order and its rows' text can never disagree. The auto-reconciler cache `sort_key` for `name` (Spike 9 R3) is that key; changing it is a cache version bump.
 3. **Untyped names fall back to `form`** in both styles, and sort by normalized `form`.
 4. **`form` is never rewritten.** Styles are presentation over typed parts; the recorded full form stays authoritative.
 5. Each profile stores its sorted order and the separator (for Western, `", "` after the surname group). Open details for that work: where `prefix` / `suffix` sit in the sorted Western order (*Robins, Rev. James, Jr.*), and whether `surname_prefix` leads the sort (*van Gogh* under V or G varies by culture — a per-profile rule).

@@ -10,7 +10,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
-	"github.com/mendahu/provenencia/core/database/namevalues"
+	"github.com/mendahu/provenencia/core/database/namevalues/namevaluestest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/subjects"
@@ -226,7 +226,7 @@ func personBeside(t *testing.T, req *engine.PromoteSubjectRequest, forms ...stri
 		}
 		var in []observations.Input
 		for _, form := range forms {
-			in = append(in, observations.Input{SubjectID: s.ID, PropertyID: name.ID, Name: &namevalues.Value{Form: form}})
+			in = append(in, observations.Input{SubjectID: s.ID, PropertyID: name.ID, Name: namevaluestest.Western(form)})
 		}
 		_, err = citations.CreateWithObservations(c, userID[:], citations.CreateInput{
 			ArtifactID: art.ID, LocatorJSON: `{"version":1,"selectors":[{"type":"page","artifact_page":1}]}`,
@@ -322,7 +322,7 @@ func TestListPromoteTargetSuggestions(t *testing.T) {
 				if len(s) != 2 || s[0].Entity.GetRef() != exact.Entity.GetRef() || s[1].Entity.GetRef() != shared.Entity.GetRef() {
 					t.Fatalf("%+v", s)
 				}
-				if s[0].GetScore() != 10 || s[0].GetPerson().GetName().GetForm() != "James Robins" || s[0].GetPerson().GetNameClusterCount() != 1 {
+				if s[0].GetScore() != 10 || s[0].GetPerson().GetName().GetForm() != "James Robins" || s[0].GetPerson().GetNameValueCount() != 1 {
 					t.Fatalf("top %+v", s[0])
 				}
 				if r := s[0].GetReasons(); len(r) != 1 || r[0].GetPropertyKey() != "name" || r[0].GetSimilarity() != 1 || r[0].GetContribution() != 10 {

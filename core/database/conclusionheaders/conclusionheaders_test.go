@@ -9,7 +9,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/conclusionheaders"
-	"github.com/mendahu/provenencia/core/database/namevalues"
+	"github.com/mendahu/provenencia/core/database/namevalues/namevaluestest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/properties"
@@ -76,7 +76,7 @@ func (f *fixture) person(forms ...string) (subjects.Subject, []observations.Obse
 	if len(forms) > 0 {
 		var in []observations.Input
 		for _, form := range forms {
-			in = append(in, observations.Input{SubjectID: s.ID, PropertyID: f.name.ID, Name: &namevalues.Value{Form: form}})
+			in = append(in, observations.Input{SubjectID: s.ID, PropertyID: f.name.ID, Name: namevaluestest.Western(form)})
 		}
 		res, err := citations.CreateWithObservations(f.c, userID, citations.CreateInput{ArtifactID: f.artifact.ID, LocatorJSON: locator}, in)
 		must(f.t, err)
@@ -115,15 +115,17 @@ func TestListPersons(t *testing.T) {
 	if len(got) != 4 {
 		t.Fatalf("listed %d Persons, want 4 (no Place)", len(got))
 	}
-	// Named first by sort key (james < mary), then unnamed by ref.
-	if got[0].Name == nil || got[0].Name.Form != "James Robins" || got[0].NameClusterCount != 2 {
+	// Named first by sort key (james < mary), then unnamed by ref. James,
+	// Jim and james reconcile into one name (S9-13b): Jim is a different
+	// given name, so it joins rather than being outvoted.
+	if got[0].Name == nil || got[0].Name.Form != "James Jim Robins" || got[0].NameValueCount != 1 {
 		t.Fatalf("first %+v", got[0])
 	}
-	if got[1].Name == nil || got[1].Name.Form != "Mary Smith" || got[1].NameClusterCount != 1 {
+	if got[1].Name == nil || got[1].Name.Form != "Mary Smith" || got[1].NameValueCount != 1 {
 		t.Fatalf("second %+v", got[1])
 	}
 	unnamed := map[string]conclusionheaders.PersonHeader{got[2].Entity.Ref: got[2], got[3].Entity.Ref: got[3]}
-	if h := unnamed[labelled.Ref]; h.Name != nil || h.NameClusterCount != 0 || h.Entity.Label != "Mother of James" {
+	if h := unnamed[labelled.Ref]; h.Name != nil || h.NameValueCount != 0 || h.Entity.Label != "Mother of James" {
 		t.Fatalf("labelled %+v", h)
 	}
 	if h := unnamed[bare.Ref]; h.Name != nil || h.Entity.Label != "" {
@@ -134,16 +136,29 @@ func TestListPersons(t *testing.T) {
 	}
 
 	t.Run("a name edit reaches the header", func(t *testing.T) {
-		// Jim → James merges the two clusters.
+		// Jim → James merges the two values.
 		_, err := observations.Update(f.c, userID, observations.Input{
 			ID: jamesObs[1].ID, SubjectID: jamesObs[1].SubjectID, PropertyID: f.name.ID,
-			Name: &namevalues.Value{Form: "James Robins"},
+			Name: namevaluestest.Western("James Robins"),
 		})
 		must(t, err)
-		if h := f.list()[0]; h.Name.Form != "James Robins" || h.NameClusterCount != 1 {
+		if h := f.list()[0]; h.Name.Form != "James Robins" || h.NameValueCount != 1 {
 			t.Fatalf("after edit %+v", h)
 		}
 	})
+}
+
+// +N counts displayed name values only. Names are one structure (S9-13b), so
+// a named Person always counts one, whatever its records disagree on.
+func TestPersonNameCountIsDisplayedOnly(t *testing.T) {
+	f := newFixture(t)
+	f.person("Ann Lee", "Anne Lee")
+	f.person("Thomas Robins", "thomas robins", "Thomas Robbins")
+	for _, h := range f.list() {
+		if h.NameValueCount != 1 {
+			t.Fatalf("%s counts %d", h.Name.Form, h.NameValueCount)
+		}
+	}
 }
 
 func TestListPersonsQueryCountIsConstant(t *testing.T) {

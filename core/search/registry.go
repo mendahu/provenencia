@@ -106,7 +106,7 @@ var Registry = []KindSpec{
 
 // Handle kinds: searchable on request (Query.Kinds), not in the omnibar's
 // default set until S9-35 designs their rows. Documents come from the
-// resolved-values cache (searchindex/handles.go): title is the rank-1 name,
+// auto-reconciler cache (searchindex/handles.go): title is the rank-1 name,
 // toponym or event type; "other" is every other cached value.
 func init() {
 	for _, k := range []string{KindPerson, KindEvent, KindPlace} {

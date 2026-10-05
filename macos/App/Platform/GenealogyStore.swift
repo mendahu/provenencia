@@ -220,7 +220,7 @@ struct CatalogSubjectMembership: Sendable, Equatable {
     var claimID: String
     var entity: CatalogCanonicalEntity
     var kind: String
-    /// The handle's rank-1 resolved name (S9-09); nil when it has none.
+    /// The handle's displayed auto-reconciled name (S9-09); nil when it has none.
     var name: CatalogNameValue? = nil
 }
 
@@ -266,20 +266,104 @@ struct CatalogNameValue: Sendable, Equatable {
     var parts: [CatalogNameValuePart] = []
 }
 
-/// One Person as a row, composed by Go from the resolved-values cache (S9-07).
+/// One Person as a row, composed by Go from the auto-reconciler cache (S9-07).
 /// Structures only; `PersonHeaderDisplay` formats the title.
 struct CatalogPersonHeader: Sendable, Equatable, Identifiable {
     var entity: CatalogCanonicalEntity
-    /// Rank-1 resolved name; `nil` when no member names the Person.
+    /// Displayed auto-reconciled name; `nil` when no member names the Person.
     var name: CatalogNameValue?
-    /// Distinct resolved names across members.
-    var nameClusterCount: Int
+    /// Displayed name values (names are one structure, so at most 1).
+    var nameValueCount: Int
 
     var id: String { entity.id }
     /// Members disagree on the name; the top-ranked one is shown.
-    var isNameMixed: Bool { nameClusterCount > 1 }
-    /// The list's *+N*: resolved names beyond the one shown.
-    var additionalNameCount: Int { max(0, nameClusterCount - 1) }
+    var isNameMixed: Bool { nameValueCount > 1 }
+    /// The list's *+N*: displayed name values beyond the one shown.
+    var additionalNameCount: Int { max(0, nameValueCount - 1) }
+}
+
+/// One Property value on a Conclusion detail: exactly one case per value type.
+enum CatalogConclusionValue: Sendable, Equatable {
+    case none
+    case text(String)
+    case integer(Int64)
+    case term(id: String, key: String, label: String)
+    case date(CatalogDateValueInput)
+    case name(CatalogNameValue)
+}
+
+/// One auto-reconciled value of a Property (S9-14). `reason == "kept"` is
+/// displayed; any other reason says why it isn't.
+struct CatalogReconciledValue: Sendable, Equatable, Identifiable {
+    var rank: Int
+    var reason: String
+    /// Distinct Sources behind it.
+    var support: Int
+    /// Negative records that match it.
+    var against: Int
+    var value: CatalogConclusionValue
+
+    var id: Int { rank }
+    var isDisplayed: Bool { reason == "kept" }
+}
+
+/// What the auto-reconciler did with one Observation, with the record's own
+/// value and the evidence it weighed. Empty keys are the scale defaults
+/// (standard credibility, moderate confidence).
+struct CatalogReconcilerOutcome: Sendable, Equatable, Identifiable {
+    var observationID: String
+    var observationRef: String
+    var reason: String
+    /// The value it went into; nil for none.
+    var valueRank: Int?
+    /// The negative Observation that denied it; "" when not denied.
+    var deniedByObservationID: String
+    var recorded: CatalogConclusionValue
+    var subjectID: String
+    var subjectRef: String
+    var citationID: String
+    var artifactID: String = ""
+    var sourceID: String
+    var sourceTitle: String
+    var credibilityKey: String
+    var transcriptionUncertain: Bool
+    var claimConfidenceKey: String
+    /// Grade order relative to the default grade, as the auto-reconciler
+    /// weighed it: below 0 is weak evidence.
+    var credibilityOffset: Int = 0
+    var claimConfidenceOffset: Int = 0
+    /// For "outvoted": the winning value's Sources of every Source that
+    /// voted on that unit. 0 otherwise.
+    var voteSupport: Int = 0
+    var voteTotal: Int = 0
+
+    var id: String { observationID }
+    var isLowTrustSource: Bool { credibilityOffset < 0 }
+    var isLowConfidenceClaim: Bool { claimConfidenceOffset < 0 }
+}
+
+/// One Property of a handle's detail. `state` is "single", "merged",
+/// "mixed", or "" when nothing is displayed; Go computes it.
+struct CatalogConclusionField: Sendable, Equatable, Identifiable {
+    var propertyID: String
+    var propertyKey: String
+    var label: String
+    var valueType: String
+    var state: String
+    var values: [CatalogReconciledValue]
+    var outcomes: [CatalogReconcilerOutcome]
+
+    var id: String { propertyID }
+    var displayedValues: [CatalogReconciledValue] { values.filter(\.isDisplayed) }
+}
+
+/// One handle's detail (S9-15), composed by Go from the auto-reconciler cache.
+/// Generic over kind: Person, Event and Place pages all read it.
+struct CatalogConclusionDetail: Sendable, Equatable {
+    var entity: CatalogCanonicalEntity
+    var fields: [CatalogConclusionField]
+    /// Accepted members.
+    var memberCount: Int = 0
 }
 
 /// One Observation row with Property summary (graph / card payloads).
@@ -803,6 +887,9 @@ protocol GenealogyStore: Sendable {
     func listSubjectMemberships(projectDir: String, sourceID: String) async throws -> [CatalogSubjectMembership]
     /// Every unmerged Person as a row header, in list order (named by name, then by ref).
     func listPersonHeaders(projectDir: String) async throws -> [CatalogPersonHeader]
+    /// One handle's fields, auto-reconciled values and outcomes. Throws
+    /// `conclusiondetails.not_found` for an unknown or merged handle.
+    func getConclusionDetail(projectDir: String, entityID: String) async throws -> CatalogConclusionDetail
     func listSubjects(projectDir: String, sourceID: String) async throws -> [CatalogSubject]
     func setSubjectPosition(
         projectDir: String,

@@ -148,7 +148,7 @@ This table is **binding**. Instance the Ship kit rows; do not redraw them. Paths
 | Building block | Layer | Status | Home | Notes |
 | --- | --- | --- | --- | --- |
 | Place detail | Snowflake | **New** | `Features/Conclusions/PlaceDetailView.swift` | |
-| Value-state field row | Snowflake | Ship (from D5) | `Features/Conclusions/ResolvedValueRow.swift` | |
+| Value-state field row | Snowflake | Ship (from D5) | `Features/Conclusions/ReconciledValueRow.swift` | |
 | Reasoning list (*Why*) | Snowflake | Ship (from D5) | `Features/Conclusions/ReconciliationReasoningView.swift` | |
 | Place chain text | Snowflake | Ship (from D4) | `Features/Conclusions/PlaceChainDisplay.swift` | |
 | Place relationship row | Snowflake | **New** | `Features/Conclusions/PlaceRelationshipRow.swift` | Related place, type, span. |

@@ -355,7 +355,7 @@ struct EvidenceSubjectCard: View {
         )
     }
 
-    /// The handle's resolved name for the membership row (S9-09), or nil when
+    /// The handle's auto-reconciled name for the membership row (S9-09), or nil when
     /// it has none — the row then keeps its *Open … page* copy.
     static func membershipName(_ membership: CatalogSubjectMembership) -> String? {
         guard let name = membership.name else { return nil }
@@ -584,7 +584,7 @@ private struct EvidenceSubjectCardChrome: View {
         let pressed = pressedActionID == EvidenceSubjectCard.openHandleActionID
         return HStack(spacing: 8) {
             PVBadge(text: membership.entity.ref, tone: .neutral, subtle: true, foreground: style.ink)
-            // The handle's resolved name (S9-09) in the slot the link copy holds
+            // The handle's auto-reconciled name (S9-09) in the slot the link copy holds
             // until a name exists — same slot, so promoting never relayouts.
             Group {
                 if let name = EvidenceSubjectCard.membershipName(membership) {

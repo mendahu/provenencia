@@ -1,6 +1,6 @@
 // Package matching runs core/match against the catalog: it reads a probe
-// (an Interpretation Subject's Observations, or a handle's resolved values)
-// and the candidate handles of the same Subject type (their resolved values
+// (an Interpretation Subject's Observations, or a handle's auto-reconciled values)
+// and the candidate handles of the same Subject type (their auto-reconciled values
 // from the cache, every rank), then ranks them with the type's Profile.
 //
 // Consumers shape the result for their surface: Promote's target
@@ -65,10 +65,10 @@ const (
 		LEFT JOIN property_terms t ON t.id = o.value_term_id
 		WHERE o.subject_id = ? AND o.polarity = 'positive'`
 
-	// Cached resolved values (every rank) of unmerged handles, terms by key.
+	// Cached auto-reconciled values (every rank) of unmerged handles, terms by key.
 	sqlEntityValues = `SELECT r.entity_id, e.ref, p.key, p.origin, r.value_text, r.value_integer,
 			r.value_date, r.value_name, t.key
-		FROM conclusion_resolved_values r
+		FROM auto_reconciler_values r
 		JOIN canonical_entities e ON e.id = r.entity_id
 		JOIN properties p ON p.id = r.property_id
 		LEFT JOIN property_terms t ON t.id = r.value_term_id

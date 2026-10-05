@@ -21,11 +21,22 @@ A canonical entity has many member Subjects, each with many Observations, and an
 
 Names and dates have the most interesting logic because they are structured, but text, integers, terms and subject references need reconciling too. Their candidates can still be weighed by their **evidence**: which Source, how well transcribed, how confident the identity, how many Sources agree.
 
+**Vocabulary.** These names are used everywhere: code, tables, docs.
+
+| Term | Meaning | In code |
+| --- | --- | --- |
+| **auto-reconciler** | the shared pipeline plus its value-type modules | `core/autoreconcile` (`Reconcile`) |
+| **auto-reconciled value** | one distinct value it produced, displayed or not, with its reason | `ReconciledValue`; table `auto_reconciler_values` |
+| **outcome** | what it did with one Observation (kept, folded, outvoted, …) | `Outcome`; table `auto_reconciler_outcomes` |
+| **the auto-reconciler cache** | both tables, derived and rebuildable | `core/database/autoreconciler` |
+
+"Resolve", "resolver", "resolved value" and "cluster" are retired for this concept.
+
 ---
 
 # 2. Principles
 
-1. **Display policy, never truth.** Auto-reconciliation is stateless projection. It never writes a claim, an Observation, a DateValue or a NameValue row ([`conclusion-layer-data-model.md`](conclusion-layer-data-model.md) §2.5, §7). Its output lives only in the derived resolved-values cache, rebuildable from truth tables.
+1. **Display policy, never truth.** Auto-reconciliation is stateless projection. It never writes a claim, an Observation, a DateValue or a NameValue row ([`conclusion-layer-data-model.md`](conclusion-layer-data-model.md) §2.5, §7). Its output lives only in the derived auto-reconciler cache, rebuildable from truth tables.
 2. **No stored scores.** Reconciliation weighs credibility, certainty and confidence but never multiplies them into a stored rollup ([`research-judgment-model.md`](research-judgment-model.md) §1.1). The cache stores order, counts and reasons, not a likelihood.
 3. **A Reconciliation Claim always wins.** An accepted Reconciliation Claim on (entity, Property) is the displayed value, whatever the reconciler would say. A provisional claim is a working choice the UI shows differently. A rejected claim is history only. This holds for **every** value type.
 4. **Be bold, and show why.** Because a researcher can always override with a claim, the reconciler may choose decisively. It must say what it considered and why each candidate won or lost, so the UI can explain it.
@@ -40,7 +51,7 @@ accepted Reconciliation Claim(s) on (entity, Property) → the concluded value(s
 otherwise                                                → the auto-reconciler's output
 ```
 
-The resolver takes the concluded value as an input so the claim plugs in without changing callers. The concluded value joins the cluster it equals, or leads alone with no support.
+A claim's value is **never written into the auto-reconciler cache**: those tables hold only the auto-reconciler's own output. When claims ship, the composers that build lists and pages lay an accepted claim over the auto-reconciled value for that (entity, Property). (`autoreconcile.Reconcile` still accepts a concluded input, which joins the value it equals or leads alone, for callers that want one combined result.)
 
 ---
 
@@ -63,7 +74,7 @@ Credibility and confidence are read relative to their vocabulary's default grade
 **Membership status:**
 
 - **Accepted** members are the evidence.
-- **Provisional** members are passed in but **always eliminated**: they never influence the answer and appear only in the reasoning. That is stricter than weak evidence, which can still win when nothing stronger disagrees.
+- **Provisional** members are passed in but **always eliminated**: they never influence the answer and appear only in the reasoning. That is stricter than weak evidence, which can still win when nothing stronger disagrees. Showing a provisional member's value as *possibly X* when nothing else survives is an idea for later: [`ideas/possible-values.md`](ideas/possible-values.md).
 - **Rejected** members do not count and are not passed in.
 
 ---
@@ -77,7 +88,7 @@ One pipeline for every value type. Each value type supplies a small module (§7)
    - Candidates with no usable value are eliminated (`no_evidence`): an empty value, a name with no parts, a term the module calls no evidence (such as an *unknown* sex term).
 2. **Deny.** A negative candidate eliminates the positive candidates with the **same value** whose evidence it is stronger than (`denied`). Those candidates cast no vote. A negative at equal or lower strength only counts against.
 3. **Group.** The module's *same value* test groups equal values. Its *fold* test folds a less specific value into a more specific one it fits (`folded`): `[J]` into `[James]`, `MAY 1985` into `14 MAY 1985`. When a value fits several, it folds into the best supported, then the strongest.
-4. **Majority.** Support is counted in **distinct Sources** (a derivative Source counts as its own Source until derivation can be recorded). A value with support from at least two Sources and more than half the support crowds out the rest (`outvoted`). Two of three wins; one to one keeps both.
+4. **Majority.** Support is counted in **distinct Sources** (a derivative Source counts as its own Source until derivation can be recorded). A value with support from at least two Sources and more than half the support crowds out the rest (`outvoted`); a module may limit what it outvotes (names: spelling variants only, §7.2). Two of three wins; one to one keeps both.
 5. **Confidence.** Among survivors, a value carried only by weak candidates is eliminated when a value with a non-weak carrier survived (`weak`).
 6. **Merge.** The module merges each surviving group into one displayed value. Single-valued Properties have one or more surviving values (§8). When several survive, the state is *mixed* and all are shown.
 
@@ -103,6 +114,8 @@ The reconciler returns the **answer and its reasoning**, so the UI can be rich a
 | `provisional` | from a provisional member; never counts |
 | `no_evidence` | nothing usable to compare |
 | `against` | a negative that counted against a value without eliminating it |
+
+**Eliminated means not displayed, never dropped.** Every distinct value is cached, with a reason on each value (`kept` when displayed, else `outvoted`, `weak`, `denied` or `provisional`). The state and list counts read the displayed values; search and matching read them all, so an outvoted spelling still finds its Person.
 
 The cache stores the reasoning with the values: state, support, the against count, and every candidate's outcome and reason. List and detail pages render from it without re-running the reconciler.
 
@@ -138,15 +151,18 @@ From [`structured-date-model.md`](structured-date-model.md): missing components 
 
 ## 7.2 Names
 
-From [`structured-name-model.md`](structured-name-model.md). Designed and built in S9-13 / S9-14 (see §12):
+From [`structured-name-model.md`](structured-name-model.md). Built in S9-13b (see §12):
 
 - **Parts only.** `form` is a transcription and is never compared. A name with no parts is `no_evidence`.
 - **Format-agnostic.** A part type is only an identifier: parts are compared only with parts of the same type, and no type behaves differently from another. A prefix, a surname and a given name are all just types. Culture lives in name format profiles, not here.
-- **The comparable unit is the part type.** A candidate's value for a type is its ordered list of parts of that type, each part one normalized unit (case, punctuation and whitespace ignored; accents are not folded).
+- **The comparable unit is the part type.** A candidate's value for a type is its ordered list of **words** of that type: each part normalized (case, punctuation and whitespace ignored; accents are not folded) and split into words. A hyphen or a space inside a part is the same as separate parts: *Smith-Jones* = *Smith Jones* = *Smith* + *Jones*. Words are compared; the best-ranked record's recorded parts are displayed.
 - **Fold (subsumption):** a list folds into a fuller one when its parts map, in order, onto a subsequence, each equal or an initial of it: `[J]` → `[James]`, `[James]` → `[James, Kenneth]`, `[J, K]` → `[James, Kenneth]`. The `initial` part type is retired; an initial is the part it stands for.
 - **Deny** compares whole names: a negative denies positives with the same parts by type.
-- **Survivors to names.** A candidate survives when all its part values survived. Survivors that agree on every type they share form one displayed name. A candidate missing a type joins the agreeing name with the most members. The displayed name is assembled from each type's fullest value, or is a member's own value when one carries exactly those parts.
-- **Single-valued at the structure level.** A Person has one concluded NameValue. Multiple given names, surnames and so on live inside it as multiple parts. There is no second independent name structure.
+- **Majority only outvotes misspellings** (decided 2026-10-05). Within a type, a majority winner outvotes a minority value only when it is a **spelling variant** of the winner: the same number of parts, each equal or similar (`SpellingSimilarity`, shared with matching: at least 0.8 similarity by edit distance with adjacent swaps, or one added or dropped letter from 3 letters up). *Robbins* beside *Robins* is outvoted. *Jake* beside *James*, or a married *Smith* beside *Robins*, never is: sources often record a nickname as a given name and seldom say so.
+- **Weak evidence still drops** within a type, and denial still applies.
+- **One name, never mixed.** Every displayed candidate contributes to a single NameValue. Each type keeps every surviving value, best supported first, a recorded part skipped when all its words are already there: *given Jake* + *given James* → `given: [Jake, James]`; a maiden *Smith* folds into a married *Smith-Jones*; *nick Jake* + *given James* → `given: [James], nick: [Jake]`. The state is single or merged. The name is assembled in the type order of the member with the most types, or is a member's own value when one carries exactly those parts. Outvoted, weak, denied and provisional names keep their own cached rows.
+- **Single-valued at the structure level.** A Person has one concluded NameValue, and the auto-reconciler produces one too. Multiple given names, surnames and so on live inside it as multiple parts. There is no second independent name structure.
+- **The form reads the parts in order** (*Jake James Robins*). There is no separate middle-name type, so the form doesn't distinguish alternatives from middle names; name display styles and the *Why* view do that work.
 
 ---
 
@@ -181,7 +197,7 @@ The model allows a Person with two birth Events, and the reconciler must handle 
 
 # 10. Cache and upkeep
 
-The reconciler's output is stored in the resolved-values cache (Spike 9 R3, `core/database/resolvedvalues`) and rewritten in the transaction of every write that can change it. A change to reconciliation rules is a cache version bump, which rebuilds on open.
+The reconciler's output is stored in the auto-reconciler cache (Spike 9 R3, `core/database/autoreconciler`) and rewritten in the transaction of every write that can change it. A change to reconciliation rules is a cache version bump, which rebuilds on open.
 
 Writes that recompute affected entities:
 
@@ -244,11 +260,13 @@ The rebuild-equals-upkeep tests hold upkeep equal to a full rebuild. Every new t
 
 | Piece | Where | State |
 | --- | --- | --- |
-| Resolver core: exact clusters, support then id, concluded input | `core/resolve` (S9-05) | on `main` |
-| Resolved-values cache and upkeep | `core/database/resolvedvalues` (S9-06) | on `main` |
+| Auto-reconciler core: exact clusters, support then id, concluded input | `core/autoreconcile` (S9-05) | on `main` |
+| Auto-reconciler cache and upkeep | `core/database/autoreconciler` (S9-06) | on `main` |
 | `initial` part type retired (migration 000037); `against` column (000038) | S9-13a | on `main` |
-| Shared pipeline and simple modules | S9-13 | planned |
-| Name module | S9-13b | planned |
-| Evidence and reasoning in the cache | S9-14 | planned |
+| Shared pipeline and simple modules; every value cached with its reason (migration 000039) | S9-13 | open PR #259 |
+| Name module: parts by type, subsumption, one name per Person, majority outvotes misspellings only, parts compared as words; cache version 8 | S9-13b | open PR #260, stacked on S9-13 |
+| Evidence loaded (Sources, provenance, negatives, provisional members); outcomes cached in `auto_reconciler_outcomes`; credibility and certainty upkeep; the "auto-reconciler" naming; cache version 9 | S9-14 | stacked on S9-13b |
+| Detail read: each field's state, values and outcomes with their evidence (`conclusiondetails`, `GetConclusionDetail`); Swift wording of states and outcomes; off-screen detail pages evicted | S9-15 | stacked on S9-14 |
+| An outvoted outcome keeps the vote that beat it (migration 000041, cache version 10); the Person page shows every field's state, values and Why | S9-16 | stacked on S9-15 |
 
 PRs #255 and #256 built names-first versions of S9-13b and S9-14 to the first plan and were closed. Their migrations landed unchanged in S9-13a; their name logic, provenance logic, fixtures and test tables (75+ cases) are lifted into S9-13, S9-13b and S9-14 (see the Spike 9 plan, slice 4).

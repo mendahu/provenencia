@@ -5,7 +5,7 @@ import SwiftUI
 /// secondary line's content differs per kind, and it arrives with S9-32.
 ///
 /// - **thumbnail:** always reserved; the kind's `subject_*` mark, never a photo.
-/// - **title:** resolved value → *italic* working label → mono ref.
+/// - **title:** auto-reconciled value → *italic* working label → mono ref.
 /// - **meta:** the ref, always shown — even when it is also the title — so the
 ///   column scans.
 /// - No *mixed* marker in rows (S9-D2 decision): a mixed value shows its

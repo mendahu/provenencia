@@ -154,12 +154,7 @@ struct PVSelect<Row: View>: View {
                 default: break
                 }
             }
-            .accessibilityCustomContent(
-                Text(L10n.DesignSystem.selectState),
-                Text(spoken.isExpanded
-                     ? L10n.DesignSystem.selectExpanded
-                     : L10n.DesignSystem.selectCollapsed)
-            )
+            .pvExpandedState(spoken.isExpanded)
             .modifier(PVSelectPositionContent(position: spoken.position))
             .pvContextMenu(
                 $menuState,

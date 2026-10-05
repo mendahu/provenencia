@@ -10,9 +10,9 @@ import (
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/audit"
+	"github.com/mendahu/provenencia/core/database/autoreconciler"
 	"github.com/mendahu/provenencia/core/database/deleteimpact"
 	"github.com/mendahu/provenencia/core/database/project"
-	"github.com/mendahu/provenencia/core/database/resolvedvalues"
 	"github.com/mendahu/provenencia/core/database/searchindex"
 	"github.com/mendahu/provenencia/core/database/subjectpositions"
 	"github.com/mendahu/provenencia/core/ref"
@@ -277,7 +277,7 @@ func Delete(c *database.Catalog, userID, id []byte) error {
 	}
 	// Handles this Subject left (and whose pins it took) are recomputed
 	// without it. Released.Handles was computed before anything was gone.
-	if err := resolvedvalues.RecomputeTx(tx, released.Handles); err != nil {
+	if err := autoreconciler.RecomputeTx(tx, released.Handles); err != nil {
 		return err
 	}
 	fields := map[string]audit.FieldDiff{
