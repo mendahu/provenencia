@@ -324,8 +324,9 @@ SLICE 3 — Join an existing Person
   Check: two records on one Person → one list row; the second card shows the same PER-….
 
 SLICE 4 — Reconciler + Person detail
+  S9-13a Land migrations 000037 / 000038: retire `initial`; add `against` (from the closed #255 / #256)
   S9-13  Reconciler pipeline + text / integer / term modules + reasoning (pure Go, table-driven)
-  S9-13b Name module (parts only, format-agnostic); retire the `initial` part type
+  S9-13b Name module (parts only, format-agnostic)
   S9-14  Evidence + reasoning in the cache: provenance, polarity, Sources; candidates table; credibility / certainty upkeep
   S9-15  Detail composer + detail read + value-state formatting (with reasoning)
   ✎ S9-D5 ──▶ S9-16  Person detail (name with states, values and why)
@@ -385,7 +386,8 @@ CLOSE
 
 - **Slices run in order.** Within a slice, PRs run top to bottom; the Go PRs at the top of a slice can usually go side by side (S9-13b / S9-14; S9-20 / S9-21; S9-36 / S9-25).
 - **Slice 4 is the foundation for the rest.** S9-13 / S9-14 put every value type on the pipeline; slices 5–7 can then swap or run side by side. Slice 9 needs slice 8 (bridges and edges).
-- **Replanned 2026-10-05.** IDs of PRs that keep their purpose stay; new work takes new IDs (S9-13b, S9-36 – S9-40), so handoff notes in [`completed.md`](completed.md) and code comments stay right.
+- **Replanned 2026-10-05.** IDs of PRs that keep their purpose stay; new work takes new IDs (S9-13a, S9-13b, S9-36 – S9-40), so handoff notes in [`completed.md`](completed.md) and code comments stay right.
+- **Migrations 000037 / 000038 are fixed.** They first shipped on the closed PRs #255 / #256, and the researcher's local projects already carry them. S9-13a lands them on `main` byte-for-byte so those projects open again; nothing else may take those numbers, and later changes are new migrations (000039 on), never edits. **Cache versions start at 5** after S9-13a: projects may hold a cache stamped 3 or 4 by the closed PRs, and a new meaning must never reuse a stamp.
 - **The cache is honest from slice 2.** S9-06 ships the rebuild-equals-upkeep test; every later PR that adds a write path or trigger adds to it.
 - **Churn is expected.** A confirm-and-mint Promote button (slice 1), stubbed sidebar items, and empty life-date cells are fine between slices.
 
@@ -407,9 +409,10 @@ CLOSE
 | S9-34a Handle search from cached values | — | S9-06 |
 | S9-11 Promote shell + choose target | **S9-D9** | S9-04, S9-10, S9-34a |
 | S9-12 Claim fields + save | **S9-D10** | S9-11 |
+| S9-13a Land migrations 000037 / 000038 | — | — |
 | S9-13 Reconciler pipeline + simple modules | — | S9-05 |
-| S9-13b Name module | — | S9-13 |
-| S9-14 Evidence + reasoning in the cache | — | S9-06, S9-13 |
+| S9-13b Name module | — | S9-13, S9-13a |
+| S9-14 Evidence + reasoning in the cache | — | S9-06, S9-13, S9-13a |
 | S9-15 Detail composer + read | — | S9-07, S9-14 |
 | S9-16 Person detail | **S9-D5** | S9-13b, S9-15 |
 | S9-17 Compare read + pins + backfill | — | S9-12, S9-13b |
@@ -464,6 +467,7 @@ In order; each brief sits just above the PR it gates.
 - [x] S9-11 — Promote shell + choose target → [`completed.md`](completed.md)
 - [x] ✎ S9-D10 — Design: Promote claim fields → [`completed.md`](completed.md)
 - [x] S9-12 — Promote claim fields + save → [`completed.md`](completed.md)
+- [ ] S9-13a — Land migrations 000037 / 000038
 - [ ] S9-13 — Reconciler pipeline + text / integer / term modules
 - [ ] S9-13b — Name module
 - [ ] S9-14 — Evidence + reasoning in the cache
@@ -692,13 +696,22 @@ Researcher's decision while revising **S9-D1**: two configuration views get plai
 
 ### Slice 4 — Reconciler + Person detail
 
-Design: [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md). Open PRs #255 (S9-13 as first planned: name reconciler) and #256 (S9-14 as first planned: name confidence + polarity) predate this replan; they are reviewed against it separately.
+Design: [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md). PRs #255 (name reconciler) and #256 (name confidence + polarity) were built to the first plan and are **closed**. Their pieces are lifted on purpose: the `initial` retirement and both migrations into S9-13a; provenance, deny and confidence logic and its cases into S9-13; the name logic, `namevaluestest` fixtures and the 55 name cases into S9-13b; the loader query, upkeep hooks, second-Source fixtures and seeded steps into S9-14.
+
+#### S9-13a — Land migrations 000037 / 000038
+
+| | |
+| --- | --- |
+| **In** | Cherry-pick #255's retire-`initial` commit as-is: migration **000037** (`UPDATE name_value_parts SET type = 'given' WHERE type = 'initial';`), `PartTypeInitial` out of the Go registry and the Western name pattern, the Swift enum, L10n key and string-catalog entry, tests and seeded-vocabulary lists. Migration **000038** byte-for-byte from #256 (`ALTER TABLE conclusion_resolved_values ADD COLUMN against INTEGER NOT NULL DEFAULT 0;`); nothing writes it until S9-14. No cache version change (the reconciler hasn't changed). |
+| **Why first** | The researcher's projects already ran both migrations from the closed PRs, so `main` refuses to open them (a newer `user_version`). Landing them unchanged makes those projects open, and the open-time schema check passes because the schema text is identical. |
+| **Testable** | `go test` for core (schema hash, Delete Impact honesty), macOS unit tests; an existing project from the closed-PR builds opens. |
+| **Depends on** | — |
 
 #### S9-13 — Reconciler pipeline + text / integer / term modules
 
 | | |
 | --- | --- |
-| **In** | Pure Go in `core/resolve`. The shared pipeline (design §5): admit → deny → group (same value, fold) → majority in distinct Sources → confidence → merge; per-candidate outcome and reason (design §6); `against`. A module interface (*same value*, *fold*, *merge*, *no evidence*) and the simple modules: **text** (trimmed, case-insensitive; changes S9-05's case-sensitive rule), **integer**, **term** (neutral terms are no evidence). Candidate inputs carry provenance, claim status, polarity and Source id. Cardinality is an input (single only until S9-36). Concluded input kept. Table-driven: the shared passes once, each module's cases separately. |
+| **In** | Pure Go in `core/resolve`. The shared pipeline (design §5): admit → deny → group (same value, fold) → majority in distinct Sources → confidence → merge; per-candidate outcome and reason (design §6); `against`. A module interface (*same value*, *fold*, *merge*, *no evidence*) that also lets a module **split a candidate into comparable units and reassemble survivors** (names run the passes per part type, then rebuild one name; the simple modules use one unit per candidate). Design the split in now so S9-13b doesn't reshape the interface. The simple modules: **text** (trimmed, case-insensitive; changes S9-05's case-sensitive rule), **integer**, **term** (neutral terms are no evidence). Candidate inputs carry provenance, claim status, polarity and Source id. Cardinality is an input (single only until S9-36). Concluded input kept. Table-driven: the shared passes once, each module's cases separately. |
 | **Out** | Name, date and subject modules (S9-13b, S9-21, S9-28); loading evidence from the catalog (S9-14). |
 | **Testable** | Every pass and reason; majority counts Sources not Observations; provisional always eliminated; a stronger negative denies, an equal one only counts against; order independence; non-name results for unchanged inputs match S9-05 except case folding. |
 | **Depends on** | S9-05 |
@@ -707,17 +720,17 @@ Design: [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md). Op
 
 | | |
 | --- | --- |
-| **In** | The name module on the pipeline (design §7.2): structured parts only (`form` never read; no parts = `no_evidence`); format-agnostic, part types as identifiers; per-type groups, subsumption (`[J]` → `[James]`, `[James]` → `[James, Kenneth]`); survivors assembled into one name; single-valued at the structure level. Retire the `initial` part type (migration retypes to `given`; Go registry, Swift enum, strings, seeded vocabulary). Test fixtures that wrote form-only names build parts (`namevaluestest`). |
+| **In** | The name module on the pipeline (design §7.2): structured parts only (`form` never read; no parts = `no_evidence`); format-agnostic, part types as identifiers; split into one unit per part type, subsumption (`[J]` → `[James]`, `[James]` → `[James, Kenneth]`); survivors reassembled into one name; single-valued at the structure level. Test fixtures that wrote form-only names build parts (`namevaluestest`). Cache version ≥ 5. (`initial` is already retired by S9-13a.) |
 | **Testable** | 50+ table cases (the spec), seeded invariants (input order, forms never matter, renaming types renames nothing else). |
-| **Depends on** | S9-13 |
+| **Depends on** | S9-13, S9-13a |
 
 #### S9-14 — Evidence + reasoning in the cache
 
 | | |
 | --- | --- |
-| **In** | Loader reads each candidate's polarity, Source, credibility, certainty, claim confidence and claim status in the existing candidate query (accepted and provisional members; rejected excluded); query count unchanged. Migration: `conclusion_resolved_values.against`; `conclusion_resolved_candidates` (entity, Property, Observation, outcome, reason, value rank) rewritten with the handle. Upkeep on Source credibility and Citation certainty changes (`RecomputeSourceTx`, `RecomputeCitationTx`). Rebuild-equals-upkeep gains credibility, certainty, negative and graded-promote steps across two Sources, asserted right after each provenance edit. Cache version bump. **Swift:** nothing to wire (certainty rides `savedCitation`, credibility `mutatedSourceWorkspace`). |
+| **In** | Loader reads each candidate's polarity, Source, credibility, certainty, claim confidence and claim status in the existing candidate query (accepted and provisional members; rejected excluded); query count unchanged. `against` (column from S9-13a's migration 000038) is written. New migration **000039**: `conclusion_resolved_candidates` (entity, Property, Observation, outcome, reason, value rank) rewritten with the handle. Upkeep on Source credibility and Citation certainty changes (`RecomputeSourceTx`, `RecomputeCitationTx`). Rebuild-equals-upkeep gains credibility, certainty, negative and graded-promote steps across two Sources, asserted right after each provenance edit. Cache version bump (≥ 5). **Swift:** nothing to wire (certainty rides `savedCitation`, credibility `mutatedSourceWorkspace`). |
 | **Testable** | Reasons stored; removing either hook fails the sequences; loader query count constant. |
-| **Depends on** | S9-06, S9-13 |
+| **Depends on** | S9-06, S9-13, S9-13a |
 
 #### S9-15 — Detail composer + detail read
 
