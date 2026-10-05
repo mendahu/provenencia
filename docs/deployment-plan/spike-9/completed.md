@@ -28,6 +28,7 @@ IDs stay stable (`S9-NN`, `S9-DN`). Do not renumber when moving steps here.
 | S9-D10 | Design | Promote claim fields + save |
 | S9-12 | PR | Promote claim fields + save |
 | S9-13 | PR | Name auto-reconciler |
+| S9-14 | PR | Name confidence + polarity |
 
 ## Steps
 
@@ -538,3 +539,35 @@ A Person's names now reconcile into the name a Reconciliation Claim would conclu
 - The confidence pass and provenance rank order (**S9-14**); until then rank is Observation id.
 - Accent folding and nicknames ([`ideas/international-names.md`](../../ideas/international-names.md), [`ideas/name-matching-enhancements.md`](../../ideas/name-matching-enhancements.md)).
 - Name format display styles; the reconciled name's `form` is its parts in order.
+
+### S9-14 — Name confidence + polarity
+
+The name reconciler now weighs where its evidence comes from: a name only a low-trust Source, an uncertain transcription or a low-confidence claim backs drops out when better evidence disagrees, and a stronger negative Observation denies a name outright.
+
+**What shipped**
+
+- **`resolve.Provenance`** on every candidate: Source credibility, transcription certainty, claim confidence, each relative to its default grade (`standard`, `moderate`) by sort order. `Weak()` is any below default; `Stronger()` compares them in that order. `Candidate.Negative` for negative polarity.
+- **Name reconciler passes** (`core/resolve/names.go`):
+  - Rank order is strongest first, then Observation id, so spelling and fold tie-breaks follow the better record.
+  - **Negatives**, before any vote: a negative eliminates the positives with the same parts that it is stronger than. They cast no vote and rank with the eliminated.
+  - **Confidence**, after majority: per type, a surviving value carried only by weak candidates (folded ones count) is eliminated when a value with a non-weak carrier survived.
+- **`Cluster.Against`**: negatives matching a cluster (for names: a member or the reconciled value with its parts; for other types: the same key). Other value types are not reconciled: provenance never reorders them.
+- **Cache:** migration `000038` adds `conclusion_resolved_values.against`. The candidate query reads polarity and provenance in the same query (query count unchanged). `RecomputeSourceTx` / `RecomputeCitationTx`, called by `sourcecredibility.Upsert` on a grade change and `citations.Update` on a certainty change. `CacheVersion = 4`.
+- **Swift:** a comment only. Certainty already rides `savedCitation`; credibility rides `mutatedSourceWorkspace`.
+- **Tests:**
+  - `TestReconcileNamesProvenance`: 20 cases, mutation-checked (removing either pass fails its group).
+  - Seeded invariants with random provenance and negatives.
+  - `TestProvenance`, `TestResolveNonNameProvenance`.
+  - Cache: `TestResolvedNameProvenance` (credibility, certainty, claim confidence, negatives end to end).
+  - Three new scenarios, and the seeded sequences gain credibility, certainty, negative and graded-promote steps on a second Source, checked right after each provenance edit. Removing either new hook fails them.
+
+**Deviations from the plan**
+
+- **Rescoped from resolver-wide ranking.** Provenance is evidence for reconcilers, not a score on every value. Text and integers are not reconciled (support, then id). Terms get a simple reconciler later. Place reconciliation is descoped from slice 4 (Q15).
+- **No credibility mutation split in Swift.** Nothing has shown the over-bust yet.
+
+**What stayed out**
+
+- Term, toponym and date reconcilers (date: **S9-21**).
+- A claim-confidence edit path. Claims are only created; when an edit lands, it recomputes the claim's handle.
+- Showing `against` (**S9-15** / **S9-16**).

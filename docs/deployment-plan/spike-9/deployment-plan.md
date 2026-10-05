@@ -77,22 +77,26 @@ Skills: [`add-catalog-migration`](../../../.cursor/skills/add-catalog-migration/
 | State | When | Display |
 | --- | --- | --- |
 | **Single** | One candidate value | That value |
-| **Resolved / mixed** | Several candidates, no accepted Reconciliation Claim | Names and dates: the **auto-reconciler** output. Everything else: the top-**ranked** value. Either way, a *mixed* indicator when the candidates did not fully agree. |
+| **Resolved / mixed** | Several candidates, no accepted Reconciliation Claim | Names and dates: the **auto-reconciler** output. Everything else: exact clusters, the best supported first. Either way, a *mixed* indicator when the candidates did not fully agree. |
 | **Concluded** | An accepted Reconciliation Claim exists | The claim's value, always. The researcher made the call. |
 
 Reconciliation Claims are out of scope, so **Concluded** never occurs this spike. The resolver still takes an optional concluded value as input, so Reconciliation plugs in later without changing callers.
 
-#### Ranking (provenance)
+#### Provenance (elimination, not a score)
 
-Each candidate carries its provenance from the evidence trail. Rank by, in order:
+**Rescoped in S9-14:** provenance is not a ranking applied to every value. It is evidence the **reconcilers** use to eliminate candidates, and only reconciled types use it. Each candidate carries, from its evidence trail:
 
-1. **Source credibility** of the Citation's root Source (`high_trust` > `standard` > `low_trust`; no assessment = `standard`)
+1. **Source credibility** of the Citation's Source (`high_trust` > `standard` > `low_trust`; no assessment = `standard`)
 2. **Citation transcription certainty** (`transcription_uncertain = 0` beats `1`)
 3. **Identity Claim confidence** of the member the Observation sits on (`high_confidence` > `moderate` > `low_confidence`; none = `moderate`)
-4. **Agreement** — how many candidates support the value (after auto-reconcile clustering)
-5. Stable tiebreak (Observation id)
 
-Negative-polarity Observations are never displayed as values; they count *against* a matching positive candidate's agreement. The ranking is display policy: the cache stores its order, never a score as catalog truth (research-judgment §1.1). The weighting is expected to change as dogfood shows where it misleads — a change is a cache version bump.
+Each is read relative to its default grade by sort order, not by key. A candidate is **weak** when any of the three is below its default. One candidate is **stronger** than another by comparing them in that order.
+
+- **Names** (S9-13, S9-14): candidates arrive strongest first (ties to the better-provenanced value). A weak value drops when a non-weak value disagrees (the confidence pass), and a negative Observation eliminates same-parts positives it is stronger than.
+- **Dates** (S9-21) and **terms** (a later step): reconcilers to come; they will use the same provenance.
+- **Text and integers are not reconciled.** They show exact clusters, ordered by support, then Observation id. Toponyms are text: place reconciliation waits for a place hierarchy (Q15).
+
+**Negative-polarity Observations** are never displayed as values. Every value type counts the negatives that match a cluster in the cache's `against`; only a reconciler lets a negative eliminate anything. All of this is display policy: the cache stores order and counts, never a score as catalog truth (research-judgment §1.1). A change is a cache version bump.
 
 #### Auto-reconcilers (names and dates)
 
@@ -106,10 +110,11 @@ Two pure functions: **n DateValues → one DateValue** and **n NameValues → on
 - **Names** ([`structured-name-model.md`](../../structured-name-model.md) — structured parts only; **S9-13**). The reconciler builds the name a Reconciliation Claim would conclude, and may be bold: the researcher overrides it with a claim.
   - **Parts only.** `form` is a transcription and is never compared. A name with no parts carries nothing to reconcile and drops out.
   - **Format-agnostic.** A part type is only an identifier: parts are compared with parts of the same type, and no type is special (a prefix, a surname and a given name behave alike).
-  - Per type, in passes: **exact** (case, punctuation, and whitespace ignored) → **subsumption** (`[J]` folds into `[James]`, `[James]` into `[James, Kenneth]`) → **majority** (a value with at least two supporters and more than half the support crowds out the rest, so a misspelling in one Source drops out) → **confidence** (S9-14).
+  - First, a negative name eliminates the positives with the same parts that it is stronger than; they cast no vote (S9-14).
+  - Per type, in passes: **exact** (case, punctuation, and whitespace ignored) → **subsumption** (`[J]` folds into `[James]`, `[James]` into `[James, Kenneth]`) → **majority** (a value with at least two supporters and more than half the support crowds out the rest, so a misspelling in one Source drops out) → **confidence** (a value carried only by weak candidates drops when a non-weak value survived; S9-14).
   - Values that can't be eliminated all survive. Survivors that agree form a cluster; one missing a type joins the agreeing cluster with the most members. Eliminated candidates rank after, so the field reads **mixed**.
 - **Subject-valued Properties** (association ends: `person`, `event`, `place`, `related_to`): each candidate subject maps to its accepted handle. Candidates whose subject is unpromoted drop out (Q3). The result is an entity id — an edge of the canonical graph.
-- **Everything else** (`toponym`, `event_type`, `role`, text, terms): no merge. Distinct values ranked.
+- **Everything else** (`toponym`, `event_type`, `role`, text, integers, terms): not reconciled yet. Exact clusters, the best supported first. Terms get a simple reconciler later (fixed choices); toponyms wait for Q15.
 
 The same reconcilers drive the Promote comparison's "compatible pairs start checked" (R7 step 3).
 
@@ -271,7 +276,7 @@ The Conclusion pages read **across** Sources — every earlier place scoped to o
 - **Go composes; Swift renders.** Swift asks for "Persons list" or "Person X" and displays the payload. It never assembles members or walks ([`macos-client-patterns.md`](../../macos-client-patterns.md) *One cache owns each list*).
 - **Query keys:** one list key per kind, one detail key per handle, and the Promote reads (target suggestions, comparison rows for a subject × entity, the neighborhood of a subject). The Promote draft is interaction state, not a cache key.
 - **Swift invalidation: bust all Conclusion keys (Q5).** Any Interpretation or Conclusion write that R3 recomputes marks every cached Conclusion key stale — cheap, because reloading reads R3.
-  - **Triggers:** Observation save / delete, Subject delete, bridge create / delete, Source delete, credibility / certainty changes, and each Promote step. Shipped in S9-07 as one set, `CatalogQueryRegistry.conclusionTriggers` (`savedCitation`, `deletedSubject`, `promotedSubject`, `deletedSource`, `mutatedSourceWorkspace` — the last carries credibility and over-busts on notes / artifacts / metadata). Certainty joins in S9-14.
+  - **Triggers:** Observation save / delete, Subject delete, bridge create / delete, Source delete, credibility / certainty changes, and each Promote step. Shipped in S9-07 as one set, `CatalogQueryRegistry.conclusionTriggers` (`savedCitation`, `deletedSubject`, `promotedSubject`, `deletedSource`, `mutatedSourceWorkspace` — the last carries credibility and over-busts on notes / artifacts / metadata). Certainty rides `savedCitation`, which a Citation save already dispatches (S9-14).
   - **Evict, don't revalidate.** Detail keys are dropped and reload when next visited; the visible page revalidates. A deliberate exception to cache contract rule 2, noted in [`macos-client-patterns.md`](../../macos-client-patterns.md). **Built in S9-15** with the first detail key: the session can't evict or tell which place is visible yet, and list keys (S9-07) follow rule 2 as usual.
   - Narrowing later can reuse R3's affected-handles set; not needed while reloads are cheap.
 - **Measure.** Build the deep fixture (a Person on ~10 Sources; birth, death, marriage events each multi-member, with Locations; a few relationships; scaled to a few hundred handles) and time: rebuild, a single write's upkeep, list composition, detail composition. Record in the [performance ledger](performance-ledger.md).
@@ -334,7 +339,7 @@ SLICE 3 — Join an existing Person
 
 SLICE 4 — Person detail + name resolution
   S9-13  Name auto-reconciler (pure Go, table-driven)
-  S9-14  Provenance ranking + polarity; upkeep on credibility / certainty changes
+  S9-14  Name confidence + polarity; upkeep on credibility / certainty changes
   S9-15  Detail composer + detail read + value-state formatting
   ✎ S9-D5 ──▶ S9-16  Person detail (name with states and clusters)
   Check: J. Robins + James Robins → merged; James / Jim → mixed with alternates;
@@ -405,7 +410,7 @@ CLOSE
 | S9-11 Promote shell + choose target | **S9-D9** | S9-04, S9-10, S9-34a |
 | S9-12 Claim fields + save | **S9-D10** | S9-11 |
 | S9-13 Name auto-reconciler | — | S9-05 |
-| S9-14 Provenance ranking | — | S9-06 |
+| S9-14 Name confidence + polarity | — | S9-06, S9-13 |
 | S9-15 Detail composer + read | — | S9-07 |
 | S9-16 Person detail | **S9-D5** | S9-13, S9-14, S9-15 |
 | S9-17 Compare read + pins + backfill | — | S9-12, S9-13 |
@@ -455,7 +460,7 @@ In order; each brief sits just above the PR it gates.
 - [x] ✎ S9-D10 — Design: Promote claim fields → [`completed.md`](completed.md)
 - [x] S9-12 — Promote claim fields + save → [`completed.md`](completed.md)
 - [x] S9-13 — Name auto-reconciler → [`completed.md`](completed.md)
-- [ ] S9-14 — Provenance ranking + polarity
+- [x] S9-14 — Name confidence + polarity → [`completed.md`](completed.md)
 - [ ] S9-15 — Detail composer + detail read
 - [ ] ✎ S9-D5 — Design: Person detail
 - [ ] S9-16 — Person detail
@@ -540,7 +545,7 @@ In order; each brief sits just above the PR it gates.
 
 #### S9-05 — Resolver core v1
 
-**Done.** See [`completed.md`](completed.md#s9-05--resolver-core-v1). `core/resolve.Resolve(valueType, candidates, concluded)` → `Result{Clusters, Concluded}`; state is `Result.State()`. S9-13 / S9-21 replace the per-type cluster key (`key` in `resolve.go`); S9-14 puts provenance ahead of support in the order.
+**Done.** See [`completed.md`](completed.md#s9-05--resolver-core-v1). `core/resolve.Resolve(valueType, candidates, concluded)` → `Result{Clusters, Concluded}`; state is `Result.State()`. S9-13 / S9-21 replace the per-type cluster key (`key` in `resolve.go`); S9-14 feeds provenance to the name reconciler (rescoped from a resolver-wide ranking).
 
 | | |
 | --- | --- |
@@ -551,7 +556,7 @@ In order; each brief sits just above the PR it gates.
 
 #### S9-06 — Resolved-values cache
 
-**Done.** See [`completed.md`](completed.md#s9-06--resolved-values-cache). Package `core/database/resolvedvalues`: `RecomputeTx` / `RecomputeSubjectsTx` are the upkeep calls a new write path adds (and an operation in `TestRebuildEqualsUpkeep_SeededSequences`, plus a scenario in `TestRebuildEqualsUpkeep_Scenarios` where it has a characteristic sequence); a resolution change bumps `CacheVersion`. Still NULL: `date_lo` / `date_hi` and date `sort_key` (**S9-21**), `value_entity_id` — subject-valued Properties are not cached yet (**S9-28**). The loader reads no provenance until **S9-14**. Dates and names are protobuf via `core/valuecodec`.
+**Done.** See [`completed.md`](completed.md#s9-06--resolved-values-cache). Package `core/database/resolvedvalues`: `RecomputeTx` / `RecomputeSubjectsTx` are the upkeep calls a new write path adds (and an operation in `TestRebuildEqualsUpkeep_SeededSequences`, plus a scenario in `TestRebuildEqualsUpkeep_Scenarios` where it has a characteristic sequence); a resolution change bumps `CacheVersion`. Still NULL: `date_lo` / `date_hi` and date `sort_key` (**S9-21**), `value_entity_id` — subject-valued Properties are not cached yet (**S9-28**). The loader reads provenance and polarity from **S9-14**. Dates and names are protobuf via `core/valuecodec`.
 
 | | |
 | --- | --- |
@@ -675,7 +680,7 @@ Researcher's decision while revising **S9-D1**: two configuration views get plai
 
 #### S9-13 — Name auto-reconciler
 
-**Done.** See [`completed.md`](completed.md#s9-13--name-auto-reconciler). `core/resolve/names.go` reconciles names by part type in passes (exact → subsumption → majority); `form` is never compared and names with no parts drop out. The `initial` part type is retired (an initial is a given name). Cache version 3. S9-14 adds the confidence pass and the provenance rank order the passes read.
+**Done.** See [`completed.md`](completed.md#s9-13--name-auto-reconciler). `core/resolve/names.go` reconciles names by part type in passes (exact → subsumption → majority); `form` is never compared and names with no parts drop out. The `initial` part type is retired (an initial is a given name). Cache version 3. S9-14 added the confidence and negative passes and the provenance rank order the passes read.
 
 | | |
 | --- | --- |
@@ -683,12 +688,15 @@ Researcher's decision while revising **S9-D1**: two configuration views get plai
 | **Depends on** | S9-05 |
 | **Note** | Decided while building it: the reconciler does not use `core/match`'s roles or scores. Types are identifiers only, so a culture's pattern needs no code. Accent differences are not merged: they show as separate clusters and are left to manual reconciliation (see [`ideas/international-names.md`](../../ideas/international-names.md)). |
 
-#### S9-14 — Provenance ranking + polarity
+#### S9-14 — Name confidence + polarity
+
+**Done.** See [`completed.md`](completed.md#s9-14--name-confidence--polarity). **Rescoped** from a resolver-wide provenance ranking to the name reconciler: candidates carry `resolve.Provenance` and polarity; a stronger negative denies same-parts names before voting, and a confidence pass drops values carried only by weak evidence. Text and integers are not reconciled; terms get a reconciler later; place reconciliation is descoped (Q15). Cache column `against`, version 4; credibility and certainty edits recompute.
 
 | | |
 | --- | --- |
-| **In** | Resolver ranking by Source credibility → Citation certainty → member claim confidence → agreement → id; negative polarity excluded and counted against. The name reconciler's **confidence pass** (S9-13): after majority, a value whose candidates are all low credibility, uncertain transcription, or low identity confidence drops out when a better-provenanced value disagrees. Upkeep triggers for credibility, transcription-certainty, and claim-confidence changes; extend the rebuild-equals-upkeep tests. Cache version bump. **Swift:** a certainty mutation joins `conclusionTriggers`; split a dedicated credibility mutation out of `mutatedSourceWorkspace` if its over-bust shows up. |
-| **Depends on** | S9-06 |
+| **In** | Provenance and polarity in the cache loader (one query per batch); the name reconciler's negative and confidence passes; `against` counts for every value type; upkeep on credibility and transcription-certainty changes; rebuild-equals-upkeep extended. Cache version bump. **Swift:** nothing to wire; certainty rides `savedCitation`. |
+| **Out** | Ranking non-name values by provenance; term and toponym reconcilers; a claim-confidence edit path (none exists; Promote sets it and already recomputes). |
+| **Depends on** | S9-06, S9-13 |
 
 #### S9-15 — Detail composer + detail read
 
@@ -920,12 +928,13 @@ Honesty pass against the [goal bar](#goal-dogfood-bar); ledger timings recorded;
 | Q6 | ~~List description line.~~ | **Decided:** row fields per list in R5. |
 | Q7 | ~~Provisional claims in Promote.~~ | **Decided:** Promote writes `accepted` only (optional confidence grade). The UI still ships the Status dropdown with that single option, so the design reserves its place. The `status` column and CHECK ship in R1. A later spike adds a status toggle to Promote along with its supporting work (candidate display, resolver exclusion, graph card state, re-promote rules). |
 | Q8 | ~~Handles in the omnibar.~~ | **Decided — in scope (R8):** refs, full text on resolved values and clusters, hit rows per kind. |
-| Q9 | ~~Event with two dates.~~ | **Decided:** no different from any multi-value Property. R2's three states and provenance ranking apply everywhere. |
+| Q9 | ~~Event with two dates.~~ | **Decided:** no different from any multi-value Property. R2's three states apply everywhere; provenance applies through the date reconciler (S9-21). |
 | Q10 | ~~Event naming matrix.~~ | **Decided (R4):** `subject` = principal(s), marriage is two subjects; *et al.* for several; *{Type} at {toponym}* / *Unspecified {type}* with no subject; *unnamed person*; generic templates for researcher-added types; precedence recorded name → composed → label → type/place → ref. |
 | Q11 | ~~Details vs lists.~~ | **Decided:** a detail page is a superset of its list row. Person adds birth / death place; Event adds place(s) (R6). |
 | Q12 | ~~Serialized value format in R3.~~ | **Decided:** protobuf DateValue / NameValue in `value_date` / `value_name`, plus `date_lo` / `date_hi` ordinals for range queries; never `date_values` / `name_values` rows. Go returns structures; Swift formats text. |
 | Q13 | ~~Event recorded-name Property.~~ | **Decided:** seed `event_name` (`value_type = text`) and bind it to `event` this spike (R1). |
 | Q14 | ~~Label vs composed-from-subjects.~~ | **Decided:** label stays below subject titles; it wins only when there is no subject. Revisit on dogfood. |
+| Q15 | Place / toponym reconciliation. | **Descoped from slice 4 (S9-14).** With no place hierarchy, a Place's toponyms ("Toronto", "Ontario", "Canada") are not alternatives to reconcile. Toponyms show as exact clusters, best supported first, until a hierarchy and a place reconciler are designed. |
 
 ---
 
