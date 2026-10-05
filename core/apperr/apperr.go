@@ -78,6 +78,7 @@ const (
 	CodeIdentityClaimsInvalid         = "identityclaims.invalid"
 	CodeIdentityClaimsAlreadyMember   = "identityclaims.already_member"
 	CodeIdentityClaimsTypeMismatch    = "identityclaims.type_mismatch"
+	CodeConclusionDetailsNotFound     = "conclusiondetails.not_found"
 	CodePromoteInvalid                = "promote.invalid"
 	CodePromoteUnsupportedType        = "promote.unsupported_type"
 	CodeSourceMetadataInvalid         = "sourcemetadata.invalid"
