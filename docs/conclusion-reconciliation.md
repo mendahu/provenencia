@@ -194,7 +194,10 @@ The rebuild-equals-upkeep tests hold upkeep equal to a full rebuild. Every new t
 
 # 11. Open questions
 
-1. **Places.** A Place's toponyms are text, but "Toronto", "Ontario" and "Canada" are not alternatives to reconcile: they are different places at different grains. Place reconciliation needs a place hierarchy (`contained_in`, gazetteer parents; [`conclusion-layer-data-model.md`](conclusion-layer-data-model.md) §13) before a module makes sense. Descoped from Spike 9 slice 4; next to design.
+1. **Places.** Direction decided (§11.1). Still open:
+   - **The link's shape.** A "part of" link carries a type and a period, so it is probably an association handle (like Location) with its own Properties, not a single subject-valued Property.
+   - **Reconciling a Place's names.** Is `toponym` multi-valued (York and Toronto both kept)?
+   - **Which chain to display** when a place has several parents, and whether the display ever uses the periods.
 2. **Claims for multi-valued Properties.** What a Reconciliation Claim concludes when a Property has several true values.
 
 **Decided 2026-10-05:**
@@ -203,6 +206,15 @@ The rebuild-equals-upkeep tests hold upkeep equal to a full rebuild. Every new t
 - **Weak evidence drops in multi-valued Properties too** (§8). A researcher who wants a weak value concluded makes a Reconciliation Claim.
 - **Derivative Sources count as separate votes, for now.** There is no way to record that an index derives from a register, so the app treats them as two Sources. Counting them once waits for source-to-source relationships ([`ideas/source-to-source-relationships.md`](ideas/source-to-source-relationships.md)).
 - **Reason vocabulary:** the §6 list, extended as modules need.
+
+## 11.1 Places (decided 2026-10-05)
+
+- **Separate places with relationships, not one composite place.** "Toronto, Ontario, Canada" is three Places linked upward, so queries like "everyone born in Ontario" work.
+- **A place is whatever the research needs.** A township, a county, a region (the Lower Mainland), a family farm. No rules about what can contain what. An optional **kind** is a label for display and filters, not a constraint.
+- **The relationship is "part of", with a type** from an open vocabulary: administrative (Guam in the United States), geographic (the Lower Mainland in British Columbia), ecclesiastical (a parish in a diocese). A place may have several parents, so places form a graph, not a tree.
+- **Periods.** A Place has a **period** when it existed or was meaningful (a city from incorporation, a country from independence, a farm until it was sold). Each "part of" link has its own period (Toronto in Upper Canada until 1841, in Ontario from 1867). Start and end are both optional structured dates.
+- **Evidence, the hard way, for now.** Every place and every "part of" link is created by hand with a cited Source, even for common knowledge ("Alberta is part of Canada"). Researcher knowledge uses a researcher-knowledge Source with an argument. The model does not change for convenience.
+- **The easy way later.** A Provenencia places service, likely paid, would write the same evidence automatically from gazetteers: [`ideas/place-gazetteer-service.md`](ideas/place-gazetteer-service.md).
 
 **Out of scope for now:** values that change over time (a married name from 1885, an occupation by decade). Cardinality is where they would hook in later.
 
