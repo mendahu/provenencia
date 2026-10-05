@@ -47,7 +47,9 @@ import (
 //	7: one name per Person; values combine per part type; majority only
 //	   outvotes spelling variants in names (S9-13b).
 //	8: name parts compare as words: Smith-Jones = Smith + Jones (S9-13b).
-const CacheVersion = 8
+//	9: evidence loaded (Sources, provenance, negatives, provisional members);
+//	   each Observation's outcome cached (S9-14).
+const CacheVersion = 9
 
 // batchSize bounds the handles per loader batch (and so the IN list length).
 const batchSize = 500
@@ -60,28 +62,47 @@ type Querier interface {
 }
 
 const (
-	sqlDeleteFor = `DELETE FROM auto_reconciler_values WHERE entity_id IN (`
+	sqlDeleteFor         = `DELETE FROM auto_reconciler_values WHERE entity_id IN (`
+	sqlDeleteOutcomesFor = `DELETE FROM auto_reconciler_outcomes WHERE entity_id IN (`
+
+	sqlInsertOutcome = `INSERT INTO auto_reconciler_outcomes
+		(entity_id, property_id, observation_id, reason, value_rank, denied_by)
+		VALUES (?, ?, ?, ?, ?, ?)`
 
 	sqlInsert = `INSERT INTO auto_reconciler_values
 		(entity_id, property_id, rank, value_text, value_integer, value_term_id,
 		 value_date, value_name, sort_key, support, against, reason)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
-	// One row per positive Observation on an accepted member of the batch.
+	// One row per Observation on an accepted or provisional member of the
+	// batch (rejected members don't count), with its evidence: polarity, the
+	// Source it is cited under, and provenance as grade sort_order relative to
+	// the provenencia default grade (standard, moderate); no assessment, no
+	// grade, or no vocabulary reads as 0.
 	sqlLoadCandidates = `SELECT ic.entity_id, o.id, o.property_id, p.value_type,
 			o.value_text, o.value_integer, o.value_date_id, o.value_name_id, o.value_term_id,
-			COALESCE(t.key, '')
+			COALESCE(t.key, ''),
+			ic.status = 'provisional', o.polarity = 'negative', a.source_id,
+			COALESCE(sg.sort_order - (SELECT sort_order FROM source_credibility_grades
+				WHERE key = 'standard' AND origin = 'provenencia'), 0),
+			c.transcription_uncertain,
+			COALESCE(cg.sort_order - (SELECT sort_order FROM claim_confidence_grades
+				WHERE key = 'moderate' AND origin = 'provenencia'), 0)
 		FROM identity_claims ic
 		JOIN observations o ON o.subject_id = ic.subject_id
 		JOIN properties p ON p.id = o.property_id
+		JOIN citations c ON c.id = o.citation_id
+		JOIN artifacts a ON a.id = c.artifact_id
 		LEFT JOIN property_terms t ON t.id = o.value_term_id
-		WHERE ic.status = 'accepted'
-		  AND o.polarity = 'positive'
+		LEFT JOIN source_credibility_assessments sca ON sca.source_id = a.source_id
+		LEFT JOIN source_credibility_grades sg ON sg.id = sca.credibility_grade_id
+		LEFT JOIN claim_confidence_grades cg ON cg.id = ic.confidence_grade_id
+		WHERE ic.status IN ('accepted', 'provisional')
 		  AND p.value_type <> 'subject'
 		  AND ic.entity_id IN (`
 
 	sqlHandlesForSubjects = `SELECT DISTINCT entity_id FROM identity_claims
-		WHERE status = 'accepted' AND subject_id IN (`
+		WHERE status IN ('accepted', 'provisional') AND subject_id IN (`
 
 	sqlAllEntities = `SELECT id FROM canonical_entities ORDER BY id`
 )
@@ -122,6 +143,9 @@ func RecomputeSubjectsTx(q Querier, subjectIDs [][]byte) error {
 // Rebuild clears the table, recomputes every handle, and stores CacheVersion.
 func Rebuild(q Querier) error {
 	if _, err := q.Exec(`DELETE FROM auto_reconciler_values`); err != nil {
+		return err
+	}
+	if _, err := q.Exec(`DELETE FROM auto_reconciler_outcomes`); err != nil {
 		return err
 	}
 	ids, err := listIDs(q, sqlAllEntities)
@@ -175,7 +199,11 @@ func EnsureCatalog(c *database.Catalog) error {
 }
 
 func recomputeBatch(q Querier, ids [][]byte) error {
-	if _, err := q.Exec(sqlDeleteFor+database.SQLInPlaceholders(len(ids))+`)`, database.BlobArgs(ids)...); err != nil {
+	in := database.SQLInPlaceholders(len(ids)) + `)`
+	if _, err := q.Exec(sqlDeleteFor+in, database.BlobArgs(ids)...); err != nil {
+		return err
+	}
+	if _, err := q.Exec(sqlDeleteOutcomesFor+in, database.BlobArgs(ids)...); err != nil {
 		return err
 	}
 	groups, err := load(q, ids)
@@ -189,6 +217,19 @@ func recomputeBatch(q Querier, ids [][]byte) error {
 		}
 		for i, cl := range res.Values {
 			if err := insertRow(q, g, i+1, cl); err != nil {
+				return err
+			}
+		}
+		for _, o := range res.Outcomes {
+			var rank any
+			if o.Value >= 0 {
+				rank = o.Value + 1
+			}
+			var deniedBy any
+			if len(o.DeniedBy) > 0 {
+				deniedBy = o.DeniedBy
+			}
+			if _, err := q.Exec(sqlInsertOutcome, g.entityID, g.propertyID, o.ObservationID, string(o.Reason), rank, deniedBy); err != nil {
 				return err
 			}
 		}
@@ -230,8 +271,13 @@ func load(q Querier, ids [][]byte) ([]*group, error) {
 			integer                     sql.NullInt64
 			dateID, nameID, termID      []byte
 			termKey                     string
+			provisional, negative       bool
+			sourceID                    []byte
+			credibility, confidence     int
+			uncertain                   bool
 		)
-		if err := rows.Scan(&entityID, &obsID, &propertyID, &valueType, &text, &integer, &dateID, &nameID, &termID, &termKey); err != nil {
+		if err := rows.Scan(&entityID, &obsID, &propertyID, &valueType, &text, &integer, &dateID, &nameID, &termID, &termKey,
+			&provisional, &negative, &sourceID, &credibility, &uncertain, &confidence); err != nil {
 			_ = rows.Close()
 			return nil, err
 		}
@@ -246,7 +292,8 @@ func load(q Querier, ids [][]byte) ([]*group, error) {
 			Text: text.String, HasText: text.Valid,
 			Integer: integer.Int64, HasInteger: integer.Valid,
 			TermID: termID, TermKey: termKey,
-		}}
+		}, SourceID: sourceID, Negative: negative, Provisional: provisional,
+			Provenance: autoreconcile.Provenance{Credibility: credibility, Uncertain: uncertain, ClaimConfidence: confidence}}
 		all = append(all, pending{g: g, c: c, dateID: dateID, nameID: nameID})
 		if len(dateID) > 0 {
 			dateIDs = append(dateIDs, dateID)

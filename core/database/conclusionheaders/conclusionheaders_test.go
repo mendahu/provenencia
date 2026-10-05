@@ -148,19 +148,16 @@ func TestListPersons(t *testing.T) {
 	})
 }
 
-// +N counts displayed names only. Names are one structure (S9-13b), so a
-// Person always has one displayed name; an outvoted misspelling keeps its row
-// but isn't counted.
+// +N counts displayed name values only. Names are one structure (S9-13b), so
+// a named Person always counts one, whatever its records disagree on.
 func TestPersonNameCountIsDisplayedOnly(t *testing.T) {
 	f := newFixture(t)
 	f.person("Ann Lee", "Anne Lee")
 	f.person("Thomas Robins", "thomas robins", "Thomas Robbins")
-	counts := map[string]int{}
 	for _, h := range f.list() {
-		counts[h.Name.Form] = h.NameValueCount
-	}
-	if counts["Ann Anne Lee"] != 1 || counts["Thomas Robins"] != 1 {
-		t.Fatalf("counts %v", counts)
+		if h.NameValueCount != 1 {
+			t.Fatalf("%s counts %d", h.Name.Form, h.NameValueCount)
+		}
 	}
 }
 

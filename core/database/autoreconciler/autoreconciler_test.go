@@ -14,13 +14,17 @@ import (
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/autoreconciler"
 	"github.com/mendahu/provenencia/core/database/citations"
+	"github.com/mendahu/provenencia/core/database/claimconfidencegrades"
 	"github.com/mendahu/provenencia/core/database/datevalues"
+	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
 	"github.com/mendahu/provenencia/core/database/searchindex"
+	"github.com/mendahu/provenencia/core/database/sourcecredibility"
+	"github.com/mendahu/provenencia/core/database/sourcecredibilitygrades"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjects"
@@ -40,8 +44,11 @@ const locator = `{"version":1,"selectors":[{"type":"page","artifact_page":1}]}`
 type fixture struct {
 	t        *testing.T
 	c        *database.Catalog
-	source   sources.Source
-	artifact artifacts.Artifact
+	source   sources.Source                // the first Source ("Register")
+	artifact artifacts.Artifact            // its Artifact
+	other    sources.Source                // a second Source ("Census"), for independent evidence
+	typeID   []byte                        // the book Source type, for newSource
+	arts     map[string]artifacts.Artifact // Source id → its Artifact
 	types    map[string]subjecttypes.Type
 	props    map[string]properties.Property
 	terms    map[string]propertyterms.Term
@@ -58,15 +65,15 @@ func newFixture(t *testing.T) *fixture {
 	must(t, err)
 	must(t, users.Upsert(c, userID, "Tester", r))
 	must(t, subjectvocab.Install(c))
+	must(t, sourcecredibilitygrades.Install(c))
+	must(t, claimconfidencegrades.Install(c))
 	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{Key: "book", Origin: sourcetypes.OriginProvenencia, Label: "Book"})
 	must(t, err)
-	src, err := sources.Create(c, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Register"})
-	must(t, err)
-	art, err := artifacts.Create(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
-	must(t, err)
-
-	f := &fixture{t: t, c: c, source: src, artifact: art,
+	f := &fixture{t: t, c: c, typeID: typeID, arts: map[string]artifacts.Artifact{},
 		types: map[string]subjecttypes.Type{}, props: map[string]properties.Property{}, terms: map[string]propertyterms.Term{}}
+	f.source = f.newSource("Register")
+	f.artifact = f.arts[string(f.source.ID)]
+	f.other = f.newSource("Census")
 	for _, k := range []string{"person", "event", "place"} {
 		st, err := subjecttypes.Lookup(c, k, subjecttypes.OriginProvenencia)
 		must(t, err)
@@ -104,18 +111,66 @@ func must(t *testing.T, err error) {
 	}
 }
 
-func (f *fixture) subject(kind string) subjects.Subject {
+// newSource is another Source with one Artifact: independent evidence, a
+// separate vote for the auto-reconciler's majority.
+func (f *fixture) newSource(title string) sources.Source {
 	f.t.Helper()
-	s, err := subjects.Create(f.c, userID, subjects.CreateInput{SourceID: f.source.ID, SubjectTypeID: f.types[kind].ID}, nil)
+	src, err := sources.Create(f.c, userID, sources.CreateInput{SourceTypeID: f.typeID, Title: title})
+	must(f.t, err)
+	art, err := artifacts.Create(f.c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
+	must(f.t, err)
+	f.arts[string(src.ID)] = art
+	return src
+}
+
+func (f *fixture) subject(kind string) subjects.Subject { return f.subjectOn(f.source, kind) }
+
+func (f *fixture) subjectOn(src sources.Source, kind string) subjects.Subject {
+	f.t.Helper()
+	s, err := subjects.Create(f.c, userID, subjects.CreateInput{SourceID: src.ID, SubjectTypeID: f.types[kind].ID}, nil)
 	must(f.t, err)
 	return s
 }
 
+// cite files the Observations on one new Citation, on the Artifact of the
+// first one's Subject's Source.
 func (f *fixture) cite(in ...observations.Input) []observations.Observation {
 	f.t.Helper()
-	res, err := citations.CreateWithObservations(f.c, userID, citations.CreateInput{ArtifactID: f.artifact.ID, LocatorJSON: locator}, in)
+	art := f.artifact
+	if len(in) > 0 {
+		s, err := subjects.Get(f.c, in[0].SubjectID)
+		must(f.t, err)
+		art = f.arts[string(s.SourceID)]
+	}
+	res, err := citations.CreateWithObservations(f.c, userID, citations.CreateInput{ArtifactID: art.ID, LocatorJSON: locator}, in)
 	must(f.t, err)
 	return res.Observations
+}
+
+// credibility assesses a Source with a seeded grade key.
+func (f *fixture) credibility(src sources.Source, key string) error {
+	g, err := sourcecredibilitygrades.Lookup(f.c, key, sourcecredibilitygrades.OriginProvenencia)
+	must(f.t, err)
+	_, err = sourcecredibility.Upsert(f.c, userID, sourcecredibility.UpsertInput{SourceID: src.ID, CredibilityGradeID: g.ID})
+	return err
+}
+
+// certainty sets a Citation's transcription certainty.
+func (f *fixture) certainty(citationID []byte, uncertain bool) error {
+	_, err := citations.Update(f.c, userID, citationID, citations.CitationFieldsInput{LocatorJSON: locator, TranscriptionUncertain: uncertain})
+	return err
+}
+
+// grade is a seeded claim confidence grade's id.
+func (f *fixture) grade(key string) []byte {
+	g, err := claimconfidencegrades.Lookup(f.c, key, claimconfidencegrades.OriginProvenencia)
+	must(f.t, err)
+	return g.ID
+}
+
+func negative(in observations.Input) observations.Input {
+	in.Polarity = observations.PolarityNegative
+	return in
 }
 
 func (f *fixture) promote(s subjects.Subject) []byte {
@@ -220,6 +275,36 @@ func rowsFor(all []row, entityID, propertyID []byte) []row {
 
 // rebuiltSnapshot rebuilds inside a rolled-back transaction, so upkeep state
 // is left as it was.
+// outcome is one auto_reconciler_outcomes row as stored.
+type outcome struct {
+	EntityID, PropertyID, ObservationID []byte
+	Reason                              string
+	ValueRank                           *int
+	DeniedBy                            []byte
+}
+
+func outcomesSnapshot(t *testing.T, q autoreconciler.Querier) []outcome {
+	t.Helper()
+	rows, err := q.Query(`SELECT entity_id, property_id, observation_id, reason, value_rank, denied_by
+		FROM auto_reconciler_outcomes ORDER BY entity_id, property_id, observation_id`)
+	must(t, err)
+	defer rows.Close()
+	var out []outcome
+	for rows.Next() {
+		var o outcome
+		must(t, rows.Scan(&o.EntityID, &o.PropertyID, &o.ObservationID, &o.Reason, &o.ValueRank, &o.DeniedBy))
+		out = append(out, o)
+	}
+	must(t, rows.Err())
+	return out
+}
+
+func (f *fixture) outcomes() []outcome {
+	db, err := f.c.DB()
+	must(f.t, err)
+	return outcomesSnapshot(f.t, db)
+}
+
 func (f *fixture) rebuiltSnapshot() []row {
 	f.t.Helper()
 	db, err := f.c.DB()
@@ -246,8 +331,9 @@ func TestReconciledValues(t *testing.T) {
 
 	names := rowsFor(all, per, f.props["name"].ID)
 	// James, james and Jim reconcile into one name: Jim is a different given
-	// name, not a misspelling, so it isn't outvoted (S9-13b).
-	if len(names) != 1 || names[0].Support != 3 {
+	// name, not a misspelling, so it isn't outvoted (S9-13b). All three are
+	// cited from the Register, so they are one Source's support (S9-14).
+	if len(names) != 1 || names[0].Support != 1 {
 		t.Fatalf("name values %+v", names)
 	}
 	top, err := valuecodec.UnmarshalName(names[0].Name)
@@ -260,7 +346,7 @@ func TestReconciledValues(t *testing.T) {
 		t.Fatalf("sex %+v", sex)
 	}
 	age := rowsFor(all, per, f.props["age"].ID)
-	if len(age) != 1 || *age[0].Integer != 34 || age[0].Support != 2 {
+	if len(age) != 1 || *age[0].Integer != 34 || age[0].Support != 1 { // two Observations, one Source
 		t.Fatalf("age %+v", age)
 	}
 
@@ -270,7 +356,7 @@ func TestReconciledValues(t *testing.T) {
 		})
 		must(t, err)
 		names := rowsFor(f.rows(), per, f.props["name"].ID)
-		if len(names) != 1 || names[0].Support != 3 {
+		if len(names) != 1 || names[0].Support != 1 {
 			t.Fatalf("after update %+v", names)
 		}
 	})
@@ -333,11 +419,13 @@ func TestReconciledValues(t *testing.T) {
 // keeps its row after the displayed one.
 func TestReconciledValuesKeepEveryValue(t *testing.T) {
 	f := newFixture(t)
-	p := f.subject("place")
-	f.cite(textIn(p, f.props["toponym"], "York"))
-	f.cite(textIn(p, f.props["toponym"], "york"))
-	f.cite(textIn(p, f.props["toponym"], "Muddy York"))
-	h := f.promote(p)
+	a, b, c := f.subject("place"), f.subjectOn(f.other, "place"), f.subjectOn(f.newSource("Gazette"), "place")
+	f.cite(textIn(a, f.props["toponym"], "York"))
+	f.cite(textIn(b, f.props["toponym"], "york"))
+	f.cite(textIn(c, f.props["toponym"], "Muddy York"))
+	h := f.promote(a)
+	f.join(b, h)
+	f.join(c, h)
 	rows := rowsFor(f.rows(), h, f.props["toponym"].ID)
 	if len(rows) != 2 || rows[0].Reason != "kept" || rows[0].Support != 2 || *rows[0].Text != "York" ||
 		rows[1].Reason != "outvoted" || *rows[1].Text != "Muddy York" {
@@ -352,8 +440,9 @@ func TestReconciledNames(t *testing.T) {
 	f := newFixture(t)
 
 	t.Run("an initial expands into the full name", func(t *testing.T) {
-		a, b := f.subject("person"), f.subject("person")
-		f.cite(nameIn(a, f.props["name"], "given=J.|surname=Robins"), nameIn(b, f.props["name"], "given=James|surname=Robins|suffix=Jr."))
+		a, b := f.subject("person"), f.subjectOn(f.other, "person")
+		f.cite(nameIn(a, f.props["name"], "given=J.|surname=Robins"))
+		f.cite(nameIn(b, f.props["name"], "given=James|surname=Robins|suffix=Jr."))
 		h := f.promote(a)
 		f.join(b, h)
 		names := rowsFor(f.rows(), h, f.props["name"].ID)
@@ -392,6 +481,172 @@ func TestReconciledNames(t *testing.T) {
 
 // A stale cache rebuilds on open: old versions, and the 3 and 4 stamped by
 // the closed PRs' builds, which must never read as current.
+// The auto-reconciler weighs real evidence (S9-14): each Observation's
+// Source, credibility, certainty, claim confidence and status, and polarity.
+func TestReconciledEvidence(t *testing.T) {
+	texts := func(f *fixture, h []byte) string {
+		var out []string
+		for _, r := range rowsFor(f.rows(), h, f.props["toponym"].ID) {
+			out = append(out, *r.Text+":"+r.Reason)
+		}
+		return strings.Join(out, " ")
+	}
+	reasonOf := func(f *fixture, obsID []byte) outcome {
+		for _, o := range f.outcomes() {
+			if bytes.Equal(o.ObservationID, obsID) {
+				return o
+			}
+		}
+		f.t.Fatalf("no outcome for %x", obsID)
+		return outcome{}
+	}
+
+	t.Run("a low-trust Source's value is weak beside a standard one", func(t *testing.T) {
+		f := newFixture(t)
+		must(t, f.credibility(f.source, "low_trust"))
+		a, b := f.subject("place"), f.subjectOn(f.other, "place")
+		f.cite(textIn(a, f.props["toponym"], "U.C."))
+		f.cite(textIn(b, f.props["toponym"], "Upper Canada"))
+		h := f.promote(a)
+		f.join(b, h)
+		if got := texts(f, h); got != "Upper Canada:kept U.C.:weak" {
+			t.Fatalf("toponyms %s", got)
+		}
+		f.assertUpkeepEqualsRebuild("low trust")
+	})
+
+	t.Run("an uncertain transcription is weak", func(t *testing.T) {
+		f := newFixture(t)
+		a, b := f.subject("place"), f.subjectOn(f.other, "place")
+		res, err := citations.CreateWithObservations(f.c, userID, citations.CreateInput{
+			ArtifactID: f.artifact.ID, LocatorJSON: locator, TranscriptionUncertain: true,
+		}, []observations.Input{textIn(a, f.props["toponym"], "Yorke")})
+		must(t, err)
+		_ = res
+		f.cite(textIn(b, f.props["toponym"], "York"))
+		h := f.promote(a)
+		f.join(b, h)
+		if got := texts(f, h); got != "York:kept Yorke:weak" {
+			t.Fatalf("toponyms %s", got)
+		}
+	})
+
+	t.Run("two Observations from one Source are one vote", func(t *testing.T) {
+		f := newFixture(t)
+		a, b := f.subject("place"), f.subjectOn(f.other, "place")
+		f.cite(textIn(a, f.props["toponym"], "York"))
+		f.cite(textIn(a, f.props["toponym"], "York"))
+		f.cite(textIn(b, f.props["toponym"], "Toronto"))
+		h := f.promote(a)
+		f.join(b, h)
+		rows := rowsFor(f.rows(), h, f.props["toponym"].ID)
+		if len(rows) != 2 || rows[0].Reason != "kept" || rows[1].Reason != "kept" || rows[0].Support != 1 || rows[1].Support != 1 {
+			t.Fatalf("one Source's two records outvoted another Source: %+v", rows)
+		}
+	})
+
+	t.Run("a stronger negative denies a value", func(t *testing.T) {
+		f := newFixture(t)
+		must(t, f.credibility(f.other, "high_trust"))
+		a, b, c := f.subject("place"), f.subjectOn(f.other, "place"), f.subjectOn(f.newSource("Gazette"), "place")
+		york := f.cite(textIn(a, f.props["toponym"], "York"))[0]
+		denial := f.cite(negative(textIn(b, f.props["toponym"], "York")))[0]
+		f.cite(textIn(c, f.props["toponym"], "Toronto"))
+		h := f.promote(a)
+		f.join(b, h)
+		f.join(c, h)
+		if got := texts(f, h); got != "Toronto:kept York:denied" {
+			t.Fatalf("toponyms %s", got)
+		}
+		rows := rowsFor(f.rows(), h, f.props["toponym"].ID)
+		if rows[1].Against != 1 {
+			t.Fatalf("against %+v", rows[1])
+		}
+		if o := reasonOf(f, york.ID); o.Reason != "denied" || !bytes.Equal(o.DeniedBy, denial.ID) || o.ValueRank == nil || *o.ValueRank != 2 {
+			t.Fatalf("York outcome %+v", o)
+		}
+		if o := reasonOf(f, denial.ID); o.Reason != "against" {
+			t.Fatalf("negative outcome %+v", o)
+		}
+		f.assertUpkeepEqualsRebuild("denied")
+	})
+
+	t.Run("a low-confidence claim's different given name is weak", func(t *testing.T) {
+		f := newFixture(t)
+		a, b := f.subject("person"), f.subjectOn(f.other, "person")
+		f.cite(nameIn(a, f.props["name"], "given=Jake|surname=Robins"))
+		f.cite(nameIn(b, f.props["name"], "given=James|surname=Robins"))
+		res, err := promote.Save(f.c, userID, promote.Input{SubjectID: a.ID, ConfidenceGradeID: f.grade("low_confidence")})
+		must(t, err)
+		f.join(b, res.Entity.ID)
+		names := rowsFor(f.rows(), res.Entity.ID, f.props["name"].ID)
+		if len(names) != 2 || names[0].Reason != "kept" || names[1].Reason != "weak" {
+			t.Fatalf("names %+v", names)
+		}
+		if n, err := valuecodec.UnmarshalName(names[0].Name); err != nil || n.Form != "James Robins" {
+			t.Fatalf("displayed %+v %v", n, err)
+		}
+	})
+
+	t.Run("a misspelt surname from one Source in three is outvoted", func(t *testing.T) {
+		f := newFixture(t)
+		a, b, c := f.subject("person"), f.subjectOn(f.other, "person"), f.subjectOn(f.newSource("Bible"), "person")
+		f.cite(nameIn(a, f.props["name"], "given=James|surname=Robins"))
+		f.cite(nameIn(b, f.props["name"], "given=James|surname=Robins"))
+		f.cite(nameIn(c, f.props["name"], "given=James|surname=Robbins"))
+		h := f.promote(a)
+		f.join(b, h)
+		f.join(c, h)
+		names := rowsFor(f.rows(), h, f.props["name"].ID)
+		if len(names) != 2 || names[0].Support != 2 || names[1].Reason != "outvoted" {
+			t.Fatalf("names %+v", names)
+		}
+	})
+
+	t.Run("provisional members count only as reasoning; rejected ones not at all", func(t *testing.T) {
+		f := newFixture(t)
+		a, b, c := f.subject("place"), f.subjectOn(f.other, "place"), f.subjectOn(f.newSource("Gazette"), "place")
+		f.cite(textIn(a, f.props["toponym"], "York"))
+		pv := f.cite(textIn(b, f.props["toponym"], "Toronto"))[0]
+		rj := f.cite(textIn(c, f.props["toponym"], "Muddy York"))[0]
+		h := f.promote(a)
+		for subj, status := range map[*subjects.Subject]string{&b: "provisional", &c: "rejected"} {
+			_, err := identityclaims.Create(f.c, userID, identityclaims.CreateInput{SubjectID: subj.ID, EntityID: h, Status: status})
+			must(t, err)
+		}
+		db, err := f.c.DB()
+		must(t, err)
+		must(t, autoreconciler.RecomputeTx(db, [][]byte{h}))
+		if got := texts(f, h); got != "York:kept Toronto:provisional" {
+			t.Fatalf("toponyms %s", got)
+		}
+		if o := reasonOf(f, pv.ID); o.Reason != "provisional" {
+			t.Fatalf("provisional outcome %+v", o)
+		}
+		for _, o := range f.outcomes() {
+			if bytes.Equal(o.ObservationID, rj.ID) {
+				t.Fatalf("a rejected member's Observation was considered: %+v", o)
+			}
+		}
+		f.assertUpkeepEqualsRebuild("provisional")
+	})
+
+	t.Run("every Observation has an outcome; no evidence has no value", func(t *testing.T) {
+		f := newFixture(t)
+		p := f.subject("person")
+		named := f.cite(nameIn(p, f.props["name"], "given=James|surname=Robins"))[0]
+		bare := f.cite(nameIn(p, f.props["name"], "form:James Robins"))[0]
+		h := f.promote(p)
+		if o := reasonOf(f, named.ID); o.Reason != "kept" || o.ValueRank == nil || *o.ValueRank != 1 {
+			t.Fatalf("named outcome %+v", o)
+		}
+		if o := reasonOf(f, bare.ID); o.Reason != "no_evidence" || o.ValueRank != nil {
+			t.Fatalf("parts-less outcome %+v", o)
+		}
+		_ = h
+	})
+}
+
 func TestEnsureCatalogRebuildsStaleVersion(t *testing.T) {
 	for _, stale := range []int{0, 2, 3, 4, 5, 6, 7} {
 		t.Run(fmt.Sprint("version ", stale), func(t *testing.T) {
@@ -453,6 +708,20 @@ func (f *fixture) assertUpkeepEqualsRebuild(at string) {
 	f.t.Helper()
 	if got, want := f.rows(), f.rebuiltSnapshot(); !reflect.DeepEqual(got, want) {
 		f.t.Fatalf("%s: upkeep has %d rows, rebuild %d", at, len(got), len(want))
+	}
+	// The outcomes (the auto-reconciler's reasoning) must match a rebuild too.
+	{
+		db, err := f.c.DB()
+		must(f.t, err)
+		got := outcomesSnapshot(f.t, db)
+		tx, err := db.Begin()
+		must(f.t, err)
+		must(f.t, autoreconciler.Rebuild(tx))
+		want := outcomesSnapshot(f.t, tx)
+		_ = tx.Rollback()
+		if !reflect.DeepEqual(got, want) {
+			f.t.Fatalf("%s: upkeep has %d outcomes, rebuild %d", at, len(got), len(want))
+		}
 	}
 	// The handle search documents ride on the same upkeep (RecomputeTx), so
 	// they must equal a full search rebuild too.
@@ -530,13 +799,15 @@ func TestRebuildEqualsUpkeep_Scenarios(t *testing.T) {
 			f.cite(textIn(a, f.props["toponym"], "york"), textIn(b, f.props["toponym"], "Toronto"))
 			f.promote(b)
 			f.assertUpkeepEqualsRebuild("two handles")
-			if rows := rowsFor(f.rows(), h, f.props["toponym"].ID); len(rows) != 1 || rows[0].Support != 2 {
-				f.t.Fatalf("York / york should be one value from two Observations: %+v", rows)
+			// Both from the Register: one value, one Source's support.
+			if rows := rowsFor(f.rows(), h, f.props["toponym"].ID); len(rows) != 1 || rows[0].Support != 1 {
+				f.t.Fatalf("York / york should be one value: %+v", rows)
 			}
 		}},
 		{"joining a second member merges its name, then adds a given name", func(f *fixture) {
-			a, b := f.subject("person"), f.subject("person")
-			f.cite(nameIn(a, f.props["name"], "given=James|surname=Robins"), nameIn(b, f.props["name"], "given=james|surname=robins"))
+			a, b := f.subject("person"), f.subjectOn(f.other, "person")
+			f.cite(nameIn(a, f.props["name"], "given=James|surname=Robins"))
+			f.cite(nameIn(b, f.props["name"], "given=james|surname=robins"))
 			h := f.promote(a)
 			f.join(b, h)
 			f.assertUpkeepEqualsRebuild("after join")
