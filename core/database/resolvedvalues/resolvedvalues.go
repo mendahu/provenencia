@@ -44,7 +44,8 @@ import (
 //	6: names reconcile by part type; names with no parts are no evidence (S9-13b).
 //	7: one name per Person; values combine per part type; majority only
 //	   outvotes spelling variants in names (S9-13b).
-const CacheVersion = 7
+//	8: name parts compare as words: Smith-Jones = Smith + Jones (S9-13b).
+const CacheVersion = 8
 
 // batchSize bounds the handles per loader batch (and so the IN list length).
 const batchSize = 500

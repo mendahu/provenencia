@@ -18,8 +18,11 @@ import (
 //   - Format-agnostic. A part type is only an identifier: a name splits into
 //     one unit per part type, and units are compared only with units of the
 //     same type. No type behaves differently from another.
-//   - A unit is the type's parts in idx order, each part one normalized unit
-//     (case, punctuation and whitespace ignored; accents are not folded).
+//   - A unit is the type's words in idx order: each part normalized (case,
+//     punctuation and whitespace ignored; accents are not folded) and split
+//     into words, so a hyphen or a space inside a part is the same as two
+//     parts. Smith-Jones = "Smith Jones" = Smith + Jones. Words are compared;
+//     the recorded parts are what's displayed.
 //   - Fold (subsumption): a unit folds into a fuller one when its parts map,
 //     in order, onto a subsequence of the fuller one's, each equal or an
 //     initial of it. [J] → [James], [James] → [James, Kenneth].
@@ -44,8 +47,9 @@ type nameModule struct{}
 
 // nameUnit is one part type's parts of one name.
 type nameUnit struct {
-	parts []string          // normalized, in idx order
-	raw   []namevalues.Part // the same parts as recorded
+	parts []string          // normalized words, in idx order
+	raw   []namevalues.Part // the parts as recorded
+	words [][]string        // each raw part's normalized words
 }
 
 // readName is a name's non-empty parts by type, and the types in the order
@@ -55,8 +59,8 @@ func readName(n *namevalues.Value) (byType map[string]nameUnit, order []string) 
 	parts := append([]namevalues.Part(nil), n.Parts...)
 	sort.SliceStable(parts, func(i, j int) bool { return parts[i].Idx < parts[j].Idx })
 	for _, p := range parts {
-		v := NormalizeForm(p.Value)
-		if v == "" {
+		words := strings.Fields(NormalizeForm(p.Value))
+		if len(words) == 0 {
 			continue
 		}
 		typ := strings.TrimSpace(p.Type)
@@ -64,8 +68,9 @@ func readName(n *namevalues.Value) (byType map[string]nameUnit, order []string) 
 		if !seen {
 			order = append(order, typ)
 		}
-		u.parts = append(u.parts, v)
+		u.parts = append(u.parts, words...)
 		u.raw = append(u.raw, p)
+		u.words = append(u.words, words)
 		byType[typ] = u
 	}
 	return byType, order
@@ -118,7 +123,7 @@ func partFits(short, long string) bool {
 }
 
 // outvotes: only a spelling variant of the winner — the same number of
-// parts, each equal or a spelling variant (SpellingSimilarity).
+// words, each equal or a spelling variant (SpellingSimilarity).
 func (nameModule) outvotes(_ string, winner, other unit) bool {
 	w, o := winner.data.(nameUnit).parts, other.data.(nameUnit).parts
 	if len(w) != len(o) {
@@ -133,6 +138,15 @@ func (nameModule) outvotes(_ string, winner, other unit) bool {
 }
 
 func (nameModule) oneValue() bool { return true }
+
+func containsAll(have, words []string) bool {
+	for _, w := range words {
+		if !slices.Contains(have, w) {
+			return false
+		}
+	}
+	return true
+}
 
 func (nameModule) assemble(members []Candidate, settled map[string][]unit) Value {
 	orders := make([][]string, len(members))
@@ -160,19 +174,19 @@ func (nameModule) assemble(members []Candidate, settled map[string][]unit) Value
 		}
 	}
 
-	// Each type's parts: every value it settled on, in order, each distinct
-	// part once (given [James, Kevin] + [James, Kenneth] → [James, Kevin,
-	// Kenneth]).
+	// Each type's parts: every value it settled on, in order, skipping a
+	// recorded part whose words are all present already (given [James,
+	// Kevin] + [James, Kenneth] → James, Kevin, Kenneth).
 	parts := map[string][]string{}
 	raw := map[string][]namevalues.Part{}
 	for _, typ := range order {
 		for _, u := range settled[typ] {
 			nu := u.data.(nameUnit)
-			for i, p := range nu.parts {
-				if slices.Contains(parts[typ], p) {
+			for i, words := range nu.words {
+				if containsAll(parts[typ], words) {
 					continue
 				}
-				parts[typ] = append(parts[typ], p)
+				parts[typ] = append(parts[typ], words...)
 				raw[typ] = append(raw[typ], nu.raw[i])
 			}
 		}

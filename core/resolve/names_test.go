@@ -74,9 +74,9 @@ func TestReconcileNames(t *testing.T) {
 		{"exact", "a hyphenated part is one unit",
 			[]Candidate{nm(1, "given=Ann|surname=Smith-Jones"), nm(2, "given=Ann|surname=Smith Jones")},
 			[]cl{{[]byte{1, 2}, "given=Ann|surname=Smith-Jones"}}, StateMerged, "kept"},
-		{"exact", "one hyphenated part is not two parts",
+		{"exact", "one hyphenated part equals two parts (words are compared)",
 			[]Candidate{nm(1, "given=Ann|surname=Smith-Jones"), nm(2, "given=Ann|surname=Smith|surname=Jones")},
-			[]cl{{[]byte{1, 2}, "given=Ann|surname=Smith-Jones|surname=Smith|surname=Jones"}}, StateMerged, "kept"},
+			[]cl{{[]byte{1, 2}, "given=Ann|surname=Smith-Jones"}}, StateMerged, "kept"},
 		{"exact", "parts of one type compare in idx order, wherever they sit",
 			[]Candidate{nm(1, "given=James|surname=Robins|given=Kenneth"), nm(2, "given=James|given=Kenneth|surname=Robins")},
 			[]cl{{[]byte{1, 2}, "given=James|surname=Robins|given=Kenneth"}}, StateMerged, "kept"},
@@ -600,6 +600,58 @@ func TestReconcileNamesCombine(t *testing.T) {
 		{"weak evidence for a different name still drops",
 			[]Candidate{lowTrust(nm(1, "given=Jake|surname=Robins")), nm(2, "given=James|surname=Robins")},
 			[]cl{{[]byte{2}, "given=James|surname=Robins"}, {[]byte{1}, "given=Jake|surname=Robins"}}, StateSingle, "kept weak"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := Resolve(properties.ValueTypeName, tc.in, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var have []cl
+			for i, c := range got.Clusters {
+				have = append(have, cl{shape(got)[i], spec(c.Value.Name)})
+			}
+			if !reflect.DeepEqual(have, tc.want) {
+				t.Fatalf("got  %v\nwant %v", have, tc.want)
+			}
+			if got.State() != tc.state {
+				t.Fatalf("state %q, want %q", got.State(), tc.state)
+			}
+			if r := reasonsOf(got); r != tc.reasons {
+				t.Fatalf("reasons %q, want %q", r, tc.reasons)
+			}
+		})
+	}
+}
+
+// Parts compare as words: a hyphen or a space inside a part is the same as
+// separate parts. The recorded parts are what's displayed.
+func TestReconcileNamesWords(t *testing.T) {
+	cases := []struct {
+		name    string
+		in      []Candidate
+		want    []cl
+		state   State
+		reasons string
+	}{
+		{"hyphenated, spaced and separate given names are one value",
+			[]Candidate{nm(1, "given=Mary-Ann|surname=Lee"), nm(2, "given=Mary Ann|surname=Lee"), nm(3, "given=Mary|given=Ann|surname=Lee")},
+			[]cl{{[]byte{1, 2, 3}, "given=Mary-Ann|surname=Lee"}}, StateMerged, "kept"},
+		{"the best-ranked record's spelling is displayed",
+			[]Candidate{nm(1, "given=Mary|given=Ann|surname=Lee"), nm(2, "given=Mary-Ann|surname=Lee")},
+			[]cl{{[]byte{1, 2}, "given=Mary|given=Ann|surname=Lee"}}, StateMerged, "kept"},
+		{"a maiden and a hyphenated married surname fold into one",
+			[]Candidate{nm(1, "given=Mary|surname=Smith"), nm(2, "given=Mary|surname=Smith-Jones"), nm(3, "given=Mary|surname=Jones")},
+			[]cl{{[]byte{1, 2, 3}, "given=Mary|surname=Smith-Jones"}}, StateMerged, "kept"},
+		{"the same words in another order add nothing new to show",
+			[]Candidate{nm(1, "given=Mary|surname=Jones-Smith"), nm(2, "given=Mary|surname=Smith-Jones")},
+			[]cl{{[]byte{1, 2}, "given=Mary|surname=Jones-Smith"}}, StateMerged, "kept"},
+		{"a misspelt word in a hyphenated surname is outvoted",
+			[]Candidate{nm(1, "given=Mary|surname=Smith-Jones"), nm(2, "given=Mary|surname=Smith-Jones"), nm(3, "given=Mary|surname=Smyth-Jones")},
+			[]cl{{[]byte{1, 2}, "given=Mary|surname=Smith-Jones"}, {[]byte{3}, "given=Mary|surname=Smyth-Jones"}}, StateMerged, "kept outvoted"},
+		{"a different second surname stays",
+			[]Candidate{nm(1, "given=Mary|surname=Smith-Jones"), nm(2, "given=Mary|surname=Smith-Jones"), nm(3, "given=Mary|surname=Smith-Brown")},
+			[]cl{{[]byte{1, 2, 3}, "given=Mary|surname=Smith-Jones|surname=Smith-Brown"}}, StateMerged, "kept"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

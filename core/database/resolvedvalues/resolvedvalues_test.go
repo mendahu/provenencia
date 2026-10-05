@@ -394,7 +394,7 @@ func TestResolvedNames(t *testing.T) {
 // A stale cache rebuilds on open: old versions, and the 3 and 4 stamped by
 // the closed PRs' builds, which must never read as current.
 func TestEnsureCatalogRebuildsStaleVersion(t *testing.T) {
-	for _, stale := range []int{0, 2, 3, 4, 5, 6} {
+	for _, stale := range []int{0, 2, 3, 4, 5, 6, 7} {
 		t.Run(fmt.Sprint("version ", stale), func(t *testing.T) {
 			f := newFixture(t)
 			p := f.subject("person")
