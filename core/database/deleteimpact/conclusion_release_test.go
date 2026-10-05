@@ -31,8 +31,8 @@ type conclusionFixture struct {
 }
 
 // newConclusionFixture: Subjects A and B on one Place, each with a toponym
-// Observation, and a confirmed comparison with backfill — both Observations
-// pinned on both claims.
+// Observation, and a confirmed comparison filed through Promote — both
+// Observations pinned on both claims.
 func newConclusionFixture(t *testing.T) conclusionFixture {
 	t.Helper()
 	c, userID := testCatalog(t)
@@ -87,27 +87,15 @@ func newConclusionFixture(t *testing.T) conclusionFixture {
 	if err != nil {
 		t.Fatal(err)
 	}
-	joined, err := identityclaims.Create(c, userID, identityclaims.CreateInput{
-		SubjectID: b.ID, EntityID: grounding.Entity.ID, Status: identityclaims.StatusAccepted,
-	})
+	// A confirmed comparison: B joins with its toponym paired against A's, so
+	// Promote pins both Observations on both claims (backfill).
+	joined, err := promote.Save(c, userID, promote.Input{SubjectID: b.ID, EntityID: grounding.Entity.ID,
+		Pairs: []promote.Pair{{IncomingObservationID: obsB, MemberObservationID: obsA}}})
 	if err != nil {
 		t.Fatal(err)
 	}
-	ca, cb := grounding.Claim.ID, joined.ID
+	ca, cb := grounding.Claim.ID, joined.Claim.ID
 
-	// A confirmed comparison with backfill: both Observations pinned on both claims.
-	db, err := c.DB()
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, claimID := range [][]byte{ca, cb} {
-		for _, obsID := range [][]byte{obsA, obsB} {
-			if _, err := db.Exec(`INSERT INTO identity_claim_evidence (identity_claim_id, observation_id) VALUES (?, ?)`,
-				claimID, obsID); err != nil {
-				t.Fatal(err)
-			}
-		}
-	}
 	return conclusionFixture{c: c, userID: userID, a: a, b: b, obsA: obsA, obsB: obsB,
 		entityID: grounding.Entity.ID, ca: ca, cb: cb}
 }
