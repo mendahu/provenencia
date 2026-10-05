@@ -62,6 +62,7 @@ handles; they do not own fetch-on-appear lifecycle.
 | --- | --- |
 | **Patch** (`setQueryValue`, `.updatedSource`) | Overlay after a write that returned enough data. Always pair with `apply` so the registry still refetches. |
 | **Invalidate + revalidate** (`session.apply`) | Default after a catalog write. `apply` marks keys stale and reloads any that are already warmed. Features do **not** `session.query` after `apply`. |
+| **Mark stale** (`markStaleOn`) | A write moves a value the current screen does not show, and refetching on every write is too costly (Sources list "Updated" order after a canvas write). `apply` flags the warmed key without a refetch; the next `query` / place visit reloads it, showing the cached frame meanwhile. |
 | **Stale-while-revalidate** | Navigation reads — Back, sidebar return; show cached frame, `isFetching` while reloading. Not the only refresh path after a write. |
 
 Do **not** call `session.query()` from view `body` or from model computed properties
@@ -97,7 +98,7 @@ Extend [`PlaceRegistryTests`](../../../macos/ProvenenciaTests/PlaceRegistryTests
 In `Session/`:
 
 - Add `CatalogQueryKey` case (project-scoped payload as needed).
-- Register in [`CatalogQueryRegistry`](../../../macos/App/Features/Workspace/Session/CatalogQueryRegistry.swift): loader calling `GenealogyStore`, `invalidateOn` mutation tags.
+- Register in [`CatalogQueryRegistry`](../../../macos/App/Features/Workspace/Session/CatalogQueryRegistry.swift): loader calling `GenealogyStore`, `invalidateOn` mutation tags, and `markStaleOn` for writes that should only reload it on the next visit. A kind belongs in one set or the other per mutation.
 - Wire `WorkspaceSession.warmQuery` switch arm if the key kind is new.
 
 **One cache owns each list — do not fold a shared list into a page payload.**
@@ -113,7 +114,7 @@ like `usedBy` / `suggestedFieldCount` move when a different table is written. If
 mutation names no single owner for an id-bearing key, `Kind.invalidation` returns
 `.allCached(kind)` and every cached key of that kind is busted.
 
-Add [`CatalogQueryRegistryTests`](../../../macos/ProvenenciaTests/CatalogQueryRegistryTests.swift) coverage for load + invalidation.
+Add [`CatalogQueryRegistryTests`](../../../macos/ProvenenciaTests/CatalogQueryRegistryTests.swift) coverage for load + invalidation (`registry.invalidations`) and mark-stale (`registry.staleMarks`).
 
 ### 4. Presentation + host
 
@@ -167,6 +168,7 @@ sync apply from history after list is ready; `fallbackToSectionRoot()` if deep i
 - Source type moved: `context.applySource(updated, typeChanged: true)` — patches the row, then refetches the page because the engine derives suggested rows from the type.
 - Metadata values: `context.notifyMetadataMutated()` (also busts the field list's `usedBy`).
 - Other page edits: `context.notifyWorkspaceMutated()` → bust `sourceWorkspace` key.
+- Any write under a Source moves its `updatedRevision` (engine audit scopes). `mutatedSourceWorkspace`, `mutatedSourceMetadata`, `mutatedSourceGraph`, `deletedSubject` and `savedCitation` **mark** `sourcesList` stale — do not add them to its `invalidateOn` (no list refetch per canvas write). A new Source child mutation joins that `markStaleOn` set.
 - Vocabulary CRUD: registry `invalidateOn` + list patch where cheap. A patch is an
   optimization on top of invalidation, never a substitute for it.
 

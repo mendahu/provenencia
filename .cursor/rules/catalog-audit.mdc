@@ -1,0 +1,15 @@
+---
+description: Audited catalog writes must resolve to audit scopes (audit_transaction_scopes)
+globs: core/database/**/*.go,core/ingest/**/*.go
+alwaysApply: false
+---
+
+# Catalog audit scopes
+
+Follow the project skill `.cursor/skills/add-audit-scope/SKILL.md` and `docs/audit-revision-history.md` § 4.1.
+
+- Research writes call `audit.Record` inside their own tx. `Record` derives scopes; callers never pass them.
+- A new `EntityType` (or `rowFacet` entity type) needs a resolver in `core/database/audit/scopes.go` — `directSource`, a parent chain, or a deliberate `noScope`. `Record` rejects a missing one; `TestResolversCoverEveryEntityType` fails CI.
+- Delete changes carry the parent FK (`source_id`, `artifact_id`, `citation_id`, …) in `DeletedRow`; the row is gone by `Record` time.
+- "Last activity under X" (Sources list "Updated", `updated_revision`) reads `audit_transaction_scopes`, never an `audit_changes` join on `entity_type`.
+- Conclusion-layer work (claims, pins, canonical entities, promote) carries no Source scope.

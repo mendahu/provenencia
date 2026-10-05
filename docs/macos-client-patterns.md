@@ -84,6 +84,7 @@ Destination view  →  reads QueryHandle(s)  →  patches / invalidates on mutat
 
 1. The registry is the only loader. Features do not rebuild a `CatalogQueryKey` payload from `GenealogyStore`.
 2. `session.apply(mutation)` patches if the mutation says so, then invalidates and **revalidates every already-warmed key**. Features never `session.query` after `apply`.
+   A registry `markStaleOn` tag instead only flags a warmed key: no refetch now, the next `query` reloads it. `sourcesList` uses it for writes under a Source, which move that Source's `updatedRevision` (audit scopes) without a list refetch on every canvas write.
 3. `readyValue` waits out in-flight work, then returns `nil` if the key is still stale.
 4. `setQueryValue` is an overlay (optimistic drag, list-row patch the write returned). It is not a substitute for `apply`.
 5. Views observe handles. Models keep form/interaction state only. Evidence graph cards are a **pure join** of `sourceGraph` (`SourceGraphRows`) and `propertiesWorkspace` types — that join is not a third cache key.
