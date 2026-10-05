@@ -559,7 +559,7 @@ Every value type now goes through one reconciler pipeline ([`conclusion-reconcil
   - `CacheVersion = 5`.
 - **Readers:** the Persons header's *+N* counts displayed names only. Search and matching read every value, so an outvoted name still finds its Person.
 - **Tests:**
-  - `TestPipeline`, 24 cases, mutation-checked: removing majority, confidence, deny, provisional or Source counting fails its group;
+  - `TestPipeline`, 22 cases, mutation-checked: removing majority, confidence, deny, provisional or Source counting fails its group;
   - `TestPipelineOutcomes`, `TestPipelineConcluded`;
   - seeded invariants (input order, outcomes, negatives never members);
   - `TestModules`, `TestProvenance`;
