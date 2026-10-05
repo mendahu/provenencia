@@ -128,7 +128,7 @@ Not yet handled:
 - **Accents, scripts, non-Western structures, nicknames:** see [`ideas/international-names.md`](ideas/international-names.md).
 - **Abbreviations (Jas., Wm.), name frequency, spaced particles ("O Brien"), sound-alikes, name changes:** see [`ideas/name-matching-enhancements.md`](ideas/name-matching-enhancements.md), with the engine-level items (support weighting, derived features, researcher decisions).
 
-**Where `form` still rules.** Resolver clustering and the cache name `sort_key` (so list order) key on normalized `form` until **S9-13**. List and card text shows `form` until the name-format work. Both are tracked there; matching does not depend on them.
+**Resolution is separate.** The resolver reconciles a handle's names by structured parts only (**S9-13**, `core/resolve/names.go`): no roles, no scores, and names with no parts drop out. Matching still reads `form` when a name has no parts. The cache name `sort_key` (so list order) is the normalized form of the reconciled name, and list and card text shows it, until the name-format work.
 
 `match.ComparerFor(valueType)` gives the default comparer for any Property, so a profile can also weigh researcher-defined Properties.
 

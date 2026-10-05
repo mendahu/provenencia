@@ -27,6 +27,7 @@ IDs stay stable (`S9-NN`, `S9-DN`). Do not renumber when moving steps here.
 | S9-11 | PR | Promote shell + choose target |
 | S9-D10 | Design | Promote claim fields + save |
 | S9-12 | PR | Promote claim fields + save |
+| S9-13 | PR | Name auto-reconciler |
 
 ## Steps
 
@@ -509,3 +510,31 @@ Next on the target step now opens Claim fields, and **Save & next** writes the I
 
 - Provisional and Rejected statuses (a `ClaimStatus` case each, plus engine support).
 - Compare (**S9-19**), pins (**S9-17**), the walk (**S9-30**).
+
+### S9-13 — Name auto-reconciler
+
+A Person's names now reconcile into the name a Reconciliation Claim would conclude: *J. Robins* and *James Robins* are one *James Robins*, and a misspelling in one Source drops out. It is display policy in the cache; a researcher's claim overrides it later.
+
+**What shipped**
+
+- **`core/resolve/names.go`**, called by `Resolve` for `name` values:
+  - **Parts only.** `form` is a transcription and is never compared. A name with no parts carries nothing to reconcile and drops out, like a low-confidence source.
+  - **Format-agnostic.** A part type is only an identifier. Parts are compared with parts of the same type, and no type is special: *Rev.* vs *Dr.* behaves exactly like *James* vs *Mary*.
+  - **Passes, per type:** exact (normalized) → subsumption (a value folds into a fuller one it fits in order, each part equal or an initial: `[J]` → `[James]`, `[James]` → `[James, Kenneth]`) → majority (`MinMajoritySupport` 2 and more than half the support crowds out the rest).
+  - **Survivors are displayed, not picked.** A candidate survives when all its values survived. Survivors that agree on every shared type form a cluster; one missing a type joins the agreeing cluster with the most members. The cluster's name is assembled from each type's fullest value, or is a member's own value when one carries exactly those parts. Eliminated candidates rank after the survivors, so the field reads mixed.
+  - The concluded input matches a cluster by parts.
+- **`initial` part type retired** (migration `000037` retypes existing parts as `given`; Go registry, Swift enum, string catalog, seeded vocabulary). The reconciler only compares same-type parts, and "J." must meet "James".
+- `resolve.IsInitial` (moved from `core/match`). `resolvedvalues.CacheVersion = 3`.
+- `core/database/namevalues/namevaluestest.Western`: fixtures that wrote form-only names now build parts from the form.
+- **Tests:** `TestReconcileNames` (55 cases, the spec), seeded invariants (input order, every structured candidate in exactly one cluster, forms never matter, renaming types renames nothing else, no invented parts), concluded and sort-key cases in `resolve_test.go`, cache rows for a reconciled name and a parts-less name, and a rebuild-equals-upkeep scenario where deleting the full given name drops rank 1 back to *J. Robins*.
+
+**Deviations from the plan**
+
+- No slash streams (`James / Jim Robins`): values that can't be eliminated stay separate clusters.
+- No match roles or scores: types are identifiers only, so the reconciler and `core/match` agree on words and normalization, not on weights.
+
+**What stayed out**
+
+- The confidence pass and provenance rank order (**S9-14**); until then rank is Observation id.
+- Accent folding and nicknames ([`ideas/international-names.md`](../../ideas/international-names.md), [`ideas/name-matching-enhancements.md`](../../ideas/name-matching-enhancements.md)).
+- Name format display styles; the reconciled name's `form` is its parts in order.

@@ -103,12 +103,11 @@ Two pure functions: **n DateValues → one DateValue** and **n NameValues → on
   - Shared components are kept; disagreeing finer components widen to a `range` (`3 MAY 1985` + `14 JUN 1985` → `BET 3 MAY 1985 AND 14 JUN 1985`), or drop to the shared precision when that reads better (`1985`) — a test-case decision.
   - `ABT` / `BEF` / `AFT` / `range` inputs merge when their windows overlap.
   - Disagreeing years with no overlap → **mixed**: top-ranked value shown with the indicator.
-- **Names** ([`structured-name-model.md`](../../structured-name-model.md) — typed parts first, `form` fallback):
-  - Surnames that match merge into one.
-  - Initials expand against a full part that starts with the same letter (`J. Robins` + `James Robins` → `James Robins`).
-  - Case, punctuation, and whitespace differences are ignored.
-  - Given names that disagree are laid out as a stream (`James / Jim Robins`) rather than picking one — exact shape is a test-case decision.
-  - Untyped parts fall back to comparing `form`. Display uses `form`; there is no name format profile yet.
+- **Names** ([`structured-name-model.md`](../../structured-name-model.md) — structured parts only; **S9-13**). The reconciler builds the name a Reconciliation Claim would conclude, and may be bold: the researcher overrides it with a claim.
+  - **Parts only.** `form` is a transcription and is never compared. A name with no parts carries nothing to reconcile and drops out.
+  - **Format-agnostic.** A part type is only an identifier: parts are compared with parts of the same type, and no type is special (a prefix, a surname and a given name behave alike).
+  - Per type, in passes: **exact** (case, punctuation, and whitespace ignored) → **subsumption** (`[J]` folds into `[James]`, `[James]` into `[James, Kenneth]`) → **majority** (a value with at least two supporters and more than half the support crowds out the rest, so a misspelling in one Source drops out) → **confidence** (S9-14).
+  - Values that can't be eliminated all survive. Survivors that agree form a cluster; one missing a type joins the agreeing cluster with the most members. Eliminated candidates rank after, so the field reads **mixed**.
 - **Subject-valued Properties** (association ends: `person`, `event`, `place`, `related_to`): each candidate subject maps to its accepted handle. Candidates whose subject is unpromoted drop out (Q3). The result is an entity id — an edge of the canonical graph.
 - **Everything else** (`toponym`, `event_type`, `role`, text, terms): no merge. Distinct values ranked.
 
@@ -455,7 +454,7 @@ In order; each brief sits just above the PR it gates.
 - [x] S9-11 — Promote shell + choose target → [`completed.md`](completed.md)
 - [x] ✎ S9-D10 — Design: Promote claim fields → [`completed.md`](completed.md)
 - [x] S9-12 — Promote claim fields + save → [`completed.md`](completed.md)
-- [ ] S9-13 — Name auto-reconciler
+- [x] S9-13 — Name auto-reconciler → [`completed.md`](completed.md)
 - [ ] S9-14 — Provenance ranking + polarity
 - [ ] S9-15 — Detail composer + detail read
 - [ ] ✎ S9-D5 — Design: Person detail
@@ -676,17 +675,19 @@ Researcher's decision while revising **S9-D1**: two configuration views get plai
 
 #### S9-13 — Name auto-reconciler
 
+**Done.** See [`completed.md`](completed.md#s9-13--name-auto-reconciler). `core/resolve/names.go` reconciles names by part type in passes (exact → subsumption → majority); `form` is never compared and names with no parts drop out. The `initial` part type is retired (an initial is a given name). Cache version 3. S9-14 adds the confidence pass and the provenance rank order the passes read.
+
 | | |
 | --- | --- |
-| **In** | Pure Go, table-driven (~50+ cases): surname merge, initial expansion, normalization, given-name stream, `form` fallback. Plugged into the resolver for `name` values; cache version bump. |
+| **In** | Pure Go, table-driven (~50+ cases): parts only, format-agnostic passes (exact, subsumption, majority), survivors displayed. Plugged into the resolver for `name` values; cache version bump. |
 | **Depends on** | S9-05 |
-| **Note** | S9-10 shipped word-by-word name comparison for matching (`core/match/names.go`): part types map to roles, any word can pair with any word, and differing roles discount rather than block. Build the reconciler's "same name" on the same words, roles and word rules, so clusters and match scores agree. The resolver's cluster key and the cache `sort_key` still use `form` until then. Accent differences are not merged here: they show as separate clusters and are left to manual reconciliation (decided; see [`ideas/international-names.md`](../../ideas/international-names.md)). |
+| **Note** | Decided while building it: the reconciler does not use `core/match`'s roles or scores. Types are identifiers only, so a culture's pattern needs no code. Accent differences are not merged: they show as separate clusters and are left to manual reconciliation (see [`ideas/international-names.md`](../../ideas/international-names.md)). |
 
 #### S9-14 — Provenance ranking + polarity
 
 | | |
 | --- | --- |
-| **In** | Resolver ranking by Source credibility → Citation certainty → member claim confidence → agreement → id; negative polarity excluded and counted against. Upkeep triggers for credibility, transcription-certainty, and claim-confidence changes; extend the rebuild-equals-upkeep tests. Cache version bump. **Swift:** a certainty mutation joins `conclusionTriggers`; split a dedicated credibility mutation out of `mutatedSourceWorkspace` if its over-bust shows up. |
+| **In** | Resolver ranking by Source credibility → Citation certainty → member claim confidence → agreement → id; negative polarity excluded and counted against. The name reconciler's **confidence pass** (S9-13): after majority, a value whose candidates are all low credibility, uncertain transcription, or low identity confidence drops out when a better-provenanced value disagrees. Upkeep triggers for credibility, transcription-certainty, and claim-confidence changes; extend the rebuild-equals-upkeep tests. Cache version bump. **Swift:** a certainty mutation joins `conclusionTriggers`; split a dedicated credibility mutation out of `mutatedSourceWorkspace` if its over-bust shows up. |
 | **Depends on** | S9-06 |
 
 #### S9-15 — Detail composer + detail read
