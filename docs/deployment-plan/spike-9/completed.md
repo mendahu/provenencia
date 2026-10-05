@@ -34,6 +34,7 @@ IDs stay stable (`S9-NN`, `S9-DN`). Do not renumber when moving steps here.
 | S9-15 | PR | Detail composer + detail read |
 | S9-D5 | Design | Person detail (revised for reasoning) |
 | S9-16 | PR | Person detail |
+| S9-17 | PR | Compare read + pins + backfill |
 
 ## Steps
 
@@ -779,3 +780,45 @@ Opening a Person now shows their page: every field with its value, how the evide
 - The member list (frame 1i): needs a per-handle members read.
 - Concluding a value (the reserved Why column, the *Concluded* badge): Reconciliation Claims, a later spike.
 - Event and Place pages: **S9-24** / **S9-27**, reusing the row and the Why.
+
+### S9-17 — Compare read + pins + backfill
+
+A join can now say which records it was confirmed against. The engine lines the incoming Subject up against the handle's members, and pins confirmed pairs on both claims. Nothing draws the comparison yet; S9-19 does.
+
+**What shipped**
+
+- **The compatibility test:** `autoreconcile.Compatible(valueType, a, b)`, the pipeline's own *same value* or *fold*, one pair at a time. Every unit both values carry must agree, so *J. Robins* ~ *James Robins*, while *Robins* / *Robbins* differ (spelling variants are outvoted, not folded). A unit only one side carries doesn't count against a pair; no evidence, no shared unit, or opposite polarity is never compatible.
+- **The comparison read:** `promotecompare.Compare` gives, per Property the incoming Subject speaks to (in binding order), each incoming Observation with every accepted member's Observation on the same Property beneath it. Each record carries its Subject, member claim, Citation, Artifact and Source, and each pair says `Compatible`. Provisional members and subject-valued Properties (S9-28) are left out. The handle must be unmerged and of the Subject's type. Constant query count.
+- **Pins and backfill in the Promote write:**
+  - `promote.Input.Pairs` takes the confirmed pairs, join only;
+  - each pair is checked in the transaction: the incoming Observation is the Subject's, the member's is on the same Property, and its Subject is an accepted member of the target;
+  - each pair pins **both** Observations on the new claim **and** on the member's claim, in the same `promote_subject` revision;
+  - the member's `argument` is not touched;
+  - `identityclaims.PinTx` skips a pin the claim already has. Every new pin is audited as `identity_claim_evidence` `create` under its claim's id, the mirror of the audited release, so a claim's exhibit history replays from the audit.
+- **FFI:** `PromoteSubjectRequest.pairs` (`ObservationPair`) and `PromoteSubjectResponse.pin_count`; `METHOD_LIST_PROMOTE_COMPARISON` (`ListPromoteComparisonRequest` → `PromoteComparisonProperty` / `Incoming` / `Pair` / `Record`, values as `ConclusionValue`).
+- **Swift:**
+  - `promoteSubject(…, pairs:)` and `listPromoteComparison` on `GenealogyStore` / `GoStore` / `FakeStore`. The fake models pins with backfill (`pinsByClaim`) and a name-only comparison;
+  - the draft's `confirmedPairs` (set by `PromoteFlow.Edit.setConfirmedPairs` on the compare step) ride `Save.pairs` and clear when the target changes;
+  - the claim summary badge counts them: *No pins* / *1 pin* / *N pins*.
+- **Tests:**
+  - Go:
+    - `Compatible` per value type;
+    - the comparison (two members, a differing pair, several Observations a side, provisional and other handles left out, refused targets);
+    - the write (both claims pinned, the older argument untouched, audit per claim, every refusal, duplicates, several members);
+    - deleting a pinned Observation releases it from both claims, audited;
+    - FFI end to end.
+  - Swift:
+    - pairs ride the join save and clear with the target;
+    - the fake's comparison and backfill;
+    - the badge's plural.
+
+**What changed for researchers**
+
+- Nothing visible yet. Joins still save with no pins until the compare step (S9-19) lets the researcher confirm pairs.
+
+**What stayed out**
+
+- The compare step itself: **S9-19** (brief S9-D11).
+- Cross-property suggestions (a census age against a birth date).
+- Deleting pinned Observations from the composer and FakeStore pin release: **S9-18**.
+- Re-pinning or removing pins after a claim is saved: claim management (Spike 10).

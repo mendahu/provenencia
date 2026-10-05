@@ -476,7 +476,7 @@ In order; each brief sits just above the PR it gates.
 - [x] S9-15 — Detail composer + detail read → [`completed.md`](completed.md)
 - [x] ✎ S9-D5 — Design: Person detail (revise for reasoning) → [`completed.md`](completed.md)
 - [x] S9-16 — Person detail → [`completed.md`](completed.md)
-- [ ] S9-17 — Compare read + pins + backfill
+- [x] S9-17 — Compare read + pins + backfill → [`completed.md`](completed.md)
 - [ ] S9-18 — Pinned-Observation delete end to end
 - [ ] ✎ S9-D11 — Design: Promote compare
 - [ ] S9-19 — Promote compare
@@ -686,7 +686,7 @@ Researcher's decision while revising **S9-D1**: two configuration views get plai
   - add `.compare` to `PromoteStep.built`, plus its screen and its `Edit` cases; Back, Next and the step count follow on their own.
   - Draft the join argument from confirmed pairs, with the hint "Draft from your N confirmed matches · edit before saving". A changed target must clear what was drafted from it (the hook is named in `PromoteFlow`'s doc comment).
   - Restore the summary line's Compare clause and the board's choose-target hint ("James Robins will be compared with the 2 members of PER-…").
-- **S9-17:** the summary's pins badge counts the pins on the claim (it reads "No pins" today).
+- **S9-17:** done. The summary's pins badge counts the Observations the draft's confirmed pairs will pin (`PromoteModel.pinsBadge`).
 - **S9-30:** after a save, the walk moves to the next subject (`PromoteFlow` already does). Add the toast body "{next} is next in this walk", "earlier steps stay saved" in the refusal callout, and the "N saved" badge.
 - **Later spike:** Provisional and Rejected are `PromoteFlow.ClaimStatus` cases, plus engine support for writing them.
 
@@ -764,6 +764,10 @@ Design: [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md). PR
 ### Slice 5 — Compare, pins, backfill
 
 #### S9-17 — Compare read + pins + backfill
+
+**Done.** See [`completed.md`](completed.md#s9-17--compare-read--pins--backfill). The compatibility test is `autoreconcile.Compatible` (the pipeline's same value or fold, unit by unit). The read is `promotecompare.Compare` → `ListPromoteComparison` → `listPromoteComparison` (`CatalogPromoteComparison`). The write takes `promote.Input.Pairs` / `PromoteSubjectRequest.pairs`, pins through `identityclaims.PinTx`, and returns `pin_count`.
+- **S9-18:** pins are real now, audited `create` under the claim's id (the mirror of `pinRelease`). `FakeStore.pinsByClaim` holds them with backfill; extend it so composer and Subject deletes release them.
+- **S9-19:** add `.compare` to `PromoteStep.built` and draw it from `listPromoteComparison`: one group per Property, the incoming record once, then member rows with their Source; pre-check `compatible`. Send the checked pairs with `PromoteFlow.Edit.setConfirmedPairs`; they ride `Save.pairs`, and changing the target clears them. The claim badge already counts them. Cross-property suggestions (age vs birth) aren't in the read yet.
 
 | | |
 | --- | --- |

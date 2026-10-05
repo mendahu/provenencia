@@ -235,6 +235,8 @@ That backfill is what keeps a proof standing when one member leaves. If the cens
 
 Pins are the machine-readable comparison. An `argument` that only names the other record in prose does not.
 
+Promote implements this (S9-17): each confirmed pair is pinned on both claims in the step's one transaction, and every added pin is audited under its claim's id.
+
 ## 5.2 When a comparison subject leaves
 
 Rejecting, deleting, or moving an accepted Identity Claim does not change any other subject's membership. Other Identity Claims on that entity whose exhibit pins an Observation of the departing subject are surfaced for review. The application does not auto-reject them and does not strip their remaining pins.
