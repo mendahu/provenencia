@@ -11,11 +11,12 @@
 // lives only in the derived resolved-values cache — never a claim, DateValue,
 // or NameValue row (seeded-vocabulary §5.3).
 //
-// v1 clusters by exact equality (names by normalized form). Later steps
-// replace pieces without changing callers: name and date auto-reconcilers
-// (S9-13, S9-21) swap the clustering for those value types, provenance ranking
-// (S9-14) goes ahead of support in the order, and subject values map to their
-// handles (S9-28). Callers pass positive-polarity candidates only until S9-14.
+// Names go through the name auto-reconciler (names.go): structured parts by
+// type, never form. Every other value type clusters by exact equality. Later
+// steps replace pieces without changing callers: the date auto-reconciler
+// (S9-21) swaps the clustering for dates, provenance ranking (S9-14) goes
+// ahead of support in the order, and subject values map to their handles
+// (S9-28). Callers pass positive-polarity candidates only until S9-14.
 package resolve
 
 import (
@@ -73,8 +74,10 @@ type Candidate struct {
 
 // Cluster is one distinct value and the Observations that support it.
 type Cluster struct {
-	// Value is the cluster's representative: the lowest-id member's value,
-	// or the concluded value when this is the concluded cluster.
+	// Value is the cluster's representative: the lowest-id member's value;
+	// for names, the reconciled name (a member's own value when one carries
+	// exactly the reconciled parts); or the concluded value when this is the
+	// concluded cluster.
 	Value          Value
 	ObservationIDs [][]byte // ascending
 	Support        int      // len(ObservationIDs); 0 for a concluded value no candidate carries
@@ -103,10 +106,10 @@ func (r Result) State() State {
 }
 
 // Resolve clusters candidates for a Property of valueType and orders the
-// clusters: support descending, then each cluster's lowest Observation id.
-// The order does not depend on the input order. A non-nil concluded value
-// always takes rank 1: it joins the cluster it equals, or stands alone with
-// support 0 ahead of the rest.
+// clusters: support descending, then each cluster's lowest Observation id
+// (names: surviving clusters first, see names.go). The order does not depend
+// on the input order. A non-nil concluded value always takes rank 1: it joins
+// the cluster it equals, or stands alone with support 0 ahead of the rest.
 func Resolve(valueType string, candidates []Candidate, concluded *Value) (Result, error) {
 	if !knownValueType(valueType) {
 		return Result{}, fmt.Errorf("%w: %q", ErrUnknownValueType, valueType)
@@ -119,59 +122,86 @@ func Resolve(valueType string, candidates []Candidate, concluded *Value) (Result
 	})
 
 	var clusters []Cluster
-	var keys []string
-	index := map[string]int{}
-	for _, c := range sorted {
-		k, err := key(valueType, c.Value)
-		if err != nil {
+	if valueType == properties.ValueTypeName {
+		for _, c := range sorted {
+			if c.Value.Name == nil {
+				return Result{}, ErrValueMismatch
+			}
+		}
+		clusters = reconcileNames(sorted)
+	} else {
+		var err error
+		if clusters, err = clusterByKey(valueType, sorted); err != nil {
 			return Result{}, err
 		}
-		i, ok := index[k]
-		if !ok {
-			i = len(clusters)
-			index[k] = i
-			keys = append(keys, k)
-			clusters = append(clusters, Cluster{Value: c.Value})
-		}
-		clusters[i].ObservationIDs = append(clusters[i].ObservationIDs, c.ObservationID)
-		clusters[i].Support++
 	}
-
-	// Clusters were created in ascending first-member id, so a stable sort on
-	// support alone leaves ties ordered by lowest Observation id.
-	order := make([]int, len(clusters))
-	for i := range order {
-		order[i] = i
-	}
-	sort.SliceStable(order, func(a, b int) bool {
-		return clusters[order[a]].Support > clusters[order[b]].Support
-	})
-	res := Result{Clusters: make([]Cluster, 0, len(clusters)+1)}
-	orderedKeys := make([]string, 0, len(clusters))
-	for _, i := range order {
-		res.Clusters = append(res.Clusters, clusters[i])
-		orderedKeys = append(orderedKeys, keys[i])
-	}
+	res := Result{Clusters: clusters}
 
 	if concluded == nil {
 		return res, nil
 	}
-	k, err := key(valueType, *concluded)
+	same, err := matcher(valueType, *concluded)
 	if err != nil {
 		return Result{}, err
 	}
 	top := Cluster{Value: *concluded}
-	for i, ck := range orderedKeys {
-		if ck == k {
-			top.ObservationIDs = res.Clusters[i].ObservationIDs
-			top.Support = res.Clusters[i].Support
-			res.Clusters = append(res.Clusters[:i], res.Clusters[i+1:]...)
+	for i, cl := range res.Clusters {
+		if same(cl.Value) {
+			top.ObservationIDs = cl.ObservationIDs
+			top.Support = cl.Support
+			res.Clusters = append(res.Clusters[:i:i], res.Clusters[i+1:]...)
 			break
 		}
 	}
 	res.Clusters = append([]Cluster{top}, res.Clusters...)
 	res.Concluded = true
 	return res, nil
+}
+
+// clusterByKey groups equal keys and orders the clusters by support, then
+// lowest Observation id.
+func clusterByKey(valueType string, sorted []Candidate) ([]Cluster, error) {
+	var clusters []Cluster
+	index := map[string]int{}
+	for _, c := range sorted {
+		k, err := key(valueType, c.Value)
+		if err != nil {
+			return nil, err
+		}
+		i, ok := index[k]
+		if !ok {
+			i = len(clusters)
+			index[k] = i
+			clusters = append(clusters, Cluster{Value: c.Value})
+		}
+		clusters[i].ObservationIDs = append(clusters[i].ObservationIDs, c.ObservationID)
+		clusters[i].Support++
+	}
+	// Clusters were created in ascending first-member id, so a stable sort on
+	// support alone leaves ties ordered by lowest Observation id.
+	sort.SliceStable(clusters, func(a, b int) bool {
+		return clusters[a].Support > clusters[b].Support
+	})
+	return clusters, nil
+}
+
+// matcher reports which cluster a concluded value belongs to: the same key,
+// or for names the same parts by type.
+func matcher(valueType string, concluded Value) (func(Value) bool, error) {
+	if valueType == properties.ValueTypeName {
+		if concluded.Name == nil {
+			return nil, ErrValueMismatch
+		}
+		return func(v Value) bool { return sameName(concluded.Name, v.Name) }, nil
+	}
+	k, err := key(valueType, concluded)
+	if err != nil {
+		return nil, err
+	}
+	return func(v Value) bool {
+		ck, err := key(valueType, v)
+		return err == nil && ck == k
+	}, nil
 }
 
 func knownValueType(vt string) bool {
@@ -184,7 +214,8 @@ func knownValueType(vt string) bool {
 	}
 }
 
-// key is the v1 clustering rule: values with equal keys are one cluster.
+// key is the clustering rule for every value type but names: values with
+// equal keys are one cluster.
 func key(valueType string, v Value) (string, error) {
 	switch valueType {
 	case properties.ValueTypeText:
@@ -207,11 +238,6 @@ func key(valueType string, v Value) (string, error) {
 			return "", ErrValueMismatch
 		}
 		return string(v.SubjectID), nil
-	case properties.ValueTypeName:
-		if v.Name == nil {
-			return "", ErrValueMismatch
-		}
-		return NormalizeForm(v.Name.Form), nil
 	case properties.ValueTypeDate:
 		if v.Date == nil {
 			return "", ErrValueMismatch
@@ -247,8 +273,9 @@ func SortKey(valueType string, v Value) (key string, ok bool) {
 	return "", false
 }
 
-// NormalizeForm ignores case, punctuation, and whitespace differences: the
-// name cluster key and sort key, and the text core/match tokenizes. Dashes
+// NormalizeForm ignores case, punctuation, and whitespace differences: how
+// the name reconciler compares one part, the name sort key, and the text
+// core/match tokenizes. Dashes
 // and slashes separate words ("Smith-Jones" reads as "smith jones"); other
 // punctuation is dropped, so an apostrophe joins ("O'Brien" reads as
 // "obrien", the same as "OBrien").

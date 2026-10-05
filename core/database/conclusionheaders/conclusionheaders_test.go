@@ -9,7 +9,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/conclusionheaders"
-	"github.com/mendahu/provenencia/core/database/namevalues"
+	"github.com/mendahu/provenencia/core/database/namevalues/namevaluestest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/properties"
@@ -76,7 +76,7 @@ func (f *fixture) person(forms ...string) (subjects.Subject, []observations.Obse
 	if len(forms) > 0 {
 		var in []observations.Input
 		for _, form := range forms {
-			in = append(in, observations.Input{SubjectID: s.ID, PropertyID: f.name.ID, Name: &namevalues.Value{Form: form}})
+			in = append(in, observations.Input{SubjectID: s.ID, PropertyID: f.name.ID, Name: namevaluestest.Western(form)})
 		}
 		res, err := citations.CreateWithObservations(f.c, userID, citations.CreateInput{ArtifactID: f.artifact.ID, LocatorJSON: locator}, in)
 		must(f.t, err)
@@ -137,7 +137,7 @@ func TestListPersons(t *testing.T) {
 		// Jim → James merges the two clusters.
 		_, err := observations.Update(f.c, userID, observations.Input{
 			ID: jamesObs[1].ID, SubjectID: jamesObs[1].SubjectID, PropertyID: f.name.ID,
-			Name: &namevalues.Value{Form: "James Robins"},
+			Name: namevaluestest.Western("James Robins"),
 		})
 		must(t, err)
 		if h := f.list()[0]; h.Name.Form != "James Robins" || h.NameClusterCount != 1 {

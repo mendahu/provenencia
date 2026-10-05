@@ -34,7 +34,8 @@ import (
 // hold; a stored version that differs rebuilds on open.
 //
 //	2: dashes and slashes separate words in name keys (S9-10).
-const CacheVersion = 2
+//	3: names reconcile by part type; names with no parts drop out (S9-13).
+const CacheVersion = 3
 
 // batchSize bounds the handles per loader batch (and so the IN list length).
 const batchSize = 500

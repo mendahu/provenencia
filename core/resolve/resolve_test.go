@@ -60,11 +60,23 @@ func TestResolve(t *testing.T) {
 			[]Candidate{text(3, "York"), text(1, "York"), text(2, " York ")}, nil, [][]byte{{1, 2, 3}}, StateMerged},
 		{"text is case-sensitive", properties.ValueTypeText,
 			[]Candidate{text(1, "York"), text(2, "york")}, nil, [][]byte{{1}, {2}}, StateMixed},
-		{"names merge by normalized form", properties.ValueTypeName,
-			[]Candidate{name(1, "JAMES ROBINS"), name(2, "James  Robins."), name(3, "james robins")}, nil,
-			[][]byte{{1, 2, 3}}, StateMerged},
-		{"different names stay apart", properties.ValueTypeName,
-			[]Candidate{name(1, "James Robins"), name(2, "Jim Robins")}, nil, [][]byte{{1}, {2}}, StateMixed},
+		{"names reconcile by parts (names_test.go)", properties.ValueTypeName,
+			[]Candidate{nm(1, "given=J.|surname=Robins"), nm(2, "given=James|surname=Robins"), nm(3, "given=Jim|surname=Robins")}, nil,
+			[][]byte{{1, 2}, {3}}, StateMixed},
+		{"names with no parts are dropped", properties.ValueTypeName,
+			[]Candidate{name(1, "James Robins"), name(2, "James Robins")}, nil, nil, StateEmpty},
+		{"concluded name joins the cluster with its parts", properties.ValueTypeName,
+			[]Candidate{nm(1, "given=James|surname=Robins"), nm(2, "given=Mary|surname=Robins")},
+			&Value{Name: parse("given=MARY|surname=Robins")}, [][]byte{{2}, {1}}, StateConcluded},
+		{"concluded name matches the reconciled parts, not a member's", properties.ValueTypeName,
+			[]Candidate{nm(1, "given=J.|surname=Robins"), nm(2, "given=James|given=K.|surname=Robins")},
+			&Value{Name: parse("given=James|given=K.|surname=Robins")}, [][]byte{{1, 2}}, StateConcluded},
+		{"concluded name with other parts leads alone", properties.ValueTypeName,
+			[]Candidate{nm(1, "given=James|surname=Robins")},
+			&Value{Name: parse("given=J.|surname=Robins")}, [][]byte{nil, {1}}, StateConcluded},
+		{"concluded name with no parts leads alone", properties.ValueTypeName,
+			[]Candidate{nm(1, "given=James|surname=Robins")},
+			&Value{Name: &namevalues.Value{Form: "James Robins"}}, [][]byte{nil, {1}}, StateConcluded},
 		{"tie broken by lowest id", properties.ValueTypeText,
 			[]Candidate{text(5, "B"), text(2, "A")}, nil, [][]byte{{2}, {5}}, StateMixed},
 		{"support beats id", properties.ValueTypeText,
@@ -117,18 +129,17 @@ func TestResolve(t *testing.T) {
 }
 
 func TestResolveRepresentative(t *testing.T) {
-	got, err := Resolve(properties.ValueTypeName,
-		[]Candidate{name(9, "james robins"), name(4, "James Robins")}, nil)
+	got, err := Resolve(properties.ValueTypeText, []Candidate{text(9, "York"), text(4, "York ")}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if f := got.Clusters[0].Value.Name.Form; f != "James Robins" {
-		t.Fatalf("representative %q, want the lowest-id member's", f)
+	if v := got.Clusters[0].Value.Text; v != "York " {
+		t.Fatalf("representative %q, want the lowest-id member's", v)
 	}
 
-	concluded := &Value{Name: &namevalues.Value{Form: "JAMES ROBINS"}}
+	concluded := &Value{Name: parse("given=JAMES|surname=ROBINS")}
 	got, err = Resolve(properties.ValueTypeName,
-		[]Candidate{name(9, "james robins"), name(4, "James Robins")}, concluded)
+		[]Candidate{nm(9, "given=james|surname=robins"), nm(4, "given=James|surname=Robins")}, concluded)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -202,6 +213,14 @@ func TestSortKey(t *testing.T) {
 	k, ok := SortKey(properties.ValueTypeName, Value{Name: &namevalues.Value{Form: "  O'Brien,  Mary "}})
 	if !ok || k != "obrien mary" {
 		t.Fatalf("name %q %v", k, ok)
+	}
+	got, err := Resolve(properties.ValueTypeName,
+		[]Candidate{nm(1, "given=J.|surname=ROBINS|suffix=Jr."), nm(2, "given=James|surname=Robins")}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if k, _ := SortKey(properties.ValueTypeName, got.Clusters[0].Value); k != "james robins jr" {
+		t.Fatalf("reconciled name sort key %q", k)
 	}
 	k, ok = SortKey(properties.ValueTypeText, Value{Text: " Upper Canada ", HasText: true})
 	if !ok || k != "upper canada" {
