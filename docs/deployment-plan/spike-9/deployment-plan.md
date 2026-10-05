@@ -467,7 +467,7 @@ In order; each brief sits just above the PR it gates.
 - [x] S9-11 — Promote shell + choose target → [`completed.md`](completed.md)
 - [x] ✎ S9-D10 — Design: Promote claim fields → [`completed.md`](completed.md)
 - [x] S9-12 — Promote claim fields + save → [`completed.md`](completed.md)
-- [ ] S9-13a — Land migrations 000037 / 000038
+- [x] S9-13a — Land migrations 000037 / 000038 → [`completed.md`](completed.md)
 - [ ] S9-13 — Reconciler pipeline + text / integer / term modules
 - [ ] S9-13b — Name module
 - [ ] S9-14 — Evidence + reasoning in the cache
@@ -699,6 +699,8 @@ Researcher's decision while revising **S9-D1**: two configuration views get plai
 Design: [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md). PRs #255 (name reconciler) and #256 (name confidence + polarity) were built to the first plan and are **closed**. Their pieces are lifted on purpose: the `initial` retirement and both migrations into S9-13a; provenance, deny and confidence logic and its cases into S9-13; the name logic, `namevaluestest` fixtures and the 55 name cases into S9-13b; the loader query, upkeep hooks, second-Source fixtures and seeded steps into S9-14.
 
 #### S9-13a — Land migrations 000037 / 000038
+
+**Done.** See [`completed.md`](completed.md#s9-13a--land-migrations-000037--000038). `against` exists but is always 0 until S9-14 writes it. The next migration is **000039**; the next cache version is **5**.
 
 | | |
 | --- | --- |

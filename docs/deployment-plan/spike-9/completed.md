@@ -27,6 +27,7 @@ IDs stay stable (`S9-NN`, `S9-DN`). Do not renumber when moving steps here.
 | S9-11 | PR | Promote shell + choose target |
 | S9-D10 | Design | Promote claim fields + save |
 | S9-12 | PR | Promote claim fields + save |
+| S9-13a | PR | Land migrations 000037 / 000038 |
 
 ## Steps
 
@@ -509,3 +510,23 @@ Next on the target step now opens Claim fields, and **Save & next** writes the I
 
 - Provisional and Rejected statuses (a `ClaimStatus` case each, plus engine support).
 - Compare (**S9-19**), pins (**S9-17**), the walk (**S9-30**).
+
+### S9-13a — Land migrations 000037 / 000038
+
+The first step of the replanned slice 4 ([`conclusion-reconciliation.md`](../../conclusion-reconciliation.md)). PRs #255 and #256 were built to the first plan and closed, but the researcher's local projects had already run their migrations, so `main` refused to open them (a newer `user_version`). This lands both migrations byte-for-byte so those projects open again.
+
+**What shipped**
+
+- **Migration 000037** retypes `initial` name parts as `given`. An initial is the part it stands for, and the name reconciler compares parts only with the same type. The `initial` part type is gone from the Go registry and the Western name pattern, the Swift `NamePartType` enum, the `nameValue.part.type.initial` string, the tests and the seeded-vocabulary lists. Cherry-picked unchanged from #255.
+- **Migration 000038** adds `conclusion_resolved_values.against` (default 0). Nothing writes it until S9-14. Copied unchanged from #256.
+- No cache version change: resolution didn't change.
+
+**Rules this sets**
+
+- Migrations 000037 and 000038 are fixed. Later changes are new migrations (000039 on), never edits.
+- Cache versions start at **5**. Projects may carry caches stamped 3 or 4 by the closed PRs' builds, and a new meaning must never reuse a stamp.
+
+**What stayed out**
+
+- Everything else from #255 / #256: the pipeline (**S9-13**), name module (**S9-13b**), evidence and reasoning (**S9-14**).
+
