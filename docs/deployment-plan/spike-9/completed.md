@@ -28,6 +28,7 @@ IDs stay stable (`S9-NN`, `S9-DN`). Do not renumber when moving steps here.
 | S9-D10 | Design | Promote claim fields + save |
 | S9-12 | PR | Promote claim fields + save |
 | S9-13a | PR | Land migrations 000037 / 000038 |
+| S9-13 | PR | Reconciler pipeline + text / integer / term modules |
 
 ## Steps
 
@@ -530,3 +531,52 @@ The first step of the replanned slice 4 ([`conclusion-reconciliation.md`](../../
 
 - Everything else from #255 / #256: the pipeline (**S9-13**), name module (**S9-13b**), evidence and reasoning (**S9-14**).
 
+### S9-13 — Reconciler pipeline + text / integer / term modules
+
+Every value type now goes through one reconciler pipeline ([`conclusion-reconciliation.md`](../../conclusion-reconciliation.md) §5). Nothing the pipeline declines to display is dropped: every value keeps its cache row with the reason.
+
+**What shipped**
+
+- **`core/resolve` pipeline** (`pipeline.go`):
+  - rank by provenance, then id;
+  - admit (no evidence; provisional never displayed);
+  - deny (a stronger negative eliminates the same value; equal or weaker only counts against);
+  - group and fold per unit;
+  - majority in distinct Sources (`MinMajoritySupport` 2 and more than half);
+  - confidence (weak values drop when non-weak evidence survived);
+  - survivors grouped into displayed values.
+- **Result:** `Clusters` holds every value, displayed first, each with `Support` (distinct Sources), `Against` and `Reason`. `Candidates` holds one `Outcome` per candidate. `State()` reads displayed values only.
+- **Candidate inputs:** `SourceID`, `Provenance` (`Weak`, `Stronger`), `Negative`, `Provisional`. An empty `SourceID` counts as its own Source.
+- **Module interface** (`modules.go`): `split` into units, `fold`, `assemble`. The interface is ready for names' per-part-type units.
+  - **Text:** trimmed, **case-insensitive**. This changes S9-05's rule: *York* = *york*.
+  - **Integer.**
+  - **Term:** `NeutralTermKeys` (`unknown`, `indeterminate`) are no evidence.
+  - **Interim** name (normalized form), date (every field) and subject (id) modules keep S9-05's behaviour.
+- **Cache:**
+  - migration **000039** adds `conclusion_resolved_values.reason`;
+  - every value is written, with `support`, `against` and `reason`;
+  - the loader reads each term's key;
+  - `CacheVersion = 5`.
+- **Readers:** the Persons header's *+N* counts displayed names only. Search and matching read every value, so an outvoted name still finds its Person.
+- **Tests:**
+  - `TestPipeline`, 24 cases, mutation-checked: removing majority, confidence, deny, provisional or Source counting fails its group;
+  - `TestPipelineOutcomes`, `TestPipelineConcluded`;
+  - seeded invariants (input order, outcomes, negatives never members);
+  - `TestModules`, `TestProvenance`;
+  - the cache keeps an outvoted row;
+  - stale versions 0, 2, 3 and 4 rebuild;
+  - rebuild-equals-upkeep compares `reason` and `against`;
+  - `+N` counts displayed names only;
+  - search finds an outvoted name.
+
+**What changed for researchers**
+
+- Case-only differences in text values merge (*York* / *york*).
+- With two of three records agreeing, the third value is no longer displayed or counted in *+N*. It keeps its row and stays searchable.
+
+**What stayed out**
+
+- The name module (**S9-13b**), date module (**S9-21**) and subject module (**S9-28**).
+- Loading Sources, provenance, negatives and provisional members (**S9-14**). Until then every candidate is its own Source and of standard strength.
+- The per-candidate reasoning table (**S9-14**, migration 000040).
+- Multi-valued cardinality (**S9-36**).

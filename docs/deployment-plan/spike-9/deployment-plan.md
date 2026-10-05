@@ -102,6 +102,7 @@ conclusion_resolved_values
   sort_key         TEXT  -- normalized text, or date ordinal
   support          INT   -- distinct Sources backing this value
   against          INT   -- negative candidates that match it
+  reason           TEXT  -- 'kept' when displayed, else why not (outvoted, weak, denied, provisional)
   PRIMARY KEY (entity_id, property_id, rank)
   INDEX (property_id, value_entity_id)   -- reverse edges: who points at PER-1?
   INDEX (property_id, sort_key)          -- sort, resemblance
@@ -112,8 +113,9 @@ conclusion_resolved_values
 
 - **State is the shape of the clusters, never stored.** The resolver (S9-05) returns a list of clusters plus a *concluded* flag; readers derive `single` / `merged` / `mixed` from the rows (rank 2 exists → mixed; else rank 1's `support` 1 → single, more → merged). A `concluded` flag column arrives with Reconciliation.
 - **Edges are resolved values.** A Participation's `person` end is its resolved `person` Property with `value_entity_id`. The canonical graph is this table plus its reverse index; there is no separate edges table.
-- **The reasoning is kept beside the values** in `conclusion_resolved_candidates`: one row per candidate (entity, Property, Observation) with its outcome, reason and the rank of the value it supports or folded into. Detail pages explain a value from it without re-running the reconciler. Rewritten with its handle's rows.
-- **Every cluster is kept**, not just the winner: lists get *+N*, search gets alternates (*Jim*), Promote compares against every value, details render clusters without re-resolving.
+- **Nothing is dropped.** Every distinct value is a row, displayed or not; `reason` says which (S9-13). Displayed rows come first, so rank 1 is the first displayed value. State and *+N* read displayed rows; search and matching read every row.
+- **The per-candidate reasoning is kept beside the values** in `conclusion_resolved_candidates` (S9-14): one row per candidate (entity, Property, Observation) with its outcome, reason and the rank of the value it supports or folded into. Detail pages explain a value from it without re-running the reconciler. Rewritten with its handle's rows.
+- **Every value is kept**, not just the displayed one: search gets alternates (*Jim*), Promote compares against every value, details render values without re-resolving.
 - **No vocabulary in the schema.** No `birth_date` columns, no per-kind tables. Genealogical concepts live in Go (resolver, composers, registry of recognized keys) and in `property_id` rows. Labels are not stored (term **ids** are), so relabels need no recompute.
 - **Maintained in the write transaction.** Every trigger is one hop from the write:
 
@@ -387,7 +389,7 @@ CLOSE
 - **Slices run in order.** Within a slice, PRs run top to bottom; the Go PRs at the top of a slice can usually go side by side (S9-13b / S9-14; S9-20 / S9-21; S9-36 / S9-25).
 - **Slice 4 is the foundation for the rest.** S9-13 / S9-14 put every value type on the pipeline; slices 5–7 can then swap or run side by side. Slice 9 needs slice 8 (bridges and edges).
 - **Replanned 2026-10-05.** IDs of PRs that keep their purpose stay; new work takes new IDs (S9-13a, S9-13b, S9-36 – S9-40), so handoff notes in [`completed.md`](completed.md) and code comments stay right.
-- **Migrations 000037 / 000038 are fixed.** They first shipped on the closed PRs #255 / #256, and the researcher's local projects already carry them. S9-13a lands them on `main` byte-for-byte so those projects open again; nothing else may take those numbers, and later changes are new migrations (000039 on), never edits. **Cache versions start at 5** after S9-13a: projects may hold a cache stamped 3 or 4 by the closed PRs, and a new meaning must never reuse a stamp.
+- **Migrations 000037 / 000038 are fixed.** They first shipped on the closed PRs #255 / #256, and the researcher's local projects already carry them. S9-13a lands them on `main` byte-for-byte so those projects open again; nothing else may take those numbers, and later changes are new migrations (000039 on), never edits. **000039** is S9-13's `reason` column; S9-14's candidates table is **000040**. **Cache versions start at 5** after S9-13a: projects may hold a cache stamped 3 or 4 by the closed PRs, and a new meaning must never reuse a stamp.
 - **The cache is honest from slice 2.** S9-06 ships the rebuild-equals-upkeep test; every later PR that adds a write path or trigger adds to it.
 - **Churn is expected.** A confirm-and-mint Promote button (slice 1), stubbed sidebar items, and empty life-date cells are fine between slices.
 
@@ -468,7 +470,7 @@ In order; each brief sits just above the PR it gates.
 - [x] ✎ S9-D10 — Design: Promote claim fields → [`completed.md`](completed.md)
 - [x] S9-12 — Promote claim fields + save → [`completed.md`](completed.md)
 - [x] S9-13a — Land migrations 000037 / 000038 → [`completed.md`](completed.md)
-- [ ] S9-13 — Reconciler pipeline + text / integer / term modules
+- [x] S9-13 — Reconciler pipeline + text / integer / term modules → [`completed.md`](completed.md)
 - [ ] S9-13b — Name module
 - [ ] S9-14 — Evidence + reasoning in the cache
 - [ ] S9-15 — Detail composer + detail read
@@ -711,9 +713,11 @@ Design: [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md). PR
 
 #### S9-13 — Reconciler pipeline + text / integer / term modules
 
+**Done.** See [`completed.md`](completed.md#s9-13--reconciler-pipeline--text--integer--term-modules). For **S9-13b**: implement `module` (`core/resolve/modules.go`) for names: `split` into one unit per part type, `fold` for subsumption, `assemble` from the settled units; swap it into `moduleFor`. For **S9-14**: fill `Candidate.SourceID`, `Provenance`, `Negative` and `Provisional` in the loader; the pipeline already uses them. Store `Result.Candidates` in migration **000040**.
+
 | | |
 | --- | --- |
-| **In** | Pure Go in `core/resolve`. The shared pipeline (design §5): admit → deny → group (same value, fold) → majority in distinct Sources → confidence → merge; per-candidate outcome and reason (design §6); `against`. A module interface (*same value*, *fold*, *merge*, *no evidence*) that also lets a module **split a candidate into comparable units and reassemble survivors** (names run the passes per part type, then rebuild one name; the simple modules use one unit per candidate). Design the split in now so S9-13b doesn't reshape the interface. The simple modules: **text** (trimmed, case-insensitive; changes S9-05's case-sensitive rule), **integer**, **term** (neutral terms are no evidence). Candidate inputs carry provenance, claim status, polarity and Source id. Cardinality is an input (single only until S9-36). Concluded input kept. Table-driven: the shared passes once, each module's cases separately. |
+| **In** | Pure Go in `core/resolve`. The shared pipeline (design §5): admit → deny → group (same value, fold) → majority in distinct Sources → confidence → merge; per-candidate outcome and reason (design §6); `against`. A module interface (*same value*, *fold*, *merge*, *no evidence*) that also lets a module **split a candidate into comparable units and reassemble survivors** (names run the passes per part type, then rebuild one name; the simple modules use one unit per candidate). Design the split in now so S9-13b doesn't reshape the interface. The simple modules: **text** (trimmed, case-insensitive; changes S9-05's case-sensitive rule), **integer**, **term** (neutral terms are no evidence). Candidate inputs carry provenance, claim status, polarity and Source id. Cardinality is an input (single only until S9-36). Concluded input kept. Table-driven: the shared passes once, each module's cases separately. **Nothing is dropped** (decided while planning): every value keeps a row with its `reason`; migration **000039** adds the column; state and *+N* read displayed rows. |
 | **Out** | Name, date and subject modules (S9-13b, S9-21, S9-28); loading evidence from the catalog (S9-14). |
 | **Testable** | Every pass and reason; majority counts Sources not Observations; provisional always eliminated; a stronger negative denies, an equal one only counts against; order independence; non-name results for unchanged inputs match S9-05 except case folding. |
 | **Depends on** | S9-05 |
@@ -730,7 +734,7 @@ Design: [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md). PR
 
 | | |
 | --- | --- |
-| **In** | Loader reads each candidate's polarity, Source, credibility, certainty, claim confidence and claim status in the existing candidate query (accepted and provisional members; rejected excluded); query count unchanged. `against` (column from S9-13a's migration 000038) is written. New migration **000039**: `conclusion_resolved_candidates` (entity, Property, Observation, outcome, reason, value rank) rewritten with the handle. Upkeep on Source credibility and Citation certainty changes (`RecomputeSourceTx`, `RecomputeCitationTx`). Rebuild-equals-upkeep gains credibility, certainty, negative and graded-promote steps across two Sources, asserted right after each provenance edit. Cache version bump (≥ 5). **Swift:** nothing to wire (certainty rides `savedCitation`, credibility `mutatedSourceWorkspace`). |
+| **In** | Loader reads each candidate's polarity, Source, credibility, certainty, claim confidence and claim status in the existing candidate query (accepted and provisional members; rejected excluded); query count unchanged. `against` (column from S9-13a's migration 000038) is written. New migration **000040**: `conclusion_resolved_candidates` (entity, Property, Observation, outcome, reason, value rank) rewritten with the handle. Upkeep on Source credibility and Citation certainty changes (`RecomputeSourceTx`, `RecomputeCitationTx`). Rebuild-equals-upkeep gains credibility, certainty, negative and graded-promote steps across two Sources, asserted right after each provenance edit. Cache version bump (≥ 5). **Swift:** nothing to wire (certainty rides `savedCitation`, credibility `mutatedSourceWorkspace`). |
 | **Testable** | Reasons stored; removing either hook fails the sequences; loader query count constant. |
 | **Depends on** | S9-06, S9-13, S9-13a |
 

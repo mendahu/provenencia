@@ -104,6 +104,8 @@ The reconciler returns the **answer and its reasoning**, so the UI can be rich a
 | `no_evidence` | nothing usable to compare |
 | `against` | a negative that counted against a value without eliminating it |
 
+**Eliminated means not displayed, never dropped.** Every distinct value is cached, with a reason on each value (`kept` when displayed, else `outvoted`, `weak`, `denied` or `provisional`). The state and list counts read the displayed values; search and matching read them all, so an outvoted spelling still finds its Person.
+
 The cache stores the reasoning with the values: state, support, the against count, and every candidate's outcome and reason. List and detail pages render from it without re-running the reconciler.
 
 ---
@@ -247,7 +249,7 @@ The rebuild-equals-upkeep tests hold upkeep equal to a full rebuild. Every new t
 | Resolver core: exact clusters, support then id, concluded input | `core/resolve` (S9-05) | on `main` |
 | Resolved-values cache and upkeep | `core/database/resolvedvalues` (S9-06) | on `main` |
 | `initial` part type retired (migration 000037); `against` column (000038) | S9-13a | on `main` |
-| Shared pipeline and simple modules | S9-13 | planned |
+| Shared pipeline and simple modules; every value cached with its reason (migration 000039) | S9-13 | on `main` |
 | Name module | S9-13b | planned |
 | Evidence and reasoning in the cache | S9-14 | planned |
 
