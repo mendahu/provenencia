@@ -89,7 +89,7 @@ Attribute-level conflicts across member Observations are handled by soft display
 
 ## 2.5 Resolver logic is application-level
 
-The database preserves multiple source-backed values. Resolvers may synthesize display without creating Claims. **Provenencia badges** on a handle (from records / inferred / asserted / unlinked) are computed from whether any accepted Identity Claim exists, whether Reconciliations pin Observations, and whether `argument` is set. They are not a stored enum.
+The database preserves multiple source-backed values. Resolvers may synthesize display without creating Claims. How they do it (the auto-reconcilers, their shared pipeline and their output) is in [`conclusion-reconciliation.md`](conclusion-reconciliation.md). **Provenencia badges** on a handle (from records / inferred / asserted / unlinked) are computed from whether any accepted Identity Claim exists, whether Reconciliations pin Observations, and whether `argument` is set. They are not a stored enum.
 
 ## 2.6 Persistence conventions
 
@@ -439,7 +439,7 @@ See [`structured-name-model.md`](structured-name-model.md).
 | Researcher commits a value (winner, synthesis, `name_format`, or nodeless ends) | Reconciliation Claim, usually `accepted` |
 | Researcher is still weighing a value | Optional claim with `status = provisional` (distinct UI) |
 
-Absence of an **accepted** Reconciliation Claim means “no committed concluded value yet.” The UI may still show member Observations and a stateless merge. For `name_format`, absence of an accepted claim means “use the project default.” For a nodeless Location, absence of accepted `event` or `place` means the edge is not usable yet.
+Absence of an **accepted** Reconciliation Claim means “no committed concluded value yet.” The UI may still show member Observations and a stateless merge; the auto-reconcilers that produce it are in [`conclusion-reconciliation.md`](conclusion-reconciliation.md). For `name_format`, absence of an accepted claim means “use the project default.” For a nodeless Location, absence of accepted `event` or `place` means the edge is not usable yet.
 
 ## 7.1 `reconciliation_claim_evidence`
 
@@ -717,6 +717,7 @@ To avoid competing schema definitions:
 - [`source-layer-data-model.md`](source-layer-data-model.md) is authoritative for Source-layer tables and Artifact/File storage.
 - [`interpretation-layer-data-model.md`](interpretation-layer-data-model.md) is authoritative for Interpretation-layer tables and vocabulary.
 - This document is authoritative for Conclusion-layer tables and Claims.
+- [`conclusion-reconciliation.md`](conclusion-reconciliation.md) is authoritative for how displayed values are derived from member evidence (auto-reconcilers) and how Reconciliation Claims override them.
 - [`structured-date-model.md`](structured-date-model.md) is authoritative for shared DateValue persistence.
 - [`structured-name-model.md`](structured-name-model.md) is authoritative for shared NameValue persistence.
 - [`seeded-vocabulary.md`](seeded-vocabulary.md) is the horizon catalog for intended keys and starter open-vocabulary lists (not a v1 ship list).

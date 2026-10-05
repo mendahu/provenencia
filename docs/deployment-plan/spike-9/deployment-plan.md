@@ -70,6 +70,8 @@ Skills: [`add-catalog-migration`](../../../.cursor/skills/add-catalog-migration/
 
 ### R2 — Value resolution (multi-value Properties)
 
+> **Superseded in design by [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md)** (2026-10-05): every value type gets an auto-reconciler on one shared pipeline, with reasoning output and per-Property cardinality. The rules below are Spike 9's original plan; the PR sequence will be revised to match.
+
 **Multiple values are first-class.** Any member Subject may carry any Property more than once, and a handle has many members, so every Property on a canonical entity is a list. Displaying one needs a rule. The **resolver** is a set of pure Go functions: candidates in, ranked clusters out. Its output is stored only in the derived cache (R3); it never creates a claim or truth row ([`conclusion-layer-data-model.md`](../../conclusion-layer-data-model.md) §2.5, §7; [`research-judgment-model.md`](../../research-judgment-model.md) §1.1).
 
 #### Three states
