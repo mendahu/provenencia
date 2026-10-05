@@ -6,6 +6,7 @@ import (
 
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/apperr"
+	"github.com/mendahu/provenencia/core/autoreconcile"
 	"github.com/mendahu/provenencia/core/catalogsession"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/conclusiondetails"
@@ -64,7 +65,7 @@ func TestGetConclusionDetail(t *testing.T) {
 						name = f
 					}
 				}
-				if d.Entity.GetRef() == "" || name == nil {
+				if d.Entity.GetRef() == "" || name == nil || d.GetMemberCount() != 1 {
 					t.Fatalf("%+v", &d)
 				}
 				// James Robins + Jim Robins: one name, from one Source, so single.
@@ -77,7 +78,8 @@ func TestGetConclusionDetail(t *testing.T) {
 				}
 				for _, o := range name.Outcomes {
 					if o.GetValueRank() != 1 || o.GetObservationRef() == "" || o.GetSubjectRef() == "" ||
-						o.GetSourceId() == "" || o.GetCitationId() == "" || o.GetRecorded().GetName() == nil ||
+						o.GetSourceId() == "" || o.GetCitationId() == "" || o.GetArtifactId() == "" || o.GetRecorded().GetName() == nil ||
+						o.GetVoteSupport() != 0 || o.GetVoteTotal() != 0 ||
 						o.GetDeniedByObservationId() != "" {
 						t.Fatalf("outcome %+v", o)
 					}
@@ -153,5 +155,20 @@ func TestConclusionValueProtoCoversEveryKind(t *testing.T) {
 				t.Fatalf("%+v", &got)
 			}
 		})
+	}
+}
+
+func TestConclusionDetailProtoCarriesVoteArtifactAndMembers(t *testing.T) {
+	artifact := []byte{0: 9, 15: 9}
+	d := conclusiondetails.Detail{
+		MemberCount: 4,
+		Fields: []conclusiondetails.Field{{Outcomes: []conclusiondetails.Outcome{{
+			Reason: "outvoted", ArtifactID: artifact, Vote: autoreconcile.Vote{Support: 2, Of: 3},
+		}}}},
+	}
+	got := conclusionDetailProto(d)
+	o := got.Fields[0].Outcomes[0]
+	if got.GetMemberCount() != 4 || o.GetArtifactId() != uuidString(artifact) || o.GetVoteSupport() != 2 || o.GetVoteTotal() != 3 {
+		t.Fatalf("%+v", got)
 	}
 }

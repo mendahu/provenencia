@@ -8808,10 +8808,15 @@ type ReconcilerOutcomeDetail struct {
 	ClaimConfidenceKey     string                 `protobuf:"bytes,14,opt,name=claim_confidence_key,json=claimConfidenceKey,proto3" json:"claim_confidence_key,omitempty"` // "" = no grade (moderate)
 	// Grade sort_order minus the default grade's (standard, moderate), as the
 	// auto-reconciler weighed it: below 0 is weak evidence.
-	CredibilityOffset     int32 `protobuf:"varint,15,opt,name=credibility_offset,json=credibilityOffset,proto3" json:"credibility_offset,omitempty"`
-	ClaimConfidenceOffset int32 `protobuf:"varint,16,opt,name=claim_confidence_offset,json=claimConfidenceOffset,proto3" json:"claim_confidence_offset,omitempty"`
-	unknownFields         protoimpl.UnknownFields
-	sizeCache             protoimpl.SizeCache
+	CredibilityOffset     int32  `protobuf:"varint,15,opt,name=credibility_offset,json=credibilityOffset,proto3" json:"credibility_offset,omitempty"`
+	ClaimConfidenceOffset int32  `protobuf:"varint,16,opt,name=claim_confidence_offset,json=claimConfidenceOffset,proto3" json:"claim_confidence_offset,omitempty"`
+	ArtifactId            string `protobuf:"bytes,17,opt,name=artifact_id,json=artifactId,proto3" json:"artifact_id,omitempty"`
+	// For "outvoted": the winning value's Sources of every Source that voted
+	// on that unit (for a name, the part it lost on). 0 otherwise.
+	VoteSupport   int32 `protobuf:"varint,18,opt,name=vote_support,json=voteSupport,proto3" json:"vote_support,omitempty"`
+	VoteTotal     int32 `protobuf:"varint,19,opt,name=vote_total,json=voteTotal,proto3" json:"vote_total,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ReconcilerOutcomeDetail) Reset() {
@@ -8952,6 +8957,27 @@ func (x *ReconcilerOutcomeDetail) GetCredibilityOffset() int32 {
 func (x *ReconcilerOutcomeDetail) GetClaimConfidenceOffset() int32 {
 	if x != nil {
 		return x.ClaimConfidenceOffset
+	}
+	return 0
+}
+
+func (x *ReconcilerOutcomeDetail) GetArtifactId() string {
+	if x != nil {
+		return x.ArtifactId
+	}
+	return ""
+}
+
+func (x *ReconcilerOutcomeDetail) GetVoteSupport() int32 {
+	if x != nil {
+		return x.VoteSupport
+	}
+	return 0
+}
+
+func (x *ReconcilerOutcomeDetail) GetVoteTotal() int32 {
+	if x != nil {
+		return x.VoteTotal
 	}
 	return 0
 }
@@ -9109,6 +9135,7 @@ type ConclusionDetail struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Entity        *CanonicalEntity       `protobuf:"bytes,1,opt,name=entity,proto3" json:"entity,omitempty"`
 	Fields        []*ConclusionField     `protobuf:"bytes,2,rep,name=fields,proto3" json:"fields,omitempty"`
+	MemberCount   int32                  `protobuf:"varint,3,opt,name=member_count,json=memberCount,proto3" json:"member_count,omitempty"` // accepted members
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -9155,6 +9182,13 @@ func (x *ConclusionDetail) GetFields() []*ConclusionField {
 		return x.Fields
 	}
 	return nil
+}
+
+func (x *ConclusionDetail) GetMemberCount() int32 {
+	if x != nil {
+		return x.MemberCount
+	}
+	return 0
 }
 
 // ListPromoteTargetSuggestions returns existing handles a Subject could join,
@@ -15020,7 +15054,7 @@ const file_engine_proto_rawDesc = "" +
 	"\x06reason\x18\x02 \x01(\tR\x06reason\x12\x18\n" +
 	"\asupport\x18\x03 \x01(\x05R\asupport\x12\x18\n" +
 	"\aagainst\x18\x04 \x01(\x05R\aagainst\x12<\n" +
-	"\x05value\x18\x05 \x01(\v2&.provenencia.engine.v1.ConclusionValueR\x05value\"\xb9\x05\n" +
+	"\x05value\x18\x05 \x01(\v2&.provenencia.engine.v1.ConclusionValueR\x05value\"\x9c\x06\n" +
 	"\x17ReconcilerOutcomeDetail\x12%\n" +
 	"\x0eobservation_id\x18\x01 \x01(\tR\robservationId\x12'\n" +
 	"\x0fobservation_ref\x18\x02 \x01(\tR\x0eobservationRef\x12\x16\n" +
@@ -15042,7 +15076,12 @@ const file_engine_proto_rawDesc = "" +
 	"\x17transcription_uncertain\x18\r \x01(\bR\x16transcriptionUncertain\x120\n" +
 	"\x14claim_confidence_key\x18\x0e \x01(\tR\x12claimConfidenceKey\x12-\n" +
 	"\x12credibility_offset\x18\x0f \x01(\x05R\x11credibilityOffset\x126\n" +
-	"\x17claim_confidence_offset\x18\x10 \x01(\x05R\x15claimConfidenceOffset\"\xb2\x02\n" +
+	"\x17claim_confidence_offset\x18\x10 \x01(\x05R\x15claimConfidenceOffset\x12\x1f\n" +
+	"\vartifact_id\x18\x11 \x01(\tR\n" +
+	"artifactId\x12!\n" +
+	"\fvote_support\x18\x12 \x01(\x05R\vvoteSupport\x12\x1d\n" +
+	"\n" +
+	"vote_total\x18\x13 \x01(\x05R\tvoteTotal\"\xb2\x02\n" +
 	"\x0fConclusionField\x12\x1f\n" +
 	"\vproperty_id\x18\x01 \x01(\tR\n" +
 	"propertyId\x12!\n" +
@@ -15056,10 +15095,11 @@ const file_engine_proto_rawDesc = "" +
 	"\x1aGetConclusionDetailRequest\x12\x1f\n" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
 	"projectDir\x12\x1b\n" +
-	"\tentity_id\x18\x02 \x01(\tR\bentityId\"\x92\x01\n" +
+	"\tentity_id\x18\x02 \x01(\tR\bentityId\"\xb5\x01\n" +
 	"\x10ConclusionDetail\x12>\n" +
 	"\x06entity\x18\x01 \x01(\v2&.provenencia.engine.v1.CanonicalEntityR\x06entity\x12>\n" +
-	"\x06fields\x18\x02 \x03(\v2&.provenencia.engine.v1.ConclusionFieldR\x06fields\"{\n" +
+	"\x06fields\x18\x02 \x03(\v2&.provenencia.engine.v1.ConclusionFieldR\x06fields\x12!\n" +
+	"\fmember_count\x18\x03 \x01(\x05R\vmemberCount\"{\n" +
 	"#ListPromoteTargetSuggestionsRequest\x12\x1f\n" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
 	"projectDir\x12\x1d\n" +

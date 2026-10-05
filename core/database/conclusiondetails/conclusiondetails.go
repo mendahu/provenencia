@@ -62,12 +62,14 @@ type Outcome struct {
 	ObservationID      []byte
 	ObservationRef     string
 	Reason             string
-	ValueRank          int    // the value it went into; 0 for none
-	DeniedBy           []byte // the negative Observation, for "denied"
-	Recorded           Value  // what the record said
+	ValueRank          int                // the value it went into; 0 for none
+	DeniedBy           []byte             // the negative Observation, for "denied"
+	Vote               autoreconcile.Vote // the majority that beat it, for "outvoted"
+	Recorded           Value              // what the record said
 	SubjectID          []byte
 	SubjectRef         string
 	CitationID         []byte
+	ArtifactID         []byte
 	SourceID           []byte
 	SourceTitle        string
 	CredibilityKey     string // "" = no assessment (standard)
@@ -91,8 +93,9 @@ type Field struct {
 
 // Detail is one handle's detail.
 type Detail struct {
-	Entity canonicalentities.Entity
-	Fields []Field
+	Entity      canonicalentities.Entity
+	MemberCount int // accepted members
+	Fields      []Field
 }
 
 const (
@@ -110,10 +113,13 @@ const (
 		WHERE v.entity_id = ?
 		ORDER BY v.property_id, v.rank`
 
+	sqlMemberCount = `SELECT COUNT(*) FROM identity_claims WHERE entity_id = ? AND status = 'accepted'`
+
 	sqlOutcomes = `SELECT ao.property_id, ao.observation_id, o.ref, ao.reason, ao.value_rank, ao.denied_by,
+			COALESCE(ao.vote_support, 0), COALESCE(ao.vote_total, 0),
 			o.value_text, o.value_integer, o.value_term_id, COALESCE(t.key, ''), COALESCE(t.label, ''),
 			o.value_date_id, o.value_name_id,
-			s.id, s.ref, c.id, src.id, COALESCE(src.title, ''),
+			s.id, s.ref, c.id, a.id, src.id, COALESCE(src.title, ''),
 			COALESCE(sg.key, ''), COALESCE(cg.key, ''),
 			COALESCE(sg.sort_order - (SELECT sort_order FROM source_credibility_grades
 				WHERE key = 'standard' AND origin = 'provenencia'), 0),
@@ -148,6 +154,9 @@ func ForEntity(q Querier, entityID []byte) (Detail, error) {
 		return Detail{}, ErrNotFound
 	}
 	d := Detail{Entity: e}
+	if d.MemberCount, err = memberCount(q, entityID); err != nil {
+		return Detail{}, err
+	}
 
 	fields, byProp, err := loadProperties(q, e.SubjectTypeID)
 	if err != nil {
@@ -174,6 +183,21 @@ func ForEntity(q Querier, entityID []byte) (Detail, error) {
 		d.Fields = append(d.Fields, *f)
 	}
 	return d, nil
+}
+
+func memberCount(q Querier, entityID []byte) (int, error) {
+	rows, err := q.Query(sqlMemberCount, entityID)
+	if err != nil {
+		return 0, err
+	}
+	defer rows.Close()
+	var n int
+	if rows.Next() {
+		if err := rows.Scan(&n); err != nil {
+			return 0, err
+		}
+	}
+	return n, rows.Err()
 }
 
 // state reads a field's state off its displayed values, by the same rule as
@@ -280,8 +304,9 @@ func loadOutcomes(q Querier, entityID []byte, byProp map[string]*Field) error {
 			o                                  Outcome
 		)
 		if err := rows.Scan(&propertyID, &o.ObservationID, &o.ObservationRef, &o.Reason, &rank, &o.DeniedBy,
+			&o.Vote.Support, &o.Vote.Of,
 			&text, &integer, &termID, &o.Recorded.TermKey, &o.Recorded.TermLabel, &dateID, &nameID,
-			&o.SubjectID, &o.SubjectRef, &o.CitationID, &o.SourceID, &o.SourceTitle,
+			&o.SubjectID, &o.SubjectRef, &o.CitationID, &o.ArtifactID, &o.SourceID, &o.SourceTitle,
 			&o.CredibilityKey, &o.ClaimConfidenceKey,
 			&o.Provenance.Credibility, &o.Provenance.Uncertain, &o.Provenance.ClaimConfidence); err != nil {
 			_ = rows.Close()

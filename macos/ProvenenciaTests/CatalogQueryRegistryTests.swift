@@ -407,6 +407,10 @@ struct CatalogQueryRegistryTests {
         #expect(name.outcomes.map(\.observationRef) == ["OBS-o1", "OBS-o3", "OBS-o2"])
         #expect(name.outcomes.map(\.valueRank) == [1, 1, 2])
         #expect(name.outcomes.allSatisfy { $0.subjectRef == "CPR-1" && $0.sourceID == "s1" })
+        // One Source voted, so the outvoted Jim lost 1 of 1.
+        #expect(name.outcomes.map(\.voteSupport) == [0, 0, 1])
+        #expect(name.outcomes.map(\.voteTotal) == [0, 0, 1])
+        #expect(detail.memberCount == 1)
         #expect(store.heldCatalogProjectDir == projectDir)
     }
 

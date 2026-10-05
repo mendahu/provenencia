@@ -37,7 +37,7 @@ func GetConclusionDetail(in []byte) ([]byte, error) {
 }
 
 func conclusionDetailProto(d conclusiondetails.Detail) *engine.ConclusionDetail {
-	out := &engine.ConclusionDetail{Entity: canonicalEntityProto(d.Entity)}
+	out := &engine.ConclusionDetail{Entity: canonicalEntityProto(d.Entity), MemberCount: int32(d.MemberCount)}
 	for _, f := range d.Fields {
 		pf := &engine.ConclusionField{
 			PropertyId:  uuidString(f.PropertyID),
@@ -65,6 +65,9 @@ func conclusionDetailProto(d conclusiondetails.Detail) *engine.ConclusionDetail 
 				SubjectId:              uuidString(o.SubjectID),
 				SubjectRef:             o.SubjectRef,
 				CitationId:             uuidString(o.CitationID),
+				ArtifactId:             uuidString(o.ArtifactID),
+				VoteSupport:            int32(o.Vote.Support),
+				VoteTotal:              int32(o.Vote.Of),
 				SourceId:               uuidString(o.SourceID),
 				SourceTitle:            o.SourceTitle,
 				CredibilityKey:         o.CredibilityKey,

@@ -868,17 +868,21 @@ struct GoStore: GenealogyStore {
                             subjectID: o.subjectID,
                             subjectRef: o.subjectRef,
                             citationID: o.citationID,
+                            artifactID: o.artifactID,
                             sourceID: o.sourceID,
                             sourceTitle: o.sourceTitle,
                             credibilityKey: o.credibilityKey,
                             transcriptionUncertain: o.transcriptionUncertain,
                             claimConfidenceKey: o.claimConfidenceKey,
                             credibilityOffset: Int(o.credibilityOffset),
-                            claimConfidenceOffset: Int(o.claimConfidenceOffset)
+                            claimConfidenceOffset: Int(o.claimConfidenceOffset),
+                            voteSupport: Int(o.voteSupport),
+                            voteTotal: Int(o.voteTotal)
                         )
                     }
                 )
-            }
+            },
+            memberCount: Int(resp.memberCount)
         )
     }
 

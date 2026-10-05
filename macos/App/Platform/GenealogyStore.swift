@@ -322,6 +322,7 @@ struct CatalogReconcilerOutcome: Sendable, Equatable, Identifiable {
     var subjectID: String
     var subjectRef: String
     var citationID: String
+    var artifactID: String = ""
     var sourceID: String
     var sourceTitle: String
     var credibilityKey: String
@@ -331,6 +332,10 @@ struct CatalogReconcilerOutcome: Sendable, Equatable, Identifiable {
     /// weighed it: below 0 is weak evidence.
     var credibilityOffset: Int = 0
     var claimConfidenceOffset: Int = 0
+    /// For "outvoted": the winning value's Sources of every Source that
+    /// voted on that unit. 0 otherwise.
+    var voteSupport: Int = 0
+    var voteTotal: Int = 0
 
     var id: String { observationID }
     var isLowTrustSource: Bool { credibilityOffset < 0 }
@@ -357,6 +362,8 @@ struct CatalogConclusionField: Sendable, Equatable, Identifiable {
 struct CatalogConclusionDetail: Sendable, Equatable {
     var entity: CatalogCanonicalEntity
     var fields: [CatalogConclusionField]
+    /// Accepted members.
+    var memberCount: Int = 0
 }
 
 /// One Observation row with Property summary (graph / card payloads).

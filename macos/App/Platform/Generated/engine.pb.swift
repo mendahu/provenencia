@@ -3455,6 +3455,23 @@ public nonisolated struct Provenencia_Engine_V1_ReconcilerOutcomeDetail: @unchec
     set {_uniqueStorage()._claimConfidenceOffset = newValue}
   }
 
+  public var artifactID: String {
+    get {_storage._artifactID}
+    set {_uniqueStorage()._artifactID = newValue}
+  }
+
+  /// For "outvoted": the winning value's Sources of every Source that voted
+  /// on that unit (for a name, the part it lost on). 0 otherwise.
+  public var voteSupport: Int32 {
+    get {_storage._voteSupport}
+    set {_uniqueStorage()._voteSupport = newValue}
+  }
+
+  public var voteTotal: Int32 {
+    get {_storage._voteTotal}
+    set {_uniqueStorage()._voteTotal = newValue}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -3520,6 +3537,9 @@ public nonisolated struct Provenencia_Engine_V1_ConclusionDetail: Sendable {
   public mutating func clearEntity() {self._entity = nil}
 
   public var fields: [Provenencia_Engine_V1_ConclusionField] = []
+
+  /// accepted members
+  public var memberCount: Int32 = 0
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -11015,7 +11035,7 @@ nonisolated extension Provenencia_Engine_V1_ReconciledValueDetail: SwiftProtobuf
 
 nonisolated extension Provenencia_Engine_V1_ReconcilerOutcomeDetail: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ReconcilerOutcomeDetail"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}observation_id\0\u{3}observation_ref\0\u{1}reason\0\u{3}value_rank\0\u{3}denied_by_observation_id\0\u{1}recorded\0\u{3}subject_id\0\u{3}subject_ref\0\u{3}citation_id\0\u{3}source_id\0\u{3}source_title\0\u{3}credibility_key\0\u{3}transcription_uncertain\0\u{3}claim_confidence_key\0\u{3}credibility_offset\0\u{3}claim_confidence_offset\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}observation_id\0\u{3}observation_ref\0\u{1}reason\0\u{3}value_rank\0\u{3}denied_by_observation_id\0\u{1}recorded\0\u{3}subject_id\0\u{3}subject_ref\0\u{3}citation_id\0\u{3}source_id\0\u{3}source_title\0\u{3}credibility_key\0\u{3}transcription_uncertain\0\u{3}claim_confidence_key\0\u{3}credibility_offset\0\u{3}claim_confidence_offset\0\u{3}artifact_id\0\u{3}vote_support\0\u{3}vote_total\0")
 
   fileprivate class _StorageClass {
     var _observationID: String = String()
@@ -11034,6 +11054,9 @@ nonisolated extension Provenencia_Engine_V1_ReconcilerOutcomeDetail: SwiftProtob
     var _claimConfidenceKey: String = String()
     var _credibilityOffset: Int32 = 0
     var _claimConfidenceOffset: Int32 = 0
+    var _artifactID: String = String()
+    var _voteSupport: Int32 = 0
+    var _voteTotal: Int32 = 0
 
       // This property is used as the initial default value for new instances of the type.
       // The type itself is protecting the reference to its storage via CoW semantics.
@@ -11060,6 +11083,9 @@ nonisolated extension Provenencia_Engine_V1_ReconcilerOutcomeDetail: SwiftProtob
       _claimConfidenceKey = source._claimConfidenceKey
       _credibilityOffset = source._credibilityOffset
       _claimConfidenceOffset = source._claimConfidenceOffset
+      _artifactID = source._artifactID
+      _voteSupport = source._voteSupport
+      _voteTotal = source._voteTotal
     }
   }
 
@@ -11094,6 +11120,9 @@ nonisolated extension Provenencia_Engine_V1_ReconcilerOutcomeDetail: SwiftProtob
         case 14: try { try decoder.decodeSingularStringField(value: &_storage._claimConfidenceKey) }()
         case 15: try { try decoder.decodeSingularInt32Field(value: &_storage._credibilityOffset) }()
         case 16: try { try decoder.decodeSingularInt32Field(value: &_storage._claimConfidenceOffset) }()
+        case 17: try { try decoder.decodeSingularStringField(value: &_storage._artifactID) }()
+        case 18: try { try decoder.decodeSingularInt32Field(value: &_storage._voteSupport) }()
+        case 19: try { try decoder.decodeSingularInt32Field(value: &_storage._voteTotal) }()
         default: break
         }
       }
@@ -11154,6 +11183,15 @@ nonisolated extension Provenencia_Engine_V1_ReconcilerOutcomeDetail: SwiftProtob
       if _storage._claimConfidenceOffset != 0 {
         try visitor.visitSingularInt32Field(value: _storage._claimConfidenceOffset, fieldNumber: 16)
       }
+      if !_storage._artifactID.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._artifactID, fieldNumber: 17)
+      }
+      if _storage._voteSupport != 0 {
+        try visitor.visitSingularInt32Field(value: _storage._voteSupport, fieldNumber: 18)
+      }
+      if _storage._voteTotal != 0 {
+        try visitor.visitSingularInt32Field(value: _storage._voteTotal, fieldNumber: 19)
+      }
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -11179,6 +11217,9 @@ nonisolated extension Provenencia_Engine_V1_ReconcilerOutcomeDetail: SwiftProtob
         if _storage._claimConfidenceKey != rhs_storage._claimConfidenceKey {return false}
         if _storage._credibilityOffset != rhs_storage._credibilityOffset {return false}
         if _storage._claimConfidenceOffset != rhs_storage._claimConfidenceOffset {return false}
+        if _storage._artifactID != rhs_storage._artifactID {return false}
+        if _storage._voteSupport != rhs_storage._voteSupport {return false}
+        if _storage._voteTotal != rhs_storage._voteTotal {return false}
         return true
       }
       if !storagesAreEqual {return false}
@@ -11285,7 +11326,7 @@ nonisolated extension Provenencia_Engine_V1_GetConclusionDetailRequest: SwiftPro
 
 nonisolated extension Provenencia_Engine_V1_ConclusionDetail: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ConclusionDetail"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}entity\0\u{1}fields\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}entity\0\u{1}fields\0\u{3}member_count\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -11295,6 +11336,7 @@ nonisolated extension Provenencia_Engine_V1_ConclusionDetail: SwiftProtobuf.Mess
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularMessageField(value: &self._entity) }()
       case 2: try { try decoder.decodeRepeatedMessageField(value: &self.fields) }()
+      case 3: try { try decoder.decodeSingularInt32Field(value: &self.memberCount) }()
       default: break
       }
     }
@@ -11311,12 +11353,16 @@ nonisolated extension Provenencia_Engine_V1_ConclusionDetail: SwiftProtobuf.Mess
     if !self.fields.isEmpty {
       try visitor.visitRepeatedMessageField(value: self.fields, fieldNumber: 2)
     }
+    if self.memberCount != 0 {
+      try visitor.visitSingularInt32Field(value: self.memberCount, fieldNumber: 3)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Provenencia_Engine_V1_ConclusionDetail, rhs: Provenencia_Engine_V1_ConclusionDetail) -> Bool {
     if lhs._entity != rhs._entity {return false}
     if lhs.fields != rhs.fields {return false}
+    if lhs.memberCount != rhs.memberCount {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

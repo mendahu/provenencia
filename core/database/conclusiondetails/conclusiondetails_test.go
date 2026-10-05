@@ -161,8 +161,8 @@ func TestForEntity(t *testing.T) {
 	f.promote(c, h)
 
 	d := f.detail(h)
-	if !bytes.Equal(d.Entity.ID, h) {
-		t.Fatalf("entity %+v", d.Entity)
+	if !bytes.Equal(d.Entity.ID, h) || d.MemberCount != 3 {
+		t.Fatalf("entity %+v, %d members", d.Entity, d.MemberCount)
 	}
 	name := field(d, "name")
 	if name.State != autoreconcile.StateMerged || name.ValueType != properties.ValueTypeName || name.Label == "" {
@@ -177,10 +177,12 @@ func TestForEntity(t *testing.T) {
 		o.Recorded.Name == nil || o.Recorded.Name.Form != "J. Robins" || o.ObservationRef == "" || o.SubjectRef == "" {
 		t.Fatalf("folded outcome %+v", o)
 	}
-	if o := outcomeOf(name, full.ID); o.Reason != "kept" || o.ValueRank != 1 || o.SourceTitle != "Census" {
+	if o := outcomeOf(name, full.ID); o.Reason != "kept" || o.ValueRank != 1 || o.SourceTitle != "Census" ||
+		len(o.ArtifactID) != 16 || o.Vote != (autoreconcile.Vote{}) {
 		t.Fatalf("kept outcome %+v", o)
 	}
-	if o := outcomeOf(name, misspelt.ID); o.Reason != "outvoted" || o.ValueRank != 2 {
+	// Robins from the Register and the Census beat the Bible's Robbins.
+	if o := outcomeOf(name, misspelt.ID); o.Reason != "outvoted" || o.ValueRank != 2 || o.Vote != (autoreconcile.Vote{Support: 2, Of: 3}) {
 		t.Fatalf("outvoted outcome %+v", o)
 	}
 	if o := outcomeOf(name, bare.ID); o.Reason != "no_evidence" || o.ValueRank != 0 || o.Recorded.Name == nil || o.Recorded.Name.Form != "James Robins" {

@@ -1495,10 +1495,16 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             v.reason = n == 0 ? "kept" : "outvoted"
             ranked.append(v)
         }
+        // Every Source that voted, for the vote an outvoted record lost.
+        let voters = Set(supportingSources.flatMap { $0 }).count
         for i in outcomes.indices {
             let rank = outcomes[i].valueRank.flatMap { rankOf[$0] }
             outcomes[i].valueRank = rank
             outcomes[i].reason = rank == 1 ? "kept" : "outvoted"
+            if rank != 1 {
+                outcomes[i].voteSupport = ranked.first?.support ?? 0
+                outcomes[i].voteTotal = voters
+            }
         }
         let state: String
         if ranked.isEmpty {
@@ -1517,7 +1523,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             values: ranked,
             outcomes: outcomes.sorted { ($0.valueRank ?? .max, $0.observationID) < ($1.valueRank ?? .max, $1.observationID) }
         )
-        return CatalogConclusionDetail(entity: entity, fields: [field])
+        return CatalogConclusionDetail(entity: entity, fields: [field], memberCount: group.count)
     }
 
     func deleteSubject(projectDir: String, userID _: String, subjectID: String) async throws {

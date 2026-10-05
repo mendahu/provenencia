@@ -1043,6 +1043,11 @@ message ReconcilerOutcomeDetail {
   // auto-reconciler weighed it: below 0 is weak evidence.
   int32 credibility_offset = 15;
   int32 claim_confidence_offset = 16;
+  string artifact_id = 17;
+  // For "outvoted": the winning value's Sources of every Source that voted
+  // on that unit (for a name, the part it lost on). 0 otherwise.
+  int32 vote_support = 18;
+  int32 vote_total = 19;
 }
 
 // ConclusionField is one Property of a handle: its state (single, merged,
@@ -1068,6 +1073,7 @@ message GetConclusionDetailRequest {
 message ConclusionDetail {
   CanonicalEntity entity = 1;
   repeated ConclusionField fields = 2;
+  int32 member_count = 3; // accepted members
 }
 
 // ListPromoteTargetSuggestions returns existing handles a Subject could join,
