@@ -152,7 +152,7 @@ red `Text`), plus `Badge`/`EmptyState`/`Callout` (added for the S2-02
 
 | Component | File | 
 |---|---|
-| Button | `Components/Button/PVButton.swift` (icon-left, loading spinner, and a chrome-less `link` variant added for S2-02) |
+| Button | `Components/Button/PVButton.swift` (icon-left, loading spinner, and a chrome-less `link` variant added for S2-02; the label is `PVCopy`, so a formatted `String` such as Promote's "Back to Compare" works as well as a catalog resource) |
 | Icon | `Components/Icon/PVIcon.swift` |
 | Field | `Components/Field/PVField.swift` |
 | Input | `Components/Input/PVInput.swift` |
@@ -164,7 +164,7 @@ red `Text`), plus `Badge`/`EmptyState`/`Callout` (added for the S2-02
 | Badge | `Components/Badge/PVBadge.swift` (added for S2-02's data-type/origin badges; a glyph-only variant carries the S2-22 seeded pill) |
 | Divider | `Components/Divider/PVDivider.swift` (1pt hairline; horizontal/vertical) |
 | EmptyState | `Components/EmptyState/PVEmptyState.swift` (added for S2-02's empty/no-match states; the web spec's `action` slot isn't ported — see the file's header comment) |
-| Callout | `Components/Callout/PVCallout.swift` (tone / icon / title / body / compact; optional `@ViewBuilder` actions under the body — call-site `PVButton`s; `onDismiss` / `detail` / `plain` deferred) |
+| Callout | `Components/Callout/PVCallout.swift` (tone / icon / title / body / compact; the title is `PVCopy`; optional `@ViewBuilder` actions under the body — call-site `PVButton`s; `onDismiss` / `detail` / `plain` deferred) |
 | Table | `Components/Table/PVTable.swift` (added for S2-22, extracted from the Metadata (then Source fields) list; see "The table tradeoff" below) |
 | Confirm | `Components/Confirm/PVConfirm.swift` (added for S2-22's delete confirmation; the macOS answer to `ConfirmDialog.jsx`, which the web spec says not to port — see "Confirmations are system chrome" below) |
 | Panel | `Components/Panel/PVPanel.swift` (sheet content shell: title / subtitle / body / optional footer; no window chrome) |

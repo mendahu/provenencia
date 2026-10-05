@@ -112,7 +112,8 @@ private struct PVMenuRowButtonBody: View {
     }
 }
 
-/// A styled push button. Always takes a `LocalizedStringResource` label.
+/// A styled push button. Its label is ``PVCopy``: a catalog resource, or a
+/// `String` an `L10n` format function already resolved ("Back to Compare").
 ///
 /// `icon` prepends a leading glyph (`Button.jsx`'s `iconLeft`); `iconRight`
 /// appends a trailing glyph (`Button.jsx`'s `iconRight`). `loading` swaps
@@ -121,7 +122,7 @@ private struct PVMenuRowButtonBody: View {
 /// `ProgressView` reads better as a real AppKit spinner than an animated
 /// SF Symbol would.
 struct PVButton: View {
-    private let titleKey: LocalizedStringResource
+    private let title: Text
     private let variant: PVButtonVariant
     private let size: PVControlSize
     private let icon: PVSymbol?
@@ -130,7 +131,7 @@ struct PVButton: View {
     private let action: () -> Void
 
     init(
-        _ titleKey: LocalizedStringResource,
+        _ title: some PVCopy,
         variant: PVButtonVariant = .secondary,
         size: PVControlSize = .md,
         icon: PVSymbol? = nil,
@@ -138,7 +139,7 @@ struct PVButton: View {
         loading: Bool = false,
         action: @escaping () -> Void
     ) {
-        self.titleKey = titleKey
+        self.title = title.pvText
         self.variant = variant
         self.size = size
         self.icon = icon
@@ -156,7 +157,7 @@ struct PVButton: View {
                 } else if let icon {
                     PVIcon(icon, size: size.iconGlyphSize)
                 }
-                Text(titleKey)
+                title
                 if let iconRight, !loading {
                     PVIcon(iconRight, size: size.iconGlyphSize)
                 }

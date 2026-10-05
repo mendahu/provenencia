@@ -67,7 +67,8 @@ private struct VocabularyToastOverlay: ViewModifier {
                     PVToast(
                         tone: toast.tone,
                         title: toast.title,
-                        message: toast.body,
+                        // A title-only notice ("James Robins filed on PER-…") has no body line.
+                        message: toast.body.isEmpty ? nil : toast.body,
                         onDismiss: { self.toast = nil }
                     )
                     .id(toast)
