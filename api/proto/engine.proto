@@ -1039,6 +1039,10 @@ message ReconcilerOutcomeDetail {
   string credibility_key = 12;       // "" = no assessment (standard)
   bool transcription_uncertain = 13;
   string claim_confidence_key = 14;  // "" = no grade (moderate)
+  // Grade sort_order minus the default grade's (standard, moderate), as the
+  // auto-reconciler weighed it: below 0 is weak evidence.
+  int32 credibility_offset = 15;
+  int32 claim_confidence_offset = 16;
 }
 
 // ConclusionField is one Property of a handle: its state (single, merged,

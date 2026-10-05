@@ -223,13 +223,15 @@ func TestForEntityEvidence(t *testing.T) {
 	f.promote(c, h)
 
 	name := field(f.detail(h), "name")
-	if o := outcomeOf(name, weak.ID); o.Reason != "weak" || o.CredibilityKey != "low_trust" {
+	// Provenance is the auto-reconciler's own view: weak from the Source alone.
+	if o := outcomeOf(name, weak.ID); o.Reason != "weak" || o.CredibilityKey != "low_trust" ||
+		!o.Provenance.Weak() || o.Provenance.Credibility >= 0 || o.Provenance.Uncertain || o.Provenance.ClaimConfidence != 0 {
 		t.Fatalf("weak outcome %+v", o)
 	}
 	if o := outcomeOf(name, denied.ID); o.Reason != "denied" || !bytes.Equal(o.DeniedBy, negative.ID) {
 		t.Fatalf("denied outcome %+v", o)
 	}
-	if o := outcomeOf(name, negative.ID); o.Reason != "against" || o.CredibilityKey != "high_trust" {
+	if o := outcomeOf(name, negative.ID); o.Reason != "against" || o.CredibilityKey != "high_trust" || o.Provenance.Credibility <= 0 {
 		t.Fatalf("negative outcome %+v", o)
 	}
 	var against int

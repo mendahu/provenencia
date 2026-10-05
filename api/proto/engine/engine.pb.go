@@ -8806,8 +8806,12 @@ type ReconcilerOutcomeDetail struct {
 	CredibilityKey         string                 `protobuf:"bytes,12,opt,name=credibility_key,json=credibilityKey,proto3" json:"credibility_key,omitempty"` // "" = no assessment (standard)
 	TranscriptionUncertain bool                   `protobuf:"varint,13,opt,name=transcription_uncertain,json=transcriptionUncertain,proto3" json:"transcription_uncertain,omitempty"`
 	ClaimConfidenceKey     string                 `protobuf:"bytes,14,opt,name=claim_confidence_key,json=claimConfidenceKey,proto3" json:"claim_confidence_key,omitempty"` // "" = no grade (moderate)
-	unknownFields          protoimpl.UnknownFields
-	sizeCache              protoimpl.SizeCache
+	// Grade sort_order minus the default grade's (standard, moderate), as the
+	// auto-reconciler weighed it: below 0 is weak evidence.
+	CredibilityOffset     int32 `protobuf:"varint,15,opt,name=credibility_offset,json=credibilityOffset,proto3" json:"credibility_offset,omitempty"`
+	ClaimConfidenceOffset int32 `protobuf:"varint,16,opt,name=claim_confidence_offset,json=claimConfidenceOffset,proto3" json:"claim_confidence_offset,omitempty"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
 }
 
 func (x *ReconcilerOutcomeDetail) Reset() {
@@ -8936,6 +8940,20 @@ func (x *ReconcilerOutcomeDetail) GetClaimConfidenceKey() string {
 		return x.ClaimConfidenceKey
 	}
 	return ""
+}
+
+func (x *ReconcilerOutcomeDetail) GetCredibilityOffset() int32 {
+	if x != nil {
+		return x.CredibilityOffset
+	}
+	return 0
+}
+
+func (x *ReconcilerOutcomeDetail) GetClaimConfidenceOffset() int32 {
+	if x != nil {
+		return x.ClaimConfidenceOffset
+	}
+	return 0
 }
 
 // ConclusionField is one Property of a handle: its state (single, merged,
@@ -15002,7 +15020,7 @@ const file_engine_proto_rawDesc = "" +
 	"\x06reason\x18\x02 \x01(\tR\x06reason\x12\x18\n" +
 	"\asupport\x18\x03 \x01(\x05R\asupport\x12\x18\n" +
 	"\aagainst\x18\x04 \x01(\x05R\aagainst\x12<\n" +
-	"\x05value\x18\x05 \x01(\v2&.provenencia.engine.v1.ConclusionValueR\x05value\"\xd2\x04\n" +
+	"\x05value\x18\x05 \x01(\v2&.provenencia.engine.v1.ConclusionValueR\x05value\"\xb9\x05\n" +
 	"\x17ReconcilerOutcomeDetail\x12%\n" +
 	"\x0eobservation_id\x18\x01 \x01(\tR\robservationId\x12'\n" +
 	"\x0fobservation_ref\x18\x02 \x01(\tR\x0eobservationRef\x12\x16\n" +
@@ -15022,7 +15040,9 @@ const file_engine_proto_rawDesc = "" +
 	"\fsource_title\x18\v \x01(\tR\vsourceTitle\x12'\n" +
 	"\x0fcredibility_key\x18\f \x01(\tR\x0ecredibilityKey\x127\n" +
 	"\x17transcription_uncertain\x18\r \x01(\bR\x16transcriptionUncertain\x120\n" +
-	"\x14claim_confidence_key\x18\x0e \x01(\tR\x12claimConfidenceKey\"\xb2\x02\n" +
+	"\x14claim_confidence_key\x18\x0e \x01(\tR\x12claimConfidenceKey\x12-\n" +
+	"\x12credibility_offset\x18\x0f \x01(\x05R\x11credibilityOffset\x126\n" +
+	"\x17claim_confidence_offset\x18\x10 \x01(\x05R\x15claimConfidenceOffset\"\xb2\x02\n" +
 	"\x0fConclusionField\x12\x1f\n" +
 	"\vproperty_id\x18\x01 \x01(\tR\n" +
 	"propertyId\x12!\n" +

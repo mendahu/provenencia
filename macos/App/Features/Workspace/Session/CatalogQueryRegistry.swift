@@ -33,6 +33,11 @@ struct CatalogQueryRegistry: Sendable {
         /// Marked stale without a refetch: the next `query` (a place visit)
         /// reloads it. For writes that move a value nobody is looking at yet.
         var markStaleOn: Set<CatalogMutationKind> = []
+        /// An invalidated key that isn't on screen is evicted, not
+        /// revalidated, and reloads when next visited. The exception to
+        /// cache rule 2 for per-handle pages, so one trigger doesn't reload
+        /// every page the researcher has opened.
+        var evictWhenHidden = false
     }
 
     private let specs: [Spec] = [
@@ -161,7 +166,8 @@ struct CatalogQueryRegistry: Sendable {
         Spec(
             kind: .conclusionDetail,
             stalePolicy: .sessionFresh,
-            invalidateOn: CatalogQueryRegistry.conclusionTriggers
+            invalidateOn: CatalogQueryRegistry.conclusionTriggers,
+            evictWhenHidden: true
         ),
     ]
 
@@ -257,6 +263,11 @@ struct CatalogQueryRegistry: Sendable {
     }
 
     /// Keys a mutation leaves stale for their next `query`, without refetching now.
+    /// Whether an invalidated `key` is evicted while off screen (see `Spec`).
+    func evictsWhenHidden(_ key: CatalogQueryKey) -> Bool {
+        specs.first { $0.kind == key.kind }?.evictWhenHidden ?? false
+    }
+
     func staleMarks(by mutation: CatalogMutation, project: ProjectKey) -> [CatalogQueryInvalidation] {
         guard let mutationKind = mutation.invalidationKind else { return [] }
         return specs

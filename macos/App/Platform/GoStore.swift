@@ -872,7 +872,9 @@ struct GoStore: GenealogyStore {
                             sourceTitle: o.sourceTitle,
                             credibilityKey: o.credibilityKey,
                             transcriptionUncertain: o.transcriptionUncertain,
-                            claimConfidenceKey: o.claimConfidenceKey
+                            claimConfidenceKey: o.claimConfidenceKey,
+                            credibilityOffset: Int(o.credibilityOffset),
+                            claimConfidenceOffset: Int(o.claimConfidenceOffset)
                         )
                     }
                 )

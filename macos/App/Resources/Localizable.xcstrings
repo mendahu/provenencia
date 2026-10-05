@@ -15475,6 +15475,258 @@
           }
         }
       }
+    },
+    "conclusions.state.empty": {
+      "comment": "Conclusion field state line when no record gives the Property a value",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing recorded"
+          }
+        }
+      }
+    },
+    "conclusions.state.mixed": {
+      "comment": "Conclusion field state line when records disagree and several values are shown",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "mixed"
+          }
+        }
+      }
+    },
+    "conclusions.state.concluded": {
+      "comment": "Conclusion field state line when a Reconciliation Claim sets the value",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "concluded"
+          }
+        }
+      }
+    },
+    "conclusions.outcome.kept": {
+      "comment": "Auto-reconciler outcome: the record's value is shown",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "kept"
+          }
+        }
+      }
+    },
+    "conclusions.outcome.folded": {
+      "comment": "Auto-reconciler outcome: the record's value was merged into another value",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "folded"
+          }
+        }
+      }
+    },
+    "conclusions.outcome.outvoted": {
+      "comment": "Auto-reconciler outcome: more Sources agree on another spelling",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "outvoted"
+          }
+        }
+      }
+    },
+    "conclusions.outcome.weak": {
+      "comment": "Auto-reconciler outcome: weak evidence that stronger evidence disagrees with",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "weak"
+          }
+        }
+      }
+    },
+    "conclusions.outcome.denied": {
+      "comment": "Auto-reconciler outcome: a stronger negative record says the value is wrong",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "denied"
+          }
+        }
+      }
+    },
+    "conclusions.outcome.provisional": {
+      "comment": "Auto-reconciler outcome: the record's Subject is only a provisional member, so it is reasoning only",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "provisional member"
+          }
+        }
+      }
+    },
+    "conclusions.outcome.noEvidence": {
+      "comment": "Auto-reconciler outcome: the record has nothing the auto-reconciler can use, such as a name without parts",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "no usable value"
+          }
+        }
+      }
+    },
+    "conclusions.outcome.against": {
+      "comment": "Auto-reconciler outcome: a negative record that counts against a value",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "counts against"
+          }
+        }
+      }
+    },
+    "conclusions.weak.lowTrustSource": {
+      "comment": "Why evidence is weak: the Source's credibility is below standard",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "low-trust Source"
+          }
+        }
+      }
+    },
+    "conclusions.weak.uncertainTranscription": {
+      "comment": "Why evidence is weak: the Citation's transcription is marked uncertain",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "uncertain transcription"
+          }
+        }
+      }
+    },
+    "conclusions.weak.lowConfidenceClaim": {
+      "comment": "Why evidence is weak: the member's Identity Claim confidence is below moderate",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "low-confidence claim"
+          }
+        }
+      }
+    },
+    "conclusions.sourceCount": {
+      "comment": "Conclusion field state line: how many Sources support the shown value; argument is the count",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Source"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Sources"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "conclusions.state.merged": {
+      "comment": "Conclusion field state line when several Sources agree on the shown value; argument is the Source count text",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "merged · %@"
+          }
+        }
+      }
+    },
+    "conclusions.additionalValues": {
+      "comment": "Badge after a Conclusion field's first value: how many more values are shown",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "+%lld"
+          }
+        }
+      }
+    },
+    "conclusions.outcome.foldedInto": {
+      "comment": "Auto-reconciler outcome: the record's value was merged into another; argument is that value",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "folded into %@"
+          }
+        }
+      }
+    },
+    "conclusions.outcome.weakBecause": {
+      "comment": "Auto-reconciler outcome: weak evidence; argument lists why (low-trust Source, uncertain transcription, low-confidence claim)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "weak · %@"
+          }
+        }
+      }
+    },
+    "conclusions.outcome.deniedBy": {
+      "comment": "Auto-reconciler outcome: a stronger negative record says the value is wrong; argument is that record's ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "denied by %@"
+          }
+        }
+      }
     }
   },
   "version": "1.1"

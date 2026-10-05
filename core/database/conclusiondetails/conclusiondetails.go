@@ -59,20 +59,23 @@ func (v ReconciledValue) Displayed() bool { return v.Reason == string(autoreconc
 // Outcome is what the auto-reconciler did with one Observation, with the
 // evidence it weighed.
 type Outcome struct {
-	ObservationID          []byte
-	ObservationRef         string
-	Reason                 string
-	ValueRank              int    // the value it went into; 0 for none
-	DeniedBy               []byte // the negative Observation, for "denied"
-	Recorded               Value  // what the record said
-	SubjectID              []byte
-	SubjectRef             string
-	CitationID             []byte
-	SourceID               []byte
-	SourceTitle            string
-	CredibilityKey         string // "" = no assessment (standard)
-	TranscriptionUncertain bool
-	ClaimConfidenceKey     string // "" = no grade (moderate)
+	ObservationID      []byte
+	ObservationRef     string
+	Reason             string
+	ValueRank          int    // the value it went into; 0 for none
+	DeniedBy           []byte // the negative Observation, for "denied"
+	Recorded           Value  // what the record said
+	SubjectID          []byte
+	SubjectRef         string
+	CitationID         []byte
+	SourceID           []byte
+	SourceTitle        string
+	CredibilityKey     string // "" = no assessment (standard)
+	ClaimConfidenceKey string // "" = no grade (moderate)
+	// Provenance is the evidence as the auto-reconciler weighed it, relative
+	// to the default grades; Provenance.Weak says whether it is weak, and
+	// each part says why.
+	Provenance autoreconcile.Provenance
 }
 
 // Field is one Property of the handle.
@@ -111,7 +114,12 @@ const (
 			o.value_text, o.value_integer, o.value_term_id, COALESCE(t.key, ''), COALESCE(t.label, ''),
 			o.value_date_id, o.value_name_id,
 			s.id, s.ref, c.id, src.id, COALESCE(src.title, ''),
-			COALESCE(sg.key, ''), c.transcription_uncertain, COALESCE(cg.key, '')
+			COALESCE(sg.key, ''), COALESCE(cg.key, ''),
+			COALESCE(sg.sort_order - (SELECT sort_order FROM source_credibility_grades
+				WHERE key = 'standard' AND origin = 'provenencia'), 0),
+			c.transcription_uncertain,
+			COALESCE(cg.sort_order - (SELECT sort_order FROM claim_confidence_grades
+				WHERE key = 'moderate' AND origin = 'provenencia'), 0)
 		FROM auto_reconciler_outcomes ao
 		JOIN observations o ON o.id = ao.observation_id
 		JOIN subjects s ON s.id = o.subject_id
@@ -274,7 +282,8 @@ func loadOutcomes(q Querier, entityID []byte, byProp map[string]*Field) error {
 		if err := rows.Scan(&propertyID, &o.ObservationID, &o.ObservationRef, &o.Reason, &rank, &o.DeniedBy,
 			&text, &integer, &termID, &o.Recorded.TermKey, &o.Recorded.TermLabel, &dateID, &nameID,
 			&o.SubjectID, &o.SubjectRef, &o.CitationID, &o.SourceID, &o.SourceTitle,
-			&o.CredibilityKey, &o.TranscriptionUncertain, &o.ClaimConfidenceKey); err != nil {
+			&o.CredibilityKey, &o.ClaimConfidenceKey,
+			&o.Provenance.Credibility, &o.Provenance.Uncertain, &o.Provenance.ClaimConfidence); err != nil {
 			_ = rows.Close()
 			return err
 		}

@@ -450,6 +450,73 @@ struct WorkspaceSessionTests {
         #expect(handle.value?.map(\.entity.ref) == [promoted.entity.ref])
     }
 
+    /// The rule-2 exception (S9-15): a trigger evicts Conclusion detail
+    /// pages that aren't on screen, revalidates the one that is, and
+    /// revalidates list keys as usual.
+    @Test func applyTriggerEvictsHiddenDetailPagesAndRevalidatesTheVisibleOne() async throws {
+        let store = FakeStore()
+        seedStore(store)
+        store.subjectTypesByProject[projectDir] = [
+            CatalogSubjectType(
+                id: "type-person", key: "person", origin: "provenencia", label: "Person",
+                description: "", refPrefix: "PER", candidateRefPrefix: "CPR"
+            ),
+        ]
+        store.subjectsBySource["s1"] = [
+            CatalogSubject(id: "sub-1", ref: "CPR-1", sourceID: "s1", subjectTypeID: "type-person", label: "", description: ""),
+            CatalogSubject(id: "sub-2", ref: "CPR-2", sourceID: "s1", subjectTypeID: "type-person", label: "", description: ""),
+        ]
+        let first = try await store.promoteSubject(projectDir: projectDir, userID: "user-1", subjectID: "sub-1")
+        let second = try await store.promoteSubject(projectDir: projectDir, userID: "user-1", subjectID: "sub-2")
+        let session = makeSession(store: store)
+        let firstKey = CatalogQueryKey.conclusionDetail(project: session.projectKey, entityId: first.entity.id)
+        let secondKey = CatalogQueryKey.conclusionDetail(project: session.projectKey, entityId: second.entity.id)
+        let list: QueryHandle<[CatalogPersonHeader]> = session.query(.personsList(project: session.projectKey))
+        await waitForFetchComplete(list)
+
+        session.apply(location: .personDetail(entityId: first.entity.id, ref: first.entity.ref, title: nil))
+        let firstHandle: QueryHandle<CatalogConclusionDetail> = try #require(session.queryHandle(firstKey))
+        await waitForFetchComplete(firstHandle)
+        session.apply(location: .personDetail(entityId: second.entity.id, ref: second.entity.ref, title: nil))
+        #expect(session.visibleKeys == [secondKey])
+        let secondHandle: QueryHandle<CatalogConclusionDetail> = try #require(session.queryHandle(secondKey))
+        await waitForFetchComplete(secondHandle)
+        #expect(secondHandle.value?.fields.first?.state == "")
+
+        store.observationsBySource["s1"] = [
+            CatalogObservation(
+                id: "o1", ref: "OBS-1", citationID: "c1", subjectID: "sub-2", propertyID: "p-name",
+                polarity: "positive", valueText: "Jim Robins", valueInteger: nil, valueDateID: "",
+                valueNameID: "n-1", nameForm: "Jim Robins", valueSubjectID: "", valueTermID: "",
+                propertyKey: "name", propertyLabel: "Name", propertyValueType: "name"
+            ),
+        ]
+        session.apply(.savedCitation(sourceId: "s1"))
+
+        // Off screen: dropped, so it reloads only when next visited.
+        let evicted: QueryHandle<CatalogConclusionDetail>? = session.queryHandle(firstKey)
+        #expect(evicted == nil)
+        // On screen and lists: revalidated in place.
+        await waitForFetchComplete(secondHandle)
+        await waitForFetchComplete(list)
+        #expect(secondHandle.value?.fields.first?.state == "single")
+        #expect(list.value?.first?.name?.form == "Jim Robins")
+
+        // Leaving for the list hides the second page too.
+        session.apply(location: .sectionRoot(.persons))
+        session.apply(.savedCitation(sourceId: "s1"))
+        let hidden: QueryHandle<CatalogConclusionDetail>? = session.queryHandle(secondKey)
+        #expect(hidden == nil)
+        await waitForFetchComplete(list)
+        #expect(list.status == .ready)
+
+        // Revisiting loads afresh.
+        session.apply(location: .personDetail(entityId: first.entity.id, ref: first.entity.ref, title: nil))
+        let reloaded: QueryHandle<CatalogConclusionDetail> = try #require(session.queryHandle(firstKey))
+        await waitForFetchComplete(reloaded)
+        #expect(reloaded.value?.entity == first.entity)
+    }
+
     /// `usedBy` on the Properties inspector counts Observations, and it
     /// moves whenever a citation save creates or deletes one.
     @Test func applySavedCitationInvalidatesPropertiesUsedBy() async {

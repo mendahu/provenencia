@@ -15,6 +15,8 @@ final class WorkspaceSession {
     private var generations: [CatalogQueryKey: Int] = [:]
     private var inFlight: [CatalogQueryKey: (generation: Int, task: Task<Void, Never>)] = [:]
     private var invalidatedKeys: Set<CatalogQueryKey> = []
+    /// Keys of the place on screen, from the last `apply(location:)`.
+    private(set) var visibleKeys: Set<CatalogQueryKey> = []
     /// Transient notice after leaving a place (composer save, etc.).
     var noticeToast: VocabularyToast?
 
@@ -82,7 +84,11 @@ final class WorkspaceSession {
         location: WorkspaceLocation,
         placeRegistry: PlaceRegistry = .standard
     ) {
-        guard let place = placeRegistry.resolve(location, project: projectKey) else { return }
+        guard let place = placeRegistry.resolve(location, project: projectKey) else {
+            visibleKeys = []
+            return
+        }
+        visibleKeys = Set(place.queryKeys)
         #if DEBUG
         if ProcessInfo.processInfo.environment["PROVENENCIA_DEBUG_SESSION_APPLY"] == "1" {
             print("WorkspaceSession.apply location=\(location) place=\(place.placeID) keys=\(place.queryKeys)")
@@ -95,13 +101,21 @@ final class WorkspaceSession {
 
     /// Patches the list row + cached page shell on identity/cover save, then
     /// invalidates and revalidates whatever else the registry says the write
-    /// reached. Features only call `apply`; they do not query afterward or
-    /// tell sibling views to refresh.
+    /// reached. Keys the registry evicts when hidden are dropped instead
+    /// unless on screen. Features only call `apply`; they do not query
+    /// afterward or tell sibling views to refresh.
     func apply(_ mutation: CatalogMutation) {
         if let source = mutation.patchedSource {
             patchUpdatedSource(source)
         }
-        let keys = cachedKeys(for: registry.invalidations(by: mutation, project: projectKey))
+        var keys: [CatalogQueryKey] = []
+        for key in cachedKeys(for: registry.invalidations(by: mutation, project: projectKey)) {
+            if registry.evictsWhenHidden(key), !visibleKeys.contains(key) {
+                evict(key)
+            } else {
+                keys.append(key)
+            }
+        }
         for key in keys {
             invalidate(key)
         }
@@ -220,6 +234,17 @@ final class WorkspaceSession {
         inFlight[key]?.task.cancel()
         inFlight[key] = nil
         invalidatedKeys.insert(key)
+    }
+
+    /// Drops a key: its in-flight load is cancelled and its handle forgotten,
+    /// so the next `query` starts fresh.
+    private func evict(_ key: CatalogQueryKey) {
+        bumpGeneration(key)
+        inFlight[key]?.task.cancel()
+        inFlight[key] = nil
+        invalidatedKeys.remove(key)
+        handles[key] = nil
+        valueTypes[key] = nil
     }
 
     @discardableResult

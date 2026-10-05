@@ -3360,55 +3360,106 @@ public nonisolated struct Provenencia_Engine_V1_ReconciledValueDetail: Sendable 
 
 /// ReconcilerOutcomeDetail is what the auto-reconciler did with one
 /// Observation, with the record's own value and the evidence it weighed.
-public nonisolated struct Provenencia_Engine_V1_ReconcilerOutcomeDetail: Sendable {
+public nonisolated struct Provenencia_Engine_V1_ReconcilerOutcomeDetail: @unchecked Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var observationID: String = String()
+  public var observationID: String {
+    get {_storage._observationID}
+    set {_uniqueStorage()._observationID = newValue}
+  }
 
-  public var observationRef: String = String()
+  public var observationRef: String {
+    get {_storage._observationRef}
+    set {_uniqueStorage()._observationRef = newValue}
+  }
 
   /// kept, folded, outvoted, weak, denied, provisional, no_evidence, against
-  public var reason: String = String()
+  public var reason: String {
+    get {_storage._reason}
+    set {_uniqueStorage()._reason = newValue}
+  }
 
   /// the value it went into; 0 for none
-  public var valueRank: Int32 = 0
+  public var valueRank: Int32 {
+    get {_storage._valueRank}
+    set {_uniqueStorage()._valueRank = newValue}
+  }
 
-  public var deniedByObservationID: String = String()
+  public var deniedByObservationID: String {
+    get {_storage._deniedByObservationID}
+    set {_uniqueStorage()._deniedByObservationID = newValue}
+  }
 
   public var recorded: Provenencia_Engine_V1_ConclusionValue {
-    get {_recorded ?? Provenencia_Engine_V1_ConclusionValue()}
-    set {_recorded = newValue}
+    get {_storage._recorded ?? Provenencia_Engine_V1_ConclusionValue()}
+    set {_uniqueStorage()._recorded = newValue}
   }
   /// Returns true if `recorded` has been explicitly set.
-  public var hasRecorded: Bool {self._recorded != nil}
+  public var hasRecorded: Bool {_storage._recorded != nil}
   /// Clears the value of `recorded`. Subsequent reads from it will return its default value.
-  public mutating func clearRecorded() {self._recorded = nil}
+  public mutating func clearRecorded() {_uniqueStorage()._recorded = nil}
 
-  public var subjectID: String = String()
+  public var subjectID: String {
+    get {_storage._subjectID}
+    set {_uniqueStorage()._subjectID = newValue}
+  }
 
-  public var subjectRef: String = String()
+  public var subjectRef: String {
+    get {_storage._subjectRef}
+    set {_uniqueStorage()._subjectRef = newValue}
+  }
 
-  public var citationID: String = String()
+  public var citationID: String {
+    get {_storage._citationID}
+    set {_uniqueStorage()._citationID = newValue}
+  }
 
-  public var sourceID: String = String()
+  public var sourceID: String {
+    get {_storage._sourceID}
+    set {_uniqueStorage()._sourceID = newValue}
+  }
 
-  public var sourceTitle: String = String()
+  public var sourceTitle: String {
+    get {_storage._sourceTitle}
+    set {_uniqueStorage()._sourceTitle = newValue}
+  }
 
   /// "" = no assessment (standard)
-  public var credibilityKey: String = String()
+  public var credibilityKey: String {
+    get {_storage._credibilityKey}
+    set {_uniqueStorage()._credibilityKey = newValue}
+  }
 
-  public var transcriptionUncertain: Bool = false
+  public var transcriptionUncertain: Bool {
+    get {_storage._transcriptionUncertain}
+    set {_uniqueStorage()._transcriptionUncertain = newValue}
+  }
 
   /// "" = no grade (moderate)
-  public var claimConfidenceKey: String = String()
+  public var claimConfidenceKey: String {
+    get {_storage._claimConfidenceKey}
+    set {_uniqueStorage()._claimConfidenceKey = newValue}
+  }
+
+  /// Grade sort_order minus the default grade's (standard, moderate), as the
+  /// auto-reconciler weighed it: below 0 is weak evidence.
+  public var credibilityOffset: Int32 {
+    get {_storage._credibilityOffset}
+    set {_uniqueStorage()._credibilityOffset = newValue}
+  }
+
+  public var claimConfidenceOffset: Int32 {
+    get {_storage._claimConfidenceOffset}
+    set {_uniqueStorage()._claimConfidenceOffset = newValue}
+  }
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
 
-  fileprivate var _recorded: Provenencia_Engine_V1_ConclusionValue? = nil
+  fileprivate var _storage = _StorageClass.defaultInstance
 }
 
 /// ConclusionField is one Property of a handle: its state (single, merged,
@@ -10964,98 +11015,174 @@ nonisolated extension Provenencia_Engine_V1_ReconciledValueDetail: SwiftProtobuf
 
 nonisolated extension Provenencia_Engine_V1_ReconcilerOutcomeDetail: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ReconcilerOutcomeDetail"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}observation_id\0\u{3}observation_ref\0\u{1}reason\0\u{3}value_rank\0\u{3}denied_by_observation_id\0\u{1}recorded\0\u{3}subject_id\0\u{3}subject_ref\0\u{3}citation_id\0\u{3}source_id\0\u{3}source_title\0\u{3}credibility_key\0\u{3}transcription_uncertain\0\u{3}claim_confidence_key\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}observation_id\0\u{3}observation_ref\0\u{1}reason\0\u{3}value_rank\0\u{3}denied_by_observation_id\0\u{1}recorded\0\u{3}subject_id\0\u{3}subject_ref\0\u{3}citation_id\0\u{3}source_id\0\u{3}source_title\0\u{3}credibility_key\0\u{3}transcription_uncertain\0\u{3}claim_confidence_key\0\u{3}credibility_offset\0\u{3}claim_confidence_offset\0")
+
+  fileprivate class _StorageClass {
+    var _observationID: String = String()
+    var _observationRef: String = String()
+    var _reason: String = String()
+    var _valueRank: Int32 = 0
+    var _deniedByObservationID: String = String()
+    var _recorded: Provenencia_Engine_V1_ConclusionValue? = nil
+    var _subjectID: String = String()
+    var _subjectRef: String = String()
+    var _citationID: String = String()
+    var _sourceID: String = String()
+    var _sourceTitle: String = String()
+    var _credibilityKey: String = String()
+    var _transcriptionUncertain: Bool = false
+    var _claimConfidenceKey: String = String()
+    var _credibilityOffset: Int32 = 0
+    var _claimConfidenceOffset: Int32 = 0
+
+      // This property is used as the initial default value for new instances of the type.
+      // The type itself is protecting the reference to its storage via CoW semantics.
+      // This will force a copy to be made of this reference when the first mutation occurs;
+      // hence, it is safe to mark this as `nonisolated(unsafe)`.
+      static nonisolated(unsafe) let defaultInstance = _StorageClass()
+
+    private init() {}
+
+    init(copying source: _StorageClass) {
+      _observationID = source._observationID
+      _observationRef = source._observationRef
+      _reason = source._reason
+      _valueRank = source._valueRank
+      _deniedByObservationID = source._deniedByObservationID
+      _recorded = source._recorded
+      _subjectID = source._subjectID
+      _subjectRef = source._subjectRef
+      _citationID = source._citationID
+      _sourceID = source._sourceID
+      _sourceTitle = source._sourceTitle
+      _credibilityKey = source._credibilityKey
+      _transcriptionUncertain = source._transcriptionUncertain
+      _claimConfidenceKey = source._claimConfidenceKey
+      _credibilityOffset = source._credibilityOffset
+      _claimConfidenceOffset = source._claimConfidenceOffset
+    }
+  }
+
+  fileprivate mutating func _uniqueStorage() -> _StorageClass {
+    if !isKnownUniquelyReferenced(&_storage) {
+      _storage = _StorageClass(copying: _storage)
+    }
+    return _storage
+  }
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.observationID) }()
-      case 2: try { try decoder.decodeSingularStringField(value: &self.observationRef) }()
-      case 3: try { try decoder.decodeSingularStringField(value: &self.reason) }()
-      case 4: try { try decoder.decodeSingularInt32Field(value: &self.valueRank) }()
-      case 5: try { try decoder.decodeSingularStringField(value: &self.deniedByObservationID) }()
-      case 6: try { try decoder.decodeSingularMessageField(value: &self._recorded) }()
-      case 7: try { try decoder.decodeSingularStringField(value: &self.subjectID) }()
-      case 8: try { try decoder.decodeSingularStringField(value: &self.subjectRef) }()
-      case 9: try { try decoder.decodeSingularStringField(value: &self.citationID) }()
-      case 10: try { try decoder.decodeSingularStringField(value: &self.sourceID) }()
-      case 11: try { try decoder.decodeSingularStringField(value: &self.sourceTitle) }()
-      case 12: try { try decoder.decodeSingularStringField(value: &self.credibilityKey) }()
-      case 13: try { try decoder.decodeSingularBoolField(value: &self.transcriptionUncertain) }()
-      case 14: try { try decoder.decodeSingularStringField(value: &self.claimConfidenceKey) }()
-      default: break
+    _ = _uniqueStorage()
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      while let fieldNumber = try decoder.nextFieldNumber() {
+        // The use of inline closures is to circumvent an issue where the compiler
+        // allocates stack space for every case branch when no optimizations are
+        // enabled. https://github.com/apple/swift-protobuf/issues/1034
+        switch fieldNumber {
+        case 1: try { try decoder.decodeSingularStringField(value: &_storage._observationID) }()
+        case 2: try { try decoder.decodeSingularStringField(value: &_storage._observationRef) }()
+        case 3: try { try decoder.decodeSingularStringField(value: &_storage._reason) }()
+        case 4: try { try decoder.decodeSingularInt32Field(value: &_storage._valueRank) }()
+        case 5: try { try decoder.decodeSingularStringField(value: &_storage._deniedByObservationID) }()
+        case 6: try { try decoder.decodeSingularMessageField(value: &_storage._recorded) }()
+        case 7: try { try decoder.decodeSingularStringField(value: &_storage._subjectID) }()
+        case 8: try { try decoder.decodeSingularStringField(value: &_storage._subjectRef) }()
+        case 9: try { try decoder.decodeSingularStringField(value: &_storage._citationID) }()
+        case 10: try { try decoder.decodeSingularStringField(value: &_storage._sourceID) }()
+        case 11: try { try decoder.decodeSingularStringField(value: &_storage._sourceTitle) }()
+        case 12: try { try decoder.decodeSingularStringField(value: &_storage._credibilityKey) }()
+        case 13: try { try decoder.decodeSingularBoolField(value: &_storage._transcriptionUncertain) }()
+        case 14: try { try decoder.decodeSingularStringField(value: &_storage._claimConfidenceKey) }()
+        case 15: try { try decoder.decodeSingularInt32Field(value: &_storage._credibilityOffset) }()
+        case 16: try { try decoder.decodeSingularInt32Field(value: &_storage._claimConfidenceOffset) }()
+        default: break
+        }
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    // The use of inline closures is to circumvent an issue where the compiler
-    // allocates stack space for every if/case branch local when no optimizations
-    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
-    // https://github.com/apple/swift-protobuf/issues/1182
-    if !self.observationID.isEmpty {
-      try visitor.visitSingularStringField(value: self.observationID, fieldNumber: 1)
-    }
-    if !self.observationRef.isEmpty {
-      try visitor.visitSingularStringField(value: self.observationRef, fieldNumber: 2)
-    }
-    if !self.reason.isEmpty {
-      try visitor.visitSingularStringField(value: self.reason, fieldNumber: 3)
-    }
-    if self.valueRank != 0 {
-      try visitor.visitSingularInt32Field(value: self.valueRank, fieldNumber: 4)
-    }
-    if !self.deniedByObservationID.isEmpty {
-      try visitor.visitSingularStringField(value: self.deniedByObservationID, fieldNumber: 5)
-    }
-    try { if let v = self._recorded {
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 6)
-    } }()
-    if !self.subjectID.isEmpty {
-      try visitor.visitSingularStringField(value: self.subjectID, fieldNumber: 7)
-    }
-    if !self.subjectRef.isEmpty {
-      try visitor.visitSingularStringField(value: self.subjectRef, fieldNumber: 8)
-    }
-    if !self.citationID.isEmpty {
-      try visitor.visitSingularStringField(value: self.citationID, fieldNumber: 9)
-    }
-    if !self.sourceID.isEmpty {
-      try visitor.visitSingularStringField(value: self.sourceID, fieldNumber: 10)
-    }
-    if !self.sourceTitle.isEmpty {
-      try visitor.visitSingularStringField(value: self.sourceTitle, fieldNumber: 11)
-    }
-    if !self.credibilityKey.isEmpty {
-      try visitor.visitSingularStringField(value: self.credibilityKey, fieldNumber: 12)
-    }
-    if self.transcriptionUncertain != false {
-      try visitor.visitSingularBoolField(value: self.transcriptionUncertain, fieldNumber: 13)
-    }
-    if !self.claimConfidenceKey.isEmpty {
-      try visitor.visitSingularStringField(value: self.claimConfidenceKey, fieldNumber: 14)
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every if/case branch local when no optimizations
+      // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+      // https://github.com/apple/swift-protobuf/issues/1182
+      if !_storage._observationID.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._observationID, fieldNumber: 1)
+      }
+      if !_storage._observationRef.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._observationRef, fieldNumber: 2)
+      }
+      if !_storage._reason.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._reason, fieldNumber: 3)
+      }
+      if _storage._valueRank != 0 {
+        try visitor.visitSingularInt32Field(value: _storage._valueRank, fieldNumber: 4)
+      }
+      if !_storage._deniedByObservationID.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._deniedByObservationID, fieldNumber: 5)
+      }
+      try { if let v = _storage._recorded {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 6)
+      } }()
+      if !_storage._subjectID.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._subjectID, fieldNumber: 7)
+      }
+      if !_storage._subjectRef.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._subjectRef, fieldNumber: 8)
+      }
+      if !_storage._citationID.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._citationID, fieldNumber: 9)
+      }
+      if !_storage._sourceID.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._sourceID, fieldNumber: 10)
+      }
+      if !_storage._sourceTitle.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._sourceTitle, fieldNumber: 11)
+      }
+      if !_storage._credibilityKey.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._credibilityKey, fieldNumber: 12)
+      }
+      if _storage._transcriptionUncertain != false {
+        try visitor.visitSingularBoolField(value: _storage._transcriptionUncertain, fieldNumber: 13)
+      }
+      if !_storage._claimConfidenceKey.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._claimConfidenceKey, fieldNumber: 14)
+      }
+      if _storage._credibilityOffset != 0 {
+        try visitor.visitSingularInt32Field(value: _storage._credibilityOffset, fieldNumber: 15)
+      }
+      if _storage._claimConfidenceOffset != 0 {
+        try visitor.visitSingularInt32Field(value: _storage._claimConfidenceOffset, fieldNumber: 16)
+      }
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Provenencia_Engine_V1_ReconcilerOutcomeDetail, rhs: Provenencia_Engine_V1_ReconcilerOutcomeDetail) -> Bool {
-    if lhs.observationID != rhs.observationID {return false}
-    if lhs.observationRef != rhs.observationRef {return false}
-    if lhs.reason != rhs.reason {return false}
-    if lhs.valueRank != rhs.valueRank {return false}
-    if lhs.deniedByObservationID != rhs.deniedByObservationID {return false}
-    if lhs._recorded != rhs._recorded {return false}
-    if lhs.subjectID != rhs.subjectID {return false}
-    if lhs.subjectRef != rhs.subjectRef {return false}
-    if lhs.citationID != rhs.citationID {return false}
-    if lhs.sourceID != rhs.sourceID {return false}
-    if lhs.sourceTitle != rhs.sourceTitle {return false}
-    if lhs.credibilityKey != rhs.credibilityKey {return false}
-    if lhs.transcriptionUncertain != rhs.transcriptionUncertain {return false}
-    if lhs.claimConfidenceKey != rhs.claimConfidenceKey {return false}
+    if lhs._storage !== rhs._storage {
+      let storagesAreEqual: Bool = withExtendedLifetime((lhs._storage, rhs._storage)) { (_args: (_StorageClass, _StorageClass)) in
+        let _storage = _args.0
+        let rhs_storage = _args.1
+        if _storage._observationID != rhs_storage._observationID {return false}
+        if _storage._observationRef != rhs_storage._observationRef {return false}
+        if _storage._reason != rhs_storage._reason {return false}
+        if _storage._valueRank != rhs_storage._valueRank {return false}
+        if _storage._deniedByObservationID != rhs_storage._deniedByObservationID {return false}
+        if _storage._recorded != rhs_storage._recorded {return false}
+        if _storage._subjectID != rhs_storage._subjectID {return false}
+        if _storage._subjectRef != rhs_storage._subjectRef {return false}
+        if _storage._citationID != rhs_storage._citationID {return false}
+        if _storage._sourceID != rhs_storage._sourceID {return false}
+        if _storage._sourceTitle != rhs_storage._sourceTitle {return false}
+        if _storage._credibilityKey != rhs_storage._credibilityKey {return false}
+        if _storage._transcriptionUncertain != rhs_storage._transcriptionUncertain {return false}
+        if _storage._claimConfidenceKey != rhs_storage._claimConfidenceKey {return false}
+        if _storage._credibilityOffset != rhs_storage._credibilityOffset {return false}
+        if _storage._claimConfidenceOffset != rhs_storage._claimConfidenceOffset {return false}
+        return true
+      }
+      if !storagesAreEqual {return false}
+    }
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

@@ -6714,6 +6714,142 @@ enum L10n {
         }
     }
 
+    /// Conclusion detail text (S9-15): field state lines and auto-reconciler
+    /// outcomes. `ReconciledValueDisplay` composes them.
+    enum Conclusions {
+        static let stateEmpty = LocalizedStringResource(
+            "conclusions.state.empty",
+            defaultValue: "Nothing recorded",
+            comment: "Conclusion field state line when no record gives the Property a value"
+        )
+
+        static let stateMixed = LocalizedStringResource(
+            "conclusions.state.mixed",
+            defaultValue: "mixed",
+            comment: "Conclusion field state line when records disagree and several values are shown"
+        )
+
+        static let stateConcluded = LocalizedStringResource(
+            "conclusions.state.concluded",
+            defaultValue: "concluded",
+            comment: "Conclusion field state line when a Reconciliation Claim sets the value"
+        )
+
+        static let outcomeKept = LocalizedStringResource(
+            "conclusions.outcome.kept",
+            defaultValue: "kept",
+            comment: "Auto-reconciler outcome: the record's value is shown"
+        )
+
+        static let outcomeFolded = LocalizedStringResource(
+            "conclusions.outcome.folded",
+            defaultValue: "folded",
+            comment: "Auto-reconciler outcome: the record's value was merged into another value"
+        )
+
+        static let outcomeOutvoted = LocalizedStringResource(
+            "conclusions.outcome.outvoted",
+            defaultValue: "outvoted",
+            comment: "Auto-reconciler outcome: more Sources agree on another spelling"
+        )
+
+        static let outcomeWeak = LocalizedStringResource(
+            "conclusions.outcome.weak",
+            defaultValue: "weak",
+            comment: "Auto-reconciler outcome: weak evidence that stronger evidence disagrees with"
+        )
+
+        static let outcomeDenied = LocalizedStringResource(
+            "conclusions.outcome.denied",
+            defaultValue: "denied",
+            comment: "Auto-reconciler outcome: a stronger negative record says the value is wrong"
+        )
+
+        static let outcomeProvisional = LocalizedStringResource(
+            "conclusions.outcome.provisional",
+            defaultValue: "provisional member",
+            comment: "Auto-reconciler outcome: the record's Subject is only a provisional member, so it is reasoning only"
+        )
+
+        static let outcomeNoEvidence = LocalizedStringResource(
+            "conclusions.outcome.noEvidence",
+            defaultValue: "no usable value",
+            comment: "Auto-reconciler outcome: the record has nothing the auto-reconciler can use, such as a name without parts"
+        )
+
+        static let outcomeAgainst = LocalizedStringResource(
+            "conclusions.outcome.against",
+            defaultValue: "counts against",
+            comment: "Auto-reconciler outcome: a negative record that counts against a value"
+        )
+
+        static let weakLowTrustSource = LocalizedStringResource(
+            "conclusions.weak.lowTrustSource",
+            defaultValue: "low-trust Source",
+            comment: "Why evidence is weak: the Source's credibility is below standard"
+        )
+
+        static let weakUncertainTranscription = LocalizedStringResource(
+            "conclusions.weak.uncertainTranscription",
+            defaultValue: "uncertain transcription",
+            comment: "Why evidence is weak: the Citation's transcription is marked uncertain"
+        )
+
+        static let weakLowConfidenceClaim = LocalizedStringResource(
+            "conclusions.weak.lowConfidenceClaim",
+            defaultValue: "low-confidence claim",
+            comment: "Why evidence is weak: the member's Identity Claim confidence is below moderate"
+        )
+
+        static func sourceCount(_ count: Int) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.sourceCount",
+                defaultValue: "%lld Sources",
+                comment: "Conclusion field state line: how many Sources support the shown value; argument is the count"
+            ), count)
+        }
+
+        static func stateMerged(sourceCount: Int) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.state.merged",
+                defaultValue: "merged · %@",
+                comment: "Conclusion field state line when several Sources agree on the shown value; argument is the Source count text"
+            ), Self.sourceCount(sourceCount))
+        }
+
+        static func additionalValues(_ count: Int) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.additionalValues",
+                defaultValue: "+%lld",
+                comment: "Badge after a Conclusion field's first value: how many more values are shown"
+            ), count)
+        }
+
+        static func outcomeFoldedInto(_ value: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.outcome.foldedInto",
+                defaultValue: "folded into %@",
+                comment: "Auto-reconciler outcome: the record's value was merged into another; argument is that value"
+            ), value)
+        }
+
+        static func outcomeWeakBecause(_ causes: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.outcome.weakBecause",
+                defaultValue: "weak · %@",
+                comment: "Auto-reconciler outcome: weak evidence; argument lists why (low-trust Source, uncertain transcription, low-confidence claim)"
+            ), causes)
+        }
+
+        static func outcomeDeniedBy(_ ref: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.outcome.deniedBy",
+                defaultValue: "denied by %@",
+                comment: "Auto-reconciler outcome: a stronger negative record says the value is wrong; argument is that record's ref"
+            ), ref)
+        }
+    }
+
     enum Errors {
         static let catalogAlreadyExists = LocalizedStringResource(
             "error.catalog.already_exists",

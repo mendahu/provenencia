@@ -410,6 +410,15 @@ struct CatalogQueryRegistryTests {
         #expect(store.heldCatalogProjectDir == projectDir)
     }
 
+    @Test func onlyConclusionDetailKeysEvictWhenHidden() {
+        let registry = CatalogQueryRegistry.standard
+        let project = ProjectKey(projectDir: projectDir)
+        #expect(registry.evictsWhenHidden(.conclusionDetail(project: project, entityId: "e1")))
+        #expect(!registry.evictsWhenHidden(.personsList(project: project)))
+        #expect(!registry.evictsWhenHidden(.promoteTargets(project: project, subjectId: "s1")))
+        #expect(!registry.evictsWhenHidden(.sourceWorkspace(project: project, sourceId: "s1")))
+    }
+
     @Test func conclusionDetailOfAnUnknownHandleIsCodedNotFound() async throws {
         let store = FakeStore()
         seedStore(store)

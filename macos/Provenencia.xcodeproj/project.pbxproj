@@ -235,6 +235,8 @@
 		A90800000000000000000002 /* ConclusionStubView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A90800000000000000000001 /* ConclusionStubView.swift */; };
 		A90900000000000000000016 /* PersonsListTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A90900000000000000000015 /* PersonsListTests.swift */; };
 		A90900000000000000000014 /* PersonsListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A90900000000000000000013 /* PersonsListView.swift */; };
+		A91500000000000000000002 /* ReconciledValueDisplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = A91500000000000000000001 /* ReconciledValueDisplay.swift */; };
+		A91500000000000000000004 /* ReconciledValueDisplayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A91500000000000000000003 /* ReconciledValueDisplayTests.swift */; };
 		A90900000000000000000012 /* ConclusionListRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = A90900000000000000000011 /* ConclusionListRow.swift */; };
 		6422592F5C31D8F535B03C6A /* MetadataView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 950877B33DC4E16E5BA8B5D6 /* MetadataView.swift */; };
 		6D245285E4AB8AAFDE78E313 /* PVIcon.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36412B0A6A6851ADB45A7AA8 /* PVIcon.swift */; };
@@ -609,6 +611,8 @@
 		A90800000000000000000001 /* ConclusionStubView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ConclusionStubView.swift; sourceTree = "<group>"; };
 		A90900000000000000000015 /* PersonsListTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PersonsListTests.swift; sourceTree = "<group>"; };
 		A90900000000000000000013 /* PersonsListView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PersonsListView.swift; sourceTree = "<group>"; };
+		A91500000000000000000001 /* ReconciledValueDisplay.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ReconciledValueDisplay.swift; sourceTree = "<group>"; };
+		A91500000000000000000003 /* ReconciledValueDisplayTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ReconciledValueDisplayTests.swift; sourceTree = "<group>"; };
 		A90900000000000000000011 /* ConclusionListRow.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ConclusionListRow.swift; sourceTree = "<group>"; };
 		C355704657FB6A572BF7FD6A /* PVMotion.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVMotion.swift; sourceTree = "<group>"; };
 		C9B9D94DAB5FD1587C260FE3 /* PVCallout.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVCallout.swift; sourceTree = "<group>"; };
@@ -1006,6 +1010,7 @@
 			children = (
 				A90800000000000000000001 /* ConclusionStubView.swift */,
 				A90900000000000000000013 /* PersonsListView.swift */,
+				A91500000000000000000001 /* ReconciledValueDisplay.swift */,
 				A90900000000000000000011 /* ConclusionListRow.swift */,
 			);
 			path = Conclusions;
@@ -1165,6 +1170,7 @@
 				AA0000000000000000000332 /* DateValueDraftTests.swift */,
 				A70D0000000000000000000D /* NameValueDraftTests.swift */,
 				A90900000000000000000015 /* PersonsListTests.swift */,
+				A91500000000000000000003 /* ReconciledValueDisplayTests.swift */,
 				A90900000000000000000003 /* PVListTests.swift */,
 				A90800000000000000000005 /* WorkspaceSidebarSectionsTests.swift */,
 				A90700000000000000000005 /* PersonHeaderDisplayTests.swift */,
@@ -1783,6 +1789,7 @@
 				A90800000000000000000004 /* WorkspaceSidebarSections.swift in Sources */,
 				A90800000000000000000002 /* ConclusionStubView.swift in Sources */,
 				A90900000000000000000014 /* PersonsListView.swift in Sources */,
+				A91500000000000000000002 /* ReconciledValueDisplay.swift in Sources */,
 				A90900000000000000000012 /* ConclusionListRow.swift in Sources */,
 				DA26E3BA97D438A7561ED96D /* WorkspaceContent.swift in Sources */,
 				AA0000000000000000000430 /* WorkspaceDestinationHost.swift in Sources */,
@@ -1985,6 +1992,7 @@
 				AA0000000000000000000333 /* DateValueDraftTests.swift in Sources */,
 				A70D0000000000000000000E /* NameValueDraftTests.swift in Sources */,
 				A90900000000000000000016 /* PersonsListTests.swift in Sources */,
+				A91500000000000000000004 /* ReconciledValueDisplayTests.swift in Sources */,
 				A90900000000000000000004 /* PVListTests.swift in Sources */,
 				A90800000000000000000006 /* WorkspaceSidebarSectionsTests.swift in Sources */,
 				A90700000000000000000006 /* PersonHeaderDisplayTests.swift in Sources */,
