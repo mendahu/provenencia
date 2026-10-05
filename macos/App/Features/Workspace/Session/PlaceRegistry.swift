@@ -31,6 +31,8 @@ struct PlaceRegistry: Sendable {
                     .sourceGraph(project: project, sourceId: sourceId),
                     .sourcesList(project: project),
                     .promoteTargets(project: project, subjectId: subjectId),
+                    .confidenceGradesList(project: project),
+                    .propertiesWorkspace(project: project),
                 ]
             },
             deepId: { $0.subjectId }

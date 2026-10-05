@@ -14841,37 +14841,37 @@
       }
     },
     "promote.hint.new.person": {
-      "comment": "Promote footer hint for a new handle (interim until the claim step, S9-12)",
+      "comment": "Promote footer hint for a new handle",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "A new Person is filed when you press Next"
+            "value": "A new Person goes straight to its claim fields"
           }
         }
       }
     },
     "promote.hint.new.event": {
-      "comment": "Promote footer hint for a new handle (interim until the claim step, S9-12)",
+      "comment": "Promote footer hint for a new handle",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "A new Event is filed when you press Next"
+            "value": "A new Event goes straight to its claim fields"
           }
         }
       }
     },
     "promote.hint.new.place": {
-      "comment": "Promote footer hint for a new handle (interim until the claim step, S9-12)",
+      "comment": "Promote footer hint for a new handle",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "A new Place is filed when you press Next"
+            "value": "A new Place goes straight to its claim fields"
           }
         }
       }
@@ -14901,7 +14901,7 @@
       }
     },
     "promote.next": {
-      "comment": "Promote footer: save this step and continue",
+      "comment": "Promote footer: continue to the next step",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -15016,6 +15016,462 @@
           "stringUnit": {
             "state": "translated",
             "value": "Promote %@"
+          }
+        }
+      }
+    },
+    "promote.saveAndNext": {
+      "comment": "Promote footer on the last step: write the claim and continue",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save & next"
+          }
+        }
+      }
+    },
+    "promote.saving": {
+      "comment": "Promote footer primary button while the claim is written",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saving"
+          }
+        }
+      }
+    },
+    "promote.backTo": {
+      "comment": "Promote footer: return to the previous step inside Promote; argument is that step's label",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Back to %@"
+          }
+        }
+      }
+    },
+    "promote.hint.saveNew.person": {
+      "comment": "Promote footer hint on the claim step for a new handle; argument is the subject's name or ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saving files %@ on a new Person"
+          }
+        }
+      }
+    },
+    "promote.hint.saveNew.event": {
+      "comment": "Promote footer hint on the claim step for a new handle; argument is the subject's name or ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saving files %@ on a new Event"
+          }
+        }
+      }
+    },
+    "promote.hint.saveNew.place": {
+      "comment": "Promote footer hint on the claim step for a new handle; argument is the subject's name or ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saving files %@ on a new Place"
+          }
+        }
+      }
+    },
+    "promote.hint.saveExisting": {
+      "comment": "Promote footer hint on the claim step for an existing handle; 1 = subject name, 2 = handle ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saving files %1$@ on %2$@"
+          }
+        }
+      }
+    },
+    "promote.hint.saving": {
+      "comment": "Promote footer hint while the claim is written; argument is the subject's name or ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Writing the claim for %@"
+          }
+        }
+      }
+    },
+    "promote.hint.blocked": {
+      "comment": "Promote footer hint after a save was refused for good",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing was written in this step"
+          }
+        }
+      }
+    },
+    "promote.claim.summary": {
+      "comment": "Promote claim step: eyebrow of the card summarising the write",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Will write · one Identity Claim"
+          }
+        }
+      }
+    },
+    "promote.claim.newRef": {
+      "comment": "Promote claim summary: the ref a new handle will get; argument is the kind's ref prefix (PER, EVT, PLC)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@-…"
+          }
+        }
+      }
+    },
+    "promote.claim.newLine": {
+      "comment": "Promote claim summary line for a new handle; 1 = ref prefix (PER, EVT, PLC), 2 = subject name",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The %1$@- ref is minted when this step saves · %2$@ becomes its first member"
+          }
+        }
+      }
+    },
+    "promote.claim.newLineUnprefixed": {
+      "comment": "Promote claim summary line for a new handle when the ref prefix is unknown; argument is the subject name",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Its ref is minted when this step saves · %@ becomes its first member"
+          }
+        }
+      }
+    },
+    "promote.claim.existingLine.person": {
+      "comment": "Promote claim summary line for an existing handle; argument is its member count",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Existing Person · %@"
+          }
+        }
+      }
+    },
+    "promote.claim.existingLine.event": {
+      "comment": "Promote claim summary line for an existing handle; argument is its member count",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Existing Event · %@"
+          }
+        }
+      }
+    },
+    "promote.claim.existingLine.place": {
+      "comment": "Promote claim summary line for an existing handle; argument is its member count",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Existing Place · %@"
+          }
+        }
+      }
+    },
+    "promote.claim.noPins": {
+      "comment": "Promote claim summary badge: no confirmed matches are pinned to the claim",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No pins"
+          }
+        }
+      }
+    },
+    "promote.claim.status": {
+      "comment": "Promote claim step: status field label",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Status"
+          }
+        }
+      }
+    },
+    "promote.claim.status.hint": {
+      "comment": "Promote claim step: status field hint",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "What you are claiming about this match"
+          }
+        }
+      }
+    },
+    "promote.claim.status.accepted": {
+      "comment": "Promote claim status option: the subject is this handle",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accepted"
+          }
+        }
+      }
+    },
+    "promote.claim.confidence": {
+      "comment": "Promote claim step: confidence field label",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Confidence"
+          }
+        }
+      }
+    },
+    "promote.claim.confidence.hint": {
+      "comment": "Promote claim step: confidence field hint",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Optional · separate from status"
+          }
+        }
+      }
+    },
+    "promote.claim.confidence.none": {
+      "comment": "Promote claim confidence option: no grade",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not stated"
+          }
+        }
+      }
+    },
+    "promote.claim.argument": {
+      "comment": "Promote claim step: argument field label",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Argument"
+          }
+        }
+      }
+    },
+    "promote.claim.argument.hintNew.person": {
+      "comment": "Promote claim argument hint for a new handle",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Optional · nothing to draft from, a new Person has no members to compare"
+          }
+        }
+      }
+    },
+    "promote.claim.argument.hintNew.event": {
+      "comment": "Promote claim argument hint for a new handle",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Optional · nothing to draft from, a new Event has no members to compare"
+          }
+        }
+      }
+    },
+    "promote.claim.argument.hintNew.place": {
+      "comment": "Promote claim argument hint for a new handle",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Optional · nothing to draft from, a new Place has no members to compare"
+          }
+        }
+      }
+    },
+    "promote.claim.argument.hintExisting": {
+      "comment": "Promote claim argument hint for an existing handle (until Compare drafts it, S9-19)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Optional"
+          }
+        }
+      }
+    },
+    "promote.claim.argument.prompt.person": {
+      "comment": "Promote claim argument placeholder",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Why this record is this Person — name, age, household, place"
+          }
+        }
+      }
+    },
+    "promote.claim.argument.prompt.event": {
+      "comment": "Promote claim argument placeholder",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Why this record is this Event — type, date, place, who took part"
+          }
+        }
+      }
+    },
+    "promote.claim.argument.prompt.place": {
+      "comment": "Promote claim argument placeholder",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Why this record is this Place — name, jurisdiction, what lies nearby"
+          }
+        }
+      }
+    },
+    "promote.blocked.title": {
+      "comment": "Promote claim step callout when another window filed the subject first; 1 = subject name, 2 = handle ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ is already a member of %2$@"
+          }
+        }
+      }
+    },
+    "promote.blocked.titleUnknown.person": {
+      "comment": "Promote claim step callout when another window filed the subject first and the handle is not known yet; argument is the subject name",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ already belongs to a Person"
+          }
+        }
+      }
+    },
+    "promote.blocked.titleUnknown.event": {
+      "comment": "Promote claim step callout when another window filed the subject first and the handle is not known yet; argument is the subject name",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ already belongs to an Event"
+          }
+        }
+      }
+    },
+    "promote.blocked.titleUnknown.place": {
+      "comment": "Promote claim step callout when another window filed the subject first and the handle is not known yet; argument is the subject name",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ already belongs to a Place"
+          }
+        }
+      }
+    },
+    "promote.blocked.message": {
+      "comment": "Promote claim step callout body when the subject was filed elsewhere; argument is the subject ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Another window filed %@ while you were on this step. Nothing was written in this step."
+          }
+        }
+      }
+    },
+    "promote.saveFailed.title": {
+      "comment": "Promote claim step callout title when a save fails and can be retried",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The claim wasn’t saved"
+          }
+        }
+      }
+    },
+    "promote.filed.toast": {
+      "comment": "Toast after Promote files a subject; 1 = subject name, 2 = handle ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ filed on %2$@"
           }
         }
       }

@@ -85,7 +85,9 @@ final class PromoteModel {
 
     /// Where the current subject stands on its graph.
     enum SubjectStatus: Equatable, Sendable {
-        case loading, promotable, missing, alreadyPromoted
+        case loading, promotable, missing
+        /// Filed on this handle (its ref).
+        case alreadyPromoted(onto: String)
     }
 
     let entry: PromoteEntry
@@ -129,9 +131,11 @@ final class PromoteModel {
     var kind: EvidencePrimaryKind { flow.subject.kind }
     var choice: Choice { flow.draft.choice }
     var target: Target? { flow.draft.target }
+    var controls: PromoteFlow.Controls { flow.controls }
     var canAdvance: Bool { flow.canAdvance }
     var isSaving: Bool { flow.isSaving }
     var saveError: String? { flow.error }
+    var isBlocked: Bool { flow.isBlocked }
     var hasUnsavedWork: Bool { flow.hasUnsavedWork }
     var pendingLeave: PendingLeave? { flow.pendingLeave.map(PendingLeave.init(navigation:)) }
 
@@ -143,13 +147,22 @@ final class PromoteModel {
         .sourceGraph(project: session.projectKey, sourceId: entry.sourceID)
     }
 
+    var confidenceKey: CatalogQueryKey {
+        .confidenceGradesList(project: session.projectKey)
+    }
+
+    /// Subject types (their handle ref prefixes) come with the Properties snapshot.
+    var propertiesKey: CatalogQueryKey {
+        .propertiesWorkspace(project: session.projectKey)
+    }
+
     /// The step row: the plan as designed (later steps show before they are
     /// built), and where the flow is in it.
     var steps: [LocalizedStringResource] { flow.plan.map(label(for:)) }
     var currentStepIndex: Int { flow.stepNumber - 1 }
     var stepText: String { L10n.Promote.stepOf(current: flow.stepNumber, total: flow.plan.count) }
 
-    private func label(for step: PromoteStep) -> LocalizedStringResource {
+    func label(for step: PromoteStep) -> LocalizedStringResource {
         switch step {
         case .chooseTarget: L10n.Promote.chooseStep(kind)
         case .compare: L10n.Promote.compareStep
@@ -157,21 +170,50 @@ final class PromoteModel {
         }
     }
 
-    /// The footer hint. New and Existing use interim wording while Next files
-    /// the claim directly (S9-12 / S9-19 restore the board's copy).
+    /// The footer hint for where the flow is.
     var hint: String {
+        let name = subject.name
+        switch flow.phase {
+        case .saving:
+            return L10n.Promote.hintSaving(name: name)
+        case .blocked:
+            return L10n.string(L10n.Promote.hintBlocked)
+        case .editing, .confirmingLeave, .finished:
+            break
+        }
+        if flow.step == .claim {
+            if let target, choice == .existing {
+                return L10n.Promote.hintSaveExisting(name: name, ref: target.ref)
+            }
+            return L10n.Promote.hintSaveNew(kind, name: name)
+        }
         switch choice {
         case .new:
             return L10n.string(L10n.Promote.hintNew(kind))
         case .existing:
             guard let target else { return L10n.string(L10n.Promote.hintChoose(kind)) }
+            // Interim until Compare (S9-19) restores the board's wording.
             return L10n.Promote.hintExisting(
-                name: subject.name,
+                name: name,
                 ref: target.ref,
                 members: Self.members(target.memberCount)
             )
         case .none:
             return L10n.string(L10n.Promote.hintChoose(kind))
+        }
+    }
+
+    /// The footer's Back: "Back to {previous step}".
+    var backLabel: String? {
+        controls.back.map { L10n.Promote.backTo(step: L10n.string(label(for: $0))) }
+    }
+
+    /// The primary button: moving on, or writing (and while it writes).
+    var nextLabel: LocalizedStringResource {
+        if isSaving { return L10n.Promote.saving }
+        switch controls.advance {
+        case .step: return L10n.Promote.next
+        case .save: return L10n.Promote.saveAndNext
         }
     }
 
@@ -197,8 +239,12 @@ final class PromoteModel {
 
     // MARK: Events
 
-    func choose(_ choice: Choice) { send(.choose(choice)) }
-    func select(_ target: Target) { send(.selectTarget(target)) }
+    func choose(_ choice: Choice) { send(.edit(.choose(choice))) }
+    func select(_ target: Target) { send(.edit(.selectTarget(target))) }
+    /// The Confidence Select's value; empty means not stated.
+    func setConfidence(_ gradeID: String) { send(.edit(.setConfidence(gradeID.isEmpty ? nil : gradeID))) }
+    func setArgument(_ argument: String) { send(.edit(.setArgument(argument))) }
+    func stepBack() { send(.stepBack) }
     func done() { send(.done) }
     func leave() { send(.leaveConfirmed) }
     func keepPromoting() { send(.leaveCancelled) }
@@ -214,8 +260,10 @@ final class PromoteModel {
 
     /// Feeds the graph's view of the current subject to the flow.
     func subjectStatusChanged(_ status: SubjectStatus) {
-        if status == .missing || status == .alreadyPromoted {
-            send(.subjectUnavailable)
+        switch status {
+        case .missing: send(.subjectUnavailable(filedOn: nil))
+        case .alreadyPromoted(let ref): send(.subjectUnavailable(filedOn: ref))
+        case .loading, .promotable: break
         }
     }
 
@@ -223,7 +271,9 @@ final class PromoteModel {
         guard let rows else { return .loading }
         let id = flow.subject.id
         guard rows.subjects.contains(where: { $0.id == id }) else { return .missing }
-        if rows.memberships.contains(where: { $0.subjectID == id }) { return .alreadyPromoted }
+        if let membership = rows.memberships.first(where: { $0.subjectID == id }) {
+            return .alreadyPromoted(onto: membership.entity.ref)
+        }
         return .promotable
     }
 
@@ -248,6 +298,12 @@ final class PromoteModel {
             case .refreshAfterSave:
                 session.apply(.promotedSubject(sourceId: entry.sourceID))
                 await catalogCounts?.refreshAll()
+            case .announceFiled(let name, let ref):
+                session.noticeToast = VocabularyToast(
+                    title: L10n.Promote.filedToast(name: name, ref: ref),
+                    body: "",
+                    tone: .success
+                )
             case .navigateToGraph, .resumeNavigation, .cancelNavigation:
                 runNavigation(effect)
             }
@@ -259,13 +315,14 @@ final class PromoteModel {
         case .navigateToGraph: navigation?.go(to: entry.graphLocation)
         case .resumeNavigation: navigation?.resumeHeldNavigation()
         case .cancelNavigation: navigation?.cancelHeldNavigation()
-        case .save, .refreshAfterSave: break
+        case .save, .refreshAfterSave, .announceFiled: break
         }
     }
 
     private func write(_ save: PromoteFlow.Save) async {
+        let result: CatalogPromoteResult
         do {
-            _ = try await store.promoteSubject(
+            result = try await store.promoteSubject(
                 projectDir: session.projectKey.projectDir,
                 userID: userID,
                 subjectID: save.subjectID,
@@ -274,11 +331,87 @@ final class PromoteModel {
                 argument: save.argument
             )
         } catch {
-            await perform(flow.send(.saveFailed(message: L10n.Errors.message(for: error))))
+            await perform(flow.send(.saveFailed(
+                message: L10n.Errors.message(for: error),
+                retryable: Self.isRetryable(error)
+            )))
             return
         }
-        await perform(flow.send(.saveSucceeded))
+        await perform(flow.send(.saveSucceeded(entityRef: result.entity.ref)))
     }
+
+    /// Whether saving again could succeed. A subject already filed elsewhere
+    /// stays filed, so that refusal is final.
+    static func isRetryable(_ error: Error) -> Bool {
+        if case CoreInvokeError.coded(_, let code, _, _) = error, code == "identityclaims.already_member" {
+            return false
+        }
+        return true
+    }
+
+    // MARK: Claim fields
+
+    /// The Status Select: one option until Provisional and Rejected ship.
+    var statusOptions: [PVSelectOption] {
+        PromoteFlow.ClaimStatus.allCases.map { status in
+            switch status {
+            case .accepted: PVSelectOption(value: status.rawValue, label: L10n.string(L10n.Promote.statusAccepted))
+            }
+        }
+    }
+
+    var statusSelection: String { flow.draft.status.rawValue }
+
+    /// Not stated first, then the grades in their vocabulary order.
+    static func confidenceOptions(_ grades: [CatalogClaimConfidenceGrade]) -> [PVSelectOption] {
+        [PVSelectOption(value: "", label: L10n.string(L10n.Promote.confidenceNone))]
+            + grades.sorted { $0.sortOrder < $1.sortOrder }.map { PVSelectOption(value: $0.id, label: $0.label) }
+    }
+
+    var confidenceSelection: String { flow.draft.confidenceGradeID ?? "" }
+    var argument: String { flow.draft.argument }
+
+    var argumentHint: String {
+        choice == .existing
+            ? L10n.string(L10n.Promote.argumentHintExisting)
+            : L10n.string(L10n.Promote.argumentHintNew(kind))
+    }
+
+    /// The handle ref prefix for this kind (PER, EVT, PLC), from the subject types.
+    func refPrefix(in properties: PropertiesSnapshot?) -> String? {
+        let prefix = properties?.types.first { $0.key == kind.rawValue }?.refPrefix
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return prefix?.isEmpty == false ? prefix : nil
+    }
+
+    /// The write summary's target: a new handle's name and pending ref, or the chosen one.
+    func summaryTarget(prefix: String?) -> (title: String, ref: String?) {
+        if choice == .existing, let target {
+            return (target.title, target.ref)
+        }
+        return (L10n.string(L10n.Promote.newOption(kind)), prefix.map { L10n.Promote.claimNewRef(prefix: $0) })
+    }
+
+    func summaryLine(prefix: String?) -> String {
+        if choice == .existing, let target {
+            return L10n.Promote.claimExistingLine(kind, members: Self.members(target.memberCount))
+        }
+        if let prefix {
+            return L10n.Promote.claimNewLine(prefix: prefix, name: subject.name)
+        }
+        return L10n.Promote.claimNewLineUnprefixed(name: subject.name)
+    }
+
+    /// The refusal callout when the subject was filed elsewhere.
+    var blockedTitle: String? {
+        guard let failure = flow.failure else { return nil }
+        if let ref = failure.filedOn {
+            return L10n.Promote.blockedTitle(name: subject.name, ref: ref)
+        }
+        return L10n.Promote.blockedTitleUnknown(kind, name: subject.name)
+    }
+
+    var blockedMessage: String { L10n.Promote.blockedMessage(subjectRef: subject.ref) }
 
     // MARK: Targets
 
@@ -371,7 +504,7 @@ private extension PromoteFlow.Effect {
     var isAsync: Bool {
         switch self {
         case .save, .refreshAfterSave: true
-        case .navigateToGraph, .resumeNavigation, .cancelNavigation: false
+        case .announceFiled, .navigateToGraph, .resumeNavigation, .cancelNavigation: false
         }
     }
 }

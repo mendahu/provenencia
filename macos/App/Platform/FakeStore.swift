@@ -23,6 +23,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var subjectsBySource: [String: [CatalogSubject]] = [:]
     /// Accepted Identity Claim per Subject id (Promote): the claim and its handle.
     var membershipBySubject: [String: CatalogSubjectMembership] = [:]
+    /// The Identity Claim Promote wrote per Subject id (confidence, argument).
+    var claimBySubject: [String: CatalogIdentityClaim] = [:]
     var subjectPositionsBySubject: [String: CatalogSubjectPosition] = [:]
     /// Type↔field suggestion joins, keyed by source type id and held in the
     /// order they were assigned — the engine's `sort_order`.
@@ -1287,6 +1289,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 entity: entity,
                 kind: type.key
             )
+            claimBySubject[subjectID] = claim
             return CatalogPromoteResult(entity: entity, claim: claim)
         }
     }
