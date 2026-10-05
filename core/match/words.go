@@ -73,56 +73,13 @@ func wordSimilarity(x, y string, r wordRules) float64 {
 	if x == y {
 		return 1
 	}
-	rx, ry := []rune(x), []rune(y)
 	if resolve.IsInitial(x) || resolve.IsInitial(y) {
-		if r.initials && rx[0] == ry[0] {
+		if r.initials && []rune(x)[0] == []rune(y)[0] {
 			return r.initialCredit
 		}
 		return 0
 	}
-	if r.floor >= 1 {
-		return 0
-	}
-	longest, shortest := len(rx), len(ry)
-	if shortest > longest {
-		longest, shortest = shortest, longest
-	}
-	edits := editDistance(rx, ry)
-	ratio := 1 - float64(edits)/float64(longest)
-	if ratio >= r.floor {
-		return ratio
-	}
-	if edits == 1 && longest == shortest+1 && shortest >= r.shortMin {
-		return ratio
-	}
-	return 0
-}
-
-// editDistance is the optimal-string-alignment distance: insertions,
-// deletions, substitutions, and swaps of adjacent letters ("Robnis" ~
-// "Robins") each cost one.
-func editDistance(a, b []rune) int {
-	d := make([][]int, len(a)+1)
-	for i := range d {
-		d[i] = make([]int, len(b)+1)
-		d[i][0] = i
-	}
-	for j := range d[0] {
-		d[0][j] = j
-	}
-	for i := 1; i <= len(a); i++ {
-		for j := 1; j <= len(b); j++ {
-			cost := 1
-			if a[i-1] == b[j-1] {
-				cost = 0
-			}
-			d[i][j] = min(d[i-1][j]+1, d[i][j-1]+1, d[i-1][j-1]+cost)
-			if i > 1 && j > 1 && a[i-1] == b[j-2] && a[i-2] == b[j-1] {
-				d[i][j] = min(d[i][j], d[i-2][j-2]+1)
-			}
-		}
-	}
-	return d[len(a)][len(b)]
+	return resolve.SpellingSimilarity(x, y, r.floor, r.shortMin)
 }
 
 // wordDice is the Dice overlap of two unweighted word lists under their best

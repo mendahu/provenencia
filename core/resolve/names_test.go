@@ -76,7 +76,7 @@ func TestReconcileNames(t *testing.T) {
 			[]cl{{[]byte{1, 2}, "given=Ann|surname=Smith-Jones"}}, StateMerged, "kept"},
 		{"exact", "one hyphenated part is not two parts",
 			[]Candidate{nm(1, "given=Ann|surname=Smith-Jones"), nm(2, "given=Ann|surname=Smith|surname=Jones")},
-			[]cl{{[]byte{1}, "given=Ann|surname=Smith-Jones"}, {[]byte{2}, "given=Ann|surname=Smith|surname=Jones"}}, StateMixed, "kept kept"},
+			[]cl{{[]byte{1, 2}, "given=Ann|surname=Smith-Jones|surname=Smith|surname=Jones"}}, StateMerged, "kept"},
 		{"exact", "parts of one type compare in idx order, wherever they sit",
 			[]Candidate{nm(1, "given=James|surname=Robins|given=Kenneth"), nm(2, "given=James|given=Kenneth|surname=Robins")},
 			[]cl{{[]byte{1, 2}, "given=James|surname=Robins|given=Kenneth"}}, StateMerged, "kept"},
@@ -106,27 +106,27 @@ func TestReconcileNames(t *testing.T) {
 		{"subsumption", "a chain folds to the fullest: [J], [James], [James, Kenneth]",
 			[]Candidate{nm(1, "given=J.|surname=Robins"), nm(2, "given=James|surname=Robins"), nm(3, "given=James|given=Kenneth|surname=Robins")},
 			[]cl{{[]byte{1, 2, 3}, "given=James|given=Kenneth|surname=Robins"}}, StateMerged, "kept"},
-		{"subsumption", "order matters: [Kenneth, James] is not [James, Kenneth]",
+		{"subsumption", "order matters: [Kenneth, James] does not fold into [James, Kenneth]; each part appears once",
 			[]Candidate{nm(1, "given=Kenneth|given=James|surname=Robins"), nm(2, "given=James|given=Kenneth|surname=Robins")},
-			[]cl{{[]byte{1}, "given=Kenneth|given=James|surname=Robins"}, {[]byte{2}, "given=James|given=Kenneth|surname=Robins"}}, StateMixed, "kept kept"},
-		{"subsumption", "different middle names do not fold",
+			[]cl{{[]byte{1, 2}, "given=Kenneth|given=James|surname=Robins"}}, StateMerged, "kept"},
+		{"subsumption", "different middle names do not fold; both stay, each part once",
 			[]Candidate{nm(1, "given=James|given=Kevin|surname=Robins"), nm(2, "given=James|given=Kenneth|surname=Robins")},
-			[]cl{{[]byte{1}, "given=James|given=Kevin|surname=Robins"}, {[]byte{2}, "given=James|given=Kenneth|surname=Robins"}}, StateMixed, "kept kept"},
+			[]cl{{[]byte{1, 2}, "given=James|given=Kevin|given=Kenneth|surname=Robins"}}, StateMerged, "kept"},
 		{"subsumption", "an initial of another letter does not fold",
 			[]Candidate{nm(1, "given=W.|surname=Robins"), nm(2, "given=James|surname=Robins")},
-			[]cl{{[]byte{1}, "given=W.|surname=Robins"}, {[]byte{2}, "given=James|surname=Robins"}}, StateMixed, "kept kept"},
-		{"subsumption", "two initials of different letters stay apart",
+			[]cl{{[]byte{1, 2}, "given=W.|given=James|surname=Robins"}}, StateMerged, "kept"},
+		{"subsumption", "two initials of different letters both stay",
 			[]Candidate{nm(1, "given=J.|surname=Robins"), nm(2, "given=K.|surname=Robins")},
-			[]cl{{[]byte{1}, "given=J.|surname=Robins"}, {[]byte{2}, "given=K.|surname=Robins"}}, StateMixed, "kept kept"},
+			[]cl{{[]byte{1, 2}, "given=J.|given=K.|surname=Robins"}}, StateMerged, "kept"},
 		{"subsumption", "a lone uncased character is a whole name, not an initial",
 			[]Candidate{nm(1, "surname=蒋|given=浩"), nm(2, "surname=蒋|given=浩然")},
-			[]cl{{[]byte{1}, "surname=蒋|given=浩"}, {[]byte{2}, "surname=蒋|given=浩然"}}, StateMixed, "kept kept"},
+			[]cl{{[]byte{1, 2}, "surname=蒋|given=浩|given=浩然"}}, StateMerged, "kept"},
 		{"subsumption", "an ambiguous initial folds into the best ranked of equal support",
 			[]Candidate{nm(1, "given=James|surname=Robins"), nm(2, "given=John|surname=Robins"), nm(3, "given=J.|surname=Robins")},
-			[]cl{{[]byte{1, 3}, "given=James|surname=Robins"}, {[]byte{2}, "given=John|surname=Robins"}}, StateMerged, "kept outvoted"},
+			[]cl{{[]byte{1, 2, 3}, "given=James|given=John|surname=Robins"}}, StateMerged, "kept"},
 		{"subsumption", "an ambiguous initial folds into the best supported",
 			[]Candidate{nm(1, "given=James|surname=Robins"), nm(2, "given=John|surname=Robins"), nm(3, "given=John|surname=Robins"), nm(4, "given=J.|surname=Robins")},
-			[]cl{{[]byte{2, 3, 4}, "given=John|surname=Robins"}, {[]byte{1}, "given=James|surname=Robins"}}, StateMerged, "kept outvoted"},
+			[]cl{{[]byte{1, 2, 3, 4}, "given=John|given=James|surname=Robins"}}, StateMerged, "kept"},
 		{"subsumption", "an initial never folds across types",
 			[]Candidate{nm(1, "nick=J|surname=Robins"), nm(2, "given=James|surname=Robins")},
 			[]cl{{[]byte{1, 2}, "given=James|nick=J|surname=Robins"}}, StateMerged, "kept"},
@@ -141,35 +141,35 @@ func TestReconcileNames(t *testing.T) {
 		{"majority", "four of five",
 			[]Candidate{nm(1, "surname=Robbins"), nm(2, "surname=Robins"), nm(3, "surname=Robins"), nm(4, "surname=Robins"), nm(5, "surname=Robins")},
 			[]cl{{[]byte{2, 3, 4, 5}, "surname=Robins"}, {[]byte{1}, "surname=Robbins"}}, StateMerged, "kept outvoted"},
-		{"majority", "one to one keeps both",
+		{"majority", "one to one keeps both in the name",
 			[]Candidate{nm(1, "given=Mary|surname=Robins"), nm(2, "given=James|surname=Robins")},
-			[]cl{{[]byte{1}, "given=Mary|surname=Robins"}, {[]byte{2}, "given=James|surname=Robins"}}, StateMixed, "kept kept"},
+			[]cl{{[]byte{1, 2}, "given=Mary|given=James|surname=Robins"}}, StateMerged, "kept"},
 		{"majority", "two of four is not a majority",
 			[]Candidate{nm(1, "given=James|surname=Robins"), nm(2, "given=James|surname=Robins"), nm(3, "given=Mary|surname=Robins"), nm(4, "given=Ann|surname=Robins")},
-			[]cl{{[]byte{1, 2}, "given=James|surname=Robins"}, {[]byte{3}, "given=Mary|surname=Robins"}, {[]byte{4}, "given=Ann|surname=Robins"}}, StateMixed, "kept kept kept"},
+			[]cl{{[]byte{1, 2, 3, 4}, "given=James|given=Mary|given=Ann|surname=Robins"}}, StateMerged, "kept"},
 		{"majority", "eliminated candidates group by exact parts",
 			[]Candidate{nm(1, "surname=Robins"), nm(2, "surname=Robins"), nm(3, "surname=Robins"), nm(4, "surname=Robbins"), nm(5, "surname=ROBBINS")},
 			[]cl{{[]byte{1, 2, 3}, "surname=Robins"}, {[]byte{4, 5}, "surname=Robbins"}}, StateMerged, "kept outvoted"},
 		{"majority", "each type is elected on its own",
 			[]Candidate{nm(1, "given=James|surname=Robins"), nm(2, "given=James|surname=Robbins"), nm(3, "given=Jim|surname=Robins")},
-			[]cl{{[]byte{1}, "given=James|surname=Robins"}, {[]byte{2}, "given=James|surname=Robbins"}, {[]byte{3}, "given=Jim|surname=Robins"}}, StateSingle, "kept outvoted outvoted"},
+			[]cl{{[]byte{1, 3}, "given=James|given=Jim|surname=Robins"}, {[]byte{2}, "given=James|surname=Robbins"}}, StateMerged, "kept outvoted"},
 		{"majority", "folded support counts, and the winner's parts can come from a loser",
 			[]Candidate{nm(1, "given=J.|surname=Robins"), nm(2, "given=J.|surname=Robins"), nm(3, "given=James|surname=Robbins")},
 			[]cl{{[]byte{1, 2}, "given=James|surname=Robins"}, {[]byte{3}, "given=James|surname=Robbins"}}, StateMerged, "kept outvoted"},
 
 		// No type is special
-		{"types", "prefixes that differ stay apart",
+		{"types", "prefixes that differ both stay in the name",
 			[]Candidate{nm(1, "prefix=Rev.|given=James|surname=Robins"), nm(2, "prefix=Dr.|given=James|surname=Robins")},
-			[]cl{{[]byte{1}, "prefix=Rev.|given=James|surname=Robins"}, {[]byte{2}, "prefix=Dr.|given=James|surname=Robins"}}, StateMixed, "kept kept"},
-		{"types", "a prefix is elected like any part",
+			[]cl{{[]byte{1, 2}, "prefix=Rev.|prefix=Dr.|given=James|surname=Robins"}}, StateMerged, "kept"},
+		{"types", "a different prefix is not outvoted",
 			[]Candidate{nm(1, "prefix=Rev.|given=James|surname=Robins"), nm(2, "prefix=Rev.|given=James|surname=Robins"), nm(3, "prefix=Dr.|given=James|surname=Robins")},
-			[]cl{{[]byte{1, 2}, "prefix=Rev.|given=James|surname=Robins"}, {[]byte{3}, "prefix=Dr.|given=James|surname=Robins"}}, StateMerged, "kept outvoted"},
-		{"types", "suffixes that differ stay apart",
+			[]cl{{[]byte{1, 2, 3}, "prefix=Rev.|prefix=Dr.|given=James|surname=Robins"}}, StateMerged, "kept"},
+		{"types", "suffixes that differ both stay in the name",
 			[]Candidate{nm(1, "given=James|surname=Robins|suffix=Jr."), nm(2, "given=James|surname=Robins|suffix=Sr.")},
-			[]cl{{[]byte{1}, "given=James|surname=Robins|suffix=Jr."}, {[]byte{2}, "given=James|surname=Robins|suffix=Sr."}}, StateMixed, "kept kept"},
-		{"types", "James and Jim, both given, are different names",
+			[]cl{{[]byte{1, 2}, "given=James|surname=Robins|suffix=Jr.|suffix=Sr."}}, StateMerged, "kept"},
+		{"types", "James and Jim, both given, both stay in the name",
 			[]Candidate{nm(1, "given=James|surname=Robins"), nm(2, "given=Jim|surname=Robins")},
-			[]cl{{[]byte{1}, "given=James|surname=Robins"}, {[]byte{2}, "given=Jim|surname=Robins"}}, StateMixed, "kept kept"},
+			[]cl{{[]byte{1, 2}, "given=James|given=Jim|surname=Robins"}}, StateMerged, "kept"},
 		{"types", "a nickname beside a given name is kept",
 			[]Candidate{nm(1, "given=James|surname=Robins"), nm(2, "given=James|nick=Jim|surname=Robins")},
 			[]cl{{[]byte{1, 2}, "given=James|nick=Jim|surname=Robins"}}, StateMerged, "kept"},
@@ -184,10 +184,10 @@ func TestReconcileNames(t *testing.T) {
 			[]cl{{[]byte{1, 2}, "=James|=Robins|given=James|surname=Robins"}}, StateMerged, "kept"},
 		{"types", "undetermined is a type like any other",
 			[]Candidate{nm(1, "undetermined=Kendall|surname=Robins"), nm(2, "undetermined=Kendal|surname=Robins")},
-			[]cl{{[]byte{1}, "undetermined=Kendall|surname=Robins"}, {[]byte{2}, "undetermined=Kendal|surname=Robins"}}, StateMixed, "kept kept"},
-		{"types", "accents are different names",
+			[]cl{{[]byte{1, 2}, "undetermined=Kendall|undetermined=Kendal|surname=Robins"}}, StateMerged, "kept"},
+		{"types", "accented and plain spellings both stay in the name",
 			[]Candidate{nm(1, "given=José|surname=Silva"), nm(2, "given=Jose|surname=Silva")},
-			[]cl{{[]byte{1}, "given=José|surname=Silva"}, {[]byte{2}, "given=Jose|surname=Silva"}}, StateMixed, "kept kept"},
+			[]cl{{[]byte{1, 2}, "given=José|given=Jose|surname=Silva"}}, StateMerged, "kept"},
 
 		// Absence is not disagreement
 		{"absence", "a surname alone joins the fuller name",
@@ -196,12 +196,12 @@ func TestReconcileNames(t *testing.T) {
 		{"absence", "a given name alone joins",
 			[]Candidate{nm(1, "given=James"), nm(2, "given=James|surname=Robins")},
 			[]cl{{[]byte{1, 2}, "given=James|surname=Robins"}}, StateMerged, "kept"},
-		{"absence", "a surname alone joins the best-ranked of equal clusters",
+		{"absence", "a surname alone joins the one name",
 			[]Candidate{nm(1, "given=Mary|surname=Robins"), nm(2, "given=James|surname=Robins"), nm(3, "surname=Robins")},
-			[]cl{{[]byte{1, 3}, "given=Mary|surname=Robins"}, {[]byte{2}, "given=James|surname=Robins"}}, StateMixed, "kept kept"},
-		{"absence", "a fuller given name wins two of three, and the surname joins it",
+			[]cl{{[]byte{1, 2, 3}, "given=Mary|given=James|surname=Robins"}}, StateMerged, "kept"},
+		{"absence", "a different given name is not outvoted by a fuller one",
 			[]Candidate{nm(1, "given=Mary|surname=Robins"), nm(2, "given=James|surname=Robins"), nm(3, "given=James|given=K.|surname=Robins"), nm(4, "surname=Robins")},
-			[]cl{{[]byte{2, 3, 4}, "given=James|given=K.|surname=Robins"}, {[]byte{1}, "given=Mary|surname=Robins"}}, StateMerged, "kept outvoted"},
+			[]cl{{[]byte{1, 2, 3, 4}, "given=James|given=K.|given=Mary|surname=Robins"}}, StateMerged, "kept"},
 		{"absence", "a candidate sharing no type joins",
 			[]Candidate{nm(1, "given=James|surname=Robins"), nm(2, "prefix=Rev.")},
 			[]cl{{[]byte{1, 2}, "prefix=Rev.|given=James|surname=Robins"}}, StateMerged, "kept"},
@@ -222,9 +222,9 @@ func TestReconcileNames(t *testing.T) {
 		{"form", "the same parts under different forms merge",
 			[]Candidate{withNameForm(nm(1, "given=James|surname=Robins"), "Robins, James"), withNameForm(nm(2, "given=James|surname=Robins"), "Jas. Robins")},
 			[]cl{{[]byte{1, 2}, "given=James|surname=Robins"}}, StateMerged, "kept"},
-		{"form", "the same form over different parts does not merge",
+		{"form", "different parts under one form both stay in the name",
 			[]Candidate{withNameForm(nm(1, "given=James|surname=Robins"), "J. Robins"), withNameForm(nm(2, "given=John|surname=Robins"), "J. Robins")},
-			[]cl{{[]byte{1}, "given=James|surname=Robins"}, {[]byte{2}, "given=John|surname=Robins"}}, StateMixed, "kept kept"},
+			[]cl{{[]byte{1, 2}, "given=James|given=John|surname=Robins"}}, StateMerged, "kept"},
 
 		// Assembly
 		{"assembly", "a type the base lacks goes after its predecessor",
@@ -292,7 +292,7 @@ func TestReconcileNamesProvenance(t *testing.T) {
 			[]clAgainst{{[]byte{2}, "given=James|surname=Robins", 0}, {[]byte{1}, "given=Mary|surname=Robins", 0}}, StateSingle, "kept weak"},
 		{"confidence", "two weak values both stay when nothing stronger disagrees",
 			[]Candidate{lowTrust(nm(1, "given=Mary|surname=Robins")), uncertain(nm(2, "given=James|surname=Robins"))},
-			[]clAgainst{{[]byte{2}, "given=James|surname=Robins", 0}, {[]byte{1}, "given=Mary|surname=Robins", 0}}, StateMixed, "kept kept"},
+			[]clAgainst{{[]byte{1, 2}, "given=James|given=Mary|surname=Robins", 0}}, StateMerged, "kept"},
 		{"confidence", "all weak and agreeing still reconcile",
 			[]Candidate{lowTrust(nm(1, "given=J.|surname=Robins")), lowClaim(nm(2, "given=James|surname=Robins"))},
 			[]clAgainst{{[]byte{1, 2}, "given=James|surname=Robins", 0}}, StateMerged, "kept"},
@@ -308,7 +308,7 @@ func TestReconcileNamesProvenance(t *testing.T) {
 			[]clAgainst{{[]byte{2}, "prefix=Rev.|given=James", 0}, {[]byte{1}, "prefix=Dr.|given=James|surname=Robins", 0}}, StateSingle, "kept weak"},
 		{"confidence", "high trust against standard is not weak against strong",
 			[]Candidate{nm(1, "given=Mary|surname=Robins"), highTrust(nm(2, "given=James|surname=Robins"))},
-			[]clAgainst{{[]byte{2}, "given=James|surname=Robins", 0}, {[]byte{1}, "given=Mary|surname=Robins", 0}}, StateMixed, "kept kept"},
+			[]clAgainst{{[]byte{1, 2}, "given=James|given=Mary|surname=Robins", 0}}, StateMerged, "kept"},
 
 		// Negatives deny weaker positives with the same parts.
 		{"negatives", "a stronger negative eliminates the same name",
@@ -345,7 +345,7 @@ func TestReconcileNamesProvenance(t *testing.T) {
 			[]clAgainst{{[]byte{1, 2}, "given=James|surname=Robins", 0}}, StateMerged, "kept"},
 		{"rank", "an ambiguous initial folds toward the stronger record",
 			[]Candidate{nm(1, "given=James|surname=Robins"), highTrust(nm(2, "given=John|surname=Robins")), nm(3, "given=J.|surname=Robins")},
-			[]clAgainst{{[]byte{2, 3}, "given=John|surname=Robins", 0}, {[]byte{1}, "given=James|surname=Robins", 0}}, StateMerged, "kept outvoted"},
+			[]clAgainst{{[]byte{1, 2, 3}, "given=John|given=James|surname=Robins", 0}}, StateMerged, "kept"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.group+"/"+tc.name, func(t *testing.T) {
@@ -566,4 +566,60 @@ func reasonsOf(r Result) string {
 		out = append(out, string(c.Reason))
 	}
 	return strings.Join(out, " ")
+}
+
+// One name per Person: values that disagree within a part type combine into
+// it, unless one is a spelling variant of a majority winner or only weak
+// evidence backs it.
+func TestReconcileNamesCombine(t *testing.T) {
+	cases := []struct {
+		name    string
+		in      []Candidate
+		want    []cl
+		state   State
+		reasons string
+	}{
+		{"a nickname and a given name from different records combine",
+			[]Candidate{nm(1, "nick=Jake|surname=Robins"), nm(2, "given=James|surname=Robins")},
+			[]cl{{[]byte{1, 2}, "given=James|nick=Jake|surname=Robins"}}, StateMerged, "kept"},
+		{"a nickname recorded as a given name combines with the given name",
+			[]Candidate{nm(1, "given=Jake|surname=Robins"), nm(2, "given=James|surname=Robins")},
+			[]cl{{[]byte{1, 2}, "given=Jake|given=James|surname=Robins"}}, StateMerged, "kept"},
+		{"a different given name in the minority is not outvoted",
+			[]Candidate{nm(1, "given=James|surname=Robins"), nm(2, "given=James|surname=Robins"), nm(3, "given=Jake|surname=Robins")},
+			[]cl{{[]byte{1, 2, 3}, "given=James|given=Jake|surname=Robins"}}, StateMerged, "kept"},
+		{"a married surname stays beside the birth surname",
+			[]Candidate{nm(1, "given=Mary|surname=Smith"), nm(2, "given=Mary|surname=Robins"), nm(3, "given=Mary|surname=Robins")},
+			[]cl{{[]byte{1, 2, 3}, "given=Mary|surname=Robins|surname=Smith"}}, StateMerged, "kept"},
+		{"a misspelt surname is outvoted, a different given name is not",
+			[]Candidate{nm(1, "given=J.|surname=Robins"), nm(2, "given=James|surname=Robins"), nm(3, "given=James|surname=Robbins"), nm(4, "given=Jim|surname=Robins")},
+			[]cl{{[]byte{1, 2, 4}, "given=James|given=Jim|surname=Robins"}, {[]byte{3}, "given=James|surname=Robbins"}}, StateMerged, "kept outvoted"},
+		{"a misspelling ties: both stay",
+			[]Candidate{nm(1, "given=James|surname=Robins"), nm(2, "given=James|surname=Robbins")},
+			[]cl{{[]byte{1, 2}, "given=James|surname=Robins|surname=Robbins"}}, StateMerged, "kept"},
+		{"weak evidence for a different name still drops",
+			[]Candidate{lowTrust(nm(1, "given=Jake|surname=Robins")), nm(2, "given=James|surname=Robins")},
+			[]cl{{[]byte{2}, "given=James|surname=Robins"}, {[]byte{1}, "given=Jake|surname=Robins"}}, StateSingle, "kept weak"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := Resolve(properties.ValueTypeName, tc.in, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var have []cl
+			for i, c := range got.Clusters {
+				have = append(have, cl{shape(got)[i], spec(c.Value.Name)})
+			}
+			if !reflect.DeepEqual(have, tc.want) {
+				t.Fatalf("got  %v\nwant %v", have, tc.want)
+			}
+			if got.State() != tc.state {
+				t.Fatalf("state %q, want %q", got.State(), tc.state)
+			}
+			if r := reasonsOf(got); r != tc.reasons {
+				t.Fatalf("reasons %q, want %q", r, tc.reasons)
+			}
+		})
+	}
 }

@@ -99,11 +99,12 @@ func TestListPersonHeaders(t *testing.T) {
 					t.Fatalf("%+v", resp.Headers)
 				}
 				h := resp.Headers[0]
-				if !strings.HasPrefix(h.Entity.GetRef(), "PER-") || h.GetNameClusterCount() != 2 {
+				// James Robins + Jim Robins reconcile into one name (S9-13b).
+				if !strings.HasPrefix(h.Entity.GetRef(), "PER-") || h.GetNameClusterCount() != 1 {
 					t.Fatalf("%+v", h)
 				}
 				n := h.GetName()
-				if n.GetForm() != "James Robins" || len(n.GetParts()) != 2 || n.GetParts()[1].GetType() != namevalues.PartTypeSurname {
+				if n.GetForm() != "James Jim Robins" || len(n.GetParts()) != 3 || n.GetParts()[2].GetType() != namevalues.PartTypeSurname {
 					t.Fatalf("name %+v", n)
 				}
 			},
@@ -178,7 +179,7 @@ func TestListSubjectMembershipsCarriesResolvedName(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(resp.Memberships) != 1 || resp.Memberships[0].Entity.GetRef() != ref ||
-		resp.Memberships[0].GetName().GetForm() != "James Robins" {
+		resp.Memberships[0].GetName().GetForm() != "James Jim Robins" {
 		t.Fatalf("%+v", resp.Memberships)
 	}
 }

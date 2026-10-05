@@ -27,9 +27,18 @@ type module interface {
 	// fold reports whether from, a less specific value, folds into into, a
 	// fuller one, both units of name. Simple modules never fold.
 	fold(name string, from, into unit) bool
+	// outvotes reports whether majority may crowd other out when winner wins
+	// unit name. Simple modules let majority outvote anything; names only
+	// outvote spelling variants of the winner.
+	outvotes(name string, winner, other unit) bool
+	// oneValue reports whether every displayed candidate forms a single
+	// value (names: one structure, several values per part type), rather
+	// than one value per agreeing group.
+	oneValue() bool
 	// assemble builds a cluster's displayed value from its supporting members
-	// in rank order and the unit each unit name settled on.
-	assemble(members []Candidate, settled map[string]unit) Value
+	// in rank order and, per unit name, the values it settled on (best
+	// supported first). A module without oneValue gets one value per name.
+	assemble(members []Candidate, settled map[string][]unit) Value
 }
 
 // wholeValue is the unit name of a module with one unit per value.
@@ -76,7 +85,11 @@ func (m keyModule) split(v Value) (map[string]unit, bool) {
 
 func (keyModule) fold(string, unit, unit) bool { return false }
 
-func (keyModule) assemble(members []Candidate, _ map[string]unit) Value {
+func (keyModule) outvotes(string, unit, unit) bool { return true }
+
+func (keyModule) oneValue() bool { return false }
+
+func (keyModule) assemble(members []Candidate, _ map[string][]unit) Value {
 	return members[0].Value
 }
 

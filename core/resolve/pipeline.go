@@ -2,6 +2,7 @@ package resolve
 
 import (
 	"bytes"
+	"slices"
 	"sort"
 	"strings"
 )
@@ -19,13 +20,16 @@ import (
 //  3. Group each unit's values by key; fold less specific values into
 //     fuller ones (the module decides).
 //  4. Majority, per unit: a value with at least MinMajoritySupport Sources
-//     and more than half the unit's support crowds out the rest.
+//     and more than half the unit's support crowds out the rest — the ones
+//     the module lets it outvote (names: spelling variants only).
 //  5. Confidence, per unit: a surviving value carried only by weak
 //     evidence drops when a value with non-weak evidence survived.
 //  6. A candidate is displayed when every one of its units survived.
 //     Displayed candidates that agree on every unit they share form one
 //     cluster; one missing a unit joins the agreeing cluster with the most
-//     members. The module assembles each cluster's value.
+//     members. A oneValue module (names) puts every displayed candidate in
+//     one cluster instead, with every surviving value of each unit. The
+//     module assembles each cluster's value.
 //
 // Nothing is dropped: every value that isn't displayed is still a cluster,
 // with the reason, and every candidate gets an Outcome.
@@ -151,7 +155,7 @@ func reconcile(m module, candidates []Candidate, concluded *Value, _ cardinality
 	for _, name := range sortedKeys(byName) {
 		vals := byName[name]
 		foldValues(m, name, vals)
-		elect(vals)
+		elect(m, name, vals)
 		dropWeak(vals)
 	}
 
@@ -185,21 +189,24 @@ func reconcile(m module, candidates []Candidate, concluded *Value, _ cardinality
 			shown = append(shown, e)
 		}
 	}
-	rows := groupDisplayed(shown)
+	var rows []*row
+	if m.oneValue() {
+		rows = groupAll(shown)
+	} else {
+		rows = groupDisplayed(shown)
+	}
 	bySig := map[string]*row{}
 	for _, r := range rows {
-		settled := map[string]unit{}
-		for name, v := range r.settled {
-			settled[name] = v.u
-		}
 		var members []Candidate
 		for _, e := range r.members {
 			members = append(members, e.c)
 		}
-		r.value = m.assemble(members, settled)
+		r.value = m.assemble(members, r.settledUnits())
 		r.reason = ReasonKept
 		r.displayed = true
-		r.sigs[signature(settled)] = true
+		if units, ok := m.split(r.value); ok {
+			r.sigs[signature(units)] = true
+		}
 		for s := range r.sigs {
 			bySig[s] = r
 		}
@@ -309,9 +316,9 @@ func foldValues(m module, name string, vals []*unitValue) {
 }
 
 // elect: a maximal value with at least MinMajoritySupport Sources and more
-// than half the unit's support wins; the others are outvoted. Otherwise
-// every value stays.
-func elect(vals []*unitValue) {
+// than half the unit's support wins; the others the module lets it outvote
+// are outvoted. Otherwise every value stays.
+func elect(m module, name string, vals []*unitValue) {
 	var all int
 	var best *unitValue
 	for _, v := range vals {
@@ -329,7 +336,7 @@ func elect(vals []*unitValue) {
 			continue
 		}
 		v.fate = ReasonKept
-		if win && v != best {
+		if win && v != best && m.outvotes(name, best.u, v.u) {
 			v.fate = ReasonOutvoted
 		}
 	}
@@ -390,6 +397,47 @@ func groupDisplayed(shown []*entry) []*row {
 		e.row = into
 	}
 	return rows
+}
+
+// groupAll puts every displayed candidate in one row, for a module whose
+// value is one structure.
+func groupAll(shown []*entry) []*row {
+	if len(shown) == 0 {
+		return nil
+	}
+	r := &row{sigs: map[string]bool{}}
+	for _, e := range shown {
+		r.members = append(r.members, e)
+		r.sigs[e.sig] = true
+		e.row = r
+	}
+	return []*row{r}
+}
+
+// settledUnits is, per unit name, the distinct values the row's members
+// settled on: best supported first, then best ranked.
+func (r *row) settledUnits() map[string][]unit {
+	byName := map[string][]*unitValue{}
+	for _, e := range r.members {
+		for name, v := range e.roots {
+			if !slices.Contains(byName[name], v) {
+				byName[name] = append(byName[name], v)
+			}
+		}
+	}
+	out := make(map[string][]unit, len(byName))
+	for name, vals := range byName {
+		sort.SliceStable(vals, func(i, j int) bool {
+			if len(vals[i].total) != len(vals[j].total) {
+				return len(vals[i].total) > len(vals[j].total)
+			}
+			return vals[i].rank < vals[j].rank
+		})
+		for _, v := range vals {
+			out[name] = append(out[name], v.u)
+		}
+	}
+	return out
 }
 
 func agrees(settled, roots map[string]*unitValue) bool {

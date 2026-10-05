@@ -23,9 +23,15 @@ import (
 //   - Fold (subsumption): a unit folds into a fuller one when its parts map,
 //     in order, onto a subsequence of the fuller one's, each equal or an
 //     initial of it. [J] → [James], [James] → [James, Kenneth].
-//   - Assemble: each type's parts come from the best-ranked carrier of the
-//     value it settled on, in the type order of the member with the most
-//     types. A member that carries exactly the result is returned as is.
+//   - Majority only outvotes spelling variants of the winner (Robbins beside
+//     Robins). A different name (Jake beside James, a married surname) is
+//     never outvoted: sources often record a nickname as a given name.
+//   - One name. Every displayed record contributes to a single structure;
+//     each part type keeps every surviving value, best supported first,
+//     each distinct part once (given [James, Jake]). Names are never mixed.
+//   - Assemble: each value's parts come from its best-ranked carrier, in the
+//     type order of the member with the most types. A member that carries
+//     exactly the result is returned as is.
 
 // IsInitial reports whether a word is an initial: a lone cased letter ("J").
 // A lone character in an uncased script (蒋, 王) is a whole word.
@@ -111,7 +117,24 @@ func partFits(short, long string) bool {
 	return []rune(short)[0] == []rune(long)[0]
 }
 
-func (nameModule) assemble(members []Candidate, settled map[string]unit) Value {
+// outvotes: only a spelling variant of the winner — the same number of
+// parts, each equal or a spelling variant (SpellingSimilarity).
+func (nameModule) outvotes(_ string, winner, other unit) bool {
+	w, o := winner.data.(nameUnit).parts, other.data.(nameUnit).parts
+	if len(w) != len(o) {
+		return false
+	}
+	for i := range w {
+		if SpellingSimilarity(w[i], o[i], SpellingFloor, SpellingShortMin) == 0 {
+			return false
+		}
+	}
+	return true
+}
+
+func (nameModule) oneValue() bool { return true }
+
+func (nameModule) assemble(members []Candidate, settled map[string][]unit) Value {
 	orders := make([][]string, len(members))
 	base := 0
 	for i, m := range members {
@@ -137,6 +160,24 @@ func (nameModule) assemble(members []Candidate, settled map[string]unit) Value {
 		}
 	}
 
+	// Each type's parts: every value it settled on, in order, each distinct
+	// part once (given [James, Kevin] + [James, Kenneth] → [James, Kevin,
+	// Kenneth]).
+	parts := map[string][]string{}
+	raw := map[string][]namevalues.Part{}
+	for _, typ := range order {
+		for _, u := range settled[typ] {
+			nu := u.data.(nameUnit)
+			for i, p := range nu.parts {
+				if slices.Contains(parts[typ], p) {
+					continue
+				}
+				parts[typ] = append(parts[typ], p)
+				raw[typ] = append(raw[typ], nu.raw[i])
+			}
+		}
+	}
+
 	// A member carrying exactly these parts, in this type order, is the value.
 	for i, m := range members {
 		if !slices.Equal(orders[i], order) {
@@ -145,7 +186,7 @@ func (nameModule) assemble(members []Candidate, settled map[string]unit) Value {
 		byType, _ := readName(m.Value.Name)
 		same := true
 		for _, typ := range order {
-			if !slices.Equal(byType[typ].parts, settled[typ].data.(nameUnit).parts) {
+			if !slices.Equal(byType[typ].parts, parts[typ]) {
 				same = false
 				break
 			}
@@ -158,7 +199,7 @@ func (nameModule) assemble(members []Candidate, settled map[string]unit) Value {
 	name := &namevalues.Value{}
 	var words []string
 	for _, typ := range order {
-		for _, p := range settled[typ].data.(nameUnit).raw {
+		for _, p := range raw[typ] {
 			name.Parts = append(name.Parts, namevalues.Part{Idx: len(name.Parts), Value: p.Value, Type: p.Type})
 			words = append(words, strings.TrimSpace(p.Value))
 		}

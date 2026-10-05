@@ -82,3 +82,37 @@ func TestModuleFor(t *testing.T) {
 		t.Fatalf("an empty name is no evidence, not an error: %v", err)
 	}
 }
+
+// The spelling-variant rule shared with core/match (SpellingFloor 0.8; one
+// added or dropped letter from SpellingShortMin letters up).
+func TestSpellingSimilarity(t *testing.T) {
+	for _, tc := range []struct {
+		x, y    string
+		variant bool
+	}{
+		{"robins", "robbins", true},
+		{"robnis", "robins", true}, // a swap is one edit
+		{"smith", "smyth", true},
+		{"catherine", "katherine", true},
+		{"johann", "johan", true},
+		{"macdonald", "mcdonald", true},
+		{"ann", "anne", true}, // short word, one added letter
+		{"jon", "john", true},
+		{"dan", "dean", true}, // a known false positive of the short-word rule
+		{"mary", "mark", false},
+		{"josé", "jose", false}, // accents kept
+		{"smith", "smythe", false},
+		{"james", "jake", false},
+		{"james", "jim", false},
+		{"kenneth", "kevin", false},
+		{"jr", "sr", false},
+	} {
+		got := SpellingSimilarity(tc.x, tc.y, SpellingFloor, SpellingShortMin) > 0
+		if got != tc.variant {
+			t.Errorf("%s ~ %s: variant %v, want %v", tc.x, tc.y, got, tc.variant)
+		}
+	}
+	if SpellingSimilarity("robins", "robbins", 1, SpellingShortMin) != 0 {
+		t.Error("a floor of 1 turns spelling variants off")
+	}
+}

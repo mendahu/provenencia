@@ -132,7 +132,7 @@ func TestHandleSearch(t *testing.T) {
 
 	t.Run("by rank-1 name, with location and member count", func(t *testing.T) {
 		hits := f.search("James Robins", KindPerson)
-		if len(hits) != 1 || hits[0].Ref != james.Entity.Ref || hits[0].Title != "James Robins" {
+		if len(hits) != 1 || hits[0].Ref != james.Entity.Ref || hits[0].Title != "James Jim Robins" {
 			t.Fatalf("got %+v", hits)
 		}
 		loc := hits[0].Location

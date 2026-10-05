@@ -245,13 +245,15 @@ func TestResolvedValues(t *testing.T) {
 	all := f.rows()
 
 	names := rowsFor(all, per, f.props["name"].ID)
-	if len(names) != 2 || names[0].Support != 2 || names[1].Support != 1 {
+	// James, james and Jim reconcile into one name: Jim is a different given
+	// name, not a misspelling, so it isn't outvoted (S9-13b).
+	if len(names) != 1 || names[0].Support != 3 {
 		t.Fatalf("name clusters %+v", names)
 	}
 	top, err := valuecodec.UnmarshalName(names[0].Name)
 	must(t, err)
-	if top.Form != "James Robins" || *names[0].SortKey != "james robins" || *names[1].SortKey != "jim robins" {
-		t.Fatalf("rank 1 %q sort %q / %q", top.Form, *names[0].SortKey, *names[1].SortKey)
+	if top.Form != "James Jim Robins" || *names[0].SortKey != "james jim robins" {
+		t.Fatalf("rank 1 %q sort %q", top.Form, *names[0].SortKey)
 	}
 	sex := rowsFor(all, per, f.props["sex_at_birth"].ID)
 	if len(sex) != 1 || !bytes.Equal(sex[0].TermID, f.terms["male"].ID) || sex[0].SortKey != nil {
@@ -392,7 +394,7 @@ func TestResolvedNames(t *testing.T) {
 // A stale cache rebuilds on open: old versions, and the 3 and 4 stamped by
 // the closed PRs' builds, which must never read as current.
 func TestEnsureCatalogRebuildsStaleVersion(t *testing.T) {
-	for _, stale := range []int{0, 2, 3, 4, 5} {
+	for _, stale := range []int{0, 2, 3, 4, 5, 6} {
 		t.Run(fmt.Sprint("version ", stale), func(t *testing.T) {
 			f := newFixture(t)
 			p := f.subject("person")
@@ -533,7 +535,7 @@ func TestRebuildEqualsUpkeep_Scenarios(t *testing.T) {
 				f.t.Fatalf("York / york should be one value from two Observations: %+v", rows)
 			}
 		}},
-		{"joining a second member merges its name, then disagrees", func(f *fixture) {
+		{"joining a second member merges its name, then adds a given name", func(f *fixture) {
 			a, b := f.subject("person"), f.subject("person")
 			f.cite(nameIn(a, f.props["name"], "given=James|surname=Robins"), nameIn(b, f.props["name"], "given=james|surname=robins"))
 			h := f.promote(a)
@@ -544,8 +546,12 @@ func TestRebuildEqualsUpkeep_Scenarios(t *testing.T) {
 				f.t.Fatalf("join should merge the names into one cluster of 2: %+v", names)
 			}
 			f.cite(nameIn(b, f.props["name"], "given=Jim|surname=Robins"))
-			if len(rowsFor(f.rows(), h, f.props["name"].ID)) != 2 {
-				f.t.Fatal("a member's new name should add a cluster")
+			names = rowsFor(f.rows(), h, f.props["name"].ID)
+			if len(names) != 1 {
+				f.t.Fatalf("a member's new given name should join the one name: %+v", names)
+			}
+			if n, err := valuecodec.UnmarshalName(names[0].Name); err != nil || n.Form != "James Jim Robins" {
+				f.t.Fatalf("name %+v %v", n, err)
 			}
 		}},
 		{"deleting the full given name drops rank 1 back to the initial", func(f *fixture) {
