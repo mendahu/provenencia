@@ -725,7 +725,8 @@ struct GoStore: GenealogyStore {
         subjectID: String,
         entityID: String?,
         confidenceGradeID: String?,
-        argument: String
+        argument: String,
+        pairs: [CatalogObservationPair]
     ) async throws -> CatalogPromoteResult {
         var req = Provenencia_Engine_V1_PromoteSubjectRequest()
         req.projectDir = projectDir
@@ -734,6 +735,12 @@ struct GoStore: GenealogyStore {
         req.entityID = entityID ?? ""
         req.confidenceGradeID = confidenceGradeID ?? ""
         req.argument = argument
+        req.pairs = pairs.map { p in
+            var pair = Provenencia_Engine_V1_ObservationPair()
+            pair.incomingObservationID = p.incomingObservationID
+            pair.memberObservationID = p.memberObservationID
+            return pair
+        }
         let resp: Provenencia_Engine_V1_PromoteSubjectResponse = try await provenenciaCall(
             method: CoreMethod.promoteSubject,
             request: req
@@ -747,7 +754,59 @@ struct GoStore: GenealogyStore {
                 status: resp.claim.status,
                 confidenceGradeID: resp.claim.confidenceGradeID.isEmpty ? nil : resp.claim.confidenceGradeID,
                 argument: resp.claim.argument
-            )
+            ),
+            pinCount: Int(resp.pinCount)
+        )
+    }
+
+    func listPromoteComparison(
+        projectDir: String,
+        subjectID: String,
+        entityID: String
+    ) async throws -> CatalogPromoteComparison {
+        var req = Provenencia_Engine_V1_ListPromoteComparisonRequest()
+        req.projectDir = projectDir
+        req.subjectID = subjectID
+        req.entityID = entityID
+        let resp: Provenencia_Engine_V1_ListPromoteComparisonResponse = try await provenenciaCall(
+            method: CoreMethod.listPromoteComparison,
+            request: req
+        )
+        return CatalogPromoteComparison(
+            memberCount: Int(resp.memberCount),
+            properties: resp.properties.map { p in
+                CatalogPromoteComparisonProperty(
+                    propertyID: p.propertyID,
+                    propertyKey: p.propertyKey,
+                    label: p.label,
+                    valueType: p.valueType,
+                    incoming: p.incoming.map { i in
+                        CatalogPromoteComparisonIncoming(
+                            record: Self.mapComparisonRecord(i.record),
+                            pairs: i.pairs.map { pr in
+                                CatalogPromoteComparisonPair(member: Self.mapComparisonRecord(pr.member), compatible: pr.compatible)
+                            }
+                        )
+                    }
+                )
+            }
+        )
+    }
+
+    private static func mapComparisonRecord(_ r: Provenencia_Engine_V1_PromoteComparisonRecord) -> CatalogPromoteComparisonRecord {
+        CatalogPromoteComparisonRecord(
+            observationID: r.observationID,
+            observationRef: r.observationRef,
+            subjectID: r.subjectID,
+            subjectRef: r.subjectRef,
+            subjectLabel: r.subjectLabel,
+            claimID: r.claimID,
+            citationID: r.citationID,
+            artifactID: r.artifactID,
+            sourceID: r.sourceID,
+            sourceTitle: r.sourceTitle,
+            negative: r.negative,
+            value: mapConclusionValue(r.value)
         )
     }
 

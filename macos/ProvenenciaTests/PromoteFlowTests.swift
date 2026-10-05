@@ -91,6 +91,58 @@ struct PromoteFlowTests {
         if case .save = flow.send(.advance).first {} else { Issue.record("expected a save from the last step") }
     }
 
+    // MARK: Confirmed pairs (S9-17)
+
+    private let pair = CatalogObservationPair(incomingObservationID: "o1", memberObservationID: "o2")
+
+    @Test func confirmedPairsRideTheJoinSave() {
+        var flow = PromoteFlow(subject: james, builtSteps: allSteps)
+        _ = flow.send(.edit(.selectTarget(per1)))
+        _ = flow.send(.advance)
+        #expect(flow.send(.edit(.setConfirmedPairs([pair]))).isEmpty)
+        #expect(flow.draft.confirmedPairs == [pair])
+        _ = flow.send(.advance)
+        guard case .save(let save) = flow.send(.advance).first else {
+            Issue.record("expected a save")
+            return
+        }
+        #expect(save.entityID == "e1")
+        #expect(save.pairs == [pair])
+    }
+
+    @Test func confirmedPairsBelongToTheTarget() {
+        let per2 = PromoteFlow.Target(entityID: "e2", ref: "PER-2", title: "Mary Robins", memberCount: 1)
+        var flow = PromoteFlow(subject: james, builtSteps: allSteps)
+        _ = flow.send(.edit(.selectTarget(per1)))
+        _ = flow.send(.advance)
+        _ = flow.send(.edit(.setConfirmedPairs([pair])))
+        _ = flow.send(.stepBack)
+        _ = flow.send(.edit(.selectTarget(per1)))
+        #expect(flow.draft.confirmedPairs == [pair], "re-selecting the same handle keeps them")
+        _ = flow.send(.edit(.selectTarget(per2)))
+        #expect(flow.draft.confirmedPairs.isEmpty)
+        _ = flow.send(.edit(.selectTarget(per1)))
+        _ = flow.send(.advance)
+        _ = flow.send(.edit(.setConfirmedPairs([pair])))
+        _ = flow.send(.stepBack)
+        _ = flow.send(.edit(.choose(.new)))
+        #expect(flow.draft.confirmedPairs.isEmpty)
+    }
+
+    @Test func confirmedPairsAreOnlySetOnTheCompareStep() {
+        var flow = PromoteFlow(subject: james)
+        _ = flow.send(.edit(.selectTarget(per1)))
+        _ = flow.send(.advance)
+        #expect(flow.step == .claim)
+        _ = flow.send(.edit(.setConfirmedPairs([pair])))
+        #expect(flow.draft.confirmedPairs.isEmpty)
+        guard case .save(let save) = flow.send(.advance).first else {
+            Issue.record("expected a save")
+            return
+        }
+        #expect(save.pairs.isEmpty)
+    }
+
     @Test func theMintPathSkipsCompare() {
         var flow = PromoteFlow(subject: james, builtSteps: allSteps)
         _ = flow.send(.edit(.choose(.new)))
@@ -220,7 +272,7 @@ struct PromoteFlowTests {
         _ = flow.send(.edit(.setArgument("Same household")))
         let effects = flow.send(.advance)
         #expect(effects == [.save(PromoteFlow.Save(
-            subjectID: "sub-1", entityID: nil, confidenceGradeID: "cg-mod", argument: "Same household"
+            subjectID: "sub-1", entityID: nil, confidenceGradeID: "cg-mod", argument: "Same household", pairs: []
         ))])
         #expect(flow.phase == .saving(heldLeave: nil))
         #expect(flow.isSaving && !flow.canAdvance)
@@ -231,7 +283,7 @@ struct PromoteFlowTests {
         _ = flow.send(.edit(.selectTarget(per1)))
         _ = flow.send(.advance)
         #expect(flow.send(.advance) == [.save(PromoteFlow.Save(
-            subjectID: "sub-1", entityID: "e1", confidenceGradeID: nil, argument: ""
+            subjectID: "sub-1", entityID: "e1", confidenceGradeID: nil, argument: "", pairs: []
         ))])
     }
 

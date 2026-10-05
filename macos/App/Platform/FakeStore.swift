@@ -25,6 +25,9 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var membershipBySubject: [String: CatalogSubjectMembership] = [:]
     /// The Identity Claim Promote wrote per Subject id (confidence, argument).
     var claimBySubject: [String: CatalogIdentityClaim] = [:]
+    /// Observation ids pinned on each claim id, as Promote's confirmed pairs
+    /// (and their backfill onto the member's claim) wrote them.
+    var pinsByClaim: [String: Set<String>] = [:]
     var subjectPositionsBySubject: [String: CatalogSubjectPosition] = [:]
     /// Type↔field suggestion joins, keyed by source type id and held in the
     /// order they were assigned — the engine's `sort_order`.
@@ -1238,7 +1241,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         subjectID: String,
         entityID: String?,
         confidenceGradeID: String?,
-        argument: String
+        argument: String,
+        pairs: [CatalogObservationPair]
     ) async throws -> CatalogPromoteResult {
         let delay = withState { promoteSubjectDelayNanoseconds }
         if delay > 0 {
@@ -1246,7 +1250,10 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         }
         return try withState {
             markCatalogSessionHeld(projectDir)
-            recordedCalls.append("promoteSubject id=\(subjectID)" + (entityID.map { " entity=\($0)" } ?? ""))
+            recordedCalls.append(
+                "promoteSubject id=\(subjectID)" + (entityID.map { " entity=\($0)" } ?? "")
+                    + (pairs.isEmpty ? "" : " pairs=\(pairs.count)")
+            )
             guard let subject = subjectsBySource.values.flatMap({ $0 }).first(where: { $0.id == subjectID }),
                   let type = subjectTypesByProject[projectDir]?.first(where: { $0.id == subject.subjectTypeID })
             else {
@@ -1257,6 +1264,24 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             }
             if membershipBySubject[subjectID] != nil {
                 throw CoreInvokeError.coded(status: 1, code: "identityclaims.already_member", kind: .conflict, params: [])
+            }
+            if entityID == nil && !pairs.isEmpty {
+                throw CoreInvokeError.coded(status: 1, code: "promote.invalid", kind: .user, params: [])
+            }
+            // Each pair's member claim, checked before anything is written.
+            let allObservations = observationsBySource.values.flatMap { $0 }
+            var memberClaims: [String] = []
+            for pair in pairs {
+                guard let incoming = allObservations.first(where: { $0.id == pair.incomingObservationID }),
+                      let member = allObservations.first(where: { $0.id == pair.memberObservationID }),
+                      incoming.subjectID == subjectID,
+                      incoming.propertyID == member.propertyID,
+                      let membership = membershipBySubject[member.subjectID],
+                      membership.entity.id == entityID
+                else {
+                    throw CoreInvokeError.coded(status: 1, code: "promote.invalid", kind: .user, params: [])
+                }
+                memberClaims.append(membership.claimID)
             }
             let entity: CatalogCanonicalEntity
             if let entityID {
@@ -1290,7 +1315,12 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 kind: type.key
             )
             claimBySubject[subjectID] = claim
-            return CatalogPromoteResult(entity: entity, claim: claim)
+            for (pair, memberClaim) in zip(pairs, memberClaims) {
+                for claimID in [claim.id, memberClaim] {
+                    pinsByClaim[claimID, default: []].formUnion([pair.incomingObservationID, pair.memberObservationID])
+                }
+            }
+            return CatalogPromoteResult(entity: entity, claim: claim, pinCount: pinsByClaim[claim.id]?.count ?? 0)
         }
     }
 
@@ -1425,6 +1455,76 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             case (.none, .some): return false
             default: return a.entity.ref.localizedCaseInsensitiveCompare(b.entity.ref) == .orderedAscending
             }
+        }
+    }
+
+    /// A stand-in for promotecompare on name Observations only: a pair is
+    /// compatible when the case-folded forms match and the polarities agree.
+    func listPromoteComparison(
+        projectDir: String,
+        subjectID: String,
+        entityID: String
+    ) async throws -> CatalogPromoteComparison {
+        // A read: no `recordedCalls`.
+        try withState {
+            markCatalogSessionHeld(projectDir)
+            let members = membershipBySubject.values
+                .filter { $0.entity.id == entityID && $0.subjectID != subjectID }
+                .sorted { $0.claimID < $1.claimID }
+            guard !members.isEmpty || membershipBySubject.values.contains(where: { $0.entity.id == entityID }) else {
+                throw CoreInvokeError.coded(status: 1, code: "promote.invalid", kind: .user, params: [])
+            }
+            let sources = sourcesByProject[projectDir] ?? []
+            let names = observationsBySource.flatMap { sourceID, list in
+                list.filter { $0.propertyKey == "name" && !$0.nameForm.isEmpty }.map { (sourceID, $0) }
+            }.sorted { $0.1.id < $1.1.id }
+            func record(_ sourceID: String, _ o: CatalogObservation, claimID: String) -> CatalogPromoteComparisonRecord {
+                let subject = subjectsBySource[sourceID]?.first { $0.id == o.subjectID }
+                return CatalogPromoteComparisonRecord(
+                    observationID: o.id,
+                    observationRef: o.ref,
+                    subjectID: o.subjectID,
+                    subjectRef: subject?.ref ?? "",
+                    subjectLabel: subject?.label ?? "",
+                    claimID: claimID,
+                    citationID: o.citationID,
+                    artifactID: "",
+                    sourceID: sourceID,
+                    sourceTitle: sources.first { $0.id == sourceID }?.title ?? "",
+                    negative: o.polarity == "negative",
+                    value: .name(CatalogNameValue(form: o.nameForm, parts: o.nameParts))
+                )
+            }
+            func folded(_ o: CatalogObservation) -> String {
+                o.nameForm.lowercased().trimmingCharacters(in: .whitespaces)
+            }
+            let incoming = names.filter { $0.1.subjectID == subjectID }
+            guard let first = incoming.first else {
+                return CatalogPromoteComparison(memberCount: members.count, properties: [])
+            }
+            let rows = incoming.map { sourceID, o in
+                CatalogPromoteComparisonIncoming(
+                    record: record(sourceID, o, claimID: ""),
+                    pairs: members.flatMap { m in
+                        names.filter { $0.1.subjectID == m.subjectID }.map { mSource, mo in
+                            CatalogPromoteComparisonPair(
+                                member: record(mSource, mo, claimID: m.claimID),
+                                compatible: folded(o) == folded(mo) && o.polarity == mo.polarity
+                            )
+                        }
+                    }
+                )
+            }
+            return CatalogPromoteComparison(
+                memberCount: members.count,
+                properties: [CatalogPromoteComparisonProperty(
+                    propertyID: first.1.propertyID,
+                    propertyKey: "name",
+                    label: first.1.propertyLabel,
+                    valueType: "name",
+                    incoming: rows
+                )]
+            )
         }
     }
 

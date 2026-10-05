@@ -500,8 +500,16 @@ private struct ThrowingStore: GenealogyStore {
         subjectID _: String,
         entityID _: String?,
         confidenceGradeID _: String?,
-        argument _: String
+        argument _: String,
+        pairs _: [CatalogObservationPair]
     ) async throws -> CatalogPromoteResult {
+        throw StoreBoom.boom
+    }
+    func listPromoteComparison(
+        projectDir _: String,
+        subjectID _: String,
+        entityID _: String
+    ) async throws -> CatalogPromoteComparison {
         throw StoreBoom.boom
     }
     func listPromoteTargetSuggestions(

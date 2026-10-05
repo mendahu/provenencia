@@ -328,7 +328,8 @@ final class PromoteModel {
                 subjectID: save.subjectID,
                 entityID: save.entityID,
                 confidenceGradeID: save.confidenceGradeID,
-                argument: save.argument
+                argument: save.argument,
+                pairs: save.pairs
             )
         } catch {
             await perform(flow.send(.saveFailed(
@@ -370,6 +371,14 @@ final class PromoteModel {
 
     var confidenceSelection: String { flow.draft.confidenceGradeID ?? "" }
     var argument: String { flow.draft.argument }
+
+    /// The claim summary badge: the Observations the confirmed pairs will pin
+    /// on the new claim (each pair pins both of its records).
+    var pinsBadge: String {
+        guard choice == .existing else { return L10n.Promote.pins(0) }
+        let pinned = Set(flow.draft.confirmedPairs.flatMap { [$0.incomingObservationID, $0.memberObservationID] })
+        return L10n.Promote.pins(pinned.count)
+    }
 
     var argumentHint: String {
         choice == .existing

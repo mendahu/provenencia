@@ -15212,6 +15212,30 @@
         }
       }
     },
+    "promote.claim.pins": {
+      "comment": "Promote claim summary badge: Observations the confirmed matches pin on the claim; argument is how many",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld pin"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld pins"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "promote.claim.status": {
       "comment": "Promote claim step: status field label",
       "extractionState": "manual",

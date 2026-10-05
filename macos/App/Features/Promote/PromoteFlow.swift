@@ -80,6 +80,10 @@ struct PromoteFlow: Equatable, Sendable {
         var status: ClaimStatus = .accepted
         var confidenceGradeID: String?
         var argument = ""
+        /// Comparisons confirmed against the target's members (S9-17). They
+        /// belong to the target: changing it clears them. Empty until S9-19
+        /// adds the compare step.
+        var confirmedPairs: [CatalogObservationPair] = []
 
         var isEmpty: Bool { self == Draft() }
     }
@@ -114,6 +118,8 @@ struct PromoteFlow: Equatable, Sendable {
         let entityID: String?
         let confidenceGradeID: String?
         let argument: String
+        /// Join only; a mint carries none.
+        let pairs: [CatalogObservationPair]
     }
 
     /// An input on a step's screen. Each edit belongs to one step; `send`
@@ -123,10 +129,13 @@ struct PromoteFlow: Equatable, Sendable {
         case selectTarget(Target)
         case setConfidence(String?)
         case setArgument(String)
+        /// The compare step's checked pairs (S9-19 draws it).
+        case setConfirmedPairs([CatalogObservationPair])
 
         var step: PromoteStep {
             switch self {
             case .choose, .selectTarget: .chooseTarget
+            case .setConfirmedPairs: .compare
             case .setConfidence, .setArgument: .claim
             }
         }
@@ -297,11 +306,13 @@ struct PromoteFlow: Equatable, Sendable {
             }
             phase = .saving(heldLeave: nil)
             error = nil
+            let joining = draft.choice == .existing
             return [.save(Save(
                 subjectID: subject.id,
-                entityID: draft.choice == .existing ? draft.target?.entityID : nil,
+                entityID: joining ? draft.target?.entityID : nil,
                 confidenceGradeID: draft.confidenceGradeID,
-                argument: draft.argument
+                argument: draft.argument,
+                pairs: joining ? draft.confirmedPairs : []
             ))]
 
         case (.editing, .stepBack):
@@ -410,14 +421,20 @@ struct PromoteFlow: Equatable, Sendable {
         case .choose(let choice):
             guard draft.choice != choice else { return }
             draft.choice = choice
-            if choice != .existing { draft.target = nil }
+            if choice != .existing {
+                draft.target = nil
+                draft.confirmedPairs = []
+            }
         case .selectTarget(let target):
+            if draft.target?.entityID != target.entityID { draft.confirmedPairs = [] }
             draft.choice = .existing
             draft.target = target
         case .setConfidence(let gradeID):
             draft.confidenceGradeID = gradeID
         case .setArgument(let argument):
             draft.argument = argument
+        case .setConfirmedPairs(let pairs):
+            draft.confirmedPairs = pairs
         }
         error = nil
     }

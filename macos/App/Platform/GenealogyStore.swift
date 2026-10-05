@@ -228,6 +228,16 @@ struct CatalogSubjectMembership: Sendable, Equatable {
 struct CatalogPromoteResult: Sendable, Equatable {
     var entity: CatalogCanonicalEntity
     var claim: CatalogIdentityClaim
+    /// Observations pinned on the new claim.
+    var pinCount: Int = 0
+}
+
+/// One confirmed comparison (S9-17): an Observation of the incoming Subject and
+/// one of an accepted member, on the same Property. Saved, both are pinned on
+/// the new claim and backfilled onto the member's claim.
+struct CatalogObservationPair: Sendable, Equatable, Hashable {
+    var incomingObservationID: String
+    var memberObservationID: String
 }
 
 struct CatalogSubjectPosition: Sendable, Equatable {
@@ -364,6 +374,61 @@ struct CatalogConclusionDetail: Sendable, Equatable {
     var fields: [CatalogConclusionField]
     /// Accepted members.
     var memberCount: Int = 0
+}
+
+/// One Observation in the Promote comparison and where it comes from.
+struct CatalogPromoteComparisonRecord: Sendable, Equatable, Identifiable {
+    var observationID: String
+    var observationRef: String
+    var subjectID: String
+    var subjectRef: String
+    var subjectLabel: String
+    /// The member's accepted claim; "" for the incoming Subject.
+    var claimID: String
+    var citationID: String
+    var artifactID: String
+    var sourceID: String
+    var sourceTitle: String
+    var negative: Bool
+    var value: CatalogConclusionValue
+
+    var id: String { observationID }
+}
+
+/// A member Observation against an incoming one. `compatible` is the
+/// auto-reconciler's same-value-or-fold test: the compare step pre-checks it.
+struct CatalogPromoteComparisonPair: Sendable, Equatable, Identifiable {
+    var member: CatalogPromoteComparisonRecord
+    var compatible: Bool
+
+    var id: String { member.observationID }
+}
+
+/// One of the incoming Subject's Observations, with the members' beneath it.
+struct CatalogPromoteComparisonIncoming: Sendable, Equatable, Identifiable {
+    var record: CatalogPromoteComparisonRecord
+    var pairs: [CatalogPromoteComparisonPair]
+
+    var id: String { record.observationID }
+}
+
+/// One Property the incoming Subject speaks to.
+struct CatalogPromoteComparisonProperty: Sendable, Equatable, Identifiable {
+    var propertyID: String
+    var propertyKey: String
+    var label: String
+    var valueType: String
+    var incoming: [CatalogPromoteComparisonIncoming]
+
+    var id: String { propertyID }
+}
+
+/// The Promote compare step's read (S9-17): the Subject's Observations against
+/// each accepted member of the handle it would join, Property by Property.
+struct CatalogPromoteComparison: Sendable, Equatable {
+    /// Accepted members compared against.
+    var memberCount: Int
+    var properties: [CatalogPromoteComparisonProperty]
 }
 
 /// One Observation row with Property summary (graph / card payloads).
@@ -866,15 +931,23 @@ protocol GenealogyStore: Sendable {
     ) async throws -> CatalogSubject
     func deleteSubject(projectDir: String, userID: String, subjectID: String) async throws
     /// File an accepted claim for the Subject (one transaction): onto a new handle of its type when
-    /// `entityID` is `nil`, else onto that existing handle (same type, unmerged; claim only).
+    /// `entityID` is `nil`, else onto that existing handle (same type, unmerged). Each confirmed pair
+    /// (join only) pins both Observations on the new claim and backfills them onto the member's claim.
     func promoteSubject(
         projectDir: String,
         userID: String,
         subjectID: String,
         entityID: String?,
         confidenceGradeID: String?,
-        argument: String
+        argument: String,
+        pairs: [CatalogObservationPair]
     ) async throws -> CatalogPromoteResult
+    /// The Subject's Observations against each accepted member of `entityID`, per Property.
+    func listPromoteComparison(
+        projectDir: String,
+        subjectID: String,
+        entityID: String
+    ) async throws -> CatalogPromoteComparison
     /// Existing handles the Subject could join, best first: same type, scored by the type's match profile.
     func listPromoteTargetSuggestions(
         projectDir: String,
@@ -1059,7 +1132,8 @@ extension GenealogyStore {
             subjectID: subjectID,
             entityID: nil,
             confidenceGradeID: nil,
-            argument: ""
+            argument: "",
+            pairs: []
         )
     }
 }

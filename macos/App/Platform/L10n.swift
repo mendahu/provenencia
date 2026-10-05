@@ -1344,6 +1344,16 @@ enum L10n {
             return L10n.format(resource, members)
         }
         static let noPins = LocalizedStringResource("promote.claim.noPins", defaultValue: "No pins", comment: "Promote claim summary badge: no confirmed matches are pinned to the claim")
+        /// The claim summary badge: "No pins", "1 pin", "N pins" — the
+        /// Observations the confirmed pairs pin on the new claim.
+        static func pins(_ count: Int) -> String {
+            guard count > 0 else { return L10n.string(noPins) }
+            return L10n.format(LocalizedStringResource(
+                "promote.claim.pins",
+                defaultValue: "%lld pins",
+                comment: "Promote claim summary badge: Observations the confirmed matches pin on the claim; argument is how many"
+            ), count)
+        }
         static let statusLabel = LocalizedStringResource("promote.claim.status", defaultValue: "Status", comment: "Promote claim step: status field label")
         static let statusHint = LocalizedStringResource("promote.claim.status.hint", defaultValue: "What you are claiming about this match", comment: "Promote claim step: status field hint")
         static let statusAccepted = LocalizedStringResource("promote.claim.status.accepted", defaultValue: "Accepted", comment: "Promote claim status option: the subject is this handle")

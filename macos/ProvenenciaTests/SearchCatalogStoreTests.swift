@@ -152,7 +152,7 @@ struct SearchCatalogStoreTests {
         let james = try await store.promoteSubject(projectDir: projectDir, userID: "u", subjectID: "sub-1")
         _ = try await store.promoteSubject(
             projectDir: projectDir, userID: "u", subjectID: "sub-2",
-            entityID: james.entity.id, confidenceGradeID: nil, argument: ""
+            entityID: james.entity.id, confidenceGradeID: nil, argument: "", pairs: []
         )
 
         let omnibar = try await store.searchCatalog(projectDir: projectDir, query: "Robins", location: .sectionRoot(.sources))

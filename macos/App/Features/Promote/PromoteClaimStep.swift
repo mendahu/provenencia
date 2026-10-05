@@ -93,7 +93,7 @@ private struct PromoteClaimSummary: View {
                         ref(targetRef)
                     }
                     Spacer(minLength: PVSpacing.space4)
-                    PVBadge(L10n.Promote.noPins, icon: .pin)
+                    PVBadge(text: model.pinsBadge, icon: .pin)
                 }
                 Text(verbatim: model.summaryLine(prefix: prefix))
                     .font(PVFont.body(size: PVTypeScale.caption, italic: true))

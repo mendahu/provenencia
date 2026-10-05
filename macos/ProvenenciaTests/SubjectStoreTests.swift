@@ -128,7 +128,7 @@ struct SubjectStoreTests {
         let second = try await make(typeID)
         let joined = try await store.promoteSubject(
             projectDir: projectDir, userID: "user-1", subjectID: second.id,
-            entityID: first.entity.id, confidenceGradeID: "cg-high", argument: " Same name. "
+            entityID: first.entity.id, confidenceGradeID: "cg-high", argument: " Same name. ", pairs: []
         )
         #expect(joined.entity == first.entity)
         #expect(joined.claim.confidenceGradeID == "cg-high" && joined.claim.argument == "Same name.")
@@ -139,7 +139,7 @@ struct SubjectStoreTests {
         await #expect(throws: CoreInvokeError.self) {
             _ = try await store.promoteSubject(
                 projectDir: projectDir, userID: "user-1", subjectID: james.id,
-                entityID: event.entity.id, confidenceGradeID: nil, argument: ""
+                entityID: event.entity.id, confidenceGradeID: nil, argument: "", pairs: []
             )
         }
         #expect(store.membershipBySubject[james.id] == nil)

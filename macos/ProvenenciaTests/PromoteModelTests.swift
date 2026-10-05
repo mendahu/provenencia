@@ -245,6 +245,54 @@ struct PromoteModelTests {
         #expect(navigation.currentLocation == model.entry.graphLocation)
     }
 
+    // MARK: Pins (S9-17)
+
+    @Test func theComparisonFlagsCompatiblePairsAndPairsPinBothClaims() async throws {
+        let store = makeStore()
+        let filed = try await existingPerson(store)
+        let comparison = try await store.listPromoteComparison(projectDir: projectDir, subjectID: "sub-1", entityID: filed.entity.id)
+        #expect(comparison.memberCount == 1)
+        let incoming = try #require(comparison.properties.first?.incoming.first)
+        #expect(incoming.record.observationID == "o1")
+        #expect(incoming.pairs.map(\.member.observationID) == ["o2"])
+        #expect(incoming.pairs.first?.compatible == true)
+        #expect(incoming.pairs.first?.member.claimID == filed.claim.id)
+
+        let pair = CatalogObservationPair(incomingObservationID: "o1", memberObservationID: "o2")
+        let joined = try await store.promoteSubject(
+            projectDir: projectDir, userID: "user-1", subjectID: "sub-1", entityID: filed.entity.id,
+            confidenceGradeID: nil, argument: "", pairs: [pair]
+        )
+        #expect(joined.pinCount == 2)
+        #expect(store.pinsByClaim[joined.claim.id] == ["o1", "o2"])
+        #expect(store.pinsByClaim[filed.claim.id] == ["o1", "o2"], "backfilled onto the member's claim")
+        #expect(store.recordedCalls.contains("promoteSubject id=sub-1 entity=\(filed.entity.id) pairs=1"))
+    }
+
+    @Test func pairsOnAMintAreRefused() async {
+        let store = makeStore()
+        let pair = CatalogObservationPair(incomingObservationID: "o1", memberObservationID: "o2")
+        await #expect(throws: (any Error).self) {
+            _ = try await store.promoteSubject(
+                projectDir: projectDir, userID: "user-1", subjectID: "sub-1", entityID: nil,
+                confidenceGradeID: nil, argument: "", pairs: [pair]
+            )
+        }
+        #expect(store.membershipBySubject["sub-1"] == nil)
+    }
+
+    @Test func thePinsBadgeCountsPinnedObservations() async throws {
+        let store = makeStore()
+        let filed = try await existingPerson(store)
+        let (model, _) = makeModel(store: store)
+        #expect(model.pinsBadge == "No pins")
+        model.select(PromoteModel.Target(entityID: filed.entity.id, ref: filed.entity.ref, title: "James Robins", memberCount: 1))
+        #expect(model.pinsBadge == "No pins")
+        #expect(L10n.Promote.pins(0) == "No pins")
+        #expect(L10n.Promote.pins(1) == "1 pin")
+        #expect(L10n.Promote.pins(3) == "3 pins")
+    }
+
     @Test func savingInvalidatesTheGraph() async {
         let store = makeStore()
         let (model, _) = makeModel(store: store)
