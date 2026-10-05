@@ -36,8 +36,8 @@ Names and dates have the most interesting logic because they are structured, but
 # 3. Precedence
 
 ```text
-accepted Reconciliation Claim on (entity, Property)   → that value (state: concluded)
-otherwise                                              → the auto-reconciler's output
+accepted Reconciliation Claim(s) on (entity, Property) → the concluded value(s) (state: concluded)
+otherwise                                                → the auto-reconciler's output
 ```
 
 The resolver takes the concluded value as an input so the claim plugs in without changing callers. The concluded value joins the cluster it equals, or leads alone with no support.
@@ -154,13 +154,16 @@ From [`structured-name-model.md`](structured-name-model.md). Designed and built 
 
 Each Property needs a **cardinality** in its configuration:
 
-- **Single** (sex at birth, birth date, name): the pipeline aims for one value. When the evidence can't decide, several survive and the state is *mixed*.
-- **Multiple** (occupation, residence, religion): several distinct values are all true. The pipeline merges duplicates and variants (same value, fold, deny) and does not crowd out a distinct value by majority. The confidence step still applies: a distinct value carried only by weak evidence is dropped when stronger evidence supports a different value. Promoting weak evidence to a concluded value is an explicit researcher action (a Reconciliation Claim), so the auto-reconciler stays opinionated.
+Most facts that repeat or change over time are better modelled another way: occupations, residences, religion and military service as **events** with spans (`residence` is already an event type), several given names as **parts** of one name, family links as **associations**. Cardinality is for what is left: concurrent place names, identifiers, and Properties researchers create.
+
+- **Single** (sex at birth, a date, name): the pipeline aims for one value. When the evidence can't decide, several survive and the state is *mixed*.
+- **Multiple** (`toponym`: Montréal and Montreal, Tkaronto and Toronto; researcher-created Properties such as languages spoken): several distinct values are all true. The pipeline merges duplicates and variants (same value, fold, deny) and does not crowd out a distinct value by majority. The confidence step still applies: a distinct value carried only by weak evidence is dropped when stronger evidence supports a different value. Promoting weak evidence to a concluded value is an explicit researcher action (a Reconciliation Claim), so the auto-reconciler stays opinionated.
 
 Model consequences:
 
 - The Property needs a configuration setting. Seeded Properties get a default.
-- A Reconciliation Claim is "one per (entity, Property)" today. A multi-valued Property needs a claim shape that can conclude several values. Open (§11).
+- **Reconciliation Claims for a multi-valued Property are one per value:** at most one claim per (entity, Property, value), each with its own evidence, confidence and argument. A single-valued Property keeps one claim per (entity, Property).
+- **Concluded values replace the list.** Once any value of a multi-valued Property is concluded, only concluded values are displayed and the auto-reconciler steps aside for that Property. The UI offers to conclude a second or third value. This is the same rule as single-valued: a claim always wins.
 - Changing a Property's cardinality changes resolution for every entity carrying it, so the cache must recompute (§10).
 
 ---
@@ -195,12 +198,12 @@ The rebuild-equals-upkeep tests hold upkeep equal to a full rebuild. Every new t
 # 11. Open questions
 
 1. **Places.** Decided in §11.1. Labels for the seeded types are a UI decision for later.
-2. **Claims for multi-valued Properties.** What a Reconciliation Claim concludes when a Property has several true values.
 
 **Decided 2026-10-05:**
 
 - **Text ignores case.** This changes Spike 9 S9-05's exact-after-trimming rule.
 - **Weak evidence drops in multi-valued Properties too** (§8). A researcher who wants a weak value concluded makes a Reconciliation Claim.
+- **Claims for multi-valued Properties:** one claim per value; concluded values replace the auto-reconciled list (§8).
 - **Derivative Sources count as separate votes, for now.** There is no way to record that an index derives from a register, so the app treats them as two Sources. Counting them once waits for source-to-source relationships ([`ideas/source-to-source-relationships.md`](ideas/source-to-source-relationships.md)).
 - **Reason vocabulary:** the §6 list, extended as modules need.
 
@@ -226,7 +229,8 @@ The rebuild-equals-upkeep tests hold upkeep equal to a full rebuild. Every new t
 - **Periods live on Places, not on links.** A Place has a **period** when it existed or was meaningful (a city from incorporation, a country from independence, a farm until it was sold). Start and end are both optional structured dates; a place with no period is always valid.
 - **A link holds where the two places' periods overlap.** Toronto (1834–) is part of Upper Canada (1791–1841) until 1841, the Province of Canada (1841–1867) until 1867, and Ontario (1867–) after. So "what is Toronto part of?" needs a date, and the periods answer it.
   - **Accepted imprecision:** when both places persist and the link changes (Guam, Spanish until 1898 and American after), the link reads as holding for the whole overlap, and Guam is part of both. Where that matters, model the jurisdictions as distinct Places with their own periods (the Kingdom of Spain, the American colonies, the United States).
-- **One toponym per Place; a rename is a new Place.** York (1793–1834) and Toronto (1834–) are two Places. Merge is only for two handles that turn out to be the same place under the same name.
+- **A rename is a new Place.** York (1793–1834) and Toronto (1834–) are two Places. Merge is only for two handles that turn out to be the same place.
+- **Concurrent names are one Place.** `toponym` is multi-valued (§8): Montréal and Montreal, Köln and Cologne, Tkaronto and Toronto are all names of one Place at the same time. Spelling duplicates still merge.
 - **Succession.** A second place-to-place relationship records that one place became another (York → Toronto), so history and search can treat them as one lineage while they stay distinct Places. A query like "born in Toronto" may follow it.
 - **Display uses the connected event's date** to pick the parent chain. When the date can't decide (an approximate or ranged date straddling a change), show every candidate: *born about 1841 in Toronto, Upper Canada or Province of Canada*.
 - **Evidence, the hard way, for now.** Every place and every "part of" link is created by hand with a cited Source, even for common knowledge ("Alberta is part of Canada"). Researcher knowledge uses a researcher-knowledge Source with an argument. The model does not change for convenience.

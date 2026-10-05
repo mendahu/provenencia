@@ -406,7 +406,7 @@ Exactly one value representation must be populated, and it must match `propertie
 
 As with Observations, typed-column matching is an **application write invariant** for now. Readers prefer the column matching `value_type` if extras are present. The concluded value may match one exhibit Observation, be copied from a related subject's value, or be synthesized (for example a DateValue spanning Apr–May 1985).
 
-There is at most one Reconciliation Claim per `(entity, property)`. Changing the concluded value, `status`, or confidence grade updates that row (and is audited).
+There is at most one Reconciliation Claim per `(entity, property)`. **Planned change:** for a multi-valued Property (per-Property cardinality), the rule becomes one claim per `(entity, property, value)`; see [`conclusion-reconciliation.md`](conclusion-reconciliation.md) §8. Changing the concluded value, `status`, or confidence grade updates that row (and is audited).
 
 `status` matches Identity Claims: `provisional`, `accepted`, or `rejected`. **Only `accepted` is the committed concluded value.** `provisional` is a persisted working choice the UI should show differently. `rejected` is kept for audit and is not the working value.
 
@@ -581,7 +581,7 @@ These are **schema and application invariants** (see §1). Grain, gazetteer use,
 10. Provisional and rejected Identity Claims are not members. Absence of a claim is not a rejection.
 11. Observations always target Subjects and always have a Citation (Interpretation schema). Canonical handles are not Observation subjects.
 12. Creating one canonical entity does not require or imply creating related entities (no cascade in schema).
-13. There is at most one Reconciliation Claim per `(entity_id, property_id)`.
+13. There is at most one Reconciliation Claim per `(entity_id, property_id)` (planned: per value for multi-valued Properties; [`conclusion-reconciliation.md`](conclusion-reconciliation.md) §8).
 14. A Reconciliation Claim's typed value must match `properties.value_type` (application write). For `value_type = 'subject'`, Conclusion uses `value_entity_id`.
 15. Soft display merges are stateless UI projections; only an accepted Reconciliation Claim is a committed concluded value.
 16. Person name format is a Property (`name_format`) or the project default, not a column on `canonical_entities`.
