@@ -77,7 +77,7 @@ One pipeline for every value type. Each value type supplies a small module (§7)
    - Candidates with no usable value are eliminated (`no_evidence`): an empty value, a name with no parts, a term the module calls no evidence (such as an *unknown* sex term).
 2. **Deny.** A negative candidate eliminates the positive candidates with the **same value** whose evidence it is stronger than (`denied`). Those candidates cast no vote. A negative at equal or lower strength only counts against.
 3. **Group.** The module's *same value* test groups equal values. Its *fold* test folds a less specific value into a more specific one it fits (`folded`): `[J]` into `[James]`, `MAY 1985` into `14 MAY 1985`. When a value fits several, it folds into the best supported, then the strongest.
-4. **Majority.** Support is counted in **distinct Sources** (a derivative Source counts as its own Source until derivation can be recorded). A value with support from at least two Sources and more than half the support crowds out the rest (`outvoted`). Two of three wins; one to one keeps both.
+4. **Majority.** Support is counted in **distinct Sources** (a derivative Source counts as its own Source until derivation can be recorded). A value with support from at least two Sources and more than half the support crowds out the rest (`outvoted`); a module may limit what it outvotes (names: spelling variants only, §7.2). Two of three wins; one to one keeps both.
 5. **Confidence.** Among survivors, a value carried only by weak candidates is eliminated when a value with a non-weak carrier survived (`weak`).
 6. **Merge.** The module merges each surviving group into one displayed value. Single-valued Properties have one or more surviving values (§8). When several survive, the state is *mixed* and all are shown.
 
@@ -140,15 +140,18 @@ From [`structured-date-model.md`](structured-date-model.md): missing components 
 
 ## 7.2 Names
 
-From [`structured-name-model.md`](structured-name-model.md). Designed and built in S9-13 / S9-14 (see §12):
+From [`structured-name-model.md`](structured-name-model.md). Built in S9-13b (see §12):
 
 - **Parts only.** `form` is a transcription and is never compared. A name with no parts is `no_evidence`.
 - **Format-agnostic.** A part type is only an identifier: parts are compared only with parts of the same type, and no type behaves differently from another. A prefix, a surname and a given name are all just types. Culture lives in name format profiles, not here.
 - **The comparable unit is the part type.** A candidate's value for a type is its ordered list of parts of that type, each part one normalized unit (case, punctuation and whitespace ignored; accents are not folded).
 - **Fold (subsumption):** a list folds into a fuller one when its parts map, in order, onto a subsequence, each equal or an initial of it: `[J]` → `[James]`, `[James]` → `[James, Kenneth]`, `[J, K]` → `[James, Kenneth]`. The `initial` part type is retired; an initial is the part it stands for.
 - **Deny** compares whole names: a negative denies positives with the same parts by type.
-- **Survivors to names.** A candidate survives when all its part values survived. Survivors that agree on every type they share form one displayed name. A candidate missing a type joins the agreeing name with the most members. The displayed name is assembled from each type's fullest value, or is a member's own value when one carries exactly those parts.
-- **Single-valued at the structure level.** A Person has one concluded NameValue. Multiple given names, surnames and so on live inside it as multiple parts. There is no second independent name structure.
+- **Majority only outvotes misspellings** (decided 2026-10-05). Within a type, a majority winner outvotes a minority value only when it is a **spelling variant** of the winner: the same number of parts, each equal or similar (`SpellingSimilarity`, shared with matching: at least 0.8 similarity by edit distance with adjacent swaps, or one added or dropped letter from 3 letters up). *Robbins* beside *Robins* is outvoted. *Jake* beside *James*, or a married *Smith* beside *Robins*, never is: sources often record a nickname as a given name and seldom say so.
+- **Weak evidence still drops** within a type, and denial still applies.
+- **One name, never mixed.** Every displayed candidate contributes to a single NameValue. Each type keeps every surviving value, best supported first, each distinct part once: *given Jake* + *given James* → `given: [Jake, James]`; *nick Jake* + *given James* → `given: [James], nick: [Jake]`. The state is single or merged. The name is assembled in the type order of the member with the most types, or is a member's own value when one carries exactly those parts. Outvoted, weak, denied and provisional names keep their own cached rows.
+- **Single-valued at the structure level.** A Person has one concluded NameValue, and the auto-reconciler produces one too. Multiple given names, surnames and so on live inside it as multiple parts. There is no second independent name structure.
+- **The form reads the parts in order** (*Jake James Robins*). There is no separate middle-name type, so the form doesn't distinguish alternatives from middle names; name display styles and the *Why* view do that work.
 
 ---
 
@@ -250,7 +253,7 @@ The rebuild-equals-upkeep tests hold upkeep equal to a full rebuild. Every new t
 | Resolved-values cache and upkeep | `core/database/resolvedvalues` (S9-06) | on `main` |
 | `initial` part type retired (migration 000037); `against` column (000038) | S9-13a | on `main` |
 | Shared pipeline and simple modules; every value cached with its reason (migration 000039) | S9-13 | on `main` |
-| Name module: parts by type, subsumption, reassembly; cache version 6 | S9-13b | stacked on S9-13 |
+| Name module: parts by type, subsumption, one name per Person, majority outvotes misspellings only; cache version 7 | S9-13b | stacked on S9-13 |
 | Evidence and reasoning in the cache | S9-14 | planned |
 
 PRs #255 and #256 built names-first versions of S9-13b and S9-14 to the first plan and were closed. Their migrations landed unchanged in S9-13a; their name logic, provenance logic, fixtures and test tables (75+ cases) are lifted into S9-13, S9-13b and S9-14 (see the Spike 9 plan, slice 4).

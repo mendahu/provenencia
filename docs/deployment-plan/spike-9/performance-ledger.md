@@ -50,5 +50,6 @@ Computed live, a Person on ten Sources reads hundreds of Observations plus Citat
 | Date | Fixture | Operation | Rows / handles | Time | Notes |
 | --- | --- | --- | --- | --- | --- |
 | 2026-10-05 | `BenchmarkReconcileNames` (pure Go, dev Mac) | Reconcile one handle's names through the pipeline | 200 name candidates | ~0.58 ms | 7.7k allocs. Per-type units, folding and survivor grouping are quadratic in distinct values per type, not in candidates; fine at this size. |
+| 2026-10-05 | `BenchmarkReconcileNames` after one-name combining | Same | 200 name candidates | ~0.87 ms | 10k allocs. Spelling checks on majority losers and per-type combining add work; still well under a write's budget. |
 
 **Fixture (required this spike):** a seeded project where a Person sits on ~10 Sources; birth, death, and marriage events each have several members; each has one or more Locations; a few relationships. Scale it to a few hundred handles. Time: full rebuild, one Observation write's upkeep, one Promote step, each list's composition, one detail's composition.

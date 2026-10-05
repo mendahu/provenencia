@@ -584,37 +584,41 @@ Every value type now goes through one reconciler pipeline ([`conclusion-reconcil
 
 ### S9-13b — Name module
 
-Names now reconcile by their structured parts on the shared pipeline ([`conclusion-reconciliation.md`](../../conclusion-reconciliation.md) §7.2). *J. Robins* and *James Robins* are one *James Robins*.
+Names now reconcile by their structured parts on the shared pipeline ([`conclusion-reconciliation.md`](../../conclusion-reconciliation.md) §7.2), into **one name per Person**. *J. Robins* and *James Robins* are one *James Robins*; *Jake Robins* and *James Robins* are one *Jake James Robins*.
 
 **What shipped**
 
 - **`nameModule`** (`core/resolve/names.go`):
   - **Split:** one unit per part type; each unit is the type's parts in idx order, normalized (accents kept). `form` is never read; a name with no parts is no evidence.
   - **Fold:** a unit folds into a fuller one when its parts map, in order, onto a subsequence, each equal or an initial of it (`[J]` → `[James]`, `[James]` → `[James, Kenneth]`).
-  - **Assemble:** each type's parts come from the best-ranked carrier of the value it settled on, in the type order of the member with the most types. A member carrying exactly that name is returned as is.
-  - The pipeline does all the voting: majority and confidence per type, a missing type joining the agreeing name, denial by whole-name parts.
-- `resolve.IsInitial` (moved from `core/match`).
-- `CacheVersion = 6`.
+  - **Majority only outvotes misspellings:** a minority value is outvoted only when it's a spelling variant of the winner (same number of parts, each similar by `SpellingSimilarity`). A different name is never outvoted; weak evidence still drops.
+  - **One name, never mixed:** every displayed record contributes to a single NameValue. Each type keeps every surviving value, best supported first, each distinct part once. Assembled in the type order of the member with the most types, or a member's own value when one carries exactly those parts.
+- **Pipeline hooks** for modules: `oneValue` (every displayed candidate forms one value) and `outvotes` (what majority may remove). Assembly receives every surviving value per unit.
+- **Spelling rule shared with matching:** `resolve.SpellingSimilarity` and `resolve.EditDistance` (moved from `core/match`), thresholds `SpellingFloor` 0.8 and `SpellingShortMin` 3, which the match registry now points at.
+- `resolve.IsInitial` (moved from `core/match`). `CacheVersion = 7`.
 - `namevaluestest.Western` builds given parts and a surname for fixtures. Fixtures in conclusion headers, matching, promote targets, search and FFI use it. Two matching scores move (9.3 → 9.1, 5.0 → 6.0) because both sides are now typed.
 - **Tests:**
-  - `TestReconcileNames` (55 cases) and `TestReconcileNamesProvenance` (20), ported from the closed #255 / #256. Each row's reason is now pinned, and states read displayed values;
-  - `TestReconcileNamesValue`; seeded invariants (input order, forms never matter, renaming types changes nothing else, no invented parts);
-  - cache: an initial expands; a parts-less name isn't cached; deleting the full given name drops rank 1 back to *J. Robins*; stale versions 0–5 rebuild;
-  - mutation checks: no folding fails 19 cases, whole-name keys fail 34.
-- Benchmark: about 0.58 ms for 200 names (performance ledger).
+  - `TestReconcileNames` (55) and `TestReconcileNamesProvenance` (20), ported from the closed #255 / #256, with each row's reason pinned. 23 expectations changed when names became one structure and were re-reviewed case by case.
+  - `TestReconcileNamesCombine` (7): nickname and given name, two given names, a minority different name kept, a married surname kept, a misspelling outvoted, a misspelling tie, weak still dropped.
+  - `TestSpellingSimilarity`, `TestReconcileNamesValue`, seeded invariants.
+  - Cache: an initial expands; a parts-less name isn't cached; deleting the full given name drops back to *J. Robins*; a new given name joins the one name; stale versions 0–6 rebuild.
+  - Mutation checks: no folding fails 19 cases, whole-name keys 34, no one-value 30, outvoting anything 10, outvoting nothing 9.
+- Benchmark: about 0.87 ms for 200 names (performance ledger).
 
 **What changed for researchers**
 
-- Names merge across initials, middle names and spacing, part type by part type.
-- A name with no parts is no longer shown. That Person reads by its label until a member's name has parts.
-- With two of three records agreeing, a misspelt surname or a minority given name is not displayed. It stays cached and searchable.
+- A Person shows one name. Different given names, nicknames and surnames from different records all appear in it: a married surname beside the birth one, a nickname recorded as a given name beside the given name.
+- A misspelling in the minority (*Robbins* beside two *Robins*) is not shown; it stays cached and searchable.
+- A name with no parts isn't shown; that Person reads by its label until a member's name has parts.
+- The form reads the parts in order (*Jake James Robins*); display styles will separate alternatives later.
 
 **Deviations from the plan**
 
-- The code landed in one commit, not two, so every commit's tests pass. The name module alone would have broken other packages' form-only fixtures.
+- **One name per Person and misspellings-only majority** were decided while building it, after working through examples. The plan had kept competing given names as separate names (mixed).
+- The code landed in fewer commits than planned so every commit's tests pass.
 
 **What stayed out**
 
 - Name display styles (natural / sorted) and name format profiles.
-- Accent folding and nicknames ([`ideas/international-names.md`](../../ideas/international-names.md), [`ideas/name-matching-enhancements.md`](../../ideas/name-matching-enhancements.md)).
+- Accent folding, nicknames dictionaries, phonetic matching ([`ideas/international-names.md`](../../ideas/international-names.md), [`ideas/name-matching-enhancements.md`](../../ideas/name-matching-enhancements.md)).
 - Sources, provenance, negatives and provisional members loaded from the catalog (**S9-14**).
