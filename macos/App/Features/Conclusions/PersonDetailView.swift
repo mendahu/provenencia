@@ -47,11 +47,11 @@ private struct PersonDetailPage: View {
             case .content(let content, let refreshing):
                 PersonDetailHeader(content: content)
                 VStack(alignment: .leading, spacing: 0) {
-                    PVSectionHeader(title: L10n.Conclusions.personDetails) {
+                    PVSectionHeader(title: L10n.Conclusions.personDetails, aside: {
                         if refreshing {
                             ProgressView().controlSize(.small)
                         }
-                    }
+                    })
                     ForEach(content.rows) { row in
                         ReconciledValueRow(model: row)
                     }
