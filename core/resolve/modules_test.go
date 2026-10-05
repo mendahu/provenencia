@@ -48,8 +48,8 @@ func TestModules(t *testing.T) {
 			[]Candidate{term(1, "u", "unknown")}, nil, StateEmpty, ""},
 		{"term", "a term with no key still counts", properties.ValueTypeTerm,
 			[]Candidate{term(1, "f", ""), term(2, "m", "")}, [][]byte{{1}, {2}}, StateMixed, ""},
-		{"name (interim)", "a name with an empty form is no evidence", properties.ValueTypeName,
-			[]Candidate{name(1, " . "), name(2, "James Robins")}, [][]byte{{2}}, StateSingle, ""},
+		{"name", "a name with no parts is no evidence, whatever its form", properties.ValueTypeName,
+			[]Candidate{name(1, "James Robins"), nm(2, "given=James|surname=Robins")}, [][]byte{{2}}, StateSingle, ""},
 	}
 	for _, tc := range cases {
 		t.Run(tc.module+"/"+tc.name, func(t *testing.T) {

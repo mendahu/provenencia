@@ -131,8 +131,25 @@ func (f *fixture) join(s subjects.Subject, entityID []byte) {
 	must(f.t, err)
 }
 
-func nameIn(s subjects.Subject, p properties.Property, form string) observations.Input {
-	return observations.Input{SubjectID: s.ID, PropertyID: p.ID, Name: &namevalues.Value{Form: form}}
+// nameIn is a name Observation from "type=value" parts separated by "|"
+// (form: the values in order), or "form:…" for a name with no parts.
+func nameIn(s subjects.Subject, p properties.Property, spec string) observations.Input {
+	return observations.Input{SubjectID: s.ID, PropertyID: p.ID, Name: nameValue(spec)}
+}
+
+func nameValue(spec string) *namevalues.Value {
+	if form, ok := strings.CutPrefix(spec, "form:"); ok {
+		return &namevalues.Value{Form: form}
+	}
+	v := &namevalues.Value{}
+	var words []string
+	for i, item := range strings.Split(spec, "|") {
+		typ, val, _ := strings.Cut(item, "=")
+		v.Parts = append(v.Parts, namevalues.Part{Idx: i, Type: typ, Value: val})
+		words = append(words, val)
+	}
+	v.Form = strings.Join(words, " ")
+	return v
 }
 
 func textIn(s subjects.Subject, p properties.Property, v string) observations.Input {
@@ -217,9 +234,9 @@ func (f *fixture) rebuiltSnapshot() []row {
 func TestResolvedValues(t *testing.T) {
 	f := newFixture(t)
 	person := f.subject("person")
-	f.cite(nameIn(person, f.props["name"], "James Robins"), termIn(person, f.props["sex_at_birth"], f.terms["male"]), intIn(person, f.props["age"], 34))
-	f.cite(nameIn(person, f.props["name"], "james  robins."), intIn(person, f.props["age"], 34))
-	jim := f.cite(nameIn(person, f.props["name"], "Jim Robins"))[0]
+	f.cite(nameIn(person, f.props["name"], "given=James|surname=Robins"), termIn(person, f.props["sex_at_birth"], f.terms["male"]), intIn(person, f.props["age"], 34))
+	f.cite(nameIn(person, f.props["name"], "given=james|surname=robins."), intIn(person, f.props["age"], 34))
+	jim := f.cite(nameIn(person, f.props["name"], "given=Jim|surname=Robins"))[0]
 
 	if got := f.rows(); len(got) != 0 {
 		t.Fatalf("unpromoted subject cached %d rows", len(got))
@@ -247,7 +264,7 @@ func TestResolvedValues(t *testing.T) {
 
 	t.Run("observation update", func(t *testing.T) {
 		_, err := observations.Update(f.c, userID, observations.Input{
-			ID: jim.ID, SubjectID: person.ID, PropertyID: f.props["name"].ID, Name: &namevalues.Value{Form: "James Robins"},
+			ID: jim.ID, SubjectID: person.ID, PropertyID: f.props["name"].ID, Name: nameValue("given=James|surname=Robins"),
 		})
 		must(t, err)
 		names := rowsFor(f.rows(), per, f.props["name"].ID)
@@ -293,7 +310,7 @@ func TestResolvedValues(t *testing.T) {
 
 	t.Run("subject delete leaves no rows", func(t *testing.T) {
 		lone := f.subject("person")
-		obs := f.cite(nameIn(lone, f.props["name"], "Mary Smith"))
+		obs := f.cite(nameIn(lone, f.props["name"], "given=Mary|surname=Smith"))
 		h := f.promote(lone)
 		if len(rowsFor(f.rows(), h, f.props["name"].ID)) != 1 {
 			t.Fatal("promoted name not cached")
@@ -327,14 +344,59 @@ func TestResolvedValuesKeepEveryValue(t *testing.T) {
 	f.assertUpkeepEqualsRebuild("TestResolvedValuesKeepEveryValue")
 }
 
-// A stale cache rebuilds on open: an old version, and the 3 and 4 stamped by
+// The cache stores the reconciled name (S9-13b): one row for names that
+// reconcile, parts only, and nothing for a name with no parts.
+func TestResolvedNames(t *testing.T) {
+	f := newFixture(t)
+
+	t.Run("an initial expands into the full name", func(t *testing.T) {
+		a, b := f.subject("person"), f.subject("person")
+		f.cite(nameIn(a, f.props["name"], "given=J.|surname=Robins"), nameIn(b, f.props["name"], "given=James|surname=Robins|suffix=Jr."))
+		h := f.promote(a)
+		f.join(b, h)
+		names := rowsFor(f.rows(), h, f.props["name"].ID)
+		if len(names) != 1 || names[0].Support != 2 || names[0].Rank != 1 {
+			t.Fatalf("names %+v", names)
+		}
+		n, err := valuecodec.UnmarshalName(names[0].Name)
+		must(t, err)
+		var parts []string
+		for _, p := range n.Parts {
+			parts = append(parts, p.Type+"="+p.Value)
+		}
+		if got := strings.Join(parts, "|"); got != "given=James|surname=Robins|suffix=Jr." {
+			t.Fatalf("parts %s", got)
+		}
+		if n.Form != "James Robins Jr." || *names[0].SortKey != "james robins jr" {
+			t.Fatalf("form %q sort %q", n.Form, *names[0].SortKey)
+		}
+	})
+
+	t.Run("a name with no parts is not cached", func(t *testing.T) {
+		p := f.subject("person")
+		f.cite(nameIn(p, f.props["name"], "form:James Robins"), intIn(p, f.props["age"], 3))
+		h := f.promote(p)
+		all := f.rows()
+		if names := rowsFor(all, h, f.props["name"].ID); len(names) != 0 {
+			t.Fatalf("names %+v", names)
+		}
+		if age := rowsFor(all, h, f.props["age"].ID); len(age) != 1 {
+			t.Fatalf("age %+v", age)
+		}
+	})
+
+	f.assertUpkeepEqualsRebuild("TestResolvedNames")
+}
+
+
+// A stale cache rebuilds on open: old versions, and the 3 and 4 stamped by
 // the closed PRs' builds, which must never read as current.
 func TestEnsureCatalogRebuildsStaleVersion(t *testing.T) {
-	for _, stale := range []int{0, 2, 3, 4} {
+	for _, stale := range []int{0, 2, 3, 4, 5} {
 		t.Run(fmt.Sprint("version ", stale), func(t *testing.T) {
 			f := newFixture(t)
 			p := f.subject("person")
-			f.cite(nameIn(p, f.props["name"], "James Robins"))
+			f.cite(nameIn(p, f.props["name"], "given=James|surname=Robins"))
 			f.promote(p)
 			want := f.rows()
 
@@ -370,7 +432,7 @@ func TestLoaderQueryCountIsConstant(t *testing.T) {
 	var handles [][]byte
 	for i := 0; i < 60; i++ {
 		p := f.subject("person")
-		f.cite(nameIn(p, f.props["name"], fmt.Sprintf("Person %d", i)), intIn(p, f.props["age"], int64(i)))
+		f.cite(nameIn(p, f.props["name"], fmt.Sprintf("given=Person|surname=P%d", i)), intIn(p, f.props["age"], int64(i)))
 		handles = append(handles, f.promote(p))
 	}
 	db, err := f.c.DB()
@@ -451,10 +513,10 @@ func TestRebuildEqualsUpkeep_Scenarios(t *testing.T) {
 	}{
 		{"edit moves the rank-1 cluster, then its last member is deleted", func(f *fixture) {
 			p := f.subject("person")
-			obs := f.cite(nameIn(p, f.props["name"], "James Robins"), nameIn(p, f.props["name"], "Jim Robins"))
+			obs := f.cite(nameIn(p, f.props["name"], "given=James|surname=Robins"), nameIn(p, f.props["name"], "given=Jim|surname=Robins"))
 			f.promote(p)
 			_, err := observations.Update(f.c, userID, observations.Input{
-				ID: obs[1].ID, SubjectID: p.ID, PropertyID: f.props["name"].ID, Name: &namevalues.Value{Form: "james robins"},
+				ID: obs[1].ID, SubjectID: p.ID, PropertyID: f.props["name"].ID, Name: nameValue("given=james|surname=robins"),
 			})
 			must(f.t, err)
 			f.assertUpkeepEqualsRebuild("after update")
@@ -473,7 +535,7 @@ func TestRebuildEqualsUpkeep_Scenarios(t *testing.T) {
 		}},
 		{"joining a second member merges its name, then disagrees", func(f *fixture) {
 			a, b := f.subject("person"), f.subject("person")
-			f.cite(nameIn(a, f.props["name"], "James Robins"), nameIn(b, f.props["name"], "james robins"))
+			f.cite(nameIn(a, f.props["name"], "given=James|surname=Robins"), nameIn(b, f.props["name"], "given=james|surname=robins"))
 			h := f.promote(a)
 			f.join(b, h)
 			f.assertUpkeepEqualsRebuild("after join")
@@ -481,9 +543,26 @@ func TestRebuildEqualsUpkeep_Scenarios(t *testing.T) {
 			if len(names) != 1 || names[0].Support != 2 {
 				f.t.Fatalf("join should merge the names into one cluster of 2: %+v", names)
 			}
-			f.cite(nameIn(b, f.props["name"], "Jim Robins"))
+			f.cite(nameIn(b, f.props["name"], "given=Jim|surname=Robins"))
 			if len(rowsFor(f.rows(), h, f.props["name"].ID)) != 2 {
 				f.t.Fatal("a member's new name should add a cluster")
+			}
+		}},
+		{"deleting the full given name drops rank 1 back to the initial", func(f *fixture) {
+			a, b := f.subject("person"), f.subject("person")
+			obs := f.cite(nameIn(a, f.props["name"], "given=J.|surname=Robins"), nameIn(b, f.props["name"], "given=James|surname=Robins"))
+			h := f.promote(a)
+			f.join(b, h)
+			f.assertUpkeepEqualsRebuild("after join")
+			must(f.t, observations.Delete(f.c, userID, obs[1].ID))
+			names := rowsFor(f.rows(), h, f.props["name"].ID)
+			if len(names) != 1 || names[0].Support != 1 {
+				f.t.Fatalf("names %+v", names)
+			}
+			n, err := valuecodec.UnmarshalName(names[0].Name)
+			must(f.t, err)
+			if n.Form != "J. Robins" {
+				f.t.Fatalf("rank 1 %q, want J. Robins", n.Form)
 			}
 		}},
 		{"emptied member subject deleted", func(f *fixture) {
@@ -513,7 +592,9 @@ func TestRebuildEqualsUpkeep_SeededSequences(t *testing.T) {
 			handles := map[string][][]byte{}
 			joins := 0
 			kinds := []string{"person", "person", "event", "place"}
-			names := []string{"James Robins", "james robins", "Jim Robins", "J. Robins", "Mary Smith"}
+			names := []string{"given=James|surname=Robins", "given=james|surname=robins", "given=Jim|surname=Robins",
+				"given=J.|surname=Robins", "given=James|given=K.|surname=Robins", "surname=Robbins",
+				"given=Mary|surname=Smith", "form:James Robins"}
 			toponyms := []string{"York", "york", "Upper Canada", "Toronto"}
 
 			value := func(s subjects.Subject) observations.Input {

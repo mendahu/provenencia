@@ -17,8 +17,8 @@
 // lives only in the derived resolved-values cache — never a claim, DateValue,
 // or NameValue row (seeded-vocabulary §5.3).
 //
-// Name, date and subject use interim exact-key modules until their own
-// modules land (S9-13b, S9-21, S9-28).
+// Names reconcile by structured parts (names.go). Date and subject use
+// interim exact-key modules until their own modules land (S9-21, S9-28).
 package resolve
 
 import (

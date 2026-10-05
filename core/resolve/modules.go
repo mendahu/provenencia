@@ -51,11 +51,7 @@ func moduleFor(valueType string) module {
 		// Interim: the subject itself. S9-28 maps it to its handle.
 		return keyModule{keyOf: func(v Value) (string, bool) { return string(v.SubjectID), true }}
 	case properties.ValueTypeName:
-		// Interim: normalized form, as S9-05. S9-13b reconciles parts.
-		return keyModule{keyOf: func(v Value) (string, bool) {
-			k := NormalizeForm(v.Name.Form)
-			return k, k != ""
-		}}
+		return nameModule{}
 	case properties.ValueTypeDate:
 		// Interim: every structured field, as S9-05. S9-21 reconciles windows.
 		return keyModule{keyOf: func(v Value) (string, bool) { return dateKey(v.Date), true }}

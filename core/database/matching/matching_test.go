@@ -12,6 +12,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/matching"
 	"github.com/mendahu/provenencia/core/database/namevalues"
+	"github.com/mendahu/provenencia/core/database/namevalues/namevaluestest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/properties"
@@ -86,7 +87,7 @@ type value func(f *fixture, s subjects.Subject) observations.Input
 
 func named(form string) value {
 	return func(f *fixture, s subjects.Subject) observations.Input {
-		return observations.Input{SubjectID: s.ID, PropertyID: f.props["name"].ID, Name: &namevalues.Value{Form: form}}
+		return observations.Input{SubjectID: s.ID, PropertyID: f.props["name"].ID, Name: namevaluestest.Western(form)}
 	}
 }
 
@@ -168,7 +169,8 @@ func TestForSubjectPersons(t *testing.T) {
 	if res.Kind != "person" || !res.Profiled {
 		t.Fatalf("%+v", res)
 	}
-	want := fmt.Sprintf("[%s=11.0 %s=9.3 %s=5.0]", exact.Entity.Ref, variant.Entity.Ref, surname.Entity.Ref)
+	// Fixture names are typed (given, surname), so a surname weighs more than a given name.
+	want := fmt.Sprintf("[%s=11.0 %s=9.1 %s=6.0]", exact.Entity.Ref, variant.Entity.Ref, surname.Entity.Ref)
 	if refs(res.Matches) != want {
 		t.Fatalf("got %s, want %s", refs(res.Matches), want)
 	}
@@ -199,7 +201,7 @@ func TestForSubjectPersons(t *testing.T) {
 		must(t, err)
 		res, err := matching.ForSubject(f.db, james.ID, matching.Options{})
 		must(t, err)
-		if want := fmt.Sprintf("[%s=9.3 %s=5.0]", variant.Entity.Ref, surname.Entity.Ref); refs(res.Matches) != want {
+		if want := fmt.Sprintf("[%s=9.1 %s=6.0]", variant.Entity.Ref, surname.Entity.Ref); refs(res.Matches) != want {
 			t.Fatalf("got %s, want %s", refs(res.Matches), want)
 		}
 	})

@@ -17,7 +17,7 @@
 // search and matching read them all.
 //
 // Scope today: positive Observations on accepted members, with each term's
-// key. Sources, provenance, negatives and provisional members load with
+// key and each name's parts. Sources, provenance, negatives and provisional members load with
 // S9-14; subject-valued Properties with S9-28; date_lo / date_hi with S9-21.
 package resolvedvalues
 
@@ -41,7 +41,8 @@ import (
 //	2: dashes and slashes separate words in name keys (S9-10).
 //	5: one reconciler pipeline; text case-insensitive; majority; every value
 //	   kept with a reason (S9-13). 3 and 4 were stamped by closed PRs' builds.
-const CacheVersion = 5
+//	6: names reconcile by part type; names with no parts are no evidence (S9-13b).
+const CacheVersion = 6
 
 // batchSize bounds the handles per loader batch (and so the IN list length).
 const batchSize = 500

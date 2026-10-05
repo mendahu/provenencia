@@ -10,7 +10,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/datevalues"
-	"github.com/mendahu/provenencia/core/database/namevalues"
+	"github.com/mendahu/provenencia/core/database/namevalues/namevaluestest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/properties"
@@ -86,7 +86,7 @@ func (f *handleFixture) person(forms ...string) subjects.Subject {
 	return f.subject("person", func(s subjects.Subject) []observations.Input {
 		var in []observations.Input
 		for _, form := range forms {
-			in = append(in, observations.Input{SubjectID: s.ID, PropertyID: f.prop("name").ID, Name: &namevalues.Value{Form: form}})
+			in = append(in, observations.Input{SubjectID: s.ID, PropertyID: f.prop("name").ID, Name: namevaluestest.Western(form)})
 		}
 		return in
 	})
@@ -185,7 +185,7 @@ func TestHandleSearchFindsOutvotedNames(t *testing.T) {
 func TestHandleSearchFollowsEdits(t *testing.T) {
 	f := newHandleFixture(t)
 	s := f.subject("person", func(s subjects.Subject) []observations.Input {
-		return []observations.Input{{SubjectID: s.ID, PropertyID: f.prop("name").ID, Name: &namevalues.Value{Form: "Ada Byron"}}}
+		return []observations.Input{{SubjectID: s.ID, PropertyID: f.prop("name").ID, Name: namevaluestest.Western("Ada Byron")}}
 	})
 	ada := f.promote(s, nil)
 	obs, err := observations.ListBySubject(f.c, s.ID)
@@ -193,7 +193,7 @@ func TestHandleSearchFollowsEdits(t *testing.T) {
 		t.Fatalf("%v %d", err, len(obs))
 	}
 	if _, err := observations.Update(f.c, f.user, observations.Input{
-		ID: obs[0].ID, SubjectID: s.ID, PropertyID: f.prop("name").ID, Name: &namevalues.Value{Form: "Ada Lovelace"},
+		ID: obs[0].ID, SubjectID: s.ID, PropertyID: f.prop("name").ID, Name: namevaluestest.Western("Ada Lovelace"),
 	}); err != nil {
 		t.Fatal(err)
 	}

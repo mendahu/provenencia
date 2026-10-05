@@ -4,7 +4,6 @@ import (
 	"math"
 	"sort"
 	"strings"
-	"unicode"
 
 	"github.com/mendahu/provenencia/core/resolve"
 )
@@ -75,7 +74,7 @@ func wordSimilarity(x, y string, r wordRules) float64 {
 		return 1
 	}
 	rx, ry := []rune(x), []rune(y)
-	if isInitial(rx) || isInitial(ry) {
+	if resolve.IsInitial(x) || resolve.IsInitial(y) {
 		if r.initials && rx[0] == ry[0] {
 			return r.initialCredit
 		}
@@ -97,10 +96,6 @@ func wordSimilarity(x, y string, r wordRules) float64 {
 		return ratio
 	}
 	return 0
-}
-
-func isInitial(r []rune) bool {
-	return len(r) == 1 && unicode.ToUpper(r[0]) != unicode.ToLower(r[0])
 }
 
 // editDistance is the optimal-string-alignment distance: insertions,
