@@ -1,6 +1,8 @@
 // Package promote is the Identity Claim write behind Promote: one transaction
 // per promoted Subject. A step either mints a new handle of the Subject's type
-// or joins an existing one, and files an accepted claim with zero pins.
+// or joins an existing one, and files an accepted claim. A join may carry
+// confirmed pairs: each pins both Observations on the new claim and backfills
+// them onto the member's claim (conclusion-layer-data-model §5.1).
 package promote
 
 import (
@@ -40,6 +42,15 @@ type Input struct {
 	EntityID          []byte
 	ConfidenceGradeID []byte // nil = no grade
 	Argument          string
+	// Pairs are the comparisons the researcher confirmed. Join only.
+	Pairs []Pair
+}
+
+// Pair is one confirmed comparison: an Observation of the incoming Subject
+// and one of an accepted member of the target, on the same Property.
+type Pair struct {
+	IncomingObservationID []byte
+	MemberObservationID   []byte
 }
 
 // Result is the handle and the claim one step wrote. On a join, Entity is
@@ -47,11 +58,14 @@ type Input struct {
 type Result struct {
 	Entity canonicalentities.Entity
 	Claim  identityclaims.Claim
+	// Pins is the number of Observations pinned on the new claim.
+	Pins int
 }
 
 // Save files an accepted Identity Claim for the Subject in one transaction,
 // recorded as promote_subject: onto a newly minted handle of its type, or onto
-// in.EntityID. Joining writes the claim only.
+// in.EntityID. A join pins each confirmed pair's two Observations on the new
+// claim and on the member's claim; the member's argument is not touched.
 func Save(c *database.Catalog, userID []byte, in Input) (Result, error) {
 	db, err := c.DB()
 	if err != nil {
@@ -61,6 +75,9 @@ func Save(c *database.Catalog, userID []byte, in Input) (Result, error) {
 		return Result{}, err
 	}
 	if len(in.SubjectID) != 16 || (in.EntityID != nil && len(in.EntityID) != 16) {
+		return Result{}, ErrInvalid
+	}
+	if in.EntityID == nil && len(in.Pairs) > 0 {
 		return Result{}, ErrInvalid
 	}
 
@@ -119,6 +136,11 @@ func Save(c *database.Catalog, userID []byte, in Input) (Result, error) {
 		return Result{}, err
 	}
 	changes = append(changes, claimChange)
+	pins, pinChanges, err := pinPairs(tx, claim, in.Pairs)
+	if err != nil {
+		return Result{}, err
+	}
+	changes = append(changes, pinChanges...)
 	if _, err := audit.Record(tx, audit.Revision{
 		UserID:     userID,
 		ActionType: "promote_subject",
@@ -133,7 +155,57 @@ func Save(c *database.Catalog, userID []byte, in Input) (Result, error) {
 	if err := tx.Commit(); err != nil {
 		return Result{}, err
 	}
-	return Result{Entity: entity, Claim: claim}, nil
+	return Result{Entity: entity, Claim: claim, Pins: pins}, nil
+}
+
+// sqlPairClaim checks one pair and returns the member's claim: the incoming
+// Observation is the Subject's, the member Observation is on the same
+// Property, and its Subject is an accepted member of the claim's handle.
+const sqlPairClaim = `SELECT ic.id
+	FROM observations a
+	JOIN observations b ON b.property_id = a.property_id
+	JOIN identity_claims ic ON ic.subject_id = b.subject_id
+		AND ic.entity_id = ? AND ic.status = 'accepted'
+	WHERE a.id = ? AND a.subject_id = ? AND b.id = ?`
+
+// pinPairs pins both Observations of every pair on the new claim and on the
+// member's claim (backfill). Pins a claim already carries are skipped; it
+// returns how many the new claim carries and a change per new pin.
+func pinPairs(tx *sql.Tx, claim identityclaims.Claim, pairs []Pair) (int, []audit.Change, error) {
+	var (
+		changes []audit.Change
+		pins    int
+	)
+	for _, p := range pairs {
+		if len(p.IncomingObservationID) != 16 || len(p.MemberObservationID) != 16 {
+			return 0, nil, ErrInvalid
+		}
+		var memberClaimID []byte
+		err := tx.QueryRow(sqlPairClaim, claim.EntityID, p.IncomingObservationID, claim.SubjectID,
+			p.MemberObservationID).Scan(&memberClaimID)
+		if errors.Is(err, sql.ErrNoRows) {
+			return 0, nil, ErrInvalid
+		}
+		if err != nil {
+			return 0, nil, err
+		}
+		for _, claimID := range [][]byte{claim.ID, memberClaimID} {
+			for _, obsID := range [][]byte{p.IncomingObservationID, p.MemberObservationID} {
+				change, ok, err := identityclaims.PinTx(tx, claimID, obsID)
+				if err != nil {
+					return 0, nil, err
+				}
+				if !ok {
+					continue
+				}
+				changes = append(changes, change)
+				if bytes.Equal(claimID, claim.ID) {
+					pins++
+				}
+			}
+		}
+	}
+	return pins, changes, nil
 }
 
 // joinTarget loads an existing handle for a join. A missing or merged handle
