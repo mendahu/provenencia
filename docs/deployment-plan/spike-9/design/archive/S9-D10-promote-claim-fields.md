@@ -6,12 +6,12 @@
 **Implements later as:** PR **S9-12**  
 **Depends on:** S9-D9 (shell); S9-10 (write with confidence + argument)  
 **Related:** S9-D11 precedes this step on the join path; research-judgment model §4  
-**Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)  
-**Skill:** [`add-design-brief`](../../../../.cursor/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.cursor/skills/add-ui-component/SKILL.md)
+**Design system layers:** [`docs/design-system-layers.md`](../../../../design-system-layers.md)  
+**Skill:** [`add-design-brief`](../../../../../.cursor/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../../.cursor/skills/add-ui-component/SKILL.md)
 
-Paste this entire document into Claude Design as the requirements for one board/flow. Read shared product facts in [`README.md`](README.md) first.
+Paste this entire document into Claude Design as the requirements for one board/flow. Read shared product facts in [`README.md`](../README.md) first.
 
-This brief **extends S9-D9**'s frames. Reuse its layout; change only what this kind needs. The S9-D9 board is Claude Design *Promote flow* (`bc84685e-bbc3-4053-a5c9-0f5ac7a13ccd`), `Promote flow.dc.html`; add these frames to it. It shipped as a workspace place in S9-11 ([`completed.md`](../completed.md#s9-d9--design-promote-shell--choose-target)).
+This brief **extends S9-D9**'s frames. Reuse its layout; change only what this kind needs. The S9-D9 board is Claude Design *Promote flow* (`bc84685e-bbc3-4053-a5c9-0f5ac7a13ccd`), `Promote flow.dc.html`; add these frames to it. It shipped as a workspace place in S9-11 ([`completed.md`](../../completed.md#s9-d9--design-promote-shell--choose-target)).
 
 ### Claude Design — do this first (in order)
 
@@ -155,5 +155,5 @@ This table is **binding**. Instance the Ship kit rows; do not redraw them. Paths
 ## 8. Handoff
 
 1. Archive this brief under `archive/` when the board is agreed.
-2. Record in [`../completed.md`](../completed.md).
+2. Record in [`../completed.md`](../../completed.md).
 3. Implement **S9-12** against the board and inventory (kit first).

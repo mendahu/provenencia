@@ -25,6 +25,8 @@ IDs stay stable (`S9-NN`, `S9-DN`). Do not renumber when moving steps here.
 | S9-34a | PR | Handle search from cached values + kinds filter |
 | S9-D9 | Design | Promote shell + choose target |
 | S9-11 | PR | Promote shell + choose target |
+| S9-D10 | Design | Promote claim fields + save |
+| S9-12 | PR | Promote claim fields + save |
 
 ## Steps
 
@@ -448,3 +450,61 @@ The graph card's Promote now opens the Promote place: choose a new or existing h
 **What stayed out**
 
 - Claim fields (**S9-12**), compare (**S9-19**), the walk and related-first ordering (**S9-29**, **S9-30**).
+
+### S9-D10 — Design: Promote claim fields + save
+
+**Board:** frames D10-01 – D10-06, added to Claude Design *Promote flow* (`bc84685e-bbc3-4053-a5c9-0f5ac7a13ccd`), `Promote flow.dc.html`, inside the S9-D9 shell.
+
+- **The step (CF-1 – CF-3, CF-6):**
+  - "Claim fields" with the step count;
+  - a sunken summary card, "Will write · one Identity Claim": subject and CPR → the handle (New Person with its pending ref, or the chosen one), a pins badge, and a line about the handle;
+  - **Status** (a real Select with one option, Accepted, so Provisional and Rejected arrive without a relayout) and **Confidence** ("Not stated" plus the grades), side by side;
+  - **Argument**, drafted from Compare's confirmed matches on the join path, empty on a new handle.
+- **Done discards the step (CF-4).** A claim is a researcher's statement, so it is never written on the way out. Done asks through the shell's leave guard; only Save writes. Right after a save, or after a failure that wrote nothing, Done leaves without asking.
+- **Back (added during review).** A ghost "Back to {previous step}" leads the footer after the first step. It returns inside Promote with the choice and the fields kept, and never asks. The toolbar's Back still leaves Promote through the guard.
+- **Saving (CF-5):** fields, Back and Done lock; the primary button shows the kit loading state and reads "Saving".
+- **Failure (CF-5):** a race where another window filed the subject. A compact danger Callout names the subject and the handle and says nothing was written; Save is disabled because retrying can't succeed.
+- **Saved:** a past-tense toast ("James Robins filed on PER-…"); the walk opens the next subject (S9-D12), or the flow returns to the graph.
+
+Brief archived: [`design/archive/S9-D10-promote-claim-fields.md`](design/archive/S9-D10-promote-claim-fields.md).
+
+### S9-12 — Promote claim fields + save
+
+Next on the target step now opens Claim fields, and **Save & next** writes the Identity Claim with its confidence and argument.
+
+**What shipped**
+
+- **`PromoteFlow`:**
+  - `.claim` is built. Mint runs Choose → Claim fields (2 of 2); join runs Choose → Claim fields (3 of 3), skipping Compare until S9-19 builds it.
+  - **Navigation is derived in one place.** `controls` gives where Back goes, whether the primary button moves to a step or saves (`Advance.step` / `.save`), and what is enabled. Footer and model read it and never check the step. With Compare built, the join path stops on it with no footer or model edits; a test injects Compare to prove it.
+  - **Edits belong to steps.** Inputs are `.edit(Edit)`, and each `Edit` names its step (choose / select target on Choose, confidence / argument on Claim fields); `send` ignores an edit anywhere else.
+  - Back and forward keep the whole draft. Changing the target keeps the claim fields, since nothing is drafted from it yet.
+  - `Draft.status` (`ClaimStatus`, Accepted only).
+  - **Blocked phase:** a write refused for good (`identityclaims.already_member`). Nothing is unsaved, so leaving and Done don't ask. The graph's report of the handle fills the callout title instead of bouncing to the graph. A retryable failure stays on the step with Save live.
+  - `saveSucceeded(entityRef:)` and the effect `announceFiled`.
+- **Feature:**
+  - `PromoteClaimStep` (the brief's snowflake).
+  - The footer's ghost Back.
+  - The primary button reads Next, Save & next, or Saving, from `controls`.
+  - The filed toast goes through `WorkspaceSession.noticeToast`, so it shows on the graph after the place closes.
+  - The new-handle ref prefix (PER, EVT, PLC) comes from the subject types in the cached Properties snapshot, not from code.
+- **Query:** `confidenceGradesList` (`listClaimConfidenceGrades`, session-fresh, never invalidated) is on the Promote place's keys, with `propertiesWorkspace`.
+- **Kit:**
+  - `PVButton` and `PVCallout` titles take `PVCopy`, so formatted strings work as labels.
+  - `PVSymbol.arrowLeft` and `.pin`.
+  - The vocabulary toast overlay hides an empty body.
+- **Copy:**
+  - Claim-fields strings in `L10n.Promote`.
+  - The New hint is the board's: "A new Person goes straight to its claim fields".
+
+**Deviations from the board**
+
+- **No pins.** The badge always reads "No pins" (pins are S9-17 / S9-19).
+- **The join argument isn't drafted** and its hint is "Optional"; the summary line has no Compare clause; the choose-target join hint keeps the interim "will join PER-… and its N members". All wait for S9-19.
+- **No walk copy:** the toast has no "next in this walk" body, and the callout leaves out "earlier steps stay saved". Both wait for S9-30.
+- **Confidence options show the vocabulary's own labels** ("Low confidence", …), not the board's Low / Moderate / High.
+
+**What stayed out**
+
+- Provisional and Rejected statuses (a `ClaimStatus` case each, plus engine support).
+- Compare (**S9-19**), pins (**S9-17**), the walk (**S9-30**).

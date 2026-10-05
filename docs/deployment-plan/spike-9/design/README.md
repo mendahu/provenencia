@@ -13,7 +13,6 @@ Design track and gating: [`../deployment-plan.md`](../deployment-plan.md#design-
 | S9-D5 | [Person detail](S9-D5-person-detail.md) | **S9-16** (S9-32) | Value states + clusters the other details extend |
 | S9-D6 | [Event detail](S9-D6-event-detail.md) | **S9-24** (S9-32) | Extends D5 |
 | S9-D7 | [Place detail](S9-D7-place-detail.md) | **S9-27** | Extends D5 |
-| S9-D10 | [Promote — claim fields](S9-D10-promote-claim-fields.md) | **S9-12** | Status dropdown laid out for three |
 | S9-D11 | [Promote — compare](S9-D11-promote-compare.md) | **S9-19** | Existing handle only |
 | S9-D12 | [Promote — walk](S9-D12-promote-walk.md) | **S9-30** | Connected subjects, bridge confirm, Done |
 | S9-D13 | [Omnibar results](S9-D13-omnibar-hits.md) | **S9-35** | Hit rows for three kinds (enhancement) |
@@ -26,6 +25,7 @@ Design track and gating: [`../deployment-plan.md`](../deployment-plan.md#design-
 | S9-D2 | [Persons list](archive/S9-D2-persons-list.md) | **S9-09** (S9-32) | Kit `PVList` + `ConclusionListRow`; title name → italic label → mono ref; trailing ref; no mixed marker in rows |
 | S9-D8 | [Evidence graph subject card](archive/S9-D8-graph-subject-card.md) | **S9-04** (S9-09 name, S9-11 flow) | One 36pt kind-chip footer (rev 1): Promote, then the membership link |
 | S9-D9 | [Promote — choose target](archive/S9-D9-promote-target.md) | **S9-11** (S9-12 / S9-19 / S9-30 extend) | A workspace place, not a sheet; subject header in the kind's wash, composed step row, New / Existing radios, search + Suggested radio rows, Done + leave guard |
+| S9-D10 | [Promote — claim fields](archive/S9-D10-promote-claim-fields.md) | **S9-12** (S9-17 / S9-19 / S9-30 extend) | Summary card of the write, Status Select (one option) beside Confidence, Argument; Done discards through the guard; footer Back keeps the draft |
 
 Design each brief alongside its feature, just before the PR it gates. Order and dependencies: [PR sequence](../deployment-plan.md#pr-sequence).
 
