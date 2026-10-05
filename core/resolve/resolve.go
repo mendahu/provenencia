@@ -1,28 +1,29 @@
-// Package resolve turns a handle's candidate values for one Property into
-// ranked clusters (deployment-plan R2).
+// Package resolve reconciles a handle's candidate values for one Property
+// into what the Conclusion layer displays (conclusion-reconciliation.md).
 //
 // Every Property on a canonical entity is a list: any member Subject may carry
-// it more than once, and a handle has many members. Resolve takes that list —
-// zero, one, or many candidates — and returns zero, one, or many clusters in
-// display order. The state (single / merged / mixed / concluded) is read off
-// the shape of the result, never stored beside it.
+// it more than once, and a handle has many members. Resolve takes that list
+// and runs it through one shared pipeline (pipeline.go): admit, deny, group,
+// majority, confidence. Each value type plugs in a small module (modules.go)
+// that says when two values are the same, what folds into what, and how a
+// group becomes one value.
+//
+// Nothing is dropped. Every distinct value comes back as a Cluster with a
+// Reason: ReasonKept when it is displayed, else why not (outvoted, weak,
+// denied, provisional). Every candidate comes back as an Outcome. The state
+// (single / merged / mixed / concluded) is read off the displayed values.
 //
 // Pure: no catalog access, no SQL, no writes. The output is display policy and
 // lives only in the derived resolved-values cache — never a claim, DateValue,
 // or NameValue row (seeded-vocabulary §5.3).
 //
-// v1 clusters by exact equality (names by normalized form). Later steps
-// replace pieces without changing callers: name and date auto-reconcilers
-// (S9-13, S9-21) swap the clustering for those value types, provenance ranking
-// (S9-14) goes ahead of support in the order, and subject values map to their
-// handles (S9-28). Callers pass positive-polarity candidates only until S9-14.
+// Name, date and subject use interim exact-key modules until their own
+// modules land (S9-13b, S9-21, S9-28).
 package resolve
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
-	"sort"
 	"strconv"
 	"strings"
 	"unicode"
@@ -36,11 +37,26 @@ import (
 type State string
 
 const (
-	StateEmpty     State = ""          // no candidates, no concluded value
-	StateSingle    State = "single"    // one candidate
-	StateMerged    State = "merged"    // several candidates, one cluster
-	StateMixed     State = "mixed"     // several clusters
+	StateEmpty     State = ""          // nothing displayed, no concluded value
+	StateSingle    State = "single"    // one displayed value from one Source
+	StateMerged    State = "merged"    // one displayed value from several Sources
+	StateMixed     State = "mixed"     // several displayed values
 	StateConcluded State = "concluded" // a concluded value (Reconciliation Claim, later)
+)
+
+// Reason says what happened to a candidate, or why a value is or isn't
+// displayed (conclusion-reconciliation.md §6). Stored in the cache.
+type Reason string
+
+const (
+	ReasonKept        Reason = "kept"        // displayed, or supports a displayed value as given
+	ReasonFolded      Reason = "folded"      // merged into a fuller value
+	ReasonOutvoted    Reason = "outvoted"    // crowded out by a majority of Sources
+	ReasonWeak        Reason = "weak"        // only weak evidence, and stronger evidence disagreed
+	ReasonDenied      Reason = "denied"      // eliminated by a stronger negative Observation
+	ReasonProvisional Reason = "provisional" // from a provisional member; never displayed
+	ReasonNoEvidence  Reason = "no_evidence" // nothing usable to compare
+	ReasonAgainst     Reason = "against"     // a negative that counted against a value
 )
 
 var (
@@ -60,118 +76,129 @@ type Value struct {
 	Integer    int64
 	HasInteger bool
 	TermID     []byte
+	TermKey    string // the term's key, when known; NeutralTermKeys are no evidence
 	SubjectID  []byte
 	Date       *datevalues.Value
 	Name       *namevalues.Value
 }
 
-// Candidate is one member Observation's value for the Property.
+// Candidate is one member Observation's value for the Property, with the
+// evidence it carries.
 type Candidate struct {
 	ObservationID []byte // UUIDv7; the stable tiebreak
 	Value         Value
+	// SourceID is the Source the Observation's Citation is under. Majority
+	// counts distinct Sources; an empty SourceID counts as its own Source.
+	SourceID []byte
+	// Negative is a negative-polarity Observation: never displayed; it
+	// denies weaker same-value candidates and counts against the rest.
+	Negative bool
+	// Provisional is a candidate from a provisional member: never displayed.
+	Provisional bool
+	Provenance  Provenance
 }
 
-// Cluster is one distinct value and the Observations that support it.
+// Provenance is how strong a candidate's evidence is, each part relative to
+// its vocabulary's default grade: 0 is the default, below it negative, above
+// it positive.
+type Provenance struct {
+	Credibility     int  // the Citation's Source credibility vs `standard`
+	Uncertain       bool // the Citation's transcription is uncertain
+	ClaimConfidence int  // the member's Identity Claim confidence vs `moderate`
+}
+
+// Weak is evidence below the default anywhere: a low-trust Source, an
+// uncertain transcription, or a low-confidence claim.
+func (p Provenance) Weak() bool {
+	return p.Credibility < 0 || p.Uncertain || p.ClaimConfidence < 0
+}
+
+// Stronger reports whether p is strictly stronger than q, comparing Source
+// credibility, then transcription certainty, then claim confidence.
+func (p Provenance) Stronger(q Provenance) bool {
+	if p.Credibility != q.Credibility {
+		return p.Credibility > q.Credibility
+	}
+	if p.Uncertain != q.Uncertain {
+		return !p.Uncertain
+	}
+	return p.ClaimConfidence > q.ClaimConfidence
+}
+
+// Cluster is one distinct value and the Observations behind it.
 type Cluster struct {
-	// Value is the cluster's representative: the lowest-id member's value,
-	// or the concluded value when this is the concluded cluster.
+	// Value is the displayed value: assembled by the value type's module
+	// (for simple types, the best-ranked member's value), or the concluded
+	// value when this is the concluded cluster.
 	Value          Value
-	ObservationIDs [][]byte // ascending
-	Support        int      // len(ObservationIDs); 0 for a concluded value no candidate carries
+	ObservationIDs [][]byte // members, ascending
+	Support        int      // distinct Sources among the members; 0 for a concluded value no candidate carries
+	Against        int      // negative candidates that match this value
+	// Reason is ReasonKept for a displayed value, else why it isn't displayed.
+	Reason Reason
 }
 
-// Result is the resolver's output for one (handle, Property).
+// Displayed reports whether the cluster is one of the displayed values.
+func (c Cluster) Displayed() bool { return c.Reason == ReasonKept }
+
+// Outcome is what happened to one candidate.
+type Outcome struct {
+	ObservationID []byte
+	Reason        Reason
+	Cluster       int    // index into Result.Clusters; -1 for no_evidence and negatives
+	DeniedBy      []byte // the negative that denied it, for ReasonDenied
+}
+
+// Result is the reconciler's output for one (handle, Property).
 type Result struct {
-	Clusters  []Cluster // display order; index 0 is rank 1
-	Concluded bool      // Clusters[0] is the concluded value
+	// Clusters holds every distinct value: displayed ones first, then the
+	// rest, each group by support descending, then its best-ranked member.
+	// Index 0 is rank 1.
+	Clusters   []Cluster
+	Candidates []Outcome // one per input candidate, ascending Observation id
+	Concluded  bool      // Clusters[0] is the concluded value
 }
 
-// State reads the state off the result's shape.
+// State reads the state off the displayed values.
 func (r Result) State() State {
-	switch {
-	case len(r.Clusters) == 0:
-		return StateEmpty
-	case r.Concluded:
+	if r.Concluded {
 		return StateConcluded
-	case len(r.Clusters) > 1:
+	}
+	var shown []Cluster
+	for _, c := range r.Clusters {
+		if c.Displayed() {
+			shown = append(shown, c)
+		}
+	}
+	switch {
+	case len(shown) == 0:
+		return StateEmpty
+	case len(shown) > 1:
 		return StateMixed
-	case r.Clusters[0].Support > 1:
+	case shown[0].Support > 1:
 		return StateMerged
 	default:
 		return StateSingle
 	}
 }
 
-// Resolve clusters candidates for a Property of valueType and orders the
-// clusters: support descending, then each cluster's lowest Observation id.
-// The order does not depend on the input order. A non-nil concluded value
-// always takes rank 1: it joins the cluster it equals, or stands alone with
-// support 0 ahead of the rest.
+// Resolve reconciles candidates for a Property of valueType. The result does
+// not depend on the input order. A non-nil concluded value always takes rank
+// 1: it joins the cluster with the same value, or stands alone with support 0
+// ahead of the rest.
 func Resolve(valueType string, candidates []Candidate, concluded *Value) (Result, error) {
 	if !knownValueType(valueType) {
 		return Result{}, fmt.Errorf("%w: %q", ErrUnknownValueType, valueType)
 	}
-
-	sorted := make([]Candidate, len(candidates))
-	copy(sorted, candidates)
-	sort.SliceStable(sorted, func(i, j int) bool {
-		return bytes.Compare(sorted[i].ObservationID, sorted[j].ObservationID) < 0
-	})
-
-	var clusters []Cluster
-	var keys []string
-	index := map[string]int{}
-	for _, c := range sorted {
-		k, err := key(valueType, c.Value)
-		if err != nil {
-			return Result{}, err
-		}
-		i, ok := index[k]
-		if !ok {
-			i = len(clusters)
-			index[k] = i
-			keys = append(keys, k)
-			clusters = append(clusters, Cluster{Value: c.Value})
-		}
-		clusters[i].ObservationIDs = append(clusters[i].ObservationIDs, c.ObservationID)
-		clusters[i].Support++
-	}
-
-	// Clusters were created in ascending first-member id, so a stable sort on
-	// support alone leaves ties ordered by lowest Observation id.
-	order := make([]int, len(clusters))
-	for i := range order {
-		order[i] = i
-	}
-	sort.SliceStable(order, func(a, b int) bool {
-		return clusters[order[a]].Support > clusters[order[b]].Support
-	})
-	res := Result{Clusters: make([]Cluster, 0, len(clusters)+1)}
-	orderedKeys := make([]string, 0, len(clusters))
-	for _, i := range order {
-		res.Clusters = append(res.Clusters, clusters[i])
-		orderedKeys = append(orderedKeys, keys[i])
-	}
-
-	if concluded == nil {
-		return res, nil
-	}
-	k, err := key(valueType, *concluded)
-	if err != nil {
-		return Result{}, err
-	}
-	top := Cluster{Value: *concluded}
-	for i, ck := range orderedKeys {
-		if ck == k {
-			top.ObservationIDs = res.Clusters[i].ObservationIDs
-			top.Support = res.Clusters[i].Support
-			res.Clusters = append(res.Clusters[:i], res.Clusters[i+1:]...)
-			break
+	for _, c := range candidates {
+		if !carries(valueType, c.Value) {
+			return Result{}, ErrValueMismatch
 		}
 	}
-	res.Clusters = append([]Cluster{top}, res.Clusters...)
-	res.Concluded = true
-	return res, nil
+	if concluded != nil && !carries(valueType, *concluded) {
+		return Result{}, ErrValueMismatch
+	}
+	return reconcile(moduleFor(valueType), candidates, concluded, cardinalitySingle), nil
 }
 
 func knownValueType(vt string) bool {
@@ -184,41 +211,25 @@ func knownValueType(vt string) bool {
 	}
 }
 
-// key is the v1 clustering rule: values with equal keys are one cluster.
-func key(valueType string, v Value) (string, error) {
+// carries reports whether v sets the field its value type needs. An empty
+// value of the right kind (blank text, a name with no parts) is carried and
+// becomes no evidence in the pipeline.
+func carries(valueType string, v Value) bool {
 	switch valueType {
 	case properties.ValueTypeText:
-		if !v.HasText {
-			return "", ErrValueMismatch
-		}
-		return strings.TrimSpace(v.Text), nil
+		return v.HasText
 	case properties.ValueTypeInteger:
-		if !v.HasInteger {
-			return "", ErrValueMismatch
-		}
-		return strconv.FormatInt(v.Integer, 10), nil
+		return v.HasInteger
 	case properties.ValueTypeTerm:
-		if len(v.TermID) == 0 {
-			return "", ErrValueMismatch
-		}
-		return string(v.TermID), nil
+		return len(v.TermID) > 0
 	case properties.ValueTypeSubject:
-		if len(v.SubjectID) == 0 {
-			return "", ErrValueMismatch
-		}
-		return string(v.SubjectID), nil
+		return len(v.SubjectID) > 0
 	case properties.ValueTypeName:
-		if v.Name == nil {
-			return "", ErrValueMismatch
-		}
-		return NormalizeForm(v.Name.Form), nil
+		return v.Name != nil
 	case properties.ValueTypeDate:
-		if v.Date == nil {
-			return "", ErrValueMismatch
-		}
-		return dateKey(v.Date), nil
+		return v.Date != nil
 	}
-	return "", ErrUnknownValueType
+	return false
 }
 
 // SortKey is the text a cluster sorts by within its Property (the cache's

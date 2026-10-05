@@ -443,8 +443,8 @@ func TestRebuildEqualsUpkeep_Scenarios(t *testing.T) {
 			f.cite(textIn(a, f.props["toponym"], "york"), textIn(b, f.props["toponym"], "Toronto"))
 			f.promote(b)
 			f.assertUpkeepEqualsRebuild("two handles")
-			if len(rowsFor(f.rows(), h, f.props["toponym"].ID)) != 2 {
-				f.t.Fatal("York / york should be two clusters")
+			if rows := rowsFor(f.rows(), h, f.props["toponym"].ID); len(rows) != 1 || rows[0].Support != 2 {
+				f.t.Fatalf("York / york should be one value from two Observations: %+v", rows)
 			}
 		}},
 		{"joining a second member merges its name, then disagrees", func(f *fixture) {

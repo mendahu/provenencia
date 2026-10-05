@@ -36,8 +36,8 @@ func shape(r Result) [][]byte {
 		for _, oid := range c.ObservationIDs {
 			ids = append(ids, oid[3])
 		}
-		if c.Support != len(c.ObservationIDs) {
-			panic("support disagrees with members")
+		if c.Support > len(c.ObservationIDs) {
+			panic("support counts more Sources than members")
 		}
 		out = append(out, ids)
 	}
@@ -58,8 +58,8 @@ func TestResolve(t *testing.T) {
 			[]Candidate{text(1, "York")}, nil, [][]byte{{1}}, StateSingle},
 		{"identical text merges", properties.ValueTypeText,
 			[]Candidate{text(3, "York"), text(1, "York"), text(2, " York ")}, nil, [][]byte{{1, 2, 3}}, StateMerged},
-		{"text is case-sensitive", properties.ValueTypeText,
-			[]Candidate{text(1, "York"), text(2, "york")}, nil, [][]byte{{1}, {2}}, StateMixed},
+		{"text ignores case (S9-13)", properties.ValueTypeText,
+			[]Candidate{text(1, "York"), text(2, "york")}, nil, [][]byte{{1, 2}}, StateMerged},
 		{"names merge by normalized form", properties.ValueTypeName,
 			[]Candidate{name(1, "JAMES ROBINS"), name(2, "James  Robins."), name(3, "james robins")}, nil,
 			[][]byte{{1, 2, 3}}, StateMerged},
@@ -67,14 +67,14 @@ func TestResolve(t *testing.T) {
 			[]Candidate{name(1, "James Robins"), name(2, "Jim Robins")}, nil, [][]byte{{1}, {2}}, StateMixed},
 		{"tie broken by lowest id", properties.ValueTypeText,
 			[]Candidate{text(5, "B"), text(2, "A")}, nil, [][]byte{{2}, {5}}, StateMixed},
-		{"support beats id", properties.ValueTypeText,
-			[]Candidate{text(1, "A"), text(4, "B"), text(3, "B")}, nil, [][]byte{{3, 4}, {1}}, StateMixed},
+		{"support beats id; two of three outvote the third (S9-13)", properties.ValueTypeText,
+			[]Candidate{text(1, "A"), text(4, "B"), text(3, "B")}, nil, [][]byte{{3, 4}, {1}}, StateMerged},
 		{"integers", properties.ValueTypeInteger,
 			[]Candidate{
 				{ObservationID: id(1), Value: Value{Integer: 7, HasInteger: true}},
 				{ObservationID: id(2), Value: Value{Integer: 7, HasInteger: true}},
 				{ObservationID: id(3), Value: Value{Integer: 0, HasInteger: true}},
-			}, nil, [][]byte{{1, 2}, {3}}, StateMixed},
+			}, nil, [][]byte{{1, 2}, {3}}, StateMerged},
 		{"terms by id", properties.ValueTypeTerm,
 			[]Candidate{
 				{ObservationID: id(1), Value: Value{TermID: []byte("birth")}},

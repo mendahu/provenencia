@@ -1,0 +1,302 @@
+package resolve
+
+import (
+	"fmt"
+	"math/rand"
+	"reflect"
+	"testing"
+
+	"github.com/mendahu/provenencia/core/database/properties"
+)
+
+// Evidence helpers: a Source, weak evidence each way, high trust, a negative,
+// a provisional member.
+func from(src string, c Candidate) Candidate { c.SourceID = []byte(src); return c }
+func lowTrust(c Candidate) Candidate         { c.Provenance.Credibility = -1; return c }
+func uncertain(c Candidate) Candidate        { c.Provenance.Uncertain = true; return c }
+func lowClaim(c Candidate) Candidate         { c.Provenance.ClaimConfidence = -1; return c }
+func highTrust(c Candidate) Candidate        { c.Provenance.Credibility = 1; return c }
+func neg(c Candidate) Candidate              { c.Negative = true; return c }
+func prov(c Candidate) Candidate             { c.Provisional = true; return c }
+
+// wantRow is an expected cluster: members, reason, support, against.
+type wantRow struct {
+	ids     []byte
+	reason  Reason
+	support int
+	against int
+}
+
+func rowsOf(r Result) []wantRow {
+	var out []wantRow
+	for i, c := range r.Clusters {
+		out = append(out, wantRow{shape(r)[i], c.Reason, c.Support, c.Against})
+	}
+	return out
+}
+
+// The shared passes, carried by text values (the text module never folds).
+func TestPipeline(t *testing.T) {
+	cases := []struct {
+		group, name string
+		in          []Candidate
+		want        []wantRow
+		state       State
+	}{
+		// Admit
+		{"admit", "a provisional member's value keeps a row but isn't displayed",
+			[]Candidate{text(1, "York"), prov(text(2, "Toronto"))},
+			[]wantRow{{[]byte{1}, ReasonKept, 1, 0}, {[]byte{2}, ReasonProvisional, 1, 0}}, StateSingle},
+		{"admit", "a provisional candidate with a displayed value joins its row, not its support",
+			[]Candidate{text(1, "York"), prov(text(2, "York"))},
+			[]wantRow{{[]byte{1}, ReasonKept, 1, 0}}, StateSingle},
+		{"admit", "only provisional: rows but nothing displayed",
+			[]Candidate{prov(text(1, "York"))},
+			[]wantRow{{[]byte{1}, ReasonProvisional, 1, 0}}, StateEmpty},
+		{"admit", "blank text is no evidence",
+			[]Candidate{text(1, "   "), text(2, "York")},
+			[]wantRow{{[]byte{2}, ReasonKept, 1, 0}}, StateSingle},
+
+		// Deny
+		{"deny", "a stronger negative denies the same value",
+			[]Candidate{text(1, "Robbins"), highTrust(neg(text(2, "Robbins"))), text(3, "Robins")},
+			[]wantRow{{[]byte{3}, ReasonKept, 1, 0}, {[]byte{1}, ReasonDenied, 1, 1}}, StateSingle},
+		{"deny", "an equally strong negative only counts against",
+			[]Candidate{text(1, "York"), neg(text(2, "York"))},
+			[]wantRow{{[]byte{1}, ReasonKept, 1, 1}}, StateSingle},
+		{"deny", "a weaker negative only counts against",
+			[]Candidate{text(1, "York"), lowTrust(neg(text(2, "york")))},
+			[]wantRow{{[]byte{1}, ReasonKept, 1, 1}}, StateSingle},
+		{"deny", "a denied candidate casts no vote",
+			[]Candidate{text(1, "B"), text(2, "B"), text(3, "A"), highTrust(neg(text(4, "B")))},
+			[]wantRow{{[]byte{3}, ReasonKept, 1, 0}, {[]byte{1, 2}, ReasonDenied, 2, 1}}, StateSingle},
+		{"deny", "a denied candidate with a displayed value joins its row",
+			[]Candidate{lowTrust(text(1, "York")), highTrust(text(2, "York")), neg(text(3, "York"))},
+			[]wantRow{{[]byte{2}, ReasonKept, 1, 1}}, StateSingle},
+		{"deny", "a negative alone: nothing",
+			[]Candidate{neg(text(1, "York"))},
+			nil, StateEmpty},
+
+		// Majority (Sources)
+		{"majority", "two of three Sources outvote the third",
+			[]Candidate{from("a", text(1, "York")), from("b", text(2, "york")), from("c", text(3, "Toronto"))},
+			[]wantRow{{[]byte{1, 2}, ReasonKept, 2, 0}, {[]byte{3}, ReasonOutvoted, 1, 0}}, StateMerged},
+		{"majority", "two Observations from one Source are one vote",
+			[]Candidate{from("a", text(1, "York")), from("a", text(2, "York")), from("b", text(3, "Toronto"))},
+			[]wantRow{{[]byte{1, 2}, ReasonKept, 1, 0}, {[]byte{3}, ReasonKept, 1, 0}}, StateMixed},
+		{"majority", "two of four is not a majority",
+			[]Candidate{text(1, "A"), text(2, "A"), text(3, "B"), text(4, "C")},
+			[]wantRow{{[]byte{1, 2}, ReasonKept, 2, 0}, {[]byte{3}, ReasonKept, 1, 0}, {[]byte{4}, ReasonKept, 1, 0}}, StateMixed},
+		{"majority", "four of five",
+			[]Candidate{text(1, "B"), text(2, "A"), text(3, "A"), text(4, "A"), text(5, "A")},
+			[]wantRow{{[]byte{2, 3, 4, 5}, ReasonKept, 4, 0}, {[]byte{1}, ReasonOutvoted, 1, 0}}, StateMerged},
+
+		// Confidence
+		{"confidence", "a low-trust value drops one to one",
+			[]Candidate{lowTrust(text(1, "Robbins")), text(2, "Robins")},
+			[]wantRow{{[]byte{2}, ReasonKept, 1, 0}, {[]byte{1}, ReasonWeak, 1, 0}}, StateSingle},
+		{"confidence", "an uncertain transcription is weak",
+			[]Candidate{uncertain(text(1, "Robbins")), text(2, "Robins")},
+			[]wantRow{{[]byte{2}, ReasonKept, 1, 0}, {[]byte{1}, ReasonWeak, 1, 0}}, StateSingle},
+		{"confidence", "a low-confidence claim is weak",
+			[]Candidate{lowClaim(text(1, "Robbins")), text(2, "Robins")},
+			[]wantRow{{[]byte{2}, ReasonKept, 1, 0}, {[]byte{1}, ReasonWeak, 1, 0}}, StateSingle},
+		{"confidence", "all weak: nothing stronger disagrees (credibility outranks certainty)",
+			[]Candidate{lowTrust(text(1, "A")), uncertain(text(2, "B"))},
+			[]wantRow{{[]byte{2}, ReasonKept, 1, 0}, {[]byte{1}, ReasonKept, 1, 0}}, StateMixed},
+		{"confidence", "majority runs first: a weak two of three still wins",
+			[]Candidate{lowTrust(text(1, "B")), lowTrust(text(2, "B")), text(3, "A")},
+			[]wantRow{{[]byte{1, 2}, ReasonKept, 2, 0}, {[]byte{3}, ReasonOutvoted, 1, 0}}, StateMerged},
+		{"confidence", "a value is strong if any carrier is",
+			[]Candidate{lowTrust(text(1, "A")), text(2, "A"), lowTrust(text(3, "B")), lowTrust(text(4, "C"))},
+			[]wantRow{{[]byte{1, 2}, ReasonKept, 2, 0}, {[]byte{3}, ReasonWeak, 1, 0}, {[]byte{4}, ReasonWeak, 1, 0}}, StateMerged},
+
+		// Order
+		{"order", "displayed values first, even when a hidden one has more support",
+			[]Candidate{prov(text(1, "B")), prov(text(2, "B")), text(3, "A")},
+			[]wantRow{{[]byte{3}, ReasonKept, 1, 0}, {[]byte{1, 2}, ReasonProvisional, 2, 0}}, StateSingle},
+		{"order", "equal support: the stronger record's value first",
+			[]Candidate{text(1, "A"), highTrust(text(2, "B"))},
+			[]wantRow{{[]byte{2}, ReasonKept, 1, 0}, {[]byte{1}, ReasonKept, 1, 0}}, StateMixed},
+	}
+	for _, tc := range cases {
+		t.Run(tc.group+"/"+tc.name, func(t *testing.T) {
+			got, err := Resolve(properties.ValueTypeText, tc.in, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if have := rowsOf(got); !reflect.DeepEqual(have, tc.want) {
+				t.Fatalf("got  %+v\nwant %+v", have, tc.want)
+			}
+			if got.State() != tc.state {
+				t.Fatalf("state %q, want %q", got.State(), tc.state)
+			}
+		})
+	}
+}
+
+func TestPipelineOutcomes(t *testing.T) {
+	in := []Candidate{
+		text(5, "   "),                             // no evidence
+		lowTrust(text(1, "York")),                  // denied, attached to the displayed York
+		highTrust(text(2, "York")),                 // kept
+		neg(text(3, "York")),                       // against
+		prov(text(4, "Toronto")),                   // provisional, its own row
+		uncertain(text(6, "U.C.")),                 // weak
+		text(7, "york"),                            // kept, same value as 2
+		from("x", text(8, "Upper Canada")),         // kept
+		from("x", lowTrust(text(9, "Muddy York"))), // weak
+	}
+	got, err := Resolve(properties.ValueTypeText, in, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := map[byte]Reason{1: ReasonDenied, 2: ReasonKept, 3: ReasonAgainst, 4: ReasonProvisional, 5: ReasonNoEvidence,
+		6: ReasonWeak, 7: ReasonKept, 8: ReasonKept, 9: ReasonWeak}
+	if len(got.Candidates) != len(in) {
+		t.Fatalf("%d outcomes for %d candidates", len(got.Candidates), len(in))
+	}
+	for i, o := range got.Candidates {
+		n := o.ObservationID[3]
+		if i > 0 && got.Candidates[i-1].ObservationID[3] >= n {
+			t.Fatalf("outcomes not in id order")
+		}
+		if o.Reason != want[n] {
+			t.Errorf("candidate %d: %q, want %q", n, o.Reason, want[n])
+		}
+		switch {
+		case o.Reason == ReasonNoEvidence && o.Cluster != -1:
+			t.Errorf("candidate %d: no evidence has cluster %d", n, o.Cluster)
+		case o.Reason != ReasonNoEvidence && (o.Cluster < 0 || o.Cluster >= len(got.Clusters)):
+			t.Errorf("candidate %d: cluster %d out of range", n, o.Cluster)
+		}
+	}
+	york := got.Clusters[got.Candidates[1].Cluster]
+	if york.Value.Text != "York" || !york.Displayed() || york.Against != 1 {
+		t.Fatalf("York cluster %+v", york)
+	}
+	if !reflect.DeepEqual(got.Candidates[0].DeniedBy, id(3)) {
+		t.Fatalf("denied by %v", got.Candidates[0].DeniedBy)
+	}
+}
+
+func TestPipelineConcluded(t *testing.T) {
+	in := []Candidate{text(1, "A"), text(2, "A"), text(3, "B")}
+	got, err := Resolve(properties.ValueTypeText, in, &Value{Text: "b", HasText: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !got.Concluded || got.State() != StateConcluded {
+		t.Fatalf("not concluded: %+v", got)
+	}
+	if want := []wantRow{{[]byte{3}, ReasonKept, 1, 0}, {[]byte{1, 2}, ReasonKept, 2, 0}}; !reflect.DeepEqual(rowsOf(got), want) {
+		t.Fatalf("rows %+v", rowsOf(got))
+	}
+	if got.Clusters[0].Value.Text != "b" {
+		t.Fatalf("concluded value %q", got.Clusters[0].Value.Text)
+	}
+	for _, o := range got.Candidates {
+		wantCluster := 1
+		if o.ObservationID[3] == 3 {
+			wantCluster = 0
+		}
+		if o.Cluster != wantCluster {
+			t.Fatalf("candidate %d points at %d after the concluded value moved", o.ObservationID[3], o.Cluster)
+		}
+	}
+}
+
+// Generated candidate lists from fixed seeds: every list must satisfy the
+// pipeline's invariants. A failure names its seed and list; shrink it into
+// TestPipeline.
+func TestPipelineInvariants(t *testing.T) {
+	texts := []string{"York", "york", "Toronto", "U.C.", "  "}
+	sources := []string{"", "a", "b", "c"}
+	for _, seed := range []int64{1, 2, 3, 4} {
+		rng := rand.New(rand.NewSource(seed))
+		for list := 0; list < 1000; list++ {
+			var in []Candidate
+			for i, k := 0, rng.Intn(8); i < k; i++ {
+				c := text(byte(i+1), texts[rng.Intn(len(texts))])
+				c.SourceID = []byte(sources[rng.Intn(len(sources))])
+				c.Negative = rng.Intn(8) == 0
+				c.Provisional = rng.Intn(8) == 0
+				c.Provenance = Provenance{Credibility: rng.Intn(3) - 1, Uncertain: rng.Intn(5) == 0, ClaimConfidence: rng.Intn(3) - 1}
+				in = append(in, c)
+			}
+			where := fmt.Sprintf("seed %d list %d: %+v", seed, list, in)
+			got, err := Resolve(properties.ValueTypeText, in, nil)
+			if err != nil {
+				t.Fatalf("%s: %v", where, err)
+			}
+
+			shuffled := append([]Candidate(nil), in...)
+			rng.Shuffle(len(shuffled), func(i, j int) { shuffled[i], shuffled[j] = shuffled[j], shuffled[i] })
+			if again, _ := Resolve(properties.ValueTypeText, shuffled, nil); !reflect.DeepEqual(again, got) {
+				t.Fatalf("%s: input order changed the result", where)
+			}
+
+			if len(got.Candidates) != len(in) {
+				t.Fatalf("%s: %d outcomes", where, len(got.Candidates))
+			}
+			members := map[byte]bool{}
+			for _, c := range got.Clusters {
+				if c.Support > len(c.ObservationIDs) {
+					t.Fatalf("%s: support %d over %d members", where, c.Support, len(c.ObservationIDs))
+				}
+				for _, oid := range c.ObservationIDs {
+					members[oid[3]] = true
+				}
+			}
+			voters := false
+			for _, c := range in {
+				if c.Negative && members[c.ObservationID[3]] {
+					t.Fatalf("%s: negative %d is a member", where, c.ObservationID[3])
+				}
+			}
+			for _, o := range got.Candidates {
+				n := o.ObservationID[3]
+				admitted := o.Reason != ReasonNoEvidence && o.Reason != ReasonAgainst
+				if admitted && (o.Cluster < 0 || o.Cluster >= len(got.Clusters)) {
+					t.Fatalf("%s: candidate %d has no cluster", where, n)
+				}
+				voters = voters || o.Reason == ReasonKept || o.Reason == ReasonOutvoted || o.Reason == ReasonWeak
+			}
+			if voters && got.State() == StateEmpty {
+				t.Fatalf("%s: votes but nothing displayed", where)
+			}
+		}
+	}
+}
+
+func TestProvenance(t *testing.T) {
+	std := Provenance{}
+	for _, tc := range []struct {
+		name     string
+		p, q     Provenance
+		stronger bool
+	}{
+		{"equal is not stronger", std, std, false},
+		{"credibility leads", Provenance{Credibility: 1, Uncertain: true, ClaimConfidence: -1}, std, true},
+		{"lower credibility loses whatever follows", Provenance{Credibility: -1, ClaimConfidence: 1}, std, false},
+		{"then certainty", std, Provenance{Uncertain: true, ClaimConfidence: 1}, true},
+		{"then claim confidence", Provenance{ClaimConfidence: 1}, std, true},
+		{"lower claim confidence", Provenance{ClaimConfidence: -1}, std, false},
+	} {
+		if got := tc.p.Stronger(tc.q); got != tc.stronger {
+			t.Errorf("%s: Stronger = %v", tc.name, got)
+		}
+	}
+	for p, weak := range map[Provenance]bool{
+		std:                                  false,
+		{Credibility: 1}:                     false,
+		{Credibility: -1}:                    true,
+		{Uncertain: true}:                    true,
+		{ClaimConfidence: -1}:                true,
+		{Credibility: 1, ClaimConfidence: 1}: false,
+	} {
+		if p.Weak() != weak {
+			t.Errorf("%+v: Weak = %v", p, !weak)
+		}
+	}
+}
