@@ -194,10 +194,9 @@ The rebuild-equals-upkeep tests hold upkeep equal to a full rebuild. Every new t
 
 # 11. Open questions
 
-1. **Places.** Direction decided (§11.1). Still open:
-   - **The link's shape.** A "part of" link carries a type and a period, so it is probably an association handle (like Location) with its own Properties, not a single subject-valued Property.
-   - **Reconciling a Place's names.** Is `toponym` multi-valued (York and Toronto both kept)?
-   - **Which chain to display** when a place has several parents, and whether the display ever uses the periods.
+1. **Places.** Decided in §11.1. Still open:
+   - **Where the link type lives.** A "part of" link carries no period, so it can be a plain subject-valued Property on the Place, except for its type (administrative, geographic, ecclesiastical). It could be one Property per type, or an association handle carrying the type.
+   - **A name for the succession relationship** (§11.1): *became*, *succeeded by*, *renamed*?
 2. **Claims for multi-valued Properties.** What a Reconciliation Claim concludes when a Property has several true values.
 
 **Decided 2026-10-05:**
@@ -211,8 +210,13 @@ The rebuild-equals-upkeep tests hold upkeep equal to a full rebuild. Every new t
 
 - **Separate places with relationships, not one composite place.** "Toronto, Ontario, Canada" is three Places linked upward, so queries like "everyone born in Ontario" work.
 - **A place is whatever the research needs.** A township, a county, a region (the Lower Mainland), a family farm. No rules about what can contain what. An optional **kind** is a label for display and filters, not a constraint.
-- **The relationship is "part of", with a type** from an open vocabulary: administrative (Guam in the United States), geographic (the Lower Mainland in British Columbia), ecclesiastical (a parish in a diocese). A place may have several parents, so places form a graph, not a tree.
-- **Periods.** A Place has a **period** when it existed or was meaningful (a city from incorporation, a country from independence, a farm until it was sold). Each "part of" link has its own period (Toronto in Upper Canada until 1841, in Ontario from 1867). Start and end are both optional structured dates.
+- **The containment relationship is "part of", with a type** from an open vocabulary: administrative (Guam in the United States), geographic (the Lower Mainland in British Columbia), ecclesiastical (a parish in a diocese). A place may have several parents, so places form a graph, not a tree.
+- **Periods live on Places, not on links.** A Place has a **period** when it existed or was meaningful (a city from incorporation, a country from independence, a farm until it was sold). Start and end are both optional structured dates; a place with no period is always valid.
+- **A link holds where the two places' periods overlap.** Toronto (1834–) is part of Upper Canada (1791–1841) until 1841, the Province of Canada (1841–1867) until 1867, and Ontario (1867–) after. So "what is Toronto part of?" needs a date, and the periods answer it.
+  - **Accepted imprecision:** when both places persist and the link changes (Guam, Spanish until 1898 and American after), the link reads as holding for the whole overlap, and Guam is part of both. Where that matters, model the jurisdictions as distinct Places with their own periods (the Kingdom of Spain, the American colonies, the United States).
+- **One toponym per Place; a rename is a new Place.** York (1793–1834) and Toronto (1834–) are two Places. Merge is only for two handles that turn out to be the same place under the same name.
+- **Succession.** A second place-to-place relationship records that one place became another (York → Toronto), so history and search can treat them as one lineage while they stay distinct Places. A query like "born in Toronto" may follow it.
+- **Display uses the connected event's date** to pick the parent chain. When the date can't decide (an approximate or ranged date straddling a change), show every candidate: *born about 1841 in Toronto, Upper Canada or Province of Canada*.
 - **Evidence, the hard way, for now.** Every place and every "part of" link is created by hand with a cited Source, even for common knowledge ("Alberta is part of Canada"). Researcher knowledge uses a researcher-knowledge Source with an argument. The model does not change for convenience.
 - **The easy way later.** A Provenencia places service, likely paid, would write the same evidence automatically from gazetteers: [`ideas/place-gazetteer-service.md`](ideas/place-gazetteer-service.md).
 
