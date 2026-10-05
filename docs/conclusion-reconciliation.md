@@ -266,5 +266,6 @@ The rebuild-equals-upkeep tests hold upkeep equal to a full rebuild. Every new t
 | Shared pipeline and simple modules; every value cached with its reason (migration 000039) | S9-13 | open PR #259 |
 | Name module: parts by type, subsumption, one name per Person, majority outvotes misspellings only, parts compared as words; cache version 8 | S9-13b | open PR #260, stacked on S9-13 |
 | Evidence loaded (Sources, provenance, negatives, provisional members); outcomes cached in `auto_reconciler_outcomes`; credibility and certainty upkeep; the "auto-reconciler" naming; cache version 9 | S9-14 | stacked on S9-13b |
+| Detail read: each field's state, values and outcomes with their evidence (`conclusiondetails`, `GetConclusionDetail`); Swift wording of states and outcomes; off-screen detail pages evicted | S9-15 | stacked on S9-14 |
 
 PRs #255 and #256 built names-first versions of S9-13b and S9-14 to the first plan and were closed. Their migrations landed unchanged in S9-13a; their name logic, provenance logic, fixtures and test tables (75+ cases) are lifted into S9-13, S9-13b and S9-14 (see the Spike 9 plan, slice 4).

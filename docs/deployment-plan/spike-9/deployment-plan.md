@@ -263,7 +263,7 @@ The Conclusion pages read **across** Sources — every earlier place scoped to o
 - **Query keys:** one list key per kind, one detail key per handle, and the Promote reads (target suggestions, comparison rows for a subject × entity, the neighborhood of a subject). The Promote draft is interaction state, not a cache key.
 - **Swift invalidation: bust all Conclusion keys (Q5).** Any Interpretation or Conclusion write that R3 recomputes marks every cached Conclusion key stale — cheap, because reloading reads R3.
   - **Triggers:** Observation save / delete, Subject delete, bridge create / delete, Source delete, credibility / certainty changes, Property configuration changes, and each Promote step. Shipped in S9-07 as one set, `CatalogQueryRegistry.conclusionTriggers` (`savedCitation`, `deletedSubject`, `promotedSubject`, `deletedSource`, `mutatedSourceWorkspace` — the last carries credibility and over-busts on notes / artifacts / metadata). Certainty already rides `savedCitation`; a cardinality change (S9-37) joins via `updatedProperty`.
-  - **Evict, don't revalidate.** Detail keys are dropped and reload when next visited; the visible page revalidates. A deliberate exception to cache contract rule 2, noted in [`macos-client-patterns.md`](../../macos-client-patterns.md). **Built in S9-15** with the first detail key: the session can't evict or tell which place is visible yet, and list keys (S9-07) follow rule 2 as usual.
+  - **Evict, don't revalidate.** Detail keys are dropped and reload when next visited; the visible page revalidates. A deliberate exception to cache contract rule 2, noted in [`macos-client-patterns.md`](../../macos-client-patterns.md). **Built in S9-15:** the session records the visible place's keys (`visibleKeys`), and a registry key tagged `evictWhenHidden` (`conclusionDetail`) is evicted on a trigger unless it is on screen. List keys (S9-07) follow rule 2 as usual.
   - Narrowing later can reuse R3's affected-handles set; not needed while reloads are cheap.
 - **Measure.** Build the deep fixture (a Person on ~10 Sources; birth, death, marriage events each multi-member, with Locations; a few relationships; scaled to a few hundred handles) and time: rebuild, a single write's upkeep, list composition, detail composition. Record in the [performance ledger](performance-ledger.md).
 
@@ -473,7 +473,7 @@ In order; each brief sits just above the PR it gates.
 - [x] S9-13 — Reconciler pipeline + text / integer / term modules → [`completed.md`](completed.md)
 - [x] S9-13b — Name module → [`completed.md`](completed.md)
 - [x] S9-14 — Evidence + reasoning in the auto-reconciler cache → [`completed.md`](completed.md)
-- [ ] S9-15 — Detail composer + detail read
+- [x] S9-15 — Detail composer + detail read → [`completed.md`](completed.md)
 - [ ] ✎ S9-D5 — Design: Person detail (revise for reasoning)
 - [ ] S9-16 — Person detail
 - [ ] S9-17 — Compare read + pins + backfill
@@ -749,11 +749,13 @@ Design: [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md). PR
 | **In** | Go detail composer: fields with states, every value with support and `against`, and the reasoning (candidates with their Source, outcome and reason) from the cache. Detail FFI; Swift store + detail key (stub view); value-state formatting (single / merged / mixed / empty, *+N*). **Eviction:** `WorkspaceSession` learns the visible place and evicts non-visible Conclusion detail keys on a Conclusion trigger (the rule-2 exception, deferred from S9-07). |
 | **Depends on** | S9-07, S9-14 |
 
+**Done.** See [`completed.md`](completed.md#s9-15--detail-composer--detail-read). `conclusiondetails.ForEntity` → `GetConclusionDetail` → `CatalogConclusionDetail`, under one key per handle, `conclusionDetail(project:, entityId:)`, for every kind. For **S9-16**: the Person detail place already loads the key; replace `ConclusionStubView` with the page and word it with `ReconciledValueDisplay` (`stateLine`, `additionalLabel`, `string(for:)`, `outcomePhrase`). Outcomes carry the Subject, Citation and Source ids for links. For **S9-22** / **S9-25**: reuse `ForEntity`, the key and the formatting; add the kind's detail place with the key in its `queryKeys`, and eviction comes with it. Fields skip subject-valued Properties until **S9-28**.
+
 #### S9-16 — Person detail
 
 | | |
 | --- | --- |
-| **In** | Per **S9-D5** (revised for the reasoning): header with name, states, values and why; life-date and place rows render empty until S9-32. Replace the Person-detail stub place from S9-09 (`ConclusionStubView` on `PlaceID.personDetail`) and give it the detail key; list rows and the graph card's `.openHandle` already route there. |
+| **In** | Per **S9-D5** (revised for the reasoning): header with name, states, values and why; life-date and place rows render empty until S9-32. Replace the Person-detail stub view from S9-09 (`ConclusionStubView` on `PlaceID.personDetail`); the place already loads the detail key (S9-15), and list rows and the graph card's `.openHandle` already route there. |
 | **Check** | *J. Robins* + *James Robins* → merged; *James* / *Jim* → one name *James Jim Robins*, merged; two of three *Robins* outvote a *Robbins*; lowering one Source to low trust drops its spelling and the page says *weak*. |
 | **Depends on** | **S9-D5**, S9-13b, S9-15 |
 

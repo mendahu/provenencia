@@ -31,6 +31,7 @@ IDs stay stable (`S9-NN`, `S9-DN`). Do not renumber when moving steps here.
 | S9-13 | PR | Reconciler pipeline + text / integer / term modules |
 | S9-13b | PR | Name module |
 | S9-14 | PR | Evidence + reasoning in the auto-reconciler cache |
+| S9-15 | PR | Detail composer + detail read |
 
 ## Steps
 
@@ -663,4 +664,43 @@ The auto-reconciler now weighs the real evidence behind each record, stores what
 - Showing the outcomes (*Why*): **S9-15** / **S9-16**.
 - A claim-confidence or claim-status edit path (none exists; Promote sets confidence and recomputes).
 - Laying Reconciliation Claims over auto-reconciled values (claims are a later spike).
+
+### S9-15 — Detail composer + detail read
+
+One read now gives a handle's page everything the auto-reconciler knows: each field's values and state, the values it didn't show and why, and what it did with every record. Nothing draws it yet; S9-16 does.
+
+**What shipped**
+
+- **Go composer** `core/database/conclusiondetails.ForEntity`, generic over kind:
+  - one field per Property bound to the handle's type, in binding order (subject-valued Properties skipped until S9-28);
+  - the field's state, computed by the `Result.State` rule;
+  - every `auto_reconciler_values` row, with support, `against` and reason;
+  - every `auto_reconciler_outcomes` row, with the record's own value, its Subject, Citation and Source, and the evidence the auto-reconciler weighed (credibility and confidence keys, and `autoreconcile.Provenance` relative to the default grades);
+  - five queries per call whatever the field count (`TestForEntityQueryCountIsConstant`);
+  - unknown, malformed or merged handles are `conclusiondetails.not_found`.
+- **FFI** `GetConclusionDetail` (method 90). A `ConclusionValue` oneof carries text, integer, term, date or name. `runRPC` tests, plus a wire round-trip of every value kind.
+- **Swift:**
+  - `GenealogyStore.getConclusionDetail` → `CatalogConclusionDetail` (GoStore, and a FakeStore that composes a Person's name field from its members);
+  - `CatalogQueryKey.conclusionDetail(project:, entityId:)`, staled by every Conclusion trigger;
+  - the Person detail place loads it (the page is still the stub);
+  - an `L10n.Errors` string for `not_found`.
+- **`ReconciledValueDisplay`** words a field: state line (*1 Source*, *merged · 3 Sources*, *mixed*, *Nothing recorded*), *+N*, each value through the name and date displays, and each outcome (*folded into James Robins*, *weak · low-trust Source*, *denied by OBS-…*, …). New strings live in `L10n.Conclusions`.
+- **Eviction, the rule-2 exception deferred from S9-07:**
+  - `WorkspaceSession.visibleKeys` is the keys of the last `apply(location:)`;
+  - a registry key tagged `evictWhenHidden` that isn't visible is evicted on a trigger (handle dropped, load cancelled);
+  - `conclusionDetail` is tagged; the visible page and list keys revalidate as before;
+  - [`macos-client-patterns.md`](../../macos-client-patterns.md) records the rule.
+- **Tests:**
+  - Go: the composer (merged, folded, outvoted, weak with its provenance, denied and against, `no_evidence`, empty field, binding order, not-found, query count) and the FFI table.
+  - Swift: `ReconciledValueDisplayTests` (every state, plurals, *+N*, every outcome, each weak cause); the registry (the key on every trigger, only detail keys evict, FakeStore load and not-found); the Person place's key; the session (hidden page evicted, visible page and list revalidated, revisit reloads). Disabling eviction fails the session test.
+
+**What changed for researchers**
+
+- Nothing visible yet. Opening a Person now loads its detail in the background, and editing evidence no longer reloads every Person page visited earlier.
+
+**What stayed out**
+
+- The Person page itself: **S9-16**.
+- Event and Place detail places: **S9-22** / **S9-25**.
+- Laying Reconciliation Claims over values (claims are a later spike); the `concluded` state is worded but never sent yet.
 
