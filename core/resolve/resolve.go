@@ -12,11 +12,12 @@
 // or NameValue row (seeded-vocabulary §5.3).
 //
 // Names go through the name auto-reconciler (names.go): structured parts by
-// type, never form. Every other value type clusters by exact equality. Later
-// steps replace pieces without changing callers: the date auto-reconciler
-// (S9-21) swaps the clustering for dates, provenance ranking (S9-14) goes
-// ahead of support in the order, and subject values map to their handles
-// (S9-28). Callers pass positive-polarity candidates only until S9-14.
+// type, never form, with weak and denied candidates eliminated by their
+// provenance. Every other value type clusters by exact equality and is not
+// reconciled; its negative candidates only count against the cluster they
+// match. Later steps replace pieces without changing callers: the date
+// auto-reconciler (S9-21), a term reconciler, and subject values mapped to
+// their handles (S9-28).
 package resolve
 
 import (
@@ -70,6 +71,37 @@ type Value struct {
 type Candidate struct {
 	ObservationID []byte // UUIDv7; the stable tiebreak
 	Value         Value
+	// Negative is a negative-polarity Observation: it is never displayed,
+	// and counts against the values it matches.
+	Negative   bool
+	Provenance Provenance
+}
+
+// Provenance is how strong a candidate's evidence is, each part relative to
+// its vocabulary's default grade: 0 is the default, below it negative, above
+// it positive.
+type Provenance struct {
+	Credibility     int  // the Citation's Source credibility vs `standard`
+	Uncertain       bool // the Citation's transcription is uncertain
+	ClaimConfidence int  // the member's Identity Claim confidence vs `moderate`
+}
+
+// Weak is evidence below the default anywhere: a low-trust Source, an
+// uncertain transcription, or a low-confidence claim.
+func (p Provenance) Weak() bool {
+	return p.Credibility < 0 || p.Uncertain || p.ClaimConfidence < 0
+}
+
+// Stronger reports whether p is strictly stronger than q, comparing Source
+// credibility, then transcription certainty, then claim confidence.
+func (p Provenance) Stronger(q Provenance) bool {
+	if p.Credibility != q.Credibility {
+		return p.Credibility > q.Credibility
+	}
+	if p.Uncertain != q.Uncertain {
+		return !p.Uncertain
+	}
+	return p.ClaimConfidence > q.ClaimConfidence
 }
 
 // Cluster is one distinct value and the Observations that support it.
@@ -81,6 +113,7 @@ type Cluster struct {
 	Value          Value
 	ObservationIDs [][]byte // ascending
 	Support        int      // len(ObservationIDs); 0 for a concluded value no candidate carries
+	Against        int      // negative candidates that match this value
 }
 
 // Result is the resolver's output for one (handle, Property).
@@ -121,6 +154,15 @@ func Resolve(valueType string, candidates []Candidate, concluded *Value) (Result
 		return bytes.Compare(sorted[i].ObservationID, sorted[j].ObservationID) < 0
 	})
 
+	var positives, negatives []Candidate
+	for _, c := range sorted {
+		if c.Negative {
+			negatives = append(negatives, c)
+		} else {
+			positives = append(positives, c)
+		}
+	}
+
 	var clusters []Cluster
 	if valueType == properties.ValueTypeName {
 		for _, c := range sorted {
@@ -128,10 +170,17 @@ func Resolve(valueType string, candidates []Candidate, concluded *Value) (Result
 				return Result{}, ErrValueMismatch
 			}
 		}
-		clusters = reconcileNames(sorted)
+		// Rank order: strongest provenance first, then id.
+		sort.SliceStable(positives, func(i, j int) bool {
+			return positives[i].Provenance.Stronger(positives[j].Provenance)
+		})
+		clusters = reconcileNames(positives, negatives)
 	} else {
 		var err error
-		if clusters, err = clusterByKey(valueType, sorted); err != nil {
+		if clusters, err = clusterByKey(valueType, positives); err != nil {
+			return Result{}, err
+		}
+		if err := countAgainst(valueType, clusters, negatives); err != nil {
 			return Result{}, err
 		}
 	}
@@ -149,6 +198,7 @@ func Resolve(valueType string, candidates []Candidate, concluded *Value) (Result
 		if same(cl.Value) {
 			top.ObservationIDs = cl.ObservationIDs
 			top.Support = cl.Support
+			top.Against = cl.Against
 			res.Clusters = append(res.Clusters[:i:i], res.Clusters[i+1:]...)
 			break
 		}
@@ -183,6 +233,24 @@ func clusterByKey(valueType string, sorted []Candidate) ([]Cluster, error) {
 		return clusters[a].Support > clusters[b].Support
 	})
 	return clusters, nil
+}
+
+// countAgainst adds each negative to the cluster with its key. Values no
+// positive candidate carries have no cluster to count against.
+func countAgainst(valueType string, clusters []Cluster, negatives []Candidate) error {
+	for _, n := range negatives {
+		k, err := key(valueType, n.Value)
+		if err != nil {
+			return err
+		}
+		for i := range clusters {
+			if ck, err := key(valueType, clusters[i].Value); err == nil && ck == k {
+				clusters[i].Against++
+				break
+			}
+		}
+	}
+	return nil
 }
 
 // matcher reports which cluster a concluded value belongs to: the same key,

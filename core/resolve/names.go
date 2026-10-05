@@ -9,7 +9,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/namevalues"
 )
 
-// The name auto-reconciler (S9-13): a handle's name candidates in, the name a
+// The name auto-reconciler (S9-13, S9-14): a handle's name candidates in, the name a
 // Reconciliation Claim would conclude out, built from structured parts by
 // eliminating candidates in passes. It is display policy and may be bold: a
 // researcher overrides it with a Reconciliation Claim.
@@ -19,6 +19,11 @@ import (
 // another (a surname is no different from a given name or a prefix). `form`
 // is never read; it is a transcription. A name with no parts carries nothing
 // to reconcile and is dropped.
+//
+// Candidates arrive in rank order: strongest provenance first, then
+// Observation id. Before any vote, a negative name denies the positive
+// candidates with the same parts whose provenance it is stronger than; a
+// denied candidate is eliminated and casts no vote.
 //
 // For each part type, independently, a candidate's value is its ordered list
 // of parts of that type, each part one normalized unit:
@@ -31,8 +36,9 @@ import (
 //     support, then the best ranked.
 //  3. Majority: a value with at least MinMajoritySupport and more than half
 //     the type's support crowds out the rest. Otherwise every value survives.
-//
-// (S9-14 adds a confidence pass and swaps the rank order for provenance.)
+//  4. Confidence: a surviving value carried only by weak candidates
+//     (Provenance.Weak) is eliminated when a value with a non-weak carrier
+//     also survived.
 //
 // A candidate survives when every one of its values survived. Survivors
 // group into clusters that agree on every type they share; a candidate
@@ -40,6 +46,8 @@ import (
 // cluster's value is assembled from the fullest value of each type.
 // Eliminated candidates are not hidden: they group by exact parts and rank
 // after the survivors, so the result reads mixed when candidates disagreed.
+// Each negative counts against every cluster with a member, or a value, of
+// its parts.
 
 // MinMajoritySupport is the least support a part value needs to crowd out
 // the others ("two out of three"). It must also hold more than half the
@@ -70,6 +78,7 @@ type partValue struct {
 	parts   []namevalues.Part // the best-ranked carrier's parts of this type
 	into    *partValue        // the value it folds into; nil when maximal
 	total   int               // support once folded values are added
+	strong  bool              // some carrier, folded ones included, is not weak
 	survive bool
 }
 
@@ -79,17 +88,28 @@ type nameCluster struct {
 	sig     map[string]*partValue
 }
 
-// reconcileNames clusters name candidates already in rank order and returns
-// the clusters in display order.
-func reconcileNames(ranked []Candidate) []Cluster {
-	var cands []*nameCandidate
+// reconcileNames clusters positive name candidates already in rank order,
+// with the negative ones against them, and returns the clusters in display
+// order.
+func reconcileNames(ranked, negatives []Candidate) []Cluster {
+	var denials []*nameCandidate
+	for _, c := range negatives {
+		if nc := structuredName(c, 0); nc != nil {
+			denials = append(denials, nc)
+		}
+	}
+	var cands, denied []*nameCandidate
 	for _, c := range ranked {
-		nc := structuredName(c, len(cands))
-		if nc != nil {
+		nc := structuredName(c, len(cands)+len(denied))
+		switch {
+		case nc == nil:
+		case deniedBy(nc, denials):
+			denied = append(denied, nc)
+		default:
 			cands = append(cands, nc)
 		}
 	}
-	if len(cands) == 0 {
+	if len(cands) == 0 && len(denied) == 0 {
 		return nil
 	}
 
@@ -115,6 +135,7 @@ func reconcileNames(ranked []Candidate) []Cluster {
 				byType[typ] = append(byType[typ], pv)
 			}
 			pv.support++
+			pv.strong = pv.strong || !nc.c.Provenance.Weak()
 			nc.folded[typ] = pv
 		}
 	}
@@ -123,9 +144,10 @@ func reconcileNames(ranked []Candidate) []Cluster {
 		values := byType[typ]
 		foldValues(values)
 		elect(values)
+		dropWeak(values)
 	}
 
-	var survivors, eliminated []*nameCandidate
+	survivors, eliminated := []*nameCandidate(nil), denied
 	for _, nc := range cands {
 		ok := true
 		for typ, pv := range nc.folded {
@@ -141,7 +163,51 @@ func reconcileNames(ranked []Candidate) []Cluster {
 	}
 
 	out := orderClusters(assemble(groupSurvivors(survivors)))
-	return append(out, orderClusters(groupExact(eliminated))...)
+	out = append(out, orderClusters(groupExact(eliminated))...)
+	countDenials(out, denials, append(cands, denied...))
+	return out
+}
+
+// deniedBy: a negative with the same parts and stronger provenance.
+func deniedBy(nc *nameCandidate, denials []*nameCandidate) bool {
+	sig := exactSignature(nc.values)
+	for _, d := range denials {
+		if exactSignature(d.values) == sig && d.c.Provenance.Stronger(nc.c.Provenance) {
+			return true
+		}
+	}
+	return false
+}
+
+// countDenials counts each negative against every cluster that has a member,
+// or a value, with its parts.
+func countDenials(clusters []Cluster, denials, cands []*nameCandidate) {
+	sigByID := map[string]string{}
+	for _, nc := range cands {
+		sigByID[string(nc.c.ObservationID)] = exactSignature(nc.values)
+	}
+	for _, d := range denials {
+		sig := exactSignature(d.values)
+		for i := range clusters {
+			match := signatureOf(clusters[i].Value.Name) == sig
+			for _, oid := range clusters[i].ObservationIDs {
+				match = match || sigByID[string(oid)] == sig
+			}
+			if match {
+				clusters[i].Against++
+			}
+		}
+	}
+}
+
+// signatureOf is a name's parts by type, as the reconciler compares them; ""
+// for a name with no parts.
+func signatureOf(n *namevalues.Value) string {
+	nc := structuredName(Candidate{Value: Value{Name: n}}, 0)
+	if nc == nil {
+		return ""
+	}
+	return exactSignature(nc.values)
 }
 
 // structuredName reads a candidate's parts by type; nil when it has none.
@@ -246,6 +312,11 @@ func foldValues(values []*partValue) {
 		}
 		target.total += v.support
 	}
+	for _, v := range values {
+		if v.into != nil && v.strong {
+			root(v).strong = true
+		}
+	}
 }
 
 // elect marks the surviving maximal values of one type.
@@ -265,6 +336,23 @@ func elect(values []*partValue) {
 	for _, v := range values {
 		if v.into == nil {
 			v.survive = !winner || v == best
+		}
+	}
+}
+
+// dropWeak eliminates surviving values carried only by weak candidates when
+// a value with a non-weak carrier also survived.
+func dropWeak(values []*partValue) {
+	anyStrong := false
+	for _, v := range values {
+		anyStrong = anyStrong || (v.into == nil && v.survive && v.strong)
+	}
+	if !anyStrong {
+		return
+	}
+	for _, v := range values {
+		if v.into == nil && !v.strong {
+			v.survive = false
 		}
 	}
 }
@@ -420,8 +508,14 @@ func indexOf(xs []string, x string) int {
 	return -1
 }
 
-// orderClusters sorts by support descending, then lowest Observation id.
+// orderClusters puts each cluster's members in ascending id and sorts the
+// clusters by support descending, then lowest Observation id.
 func orderClusters(cs []Cluster) []Cluster {
+	for i := range cs {
+		sort.Slice(cs[i].ObservationIDs, func(a, b int) bool {
+			return string(cs[i].ObservationIDs[a]) < string(cs[i].ObservationIDs[b])
+		})
+	}
 	sort.SliceStable(cs, func(i, j int) bool {
 		if cs[i].Support != cs[j].Support {
 			return cs[i].Support > cs[j].Support
@@ -434,9 +528,6 @@ func orderClusters(cs []Cluster) []Cluster {
 // sameName reports whether two names carry the same parts by type, compared
 // as the reconciler compares them; names with no parts match nothing.
 func sameName(a, b *namevalues.Value) bool {
-	na, nb := structuredName(Candidate{Value: Value{Name: a}}, 0), structuredName(Candidate{Value: Value{Name: b}}, 0)
-	if na == nil || nb == nil {
-		return false
-	}
-	return exactSignature(na.values) == exactSignature(nb.values)
+	sa := signatureOf(a)
+	return sa != "" && sa == signatureOf(b)
 }

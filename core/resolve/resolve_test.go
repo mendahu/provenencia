@@ -241,3 +241,72 @@ func TestSortKey(t *testing.T) {
 		}
 	}
 }
+
+// Values other than names are not reconciled (S9-14): provenance never
+// reorders them, and a negative only counts against the cluster it equals.
+func TestResolveNonNameProvenance(t *testing.T) {
+	strong := text(3, "Toronto")
+	strong.Provenance.Credibility = 1
+	in := []Candidate{text(1, "York"), text(2, "York"), strong}
+	denial := text(4, "York")
+	denial.Negative = true
+	denial.Provenance.Credibility = 1
+	other := text(5, "Ottawa")
+	other.Negative = true
+	got, err := Resolve(properties.ValueTypeText, append(in, denial, other), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s := shape(got); !reflect.DeepEqual(s, [][]byte{{1, 2}, {3}}) {
+		t.Fatalf("clusters %v", s)
+	}
+	if got.Clusters[0].Against != 1 || got.Clusters[1].Against != 0 {
+		t.Fatalf("against %d / %d", got.Clusters[0].Against, got.Clusters[1].Against)
+	}
+
+	concluded := &Value{Text: "York", HasText: true}
+	got, err = Resolve(properties.ValueTypeText, append(in, denial), concluded)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !got.Concluded || got.Clusters[0].Against != 1 || got.Clusters[0].Support != 2 {
+		t.Fatalf("concluded cluster %+v", got.Clusters[0])
+	}
+
+	bad := Candidate{ObservationID: id(9), Negative: true}
+	if _, err := Resolve(properties.ValueTypeText, []Candidate{bad}, nil); !errors.Is(err, ErrValueMismatch) {
+		t.Fatalf("negative without a value: %v", err)
+	}
+}
+
+func TestProvenance(t *testing.T) {
+	std := Provenance{}
+	for _, tc := range []struct {
+		name     string
+		p, q     Provenance
+		stronger bool
+	}{
+		{"equal is not stronger", std, std, false},
+		{"credibility leads", Provenance{Credibility: 1, Uncertain: true, ClaimConfidence: -1}, std, true},
+		{"lower credibility loses whatever follows", Provenance{Credibility: -1, ClaimConfidence: 1}, std, false},
+		{"then certainty", std, Provenance{Uncertain: true, ClaimConfidence: 1}, true},
+		{"then claim confidence", Provenance{ClaimConfidence: 1}, std, true},
+		{"lower claim confidence", Provenance{ClaimConfidence: -1}, std, false},
+	} {
+		if got := tc.p.Stronger(tc.q); got != tc.stronger {
+			t.Errorf("%s: Stronger = %v", tc.name, got)
+		}
+	}
+	for p, weak := range map[Provenance]bool{
+		std:                                  false,
+		{Credibility: 1}:                     false,
+		{Credibility: -1}:                    true,
+		{Uncertain: true}:                    true,
+		{ClaimConfidence: -1}:                true,
+		{Credibility: 1, ClaimConfidence: 1}: false,
+	} {
+		if p.Weak() != weak {
+			t.Errorf("%+v: Weak = %v", p, !weak)
+		}
+	}
+}

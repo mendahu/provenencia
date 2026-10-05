@@ -259,6 +259,114 @@ func TestReconcileNames(t *testing.T) {
 	}
 }
 
+// Provenance helpers: weak evidence each way, high trust, and a negative.
+func lowTrust(c Candidate) Candidate  { c.Provenance.Credibility = -1; return c }
+func uncertain(c Candidate) Candidate { c.Provenance.Uncertain = true; return c }
+func lowClaim(c Candidate) Candidate  { c.Provenance.ClaimConfidence = -1; return c }
+func highTrust(c Candidate) Candidate { c.Provenance.Credibility = 1; return c }
+func neg(c Candidate) Candidate       { c.Negative = true; return c }
+
+// clAgainst is an expected cluster with its count of negatives against it.
+type clAgainst struct {
+	ids     []byte
+	parts   string
+	against int
+}
+
+func TestReconcileNamesProvenance(t *testing.T) {
+	cases := []struct {
+		group, name string
+		in          []Candidate
+		want        []clAgainst
+		state       State
+	}{
+		// Confidence: weak values drop when a non-weak value disagrees.
+		{"confidence", "a low-trust outlier drops one to one",
+			[]Candidate{lowTrust(nm(1, "given=James|surname=Robbins")), nm(2, "given=James|surname=Robins")},
+			[]clAgainst{{[]byte{2}, "given=James|surname=Robins", 0}, {[]byte{1}, "given=James|surname=Robbins", 0}}, StateMixed},
+		{"confidence", "an uncertain transcription drops",
+			[]Candidate{uncertain(nm(1, "given=Mary|surname=Robins")), nm(2, "given=James|surname=Robins")},
+			[]clAgainst{{[]byte{2}, "given=James|surname=Robins", 0}, {[]byte{1}, "given=Mary|surname=Robins", 0}}, StateMixed},
+		{"confidence", "a low-confidence claim drops",
+			[]Candidate{lowClaim(nm(1, "given=Mary|surname=Robins")), nm(2, "given=James|surname=Robins")},
+			[]clAgainst{{[]byte{2}, "given=James|surname=Robins", 0}, {[]byte{1}, "given=Mary|surname=Robins", 0}}, StateMixed},
+		{"confidence", "two weak values both stay when nothing stronger disagrees",
+			[]Candidate{lowTrust(nm(1, "given=Mary|surname=Robins")), uncertain(nm(2, "given=James|surname=Robins"))},
+			[]clAgainst{{[]byte{1}, "given=Mary|surname=Robins", 0}, {[]byte{2}, "given=James|surname=Robins", 0}}, StateMixed},
+		{"confidence", "all weak and agreeing still reconcile",
+			[]Candidate{lowTrust(nm(1, "given=J.|surname=Robins")), lowClaim(nm(2, "given=James|surname=Robins"))},
+			[]clAgainst{{[]byte{1, 2}, "given=James|surname=Robins", 0}}, StateMerged},
+		{"confidence", "majority runs first: a weak two of three still wins",
+			[]Candidate{lowTrust(nm(1, "surname=Robbins")), lowTrust(nm(2, "surname=Robbins")), nm(3, "surname=Robins")},
+			[]clAgainst{{[]byte{1, 2}, "surname=Robbins", 0}, {[]byte{3}, "surname=Robins", 0}}, StateMixed},
+		{"confidence", "a folded value is strong if any carrier is",
+			[]Candidate{lowTrust(nm(1, "given=Mary|surname=Robins")), lowTrust(nm(2, "given=Mary|surname=Robins")),
+				nm(3, "given=J.|surname=Robins"), lowTrust(nm(4, "given=James|surname=Robins"))},
+			[]clAgainst{{[]byte{3, 4}, "given=James|surname=Robins", 0}, {[]byte{1, 2}, "given=Mary|surname=Robins", 0}}, StateMixed},
+		{"confidence", "a weak candidate's rival in one type takes its other parts with it",
+			[]Candidate{lowTrust(nm(1, "prefix=Dr.|given=James|surname=Robins")), nm(2, "prefix=Rev.|given=James")},
+			[]clAgainst{{[]byte{2}, "prefix=Rev.|given=James", 0}, {[]byte{1}, "prefix=Dr.|given=James|surname=Robins", 0}}, StateMixed},
+		{"confidence", "high trust against standard is not weak against strong",
+			[]Candidate{nm(1, "given=Mary|surname=Robins"), highTrust(nm(2, "given=James|surname=Robins"))},
+			[]clAgainst{{[]byte{1}, "given=Mary|surname=Robins", 0}, {[]byte{2}, "given=James|surname=Robins", 0}}, StateMixed},
+
+		// Negatives deny weaker positives with the same parts.
+		{"negatives", "a stronger negative eliminates the same name",
+			[]Candidate{nm(1, "given=James|surname=Robbins"), highTrust(neg(nm(2, "given=James|surname=Robbins"))), nm(3, "given=James|surname=Robins")},
+			[]clAgainst{{[]byte{3}, "given=James|surname=Robins", 0}, {[]byte{1}, "given=James|surname=Robbins", 1}}, StateMixed},
+		{"negatives", "an equally strong negative only counts against",
+			[]Candidate{nm(1, "given=James|surname=Robins"), neg(nm(2, "given=James|surname=Robins"))},
+			[]clAgainst{{[]byte{1}, "given=James|surname=Robins", 1}}, StateSingle},
+		{"negatives", "a weaker negative only counts against",
+			[]Candidate{nm(1, "given=James|surname=Robins"), lowTrust(neg(nm(2, "given=James|surname=Robins")))},
+			[]clAgainst{{[]byte{1}, "given=James|surname=Robins", 1}}, StateSingle},
+		{"negatives", "it eliminates only the weaker of two equal names",
+			[]Candidate{lowTrust(nm(1, "given=James|surname=Robins")), highTrust(nm(2, "given=James|surname=Robins")), neg(nm(3, "given=James|surname=Robins"))},
+			[]clAgainst{{[]byte{2}, "given=James|surname=Robins", 1}, {[]byte{1}, "given=James|surname=Robins", 1}}, StateMixed},
+		{"negatives", "a negative of other parts does nothing",
+			[]Candidate{nm(1, "given=James|surname=Robins"), highTrust(neg(nm(2, "given=Mary|surname=Robins")))},
+			[]clAgainst{{[]byte{1}, "given=James|surname=Robins", 0}}, StateSingle},
+		{"negatives", "a negative with no parts is ignored",
+			[]Candidate{lowTrust(nm(1, "given=James|surname=Robins")), neg(name(2, "James Robins"))},
+			[]clAgainst{{[]byte{1}, "given=James|surname=Robins", 0}}, StateSingle},
+		{"negatives", "a negative counts against the reconciled name too",
+			[]Candidate{nm(1, "given=J.|surname=Robins"), nm(2, "given=James"), lowTrust(neg(nm(3, "given=James|surname=Robins")))},
+			[]clAgainst{{[]byte{1, 2}, "given=James|surname=Robins", 1}}, StateMerged},
+		{"negatives", "a denied candidate casts no vote",
+			[]Candidate{lowTrust(nm(1, "surname=Robbins")), lowTrust(nm(2, "surname=Robbins")), nm(3, "surname=Robins"), neg(nm(4, "surname=Robbins"))},
+			[]clAgainst{{[]byte{3}, "surname=Robins", 0}, {[]byte{1, 2}, "surname=Robbins", 1}}, StateMixed},
+		{"negatives", "only negatives: empty",
+			[]Candidate{neg(nm(1, "given=James|surname=Robins"))},
+			nil, StateEmpty},
+
+		// Rank order: provenance before id.
+		{"rank", "the stronger record's spelling is kept",
+			[]Candidate{nm(1, "given=JAMES|surname=ROBINS"), highTrust(nm(2, "given=James|surname=Robins"))},
+			[]clAgainst{{[]byte{1, 2}, "given=James|surname=Robins", 0}}, StateMerged},
+		{"rank", "an ambiguous initial folds toward the stronger record",
+			[]Candidate{nm(1, "given=James|surname=Robins"), highTrust(nm(2, "given=John|surname=Robins")), nm(3, "given=J.|surname=Robins")},
+			[]clAgainst{{[]byte{2, 3}, "given=John|surname=Robins", 0}, {[]byte{1}, "given=James|surname=Robins", 0}}, StateMixed},
+	}
+	for _, tc := range cases {
+		t.Run(tc.group+"/"+tc.name, func(t *testing.T) {
+			got, err := Resolve(properties.ValueTypeName, tc.in, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var have []clAgainst
+			for i, c := range got.Clusters {
+				have = append(have, clAgainst{shape(got)[i], spec(c.Value.Name), c.Against})
+			}
+			if !reflect.DeepEqual(have, tc.want) {
+				t.Fatalf("got  %v\nwant %v", have, tc.want)
+			}
+			if got.State() != tc.state {
+				t.Fatalf("state %q, want %q", got.State(), tc.state)
+			}
+		})
+	}
+}
+
 // A cluster whose reconciled parts are exactly one member's is that member's
 // own value, form and all; otherwise the form is the parts in order.
 func TestReconcileNamesValue(t *testing.T) {
@@ -313,7 +421,8 @@ func TestReconcileNamesInvariants(t *testing.T) {
 				pool := pools[typ]
 				v.Parts = append(v.Parts, namevalues.Part{Idx: i, Type: typ, Value: pool[rng.Intn(len(pool))]})
 			}
-			return Candidate{ObservationID: id(n), Value: Value{Name: v}}
+			return Candidate{ObservationID: id(n), Value: Value{Name: v}, Negative: rng.Intn(8) == 0,
+				Provenance: Provenance{Credibility: rng.Intn(3) - 1, Uncertain: rng.Intn(5) == 0, ClaimConfidence: rng.Intn(3) - 1}}
 		}
 		for list := 0; list < 500; list++ {
 			var in []Candidate
@@ -333,7 +442,8 @@ func TestReconcileNamesInvariants(t *testing.T) {
 				t.Fatalf("%s: input order changed the result", where)
 			}
 
-			// Every structured candidate in exactly one cluster; no other.
+			// Every structured positive candidate in exactly one cluster; no
+			// negative in any.
 			seen := map[byte]int{}
 			for _, c := range got.Clusters {
 				for _, oid := range c.ObservationIDs {
@@ -342,7 +452,7 @@ func TestReconcileNamesInvariants(t *testing.T) {
 			}
 			for _, c := range in {
 				want := 1
-				if structuredName(c, 0) == nil {
+				if c.Negative || structuredName(c, 0) == nil {
 					want = 0
 				}
 				if seen[c.ObservationID[3]] != want {
@@ -383,7 +493,8 @@ func TestReconcileNamesInvariants(t *testing.T) {
 				for j := range n.Parts {
 					n.Parts[j].Type = rename[n.Parts[j].Type]
 				}
-				renamed[i] = Candidate{ObservationID: c.ObservationID, Value: Value{Name: &n}}
+				renamed[i] = c
+				renamed[i].Value = Value{Name: &n}
 			}
 			if again, _ := Resolve(properties.ValueTypeName, renamed, nil); !reflect.DeepEqual(shape(again), shape(got)) {
 				t.Fatalf("%s: renaming types changed the clusters", where)
@@ -395,7 +506,7 @@ func TestReconcileNamesInvariants(t *testing.T) {
 func describe(in []Candidate) string {
 	var out []string
 	for _, c := range in {
-		out = append(out, fmt.Sprintf("%d:%q", c.ObservationID[3], spec(c.Value.Name)))
+		out = append(out, fmt.Sprintf("%d:%q%+v neg=%v", c.ObservationID[3], spec(c.Value.Name), c.Provenance, c.Negative))
 	}
 	return strings.Join(out, " ")
 }
@@ -407,14 +518,6 @@ func specs(r Result) []string {
 		out = append(out, fmt.Sprint(shape(r)[i], signatureOf(c.Value.Name)))
 	}
 	return out
-}
-
-func signatureOf(n *namevalues.Value) string {
-	nc := structuredName(Candidate{Value: Value{Name: n}}, 0)
-	if nc == nil {
-		return ""
-	}
-	return exactSignature(nc.values)
 }
 
 func TestIsInitial(t *testing.T) {
