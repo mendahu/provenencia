@@ -28,6 +28,15 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     /// Observation ids pinned on each claim id, as Promote's confirmed pairs
     /// (and their backfill onto the member's claim) wrote them.
     var pinsByClaim: [String: Set<String>] = [:]
+    /// Every pin a delete released, in order: the audit's
+    /// (identity_claim_evidence, claim id) removals, read back per claim.
+    var releasedPins: [ReleasedPin] = []
+
+    /// One pin a delete took off a claim.
+    struct ReleasedPin: Equatable {
+        var claimID: String
+        var observationID: String
+    }
     var subjectPositionsBySubject: [String: CatalogSubjectPosition] = [:]
     /// Type↔field suggestion joins, keyed by source type id and held in the
     /// order they were assigned — the engine's `sort_order`.
@@ -1658,7 +1667,13 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 subjectsBySource[sourceID] = list
                 bumpSource(sourceID)
                 subjectPositionsBySubject[subjectID] = nil
+                // The Subject leaves its handle: its claim goes, taking its pins.
+                if let claimID = membershipBySubject[subjectID]?.claimID {
+                    releasePins { claim, _ in claim == claimID }
+                    pinsByClaim[claimID] = nil
+                }
                 membershipBySubject[subjectID] = nil
+                claimBySubject[subjectID] = nil
                 return
             }
             throw StoreBoom.boom
@@ -2261,6 +2276,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             if isEdgeLocked(observation: existing, projectDir: projectDir) {
                 throw edgeLockedError()
             }
+            releasePins { _, pinned in pinned == observationID }
             for (sourceID, list) in observationsBySource where list.contains(where: { $0.id == observationID }) {
                 observationsBySource[sourceID] = list.filter { $0.id != observationID }
                 bumpSource(sourceID)
@@ -2640,7 +2656,40 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         if isEdgeLocked(observation: existing, projectDir: projectDir) {
             return CatalogDeleteImpact(allowed: false, gate: .edgeLocked, groups: [])
         }
-        return CatalogDeleteImpact(allowed: true, gate: .ok, groups: [])
+        // A pinned Observation names the handles whose claims lose it, once each.
+        let handles = pinsByClaim.filter { $0.value.contains(id) }.keys
+            .compactMap { claimID in membershipBySubject.values.first { $0.claimID == claimID }?.entity }
+        var seen = Set<String>()
+        let entities = handles.filter { seen.insert($0.id).inserted }.sorted { $0.ref < $1.ref }
+        guard !entities.isEmpty else {
+            return CatalogDeleteImpact(allowed: true, gate: .ok, groups: [])
+        }
+        return CatalogDeleteImpact(allowed: true, gate: .ok, groups: [], cascades: [
+            CatalogDeleteImpactGroup(
+                via: "identity_claim_evidence.observation_id",
+                kind: "canonical_entity",
+                total: entities.count,
+                listed: entities.map { entity in
+                    CatalogDeleteImpactListed(
+                        id: entity.id,
+                        ref: entity.ref,
+                        title: entity.ref,
+                        location: WorkspaceLocation(section: .sources, ref: entity.ref, title: entity.ref)
+                    )
+                }
+            ),
+        ])
+    }
+
+    /// Takes every pin `select` matches off its claim, logging each in `releasedPins`.
+    /// Call inside `withState`.
+    private func releasePins(where select: (_ claimID: String, _ observationID: String) -> Bool) {
+        for claimID in pinsByClaim.keys.sorted() {
+            for observationID in (pinsByClaim[claimID] ?? []).sorted() where select(claimID, observationID) {
+                pinsByClaim[claimID]?.remove(observationID)
+                releasedPins.append(.init(claimID: claimID, observationID: observationID))
+            }
+        }
     }
 
     private func subjectDeleteImpact(projectDir: String, id: String) -> CatalogDeleteImpact {
