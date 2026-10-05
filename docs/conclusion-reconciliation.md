@@ -246,14 +246,9 @@ The rebuild-equals-upkeep tests hold upkeep equal to a full rebuild. Every new t
 | --- | --- | --- |
 | Resolver core: exact clusters, support then id, concluded input | `core/resolve` (S9-05) | on `main` |
 | Resolved-values cache and upkeep | `core/database/resolvedvalues` (S9-06) | on `main` |
-| Name module: parts only, format-agnostic, subsumption, majority; `initial` retired | S9-13, PR #255 | open, unmerged |
-| Provenance, negatives, confidence pass for names; `against`; credibility and certainty upkeep | S9-14, PR #256 (stacked) | open, unmerged |
+| `initial` part type retired (migration 000037); `against` column (000038) | S9-13a | on `main` |
+| Shared pipeline and simple modules | S9-13 | planned |
+| Name module | S9-13b | planned |
+| Evidence and reasoning in the cache | S9-14 | planned |
 
-#255 and #256 match this design's direction but not its shape:
-
-- The passes live inside the name code instead of a shared pipeline.
-- Majority counts Observations, not Sources.
-- There is no per-candidate reasoning output.
-- Provisional members are not passed in.
-
-Their test tables (75+ cases) carry over as the spec for the name module.
+PRs #255 and #256 built names-first versions of S9-13b and S9-14 to the first plan and were closed. Their migrations landed unchanged in S9-13a; their name logic, provenance logic, fixtures and test tables (75+ cases) are lifted into S9-13, S9-13b and S9-14 (see the Spike 9 plan, slice 4).

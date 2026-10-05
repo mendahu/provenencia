@@ -73,7 +73,6 @@ var WesternNamePattern = NamePattern{
 	PartRoles: map[string]NameRole{
 		namevalues.PartTypeSurname:       RoleFamily,
 		namevalues.PartTypeGiven:         RoleGiven,
-		namevalues.PartTypeInitial:       RoleGiven,
 		namevalues.PartTypeNick:          RoleNick,
 		namevalues.PartTypeSuffix:        RoleGeneration,
 		namevalues.PartTypePrefix:        RoleIgnored,

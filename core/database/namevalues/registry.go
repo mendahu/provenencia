@@ -34,12 +34,11 @@ func KnownPartType(key string) bool {
 var partTypeRegistry = []PartTypeInfo{
 	{Key: PartTypePrefix, L10nKey: "nameValue.part.type.prefix", Sort: 0},
 	{Key: PartTypeGiven, L10nKey: "nameValue.part.type.given", Sort: 1},
-	{Key: PartTypeInitial, L10nKey: "nameValue.part.type.initial", Sort: 2},
-	{Key: PartTypeNick, L10nKey: "nameValue.part.type.nick", Sort: 3},
-	{Key: PartTypeSurnamePrefix, L10nKey: "nameValue.part.type.surname_prefix", Sort: 4},
-	{Key: PartTypeSurname, L10nKey: "nameValue.part.type.surname", Sort: 5},
-	{Key: PartTypeSuffix, L10nKey: "nameValue.part.type.suffix", Sort: 6},
-	{Key: PartTypeUndetermined, L10nKey: "nameValue.part.type.undetermined", Sort: 7},
+	{Key: PartTypeNick, L10nKey: "nameValue.part.type.nick", Sort: 2},
+	{Key: PartTypeSurnamePrefix, L10nKey: "nameValue.part.type.surname_prefix", Sort: 3},
+	{Key: PartTypeSurname, L10nKey: "nameValue.part.type.surname", Sort: 4},
+	{Key: PartTypeSuffix, L10nKey: "nameValue.part.type.suffix", Sort: 5},
+	{Key: PartTypeUndetermined, L10nKey: "nameValue.part.type.undetermined", Sort: 6},
 }
 
 var partTypeByKey map[string]PartTypeInfo
