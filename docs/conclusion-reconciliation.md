@@ -74,7 +74,7 @@ Credibility and confidence are read relative to their vocabulary's default grade
 **Membership status:**
 
 - **Accepted** members are the evidence.
-- **Provisional** members are passed in but **always eliminated**: they never influence the answer and appear only in the reasoning. That is stricter than weak evidence, which can still win when nothing stronger disagrees.
+- **Provisional** members are passed in but **always eliminated**: they never influence the answer and appear only in the reasoning. That is stricter than weak evidence, which can still win when nothing stronger disagrees. Showing a provisional member's value as *possibly X* when nothing else survives is an idea for later: [`ideas/possible-values.md`](ideas/possible-values.md).
 - **Rejected** members do not count and are not passed in.
 
 ---
