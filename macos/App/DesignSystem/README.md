@@ -153,6 +153,7 @@ red `Text`), plus `Badge`/`EmptyState`/`Callout` (added for the S2-02
 | Component | File | 
 |---|---|
 | Button | `Components/Button/PVButton.swift` (icon-left, loading spinner, and a chrome-less `link` variant added for S2-02; the label is `PVCopy`, so a formatted `String` such as Promote's "Back to Compare" works as well as a catalog resource) |
+| Disclosure | `Components/Disclosure/PVDisclosureButton.swift` (added for S9-16's Person page: a `PVButton` that owns an `isExpanded` binding, its chevron, and the spoken state; the caller places the disclosed content. `pvExpandedState(_:)` is the shared VoiceOver piece, also used by `PVSelect` and the Source page's artifact rows. No JSX twin: boards compose `Button.jsx` with `aria-expanded`) |
 | Icon | `Components/Icon/PVIcon.swift` |
 | Field | `Components/Field/PVField.swift` |
 | Input | `Components/Input/PVInput.swift` |
@@ -344,7 +345,7 @@ and ignores keys and pointer.
 **Accessibility.** The trigger is the VoiceOver surface (`aria-activedescendant`
 twin). Spoken value is the committed label when closed and the highlighted
 option when open. Expanded / collapsed is custom content, not stuffed into
-the value. Increment / decrement call the same session moves as ↑ / ↓
+the value (`pvExpandedState`, shared with `PVDisclosureButton`). Increment / decrement call the same session moves as ↑ / ↓
 (closed commit; open highlight). Open menus expose `N of M`. One tab stop
 on the trigger; the panel is not a second stop. Icon-only chips require a
 spoken label (`tableFilterColumn`). Decorative chevron, chip icon, and

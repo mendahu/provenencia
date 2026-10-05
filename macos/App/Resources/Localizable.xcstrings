@@ -1002,8 +1002,8 @@
         }
       }
     },
-    "designSystem.select.collapsed": {
-      "comment": "VoiceOver value when a PVSelect menu is closed",
+    "designSystem.disclosure.collapsed": {
+      "comment": "VoiceOver value when a disclosure, menu or expandable row is closed",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -1014,8 +1014,8 @@
         }
       }
     },
-    "designSystem.select.expanded": {
-      "comment": "VoiceOver value when a PVSelect menu is open",
+    "designSystem.disclosure.expanded": {
+      "comment": "VoiceOver value when a disclosure, menu or expandable row is open",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -1050,8 +1050,8 @@
         }
       }
     },
-    "designSystem.select.state": {
-      "comment": "VoiceOver custom-content key for whether a PVSelect menu is open",
+    "designSystem.disclosure.state": {
+      "comment": "VoiceOver custom-content key for whether something is shown: a disclosure, a menu, an expandable row",
       "extractionState": "manual",
       "localizations": {
         "en": {

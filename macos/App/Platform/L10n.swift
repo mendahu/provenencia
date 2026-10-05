@@ -135,22 +135,22 @@ enum L10n {
             ), column)
         }
 
-        static let selectState = LocalizedStringResource(
-            "designSystem.select.state",
+        static let disclosureState = LocalizedStringResource(
+            "designSystem.disclosure.state",
             defaultValue: "State",
-            comment: "VoiceOver custom-content key for whether a PVSelect menu is open"
+            comment: "VoiceOver custom-content key for whether something is shown: a disclosure, a menu, an expandable row"
         )
 
-        static let selectExpanded = LocalizedStringResource(
-            "designSystem.select.expanded",
+        static let disclosureExpanded = LocalizedStringResource(
+            "designSystem.disclosure.expanded",
             defaultValue: "Expanded",
-            comment: "VoiceOver value when a PVSelect menu is open"
+            comment: "VoiceOver value when a disclosure, menu or expandable row is open"
         )
 
-        static let selectCollapsed = LocalizedStringResource(
-            "designSystem.select.collapsed",
+        static let disclosureCollapsed = LocalizedStringResource(
+            "designSystem.disclosure.collapsed",
             defaultValue: "Collapsed",
-            comment: "VoiceOver value when a PVSelect menu is closed"
+            comment: "VoiceOver value when a disclosure, menu or expandable row is closed"
         )
 
         static let selectPosition = LocalizedStringResource(
