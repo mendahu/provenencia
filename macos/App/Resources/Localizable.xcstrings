@@ -9726,18 +9726,6 @@
         }
       }
     },
-    "workspace.persons.detailStubMessage": {
-      "comment": "Placeholder body on a Person detail page until it ships; argument is the Person ref",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The page for %@ is on its way. It will show this Person's name, life dates and places, and the evidence behind them."
-          }
-        }
-      }
-    },
     "workspace.persons.emptyMessage": {
       "comment": "Persons list empty state body; explains Promote",
       "extractionState": "manual",
@@ -15477,7 +15465,7 @@
       }
     },
     "conclusions.state.empty": {
-      "comment": "Conclusion field state line when no record gives the Property a value",
+      "comment": "Empty Conclusion field with no specific wording for its Property",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -15488,32 +15476,56 @@
         }
       }
     },
-    "conclusions.state.mixed": {
-      "comment": "Conclusion field state line when records disagree and several values are shown",
+    "conclusions.badge.merged": {
+      "comment": "Badge on a Conclusion field whose one value several Sources agree on",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "mixed"
+            "value": "Merged"
           }
         }
       }
     },
-    "conclusions.state.concluded": {
-      "comment": "Conclusion field state line when a Reconciliation Claim sets the value",
+    "conclusions.badge.mixed": {
+      "comment": "Badge on a Conclusion field whose records disagree, so several values are shown",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "concluded"
+            "value": "Mixed"
+          }
+        }
+      }
+    },
+    "conclusions.badge.concluded": {
+      "comment": "Badge on a Conclusion field whose value the researcher concluded",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Concluded"
+          }
+        }
+      }
+    },
+    "conclusions.count.concluded": {
+      "comment": "Support column of a concluded Conclusion field: the researcher set the value",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "by you"
           }
         }
       }
     },
     "conclusions.outcome.kept": {
-      "comment": "Auto-reconciler outcome: the record's value is shown",
+      "comment": "Auto-reconciler outcome: the record counted toward the value shown",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -15537,7 +15549,7 @@
       }
     },
     "conclusions.outcome.outvoted": {
-      "comment": "Auto-reconciler outcome: more Sources agree on another spelling",
+      "comment": "Auto-reconciler outcome: more Sources read another spelling",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -15585,7 +15597,7 @@
       }
     },
     "conclusions.outcome.noEvidence": {
-      "comment": "Auto-reconciler outcome: the record has nothing the auto-reconciler can use, such as a name without parts",
+      "comment": "Auto-reconciler outcome: the record states nothing usable for this field, such as a name without parts",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -15597,13 +15609,13 @@
       }
     },
     "conclusions.outcome.against": {
-      "comment": "Auto-reconciler outcome: a negative record that counts against a value",
+      "comment": "Auto-reconciler outcome of a negative record that eliminated nothing; it still counts against the value",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "counts against"
+            "value": "disagrees · did not eliminate"
           }
         }
       }
@@ -15644,8 +15656,296 @@
         }
       }
     },
+    "conclusions.readAs.none": {
+      "comment": "Why table, Read as column: the record states nothing for this field",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "—"
+          }
+        }
+      }
+    },
+    "conclusions.why.readAs": {
+      "comment": "Why table column heading: what the record says",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Read as"
+          }
+        }
+      }
+    },
+    "conclusions.why.source": {
+      "comment": "Why table column heading: the Source the record is cited under",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Source"
+          }
+        }
+      }
+    },
+    "conclusions.why.outcome": {
+      "comment": "Why table column heading: what the auto-reconciler did with the record",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Outcome"
+          }
+        }
+      }
+    },
+    "conclusions.why.button": {
+      "comment": "Button on a Conclusion field that shows the records behind its value",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Why"
+          }
+        }
+      }
+    },
+    "conclusions.person.details": {
+      "comment": "Section heading over a Person's fields",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Details"
+          }
+        }
+      }
+    },
+    "conclusions.person.noLikeness": {
+      "comment": "Accessibility label of the empty portrait slot on a Person page",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No likeness recorded"
+          }
+        }
+      }
+    },
+    "conclusions.person.born": {
+      "comment": "Abbreviation before a Person's birth date and place in the page header",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "b."
+          }
+        }
+      }
+    },
+    "conclusions.person.died": {
+      "comment": "Abbreviation before a Person's death date and place in the page header",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "d."
+          }
+        }
+      }
+    },
+    "conclusions.person.dateUnknown": {
+      "comment": "Page header: the Person's birth or death date is not known",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "date unknown"
+          }
+        }
+      }
+    },
+    "conclusions.person.placeUnknown": {
+      "comment": "Page header: the Person's birth or death place is not known",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "place unknown"
+          }
+        }
+      }
+    },
+    "conclusions.person.birthDate": {
+      "comment": "Row label on a Person page",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Birth date"
+          }
+        }
+      }
+    },
+    "conclusions.person.birthPlace": {
+      "comment": "Row label on a Person page",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Birth place"
+          }
+        }
+      }
+    },
+    "conclusions.person.deathDate": {
+      "comment": "Row label on a Person page",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Death date"
+          }
+        }
+      }
+    },
+    "conclusions.person.deathPlace": {
+      "comment": "Row label on a Person page",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Death place"
+          }
+        }
+      }
+    },
+    "conclusions.empty.name": {
+      "comment": "Empty Name row on a Person page",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No name recorded"
+          }
+        }
+      }
+    },
+    "conclusions.empty.sexAtBirth": {
+      "comment": "Empty Sex at birth row on a Person page",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No sex at birth recorded"
+          }
+        }
+      }
+    },
+    "conclusions.empty.birthDate": {
+      "comment": "Empty Birth date row on a Person page",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No birth date recorded"
+          }
+        }
+      }
+    },
+    "conclusions.empty.birthPlace": {
+      "comment": "Empty Birth place row on a Person page",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No birth place recorded"
+          }
+        }
+      }
+    },
+    "conclusions.empty.deathDate": {
+      "comment": "Empty Death date row on a Person page",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No death date recorded"
+          }
+        }
+      }
+    },
+    "conclusions.empty.deathPlace": {
+      "comment": "Empty Death place row on a Person page",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No death place recorded"
+          }
+        }
+      }
+    },
+    "conclusions.a11y.concluded": {
+      "comment": "VoiceOver state of a concluded Conclusion field",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "concluded"
+          }
+        }
+      }
+    },
+    "conclusions.a11y.born": {
+      "comment": "VoiceOver word before a Person's birth date and place",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Born"
+          }
+        }
+      }
+    },
+    "conclusions.a11y.died": {
+      "comment": "VoiceOver word before a Person's death date and place",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Died"
+          }
+        }
+      }
+    },
     "conclusions.sourceCount": {
-      "comment": "Conclusion field state line: how many Sources support the shown value; argument is the count",
+      "comment": "How many Sources support a value; argument is the count",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -15668,26 +15968,74 @@
         }
       }
     },
-    "conclusions.state.merged": {
-      "comment": "Conclusion field state line when several Sources agree on the shown value; argument is the Source count text",
+    "conclusions.againstCount": {
+      "comment": "Negative records that count against a Conclusion field's value; argument is the count",
       "extractionState": "manual",
       "localizations": {
         "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "merged · %@"
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld record disagrees"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld records disagree"
+                }
+              }
+            }
           }
         }
       }
     },
-    "conclusions.additionalValues": {
-      "comment": "Badge after a Conclusion field's first value: how many more values are shown",
+    "conclusions.otherValues": {
+      "comment": "Button on a mixed Conclusion field that shows its other values; argument is how many",
       "extractionState": "manual",
       "localizations": {
         "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "+%lld"
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld other value"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld other values"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "conclusions.memberCount": {
+      "comment": "Page header: how many Subjects are members of this handle; argument is the count",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld member"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld members"
+                }
+              }
+            }
           }
         }
       }
@@ -15700,6 +16048,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "folded into %@"
+          }
+        }
+      }
+    },
+    "conclusions.outcome.outvotedBy": {
+      "comment": "Auto-reconciler outcome: a majority read otherwise; arguments are the winning value's Source count and every voting Source as text (e.g. 3 Sources)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "outvoted (%1$lld of %2$@)"
           }
         }
       }
@@ -15717,13 +16077,145 @@
       }
     },
     "conclusions.outcome.deniedBy": {
-      "comment": "Auto-reconciler outcome: a stronger negative record says the value is wrong; argument is that record's ref",
+      "comment": "Auto-reconciler outcome: a stronger negative record says the value is wrong; argument is that record's Source",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
             "value": "denied by %@"
+          }
+        }
+      }
+    },
+    "conclusions.readAs.not": {
+      "comment": "Why table, Read as column: a negative record saying the value is not this; argument is the value",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "not %@"
+          }
+        }
+      }
+    },
+    "conclusions.why.title": {
+      "comment": "Heading of the records behind a value; argument is the value",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Why “%@”"
+          }
+        }
+      }
+    },
+    "conclusions.why.records": {
+      "comment": "VoiceOver label of the records behind a field; argument is the field label",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Records considered for %@"
+          }
+        }
+      }
+    },
+    "conclusions.otherValues.list": {
+      "comment": "VoiceOver label of a mixed field's other values; argument is the field label",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Other values of %@"
+          }
+        }
+      }
+    },
+    "conclusions.a11y.single": {
+      "comment": "VoiceOver state of a field with one value from one Source; argument is the Source count text",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "single, %@"
+          }
+        }
+      }
+    },
+    "conclusions.a11y.merged": {
+      "comment": "VoiceOver state of a field whose value several Sources agree on; argument is the Source count text",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "merged from %@"
+          }
+        }
+      }
+    },
+    "conclusions.a11y.mixed": {
+      "comment": "VoiceOver state of a field showing several values; argument is the Source count text",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "mixed from %@"
+          }
+        }
+      }
+    },
+    "conclusions.a11y.empty": {
+      "comment": "VoiceOver label of an empty field; argument is the field label",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@, empty"
+          }
+        }
+      }
+    },
+    "conclusions.a11y.list": {
+      "comment": "Joins two parts of a spoken Conclusion field (label, value, state, disagreement)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@, %2$@"
+          }
+        }
+      }
+    },
+    "conclusions.a11y.vital": {
+      "comment": "VoiceOver for a Person header line; arguments are Born/Died, the date, and the place",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ %2$@, %3$@"
+          }
+        }
+      }
+    },
+    "conclusions.a11y.ref": {
+      "comment": "VoiceOver label of a handle's ref (PER-…)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reference %@"
           }
         }
       }

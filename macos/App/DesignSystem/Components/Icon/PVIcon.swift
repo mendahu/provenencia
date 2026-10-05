@@ -16,6 +16,24 @@ enum PVSymbol: String {
     case arrowLeft = "arrow.left"
     /// Lucide `git-branch` — Evidence graph jump on the Source identity header.
     case gitBranch = "arrow.triangle.branch"
+    /// Lucide `merge` — Merged state badge (S9-16).
+    case merge = "arrow.merge"
+    /// Lucide `split` — Mixed state badge (S9-16).
+    case split = "arrow.branch"
+    /// Lucide `stamp` — Concluded state badge (S9-16).
+    case stamp = "seal"
+    /// Lucide `git-merge` — a record folded into a fuller value (S9-16).
+    case gitMerge = "arrow.triangle.merge"
+    /// Lucide `scale` — a record outvoted by more Sources (S9-16).
+    case scale = "scalemass"
+    /// Lucide `signal-low` — a record dropped as weak evidence (S9-16).
+    case signalLow = "gauge.with.dots.needle.0percent"
+    /// Lucide `ban` — a record denied by a stronger negative (S9-16).
+    case ban = "nosign"
+    /// Lucide `circle-minus` — a negative record counting against (S9-16).
+    case circleMinus = "minus.circle"
+    /// Lucide `minus` — a record with no usable value (S9-16).
+    case minus = "minus"
     case photo = "photo"
     case scrollText = "doc.text"
     /// Lucide `file` — locator floor (entire artifact).

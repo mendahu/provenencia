@@ -956,14 +956,6 @@ enum L10n {
             ), title, ref)
         }
 
-        static func personDetailStubMessage(ref: String) -> String {
-            return L10n.format(LocalizedStringResource(
-                "workspace.persons.detailStubMessage",
-                defaultValue: "The page for %@ is on its way. It will show this Person's name, life dates and places, and the evidence behind them.",
-                comment: "Placeholder body on a Person detail page until it ships; argument is the Person ref"
-            ), ref)
-        }
-
         static let personsStubMessage = LocalizedStringResource(
             "workspace.section.persons.stubMessage",
             defaultValue: "The Persons list is on its way. Promoted people will be listed here.",
@@ -6714,31 +6706,44 @@ enum L10n {
         }
     }
 
-    /// Conclusion detail text (S9-15): field state lines and auto-reconciler
-    /// outcomes. `ReconciledValueDisplay` composes them.
+    /// Conclusion detail copy (S9-15, S9-16): field states, auto-reconciler
+    /// outcomes, the Why table and the Person page. `ReconciledValueDisplay`
+    /// and `PersonDetailContent` compose them.
     enum Conclusions {
         static let stateEmpty = LocalizedStringResource(
             "conclusions.state.empty",
             defaultValue: "Nothing recorded",
-            comment: "Conclusion field state line when no record gives the Property a value"
+            comment: "Empty Conclusion field with no specific wording for its Property"
         )
 
-        static let stateMixed = LocalizedStringResource(
-            "conclusions.state.mixed",
-            defaultValue: "mixed",
-            comment: "Conclusion field state line when records disagree and several values are shown"
+        static let badgeMerged = LocalizedStringResource(
+            "conclusions.badge.merged",
+            defaultValue: "Merged",
+            comment: "Badge on a Conclusion field whose one value several Sources agree on"
         )
 
-        static let stateConcluded = LocalizedStringResource(
-            "conclusions.state.concluded",
-            defaultValue: "concluded",
-            comment: "Conclusion field state line when a Reconciliation Claim sets the value"
+        static let badgeMixed = LocalizedStringResource(
+            "conclusions.badge.mixed",
+            defaultValue: "Mixed",
+            comment: "Badge on a Conclusion field whose records disagree, so several values are shown"
+        )
+
+        static let badgeConcluded = LocalizedStringResource(
+            "conclusions.badge.concluded",
+            defaultValue: "Concluded",
+            comment: "Badge on a Conclusion field whose value the researcher concluded"
+        )
+
+        static let countConcluded = LocalizedStringResource(
+            "conclusions.count.concluded",
+            defaultValue: "by you",
+            comment: "Support column of a concluded Conclusion field: the researcher set the value"
         )
 
         static let outcomeKept = LocalizedStringResource(
             "conclusions.outcome.kept",
             defaultValue: "kept",
-            comment: "Auto-reconciler outcome: the record's value is shown"
+            comment: "Auto-reconciler outcome: the record counted toward the value shown"
         )
 
         static let outcomeFolded = LocalizedStringResource(
@@ -6750,7 +6755,7 @@ enum L10n {
         static let outcomeOutvoted = LocalizedStringResource(
             "conclusions.outcome.outvoted",
             defaultValue: "outvoted",
-            comment: "Auto-reconciler outcome: more Sources agree on another spelling"
+            comment: "Auto-reconciler outcome: more Sources read another spelling"
         )
 
         static let outcomeWeak = LocalizedStringResource(
@@ -6774,13 +6779,13 @@ enum L10n {
         static let outcomeNoEvidence = LocalizedStringResource(
             "conclusions.outcome.noEvidence",
             defaultValue: "no usable value",
-            comment: "Auto-reconciler outcome: the record has nothing the auto-reconciler can use, such as a name without parts"
+            comment: "Auto-reconciler outcome: the record states nothing usable for this field, such as a name without parts"
         )
 
         static let outcomeAgainst = LocalizedStringResource(
             "conclusions.outcome.against",
-            defaultValue: "counts against",
-            comment: "Auto-reconciler outcome: a negative record that counts against a value"
+            defaultValue: "disagrees · did not eliminate",
+            comment: "Auto-reconciler outcome of a negative record that eliminated nothing; it still counts against the value"
         )
 
         static let weakLowTrustSource = LocalizedStringResource(
@@ -6801,27 +6806,179 @@ enum L10n {
             comment: "Why evidence is weak: the member's Identity Claim confidence is below moderate"
         )
 
+        static let readAsNone = LocalizedStringResource(
+            "conclusions.readAs.none",
+            defaultValue: "—",
+            comment: "Why table, Read as column: the record states nothing for this field"
+        )
+
+        static let whyReadAs = LocalizedStringResource(
+            "conclusions.why.readAs",
+            defaultValue: "Read as",
+            comment: "Why table column heading: what the record says"
+        )
+
+        static let whySource = LocalizedStringResource(
+            "conclusions.why.source",
+            defaultValue: "Source",
+            comment: "Why table column heading: the Source the record is cited under"
+        )
+
+        static let whyOutcome = LocalizedStringResource(
+            "conclusions.why.outcome",
+            defaultValue: "Outcome",
+            comment: "Why table column heading: what the auto-reconciler did with the record"
+        )
+
+        static let whyButton = LocalizedStringResource(
+            "conclusions.why.button",
+            defaultValue: "Why",
+            comment: "Button on a Conclusion field that shows the records behind its value"
+        )
+
+        static let personDetails = LocalizedStringResource(
+            "conclusions.person.details",
+            defaultValue: "Details",
+            comment: "Section heading over a Person's fields"
+        )
+
+        static let personNoLikeness = LocalizedStringResource(
+            "conclusions.person.noLikeness",
+            defaultValue: "No likeness recorded",
+            comment: "Accessibility label of the empty portrait slot on a Person page"
+        )
+
+        static let personBornAbbr = LocalizedStringResource(
+            "conclusions.person.born",
+            defaultValue: "b.",
+            comment: "Abbreviation before a Person's birth date and place in the page header"
+        )
+
+        static let personDiedAbbr = LocalizedStringResource(
+            "conclusions.person.died",
+            defaultValue: "d.",
+            comment: "Abbreviation before a Person's death date and place in the page header"
+        )
+
+        static let personDateUnknown = LocalizedStringResource(
+            "conclusions.person.dateUnknown",
+            defaultValue: "date unknown",
+            comment: "Page header: the Person's birth or death date is not known"
+        )
+
+        static let personPlaceUnknown = LocalizedStringResource(
+            "conclusions.person.placeUnknown",
+            defaultValue: "place unknown",
+            comment: "Page header: the Person's birth or death place is not known"
+        )
+
+        static let personBirthDate = LocalizedStringResource(
+            "conclusions.person.birthDate",
+            defaultValue: "Birth date",
+            comment: "Row label on a Person page"
+        )
+
+        static let personBirthPlace = LocalizedStringResource(
+            "conclusions.person.birthPlace",
+            defaultValue: "Birth place",
+            comment: "Row label on a Person page"
+        )
+
+        static let personDeathDate = LocalizedStringResource(
+            "conclusions.person.deathDate",
+            defaultValue: "Death date",
+            comment: "Row label on a Person page"
+        )
+
+        static let personDeathPlace = LocalizedStringResource(
+            "conclusions.person.deathPlace",
+            defaultValue: "Death place",
+            comment: "Row label on a Person page"
+        )
+
+        static let emptyName = LocalizedStringResource(
+            "conclusions.empty.name",
+            defaultValue: "No name recorded",
+            comment: "Empty Name row on a Person page"
+        )
+
+        static let emptySexAtBirth = LocalizedStringResource(
+            "conclusions.empty.sexAtBirth",
+            defaultValue: "No sex at birth recorded",
+            comment: "Empty Sex at birth row on a Person page"
+        )
+
+        static let emptyBirthDate = LocalizedStringResource(
+            "conclusions.empty.birthDate",
+            defaultValue: "No birth date recorded",
+            comment: "Empty Birth date row on a Person page"
+        )
+
+        static let emptyBirthPlace = LocalizedStringResource(
+            "conclusions.empty.birthPlace",
+            defaultValue: "No birth place recorded",
+            comment: "Empty Birth place row on a Person page"
+        )
+
+        static let emptyDeathDate = LocalizedStringResource(
+            "conclusions.empty.deathDate",
+            defaultValue: "No death date recorded",
+            comment: "Empty Death date row on a Person page"
+        )
+
+        static let emptyDeathPlace = LocalizedStringResource(
+            "conclusions.empty.deathPlace",
+            defaultValue: "No death place recorded",
+            comment: "Empty Death place row on a Person page"
+        )
+
+        static let a11yConcluded = LocalizedStringResource(
+            "conclusions.a11y.concluded",
+            defaultValue: "concluded",
+            comment: "VoiceOver state of a concluded Conclusion field"
+        )
+
+        static let a11yBorn = LocalizedStringResource(
+            "conclusions.a11y.born",
+            defaultValue: "Born",
+            comment: "VoiceOver word before a Person's birth date and place"
+        )
+
+        static let a11yDied = LocalizedStringResource(
+            "conclusions.a11y.died",
+            defaultValue: "Died",
+            comment: "VoiceOver word before a Person's death date and place"
+        )
+
         static func sourceCount(_ count: Int) -> String {
             L10n.format(LocalizedStringResource(
                 "conclusions.sourceCount",
                 defaultValue: "%lld Sources",
-                comment: "Conclusion field state line: how many Sources support the shown value; argument is the count"
+                comment: "How many Sources support a value; argument is the count"
             ), count)
         }
 
-        static func stateMerged(sourceCount: Int) -> String {
+        static func againstCount(_ count: Int) -> String {
             L10n.format(LocalizedStringResource(
-                "conclusions.state.merged",
-                defaultValue: "merged · %@",
-                comment: "Conclusion field state line when several Sources agree on the shown value; argument is the Source count text"
-            ), Self.sourceCount(sourceCount))
+                "conclusions.againstCount",
+                defaultValue: "%lld records disagree",
+                comment: "Negative records that count against a Conclusion field's value; argument is the count"
+            ), count)
         }
 
-        static func additionalValues(_ count: Int) -> String {
+        static func otherValues(_ count: Int) -> String {
             L10n.format(LocalizedStringResource(
-                "conclusions.additionalValues",
-                defaultValue: "+%lld",
-                comment: "Badge after a Conclusion field's first value: how many more values are shown"
+                "conclusions.otherValues",
+                defaultValue: "%lld other values",
+                comment: "Button on a mixed Conclusion field that shows its other values; argument is how many"
+            ), count)
+        }
+
+        static func memberCount(_ count: Int) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.memberCount",
+                defaultValue: "%lld members",
+                comment: "Page header: how many Subjects are members of this handle; argument is the count"
             ), count)
         }
 
@@ -6833,6 +6990,14 @@ enum L10n {
             ), value)
         }
 
+        static func outcomeOutvotedBy(_ support: Int, sources: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.outcome.outvotedBy",
+                defaultValue: "outvoted (%1$lld of %2$@)",
+                comment: "Auto-reconciler outcome: a majority read otherwise; arguments are the winning value's Source count and every voting Source as text (e.g. 3 Sources)"
+            ), support, sources)
+        }
+
         static func outcomeWeakBecause(_ causes: String) -> String {
             L10n.format(LocalizedStringResource(
                 "conclusions.outcome.weakBecause",
@@ -6841,11 +7006,99 @@ enum L10n {
             ), causes)
         }
 
-        static func outcomeDeniedBy(_ ref: String) -> String {
+        static func outcomeDeniedBy(_ source: String) -> String {
             L10n.format(LocalizedStringResource(
                 "conclusions.outcome.deniedBy",
                 defaultValue: "denied by %@",
-                comment: "Auto-reconciler outcome: a stronger negative record says the value is wrong; argument is that record's ref"
+                comment: "Auto-reconciler outcome: a stronger negative record says the value is wrong; argument is that record's Source"
+            ), source)
+        }
+
+        static func readAsNot(_ value: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.readAs.not",
+                defaultValue: "not %@",
+                comment: "Why table, Read as column: a negative record saying the value is not this; argument is the value"
+            ), value)
+        }
+
+        static func whyTitle(_ value: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.why.title",
+                defaultValue: "Why “%@”",
+                comment: "Heading of the records behind a value; argument is the value"
+            ), value)
+        }
+
+        static func whyRecords(_ label: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.why.records",
+                defaultValue: "Records considered for %@",
+                comment: "VoiceOver label of the records behind a field; argument is the field label"
+            ), label)
+        }
+
+        static func otherValuesList(_ label: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.otherValues.list",
+                defaultValue: "Other values of %@",
+                comment: "VoiceOver label of a mixed field's other values; argument is the field label"
+            ), label)
+        }
+
+        static func a11ySingle(_ sources: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.a11y.single",
+                defaultValue: "single, %@",
+                comment: "VoiceOver state of a field with one value from one Source; argument is the Source count text"
+            ), sources)
+        }
+
+        static func a11yMerged(_ sources: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.a11y.merged",
+                defaultValue: "merged from %@",
+                comment: "VoiceOver state of a field whose value several Sources agree on; argument is the Source count text"
+            ), sources)
+        }
+
+        static func a11yMixed(_ sources: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.a11y.mixed",
+                defaultValue: "mixed from %@",
+                comment: "VoiceOver state of a field showing several values; argument is the Source count text"
+            ), sources)
+        }
+
+        static func a11yEmpty(_ label: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.a11y.empty",
+                defaultValue: "%@, empty",
+                comment: "VoiceOver label of an empty field; argument is the field label"
+            ), label)
+        }
+
+        static func a11yList(_ first: String, rest: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.a11y.list",
+                defaultValue: "%1$@, %2$@",
+                comment: "Joins two parts of a spoken Conclusion field (label, value, state, disagreement)"
+            ), first, rest)
+        }
+
+        static func a11yVital(_ word: String, date: String, place: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.a11y.vital",
+                defaultValue: "%1$@ %2$@, %3$@",
+                comment: "VoiceOver for a Person header line; arguments are Born/Died, the date, and the place"
+            ), word, date, place)
+        }
+
+        static func a11yRef(_ ref: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.a11y.ref",
+                defaultValue: "Reference %@",
+                comment: "VoiceOver label of a handle's ref (PER-…)"
             ), ref)
         }
     }
