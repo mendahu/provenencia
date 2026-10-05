@@ -1614,30 +1614,6 @@
         }
       }
     },
-    "deleteImpact.kind.samenessClaim.one": {
-      "comment": "Singular reserved Impact kind noun",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "sameness claim"
-          }
-        }
-      }
-    },
-    "deleteImpact.kind.samenessClaim.other": {
-      "comment": "Plural reserved Impact kind noun",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "sameness claims"
-          }
-        }
-      }
-    },
     "deleteImpact.kind.source.one": {
       "comment": "Singular Impact kind noun",
       "extractionState": "manual",

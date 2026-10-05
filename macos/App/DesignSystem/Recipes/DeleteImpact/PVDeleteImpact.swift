@@ -558,12 +558,12 @@ enum PVDeleteImpactPreviewData {
         gate: .inbound,
         groups: [
             CatalogDeleteImpactGroup(
-                via: "sameness_claim_evidence.observation_id",
-                kind: "sameness_claim",
+                via: "narrative_citations.citation_id",
+                kind: "narrative",
                 total: 2,
                 listed: [
-                    listed(ref: "CLM-3JQ8", title: "Same as Thomas Hartley of Leeds"),
-                    listed(ref: "CLM-3JQ9", title: "Same as Thos. Hartley, 1881 census"),
+                    listed(ref: "NAR-3JQ8", title: "The Hartleys of Leeds"),
+                    listed(ref: "NAR-3JQ9", title: "Thomas Hartley, miller"),
                 ]
             ),
         ]

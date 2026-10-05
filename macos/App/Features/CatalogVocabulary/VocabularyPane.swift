@@ -2,7 +2,7 @@ import Foundation
 
 /// A row in one of the project's catalog vocabularies (`source_types`,
 /// `source_metadata_fields`). The two vocabulary destinations browse and
-/// count their rows identically; this is the shape that sameness hangs off.
+/// count their rows identically; this is the shape that shared browsing hangs off.
 /// Find lives in the workspace omnibar (S3-10).
 protocol CatalogVocabularyRow: Identifiable where ID == String {
     var id: String { get }
