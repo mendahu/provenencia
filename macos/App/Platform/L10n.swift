@@ -6872,6 +6872,12 @@ enum L10n {
             comment: "Page header: the Person's birth or death place is not known"
         )
 
+        static let personName = LocalizedStringResource(
+            "conclusions.person.name",
+            defaultValue: "Name",
+            comment: "Row label on a Person page"
+        )
+
         static let personBirthDate = LocalizedStringResource(
             "conclusions.person.birthDate",
             defaultValue: "Birth date",

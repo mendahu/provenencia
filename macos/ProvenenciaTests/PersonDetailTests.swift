@@ -33,18 +33,26 @@ struct PersonDetailTests {
             == .content(content, refreshing: true))
     }
 
-    @Test func rowsAreNameThenLifeThenOtherBoundFields() {
-        let content = PersonDetailContent(detail: detail(extra: [D.field("", key: "occupation", label: "Occupation", valueType: "text")]))
+    /// Name and the life rows always show; any other field only once a
+    /// record speaks to it.
+    @Test func rowsAreNameThenLifeThenRecordedFields() {
+        let weak = D.outcome("w", "weak", rank: 1, recorded: .integer(8))
+        let content = PersonDetailContent(detail: detail(extra: [
+            D.field("", key: "occupation", label: "Occupation", valueType: "text", outcomes: [D.outcome("o", "no_evidence", rank: nil)]),
+            D.field("single", key: "birth_weight", label: "Birth weight", valueType: "integer", [D.value(1, "weak", .integer(8))], outcomes: [weak]),
+            D.field("", key: "height", label: "Height", valueType: "integer"),
+        ]))
+        // Sex at birth and Height have no records, so they don't show.
         #expect(content.rows.map(\.label) == [
-            "Name", "Birth date", "Birth place", "Death date", "Death place", "Sex at birth", "Occupation",
+            "Name", "Birth date", "Birth place", "Death date", "Death place", "Occupation", "Birth weight",
         ])
         #expect(content.rows[1...4].map(\.style) == [.date, .place, .date, .place])
         #expect(content.rows[1...4].map(\.emptyText) == [
             "No birth date recorded", "No birth place recorded", "No death date recorded", "No death place recorded",
         ])
         #expect(content.rows[1...4].allSatisfy { $0.lead == nil && $0.records.isEmpty && $0.count == nil })
-        #expect(content.rows[5].emptyText == "No sex at birth recorded")
-        #expect(content.rows[6].emptyText == "Nothing recorded")
+        // A recorded field with nothing to show says so, and keeps its Why.
+        #expect(content.rows[5].lead == nil && content.rows[5].emptyText == "Nothing recorded" && content.rows[5].records.count == 1)
     }
 
     @Test func aMergedNameRowCarriesItsStateAndWhy() {
@@ -80,7 +88,10 @@ struct PersonDetailTests {
         #expect(labelled.title == .label("Grandpa") && labelled.showsRef && labelled.members == "1 member")
         let bare = PersonDetailContent(detail: detail(name: nil, members: 1))
         #expect(bare.title == .ref("PER-7KD45") && !bare.showsRef)
-        #expect(bare.rows.first?.label == "Birth date")
+        // No name field at all: the Name row still shows, empty.
+        #expect(bare.rows.first?.label == "Name" && bare.rows.first?.lead == nil)
+        #expect(bare.rows.first?.emptyText == "No name recorded")
+        #expect(bare.rows.first?.accessibilityLabel == "Name, empty")
     }
 
     @Test func vitalsSayUnknownUntilLifeEventsArrive() {

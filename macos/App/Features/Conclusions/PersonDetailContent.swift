@@ -53,12 +53,18 @@ struct PersonDetailContent: Equatable {
         rows = Self.rows(detail.fields, locale: locale)
     }
 
-    /// Name, then the four life rows (stated empty until S9-32), then every
-    /// other bound field in binding order.
+    /// A Person always shows its name and four life rows, stated empty when
+    /// nothing is recorded. Every other field shows only once a record
+    /// speaks to it (sex at birth, a custom birth weight), in binding order.
     static func rows(_ fields: [CatalogConclusionField], locale: Locale) -> [ReconciledValueRowModel] {
         var rows: [ReconciledValueRowModel] = []
         if let name = fields.first(where: { $0.propertyKey == "name" }) {
             rows.append(ReconciledValueRowModel(field: name, locale: locale))
+        } else {
+            rows.append(.empty(
+                id: "name", label: L10n.string(L10n.Conclusions.personName), style: .text,
+                emptyText: L10n.string(L10n.Conclusions.emptyName)
+            ))
         }
         let life: [(String, LocalizedStringResource, LocalizedStringResource, ReconciledValueRowModel.ValueStyle)] = [
             ("life.birthDate", L10n.Conclusions.personBirthDate, L10n.Conclusions.emptyBirthDate, .date),
@@ -69,7 +75,7 @@ struct PersonDetailContent: Equatable {
         for (id, label, empty, style) in life {
             rows.append(.empty(id: id, label: L10n.string(label), style: style, emptyText: L10n.string(empty)))
         }
-        for field in fields where field.propertyKey != "name" {
+        for field in fields where field.propertyKey != "name" && !field.outcomes.isEmpty {
             rows.append(ReconciledValueRowModel(field: field, locale: locale))
         }
         return rows

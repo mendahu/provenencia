@@ -741,12 +741,13 @@ Opening a Person now shows their page: every field with its value, how the evide
   - `autoreconcile.Outcome.Vote` records the winning value's Sources of every Source that voted on that unit (for a name, the part it lost on);
   - migration **000041** stores it (`vote_support`, `vote_total` on `auto_reconciler_outcomes`), and cache version **10** rebuilds on open.
 - **The detail read:**
+  - fields come from the handle's own cache rows (the Properties its records speak to), not from every Property its kind could have, so an unrecorded Property is never read;
   - each outcome carries its Artifact and vote;
   - the detail carries the accepted member count (one more query, still constant).
 - **The page** (`Features/Conclusions/`):
   - `PersonDetailView` replaces the stub on `PlaceID.personDetail`;
   - the header follows the board;
-  - under *Details*: Name, the four life rows (empty until S9-32), then every other bound field (Sex at birth);
+  - under *Details*, Name and the four life rows always show, stated empty when nothing is recorded (the life rows until S9-32). Every other field (sex at birth, a custom birth weight) shows only once a record speaks to it, in binding order;
   - each field is a `ReconciledValueRow`, its Why a `ReconciliationReasoningView` of `ReconciliationOutcome`s;
   - a Why record's Source opens that Citation in the composer with its Observation in focus; Back returns to the Person.
   - `PersonDetailContent` and `ReconciledValueDisplay` hold all the wording and are unit-tested; the views only lay it out.

@@ -193,11 +193,29 @@ func TestForEntity(t *testing.T) {
 		t.Fatalf("outcome order %+v", name.Outcomes)
 	}
 
-	if sex := field(d, "sex_at_birth"); sex.State != autoreconcile.StateEmpty || len(sex.Values) != 0 || len(sex.Outcomes) != 0 {
-		t.Fatalf("empty field %+v", sex)
+	// Only Properties the records speak to: sex at birth is bound to Person
+	// but nobody recorded it, so it isn't read.
+	if len(d.Fields) != 1 || d.Fields[0].PropertyKey != "name" {
+		t.Fatalf("fields %+v", d.Fields)
 	}
-	if d.Fields[0].PropertyKey != "name" {
-		t.Fatalf("binding order: first field %q", d.Fields[0].PropertyKey)
+}
+
+// A field appears once a record speaks to it, in the kind's binding order.
+func TestForEntityFieldsFollowTheRecords(t *testing.T) {
+	f := newFixture(t)
+	a, b := f.personOn(f.source("Register")), f.personOn(f.source("Census"))
+	f.cite(a, observations.Input{SubjectID: a.ID, PropertyID: f.sex.ID, ValueTermID: termID(t, f, "male")})
+	f.cite(a, f.nameIn(a, "given=James|surname=Robins"))
+	h := f.promote(a, nil)
+	if d := f.detail(h); len(d.Fields) != 2 || d.Fields[0].PropertyKey != "name" || d.Fields[1].PropertyKey != "sex_at_birth" {
+		t.Fatalf("binding order %+v", d.Fields)
+	}
+
+	// Another Person with no sex recorded has no sex field.
+	f.cite(b, f.nameIn(b, "given=James|surname=Robins"))
+	g := f.promote(b, nil)
+	if d := f.detail(g); len(d.Fields) != 1 {
+		t.Fatalf("no sex recorded: %+v", d.Fields)
 	}
 }
 

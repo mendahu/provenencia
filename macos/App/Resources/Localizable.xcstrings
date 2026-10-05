@@ -16219,6 +16219,18 @@
           }
         }
       }
+    },
+    "conclusions.person.name": {
+      "comment": "Row label on a Person page",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Name"
+          }
+        }
+      }
     }
   },
   "version": "1.1"

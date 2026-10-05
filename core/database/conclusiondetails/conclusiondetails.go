@@ -1,12 +1,15 @@
 // Package conclusiondetails composes the detail of one canonical handle — a
 // Person now, Events and Places later — from the auto-reconciler cache
-// (Spike 9 R6). For every Property bound to the handle's kind it returns the
-// state, every auto-reconciled value (displayed or not, with its reason), and
-// the auto-reconciler's outcome for each Observation it considered, joined to
-// the record's Source: the "Why" a detail page shows.
+// (Spike 9 R6). For every Property its members' records speak to, it returns
+// the state, every auto-reconciled value (displayed or not, with its reason),
+// and the auto-reconciler's outcome for each Observation it considered,
+// joined to the record's Source: the "Why" a detail page shows.
 //
-// Composed at read time, never stored, in a fixed number of queries whatever
-// the number of Properties. Go returns structures; the app formats text.
+// Fields come from the handle's own cache rows, never from the Properties
+// its kind could have: a Property no record mentions isn't read or returned.
+// Which empty fields a page still shows (a Person's name and life rows) is
+// the page's choice. Composed at read time, never stored, in a fixed number
+// of queries whatever the number of Properties. Go returns structures; the app formats text.
 // Reconciliation Claims are never in these tables: when they ship, a
 // composer lays an accepted claim over the auto-reconciled value here.
 package conclusiondetails
@@ -99,11 +102,14 @@ type Detail struct {
 }
 
 const (
+	// The Properties this handle's records speak to (every considered
+	// Observation has an outcome row), in the kind's binding order.
 	sqlProperties = `SELECT p.id, p.key, p.label, p.value_type
-		FROM subject_type_properties stp
-		JOIN properties p ON p.id = stp.property_id
-		WHERE stp.subject_type_id = ? AND p.value_type <> 'subject'
-		ORDER BY stp.sort_order, p.key`
+		FROM (SELECT DISTINCT property_id FROM auto_reconciler_outcomes WHERE entity_id = ?) ao
+		JOIN properties p ON p.id = ao.property_id
+		LEFT JOIN subject_type_properties stp ON stp.property_id = p.id AND stp.subject_type_id = ?
+		WHERE p.value_type <> 'subject'
+		ORDER BY stp.sort_order IS NULL, stp.sort_order, p.key`
 
 	sqlValues = `SELECT v.property_id, v.rank, v.value_text, v.value_integer, v.value_term_id,
 			COALESCE(t.key, ''), COALESCE(t.label, ''), v.value_date, v.value_name,
@@ -158,7 +164,7 @@ func ForEntity(q Querier, entityID []byte) (Detail, error) {
 		return Detail{}, err
 	}
 
-	fields, byProp, err := loadProperties(q, e.SubjectTypeID)
+	fields, byProp, err := loadProperties(q, entityID, e.SubjectTypeID)
 	if err != nil {
 		return Detail{}, err
 	}
@@ -221,8 +227,8 @@ func state(values []ReconciledValue) autoreconcile.State {
 	}
 }
 
-func loadProperties(q Querier, subjectTypeID []byte) ([]*Field, map[string]*Field, error) {
-	rows, err := q.Query(sqlProperties, subjectTypeID)
+func loadProperties(q Querier, entityID, subjectTypeID []byte) ([]*Field, map[string]*Field, error) {
+	rows, err := q.Query(sqlProperties, entityID, subjectTypeID)
 	if err != nil {
 		return nil, nil, err
 	}
