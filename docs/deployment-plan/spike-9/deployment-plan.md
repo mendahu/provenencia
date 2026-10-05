@@ -453,8 +453,8 @@ In order; each brief sits just above the PR it gates.
 - [x] S9-34a — Handle search from cached values + kinds filter → [`completed.md`](completed.md)
 - [x] ✎ S9-D9 — Design: Promote shell + choose target → [`completed.md`](completed.md)
 - [x] S9-11 — Promote shell + choose target → [`completed.md`](completed.md)
-- [ ] ✎ S9-D10 — Design: Promote claim fields
-- [ ] S9-12 — Promote claim fields + save
+- [x] ✎ S9-D10 — Design: Promote claim fields → [`completed.md`](completed.md)
+- [x] S9-12 — Promote claim fields + save → [`completed.md`](completed.md)
 - [ ] S9-13 — Name auto-reconciler
 - [ ] S9-14 — Provenance ranking + polarity
 - [ ] S9-15 — Detail composer + detail read
@@ -645,7 +645,7 @@ Researcher's decision while revising **S9-D1**: two configuration views get plai
 
 **Done.** See [`completed.md`](completed.md#s9-11--promote-shell--choose-target). Brief archived: [`design/archive/S9-D9-promote-target.md`](design/archive/S9-D9-promote-target.md). Promote is a workspace place (`SourceSurface.promote`, `PromoteView` / `PromoteModel` in `Features/Promote/`).
 - **The flow is a state machine:** `PromoteFlow` (`Features/Promote/PromoteFlow.swift`) is the single source of truth for steps, the draft, writes in flight, the leave guard and the walk. `PromoteModel` sends it events and runs the effects it returns. A new step is a case on `PromoteStep`, its screen, and its draft fields; it isn't new plumbing.
-- **S9-12:** add `.claim` to `PromoteStep.built`, its screen, and read `confidenceGradeID` / `argument` from `PromoteFlow.Draft` (already sent in the save). Grades come from `listClaimConfidenceGrades`. Restore the board's footer hints ("A new Person goes straight to its claim fields").
+- **S9-12:** done; see [S9-12](#s9-12--promote-claim-fields--save).
 - **S9-19:** add `.compare` to `PromoteStep.built` and its screen; confirmed pairs go on the draft. Restore the board's hint ("James Robins will be compared with the 2 members of PER-…").
 - **S9-29 / S9-30:** the walk is `PromoteFlow.enqueue` (a queue of subjects; after each save the flow moves to the next subject and `savedCount` counts them). Add the "Related to {ref}" group (frame 06), the "N saved" badge and the walk sentence in the leave guard.
 - **S9-32:** life years and places in the candidate rows (`PromoteCandidateRow`) and the search rows (`PromoteSearchRow`), both in `Features/Promote`.
@@ -656,6 +656,15 @@ Researcher's decision while revising **S9-D1**: two configuration views get plai
 | **Depends on** | **S9-D9**, S9-04, S9-10, S9-34a |
 
 #### S9-12 — Promote claim fields + save
+
+**Done.** See [`completed.md`](completed.md#s9-12--promote-claim-fields--save). Brief archived: [`design/archive/S9-D10-promote-claim-fields.md`](design/archive/S9-D10-promote-claim-fields.md). The claim step is `PromoteClaimStep`; the footer reads only `PromoteFlow.controls`.
+- **S9-19:**
+  - add `.compare` to `PromoteStep.built`, plus its screen and its `Edit` cases; Back, Next and the step count follow on their own.
+  - Draft the join argument from confirmed pairs, with the hint "Draft from your N confirmed matches · edit before saving". A changed target must clear what was drafted from it (the hook is named in `PromoteFlow`'s doc comment).
+  - Restore the summary line's Compare clause and the board's choose-target hint ("James Robins will be compared with the 2 members of PER-…").
+- **S9-17:** the summary's pins badge counts the pins on the claim (it reads "No pins" today).
+- **S9-30:** after a save, the walk moves to the next subject (`PromoteFlow` already does). Add the toast body "{next} is next in this walk", "earlier steps stay saved" in the refusal callout, and the "N saved" badge.
+- **Later spike:** Provisional and Rejected are `PromoteFlow.ClaimStatus` cases, plus engine support for writing them.
 
 | | |
 | --- | --- |
@@ -744,6 +753,7 @@ Researcher's decision while revising **S9-D1**: two configuration views get plai
 | --- | --- |
 | **In** | Event header + detail: title precedence without subjects (`event_name` → label → *Unspecified {type}* → ref), date (else span). List / detail / count FFI and keys. Swift event-title formatter (L10n templates, full matrix so S9-31 only supplies parts). |
 | **Depends on** | S9-15, S9-20, S9-21 |
+| **Note** | Promote names an Event subject by `SourceGraphPlacedSubject.displayName` (S9-12), which uses the label until now. Point its Event case at this formatter, fed from the subject's own Observations on the graph (type term, `event_name`, date), so Promote's header reads like the Event's title. |
 
 #### S9-23 — Events list
 
@@ -816,6 +826,7 @@ Researcher's decision while revising **S9-D1**: two configuration views get plai
 | --- | --- |
 | **In** | Person birth / death date and place; Event subject titles (*Birth of …*, marriage, *et al.*, *unnamed person*, *{Type} at {toponym}*) and places. Header-dependents function (reverse walk) for later reprojection. |
 | **Depends on** | S9-22, S9-25, S9-28 |
+| **Note** | Give Promote's Event name (`displayName`) the same subject parts from the graph's participation and location bridges, so a Baptism card promotes as *Baptism of James Robins* rather than its label. People are named by their own `displayName` rule (name form, then label). |
 
 #### S9-32 — Fill derived cells
 

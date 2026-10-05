@@ -45,11 +45,6 @@ struct PromoteTargetStep: View {
                 }
                 .padding(.leading, 28)
             }
-
-            if let error = model.saveError {
-                PVCallout(tone: .danger, message: error)
-                    .accessibilityIdentifier("promote.error")
-            }
         }
     }
 

@@ -1283,9 +1283,9 @@ enum L10n {
         }
         static func hintNew(_ kind: EvidencePrimaryKind) -> LocalizedStringResource {
             let resource: LocalizedStringResource = switch kind {
-            case .person: LocalizedStringResource("promote.hint.new.person", defaultValue: "A new Person is filed when you press Next", comment: "Promote footer hint for a new handle (interim until the claim step, S9-12)")
-            case .event: LocalizedStringResource("promote.hint.new.event", defaultValue: "A new Event is filed when you press Next", comment: "Promote footer hint for a new handle (interim until the claim step, S9-12)")
-            case .place: LocalizedStringResource("promote.hint.new.place", defaultValue: "A new Place is filed when you press Next", comment: "Promote footer hint for a new handle (interim until the claim step, S9-12)")
+            case .person: LocalizedStringResource("promote.hint.new.person", defaultValue: "A new Person goes straight to its claim fields", comment: "Promote footer hint for a new handle")
+            case .event: LocalizedStringResource("promote.hint.new.event", defaultValue: "A new Event goes straight to its claim fields", comment: "Promote footer hint for a new handle")
+            case .place: LocalizedStringResource("promote.hint.new.place", defaultValue: "A new Place goes straight to its claim fields", comment: "Promote footer hint for a new handle")
             }
             return resource
         }
@@ -1293,7 +1293,7 @@ enum L10n {
             L10n.format(LocalizedStringResource("promote.hint.existing", defaultValue: "%1$@ will join %2$@ and its %3$@", comment: "Promote footer hint for an existing handle (interim until compare, S9-19); 1 = subject name, 2 = handle ref, 3 = member count"), name, ref, members)
         }
         static let done = LocalizedStringResource("promote.done", defaultValue: "Done", comment: "Promote footer: leave the flow")
-        static let next = LocalizedStringResource("promote.next", defaultValue: "Next", comment: "Promote footer: save this step and continue")
+        static let next = LocalizedStringResource("promote.next", defaultValue: "Next", comment: "Promote footer: continue to the next step")
         static func leaveTitle(name: String) -> String {
             L10n.format(LocalizedStringResource("promote.leave.title", defaultValue: "Leave Promote without filing %@?", comment: "Promote leave guard title; argument is the subject's name or ref"), name)
         }
@@ -1313,6 +1313,87 @@ enum L10n {
         }
         static let leaveConfirm = LocalizedStringResource("promote.leave.confirm", defaultValue: "Leave Promote", comment: "Promote leave guard: leave")
         static let leaveCancel = LocalizedStringResource("promote.leave.cancel", defaultValue: "Keep promoting", comment: "Promote leave guard: stay")
+        static let saveAndNext = LocalizedStringResource("promote.saveAndNext", defaultValue: "Save & next", comment: "Promote footer on the last step: write the claim and continue")
+        static let saving = LocalizedStringResource("promote.saving", defaultValue: "Saving", comment: "Promote footer primary button while the claim is written")
+        static func backTo(step: String) -> String {
+            L10n.format(LocalizedStringResource("promote.backTo", defaultValue: "Back to %@", comment: "Promote footer: return to the previous step inside Promote; argument is that step's label"), step)
+        }
+        static func hintSaveNew(_ kind: EvidencePrimaryKind, name: String) -> String {
+            let resource: LocalizedStringResource = switch kind {
+            case .person: LocalizedStringResource("promote.hint.saveNew.person", defaultValue: "Saving files %@ on a new Person", comment: "Promote footer hint on the claim step for a new handle; argument is the subject's name or ref")
+            case .event: LocalizedStringResource("promote.hint.saveNew.event", defaultValue: "Saving files %@ on a new Event", comment: "Promote footer hint on the claim step for a new handle; argument is the subject's name or ref")
+            case .place: LocalizedStringResource("promote.hint.saveNew.place", defaultValue: "Saving files %@ on a new Place", comment: "Promote footer hint on the claim step for a new handle; argument is the subject's name or ref")
+            }
+            return L10n.format(resource, name)
+        }
+        static func hintSaveExisting(name: String, ref: String) -> String {
+            L10n.format(LocalizedStringResource("promote.hint.saveExisting", defaultValue: "Saving files %1$@ on %2$@", comment: "Promote footer hint on the claim step for an existing handle; 1 = subject name, 2 = handle ref"), name, ref)
+        }
+        static func hintSaving(name: String) -> String {
+            L10n.format(LocalizedStringResource("promote.hint.saving", defaultValue: "Writing the claim for %@", comment: "Promote footer hint while the claim is written; argument is the subject's name or ref"), name)
+        }
+        static let hintBlocked = LocalizedStringResource("promote.hint.blocked", defaultValue: "Nothing was written in this step", comment: "Promote footer hint after a save was refused for good")
+        static let claimSummary = LocalizedStringResource("promote.claim.summary", defaultValue: "Will write · one Identity Claim", comment: "Promote claim step: eyebrow of the card summarising the write")
+        static func claimNewRef(prefix: String) -> String {
+            L10n.format(LocalizedStringResource("promote.claim.newRef", defaultValue: "%@-…", comment: "Promote claim summary: the ref a new handle will get; argument is the kind's ref prefix (PER, EVT, PLC)"), prefix)
+        }
+        static func claimNewLine(prefix: String, name: String) -> String {
+            L10n.format(LocalizedStringResource("promote.claim.newLine", defaultValue: "The %1$@- ref is minted when this step saves · %2$@ becomes its first member", comment: "Promote claim summary line for a new handle; 1 = ref prefix (PER, EVT, PLC), 2 = subject name"), prefix, name)
+        }
+        static func claimNewLineUnprefixed(name: String) -> String {
+            L10n.format(LocalizedStringResource("promote.claim.newLineUnprefixed", defaultValue: "Its ref is minted when this step saves · %@ becomes its first member", comment: "Promote claim summary line for a new handle when the ref prefix is unknown; argument is the subject name"), name)
+        }
+        static func claimExistingLine(_ kind: EvidencePrimaryKind, members: String) -> String {
+            let resource: LocalizedStringResource = switch kind {
+            case .person: LocalizedStringResource("promote.claim.existingLine.person", defaultValue: "Existing Person · %@", comment: "Promote claim summary line for an existing handle; argument is its member count")
+            case .event: LocalizedStringResource("promote.claim.existingLine.event", defaultValue: "Existing Event · %@", comment: "Promote claim summary line for an existing handle; argument is its member count")
+            case .place: LocalizedStringResource("promote.claim.existingLine.place", defaultValue: "Existing Place · %@", comment: "Promote claim summary line for an existing handle; argument is its member count")
+            }
+            return L10n.format(resource, members)
+        }
+        static let noPins = LocalizedStringResource("promote.claim.noPins", defaultValue: "No pins", comment: "Promote claim summary badge: no confirmed matches are pinned to the claim")
+        static let statusLabel = LocalizedStringResource("promote.claim.status", defaultValue: "Status", comment: "Promote claim step: status field label")
+        static let statusHint = LocalizedStringResource("promote.claim.status.hint", defaultValue: "What you are claiming about this match", comment: "Promote claim step: status field hint")
+        static let statusAccepted = LocalizedStringResource("promote.claim.status.accepted", defaultValue: "Accepted", comment: "Promote claim status option: the subject is this handle")
+        static let confidenceLabel = LocalizedStringResource("promote.claim.confidence", defaultValue: "Confidence", comment: "Promote claim step: confidence field label")
+        static let confidenceHint = LocalizedStringResource("promote.claim.confidence.hint", defaultValue: "Optional · separate from status", comment: "Promote claim step: confidence field hint")
+        static let confidenceNone = LocalizedStringResource("promote.claim.confidence.none", defaultValue: "Not stated", comment: "Promote claim confidence option: no grade")
+        static let argumentLabel = LocalizedStringResource("promote.claim.argument", defaultValue: "Argument", comment: "Promote claim step: argument field label")
+        static func argumentHintNew(_ kind: EvidencePrimaryKind) -> LocalizedStringResource {
+            let resource: LocalizedStringResource = switch kind {
+            case .person: LocalizedStringResource("promote.claim.argument.hintNew.person", defaultValue: "Optional · nothing to draft from, a new Person has no members to compare", comment: "Promote claim argument hint for a new handle")
+            case .event: LocalizedStringResource("promote.claim.argument.hintNew.event", defaultValue: "Optional · nothing to draft from, a new Event has no members to compare", comment: "Promote claim argument hint for a new handle")
+            case .place: LocalizedStringResource("promote.claim.argument.hintNew.place", defaultValue: "Optional · nothing to draft from, a new Place has no members to compare", comment: "Promote claim argument hint for a new handle")
+            }
+            return resource
+        }
+        static let argumentHintExisting = LocalizedStringResource("promote.claim.argument.hintExisting", defaultValue: "Optional", comment: "Promote claim argument hint for an existing handle (until Compare drafts it, S9-19)")
+        static func argumentPrompt(_ kind: EvidencePrimaryKind) -> LocalizedStringResource {
+            let resource: LocalizedStringResource = switch kind {
+            case .person: LocalizedStringResource("promote.claim.argument.prompt.person", defaultValue: "Why this record is this Person — name, age, household, place", comment: "Promote claim argument placeholder")
+            case .event: LocalizedStringResource("promote.claim.argument.prompt.event", defaultValue: "Why this record is this Event — type, date, place, who took part", comment: "Promote claim argument placeholder")
+            case .place: LocalizedStringResource("promote.claim.argument.prompt.place", defaultValue: "Why this record is this Place — name, jurisdiction, what lies nearby", comment: "Promote claim argument placeholder")
+            }
+            return resource
+        }
+        static func blockedTitle(name: String, ref: String) -> String {
+            L10n.format(LocalizedStringResource("promote.blocked.title", defaultValue: "%1$@ is already a member of %2$@", comment: "Promote claim step callout when another window filed the subject first; 1 = subject name, 2 = handle ref"), name, ref)
+        }
+        static func blockedTitleUnknown(_ kind: EvidencePrimaryKind, name: String) -> String {
+            let resource: LocalizedStringResource = switch kind {
+            case .person: LocalizedStringResource("promote.blocked.titleUnknown.person", defaultValue: "%@ already belongs to a Person", comment: "Promote claim step callout when another window filed the subject first and the handle is not known yet; argument is the subject name")
+            case .event: LocalizedStringResource("promote.blocked.titleUnknown.event", defaultValue: "%@ already belongs to an Event", comment: "Promote claim step callout when another window filed the subject first and the handle is not known yet; argument is the subject name")
+            case .place: LocalizedStringResource("promote.blocked.titleUnknown.place", defaultValue: "%@ already belongs to a Place", comment: "Promote claim step callout when another window filed the subject first and the handle is not known yet; argument is the subject name")
+            }
+            return L10n.format(resource, name)
+        }
+        static func blockedMessage(subjectRef: String) -> String {
+            L10n.format(LocalizedStringResource("promote.blocked.message", defaultValue: "Another window filed %@ while you were on this step. Nothing was written in this step.", comment: "Promote claim step callout body when the subject was filed elsewhere; argument is the subject ref"), subjectRef)
+        }
+        static let saveFailedTitle = LocalizedStringResource("promote.saveFailed.title", defaultValue: "The claim wasn’t saved", comment: "Promote claim step callout title when a save fails and can be retried")
+        static func filedToast(name: String, ref: String) -> String {
+            L10n.format(LocalizedStringResource("promote.filed.toast", defaultValue: "%1$@ filed on %2$@", comment: "Toast after Promote files a subject; 1 = subject name, 2 = handle ref"), name, ref)
+        }
         static func breadcrumb(ref: String) -> String {
             L10n.format(LocalizedStringResource("promote.breadcrumb", defaultValue: "Promote %@", comment: "Toolbar breadcrumb for the Promote place; argument is the subject ref"), ref)
         }

@@ -11,7 +11,7 @@ enum PromoteStep: String, CaseIterable, Sendable {
     /// Steps whose screens exist. The step row shows the whole plan as
     /// designed; advancing skips steps that aren't built yet, so a later PR
     /// adds its step here and the flow starts stopping on it.
-    static let built: Set<PromoteStep> = [.chooseTarget]
+    static let built: Set<PromoteStep> = [.chooseTarget, .claim]
 
     var isBuilt: Bool { Self.built.contains(self) }
 }
@@ -28,7 +28,19 @@ enum PromoteStep: String, CaseIterable, Sendable {
 /// neighbours as they are filed). Each subject runs its *plan* — the steps
 /// its choice implies — with a draft that only becomes a write when the last
 /// built step advances. `phase` says whether input is accepted, a write is
-/// running, the leave guard is asking, or the flow is over.
+/// running, the leave guard is asking, a write was refused for good, or the
+/// flow is over.
+///
+/// **Navigation.** Moving between steps is `.advance` and `.stepBack`, and
+/// `controls` is everything the footer shows: where Back goes, whether Next
+/// moves or writes, and what is enabled. A new step is a case on
+/// `PromoteStep`, an entry in `built`, its screen, and the edits it owns
+/// (`Edit.step`) — the footer and model don't change.
+///
+/// **Draft across steps.** Back and forward keep the whole draft. Nothing is
+/// drafted from the target yet, so changing it keeps the claim fields; when
+/// Compare drafts the argument (S9-19), a changed target must clear what was
+/// drafted from it.
 struct PromoteFlow: Equatable, Sendable {
     // MARK: Types
 
@@ -53,15 +65,30 @@ struct PromoteFlow: Equatable, Sendable {
         let memberCount: Int
     }
 
+    /// The Identity Claim's status. Promote writes accepted claims only
+    /// (S9-D10); Provisional and Rejected are later cases, a data change for
+    /// the step's Select.
+    enum ClaimStatus: String, CaseIterable, Sendable {
+        case accepted
+    }
+
     /// What the researcher has entered for the current subject. Grows with
-    /// later steps (claim fields in S9-12, confirmed pairs in S9-19).
+    /// later steps (confirmed pairs in S9-19).
     struct Draft: Equatable, Sendable {
         var choice: Choice = .none
         var target: Target?
+        var status: ClaimStatus = .accepted
         var confidenceGradeID: String?
         var argument = ""
 
         var isEmpty: Bool { self == Draft() }
+    }
+
+    /// A write the engine refused for good — retrying cannot succeed.
+    struct Failure: Equatable, Sendable {
+        let message: String
+        /// The handle the subject was filed on elsewhere, once the graph shows it.
+        var filedOn: String?
     }
 
     enum Phase: Equatable, Sendable {
@@ -72,6 +99,10 @@ struct PromoteFlow: Equatable, Sendable {
         case saving(heldLeave: PendingNavigation?)
         /// The leave guard is asking about this navigation.
         case confirmingLeave(PendingNavigation)
+        /// The write was refused for good (the subject was filed elsewhere).
+        /// Nothing was written, so leaving never asks; the step stays on
+        /// screen with the reason.
+        case blocked(Failure)
         /// The flow is over; leaving never asks.
         case finished
     }
@@ -85,17 +116,37 @@ struct PromoteFlow: Equatable, Sendable {
         let argument: String
     }
 
-    enum Event: Equatable, Sendable {
+    /// An input on a step's screen. Each edit belongs to one step; `send`
+    /// ignores it anywhere else.
+    enum Edit: Equatable, Sendable {
         case choose(Choice)
         case selectTarget(Target)
+        case setConfidence(String?)
+        case setArgument(String)
+
+        var step: PromoteStep {
+            switch self {
+            case .choose, .selectTarget: .chooseTarget
+            case .setConfidence, .setArgument: .claim
+            }
+        }
+    }
+
+    enum Event: Equatable, Sendable {
+        case edit(Edit)
         /// Next: the following built step, or the write after the last one.
         case advance
-        /// Back within the flow (to the previous built step).
+        /// Back within the flow (to the previous built step). Never asks:
+        /// the draft is kept.
         case stepBack
-        case saveSucceeded
-        case saveFailed(message: String)
-        /// The subject left the graph or was promoted elsewhere.
-        case subjectUnavailable
+        /// The write landed; `entityRef` is the handle the subject is now on.
+        case saveSucceeded(entityRef: String)
+        /// The write failed. A retryable failure keeps the step editable; one
+        /// that isn't blocks it.
+        case saveFailed(message: String, retryable: Bool)
+        /// The subject left the graph or was promoted elsewhere (`filedOn`
+        /// is that handle's ref, when known).
+        case subjectUnavailable(filedOn: String?)
         /// Done: end the walk; the navigation it starts goes through the guard
         /// (`requestLeave`).
         case done
@@ -107,6 +158,8 @@ struct PromoteFlow: Equatable, Sendable {
         case save(Save)
         /// After a write: invalidate the graph and recount the sidebar.
         case refreshAfterSave
+        /// Tell the researcher a subject was filed (a toast that outlives the place).
+        case announceFiled(subjectName: String, entityRef: String)
         case navigateToGraph
         case resumeNavigation
         case cancelNavigation
@@ -119,6 +172,25 @@ struct PromoteFlow: Equatable, Sendable {
         case hold
     }
 
+    /// What the primary button does from the current step.
+    enum Advance: Equatable, Sendable {
+        /// Moves to this step.
+        case step(PromoteStep)
+        /// Writes the subject's claim.
+        case save
+    }
+
+    /// Everything the footer needs, derived in one place.
+    struct Controls: Equatable, Sendable {
+        /// Where Back goes; nil hides it.
+        var back: PromoteStep?
+        var advance: Advance
+        var canGoBack: Bool
+        var canAdvance: Bool
+        /// Step inputs are read-only (writing, refused, asking, or over).
+        var isLocked: Bool
+    }
+
     // MARK: State
 
     private(set) var queue: [Subject]
@@ -126,7 +198,7 @@ struct PromoteFlow: Equatable, Sendable {
     private(set) var draft = Draft()
     private(set) var step: PromoteStep = .chooseTarget
     private(set) var phase: Phase = .editing
-    /// The last write's failure, shown on the step until the next edit.
+    /// The last retryable write failure, shown on the step until the next edit.
     private(set) var error: String?
     /// Subjects filed in this walk.
     private(set) var savedCount = 0
@@ -158,6 +230,13 @@ struct PromoteFlow: Equatable, Sendable {
         return false
     }
 
+    var failure: Failure? {
+        if case .blocked(let failure) = phase { return failure }
+        return nil
+    }
+
+    var isBlocked: Bool { failure != nil }
+
     var pendingLeave: PendingNavigation? {
         if case .confirmingLeave(let pending) = phase { return pending }
         return nil
@@ -177,14 +256,25 @@ struct PromoteFlow: Equatable, Sendable {
         }
     }
 
-    var canAdvance: Bool { isEditing && isStepComplete }
+    var controls: Controls {
+        let back = previousBuiltStep(before: step)
+        return Controls(
+            back: back,
+            advance: nextBuiltStep(after: step).map(Advance.step) ?? .save,
+            canGoBack: isEditing && back != nil,
+            canAdvance: isEditing && isStepComplete,
+            isLocked: !isEditing
+        )
+    }
+
+    var canAdvance: Bool { controls.canAdvance }
 
     /// Leaving now would drop something the researcher entered.
     var hasUnsavedWork: Bool {
         switch phase {
         case .editing, .confirmingLeave: return !draft.isEmpty
         case .saving: return true
-        case .finished: return false
+        case .blocked, .finished: return false
         }
     }
 
@@ -194,18 +284,9 @@ struct PromoteFlow: Equatable, Sendable {
     /// don't fit the current phase are ignored (no state change, no effects).
     mutating func send(_ event: Event) -> [Effect] {
         switch (phase, event) {
-        case (.editing, .choose(let choice)):
-            guard step == .chooseTarget, draft.choice != choice else { return [] }
-            draft.choice = choice
-            if choice != .existing { draft.target = nil }
-            error = nil
-            return []
-
-        case (.editing, .selectTarget(let target)):
-            guard step == .chooseTarget else { return [] }
-            draft.choice = .existing
-            draft.target = target
-            error = nil
+        case (.editing, .edit(let edit)):
+            guard edit.step == step else { return [] }
+            apply(edit)
             return []
 
         case (.editing, .advance):
@@ -229,9 +310,12 @@ struct PromoteFlow: Equatable, Sendable {
             }
             return []
 
-        case (.saving(let held), .saveSucceeded):
+        case (.saving(let held), .saveSucceeded(let entityRef)):
             savedCount += 1
-            var effects: [Effect] = [.refreshAfterSave]
+            var effects: [Effect] = [
+                .refreshAfterSave,
+                .announceFiled(subjectName: subject.name, entityRef: entityRef),
+            ]
             if index + 1 < queue.count {
                 index += 1
                 draft = Draft()
@@ -244,10 +328,26 @@ struct PromoteFlow: Equatable, Sendable {
             effects.append(held != nil ? .resumeNavigation : .navigateToGraph)
             return effects
 
-        case (.saving(let held), .saveFailed(let message)):
-            phase = .editing
-            error = message
-            return held != nil ? [.cancelNavigation] : []
+        case (.saving(let held), .saveFailed(let message, let retryable)):
+            if retryable {
+                phase = .editing
+                error = message
+                return held != nil ? [.cancelNavigation] : []
+            }
+            // Someone else filed the subject: reload so the graph (and the
+            // callout's handle) catch up. Nothing is unsaved, so a held
+            // navigation goes ahead.
+            phase = .blocked(Failure(message: message))
+            error = nil
+            return held != nil ? [.refreshAfterSave, .resumeNavigation] : [.refreshAfterSave]
+
+        case (.blocked(var failure), .subjectUnavailable(let filedOn)):
+            // Stay on the refusal; just learn which handle it was.
+            if let filedOn, failure.filedOn != filedOn {
+                failure.filedOn = filedOn
+                phase = .blocked(failure)
+            }
+            return []
 
         case (_, .subjectUnavailable) where phase != .finished:
             let wasHolding: Bool
@@ -259,7 +359,7 @@ struct PromoteFlow: Equatable, Sendable {
             phase = .finished
             return wasHolding ? [.cancelNavigation, .navigateToGraph] : [.navigateToGraph]
 
-        case (.editing, .done), (.finished, .done):
+        case (.editing, .done), (.blocked, .done), (.finished, .done):
             return [.navigateToGraph]
 
         case (.confirmingLeave, .leaveConfirmed):
@@ -278,7 +378,7 @@ struct PromoteFlow: Equatable, Sendable {
     /// The guard's answer to a navigation away, applying it to the flow.
     mutating func requestLeave(_ pending: PendingNavigation) -> LeaveAnswer {
         switch phase {
-        case .finished:
+        case .finished, .blocked:
             return .allow
         case .editing:
             guard !draft.isEmpty else { return .allow }
@@ -304,6 +404,23 @@ struct PromoteFlow: Equatable, Sendable {
     }
 
     // MARK: Helpers
+
+    private mutating func apply(_ edit: Edit) {
+        switch edit {
+        case .choose(let choice):
+            guard draft.choice != choice else { return }
+            draft.choice = choice
+            if choice != .existing { draft.target = nil }
+        case .selectTarget(let target):
+            draft.choice = .existing
+            draft.target = target
+        case .setConfidence(let gradeID):
+            draft.confidenceGradeID = gradeID
+        case .setArgument(let argument):
+            draft.argument = argument
+        }
+        error = nil
+    }
 
     private func nextBuiltStep(after step: PromoteStep) -> PromoteStep? {
         guard let at = plan.firstIndex(of: step) else { return nil }

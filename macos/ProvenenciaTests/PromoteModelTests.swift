@@ -220,6 +220,9 @@ struct PromoteModelTests {
         #expect(counts.persons == 0)
         model.choose(.new)
         #expect(await model.next())
+        #expect(model.flow.step == .claim)
+        #expect(!store.recordedCalls.contains("promoteSubject id=sub-1"))
+        #expect(await model.next())
         #expect(store.recordedCalls.contains("promoteSubject id=sub-1"))
         #expect(store.membershipBySubject["sub-1"]?.entity.ref.hasPrefix("PER-") == true)
         #expect(counts.persons == 1)
@@ -236,6 +239,7 @@ struct PromoteModelTests {
         let (model, navigation) = makeModel(store: store)
         model.select(PromoteModel.Target(entityID: filed.entity.id, ref: filed.entity.ref, title: "James Robins", memberCount: 1))
         #expect(await model.next())
+        #expect(await model.next())
         #expect(store.recordedCalls.contains("promoteSubject id=sub-1 entity=\(filed.entity.id)"))
         #expect(store.membershipBySubject["sub-1"]?.entity.id == filed.entity.id)
         #expect(navigation.currentLocation == model.entry.graphLocation)
@@ -248,6 +252,7 @@ struct PromoteModelTests {
         #expect(await waitUntil { graph.value != nil })
         model.choose(.new)
         #expect(await model.next())
+        #expect(await model.next())
         let reloaded: QueryHandle<SourceGraphRows> = model.session.query(model.graphKey)
         #expect(await waitUntil { reloaded.value?.memberships.contains { $0.subjectID == "sub-1" } == true })
     }
@@ -258,13 +263,145 @@ struct PromoteModelTests {
         let (model, navigation) = makeModel(store: store)
         let before = navigation.currentLocation
         model.choose(.new)
+        #expect(await model.next())
         #expect(!(await model.next()))
         #expect(model.saveError?.isEmpty == false)
+        #expect(!model.isBlocked)
         #expect(model.flow.phase == .editing)
+        #expect(model.flow.step == .claim)
         #expect(model.flow.savedCount == 0)
         #expect(model.choice == .new)
         #expect(model.canAdvance)
         #expect(navigation.currentLocation == before)
+    }
+
+    // MARK: Claim fields
+
+    /// A model on the claim step of the mint path.
+    private func onClaim(_ store: FakeStore) async -> (PromoteModel, WorkspaceNavigation) {
+        let (model, navigation) = makeModel(store: store)
+        model.choose(.new)
+        _ = await model.next()
+        return (model, navigation)
+    }
+
+    @Test func claimStepReadsFromTheFlowsControls() async {
+        let (model, _) = await onClaim(makeStore())
+        #expect(model.flow.step == .claim)
+        #expect(model.stepText == L10n.Promote.stepOf(current: 2, total: 2))
+        #expect(model.nextLabel == L10n.Promote.saveAndNext)
+        #expect(model.backLabel == L10n.Promote.backTo(step: L10n.string(L10n.Promote.chooseStep(.person))))
+        #expect(model.hint == L10n.Promote.hintSaveNew(.person, name: "James Robins"))
+        model.stepBack()
+        #expect(model.flow.step == .chooseTarget)
+        #expect(model.backLabel == nil)
+        #expect(model.nextLabel == L10n.Promote.next)
+        #expect(model.choice == .new)
+    }
+
+    @Test func joinHintNamesTheHandle() async {
+        let (model, _) = makeModel(store: makeStore())
+        model.select(PromoteModel.Target(entityID: "e1", ref: "PER-1", title: "James Robins", memberCount: 2))
+        _ = await model.next()
+        #expect(model.stepText == L10n.Promote.stepOf(current: 3, total: 3))
+        #expect(model.hint == L10n.Promote.hintSaveExisting(name: "James Robins", ref: "PER-1"))
+        #expect(model.argumentHint == L10n.string(L10n.Promote.argumentHintExisting))
+        #expect(model.summaryTarget(prefix: "PER") == ("James Robins", "PER-1"))
+        #expect(model.summaryLine(prefix: "PER") == L10n.Promote.claimExistingLine(.person, members: L10n.Promote.memberOther(count: 2)))
+    }
+
+    @Test func mintSummaryUsesTheKindsRefPrefix() async {
+        let (model, _) = await onClaim(makeStore())
+        let types = PropertiesSnapshot(
+            properties: [],
+            types: [CatalogSubjectType(
+                id: "type-person", key: "person", origin: "provenencia", label: "Person",
+                description: "", refPrefix: "PER", candidateRefPrefix: "CPR"
+            )],
+            propertiesByTypeID: [:],
+            presentationsByKey: [:]
+        )
+        #expect(model.refPrefix(in: types) == "PER")
+        #expect(model.refPrefix(in: nil) == nil)
+        #expect(model.summaryTarget(prefix: "PER") == (L10n.string(L10n.Promote.newOption(.person)), "PER-…"))
+        #expect(model.summaryLine(prefix: "PER") == L10n.Promote.claimNewLine(prefix: "PER", name: "James Robins"))
+        #expect(model.summaryLine(prefix: nil) == L10n.Promote.claimNewLineUnprefixed(name: "James Robins"))
+        #expect(model.argumentHint == L10n.string(L10n.Promote.argumentHintNew(.person)))
+    }
+
+    @Test func confidenceOptionsStartWithNotStated() {
+        let options = PromoteModel.confidenceOptions([
+            CatalogClaimConfidenceGrade(id: "g3", key: "high", origin: "provenencia", label: "High", sortOrder: 3),
+            CatalogClaimConfidenceGrade(id: "g1", key: "low", origin: "provenencia", label: "Low", sortOrder: 1),
+        ])
+        #expect(options.map(\.id) == ["", "g1", "g3"])
+        #expect(options.first?.label == L10n.string(L10n.Promote.confidenceNone))
+    }
+
+    @Test func statusHasOneOptionAccepted() async {
+        let (model, _) = await onClaim(makeStore())
+        #expect(model.statusOptions.map(\.id) == ["accepted"])
+        #expect(model.statusSelection == "accepted")
+    }
+
+    @Test func saveWritesConfidenceAndArgumentAndAnnouncesIt() async {
+        let store = makeStore()
+        let (model, navigation) = await onClaim(store)
+        model.setConfidence("cg-mod")
+        model.setArgument("Same household in York")
+        #expect(model.confidenceSelection == "cg-mod")
+        model.setConfidence("")
+        #expect(model.flow.draft.confidenceGradeID == nil)
+        model.setConfidence("cg-mod")
+        #expect(await model.next())
+        let claim = store.claimBySubject["sub-1"]
+        #expect(claim?.confidenceGradeID == "cg-mod")
+        #expect(claim?.argument == "Same household in York")
+        let ref = store.membershipBySubject["sub-1"]?.entity.ref ?? ""
+        #expect(model.session.noticeToast == VocabularyToast(
+            title: L10n.Promote.filedToast(name: "James Robins", ref: ref), body: "", tone: .success
+        ))
+        #expect(navigation.currentLocation == model.entry.graphLocation)
+    }
+
+    @Test func aSubjectFiledElsewhereBlocksTheStep() async throws {
+        let store = makeStore()
+        let (model, navigation) = await onClaim(store)
+        // Another window files sub-1 first.
+        let elsewhere = try await store.promoteSubject(projectDir: projectDir, userID: "user-2", subjectID: "sub-1")
+        let here = navigation.currentLocation
+        #expect(!(await model.next()))
+        #expect(model.isBlocked)
+        #expect(model.saveError == nil)
+        #expect(!model.controls.canAdvance)
+        #expect(model.hint == L10n.string(L10n.Promote.hintBlocked))
+        #expect(model.blockedTitle == L10n.Promote.blockedTitleUnknown(.person, name: "James Robins"))
+        #expect(model.blockedMessage == L10n.Promote.blockedMessage(subjectRef: "CPR-1"))
+        // The graph catches up: the callout names the handle, and the place stays.
+        model.subjectStatusChanged(.alreadyPromoted(onto: elsewhere.entity.ref))
+        #expect(model.blockedTitle == L10n.Promote.blockedTitle(name: "James Robins", ref: elsewhere.entity.ref))
+        #expect(navigation.currentLocation == here)
+        // Done leaves without asking.
+        model.done()
+        #expect(model.pendingLeave == nil)
+        #expect(navigation.currentLocation == model.entry.graphLocation)
+    }
+
+    @Test func onlyAlreadyMemberIsFinal() {
+        #expect(!PromoteModel.isRetryable(CoreInvokeError.coded(
+            status: 1, code: "identityclaims.already_member", kind: .conflict, params: []
+        )))
+        #expect(PromoteModel.isRetryable(CoreInvokeError.coded(status: 1, code: "promote.invalid", kind: .user, params: [])))
+        #expect(PromoteModel.isRetryable(CocoaError(.fileReadUnknown)))
+    }
+
+    @Test func doneOnClaimFieldsAsks() async {
+        let (model, navigation) = await onClaim(makeStore())
+        model.done()
+        #expect(model.pendingLeave != nil)
+        model.keepPromoting()
+        #expect(model.flow.step == .claim)
+        #expect(navigation.heldNavigation == nil)
     }
 
     // MARK: Leave guard
@@ -325,17 +462,18 @@ struct PromoteModelTests {
             kind: "person"
         )
         let promoted = SourceGraphRows(sourceId: sourceID, subjects: [james], memberships: [member])
-        #expect(model.subjectStatus(rows: promoted) == .alreadyPromoted)
+        #expect(model.subjectStatus(rows: promoted) == .alreadyPromoted(onto: "PER-1"))
     }
 
     @Test func ourOwnSaveDoesNotBounceTheGraphReload() async {
         let (model, navigation) = makeModel(store: makeStore())
         model.choose(.new)
         #expect(await model.next())
+        #expect(await model.next())
         // The reloaded graph now shows the subject promoted; the flow is
         // finished, so the status change does nothing further.
         navigation.go(to: .sectionRoot(.persons))
-        model.subjectStatusChanged(.alreadyPromoted)
+        model.subjectStatusChanged(.alreadyPromoted(onto: "PER-1"))
         #expect(navigation.currentLocation == .sectionRoot(.persons))
     }
 
@@ -343,6 +481,7 @@ struct PromoteModelTests {
         let store = makeStore()
         let (model, navigation) = makeModel(store: store)
         model.choose(.new)
+        #expect(await model.next())
         store.promoteSubjectDelayNanoseconds = 50_000_000
         let writing = Task { await model.next() }
         #expect(await waitUntil { model.isSaving })

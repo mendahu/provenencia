@@ -2,7 +2,7 @@
 
 ## Status
 
-**Open.** Requirements, design track (13 briefs, one per view), and PR sequence in vertical slices (S9-01…S9-35): [`deployment-plan.md`](deployment-plan.md). Finished steps: [`completed.md`](completed.md) — S9-01…S9-11 and S9-34a (and S9-D1, S9-D2, S9-D8, S9-D9) landed.
+**Open.** Requirements, design track (13 briefs, one per view), and PR sequence in vertical slices (S9-01…S9-35): [`deployment-plan.md`](deployment-plan.md). Finished steps: [`completed.md`](completed.md) — S9-01…S9-12 and S9-34a (and S9-D1, S9-D2, S9-D8, S9-D9, S9-D10) landed.
 
 Spikes 5–8 built the Interpretation layer: Sources → Citations → Observations on Subjects, drawn on an Evidence graph. Nothing yet says *these three census lines are the same James*. Spike 9 opens the **Conclusion layer**: canonical Persons, Events, and Places assembled from Subjects through **Identity Claims**, with read-only pages that project their values.
 

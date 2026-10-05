@@ -46,12 +46,13 @@ enum PVCalloutTone {
 
 /// An inline status/explanation banner — mirrors `components/feedback/Callout.jsx`
 /// (tone-tinted fill, 3pt left rule, optional title, optional actions row under the
-/// body). `onDismiss`, `detail`, and `plain` variant remain deferred until a call
-/// site needs them.
+/// body). The title is ``PVCopy``: a catalog resource or an already formatted
+/// `String`. `onDismiss`, `detail`, and `plain` variant remain deferred until a
+/// call site needs them.
 struct PVCallout<Actions: View>: View {
     private let tone: PVCalloutTone
     private let icon: PVSymbol?
-    private let title: LocalizedStringResource?
+    private let title: Text?
     private let message: String
     private let compact: Bool
     private let actions: Actions
@@ -59,14 +60,14 @@ struct PVCallout<Actions: View>: View {
     init(
         tone: PVCalloutTone = .info,
         icon: PVSymbol? = nil,
-        title: LocalizedStringResource? = nil,
+        title: (any PVCopy)? = nil,
         message: String,
         compact: Bool = false,
         @ViewBuilder actions: () -> Actions
     ) {
         self.tone = tone
         self.icon = icon
-        self.title = title
+        self.title = title?.pvText
         self.message = message
         self.compact = compact
         self.actions = actions()
@@ -79,7 +80,7 @@ struct PVCallout<Actions: View>: View {
                 .padding(.top, 2)
             VStack(alignment: .leading, spacing: PVSpacing.space1) {
                 if let title {
-                    Text(title)
+                    title
                         .font(PVFont.display(size: compact ? PVTypeScale.h4 : PVTypeScale.h3, weight: PVFontWeight.semibold))
                         .foregroundStyle(tone.foreground)
                 }
@@ -115,7 +116,7 @@ extension PVCallout where Actions == EmptyView {
     init(
         tone: PVCalloutTone = .info,
         icon: PVSymbol? = nil,
-        title: LocalizedStringResource? = nil,
+        title: (any PVCopy)? = nil,
         message: String,
         compact: Bool = false
     ) {

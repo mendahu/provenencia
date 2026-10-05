@@ -12,6 +12,8 @@ enum PVSymbol: String {
     case chevronForward = "chevron.right"
     /// Lucide `arrow-right` — trailing jump on the Evidence graph header.
     case arrowRight = "arrow.right"
+    /// Lucide `arrow-left` — leading Back to the previous step (Promote footer).
+    case arrowLeft = "arrow.left"
     /// Lucide `git-branch` — Evidence graph jump on the Source identity header.
     case gitBranch = "arrow.triangle.branch"
     case photo = "photo"
@@ -35,6 +37,8 @@ enum PVSymbol: String {
     case account = "person.crop.circle"
     case person = "person"
     case mapPin = "mappin"
+    /// Lucide `pin` — confirmed matches pinned to a claim (Promote summary).
+    case pin = "pin"
     case sidebarToggle = "sidebar.left"
     case search = "magnifyingglass"
     case searchEmpty = "text.magnifyingglass"

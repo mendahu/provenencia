@@ -5,11 +5,11 @@
 **View:** Promote flow — choose target step (and the flow shell)  
 **Implements later as:** PR **S9-11**  
 **Depends on:** S9-10 (existing-target write + suggestions), S9-04 (card entry point)  
-**Related:** S9-D10…D12 extend this shell; conclusion model §5.3–5.4; [`deployment-plan.md`](../deployment-plan.md) R7  
-**Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)  
-**Skill:** [`add-design-brief`](../../../../.cursor/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.cursor/skills/add-ui-component/SKILL.md); [`add-workspace-place`](../../../../.cursor/skills/add-workspace-place/SKILL.md)
+**Related:** S9-D10…D12 extend this shell; conclusion model §5.3–5.4; [`deployment-plan.md`](../../deployment-plan.md) R7  
+**Design system layers:** [`docs/design-system-layers.md`](../../../../design-system-layers.md)  
+**Skill:** [`add-design-brief`](../../../../../.cursor/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../../.cursor/skills/add-ui-component/SKILL.md); [`add-workspace-place`](../../../../../.cursor/skills/add-workspace-place/SKILL.md)
 
-Paste this entire document into Claude Design as the requirements for one board/flow. Read shared product facts in [`README.md`](README.md) first.
+Paste this entire document into Claude Design as the requirements for one board/flow. Read shared product facts in [`README.md`](../README.md) first.
 
 This brief designs a **new** surface. Establish its frames here; later Spike 9 briefs extend them.
 
@@ -167,5 +167,5 @@ This table is **binding**. Instance the Ship kit rows; do not redraw them. Paths
 ## 8. Handoff
 
 1. Archive this brief under `archive/` when the board is agreed.
-2. Record in [`../completed.md`](../completed.md).
+2. Record in [`../completed.md`](../../completed.md).
 3. Implement **S9-11** against the board and inventory (kit first).

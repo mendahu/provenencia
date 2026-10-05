@@ -34,15 +34,12 @@ struct PromoteView: View {
                 currentStep: model.currentStepIndex
             )
             ScrollView {
-                PromoteTargetStep(
-                    model: model,
-                    suggestions: model.session.queryHandle(model.suggestionsKey)
-                )
-                .frame(maxWidth: 700, alignment: .leading)
-                .padding(.horizontal, PVSpacing.space10)
-                .padding(.top, 28)
-                .padding(.bottom, PVSpacing.space8)
-                .frame(maxWidth: .infinity, alignment: .leading)
+                stepScreen
+                    .frame(maxWidth: 700, alignment: .leading)
+                    .padding(.horizontal, PVSpacing.space10)
+                    .padding(.top, 28)
+                    .padding(.bottom, PVSpacing.space8)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
             footer
         }
@@ -64,6 +61,8 @@ struct PromoteView: View {
         .task {
             let _: QueryHandle<SourceGraphRows> = model.session.query(model.graphKey)
             let _: QueryHandle<[CatalogPromoteTargetSuggestion]> = model.session.query(model.suggestionsKey)
+            let _: QueryHandle<[CatalogClaimConfidenceGrade]> = model.session.query(model.confidenceKey)
+            let _: QueryHandle<PropertiesSnapshot> = model.session.query(model.propertiesKey)
         }
         .pvConfirm(
             item: leaveBinding,
@@ -83,8 +82,39 @@ struct PromoteView: View {
         .accessibilityIdentifier("workspace.destination.promote")
     }
 
+    /// The current step's screen; the flow decides which step that is.
+    @ViewBuilder
+    private var stepScreen: some View {
+        switch model.flow.step {
+        case .chooseTarget:
+            PromoteTargetStep(
+                model: model,
+                suggestions: model.session.queryHandle(model.suggestionsKey)
+            )
+        case .claim:
+            PromoteClaimStep(
+                model: model,
+                grades: model.session.queryHandle(model.confidenceKey),
+                properties: model.session.queryHandle(model.propertiesKey)
+            )
+        case .compare:
+            // Not built until S9-19; the flow never stops here.
+            EmptyView()
+        }
+    }
+
+    /// Back, the hint, Done and Next. Everything here reads `model.controls`
+    /// (from the flow), never the step itself.
     private var footer: some View {
-        HStack(spacing: PVSpacing.space6) {
+        let controls = model.controls
+        return HStack(spacing: PVSpacing.space6) {
+            if let backLabel = model.backLabel {
+                PVButton(backLabel, variant: .ghost, icon: .arrowLeft) {
+                    model.stepBack()
+                }
+                .disabled(!controls.canGoBack)
+                .accessibilityIdentifier("promote.back")
+            }
             Text(verbatim: model.hint)
                 .font(PVFont.body(size: PVTypeScale.caption, italic: true))
                 .foregroundStyle(PVColor.textMuted)
@@ -94,11 +124,12 @@ struct PromoteView: View {
             PVButton(L10n.Promote.done, variant: .secondary) {
                 model.done()
             }
+            .disabled(model.isSaving)
             .accessibilityIdentifier("promote.done")
-            PVButton(L10n.Promote.next, variant: .primary, iconRight: .arrowRight, loading: model.isSaving) {
+            PVButton(model.nextLabel, variant: .primary, iconRight: .arrowRight, loading: model.isSaving) {
                 Task { await model.next() }
             }
-            .disabled(!model.canAdvance)
+            .disabled(!controls.canAdvance)
             .accessibilityIdentifier("promote.next")
         }
         .padding(.horizontal, PVSpacing.space10)

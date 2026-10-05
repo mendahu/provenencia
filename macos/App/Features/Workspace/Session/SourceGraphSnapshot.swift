@@ -28,6 +28,33 @@ struct SourceGraphPlacedSubject: Identifiable, Sendable, Equatable {
     var observations: [CatalogObservation] = []
     /// The handle this subject belongs to (accepted Identity Claim), or nil.
     var membership: CatalogSubjectMembership?
+
+    /// What the subject is called where it is promoted: its first asserted
+    /// naming Observation (a Person's `name` form, a Place's `toponym`), else
+    /// its working label, else its ref. Events use the label until the event
+    /// title formatter (S9-22) and its participants (S9-31) exist.
+    var displayName: String {
+        if let named = observations.lazy.compactMap(Self.namingValue(for: kind)).first {
+            return named
+        }
+        let label = subject.label.trimmingCharacters(in: .whitespacesAndNewlines)
+        return label.isEmpty ? subject.ref : label
+    }
+
+    /// The value of an asserted Observation that names a subject of this kind.
+    private static func namingValue(for kind: EvidencePrimaryKind) -> (CatalogObservation) -> String? {
+        { observation in
+            guard observation.polarity != "negative" else { return nil }
+            let value: String
+            switch (kind, observation.propertyKey) {
+            case (.person, "name"): value = observation.nameForm
+            case (.place, "toponym"): value = observation.valueText
+            default: return nil
+            }
+            let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+            return trimmed.isEmpty ? nil : trimmed
+        }
+    }
 }
 
 /// A bridge subject with position and provisional endpoint ids (S6-04).

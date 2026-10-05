@@ -75,6 +75,12 @@ struct CatalogQueryRegistry: Sendable {
             invalidateOn: []
         ),
         Spec(
+            kind: .confidenceGradesList,
+            stalePolicy: .sessionFresh,
+            // Seeded vocabulary with no CRUD surface, so nothing stales it.
+            invalidateOn: []
+        ),
+        Spec(
             kind: .sourceWorkspace,
             stalePolicy: .sessionFresh,
             // Vocabulary lists are no longer folded in here, so plain
@@ -168,6 +174,8 @@ struct CatalogQueryRegistry: Sendable {
             return try await store.listMetadataFields(projectDir: project.projectDir)
         case .credibilityGradesList(let project):
             return try await store.listSourceCredibilityGrades(projectDir: project.projectDir)
+        case .confidenceGradesList(let project):
+            return try await store.listClaimConfidenceGrades(projectDir: project.projectDir)
         case .sourceWorkspace(let project, let sourceId):
             return try await store.getSourceWorkspace(projectDir: project.projectDir, sourceID: sourceId)
         case .typeSuggestions(let project, let typeId):
@@ -263,6 +271,8 @@ private extension CatalogQueryKey.Kind {
             return .key(.metadataFieldsList(project: project))
         case .credibilityGradesList:
             return .key(.credibilityGradesList(project: project))
+        case .confidenceGradesList:
+            return .key(.confidenceGradesList(project: project))
         case .sourceWorkspace:
             switch mutation {
             case .mutatedSourceWorkspace(let sourceId), .mutatedSourceMetadata(let sourceId),

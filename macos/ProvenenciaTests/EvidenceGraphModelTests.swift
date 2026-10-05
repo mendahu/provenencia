@@ -1420,6 +1420,43 @@ struct EvidenceGraphModelTests {
         #expect(!store.recordedCalls.contains { $0.hasPrefix("promoteSubject") })
     }
 
+    /// Promote names the subject by its name Observation's form, falling back
+    /// to the label, then the ref.
+    @Test func promoteTitleUsesTheNameFormThenTheLabel() async {
+        let (_, model) = await promotableModel()
+        let base = CatalogSubject(
+            id: "s-james", ref: "CPR-2AB91", sourceID: sourceID, subjectTypeID: personTypeID,
+            label: "James Robins", description: ""
+        )
+        func name(_ id: String, form: String, polarity: String = "positive") -> CatalogObservation {
+            CatalogObservation(
+                id: id, ref: "OBS-\(id)", citationID: "c1", subjectID: "s-james", propertyID: "p-name",
+                polarity: polarity, valueText: "", valueInteger: nil, valueDateID: "",
+                valueNameID: "n-\(id)", nameForm: form, valueSubjectID: "", valueTermID: "",
+                propertyKey: "name", propertyLabel: "Name", propertyValueType: "name"
+            )
+        }
+        func title(label: String, observations: [CatalogObservation]) -> String? {
+            var subject = base
+            subject.label = label
+            model.session.setQueryValue(
+                CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID),
+                value: graphRows(
+                    sourceId: sourceID,
+                    subjects: [subject],
+                    positions: [CatalogSubjectPosition(subjectID: "s-james", gridX: 1, gridY: 1)],
+                    observations: observations
+                )
+            )
+            return model.promoteLocation(for: "s-james")?.title
+        }
+        #expect(title(label: "James", observations: [name("o1", form: "James Henry Robins")]) == "James Henry Robins")
+        #expect(title(label: "James", observations: [name("o1", form: "Not James", polarity: "negative")]) == "James")
+        #expect(title(label: "James", observations: [name("o1", form: "  ")]) == "James")
+        #expect(title(label: "James", observations: []) == "James")
+        #expect(title(label: " ", observations: []) == "CPR-2AB91")
+    }
+
     /// Files s-james the way the Promote place does: write, then invalidate.
     private func promoteJames(_ store: FakeStore, _ model: EvidenceGraphModel) async throws {
         _ = try await store.promoteSubject(projectDir: projectDir, userID: "user-1", subjectID: "s-james")
