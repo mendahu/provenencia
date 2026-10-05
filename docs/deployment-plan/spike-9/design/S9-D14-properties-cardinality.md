@@ -1,17 +1,17 @@
-# S9-D13 — Omnibar: Person / Event / Place hits
+# S9-D14 — Properties: cardinality
 
 **Kind:** Claude Design board  
 **Spike:** Provenencia Spike 9 (canonical entities MVP)  
-**View:** Omnibar results dropdown  
-**Implements later as:** PR **S9-35**  
-**Depends on:** S9-34 (search kinds + structured headers); shipped [`PVOmnibarHitRow`](../../../../macos/App/DesignSystem/Recipes/OmnibarHitRow/PVOmnibarHitRow.swift)  
-**Related:** Omnibar contract [`omnibar-search.md`](../../../deployment-plan/archive/spike-3/omnibar-search.md); S9-D2 (row these should echo)  
+**View:** Properties page (Configure → Properties)  
+**Implements later as:** PR **S9-37**  
+**Depends on:** S9-36 (cardinality in the engine)  
+**Related:** S9-07b (the Properties page as shipped)  
 **Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)  
-**Skill:** [`add-design-brief`](../../../../.cursor/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.cursor/skills/add-ui-component/SKILL.md); [`add-searchable-kind`](../../../../.cursor/skills/add-searchable-kind/SKILL.md)
+**Skill:** [`add-design-brief`](../../../../.cursor/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.cursor/skills/add-ui-component/SKILL.md)
 
 Paste this entire document into Claude Design as the requirements for one board/flow. Read shared product facts in [`README.md`](README.md) first.
 
-This brief is an **enhancement** of a shipped surface: extend its existing frames.
+This brief is an **enhancement** to the shipped Properties page. Add to its frames; do not redesign the page.
 
 ### Claude Design — do this first (in order)
 
@@ -63,13 +63,13 @@ Do **not** invent a local Field, Button, Card, Select, Callout, or Confirm.
 
 ## 1. Objective
 
-Add Person, Event, and Place hits to the omnibar results. They use the shipped `PVOmnibarHitRow` slots (lead, title, kind, secondary, ref, match context) filled from the same header as the list row, so a hit reads like its list row.
+Let a researcher say whether a Property holds **one value or several** on a Person, Event or Place. Today every Property is reconciled down to one value; a few hold several true values at once (a Place's concurrent names). Seeded Properties have a fixed answer; researcher-created ones choose.
 
 ```text
-[ ◯ ]  James Robins                    Person    PER-7KD45
-       1817 – 1880 · York              matched: "Jim Robins"
-[ ◇ ]  Birth of James Robins           Event     EVT-4MA10
-       14 May 1817 · York
+Properties › languages spoken            (inspector)
+  Value type     Text
+  Holds          ( ) One value   (•) Several values
+                 Several: every distinct value is kept; spellings still merge.
 ```
 
 ---
@@ -78,22 +78,25 @@ Add Person, Event, and Place hits to the omnibar results. They use the shipped `
 
 | Fact | UI implication |
 | --- | --- |
-| Alternates match | *Jim Robins* can find a Person resolved as *James Robins*; show why (match context). |
-| Structured header | The app formats title and secondary from structures (unlike today's kinds). |
-| Ref match | Exact ref match uses the accent ref style. |
-| Mixed flat ranking | Conclusion hits interleave with Sources etc. by score; no per-kind sections. |
+| Two choices | **One value** (single; the default) or **several values** (multiple). |
+| What it changes | Single: the engine narrows records down to one value, or shows *mixed* when it can't. Several: every distinct value is kept; duplicates, spellings and weak evidence still drop. |
+| Seeded Properties are fixed | `toponym` holds several; every other seeded Property holds one. Show the value, read-only, like other seeded facts in the inspector. |
+| Most repeating facts are events | Occupations, residences and religion over time belong in events, not a several-values Property. A one-line hint can say so. |
+| Changing it recomputes | Every Person / Event / Place carrying the Property is reconciled again. Fast, but the page should not imply data is changed or lost. |
+| Where it lives | The Property inspector, beside value type. Also in the create form. |
 
 ### 2.1 What this board is not
 
-- Not omnibar chrome, ranking, or facets.
+- Not a redesign of the Properties page or its bindings.
+- Not term management.
 
 ---
 
-## 3. Implementation gate (S9-35)
+## 3. Implementation gate (S9-37)
 
-| Ships in **S9-35** | Does **not** ship there |
+| Ships in **S9-37** | Does **not** ship there |
 | --- | --- |
-| Three hit kinds in the shipped row | New row layout, facets |
+| Cardinality control in the inspector and the create form; read-only for seeded Properties | Term categories (S9-D15); any other Property setting |
 
 ---
 
@@ -101,19 +104,20 @@ Add Person, Event, and Place hits to the omnibar results. They use the shipped `
 
 | ID | Requirement |
 | --- | --- |
-| OH-1 | Lead slot: per-kind placeholder thumbnail consistent with lists. |
-| OH-2 | Title / secondary match the list row's title and secondary line. |
-| OH-3 | Match context shows an alternate name / toponym when that is what matched. |
-| OH-4 | Kind label: Person / Event / Place. |
-| OH-5 | No new row variant. |
+| PC-1 | The inspector shows **Holds: one value / several values** for every Property. |
+| PC-2 | Researcher-created Properties can change it; seeded ones show it read-only. |
+| PC-3 | A short explanation of each choice, and the hint that repeating facts over time are usually events. |
+| PC-4 | The create form asks for it, defaulting to one value. |
+| PC-5 | Changing it needs no confirm unless the board finds it confusing; nothing is deleted. |
 
 ---
 
 ## 5. Suggested frames
 
-1. Mixed results for *Robins* (Sources + Persons + Events).
-2. Exact ref hit.
-3. Alternate-name match.
+1. Inspector for a seeded single Property (`name`), read-only.
+2. Inspector for `toponym`, read-only *several values*.
+3. Inspector for a researcher Property, editable.
+4. Create form with the choice.
 
 ---
 
@@ -123,22 +127,23 @@ This table is **binding**. Instance the Ship kit rows; do not redraw them. Paths
 
 | Building block | Layer | Status | Home | Notes |
 | --- | --- | --- | --- | --- |
-| Omnibar hit row | Recipe | Ship | `DesignSystem/Recipes/OmnibarHitRow/PVOmnibarHitRow.swift` | Fill slots. |
-| Hit presentation | Snowflake | **Extend** | `Features/Workspace/OmnibarHitPresentation.swift` | Map the three kinds. |
-| Thumbnail | Component | Ship | kit | Lead. |
+| Properties inspector | Snowflake | Extend | `Features/Properties/PropertiesView.swift` | Add the *Holds* row. |
+| Create form | Snowflake | Extend | `Features/Properties/PropertiesView.swift` (`PropertiesCreateHost`) | |
+| Choice | Component | Ship | Radio / Select from the kit | |
+| Field / hint | Component | Ship | Field, caption text | |
 
 ### Explicit non-goals
 
 | Do not add | Why |
 | --- | --- |
-| A Conclusion-specific hit row | Row is kind-agnostic by design. |
+| A new settings section or page | One row on the existing inspector. |
 
 ---
 
 ## 7. Out of scope
 
-- Search ranking
-- Subjects (`CPR-…`) as hits
+- Term categories (S9-D15)
+- Reconciliation settings beyond cardinality
 
 ---
 
@@ -146,4 +151,4 @@ This table is **binding**. Instance the Ship kit rows; do not redraw them. Paths
 
 1. Archive this brief under `archive/` when the board is agreed.
 2. Record in [`../completed.md`](../completed.md).
-3. Implement **S9-35** against the board and inventory (kit first).
+3. Implement **S9-37** against the board and inventory (kit first).

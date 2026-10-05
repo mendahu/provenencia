@@ -210,7 +210,7 @@ The rebuild-equals-upkeep tests hold upkeep equal to a full rebuild. Every new t
 ## 11.1 Places (decided 2026-10-05)
 
 - **Separate places with relationships, not one composite place.** "Toronto, Ontario, Canada" is three Places linked upward, so queries like "everyone born in Ontario" work.
-- **A place is whatever the research needs.** A township, a county, a region (the Lower Mainland), a family farm. No rules about what can contain what. An optional **kind** is a label for display and filters, not a constraint.
+- **A place is whatever the research needs.** A township, a county, a region (the Lower Mainland), a family farm. No rules about what can contain what. A place **kind** (township, county, province) is left for later: the hierarchy already says what a place is part of.
 - **Places relate through a place relationship**, an association kind alongside Location and Participation, with three Properties:
 
   | Property | Value | Meaning |

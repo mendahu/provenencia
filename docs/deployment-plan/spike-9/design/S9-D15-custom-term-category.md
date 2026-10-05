@@ -1,17 +1,17 @@
-# S9-D13 — Omnibar: Person / Event / Place hits
+# S9-D15 — Custom term: category
 
 **Kind:** Claude Design board  
 **Spike:** Provenencia Spike 9 (canonical entities MVP)  
-**View:** Omnibar results dropdown  
-**Implements later as:** PR **S9-35**  
-**Depends on:** S9-34 (search kinds + structured headers); shipped [`PVOmnibarHitRow`](../../../../macos/App/DesignSystem/Recipes/OmnibarHitRow/PVOmnibarHitRow.swift)  
-**Related:** Omnibar contract [`omnibar-search.md`](../../../deployment-plan/archive/spike-3/omnibar-search.md); S9-D2 (row these should echo)  
+**View:** Citation Composer — the custom term dialog  
+**Implements later as:** PR **S9-38b**  
+**Depends on:** S9-38 (term categories in the engine)  
+**Related:** S9-D7 (Place detail shows relationships by type)  
 **Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)  
-**Skill:** [`add-design-brief`](../../../../.cursor/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.cursor/skills/add-ui-component/SKILL.md); [`add-searchable-kind`](../../../../.cursor/skills/add-searchable-kind/SKILL.md)
+**Skill:** [`add-design-brief`](../../../../.cursor/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.cursor/skills/add-ui-component/SKILL.md)
 
 Paste this entire document into Claude Design as the requirements for one board/flow. Read shared product facts in [`README.md`](README.md) first.
 
-This brief is an **enhancement** of a shipped surface: extend its existing frames.
+This brief is an **enhancement** to the composer's existing custom term dialog. Add to it; do not redesign the composer.
 
 ### Claude Design — do this first (in order)
 
@@ -63,13 +63,14 @@ Do **not** invent a local Field, Button, Card, Select, Callout, or Confirm.
 
 ## 1. Objective
 
-Add Person, Event, and Place hits to the omnibar results. They use the shipped `PVOmnibarHitRow` slots (lead, title, kind, secondary, ref, match context) filled from the same header as the list row, so a hit reads like its list row.
+When a researcher adds their own **place relationship type** (beyond *administrative*, *geographic*, *ecclesiastical*, *succeeded by*), they say how it behaves: **hierarchical** (one place is part of another) or **temporal** (one place became another).
 
 ```text
-[ ◯ ]  James Robins                    Person    PER-7KD45
-       1817 – 1880 · York              matched: "Jim Robins"
-[ ◇ ]  Birth of James Robins           Event     EVT-4MA10
-       14 May 1817 · York
+New relationship type
+  Label      [ Judicial district                ]
+  Behaves as ( ) Part of — one place within another
+             ( ) Succession — one place became another
+                                   [Cancel] [Add type]
 ```
 
 ---
@@ -78,22 +79,24 @@ Add Person, Event, and Place hits to the omnibar results. They use the shipped `
 
 | Fact | UI implication |
 | --- | --- |
-| Alternates match | *Jim Robins* can find a Person resolved as *James Robins*; show why (match context). |
-| Structured header | The app formats title and secondary from structures (unlike today's kinds). |
-| Ref match | Exact ref match uses the accent ref style. |
-| Mixed flat ranking | Conclusion hits interleave with Sources etc. by score; no per-kind sections. |
+| Only some Properties use categories | Today only `place_relationship_type`. Terms for other Properties (roles, relationship types, event types) never show the choice. |
+| Two categories | **Hierarchical** (*part of*): builds chains like *Toronto, Ontario, Canada*. **Temporal** (*succession*): links a lineage (*York → Toronto*), never a chain. |
+| It is required | A place relationship type without a category can't be used; the dialog can't add one without a choice. |
+| Seeded types already have one | Administrative, geographic, ecclesiastical are hierarchical; *succeeded by* is temporal. |
+| Where it's met | The researcher is citing a place relationship in the composer (drawing it between two place cards) and picks *Add type…* in its type picker. |
 
 ### 2.1 What this board is not
 
-- Not omnibar chrome, ranking, or facets.
+- Not a term manager.
+- Not the composer's relationship row itself (unchanged).
 
 ---
 
-## 3. Implementation gate (S9-35)
+## 3. Implementation gate (S9-38b)
 
-| Ships in **S9-35** | Does **not** ship there |
+| Ships in **S9-38b** | Does **not** ship there |
 | --- | --- |
-| Three hit kinds in the shipped row | New row layout, facets |
+| The category choice in the custom term dialog, shown only for Properties whose terms carry a category | Editing a term's category after it exists |
 
 ---
 
@@ -101,19 +104,18 @@ Add Person, Event, and Place hits to the omnibar results. They use the shipped `
 
 | ID | Requirement |
 | --- | --- |
-| OH-1 | Lead slot: per-kind placeholder thumbnail consistent with lists. |
-| OH-2 | Title / secondary match the list row's title and secondary line. |
-| OH-3 | Match context shows an alternate name / toponym when that is what matched. |
-| OH-4 | Kind label: Person / Event / Place. |
-| OH-5 | No new row variant. |
+| TC-1 | The dialog shows the category choice only when the Property's terms carry one. |
+| TC-2 | Each choice has a plain-language label and an example. |
+| TC-3 | Add is disabled until a category is chosen. |
+| TC-4 | Errors (a duplicate label) show as today. |
 
 ---
 
 ## 5. Suggested frames
 
-1. Mixed results for *Robins* (Sources + Persons + Events).
-2. Exact ref hit.
-3. Alternate-name match.
+1. Custom term dialog for a role (unchanged, no category).
+2. Custom term dialog for a place relationship type, nothing chosen.
+3. Same, *Part of* chosen.
 
 ---
 
@@ -123,22 +125,21 @@ This table is **binding**. Instance the Ship kit rows; do not redraw them. Paths
 
 | Building block | Layer | Status | Home | Notes |
 | --- | --- | --- | --- | --- |
-| Omnibar hit row | Recipe | Ship | `DesignSystem/Recipes/OmnibarHitRow/PVOmnibarHitRow.swift` | Fill slots. |
-| Hit presentation | Snowflake | **Extend** | `Features/Workspace/OmnibarHitPresentation.swift` | Map the three kinds. |
-| Thumbnail | Component | Ship | kit | Lead. |
+| Custom term dialog | Snowflake | Extend | `Features/CitationComposer/CitationComposerView.swift` | Existing FormDialog. |
+| Choice | Component | Ship | Radio from the kit | |
 
 ### Explicit non-goals
 
 | Do not add | Why |
 | --- | --- |
-| A Conclusion-specific hit row | Row is kind-agnostic by design. |
+| A category on every term | Only Properties that use one. |
 
 ---
 
 ## 7. Out of scope
 
-- Search ranking
-- Subjects (`CPR-…`) as hits
+- Term editing and deletion
+- Cardinality (S9-D14)
 
 ---
 
@@ -146,4 +147,4 @@ This table is **binding**. Instance the Ship kit rows; do not redraw them. Paths
 
 1. Archive this brief under `archive/` when the board is agreed.
 2. Record in [`../completed.md`](../completed.md).
-3. Implement **S9-35** against the board and inventory (kit first).
+3. Implement **S9-38b** against the board and inventory (kit first).

@@ -241,7 +241,7 @@ Persons, Events, and Places become omnibar hit kinds (Q8). Contract: [`omnibar-s
 
 Design: [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md) §11.1. A gazetteer that writes this evidence automatically is a later, optional service ([`ideas/place-gazetteer-service.md`](../../ideas/place-gazetteer-service.md)); this spike does it by hand, cited.
 
-- **Places are separate entities** at any grain the research needs (township, county, region, farm). Optional **`place_kind`** (term) is a label, not a rule.
+- **Places are separate entities** at any grain the research needs (township, county, region, farm). No place kinds this spike: the hierarchy says what a place is part of, and a kind label can come later.
 - **Period:** a Place's `start_date` / `end_date` (bound to `place`) say when it existed or mattered; both optional; none = always.
 - **Place relationship**, a new association kind (bridge) with `from` (place), `to` (place), `place_relationship_type` (term). Types are researcher-extensible; each term has a **category**:
   - **hierarchical** — seeded `administrative`, `geographic`, `ecclesiastical`. A link holds where the two places' periods overlap.
@@ -282,9 +282,10 @@ The Conclusion pages read **across** Sources — every earlier place scoped to o
 | **S9-D11** | Promote — compare | **S9-19** | — |
 | **S9-D3** | Events list | **S9-23** | S9-32 (subject titles, places) |
 | **S9-D6** | Event detail | **S9-24** | S9-32 (subject titles, places) |
-| **S9-D14** | Properties — cardinality, term category | **S9-37** | — |
+| **S9-D14** | Properties — cardinality | **S9-37** | — |
 | **S9-D4** | Places list (**revise:** names, parent chain) | **S9-26** | S9-40 (chain cell) |
 | **S9-D7** | Place detail (**revise:** names, period, hierarchy, succession) | **S9-27** | S9-40 (hierarchy rows) |
+| **S9-D15** | Custom term dialog — category | **S9-38b** | — |
 | **S9-D12** | Promote — walk | **S9-30** | — |
 | **S9-D13** | Omnibar results | **S9-35** | — |
 
@@ -347,7 +348,7 @@ SLICE 6 — Events
 
 SLICE 7 — Places: names and cardinality
   S9-36  Property cardinality: column, seeds (toponym multi-valued), pipeline, config-change upkeep
-  ✎ S9-D14 ──▶ S9-37  Properties page: cardinality control + term category
+  ✎ S9-D14 ──▶ S9-37  Properties page: cardinality control
   S9-25  Place composer (names) + reads
   ✎ S9-D4 ──▶ S9-26  Places list (sidebar Places goes live)
   ✎ S9-D7 ──▶ S9-27  Place detail (names; hierarchy rows empty until S9-40)
@@ -360,7 +361,8 @@ SLICE 8 — Walk + bridges
   Check: walk a birth record → Participation + Location handles filed; bridges wait for both ends; Done keeps saved steps.
 
 SLICE 9 — Place hierarchy (the hard way)
-  S9-38  Place model: place relationship bridge, typed terms with categories, place period + kind, connect rule, loop refusal
+  S9-38  Place model: place relationship bridge, typed terms with categories, place period, connect rule, loop refusal
+  ✎ S9-D15 ──▶ S9-38b Custom term dialog: category for new place relationship types
   S9-39  Place chain composer: parents at a date, candidates when undecided, parts, succession; header dependents
   S9-40  Place hierarchy in Places list and Place detail (designed in D4 / D7)
   Check: draw Toronto part of Upper Canada / Province of Canada / Ontario with periods → Toronto's page shows each by period;
@@ -419,7 +421,7 @@ CLOSE
 | S9-23 Events list | **S9-D3** (extends D2) | S9-09, S9-22 |
 | S9-24 Event detail | **S9-D6** (extends D5) | S9-16, S9-22 |
 | S9-36 Property cardinality | — | S9-14 |
-| S9-37 Properties page: cardinality + term category | **S9-D14** | S9-36 |
+| S9-37 Properties page: cardinality | **S9-D14** | S9-36 |
 | S9-25 Place composer + reads | — | S9-15, S9-36 |
 | S9-26 Places list | **S9-D4** (extends D2) | S9-09, S9-25 |
 | S9-27 Place detail | **S9-D7** (extends D5) | S9-16, S9-25 |
@@ -427,6 +429,7 @@ CLOSE
 | S9-29 Neighborhood read | — | S9-28 |
 | S9-30 Promote walk | **S9-D12** (extends D9) | S9-29 |
 | S9-38 Place model | — | S9-28, S9-36 |
+| S9-38b Custom term dialog: category | **S9-D15** | S9-38 |
 | S9-39 Place chain composer | — | S9-38, S9-21, S9-25 |
 | S9-40 Place hierarchy in list and detail | (D4 / D7) | S9-39, S9-26, S9-27 |
 | S9-31 Composer walks | — | S9-22, S9-28, S9-39 |
@@ -479,8 +482,8 @@ In order; each brief sits just above the PR it gates.
 - [ ] ✎ S9-D6 — Design: Event detail
 - [ ] S9-24 — Event detail
 - [ ] S9-36 — Property cardinality
-- [ ] ✎ S9-D14 — Design: Properties cardinality + term category
-- [ ] S9-37 — Properties page: cardinality + term category
+- [ ] ✎ S9-D14 — Design: Properties cardinality
+- [ ] S9-37 — Properties page: cardinality
 - [ ] S9-25 — Place composer + reads
 - [ ] ✎ S9-D4 — Design: Places list (revise for names and chain)
 - [ ] S9-26 — Places list
@@ -490,7 +493,9 @@ In order; each brief sits just above the PR it gates.
 - [ ] S9-29 — Neighborhood read
 - [ ] ✎ S9-D12 — Design: Promote walk
 - [ ] S9-30 — Promote walk + off-ramp
-- [ ] S9-38 — Place model: relationships, periods, kinds
+- [ ] S9-38 — Place model: relationships, periods
+- [ ] ✎ S9-D15 — Design: custom term category
+- [ ] S9-38b — Custom term dialog: category
 - [ ] S9-39 — Place chain composer
 - [ ] S9-40 — Place hierarchy in list and detail
 - [ ] S9-31 — Composer walks + header dependents
@@ -804,11 +809,11 @@ Design: [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md). Op
 | **In** | Migration: `properties.cardinality` (`single` / `multiple`, default `single`); `toponym` seeded `multiple` (Install + migration). The pipeline honors it (design §8): multi-valued keeps every distinct surviving value; majority never crowds out a distinct value; confidence still drops weak ones. Upkeep: a cardinality change recomputes every handle carrying the Property; joins rebuild-equals-upkeep. FFI on the Property read / update. |
 | **Depends on** | S9-14 |
 
-#### S9-37 — Properties page: cardinality + term category
+#### S9-37 — Properties page: cardinality
 
 | | |
 | --- | --- |
-| **In** | Per **S9-D14**: a cardinality control on a Property (seeded Properties read-only); a category picker (hierarchical / temporal) when adding a term to a Property whose terms carry one (`place_relationship_type`, S9-38). The mutation joins `conclusionTriggers`. |
+| **In** | Per **S9-D14**: a cardinality control in the Property inspector and create form (seeded Properties read-only). The mutation joins `conclusionTriggers` (via `updatedProperty`). |
 | **Depends on** | **S9-D14**, S9-36 |
 
 #### S9-25 — Place composer + reads
@@ -861,13 +866,20 @@ Design: [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md). Op
 
 Design: [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md) §11.1 and R9.
 
-#### S9-38 — Place model: relationships, periods, kinds
+#### S9-38 — Place model: relationships, periods
 
 | | |
 | --- | --- |
-| **In** | Seed (Install + migration): subject type `place_relationship` (bridge) with Properties `from` (place), `to` (place), `place_relationship_type` (term); term **category** on `property_terms` (`hierarchical` / `temporal`, nullable for terms that don't use it); seeded types `administrative`, `geographic`, `ecclesiastical` (hierarchical) and `succeeded_by` (temporal); `start_date` / `end_date` bound to `place` (its period); `place_kind` (term). A `connectrules` bridge place ↔ place disambiguated by `place_relationship_type`, so it is drawn and cited on the Evidence graph like any bridge; Promote files it through S9-28. **Loop refusal** in the filing write: a hierarchical link that would close a cycle among canonical places, or a looping succession, is refused with a clear error. Delete Impact and search registries for the new kind. |
+| **In** | Seed (Install + migration): subject type `place_relationship` (bridge) with Properties `from` (place), `to` (place), `place_relationship_type` (term); term **category** on `property_terms` (`hierarchical` / `temporal`, nullable for terms that don't use it); seeded types `administrative`, `geographic`, `ecclesiastical` (hierarchical) and `succeeded_by` (temporal); `start_date` / `end_date` bound to `place` (its period). A `connectrules` bridge place ↔ place disambiguated by `place_relationship_type`, so it is drawn and cited on the Evidence graph like any bridge; Promote files it through S9-28. **Loop refusal** in the filing write: a hierarchical link that would close a cycle among canonical places, or a looping succession, is refused with a clear error. Delete Impact and search registries for the new kind. |
 | **Testable** | Seeds; connect rule; cycles refused (direct and transitive); a researcher-added type with a category behaves like the seeded one. |
 | **Depends on** | S9-28, S9-36 |
+
+#### S9-38b — Custom term dialog: category
+
+| | |
+| --- | --- |
+| **In** | Per **S9-D15**: when a researcher adds a term to a Property whose terms carry a category (`place_relationship_type`), the composer's custom term dialog asks for it (hierarchical / temporal); FFI `createPropertyTerm` takes the category. |
+| **Depends on** | **S9-D15**, S9-38 |
 
 #### S9-39 — Place chain composer
 
@@ -942,7 +954,7 @@ Honesty pass against the [goal bar](#goal-dogfood-bar); ledger timings recorded;
 | Canonical entities, Identity Claims, evidence pins | Reconciliation Claims (designed: one per value for multi-valued Properties), `name_format` |
 | Names display as the reconciled name (a member's own `form` when one carries exactly its parts, else its parts in order); lists sort by that, normalized | Name display styles (natural / sorted), surname-first sort, profiles — decided in [`structured-name-model.md`](../../structured-name-model.md) §4.5 for a later spike |
 | Reconciler: one pipeline, modules for every value type, reasoning cached; per-Property cardinality | Persisted "auto" claims; scores stored as catalog truth; values that change over time |
-| Place hierarchy the hard way: place relationships (typed, categorized), periods, kinds, chains at a date, loop refusal | Gazetteer lookup ([`ideas/place-gazetteer-service.md`](../../ideas/place-gazetteer-service.md)); geometry; place reconciliation across grains |
+| Place hierarchy the hard way: place relationships (typed, categorized), periods, chains at a date, loop refusal | Gazetteer lookup ([`ideas/place-gazetteer-service.md`](../../ideas/place-gazetteer-service.md)); geometry; place reconciliation across grains |
 | Resolved-values cache with upkeep, rebuild, and rebuild-equals-upkeep test | Per-screen caches; stored derived values (life dates, event names); resident in-memory graph (only if timings demand) |
 | Header composers shared by lists, Promote, search | — |
 | Promote from the Evidence graph: per-step saves, walk, Done off-ramp | Stub handles with no Subject; canonical merge |
@@ -1008,7 +1020,7 @@ Honesty pass against the [goal bar](#goal-dogfood-bar); ledger timings recorded;
 - [`research-judgment-model.md`](../../research-judgment-model.md) §1.1: cached order and reasoning are derived, not stored judgment.
 - [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md) §12: implementation status as each module lands.
 - [`conclusion-layer-data-model.md`](../../conclusion-layer-data-model.md) §13: Place `contained_in` question answered by place relationships (R9); new `place_relationship` kind in the kinds list.
-- [`seeded-vocabulary.md`](../../seeded-vocabulary.md): `place_relationship` kind and its Properties, `place_relationship_type` terms with categories, `place_kind`, place `start_date` / `end_date`, Property cardinality (S9-36, S9-38).
+- [`seeded-vocabulary.md`](../../seeded-vocabulary.md): `place_relationship` kind and its Properties, `place_relationship_type` terms with categories, place `start_date` / `end_date`, Property cardinality (S9-36, S9-38).
 - [`seeded-vocabulary.md`](../../seeded-vocabulary.md) §5.5: mark claim confidence grades as seeded. §3.5: `subject` = the event's principal(s), possibly several; marriage uses two `subject` Participations; `spouse` is a principal's spouse on another event. §3.2 / §3.3: `event_name` (text) bound to `event`.
 - [`catalog-refs.md`](../../catalog-refs.md): canonical ref minting.
 - [`catalog-deletes.md`](../../catalog-deletes.md): Identity Claim / evidence Impact (done in S9-02: non-blocking cascades, explicit audited release); hook cache dependents into the release calls (S9-06).
