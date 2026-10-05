@@ -79,8 +79,8 @@ struct PVDeleteImpactCopyTests {
     @Test func unknownViaStillListsRefs() {
         let group = PVDeleteImpactPreviewData.unknownVia.groups[0]
         #expect(!PVDeleteImpactCopy.isKnownVia(group.via))
-        #expect(PVDeleteImpactCopy.heading(group) == "2 sameness claims reference this")
-        #expect(group.listed.map(\.ref) == ["CLM-3JQ8", "CLM-3JQ9"])
+        #expect(PVDeleteImpactCopy.heading(group) == "2 narratives reference this")
+        #expect(group.listed.map(\.ref) == ["NAR-3JQ8", "NAR-3JQ9"])
     }
 
     @Test func extraGatesHaveNoDestructiveButtonAndNoInventedList() {

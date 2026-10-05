@@ -6207,8 +6207,6 @@ enum L10n {
                 pair = (nounPropertyTerm, nounPropertyTerms)
             case "canonical_entity":
                 pair = (nounCanonicalEntity, nounCanonicalEntities)
-            case "sameness_claim":
-                pair = (nounSamenessClaim, nounSamenessClaims)
             case "user":
                 pair = (nounUser, nounUsers)
             case "project":
@@ -6344,16 +6342,6 @@ enum L10n {
             "deleteImpact.kind.canonicalEntity.other",
             defaultValue: "people, events, or places",
             comment: "Plural Impact kind noun for Conclusion handles"
-        )
-        static let nounSamenessClaim = LocalizedStringResource(
-            "deleteImpact.kind.samenessClaim.one",
-            defaultValue: "sameness claim",
-            comment: "Singular reserved Impact kind noun"
-        )
-        static let nounSamenessClaims = LocalizedStringResource(
-            "deleteImpact.kind.samenessClaim.other",
-            defaultValue: "sameness claims",
-            comment: "Plural reserved Impact kind noun"
         )
         static let nounUser = LocalizedStringResource(
             "deleteImpact.kind.user.one",
