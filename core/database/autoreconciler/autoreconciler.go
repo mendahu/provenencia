@@ -59,7 +59,8 @@ import (
 //	8: name parts compare as words: Smith-Jones = Smith + Jones (S9-13b).
 //	9: evidence loaded (Sources, provenance, negatives, provisional members);
 //	   each Observation's outcome cached (S9-14).
-const CacheVersion = 9
+//	10: an outvoted outcome keeps the vote that beat it (S9-16).
+const CacheVersion = 10
 
 // batchSize bounds the handles per loader batch (and so the IN list length).
 const batchSize = 500
@@ -76,8 +77,9 @@ const (
 	sqlDeleteOutcomesFor = `DELETE FROM auto_reconciler_outcomes WHERE entity_id IN (`
 
 	sqlInsertOutcome = `INSERT INTO auto_reconciler_outcomes
-		(entity_id, property_id, observation_id, reason, value_rank, denied_by)
-		VALUES (?, ?, ?, ?, ?, ?)`
+		(entity_id, property_id, observation_id, reason, value_rank, denied_by,
+		 vote_support, vote_total)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
 
 	sqlInsert = `INSERT INTO auto_reconciler_values
 		(entity_id, property_id, rank, value_text, value_integer, value_term_id,
@@ -271,7 +273,12 @@ func recomputeBatch(q Querier, ids [][]byte) error {
 			if len(o.DeniedBy) > 0 {
 				deniedBy = o.DeniedBy
 			}
-			if _, err := q.Exec(sqlInsertOutcome, g.entityID, g.propertyID, o.ObservationID, string(o.Reason), rank, deniedBy); err != nil {
+			var voteSupport, voteTotal any
+			if o.Vote != (autoreconcile.Vote{}) {
+				voteSupport, voteTotal = o.Vote.Support, o.Vote.Of
+			}
+			if _, err := q.Exec(sqlInsertOutcome, g.entityID, g.propertyID, o.ObservationID, string(o.Reason), rank, deniedBy,
+				voteSupport, voteTotal); err != nil {
 				return err
 			}
 		}

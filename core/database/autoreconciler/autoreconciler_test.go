@@ -281,18 +281,21 @@ type outcome struct {
 	Reason                              string
 	ValueRank                           *int
 	DeniedBy                            []byte
+	VoteSupport, VoteTotal              *int
 }
 
 func outcomesSnapshot(t *testing.T, q autoreconciler.Querier) []outcome {
 	t.Helper()
-	rows, err := q.Query(`SELECT entity_id, property_id, observation_id, reason, value_rank, denied_by
+	rows, err := q.Query(`SELECT entity_id, property_id, observation_id, reason, value_rank, denied_by,
+			vote_support, vote_total
 		FROM auto_reconciler_outcomes ORDER BY entity_id, property_id, observation_id`)
 	must(t, err)
 	defer rows.Close()
 	var out []outcome
 	for rows.Next() {
 		var o outcome
-		must(t, rows.Scan(&o.EntityID, &o.PropertyID, &o.ObservationID, &o.Reason, &o.ValueRank, &o.DeniedBy))
+		must(t, rows.Scan(&o.EntityID, &o.PropertyID, &o.ObservationID, &o.Reason, &o.ValueRank, &o.DeniedBy,
+			&o.VoteSupport, &o.VoteTotal))
 		out = append(out, o)
 	}
 	must(t, rows.Err())
@@ -593,13 +596,23 @@ func TestReconciledEvidence(t *testing.T) {
 		a, b, c := f.subject("person"), f.subjectOn(f.other, "person"), f.subjectOn(f.newSource("Bible"), "person")
 		f.cite(nameIn(a, f.props["name"], "given=James|surname=Robins"))
 		f.cite(nameIn(b, f.props["name"], "given=James|surname=Robins"))
-		f.cite(nameIn(c, f.props["name"], "given=James|surname=Robbins"))
+		robbins := f.cite(nameIn(c, f.props["name"], "given=James|surname=Robbins"))[0]
 		h := f.promote(a)
 		f.join(b, h)
 		f.join(c, h)
 		names := rowsFor(f.rows(), h, f.props["name"].ID)
 		if len(names) != 2 || names[0].Support != 2 || names[1].Reason != "outvoted" {
 			t.Fatalf("names %+v", names)
+		}
+		// The outcome keeps the vote that beat it; the others keep none.
+		for _, o := range f.outcomes() {
+			outvoted := bytes.Equal(o.ObservationID, robbins.ID)
+			if outvoted && (o.VoteSupport == nil || *o.VoteSupport != 2 || o.VoteTotal == nil || *o.VoteTotal != 3) {
+				t.Fatalf("outvoted outcome %+v", o)
+			}
+			if !outvoted && (o.VoteSupport != nil || o.VoteTotal != nil) {
+				t.Fatalf("vote on %+v", o)
+			}
 		}
 	})
 

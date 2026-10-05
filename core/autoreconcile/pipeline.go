@@ -53,6 +53,7 @@ type entry struct {
 	sig      string // its units, exactly
 	reason   Reason // "" while still in the running
 	deniedBy []byte
+	vote     Vote                  // the first lost unit's vote, when outvoted
 	roots    map[string]*unitValue // unit name → the value it settled on
 	row      *row
 }
@@ -68,6 +69,7 @@ type unitValue struct {
 	total     map[string]bool // Sources once folded values are added
 	anyStrong bool            // some carrier, folded ones included, is not weak
 	fate      Reason          // ReasonKept, ReasonOutvoted or ReasonWeak
+	vote      Vote            // the winner's Sources of all, when outvoted
 }
 
 // row is one auto-reconciled value under construction.
@@ -171,6 +173,9 @@ func reconcile(m module, candidates []Candidate, concluded *Value, _ cardinality
 			}
 			switch {
 			case v.fate == ReasonOutvoted:
+				if fate != ReasonOutvoted {
+					e.vote = v.vote
+				}
 				fate = ReasonOutvoted
 			case v.fate == ReasonWeak && fate == ReasonKept:
 				fate = ReasonWeak
@@ -252,6 +257,9 @@ func reconcile(m module, candidates []Candidate, concluded *Value, _ cardinality
 	}
 	for _, e := range pos {
 		res.Outcomes[e.in] = Outcome{ObservationID: e.c.ObservationID, Reason: e.reason, Value: index[e.row], DeniedBy: e.deniedBy}
+		if e.reason == ReasonOutvoted {
+			res.Outcomes[e.in].Vote = e.vote
+		}
 	}
 	for _, n := range neg {
 		for _, r := range ordered {
@@ -338,6 +346,7 @@ func elect(m module, name string, vals []*unitValue) {
 		v.fate = ReasonKept
 		if win && v != best && m.outvotes(name, best.u, v.u) {
 			v.fate = ReasonOutvoted
+			v.vote = Vote{Support: len(best.total), Of: all}
 		}
 	}
 }

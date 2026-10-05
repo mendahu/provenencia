@@ -148,6 +148,15 @@ type Outcome struct {
 	Reason        Reason
 	Value         int    // index into Result.Values; -1 for no_evidence and negatives
 	DeniedBy      []byte // the negative that denied it, for ReasonDenied
+	Vote          Vote   // the majority that outvoted it, for ReasonOutvoted
+}
+
+// Vote is the majority behind an outvoted candidate: the winning value had
+// Support Sources of the Of Sources that voted on that unit (for names, the
+// name part it lost on). Zero when the candidate wasn't outvoted.
+type Vote struct {
+	Support int
+	Of      int
 }
 
 // Result is the reconciler's output for one (handle, Property).

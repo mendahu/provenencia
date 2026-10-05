@@ -300,3 +300,50 @@ func TestProvenance(t *testing.T) {
 		}
 	}
 }
+
+// An outvoted candidate carries the vote that beat it; nothing else does.
+func TestOutvotedVote(t *testing.T) {
+	votes := func(r Result) map[byte]Vote {
+		out := map[byte]Vote{}
+		for _, o := range r.Outcomes {
+			out[o.ObservationID[len(o.ObservationID)-1]] = o.Vote
+		}
+		return out
+	}
+	cases := []struct {
+		name      string
+		valueType string
+		in        []Candidate
+		want      map[byte]Vote
+	}{
+		{"two of three Sources", properties.ValueTypeText,
+			[]Candidate{from("a", text(1, "York")), from("b", text(2, "york")), from("c", text(3, "Toronto"))},
+			map[byte]Vote{1: {}, 2: {}, 3: {Support: 2, Of: 3}}},
+		{"four of five, one Source each", properties.ValueTypeText,
+			[]Candidate{text(1, "B"), text(2, "A"), text(3, "A"), text(4, "A"), text(5, "A")},
+			map[byte]Vote{1: {Support: 4, Of: 5}, 2: {}, 3: {}, 4: {}, 5: {}}},
+		{"a Source's records are one vote", properties.ValueTypeText,
+			[]Candidate{from("a", text(1, "A")), from("a", text(2, "A")), from("b", text(3, "A")), from("c", text(4, "B"))},
+			map[byte]Vote{1: {}, 2: {}, 3: {}, 4: {Support: 2, Of: 3}}},
+		{"weak and kept carry none", properties.ValueTypeText,
+			[]Candidate{lowTrust(text(1, "Robbins")), text(2, "Robins")},
+			map[byte]Vote{1: {}, 2: {}}},
+		{"a name outvoted on its surname carries that part's vote", properties.ValueTypeName,
+			[]Candidate{nm(1, "given=J.|surname=Robins"), nm(2, "given=James|surname=Robins"), nm(3, "given=James|surname=Robbins"), nm(4, "given=Jim|surname=Robins")},
+			map[byte]Vote{1: {}, 2: {}, 3: {Support: 3, Of: 4}, 4: {}}},
+	}
+	for _, tc := range cases {
+		got, err := Reconcile(tc.valueType, tc.in, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if g := votes(got); !reflect.DeepEqual(g, tc.want) {
+			t.Errorf("%s: votes %+v, want %+v", tc.name, g, tc.want)
+		}
+		for _, o := range got.Outcomes {
+			if (o.Reason == ReasonOutvoted) != (o.Vote != Vote{}) {
+				t.Errorf("%s: %+v", tc.name, o)
+			}
+		}
+	}
+}
