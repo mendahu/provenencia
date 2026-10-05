@@ -38,7 +38,7 @@ Computed live, a Person on ten Sources reads hundreds of Observations plus Citat
 | H1 | Person detail | Fan-out: each Property × members; each derived value walks another handle's members | Absorbed by R3; detail composes from cached clusters. Observation drill-down stays live for one handle. |
 | H2 | Persons list | H1 per row, twice for places (birth, death) | Absorbed by R3 + set-based R4 composition. Measure list composition. |
 | H3 | Events list | Event name needs subject Person's name; event place walks Locations → Places | Composed from R3 lookups. Measure. |
-| H4 | Auto-reconciler ranking | Candidate provenance (Citation → Source → assessment, certainty, claim confidence) — extra joins per Observation | Paid at write / rebuild time by the batched loader. Measure single-write upkeep. |
+| H4 | Auto-reconciler evidence | Candidate provenance (Citation → Source → assessment, certainty, claim confidence) — extra joins per Observation | Joined into the candidate query (S9-14): query count per batch unchanged (`TestLoaderQueryCountIsConstant`). A credibility change recomputes every handle the Source backs (see H9); outcomes add one row per Observation to each handle's rewrite. |
 | H5 | Swift invalidation | Bust-all on any write | Cheap while reloads read R3. Tier 3 if not. |
 | H6 | Catalog session | Cross-Source reads and full rebuilds on one serialized session | Measure rebuild on open. |
 | H7 | Promote | Target suggestions across all handles of a type; comparison rows (incoming × every member) | Suggestions via R3 `sort_key` + R8 index; comparison live for one handle. |

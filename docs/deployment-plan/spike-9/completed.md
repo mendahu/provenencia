@@ -30,6 +30,7 @@ IDs stay stable (`S9-NN`, `S9-DN`). Do not renumber when moving steps here.
 | S9-13a | PR | Land migrations 000037 / 000038 |
 | S9-13 | PR | Reconciler pipeline + text / integer / term modules |
 | S9-13b | PR | Name module |
+| S9-14 | PR | Evidence + reasoning in the auto-reconciler cache |
 
 ## Steps
 
@@ -624,3 +625,42 @@ Names now reconcile by their structured parts on the shared pipeline ([`conclusi
 - Name display styles (natural / sorted) and name format profiles.
 - Accent folding, nicknames dictionaries, phonetic matching ([`ideas/international-names.md`](../../ideas/international-names.md), [`ideas/name-matching-enhancements.md`](../../ideas/name-matching-enhancements.md)).
 - Sources, provenance, negatives and provisional members loaded from the catalog (**S9-14**).
+
+### S9-14 — Evidence + reasoning in the auto-reconciler cache
+
+The auto-reconciler now weighs the real evidence behind each record, stores what it did with each one, and has one name everywhere.
+
+**What shipped**
+
+- **One name: "auto-reconciler"** (decided while planning). Glossary in [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md) §1.
+  - `core/resolve` → `core/autoreconcile` (`Reconcile`, `ReconciledValue`, `Result.Values` / `Outcomes`, `Outcome.Value`).
+  - `core/database/resolvedvalues` → `core/database/autoreconciler`.
+  - Migration **000040** renames `conclusion_resolved_values` / `_meta` → `auto_reconciler_values` / `_meta` (indexes recreated) and adds `auto_reconciler_outcomes`.
+  - `PersonHeader.name_cluster_count` → `name_value_count` (wire-compatible), Swift `nameValueCount`.
+  - Comments, the string catalog and living docs follow.
+  - A Reconciliation Claim is laid over the auto-reconciled value by composers, never written into these tables.
+- **Evidence loaded,** in the same one query per batch: each Observation's Source, polarity, Source credibility, transcription certainty, and claim confidence and status. Provisional members are passed in (reasoning only); rejected members aren't.
+- **Outcomes cached:** one `auto_reconciler_outcomes` row per Observation, with its reason, the rank of its value and the negative that denied it. Rebuild-equals-upkeep compares them.
+- **Upkeep:**
+  - `RecomputeSourceTx` from `sourcecredibility.Upsert` when the grade is set or changed;
+  - `RecomputeCitationTx` from `citations.Update` when certainty flips;
+  - provisional members count as members for upkeep.
+- `CacheVersion = 9`.
+- **Tests:**
+  - `TestReconciledEvidence` (8): low trust, uncertain transcription, one Source one vote, a stronger negative, low claim confidence, a misspelling outvoted across three Sources, provisional and rejected members, outcome rows. Blanking each loaded field (Source, negative, provisional, provenance) fails it.
+  - Three scenarios: lowering credibility, a negative removed, certainty toggled.
+  - Seeded sequences gain credibility, certainty, negative and graded-promote steps across two Sources, checked right after each edit. Replacing either hook with a no-op fails both the scenarios and the sequences.
+  - The cache fixture makes Sources on demand. Tests that meant independent evidence now cite it from separate Sources.
+
+**What changed for researchers**
+
+- Two records from the same Source are one vote, not two.
+- A spelling from a low-trust Source, an uncertain transcription or a low-confidence claim drops when better evidence disagrees, and changing a Source's credibility or a Citation's certainty updates Persons and Places straight away.
+- A stronger record saying "not this" removes the value it denies.
+
+**What stayed out**
+
+- Showing the outcomes (*Why*): **S9-15** / **S9-16**.
+- A claim-confidence or claim-status edit path (none exists; Promote sets confidence and recomputes).
+- Laying Reconciliation Claims over auto-reconciled values (claims are a later spike).
+

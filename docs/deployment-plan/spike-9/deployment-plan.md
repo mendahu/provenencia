@@ -329,7 +329,7 @@ SLICE 4 — Reconciler + Person detail
   S9-13a Land migrations 000037 / 000038: retire `initial`; add `against` (from the closed #255 / #256)
   S9-13  Reconciler pipeline + text / integer / term modules + reasoning (pure Go, table-driven)
   S9-13b Name module (parts only, format-agnostic)
-  S9-14  Evidence + reasoning in the cache: provenance, polarity, Sources; candidates table; credibility / certainty upkeep
+  S9-14  Evidence + reasoning in the auto-reconciler cache: provenance, polarity, Sources; outcomes table; credibility / certainty upkeep; one name for the auto-reconciler
   S9-15  Detail composer + detail read + value-state formatting (with reasoning)
   ✎ S9-D5 ──▶ S9-16  Person detail (name with states, values and why)
   Check: J. Robins + James Robins → one name, merged; James / Jim → mixed; a low-trust
@@ -389,7 +389,7 @@ CLOSE
 - **Slices run in order.** Within a slice, PRs run top to bottom; the Go PRs at the top of a slice can usually go side by side (S9-13b / S9-14; S9-20 / S9-21; S9-36 / S9-25).
 - **Slice 4 is the foundation for the rest.** S9-13 / S9-14 put every value type on the pipeline; slices 5–7 can then swap or run side by side. Slice 9 needs slice 8 (bridges and edges).
 - **Replanned 2026-10-05.** IDs of PRs that keep their purpose stay; new work takes new IDs (S9-13a, S9-13b, S9-36 – S9-40), so handoff notes in [`completed.md`](completed.md) and code comments stay right.
-- **Migrations 000037 / 000038 are fixed.** They first shipped on the closed PRs #255 / #256, and the researcher's local projects already carry them. S9-13a lands them on `main` byte-for-byte so those projects open again; nothing else may take those numbers, and later changes are new migrations (000039 on), never edits. **000039** is S9-13's `reason` column; S9-14's candidates table is **000040**. **Cache versions start at 5** after S9-13a: projects may hold a cache stamped 3 or 4 by the closed PRs, and a new meaning must never reuse a stamp.
+- **Migrations 000037 / 000038 are fixed.** They first shipped on the closed PRs #255 / #256, and the researcher's local projects already carry them. S9-13a lands them on `main` byte-for-byte so those projects open again; nothing else may take those numbers, and later changes are new migrations (000039 on), never edits. **000039** is S9-13's `reason` column; **000040** is S9-14's rename to `auto_reconciler_*` and its outcomes table. The next is **000041**; the next cache version **10**. **Cache versions start at 5** after S9-13a: projects may hold a cache stamped 3 or 4 by the closed PRs, and a new meaning must never reuse a stamp.
 - **The cache is honest from slice 2.** S9-06 ships the rebuild-equals-upkeep test; every later PR that adds a write path or trigger adds to it.
 - **Churn is expected.** A confirm-and-mint Promote button (slice 1), stubbed sidebar items, and empty life-date cells are fine between slices.
 
@@ -472,7 +472,7 @@ In order; each brief sits just above the PR it gates.
 - [x] S9-13a — Land migrations 000037 / 000038 → [`completed.md`](completed.md)
 - [x] S9-13 — Reconciler pipeline + text / integer / term modules → [`completed.md`](completed.md)
 - [x] S9-13b — Name module → [`completed.md`](completed.md)
-- [ ] S9-14 — Evidence + reasoning in the cache
+- [x] S9-14 — Evidence + reasoning in the auto-reconciler cache → [`completed.md`](completed.md)
 - [ ] S9-15 — Detail composer + detail read
 - [ ] ✎ S9-D5 — Design: Person detail (revise for reasoning)
 - [ ] S9-16 — Person detail
@@ -713,7 +713,7 @@ Design: [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md). PR
 
 #### S9-13 — Reconciler pipeline + text / integer / term modules
 
-**Done.** See [`completed.md`](completed.md#s9-13--reconciler-pipeline--text--integer--term-modules). For **S9-13b**: implement `module` (`core/autoreconcile/modules.go`) for names: `split` into one unit per part type, `fold` for subsumption, `assemble` from the settled units; swap it into `moduleFor`. For **S9-14**: fill `Candidate.SourceID`, `Provenance`, `Negative` and `Provisional` in the loader; the pipeline already uses them. Store `Result.Candidates` in migration **000040**.
+**Done.** See [`completed.md`](completed.md#s9-13--reconciler-pipeline--text--integer--term-modules). For **S9-13b**: implement `module` (`core/autoreconcile/modules.go`) for names: `split` into one unit per part type, `fold` for subsumption, `assemble` from the settled units; swap it into `moduleFor`. For **S9-14**: fill `Candidate.SourceID`, `Provenance`, `Negative` and `Provisional` in the loader; the pipeline already uses them. Store `Result.Outcomes` in migration **000040** (done in S9-14).
 
 | | |
 | --- | --- |
@@ -732,11 +732,13 @@ Design: [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md). PR
 | **Testable** | 50+ table cases (the spec), seeded invariants (input order, forms never matter, renaming types renames nothing else). |
 | **Depends on** | S9-13, S9-13a |
 
-#### S9-14 — Evidence + reasoning in the cache
+#### S9-14 — Evidence + reasoning in the auto-reconciler cache
+
+**Done.** See [`completed.md`](completed.md#s9-14--evidence--reasoning-in-the-auto-reconciler-cache). Everything the auto-reconciler touches is now named for it: `core/autoreconcile` (`Reconcile`, `ReconciledValue`, `Result.Values` / `Outcomes`), `core/database/autoreconciler`, tables `auto_reconciler_values` / `auto_reconciler_outcomes` / `auto_reconciler_meta`, `PersonHeader.name_value_count`. For **S9-15**: the *Why* rows are `auto_reconciler_outcomes` joined to Observation → Citation → Artifact → Source; the values are `auto_reconciler_values`. When Reconciliation Claims ship, composers lay an accepted claim over the auto-reconciled value; it is never written into these tables.
 
 | | |
 | --- | --- |
-| **In** | Loader reads each candidate's polarity, Source, credibility, certainty, claim confidence and claim status in the existing candidate query (accepted and provisional members; rejected excluded); query count unchanged. `against` (column from S9-13a's migration 000038) is written. New migration **000040**: `auto_reconciler_outcomes` (entity, Property, Observation, outcome, reason, value rank) rewritten with the handle. Upkeep on Source credibility and Citation certainty changes (`RecomputeSourceTx`, `RecomputeCitationTx`). Rebuild-equals-upkeep gains credibility, certainty, negative and graded-promote steps across two Sources, asserted right after each provenance edit. Cache version bump (≥ 5). **Swift:** nothing to wire (certainty rides `savedCitation`, credibility `mutatedSourceWorkspace`). |
+| **In** | Loader reads each candidate's polarity, Source, credibility, certainty, claim confidence and claim status in the existing candidate query (accepted and provisional members; rejected excluded); query count unchanged. `against` (column from S9-13a's migration 000038) is written. Migration **000040**: the cache tables renamed for the auto-reconciler, plus `auto_reconciler_outcomes` (entity, Property, Observation, reason, value rank, denied by) rewritten with the handle. Everything named "resolve" / "resolved value" / "cluster" for this concept is renamed (decided while planning). Upkeep on Source credibility and Citation certainty changes (`RecomputeSourceTx`, `RecomputeCitationTx`). Rebuild-equals-upkeep gains credibility, certainty, negative and graded-promote steps across two Sources, asserted right after each provenance edit. Cache version 9. **Swift:** the `nameValueCount` rename; nothing else to wire (certainty rides `savedCitation`, credibility `mutatedSourceWorkspace`). |
 | **Testable** | Reasons stored; removing either hook fails the sequences; loader query count constant. |
 | **Depends on** | S9-06, S9-13, S9-13a |
 
