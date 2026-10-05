@@ -63,7 +63,7 @@ func TestInsertLookup(t *testing.T) {
 					Form: "James K. Robins",
 					Parts: []Part{
 						{Idx: 0, Value: "James", Type: PartTypeGiven},
-						{Idx: 1, Value: "K.", Type: PartTypeInitial},
+						{Idx: 1, Value: "K.", Type: PartTypeGiven},
 						{Idx: 2, Value: "Robins", Type: PartTypeSurname},
 					},
 				})
@@ -78,7 +78,7 @@ func TestInsertLookup(t *testing.T) {
 					t.Fatalf("got %+v", got)
 				}
 				if got.Parts[0].Value != "James" || got.Parts[0].Type != PartTypeGiven ||
-					got.Parts[1].Value != "K." || got.Parts[1].Type != PartTypeInitial ||
+					got.Parts[1].Value != "K." || got.Parts[1].Type != PartTypeGiven ||
 					got.Parts[2].Value != "Robins" || got.Parts[2].Type != PartTypeSurname {
 					t.Fatalf("parts %+v", got.Parts)
 				}

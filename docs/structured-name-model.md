@@ -74,7 +74,7 @@ NameValue
   form = "James K. Robins"
   parts:
     idx=0 value="James"  type=given
-    idx=1 value="K."     type=initial
+    idx=1 value="K."     type=given
     idx=2 value="Robins" type=surname
 ```
 

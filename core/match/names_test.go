@@ -14,7 +14,7 @@ import (
 // nv builds a name from "type=value" parts separated by "|", with a form
 // that says nothing, so structured comparison has to carry the test.
 //
-//	g given · i initial · n nick · s surname · sp surname_prefix ·
+//	g given (initials too) · n nick · s surname · sp surname_prefix ·
 //	x suffix · p prefix · u undetermined · _ untyped
 func nv(spec string) Value {
 	n := &namevalues.Value{Form: "(as written)"}
@@ -33,7 +33,7 @@ func nv(spec string) Value {
 }
 
 var partCodes = map[string]string{
-	"g": namevalues.PartTypeGiven, "i": namevalues.PartTypeInitial, "n": namevalues.PartTypeNick,
+	"g": namevalues.PartTypeGiven, "n": namevalues.PartTypeNick,
 	"s": namevalues.PartTypeSurname, "sp": namevalues.PartTypeSurnamePrefix, "x": namevalues.PartTypeSuffix,
 	"p": namevalues.PartTypePrefix, "u": namevalues.PartTypeUndetermined, "_": "",
 }
@@ -95,7 +95,7 @@ var nameCases = []nameCase{
 	{"identity", "surname listed first", NameComparer{}, nv("s=Robins|g=James"), nv("g=James|s=Robins"), 1},
 	{"identity", "forms disagree, parts agree", NameComparer{}, withForm(nv("g=James|s=Robins"), "ROBINS, Jas."), withForm(nv("g=James|s=Robins"), "Jim Robbins"), 1},
 	{"identity", "forms agree, parts disagree", NameComparer{}, withForm(nv("g=Mary|s=Robins"), "James Robins"), withForm(nv("g=James|s=Robins"), "James Robins"), 2 * F / (2 * (G1 + F))},
-	{"identity", "initial with and without period", NameComparer{}, nv("i=J.|s=Robins"), nv("i=J|s=Robins"), 1},
+	{"identity", "initial with and without period", NameComparer{}, nv("g=J.|s=Robins"), nv("g=J|s=Robins"), 1},
 	{"identity", "non-Latin script", NameComparer{}, nv("s=蒋|g=浩"), nv("g=浩|s=蒋"), 1},
 	{"identity", "accented letters match themselves", NameComparer{}, nv("g=José|s=Núñez"), nv("g=josé|s=NÚÑEZ"), 1},
 
@@ -126,11 +126,11 @@ var nameCases = []nameCase{
 	{"given", "names in one part", NameComparer{}, nv("g=James William|s=Robins"), nv("g=James|g=William|s=Robins"), 1},
 	{"given", "first and middle swapped still pair", NameComparer{}, nv("g=William|g=James|s=Robins"), nv("g=James|g=William|s=Robins"), 1},
 	{"given", "middle name used as first", NameComparer{}, nv("g=William|s=Robins"), nv("g=James|g=William|s=Robins"), ((G1 + G2) + 2*F) / (G1 + F + G1 + G2 + F)},
-	{"given", "initial for the first name", NameComparer{}, nv("i=J.|s=Robins"), nv("g=James|s=Robins"), (0.5*2*G1 + 2*F) / (2 * (G1 + F))},
-	{"given", "initial for the middle name", NameComparer{}, nv("g=James|i=W.|s=Robins"), nv("g=James|g=William|s=Robins"), (2*G1 + 0.5*2*G2 + 2*F) / (2 * (G1 + G2 + F))},
-	{"given", "initials on both sides", NameComparer{}, nv("i=J.|i=W.|s=Robins"), nv("i=J|i=W|s=Robins"), 1},
-	{"given", "initials vs full names", NameComparer{}, nv("i=J.|i=W.|s=Robins"), nv("g=James|g=William|s=Robins"), (0.5*2*G1 + 0.5*2*G2 + 2*F) / (2 * (G1 + G2 + F))},
-	{"given", "initial that does not fit", NameComparer{}, nv("i=W.|s=Robins"), nv("g=James|s=Robins"), 2 * F / (2 * (G1 + F))},
+	{"given", "initial for the first name", NameComparer{}, nv("g=J.|s=Robins"), nv("g=James|s=Robins"), (0.5*2*G1 + 2*F) / (2 * (G1 + F))},
+	{"given", "initial for the middle name", NameComparer{}, nv("g=James|g=W.|s=Robins"), nv("g=James|g=William|s=Robins"), (2*G1 + 0.5*2*G2 + 2*F) / (2 * (G1 + G2 + F))},
+	{"given", "initials on both sides", NameComparer{}, nv("g=J.|g=W.|s=Robins"), nv("g=J|g=W|s=Robins"), 1},
+	{"given", "initials vs full names", NameComparer{}, nv("g=J.|g=W.|s=Robins"), nv("g=James|g=William|s=Robins"), (0.5*2*G1 + 0.5*2*G2 + 2*F) / (2 * (G1 + G2 + F))},
+	{"given", "initial that does not fit", NameComparer{}, nv("g=W.|s=Robins"), nv("g=James|s=Robins"), 2 * F / (2 * (G1 + F))},
 	{"given", "first-name spelling variant", NameComparer{}, nv("g=Johann|s=Bach"), nv("g=Johan|s=Bach"), (johan*2*G1 + 2*F) / (2 * (G1 + F))},
 	{"given", "short name, one added letter", NameComparer{}, nv("g=Ann|s=Robins"), nv("g=Anne|s=Robins"), (anne*2*G1 + 2*F) / (2 * (G1 + F))},
 	{"given", "short name, one dropped letter", NameComparer{}, nv("g=John|s=Robins"), nv("g=Jon|s=Robins"), (anne*2*G1 + 2*F) / (2 * (G1 + F))},
@@ -138,7 +138,7 @@ var nameCases = []nameCase{
 	{"given", "two-letter name, one added letter", NameComparer{}, nv("g=Al|s=Robins"), nv("g=Ali|s=Robins"), 2 * F / (2 * (G1 + F))},
 	{"given", "abbreviation is not yet a match", NameComparer{}, nv("g=Jas.|s=Robins"), nv("g=James|s=Robins"), 2 * F / (2 * (G1 + F))},
 	{"given", "missing on one side", NameComparer{}, nv("s=Robins"), nv("g=James|s=Robins"), 2 * F / (F + G1 + F)},
-	{"given", "given only, initial", NameComparer{}, nv("i=J."), nv("g=James"), 0.5},
+	{"given", "given only, initial", NameComparer{}, nv("g=J."), nv("g=James"), 0.5},
 	{"given", "single character is a word, not an initial", NameComparer{}, nv("s=蒋|g=浩"), nv("s=蒋|g=浩然"), 2 * F / (2 * (G1 + F))},
 	{"given", "nickname matches a given name", NameComparer{}, nv("g=James|n=Jim|s=Robins"), nv("g=Jim|s=Robins"), (0.9*(N+G1) + 2*F) / (G1 + N + F + G1 + F)},
 	{"given", "nicknames on both sides", NameComparer{}, nv("g=James|n=Jim|s=Robins"), nv("g=Jacob|n=Jim|s=Robins"), (2*N + 2*F) / (2 * (G1 + N + F))},
@@ -160,8 +160,8 @@ var nameCases = []nameCase{
 
 	// A shared given name with unrelated surnames is weak.
 	{"surname conflict", "same given, unrelated surname", NameComparer{}, nv("g=James|s=Smith"), nv("g=James|s=Robins"), 2 * G1 / (2 * (G1 + F)) * 0.5},
-	{"surname conflict", "initial only, unrelated surname", NameComparer{}, nv("i=J.|s=Smith"), nv("g=James|s=Robins"), 0.5 * 2 * G1 / (2 * (G1 + F)) * 0.5},
-	{"surname conflict", "an initial does not hide it", NameComparer{}, nv("i=J.|s=Smith"), nv("i=S.|s=Robins"), 0.5 * 0.5 * (F + G1) / (2 * (G1 + F)) * 0.5},
+	{"surname conflict", "initial only, unrelated surname", NameComparer{}, nv("g=J.|s=Smith"), nv("g=James|s=Robins"), 0.5 * 2 * G1 / (2 * (G1 + F)) * 0.5},
+	{"surname conflict", "an initial does not hide it", NameComparer{}, nv("g=J.|s=Smith"), nv("g=S.|s=Robins"), 0.5 * 0.5 * (F + G1) / (2 * (G1 + F)) * 0.5},
 	{"surname conflict", "factor zero", NameComparer{GivenOnlyFactor: Set(0.0)}, nv("g=James|s=Smith"), nv("g=James|s=Robins"), 0},
 	{"surname conflict", "factor off", NameComparer{GivenOnlyFactor: Set(1.0)}, nv("g=James|s=Smith"), nv("g=James|s=Robins"), 2 * G1 / (2 * (G1 + F))},
 	{"surname conflict", "variant is not a conflict", NameComparer{}, nv("g=James|s=Robbins"), nv("g=James|s=Robins"), (2*G1 + robbins*2*F) / (2 * (G1 + F))},
@@ -236,14 +236,14 @@ func TestNameComparerLadders(t *testing.T) {
 		probe string
 		order []string
 	}{
-		{"g=James|i=K.|s=Robins", []string{
-			"g=James|i=K.|s=Robins",
-			"g=James|i=K.|s=Robbins",
+		{"g=James|g=K.|s=Robins", []string{
+			"g=James|g=K.|s=Robins",
+			"g=James|g=K.|s=Robbins",
 			"g=James|s=Robins",
-			"i=J.|i=K.|s=Robins",
+			"g=J.|g=K.|s=Robins",
 			"s=Robins",
 			"g=Mary|s=Robins",
-			"g=James|i=K.|s=Smith",
+			"g=James|g=K.|s=Smith",
 			"g=Ada|s=Lovelace",
 		}},
 		{"g=James|s=Robins|x=Jr.", []string{
@@ -257,7 +257,7 @@ func TestNameComparerLadders(t *testing.T) {
 			"g=Maria|g=Luisa|s=Silva|s=Costa",
 			"g=Maria|s=Silva Costa",
 			"g=Maria|g=Luisa|s=Costa",
-			"i=M.|s=Costa",
+			"g=M.|s=Costa",
 			"g=Luisa|s=Pereira",
 		}},
 		// Across formats: the same words typed differently still rank above
@@ -296,8 +296,7 @@ func TestNameComparerLadders(t *testing.T) {
 // nameCases.
 func TestNameComparerInvariants(t *testing.T) {
 	pools := map[string][]string{
-		"g":  {"James", "Jim", "Mary", "William", "Johann", "Johan", "José", "Maria Luisa", "浩"},
-		"i":  {"J.", "K.", "W", "M."},
+		"g":  {"James", "Jim", "Mary", "William", "Johann", "Johan", "José", "Maria Luisa", "浩", "J.", "K.", "W", "M."},
 		"n":  {"Jim", "Bill", "Polly"},
 		"s":  {"Robins", "Robbins", "Smith", "Smyth", "Silva Costa", "Costa", "Gogh", "蒋"},
 		"sp": {"van", "von", "de"},
@@ -306,7 +305,7 @@ func TestNameComparerInvariants(t *testing.T) {
 		"u":  {"Kendall"},
 		"_":  {"Robins", "James"},
 	}
-	codes := []string{"g", "g", "i", "n", "s", "s", "sp", "x", "p", "u", "_"}
+	codes := []string{"g", "g", "g", "n", "s", "s", "sp", "x", "p", "u", "_"}
 	forms := []string{"James Robins", "J. Robins", "Mary Smith", "(as written)", ""}
 	heavy := patterned(func(p *NamePattern) { p.Weights.Family = 3 })
 	heavy.CrossRole, heavy.GivenOnlyFactor, heavy.SuffixConflict = Set(0.2), Set(1.0), Set(0.9)

@@ -2290,11 +2290,6 @@ enum L10n {
             defaultValue: "Given name",
             comment: "NameValue part type: given"
         )
-        static let partTypeInitial = LocalizedStringResource(
-            "nameValue.part.type.initial",
-            defaultValue: "Initial",
-            comment: "NameValue part type: initial"
-        )
         static let partTypeNick = LocalizedStringResource(
             "nameValue.part.type.nick",
             defaultValue: "Nickname",
