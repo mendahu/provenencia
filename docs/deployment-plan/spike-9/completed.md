@@ -29,6 +29,7 @@ IDs stay stable (`S9-NN`, `S9-DN`). Do not renumber when moving steps here.
 | S9-12 | PR | Promote claim fields + save |
 | S9-13a | PR | Land migrations 000037 / 000038 |
 | S9-13 | PR | Reconciler pipeline + text / integer / term modules |
+| S9-13b | PR | Name module |
 
 ## Steps
 
@@ -580,3 +581,40 @@ Every value type now goes through one reconciler pipeline ([`conclusion-reconcil
 - Loading Sources, provenance, negatives and provisional members (**S9-14**). Until then every candidate is its own Source and of standard strength.
 - The per-candidate reasoning table (**S9-14**, migration 000040).
 - Multi-valued cardinality (**S9-36**).
+
+### S9-13b — Name module
+
+Names now reconcile by their structured parts on the shared pipeline ([`conclusion-reconciliation.md`](../../conclusion-reconciliation.md) §7.2). *J. Robins* and *James Robins* are one *James Robins*.
+
+**What shipped**
+
+- **`nameModule`** (`core/resolve/names.go`):
+  - **Split:** one unit per part type; each unit is the type's parts in idx order, normalized (accents kept). `form` is never read; a name with no parts is no evidence.
+  - **Fold:** a unit folds into a fuller one when its parts map, in order, onto a subsequence, each equal or an initial of it (`[J]` → `[James]`, `[James]` → `[James, Kenneth]`).
+  - **Assemble:** each type's parts come from the best-ranked carrier of the value it settled on, in the type order of the member with the most types. A member carrying exactly that name is returned as is.
+  - The pipeline does all the voting: majority and confidence per type, a missing type joining the agreeing name, denial by whole-name parts.
+- `resolve.IsInitial` (moved from `core/match`).
+- `CacheVersion = 6`.
+- `namevaluestest.Western` builds given parts and a surname for fixtures. Fixtures in conclusion headers, matching, promote targets, search and FFI use it. Two matching scores move (9.3 → 9.1, 5.0 → 6.0) because both sides are now typed.
+- **Tests:**
+  - `TestReconcileNames` (55 cases) and `TestReconcileNamesProvenance` (20), ported from the closed #255 / #256. Each row's reason is now pinned, and states read displayed values;
+  - `TestReconcileNamesValue`; seeded invariants (input order, forms never matter, renaming types changes nothing else, no invented parts);
+  - cache: an initial expands; a parts-less name isn't cached; deleting the full given name drops rank 1 back to *J. Robins*; stale versions 0–5 rebuild;
+  - mutation checks: no folding fails 19 cases, whole-name keys fail 34.
+- Benchmark: about 0.58 ms for 200 names (performance ledger).
+
+**What changed for researchers**
+
+- Names merge across initials, middle names and spacing, part type by part type.
+- A name with no parts is no longer shown. That Person reads by its label until a member's name has parts.
+- With two of three records agreeing, a misspelt surname or a minority given name is not displayed. It stays cached and searchable.
+
+**Deviations from the plan**
+
+- The code landed in one commit, not two, so every commit's tests pass. The name module alone would have broken other packages' form-only fixtures.
+
+**What stayed out**
+
+- Name display styles (natural / sorted) and name format profiles.
+- Accent folding and nicknames ([`ideas/international-names.md`](../../ideas/international-names.md), [`ideas/name-matching-enhancements.md`](../../ideas/name-matching-enhancements.md)).
+- Sources, provenance, negatives and provisional members loaded from the catalog (**S9-14**).

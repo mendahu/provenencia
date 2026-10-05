@@ -471,7 +471,7 @@ In order; each brief sits just above the PR it gates.
 - [x] S9-12 — Promote claim fields + save → [`completed.md`](completed.md)
 - [x] S9-13a — Land migrations 000037 / 000038 → [`completed.md`](completed.md)
 - [x] S9-13 — Reconciler pipeline + text / integer / term modules → [`completed.md`](completed.md)
-- [ ] S9-13b — Name module
+- [x] S9-13b — Name module → [`completed.md`](completed.md)
 - [ ] S9-14 — Evidence + reasoning in the cache
 - [ ] S9-15 — Detail composer + detail read
 - [ ] ✎ S9-D5 — Design: Person detail (revise for reasoning)
@@ -724,6 +724,8 @@ Design: [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md). PR
 
 #### S9-13b — Name module
 
+**Done.** See [`completed.md`](completed.md#s9-13b--name-module). `nameModule` in `core/resolve/names.go`; `resolve.IsInitial`; `namevaluestest.Western` builds parts for fixtures. For **S9-17**: a pair is compatible when `nameModule` (through `moduleFor(properties.ValueTypeName)`) gives both the same units or one folds into the other, the same test the Person page uses.
+
 | | |
 | --- | --- |
 | **In** | The name module on the pipeline (design §7.2): structured parts only (`form` never read; no parts = `no_evidence`); format-agnostic, part types as identifiers; split into one unit per part type, subsumption (`[J]` → `[James]`, `[James]` → `[James, Kenneth]`); survivors reassembled into one name; single-valued at the structure level. Test fixtures that wrote form-only names build parts (`namevaluestest`). Cache version ≥ 5. (`initial` is already retired by S9-13a.) |
@@ -759,7 +761,7 @@ Design: [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md). PR
 
 | | |
 | --- | --- |
-| **In** | Comparison read: incoming Observations × each member's per Property; a pair is compatible when the value-type module says *same value* or *fold*. Promote write takes confirmed pairs: pins on the new claim **and** backfill onto the member's claim, same transaction. |
+| **In** | Comparison read: incoming Observations × each member's per Property; a pair is compatible when the value-type module says *same value* or *fold* (`moduleFor` in `core/resolve/modules.go`; names compare unit by unit, S9-13b). Promote write takes confirmed pairs: pins on the new claim **and** backfill onto the member's claim, same transaction. |
 | **Testable** | Pins on both claims; older `argument` untouched; compatible pairs flagged by the same test the Person page uses. |
 | **Depends on** | S9-12, S9-13b |
 

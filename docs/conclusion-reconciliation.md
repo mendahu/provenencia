@@ -250,7 +250,7 @@ The rebuild-equals-upkeep tests hold upkeep equal to a full rebuild. Every new t
 | Resolved-values cache and upkeep | `core/database/resolvedvalues` (S9-06) | on `main` |
 | `initial` part type retired (migration 000037); `against` column (000038) | S9-13a | on `main` |
 | Shared pipeline and simple modules; every value cached with its reason (migration 000039) | S9-13 | on `main` |
-| Name module | S9-13b | planned |
+| Name module: parts by type, subsumption, reassembly; cache version 6 | S9-13b | stacked on S9-13 |
 | Evidence and reasoning in the cache | S9-14 | planned |
 
 PRs #255 and #256 built names-first versions of S9-13b and S9-14 to the first plan and were closed. Their migrations landed unchanged in S9-13a; their name logic, provenance logic, fixtures and test tables (75+ cases) are lifted into S9-13, S9-13b and S9-14 (see the Spike 9 plan, slice 4).
