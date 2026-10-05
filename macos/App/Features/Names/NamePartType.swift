@@ -4,7 +4,6 @@ import Foundation
 enum NamePartType: String, CaseIterable, Sendable {
     case prefix
     case given
-    case initial
     case nick
     case surnamePrefix = "surname_prefix"
     case surname
@@ -15,7 +14,6 @@ enum NamePartType: String, CaseIterable, Sendable {
         switch self {
         case .prefix: L10n.NameValue.partTypePrefix
         case .given: L10n.NameValue.partTypeGiven
-        case .initial: L10n.NameValue.partTypeInitial
         case .nick: L10n.NameValue.partTypeNick
         case .surnamePrefix: L10n.NameValue.partTypeSurnamePrefix
         case .surname: L10n.NameValue.partTypeSurname

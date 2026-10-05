@@ -56,12 +56,12 @@ struct NameValueDraftTests {
         draft.form = "John W. Alderwick"
         draft.parts = [
             .init(id: UUID(), value: "John", type: "given"),
-            .init(id: UUID(), value: "W.", type: "initial"),
+            .init(id: UUID(), value: "W.", type: "given"),
             .init(id: UUID(), value: "Alderwick", type: "surname"),
         ]
         #expect(draft.isValid)
         let parts = draft.toInput().parts
-        #expect(parts.map(\.type) == ["given", "initial", "surname"])
+        #expect(parts.map(\.type) == ["given", "given", "surname"])
         #expect(NameValueDisplay.string(for: draft) == "John W. Alderwick")
     }
 
@@ -106,10 +106,10 @@ struct NameValueDraftTests {
         draft.form = "John W. Alderwick"
         draft.parts = [
             .init(id: UUID(), value: "John", type: "given"),
-            .init(id: UUID(), value: "W.", type: "initial"),
+            .init(id: UUID(), value: "W.", type: "given"),
             .init(id: UUID(), value: "", type: ""),
         ]
         #expect(draft.storedFormLine == "“John W. Alderwick”")
-        #expect(draft.storedPartsLine == "1 given:John · 2 initial:W. · 3 \"\":…")
+        #expect(draft.storedPartsLine == "1 given:John · 2 given:W. · 3 \"\":…")
     }
 }

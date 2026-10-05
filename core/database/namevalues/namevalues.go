@@ -27,7 +27,6 @@ var ErrInvalid = apperr.New(apperr.CodeNameValuesInvalid, apperr.KindUser)
 const (
 	PartTypePrefix        = "prefix"
 	PartTypeGiven         = "given"
-	PartTypeInitial       = "initial"
 	PartTypeNick          = "nick"
 	PartTypeSurnamePrefix = "surname_prefix"
 	PartTypeSurname       = "surname"

@@ -455,8 +455,7 @@ User-minted part types (DB vocabulary, Property-terms-shaped) are **TBD** — do
 
 ```text
 prefix              -- NPFX
-given               -- GIVN
-initial
+given               -- GIVN (an initial is a given name written short: "J.")
 nick                -- NICK
 surname_prefix      -- SPFX
 surname             -- SURN
@@ -480,11 +479,10 @@ Natural style (spoken / display order):
 idx   part_type
 0     prefix
 1     given
-2     initial
-3     nick
-4     surname_prefix
-5     surname
-6     suffix
+2     nick
+3     surname_prefix
+4     surname
+5     suffix
 ```
 
 Sorted style (list order; separator `", "` after the surname group — *Robins, James*). Proposed, to be settled with the name-format work ([`structured-name-model.md`](structured-name-model.md) §4.5):
@@ -496,9 +494,8 @@ idx   part_type
 —     ", "
 2     prefix
 3     given
-4     initial
-5     nick
-6     suffix
+4     nick
+5     suffix
 ```
 
 ## 4.4 `project_settings`

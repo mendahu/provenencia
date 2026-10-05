@@ -11994,18 +11994,6 @@
         }
       }
     },
-    "nameValue.part.type.initial": {
-      "comment": "NameValue part type: initial",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Initial"
-          }
-        }
-      }
-    },
     "nameValue.part.type.nick": {
       "comment": "NameValue part type: nick",
       "extractionState": "manual",
