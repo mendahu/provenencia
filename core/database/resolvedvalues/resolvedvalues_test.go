@@ -13,6 +13,7 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/citations"
+	"github.com/mendahu/provenencia/core/database/claimconfidencegrades"
 	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/database/observations"
@@ -21,6 +22,8 @@ import (
 	"github.com/mendahu/provenencia/core/database/propertyterms"
 	"github.com/mendahu/provenencia/core/database/resolvedvalues"
 	"github.com/mendahu/provenencia/core/database/searchindex"
+	"github.com/mendahu/provenencia/core/database/sourcecredibility"
+	"github.com/mendahu/provenencia/core/database/sourcecredibilitygrades"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjects"
@@ -35,16 +38,20 @@ var userID = []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}
 
 const locator = `{"version":1,"selectors":[{"type":"page","artifact_page":1}]}`
 
-// fixture is a catalog with one Source and Artifact, the seeded vocabulary,
-// and a user integer Property ("age") bound to person.
+// fixture is a catalog with two Sources (one Artifact each), the seeded
+// vocabulary and grade registries, and a user integer Property ("age") bound
+// to person. f.source / f.artifact are the first; f.other / f.otherArtifact
+// the second.
 type fixture struct {
-	t        *testing.T
-	c        *database.Catalog
-	source   sources.Source
-	artifact artifacts.Artifact
-	types    map[string]subjecttypes.Type
-	props    map[string]properties.Property
-	terms    map[string]propertyterms.Term
+	t             *testing.T
+	c             *database.Catalog
+	source        sources.Source
+	artifact      artifacts.Artifact
+	other         sources.Source
+	otherArtifact artifacts.Artifact
+	types         map[string]subjecttypes.Type
+	props         map[string]properties.Property
+	terms         map[string]propertyterms.Term
 }
 
 func newFixture(t *testing.T) *fixture {
@@ -58,14 +65,20 @@ func newFixture(t *testing.T) *fixture {
 	must(t, err)
 	must(t, users.Upsert(c, userID, "Tester", r))
 	must(t, subjectvocab.Install(c))
+	must(t, sourcecredibilitygrades.Install(c))
+	must(t, claimconfidencegrades.Install(c))
 	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{Key: "book", Origin: sourcetypes.OriginProvenencia, Label: "Book"})
 	must(t, err)
 	src, err := sources.Create(c, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Register"})
 	must(t, err)
 	art, err := artifacts.Create(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
 	must(t, err)
+	other, err := sources.Create(c, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Census"})
+	must(t, err)
+	otherArt, err := artifacts.Create(c, userID, artifacts.CreateInput{SourceID: other.ID, Label: "Sheet"})
+	must(t, err)
 
-	f := &fixture{t: t, c: c, source: src, artifact: art,
+	f := &fixture{t: t, c: c, source: src, artifact: art, other: other, otherArtifact: otherArt,
 		types: map[string]subjecttypes.Type{}, props: map[string]properties.Property{}, terms: map[string]propertyterms.Term{}}
 	for _, k := range []string{"person", "event", "place"} {
 		st, err := subjecttypes.Lookup(c, k, subjecttypes.OriginProvenencia)
@@ -104,18 +117,58 @@ func must(t *testing.T, err error) {
 	}
 }
 
-func (f *fixture) subject(kind string) subjects.Subject {
+func (f *fixture) subject(kind string) subjects.Subject { return f.subjectOn(f.source, kind) }
+
+func (f *fixture) subjectOn(src sources.Source, kind string) subjects.Subject {
 	f.t.Helper()
-	s, err := subjects.Create(f.c, userID, subjects.CreateInput{SourceID: f.source.ID, SubjectTypeID: f.types[kind].ID}, nil)
+	s, err := subjects.Create(f.c, userID, subjects.CreateInput{SourceID: src.ID, SubjectTypeID: f.types[kind].ID}, nil)
 	must(f.t, err)
 	return s
 }
 
+// cite files the Observations on one new Citation, on the Artifact of the
+// first one's Subject's Source.
 func (f *fixture) cite(in ...observations.Input) []observations.Observation {
 	f.t.Helper()
-	res, err := citations.CreateWithObservations(f.c, userID, citations.CreateInput{ArtifactID: f.artifact.ID, LocatorJSON: locator}, in)
+	art := f.artifact
+	if len(in) > 0 && f.sourceOf(in[0].SubjectID) == string(f.other.ID) {
+		art = f.otherArtifact
+	}
+	res, err := citations.CreateWithObservations(f.c, userID, citations.CreateInput{ArtifactID: art.ID, LocatorJSON: locator}, in)
 	must(f.t, err)
 	return res.Observations
+}
+
+func (f *fixture) sourceOf(subjectID []byte) string {
+	s, err := subjects.Get(f.c, subjectID)
+	must(f.t, err)
+	return string(s.SourceID)
+}
+
+// credibility assesses a Source with a seeded grade key.
+func (f *fixture) credibility(src sources.Source, key string) error {
+	g, err := sourcecredibilitygrades.Lookup(f.c, key, sourcecredibilitygrades.OriginProvenencia)
+	must(f.t, err)
+	_, err = sourcecredibility.Upsert(f.c, userID, sourcecredibility.UpsertInput{SourceID: src.ID, CredibilityGradeID: g.ID})
+	return err
+}
+
+// certainty sets a Citation's transcription certainty.
+func (f *fixture) certainty(citationID []byte, uncertain bool) error {
+	_, err := citations.Update(f.c, userID, citationID, citations.CitationFieldsInput{LocatorJSON: locator, TranscriptionUncertain: uncertain})
+	return err
+}
+
+// grade is a seeded claim confidence grade's id.
+func (f *fixture) grade(key string) []byte {
+	g, err := claimconfidencegrades.Lookup(f.c, key, claimconfidencegrades.OriginProvenencia)
+	must(f.t, err)
+	return g.ID
+}
+
+func negative(in observations.Input) observations.Input {
+	in.Polarity = observations.PolarityNegative
+	return in
 }
 
 func (f *fixture) promote(s subjects.Subject) []byte {
@@ -181,20 +234,20 @@ type row struct {
 	TermID               []byte
 	Date, Name           []byte
 	SortKey              *string
-	Support              int
+	Support, Against     int
 }
 
 func snapshot(t *testing.T, q resolvedvalues.Querier) []row {
 	t.Helper()
 	rows, err := q.Query(`SELECT entity_id, property_id, rank, value_text, value_integer, value_term_id,
-		value_date, value_name, sort_key, support FROM conclusion_resolved_values
+		value_date, value_name, sort_key, support, against FROM conclusion_resolved_values
 		ORDER BY entity_id, property_id, rank`)
 	must(t, err)
 	defer rows.Close()
 	var out []row
 	for rows.Next() {
 		var r row
-		must(t, rows.Scan(&r.EntityID, &r.PropertyID, &r.Rank, &r.Text, &r.Integer, &r.TermID, &r.Date, &r.Name, &r.SortKey, &r.Support))
+		must(t, rows.Scan(&r.EntityID, &r.PropertyID, &r.Rank, &r.Text, &r.Integer, &r.TermID, &r.Date, &r.Name, &r.SortKey, &r.Support, &r.Against))
 		out = append(out, r)
 	}
 	must(t, rows.Err())
@@ -370,6 +423,82 @@ func TestResolvedNames(t *testing.T) {
 	f.assertUpkeepEqualsRebuild("TestResolvedNames")
 }
 
+// Provenance reaches the name reconciler (S9-14): weak names drop, stronger
+// negatives deny, and credibility and certainty edits recompute.
+func TestResolvedNameProvenance(t *testing.T) {
+	f := newFixture(t)
+	topName := func(h []byte) (string, []row) {
+		t.Helper()
+		names := rowsFor(f.rows(), h, f.props["name"].ID)
+		if len(names) == 0 {
+			t.Fatal("no name rows")
+		}
+		n, err := valuecodec.UnmarshalName(names[0].Name)
+		must(t, err)
+		return n.Form, names
+	}
+
+	// One Person on two Sources: "James Robins" in the Register, "Mary Robins"
+	// in the Census. One to one, so both stay; the lower id leads.
+	a, b := f.subject("person"), f.subjectOn(f.other, "person")
+	register := f.cite(nameIn(a, f.props["name"], "given=James|surname=Robins"))
+	f.cite(nameIn(b, f.props["name"], "given=Mary|surname=Robins"))
+	h := f.promote(a)
+	f.join(b, h)
+	if _, names := topName(h); len(names) != 2 {
+		t.Fatalf("names %+v", names)
+	}
+
+	t.Run("a low-trust Source drops its name", func(t *testing.T) {
+		must(t, f.credibility(f.source, "low_trust"))
+		if form, _ := topName(h); form != "Mary Robins" {
+			t.Fatalf("rank 1 %q, want the standard Source's name", form)
+		}
+		must(t, f.credibility(f.source, "standard"))
+		must(t, f.credibility(f.other, "low_trust"))
+		if form, _ := topName(h); form != "James Robins" {
+			t.Fatalf("rank 1 %q after the other Source fell", form)
+		}
+		must(t, f.credibility(f.other, "standard"))
+	})
+
+	t.Run("an uncertain transcription drops its name", func(t *testing.T) {
+		must(t, f.certainty(register[0].CitationID, true))
+		if form, _ := topName(h); form != "Mary Robins" {
+			t.Fatalf("rank 1 %q", form)
+		}
+		must(t, f.certainty(register[0].CitationID, false))
+	})
+
+	t.Run("a low-confidence claim drops its member's name", func(t *testing.T) {
+		c, d := f.subject("person"), f.subjectOn(f.other, "person")
+		f.cite(nameIn(c, f.props["name"], "given=Ann|surname=Lee"))
+		f.cite(nameIn(d, f.props["name"], "given=Anne|surname=Lee"))
+		res, err := promote.Save(f.c, userID, promote.Input{SubjectID: c.ID, ConfidenceGradeID: f.grade("low_confidence")})
+		must(t, err)
+		f.join(d, res.Entity.ID)
+		if form, names := topName(res.Entity.ID); form != "Anne Lee" || len(names) != 2 {
+			t.Fatalf("rank 1 %q, rows %+v", form, names)
+		}
+	})
+
+	t.Run("a stronger negative denies a name and counts against", func(t *testing.T) {
+		must(t, f.credibility(f.other, "high_trust"))
+		denial := f.cite(negative(nameIn(b, f.props["name"], "given=James|surname=Robins")))
+		form, names := topName(h)
+		if form != "Mary Robins" || names[1].Against != 1 {
+			t.Fatalf("rank 1 %q, rows %+v", form, names)
+		}
+		must(t, observations.Delete(f.c, userID, denial[0].ID))
+		if _, names := topName(h); names[0].Against+names[1].Against != 0 {
+			t.Fatalf("against after the negative went: %+v", names)
+		}
+		must(t, f.credibility(f.other, "standard"))
+	})
+
+	f.assertUpkeepEqualsRebuild("TestResolvedNameProvenance")
+}
+
 func TestEnsureCatalogRebuildsStaleVersion(t *testing.T) {
 	f := newFixture(t)
 	p := f.subject("person")
@@ -540,6 +669,47 @@ func TestRebuildEqualsUpkeep_Scenarios(t *testing.T) {
 				f.t.Fatalf("rank 1 %q, want J. Robins", n.Form)
 			}
 		}},
+		{"lowering a Source's credibility drops its spelling", func(f *fixture) {
+			a, b := f.subject("person"), f.subjectOn(f.other, "person")
+			f.cite(nameIn(a, f.props["name"], "given=James|surname=Robbins"))
+			f.cite(nameIn(b, f.props["name"], "given=James|surname=Robins"))
+			h := f.promote(a)
+			f.join(b, h)
+			f.assertUpkeepEqualsRebuild("before")
+			must(f.t, f.credibility(f.source, "low_trust"))
+			f.assertUpkeepEqualsRebuild("after the Register fell")
+			n, err := valuecodec.UnmarshalName(rowsFor(f.rows(), h, f.props["name"].ID)[0].Name)
+			must(f.t, err)
+			if n.Form != "James Robins" {
+				f.t.Fatalf("rank 1 %q, want the Census spelling", n.Form)
+			}
+		}},
+		{"a stronger negative removes a name, and deleting it brings the name back", func(f *fixture) {
+			a, b := f.subject("person"), f.subjectOn(f.other, "person")
+			f.cite(nameIn(a, f.props["name"], "given=James|surname=Robins"), nameIn(a, f.props["name"], "given=Jim|surname=Robins"))
+			must(f.t, f.credibility(f.other, "high_trust"))
+			h := f.promote(a)
+			f.join(b, h)
+			denial := f.cite(negative(nameIn(b, f.props["name"], "given=James|surname=Robins")))
+			f.assertUpkeepEqualsRebuild("denied")
+			must(f.t, observations.Delete(f.c, userID, denial[0].ID))
+			f.assertUpkeepEqualsRebuild("restored")
+			for _, r := range rowsFor(f.rows(), h, f.props["name"].ID) {
+				if r.Against != 0 {
+					f.t.Fatalf("against after the negative went: %+v", r)
+				}
+			}
+		}},
+		{"certainty toggled on a cited name", func(f *fixture) {
+			a, b := f.subject("person"), f.subjectOn(f.other, "person")
+			obs := f.cite(nameIn(a, f.props["name"], "given=Mary|surname=Robins"))
+			f.cite(nameIn(b, f.props["name"], "given=James|surname=Robins"))
+			h := f.promote(a)
+			f.join(b, h)
+			must(f.t, f.certainty(obs[0].CitationID, true))
+			f.assertUpkeepEqualsRebuild("uncertain")
+			must(f.t, f.certainty(obs[0].CitationID, false))
+		}},
 		{"emptied member subject deleted", func(f *fixture) {
 			p := f.subject("event")
 			obs := f.cite(dateIn(p, f.props["date"], 1985, ip(5), nil))
@@ -567,6 +737,8 @@ func TestRebuildEqualsUpkeep_SeededSequences(t *testing.T) {
 			handles := map[string][][]byte{}
 			joins := 0
 			kinds := []string{"person", "person", "event", "place"}
+			credibilities := []string{"low_trust", "standard", "high_trust"}
+			grades := []string{"", "low_confidence", "moderate", "high_confidence"}
 			names := []string{"given=James|surname=Robins", "given=james|surname=robins", "given=Jim|surname=Robins",
 				"given=J.|surname=Robins", "given=James|given=K.|surname=Robins", "surname=Robbins",
 				"given=Mary|surname=Smith", "form:James Robins"}
@@ -605,9 +777,13 @@ func TestRebuildEqualsUpkeep_SeededSequences(t *testing.T) {
 			}
 
 			for step := 1; step <= 200; step++ {
-				switch op := rng.Intn(10); {
+				switch op := rng.Intn(13); {
 				case op < 2 || len(subs) == 0:
-					subs = append(subs, f.subject(kinds[rng.Intn(len(kinds))]))
+					src := f.source
+					if rng.Intn(2) == 0 {
+						src = f.other
+					}
+					subs = append(subs, f.subjectOn(src, kinds[rng.Intn(len(kinds))]))
 				case op < 5:
 					s := subs[rng.Intn(len(subs))]
 					obs = append(obs, f.cite(value(s), value(s))...)
@@ -615,6 +791,9 @@ func TestRebuildEqualsUpkeep_SeededSequences(t *testing.T) {
 					// Mint, or join a handle of the Subject's kind already minted.
 					s := subs[rng.Intn(len(subs))]
 					in := promote.Input{SubjectID: s.ID}
+					if g := grades[rng.Intn(len(grades))]; g != "" {
+						in.ConfidenceGradeID = f.grade(g)
+					}
 					if same := handles[kindOf(f, s)]; len(same) > 0 && rng.Intn(2) == 0 {
 						in.EntityID = same[rng.Intn(len(same))]
 					}
@@ -640,6 +819,28 @@ func TestRebuildEqualsUpkeep_SeededSequences(t *testing.T) {
 					if err == nil {
 						obs = append(obs[:i], obs[i+1:]...)
 					}
+				case op == 10:
+					src := f.source
+					if rng.Intn(2) == 0 {
+						src = f.other
+					}
+					tolerate(f.credibility(src, credibilities[rng.Intn(len(credibilities))]))
+					// Checked at once: a later write to the handle would heal a miss.
+					f.assertUpkeepEqualsRebuild(fmt.Sprintf("seed %d step %d credibility", seed, step))
+				case op == 11 && len(obs) > 0:
+					// Prefer a name's Citation: certainty only moves names.
+					o := obs[rng.Intn(len(obs))]
+					for _, c := range obs {
+						if bytes.Equal(c.PropertyID, f.props["name"].ID) && rng.Intn(2) == 0 {
+							o = c
+							break
+						}
+					}
+					tolerate(f.certainty(o.CitationID, rng.Intn(2) == 0))
+					f.assertUpkeepEqualsRebuild(fmt.Sprintf("seed %d step %d certainty", seed, step))
+				case op == 12:
+					s := subs[rng.Intn(len(subs))]
+					obs = append(obs, f.cite(negative(value(s)))...)
 				default:
 					i := rng.Intn(len(subs))
 					err := subjects.Delete(f.c, userID, subs[i].ID)

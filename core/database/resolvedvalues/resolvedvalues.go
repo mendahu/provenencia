@@ -11,9 +11,16 @@
 // Recompute is per handle: all of a handle's Properties are rewritten together.
 // Narrowing to (handle, Property) waits for timings that need it.
 //
-// v1 scope: positive Observations on accepted members, clustered by
-// core/resolve. Subject-valued Properties are not cached until S9-28 maps them
-// to handles; provenance arrives with S9-14; date_lo / date_hi with S9-21.
+// Scope: Observations on accepted members, positive and negative, each with
+// its provenance (Source credibility, transcription certainty, the member's
+// claim confidence), resolved by core/resolve. Subject-valued Properties are
+// not cached until S9-28 maps them to handles; date_lo / date_hi wait for
+// S9-21.
+//
+// Upkeep: Observation, Promote and Subject writes recompute their handles; so
+// do a Source credibility change (RecomputeSourceTx) and a Citation certainty
+// change (RecomputeCitationTx). Claim confidence has no edit path yet; when
+// one lands it recomputes the claim's handle.
 package resolvedvalues
 
 import (
@@ -35,7 +42,8 @@ import (
 //
 //	2: dashes and slashes separate words in name keys (S9-10).
 //	3: names reconcile by part type; names with no parts drop out (S9-13).
-const CacheVersion = 3
+//	4: names drop weak and denied candidates; against counts (S9-14).
+const CacheVersion = 4
 
 // batchSize bounds the handles per loader batch (and so the IN list length).
 const batchSize = 500
@@ -52,19 +60,44 @@ const (
 
 	sqlInsert = `INSERT INTO conclusion_resolved_values
 		(entity_id, property_id, rank, value_text, value_integer, value_term_id,
-		 value_date, value_name, sort_key, support)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+		 value_date, value_name, sort_key, support, against)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
-	// One row per positive Observation on an accepted member of the batch.
+	// One row per Observation on an accepted member of the batch, with its
+	// polarity and provenance: credibility and claim confidence as grade
+	// sort_order relative to the provenencia default grade (standard,
+	// moderate); no assessment, no grade, or no vocabulary reads as 0.
 	sqlLoadCandidates = `SELECT ic.entity_id, o.id, o.property_id, p.value_type,
-			o.value_text, o.value_integer, o.value_date_id, o.value_name_id, o.value_term_id
+			o.value_text, o.value_integer, o.value_date_id, o.value_name_id, o.value_term_id,
+			o.polarity = 'negative',
+			COALESCE(sg.sort_order - (SELECT sort_order FROM source_credibility_grades
+				WHERE key = 'standard' AND origin = 'provenencia'), 0),
+			c.transcription_uncertain,
+			COALESCE(cg.sort_order - (SELECT sort_order FROM claim_confidence_grades
+				WHERE key = 'moderate' AND origin = 'provenencia'), 0)
 		FROM identity_claims ic
 		JOIN observations o ON o.subject_id = ic.subject_id
 		JOIN properties p ON p.id = o.property_id
+		JOIN citations c ON c.id = o.citation_id
+		JOIN artifacts a ON a.id = c.artifact_id
+		LEFT JOIN source_credibility_assessments sca ON sca.source_id = a.source_id
+		LEFT JOIN source_credibility_grades sg ON sg.id = sca.credibility_grade_id
+		LEFT JOIN claim_confidence_grades cg ON cg.id = ic.confidence_grade_id
 		WHERE ic.status = 'accepted'
-		  AND o.polarity = 'positive'
 		  AND p.value_type <> 'subject'
 		  AND ic.entity_id IN (`
+
+	// Handles with an accepted member that has an Observation citing the
+	// Source / the Citation.
+	sqlHandlesForSource = `SELECT DISTINCT ic.entity_id FROM identity_claims ic
+		JOIN observations o ON o.subject_id = ic.subject_id
+		JOIN citations c ON c.id = o.citation_id
+		JOIN artifacts a ON a.id = c.artifact_id
+		WHERE ic.status = 'accepted' AND a.source_id = ?`
+
+	sqlHandlesForCitation = `SELECT DISTINCT ic.entity_id FROM identity_claims ic
+		JOIN observations o ON o.subject_id = ic.subject_id
+		WHERE ic.status = 'accepted' AND o.citation_id = ?`
 
 	sqlHandlesForSubjects = `SELECT DISTINCT entity_id FROM identity_claims
 		WHERE status = 'accepted' AND subject_id IN (`
@@ -103,6 +136,26 @@ func RecomputeSubjectsTx(q Querier, subjectIDs [][]byte) error {
 		handles = append(handles, got...)
 	}
 	return RecomputeTx(q, handles)
+}
+
+// RecomputeSourceTx recomputes the handles whose members have Observations
+// citing the Source: its credibility is part of their provenance.
+func RecomputeSourceTx(q Querier, sourceID []byte) error {
+	ids, err := listIDs(q, sqlHandlesForSource, sourceID)
+	if err != nil {
+		return err
+	}
+	return RecomputeTx(q, ids)
+}
+
+// RecomputeCitationTx recomputes the handles whose members have Observations
+// on the Citation: its transcription certainty is part of their provenance.
+func RecomputeCitationTx(q Querier, citationID []byte) error {
+	ids, err := listIDs(q, sqlHandlesForCitation, citationID)
+	if err != nil {
+		return err
+	}
+	return RecomputeTx(q, ids)
 }
 
 // Rebuild clears the table, recomputes every handle, and stores CacheVersion.
@@ -215,8 +268,11 @@ func load(q Querier, ids [][]byte) ([]*group, error) {
 			text                        sql.NullString
 			integer                     sql.NullInt64
 			dateID, nameID, termID      []byte
+			negative, uncertain         bool
+			credibility, confidence     int
 		)
-		if err := rows.Scan(&entityID, &obsID, &propertyID, &valueType, &text, &integer, &dateID, &nameID, &termID); err != nil {
+		if err := rows.Scan(&entityID, &obsID, &propertyID, &valueType, &text, &integer, &dateID, &nameID, &termID,
+			&negative, &credibility, &uncertain, &confidence); err != nil {
 			_ = rows.Close()
 			return nil, err
 		}
@@ -231,6 +287,8 @@ func load(q Querier, ids [][]byte) ([]*group, error) {
 			Text: text.String, HasText: text.Valid,
 			Integer: integer.Int64, HasInteger: integer.Valid,
 			TermID: termID,
+		}, Negative: negative, Provenance: resolve.Provenance{
+			Credibility: credibility, Uncertain: uncertain, ClaimConfidence: confidence,
 		}}
 		all = append(all, pending{g: g, c: c, dateID: dateID, nameID: nameID})
 		if len(dateID) > 0 {
@@ -327,7 +385,7 @@ func insertRow(q Querier, g *group, rank int, cl resolve.Cluster) error {
 	if k, ok := resolve.SortKey(g.valueType, v); ok {
 		sortKey = k
 	}
-	_, err := q.Exec(sqlInsert, g.entityID, g.propertyID, rank, text, integer, termID, dateBlob, nameBlb, sortKey, cl.Support)
+	_, err := q.Exec(sqlInsert, g.entityID, g.propertyID, rank, text, integer, termID, dateBlob, nameBlb, sortKey, cl.Support, cl.Against)
 	return err
 }
 
