@@ -753,6 +753,7 @@ Researcher's decision while revising **S9-D1**: two configuration views get plai
 | --- | --- |
 | **In** | Event header + detail: title precedence without subjects (`event_name` → label → *Unspecified {type}* → ref), date (else span). List / detail / count FFI and keys. Swift event-title formatter (L10n templates, full matrix so S9-31 only supplies parts). |
 | **Depends on** | S9-15, S9-20, S9-21 |
+| **Note** | Promote names an Event subject by `SourceGraphPlacedSubject.displayName` (S9-12), which uses the label until now. Point its Event case at this formatter, fed from the subject's own Observations on the graph (type term, `event_name`, date), so Promote's header reads like the Event's title. |
 
 #### S9-23 — Events list
 
@@ -825,6 +826,7 @@ Researcher's decision while revising **S9-D1**: two configuration views get plai
 | --- | --- |
 | **In** | Person birth / death date and place; Event subject titles (*Birth of …*, marriage, *et al.*, *unnamed person*, *{Type} at {toponym}*) and places. Header-dependents function (reverse walk) for later reprojection. |
 | **Depends on** | S9-22, S9-25, S9-28 |
+| **Note** | Give Promote's Event name (`displayName`) the same subject parts from the graph's participation and location bridges, so a Baptism card promotes as *Baptism of James Robins* rather than its label. People are named by their own `displayName` rule (name form, then label). |
 
 #### S9-32 — Fill derived cells
 

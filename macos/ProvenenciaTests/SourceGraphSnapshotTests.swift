@@ -415,4 +415,49 @@ struct SourceGraphSnapshotTests {
             .updatingPosition(subjectID: "s-alice", gridX: 3, gridY: 3)
         #expect(rows.memberships == [membership])
     }
+
+    // MARK: Display name (Promote)
+
+    private func placed(
+        _ kind: EvidencePrimaryKind,
+        label: String,
+        _ observations: [CatalogObservation] = []
+    ) -> SourceGraphPlacedSubject {
+        SourceGraphPlacedSubject(
+            subject: CatalogSubject(id: "s1", ref: "CXX-1", sourceID: "src", subjectTypeID: "t", label: label, description: ""),
+            kind: kind, typeLabel: "", gridX: 0, gridY: 0, isCited: !observations.isEmpty,
+            observations: observations
+        )
+    }
+
+    private func observation(
+        _ key: String,
+        text: String = "",
+        nameForm: String = "",
+        polarity: String = "positive"
+    ) -> CatalogObservation {
+        CatalogObservation(
+            id: key, ref: "OBS-1", citationID: "c1", subjectID: "s1", propertyID: "p-\(key)",
+            polarity: polarity, valueText: text, valueInteger: nil, valueDateID: "",
+            valueNameID: "", nameForm: nameForm, valueSubjectID: "", valueTermID: "",
+            propertyKey: key, propertyLabel: key, propertyValueType: "text"
+        )
+    }
+
+    @Test func displayNameUsesEachKindsNamingProperty() {
+        #expect(placed(.person, label: "James", [observation("name", nameForm: "James Robins")]).displayName == "James Robins")
+        #expect(placed(.place, label: "the town", [observation("toponym", text: "York")]).displayName == "York")
+        // A toponym doesn't name a Person, nor a name a Place.
+        #expect(placed(.person, label: "James", [observation("toponym", text: "York")]).displayName == "James")
+        #expect(placed(.place, label: "the town", [observation("name", nameForm: "York")]).displayName == "the town")
+        // Events keep the label until the event title formatter (S9-22).
+        #expect(placed(.event, label: "Baptism", [observation("name", nameForm: "James")]).displayName == "Baptism")
+    }
+
+    @Test func displayNameSkipsDeniedAndBlankValues() {
+        let denied = observation("toponym", text: "Leeds", polarity: "negative")
+        #expect(placed(.place, label: "the town", [denied, observation("toponym", text: "York")]).displayName == "York")
+        #expect(placed(.place, label: "the town", [observation("toponym", text: "  ")]).displayName == "the town")
+        #expect(placed(.place, label: "  ").displayName == "CXX-1")
+    }
 }
