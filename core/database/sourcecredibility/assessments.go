@@ -11,6 +11,7 @@ import (
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/audit"
+	"github.com/mendahu/provenencia/core/database/autoreconciler"
 	"github.com/mendahu/provenencia/core/database/project"
 	"github.com/mendahu/provenencia/core/database/sourcecredibilitygrades"
 )
@@ -145,6 +146,13 @@ func Upsert(c *database.Catalog, userID []byte, in UpsertInput) (Assessment, err
 		}
 	}
 
+	// Credibility is part of the evidence of every value the Source backs; an
+	// argument-only edit changes none.
+	if _, gradeSet := fields["credibility_grade_id"]; gradeSet {
+		if err := autoreconciler.RecomputeSourceTx(tx, in.SourceID); err != nil {
+			return Assessment{}, err
+		}
+	}
 	if _, err := audit.Record(tx, audit.Revision{
 		UserID:     userID,
 		ActionType: actionType,

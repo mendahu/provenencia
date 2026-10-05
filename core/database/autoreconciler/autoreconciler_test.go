@@ -841,6 +841,50 @@ func TestRebuildEqualsUpkeep_Scenarios(t *testing.T) {
 				f.t.Fatalf("rank 1 %q, want J. Robins", n.Form)
 			}
 		}},
+		{"lowering a Source's credibility drops its spelling", func(f *fixture) {
+			a, b := f.subject("place"), f.subjectOn(f.other, "place")
+			f.cite(textIn(a, f.props["toponym"], "U.C."))
+			f.cite(textIn(b, f.props["toponym"], "Upper Canada"))
+			h := f.promote(a)
+			f.join(b, h)
+			f.assertUpkeepEqualsRebuild("before")
+			must(f.t, f.credibility(f.source, "low_trust"))
+			f.assertUpkeepEqualsRebuild("after the Register fell")
+			if rows := rowsFor(f.rows(), h, f.props["toponym"].ID); len(rows) != 2 || *rows[0].Text != "Upper Canada" || rows[1].Reason != "weak" {
+				f.t.Fatalf("toponyms %+v", rows)
+			}
+		}},
+		{"a stronger negative removes a value, and deleting it brings it back", func(f *fixture) {
+			a, b, c := f.subject("place"), f.subjectOn(f.other, "place"), f.subjectOn(f.newSource("Gazette"), "place")
+			f.cite(textIn(a, f.props["toponym"], "York"))
+			f.cite(textIn(c, f.props["toponym"], "Toronto"))
+			must(f.t, f.credibility(f.other, "high_trust"))
+			h := f.promote(a)
+			f.join(b, h)
+			f.join(c, h)
+			denial := f.cite(negative(textIn(b, f.props["toponym"], "York")))
+			f.assertUpkeepEqualsRebuild("denied")
+			must(f.t, observations.Delete(f.c, userID, denial[0].ID))
+			f.assertUpkeepEqualsRebuild("restored")
+			for _, r := range rowsFor(f.rows(), h, f.props["toponym"].ID) {
+				if r.Reason != "kept" || r.Against != 0 {
+					f.t.Fatalf("after the negative went: %+v", r)
+				}
+			}
+		}},
+		{"certainty toggled on a cited value", func(f *fixture) {
+			a, b := f.subject("place"), f.subjectOn(f.other, "place")
+			obs := f.cite(textIn(a, f.props["toponym"], "Yorke"))
+			f.cite(textIn(b, f.props["toponym"], "York"))
+			h := f.promote(a)
+			f.join(b, h)
+			must(f.t, f.certainty(obs[0].CitationID, true))
+			f.assertUpkeepEqualsRebuild("uncertain")
+			if rows := rowsFor(f.rows(), h, f.props["toponym"].ID); len(rows) != 2 || rows[1].Reason != "weak" {
+				f.t.Fatalf("toponyms %+v", rows)
+			}
+			must(f.t, f.certainty(obs[0].CitationID, false))
+		}},
 		{"emptied member subject deleted", func(f *fixture) {
 			p := f.subject("event")
 			obs := f.cite(dateIn(p, f.props["date"], 1985, ip(5), nil))
@@ -868,6 +912,8 @@ func TestRebuildEqualsUpkeep_SeededSequences(t *testing.T) {
 			handles := map[string][][]byte{}
 			joins := 0
 			kinds := []string{"person", "person", "event", "place"}
+			credibilities := []string{"low_trust", "standard", "high_trust"}
+			grades := []string{"", "low_confidence", "moderate", "high_confidence"}
 			names := []string{"given=James|surname=Robins", "given=james|surname=robins", "given=Jim|surname=Robins",
 				"given=J.|surname=Robins", "given=James|given=K.|surname=Robins", "surname=Robbins",
 				"given=Mary|surname=Smith", "form:James Robins"}
@@ -906,9 +952,13 @@ func TestRebuildEqualsUpkeep_SeededSequences(t *testing.T) {
 			}
 
 			for step := 1; step <= 200; step++ {
-				switch op := rng.Intn(10); {
+				switch op := rng.Intn(13); {
 				case op < 2 || len(subs) == 0:
-					subs = append(subs, f.subject(kinds[rng.Intn(len(kinds))]))
+					src := f.source
+					if rng.Intn(2) == 0 {
+						src = f.other
+					}
+					subs = append(subs, f.subjectOn(src, kinds[rng.Intn(len(kinds))]))
 				case op < 5:
 					s := subs[rng.Intn(len(subs))]
 					obs = append(obs, f.cite(value(s), value(s))...)
@@ -916,6 +966,9 @@ func TestRebuildEqualsUpkeep_SeededSequences(t *testing.T) {
 					// Mint, or join a handle of the Subject's kind already minted.
 					s := subs[rng.Intn(len(subs))]
 					in := promote.Input{SubjectID: s.ID}
+					if g := grades[rng.Intn(len(grades))]; g != "" {
+						in.ConfidenceGradeID = f.grade(g)
+					}
 					if same := handles[kindOf(f, s)]; len(same) > 0 && rng.Intn(2) == 0 {
 						in.EntityID = same[rng.Intn(len(same))]
 					}
@@ -941,6 +994,28 @@ func TestRebuildEqualsUpkeep_SeededSequences(t *testing.T) {
 					if err == nil {
 						obs = append(obs[:i], obs[i+1:]...)
 					}
+				case op == 10:
+					src := f.source
+					if rng.Intn(2) == 0 {
+						src = f.other
+					}
+					tolerate(f.credibility(src, credibilities[rng.Intn(len(credibilities))]))
+					// Checked at once: a later write to the handle would heal a miss.
+					f.assertUpkeepEqualsRebuild(fmt.Sprintf("seed %d step %d credibility", seed, step))
+				case op == 11 && len(obs) > 0:
+					// Prefer a name or toponym Citation: certainty moves those most.
+					o := obs[rng.Intn(len(obs))]
+					for _, c := range obs {
+						if (bytes.Equal(c.PropertyID, f.props["name"].ID) || bytes.Equal(c.PropertyID, f.props["toponym"].ID)) && rng.Intn(2) == 0 {
+							o = c
+							break
+						}
+					}
+					tolerate(f.certainty(o.CitationID, rng.Intn(2) == 0))
+					f.assertUpkeepEqualsRebuild(fmt.Sprintf("seed %d step %d certainty", seed, step))
+				case op == 12:
+					s := subs[rng.Intn(len(subs))]
+					obs = append(obs, f.cite(negative(value(s)))...)
 				default:
 					i := rng.Intn(len(subs))
 					err := subjects.Delete(f.c, userID, subs[i].ID)

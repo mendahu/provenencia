@@ -1,26 +1,36 @@
 // Package autoreconciler stores the auto-reconciler's output (Spike 9 R3):
 // auto_reconciler_values holds every auto-reconciled value for every Property
-// on every canonical handle. core/autoreconcile computes it; this package
-// loads its inputs, writes its output, and keeps it current.
+// on every canonical handle, and auto_reconciler_outcomes what the
+// auto-reconciler did with each Observation. core/autoreconcile computes
+// them; this package loads its inputs, writes its output, and keeps it
+// current. A Reconciliation Claim is never written here.
 //
-// The table is derived and rebuildable. Every write that can change a handle's
-// values recomputes the affected handles inside its own transaction
-// (RecomputeTx / RecomputeSubjectsTx); EnsureCatalog rebuilds everything on
-// open when CacheVersion moves. Rebuild and upkeep share one batched loader,
-// and the rebuild-equals-upkeep tests (fixed-seed sequences plus named
-// scenarios) hold them equal — an upkeep miss is otherwise silent.
+// The tables are derived and rebuildable. Every write that can change a
+// handle's values recomputes the affected handles inside its own transaction;
+// EnsureCatalog rebuilds everything on open when CacheVersion moves. Rebuild
+// and upkeep share one batched loader, and the rebuild-equals-upkeep tests
+// (fixed-seed sequences plus named scenarios) hold them equal — an upkeep miss
+// is otherwise silent.
+//
+// Upkeep: RecomputeTx / RecomputeSubjectsTx for Observation, Promote and
+// Subject writes; RecomputeSourceTx for a Source credibility change;
+// RecomputeCitationTx for a Citation certainty change. Claim confidence and
+// status have no edit path yet; when one lands it recomputes the claim's
+// handle.
 //
 // Recompute is per handle: all of a handle's Properties are rewritten together.
 // Narrowing to (handle, Property) waits for timings that need it.
 //
-// Every value core/resolve returns is cached, displayed or not: `reason` is
-// 'kept' for a displayed value, else why it isn't displayed (outvoted, weak,
-// denied, provisional). Readers that count displayed values filter on it;
-// search and matching read them all.
+// Every auto-reconciled value is cached, displayed or not: `reason` is 'kept'
+// for a displayed value, else why it isn't displayed (outvoted, weak, denied,
+// provisional). Readers that count displayed values filter on it; search and
+// matching read them all.
 //
-// Scope today: positive Observations on accepted members, with each term's
-// key and each name's parts. Sources, provenance, negatives and provisional members load with
-// S9-14; subject-valued Properties with S9-28; date_lo / date_hi with S9-21.
+// Inputs: every Observation on an accepted or provisional member (rejected
+// members don't count), with its Source, polarity, Source credibility,
+// transcription certainty, and claim confidence and status; each term's key
+// and each name's parts. Subject-valued Properties wait for S9-28;
+// date_lo / date_hi for S9-21.
 package autoreconciler
 
 import (
@@ -104,6 +114,18 @@ const (
 	sqlHandlesForSubjects = `SELECT DISTINCT entity_id FROM identity_claims
 		WHERE status IN ('accepted', 'provisional') AND subject_id IN (`
 
+	// Handles with an accepted or provisional member that has an Observation
+	// citing the Source / the Citation.
+	sqlHandlesForSource = `SELECT DISTINCT ic.entity_id FROM identity_claims ic
+		JOIN observations o ON o.subject_id = ic.subject_id
+		JOIN citations c ON c.id = o.citation_id
+		JOIN artifacts a ON a.id = c.artifact_id
+		WHERE ic.status IN ('accepted', 'provisional') AND a.source_id = ?`
+
+	sqlHandlesForCitation = `SELECT DISTINCT ic.entity_id FROM identity_claims ic
+		JOIN observations o ON o.subject_id = ic.subject_id
+		WHERE ic.status IN ('accepted', 'provisional') AND o.citation_id = ?`
+
 	sqlAllEntities = `SELECT id FROM canonical_entities ORDER BY id`
 )
 
@@ -138,6 +160,26 @@ func RecomputeSubjectsTx(q Querier, subjectIDs [][]byte) error {
 		handles = append(handles, got...)
 	}
 	return RecomputeTx(q, handles)
+}
+
+// RecomputeSourceTx recomputes the handles whose members have Observations
+// citing the Source: its credibility is part of their evidence.
+func RecomputeSourceTx(q Querier, sourceID []byte) error {
+	ids, err := listIDs(q, sqlHandlesForSource, sourceID)
+	if err != nil {
+		return err
+	}
+	return RecomputeTx(q, ids)
+}
+
+// RecomputeCitationTx recomputes the handles whose members have Observations
+// on the Citation: its transcription certainty is part of their evidence.
+func RecomputeCitationTx(q Querier, citationID []byte) error {
+	ids, err := listIDs(q, sqlHandlesForCitation, citationID)
+	if err != nil {
+		return err
+	}
+	return RecomputeTx(q, ids)
 }
 
 // Rebuild clears the table, recomputes every handle, and stores CacheVersion.

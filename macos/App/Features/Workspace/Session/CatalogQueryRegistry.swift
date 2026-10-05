@@ -20,8 +20,8 @@ struct CatalogQueryRegistry: Sendable {
     /// Conclusion key — lists now, details from S9-15 — invalidates on this
     /// one set, because Go's auto-reconciler cache recomputes on the same
     /// writes and reloading from it is cheap. `mutatedSourceWorkspace` carries
-    /// credibility changes and over-busts on notes, artifacts, and metadata.
-    /// Certainty joins with S9-14.
+    /// credibility changes and over-busts on notes, artifacts, and metadata;
+    /// a Citation's certainty rides `savedCitation` (S9-14).
     static let conclusionTriggers: Set<CatalogMutationKind> = [
         .savedCitation, .deletedSubject, .promotedSubject, .deletedSource, .mutatedSourceWorkspace,
     ]
