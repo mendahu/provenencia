@@ -194,7 +194,7 @@ The rebuild-equals-upkeep tests hold upkeep equal to a full rebuild. Every new t
 
 # 11. Open questions
 
-1. **Places.** Decided in §11.1. Still open: the seeded type keys and labels (the succession type's name: *became*, *succeeded by*, *renamed*?).
+1. **Places.** Decided in §11.1. Labels for the seeded types are a UI decision for later.
 2. **Claims for multi-valued Properties.** What a Reconciliation Claim concludes when a Property has several true values.
 
 **Decided 2026-10-05:**
@@ -218,8 +218,8 @@ The rebuild-equals-upkeep tests hold upkeep equal to a full rebuild. Every new t
 
   Each relationship is cited and reconciled like any other evidence; the ends use the subject-valued module (§7). It is a dedicated kind, not the Person Relationship, because its ends are two directional places. It can carry more Properties later without remodelling.
 - **Types are an open, researcher-extensible vocabulary, and each type has a category:**
-  - **hierarchical:** administrative (Guam in the United States), geographic (the Lower Mainland in British Columbia), ecclesiastical (a parish in a diocese), and any a researcher adds. These follow a chain upward ("everyone in Ontario"), hold where the two places' periods overlap, and build display chains ("Toronto, Ontario, Canada"). A place may have several parents, so places form a graph, not a tree.
-  - **temporal:** succession (York → Toronto), and any a researcher adds. These link a lineage that search may follow. They never build a display chain, and containment is not inherited across them.
+  - **hierarchical:** `administrative` (Guam in the United States), `geographic` (the Lower Mainland in British Columbia), `ecclesiastical` (a parish in a diocese), and any a researcher adds. These follow a chain upward ("everyone in Ontario"), hold where the two places' periods overlap, and build display chains ("Toronto, Ontario, Canada"). A place may have several parents, so places form a graph, not a tree.
+  - **temporal:** `succeeded_by` (York succeeded by Toronto), and any a researcher adds. These link a lineage that search may follow. They never build a display chain, and containment is not inherited across them.
 
   The category is data on the vocabulary term (a new field), so a researcher-added type tells the app how to behave.
 - **No loops.** Hierarchical relationships must not form a cycle, and temporal ones are directional. Both are checked in the app layer, not the schema.
