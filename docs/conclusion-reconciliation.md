@@ -77,7 +77,7 @@ One pipeline for every value type. Each value type supplies a small module (§7)
    - Candidates with no usable value are eliminated (`no_evidence`): an empty value, a name with no parts, a term the module calls no evidence (such as an *unknown* sex term).
 2. **Deny.** A negative candidate eliminates the positive candidates with the **same value** whose evidence it is stronger than (`denied`). Those candidates cast no vote. A negative at equal or lower strength only counts against.
 3. **Group.** The module's *same value* test groups equal values. Its *fold* test folds a less specific value into a more specific one it fits (`folded`): `[J]` into `[James]`, `MAY 1985` into `14 MAY 1985`. When a value fits several, it folds into the best supported, then the strongest.
-4. **Majority.** Support is counted in **distinct Sources**. A value with support from at least two Sources and more than half the support crowds out the rest (`outvoted`). Two of three wins; one to one keeps both.
+4. **Majority.** Support is counted in **distinct Sources** (a derivative Source counts as its own Source until derivation can be recorded). A value with support from at least two Sources and more than half the support crowds out the rest (`outvoted`). Two of three wins; one to one keeps both.
 5. **Confidence.** Among survivors, a value carried only by weak candidates is eliminated when a value with a non-weak carrier survived (`weak`).
 6. **Merge.** The module merges each surviving group into one displayed value. Single-valued Properties have one or more surviving values (§8). When several survive, the state is *mixed* and all are shown.
 
@@ -104,7 +104,7 @@ The reconciler returns the **answer and its reasoning**, so the UI can be rich a
 | `no_evidence` | nothing usable to compare |
 | `against` | a negative that counted against a value without eliminating it |
 
-The cache stores enough of this for list and detail pages to render without re-running the reconciler: values, state, support, the against count, and the per-candidate outcomes.
+The cache stores the reasoning with the values: state, support, the against count, and every candidate's outcome and reason. List and detail pages render from it without re-running the reconciler.
 
 ---
 
@@ -118,7 +118,7 @@ Each module answers three questions:
 
 | Value type | Same value | Fold | Merge | No evidence |
 | --- | --- | --- | --- | --- |
-| **text** | equal after trimming (case folding is open, §11) | none | the best-ranked member's text | empty |
+| **text** | equal after trimming whitespace, ignoring case (*York* = *york*) | none | the best-ranked member's text | empty |
 | **integer** | equal | none | the value | — |
 | **term** | same term | none | the term | terms the module marks neutral (*unknown*, *indeterminate*) |
 | **subject** | candidate Subjects map to the **same handle**; unpromoted Subjects drop out | none | the handle (an edge of the canonical graph) | unpromoted |
@@ -155,7 +155,7 @@ From [`structured-name-model.md`](structured-name-model.md). Designed and built 
 Each Property needs a **cardinality** in its configuration:
 
 - **Single** (sex at birth, birth date, name): the pipeline aims for one value. When the evidence can't decide, several survive and the state is *mixed*.
-- **Multiple** (occupation, residence, religion): several distinct values are all true. The pipeline merges duplicates and variants (same value, fold, deny) but must not crowd out a distinct value as an outlier.
+- **Multiple** (occupation, residence, religion): several distinct values are all true. The pipeline merges duplicates and variants (same value, fold, deny) and does not crowd out a distinct value by majority. The confidence step still applies: a distinct value carried only by weak evidence is dropped when stronger evidence supports a different value. Promoting weak evidence to a concluded value is an explicit researcher action (a Reconciliation Claim), so the auto-reconciler stays opinionated.
 
 Model consequences:
 
@@ -196,9 +196,13 @@ The rebuild-equals-upkeep tests hold upkeep equal to a full rebuild. Every new t
 
 1. **Places.** A Place's toponyms are text, but "Toronto", "Ontario" and "Canada" are not alternatives to reconcile: they are different places at different grains. Place reconciliation needs a place hierarchy (`contained_in`, gazetteer parents; [`conclusion-layer-data-model.md`](conclusion-layer-data-model.md) §13) before a module makes sense. Descoped from Spike 9 slice 4; next to design.
 2. **Claims for multi-valued Properties.** What a Reconciliation Claim concludes when a Property has several true values.
-3. **Text normalization.** Whether text equality folds case (*York* vs *york*). Spike 9 S9-05 decided exact after trimming.
-4. **Confidence in multi-valued Properties.** Whether a weak distinct value is dropped when stronger evidence supports a *different* value, given both may be true.
-5. **Derivative Sources.** Majority counts Sources. An index copied from a register is arguably one Source's evidence twice. That needs source-to-source relationships ([`ideas/source-to-source-relationships.md`](ideas/source-to-source-relationships.md)).
+
+**Decided 2026-10-05:**
+
+- **Text ignores case.** This changes Spike 9 S9-05's exact-after-trimming rule.
+- **Weak evidence drops in multi-valued Properties too** (§8). A researcher who wants a weak value concluded makes a Reconciliation Claim.
+- **Derivative Sources count as separate votes, for now.** There is no way to record that an index derives from a register, so the app treats them as two Sources. Counting them once waits for source-to-source relationships ([`ideas/source-to-source-relationships.md`](ideas/source-to-source-relationships.md)).
+- **Reason vocabulary:** the §6 list, extended as modules need.
 
 **Out of scope for now:** values that change over time (a married name from 1885, an occupation by decade). Cardinality is where they would hook in later.
 
