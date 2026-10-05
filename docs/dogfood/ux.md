@@ -19,6 +19,13 @@ Copy the stub. Surface + what got in the way is enough. A wanted fix is optional
 
 <!-- add below this line -->
 
+### Onboarding defaults to a new user when opening an existing project
+
+- **Date:** 2026-10-05
+- **Where:** Onboarding → user selection (after choosing an existing project)
+- **Annoyance:** After picking an existing project, the user selection on the next screen defaults to creating a new user.
+- **Wanted:** Default to the oldest existing user in the list.
+
 ### Last updated field on list views
 
 - **Date:** 2026-10-05
