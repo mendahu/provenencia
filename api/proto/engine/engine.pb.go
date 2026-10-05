@@ -1706,8 +1706,8 @@ type Source struct {
 	// True when this Source has at least one Artifact row (fileless counts).
 	// Used by Sources list Evidence graph gate — not cover presence.
 	HasArtifact bool `protobuf:"varint,11,opt,name=has_artifact,json=hasArtifact,proto3" json:"has_artifact,omitempty"`
-	// Max audit_transactions.revision for entity_type=source on this id.
-	// Sources list "Updated" sort; create-only Sources use their create revision.
+	// Max audit_transactions.revision scoped to this Source (audit_transaction_scopes):
+	// its row and any work under it. Sources list "Updated" sort.
 	UpdatedRevision int64 `protobuf:"varint,12,opt,name=updated_revision,json=updatedRevision,proto3" json:"updated_revision,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache

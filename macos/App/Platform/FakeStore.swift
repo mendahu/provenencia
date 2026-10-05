@@ -407,6 +407,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 createdAt: formatter.string(from: Date())
             )
             notesBySource[sourceID, default: []].append(note)
+            bumpSource(sourceID)
             return note
         }
     }
@@ -420,6 +421,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                     var copy = notes
                     copy[idx].body = body
                     notesBySource[sourceID] = copy
+                    bumpSource(sourceID)
                     return copy[idx]
                 }
             }
@@ -442,8 +444,9 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
 
     func deleteSourceNote(projectDir _: String, userID _: String, noteID: String) async throws {
         withState {
-            for (sourceID, notes) in notesBySource {
+            for (sourceID, notes) in notesBySource where notes.contains(where: { $0.id == noteID }) {
                 notesBySource[sourceID] = notes.filter { $0.id != noteID }
+                bumpSource(sourceID)
             }
         }
     }
@@ -479,6 +482,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 list.append(entry)
             }
             metadataBySource[sourceID] = list
+            bumpSource(sourceID)
             return entry
         }
     }
@@ -494,6 +498,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 list.remove(at: idx)
             }
             metadataBySource[sourceID] = list
+            bumpSource(sourceID)
         }
     }
 
@@ -507,6 +512,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             var list = metadataBySource[sourceID] ?? []
             list.removeAll { $0.field.id == fieldID && !$0.hasValue }
             metadataBySource[sourceID] = list
+            bumpSource(sourceID)
             return list
         }
     }
@@ -533,6 +539,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 next.append(entry)
             }
             metadataBySource[sourceID] = next
+            bumpSource(sourceID)
             return next
         }
     }
@@ -556,6 +563,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 file: nil
             )
             artifactsBySource[sourceID, default: []].append(art)
+            bumpSource(sourceID)
             return art
         }
     }
@@ -574,6 +582,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                     copy[idx].label = label
                     copy[idx].description = description
                     artifactsBySource[sourceID] = copy
+                    bumpSource(sourceID)
                     return copy[idx]
                 }
             }
@@ -585,8 +594,9 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         withState {
             markCatalogSessionHeld(projectDir)
             deleteArtifactCalls += 1
-            for (sourceID, arts) in artifactsBySource {
+            for (sourceID, arts) in artifactsBySource where arts.contains(where: { $0.id == artifactID }) {
                 artifactsBySource[sourceID] = arts.filter { $0.id != artifactID }
+                bumpSource(sourceID)
             }
             for (project, var sources) in sourcesByProject {
                 for i in sources.indices where sources[i].primaryArtifactID == artifactID {
@@ -650,6 +660,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                         copy[idx].thumbnailRelPath = "objects/aa/bb/thumb-\(file.id.prefix(8))"
                     }
                     artifactsBySource[sourceID] = copy
+                    bumpSource(sourceID)
                     return (copy[idx], file, false)
                 }
             }
@@ -689,6 +700,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 argument: argument
             )
             credibilityBySource[sourceID] = assessment
+            bumpSource(sourceID)
             return assessment
         }
     }
@@ -1184,6 +1196,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 description: description
             )
             subjectsBySource[sourceID, default: []].append(subject)
+            bumpSource(sourceID)
             if let placement {
                 subjectPositionsBySubject[subject.id] = CatalogSubjectPosition(
                     subjectID: subject.id,
@@ -1210,6 +1223,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 list[idx].label = label
                 list[idx].description = description
                 subjectsBySource[sourceID] = list
+                bumpSource(sourceID)
                 return list[idx]
             }
             throw StoreBoom.boom
@@ -1441,6 +1455,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 guard let idx = list.firstIndex(where: { $0.id == subjectID }) else { continue }
                 list.remove(at: idx)
                 subjectsBySource[sourceID] = list
+                bumpSource(sourceID)
                 subjectPositionsBySubject[subjectID] = nil
                 membershipBySubject[subjectID] = nil
                 return
@@ -1922,6 +1937,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 citationID: citation.id,
                 drafts: drafts
             )
+            bumpSource(owningSource(ofCitation: citation.id))
             return (citation, created)
         }
     }
@@ -1976,6 +1992,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                     throw edgeLockedError()
                 }
             }
+            bumpSource(owningSource(ofCitation: citationID))
             return written
         }
     }
@@ -2000,6 +2017,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             citation.transcriptionUncertain = transcriptionUncertain
             citation.transcriptionNote = transcriptionNote
             citationsByID[citationID] = citation
+            bumpSource(owningSource(ofCitation: citationID))
             return citation
         }
     }
@@ -2025,8 +2043,9 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 ref: existing.ref,
                 row: observation
             )
-            for (sourceID, list) in observationsBySource {
+            for (sourceID, list) in observationsBySource where list.contains(where: { $0.id == next.id }) {
                 observationsBySource[sourceID] = list.map { $0.id == next.id ? next : $0 }
+                bumpSource(sourceID)
             }
             return next
         }
@@ -2041,8 +2060,9 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             if isEdgeLocked(observation: existing, projectDir: projectDir) {
                 throw edgeLockedError()
             }
-            for (sourceID, list) in observationsBySource {
+            for (sourceID, list) in observationsBySource where list.contains(where: { $0.id == observationID }) {
                 observationsBySource[sourceID] = list.filter { $0.id != observationID }
+                bumpSource(sourceID)
             }
         }
     }
@@ -2063,8 +2083,10 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                     params: []
                 )
             }
+            let owner = owningSource(ofCitation: citationID)
             citationsByID.removeValue(forKey: citationID)
             citationNotesByID.removeValue(forKey: citationID)
+            bumpSource(owner)
         }
     }
 
@@ -2672,6 +2694,30 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
 
     /// Runs `body` under `stateLock`. Never spans an `await`: methods that
     /// suspend take the lock separately for each synchronous stretch.
+    /// Mirrors the engine's audit scopes: any write under a Source moves its
+    /// "Updated" revision, not just edits to the Source row.
+    private func bumpSource(_ sourceID: String?) {
+        guard let sourceID else { return }
+        for (project, var list) in sourcesByProject {
+            guard let idx = list.firstIndex(where: { $0.id == sourceID }) else { continue }
+            list[idx].updatedRevision = nextAuditRevision
+            nextAuditRevision += 1
+            sourcesByProject[project] = list
+            return
+        }
+    }
+
+    private func owningSource(ofCitation citationID: String) -> String? {
+        if let artifactID = citationsByID[citationID]?.artifactID,
+           let owner = artifactsBySource.first(where: { entry in entry.value.contains { $0.id == artifactID } })?.key
+        {
+            return owner
+        }
+        return observationsBySource.first(where: { entry in
+            entry.value.contains { $0.citationID == citationID }
+        })?.key
+    }
+
     private func withState<T>(_ body: () throws -> T) rethrows -> T {
         try stateLock.withLock(body)
     }

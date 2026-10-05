@@ -67,7 +67,9 @@ func DeletedRow(fields map[string]any) map[string]FieldDiff {
 	return out
 }
 
-// Record allocates the next revision and inserts the transaction + changes on tx.
+// Record allocates the next revision and inserts the transaction + changes on tx,
+// plus the scopes the changes resolve to (see scopes.go). Every entity type must
+// have a resolver; an unknown type is invalid.
 // The caller owns BEGIN/COMMIT; Record must run inside that transaction.
 // An empty Changes slice is invalid — callers must skip Record when nothing changed.
 func Record(tx *sql.Tx, rev Revision) (int64, error) {
@@ -138,11 +140,24 @@ func Record(tx *sql.Tx, rev Revision) (int64, error) {
 			return 0, err
 		}
 	}
+
+	scopes, err := resolveScopes(tx, rev.Changes)
+	if err != nil {
+		return 0, err
+	}
+	for _, s := range scopes {
+		if _, err := tx.Exec(sqlInsertScope, txID[:], s.Type, s.ID); err != nil {
+			return 0, err
+		}
+	}
 	return revision, nil
 }
 
 func validateChange(ch Change) error {
 	if strings.TrimSpace(ch.EntityType) == "" || len(ch.EntityID) != 16 || ch.Fields == nil {
+		return ErrInvalid
+	}
+	if _, ok := resolvers[ch.EntityType]; !ok {
 		return ErrInvalid
 	}
 	switch ch.Action {

@@ -30,13 +30,23 @@ struct CatalogQueryRegistry: Sendable {
         let kind: CatalogQueryKey.Kind
         let stalePolicy: CatalogQueryStalePolicy
         let invalidateOn: Set<CatalogMutationKind>
+        /// Marked stale without a refetch: the next `query` (a place visit)
+        /// reloads it. For writes that move a value nobody is looking at yet.
+        var markStaleOn: Set<CatalogMutationKind> = []
     }
 
     private let specs: [Spec] = [
         Spec(
             kind: .sourcesList,
             stalePolicy: .sessionFresh,
-            invalidateOn: [.createdSource, .deletedSource]
+            invalidateOn: [.createdSource, .deletedSource],
+            // Work under a Source moves its "Updated" revision (engine audit
+            // scopes). Canvas writes must not refetch every row, so the list
+            // reloads on its next visit instead.
+            markStaleOn: [
+                .mutatedSourceWorkspace, .mutatedSourceMetadata, .mutatedSourceGraph,
+                .deletedSubject, .savedCitation,
+            ]
         ),
         Spec(
             kind: .sourceTypesList,
@@ -228,6 +238,14 @@ struct CatalogQueryRegistry: Sendable {
         guard let mutationKind = mutation.invalidationKind else { return [] }
         return specs
             .filter { $0.invalidateOn.contains(mutationKind) }
+            .map { $0.kind.invalidation(project: project, mutation: mutation) }
+    }
+
+    /// Keys a mutation leaves stale for their next `query`, without refetching now.
+    func staleMarks(by mutation: CatalogMutation, project: ProjectKey) -> [CatalogQueryInvalidation] {
+        guard let mutationKind = mutation.invalidationKind else { return [] }
+        return specs
+            .filter { $0.markStaleOn.contains(mutationKind) }
             .map { $0.kind.invalidation(project: project, mutation: mutation) }
     }
 }
