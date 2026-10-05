@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"sort"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -344,4 +346,98 @@ func TestListPromoteTargetSuggestions(t *testing.T) {
 			},
 		},
 	})
+}
+
+func TestListPromoteComparisonAndPins(t *testing.T) {
+	first := promotableSubject(t)
+	minted := promoteOK(t, &engine.PromoteSubjectRequest{
+		ProjectDir: first.GetProjectDir(), UserId: first.GetUserId(),
+		SubjectId: personBeside(t, first, "James Robins"), Argument: "The birth record.",
+	})
+	incoming := personBeside(t, first, "J. Robins", "Jack Robbins")
+
+	out, err := ListPromoteComparison(marshalProto(t, &engine.ListPromoteComparisonRequest{
+		ProjectDir: first.GetProjectDir(), SubjectId: incoming, EntityId: minted.Entity.GetId(),
+	}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var cmp engine.ListPromoteComparisonResponse
+	if err := proto.Unmarshal(out, &cmp); err != nil {
+		t.Fatal(err)
+	}
+	if cmp.GetMemberCount() != 1 || len(cmp.GetProperties()) != 1 || cmp.GetProperties()[0].GetPropertyKey() != "name" {
+		t.Fatalf("comparison %+v", &cmp)
+	}
+	var (
+		marks []string
+		pairs []*engine.ObservationPair
+	)
+	for _, in := range cmp.GetProperties()[0].GetIncoming() {
+		if in.GetRecord().GetClaimId() != "" || in.GetRecord().GetSubjectId() != incoming {
+			t.Fatalf("incoming record %+v", in.GetRecord())
+		}
+		for _, pr := range in.GetPairs() {
+			if pr.GetMember().GetClaimId() != minted.Claim.GetId() || pr.GetMember().GetValue().GetName() == nil {
+				t.Fatalf("member record %+v", pr.GetMember())
+			}
+			marks = append(marks, in.GetRecord().GetValue().GetName().GetForm()+":"+strconv.FormatBool(pr.GetCompatible()))
+			if pr.GetCompatible() {
+				pairs = append(pairs, &engine.ObservationPair{
+					IncomingObservationId: in.GetRecord().GetObservationId(),
+					MemberObservationId:   pr.GetMember().GetObservationId(),
+				})
+			}
+		}
+	}
+	sort.Strings(marks)
+	if strings.Join(marks, ",") != "J. Robins:true,Jack Robbins:false" {
+		t.Fatalf("marks %v", marks)
+	}
+
+	joined := promoteOK(t, &engine.PromoteSubjectRequest{
+		ProjectDir: first.GetProjectDir(), UserId: first.GetUserId(),
+		SubjectId: incoming, EntityId: minted.Entity.GetId(), Pairs: pairs,
+	})
+	if joined.GetPinCount() != 2 {
+		t.Fatalf("pin_count %d", joined.GetPinCount())
+	}
+	if err := withProjectCatalog(first.GetProjectDir(), func(c *database.Catalog) error {
+		db, err := c.DB()
+		if err != nil {
+			return err
+		}
+		var n int
+		claim := uuid.MustParse(minted.Claim.GetId())
+		if err := db.QueryRow(`SELECT COUNT(*) FROM identity_claim_evidence WHERE identity_claim_id = ?`, claim[:]).Scan(&n); err != nil {
+			return err
+		}
+		if n != 2 {
+			t.Fatalf("member claim carries %d pins, want 2 (backfill)", n)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	for name, req := range map[string]*engine.ListPromoteComparisonRequest{
+		"bad subject id": {ProjectDir: first.GetProjectDir(), SubjectId: "nope", EntityId: minted.Entity.GetId()},
+		"bad entity id":  {ProjectDir: first.GetProjectDir(), SubjectId: incoming, EntityId: "nope"},
+		"unknown entity": {ProjectDir: first.GetProjectDir(), SubjectId: incoming, EntityId: uuid.Must(uuid.NewV7()).String()},
+	} {
+		if _, err := ListPromoteComparison(marshalProto(t, req)); err == nil {
+			t.Fatalf("%s accepted", name)
+		}
+	}
+	if _, err := ListPromoteComparison([]byte{0xff}); err == nil {
+		t.Fatal("bad proto accepted")
+	}
+	bad := &engine.PromoteSubjectRequest{
+		ProjectDir: first.GetProjectDir(), UserId: first.GetUserId(),
+		SubjectId: personBeside(t, first, "James Robins"), EntityId: minted.Entity.GetId(),
+		Pairs: []*engine.ObservationPair{{IncomingObservationId: "nope", MemberObservationId: "nope"}},
+	}
+	if _, err := PromoteSubject(marshalProto(t, bad)); err == nil {
+		t.Fatal("bad pair id accepted")
+	}
 }

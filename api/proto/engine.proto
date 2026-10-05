@@ -100,6 +100,7 @@ enum Method {
   METHOD_LIST_PROMOTE_TARGET_SUGGESTIONS = 88;
   METHOD_LIST_CLAIM_CONFIDENCE_GRADES = 89;
   METHOD_GET_CONCLUSION_DETAIL = 90;
+  METHOD_LIST_PROMOTE_COMPARISON = 91;
 }
 
 message PingRequest {
@@ -934,8 +935,9 @@ message ListClaimConfidenceGradesResponse {
 
 // PromoteSubject files an accepted claim for the Subject, one transaction:
 // onto a newly minted handle of its type when entity_id is empty, else onto
-// that existing handle (same type, unmerged; claim only). Refuses members and
-// non-primary kinds.
+// that existing handle (same type, unmerged). Each confirmed pair (join only)
+// pins both Observations on the new claim and backfills them onto the
+// member's claim. Refuses members and non-primary kinds.
 message PromoteSubjectRequest {
   string project_dir = 1;
   string user_id = 2;
@@ -943,11 +945,67 @@ message PromoteSubjectRequest {
   string entity_id = 4; // empty = mint a new handle
   string confidence_grade_id = 5; // empty = no grade
   string argument = 6;
+  repeated ObservationPair pairs = 7;
+}
+
+// ObservationPair is one confirmed comparison: an Observation of the incoming
+// Subject and one of an accepted member, on the same Property.
+message ObservationPair {
+  string incoming_observation_id = 1;
+  string member_observation_id = 2;
 }
 
 message PromoteSubjectResponse {
   CanonicalEntity entity = 1;
   IdentityClaim claim = 2;
+  int32 pin_count = 3; // Observations pinned on the new claim
+}
+
+// ListPromoteComparison lines the Subject's Observations up, per Property,
+// against each accepted member of the handle it would join. compatible is the
+// auto-reconciler's same-value-or-fold test: the compare step pre-checks it.
+message ListPromoteComparisonRequest {
+  string project_dir = 1;
+  string subject_id = 2;
+  string entity_id = 3;
+}
+
+message ListPromoteComparisonResponse {
+  int32 member_count = 1;
+  repeated PromoteComparisonProperty properties = 2; // binding order
+}
+
+message PromoteComparisonProperty {
+  string property_id = 1;
+  string property_key = 2;
+  string label = 3;
+  string value_type = 4;
+  repeated PromoteComparisonIncoming incoming = 5;
+}
+
+message PromoteComparisonIncoming {
+  PromoteComparisonRecord record = 1;
+  repeated PromoteComparisonPair pairs = 2;
+}
+
+message PromoteComparisonPair {
+  PromoteComparisonRecord member = 1;
+  bool compatible = 2;
+}
+
+message PromoteComparisonRecord {
+  string observation_id = 1;
+  string observation_ref = 2;
+  string subject_id = 3;
+  string subject_ref = 4;
+  string subject_label = 5;
+  string claim_id = 6; // the member's accepted claim; empty for the incoming Subject
+  string citation_id = 7;
+  string artifact_id = 8;
+  string source_id = 9;
+  string source_title = 10;
+  bool negative = 11;
+  ConclusionValue value = 12;
 }
 
 // SubjectMembership is a view of one Subject's accepted Identity Claim: the

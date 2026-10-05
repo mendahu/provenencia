@@ -7,6 +7,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/claimconfidencegrades"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/promote"
+	"github.com/mendahu/provenencia/core/database/promotecompare"
 	"github.com/mendahu/provenencia/core/database/promotetargets"
 	"github.com/mendahu/provenencia/core/valuecodec"
 	"google.golang.org/protobuf/proto"
@@ -33,6 +34,18 @@ func PromoteSubject(in []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	var pairs []promote.Pair
+	for _, p := range req.GetPairs() {
+		incoming, err := parseID(p.GetIncomingObservationId())
+		if err != nil {
+			return nil, err
+		}
+		member, err := parseID(p.GetMemberObservationId())
+		if err != nil {
+			return nil, err
+		}
+		pairs = append(pairs, promote.Pair{IncomingObservationID: incoming, MemberObservationID: member})
+	}
 	var out *engine.PromoteSubjectResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
 		res, err := promote.Save(c, userID, promote.Input{
@@ -40,13 +53,15 @@ func PromoteSubject(in []byte) ([]byte, error) {
 			EntityID:          entityID,
 			ConfidenceGradeID: gradeID,
 			Argument:          req.GetArgument(),
+			Pairs:             pairs,
 		})
 		if err != nil {
 			return err
 		}
 		out = &engine.PromoteSubjectResponse{
-			Entity: canonicalEntityProto(res.Entity),
-			Claim:  identityClaimProto(res.Claim),
+			Entity:   canonicalEntityProto(res.Entity),
+			Claim:    identityClaimProto(res.Claim),
+			PinCount: int32(res.Pins),
 		}
 		return nil
 	})
@@ -54,6 +69,74 @@ func PromoteSubject(in []byte) ([]byte, error) {
 		return nil, err
 	}
 	return proto.Marshal(out)
+}
+
+func ListPromoteComparison(in []byte) ([]byte, error) {
+	var req engine.ListPromoteComparisonRequest
+	if err := proto.Unmarshal(in, &req); err != nil {
+		return nil, unmarshalErr("list_promote_comparison", err)
+	}
+	subjectID, err := parseID(req.GetSubjectId())
+	if err != nil {
+		return nil, err
+	}
+	entityID, err := parseID(req.GetEntityId())
+	if err != nil {
+		return nil, err
+	}
+	out := &engine.ListPromoteComparisonResponse{}
+	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
+		db, err := c.DB()
+		if err != nil {
+			return err
+		}
+		got, err := promotecompare.Compare(db, subjectID, entityID)
+		if err != nil {
+			return err
+		}
+		out.MemberCount = int32(got.Members)
+		for _, p := range got.Properties {
+			pp := &engine.PromoteComparisonProperty{
+				PropertyId:  uuidString(p.PropertyID),
+				PropertyKey: p.Key,
+				Label:       p.Label,
+				ValueType:   p.ValueType,
+			}
+			for _, inc := range p.Incoming {
+				pi := &engine.PromoteComparisonIncoming{Record: comparisonRecordProto(inc.Record)}
+				for _, pr := range inc.Pairs {
+					pi.Pairs = append(pi.Pairs, &engine.PromoteComparisonPair{
+						Member:     comparisonRecordProto(pr.Member),
+						Compatible: pr.Compatible,
+					})
+				}
+				pp.Incoming = append(pp.Incoming, pi)
+			}
+			out.Properties = append(out.Properties, pp)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return proto.Marshal(out)
+}
+
+func comparisonRecordProto(r promotecompare.Record) *engine.PromoteComparisonRecord {
+	return &engine.PromoteComparisonRecord{
+		ObservationId:  uuidString(r.ObservationID),
+		ObservationRef: r.ObservationRef,
+		SubjectId:      uuidString(r.SubjectID),
+		SubjectRef:     r.SubjectRef,
+		SubjectLabel:   r.SubjectLabel,
+		ClaimId:        uuidString(r.ClaimID),
+		CitationId:     uuidString(r.CitationID),
+		ArtifactId:     uuidString(r.ArtifactID),
+		SourceId:       uuidString(r.SourceID),
+		SourceTitle:    r.SourceTitle,
+		Negative:       r.Negative,
+		Value:          conclusionValueProto(r.Value),
+	}
 }
 
 func ListPromoteTargetSuggestions(in []byte) ([]byte, error) {
