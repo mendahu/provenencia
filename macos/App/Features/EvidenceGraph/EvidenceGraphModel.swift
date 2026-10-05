@@ -687,13 +687,12 @@ final class EvidenceGraphModel {
         guard let placed = primary(in: currentSnapshot(), id: subjectID),
               placed.membership == nil
         else { return nil }
-        let label = placed.subject.label.trimmingCharacters(in: .whitespacesAndNewlines)
         return .promote(
             sourceId: sourceID,
             subjectId: placed.id,
             kind: placed.kind,
             ref: placed.subject.ref,
-            title: label.isEmpty ? placed.subject.ref : label,
+            title: placed.displayName,
             sourceTitle: resolvedSourceTitle()
         )
     }

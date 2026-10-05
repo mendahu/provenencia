@@ -28,6 +28,20 @@ struct SourceGraphPlacedSubject: Identifiable, Sendable, Equatable {
     var observations: [CatalogObservation] = []
     /// The handle this subject belongs to (accepted Identity Claim), or nil.
     var membership: CatalogSubjectMembership?
+
+    /// What the subject is called where it is promoted: the form of its first
+    /// asserted `name` Observation, else its working label, else its ref.
+    var displayName: String {
+        let name = observations.first {
+            $0.propertyKey == "name" && $0.polarity != "negative"
+                && !$0.nameForm.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        }
+        if let form = name?.nameForm.trimmingCharacters(in: .whitespacesAndNewlines) {
+            return form
+        }
+        let label = subject.label.trimmingCharacters(in: .whitespacesAndNewlines)
+        return label.isEmpty ? subject.ref : label
+    }
 }
 
 /// A bridge subject with position and provisional endpoint ids (S6-04).

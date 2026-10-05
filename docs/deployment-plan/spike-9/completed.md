@@ -488,6 +488,7 @@ Next on the target step now opens Claim fields, and **Save & next** writes the I
   - The primary button reads Next, Save & next, or Saving, from `controls`.
   - The filed toast goes through `WorkspaceSession.noticeToast`, so it shows on the graph after the place closes.
   - The new-handle ref prefix (PER, EVT, PLC) comes from the subject types in the cached Properties snapshot, not from code.
+  - Promote names the subject by its first asserted `name` Observation's form, else its label, else its ref (`SourceGraphPlacedSubject.displayName`). The header, hints, leave guard and toast all use it.
 - **Query:** `confidenceGradesList` (`listClaimConfidenceGrades`, session-fresh, never invalidated) is on the Promote place's keys, with `propertiesWorkspace`.
 - **Kit:**
   - `PVButton` and `PVCallout` titles take `PVCopy`, so formatted strings work as labels.
