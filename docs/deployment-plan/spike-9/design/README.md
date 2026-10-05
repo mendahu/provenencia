@@ -10,7 +10,6 @@ Design track and gating: [`../deployment-plan.md`](../deployment-plan.md#design-
 | --- | --- | --- | --- |
 | S9-D3 | [Events list](S9-D3-events-list.md) | **S9-23** (S9-32) | Extends D2 |
 | S9-D4 | [Places list](S9-D4-places-list.md) | **S9-26** (S9-40) | Extends D2; revised for names and parent chain |
-| S9-D5 | [Person detail](S9-D5-person-detail.md) | **S9-16** (S9-32) | Value states, values and the *why* the other details extend; revised for reasoning |
 | S9-D6 | [Event detail](S9-D6-event-detail.md) | **S9-24** (S9-32) | Extends D5 |
 | S9-D7 | [Place detail](S9-D7-place-detail.md) | **S9-27** (S9-40) | Extends D5; revised for names, period, hierarchy, succession |
 | S9-D14 | [Properties — cardinality](S9-D14-properties-cardinality.md) | **S9-37** | Enhancement to the Properties page |
@@ -28,6 +27,7 @@ Design track and gating: [`../deployment-plan.md`](../deployment-plan.md#design-
 | S9-D8 | [Evidence graph subject card](archive/S9-D8-graph-subject-card.md) | **S9-04** (S9-09 name, S9-11 flow) | One 36pt kind-chip footer (rev 1): Promote, then the membership link |
 | S9-D9 | [Promote — choose target](archive/S9-D9-promote-target.md) | **S9-11** (S9-12 / S9-19 / S9-30 extend) | A workspace place, not a sheet; subject header in the kind's wash, composed step row, New / Existing radios, search + Suggested radio rows, Done + leave guard |
 | S9-D10 | [Promote — claim fields](archive/S9-D10-promote-claim-fields.md) | **S9-12** (S9-17 / S9-19 / S9-30 extend) | Summary card of the write, Status Select (one option) beside Confidence, Argument; Done discards through the guard; footer Back keeps the draft |
+| S9-D5 | [Person detail](archive/S9-D5-person-detail.md) | **S9-16** (S9-32 fills the life rows) | Field rows of label · value · state badge · Sources · disclosures; Why as Read as · Source · Outcome with a mark and a phrase per outcome; member list slot deferred |
 
 Design each brief alongside its feature, just before the PR it gates. Order and dependencies: [PR sequence](../deployment-plan.md#pr-sequence).
 

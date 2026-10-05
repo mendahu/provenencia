@@ -32,6 +32,8 @@ IDs stay stable (`S9-NN`, `S9-DN`). Do not renumber when moving steps here.
 | S9-13b | PR | Name module |
 | S9-14 | PR | Evidence + reasoning in the auto-reconciler cache |
 | S9-15 | PR | Detail composer + detail read |
+| S9-D5 | Design | Person detail (revised for reasoning) |
+| S9-16 | PR | Person detail |
 
 ## Steps
 
@@ -704,3 +706,75 @@ One read now gives a handle's page everything the auto-reconciler knows: each fi
 - Event and Place detail places: **S9-22** / **S9-25**.
 - Laying Reconciliation Claims over values (claims are a later spike); the `concluded` state is worded but never sent yet.
 
+### S9-D5 — Design: Person detail (revised for reasoning)
+
+**Board:** Claude Design project *Person Detail* (`c8660cdb-2c61-4c30-bc39-b2411036e6c0`), `Person Detail.dc.html`, frames 1a–1i (rev. 2026-10-05).
+
+- **Each field is one row:** label · lead value · state · support in Sources · disclosures. The state is always text (a *Merged* / *Mixed* / *Concluded* badge, or the Source count alone for a single value), never colour alone. A negative record that eliminated nothing still shows: *1 record disagrees*.
+- **Mixed leads with the first surviving value;** the rest disclose (*1 other value*). There is no "choose" control: that is reconciliation, later.
+- **Why lists every record considered**, as Read as · Source · Outcome. Each outcome is one mark and one phrase, readable without colour:
+
+  | Outcome | Mark | Phrase |
+  | --- | --- | --- |
+  | kept | check | *kept* |
+  | folded | git-merge | *folded into James Robins* |
+  | outvoted | scale | *outvoted (2 of 3 Sources)* |
+  | weak | signal-low | *weak · low-trust Source* (or uncertain transcription, low-confidence claim) |
+  | denied | ban | *denied by Court deposition, 1862* |
+  | against | circle-minus | *disagrees · did not eliminate* (a negative that denied something reads *kept*) |
+  | no usable value | minus | *no usable value* |
+
+- **Room for later:** the Why's empty last column is reserved for "conclude this value", and *Concluded* uses the same row columns, so neither needs a relayout (PD-8).
+- **Header:** 80pt thumbnail slot with the person mark; title name → label → mono ref (the ref isn't repeated when it is the title); b. / d. shorthand saying *date unknown · place unknown* until the life Events exist; ref and member count at the right.
+- **Ship state (frame 1g):** name filled, the four life rows stated empty, so the page keeps its shape when S9-32 fills them.
+- **Member list (frame 1i)** is a stretch slot: deferred, see S9-16.
+
+Brief archived: [`design/archive/S9-D5-person-detail.md`](design/archive/S9-D5-person-detail.md).
+
+### S9-16 — Person detail
+
+Opening a Person now shows their page: every field with its value, how the evidence agrees or disagrees, and, under *Why*, each record behind it and what happened to it.
+
+**What shipped**
+
+- **The vote behind *outvoted*:**
+  - `autoreconcile.Outcome.Vote` records the winning value's Sources of every Source that voted on that unit (for a name, the part it lost on);
+  - migration **000041** stores it (`vote_support`, `vote_total` on `auto_reconciler_outcomes`), and cache version **10** rebuilds on open.
+- **The detail read:**
+  - each outcome carries its Artifact and vote;
+  - the detail carries the accepted member count (one more query, still constant).
+- **The page** (`Features/Conclusions/`):
+  - `PersonDetailView` replaces the stub on `PlaceID.personDetail`;
+  - the header follows the board;
+  - under *Details*: Name, the four life rows (empty until S9-32), then every other bound field (Sex at birth);
+  - each field is a `ReconciledValueRow`, its Why a `ReconciliationReasoningView` of `ReconciliationOutcome`s;
+  - a Why record's Source opens that Citation in the composer with its Observation in focus; Back returns to the Person.
+  - `PersonDetailContent` and `ReconciledValueDisplay` hold all the wording and are unit-tested; the views only lay it out.
+- **Kit:**
+  - `PVDisclosureButton`: a `PVButton` whose parent owns the expanded state, the chevron and the spoken state. The caller places what it discloses.
+  - `pvExpandedState(_:)` is its VoiceOver half, now also used by `PVSelect` and by the Source page's artifact rows, which expanded silently before. The strings moved to `designSystem.disclosure.*`.
+  - `PVSymbol` gains the outcome and state marks.
+- **Design-system review:** the disclosure was the one piece worth promoting. Sunken panels compose `PVCard`, the caps labels `pvMicroCaps()`, and the Source link `PVButton(.link)`. The row, the Why and the state badges stay snowflakes shared from `Features/Conclusions/` (one feature, three kinds).
+- **Tests:**
+  - Go:
+    - the vote (pipeline, cache with rebuild-equals-upkeep, detail, FFI);
+    - writing no vote fails the cache test.
+  - Swift:
+    - every board phrase, mark and spoken label (frames 1c–1h);
+    - row order and empty text;
+    - the header fallbacks;
+    - the composer location parses as an edit of that Citation;
+    - the disclosure's chevron, toggle and spoken state;
+    - every new SF Symbol resolves on macOS 14.
+
+**What changed for researchers**
+
+- A Person's page shows each value with its state and Source count. *Why* shows every record behind it, including the spellings that lost (*outvoted (2 of 3 Sources)*), the weak ones and the denied ones. A click on a Source opens that record.
+- VoiceOver reads each field's state in words, and says *expanded* or *collapsed* on disclosures, including a Source page's artifact rows.
+
+**What stayed out**
+
+- Life dates and places (rows and header): **S9-32**.
+- The member list (frame 1i): needs a per-handle members read.
+- Concluding a value (the reserved Why column, the *Concluded* badge): Reconciliation Claims, a later spike.
+- Event and Place pages: **S9-24** / **S9-27**, reusing the row and the Why.

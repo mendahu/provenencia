@@ -4,7 +4,7 @@ MVP for the **Conclusion layer**: assemble canonical Persons, Events, and Places
 
 ## Status
 
-**Open.** Slices 1–3 landed. **Replanned 2026-10-05** from slice 4 on: the reconciliation design ([`conclusion-reconciliation.md`](../../conclusion-reconciliation.md)) replaces R2's name / date / ranking plan with one reconciler pipeline for every value type, adds per-Property cardinality, and brings place hierarchy into the spike. Briefs S9-D1…D14 in [`design/`](design/) (D5 and D7 need revising). Landings go in [`completed.md`](completed.md).
+**Open.** Slices 1–3 landed. **Replanned 2026-10-05** from slice 4 on: the reconciliation design ([`conclusion-reconciliation.md`](../../conclusion-reconciliation.md)) replaces R2's name / date / ranking plan with one reconciler pipeline for every value type, adds per-Property cardinality, and brings place hierarchy into the spike. Briefs S9-D1…D14 in [`design/`](design/) (D7 needs revising; D5 was revised and built in S9-16). Landings go in [`completed.md`](completed.md).
 
 > **Goal of this spike:** a researcher can promote Subjects off an Evidence graph into Persons, Events, and Places, and open a page for each that shows who or what it is — name and life dates, event and date, place names and where the place sits — reconciled from every member Subject, with the reasoning shown.
 
@@ -389,7 +389,7 @@ CLOSE
 - **Slices run in order.** Within a slice, PRs run top to bottom; the Go PRs at the top of a slice can usually go side by side (S9-13b / S9-14; S9-20 / S9-21; S9-36 / S9-25).
 - **Slice 4 is the foundation for the rest.** S9-13 / S9-14 put every value type on the pipeline; slices 5–7 can then swap or run side by side. Slice 9 needs slice 8 (bridges and edges).
 - **Replanned 2026-10-05.** IDs of PRs that keep their purpose stay; new work takes new IDs (S9-13a, S9-13b, S9-36 – S9-40), so handoff notes in [`completed.md`](completed.md) and code comments stay right.
-- **Migrations 000037 / 000038 are fixed.** They first shipped on the closed PRs #255 / #256, and the researcher's local projects already carry them. S9-13a lands them on `main` byte-for-byte so those projects open again; nothing else may take those numbers, and later changes are new migrations (000039 on), never edits. **000039** is S9-13's `reason` column; **000040** is S9-14's rename to `auto_reconciler_*` and its outcomes table. The next is **000041**; the next cache version **10**. **Cache versions start at 5** after S9-13a: projects may hold a cache stamped 3 or 4 by the closed PRs, and a new meaning must never reuse a stamp.
+- **Migrations 000037 / 000038 are fixed.** They first shipped on the closed PRs #255 / #256, and the researcher's local projects already carry them. S9-13a lands them on `main` byte-for-byte so those projects open again; nothing else may take those numbers, and later changes are new migrations (000039 on), never edits. **000039** is S9-13's `reason` column; **000040** is S9-14's rename to `auto_reconciler_*` and its outcomes table. **000041** is S9-16's vote on outvoted outcomes (cache version 10). The next is **000042**; the next cache version **11**. **Cache versions start at 5** after S9-13a: projects may hold a cache stamped 3 or 4 by the closed PRs, and a new meaning must never reuse a stamp.
 - **The cache is honest from slice 2.** S9-06 ships the rebuild-equals-upkeep test; every later PR that adds a write path or trigger adds to it.
 - **Churn is expected.** A confirm-and-mint Promote button (slice 1), stubbed sidebar items, and empty life-date cells are fine between slices.
 
@@ -474,8 +474,8 @@ In order; each brief sits just above the PR it gates.
 - [x] S9-13b — Name module → [`completed.md`](completed.md)
 - [x] S9-14 — Evidence + reasoning in the auto-reconciler cache → [`completed.md`](completed.md)
 - [x] S9-15 — Detail composer + detail read → [`completed.md`](completed.md)
-- [ ] ✎ S9-D5 — Design: Person detail (revise for reasoning)
-- [ ] S9-16 — Person detail
+- [x] ✎ S9-D5 — Design: Person detail (revise for reasoning) → [`completed.md`](completed.md)
+- [x] S9-16 — Person detail → [`completed.md`](completed.md)
 - [ ] S9-17 — Compare read + pins + backfill
 - [ ] S9-18 — Pinned-Observation delete end to end
 - [ ] ✎ S9-D11 — Design: Promote compare
@@ -758,6 +758,8 @@ Design: [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md). PR
 | **In** | Per **S9-D5** (revised for the reasoning): header with name, states, values and why; life-date and place rows render empty until S9-32. Replace the Person-detail stub view from S9-09 (`ConclusionStubView` on `PlaceID.personDetail`); the place already loads the detail key (S9-15), and list rows and the graph card's `.openHandle` already route there. |
 | **Check** | *J. Robins* + *James Robins* → merged; *James* / *Jim* → one name *James Jim Robins*, merged; two of three *Robins* outvote a *Robbins*; lowering one Source to low trust drops its spelling and the page says *weak*. |
 | **Depends on** | **S9-D5**, S9-13b, S9-15 |
+
+**Done.** See [`completed.md`](completed.md#s9-16--person-detail). Board: Claude Design *Person Detail*, frames 1a–1i; brief archived: [`design/archive/S9-D5-person-detail.md`](design/archive/S9-D5-person-detail.md). The page is `PersonDetailView`, its text `PersonDetailContent` / `ReconciledValueDisplay`; each field is a `ReconciledValueRow` with its Why (`ReconciliationReasoningView`, `ReconciliationOutcome`). For **S9-32**: fill the four life rows (`PersonDetailContent.rows`, ids `life.*`) and the header's b. / d. lines from the birth and death Events; the place-chain hint for a straddling date (PD-2, frame 1f) arrives with places. For **S9-22 / S9-25** (with S9-24 / S9-27): reuse `ReconciledValueRow` and the Why from `Features/Conclusions/` and write the kind's own header. When Reconciliation Claims ship: the *Concluded* badge and *by you* are worded; the Why's empty last column is reserved for "conclude this value". Still out: the member list (frame 1i, a stretch slot) needs a per-handle members read.
 
 ### Slice 5 — Compare, pins, backfill
 

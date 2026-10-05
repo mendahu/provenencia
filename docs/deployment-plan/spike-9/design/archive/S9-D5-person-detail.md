@@ -7,10 +7,10 @@
 **Depends on:** S9-15 (detail read + value-state formatting, reasoning), S9-13 / S9-13b (reconciler, name module), S9-14 (evidence + reasoning in the cache)  
 **Revision:** 2026-10-05, for the reconciliation design: values explain themselves.  
 **Related:** S9-D6 / S9-D7 extend this page; S9-D2 (the row it expands)  
-**Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)  
-**Skill:** [`add-design-brief`](../../../../.cursor/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.cursor/skills/add-ui-component/SKILL.md); [`add-workspace-place`](../../../../.cursor/skills/add-workspace-place/SKILL.md)
+**Design system layers:** [`docs/design-system-layers.md`](../../../../design-system-layers.md)  
+**Skill:** [`add-design-brief`](../../../../../.cursor/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../../.cursor/skills/add-ui-component/SKILL.md); [`add-workspace-place`](../../../../../.cursor/skills/add-workspace-place/SKILL.md)
 
-Paste this entire document into Claude Design as the requirements for one board/flow. Read shared product facts in [`README.md`](README.md) first.
+Paste this entire document into Claude Design as the requirements for one board/flow. Read shared product facts in [`README.md`](../README.md) first.
 
 This brief designs a **new** surface. Establish its frames here; later Spike 9 briefs extend them.
 
@@ -52,7 +52,7 @@ Do **not** invent a local Field, Button, Card, Select, Callout, or Confirm.
 ### Shared Spike 9 facts (all Conclusion boards)
 
 - A canonical **Person / Event / Place** (`PER-…` / `EVT-…` / `PLC-…`) is a researcher's handle for one historical thing. In the UI it is a Person, never a "canonical entity." Interpretation Subjects on Evidence graphs keep candidate refs (`CPR-…`).
-- A handle's **members** are the Subjects promoted onto it (accepted Identity Claims). Each Property collects values from every member, and the engine **reconciles** them ([`conclusion-reconciliation.md`](../../../conclusion-reconciliation.md)).
+- A handle's **members** are the Subjects promoted onto it (accepted Identity Claims). Each Property collects values from every member, and the engine **reconciles** them ([`conclusion-reconciliation.md`](../../../../conclusion-reconciliation.md)).
 - Each field shows its reconciled value in a state: **single**, **merged** (several records agree once reconciled), **mixed** (records disagree and the evidence couldn't narrow them; every surviving value is shown), or **empty**. A future **concluded** state (a researcher's Reconciliation Claim) needs room but does not ship in Spike 9.
 - **Every value can explain itself.** The engine returns every record it considered with an outcome: kept, folded into a fuller value (*J.* into *James*), outvoted by a majority of Sources, dropped as weak evidence (low-trust Source, uncertain transcription, low-confidence claim), denied by a stronger negative record, or no usable value. Support counts **Sources**, not records.
 - A few Properties hold **several true values** (a Place's concurrent names, *Montréal* and *Montreal*). Those show every value; most fields show one.
@@ -182,5 +182,5 @@ This table is **binding**. Instance the Ship kit rows; do not redraw them. Paths
 ## 8. Handoff
 
 1. Archive this brief under `archive/` when the board is agreed.
-2. Record in [`../completed.md`](../completed.md).
+2. Record in [`../completed.md`](../../completed.md).
 3. Implement **S9-16** against the board and inventory (kit first).
