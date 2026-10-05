@@ -40,7 +40,7 @@ const (
 	sqlPersonsSelect = `SELECT e.id, e.subject_type_id, e.ref, COALESCE(e.argument, ''), COALESCE(e.label, ''),
 		r.value_name,
 		(SELECT COUNT(*) FROM conclusion_resolved_values c
-			WHERE c.entity_id = e.id AND c.property_id = np.id) AS clusters
+			WHERE c.entity_id = e.id AND c.property_id = np.id AND c.reason = 'kept') AS clusters
 	FROM canonical_entities e
 	JOIN subject_types st ON st.id = e.subject_type_id
 	LEFT JOIN properties np ON np.key = 'name' AND np.origin = 'provenencia'

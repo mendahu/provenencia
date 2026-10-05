@@ -172,6 +172,16 @@ func TestHandleSearch(t *testing.T) {
 	})
 }
 
+// A name outvoted by the other records isn't displayed, but it stays a
+// cached value, so search still finds the handle by it (S9-13).
+func TestHandleSearchFindsOutvotedNames(t *testing.T) {
+	f := newHandleFixture(t)
+	thomas := f.promote(f.person("Thomas Lee", "thomas lee", "Tom Lee"), nil)
+	if hits := f.search("Tom", KindPerson); refsOf(hits) != fmt.Sprint([]string{"person:" + thomas.Entity.Ref}) {
+		t.Fatalf("got %s", refsOf(hits))
+	}
+}
+
 func TestHandleSearchFollowsEdits(t *testing.T) {
 	f := newHandleFixture(t)
 	s := f.subject("person", func(s subjects.Subject) []observations.Input {

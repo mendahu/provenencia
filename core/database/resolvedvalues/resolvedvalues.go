@@ -11,9 +11,14 @@
 // Recompute is per handle: all of a handle's Properties are rewritten together.
 // Narrowing to (handle, Property) waits for timings that need it.
 //
-// v1 scope: positive Observations on accepted members, clustered by
-// core/resolve. Subject-valued Properties are not cached until S9-28 maps them
-// to handles; provenance arrives with S9-14; date_lo / date_hi with S9-21.
+// Every value core/resolve returns is cached, displayed or not: `reason` is
+// 'kept' for a displayed value, else why it isn't displayed (outvoted, weak,
+// denied, provisional). Readers that count displayed values filter on it;
+// search and matching read them all.
+//
+// Scope today: positive Observations on accepted members, with each term's
+// key. Sources, provenance, negatives and provisional members load with
+// S9-14; subject-valued Properties with S9-28; date_lo / date_hi with S9-21.
 package resolvedvalues
 
 import (
@@ -34,7 +39,9 @@ import (
 // hold; a stored version that differs rebuilds on open.
 //
 //	2: dashes and slashes separate words in name keys (S9-10).
-const CacheVersion = 2
+//	5: one reconciler pipeline; text case-insensitive; majority; every value
+//	   kept with a reason (S9-13). 3 and 4 were stamped by closed PRs' builds.
+const CacheVersion = 5
 
 // batchSize bounds the handles per loader batch (and so the IN list length).
 const batchSize = 500
@@ -51,15 +58,17 @@ const (
 
 	sqlInsert = `INSERT INTO conclusion_resolved_values
 		(entity_id, property_id, rank, value_text, value_integer, value_term_id,
-		 value_date, value_name, sort_key, support)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+		 value_date, value_name, sort_key, support, against, reason)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
 	// One row per positive Observation on an accepted member of the batch.
 	sqlLoadCandidates = `SELECT ic.entity_id, o.id, o.property_id, p.value_type,
-			o.value_text, o.value_integer, o.value_date_id, o.value_name_id, o.value_term_id
+			o.value_text, o.value_integer, o.value_date_id, o.value_name_id, o.value_term_id,
+			COALESCE(t.key, '')
 		FROM identity_claims ic
 		JOIN observations o ON o.subject_id = ic.subject_id
 		JOIN properties p ON p.id = o.property_id
+		LEFT JOIN property_terms t ON t.id = o.value_term_id
 		WHERE ic.status = 'accepted'
 		  AND o.polarity = 'positive'
 		  AND p.value_type <> 'subject'
@@ -214,8 +223,9 @@ func load(q Querier, ids [][]byte) ([]*group, error) {
 			text                        sql.NullString
 			integer                     sql.NullInt64
 			dateID, nameID, termID      []byte
+			termKey                     string
 		)
-		if err := rows.Scan(&entityID, &obsID, &propertyID, &valueType, &text, &integer, &dateID, &nameID, &termID); err != nil {
+		if err := rows.Scan(&entityID, &obsID, &propertyID, &valueType, &text, &integer, &dateID, &nameID, &termID, &termKey); err != nil {
 			_ = rows.Close()
 			return nil, err
 		}
@@ -229,7 +239,7 @@ func load(q Querier, ids [][]byte) ([]*group, error) {
 		c := resolve.Candidate{ObservationID: obsID, Value: resolve.Value{
 			Text: text.String, HasText: text.Valid,
 			Integer: integer.Int64, HasInteger: integer.Valid,
-			TermID: termID,
+			TermID: termID, TermKey: termKey,
 		}}
 		all = append(all, pending{g: g, c: c, dateID: dateID, nameID: nameID})
 		if len(dateID) > 0 {
@@ -326,7 +336,8 @@ func insertRow(q Querier, g *group, rank int, cl resolve.Cluster) error {
 	if k, ok := resolve.SortKey(g.valueType, v); ok {
 		sortKey = k
 	}
-	_, err := q.Exec(sqlInsert, g.entityID, g.propertyID, rank, text, integer, termID, dateBlob, nameBlb, sortKey, cl.Support)
+	_, err := q.Exec(sqlInsert, g.entityID, g.propertyID, rank, text, integer, termID, dateBlob, nameBlb, sortKey,
+		cl.Support, cl.Against, string(cl.Reason))
 	return err
 }
 

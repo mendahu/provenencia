@@ -164,20 +164,21 @@ type row struct {
 	TermID               []byte
 	Date, Name           []byte
 	SortKey              *string
-	Support              int
+	Support, Against     int
+	Reason               string
 }
 
 func snapshot(t *testing.T, q resolvedvalues.Querier) []row {
 	t.Helper()
 	rows, err := q.Query(`SELECT entity_id, property_id, rank, value_text, value_integer, value_term_id,
-		value_date, value_name, sort_key, support FROM conclusion_resolved_values
+		value_date, value_name, sort_key, support, against, reason FROM conclusion_resolved_values
 		ORDER BY entity_id, property_id, rank`)
 	must(t, err)
 	defer rows.Close()
 	var out []row
 	for rows.Next() {
 		var r row
-		must(t, rows.Scan(&r.EntityID, &r.PropertyID, &r.Rank, &r.Text, &r.Integer, &r.TermID, &r.Date, &r.Name, &r.SortKey, &r.Support))
+		must(t, rows.Scan(&r.EntityID, &r.PropertyID, &r.Rank, &r.Text, &r.Integer, &r.TermID, &r.Date, &r.Name, &r.SortKey, &r.Support, &r.Against, &r.Reason))
 		out = append(out, r)
 	}
 	must(t, rows.Err())
@@ -309,35 +310,58 @@ func TestResolvedValues(t *testing.T) {
 	f.assertUpkeepEqualsRebuild("TestResolvedValues")
 }
 
-func TestEnsureCatalogRebuildsStaleVersion(t *testing.T) {
+// Every value stays cached with its reason (S9-13): an outvoted toponym
+// keeps its row after the displayed one.
+func TestResolvedValuesKeepEveryValue(t *testing.T) {
 	f := newFixture(t)
-	p := f.subject("person")
-	f.cite(nameIn(p, f.props["name"], "James Robins"))
-	f.promote(p)
-	want := f.rows()
+	p := f.subject("place")
+	f.cite(textIn(p, f.props["toponym"], "York"))
+	f.cite(textIn(p, f.props["toponym"], "york"))
+	f.cite(textIn(p, f.props["toponym"], "Muddy York"))
+	h := f.promote(p)
+	rows := rowsFor(f.rows(), h, f.props["toponym"].ID)
+	if len(rows) != 2 || rows[0].Reason != "kept" || rows[0].Support != 2 || *rows[0].Text != "York" ||
+		rows[1].Reason != "outvoted" || *rows[1].Text != "Muddy York" {
+		t.Fatalf("rows %+v", rows)
+	}
+	f.assertUpkeepEqualsRebuild("TestResolvedValuesKeepEveryValue")
+}
 
-	db, err := f.c.DB()
-	must(t, err)
-	_, err = db.Exec(`DELETE FROM conclusion_resolved_values`)
-	must(t, err)
-	_, err = db.Exec(`UPDATE conclusion_resolved_meta SET cache_version = 0`)
-	must(t, err)
-	need, err := resolvedvalues.NeedsRebuild(db)
-	must(t, err)
-	if !need {
-		t.Fatal("stale version not detected")
-	}
-	must(t, resolvedvalues.EnsureCatalog(f.c))
-	if v, err := resolvedvalues.StoredVersion(db); err != nil || v != resolvedvalues.CacheVersion {
-		t.Fatalf("version %d %v", v, err)
-	}
-	if got := f.rows(); !reflect.DeepEqual(got, want) {
-		t.Fatalf("rebuilt %d rows, want %d", len(got), len(want))
-	}
-	need, err = resolvedvalues.NeedsRebuild(db)
-	must(t, err)
-	if need {
-		t.Fatal("rebuild did not store the version")
+// A stale cache rebuilds on open: an old version, and the 3 and 4 stamped by
+// the closed PRs' builds, which must never read as current.
+func TestEnsureCatalogRebuildsStaleVersion(t *testing.T) {
+	for _, stale := range []int{0, 2, 3, 4} {
+		t.Run(fmt.Sprint("version ", stale), func(t *testing.T) {
+			f := newFixture(t)
+			p := f.subject("person")
+			f.cite(nameIn(p, f.props["name"], "James Robins"))
+			f.promote(p)
+			want := f.rows()
+
+			db, err := f.c.DB()
+			must(t, err)
+			_, err = db.Exec(`DELETE FROM conclusion_resolved_values`)
+			must(t, err)
+			_, err = db.Exec(`UPDATE conclusion_resolved_meta SET cache_version = ?`, stale)
+			must(t, err)
+			need, err := resolvedvalues.NeedsRebuild(db)
+			must(t, err)
+			if !need {
+				t.Fatal("stale version not detected")
+			}
+			must(t, resolvedvalues.EnsureCatalog(f.c))
+			if v, err := resolvedvalues.StoredVersion(db); err != nil || v != resolvedvalues.CacheVersion {
+				t.Fatalf("version %d %v", v, err)
+			}
+			if got := f.rows(); !reflect.DeepEqual(got, want) {
+				t.Fatalf("rebuilt %d rows, want %d", len(got), len(want))
+			}
+			need, err = resolvedvalues.NeedsRebuild(db)
+			must(t, err)
+			if need {
+				t.Fatal("rebuild did not store the version")
+			}
+		})
 	}
 }
 

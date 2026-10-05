@@ -115,8 +115,10 @@ func TestListPersons(t *testing.T) {
 	if len(got) != 4 {
 		t.Fatalf("listed %d Persons, want 4 (no Place)", len(got))
 	}
-	// Named first by sort key (james < mary), then unnamed by ref.
-	if got[0].Name == nil || got[0].Name.Form != "James Robins" || got[0].NameClusterCount != 2 {
+	// Named first by sort key (james < mary), then unnamed by ref. Jim
+	// Robins is outvoted two to one: it keeps its cache row but isn't a
+	// displayed value, so it isn't counted (S9-13).
+	if got[0].Name == nil || got[0].Name.Form != "James Robins" || got[0].NameClusterCount != 1 {
 		t.Fatalf("first %+v", got[0])
 	}
 	if got[1].Name == nil || got[1].Name.Form != "Mary Smith" || got[1].NameClusterCount != 1 {
@@ -144,6 +146,21 @@ func TestListPersons(t *testing.T) {
 			t.Fatalf("after edit %+v", h)
 		}
 	})
+}
+
+// +N counts displayed names only: two names one to one are both displayed;
+// an outvoted name keeps its row but isn't counted.
+func TestPersonNameCountIsDisplayedOnly(t *testing.T) {
+	f := newFixture(t)
+	f.person("Ann Lee", "Anne Lee")
+	f.person("James Robins", "james robins", "Jim Robins")
+	counts := map[string]int{}
+	for _, h := range f.list() {
+		counts[h.Name.Form] = h.NameClusterCount
+	}
+	if counts["Ann Lee"] != 2 || counts["James Robins"] != 1 {
+		t.Fatalf("counts %v", counts)
+	}
 }
 
 func TestListPersonsQueryCountIsConstant(t *testing.T) {
