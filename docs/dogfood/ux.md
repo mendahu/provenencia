@@ -19,6 +19,13 @@ Copy the stub. Surface + what got in the way is enough. A wanted fix is optional
 
 <!-- add below this line -->
 
+### Open the Artifact file without expanding its row
+
+- **Date:** 2026-10-06
+- **Where:** Source detail page (Artifact list), Evidence graph
+- **Annoyance:** To open a Source's Artifact file from the Source detail page, I have to expand that Artifact's row in the list to reach the open button.
+- **Wanted:** Move the open button up into the collapsed row, or show a copy there, so the file opens in one click. Offer the same open action on the Evidence graph page.
+
 ### Onboarding defaults to a new user when opening an existing project
 
 - **Date:** 2026-10-05
