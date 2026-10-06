@@ -18,8 +18,8 @@
 // lives only in the auto-reconciler's derived cache — never a claim, DateValue,
 // or NameValue row (seeded-vocabulary §5.3).
 //
-// Names reconcile by structured parts (names.go). Date and subject use
-// interim exact-key modules until their own modules land (S9-21, S9-28).
+// Names reconcile by structured parts (names.go). Dates reconcile by window
+// (dates.go). Subjects stay on an exact-key module until S9-28.
 package autoreconcile
 
 import (
@@ -243,9 +243,9 @@ func carries(valueType string, v Value) bool {
 }
 
 // SortKey is the text a value sorts by within its Property (the cache's
-// sort_key): normalized form for names, case-folded text, and an
-// order-preserving encoding for integers. Other value types have no sort key
-// here (ok = false): dates sort by their window (S9-21), terms by label.
+// sort_key): normalized form for names, case-folded text, an
+// order-preserving encoding for integers, and the date window's start.
+// Terms have no sort key here (ok = false): they sort by label.
 func SortKey(valueType string, v Value) (key string, ok bool) {
 	switch valueType {
 	case properties.ValueTypeName:
@@ -264,6 +264,15 @@ func SortKey(valueType string, v Value) (key string, ok bool) {
 		}
 		// Offset into uint64 so byte order matches numeric order, negatives included.
 		return fmt.Sprintf("%020d", uint64(v.Integer)^(1<<63)), true
+	case properties.ValueTypeDate:
+		if v.Date == nil {
+			return "", false
+		}
+		lo, _, ok := DateBounds(*v.Date)
+		if !ok || lo == nil {
+			return "", false
+		}
+		return fmt.Sprintf("%020d", int64(*lo)+dateSortOffset), true
 	}
 	return "", false
 }
@@ -296,8 +305,8 @@ func NormalizeForm(form string) string {
 	return b.String()
 }
 
-// dateKey matches on every structured field; containment and overlap are the
-// date reconciler's job (S9-21).
+// dateKey matches on every structured field. Containment and overlap are
+// dateModule.fold, not this key.
 func dateKey(d *datevalues.Value) string {
 	parts := []string{
 		d.Kind, d.Qualifier, d.Calendar,
