@@ -19,6 +19,13 @@ Copy the stub. Surface + what got in the way is enough. A wanted fix is optional
 
 <!-- add below this line -->
 
+### Sidebar icons don't match Subject card icons
+
+- **Date:** 2026-10-06
+- **Where:** Sidebar, Subject cards
+- **Annoyance:** The icons for People, Places, and Events in the sidebar are different from the ones on their Subject cards.
+- **Wanted:** Use the same icon for each type in both places.
+
 ### Open the Artifact file without expanding its row
 
 - **Date:** 2026-10-06
