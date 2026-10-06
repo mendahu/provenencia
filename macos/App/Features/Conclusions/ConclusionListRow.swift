@@ -31,7 +31,8 @@ enum ConclusionListRow {
     }
 
     /// The title, with a `+N` badge when other names survived. The badge keeps
-    /// its width; the title truncates.
+    /// its width; the title truncates. Main actor: `PVBadge` builds its label there.
+    @MainActor
     @ViewBuilder
     static func title(_ source: ConclusionTitleSource, extraCount: Int = 0) -> some View {
         HStack(spacing: PVSpacing.space4) {
