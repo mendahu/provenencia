@@ -340,7 +340,7 @@ Target Subject type hints are application-only (not SQL allow-lists). See the In
 
 Create-time Install seeds the full §3.2 matrix, including kind/edge and person term Properties as `value_type = term` with `property_terms` (§3.4–3.7).
 
-Event date Properties (`date`, `start_date`, `end_date`) are locked on `event`: Conclusion ordering and timelines may key into them; the Properties page must not unbind them. **Coexistence:** use `date` for a single point (birth, death, marriage day); use `start_date` / `end_date` when the event spans time (residence, service, voyage). Instantaneous events leave start/end empty; spanned events may leave `date` empty when only the range is known.
+Event date Properties (`date`, `start_date`, `end_date`) are locked on `event`: Conclusion ordering and timelines may key into them; the Properties page must not unbind them. `event_type` on `event`, `role` on `participation`, and `relationship_type` on `relationship` are locked for the same reason: birth and death walks, the subject principal, and relationship identity read those slots. **Coexistence:** use `date` for a single point (birth, death, marriage day); use `start_date` / `end_date` when the event spans time (residence, service, voyage). Instantaneous events leave start/end empty; spanned events may leave `date` empty when only the range is known.
 
 Additional Properties may be seeded as workflows need them (shared DNA, predicted relationship, and similar). Treat those as **TBD** until a concrete UI requires them.
 
@@ -351,7 +351,7 @@ subject_type    property
 person          name
 person          sex_at_birth        # term
 
-event           event_type          # term
+event           event_type          # term; locked
 event           event_name          # text; unlocked
 event           date                # locked
 event           start_date          # locked
@@ -361,14 +361,14 @@ place           toponym
 
 participation   person
 participation   event
-participation   role                # term
+participation   role                # term; locked
 
 location        event
 location        place
 
 relationship    person              # locked; who is the X
 relationship    related_to          # locked; …of this person
-relationship    relationship_type   # term (directed)
+relationship    relationship_type   # term; locked (directed)
 
 source          mentions
 source          remark

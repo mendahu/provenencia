@@ -826,12 +826,13 @@ An Event can carry a recorded historical name (*The Great Fire of 1849*) as text
 **What shipped**
 
 - Property `event_name` (`text`, label *Event name*) in the subjectvocab registry, bound to `event` immediately after `event_type` (sort order 1), unlocked. The three date bindings move to sort orders 2–4 and stay locked.
+- `event_type` on `event`, `role` on `participation`, and `relationship_type` on `relationship` are locked, so the Properties page cannot unbind the slots birth and death walks, the subject principal, and relationship identity read. The lock is in the compiled registry, not a column, so existing catalogs pick it up with no migration.
 - Migration **000042** writes the Property and binding when the provenencia `event` type is already present. A new catalog is empty at that step; Install mints the UUIDv7.
 - [`seeded-vocabulary.md`](../../seeded-vocabulary.md) §3.2 / §3.3 list the Property and the binding.
 
 **What changed for researchers**
 
-- On an Event, the citation composer offers *Event name*. Nothing else on screen uses it yet.
+- On an Event, the citation composer offers *Event name*. The Properties page no longer unbinds Event type, Role, or Relationship type.
 
 **What stayed out**
 

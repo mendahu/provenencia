@@ -688,7 +688,7 @@ For example (full matrix in [`seeded-vocabulary.md`](seeded-vocabulary.md)):
 person        -> name
 person        -> sex_at_birth  # term
 
-event         -> event_type   # term
+event         -> event_type   # locked (kind; birth / death walks)
 event         -> date         # locked (point / ordering)
 event         -> start_date   # locked (span start)
 event         -> end_date     # locked (span end)
@@ -697,14 +697,14 @@ place         -> toponym
 
 participation -> person
 participation -> event
-participation -> role         # term
+participation -> role         # locked (subject principal)
 
 location      -> event
 location      -> place
 
 relationship  -> person             # locked; who is the X
 relationship  -> related_to         # locked; …of this person
-relationship  -> relationship_type  # term (directed)
+relationship  -> relationship_type  # locked (directed)
 
 source        -> mentions
 source        -> remark

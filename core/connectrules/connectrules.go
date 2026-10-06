@@ -278,7 +278,8 @@ type Binding struct {
 }
 
 // BridgeBindings returns Install bindings derived from registered bridges:
-// endpoints locked (endpoint order), disambiguation unlocked when present.
+// endpoints locked (endpoint order). Product disambiguation is locked
+// (role, relationship_type); a plugin's disambiguation stays unlocked.
 // Dedupes by BridgeTypeKey (first wins).
 func BridgeBindings() []Binding {
 	mu.RLock()
@@ -305,7 +306,7 @@ func BridgeBindings() []Binding {
 		if HasDisambiguation(b.Disambiguation) {
 			out = append(out, Binding{
 				Origin: origin, TypeKey: b.BridgeTypeKey, PropertyKey: b.Disambiguation,
-				SortOrder: order, Locked: false,
+				SortOrder: order, Locked: origin == OriginProvenencia,
 			})
 		}
 	}
