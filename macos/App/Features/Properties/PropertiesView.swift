@@ -461,6 +461,7 @@ private struct PropertiesContent: View {
                             .accessibilityLabel(Text(L10n.Properties.valueTypeImmutable))
                     }
                 }
+                holdsRow(property)
                 inspectorMetaRow(label: L10n.Properties.inspectorOrigin) {
                     Group {
                         switch property.origin {
@@ -521,6 +522,60 @@ private struct PropertiesContent: View {
                 .accessibilityLabel(Text(L10n.Properties.bindingsAccessibility))
             }
 
+        }
+    }
+
+    @ViewBuilder
+    private func holdsRow(_ property: CatalogProperty) -> some View {
+        if model.canEditCardinality {
+            VStack(alignment: .leading, spacing: PVSpacing.space3) {
+                Text(L10n.Properties.holds)
+                    .font(PVFont.body(size: PVTypeScale.caption))
+                    .foregroundStyle(PVColor.textMuted)
+                PVRadio(
+                    L10n.Properties.holdsOne,
+                    description: L10n.Properties.holdsOneDescription,
+                    isSelected: property.cardinality != "multiple",
+                    isDisabled: model.isSaving
+                ) {
+                    Task { await model.setCardinality("single") }
+                }
+                .accessibilityIdentifier("properties.holds.single")
+                PVRadio(
+                    L10n.Properties.holdsSeveral,
+                    description: L10n.Properties.holdsSeveralDescription,
+                    isSelected: property.cardinality == "multiple",
+                    isDisabled: model.isSaving
+                ) {
+                    Task { await model.setCardinality("multiple") }
+                }
+                .accessibilityIdentifier("properties.holds.multiple")
+                if model.cardinalityNotice {
+                    Text(verbatim: L10n.Properties.holdsReconciled(label: property.label))
+                        .font(PVFont.body(size: PVTypeScale.caption, italic: true))
+                        .foregroundStyle(PVColor.textMuted)
+                        .fixedSize(horizontal: false, vertical: true)
+                } else {
+                    Text(L10n.Properties.holdsEventsHint)
+                        .font(PVFont.body(size: PVTypeScale.caption, italic: true))
+                        .foregroundStyle(PVColor.textMuted)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel(Text(verbatim: L10n.Properties.holdsGroup(label: property.label)))
+        } else {
+            inspectorMetaRow(label: L10n.Properties.holds) {
+                HStack(spacing: 6) {
+                    Text(property.cardinality == "multiple" ? L10n.Properties.holdsSeveral : L10n.Properties.holdsOne)
+                        .font(PVFont.body(size: PVTypeScale.bodySmall))
+                        .foregroundStyle(PVColor.textPrimary)
+                    Image(systemName: "lock.fill")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(PVColor.textFaint)
+                        .accessibilityLabel(Text(L10n.Properties.holdsLocked))
+                }
+            }
         }
     }
 
@@ -786,6 +841,32 @@ private struct PropertiesCreateHost: View {
                     }
                 }
                 .accessibilityLabel(Text(L10n.Properties.createValueType))
+            }
+
+            PVField(
+                label: L10n.Properties.holds,
+                hint: L10n.Properties.holdsEventsHint
+            ) {
+                VStack(alignment: .leading, spacing: PVSpacing.space3) {
+                    PVRadio(
+                        L10n.Properties.holdsOne,
+                        description: L10n.Properties.holdsOneDescription,
+                        isSelected: (draft?.cardinality ?? "single") != "multiple"
+                    ) {
+                        draft?.cardinality = "single"
+                    }
+                    .accessibilityIdentifier("properties.create.holds.single")
+                    PVRadio(
+                        L10n.Properties.holdsSeveral,
+                        description: L10n.Properties.holdsSeveralDescription,
+                        isSelected: draft?.cardinality == "multiple"
+                    ) {
+                        draft?.cardinality = "multiple"
+                    }
+                    .accessibilityIdentifier("properties.create.holds.multiple")
+                }
+                .accessibilityElement(children: .contain)
+                .accessibilityLabel(Text(L10n.Properties.holds))
             }
 
             VStack(alignment: .leading, spacing: PVSpacing.space4) {

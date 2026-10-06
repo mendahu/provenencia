@@ -10,7 +10,6 @@ Design track and gating: [`../deployment-plan.md`](../deployment-plan.md#design-
 | --- | --- | --- | --- |
 | S9-D4 | [Places list](S9-D4-places-list.md) | **S9-26** (S9-40) | Extends D2; revised for names and parent chain |
 | S9-D7 | [Place detail](S9-D7-place-detail.md) | **S9-27** (S9-40) | Extends D5; revised for names, period, hierarchy, succession |
-| S9-D14 | [Properties — cardinality](S9-D14-properties-cardinality.md) | **S9-37** | Enhancement to the Properties page |
 | S9-D15 | [Custom term — category](S9-D15-custom-term-category.md) | **S9-38b** | Enhancement to the composer's custom term dialog |
 | S9-D16 | [Promote — one page](S9-D16-promote-page.md) | **S9-44** | **Rethink:** throws out the D9 / D10 frames on the Promote board; one page aligning the whole Evidence graph |
 | S9-D13 | [Omnibar results](S9-D13-omnibar-hits.md) | **S9-35** | Hit rows for three kinds (enhancement) |
@@ -27,6 +26,7 @@ Design track and gating: [`../deployment-plan.md`](../deployment-plan.md#design-
 | S9-D10 | [Promote — claim fields](archive/S9-D10-promote-claim-fields.md) | **S9-12** (replaced by S9-D16 / S9-44) | Summary card of the write, Status Select (one option) beside Confidence, Argument; Done discards through the guard; footer Back keeps the draft |
 | S9-D5 | [Person detail](archive/S9-D5-person-detail.md) | **S9-16** (S9-32 fills the life rows) | Field rows of label · value · state badge · Sources · disclosures; Why as Read as · Source · Outcome with a mark and a phrase per outcome; member list slot deferred |
 | S9-D6 | [Event detail](archive/S9-D6-event-detail.md) | **S9-24** (S9-32) | Same page as Person detail; Date row, empty Place; subject titles and places later |
+| S9-D14 | [Properties — cardinality](archive/S9-D14-properties-cardinality.md) | **S9-37** | Holds on the inspector and the create form; seeded Properties read-only |
 
 ## Superseded
 

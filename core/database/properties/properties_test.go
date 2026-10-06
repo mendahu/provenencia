@@ -50,11 +50,11 @@ func TestProperties(t *testing.T) {
 		{
 			name: "create update delete audited user property",
 			run: func(t *testing.T, c *database.Catalog, userID []byte) {
-				got, err := Create(c, userID, "Custom Fact", ValueTypeText, "note")
+				got, err := Create(c, userID, "Custom Fact", ValueTypeText, "note", "")
 				if err != nil {
 					t.Fatal(err)
 				}
-				if got.Key != "custom-fact" || got.Origin != OriginUser {
+				if got.Key != "custom-fact" || got.Origin != OriginUser || got.Cardinality != CardinalitySingle {
 					t.Fatalf("got %+v", got)
 				}
 				updated, err := Update(c, userID, got.ID, "Custom Fact 2", ValueTypeText, "", "", nil)
@@ -76,11 +76,26 @@ func TestProperties(t *testing.T) {
 		{
 			name: "duplicate user key",
 			run: func(t *testing.T, c *database.Catalog, userID []byte) {
-				if _, err := Create(c, userID, "Dup", ValueTypeText, ""); err != nil {
+				if _, err := Create(c, userID, "Dup", ValueTypeText, "", ""); err != nil {
 					t.Fatal(err)
 				}
-				_, err := Create(c, userID, "Dup", ValueTypeText, "")
+				_, err := Create(c, userID, "Dup", ValueTypeText, "", "")
 				if !errors.Is(err, ErrDuplicateKey) {
+					t.Fatalf("got %v", err)
+				}
+			},
+		},
+		{
+			name: "create stores cardinality",
+			run: func(t *testing.T, c *database.Catalog, userID []byte) {
+				got, err := Create(c, userID, "Languages Spoken", ValueTypeText, "", CardinalityMultiple)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if got.Cardinality != CardinalityMultiple {
+					t.Fatalf("cardinality %q", got.Cardinality)
+				}
+				if _, err := Create(c, userID, "Bad Holds", ValueTypeText, "", "triple"); !errors.Is(err, ErrInvalid) {
 					t.Fatalf("got %v", err)
 				}
 			},
@@ -88,7 +103,7 @@ func TestProperties(t *testing.T) {
 		{
 			name: "create refuses term value type",
 			run: func(t *testing.T, c *database.Catalog, userID []byte) {
-				_, err := Create(c, userID, "Event Kind", ValueTypeTerm, "")
+				_, err := Create(c, userID, "Event Kind", ValueTypeTerm, "", "")
 				if !errors.Is(err, ErrInvalid) {
 					t.Fatalf("got %v", err)
 				}

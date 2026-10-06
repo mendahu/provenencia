@@ -57,10 +57,24 @@ func TestCreateUpdateDeleteProperty(t *testing.T) {
 				if err := proto.Unmarshal(out, &created); err != nil {
 					t.Fatal(err)
 				}
-				if created.Property.GetKey() != "custom-fact" || created.Property.GetOrigin() != "user" {
+				if created.Property.GetKey() != "custom-fact" || created.Property.GetOrigin() != "user" || created.Property.GetCardinality() != "single" {
 					t.Fatalf("%+v", created.Property)
 				}
 				cr := req.(*engine.CreatePropertyRequest)
+				severalOut, err := CreateProperty(marshalProto(t, &engine.CreatePropertyRequest{
+					ProjectDir: cr.ProjectDir, UserId: cr.UserId,
+					Label: "Languages Spoken", ValueType: "text", Cardinality: "multiple",
+				}))
+				if err != nil {
+					t.Fatal(err)
+				}
+				var several engine.CreatePropertyResponse
+				if err := proto.Unmarshal(severalOut, &several); err != nil {
+					t.Fatal(err)
+				}
+				if several.Property.GetCardinality() != "multiple" {
+					t.Fatalf("%+v", several.Property)
+				}
 				uout, err := UpdateProperty(marshalProto(t, &engine.UpdatePropertyRequest{
 					ProjectDir: cr.ProjectDir, UserId: cr.UserId,
 					PropertyId: created.Property.GetId(), Label: "Custom Fact 2", ValueType: "text",

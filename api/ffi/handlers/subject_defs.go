@@ -47,7 +47,7 @@ func CreateProperty(in []byte) ([]byte, error) {
 	}
 	var out *engine.CreatePropertyResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		got, err := properties.Create(c, userID, req.GetLabel(), req.GetValueType(), req.GetDescription())
+		got, err := properties.Create(c, userID, req.GetLabel(), req.GetValueType(), req.GetDescription(), req.GetCardinality())
 		if err != nil {
 			return err
 		}

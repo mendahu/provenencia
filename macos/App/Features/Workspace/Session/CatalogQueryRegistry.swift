@@ -21,9 +21,11 @@ struct CatalogQueryRegistry: Sendable {
     /// one set, because Go's auto-reconciler cache recomputes on the same
     /// writes and reloading from it is cheap. `mutatedSourceWorkspace` carries
     /// credibility changes and over-busts on notes, artifacts, and metadata;
-    /// a Citation's certainty rides `savedCitation` (S9-14).
+    /// a Citation's certainty rides `savedCitation` (S9-14). A Property
+    /// update, including a cardinality change, rides `updatedProperty` (S9-37).
     static let conclusionTriggers: Set<CatalogMutationKind> = [
         .savedCitation, .deletedSubject, .promotedSubject, .deletedSource, .mutatedSourceWorkspace,
+        .updatedProperty,
     ]
 
     private struct Spec {

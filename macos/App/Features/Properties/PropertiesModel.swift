@@ -27,6 +27,8 @@ final class PropertiesModel {
         var label: String
         var valueType: String
         var description: String
+        /// `single` or `multiple`. Create defaults to one value.
+        var cardinality: String = "single"
         var bindTypeIDs: Set<String>
     }
 
@@ -38,6 +40,8 @@ final class PropertiesModel {
     private(set) var createOpen = false
     var draft: Draft?
     private(set) var isEditingIdentity = false
+    /// Shown after a cardinality change until the researcher picks another property.
+    private(set) var cardinalityNotice = false
     private(set) var isSaving = false
     var formError: String?
     var toast: VocabularyToast?
@@ -175,6 +179,11 @@ final class PropertiesModel {
         return !CatalogOrigin.isPlugin(property.origin)
     }
 
+    /// Seeded and plugin Properties show Holds read-only. A researcher Property can change it.
+    var canEditCardinality: Bool {
+        selectedProperty?.origin == CatalogOrigin.user
+    }
+
     func isEditDirty(label: String, description: String) -> Bool {
         guard let property = selectedProperty else { return false }
         return label.trimmingCharacters(in: .whitespacesAndNewlines) != property.label
@@ -251,6 +260,9 @@ final class PropertiesModel {
     /// Applies UI state for a row pick. History owns the committed place — see `location(selectingProperty:)`.
     func selectProperty(_ id: String?) {
         cancelEdit()
+        if id != selectedPropertyID {
+            cardinalityNotice = false
+        }
         selectedPropertyID = id
         lockedCallout = nil
         formError = nil
@@ -289,6 +301,7 @@ final class PropertiesModel {
             label: label,
             valueType: "text",
             description: "",
+            cardinality: "single",
             bindTypeIDs: bind
         )
     }
@@ -353,6 +366,34 @@ final class PropertiesModel {
         }
     }
 
+    /// Saves Holds immediately. The value already stored is a no-op. Seeded and plugin Properties stay fixed.
+    @discardableResult
+    func setCardinality(_ cardinality: String) async -> Bool {
+        guard canEditCardinality, let property = selectedProperty, !isSaving else { return false }
+        guard cardinality == "single" || cardinality == "multiple" else { return false }
+        guard cardinality != property.cardinality else { return false }
+        isSaving = true
+        formError = nil
+        defer { isSaving = false }
+        do {
+            _ = try await store.updateProperty(
+                projectDir: session.projectKey.projectDir,
+                userID: userID,
+                propertyID: property.id,
+                label: property.label,
+                valueType: property.valueType,
+                description: property.description,
+                cardinality: cardinality
+            )
+            session.apply(.updatedProperty)
+            cardinalityNotice = true
+            return true
+        } catch {
+            formError = L10n.Errors.message(for: error)
+            return false
+        }
+    }
+
     func askDelete() async {
         guard let property = selectedProperty else { return }
         cancelEdit()
@@ -385,6 +426,7 @@ final class PropertiesModel {
             )
             session.apply(.deletedProperty)
             selectedPropertyID = nil
+            cardinalityNotice = false
             formError = nil
             cancelEdit()
             toast = VocabularyToast(
@@ -432,7 +474,8 @@ final class PropertiesModel {
                 userID: userID,
                 label: label,
                 valueType: draft.valueType,
-                description: draft.description
+                description: draft.description,
+                cardinality: draft.cardinality
             )
             for typeID in draft.bindTypeIDs {
                 try await store.assignSubjectTypeProperty(

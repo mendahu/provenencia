@@ -10789,12 +10789,14 @@ func (x *ListPropertiesResponse) GetProperties() []*Property {
 }
 
 type CreatePropertyRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ProjectDir    string                 `protobuf:"bytes,1,opt,name=project_dir,json=projectDir,proto3" json:"project_dir,omitempty"`
-	UserId        string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	Label         string                 `protobuf:"bytes,4,opt,name=label,proto3" json:"label,omitempty"`
-	ValueType     string                 `protobuf:"bytes,5,opt,name=value_type,json=valueType,proto3" json:"value_type,omitempty"`
-	Description   string                 `protobuf:"bytes,6,opt,name=description,proto3" json:"description,omitempty"`
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	ProjectDir  string                 `protobuf:"bytes,1,opt,name=project_dir,json=projectDir,proto3" json:"project_dir,omitempty"`
+	UserId      string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	Label       string                 `protobuf:"bytes,4,opt,name=label,proto3" json:"label,omitempty"`
+	ValueType   string                 `protobuf:"bytes,5,opt,name=value_type,json=valueType,proto3" json:"value_type,omitempty"`
+	Description string                 `protobuf:"bytes,6,opt,name=description,proto3" json:"description,omitempty"`
+	// Empty means single. single | multiple.
+	Cardinality   string `protobuf:"bytes,7,opt,name=cardinality,proto3" json:"cardinality,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -10860,6 +10862,13 @@ func (x *CreatePropertyRequest) GetValueType() string {
 func (x *CreatePropertyRequest) GetDescription() string {
 	if x != nil {
 		return x.Description
+	}
+	return ""
+}
+
+func (x *CreatePropertyRequest) GetCardinality() string {
+	if x != nil {
+		return x.Cardinality
 	}
 	return ""
 }
@@ -15576,7 +15585,7 @@ const file_engine_proto_rawDesc = "" +
 	"\x16ListPropertiesResponse\x12?\n" +
 	"\n" +
 	"properties\x18\x01 \x03(\v2\x1f.provenencia.engine.v1.PropertyR\n" +
-	"properties\"\xb3\x01\n" +
+	"properties\"\xd5\x01\n" +
 	"\x15CreatePropertyRequest\x12\x1f\n" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
 	"projectDir\x12\x17\n" +
@@ -15584,7 +15593,8 @@ const file_engine_proto_rawDesc = "" +
 	"\x05label\x18\x04 \x01(\tR\x05label\x12\x1d\n" +
 	"\n" +
 	"value_type\x18\x05 \x01(\tR\tvalueType\x12 \n" +
-	"\vdescription\x18\x06 \x01(\tR\vdescriptionJ\x04\b\x03\x10\x04R\x03key\"U\n" +
+	"\vdescription\x18\x06 \x01(\tR\vdescription\x12 \n" +
+	"\vcardinality\x18\a \x01(\tR\vcardinalityJ\x04\b\x03\x10\x04R\x03key\"U\n" +
 	"\x16CreatePropertyResponse\x12;\n" +
 	"\bproperty\x18\x01 \x01(\v2\x1f.provenencia.engine.v1.PropertyR\bproperty\"\xeb\x01\n" +
 	"\x15UpdatePropertyRequest\x12\x1f\n" +

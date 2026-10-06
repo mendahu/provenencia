@@ -134,9 +134,40 @@ struct PropertiesModelTests {
         #expect(location?.subjectTypeKey == "person")
         #expect(location?.propertyId == model.selectedPropertyID)
         #expect(location?.title == "Custom Fact")
-        #expect(store.propertiesByProject[projectDir]?.contains { $0.key == "custom-fact" } == true)
+        #expect(store.propertiesByProject[projectDir]?.contains { $0.key == "custom-fact" && $0.cardinality == "single" } == true)
         #expect(store.subjectTypePropertiesByType[person.id]?.contains { $0.property.key == "custom-fact" } == true)
         #expect(!(SubjectPropertyValueType.researcherCreatable.contains("term")))
+    }
+
+    @Test func createDefaultsToOneValueAndCanSubmitSeveral() async {
+        let (model, session, store) = makeModel(types: [personType()])
+        await warm(model, session: session)
+        model.openCreate()
+        #expect(model.draft?.cardinality == "single")
+        model.draft?.cardinality = "multiple"
+        model.draft?.label = "Languages spoken"
+        let location = await model.submitCreate()
+        #expect(location?.title == "Languages spoken")
+        #expect(store.propertiesByProject[projectDir]?.first?.cardinality == "multiple")
+    }
+
+    @Test func userPropertyCardinalityChangeKeepsTheNoticeUntilSelectionMoves() async {
+        let store = FakeStore()
+        let property = userProperty()
+        let other = nameProperty()
+        let (model, session, _) = makeModel(store: store, properties: [property, other], types: [personType()])
+        await warm(model, session: session)
+        model.selectProperty(property.id)
+        #expect(model.canEditCardinality)
+        #expect(await model.setCardinality("single") == false)
+        #expect(await model.setCardinality("multiple"))
+        #expect(model.cardinalityNotice)
+        #expect(store.propertiesByProject[projectDir]?.first { $0.id == property.id }?.cardinality == "multiple")
+        model.selectProperty(other.id)
+        #expect(!model.cardinalityNotice)
+        #expect(!model.canEditCardinality)
+        #expect(await model.setCardinality("single") == false)
+        #expect(store.propertiesByProject[projectDir]?.first { $0.id == other.id }?.cardinality == "single")
     }
 
     @Test func typesFollowPaletteOrderNotAlphabetical() async {

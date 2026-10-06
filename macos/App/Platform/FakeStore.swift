@@ -1719,14 +1719,19 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         userID _: String,
         label: String,
         valueType: String,
-        description: String
+        description: String,
+        cardinality: String
     ) async throws -> CatalogProperty {
-        return withState {
+        return try withState {
             markCatalogSessionHeld(projectDir)
             let key = label
                 .lowercased()
                 .replacingOccurrences(of: " ", with: "-")
                 .filter { $0.isLetter || $0.isNumber || $0 == "-" }
+            let stored = cardinality.isEmpty ? "single" : cardinality
+            guard stored == "single" || stored == "multiple" else {
+                throw CoreInvokeError.coded(status: 1, code: "properties.invalid", kind: .user, params: [])
+            }
             let property = CatalogProperty(
                 id: UUID().uuidString.lowercased(),
                 key: key,
@@ -1734,7 +1739,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 label: label,
                 description: description,
                 valueType: valueType,
-                cardinality: "single"
+                cardinality: stored
             )
             propertiesByProject[projectDir, default: []].append(property)
             return property
