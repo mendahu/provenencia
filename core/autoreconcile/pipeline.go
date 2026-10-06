@@ -5,6 +5,8 @@ import (
 	"slices"
 	"sort"
 	"strings"
+
+	"github.com/mendahu/provenencia/core/database/properties"
 )
 
 // The shared reconciliation pipeline (conclusion-reconciliation.md §5). Every
@@ -36,13 +38,8 @@ import (
 
 // MinMajoritySupport is the least support, in distinct Sources, a value needs
 // to crowd out the others ("two out of three"). It must also hold more than
-// half the unit's support.
+// half the unit's support. Multiple cardinality skips this step.
 const MinMajoritySupport = 2
-
-// cardinality is fixed at single until Properties carry one (S9-36).
-type cardinality int
-
-const cardinalitySingle cardinality = iota
 
 // entry is one candidate in the pipeline.
 type entry struct {
@@ -84,8 +81,8 @@ type row struct {
 	against   int
 }
 
-func reconcile(m module, candidates []Candidate, concluded *Value, _ cardinality) Result {
-	res := Result{Outcomes: make([]Outcome, len(candidates))}
+func reconcile(m module, candidates []Candidate, concluded *Value, cardinality string) Result {
+	res := Result{Outcomes: make([]Outcome, len(candidates)), cardinality: cardinality}
 
 	order := make([]int, len(candidates))
 	for i := range order {
@@ -157,7 +154,15 @@ func reconcile(m module, candidates []Candidate, concluded *Value, _ cardinality
 	for _, name := range sortedKeys(byName) {
 		vals := byName[name]
 		foldValues(m, name, vals)
-		elect(m, name, vals)
+		if cardinality == properties.CardinalityMultiple {
+			for _, v := range vals {
+				if v.into == nil {
+					v.fate = ReasonKept
+				}
+			}
+		} else {
+			elect(m, name, vals)
+		}
 		dropWeak(vals)
 	}
 

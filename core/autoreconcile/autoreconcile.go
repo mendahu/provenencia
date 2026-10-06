@@ -41,7 +41,8 @@ const (
 	StateEmpty     State = ""          // nothing displayed, no concluded value
 	StateSingle    State = "single"    // one displayed value from one Source
 	StateMerged    State = "merged"    // one displayed value from several Sources
-	StateMixed     State = "mixed"     // several displayed values
+	StateMixed     State = "mixed"     // several displayed values that could not be decided
+	StateMultiple  State = "multiple"  // several displayed values, all of them true
 	StateConcluded State = "concluded" // a concluded value (Reconciliation Claim, later)
 )
 
@@ -164,9 +165,10 @@ type Result struct {
 	// Values holds every distinct value: displayed ones first, then the
 	// rest, each group by support descending, then its best-ranked member.
 	// Index 0 is rank 1.
-	Values    []ReconciledValue
-	Outcomes  []Outcome // one per input candidate, ascending Observation id
-	Concluded bool      // Values[0] is the concluded value
+	Values      []ReconciledValue
+	Outcomes    []Outcome // one per input candidate, ascending Observation id
+	Concluded   bool      // Values[0] is the concluded value
+	cardinality string
 }
 
 // State reads the state off the displayed values.
@@ -184,6 +186,9 @@ func (r Result) State() State {
 	case len(shown) == 0:
 		return StateEmpty
 	case len(shown) > 1:
+		if r.cardinality == properties.CardinalityMultiple {
+			return StateMultiple
+		}
 		return StateMixed
 	case shown[0].Support > 1:
 		return StateMerged
@@ -192,13 +197,18 @@ func (r Result) State() State {
 	}
 }
 
-// Reconcile reconciles candidates for a Property of valueType. The result does
-// not depend on the input order. A non-nil concluded value always takes rank
-// 1: it joins the auto-reconciled value it equals, or stands alone with support 0
-// ahead of the rest.
-func Reconcile(valueType string, candidates []Candidate, concluded *Value) (Result, error) {
+// Reconcile reconciles candidates for a Property of valueType and cardinality
+// (single or multiple). The result does not depend on the input order. A
+// non-nil concluded value always takes rank 1: it joins the auto-reconciled
+// value it equals, or stands alone with support 0 ahead of the rest.
+func Reconcile(valueType string, candidates []Candidate, concluded *Value, cardinality string) (Result, error) {
 	if !knownValueType(valueType) {
 		return Result{}, fmt.Errorf("%w: %q", ErrUnknownValueType, valueType)
+	}
+	switch cardinality {
+	case properties.CardinalitySingle, properties.CardinalityMultiple:
+	default:
+		return Result{}, fmt.Errorf("%w: %q", ErrUnknownValueType, cardinality)
 	}
 	for _, c := range candidates {
 		if !carries(valueType, c.Value) {
@@ -208,7 +218,7 @@ func Reconcile(valueType string, candidates []Candidate, concluded *Value) (Resu
 	if concluded != nil && !carries(valueType, *concluded) {
 		return Result{}, ErrValueMismatch
 	}
-	return reconcile(moduleFor(valueType), candidates, concluded, cardinalitySingle), nil
+	return reconcile(moduleFor(valueType), candidates, concluded, cardinality), nil
 }
 
 func knownValueType(vt string) bool {

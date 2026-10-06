@@ -42,7 +42,7 @@ type seedType struct {
 }
 
 type seedProperty struct {
-	Key, Label, Description, ValueType string
+	Key, Label, Description, ValueType, Cardinality string
 }
 
 type seedBinding struct {
@@ -151,7 +151,7 @@ var seedProperties = []seedProperty{
 	{Key: "related_to", Label: "Related to", Description: "Target hint: person (on a relationship: the other end — person is the X of related_to)", ValueType: properties.ValueTypeSubject},
 	{Key: "mentions", Label: "Mentions", Description: "Target hint: source", ValueType: properties.ValueTypeSubject},
 	{Key: "remark", Label: "Remark", Description: "Free-text commentary about a source subject", ValueType: properties.ValueTypeText},
-	{Key: "toponym", Label: "Toponym", Description: "Place name as interpreted from a Source", ValueType: properties.ValueTypeText},
+	{Key: "toponym", Label: "Toponym", Description: "Place name as interpreted from a Source", ValueType: properties.ValueTypeText, Cardinality: properties.CardinalityMultiple},
 }
 
 // Non-bridge bindings from docs/seeded-vocabulary.md §3.3.

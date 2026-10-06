@@ -431,6 +431,8 @@ struct CatalogProperty: Sendable, Equatable, Identifiable {
     var description: String
     /// text | integer | date | name | subject | term
     var valueType: String
+    /// single | multiple. Empty input is treated as single.
+    var cardinality: String = "single"
     /// Observation count (`observations.property_id`). Display only; not a delete gate.
     var usedBy: Int = 0
 }
@@ -945,7 +947,8 @@ protocol GenealogyStore: Sendable {
         propertyID: String,
         label: String,
         valueType: String,
-        description: String
+        description: String,
+        cardinality: String
     ) async throws -> CatalogProperty
     func deleteProperty(projectDir: String, userID: String, propertyID: String) async throws
     func listPropertyTerms(projectDir: String, propertyID: String) async throws -> [CatalogPropertyTerm]

@@ -24,15 +24,17 @@ func TestListProperties(t *testing.T) {
 				if len(resp.Properties) != 16 {
 					t.Fatalf("len=%d want 16", len(resp.Properties))
 				}
-				found := false
+				foundName, foundToponym := false, false
 				for _, p := range resp.Properties {
-					if p.GetKey() == "name" && p.GetValueType() == "name" {
-						found = true
-						break
+					if p.GetKey() == "name" && p.GetValueType() == "name" && p.GetCardinality() == "single" {
+						foundName = true
+					}
+					if p.GetKey() == "toponym" && p.GetCardinality() == "multiple" {
+						foundToponym = true
 					}
 				}
-				if !found {
-					t.Fatal("missing name property")
+				if !foundName || !foundToponym {
+					t.Fatalf("name=%v toponym=%v", foundName, foundToponym)
 				}
 			},
 		},
@@ -70,7 +72,7 @@ func TestCreateUpdateDeleteProperty(t *testing.T) {
 				if err := proto.Unmarshal(uout, &updated); err != nil {
 					t.Fatal(err)
 				}
-				if updated.Property.GetLabel() != "Custom Fact 2" {
+				if updated.Property.GetLabel() != "Custom Fact 2" || updated.Property.GetCardinality() != "single" {
 					t.Fatalf("%+v", updated.Property)
 				}
 				if _, err := DeleteProperty(marshalProto(t, &engine.DeletePropertyRequest{

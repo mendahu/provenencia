@@ -1,9 +1,12 @@
 package handlers
 
 import (
+	"database/sql"
+
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/autoreconciler"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
@@ -72,7 +75,9 @@ func UpdateProperty(in []byte) ([]byte, error) {
 	}
 	var out *engine.UpdatePropertyResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		got, err := properties.Update(c, userID, propertyID, req.GetLabel(), req.GetValueType(), req.GetDescription())
+		got, err := properties.Update(c, userID, propertyID, req.GetLabel(), req.GetValueType(), req.GetDescription(), req.GetCardinality(), func(tx *sql.Tx) error {
+			return autoreconciler.RecomputePropertyTx(tx, propertyID)
+		})
 		if err != nil {
 			return err
 		}
@@ -311,6 +316,7 @@ func propertyProto(p properties.Property) *engine.Property {
 		Description: p.Description,
 		ValueType:   p.ValueType,
 		UsedBy:      int32(p.UsedBy),
+		Cardinality: p.Cardinality,
 	}
 }
 

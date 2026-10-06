@@ -42,6 +42,7 @@ IDs stay stable (`S9-NN`, `S9-DN`). Do not renumber when moving steps here.
 | S9-23 | PR | Events list |
 | S9-D6 | Design | Event detail |
 | S9-24 | PR | Event detail |
+| S9-36 | PR | Property cardinality |
 
 ## Steps
 
@@ -940,3 +941,19 @@ Opening an Event shows its date and how that date was reconciled. Person and Eve
 
 - Subject titles, the Subjects section, and a filled Place: **S9-32**. Participant editing.
 - The Place configuration of the same page: **S9-27**. Add a configuration, not a new page.
+
+### S9-36 — Property cardinality
+
+A Place can keep Montréal and Montreal as two names. Majority no longer treats a second name as a disagreement.
+
+**What shipped**
+
+- Migration `000043`: `properties.cardinality` (`single` or `multiple`, default `single`). Seeded `toponym` is `multiple` from the migration and from create-time Install. A researcher-created Property starts `single`.
+- On a multiple Property the pipeline still folds the same value, still honors a denial, and still drops a value that only weak evidence carries when a stronger different value survived. Majority does not run, so a distinct value is never outvoted. Several displayed values are state `multiple` (the detail badge ignores that state). One displayed value is still `single` or `merged`.
+- Cache version **12**. Opening a catalog rebuilds the auto-reconciler cache.
+- Changing cardinality recomputes every handle that has an Observation on that Property, in the same transaction as the update. That path matches a full rebuild. A label or description edit does not recompute. Provenencia cardinality is fixed (`ErrLocked`); a user Property may change. List and update round-trip the field. Saving a label sends the Property's current cardinality.
+
+**What stayed out**
+
+- The Properties cardinality control, and registering `updatedProperty` on `conclusionTriggers`: **S9-37**, gated by **S9-D14**.
+- One Reconciliation Claim per value (design §8). Claims stay one per entity and property until claims ship.

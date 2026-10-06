@@ -264,7 +264,7 @@ func TestDateReconcile(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := Reconcile(properties.ValueTypeDate, tc.cands, nil)
+			got, err := Reconcile(properties.ValueTypeDate, tc.cands, nil, properties.CardinalitySingle)
 			if err != nil {
 				t.Fatal(err)
 			}

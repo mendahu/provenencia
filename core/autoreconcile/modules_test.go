@@ -53,7 +53,7 @@ func TestModules(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.module+"/"+tc.name, func(t *testing.T) {
-			got, err := Reconcile(tc.valueType, tc.in, nil)
+			got, err := Reconcile(tc.valueType, tc.in, nil, properties.CardinalitySingle)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -78,7 +78,7 @@ func TestModuleFor(t *testing.T) {
 			t.Errorf("%s has no module", vt)
 		}
 	}
-	if _, err := Reconcile(properties.ValueTypeName, []Candidate{{ObservationID: id(1), Value: Value{Name: &namevalues.Value{}}}}, nil); err != nil {
+	if _, err := Reconcile(properties.ValueTypeName, []Candidate{{ObservationID: id(1), Value: Value{Name: &namevalues.Value{}}}}, nil, properties.CardinalitySingle); err != nil {
 		t.Fatalf("an empty name is no evidence, not an error: %v", err)
 	}
 }

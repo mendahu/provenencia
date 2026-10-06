@@ -10172,6 +10172,7 @@ type Property struct {
 	Description   string                 `protobuf:"bytes,5,opt,name=description,proto3" json:"description,omitempty"`
 	ValueType     string                 `protobuf:"bytes,6,opt,name=value_type,json=valueType,proto3" json:"value_type,omitempty"` // text | integer | date | name | subject | term
 	UsedBy        int32                  `protobuf:"varint,7,opt,name=used_by,json=usedBy,proto3" json:"used_by,omitempty"`         // subject_type_properties references; delete only at 0
+	Cardinality   string                 `protobuf:"bytes,8,opt,name=cardinality,proto3" json:"cardinality,omitempty"`              // single | multiple
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -10253,6 +10254,13 @@ func (x *Property) GetUsedBy() int32 {
 		return x.UsedBy
 	}
 	return 0
+}
+
+func (x *Property) GetCardinality() string {
+	if x != nil {
+		return x.Cardinality
+	}
+	return ""
 }
 
 // PropertyTerm is one categorical value for a term-typed Property.
@@ -10901,13 +10909,15 @@ func (x *CreatePropertyResponse) GetProperty() *Property {
 }
 
 type UpdatePropertyRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ProjectDir    string                 `protobuf:"bytes,1,opt,name=project_dir,json=projectDir,proto3" json:"project_dir,omitempty"`
-	UserId        string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	PropertyId    string                 `protobuf:"bytes,3,opt,name=property_id,json=propertyId,proto3" json:"property_id,omitempty"`
-	Label         string                 `protobuf:"bytes,4,opt,name=label,proto3" json:"label,omitempty"`
-	ValueType     string                 `protobuf:"bytes,5,opt,name=value_type,json=valueType,proto3" json:"value_type,omitempty"`
-	Description   string                 `protobuf:"bytes,6,opt,name=description,proto3" json:"description,omitempty"`
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	ProjectDir  string                 `protobuf:"bytes,1,opt,name=project_dir,json=projectDir,proto3" json:"project_dir,omitempty"`
+	UserId      string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	PropertyId  string                 `protobuf:"bytes,3,opt,name=property_id,json=propertyId,proto3" json:"property_id,omitempty"`
+	Label       string                 `protobuf:"bytes,4,opt,name=label,proto3" json:"label,omitempty"`
+	ValueType   string                 `protobuf:"bytes,5,opt,name=value_type,json=valueType,proto3" json:"value_type,omitempty"`
+	Description string                 `protobuf:"bytes,6,opt,name=description,proto3" json:"description,omitempty"`
+	// Empty leaves the stored cardinality. single | multiple.
+	Cardinality   string `protobuf:"bytes,7,opt,name=cardinality,proto3" json:"cardinality,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -10980,6 +10990,13 @@ func (x *UpdatePropertyRequest) GetValueType() string {
 func (x *UpdatePropertyRequest) GetDescription() string {
 	if x != nil {
 		return x.Description
+	}
+	return ""
+}
+
+func (x *UpdatePropertyRequest) GetCardinality() string {
+	if x != nil {
+		return x.Cardinality
 	}
 	return ""
 }
@@ -15498,7 +15515,7 @@ const file_engine_proto_rawDesc = "" +
 	"projectDir\x12\x1b\n" +
 	"\tsource_id\x18\x02 \x01(\tR\bsourceId\"d\n" +
 	"\x1cListSubjectPositionsResponse\x12D\n" +
-	"\tpositions\x18\x01 \x03(\v2&.provenencia.engine.v1.SubjectPositionR\tpositions\"\xb4\x01\n" +
+	"\tpositions\x18\x01 \x03(\v2&.provenencia.engine.v1.SubjectPositionR\tpositions\"\xd6\x01\n" +
 	"\bProperty\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x10\n" +
 	"\x03key\x18\x02 \x01(\tR\x03key\x12\x16\n" +
@@ -15507,7 +15524,8 @@ const file_engine_proto_rawDesc = "" +
 	"\vdescription\x18\x05 \x01(\tR\vdescription\x12\x1d\n" +
 	"\n" +
 	"value_type\x18\x06 \x01(\tR\tvalueType\x12\x17\n" +
-	"\aused_by\x18\a \x01(\x05R\x06usedBy\"\xa1\x01\n" +
+	"\aused_by\x18\a \x01(\x05R\x06usedBy\x12 \n" +
+	"\vcardinality\x18\b \x01(\tR\vcardinality\"\xa1\x01\n" +
 	"\fPropertyTerm\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
 	"\vproperty_id\x18\x02 \x01(\tR\n" +
@@ -15568,7 +15586,7 @@ const file_engine_proto_rawDesc = "" +
 	"value_type\x18\x05 \x01(\tR\tvalueType\x12 \n" +
 	"\vdescription\x18\x06 \x01(\tR\vdescriptionJ\x04\b\x03\x10\x04R\x03key\"U\n" +
 	"\x16CreatePropertyResponse\x12;\n" +
-	"\bproperty\x18\x01 \x01(\v2\x1f.provenencia.engine.v1.PropertyR\bproperty\"\xc9\x01\n" +
+	"\bproperty\x18\x01 \x01(\v2\x1f.provenencia.engine.v1.PropertyR\bproperty\"\xeb\x01\n" +
 	"\x15UpdatePropertyRequest\x12\x1f\n" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
 	"projectDir\x12\x17\n" +
@@ -15578,7 +15596,8 @@ const file_engine_proto_rawDesc = "" +
 	"\x05label\x18\x04 \x01(\tR\x05label\x12\x1d\n" +
 	"\n" +
 	"value_type\x18\x05 \x01(\tR\tvalueType\x12 \n" +
-	"\vdescription\x18\x06 \x01(\tR\vdescription\"U\n" +
+	"\vdescription\x18\x06 \x01(\tR\vdescription\x12 \n" +
+	"\vcardinality\x18\a \x01(\tR\vcardinality\"U\n" +
 	"\x16UpdatePropertyResponse\x12;\n" +
 	"\bproperty\x18\x01 \x01(\v2\x1f.provenencia.engine.v1.PropertyR\bproperty\"r\n" +
 	"\x15DeletePropertyRequest\x12\x1f\n" +

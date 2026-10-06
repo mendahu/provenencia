@@ -559,7 +559,8 @@ private struct ThrowingStore: GenealogyStore {
         propertyID _: String,
         label _: String,
         valueType _: String,
-        description _: String
+        description _: String,
+        cardinality _: String
     ) async throws -> CatalogProperty { throw StoreBoom.boom }
     func deleteProperty(projectDir _: String, userID _: String, propertyID _: String) async throws {
         throw StoreBoom.boom
