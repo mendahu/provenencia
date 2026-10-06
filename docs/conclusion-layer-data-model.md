@@ -135,7 +135,7 @@ Important separations:
 3. **Membership** — the accepted Identity Claims for that entity. Not a separate join table, and not a graph closure over other subjects.
 4. **Reconciliation Claim** — concluded value of one Property on one entity. Exhibit Observations may be about **other** Subjects; they are not retargeted.
 5. **Canonical merge** — `merged_into_id` within the same Subject type. Explicit; identifying a subject does not merge two handles.
-6. **Independent handles** — creating a Person does not auto-create related Events, Places, or Locations. The promote UI may offer those neighbors afterward (§5.4). The schema still creates nothing until the researcher accepts each one.
+6. **Independent handles** — creating a Person does not create its Events, Places, or relationships. Promote proposes those neighbors (§5.3); no primary handle is created until the researcher's Done accepts its row. Bridges are filed onto association handles once both ends are members (§5.4). The schema itself cascades nothing.
 
 SQLite enforces foreign keys, one claim per (subject, entity), one accepted claim per subject, and same Subject type on both ends. Merge re-pointing and “a Location is usable only when both ends are known” are **application invariants**.
 
@@ -219,7 +219,7 @@ CREATE TABLE identity_claim_evidence (
 
 A pin is a facet of **both** its claim and its Observation. Deleting a pinned Observation is allowed: its pins go with it, and every claim that pinned it stays, with a weaker exhibit (§5.2). Deleting a claim (or the Subject that carries it) drops that claim's pins. The application removes pins and claims **explicitly** in the same transaction so each removal is audited; the `CASCADE` is only a backstop for a writer that forgets. The delete confirm names the handles whose claims lose evidence.
 
-Pin every relevant Observation here; write the conclusion and inference in `identity_claims.argument`. Exhibit pins are **Observations only** — not Citations, Sources, or other Claims. A confirmed match pins Observations that already exist on the two subjects (§5.1). Broader exhibit types can wait until a concrete workflow needs them.
+Pin every relevant Observation here; write the conclusion and inference in `identity_claims.argument`. Exhibit pins are **Observations only** — not Citations, Sources, or other Claims. A confirmed match pins Observations that already exist on the two subjects, or on a neighbor one bridge away (a birth event's date for a person, §5.3) (§5.1). Broader exhibit types can wait until a concrete workflow needs them.
 
 The Observation's `subject_id` is unchanged. Pins mean “this assertion is part of my proof,” not “this Observation is now about the claim.” Creating a match does not insert an Observation, a Citation, or a subject. The source did not state the match; the Identity Claim does.
 
@@ -245,54 +245,48 @@ The same review applies when a pinned Observation is deleted or its value change
 
 **Weak claims (review alert, future UI).** A claim is surfaced for review when it is accepted, has **zero pins**, and its handle has **more than one** accepted member — it explains membership with no confirmed comparison. A handle's only member (a grounding claim, §5.1) is not flagged. No column stores this; it is a query over `identity_claims` and `identity_claim_evidence`. The audit history of `identity_claim_evidence` (removals are recorded under the claim's id) says *why* a claim is weak: never pinned, or evidence removed when an Observation or member was deleted. The alert offers the same three actions as above — re-pin against a remaining member, accept as-is, or reject — and never acts on its own. Planned with claim management (Spike 10); see [`ideas/identity-claim-review.md`](ideas/identity-claim-review.md).
 
-## 5.3 Promote comparison (future UI)
+## 5.3 Promote
 
-> **Being replaced (2026-10-06):** the per-Property checklist below, and the per-Subject walk in §5.4, are not the design we'll build. Identity is mostly carried by a Subject's neighbors (its birth event, its places, its family), and most agreements can be decided automatically. The proposed replacement is one page that aligns the whole Evidence graph against the canonical graph, with the researcher fine-tuning: [`promote-alignment.md`](promote-alignment.md). The problem and the directions explored: [`ideas/promote-matching.md`](ideas/promote-matching.md). The pins and backfill in §5.1 stand; the pair check widens to one-hop neighbors.
+The researcher files an Evidence graph's Subjects onto handles from one page. The design (alignment, scoring, the page) is [`promote-alignment.md`](promote-alignment.md); this section holds the model rules. The schema doesn't require the page: accepting a claim with an empty exhibit stays valid, and that claim may show as undocumented. The product proposes; it never blocks an accept.
 
-The screen below is the intended promote flow for a later spike. The schema does not require it. Accepting a claim with an empty exhibit stays valid, and that claim may show as undocumented. The product offers the comparison; it does not block the accept.
+1. Promote from any unpromoted primary Subject (person, event, place) opens the page with that Subject matched to its best handle. *Map the rest of this graph* adds a row for every other primary Subject on the Evidence graph.
+2. Each row's target is **proposed by aligning** the graph with the canonical graph. A Subject's own Properties *and its neighbors'* (its birth event's date, its places, its family) are compared with each candidate's members, and each comparison agrees, conflicts or is unknown. Subjects that are already members are anchors. A handle with no members is grounding: there's nothing to compare.
+3. The researcher accepts, retargets, mints new, or skips each row. Their choices are fixed; everything not yet decided is re-proposed around them.
+4. Each row's evidence lists its comparisons. The agreeing ones are preselected as pins, and any can be toggled. A comparison may reach **one hop through a bridge**: the incoming person's birth date (on their birth event) against a member's pins both date Observations on the person claims.
+5. **Done** writes everything in one transaction:
+   - one Identity Claim per filed Subject, and the minted handles;
+   - the pins from §5.1, with backfill onto the members' claims;
+   - the bridges (§5.4).
 
-1. The researcher has a subject, its Observations, and an evidence graph.
-2. They choose Promote and a canonical entity of the same Subject type.
-3. If that entity has no accepted members yet, this claim grounds the handle. There is no comparison step.
-4. Otherwise the UI lines the incoming subject's Observations up against the same Property on each accepted member. Compatible pairs start checked. Differing values start unchecked. A routine cross-property comparison (a census age against a birth date) may be suggested; confirming it still only pins the two existing Observations. Where a member has several Observations for one Property, each is its own row.
-5. The researcher can accept the checked pairs for a Property in one gesture, clear a pair, or skip the comparison and accept with no pins. One confirmed member is enough. Further checked members are the resilient exhibit from §5.1.
-6. Accept writes the incoming Identity Claim and the pins from §5.1, including backfill onto the other accepted members' claims. The UI may draft the new claim's `argument` from the confirmed rows; the researcher can edit that draft. Older claims' arguments are not rewritten.
+   A new claim's `argument` may be drafted from its agreeing comparisons and edited. Older claims' arguments are not rewritten.
 
-A refusal is not stored as its own row. Opening the comparison again shows an unpinned pair as not yet cited.
+A skipped row or an unpinned comparison is not stored. Opening Promote again proposes it afresh.
 
-The review in §5.2 is the other half of this UI: when a member leaves or a pinned Observation changes, list the affected Identity Claims on that entity and say whether each one still cites a remaining member.
+The review in §5.2 is the other half of this: when a member leaves or a pinned Observation changes, list the affected Identity Claims on that entity and say whether each still cites a remaining member.
 
-## 5.4 Neighborhood walk (future UI)
+## 5.4 Bridges and the rest of the graph
 
-> **Shipped so far (Spike 9, S9-02):** a grounding Promote is one transaction that mints the handle and an accepted Identity Claim with zero pins (`promote.Save`). The walk below is still future UI.
+Promoting one Subject does not promote its neighbors. The page proposes them, and nothing is created for a row the researcher skips. A primary handle (Person, Event, Place) is created only by an accepted row.
 
-Promoting one subject does not promote the subjects it is connected to. After the Identity Claim in §5.3 is accepted, the UI may continue with the unpromoted interpretation neighborhood of **the subject just filed**. That walk is a checklist the researcher can leave at any time. Whatever is left stays on the evidence graph, unconcluded.
+**Bridge Subjects** (participation, location, relationship, place relationship) have no identity of their own. Once both ends are members of handles, a bridge is **filed automatically**, joining the association the two handles already share, or a new one. That happens on Done, or later, when a claim makes its second end a member.
 
-The queue appends. It does not walk the canonical entity the subject was filed onto. That entity's existing relationships are a source of **suggested targets** only.
+- **Participation and location** are keyed by their ends. The role is a reconciled value on the association, not part of its identity.
+- **Relationship and place relationship** are keyed by their ends and type: spouse *and* cousin are two relationships.
+- **Direction** is kept for directed types ("parent of", "part of"); symmetric types (spouse) ignore order.
+- **A bridge whose ends are one handle is refused.** A refused filing (that one, or a place-hierarchy cycle) leaves the bridge unfiled, with its reason, and never fails the claim that triggered it.
+- **On the Promote page, each bridge can be switched off** before Done, for a relationship the researcher doesn't accept from this Source.
+- **A bridge with an unpromoted end** stays on the Evidence graph until that end is promoted.
 
-For each queued subject:
+The role or relationship type stays an Observation on the bridge Subject; reconciliation shows it on the association.
 
-1. Offer canonical entities of the same Subject type that already relate to the handle just filed, plus others that resemble this subject (type, date, toponym, and similar text). The researcher picks one, or creates a new handle.
-2. Run the property comparison from §5.3 against the chosen entity's accepted members, including backfill. A new handle with no members is grounding: there is no comparison step.
-3. Append this subject's interpretation neighbors that are not already queued and not already handled in this pass. Do not append the other members of the canonical entity, or the neighbors of those members.
-
-A subject handled in this pass is skipped, so a wife's relationships do not promote the husband again. Skipping a subject does not reach through it. Declining the birth event does not queue that event's places.
-
-Bridge subjects (`participation`, `location`, `relationship`) are queue items, and they wait until both ends are handles. The step is then a short confirm: connect these two, or file this bridge subject onto the participation or location the canonical ends already share. The role or relationship type stays an Observation on the bridge. It is not its own canonical entity.
-
-Worked shape, starting from a person on a birth record:
+Worked shape, from a birth record:
 
 ```text
-accept person  → queue the birth event and its participation
-accept event   → property match if the event already exists;
-                 else ground a new event;
-                 queue that event subject's places and location bridges
-accept a place → suggest the place already linked to that event, if any;
-                 do not queue that place's other events
-both ends known → confirm the participation and each location
+promote the person  → the page proposes the birth event and its place
+Done                → claims for the person, the event and the place;
+                      the participation and the location file themselves
+                      (both ends of each are now handles)
 ```
-
-Three places are three checklist rows. Each can join a different existing place or start a new one.
 
 ---
 
@@ -591,8 +585,9 @@ These are **schema and application invariants** (see §1). Grain, gazetteer use,
 18. There is no `origination_claims` table and no `identity_anchor_id`; the canonical row is the working-subject insert, and membership is Identity Claims.
 19. Optional `confidence_grade_id` on Identity and Reconciliation Claims is epistemic stance only; it does not replace `status` and must use Claim confidence vocabulary, not Source credibility grades ([`research-judgment-model.md`](research-judgment-model.md)).
 20. Confirming that two Observations agree pins those Observations. It does not create an Observation, Citation, or subject (§5.1).
-21. A confirmed match between an incoming subject and an existing accepted member pins both Observations on both Identity Claims. The existing claim's `argument` is not rewritten.
+21. A confirmed match between an incoming subject and an existing accepted member pins both Observations on both Identity Claims, including Observations one bridge away (§5.3). The existing claim's `argument` is not rewritten.
 22. Removing one member does not remove the others. Identity Claims on that entity that pin the departing subject's Observations are surfaced for review (§5.2). Their remaining pins stay.
+23. A bridge is filed onto an association only when both its ends are members of handles, keyed as in §5.4. Filing a bridge never creates or chooses a handle for its ends.
 
 ---
 

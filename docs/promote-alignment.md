@@ -2,7 +2,7 @@
 
 ## Status
 
-**Agreed 2026-10-06; scheduled as Spike 9 slice 9** (§10). This replaces the per-Property compare checklist in [`conclusion-layer-data-model.md`](conclusion-layer-data-model.md) §5.3 and the per-Subject walk in §5.4 once it's adopted. How we got here, and the directions we turned down: [`ideas/promote-matching.md`](ideas/promote-matching.md). Matching today: [`matching.md`](matching.md).
+**Agreed 2026-10-06; scheduled as Spike 9 slice 9** (§10). It replaced the per-Property compare checklist and the per-Subject walk; [`conclusion-layer-data-model.md`](conclusion-layer-data-model.md) §5.3–§5.4 now state its model rules. How we got here, and the directions we turned down: [`ideas/promote-matching.md`](ideas/promote-matching.md). Matching today: [`matching.md`](matching.md).
 
 **The data model doesn't change:** one Identity Claim per Subject and handle, with Observation pins on the claim and backfill (§5, §5.1).
 

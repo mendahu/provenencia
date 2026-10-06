@@ -208,7 +208,7 @@ Three sidebar destinations under a new **Conclude** section (sidebar sections: S
 
 ### R7 — Promote (alignment)
 
-**Authoritative design: [`promote-alignment.md`](../../promote-alignment.md)** (replanned 2026-10-06). It replaces the step-by-step compare and walk of model §5.3–§5.4. This section is the spike's slice of it.
+**Authoritative design: [`promote-alignment.md`](../../promote-alignment.md)** (replanned 2026-10-06). It replaces the step-by-step compare and walk the model used to describe; model §5.3–§5.4 now state its rules. This section is the spike's slice of it.
 
 **Promote only creates claims.** It is one-way: nobody comes back into it to edit, re-pin, or remove a claim. Those are a separate workflow with its own place (Spike 10), even though they write the same tables.
 
@@ -1049,7 +1049,7 @@ Honesty pass against the [goal bar](#goal-dogfood-bar); ledger timings recorded;
 
 ## Docs to update as work lands
 
-- [`conclusion-layer-data-model.md`](../../conclusion-layer-data-model.md): §5.3–§5.4 → replaced by Promote alignment ([`promote-alignment.md`](../../promote-alignment.md)): one page, one Done, bridges filed automatically, pins may reach one hop; grounding with zero pins; create-only. New section: the auto-reconciler cache as a derived, rebuildable projection; edges as auto-reconciled subject-valued Properties.
+- [`conclusion-layer-data-model.md`](../../conclusion-layer-data-model.md): §5.3–§5.4 rewritten for Promote alignment (2026-10-06); as S9-41 – S9-44 land, note what shipped. New section: the auto-reconciler cache as a derived, rebuildable projection; edges as auto-reconciled subject-valued Properties.
 - [`research-judgment-model.md`](../../research-judgment-model.md) §1.1: cached order and reasoning are derived, not stored judgment.
 - [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md) §12: implementation status as each module lands.
 - [`conclusion-layer-data-model.md`](../../conclusion-layer-data-model.md) §13: Place `contained_in` question answered by place relationships (R9); new `place_relationship` kind in the kinds list.

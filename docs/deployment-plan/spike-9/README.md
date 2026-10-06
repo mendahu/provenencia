@@ -30,7 +30,7 @@ Four strands:
 
 Spike 7 made subject types product-seeded and gave each a `ref_prefix` (`PER`, `EVT`, `PLC`, …) next to its `candidate_ref_prefix`. Canonical refs already have a namespace. Spike 8 settled the composer and graph chrome that Promote starts from, and reserved `reconciliation_claim` in delete Impact.
 
-Authoritative model: [`conclusion-layer-data-model.md`](../../conclusion-layer-data-model.md). The promote comparison (§5.3) and neighborhood walk (§5.4) are written there as "future UI"; this spike makes them current.
+Authoritative model: [`conclusion-layer-data-model.md`](../../conclusion-layer-data-model.md). Promote (§5.3) and bridge filing (§5.4) state the rules of Promote alignment, whose design is [`promote-alignment.md`](../../promote-alignment.md); this spike builds them.
 
 ## Out of scope (for this spike)
 

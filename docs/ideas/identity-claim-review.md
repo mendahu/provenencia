@@ -19,7 +19,7 @@ All are queries over `identity_claims`, `identity_claim_evidence`, and members �
 - **Badge** on the Person / Event / Place page and its list row when any member's claim is weak.
 - **Member list** on the detail page marks the weak claim and shows what was removed ("lost OBS-… when it was deleted on …").
 - **Review queue** (sidebar or page section): every weak claim across the project, newest first.
-- **Actions** per claim: re-pin against a remaining member (reuses the Promote compare step), accept as-is (dismiss until something else changes), or reject the claim. The app never auto-rejects or evicts.
+- **Actions** per claim: re-pin against a remaining member (reuses Promote's evidence sheet and alignment, S9-44), accept as-is (dismiss until something else changes), or reject the claim. The app never auto-rejects or evicts.
 - **At delete time** the confirm already names the handles affected (S9-02); a link from that sentence to the review queue would close the loop.
 
 ## Open questions

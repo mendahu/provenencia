@@ -138,7 +138,7 @@ Each module answers three questions:
 | **date** | §7.1 | precision containment | §7.1 | empty |
 | **name** | §7.2 | subsumption per part type | §7.2 | no parts |
 
-The same *same value* test is what Promote uses to start compatible pairs checked (Spike 9 R7), and what matching should use for agreement, so a Promote comparison and a Person page can never disagree about whether two values match.
+The same *same value* test (`autoreconcile.Compatible`) is what Promote alignment counts as an agreement ([`promote-alignment.md`](promote-alignment.md) §6), and what matching should use for agreement, so a Promote comparison and a Person page can never disagree about whether two values match.
 
 ## 7.1 Dates
 
