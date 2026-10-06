@@ -112,8 +112,8 @@ func termKey(v Value) (string, bool) {
 // the pipeline would see it: every unit both carry is equal, or one folds
 // into the other (J. Robins and James Robins). A unit only one carries does
 // not count against them, as in the pipeline's grouping; values that share
-// no unit, or where either is no evidence, are not compatible. Promote's
-// comparison pre-checks a pair by this test (S9-17).
+// no unit, or where either is no evidence, are not compatible. Promote
+// alignment counts a comparison as an agreement by this test (S9-41).
 func Compatible(valueType string, a, b Value) bool {
 	if !knownValueType(valueType) || !carries(valueType, a) || !carries(valueType, b) {
 		return false
