@@ -34,6 +34,7 @@ IDs stay stable (`S9-NN`, `S9-DN`). Do not renumber when moving steps here.
 | S9-15 | PR | Detail composer + detail read |
 | S9-D5 | Design | Person detail (revised for reasoning) |
 | S9-16 | PR | Person detail |
+| S9-17 | PR | Pins + backfill engine |
 
 ## Steps
 
@@ -779,3 +780,40 @@ Opening a Person now shows their page: every field with its value, how the evide
 - The member list (frame 1i): needs a per-handle members read.
 - Concluding a value (the reserved Why column, the *Concluded* badge): Reconciliation Claims, a later spike.
 - Event and Place pages: **S9-24** / **S9-27**, reusing the row and the Why.
+
+### S9-17 — Pins + backfill engine
+
+Promote can now record which records a join was confirmed against, on both claims, with every pin audited. This is the engine only. It's salvaged from the first S9-17 / S9-18 (#265 / #266, closed unmerged) after the replan to Promote alignment, and nothing calls it from the app yet.
+
+**What shipped**
+
+- **`autoreconcile.Compatible`:** the pipeline's *same value* or *fold* for one pair of values. Every unit both carry must agree (*J. Robins* ~ *James Robins*; *Robins* / *Robbins* differ). A unit only one carries doesn't count against them; no evidence or no shared unit is never compatible. Promote alignment (S9-41) counts agreements with it.
+- **Pins:**
+  - `identityclaims.PinTx` writes one pin and audits it as `identity_claim_evidence` `create` under the claim's id, the mirror of the audited release. A pin the claim already has is skipped.
+  - `PinnedObservations` reads a claim's pins.
+- **Pairs and backfill in `promote.Save`:**
+  - `Input.Pairs` takes confirmed pairs, on a join only;
+  - each pair is checked in the transaction: the incoming Observation is the Subject's, the member's is on the same Property, and its Subject is an accepted member of the target;
+  - both Observations are pinned on the new claim and on the member's claim, in the same `promote_subject` revision;
+  - the member's `argument` is untouched;
+  - `Result.Pins` counts the new claim's pins.
+
+  Go only: there's no FFI or Swift path yet.
+- **Pinned deletes, end to end:**
+  - the delete-impact release fixture now gets its pins from Promote;
+  - new tests: a pinned Observation's confirm names its handle once though two claims pin it;
+  - the delete takes the pin off both claims and keeps their other pins;
+  - each claim's audit replays as Promote's creates, then the delete's removal;
+  - a member emptied of its records takes its claim's backfilled pins with it;
+  - the cache equals a rebuild after each.
+- **Retired:** the Swift `sameness_claim` delete-impact noun, its two catalog keys, and the preview built on it.
+
+**What changed for researchers**
+
+- Nothing visible yet.
+
+**What stayed out**
+
+- Pins one hop through a bridge, and the batch write: **S9-43**.
+- Any UI, FFI or Swift pairs API, and FakeStore pins: **S9-43 / S9-44**.
+- The per-Subject comparison read and the compare step from #265 were dropped; alignment (S9-41) and the evidence sheet (S9-44) replace them.

@@ -116,3 +116,44 @@ func TestSpellingSimilarity(t *testing.T) {
 		t.Error("a floor of 1 turns spelling variants off")
 	}
 }
+
+// Compatible is the pipeline's "same value or fold", one pair at a time.
+func TestCompatible(t *testing.T) {
+	cases := []struct {
+		name      string
+		valueType string
+		a, b      Candidate
+		want      bool
+	}{
+		{"text: trimmed and case-insensitive", properties.ValueTypeText, text(1, " York"), text(2, "york"), true},
+		{"text: different", properties.ValueTypeText, text(1, "York"), text(2, "Toronto"), false},
+		{"text: blank is no evidence", properties.ValueTypeText, text(1, ""), text(2, ""), false},
+		{"integer: equal", properties.ValueTypeInteger, integer(1, 34), integer(2, 34), true},
+		{"integer: different", properties.ValueTypeInteger, integer(1, 34), integer(2, 35), false},
+		{"term: the same term", properties.ValueTypeTerm, term(1, "m", "male"), term(2, "m", "male"), true},
+		{"term: different terms", properties.ValueTypeTerm, term(1, "m", "male"), term(2, "f", "female"), false},
+		{"term: a neutral term is no evidence", properties.ValueTypeTerm, term(1, "u", "unknown"), term(2, "u", "unknown"), false},
+		{"name: the same parts", properties.ValueTypeName,
+			nm(1, "given=James|surname=Robins"), nm(2, "given=James|surname=Robins"), true},
+		{"name: an initial folds into the full given name", properties.ValueTypeName,
+			nm(1, "given=J.|surname=Robins"), nm(2, "given=James|surname=Robins"), true},
+		{"name: fold either way round", properties.ValueTypeName,
+			nm(1, "given=James|surname=Robins"), nm(2, "given=J.|surname=Robins"), true},
+		{"name: a part only one carries does not count against", properties.ValueTypeName,
+			nm(1, "given=James"), nm(2, "given=James|surname=Robins"), true},
+		{"name: a spelling variant differs", properties.ValueTypeName,
+			nm(1, "given=James|surname=Robins"), nm(2, "given=James|surname=Robbins"), false},
+		{"name: no shared part", properties.ValueTypeName,
+			nm(1, "given=James"), nm(2, "surname=Robins"), false},
+		{"name: no parts is no evidence", properties.ValueTypeName, name(1, "James Robins"), name(2, "James Robins"), false},
+		{"mismatched value", properties.ValueTypeInteger, text(1, "34"), integer(2, 34), false},
+		{"unknown value type", "colour", text(1, "red"), text(2, "red"), false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := Compatible(tc.valueType, tc.a.Value, tc.b.Value); got != tc.want {
+				t.Fatalf("Compatible = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}

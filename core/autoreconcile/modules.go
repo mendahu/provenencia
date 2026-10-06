@@ -107,3 +107,36 @@ func termKey(v Value) (string, bool) {
 	}
 	return string(v.TermID), true
 }
+
+// Compatible reports whether two values of valueType are the same value as
+// the pipeline would see it: every unit both carry is equal, or one folds
+// into the other (J. Robins and James Robins). A unit only one carries does
+// not count against them, as in the pipeline's grouping; values that share
+// no unit, or where either is no evidence, are not compatible. Promote
+// alignment counts a comparison as an agreement by this test (S9-41).
+func Compatible(valueType string, a, b Value) bool {
+	if !knownValueType(valueType) || !carries(valueType, a) || !carries(valueType, b) {
+		return false
+	}
+	m := moduleFor(valueType)
+	ua, ok := m.split(a)
+	if !ok {
+		return false
+	}
+	ub, ok := m.split(b)
+	if !ok {
+		return false
+	}
+	shared := false
+	for name, x := range ua {
+		y, ok := ub[name]
+		if !ok {
+			continue
+		}
+		shared = true
+		if x.key != y.key && !m.fold(name, x, y) && !m.fold(name, y, x) {
+			return false
+		}
+	}
+	return shared
+}
