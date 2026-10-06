@@ -96,6 +96,9 @@ struct WorkspaceDestinationHost: View {
         case .placesList:
             ConclusionStubView(section: .places)
                 .accessibilityIdentifier("workspace.destination.places")
+        case .placeDetail:
+            ConclusionStubView(section: .places)
+                .accessibilityIdentifier("workspace.destination.placeDetail")
         }
     }
 
@@ -123,7 +126,7 @@ struct WorkspaceDestinationHost: View {
             return .persons
         case .eventsList, .eventDetail:
             return .events
-        case .placesList:
+        case .placesList, .placeDetail:
             return .places
         }
     }

@@ -1409,6 +1409,23 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         }
     }
 
+    func listPlaceHeaders(projectDir: String) async throws -> [CatalogPlaceHeader] {
+        withState {
+            markCatalogSessionHeld(projectDir)
+            return placeHeaders()
+        }
+    }
+
+    func placeHeader(projectDir: String, entityID: String) async throws -> CatalogPlaceHeader {
+        try withState {
+            markCatalogSessionHeld(projectDir)
+            guard let header = placeHeaders().first(where: { $0.entity.id == entityID }) else {
+                throw CoreInvokeError.coded(status: 1, code: "conclusiondetails.not_found", kind: .user, params: [])
+            }
+            return header
+        }
+    }
+
     /// Rank-1 event_name, event_type, and date (else start/end) from member
     /// Observations. Dated events sort by year, then ref. Call inside `withState`.
     private func eventHeaders() -> [CatalogEventHeader] {
@@ -1460,6 +1477,39 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             case (.some, .none): return true
             case (.none, .some): return false
             default: return a.entity.ref.localizedCaseInsensitiveCompare(b.entity.ref) == .orderedAscending
+            }
+        }
+    }
+
+    /// Kept toponyms in citation order, case-only duplicates collapsed to the
+    /// first spelling. Named places sort by that first name, then unnamed by
+    /// ref. Call inside `withState`.
+    private func placeHeaders() -> [CatalogPlaceHeader] {
+        let members = membershipBySubject.values.filter { $0.kind == "place" }
+        let byEntity = Dictionary(grouping: members, by: \.entity.id)
+        let observations = observationsBySource.values.flatMap { $0 }
+        let headers = byEntity.values.compactMap { group -> CatalogPlaceHeader? in
+            guard let entity = group.first?.entity else { return nil }
+            let memberIDs = Set(group.map(\.subjectID))
+            var names: [String] = []
+            var seen = Set<String>()
+            for row in observations where memberIDs.contains(row.subjectID) && row.propertyKey == "toponym" && row.polarity != "negative" {
+                let text = row.valueText.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !text.isEmpty, seen.insert(text.lowercased()).inserted else { continue }
+                names.append(text)
+            }
+            return CatalogPlaceHeader(entity: entity, names: names)
+        }
+        return headers.sorted { a, b in
+            let an = a.names.first ?? ""
+            let bn = b.names.first ?? ""
+            switch (an.isEmpty, bn.isEmpty) {
+            case (false, true): return true
+            case (true, false): return false
+            case (false, false) where an.localizedCaseInsensitiveCompare(bn) != .orderedSame:
+                return an.localizedCaseInsensitiveCompare(bn) == .orderedAscending
+            default:
+                return a.entity.ref.localizedCaseInsensitiveCompare(b.entity.ref) == .orderedAscending
             }
         }
     }

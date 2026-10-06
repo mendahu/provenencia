@@ -102,6 +102,8 @@ enum Method {
   METHOD_GET_CONCLUSION_DETAIL = 90;
   METHOD_LIST_EVENT_HEADERS = 91;
   METHOD_GET_EVENT_HEADER = 92;
+  METHOD_LIST_PLACE_HEADERS = 93;
+  METHOD_GET_PLACE_HEADER = 94;
 }
 
 message PingRequest {
@@ -1034,6 +1036,40 @@ message GetEventHeaderRequest {
 
 message GetEventHeaderResponse {
   EventHeader header = 1;
+}
+
+// PlaceHeader is one Place as a row, composed from the auto-reconciler's
+// cache. names are the kept toponyms in rank order (Montréal and Montreal
+// are both names). start_date, end_date, kind, and parents stay empty until
+// S9-38 and S9-39. The app formats the title.
+message PlaceHeader {
+  CanonicalEntity entity = 1;
+  repeated string names = 2;
+  DateValueInput start_date = 3;
+  DateValueInput end_date = 4;
+  string kind = 5;
+  repeated string parents = 6;
+}
+
+// ListPlaceHeaders returns every unmerged Place in list order: named
+// places by the rank-1 toponym, then the rest by ref.
+message ListPlaceHeadersRequest {
+  string project_dir = 1;
+}
+
+message ListPlaceHeadersResponse {
+  repeated PlaceHeader headers = 1;
+}
+
+// GetPlaceHeader returns one unmerged Place's header. Unknown, merged,
+// and non-Place ids are not found.
+message GetPlaceHeaderRequest {
+  string project_dir = 1;
+  string entity_id = 2;
+}
+
+message GetPlaceHeaderResponse {
+  PlaceHeader header = 1;
 }
 
 // ConclusionValue is one Property value; exactly the field for the

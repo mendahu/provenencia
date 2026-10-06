@@ -253,6 +253,147 @@ func citedEvent(t *testing.T) (dir, entityID string) {
 	return dir, entityID
 }
 
+func TestListPlaceHeaders(t *testing.T) {
+	runRPC(t, ListPlaceHeaders, []rpcTest{
+		{name: "bad proto", raw: []byte{0xff}, wantErr: true},
+		{
+			name: "empty project lists nothing",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, _, _, _ := subjectFixture(t)
+				return &engine.ListPlaceHeadersRequest{ProjectDir: dir}
+			},
+			want:  &engine.ListPlaceHeadersResponse{},
+			exact: true,
+		},
+		{
+			name: "promoted Place carries every kept toponym",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, _ := citedPlace(t)
+				return &engine.ListPlaceHeadersRequest{ProjectDir: dir}
+			},
+			after: func(t *testing.T, out []byte, _ proto.Message) {
+				var resp engine.ListPlaceHeadersResponse
+				if err := proto.Unmarshal(out, &resp); err != nil {
+					t.Fatal(err)
+				}
+				if len(resp.Headers) != 1 || len(resp.Headers[0].GetNames()) != 2 ||
+					resp.Headers[0].GetNames()[0] != "York" || resp.Headers[0].GetNames()[1] != "Toronto" ||
+					resp.Headers[0].GetKind() != "" || len(resp.Headers[0].GetParents()) != 0 ||
+					resp.Headers[0].GetStartDate() != nil || resp.Headers[0].GetEndDate() != nil {
+					t.Fatalf("%+v", resp.Headers)
+				}
+			},
+		},
+	})
+}
+
+func TestGetPlaceHeader(t *testing.T) {
+	runRPC(t, GetPlaceHeader, []rpcTest{
+		{name: "bad proto", raw: []byte{0xff}, wantErr: true},
+		{
+			name: "unknown id",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, _, _, _ := subjectFixture(t)
+				return &engine.GetPlaceHeaderRequest{ProjectDir: dir, EntityId: uuid.Must(uuid.NewV7()).String()}
+			},
+			wantErr:   true,
+			wantErrIs: conclusiondetails.ErrNotFound,
+		},
+		{
+			name: "a Person is not a Place",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, ref := namedPerson(t)
+				var entityID string
+				if err := withProjectCatalog(dir, func(c *database.Catalog) error {
+					db, err := c.DB()
+					if err != nil {
+						return err
+					}
+					var id []byte
+					if err := db.QueryRow(`SELECT id FROM canonical_entities WHERE ref = ?`, ref).Scan(&id); err != nil {
+						return err
+					}
+					entityID = uuidString(id)
+					return nil
+				}); err != nil {
+					t.Fatal(err)
+				}
+				return &engine.GetPlaceHeaderRequest{ProjectDir: dir, EntityId: entityID}
+			},
+			wantErr:   true,
+			wantErrIs: conclusiondetails.ErrNotFound,
+		},
+		{
+			name: "returns the one place",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, id := citedPlace(t)
+				return &engine.GetPlaceHeaderRequest{ProjectDir: dir, EntityId: id}
+			},
+			after: func(t *testing.T, out []byte, req proto.Message) {
+				var resp engine.GetPlaceHeaderResponse
+				if err := proto.Unmarshal(out, &resp); err != nil {
+					t.Fatal(err)
+				}
+				in := req.(*engine.GetPlaceHeaderRequest)
+				names := resp.GetHeader().GetNames()
+				if resp.GetHeader().GetEntity().GetId() != in.GetEntityId() || len(names) != 2 || names[0] != "York" {
+					t.Fatalf("%+v", resp.GetHeader())
+				}
+			},
+		},
+	})
+}
+
+// citedPlace promotes a Place named York and Toronto.
+func citedPlace(t *testing.T) (dir, entityID string) {
+	t.Helper()
+	dir, user, sourceID, _ := subjectFixture(t)
+	userID, err := uuid.Parse(user)
+	if err != nil {
+		t.Fatal(err)
+	}
+	source, err := uuid.Parse(sourceID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := withProjectCatalog(dir, func(c *database.Catalog) error {
+		st, err := subjecttypes.Lookup(c, "place", subjecttypes.OriginProvenencia)
+		if err != nil {
+			return err
+		}
+		s, err := subjects.Create(c, userID[:], subjects.CreateInput{SourceID: source[:], SubjectTypeID: st.ID}, nil)
+		if err != nil {
+			return err
+		}
+		toponym, err := properties.Lookup(c, "toponym", properties.OriginProvenencia)
+		if err != nil {
+			return err
+		}
+		art, err := artifacts.Create(c, userID[:], artifacts.CreateInput{SourceID: source[:], Label: "Scan"})
+		if err != nil {
+			return err
+		}
+		_, err = citations.CreateWithObservations(c, userID[:], citations.CreateInput{
+			ArtifactID: art.ID, LocatorJSON: `{"version":1,"selectors":[{"type":"page","artifact_page":1}]}`,
+		}, []observations.Input{
+			{SubjectID: s.ID, PropertyID: toponym.ID, ValueText: "York", HasText: true},
+			{SubjectID: s.ID, PropertyID: toponym.ID, ValueText: "Toronto", HasText: true},
+		})
+		if err != nil {
+			return err
+		}
+		p, err := promote.Save(c, userID[:], promote.Input{SubjectID: s.ID})
+		if err != nil {
+			return err
+		}
+		entityID = uuidString(p.Entity.ID)
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	return dir, entityID
+}
+
 func TestWorkspaceNavCountsConclusionHandles(t *testing.T) {
 	dir, _ := namedPerson(t)
 	t.Cleanup(func() { _ = catalogsession.CloseAll() })

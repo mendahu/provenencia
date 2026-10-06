@@ -1,5 +1,5 @@
 // Package conclusionheaders composes the row-shaped header of each canonical
-// Person, Event, and (later) Place from the auto-reconciler cache (Spike 9
+// Person, Event, and Place from the auto-reconciler cache (Spike 9
 // R4). One header composer per kind serves every surface that shows a handle
 // as a row: lists, Promote's target picker, omnibar hits, later tree nodes.
 //

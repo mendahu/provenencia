@@ -58,6 +58,8 @@
 		A90700000000000000000006 /* PersonHeaderDisplayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A90700000000000000000005 /* PersonHeaderDisplayTests.swift */; };
 		A90700000000000000000008 /* EventTitleDisplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = A90700000000000000000007 /* EventTitleDisplay.swift */; };
 		A9070000000000000000000A /* EventTitleDisplayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A90700000000000000000009 /* EventTitleDisplayTests.swift */; };
+		A9070000000000000000000C /* PlaceTitleDisplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9070000000000000000000B /* PlaceTitleDisplay.swift */; };
+		A9070000000000000000000E /* PlaceTitleDisplayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9070000000000000000000D /* PlaceTitleDisplayTests.swift */; };
 		A90700000000000000000002 /* PersonHeaderDisplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = A90700000000000000000001 /* PersonHeaderDisplay.swift */; };
 		A70D0000000000000000000E /* NameValueDraftTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70D0000000000000000000D /* NameValueDraftTests.swift */; };
 		A70900000000000000000002 /* DateValueDisplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70900000000000000000001 /* DateValueDisplay.swift */; };
@@ -404,6 +406,8 @@
 		A90700000000000000000005 /* PersonHeaderDisplayTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PersonHeaderDisplayTests.swift; sourceTree = "<group>"; };
 		A90700000000000000000007 /* EventTitleDisplay.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EventTitleDisplay.swift; sourceTree = "<group>"; };
 		A90700000000000000000009 /* EventTitleDisplayTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EventTitleDisplayTests.swift; sourceTree = "<group>"; };
+		A9070000000000000000000B /* PlaceTitleDisplay.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PlaceTitleDisplay.swift; sourceTree = "<group>"; };
+		A9070000000000000000000D /* PlaceTitleDisplayTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PlaceTitleDisplayTests.swift; sourceTree = "<group>"; };
 		A90700000000000000000001 /* PersonHeaderDisplay.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PersonHeaderDisplay.swift; sourceTree = "<group>"; };
 		A70D0000000000000000000D /* NameValueDraftTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NameValueDraftTests.swift; sourceTree = "<group>"; };
 		A70900000000000000000001 /* DateValueDisplay.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DateValueDisplay.swift; sourceTree = "<group>"; };
@@ -1053,6 +1057,7 @@
 			children = (
 				A90800000000000000000001 /* ConclusionStubView.swift */,
 				A90700000000000000000007 /* EventTitleDisplay.swift */,
+				A9070000000000000000000B /* PlaceTitleDisplay.swift */,
 				A90900000000000000000013 /* PersonsListView.swift */,
 				A91C00000000000000000001 /* ConclusionListPage.swift */,
 				A91C00000000000000000003 /* EventsListView.swift */,
@@ -1233,6 +1238,7 @@
 				A90800000000000000000005 /* WorkspaceSidebarSectionsTests.swift */,
 				A90700000000000000000005 /* PersonHeaderDisplayTests.swift */,
 				A90700000000000000000009 /* EventTitleDisplayTests.swift */,
+				A9070000000000000000000D /* PlaceTitleDisplayTests.swift */,
 				A70900000000000000000003 /* DateValueDisplayTests.swift */,
 				A70900000000000000000007 /* ObservationValueDisplayTests.swift */,
 				A7090000000000000000000B /* EvidenceBridgeEdgeSummaryTests.swift */,
@@ -1961,6 +1967,7 @@
 				A70D0000000000000000000C /* NameValueDisplay.swift in Sources */,
 				A90700000000000000000002 /* PersonHeaderDisplay.swift in Sources */,
 				A90700000000000000000008 /* EventTitleDisplay.swift in Sources */,
+				A9070000000000000000000C /* PlaceTitleDisplay.swift in Sources */,
 				A70B00000000000000000002 /* ArtifactViewerKind.swift in Sources */,
 				A70B00000000000000000004 /* ArtifactViewerContent.swift in Sources */,
 				A70B00000000000000000006 /* ArtifactViewerModel.swift in Sources */,
@@ -2073,6 +2080,7 @@
 				A90800000000000000000006 /* WorkspaceSidebarSectionsTests.swift in Sources */,
 				A90700000000000000000006 /* PersonHeaderDisplayTests.swift in Sources */,
 				A9070000000000000000000A /* EventTitleDisplayTests.swift in Sources */,
+				A9070000000000000000000E /* PlaceTitleDisplayTests.swift in Sources */,
 				A70900000000000000000004 /* DateValueDisplayTests.swift in Sources */,
 				A70900000000000000000008 /* ObservationValueDisplayTests.swift in Sources */,
 				A7090000000000000000000C /* EvidenceBridgeEdgeSummaryTests.swift in Sources */,

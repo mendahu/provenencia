@@ -235,6 +235,7 @@ struct PlaceRegistryTests {
             case .eventsList: .sectionRoot(.events)
             case .eventDetail: .eventDetail(entityId: "e1", ref: "EVT-1", title: "Fire at York")
             case .placesList: .sectionRoot(.places)
+            case .placeDetail: .placeDetail(entityId: "e1", ref: "PLC-1", title: "York")
             }
             let place = resolve(location)
             #expect(place?.placeID == id)
@@ -259,10 +260,14 @@ struct PlaceRegistryTests {
         #expect(persons?.placeID == .personsList)
     }
 
-    @Test func placesStubResolvesWithNoQueryKeys() {
+    @Test func placesListWarmsTheHeaderRead() {
         let place = resolve(.sectionRoot(.places))
         #expect(place?.placeID == .placesList)
-        #expect(place?.queryKeys == [])
+        #expect(place?.queryKeys == [.placesList(project: project)])
+        let detail = resolve(.placeDetail(entityId: "plc-1", ref: "PLC-1", title: "York"))
+        #expect(detail?.placeID == .placeDetail)
+        #expect(detail?.queryKeys == [.conclusionDetail(project: project, entityId: "plc-1")])
+        #expect(detail?.deepId == "plc-1")
     }
 
     @Test func citationJumpResolvesComposerWithoutSubjectId() {

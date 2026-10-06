@@ -119,6 +119,8 @@ enum CoreMethod {
     static let getConclusionDetail = Int32(Provenencia_Engine_V1_Method.getConclusionDetail.rawValue)
     static let listEventHeaders = Int32(Provenencia_Engine_V1_Method.listEventHeaders.rawValue)
     static let getEventHeader = Int32(Provenencia_Engine_V1_Method.getEventHeader.rawValue)
+    static let listPlaceHeaders = Int32(Provenencia_Engine_V1_Method.listPlaceHeaders.rawValue)
+    static let getPlaceHeader = Int32(Provenencia_Engine_V1_Method.getPlaceHeader.rawValue)
 }
 
 func provenenciaInvoke(method: Int32, request: Data) throws -> Data {
