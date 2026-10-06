@@ -47,9 +47,55 @@ struct ConclusionListPage<Row: Identifiable & Equatable, Secondary: View>: View 
     let ref: (Row) -> String
     let rowAccessibilityIdentifier: (Row) -> String
     let titleSource: (Row) -> ConclusionTitleSource
+    /// Names beyond the one shown. Zero omits the +N badge.
+    let extraCount: (Row) -> Int
+    /// List order. The default keeps the composer's order.
+    let rows: ([Row]) -> [Row]
     let accessibilityLabel: (Row) -> String
     let location: (Row) -> WorkspaceLocation
     let secondary: (Row) -> Secondary
+
+    init(
+        session: WorkspaceSession,
+        key: CatalogQueryKey,
+        title: LocalizedStringResource,
+        pageAccessibilityIdentifier: String,
+        emptyIcon: PVSymbol,
+        emptyTitle: LocalizedStringResource,
+        emptyMessage: LocalizedStringResource,
+        emptyAccessibilityIdentifier: String,
+        countMeta: @escaping (Int) -> String,
+        refreshingMeta: @escaping (Int) -> String,
+        mark: PVMarkKey,
+        ref: @escaping (Row) -> String,
+        rowAccessibilityIdentifier: @escaping (Row) -> String,
+        titleSource: @escaping (Row) -> ConclusionTitleSource,
+        extraCount: @escaping (Row) -> Int = { _ in 0 },
+        rows: @escaping ([Row]) -> [Row] = { $0 },
+        accessibilityLabel: @escaping (Row) -> String,
+        location: @escaping (Row) -> WorkspaceLocation,
+        secondary: @escaping (Row) -> Secondary
+    ) {
+        self.session = session
+        self.key = key
+        self.title = title
+        self.pageAccessibilityIdentifier = pageAccessibilityIdentifier
+        self.emptyIcon = emptyIcon
+        self.emptyTitle = emptyTitle
+        self.emptyMessage = emptyMessage
+        self.emptyAccessibilityIdentifier = emptyAccessibilityIdentifier
+        self.countMeta = countMeta
+        self.refreshingMeta = refreshingMeta
+        self.mark = mark
+        self.ref = ref
+        self.rowAccessibilityIdentifier = rowAccessibilityIdentifier
+        self.titleSource = titleSource
+        self.extraCount = extraCount
+        self.rows = rows
+        self.accessibilityLabel = accessibilityLabel
+        self.location = location
+        self.secondary = secondary
+    }
 
     var body: some View {
         Group {
@@ -68,6 +114,8 @@ struct ConclusionListPage<Row: Identifiable & Equatable, Secondary: View>: View 
                     ref: ref,
                     rowAccessibilityIdentifier: rowAccessibilityIdentifier,
                     titleSource: titleSource,
+                    extraCount: extraCount,
+                    rows: rows,
                     accessibilityLabel: accessibilityLabel,
                     location: location,
                     secondary: secondary
@@ -121,6 +169,8 @@ private struct ConclusionListBody<Row: Identifiable & Equatable, Secondary: View
     let ref: (Row) -> String
     let rowAccessibilityIdentifier: (Row) -> String
     let titleSource: (Row) -> ConclusionTitleSource
+    let extraCount: (Row) -> Int
+    let rows: ([Row]) -> [Row]
     let accessibilityLabel: (Row) -> String
     let location: (Row) -> WorkspaceLocation
     let secondary: (Row) -> Secondary
@@ -151,14 +201,14 @@ private struct ConclusionListBody<Row: Identifiable & Equatable, Secondary: View
                 PVCallout(tone: .danger, message: message)
             case .rows(let headers, _):
                 PVList(
-                    items: headers,
+                    items: rows(headers),
                     thumbnail: { _ in ConclusionListRow.thumbnail(mark: mark) },
                     meta: ref,
                     label: title,
                     itemAccessibilityLabel: accessibilityLabel,
                     itemAccessibilityIdentifier: rowAccessibilityIdentifier,
                     onActivate: { navigation.go(to: location($0)) },
-                    primary: { ConclusionListRow.title(titleSource($0)) },
+                    primary: { ConclusionListRow.title(titleSource($0), extraCount: extraCount($0)) },
                     secondary: secondary
                 )
             }

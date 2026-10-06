@@ -487,8 +487,8 @@ In order; each brief sits just above the PR it gates.
 - [x] ✎ S9-D14 — Design: Properties cardinality
 - [x] S9-37 — Properties page: cardinality
 - [x] S9-25 — Place composer + reads → [`completed.md`](completed.md)
-- [ ] ✎ S9-D4 — Design: Places list (revise for names and chain)
-- [ ] S9-26 — Places list
+- [x] ✎ S9-D4 — Design: Places list (revise for names and chain) → [`completed.md`](completed.md)
+- [x] S9-26 — Places list → [`completed.md`](completed.md)
 - [ ] ✎ S9-D7 — Design: Place detail (revise for hierarchy)
 - [ ] S9-27 — Place detail
 - [ ] S9-28 — Subject module + bridge filing
@@ -845,6 +845,8 @@ Design: [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md). PR
 | --- | --- |
 | **In** | Per **S9-D4** (revised); sidebar Places goes live. The chain cell is empty until S9-40. |
 | **Depends on** | **S9-D4**, S9-09, S9-25 |
+
+**Done.** See [`completed.md`](completed.md#s9-26--places-list). Brief archived: [`design/archive/S9-D4-places-list.md`](design/archive/S9-D4-places-list.md). Places is a configuration of the shared list: name, +N, and ref. The chain line is present and empty. The list orders by the displayed title. The Place page and the graph card stay closed until **S9-27**.
 
 #### S9-27 — Place detail
 
