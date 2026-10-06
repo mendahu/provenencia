@@ -156,10 +156,10 @@ var seedProperties = []seedProperty{
 
 // Non-bridge bindings from docs/seeded-vocabulary.md §3.3.
 // Locked = the Properties page must not unbind it: Conclusion ordering
-// (event dates), or a slot later walks key into (event_type).
+// (event dates), or a slot the screens key into (event_type, name, toponym).
 // Bridge type bindings come from connectrules.BridgeBindings() at Install time.
 var seedBindings = []seedBinding{
-	{TypeKey: "person", PropertyKey: "name", SortOrder: 0},
+	{TypeKey: "person", PropertyKey: "name", SortOrder: 0, Locked: true},
 	{TypeKey: "person", PropertyKey: "sex_at_birth", SortOrder: 1},
 
 	{TypeKey: "event", PropertyKey: "event_type", SortOrder: 0, Locked: true},
@@ -168,7 +168,7 @@ var seedBindings = []seedBinding{
 	{TypeKey: "event", PropertyKey: "start_date", SortOrder: 3, Locked: true},
 	{TypeKey: "event", PropertyKey: "end_date", SortOrder: 4, Locked: true},
 
-	{TypeKey: "place", PropertyKey: "toponym", SortOrder: 0},
+	{TypeKey: "place", PropertyKey: "toponym", SortOrder: 0, Locked: true},
 
 	{TypeKey: "source", PropertyKey: "mentions", SortOrder: 0},
 	{TypeKey: "source", PropertyKey: "remark", SortOrder: 1},

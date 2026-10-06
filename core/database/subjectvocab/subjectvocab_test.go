@@ -184,6 +184,9 @@ func TestSubjectVocab(t *testing.T) {
 				if !LockedBinding("participation", "role") || !LockedBinding("relationship", "relationship_type") {
 					t.Fatal("expected role and relationship_type locked")
 				}
+				if !LockedBinding("person", "name") || !LockedBinding("place", "toponym") {
+					t.Fatal("expected name and toponym locked")
+				}
 				rule := Connect("person", "event")
 				if rule.Refuse || rule.BridgeTypeKey != "participation" || rule.Disambiguation != DisambiguationRole {
 					t.Fatalf("%+v", rule)

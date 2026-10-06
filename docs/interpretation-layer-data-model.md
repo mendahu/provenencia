@@ -685,7 +685,7 @@ CREATE TABLE subject_type_properties (
 For example (full matrix in [`seeded-vocabulary.md`](seeded-vocabulary.md)):
 
 ```text
-person        -> name
+person        -> name              # locked
 person        -> sex_at_birth  # term
 
 event         -> event_type   # locked (kind; birth / death walks)
@@ -693,7 +693,7 @@ event         -> date         # locked (point / ordering)
 event         -> start_date   # locked (span start)
 event         -> end_date     # locked (span end)
 
-place         -> toponym
+place         -> toponym           # locked
 
 participation -> person
 participation -> event

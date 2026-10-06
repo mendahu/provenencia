@@ -770,7 +770,7 @@ Design: [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md). PR
 | **In** | `event_name` (`text`) bound to `event`: Install seed + migration. |
 | **Depends on** | — |
 
-**Done.** See [`completed.md`](completed.md#s9-20--seed-event_name). The Property is `event_name` (`text`), bound to `event` at sort order 1, unlocked. Date bindings are 2–4. `event_type`, `role`, and `relationship_type` are locked in the registry. Migration **000042** backfills catalogs that already have the `event` type; new catalogs get a UUIDv7 from Install. For **S9-22**: read this Property first in the title precedence. Match weights and search documents stay out until **S9-41** / **S9-34**.
+**Done.** See [`completed.md`](completed.md#s9-20--seed-event_name). The Property is `event_name` (`text`), bound to `event` at sort order 1, unlocked. Date bindings are 2–4. `event_type`, `role`, `relationship_type`, `name`, and `toponym` are locked in the registry. Migration **000042** backfills catalogs that already have the `event` type; new catalogs get a UUIDv7 from Install. For **S9-22**: read this Property first in the title precedence. Match weights and search documents stay out until **S9-41** / **S9-34**.
 
 #### S9-21 — Date module + windows
 
