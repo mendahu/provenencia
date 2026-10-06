@@ -45,6 +45,7 @@ IDs stay stable (`S9-NN`, `S9-DN`). Do not renumber when moving steps here.
 | S9-36 | PR | Property cardinality |
 | S9-D14 | Design | Properties — cardinality |
 | S9-37 | PR | Properties page: cardinality |
+| S9-25 | PR | Place composer + reads |
 
 ## Steps
 
@@ -983,3 +984,23 @@ A researcher can say a Property holds several values, so a custom fact can keep 
 
 - Term categories: **S9-D15** / **S9-38b**.
 - Any other Property setting. A confirm: nothing is deleted.
+
+### S9-25 — Place composer + reads
+
+A Place's row can carry every name it goes by. Montréal and Montreal stay two names of one place.
+
+**What shipped**
+
+- `conclusionheaders.ListPlaces` / `PlacesByIDs`: every unmerged Place in one query. Kept `toponym` values, in rank order. Case-only spellings are one name. A weak spelling is absent. Named places sort by the rank-1 toponym, then unnamed by ref.
+- `start_date`, `end_date`, `kind`, and `parents` are on the header and empty.
+- FFI `ListPlaceHeaders` and `GetPlaceHeader`. Unknown, merged, and non-Place ids are not found. The Places nav count was already on `GetWorkspaceNavCounts`.
+- `CatalogQueryKey.placesList` on the Places list, invalidated with the other Conclusion lists. A Place detail place warms `conclusionDetail`. Both pages are still `ConclusionStubView`.
+- `PlaceTitleDisplay`: first name, else an italic label, else the mono ref, plus an extra-name count. The chain line is empty. Go does not return a sentence.
+
+**What stayed out**
+
+- The Places list: **S9-26**, gated by **S9-D4**.
+- The Place page: **S9-27**, gated by **S9-D7**.
+- Periods and relationships: **S9-38**.
+- The parent chain: **S9-39**.
+- The Evidence-graph Place card still uses the subject's own `toponym`.

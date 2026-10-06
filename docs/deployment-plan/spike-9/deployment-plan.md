@@ -486,7 +486,7 @@ In order; each brief sits just above the PR it gates.
 - [x] S9-36 — Property cardinality
 - [x] ✎ S9-D14 — Design: Properties cardinality
 - [x] S9-37 — Properties page: cardinality
-- [ ] S9-25 — Place composer + reads
+- [x] S9-25 — Place composer + reads → [`completed.md`](completed.md)
 - [ ] ✎ S9-D4 — Design: Places list (revise for names and chain)
 - [ ] S9-26 — Places list
 - [ ] ✎ S9-D7 — Design: Place detail (revise for hierarchy)
@@ -836,6 +836,8 @@ Design: [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md). PR
 | --- | --- |
 | **In** | Place header + detail: every reconciled name (multi-valued), with the reasoning. List / detail / count FFI and keys. Period, kind and hierarchy fields present but empty until S9-38 / S9-39. |
 | **Depends on** | S9-15, S9-36 |
+
+**Done.** See [`completed.md`](completed.md#s9-25--place-composer--reads). Every kept toponym is on the header, in rank order. Detail reasoning is already on `GetConclusionDetail`. The Places list warms `placesList`; a Place warms `conclusionDetail`. Period, kind, and parents are present and empty. The pages stay stubs until **S9-26** and **S9-27**.
 
 #### S9-26 — Places list
 

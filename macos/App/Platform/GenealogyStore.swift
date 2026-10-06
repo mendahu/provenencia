@@ -312,6 +312,26 @@ struct CatalogEventHeader: Sendable, Equatable, Identifiable {
     }
 }
 
+/// One Place as a row, composed by Go from the auto-reconciler cache (S9-25).
+/// `names` are the kept toponyms in rank order. Period, kind, and parents
+/// stay empty until S9-38 and S9-39. `PlaceTitleDisplay` formats the title.
+struct CatalogPlaceHeader: Sendable, Equatable, Identifiable {
+    var entity: CatalogCanonicalEntity
+    var names: [String] = []
+    var startDate: CatalogDateValueInput?
+    var endDate: CatalogDateValueInput?
+    var kind: String = ""
+    var parents: [String] = []
+
+    var id: String { entity.id }
+
+    var titleParts: PlaceTitleParts {
+        PlaceTitleParts(names: names, label: entity.label, ref: entity.ref)
+    }
+
+    var extraNameCount: Int { PlaceTitleDisplay.extraNameCount(titleParts) }
+}
+
 /// One Property value on a Conclusion detail: exactly one case per value type.
 enum CatalogConclusionValue: Sendable, Equatable {
     case none
@@ -921,6 +941,8 @@ protocol GenealogyStore: Sendable {
     func listPersonHeaders(projectDir: String) async throws -> [CatalogPersonHeader]
     func listEventHeaders(projectDir: String) async throws -> [CatalogEventHeader]
     func eventHeader(projectDir: String, entityID: String) async throws -> CatalogEventHeader
+    func listPlaceHeaders(projectDir: String) async throws -> [CatalogPlaceHeader]
+    func placeHeader(projectDir: String, entityID: String) async throws -> CatalogPlaceHeader
     /// One handle's fields, auto-reconciled values and outcomes. Throws
     /// `conclusiondetails.not_found` for an unknown or merged handle.
     func getConclusionDetail(projectDir: String, entityID: String) async throws -> CatalogConclusionDetail

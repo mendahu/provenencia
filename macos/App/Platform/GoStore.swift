@@ -844,6 +844,27 @@ struct GoStore: GenealogyStore {
         return Self.mapEventHeader(resp.header)
     }
 
+    func listPlaceHeaders(projectDir: String) async throws -> [CatalogPlaceHeader] {
+        var req = Provenencia_Engine_V1_ListPlaceHeadersRequest()
+        req.projectDir = projectDir
+        let resp: Provenencia_Engine_V1_ListPlaceHeadersResponse = try await provenenciaCall(
+            method: CoreMethod.listPlaceHeaders,
+            request: req
+        )
+        return resp.headers.map(Self.mapPlaceHeader)
+    }
+
+    func placeHeader(projectDir: String, entityID: String) async throws -> CatalogPlaceHeader {
+        var req = Provenencia_Engine_V1_GetPlaceHeaderRequest()
+        req.projectDir = projectDir
+        req.entityID = entityID
+        let resp: Provenencia_Engine_V1_GetPlaceHeaderResponse = try await provenenciaCall(
+            method: CoreMethod.getPlaceHeader,
+            request: req
+        )
+        return Self.mapPlaceHeader(resp.header)
+    }
+
     private static func mapPersonHeader(_ h: Provenencia_Engine_V1_PersonHeader) -> CatalogPersonHeader {
         CatalogPersonHeader(
             entity: mapCanonicalEntity(h.entity),
@@ -866,6 +887,17 @@ struct GoStore: GenealogyStore {
             startDateCount: Int(h.startDateCount),
             endDate: h.hasEndDate ? mapDateValue(h.endDate) : nil,
             endDateCount: Int(h.endDateCount)
+        )
+    }
+
+    private static func mapPlaceHeader(_ h: Provenencia_Engine_V1_PlaceHeader) -> CatalogPlaceHeader {
+        CatalogPlaceHeader(
+            entity: mapCanonicalEntity(h.entity),
+            names: h.names,
+            startDate: h.hasStartDate ? mapDateValue(h.startDate) : nil,
+            endDate: h.hasEndDate ? mapDateValue(h.endDate) : nil,
+            kind: h.kind,
+            parents: h.parents
         )
     }
 

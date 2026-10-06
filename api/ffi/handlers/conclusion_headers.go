@@ -131,3 +131,76 @@ func eventHeaderProto(h conclusionheaders.EventHeader) *engine.EventHeader {
 	}
 	return eh
 }
+
+func ListPlaceHeaders(in []byte) ([]byte, error) {
+	var req engine.ListPlaceHeadersRequest
+	if err := proto.Unmarshal(in, &req); err != nil {
+		return nil, unmarshalErr("list_place_headers", err)
+	}
+	out := &engine.ListPlaceHeadersResponse{}
+	err := withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
+		db, err := c.DB()
+		if err != nil {
+			return err
+		}
+		headers, err := conclusionheaders.ListPlaces(db)
+		if err != nil {
+			return err
+		}
+		for _, h := range headers {
+			out.Headers = append(out.Headers, placeHeaderProto(h))
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return proto.Marshal(out)
+}
+
+func GetPlaceHeader(in []byte) ([]byte, error) {
+	var req engine.GetPlaceHeaderRequest
+	if err := proto.Unmarshal(in, &req); err != nil {
+		return nil, unmarshalErr("get_place_header", err)
+	}
+	entityID, err := parseID(req.GetEntityId())
+	if err != nil {
+		return nil, conclusiondetails.ErrNotFound
+	}
+	out := &engine.GetPlaceHeaderResponse{}
+	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
+		db, err := c.DB()
+		if err != nil {
+			return err
+		}
+		headers, err := conclusionheaders.PlacesByIDs(db, [][]byte{entityID})
+		if err != nil {
+			return err
+		}
+		if len(headers) != 1 {
+			return conclusiondetails.ErrNotFound
+		}
+		out.Header = placeHeaderProto(headers[0])
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return proto.Marshal(out)
+}
+
+func placeHeaderProto(h conclusionheaders.PlaceHeader) *engine.PlaceHeader {
+	ph := &engine.PlaceHeader{
+		Entity:  canonicalEntityProto(h.Entity),
+		Names:   h.Names,
+		Kind:    h.Kind,
+		Parents: h.Parents,
+	}
+	if h.StartDate != nil {
+		ph.StartDate = valuecodec.DateToProto(*h.StartDate)
+	}
+	if h.EndDate != nil {
+		ph.EndDate = valuecodec.DateToProto(*h.EndDate)
+	}
+	return ph
+}

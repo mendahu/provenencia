@@ -15,4 +15,5 @@ enum WorkspacePresentationID: Hashable, Sendable, CaseIterable {
     case eventsList
     case eventDetail
     case placesList
+    case placeDetail
 }

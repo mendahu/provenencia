@@ -710,6 +710,7 @@ struct CatalogQueryRegistryTests {
             .key(.sourceGraph(project: project, sourceId: "s1")),
             .key(.personsList(project: project)),
             .key(.eventsList(project: project)),
+            .key(.placesList(project: project)),
             .allCached(.promoteTargets),
             .allCached(.conclusionDetail),
         ])
@@ -762,6 +763,7 @@ struct CatalogQueryRegistryTests {
             .allCached(.citationsByArtifact),
             .key(.personsList(project: project)),
             .key(.eventsList(project: project)),
+            .key(.placesList(project: project)),
             .allCached(.promoteTargets),
             .allCached(.conclusionDetail),
         ])
@@ -772,6 +774,7 @@ struct CatalogQueryRegistryTests {
             .allCached(.citationsByArtifact),
             .key(.personsList(project: project)),
             .key(.eventsList(project: project)),
+            .key(.placesList(project: project)),
             .allCached(.promoteTargets),
             .allCached(.conclusionDetail),
         ])
@@ -781,6 +784,7 @@ struct CatalogQueryRegistryTests {
             .key(.sourceGraph(project: project, sourceId: "s1")),
             .key(.personsList(project: project)),
             .key(.eventsList(project: project)),
+            .key(.placesList(project: project)),
             .allCached(.promoteTargets),
             .allCached(.conclusionDetail),
         ])
@@ -817,16 +821,18 @@ struct CatalogQueryRegistryTests {
             .key(.sourceWorkspace(project: project, sourceId: "s1")),
             .key(.personsList(project: project)),
             .key(.eventsList(project: project)),
+            .key(.placesList(project: project)),
             .allCached(.promoteTargets),
             .allCached(.conclusionDetail),
         ])
-        // Every Conclusion trigger stales the Person and Event lists and every
-        // cached detail; nothing else does.
+        // Every Conclusion trigger stales the Person, Event, and Place lists and
+        // every cached detail; nothing else does.
         for mutation in everyMutation {
             let invalidations = registry.invalidations(by: mutation, project: project)
             let isTrigger = mutation.invalidationKind.map { CatalogQueryRegistry.conclusionTriggers.contains($0) } ?? false
             #expect(invalidations.contains(.key(.personsList(project: project))) == isTrigger, "\(mutation)")
             #expect(invalidations.contains(.key(.eventsList(project: project))) == isTrigger, "\(mutation)")
+            #expect(invalidations.contains(.key(.placesList(project: project))) == isTrigger, "\(mutation)")
             #expect(invalidations.contains(.allCached(.conclusionDetail)) == isTrigger, "\(mutation)")
         }
         #expect(CatalogQueryRegistry.conclusionTriggers == [

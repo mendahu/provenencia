@@ -117,6 +117,8 @@ struct WorkspaceDestinationHostTests {
         #expect(presentation(for: .eventDetail(entityId: "e1", ref: "EVT-1", title: "Fire")) == .eventDetail)
         #expect(WorkspaceDestinationHost.destinationKind(for: .eventDetail) == .events)
         #expect(WorkspaceDestinationHost.destinationKind(for: .placesList) == .places)
+        #expect(presentation(for: .placeDetail(entityId: "e1", ref: "PLC-1", title: "York")) == .placeDetail)
+        #expect(WorkspaceDestinationHost.destinationKind(for: .placeDetail) == .places)
     }
 
     @Test func propertiesPresentationHasOwnKind() {
@@ -146,6 +148,7 @@ struct WorkspaceDestinationHostTests {
             .sectionRoot(.places),
             .personDetail(entityId: "e1", ref: "PER-1", title: nil),
             .eventDetail(entityId: "e1", ref: "EVT-1", title: "Fire at York"),
+            .placeDetail(entityId: "e1", ref: "PLC-1", title: "York"),
         ]
         let known = Set(WorkspacePresentationID.allCases)
         for location in locations {
@@ -155,6 +158,6 @@ struct WorkspaceDestinationHostTests {
             }
             #expect(known.contains(place.presentation))
         }
-        #expect(known.count == 13)
+        #expect(known.count == 14)
     }
 }

@@ -301,6 +301,8 @@ final class WorkspaceSession {
             let _: QueryHandle<[CatalogPersonHeader]> = query(key)
         case .eventsList:
             let _: QueryHandle<[CatalogEventHeader]> = query(key)
+        case .placesList:
+            let _: QueryHandle<[CatalogPlaceHeader]> = query(key)
         case .promoteTargets:
             let _: QueryHandle<[CatalogPromoteTargetSuggestion]> = query(key)
         case .conclusionDetail:

@@ -8,6 +8,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/citations"
+	"github.com/mendahu/provenencia/core/database/conclusiondetails"
 	"github.com/mendahu/provenencia/core/database/conclusionheaders"
 	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/namevalues/namevaluestest"
@@ -15,6 +16,8 @@ import (
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
+	"github.com/mendahu/provenencia/core/database/sourcecredibility"
+	"github.com/mendahu/provenencia/core/database/sourcecredibilitygrades"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjects"
@@ -344,6 +347,185 @@ func TestEventsByIDs(t *testing.T) {
 		t.Fatalf("%+v", got)
 	}
 	if got, err := conclusionheaders.EventsByIDs(db, nil); err != nil || got != nil {
+		t.Fatalf("no ids: %v %+v", err, got)
+	}
+}
+
+func (f *fixture) book(title string) (sources.Source, artifacts.Artifact) {
+	f.t.Helper()
+	src, err := sources.Create(f.c, userID, sources.CreateInput{SourceTypeID: f.source.SourceTypeID, Title: title})
+	must(f.t, err)
+	art, err := artifacts.Create(f.c, userID, artifacts.CreateInput{SourceID: src.ID, Label: title})
+	must(f.t, err)
+	return src, art
+}
+
+func (f *fixture) lowTrust(src sources.Source) {
+	f.t.Helper()
+	g, err := sourcecredibilitygrades.Lookup(f.c, "low_trust", sourcecredibilitygrades.OriginProvenencia)
+	must(f.t, err)
+	_, err = sourcecredibility.Upsert(f.c, userID, sourcecredibility.UpsertInput{
+		SourceID: src.ID, CredibilityGradeID: g.ID,
+	})
+	must(f.t, err)
+}
+
+// place promotes a new Place whose toponyms are cited, in order, on art.
+func (f *fixture) place(art artifacts.Artifact, names ...string) []byte {
+	f.t.Helper()
+	s, err := subjects.Create(f.c, userID, subjects.CreateInput{SourceID: art.SourceID, SubjectTypeID: f.typeID("place")}, nil)
+	must(f.t, err)
+	f.citeToponyms(art, s.ID, names...)
+	p, err := promote.Save(f.c, userID, promote.Input{SubjectID: s.ID})
+	must(f.t, err)
+	return p.Entity.ID
+}
+
+func (f *fixture) citeToponyms(art artifacts.Artifact, subjectID []byte, names ...string) {
+	f.t.Helper()
+	if len(names) == 0 {
+		return
+	}
+	toponym := f.prop("toponym")
+	in := make([]observations.Input, len(names))
+	for i, name := range names {
+		in[i] = observations.Input{SubjectID: subjectID, PropertyID: toponym.ID, ValueText: name, HasText: true}
+	}
+	_, err := citations.CreateWithObservations(f.c, userID, citations.CreateInput{ArtifactID: art.ID, LocatorJSON: locator}, in)
+	must(f.t, err)
+}
+
+func (f *fixture) joinPlace(art artifacts.Artifact, entityID []byte, names ...string) {
+	f.t.Helper()
+	s, err := subjects.Create(f.c, userID, subjects.CreateInput{SourceID: art.SourceID, SubjectTypeID: f.typeID("place")}, nil)
+	must(f.t, err)
+	f.citeToponyms(art, s.ID, names...)
+	_, err = promote.Save(f.c, userID, promote.Input{SubjectID: s.ID, EntityID: entityID})
+	must(f.t, err)
+}
+
+func (f *fixture) places() []conclusionheaders.PlaceHeader {
+	f.t.Helper()
+	db, err := f.c.DB()
+	must(f.t, err)
+	h, err := conclusionheaders.ListPlaces(db)
+	must(f.t, err)
+	return h
+}
+
+func TestPlaceKeepsEveryDistinctToponym(t *testing.T) {
+	f := newFixture(t)
+	must(t, sourcecredibilitygrades.Install(f.c))
+	census, censusArt := f.book("Census")
+	gazette, gazetteArt := f.book("Gazette")
+	f.lowTrust(gazette)
+
+	york := f.place(f.artifact, "York", "york")
+	f.joinPlace(censusArt, york, "Toronto")
+	f.joinPlace(gazetteArt, york, "Muddy York")
+
+	got := f.places()
+	if len(got) != 1 || len(got[0].Names) != 2 || got[0].Names[0] != "York" || got[0].Names[1] != "Toronto" {
+		t.Fatalf("names %+v", got)
+	}
+	if got[0].StartDate != nil || got[0].EndDate != nil || got[0].Kind != "" || len(got[0].Parents) != 0 {
+		t.Fatalf("period, kind, and parents stay empty: %+v", got[0])
+	}
+
+	db, err := f.c.DB()
+	must(t, err)
+	detail, err := conclusiondetails.ForEntity(db, york)
+	must(t, err)
+	var weak string
+	for _, field := range detail.Fields {
+		if field.PropertyKey != "toponym" {
+			continue
+		}
+		for _, value := range field.Values {
+			if value.Reason == "weak" {
+				weak = value.Value.Text
+			}
+		}
+	}
+	if weak != "Muddy York" {
+		t.Fatalf("weak spelling %+v", detail.Fields)
+	}
+	_ = census
+}
+
+func TestPlaceSort(t *testing.T) {
+	f := newFixture(t)
+	york := f.place(f.artifact, "York")
+	montreal := f.place(f.artifact, "montreal")
+	bareA := f.place(f.artifact)
+	bareB := f.place(f.artifact)
+	f.event()
+
+	got := f.places()
+	if len(got) != 4 {
+		t.Fatalf("listed %d, want 4 (no Event)", len(got))
+	}
+	if string(got[0].Entity.ID) != string(montreal) || got[0].Names[0] != "montreal" {
+		t.Fatalf("named first by folded toponym: %+v", got[0])
+	}
+	if string(got[1].Entity.ID) != string(york) || got[1].Names[0] != "York" {
+		t.Fatalf("York second: %+v", got[1])
+	}
+	unnamed := []string{string(bareA), string(bareB)}
+	if string(got[2].Entity.ID) == unnamed[1] {
+		unnamed[0], unnamed[1] = unnamed[1], unnamed[0]
+	}
+	// Refs increase with creation, so the earlier unnamed Place sorts first only
+	// when its ref does. Compare the two trailing rows to the two bare ids,
+	// ordered by the refs the query already applied.
+	if string(got[2].Entity.ID) != unnamed[0] || string(got[3].Entity.ID) != unnamed[1] ||
+		len(got[2].Names) != 0 || len(got[3].Names) != 0 || got[2].Entity.Ref > got[3].Entity.Ref {
+		t.Fatalf("unnamed last by ref: %s %s then %s %s", got[2].Entity.Ref, got[2].Entity.ID, got[3].Entity.Ref, got[3].Entity.ID)
+	}
+}
+
+func TestListPlacesQueryCountIsConstant(t *testing.T) {
+	f := newFixture(t)
+	f.place(f.artifact, "York")
+	db, err := f.c.DB()
+	must(t, err)
+	one, err := conclusionheaders.ListPlacesQueryCount(db)
+	must(t, err)
+	for i := 0; i < 20; i++ {
+		f.place(f.artifact, fmt.Sprintf("Place %d", i))
+	}
+	many, err := conclusionheaders.ListPlacesQueryCount(db)
+	must(t, err)
+	if one != 1 || many != one {
+		t.Fatalf("queries: %d for 1 Place, %d for 21", one, many)
+	}
+}
+
+func TestPlacesByIDs(t *testing.T) {
+	f := newFixture(t)
+	york := f.place(f.artifact, "York")
+	bare := f.place(f.artifact)
+	f.place(f.artifact, "Toronto")
+	_, _, person := f.person("Ada Lovelace")
+	db, err := f.c.DB()
+	must(t, err)
+	got, err := conclusionheaders.PlacesByIDs(db, [][]byte{bare, york, york, person, make([]byte, 16)})
+	must(t, err)
+	if len(got) != 2 {
+		t.Fatalf("%+v", got)
+	}
+	names := map[string]bool{}
+	for _, h := range got {
+		if len(h.Names) == 0 {
+			names[""] = true
+		} else {
+			names[h.Names[0]] = true
+		}
+	}
+	if !names["York"] || !names[""] {
+		t.Fatalf("%+v", got)
+	}
+	if got, err := conclusionheaders.PlacesByIDs(db, nil); err != nil || got != nil {
 		t.Fatalf("no ids: %v %+v", err, got)
 	}
 }
