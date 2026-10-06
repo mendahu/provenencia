@@ -475,7 +475,7 @@ In order; each brief sits just above the PR it gates.
 - [x] S9-15 — Detail composer + detail read → [`completed.md`](completed.md)
 - [x] ✎ S9-D5 — Design: Person detail (revise for reasoning) → [`completed.md`](completed.md)
 - [x] S9-16 — Person detail → [`completed.md`](completed.md)
-- [ ] S9-17 — Pins + backfill engine (reshaped; lands now, slice 9)
+- [x] S9-17 — Pins + backfill engine (reshaped; landed early, slice 9) → [`completed.md`](completed.md)
 - [ ] S9-20 — Seed `event_name`
 - [ ] S9-21 — Date module + windows
 - [ ] S9-22 — Event composer + reads
@@ -905,6 +905,11 @@ Design: [`promote-alignment.md`](../../promote-alignment.md). Brief: [`S9-D16`](
 
 #### S9-17 — Pins + backfill engine
 
+**Done.** See [`completed.md`](completed.md#s9-17--pins--backfill-engine). `autoreconcile.Compatible` (`core/autoreconcile/modules.go`); `identityclaims.PinTx` / `PinnedObservations` (`core/database/identityclaims/pins.go`); `promote.Input.Pairs` / `promote.Pair`, `Result.Pins`, and `pinPairs` with the pair check `sqlPairClaim` (`core/database/promote/promote.go`); end-to-end tests in `core/database/deleteimpact/pins_e2e_test.go`.
+- **S9-41:** count a comparison as an agreement with `Compatible`; a conflict is both sides carrying a value and none compatible.
+- **S9-43:** build the batch write on `PinTx` and `pinPairs`. Widen `sqlPairClaim` from "same Subject, same Property" to one hop through a bridge, and move the pins into the batch's single revision. The `pinnedHandle.exhibitHistory` test helper shows how a claim's audit replays.
+- **S9-44:** Swift has no pairs API yet; add it with the batch write (S9-43), along with FakeStore pin modelling and the composer / graph pinned-delete tests.
+
 | | |
 | --- | --- |
 | **In** | Salvaged from the first S9-17 / S9-18 (#265 / #266, closed unmerged). **Kept:** `autoreconcile.Compatible` (the module's same value or fold, for one pair); `identityclaims.PinTx` / `PinnedObservations`; pairs + backfill in `promote.Save`, each pin audited under its claim (Go only, no FFI yet); the delete-impact fixture on Promote-written pins and the end-to-end pinned-delete tests (impact names the handle once, other pins kept, audit reads back per claim); the Swift `sameness_claim` leftovers removed. **Dropped:** the per-Subject comparison read (`promotecompare`) and its proto / FFI / Swift plumbing, the compare-step draft (`confirmedPairs`), the pins badge, FakeStore pin modelling. S9-41 / S9-43 / S9-44 replace them. |
@@ -1009,7 +1014,7 @@ Honesty pass against the [goal bar](#goal-dogfood-bar); ledger timings recorded;
 9. **Composite FKs** carry `subject_type_id` on the claim. A person Subject cannot be claimed onto a Place; the target picker filters by type so the researcher never sees that error.
 10. **Backfill is symmetric.** A confirmed pair pins both Observations on the incoming claim **and** the existing member's claim. The older claim's `argument` is not rewritten.
 11. **Pins are Observations only.** Not Citations, Subjects, or Sources. A pin may be one hop away (the birth event's date on the person's claim). Confirming a match creates no Observation.
-12. ~~**Stale reservation.**~~ Go side retired in S9-01. Swift still carries `sameness_claim` L10n / preview until S9-17.
+12. ~~**Stale reservation.**~~ Go side retired in S9-01; Swift `sameness_claim` L10n / preview retired in S9-17.
 15. **Pins never block.** A pinned Observation (or a Subject whose Observations are pinned on other members' claims) deletes freely; the claims stay with a weaker exhibit. Do not reintroduce a blocking evidence probe — weak claims are the §5.2 review alert's job.
 13. **Candidate vs canonical refs.** Subjects are `CPR-…`; handles are `PER-…`. Both prefixes already exist on `subject_types`.
 14. **Cross-Source reads** run on the serialized catalog session. Keep rebuild off the open path's critical section if it gets long.
