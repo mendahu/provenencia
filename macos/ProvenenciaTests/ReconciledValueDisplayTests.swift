@@ -127,8 +127,9 @@ struct ReconciledValueDisplayTests {
         #expect(ReconciledValueDisplay.string(for: .term(id: "t", key: "male", label: "Male")) == "Male")
         #expect(ReconciledValueDisplay.string(for: .term(id: "t", key: "male", label: "")) == "male")
         #expect(ReconciledValueDisplay.string(for: .name(Self.jamesRobins)) == "James Robins")
-        let date = CatalogDateValueInput(kind: "point", startYear: 1890)
-        #expect(ReconciledValueDisplay.string(for: .date(date), locale: en) == DateValueDisplay.string(for: date, locale: en))
+        let date = CatalogDateValueInput(kind: "point", startYear: 1817, startMonth: 5, startDay: 14)
+        #expect(ReconciledValueDisplay.string(for: .date(date), locale: en) == EventTitleDisplay.dateLine(date: date, locale: en))
+        #expect(ReconciledValueDisplay.string(for: .date(date), locale: en) == "14 May 1817")
     }
 
     @Test func frame1cPhrasesAndMarks() {

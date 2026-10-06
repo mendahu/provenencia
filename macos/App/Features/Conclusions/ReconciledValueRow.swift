@@ -40,7 +40,7 @@ struct ReconciledValueRow: View {
                 .padding(.bottom, PVSpacing.space5)
             }
         }
-        .accessibilityIdentifier("person.detail.row.\(model.id)")
+        .accessibilityIdentifier("conclusion.detail.row.\(model.id)")
     }
 
     /// Label, value and state: one VoiceOver element with the row's spoken
@@ -98,11 +98,11 @@ struct ReconciledValueRow: View {
         HStack(spacing: PVSpacing.space2) {
             if let label = model.otherValuesLabel {
                 PVDisclosureButton(label, isExpanded: $showsOtherValues)
-                    .accessibilityIdentifier("person.detail.row.\(model.id).others")
+                    .accessibilityIdentifier("conclusion.detail.row.\(model.id).others")
             }
             if !model.records.isEmpty {
                 PVDisclosureButton(L10n.Conclusions.whyButton, isExpanded: $showsWhy)
-                    .accessibilityIdentifier("person.detail.row.\(model.id).why")
+                    .accessibilityIdentifier("conclusion.detail.row.\(model.id).why")
             }
         }
         .frame(minWidth: 72, alignment: .trailing)

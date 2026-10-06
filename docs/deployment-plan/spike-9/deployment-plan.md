@@ -481,8 +481,8 @@ In order; each brief sits just above the PR it gates.
 - [x] S9-22 — Event composer + reads → [`completed.md`](completed.md)
 - [x] ✎ S9-D3 — Design: Events list → [`completed.md`](completed.md)
 - [x] S9-23 — Events list → [`completed.md`](completed.md)
-- [ ] ✎ S9-D6 — Design: Event detail
-- [ ] S9-24 — Event detail
+- [x] ✎ S9-D6 — Design: Event detail
+- [x] S9-24 — Event detail
 - [ ] S9-36 — Property cardinality
 - [ ] ✎ S9-D14 — Design: Properties cardinality
 - [ ] S9-37 — Properties page: cardinality
@@ -807,6 +807,8 @@ Design: [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md). PR
 | --- | --- |
 | **In** | Per **S9-D6**. Places empty until S9-32. Route the graph card's `.openHandle` target to this page for events. |
 | **Depends on** | **S9-D6**, S9-16, S9-22 |
+
+**Done.** See [`completed.md`](completed.md#s9-24--event-detail). Brief archived: [`design/archive/S9-D6-event-detail.md`](design/archive/S9-D6-event-detail.md). Person and Event share `ConclusionDetailPage`; each detail stays its own place and history entry. For **S9-27**: add a Place configuration of that page, not a new page. For **S9-32**: subject titles, the Subjects section, and a filled Place row.
 
 ### Slice 6 — Places: names and cardinality
 

@@ -1,26 +1,8 @@
 import Foundation
 
-/// What the Person page shows for its handle's state (S9-D5). A stale page
-/// stays readable while it refreshes.
-enum PersonDetailPresentation: Equatable {
-    case loading
-    case failed(String)
-    case content(PersonDetailContent, refreshing: Bool)
-
-    init(value: CatalogConclusionDetail?, isFetching: Bool, status: QueryStatus, error: Error?) {
-        if let value {
-            self = .content(PersonDetailContent(detail: value), refreshing: isFetching)
-        } else if status == .error, let error {
-            self = .failed(L10n.Errors.message(for: error))
-        } else {
-            self = .loading
-        }
-    }
-}
-
 /// The Person page, worded from one `CatalogConclusionDetail` (S9-16, board
 /// S9-D5). Pure: views only lay it out.
-struct PersonDetailContent: Equatable {
+struct PersonDetailContent: ConclusionDetailBody {
     /// One header line: *b. 14 May 1817 · York, Upper Canada*. Date and
     /// place come from the birth / death Events (S9-32); nil until then.
     struct Vital: Equatable {
@@ -152,6 +134,32 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
         whyTitle = L10n.Conclusions.whyTitle(lead ?? field.label)
         records = field.outcomes.map { ReconciliationRecord(outcome: $0, in: field, locale: locale) }
         accessibilityLabel = ReconciledValueDisplay.accessibilityLabel(label: field.label, lead: lead, field: field)
+    }
+
+    /// One Date row whose lead is a start–end span. Why lists every record
+    /// on those properties. The span is not one property's reconciled state,
+    /// so it carries no badge.
+    static func spanning(
+        id: String,
+        label: String,
+        lead: String?,
+        emptyText: String,
+        fields: [CatalogConclusionField],
+        locale: Locale
+    ) -> Self {
+        let shown = lead.flatMap { $0.isEmpty ? nil : $0 }
+        let records = fields.flatMap { field in
+            field.outcomes.map { ReconciliationRecord(outcome: $0, in: field, locale: locale) }
+        }
+        let spoken = shown.map { L10n.Conclusions.a11yList(label, rest: $0) }
+            ?? ReconciledValueDisplay.accessibilityLabel(label: label, lead: nil, field: nil)
+        return Self(
+            id: id, label: label, style: .date, lead: shown, emptyText: emptyText,
+            badge: nil, count: nil, against: nil, otherValuesLabel: nil, otherValues: [],
+            whyTitle: shown.map { L10n.Conclusions.whyTitle($0) } ?? "",
+            records: records,
+            accessibilityLabel: spoken
+        )
     }
 
     /// A row with nothing behind it yet (the life rows until S9-32).

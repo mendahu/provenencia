@@ -893,12 +893,6 @@ enum L10n {
             comment: "Placeholder body on an Event's page until the detail ships"
         )
 
-        static let eventDetailStubTitle = LocalizedStringResource(
-            "workspace.events.detailStubTitle",
-            defaultValue: "Event",
-            comment: "Title of the Event page placeholder until the detail ships"
-        )
-
         static let placesStubMessage = LocalizedStringResource(
             "workspace.section.places.stubMessage",
             defaultValue: "The Places list is on its way. Promoted places will be listed here.",
@@ -7017,6 +7011,30 @@ enum L10n {
             "conclusions.person.placeUnknown",
             defaultValue: "place unknown",
             comment: "Page header: the Person's birth or death place is not known"
+        )
+
+        static let eventDate = LocalizedStringResource(
+            "conclusions.event.date",
+            defaultValue: "Date",
+            comment: "Row label on an Event page"
+        )
+
+        static let eventPlace = LocalizedStringResource(
+            "conclusions.event.place",
+            defaultValue: "Place",
+            comment: "Row label on an Event page"
+        )
+
+        static let emptyEventDate = LocalizedStringResource(
+            "conclusions.event.emptyDate",
+            defaultValue: "No date recorded",
+            comment: "Empty Date row on an Event page"
+        )
+
+        static let emptyEventPlace = LocalizedStringResource(
+            "conclusions.event.emptyPlace",
+            defaultValue: "No place recorded",
+            comment: "Empty Place row on an Event page until places are filled"
         )
 
         static let personName = LocalizedStringResource(
