@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed 2026-10-06. The direction is agreed; it isn't scheduled.** This replaces the per-Property compare checklist in [`conclusion-layer-data-model.md`](conclusion-layer-data-model.md) §5.3 and the per-Subject walk in §5.4 once it's adopted. How we got here, and the directions we turned down: [`ideas/promote-matching.md`](ideas/promote-matching.md). Matching today: [`matching.md`](matching.md).
+**Agreed 2026-10-06; scheduled as Spike 9 slice 8** (§10). This replaces the per-Property compare checklist in [`conclusion-layer-data-model.md`](conclusion-layer-data-model.md) §5.3 and the per-Subject walk in §5.4 once it's adopted. How we got here, and the directions we turned down: [`ideas/promote-matching.md`](ideas/promote-matching.md). Matching today: [`matching.md`](matching.md).
 
 **The data model doesn't change:** one Identity Claim per Subject and handle, with Observation pins on the claim and backfill (§5, §5.1).
 
@@ -48,7 +48,7 @@ Promote is one workspace page; the choose-target screen and the separate claim s
   - **Unpromoted:** a target dropdown with the best match preselected, the next few alternatives, **New**, and **Skip**.
 - **Assessment:** each row shows **strong**, **weak** or **no match**. Clicking it opens a **sheet** with every comparison that contributed: agree, conflict or unknown, with its weight. The agreeing comparisons are preselected as pins and can be toggled.
 - **Claim fields per row:** status, confidence and argument. The argument can be drafted from the assessment.
-- **Bridges aren't rows** (participation, relationship, location). A summary line reads "22 connections will be filed". A bridge is filed once both its ends are handles; a bridge with a skipped end stays unfiled.
+- **Bridges aren't rows** (participation, relationship, location). A summary line reads "22 connections will be filed". It expands to a list where each bridge can be switched off, for a relationship the researcher doesn't accept from this Source. Filing rules: §9.1.
 - **Possible duplicates:** two rows landing on the same existing handle, or two New rows that score as near-identical, get a warning ("these may be the same person; combine them on the Evidence graph"). There is no row-to-row option.
 - **Done** writes the whole batch in one transaction (§9).
 - **Leaving:** the leave guard covers accidental navigation. Drafts aren't persisted: re-opening re-proposes everything, and only manual changes are lost.
@@ -163,20 +163,49 @@ That's roughly 10–15 queries per proposal, whatever the graph size.
 - **Per row:** the Identity Claim with status, confidence and argument; a minted handle for New; nothing for Skip.
 - **Pins:** each toggled comparison pins its Observations on the row's claim and backfills them onto the member's claim (§5.1). The pair check widens from same Subject and same Property (S9-17) to **one-hop neighbors through a bridge**, so "her birth date matches" can be pinned on the person's claim.
 - **Duplicate pins are accepted on purpose.** The same agreement may be pinned on several claims (the person's and the birth event's). The machine drafts the pins, so this costs the researcher nothing.
-- **Bridges** are filed onto the relationship the two handles already share, or a new one (S9-28).
+- **Bridges** are filed by the rules in §9.1; switched-off bridges are skipped.
+
+## 9.1 Bridge filing
+
+A bridge (participation, relationship, location, place relationship) has **no identity of its own**: once both its ends are handles, which canonical association it belongs to follows from the ends. So filing is automatic everywhere, not only on the Promote page.
+
+- **When:** after **any** claim create, every bridge Subject whose ends are now both handles is filed in the same transaction. On the Promote page the researcher can switch individual bridges off before Done. Anywhere else, filing just happens. A bridge with an end that is unpromoted, skipped or simply not recorded stays unfiled on the graph, and files when that end is promoted later.
+- **Which association it joins:** an existing association of the same kind between the same two handles, matched by its key; otherwise a new one is minted.
+
+  | Bridge kind | Key | Notes |
+  | --- | --- | --- |
+  | Participation | person + event | The role is a reconciled value on the association. Sources that disagree on the role show it as mixed; a person who was really witness *and* informant shows both if `role` is multi-valued (S9-36). |
+  | Location | event + place | |
+  | Relationship | the two people + relationship type | The type is the identity: spouse *and* cousin are two relationships. Sources that disagree on the type (son vs stepson) make two relationships, not a mixed value. |
+  | Place relationship (S9-38) | the two places + type | |
+
+- **Direction:** directed types ("A parent of B", "part of") match only in the same direction. Symmetric types (spouse) ignore order. Whether a type is directed is a property of the type (term or bridge kind), not a list in code.
+- **A link from a handle to itself** (both ends on one handle: a duplicate on the graph, or a wrong match) is refused. On the page it's flagged before Done.
+- **Refused filings don't fail the claim.** A place relationship that would close a hierarchy cycle (S9-38), or a self-link, leaves the bridge unfiled, with its reason visible. On the page, alignment flags it before Done, so the batch never fails on it.
+- **An end that leaves later** (its member deleted) leaves the bridge's claim in place. The association loses that end's evidence, and the reconciler shows it. That's §5.2 review territory, not a special case.
 
 ---
 
 # 10. Effect on the plan
 
-- **S9-17 / S9-18 (#265 / #266) stand:** pins, backfill, `Compatible`, the comparison read, and pinned deletes. Two things are added on top: one-hop pairs, and the batch write.
-- **Briefs S9-D9 to S9-D12** (target, claim fields, compare, walk) are replaced by **one brief for the page**. The S9-11 / S9-12 UI is rewritten: `PromoteFlow` becomes a row list. Kit pieces carry over.
-- **Order of work:**
-  1. prototype `Align` as a pure package, test-first, against the obituary and a small canonical tree;
-  2. the loader;
-  3. the page;
-  4. whole-graph mapping and bridge filing, with S9-28.
-- **Later, learned weights:** start logging the suggestions shown and the decisions made, so m and u can be fitted from real accepts and rejects ([`ideas/promote-matching.md`](ideas/promote-matching.md#directions-we-circled-none-chosen)).
+Spike 9 was replanned around this on 2026-10-06: [`deployment-plan/spike-9/deployment-plan.md`](deployment-plan/spike-9/deployment-plan.md), slices 5–10.
+
+- **Events and Places come first** (slices 5–6): alignment needs the date module (S9-21), per-Property cardinality (S9-36), and the Event and Place headers for its dropdowns.
+- **The canonical graph gets its own slice** (slice 7): the subject module and automatic bridge filing (S9-28), then the derived values that walk it (S9-31 / S9-32).
+- **Promote alignment is one slice** (slice 8):
+  - **S9-17**, reshaped from #265 / #266: `Compatible`, pins and backfill, the pinned-delete tests. The per-Subject comparison read and its UI plumbing are dropped.
+  - **S9-41:** `Align`, a pure package.
+  - **S9-42:** the loader and the proposal read.
+  - **S9-43:** the batch write.
+  - **S9-44:** the page, gated by brief **S9-D16**.
+- **Retired:**
+  - S9-19 and S9-D11 (compare);
+  - S9-29 (neighborhood read);
+  - S9-30 and S9-D12 (walk);
+  - S9-18, folded into S9-17 and S9-44.
+
+  S9-D16 is a **rethink**: it replaces the S9-D9 / S9-D10 frames on the Promote board.
+- **Later, learned weights:** start logging the suggestions shown and the decisions made, so m and u can be fitted from real accepts and rejects ([`ideas/promote-matching.md`](ideas/promote-matching.md#directions-we-circled-none-chosen)). This is out of scope for Spike 9.
 
 ---
 
