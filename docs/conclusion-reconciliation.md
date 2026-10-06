@@ -144,10 +144,12 @@ The same *same value* test (`autoreconcile.Compatible`) is what Promote alignmen
 
 From [`structured-date-model.md`](structured-date-model.md): missing components are unknown, never zero.
 
-- A less precise point containing a more precise one folds into it (`MAY 1985` + `14 MAY 1985` → `14 MAY 1985`).
-- Shared components are kept. Disagreeing finer components either widen to a range (`3 MAY 1985` + `14 JUN 1985` → `BET 3 MAY 1985 AND 14 JUN 1985`) or drop to the shared precision (`1985`). Which one is a test-case decision.
-- `ABT`, `BEF`, `AFT` and ranges are the same value when their windows overlap.
-- Years that disagree with no overlap stay separate, so the state reads *mixed*.
+- Equal structured dates merge.
+- A wider point folds into a narrower one it contains (`MAY 1985` + `14 MAY 1985` → `14 MAY 1985`).
+- `ABT` uses the same span as an unqualified point of that precision (about 1985 overlaps May 1985 and does not reach 1986). `BEF` is open on the low side through the end of its bound; `AFT` is open on the high side from the start of its bound. A range is the window from the start of its first bound to the end of its second. Qualifiers and ranges fold into the narrowest closed value they contain.
+- **Disjoint points stay mixed** (decided 2026-10-06). They are not widened into a range and not collapsed to the precision they share. `APR` and `MAY`, and `3 MAY 1985` and `14 JUN 1985`, stay two values.
+- An open window does not glue the closed dates it contains. `BEF 1900` folds into `1885` when that is the only closed date it overlaps, and `1885` and `1890` stay separate.
+- A phrase with no year, month, or day is no evidence.
 
 ## 7.2 Names
 
@@ -269,5 +271,6 @@ The rebuild-equals-upkeep tests hold upkeep equal to a full rebuild. Every new t
 | Evidence loaded (Sources, provenance, negatives, provisional members); outcomes cached in `auto_reconciler_outcomes`; credibility and certainty upkeep; the "auto-reconciler" naming; cache version 9 | S9-14 | stacked on S9-13b |
 | Detail read: each field's state, values and outcomes with their evidence (`conclusiondetails`, `GetConclusionDetail`); Swift wording of states and outcomes; off-screen detail pages evicted | S9-15 | stacked on S9-14 |
 | An outvoted outcome keeps the vote that beat it (migration 000041, cache version 10); the Person page shows every field's state, values and Why | S9-16 | stacked on S9-15 |
+| Date module: containment fold, qualifiers and ranges fold into the narrowest closed value, disjoint points stay mixed; `date_lo` / `date_hi` and `sort_key`; cache version 11 | S9-21 | this PR |
 
 PRs #255 and #256 built names-first versions of S9-13b and S9-14 to the first plan and were closed. Their migrations landed unchanged in S9-13a; their name logic, provenance logic, fixtures and test tables (75+ cases) are lifted into S9-13, S9-13b and S9-14 (see the Spike 9 plan, slice 4).

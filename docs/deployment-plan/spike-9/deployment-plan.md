@@ -388,7 +388,7 @@ CLOSE
 - **Slice 4 is the foundation for the rest.** S9-13 / S9-14 put every value type on the pipeline. **Promote alignment (slice 9) needs slices 5–7:** dates (S9-21) and cardinality (S9-36) to compare and to tell a conflict from a second value, Event and Place headers (S9-22, S9-25) for its dropdowns, and the canonical graph (S9-28) to walk and to file bridges. **Place hierarchy (slice 8) goes first** so that trying Promote on real research captures part-of and succession links from the start, and alignment is tested with them as edges.
 - **Replanned 2026-10-05.** IDs of PRs that keep their purpose stay; new work takes new IDs (S9-13a, S9-13b, S9-36 – S9-40), so handoff notes in [`completed.md`](completed.md) and code comments stay right.
 - **Replanned 2026-10-06 (Promote alignment).** New work: S9-41 – S9-44 and brief S9-D16. **Retired:** S9-19 and S9-D11 (compare → S9-44's evidence sheet), S9-29 (neighborhood read → S9-42), S9-30 and S9-D12 (walk → S9-44), S9-18 (folded into S9-17 and S9-44). S9-17 keeps its ID, reshaped from the closed #265 / #266.
-- **Migrations 000037 / 000038 are fixed.** They first shipped on the closed PRs #255 / #256, and the researcher's local projects already carry them. S9-13a lands them on `main` byte-for-byte so those projects open again; nothing else may take those numbers, and later changes are new migrations (000039 on), never edits. **000039** is S9-13's `reason` column; **000040** is S9-14's rename to `auto_reconciler_*` and its outcomes table. **000041** is S9-16's vote on outvoted outcomes (cache version 10). **000042** is S9-20's `event_name` backfill (no cache bump). The next is **000043**; the next cache version **11**. **Cache versions start at 5** after S9-13a: projects may hold a cache stamped 3 or 4 by the closed PRs, and a new meaning must never reuse a stamp.
+- **Migrations 000037 / 000038 are fixed.** They first shipped on the closed PRs #255 / #256, and the researcher's local projects already carry them. S9-13a lands them on `main` byte-for-byte so those projects open again; nothing else may take those numbers, and later changes are new migrations (000039 on), never edits. **000039** is S9-13's `reason` column; **000040** is S9-14's rename to `auto_reconciler_*` and its outcomes table. **000041** is S9-16's vote on outvoted outcomes (cache version 10). **000042** is S9-20's `event_name` backfill (no cache bump). The next is **000043**; the next cache version **12** (11 is S9-21's date windows). **Cache versions start at 5** after S9-13a: projects may hold a cache stamped 3 or 4 by the closed PRs, and a new meaning must never reuse a stamp.
 - **The cache is honest from slice 2.** S9-06 ships the rebuild-equals-upkeep test; every later PR that adds a write path or trigger adds to it.
 - **Churn is expected.** A confirm-and-mint Promote button (slice 1), stubbed sidebar items, and empty life-date cells are fine between slices. Today's step-based Promote (S9-11 / S9-12) stays in use until S9-44 replaces it; from S9-28 on it already files bridges.
 
@@ -477,7 +477,7 @@ In order; each brief sits just above the PR it gates.
 - [x] S9-16 — Person detail → [`completed.md`](completed.md)
 - [x] S9-17 — Pins + backfill engine (reshaped; landed early, slice 9) → [`completed.md`](completed.md)
 - [x] S9-20 — Seed `event_name` → [`completed.md`](completed.md)
-- [ ] S9-21 — Date module + windows
+- [x] S9-21 — Date module + windows → [`completed.md`](completed.md)
 - [ ] S9-22 — Event composer + reads
 - [ ] ✎ S9-D3 — Design: Events list
 - [ ] S9-23 — Events list
@@ -778,6 +778,8 @@ Design: [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md). PR
 | --- | --- |
 | **In** | The date module on the pipeline (design §7.1), table-driven (~50+ cases): containment folds, overlapping windows are the same value, range widening vs shared precision (a test-case decision), qualifiers, disjoint → mixed. `date_lo` / `date_hi` and the date `sort_key` computed and stored. Cache version bump. Period dates on Places (S9-38) use the same windows. |
 | **Depends on** | S9-13 |
+
+**Done.** See [`completed.md`](completed.md#s9-21--date-module--windows). Containment folds (`MAY 1985` into `14 MAY 1985`). Qualifiers and ranges fold into the narrowest closed value they contain. Disjoint points stay mixed: no range widening and no collapse to the shared year. `BEF 1900` does not glue `1885` and `1890`. `date_lo` / `date_hi` and a zero-padded `sort_key` are stored; cache version **11** rebuilds on open. No new migration. For **S9-22**: titles and list formatting. For **S9-38**: place periods use these same windows. Match scores are unchanged.
 
 #### S9-22 — Event composer + reads
 

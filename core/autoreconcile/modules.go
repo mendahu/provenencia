@@ -62,8 +62,7 @@ func moduleFor(valueType string) module {
 	case properties.ValueTypeName:
 		return nameModule{}
 	case properties.ValueTypeDate:
-		// Interim: every structured field, as S9-05. S9-21 reconciles windows.
-		return keyModule{keyOf: func(v Value) (string, bool) { return dateKey(v.Date), true }}
+		return dateModule{}
 	}
 	return nil
 }

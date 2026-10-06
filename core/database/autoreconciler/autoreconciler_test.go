@@ -235,6 +235,7 @@ type row struct {
 	Integer              *int64
 	TermID               []byte
 	Date, Name           []byte
+	DateLo, DateHi       *int
 	SortKey              *string
 	Support, Against     int
 	Reason               string
@@ -243,14 +244,14 @@ type row struct {
 func snapshot(t *testing.T, q autoreconciler.Querier) []row {
 	t.Helper()
 	rows, err := q.Query(`SELECT entity_id, property_id, rank, value_text, value_integer, value_term_id,
-		value_date, value_name, sort_key, support, against, reason FROM auto_reconciler_values
+		value_date, value_name, date_lo, date_hi, sort_key, support, against, reason FROM auto_reconciler_values
 		ORDER BY entity_id, property_id, rank`)
 	must(t, err)
 	defer rows.Close()
 	var out []row
 	for rows.Next() {
 		var r row
-		must(t, rows.Scan(&r.EntityID, &r.PropertyID, &r.Rank, &r.Text, &r.Integer, &r.TermID, &r.Date, &r.Name, &r.SortKey, &r.Support, &r.Against, &r.Reason))
+		must(t, rows.Scan(&r.EntityID, &r.PropertyID, &r.Rank, &r.Text, &r.Integer, &r.TermID, &r.Date, &r.Name, &r.DateLo, &r.DateHi, &r.SortKey, &r.Support, &r.Against, &r.Reason))
 		out = append(out, r)
 	}
 	must(t, rows.Err())
@@ -385,12 +386,12 @@ func TestReconciledValues(t *testing.T) {
 		evt, plc := f.promote(event), f.promote(place)
 		all := f.rows()
 		dates := rowsFor(all, evt, f.props["date"].ID)
-		if len(dates) != 2 || dates[0].SortKey != nil {
+		if len(dates) != 1 || dates[0].SortKey == nil || dates[0].DateLo == nil || dates[0].DateHi == nil || *dates[0].DateLo != *dates[0].DateHi {
 			t.Fatalf("dates %+v", dates)
 		}
 		d, err := valuecodec.UnmarshalDate(dates[0].Date)
 		must(t, err)
-		if *d.StartYear != 1985 || *d.StartMonth != 5 || d.StartDay != nil {
+		if *d.StartYear != 1985 || *d.StartMonth != 5 || d.StartDay == nil || *d.StartDay != 14 {
 			t.Fatalf("rank 1 date %+v", d)
 		}
 		tops := rowsFor(all, plc, f.props["toponym"].ID)

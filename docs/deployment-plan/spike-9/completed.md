@@ -36,6 +36,7 @@ IDs stay stable (`S9-NN`, `S9-DN`). Do not renumber when moving steps here.
 | S9-16 | PR | Person detail |
 | S9-17 | PR | Pins + backfill engine |
 | S9-20 | PR | Seed `event_name` |
+| S9-21 | PR | Date module + windows |
 
 ## Steps
 
@@ -839,3 +840,25 @@ An Event can carry a recorded historical name (*The Great Fire of 1849*) as text
 - Title precedence (`event_name` first): **S9-22**. Subject titles (*Birth of …*): **S9-31**.
 - Search documents that include the name: **S9-34**.
 - Match weights for the Property: **S9-41**.
+
+### S9-21 — Date module + windows
+
+Dates reconcile by window. A wider date folds into a narrower one it contains, and two dates that do not contain each other stay mixed.
+
+**What shipped**
+
+- `dateModule` in `core/autoreconcile`: equal structured dates merge; containment folds (`MAY 1985` into `14 MAY 1985`); `ABT`, `BEF`, `AFT`, and ranges fold into the narrowest closed value they contain. `ABT` spans the same window as an unqualified point of that precision.
+- Disjoint points stay two values. They are not widened into a range and not collapsed to the year or month they share (`APR` vs `MAY`, `3 MAY 1985` vs `14 JUN 1985`).
+- An open window does not glue the closed dates inside it. `BEF 1900` may fold into `1885` and still leave `1890` separate. A majority does not outvote a disjoint date.
+- A phrase with no year is no evidence.
+- The cache stores `date_lo` and `date_hi` (inclusive proleptic day numbers; an open end stays NULL) and a zero-padded `sort_key` from `date_lo`. Cache version **11** rebuilds existing catalogs on open. No new migration.
+
+**What changed for researchers**
+
+- Nothing visible yet. Cached dates that used to stay apart now fold when one contains the other, and catalogs rebuild once on open.
+
+**What stayed out**
+
+- Event titles and list formatting: **S9-22**.
+- Match-score changes (`core/match/dates.go`).
+- Place periods, which will read these same windows: **S9-38**.

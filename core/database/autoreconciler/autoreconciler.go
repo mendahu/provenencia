@@ -29,8 +29,8 @@
 // Inputs: every Observation on an accepted or provisional member (rejected
 // members don't count), with its Source, polarity, Source credibility,
 // transcription certainty, and claim confidence and status; each term's key
-// and each name's parts. Subject-valued Properties wait for S9-28;
-// date_lo / date_hi for S9-21.
+// and each name's parts. Subject-valued Properties wait for S9-28. Date
+// windows are stored as date_lo / date_hi.
 package autoreconciler
 
 import (
@@ -60,7 +60,9 @@ import (
 //	9: evidence loaded (Sources, provenance, negatives, provisional members);
 //	   each Observation's outcome cached (S9-14).
 //	10: an outvoted outcome keeps the vote that beat it (S9-16).
-const CacheVersion = 10
+//	11: dates reconcile by window; date_lo / date_hi and the date sort_key
+//	   are stored (S9-21).
+const CacheVersion = 11
 
 // batchSize bounds the handles per loader batch (and so the IN list length).
 const batchSize = 500
@@ -83,8 +85,8 @@ const (
 
 	sqlInsert = `INSERT INTO auto_reconciler_values
 		(entity_id, property_id, rank, value_text, value_integer, value_term_id,
-		 value_date, value_name, sort_key, support, against, reason)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+		 value_date, value_name, date_lo, date_hi, sort_key, support, against, reason)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
 	// One row per Observation on an accepted or provisional member of the
 	// batch (rejected members don't count), with its evidence: polarity, the
@@ -411,6 +413,7 @@ func insertRow(q Querier, g *group, rank int, cl autoreconcile.ReconciledValue) 
 		integer           any
 		termID            any
 		dateBlob, nameBlb any
+		dateLo, dateHi    any
 	)
 	if v.HasText {
 		text = v.Text
@@ -427,6 +430,14 @@ func insertRow(q Querier, g *group, rank int, cl autoreconcile.ReconciledValue) 
 			return err
 		}
 		dateBlob = b
+		if lo, hi, ok := autoreconcile.DateBounds(*v.Date); ok {
+			if lo != nil {
+				dateLo = *lo
+			}
+			if hi != nil {
+				dateHi = *hi
+			}
+		}
 	}
 	if v.Name != nil {
 		b, err := valuecodec.MarshalName(*v.Name)
@@ -438,7 +449,7 @@ func insertRow(q Querier, g *group, rank int, cl autoreconcile.ReconciledValue) 
 	if k, ok := autoreconcile.SortKey(g.valueType, v); ok {
 		sortKey = k
 	}
-	_, err := q.Exec(sqlInsert, g.entityID, g.propertyID, rank, text, integer, termID, dateBlob, nameBlb, sortKey,
+	_, err := q.Exec(sqlInsert, g.entityID, g.propertyID, rank, text, integer, termID, dateBlob, nameBlb, dateLo, dateHi, sortKey,
 		cl.Support, cl.Against, string(cl.Reason))
 	return err
 }
