@@ -30,8 +30,24 @@ enum ConclusionListRow {
         PVThumbnail.Content(mark: mark, label: nil)
     }
 
+    /// The title, with a `+N` badge when other names survived. The badge keeps
+    /// its width; the title truncates.
     @ViewBuilder
-    static func title(_ source: ConclusionTitleSource) -> some View {
+    static func title(_ source: ConclusionTitleSource, extraCount: Int = 0) -> some View {
+        HStack(spacing: PVSpacing.space4) {
+            titleText(source)
+                .lineLimit(1)
+                .truncationMode(.tail)
+            if extraCount > 0 {
+                PVBadge(text: "+\(extraCount)", tone: .neutral, subtle: true)
+                    .layoutPriority(1)
+                    .accessibilityHidden(true)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private static func titleText(_ source: ConclusionTitleSource) -> some View {
         switch source {
         case .name(let text):
             Text(verbatim: text)

@@ -9930,6 +9930,158 @@
         }
       }
     },
+    "workspace.places.count": {
+      "comment": "Places list header meta; argument is how many Places are listed. Includes the name sort.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld place · by name"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld places · by name"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "workspace.places.countRefreshing": {
+      "comment": "Places list header meta while the list reloads; argument is the place count text",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · refreshing"
+          }
+        }
+      }
+    },
+    "workspace.places.emptyMessage": {
+      "comment": "Places list empty state body; explains Promote",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A Place is created when you promote a place subject from a card on an Evidence graph. Promoted places appear here, by name."
+          }
+        }
+      }
+    },
+    "workspace.places.emptyTitle": {
+      "comment": "Places list empty state title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No places yet"
+          }
+        }
+      }
+    },
+    "workspace.places.rowAccessibility": {
+      "comment": "VoiceOver label for a Places row with one name and no chain; arguments are the title and the ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@, %2$@"
+          }
+        }
+      }
+    },
+    "workspace.places.rowAccessibilityExtra": {
+      "comment": "VoiceOver label for a Places row with other names and no chain; arguments are the title, the extra-name count, and the ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@, and %#@extra@, %3$@"
+          },
+          "substitutions": {
+            "extra": {
+              "argNum": 2,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg other name"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg other names"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "workspace.places.rowAccessibilityExtraInChain": {
+      "comment": "VoiceOver label for a Places row with other names and a parent chain; arguments are the title, the extra-name count, the chain, and the ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@, and %#@extra@, in %3$@, %4$@"
+          },
+          "substitutions": {
+            "extra": {
+              "argNum": 2,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg other name"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg other names"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "workspace.places.rowAccessibilityInChain": {
+      "comment": "VoiceOver label for a Places row with a parent chain; arguments are the title, the chain, and the ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@, in %2$@, %3$@"
+          }
+        }
+      }
+    },
     "workspace.events.rowAccessibilityDated": {
       "comment": "VoiceOver label for an Events list row; arguments are the title, the date, and the ref",
       "extractionState": "manual",
@@ -9955,13 +10107,13 @@
       }
     },
     "workspace.section.places.stubMessage": {
-      "comment": "Placeholder body on the Places page until the list ships",
+      "comment": "Placeholder body on a Place's page until the detail ships",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The Places list is on its way. Promoted places will be listed here."
+            "value": "This Place's page is on its way."
           }
         }
       }

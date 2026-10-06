@@ -895,9 +895,70 @@ enum L10n {
 
         static let placesStubMessage = LocalizedStringResource(
             "workspace.section.places.stubMessage",
-            defaultValue: "The Places list is on its way. Promoted places will be listed here.",
-            comment: "Placeholder body on the Places page until the list ships"
+            defaultValue: "This Place's page is on its way.",
+            comment: "Placeholder body on a Place's page until the detail ships"
         )
+
+        /// Places list header meta: "1 place · by name" / "N places · by name".
+        static func placeCount(_ count: Int) -> String {
+            L10n.format(LocalizedStringResource(
+                "workspace.places.count",
+                defaultValue: "%lld places · by name",
+                comment: "Places list header meta; argument is how many Places are listed. Includes the name sort."
+            ), count)
+        }
+
+        /// Header meta while a stale Places list reloads.
+        static func placeCountRefreshing(_ count: Int) -> String {
+            return L10n.format(LocalizedStringResource(
+                "workspace.places.countRefreshing",
+                defaultValue: "%@ · refreshing",
+                comment: "Places list header meta while the list reloads; argument is the place count text"
+            ), placeCount(count))
+        }
+
+        static let placesEmptyTitle = LocalizedStringResource(
+            "workspace.places.emptyTitle",
+            defaultValue: "No places yet",
+            comment: "Places list empty state title"
+        )
+
+        static let placesEmptyMessage = LocalizedStringResource(
+            "workspace.places.emptyMessage",
+            defaultValue: "A Place is created when you promote a place subject from a card on an Evidence graph. Promoted places appear here, by name.",
+            comment: "Places list empty state body; explains Promote"
+        )
+
+        /// VoiceOver label for one Places row. Extra names and the chain are
+        /// omitted when the row has none.
+        static func placeRowAccessibility(title: String, extra: Int, chain: String, ref: String) -> String {
+            if extra > 0 && !chain.isEmpty {
+                return L10n.format(LocalizedStringResource(
+                    "workspace.places.rowAccessibilityExtraInChain",
+                    defaultValue: "%1$@, and %#@extra@, in %3$@, %4$@",
+                    comment: "VoiceOver label for a Places row with other names and a parent chain; arguments are the title, the extra-name count, the chain, and the ref"
+                ), title, extra, chain, ref)
+            }
+            if extra > 0 {
+                return L10n.format(LocalizedStringResource(
+                    "workspace.places.rowAccessibilityExtra",
+                    defaultValue: "%1$@, and %#@extra@, %3$@",
+                    comment: "VoiceOver label for a Places row with other names and no chain; arguments are the title, the extra-name count, and the ref"
+                ), title, extra, ref)
+            }
+            if !chain.isEmpty {
+                return L10n.format(LocalizedStringResource(
+                    "workspace.places.rowAccessibilityInChain",
+                    defaultValue: "%1$@, in %2$@, %3$@",
+                    comment: "VoiceOver label for a Places row with a parent chain; arguments are the title, the chain, and the ref"
+                ), title, chain, ref)
+            }
+            return L10n.format(LocalizedStringResource(
+                "workspace.places.rowAccessibility",
+                defaultValue: "%1$@, %2$@",
+                comment: "VoiceOver label for a Places row with one name and no chain; arguments are the title and the ref"
+            ), title, ref)
+        }
 
         static let sidebarSourceTitle = LocalizedStringResource(
             "workspace.sidebar.section.source",

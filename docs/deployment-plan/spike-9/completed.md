@@ -46,6 +46,8 @@ IDs stay stable (`S9-NN`, `S9-DN`). Do not renumber when moving steps here.
 | S9-D14 | Design | Properties — cardinality |
 | S9-37 | PR | Properties page: cardinality |
 | S9-25 | PR | Place composer + reads |
+| S9-D4 | Design | Places list |
+| S9-26 | PR | Places list |
 
 ## Steps
 
@@ -1004,3 +1006,28 @@ A Place's row can carry every name it goes by. Montréal and Montreal stay two n
 - Periods and relationships: **S9-38**.
 - The parent chain: **S9-39**.
 - The Evidence-graph Place card still uses the subject's own `toponym`.
+
+### S9-D4 — Design: Places list
+
+**Board:** Claude Design project *Places List*, `Places List.dc.html`, frames 01–09.
+
+- Same row as S9-D2: kit `PVList` and `ConclusionListRow`. Thumbnail is the `subject_place` mark. Title is the first name, else an italic working label, else the mono ref, with a subtle `+N` for the other names. Secondary line is the administrative chain, italic, omitted when there is none. Trailing ref. Sorted by the displayed title; ref-only rows last.
+- Frame 03 is the S9-26 ship state: names, +N, and refs, with every chain empty. Frames 01, 05, and 07 show the chain S9-40 fills. Frame 08 empty state points at Promote and has no button.
+
+Brief archived: [`design/archive/S9-D4-places-list.md`](design/archive/S9-D4-places-list.md).
+
+### S9-26 — Places list
+
+The Places sidebar destination lists every promoted Place. Persons, Events, and Places share one list page; they stay separate places in navigation history.
+
+**What shipped**
+
+- `PlacesListView` is the Places configuration of `ConclusionListPage`: `subject_place` thumbnail, title from `PlaceTitleDisplay`, a subtle neutral `+N` when other names survived, trailing ref. Header meta is "N places · by name", with "· refreshing" while a stale list reloads. Empty state explains Promote and has no button.
+- The list sorts by the displayed title, case- and diacritic-insensitive, so Montréal sits with M. A label sorts with the names. A ref-only row sorts last, by ref. The composer's order is unchanged.
+- `PlaceChainDisplay` joins parent names. The secondary line is that text, italic, and omitted while `parents` is empty.
+- A row opens the Place-detail stub. VoiceOver reads the title, the extra-name count, and the ref, and includes the chain when one exists.
+
+**What stayed out**
+
+- The chain cell's contents, including truncation from the top of the hierarchy: **S9-40**.
+- The Place page, and routing the graph card's open-handle action: **S9-27**.

@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// Placeholder page for a Conclude destination that hasn't shipped.
-/// Places stay here until S9-26. The Events list and an Event's page are live.
+/// A Place's page stays here until S9-27. The lists and an Event's page are live.
 struct ConclusionStubView: View {
     let section: WorkspaceSection
 
