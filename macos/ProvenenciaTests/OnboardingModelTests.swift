@@ -520,6 +520,12 @@ private struct ThrowingStore: GenealogyStore {
     func listPersonHeaders(projectDir _: String) async throws -> [CatalogPersonHeader] {
         throw StoreBoom.boom
     }
+    func listEventHeaders(projectDir _: String) async throws -> [CatalogEventHeader] {
+        throw StoreBoom.boom
+    }
+    func eventHeader(projectDir _: String, entityID _: String) async throws -> CatalogEventHeader {
+        throw StoreBoom.boom
+    }
     func getConclusionDetail(projectDir _: String, entityID _: String) async throws -> CatalogConclusionDetail {
         throw StoreBoom.boom
     }

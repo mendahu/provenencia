@@ -434,13 +434,15 @@ struct SourceGraphSnapshotTests {
         _ key: String,
         text: String = "",
         nameForm: String = "",
-        polarity: String = "positive"
+        polarity: String = "positive",
+        termKey: String = ""
     ) -> CatalogObservation {
         CatalogObservation(
             id: key, ref: "OBS-1", citationID: "c1", subjectID: "s1", propertyID: "p-\(key)",
             polarity: polarity, valueText: text, valueInteger: nil, valueDateID: "",
             valueNameID: "", nameForm: nameForm, valueSubjectID: "", valueTermID: "",
-            propertyKey: key, propertyLabel: key, propertyValueType: "text"
+            propertyKey: key, propertyLabel: key, propertyValueType: "text",
+            valueTermKey: termKey
         )
     }
 
@@ -450,8 +452,13 @@ struct SourceGraphSnapshotTests {
         // A toponym doesn't name a Person, nor a name a Place.
         #expect(placed(.person, label: "James", [observation("toponym", text: "York")]).displayName == "James")
         #expect(placed(.place, label: "the town", [observation("name", nameForm: "York")]).displayName == "the town")
-        // Events keep the label until the event title formatter (S9-22).
+        // A personal name does not name an Event; the working label does until event_name.
         #expect(placed(.event, label: "Baptism", [observation("name", nameForm: "James")]).displayName == "Baptism")
+        #expect(placed(.event, label: "Grandpa's fire", [observation("event_name", text: "The Great Fire")]).displayName == "The Great Fire")
+        #expect(
+            placed(.event, label: "", [observation("event_type", text: "Birth", termKey: "birth")]).displayName
+                == L10n.EventTitle.unspecified(type: "Birth")
+        )
     }
 
     @Test func displayNameSkipsDeniedAndBlankValues() {

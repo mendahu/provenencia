@@ -282,6 +282,36 @@ struct CatalogPersonHeader: Sendable, Equatable, Identifiable {
     var additionalNameCount: Int { max(0, nameValueCount - 1) }
 }
 
+/// One Event as a row, composed by Go from the auto-reconciler cache (S9-22).
+/// Structures only; `EventTitleDisplay` formats the title. A point `date`
+/// wins over `startDate` / `endDate`.
+struct CatalogEventHeader: Sendable, Equatable, Identifiable {
+    var entity: CatalogCanonicalEntity
+    var eventName: String = ""
+    var eventNameCount: Int = 0
+    var eventTypeKey: String = ""
+    var eventTypeLabel: String = ""
+    var eventTypeCount: Int = 0
+    var date: CatalogDateValueInput?
+    var dateCount: Int = 0
+    var startDate: CatalogDateValueInput?
+    var startDateCount: Int = 0
+    var endDate: CatalogDateValueInput?
+    var endDateCount: Int = 0
+
+    var id: String { entity.id }
+
+    var titleParts: EventTitleParts {
+        EventTitleParts(
+            recordedName: eventName,
+            label: entity.label,
+            ref: entity.ref,
+            typeKey: eventTypeKey,
+            typeLabel: eventTypeLabel
+        )
+    }
+}
+
 /// One Property value on a Conclusion detail: exactly one case per value type.
 enum CatalogConclusionValue: Sendable, Equatable {
     case none
@@ -887,6 +917,8 @@ protocol GenealogyStore: Sendable {
     func listSubjectMemberships(projectDir: String, sourceID: String) async throws -> [CatalogSubjectMembership]
     /// Every unmerged Person as a row header, in list order (named by name, then by ref).
     func listPersonHeaders(projectDir: String) async throws -> [CatalogPersonHeader]
+    func listEventHeaders(projectDir: String) async throws -> [CatalogEventHeader]
+    func eventHeader(projectDir: String, entityID: String) async throws -> CatalogEventHeader
     /// One handle's fields, auto-reconciled values and outcomes. Throws
     /// `conclusiondetails.not_found` for an unknown or merged handle.
     func getConclusionDetail(projectDir: String, entityID: String) async throws -> CatalogConclusionDetail

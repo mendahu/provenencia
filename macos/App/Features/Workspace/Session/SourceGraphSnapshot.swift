@@ -31,14 +31,35 @@ struct SourceGraphPlacedSubject: Identifiable, Sendable, Equatable {
 
     /// What the subject is called where it is promoted: its first asserted
     /// naming Observation (a Person's `name` form, a Place's `toponym`), else
-    /// its working label, else its ref. Events use the label until the event
-    /// title formatter (S9-22) and its participants (S9-31) exist.
+    /// its working label, else its ref. An Event uses `EventTitleDisplay`
+    /// from its own `event_name` and `event_type` Observations. Subject and
+    /// place parts arrive with S9-31 and S9-32; the date is not part of the title.
     var displayName: String {
+        if kind == .event {
+            return EventTitleDisplay.title(eventTitleParts)
+        }
         if let named = observations.lazy.compactMap(Self.namingValue(for: kind)).first {
             return named
         }
         let label = subject.label.trimmingCharacters(in: .whitespacesAndNewlines)
         return label.isEmpty ? subject.ref : label
+    }
+
+    private var eventTitleParts: EventTitleParts {
+        var parts = EventTitleParts(label: subject.label, ref: subject.ref)
+        for observation in observations where observation.polarity != "negative" {
+            let text = observation.valueText.trimmingCharacters(in: .whitespacesAndNewlines)
+            switch observation.propertyKey {
+            case "event_name" where parts.recordedName.isEmpty && !text.isEmpty:
+                parts.recordedName = text
+            case "event_type" where parts.typeLabel.isEmpty && parts.typeKey.isEmpty:
+                parts.typeLabel = text
+                parts.typeKey = observation.valueTermKey
+            default:
+                break
+            }
+        }
+        return parts
     }
 
     /// The value of an asserted Observation that names a subject of this kind.

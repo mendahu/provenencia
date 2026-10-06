@@ -37,6 +37,7 @@ IDs stay stable (`S9-NN`, `S9-DN`). Do not renumber when moving steps here.
 | S9-17 | PR | Pins + backfill engine |
 | S9-20 | PR | Seed `event_name` |
 | S9-21 | PR | Date module + windows |
+| S9-22 | PR | Event composer + reads |
 
 ## Steps
 
@@ -862,3 +863,26 @@ Dates reconcile by window. A wider date folds into a narrower one it contains, a
 - Event titles and list formatting: **S9-22**.
 - Match-score changes (`core/match/dates.go`).
 - Place periods, which will read these same windows: **S9-38**.
+
+### S9-22 — Event composer + reads
+
+An Event's row is composed from the auto-reconciler cache. The app formats the title; Go does not return a sentence.
+
+**What shipped**
+
+- `conclusionheaders.ListEvents` / `EventsByIDs`: unmerged Events in one query, dated first by the date window's `sort_key`, else `start_date`, then ref. Rank-1 `event_name`, `event_type` (key and label), and `date`, or `start_date` and `end_date` when there is no date. Kept-value counts ride along for a later +N.
+- FFI `ListEventHeaders` and `GetEventHeader`. The Events nav count was already on `GetWorkspaceNavCounts`.
+- `CatalogQueryKey.eventsList` on the existing Events place. The page is still the stub.
+- `EventTitleDisplay` and L10n templates for the whole naming matrix, including subject and place cases this composer does not fill yet.
+- An Event on the Evidence graph is named by that formatter from its `event_name` and `event_type` Observations. The date is a separate line, not part of the title.
+
+**What changed for researchers**
+
+- An Event card on the Evidence graph uses a recorded name, else the working label, else *Unspecified {type}*, else the ref. The Events sidebar destination is still the empty stub.
+
+**What stayed out**
+
+- The designed Events list: **S9-23**.
+- Subject titles (*Birth of …*): **S9-31**. Places on the row: **S9-32**.
+- The Event detail page: **S9-24**.
+- Search documents: **S9-34**.

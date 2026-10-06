@@ -478,7 +478,7 @@ In order; each brief sits just above the PR it gates.
 - [x] S9-17 — Pins + backfill engine (reshaped; landed early, slice 9) → [`completed.md`](completed.md)
 - [x] S9-20 — Seed `event_name` → [`completed.md`](completed.md)
 - [x] S9-21 — Date module + windows → [`completed.md`](completed.md)
-- [ ] S9-22 — Event composer + reads
+- [x] S9-22 — Event composer + reads → [`completed.md`](completed.md)
 - [ ] ✎ S9-D3 — Design: Events list
 - [ ] S9-23 — Events list
 - [ ] ✎ S9-D6 — Design: Event detail
@@ -788,6 +788,8 @@ Design: [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md). PR
 | **In** | Event header + detail: title precedence without subjects (`event_name` → label → *Unspecified {type}* → ref), date (else span). List / detail / count FFI and keys. Swift event-title formatter (L10n templates, full matrix so S9-31 only supplies parts). |
 | **Depends on** | S9-15, S9-20, S9-21 |
 | **Note** | Promote names an Event subject by `SourceGraphPlacedSubject.displayName` (S9-12), which uses the label until now. Point its Event case at this formatter, fed from the subject's own Observations on the graph (type term, `event_name`, date), so Promote's header reads like the Event's title. |
+
+**Done.** See [`completed.md`](completed.md#s9-22--event-composer--reads). `ListEventHeaders` / `GetEventHeader` return structures: recorded name, event type, and the rank-1 `date` or else `start_date`–`end_date`. The Events place warms `eventsList`; the stub stays until **S9-23**. `EventTitleDisplay` has the full matrix, and an Event card's name uses it from that subject's `event_name` and `event_type`. Nav counts already included Events. For **S9-23**: the designed list. For **S9-31** / **S9-32**: subject and place parts. For **S9-24**: the detail page.
 
 #### S9-23 — Events list
 

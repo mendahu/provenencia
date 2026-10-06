@@ -1,12 +1,11 @@
 // Package conclusionheaders composes the row-shaped header of each canonical
-// Person (and later Event and Place) from the auto-reconciler cache (Spike 9
+// Person, Event, and (later) Place from the auto-reconciler cache (Spike 9
 // R4). One header composer per kind serves every surface that shows a handle
 // as a row: lists, Promote's target picker, omnibar hits, later tree nodes.
 //
 // Headers are composed at read time, never stored, and set-based: a whole
-// list is one query whatever its length. Go returns structures (the rank-1
-// NameValue, value counts, label, ref); the app formats text, including
-// the name → label → ref fallback.
+// list is one query whatever its length. Go returns structures; the app
+// formats text, including an Event's title precedence.
 package conclusionheaders
 
 import (

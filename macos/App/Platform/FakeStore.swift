@@ -1392,6 +1392,78 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         }
     }
 
+    func listEventHeaders(projectDir: String) async throws -> [CatalogEventHeader] {
+        withState {
+            markCatalogSessionHeld(projectDir)
+            return eventHeaders()
+        }
+    }
+
+    func eventHeader(projectDir: String, entityID: String) async throws -> CatalogEventHeader {
+        try withState {
+            markCatalogSessionHeld(projectDir)
+            guard let header = eventHeaders().first(where: { $0.entity.id == entityID }) else {
+                throw CoreInvokeError.coded(status: 1, code: "conclusiondetails.not_found", kind: .user, params: [])
+            }
+            return header
+        }
+    }
+
+    /// Rank-1 event_name, event_type, and date (else start/end) from member
+    /// Observations. Dated events sort by year, then ref. Call inside `withState`.
+    private func eventHeaders() -> [CatalogEventHeader] {
+        let members = membershipBySubject.values.filter { $0.kind == "event" }
+        let byEntity = Dictionary(grouping: members, by: \.entity.id)
+        let observations = observationsBySource.values.flatMap { $0 }
+        let headers = byEntity.values.compactMap { group -> CatalogEventHeader? in
+            guard let entity = group.first?.entity else { return nil }
+            let memberIDs = Set(group.map(\.subjectID))
+            let rows = observations.filter { memberIDs.contains($0.subjectID) && $0.polarity != "negative" }
+            func texts(_ key: String) -> [String] {
+                rows.compactMap { row in
+                    guard row.propertyKey == key else { return nil }
+                    let text = row.valueText.trimmingCharacters(in: .whitespacesAndNewlines)
+                    return text.isEmpty ? nil : text
+                }
+            }
+            func dates(_ key: String) -> [CatalogDateValueInput] {
+                rows.compactMap { row in
+                    guard row.propertyKey == key, let date = row.date else { return nil }
+                    return date
+                }
+            }
+            let names = texts("event_name")
+            let type = rows.first { $0.propertyKey == "event_type" && !$0.valueTermKey.isEmpty }
+            let point = dates("date").first
+            let start = dates("start_date")
+            let end = dates("end_date")
+            return CatalogEventHeader(
+                entity: entity,
+                eventName: names.first ?? "",
+                eventNameCount: names.count,
+                eventTypeKey: type?.valueTermKey ?? "",
+                eventTypeLabel: type.map { $0.valueText.isEmpty ? $0.valueTermKey : $0.valueText } ?? "",
+                eventTypeCount: rows.filter { $0.propertyKey == "event_type" }.count,
+                date: point,
+                dateCount: dates("date").count,
+                startDate: point == nil ? start.first : nil,
+                startDateCount: start.count,
+                endDate: point == nil ? end.first : nil,
+                endDateCount: end.count
+            )
+        }
+        return headers.sorted { a, b in
+            let ay = a.date?.startYear ?? a.startDate?.startYear
+            let by = b.date?.startYear ?? b.startDate?.startYear
+            switch (ay, by) {
+            case let (x?, y?) where x != y: return x < y
+            case (.some, .none): return true
+            case (.none, .some): return false
+            default: return a.entity.ref.localizedCaseInsensitiveCompare(b.entity.ref) == .orderedAscending
+            }
+        }
+    }
+
     /// Mirrors the Go composer closely enough for UI tests: members' name
     /// Observations cluster by case-folded form, the most-supported cluster
     /// (then the earliest) is rank 1, and named Persons sort by name before

@@ -6694,6 +6694,68 @@ enum L10n {
         }
     }
 
+    /// Event title templates (S9-22). `EventTitleDisplay` fills them. The
+    /// type word is the term label as stored, or `fallbackType` when the
+    /// event has no type.
+    enum EventTitle {
+        static func ofOne(type: String, subject: String, locale: Locale = .autoupdatingCurrent) -> String {
+            let resource = LocalizedStringResource(
+                "eventTitle.ofOne",
+                defaultValue: "%1$@ of %2$@",
+                comment: "Event title for one subject. Arguments are the type word, then the subject."
+            )
+            return L10n.format(resource, locale: locale, type, subject)
+        }
+
+        static func marriage(a: String, b: String, locale: Locale = .autoupdatingCurrent) -> String {
+            let resource = LocalizedStringResource(
+                "eventTitle.marriage",
+                defaultValue: "Marriage of %1$@ and %2$@",
+                comment: "Event title for a marriage with two subjects. Arguments are the two people."
+            )
+            return L10n.format(resource, locale: locale, a, b)
+        }
+
+        static func etAl(type: String, first: String, locale: Locale = .autoupdatingCurrent) -> String {
+            let resource = LocalizedStringResource(
+                "eventTitle.etAl",
+                defaultValue: "%1$@ of %2$@ et al.",
+                comment: "Event title for several subjects, or three or more on a marriage. Arguments are the type word, then the first subject."
+            )
+            return L10n.format(resource, locale: locale, type, first)
+        }
+
+        static func atPlace(type: String, place: String, locale: Locale = .autoupdatingCurrent) -> String {
+            let resource = LocalizedStringResource(
+                "eventTitle.atPlace",
+                defaultValue: "%1$@ at %2$@",
+                comment: "Event title when there is no recorded name, subject, or label, and there is a place. Arguments are the type word, then the place."
+            )
+            return L10n.format(resource, locale: locale, type, place)
+        }
+
+        static func unspecified(type: String, locale: Locale = .autoupdatingCurrent) -> String {
+            let resource = LocalizedStringResource(
+                "eventTitle.unspecified",
+                defaultValue: "Unspecified %@",
+                comment: "Event title when there is no recorded name, subject, label, or place. Argument is the type word."
+            )
+            return L10n.format(resource, locale: locale, type)
+        }
+
+        static let unnamedPerson = LocalizedStringResource(
+            "eventTitle.unnamedPerson",
+            defaultValue: "unnamed person",
+            comment: "Subject name in an event title when that person has no reconciled name"
+        )
+
+        static let fallbackType = LocalizedStringResource(
+            "eventTitle.fallbackType",
+            defaultValue: "Event",
+            comment: "Event title type word when the event has no event type"
+        )
+    }
+
     /// Conclusion detail copy (S9-15, S9-16): field states, auto-reconciler
     /// outcomes, the Why table and the Person page. `ReconciledValueDisplay`
     /// and `PersonDetailContent` compose them.

@@ -15440,6 +15440,90 @@
         }
       }
     },
+    "eventTitle.atPlace": {
+      "comment": "Event title when there is no recorded name, subject, or label, and there is a place. Arguments are the type word, then the place.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ at %2$@"
+          }
+        }
+      }
+    },
+    "eventTitle.etAl": {
+      "comment": "Event title for several subjects, or three or more on a marriage. Arguments are the type word, then the first subject.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ of %2$@ et al."
+          }
+        }
+      }
+    },
+    "eventTitle.fallbackType": {
+      "comment": "Event title type word when the event has no event type",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Event"
+          }
+        }
+      }
+    },
+    "eventTitle.marriage": {
+      "comment": "Event title for a marriage with two subjects. Arguments are the two people.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Marriage of %1$@ and %2$@"
+          }
+        }
+      }
+    },
+    "eventTitle.ofOne": {
+      "comment": "Event title for one subject. Arguments are the type word, then the subject.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ of %2$@"
+          }
+        }
+      }
+    },
+    "eventTitle.unnamedPerson": {
+      "comment": "Subject name in an event title when that person has no reconciled name",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "unnamed person"
+          }
+        }
+      }
+    },
+    "eventTitle.unspecified": {
+      "comment": "Event title when there is no recorded name, subject, label, or place. Argument is the type word.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unspecified %@"
+          }
+        }
+      }
+    },
     "conclusions.state.empty": {
       "comment": "Empty Conclusion field with no specific wording for its Property",
       "extractionState": "manual",

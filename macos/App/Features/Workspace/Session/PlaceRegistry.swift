@@ -190,8 +190,8 @@ struct PlaceRegistry: Sendable {
             presentation: .eventsList,
             priority: 10,
             matches: { $0.section == .events },
-            // Stub page until S9-23.
-            queryKeys: { _, _ in [] },
+            // Stub page until S9-23; the list read is warm.
+            queryKeys: { project, _ in [.eventsList(project: project)] },
             deepId: { _ in nil }
         ),
         Spec(

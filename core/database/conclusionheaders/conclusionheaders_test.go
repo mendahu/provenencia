@@ -9,10 +9,12 @@ import (
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/conclusionheaders"
+	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/namevalues/namevaluestest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/properties"
+	"github.com/mendahu/provenencia/core/database/propertyterms"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjects"
@@ -194,6 +196,154 @@ func TestPersonsByIDs(t *testing.T) {
 		t.Fatalf("want James, Mary in list order: %+v", got)
 	}
 	if got, err := conclusionheaders.PersonsByIDs(db, nil); err != nil || got != nil {
+		t.Fatalf("no ids: %v %+v", err, got)
+	}
+}
+
+func (f *fixture) prop(key string) properties.Property {
+	f.t.Helper()
+	p, err := properties.Lookup(f.c, key, properties.OriginProvenencia)
+	must(f.t, err)
+	return p
+}
+
+func (f *fixture) term(propertyKey, termKey string) propertyterms.Term {
+	f.t.Helper()
+	p := f.prop(propertyKey)
+	term, err := propertyterms.Lookup(f.c, p.ID, termKey, propertyterms.OriginProvenencia)
+	must(f.t, err)
+	return term
+}
+
+func pointYear(year int) *datevalues.Value {
+	y := year
+	return &datevalues.Value{Kind: datevalues.KindPoint, Calendar: "gregorian", StartYear: &y}
+}
+
+// event promotes a new event Subject with the given Observations.
+func (f *fixture) event(in ...observations.Input) []byte {
+	f.t.Helper()
+	s, err := subjects.Create(f.c, userID, subjects.CreateInput{SourceID: f.source.ID, SubjectTypeID: f.typeID("event")}, nil)
+	must(f.t, err)
+	if len(in) > 0 {
+		for i := range in {
+			in[i].SubjectID = s.ID
+		}
+		_, err = citations.CreateWithObservations(f.c, userID, citations.CreateInput{ArtifactID: f.artifact.ID, LocatorJSON: locator}, in)
+		must(f.t, err)
+	}
+	p, err := promote.Save(f.c, userID, promote.Input{SubjectID: s.ID})
+	must(f.t, err)
+	return p.Entity.ID
+}
+
+func (f *fixture) events() []conclusionheaders.EventHeader {
+	f.t.Helper()
+	db, err := f.c.DB()
+	must(f.t, err)
+	h, err := conclusionheaders.ListEvents(db)
+	must(f.t, err)
+	return h
+}
+
+func TestListEvents(t *testing.T) {
+	f := newFixture(t)
+	if got := f.events(); len(got) != 0 {
+		t.Fatalf("empty project listed %d", len(got))
+	}
+	name := f.prop("event_name")
+	date := f.prop("date")
+	start := f.prop("start_date")
+	end := f.prop("end_date")
+	eventType := f.prop("event_type")
+	birth := f.term("event_type", "birth")
+
+	fire := f.event(
+		observations.Input{PropertyID: name.ID, ValueText: " The Great Fire ", HasText: true},
+		observations.Input{PropertyID: date.ID, Date: pointYear(1849)},
+	)
+	birthID := f.event(
+		observations.Input{PropertyID: eventType.ID, ValueTermID: birth.ID},
+		observations.Input{PropertyID: date.ID, Date: pointYear(1985)},
+		observations.Input{PropertyID: start.ID, Date: pointYear(1900)},
+	)
+	span := f.event(
+		observations.Input{PropertyID: start.ID, Date: pointYear(1900)},
+		observations.Input{PropertyID: end.ID, Date: pointYear(1910)},
+	)
+	undated := f.event()
+	f.person("Ada Lovelace")
+
+	got := f.events()
+	if len(got) != 4 {
+		t.Fatalf("listed %d Events, want 4 (no Person)", len(got))
+	}
+	byID := map[string]conclusionheaders.EventHeader{}
+	for _, h := range got {
+		byID[string(h.Entity.ID)] = h
+	}
+	if string(got[0].Entity.ID) != string(fire) || got[0].EventName != "The Great Fire" || got[0].Date == nil || *got[0].Date.StartYear != 1849 {
+		t.Fatalf("fire %+v", got[0])
+	}
+	born := byID[string(birthID)]
+	if born.EventType == nil || born.EventType.Key != "birth" || born.EventType.Label != "Birth" || born.EventTypeCount != 1 {
+		t.Fatalf("type %+v", born.EventType)
+	}
+	if born.Date == nil || *born.Date.StartYear != 1985 || born.StartDate != nil || born.EndDate != nil || born.StartDateCount != 1 {
+		t.Fatalf("date wins over span %+v", born)
+	}
+	spanned := byID[string(span)]
+	if spanned.Date != nil || spanned.StartDate == nil || *spanned.StartDate.StartYear != 1900 || spanned.EndDate == nil || *spanned.EndDate.StartYear != 1910 {
+		t.Fatalf("span %+v", spanned)
+	}
+	if byID[string(undated)].Date != nil || byID[string(undated)].EventName != "" {
+		t.Fatalf("undated %+v", byID[string(undated)])
+	}
+	want := [][]byte{fire, span, birthID, undated}
+	for i, id := range want {
+		if string(got[i].Entity.ID) != string(id) {
+			t.Fatalf("order %d got %x want %x", i, got[i].Entity.ID, id)
+		}
+	}
+}
+
+func TestListEventsQueryCountIsConstant(t *testing.T) {
+	f := newFixture(t)
+	f.event()
+	db, err := f.c.DB()
+	must(t, err)
+	one, err := conclusionheaders.ListEventsQueryCount(db)
+	must(t, err)
+	date := f.prop("date")
+	for i := 0; i < 50; i++ {
+		f.event(observations.Input{PropertyID: date.ID, Date: pointYear(1800 + i)})
+	}
+	many, err := conclusionheaders.ListEventsQueryCount(db)
+	must(t, err)
+	if one != 1 || many != one {
+		t.Fatalf("queries: %d for 1 Event, %d for 51", one, many)
+	}
+}
+
+func TestEventsByIDs(t *testing.T) {
+	f := newFixture(t)
+	name := f.prop("event_name")
+	fire := f.event(observations.Input{PropertyID: name.ID, ValueText: "Fire", HasText: true})
+	bare := f.event()
+	f.event(observations.Input{PropertyID: name.ID, ValueText: "Other", HasText: true})
+	_, _, person := f.person("Ada Lovelace")
+	db, err := f.c.DB()
+	must(t, err)
+	got, err := conclusionheaders.EventsByIDs(db, [][]byte{bare, fire, fire, person, make([]byte, 16)})
+	must(t, err)
+	if len(got) != 2 {
+		t.Fatalf("%+v", got)
+	}
+	names := map[string]bool{got[0].EventName: true, got[1].EventName: true}
+	if !names["Fire"] || !names[""] {
+		t.Fatalf("%+v", got)
+	}
+	if got, err := conclusionheaders.EventsByIDs(db, nil); err != nil || got != nil {
 		t.Fatalf("no ids: %v %+v", err, got)
 	}
 }
