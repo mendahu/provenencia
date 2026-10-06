@@ -107,6 +107,9 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
     var against: String?
     var otherValuesLabel: String?
     var otherValues: [OtherValue]
+    /// Every displayed value when the field keeps several (`multiple`). Empty
+    /// otherwise, including a mixed field, which still discloses the rest.
+    var listedValues: [OtherValue]
     var whyTitle: String
     var records: [ReconciliationRecord]
     var accessibilityLabel: String
@@ -115,6 +118,8 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
         let lead = field.displayedValues.first
             .map { ReconciledValueDisplay.string(for: $0.value, locale: locale) }
             .flatMap { $0.isEmpty ? nil : $0 }
+        let listed = Self.listedValues(of: field, locale: locale)
+        let spokenLead = listed.count > 1 ? listed.map(\.text).joined(separator: "; ") : lead
         id = field.propertyID
         label = field.label
         style = field.valueType == "date" ? .date : .text
@@ -131,9 +136,27 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
                 support: L10n.Conclusions.sourceCount($0.support)
             )
         }
-        whyTitle = L10n.Conclusions.whyTitle(lead ?? field.label)
+        listedValues = listed
+        whyTitle = listed.count > 1
+            ? L10n.Conclusions.whyThese(listed.count, label: field.label)
+            : L10n.Conclusions.whyTitle(lead ?? field.label)
         records = field.outcomes.map { ReconciliationRecord(outcome: $0, in: field, locale: locale) }
-        accessibilityLabel = ReconciledValueDisplay.accessibilityLabel(label: field.label, lead: lead, field: field)
+        accessibilityLabel = ReconciledValueDisplay.accessibilityLabel(label: field.label, lead: spokenLead, field: field)
+    }
+
+    /// Every kept value of a multi-valued field, lead included. A weak
+    /// spelling is not displayed, so it stays out of this list.
+    private static func listedValues(of field: CatalogConclusionField, locale: Locale) -> [OtherValue] {
+        guard field.state == "multiple" else { return [] }
+        return field.displayedValues.compactMap { value in
+            let text = ReconciledValueDisplay.string(for: value.value, locale: locale)
+            guard !text.isEmpty else { return nil }
+            return OtherValue(
+                rank: value.rank,
+                text: text,
+                support: L10n.Conclusions.sourceCount(value.support)
+            )
+        }
     }
 
     /// One Date row whose lead is a start–end span. Why lists every record
@@ -156,6 +179,7 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
         return Self(
             id: id, label: label, style: .date, lead: shown, emptyText: emptyText,
             badge: nil, count: nil, against: nil, otherValuesLabel: nil, otherValues: [],
+            listedValues: [],
             whyTitle: shown.map { L10n.Conclusions.whyTitle($0) } ?? "",
             records: records,
             accessibilityLabel: spoken
@@ -166,7 +190,7 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
     static func empty(id: String, label: String, style: ValueStyle, emptyText: String) -> Self {
         Self(
             id: id, label: label, style: style, lead: nil, emptyText: emptyText, badge: nil, count: nil,
-            against: nil, otherValuesLabel: nil, otherValues: [], whyTitle: "", records: [],
+            against: nil, otherValuesLabel: nil, otherValues: [], listedValues: [], whyTitle: "", records: [],
             accessibilityLabel: ReconciledValueDisplay.accessibilityLabel(label: label, lead: nil, field: nil)
         )
     }
@@ -174,7 +198,7 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
     private init(
         id: String, label: String, style: ValueStyle, lead: String?, emptyText: String,
         badge: ReconciledValueDisplay.StateBadge?, count: String?, against: String?,
-        otherValuesLabel: String?, otherValues: [OtherValue], whyTitle: String,
+        otherValuesLabel: String?, otherValues: [OtherValue], listedValues: [OtherValue], whyTitle: String,
         records: [ReconciliationRecord], accessibilityLabel: String
     ) {
         self.id = id
@@ -187,6 +211,7 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
         self.against = against
         self.otherValuesLabel = otherValuesLabel
         self.otherValues = otherValues
+        self.listedValues = listedValues
         self.whyTitle = whyTitle
         self.records = records
         self.accessibilityLabel = accessibilityLabel

@@ -16528,6 +16528,174 @@
         }
       }
     },
+    "conclusions.place.names": {
+      "comment": "Row label for a Place's toponyms",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Names"
+          }
+        }
+      }
+    },
+    "conclusions.place.emptyNames": {
+      "comment": "Empty Names row on a Place page",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No names recorded"
+          }
+        }
+      }
+    },
+    "conclusions.place.period": {
+      "comment": "Row label for when a Place was current",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Period"
+          }
+        }
+      }
+    },
+    "conclusions.place.emptyPeriod": {
+      "comment": "Empty Period row on a Place page until periods are filled",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No period recorded"
+          }
+        }
+      }
+    },
+    "conclusions.place.noParent": {
+      "comment": "Header line when a Place has no parent in the hierarchy",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No parent place recorded"
+          }
+        }
+      }
+    },
+    "conclusions.place.partOf": {
+      "comment": "Section heading for the places this Place belongs to",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Part of"
+          }
+        }
+      }
+    },
+    "conclusions.place.partOfAside": {
+      "comment": "Aside under the Part of heading on a Place page",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grouped by type · span is when the link holds"
+          }
+        }
+      }
+    },
+    "conclusions.place.partOfEmpty": {
+      "comment": "Empty Part of section on a Place page",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not part of any recorded place"
+          }
+        }
+      }
+    },
+    "conclusions.place.contains": {
+      "comment": "Section heading for the places inside this Place",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Contains"
+          }
+        }
+      }
+    },
+    "conclusions.place.containsAside": {
+      "comment": "Aside under the Contains heading on a Place page",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Direct children only"
+          }
+        }
+      }
+    },
+    "conclusions.place.containsEmpty": {
+      "comment": "Empty Contains section on a Place page",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No places recorded as part of this one"
+          }
+        }
+      }
+    },
+    "conclusions.place.succession": {
+      "comment": "Section heading for a Place's renames and mergers",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Succession"
+          }
+        }
+      }
+    },
+    "conclusions.place.successionAside": {
+      "comment": "Aside under the Succession heading on a Place page",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Renames and mergers · not part of the hierarchy"
+          }
+        }
+      }
+    },
+    "conclusions.place.successionEmpty": {
+      "comment": "Empty Succession section on a Place page",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No predecessor or successor recorded"
+          }
+        }
+      }
+    },
     "conclusions.memberCount": {
       "comment": "Page header: how many Subjects are members of this handle; argument is the count",
       "extractionState": "manual",
@@ -16624,6 +16792,18 @@
         }
       }
     },
+    "conclusions.why.these": {
+      "comment": "Heading of the records behind several kept values; arguments are the count and the lowercased field label",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Why these %1$lld %2$@"
+          }
+        }
+      }
+    },
     "conclusions.why.records": {
       "comment": "VoiceOver label of the records behind a field; argument is the field label",
       "extractionState": "manual",
@@ -16680,6 +16860,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "mixed from %@"
+          }
+        }
+      }
+    },
+    "conclusions.a11y.multiple": {
+      "comment": "VoiceOver state of a field that keeps several values; arguments are how many values and the Source count text",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%#@values@ from %2$@"
+          },
+          "substitutions": {
+            "values": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg value"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg values"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }

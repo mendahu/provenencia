@@ -46,7 +46,7 @@ struct ReconciledValueRow: View {
     /// Label, value and state: one VoiceOver element with the row's spoken
     /// label; the disclosures stay separate controls.
     private var summary: some View {
-        HStack(alignment: .center, spacing: PVSpacing.space6) {
+        HStack(alignment: model.listedValues.isEmpty ? .center : .firstTextBaseline, spacing: PVSpacing.space6) {
             Text(model.label)
                 .pvMicroCaps()
                 .foregroundStyle(PVColor.textMuted)
@@ -61,7 +61,21 @@ struct ReconciledValueRow: View {
 
     @ViewBuilder
     private var value: some View {
-        if let lead = model.lead {
+        if !model.listedValues.isEmpty {
+            VStack(alignment: .leading, spacing: PVSpacing.space2) {
+                ForEach(model.listedValues) { value in
+                    HStack(alignment: .firstTextBaseline, spacing: PVSpacing.space5) {
+                        Text(verbatim: value.text)
+                            .font(Self.font(for: model.style))
+                            .foregroundStyle(PVColor.textPrimary)
+                            .textSelection(.enabled)
+                        Text(verbatim: value.support)
+                            .font(PVFont.mono(size: PVTypeScale.caption))
+                            .foregroundStyle(PVColor.textMuted)
+                    }
+                }
+            }
+        } else if let lead = model.lead {
             Text(lead)
                 .font(Self.font(for: model.style))
                 .foregroundStyle(PVColor.textPrimary)

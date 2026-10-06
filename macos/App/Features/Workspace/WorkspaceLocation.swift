@@ -145,7 +145,7 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
         WorkspaceLocation(section: .events, entityId: entityId, ref: ref, title: title)
     }
 
-    /// One Place's page (S9-25 stub; the page itself is S9-27).
+    /// One Place's page (S9-27).
     static func placeDetail(entityId: String, ref: String, title: String?) -> WorkspaceLocation {
         WorkspaceLocation(section: .places, entityId: entityId, ref: ref, title: title)
     }

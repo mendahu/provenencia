@@ -68,6 +68,7 @@ enum ReconciledValueDisplay {
         switch propertyKey {
         case "name": L10n.string(L10n.Conclusions.emptyName)
         case "sex_at_birth": L10n.string(L10n.Conclusions.emptySexAtBirth)
+        case "toponym": L10n.string(L10n.Conclusions.emptyPlaceNames)
         default: L10n.string(L10n.Conclusions.stateEmpty)
         }
     }
@@ -203,6 +204,7 @@ enum ReconciledValueDisplay {
         case "single": return L10n.Conclusions.a11ySingle(sources)
         case "merged": return L10n.Conclusions.a11yMerged(sources)
         case "mixed": return L10n.Conclusions.a11yMixed(sources)
+        case "multiple": return L10n.Conclusions.a11yMultiple(field.displayedValues.count, sources: sources)
         case "concluded": return L10n.string(L10n.Conclusions.a11yConcluded)
         default: return nil
         }

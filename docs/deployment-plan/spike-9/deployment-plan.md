@@ -489,8 +489,8 @@ In order; each brief sits just above the PR it gates.
 - [x] S9-25 — Place composer + reads → [`completed.md`](completed.md)
 - [x] ✎ S9-D4 — Design: Places list (revise for names and chain) → [`completed.md`](completed.md)
 - [x] S9-26 — Places list → [`completed.md`](completed.md)
-- [ ] ✎ S9-D7 — Design: Place detail (revise for hierarchy)
-- [ ] S9-27 — Place detail
+- [x] ✎ S9-D7 — Design: Place detail (revise for hierarchy) → [`completed.md`](completed.md)
+- [x] S9-27 — Place detail → [`completed.md`](completed.md)
 - [ ] S9-28 — Subject module + bridge filing
 - [ ] S9-31 — Composer walks + header dependents
 - [ ] S9-32 — Fill derived cells in lists and details
@@ -855,6 +855,8 @@ Design: [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md). PR
 | **In** | Per **S9-D7** (revised). Names with their reasoning; hierarchy, period and succession rows render empty until S9-40. Route the graph card's `.openHandle` target to this page for places. |
 | **Check** | *Montréal* + *Montreal* → two names on one Place; *york* + *York* → one; a low-trust spelling drops with its reason. |
 | **Depends on** | **S9-D7**, S9-16, S9-25 |
+
+**Done.** See [`completed.md`](completed.md#s9-27--place-detail). Brief archived: [`design/archive/S9-D7-place-detail.md`](design/archive/S9-D7-place-detail.md). Place is a configuration of the shared page. Every kept name is listed with its Why. Period and the three relationship sections are present and empty. The graph card opens the page.
 
 ### Slice 7 — The canonical graph
 

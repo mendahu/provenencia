@@ -48,6 +48,8 @@ IDs stay stable (`S9-NN`, `S9-DN`). Do not renumber when moving steps here.
 | S9-25 | PR | Place composer + reads |
 | S9-D4 | Design | Places list |
 | S9-26 | PR | Places list |
+| S9-D7 | Design | Place detail |
+| S9-27 | PR | Place detail |
 
 ## Steps
 
@@ -1031,3 +1033,27 @@ The Places sidebar destination lists every promoted Place. Persons, Events, and 
 
 - The chain cell's contents, including truncation from the top of the hierarchy: **S9-40**.
 - The Place page, and routing the graph card's open-handle action: **S9-27**.
+
+### S9-D7 — Design: Place detail
+
+**Board:** Claude Design project *Place Detail*, `Place Detail.dc.html`. Frame **1f** is the S9-27 ship state.
+
+- Same page as S9-D5: header, Details, and a Why per field. Title is the first name, else an italic label, else the mono ref. The line under the title is the parent chain, or "No parent place recorded" while none exists. Names lists every kept toponym with its Source count and one Why. A weak spelling stays in that Why.
+- Period, Part of, Contains, and Succession are drawn and empty. Frame 1f is that state. S9-40 fills them.
+
+Brief archived: [`design/archive/S9-D7-place-detail.md`](design/archive/S9-D7-place-detail.md).
+
+### S9-27 — Place detail
+
+Opening a Place shows every name it goes by, and why each one was kept.
+
+**What shipped**
+
+- `PlaceDetailView` is the Place configuration of `ConclusionDetailPage`: `subject_place` mark, title from `PlaceTitleDisplay`, the chain sentence under the title, and the member count. The ref is hidden when it is the title.
+- The Names row is the `toponym` field. When several names were kept, each is listed with its Source count, and the row has one Why ("Why these 2 names"). A weak spelling is in that Why and is not a displayed name. A Place with no toponym says "No names recorded".
+- Period is a stated-empty Details row. Part of, Contains, and Succession are sections under Details, each a header, an aside, and an empty sentence.
+- A promoted Place on an Evidence graph opens this page. The card's title stays the subject's own name.
+
+**What stayed out**
+
+- Period, Part of, Contains, Succession, and `PlaceRelationshipRow`: **S9-40**.
