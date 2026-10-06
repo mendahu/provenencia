@@ -21,8 +21,8 @@ func TestListProperties(t *testing.T) {
 				if err := proto.Unmarshal(out, &resp); err != nil {
 					t.Fatal(err)
 				}
-				if len(resp.Properties) != 15 {
-					t.Fatalf("len=%d want 15", len(resp.Properties))
+				if len(resp.Properties) != 16 {
+					t.Fatalf("len=%d want 16", len(resp.Properties))
 				}
 				found := false
 				for _, p := range resp.Properties {
@@ -123,8 +123,8 @@ func TestSubjectTypePropertiesAndRegistry(t *testing.T) {
 						locked++
 					}
 				}
-				if locked != 2 {
-					t.Fatalf("locked=%d", locked)
+				if locked != 3 {
+					t.Fatalf("locked=%d want 3", locked)
 				}
 				pout, err := ListPlaceableSubjectTypes(marshalProto(t, &engine.ListPlaceableSubjectTypesRequest{}))
 				if err != nil {
