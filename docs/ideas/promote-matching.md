@@ -32,6 +32,35 @@ What the graph also shows:
 - **Places come at several grains, not as a hierarchy.** Birth links to both Polemont *and* Scotland through separate location bridges, and Death to both Edmonton and Alberta. Nothing records that Polemont is in Scotland.
 - **Dates carry qualifiers.** "Before" and "after 27 Dec 1990" are windows, not points.
 
+## The stack: how to picture the problem
+
+Picture every Evidence graph as a **layer**, and the layers stacked so that Subjects about the same historical thing line up **vertically**.
+
+- **Horizontal** is within one Source: bridges inside one Evidence graph (Gracie → participation → Birth).
+- **Vertical** is across Sources: a **column** of Subjects from different layers that are the same person, event or place. A canonical entity is a column, and an Identity Claim is one vertical link.
+- **The canonical graph is the stack seen from above:** columns collapsed into handles, and horizontal edges reconciled into canonical edges (the subject module, S9-28).
+- **Traversal goes both ways:** horizontally to stay inside a Source, vertically to hop to the same entity in another Source.
+- **Promote lays a new layer onto the stack:** it decides which of the layer's Subjects drop into existing columns and which start new ones.
+
+How a new layer meets the stack varies:
+- **Large overlap:** most of the layer lines up with an existing region, with a few branches that are new information.
+- **A single connecting node:** one Subject lines up, and everything else is new.
+- **No overlap:** the layer starts its own columns.
+
+What the picture makes clear:
+- **A vertical link's strongest evidence is the horizontal structure around it.** Gracie belongs in column PER-X partly because the names agree. Mostly, though, it's because her neighbors line up too: her Birth in PER-X's birth column, her daughter in PER-X's child's column, their dates and places agreeing. Vertical links in one layer **support each other** through the horizontal edges between them.
+- **That's why pins duplicated.** One matching pair of edges (her Birth here, PER-X's Birth there) supports two vertical links, Gracie's and the Birth's. The evidence is a **correspondence between layers**, not a list of Observations on a claim.
+- **Overlap measures confidence.** A large, self-consistent overlap is a strong alignment. A single connecting node, with no structure around it, is the weak case, and that's where the researcher's attention belongs.
+- **New branches are placed by position.** A Subject with no column of its own is identified by its horizontal link to one that has a column ("the spouse of Marion, who is in PER-Y"). That link is both the genealogical linkage and the reason it's filed where it is.
+- **It's how genealogists already argue.** The Genealogical Proof Standard's *correlation of evidence* is this stacking: identity established by consistent agreement across independent sources, not by one matching field.
+
+**A candidate unit of evidence (not decided): the alignment.**
+- **Decisions stay per Subject:** one vertical link, one claim, each rejectable alone.
+- **The evidence is the alignment of the layer against the stack,** recorded once per Promote: which edge pairs line up, which property pairs agree, which conflict.
+- **A claim's support is the part of that alignment touching it,** worked out rather than copied. Nothing is duplicated, there's no backfill, and "why is Gracie here?" has a structural answer: "this layer lines up with PER-X through her birth, her death and two children".
+
+**The goal for the interaction:** a Promote that is **mostly automated, with a few fine-tuning actions**. The app proposes the alignment. The researcher accepts the well-matched regions together, then fixes the few links that need judgment (a single connecting node, a conflict, an ambiguous child) by moving a Subject onto a different column or into a new one. The UI for this is still open.
+
 ## What any answer has to keep
 
 - **Membership stays per Subject.** One Identity Claim per Subject and handle, so a wrong match can be rejected alone. An obituary mixes people you file, people you skip, and people who belong to different handles.
@@ -63,4 +92,6 @@ What the graph also shows:
 - How far do neighbors count: one hop through bridges, or anything an anchor reaches?
 - Is Promote one Subject at a time (§5.4 walk), or one review for the whole graph from an anchor?
 - Events and persons each help identify the other. What gets matched first?
+- What does laying a layer onto the stack look like on screen? Where does the proposed alignment show, and what are the fine-tuning actions (move to another column, start a new one, detach)?
+- Is the alignment stored per Promote, and how does a later Promote of an overlapping layer relate to it?
 - What happens to #265 / #266 (pins, backfill, pin release) and to briefs S9-D11 / S9-D12?
