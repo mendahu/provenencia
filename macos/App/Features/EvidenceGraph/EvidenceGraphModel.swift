@@ -697,18 +697,28 @@ final class EvidenceGraphModel {
         )
     }
 
-    /// Location of a promoted subject's handle page. Persons open their page
-    /// (a stub until S9-16); Events and Places have none yet (`nil`) until
-    /// S9-24 / S9-27.
+    /// Location of a promoted subject's handle page. Persons and Events open
+    /// their pages. Places stay closed until S9-27.
     func openHandle(subjectID: String) -> WorkspaceLocation? {
-        guard let membership = primary(in: currentSnapshot(), id: subjectID)?.membership,
-              membership.kind == "person"
+        guard let placed = primary(in: currentSnapshot(), id: subjectID),
+              let membership = placed.membership
         else { return nil }
-        return .personDetail(
-            entityId: membership.entity.id,
-            ref: membership.entity.ref,
-            title: EvidenceSubjectCard.membershipName(membership)
-        )
+        switch membership.kind {
+        case "person":
+            return .personDetail(
+                entityId: membership.entity.id,
+                ref: membership.entity.ref,
+                title: EvidenceSubjectCard.membershipName(membership)
+            )
+        case "event":
+            return .eventDetail(
+                entityId: membership.entity.id,
+                ref: membership.entity.ref,
+                title: placed.displayName
+            )
+        default:
+            return nil
+        }
     }
 
     @discardableResult

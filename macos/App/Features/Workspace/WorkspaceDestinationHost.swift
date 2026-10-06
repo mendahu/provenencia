@@ -91,7 +91,7 @@ struct WorkspaceDestinationHost: View {
             EventsListView(session: session)
                 .accessibilityIdentifier("workspace.destination.events")
         case .eventDetail:
-            EventDetailStubView()
+            EventDetailView(session: session, entityId: navigation.currentLocation.entityId ?? "")
                 .accessibilityIdentifier("workspace.destination.eventDetail")
         case .placesList:
             ConclusionStubView(section: .places)

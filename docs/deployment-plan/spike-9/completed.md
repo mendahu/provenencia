@@ -40,6 +40,8 @@ IDs stay stable (`S9-NN`, `S9-DN`). Do not renumber when moving steps here.
 | S9-22 | PR | Event composer + reads |
 | S9-D3 | Design | Events list |
 | S9-23 | PR | Events list |
+| S9-D6 | Design | Event detail |
+| S9-24 | PR | Event detail |
 
 ## Steps
 
@@ -914,3 +916,27 @@ The Events sidebar destination lists every promoted Event. Persons and Events sh
 - Subject titles and the place cell, including *+N*: **S9-32**. Date disagreement on the row stays unmarked; the detail page explains it: **S9-24**.
 - The Places configuration of the same page: **S9-26**.
 - Title as the tie-break when two events share a date. Order stays the composer's: date, then ref.
+
+### S9-D6 — Design: Event detail
+
+**Board:** Claude Design project *Event Detail*, `Event Detail.dc.html`, frames 2a–2f.
+
+- Same page as Person detail: header, a Details section, and `ReconciledValueRow` with its Why. The Event mark is `subject_event`. The line under the title is the compact date, then the place.
+- Frame 2f is the S9-24 ship state: no subject names in the title, the Place row stated empty, and no Subjects section. Frames 2a–2e show subject titles, a Subjects section, and filled places for S9-32.
+
+Brief archived: [`design/archive/S9-D6-event-detail.md`](design/archive/S9-D6-event-detail.md).
+
+### S9-24 — Event detail
+
+Opening an Event shows its date and how that date was reconciled. Person and Event share one detail page; they stay separate places in navigation history.
+
+**What shipped**
+
+- **`ConclusionDetailPage`** owns the load, the stale-while-refreshing page, the header grid, and the Details section. `PersonDetailView` is that page's Person configuration (unchanged on screen). `EventDetailView` is the Event configuration: `subject_event` thumbnail, title from `EventTitleDisplay` with empty subjects and place, and a summary line of the compact date then "place unknown".
+- The Date row is the `date` property when it has records. Otherwise one row whose lead is the start–end span (`1849–1851`) and whose Why lists those properties' records. With none of them set, the Date row is stated empty. Conclusion dates on the row, its other values, and its Why use the same compact line as the list. Editors still use `DateValueDisplay`.
+- The Place row is stated empty ("No place recorded"). A row on the Events list already opened this place; the stub is gone. A promoted Event card opens it too. Places still do not.
+
+**What stayed out**
+
+- Subject titles, the Subjects section, and a filled Place: **S9-32**. Participant editing.
+- The Place configuration of the same page: **S9-27**. Add a configuration, not a new page.

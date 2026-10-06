@@ -9750,18 +9750,6 @@
         }
       }
     },
-    "workspace.events.detailStubTitle": {
-      "comment": "Title of the Event page placeholder until the detail ships",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Event"
-          }
-        }
-      }
-    },
     "workspace.events.count": {
       "comment": "Events list header meta; argument is how many Events are listed. Includes the date sort.",
       "extractionState": "manual",
@@ -16228,6 +16216,54 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "conclusions.event.date": {
+      "comment": "Row label on an Event page",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Date"
+          }
+        }
+      }
+    },
+    "conclusions.event.place": {
+      "comment": "Row label on an Event page",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Place"
+          }
+        }
+      }
+    },
+    "conclusions.event.emptyDate": {
+      "comment": "Empty Date row on an Event page",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No date recorded"
+          }
+        }
+      }
+    },
+    "conclusions.event.emptyPlace": {
+      "comment": "Empty Place row on an Event page until places are filled",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No place recorded"
           }
         }
       }

@@ -1494,6 +1494,48 @@ struct EvidenceGraphModelTests {
         #expect(location?.title == "James Robins")
     }
 
+    /// A promoted Event opens its page. An unpromoted card, and a Place, do not.
+    @Test func promotedEventOpensItsPage() async throws {
+        let store = makeStore()
+        let event = CatalogSubject(
+            id: "s-fire", ref: "CEV-1", sourceID: sourceID, subjectTypeID: "type-event",
+            label: "Fire at York", description: ""
+        )
+        let place = CatalogSubject(
+            id: "s-york", ref: "CPL-1", sourceID: sourceID, subjectTypeID: "type-place",
+            label: "York", description: ""
+        )
+        store.subjectsBySource[sourceID] = [event, place]
+        store.subjectPositionsBySubject["s-fire"] = CatalogSubjectPosition(subjectID: "s-fire", gridX: 1, gridY: 1)
+        store.subjectPositionsBySubject["s-york"] = CatalogSubjectPosition(subjectID: "s-york", gridX: 4, gridY: 1)
+        let model = makeModel(store: store)
+        await model.prepare()
+        #expect(model.openHandle(subjectID: "s-fire") == nil)
+
+        _ = try await store.promoteSubject(
+            projectDir: projectDir, userID: "user-1", subjectID: "s-fire",
+            entityID: nil, confidenceGradeID: nil, argument: ""
+        )
+        _ = try await store.promoteSubject(
+            projectDir: projectDir, userID: "user-1", subjectID: "s-york",
+            entityID: nil, confidenceGradeID: nil, argument: ""
+        )
+        model.session.apply(.promotedSubject(sourceId: sourceID))
+        let key = CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID)
+        let loaded = await waitUntil {
+            let handle: QueryHandle<SourceGraphRows>? = model.session.queryHandle(key)
+            return handle?.value?.memberships.contains { $0.subjectID == "s-fire" && $0.kind == "event" } == true
+        }
+        #expect(loaded)
+        let handle: QueryHandle<SourceGraphRows>? = model.session.queryHandle(key)
+        let membership = handle?.value?.memberships.first { $0.subjectID == "s-fire" }
+        let location = model.openHandle(subjectID: "s-fire")
+        #expect(location?.section == .events)
+        #expect(location?.entityId == membership?.entity.id)
+        #expect(location?.title == "Fire at York")
+        #expect(model.openHandle(subjectID: "s-york") == nil)
+    }
+
     @Test func promotedCardShowsMembershipAndNoLongerOffersPromote() async throws {
         let (store, model) = await promotableModel()
         try await promoteJames(store, model)
