@@ -139,6 +139,7 @@ var seedProperties = []seedProperty{
 	{Key: "name", Label: "Name", ValueType: properties.ValueTypeName},
 	{Key: "sex_at_birth", Label: "Sex at birth", Description: "Sex recorded or assigned at birth. Product term vocabulary.", ValueType: properties.ValueTypeTerm},
 	{Key: "event_type", Label: "Event type", Description: "Kind of event (birth, census, …). Product term vocabulary.", ValueType: properties.ValueTypeTerm},
+	{Key: "event_name", Label: "Event name", Description: "Recorded name of a historical event. Not a personal NameValue.", ValueType: properties.ValueTypeText},
 	{Key: "date", Label: "Date", Description: "Point-in-time when the event occurred (or the best single date when a span is unknown). Prefer this for births, deaths, and other one-day facts. Use start/end date instead when the event clearly lasts across a range.", ValueType: properties.ValueTypeDate},
 	{Key: "start_date", Label: "Start date", Description: "When a multi-day or open-ended event began (census day range, residence, military service, voyage). Leave empty for instantaneous events that only need Date.", ValueType: properties.ValueTypeDate},
 	{Key: "end_date", Label: "End date", Description: "When a spanned event ended or was last known. Pair with Start date; leave empty for instantaneous events that only need Date.", ValueType: properties.ValueTypeDate},
@@ -161,9 +162,10 @@ var seedBindings = []seedBinding{
 	{TypeKey: "person", PropertyKey: "sex_at_birth", SortOrder: 1},
 
 	{TypeKey: "event", PropertyKey: "event_type", SortOrder: 0},
-	{TypeKey: "event", PropertyKey: "date", SortOrder: 1, Locked: true},
-	{TypeKey: "event", PropertyKey: "start_date", SortOrder: 2, Locked: true},
-	{TypeKey: "event", PropertyKey: "end_date", SortOrder: 3, Locked: true},
+	{TypeKey: "event", PropertyKey: "event_name", SortOrder: 1},
+	{TypeKey: "event", PropertyKey: "date", SortOrder: 2, Locked: true},
+	{TypeKey: "event", PropertyKey: "start_date", SortOrder: 3, Locked: true},
+	{TypeKey: "event", PropertyKey: "end_date", SortOrder: 4, Locked: true},
 
 	{TypeKey: "place", PropertyKey: "toponym", SortOrder: 0},
 

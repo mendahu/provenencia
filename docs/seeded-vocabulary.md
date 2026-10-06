@@ -319,6 +319,7 @@ key                 value_type    notes
 name                name
 sex_at_birth        term          recorded/assigned sex at birth; terms §3.7
 event_type          term          kind identity; terms §3.4
+event_name          text          recorded historical name; not a personal NameValue; unlocked on event
 date                date          point-in-time (or best single date); locked on event
 start_date          date          span start; locked on event — leave empty if only Date applies
 end_date            date          span end; locked on event — leave empty if only Date applies
@@ -351,6 +352,7 @@ person          name
 person          sex_at_birth        # term
 
 event           event_type          # term
+event           event_name          # text; unlocked
 event           date                # locked
 event           start_date          # locked
 event           end_date            # locked

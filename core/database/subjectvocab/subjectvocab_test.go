@@ -63,8 +63,22 @@ func TestSubjectVocab(t *testing.T) {
 					t.Fatal(err)
 				}
 				eb, err := ListBindings(c, evt.ID)
-				if err != nil || len(eb) != 4 {
-					t.Fatalf("event bindings %v len=%d want 4", err, len(eb))
+				if err != nil || len(eb) != 5 {
+					t.Fatalf("event bindings %v len=%d want 5", err, len(eb))
+				}
+				en, err := properties.Lookup(c, "event_name", properties.OriginProvenencia)
+				if err != nil || en.ValueType != properties.ValueTypeText || en.Origin != properties.OriginProvenencia {
+					t.Fatalf("event_name %+v %v", en, err)
+				}
+				var nameBinding *Binding
+				for i := range eb {
+					if eb[i].Property.Key == "event_name" {
+						nameBinding = &eb[i]
+						break
+					}
+				}
+				if nameBinding == nil || nameBinding.Locked || nameBinding.SortOrder != 1 {
+					t.Fatalf("event_name binding %+v", nameBinding)
 				}
 				participation, err := subjecttypes.Lookup(c, "participation", subjecttypes.OriginProvenencia)
 				if err != nil {
