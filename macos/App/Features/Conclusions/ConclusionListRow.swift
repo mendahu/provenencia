@@ -1,8 +1,23 @@
 import SwiftUI
 
+/// How a Conclusion row titles itself. A resolved value is plain, a working
+/// label is italic, and a ref is mono. Persons, Events, and Places share it.
+enum ConclusionTitleSource: Equatable {
+    case name(String)
+    case label(String)
+    case ref(String)
+
+    var text: String {
+        switch self {
+        case .name(let text), .label(let text), .ref(let text): text
+        }
+    }
+}
+
 /// The S9-D2 row anatomy for a Conclusion list, supplying `PVList`'s slots.
-/// Shared by Persons (S9-09), Events (S9-23), and Places (S9-26); only the
-/// secondary line's content differs per kind, and it arrives with S9-32.
+/// Shared by Persons (S9-09), Events (S9-23), and Places (S9-26). The
+/// secondary line is per kind: empty for Persons until S9-32, the date for
+/// Events, the parent chain for Places.
 ///
 /// - **thumbnail:** always reserved; the kind's `subject_*` mark, never a photo.
 /// - **title:** auto-reconciled value → *italic* working label → mono ref.
@@ -16,7 +31,7 @@ enum ConclusionListRow {
     }
 
     @ViewBuilder
-    static func title(_ source: PersonHeaderDisplay.TitleSource) -> some View {
+    static func title(_ source: ConclusionTitleSource) -> some View {
         switch source {
         case .name(let text):
             Text(verbatim: text)
@@ -29,7 +44,7 @@ enum ConclusionListRow {
         }
     }
 
-    static func accessibilityLabel(_ source: PersonHeaderDisplay.TitleSource, ref: String) -> String {
+    static func accessibilityLabel(_ source: ConclusionTitleSource, ref: String) -> String {
         L10n.Workspace.personRowAccessibility(title: source.text, ref: ref)
     }
 }

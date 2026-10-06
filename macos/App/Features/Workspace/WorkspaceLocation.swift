@@ -140,6 +140,11 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
         WorkspaceLocation(section: .persons, entityId: entityId, ref: ref, title: title)
     }
 
+    /// One Event's page (S9-23 stub; the page itself is S9-24).
+    static func eventDetail(entityId: String, ref: String, title: String?) -> WorkspaceLocation {
+        WorkspaceLocation(section: .events, entityId: entityId, ref: ref, title: title)
+    }
+
     /// Identity used for coalesce / equality of navigation — deep ids only.
     static func == (lhs: WorkspaceLocation, rhs: WorkspaceLocation) -> Bool {
         lhs.section == rhs.section

@@ -38,6 +38,8 @@ IDs stay stable (`S9-NN`, `S9-DN`). Do not renumber when moving steps here.
 | S9-20 | PR | Seed `event_name` |
 | S9-21 | PR | Date module + windows |
 | S9-22 | PR | Event composer + reads |
+| S9-D3 | Design | Events list |
+| S9-23 | PR | Events list |
 
 ## Steps
 
@@ -886,3 +888,29 @@ An Event's row is composed from the auto-reconciler cache. The app formats the t
 - Subject titles (*Birth of …*): **S9-31**. Places on the row: **S9-32**.
 - The Event detail page: **S9-24**.
 - Search documents: **S9-34**.
+
+### S9-D3 — Design: Events list
+
+**Board:** Claude Design project *Events List*, `Events List.dc.html`, frames 01–08.
+
+- Same row as S9-D2: kit `PVList` and `ConclusionListRow`. Thumbnail is the `subject_event` mark. Title is the composed event title (plain name, italic working label, mono ref). Secondary line is one date group with the label omitted: mono date, then italic place and *+N*. Empty date and place omit the line. Sorted by date, undated last.
+- Frame 03 is the S9-23 ship state: no subject titles, no places. Frame 04 shows a disagreed date as the top-ranked value, unmarked. Frame 07 empty state points at Promote and has no button. Frame 08 keeps the Event mark distinct from Person and Place.
+
+Brief archived: [`design/archive/S9-D3-events-list.md`](design/archive/S9-D3-events-list.md).
+
+### S9-23 — Events list
+
+The Events sidebar destination lists every promoted Event. Persons and Events share one list page; they stay separate places in navigation history.
+
+**What shipped**
+
+- **`ConclusionListPage`** owns the loading, empty, error, and refresh chrome. `PersonsListView` is that page's Persons configuration (unchanged on screen). `EventsListView` is the Events configuration: `subject_event` thumbnail, title from `EventTitleDisplay`, mono date on the secondary line, trailing ref.
+- Titles this slice are the recorded name, else an italic working label, else *Unspecified {type}* (the type word lowercased), else the mono ref. The date line is genealogical and compact (`14 May 1817`, `abt 1810`, `bef Mar 1790`, `bet 1803 and 1806`, `1849–1851`). Editors still use `DateValueDisplay`.
+- Header meta is "N events · by date", with "· refreshing" while a stale list reloads. Empty state explains Promote and has no button.
+- A row opens an Event-detail stub (`section: .events` plus `entityId`). The Events list match requires no `entityId`, so history restores the list and the detail as two places. The graph card's open-handle action still opens Persons only.
+
+**What stayed out**
+
+- Subject titles and the place cell, including *+N*: **S9-32**. Date disagreement on the row stays unmarked; the detail page explains it: **S9-24**.
+- The Places configuration of the same page: **S9-26**.
+- Title as the tie-break when two events share a date. Order stays the composer's: date, then ref.

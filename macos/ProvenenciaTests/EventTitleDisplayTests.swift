@@ -76,8 +76,9 @@ struct EventTitleDisplayTests {
     @Test func unspecifiedType() {
         #expect(
             EventTitleDisplay.title(parts(typeLabel: "Birth"), locale: en)
-                == L10n.EventTitle.unspecified(type: "Birth", locale: en)
+                == L10n.EventTitle.unspecified(type: "birth", locale: en)
         )
+        #expect(EventTitleDisplay.titleSource(parts(typeLabel: "Birth"), locale: en) == .name("Unspecified birth"))
     }
 
     @Test func missingTypeUsesEvent() {
@@ -104,19 +105,29 @@ struct EventTitleDisplayTests {
 
     @Test func dateLineUsesThePointOrTheSpan() {
         let day = CatalogDateValueInput(kind: "point", startYear: 1817, startMonth: 5, startDay: 14)
-        let start = CatalogDateValueInput(kind: "point", startYear: 1900)
-        let end = CatalogDateValueInput(kind: "point", startYear: 1910)
-        #expect(EventTitleDisplay.dateLine(date: day, start: start, end: end, locale: en) == DateValueDisplay.string(for: day, locale: en))
-        #expect(
-            EventTitleDisplay.dateLine(date: nil, start: start, end: end, locale: en)
-                == L10n.Dates.displayBetween(
-                    start: DateValueDisplay.string(for: start, locale: en),
-                    end: DateValueDisplay.string(for: end, locale: en),
-                    locale: en
-                )
-        )
-        #expect(EventTitleDisplay.dateLine(date: nil, start: start, locale: en) == DateValueDisplay.string(for: start, locale: en))
-        #expect(EventTitleDisplay.dateLine(date: nil, end: end, locale: en) == DateValueDisplay.string(for: end, locale: en))
+        let start = CatalogDateValueInput(kind: "point", startYear: 1849)
+        let end = CatalogDateValueInput(kind: "point", startYear: 1851)
+        #expect(EventTitleDisplay.dateLine(date: day, start: start, end: end, locale: en) == "14 May 1817")
+        #expect(EventTitleDisplay.dateLine(date: nil, start: start, end: end, locale: en) == "1849–1851")
+        #expect(EventTitleDisplay.dateLine(date: nil, start: start, locale: en) == "1849")
+        #expect(EventTitleDisplay.dateLine(date: nil, end: end, locale: en) == "1851")
         #expect(EventTitleDisplay.dateLine(date: nil, locale: en) == "")
+    }
+
+    @Test func dateLineKeepsQualifiersAndRanges() {
+        let about = CatalogDateValueInput(kind: "point", qualifier: "ABT", startYear: 1810)
+        let before = CatalogDateValueInput(kind: "point", qualifier: "BEF", startYear: 1790, startMonth: 3)
+        let after = CatalogDateValueInput(kind: "point", qualifier: "AFT", startYear: 1880)
+        var range = CatalogDateValueInput(kind: "range", startYear: 1803)
+        range.endYear = 1806
+        #expect(EventTitleDisplay.dateLine(date: about, locale: en) == "abt 1810")
+        #expect(EventTitleDisplay.dateLine(date: before, locale: en) == "bef Mar 1790")
+        #expect(EventTitleDisplay.dateLine(date: after, locale: en) == "aft 1880")
+        #expect(EventTitleDisplay.dateLine(date: range, locale: en) == "bet 1803 and 1806")
+    }
+
+    @Test func labelIsItalicSourceAndRefIsMonoSource() {
+        #expect(EventTitleDisplay.titleSource(parts(label: "Baptism in St James register, f. 12"), locale: en) == .label("Baptism in St James register, f. 12"))
+        #expect(EventTitleDisplay.titleSource(parts(ref: "EVT-9ZZ02"), locale: en) == .ref("EVT-9ZZ02"))
     }
 }

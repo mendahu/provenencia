@@ -26,20 +26,46 @@ struct PersonsListTests {
 
     @Test func presentationFollowsTheHandleState() {
         let rows = [header("PER-1", name: "A"), header("PER-2", name: "B")]
-        #expect(PersonsListPresentation(value: nil, isFetching: false, status: .loading, error: nil) == .loading)
-        #expect(PersonsListPresentation(value: [], isFetching: false, status: .ready, error: nil) == .empty)
-        #expect(PersonsListPresentation(value: rows, isFetching: false, status: .ready, error: nil) == .rows(rows, refreshing: false))
-        #expect(PersonsListPresentation(value: rows, isFetching: true, status: .ready, error: nil) == .rows(rows, refreshing: true))
+        let none: [CatalogPersonHeader]? = nil
+        let empty: [CatalogPersonHeader] = []
+        #expect(ConclusionListPresentation(value: none, isFetching: false, status: .loading, error: nil) == .loading)
+        #expect(ConclusionListPresentation(value: empty, isFetching: false, status: .ready, error: nil) == .empty)
+        #expect(ConclusionListPresentation(value: rows, isFetching: false, status: .ready, error: nil) == .rows(rows, refreshing: false))
+        #expect(ConclusionListPresentation(value: rows, isFetching: true, status: .ready, error: nil) == .rows(rows, refreshing: true))
     }
 
     @Test func headerMetaCountsAndShowsRefreshing() {
         let one = [header("PER-1", name: "A")]
         let two = one + [header("PER-2")]
-        #expect(PersonsListPresentation.rows(one, refreshing: false).meta == "1 person")
-        #expect(PersonsListPresentation.rows(two, refreshing: false).meta == "2 persons")
-        #expect(PersonsListPresentation.rows(two, refreshing: true).meta == "2 persons · refreshing")
-        #expect(PersonsListPresentation.empty.meta == nil)
-        #expect(PersonsListPresentation.loading.meta == nil)
+        #expect(ConclusionListPresentation.rows(one, refreshing: false).meta(
+            count: L10n.Workspace.personCount, refreshing: L10n.Workspace.personCountRefreshing
+        ) == "1 person")
+        #expect(ConclusionListPresentation.rows(two, refreshing: false).meta(
+            count: L10n.Workspace.personCount, refreshing: L10n.Workspace.personCountRefreshing
+        ) == "2 persons")
+        #expect(ConclusionListPresentation.rows(two, refreshing: true).meta(
+            count: L10n.Workspace.personCount, refreshing: L10n.Workspace.personCountRefreshing
+        ) == "2 persons · refreshing")
+        #expect(ConclusionListPresentation<[CatalogPersonHeader]>.empty.meta(
+            count: L10n.Workspace.personCount, refreshing: L10n.Workspace.personCountRefreshing
+        ) == nil)
+        #expect(ConclusionListPresentation<[CatalogPersonHeader]>.loading.meta(
+            count: L10n.Workspace.personCount, refreshing: L10n.Workspace.personCountRefreshing
+        ) == nil)
+    }
+
+    @Test func eventsHeaderMetaNamesTheDateSort() {
+        let one = [CatalogEventHeader(entity: CatalogCanonicalEntity(id: "e1", ref: "EVT-1", subjectTypeID: "t", label: ""))]
+        let two = one + [CatalogEventHeader(entity: CatalogCanonicalEntity(id: "e2", ref: "EVT-2", subjectTypeID: "t", label: ""))]
+        #expect(ConclusionListPresentation.rows(one, refreshing: false).meta(
+            count: L10n.Workspace.eventCount, refreshing: L10n.Workspace.eventCountRefreshing
+        ) == "1 event · by date")
+        #expect(ConclusionListPresentation.rows(two, refreshing: false).meta(
+            count: L10n.Workspace.eventCount, refreshing: L10n.Workspace.eventCountRefreshing
+        ) == "2 events · by date")
+        #expect(ConclusionListPresentation.rows(two, refreshing: true).meta(
+            count: L10n.Workspace.eventCount, refreshing: L10n.Workspace.eventCountRefreshing
+        ) == "2 events · by date · refreshing")
     }
 
     @Test func rowOpensThePersonDetailPlace() {

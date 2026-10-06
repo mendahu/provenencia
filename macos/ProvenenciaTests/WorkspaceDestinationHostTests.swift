@@ -114,6 +114,8 @@ struct WorkspaceDestinationHostTests {
         #expect(presentation(for: .personDetail(entityId: "e1", ref: "PER-1", title: nil)) == .personDetail)
         #expect(WorkspaceDestinationHost.destinationKind(for: .personDetail) == .persons)
         #expect(WorkspaceDestinationHost.destinationKind(for: .eventsList) == .events)
+        #expect(presentation(for: .eventDetail(entityId: "e1", ref: "EVT-1", title: "Fire")) == .eventDetail)
+        #expect(WorkspaceDestinationHost.destinationKind(for: .eventDetail) == .events)
         #expect(WorkspaceDestinationHost.destinationKind(for: .placesList) == .places)
     }
 
@@ -143,6 +145,7 @@ struct WorkspaceDestinationHostTests {
             .sectionRoot(.events),
             .sectionRoot(.places),
             .personDetail(entityId: "e1", ref: "PER-1", title: nil),
+            .eventDetail(entityId: "e1", ref: "EVT-1", title: "Fire at York"),
         ]
         let known = Set(WorkspacePresentationID.allCases)
         for location in locations {
@@ -152,6 +155,6 @@ struct WorkspaceDestinationHostTests {
             }
             #expect(known.contains(place.presentation))
         }
-        #expect(known.count == 12)
+        #expect(known.count == 13)
     }
 }

@@ -889,8 +889,14 @@ enum L10n {
 
         static let eventsStubMessage = LocalizedStringResource(
             "workspace.section.events.stubMessage",
-            defaultValue: "The Events list is on its way. Promoted events will be listed here.",
-            comment: "Placeholder body on the Events page until the list ships"
+            defaultValue: "This Event's page is on its way.",
+            comment: "Placeholder body on an Event's page until the detail ships"
+        )
+
+        static let eventDetailStubTitle = LocalizedStringResource(
+            "workspace.events.detailStubTitle",
+            defaultValue: "Event",
+            comment: "Title of the Event page placeholder until the detail ships"
         )
 
         static let placesStubMessage = LocalizedStringResource(
@@ -954,6 +960,52 @@ enum L10n {
                 defaultValue: "%1$@, %2$@",
                 comment: "VoiceOver label for a Persons list row; arguments are the title and the ref"
             ), title, ref)
+        }
+
+        /// Events list header meta: "1 event · by date" / "N events · by date".
+        static func eventCount(_ count: Int) -> String {
+            L10n.format(LocalizedStringResource(
+                "workspace.events.count",
+                defaultValue: "%lld events · by date",
+                comment: "Events list header meta; argument is how many Events are listed. Includes the date sort."
+            ), count)
+        }
+
+        /// Header meta while a stale Events list reloads.
+        static func eventCountRefreshing(_ count: Int) -> String {
+            return L10n.format(LocalizedStringResource(
+                "workspace.events.countRefreshing",
+                defaultValue: "%@ · refreshing",
+                comment: "Events list header meta while the list reloads; argument is the event count text"
+            ), eventCount(count))
+        }
+
+        static let eventsEmptyTitle = LocalizedStringResource(
+            "workspace.events.emptyTitle",
+            defaultValue: "No events yet",
+            comment: "Events list empty state title"
+        )
+
+        static let eventsEmptyMessage = LocalizedStringResource(
+            "workspace.events.emptyMessage",
+            defaultValue: "An Event is created when you promote an event subject from a card on an Evidence graph. Promoted events appear here, in date order.",
+            comment: "Events list empty state body; explains Promote"
+        )
+
+        /// VoiceOver label for one Events row. The date is omitted when the row has none.
+        static func eventRowAccessibility(title: String, date: String, ref: String) -> String {
+            if date.isEmpty {
+                return L10n.format(LocalizedStringResource(
+                    "workspace.events.rowAccessibility",
+                    defaultValue: "%1$@, %2$@",
+                    comment: "VoiceOver label for an Events list row with no date; arguments are the title and the ref"
+                ), title, ref)
+            }
+            return L10n.format(LocalizedStringResource(
+                "workspace.events.rowAccessibilityDated",
+                defaultValue: "%1$@, %2$@, %3$@",
+                comment: "VoiceOver label for an Events list row; arguments are the title, the date, and the ref"
+            ), title, date, ref)
         }
 
         static let personsStubMessage = LocalizedStringResource(
@@ -2160,6 +2212,51 @@ enum L10n {
                 "dates.display.between",
                 defaultValue: "Between %1$@ and %2$@",
                 comment: "DateValue summary for a range; arguments are formatted start then end"
+            )
+            return L10n.format(resource, locale: locale, start, end)
+        }
+
+        static func rowAbout(_ date: String, locale: Locale = .autoupdatingCurrent) -> String {
+            let resource = LocalizedStringResource(
+                "dates.row.about",
+                defaultValue: "abt %@",
+                comment: "Events list date prefix for ABT; argument is the formatted point date"
+            )
+            return L10n.format(resource, locale: locale, date)
+        }
+
+        static func rowBefore(_ date: String, locale: Locale = .autoupdatingCurrent) -> String {
+            let resource = LocalizedStringResource(
+                "dates.row.before",
+                defaultValue: "bef %@",
+                comment: "Events list date prefix for BEF; argument is the formatted point date"
+            )
+            return L10n.format(resource, locale: locale, date)
+        }
+
+        static func rowAfter(_ date: String, locale: Locale = .autoupdatingCurrent) -> String {
+            let resource = LocalizedStringResource(
+                "dates.row.after",
+                defaultValue: "aft %@",
+                comment: "Events list date prefix for AFT; argument is the formatted point date"
+            )
+            return L10n.format(resource, locale: locale, date)
+        }
+
+        static func rowBetween(start: String, end: String, locale: Locale = .autoupdatingCurrent) -> String {
+            let resource = LocalizedStringResource(
+                "dates.row.between",
+                defaultValue: "bet %1$@ and %2$@",
+                comment: "Events list date for a range; arguments are the formatted start and end"
+            )
+            return L10n.format(resource, locale: locale, start, end)
+        }
+
+        static func rowSpan(start: String, end: String, locale: Locale = .autoupdatingCurrent) -> String {
+            let resource = LocalizedStringResource(
+                "dates.row.span",
+                defaultValue: "%1$@–%2$@",
+                comment: "Events list date when an event has a start and an end and no single date. Arguments are the two formatted dates. The separator is an en dash."
             )
             return L10n.format(resource, locale: locale, start, end)
         }

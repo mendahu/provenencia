@@ -258,6 +258,10 @@ struct WorkspaceToolbar: View {
         let leaf: String
         if location.sourceSurface == .graph, location.sourceId != nil {
             leaf = L10n.string(L10n.Workspace.evidenceGraphTitle)
+        } else if location.entityId != nil {
+            leaf = location.title.flatMap { $0.nilIfEmpty }
+                ?? location.ref.flatMap { $0.nilIfEmpty }
+                ?? "…"
         } else {
             leaf = location.ref.flatMap { $0.nilIfEmpty }
                 ?? location.title.flatMap { $0.nilIfEmpty }

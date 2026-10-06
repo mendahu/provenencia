@@ -9739,13 +9739,109 @@
       }
     },
     "workspace.section.events.stubMessage": {
-      "comment": "Placeholder body on the Events page until the list ships",
+      "comment": "Placeholder body on an Event's page until the detail ships",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The Events list is on its way. Promoted events will be listed here."
+            "value": "This Event's page is on its way."
+          }
+        }
+      }
+    },
+    "workspace.events.detailStubTitle": {
+      "comment": "Title of the Event page placeholder until the detail ships",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Event"
+          }
+        }
+      }
+    },
+    "workspace.events.count": {
+      "comment": "Events list header meta; argument is how many Events are listed. Includes the date sort.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld event · by date"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld events · by date"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "workspace.events.countRefreshing": {
+      "comment": "Events list header meta while the list reloads; argument is the event count text",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · refreshing"
+          }
+        }
+      }
+    },
+    "workspace.events.emptyMessage": {
+      "comment": "Events list empty state body; explains Promote",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "An Event is created when you promote an event subject from a card on an Evidence graph. Promoted events appear here, in date order."
+          }
+        }
+      }
+    },
+    "workspace.events.emptyTitle": {
+      "comment": "Events list empty state title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No events yet"
+          }
+        }
+      }
+    },
+    "workspace.events.rowAccessibility": {
+      "comment": "VoiceOver label for an Events list row with no date; arguments are the title and the ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@, %2$@"
+          }
+        }
+      }
+    },
+    "workspace.events.rowAccessibilityDated": {
+      "comment": "VoiceOver label for an Events list row; arguments are the title, the date, and the ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@, %2$@, %3$@"
           }
         }
       }
@@ -10910,6 +11006,66 @@
           "stringUnit": {
             "state": "translated",
             "value": "Between %1$@ and %2$@"
+          }
+        }
+      }
+    },
+    "dates.row.about": {
+      "comment": "Events list date prefix for ABT; argument is the formatted point date",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "abt %@"
+          }
+        }
+      }
+    },
+    "dates.row.after": {
+      "comment": "Events list date prefix for AFT; argument is the formatted point date",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "aft %@"
+          }
+        }
+      }
+    },
+    "dates.row.before": {
+      "comment": "Events list date prefix for BEF; argument is the formatted point date",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "bef %@"
+          }
+        }
+      }
+    },
+    "dates.row.between": {
+      "comment": "Events list date for a range; arguments are the formatted start and end",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "bet %1$@ and %2$@"
+          }
+        }
+      }
+    },
+    "dates.row.span": {
+      "comment": "Events list date when an event has a start and an end and no single date. Arguments are the two formatted dates. The separator is an en dash.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@–%2$@"
           }
         }
       }

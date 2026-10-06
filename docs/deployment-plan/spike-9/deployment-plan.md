@@ -479,8 +479,8 @@ In order; each brief sits just above the PR it gates.
 - [x] S9-20 — Seed `event_name` → [`completed.md`](completed.md)
 - [x] S9-21 — Date module + windows → [`completed.md`](completed.md)
 - [x] S9-22 — Event composer + reads → [`completed.md`](completed.md)
-- [ ] ✎ S9-D3 — Design: Events list
-- [ ] S9-23 — Events list
+- [x] ✎ S9-D3 — Design: Events list → [`completed.md`](completed.md)
+- [x] S9-23 — Events list → [`completed.md`](completed.md)
 - [ ] ✎ S9-D6 — Design: Event detail
 - [ ] S9-24 — Event detail
 - [ ] S9-36 — Property cardinality
@@ -798,6 +798,8 @@ Design: [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md). PR
 | **In** | Per **S9-D3**; sidebar Events goes live. Place cell empty until S9-32. |
 | **Check** | Promoted event cards list with titles; `MAY 1985` + `14 MAY 1985` merge; `APR` vs `MAY` → mixed. |
 | **Depends on** | **S9-D3**, S9-09, S9-22 |
+
+**Done.** See [`completed.md`](completed.md#s9-23--events-list). Brief archived: [`design/archive/S9-D3-events-list.md`](design/archive/S9-D3-events-list.md). Persons and Events share `ConclusionListPage`; each list stays its own place, query key, and history entry. For **S9-26**: add a Places configuration of that page, not a new list. For **S9-32**: subject titles and the place cell. For **S9-24**: replace the Event-detail stub and route the graph card.
 
 #### S9-24 — Event detail
 
