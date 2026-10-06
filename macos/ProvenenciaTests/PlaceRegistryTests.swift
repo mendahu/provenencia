@@ -246,12 +246,16 @@ struct PlaceRegistryTests {
         #expect(resolve(location)?.placeID != .sourcePromote)
     }
 
-    @Test func conclusionStubsResolveWithNoQueryKeys() {
-        for (section, id) in [(WorkspaceSection.events, PlaceID.eventsList), (.places, .placesList)] {
-            let place = resolve(.sectionRoot(section))
-            #expect(place?.placeID == id)
-            #expect(place?.queryKeys == [])
-        }
+    @Test func eventsListWarmsTheHeaderRead() {
+        let place = resolve(.sectionRoot(.events))
+        #expect(place?.placeID == .eventsList)
+        #expect(place?.queryKeys == [.eventsList(project: project)])
+    }
+
+    @Test func placesStubResolvesWithNoQueryKeys() {
+        let place = resolve(.sectionRoot(.places))
+        #expect(place?.placeID == .placesList)
+        #expect(place?.queryKeys == [])
     }
 
     @Test func citationJumpResolvesComposerWithoutSubjectId() {

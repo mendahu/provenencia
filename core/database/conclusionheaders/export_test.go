@@ -18,3 +18,10 @@ func ListPersonsQueryCount(q Querier) (int, error) {
 	_, err := ListPersons(cq)
 	return cq.n, err
 }
+
+// ListEventsQueryCount lists Events and reports how many queries it took.
+func ListEventsQueryCount(q Querier) (int, error) {
+	cq := &countingQuerier{Querier: q}
+	_, err := ListEvents(cq)
+	return cq.n, err
+}

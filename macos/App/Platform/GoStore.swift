@@ -823,11 +823,49 @@ struct GoStore: GenealogyStore {
         return resp.headers.map(Self.mapPersonHeader)
     }
 
+    func listEventHeaders(projectDir: String) async throws -> [CatalogEventHeader] {
+        var req = Provenencia_Engine_V1_ListEventHeadersRequest()
+        req.projectDir = projectDir
+        let resp: Provenencia_Engine_V1_ListEventHeadersResponse = try await provenenciaCall(
+            method: CoreMethod.listEventHeaders,
+            request: req
+        )
+        return resp.headers.map(Self.mapEventHeader)
+    }
+
+    func eventHeader(projectDir: String, entityID: String) async throws -> CatalogEventHeader {
+        var req = Provenencia_Engine_V1_GetEventHeaderRequest()
+        req.projectDir = projectDir
+        req.entityID = entityID
+        let resp: Provenencia_Engine_V1_GetEventHeaderResponse = try await provenenciaCall(
+            method: CoreMethod.getEventHeader,
+            request: req
+        )
+        return Self.mapEventHeader(resp.header)
+    }
+
     private static func mapPersonHeader(_ h: Provenencia_Engine_V1_PersonHeader) -> CatalogPersonHeader {
         CatalogPersonHeader(
             entity: mapCanonicalEntity(h.entity),
             name: h.hasName ? mapNameValue(h.name) : nil,
             nameValueCount: Int(h.nameValueCount)
+        )
+    }
+
+    private static func mapEventHeader(_ h: Provenencia_Engine_V1_EventHeader) -> CatalogEventHeader {
+        CatalogEventHeader(
+            entity: mapCanonicalEntity(h.entity),
+            eventName: h.eventName,
+            eventNameCount: Int(h.eventNameCount),
+            eventTypeKey: h.hasEventType ? h.eventType.key : "",
+            eventTypeLabel: h.hasEventType ? h.eventType.label : "",
+            eventTypeCount: Int(h.eventTypeCount),
+            date: h.hasDate ? mapDateValue(h.date) : nil,
+            dateCount: Int(h.dateCount),
+            startDate: h.hasStartDate ? mapDateValue(h.startDate) : nil,
+            startDateCount: Int(h.startDateCount),
+            endDate: h.hasEndDate ? mapDateValue(h.endDate) : nil,
+            endDateCount: Int(h.endDateCount)
         )
     }
 

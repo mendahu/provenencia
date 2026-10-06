@@ -100,6 +100,8 @@ enum Method {
   METHOD_LIST_PROMOTE_TARGET_SUGGESTIONS = 88;
   METHOD_LIST_CLAIM_CONFIDENCE_GRADES = 89;
   METHOD_GET_CONCLUSION_DETAIL = 90;
+  METHOD_LIST_EVENT_HEADERS = 91;
+  METHOD_GET_EVENT_HEADER = 92;
 }
 
 message PingRequest {
@@ -992,6 +994,46 @@ message ListPersonHeadersRequest {
 
 message ListPersonHeadersResponse {
   repeated PersonHeader headers = 1;
+}
+
+// EventHeader is one Event as a row, composed from the auto-reconciler's
+// cache. Structures only: the app formats the title. event_name is the
+// rank-1 recorded name, empty when none. date is the rank-1 date when one
+// exists; otherwise start_date and end_date are the span. Counts are kept
+// values of that Property (the list's +N).
+message EventHeader {
+  CanonicalEntity entity = 1;
+  string event_name = 2;
+  int32 event_name_count = 3;
+  ConclusionTerm event_type = 4;
+  int32 event_type_count = 5;
+  DateValueInput date = 6;
+  int32 date_count = 7;
+  DateValueInput start_date = 8;
+  int32 start_date_count = 9;
+  DateValueInput end_date = 10;
+  int32 end_date_count = 11;
+}
+
+// ListEventHeaders returns every unmerged Event in list order: dated
+// events by the date window, else the start date, then the rest by ref.
+message ListEventHeadersRequest {
+  string project_dir = 1;
+}
+
+message ListEventHeadersResponse {
+  repeated EventHeader headers = 1;
+}
+
+// GetEventHeader returns one unmerged Event's header. Unknown, merged,
+// and non-Event ids are not found.
+message GetEventHeaderRequest {
+  string project_dir = 1;
+  string entity_id = 2;
+}
+
+message GetEventHeaderResponse {
+  EventHeader header = 1;
 }
 
 // ConclusionValue is one Property value; exactly the field for the

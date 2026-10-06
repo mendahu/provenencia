@@ -20,6 +20,8 @@ enum CatalogQueryKey: Hashable, Sendable {
     case sourceGraphProgress(project: ProjectKey)
     /// Every Person header, composed from the auto-reconciler cache (S9-07).
     case personsList(project: ProjectKey)
+    /// Every Event header, composed from the auto-reconciler cache (S9-22).
+    case eventsList(project: ProjectKey)
     /// Existing handles a Subject could join in Promote, best first (S9-11).
     case promoteTargets(project: ProjectKey, subjectId: String)
     /// One handle's detail, any kind (S9-15). Evicted, not revalidated, while
@@ -43,6 +45,7 @@ enum CatalogQueryKey: Hashable, Sendable {
         case citationsByArtifact
         case sourceGraphProgress
         case personsList
+        case eventsList
         case promoteTargets
         case conclusionDetail
     }
@@ -79,6 +82,8 @@ enum CatalogQueryKey: Hashable, Sendable {
             return .sourceGraphProgress
         case .personsList:
             return .personsList
+        case .eventsList:
+            return .eventsList
         case .promoteTargets:
             return .promoteTargets
         case .conclusionDetail:
@@ -103,6 +108,7 @@ enum CatalogQueryKey: Hashable, Sendable {
              .citationsByArtifact(let project, _),
              .sourceGraphProgress(let project),
              .personsList(let project),
+             .eventsList(let project),
              .promoteTargets(let project, _),
              .conclusionDetail(let project, _):
             project

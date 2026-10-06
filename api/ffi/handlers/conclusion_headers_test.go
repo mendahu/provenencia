@@ -11,10 +11,15 @@ import (
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/citations"
+	"github.com/mendahu/provenencia/core/database/conclusiondetails"
+	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/database/namevalues/namevaluestest"
 	"github.com/mendahu/provenencia/core/database/observations"
+	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/properties"
+	"github.com/mendahu/provenencia/core/database/propertyterms"
+	"github.com/mendahu/provenencia/core/database/subjects"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"google.golang.org/protobuf/proto"
 )
@@ -110,6 +115,142 @@ func TestListPersonHeaders(t *testing.T) {
 			},
 		},
 	})
+}
+
+func TestListEventHeaders(t *testing.T) {
+	runRPC(t, ListEventHeaders, []rpcTest{
+		{name: "bad proto", raw: []byte{0xff}, wantErr: true},
+		{
+			name: "empty project lists nothing",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, _, _, _ := subjectFixture(t)
+				return &engine.ListEventHeadersRequest{ProjectDir: dir}
+			},
+			want:  &engine.ListEventHeadersResponse{},
+			exact: true,
+		},
+		{
+			name: "promoted Event carries its name, type, and date",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, _ := citedEvent(t)
+				return &engine.ListEventHeadersRequest{ProjectDir: dir}
+			},
+			after: func(t *testing.T, out []byte, _ proto.Message) {
+				var resp engine.ListEventHeadersResponse
+				if err := proto.Unmarshal(out, &resp); err != nil {
+					t.Fatal(err)
+				}
+				if len(resp.Headers) != 1 {
+					t.Fatalf("%+v", resp.Headers)
+				}
+				h := resp.Headers[0]
+				if !strings.HasPrefix(h.Entity.GetRef(), "EVT-") || h.GetEventName() != "The Great Fire" || h.GetEventNameCount() != 1 {
+					t.Fatalf("%+v", h)
+				}
+				if h.GetEventType().GetKey() != "birth" || h.GetEventType().GetLabel() != "Birth" || h.GetDate().GetStartYear() != 1849 {
+					t.Fatalf("type %v date %v", h.GetEventType(), h.GetDate())
+				}
+			},
+		},
+	})
+}
+
+func TestGetEventHeader(t *testing.T) {
+	runRPC(t, GetEventHeader, []rpcTest{
+		{name: "bad proto", raw: []byte{0xff}, wantErr: true},
+		{
+			name: "unknown id",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, _, _, _ := subjectFixture(t)
+				return &engine.GetEventHeaderRequest{ProjectDir: dir, EntityId: uuid.Must(uuid.NewV7()).String()}
+			},
+			wantErr:   true,
+			wantErrIs: conclusiondetails.ErrNotFound,
+		},
+		{
+			name: "returns the one event",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, id := citedEvent(t)
+				return &engine.GetEventHeaderRequest{ProjectDir: dir, EntityId: id}
+			},
+			after: func(t *testing.T, out []byte, req proto.Message) {
+				var resp engine.GetEventHeaderResponse
+				if err := proto.Unmarshal(out, &resp); err != nil {
+					t.Fatal(err)
+				}
+				in := req.(*engine.GetEventHeaderRequest)
+				if resp.GetHeader().GetEntity().GetId() != in.GetEntityId() || resp.GetHeader().GetEventName() != "The Great Fire" {
+					t.Fatalf("%+v", resp.GetHeader())
+				}
+			},
+		},
+	})
+}
+
+// citedEvent promotes an event with a recorded name, a birth type, and a date.
+func citedEvent(t *testing.T) (dir, entityID string) {
+	t.Helper()
+	dir, user, sourceID, _ := subjectFixture(t)
+	userID, err := uuid.Parse(user)
+	if err != nil {
+		t.Fatal(err)
+	}
+	source, err := uuid.Parse(sourceID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var subjectID []byte
+	if err := withProjectCatalog(dir, func(c *database.Catalog) error {
+		st, err := subjecttypes.Lookup(c, "event", subjecttypes.OriginProvenencia)
+		if err != nil {
+			return err
+		}
+		s, err := subjects.Create(c, userID[:], subjects.CreateInput{SourceID: source[:], SubjectTypeID: st.ID}, nil)
+		if err != nil {
+			return err
+		}
+		subjectID = s.ID
+		name, err := properties.Lookup(c, "event_name", properties.OriginProvenencia)
+		if err != nil {
+			return err
+		}
+		eventType, err := properties.Lookup(c, "event_type", properties.OriginProvenencia)
+		if err != nil {
+			return err
+		}
+		term, err := propertyterms.Lookup(c, eventType.ID, "birth", propertyterms.OriginProvenencia)
+		if err != nil {
+			return err
+		}
+		dateProp, err := properties.Lookup(c, "date", properties.OriginProvenencia)
+		if err != nil {
+			return err
+		}
+		art, err := artifacts.Create(c, userID[:], artifacts.CreateInput{SourceID: source[:], Label: "Scan"})
+		if err != nil {
+			return err
+		}
+		year := 1849
+		_, err = citations.CreateWithObservations(c, userID[:], citations.CreateInput{
+			ArtifactID: art.ID, LocatorJSON: `{"version":1,"selectors":[{"type":"page","artifact_page":1}]}`,
+		}, []observations.Input{
+			{SubjectID: s.ID, PropertyID: name.ID, ValueText: "The Great Fire", HasText: true},
+			{SubjectID: s.ID, PropertyID: eventType.ID, ValueTermID: term.ID},
+			{SubjectID: s.ID, PropertyID: dateProp.ID, Date: &datevalues.Value{Kind: datevalues.KindPoint, Calendar: "gregorian", StartYear: &year}},
+		})
+		if err != nil {
+			return err
+		}
+		p, err := promote.Save(c, userID[:], promote.Input{SubjectID: subjectID})
+		if err != nil {
+			return err
+		}
+		entityID = uuidString(p.Entity.ID)
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	return dir, entityID
 }
 
 func TestWorkspaceNavCountsConclusionHandles(t *testing.T) {
