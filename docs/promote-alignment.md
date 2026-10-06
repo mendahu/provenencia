@@ -2,7 +2,7 @@
 
 ## Status
 
-**Agreed 2026-10-06; scheduled as Spike 9 slice 8** (§10). This replaces the per-Property compare checklist in [`conclusion-layer-data-model.md`](conclusion-layer-data-model.md) §5.3 and the per-Subject walk in §5.4 once it's adopted. How we got here, and the directions we turned down: [`ideas/promote-matching.md`](ideas/promote-matching.md). Matching today: [`matching.md`](matching.md).
+**Agreed 2026-10-06; scheduled as Spike 9 slice 9** (§10). This replaces the per-Property compare checklist in [`conclusion-layer-data-model.md`](conclusion-layer-data-model.md) §5.3 and the per-Subject walk in §5.4 once it's adopted. How we got here, and the directions we turned down: [`ideas/promote-matching.md`](ideas/promote-matching.md). Matching today: [`matching.md`](matching.md).
 
 **The data model doesn't change:** one Identity Claim per Subject and handle, with Observation pins on the claim and backfill (§5, §5.1).
 
@@ -192,7 +192,8 @@ Spike 9 was replanned around this on 2026-10-06: [`deployment-plan/spike-9/deplo
 
 - **Events and Places come first** (slices 5–6): alignment needs the date module (S9-21), per-Property cardinality (S9-36), and the Event and Place headers for its dropdowns.
 - **The canonical graph gets its own slice** (slice 7): the subject module and automatic bridge filing (S9-28), then the derived values that walk it (S9-31 / S9-32).
-- **Promote alignment is one slice** (slice 8):
+- **Place hierarchy comes before Promote** (slice 8): part-of and succession links (splits and amalgamations included) are filed as bridges from the start, so trying Promote on real research captures them, and alignment is tested with them as edges.
+- **Promote alignment is one slice** (slice 9):
   - **S9-17**, reshaped from #265 / #266: `Compatible`, pins and backfill, the pinned-delete tests. The per-Subject comparison read and its UI plumbing are dropped.
   - **S9-41:** `Align`, a pure package.
   - **S9-42:** the loader and the proposal read.

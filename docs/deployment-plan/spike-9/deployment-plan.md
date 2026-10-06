@@ -6,7 +6,7 @@ MVP for the **Conclusion layer**: assemble canonical Persons, Events, and Places
 
 **Open.** Slices 1–3 landed. **Replanned 2026-10-05** from slice 4 on: the reconciliation design ([`conclusion-reconciliation.md`](../../conclusion-reconciliation.md)) replaces R2's name / date / ranking plan with one reconciler pipeline for every value type, adds per-Property cardinality, and brings place hierarchy into the spike. Briefs S9-D1…D16 in [`design/`](design/) (D7 needs revising; D5 was revised and built in S9-16). Landings go in [`completed.md`](completed.md).
 
-**Replanned again 2026-10-06** from slice 5 on: Promote becomes **one page that aligns a whole Evidence graph** against the canonical graph, proposing a handle, New or Skip for every Subject, with the researcher fine-tuning and one Done ([`promote-alignment.md`](../../promote-alignment.md)). The per-Property compare step and the per-Subject walk are retired (S9-19, S9-29, S9-30; briefs D11, D12). Events and Places move ahead of Promote; the canonical graph gets its own slice; S9-17 / S9-18 are reshaped into one engine PR.
+**Replanned again 2026-10-06** from slice 5 on: Promote becomes **one page that aligns a whole Evidence graph** against the canonical graph, proposing a handle, New or Skip for every Subject, with the researcher fine-tuning and one Done ([`promote-alignment.md`](../../promote-alignment.md)). The per-Property compare step and the per-Subject walk are retired (S9-19, S9-29, S9-30; briefs D11, D12). Events, Places, the canonical graph and the place hierarchy all move ahead of Promote; S9-17 / S9-18 are reshaped into one engine PR.
 
 > **Goal of this spike:** a researcher can promote Subjects off an Evidence graph into Persons, Events, and Places, and open a page for each that shows who or what it is — name and life dates, event and date, place names and where the place sits — reconciled from every member Subject, with the reasoning shown.
 
@@ -356,22 +356,23 @@ SLICE 7 — The canonical graph
   Check: promote a person and then its birth event → the participation files itself;
          "Birth of James Robins"; James shows 1817 – 1880 · York → Toronto.
 
-SLICE 8 — Promote alignment
-  S9-17  Pins + backfill engine (reshaped from #265 / #266; lands now, no UI)
-  S9-41  Align core: pure Go, best-first propagation, data-driven weights, edge signatures, fixed rows
-  S9-42  Alignment loader + stats + proposal read (FFI)
-  S9-43  Batch Promote write: one transaction; one-hop pins + backfill; bridges
-  ✎ S9-D16 ──▶ S9-44  Promote page (rethink; replaces the S9-11 / S9-12 steps)
-  Check: promote Gracie → map the rest of the obituary → strong rows preselected, weak flagged,
-         the rest Skip; Done files everything at once; a pinned delete names the Person.
-
-SLICE 9 — Place hierarchy (the hard way)
+SLICE 8 — Place hierarchy (the hard way)
   S9-38  Place model: place relationship bridge, typed terms with categories, place period, connect rule, loop refusal
   ✎ S9-D15 ──▶ S9-38b Custom term dialog: category for new place relationship types
   S9-39  Place chain composer: parents at a date, candidates when undecided, parts, succession; chains in S9-31's walks
   S9-40  Place hierarchy in Places list and Place detail (designed in D4 / D7)
   Check: draw Toronto part of Upper Canada / Province of Canada / Ontario with periods → Toronto's page shows each by period;
          a cycle is refused; York succeeded by Toronto shows on both; James's birth place reads with its chain.
+
+SLICE 9 — Promote alignment
+  S9-17  Pins + backfill engine (reshaped from #265 / #266; lands now, no UI)
+  S9-41  Align core: pure Go, best-first propagation, data-driven weights, edge signatures, fixed rows
+  S9-42  Alignment loader + stats + proposal read (FFI)
+  S9-43  Batch Promote write: one transaction; one-hop pins + backfill; bridges
+  ✎ S9-D16 ──▶ S9-44  Promote page (rethink; replaces the S9-11 / S9-12 steps)
+  Check: promote Gracie → map the rest of the obituary → strong rows preselected, weak flagged,
+         the rest Skip; Done files everything at once, place relationships drawn on the graph included;
+         a pinned delete names the Person.
 
 SLICE 10 — Search + timings
   S9-33  Deep fixture + timings (including a Promote proposal and Done)
@@ -383,8 +384,8 @@ CLOSE
   S9-99  Dogfood close / docs
 ```
 
-- **Slices run in order.** Within a slice, PRs run top to bottom; the Go PRs at the top of a slice can usually go side by side (S9-13b / S9-14; S9-20 / S9-21; S9-36 / S9-25). **S9-41** (pure Go) can start once S9-21 and S9-36 land and run beside slice 7.
-- **Slice 4 is the foundation for the rest.** S9-13 / S9-14 put every value type on the pipeline. **Promote alignment (slice 8) needs slices 5–7:** dates (S9-21) and cardinality (S9-36) to compare and to tell a conflict from a second value, Event and Place headers (S9-22, S9-25) for its dropdowns, and the canonical graph (S9-28) to walk and to file bridges.
+- **Slices run in order.** Within a slice, PRs run top to bottom; the Go PRs at the top of a slice can usually go side by side (S9-13b / S9-14; S9-20 / S9-21; S9-36 / S9-25). **S9-41** (pure Go) can start once S9-21 and S9-36 land and run beside slices 7–8.
+- **Slice 4 is the foundation for the rest.** S9-13 / S9-14 put every value type on the pipeline. **Promote alignment (slice 9) needs slices 5–7:** dates (S9-21) and cardinality (S9-36) to compare and to tell a conflict from a second value, Event and Place headers (S9-22, S9-25) for its dropdowns, and the canonical graph (S9-28) to walk and to file bridges. **Place hierarchy (slice 8) goes first** so that trying Promote on real research captures part-of and succession links from the start, and alignment is tested with them as edges.
 - **Replanned 2026-10-05.** IDs of PRs that keep their purpose stay; new work takes new IDs (S9-13a, S9-13b, S9-36 – S9-40), so handoff notes in [`completed.md`](completed.md) and code comments stay right.
 - **Replanned 2026-10-06 (Promote alignment).** New work: S9-41 – S9-44 and brief S9-D16. **Retired:** S9-19 and S9-D11 (compare → S9-44's evidence sheet), S9-29 (neighborhood read → S9-42), S9-30 and S9-D12 (walk → S9-44), S9-18 (folded into S9-17 and S9-44). S9-17 keeps its ID, reshaped from the closed #265 / #266.
 - **Migrations 000037 / 000038 are fixed.** They first shipped on the closed PRs #255 / #256, and the researcher's local projects already carry them. S9-13a lands them on `main` byte-for-byte so those projects open again; nothing else may take those numbers, and later changes are new migrations (000039 on), never edits. **000039** is S9-13's `reason` column; **000040** is S9-14's rename to `auto_reconciler_*` and its outcomes table. **000041** is S9-16's vote on outvoted outcomes (cache version 10). The next is **000042**; the next cache version **11**. **Cache versions start at 5** after S9-13a: projects may hold a cache stamped 3 or 4 by the closed PRs, and a new meaning must never reuse a stamp.
@@ -428,15 +429,15 @@ CLOSE
 | S9-28 Subject module + bridge filing | — | S9-12, S9-13 |
 | S9-31 Composer walks | — | S9-22, S9-25, S9-28 |
 | S9-32 Fill derived cells | (D2 / D3 / D5 / D6) | S9-31, S9-23, S9-24 |
+| S9-38 Place model | — | S9-28, S9-36 |
+| S9-38b Custom term dialog: category | **S9-D15** | S9-38 |
+| S9-39 Place chain composer | — | S9-38, S9-21, S9-25, S9-31 |
+| S9-40 Place hierarchy in list and detail | (D4 / D7) | S9-39, S9-26, S9-27, S9-32 |
 | S9-17 Pins + backfill engine | — | S9-12, S9-13b |
 | S9-41 Align core | — | S9-17, S9-21, S9-36 |
 | S9-42 Alignment loader + proposal read | — | S9-41, S9-22, S9-25, S9-28 |
 | S9-43 Batch Promote write | — | S9-17, S9-28, S9-42 |
 | S9-44 Promote page | **S9-D16** (rethink of D9 / D10) | S9-42, S9-43 |
-| S9-38 Place model | — | S9-28, S9-36 |
-| S9-38b Custom term dialog: category | **S9-D15** | S9-38 |
-| S9-39 Place chain composer | — | S9-38, S9-21, S9-25, S9-31 |
-| S9-40 Place hierarchy in list and detail | (D4 / D7) | S9-39, S9-26, S9-27, S9-32 |
 | S9-33 Deep fixture + timings | — | S9-39, S9-44 |
 | S9-34 Search documents from headers | — | S9-31, S9-34a |
 | S9-35 Omnibar hits | **S9-D13** | S9-34 |
@@ -474,7 +475,7 @@ In order; each brief sits just above the PR it gates.
 - [x] S9-15 — Detail composer + detail read → [`completed.md`](completed.md)
 - [x] ✎ S9-D5 — Design: Person detail (revise for reasoning) → [`completed.md`](completed.md)
 - [x] S9-16 — Person detail → [`completed.md`](completed.md)
-- [ ] S9-17 — Pins + backfill engine (reshaped; lands now, slice 8)
+- [ ] S9-17 — Pins + backfill engine (reshaped; lands now, slice 9)
 - [ ] S9-20 — Seed `event_name`
 - [ ] S9-21 — Date module + windows
 - [ ] S9-22 — Event composer + reads
@@ -493,16 +494,16 @@ In order; each brief sits just above the PR it gates.
 - [ ] S9-28 — Subject module + bridge filing
 - [ ] S9-31 — Composer walks + header dependents
 - [ ] S9-32 — Fill derived cells in lists and details
-- [ ] S9-41 — Align core
-- [ ] S9-42 — Alignment loader + proposal read
-- [ ] S9-43 — Batch Promote write
-- [ ] ✎ S9-D16 — Design: Promote page (rethink)
-- [ ] S9-44 — Promote page
 - [ ] S9-38 — Place model: relationships, periods
 - [ ] ✎ S9-D15 — Design: custom term category
 - [ ] S9-38b — Custom term dialog: category
 - [ ] S9-39 — Place chain composer
 - [ ] S9-40 — Place hierarchy in list and detail
+- [ ] S9-41 — Align core
+- [ ] S9-42 — Alignment loader + proposal read
+- [ ] S9-43 — Batch Promote write
+- [ ] ✎ S9-D16 — Design: Promote page (rethink)
+- [ ] S9-44 — Promote page
 - [ ] S9-33 — Deep fixture + timings
 - [ ] S9-34 — Search documents from headers + dependents
 - [ ] ✎ S9-D13 — Design: omnibar hits
@@ -863,7 +864,42 @@ Design: [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md). PR
 | **Check** | *Birth of James Robins*; James shows *1817 – 1880 · York → Toronto* (chains follow in S9-40). |
 | **Depends on** | S9-31, S9-23, S9-24 |
 
-### Slice 8 — Promote alignment
+### Slice 8 — Place hierarchy (the hard way)
+
+Design: [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md) §11.1 and R9.
+
+#### S9-38 — Place model: relationships, periods
+
+| | |
+| --- | --- |
+| **In** | Seed (Install + migration): subject type `place_relationship` (bridge) with Properties `from` (place), `to` (place), `place_relationship_type` (term); term **category** on `property_terms` (`hierarchical` / `temporal`, nullable for terms that don't use it); seeded types `administrative`, `geographic`, `ecclesiastical` (hierarchical) and `succeeded_by` (temporal); `start_date` / `end_date` bound to `place` (its period). A `connectrules` bridge place ↔ place disambiguated by `place_relationship_type`, so it is drawn and cited on the Evidence graph like any bridge, and filed automatically through S9-28 (keyed by the two places and the type, direction kept). **Succession may branch:** a split is one Place `succeeded_by` several, an amalgamation several Places `succeeded_by` one; nothing assumes one successor. **Loop refusal** in S9-28's bridge filing (alignment flags it before Done): a hierarchical link that would close a cycle among canonical places, or a looping succession, is refused with a clear error. Delete Impact and search registries for the new kind. |
+| **Testable** | Seeds; connect rule; cycles refused (direct and transitive); a researcher-added type with a category behaves like the seeded one; a split (one → two) and an amalgamation (two → one) file and read back. |
+| **Depends on** | S9-28, S9-36 |
+
+#### S9-38b — Custom term dialog: category
+
+| | |
+| --- | --- |
+| **In** | Per **S9-D15**: when a researcher adds a term to a Property whose terms carry a category (`place_relationship_type`), the composer's custom term dialog asks for it (hierarchical / temporal); FFI `createPropertyTerm` takes the category. |
+| **Depends on** | **S9-D15**, S9-38 |
+
+#### S9-39 — Place chain composer
+
+| | |
+| --- | --- |
+| **In** | Go composer over the cache: a Place's hierarchical parents at a date (links hold where the two places' periods overlap; no period = always), following `administrative` first for display; every candidate when the date can't decide; its parts; its succession both ways. A chain reader for other composers: plug chains into S9-31's walks (life places and event places read with their chain at the event's date) and search. Header dependents for places (a parent's rename reprojects its children's headers). Cycle guard. |
+| **Testable** | Toronto in 1820 / 1850 / 1950; *about 1841* → both; several parents; succession never builds a chain; succession both ways with several successors (a split) and several predecessors (an amalgamation); undated places always hold. |
+| **Depends on** | S9-38, S9-21, S9-25, S9-31 |
+
+#### S9-40 — Place hierarchy in list and detail
+
+| | |
+| --- | --- |
+| **In** | Places list chain cell (today's chain); Place detail period, parents by type with their periods, parts, succession — designed in **S9-D4 / S9-D7**; no new brief. |
+| **Check** | Draw Toronto part of Upper Canada, Province of Canada and Ontario with periods → Toronto's page shows each by period; York succeeded by Toronto shows on both pages. |
+| **Depends on** | S9-39, S9-26, S9-27, S9-32 |
+
+### Slice 9 — Promote alignment
 
 Design: [`promote-alignment.md`](../../promote-alignment.md). Brief: [`S9-D16`](design/S9-D16-promote-page.md) (a **rethink** of the Promote board).
 
@@ -907,41 +943,6 @@ Design: [`promote-alignment.md`](../../promote-alignment.md). Brief: [`S9-D16`](
 | **In** | Per **S9-D16** (rethink). The Promote place becomes one page: the choose-target and claim steps (S9-11 / S9-12) and `PromoteFlow`'s step machine are replaced by a row list (suggested / decided, target, claim fields, pin toggles). Entry from any card opens with that row; *Map the rest of this graph*; re-propose after every decision with *updated* marks; the evidence sheet; the bridge summary with switches; duplicate and conflict warnings; Done; leave guard. The app half of the old S9-18: pinned deletes from the composer and the graph, covered through FakeStore pins. |
 | **Check** | Promote Gracie → map the rest → strong rows preselected, weak flagged, the rest Skip; retarget a child → only suggested rows move; Done files everything at once; delete a pinned Observation → the confirm names the Person. |
 | **Depends on** | **S9-D16**, S9-42, S9-43 |
-
-### Slice 9 — Place hierarchy (the hard way)
-
-Design: [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md) §11.1 and R9.
-
-#### S9-38 — Place model: relationships, periods
-
-| | |
-| --- | --- |
-| **In** | Seed (Install + migration): subject type `place_relationship` (bridge) with Properties `from` (place), `to` (place), `place_relationship_type` (term); term **category** on `property_terms` (`hierarchical` / `temporal`, nullable for terms that don't use it); seeded types `administrative`, `geographic`, `ecclesiastical` (hierarchical) and `succeeded_by` (temporal); `start_date` / `end_date` bound to `place` (its period). A `connectrules` bridge place ↔ place disambiguated by `place_relationship_type`, so it is drawn and cited on the Evidence graph like any bridge, and filed automatically through S9-28 (keyed by the two places and the type, direction kept). **Loop refusal** in S9-28's bridge filing (alignment flags it before Done): a hierarchical link that would close a cycle among canonical places, or a looping succession, is refused with a clear error. Delete Impact and search registries for the new kind. |
-| **Testable** | Seeds; connect rule; cycles refused (direct and transitive); a researcher-added type with a category behaves like the seeded one. |
-| **Depends on** | S9-28, S9-36 |
-
-#### S9-38b — Custom term dialog: category
-
-| | |
-| --- | --- |
-| **In** | Per **S9-D15**: when a researcher adds a term to a Property whose terms carry a category (`place_relationship_type`), the composer's custom term dialog asks for it (hierarchical / temporal); FFI `createPropertyTerm` takes the category. |
-| **Depends on** | **S9-D15**, S9-38 |
-
-#### S9-39 — Place chain composer
-
-| | |
-| --- | --- |
-| **In** | Go composer over the cache: a Place's hierarchical parents at a date (links hold where the two places' periods overlap; no period = always), following `administrative` first for display; every candidate when the date can't decide; its parts; its succession both ways. A chain reader for other composers: plug chains into S9-31's walks (life places and event places read with their chain at the event's date) and search. Header dependents for places (a parent's rename reprojects its children's headers). Cycle guard. |
-| **Testable** | Toronto in 1820 / 1850 / 1950; *about 1841* → both; several parents; succession never builds a chain; undated places always hold. |
-| **Depends on** | S9-38, S9-21, S9-25, S9-31 |
-
-#### S9-40 — Place hierarchy in list and detail
-
-| | |
-| --- | --- |
-| **In** | Places list chain cell (today's chain); Place detail period, parents by type with their periods, parts, succession — designed in **S9-D4 / S9-D7**; no new brief. |
-| **Check** | Draw Toronto part of Upper Canada, Province of Canada and Ontario with periods → Toronto's page shows each by period; York succeeded by Toronto shows on both pages. |
-| **Depends on** | S9-39, S9-26, S9-27, S9-32 |
 
 ### Slice 10 — Search + timings
 
