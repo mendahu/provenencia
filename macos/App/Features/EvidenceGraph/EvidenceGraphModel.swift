@@ -697,8 +697,8 @@ final class EvidenceGraphModel {
         )
     }
 
-    /// Location of a promoted subject's handle page. Persons and Events open
-    /// their pages. Places stay closed until S9-27.
+    /// Location of a promoted subject's handle page. Persons, Events, and
+    /// Places open their pages.
     func openHandle(subjectID: String) -> WorkspaceLocation? {
         guard let placed = primary(in: currentSnapshot(), id: subjectID),
               let membership = placed.membership
@@ -712,6 +712,12 @@ final class EvidenceGraphModel {
             )
         case "event":
             return .eventDetail(
+                entityId: membership.entity.id,
+                ref: membership.entity.ref,
+                title: placed.displayName
+            )
+        case "place":
+            return .placeDetail(
                 entityId: membership.entity.id,
                 ref: membership.entity.ref,
                 title: placed.displayName

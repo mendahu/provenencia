@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// What a Conclusion page shows for its handle's state. A stale page stays
-/// readable while it refreshes. Person, Event, and (later) Place each supply
+/// readable while it refreshes. Person, Event, and Place each supply
 /// their own content; the page does not know which kind it is.
 enum ConclusionDetailPresentation<Content: Equatable>: Equatable {
     case loading
@@ -25,6 +25,14 @@ enum ConclusionDetailPresentation<Content: Equatable>: Equatable {
     }
 }
 
+/// One section under Details. Empty until a later slice fills its rows.
+struct ConclusionDetailSection: Equatable, Identifiable {
+    var id: String
+    var title: String
+    var aside: String
+    var emptyText: String
+}
+
 /// The fields a Conclusion detail page lays out. Each kind owns how it
 /// fills them (mark, title, the line under the title, and the rows). The
 /// page only places them. Giving a kind its own page later does not need a
@@ -35,11 +43,16 @@ protocol ConclusionDetailBody: Equatable {
     var showsRef: Bool { get }
     var members: String { get }
     var rows: [ReconciledValueRowModel] { get }
+    var sections: [ConclusionDetailSection] { get }
+}
+
+extension ConclusionDetailBody {
+    var sections: [ConclusionDetailSection] { [] }
 }
 
 /// Shared Conclusion detail chrome (S9-24). A view, not a place: the caller
 /// names the entity, and the place registry warms `conclusionDetail` for
-/// that id. Person, Event, and later Place stay separate history entries.
+/// that id. Person, Event, and Place stay separate history entries.
 struct ConclusionDetailPage<Content: ConclusionDetailBody, Summary: View>: View {
     let session: WorkspaceSession
     let entityId: String
@@ -143,7 +156,41 @@ private struct ConclusionDetailLoaded<Content: ConclusionDetailBody, Summary: Vi
                         ReconciledValueRow(model: row)
                     }
                 }
+                ForEach(content.sections) { section in
+                    ConclusionDetailEmptySection(section: section)
+                }
             }
+        }
+    }
+}
+
+/// A relationship section with its header and an empty sentence. S9-40 fills the rows.
+private struct ConclusionDetailEmptySection: View {
+    let section: ConclusionDetailSection
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            PVSectionHeader(title: title, aside: {
+                Text(verbatim: section.aside)
+                    .font(PVFont.body(size: PVTypeScale.caption, italic: true))
+                    .foregroundStyle(PVColor.textMuted)
+                    .lineLimit(2)
+            })
+            Text(verbatim: section.emptyText)
+                .font(PVFont.body(size: PVTypeScale.bodySmall, italic: true))
+                .foregroundStyle(PVColor.textMuted)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.vertical, PVSpacing.space5)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(L10n.Conclusions.a11yList(section.title, rest: section.emptyText))
+    }
+
+    private var title: LocalizedStringResource {
+        switch section.id {
+        case "contains": L10n.Conclusions.placeContains
+        case "succession": L10n.Conclusions.placeSuccession
+        default: L10n.Conclusions.placePartOf
         }
     }
 }

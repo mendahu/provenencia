@@ -1494,7 +1494,7 @@ struct EvidenceGraphModelTests {
         #expect(location?.title == "James Robins")
     }
 
-    /// A promoted Event opens its page. An unpromoted card, and a Place, do not.
+    /// A promoted Event opens its page. A promoted Place opens its page. An unpromoted card does not.
     @Test func promotedEventOpensItsPage() async throws {
         let store = makeStore()
         let event = CatalogSubject(
@@ -1533,7 +1533,11 @@ struct EvidenceGraphModelTests {
         #expect(location?.section == .events)
         #expect(location?.entityId == membership?.entity.id)
         #expect(location?.title == "Fire at York")
-        #expect(model.openHandle(subjectID: "s-york") == nil)
+        let york = handle?.value?.memberships.first { $0.subjectID == "s-york" }
+        let yorkPage = model.openHandle(subjectID: "s-york")
+        #expect(yorkPage?.section == .places)
+        #expect(yorkPage?.entityId == york?.entity.id)
+        #expect(yorkPage?.title == "York")
     }
 
     @Test func promotedCardShowsMembershipAndNoLongerOffersPromote() async throws {

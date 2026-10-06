@@ -7147,6 +7147,90 @@ enum L10n {
             comment: "Empty Place row on an Event page until places are filled"
         )
 
+        static let placeNames = LocalizedStringResource(
+            "conclusions.place.names",
+            defaultValue: "Names",
+            comment: "Row label for a Place's toponyms"
+        )
+
+        static let emptyPlaceNames = LocalizedStringResource(
+            "conclusions.place.emptyNames",
+            defaultValue: "No names recorded",
+            comment: "Empty Names row on a Place page"
+        )
+
+        static let placePeriod = LocalizedStringResource(
+            "conclusions.place.period",
+            defaultValue: "Period",
+            comment: "Row label for when a Place was current"
+        )
+
+        static let emptyPlacePeriod = LocalizedStringResource(
+            "conclusions.place.emptyPeriod",
+            defaultValue: "No period recorded",
+            comment: "Empty Period row on a Place page until periods are filled"
+        )
+
+        static let placeNoParent = LocalizedStringResource(
+            "conclusions.place.noParent",
+            defaultValue: "No parent place recorded",
+            comment: "Header line when a Place has no parent in the hierarchy"
+        )
+
+        static let placePartOf = LocalizedStringResource(
+            "conclusions.place.partOf",
+            defaultValue: "Part of",
+            comment: "Section heading for the places this Place belongs to"
+        )
+
+        static let placePartOfAside = LocalizedStringResource(
+            "conclusions.place.partOfAside",
+            defaultValue: "Grouped by type · span is when the link holds",
+            comment: "Aside under the Part of heading on a Place page"
+        )
+
+        static let placePartOfEmpty = LocalizedStringResource(
+            "conclusions.place.partOfEmpty",
+            defaultValue: "Not part of any recorded place",
+            comment: "Empty Part of section on a Place page"
+        )
+
+        static let placeContains = LocalizedStringResource(
+            "conclusions.place.contains",
+            defaultValue: "Contains",
+            comment: "Section heading for the places inside this Place"
+        )
+
+        static let placeContainsAside = LocalizedStringResource(
+            "conclusions.place.containsAside",
+            defaultValue: "Direct children only",
+            comment: "Aside under the Contains heading on a Place page"
+        )
+
+        static let placeContainsEmpty = LocalizedStringResource(
+            "conclusions.place.containsEmpty",
+            defaultValue: "No places recorded as part of this one",
+            comment: "Empty Contains section on a Place page"
+        )
+
+        static let placeSuccession = LocalizedStringResource(
+            "conclusions.place.succession",
+            defaultValue: "Succession",
+            comment: "Section heading for a Place's renames and mergers"
+        )
+
+        static let placeSuccessionAside = LocalizedStringResource(
+            "conclusions.place.successionAside",
+            defaultValue: "Renames and mergers · not part of the hierarchy",
+            comment: "Aside under the Succession heading on a Place page"
+        )
+
+        static let placeSuccessionEmpty = LocalizedStringResource(
+            "conclusions.place.successionEmpty",
+            defaultValue: "No predecessor or successor recorded",
+            comment: "Empty Succession section on a Place page"
+        )
+
         static let personName = LocalizedStringResource(
             "conclusions.person.name",
             defaultValue: "Name",
@@ -7311,6 +7395,14 @@ enum L10n {
             ), value)
         }
 
+        static func whyThese(_ count: Int, label: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.why.these",
+                defaultValue: "Why these %1$lld %2$@",
+                comment: "Heading of the records behind several kept values; arguments are the count and the lowercased field label"
+            ), count, label.localizedLowercase)
+        }
+
         static func whyRecords(_ label: String) -> String {
             L10n.format(LocalizedStringResource(
                 "conclusions.why.records",
@@ -7349,6 +7441,14 @@ enum L10n {
                 defaultValue: "mixed from %@",
                 comment: "VoiceOver state of a field showing several values; argument is the Source count text"
             ), sources)
+        }
+
+        static func a11yMultiple(_ count: Int, sources: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.a11y.multiple",
+                defaultValue: "%#@values@ from %2$@",
+                comment: "VoiceOver state of a field that keeps several values; arguments are how many values and the Source count text"
+            ), count, sources)
         }
 
         static func a11yEmpty(_ label: String) -> String {

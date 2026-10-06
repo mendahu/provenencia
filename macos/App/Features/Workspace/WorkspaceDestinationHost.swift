@@ -97,7 +97,7 @@ struct WorkspaceDestinationHost: View {
             PlacesListView(session: session)
                 .accessibilityIdentifier("workspace.destination.places")
         case .placeDetail:
-            ConclusionStubView(section: .places)
+            PlaceDetailView(session: session, entityId: navigation.currentLocation.entityId ?? "")
                 .accessibilityIdentifier("workspace.destination.placeDetail")
         }
     }
