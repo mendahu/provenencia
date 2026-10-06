@@ -388,7 +388,7 @@ CLOSE
 - **Slice 4 is the foundation for the rest.** S9-13 / S9-14 put every value type on the pipeline. **Promote alignment (slice 9) needs slices 5–7:** dates (S9-21) and cardinality (S9-36) to compare and to tell a conflict from a second value, Event and Place headers (S9-22, S9-25) for its dropdowns, and the canonical graph (S9-28) to walk and to file bridges. **Place hierarchy (slice 8) goes first** so that trying Promote on real research captures part-of and succession links from the start, and alignment is tested with them as edges.
 - **Replanned 2026-10-05.** IDs of PRs that keep their purpose stay; new work takes new IDs (S9-13a, S9-13b, S9-36 – S9-40), so handoff notes in [`completed.md`](completed.md) and code comments stay right.
 - **Replanned 2026-10-06 (Promote alignment).** New work: S9-41 – S9-44 and brief S9-D16. **Retired:** S9-19 and S9-D11 (compare → S9-44's evidence sheet), S9-29 (neighborhood read → S9-42), S9-30 and S9-D12 (walk → S9-44), S9-18 (folded into S9-17 and S9-44). S9-17 keeps its ID, reshaped from the closed #265 / #266.
-- **Migrations 000037 / 000038 are fixed.** They first shipped on the closed PRs #255 / #256, and the researcher's local projects already carry them. S9-13a lands them on `main` byte-for-byte so those projects open again; nothing else may take those numbers, and later changes are new migrations (000039 on), never edits. **000039** is S9-13's `reason` column; **000040** is S9-14's rename to `auto_reconciler_*` and its outcomes table. **000041** is S9-16's vote on outvoted outcomes (cache version 10). The next is **000042**; the next cache version **11**. **Cache versions start at 5** after S9-13a: projects may hold a cache stamped 3 or 4 by the closed PRs, and a new meaning must never reuse a stamp.
+- **Migrations 000037 / 000038 are fixed.** They first shipped on the closed PRs #255 / #256, and the researcher's local projects already carry them. S9-13a lands them on `main` byte-for-byte so those projects open again; nothing else may take those numbers, and later changes are new migrations (000039 on), never edits. **000039** is S9-13's `reason` column; **000040** is S9-14's rename to `auto_reconciler_*` and its outcomes table. **000041** is S9-16's vote on outvoted outcomes (cache version 10). **000042** is S9-20's `event_name` backfill (no cache bump). The next is **000043**; the next cache version **11**. **Cache versions start at 5** after S9-13a: projects may hold a cache stamped 3 or 4 by the closed PRs, and a new meaning must never reuse a stamp.
 - **The cache is honest from slice 2.** S9-06 ships the rebuild-equals-upkeep test; every later PR that adds a write path or trigger adds to it.
 - **Churn is expected.** A confirm-and-mint Promote button (slice 1), stubbed sidebar items, and empty life-date cells are fine between slices. Today's step-based Promote (S9-11 / S9-12) stays in use until S9-44 replaces it; from S9-28 on it already files bridges.
 
@@ -476,7 +476,7 @@ In order; each brief sits just above the PR it gates.
 - [x] ✎ S9-D5 — Design: Person detail (revise for reasoning) → [`completed.md`](completed.md)
 - [x] S9-16 — Person detail → [`completed.md`](completed.md)
 - [x] S9-17 — Pins + backfill engine (reshaped; landed early, slice 9) → [`completed.md`](completed.md)
-- [ ] S9-20 — Seed `event_name`
+- [x] S9-20 — Seed `event_name` → [`completed.md`](completed.md)
 - [ ] S9-21 — Date module + windows
 - [ ] S9-22 — Event composer + reads
 - [ ] ✎ S9-D3 — Design: Events list
@@ -770,6 +770,8 @@ Design: [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md). PR
 | **In** | `event_name` (`text`) bound to `event`: Install seed + migration. |
 | **Depends on** | — |
 
+**Done.** See [`completed.md`](completed.md#s9-20--seed-event_name). The Property is `event_name` (`text`), bound to `event` at sort order 1, unlocked. Date bindings are 2–4. `event_type`, `role`, `relationship_type`, `name`, and `toponym` are locked in the registry. Migration **000042** backfills catalogs that already have the `event` type; new catalogs get a UUIDv7 from Install. For **S9-22**: read this Property first in the title precedence. Match weights and search documents stay out until **S9-41** / **S9-34**.
+
 #### S9-21 — Date module + windows
 
 | | |
@@ -1059,7 +1061,7 @@ Honesty pass against the [goal bar](#goal-dogfood-bar); ledger timings recorded;
 - [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md) §12: implementation status as each module lands.
 - [`conclusion-layer-data-model.md`](../../conclusion-layer-data-model.md) §13: Place `contained_in` question answered by place relationships (R9); new `place_relationship` kind in the kinds list.
 - [`seeded-vocabulary.md`](../../seeded-vocabulary.md): `place_relationship` kind and its Properties, `place_relationship_type` terms with categories, place `start_date` / `end_date`, Property cardinality (S9-36, S9-38).
-- [`seeded-vocabulary.md`](../../seeded-vocabulary.md) §5.5: mark claim confidence grades as seeded. §3.5: `subject` = the event's principal(s), possibly several; marriage uses two `subject` Participations; `spouse` is a principal's spouse on another event. §3.2 / §3.3: `event_name` (text) bound to `event`.
+- [`seeded-vocabulary.md`](../../seeded-vocabulary.md) §5.5: mark claim confidence grades as seeded. §3.5: `subject` = the event's principal(s), possibly several; marriage uses two `subject` Participations; `spouse` is a principal's spouse on another event. §3.2 / §3.3: `event_name` (text) bound to `event` (landed in S9-20).
 - [`catalog-refs.md`](../../catalog-refs.md): canonical ref minting.
 - [`catalog-deletes.md`](../../catalog-deletes.md): Identity Claim / evidence Impact (done in S9-02: non-blocking cascades, explicit audited release); hook cache dependents into the release calls (S9-06).
 - [`macos-client-patterns.md`](../../macos-client-patterns.md): Conclusion query keys and their invalidation rule; Go returns structures (DateValue, NameValue, title parts), Swift formats text.

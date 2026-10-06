@@ -63,8 +63,22 @@ func TestSubjectVocab(t *testing.T) {
 					t.Fatal(err)
 				}
 				eb, err := ListBindings(c, evt.ID)
-				if err != nil || len(eb) != 4 {
-					t.Fatalf("event bindings %v len=%d want 4", err, len(eb))
+				if err != nil || len(eb) != 5 {
+					t.Fatalf("event bindings %v len=%d want 5", err, len(eb))
+				}
+				en, err := properties.Lookup(c, "event_name", properties.OriginProvenencia)
+				if err != nil || en.ValueType != properties.ValueTypeText || en.Origin != properties.OriginProvenencia {
+					t.Fatalf("event_name %+v %v", en, err)
+				}
+				var nameBinding *Binding
+				for i := range eb {
+					if eb[i].Property.Key == "event_name" {
+						nameBinding = &eb[i]
+						break
+					}
+				}
+				if nameBinding == nil || nameBinding.Locked || nameBinding.SortOrder != 1 {
+					t.Fatalf("event_name binding %+v", nameBinding)
 				}
 				participation, err := subjecttypes.Lookup(c, "participation", subjecttypes.OriginProvenencia)
 				if err != nil {
@@ -80,8 +94,8 @@ func TestSubjectVocab(t *testing.T) {
 						locked++
 					}
 				}
-				if locked != 2 {
-					t.Fatalf("participation locked=%d want 2", locked)
+				if locked != 3 {
+					t.Fatalf("participation locked=%d want 3", locked)
 				}
 			},
 		},
@@ -164,8 +178,14 @@ func TestSubjectVocab(t *testing.T) {
 				if !LockedBinding("participation", "person") {
 					t.Fatal("expected locked")
 				}
-				if !LockedBinding("event", "date") || !LockedBinding("event", "start_date") || !LockedBinding("event", "end_date") {
-					t.Fatal("expected event date Properties locked")
+				if !LockedBinding("event", "event_type") || !LockedBinding("event", "date") || !LockedBinding("event", "start_date") || !LockedBinding("event", "end_date") {
+					t.Fatal("expected event_type and event date Properties locked")
+				}
+				if !LockedBinding("participation", "role") || !LockedBinding("relationship", "relationship_type") {
+					t.Fatal("expected role and relationship_type locked")
+				}
+				if !LockedBinding("person", "name") || !LockedBinding("place", "toponym") {
+					t.Fatal("expected name and toponym locked")
 				}
 				rule := Connect("person", "event")
 				if rule.Refuse || rule.BridgeTypeKey != "participation" || rule.Disambiguation != DisambiguationRole {

@@ -35,6 +35,7 @@ IDs stay stable (`S9-NN`, `S9-DN`). Do not renumber when moving steps here.
 | S9-D5 | Design | Person detail (revised for reasoning) |
 | S9-16 | PR | Person detail |
 | S9-17 | PR | Pins + backfill engine |
+| S9-20 | PR | Seed `event_name` |
 
 ## Steps
 
@@ -817,3 +818,24 @@ Promote can now record which records a join was confirmed against, on both claim
 - Pins one hop through a bridge, and the batch write: **S9-43**.
 - Any UI, FFI or Swift pairs API, and FakeStore pins: **S9-43 / S9-44**.
 - The per-Subject comparison read and the compare step from #265 were dropped; alignment (S9-41) and the evidence sheet (S9-44) replace them.
+
+### S9-20 — Seed `event_name`
+
+An Event can carry a recorded historical name (*The Great Fire of 1849*) as text. A person's structured `name` stays unbound from `event`.
+
+**What shipped**
+
+- Property `event_name` (`text`, label *Event name*) in the subjectvocab registry, bound to `event` immediately after `event_type` (sort order 1), unlocked. The three date bindings move to sort orders 2–4 and stay locked.
+- `event_type` on `event`, `role` on `participation`, `relationship_type` on `relationship`, `name` on `person`, and `toponym` on `place` are locked, so the Properties page cannot unbind the slots the walks, rows, and titles read. The lock is in the compiled registry, not a column, so existing catalogs pick it up with no migration.
+- Migration **000042** writes the Property and binding when the provenencia `event` type is already present. A new catalog is empty at that step; Install mints the UUIDv7.
+- [`seeded-vocabulary.md`](../../seeded-vocabulary.md) §3.2 / §3.3 list the Property and the binding.
+
+**What changed for researchers**
+
+- On an Event, the citation composer offers *Event name*. The Properties page no longer unbinds Event type, Role, Relationship type, Name, or Toponym.
+
+**What stayed out**
+
+- Title precedence (`event_name` first): **S9-22**. Subject titles (*Birth of …*): **S9-31**.
+- Search documents that include the name: **S9-34**.
+- Match weights for the Property: **S9-41**.
