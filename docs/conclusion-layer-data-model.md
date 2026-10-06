@@ -247,7 +247,7 @@ The same review applies when a pinned Observation is deleted or its value change
 
 ## 5.3 Promote comparison (future UI)
 
-> **Open problem (2026-10-05):** the per-Property checklist below is not the design we'll build. Identity is mostly carried by a Subject's neighbors (its birth event, its places, its family), pins duplicate across the claims that share them, and most agreements can be decided automatically. Scope and directions: [`ideas/promote-matching.md`](ideas/promote-matching.md). §5.1, §5.3 and §5.4 change once that's settled.
+> **Being replaced (2026-10-06):** the per-Property checklist below, and the per-Subject walk in §5.4, are not the design we'll build. Identity is mostly carried by a Subject's neighbors (its birth event, its places, its family), and most agreements can be decided automatically. The proposed replacement is one page that aligns the whole Evidence graph against the canonical graph, with the researcher fine-tuning: [`promote-alignment.md`](promote-alignment.md). The problem and the directions explored: [`ideas/promote-matching.md`](ideas/promote-matching.md). The pins and backfill in §5.1 stand; the pair check widens to one-hop neighbors.
 
 The screen below is the intended promote flow for a later spike. The schema does not require it. Accepting a claim with an empty exhibit stays valid, and that claim may show as undocumented. The product offers the comparison; it does not block the accept.
 
