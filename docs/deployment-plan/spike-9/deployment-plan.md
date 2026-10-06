@@ -484,8 +484,8 @@ In order; each brief sits just above the PR it gates.
 - [x] ✎ S9-D6 — Design: Event detail
 - [x] S9-24 — Event detail
 - [x] S9-36 — Property cardinality
-- [ ] ✎ S9-D14 — Design: Properties cardinality
-- [ ] S9-37 — Properties page: cardinality
+- [x] ✎ S9-D14 — Design: Properties cardinality
+- [x] S9-37 — Properties page: cardinality
 - [ ] S9-25 — Place composer + reads
 - [ ] ✎ S9-D4 — Design: Places list (revise for names and chain)
 - [ ] S9-26 — Places list
@@ -819,7 +819,7 @@ Design: [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md). PR
 | **In** | Migration: `properties.cardinality` (`single` / `multiple`, default `single`); `toponym` seeded `multiple` (Install + migration). The pipeline honors it (design §8): multi-valued keeps every distinct surviving value; majority never crowds out a distinct value; confidence still drops weak ones. Upkeep: a cardinality change recomputes every handle carrying the Property; joins rebuild-equals-upkeep. FFI on the Property read / update. |
 | **Depends on** | S9-14 |
 
-**Done.** See [`completed.md`](completed.md#s9-36--property-cardinality). Migration `000043` adds `properties.cardinality`; seeded `toponym` is `multiple`. The pipeline keeps every distinct surviving value on a multiple Property, and confidence still drops a weak one. Cache version **12** rebuilds existing catalogs on open. A cardinality change recomputes the handles that carry the Property in the same transaction, and that path matches a full rebuild. List and update round-trip the field. **S9-D14** and **S9-37** stay open.
+**Done.** See [`completed.md`](completed.md#s9-36--property-cardinality). Migration `000043` adds `properties.cardinality`; seeded `toponym` is `multiple`. The pipeline keeps every distinct surviving value on a multiple Property, and confidence still drops a weak one. Cache version **12** rebuilds existing catalogs on open. A cardinality change recomputes the handles that carry the Property in the same transaction, and that path matches a full rebuild. List and update round-trip the field. The Properties control is **S9-37**.
 
 #### S9-37 — Properties page: cardinality
 
@@ -827,6 +827,8 @@ Design: [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md). PR
 | --- | --- |
 | **In** | Per **S9-D14**: a cardinality control in the Property inspector and create form (seeded Properties read-only). The mutation joins `conclusionTriggers` (via `updatedProperty`). |
 | **Depends on** | **S9-D14**, S9-36 |
+
+**Done.** See [`completed.md`](completed.md#s9-37--properties-page-cardinality). Brief archived: [`design/archive/S9-D14-properties-cardinality.md`](design/archive/S9-D14-properties-cardinality.md). The inspector and the create form offer Holds: one value or several values. Seeded Properties show it read-only. Create writes the column. `updatedProperty` joins `conclusionTriggers`.
 
 #### S9-25 — Place composer + reads
 

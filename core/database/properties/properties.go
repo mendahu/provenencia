@@ -63,7 +63,7 @@ const (
 	sqlList = `SELECT p.id, p.key, p.origin, p.label, COALESCE(p.description, ''), p.value_type, p.cardinality,
 			(SELECT COUNT(*) FROM observations o WHERE o.property_id = p.id)
 		FROM properties p ORDER BY p.label COLLATE NOCASE, p.origin, p.key`
-	sqlUpdate = `UPDATE properties SET label = ?, description = ?, cardinality = ? WHERE id = ?`
+	sqlUpdate        = `UPDATE properties SET label = ?, description = ?, cardinality = ? WHERE id = ?`
 	sqlDelete        = `DELETE FROM properties WHERE id = ?`
 	sqlUsedBy        = `SELECT COUNT(*) FROM observations WHERE property_id = ?`
 	sqlCountByOrigin = `SELECT origin, COUNT(*) FROM properties GROUP BY origin`
@@ -142,7 +142,8 @@ func Upsert(c *database.Catalog, p Property) ([]byte, error) {
 
 // Create mints a kebab-case key from label and inserts a user-origin Property with audit.
 // value_type = term is registry/Install only — Create refuses it for researchers.
-func Create(c *database.Catalog, userID []byte, label, valueType, description string) (Property, error) {
+// An empty cardinality is single. Create does not recompute: the Property has no Observations yet.
+func Create(c *database.Catalog, userID []byte, label, valueType, description, cardinality string) (Property, error) {
 	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
 		return Property{}, err
 	}
@@ -177,7 +178,11 @@ func Create(c *database.Catalog, userID []byte, label, valueType, description st
 	id := uid[:]
 	label = strings.TrimSpace(label)
 	description = strings.TrimSpace(description)
-	if label == "" || !valueTypeOK(valueType) {
+	cardinality = strings.TrimSpace(cardinality)
+	if cardinality == "" {
+		cardinality = CardinalitySingle
+	}
+	if label == "" || !valueTypeOK(valueType) || !cardinalityOK(cardinality) {
 		return Property{}, ErrInvalid
 	}
 	var desc any
@@ -186,15 +191,16 @@ func Create(c *database.Catalog, userID []byte, label, valueType, description st
 	} else {
 		desc = description
 	}
-	if _, err := tx.Exec(sqlUpsert, id, key, OriginUser, label, desc, valueType, CardinalitySingle); err != nil {
+	if _, err := tx.Exec(sqlUpsert, id, key, OriginUser, label, desc, valueType, cardinality); err != nil {
 		return Property{}, err
 	}
 	fields := map[string]audit.FieldDiff{
-		"id":         {Old: nil, New: uid.String()},
-		"key":        {Old: nil, New: key},
-		"origin":     {Old: nil, New: OriginUser},
-		"label":      {Old: nil, New: label},
-		"value_type": {Old: nil, New: valueType},
+		"id":          {Old: nil, New: uid.String()},
+		"key":         {Old: nil, New: key},
+		"origin":      {Old: nil, New: OriginUser},
+		"label":       {Old: nil, New: label},
+		"value_type":  {Old: nil, New: valueType},
+		"cardinality": {Old: nil, New: cardinality},
 	}
 	if description != "" {
 		fields["description"] = audit.FieldDiff{Old: nil, New: description}

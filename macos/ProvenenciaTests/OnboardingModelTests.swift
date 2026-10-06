@@ -551,7 +551,8 @@ private struct ThrowingStore: GenealogyStore {
         userID _: String,
         label _: String,
         valueType _: String,
-        description _: String
+        description _: String,
+        cardinality _: String
     ) async throws -> CatalogProperty { throw StoreBoom.boom }
     func updateProperty(
         projectDir _: String,

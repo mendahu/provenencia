@@ -8982,6 +8982,114 @@
         }
       }
     },
+    "properties.inspector.holds": {
+      "comment": "Inspector and create-form label for property cardinality",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Holds"
+          }
+        }
+      }
+    },
+    "properties.inspector.holdsEventsHint": {
+      "comment": "Standing hint under Holds, and the create-form field hint",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Facts that change over time, like occupation or residence, usually belong in events"
+          }
+        }
+      }
+    },
+    "properties.inspector.holdsGroup": {
+      "comment": "Accessibility label for the Holds radio group; argument is the property label",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ holds"
+          }
+        }
+      }
+    },
+    "properties.inspector.holdsLocked": {
+      "comment": "Accessibility label for the lock beside a seeded property's Holds value",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Set by Provenencia"
+          }
+        }
+      }
+    },
+    "properties.inspector.holdsOne": {
+      "comment": "Cardinality choice: the engine narrows records to one value",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "One value"
+          }
+        }
+      }
+    },
+    "properties.inspector.holdsOneDescription": {
+      "comment": "Explanation under the one-value cardinality choice",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Records are narrowed to one value, or shown as mixed"
+          }
+        }
+      }
+    },
+    "properties.inspector.holdsReconciled": {
+      "comment": "Hint after a cardinality change until another property is selected; argument is the property label",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Every Person, Event and Place carrying %@ is reconciled again; no values are deleted"
+          }
+        }
+      }
+    },
+    "properties.inspector.holdsSeveral": {
+      "comment": "Cardinality choice: every distinct surviving value is kept",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Several values"
+          }
+        }
+      }
+    },
+    "properties.inspector.holdsSeveralDescription": {
+      "comment": "Explanation under the several-values cardinality choice",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Every distinct value is kept; spellings still merge"
+          }
+        }
+      }
+    },
     "properties.list.description": {
       "comment": "Explanatory copy under the Properties page title",
       "extractionState": "manual",

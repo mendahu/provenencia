@@ -43,6 +43,8 @@ IDs stay stable (`S9-NN`, `S9-DN`). Do not renumber when moving steps here.
 | S9-D6 | Design | Event detail |
 | S9-24 | PR | Event detail |
 | S9-36 | PR | Property cardinality |
+| S9-D14 | Design | Properties — cardinality |
+| S9-37 | PR | Properties page: cardinality |
 
 ## Steps
 
@@ -957,3 +959,27 @@ A Place can keep Montréal and Montreal as two names. Majority no longer treats 
 
 - The Properties cardinality control, and registering `updatedProperty` on `conclusionTriggers`: **S9-37**, gated by **S9-D14**.
 - One Reconciliation Claim per value (design §8). Claims stay one per entity and property until claims ship.
+
+### S9-D14 — Design: Properties cardinality
+
+**Board:** Claude Design project *Properties View*, `S7-D2 Subject Fields.dc.html`, Holds frames.
+
+- Holds sits on the existing inspector, between value type and origin, and on the create form. One value or several values. Seeded Properties show the choice with a lock. A researcher Property chooses immediately, with no confirm.
+- The standing hint says facts that change over time usually belong in events. After a change, the hint says every Person, Event, and Place carrying the Property is reconciled again and no values are deleted.
+
+Brief archived: [`design/archive/S9-D14-properties-cardinality.md`](design/archive/S9-D14-properties-cardinality.md).
+
+### S9-37 — Properties page: cardinality
+
+A researcher can say a Property holds several values, so a custom fact can keep more than one without a second settings page.
+
+**What shipped**
+
+- The inspector shows **Holds**. A user Property picks one value or several values with `PVRadio`, and the choice saves immediately. Provenencia and plugin Properties show the phrase with a lock. The create form asks the same question and defaults to one value.
+- Create writes `cardinality`. An empty request stays `single`. Changing it still recomputes in the same transaction (S9-36).
+- `updatedProperty` joins `conclusionTriggers`, so Persons, Events, Promote targets, and an open detail reload after a Property update. A label edit busts those caches too.
+
+**What stayed out**
+
+- Term categories: **S9-D15** / **S9-38b**.
+- Any other Property setting. A confirm: nothing is deleted.

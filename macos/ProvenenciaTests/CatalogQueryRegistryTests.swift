@@ -831,6 +831,7 @@ struct CatalogQueryRegistryTests {
         }
         #expect(CatalogQueryRegistry.conclusionTriggers == [
             .savedCitation, .deletedSubject, .promotedSubject, .deletedSource, .mutatedSourceWorkspace,
+            .updatedProperty,
         ])
         #expect(registry.invalidations(by: .mutatedSourceMetadata(sourceId: "s1"), project: project) == [
             .key(.metadataFieldsList(project: project)),

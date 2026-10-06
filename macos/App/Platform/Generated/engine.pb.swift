@@ -4101,6 +4101,9 @@ public nonisolated struct Provenencia_Engine_V1_CreatePropertyRequest: Sendable 
 
   public var description_p: String = String()
 
+  /// Empty means single. single | multiple.
+  public var cardinality: String = String()
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -12584,7 +12587,7 @@ nonisolated extension Provenencia_Engine_V1_ListPropertiesResponse: SwiftProtobu
 
 nonisolated extension Provenencia_Engine_V1_CreatePropertyRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".CreatePropertyRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_dir\0\u{3}user_id\0\u{2}\u{2}label\0\u{3}value_type\0\u{1}description\0\u{b}key\0\u{c}\u{3}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_dir\0\u{3}user_id\0\u{2}\u{2}label\0\u{3}value_type\0\u{1}description\0\u{1}cardinality\0\u{b}key\0\u{c}\u{3}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -12597,6 +12600,7 @@ nonisolated extension Provenencia_Engine_V1_CreatePropertyRequest: SwiftProtobuf
       case 4: try { try decoder.decodeSingularStringField(value: &self.label) }()
       case 5: try { try decoder.decodeSingularStringField(value: &self.valueType) }()
       case 6: try { try decoder.decodeSingularStringField(value: &self.description_p) }()
+      case 7: try { try decoder.decodeSingularStringField(value: &self.cardinality) }()
       default: break
       }
     }
@@ -12618,6 +12622,9 @@ nonisolated extension Provenencia_Engine_V1_CreatePropertyRequest: SwiftProtobuf
     if !self.description_p.isEmpty {
       try visitor.visitSingularStringField(value: self.description_p, fieldNumber: 6)
     }
+    if !self.cardinality.isEmpty {
+      try visitor.visitSingularStringField(value: self.cardinality, fieldNumber: 7)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -12627,6 +12634,7 @@ nonisolated extension Provenencia_Engine_V1_CreatePropertyRequest: SwiftProtobuf
     if lhs.label != rhs.label {return false}
     if lhs.valueType != rhs.valueType {return false}
     if lhs.description_p != rhs.description_p {return false}
+    if lhs.cardinality != rhs.cardinality {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

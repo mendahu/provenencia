@@ -199,7 +199,7 @@ func TestObservations(t *testing.T) {
 			name: "unbound property refused",
 			run: func(t *testing.T) {
 				c, s := mustSeed(t)
-				unbound, err := properties.Create(c, userID, "Nickname", properties.ValueTypeText, "")
+				unbound, err := properties.Create(c, userID, "Nickname", properties.ValueTypeText, "", "")
 				if err != nil {
 					t.Fatal(err)
 				}

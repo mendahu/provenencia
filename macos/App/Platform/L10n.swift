@@ -5561,6 +5561,55 @@ enum L10n {
             defaultValue: "Immutable after create",
             comment: "Accessibility label for the lock beside value type in the inspector"
         )
+        static let holds = LocalizedStringResource(
+            "properties.inspector.holds",
+            defaultValue: "Holds",
+            comment: "Inspector and create-form label for property cardinality"
+        )
+        static let holdsOne = LocalizedStringResource(
+            "properties.inspector.holdsOne",
+            defaultValue: "One value",
+            comment: "Cardinality choice: the engine narrows records to one value"
+        )
+        static let holdsOneDescription = LocalizedStringResource(
+            "properties.inspector.holdsOneDescription",
+            defaultValue: "Records are narrowed to one value, or shown as mixed",
+            comment: "Explanation under the one-value cardinality choice"
+        )
+        static let holdsSeveral = LocalizedStringResource(
+            "properties.inspector.holdsSeveral",
+            defaultValue: "Several values",
+            comment: "Cardinality choice: every distinct surviving value is kept"
+        )
+        static let holdsSeveralDescription = LocalizedStringResource(
+            "properties.inspector.holdsSeveralDescription",
+            defaultValue: "Every distinct value is kept; spellings still merge",
+            comment: "Explanation under the several-values cardinality choice"
+        )
+        static let holdsEventsHint = LocalizedStringResource(
+            "properties.inspector.holdsEventsHint",
+            defaultValue: "Facts that change over time, like occupation or residence, usually belong in events",
+            comment: "Standing hint under Holds, and the create-form field hint"
+        )
+        static func holdsReconciled(label: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "properties.inspector.holdsReconciled",
+                defaultValue: "Every Person, Event and Place carrying %@ is reconciled again; no values are deleted",
+                comment: "Hint after a cardinality change until another property is selected; argument is the property label"
+            ), label)
+        }
+        static let holdsLocked = LocalizedStringResource(
+            "properties.inspector.holdsLocked",
+            defaultValue: "Set by Provenencia",
+            comment: "Accessibility label for the lock beside a seeded property's Holds value"
+        )
+        static func holdsGroup(label: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "properties.inspector.holdsGroup",
+                defaultValue: "%@ holds",
+                comment: "Accessibility label for the Holds radio group; argument is the property label"
+            ), label)
+        }
         static let inspectorOrigin = LocalizedStringResource(
             "properties.inspector.origin",
             defaultValue: "Origin",

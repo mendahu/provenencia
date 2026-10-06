@@ -32,7 +32,7 @@ func TestDelete(t *testing.T) {
 		{
 			name: "unused user property erases and audits",
 			run: func(t *testing.T, c *database.Catalog) {
-				got, err := properties.Create(c, userID, "Burial Ground", properties.ValueTypeText, "")
+				got, err := properties.Create(c, userID, "Burial Ground", properties.ValueTypeText, "", "")
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -50,7 +50,7 @@ func TestDelete(t *testing.T) {
 		{
 			name: "bound only to a type still erases",
 			run: func(t *testing.T, c *database.Catalog) {
-				got, err := properties.Create(c, userID, "Maiden Name", properties.ValueTypeText, "")
+				got, err := properties.Create(c, userID, "Maiden Name", properties.ValueTypeText, "", "")
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -95,7 +95,7 @@ func TestDelete(t *testing.T) {
 				if err := subjectvocab.Install(c); err != nil {
 					t.Fatal(err)
 				}
-				prop, err := properties.Create(c, userID, "Outcome", properties.ValueTypeText, "")
+				prop, err := properties.Create(c, userID, "Outcome", properties.ValueTypeText, "", "")
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -294,7 +294,7 @@ func TestUsedByCountsObservationsNotBindings(t *testing.T) {
 	if err := users.Upsert(c, userID, "Tester", r); err != nil {
 		t.Fatal(err)
 	}
-	prop, err := properties.Create(c, userID, "Custom Fact", properties.ValueTypeText, "")
+	prop, err := properties.Create(c, userID, "Custom Fact", properties.ValueTypeText, "", "")
 	if err != nil {
 		t.Fatal(err)
 	}

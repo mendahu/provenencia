@@ -939,7 +939,8 @@ protocol GenealogyStore: Sendable {
         userID: String,
         label: String,
         valueType: String,
-        description: String
+        description: String,
+        cardinality: String
     ) async throws -> CatalogProperty
     func updateProperty(
         projectDir: String,
