@@ -1,0 +1,221 @@
+# Provenencia — Promote Alignment
+
+## Status
+
+**Agreed 2026-10-06; scheduled as Spike 9 slice 9** (§10). It replaced the per-Property compare checklist and the per-Subject walk; [`conclusion-layer-data-model.md`](conclusion-layer-data-model.md) §5.3–§5.4 now state its model rules. How we got here, and the directions we turned down: [`ideas/promote-matching.md`](ideas/promote-matching.md). Matching today: [`matching.md`](matching.md).
+
+**The data model doesn't change:** one Identity Claim per Subject and handle, with Observation pins on the claim and backfill (§5, §5.1).
+
+---
+
+# 1. The problem
+
+Promote files Interpretation Subjects onto canonical handles. A Subject's identity is carried mostly by its **neighbors** (its birth event, its places, its family), not by its own Properties. An Evidence graph is also much bigger than one Subject: the reference case, an obituary, has 41 Subjects. Ticking agreements Property by Property, Subject by Subject, is the wrong amount of work. Most of those agreements the machine can decide, and none of them can see the structure that actually identifies people.
+
+**The picture** ([`ideas/promote-matching.md`](ideas/promote-matching.md#the-stack-how-to-picture-the-problem)):
+- every Evidence graph is a **layer**;
+- the layers stack so that Subjects about the same thing line up in **columns**;
+- a handle is a column, and an Identity Claim is a vertical link;
+- Promote **lays a new layer onto the stack**.
+
+A vertical link's strongest evidence is the horizontal structure around it lining up too.
+
+**The goal:** Promote proposes the whole alignment automatically, and the researcher fine-tunes the few links that need judgment.
+
+---
+
+# 2. Principles
+
+1. **The machine proposes; the researcher decides.** Nothing is filed without the researcher's Done. Promote stays create-only.
+2. **Decisions are fixed.** A choice the researcher made is never overridden by a re-run. Everything not yet decided follows the decisions.
+3. **One claim per Subject.** A batch is many independent claims, and any one can be rejected later on its own.
+4. **No hard-coded lists of Properties or relationships.** What counts as evidence, and how much, comes from metadata (value types, cardinality, bridge types and roles) and from the catalog's own data. A Property or bridge kind added later takes part with no code change.
+5. **Precision over recall.** A false merge is the costliest mistake. Weak and unreachable matches default to **Skip**, not to New.
+6. **Explainable, deterministic, local.**
+   - Every suggestion carries its reasons.
+   - The same inputs give the same proposal.
+   - Everything runs on device.
+
+---
+
+# 3. The flow: one page
+
+Promote is one workspace page; the choose-target screen and the separate claim step go away.
+
+- **Entry:** the Promote button on any unpromoted Subject card, as today. The page opens with that Subject's row, preselected to its best match, plus **"Map the rest of this graph (N Subjects)"**. Promoting one Subject is the same page with one row.
+- **Rows:** one per primary Subject on the Evidence graph (person, event, place).
+  - **Already promoted:** shown read-only, with no controls. They are anchors for the alignment, and editing them is a separate workflow (Spike 10).
+  - **Unpromoted:** a target dropdown with the best match preselected, the next few alternatives, **New**, and **Skip**.
+- **Assessment:** each row shows **strong**, **weak** or **no match**. Clicking it opens a **sheet** with every comparison that contributed: agree, conflict or unknown, with its weight. The agreeing comparisons are preselected as pins and can be toggled.
+- **Claim fields per row:** status, confidence and argument. The argument can be drafted from the assessment.
+- **Bridges aren't rows** (participation, relationship, location). A summary line reads "22 connections will be filed". It expands to a list where each bridge can be switched off, for a relationship the researcher doesn't accept from this Source. Filing rules: §9.1.
+- **Possible duplicates:** two rows landing on the same existing handle, or two New rows that score as near-identical, get a warning ("these may be the same person; combine them on the Evidence graph"). There is no row-to-row option.
+- **Done** writes the whole batch in one transaction (§9).
+- **Leaving:** the leave guard covers accidental navigation. Drafts aren't persisted: re-opening re-proposes everything, and only manual changes are lost.
+
+## 3.1 Suggested and decided rows
+
+Every row is **suggested** (the machine filled it) or **decided**: the researcher changed its dropdown or toggled anything in its sheet.
+
+- **On open,** the only fixed points are the clicked Subject's row and the already-promoted rows.
+- **On any change,** that row becomes decided, and alignment re-runs over the whole page with every decided row held fixed. Suggested rows and their sheets are recomputed; decided rows are never touched.
+- **Rows whose suggestion changed** get a brief "updated" mark with the reason ("because Gracie → PER-Z").
+- **A decided row that the new context contradicts** keeps its choice and gets a warning. The researcher resolves it.
+
+---
+
+# 4. The alignment function
+
+One pure function, called on open and after every decision:
+
+```go
+// Align proposes a handle, New or Skip for every primary Subject on one
+// layer, holding the fixed pairs as given.
+func Align(layer Layer, canon Canon, stats Stats, fixed []Fixed) Proposal
+```
+
+| Input | Holds |
+| --- | --- |
+| `layer` | One Evidence graph: Subjects, bridges, Observations with values and provenance |
+| `canon` | A bounded piece of the canonical graph: handles, their adjacency, their members' Observations |
+| `stats` | Catalog statistics for weighting: value frequencies, edge fan-outs (§6) |
+| `fixed` | Decided rows, plus every already-promoted Subject on the layer, whose existing claim is a free anchor |
+
+`Proposal` is one row per Subject:
+- the target, plus the next 2–3 alternatives;
+- the assessment;
+- the comparisons, with drafted pins;
+- the reasons;
+- flags (conflicts with decided rows, possible duplicates).
+
+**Pure and deterministic,** like the `autoreconcile` / `autoreconciler` split. A pure package aligns, a database package loads the inputs, and ties break by id. The obituary is a golden test.
+
+---
+
+# 5. Walking: best-first propagation
+
+This is collective entity resolution: graph alignment by propagation (cf. PARIS, similarity flooding). The walk is **best-first, not recursive**. A depth-first walk commits to whatever it reaches first; a priority queue lets the strongest matches settle first, so the weaker ones are decided with the most context.
+
+1. **Seed.** For each fixed pair (s, H): look at each bridge from s to an unmapped neighbor t on the layer. For each corresponding edge from H to a handle G in `canon`, push the candidate (t, G).
+2. **Pop the best-scoring candidate.** Accept it if it clears the threshold and keeps the alignment **one-to-one**: within one layer, a handle takes at most one Subject.
+3. **Propagate.** The accepted pair becomes an anchor. Push its neighbors' candidates, and add **support** to queued candidates that are consistent with it. A candidate's score rises as more of its neighbors map consistently. That's the "the structure lines up" evidence.
+4. **Repeat** until the queue is empty.
+5. **Unreachable Subjects** (nothing reaches them from an anchor) fall back to property-only matching, today's `core/match` suggestions. Below the threshold, they default to Skip.
+
+The work is about (Subjects + bridges) × candidates × log: well under a millisecond at obituary scale.
+
+---
+
+# 6. Scoring
+
+Nothing names a Property or a relationship. Every weight comes from metadata or from data.
+
+**Node comparisons.**
+- For each Property both sides carry, the value-type module compares the values. The result is **agrees** (`autoreconcile.Compatible`), **conflicts** (both have values and none are compatible) or **unknown** (one side has none).
+- **Cardinality:** a Property that can hold several values (residences) never conflicts on a difference; per-Property cardinality decides which ones.
+
+**Weights, Fellegi–Sunter style.**
+- **u:** how often two *unrelated* handles agree on this Property, measured from the catalog's value frequencies. This is how commonness enters: "John Smith" and "farmer" earn little, a rare surname a lot.
+- **m:** how often the *same* entity's records agree, from a prior per value type.
+- **Score:** Σ log(m/u) over agreements, minus a conflict penalty; unknowns are 0.
+- A Property added later is weighted from its own data.
+
+**Provenance scales each comparison:** Source credibility, transcription uncertainty, and the claim confidence of the member the evidence came from. These are the same inputs the auto-reconciler's provenance uses ([`conclusion-reconciliation.md`](conclusion-reconciliation.md) §4).
+
+**Edge comparisons.**
+- An edge's **signature** is (bridge type, role or relationship term, neighbor kind, the neighbor's own type term). An example: participation · subject · event · birth. Two edges correspond when their signatures match.
+- Each signature's **fan-out** (how many neighbors a handle typically has through it) is measured from the catalog:
+  - **≈1** ("subject at a birth"): a single correspondence is strong support;
+  - **high** ("parent of", "subject at a residence"): it only narrows the candidates, and node comparison picks among them.
+
+---
+
+# 7. Loading: prefetch, then walk in memory
+
+There are no database calls during the walk. Everything loads in a fixed number of batched queries:
+
+1. **The layer:** one Source's Subjects, bridges, Observations and provenance, from the existing source-graph and comparison loaders.
+2. **Seed handles:**
+   - the fixed pairs;
+   - the handles of already-promoted Subjects;
+   - the top-k property-only candidates of each unpromoted Subject.
+3. **Expand the canonical graph** breadth-first, with **one batched query per hop** (`WHERE entity_id IN (…)`), out to the layer's diameter (the obituary's is about 5). Each reached handle's member Observations load in batch, as `autoreconciler.load` does.
+4. **`stats`:** value frequencies and signature fan-outs, computed lazily.
+
+That's roughly 10–15 queries per proposal, whatever the graph size.
+
+**Canonical adjacency without S9-28.** It can be derived through members: H's member m → bridge → neighbor n → n's accepted claim → G. That's a join, and it loads in batch. S9-28 caches it as canonical edges and adds bridge filing, so a prototype of `Align` doesn't need to wait for it.
+
+---
+
+# 8. Caching and decisions
+
+- **Decisions live in the page's draft:** the Swift row list (suggested or decided, target, sheet toggles, claim fields). They're sent as `fixed` on every call and never stored.
+- **Stateless first:** every call loads and aligns from scratch. Tens of milliseconds is fine for an interactive page. The S9-33 deep-fixture timings will say if it isn't.
+- **If it's slow,** keep the loaded snapshot in Go memory, keyed by (Source id, latest audit revision). The highest audit revision is a natural change stamp: any write invalidates the snapshot, and re-runs after decisions skip loading.
+- **`stats`** is cached against the same stamp.
+
+---
+
+# 9. Writing
+
+- **Done is one transaction for the whole batch:** all or nothing. Bridges need handles minted in the same batch, so a partial write could leave things half-linked. It's re-validated against the current state first: a write elsewhere since the proposal fails Done cleanly, and the page re-proposes. One audit revision covers the batch.
+- **Per row:** the Identity Claim with status, confidence and argument; a minted handle for New; nothing for Skip.
+- **Pins:** each toggled comparison pins its Observations on the row's claim and backfills them onto the member's claim (§5.1). The pair check widens from same Subject and same Property (S9-17) to **one-hop neighbors through a bridge**, so "her birth date matches" can be pinned on the person's claim.
+- **Duplicate pins are accepted on purpose.** The same agreement may be pinned on several claims (the person's and the birth event's). The machine drafts the pins, so this costs the researcher nothing.
+- **Bridges** are filed by the rules in §9.1; switched-off bridges are skipped.
+
+## 9.1 Bridge filing
+
+A bridge (participation, relationship, location, place relationship) has **no identity of its own**: once both its ends are handles, which canonical association it belongs to follows from the ends. So filing is automatic everywhere, not only on the Promote page.
+
+- **When:** after **any** claim create, every bridge Subject whose ends are now both handles is filed in the same transaction. On the Promote page the researcher can switch individual bridges off before Done. Anywhere else, filing just happens. A bridge with an end that is unpromoted, skipped or simply not recorded stays unfiled on the graph, and files when that end is promoted later.
+- **Which association it joins:** an existing association of the same kind between the same two handles, matched by its key; otherwise a new one is minted.
+
+  | Bridge kind | Key | Notes |
+  | --- | --- | --- |
+  | Participation | person + event | The role is a reconciled value on the association. Sources that disagree on the role show it as mixed; a person who was really witness *and* informant shows both if `role` is multi-valued (S9-36). |
+  | Location | event + place | |
+  | Relationship | the two people + relationship type | The type is the identity: spouse *and* cousin are two relationships. Sources that disagree on the type (son vs stepson) make two relationships, not a mixed value. |
+  | Place relationship (S9-38) | the two places + type | |
+
+- **Direction:** directed types ("A parent of B", "part of") match only in the same direction. Symmetric types (spouse) ignore order. Whether a type is directed is a property of the type (term or bridge kind), not a list in code.
+- **A link from a handle to itself** (both ends on one handle: a duplicate on the graph, or a wrong match) is refused. On the page it's flagged before Done.
+- **Refused filings don't fail the claim.** A place relationship that would close a hierarchy cycle (S9-38), or a self-link, leaves the bridge unfiled, with its reason visible. On the page, alignment flags it before Done, so the batch never fails on it.
+- **An end that leaves later** (its member deleted) leaves the bridge's claim in place. The association loses that end's evidence, and the reconciler shows it. That's §5.2 review territory, not a special case.
+
+---
+
+# 10. Effect on the plan
+
+Spike 9 was replanned around this on 2026-10-06: [`deployment-plan/spike-9/deployment-plan.md`](deployment-plan/spike-9/deployment-plan.md), slices 5–10.
+
+- **Events and Places come first** (slices 5–6): alignment needs the date module (S9-21), per-Property cardinality (S9-36), and the Event and Place headers for its dropdowns.
+- **The canonical graph gets its own slice** (slice 7): the subject module and automatic bridge filing (S9-28), then the derived values that walk it (S9-31 / S9-32).
+- **Place hierarchy comes before Promote** (slice 8): part-of and succession links (splits and amalgamations included) are filed as bridges from the start, so trying Promote on real research captures them, and alignment is tested with them as edges.
+- **Promote alignment is one slice** (slice 9):
+  - **S9-17**, reshaped from #265 / #266: `Compatible`, pins and backfill, the pinned-delete tests. The per-Subject comparison read and its UI plumbing are dropped.
+  - **S9-41:** `Align`, a pure package.
+  - **S9-42:** the loader and the proposal read.
+  - **S9-43:** the batch write.
+  - **S9-44:** the page, gated by brief **S9-D16**.
+- **Retired:**
+  - S9-19 and S9-D11 (compare);
+  - S9-29 (neighborhood read);
+  - S9-30 and S9-D12 (walk);
+  - S9-18, folded into S9-17 and S9-44.
+
+  S9-D16 is a **rethink**: it replaces the S9-D9 / S9-D10 frames on the Promote board.
+- **Later, learned weights:** start logging the suggestions shown and the decisions made, so m and u can be fitted from real accepts and rejects ([`ideas/promote-matching.md`](ideas/promote-matching.md#directions-we-circled-none-chosen)). This is out of scope for Spike 9.
+
+---
+
+# 11. Open questions
+
+- **Thresholds and bands:** the score cut-offs for strong, weak and no match, and the conflict penalty. Set them against the obituary, then dogfood.
+- **Cold start:** in a small catalog, u and the fan-outs are noisy or missing. What priors per value type and signature apply until the data is enough?
+- **Expansion depth:** is the layer's diameter always the right bound, or should it be capped?
+- **Places at several grains:** a Birth linked to both Polemont and Scotland. Should two places on one event count as a hint that one contains the other (S9-36 / S9-38)?
+- **Typed name parts:** a name entered as one form ("Gracie Gray Gates (Frickleton)") weakens name comparison. Is that a composer nudge, or a parsing step?
+- **Naming:** what is the "map the rest of this graph" action called?
+- **The decision log:** what to record, and where, so it stays local and private.

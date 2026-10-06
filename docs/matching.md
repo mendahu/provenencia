@@ -1,6 +1,6 @@
 # Matching
 
-How Provenencia scores how much one thing resembles each canonical handle (a Person, Event or Place). Promote's target suggestions (Spike 9 R7, **S9-10**) are the first consumer. Merge hints are the second: `ForEntity` already exists, but no UI uses it yet.
+How Provenencia scores how much one thing resembles each canonical handle (a Person, Event or Place), from the thing's own Properties. Promote's target suggestions (Spike 9 R7, **S9-10**) are the first consumer. In Promote alignment ([`promote-alignment.md`](promote-alignment.md)) this is the **property-only** part: it seeds each Subject's candidates, and it's the fallback for Subjects no anchor reaches. Evidence through neighbors (birth events, places, family) is alignment's job, not a matching Feature. Merge hints are the second: `ForEntity` already exists, but no UI uses it yet.
 
 Code: [`core/match`](../core/match) (the algorithm) and [`core/database/matching`](../core/database/matching) (catalog adapter). Consumers: [`core/database/promotetargets`](../core/database/promotetargets).
 
@@ -175,10 +175,10 @@ Worked examples:
 ## Extending
 
 - **A new kind** needs a `DefaultProfile` case. Its consumer then needs a header for the kind (Promote suggestions carry `PersonHeader` for Persons, and the handle alone for Events and Places until S9-22 / S9-25).
-- **A new signal** (birth year for a Person, through its events; family context during a walk) needs:
+- **A new signal on the thing itself** (a researcher-added Property, say) needs:
   - a Comparer, if no existing one fits;
   - a Feature in the profile;
   - the adapter putting those values into the probe and the candidates.
-  Edge-derived values arrive with S9-28 / S9-29. Related-first ordering during a walk (S9-29) is a Feature or a boost, not a separate path.
+  Signals reached through edges (a Person's birth year through its birth event, its family) are **not** matching Features: Promote alignment compares neighbors directly, over the canonical graph (S9-28), with its own weights (S9-41).
 - **Blocking:** candidates are currently every handle of the type with a cached profile value, read in one query (constant query count, but linear rows). When catalogs outgrow that, narrow candidates in `loadCandidates` using the handle search index (S9-34a: `catalog_search_docs` kinds `person` / `event` / `place`, kept current by the cache's upkeep). Scoring does not change.
 - **Merge hints:** `matching.ForEntity(handle)` ranks the other handles of the same type. A merge-hint surface needs only to shape that result.

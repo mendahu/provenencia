@@ -4,7 +4,9 @@ MVP for the **Conclusion layer**: assemble canonical Persons, Events, and Places
 
 ## Status
 
-**Open.** Slices 1–3 landed. **Replanned 2026-10-05** from slice 4 on: the reconciliation design ([`conclusion-reconciliation.md`](../../conclusion-reconciliation.md)) replaces R2's name / date / ranking plan with one reconciler pipeline for every value type, adds per-Property cardinality, and brings place hierarchy into the spike. Briefs S9-D1…D14 in [`design/`](design/) (D7 needs revising; D5 was revised and built in S9-16). Landings go in [`completed.md`](completed.md).
+**Open.** Slices 1–3 landed. **Replanned 2026-10-05** from slice 4 on: the reconciliation design ([`conclusion-reconciliation.md`](../../conclusion-reconciliation.md)) replaces R2's name / date / ranking plan with one reconciler pipeline for every value type, adds per-Property cardinality, and brings place hierarchy into the spike. Briefs S9-D1…D16 in [`design/`](design/) (D7 needs revising; D5 was revised and built in S9-16). Landings go in [`completed.md`](completed.md).
+
+**Replanned again 2026-10-06** from slice 5 on: Promote becomes **one page that aligns a whole Evidence graph** against the canonical graph, proposing a handle, New or Skip for every Subject, with the researcher fine-tuning and one Done ([`promote-alignment.md`](../../promote-alignment.md)). The per-Property compare step and the per-Subject walk are retired (S9-19, S9-29, S9-30; briefs D11, D12). Events, Places, the canonical graph and the place hierarchy all move ahead of Promote; S9-17 / S9-18 are reshaped into one engine PR.
 
 > **Goal of this spike:** a researcher can promote Subjects off an Evidence graph into Persons, Events, and Places, and open a page for each that shows who or what it is — name and life dates, event and date, place names and where the place sits — reconciled from every member Subject, with the reasoning shown.
 
@@ -14,8 +16,8 @@ MVP for the **Conclusion layer**: assemble canonical Persons, Events, and Places
 
 **By spike close**, each of these must be true in the app on real research:
 
-1. **Promote a person from a birth record.** From a person card on the Evidence graph, Promote mints a new Person. The walk then offers the birth event, its participation, its place, and its location. Each can join an existing handle or mint a new one. Each step saves on Next; **Done** stops the walk with everything so far kept.
-2. **Promote a second record onto the same Person.** A census person joins the existing Person. The comparison lines up name (and anything else comparable) against the current members. Confirmed pairs are pinned on both claims.
+1. **Promote a whole record.** From any unpromoted card on the Evidence graph, Promote opens one page with that Subject matched to its best handle (or New). *Map the rest of this graph* proposes a handle, New or Skip for every person, event and place on it, each with an assessment (strong / weak / no match) and its reasons. The researcher fixes the few rows that need judgment; **Done** files everything in one transaction, bridges included. Acceptance case: the Grace Gray Gates obituary (41 Subjects).
+2. **Join with evidence.** A record whose name, birth and family line up with an existing Person is proposed as a strong match. Done pins the agreeing Observations (including the birth event's date, reached through the participation) on the new claim and on the member's claim.
 3. **Browse.** Persons, Events, and Places appear in the sidebar. Each list shows every handle of that kind with the row fields in R5: Persons with name, birth–death dates, birth and death places; Events with a derived name, date, and place; Places with a name and parent chain. Every row has a thumbnail slot and its ref.
 4. **Person detail** shows the thumbnail slot, the reconciled name, the birth and death dates, and the birth and death places. Two members saying `14 MAY 1985` and `MAY 1985` show one date. Two members saying `MAY 1985` and `APR 1985` show that they disagree. Every value can explain itself: each record considered and what happened to it (kept, folded, outvoted, weak, denied).
 5. **Event detail** shows the thumbnail slot, the event title, the event date, and the event place(s).
@@ -83,7 +85,7 @@ Skills: [`add-catalog-migration`](../../../.cursor/skills/add-catalog-migration/
 - **Cardinality** (design §8): each Property is single- or multi-valued. Seeded Properties are single except `toponym`. Multi-valued Properties keep every distinct surviving value.
 - **States:** single, merged, mixed, empty, read off the result's shape. **Concluded** needs Reconciliation Claims, which stay out of scope (design §8: one claim per value for multi-valued Properties); the reconciler takes a concluded input so they plug in later.
 
-The modules' *same value* test also drives the Promote comparison's "compatible pairs start checked" (R7 step 3).
+The modules' *same value* test (`autoreconcile.Compatible`) is also what Promote alignment counts as an agreement (R7).
 
 ### R3 — Auto-reconciler cache (foundation)
 
@@ -204,21 +206,18 @@ Three sidebar destinations under a new **Conclude** section (sidebar sections: S
 - Every value shows its state — single, merged, mixed, or empty — its ranked values, and **why**: the candidates and their outcomes from R3's reasoning. Drilling into the Observations behind a cluster loads live for that one handle. A member list (Subjects with their Source) is a stretch goal.
 - Read-only this spike.
 
-### R7 — Promote (Identity Claim workflow)
+### R7 — Promote (alignment)
 
-The hard part. Model: [`conclusion-layer-data-model.md`](../../conclusion-layer-data-model.md) §5.1–§5.4.
+**Authoritative design: [`promote-alignment.md`](../../promote-alignment.md)** (replanned 2026-10-06). It replaces the step-by-step compare and walk the model used to describe; model §5.3–§5.4 now state its rules. This section is the spike's slice of it.
 
-**Promote only creates claims.** It is one-way: nobody comes back into it to edit, re-pin, or remove a claim. Those are a separate workflow with its own place (Spike 10), even though they write the same tables. No resume-midstream affordances.
+**Promote only creates claims.** It is one-way: nobody comes back into it to edit, re-pin, or remove a claim. Those are a separate workflow with its own place (Spike 10), even though they write the same tables.
 
-1. **Entry.** A **Promote** control at the bottom of a subject card on the Evidence graph, for primary kinds (`person`, `event`, `place`) that have no accepted Identity Claim. Bridge cards are not entry points; they join through the walk.
-2. **Choose target.** Mint a new handle, or pick an existing one of the same Subject type. The picker shows R4 headers. Suggestions: handles already related to the one just filed (during the walk), then resemblance (auto-reconciled name, date, toponym, event type — scored by per-kind match profiles over R3, see [`docs/matching.md`](../../matching.md); the R8 index can narrow candidates).
-3. **Compare (existing handle only).** Line up the incoming Subject's Observations against each accepted member's Observations for the same Property. Compatible pairs start checked (the value-type module's *same value* or *fold*, R2); differing pairs start unchecked. Accept all checked for a Property in one gesture, clear a pair, or skip and accept with no pins. Checked pairs are pinned; unchecked pairs are simply not pinned.
-   - **Minting a new handle skips this step.** The grounding claim normally has **zero pins**. Its Observations get pinned later, by backfill, when a second Subject joins and confirms against it (§5.1).
-4. **Claim fields.** A **Status** dropdown is in the layout now, with one option — `accepted` (Q7). Later spikes add `provisional` / `rejected` to it without a relayout. Optional confidence grade. `argument` drafted from the confirmed rows when there are any; editable; empty is fine on grounding.
-5. **Next = save this step.** One transaction per promoted Subject: the new handle (if minted), the Identity Claim, its pins, **backfill** pins onto the compared members' claims (§5.1), and the R3 recompute. A person and its birth event are two transactions. A failure (for example the one-accepted-claim index losing a race) fails that step only.
-6. **Walk.** After a step saves, show the Subjects connected to the one just filed and offer each for promotion. Picking one repeats steps 2–5 for it; its unpromoted Interpretation neighbors are appended to the queue if they are not already queued, not handled in this pass, not members of the target, not neighbors of other members. Declining a subject does not reach through it. Bridge subjects (`participation`, `location`, `relationship`) wait until both ends have a handle, then become a short confirm: file onto the association the two ends already share, or mint one.
-7. **Off-ramp.** **Done** ends the walk at any point. Earlier steps are already saved; the unvisited queue is not persisted and those Subjects stay unpromoted on the graph. The leave guard (`WorkspaceLeaveGuard`) covers only the unsaved step in progress. There is no rollback; corrections are Spike 10.
-8. **After.** The graph card shows membership (handle ref, link to its page). Conclusion caches refresh (see *Data fetching*).
+1. **Entry.** The **Promote** control on any unpromoted primary card (`person`, `event`, `place`) opens the Promote page with that Subject's row matched to its best handle. Bridge cards are not entry points.
+2. **One page.** *Map the rest of this graph* adds a row for every primary Subject on the Evidence graph. Already-promoted rows are read-only anchors. Each unpromoted row has a target dropdown (best match preselected, alternatives as R4 headers, **New**, **Skip**; weak and unmatched rows default to Skip), an assessment (strong / weak / no match) that opens a sheet of the comparisons with agreeing ones preselected as pins, and the claim fields (Status with one option, Q7; confidence; argument drafted from the agreements).
+3. **Alignment.** A pure function proposes every row from the fixed rows (the researcher's decisions and existing claims): best-first propagation over the layer and a prefetched piece of the canonical graph; agree / conflict / unknown per comparison; weights from catalog statistics; no hard-coded Property lists. It re-runs after every decision; decided rows never change.
+4. **Bridges** file automatically whenever both ends are handles, on the page (a summary line; each bridge can be switched off) and after any other claim create. Identity rules: design §9.1.
+5. **Done** writes the batch in one transaction: claims, minted handles, pins (one-hop neighbors allowed) with backfill (§5.1), bridges, the R3 recompute, one audit revision. It re-validates against the catalog first; a lost race fails Done whole and the page re-proposes.
+6. **After.** The graph cards show membership (handle ref, link to its page). Conclusion caches refresh (see *Data fetching*).
 
 ### R8 — Omnibar search
 
@@ -260,9 +259,9 @@ Design: [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md) §1
 The Conclusion pages read **across** Sources — every earlier place scoped to one Source or one vocabulary. R3 absorbs that cost at write time.
 
 - **Go composes; Swift renders.** Swift asks for "Persons list" or "Person X" and displays the payload. It never assembles members or walks ([`macos-client-patterns.md`](../../macos-client-patterns.md) *One cache owns each list*).
-- **Query keys:** one list key per kind, one detail key per handle, and the Promote reads (target suggestions, comparison rows for a subject × entity, the neighborhood of a subject). The Promote draft is interaction state, not a cache key.
+- **Query keys:** one list key per kind, one detail key per handle, and the Promote proposal (one Source's alignment, given the fixed rows). The Promote draft (decided rows, toggles, claim fields) is interaction state, not a cache key.
 - **Swift invalidation: bust all Conclusion keys (Q5).** Any Interpretation or Conclusion write that R3 recomputes marks every cached Conclusion key stale — cheap, because reloading reads R3.
-  - **Triggers:** Observation save / delete, Subject delete, bridge create / delete, Source delete, credibility / certainty changes, Property configuration changes, and each Promote step. Shipped in S9-07 as one set, `CatalogQueryRegistry.conclusionTriggers` (`savedCitation`, `deletedSubject`, `promotedSubject`, `deletedSource`, `mutatedSourceWorkspace` — the last carries credibility and over-busts on notes / artifacts / metadata). Certainty already rides `savedCitation`; a cardinality change (S9-37) joins via `updatedProperty`.
+  - **Triggers:** Observation save / delete, Subject delete, bridge create / delete, Source delete, credibility / certainty changes, Property configuration changes, and each Promote Done. Shipped in S9-07 as one set, `CatalogQueryRegistry.conclusionTriggers` (`savedCitation`, `deletedSubject`, `promotedSubject`, `deletedSource`, `mutatedSourceWorkspace` — the last carries credibility and over-busts on notes / artifacts / metadata). Certainty already rides `savedCitation`; a cardinality change (S9-37) joins via `updatedProperty`.
   - **Evict, don't revalidate.** Detail keys are dropped and reload when next visited; the visible page revalidates. A deliberate exception to cache contract rule 2, noted in [`macos-client-patterns.md`](../../macos-client-patterns.md). **Built in S9-15:** the session records the visible place's keys (`visibleKeys`), and a registry key tagged `evictWhenHidden` (`conclusionDetail`) is evicted on a trigger unless it is on screen. List keys (S9-07) follow rule 2 as usual.
   - Narrowing later can reuse R3's affected-handles set; not needed while reloads are cheap.
 - **Measure.** Build the deep fixture (a Person on ~10 Sources; birth, death, marriage events each multi-member, with Locations; a few relationships; scaled to a few hundred handles) and time: rebuild, a single write's upkeep, list composition, detail composition. Record in the [performance ledger](performance-ledger.md).
@@ -278,17 +277,16 @@ The Conclusion pages read **across** Sources — every earlier place scoped to o
 | **S9-D8** | Evidence graph subject card | **S9-04** | S9-09 (name on the membership row), S9-11 (Promote opens the flow) |
 | **S9-D1** | Workspace sidebar | **S9-08** | S9-23, S9-26 (Events / Places go live) |
 | **S9-D2** | Persons list | **S9-09** | S9-32 (life dates and places) |
-| **S9-D9** | Promote — choose target (+ shell) | **S9-11** | — |
-| **S9-D10** | Promote — claim fields | **S9-12** | — |
+| **S9-D9** | Promote — choose target (+ shell) | **S9-11** | Replaced by S9-D16 |
+| **S9-D10** | Promote — claim fields | **S9-12** | Replaced by S9-D16 |
 | **S9-D5** | Person detail (**revise:** reasoning) | **S9-16** | S9-32 (life dates and places) |
-| **S9-D11** | Promote — compare | **S9-19** | — |
 | **S9-D3** | Events list | **S9-23** | S9-32 (subject titles, places) |
 | **S9-D6** | Event detail | **S9-24** | S9-32 (subject titles, places) |
 | **S9-D14** | Properties — cardinality | **S9-37** | — |
 | **S9-D4** | Places list (**revise:** names, parent chain) | **S9-26** | S9-40 (chain cell) |
 | **S9-D7** | Place detail (**revise:** names, period, hierarchy, succession) | **S9-27** | S9-40 (hierarchy rows) |
 | **S9-D15** | Custom term dialog — category | **S9-38b** | — |
-| **S9-D12** | Promote — walk | **S9-30** | — |
+| **S9-D16** | Promote — one page (**rethink:** throws out D9 / D10 frames) | **S9-44** | — |
 | **S9-D13** | Omnibar results | **S9-35** | — |
 
 A brief covers its **whole** view, including cells a first PR leaves empty. Later PRs on the same view fill in designed frames and need no new brief.
@@ -335,13 +333,7 @@ SLICE 4 — Reconciler + Person detail
   Check: J. Robins + James Robins → one name, merged; James / Jim → mixed; a low-trust
          Source's spelling drops and the page says why; two Observations from one Source are one vote.
 
-SLICE 5 — Compare, pins, backfill
-  S9-17  Comparison read (module same-value) + pins + backfill in the Promote write
-  S9-18  Pinned-Observation delete end to end (composer confirm names the evidence it leaves)
-  ✎ S9-D11 ──▶ S9-19  Promote compare
-  Check: join with confirmed pairs → both claims pinned; delete a pinned Observation → allowed, confirm names the handle, pins audited away.
-
-SLICE 6 — Events
+SLICE 5 — Events
   S9-20  Seed event_name
   S9-21  Date module + date windows (pure Go, table-driven)
   S9-22  Event composer (title precedence without subjects, date) + reads + title formatting
@@ -349,7 +341,7 @@ SLICE 6 — Events
   ✎ S9-D6 ──▶ S9-24  Event detail
   Check: promoted event cards list with titles; MAY 1985 + 14 MAY 1985 merge; APR vs MAY → mixed.
 
-SLICE 7 — Places: names and cardinality
+SLICE 6 — Places: names and cardinality
   S9-36  Property cardinality: column, seeds (toponym multi-valued), pipeline, config-change upkeep
   ✎ S9-D14 ──▶ S9-37  Properties page: cardinality control
   S9-25  Place composer (names) + reads
@@ -357,41 +349,48 @@ SLICE 7 — Places: names and cardinality
   ✎ S9-D7 ──▶ S9-27  Place detail (names; hierarchy rows empty until S9-40)
   Check: Montréal + Montreal → two names on one Place; "york" + "York" → one; a low-trust spelling drops.
 
-SLICE 8 — Walk + bridges
-  S9-28  Edges: subject module, bridge filing in the Promote write, inbound-end upkeep
-  S9-29  Neighborhood read
-  ✎ S9-D12 ──▶ S9-30  Promote walk + off-ramp
-  Check: walk a birth record → Participation + Location handles filed; bridges wait for both ends; Done keeps saved steps.
+SLICE 7 — The canonical graph
+  S9-28  Subject module + automatic bridge filing (any claim create) + inbound-end upkeep
+  S9-31  Composer walks: life dates, birth / death places (names), subject titles, event places; header dependents
+  S9-32  Fill derived cells in Persons / Events lists and Person / Event detail (designed in D2 / D3 / D5 / D6)
+  Check: promote a person and then its birth event → the participation files itself;
+         "Birth of James Robins"; James shows 1817 – 1880 · York → Toronto.
 
-SLICE 9 — Place hierarchy (the hard way)
+SLICE 8 — Place hierarchy (the hard way)
   S9-38  Place model: place relationship bridge, typed terms with categories, place period, connect rule, loop refusal
   ✎ S9-D15 ──▶ S9-38b Custom term dialog: category for new place relationship types
-  S9-39  Place chain composer: parents at a date, candidates when undecided, parts, succession; header dependents
+  S9-39  Place chain composer: parents at a date, candidates when undecided, parts, succession; chains in S9-31's walks
   S9-40  Place hierarchy in Places list and Place detail (designed in D4 / D7)
   Check: draw Toronto part of Upper Canada / Province of Canada / Ontario with periods → Toronto's page shows each by period;
-         a cycle is refused; York succeeded by Toronto shows on both.
+         a cycle is refused; York succeeded by Toronto shows on both; James's birth place reads with its chain.
 
-SLICE 10 — Derived values across the graph
-  S9-31  Composer walks: life dates + places with chains at the event date, subject titles, event places; header dependents
-  S9-32  Fill derived cells in Persons / Events lists and Person / Event detail (designed in D2 / D3 / D5 / D6)
-  S9-33  Deep fixture + timings
-  Check: "Birth of James Robins"; James shows 1817 – 1880 · York, Upper Canada → Toronto, Ontario; timings in the ledger.
+SLICE 9 — Promote alignment
+  S9-17  Pins + backfill engine (reshaped from #265 / #266; lands now, no UI)
+  S9-41  Align core: pure Go, best-first propagation, data-driven weights, edge signatures, fixed rows
+  S9-42  Alignment loader + stats + proposal read (FFI)
+  S9-43  Batch Promote write: one transaction; one-hop pins + backfill; bridges
+  ✎ S9-D16 ──▶ S9-44  Promote page (rethink; replaces the S9-11 / S9-12 steps)
+  Check: promote Gracie → map the rest of the obituary → strong rows preselected, weak flagged,
+         the rest Skip; Done files everything at once, place relationships drawn on the graph included;
+         a pinned delete names the Person.
 
-SLICE 11 — Search
+SLICE 10 — Search + timings
+  S9-33  Deep fixture + timings (including a Promote proposal and Done)
   S9-34  Search documents from headers + dependents (S9-34a shipped kinds, cached-value documents, upkeep)
   ✎ S9-D13 ──▶ S9-35  Omnibar Conclusion hits
-  Check: PER-7KD45, Jim Robins, Birth of James, a place name → each finds its handle; a name edit updates the hit.
+  Check: PER-7KD45, Jim Robins, Birth of James, a place name → each finds its handle; a name edit updates the hit; timings in the ledger.
 
 CLOSE
   S9-99  Dogfood close / docs
 ```
 
-- **Slices run in order.** Within a slice, PRs run top to bottom; the Go PRs at the top of a slice can usually go side by side (S9-13b / S9-14; S9-20 / S9-21; S9-36 / S9-25).
-- **Slice 4 is the foundation for the rest.** S9-13 / S9-14 put every value type on the pipeline; slices 5–7 can then swap or run side by side. Slice 9 needs slice 8 (bridges and edges).
+- **Slices run in order.** Within a slice, PRs run top to bottom; the Go PRs at the top of a slice can usually go side by side (S9-13b / S9-14; S9-20 / S9-21; S9-36 / S9-25). **S9-41** (pure Go) can start once S9-21 and S9-36 land and run beside slices 7–8.
+- **Slice 4 is the foundation for the rest.** S9-13 / S9-14 put every value type on the pipeline. **Promote alignment (slice 9) needs slices 5–7:** dates (S9-21) and cardinality (S9-36) to compare and to tell a conflict from a second value, Event and Place headers (S9-22, S9-25) for its dropdowns, and the canonical graph (S9-28) to walk and to file bridges. **Place hierarchy (slice 8) goes first** so that trying Promote on real research captures part-of and succession links from the start, and alignment is tested with them as edges.
 - **Replanned 2026-10-05.** IDs of PRs that keep their purpose stay; new work takes new IDs (S9-13a, S9-13b, S9-36 – S9-40), so handoff notes in [`completed.md`](completed.md) and code comments stay right.
+- **Replanned 2026-10-06 (Promote alignment).** New work: S9-41 – S9-44 and brief S9-D16. **Retired:** S9-19 and S9-D11 (compare → S9-44's evidence sheet), S9-29 (neighborhood read → S9-42), S9-30 and S9-D12 (walk → S9-44), S9-18 (folded into S9-17 and S9-44). S9-17 keeps its ID, reshaped from the closed #265 / #266.
 - **Migrations 000037 / 000038 are fixed.** They first shipped on the closed PRs #255 / #256, and the researcher's local projects already carry them. S9-13a lands them on `main` byte-for-byte so those projects open again; nothing else may take those numbers, and later changes are new migrations (000039 on), never edits. **000039** is S9-13's `reason` column; **000040** is S9-14's rename to `auto_reconciler_*` and its outcomes table. **000041** is S9-16's vote on outvoted outcomes (cache version 10). The next is **000042**; the next cache version **11**. **Cache versions start at 5** after S9-13a: projects may hold a cache stamped 3 or 4 by the closed PRs, and a new meaning must never reuse a stamp.
 - **The cache is honest from slice 2.** S9-06 ships the rebuild-equals-upkeep test; every later PR that adds a write path or trigger adds to it.
-- **Churn is expected.** A confirm-and-mint Promote button (slice 1), stubbed sidebar items, and empty life-date cells are fine between slices.
+- **Churn is expected.** A confirm-and-mint Promote button (slice 1), stubbed sidebar items, and empty life-date cells are fine between slices. Today's step-based Promote (S9-11 / S9-12) stays in use until S9-44 replaces it; from S9-28 on it already files bridges.
 
 ### Dependencies at a glance
 
@@ -417,9 +416,6 @@ CLOSE
 | S9-14 Evidence + reasoning in the cache | — | S9-06, S9-13, S9-13a |
 | S9-15 Detail composer + read | — | S9-07, S9-14 |
 | S9-16 Person detail | **S9-D5** | S9-13b, S9-15 |
-| S9-17 Compare read + pins + backfill | — | S9-12, S9-13b |
-| S9-18 Pinned-Observation delete end to end | — | S9-17 |
-| S9-19 Promote compare | **S9-D11** | S9-17 |
 | S9-20 Seed `event_name` | — | — |
 | S9-21 Date module | — | S9-13 |
 | S9-22 Event composer + reads | — | S9-15, S9-20, S9-21 |
@@ -430,16 +426,19 @@ CLOSE
 | S9-25 Place composer + reads | — | S9-15, S9-36 |
 | S9-26 Places list | **S9-D4** (extends D2) | S9-09, S9-25 |
 | S9-27 Place detail | **S9-D7** (extends D5) | S9-16, S9-25 |
-| S9-28 Edges + bridge filing | — | S9-12, S9-13 |
-| S9-29 Neighborhood read | — | S9-28 |
-| S9-30 Promote walk | **S9-D12** (extends D9) | S9-29 |
+| S9-28 Subject module + bridge filing | — | S9-12, S9-13 |
+| S9-31 Composer walks | — | S9-22, S9-25, S9-28 |
+| S9-32 Fill derived cells | (D2 / D3 / D5 / D6) | S9-31, S9-23, S9-24 |
 | S9-38 Place model | — | S9-28, S9-36 |
 | S9-38b Custom term dialog: category | **S9-D15** | S9-38 |
-| S9-39 Place chain composer | — | S9-38, S9-21, S9-25 |
-| S9-40 Place hierarchy in list and detail | (D4 / D7) | S9-39, S9-26, S9-27 |
-| S9-31 Composer walks | — | S9-22, S9-28, S9-39 |
-| S9-32 Fill derived cells | (D2 / D3 / D5 / D6) | S9-31, S9-23, S9-24 |
-| S9-33 Deep fixture + timings | — | S9-31 |
+| S9-39 Place chain composer | — | S9-38, S9-21, S9-25, S9-31 |
+| S9-40 Place hierarchy in list and detail | (D4 / D7) | S9-39, S9-26, S9-27, S9-32 |
+| S9-17 Pins + backfill engine | — | S9-12, S9-13b |
+| S9-41 Align core | — | S9-17, S9-21, S9-36 |
+| S9-42 Alignment loader + proposal read | — | S9-41, S9-22, S9-25, S9-28 |
+| S9-43 Batch Promote write | — | S9-17, S9-28, S9-42 |
+| S9-44 Promote page | **S9-D16** (rethink of D9 / D10) | S9-42, S9-43 |
+| S9-33 Deep fixture + timings | — | S9-39, S9-44 |
 | S9-34 Search documents from headers | — | S9-31, S9-34a |
 | S9-35 Omnibar hits | **S9-D13** | S9-34 |
 | S9-99 Dogfood close | — | all |
@@ -476,10 +475,7 @@ In order; each brief sits just above the PR it gates.
 - [x] S9-15 — Detail composer + detail read → [`completed.md`](completed.md)
 - [x] ✎ S9-D5 — Design: Person detail (revise for reasoning) → [`completed.md`](completed.md)
 - [x] S9-16 — Person detail → [`completed.md`](completed.md)
-- [ ] S9-17 — Compare read + pins + backfill
-- [ ] S9-18 — Pinned-Observation delete end to end
-- [ ] ✎ S9-D11 — Design: Promote compare
-- [ ] S9-19 — Promote compare
+- [ ] S9-17 — Pins + backfill engine (reshaped; lands now, slice 9)
 - [ ] S9-20 — Seed `event_name`
 - [ ] S9-21 — Date module + windows
 - [ ] S9-22 — Event composer + reads
@@ -495,22 +491,26 @@ In order; each brief sits just above the PR it gates.
 - [ ] S9-26 — Places list
 - [ ] ✎ S9-D7 — Design: Place detail (revise for hierarchy)
 - [ ] S9-27 — Place detail
-- [ ] S9-28 — Edges + bridge filing
-- [ ] S9-29 — Neighborhood read
-- [ ] ✎ S9-D12 — Design: Promote walk
-- [ ] S9-30 — Promote walk + off-ramp
+- [ ] S9-28 — Subject module + bridge filing
+- [ ] S9-31 — Composer walks + header dependents
+- [ ] S9-32 — Fill derived cells in lists and details
 - [ ] S9-38 — Place model: relationships, periods
 - [ ] ✎ S9-D15 — Design: custom term category
 - [ ] S9-38b — Custom term dialog: category
 - [ ] S9-39 — Place chain composer
 - [ ] S9-40 — Place hierarchy in list and detail
-- [ ] S9-31 — Composer walks + header dependents
-- [ ] S9-32 — Fill derived cells in lists and details
+- [ ] S9-41 — Align core
+- [ ] S9-42 — Alignment loader + proposal read
+- [ ] S9-43 — Batch Promote write
+- [ ] ✎ S9-D16 — Design: Promote page (rethink)
+- [ ] S9-44 — Promote page
 - [ ] S9-33 — Deep fixture + timings
 - [ ] S9-34 — Search documents from headers + dependents
 - [ ] ✎ S9-D13 — Design: omnibar hits
 - [ ] S9-35 — Omnibar Conclusion hits
 - [ ] S9-99 — Dogfood close / docs
+
+Retired 2026-10-06: ~~S9-18 — Pinned-Observation delete end to end~~ (folded into S9-17 / S9-44) · ~~✎ S9-D11 / S9-19 — Promote compare~~ · ~~S9-29 — Neighborhood read~~ · ~~✎ S9-D12 / S9-30 — Promote walk~~.
 
 ---
 
@@ -642,7 +642,7 @@ Researcher's decision while revising **S9-D1**: two configuration views get plai
 - **S9-11:** `listPromoteTargetSuggestions` gives the *Suggested* rows: `CatalogPromoteTargetSuggestion` (score, reasons, `person` header), best first. Search the existing `.personsList` for the picker, and join by passing `entityID` to `promoteSubject`.
 - **S9-12:** grades come from `listClaimConfidenceGrades`; pass `confidenceGradeID` / `argument` on the same `promoteSubject` call.
 - **S9-22 / S9-25:** add an `event` / `place` header to `PromoteTargetSuggestion`; matching for those kinds already ships.
-- **S9-28 / S9-29:** new signals (life dates through edges, related-first ordering) are Features in `core/match` profiles.
+- **S9-41:** neighbor signals (life dates through edges, family) come from Promote alignment, not new `core/match` Features. `core/match` stays the property-only fallback for Subjects no anchor reaches (S9-28 / S9-29 originally; replanned 2026-10-06).
 
 | | |
 | --- | --- |
@@ -667,7 +667,7 @@ Researcher's decision while revising **S9-D1**: two configuration views get plai
 
 #### S9-11 — Promote shell + choose target
 
-**Done.** See [`completed.md`](completed.md#s9-11--promote-shell--choose-target). Brief archived: [`design/archive/S9-D9-promote-target.md`](design/archive/S9-D9-promote-target.md). Promote is a workspace place (`SourceSurface.promote`, `PromoteView` / `PromoteModel` in `Features/Promote/`).
+**Done.** See [`completed.md`](completed.md#s9-11--promote-shell--choose-target). **Superseded 2026-10-06:** S9-44 replaces this flow with the one-page Promote; the S9-19 / S9-29 / S9-30 handoffs below no longer apply. Brief archived: [`design/archive/S9-D9-promote-target.md`](design/archive/S9-D9-promote-target.md). Promote is a workspace place (`SourceSurface.promote`, `PromoteView` / `PromoteModel` in `Features/Promote/`).
 - **The flow is a state machine:** `PromoteFlow` (`Features/Promote/PromoteFlow.swift`) is the single source of truth for steps, the draft, writes in flight, the leave guard and the walk. `PromoteModel` sends it events and runs the effects it returns. A new step is a case on `PromoteStep`, its screen, and its draft fields; it isn't new plumbing.
 - **S9-12:** done; see [S9-12](#s9-12--promote-claim-fields--save).
 - **S9-19:** add `.compare` to `PromoteStep.built` and its screen; confirmed pairs go on the draft. Restore the board's hint ("James Robins will be compared with the 2 members of PER-…").
@@ -681,7 +681,7 @@ Researcher's decision while revising **S9-D1**: two configuration views get plai
 
 #### S9-12 — Promote claim fields + save
 
-**Done.** See [`completed.md`](completed.md#s9-12--promote-claim-fields--save). Brief archived: [`design/archive/S9-D10-promote-claim-fields.md`](design/archive/S9-D10-promote-claim-fields.md). The claim step is `PromoteClaimStep`; the footer reads only `PromoteFlow.controls`.
+**Done.** See [`completed.md`](completed.md#s9-12--promote-claim-fields--save). **Superseded 2026-10-06:** S9-44 replaces this step; the S9-17 / S9-19 / S9-30 handoffs below no longer apply. Brief archived: [`design/archive/S9-D10-promote-claim-fields.md`](design/archive/S9-D10-promote-claim-fields.md). The claim step is `PromoteClaimStep`; the footer reads only `PromoteFlow.controls`.
 - **S9-19:**
   - add `.compare` to `PromoteStep.built`, plus its screen and its `Edit` cases; Back, Next and the step count follow on their own.
   - Draft the join argument from confirmed pairs, with the hint "Draft from your N confirmed matches · edit before saving". A changed target must clear what was drafted from it (the hook is named in `PromoteFlow`'s doc comment).
@@ -761,34 +761,7 @@ Design: [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md). PR
 
 **Done.** See [`completed.md`](completed.md#s9-16--person-detail). Board: Claude Design *Person Detail*, frames 1a–1i; brief archived: [`design/archive/S9-D5-person-detail.md`](design/archive/S9-D5-person-detail.md). The page is `PersonDetailView`, its text `PersonDetailContent` / `ReconciledValueDisplay`; each field is a `ReconciledValueRow` with its Why (`ReconciliationReasoningView`, `ReconciliationOutcome`). For **S9-32**: fill the four life rows (`PersonDetailContent.rows`, ids `life.*`) and the header's b. / d. lines from the birth and death Events; the place-chain hint for a straddling date (PD-2, frame 1f) arrives with places. For **S9-22 / S9-25** (with S9-24 / S9-27): reuse `ReconciledValueRow` and the Why from `Features/Conclusions/` and write the kind's own header. When Reconciliation Claims ship: the *Concluded* badge and *by you* are worded; the Why's empty last column is reserved for "conclude this value". Still out: the member list (frame 1i, a stretch slot) needs a per-handle members read.
 
-### Slice 5 — Compare, pins, backfill
-
-#### S9-17 — Compare read + pins + backfill
-
-| | |
-| --- | --- |
-| **In** | Comparison read: incoming Observations × each member's per Property; a pair is compatible when the value-type module says *same value* or *fold* (`moduleFor` in `core/autoreconcile/modules.go`; names compare unit by unit, S9-13b). Promote write takes confirmed pairs: pins on the new claim **and** backfill onto the member's claim, same transaction. |
-| **Testable** | Pins on both claims; older `argument` untouched; compatible pairs flagged by the same test the Person page uses. |
-| **Depends on** | S9-12, S9-13b |
-
-#### S9-18 — Pinned-Observation delete end to end
-
-| | |
-| --- | --- |
-| **Already shipped** | S9-02 made pins a non-blocking, **Named** facet release: migration `000033` (`observation_id … ON DELETE CASCADE` as backstop), audited removal through `deleteimpact.ReleaseFacets`, and the confirm sentence naming the handles. |
-| **In** | With real pins from S9-17: composer row delete and Subject delete through the shipped confirm; FakeStore models pins so Swift tests cover it; drop the Swift `sameness_claim` leftovers. Confirm the audit trail reads back per claim. |
-| **Check** | Delete a pinned Observation from the composer → allowed; confirm names PER-…; both claims keep their other pins; audit shows the removed pins. |
-| **Depends on** | S9-17 |
-
-#### S9-19 — Promote compare
-
-| | |
-| --- | --- |
-| **In** | Per **S9-D11**: compare step for existing handles with members, between target and claim fields. |
-| **Check** | Join with two confirmed pairs → both claims pinned. |
-| **Depends on** | **S9-D11**, S9-17 |
-
-### Slice 6 — Events
+### Slice 5 — Events
 
 #### S9-20 — Seed `event_name`
 
@@ -827,7 +800,7 @@ Design: [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md). PR
 | **In** | Per **S9-D6**. Places empty until S9-32. Route the graph card's `.openHandle` target to this page for events. |
 | **Depends on** | **S9-D6**, S9-16, S9-22 |
 
-### Slice 7 — Places: names and cardinality
+### Slice 6 — Places: names and cardinality
 
 #### S9-36 — Property cardinality
 
@@ -865,31 +838,33 @@ Design: [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md). PR
 | **Check** | *Montréal* + *Montreal* → two names on one Place; *york* + *York* → one; a low-trust spelling drops with its reason. |
 | **Depends on** | **S9-D7**, S9-16, S9-25 |
 
-### Slice 8 — Walk + bridges
+### Slice 7 — The canonical graph
 
-#### S9-28 — Edges + bridge filing
+#### S9-28 — Subject module + bridge filing
 
 | | |
 | --- | --- |
-| **In** | The **subject module**: subject-valued Properties map to the target's handle (unpromoted drop out as `no_evidence`) — the canonical graph, in `value_entity_id`. Upkeep: a claim create / remove recomputes handles whose members' Observations point at that subject. Promote write files bridge subjects onto the association the ends already share, or mints one (lift the S9-02 primary-kinds guard in `promote.Save`). Extend the rebuild-equals-upkeep tests. Once bridge edge Observations can be pinned, test that deleting a bridge Subject releases those pins audited: its connection-facet release erases each edge Observation through `ReleaseFacets(KindObservation)`, which takes the pins first. |
+| **In** | The **subject module**: subject-valued Properties map to the target's handle (unpromoted drop out as `no_evidence`) — the canonical graph, in `value_entity_id`. Upkeep: a claim create / remove recomputes handles whose members' Observations point at that subject. **Automatic bridge filing** ([`promote-alignment.md`](../../promote-alignment.md) §9.1): after any claim create, every bridge Subject whose ends are now both handles is filed in the same transaction, joining the association the ends already share or minting one. Keys: participation and location by their ends (role reconciled on the association); relationship and place relationship by their ends and type; direction kept for directed types (a per-type flag, not a code list). A link from a handle to itself is refused; a refused filing doesn't fail the claim and the bridge stays unfiled with its reason. Lift the S9-02 primary-kinds guard for bridges filed this way. Extend the rebuild-equals-upkeep tests. Test that deleting a bridge Subject releases its edge Observations' pins audited (connection-facet release through `ReleaseFacets(KindObservation)`). |
+| **Testable** | Promote a person, then its birth event (today's single-Subject Promote) → the participation is filed onto a new association; a second record of the same birth joins it; a spouse and a parent link between the same two people are two relationships; direction is kept; a self-link is refused; rebuild equals upkeep. |
 | **Depends on** | S9-12, S9-13 |
 
-#### S9-29 — Neighborhood read
+#### S9-31 — Composer walks + header dependents
 
 | | |
 | --- | --- |
-| **In** | Unpromoted neighbors of a just-filed subject; queue rules; bridge readiness and shared association. Related-first target suggestions during a walk. |
-| **Depends on** | S9-28 |
+| **In** | Person birth / death date and place (place names; chains arrive with S9-39); Event subject titles (*Birth of …*, marriage, *et al.*, *unnamed person*, *{Type} at {name}*) and places. Header-dependents function (reverse walk) for later reprojection. |
+| **Depends on** | S9-22, S9-25, S9-28 |
+| **Note** | Give Promote's Event name (`displayName`) the same subject parts from the graph's participation and location bridges, so a Baptism card promotes as *Baptism of James Robins* rather than its label. People are named by their own `displayName` rule (name form, then label). |
 
-#### S9-30 — Promote walk + off-ramp
+#### S9-32 — Fill derived cells
 
 | | |
 | --- | --- |
-| **In** | Per **S9-D12**: connected subjects after each save; loop; bridge confirm; Done. |
-| **Check** | Walk a birth record: person → event → place → participation → location; bridges wait for both ends; Done keeps saved steps. |
-| **Depends on** | **S9-D12**, S9-29 |
+| **In** | Persons / Events lists and Person / Event detail render the new cells — already designed in **S9-D2 / D3 / D5 / D6**; no new brief. |
+| **Check** | *Birth of James Robins*; James shows *1817 – 1880 · York → Toronto* (chains follow in S9-40). |
+| **Depends on** | S9-31, S9-23, S9-24 |
 
-### Slice 9 — Place hierarchy (the hard way)
+### Slice 8 — Place hierarchy (the hard way)
 
 Design: [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md) §11.1 and R9.
 
@@ -897,8 +872,8 @@ Design: [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md) §1
 
 | | |
 | --- | --- |
-| **In** | Seed (Install + migration): subject type `place_relationship` (bridge) with Properties `from` (place), `to` (place), `place_relationship_type` (term); term **category** on `property_terms` (`hierarchical` / `temporal`, nullable for terms that don't use it); seeded types `administrative`, `geographic`, `ecclesiastical` (hierarchical) and `succeeded_by` (temporal); `start_date` / `end_date` bound to `place` (its period). A `connectrules` bridge place ↔ place disambiguated by `place_relationship_type`, so it is drawn and cited on the Evidence graph like any bridge; Promote files it through S9-28. **Loop refusal** in the filing write: a hierarchical link that would close a cycle among canonical places, or a looping succession, is refused with a clear error. Delete Impact and search registries for the new kind. |
-| **Testable** | Seeds; connect rule; cycles refused (direct and transitive); a researcher-added type with a category behaves like the seeded one. |
+| **In** | Seed (Install + migration): subject type `place_relationship` (bridge) with Properties `from` (place), `to` (place), `place_relationship_type` (term); term **category** on `property_terms` (`hierarchical` / `temporal`, nullable for terms that don't use it); seeded types `administrative`, `geographic`, `ecclesiastical` (hierarchical) and `succeeded_by` (temporal); `start_date` / `end_date` bound to `place` (its period). A `connectrules` bridge place ↔ place disambiguated by `place_relationship_type`, so it is drawn and cited on the Evidence graph like any bridge, and filed automatically through S9-28 (keyed by the two places and the type, direction kept). **Succession may branch:** a split is one Place `succeeded_by` several, an amalgamation several Places `succeeded_by` one; nothing assumes one successor. **Loop refusal** in S9-28's bridge filing (alignment flags it before Done): a hierarchical link that would close a cycle among canonical places, or a looping succession, is refused with a clear error. Delete Impact and search registries for the new kind. |
+| **Testable** | Seeds; connect rule; cycles refused (direct and transitive); a researcher-added type with a category behaves like the seeded one; a split (one → two) and an amalgamation (two → one) file and read back. |
 | **Depends on** | S9-28, S9-36 |
 
 #### S9-38b — Custom term dialog: category
@@ -912,9 +887,9 @@ Design: [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md) §1
 
 | | |
 | --- | --- |
-| **In** | Go composer over the cache: a Place's hierarchical parents at a date (links hold where the two places' periods overlap; no period = always), following `administrative` first for display; every candidate when the date can't decide; its parts; its succession both ways. A chain reader for other composers (Persons, Events, search). Header dependents for places (a parent's rename reprojects its children's headers). Cycle guard. |
-| **Testable** | Toronto in 1820 / 1850 / 1950; *about 1841* → both; several parents; succession never builds a chain; undated places always hold. |
-| **Depends on** | S9-38, S9-21, S9-25 |
+| **In** | Go composer over the cache: a Place's hierarchical parents at a date (links hold where the two places' periods overlap; no period = always), following `administrative` first for display; every candidate when the date can't decide; its parts; its succession both ways. A chain reader for other composers: plug chains into S9-31's walks (life places and event places read with their chain at the event's date) and search. Header dependents for places (a parent's rename reprojects its children's headers). Cycle guard. |
+| **Testable** | Toronto in 1820 / 1850 / 1950; *about 1841* → both; several parents; succession never builds a chain; succession both ways with several successors (a split) and several predecessors (an amalgamation); undated places always hold. |
+| **Depends on** | S9-38, S9-21, S9-25, S9-31 |
 
 #### S9-40 — Place hierarchy in list and detail
 
@@ -922,34 +897,61 @@ Design: [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md) §1
 | --- | --- |
 | **In** | Places list chain cell (today's chain); Place detail period, parents by type with their periods, parts, succession — designed in **S9-D4 / S9-D7**; no new brief. |
 | **Check** | Draw Toronto part of Upper Canada, Province of Canada and Ontario with periods → Toronto's page shows each by period; York succeeded by Toronto shows on both pages. |
-| **Depends on** | S9-39, S9-26, S9-27 |
+| **Depends on** | S9-39, S9-26, S9-27, S9-32 |
 
-### Slice 10 — Derived values across the graph
+### Slice 9 — Promote alignment
 
-#### S9-31 — Composer walks + header dependents
+Design: [`promote-alignment.md`](../../promote-alignment.md). Brief: [`S9-D16`](design/S9-D16-promote-page.md) (a **rethink** of the Promote board).
 
-| | |
-| --- | --- |
-| **In** | Person birth / death date and place, the place with its **chain at the event's date** (S9-39); Event subject titles (*Birth of …*, marriage, *et al.*, *unnamed person*, *{Type} at {name}*) and places with chains. Header-dependents function (reverse walk) for later reprojection. |
-| **Depends on** | S9-22, S9-28, S9-39 |
-| **Note** | Give Promote's Event name (`displayName`) the same subject parts from the graph's participation and location bridges, so a Baptism card promotes as *Baptism of James Robins* rather than its label. People are named by their own `displayName` rule (name form, then label). |
-
-#### S9-32 — Fill derived cells
+#### S9-17 — Pins + backfill engine
 
 | | |
 | --- | --- |
-| **In** | Persons / Events lists and Person / Event detail render the new cells — already designed in **S9-D2 / D3 / D5 / D6**; no new brief. |
-| **Check** | *Birth of James Robins*; James shows *1817 – 1880 · York, Upper Canada → Toronto, Ontario*. |
-| **Depends on** | S9-31, S9-23, S9-24 |
+| **In** | Salvaged from the first S9-17 / S9-18 (#265 / #266, closed unmerged). **Kept:** `autoreconcile.Compatible` (the module's same value or fold, for one pair); `identityclaims.PinTx` / `PinnedObservations`; pairs + backfill in `promote.Save`, each pin audited under its claim (Go only, no FFI yet); the delete-impact fixture on Promote-written pins and the end-to-end pinned-delete tests (impact names the handle once, other pins kept, audit reads back per claim); the Swift `sameness_claim` leftovers removed. **Dropped:** the per-Subject comparison read (`promotecompare`) and its proto / FFI / Swift plumbing, the compare-step draft (`confirmedPairs`), the pins badge, FakeStore pin modelling. S9-41 / S9-43 / S9-44 replace them. |
+| **Testable** | Pins on both claims; older `argument` untouched; deleting a pinned Observation names its handle and keeps the claims' other pins; the audit reads back per claim. |
+| **Depends on** | S9-12, S9-13b |
+| **Note** | Lands ahead of its slice: no UI. Everything it keeps has a consumer in S9-41 / S9-43. |
+
+#### S9-41 — Align core
+
+| | |
+| --- | --- |
+| **In** | A pure Go package: `Align(layer, canon, stats, fixed) Proposal` (design §4–§6). Best-first propagation from the fixed pairs (decided rows and existing claims); one handle per Subject within a layer; property-only fallback for unreachable Subjects; agree / conflict / unknown per comparison through the value-type modules and per-Property cardinality; weights log(m/u) with u from `stats` and m from priors per value type; provenance scaling; edge signatures with fan-out; flags for conflicts with decided rows, possible duplicates, self-links and cycles. Deterministic. |
+| **Testable** | Table-driven, plus the obituary golden test against a small canonical tree: Gracie anchors her birth, death, burial and two children; the residences and Medicine Hat come out New / Skip; a decided row never changes on a re-run; the same inputs give the same proposal. |
+| **Depends on** | S9-17, S9-21, S9-36 |
+
+#### S9-42 — Alignment loader + proposal read
+
+| | |
+| --- | --- |
+| **In** | The loader (design §7): the layer (one Source's Subjects, bridges, Observations, provenance); seed handles (fixed rows, existing claims, top-k `core/match` candidates); canonical expansion, one batched query per hop over S9-28's edges; members' Observations in batch. `stats` (value frequencies, signature fan-outs) cached against the latest audit revision. FFI `ProposePromoteAlignment(source, fixed[])` → rows with candidate headers (Person / Event / Place header composers), comparisons, drafted pins, reasons and flags; Swift store + FakeStore. |
+| **Testable** | A fixed query count whatever the graph size; a write anywhere invalidates `stats`; the obituary fixture through the real loader matches S9-41's golden. |
+| **Depends on** | S9-41, S9-22, S9-25, S9-28 |
+
+#### S9-43 — Batch Promote write
+
+| | |
+| --- | --- |
+| **In** | One transaction per Done (design §9): re-validate against the revision the proposal saw; a claim per row (status, confidence, argument), a minted handle for New, nothing for Skip; pins from the toggled comparisons, the pair check widened to **one-hop neighbors through a bridge**, with backfill; bridge filing through S9-28, skipping switched-off bridges; one R3 recompute over every touched handle; one audit revision. FFI + Swift store + FakeStore, with pins modelled so S9-44's tests cover pinned deletes from the composer and the graph. |
+| **Testable** | All or nothing on a lost race; one-hop pins land on both claims; each bridge filed once; rebuild equals upkeep after a batch. |
+| **Depends on** | S9-17, S9-28, S9-42 |
+
+#### S9-44 — Promote page
+
+| | |
+| --- | --- |
+| **In** | Per **S9-D16** (rethink). The Promote place becomes one page: the choose-target and claim steps (S9-11 / S9-12) and `PromoteFlow`'s step machine are replaced by a row list (suggested / decided, target, claim fields, pin toggles). Entry from any card opens with that row; *Map the rest of this graph*; re-propose after every decision with *updated* marks; the evidence sheet; the bridge summary with switches; duplicate and conflict warnings; Done; leave guard. The app half of the old S9-18: pinned deletes from the composer and the graph, covered through FakeStore pins. |
+| **Check** | Promote Gracie → map the rest → strong rows preselected, weak flagged, the rest Skip; retarget a child → only suggested rows move; Done files everything at once; delete a pinned Observation → the confirm names the Person. |
+| **Depends on** | **S9-D16**, S9-42, S9-43 |
+
+### Slice 10 — Search + timings
 
 #### S9-33 — Deep fixture + timings
 
 | | |
 | --- | --- |
-| **In** | Seeded project generator (a Person on ~10 Sources, multi-member events with Locations, relationships, a place hierarchy several levels deep; a few hundred handles). Benchmarks: rebuild, one-write upkeep, one Promote step, list and detail composition, chain composition. Ledger rows. |
-| **Depends on** | S9-31 |
-
-### Slice 11 — Search
+| **In** | Seeded project generator (a Person on ~10 Sources, multi-member events with Locations, relationships, a place hierarchy several levels deep; a few hundred handles). Benchmarks: rebuild, one-write upkeep, a Promote proposal and a batch Done (at obituary scale and on the deep fixture), list and detail composition, chain composition. Ledger rows. |
+| **Depends on** | S9-39, S9-44 |
 
 #### S9-34 — Search documents from headers + dependents
 
@@ -984,7 +986,7 @@ Honesty pass against the [goal bar](#goal-dogfood-bar); ledger timings recorded;
 | Place hierarchy the hard way: place relationships (typed, categorized), periods, chains at a date, loop refusal | Gazetteer lookup ([`ideas/place-gazetteer-service.md`](../../ideas/place-gazetteer-service.md)); geometry; place reconciliation across grains |
 | Auto-reconciler cache with upkeep, rebuild, and rebuild-equals-upkeep test | Per-screen caches; stored derived values (life dates, event names); resident in-memory graph (only if timings demand) |
 | Header composers shared by lists, Promote, search | — |
-| Promote from the Evidence graph: per-step saves, walk, Done off-ramp | Stub handles with no Subject; canonical merge |
+| Promote from the Evidence graph: one page aligning the whole graph, one Done, bridges filed automatically | Stub handles with no Subject; canonical merge; a saved Promote draft; learned matching weights and the decision log they need |
 | Promote creates claims (one-way) | Editing, re-pinning, or removing Identity Claims; removing a member (Spike 10) |
 | Promote writes `accepted` claims; the reconciler already treats provisional members as reasoning-only and ignores rejected ones | `provisional` / `rejected` in Promote (later spike) |
 | Person / Event / Place lists and details | Association-kind pages; tree / timeline / map |
@@ -1003,17 +1005,19 @@ Honesty pass against the [goal bar](#goal-dogfood-bar); ledger timings recorded;
 5. **Upkeep misses are silent.** A trigger the affected-handles function forgets leaves a stale row nobody notices. The rebuild-equals-upkeep test is the guard; every new write path adds its trigger and a test sequence.
 6. **Cascades bypass Go — so Go doesn't rely on them.** Every official delete calls `deleteimpact.ReleaseFacets`, which removes and audits claims, pins, notes, and connection facets before the parent `DELETE` and fails if anything is left for the `CASCADE` backstop. Its `Released.Handles` is how cache upkeep (S9-06) — and with it handle search reprojection (S9-34a) — learns which handles a delete touched — computed before anything is gone. A new delete path gets this by calling `ReleaseFacets`, not by hand-wiring helpers.
 7. **Promoting a subject can change other handles.** Its Observations' targets and inbound subject-valued Observations re-map; R3's claim trigger covers the second hop.
-8. **One accepted claim per Subject** is a partial unique index. Promote must hide or refuse subjects that are already members, and a step that loses a race fails alone — earlier steps stay saved.
+8. **One accepted claim per Subject** is a partial unique index. Promote shows members as read-only anchors, and a Done that loses a race fails whole; the page re-proposes.
 9. **Composite FKs** carry `subject_type_id` on the claim. A person Subject cannot be claimed onto a Place; the target picker filters by type so the researcher never sees that error.
 10. **Backfill is symmetric.** A confirmed pair pins both Observations on the incoming claim **and** the existing member's claim. The older claim's `argument` is not rewritten.
-11. **Pins are Observations only.** Not Citations, Subjects, or Sources. Confirming a match creates no Observation.
-12. ~~**Stale reservation.**~~ Go side retired in S9-01. Swift still carries `sameness_claim` L10n / preview until S9-18.
+11. **Pins are Observations only.** Not Citations, Subjects, or Sources. A pin may be one hop away (the birth event's date on the person's claim). Confirming a match creates no Observation.
+12. ~~**Stale reservation.**~~ Go side retired in S9-01. Swift still carries `sameness_claim` L10n / preview until S9-17.
 15. **Pins never block.** A pinned Observation (or a Subject whose Observations are pinned on other members' claims) deletes freely; the claims stay with a weaker exhibit. Do not reintroduce a blocking evidence probe — weak claims are the §5.2 review alert's job.
 13. **Candidate vs canonical refs.** Subjects are `CPR-…`; handles are `PER-…`. Both prefixes already exist on `subject_types`.
 14. **Cross-Source reads** run on the serialized catalog session. Keep rebuild off the open path's critical section if it gets long.
 16. **`form` is a transcription.** The reconciler never reads a NameValue's `form`; a name with no parts is no evidence. Fixtures and seeds that write names must write parts.
 17. **Majority counts Sources.** Two Observations under one Source are one vote; a test that wants two votes needs two Sources.
 18. **Places don't reconcile across grains.** Toronto, Ontario and Canada are three Places linked by relationships, never names of one Place. A rename is a new Place with `succeeded_by`.
+19. **Bridges have no identity of their own.** They are filed by their ends (and type, for relationships), never matched on their own fields (S9-28).
+20. **Decided rows are fixed.** An alignment re-run may never change a row the researcher touched; it flags a conflict instead.
 
 ---
 
@@ -1021,7 +1025,7 @@ Honesty pass against the [goal bar](#goal-dogfood-bar); ledger timings recorded;
 
 | # | Question | Leaning |
 | --- | --- | --- |
-| Q1 | ~~Submit at the end vs commit each step.~~ | **Decided:** one transaction per promoted Subject, saved on Next, with a **Done** off-ramp after every step. Matches §5.4. |
+| Q1 | ~~Submit at the end vs commit each step.~~ | **Decided, then revised 2026-10-06:** one transaction per **Done** for the whole Promote page (claims, pins, bridges), re-validated first ([`promote-alignment.md`](../../promote-alignment.md) §9). |
 | Q2 | ~~Correcting a mistake.~~ | **Descoped to Spike 10:** remove a member, remove its Identity Claim, add evidence to an existing claim. Promote stays create-only. |
 | Q3 | ~~Walk canonical or Interpretation neighbors for derived values?~~ | **Decided:** canonical only. Detail pages show promoted handles and claims; Interpretation neighbors live on the Evidence graph. An unpromoted birth event gives the Person no birth date. |
 | Q4 | ~~Which Participation roles count for a Person's birth / death?~~ | **Decided:** `role = subject` only — that is what the role is for. A father on a birth is not his birth. |
@@ -1037,13 +1041,15 @@ Honesty pass against the [goal bar](#goal-dogfood-bar); ledger timings recorded;
 | Q14 | ~~Label vs composed-from-subjects.~~ | **Decided:** label stays below subject titles; it wins only when there is no subject. Revisit on dogfood. |
 | Q15 | ~~Reconciling values other than names and dates.~~ | **Decided (replan):** every value type gets a module on one pipeline ([`conclusion-reconciliation.md`](../../conclusion-reconciliation.md)). Text is case-insensitive; majority counts Sources; reasoning is cached. |
 | Q16 | ~~Places and their hierarchy.~~ | **Decided (replan):** separate Places linked by typed place relationships (hierarchical or temporal), periods on Places, chains at a date, evidence by hand this spike (R9). |
+| Q18 | ~~How Promote proves a join.~~ | **Decided 2026-10-06:** automatic alignment of the whole Evidence graph with researcher fine-tuning, not a per-Property checklist or a per-Subject walk ([`promote-alignment.md`](../../promote-alignment.md)). |
+| Q19 | ~~Bridge filing.~~ | **Decided 2026-10-06:** automatic whenever both ends are handles; participation / location keyed by ends, relationships by ends + type; direction per type; self-links refused (design §9.1). |
 | Q17 | ~~Multi-valued Properties.~~ | **Decided (replan):** per-Property cardinality; `toponym` is the seeded multi-valued one. Most repeating facts are Events. |
 
 ---
 
 ## Docs to update as work lands
 
-- [`conclusion-layer-data-model.md`](../../conclusion-layer-data-model.md): §5.3–§5.4 "future UI" → shipped behavior (per-step saves; grounding with zero pins; create-only). New section: the auto-reconciler cache as a derived, rebuildable projection; edges as auto-reconciled subject-valued Properties.
+- [`conclusion-layer-data-model.md`](../../conclusion-layer-data-model.md): §5.3–§5.4 rewritten for Promote alignment (2026-10-06); as S9-41 – S9-44 land, note what shipped. New section: the auto-reconciler cache as a derived, rebuildable projection; edges as auto-reconciled subject-valued Properties.
 - [`research-judgment-model.md`](../../research-judgment-model.md) §1.1: cached order and reasoning are derived, not stored judgment.
 - [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md) §12: implementation status as each module lands.
 - [`conclusion-layer-data-model.md`](../../conclusion-layer-data-model.md) §13: Place `contained_in` question answered by place relationships (R9); new `place_relationship` kind in the kinds list.

@@ -1,17 +1,19 @@
 # S9-D11 — Promote: compare
 
+> **Superseded 2026-10-06, never built.** Promote became one page that aligns the whole Evidence graph: [`S9-D16`](../S9-D16-promote-page.md), design in [`promote-alignment.md`](../../../../promote-alignment.md). Kept for history; do not hand this to Claude Design.
+
 **Kind:** Claude Design board  
 **Spike:** Provenencia Spike 9 (canonical entities MVP)  
 **View:** Promote flow — compare step (existing handle only)  
 **Implements later as:** PR **S9-19**  
 **Depends on:** S9-D9 (shell), S9-D10 (next step); S9-17 (comparison read + pins + backfill)  
 **Related:** conclusion model §5.1 (confirmed matches, backfill), §5.3  
-**Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)  
-**Skill:** [`add-design-brief`](../../../../.cursor/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.cursor/skills/add-ui-component/SKILL.md)
+**Design system layers:** [`docs/design-system-layers.md`](../../../../design-system-layers.md)  
+**Skill:** [`add-design-brief`](../../../../../.cursor/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../../.cursor/skills/add-ui-component/SKILL.md)
 
-Paste this entire document into Claude Design as the requirements for one board/flow. Read shared product facts in [`README.md`](README.md) first.
+Paste this entire document into Claude Design as the requirements for one board/flow. Read shared product facts in [`README.md`](../README.md) first.
 
-This brief **extends S9-D9**'s frames. Reuse its layout; change only what this kind needs. The S9-D9 board is Claude Design *Promote flow* (`bc84685e-bbc3-4053-a5c9-0f5ac7a13ccd`), `Promote flow.dc.html`; add these frames to it. It shipped as a workspace place in S9-11 ([`completed.md`](../completed.md#s9-d9--design-promote-shell--choose-target)).
+This brief **extends S9-D9**'s frames. Reuse its layout; change only what this kind needs. The S9-D9 board is Claude Design *Promote flow* (`bc84685e-bbc3-4053-a5c9-0f5ac7a13ccd`), `Promote flow.dc.html`; add these frames to it. It shipped as a workspace place in S9-11 ([`completed.md`](../../completed.md#s9-d9--design-promote-shell--choose-target)).
 
 ### Claude Design — do this first (in order)
 
@@ -51,7 +53,7 @@ Do **not** invent a local Field, Button, Card, Select, Callout, or Confirm.
 ### Shared Spike 9 facts (all Conclusion boards)
 
 - A canonical **Person / Event / Place** (`PER-…` / `EVT-…` / `PLC-…`) is a researcher's handle for one historical thing. In the UI it is a Person, never a "canonical entity." Interpretation Subjects on Evidence graphs keep candidate refs (`CPR-…`).
-- A handle's **members** are the Subjects promoted onto it (accepted Identity Claims). Each Property collects values from every member, and the engine **reconciles** them ([`conclusion-reconciliation.md`](../../../conclusion-reconciliation.md)).
+- A handle's **members** are the Subjects promoted onto it (accepted Identity Claims). Each Property collects values from every member, and the engine **reconciles** them ([`conclusion-reconciliation.md`](../../../../conclusion-reconciliation.md)).
 - Each field shows its reconciled value in a state: **single**, **merged** (several records agree once reconciled), **mixed** (records disagree and the evidence couldn't narrow them; every surviving value is shown), or **empty**. A future **concluded** state (a researcher's Reconciliation Claim) needs room but does not ship in Spike 9.
 - **Every value can explain itself.** The engine returns every record it considered with an outcome: kept, folded into a fuller value (*J.* into *James*), outvoted by a majority of Sources, dropped as weak evidence (low-trust Source, uncertain transcription, low-confidence claim), denied by a stronger negative record, or no usable value. Support counts **Sources**, not records.
 - A few Properties hold **several true values** (a Place's concurrent names, *Montréal* and *Montreal*). Those show every value; most fields show one.
@@ -161,5 +163,5 @@ This table is **binding**. Instance the Ship kit rows; do not redraw them. Paths
 ## 8. Handoff
 
 1. Archive this brief under `archive/` when the board is agreed.
-2. Record in [`../completed.md`](../completed.md).
+2. Record in [`../completed.md`](../../completed.md).
 3. Implement **S9-19** against the board and inventory (kit first).

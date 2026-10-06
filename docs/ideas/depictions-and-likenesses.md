@@ -34,7 +34,7 @@ A group photo is several Citations on one Artifact, one likeness Observation per
 
 Several likenesses of one person are a gallery. They do not compete the way two birth dates do, and they do not need a Reconciliation Claim to be useful. A preferred portrait, if we ever want one, is a later display choice among those Observations.
 
-On promote, a likeness lines up like a name. The comparison shows the two crops. Confirming a match pins the two Observations that already exist. It does not create a picture and it does not write a transcription.
+On promote, a likeness lines up like a name: Promote's evidence sheet ([`promote-alignment.md`](../promote-alignment.md)) shows the two crops as one comparison, and pinning it pins the two Observations that already exist. It does not create a picture and it does not write a transcription.
 
 ## Crop cache
 
