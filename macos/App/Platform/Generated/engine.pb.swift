@@ -3926,6 +3926,9 @@ public nonisolated struct Provenencia_Engine_V1_Property: Sendable {
   /// subject_type_properties references; delete only at 0
   public var usedBy: Int32 = 0
 
+  /// single | multiple
+  public var cardinality: String = String()
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -4140,6 +4143,9 @@ public nonisolated struct Provenencia_Engine_V1_UpdatePropertyRequest: Sendable 
   public var valueType: String = String()
 
   public var description_p: String = String()
+
+  /// Empty leaves the stored cardinality. single | multiple.
+  public var cardinality: String = String()
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -12164,7 +12170,7 @@ nonisolated extension Provenencia_Engine_V1_ListSubjectPositionsResponse: SwiftP
 
 nonisolated extension Provenencia_Engine_V1_Property: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".Property"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}key\0\u{1}origin\0\u{1}label\0\u{1}description\0\u{3}value_type\0\u{3}used_by\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}key\0\u{1}origin\0\u{1}label\0\u{1}description\0\u{3}value_type\0\u{3}used_by\0\u{1}cardinality\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -12179,6 +12185,7 @@ nonisolated extension Provenencia_Engine_V1_Property: SwiftProtobuf.Message, Swi
       case 5: try { try decoder.decodeSingularStringField(value: &self.description_p) }()
       case 6: try { try decoder.decodeSingularStringField(value: &self.valueType) }()
       case 7: try { try decoder.decodeSingularInt32Field(value: &self.usedBy) }()
+      case 8: try { try decoder.decodeSingularStringField(value: &self.cardinality) }()
       default: break
       }
     }
@@ -12206,6 +12213,9 @@ nonisolated extension Provenencia_Engine_V1_Property: SwiftProtobuf.Message, Swi
     if self.usedBy != 0 {
       try visitor.visitSingularInt32Field(value: self.usedBy, fieldNumber: 7)
     }
+    if !self.cardinality.isEmpty {
+      try visitor.visitSingularStringField(value: self.cardinality, fieldNumber: 8)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -12217,6 +12227,7 @@ nonisolated extension Provenencia_Engine_V1_Property: SwiftProtobuf.Message, Swi
     if lhs.description_p != rhs.description_p {return false}
     if lhs.valueType != rhs.valueType {return false}
     if lhs.usedBy != rhs.usedBy {return false}
+    if lhs.cardinality != rhs.cardinality {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -12657,7 +12668,7 @@ nonisolated extension Provenencia_Engine_V1_CreatePropertyResponse: SwiftProtobu
 
 nonisolated extension Provenencia_Engine_V1_UpdatePropertyRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".UpdatePropertyRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_dir\0\u{3}user_id\0\u{3}property_id\0\u{1}label\0\u{3}value_type\0\u{1}description\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_dir\0\u{3}user_id\0\u{3}property_id\0\u{1}label\0\u{3}value_type\0\u{1}description\0\u{1}cardinality\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -12671,6 +12682,7 @@ nonisolated extension Provenencia_Engine_V1_UpdatePropertyRequest: SwiftProtobuf
       case 4: try { try decoder.decodeSingularStringField(value: &self.label) }()
       case 5: try { try decoder.decodeSingularStringField(value: &self.valueType) }()
       case 6: try { try decoder.decodeSingularStringField(value: &self.description_p) }()
+      case 7: try { try decoder.decodeSingularStringField(value: &self.cardinality) }()
       default: break
       }
     }
@@ -12695,6 +12707,9 @@ nonisolated extension Provenencia_Engine_V1_UpdatePropertyRequest: SwiftProtobuf
     if !self.description_p.isEmpty {
       try visitor.visitSingularStringField(value: self.description_p, fieldNumber: 6)
     }
+    if !self.cardinality.isEmpty {
+      try visitor.visitSingularStringField(value: self.cardinality, fieldNumber: 7)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -12705,6 +12720,7 @@ nonisolated extension Provenencia_Engine_V1_UpdatePropertyRequest: SwiftProtobuf
     if lhs.label != rhs.label {return false}
     if lhs.valueType != rhs.valueType {return false}
     if lhs.description_p != rhs.description_p {return false}
+    if lhs.cardinality != rhs.cardinality {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

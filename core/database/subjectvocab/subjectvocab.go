@@ -250,6 +250,7 @@ func Install(c *database.Catalog) error {
 			Label:       p.Label,
 			Description: p.Description,
 			ValueType:   p.ValueType,
+			Cardinality: p.Cardinality,
 		})
 		if err != nil {
 			return err

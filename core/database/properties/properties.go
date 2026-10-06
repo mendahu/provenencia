@@ -43,20 +43,27 @@ const (
 	ValueTypeSubject = "subject"
 	ValueTypeTerm    = "term"
 
-	sqlUpsert = `INSERT INTO properties (id, key, origin, label, description, value_type)
-		VALUES (?, ?, ?, ?, ?, ?)
+	// CardinalitySingle aims for one value. Several survivors are mixed.
+	CardinalitySingle = "single"
+	// CardinalityMultiple keeps every distinct surviving value. Majority
+	// does not crowd one out; weak evidence still drops.
+	CardinalityMultiple = "multiple"
+
+	sqlUpsert = `INSERT INTO properties (id, key, origin, label, description, value_type, cardinality)
+		VALUES (?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT(key, origin) DO UPDATE SET
 			label = excluded.label,
 			description = excluded.description,
-			value_type = excluded.value_type`
-	sqlLookup = `SELECT id, key, origin, label, COALESCE(description, ''), value_type
+			value_type = excluded.value_type,
+			cardinality = excluded.cardinality`
+	sqlLookup = `SELECT id, key, origin, label, COALESCE(description, ''), value_type, cardinality
 		FROM properties WHERE key = ? AND origin = ?`
-	sqlGetByID = `SELECT id, key, origin, label, COALESCE(description, ''), value_type
+	sqlGetByID = `SELECT id, key, origin, label, COALESCE(description, ''), value_type, cardinality
 		FROM properties WHERE id = ?`
-	sqlList = `SELECT p.id, p.key, p.origin, p.label, COALESCE(p.description, ''), p.value_type,
+	sqlList = `SELECT p.id, p.key, p.origin, p.label, COALESCE(p.description, ''), p.value_type, p.cardinality,
 			(SELECT COUNT(*) FROM observations o WHERE o.property_id = p.id)
 		FROM properties p ORDER BY p.label COLLATE NOCASE, p.origin, p.key`
-	sqlUpdate        = `UPDATE properties SET label = ?, description = ? WHERE id = ?`
+	sqlUpdate = `UPDATE properties SET label = ?, description = ?, cardinality = ? WHERE id = ?`
 	sqlDelete        = `DELETE FROM properties WHERE id = ?`
 	sqlUsedBy        = `SELECT COUNT(*) FROM observations WHERE property_id = ?`
 	sqlCountByOrigin = `SELECT origin, COUNT(*) FROM properties GROUP BY origin`
@@ -70,6 +77,8 @@ type Property struct {
 	Label       string
 	Description string
 	ValueType   string
+	// Cardinality is single or multiple. Empty on input means single.
+	Cardinality string
 	// UsedBy is how many observations reference this Property. Type bindings
 	// do not count. Only List and Update populate it; other readers leave it 0.
 	UsedBy int
@@ -95,7 +104,11 @@ func Upsert(c *database.Catalog, p Property) ([]byte, error) {
 	p.Label = strings.TrimSpace(p.Label)
 	p.Description = strings.TrimSpace(p.Description)
 	p.ValueType = strings.TrimSpace(p.ValueType)
-	if p.Key == "" || p.Label == "" || !originOK(p.Origin) || !valueTypeOK(p.ValueType) {
+	p.Cardinality = strings.TrimSpace(p.Cardinality)
+	if p.Cardinality == "" {
+		p.Cardinality = CardinalitySingle
+	}
+	if p.Key == "" || p.Label == "" || !originOK(p.Origin) || !valueTypeOK(p.ValueType) || !cardinalityOK(p.Cardinality) {
 		return nil, ErrInvalid
 	}
 	id := p.ID
@@ -121,7 +134,7 @@ func Upsert(c *database.Catalog, p Property) ([]byte, error) {
 	} else {
 		desc = p.Description
 	}
-	if _, err := db.Exec(sqlUpsert, id, p.Key, p.Origin, p.Label, desc, p.ValueType); err != nil {
+	if _, err := db.Exec(sqlUpsert, id, p.Key, p.Origin, p.Label, desc, p.ValueType, p.Cardinality); err != nil {
 		return nil, err
 	}
 	return append([]byte(nil), id...), nil
@@ -173,7 +186,7 @@ func Create(c *database.Catalog, userID []byte, label, valueType, description st
 	} else {
 		desc = description
 	}
-	if _, err := tx.Exec(sqlUpsert, id, key, OriginUser, label, desc, valueType); err != nil {
+	if _, err := tx.Exec(sqlUpsert, id, key, OriginUser, label, desc, valueType, CardinalitySingle); err != nil {
 		return Property{}, err
 	}
 	fields := map[string]audit.FieldDiff{
@@ -205,9 +218,12 @@ func Create(c *database.Catalog, userID []byte, label, valueType, description st
 	return Lookup(c, key, OriginUser)
 }
 
-// Update patches label and description for a project Property (user or provenencia).
-// Key, origin, and value_type are immutable. Returns ErrLocked for plugin-origin.
-func Update(c *database.Catalog, userID, id []byte, label, valueType, description string) (Property, error) {
+// Update patches label, description, and cardinality for a project Property
+// (user or provenencia). Key, origin, and value_type are immutable. An empty
+// cardinality leaves the stored one. Provenencia cardinality is fixed:
+// changing it returns ErrLocked, as does a plugin-origin Property. recompute
+// runs in the same transaction only when cardinality actually changes.
+func Update(c *database.Catalog, userID, id []byte, label, valueType, description, cardinality string, recompute func(tx *sql.Tx) error) (Property, error) {
 	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
 		return Property{}, err
 	}
@@ -218,6 +234,7 @@ func Update(c *database.Catalog, userID, id []byte, label, valueType, descriptio
 	label = strings.TrimSpace(label)
 	valueType = strings.TrimSpace(valueType)
 	description = strings.TrimSpace(description)
+	cardinality = strings.TrimSpace(cardinality)
 	if len(id) != 16 || label == "" || !valueTypeOK(valueType) {
 		return Property{}, ErrInvalid
 	}
@@ -230,6 +247,16 @@ func Update(c *database.Catalog, userID, id []byte, label, valueType, descriptio
 	}
 	if valueType != existing.ValueType {
 		return Property{}, ErrInvalid
+	}
+	if cardinality == "" {
+		cardinality = existing.Cardinality
+	}
+	if !cardinalityOK(cardinality) {
+		return Property{}, ErrInvalid
+	}
+	cardinalityChanged := cardinality != existing.Cardinality
+	if cardinalityChanged && existing.Origin != OriginUser {
+		return Property{}, ErrLocked
 	}
 
 	tx, err := db.Begin()
@@ -245,6 +272,9 @@ func Update(c *database.Catalog, userID, id []byte, label, valueType, descriptio
 	if existing.Description != description {
 		fields["description"] = audit.FieldDiff{Old: nullJSON(existing.Description), New: nullJSON(description)}
 	}
+	if cardinalityChanged {
+		fields["cardinality"] = audit.FieldDiff{Old: nullJSON(existing.Cardinality), New: nullJSON(cardinality)}
+	}
 	if len(fields) == 0 {
 		_ = tx.Rollback()
 		existing.UsedBy, _ = UsedBy(c, id)
@@ -256,8 +286,13 @@ func Update(c *database.Catalog, userID, id []byte, label, valueType, descriptio
 	} else {
 		desc = description
 	}
-	if _, err := tx.Exec(sqlUpdate, label, desc, id); err != nil {
+	if _, err := tx.Exec(sqlUpdate, label, desc, cardinality, id); err != nil {
 		return Property{}, err
+	}
+	if cardinalityChanged && recompute != nil {
+		if err := recompute(tx); err != nil {
+			return Property{}, err
+		}
 	}
 	if _, err := audit.Record(tx, audit.Revision{
 		UserID:     userID,
@@ -341,7 +376,7 @@ func List(c *database.Catalog) ([]Property, error) {
 	var out []Property
 	for rows.Next() {
 		var p Property
-		if err := rows.Scan(&p.ID, &p.Key, &p.Origin, &p.Label, &p.Description, &p.ValueType, &p.UsedBy); err != nil {
+		if err := rows.Scan(&p.ID, &p.Key, &p.Origin, &p.Label, &p.Description, &p.ValueType, &p.Cardinality, &p.UsedBy); err != nil {
 			return nil, err
 		}
 		out = append(out, p)
@@ -478,6 +513,10 @@ func valueTypeOK(vt string) bool {
 	}
 }
 
+func cardinalityOK(cardinality string) bool {
+	return cardinality == CardinalitySingle || cardinality == CardinalityMultiple
+}
+
 func uuidString(id []byte) string {
 	if len(id) != 16 {
 		return ""
@@ -500,7 +539,7 @@ type rowScanner interface {
 
 func scanProperty(row rowScanner) (Property, error) {
 	var p Property
-	err := row.Scan(&p.ID, &p.Key, &p.Origin, &p.Label, &p.Description, &p.ValueType)
+	err := row.Scan(&p.ID, &p.Key, &p.Origin, &p.Label, &p.Description, &p.ValueType, &p.Cardinality)
 	if err != nil {
 		return Property{}, err
 	}

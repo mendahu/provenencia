@@ -23,6 +23,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/namevalues"
+	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/valuecodec"
 )
 
@@ -90,6 +91,7 @@ type Field struct {
 	Label       string
 	ValueType   string
 	State       autoreconcile.State // read off the displayed values
+	cardinality string
 	Values      []ReconciledValue   // rank order
 	Outcomes    []Outcome           // by value rank (none last), then Observation id
 }
@@ -104,7 +106,7 @@ type Detail struct {
 const (
 	// The Properties this handle's records speak to (every considered
 	// Observation has an outcome row), in the kind's binding order.
-	sqlProperties = `SELECT p.id, p.key, p.label, p.value_type
+	sqlProperties = `SELECT p.id, p.key, p.label, p.value_type, p.cardinality
 		FROM (SELECT DISTINCT property_id FROM auto_reconciler_outcomes WHERE entity_id = ?) ao
 		JOIN properties p ON p.id = ao.property_id
 		LEFT JOIN subject_type_properties stp ON stp.property_id = p.id AND stp.subject_type_id = ?
@@ -175,7 +177,7 @@ func ForEntity(q Querier, entityID []byte) (Detail, error) {
 		return Detail{}, err
 	}
 	for _, f := range fields {
-		f.State = state(f.Values)
+		f.State = state(f.Values, f.cardinality)
 		sort.SliceStable(f.Outcomes, func(i, j int) bool {
 			ri, rj := f.Outcomes[i].ValueRank, f.Outcomes[j].ValueRank
 			if (ri == 0) != (rj == 0) {
@@ -207,8 +209,9 @@ func memberCount(q Querier, entityID []byte) (int, error) {
 }
 
 // state reads a field's state off its displayed values, by the same rule as
-// autoreconcile.Result.State.
-func state(values []ReconciledValue) autoreconcile.State {
+// autoreconcile.Result.State. Several displayed values on a multiple Property
+// are all true, so the state is multiple rather than mixed.
+func state(values []ReconciledValue, cardinality string) autoreconcile.State {
 	var shown []ReconciledValue
 	for _, v := range values {
 		if v.Displayed() {
@@ -219,6 +222,9 @@ func state(values []ReconciledValue) autoreconcile.State {
 	case len(shown) == 0:
 		return autoreconcile.StateEmpty
 	case len(shown) > 1:
+		if cardinality == properties.CardinalityMultiple {
+			return autoreconcile.StateMultiple
+		}
 		return autoreconcile.StateMixed
 	case shown[0].Support > 1:
 		return autoreconcile.StateMerged
@@ -237,7 +243,7 @@ func loadProperties(q Querier, entityID, subjectTypeID []byte) ([]*Field, map[st
 	byProp := map[string]*Field{}
 	for rows.Next() {
 		f := &Field{}
-		if err := rows.Scan(&f.PropertyID, &f.PropertyKey, &f.Label, &f.ValueType); err != nil {
+		if err := rows.Scan(&f.PropertyID, &f.PropertyKey, &f.Label, &f.ValueType, &f.cardinality); err != nil {
 			return nil, nil, err
 		}
 		fields = append(fields, f)

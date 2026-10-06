@@ -336,7 +336,8 @@ final class PropertiesModel {
                 propertyID: property.id,
                 label: trimmedLabel,
                 valueType: property.valueType,
-                description: trimmedDescription
+                description: trimmedDescription,
+                cardinality: property.cardinality
             )
             session.apply(.updatedProperty)
             isEditingIdentity = false

@@ -331,7 +331,7 @@ place               subject       app target hint: place
 related_to          subject       app target hint: person (relationship other end)
 mentions            subject       app target hint: source
 remark              text          free-text commentary about a source subject
-toponym             text          place name as interpreted from a Source (not a personal NameValue)
+toponym             text          place name as interpreted from a Source (not a personal NameValue); cardinality `multiple`
 ```
 
 Target Subject type hints are application-only (not SQL allow-lists). See the Interpretation doc.

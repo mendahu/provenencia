@@ -242,7 +242,7 @@ func TestReconcileNames(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.group+"/"+tc.name, func(t *testing.T) {
-			got, err := Reconcile(properties.ValueTypeName, tc.in, nil)
+			got, err := Reconcile(properties.ValueTypeName, tc.in, nil, properties.CardinalitySingle)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -349,7 +349,7 @@ func TestReconcileNamesProvenance(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.group+"/"+tc.name, func(t *testing.T) {
-			got, err := Reconcile(properties.ValueTypeName, tc.in, nil)
+			got, err := Reconcile(properties.ValueTypeName, tc.in, nil, properties.CardinalitySingle)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -375,7 +375,7 @@ func TestReconcileNamesProvenance(t *testing.T) {
 func TestReconcileNamesValue(t *testing.T) {
 	a := withNameForm(nm(1, "given=J.|surname=Robins"), "J. Robins")
 	b := withNameForm(nm(2, "given=James|surname=Robins"), "Robins, James")
-	got, err := Reconcile(properties.ValueTypeName, []Candidate{a, b}, nil)
+	got, err := Reconcile(properties.ValueTypeName, []Candidate{a, b}, nil, properties.CardinalitySingle)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -385,7 +385,7 @@ func TestReconcileNamesValue(t *testing.T) {
 
 	c := withNameForm(nm(3, "given=James|surname=Robins|suffix=Jr."), "x")
 	d := withNameForm(nm(4, "given=James|nick=Jim|surname=Robins"), "y")
-	got, err = Reconcile(properties.ValueTypeName, []Candidate{c, d}, nil)
+	got, err = Reconcile(properties.ValueTypeName, []Candidate{c, d}, nil, properties.CardinalitySingle)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -433,7 +433,7 @@ func TestReconcileNamesInvariants(t *testing.T) {
 				in = append(in, gen(byte(i+1)))
 			}
 			where := fmt.Sprintf("seed %d list %d: %s", seed, list, describe(in))
-			got, err := Reconcile(properties.ValueTypeName, in, nil)
+			got, err := Reconcile(properties.ValueTypeName, in, nil, properties.CardinalitySingle)
 			if err != nil {
 				t.Fatalf("%s: %v", where, err)
 			}
@@ -441,7 +441,7 @@ func TestReconcileNamesInvariants(t *testing.T) {
 			// Order independent.
 			shuffled := append([]Candidate(nil), in...)
 			rng.Shuffle(len(shuffled), func(i, j int) { shuffled[i], shuffled[j] = shuffled[j], shuffled[i] })
-			if again, _ := Reconcile(properties.ValueTypeName, shuffled, nil); !reflect.DeepEqual(again, got) {
+			if again, _ := Reconcile(properties.ValueTypeName, shuffled, nil, properties.CardinalitySingle); !reflect.DeepEqual(again, got) {
 				t.Fatalf("%s: input order changed the result", where)
 			}
 
@@ -483,7 +483,7 @@ func TestReconcileNamesInvariants(t *testing.T) {
 			for i, c := range in {
 				reformed[i] = withNameForm(c, "anything "+strings.Repeat("x", i))
 			}
-			if again, _ := Reconcile(properties.ValueTypeName, reformed, nil); !reflect.DeepEqual(specs(again), specs(got)) {
+			if again, _ := Reconcile(properties.ValueTypeName, reformed, nil, properties.CardinalitySingle); !reflect.DeepEqual(specs(again), specs(got)) {
 				t.Fatalf("%s: forms changed the result", where)
 			}
 
@@ -499,7 +499,7 @@ func TestReconcileNamesInvariants(t *testing.T) {
 				renamed[i] = c
 				renamed[i].Value = Value{Name: &n}
 			}
-			if again, _ := Reconcile(properties.ValueTypeName, renamed, nil); !reflect.DeepEqual(shape(again), shape(got)) {
+			if again, _ := Reconcile(properties.ValueTypeName, renamed, nil, properties.CardinalitySingle); !reflect.DeepEqual(shape(again), shape(got)) {
 				t.Fatalf("%s: renaming types changed the values", where)
 			}
 		}
@@ -544,7 +544,7 @@ func BenchmarkReconcileNames(b *testing.B) {
 	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		if _, err := Reconcile(properties.ValueTypeName, in, nil); err != nil {
+		if _, err := Reconcile(properties.ValueTypeName, in, nil, properties.CardinalitySingle); err != nil {
 			b.Fatal(err)
 		}
 	}
@@ -603,7 +603,7 @@ func TestReconcileNamesCombine(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := Reconcile(properties.ValueTypeName, tc.in, nil)
+			got, err := Reconcile(properties.ValueTypeName, tc.in, nil, properties.CardinalitySingle)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -655,7 +655,7 @@ func TestReconcileNamesWords(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := Reconcile(properties.ValueTypeName, tc.in, nil)
+			got, err := Reconcile(properties.ValueTypeName, tc.in, nil, properties.CardinalitySingle)
 			if err != nil {
 				t.Fatal(err)
 			}

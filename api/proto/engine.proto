@@ -1196,6 +1196,7 @@ message Property {
   string description = 5;
   string value_type = 6; // text | integer | date | name | subject | term
   int32 used_by = 7; // subject_type_properties references; delete only at 0
+  string cardinality = 8; // single | multiple
 }
 
 // PropertyTerm is one categorical value for a term-typed Property.
@@ -1275,6 +1276,8 @@ message UpdatePropertyRequest {
   string label = 4;
   string value_type = 5;
   string description = 6;
+  // Empty leaves the stored cardinality. single | multiple.
+  string cardinality = 7;
 }
 
 message UpdatePropertyResponse {

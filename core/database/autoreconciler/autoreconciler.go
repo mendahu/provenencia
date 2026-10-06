@@ -62,7 +62,8 @@ import (
 //	10: an outvoted outcome keeps the vote that beat it (S9-16).
 //	11: dates reconcile by window; date_lo / date_hi and the date sort_key
 //	   are stored (S9-21).
-const CacheVersion = 11
+//	12: multiple cardinality keeps every distinct surviving value (S9-36).
+const CacheVersion = 12
 
 // batchSize bounds the handles per loader batch (and so the IN list length).
 const batchSize = 500
@@ -93,7 +94,7 @@ const (
 	// Source it is cited under, and provenance as grade sort_order relative to
 	// the provenencia default grade (standard, moderate); no assessment, no
 	// grade, or no vocabulary reads as 0.
-	sqlLoadCandidates = `SELECT ic.entity_id, o.id, o.property_id, p.value_type,
+	sqlLoadCandidates = `SELECT ic.entity_id, o.id, o.property_id, p.value_type, p.cardinality,
 			o.value_text, o.value_integer, o.value_date_id, o.value_name_id, o.value_term_id,
 			COALESCE(t.key, ''),
 			ic.status = 'provisional', o.polarity = 'negative', a.source_id,
@@ -129,6 +130,10 @@ const (
 	sqlHandlesForCitation = `SELECT DISTINCT ic.entity_id FROM identity_claims ic
 		JOIN observations o ON o.subject_id = ic.subject_id
 		WHERE ic.status IN ('accepted', 'provisional') AND o.citation_id = ?`
+
+	sqlHandlesForProperty = `SELECT DISTINCT ic.entity_id FROM identity_claims ic
+		JOIN observations o ON o.subject_id = ic.subject_id
+		WHERE ic.status IN ('accepted', 'provisional') AND o.property_id = ?`
 
 	sqlAllEntities = `SELECT id FROM canonical_entities ORDER BY id`
 )
@@ -180,6 +185,16 @@ func RecomputeSourceTx(q Querier, sourceID []byte) error {
 // on the Citation: its transcription certainty is part of their evidence.
 func RecomputeCitationTx(q Querier, citationID []byte) error {
 	ids, err := listIDs(q, sqlHandlesForCitation, citationID)
+	if err != nil {
+		return err
+	}
+	return RecomputeTx(q, ids)
+}
+
+// RecomputePropertyTx recomputes every handle that has an Observation on the
+// Property. A cardinality change resolves those handles differently.
+func RecomputePropertyTx(q Querier, propertyID []byte) error {
+	ids, err := listIDs(q, sqlHandlesForProperty, propertyID)
 	if err != nil {
 		return err
 	}
@@ -257,7 +272,7 @@ func recomputeBatch(q Querier, ids [][]byte) error {
 		return err
 	}
 	for _, g := range groups {
-		res, err := autoreconcile.Reconcile(g.valueType, g.candidates, nil)
+		res, err := autoreconcile.Reconcile(g.valueType, g.candidates, nil, g.cardinality)
 		if err != nil {
 			return err
 		}
@@ -290,10 +305,11 @@ func recomputeBatch(q Querier, ids [][]byte) error {
 
 // group is one (handle, Property) and its candidates.
 type group struct {
-	entityID   []byte
-	propertyID []byte
-	valueType  string
-	candidates []autoreconcile.Candidate
+	entityID    []byte
+	propertyID  []byte
+	valueType   string
+	cardinality string
+	candidates  []autoreconcile.Candidate
 }
 
 // load reads every candidate for the batch in a fixed number of queries: the
@@ -317,7 +333,7 @@ func load(q Querier, ids [][]byte) ([]*group, error) {
 	for rows.Next() {
 		var (
 			entityID, obsID, propertyID []byte
-			valueType                   string
+			valueType, cardinality          string
 			text                        sql.NullString
 			integer                     sql.NullInt64
 			dateID, nameID, termID      []byte
@@ -327,7 +343,7 @@ func load(q Querier, ids [][]byte) ([]*group, error) {
 			credibility, confidence     int
 			uncertain                   bool
 		)
-		if err := rows.Scan(&entityID, &obsID, &propertyID, &valueType, &text, &integer, &dateID, &nameID, &termID, &termKey,
+		if err := rows.Scan(&entityID, &obsID, &propertyID, &valueType, &cardinality, &text, &integer, &dateID, &nameID, &termID, &termKey,
 			&provisional, &negative, &sourceID, &credibility, &uncertain, &confidence); err != nil {
 			_ = rows.Close()
 			return nil, err
@@ -335,7 +351,7 @@ func load(q Querier, ids [][]byte) ([]*group, error) {
 		k := string(entityID) + "\x00" + string(propertyID)
 		g, ok := byKey[k]
 		if !ok {
-			g = &group{entityID: entityID, propertyID: propertyID, valueType: valueType}
+			g = &group{entityID: entityID, propertyID: propertyID, valueType: valueType, cardinality: cardinality}
 			byKey[k] = g
 			groups = append(groups, g)
 		}

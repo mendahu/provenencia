@@ -57,11 +57,11 @@ func TestProperties(t *testing.T) {
 				if got.Key != "custom-fact" || got.Origin != OriginUser {
 					t.Fatalf("got %+v", got)
 				}
-				updated, err := Update(c, userID, got.ID, "Custom Fact 2", ValueTypeText, "")
+				updated, err := Update(c, userID, got.ID, "Custom Fact 2", ValueTypeText, "", "", nil)
 				if err != nil {
 					t.Fatal(err)
 				}
-				if updated.Label != "Custom Fact 2" {
+				if updated.Label != "Custom Fact 2" || updated.Cardinality != CardinalitySingle {
 					t.Fatalf("label %q", updated.Label)
 				}
 				if err := Delete(c, userID, got.ID); err != nil {

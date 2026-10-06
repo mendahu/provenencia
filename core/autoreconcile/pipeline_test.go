@@ -121,7 +121,37 @@ func TestPipeline(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.group+"/"+tc.name, func(t *testing.T) {
-			got, err := Reconcile(properties.ValueTypeText, tc.in, nil)
+			got, err := Reconcile(properties.ValueTypeText, tc.in, nil, properties.CardinalitySingle)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if have := rowsOf(got); !reflect.DeepEqual(have, tc.want) {
+				t.Fatalf("got  %+v\nwant %+v", have, tc.want)
+			}
+			if got.State() != tc.state {
+				t.Fatalf("state %q, want %q", got.State(), tc.state)
+			}
+		})
+	}
+}
+
+func TestPipelineMultipleCardinality(t *testing.T) {
+	cases := []struct {
+		name  string
+		in    []Candidate
+		want  []wantRow
+		state State
+	}{
+		{"majority does not crowd out a distinct value",
+			[]Candidate{from("a", text(1, "York")), from("b", text(2, "york")), from("c", text(3, "Toronto"))},
+			[]wantRow{{[]byte{1, 2}, ReasonKept, 2, 0}, {[]byte{3}, ReasonKept, 1, 0}}, StateMultiple},
+		{"a weak distinct value still drops",
+			[]Candidate{text(1, "York"), lowTrust(text(2, "Toronto"))},
+			[]wantRow{{[]byte{1}, ReasonKept, 1, 0}, {[]byte{2}, ReasonWeak, 1, 0}}, StateSingle},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := Reconcile(properties.ValueTypeText, tc.in, nil, properties.CardinalityMultiple)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -147,7 +177,7 @@ func TestPipelineOutcomes(t *testing.T) {
 		from("x", text(8, "Upper Canada")),         // kept
 		from("x", lowTrust(text(9, "Muddy York"))), // weak
 	}
-	got, err := Reconcile(properties.ValueTypeText, in, nil)
+	got, err := Reconcile(properties.ValueTypeText, in, nil, properties.CardinalitySingle)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -182,7 +212,7 @@ func TestPipelineOutcomes(t *testing.T) {
 
 func TestPipelineConcluded(t *testing.T) {
 	in := []Candidate{text(1, "A"), text(2, "A"), text(3, "B")}
-	got, err := Reconcile(properties.ValueTypeText, in, &Value{Text: "b", HasText: true})
+	got, err := Reconcile(properties.ValueTypeText, in, &Value{Text: "b", HasText: true}, properties.CardinalitySingle)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -225,14 +255,14 @@ func TestPipelineInvariants(t *testing.T) {
 				in = append(in, c)
 			}
 			where := fmt.Sprintf("seed %d list %d: %+v", seed, list, in)
-			got, err := Reconcile(properties.ValueTypeText, in, nil)
+			got, err := Reconcile(properties.ValueTypeText, in, nil, properties.CardinalitySingle)
 			if err != nil {
 				t.Fatalf("%s: %v", where, err)
 			}
 
 			shuffled := append([]Candidate(nil), in...)
 			rng.Shuffle(len(shuffled), func(i, j int) { shuffled[i], shuffled[j] = shuffled[j], shuffled[i] })
-			if again, _ := Reconcile(properties.ValueTypeText, shuffled, nil); !reflect.DeepEqual(again, got) {
+			if again, _ := Reconcile(properties.ValueTypeText, shuffled, nil, properties.CardinalitySingle); !reflect.DeepEqual(again, got) {
 				t.Fatalf("%s: input order changed the result", where)
 			}
 
@@ -333,7 +363,7 @@ func TestOutvotedVote(t *testing.T) {
 			map[byte]Vote{1: {}, 2: {}, 3: {Support: 3, Of: 4}, 4: {}}},
 	}
 	for _, tc := range cases {
-		got, err := Reconcile(tc.valueType, tc.in, nil)
+		got, err := Reconcile(tc.valueType, tc.in, nil, properties.CardinalitySingle)
 		if err != nil {
 			t.Fatal(err)
 		}

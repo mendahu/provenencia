@@ -1733,7 +1733,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 origin: "user",
                 label: label,
                 description: description,
-                valueType: valueType
+                valueType: valueType,
+                cardinality: "single"
             )
             propertiesByProject[projectDir, default: []].append(property)
             return property
@@ -1746,7 +1747,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         propertyID: String,
         label: String,
         valueType _: String,
-        description: String
+        description: String,
+        cardinality: String
     ) async throws -> CatalogProperty {
         return try withState {
             markCatalogSessionHeld(projectDir)
@@ -1758,8 +1760,14 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             if CatalogOrigin.isPlugin(list[idx].origin) {
                 throw CoreInvokeError.coded(status: 1, code: "properties.invalid", kind: .user, params: [])
             }
+            if list[idx].origin != "user" && cardinality != list[idx].cardinality {
+                throw CoreInvokeError.coded(status: 1, code: "properties.invalid", kind: .user, params: [])
+            }
             list[idx].label = label
             list[idx].description = description
+            if !cardinality.isEmpty {
+                list[idx].cardinality = cardinality
+            }
             propertiesByProject[projectDir] = list
             return list[idx]
         }

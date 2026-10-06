@@ -2,6 +2,7 @@ package autoreconciler_test
 
 import (
 	"bytes"
+	"database/sql"
 	"errors"
 	"fmt"
 	"math/rand"
@@ -121,6 +122,14 @@ func (f *fixture) newSource(title string) sources.Source {
 	must(f.t, err)
 	f.arts[string(src.ID)] = art
 	return src
+}
+
+func (f *fixture) bind(kind string, propertyID []byte) {
+	f.t.Helper()
+	db, err := f.c.DB()
+	must(f.t, err)
+	_, err = db.Exec(`INSERT INTO subject_type_properties (subject_type_id, property_id, sort_order) VALUES (?, ?, 98)`, f.types[kind].ID, propertyID)
+	must(f.t, err)
 }
 
 func (f *fixture) subject(kind string) subjects.Subject { return f.subjectOn(f.source, kind) }
@@ -419,23 +428,95 @@ func TestReconciledValues(t *testing.T) {
 	f.assertUpkeepEqualsRebuild("TestAutoReconciledValues")
 }
 
-// Every value stays cached with its reason (S9-13): an outvoted toponym
-// keeps its row after the displayed one.
+// Every value stays cached with its reason (S9-13). On a single-valued
+// Property, a majority still outvotes a distinct spelling.
 func TestReconciledValuesKeepEveryValue(t *testing.T) {
 	f := newFixture(t)
+	aliasID, err := properties.Upsert(f.c, properties.Property{
+		Key: "alias", Origin: properties.OriginUser, Label: "Alias", ValueType: properties.ValueTypeText,
+	})
+	must(t, err)
+	alias := properties.Property{ID: aliasID, Key: "alias", ValueType: properties.ValueTypeText, Cardinality: properties.CardinalitySingle}
+	f.bind("place", aliasID)
 	a, b, c := f.subject("place"), f.subjectOn(f.other, "place"), f.subjectOn(f.newSource("Gazette"), "place")
-	f.cite(textIn(a, f.props["toponym"], "York"))
-	f.cite(textIn(b, f.props["toponym"], "york"))
-	f.cite(textIn(c, f.props["toponym"], "Muddy York"))
+	f.cite(textIn(a, alias, "York"))
+	f.cite(textIn(b, alias, "york"))
+	f.cite(textIn(c, alias, "Muddy York"))
 	h := f.promote(a)
 	f.join(b, h)
 	f.join(c, h)
-	rows := rowsFor(f.rows(), h, f.props["toponym"].ID)
+	rows := rowsFor(f.rows(), h, alias.ID)
 	if len(rows) != 2 || rows[0].Reason != "kept" || rows[0].Support != 2 || *rows[0].Text != "York" ||
 		rows[1].Reason != "outvoted" || *rows[1].Text != "Muddy York" {
 		t.Fatalf("rows %+v", rows)
 	}
 	f.assertUpkeepEqualsRebuild("TestAutoReconciledValuesKeepEveryValue")
+}
+
+// A multiple Property keeps every distinct surviving value. Case-only
+// duplicates still merge, and a value carried only by weak evidence drops.
+func TestMultipleCardinalityKeepsDistinctValues(t *testing.T) {
+	f := newFixture(t)
+	gazette := f.newSource("Gazette")
+	paper := f.newSource("Paper")
+	must(t, f.credibility(gazette, "low_trust"))
+	a := f.subject("place")
+	b := f.subjectOn(f.other, "place")
+	c := f.subjectOn(paper, "place")
+	d := f.subjectOn(gazette, "place")
+	f.cite(textIn(a, f.props["toponym"], "York"))
+	f.cite(textIn(b, f.props["toponym"], "york"))
+	f.cite(textIn(c, f.props["toponym"], "Toronto"))
+	f.cite(textIn(d, f.props["toponym"], "Muddy York"))
+	h := f.promote(a)
+	f.join(b, h)
+	f.join(c, h)
+	f.join(d, h)
+	rows := rowsFor(f.rows(), h, f.props["toponym"].ID)
+	if len(rows) != 3 || rows[0].Reason != "kept" || *rows[0].Text != "York" || rows[0].Support != 2 ||
+		rows[1].Reason != "kept" || *rows[1].Text != "Toronto" || rows[1].Support != 1 ||
+		rows[2].Reason != "weak" || *rows[2].Text != "Muddy York" {
+		t.Fatalf("rows %+v", rows)
+	}
+	f.assertUpkeepEqualsRebuild("TestMultipleCardinalityKeepsDistinctValues")
+}
+
+// Changing a user Property to multiple recomputes the handles that carry it.
+// A seeded Property's cardinality stays fixed.
+func TestCardinalityChangeRecomputes(t *testing.T) {
+	f := newFixture(t)
+	aliasID, err := properties.Upsert(f.c, properties.Property{
+		Key: "alias", Origin: properties.OriginUser, Label: "Alias", ValueType: properties.ValueTypeText,
+	})
+	must(t, err)
+	alias := properties.Property{ID: aliasID, ValueType: properties.ValueTypeText}
+	f.bind("place", aliasID)
+	a, b, c := f.subject("place"), f.subjectOn(f.other, "place"), f.subjectOn(f.newSource("Gazette"), "place")
+	f.cite(textIn(a, alias, "York"))
+	f.cite(textIn(b, alias, "york"))
+	f.cite(textIn(c, alias, "Toronto"))
+	h := f.promote(a)
+	f.join(b, h)
+	f.join(c, h)
+	rows := rowsFor(f.rows(), h, alias.ID)
+	if len(rows) != 2 || rows[1].Reason != "outvoted" {
+		t.Fatalf("single %+v", rows)
+	}
+	_, err = properties.Update(f.c, userID, alias.ID, "Alias", properties.ValueTypeText, "", properties.CardinalityMultiple,
+		func(tx *sql.Tx) error { return autoreconciler.RecomputePropertyTx(tx, alias.ID) })
+	must(t, err)
+	rows = rowsFor(f.rows(), h, alias.ID)
+	if len(rows) != 2 || rows[0].Reason != "kept" || *rows[0].Text != "York" ||
+		rows[1].Reason != "kept" || *rows[1].Text != "Toronto" {
+		t.Fatalf("multiple %+v", rows)
+	}
+	f.assertUpkeepEqualsRebuild("TestCardinalityChangeRecomputes")
+
+	top := f.props["toponym"]
+	_, err = properties.Update(f.c, userID, top.ID, top.Label, top.ValueType, top.Description, properties.CardinalitySingle, nil)
+	if !errors.Is(err, properties.ErrLocked) {
+		t.Fatalf("seeded cardinality: %v", err)
+	}
 }
 
 // The cache stores the reconciled name (S9-13b): one row for names that

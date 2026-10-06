@@ -1019,7 +1019,8 @@ struct GoStore: GenealogyStore {
         propertyID: String,
         label: String,
         valueType: String,
-        description: String
+        description: String,
+        cardinality: String
     ) async throws -> CatalogProperty {
         var req = Provenencia_Engine_V1_UpdatePropertyRequest()
         req.projectDir = projectDir
@@ -1028,6 +1029,7 @@ struct GoStore: GenealogyStore {
         req.label = label
         req.valueType = valueType
         req.description_p = description
+        req.cardinality = cardinality
         let resp: Provenencia_Engine_V1_UpdatePropertyResponse = try await provenenciaCall(
             method: CoreMethod.updateProperty,
             request: req
@@ -1651,6 +1653,7 @@ struct GoStore: GenealogyStore {
             label: p.label,
             description: p.description_p,
             valueType: p.valueType,
+            cardinality: p.cardinality,
             usedBy: Int(p.usedBy)
         )
     }
