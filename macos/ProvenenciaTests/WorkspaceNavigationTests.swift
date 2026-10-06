@@ -21,6 +21,23 @@ struct WorkspaceNavigationTests {
         return (navigation, url)
     }
 
+    @Test func eventsListAndDetailStayOffThePersonsPlace() throws {
+        let (navigation, _) = try attachedNavigation()
+        navigation.go(to: .sectionRoot(.events))
+        navigation.go(to: .eventDetail(entityId: "evt-1", ref: "EVT-1", title: "Fire at York"))
+        #expect(navigation.currentLocation.section == .events)
+        #expect(navigation.currentLocation.entityId == "evt-1")
+        navigation.goBack()
+        #expect(navigation.currentLocation == .sectionRoot(.events))
+        #expect(navigation.currentLocation.section != .persons)
+        navigation.goForward()
+        #expect(navigation.currentLocation.entityId == "evt-1")
+        #expect(navigation.currentLocation.section == .events)
+        navigation.goBack()
+        navigation.goBack()
+        #expect(navigation.currentLocation == .sectionRoot(.sources))
+    }
+
     @Test func defaultsToSources() {
         let navigation = WorkspaceNavigation()
         #expect(navigation.selectedSection == .sources)

@@ -233,6 +233,7 @@ struct PlaceRegistryTests {
             case .personsList: .sectionRoot(.persons)
             case .personDetail: .personDetail(entityId: "e1", ref: "PER-1", title: nil)
             case .eventsList: .sectionRoot(.events)
+            case .eventDetail: .eventDetail(entityId: "e1", ref: "EVT-1", title: "Fire at York")
             case .placesList: .sectionRoot(.places)
             }
             let place = resolve(location)
@@ -250,6 +251,12 @@ struct PlaceRegistryTests {
         let place = resolve(.sectionRoot(.events))
         #expect(place?.placeID == .eventsList)
         #expect(place?.queryKeys == [.eventsList(project: project)])
+        let detail = resolve(.eventDetail(entityId: "evt-1", ref: "EVT-1", title: "Fire at York"))
+        #expect(detail?.placeID == .eventDetail)
+        #expect(detail?.queryKeys == [.conclusionDetail(project: project, entityId: "evt-1")])
+        #expect(detail?.deepId == "evt-1")
+        let persons = resolve(.sectionRoot(.persons))
+        #expect(persons?.placeID == .personsList)
     }
 
     @Test func placesStubResolvesWithNoQueryKeys() {

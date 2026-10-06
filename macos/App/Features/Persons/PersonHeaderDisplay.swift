@@ -5,17 +5,7 @@ import Foundation
 /// label, else its ref. `titleSource` says which, so a row can style each
 /// case (S9-D2: name plain, label italic, ref mono).
 enum PersonHeaderDisplay {
-    enum TitleSource: Equatable {
-        case name(String)
-        case label(String)
-        case ref(String)
-
-        var text: String {
-            switch self {
-            case .name(let text), .label(let text), .ref(let text): text
-            }
-        }
-    }
+    typealias TitleSource = ConclusionTitleSource
 
     static func titleSource(name: CatalogNameValue?, entity: CatalogCanonicalEntity) -> TitleSource {
         if let name {

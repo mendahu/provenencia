@@ -457,7 +457,7 @@ struct SourceGraphSnapshotTests {
         #expect(placed(.event, label: "Grandpa's fire", [observation("event_name", text: "The Great Fire")]).displayName == "The Great Fire")
         #expect(
             placed(.event, label: "", [observation("event_type", text: "Birth", termKey: "birth")]).displayName
-                == L10n.EventTitle.unspecified(type: "Birth")
+                == L10n.EventTitle.unspecified(type: "birth")
         )
     }
 

@@ -88,8 +88,11 @@ struct WorkspaceDestinationHost: View {
             PersonDetailView(session: session, entityId: navigation.currentLocation.entityId ?? "")
                 .accessibilityIdentifier("workspace.destination.personDetail")
         case .eventsList:
-            ConclusionStubView(section: .events)
+            EventsListView(session: session)
                 .accessibilityIdentifier("workspace.destination.events")
+        case .eventDetail:
+            EventDetailStubView()
+                .accessibilityIdentifier("workspace.destination.eventDetail")
         case .placesList:
             ConclusionStubView(section: .places)
                 .accessibilityIdentifier("workspace.destination.places")
@@ -118,7 +121,7 @@ struct WorkspaceDestinationHost: View {
             return .properties
         case .personsList, .personDetail:
             return .persons
-        case .eventsList:
+        case .eventsList, .eventDetail:
             return .events
         case .placesList:
             return .places

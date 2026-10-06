@@ -8,7 +8,6 @@ Design track and gating: [`../deployment-plan.md`](../deployment-plan.md#design-
 
 | Step | Brief | Feeds (later PRs on the view) | Notes |
 | --- | --- | --- | --- |
-| S9-D3 | [Events list](S9-D3-events-list.md) | **S9-23** (S9-32) | Extends D2 |
 | S9-D4 | [Places list](S9-D4-places-list.md) | **S9-26** (S9-40) | Extends D2; revised for names and parent chain |
 | S9-D6 | [Event detail](S9-D6-event-detail.md) | **S9-24** (S9-32) | Extends D5 |
 | S9-D7 | [Place detail](S9-D7-place-detail.md) | **S9-27** (S9-40) | Extends D5; revised for names, period, hierarchy, succession |
@@ -23,6 +22,7 @@ Design track and gating: [`../deployment-plan.md`](../deployment-plan.md#design-
 | --- | --- | --- | --- |
 | S9-D1 | [Workspace sidebar](archive/S9-D1-sidebar.md) | **S9-08** (S9-23 / S9-26 go live) | Titled Source / Conclude / Configure groups; Configure bottom-aligned behind space + hairline, no counts |
 | S9-D2 | [Persons list](archive/S9-D2-persons-list.md) | **S9-09** (S9-32) | Kit `PVList` + `ConclusionListRow`; title name → italic label → mono ref; trailing ref; no mixed marker in rows |
+| S9-D3 | [Events list](archive/S9-D3-events-list.md) | **S9-23** (S9-32) | Same row; date on the secondary line; subject titles and places later |
 | S9-D8 | [Evidence graph subject card](archive/S9-D8-graph-subject-card.md) | **S9-04** (S9-09 name, S9-11 flow) | One 36pt kind-chip footer (rev 1): Promote, then the membership link |
 | S9-D9 | [Promote — choose target](archive/S9-D9-promote-target.md) | **S9-11** (replaced by S9-D16 / S9-44) | A workspace place, not a sheet; subject header in the kind's wash, composed step row, New / Existing radios, search + Suggested radio rows, Done + leave guard |
 | S9-D10 | [Promote — claim fields](archive/S9-D10-promote-claim-fields.md) | **S9-12** (replaced by S9-D16 / S9-44) | Summary card of the write, Status Select (one option) beside Confidence, Argument; Done discards through the guard; footer Back keeps the draft |

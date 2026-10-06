@@ -4,6 +4,19 @@ import Testing
 
 @Suite
 struct WorkspaceToolbarBreadcrumbTests {
+    @Test func conclusionDetailCrumbPrefersTheTitle() {
+        var wentTo: WorkspaceLocation?
+        let items = WorkspaceToolbar.breadcrumbItems(
+            for: .eventDetail(entityId: "evt-1", ref: "EVT-1", title: "Fire at York"),
+            goTo: { wentTo = $0 }
+        )
+        #expect(items.count == 2)
+        #expect(items[0].label == L10n.string(L10n.Workspace.eventsTitle))
+        #expect(items[1].label == "Fire at York")
+        items[0].action?()
+        #expect(wentTo == .sectionRoot(.events))
+    }
+
     @Test func sectionRootIsSingleNonNavigatingCrumb() {
         let items = WorkspaceToolbar.breadcrumbItems(
             for: .sectionRoot(.sourceTypes),
