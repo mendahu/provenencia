@@ -31,20 +31,20 @@ const (
 	OriginProvenencia = "provenencia"
 	OriginUser        = "user"
 
-	CategoryHierarchical = "hierarchical"
-	CategoryTemporal     = "temporal"
-
 	// KeyPlaceRelationshipType is product-only: researchers cannot mint terms.
 	KeyPlaceRelationshipType = "place_relationship_type"
+	// Locked place_relationship_type keys. Walk / cycle behaviour is keyed
+	// here in Go (part_of = containment; succeeded_by = succession).
+	KeyPartOf      = "part_of"
+	KeySucceededBy = "succeeded_by"
 
-	sqlUpsert = `INSERT INTO property_terms (id, property_id, key, origin, label, description, directed, category)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+	sqlUpsert = `INSERT INTO property_terms (id, property_id, key, origin, label, description, directed)
+		VALUES (?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT(property_id, key, origin) DO UPDATE SET
 			label = excluded.label,
 			description = excluded.description,
-			directed = excluded.directed,
-			category = excluded.category`
-	sqlTermCols = `id, property_id, key, origin, label, COALESCE(description, ''), directed, COALESCE(category, '')`
+			directed = excluded.directed`
+	sqlTermCols = `id, property_id, key, origin, label, COALESCE(description, ''), directed`
 	sqlLookup   = `SELECT ` + sqlTermCols + `
 		FROM property_terms WHERE property_id = ? AND key = ? AND origin = ?`
 	sqlGetByID = `SELECT ` + sqlTermCols + `
@@ -65,8 +65,7 @@ type Term struct {
 	Origin      string
 	Label       string
 	Description string
-	Directed    bool   // kinship / place-relationship: order is part of the key
-	Category    string // hierarchical | temporal | empty
+	Directed    bool // kinship / place-relationship: order is part of the key
 }
 
 // Upsert inserts or updates by (property_id, key, origin). Mints a UUIDv7 id when ID is empty on insert.
@@ -80,11 +79,7 @@ func Upsert(c *database.Catalog, t Term) ([]byte, error) {
 	t.Origin = strings.TrimSpace(t.Origin)
 	t.Label = strings.TrimSpace(t.Label)
 	t.Description = strings.TrimSpace(t.Description)
-	t.Category = strings.TrimSpace(t.Category)
 	if len(t.PropertyID) != 16 || t.Key == "" || t.Label == "" || !originOK(t.Origin) {
-		return nil, ErrInvalid
-	}
-	if !categoryOK(t.Category) {
 		return nil, ErrInvalid
 	}
 	id := t.ID
@@ -110,13 +105,7 @@ func Upsert(c *database.Catalog, t Term) ([]byte, error) {
 	} else {
 		desc = t.Description
 	}
-	var cat any
-	if t.Category == "" {
-		cat = nil
-	} else {
-		cat = t.Category
-	}
-	if _, err := db.Exec(sqlUpsert, id, t.PropertyID, t.Key, t.Origin, t.Label, desc, directedBit(t.Directed), cat); err != nil {
+	if _, err := db.Exec(sqlUpsert, id, t.PropertyID, t.Key, t.Origin, t.Label, desc, directedBit(t.Directed)); err != nil {
 		return nil, err
 	}
 	return append([]byte(nil), id...), nil
@@ -172,7 +161,7 @@ func Create(c *database.Catalog, userID, propertyID []byte, label, description s
 	} else {
 		desc = description
 	}
-	if _, err := tx.Exec(sqlUpsert, id, propertyID, key, OriginUser, label, desc, 0, nil); err != nil {
+	if _, err := tx.Exec(sqlUpsert, id, propertyID, key, OriginUser, label, desc, 0); err != nil {
 		return Term{}, err
 	}
 	fields := map[string]audit.FieldDiff{
@@ -383,7 +372,7 @@ func ListByProperty(c *database.Catalog, propertyID []byte) ([]Term, error) {
 func scanTerm(row *sql.Row) (Term, error) {
 	var t Term
 	var directed int
-	err := row.Scan(&t.ID, &t.PropertyID, &t.Key, &t.Origin, &t.Label, &t.Description, &directed, &t.Category)
+	err := row.Scan(&t.ID, &t.PropertyID, &t.Key, &t.Origin, &t.Label, &t.Description, &directed)
 	if err != nil {
 		return Term{}, err
 	}
@@ -394,7 +383,7 @@ func scanTerm(row *sql.Row) (Term, error) {
 func scanTermRows(rows *sql.Rows) (Term, error) {
 	var t Term
 	var directed int
-	err := rows.Scan(&t.ID, &t.PropertyID, &t.Key, &t.Origin, &t.Label, &t.Description, &directed, &t.Category)
+	err := rows.Scan(&t.ID, &t.PropertyID, &t.Key, &t.Origin, &t.Label, &t.Description, &directed)
 	if err != nil {
 		return Term{}, err
 	}
@@ -407,10 +396,6 @@ func directedBit(directed bool) int {
 		return 1
 	}
 	return 0
-}
-
-func categoryOK(category string) bool {
-	return category == "" || category == CategoryHierarchical || category == CategoryTemporal
 }
 
 func propertyTermsLocked(c *database.Catalog, propertyID []byte) (bool, error) {

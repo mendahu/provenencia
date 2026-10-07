@@ -528,8 +528,6 @@ struct CatalogPropertyTerm: Sendable, Equatable, Identifiable {
     var origin: String
     var label: String
     var description: String
-    /// hierarchical | temporal | empty (engine-facing; place_relationship_type today).
-    var category: String = ""
 }
 
 struct CatalogSubjectTypeProperty: Sendable, Equatable, Identifiable {

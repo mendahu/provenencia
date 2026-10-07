@@ -1758,8 +1758,7 @@ struct GoStore: GenealogyStore {
             key: t.key,
             origin: t.origin,
             label: t.label,
-            description: t.description_p,
-            category: t.category
+            description: t.description_p
         )
     }
 

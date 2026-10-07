@@ -102,11 +102,11 @@ func TestSubjectVocab(t *testing.T) {
 					t.Fatal(err)
 				}
 				partOf, err := propertyterms.Lookup(c, prt.ID, "part_of", propertyterms.OriginProvenencia)
-				if err != nil || !partOf.Directed || partOf.Category != propertyterms.CategoryHierarchical {
+				if err != nil || !partOf.Directed {
 					t.Fatalf("part_of %+v %v", partOf, err)
 				}
 				succ, err := propertyterms.Lookup(c, prt.ID, "succeeded_by", propertyterms.OriginProvenencia)
-				if err != nil || !succ.Directed || succ.Category != propertyterms.CategoryTemporal {
+				if err != nil || !succ.Directed {
 					t.Fatalf("succeeded_by %+v %v", succ, err)
 				}
 				placeType, err := subjecttypes.Lookup(c, "place", subjecttypes.OriginProvenencia)

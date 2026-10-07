@@ -453,8 +453,8 @@ func TestBridgeFiling(t *testing.T) {
 		typeProp := w.prop("place_relationship_type")
 		partOf := w.term(typeProp, "part_of")
 		succeededBy := w.term(typeProp, "succeeded_by")
-		if partOf.Category != propertyterms.CategoryHierarchical || succeededBy.Category != propertyterms.CategoryTemporal {
-			t.Fatalf("categories part_of=%q succeeded_by=%q", partOf.Category, succeededBy.Category)
+		if !partOf.Directed || !succeededBy.Directed {
+			t.Fatalf("directed part_of=%v succeeded_by=%v", partOf.Directed, succeededBy.Directed)
 		}
 
 		york := w.node("place", "York", 0, 0)

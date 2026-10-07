@@ -8,6 +8,7 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/audit"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
+	"github.com/mendahu/provenencia/core/database/propertyterms"
 )
 
 // FileBridgesTx files every unfiled bridge whose ends touch subjectID, in
@@ -139,20 +140,21 @@ func fileBridge(tx *sql.Tx, b bridgeHead) (assocID []byte, changes []audit.Chang
 
 	var termID []byte
 	directed := false
-	var category string
+	var termKey string
 	if keysOnType(rule) {
 		termID = firstTerm(obs, rule.Disambiguation)
 		if len(termID) != 16 {
 			return nil, nil, false, nil
 		}
 		var bit int
-		if err := tx.QueryRow(`SELECT directed, COALESCE(category, '') FROM property_terms WHERE id = ?`, termID).Scan(&bit, &category); err != nil {
+		if err := tx.QueryRow(`SELECT directed, key FROM property_terms WHERE id = ?`, termID).Scan(&bit, &termKey); err != nil {
 			return nil, nil, false, err
 		}
 		directed = bit != 0
 	}
 
-	if b.typeKey == "place_relationship" && (category == "hierarchical" || category == "temporal") {
+	if b.typeKey == "place_relationship" &&
+		(termKey == propertyterms.KeyPartOf || termKey == propertyterms.KeySucceededBy) {
 		fromID, toID := ends[0].entityID, ends[1].entityID
 		if rule.Endpoints[0].PropertyKey != "from" {
 			for _, e := range ends {
@@ -164,7 +166,7 @@ func fileBridge(tx *sql.Tx, b bridgeHead) (assocID []byte, changes []audit.Chang
 				}
 			}
 		}
-		closes, err := placeRelationshipWouldCycle(tx, category, fromID, toID)
+		closes, err := placeRelationshipWouldCycle(tx, termKey, fromID, toID)
 		if err != nil {
 			return nil, nil, false, err
 		}
@@ -207,8 +209,9 @@ func keysOnType(b connectrules.Bridge) bool {
 }
 
 // placeRelationshipWouldCycle reports whether adding from→to of the given
-// category would close a loop among already filed place relationships.
-func placeRelationshipWouldCycle(tx *sql.Tx, category string, fromID, toID []byte) (bool, error) {
+// locked term key (part_of or succeeded_by) would close a loop among already
+// filed place relationships of that same key.
+func placeRelationshipWouldCycle(tx *sql.Tx, termKey string, fromID, toID []byte) (bool, error) {
 	rows, err := tx.Query(`
 		SELECT ic_from.entity_id, ic_to.entity_id
 		FROM identity_claims ic
@@ -218,7 +221,7 @@ func placeRelationshipWouldCycle(tx *sql.Tx, category string, fromID, toID []byt
 		JOIN observations o_type ON o_type.subject_id = s.id
 		JOIN properties p_type ON p_type.id = o_type.property_id
 			AND p_type.key = 'place_relationship_type' AND p_type.origin = 'provenencia'
-		JOIN property_terms pt ON pt.id = o_type.value_term_id AND pt.category = ?
+		JOIN property_terms pt ON pt.id = o_type.value_term_id AND pt.key = ?
 		JOIN observations o_from ON o_from.subject_id = s.id
 		JOIN properties p_from ON p_from.id = o_from.property_id
 			AND p_from.key = 'from' AND p_from.origin = 'provenencia'
@@ -229,7 +232,7 @@ func placeRelationshipWouldCycle(tx *sql.Tx, category string, fromID, toID []byt
 			AND ic_from.status = 'accepted'
 		JOIN identity_claims ic_to ON ic_to.subject_id = o_to.value_subject_id
 			AND ic_to.status = 'accepted'
-		WHERE ic.status = 'accepted'`, category)
+		WHERE ic.status = 'accepted'`, termKey)
 	if err != nil {
 		return false, err
 	}

@@ -269,7 +269,6 @@ func Install(c *database.Catalog) error {
 			Label:       term.Label,
 			Description: term.Description,
 			Directed:    term.Directed,
-			Category:    term.Category,
 		}); err != nil {
 			return err
 		}

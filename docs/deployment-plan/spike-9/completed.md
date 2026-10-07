@@ -1118,10 +1118,10 @@ Places can sit in a containment graph and a succession lineage, with periods on 
 
 **What shipped**
 
-- Migration `000045`: `property_terms.category` (`hierarchical` / `temporal`); backfill for existing catalogs — subject type `place_relationship`, Properties `from` / `to` / `place_relationship_type`, period bindings on `place`, membership span on the bridge, locked terms `part_of` and `succeeded_by`.
+- Migration `000045`: backfill for existing catalogs — subject type `place_relationship`, Properties `from` / `to` / `place_relationship_type`, period bindings on `place`, membership span on the bridge, locked directed terms `part_of` and `succeeded_by`. No category column; walk / cycle behaviour keys off those term keys in Go.
 - `subjectvocab` Install seeds the same for new catalogs; connectrules product bridge place↔place (disambiguation `place_relationship_type`); place↔place refusal removed. Mac `productMatrix` and FakeStore match.
-- User `propertyterms.Create` under provenencia `place_relationship_type` returns `ErrLocked`. Proto / Swift carry optional `category` on list round-trip.
-- Bridge filing soft-refuses hierarchical and temporal cycles (direct and transitive); the place claims still succeed. Splits and amalgamations file. A hierarchical link keeps its own `start_date` / `end_date` observations.
+- User `propertyterms.Create` under provenencia `place_relationship_type` returns `ErrLocked`.
+- Bridge filing soft-refuses `part_of` and `succeeded_by` cycles (direct and transitive, same-key graph); the place claims still succeed. Splits and amalgamations file. A hierarchical link keeps its own `start_date` / `end_date` observations.
 - Mark `subject_place_relationship`, Properties strip chrome, and Evidence graph bridge kind wiring for connect.
 
 **What stayed out**

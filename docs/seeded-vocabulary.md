@@ -26,7 +26,7 @@ Items marked **TBD** are expected seeds whose exact set is still being refined.
 2. This file may stay ahead of the product. Keeping a larger catalog here is documentation, not a commitment to pre-make unused pickers, metadata fields, or event types.
 3. Seeds are data inserted into a project database, not SQL enums.
 4. Shipped keys are not structurally privileged subclasses; they are convenient defaults with optional first-class UX. Their privilege is **origin**, not a separate table or enum.
-5. **Property terms** (`event_type`, `role`, `relationship_type`, `place_relationship_type`, and similar kind/edge vocabularies) are vocabulary-definition rows with `origin` (§1.1), not free-text Observation strings. **Term-typed Properties are Install/registry only** (product or plugin) — researchers do not create Properties with `value_type = term`. Product/plugin Install seeds large term sets; researchers may usually add `origin=user` **term rows** under those Properties without a dedicated Event types / Roles admin destination. **Exception:** `place_relationship_type` is product-only (locked `part_of` / `succeeded_by`); the UI does not offer *Add type…* there. True prose Properties (`remark`, `toponym`) stay `value_type = text`. Name part `type` on NameValue is a **compiled product registry** (not `property_terms`); user-minted part types are TBD. `place_relationship_type` terms carry a **category** (`hierarchical` / `temporal`) for the engine.
+5. **Property terms** (`event_type`, `role`, `relationship_type`, `place_relationship_type`, and similar kind/edge vocabularies) are vocabulary-definition rows with `origin` (§1.1), not free-text Observation strings. **Term-typed Properties are Install/registry only** (product or plugin) — researchers do not create Properties with `value_type = term`. Product/plugin Install seeds large term sets; researchers may usually add `origin=user` **term rows** under those Properties without a dedicated Event types / Roles admin destination. **Exception:** `place_relationship_type` is product-only (locked `part_of` / `succeeded_by`); the UI does not offer *Add type…* there. True prose Properties (`remark`, `toponym`) stay `value_type = text`. Name part `type` on NameValue is a **compiled product registry** (not `property_terms`); user-minted part types are TBD. Engine behaviour for place links is keyed by those term keys (`part_of` = containment; `succeeded_by` = succession), not a category column.
 6. Do not seed a fine-grained source-quality ontology (`is_authentic`, defect codes, and similar) on Source catalog rows or as Observation defect codes unless a concrete workflow requires it. First-class **Source credibility** uses the three-point assessment vocabulary in §3.0 and [`research-judgment-model.md`](research-judgment-model.md), not ad hoc Source metadata.
 7. Expanding this catalog does not require a schema migration when the underlying tables already use open keys.
 8. Source credibility grades and Claim confidence grades share a three-point *shape* but **must not share keys or labels** — they answer different questions.
@@ -326,7 +326,7 @@ start_date          date          span start; locked on event — leave empty if
 end_date            date          span end; locked on event — leave empty if only Date applies
 role                term          participation edge label; terms §3.5
 relationship_type   term          directed: person is this of related_to; terms §3.6
-place_relationship_type  term     part_of / succeeded_by only (product-locked); categories hierarchical / temporal; terms §3.8
+place_relationship_type  term     part_of / succeeded_by only (product-locked); terms §3.8
 from                subject       app target hint: place (place relationship: the part or predecessor)
 to                  subject       app target hint: place (place relationship: the whole or successor)
 person              subject       app target hint: person (also relationship “who is the X”)
@@ -378,7 +378,7 @@ relationship    relationship_type   # term; locked (directed)
 
 place_relationship  from            # locked; part or predecessor (S9-38)
 place_relationship  to              # locked; whole or successor
-place_relationship  place_relationship_type  # term; locked; category hierarchical|temporal
+place_relationship  place_relationship_type  # term; locked part_of / succeeded_by
 place_relationship  start_date      # locked; membership span start
 place_relationship  end_date        # locked; membership span end
 
@@ -457,11 +457,11 @@ Use `intersex` when the source indicates intersex / DSD variation; `indeterminat
 
 ## 3.8 Property terms: `place_relationship_type` (S9-38)
 
-How two Places relate. **Product-only:** the two seeded terms are locked; Create of a user term under this Property is refused; the composer does not offer *Add type…*. Each term has a **category** on `property_terms` (`hierarchical` or `temporal`) so filing and chains know how to behave. Bound only to `place_relationship`. Both terms are directed.
+How two Places relate. **Product-only:** the two seeded terms are locked; Create of a user term under this Property is refused; the composer does not offer *Add type…*. Filing and chains key off the term key (`part_of` = containment; `succeeded_by` = succession). Bound only to `place_relationship`. Both terms are directed.
 
 ```text
-part_of        hierarchical   -- from is part of to (builds display chains)
-succeeded_by   temporal       -- from was succeeded by to (lineage; never a chain)
+part_of        -- from is part of to (builds display chains)
+succeeded_by   -- from was succeeded by to (lineage; never a chain)
 ```
 
 A place-nature vocabulary (administrative / informal / …) is **deferred**; several Locations on an Event fold into chains via `part_of` instead ([`conclusion-reconciliation.md`](conclusion-reconciliation.md) §11.1).

@@ -11023,15 +11023,13 @@ func (x *Property) GetCardinality() string {
 
 // PropertyTerm is one categorical value for a term-typed Property.
 type PropertyTerm struct {
-	state       protoimpl.MessageState `protogen:"open.v1"`
-	Id          string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	PropertyId  string                 `protobuf:"bytes,2,opt,name=property_id,json=propertyId,proto3" json:"property_id,omitempty"`
-	Key         string                 `protobuf:"bytes,3,opt,name=key,proto3" json:"key,omitempty"`
-	Origin      string                 `protobuf:"bytes,4,opt,name=origin,proto3" json:"origin,omitempty"`
-	Label       string                 `protobuf:"bytes,5,opt,name=label,proto3" json:"label,omitempty"`
-	Description string                 `protobuf:"bytes,6,opt,name=description,proto3" json:"description,omitempty"`
-	// hierarchical | temporal | empty. Engine-facing; product place_relationship_type only today.
-	Category      string `protobuf:"bytes,7,opt,name=category,proto3" json:"category,omitempty"`
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	PropertyId    string                 `protobuf:"bytes,2,opt,name=property_id,json=propertyId,proto3" json:"property_id,omitempty"`
+	Key           string                 `protobuf:"bytes,3,opt,name=key,proto3" json:"key,omitempty"`
+	Origin        string                 `protobuf:"bytes,4,opt,name=origin,proto3" json:"origin,omitempty"`
+	Label         string                 `protobuf:"bytes,5,opt,name=label,proto3" json:"label,omitempty"`
+	Description   string                 `protobuf:"bytes,6,opt,name=description,proto3" json:"description,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -11104,13 +11102,6 @@ func (x *PropertyTerm) GetLabel() string {
 func (x *PropertyTerm) GetDescription() string {
 	if x != nil {
 		return x.Description
-	}
-	return ""
-}
-
-func (x *PropertyTerm) GetCategory() string {
-	if x != nil {
-		return x.Category
 	}
 	return ""
 }
@@ -16356,7 +16347,7 @@ const file_engine_proto_rawDesc = "" +
 	"\n" +
 	"value_type\x18\x06 \x01(\tR\tvalueType\x12\x17\n" +
 	"\aused_by\x18\a \x01(\x05R\x06usedBy\x12 \n" +
-	"\vcardinality\x18\b \x01(\tR\vcardinality\"\xbd\x01\n" +
+	"\vcardinality\x18\b \x01(\tR\vcardinality\"\xa1\x01\n" +
 	"\fPropertyTerm\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
 	"\vproperty_id\x18\x02 \x01(\tR\n" +
@@ -16364,8 +16355,7 @@ const file_engine_proto_rawDesc = "" +
 	"\x03key\x18\x03 \x01(\tR\x03key\x12\x16\n" +
 	"\x06origin\x18\x04 \x01(\tR\x06origin\x12\x14\n" +
 	"\x05label\x18\x05 \x01(\tR\x05label\x12 \n" +
-	"\vdescription\x18\x06 \x01(\tR\vdescription\x12\x1a\n" +
-	"\bcategory\x18\a \x01(\tR\bcategory\"\x89\x01\n" +
+	"\vdescription\x18\x06 \x01(\tR\vdescription\"\x89\x01\n" +
 	"\x13SubjectTypeProperty\x12;\n" +
 	"\bproperty\x18\x01 \x01(\v2\x1f.provenencia.engine.v1.PropertyR\bproperty\x12\x1d\n" +
 	"\n" +

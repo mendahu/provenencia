@@ -55,7 +55,6 @@ type seedBinding struct {
 type seedTerm struct {
 	PropertyKey, Key, Label, Description string
 	Directed                             bool
-	Category                             string // hierarchical | temporal; empty for other Properties
 }
 
 var seedTypes = []seedType{
@@ -235,7 +234,7 @@ var seedTerms = []seedTerm{
 	{PropertyKey: "relationship_type", Key: "ward", Label: "Ward", Directed: true},
 
 	{PropertyKey: "place_relationship_type", Key: "part_of", Label: "Part of",
-		Description: "From is part of to. Builds display chains.", Directed: true, Category: "hierarchical"},
+		Description: "From is part of to. Builds display chains.", Directed: true},
 	{PropertyKey: "place_relationship_type", Key: "succeeded_by", Label: "Succeeded by",
-		Description: "From was succeeded by to. Lineage; never a chain.", Directed: true, Category: "temporal"},
+		Description: "From was succeeded by to. Lineage; never a chain.", Directed: true},
 }

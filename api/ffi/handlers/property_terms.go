@@ -125,6 +125,5 @@ func propertyTermProto(t propertyterms.Term) *engine.PropertyTerm {
 		Origin:      t.Origin,
 		Label:       t.Label,
 		Description: t.Description,
-		Category:    t.Category,
 	}
 }

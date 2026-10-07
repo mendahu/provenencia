@@ -1,10 +1,7 @@
--- S9-38: place relationships and periods. Term category (hierarchical /
--- temporal) for place_relationship_type. Existing catalogs get the type,
+-- S9-38: place relationships and periods. Existing catalogs get the type,
 -- properties, terms, and bindings; new catalogs are empty here and Install
--- mints UUIDv7s.
-
-ALTER TABLE property_terms ADD COLUMN category TEXT
-	CHECK (category IS NULL OR category IN ('hierarchical', 'temporal'));
+-- mints UUIDv7s. Hierarchical vs temporal behaviour is keyed by the locked
+-- term keys part_of / succeeded_by in Go (no schema category column).
 
 -- Subject type place_relationship (only when provenencia types already exist).
 INSERT INTO subject_types (id, key, origin, label, description, ref_prefix, candidate_ref_prefix)
@@ -123,10 +120,10 @@ AND NOT EXISTS (
 	WHERE stp.subject_type_id = st.id AND stp.property_id = p.id
 );
 
-INSERT INTO property_terms (id, property_id, key, origin, label, description, directed, category)
+INSERT INTO property_terms (id, property_id, key, origin, label, description, directed)
 SELECT randomblob(16), p.id, 'part_of', 'provenencia', 'Part of',
 	'From is part of to. Builds display chains.',
-	1, 'hierarchical'
+	1
 FROM properties p
 WHERE p.key = 'place_relationship_type' AND p.origin = 'provenencia'
 AND NOT EXISTS (
@@ -134,10 +131,10 @@ AND NOT EXISTS (
 	WHERE t.property_id = p.id AND t.key = 'part_of' AND t.origin = 'provenencia'
 );
 
-INSERT INTO property_terms (id, property_id, key, origin, label, description, directed, category)
+INSERT INTO property_terms (id, property_id, key, origin, label, description, directed)
 SELECT randomblob(16), p.id, 'succeeded_by', 'provenencia', 'Succeeded by',
 	'From was succeeded by to. Lineage; never a chain.',
-	1, 'temporal'
+	1
 FROM properties p
 WHERE p.key = 'place_relationship_type' AND p.origin = 'provenencia'
 AND NOT EXISTS (
