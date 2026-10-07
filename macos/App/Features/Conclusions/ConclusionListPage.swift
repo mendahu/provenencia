@@ -21,14 +21,6 @@ enum ConclusionListPresentation<Row: Equatable>: Equatable {
             self = .loading
         }
     }
-
-    /// Header meta from the kind's count copy, or none when there are no rows.
-    /// Takes resolved strings (not function refs) so MainActor kind helpers are
-    /// not sent into this nonisolated value.
-    func meta(count: String, refreshing: String, isRefreshing: Bool) -> String? {
-        guard case .rows(let rows, _) = self, !rows.isEmpty else { return nil }
-        return isRefreshing ? refreshing : count
-    }
 }
 
 /// One Conclude list: what `ConclusionListPage` needs to know about a kind.
@@ -138,13 +130,13 @@ private struct ConclusionListBody<Kind: ConclusionListKind>: View {
                     // Go owns list order (conclusionheaders.sortByTitle); rows show as given.
                     items: rows,
                     thumbnail: { _ in ConclusionListRow.thumbnail(mark: Kind.mark) },
-                    meta: Kind.ref,
+                    meta: { Kind.ref($0) },
                     label: Kind.title,
-                    itemAccessibilityLabel: Kind.accessibilityLabel,
+                    itemAccessibilityLabel: { Kind.accessibilityLabel($0) },
                     itemAccessibilityIdentifier: { "\(Kind.identifierRoot).row.\(Kind.ref($0))" },
                     onActivate: { navigation.go(to: Kind.location($0)) },
                     primary: { ConclusionListRow.title(Kind.titleSource($0), extraCount: Kind.extraCount($0)) },
-                    secondary: Kind.secondary
+                    secondary: { Kind.secondary($0) }
                 )
             }
         }
