@@ -90,6 +90,28 @@ func Align(layer Layer, canon Canon, stats Stats, fixed []Fixed) Proposal
 
 **Pure and deterministic,** like the `autoreconcile` / `autoreconciler` split. A pure package (`graphalign` or similar) runs `Align`; a database package loads the inputs; ties break by id. The obituary is a golden test.
 
+## 4.1 Package shape and tunables
+
+Graph alignment is **its own module**, not folded into Promote UI, FFI handlers, or `core/match`. Shape mirrors the matching split:
+
+| Concern | Lives in |
+| --- | --- |
+| Pure engine | `Align`, seed/propagate/score — no I/O, no catalog types |
+| Catalog adapter | Loader that builds `Layer` / `Canon` / `Stats` and calls `Align` (S9-42) |
+| Config | **One registry file** in the pure package (same idea as [`matching.md`](matching.md) `registry.go`): every tunable the walk and scorer read |
+
+**Everything we expect to tweak while dogfooding belongs in that registry**, not scattered through the walk:
+
+- accept / strong / weak / Skip score bands and the conflict penalty;
+- cold-start priors for `m` (and fallbacks when `u` or fan-out is missing);
+- propagation knobs (queue behaviour, how neighbor support accumulates, one-to-one refusal margins);
+- expansion depth cap if the layer diameter is not enough on its own;
+- any other weights that decide “is this the best candidate to promote?”
+
+Defaults ship for the obituary golden and table tests. Real tuning is **empirical**: file a batch of Sources, watch proposals, change the registry, re-run. Unit tests lock invariants and regressions; they cannot replace merging real graphs. Learned weights from accepts/rejects (§10) stay later; the registry is the hand-tuned front door until then.
+
+`Align` takes an explicit config (or reads the package default) so tests can pin values without editing the registry file.
+
 ---
 
 # 5. Walking: best-first propagation
@@ -210,7 +232,7 @@ Spike 9 was replanned around this on 2026-10-06: [`deployment-plan/spike-9/deplo
 - **Place hierarchy comes before Promote** (slice 8): part-of and succession links (splits and amalgamations included) are filed as bridges from the start, so trying Promote on real research captures them, and graph alignment is tested with them as edges.
 - **Promote graph alignment is one slice** (slice 9):
   - **S9-17**, reshaped from #265 / #266: `Compatible`, pins and backfill, the pinned-delete tests. The per-Subject comparison read and its UI plumbing are dropped.
-  - **S9-41:** `Align`, a pure package.
+  - **S9-41:** `Align`, a pure package with a single config registry for every tunable (§4.1).
   - **S9-42:** the loader and the proposal read.
   - **S9-43:** the batch write.
   - **S9-44:** the page, gated by brief **S9-D16**.
@@ -227,9 +249,7 @@ Spike 9 was replanned around this on 2026-10-06: [`deployment-plan/spike-9/deplo
 
 # 11. Open questions
 
-- **Thresholds and bands:** the score cut-offs for strong, weak and no match, and the conflict penalty. Set them against the obituary, then dogfood.
-- **Cold start:** in a small catalog, u and the fan-outs are noisy or missing. What priors per value type and signature apply until the data is enough?
-- **Expansion depth:** is the layer's diameter always the right bound, or should it be capped?
+- **Thresholds and bands / cold-start priors / expansion depth:** all live in the graph-alignment config registry (§4.1). Initial values from the obituary golden; refine by dogfooding whole Sources, not by guessing in isolation.
 - ~~**Places at several grains:**~~ **Decided 2026-10-07:** fold Locations that share a `part_of` graph into one chain; unrealted Places stay competing values and reconcile ([`conclusion-reconciliation.md`](conclusion-reconciliation.md) §11.1). No place-nature Property this spike.
 - **Typed name parts:** a name entered as one form ("Gracie Gray Gates (Frickleton)") weakens name comparison. Is that a composer nudge, or a parsing step?
 - **Naming:** what is the "map the rest of this graph" action called?
