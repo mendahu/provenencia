@@ -336,3 +336,59 @@ func hasID(ids [][]byte, id []byte) bool {
 	}
 	return false
 }
+
+// Two surviving births are a disagreement: the header counts them and leads
+// with the earliest dated one, whatever the refs say.
+func TestCompetingLifeEvents(t *testing.T) {
+	tests := []struct {
+		name      string
+		years     []int // 0 = undated
+		wantCount int
+		wantYear  int // 0 = no date
+	}{
+		{name: "one birth", years: []int{1817}, wantCount: 1, wantYear: 1817},
+		{name: "the earliest dated birth leads", years: []int{1819, 1815, 1817}, wantCount: 3, wantYear: 1815},
+		{name: "a dated birth leads an undated one", years: []int{0, 1821}, wantCount: 2, wantYear: 1821},
+		{name: "undated births still count", years: []int{0, 0}, wantCount: 2},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			f := newFixture(t)
+			james := f.bare("person")
+			f.named(james, "James Robins")
+			f.at(james, 0, 0)
+			var births []subjects.Subject
+			for i, year := range tt.years {
+				birth := f.bare("event")
+				in := []observations.Input{{PropertyID: f.prop("event_type").ID, ValueTermID: f.term("event_type", "birth").ID}}
+				if year != 0 {
+					in = append(in, observations.Input{PropertyID: f.prop("date").ID, Date: pointYear(year)})
+				}
+				f.cite(birth, in...)
+				f.at(birth, 4, int64(2*i))
+				f.participation(james, birth, "subject")
+				births = append(births, birth)
+			}
+			jamesID := f.promoteSubject(james)
+			for _, b := range births {
+				f.promoteSubject(b)
+			}
+			var birth conclusionheaders.LifeFacts
+			for _, h := range f.list() {
+				if bytes.Equal(h.Entity.ID, jamesID) {
+					birth = h.Birth
+				}
+			}
+			if birth.EventCount != tt.wantCount || birth.Event == nil {
+				t.Fatalf("event count %d event %+v", birth.EventCount, birth.Event)
+			}
+			var year int
+			if birth.Date != nil && birth.Date.StartYear != nil {
+				year = *birth.Date.StartYear
+			}
+			if year != tt.wantYear {
+				t.Fatalf("lead year %d, want %d", year, tt.wantYear)
+			}
+		})
+	}
+}

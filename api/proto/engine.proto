@@ -995,6 +995,9 @@ message LifeFacts {
   repeated HeaderPlace places = 3;
   // event is the birth or death event read; absent when none is linked.
   CanonicalEntity event = 4;
+  // event_count is how many birth (or death) events survive; > 1 is a
+  // disagreement, and event is the earliest dated one.
+  int32 event_count = 5;
 }
 
 // EventSubject is one person on an event through a subject-role participation.

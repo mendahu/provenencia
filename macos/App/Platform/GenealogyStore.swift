@@ -280,6 +280,9 @@ struct CatalogLifeFacts: Sendable, Equatable {
     /// The birth or death event read; `nil` when none is linked. Its page
     /// owns the date's Why.
     var event: CatalogCanonicalEntity?
+    /// Surviving birth (or death) events; above 1 is a disagreement, and
+    /// `event` is the earliest dated one.
+    var eventCount: Int = 0
     var date: CatalogDateValueInput?
     var dateCount: Int = 0
     var places: [CatalogHeaderPlace] = []

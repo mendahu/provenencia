@@ -49,7 +49,7 @@ func personHeaderProto(h conclusionheaders.PersonHeader) *engine.PersonHeader {
 }
 
 func lifeFactsProto(life conclusionheaders.LifeFacts) *engine.LifeFacts {
-	out := &engine.LifeFacts{DateCount: int32(life.DateCount)}
+	out := &engine.LifeFacts{DateCount: int32(life.DateCount), EventCount: int32(life.EventCount)}
 	if life.Event != nil {
 		out.Event = canonicalEntityProto(*life.Event)
 	}

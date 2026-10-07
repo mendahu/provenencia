@@ -26,6 +26,7 @@ SELECT pe.value_entity_id, tt.key,
 	sd.value_date,
 	(SELECT COUNT(*) FROM auto_reconciler_values c
 		WHERE c.entity_id = ev.id AND c.property_id = sp.id AND c.reason = 'kept'),
+	COALESCE(d.sort_key, sd.sort_key),
 	pl.id, pl.subject_type_id, pl.ref, COALESCE(pl.argument, ''), COALESCE(pl.label, ''),
 	tv.value_text, COALESCE(tv.rank, 0),
 	(SELECT COUNT(*) FROM auto_reconciler_values c
@@ -150,6 +151,7 @@ type lifeRow struct {
 	event                 canonicalentities.Entity
 	dateBlob, startBlob   []byte
 	dateCount, startCount int
+	dateSort              sql.NullString
 	place                 canonicalentities.Entity
 	name                  string
 	nameRank, placeCount  int
@@ -162,7 +164,7 @@ func loadLives(q Querier, personIDs [][]byte) (map[string]map[string]LifeFacts, 
 		ev, pl := &r.event, &r.place
 		if err := sc.Scan(&r.personID, &r.kind,
 			&ev.ID, &ev.SubjectTypeID, &ev.Ref, &ev.Argument, &ev.Label,
-			&r.dateBlob, &r.dateCount, &r.startBlob, &r.startCount,
+			&r.dateBlob, &r.dateCount, &r.startBlob, &r.startCount, &r.dateSort,
 			&pl.ID, &pl.SubjectTypeID, &placeRef, &pl.Argument, &pl.Label,
 			&name, &r.nameRank, &r.placeCount); err != nil {
 			return lifeRow{}, err
@@ -181,10 +183,13 @@ func loadLives(q Querier, personIDs [][]byte) (map[string]map[string]LifeFacts, 
 	if err != nil {
 		return nil, err
 	}
-	// person → kind → event ref → accumulator. The lowest event ref wins
-	// when several births (or deaths) survive.
+	// person → kind → event id → accumulator. When several births (or
+	// deaths) survive, the header leads with the earliest dated one (undated
+	// last, then by ref) and counts them all: more than one is a
+	// disagreement the page shows as mixed.
 	type ev struct {
 		entity canonicalentities.Entity
+		sort   sql.NullString
 		date   *datevalues.Value
 		count  int
 		places map[string]*placeBuild
@@ -211,7 +216,7 @@ func loadLives(q Querier, personIDs [][]byte) (map[string]map[string]LifeFacts, 
 			if err != nil {
 				return nil, err
 			}
-			e = &ev{entity: r.event, date: date, count: count, places: map[string]*placeBuild{}}
+			e = &ev{entity: r.event, sort: r.dateSort, date: date, count: count, places: map[string]*placeBuild{}}
 			events[string(r.event.ID)] = e
 		}
 		if len(r.place.ID) == 0 {
@@ -225,15 +230,30 @@ func loadLives(q Querier, personIDs [][]byte) (map[string]map[string]LifeFacts, 
 		for kind, events := range kinds {
 			var best *ev
 			for _, e := range events {
-				if best == nil || e.entity.Ref < best.entity.Ref {
+				if best == nil || leadsLife(e.sort, e.entity.Ref, best.sort, best.entity.Ref) {
 					best = e
 				}
 			}
 			event := best.entity
-			out[person][kind] = LifeFacts{Event: &event, Date: best.date, DateCount: best.count, Places: placesOf(best.places)}
+			out[person][kind] = LifeFacts{
+				Event: &event, EventCount: len(events),
+				Date: best.date, DateCount: best.count, Places: placesOf(best.places),
+			}
 		}
 	}
 	return out, nil
+}
+
+// leadsLife orders competing births or deaths: dated before undated, then
+// by the date's sort key, then by ref so the choice is stable.
+func leadsLife(aSort sql.NullString, aRef string, bSort sql.NullString, bRef string) bool {
+	if aSort.Valid != bSort.Valid {
+		return aSort.Valid
+	}
+	if aSort.String != bSort.String {
+		return aSort.String < bSort.String
+	}
+	return aRef < bRef
 }
 
 type subjectRow struct {

@@ -8449,7 +8449,10 @@ type LifeFacts struct {
 	DateCount int32                  `protobuf:"varint,2,opt,name=date_count,json=dateCount,proto3" json:"date_count,omitempty"`
 	Places    []*HeaderPlace         `protobuf:"bytes,3,rep,name=places,proto3" json:"places,omitempty"`
 	// event is the birth or death event read; absent when none is linked.
-	Event         *CanonicalEntity `protobuf:"bytes,4,opt,name=event,proto3" json:"event,omitempty"`
+	Event *CanonicalEntity `protobuf:"bytes,4,opt,name=event,proto3" json:"event,omitempty"`
+	// event_count is how many birth (or death) events survive; > 1 is a
+	// disagreement, and event is the earliest dated one.
+	EventCount    int32 `protobuf:"varint,5,opt,name=event_count,json=eventCount,proto3" json:"event_count,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -8510,6 +8513,13 @@ func (x *LifeFacts) GetEvent() *CanonicalEntity {
 		return x.Event
 	}
 	return nil
+}
+
+func (x *LifeFacts) GetEventCount() int32 {
+	if x != nil {
+		return x.EventCount
+	}
+	return 0
 }
 
 // EventSubject is one person on an event through a subject-role participation.
@@ -15997,13 +16007,15 @@ const file_engine_proto_rawDesc = "" +
 	"\x05names\x18\x01 \x03(\tR\x05names\x12\x1d\n" +
 	"\n" +
 	"name_count\x18\x02 \x01(\x05R\tnameCount\x12>\n" +
-	"\x06entity\x18\x03 \x01(\v2&.provenencia.engine.v1.CanonicalEntityR\x06entity\"\xdf\x01\n" +
+	"\x06entity\x18\x03 \x01(\v2&.provenencia.engine.v1.CanonicalEntityR\x06entity\"\x80\x02\n" +
 	"\tLifeFacts\x129\n" +
 	"\x04date\x18\x01 \x01(\v2%.provenencia.engine.v1.DateValueInputR\x04date\x12\x1d\n" +
 	"\n" +
 	"date_count\x18\x02 \x01(\x05R\tdateCount\x12:\n" +
 	"\x06places\x18\x03 \x03(\v2\".provenencia.engine.v1.HeaderPlaceR\x06places\x12<\n" +
-	"\x05event\x18\x04 \x01(\v2&.provenencia.engine.v1.CanonicalEntityR\x05event\"\xb3\x01\n" +
+	"\x05event\x18\x04 \x01(\v2&.provenencia.engine.v1.CanonicalEntityR\x05event\x12\x1f\n" +
+	"\vevent_count\x18\x05 \x01(\x05R\n" +
+	"eventCount\"\xb3\x01\n" +
 	"\fEventSubject\x12>\n" +
 	"\x06entity\x18\x01 \x01(\v2&.provenencia.engine.v1.CanonicalEntityR\x06entity\x129\n" +
 	"\x04name\x18\x02 \x01(\v2%.provenencia.engine.v1.NameValueInputR\x04name\x12(\n" +

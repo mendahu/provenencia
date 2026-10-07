@@ -40,7 +40,9 @@ struct PersonDetailContent: ConclusionDetailBody {
     }
 
     /// A Person always shows its name and four life rows, stated empty when
-    /// nothing is recorded. Every other field shows only once a record
+    /// nothing is recorded. A life row is mixed when its value disagrees (two
+    /// kept dates, two Places) or when more than one birth (or death) event
+    /// survives. Every other field shows only once a record
     /// speaks to it (sex at birth, a custom birth weight), in binding order.
     static func rows(
         _ fields: [CatalogConclusionField],
@@ -69,13 +71,14 @@ struct PersonDetailContent: ConclusionDetailBody {
             let lead: String
             let mixed: Bool
             let opens: ReconciledValueRowModel.Opens?
+            let competing = (side?.eventCount ?? 0) > 1
             if style == .date {
                 lead = PersonLifeDisplay.dateText(side?.date, locale: locale)
-                mixed = (side?.dateCount ?? 0) > 1
+                mixed = competing || (side?.dateCount ?? 0) > 1
                 opens = side?.event.map(ReconciledValueRowModel.Opens.event)
             } else {
                 lead = DerivedPlace.name(side?.places ?? [])
-                mixed = DerivedPlace.extra(side?.places ?? []) > 0
+                mixed = competing || DerivedPlace.extra(side?.places ?? []) > 0
                 opens = side?.places.first.map(ReconciledValueRowModel.Opens.place)
             }
             rows.append(.derived(

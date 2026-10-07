@@ -3260,6 +3260,10 @@ public nonisolated struct Provenencia_Engine_V1_LifeFacts: Sendable {
   /// Clears the value of `event`. Subsequent reads from it will return its default value.
   public mutating func clearEvent() {self._event = nil}
 
+  /// event_count is how many birth (or death) events survive; > 1 is a
+  /// disagreement, and event is the earliest dated one.
+  public var eventCount: Int32 = 0
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -11243,7 +11247,7 @@ nonisolated extension Provenencia_Engine_V1_HeaderPlace: SwiftProtobuf.Message, 
 
 nonisolated extension Provenencia_Engine_V1_LifeFacts: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".LifeFacts"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}date\0\u{3}date_count\0\u{1}places\0\u{1}event\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}date\0\u{3}date_count\0\u{1}places\0\u{1}event\0\u{3}event_count\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -11255,6 +11259,7 @@ nonisolated extension Provenencia_Engine_V1_LifeFacts: SwiftProtobuf.Message, Sw
       case 2: try { try decoder.decodeSingularInt32Field(value: &self.dateCount) }()
       case 3: try { try decoder.decodeRepeatedMessageField(value: &self.places) }()
       case 4: try { try decoder.decodeSingularMessageField(value: &self._event) }()
+      case 5: try { try decoder.decodeSingularInt32Field(value: &self.eventCount) }()
       default: break
       }
     }
@@ -11277,6 +11282,9 @@ nonisolated extension Provenencia_Engine_V1_LifeFacts: SwiftProtobuf.Message, Sw
     try { if let v = self._event {
       try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
     } }()
+    if self.eventCount != 0 {
+      try visitor.visitSingularInt32Field(value: self.eventCount, fieldNumber: 5)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -11285,6 +11293,7 @@ nonisolated extension Provenencia_Engine_V1_LifeFacts: SwiftProtobuf.Message, Sw
     if lhs.dateCount != rhs.dateCount {return false}
     if lhs.places != rhs.places {return false}
     if lhs._event != rhs._event {return false}
+    if lhs.eventCount != rhs.eventCount {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

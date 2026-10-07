@@ -180,18 +180,23 @@ enum EventTitleDisplay {
     }
 }
 
-/// The first kept place name, and how many kept names are not that one.
-/// A chain is not part of the name.
+/// The first named Place's first kept name, and how many other Places a walk
+/// reached. A Place's other names (Montréal and Montreal) are one place, not
+/// a disagreement. A chain is not part of the name.
 enum DerivedPlace {
     static func name(_ places: [CatalogHeaderPlace]) -> String {
-        places.first?.names.first?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        for place in places {
+            for name in place.names {
+                let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !trimmed.isEmpty { return trimmed }
+            }
+        }
+        return ""
     }
 
-    /// Kept names beyond the one `name` shows. Several locations and several
-    /// names of one place both count.
+    /// Places beyond the one `name` shows: the list's +N.
     static func extra(_ places: [CatalogHeaderPlace]) -> Int {
-        let total = places.reduce(0) { $0 + max($1.nameCount, $1.names.count) }
-        return max(0, total - (name(places).isEmpty ? 0 : 1))
+        max(0, places.count - (name(places).isEmpty ? 0 : 1))
     }
 }
 
@@ -200,7 +205,7 @@ enum DerivedPlace {
 enum PersonLifeDisplay {
     struct Line: Equatable {
         var text: String
-        /// Kept places beyond the names in `text`. The list's +N.
+        /// Places beyond the ones in `text`. The list's +N.
         var extraPlaces: Int
     }
 

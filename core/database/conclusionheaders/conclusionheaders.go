@@ -42,8 +42,10 @@ type PersonHeader struct {
 // LifeFacts is a birth or a death composed from the canonical graph.
 type LifeFacts struct {
 	// Event is the birth or death event read; nil when none is linked.
-	// Its page owns the date's Why.
-	Event *canonicalentities.Entity
+	// Its page owns the date's Why. EventCount is how many such events
+	// survive; more than one is a disagreement.
+	Event      *canonicalentities.Entity
+	EventCount int
 	// Date is the event's date, else its start date.
 	Date      *datevalues.Value
 	DateCount int
