@@ -27,7 +27,7 @@ Copy the stub. Surface + what got in the way is enough. A wanted fix is optional
 - **Wanted:** When I open the date modal for a date-type Observation, prefill it with a date regex-matched from the transcription. Date formats are fairly limited, so the aim is to get 80–90% of cases right, not every one.
   - Needs a set of patterns for each supported language. That should be manageable.
   - Related: *Automatic structure from the Artifact* (field hints such as `NSDataDetector`) and *Structured date modal should open focused on Year*.
-- **Open question:** What should it pick when the transcription has several dates (e.g. birth and death in an obituary): the first match, or offer the matches to choose from?
+- **Several dates:** use the first match. Citations are usually narrowed to one specific part of a Source, so multiple dates in one transcription are rare. If someone cites a larger chunk, they fix the date by hand.
 
 ### Auto-fill name parts from the full name line
 
