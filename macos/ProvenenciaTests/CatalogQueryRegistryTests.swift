@@ -435,6 +435,40 @@ struct CatalogQueryRegistryTests {
         )
     }
 
+    @Test func eventAndPlaceListsAreGosRowsAsGiven() async throws {
+        let store = FakeStore()
+        let late = CatalogEventHeader(
+            entity: CatalogCanonicalEntity(id: "e2", ref: "EVT-2", subjectTypeID: "t", label: ""),
+            title: CatalogEventTitle(rule: .ref, ref: "EVT-2")
+        )
+        let early = CatalogEventHeader(
+            entity: CatalogCanonicalEntity(id: "e1", ref: "EVT-1", subjectTypeID: "t", label: ""),
+            title: CatalogEventTitle(rule: .ref, ref: "EVT-1")
+        )
+        store.seededEventHeaders = [late, early]
+        let place = CatalogPlaceHeader(
+            entity: CatalogCanonicalEntity(id: "p1", ref: "PLC-1", subjectTypeID: "t", label: ""),
+            names: ["Montréal", "Montreal"]
+        )
+        store.seededPlaceHeaders = [place]
+        let detail = CatalogConclusionDetail(entity: early.entity, fields: [], memberCount: 1, header: .event(early))
+        store.seededConclusionDetails = [early.entity.id: detail]
+        let session = makeSession(store: store)
+
+        let events: QueryHandle<[CatalogEventHeader]> = session.query(.eventsList(project: session.projectKey))
+        let places: QueryHandle<[CatalogPlaceHeader]> = session.query(.placesList(project: session.projectKey))
+        let page: QueryHandle<CatalogConclusionDetail> = session.query(
+            .conclusionDetail(project: session.projectKey, entityId: early.entity.id)
+        )
+        await waitForFetchComplete(events)
+        await waitForFetchComplete(places)
+        await waitForFetchComplete(page)
+        // Order is Go's; the fake does not re-sort or re-derive.
+        #expect(events.value == [late, early])
+        #expect(places.value == [place])
+        #expect(page.value?.eventHeader == early)
+    }
+
     private func nameObservation(id: String, subjectID: String, form: String) -> CatalogObservation {
         CatalogObservation(
             id: id, ref: "OBS-\(id)", citationID: "c1", subjectID: subjectID, propertyID: "p-name",

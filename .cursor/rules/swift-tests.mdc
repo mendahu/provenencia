@@ -20,3 +20,4 @@ Follow the project skill `.cursor/skills/add-swift-test/SKILL.md`.
     #expect(!model.researcherLocked)
 }
 ```
+- `FakeStore` seeds what Go composes (`seededEventHeaders`, `seededPlaceHeaders`, `seededConclusionDetails`, `eventTitlesBySource`); it does not re-implement reconciliation, graph walks, ordering, or the naming matrix. Test those rules in Go.
