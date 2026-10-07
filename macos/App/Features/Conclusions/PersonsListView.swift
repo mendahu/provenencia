@@ -1,55 +1,45 @@
 import SwiftUI
 
-/// The Persons list (S9-09, board S9-D2). A configuration of
-/// `ConclusionListPage`; the place, query key, and history entry stay
-/// Persons. The secondary line is the birth and death.
-struct PersonsListView: View {
-    let session: WorkspaceSession
+/// The Persons list (S9-09, board S9-D2). The place, query key, and history
+/// entry stay Persons. The secondary line is the birth and death.
+typealias PersonsListView = ConclusionListPage<PersonsList>
 
-    var body: some View {
-        ConclusionListPage<CatalogPersonHeader, PersonLifeLine>(
-            session: session,
-            key: .personsList(project: session.projectKey),
-            title: L10n.Workspace.personsTitle,
-            pageAccessibilityIdentifier: "persons.list",
-            emptyIcon: .person,
-            emptyTitle: L10n.Workspace.personsEmptyTitle,
-            emptyMessage: L10n.Workspace.personsEmptyMessage,
-            emptyAccessibilityIdentifier: "persons.empty",
-            countMeta: L10n.Workspace.personCount,
-            refreshingMeta: L10n.Workspace.personCountRefreshing,
-            mark: .subjectPerson,
-            ref: { $0.entity.ref },
-            rowAccessibilityIdentifier: { "persons.row.\($0.entity.ref)" },
-            titleSource: { PersonHeaderDisplay.titleSource($0) },
-            accessibilityLabel: Self.rowLabel,
-            location: { header in
-                .personDetail(
-                    entityId: header.entity.id,
-                    ref: header.entity.ref,
-                    title: PersonHeaderDisplay.title(header)
-                )
-            },
-            secondary: Self.lifeLine
-        )
+enum PersonsList: ConclusionListKind {
+    static func key(project: ProjectKey) -> CatalogQueryKey { .personsList(project: project) }
+    static var title: LocalizedStringResource { L10n.Workspace.personsTitle }
+    static var identifierRoot: String { "persons" }
+    static var emptyIcon: PVSymbol { .person }
+    static var emptyTitle: LocalizedStringResource { L10n.Workspace.personsEmptyTitle }
+    static var emptyMessage: LocalizedStringResource { L10n.Workspace.personsEmptyMessage }
+    static func countMeta(_ count: Int) -> String { L10n.Workspace.personCount(count) }
+    static func refreshingMeta(_ count: Int) -> String { L10n.Workspace.personCountRefreshing(count) }
+    static var mark: PVMarkKey { .subjectPerson }
+
+    static func ref(_ header: CatalogPersonHeader) -> String { header.entity.ref }
+
+    static func titleSource(_ header: CatalogPersonHeader) -> ConclusionTitleSource {
+        PersonHeaderDisplay.titleSource(header)
     }
 
-    private static func rowLabel(_ header: CatalogPersonHeader) -> String {
-        let title = ConclusionListRow.accessibilityLabel(
-            PersonHeaderDisplay.titleSource(header), ref: header.entity.ref
-        )
+    static func accessibilityLabel(_ header: CatalogPersonHeader) -> String {
+        let title = ConclusionListRow.accessibilityLabel(titleSource(header), ref: header.entity.ref)
         let life = PersonLifeDisplay.line(header).text
         guard !life.isEmpty else { return title }
         return L10n.Conclusions.a11yList(title, rest: life)
     }
 
-    private static func lifeLine(_ header: CatalogPersonHeader) -> PersonLifeLine {
+    static func location(_ header: CatalogPersonHeader) -> WorkspaceLocation {
+        .personDetail(entityId: header.entity.id, ref: header.entity.ref, title: PersonHeaderDisplay.title(header))
+    }
+
+    @MainActor
+    static func secondary(_ header: CatalogPersonHeader) -> PersonLifeLine {
         PersonLifeLine(line: PersonLifeDisplay.line(header))
     }
 }
 
 /// Birth and death under a Person's name. The +N is other kept places.
-private struct PersonLifeLine: View {
+struct PersonLifeLine: View {
     let line: PersonLifeDisplay.Line
 
     var body: some View {

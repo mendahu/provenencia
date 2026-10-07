@@ -26,9 +26,10 @@ enum ConclusionDetailPresentation<Content: Equatable>: Equatable {
 }
 
 /// One section under Details. Empty until a later slice fills its rows.
+/// The kind names it; the page draws it.
 struct ConclusionDetailSection: Equatable, Identifiable {
     var id: String
-    var title: String
+    var title: LocalizedStringResource
     var aside: String
     var emptyText: String
 }
@@ -170,7 +171,7 @@ private struct ConclusionDetailEmptySection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            PVSectionHeader(title: title, aside: {
+            PVSectionHeader(title: section.title, aside: {
                 Text(verbatim: section.aside)
                     .font(PVFont.body(size: PVTypeScale.caption, italic: true))
                     .foregroundStyle(PVColor.textMuted)
@@ -183,15 +184,7 @@ private struct ConclusionDetailEmptySection: View {
                 .padding(.vertical, PVSpacing.space5)
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel(L10n.Conclusions.a11yList(section.title, rest: section.emptyText))
-    }
-
-    private var title: LocalizedStringResource {
-        switch section.id {
-        case "contains": L10n.Conclusions.placeContains
-        case "succession": L10n.Conclusions.placeSuccession
-        default: L10n.Conclusions.placePartOf
-        }
+        .accessibilityLabel(L10n.Conclusions.a11yList(L10n.string(section.title), rest: section.emptyText))
     }
 }
 

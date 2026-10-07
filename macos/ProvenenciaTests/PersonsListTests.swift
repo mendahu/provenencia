@@ -94,3 +94,24 @@ struct PersonsListTests {
         #expect(old != location)
     }
 }
+
+/// Each kind's list contract: identifier roots and query keys stay per kind.
+struct ConclusionListKindTests {
+    private let project = ProjectKey(projectDir: "/tmp/p.provenencia")
+
+    @Test func eachKindKeepsItsOwnPlaceAndIdentifiers() {
+        #expect(PersonsList.key(project: project) == .personsList(project: project))
+        #expect(EventsList.key(project: project) == .eventsList(project: project))
+        #expect(PlacesList.key(project: project) == .placesList(project: project))
+        #expect([PersonsList.identifierRoot, EventsList.identifierRoot, PlacesList.identifierRoot] == ["persons", "events", "places"])
+    }
+
+    @Test func onlyPlacesReorderAndBadgeNames() {
+        let entity = CatalogCanonicalEntity(id: "e1", ref: "PER-1", subjectTypeID: "t", label: "")
+        let person = CatalogPersonHeader(entity: entity, name: nil, nameValueCount: 0)
+        #expect(PersonsList.extraCount(person) == 0)
+        #expect(PersonsList.ordered([person]) == [person])
+        let place = CatalogPlaceHeader(entity: entity, names: ["Montréal", "Montreal"])
+        #expect(PlacesList.extraCount(place) == 1)
+    }
+}
