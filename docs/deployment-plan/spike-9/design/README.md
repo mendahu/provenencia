@@ -8,7 +8,6 @@ Design track and gating: [`../deployment-plan.md`](../deployment-plan.md#design-
 
 | Step | Brief | Feeds (later PRs on the view) | Notes |
 | --- | --- | --- | --- |
-| S9-D15 | [Custom term — category](S9-D15-custom-term-category.md) | **S9-38b** | Enhancement to the composer's custom term dialog |
 | S9-D16 | [Promote — one page](S9-D16-promote-page.md) | **S9-44** | **Rethink:** throws out the D9 / D10 frames on the Promote board; one page aligning the whole Evidence graph |
 | S9-D13 | [Omnibar results](S9-D13-omnibar-hits.md) | **S9-35** | Hit rows for three kinds (enhancement) |
 
@@ -34,6 +33,7 @@ Design track and gating: [`../deployment-plan.md`](../deployment-plan.md#design-
 | --- | --- | --- |
 | S9-D11 | [Promote — compare](archive/S9-D11-promote-compare.md) | Never built. Replaced by S9-D16's evidence sheet (2026-10-06). |
 | S9-D12 | [Promote — walk](archive/S9-D12-promote-walk.md) | Never built. Replaced by S9-D16's whole-graph page (2026-10-06). |
+| S9-D15 | [Custom term — category](archive/S9-D15-custom-term-category.md) | Never built. Place relationships are locked `part_of` / `succeeded_by`; nature is an ordinary term Property (2026-10-07). |
 
 Design each brief alongside its feature, just before the PR it gates. Order and dependencies: [PR sequence](../deployment-plan.md#pr-sequence).
 

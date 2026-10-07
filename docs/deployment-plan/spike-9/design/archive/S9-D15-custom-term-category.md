@@ -1,9 +1,11 @@
 # S9-D15 — Custom term: category
 
+> **Retired 2026-10-07.** Never built. Place relationships are locked `part_of` / `succeeded_by` (UI-driven); `place_nature` uses the ordinary custom-term dialog with no category. Kept for history only.
+
 **Kind:** Claude Design board  
 **Spike:** Provenencia Spike 9 (canonical entities MVP)  
 **View:** Citation Composer — the custom term dialog  
-**Implements later as:** PR **S9-38b**  
+**Implements later as:** ~~PR **S9-38b**~~ (retired)  
 **Depends on:** S9-38 (term categories in the engine)  
 **Related:** S9-D7 (Place detail shows parents grouped by the parent's nature)  
 **Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)  

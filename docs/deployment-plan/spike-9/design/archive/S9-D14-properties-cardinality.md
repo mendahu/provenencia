@@ -96,7 +96,7 @@ Properties › languages spoken            (inspector)
 
 | Ships in **S9-37** | Does **not** ship there |
 | --- | --- |
-| Cardinality control in the inspector and the create form; read-only for seeded Properties | Term categories (S9-D15); any other Property setting |
+| Cardinality control in the inspector and the create form; read-only for seeded Properties | Term categories (S9-D15, later retired); any other Property setting |
 
 ---
 
@@ -142,7 +142,7 @@ This table is **binding**. Instance the Ship kit rows; do not redraw them. Paths
 
 ## 7. Out of scope
 
-- Term categories (S9-D15)
+- Term categories (S9-D15 — retired 2026-10-07)
 - Reconciliation settings beyond cardinality
 
 ---

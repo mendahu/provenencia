@@ -26,7 +26,7 @@ Items marked **TBD** are expected seeds whose exact set is still being refined.
 2. This file may stay ahead of the product. Keeping a larger catalog here is documentation, not a commitment to pre-make unused pickers, metadata fields, or event types.
 3. Seeds are data inserted into a project database, not SQL enums.
 4. Shipped keys are not structurally privileged subclasses; they are convenient defaults with optional first-class UX. Their privilege is **origin**, not a separate table or enum.
-5. **Property terms** (`event_type`, `role`, `relationship_type`, `place_nature`, `place_relationship_type`, and similar kind/edge vocabularies) are vocabulary-definition rows with `origin` (§1.1), not free-text Observation strings. **Term-typed Properties are Install/registry only** (product or plugin) — researchers do not create Properties with `value_type = term`. Product/plugin Install seeds large term sets; researchers may add `origin=user` **term rows** under those Properties without a dedicated Event types / Roles admin destination. True prose Properties (`remark`, `toponym`) stay `value_type = text`. Name part `type` on NameValue is a **compiled product registry** (not `property_terms`); user-minted part types are TBD. Some term Properties (`place_relationship_type`) carry a **category** on each term (`hierarchical` / `temporal`); others (`place_nature`) do not.
+5. **Property terms** (`event_type`, `role`, `relationship_type`, `place_nature`, `place_relationship_type`, and similar kind/edge vocabularies) are vocabulary-definition rows with `origin` (§1.1), not free-text Observation strings. **Term-typed Properties are Install/registry only** (product or plugin) — researchers do not create Properties with `value_type = term`. Product/plugin Install seeds large term sets; researchers may usually add `origin=user` **term rows** under those Properties without a dedicated Event types / Roles admin destination. **Exception:** `place_relationship_type` is product-only (locked `part_of` / `succeeded_by`); the UI does not offer *Add type…* there. True prose Properties (`remark`, `toponym`) stay `value_type = text`. Name part `type` on NameValue is a **compiled product registry** (not `property_terms`); user-minted part types are TBD. `place_relationship_type` terms carry a **category** (`hierarchical` / `temporal`) for the engine; `place_nature` does not.
 6. Do not seed a fine-grained source-quality ontology (`is_authentic`, defect codes, and similar) on Source catalog rows or as Observation defect codes unless a concrete workflow requires it. First-class **Source credibility** uses the three-point assessment vocabulary in §3.0 and [`research-judgment-model.md`](research-judgment-model.md), not ad hoc Source metadata.
 7. Expanding this catalog does not require a schema migration when the underlying tables already use open keys.
 8. Source credibility grades and Claim confidence grades share a three-point *shape* but **must not share keys or labels** — they answer different questions.
@@ -327,7 +327,7 @@ end_date            date          span end; locked on event — leave empty if o
 role                term          participation edge label; terms §3.5
 relationship_type   term          directed: person is this of related_to; terms §3.6
 place_nature        term          administrative / informal / ecclesiastical; on `place` (S9-38); terms §3.8
-place_relationship_type  term     part_of / succeeded_by; categories hierarchical / temporal; terms §3.9
+place_relationship_type  term     part_of / succeeded_by only (product-locked); categories hierarchical / temporal; terms §3.9
 from                subject       app target hint: place (place relationship: the part or predecessor)
 to                  subject       app target hint: place (place relationship: the whole or successor)
 person              subject       app target hint: person (also relationship “who is the X”)
@@ -467,18 +467,18 @@ informal         -- region, locality, farm, or other non-institutional place (th
 ecclesiastical   -- church hierarchy (parish, diocese)
 ```
 
-Cross-containment is normal: an informal place may be part of an administrative one, a parish inside a country, Canada part of North America. Researchers may add further `origin=user` terms; those do not carry a category (nature is not hierarchical vs temporal).
+Cross-containment is normal: an informal place may be part of an administrative one, a parish inside a country, Canada part of North America. Researchers may add further `origin=user` terms via the ordinary custom-term dialog (no category). Nature is not hierarchical vs temporal.
 
 ## 3.9 Property terms: `place_relationship_type` (S9-38)
 
-How two Places relate. Each term has a **category** on `property_terms` (`hierarchical` or `temporal`). Bound only to `place_relationship`. All seeded terms are directed.
+How two Places relate. **Product-only:** the two seeded terms are locked; Create of a user term under this Property is refused; the composer does not offer *Add type…*. Each term has a **category** on `property_terms` (`hierarchical` or `temporal`) so filing and chains know how to behave. Bound only to `place_relationship`. Both terms are directed.
 
 ```text
 part_of        hierarchical   -- from is part of to (builds display chains)
 succeeded_by   temporal       -- from was succeeded by to (lineage; never a chain)
 ```
 
-Researchers may add further `origin=user` terms and must pick a category (S9-D15 / S9-38b). Administrative / informal / ecclesiastical are **not** relationship types — they live on `place_nature`.
+Administrative / informal / ecclesiastical are **not** relationship types — they live on `place_nature`.
 
 ---
 

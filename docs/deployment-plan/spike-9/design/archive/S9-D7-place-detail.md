@@ -94,7 +94,7 @@ The page for one Place: **thumbnail slot, names, ref, period, the places it is p
 | Several names at once | All of a Place's reconciled names show (*Toronto*, *Tkaronto*); each has the D5 *Why*. Spellings and case already merged; a low-trust spelling may be dropped as *weak*. |
 | Period | When the Place existed or mattered (*1834 –*, *until 1867*, unknown). Either end may be missing. |
 | Nature on the Place | Administrative, informal, or ecclesiastical (optional). Shown on the Place, not on each link. |
-| "Part of" is one relationship | Hierarchical `part_of` (plus researcher-added hierarchical types). Group parents by the **parent's nature**. |
+| "Part of" is one relationship | Locked hierarchical `part_of` (UI has *part of* and *succeeded by* only). Group parents by the **parent's nature**. |
 | Parents change with time | A link holds for its own span: the overlap of the two places' periods, cut shorter when the link has dates, so a membership can end while both places continue. The header shows **today's** chain (or the last one for a place that ended). |
 | Contains | Places that are part of this one (direct children), grouped like parents. Can be long. |
 | Succession | *Succeeded* / *succeeded by* links to the place before or after a rename or merger (York → Toronto). Not part of the hierarchy. |

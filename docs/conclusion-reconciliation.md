@@ -236,16 +236,16 @@ The rebuild-equals-upkeep tests hold upkeep equal to a full rebuild. Every new t
   | --- | --- | --- |
   | `from` | place | the part, or the predecessor |
   | `to` | place | the whole, or the successor |
-  | `place_relationship_type` | term | hierarchical or temporal (see below) |
+  | `place_relationship_type` | term | `part_of` or `succeeded_by` (product-locked; see below) |
   | `start_date` | date | when a hierarchical membership starts; optional |
   | `end_date` | date | when a hierarchical membership ends; optional |
 
   Each relationship is cited and reconciled like any other evidence; the ends use the subject-valued module (§7). It is a dedicated kind, not the Person Relationship, because its ends are two directional places. It can carry more Properties later without remodelling.
-- **Relationship types are only two behaviors** (open, researcher-extensible; each term has a **category**):
-  - **hierarchical** — seeded `part_of`. One place within another. Follows a chain upward ("everyone in Ontario") and builds display chains ("Toronto, Ontario, Canada"). A place may have several parents, so places form a graph, not a tree. A hierarchical link holds for its membership span, below. Cross-nature containment is fine.
-  - **temporal** — seeded `succeeded_by` (York succeeded by Toronto), and any a researcher adds. These link a lineage that search may follow. They never build a display chain, and containment is not inherited across them.
+- **Relationship types are fixed product terms** (locked; the UI draws *part of* and *succeeded by*). Each carries a **category** on `property_terms` so the engine knows how to file and chain them:
+  - **hierarchical** — `part_of`. One place within another. Follows a chain upward ("everyone in Ontario") and builds display chains ("Toronto, Ontario, Canada"). A place may have several parents, so places form a graph, not a tree. A hierarchical link holds for its membership span, below. Cross-nature containment is fine.
+  - **temporal** — `succeeded_by` (York succeeded by Toronto). Links a lineage that search may follow. Never builds a display chain; containment is not inherited across it.
 
-  The category is data on the vocabulary term (a field on `property_terms`), so a researcher-added type tells the app how to behave. Administrative / informal / ecclesiastical are **not** relationship types.
+  Researchers do **not** add place-relationship types. Administrative / informal / ecclesiastical are **not** relationship types — they live on `place_nature`, a normal researcher-extensible term Property.
 - **No loops.** Hierarchical relationships must not form a cycle, and temporal ones are directional. Both are checked in the app layer, not the schema.
 - **Periods live on Places.** A Place has a **period** when it existed or was meaningful (a city from incorporation, a country from independence, a farm until it was sold). Start and end are both optional structured dates; a place with no period is always valid.
 - **A membership span lives on the hierarchical link.** The bridge's own `start_date` and `end_date` say when that one "part of" held. One bridge is one contiguous span (a place relationship is filed by its two ends and its type). Both dates are optional.

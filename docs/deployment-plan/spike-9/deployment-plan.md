@@ -8,7 +8,7 @@ MVP for the **Conclusion layer**: assemble canonical Persons, Events, and Places
 
 **Replanned again 2026-10-06** from slice 5 on: Promote becomes **one page that aligns a whole Evidence graph** against the canonical graph, proposing a handle, New or Skip for every Subject, with the researcher fine-tuning and one Done ([`promote-alignment.md`](../../promote-alignment.md)). The per-Property compare step and the per-Subject walk are retired (S9-19, S9-29, S9-30; briefs D11, D12). Events, Places, the canonical graph and the place hierarchy all move ahead of Promote; S9-17 / S9-18 are reshaped into one engine PR.
 
-**Revised 2026-10-07 (slice 8):** place **nature** (`administrative` / `informal` / `ecclesiastical`) lives on the Place (`place_nature`). Place relationships shrink to **hierarchical** (`part_of`) and **temporal** (`succeeded_by`); cross-nature containment is normal. Standing model: [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md) §11.1.
+**Revised 2026-10-07 (slice 8):** place **nature** (`administrative` / `informal` / `ecclesiastical`) lives on the Place (`place_nature`, ordinary researcher-extensible terms). Place relationships shrink to locked **`part_of`** and **`succeeded_by`**; cross-nature containment is normal. **Retired:** S9-D15 / S9-38b (custom term category) — no researcher-added place-relationship types. Standing model: [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md) §11.1.
 
 > **Goal of this spike:** a researcher can promote Subjects off an Evidence graph into Persons, Events, and Places, and open a page for each that shows who or what it is — name and life dates, event and date, place names and where the place sits — reconciled from every member Subject, with the reasoning shown.
 
@@ -247,9 +247,9 @@ Design: [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md) §1
 - **Places are separate entities** at any grain the research needs (township, county, region, farm). Grain labels (township vs county) stay later; **nature** ships this spike.
 - **Nature on the Place:** Property `place_nature` (`term`) — seeded `administrative`, `informal`, `ecclesiastical`. Optional; one value. Cross-containment is normal (informal ∈ administrative, parish ∈ country, Canada ∈ North America). Not grain; do not name it `kind`.
 - **Period:** a Place's `start_date` / `end_date` (bound to `place`) say when it existed or mattered; both optional; none = always.
-- **Place relationship**, a new association kind (bridge) with `from` (place), `to` (place), `place_relationship_type` (term), and its own optional `start_date` / `end_date`. Types are researcher-extensible; each term has a **category**:
-  - **hierarchical** — seeded `part_of`. One bridge is one contiguous membership. An undated link holds where the two places' periods overlap. A dated link holds only inside its own span, and only while both places' periods hold, so a place can leave a relationship while both continue (Ireland in the United Kingdom until 1922).
-  - **temporal** — seeded `succeeded_by` (York → Toronto). A lineage for history and search; never a display chain. The link's dates are not what builds a chain.
+- **Place relationship**, a new association kind (bridge) with `from` (place), `to` (place), `place_relationship_type` (term), and its own optional `start_date` / `end_date`. Two **product-locked** terms, each with a **category** for the engine (researchers cannot add types; the UI picks *part of* or *succeeded by*):
+  - **hierarchical** — `part_of`. One bridge is one contiguous membership. An undated link holds where the two places' periods overlap. A dated link holds only inside its own span, and only while both places' periods hold, so a place can leave a relationship while both continue (Ireland in the United Kingdom until 1922).
+  - **temporal** — `succeeded_by` (York → Toronto). A lineage for history and search; never a display chain. The link's dates are not what builds a chain.
 - **Drawn on the Evidence graph** like any bridge (a `connectrules` entry, disambiguated by type), cited, and promoted like Location.
 - **Chains at a date.** The composer walks hierarchical parents whose membership span holds at the date (an Event's reconciled date, or today). When the date can't decide, every candidate is returned (*Upper Canada or Province of Canada*). A place may have several parents; the display prefers parents whose **nature** is administrative.
 - **No loops**, checked in Go when a place relationship is filed: a hierarchical link that would close a cycle, or a succession that loops, is refused. Composers guard anyway.
@@ -288,7 +288,6 @@ The Conclusion pages read **across** Sources — every earlier place scoped to o
 | **S9-D14** | Properties — cardinality | **S9-37** | — |
 | **S9-D4** | Places list (**revise:** names, parent chain) | **S9-26** | S9-40 (chain cell) |
 | **S9-D7** | Place detail (**revise:** names, period, hierarchy, succession) | **S9-27** | S9-40 (hierarchy rows) |
-| **S9-D15** | Custom term dialog — category | **S9-38b** | — |
 | **S9-D16** | Promote — one page (**rethink:** throws out D9 / D10 frames) | **S9-44** | — |
 | **S9-D13** | Omnibar results | **S9-35** | — |
 
@@ -360,8 +359,7 @@ SLICE 7 — The canonical graph
          "Birth of James Robins"; James shows 1817 – 1880 · York → Toronto.
 
 SLICE 8 — Place hierarchy (the hard way)
-  S9-38  Place model: place_nature on Place; place relationship bridge (part_of / succeeded_by), periods, connect rule, loop refusal
-  ✎ S9-D15 ──▶ S9-38b Custom term dialog: category for new place relationship types
+  S9-38  Place model: place_nature on Place; locked part_of / succeeded_by bridge, periods, connect rule, loop refusal
   S9-39  Place chain composer: parents at a date, prefer administrative nature, parts, succession; chains in S9-31's walks
   S9-40  Place hierarchy in Places list and Place detail (designed in D4 / D7)
   Check: draw Toronto part of Upper Canada / Province of Canada / Ontario with periods → Toronto's page shows each by period;
@@ -433,7 +431,6 @@ CLOSE
 | S9-31 Composer walks | — | S9-22, S9-25, S9-28 |
 | S9-32 Fill derived cells | (D2 / D3 / D5 / D6) | S9-31, S9-23, S9-24 |
 | S9-38 Place model (nature + relationships) | — | S9-28, S9-36 |
-| S9-38b Custom term dialog: category | **S9-D15** | S9-38 |
 | S9-39 Place chain composer | — | S9-38, S9-21, S9-25, S9-31 |
 | S9-40 Place hierarchy in list and detail | (D4 / D7) | S9-39, S9-26, S9-27, S9-32 |
 | S9-17 Pins + backfill engine | — | S9-12, S9-13b |
@@ -498,8 +495,6 @@ In order; each brief sits just above the PR it gates.
 - [x] S9-31 — Composer walks + header dependents
 - [x] S9-32 — Fill derived cells in lists and details
 - [ ] S9-38 — Place model: nature, relationships, periods
-- [ ] ✎ S9-D15 — Design: custom term category
-- [ ] S9-38b — Custom term dialog: category
 - [ ] S9-39 — Place chain composer
 - [ ] S9-40 — Place hierarchy in list and detail
 - [ ] S9-41 — Align core
@@ -514,6 +509,8 @@ In order; each brief sits just above the PR it gates.
 - [ ] S9-99 — Dogfood close / docs
 
 Retired 2026-10-06: ~~S9-18 — Pinned-Observation delete end to end~~ (folded into S9-17 / S9-44) · ~~✎ S9-D11 / S9-19 — Promote compare~~ · ~~S9-29 — Neighborhood read~~ · ~~✎ S9-D12 / S9-30 — Promote walk~~.
+
+Retired 2026-10-07: ~~✎ S9-D15 / S9-38b — Custom term category~~ (place relationships are locked `part_of` / `succeeded_by`; nature is an ordinary term Property).
 
 ---
 
@@ -901,16 +898,9 @@ Design: [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md) §1
 
 | | |
 | --- | --- |
-| **In** | Seed (Install + migration): Property `place_nature` (`term`) bound to `place` — seeded `administrative`, `informal`, `ecclesiastical` (optional, single-valued; nature on the Place, not the link). Subject type `place_relationship` (bridge) with Properties `from` (place), `to` (place), `place_relationship_type` (term), and `start_date` / `end_date` (the membership span); term **category** on `property_terms` (`hierarchical` / `temporal`, nullable for terms that don't use it); seeded types `part_of` (hierarchical) and `succeeded_by` (temporal), both directed. The same `start_date` / `end_date` also bound to `place` (its period). A `connectrules` bridge place ↔ place disambiguated by `place_relationship_type`, so it is drawn and cited on the Evidence graph like any bridge, and filed automatically through S9-28 (keyed by the two places and the type, direction kept). One bridge is one contiguous span. **Succession may branch:** a split is one Place `succeeded_by` several, an amalgamation several Places `succeeded_by` one; nothing assumes one successor. **Loop refusal** in S9-28's bridge filing (alignment flags it before Done): a hierarchical link that would close a cycle among canonical places, or a looping succession, is refused with a clear error. Delete Impact and search registries for the new kind. |
-| **Testable** | Seeds (`place_nature` + relationship types); connect rule; cycles refused (direct and transitive); a researcher-added relationship type with a category behaves like the seeded one; a split (one → two) and an amalgamation (two → one) file and read back; a hierarchical link stores its own start and end; an informal Place can be part of an administrative Place. |
+| **In** | Seed (Install + migration): Property `place_nature` (`term`) bound to `place` — seeded `administrative`, `informal`, `ecclesiastical` (optional, single-valued; ordinary researcher-extensible terms via the existing custom-term dialog). Subject type `place_relationship` (bridge) with Properties `from` (place), `to` (place), `place_relationship_type` (term), and `start_date` / `end_date` (the membership span); term **category** on `property_terms` (`hierarchical` / `temporal`); **locked** seeded types `part_of` (hierarchical) and `succeeded_by` (temporal), both directed — Create of a user term under `place_relationship_type` is refused; the composer offers only those two types (no *Add type…*). The same `start_date` / `end_date` also bound to `place` (its period). A `connectrules` bridge place ↔ place disambiguated by `place_relationship_type`, so it is drawn and cited on the Evidence graph like any bridge, and filed automatically through S9-28 (keyed by the two places and the type, direction kept). One bridge is one contiguous span. **Succession may branch:** a split is one Place `succeeded_by` several, an amalgamation several Places `succeeded_by` one; nothing assumes one successor. **Loop refusal** in S9-28's bridge filing (alignment flags it before Done): a hierarchical link that would close a cycle among canonical places, or a looping succession, is refused with a clear error. Delete Impact and search registries for the new kind. |
+| **Testable** | Seeds (`place_nature` + locked relationship types); connect rule; cycles refused (direct and transitive); user Create under `place_relationship_type` is refused; a user `place_nature` term works like a seeded one; a split (one → two) and an amalgamation (two → one) file and read back; a hierarchical link stores its own start and end; an informal Place can be part of an administrative Place. |
 | **Depends on** | S9-28, S9-36 |
-
-#### S9-38b — Custom term dialog: category
-
-| | |
-| --- | --- |
-| **In** | Per **S9-D15**: when a researcher adds a term to a Property whose terms carry a category (`place_relationship_type`), the composer's custom term dialog asks for it (hierarchical / temporal — *part of* vs *succession*); FFI `createPropertyTerm` takes the category. Adding a `place_nature` term does **not** ask for a category. |
-| **Depends on** | **S9-D15**, S9-38 |
 
 #### S9-39 — Place chain composer
 
@@ -1074,7 +1064,7 @@ Honesty pass against the [goal bar](#goal-dogfood-bar); ledger timings recorded;
 | Q13 | ~~Event recorded-name Property.~~ | **Decided:** seed `event_name` (`value_type = text`) and bind it to `event` this spike (R1). |
 | Q14 | ~~Label vs composed-from-subjects.~~ | **Decided:** label stays below subject titles; it wins only when there is no subject. Revisit on dogfood. |
 | Q15 | ~~Reconciling values other than names and dates.~~ | **Decided (replan):** every value type gets a module on one pipeline ([`conclusion-reconciliation.md`](../../conclusion-reconciliation.md)). Text is case-insensitive; majority counts Sources; reasoning is cached. |
-| Q16 | ~~Places and their hierarchy.~~ | **Decided (replan; membership span revised 2026-10-06; nature on Place 2026-10-07):** separate Places with `place_nature`; linked by `part_of` / `succeeded_by` (categories hierarchical / temporal), periods on Places, a span on each hierarchical link, chains at a date, evidence by hand this spike (R9). |
+| Q16 | ~~Places and their hierarchy.~~ | **Decided (replan; membership span revised 2026-10-06; nature on Place 2026-10-07):** separate Places with researcher-extensible `place_nature`; linked by locked `part_of` / `succeeded_by`, periods on Places, a span on each hierarchical link, chains at a date, evidence by hand this spike (R9). |
 | Q18 | ~~How Promote proves a join.~~ | **Decided 2026-10-06:** automatic alignment of the whole Evidence graph with researcher fine-tuning, not a per-Property checklist or a per-Subject walk ([`promote-alignment.md`](../../promote-alignment.md)). |
 | Q19 | ~~Bridge filing.~~ | **Decided 2026-10-06:** automatic whenever both ends are handles; participation / location keyed by ends, relationships by ends + type; direction per type; self-links refused (design §9.1). |
 | Q17 | ~~Multi-valued Properties.~~ | **Decided (replan):** per-Property cardinality; `toponym` is the seeded multi-valued one. Most repeating facts are Events. |
@@ -1087,7 +1077,7 @@ Honesty pass against the [goal bar](#goal-dogfood-bar); ledger timings recorded;
 - [`research-judgment-model.md`](../../research-judgment-model.md) §1.1: cached order and reasoning are derived, not stored judgment.
 - [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md) §12: implementation status as each module lands.
 - [`conclusion-layer-data-model.md`](../../conclusion-layer-data-model.md) §13: Place containment answered by place relationships (R9); new `place_relationship` kind in the kinds list; nature on the Place.
-- [`seeded-vocabulary.md`](../../seeded-vocabulary.md): `place_nature` on `place`; `place_relationship` kind and its Properties (`from`, `to`, `place_relationship_type`, and the link's `start_date` / `end_date`); `part_of` / `succeeded_by` with categories; place period bindings (S9-38). Property cardinality (S9-36).
+- [`seeded-vocabulary.md`](../../seeded-vocabulary.md): `place_nature` on `place` (ordinary terms); `place_relationship` kind and its Properties; locked `part_of` / `succeeded_by` with engine categories; place period bindings (S9-38). Property cardinality (S9-36).
 - [`seeded-vocabulary.md`](../../seeded-vocabulary.md) §5.5: mark claim confidence grades as seeded. §3.5: `subject` = the event's principal(s), possibly several; marriage uses two `subject` Participations; `spouse` is a principal's spouse on another event. §3.2 / §3.3: `event_name` (text) bound to `event` (landed in S9-20).
 - [`catalog-refs.md`](../../catalog-refs.md): canonical ref minting.
 - [`catalog-deletes.md`](../../catalog-deletes.md): Identity Claim / evidence Impact (done in S9-02: non-blocking cascades, explicit audited release); hook cache dependents into the release calls (S9-06).

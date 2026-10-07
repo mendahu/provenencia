@@ -989,7 +989,7 @@ A researcher can say a Property holds several values, so a custom fact can keep 
 
 **What stayed out**
 
-- Term categories: **S9-D15** / **S9-38b**.
+- Term categories on researcher-added place-relationship types: **retired** with S9-D15 / S9-38b (2026-10-07); `part_of` / `succeeded_by` are product-locked.
 - Any other Property setting. A confirm: nothing is deleted.
 
 ### S9-25 — Place composer + reads
