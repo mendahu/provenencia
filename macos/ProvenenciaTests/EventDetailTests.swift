@@ -10,12 +10,14 @@ struct EventDetailTests {
         label: String = "",
         ref: String = "EVT-8PL22",
         fields: [CatalogConclusionField] = [],
-        members: Int = 4
+        members: Int = 4,
+        header: CatalogEventHeader? = nil
     ) -> CatalogConclusionDetail {
         CatalogConclusionDetail(
             entity: CatalogCanonicalEntity(id: "e1", ref: ref, subjectTypeID: "t", label: label),
             fields: fields,
-            memberCount: members
+            memberCount: members,
+            header: header.map { .event($0) }
         )
     }
 
@@ -35,21 +37,29 @@ struct EventDetailTests {
         )
     }
 
-    @Test func recordedNameIsAPlainTitle() {
-        let page = content(detail(fields: [
-            D.field("single", key: "event_name", label: "Event name", valueType: "text", [D.value(1, "kept", .text("Fire at York"))]),
-        ]))
+    private func header(_ title: CatalogEventTitle) -> CatalogEventHeader {
+        CatalogEventHeader(
+            entity: CatalogCanonicalEntity(id: "e1", ref: "EVT-8PL22", subjectTypeID: "t", label: ""),
+            title: title
+        )
+    }
+
+    @Test func titleIsTheHeadersChosenTitle() {
+        let page = EventDetailContent(
+            detail: detail(header: header(CatalogEventTitle(rule: .recordedName, recordedName: "Fire at York", ref: "EVT-8PL22"))),
+            locale: en
+        )
         #expect(page.title == .name("Fire at York"))
         #expect(page.showsRef)
         #expect(page.ref == "EVT-8PL22")
     }
 
-    @Test func typeOnlyBecomesUnspecified() {
-        let type = D.field(
-            "single", key: "event_type", label: "Event type", valueType: "term",
-            [D.value(1, "kept", .term(id: "t", key: "birth", label: "Birth"))]
-        )
-        #expect(content(detail(fields: [type])).title == .name("Unspecified birth"))
+    @Test func withNoHeaderTheTitleIsTheLabelThenTheRef() {
+        // A recorded name in the detail does not choose a title; only Go's header does.
+        let named = content(detail(label: "Grandpa's fire", fields: [
+            D.field("single", key: "event_name", label: "Event name", valueType: "text", [D.value(1, "kept", .text("Fire at York"))]),
+        ]))
+        #expect(named.title == .label("Grandpa's fire"))
     }
 
     @Test func refTitleHidesTheTrailingRef() {
@@ -84,6 +94,8 @@ struct EventDetailTests {
 
     @Test func headerSuppliesSubjectsAndPlace() {
         let james = CatalogCanonicalEntity(id: "p1", ref: "PER-1", subjectTypeID: "t", label: "")
+        let york = CatalogCanonicalEntity(id: "pl1", ref: "PLC-1", subjectTypeID: "t", label: "")
+        let toronto = CatalogCanonicalEntity(id: "pl2", ref: "PLC-2", subjectTypeID: "t", label: "")
         let header = CatalogEventHeader(
             entity: CatalogCanonicalEntity(id: "e1", ref: "EVT-8PL22", subjectTypeID: "t", label: ""),
             eventTypeKey: "birth",
@@ -96,15 +108,20 @@ struct EventDetailTests {
                 ),
             ],
             places: [
-                CatalogHeaderPlace(names: ["York"], nameCount: 1),
-                CatalogHeaderPlace(names: ["Toronto"], nameCount: 1),
-            ]
+                CatalogHeaderPlace(entity: york, names: ["York"]),
+                CatalogHeaderPlace(entity: toronto, names: ["Toronto"]),
+            ],
+            title: CatalogEventTitle(
+                rule: .subject, ref: "EVT-8PL22", typeKey: "birth", typeLabel: "Birth",
+                subjects: [CatalogNameValue(form: "James Robins")], place: "York"
+            )
         )
-        let page = EventDetailContent(detail: detail(), header: header, locale: en)
+        let page = EventDetailContent(detail: detail(header: header), locale: en)
         #expect(page.title == .name(L10n.EventTitle.ofOne(type: "Birth", subject: "James Robins", locale: en)))
         #expect(page.summaryPlace == "York")
         #expect(page.rows[1].lead == "York" && page.rows[1].badge == .mixed && page.rows[1].records.isEmpty)
         #expect(!page.rows[1].lead!.contains(","))
+        #expect(page.rows[1].opens?.location == .placeDetail(entityId: "pl1", ref: "PLC-1", title: "York"))
     }
 
     @Test func placeRowIsEmpty() {

@@ -9846,18 +9846,6 @@
         }
       }
     },
-    "workspace.section.events.stubMessage": {
-      "comment": "Placeholder body on an Event's page until the detail ships",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "This Event's page is on its way."
-          }
-        }
-      }
-    },
     "workspace.events.count": {
       "comment": "Events list header meta; argument is how many Events are listed. Includes the date sort.",
       "extractionState": "manual",
@@ -10106,18 +10094,6 @@
         }
       }
     },
-    "workspace.section.places.stubMessage": {
-      "comment": "Placeholder body on a Place's page until the detail ships",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "This Place's page is on its way."
-          }
-        }
-      }
-    },
     "workspace.section.places.title": {
       "comment": "Workspace sidebar destination and page title: Places (Conclude section)",
       "extractionState": "manual",
@@ -10162,18 +10138,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Source"
-          }
-        }
-      }
-    },
-    "workspace.section.persons.stubMessage": {
-      "comment": "Placeholder body on the Persons page until the list ships",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The Persons list is on its way. Promoted people will be listed here."
           }
         }
       }
@@ -11314,6 +11278,66 @@
           "stringUnit": {
             "state": "translated",
             "value": "%1$@–%2$@"
+          }
+        }
+      }
+    },
+    "dates.row.dayMonthYear": {
+      "comment": "Row date with day, abbreviated month, and year (14 May 1817). Day and year are digits, never grouped. Reorder for your locale.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ %2$@ %3$@"
+          }
+        }
+      }
+    },
+    "dates.row.monthYear": {
+      "comment": "Row date with abbreviated month and year (Mar 1790). The year is digits, never grouped.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ %2$@"
+          }
+        }
+      }
+    },
+    "dates.row.dayMonth": {
+      "comment": "Row date with day and abbreviated month, no year (14 May).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ %2$@"
+          }
+        }
+      }
+    },
+    "dates.row.dayYear": {
+      "comment": "Row date with a day and a year but no month. The year is digits, never grouped.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ %2$@"
+          }
+        }
+      }
+    },
+    "dates.row.withPhrase": {
+      "comment": "Row date followed by its recorded phrase. Arguments are the formatted date and the phrase.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · %2$@"
           }
         }
       }
@@ -16180,7 +16204,127 @@
         }
       }
     },
-    "conclusions.person.details": {
+    "conclusions.detail.openEvent": {
+      "comment": "Icon button on a Person's birth or death date row that opens the event the date is read from",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open event"
+          }
+        }
+      }
+    },
+    "conclusions.detail.openPlace": {
+      "comment": "Icon button on a derived place row that opens the Place page; argument is the place name",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open %@"
+          }
+        }
+      }
+    },
+    "conclusions.list.more": {
+      "comment": "Badge after a list row title or line: how many more names or places there are. Argument is the count.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "+%lld"
+          }
+        }
+      }
+    },
+    "conclusions.life.span": {
+      "comment": "Persons row: birth date, then death date. Arguments are the two formatted dates.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ – %2$@"
+          }
+        }
+      }
+    },
+    "conclusions.life.spanOpen": {
+      "comment": "Persons row with a birth and no death: the birth date and an open dash. Argument is the formatted date.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ –"
+          }
+        }
+      }
+    },
+    "conclusions.life.places": {
+      "comment": "Persons row: birth place, then death place. Arguments are the two place names.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ → %2$@"
+          }
+        }
+      }
+    },
+    "conclusions.line.join": {
+      "comment": "Joins two parts of one secondary line (dates · places, a date · its phrase). Arguments are the two parts.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · %2$@"
+          }
+        }
+      }
+    },
+    "conclusions.place.chainSeparator": {
+      "comment": "Separator between a Place and its parents in the parent chain (York, Upper Canada)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": ", "
+          }
+        }
+      }
+    },
+    "conclusions.a11y.morePlaces": {
+      "comment": "VoiceOver: other places a row stands for beyond the one it shows. Argument is the count.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld more place"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld more places"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "conclusions.detail.details": {
       "comment": "Section heading over a Person's fields",
       "extractionState": "manual",
       "localizations": {
@@ -16200,6 +16344,30 @@
           "stringUnit": {
             "state": "translated",
             "value": "No likeness recorded"
+          }
+        }
+      }
+    },
+    "conclusions.event.noImage": {
+      "comment": "Thumbnail placeholder on an Event page when no image is recorded",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No image recorded"
+          }
+        }
+      }
+    },
+    "conclusions.place.noImage": {
+      "comment": "Thumbnail placeholder on a Place page when no image is recorded",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No image recorded"
           }
         }
       }
@@ -16228,7 +16396,7 @@
         }
       }
     },
-    "conclusions.person.dateUnknown": {
+    "conclusions.detail.dateUnknown": {
       "comment": "Page header: the Person's birth or death date is not known",
       "extractionState": "manual",
       "localizations": {
@@ -16240,7 +16408,7 @@
         }
       }
     },
-    "conclusions.person.placeUnknown": {
+    "conclusions.detail.placeUnknown": {
       "comment": "Page header: the Person's birth or death place is not known",
       "extractionState": "manual",
       "localizations": {

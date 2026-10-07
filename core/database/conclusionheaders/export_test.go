@@ -32,3 +32,8 @@ func ListPlacesQueryCount(q Querier) (int, error) {
 	_, err := ListPlaces(cq)
 	return cq.n, err
 }
+
+// SortPlaces applies the list order to Place rows.
+func SortPlaces(rows []PlaceHeader) {
+	sortByTitle(rows, placeTitle, func(h PlaceHeader) string { return h.Entity.Ref })
+}

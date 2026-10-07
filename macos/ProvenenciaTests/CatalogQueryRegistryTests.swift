@@ -367,7 +367,7 @@ struct CatalogQueryRegistryTests {
         let headers = try #require(handle.value)
         #expect(headers.map(\.entity.ref) == [james.entity.ref, bare.entity.ref])
         #expect(headers[0].name?.form == "James Robins")
-        #expect(headers[0].isNameMixed && headers[0].additionalNameCount == 1)
+        #expect(headers[0].nameValueCount == 2)
         #expect(headers[1].name == nil && PersonHeaderDisplay.title(headers[1]) == bare.entity.ref)
         #expect(store.heldCatalogProjectDir == projectDir)
     }
@@ -401,8 +401,8 @@ struct CatalogQueryRegistryTests {
         #expect(detail.entity == james.entity)
         let name = try #require(detail.fields.first { $0.propertyKey == "name" })
         // One Source: its two James Robins records are one value, single.
-        #expect(name.state == "single")
-        #expect(name.values.map(\.reason) == ["kept", "outvoted"])
+        #expect(name.state == .single)
+        #expect(name.values.map(\.reason) == [.kept, .outvoted])
         #expect(name.displayedValues.map(\.value) == [.name(CatalogNameValue(form: "James Robins"))])
         #expect(name.outcomes.map(\.observationRef) == ["OBS-o1", "OBS-o3", "OBS-o2"])
         #expect(name.outcomes.map(\.valueRank) == [1, 1, 2])
@@ -418,8 +418,6 @@ struct CatalogQueryRegistryTests {
         let registry = CatalogQueryRegistry.standard
         let project = ProjectKey(projectDir: projectDir)
         #expect(registry.evictsWhenHidden(.conclusionDetail(project: project, entityId: "e1")))
-        #expect(registry.evictsWhenHidden(.personHeader(project: project, entityId: "e1")))
-        #expect(registry.evictsWhenHidden(.eventHeader(project: project, entityId: "e1")))
         #expect(!registry.evictsWhenHidden(.personsList(project: project)))
         #expect(!registry.evictsWhenHidden(.promoteTargets(project: project, subjectId: "s1")))
         #expect(!registry.evictsWhenHidden(.sourceWorkspace(project: project, sourceId: "s1")))
@@ -435,6 +433,40 @@ struct CatalogQueryRegistryTests {
             CoreInvokeError.coded(status: 1, code: "conclusiondetails.not_found", kind: .user, params: []).localizedDescription
                 == "This record no longer exists. It may have been merged into another."
         )
+    }
+
+    @Test func eventAndPlaceListsAreGosRowsAsGiven() async throws {
+        let store = FakeStore()
+        let late = CatalogEventHeader(
+            entity: CatalogCanonicalEntity(id: "e2", ref: "EVT-2", subjectTypeID: "t", label: ""),
+            title: CatalogEventTitle(rule: .ref, ref: "EVT-2")
+        )
+        let early = CatalogEventHeader(
+            entity: CatalogCanonicalEntity(id: "e1", ref: "EVT-1", subjectTypeID: "t", label: ""),
+            title: CatalogEventTitle(rule: .ref, ref: "EVT-1")
+        )
+        store.seededEventHeaders = [late, early]
+        let place = CatalogPlaceHeader(
+            entity: CatalogCanonicalEntity(id: "p1", ref: "PLC-1", subjectTypeID: "t", label: ""),
+            names: ["Montréal", "Montreal"]
+        )
+        store.seededPlaceHeaders = [place]
+        let detail = CatalogConclusionDetail(entity: early.entity, fields: [], memberCount: 1, header: .event(early))
+        store.seededConclusionDetails = [early.entity.id: detail]
+        let session = makeSession(store: store)
+
+        let events: QueryHandle<[CatalogEventHeader]> = session.query(.eventsList(project: session.projectKey))
+        let places: QueryHandle<[CatalogPlaceHeader]> = session.query(.placesList(project: session.projectKey))
+        let page: QueryHandle<CatalogConclusionDetail> = session.query(
+            .conclusionDetail(project: session.projectKey, entityId: early.entity.id)
+        )
+        await waitForFetchComplete(events)
+        await waitForFetchComplete(places)
+        await waitForFetchComplete(page)
+        // Order is Go's; the fake does not re-sort or re-derive.
+        #expect(events.value == [late, early])
+        #expect(places.value == [place])
+        #expect(page.value?.eventHeader == early)
     }
 
     private func nameObservation(id: String, subjectID: String, form: String) -> CatalogObservation {
@@ -715,8 +747,6 @@ struct CatalogQueryRegistryTests {
             .key(.placesList(project: project)),
             .allCached(.promoteTargets),
             .allCached(.conclusionDetail),
-            .allCached(.personHeader),
-            .allCached(.eventHeader),
         ])
         // Adding vocabulary touches only the list that owns it — the Source
         // page reads that list rather than carrying its own copy.
@@ -770,8 +800,6 @@ struct CatalogQueryRegistryTests {
             .key(.placesList(project: project)),
             .allCached(.promoteTargets),
             .allCached(.conclusionDetail),
-            .allCached(.personHeader),
-            .allCached(.eventHeader),
         ])
         #expect(registry.invalidations(by: .deletedSubject(sourceId: "s1"), project: project) == [
             .key(.sourceGraph(project: project, sourceId: "s1")),
@@ -783,8 +811,6 @@ struct CatalogQueryRegistryTests {
             .key(.placesList(project: project)),
             .allCached(.promoteTargets),
             .allCached(.conclusionDetail),
-            .allCached(.personHeader),
-            .allCached(.eventHeader),
         ])
         // A Promote changes that Source's graph cards (their membership row)
         // and every Conclusion key.
@@ -795,8 +821,6 @@ struct CatalogQueryRegistryTests {
             .key(.placesList(project: project)),
             .allCached(.promoteTargets),
             .allCached(.conclusionDetail),
-            .allCached(.personHeader),
-            .allCached(.eventHeader),
         ])
         #expect(registry.invalidations(by: .createdPropertyTerm(propertyId: "p1"), project: project) == [
             .key(.propertyTerms(project: project, propertyId: "p1")),
@@ -834,8 +858,6 @@ struct CatalogQueryRegistryTests {
             .key(.placesList(project: project)),
             .allCached(.promoteTargets),
             .allCached(.conclusionDetail),
-            .allCached(.personHeader),
-            .allCached(.eventHeader),
         ])
         // Every Conclusion trigger stales the Person, Event, and Place lists and
         // every cached detail; nothing else does.
@@ -846,8 +868,6 @@ struct CatalogQueryRegistryTests {
             #expect(invalidations.contains(.key(.eventsList(project: project))) == isTrigger, "\(mutation)")
             #expect(invalidations.contains(.key(.placesList(project: project))) == isTrigger, "\(mutation)")
             #expect(invalidations.contains(.allCached(.conclusionDetail)) == isTrigger, "\(mutation)")
-            #expect(invalidations.contains(.allCached(.personHeader)) == isTrigger, "\(mutation)")
-            #expect(invalidations.contains(.allCached(.eventHeader)) == isTrigger, "\(mutation)")
         }
         #expect(CatalogQueryRegistry.conclusionTriggers == [
             .savedCitation, .deletedSubject, .promotedSubject, .deletedSource, .mutatedSourceWorkspace,

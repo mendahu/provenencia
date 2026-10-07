@@ -4,8 +4,9 @@
 // as a row: lists, Promote's target picker, omnibar hits, later tree nodes.
 //
 // Headers are composed at read time, never stored, and set-based: a whole
-// list is one query whatever its length. Go returns structures; the app
-// formats text, including an Event's title precedence.
+// list is a fixed number of queries whatever its length. Go returns
+// structures, including which naming-matrix rule titles an Event
+// (eventtitle); the app formats text.
 package conclusionheaders
 
 import (
@@ -41,6 +42,11 @@ type PersonHeader struct {
 
 // LifeFacts is a birth or a death composed from the canonical graph.
 type LifeFacts struct {
+	// Event is the birth or death event read; nil when none is linked.
+	// Its page owns the date's Why. EventCount is how many such events
+	// survive; more than one is a disagreement.
+	Event      *canonicalentities.Entity
+	EventCount int
 	// Date is the event's date, else its start date.
 	Date      *datevalues.Value
 	DateCount int
@@ -48,14 +54,14 @@ type LifeFacts struct {
 }
 
 // HeaderPlace is one Place a walk reached. Names are kept toponyms in rank
-// order. Count is how many were kept (the list's +N). No chain.
+// order. No chain. Entity is the Place, whose page owns the names' Why.
 type HeaderPlace struct {
-	Names []string
-	Count int
+	Entity canonicalentities.Entity
+	Names  []string
 }
 
-// Unmerged Person handles with their rank-1 name row and displayed name count,
-// named Persons first by name sort key, then by ref (R5).
+// Unmerged Person handles with their displayed (kept rank-1) name and name
+// count. Order is sortByTitle's (R5), applied after the scan.
 const (
 	sqlPersonsSelect = `SELECT e.id, e.subject_type_id, e.ref, COALESCE(e.argument, ''), COALESCE(e.label, ''),
 		r.value_name,
@@ -65,15 +71,13 @@ const (
 	JOIN subject_types st ON st.id = e.subject_type_id
 	LEFT JOIN properties np ON np.key = 'name' AND np.origin = 'provenencia'
 	LEFT JOIN auto_reconciler_values r
-		ON r.entity_id = e.id AND r.property_id = np.id AND r.rank = 1
+		ON r.entity_id = e.id AND r.property_id = np.id AND r.rank = 1 AND r.reason = 'kept'
 	WHERE st.key = 'person' AND st.origin = 'provenencia' AND e.merged_into_id IS NULL`
-	sqlPersonsOrder = ` ORDER BY r.sort_key IS NULL, r.sort_key, e.ref COLLATE NOCASE`
-	sqlListPersons  = sqlPersonsSelect + sqlPersonsOrder
 )
 
-// ListPersons returns every Person's header in list order, in one query.
+// ListPersons returns every Person's header in list order.
 func ListPersons(q Querier) ([]PersonHeader, error) {
-	return queryPersons(q, sqlListPersons)
+	return queryPersons(q, sqlPersonsSelect)
 }
 
 // PersonsByIDs returns the headers of the given unmerged Persons in list
@@ -83,11 +87,34 @@ func PersonsByIDs(q Querier, ids [][]byte) ([]PersonHeader, error) {
 	if len(ids) == 0 {
 		return nil, nil
 	}
-	return queryPersons(q, sqlPersonsSelect+` AND e.id IN (`+database.SQLInPlaceholders(len(ids))+`)`+sqlPersonsOrder,
+	return queryPersons(q, sqlPersonsSelect+` AND e.id IN (`+database.SQLInPlaceholders(len(ids))+`)`,
+		database.BlobArgs(ids)...)
+}
+
+// personRowsByIDs is PersonsByIDs without the birth and death walk, for an
+// Event's subjects.
+func personRowsByIDs(q Querier, ids [][]byte) ([]PersonHeader, error) {
+	ids = database.UniqueBlobIDs(ids)
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	return scanPersons(q, sqlPersonsSelect+` AND e.id IN (`+database.SQLInPlaceholders(len(ids))+`)`,
 		database.BlobArgs(ids)...)
 }
 
 func queryPersons(q Querier, query string, args ...any) ([]PersonHeader, error) {
+	out, err := scanPersons(q, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	if err := attachLives(q, out); err != nil {
+		return nil, err
+	}
+	sortByTitle(out, personTitle, func(h PersonHeader) string { return h.Entity.Ref })
+	return out, nil
+}
+
+func scanPersons(q Querier, query string, args ...any) ([]PersonHeader, error) {
 	rows, err := q.Query(query, args...)
 	if err != nil {
 		return nil, err
@@ -112,11 +139,5 @@ func queryPersons(q Querier, query string, args ...any) ([]PersonHeader, error) 
 		}
 		out = append(out, h)
 	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	if err := attachLives(q, out); err != nil {
-		return nil, err
-	}
-	return out, nil
+	return out, rows.Err()
 }

@@ -269,12 +269,19 @@ struct CatalogNameValue: Sendable, Equatable {
 /// One Place reached from a birth, death, or event. `names` are kept toponyms
 /// in rank order. The parent chain is not here.
 struct CatalogHeaderPlace: Sendable, Equatable {
+    /// The Place; its page owns the names' Why.
+    var entity: CatalogCanonicalEntity
     var names: [String] = []
-    var nameCount: Int = 0
 }
 
 /// A birth or a death composed from the canonical graph.
 struct CatalogLifeFacts: Sendable, Equatable {
+    /// The birth or death event read; `nil` when none is linked. Its page
+    /// owns the date's Why.
+    var event: CatalogCanonicalEntity?
+    /// Surviving birth (or death) events; above 1 is a disagreement, and
+    /// `event` is the earliest dated one.
+    var eventCount: Int = 0
     var date: CatalogDateValueInput?
     var dateCount: Int = 0
     var places: [CatalogHeaderPlace] = []
@@ -300,10 +307,6 @@ struct CatalogPersonHeader: Sendable, Equatable, Identifiable {
     var death: CatalogLifeFacts = CatalogLifeFacts()
 
     var id: String { entity.id }
-    /// Members disagree on the name; the top-ranked one is shown.
-    var isNameMixed: Bool { nameValueCount > 1 }
-    /// The list's *+N*: displayed name values beyond the one shown.
-    var additionalNameCount: Int { max(0, nameValueCount - 1) }
 }
 
 /// One Event as a row, composed by Go from the auto-reconciler cache (S9-22).
@@ -325,24 +328,37 @@ struct CatalogEventHeader: Sendable, Equatable, Identifiable {
     /// Subject-role persons, then every location's kept names.
     var subjects: [CatalogEventSubject] = []
     var places: [CatalogHeaderPlace] = []
+    /// The naming-matrix rule Go chose, and its parts.
+    var title: CatalogEventTitle
 
     var id: String { entity.id }
+}
 
-    var titleParts: EventTitleParts {
-        var parts = EventTitleParts(
-            recordedName: eventName,
-            label: entity.label,
-            ref: entity.ref,
-            typeKey: eventTypeKey,
-            typeLabel: eventTypeLabel
-        )
-        parts.subjects = subjects.map { subject in
-            guard let name = subject.name else { return "" }
-            return NameValueDisplay.string(for: name)
-        }
-        parts.place = DerivedPlace.name(places)
-        return parts
+/// An Event's title as Go chose it (Spike 9 R4): which row of the naming
+/// matrix applies, and the parts that row reads. Canonical headers and
+/// Evidence graph cards both carry one, so they can't disagree.
+/// `EventTitleDisplay` fills the rule's L10n template; it does not choose.
+struct CatalogEventTitle: Sendable, Equatable {
+    enum Rule: Sendable, Equatable {
+        case recordedName
+        case subject
+        case couple
+        case subjects
+        case label
+        case typeAtPlace
+        case type
+        case ref
     }
+
+    var rule: Rule
+    var recordedName: String = ""
+    var label: String = ""
+    var ref: String = ""
+    var typeKey: String = ""
+    var typeLabel: String = ""
+    /// Subject-role persons in stable order; `nil` reads "unnamed person".
+    var subjects: [CatalogNameValue?] = []
+    var place: String = ""
 }
 
 /// One Place as a row, composed by Go from the auto-reconciler cache (S9-25).
@@ -357,12 +373,6 @@ struct CatalogPlaceHeader: Sendable, Equatable, Identifiable {
     var parents: [String] = []
 
     var id: String { entity.id }
-
-    var titleParts: PlaceTitleParts {
-        PlaceTitleParts(names: names, label: entity.label, ref: entity.ref)
-    }
-
-    var extraNameCount: Int { PlaceTitleDisplay.extraNameCount(titleParts) }
 }
 
 /// One Property value on a Conclusion detail: exactly one case per value type.
@@ -375,11 +385,11 @@ enum CatalogConclusionValue: Sendable, Equatable {
     case name(CatalogNameValue)
 }
 
-/// One auto-reconciled value of a Property (S9-14). `reason == "kept"` is
-/// displayed; any other reason says why it isn't.
+/// One auto-reconciled value of a Property (S9-14). `.kept` is displayed;
+/// any other reason says why it isn't.
 struct CatalogReconciledValue: Sendable, Equatable, Identifiable {
     var rank: Int
-    var reason: String
+    var reason: ReconcilerReason
     /// Distinct Sources behind it.
     var support: Int
     /// Negative records that match it.
@@ -387,7 +397,7 @@ struct CatalogReconciledValue: Sendable, Equatable, Identifiable {
     var value: CatalogConclusionValue
 
     var id: Int { rank }
-    var isDisplayed: Bool { reason == "kept" }
+    var isDisplayed: Bool { reason == .kept }
 }
 
 /// What the auto-reconciler did with one Observation, with the record's own
@@ -396,7 +406,7 @@ struct CatalogReconciledValue: Sendable, Equatable, Identifiable {
 struct CatalogReconcilerOutcome: Sendable, Equatable, Identifiable {
     var observationID: String
     var observationRef: String
-    var reason: String
+    var reason: ReconcilerReason
     /// The value it went into; nil for none.
     var valueRank: Int?
     /// The negative Observation that denied it; "" when not denied.
@@ -425,14 +435,13 @@ struct CatalogReconcilerOutcome: Sendable, Equatable, Identifiable {
     var isLowConfidenceClaim: Bool { claimConfidenceOffset < 0 }
 }
 
-/// One Property of a handle's detail. `state` is "single", "merged",
-/// "mixed", or "" when nothing is displayed; Go computes it.
+/// One Property of a handle's detail. Go computes `state`.
 struct CatalogConclusionField: Sendable, Equatable, Identifiable {
     var propertyID: String
     var propertyKey: String
     var label: String
-    var valueType: String
-    var state: String
+    var valueType: PropertyValueType
+    var state: ReconciledState
     var values: [CatalogReconciledValue]
     var outcomes: [CatalogReconcilerOutcome]
 
@@ -447,6 +456,28 @@ struct CatalogConclusionDetail: Sendable, Equatable {
     var fields: [CatalogConclusionField]
     /// Accepted members.
     var memberCount: Int = 0
+    /// The handle's header for its kind, read in the same call, so a page
+    /// has one load, one error, and one consistent read.
+    var header: CatalogConclusionHeader?
+
+    var personHeader: CatalogPersonHeader? {
+        if case .person(let header) = header { header } else { nil }
+    }
+
+    var eventHeader: CatalogEventHeader? {
+        if case .event(let header) = header { header } else { nil }
+    }
+
+    var placeHeader: CatalogPlaceHeader? {
+        if case .place(let header) = header { header } else { nil }
+    }
+}
+
+/// One handle's row for its kind, as the lists show it.
+enum CatalogConclusionHeader: Sendable, Equatable {
+    case person(CatalogPersonHeader)
+    case event(CatalogEventHeader)
+    case place(CatalogPlaceHeader)
 }
 
 /// One Observation row with Property summary (graph / card payloads).
@@ -970,13 +1001,12 @@ protocol GenealogyStore: Sendable {
     func listClaimConfidenceGrades(projectDir: String) async throws -> [CatalogClaimConfidenceGrade]
     /// Accepted handle of every promoted Subject on one Source's Evidence graph.
     func listSubjectMemberships(projectDir: String, sourceID: String) async throws -> [CatalogSubjectMembership]
-    /// Every unmerged Person as a row header, in list order (named by name, then by ref).
+    /// The title of every Event Subject on one Source's Evidence graph, keyed by Subject id.
+    func listSourceEventTitles(projectDir: String, sourceID: String) async throws -> [String: CatalogEventTitle]
+    /// Every unmerged Person as a row header, in Go's list order (by shown title, then ref-only by ref).
     func listPersonHeaders(projectDir: String) async throws -> [CatalogPersonHeader]
-    func personHeader(projectDir: String, entityID: String) async throws -> CatalogPersonHeader
     func listEventHeaders(projectDir: String) async throws -> [CatalogEventHeader]
-    func eventHeader(projectDir: String, entityID: String) async throws -> CatalogEventHeader
     func listPlaceHeaders(projectDir: String) async throws -> [CatalogPlaceHeader]
-    func placeHeader(projectDir: String, entityID: String) async throws -> CatalogPlaceHeader
     /// One handle's fields, auto-reconciled values and outcomes. Throws
     /// `conclusiondetails.not_found` for an unknown or merged handle.
     func getConclusionDetail(projectDir: String, entityID: String) async throws -> CatalogConclusionDetail

@@ -27,12 +27,15 @@ enum PlaceTitleDisplay {
         max(0, parts.names.map(trimmed).filter { !$0.isEmpty }.count - 1)
     }
 
-    /// Parent chain. Empty until S9-39 walks it.
-    static func chain(_: PlaceTitleParts) -> String {
-        ""
-    }
-
     private static func trimmed(_ value: String) -> String {
         value.trimmingCharacters(in: .whitespacesAndNewlines)
     }
+}
+
+extension CatalogPlaceHeader {
+    var titleParts: PlaceTitleParts {
+        PlaceTitleParts(names: names, label: entity.label, ref: entity.ref)
+    }
+
+    var extraNameCount: Int { PlaceTitleDisplay.extraNameCount(titleParts) }
 }

@@ -11,7 +11,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/citations"
-	"github.com/mendahu/provenencia/core/database/conclusiondetails"
+	"github.com/mendahu/provenencia/core/database/conclusionheaders"
 	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/database/namevalues/namevaluestest"
@@ -117,38 +117,6 @@ func TestListPersonHeaders(t *testing.T) {
 	})
 }
 
-func TestGetPersonHeader(t *testing.T) {
-	runRPC(t, GetPersonHeader, []rpcTest{
-		{name: "bad proto", raw: []byte{0xff}, wantErr: true},
-		{
-			name: "unknown id",
-			reqFn: func(t *testing.T) proto.Message {
-				dir, _, _, _ := subjectFixture(t)
-				return &engine.GetPersonHeaderRequest{ProjectDir: dir, EntityId: uuid.Must(uuid.NewV7()).String()}
-			},
-			wantErr:   true,
-			wantErrIs: conclusiondetails.ErrNotFound,
-		},
-		{
-			name: "returns the one person",
-			reqFn: func(t *testing.T) proto.Message {
-				dir, id := namedPersonID(t)
-				return &engine.GetPersonHeaderRequest{ProjectDir: dir, EntityId: id}
-			},
-			after: func(t *testing.T, out []byte, req proto.Message) {
-				var resp engine.GetPersonHeaderResponse
-				if err := proto.Unmarshal(out, &resp); err != nil {
-					t.Fatal(err)
-				}
-				in := req.(*engine.GetPersonHeaderRequest)
-				if resp.GetHeader().GetEntity().GetId() != in.GetEntityId() || resp.GetHeader().GetName().GetForm() == "" {
-					t.Fatalf("%+v", resp.GetHeader())
-				}
-			},
-		},
-	})
-}
-
 func namedPersonID(t *testing.T) (dir, id string) {
 	t.Helper()
 	dir, ref := namedPerson(t)
@@ -201,38 +169,6 @@ func TestListEventHeaders(t *testing.T) {
 				}
 				if h.GetEventType().GetKey() != "birth" || h.GetEventType().GetLabel() != "Birth" || h.GetDate().GetStartYear() != 1849 {
 					t.Fatalf("type %v date %v", h.GetEventType(), h.GetDate())
-				}
-			},
-		},
-	})
-}
-
-func TestGetEventHeader(t *testing.T) {
-	runRPC(t, GetEventHeader, []rpcTest{
-		{name: "bad proto", raw: []byte{0xff}, wantErr: true},
-		{
-			name: "unknown id",
-			reqFn: func(t *testing.T) proto.Message {
-				dir, _, _, _ := subjectFixture(t)
-				return &engine.GetEventHeaderRequest{ProjectDir: dir, EntityId: uuid.Must(uuid.NewV7()).String()}
-			},
-			wantErr:   true,
-			wantErrIs: conclusiondetails.ErrNotFound,
-		},
-		{
-			name: "returns the one event",
-			reqFn: func(t *testing.T) proto.Message {
-				dir, id := citedEvent(t)
-				return &engine.GetEventHeaderRequest{ProjectDir: dir, EntityId: id}
-			},
-			after: func(t *testing.T, out []byte, req proto.Message) {
-				var resp engine.GetEventHeaderResponse
-				if err := proto.Unmarshal(out, &resp); err != nil {
-					t.Fatal(err)
-				}
-				in := req.(*engine.GetEventHeaderRequest)
-				if resp.GetHeader().GetEntity().GetId() != in.GetEntityId() || resp.GetHeader().GetEventName() != "The Great Fire" {
-					t.Fatalf("%+v", resp.GetHeader())
 				}
 			},
 		},
@@ -333,63 +269,6 @@ func TestListPlaceHeaders(t *testing.T) {
 					resp.Headers[0].GetKind() != "" || len(resp.Headers[0].GetParents()) != 0 ||
 					resp.Headers[0].GetStartDate() != nil || resp.Headers[0].GetEndDate() != nil {
 					t.Fatalf("%+v", resp.Headers)
-				}
-			},
-		},
-	})
-}
-
-func TestGetPlaceHeader(t *testing.T) {
-	runRPC(t, GetPlaceHeader, []rpcTest{
-		{name: "bad proto", raw: []byte{0xff}, wantErr: true},
-		{
-			name: "unknown id",
-			reqFn: func(t *testing.T) proto.Message {
-				dir, _, _, _ := subjectFixture(t)
-				return &engine.GetPlaceHeaderRequest{ProjectDir: dir, EntityId: uuid.Must(uuid.NewV7()).String()}
-			},
-			wantErr:   true,
-			wantErrIs: conclusiondetails.ErrNotFound,
-		},
-		{
-			name: "a Person is not a Place",
-			reqFn: func(t *testing.T) proto.Message {
-				dir, ref := namedPerson(t)
-				var entityID string
-				if err := withProjectCatalog(dir, func(c *database.Catalog) error {
-					db, err := c.DB()
-					if err != nil {
-						return err
-					}
-					var id []byte
-					if err := db.QueryRow(`SELECT id FROM canonical_entities WHERE ref = ?`, ref).Scan(&id); err != nil {
-						return err
-					}
-					entityID = uuidString(id)
-					return nil
-				}); err != nil {
-					t.Fatal(err)
-				}
-				return &engine.GetPlaceHeaderRequest{ProjectDir: dir, EntityId: entityID}
-			},
-			wantErr:   true,
-			wantErrIs: conclusiondetails.ErrNotFound,
-		},
-		{
-			name: "returns the one place",
-			reqFn: func(t *testing.T) proto.Message {
-				dir, id := citedPlace(t)
-				return &engine.GetPlaceHeaderRequest{ProjectDir: dir, EntityId: id}
-			},
-			after: func(t *testing.T, out []byte, req proto.Message) {
-				var resp engine.GetPlaceHeaderResponse
-				if err := proto.Unmarshal(out, &resp); err != nil {
-					t.Fatal(err)
-				}
-				in := req.(*engine.GetPlaceHeaderRequest)
-				names := resp.GetHeader().GetNames()
-				if resp.GetHeader().GetEntity().GetId() != in.GetEntityId() || len(names) != 2 || names[0] != "York" {
-					t.Fatalf("%+v", resp.GetHeader())
 				}
 			},
 		},
@@ -516,4 +395,122 @@ func TestListSubjectMembershipsCarriesAutoReconciledName(t *testing.T) {
 		resp.Memberships[0].GetName().GetForm() != "James Jim Robins" {
 		t.Fatalf("%+v", resp.Memberships)
 	}
+}
+
+func TestLifeFactsProtoCarriesIdentities(t *testing.T) {
+	event := canonicalentities.Entity{ID: mustUUIDBytes(t), Ref: "EVT-1"}
+	place := canonicalentities.Entity{ID: mustUUIDBytes(t), Ref: "PLC-1", Label: "York"}
+	tests := []struct {
+		name      string
+		in        conclusionheaders.LifeFacts
+		wantEvent string
+		wantPlace string
+	}{
+		{name: "no event linked", in: conclusionheaders.LifeFacts{}},
+		{
+			name: "event and place",
+			in: conclusionheaders.LifeFacts{
+				Event:  &event,
+				Places: []conclusionheaders.HeaderPlace{{Entity: place, Names: []string{"York"}}},
+			},
+			wantEvent: "EVT-1",
+			wantPlace: "PLC-1",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := lifeFactsProto(tt.in)
+			if got.GetEvent().GetRef() != tt.wantEvent {
+				t.Fatalf("event %+v", got.GetEvent())
+			}
+			if tt.wantEvent != "" && got.GetEvent().GetId() != uuidString(event.ID) {
+				t.Fatalf("event id %q", got.GetEvent().GetId())
+			}
+			var placeRef string
+			if len(got.GetPlaces()) > 0 {
+				placeRef = got.GetPlaces()[0].GetEntity().GetRef()
+			}
+			if placeRef != tt.wantPlace {
+				t.Fatalf("place %+v", got.GetPlaces())
+			}
+		})
+	}
+}
+
+func mustUUIDBytes(t *testing.T) []byte {
+	t.Helper()
+	id := uuid.Must(uuid.NewV7())
+	return id[:]
+}
+
+func eventSourceID(t *testing.T, dir string) string {
+	t.Helper()
+	var sourceID string
+	if err := withProjectCatalog(dir, func(c *database.Catalog) error {
+		db, err := c.DB()
+		if err != nil {
+			return err
+		}
+		var id []byte
+		if err := db.QueryRow(`SELECT s.source_id FROM subjects s
+			JOIN subject_types st ON st.id = s.subject_type_id AND st.key = 'event' LIMIT 1`).Scan(&id); err != nil {
+			return err
+		}
+		sourceID = uuidString(id)
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	return sourceID
+}
+
+func TestEventTitlesUseOneRule(t *testing.T) {
+	t.Run("an Event header carries its chosen title", func(t *testing.T) {
+		dir, _ := citedEvent(t)
+		t.Cleanup(func() { _ = catalogsession.CloseAll() })
+		out, err := ListEventHeaders(marshalProto(t, &engine.ListEventHeadersRequest{ProjectDir: dir}))
+		if err != nil {
+			t.Fatal(err)
+		}
+		var resp engine.ListEventHeadersResponse
+		if err := proto.Unmarshal(out, &resp); err != nil {
+			t.Fatal(err)
+		}
+		title := resp.GetHeaders()[0].GetTitle()
+		if title.GetRule() != engine.EventTitleRule_EVENT_TITLE_RULE_RECORDED_NAME || title.GetRecordedName() != "The Great Fire" ||
+			title.GetTypeKey() != "birth" || !strings.HasPrefix(title.GetRef(), "EVT-") {
+			t.Fatalf("%+v", title)
+		}
+	})
+	runRPC(t, ListSourceEventTitles, []rpcTest{
+		{name: "bad proto", raw: []byte{0xff}, wantErr: true},
+		{
+			name: "bad source id",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, _, _, _ := subjectFixture(t)
+				return &engine.ListSourceEventTitlesRequest{ProjectDir: dir, SourceId: "nope"}
+			},
+			wantErr: true,
+		},
+		{
+			name: "the Source's Event card is titled by the same rule",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, _ := citedEvent(t)
+				return &engine.ListSourceEventTitlesRequest{ProjectDir: dir, SourceId: eventSourceID(t, dir)}
+			},
+			after: func(t *testing.T, out []byte, _ proto.Message) {
+				var resp engine.ListSourceEventTitlesResponse
+				if err := proto.Unmarshal(out, &resp); err != nil {
+					t.Fatal(err)
+				}
+				if len(resp.Titles) != 1 || resp.Titles[0].GetSubjectId() == "" {
+					t.Fatalf("%+v", resp.Titles)
+				}
+				title := resp.Titles[0].GetTitle()
+				if title.GetRule() != engine.EventTitleRule_EVENT_TITLE_RULE_RECORDED_NAME || title.GetRecordedName() != "The Great Fire" {
+					t.Fatalf("%+v", title)
+				}
+			},
+		},
+	})
 }

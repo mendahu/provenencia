@@ -517,22 +517,16 @@ private struct ThrowingStore: GenealogyStore {
     func listSubjectMemberships(projectDir _: String, sourceID _: String) async throws -> [CatalogSubjectMembership] {
         throw StoreBoom.boom
     }
+    func listSourceEventTitles(projectDir _: String, sourceID _: String) async throws -> [String: CatalogEventTitle] {
+        throw StoreBoom.boom
+    }
     func listPersonHeaders(projectDir _: String) async throws -> [CatalogPersonHeader] {
         throw StoreBoom.boom
     }
     func listEventHeaders(projectDir _: String) async throws -> [CatalogEventHeader] {
         throw StoreBoom.boom
     }
-    func personHeader(projectDir _: String, entityID _: String) async throws -> CatalogPersonHeader {
-        throw StoreBoom.boom
-    }
-    func eventHeader(projectDir _: String, entityID _: String) async throws -> CatalogEventHeader {
-        throw StoreBoom.boom
-    }
     func listPlaceHeaders(projectDir _: String) async throws -> [CatalogPlaceHeader] {
-        throw StoreBoom.boom
-    }
-    func placeHeader(projectDir _: String, entityID _: String) async throws -> CatalogPlaceHeader {
         throw StoreBoom.boom
     }
     func getConclusionDetail(projectDir _: String, entityID _: String) async throws -> CatalogConclusionDetail {

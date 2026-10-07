@@ -13,6 +13,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/propertyterms"
 	"github.com/mendahu/provenencia/core/database/subjectpositions"
 	"github.com/mendahu/provenencia/core/database/subjects"
+	"github.com/mendahu/provenencia/core/eventtitle"
 )
 
 func (f *fixture) bare(kind string) subjects.Subject {
@@ -160,7 +161,7 @@ func TestCanonicalWalks(t *testing.T) {
 	baptismID := f.promoteSubject(baptism)
 	fireID := f.promoteSubject(fire)
 	yorkID := f.promoteSubject(york)
-	f.promoteSubject(toronto)
+	torontoID := f.promoteSubject(toronto)
 
 	var jamesHeader conclusionheaders.PersonHeader
 	for _, h := range f.list() {
@@ -186,12 +187,26 @@ func TestCanonicalWalks(t *testing.T) {
 		}
 	}
 	yorkPlace := headerPlace(jamesHeader.Birth.Places, "York")
-	if yorkPlace.Count != 2 || !sameSet(yorkPlace.Names, []string{"York", "Tkaronto"}) {
+	if !sameSet(yorkPlace.Names, []string{"York", "Tkaronto"}) {
 		t.Fatalf("York names %+v", yorkPlace)
 	}
 	if got := placeNames(jamesHeader.Death.Places); !sameSet(got, []string{"Toronto"}) {
 		t.Fatalf("death places %v", got)
 	}
+	t.Run("life facts name the event and places they read", func(t *testing.T) {
+		if e := jamesHeader.Birth.Event; e == nil || !bytes.Equal(e.ID, birthID) || e.Ref == "" || len(e.SubjectTypeID) != 16 {
+			t.Fatalf("birth event %+v", e)
+		}
+		if e := jamesHeader.Death.Event; e == nil || !bytes.Equal(e.ID, deathID) {
+			t.Fatalf("death event %+v", e)
+		}
+		if p := headerPlace(jamesHeader.Birth.Places, "York"); !bytes.Equal(p.Entity.ID, yorkID) || p.Entity.Ref == "" {
+			t.Fatalf("York entity %+v", p.Entity)
+		}
+		if p := headerPlace(jamesHeader.Death.Places, "Toronto"); !bytes.Equal(p.Entity.ID, torontoID) {
+			t.Fatalf("Toronto entity %+v", p.Entity)
+		}
+	})
 
 	events := map[string]conclusionheaders.EventHeader{}
 	for _, h := range f.events() {
@@ -227,6 +242,38 @@ func TestCanonicalWalks(t *testing.T) {
 	if got := placeNames(fireHeader.Places); !sameSet(got, []string{"York", "Tkaronto"}) {
 		t.Fatalf("fire places %v", got)
 	}
+	if len(fireHeader.Places) != 1 || !bytes.Equal(fireHeader.Places[0].Entity.ID, yorkID) {
+		t.Fatalf("fire place entity %+v", fireHeader.Places)
+	}
+
+	t.Run("each event's title rule comes from its own parts", func(t *testing.T) {
+		tests := []struct {
+			name     string
+			id       []byte
+			want     eventtitle.Rule
+			subjects int
+		}{
+			{name: "birth of one subject", id: birthID, want: eventtitle.RuleSubject, subjects: 1},
+			{name: "marriage of two", id: marriageID, want: eventtitle.RuleCouple, subjects: 2},
+			{name: "census of three", id: censusID, want: eventtitle.RuleSubjects, subjects: 3},
+			{name: "baptism of an unnamed person", id: baptismID, want: eventtitle.RuleSubject, subjects: 1},
+			{name: "fire at York", id: fireID, want: eventtitle.RuleTypeAtPlace},
+		}
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				title := events[string(tt.id)].Title
+				if title.Rule != tt.want || len(title.Parts.Subjects) != tt.subjects {
+					t.Fatalf("rule %s with %d subjects", title.Rule, len(title.Parts.Subjects))
+				}
+			})
+		}
+		if p := events[string(fireID)].Title.Parts; p.Place != "York" || p.TypeLabel != "Fire" {
+			t.Fatalf("fire parts %+v", p)
+		}
+		if s := events[string(baptismID)].Title.Parts.Subjects; s[0].Name != nil {
+			t.Fatalf("unnamed subject carried a name %+v", s[0].Name)
+		}
+	})
 
 	again := map[string][]string{}
 	for _, h := range f.events() {
@@ -252,6 +299,13 @@ func TestCanonicalWalks(t *testing.T) {
 	}
 	if hasID(fromJames, yorkID) || hasID(fromJames, baptismID) {
 		t.Fatal("person walk reached a place or someone else's event")
+	}
+	// James's header embeds his birth's date: a change to the birth must
+	// reach him. The witness is not a subject, so they are not reached.
+	fromBirth, err := conclusionheaders.HeaderDependents(db, [][]byte{birthID})
+	must(t, err)
+	if !hasID(fromBirth, jamesID) || hasID(fromBirth, birthID) || hasID(fromBirth, yorkID) {
+		t.Fatalf("event dependents %d: missing James, or included the event or its place", len(fromBirth))
 	}
 }
 
@@ -318,4 +372,60 @@ func hasID(ids [][]byte, id []byte) bool {
 		}
 	}
 	return false
+}
+
+// Two surviving births are a disagreement: the header counts them and leads
+// with the earliest dated one, whatever the refs say.
+func TestCompetingLifeEvents(t *testing.T) {
+	tests := []struct {
+		name      string
+		years     []int // 0 = undated
+		wantCount int
+		wantYear  int // 0 = no date
+	}{
+		{name: "one birth", years: []int{1817}, wantCount: 1, wantYear: 1817},
+		{name: "the earliest dated birth leads", years: []int{1819, 1815, 1817}, wantCount: 3, wantYear: 1815},
+		{name: "a dated birth leads an undated one", years: []int{0, 1821}, wantCount: 2, wantYear: 1821},
+		{name: "undated births still count", years: []int{0, 0}, wantCount: 2},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			f := newFixture(t)
+			james := f.bare("person")
+			f.named(james, "James Robins")
+			f.at(james, 0, 0)
+			var births []subjects.Subject
+			for i, year := range tt.years {
+				birth := f.bare("event")
+				in := []observations.Input{{PropertyID: f.prop("event_type").ID, ValueTermID: f.term("event_type", "birth").ID}}
+				if year != 0 {
+					in = append(in, observations.Input{PropertyID: f.prop("date").ID, Date: pointYear(year)})
+				}
+				f.cite(birth, in...)
+				f.at(birth, 4, int64(2*i))
+				f.participation(james, birth, "subject")
+				births = append(births, birth)
+			}
+			jamesID := f.promoteSubject(james)
+			for _, b := range births {
+				f.promoteSubject(b)
+			}
+			var birth conclusionheaders.LifeFacts
+			for _, h := range f.list() {
+				if bytes.Equal(h.Entity.ID, jamesID) {
+					birth = h.Birth
+				}
+			}
+			if birth.EventCount != tt.wantCount || birth.Event == nil {
+				t.Fatalf("event count %d event %+v", birth.EventCount, birth.Event)
+			}
+			var year int
+			if birth.Date != nil && birth.Date.StartYear != nil {
+				year = *birth.Date.StartYear
+			}
+			if year != tt.wantYear {
+				t.Fatalf("lead year %d, want %d", year, tt.wantYear)
+			}
+		})
+	}
 }

@@ -179,14 +179,8 @@ struct PlaceRegistry: Sendable {
             presentation: .personDetail,
             priority: 20,
             matches: { $0.section == .persons && $0.entityId != nil },
-            // Still the stub page until S9-16 draws it; the detail loads.
             queryKeys: { project, location in
-                location.entityId.map {
-                    [
-                        .conclusionDetail(project: project, entityId: $0),
-                        .personHeader(project: project, entityId: $0),
-                    ]
-                } ?? []
+                location.entityId.map { [.conclusionDetail(project: project, entityId: $0)] } ?? []
             },
             deepId: { $0.entityId }
         ),
@@ -204,12 +198,7 @@ struct PlaceRegistry: Sendable {
             priority: 20,
             matches: { $0.section == .events && $0.entityId != nil },
             queryKeys: { project, location in
-                location.entityId.map {
-                    [
-                        .conclusionDetail(project: project, entityId: $0),
-                        .eventHeader(project: project, entityId: $0),
-                    ]
-                } ?? []
+                location.entityId.map { [.conclusionDetail(project: project, entityId: $0)] } ?? []
             },
             deepId: { $0.entityId }
         ),
@@ -226,7 +215,6 @@ struct PlaceRegistry: Sendable {
             presentation: .placeDetail,
             priority: 20,
             matches: { $0.section == .places && $0.entityId != nil },
-            // Stub page until S9-27; the detail loads.
             queryKeys: { project, location in
                 location.entityId.map { [.conclusionDetail(project: project, entityId: $0)] } ?? []
             },

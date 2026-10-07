@@ -2,15 +2,18 @@ package conclusionheaders_test
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
+	"github.com/mendahu/provenencia/core/database/autoreconciler"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/conclusiondetails"
 	"github.com/mendahu/provenencia/core/database/conclusionheaders"
 	"github.com/mendahu/provenencia/core/database/datevalues"
+	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/namevalues/namevaluestest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
@@ -120,24 +123,21 @@ func TestListPersons(t *testing.T) {
 	if len(got) != 4 {
 		t.Fatalf("listed %d Persons, want 4 (no Place)", len(got))
 	}
-	// Named first by sort key (james < mary), then unnamed by ref. James,
-	// Jim and james reconcile into one name (S9-13b): Jim is a different
-	// given name, so it joins rather than being outvoted.
+	// By the title the row shows (james < mary < "Mother of James"), then
+	// the ref-only row. James, Jim and james reconcile into one name
+	// (S9-13b): Jim is a different given name, so it joins rather than
+	// being outvoted.
 	if got[0].Name == nil || got[0].Name.Form != "James Jim Robins" || got[0].NameValueCount != 1 {
 		t.Fatalf("first %+v", got[0])
 	}
 	if got[1].Name == nil || got[1].Name.Form != "Mary Smith" || got[1].NameValueCount != 1 {
 		t.Fatalf("second %+v", got[1])
 	}
-	unnamed := map[string]conclusionheaders.PersonHeader{got[2].Entity.Ref: got[2], got[3].Entity.Ref: got[3]}
-	if h := unnamed[labelled.Ref]; h.Name != nil || h.NameValueCount != 0 || h.Entity.Label != "Mother of James" {
-		t.Fatalf("labelled %+v", h)
+	if h := got[2]; h.Entity.Ref != labelled.Ref || h.Name != nil || h.NameValueCount != 0 || h.Entity.Label != "Mother of James" {
+		t.Fatalf("labelled third %+v", h)
 	}
-	if h := unnamed[bare.Ref]; h.Name != nil || h.Entity.Label != "" {
-		t.Fatalf("bare %+v", h)
-	}
-	if got[2].Entity.Ref > got[3].Entity.Ref {
-		t.Fatalf("unnamed not ordered by ref: %s, %s", got[2].Entity.Ref, got[3].Entity.Ref)
+	if h := got[3]; h.Entity.Ref != bare.Ref || h.Name != nil || h.Entity.Label != "" {
+		t.Fatalf("bare last %+v", h)
 	}
 
 	t.Run("a name edit reaches the header", func(t *testing.T) {
@@ -163,6 +163,71 @@ func TestPersonNameCountIsDisplayedOnly(t *testing.T) {
 		if h.NameValueCount != 1 {
 			t.Fatalf("%s counts %d", h.Name.Form, h.NameValueCount)
 		}
+	}
+}
+
+// A header shows what the detail page displays: a kept value. When every
+// value is held back (here, only a provisional member speaks), rank 1 is not
+// kept, so the row falls back to the label or ref.
+func TestHeadersShowKeptValuesOnly(t *testing.T) {
+	tests := []struct {
+		name  string
+		kind  string
+		cite  func(f *fixture) []observations.Input
+		check func(t *testing.T, f *fixture, entityID []byte)
+	}{
+		{
+			name: "a provisional member's name is not the Person's name",
+			kind: "person",
+			cite: func(f *fixture) []observations.Input {
+				return []observations.Input{{PropertyID: f.name.ID, Name: namevaluestest.Western("Ghost Name")}}
+			},
+			check: func(t *testing.T, f *fixture, entityID []byte) {
+				for _, h := range f.list() {
+					if string(h.Entity.ID) == string(entityID) && h.Name != nil {
+						t.Fatalf("listed provisional name %q", h.Name.Form)
+					}
+				}
+			},
+		},
+		{
+			name: "a provisional member's name, type, and date are not the Event's",
+			kind: "event",
+			cite: func(f *fixture) []observations.Input {
+				return []observations.Input{
+					{PropertyID: f.prop("event_name").ID, ValueText: "Phantom Fair", HasText: true},
+					{PropertyID: f.prop("event_type").ID, ValueTermID: f.term("event_type", "birth").ID},
+					{PropertyID: f.prop("date").ID, Date: pointYear(1801)},
+				}
+			},
+			check: func(t *testing.T, f *fixture, entityID []byte) {
+				for _, h := range f.events() {
+					if string(h.Entity.ID) != string(entityID) {
+						continue
+					}
+					if h.EventName != "" || h.EventType != nil || h.Date != nil {
+						t.Fatalf("listed provisional values %+v", h)
+					}
+				}
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			f := newFixture(t)
+			handle, err := canonicalentities.Create(f.c, userID, canonicalentities.CreateInput{SubjectTypeID: f.typeID(tt.kind)})
+			must(t, err)
+			s := f.bare(tt.kind)
+			f.cite(s, tt.cite(f)...)
+			_, err = identityclaims.Create(f.c, userID, identityclaims.CreateInput{
+				SubjectID: s.ID, EntityID: handle.ID, Status: identityclaims.StatusProvisional,
+			})
+			must(t, err)
+			db, err := f.c.DB()
+			must(t, err)
+			must(t, autoreconciler.RecomputeTx(db, [][]byte{handle.ID}))
+			tt.check(t, f, handle.ID)
+		})
 	}
 }
 
@@ -531,5 +596,58 @@ func TestPlacesByIDs(t *testing.T) {
 	}
 	if got, err := conclusionheaders.PlacesByIDs(db, nil); err != nil || got != nil {
 		t.Fatalf("no ids: %v %+v", err, got)
+	}
+}
+
+func TestListOrderIsByShownTitle(t *testing.T) {
+	place := func(ref, label string, names ...string) conclusionheaders.PlaceHeader {
+		return conclusionheaders.PlaceHeader{Entity: canonicalentities.Entity{Ref: ref, Label: label}, Names: names}
+	}
+	tests := []struct {
+		name string
+		in   []conclusionheaders.PlaceHeader
+		want []string // refs
+	}{
+		{
+			name: "case and diacritics do not split the alphabet",
+			in:   []conclusionheaders.PlaceHeader{place("P3", "", "york"), place("P1", "", "Montréal"), place("P2", "", "Mumbai"), place("P4", "", "Évora")},
+			want: []string{"P4", "P1", "P2", "P3"},
+		},
+		{
+			name: "a working label sorts among the names",
+			in:   []conclusionheaders.PlaceHeader{place("P1", "", "York"), place("P2", "the old mill"), place("P3", "", "Kingston")},
+			want: []string{"P3", "P2", "P1"},
+		},
+		{
+			name: "a ref-only row sorts last, by ref",
+			in:   []conclusionheaders.PlaceHeader{place("PLC-B", ""), place("P1", "", "York"), place("PLC-A", "  ")},
+			want: []string{"P1", "PLC-A", "PLC-B"},
+		},
+		{
+			name: "the order the Places list showed when Swift sorted it",
+			in: []conclusionheaders.PlaceHeader{
+				place("PLC-9", "", "York"), place("PLC-2", "Home"), place("PLC-B", ""),
+				place("PLC-A", ""), place("PLC-1", "", "Montréal"), place("PLC-3", "", "montreal"),
+			},
+			want: []string{"PLC-2", "PLC-1", "PLC-3", "PLC-9", "PLC-A", "PLC-B"},
+		},
+		{
+			name: "the same title breaks by ref",
+			in:   []conclusionheaders.PlaceHeader{place("P2", "", "Montreal"), place("P1", "", "Montréal")},
+			want: []string{"P1", "P2"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rows := append([]conclusionheaders.PlaceHeader(nil), tt.in...)
+			conclusionheaders.SortPlaces(rows)
+			var got []string
+			for _, r := range rows {
+				got = append(got, r.Entity.Ref)
+			}
+			if strings.Join(got, ",") != strings.Join(tt.want, ",") {
+				t.Fatalf("got %v want %v", got, tt.want)
+			}
+		})
 	}
 }

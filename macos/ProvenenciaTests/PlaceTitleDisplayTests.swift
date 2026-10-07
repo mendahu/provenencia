@@ -31,6 +31,5 @@ struct PlaceTitleDisplayTests {
     }
 
     @Test func chainStaysEmpty() {
-        #expect(PlaceTitleDisplay.chain(parts(names: ["York", "Toronto"], label: "Home")) == "")
     }
 }

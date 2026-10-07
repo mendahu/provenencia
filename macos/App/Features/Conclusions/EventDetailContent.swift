@@ -1,8 +1,8 @@
 import Foundation
 
-/// The Event page, worded from one `CatalogConclusionDetail` and, when the
-/// page has it, the Event header (S9-24, board S9-D6). The header supplies
-/// the subjects and places. The date's Why stays on this page's date row.
+/// The Event page, worded from one `CatalogConclusionDetail` and the Event
+/// header it carries (S9-24, board S9-D6). The header supplies the title and
+/// places. The date's Why stays on this page's date row.
 struct EventDetailContent: ConclusionDetailBody {
     var title: ConclusionTitleSource
     var ref: String
@@ -14,13 +14,10 @@ struct EventDetailContent: ConclusionDetailBody {
     var summaryPlace: String?
     var rows: [ReconciledValueRowModel]
 
-    init(
-        detail: CatalogConclusionDetail,
-        header: CatalogEventHeader? = nil,
-        locale: Locale = .autoupdatingCurrent
-    ) {
-        let parts = header?.titleParts ?? Self.parts(detail)
-        title = EventTitleDisplay.titleSource(parts, locale: locale)
+    init(detail: CatalogConclusionDetail, locale: Locale = .autoupdatingCurrent) {
+        let header = detail.eventHeader
+        title = header.map { EventTitleDisplay.titleSource($0.title, locale: locale) }
+            ?? EventTitleDisplay.untitled(detail.entity)
         ref = detail.entity.ref
         members = L10n.Conclusions.memberCount(detail.memberCount)
         summaryDate = Self.summaryDate(detail.fields, locale: locale)
@@ -29,29 +26,18 @@ struct EventDetailContent: ConclusionDetailBody {
         rows = [Self.dateRow(detail.fields, locale: locale), Self.placeRow(header)]
     }
 
-    private static func parts(_ detail: CatalogConclusionDetail) -> EventTitleParts {
-        let type = term(detail.fields, propertyKey: "event_type")
-        return EventTitleParts(
-            recordedName: text(detail.fields, key: "event_name"),
-            label: detail.entity.label,
-            ref: detail.entity.ref,
-            typeKey: type.key,
-            typeLabel: type.label
-        )
-    }
-
     /// A recorded `date` wins. Otherwise the start–end span. Empty when
     /// none of them is displayed.
     static func summaryDate(_ fields: [CatalogConclusionField], locale: Locale) -> String? {
-        if let date = fields.first(where: { $0.propertyKey == "date" }), !date.outcomes.isEmpty {
+        if let date = fields.first(where: { $0.propertyKey == SeededPropertyKey.date }), !date.outcomes.isEmpty {
             guard let value = dateValue(date) else { return nil }
-            let line = EventTitleDisplay.dateLine(date: value, locale: locale)
+            let line = DateRowDisplay.line(date: value, locale: locale)
             return line.isEmpty ? nil : line
         }
-        let line = EventTitleDisplay.dateLine(
+        let line = DateRowDisplay.line(
             date: nil,
-            start: dateValue(fields, key: "start_date"),
-            end: dateValue(fields, key: "end_date"),
+            start: dateValue(fields, key: SeededPropertyKey.startDate),
+            end: dateValue(fields, key: SeededPropertyKey.endDate),
             locale: locale
         )
         return line.isEmpty ? nil : line
@@ -62,10 +48,10 @@ struct EventDetailContent: ConclusionDetailBody {
     /// Stated empty when none of them is set.
     static func dateRow(_ fields: [CatalogConclusionField], locale: Locale) -> ReconciledValueRowModel {
         let label = L10n.string(L10n.Conclusions.eventDate)
-        if let date = fields.first(where: { $0.propertyKey == "date" }), !date.outcomes.isEmpty {
+        if let date = fields.first(where: { $0.propertyKey == SeededPropertyKey.date }), !date.outcomes.isEmpty {
             return labeled(ReconciledValueRowModel(field: date, locale: locale), label, field: date)
         }
-        let span = ["start_date", "end_date"].compactMap { key in
+        let span = [SeededPropertyKey.startDate, SeededPropertyKey.endDate].compactMap { key in
             fields.first { $0.propertyKey == key && !$0.outcomes.isEmpty }
         }
         let empty = L10n.string(L10n.Conclusions.emptyEventDate)
@@ -75,24 +61,25 @@ struct EventDetailContent: ConclusionDetailBody {
         if span.count == 1, let only = span.first {
             return labeled(ReconciledValueRowModel(field: only, locale: locale), label, field: only)
         }
-        let lead = EventTitleDisplay.dateLine(
+        let lead = DateRowDisplay.line(
             date: nil,
-            start: dateValue(fields, key: "start_date"),
-            end: dateValue(fields, key: "end_date"),
+            start: dateValue(fields, key: SeededPropertyKey.startDate),
+            end: dateValue(fields, key: SeededPropertyKey.endDate),
             locale: locale
         )
         return .spanning(id: "date", label: label, lead: lead, emptyText: empty, fields: span, locale: locale)
     }
 
     /// The Place row. The first kept name, mixed when more survived. No Why:
-    /// that stays on the Place.
+    /// that stays on the Place, which the row opens.
     static func placeRow(_ header: CatalogEventHeader?) -> ReconciledValueRowModel {
         let label = L10n.string(L10n.Conclusions.eventPlace)
         let empty = L10n.string(L10n.Conclusions.emptyEventPlace)
         let places = header?.places ?? []
         return .derived(
             id: "place", label: label, style: .place, lead: DerivedPlace.name(places),
-            emptyText: empty, mixed: DerivedPlace.extra(places) > 0
+            emptyText: empty, mixed: DerivedPlace.extra(places) > 0,
+            opens: places.first.map(ReconciledValueRowModel.Opens.place)
         )
     }
 
@@ -105,20 +92,6 @@ struct EventDetailContent: ConclusionDetailBody {
         row.label = label
         row.accessibilityLabel = ReconciledValueDisplay.accessibilityLabel(label: label, lead: row.lead, field: field)
         return row
-    }
-
-    private static func text(_ fields: [CatalogConclusionField], key: String) -> String {
-        guard let field = fields.first(where: { $0.propertyKey == key }),
-              case .text(let text)? = field.displayedValues.first?.value
-        else { return "" }
-        return text
-    }
-
-    private static func term(_ fields: [CatalogConclusionField], propertyKey: String) -> (key: String, label: String) {
-        guard let field = fields.first(where: { $0.propertyKey == propertyKey }),
-              case .term(_, let key, let label)? = field.displayedValues.first?.value
-        else { return ("", "") }
-        return (key, label)
     }
 
     private static func dateValue(_ field: CatalogConclusionField) -> CatalogDateValueInput? {

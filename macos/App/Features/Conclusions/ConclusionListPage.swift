@@ -29,119 +29,66 @@ enum ConclusionListPresentation<Row: Equatable>: Equatable {
     }
 }
 
-/// The shared Conclude list page. Each kind stays its own place: the caller
-/// passes that place's query key and the location a row opens. This view
-/// does not choose a section or push history.
-struct ConclusionListPage<Row: Identifiable & Equatable, Secondary: View>: View {
-    let session: WorkspaceSession
-    let key: CatalogQueryKey
-    let title: LocalizedStringResource
-    let pageAccessibilityIdentifier: String
-    let emptyIcon: PVSymbol
-    let emptyTitle: LocalizedStringResource
-    let emptyMessage: LocalizedStringResource
-    let emptyAccessibilityIdentifier: String
-    let countMeta: (Int) -> String
-    let refreshingMeta: (Int) -> String
-    let mark: PVMarkKey
-    let ref: (Row) -> String
-    let rowAccessibilityIdentifier: (Row) -> String
-    let titleSource: (Row) -> ConclusionTitleSource
-    /// Names beyond the one shown. Zero omits the +N badge.
-    let extraCount: (Row) -> Int
-    /// List order. The default keeps the composer's order.
-    let rows: ([Row]) -> [Row]
-    let accessibilityLabel: (Row) -> String
-    let location: (Row) -> WorkspaceLocation
-    let secondary: (Row) -> Secondary
+/// One Conclude list: what `ConclusionListPage` needs to know about a kind.
+/// Persons, Events, and Places each conform once; the page owns the chrome,
+/// the query handle, and navigation. Each kind stays its own place: its
+/// query key and the location a row opens.
+protocol ConclusionListKind {
+    associatedtype Row: Identifiable & Equatable
+    associatedtype Secondary: View
 
-    init(
-        session: WorkspaceSession,
-        key: CatalogQueryKey,
-        title: LocalizedStringResource,
-        pageAccessibilityIdentifier: String,
-        emptyIcon: PVSymbol,
-        emptyTitle: LocalizedStringResource,
-        emptyMessage: LocalizedStringResource,
-        emptyAccessibilityIdentifier: String,
-        countMeta: @escaping (Int) -> String,
-        refreshingMeta: @escaping (Int) -> String,
-        mark: PVMarkKey,
-        ref: @escaping (Row) -> String,
-        rowAccessibilityIdentifier: @escaping (Row) -> String,
-        titleSource: @escaping (Row) -> ConclusionTitleSource,
-        extraCount: @escaping (Row) -> Int = { _ in 0 },
-        rows: @escaping ([Row]) -> [Row] = { $0 },
-        accessibilityLabel: @escaping (Row) -> String,
-        location: @escaping (Row) -> WorkspaceLocation,
-        secondary: @escaping (Row) -> Secondary
-    ) {
-        self.session = session
-        self.key = key
-        self.title = title
-        self.pageAccessibilityIdentifier = pageAccessibilityIdentifier
-        self.emptyIcon = emptyIcon
-        self.emptyTitle = emptyTitle
-        self.emptyMessage = emptyMessage
-        self.emptyAccessibilityIdentifier = emptyAccessibilityIdentifier
-        self.countMeta = countMeta
-        self.refreshingMeta = refreshingMeta
-        self.mark = mark
-        self.ref = ref
-        self.rowAccessibilityIdentifier = rowAccessibilityIdentifier
-        self.titleSource = titleSource
-        self.extraCount = extraCount
-        self.rows = rows
-        self.accessibilityLabel = accessibilityLabel
-        self.location = location
-        self.secondary = secondary
-    }
+    static func key(project: ProjectKey) -> CatalogQueryKey
+    static var title: LocalizedStringResource { get }
+    /// Stable identifier root: `<root>.list`, `<root>.empty`, `<root>.row.<ref>`.
+    static var identifierRoot: String { get }
+    static var emptyIcon: PVSymbol { get }
+    static var emptyTitle: LocalizedStringResource { get }
+    static var emptyMessage: LocalizedStringResource { get }
+    static func countMeta(_ count: Int) -> String
+    static func refreshingMeta(_ count: Int) -> String
+    static var mark: PVMarkKey { get }
+
+    static func ref(_ row: Row) -> String
+    static func titleSource(_ row: Row) -> ConclusionTitleSource
+    /// Names beyond the one shown. Zero omits the +N badge.
+    static func extraCount(_ row: Row) -> Int
+    static func accessibilityLabel(_ row: Row) -> String
+    static func location(_ row: Row) -> WorkspaceLocation
+    @MainActor static func secondary(_ row: Row) -> Secondary
+}
+
+extension ConclusionListKind {
+    static func extraCount(_: Row) -> Int { 0 }
+}
+
+/// The shared Conclude list page for one kind. This view does not choose a
+/// section or push history.
+struct ConclusionListPage<Kind: ConclusionListKind>: View {
+    let session: WorkspaceSession
+
+    private var key: CatalogQueryKey { Kind.key(project: session.projectKey) }
 
     var body: some View {
         Group {
-            if let handle: QueryHandle<[Row]> = session.queryHandle(key) {
-                ConclusionListBody(
-                    handle: handle,
-                    title: title,
-                    pageAccessibilityIdentifier: pageAccessibilityIdentifier,
-                    emptyIcon: emptyIcon,
-                    emptyTitle: emptyTitle,
-                    emptyMessage: emptyMessage,
-                    emptyAccessibilityIdentifier: emptyAccessibilityIdentifier,
-                    countMeta: countMeta,
-                    refreshingMeta: refreshingMeta,
-                    mark: mark,
-                    ref: ref,
-                    rowAccessibilityIdentifier: rowAccessibilityIdentifier,
-                    titleSource: titleSource,
-                    extraCount: extraCount,
-                    rows: rows,
-                    accessibilityLabel: accessibilityLabel,
-                    location: location,
-                    secondary: secondary
-                )
+            if let handle: QueryHandle<[Kind.Row]> = session.queryHandle(key) {
+                ConclusionListBody<Kind>(handle: handle)
             } else {
-                Self.page(title: title, meta: nil, accessibilityIdentifier: pageAccessibilityIdentifier) {
+                Self.page(meta: nil) {
                     PVListSkeleton()
                 }
             }
         }
         .task {
-            let _: QueryHandle<[Row]> = session.query(key)
+            let _: QueryHandle<[Kind.Row]> = session.query(key)
         }
     }
 
     /// Page chrome shared by every state: the section header over the body,
     /// in the content column.
-    static func page<Body: View>(
-        title: LocalizedStringResource,
-        meta: String?,
-        accessibilityIdentifier: String,
-        @ViewBuilder body: () -> Body
-    ) -> some View {
+    static func page<Body: View>(meta: String?, @ViewBuilder body: () -> Body) -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: PVSpacing.space6) {
-                PVSectionHeader(title: title, meta: meta)
+                PVSectionHeader(title: Kind.title, meta: meta)
                 body()
             }
             .frame(maxWidth: PVSpacing.widthContentMax, alignment: .leading)
@@ -149,67 +96,48 @@ struct ConclusionListPage<Row: Identifiable & Equatable, Secondary: View>: View 
             .padding(.vertical, PVSpacing.space8)
             .frame(maxWidth: .infinity)
         }
-        .accessibilityIdentifier(accessibilityIdentifier)
+        .accessibilityIdentifier("\(Kind.identifierRoot).list")
     }
 }
 
-private struct ConclusionListBody<Row: Identifiable & Equatable, Secondary: View>: View {
-    @Bindable var handle: QueryHandle<[Row]>
+private struct ConclusionListBody<Kind: ConclusionListKind>: View {
+    @Bindable var handle: QueryHandle<[Kind.Row]>
     @Environment(WorkspaceNavigation.self) private var navigation
 
-    let title: LocalizedStringResource
-    let pageAccessibilityIdentifier: String
-    let emptyIcon: PVSymbol
-    let emptyTitle: LocalizedStringResource
-    let emptyMessage: LocalizedStringResource
-    let emptyAccessibilityIdentifier: String
-    let countMeta: (Int) -> String
-    let refreshingMeta: (Int) -> String
-    let mark: PVMarkKey
-    let ref: (Row) -> String
-    let rowAccessibilityIdentifier: (Row) -> String
-    let titleSource: (Row) -> ConclusionTitleSource
-    let extraCount: (Row) -> Int
-    let rows: ([Row]) -> [Row]
-    let accessibilityLabel: (Row) -> String
-    let location: (Row) -> WorkspaceLocation
-    let secondary: (Row) -> Secondary
-
-    private var presentation: ConclusionListPresentation<Row> {
+    private var presentation: ConclusionListPresentation<Kind.Row> {
         ConclusionListPresentation(
             value: handle.value, isFetching: handle.isFetching, status: handle.status, error: handle.error
         )
     }
 
     var body: some View {
-        ConclusionListPage<Row, Secondary>.page(
-            title: title,
-            meta: presentation.meta(count: countMeta, refreshing: refreshingMeta),
-            accessibilityIdentifier: pageAccessibilityIdentifier
+        ConclusionListPage<Kind>.page(
+            meta: presentation.meta(count: Kind.countMeta, refreshing: Kind.refreshingMeta)
         ) {
             switch presentation {
             case .loading:
                 PVListSkeleton()
             case .empty:
                 PVEmptyState(
-                    icon: emptyIcon,
-                    title: emptyTitle,
-                    message: L10n.string(emptyMessage)
+                    icon: Kind.emptyIcon,
+                    title: Kind.emptyTitle,
+                    message: L10n.string(Kind.emptyMessage)
                 )
-                .accessibilityIdentifier(emptyAccessibilityIdentifier)
+                .accessibilityIdentifier("\(Kind.identifierRoot).empty")
             case .failed(let message):
                 PVCallout(tone: .danger, message: message)
-            case .rows(let headers, _):
+            case .rows(let rows, _):
                 PVList(
-                    items: rows(headers),
-                    thumbnail: { _ in ConclusionListRow.thumbnail(mark: mark) },
-                    meta: ref,
-                    label: title,
-                    itemAccessibilityLabel: accessibilityLabel,
-                    itemAccessibilityIdentifier: rowAccessibilityIdentifier,
-                    onActivate: { navigation.go(to: location($0)) },
-                    primary: { ConclusionListRow.title(titleSource($0), extraCount: extraCount($0)) },
-                    secondary: secondary
+                    // Go owns list order (conclusionheaders.sortByTitle); rows show as given.
+                    items: rows,
+                    thumbnail: { _ in ConclusionListRow.thumbnail(mark: Kind.mark) },
+                    meta: Kind.ref,
+                    label: Kind.title,
+                    itemAccessibilityLabel: Kind.accessibilityLabel,
+                    itemAccessibilityIdentifier: { "\(Kind.identifierRoot).row.\(Kind.ref($0))" },
+                    onActivate: { navigation.go(to: Kind.location($0)) },
+                    primary: { ConclusionListRow.title(Kind.titleSource($0), extraCount: Kind.extraCount($0)) },
+                    secondary: Kind.secondary
                 )
             }
         }

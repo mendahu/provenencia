@@ -256,7 +256,6 @@ struct PlaceRegistryTests {
         #expect(detail?.placeID == .eventDetail)
         #expect(detail?.queryKeys == [
             .conclusionDetail(project: project, entityId: "evt-1"),
-            .eventHeader(project: project, entityId: "evt-1"),
         ])
         #expect(detail?.deepId == "evt-1")
         let persons = resolve(.sectionRoot(.persons))

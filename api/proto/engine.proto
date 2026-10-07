@@ -38,6 +38,9 @@ enum Method {
   reserved "METHOD_COUNT_FILES";
   reserved 71;
   reserved "METHOD_UPDATE_CITATION_WITH_OBSERVATIONS";
+  // Per-entity headers ride GetConclusionDetail.
+  reserved 92, 94, 95;
+  reserved "METHOD_GET_EVENT_HEADER", "METHOD_GET_PLACE_HEADER", "METHOD_GET_PERSON_HEADER";
   METHOD_UPDATE_METADATA_FIELD = 28;
   METHOD_DELETE_SOURCE_TYPE = 29;
   METHOD_DELETE_METADATA_FIELD = 30;
@@ -101,10 +104,8 @@ enum Method {
   METHOD_LIST_CLAIM_CONFIDENCE_GRADES = 89;
   METHOD_GET_CONCLUSION_DETAIL = 90;
   METHOD_LIST_EVENT_HEADERS = 91;
-  METHOD_GET_EVENT_HEADER = 92;
   METHOD_LIST_PLACE_HEADERS = 93;
-  METHOD_GET_PLACE_HEADER = 94;
-  METHOD_GET_PERSON_HEADER = 95;
+  METHOD_LIST_SOURCE_EVENT_TITLES = 96;
 }
 
 message PingRequest {
@@ -966,6 +967,53 @@ message SubjectMembership {
   NameValueInput name = 5; // handle's displayed auto-reconciled name; absent when none
 }
 
+// EventTitleRule is one row of the Event naming matrix (Spike 9 R4), in
+// precedence order. Go chooses the rule; the app fills its L10n template.
+enum EventTitleRule {
+  EVENT_TITLE_RULE_UNSPECIFIED = 0;
+  EVENT_TITLE_RULE_RECORDED_NAME = 1; // event_name
+  EVENT_TITLE_RULE_SUBJECT = 2;       // {Type} of {subject}
+  EVENT_TITLE_RULE_COUPLE = 3;        // Marriage of {a} and {b}
+  EVENT_TITLE_RULE_SUBJECTS = 4;      // {Type} of {first} et al.
+  EVENT_TITLE_RULE_LABEL = 5;         // working label
+  EVENT_TITLE_RULE_TYPE_AT_PLACE = 6; // {Type} at {place}
+  EVENT_TITLE_RULE_TYPE = 7;          // Unspecified {type}
+  EVENT_TITLE_RULE_REF = 8;
+}
+
+// EventTitleSubject is one subject-role person; no name reads "unnamed person".
+message EventTitleSubject {
+  NameValueInput name = 1;
+}
+
+// EventTitle is the chosen rule and the trimmed parts it reads.
+message EventTitle {
+  EventTitleRule rule = 1;
+  string recorded_name = 2;
+  string label = 3;
+  string ref = 4;
+  string type_key = 5;
+  string type_label = 6;
+  repeated EventTitleSubject subjects = 7;
+  string place = 8;
+}
+
+// ListSourceEventTitles titles every Event Subject on one Source's Evidence
+// graph from what that Source cites, by the same rule as Event headers.
+message ListSourceEventTitlesRequest {
+  string project_dir = 1;
+  string source_id = 2;
+}
+
+message SourceEventTitle {
+  string subject_id = 1;
+  EventTitle title = 2;
+}
+
+message ListSourceEventTitlesResponse {
+  repeated SourceEventTitle titles = 1;
+}
+
 // ListSubjectMemberships returns the handle of every promoted Subject on one
 // Source's Evidence graph. Unpromoted Subjects are absent.
 message ListSubjectMembershipsRequest {
@@ -978,11 +1026,13 @@ message ListSubjectMembershipsResponse {
 }
 
 // HeaderPlace is one Place a walk reached. names are kept toponyms in rank
-// order. name_count is how many were kept. The parent chain is not here
-// (S9-39).
+// order. The parent chain is not here (S9-39).
 message HeaderPlace {
   repeated string names = 1;
-  int32 name_count = 2;
+  reserved 2;
+  reserved "name_count"; // always len(names)
+  // entity is the Place; its page owns the names' Why.
+  CanonicalEntity entity = 3;
 }
 
 // LifeFacts is a birth or a death: the event's date, else its start date,
@@ -991,6 +1041,11 @@ message LifeFacts {
   DateValueInput date = 1;
   int32 date_count = 2;
   repeated HeaderPlace places = 3;
+  // event is the birth or death event read; absent when none is linked.
+  CanonicalEntity event = 4;
+  // event_count is how many birth (or death) events survive; > 1 is a
+  // disagreement, and event is the earliest dated one.
+  int32 event_count = 5;
 }
 
 // EventSubject is one person on an event through a subject-role participation.
@@ -1015,25 +1070,15 @@ message PersonHeader {
   LifeFacts death = 5;
 }
 
-// ListPersonHeaders returns every unmerged Person in list order: named
-// Persons by auto-reconciled name, then the rest by ref.
+// ListPersonHeaders returns every unmerged Person in list order: by the title
+// the row shows (auto-reconciled name, else label), ignoring case and
+// diacritics, then ref-only rows by ref. The app shows rows as given.
 message ListPersonHeadersRequest {
   string project_dir = 1;
 }
 
 message ListPersonHeadersResponse {
   repeated PersonHeader headers = 1;
-}
-
-// GetPersonHeader returns one unmerged Person's header. Unknown, merged,
-// and non-Person ids are not found.
-message GetPersonHeaderRequest {
-  string project_dir = 1;
-  string entity_id = 2;
-}
-
-message GetPersonHeaderResponse {
-  PersonHeader header = 1;
 }
 
 // EventHeader is one Event as a row, composed from the auto-reconciler's
@@ -1058,6 +1103,8 @@ message EventHeader {
   // places are every location's kept names. Chains stay empty until S9-39.
   repeated EventSubject subjects = 12;
   repeated HeaderPlace places = 13;
+  // title is the naming-matrix rule Go chose and the parts it reads.
+  EventTitle title = 14;
 }
 
 // ListEventHeaders returns every unmerged Event in list order: dated
@@ -1068,17 +1115,6 @@ message ListEventHeadersRequest {
 
 message ListEventHeadersResponse {
   repeated EventHeader headers = 1;
-}
-
-// GetEventHeader returns one unmerged Event's header. Unknown, merged,
-// and non-Event ids are not found.
-message GetEventHeaderRequest {
-  string project_dir = 1;
-  string entity_id = 2;
-}
-
-message GetEventHeaderResponse {
-  EventHeader header = 1;
 }
 
 // PlaceHeader is one Place as a row, composed from the auto-reconciler's
@@ -1094,25 +1130,15 @@ message PlaceHeader {
   repeated string parents = 6;
 }
 
-// ListPlaceHeaders returns every unmerged Place in list order: named
-// places by the rank-1 toponym, then the rest by ref.
+// ListPlaceHeaders returns every unmerged Place in list order: by the title
+// the row shows (first kept toponym, else label), ignoring case and
+// diacritics, then ref-only rows by ref. The app shows rows as given.
 message ListPlaceHeadersRequest {
   string project_dir = 1;
 }
 
 message ListPlaceHeadersResponse {
   repeated PlaceHeader headers = 1;
-}
-
-// GetPlaceHeader returns one unmerged Place's header. Unknown, merged,
-// and non-Place ids are not found.
-message GetPlaceHeaderRequest {
-  string project_dir = 1;
-  string entity_id = 2;
-}
-
-message GetPlaceHeaderResponse {
-  PlaceHeader header = 1;
 }
 
 // ConclusionValue is one Property value; exactly the field for the
@@ -1195,6 +1221,14 @@ message ConclusionDetail {
   CanonicalEntity entity = 1;
   repeated ConclusionField fields = 2;
   int32 member_count = 3; // accepted members
+  // header is the handle's row for its kind, read with the detail so a page
+  // has one load, one error, and one consistent read. Absent for a kind
+  // with no header composer.
+  oneof header {
+    PersonHeader person = 4;
+    EventHeader event = 5;
+    PlaceHeader place = 6;
+  }
 }
 
 // ListPromoteTargetSuggestions returns existing handles a Subject could join,

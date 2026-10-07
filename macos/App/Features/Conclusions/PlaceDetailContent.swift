@@ -16,7 +16,7 @@ struct PlaceDetailContent: ConclusionDetailBody {
     var sections: [ConclusionDetailSection]
 
     init(detail: CatalogConclusionDetail, locale: Locale = .autoupdatingCurrent) {
-        let toponym = detail.fields.first { $0.propertyKey == "toponym" }
+        let toponym = detail.fields.first { $0.propertyKey == SeededPropertyKey.toponym }
         let names = toponym?.displayedValues.compactMap { value -> String? in
             let text = ReconciledValueDisplay.string(for: value.value, locale: locale)
             return text.isEmpty ? nil : text
@@ -70,19 +70,19 @@ struct PlaceDetailContent: ConclusionDetailBody {
     static let relationshipSections: [ConclusionDetailSection] = [
         ConclusionDetailSection(
             id: "partOf",
-            title: L10n.string(L10n.Conclusions.placePartOf),
+            title: L10n.Conclusions.placePartOf,
             aside: L10n.string(L10n.Conclusions.placePartOfAside),
             emptyText: L10n.string(L10n.Conclusions.placePartOfEmpty)
         ),
         ConclusionDetailSection(
             id: "contains",
-            title: L10n.string(L10n.Conclusions.placeContains),
+            title: L10n.Conclusions.placeContains,
             aside: L10n.string(L10n.Conclusions.placeContainsAside),
             emptyText: L10n.string(L10n.Conclusions.placeContainsEmpty)
         ),
         ConclusionDetailSection(
             id: "succession",
-            title: L10n.string(L10n.Conclusions.placeSuccession),
+            title: L10n.Conclusions.placeSuccession,
             aside: L10n.string(L10n.Conclusions.placeSuccessionAside),
             emptyText: L10n.string(L10n.Conclusions.placeSuccessionEmpty)
         ),

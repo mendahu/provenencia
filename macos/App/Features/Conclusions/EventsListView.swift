@@ -1,59 +1,49 @@
 import SwiftUI
 
-/// The Events list (S9-23, board S9-D3). A configuration of
-/// `ConclusionListPage`. The Events place, query key, and history entry stay
-/// Events. The title includes subjects; the secondary line adds the place.
-struct EventsListView: View {
-    let session: WorkspaceSession
+/// The Events list (S9-23, board S9-D3). The Events place, query key, and
+/// history entry stay Events. The title includes subjects; the secondary line
+/// adds the place.
+typealias EventsListView = ConclusionListPage<EventsList>
 
-    var body: some View {
-        ConclusionListPage<CatalogEventHeader, EventSecondaryLine>(
-            session: session,
-            key: .eventsList(project: session.projectKey),
-            title: L10n.Workspace.eventsTitle,
-            pageAccessibilityIdentifier: "events.list",
-            emptyIcon: .calendar,
-            emptyTitle: L10n.Workspace.eventsEmptyTitle,
-            emptyMessage: L10n.Workspace.eventsEmptyMessage,
-            emptyAccessibilityIdentifier: "events.empty",
-            countMeta: L10n.Workspace.eventCount,
-            refreshingMeta: L10n.Workspace.eventCountRefreshing,
-            mark: .subjectEvent,
-            ref: { $0.entity.ref },
-            rowAccessibilityIdentifier: { "events.row.\($0.entity.ref)" },
-            titleSource: { EventTitleDisplay.titleSource($0.titleParts) },
-            accessibilityLabel: Self.rowLabel,
-            location: Self.location,
-            secondary: Self.secondary
-        )
+enum EventsList: ConclusionListKind {
+    static func key(project: ProjectKey) -> CatalogQueryKey { .eventsList(project: project) }
+    static var title: LocalizedStringResource { L10n.Workspace.eventsTitle }
+    static var identifierRoot: String { "events" }
+    static var emptyIcon: PVSymbol { .calendar }
+    static var emptyTitle: LocalizedStringResource { L10n.Workspace.eventsEmptyTitle }
+    static var emptyMessage: LocalizedStringResource { L10n.Workspace.eventsEmptyMessage }
+    static func countMeta(_ count: Int) -> String { L10n.Workspace.eventCount(count) }
+    static func refreshingMeta(_ count: Int) -> String { L10n.Workspace.eventCountRefreshing(count) }
+    static var mark: PVMarkKey { .subjectEvent }
+
+    static func ref(_ header: CatalogEventHeader) -> String { header.entity.ref }
+
+    static func titleSource(_ header: CatalogEventHeader) -> ConclusionTitleSource {
+        EventTitleDisplay.titleSource(header.title)
     }
 
-    private static func rowLabel(_ header: CatalogEventHeader) -> String {
-        let source = EventTitleDisplay.titleSource(header.titleParts)
-        let date = EventTitleDisplay.dateLine(
-            date: header.date, start: header.startDate, end: header.endDate
-        )
-        var label = L10n.Workspace.eventRowAccessibility(title: source.text, date: date, ref: header.entity.ref)
+    static func accessibilityLabel(_ header: CatalogEventHeader) -> String {
+        let date = DateRowDisplay.line(date: header.date, start: header.startDate, end: header.endDate)
+        var label = L10n.Workspace.eventRowAccessibility(title: titleSource(header).text, date: date, ref: header.entity.ref)
         let place = DerivedPlace.name(header.places)
         if !place.isEmpty {
             label = L10n.Conclusions.a11yList(label, rest: place)
         }
+        let extra = DerivedPlace.extra(header.places)
+        if extra > 0 {
+            label = L10n.Conclusions.a11yList(label, rest: L10n.Conclusions.morePlaces(count: extra))
+        }
         return label
     }
 
-    private static func location(_ header: CatalogEventHeader) -> WorkspaceLocation {
-        .eventDetail(
-            entityId: header.entity.id,
-            ref: header.entity.ref,
-            title: EventTitleDisplay.title(header.titleParts)
-        )
+    static func location(_ header: CatalogEventHeader) -> WorkspaceLocation {
+        .eventDetail(entityId: header.entity.id, ref: header.entity.ref, title: EventTitleDisplay.title(header.title))
     }
 
-    private static func secondary(_ header: CatalogEventHeader) -> EventSecondaryLine {
+    @MainActor
+    static func secondary(_ header: CatalogEventHeader) -> EventSecondaryLine {
         EventSecondaryLine(
-            date: EventTitleDisplay.dateLine(
-                date: header.date, start: header.startDate, end: header.endDate
-            ),
+            date: DateRowDisplay.line(date: header.date, start: header.startDate, end: header.endDate),
             place: DerivedPlace.name(header.places),
             extraPlaces: DerivedPlace.extra(header.places)
         )
@@ -61,33 +51,34 @@ struct EventsListView: View {
 }
 
 /// The Events row's date, then its place. The +N is other kept places.
-private struct EventSecondaryLine: View {
+struct EventSecondaryLine: View {
     let date: String
     let place: String
     let extraPlaces: Int
 
+    /// Nothing when neither is recorded, so `PVList` lays out no second line.
     var body: some View {
-        HStack(spacing: PVSpacing.space4) {
-            if !date.isEmpty {
-                Text(verbatim: date)
-                    .font(PVFont.mono(size: PVTypeScale.caption))
-                    .fixedSize(horizontal: true, vertical: false)
-            }
-            if !date.isEmpty && !place.isEmpty {
-                Text(verbatim: "·")
-                    .foregroundStyle(PVColor.textFaint)
-            }
-            if !place.isEmpty {
-                Text(verbatim: place)
-                    .italic()
-                    .lineLimit(1)
-            }
-            if extraPlaces > 0 {
-                PVBadge(text: "+\(extraPlaces)", tone: .neutral, subtle: true)
-                    .accessibilityHidden(true)
+        if !date.isEmpty || !place.isEmpty {
+            HStack(spacing: PVSpacing.space4) {
+                if !date.isEmpty {
+                    Text(verbatim: date)
+                        .font(PVFont.mono(size: PVTypeScale.caption))
+                        .fixedSize(horizontal: true, vertical: false)
+                }
+                if !date.isEmpty && !place.isEmpty {
+                    Text(verbatim: "·")
+                        .foregroundStyle(PVColor.textFaint)
+                }
+                if !place.isEmpty {
+                    Text(verbatim: place)
+                        .italic()
+                        .lineLimit(1)
+                }
+                if extraPlaces > 0 {
+                    PVBadge(text: L10n.Conclusions.moreCount(extraPlaces), tone: .neutral, subtle: true)
+                        .accessibilityHidden(true)
+                }
             }
         }
-        .frame(maxHeight: date.isEmpty && place.isEmpty ? 0 : nil)
-        .accessibilityHidden(date.isEmpty && place.isEmpty)
     }
 }

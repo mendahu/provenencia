@@ -9,13 +9,15 @@ struct PersonDetailTests {
         name: CatalogConclusionField? = D.mergedName,
         label: String = "",
         members: Int = 4,
-        extra: [CatalogConclusionField] = []
+        extra: [CatalogConclusionField] = [],
+        header: CatalogPersonHeader? = nil
     ) -> CatalogConclusionDetail {
         let sex = D.field("", key: "sex_at_birth", label: "Sex at birth", valueType: "term")
         return CatalogConclusionDetail(
             entity: CatalogCanonicalEntity(id: "e1", ref: "PER-7KD45", subjectTypeID: "t", label: label),
             fields: (name.map { [$0] } ?? []) + [sex] + extra,
-            memberCount: members
+            memberCount: members,
+            header: header.map { .person($0) }
         )
     }
 
@@ -101,41 +103,71 @@ struct PersonDetailTests {
 
     @Test func lifeLineReadsBirthAndDeath() {
         let en = Locale(identifier: "en_US")
+        let birthEvent = CatalogCanonicalEntity(id: "ev1", ref: "EVT-1", subjectTypeID: "t", label: "")
+        let york = CatalogCanonicalEntity(id: "pl1", ref: "PLC-1", subjectTypeID: "t", label: "")
+        let toronto = CatalogCanonicalEntity(id: "pl2", ref: "PLC-2", subjectTypeID: "t", label: "")
         let james = CatalogPersonHeader(
             entity: CatalogCanonicalEntity(id: "e1", ref: "PER-7KD45", subjectTypeID: "t", label: ""),
             name: CatalogNameValue(form: "James Robins"),
             nameValueCount: 1,
             birth: CatalogLifeFacts(
+                event: birthEvent,
                 date: CatalogDateValueInput(kind: "point", startYear: 1817),
                 dateCount: 1,
-                places: [CatalogHeaderPlace(names: ["York"], nameCount: 1)]
+                places: [CatalogHeaderPlace(entity: york, names: ["York"])]
             ),
             death: CatalogLifeFacts(
                 date: CatalogDateValueInput(kind: "point", startYear: 1880),
                 dateCount: 1,
-                places: [CatalogHeaderPlace(names: ["Toronto"], nameCount: 1)]
+                places: [CatalogHeaderPlace(entity: toronto, names: ["Toronto"])]
             )
         )
         #expect(PersonLifeDisplay.line(james, locale: en).text == "1817 – 1880 · York → Toronto")
         #expect(PersonLifeDisplay.line(james, locale: en).extraPlaces == 0)
 
-        let page = PersonDetailContent(detail: detail(), header: james, locale: en)
+        let page = PersonDetailContent(detail: detail(header: james), locale: en)
         #expect(page.vitals.map(\.date) == ["1817", "1880"])
         #expect(page.vitals.map(\.place) == ["York", "Toronto"])
         #expect(page.rows[1].lead == "1817" && page.rows[1].badge == nil && page.rows[1].records.isEmpty)
         #expect(page.rows[2].lead == "York" && page.rows[2].style == .place)
         #expect(page.rows[4].lead == "Toronto")
+        // Derived rows open the Event or Place that owns their Why.
+        #expect(page.rows[1].opens?.location == .eventDetail(entityId: "ev1", ref: "EVT-1", title: nil))
+        #expect(page.rows[2].opens?.location == .placeDetail(entityId: "pl1", ref: "PLC-1", title: "York"))
+        #expect(page.rows[2].opens?.label == L10n.Conclusions.openPlace("York"))
+        #expect(page.rows[3].opens == nil, "a death with no linked event opens nothing")
+        #expect(page.rows[4].opens?.location == .placeDetail(entityId: "pl2", ref: "PLC-2", title: "Toronto"))
 
         var loneBirth = james
         loneBirth.death = CatalogLifeFacts()
         #expect(PersonLifeDisplay.line(loneBirth, locale: en).text == "1817 – · York")
 
-        var extra = james
-        extra.birth.places = [CatalogHeaderPlace(names: ["York", "Tkaronto"], nameCount: 2)]
-        #expect(PersonLifeDisplay.line(extra, locale: en).text == "1817 – 1880 · York → Toronto")
-        #expect(PersonLifeDisplay.line(extra, locale: en).extraPlaces == 1)
-        let mixed = PersonDetailContent(detail: detail(), header: extra, locale: en)
+        // Two names of one Place are one place: no +N, not mixed.
+        var renamed = james
+        renamed.birth.places = [CatalogHeaderPlace(entity: york, names: ["York", "Tkaronto"])]
+        #expect(PersonLifeDisplay.line(renamed, locale: en).text == "1817 – 1880 · York → Toronto")
+        #expect(PersonLifeDisplay.line(renamed, locale: en).extraPlaces == 0)
+        let oneplace = PersonDetailContent(detail: detail(header: renamed), locale: en)
+        #expect(oneplace.rows[2].lead == "York" && oneplace.rows[2].badge == nil)
+
+        // Two Places disagree: +1 and mixed, with no Why on this row.
+        var twoPlaces = james
+        let upper = CatalogCanonicalEntity(id: "pl3", ref: "PLC-3", subjectTypeID: "t", label: "")
+        twoPlaces.birth.places = [
+            CatalogHeaderPlace(entity: york, names: ["York"]),
+            CatalogHeaderPlace(entity: upper, names: ["Kingston"]),
+        ]
+        #expect(PersonLifeDisplay.line(twoPlaces, locale: en).extraPlaces == 1)
+        let mixed = PersonDetailContent(detail: detail(header: twoPlaces), locale: en)
         #expect(mixed.rows[2].lead == "York" && mixed.rows[2].badge == .mixed && mixed.rows[2].records.isEmpty)
+        #expect(mixed.rows[1].badge == nil, "one birth event with one date is not mixed")
+
+        // Two birth events disagree: both birth rows are mixed.
+        var twoBirths = james
+        twoBirths.birth.eventCount = 2
+        let competing = PersonDetailContent(detail: detail(header: twoBirths), locale: en)
+        #expect(competing.rows[1].badge == .mixed && competing.rows[2].badge == .mixed)
+        #expect(competing.rows[3].badge == nil && competing.rows[4].badge == nil)
     }
 
     @Test func vitalsSayUnknownUntilLifeEventsArrive() {

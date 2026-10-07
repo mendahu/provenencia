@@ -23,6 +23,16 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var subjectsBySource: [String: [CatalogSubject]] = [:]
     /// Accepted Identity Claim per Subject id (Promote): the claim and its handle.
     var membershipBySubject: [String: CatalogSubjectMembership] = [:]
+    /// Event and Place headers as Go would compose them, seeded by tests in
+    /// list order. FakeStore does not reconcile, walk, or title them; Go owns
+    /// those rules (`conclusionheaders`, `eventtitle`) and their tests.
+    var seededEventHeaders: [CatalogEventHeader] = []
+    var seededPlaceHeaders: [CatalogPlaceHeader] = []
+    /// Event card titles Go would choose, per Source then Subject id.
+    var eventTitlesBySource: [String: [String: CatalogEventTitle]] = [:]
+    /// A handle's detail as Go would compose it, seeded by tests. Persons
+    /// without a seed fall back to the name mirror below.
+    var seededConclusionDetails: [String: CatalogConclusionDetail] = [:]
     /// The Identity Claim Promote wrote per Subject id (confidence, argument).
     var claimBySubject: [String: CatalogIdentityClaim] = [:]
     var subjectPositionsBySubject: [String: CatalogSubjectPosition] = [:]
@@ -1363,6 +1373,13 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         }
     }
 
+    func listSourceEventTitles(projectDir: String, sourceID: String) async throws -> [String: CatalogEventTitle] {
+        withState {
+            markCatalogSessionHeld(projectDir)
+            return eventTitlesBySource[sourceID] ?? [:]
+        }
+    }
+
     func listSubjectMemberships(projectDir: String, sourceID: String) async throws -> [CatalogSubjectMembership] {
         // Reads do not append to `recordedCalls`: graph reads run as parallel
         // `async let`s beside position writes that log their calls.
@@ -1392,135 +1409,17 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         }
     }
 
-    func personHeader(projectDir: String, entityID: String) async throws -> CatalogPersonHeader {
-        try withState {
-            markCatalogSessionHeld(projectDir)
-            guard let header = personHeaders().first(where: { $0.entity.id == entityID }) else {
-                throw CoreInvokeError.coded(status: 1, code: "conclusiondetails.not_found", kind: .user, params: [])
-            }
-            return header
-        }
-    }
-
     func listEventHeaders(projectDir: String) async throws -> [CatalogEventHeader] {
         withState {
             markCatalogSessionHeld(projectDir)
-            return eventHeaders()
-        }
-    }
-
-    func eventHeader(projectDir: String, entityID: String) async throws -> CatalogEventHeader {
-        try withState {
-            markCatalogSessionHeld(projectDir)
-            guard let header = eventHeaders().first(where: { $0.entity.id == entityID }) else {
-                throw CoreInvokeError.coded(status: 1, code: "conclusiondetails.not_found", kind: .user, params: [])
-            }
-            return header
+            return seededEventHeaders
         }
     }
 
     func listPlaceHeaders(projectDir: String) async throws -> [CatalogPlaceHeader] {
         withState {
             markCatalogSessionHeld(projectDir)
-            return placeHeaders()
-        }
-    }
-
-    func placeHeader(projectDir: String, entityID: String) async throws -> CatalogPlaceHeader {
-        try withState {
-            markCatalogSessionHeld(projectDir)
-            guard let header = placeHeaders().first(where: { $0.entity.id == entityID }) else {
-                throw CoreInvokeError.coded(status: 1, code: "conclusiondetails.not_found", kind: .user, params: [])
-            }
-            return header
-        }
-    }
-
-    /// Rank-1 event_name, event_type, and date (else start/end) from member
-    /// Observations. Dated events sort by year, then ref. Call inside `withState`.
-    private func eventHeaders() -> [CatalogEventHeader] {
-        let members = membershipBySubject.values.filter { $0.kind == "event" }
-        let byEntity = Dictionary(grouping: members, by: \.entity.id)
-        let observations = observationsBySource.values.flatMap { $0 }
-        let headers = byEntity.values.compactMap { group -> CatalogEventHeader? in
-            guard let entity = group.first?.entity else { return nil }
-            let memberIDs = Set(group.map(\.subjectID))
-            let rows = observations.filter { memberIDs.contains($0.subjectID) && $0.polarity != "negative" }
-            func texts(_ key: String) -> [String] {
-                rows.compactMap { row in
-                    guard row.propertyKey == key else { return nil }
-                    let text = row.valueText.trimmingCharacters(in: .whitespacesAndNewlines)
-                    return text.isEmpty ? nil : text
-                }
-            }
-            func dates(_ key: String) -> [CatalogDateValueInput] {
-                rows.compactMap { row in
-                    guard row.propertyKey == key, let date = row.date else { return nil }
-                    return date
-                }
-            }
-            let names = texts("event_name")
-            let type = rows.first { $0.propertyKey == "event_type" && !$0.valueTermKey.isEmpty }
-            let point = dates("date").first
-            let start = dates("start_date")
-            let end = dates("end_date")
-            return CatalogEventHeader(
-                entity: entity,
-                eventName: names.first ?? "",
-                eventNameCount: names.count,
-                eventTypeKey: type?.valueTermKey ?? "",
-                eventTypeLabel: type.map { $0.valueText.isEmpty ? $0.valueTermKey : $0.valueText } ?? "",
-                eventTypeCount: rows.filter { $0.propertyKey == "event_type" }.count,
-                date: point,
-                dateCount: dates("date").count,
-                startDate: point == nil ? start.first : nil,
-                startDateCount: start.count,
-                endDate: point == nil ? end.first : nil,
-                endDateCount: end.count
-            )
-        }
-        return headers.sorted { a, b in
-            let ay = a.date?.startYear ?? a.startDate?.startYear
-            let by = b.date?.startYear ?? b.startDate?.startYear
-            switch (ay, by) {
-            case let (x?, y?) where x != y: return x < y
-            case (.some, .none): return true
-            case (.none, .some): return false
-            default: return a.entity.ref.localizedCaseInsensitiveCompare(b.entity.ref) == .orderedAscending
-            }
-        }
-    }
-
-    /// Kept toponyms in citation order, case-only duplicates collapsed to the
-    /// first spelling. Named places sort by that first name, then unnamed by
-    /// ref. Call inside `withState`.
-    private func placeHeaders() -> [CatalogPlaceHeader] {
-        let members = membershipBySubject.values.filter { $0.kind == "place" }
-        let byEntity = Dictionary(grouping: members, by: \.entity.id)
-        let observations = observationsBySource.values.flatMap { $0 }
-        let headers = byEntity.values.compactMap { group -> CatalogPlaceHeader? in
-            guard let entity = group.first?.entity else { return nil }
-            let memberIDs = Set(group.map(\.subjectID))
-            var names: [String] = []
-            var seen = Set<String>()
-            for row in observations where memberIDs.contains(row.subjectID) && row.propertyKey == "toponym" && row.polarity != "negative" {
-                let text = row.valueText.trimmingCharacters(in: .whitespacesAndNewlines)
-                guard !text.isEmpty, seen.insert(text.lowercased()).inserted else { continue }
-                names.append(text)
-            }
-            return CatalogPlaceHeader(entity: entity, names: names)
-        }
-        return headers.sorted { a, b in
-            let an = a.names.first ?? ""
-            let bn = b.names.first ?? ""
-            switch (an.isEmpty, bn.isEmpty) {
-            case (false, true): return true
-            case (true, false): return false
-            case (false, false) where an.localizedCaseInsensitiveCompare(bn) != .orderedSame:
-                return an.localizedCaseInsensitiveCompare(bn) == .orderedAscending
-            default:
-                return a.entity.ref.localizedCaseInsensitiveCompare(b.entity.ref) == .orderedAscending
-            }
+            return seededPlaceHeaders
         }
     }
 
@@ -1564,8 +1463,14 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         // A read: no `recordedCalls`.
         try withState {
             markCatalogSessionHeld(projectDir)
-            guard let detail = conclusionDetail(projectDir: projectDir, entityID: entityID) else {
+            if let seeded = seededConclusionDetails[entityID] {
+                return seeded
+            }
+            guard var detail = conclusionDetail(projectDir: projectDir, entityID: entityID) else {
                 throw CoreInvokeError.coded(status: 1, code: "conclusiondetails.not_found", kind: .user, params: [])
+            }
+            if let person = personHeaders().first(where: { $0.entity.id == entityID }) {
+                detail.header = .person(person)
             }
             return detail
         }
@@ -1596,12 +1501,12 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 } else {
                     keys.append(key)
                     supportingSources.append([sourceID])
-                    values.append(CatalogReconciledValue(rank: 0, reason: "", support: 1, against: 0, value: .name(name)))
+                    values.append(CatalogReconciledValue(rank: 0, reason: .noEvidence, support: 1, against: 0, value: .name(name)))
                 }
                 outcomes.append(CatalogReconcilerOutcome(
                     observationID: o.id,
                     observationRef: o.ref,
-                    reason: "",
+                    reason: .noEvidence,
                     valueRank: keys.firstIndex(of: key),
                     deniedByObservationID: "",
                     recorded: .name(name),
@@ -1624,7 +1529,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             rankOf[i] = n + 1
             var v = values[i]
             v.rank = n + 1
-            v.reason = n == 0 ? "kept" : "outvoted"
+            v.reason = n == 0 ? .kept : .outvoted
             ranked.append(v)
         }
         // Every Source that voted, for the vote an outvoted record lost.
@@ -1632,25 +1537,25 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         for i in outcomes.indices {
             let rank = outcomes[i].valueRank.flatMap { rankOf[$0] }
             outcomes[i].valueRank = rank
-            outcomes[i].reason = rank == 1 ? "kept" : "outvoted"
+            outcomes[i].reason = rank == 1 ? .kept : .outvoted
             if rank != 1 {
                 outcomes[i].voteSupport = ranked.first?.support ?? 0
                 outcomes[i].voteTotal = voters
             }
         }
-        let state: String
+        let state: ReconciledState
         if ranked.isEmpty {
-            state = ""
+            state = .empty
         } else if (ranked.first?.support ?? 0) > 1 {
-            state = "merged"
+            state = .merged
         } else {
-            state = "single"
+            state = .single
         }
         let field = CatalogConclusionField(
             propertyID: propertyID,
-            propertyKey: "name",
+            propertyKey: SeededPropertyKey.name,
             label: "Name",
-            valueType: "name",
+            valueType: .name,
             state: state,
             values: ranked,
             outcomes: outcomes.sorted { ($0.valueRank ?? .max, $0.observationID) < ($1.valueRank ?? .max, $1.observationID) }

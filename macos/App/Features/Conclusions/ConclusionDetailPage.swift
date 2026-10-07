@@ -26,9 +26,10 @@ enum ConclusionDetailPresentation<Content: Equatable>: Equatable {
 }
 
 /// One section under Details. Empty until a later slice fills its rows.
+/// The kind names it; the page draws it.
 struct ConclusionDetailSection: Equatable, Identifiable {
     var id: String
-    var title: String
+    var title: LocalizedStringResource
     var aside: String
     var emptyText: String
 }
@@ -57,7 +58,7 @@ struct ConclusionDetailPage<Content: ConclusionDetailBody, Summary: View>: View 
     let session: WorkspaceSession
     let entityId: String
     let mark: PVMarkKey
-    let noLikeness: LocalizedStringResource
+    let thumbnailLabel: LocalizedStringResource
     let pageIdentifier: String
     let errorIdentifier: String
     let make: (CatalogConclusionDetail) -> Content
@@ -73,7 +74,7 @@ struct ConclusionDetailPage<Content: ConclusionDetailBody, Summary: View>: View 
                 ConclusionDetailLoaded(
                     handle: handle,
                     mark: mark,
-                    noLikeness: noLikeness,
+                    thumbnailLabel: thumbnailLabel,
                     pageIdentifier: pageIdentifier,
                     errorIdentifier: errorIdentifier,
                     make: make,
@@ -115,7 +116,7 @@ struct ConclusionDetailPage<Content: ConclusionDetailBody, Summary: View>: View 
 private struct ConclusionDetailLoaded<Content: ConclusionDetailBody, Summary: View>: View {
     @Bindable var handle: QueryHandle<CatalogConclusionDetail>
     let mark: PVMarkKey
-    let noLikeness: LocalizedStringResource
+    let thumbnailLabel: LocalizedStringResource
     let pageIdentifier: String
     let errorIdentifier: String
     let make: (CatalogConclusionDetail) -> Content
@@ -143,11 +144,11 @@ private struct ConclusionDetailLoaded<Content: ConclusionDetailBody, Summary: Vi
                 ConclusionDetailHeader(
                     content: content,
                     mark: mark,
-                    noLikeness: noLikeness,
+                    thumbnailLabel: thumbnailLabel,
                     summary: summary
                 )
                 VStack(alignment: .leading, spacing: 0) {
-                    PVSectionHeader(title: L10n.Conclusions.personDetails, aside: {
+                    PVSectionHeader(title: L10n.Conclusions.detailsSection, aside: {
                         if refreshing {
                             ProgressView().controlSize(.small)
                         }
@@ -170,7 +171,7 @@ private struct ConclusionDetailEmptySection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            PVSectionHeader(title: title, aside: {
+            PVSectionHeader(title: section.title, aside: {
                 Text(verbatim: section.aside)
                     .font(PVFont.body(size: PVTypeScale.caption, italic: true))
                     .foregroundStyle(PVColor.textMuted)
@@ -183,15 +184,7 @@ private struct ConclusionDetailEmptySection: View {
                 .padding(.vertical, PVSpacing.space5)
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel(L10n.Conclusions.a11yList(section.title, rest: section.emptyText))
-    }
-
-    private var title: LocalizedStringResource {
-        switch section.id {
-        case "contains": L10n.Conclusions.placeContains
-        case "succession": L10n.Conclusions.placeSuccession
-        default: L10n.Conclusions.placePartOf
-        }
+        .accessibilityLabel(L10n.Conclusions.a11yList(L10n.string(section.title), rest: section.emptyText))
     }
 }
 
@@ -199,12 +192,12 @@ private struct ConclusionDetailEmptySection: View {
 private struct ConclusionDetailHeader<Content: ConclusionDetailBody, Summary: View>: View {
     let content: Content
     let mark: PVMarkKey
-    let noLikeness: LocalizedStringResource
+    let thumbnailLabel: LocalizedStringResource
     let summary: (Content) -> Summary
 
     var body: some View {
         HStack(alignment: .top, spacing: PVSpacing.space7) {
-            PVThumbnail(.init(mark: mark, label: noLikeness), size: 80)
+            PVThumbnail(.init(mark: mark, label: thumbnailLabel), size: 80)
             VStack(alignment: .leading, spacing: PVSpacing.space4) {
                 title
                 summary(content)

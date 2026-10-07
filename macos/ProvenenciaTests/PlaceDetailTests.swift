@@ -64,7 +64,7 @@ struct PlaceDetailTests {
         #expect(page.rows[1].emptyText == "No period recorded")
         #expect(page.chain == "No parent place recorded")
         #expect(!page.chainIsRecorded)
-        #expect(page.sections.map(\.title) == ["Part of", "Contains", "Succession"])
+        #expect(page.sections.map { L10n.string($0.title) } == ["Part of", "Contains", "Succession"])
         #expect(page.sections.map(\.aside) == [
             "Grouped by type · span is when the link holds",
             "Direct children only",

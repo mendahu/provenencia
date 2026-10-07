@@ -40,7 +40,7 @@ enum ConclusionListRow {
                 .lineLimit(1)
                 .truncationMode(.tail)
             if extraCount > 0 {
-                PVBadge(text: "+\(extraCount)", tone: .neutral, subtle: true)
+                PVBadge(text: L10n.Conclusions.moreCount(extraCount), tone: .neutral, subtle: true)
                     .layoutPriority(1)
                     .accessibilityHidden(true)
             }

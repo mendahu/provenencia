@@ -32,7 +32,7 @@ const sqlMembershipsBySource = `SELECT s.id, ic.id, e.id, e.subject_type_id, e.r
 	JOIN subject_types st ON st.id = e.subject_type_id
 	LEFT JOIN properties np ON np.key = 'name' AND np.origin = 'provenencia'
 	LEFT JOIN auto_reconciler_values r
-		ON r.entity_id = e.id AND r.property_id = np.id AND r.rank = 1
+		ON r.entity_id = e.id AND r.property_id = np.id AND r.rank = 1 AND r.reason = 'kept'
 	WHERE s.source_id = ?
 	ORDER BY s.ref COLLATE NOCASE`
 

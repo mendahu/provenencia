@@ -794,6 +794,44 @@ struct GoStore: GenealogyStore {
         }
     }
 
+    func listSourceEventTitles(projectDir: String, sourceID: String) async throws -> [String: CatalogEventTitle] {
+        var req = Provenencia_Engine_V1_ListSourceEventTitlesRequest()
+        req.projectDir = projectDir
+        req.sourceID = sourceID
+        let resp: Provenencia_Engine_V1_ListSourceEventTitlesResponse = try await provenenciaCall(
+            method: CoreMethod.listSourceEventTitles,
+            request: req
+        )
+        return Dictionary(
+            resp.titles.map { ($0.subjectID, Self.mapEventTitle($0.title)) },
+            uniquingKeysWith: { first, _ in first }
+        )
+    }
+
+    private static func mapEventTitle(_ t: Provenencia_Engine_V1_EventTitle) -> CatalogEventTitle {
+        let rule: CatalogEventTitle.Rule
+        switch t.rule {
+        case .recordedName: rule = .recordedName
+        case .subject: rule = .subject
+        case .couple: rule = .couple
+        case .subjects: rule = .subjects
+        case .label: rule = .label
+        case .typeAtPlace: rule = .typeAtPlace
+        case .type: rule = .type
+        case .ref, .unspecified, .UNRECOGNIZED: rule = .ref
+        }
+        return CatalogEventTitle(
+            rule: rule,
+            recordedName: t.recordedName,
+            label: t.label,
+            ref: t.ref,
+            typeKey: t.typeKey,
+            typeLabel: t.typeLabel,
+            subjects: t.subjects.map { $0.hasName ? mapNameValue($0.name) : nil },
+            place: t.place
+        )
+    }
+
     func listSubjectMemberships(projectDir: String, sourceID: String) async throws -> [CatalogSubjectMembership] {
         var req = Provenencia_Engine_V1_ListSubjectMembershipsRequest()
         req.projectDir = projectDir
@@ -823,17 +861,6 @@ struct GoStore: GenealogyStore {
         return resp.headers.map(Self.mapPersonHeader)
     }
 
-    func personHeader(projectDir: String, entityID: String) async throws -> CatalogPersonHeader {
-        var req = Provenencia_Engine_V1_GetPersonHeaderRequest()
-        req.projectDir = projectDir
-        req.entityID = entityID
-        let resp: Provenencia_Engine_V1_GetPersonHeaderResponse = try await provenenciaCall(
-            method: CoreMethod.getPersonHeader,
-            request: req
-        )
-        return Self.mapPersonHeader(resp.header)
-    }
-
     func listEventHeaders(projectDir: String) async throws -> [CatalogEventHeader] {
         var req = Provenencia_Engine_V1_ListEventHeadersRequest()
         req.projectDir = projectDir
@@ -842,17 +869,6 @@ struct GoStore: GenealogyStore {
             request: req
         )
         return resp.headers.map(Self.mapEventHeader)
-    }
-
-    func eventHeader(projectDir: String, entityID: String) async throws -> CatalogEventHeader {
-        var req = Provenencia_Engine_V1_GetEventHeaderRequest()
-        req.projectDir = projectDir
-        req.entityID = entityID
-        let resp: Provenencia_Engine_V1_GetEventHeaderResponse = try await provenenciaCall(
-            method: CoreMethod.getEventHeader,
-            request: req
-        )
-        return Self.mapEventHeader(resp.header)
     }
 
     func listPlaceHeaders(projectDir: String) async throws -> [CatalogPlaceHeader] {
@@ -865,15 +881,15 @@ struct GoStore: GenealogyStore {
         return resp.headers.map(Self.mapPlaceHeader)
     }
 
-    func placeHeader(projectDir: String, entityID: String) async throws -> CatalogPlaceHeader {
-        var req = Provenencia_Engine_V1_GetPlaceHeaderRequest()
-        req.projectDir = projectDir
-        req.entityID = entityID
-        let resp: Provenencia_Engine_V1_GetPlaceHeaderResponse = try await provenenciaCall(
-            method: CoreMethod.getPlaceHeader,
-            request: req
-        )
-        return Self.mapPlaceHeader(resp.header)
+    private static func mapConclusionHeader(
+        _ header: Provenencia_Engine_V1_ConclusionDetail.OneOf_Header?
+    ) -> CatalogConclusionHeader? {
+        switch header {
+        case .person(let h): .person(mapPersonHeader(h))
+        case .event(let h): .event(mapEventHeader(h))
+        case .place(let h): .place(mapPlaceHeader(h))
+        case nil: nil
+        }
     }
 
     private static func mapPersonHeader(_ h: Provenencia_Engine_V1_PersonHeader) -> CatalogPersonHeader {
@@ -888,6 +904,8 @@ struct GoStore: GenealogyStore {
 
     private static func mapLifeFacts(_ life: Provenencia_Engine_V1_LifeFacts) -> CatalogLifeFacts {
         CatalogLifeFacts(
+            event: life.hasEvent ? mapCanonicalEntity(life.event) : nil,
+            eventCount: Int(life.eventCount),
             date: life.hasDate ? mapDateValue(life.date) : nil,
             dateCount: Int(life.dateCount),
             places: life.places.map(mapHeaderPlace)
@@ -895,7 +913,10 @@ struct GoStore: GenealogyStore {
     }
 
     private static func mapHeaderPlace(_ place: Provenencia_Engine_V1_HeaderPlace) -> CatalogHeaderPlace {
-        CatalogHeaderPlace(names: place.names, nameCount: Int(place.nameCount))
+        CatalogHeaderPlace(
+            entity: mapCanonicalEntity(place.entity),
+            names: place.names
+        )
     }
 
     private static func mapEventSubject(_ subject: Provenencia_Engine_V1_EventSubject) -> CatalogEventSubject {
@@ -921,7 +942,8 @@ struct GoStore: GenealogyStore {
             endDate: h.hasEndDate ? mapDateValue(h.endDate) : nil,
             endDateCount: Int(h.endDateCount),
             subjects: h.subjects.map(mapEventSubject),
-            places: h.places.map(mapHeaderPlace)
+            places: h.places.map(mapHeaderPlace),
+            title: mapEventTitle(h.title)
         )
     }
 
@@ -951,12 +973,13 @@ struct GoStore: GenealogyStore {
                     propertyID: f.propertyID,
                     propertyKey: f.propertyKey,
                     label: f.label,
-                    valueType: f.valueType,
-                    state: f.state,
+                    // A value type this build doesn't know is laid out as text.
+                    valueType: PropertyValueType(rawValue: f.valueType) ?? .text,
+                    state: ReconciledState(wire: f.state),
                     values: f.values.map { v in
                         CatalogReconciledValue(
                             rank: Int(v.rank),
-                            reason: v.reason,
+                            reason: ReconcilerReason(wire: v.reason),
                             support: Int(v.support),
                             against: Int(v.against),
                             value: Self.mapConclusionValue(v.value)
@@ -966,7 +989,7 @@ struct GoStore: GenealogyStore {
                         CatalogReconcilerOutcome(
                             observationID: o.observationID,
                             observationRef: o.observationRef,
-                            reason: o.reason,
+                            reason: ReconcilerReason(wire: o.reason),
                             valueRank: o.valueRank > 0 ? Int(o.valueRank) : nil,
                             deniedByObservationID: o.deniedByObservationID,
                             recorded: Self.mapConclusionValue(o.recorded),
@@ -987,7 +1010,8 @@ struct GoStore: GenealogyStore {
                     }
                 )
             },
-            memberCount: Int(resp.memberCount)
+            memberCount: Int(resp.memberCount),
+            header: Self.mapConclusionHeader(resp.header)
         )
     }
 

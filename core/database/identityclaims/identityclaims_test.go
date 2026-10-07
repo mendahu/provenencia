@@ -392,6 +392,25 @@ func TestMembershipsBySource(t *testing.T) {
 		}
 	})
 
+	t.Run("a name that is not kept is not the handle's name", func(t *testing.T) {
+		db, err := f.c.DB()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := db.Exec(`UPDATE auto_reconciler_values SET reason = 'provisional' WHERE entity_id = ?`, f.per1.ID); err != nil {
+			t.Fatal(err)
+		}
+		got, err := identityclaims.MembershipsBySource(f.c, f.james.SourceID)
+		if err != nil || len(got) != 2 {
+			t.Fatalf("%v %+v", err, got)
+		}
+		for _, m := range got {
+			if m.Name != nil {
+				t.Fatalf("held-back name shown: %+v", m.Name)
+			}
+		}
+	})
+
 	t.Run("other source and bad id", func(t *testing.T) {
 		typeID, err := sourcetypes.Upsert(f.c, sourcetypes.Type{
 			Key: "book", Origin: sourcetypes.OriginProvenencia, Label: "Book",
