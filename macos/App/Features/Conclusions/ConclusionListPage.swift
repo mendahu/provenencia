@@ -23,9 +23,11 @@ enum ConclusionListPresentation<Row: Equatable>: Equatable {
     }
 
     /// Header meta from the kind's count copy, or none when there are no rows.
-    func meta(count: (Int) -> String, refreshing: (Int) -> String) -> String? {
-        guard case .rows(let rows, let isRefreshing) = self, !rows.isEmpty else { return nil }
-        return isRefreshing ? refreshing(rows.count) : count(rows.count)
+    /// Takes resolved strings (not function refs) so MainActor kind helpers are
+    /// not sent into this nonisolated value.
+    func meta(count: String, refreshing: String, isRefreshing: Bool) -> String? {
+        guard case .rows(let rows, _) = self, !rows.isEmpty else { return nil }
+        return isRefreshing ? refreshing : count
     }
 }
 
@@ -110,10 +112,15 @@ private struct ConclusionListBody<Kind: ConclusionListKind>: View {
         )
     }
 
+    private var headerMeta: String? {
+        guard case .rows(let rows, let isRefreshing) = presentation, !rows.isEmpty else { return nil }
+        return isRefreshing
+            ? Kind.refreshingMeta(rows.count)
+            : Kind.countMeta(rows.count)
+    }
+
     var body: some View {
-        ConclusionListPage<Kind>.page(
-            meta: presentation.meta(count: Kind.countMeta, refreshing: Kind.refreshingMeta)
-        ) {
+        ConclusionListPage<Kind>.page(meta: headerMeta) {
             switch presentation {
             case .loading:
                 PVListSkeleton()

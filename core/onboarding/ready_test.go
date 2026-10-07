@@ -145,7 +145,7 @@ func TestCreateCatalogSeedsSubjectTypes(t *testing.T) {
 	}
 	defer c.Close()
 	list, err := subjecttypes.List(c)
-	if err != nil || len(list) != 7 {
+	if err != nil || len(list) != 8 {
 		t.Fatalf("%v len=%d", err, len(list))
 	}
 	person, err := subjecttypes.Lookup(c, "person", subjecttypes.OriginProvenencia)
