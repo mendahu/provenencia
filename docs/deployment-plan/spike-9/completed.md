@@ -846,7 +846,7 @@ An Event can carry a recorded historical name (*The Great Fire of 1849*) as text
 
 - Property `event_name` (`text`, label *Event name*) in the subjectvocab registry, bound to `event` immediately after `event_type` (sort order 1), unlocked. The three date bindings move to sort orders 2–4 and stay locked.
 - `event_type` on `event`, `role` on `participation`, `relationship_type` on `relationship`, `name` on `person`, and `toponym` on `place` are locked, so the Properties page cannot unbind the slots the walks, rows, and titles read. The lock is in the compiled registry, not a column, so existing catalogs pick it up with no migration.
-- Migration **000042** writes the Property and binding when the provenencia `event` type is already present. A new catalog is empty at that step; Install mints the UUIDv7.
+- Migration **000042** is a no-op version step (seed INSERTs removed). `event_name` comes from create-time Install only; pre-production catalogs re-run Install on the CLI.
 - [`seeded-vocabulary.md`](../../seeded-vocabulary.md) §3.2 / §3.3 list the Property and the binding.
 
 **What changed for researchers**
@@ -1119,7 +1119,7 @@ Places can sit in a containment graph and a succession lineage, with periods on 
 
 **What shipped**
 
-- Migration `000045`: backfill for existing catalogs — subject type `place_relationship`, Properties `from` / `to` / `place_relationship_type`, period bindings on `place`, membership span on the bridge, locked directed terms `part_of` and `succeeded_by`. No category column; walk / cycle behaviour keys off those term keys in Go.
+- Migration `000045` is a no-op version step (seed INSERTs removed). Place-relationship vocabulary comes from create-time `subjectvocab.Install` only; pre-production catalogs re-run Install on the CLI. No category column; walk / cycle behaviour keys off term keys in Go.
 - `subjectvocab` Install seeds the same for new catalogs; connectrules product bridge place↔place (disambiguation `place_relationship_type`); place↔place refusal removed. Mac `productMatrix` and FakeStore match.
 - User `propertyterms.Create` under provenencia `place_relationship_type` returns `ErrLocked`.
 - Bridge filing soft-refuses `part_of` and `succeeded_by` cycles (direct and transitive, same-key graph); the place claims still succeed. Splits and amalgamations file. A hierarchical link keeps its own `start_date` / `end_date` observations.
