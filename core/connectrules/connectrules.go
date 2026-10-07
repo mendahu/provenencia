@@ -13,9 +13,10 @@ import (
 )
 
 const (
-	DisambiguationNone             = "none"
-	DisambiguationRole             = "role"
-	DisambiguationRelationshipType = "relationship_type"
+	DisambiguationNone                  = "none"
+	DisambiguationRole                  = "role"
+	DisambiguationRelationshipType      = "relationship_type"
+	DisambiguationPlaceRelationshipType = "place_relationship_type"
 
 	OriginProvenencia = "provenencia"
 )
@@ -75,13 +76,21 @@ var productBridges = []Bridge{
 		Disambiguation: DisambiguationNone,
 		Pairs:          [][2]string{{"event", "place"}, {"place", "event"}},
 	},
+	{
+		Origin: OriginProvenencia, BridgeTypeKey: "place_relationship",
+		Endpoints: []Endpoint{
+			{PropertyKey: "from", TypeKey: "place"},
+			{PropertyKey: "to", TypeKey: "place"},
+		},
+		Disambiguation: DisambiguationPlaceRelationshipType,
+		Pairs:          [][2]string{{"place", "place"}},
+	},
 }
 
 var productRefusals = [][2]string{
 	{"person", "place"},
 	{"place", "person"},
 	{"event", "event"},
-	{"place", "place"},
 }
 
 var (
@@ -278,8 +287,8 @@ type Binding struct {
 }
 
 // LookupBridge returns the registered bridge for a type key, or false.
-// Refusals are not bridges. Place relationship (S9-38) plugs in here: the
-// filer keys whatever this returns, ends plus a non-role disambiguation.
+// Refusals are not bridges. The filer keys whatever this returns: ends plus a
+// non-role disambiguation (relationship_type, place_relationship_type).
 func LookupBridge(typeKey string) (Bridge, bool) {
 	typeKey = strings.TrimSpace(typeKey)
 	if typeKey == "" {

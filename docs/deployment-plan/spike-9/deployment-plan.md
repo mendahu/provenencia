@@ -246,9 +246,9 @@ Design: [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md) §1
 
 - **Places are separate entities** at any grain the research needs (township, county, region, farm). Grain / nature labels stay later if dogfood needs them.
 - **Period:** a Place's `start_date` / `end_date` (bound to `place`) say when it existed or mattered; both optional; none = always.
-- **Place relationship**, a new association kind (bridge) with `from` (place), `to` (place), `place_relationship_type` (term), and its own optional `start_date` / `end_date`. Two **product-locked** terms, each with a **category** for the engine (researchers cannot add types; the UI picks *part of* or *succeeded by*):
-  - **hierarchical** — `part_of`. One bridge is one contiguous membership. An undated link holds where the two places' periods overlap. A dated link holds only inside its own span, and only while both places' periods hold, so a place can leave a relationship while both continue (Ireland in the United Kingdom until 1922).
-  - **temporal** — `succeeded_by` (York → Toronto). A lineage for history and search; never a display chain. The link's dates are not what builds a chain.
+- **Place relationship**, a new association kind (bridge) with `from` (place), `to` (place), `place_relationship_type` (term), and its own optional `start_date` / `end_date`. Two **product-locked** terms (researchers cannot add types; the UI picks *part of* or *succeeded by*); the engine keys behaviour off those keys:
+  - **`part_of`** (hierarchical). One bridge is one contiguous membership. An undated link holds where the two places' periods overlap. A dated link holds only inside its own span, and only while both places' periods hold, so a place can leave a relationship while both continue (Ireland in the United Kingdom until 1922).
+  - **`succeeded_by`** (temporal; York → Toronto). A lineage for history and search; never a display chain. The link's dates are not what builds a chain.
 - **Drawn on the Evidence graph** like any bridge (a `connectrules` entry, disambiguated by type), cited, and promoted like Location.
 - **Chains at a date.** The composer walks hierarchical parents whose membership span holds at the date (an Event's reconciled date, or today). When the date can't decide, or a place has several parents at once, every candidate is returned (*Upper Canada or Province of Canada*).
 - **Fold Locations into chains.** Several Places on one Event (or a Person's birth/death place) that share a `part_of` graph become one chain value; unrealted Places stay competing values and reconcile. Prefer this derivative logic over a schema nature Property.
@@ -494,7 +494,7 @@ In order; each brief sits just above the PR it gates.
 - [x] S9-28 — Subject module + bridge filing
 - [x] S9-31 — Composer walks + header dependents
 - [x] S9-32 — Fill derived cells in lists and details
-- [ ] S9-38 — Place model: relationships, periods
+- [x] S9-38 — Place model: relationships, periods → [`completed.md`](completed.md)
 - [ ] S9-39 — Place chain composer
 - [ ] S9-40 — Place hierarchy in list and detail
 - [ ] S9-41 — Align core
@@ -896,9 +896,11 @@ Design: [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md) §1
 
 #### S9-38 — Place model: relationships, periods
 
+**Done.** See [`completed.md`](completed.md#s9-38--place-model-relationships-periods). Seeded `place_relationship` with locked `part_of` / `succeeded_by`, place periods, place↔place connect, and soft cycle refusal on file (keyed by term key, no category column). No `place_nature`. Chain fold is **S9-39**; list/detail hierarchy UI is **S9-40**.
+
 | | |
 | --- | --- |
-| **In** | Seed (Install + migration): subject type `place_relationship` (bridge) with Properties `from` (place), `to` (place), `place_relationship_type` (term), and `start_date` / `end_date` (the membership span); term **category** on `property_terms` (`hierarchical` / `temporal`); **locked** seeded types `part_of` (hierarchical) and `succeeded_by` (temporal), both directed — Create of a user term under `place_relationship_type` is refused; the composer offers only those two types (no *Add type…*). The same `start_date` / `end_date` also bound to `place` (its period). A `connectrules` bridge place ↔ place disambiguated by `place_relationship_type`, so it is drawn and cited on the Evidence graph like any bridge, and filed automatically through S9-28 (keyed by the two places and the type, direction kept). One bridge is one contiguous span. **Succession may branch:** a split is one Place `succeeded_by` several, an amalgamation several Places `succeeded_by` one; nothing assumes one successor. **Loop refusal** in S9-28's bridge filing (alignment flags it before Done): a hierarchical link that would close a cycle among canonical places, or a looping succession, is refused with a clear error. Delete Impact and search registries for the new kind. No `place_nature` Property. |
+| **In** | Seed (Install + migration): subject type `place_relationship` (bridge) with Properties `from` (place), `to` (place), `place_relationship_type` (term), and `start_date` / `end_date` (the membership span); **locked** seeded types `part_of` and `succeeded_by`, both directed — Create of a user term under `place_relationship_type` is refused; the composer offers only those two types (no *Add type…*). Engine walk / cycle behaviour keys off those term keys (containment vs succession), not a schema category. The same `start_date` / `end_date` also bound to `place` (its period). A `connectrules` bridge place ↔ place disambiguated by `place_relationship_type`, so it is drawn and cited on the Evidence graph like any bridge, and filed automatically through S9-28 (keyed by the two places and the type, direction kept). One bridge is one contiguous span. **Succession may branch:** a split is one Place `succeeded_by` several, an amalgamation several Places `succeeded_by` one; nothing assumes one successor. **Loop refusal** in S9-28's bridge filing (alignment flags it before Done): a hierarchical link that would close a cycle among canonical places, or a looping succession, is refused with a clear error. Delete Impact and search registries for the new kind. No `place_nature` Property. |
 | **Testable** | Seeds (locked relationship types + place period bindings); connect rule; cycles refused (direct and transitive); user Create under `place_relationship_type` is refused; a split (one → two) and an amalgamation (two → one) file and read back; a hierarchical link stores its own start and end. |
 | **Depends on** | S9-28, S9-36 |
 

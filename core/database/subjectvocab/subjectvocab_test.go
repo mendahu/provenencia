@@ -22,7 +22,7 @@ func TestSubjectVocab(t *testing.T) {
 					t.Fatal(err)
 				}
 				types, err := subjecttypes.List(c)
-				if err != nil || len(types) != 7 {
+				if err != nil || len(types) != 8 {
 					t.Fatalf("types %v len=%d", err, len(types))
 				}
 				props, err := properties.List(c)
@@ -96,6 +96,35 @@ func TestSubjectVocab(t *testing.T) {
 				}
 				if locked != 3 {
 					t.Fatalf("participation locked=%d want 3", locked)
+				}
+				prt, err := properties.Lookup(c, "place_relationship_type", properties.OriginProvenencia)
+				if err != nil {
+					t.Fatal(err)
+				}
+				partOf, err := propertyterms.Lookup(c, prt.ID, "part_of", propertyterms.OriginProvenencia)
+				if err != nil || !partOf.Directed {
+					t.Fatalf("part_of %+v %v", partOf, err)
+				}
+				succ, err := propertyterms.Lookup(c, prt.ID, "succeeded_by", propertyterms.OriginProvenencia)
+				if err != nil || !succ.Directed {
+					t.Fatalf("succeeded_by %+v %v", succ, err)
+				}
+				placeType, err := subjecttypes.Lookup(c, "place", subjecttypes.OriginProvenencia)
+				if err != nil {
+					t.Fatal(err)
+				}
+				placeBindings, err := ListBindings(c, placeType.ID)
+				if err != nil {
+					t.Fatal(err)
+				}
+				gotPlace := map[string]bool{}
+				for _, b := range placeBindings {
+					gotPlace[b.Property.Key] = true
+				}
+				for _, key := range []string{"toponym", "start_date", "end_date"} {
+					if !gotPlace[key] {
+						t.Fatalf("place missing binding %q", key)
+					}
 				}
 			},
 		},
@@ -187,6 +216,14 @@ func TestSubjectVocab(t *testing.T) {
 				if !LockedBinding("person", "name") || !LockedBinding("place", "toponym") {
 					t.Fatal("expected name and toponym locked")
 				}
+				if !LockedBinding("place", "start_date") || !LockedBinding("place", "end_date") {
+					t.Fatal("expected place period bindings locked")
+				}
+				if !LockedBinding("place_relationship", "from") || !LockedBinding("place_relationship", "to") ||
+					!LockedBinding("place_relationship", "place_relationship_type") ||
+					!LockedBinding("place_relationship", "start_date") || !LockedBinding("place_relationship", "end_date") {
+					t.Fatal("expected place_relationship bindings locked")
+				}
 				rule := Connect("person", "event")
 				if rule.Refuse || rule.BridgeTypeKey != "participation" || rule.Disambiguation != DisambiguationRole {
 					t.Fatalf("%+v", rule)
@@ -204,6 +241,14 @@ func TestSubjectVocab(t *testing.T) {
 				if len(loc.Edges) != 2 || loc.Edges[0].PropertyKey != "event" || loc.Edges[1].PropertyKey != "place" {
 					t.Fatalf("location edges %+v", loc.Edges)
 				}
+				placeRel := Connect("place", "place")
+				if placeRel.Refuse || placeRel.BridgeTypeKey != "place_relationship" ||
+					placeRel.Disambiguation != DisambiguationPlaceRelationshipType {
+					t.Fatalf("%+v", placeRel)
+				}
+				if len(placeRel.Edges) != 2 || placeRel.Edges[0].PropertyKey != "from" || placeRel.Edges[1].PropertyKey != "to" {
+					t.Fatalf("place_relationship edges %+v", placeRel.Edges)
+				}
 				if endpoint, ok := EdgeEndpoint("participation", "person"); !ok || endpoint != "person" {
 					t.Fatalf("EdgeEndpoint participation/person %q %v", endpoint, ok)
 				}
@@ -212,6 +257,9 @@ func TestSubjectVocab(t *testing.T) {
 				}
 				if endpoint, ok := EdgeEndpoint("location", "place"); !ok || endpoint != "place" {
 					t.Fatalf("EdgeEndpoint location/place %q %v", endpoint, ok)
+				}
+				if endpoint, ok := EdgeEndpoint("place_relationship", "from"); !ok || endpoint != "place" {
+					t.Fatalf("EdgeEndpoint place_relationship/from %q %v", endpoint, ok)
 				}
 				if _, ok := EdgeEndpoint("participation", "role"); ok {
 					t.Fatal("role is not an edge")

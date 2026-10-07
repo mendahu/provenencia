@@ -31,6 +31,13 @@ const (
 	OriginProvenencia = "provenencia"
 	OriginUser        = "user"
 
+	// KeyPlaceRelationshipType is product-only: researchers cannot mint terms.
+	KeyPlaceRelationshipType = "place_relationship_type"
+	// Locked place_relationship_type keys. Walk / cycle behaviour is keyed
+	// here in Go (part_of = containment; succeeded_by = succession).
+	KeyPartOf      = "part_of"
+	KeySucceededBy = "succeeded_by"
+
 	sqlUpsert = `INSERT INTO property_terms (id, property_id, key, origin, label, description, directed)
 		VALUES (?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT(property_id, key, origin) DO UPDATE SET
@@ -45,8 +52,9 @@ const (
 	sqlListByProperty = `SELECT ` + sqlTermCols + `
 		FROM property_terms WHERE property_id = ?
 		ORDER BY label COLLATE NOCASE, origin, key`
-	sqlUpdate = `UPDATE property_terms SET label = ?, description = ? WHERE id = ?`
-	sqlDelete = `DELETE FROM property_terms WHERE id = ?`
+	sqlUpdate      = `UPDATE property_terms SET label = ?, description = ? WHERE id = ?`
+	sqlDelete      = `DELETE FROM property_terms WHERE id = ?`
+	sqlPropertyKey = `SELECT key FROM properties WHERE id = ? AND origin = ?`
 )
 
 // Term is one property_terms row.
@@ -57,7 +65,7 @@ type Term struct {
 	Origin      string
 	Label       string
 	Description string
-	Directed    bool // kinship (and later place-relationship) terms: order is part of the key
+	Directed    bool // kinship / place-relationship: order is part of the key
 }
 
 // Upsert inserts or updates by (property_id, key, origin). Mints a UUIDv7 id when ID is empty on insert.
@@ -104,12 +112,18 @@ func Upsert(c *database.Catalog, t Term) ([]byte, error) {
 }
 
 // Create mints a kebab-case key from label and inserts a user-origin term with audit.
+// Refuses place_relationship_type (product-locked vocabulary).
 func Create(c *database.Catalog, userID, propertyID []byte, label, description string) (Term, error) {
 	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
 		return Term{}, err
 	}
 	if len(propertyID) != 16 {
 		return Term{}, ErrInvalid
+	}
+	if locked, err := propertyTermsLocked(c, propertyID); err != nil {
+		return Term{}, err
+	} else if locked {
+		return Term{}, ErrLocked
 	}
 	key := slug.Kebab(label)
 	if key == "" {
@@ -382,6 +396,22 @@ func directedBit(directed bool) int {
 		return 1
 	}
 	return 0
+}
+
+func propertyTermsLocked(c *database.Catalog, propertyID []byte) (bool, error) {
+	db, err := c.DB()
+	if err != nil {
+		return false, err
+	}
+	var key string
+	err = db.QueryRow(sqlPropertyKey, propertyID, "provenencia").Scan(&key)
+	if errors.Is(err, sql.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return key == KeyPlaceRelationshipType, nil
 }
 
 func originOK(origin string) bool {

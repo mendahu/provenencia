@@ -17125,6 +17125,105 @@
           }
         }
       }
+    },
+    "designSystem.mark.subjectPlaceRelationship": {
+      "comment": "Accessibility name for curated mark.",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Place relationship bridge"
+          }
+        }
+      }
+    },
+    "evidenceGraph.edit.placeRelationshipTitle": {
+      "comment": "Edit-subject dialog title for a place_relationship bridge",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit place relationship"
+          }
+        }
+      }
+    },
+    "evidenceGraph.create.placeRelationshipTitle": {
+      "comment": "Create-bridge dialog title for a place_relationship mid-card",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add place relationship"
+          }
+        }
+      }
+    },
+    "evidenceGraph.bridge.summary.placeRelationship": {
+      "comment": "Place relationship edge summary; arguments are from place, type, to place",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ is %2$@ %3$@"
+          }
+        }
+      }
+    },
+    "evidenceGraph.bridge.summary.placeRelationshipFallback": {
+      "comment": "Place relationship edge summary without type; from then to",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ relates to %2$@"
+          }
+        }
+      }
+    },
+    "evidenceGraph.bridge.summary.placeRelationshipTypeOnly": {
+      "comment": "Place relationship mid-phrase when endpoints missing; argument is type",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Is %@ of"
+          }
+        }
+      }
+    },
+    "evidenceGraph.bridge.summary.placeRelationshipBare": {
+      "comment": "Place relationship edge summary when type and endpoints are missing",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Relates to"
+          }
+        }
+      }
+    },
+    "propertyTerm.place_relationship_type.part_of": {
+      "comment": "Product place_relationship_type term: part_of",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Part of"
+          }
+        }
+      }
+    },
+    "propertyTerm.place_relationship_type.succeeded_by": {
+      "comment": "Product place_relationship_type term: succeeded_by",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Succeeded by"
+          }
+        }
+      }
     }
   },
   "version": "1.1"

@@ -16,9 +16,10 @@ const (
 	RoleBridge      = "bridge"
 	RoleReification = "reification"
 
-	DisambiguationNone             = connectrules.DisambiguationNone
-	DisambiguationRole             = connectrules.DisambiguationRole
-	DisambiguationRelationshipType = connectrules.DisambiguationRelationshipType
+	DisambiguationNone                  = connectrules.DisambiguationNone
+	DisambiguationRole                  = connectrules.DisambiguationRole
+	DisambiguationRelationshipType      = connectrules.DisambiguationRelationshipType
+	DisambiguationPlaceRelationshipType = connectrules.DisambiguationPlaceRelationshipType
 )
 
 type presentation struct {
@@ -124,6 +125,17 @@ var seedTypes = []seedType{
 		},
 	},
 	{
+		Key: "place_relationship", Label: "Place relationship",
+		Description: "Association between two places: part-of or succession.",
+		RefPrefix:   "PLR", CandidateRefPrefix: "CLR",
+		Role: RoleBridge, RequiresCitationAtCreate: true,
+		Presentation: presentation{
+			L10nKey: "subjectType.place_relationship", IconSymbol: "subject_place_relationship",
+			InkToken: "subjectPlaceInk", TintToken: "subjectPlaceTint",
+			ChipToken: "subjectPlaceChip", LineToken: "subjectPlaceLine",
+		},
+	},
+	{
 		Key: "source", Label: "Source",
 		Description: "A Source reified so other evidence can refer to or comment on it.",
 		RefPrefix:   "SRN", CandidateRefPrefix: "CSR",
@@ -146,6 +158,9 @@ var seedProperties = []seedProperty{
 	{Key: "end_date", Label: "End date", Description: "When a spanned event ended or was last known. Pair with Start date; leave empty for instantaneous events that only need Date.", ValueType: properties.ValueTypeDate},
 	{Key: "role", Label: "Role", Description: "Participation role (subject, father, …). Product term vocabulary.", ValueType: properties.ValueTypeTerm},
 	{Key: "relationship_type", Label: "Relationship type", Description: "Directed kinship: person is this type of related_to. Spouse, sibling, and cousin are symmetric.", ValueType: properties.ValueTypeTerm},
+	{Key: "place_relationship_type", Label: "Place relationship type", Description: "Part of or succeeded by. Product-locked vocabulary.", ValueType: properties.ValueTypeTerm},
+	{Key: "from", Label: "From", Description: "Place relationship: the part, or the predecessor", ValueType: properties.ValueTypeSubject},
+	{Key: "to", Label: "To", Description: "Place relationship: the whole, or the successor", ValueType: properties.ValueTypeSubject},
 	{Key: "person", Label: "Person", Description: "Target hint: person (on a relationship: who is the typed relative)", ValueType: properties.ValueTypeSubject},
 	{Key: "event", Label: "Event", Description: "Target hint: event", ValueType: properties.ValueTypeSubject},
 	{Key: "place", Label: "Place", Description: "Target hint: place", ValueType: properties.ValueTypeSubject},
@@ -170,6 +185,12 @@ var seedBindings = []seedBinding{
 	{TypeKey: "event", PropertyKey: "end_date", SortOrder: 4, Locked: true},
 
 	{TypeKey: "place", PropertyKey: "toponym", SortOrder: 0, Locked: true},
+	{TypeKey: "place", PropertyKey: "start_date", SortOrder: 1, Locked: true},
+	{TypeKey: "place", PropertyKey: "end_date", SortOrder: 2, Locked: true},
+
+	// Bridge endpoints + type come from connectrules; membership span is here.
+	{TypeKey: "place_relationship", PropertyKey: "start_date", SortOrder: 3, Locked: true},
+	{TypeKey: "place_relationship", PropertyKey: "end_date", SortOrder: 4, Locked: true},
 
 	{TypeKey: "source", PropertyKey: "mentions", SortOrder: 0},
 	{TypeKey: "source", PropertyKey: "remark", SortOrder: 1},
@@ -211,4 +232,9 @@ var seedTerms = []seedTerm{
 	{PropertyKey: "relationship_type", Key: "nibling", Label: "Niece / nephew", Directed: true},
 	{PropertyKey: "relationship_type", Key: "guardian", Label: "Guardian", Directed: true},
 	{PropertyKey: "relationship_type", Key: "ward", Label: "Ward", Directed: true},
+
+	{PropertyKey: "place_relationship_type", Key: "part_of", Label: "Part of",
+		Description: "From is part of to. Builds display chains.", Directed: true},
+	{PropertyKey: "place_relationship_type", Key: "succeeded_by", Label: "Succeeded by",
+		Description: "From was succeeded by to. Lineage; never a chain.", Directed: true},
 }

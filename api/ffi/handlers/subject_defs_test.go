@@ -21,8 +21,8 @@ func TestListProperties(t *testing.T) {
 				if err := proto.Unmarshal(out, &resp); err != nil {
 					t.Fatal(err)
 				}
-				if len(resp.Properties) != 16 {
-					t.Fatalf("len=%d want 16", len(resp.Properties))
+				if len(resp.Properties) != 19 {
+					t.Fatalf("len=%d want 19", len(resp.Properties))
 				}
 				foundName, foundToponym := false, false
 				for _, p := range resp.Properties {

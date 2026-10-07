@@ -933,6 +933,7 @@ final class EvidenceGraphModel {
             case .relationship: return L10n.EvidenceGraph.editRelationshipTitle
             case .participation: return L10n.EvidenceGraph.editParticipationTitle
             case .location: return L10n.EvidenceGraph.editLocationTitle
+            case .placeRelationship: return L10n.EvidenceGraph.editPlaceRelationshipTitle
             }
         }
         return L10n.EvidenceGraph.editPersonTitle
@@ -957,6 +958,7 @@ final class EvidenceGraphModel {
         case .relationship: L10n.EvidenceGraph.addRelationshipTitle
         case .participation: L10n.EvidenceGraph.addParticipationTitle
         case .location: L10n.EvidenceGraph.addLocationTitle
+        case .placeRelationship: L10n.EvidenceGraph.addPlaceRelationshipTitle
         }
     }
 

@@ -240,9 +240,9 @@ The rebuild-equals-upkeep tests hold upkeep equal to a full rebuild. Every new t
   | `end_date` | date | when a hierarchical membership ends; optional |
 
   Each relationship is cited and reconciled like any other evidence; the ends use the subject-valued module (§7). It is a dedicated kind, not the Person Relationship, because its ends are two directional places. It can carry more Properties later without remodelling.
-- **Relationship types are fixed product terms** (locked; the UI draws *part of* and *succeeded by*). Each carries a **category** on `property_terms` so the engine knows how to file and chain them:
-  - **hierarchical** — `part_of`. One place within another. Follows a chain upward ("everyone in Ontario") and builds display chains ("Toronto, Ontario, Canada"). A place may have several parents, so places form a graph, not a tree. A hierarchical link holds for its membership span, below.
-  - **temporal** — `succeeded_by` (York succeeded by Toronto). Links a lineage that search may follow. Never builds a display chain; containment is not inherited across it.
+- **Relationship types are fixed product terms** (locked; the UI draws *part of* and *succeeded by*). The engine keys behaviour off those term keys (not a schema flag):
+  - **`part_of`** (hierarchical). One place within another. Follows a chain upward ("everyone in Ontario") and builds display chains ("Toronto, Ontario, Canada"). A place may have several parents, so places form a graph, not a tree. A hierarchical link holds for its membership span, below.
+  - **`succeeded_by`** (temporal; York succeeded by Toronto). Links a lineage that search may follow. Never builds a display chain; containment is not inherited across it.
 
   Researchers do **not** add place-relationship types.
 - **No loops.** Hierarchical relationships must not form a cycle, and temporal ones are directional. Both are checked in the app layer, not the schema.

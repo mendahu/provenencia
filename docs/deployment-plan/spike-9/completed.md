@@ -53,6 +53,7 @@ IDs stay stable (`S9-NN`, `S9-DN`). Do not renumber when moving steps here.
 | S9-28 | PR | Subject module + bridge filing |
 | S9-31 | PR | Composer walks + header dependents |
 | S9-32 | PR | Fill derived cells in lists and details |
+| S9-38 | PR | Place model: relationships, periods |
 
 ## Steps
 
@@ -1110,3 +1111,22 @@ The Persons and Events pages show the birth, the death, and who the event is abo
 
 - Place chains (*York, Upper Canada*): **S9-40**.
 - Search documents from these headers: **S9-34**.
+
+### S9-38 — Place model: relationships, periods
+
+Places can sit in a containment graph and a succession lineage, with periods on both the Place and each membership link.
+
+**What shipped**
+
+- Migration `000045`: backfill for existing catalogs — subject type `place_relationship`, Properties `from` / `to` / `place_relationship_type`, period bindings on `place`, membership span on the bridge, locked directed terms `part_of` and `succeeded_by`. No category column; walk / cycle behaviour keys off those term keys in Go.
+- `subjectvocab` Install seeds the same for new catalogs; connectrules product bridge place↔place (disambiguation `place_relationship_type`); place↔place refusal removed. Mac `productMatrix` and FakeStore match.
+- User `propertyterms.Create` under provenencia `place_relationship_type` returns `ErrLocked`.
+- Bridge filing soft-refuses `part_of` and `succeeded_by` cycles (direct and transitive, same-key graph); the place claims still succeed. Splits and amalgamations file. A hierarchical link keeps its own `start_date` / `end_date` observations.
+- Mark `subject_place_relationship`, Properties strip chrome, and Evidence graph bridge kind wiring for connect.
+
+**What stayed out**
+
+- Chain composer and Location fold: **S9-39**.
+- Place hierarchy in list and detail UI: **S9-40**.
+- `place_nature` Property (deferred).
+- Cache version bump (stays 13); product VERSION bump.

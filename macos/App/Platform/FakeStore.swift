@@ -1798,6 +1798,14 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 .lowercased()
                 .replacingOccurrences(of: " ", with: "-")
                 .filter { $0.isLetter || $0.isNumber || $0 == "-" }
+            if let property = (propertiesByProject[projectDir] ?? []).first(where: { $0.id == propertyID }),
+               property.key == "place_relationship_type",
+               property.origin == "provenencia"
+            {
+                throw CoreInvokeError.coded(
+                    status: 1, code: "propertyterms.locked", kind: .user, params: []
+                )
+            }
             let term = CatalogPropertyTerm(
                 id: UUID().uuidString.lowercased(),
                 propertyID: propertyID,
@@ -1858,13 +1866,14 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         case "relationship": role = "bridge"; sort = 3
         case "participation": role = "bridge"; sort = 4
         case "location": role = "bridge"; sort = 5
-        case "source": role = "reification"; sort = 6
+        case "place_relationship": role = "bridge"; sort = 6
+        case "source": role = "reification"; sort = 7
         default: role = "root"; sort = 99
         }
         let ink: String
         switch typeKey {
         case "event", "participation": ink = "subjectEventInk"
-        case "place", "location": ink = "subjectPlaceInk"
+        case "place", "location", "place_relationship": ink = "subjectPlaceInk"
         default: ink = "subjectPersonInk"
         }
         let tint = ink.replacingOccurrences(of: "Ink", with: "Tint")

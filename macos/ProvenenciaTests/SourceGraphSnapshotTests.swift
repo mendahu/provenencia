@@ -309,7 +309,8 @@ struct SourceGraphSnapshotTests {
         #expect(CatalogConnectRule.match(from: "event", to: "place", in: rules).bridgeTypeKey == "location")
         #expect(CatalogConnectRule.match(from: "person", to: "person", in: rules).bridgeTypeKey == "relationship")
         #expect(CatalogConnectRule.match(from: "event", to: "event", in: rules).refuse)
-        #expect(CatalogConnectRule.match(from: "place", to: "place", in: rules).refuse)
+        #expect(CatalogConnectRule.match(from: "place", to: "place", in: rules).bridgeTypeKey == "place_relationship")
+        #expect(!CatalogConnectRule.match(from: "place", to: "place", in: rules).refuse)
     }
 
     @Test func updatingPositionChangesOnlyMatchingSubject() {

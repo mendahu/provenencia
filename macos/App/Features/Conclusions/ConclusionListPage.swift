@@ -22,7 +22,9 @@ enum ConclusionListPresentation<Row: Equatable>: Equatable {
         }
     }
 
-    /// Header meta from the kind's count copy, or none when there are no rows.
+    /// Header meta from count copy, or none when there are no rows.
+    /// Takes formatters (not MainActor kind methods) so tests and callers can
+    /// pass L10n without crossing isolation.
     func meta(count: (Int) -> String, refreshing: (Int) -> String) -> String? {
         guard case .rows(let rows, let isRefreshing) = self, !rows.isEmpty else { return nil }
         return isRefreshing ? refreshing(rows.count) : count(rows.count)
@@ -110,10 +112,15 @@ private struct ConclusionListBody<Kind: ConclusionListKind>: View {
         )
     }
 
+    private var headerMeta: String? {
+        guard case .rows(let rows, let isRefreshing) = presentation, !rows.isEmpty else { return nil }
+        return isRefreshing
+            ? Kind.refreshingMeta(rows.count)
+            : Kind.countMeta(rows.count)
+    }
+
     var body: some View {
-        ConclusionListPage<Kind>.page(
-            meta: presentation.meta(count: Kind.countMeta, refreshing: Kind.refreshingMeta)
-        ) {
+        ConclusionListPage<Kind>.page(meta: headerMeta) {
             switch presentation {
             case .loading:
                 PVListSkeleton()
@@ -131,13 +138,13 @@ private struct ConclusionListBody<Kind: ConclusionListKind>: View {
                     // Go owns list order (conclusionheaders.sortByTitle); rows show as given.
                     items: rows,
                     thumbnail: { _ in ConclusionListRow.thumbnail(mark: Kind.mark) },
-                    meta: Kind.ref,
+                    meta: { Kind.ref($0) },
                     label: Kind.title,
-                    itemAccessibilityLabel: Kind.accessibilityLabel,
+                    itemAccessibilityLabel: { Kind.accessibilityLabel($0) },
                     itemAccessibilityIdentifier: { "\(Kind.identifierRoot).row.\(Kind.ref($0))" },
                     onActivate: { navigation.go(to: Kind.location($0)) },
                     primary: { ConclusionListRow.title(Kind.titleSource($0), extraCount: Kind.extraCount($0)) },
-                    secondary: Kind.secondary
+                    secondary: { Kind.secondary($0) }
                 )
             }
         }

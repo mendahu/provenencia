@@ -33,6 +33,7 @@ extension EvidenceBridgeKind {
         case .relationship: .subjectRelationship
         case .participation: .subjectParticipation
         case .location: .subjectLocation
+        case .placeRelationship: .subjectPlaceRelationship
         }
     }
 }

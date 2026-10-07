@@ -3,6 +3,7 @@ package promote_test
 import (
 	"bytes"
 	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
 	"testing"
@@ -14,6 +15,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/connect"
+	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/project"
@@ -145,6 +147,18 @@ func (w *bridgeWorld) location(event, place subjects.Subject) connect.Result {
 	return w.bridge("location", event, place, []observations.Input{
 		{PropertyID: w.eventProp.ID, ValueSubjectID: event.ID},
 		{PropertyID: w.placeProp.ID, ValueSubjectID: place.ID},
+	})
+}
+
+func (w *bridgeWorld) placeRelationship(from, to subjects.Subject, kind propertyterms.Term) connect.Result {
+	w.t.Helper()
+	fromProp := w.prop("from")
+	toProp := w.prop("to")
+	typeProp := w.prop("place_relationship_type")
+	return w.bridge("place_relationship", from, to, []observations.Input{
+		{PropertyID: fromProp.ID, ValueSubjectID: from.ID},
+		{PropertyID: toProp.ID, ValueSubjectID: to.ID},
+		{PropertyID: typeProp.ID, ValueTermID: kind.ID},
 	})
 }
 
@@ -433,6 +447,96 @@ func TestBridgeFiling(t *testing.T) {
 			t.Fatalf("associations %d", len(got))
 		}
 	})
+
+	t.Run("place relationship files; cycles refuse; split and amalgamation ok", func(t *testing.T) {
+		w := newBridgeWorld(t)
+		typeProp := w.prop("place_relationship_type")
+		partOf := w.term(typeProp, "part_of")
+		succeededBy := w.term(typeProp, "succeeded_by")
+		if !partOf.Directed || !succeededBy.Directed {
+			t.Fatalf("directed part_of=%v succeeded_by=%v", partOf.Directed, succeededBy.Directed)
+		}
+
+		york := w.node("place", "York", 0, 0)
+		uc := w.node("place", "Upper Canada", 2, 0)
+		canada := w.node("place", "Canada", 4, 0)
+		link := w.placeRelationship(york, uc, partOf)
+		w.placeRelationship(uc, canada, partOf)
+		w.placeRelationship(canada, york, partOf) // would cycle after all three file
+
+		year := 1791
+		startProp := w.prop("start_date")
+		endProp := w.prop("end_date")
+		if _, err := observations.AddToCitation(w.c, userID, link.Citation.ID, []observations.Input{
+			{SubjectID: link.Subject.ID, PropertyID: startProp.ID, Date: &datevalues.Value{
+				Kind: datevalues.KindPoint, StartYear: &year,
+			}},
+			{SubjectID: link.Subject.ID, PropertyID: endProp.ID, Date: &datevalues.Value{
+				Kind: datevalues.KindPoint, StartYear: &year,
+			}},
+		}); err != nil {
+			t.Fatal(err)
+		}
+
+		w.promote(york)
+		w.promote(uc)
+		w.promote(canada)
+		got := w.handles("place_relationship")
+		if len(got) != 2 {
+			t.Fatalf("hierarchical associations %d, want 2 (cycle refused)", len(got))
+		}
+		listed, err := observations.ListBySubject(w.c, link.Subject.ID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var sawStart, sawEnd bool
+		for _, o := range listed {
+			switch {
+			case bytes.Equal(o.PropertyID, startProp.ID) && len(o.ValueDateID) == 16:
+				sawStart = true
+			case bytes.Equal(o.PropertyID, endProp.ID) && len(o.ValueDateID) == 16:
+				sawEnd = true
+			}
+		}
+		if !sawStart || !sawEnd {
+			t.Fatalf("hierarchical link lost start/end (start=%v end=%v)", sawStart, sawEnd)
+		}
+		if _, err := identityclaims.AcceptedEntityForSubject(w.c, link.Subject.ID); err != nil {
+			t.Fatalf("filed link claim: %v", err)
+		}
+
+		// Split: one → two successors. Amalgamation: two → one.
+		oldA := w.node("place", "Old A", 0, 2)
+		oldB := w.node("place", "Old B", 2, 2)
+		newOne := w.node("place", "New", 4, 2)
+		left := w.node("place", "Left", 0, 4)
+		right := w.node("place", "Right", 2, 4)
+		w.placeRelationship(oldA, newOne, succeededBy)
+		w.placeRelationship(oldB, newOne, succeededBy)
+		w.placeRelationship(newOne, left, succeededBy)
+		w.placeRelationship(newOne, right, succeededBy)
+		// Temporal loop: left → oldA would close after the chain files.
+		w.placeRelationship(left, oldA, succeededBy)
+		w.promote(oldA)
+		w.promote(oldB)
+		w.promote(newOne)
+		w.promote(left)
+		w.promote(right)
+		// Hierarchical 2 + amalgamation 2 + split 2 = 6; temporal loop soft-refused.
+		if got := w.handles("place_relationship"); len(got) != 6 {
+			t.Fatalf("place_relationship associations %d, want 6", len(got))
+		}
+		w.cacheMatchesRebuild()
+	})
+}
+
+func TestPlaceRelationshipTypeCreateRefused(t *testing.T) {
+	w := newBridgeWorld(t)
+	prop := w.prop("place_relationship_type")
+	_, err := propertyterms.Create(w.c, userID, prop.ID, "Adjacent", "")
+	if !errors.Is(err, propertyterms.ErrLocked) {
+		t.Fatalf("Create under place_relationship_type: %v", err)
+	}
 }
 
 func TestBridgeSubjectDeleteReleasesPins(t *testing.T) {
