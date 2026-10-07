@@ -174,6 +174,29 @@ func loadCandidates(q Querier, typeID []byte, profile match.Profile) ([]match.Ca
 	return scanEntityValues(rows, profile)
 }
 
+// LoadSubjectValues reads the Subject's positive Observations for the
+// profile's Properties: one query, plus the date and name lookups.
+func LoadSubjectValues(q Querier, subjectID []byte, profile match.Profile) (match.Values, error) {
+	return loadSubjectValues(q, subjectID, profile)
+}
+
+// LoadEntityValues reads one handle's cached auto-reconciled values for the
+// profile's Properties.
+func LoadEntityValues(q Querier, entityID []byte, profile match.Profile) (match.Values, string, error) {
+	rows, err := q.Query(sqlEntityValuesOfOne, entityID)
+	if err != nil {
+		return nil, "", err
+	}
+	cands, err := scanEntityValues(rows, profile)
+	if err != nil {
+		return nil, "", err
+	}
+	if len(cands) == 0 {
+		return match.Values{}, "", nil
+	}
+	return cands[0].Values, cands[0].Ref, nil
+}
+
 // loadSubjectValues reads the Subject's positive Observations for the
 // profile's Properties: one query, plus the date and name lookups.
 func loadSubjectValues(q Querier, subjectID []byte, profile match.Profile) (match.Values, error) {
