@@ -1,8 +1,8 @@
 import Foundation
 
-/// Parts of an Event title. Go supplies the ones it has composed; subject
-/// and place parts stay empty until S9-31 and S9-32. The date is not part
-/// of the title.
+/// Parts of an Event title. Go supplies the ones it has composed. The
+/// Persons and Events lists pass subjects and place through in S9-32. The
+/// date is not part of the title.
 struct EventTitleParts: Equatable, Sendable {
     var recordedName: String = ""
     var label: String = ""
@@ -177,5 +177,88 @@ enum EventTitleDisplay {
 
     private static func trim(_ value: String) -> String {
         value.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+}
+
+/// The first kept place name, and how many kept names are not that one.
+/// A chain is not part of the name.
+enum DerivedPlace {
+    static func name(_ places: [CatalogHeaderPlace]) -> String {
+        places.first?.names.first?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+    }
+
+    /// Kept names beyond the one `name` shows. Several locations and several
+    /// names of one place both count.
+    static func extra(_ places: [CatalogHeaderPlace]) -> Int {
+        let total = places.reduce(0) { $0 + max($1.nameCount, $1.names.count) }
+        return max(0, total - (name(places).isEmpty ? 0 : 1))
+    }
+}
+
+/// A Person's birth and death as one secondary line: dates, then places.
+/// A missing half is left out. A birth with no death keeps the dash.
+enum PersonLifeDisplay {
+    struct Line: Equatable {
+        var text: String
+        /// Kept places beyond the names in `text`. The list's +N.
+        var extraPlaces: Int
+    }
+
+    static func line(_ header: CatalogPersonHeader, locale: Locale = .autoupdatingCurrent) -> Line {
+        let dates = dateSpan(birth: header.birth.date, death: header.death.date, locale: locale)
+        let places = placeSpan(birth: header.birth.places, death: header.death.places)
+        let extra = DerivedPlace.extra(header.birth.places) + DerivedPlace.extra(header.death.places)
+        let text: String
+        switch (dates.isEmpty, places.isEmpty) {
+        case (true, true):
+            text = ""
+        case (false, true):
+            text = dates
+        case (true, false):
+            text = places
+        case (false, false):
+            text = "\(dates) · \(places)"
+        }
+        return Line(text: text, extraPlaces: extra)
+    }
+
+    /// The date a life row shows. Empty when none is recorded.
+    static func dateText(_ date: CatalogDateValueInput?, locale: Locale = .autoupdatingCurrent) -> String {
+        guard let date else { return "" }
+        return EventTitleDisplay.dateLine(date: date, locale: locale)
+    }
+
+    private static func dateSpan(
+        birth: CatalogDateValueInput?,
+        death: CatalogDateValueInput?,
+        locale: Locale
+    ) -> String {
+        let born = dateText(birth, locale: locale)
+        let died = dateText(death, locale: locale)
+        switch (born.isEmpty, died.isEmpty) {
+        case (true, true):
+            return ""
+        case (false, true):
+            return "\(born) –"
+        case (true, false):
+            return died
+        case (false, false):
+            return "\(born) – \(died)"
+        }
+    }
+
+    private static func placeSpan(birth: [CatalogHeaderPlace], death: [CatalogHeaderPlace]) -> String {
+        let born = DerivedPlace.name(birth)
+        let died = DerivedPlace.name(death)
+        switch (born.isEmpty, died.isEmpty) {
+        case (true, true):
+            return ""
+        case (false, true):
+            return born
+        case (true, false):
+            return died
+        case (false, false):
+            return "\(born) → \(died)"
+        }
     }
 }

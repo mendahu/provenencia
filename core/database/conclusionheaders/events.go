@@ -7,6 +7,7 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/datevalues"
+	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/valuecodec"
 )
 
@@ -17,9 +18,10 @@ type EventType struct {
 	Label string
 }
 
-// EventHeader is one Event as a row. Subjects and places are not composed
-// yet (S9-31, S9-32). A rank-1 date wins over a start/end span; the span's
-// counts are still reported.
+// EventHeader is one Event as a row. A rank-1 date wins over a start/end
+// span; the span's counts are still reported. Subjects are the subject-role
+// persons, participation ref then person ref. Places are every location's
+// kept names; chains stay empty until S9-39.
 type EventHeader struct {
 	Entity         canonicalentities.Entity
 	EventName      string
@@ -32,6 +34,15 @@ type EventHeader struct {
 	StartDateCount int
 	EndDate        *datevalues.Value
 	EndDateCount   int
+	Subjects       []EventSubject
+	Places         []HeaderPlace
+}
+
+// EventSubject is one person on an event through a subject-role participation.
+type EventSubject struct {
+	Entity         canonicalentities.Entity
+	Name           *namevalues.Value
+	NameValueCount int
 }
 
 // Unmerged Event handles. Dated events first by the date window's sort key,
@@ -106,7 +117,13 @@ func queryEvents(q Querier, query string, args ...any) ([]EventHeader, error) {
 		}
 		out = append(out, h)
 	}
-	return out, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	if err := attachEventGraph(q, out); err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func scanEvent(rows *sql.Rows) (EventHeader, error) {

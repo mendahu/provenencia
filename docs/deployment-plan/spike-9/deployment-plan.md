@@ -491,9 +491,9 @@ In order; each brief sits just above the PR it gates.
 - [x] S9-26 — Places list → [`completed.md`](completed.md)
 - [x] ✎ S9-D7 — Design: Place detail (revise for hierarchy) → [`completed.md`](completed.md)
 - [x] S9-27 — Place detail → [`completed.md`](completed.md)
-- [ ] S9-28 — Subject module + bridge filing
-- [ ] S9-31 — Composer walks + header dependents
-- [ ] S9-32 — Fill derived cells in lists and details
+- [x] S9-28 — Subject module + bridge filing
+- [x] S9-31 — Composer walks + header dependents
+- [x] S9-32 — Fill derived cells in lists and details
 - [ ] S9-38 — Place model: relationships, periods
 - [ ] ✎ S9-D15 — Design: custom term category
 - [ ] S9-38b — Custom term dialog: category
@@ -531,7 +531,7 @@ Retired 2026-10-06: ~~S9-18 — Pinned-Observation delete end to end~~ (folded i
 
 #### S9-02 — Promote write v1
 
-**Done.** See [`completed.md`](completed.md#s9-02--promote-write-v1). v1 refuses non-primary kinds (`promote.unsupported_type`); **S9-28** relaxes that when bridge filing lands.
+**Done.** See [`completed.md`](completed.md#s9-02--promote-write-v1). v1 refuses non-primary kinds (`promote.unsupported_type`). **S9-28** files a bridge from the claim that completes its ends; Promote still refuses a bridge as the entry.
 
 | | |
 | --- | --- |
@@ -576,7 +576,7 @@ Retired 2026-10-06: ~~S9-18 — Pinned-Observation delete end to end~~ (folded i
 
 #### S9-06 — Auto-reconciler cache
 
-**Done.** See [`completed.md`](completed.md#s9-06--resolved-values-cache). Package `core/database/autoreconciler`: `RecomputeTx` / `RecomputeSubjectsTx` are the upkeep calls a new write path adds (and an operation in `TestRebuildEqualsUpkeep_SeededSequences`, plus a scenario in `TestRebuildEqualsUpkeep_Scenarios` where it has a characteristic sequence); a resolution change bumps `CacheVersion`. Still NULL: `date_lo` / `date_hi` and date `sort_key` (**S9-21**), `value_entity_id` — subject-valued Properties are not cached yet (**S9-28**). The loader reads no provenance until **S9-14**. Dates and names are protobuf via `core/valuecodec`.
+**Done.** See [`completed.md`](completed.md#s9-06--resolved-values-cache). Package `core/database/autoreconciler`: `RecomputeTx` / `RecomputeSubjectsTx` are the upkeep calls a new write path adds (and an operation in `TestRebuildEqualsUpkeep_SeededSequences`, plus a scenario in `TestRebuildEqualsUpkeep_Scenarios` where it has a characteristic sequence); a resolution change bumps `CacheVersion`. `value_entity_id` is filled from **S9-28**. The loader reads no provenance until **S9-14**. Dates and names are protobuf via `core/valuecodec`.
 
 | | |
 | --- | --- |
@@ -868,6 +868,8 @@ Design: [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md). PR
 | **Testable** | Promote a person, then its birth event (today's single-Subject Promote) → the participation is filed onto a new association; a second record of the same birth joins it; a spouse and a parent link between the same two people are two relationships; direction is kept; a self-link is refused; rebuild equals upkeep. |
 | **Depends on** | S9-12, S9-13 |
 
+**Done.** See [`completed.md`](completed.md#s9-28--subject-module--bridge-filing). Promoting both ends of a bridge files the connection. A birth and its person become one participation. Place-relationship seeding and cycle refusal stay in S9-38.
+
 #### S9-31 — Composer walks + header dependents
 
 | | |
@@ -876,6 +878,8 @@ Design: [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md). PR
 | **Depends on** | S9-22, S9-25, S9-28 |
 | **Note** | Give Promote's Event name (`displayName`) the same subject parts from the graph's participation and location bridges, so a Baptism card promotes as *Baptism of James Robins* rather than its label. People are named by their own `displayName` rule (name form, then label). |
 
+**Done.** See [`completed.md`](completed.md#s9-31--composer-walks--header-dependents). A Person's birth and an Event's title are read off the canonical graph. Place chains stay empty until S9-39. Lists still render as they did; S9-32 fills the cells.
+
 #### S9-32 — Fill derived cells
 
 | | |
@@ -883,6 +887,8 @@ Design: [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md). PR
 | **In** | Persons / Events lists and Person / Event detail render the new cells — already designed in **S9-D2 / D3 / D5 / D6**; no new brief. |
 | **Check** | *Birth of James Robins*; James shows *1817 – 1880 · York → Toronto* (chains follow in S9-40). |
 | **Depends on** | S9-31, S9-23, S9-24 |
+
+**Done.** See [`completed.md`](completed.md#s9-32--fill-derived-cells). The Persons and Events pages show the birth, the death, and who the event is about. Place chains stay names only until S9-40.
 
 ### Slice 8 — Place hierarchy (the hard way)
 

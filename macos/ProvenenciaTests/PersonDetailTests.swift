@@ -99,6 +99,45 @@ struct PersonDetailTests {
         #expect(bare.rows.first?.accessibilityLabel == "Name, empty")
     }
 
+    @Test func lifeLineReadsBirthAndDeath() {
+        let en = Locale(identifier: "en_US")
+        let james = CatalogPersonHeader(
+            entity: CatalogCanonicalEntity(id: "e1", ref: "PER-7KD45", subjectTypeID: "t", label: ""),
+            name: CatalogNameValue(form: "James Robins"),
+            nameValueCount: 1,
+            birth: CatalogLifeFacts(
+                date: CatalogDateValueInput(kind: "point", startYear: 1817),
+                dateCount: 1,
+                places: [CatalogHeaderPlace(names: ["York"], nameCount: 1)]
+            ),
+            death: CatalogLifeFacts(
+                date: CatalogDateValueInput(kind: "point", startYear: 1880),
+                dateCount: 1,
+                places: [CatalogHeaderPlace(names: ["Toronto"], nameCount: 1)]
+            )
+        )
+        #expect(PersonLifeDisplay.line(james, locale: en).text == "1817 – 1880 · York → Toronto")
+        #expect(PersonLifeDisplay.line(james, locale: en).extraPlaces == 0)
+
+        let page = PersonDetailContent(detail: detail(), header: james, locale: en)
+        #expect(page.vitals.map(\.date) == ["1817", "1880"])
+        #expect(page.vitals.map(\.place) == ["York", "Toronto"])
+        #expect(page.rows[1].lead == "1817" && page.rows[1].badge == nil && page.rows[1].records.isEmpty)
+        #expect(page.rows[2].lead == "York" && page.rows[2].style == .place)
+        #expect(page.rows[4].lead == "Toronto")
+
+        var loneBirth = james
+        loneBirth.death = CatalogLifeFacts()
+        #expect(PersonLifeDisplay.line(loneBirth, locale: en).text == "1817 – · York")
+
+        var extra = james
+        extra.birth.places = [CatalogHeaderPlace(names: ["York", "Tkaronto"], nameCount: 2)]
+        #expect(PersonLifeDisplay.line(extra, locale: en).text == "1817 – 1880 · York → Toronto")
+        #expect(PersonLifeDisplay.line(extra, locale: en).extraPlaces == 1)
+        let mixed = PersonDetailContent(detail: detail(), header: extra, locale: en)
+        #expect(mixed.rows[2].lead == "York" && mixed.rows[2].badge == .mixed && mixed.rows[2].records.isEmpty)
+    }
+
     @Test func vitalsSayUnknownUntilLifeEventsArrive() {
         let vitals = PersonDetailContent(detail: detail()).vitals
         #expect(vitals.map(\.abbreviation) == ["b.", "d."])

@@ -141,6 +141,10 @@ func Save(c *database.Catalog, userID []byte, in Input) (Result, error) {
 		return Result{}, err
 	}
 	changes = append(changes, pinChanges...)
+	assocs, changes, err := identityclaims.AppendFiling(tx, subject.ID, changes)
+	if err != nil {
+		return Result{}, err
+	}
 	if _, err := audit.Record(tx, audit.Revision{
 		UserID:     userID,
 		ActionType: "promote_subject",
@@ -149,7 +153,7 @@ func Save(c *database.Catalog, userID []byte, in Input) (Result, error) {
 	}); err != nil {
 		return Result{}, err
 	}
-	if err := autoreconciler.RecomputeTx(tx, [][]byte{entity.ID}); err != nil {
+	if err := autoreconciler.RecomputeTouchingTx(tx, append([][]byte{entity.ID}, assocs...), subject.ID); err != nil {
 		return Result{}, err
 	}
 	if err := tx.Commit(); err != nil {

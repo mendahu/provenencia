@@ -418,6 +418,8 @@ struct CatalogQueryRegistryTests {
         let registry = CatalogQueryRegistry.standard
         let project = ProjectKey(projectDir: projectDir)
         #expect(registry.evictsWhenHidden(.conclusionDetail(project: project, entityId: "e1")))
+        #expect(registry.evictsWhenHidden(.personHeader(project: project, entityId: "e1")))
+        #expect(registry.evictsWhenHidden(.eventHeader(project: project, entityId: "e1")))
         #expect(!registry.evictsWhenHidden(.personsList(project: project)))
         #expect(!registry.evictsWhenHidden(.promoteTargets(project: project, subjectId: "s1")))
         #expect(!registry.evictsWhenHidden(.sourceWorkspace(project: project, sourceId: "s1")))
@@ -713,6 +715,8 @@ struct CatalogQueryRegistryTests {
             .key(.placesList(project: project)),
             .allCached(.promoteTargets),
             .allCached(.conclusionDetail),
+            .allCached(.personHeader),
+            .allCached(.eventHeader),
         ])
         // Adding vocabulary touches only the list that owns it — the Source
         // page reads that list rather than carrying its own copy.
@@ -766,6 +770,8 @@ struct CatalogQueryRegistryTests {
             .key(.placesList(project: project)),
             .allCached(.promoteTargets),
             .allCached(.conclusionDetail),
+            .allCached(.personHeader),
+            .allCached(.eventHeader),
         ])
         #expect(registry.invalidations(by: .deletedSubject(sourceId: "s1"), project: project) == [
             .key(.sourceGraph(project: project, sourceId: "s1")),
@@ -777,6 +783,8 @@ struct CatalogQueryRegistryTests {
             .key(.placesList(project: project)),
             .allCached(.promoteTargets),
             .allCached(.conclusionDetail),
+            .allCached(.personHeader),
+            .allCached(.eventHeader),
         ])
         // A Promote changes that Source's graph cards (their membership row)
         // and every Conclusion key.
@@ -787,6 +795,8 @@ struct CatalogQueryRegistryTests {
             .key(.placesList(project: project)),
             .allCached(.promoteTargets),
             .allCached(.conclusionDetail),
+            .allCached(.personHeader),
+            .allCached(.eventHeader),
         ])
         #expect(registry.invalidations(by: .createdPropertyTerm(propertyId: "p1"), project: project) == [
             .key(.propertyTerms(project: project, propertyId: "p1")),
@@ -824,6 +834,8 @@ struct CatalogQueryRegistryTests {
             .key(.placesList(project: project)),
             .allCached(.promoteTargets),
             .allCached(.conclusionDetail),
+            .allCached(.personHeader),
+            .allCached(.eventHeader),
         ])
         // Every Conclusion trigger stales the Person, Event, and Place lists and
         // every cached detail; nothing else does.
@@ -834,6 +846,8 @@ struct CatalogQueryRegistryTests {
             #expect(invalidations.contains(.key(.eventsList(project: project))) == isTrigger, "\(mutation)")
             #expect(invalidations.contains(.key(.placesList(project: project))) == isTrigger, "\(mutation)")
             #expect(invalidations.contains(.allCached(.conclusionDetail)) == isTrigger, "\(mutation)")
+            #expect(invalidations.contains(.allCached(.personHeader)) == isTrigger, "\(mutation)")
+            #expect(invalidations.contains(.allCached(.eventHeader)) == isTrigger, "\(mutation)")
         }
         #expect(CatalogQueryRegistry.conclusionTriggers == [
             .savedCitation, .deletedSubject, .promotedSubject, .deletedSource, .mutatedSourceWorkspace,

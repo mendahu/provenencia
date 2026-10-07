@@ -277,6 +277,40 @@ type Binding struct {
 	Locked               bool
 }
 
+// LookupBridge returns the registered bridge for a type key, or false.
+// Refusals are not bridges. Place relationship (S9-38) plugs in here: the
+// filer keys whatever this returns, ends plus a non-role disambiguation.
+func LookupBridge(typeKey string) (Bridge, bool) {
+	typeKey = strings.TrimSpace(typeKey)
+	if typeKey == "" {
+		return Bridge{}, false
+	}
+	mu.RLock()
+	defer mu.RUnlock()
+	for _, b := range bridges {
+		if b.BridgeTypeKey == typeKey {
+			return b, true
+		}
+	}
+	return Bridge{}, false
+}
+
+// BridgeTypeKeys returns each registered bridge type once, in registry order.
+func BridgeTypeKeys() []string {
+	mu.RLock()
+	defer mu.RUnlock()
+	seen := make(map[string]bool)
+	var out []string
+	for _, b := range bridges {
+		if seen[b.BridgeTypeKey] {
+			continue
+		}
+		seen[b.BridgeTypeKey] = true
+		out = append(out, b.BridgeTypeKey)
+	}
+	return out
+}
+
 // BridgeBindings returns Install bindings derived from registered bridges:
 // endpoints locked (endpoint order). Product disambiguation is locked
 // (role, relationship_type); a plugin's disambiguation stays unlocked.

@@ -50,6 +50,9 @@ IDs stay stable (`S9-NN`, `S9-DN`). Do not renumber when moving steps here.
 | S9-26 | PR | Places list |
 | S9-D7 | Design | Place detail |
 | S9-27 | PR | Place detail |
+| S9-28 | PR | Subject module + bridge filing |
+| S9-31 | PR | Composer walks + header dependents |
+| S9-32 | PR | Fill derived cells in lists and details |
 
 ## Steps
 
@@ -1057,3 +1060,53 @@ Opening a Place shows every name it goes by, and why each one was kept.
 **What stayed out**
 
 - Period, Part of, Contains, Succession, and `PlaceRelationshipRow`: **S9-40**.
+
+### S9-28 — Subject module + bridge filing
+
+Promoting both ends of a bridge files the connection, so a birth and its person become one participation.
+
+**What shipped**
+
+- The subject module keys the accepted handle. The loader reads `observations.value_subject_id`, maps it to that subject's accepted claim, and stores `value_entity_id`. An unpromoted or missing end is `no_evidence`. `CacheVersion` is 13.
+- After an accepted claim (`promote.Save` and `identityclaims.Create`), every bridge whose ends are now both handles is filed in that transaction. It joins the association with the same key, or a new one is minted and the bridge is claimed onto it. The promoted handle, the association, and handles whose members cite the new member are recomputed. Subject delete recomputes those inbound handles too.
+- Participation and location are keyed by their ends. Relationship is keyed by the two people and `relationship_type`. Migration `000044` adds `property_terms.directed`: spouse, sibling, and cousin stay symmetric; the other seeded kinship terms are directed. A symmetric key ignores order. A self-link is not filed and does not fail the claim. Promote still refuses a bridge as the entry.
+- Deleting a bridge subject releases pins on its edge observations through `ReleaseFacets(KindObservation)`, audited. Rebuild equals upkeep across a filed participation.
+
+**What stayed out**
+
+- Place-relationship seeding and cycle refusal: **S9-38**.
+- Header walks and derived cells: **S9-31**, **S9-32**.
+- Search documents read from headers: **S9-34**.
+
+### S9-31 — Composer walks + header dependents
+
+A Person's birth and an Event's title are read off the canonical graph, so the pages can show them without storing a second copy.
+
+**What shipped**
+
+- `PersonHeader` carries birth and death: the subject-role event's date, else its start date, and every linked Place's kept names, with kept-value counts. `EventHeader` carries subject-role people (participation ref, then person ref) and every location's kept names. Place chains are absent.
+- The walks are set-based: one extra query for a Person list, two for an Event list, whatever the length. Proto fields are new numbers only. Swift stores them on `CatalogPersonHeader` and `CatalogEventHeader`. The lists do not render them yet.
+- `HeaderDependents` walks Place → locations → events → subject persons, and person → subject participations → events. Search documents are not reprojected.
+- An Evidence graph Event card takes its subject and place from the participation and location bridges on that graph, so a Baptism card reads *Baptism of James Robins*. A Person card stays name, then label.
+
+**What stayed out**
+
+- Filling the list and detail cells: **S9-32**.
+- Place chains: **S9-39**.
+- Search reprojection from these dependents: **S9-34**.
+
+### S9-32 — Fill derived cells
+
+The Persons and Events pages show the birth, the death, and who the event is about, from the headers the graph already composed.
+
+**What shipped**
+
+- A Persons row reads birth date – death date, then birth place → death place. A missing half is omitted. A lone birth keeps the dash. Extra places are +N. There is no mixed marker on the row.
+- An Events row puts the place after the date, with +N when more locations survived. The title now includes subjects and place, so the existing matrix reads *Birth of James Robins*.
+- Person detail vitals and the four life rows, and the Event title, summary place, and Place row, take those headers. A kept count above 1 is the detail row's mixed badge. The Why for that date or place stays on the Event or Place page.
+- `GetPersonHeader` joins `GetEventHeader`. The person page and the event page warm them beside the detail.
+
+**What stayed out**
+
+- Place chains (*York, Upper Canada*): **S9-40**.
+- Search documents from these headers: **S9-34**.

@@ -268,6 +268,7 @@ func Install(c *database.Catalog) error {
 			Origin:      propertyterms.OriginProvenencia,
 			Label:       term.Label,
 			Description: term.Description,
+			Directed:    term.Directed,
 		}); err != nil {
 			return err
 		}

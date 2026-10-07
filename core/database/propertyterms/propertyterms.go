@@ -31,16 +31,18 @@ const (
 	OriginProvenencia = "provenencia"
 	OriginUser        = "user"
 
-	sqlUpsert = `INSERT INTO property_terms (id, property_id, key, origin, label, description)
-		VALUES (?, ?, ?, ?, ?, ?)
+	sqlUpsert = `INSERT INTO property_terms (id, property_id, key, origin, label, description, directed)
+		VALUES (?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT(property_id, key, origin) DO UPDATE SET
 			label = excluded.label,
-			description = excluded.description`
-	sqlLookup = `SELECT id, property_id, key, origin, label, COALESCE(description, '')
+			description = excluded.description,
+			directed = excluded.directed`
+	sqlTermCols = `id, property_id, key, origin, label, COALESCE(description, ''), directed`
+	sqlLookup   = `SELECT ` + sqlTermCols + `
 		FROM property_terms WHERE property_id = ? AND key = ? AND origin = ?`
-	sqlGetByID = `SELECT id, property_id, key, origin, label, COALESCE(description, '')
+	sqlGetByID = `SELECT ` + sqlTermCols + `
 		FROM property_terms WHERE id = ?`
-	sqlListByProperty = `SELECT id, property_id, key, origin, label, COALESCE(description, '')
+	sqlListByProperty = `SELECT ` + sqlTermCols + `
 		FROM property_terms WHERE property_id = ?
 		ORDER BY label COLLATE NOCASE, origin, key`
 	sqlUpdate = `UPDATE property_terms SET label = ?, description = ? WHERE id = ?`
@@ -55,6 +57,7 @@ type Term struct {
 	Origin      string
 	Label       string
 	Description string
+	Directed    bool // kinship (and later place-relationship) terms: order is part of the key
 }
 
 // Upsert inserts or updates by (property_id, key, origin). Mints a UUIDv7 id when ID is empty on insert.
@@ -94,7 +97,7 @@ func Upsert(c *database.Catalog, t Term) ([]byte, error) {
 	} else {
 		desc = t.Description
 	}
-	if _, err := db.Exec(sqlUpsert, id, t.PropertyID, t.Key, t.Origin, t.Label, desc); err != nil {
+	if _, err := db.Exec(sqlUpsert, id, t.PropertyID, t.Key, t.Origin, t.Label, desc, directedBit(t.Directed)); err != nil {
 		return nil, err
 	}
 	return append([]byte(nil), id...), nil
@@ -144,7 +147,7 @@ func Create(c *database.Catalog, userID, propertyID []byte, label, description s
 	} else {
 		desc = description
 	}
-	if _, err := tx.Exec(sqlUpsert, id, propertyID, key, OriginUser, label, desc); err != nil {
+	if _, err := tx.Exec(sqlUpsert, id, propertyID, key, OriginUser, label, desc, 0); err != nil {
 		return Term{}, err
 	}
 	fields := map[string]audit.FieldDiff{
@@ -354,20 +357,31 @@ func ListByProperty(c *database.Catalog, propertyID []byte) ([]Term, error) {
 
 func scanTerm(row *sql.Row) (Term, error) {
 	var t Term
-	err := row.Scan(&t.ID, &t.PropertyID, &t.Key, &t.Origin, &t.Label, &t.Description)
+	var directed int
+	err := row.Scan(&t.ID, &t.PropertyID, &t.Key, &t.Origin, &t.Label, &t.Description, &directed)
 	if err != nil {
 		return Term{}, err
 	}
+	t.Directed = directed != 0
 	return t, nil
 }
 
 func scanTermRows(rows *sql.Rows) (Term, error) {
 	var t Term
-	err := rows.Scan(&t.ID, &t.PropertyID, &t.Key, &t.Origin, &t.Label, &t.Description)
+	var directed int
+	err := rows.Scan(&t.ID, &t.PropertyID, &t.Key, &t.Origin, &t.Label, &t.Description, &directed)
 	if err != nil {
 		return Term{}, err
 	}
+	t.Directed = directed != 0
 	return t, nil
+}
+
+func directedBit(directed bool) int {
+	if directed {
+		return 1
+	}
+	return 0
 }
 
 func originOK(origin string) bool {

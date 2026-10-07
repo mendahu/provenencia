@@ -43,7 +43,55 @@ func personHeaderProto(h conclusionheaders.PersonHeader) *engine.PersonHeader {
 	if h.Name != nil {
 		ph.Name = valuecodec.NameToProto(*h.Name)
 	}
+	ph.Birth = lifeFactsProto(h.Birth)
+	ph.Death = lifeFactsProto(h.Death)
 	return ph
+}
+
+func lifeFactsProto(life conclusionheaders.LifeFacts) *engine.LifeFacts {
+	out := &engine.LifeFacts{DateCount: int32(life.DateCount)}
+	if life.Date != nil {
+		out.Date = valuecodec.DateToProto(*life.Date)
+	}
+	for _, p := range life.Places {
+		out.Places = append(out.Places, headerPlaceProto(p))
+	}
+	return out
+}
+
+func headerPlaceProto(p conclusionheaders.HeaderPlace) *engine.HeaderPlace {
+	return &engine.HeaderPlace{Names: append([]string(nil), p.Names...), NameCount: int32(p.Count)}
+}
+
+func GetPersonHeader(in []byte) ([]byte, error) {
+	var req engine.GetPersonHeaderRequest
+	if err := proto.Unmarshal(in, &req); err != nil {
+		return nil, unmarshalErr("get_person_header", err)
+	}
+	entityID, err := parseID(req.GetEntityId())
+	if err != nil {
+		return nil, conclusiondetails.ErrNotFound
+	}
+	out := &engine.GetPersonHeaderResponse{}
+	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
+		db, err := c.DB()
+		if err != nil {
+			return err
+		}
+		headers, err := conclusionheaders.PersonsByIDs(db, [][]byte{entityID})
+		if err != nil {
+			return err
+		}
+		if len(headers) != 1 {
+			return conclusiondetails.ErrNotFound
+		}
+		out.Header = personHeaderProto(headers[0])
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return proto.Marshal(out)
 }
 
 func ListEventHeaders(in []byte) ([]byte, error) {
@@ -128,6 +176,19 @@ func eventHeaderProto(h conclusionheaders.EventHeader) *engine.EventHeader {
 	}
 	if h.EndDate != nil {
 		eh.EndDate = valuecodec.DateToProto(*h.EndDate)
+	}
+	for _, s := range h.Subjects {
+		sub := &engine.EventSubject{
+			Entity:         canonicalEntityProto(s.Entity),
+			NameValueCount: int32(s.NameValueCount),
+		}
+		if s.Name != nil {
+			sub.Name = valuecodec.NameToProto(*s.Name)
+		}
+		eh.Subjects = append(eh.Subjects, sub)
+	}
+	for _, p := range h.Places {
+		eh.Places = append(eh.Places, headerPlaceProto(p))
 	}
 	return eh
 }

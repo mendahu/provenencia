@@ -117,6 +117,58 @@ func TestListPersonHeaders(t *testing.T) {
 	})
 }
 
+func TestGetPersonHeader(t *testing.T) {
+	runRPC(t, GetPersonHeader, []rpcTest{
+		{name: "bad proto", raw: []byte{0xff}, wantErr: true},
+		{
+			name: "unknown id",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, _, _, _ := subjectFixture(t)
+				return &engine.GetPersonHeaderRequest{ProjectDir: dir, EntityId: uuid.Must(uuid.NewV7()).String()}
+			},
+			wantErr:   true,
+			wantErrIs: conclusiondetails.ErrNotFound,
+		},
+		{
+			name: "returns the one person",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, id := namedPersonID(t)
+				return &engine.GetPersonHeaderRequest{ProjectDir: dir, EntityId: id}
+			},
+			after: func(t *testing.T, out []byte, req proto.Message) {
+				var resp engine.GetPersonHeaderResponse
+				if err := proto.Unmarshal(out, &resp); err != nil {
+					t.Fatal(err)
+				}
+				in := req.(*engine.GetPersonHeaderRequest)
+				if resp.GetHeader().GetEntity().GetId() != in.GetEntityId() || resp.GetHeader().GetName().GetForm() == "" {
+					t.Fatalf("%+v", resp.GetHeader())
+				}
+			},
+		},
+	})
+}
+
+func namedPersonID(t *testing.T) (dir, id string) {
+	t.Helper()
+	dir, ref := namedPerson(t)
+	raw, err := ListPersonHeaders(marshalProto(t, &engine.ListPersonHeadersRequest{ProjectDir: dir}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var resp engine.ListPersonHeadersResponse
+	if err := proto.Unmarshal(raw, &resp); err != nil {
+		t.Fatal(err)
+	}
+	for _, h := range resp.GetHeaders() {
+		if h.GetEntity().GetRef() == ref {
+			return dir, h.GetEntity().GetId()
+		}
+	}
+	t.Fatalf("no header for %s", ref)
+	return "", ""
+}
+
 func TestListEventHeaders(t *testing.T) {
 	runRPC(t, ListEventHeaders, []rpcTest{
 		{name: "bad proto", raw: []byte{0xff}, wantErr: true},
