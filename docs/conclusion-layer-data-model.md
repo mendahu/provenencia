@@ -271,7 +271,7 @@ Promoting one Subject does not promote its neighbors. The page proposes them, an
 **Bridge Subjects** (participation, location, relationship, place relationship) have no identity of their own. Once both ends are members of handles, a bridge is **filed automatically**, joining the association the two handles already share, or a new one. That happens on Done, or later, when a claim makes its second end a member.
 
 - **Participation and location** are keyed by their ends. The role is a reconciled value on the association, not part of its identity.
-- **Relationship and place relationship** are keyed by their ends and type: spouse *and* cousin are two relationships.
+- **Relationship and place relationship** are keyed by their ends and type: spouse *and* cousin are two relationships; `part_of` *and* `succeeded_by` are two place relationships.
 - **Direction** is kept for directed types ("parent of", "part of"); symmetric types (spouse) ignore order.
 - **A bridge whose ends are one handle is refused.** A refused filing (that one, or a place-hierarchy cycle) leaves the bridge unfiled, with its reason, and never fails the claim that triggered it.
 - **On the Promote page, each bridge can be switched off** before Done, for a relationship the researcher doesn't accept from this Source.
@@ -702,7 +702,7 @@ Conclusion
 # 13. Open schema questions
 
 1. **Gazetteer runtime** — which editioned packs to ship or download (WOF vs GeoNames SQLite, Newberry, OHM extracts), license and ingest-as-Source UX. Product, not a third identity model.
-2. **Place `contained_in`** — optional concluded Property vs search-only gazetteer parents. **Convention:** do not infer containment from two Locations on one Event; the schema will not stop a `contained_in` Observation or Reconciliation if someone adds that Property.
+2. **Place containment** — answered for Spike 9 by place relationships (`part_of`). Several Locations on one Event that share a containment graph fold into one display chain; unrealted Places stay competing values. Optional concluded `contained_in` vs search-only gazetteer parents, and any place-nature vocabulary, remain open for later. **Convention:** do not infer containment from two Locations alone — only from filed `part_of` (or a later gazetteer write of the same).
 3. **Relationship endpoints** — seeded `participant` is a single Property; multi-party relationships may need repeated Properties, ordered parts, or a later shape. Out of scope for this Place pass.
 
 ---

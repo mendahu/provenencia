@@ -989,7 +989,7 @@ A researcher can say a Property holds several values, so a custom fact can keep 
 
 **What stayed out**
 
-- Term categories: **S9-D15** / **S9-38b**.
+- Term categories on researcher-added place-relationship types: **retired** with S9-D15 / S9-38b (2026-10-07); `part_of` / `succeeded_by` are product-locked.
 - Any other Property setting. A confirm: nothing is deleted.
 
 ### S9-25 — Place composer + reads
@@ -1008,7 +1008,7 @@ A Place's row can carry every name it goes by. Montréal and Montreal stay two n
 
 - The Places list: **S9-26**, gated by **S9-D4**.
 - The Place page: **S9-27**, gated by **S9-D7**.
-- Periods and relationships: **S9-38**.
+- Periods and relationships: **S9-38**. Place nature deferred; chain folding in **S9-39**.
 - The parent chain: **S9-39**.
 - The Evidence-graph Place card still uses the subject's own `toponym`.
 
@@ -1074,7 +1074,7 @@ Promoting both ends of a bridge files the connection, so a birth and its person 
 
 **What stayed out**
 
-- Place-relationship seeding and cycle refusal: **S9-38**.
+- Place-relationship seeding (`part_of` / `succeeded_by`) and cycle refusal: **S9-38**. Chain folding for Event places: **S9-39**.
 - Header walks and derived cells: **S9-31**, **S9-32**.
 - Search documents read from headers: **S9-34**.
 

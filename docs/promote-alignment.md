@@ -177,7 +177,7 @@ A bridge (participation, relationship, location, place relationship) has **no id
   | Participation | person + event | The role is a reconciled value on the association. Sources that disagree on the role show it as mixed; a person who was really witness *and* informant shows both if `role` is multi-valued (S9-36). |
   | Location | event + place | |
   | Relationship | the two people + relationship type | The type is the identity: spouse *and* cousin are two relationships. Sources that disagree on the type (son vs stepson) make two relationships, not a mixed value. |
-  | Place relationship (S9-38) | the two places + type | |
+  | Place relationship (S9-38) | the two places + type (`part_of` vs `succeeded_by`) | |
 
 - **Direction:** directed types ("A parent of B", "part of") match only in the same direction. Symmetric types (spouse) ignore order. Whether a type is directed is a property of the type (term or bridge kind), not a list in code.
 - **A link from a handle to itself** (both ends on one handle: a duplicate on the graph, or a wrong match) is refused. On the page it's flagged before Done.
@@ -215,7 +215,7 @@ Spike 9 was replanned around this on 2026-10-06: [`deployment-plan/spike-9/deplo
 - **Thresholds and bands:** the score cut-offs for strong, weak and no match, and the conflict penalty. Set them against the obituary, then dogfood.
 - **Cold start:** in a small catalog, u and the fan-outs are noisy or missing. What priors per value type and signature apply until the data is enough?
 - **Expansion depth:** is the layer's diameter always the right bound, or should it be capped?
-- **Places at several grains:** a Birth linked to both Polemont and Scotland. Should two places on one event count as a hint that one contains the other (S9-36 / S9-38)?
+- ~~**Places at several grains:**~~ **Decided 2026-10-07:** fold Locations that share a `part_of` graph into one chain; unrealted Places stay competing values and reconcile ([`conclusion-reconciliation.md`](conclusion-reconciliation.md) §11.1). No place-nature Property this spike.
 - **Typed name parts:** a name entered as one form ("Gracie Gray Gates (Frickleton)") weakens name comparison. Is that a composer nudge, or a parsing step?
 - **Naming:** what is the "map the rest of this graph" action called?
 - **The decision log:** what to record, and where, so it stays local and private.
