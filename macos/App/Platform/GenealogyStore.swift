@@ -390,11 +390,11 @@ enum CatalogConclusionValue: Sendable, Equatable {
     case name(CatalogNameValue)
 }
 
-/// One auto-reconciled value of a Property (S9-14). `reason == "kept"` is
-/// displayed; any other reason says why it isn't.
+/// One auto-reconciled value of a Property (S9-14). `.kept` is displayed;
+/// any other reason says why it isn't.
 struct CatalogReconciledValue: Sendable, Equatable, Identifiable {
     var rank: Int
-    var reason: String
+    var reason: ReconcilerReason
     /// Distinct Sources behind it.
     var support: Int
     /// Negative records that match it.
@@ -402,7 +402,7 @@ struct CatalogReconciledValue: Sendable, Equatable, Identifiable {
     var value: CatalogConclusionValue
 
     var id: Int { rank }
-    var isDisplayed: Bool { reason == "kept" }
+    var isDisplayed: Bool { reason == .kept }
 }
 
 /// What the auto-reconciler did with one Observation, with the record's own
@@ -411,7 +411,7 @@ struct CatalogReconciledValue: Sendable, Equatable, Identifiable {
 struct CatalogReconcilerOutcome: Sendable, Equatable, Identifiable {
     var observationID: String
     var observationRef: String
-    var reason: String
+    var reason: ReconcilerReason
     /// The value it went into; nil for none.
     var valueRank: Int?
     /// The negative Observation that denied it; "" when not denied.
@@ -440,14 +440,13 @@ struct CatalogReconcilerOutcome: Sendable, Equatable, Identifiable {
     var isLowConfidenceClaim: Bool { claimConfidenceOffset < 0 }
 }
 
-/// One Property of a handle's detail. `state` is "single", "merged",
-/// "mixed", or "" when nothing is displayed; Go computes it.
+/// One Property of a handle's detail. Go computes `state`.
 struct CatalogConclusionField: Sendable, Equatable, Identifiable {
     var propertyID: String
     var propertyKey: String
     var label: String
-    var valueType: String
-    var state: String
+    var valueType: PropertyValueType
+    var state: ReconciledState
     var values: [CatalogReconciledValue]
     var outcomes: [CatalogReconcilerOutcome]
 

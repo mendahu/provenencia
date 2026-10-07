@@ -974,12 +974,13 @@ struct GoStore: GenealogyStore {
                     propertyID: f.propertyID,
                     propertyKey: f.propertyKey,
                     label: f.label,
-                    valueType: f.valueType,
-                    state: f.state,
+                    // A value type this build doesn't know is laid out as text.
+                    valueType: PropertyValueType(rawValue: f.valueType) ?? .text,
+                    state: ReconciledState(wire: f.state),
                     values: f.values.map { v in
                         CatalogReconciledValue(
                             rank: Int(v.rank),
-                            reason: v.reason,
+                            reason: ReconcilerReason(wire: v.reason),
                             support: Int(v.support),
                             against: Int(v.against),
                             value: Self.mapConclusionValue(v.value)
@@ -989,7 +990,7 @@ struct GoStore: GenealogyStore {
                         CatalogReconcilerOutcome(
                             observationID: o.observationID,
                             observationRef: o.observationRef,
-                            reason: o.reason,
+                            reason: ReconcilerReason(wire: o.reason),
                             valueRank: o.valueRank > 0 ? Int(o.valueRank) : nil,
                             deniedByObservationID: o.deniedByObservationID,
                             recorded: Self.mapConclusionValue(o.recorded),

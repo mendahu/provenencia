@@ -481,7 +481,7 @@ struct WorkspaceSessionTests {
         #expect(session.visibleKeys == [secondKey])
         let secondHandle: QueryHandle<CatalogConclusionDetail> = try #require(session.queryHandle(secondKey))
         await waitForFetchComplete(secondHandle)
-        #expect(secondHandle.value?.fields.first?.state == "")
+        #expect(secondHandle.value?.fields.first?.state == .empty)
 
         store.observationsBySource["s1"] = [
             CatalogObservation(
@@ -499,7 +499,7 @@ struct WorkspaceSessionTests {
         // On screen and lists: revalidated in place.
         await waitForFetchComplete(secondHandle)
         await waitForFetchComplete(list)
-        #expect(secondHandle.value?.fields.first?.state == "single")
+        #expect(secondHandle.value?.fields.first?.state == .single)
         #expect(list.value?.first?.name?.form == "Jim Robins")
 
         // Leaving for the list hides the second page too.

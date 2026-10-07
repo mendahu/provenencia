@@ -23,7 +23,7 @@ struct PersonDetailContent: ConclusionDetailBody {
 
     init(detail: CatalogConclusionDetail, locale: Locale = .autoupdatingCurrent) {
         let header = detail.personHeader
-        let nameField = detail.fields.first { $0.propertyKey == "name" }
+        let nameField = detail.fields.first { $0.propertyKey == SeededPropertyKey.name }
         var leadName: CatalogNameValue?
         if case .name(let name)? = nameField?.displayedValues.first?.value { leadName = name }
         title = PersonHeaderDisplay.titleSource(name: leadName, entity: detail.entity)
@@ -47,7 +47,7 @@ struct PersonDetailContent: ConclusionDetailBody {
         locale: Locale
     ) -> [ReconciledValueRowModel] {
         var rows: [ReconciledValueRowModel] = []
-        if let name = fields.first(where: { $0.propertyKey == "name" }) {
+        if let name = fields.first(where: { $0.propertyKey == SeededPropertyKey.name }) {
             rows.append(ReconciledValueRowModel(field: name, locale: locale))
         } else {
             rows.append(.empty(
@@ -83,7 +83,7 @@ struct PersonDetailContent: ConclusionDetailBody {
                 emptyText: L10n.string(empty), mixed: mixed, opens: opens
             ))
         }
-        for field in fields where field.propertyKey != "name" && !field.outcomes.isEmpty {
+        for field in fields where field.propertyKey != SeededPropertyKey.name && !field.outcomes.isEmpty {
             rows.append(ReconciledValueRowModel(field: field, locale: locale))
         }
         return rows

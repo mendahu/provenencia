@@ -16,7 +16,7 @@ struct PlaceDetailContent: ConclusionDetailBody {
     var sections: [ConclusionDetailSection]
 
     init(detail: CatalogConclusionDetail, locale: Locale = .autoupdatingCurrent) {
-        let toponym = detail.fields.first { $0.propertyKey == "toponym" }
+        let toponym = detail.fields.first { $0.propertyKey == SeededPropertyKey.toponym }
         let names = toponym?.displayedValues.compactMap { value -> String? in
             let text = ReconciledValueDisplay.string(for: value.value, locale: locale)
             return text.isEmpty ? nil : text

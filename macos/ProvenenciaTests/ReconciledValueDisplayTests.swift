@@ -14,7 +14,7 @@ struct ReconciledValueDisplayTests {
 
     static func value(_ rank: Int, _ reason: String, support: Int = 1, against: Int = 0,
                       _ v: CatalogConclusionValue = .text("x")) -> CatalogReconciledValue {
-        CatalogReconciledValue(rank: rank, reason: reason, support: support, against: against, value: v)
+        CatalogReconciledValue(rank: rank, reason: ReconcilerReason(wire: reason), support: support, against: against, value: v)
     }
 
     static func outcome(
@@ -31,7 +31,7 @@ struct ReconciledValueDisplayTests {
         vote: (Int, Int) = (0, 0)
     ) -> CatalogReconcilerOutcome {
         CatalogReconcilerOutcome(
-            observationID: id, observationRef: "OBS-\(id)", reason: reason, valueRank: rank,
+            observationID: id, observationRef: "OBS-\(id)", reason: ReconcilerReason(wire: reason), valueRank: rank,
             deniedByObservationID: deniedBy, recorded: recorded, subjectID: "sub-\(id)", subjectRef: "CPR-\(id)",
             citationID: "cit-\(id)", artifactID: "art-\(id)", sourceID: source, sourceTitle: title, credibilityKey: "",
             transcriptionUncertain: uncertain, claimConfidenceKey: "",
@@ -49,8 +49,8 @@ struct ReconciledValueDisplayTests {
         outcomes: [CatalogReconcilerOutcome] = []
     ) -> CatalogConclusionField {
         CatalogConclusionField(
-            propertyID: "p-\(key)", propertyKey: key, label: label, valueType: valueType,
-            state: state, values: values, outcomes: outcomes
+            propertyID: "p-\(key)", propertyKey: key, label: label, valueType: PropertyValueType(rawValue: valueType) ?? .text,
+            state: ReconciledState(wire: state), values: values, outcomes: outcomes
         )
     }
 
@@ -225,5 +225,13 @@ struct ReconciledValueDisplayTests {
         #expect(ReconciledValueDisplay.accessibilityLabel(label: "Name", lead: "Jim", field: Self.field("single", [Self.value(1, "kept")]))
             == "Name, Jim, single, 1 Source")
         #expect(ReconciledValueDisplay.accessibilityLabel(label: "Birth date", lead: nil, field: nil) == "Birth date, empty")
+    }
+
+    @Test func aStateOrReasonThisBuildDoesNotKnowIsNotDisplayedOrBadged() {
+        #expect(ReconciledState(wire: "contested") == .unrecognized("contested"))
+        #expect(ReconcilerReason(wire: "superseded") == .unrecognized("superseded"))
+        let unknown = Self.field("contested", [Self.value(1, "superseded")])
+        #expect(ReconciledValueDisplay.stateBadge(unknown) == nil)
+        #expect(unknown.displayedValues.isEmpty)
     }
 }

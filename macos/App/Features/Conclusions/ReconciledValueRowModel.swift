@@ -55,7 +55,7 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
         let spokenLead = listed.count > 1 ? listed.map(\.text).joined(separator: "; ") : lead
         id = field.propertyID
         label = field.label
-        style = field.valueType == "date" ? .date : .text
+        style = field.valueType == .date ? .date : .text
         self.lead = lead
         emptyText = ReconciledValueDisplay.emptyText(propertyKey: field.propertyKey)
         badge = ReconciledValueDisplay.stateBadge(field)
@@ -80,7 +80,7 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
     /// Every kept value of a multi-valued field, lead included. A weak
     /// spelling is not displayed, so it stays out of this list.
     private static func listedValues(of field: CatalogConclusionField, locale: Locale) -> [OtherValue] {
-        guard field.state == "multiple" else { return [] }
+        guard field.state == .multiple else { return [] }
         return field.displayedValues.compactMap { value in
             let text = ReconciledValueDisplay.string(for: value.value, locale: locale)
             guard !text.isEmpty else { return nil }

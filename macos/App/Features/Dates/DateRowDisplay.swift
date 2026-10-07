@@ -33,7 +33,7 @@ enum DateRowDisplay {
     /// and `bet … and …` for a range.
     private static func rowDate(_ input: CatalogDateValueInput, locale: Locale) -> String {
         let draft = DateValueDraft(from: input)
-        if draft.kind == "range" {
+        if draft.isRange {
             guard
                 let start = civil(
                     year: draft.startYear, month: draft.startMonth, day: draft.startDay, locale: locale
@@ -59,11 +59,11 @@ enum DateRowDisplay {
 
     private static func applyQualifier(_ raw: String, to point: String, locale: Locale) -> String {
         switch raw.trimmingCharacters(in: .whitespacesAndNewlines) {
-        case "ABT":
+        case DateQualifier.about:
             return L10n.Dates.rowAbout(point, locale: locale)
-        case "BEF":
+        case DateQualifier.before:
             return L10n.Dates.rowBefore(point, locale: locale)
-        case "AFT":
+        case DateQualifier.after:
             return L10n.Dates.rowAfter(point, locale: locale)
         default:
             return point

@@ -14,9 +14,9 @@ enum ReconciledValueDisplay {
 
     static func stateBadge(_ field: CatalogConclusionField) -> StateBadge? {
         switch field.state {
-        case "merged": .merged
-        case "mixed": .mixed
-        case "concluded": .concluded
+        case .merged: .merged
+        case .mixed: .mixed
+        case .concluded: .concluded
         default: nil
         }
     }
@@ -29,7 +29,7 @@ enum ReconciledValueDisplay {
         guard shown.count > 1 else { return shown.first?.support ?? 0 }
         let ranks = Set(shown.map(\.rank))
         let sources = Set(field.outcomes.filter { outcome in
-            (outcome.reason == "kept" || outcome.reason == "folded") && outcome.valueRank.map(ranks.contains) == true
+            (outcome.reason == .kept || outcome.reason == .folded) && outcome.valueRank.map(ranks.contains) == true
         }.map(\.sourceID))
         return sources.isEmpty ? shown.reduce(0) { $0 + $1.support } : sources.count
     }
@@ -37,8 +37,8 @@ enum ReconciledValueDisplay {
     /// "1 Source", "3 Sources", "by you"; nil for an empty field.
     static func countLine(_ field: CatalogConclusionField) -> String? {
         switch field.state {
-        case "": nil
-        case "concluded": L10n.string(L10n.Conclusions.countConcluded)
+        case .empty: nil
+        case .concluded: L10n.string(L10n.Conclusions.countConcluded)
         default: L10n.Conclusions.sourceCount(sourceCount(field))
         }
     }
@@ -52,7 +52,7 @@ enum ReconciledValueDisplay {
 
     /// The shown values after the lead, which a mixed field discloses.
     static func otherValues(_ field: CatalogConclusionField) -> [CatalogReconciledValue] {
-        guard field.state == "mixed" else { return [] }
+        guard field.state == .mixed else { return [] }
         return Array(field.displayedValues.dropFirst())
     }
 
@@ -66,9 +66,9 @@ enum ReconciledValueDisplay {
     /// Property with no wording of its own.
     static func emptyText(propertyKey: String) -> String {
         switch propertyKey {
-        case "name": L10n.string(L10n.Conclusions.emptyName)
-        case "sex_at_birth": L10n.string(L10n.Conclusions.emptySexAtBirth)
-        case "toponym": L10n.string(L10n.Conclusions.emptyPlaceNames)
+        case SeededPropertyKey.name: L10n.string(L10n.Conclusions.emptyName)
+        case SeededPropertyKey.sexAtBirth: L10n.string(L10n.Conclusions.emptySexAtBirth)
+        case SeededPropertyKey.toponym: L10n.string(L10n.Conclusions.emptyPlaceNames)
         default: L10n.string(L10n.Conclusions.stateEmpty)
         }
     }
@@ -94,7 +94,7 @@ enum ReconciledValueDisplay {
 
     /// A negative record: it says "not this". Its outcome is always `against`.
     static func isNegative(_ outcome: CatalogReconcilerOutcome) -> Bool {
-        outcome.reason == "against"
+        outcome.reason == .against
     }
 
     /// What the record said: its value, "not …" for a negative, or "—".
@@ -114,8 +114,8 @@ enum ReconciledValueDisplay {
     /// rest are secondary.
     static func counted(_ outcome: CatalogReconcilerOutcome, in field: CatalogConclusionField) -> Bool {
         switch outcome.reason {
-        case "kept", "folded": true
-        case "against": deniedSomething(outcome, in: field)
+        case .kept, .folded: true
+        case .against: deniedSomething(outcome, in: field)
         default: false
         }
     }
@@ -136,33 +136,33 @@ enum ReconciledValueDisplay {
         locale: Locale = .autoupdatingCurrent
     ) -> String {
         switch outcome.reason {
-        case "kept":
+        case .kept:
             return L10n.string(L10n.Conclusions.outcomeKept)
-        case "folded":
+        case .folded:
             let into = field.values.first { $0.rank == outcome.valueRank }.map { string(for: $0.value, locale: locale) } ?? ""
             return into.isEmpty
                 ? L10n.string(L10n.Conclusions.outcomeFolded)
                 : L10n.Conclusions.outcomeFoldedInto(into)
-        case "outvoted":
+        case .outvoted:
             return outcome.voteTotal > 0
                 ? L10n.Conclusions.outcomeOutvotedBy(outcome.voteSupport, sources: L10n.Conclusions.sourceCount(outcome.voteTotal))
                 : L10n.string(L10n.Conclusions.outcomeOutvoted)
-        case "weak":
+        case .weak:
             let causes = weakCauses(outcome)
             return causes.isEmpty
                 ? L10n.string(L10n.Conclusions.outcomeWeak)
                 : L10n.Conclusions.outcomeWeakBecause(ListFormatter.localizedString(byJoining: causes))
-        case "denied":
+        case .denied:
             let denier = field.outcomes.first { $0.observationID == outcome.deniedByObservationID }
             let name = denier.map { $0.sourceTitle.isEmpty ? $0.observationRef : $0.sourceTitle } ?? ""
             return name.isEmpty
                 ? L10n.string(L10n.Conclusions.outcomeDenied)
                 : L10n.Conclusions.outcomeDeniedBy(name)
-        case "provisional":
+        case .provisional:
             return L10n.string(L10n.Conclusions.outcomeProvisional)
-        case "no_evidence":
+        case .noEvidence:
             return L10n.string(L10n.Conclusions.outcomeNoEvidence)
-        case "against":
+        case .against:
             return deniedSomething(outcome, in: field)
                 ? L10n.string(L10n.Conclusions.outcomeKept)
                 : L10n.string(L10n.Conclusions.outcomeAgainst)
@@ -175,13 +175,13 @@ enum ReconciledValueDisplay {
     /// colour. Decorative beside the phrase.
     static func outcomeMark(_ outcome: CatalogReconcilerOutcome, in field: CatalogConclusionField) -> PVSymbol {
         switch outcome.reason {
-        case "kept": .check
-        case "folded": .gitMerge
-        case "outvoted": .scale
-        case "weak": .signalLow
-        case "denied": .ban
-        case "provisional": .circleDashed
-        case "against": deniedSomething(outcome, in: field) ? .check : .circleMinus
+        case .kept: .check
+        case .folded: .gitMerge
+        case .outvoted: .scale
+        case .weak: .signalLow
+        case .denied: .ban
+        case .provisional: .circleDashed
+        case .against: deniedSomething(outcome, in: field) ? .check : .circleMinus
         default: .minus
         }
     }
@@ -201,11 +201,11 @@ enum ReconciledValueDisplay {
     static func spokenState(_ field: CatalogConclusionField) -> String? {
         let sources = L10n.Conclusions.sourceCount(sourceCount(field))
         switch field.state {
-        case "single": return L10n.Conclusions.a11ySingle(sources)
-        case "merged": return L10n.Conclusions.a11yMerged(sources)
-        case "mixed": return L10n.Conclusions.a11yMixed(sources)
-        case "multiple": return L10n.Conclusions.a11yMultiple(field.displayedValues.count, sources: sources)
-        case "concluded": return L10n.string(L10n.Conclusions.a11yConcluded)
+        case .single: return L10n.Conclusions.a11ySingle(sources)
+        case .merged: return L10n.Conclusions.a11yMerged(sources)
+        case .mixed: return L10n.Conclusions.a11yMixed(sources)
+        case .multiple: return L10n.Conclusions.a11yMultiple(field.displayedValues.count, sources: sources)
+        case .concluded: return L10n.string(L10n.Conclusions.a11yConcluded)
         default: return nil
         }
     }

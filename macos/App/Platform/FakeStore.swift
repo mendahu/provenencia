@@ -1501,12 +1501,12 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 } else {
                     keys.append(key)
                     supportingSources.append([sourceID])
-                    values.append(CatalogReconciledValue(rank: 0, reason: "", support: 1, against: 0, value: .name(name)))
+                    values.append(CatalogReconciledValue(rank: 0, reason: .noEvidence, support: 1, against: 0, value: .name(name)))
                 }
                 outcomes.append(CatalogReconcilerOutcome(
                     observationID: o.id,
                     observationRef: o.ref,
-                    reason: "",
+                    reason: .noEvidence,
                     valueRank: keys.firstIndex(of: key),
                     deniedByObservationID: "",
                     recorded: .name(name),
@@ -1529,7 +1529,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             rankOf[i] = n + 1
             var v = values[i]
             v.rank = n + 1
-            v.reason = n == 0 ? "kept" : "outvoted"
+            v.reason = n == 0 ? .kept : .outvoted
             ranked.append(v)
         }
         // Every Source that voted, for the vote an outvoted record lost.
@@ -1537,25 +1537,25 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         for i in outcomes.indices {
             let rank = outcomes[i].valueRank.flatMap { rankOf[$0] }
             outcomes[i].valueRank = rank
-            outcomes[i].reason = rank == 1 ? "kept" : "outvoted"
+            outcomes[i].reason = rank == 1 ? .kept : .outvoted
             if rank != 1 {
                 outcomes[i].voteSupport = ranked.first?.support ?? 0
                 outcomes[i].voteTotal = voters
             }
         }
-        let state: String
+        let state: ReconciledState
         if ranked.isEmpty {
-            state = ""
+            state = .empty
         } else if (ranked.first?.support ?? 0) > 1 {
-            state = "merged"
+            state = .merged
         } else {
-            state = "single"
+            state = .single
         }
         let field = CatalogConclusionField(
             propertyID: propertyID,
-            propertyKey: "name",
+            propertyKey: SeededPropertyKey.name,
             label: "Name",
-            valueType: "name",
+            valueType: .name,
             state: state,
             values: ranked,
             outcomes: outcomes.sorted { ($0.valueRank ?? .max, $0.observationID) < ($1.valueRank ?? .max, $1.observationID) }

@@ -29,15 +29,15 @@ struct EventDetailContent: ConclusionDetailBody {
     /// A recorded `date` wins. Otherwise the start–end span. Empty when
     /// none of them is displayed.
     static func summaryDate(_ fields: [CatalogConclusionField], locale: Locale) -> String? {
-        if let date = fields.first(where: { $0.propertyKey == "date" }), !date.outcomes.isEmpty {
+        if let date = fields.first(where: { $0.propertyKey == SeededPropertyKey.date }), !date.outcomes.isEmpty {
             guard let value = dateValue(date) else { return nil }
             let line = DateRowDisplay.line(date: value, locale: locale)
             return line.isEmpty ? nil : line
         }
         let line = DateRowDisplay.line(
             date: nil,
-            start: dateValue(fields, key: "start_date"),
-            end: dateValue(fields, key: "end_date"),
+            start: dateValue(fields, key: SeededPropertyKey.startDate),
+            end: dateValue(fields, key: SeededPropertyKey.endDate),
             locale: locale
         )
         return line.isEmpty ? nil : line
@@ -48,10 +48,10 @@ struct EventDetailContent: ConclusionDetailBody {
     /// Stated empty when none of them is set.
     static func dateRow(_ fields: [CatalogConclusionField], locale: Locale) -> ReconciledValueRowModel {
         let label = L10n.string(L10n.Conclusions.eventDate)
-        if let date = fields.first(where: { $0.propertyKey == "date" }), !date.outcomes.isEmpty {
+        if let date = fields.first(where: { $0.propertyKey == SeededPropertyKey.date }), !date.outcomes.isEmpty {
             return labeled(ReconciledValueRowModel(field: date, locale: locale), label, field: date)
         }
-        let span = ["start_date", "end_date"].compactMap { key in
+        let span = [SeededPropertyKey.startDate, SeededPropertyKey.endDate].compactMap { key in
             fields.first { $0.propertyKey == key && !$0.outcomes.isEmpty }
         }
         let empty = L10n.string(L10n.Conclusions.emptyEventDate)
@@ -63,8 +63,8 @@ struct EventDetailContent: ConclusionDetailBody {
         }
         let lead = DateRowDisplay.line(
             date: nil,
-            start: dateValue(fields, key: "start_date"),
-            end: dateValue(fields, key: "end_date"),
+            start: dateValue(fields, key: SeededPropertyKey.startDate),
+            end: dateValue(fields, key: SeededPropertyKey.endDate),
             locale: locale
         )
         return .spanning(id: "date", label: label, lead: lead, emptyText: empty, fields: span, locale: locale)

@@ -341,6 +341,7 @@
 		B053526B050C75CF562118C1 /* ReconciliationRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = B066A6D4E7DF393AEE952114 /* ReconciliationRecord.swift */; };
 		B0E27559D6CFFEBA2093C436 /* DateRowDisplayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0D89A265AAED569EA0CA31E /* DateRowDisplayTests.swift */; };
 		B0E8631619214033F0948729 /* DerivedPlaceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B042B09EC818DE35F967C981 /* DerivedPlaceTests.swift */; };
+		B0CABB2D1B7B37092BF31774 /* ConclusionVocabulary.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0C30618199D5D309E96D3DF /* ConclusionVocabulary.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -705,6 +706,7 @@
 		B066A6D4E7DF393AEE952114 /* ReconciliationRecord.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ReconciliationRecord.swift; sourceTree = "<group>"; };
 		B0D89A265AAED569EA0CA31E /* DateRowDisplayTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DateRowDisplayTests.swift; sourceTree = "<group>"; };
 		B042B09EC818DE35F967C981 /* DerivedPlaceTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DerivedPlaceTests.swift; sourceTree = "<group>"; };
+		B0C30618199D5D309E96D3DF /* ConclusionVocabulary.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ConclusionVocabulary.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -991,6 +993,7 @@
 				7F69681C808F487B9BD6E7AA /* WindowSizing.swift */,
 				F10C63066463B02E05808F78 /* PreviewFixtures.swift */,
 				E07E52EC527189A4A377F9AD /* FieldSlug.swift */,
+				B0C30618199D5D309E96D3DF /* ConclusionVocabulary.swift */,
 			);
 			path = Platform;
 			sourceTree = "<group>";
@@ -2043,6 +2046,7 @@
 				B071F1D64BED98AE2965E8AD /* PersonLifeDisplay.swift in Sources */,
 				B0AAC26F5EC2839B696B4874 /* ReconciledValueRowModel.swift in Sources */,
 				B053526B050C75CF562118C1 /* ReconciliationRecord.swift in Sources */,
+				B0CABB2D1B7B37092BF31774 /* ConclusionVocabulary.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

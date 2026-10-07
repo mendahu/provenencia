@@ -401,8 +401,8 @@ struct CatalogQueryRegistryTests {
         #expect(detail.entity == james.entity)
         let name = try #require(detail.fields.first { $0.propertyKey == "name" })
         // One Source: its two James Robins records are one value, single.
-        #expect(name.state == "single")
-        #expect(name.values.map(\.reason) == ["kept", "outvoted"])
+        #expect(name.state == .single)
+        #expect(name.values.map(\.reason) == [.kept, .outvoted])
         #expect(name.displayedValues.map(\.value) == [.name(CatalogNameValue(form: "James Robins"))])
         #expect(name.outcomes.map(\.observationRef) == ["OBS-o1", "OBS-o3", "OBS-o2"])
         #expect(name.outcomes.map(\.valueRank) == [1, 1, 2])
