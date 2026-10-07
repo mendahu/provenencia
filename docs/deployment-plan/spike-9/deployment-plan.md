@@ -498,7 +498,7 @@ In order; each brief sits just above the PR it gates.
 - [x] S9-39 — Place chain composer → [`completed.md`](completed.md)
 - [x] S9-40 — Place hierarchy in list and detail → [`completed.md`](completed.md)
 - [x] S9-41 — Graph alignment core → [`completed.md`](completed.md)
-- [ ] S9-42 — Graph alignment loader + proposal read
+- [x] S9-42 — Graph alignment loader + proposal read → [`completed.md`](completed.md)
 - [ ] S9-43 — Batch Promote write
 - [ ] ✎ S9-D16 — Design: Promote page (rethink)
 - [ ] S9-44 — Promote page
@@ -936,11 +936,7 @@ Design: [`promote-graph-alignment.md`](../../promote-graph-alignment.md). Brief:
 
 #### S9-42 — Graph alignment loader + proposal read
 
-| | |
-| --- | --- |
-| **In** | The loader (design §7): the layer (one Source's Subjects, bridges, Observations, provenance); seed handles (fixed rows, existing claims, top-k `core/match` candidates); canonical expansion, one batched query per hop over S9-28's edges; members' Observations in batch. `stats` (value frequencies, signature fan-outs) cached against the latest audit revision. FFI `ProposePromoteGraphAlignment(source, fixed[])` → rows with candidate headers (Person / Event / Place header composers), comparisons, drafted pins, reasons and flags; Swift store + FakeStore. |
-| **Testable** | A fixed query count whatever the graph size; a write anywhere invalidates `stats`; the obituary fixture through the real loader matches S9-41's golden. |
-| **Depends on** | S9-41, S9-22, S9-25, S9-28 |
+**Done.** See [`completed.md`](completed.md#s9-42--graph-alignment-loader--proposal-read). Catalog `promotealign.Propose` loads Layer / Canon / Stats and calls pure `graphalign.Align`; FFI `ProposePromoteGraphAlignment` + Swift store / FakeStore. Batch Done stays **S9-43**.
 
 #### S9-43 — Batch Promote write
 

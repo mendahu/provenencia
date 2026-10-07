@@ -1187,3 +1187,21 @@ Pure in-memory graph alignment for Promote: propose a handle, New, or Skip for e
 - Promote page: **S9-44**.
 - Rewiring `Rank`’s fuzzy scorer onto Compatible.
 - Migrations / product VERSION bump.
+
+### S9-42 — Graph alignment loader + proposal read
+
+Catalog adapter for Promote graph alignment: load Layer / Canon / Stats, call pure `Align`, expose the proposal over FFI.
+
+**What shipped**
+
+- `graphalign.ScoreCandidate`: shared Fellegi–Sunter pairwise + edge scoring path Align uses (composable unit under the walk).
+- `core/database/promotealign`: `Propose(q, sourceID, fixed)` loads primary Subjects and bridges (`WalkSource`), merges caller fixed with already-promoted anchors, seeds top-k `matching.ForSubject` candidates, expands a bounded canon via `canonicalgraph.Walk`, caches `stats` against `MAX(audit_transactions.revision)`, then calls `graphalign.Align`. No walk policy or pair scoring in the loader.
+- FFI `ProposePromoteGraphAlignment` → rows with comparisons, drafted pins, alternatives, flags, and Person / Event / Place headers; Swift `GenealogyStore` + `FakeStore` stub (UI sheet is S9-44).
+- Tests: Gracie-style seed-from-promoted-neighbor and place `part_of` chain through the real loader; stats cache invalidates on write; handler `runRPC` coverage.
+
+**What stayed out**
+
+- Batch Done / bridge filing / pins write: **S9-43**.
+- Promote page: **S9-44**.
+- Rewiring `Rank` onto Compatible.
+- Migrations / product VERSION bump.
