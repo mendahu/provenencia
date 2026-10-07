@@ -135,8 +135,8 @@ func TestBridgeAuthoredOnce(t *testing.T) {
 	t.Cleanup(ResetForTest)
 
 	bs := Bridges()
-	if len(bs) != 3 {
-		t.Fatalf("want 3 product bridges, got %d", len(bs))
+	if len(bs) != 4 {
+		t.Fatalf("want 4 product bridges, got %d", len(bs))
 	}
 	var participationPairs int
 	for _, r := range All() {

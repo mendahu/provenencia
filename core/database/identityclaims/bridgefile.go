@@ -139,16 +139,38 @@ func fileBridge(tx *sql.Tx, b bridgeHead) (assocID []byte, changes []audit.Chang
 
 	var termID []byte
 	directed := false
+	var category string
 	if keysOnType(rule) {
 		termID = firstTerm(obs, rule.Disambiguation)
 		if len(termID) != 16 {
 			return nil, nil, false, nil
 		}
 		var bit int
-		if err := tx.QueryRow(`SELECT directed FROM property_terms WHERE id = ?`, termID).Scan(&bit); err != nil {
+		if err := tx.QueryRow(`SELECT directed, COALESCE(category, '') FROM property_terms WHERE id = ?`, termID).Scan(&bit, &category); err != nil {
 			return nil, nil, false, err
 		}
 		directed = bit != 0
+	}
+
+	if b.typeKey == "place_relationship" && (category == "hierarchical" || category == "temporal") {
+		fromID, toID := ends[0].entityID, ends[1].entityID
+		if rule.Endpoints[0].PropertyKey != "from" {
+			for _, e := range ends {
+				if e.propertyKey == "from" {
+					fromID = e.entityID
+				}
+				if e.propertyKey == "to" {
+					toID = e.entityID
+				}
+			}
+		}
+		closes, err := placeRelationshipWouldCycle(tx, category, fromID, toID)
+		if err != nil {
+			return nil, nil, false, err
+		}
+		if closes {
+			return nil, nil, false, nil
+		}
 	}
 
 	assocID, err = findAssociation(tx, b.typeKey, ends, rule.Disambiguation, termID, !directed && sameEndpointType(rule))
@@ -178,10 +200,71 @@ func fileBridge(tx *sql.Tx, b bridgeHead) (assocID []byte, changes []audit.Chang
 }
 
 // keysOnType reports whether the bridge's disambiguation is the association's
-// identity (relationship type, and later place relationship type). Role is a
-// reconciled value, not part of the key.
+// identity (relationship type, place relationship type). Role is a reconciled
+// value, not part of the key.
 func keysOnType(b connectrules.Bridge) bool {
 	return connectrules.HasDisambiguation(b.Disambiguation) && b.Disambiguation != connectrules.DisambiguationRole
+}
+
+// placeRelationshipWouldCycle reports whether adding from→to of the given
+// category would close a loop among already filed place relationships.
+func placeRelationshipWouldCycle(tx *sql.Tx, category string, fromID, toID []byte) (bool, error) {
+	rows, err := tx.Query(`
+		SELECT ic_from.entity_id, ic_to.entity_id
+		FROM identity_claims ic
+		JOIN subjects s ON s.id = ic.subject_id
+		JOIN subject_types st ON st.id = s.subject_type_id
+			AND st.key = 'place_relationship' AND st.origin = 'provenencia'
+		JOIN observations o_type ON o_type.subject_id = s.id
+		JOIN properties p_type ON p_type.id = o_type.property_id
+			AND p_type.key = 'place_relationship_type' AND p_type.origin = 'provenencia'
+		JOIN property_terms pt ON pt.id = o_type.value_term_id AND pt.category = ?
+		JOIN observations o_from ON o_from.subject_id = s.id
+		JOIN properties p_from ON p_from.id = o_from.property_id
+			AND p_from.key = 'from' AND p_from.origin = 'provenencia'
+		JOIN observations o_to ON o_to.subject_id = s.id
+		JOIN properties p_to ON p_to.id = o_to.property_id
+			AND p_to.key = 'to' AND p_to.origin = 'provenencia'
+		JOIN identity_claims ic_from ON ic_from.subject_id = o_from.value_subject_id
+			AND ic_from.status = 'accepted'
+		JOIN identity_claims ic_to ON ic_to.subject_id = o_to.value_subject_id
+			AND ic_to.status = 'accepted'
+		WHERE ic.status = 'accepted'`, category)
+	if err != nil {
+		return false, err
+	}
+	defer rows.Close()
+
+	adj := map[string][][]byte{}
+	for rows.Next() {
+		var fromEnt, toEnt []byte
+		if err := rows.Scan(&fromEnt, &toEnt); err != nil {
+			return false, err
+		}
+		adj[string(fromEnt)] = append(adj[string(fromEnt)], append([]byte(nil), toEnt...))
+	}
+	if err := rows.Err(); err != nil {
+		return false, err
+	}
+
+	// Reach fromID starting at toID along existing edges?
+	seen := map[string]bool{string(toID): true}
+	queue := [][]byte{append([]byte(nil), toID...)}
+	for len(queue) > 0 {
+		cur := queue[0]
+		queue = queue[1:]
+		if bytes.Equal(cur, fromID) {
+			return true, nil
+		}
+		for _, next := range adj[string(cur)] {
+			if seen[string(next)] {
+				continue
+			}
+			seen[string(next)] = true
+			queue = append(queue, next)
+		}
+	}
+	return false, nil
 }
 
 func sameEndpointType(b connectrules.Bridge) bool {

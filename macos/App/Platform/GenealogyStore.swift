@@ -528,6 +528,8 @@ struct CatalogPropertyTerm: Sendable, Equatable, Identifiable {
     var origin: String
     var label: String
     var description: String
+    /// hierarchical | temporal | empty (engine-facing; place_relationship_type today).
+    var category: String = ""
 }
 
 struct CatalogSubjectTypeProperty: Sendable, Equatable, Identifiable {
@@ -625,6 +627,15 @@ struct CatalogConnectRule: Sendable, Equatable {
             ]
         ),
         CatalogConnectRule(
+            fromTypeKey: "place", toTypeKey: "place",
+            bridgeTypeKey: "place_relationship", edgePropertyKeys: ["from", "to"],
+            disambiguation: "place_relationship_type", refuse: false,
+            edges: [
+                CatalogConnectEdge(propertyKey: "from", endpointTypeKey: "place"),
+                CatalogConnectEdge(propertyKey: "to", endpointTypeKey: "place"),
+            ]
+        ),
+        CatalogConnectRule(
             fromTypeKey: "person", toTypeKey: "place",
             bridgeTypeKey: "", edgePropertyKeys: [], disambiguation: "", refuse: true
         ),
@@ -634,10 +645,6 @@ struct CatalogConnectRule: Sendable, Equatable {
         ),
         CatalogConnectRule(
             fromTypeKey: "event", toTypeKey: "event",
-            bridgeTypeKey: "", edgePropertyKeys: [], disambiguation: "", refuse: true
-        ),
-        CatalogConnectRule(
-            fromTypeKey: "place", toTypeKey: "place",
             bridgeTypeKey: "", edgePropertyKeys: [], disambiguation: "", refuse: true
         ),
     ]

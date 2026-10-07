@@ -4375,6 +4375,9 @@ public nonisolated struct Provenencia_Engine_V1_PropertyTerm: Sendable {
 
   public var description_p: String = String()
 
+  /// hierarchical | temporal | empty. Engine-facing; product place_relationship_type only today.
+  public var category: String = String()
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -13241,7 +13244,7 @@ nonisolated extension Provenencia_Engine_V1_Property: SwiftProtobuf.Message, Swi
 
 nonisolated extension Provenencia_Engine_V1_PropertyTerm: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".PropertyTerm"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{3}property_id\0\u{1}key\0\u{1}origin\0\u{1}label\0\u{1}description\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{3}property_id\0\u{1}key\0\u{1}origin\0\u{1}label\0\u{1}description\0\u{1}category\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -13255,6 +13258,7 @@ nonisolated extension Provenencia_Engine_V1_PropertyTerm: SwiftProtobuf.Message,
       case 4: try { try decoder.decodeSingularStringField(value: &self.origin) }()
       case 5: try { try decoder.decodeSingularStringField(value: &self.label) }()
       case 6: try { try decoder.decodeSingularStringField(value: &self.description_p) }()
+      case 7: try { try decoder.decodeSingularStringField(value: &self.category) }()
       default: break
       }
     }
@@ -13279,6 +13283,9 @@ nonisolated extension Provenencia_Engine_V1_PropertyTerm: SwiftProtobuf.Message,
     if !self.description_p.isEmpty {
       try visitor.visitSingularStringField(value: self.description_p, fieldNumber: 6)
     }
+    if !self.category.isEmpty {
+      try visitor.visitSingularStringField(value: self.category, fieldNumber: 7)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -13289,6 +13296,7 @@ nonisolated extension Provenencia_Engine_V1_PropertyTerm: SwiftProtobuf.Message,
     if lhs.origin != rhs.origin {return false}
     if lhs.label != rhs.label {return false}
     if lhs.description_p != rhs.description_p {return false}
+    if lhs.category != rhs.category {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

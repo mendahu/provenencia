@@ -12,6 +12,7 @@ enum EvidenceBridgeKind: String, Sendable, Equatable, CaseIterable {
     case relationship
     case participation
     case location
+    case placeRelationship = "place_relationship"
 }
 
 /// A primary subject with a persisted grid position for the Evidence graph.

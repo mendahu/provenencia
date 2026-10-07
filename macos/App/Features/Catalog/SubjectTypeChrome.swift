@@ -11,7 +11,8 @@ enum PropertiesTypeChrome {
         case "relationship": return 3
         case "participation": return 4
         case "location": return 5
-        case "source": return 6
+        case "place_relationship": return 6
+        case "source": return 7
         default: return 99
         }
     }
@@ -25,6 +26,7 @@ enum PropertiesTypeChrome {
         case "relationship": return .subjectRelationship
         case "participation": return .subjectParticipation
         case "location": return .subjectLocation
+        case "place_relationship": return .subjectPlaceRelationship
         case "source": return .subjectSource
         default: return nil
         }
@@ -34,7 +36,7 @@ enum PropertiesTypeChrome {
     /// Source is a reification, not a bridge — do not label it as one.
     static func showsBridgeLabel(typeKey: String) -> Bool {
         switch typeKey {
-        case "relationship", "participation", "location": return true
+        case "relationship", "participation", "location", "place_relationship": return true
         default: return false
         }
     }

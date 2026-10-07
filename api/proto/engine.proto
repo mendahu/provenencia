@@ -1320,6 +1320,8 @@ message PropertyTerm {
   string origin = 4;
   string label = 5;
   string description = 6;
+  // hierarchical | temporal | empty. Engine-facing; product place_relationship_type only today.
+  string category = 7;
 }
 
 message SubjectTypeProperty {

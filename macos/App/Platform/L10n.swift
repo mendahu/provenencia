@@ -574,6 +574,10 @@ enum L10n {
             "designSystem.mark.subjectLocation",
             defaultValue: "Location bridge"
         )
+        static let markSubjectPlaceRelationship = LocalizedStringResource(
+            "designSystem.mark.subjectPlaceRelationship",
+            defaultValue: "Place relationship bridge"
+        )
         static let markSubjectSource = LocalizedStringResource(
             "designSystem.mark.subjectSource",
             defaultValue: "Source subject"
@@ -1636,6 +1640,11 @@ enum L10n {
             defaultValue: "Edit location",
             comment: "Edit-subject dialog title for a location bridge"
         )
+        static let editPlaceRelationshipTitle = LocalizedStringResource(
+            "evidenceGraph.edit.placeRelationshipTitle",
+            defaultValue: "Edit place relationship",
+            comment: "Edit-subject dialog title for a place_relationship bridge"
+        )
 
         static let editConfirm = LocalizedStringResource(
             "evidenceGraph.edit.confirm",
@@ -1933,6 +1942,11 @@ enum L10n {
             defaultValue: "Add location",
             comment: "Create-bridge dialog title for a location mid-card"
         )
+        static let addPlaceRelationshipTitle = LocalizedStringResource(
+            "evidenceGraph.create.placeRelationshipTitle",
+            defaultValue: "Add place relationship",
+            comment: "Create-bridge dialog title for a place_relationship mid-card"
+        )
 
         static let defaultLabelRelationship = LocalizedStringResource(
             "evidenceGraph.create.defaultLabelRelationship",
@@ -2011,6 +2025,37 @@ enum L10n {
             "evidenceGraph.bridge.summary.relationshipBare",
             defaultValue: "Is related to",
             comment: "Relationship edge summary when type and endpoint labels are missing"
+        )
+
+        /// Place relationship: "{from} is {type} {to}".
+        static func bridgeSummaryPlaceRelationship(from: String, type: String, to: String) -> String {
+            return L10n.format(LocalizedStringResource(
+                "evidenceGraph.bridge.summary.placeRelationship",
+                defaultValue: "%1$@ is %2$@ %3$@",
+                comment: "Place relationship edge summary; arguments are from place, type, to place"
+            ), from, type, to)
+        }
+
+        static func bridgeSummaryPlaceRelationshipFallback(from: String, to: String) -> String {
+            return L10n.format(LocalizedStringResource(
+                "evidenceGraph.bridge.summary.placeRelationshipFallback",
+                defaultValue: "%1$@ relates to %2$@",
+                comment: "Place relationship edge summary without type; from then to"
+            ), from, to)
+        }
+
+        static func bridgeSummaryPlaceRelationshipTypeOnly(type: String) -> String {
+            return L10n.format(LocalizedStringResource(
+                "evidenceGraph.bridge.summary.placeRelationshipTypeOnly",
+                defaultValue: "Is %@ of",
+                comment: "Place relationship mid-phrase when endpoints missing; argument is type"
+            ), type)
+        }
+
+        static let bridgeSummaryPlaceRelationshipBare = LocalizedStringResource(
+            "evidenceGraph.bridge.summary.placeRelationshipBare",
+            defaultValue: "Relates to",
+            comment: "Place relationship edge summary when type and endpoints are missing"
         )
 
         /// Participation with role: "{person} participated as {role} at {event}".
@@ -2119,6 +2164,8 @@ enum L10n {
             case ("relationship_type", "nibling"): return relationshipNibling
             case ("relationship_type", "guardian"): return relationshipGuardian
             case ("relationship_type", "ward"): return relationshipWard
+            case ("place_relationship_type", "part_of"): return placeRelationshipPartOf
+            case ("place_relationship_type", "succeeded_by"): return placeRelationshipSucceededBy
             default: return nil
             }
         }
@@ -2212,6 +2259,16 @@ enum L10n {
             "propertyTerm.relationship_type.ward",
             defaultValue: "Ward",
             comment: "Product relationship_type term: ward"
+        )
+        static let placeRelationshipPartOf = LocalizedStringResource(
+            "propertyTerm.place_relationship_type.part_of",
+            defaultValue: "Part of",
+            comment: "Product place_relationship_type term: part_of"
+        )
+        static let placeRelationshipSucceededBy = LocalizedStringResource(
+            "propertyTerm.place_relationship_type.succeeded_by",
+            defaultValue: "Succeeded by",
+            comment: "Product place_relationship_type term: succeeded_by"
         )
     }
 

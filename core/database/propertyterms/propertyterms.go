@@ -31,13 +31,20 @@ const (
 	OriginProvenencia = "provenencia"
 	OriginUser        = "user"
 
-	sqlUpsert = `INSERT INTO property_terms (id, property_id, key, origin, label, description, directed)
-		VALUES (?, ?, ?, ?, ?, ?, ?)
+	CategoryHierarchical = "hierarchical"
+	CategoryTemporal     = "temporal"
+
+	// KeyPlaceRelationshipType is product-only: researchers cannot mint terms.
+	KeyPlaceRelationshipType = "place_relationship_type"
+
+	sqlUpsert = `INSERT INTO property_terms (id, property_id, key, origin, label, description, directed, category)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT(property_id, key, origin) DO UPDATE SET
 			label = excluded.label,
 			description = excluded.description,
-			directed = excluded.directed`
-	sqlTermCols = `id, property_id, key, origin, label, COALESCE(description, ''), directed`
+			directed = excluded.directed,
+			category = excluded.category`
+	sqlTermCols = `id, property_id, key, origin, label, COALESCE(description, ''), directed, COALESCE(category, '')`
 	sqlLookup   = `SELECT ` + sqlTermCols + `
 		FROM property_terms WHERE property_id = ? AND key = ? AND origin = ?`
 	sqlGetByID = `SELECT ` + sqlTermCols + `
@@ -45,8 +52,9 @@ const (
 	sqlListByProperty = `SELECT ` + sqlTermCols + `
 		FROM property_terms WHERE property_id = ?
 		ORDER BY label COLLATE NOCASE, origin, key`
-	sqlUpdate = `UPDATE property_terms SET label = ?, description = ? WHERE id = ?`
-	sqlDelete = `DELETE FROM property_terms WHERE id = ?`
+	sqlUpdate      = `UPDATE property_terms SET label = ?, description = ? WHERE id = ?`
+	sqlDelete      = `DELETE FROM property_terms WHERE id = ?`
+	sqlPropertyKey = `SELECT key FROM properties WHERE id = ? AND origin = ?`
 )
 
 // Term is one property_terms row.
@@ -57,7 +65,8 @@ type Term struct {
 	Origin      string
 	Label       string
 	Description string
-	Directed    bool // kinship (and later place-relationship) terms: order is part of the key
+	Directed    bool   // kinship / place-relationship: order is part of the key
+	Category    string // hierarchical | temporal | empty
 }
 
 // Upsert inserts or updates by (property_id, key, origin). Mints a UUIDv7 id when ID is empty on insert.
@@ -71,7 +80,11 @@ func Upsert(c *database.Catalog, t Term) ([]byte, error) {
 	t.Origin = strings.TrimSpace(t.Origin)
 	t.Label = strings.TrimSpace(t.Label)
 	t.Description = strings.TrimSpace(t.Description)
+	t.Category = strings.TrimSpace(t.Category)
 	if len(t.PropertyID) != 16 || t.Key == "" || t.Label == "" || !originOK(t.Origin) {
+		return nil, ErrInvalid
+	}
+	if !categoryOK(t.Category) {
 		return nil, ErrInvalid
 	}
 	id := t.ID
@@ -97,19 +110,31 @@ func Upsert(c *database.Catalog, t Term) ([]byte, error) {
 	} else {
 		desc = t.Description
 	}
-	if _, err := db.Exec(sqlUpsert, id, t.PropertyID, t.Key, t.Origin, t.Label, desc, directedBit(t.Directed)); err != nil {
+	var cat any
+	if t.Category == "" {
+		cat = nil
+	} else {
+		cat = t.Category
+	}
+	if _, err := db.Exec(sqlUpsert, id, t.PropertyID, t.Key, t.Origin, t.Label, desc, directedBit(t.Directed), cat); err != nil {
 		return nil, err
 	}
 	return append([]byte(nil), id...), nil
 }
 
 // Create mints a kebab-case key from label and inserts a user-origin term with audit.
+// Refuses place_relationship_type (product-locked vocabulary).
 func Create(c *database.Catalog, userID, propertyID []byte, label, description string) (Term, error) {
 	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
 		return Term{}, err
 	}
 	if len(propertyID) != 16 {
 		return Term{}, ErrInvalid
+	}
+	if locked, err := propertyTermsLocked(c, propertyID); err != nil {
+		return Term{}, err
+	} else if locked {
+		return Term{}, ErrLocked
 	}
 	key := slug.Kebab(label)
 	if key == "" {
@@ -147,7 +172,7 @@ func Create(c *database.Catalog, userID, propertyID []byte, label, description s
 	} else {
 		desc = description
 	}
-	if _, err := tx.Exec(sqlUpsert, id, propertyID, key, OriginUser, label, desc, 0); err != nil {
+	if _, err := tx.Exec(sqlUpsert, id, propertyID, key, OriginUser, label, desc, 0, nil); err != nil {
 		return Term{}, err
 	}
 	fields := map[string]audit.FieldDiff{
@@ -358,7 +383,7 @@ func ListByProperty(c *database.Catalog, propertyID []byte) ([]Term, error) {
 func scanTerm(row *sql.Row) (Term, error) {
 	var t Term
 	var directed int
-	err := row.Scan(&t.ID, &t.PropertyID, &t.Key, &t.Origin, &t.Label, &t.Description, &directed)
+	err := row.Scan(&t.ID, &t.PropertyID, &t.Key, &t.Origin, &t.Label, &t.Description, &directed, &t.Category)
 	if err != nil {
 		return Term{}, err
 	}
@@ -369,7 +394,7 @@ func scanTerm(row *sql.Row) (Term, error) {
 func scanTermRows(rows *sql.Rows) (Term, error) {
 	var t Term
 	var directed int
-	err := rows.Scan(&t.ID, &t.PropertyID, &t.Key, &t.Origin, &t.Label, &t.Description, &directed)
+	err := rows.Scan(&t.ID, &t.PropertyID, &t.Key, &t.Origin, &t.Label, &t.Description, &directed, &t.Category)
 	if err != nil {
 		return Term{}, err
 	}
@@ -382,6 +407,26 @@ func directedBit(directed bool) int {
 		return 1
 	}
 	return 0
+}
+
+func categoryOK(category string) bool {
+	return category == "" || category == CategoryHierarchical || category == CategoryTemporal
+}
+
+func propertyTermsLocked(c *database.Catalog, propertyID []byte) (bool, error) {
+	db, err := c.DB()
+	if err != nil {
+		return false, err
+	}
+	var key string
+	err = db.QueryRow(sqlPropertyKey, propertyID, "provenencia").Scan(&key)
+	if errors.Is(err, sql.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return key == KeyPlaceRelationshipType, nil
 }
 
 func originOK(origin string) bool {

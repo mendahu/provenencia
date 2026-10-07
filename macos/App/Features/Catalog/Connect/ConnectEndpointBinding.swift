@@ -91,7 +91,7 @@ enum ConnectEndpointBinding {
                 place: endpointB,
                 term: term
             )
-        case .relationship:
+        case .relationship, .placeRelationship:
             return EvidenceBridgeEdgeSummary.sentence(
                 kind: kind,
                 person: endpointA,

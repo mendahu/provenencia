@@ -494,7 +494,7 @@ In order; each brief sits just above the PR it gates.
 - [x] S9-28 — Subject module + bridge filing
 - [x] S9-31 — Composer walks + header dependents
 - [x] S9-32 — Fill derived cells in lists and details
-- [ ] S9-38 — Place model: relationships, periods
+- [x] S9-38 — Place model: relationships, periods → [`completed.md`](completed.md)
 - [ ] S9-39 — Place chain composer
 - [ ] S9-40 — Place hierarchy in list and detail
 - [ ] S9-41 — Align core
@@ -895,6 +895,8 @@ Design: [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md). PR
 Design: [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md) §11.1 and R9.
 
 #### S9-38 — Place model: relationships, periods
+
+**Done.** See [`completed.md`](completed.md#s9-38--place-model-relationships-periods). Seeded `place_relationship` with locked `part_of` / `succeeded_by`, term `category`, place periods, place↔place connect, and soft cycle refusal on file. No `place_nature`. Chain fold is **S9-39**; list/detail hierarchy UI is **S9-40**.
 
 | | |
 | --- | --- |

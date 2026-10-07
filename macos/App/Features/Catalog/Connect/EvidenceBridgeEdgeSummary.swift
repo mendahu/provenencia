@@ -44,6 +44,11 @@ enum EvidenceBridgeEdgeSummary {
                 return L10n.EvidenceGraph.bridgeSummaryRelationshipTypeOnly(type: term)
             }
             return L10n.string(L10n.EvidenceGraph.bridgeSummaryRelationshipBare)
+        case .placeRelationship:
+            if let term {
+                return L10n.EvidenceGraph.bridgeSummaryPlaceRelationshipTypeOnly(type: term)
+            }
+            return L10n.string(L10n.EvidenceGraph.bridgeSummaryPlaceRelationshipBare)
         case .participation:
             if let term {
                 return L10n.EvidenceGraph.bridgeSummaryParticipationRoleOnly(role: term)
@@ -65,9 +70,21 @@ enum EvidenceBridgeEdgeSummary {
             return locationSentence(event: event, place: place)
         case .relationship:
             return relationshipSentence(person: person, related: related, type: term)
+        case .placeRelationship:
+            return placeRelationshipSentence(from: person, to: related, type: term)
         case .participation:
             return participationSentence(person: person, event: event, role: term)
         }
+    }
+
+    private static func placeRelationshipSentence(from: String?, to: String?, type: String?) -> String {
+        if let from, let to, let type {
+            return L10n.EvidenceGraph.bridgeSummaryPlaceRelationship(from: from, type: type, to: to)
+        }
+        if let from, let to {
+            return L10n.EvidenceGraph.bridgeSummaryPlaceRelationshipFallback(from: from, to: to)
+        }
+        return phrase(kind: .placeRelationship, term: type)
     }
 
     private static func locationSentence(event: String?, place: String?) -> String {
@@ -174,7 +191,12 @@ enum EvidenceBridgeEdgeSummary {
         kind: EvidenceBridgeKind,
         in observations: [CatalogObservation]
     ) -> String? {
-        let key = kind == .relationship ? "relationship_type" : "role"
+        let key: String
+        switch kind {
+        case .relationship: key = "relationship_type"
+        case .placeRelationship: key = "place_relationship_type"
+        case .participation, .location: key = "role"
+        }
         guard let observation = observations.first(where: { $0.propertyKey == key }) else {
             return nil
         }

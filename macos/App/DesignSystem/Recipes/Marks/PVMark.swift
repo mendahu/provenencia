@@ -61,6 +61,7 @@ enum PVMarkKey: String, CaseIterable, Sendable {
     case subjectRelationship = "subject_relationship"
     case subjectParticipation = "subject_participation"
     case subjectLocation = "subject_location"
+    case subjectPlaceRelationship = "subject_place_relationship"
     case subjectSource = "subject_source"
 
     /// Unknown catalog strings resolve here rather than failing.
@@ -136,6 +137,7 @@ enum PVMarkKey: String, CaseIterable, Sendable {
         case .subjectRelationship: L10n.DesignSystem.markSubjectRelationship
         case .subjectParticipation: L10n.DesignSystem.markSubjectParticipation
         case .subjectLocation: L10n.DesignSystem.markSubjectLocation
+        case .subjectPlaceRelationship: L10n.DesignSystem.markSubjectPlaceRelationship
         case .subjectSource: L10n.DesignSystem.markSubjectSource
         }
     }
