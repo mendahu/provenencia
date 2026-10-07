@@ -725,33 +725,46 @@ func TestReconciledEvidence(t *testing.T) {
 		}
 	})
 
-	t.Run("provisional members count only as reasoning; rejected ones not at all", func(t *testing.T) {
-		f := newFixture(t)
-		a, b, c := f.subject("place"), f.subjectOn(f.other, "place"), f.subjectOn(f.newSource("Gazette"), "place")
-		f.cite(textIn(a, f.props["toponym"], "York"))
-		pv := f.cite(textIn(b, f.props["toponym"], "Toronto"))[0]
-		rj := f.cite(textIn(c, f.props["toponym"], "Muddy York"))[0]
-		h := f.promote(a)
-		for subj, status := range map[*subjects.Subject]string{&b: "provisional", &c: "rejected"} {
-			_, err := identityclaims.Create(f.c, userID, identityclaims.CreateInput{SubjectID: subj.ID, EntityID: h, Status: status})
+	// Creating a claim recomputes its handle in the same transaction, whatever
+	// its status: no manual recompute, and upkeep still equals rebuild.
+	claimTests := []struct {
+		name        string
+		status      string
+		wantTexts   string
+		wantOutcome string // "" = the claimed member's Observation has no outcome
+	}{
+		{name: "a provisional member counts only as reasoning", status: identityclaims.StatusProvisional,
+			wantTexts: "York:kept Toronto:provisional", wantOutcome: "provisional"},
+		{name: "a rejected member does not count at all", status: identityclaims.StatusRejected,
+			wantTexts: "York:kept"},
+	}
+	for _, tt := range claimTests {
+		t.Run(tt.name, func(t *testing.T) {
+			f := newFixture(t)
+			a, b := f.subject("place"), f.subjectOn(f.other, "place")
+			f.cite(textIn(a, f.props["toponym"], "York"))
+			claimed := f.cite(textIn(b, f.props["toponym"], "Toronto"))[0]
+			h := f.promote(a)
+			_, err := identityclaims.Create(f.c, userID, identityclaims.CreateInput{SubjectID: b.ID, EntityID: h, Status: tt.status})
 			must(t, err)
-		}
-		db, err := f.c.DB()
-		must(t, err)
-		must(t, autoreconciler.RecomputeTx(db, [][]byte{h}))
-		if got := texts(f, h); got != "York:kept Toronto:provisional" {
-			t.Fatalf("toponyms %s", got)
-		}
-		if o := reasonOf(f, pv.ID); o.Reason != "provisional" {
-			t.Fatalf("provisional outcome %+v", o)
-		}
-		for _, o := range f.outcomes() {
-			if bytes.Equal(o.ObservationID, rj.ID) {
-				t.Fatalf("a rejected member's Observation was considered: %+v", o)
+			if got := texts(f, h); got != tt.wantTexts {
+				t.Fatalf("toponyms %q want %q", got, tt.wantTexts)
 			}
-		}
-		f.assertUpkeepEqualsRebuild("provisional")
-	})
+			var got *outcome
+			for _, o := range f.outcomes() {
+				if bytes.Equal(o.ObservationID, claimed.ID) {
+					got = &o
+				}
+			}
+			switch {
+			case tt.wantOutcome == "" && got != nil:
+				t.Fatalf("a %s member's Observation was considered: %+v", tt.status, *got)
+			case tt.wantOutcome != "" && (got == nil || got.Reason != tt.wantOutcome):
+				t.Fatalf("outcome %+v want reason %q", got, tt.wantOutcome)
+			}
+			f.assertUpkeepEqualsRebuild(tt.status)
+		})
+	}
 
 	t.Run("every Observation has an outcome; no evidence has no value", func(t *testing.T) {
 		f := newFixture(t)
