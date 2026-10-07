@@ -51,6 +51,7 @@ IDs stay stable (`S9-NN`, `S9-DN`). Do not renumber when moving steps here.
 | S9-D7 | Design | Place detail |
 | S9-27 | PR | Place detail |
 | S9-28 | PR | Subject module + bridge filing |
+| S9-31 | PR | Composer walks + header dependents |
 
 ## Steps
 
@@ -1075,3 +1076,20 @@ Promoting both ends of a bridge files the connection, so a birth and its person 
 - Place-relationship seeding and cycle refusal: **S9-38**.
 - Header walks and derived cells: **S9-31**, **S9-32**.
 - Search documents read from headers: **S9-34**.
+
+### S9-31 — Composer walks + header dependents
+
+A Person's birth and an Event's title are read off the canonical graph, so the pages can show them without storing a second copy.
+
+**What shipped**
+
+- `PersonHeader` carries birth and death: the subject-role event's date, else its start date, and every linked Place's kept names, with kept-value counts. `EventHeader` carries subject-role people (participation ref, then person ref) and every location's kept names. Place chains are absent.
+- The walks are set-based: one extra query for a Person list, two for an Event list, whatever the length. Proto fields are new numbers only. Swift stores them on `CatalogPersonHeader` and `CatalogEventHeader`. The lists do not render them yet.
+- `HeaderDependents` walks Place → locations → events → subject persons, and person → subject participations → events. Search documents are not reprojected.
+- An Evidence graph Event card takes its subject and place from the participation and location bridges on that graph, so a Baptism card reads *Baptism of James Robins*. A Person card stays name, then label.
+
+**What stayed out**
+
+- Filling the list and detail cells: **S9-32**.
+- Place chains: **S9-39**.
+- Search reprojection from these dependents: **S9-34**.

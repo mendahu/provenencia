@@ -869,7 +869,29 @@ struct GoStore: GenealogyStore {
         CatalogPersonHeader(
             entity: mapCanonicalEntity(h.entity),
             name: h.hasName ? mapNameValue(h.name) : nil,
-            nameValueCount: Int(h.nameValueCount)
+            nameValueCount: Int(h.nameValueCount),
+            birth: mapLifeFacts(h.birth),
+            death: mapLifeFacts(h.death)
+        )
+    }
+
+    private static func mapLifeFacts(_ life: Provenencia_Engine_V1_LifeFacts) -> CatalogLifeFacts {
+        CatalogLifeFacts(
+            date: life.hasDate ? mapDateValue(life.date) : nil,
+            dateCount: Int(life.dateCount),
+            places: life.places.map(mapHeaderPlace)
+        )
+    }
+
+    private static func mapHeaderPlace(_ place: Provenencia_Engine_V1_HeaderPlace) -> CatalogHeaderPlace {
+        CatalogHeaderPlace(names: place.names, nameCount: Int(place.nameCount))
+    }
+
+    private static func mapEventSubject(_ subject: Provenencia_Engine_V1_EventSubject) -> CatalogEventSubject {
+        CatalogEventSubject(
+            entity: mapCanonicalEntity(subject.entity),
+            name: subject.hasName ? mapNameValue(subject.name) : nil,
+            nameValueCount: Int(subject.nameValueCount)
         )
     }
 
@@ -886,7 +908,9 @@ struct GoStore: GenealogyStore {
             startDate: h.hasStartDate ? mapDateValue(h.startDate) : nil,
             startDateCount: Int(h.startDateCount),
             endDate: h.hasEndDate ? mapDateValue(h.endDate) : nil,
-            endDateCount: Int(h.endDateCount)
+            endDateCount: Int(h.endDateCount),
+            subjects: h.subjects.map(mapEventSubject),
+            places: h.places.map(mapHeaderPlace)
         )
     }
 

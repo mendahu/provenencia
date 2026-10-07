@@ -1,8 +1,8 @@
 import Foundation
 
-/// Parts of an Event title. Go supplies the ones it has composed; subject
-/// and place parts stay empty until S9-31 and S9-32. The date is not part
-/// of the title.
+/// Parts of an Event title. Go supplies the ones it has composed. The
+/// Persons and Events lists pass subjects and place through in S9-32. The
+/// date is not part of the title.
 struct EventTitleParts: Equatable, Sendable {
     var recordedName: String = ""
     var label: String = ""

@@ -976,16 +976,42 @@ message ListSubjectMembershipsResponse {
   repeated SubjectMembership memberships = 1;
 }
 
+// HeaderPlace is one Place a walk reached. names are kept toponyms in rank
+// order. name_count is how many were kept. The parent chain is not here
+// (S9-39).
+message HeaderPlace {
+  repeated string names = 1;
+  int32 name_count = 2;
+}
+
+// LifeFacts is a birth or a death: the event's date, else its start date,
+// and every linked Place's kept names.
+message LifeFacts {
+  DateValueInput date = 1;
+  int32 date_count = 2;
+  repeated HeaderPlace places = 3;
+}
+
+// EventSubject is one person on an event through a subject-role participation.
+message EventSubject {
+  CanonicalEntity entity = 1;
+  NameValueInput name = 2;
+  int32 name_value_count = 3;
+}
+
 // PersonHeader is one Person as a row, composed from the auto-reconciler's
 // cache. Structures only: the app formats the title (name, else entity
 // label, else ref). name is the displayed auto-reconciled name, absent when
 // no member names the Person; name_value_count counts displayed name values
 // (names are one structure, so at most 1; > 1 would read as mixed, and the
-// extra values are the list's +N).
+// extra values are the list's +N). birth and death are read off the
+// canonical graph.
 message PersonHeader {
   CanonicalEntity entity = 1;
   NameValueInput name = 2;
   int32 name_value_count = 3;
+  LifeFacts birth = 4;
+  LifeFacts death = 5;
 }
 
 // ListPersonHeaders returns every unmerged Person in list order: named
@@ -1002,7 +1028,8 @@ message ListPersonHeadersResponse {
 // cache. Structures only: the app formats the title. event_name is the
 // rank-1 recorded name, empty when none. date is the rank-1 date when one
 // exists; otherwise start_date and end_date are the span. Counts are kept
-// values of that Property (the list's +N).
+// values of that Property (the list's +N). subjects and places come from
+// the canonical graph.
 message EventHeader {
   CanonicalEntity entity = 1;
   string event_name = 2;
@@ -1015,6 +1042,10 @@ message EventHeader {
   int32 start_date_count = 9;
   DateValueInput end_date = 10;
   int32 end_date_count = 11;
+  // subjects are subject-role persons, participation ref then person ref.
+  // places are every location's kept names. Chains stay empty until S9-39.
+  repeated EventSubject subjects = 12;
+  repeated HeaderPlace places = 13;
 }
 
 // ListEventHeaders returns every unmerged Event in list order: dated

@@ -492,7 +492,7 @@ In order; each brief sits just above the PR it gates.
 - [x] ✎ S9-D7 — Design: Place detail (revise for hierarchy) → [`completed.md`](completed.md)
 - [x] S9-27 — Place detail → [`completed.md`](completed.md)
 - [x] S9-28 — Subject module + bridge filing
-- [ ] S9-31 — Composer walks + header dependents
+- [x] S9-31 — Composer walks + header dependents
 - [ ] S9-32 — Fill derived cells in lists and details
 - [ ] S9-38 — Place model: relationships, periods
 - [ ] ✎ S9-D15 — Design: custom term category
@@ -877,6 +877,8 @@ Design: [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md). PR
 | **In** | Person birth / death date and place (place names; chains arrive with S9-39); Event subject titles (*Birth of …*, marriage, *et al.*, *unnamed person*, *{Type} at {name}*) and places. Header-dependents function (reverse walk) for later reprojection. |
 | **Depends on** | S9-22, S9-25, S9-28 |
 | **Note** | Give Promote's Event name (`displayName`) the same subject parts from the graph's participation and location bridges, so a Baptism card promotes as *Baptism of James Robins* rather than its label. People are named by their own `displayName` rule (name form, then label). |
+
+**Done.** See [`completed.md`](completed.md#s9-31--composer-walks--header-dependents). A Person's birth and an Event's title are read off the canonical graph. Place chains stay empty until S9-39. Lists still render as they did; S9-32 fills the cells.
 
 #### S9-32 — Fill derived cells
 

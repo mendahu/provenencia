@@ -43,7 +43,24 @@ func personHeaderProto(h conclusionheaders.PersonHeader) *engine.PersonHeader {
 	if h.Name != nil {
 		ph.Name = valuecodec.NameToProto(*h.Name)
 	}
+	ph.Birth = lifeFactsProto(h.Birth)
+	ph.Death = lifeFactsProto(h.Death)
 	return ph
+}
+
+func lifeFactsProto(life conclusionheaders.LifeFacts) *engine.LifeFacts {
+	out := &engine.LifeFacts{DateCount: int32(life.DateCount)}
+	if life.Date != nil {
+		out.Date = valuecodec.DateToProto(*life.Date)
+	}
+	for _, p := range life.Places {
+		out.Places = append(out.Places, headerPlaceProto(p))
+	}
+	return out
+}
+
+func headerPlaceProto(p conclusionheaders.HeaderPlace) *engine.HeaderPlace {
+	return &engine.HeaderPlace{Names: append([]string(nil), p.Names...), NameCount: int32(p.Count)}
 }
 
 func ListEventHeaders(in []byte) ([]byte, error) {
@@ -128,6 +145,19 @@ func eventHeaderProto(h conclusionheaders.EventHeader) *engine.EventHeader {
 	}
 	if h.EndDate != nil {
 		eh.EndDate = valuecodec.DateToProto(*h.EndDate)
+	}
+	for _, s := range h.Subjects {
+		sub := &engine.EventSubject{
+			Entity:         canonicalEntityProto(s.Entity),
+			NameValueCount: int32(s.NameValueCount),
+		}
+		if s.Name != nil {
+			sub.Name = valuecodec.NameToProto(*s.Name)
+		}
+		eh.Subjects = append(eh.Subjects, sub)
+	}
+	for _, p := range h.Places {
+		eh.Places = append(eh.Places, headerPlaceProto(p))
 	}
 	return eh
 }

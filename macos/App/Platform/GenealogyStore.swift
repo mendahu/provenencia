@@ -266,14 +266,38 @@ struct CatalogNameValue: Sendable, Equatable {
     var parts: [CatalogNameValuePart] = []
 }
 
+/// One Place reached from a birth, death, or event. `names` are kept toponyms
+/// in rank order. The parent chain is not here.
+struct CatalogHeaderPlace: Sendable, Equatable {
+    var names: [String] = []
+    var nameCount: Int = 0
+}
+
+/// A birth or a death composed from the canonical graph.
+struct CatalogLifeFacts: Sendable, Equatable {
+    var date: CatalogDateValueInput?
+    var dateCount: Int = 0
+    var places: [CatalogHeaderPlace] = []
+}
+
+/// One subject-role person on an event.
+struct CatalogEventSubject: Sendable, Equatable {
+    var entity: CatalogCanonicalEntity
+    var name: CatalogNameValue?
+    var nameValueCount: Int = 0
+}
+
 /// One Person as a row, composed by Go from the auto-reconciler cache (S9-07).
-/// Structures only; `PersonHeaderDisplay` formats the title.
+/// Structures only; `PersonHeaderDisplay` formats the title. Birth and death
+/// are filled from S9-31; the list still leaves those cells empty until S9-32.
 struct CatalogPersonHeader: Sendable, Equatable, Identifiable {
     var entity: CatalogCanonicalEntity
     /// Displayed auto-reconciled name; `nil` when no member names the Person.
     var name: CatalogNameValue?
     /// Displayed name values (names are one structure, so at most 1).
     var nameValueCount: Int
+    var birth: CatalogLifeFacts = CatalogLifeFacts()
+    var death: CatalogLifeFacts = CatalogLifeFacts()
 
     var id: String { entity.id }
     /// Members disagree on the name; the top-ranked one is shown.
@@ -298,6 +322,10 @@ struct CatalogEventHeader: Sendable, Equatable, Identifiable {
     var startDateCount: Int = 0
     var endDate: CatalogDateValueInput?
     var endDateCount: Int = 0
+    /// Subject-role persons, then every location's kept names. The list title
+    /// does not read these until S9-32.
+    var subjects: [CatalogEventSubject] = []
+    var places: [CatalogHeaderPlace] = []
 
     var id: String { entity.id }
 
