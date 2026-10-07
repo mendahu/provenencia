@@ -225,33 +225,36 @@ The rebuild-equals-upkeep tests hold upkeep equal to a full rebuild. Every new t
 - **Derivative Sources count as separate votes, for now.** There is no way to record that an index derives from a register, so the app treats them as two Sources. Counting them once waits for source-to-source relationships ([`ideas/source-to-source-relationships.md`](ideas/source-to-source-relationships.md)).
 - **Reason vocabulary:** the §6 list, extended as modules need.
 
-## 11.1 Places (decided 2026-10-05)
+## 11.1 Places (decided 2026-10-05; membership span revised 2026-10-06)
 
 - **Separate places with relationships, not one composite place.** "Toronto, Ontario, Canada" is three Places linked upward, so queries like "everyone born in Ontario" work.
 - **A place is whatever the research needs.** A township, a county, a region (the Lower Mainland), a family farm. No rules about what can contain what. A place **kind** (township, county, province) is left for later: the hierarchy already says what a place is part of.
-- **Places relate through a place relationship**, an association kind alongside Location and Participation, with three Properties:
+- **Places relate through a place relationship**, an association kind alongside Location and Participation, with these Properties:
 
   | Property | Value | Meaning |
   | --- | --- | --- |
   | `from` | place | the part, or the predecessor |
   | `to` | place | the whole, or the successor |
   | `place_relationship_type` | term | what the relationship is |
+  | `start_date` | date | when a hierarchical membership starts; optional |
+  | `end_date` | date | when a hierarchical membership ends; optional |
 
   Each relationship is cited and reconciled like any other evidence; the ends use the subject-valued module (§7). It is a dedicated kind, not the Person Relationship, because its ends are two directional places. It can carry more Properties later without remodelling.
 - **Types are an open, researcher-extensible vocabulary, and each type has a category:**
-  - **hierarchical:** `administrative` (Guam in the United States), `geographic` (the Lower Mainland in British Columbia), `ecclesiastical` (a parish in a diocese), and any a researcher adds. These follow a chain upward ("everyone in Ontario"), hold where the two places' periods overlap, and build display chains ("Toronto, Ontario, Canada"). A place may have several parents, so places form a graph, not a tree.
+  - **hierarchical:** `administrative` (Guam in the United States), `geographic` (the Lower Mainland in British Columbia), `ecclesiastical` (a parish in a diocese), and any a researcher adds. These follow a chain upward ("everyone in Ontario") and build display chains ("Toronto, Ontario, Canada"). A place may have several parents, so places form a graph, not a tree. A hierarchical link holds for its membership span, below.
   - **temporal:** `succeeded_by` (York succeeded by Toronto), and any a researcher adds. These link a lineage that search may follow. They never build a display chain, and containment is not inherited across them.
 
   The category is data on the vocabulary term (a new field), so a researcher-added type tells the app how to behave.
 - **No loops.** Hierarchical relationships must not form a cycle, and temporal ones are directional. Both are checked in the app layer, not the schema.
-- **Periods live on Places, not on links.** A Place has a **period** when it existed or was meaningful (a city from incorporation, a country from independence, a farm until it was sold). Start and end are both optional structured dates; a place with no period is always valid.
-- **A link holds where the two places' periods overlap.** Toronto (1834–) is part of Upper Canada (1791–1841) until 1841, the Province of Canada (1841–1867) until 1867, and Ontario (1867–) after. So "what is Toronto part of?" needs a date, and the periods answer it.
-  - **Accepted imprecision:** when both places persist and the link changes (Guam, Spanish until 1898 and American after), the link reads as holding for the whole overlap, and Guam is part of both. Where that matters, model the jurisdictions as distinct Places with their own periods (the Kingdom of Spain, the American colonies, the United States).
+- **Periods live on Places.** A Place has a **period** when it existed or was meaningful (a city from incorporation, a country from independence, a farm until it was sold). Start and end are both optional structured dates; a place with no period is always valid.
+- **A membership span lives on the hierarchical link.** The bridge's own `start_date` and `end_date` say when that one "part of" held. One bridge is one contiguous span (a place relationship is filed by its two ends and its type). Both dates are optional.
+  - **Undated link:** it holds wherever the two places' periods overlap. Toronto (1834–) part of Upper Canada (1791–1841), then the Province of Canada (1841–1867), then Ontario (1867–) is three undated links: the parents' periods already change, so the overlap answers "what is Toronto part of?" at a date.
+  - **Dated link:** it holds only inside its own span, and only while both places' periods hold. A membership can end while both places continue. Ireland is part of the United Kingdom until 1922; Guam is part of Spain until 1898 and of the United States after. Neither place has to end for the link to end.
+- **A chain at a date** follows the hierarchical links whose span holds then. Display uses the connected event's date, or today for a Place's own chain. When the date can't decide (an approximate or ranged date straddling a change, or mixed dates on the link), show every candidate: *born about 1841 in Toronto, Upper Canada or Province of Canada*.
 - **A rename is a new Place.** York (1793–1834) and Toronto (1834–) are two Places. Merge is only for two handles that turn out to be the same place.
 - **Succession may branch.** A split is one Place `succeeded_by` several (a county divided in two); an amalgamation is several Places `succeeded_by` one (townships joined into a city). A lineage has any number of predecessors and successors.
 - **Concurrent names are one Place.** `toponym` is multi-valued (§8): Montréal and Montreal, Köln and Cologne, Tkaronto and Toronto are all names of one Place at the same time. Spelling duplicates still merge.
 - **Succession.** A second place-to-place relationship records that one place became another (York → Toronto), so history and search can treat them as one lineage while they stay distinct Places. A query like "born in Toronto" may follow it.
-- **Display uses the connected event's date** to pick the parent chain. When the date can't decide (an approximate or ranged date straddling a change), show every candidate: *born about 1841 in Toronto, Upper Canada or Province of Canada*.
 - **Evidence, the hard way, for now.** Every place and every "part of" link is created by hand with a cited Source, even for common knowledge ("Alberta is part of Canada"). Researcher knowledge uses a researcher-knowledge Source with an argument. The model does not change for convenience.
 - **The easy way later.** A Provenencia places service, likely paid, would write the same evidence automatically from gazetteers: [`ideas/place-gazetteer-service.md`](ideas/place-gazetteer-service.md).
 
