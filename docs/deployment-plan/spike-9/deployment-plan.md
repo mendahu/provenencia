@@ -934,8 +934,8 @@ Design: [`promote-graph-alignment.md`](../../promote-graph-alignment.md). Brief:
 
 | | |
 | --- | --- |
-| **In** | A pure Go package: `Align(layer, canon, stats, fixed) Proposal` (design §4–§6). Best-first propagation from the fixed pairs (decided rows and existing claims); one handle per Subject within a layer; property-only fallback for unreachable Subjects; agree / conflict / unknown per comparison through the value-type modules and per-Property cardinality; weights log(m/u) with u from `stats` and m from priors per value type; provenance scaling; edge signatures with fan-out; flags for conflicts with decided rows, possible duplicates, self-links and cycles. Deterministic. |
-| **Testable** | Table-driven, plus the obituary golden test against a small canonical tree: Gracie anchors her birth, death, burial and two children; the residences and Medicine Hat come out New / Skip; a decided row never changes on a re-run; the same inputs give the same proposal. |
+| **In** | A pure Go package: `Align(layer, canon, stats, fixed) Proposal` (design §4–§6, **§5.1**). Best-first propagation from the fixed pairs (decided rows and existing claims), walking Evidence bridges in **both directions**; one handle per Subject within a layer; property-only fallback for **unreachable / orphan** Subjects and disconnected islands; agree / conflict / unknown per comparison through the value-type modules and per-Property cardinality; weights log(m/u) with u from `stats` and m from priors per value type; provenance scaling; edge signatures with fan-out; flags for conflicts with decided rows, possible duplicates, self-links and cycles. Deterministic. |
+| **Testable** | Table-driven, plus the obituary golden test against a small canonical tree: Gracie anchors her birth, death, burial and two children; the residences and Medicine Hat come out New / Skip; a decided row never changes on a re-run; the same inputs give the same proposal. Fixtures for design §5.1: seed from an already-promoted neighbor into an unpromoted Subject (and the reverse); both ends unpromoted; an orphan with no bridges falls back to property-only / Skip when weak. |
 | **Depends on** | S9-17, S9-21, S9-36 |
 
 #### S9-42 — Graph alignment loader + proposal read
@@ -950,8 +950,8 @@ Design: [`promote-graph-alignment.md`](../../promote-graph-alignment.md). Brief:
 
 | | |
 | --- | --- |
-| **In** | One transaction per Done (design §9): re-validate against the revision the proposal saw; a claim per row (status, confidence, argument), a minted handle for New, nothing for Skip; pins from the toggled comparisons, the pair check widened to **one-hop neighbors through a bridge**, with backfill; bridge filing through S9-28, skipping switched-off bridges; one R3 recompute over every touched handle; one audit revision. FFI + Swift store + FakeStore, with pins modelled so S9-44's tests cover pinned deletes from the composer and the graph. |
-| **Testable** | All or nothing on a lost race; one-hop pins land on both claims; each bridge filed once; rebuild equals upkeep after a batch. |
+| **In** | One transaction per Done (design §9): re-validate against the revision the proposal saw; a claim per row (status, confidence, argument), a minted handle for New, nothing for Skip; pins from the toggled comparisons, the pair check widened to **one-hop neighbors through a bridge**, with backfill; bridge filing through S9-28 (including the **both-ends-already-promoted** / missing-relationship case in design §5.1), skipping switched-off bridges; one R3 recompute over every touched handle; one audit revision. FFI + Swift store + FakeStore, with pins modelled so S9-44's tests cover pinned deletes from the composer and the graph. |
+| **Testable** | All or nothing on a lost race; one-hop pins land on both claims; each bridge filed once (including a bridge whose ends were both claimed before this batch); rebuild equals upkeep after a batch. |
 | **Depends on** | S9-17, S9-28, S9-42 |
 
 #### S9-44 — Promote page

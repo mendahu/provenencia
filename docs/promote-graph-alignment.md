@@ -96,13 +96,28 @@ func Align(layer Layer, canon Canon, stats Stats, fixed []Fixed) Proposal
 
 This is collective entity resolution: graph alignment by propagation (cf. PARIS, similarity flooding). The walk is **best-first, not recursive**. A depth-first walk commits to whatever it reaches first; a priority queue lets the strongest matches settle first, so the weaker ones are decided with the most context.
 
-1. **Seed.** For each fixed pair (s, H): look at each bridge from s to an unmapped neighbor t on the layer. For each corresponding edge from H to a handle G in `canon`, push the candidate (t, G).
+1. **Seed.** For each fixed pair (s, H): look at each bridge between `s` and an unmapped neighbor `t` on the layer (**both directions** — the walk treats the Evidence graph as undirected; directedness matters only when filing, §9.1). For each corresponding edge from H to a handle G in `canon`, push the candidate (t, G).
 2. **Pop the best-scoring candidate.** Accept it if it clears the threshold and keeps the graph alignment **one-to-one**: within one layer, a handle takes at most one Subject.
 3. **Propagate.** The accepted pair becomes an anchor. Push its neighbors' candidates, and add **support** to queued candidates that are consistent with it. A candidate's score rises as more of its neighbors map consistently. That's the "the structure lines up" evidence.
 4. **Repeat** until the queue is empty.
 5. **Unreachable Subjects** (nothing reaches them from an anchor) fall back to property-only matching, today's `core/match` suggestions. Below the threshold, they default to Skip.
 
 The work is about (Subjects + bridges) × candidates × log: well under a millisecond at obituary scale.
+
+## 5.1 Layer shape: every bridge pair, and orphans
+
+A layer is **one Source’s Subjects**, not one connected component. *Map the rest of this graph* lists every primary Subject on that Source, including stragglers.
+
+**Every Evidence bridge is a pair** of primary ends (call them subject and object). Promotion status is independent on each end. Graph alignment and bridge filing together cover all four:
+
+| Subject | Object | Who acts |
+| --- | --- | --- |
+| Unpromoted | Unpromoted | Alignment proposes both (seed/propagate once either end is fixed). Done may mint two handles, then file the bridge. |
+| Promoted | Unpromoted | The promoted end is a **fixed anchor**; seed walks to the unpromoted end from that handle’s canonical neighbors. |
+| Unpromoted | Promoted | Same mechanism, other direction (e.g. open Promote on a new person whose event neighbor was filed earlier). |
+| Promoted | Promoted | Not an identity proposal for those rows. It is a **missing / unfiled relationship**: the Evidence bridge exists and both ends are handles, so §9.1 files the canonical association (shown on the page as a connection that will be filed; the researcher can switch it off). |
+
+**Orphans and disconnected islands** are expected. A primary Subject with no bridges, or a cluster that shares no path with any fixed/promoted anchor, is **unreachable** (§5 step 5): property-only matching only; weak or no match defaults to Skip, not New. Structure-backed scoring never assumes a path from the entry card to every row.
 
 ---
 
