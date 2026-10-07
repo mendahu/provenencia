@@ -861,17 +861,6 @@ struct GoStore: GenealogyStore {
         return resp.headers.map(Self.mapPersonHeader)
     }
 
-    func personHeader(projectDir: String, entityID: String) async throws -> CatalogPersonHeader {
-        var req = Provenencia_Engine_V1_GetPersonHeaderRequest()
-        req.projectDir = projectDir
-        req.entityID = entityID
-        let resp: Provenencia_Engine_V1_GetPersonHeaderResponse = try await provenenciaCall(
-            method: CoreMethod.getPersonHeader,
-            request: req
-        )
-        return Self.mapPersonHeader(resp.header)
-    }
-
     func listEventHeaders(projectDir: String) async throws -> [CatalogEventHeader] {
         var req = Provenencia_Engine_V1_ListEventHeadersRequest()
         req.projectDir = projectDir
@@ -880,17 +869,6 @@ struct GoStore: GenealogyStore {
             request: req
         )
         return resp.headers.map(Self.mapEventHeader)
-    }
-
-    func eventHeader(projectDir: String, entityID: String) async throws -> CatalogEventHeader {
-        var req = Provenencia_Engine_V1_GetEventHeaderRequest()
-        req.projectDir = projectDir
-        req.entityID = entityID
-        let resp: Provenencia_Engine_V1_GetEventHeaderResponse = try await provenenciaCall(
-            method: CoreMethod.getEventHeader,
-            request: req
-        )
-        return Self.mapEventHeader(resp.header)
     }
 
     func listPlaceHeaders(projectDir: String) async throws -> [CatalogPlaceHeader] {
@@ -903,15 +881,15 @@ struct GoStore: GenealogyStore {
         return resp.headers.map(Self.mapPlaceHeader)
     }
 
-    func placeHeader(projectDir: String, entityID: String) async throws -> CatalogPlaceHeader {
-        var req = Provenencia_Engine_V1_GetPlaceHeaderRequest()
-        req.projectDir = projectDir
-        req.entityID = entityID
-        let resp: Provenencia_Engine_V1_GetPlaceHeaderResponse = try await provenenciaCall(
-            method: CoreMethod.getPlaceHeader,
-            request: req
-        )
-        return Self.mapPlaceHeader(resp.header)
+    private static func mapConclusionHeader(
+        _ header: Provenencia_Engine_V1_ConclusionDetail.OneOf_Header?
+    ) -> CatalogConclusionHeader? {
+        switch header {
+        case .person(let h): .person(mapPersonHeader(h))
+        case .event(let h): .event(mapEventHeader(h))
+        case .place(let h): .place(mapPlaceHeader(h))
+        case nil: nil
+        }
     }
 
     private static func mapPersonHeader(_ h: Provenencia_Engine_V1_PersonHeader) -> CatalogPersonHeader {
@@ -1032,7 +1010,8 @@ struct GoStore: GenealogyStore {
                     }
                 )
             },
-            memberCount: Int(resp.memberCount)
+            memberCount: Int(resp.memberCount),
+            header: Self.mapConclusionHeader(resp.header)
         )
     }
 

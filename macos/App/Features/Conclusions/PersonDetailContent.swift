@@ -21,11 +21,8 @@ struct PersonDetailContent: ConclusionDetailBody {
     var vitals: [Vital]
     var rows: [ReconciledValueRowModel]
 
-    init(
-        detail: CatalogConclusionDetail,
-        header: CatalogPersonHeader? = nil,
-        locale: Locale = .autoupdatingCurrent
-    ) {
+    init(detail: CatalogConclusionDetail, locale: Locale = .autoupdatingCurrent) {
+        let header = detail.personHeader
         let nameField = detail.fields.first { $0.propertyKey == "name" }
         var leadName: CatalogNameValue?
         if case .name(let name)? = nameField?.displayedValues.first?.value { leadName = name }

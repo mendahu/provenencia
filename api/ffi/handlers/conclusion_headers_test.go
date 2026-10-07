@@ -11,7 +11,6 @@ import (
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/citations"
-	"github.com/mendahu/provenencia/core/database/conclusiondetails"
 	"github.com/mendahu/provenencia/core/database/conclusionheaders"
 	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/namevalues"
@@ -118,38 +117,6 @@ func TestListPersonHeaders(t *testing.T) {
 	})
 }
 
-func TestGetPersonHeader(t *testing.T) {
-	runRPC(t, GetPersonHeader, []rpcTest{
-		{name: "bad proto", raw: []byte{0xff}, wantErr: true},
-		{
-			name: "unknown id",
-			reqFn: func(t *testing.T) proto.Message {
-				dir, _, _, _ := subjectFixture(t)
-				return &engine.GetPersonHeaderRequest{ProjectDir: dir, EntityId: uuid.Must(uuid.NewV7()).String()}
-			},
-			wantErr:   true,
-			wantErrIs: conclusiondetails.ErrNotFound,
-		},
-		{
-			name: "returns the one person",
-			reqFn: func(t *testing.T) proto.Message {
-				dir, id := namedPersonID(t)
-				return &engine.GetPersonHeaderRequest{ProjectDir: dir, EntityId: id}
-			},
-			after: func(t *testing.T, out []byte, req proto.Message) {
-				var resp engine.GetPersonHeaderResponse
-				if err := proto.Unmarshal(out, &resp); err != nil {
-					t.Fatal(err)
-				}
-				in := req.(*engine.GetPersonHeaderRequest)
-				if resp.GetHeader().GetEntity().GetId() != in.GetEntityId() || resp.GetHeader().GetName().GetForm() == "" {
-					t.Fatalf("%+v", resp.GetHeader())
-				}
-			},
-		},
-	})
-}
-
 func namedPersonID(t *testing.T) (dir, id string) {
 	t.Helper()
 	dir, ref := namedPerson(t)
@@ -202,38 +169,6 @@ func TestListEventHeaders(t *testing.T) {
 				}
 				if h.GetEventType().GetKey() != "birth" || h.GetEventType().GetLabel() != "Birth" || h.GetDate().GetStartYear() != 1849 {
 					t.Fatalf("type %v date %v", h.GetEventType(), h.GetDate())
-				}
-			},
-		},
-	})
-}
-
-func TestGetEventHeader(t *testing.T) {
-	runRPC(t, GetEventHeader, []rpcTest{
-		{name: "bad proto", raw: []byte{0xff}, wantErr: true},
-		{
-			name: "unknown id",
-			reqFn: func(t *testing.T) proto.Message {
-				dir, _, _, _ := subjectFixture(t)
-				return &engine.GetEventHeaderRequest{ProjectDir: dir, EntityId: uuid.Must(uuid.NewV7()).String()}
-			},
-			wantErr:   true,
-			wantErrIs: conclusiondetails.ErrNotFound,
-		},
-		{
-			name: "returns the one event",
-			reqFn: func(t *testing.T) proto.Message {
-				dir, id := citedEvent(t)
-				return &engine.GetEventHeaderRequest{ProjectDir: dir, EntityId: id}
-			},
-			after: func(t *testing.T, out []byte, req proto.Message) {
-				var resp engine.GetEventHeaderResponse
-				if err := proto.Unmarshal(out, &resp); err != nil {
-					t.Fatal(err)
-				}
-				in := req.(*engine.GetEventHeaderRequest)
-				if resp.GetHeader().GetEntity().GetId() != in.GetEntityId() || resp.GetHeader().GetEventName() != "The Great Fire" {
-					t.Fatalf("%+v", resp.GetHeader())
 				}
 			},
 		},
@@ -334,63 +269,6 @@ func TestListPlaceHeaders(t *testing.T) {
 					resp.Headers[0].GetKind() != "" || len(resp.Headers[0].GetParents()) != 0 ||
 					resp.Headers[0].GetStartDate() != nil || resp.Headers[0].GetEndDate() != nil {
 					t.Fatalf("%+v", resp.Headers)
-				}
-			},
-		},
-	})
-}
-
-func TestGetPlaceHeader(t *testing.T) {
-	runRPC(t, GetPlaceHeader, []rpcTest{
-		{name: "bad proto", raw: []byte{0xff}, wantErr: true},
-		{
-			name: "unknown id",
-			reqFn: func(t *testing.T) proto.Message {
-				dir, _, _, _ := subjectFixture(t)
-				return &engine.GetPlaceHeaderRequest{ProjectDir: dir, EntityId: uuid.Must(uuid.NewV7()).String()}
-			},
-			wantErr:   true,
-			wantErrIs: conclusiondetails.ErrNotFound,
-		},
-		{
-			name: "a Person is not a Place",
-			reqFn: func(t *testing.T) proto.Message {
-				dir, ref := namedPerson(t)
-				var entityID string
-				if err := withProjectCatalog(dir, func(c *database.Catalog) error {
-					db, err := c.DB()
-					if err != nil {
-						return err
-					}
-					var id []byte
-					if err := db.QueryRow(`SELECT id FROM canonical_entities WHERE ref = ?`, ref).Scan(&id); err != nil {
-						return err
-					}
-					entityID = uuidString(id)
-					return nil
-				}); err != nil {
-					t.Fatal(err)
-				}
-				return &engine.GetPlaceHeaderRequest{ProjectDir: dir, EntityId: entityID}
-			},
-			wantErr:   true,
-			wantErrIs: conclusiondetails.ErrNotFound,
-		},
-		{
-			name: "returns the one place",
-			reqFn: func(t *testing.T) proto.Message {
-				dir, id := citedPlace(t)
-				return &engine.GetPlaceHeaderRequest{ProjectDir: dir, EntityId: id}
-			},
-			after: func(t *testing.T, out []byte, req proto.Message) {
-				var resp engine.GetPlaceHeaderResponse
-				if err := proto.Unmarshal(out, &resp); err != nil {
-					t.Fatal(err)
-				}
-				in := req.(*engine.GetPlaceHeaderRequest)
-				names := resp.GetHeader().GetNames()
-				if resp.GetHeader().GetEntity().GetId() != in.GetEntityId() || len(names) != 2 || names[0] != "York" {
-					t.Fatalf("%+v", resp.GetHeader())
 				}
 			},
 		},

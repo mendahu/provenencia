@@ -38,6 +38,9 @@ enum Method {
   reserved "METHOD_COUNT_FILES";
   reserved 71;
   reserved "METHOD_UPDATE_CITATION_WITH_OBSERVATIONS";
+  // Per-entity headers ride GetConclusionDetail.
+  reserved 92, 94, 95;
+  reserved "METHOD_GET_EVENT_HEADER", "METHOD_GET_PLACE_HEADER", "METHOD_GET_PERSON_HEADER";
   METHOD_UPDATE_METADATA_FIELD = 28;
   METHOD_DELETE_SOURCE_TYPE = 29;
   METHOD_DELETE_METADATA_FIELD = 30;
@@ -101,10 +104,7 @@ enum Method {
   METHOD_LIST_CLAIM_CONFIDENCE_GRADES = 89;
   METHOD_GET_CONCLUSION_DETAIL = 90;
   METHOD_LIST_EVENT_HEADERS = 91;
-  METHOD_GET_EVENT_HEADER = 92;
   METHOD_LIST_PLACE_HEADERS = 93;
-  METHOD_GET_PLACE_HEADER = 94;
-  METHOD_GET_PERSON_HEADER = 95;
   METHOD_LIST_SOURCE_EVENT_TITLES = 96;
 }
 
@@ -1080,17 +1080,6 @@ message ListPersonHeadersResponse {
   repeated PersonHeader headers = 1;
 }
 
-// GetPersonHeader returns one unmerged Person's header. Unknown, merged,
-// and non-Person ids are not found.
-message GetPersonHeaderRequest {
-  string project_dir = 1;
-  string entity_id = 2;
-}
-
-message GetPersonHeaderResponse {
-  PersonHeader header = 1;
-}
-
 // EventHeader is one Event as a row, composed from the auto-reconciler's
 // cache. Structures only: the app formats the title. event_name is the
 // rank-1 recorded name, empty when none. date is the rank-1 date when one
@@ -1127,17 +1116,6 @@ message ListEventHeadersResponse {
   repeated EventHeader headers = 1;
 }
 
-// GetEventHeader returns one unmerged Event's header. Unknown, merged,
-// and non-Event ids are not found.
-message GetEventHeaderRequest {
-  string project_dir = 1;
-  string entity_id = 2;
-}
-
-message GetEventHeaderResponse {
-  EventHeader header = 1;
-}
-
 // PlaceHeader is one Place as a row, composed from the auto-reconciler's
 // cache. names are the kept toponyms in rank order (Montréal and Montreal
 // are both names). start_date, end_date, kind, and parents stay empty until
@@ -1159,17 +1137,6 @@ message ListPlaceHeadersRequest {
 
 message ListPlaceHeadersResponse {
   repeated PlaceHeader headers = 1;
-}
-
-// GetPlaceHeader returns one unmerged Place's header. Unknown, merged,
-// and non-Place ids are not found.
-message GetPlaceHeaderRequest {
-  string project_dir = 1;
-  string entity_id = 2;
-}
-
-message GetPlaceHeaderResponse {
-  PlaceHeader header = 1;
 }
 
 // ConclusionValue is one Property value; exactly the field for the
@@ -1252,6 +1219,14 @@ message ConclusionDetail {
   CanonicalEntity entity = 1;
   repeated ConclusionField fields = 2;
   int32 member_count = 3; // accepted members
+  // header is the handle's row for its kind, read with the detail so a page
+  // has one load, one error, and one consistent read. Absent for a kind
+  // with no header composer.
+  oneof header {
+    PersonHeader person = 4;
+    EventHeader event = 5;
+    PlaceHeader place = 6;
+  }
 }
 
 // ListPromoteTargetSuggestions returns existing handles a Subject could join,

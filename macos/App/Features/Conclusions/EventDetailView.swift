@@ -2,17 +2,13 @@ import SwiftUI
 
 /// The Event page (S9-24, board S9-D6 frame 2f). A configuration of
 /// `ConclusionDetailPage`: the event mark, a date · place line, and the
-/// Date and Place rows. Subjects and places come from the Event header.
+/// Date and Place rows. The title and places come from the Event header the
+/// detail carries.
 struct EventDetailView: View {
     let session: WorkspaceSession
     let entityId: String
 
-    private var headerKey: CatalogQueryKey {
-        .eventHeader(project: session.projectKey, entityId: entityId)
-    }
-
     var body: some View {
-        let header: CatalogEventHeader? = session.queryHandle(headerKey)?.value
         ConclusionDetailPage<EventDetailContent, EventDetailSummary>(
             session: session,
             entityId: entityId,
@@ -20,12 +16,9 @@ struct EventDetailView: View {
             noLikeness: L10n.Conclusions.personNoLikeness,
             pageIdentifier: "events.detail",
             errorIdentifier: "events.detail.error",
-            make: { EventDetailContent(detail: $0, header: header) },
+            make: { EventDetailContent(detail: $0) },
             summary: { EventDetailSummary(date: $0.summaryDate, place: $0.summaryPlace) }
         )
-        .task(id: entityId) {
-            let _: QueryHandle<CatalogEventHeader> = session.query(headerKey)
-        }
     }
 }
 

@@ -1,8 +1,8 @@
 import Foundation
 
-/// The Event page, worded from one `CatalogConclusionDetail` and, when the
-/// page has it, the Event header (S9-24, board S9-D6). The header supplies
-/// the subjects and places. The date's Why stays on this page's date row.
+/// The Event page, worded from one `CatalogConclusionDetail` and the Event
+/// header it carries (S9-24, board S9-D6). The header supplies the title and
+/// places. The date's Why stays on this page's date row.
 struct EventDetailContent: ConclusionDetailBody {
     var title: ConclusionTitleSource
     var ref: String
@@ -14,11 +14,8 @@ struct EventDetailContent: ConclusionDetailBody {
     var summaryPlace: String?
     var rows: [ReconciledValueRowModel]
 
-    init(
-        detail: CatalogConclusionDetail,
-        header: CatalogEventHeader? = nil,
-        locale: Locale = .autoupdatingCurrent
-    ) {
+    init(detail: CatalogConclusionDetail, locale: Locale = .autoupdatingCurrent) {
+        let header = detail.eventHeader
         title = header.map { EventTitleDisplay.titleSource($0.title, locale: locale) }
             ?? EventTitleDisplay.untitled(detail.entity)
         ref = detail.entity.ref

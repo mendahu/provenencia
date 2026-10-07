@@ -10,12 +10,14 @@ struct EventDetailTests {
         label: String = "",
         ref: String = "EVT-8PL22",
         fields: [CatalogConclusionField] = [],
-        members: Int = 4
+        members: Int = 4,
+        header: CatalogEventHeader? = nil
     ) -> CatalogConclusionDetail {
         CatalogConclusionDetail(
             entity: CatalogCanonicalEntity(id: "e1", ref: ref, subjectTypeID: "t", label: label),
             fields: fields,
-            memberCount: members
+            memberCount: members,
+            header: header.map { .event($0) }
         )
     }
 
@@ -44,8 +46,7 @@ struct EventDetailTests {
 
     @Test func titleIsTheHeadersChosenTitle() {
         let page = EventDetailContent(
-            detail: detail(),
-            header: header(CatalogEventTitle(rule: .recordedName, recordedName: "Fire at York", ref: "EVT-8PL22")),
+            detail: detail(header: header(CatalogEventTitle(rule: .recordedName, recordedName: "Fire at York", ref: "EVT-8PL22"))),
             locale: en
         )
         #expect(page.title == .name("Fire at York"))
@@ -53,7 +54,7 @@ struct EventDetailTests {
         #expect(page.ref == "EVT-8PL22")
     }
 
-    @Test func untilTheHeaderLoadsTheTitleIsTheLabelThenTheRef() {
+    @Test func withNoHeaderTheTitleIsTheLabelThenTheRef() {
         // A recorded name in the detail does not choose a title; only Go's header does.
         let named = content(detail(label: "Grandpa's fire", fields: [
             D.field("single", key: "event_name", label: "Event name", valueType: "text", [D.value(1, "kept", .text("Fire at York"))]),
@@ -115,7 +116,7 @@ struct EventDetailTests {
                 subjects: [CatalogNameValue(form: "James Robins")], place: "York"
             )
         )
-        let page = EventDetailContent(detail: detail(), header: header, locale: en)
+        let page = EventDetailContent(detail: detail(header: header), locale: en)
         #expect(page.title == .name(L10n.EventTitle.ofOne(type: "Birth", subject: "James Robins", locale: en)))
         #expect(page.summaryPlace == "York")
         #expect(page.rows[1].lead == "York" && page.rows[1].badge == .mixed && page.rows[1].records.isEmpty)

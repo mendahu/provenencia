@@ -26,13 +26,10 @@ enum CatalogQueryKey: Hashable, Sendable {
     case placesList(project: ProjectKey)
     /// Existing handles a Subject could join in Promote, best first (S9-11).
     case promoteTargets(project: ProjectKey, subjectId: String)
-    /// One handle's detail, any kind (S9-15). Evicted, not revalidated, while
-    /// off screen.
+    /// One handle's detail, any kind (S9-15), with its kind's header (birth
+    /// and death, an Event's subjects and title, a Place's names) read in the
+    /// same call. Evicted, not revalidated, while off screen.
     case conclusionDetail(project: ProjectKey, entityId: String)
-    /// One Person's header, including birth and death (S9-32).
-    case personHeader(project: ProjectKey, entityId: String)
-    /// One Event's header, including subjects and places (S9-32).
-    case eventHeader(project: ProjectKey, entityId: String)
 
     /// Case identity without associated payload — used by `CatalogQueryRegistry` specs.
     enum Kind: Hashable, Sendable {
@@ -55,8 +52,6 @@ enum CatalogQueryKey: Hashable, Sendable {
         case placesList
         case promoteTargets
         case conclusionDetail
-        case personHeader
-        case eventHeader
     }
 
     var kind: Kind {
@@ -99,10 +94,6 @@ enum CatalogQueryKey: Hashable, Sendable {
             return .promoteTargets
         case .conclusionDetail:
             return .conclusionDetail
-        case .personHeader:
-            return .personHeader
-        case .eventHeader:
-            return .eventHeader
         }
     }
 
@@ -126,9 +117,7 @@ enum CatalogQueryKey: Hashable, Sendable {
              .eventsList(let project),
              .placesList(let project),
              .promoteTargets(let project, _),
-             .conclusionDetail(let project, _),
-             .personHeader(let project, _),
-             .eventHeader(let project, _):
+             .conclusionDetail(let project, _):
             project
         }
     }

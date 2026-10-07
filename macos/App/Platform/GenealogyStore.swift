@@ -468,6 +468,28 @@ struct CatalogConclusionDetail: Sendable, Equatable {
     var fields: [CatalogConclusionField]
     /// Accepted members.
     var memberCount: Int = 0
+    /// The handle's header for its kind, read in the same call, so a page
+    /// has one load, one error, and one consistent read.
+    var header: CatalogConclusionHeader?
+
+    var personHeader: CatalogPersonHeader? {
+        if case .person(let header) = header { header } else { nil }
+    }
+
+    var eventHeader: CatalogEventHeader? {
+        if case .event(let header) = header { header } else { nil }
+    }
+
+    var placeHeader: CatalogPlaceHeader? {
+        if case .place(let header) = header { header } else { nil }
+    }
+}
+
+/// One handle's row for its kind, as the lists show it.
+enum CatalogConclusionHeader: Sendable, Equatable {
+    case person(CatalogPersonHeader)
+    case event(CatalogEventHeader)
+    case place(CatalogPlaceHeader)
 }
 
 /// One Observation row with Property summary (graph / card payloads).
@@ -995,11 +1017,8 @@ protocol GenealogyStore: Sendable {
     func listSourceEventTitles(projectDir: String, sourceID: String) async throws -> [String: CatalogEventTitle]
     /// Every unmerged Person as a row header, in list order (named by name, then by ref).
     func listPersonHeaders(projectDir: String) async throws -> [CatalogPersonHeader]
-    func personHeader(projectDir: String, entityID: String) async throws -> CatalogPersonHeader
     func listEventHeaders(projectDir: String) async throws -> [CatalogEventHeader]
-    func eventHeader(projectDir: String, entityID: String) async throws -> CatalogEventHeader
     func listPlaceHeaders(projectDir: String) async throws -> [CatalogPlaceHeader]
-    func placeHeader(projectDir: String, entityID: String) async throws -> CatalogPlaceHeader
     /// One handle's fields, auto-reconciled values and outcomes. Throws
     /// `conclusiondetails.not_found` for an unknown or merged handle.
     func getConclusionDetail(projectDir: String, entityID: String) async throws -> CatalogConclusionDetail

@@ -3,7 +3,6 @@ package handlers
 import (
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/conclusiondetails"
 	"github.com/mendahu/provenencia/core/database/conclusionheaders"
 	"github.com/mendahu/provenencia/core/valuecodec"
 	"google.golang.org/protobuf/proto"
@@ -70,37 +69,6 @@ func headerPlaceProto(p conclusionheaders.HeaderPlace) *engine.HeaderPlace {
 	}
 }
 
-func GetPersonHeader(in []byte) ([]byte, error) {
-	var req engine.GetPersonHeaderRequest
-	if err := proto.Unmarshal(in, &req); err != nil {
-		return nil, unmarshalErr("get_person_header", err)
-	}
-	entityID, err := parseID(req.GetEntityId())
-	if err != nil {
-		return nil, conclusiondetails.ErrNotFound
-	}
-	out := &engine.GetPersonHeaderResponse{}
-	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		db, err := c.DB()
-		if err != nil {
-			return err
-		}
-		headers, err := conclusionheaders.PersonsByIDs(db, [][]byte{entityID})
-		if err != nil {
-			return err
-		}
-		if len(headers) != 1 {
-			return conclusiondetails.ErrNotFound
-		}
-		out.Header = personHeaderProto(headers[0])
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-	return proto.Marshal(out)
-}
-
 func ListEventHeaders(in []byte) ([]byte, error) {
 	var req engine.ListEventHeadersRequest
 	if err := proto.Unmarshal(in, &req); err != nil {
@@ -119,37 +87,6 @@ func ListEventHeaders(in []byte) ([]byte, error) {
 		for _, h := range headers {
 			out.Headers = append(out.Headers, eventHeaderProto(h))
 		}
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-	return proto.Marshal(out)
-}
-
-func GetEventHeader(in []byte) ([]byte, error) {
-	var req engine.GetEventHeaderRequest
-	if err := proto.Unmarshal(in, &req); err != nil {
-		return nil, unmarshalErr("get_event_header", err)
-	}
-	entityID, err := parseID(req.GetEntityId())
-	if err != nil {
-		return nil, conclusiondetails.ErrNotFound
-	}
-	out := &engine.GetEventHeaderResponse{}
-	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		db, err := c.DB()
-		if err != nil {
-			return err
-		}
-		headers, err := conclusionheaders.EventsByIDs(db, [][]byte{entityID})
-		if err != nil {
-			return err
-		}
-		if len(headers) != 1 {
-			return conclusiondetails.ErrNotFound
-		}
-		out.Header = eventHeaderProto(headers[0])
 		return nil
 	})
 	if err != nil {
@@ -219,37 +156,6 @@ func ListPlaceHeaders(in []byte) ([]byte, error) {
 		for _, h := range headers {
 			out.Headers = append(out.Headers, placeHeaderProto(h))
 		}
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-	return proto.Marshal(out)
-}
-
-func GetPlaceHeader(in []byte) ([]byte, error) {
-	var req engine.GetPlaceHeaderRequest
-	if err := proto.Unmarshal(in, &req); err != nil {
-		return nil, unmarshalErr("get_place_header", err)
-	}
-	entityID, err := parseID(req.GetEntityId())
-	if err != nil {
-		return nil, conclusiondetails.ErrNotFound
-	}
-	out := &engine.GetPlaceHeaderResponse{}
-	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		db, err := c.DB()
-		if err != nil {
-			return err
-		}
-		headers, err := conclusionheaders.PlacesByIDs(db, [][]byte{entityID})
-		if err != nil {
-			return err
-		}
-		if len(headers) != 1 {
-			return conclusiondetails.ErrNotFound
-		}
-		out.Header = placeHeaderProto(headers[0])
 		return nil
 	})
 	if err != nil {

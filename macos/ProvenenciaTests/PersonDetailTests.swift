@@ -9,13 +9,15 @@ struct PersonDetailTests {
         name: CatalogConclusionField? = D.mergedName,
         label: String = "",
         members: Int = 4,
-        extra: [CatalogConclusionField] = []
+        extra: [CatalogConclusionField] = [],
+        header: CatalogPersonHeader? = nil
     ) -> CatalogConclusionDetail {
         let sex = D.field("", key: "sex_at_birth", label: "Sex at birth", valueType: "term")
         return CatalogConclusionDetail(
             entity: CatalogCanonicalEntity(id: "e1", ref: "PER-7KD45", subjectTypeID: "t", label: label),
             fields: (name.map { [$0] } ?? []) + [sex] + extra,
-            memberCount: members
+            memberCount: members,
+            header: header.map { .person($0) }
         )
     }
 
@@ -123,7 +125,7 @@ struct PersonDetailTests {
         #expect(PersonLifeDisplay.line(james, locale: en).text == "1817 – 1880 · York → Toronto")
         #expect(PersonLifeDisplay.line(james, locale: en).extraPlaces == 0)
 
-        let page = PersonDetailContent(detail: detail(), header: james, locale: en)
+        let page = PersonDetailContent(detail: detail(header: james), locale: en)
         #expect(page.vitals.map(\.date) == ["1817", "1880"])
         #expect(page.vitals.map(\.place) == ["York", "Toronto"])
         #expect(page.rows[1].lead == "1817" && page.rows[1].badge == nil && page.rows[1].records.isEmpty)
@@ -145,7 +147,7 @@ struct PersonDetailTests {
         renamed.birth.places = [CatalogHeaderPlace(entity: york, names: ["York", "Tkaronto"], nameCount: 2)]
         #expect(PersonLifeDisplay.line(renamed, locale: en).text == "1817 – 1880 · York → Toronto")
         #expect(PersonLifeDisplay.line(renamed, locale: en).extraPlaces == 0)
-        let oneplace = PersonDetailContent(detail: detail(), header: renamed, locale: en)
+        let oneplace = PersonDetailContent(detail: detail(header: renamed), locale: en)
         #expect(oneplace.rows[2].lead == "York" && oneplace.rows[2].badge == nil)
 
         // Two Places disagree: +1 and mixed, with no Why on this row.
@@ -156,14 +158,14 @@ struct PersonDetailTests {
             CatalogHeaderPlace(entity: upper, names: ["Kingston"], nameCount: 1),
         ]
         #expect(PersonLifeDisplay.line(twoPlaces, locale: en).extraPlaces == 1)
-        let mixed = PersonDetailContent(detail: detail(), header: twoPlaces, locale: en)
+        let mixed = PersonDetailContent(detail: detail(header: twoPlaces), locale: en)
         #expect(mixed.rows[2].lead == "York" && mixed.rows[2].badge == .mixed && mixed.rows[2].records.isEmpty)
         #expect(mixed.rows[1].badge == nil, "one birth event with one date is not mixed")
 
         // Two birth events disagree: both birth rows are mixed.
         var twoBirths = james
         twoBirths.birth.eventCount = 2
-        let competing = PersonDetailContent(detail: detail(), header: twoBirths, locale: en)
+        let competing = PersonDetailContent(detail: detail(header: twoBirths), locale: en)
         #expect(competing.rows[1].badge == .mixed && competing.rows[2].badge == .mixed)
         #expect(competing.rows[3].badge == nil && competing.rows[4].badge == nil)
     }

@@ -4,6 +4,8 @@ import (
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/conclusiondetails"
+	"github.com/mendahu/provenencia/core/database/conclusionheaders"
+	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/valuecodec"
 	"google.golang.org/protobuf/proto"
 )
@@ -28,7 +30,7 @@ func GetConclusionDetail(in []byte) ([]byte, error) {
 			return err
 		}
 		out = conclusionDetailProto(d)
-		return nil
+		return attachHeader(c, db, d, out)
 	})
 	if err != nil {
 		return nil, err
@@ -102,4 +104,37 @@ func conclusionValueProto(v conclusiondetails.Value) *engine.ConclusionValue {
 		return &engine.ConclusionValue{Kind: &engine.ConclusionValue_Text{Text: v.Text}}
 	}
 	return &engine.ConclusionValue{}
+}
+
+// attachHeader reads the handle's header for its kind beside the detail.
+func attachHeader(c *database.Catalog, db conclusionheaders.Querier, d conclusiondetails.Detail, out *engine.ConclusionDetail) error {
+	st, err := subjecttypes.GetByID(c, d.Entity.SubjectTypeID)
+	if err != nil {
+		return err
+	}
+	if st.Origin != subjecttypes.OriginProvenencia {
+		return nil
+	}
+	ids := [][]byte{d.Entity.ID}
+	switch st.Key {
+	case "person":
+		h, err := conclusionheaders.PersonsByIDs(db, ids)
+		if err != nil || len(h) != 1 {
+			return err
+		}
+		out.Header = &engine.ConclusionDetail_Person{Person: personHeaderProto(h[0])}
+	case "event":
+		h, err := conclusionheaders.EventsByIDs(db, ids)
+		if err != nil || len(h) != 1 {
+			return err
+		}
+		out.Header = &engine.ConclusionDetail_Event{Event: eventHeaderProto(h[0])}
+	case "place":
+		h, err := conclusionheaders.PlacesByIDs(db, ids)
+		if err != nil || len(h) != 1 {
+			return err
+		}
+		out.Header = &engine.ConclusionDetail_Place{Place: placeHeaderProto(h[0])}
+	}
+	return nil
 }

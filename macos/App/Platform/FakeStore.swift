@@ -1404,16 +1404,6 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         }
     }
 
-    func personHeader(projectDir: String, entityID: String) async throws -> CatalogPersonHeader {
-        try withState {
-            markCatalogSessionHeld(projectDir)
-            guard let header = personHeaders().first(where: { $0.entity.id == entityID }) else {
-                throw CoreInvokeError.coded(status: 1, code: "conclusiondetails.not_found", kind: .user, params: [])
-            }
-            return header
-        }
-    }
-
     func listEventHeaders(projectDir: String) async throws -> [CatalogEventHeader] {
         withState {
             markCatalogSessionHeld(projectDir)
@@ -1421,30 +1411,10 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         }
     }
 
-    func eventHeader(projectDir: String, entityID: String) async throws -> CatalogEventHeader {
-        try withState {
-            markCatalogSessionHeld(projectDir)
-            guard let header = eventHeaders().first(where: { $0.entity.id == entityID }) else {
-                throw CoreInvokeError.coded(status: 1, code: "conclusiondetails.not_found", kind: .user, params: [])
-            }
-            return header
-        }
-    }
-
     func listPlaceHeaders(projectDir: String) async throws -> [CatalogPlaceHeader] {
         withState {
             markCatalogSessionHeld(projectDir)
             return placeHeaders()
-        }
-    }
-
-    func placeHeader(projectDir: String, entityID: String) async throws -> CatalogPlaceHeader {
-        try withState {
-            markCatalogSessionHeld(projectDir)
-            guard let header = placeHeaders().first(where: { $0.entity.id == entityID }) else {
-                throw CoreInvokeError.coded(status: 1, code: "conclusiondetails.not_found", kind: .user, params: [])
-            }
-            return header
         }
     }
 
@@ -1577,8 +1547,15 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         // A read: no `recordedCalls`.
         try withState {
             markCatalogSessionHeld(projectDir)
-            guard let detail = conclusionDetail(projectDir: projectDir, entityID: entityID) else {
+            guard var detail = conclusionDetail(projectDir: projectDir, entityID: entityID) else {
                 throw CoreInvokeError.coded(status: 1, code: "conclusiondetails.not_found", kind: .user, params: [])
+            }
+            if let person = personHeaders().first(where: { $0.entity.id == entityID }) {
+                detail.header = .person(person)
+            } else if let event = eventHeaders().first(where: { $0.entity.id == entityID }) {
+                detail.header = .event(event)
+            } else if let place = placeHeaders().first(where: { $0.entity.id == entityID }) {
+                detail.header = .place(place)
             }
             return detail
         }

@@ -172,3 +172,56 @@ func TestConclusionDetailProtoCarriesVoteArtifactAndMembers(t *testing.T) {
 		t.Fatalf("%+v", got)
 	}
 }
+
+// A page reads its handle's header with its detail: one load, one error.
+func TestGetConclusionDetailCarriesItsHeader(t *testing.T) {
+	t.Cleanup(func() { _ = catalogsession.CloseAll() })
+	tests := []struct {
+		name    string
+		fixture func(t *testing.T) (dir, id string)
+		check   func(t *testing.T, d *engine.ConclusionDetail, id string)
+	}{
+		{
+			name:    "a Person carries the Person header",
+			fixture: namedPersonID,
+			check: func(t *testing.T, d *engine.ConclusionDetail, id string) {
+				if h := d.GetPerson(); h.GetEntity().GetId() != id || h.GetName().GetForm() == "" {
+					t.Fatalf("person header %+v", h)
+				}
+			},
+		},
+		{
+			name:    "an Event carries the Event header and its title",
+			fixture: citedEvent,
+			check: func(t *testing.T, d *engine.ConclusionDetail, id string) {
+				h := d.GetEvent()
+				if h.GetEntity().GetId() != id || h.GetTitle().GetRule() != engine.EventTitleRule_EVENT_TITLE_RULE_RECORDED_NAME {
+					t.Fatalf("event header %+v", h)
+				}
+			},
+		},
+		{
+			name:    "a Place carries the Place header",
+			fixture: citedPlace,
+			check: func(t *testing.T, d *engine.ConclusionDetail, id string) {
+				if h := d.GetPlace(); h.GetEntity().GetId() != id || len(h.GetNames()) == 0 {
+					t.Fatalf("place header %+v", h)
+				}
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dir, id := tt.fixture(t)
+			out, err := GetConclusionDetail(marshalProto(t, &engine.GetConclusionDetailRequest{ProjectDir: dir, EntityId: id}))
+			if err != nil {
+				t.Fatal(err)
+			}
+			var d engine.ConclusionDetail
+			if err := proto.Unmarshal(out, &d); err != nil {
+				t.Fatal(err)
+			}
+			tt.check(t, &d, id)
+		})
+	}
+}

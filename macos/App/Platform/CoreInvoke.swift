@@ -118,10 +118,7 @@ enum CoreMethod {
     static let listClaimConfidenceGrades = Int32(Provenencia_Engine_V1_Method.listClaimConfidenceGrades.rawValue)
     static let getConclusionDetail = Int32(Provenencia_Engine_V1_Method.getConclusionDetail.rawValue)
     static let listEventHeaders = Int32(Provenencia_Engine_V1_Method.listEventHeaders.rawValue)
-    static let getEventHeader = Int32(Provenencia_Engine_V1_Method.getEventHeader.rawValue)
     static let listPlaceHeaders = Int32(Provenencia_Engine_V1_Method.listPlaceHeaders.rawValue)
-    static let getPlaceHeader = Int32(Provenencia_Engine_V1_Method.getPlaceHeader.rawValue)
-    static let getPersonHeader = Int32(Provenencia_Engine_V1_Method.getPersonHeader.rawValue)
     static let listSourceEventTitles = Int32(Provenencia_Engine_V1_Method.listSourceEventTitles.rawValue)
 }
 
