@@ -495,7 +495,7 @@ In order; each brief sits just above the PR it gates.
 - [x] S9-31 — Composer walks + header dependents
 - [x] S9-32 — Fill derived cells in lists and details
 - [x] S9-38 — Place model: relationships, periods → [`completed.md`](completed.md)
-- [ ] S9-39 — Place chain composer
+- [x] S9-39 — Place chain composer → [`completed.md`](completed.md)
 - [ ] S9-40 — Place hierarchy in list and detail
 - [ ] S9-41 — Align core
 - [ ] S9-42 — Alignment loader + proposal read
@@ -906,11 +906,7 @@ Design: [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md) §1
 
 #### S9-39 — Place chain composer
 
-| | |
-| --- | --- |
-| **In** | Go composer over the cache: a Place's hierarchical (`part_of`) parents at a date. An undated link holds where the two places' periods overlap (no place period = always). A dated link holds only inside its own span, and only while both places' periods hold. Several parents → every candidate (no nature preference); every candidate when the date can't decide; its parts; its succession both ways (a temporal link's dates do not build a chain). **Fold Locations into chains** for Event / life-place walks: Places that share a `part_of` graph at the event's date become one chain value; unrealted Places stay competing values for reconciliation. Plug into S9-31's walks and search. Header dependents for places (a parent's rename reprojects its children's headers). Cycle guard. |
-| **Testable** | Toronto in 1820 / 1850 / 1950 from undated links and the parents' periods; *about 1841* → both; several parents → all candidates; Birth linked to Toronto and Ontario (with `part_of`) → one chain; Birth linked to Toronto and Scotland (no link) → two competing place values; succession never builds a chain; succession both ways with several successors (a split) and several predecessors (an amalgamation); undated places always hold; Ireland part of the United Kingdom until 1922 drops that parent afterward while both places continue. |
-| **Depends on** | S9-38, S9-21, S9-25, S9-31 |
+**Done.** See [`completed.md`](completed.md#s9-39--place-chain-composer). Parents-at-date, parts, succession, and Location fold over `part_of` with S9-21 windows. `PlaceHeader.parents` and `HeaderPlace.parents` fill; Places list shows today's chain. Person/Event chain chrome and Place detail hierarchy stay **S9-40**; search documents stay **S9-34**.
 
 #### S9-40 — Place hierarchy in list and detail
 

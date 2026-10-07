@@ -54,6 +54,7 @@ IDs stay stable (`S9-NN`, `S9-DN`). Do not renumber when moving steps here.
 | S9-31 | PR | Composer walks + header dependents |
 | S9-32 | PR | Fill derived cells in lists and details |
 | S9-38 | PR | Place model: relationships, periods |
+| S9-39 | PR | Place chain composer |
 
 ## Steps
 
@@ -1130,3 +1131,21 @@ Places can sit in a containment graph and a succession lineage, with periods on 
 - Place hierarchy in list and detail UI: **S9-40**.
 - `place_nature` Property (deferred).
 - Cache version bump (stays 13); product VERSION bump.
+
+### S9-39 — Place chain composer
+
+A Place's hierarchical parents at a date, Location fold on Event/life walks, and succession lineage reads — composed from the S9-38 graph and S9-21 windows.
+
+**What shipped**
+
+- `autoreconcile` window helpers: `PeriodWindow`, `LinkMembership`, `Overlaps` / `Intersect` / `Relate` / `HoldsAt` (undated link = place-period overlap; dated link ∩ both periods; ambiguous query → candidates).
+- `canonicalgraph` hops: `ParentsOfPlace` / `PartsOfPlace` (`part_of`), `SuccessorsOfPlace` / `PredecessorsOfPlace` (`succeeded_by`).
+- `conclusionheaders` chain composer (`placechains.go`): parents-at-date, parts, succession both ways (splits/amalgamations; succession never builds a display chain), Location fold in `loadPlacesOf`, `PlaceHeader` period + today's `Parents`, `HeaderPlace.parents`, `HeaderDependents` includes child Places.
+- Proto `HeaderPlace.parents`; FFI and Swift `CatalogHeaderPlace.parents` mapping. Places list already renders the chain line once parents fill.
+
+**What stayed out**
+
+- Places list candidate/"or" polish and Place detail period / parts / succession sections: **S9-40**.
+- Person/Event row chain chrome beyond folded leaf names: **S9-40**.
+- Search document secondary = today's chain: **S9-34**.
+- `place_nature` / `Kind`.

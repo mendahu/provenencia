@@ -267,11 +267,12 @@ struct CatalogNameValue: Sendable, Equatable {
 }
 
 /// One Place reached from a birth, death, or event. `names` are kept toponyms
-/// in rank order. The parent chain is not here.
+/// in rank order. `parents` is the hierarchical chain at the walk's date.
 struct CatalogHeaderPlace: Sendable, Equatable {
     /// The Place; its page owns the names' Why.
     var entity: CatalogCanonicalEntity
     var names: [String] = []
+    var parents: [String] = []
 }
 
 /// A birth or a death composed from the canonical graph.
@@ -362,8 +363,9 @@ struct CatalogEventTitle: Sendable, Equatable {
 }
 
 /// One Place as a row, composed by Go from the auto-reconciler cache (S9-25).
-/// `names` are the kept toponyms in rank order. Period, kind, and parents
-/// stay empty until S9-38 and S9-39. `PlaceTitleDisplay` formats the title.
+/// `names` are the kept toponyms in rank order. Period and parents come from
+/// the Place chain composer; `kind` stays empty. `PlaceTitleDisplay` formats
+/// the title.
 struct CatalogPlaceHeader: Sendable, Equatable, Identifiable {
     var entity: CatalogCanonicalEntity
     var names: [String] = []

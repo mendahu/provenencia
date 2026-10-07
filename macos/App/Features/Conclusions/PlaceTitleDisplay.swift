@@ -1,7 +1,7 @@
 import Foundation
 
 /// The pieces a Place title is chosen from. Go returns the kept names;
-/// this picks the row text. The chain line stays empty until S9-39.
+/// this picks the row text. The chain line is formatted by PlaceChainDisplay.
 struct PlaceTitleParts: Equatable, Sendable {
     var names: [String] = []
     var label: String = ""

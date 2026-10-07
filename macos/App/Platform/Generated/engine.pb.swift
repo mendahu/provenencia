@@ -3372,7 +3372,7 @@ public nonisolated struct Provenencia_Engine_V1_ListSubjectMembershipsResponse: 
 }
 
 /// HeaderPlace is one Place a walk reached. names are kept toponyms in rank
-/// order. The parent chain is not here (S9-39).
+/// order. parents is the hierarchical chain at the walk's date (nearest first).
 public nonisolated struct Provenencia_Engine_V1_HeaderPlace: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -3389,6 +3389,8 @@ public nonisolated struct Provenencia_Engine_V1_HeaderPlace: Sendable {
   public var hasEntity: Bool {self._entity != nil}
   /// Clears the value of `entity`. Subsequent reads from it will return its default value.
   public mutating func clearEntity() {self._entity = nil}
+
+  public var parents: [String] = []
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -3647,7 +3649,8 @@ public nonisolated struct Provenencia_Engine_V1_EventHeader: @unchecked Sendable
   }
 
   /// subjects are subject-role persons, participation ref then person ref.
-  /// places are every location's kept names. Chains stay empty until S9-39.
+  /// places are every location's kept names with hierarchical parents at the
+  /// event's date (Locations that share part_of fold into one chain).
   public var subjects: [Provenencia_Engine_V1_EventSubject] {
     get {_storage._subjects}
     set {_uniqueStorage()._subjects = newValue}
@@ -3703,8 +3706,8 @@ public nonisolated struct Provenencia_Engine_V1_ListEventHeadersResponse: Sendab
 
 /// PlaceHeader is one Place as a row, composed from the auto-reconciler's
 /// cache. names are the kept toponyms in rank order (Montréal and Montreal
-/// are both names). start_date, end_date, kind, and parents stay empty until
-/// S9-38 and S9-39. The app formats the title.
+/// are both names). start_date / end_date are the Place's period; parents is
+/// today's hierarchical chain. kind stays empty (place_nature deferred).
 public nonisolated struct Provenencia_Engine_V1_PlaceHeader: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -11517,7 +11520,7 @@ nonisolated extension Provenencia_Engine_V1_ListSubjectMembershipsResponse: Swif
 
 nonisolated extension Provenencia_Engine_V1_HeaderPlace: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".HeaderPlace"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}names\0\u{2}\u{2}entity\0\u{b}name_count\0\u{c}\u{2}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}names\0\u{2}\u{2}entity\0\u{1}parents\0\u{b}name_count\0\u{c}\u{2}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -11527,6 +11530,7 @@ nonisolated extension Provenencia_Engine_V1_HeaderPlace: SwiftProtobuf.Message, 
       switch fieldNumber {
       case 1: try { try decoder.decodeRepeatedStringField(value: &self.names) }()
       case 3: try { try decoder.decodeSingularMessageField(value: &self._entity) }()
+      case 4: try { try decoder.decodeRepeatedStringField(value: &self.parents) }()
       default: break
       }
     }
@@ -11543,12 +11547,16 @@ nonisolated extension Provenencia_Engine_V1_HeaderPlace: SwiftProtobuf.Message, 
     try { if let v = self._entity {
       try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
     } }()
+    if !self.parents.isEmpty {
+      try visitor.visitRepeatedStringField(value: self.parents, fieldNumber: 4)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Provenencia_Engine_V1_HeaderPlace, rhs: Provenencia_Engine_V1_HeaderPlace) -> Bool {
     if lhs.names != rhs.names {return false}
     if lhs._entity != rhs._entity {return false}
+    if lhs.parents != rhs.parents {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

@@ -325,3 +325,69 @@ func reasonOf(r Result, n byte) Reason {
 	}
 	return ""
 }
+
+func TestPeriodWindowAndLinkMembership(t *testing.T) {
+	uc := PeriodWindow(ptrDate(ymd(1791, nil, nil)), ptrDate(ymd(1841, nil, nil)))
+	pc := PeriodWindow(ptrDate(ymd(1841, nil, nil)), ptrDate(ymd(1867, nil, nil)))
+	ontario := PeriodWindow(ptrDate(ymd(1867, nil, nil)), nil)
+	always := PeriodWindow(nil, nil)
+	if !Overlaps(always, uc) || !HoldsAt(Always(), always) {
+		t.Fatal("undated place always holds")
+	}
+	overlap, ok := Intersect(always, uc)
+	if !ok || overlap.Lo == nil || *overlap.Lo != *uc.Lo || overlap.Hi == nil || *overlap.Hi != *uc.Hi {
+		t.Fatalf("always ∩ uc = %+v ok=%v", overlap, ok)
+	}
+	// Undated Toronto→UC holds on UC's period when Toronto has no period.
+	mem, ok := LinkMembership(nil, nil, always, uc)
+	if !ok || !HoldsAt(mustWindow(t, ymd(1820, nil, nil)), mem) {
+		t.Fatalf("1820 in undated UC membership %+v ok=%v", mem, ok)
+	}
+	if HoldsAt(mustWindow(t, ymd(1850, nil, nil)), mem) {
+		t.Fatal("1850 should miss UC membership")
+	}
+	// Dated Ireland⊂UK until 1922: both places continue.
+	ireland := always
+	uk := always
+	end1922 := ymd(1922, nil, nil)
+	dated, ok := LinkMembership(nil, &end1922, ireland, uk)
+	if !ok {
+		t.Fatal("dated membership")
+	}
+	if !HoldsAt(mustWindow(t, ymd(1900, nil, nil)), dated) {
+		t.Fatal("1900 should hold in Ireland⊂UK until 1922")
+	}
+	if HoldsAt(mustWindow(t, ymd(1923, nil, nil)), dated) {
+		t.Fatal("1923 should miss Ireland⊂UK until 1922")
+	}
+	// About 1841 overlaps both UC and PC undated memberships.
+	abt := mustWindow(t, qualified(datevalues.QualifierABT, 1841, nil, nil))
+	ucMem, _ := LinkMembership(nil, nil, always, uc)
+	pcMem, _ := LinkMembership(nil, nil, always, pc)
+	if !HoldsAt(abt, ucMem) || !HoldsAt(abt, pcMem) {
+		t.Fatalf("about 1841 should hold in both UC and PC")
+	}
+	// Range straddling UC→PC is ambiguous on each.
+	span := mustWindow(t, between(1840, nil, nil, 1842, nil, nil))
+	if Relate(span, ucMem) != HoldAmbiguous {
+		t.Fatalf("1840–1842 vs UC: %v", Relate(span, ucMem))
+	}
+	if Relate(span, pcMem) != HoldAmbiguous {
+		t.Fatalf("1840–1842 vs PC: %v", Relate(span, pcMem))
+	}
+	ontMem, _ := LinkMembership(nil, nil, always, ontario)
+	if !HoldsAt(mustWindow(t, ymd(1950, nil, nil)), ontMem) {
+		t.Fatal("1950 should hold in Ontario")
+	}
+}
+
+func ptrDate(d datevalues.Value) *datevalues.Value { return &d }
+
+func mustWindow(t *testing.T, d datevalues.Value) Window {
+	t.Helper()
+	w, ok := WindowOfDate(d)
+	if !ok {
+		t.Fatalf("no window for %+v", d)
+	}
+	return w
+}
