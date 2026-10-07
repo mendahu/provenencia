@@ -19,6 +19,14 @@ Copy the stub. Surface + what got in the way is enough. A wanted fix is optional
 
 <!-- add below this line -->
 
+### Auto-fill name parts from the full name line
+
+- **Date:** 2026-10-07
+- **Where:** Citation composer → Observation name parts modal
+- **Annoyance:** After typing the full name into the single full-form line, I still have to add each name part by hand.
+- **Wanted:** Fill in the structured parts automatically from the full-form line. Split the string on spaces, add one name part per word, and default each part's type to **Given name**. Then I only have to fix the type dropdowns that are wrong and I'm done. Pairs with *Name part type dropdown: shifting width and no type-to-cycle*, since retyping parts is where that dropdown gets used.
+- **Open question:** When does it run: only while the parts list is empty, or on demand (e.g. a "Split" button), so it never overwrites parts I already edited?
+
 ### Click outside a modal sheet to close it
 
 - **Date:** 2026-10-07
