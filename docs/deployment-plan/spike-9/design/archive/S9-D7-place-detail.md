@@ -94,7 +94,7 @@ The page for one Place: **thumbnail slot, names, ref, period, the places it is p
 | Several names at once | All of a Place's reconciled names show (*Toronto*, *Tkaronto*); each has the D5 *Why*. Spellings and case already merged; a low-trust spelling may be dropped as *weak*. |
 | Period | When the Place existed or mattered (*1834 –*, *until 1867*, unknown). Either end may be missing. |
 | "Part of" has a type | Administrative, geographic, ecclesiastical, plus researcher-added types. Group parents by type. |
-| Parents change with time | A link holds while both places' periods overlap, so a list of administrative parents reads as a timeline. The header shows **today's** chain (or the last one for a place that ended). |
+| Parents change with time | A link holds for its own span: the overlap of the two places' periods, cut shorter when the link has dates, so a membership can end while both places continue. The header shows **today's** chain (or the last one for a place that ended). |
 | Contains | Places that are part of this one (direct children), grouped like parents. Can be long. |
 | Succession | *Succeeded* / *succeeded by* links to the place before or after a rename or merger (York → Toronto). Not part of the hierarchy. |
 | Everything is evidence | Every name, period and relationship came from a cited record (the hard way). Relationship rows can show their *Why* like any value. |
@@ -123,7 +123,7 @@ The page for one Place: **thumbnail slot, names, ref, period, the places it is p
 | PLD-1 | Title is the first name (fallback label → ref); the other names show beneath with D5 value rows and *Why*. |
 | PLD-2 | The header shows today's chain, or the last one for a place whose period has ended. |
 | PLD-3 | **Period** row: start and end, either may be unknown. |
-| PLD-4 | **Part of** lists parents grouped by relationship type, each with the span the link holds; an undated link reads as always. |
+| PLD-4 | **Part of** lists parents grouped by relationship type, each with the span the link holds. An undated link shows the overlap of the two places' periods; a link with dates shows that span. |
 | PLD-5 | **Contains** lists direct children; long lists truncate with a count. |
 | PLD-6 | **Succession** shows *Succeeded* and *Succeeded by* links with the other place's period. |
 | PLD-7 | Every related place links to its own page. |
