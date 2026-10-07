@@ -101,19 +101,23 @@ struct PersonDetailTests {
 
     @Test func lifeLineReadsBirthAndDeath() {
         let en = Locale(identifier: "en_US")
+        let birthEvent = CatalogCanonicalEntity(id: "ev1", ref: "EVT-1", subjectTypeID: "t", label: "")
+        let york = CatalogCanonicalEntity(id: "pl1", ref: "PLC-1", subjectTypeID: "t", label: "")
+        let toronto = CatalogCanonicalEntity(id: "pl2", ref: "PLC-2", subjectTypeID: "t", label: "")
         let james = CatalogPersonHeader(
             entity: CatalogCanonicalEntity(id: "e1", ref: "PER-7KD45", subjectTypeID: "t", label: ""),
             name: CatalogNameValue(form: "James Robins"),
             nameValueCount: 1,
             birth: CatalogLifeFacts(
+                event: birthEvent,
                 date: CatalogDateValueInput(kind: "point", startYear: 1817),
                 dateCount: 1,
-                places: [CatalogHeaderPlace(names: ["York"], nameCount: 1)]
+                places: [CatalogHeaderPlace(entity: york, names: ["York"], nameCount: 1)]
             ),
             death: CatalogLifeFacts(
                 date: CatalogDateValueInput(kind: "point", startYear: 1880),
                 dateCount: 1,
-                places: [CatalogHeaderPlace(names: ["Toronto"], nameCount: 1)]
+                places: [CatalogHeaderPlace(entity: toronto, names: ["Toronto"], nameCount: 1)]
             )
         )
         #expect(PersonLifeDisplay.line(james, locale: en).text == "1817 – 1880 · York → Toronto")
@@ -125,13 +129,19 @@ struct PersonDetailTests {
         #expect(page.rows[1].lead == "1817" && page.rows[1].badge == nil && page.rows[1].records.isEmpty)
         #expect(page.rows[2].lead == "York" && page.rows[2].style == .place)
         #expect(page.rows[4].lead == "Toronto")
+        // Derived rows open the Event or Place that owns their Why.
+        #expect(page.rows[1].opens?.location == .eventDetail(entityId: "ev1", ref: "EVT-1", title: nil))
+        #expect(page.rows[2].opens?.location == .placeDetail(entityId: "pl1", ref: "PLC-1", title: "York"))
+        #expect(page.rows[2].opens?.label == L10n.Conclusions.openPlace("York"))
+        #expect(page.rows[3].opens == nil, "a death with no linked event opens nothing")
+        #expect(page.rows[4].opens?.location == .placeDetail(entityId: "pl2", ref: "PLC-2", title: "Toronto"))
 
         var loneBirth = james
         loneBirth.death = CatalogLifeFacts()
         #expect(PersonLifeDisplay.line(loneBirth, locale: en).text == "1817 – · York")
 
         var extra = james
-        extra.birth.places = [CatalogHeaderPlace(names: ["York", "Tkaronto"], nameCount: 2)]
+        extra.birth.places = [CatalogHeaderPlace(entity: york, names: ["York", "Tkaronto"], nameCount: 2)]
         #expect(PersonLifeDisplay.line(extra, locale: en).text == "1817 – 1880 · York → Toronto")
         #expect(PersonLifeDisplay.line(extra, locale: en).extraPlaces == 1)
         let mixed = PersonDetailContent(detail: detail(), header: extra, locale: en)

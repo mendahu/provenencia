@@ -3213,9 +3213,21 @@ public nonisolated struct Provenencia_Engine_V1_HeaderPlace: Sendable {
 
   public var nameCount: Int32 = 0
 
+  /// entity is the Place; its page owns the names' Why.
+  public var entity: Provenencia_Engine_V1_CanonicalEntity {
+    get {_entity ?? Provenencia_Engine_V1_CanonicalEntity()}
+    set {_entity = newValue}
+  }
+  /// Returns true if `entity` has been explicitly set.
+  public var hasEntity: Bool {self._entity != nil}
+  /// Clears the value of `entity`. Subsequent reads from it will return its default value.
+  public mutating func clearEntity() {self._entity = nil}
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
+
+  fileprivate var _entity: Provenencia_Engine_V1_CanonicalEntity? = nil
 }
 
 /// LifeFacts is a birth or a death: the event's date, else its start date,
@@ -3238,11 +3250,22 @@ public nonisolated struct Provenencia_Engine_V1_LifeFacts: Sendable {
 
   public var places: [Provenencia_Engine_V1_HeaderPlace] = []
 
+  /// event is the birth or death event read; absent when none is linked.
+  public var event: Provenencia_Engine_V1_CanonicalEntity {
+    get {_event ?? Provenencia_Engine_V1_CanonicalEntity()}
+    set {_event = newValue}
+  }
+  /// Returns true if `event` has been explicitly set.
+  public var hasEvent: Bool {self._event != nil}
+  /// Clears the value of `event`. Subsequent reads from it will return its default value.
+  public mutating func clearEvent() {self._event = nil}
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
 
   fileprivate var _date: Provenencia_Engine_V1_DateValueInput? = nil
+  fileprivate var _event: Provenencia_Engine_V1_CanonicalEntity? = nil
 }
 
 /// EventSubject is one person on an event through a subject-role participation.
@@ -3286,57 +3309,57 @@ public nonisolated struct Provenencia_Engine_V1_EventSubject: Sendable {
 /// (names are one structure, so at most 1; > 1 would read as mixed, and the
 /// extra values are the list's +N). birth and death are read off the
 /// canonical graph.
-public nonisolated struct Provenencia_Engine_V1_PersonHeader: Sendable {
+public nonisolated struct Provenencia_Engine_V1_PersonHeader: @unchecked Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
   public var entity: Provenencia_Engine_V1_CanonicalEntity {
-    get {_entity ?? Provenencia_Engine_V1_CanonicalEntity()}
-    set {_entity = newValue}
+    get {_storage._entity ?? Provenencia_Engine_V1_CanonicalEntity()}
+    set {_uniqueStorage()._entity = newValue}
   }
   /// Returns true if `entity` has been explicitly set.
-  public var hasEntity: Bool {self._entity != nil}
+  public var hasEntity: Bool {_storage._entity != nil}
   /// Clears the value of `entity`. Subsequent reads from it will return its default value.
-  public mutating func clearEntity() {self._entity = nil}
+  public mutating func clearEntity() {_uniqueStorage()._entity = nil}
 
   public var name: Provenencia_Engine_V1_NameValueInput {
-    get {_name ?? Provenencia_Engine_V1_NameValueInput()}
-    set {_name = newValue}
+    get {_storage._name ?? Provenencia_Engine_V1_NameValueInput()}
+    set {_uniqueStorage()._name = newValue}
   }
   /// Returns true if `name` has been explicitly set.
-  public var hasName: Bool {self._name != nil}
+  public var hasName: Bool {_storage._name != nil}
   /// Clears the value of `name`. Subsequent reads from it will return its default value.
-  public mutating func clearName() {self._name = nil}
+  public mutating func clearName() {_uniqueStorage()._name = nil}
 
-  public var nameValueCount: Int32 = 0
+  public var nameValueCount: Int32 {
+    get {_storage._nameValueCount}
+    set {_uniqueStorage()._nameValueCount = newValue}
+  }
 
   public var birth: Provenencia_Engine_V1_LifeFacts {
-    get {_birth ?? Provenencia_Engine_V1_LifeFacts()}
-    set {_birth = newValue}
+    get {_storage._birth ?? Provenencia_Engine_V1_LifeFacts()}
+    set {_uniqueStorage()._birth = newValue}
   }
   /// Returns true if `birth` has been explicitly set.
-  public var hasBirth: Bool {self._birth != nil}
+  public var hasBirth: Bool {_storage._birth != nil}
   /// Clears the value of `birth`. Subsequent reads from it will return its default value.
-  public mutating func clearBirth() {self._birth = nil}
+  public mutating func clearBirth() {_uniqueStorage()._birth = nil}
 
   public var death: Provenencia_Engine_V1_LifeFacts {
-    get {_death ?? Provenencia_Engine_V1_LifeFacts()}
-    set {_death = newValue}
+    get {_storage._death ?? Provenencia_Engine_V1_LifeFacts()}
+    set {_uniqueStorage()._death = newValue}
   }
   /// Returns true if `death` has been explicitly set.
-  public var hasDeath: Bool {self._death != nil}
+  public var hasDeath: Bool {_storage._death != nil}
   /// Clears the value of `death`. Subsequent reads from it will return its default value.
-  public mutating func clearDeath() {self._death = nil}
+  public mutating func clearDeath() {_uniqueStorage()._death = nil}
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
 
-  fileprivate var _entity: Provenencia_Engine_V1_CanonicalEntity? = nil
-  fileprivate var _name: Provenencia_Engine_V1_NameValueInput? = nil
-  fileprivate var _birth: Provenencia_Engine_V1_LifeFacts? = nil
-  fileprivate var _death: Provenencia_Engine_V1_LifeFacts? = nil
+  fileprivate var _storage = _StorageClass.defaultInstance
 }
 
 /// ListPersonHeaders returns every unmerged Person in list order: named
@@ -4028,50 +4051,42 @@ public nonisolated struct Provenencia_Engine_V1_MatchReason: Sendable {
 /// PromoteTargetSuggestion is one handle the Subject could join. person is
 /// the row header for Person handles; Events and Places carry the handle
 /// alone until their header composers land.
-public nonisolated struct Provenencia_Engine_V1_PromoteTargetSuggestion: @unchecked Sendable {
+public nonisolated struct Provenencia_Engine_V1_PromoteTargetSuggestion: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
   public var entity: Provenencia_Engine_V1_CanonicalEntity {
-    get {_storage._entity ?? Provenencia_Engine_V1_CanonicalEntity()}
-    set {_uniqueStorage()._entity = newValue}
+    get {_entity ?? Provenencia_Engine_V1_CanonicalEntity()}
+    set {_entity = newValue}
   }
   /// Returns true if `entity` has been explicitly set.
-  public var hasEntity: Bool {_storage._entity != nil}
+  public var hasEntity: Bool {self._entity != nil}
   /// Clears the value of `entity`. Subsequent reads from it will return its default value.
-  public mutating func clearEntity() {_uniqueStorage()._entity = nil}
+  public mutating func clearEntity() {self._entity = nil}
 
-  public var score: Double {
-    get {_storage._score}
-    set {_uniqueStorage()._score = newValue}
-  }
+  public var score: Double = 0
 
-  public var reasons: [Provenencia_Engine_V1_MatchReason] {
-    get {_storage._reasons}
-    set {_uniqueStorage()._reasons = newValue}
-  }
+  public var reasons: [Provenencia_Engine_V1_MatchReason] = []
 
   public var person: Provenencia_Engine_V1_PersonHeader {
-    get {_storage._person ?? Provenencia_Engine_V1_PersonHeader()}
-    set {_uniqueStorage()._person = newValue}
+    get {_person ?? Provenencia_Engine_V1_PersonHeader()}
+    set {_person = newValue}
   }
   /// Returns true if `person` has been explicitly set.
-  public var hasPerson: Bool {_storage._person != nil}
+  public var hasPerson: Bool {self._person != nil}
   /// Clears the value of `person`. Subsequent reads from it will return its default value.
-  public mutating func clearPerson() {_uniqueStorage()._person = nil}
+  public mutating func clearPerson() {self._person = nil}
 
   /// accepted members of the handle
-  public var memberCount: Int32 {
-    get {_storage._memberCount}
-    set {_uniqueStorage()._memberCount = newValue}
-  }
+  public var memberCount: Int32 = 0
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
 
-  fileprivate var _storage = _StorageClass.defaultInstance
+  fileprivate var _entity: Provenencia_Engine_V1_CanonicalEntity? = nil
+  fileprivate var _person: Provenencia_Engine_V1_PersonHeader? = nil
 }
 
 public nonisolated struct Provenencia_Engine_V1_ListPromoteTargetSuggestionsResponse: Sendable {
@@ -11184,7 +11199,7 @@ nonisolated extension Provenencia_Engine_V1_ListSubjectMembershipsResponse: Swif
 
 nonisolated extension Provenencia_Engine_V1_HeaderPlace: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".HeaderPlace"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}names\0\u{3}name_count\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}names\0\u{3}name_count\0\u{1}entity\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -11194,24 +11209,33 @@ nonisolated extension Provenencia_Engine_V1_HeaderPlace: SwiftProtobuf.Message, 
       switch fieldNumber {
       case 1: try { try decoder.decodeRepeatedStringField(value: &self.names) }()
       case 2: try { try decoder.decodeSingularInt32Field(value: &self.nameCount) }()
+      case 3: try { try decoder.decodeSingularMessageField(value: &self._entity) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
     if !self.names.isEmpty {
       try visitor.visitRepeatedStringField(value: self.names, fieldNumber: 1)
     }
     if self.nameCount != 0 {
       try visitor.visitSingularInt32Field(value: self.nameCount, fieldNumber: 2)
     }
+    try { if let v = self._entity {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Provenencia_Engine_V1_HeaderPlace, rhs: Provenencia_Engine_V1_HeaderPlace) -> Bool {
     if lhs.names != rhs.names {return false}
     if lhs.nameCount != rhs.nameCount {return false}
+    if lhs._entity != rhs._entity {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -11219,7 +11243,7 @@ nonisolated extension Provenencia_Engine_V1_HeaderPlace: SwiftProtobuf.Message, 
 
 nonisolated extension Provenencia_Engine_V1_LifeFacts: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".LifeFacts"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}date\0\u{3}date_count\0\u{1}places\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}date\0\u{3}date_count\0\u{1}places\0\u{1}event\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -11230,6 +11254,7 @@ nonisolated extension Provenencia_Engine_V1_LifeFacts: SwiftProtobuf.Message, Sw
       case 1: try { try decoder.decodeSingularMessageField(value: &self._date) }()
       case 2: try { try decoder.decodeSingularInt32Field(value: &self.dateCount) }()
       case 3: try { try decoder.decodeRepeatedMessageField(value: &self.places) }()
+      case 4: try { try decoder.decodeSingularMessageField(value: &self._event) }()
       default: break
       }
     }
@@ -11249,6 +11274,9 @@ nonisolated extension Provenencia_Engine_V1_LifeFacts: SwiftProtobuf.Message, Sw
     if !self.places.isEmpty {
       try visitor.visitRepeatedMessageField(value: self.places, fieldNumber: 3)
     }
+    try { if let v = self._event {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -11256,6 +11284,7 @@ nonisolated extension Provenencia_Engine_V1_LifeFacts: SwiftProtobuf.Message, Sw
     if lhs._date != rhs._date {return false}
     if lhs.dateCount != rhs.dateCount {return false}
     if lhs.places != rhs.places {return false}
+    if lhs._event != rhs._event {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -11309,51 +11338,95 @@ nonisolated extension Provenencia_Engine_V1_PersonHeader: SwiftProtobuf.Message,
   public static let protoMessageName: String = _protobuf_package + ".PersonHeader"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}entity\0\u{1}name\0\u{3}name_value_count\0\u{1}birth\0\u{1}death\0")
 
+  fileprivate class _StorageClass {
+    var _entity: Provenencia_Engine_V1_CanonicalEntity? = nil
+    var _name: Provenencia_Engine_V1_NameValueInput? = nil
+    var _nameValueCount: Int32 = 0
+    var _birth: Provenencia_Engine_V1_LifeFacts? = nil
+    var _death: Provenencia_Engine_V1_LifeFacts? = nil
+
+      // This property is used as the initial default value for new instances of the type.
+      // The type itself is protecting the reference to its storage via CoW semantics.
+      // This will force a copy to be made of this reference when the first mutation occurs;
+      // hence, it is safe to mark this as `nonisolated(unsafe)`.
+      static nonisolated(unsafe) let defaultInstance = _StorageClass()
+
+    private init() {}
+
+    init(copying source: _StorageClass) {
+      _entity = source._entity
+      _name = source._name
+      _nameValueCount = source._nameValueCount
+      _birth = source._birth
+      _death = source._death
+    }
+  }
+
+  fileprivate mutating func _uniqueStorage() -> _StorageClass {
+    if !isKnownUniquelyReferenced(&_storage) {
+      _storage = _StorageClass(copying: _storage)
+    }
+    return _storage
+  }
+
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularMessageField(value: &self._entity) }()
-      case 2: try { try decoder.decodeSingularMessageField(value: &self._name) }()
-      case 3: try { try decoder.decodeSingularInt32Field(value: &self.nameValueCount) }()
-      case 4: try { try decoder.decodeSingularMessageField(value: &self._birth) }()
-      case 5: try { try decoder.decodeSingularMessageField(value: &self._death) }()
-      default: break
+    _ = _uniqueStorage()
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      while let fieldNumber = try decoder.nextFieldNumber() {
+        // The use of inline closures is to circumvent an issue where the compiler
+        // allocates stack space for every case branch when no optimizations are
+        // enabled. https://github.com/apple/swift-protobuf/issues/1034
+        switch fieldNumber {
+        case 1: try { try decoder.decodeSingularMessageField(value: &_storage._entity) }()
+        case 2: try { try decoder.decodeSingularMessageField(value: &_storage._name) }()
+        case 3: try { try decoder.decodeSingularInt32Field(value: &_storage._nameValueCount) }()
+        case 4: try { try decoder.decodeSingularMessageField(value: &_storage._birth) }()
+        case 5: try { try decoder.decodeSingularMessageField(value: &_storage._death) }()
+        default: break
+        }
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    // The use of inline closures is to circumvent an issue where the compiler
-    // allocates stack space for every if/case branch local when no optimizations
-    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
-    // https://github.com/apple/swift-protobuf/issues/1182
-    try { if let v = self._entity {
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
-    } }()
-    try { if let v = self._name {
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
-    } }()
-    if self.nameValueCount != 0 {
-      try visitor.visitSingularInt32Field(value: self.nameValueCount, fieldNumber: 3)
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every if/case branch local when no optimizations
+      // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+      // https://github.com/apple/swift-protobuf/issues/1182
+      try { if let v = _storage._entity {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
+      } }()
+      try { if let v = _storage._name {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+      } }()
+      if _storage._nameValueCount != 0 {
+        try visitor.visitSingularInt32Field(value: _storage._nameValueCount, fieldNumber: 3)
+      }
+      try { if let v = _storage._birth {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
+      } }()
+      try { if let v = _storage._death {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 5)
+      } }()
     }
-    try { if let v = self._birth {
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
-    } }()
-    try { if let v = self._death {
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 5)
-    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Provenencia_Engine_V1_PersonHeader, rhs: Provenencia_Engine_V1_PersonHeader) -> Bool {
-    if lhs._entity != rhs._entity {return false}
-    if lhs._name != rhs._name {return false}
-    if lhs.nameValueCount != rhs.nameValueCount {return false}
-    if lhs._birth != rhs._birth {return false}
-    if lhs._death != rhs._death {return false}
+    if lhs._storage !== rhs._storage {
+      let storagesAreEqual: Bool = withExtendedLifetime((lhs._storage, rhs._storage)) { (_args: (_StorageClass, _StorageClass)) in
+        let _storage = _args.0
+        let rhs_storage = _args.1
+        if _storage._entity != rhs_storage._entity {return false}
+        if _storage._name != rhs_storage._name {return false}
+        if _storage._nameValueCount != rhs_storage._nameValueCount {return false}
+        if _storage._birth != rhs_storage._birth {return false}
+        if _storage._death != rhs_storage._death {return false}
+        return true
+      }
+      if !storagesAreEqual {return false}
+    }
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -12585,95 +12658,51 @@ nonisolated extension Provenencia_Engine_V1_PromoteTargetSuggestion: SwiftProtob
   public static let protoMessageName: String = _protobuf_package + ".PromoteTargetSuggestion"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}entity\0\u{1}score\0\u{1}reasons\0\u{1}person\0\u{3}member_count\0")
 
-  fileprivate class _StorageClass {
-    var _entity: Provenencia_Engine_V1_CanonicalEntity? = nil
-    var _score: Double = 0
-    var _reasons: [Provenencia_Engine_V1_MatchReason] = []
-    var _person: Provenencia_Engine_V1_PersonHeader? = nil
-    var _memberCount: Int32 = 0
-
-      // This property is used as the initial default value for new instances of the type.
-      // The type itself is protecting the reference to its storage via CoW semantics.
-      // This will force a copy to be made of this reference when the first mutation occurs;
-      // hence, it is safe to mark this as `nonisolated(unsafe)`.
-      static nonisolated(unsafe) let defaultInstance = _StorageClass()
-
-    private init() {}
-
-    init(copying source: _StorageClass) {
-      _entity = source._entity
-      _score = source._score
-      _reasons = source._reasons
-      _person = source._person
-      _memberCount = source._memberCount
-    }
-  }
-
-  fileprivate mutating func _uniqueStorage() -> _StorageClass {
-    if !isKnownUniquelyReferenced(&_storage) {
-      _storage = _StorageClass(copying: _storage)
-    }
-    return _storage
-  }
-
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    _ = _uniqueStorage()
-    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
-      while let fieldNumber = try decoder.nextFieldNumber() {
-        // The use of inline closures is to circumvent an issue where the compiler
-        // allocates stack space for every case branch when no optimizations are
-        // enabled. https://github.com/apple/swift-protobuf/issues/1034
-        switch fieldNumber {
-        case 1: try { try decoder.decodeSingularMessageField(value: &_storage._entity) }()
-        case 2: try { try decoder.decodeSingularDoubleField(value: &_storage._score) }()
-        case 3: try { try decoder.decodeRepeatedMessageField(value: &_storage._reasons) }()
-        case 4: try { try decoder.decodeSingularMessageField(value: &_storage._person) }()
-        case 5: try { try decoder.decodeSingularInt32Field(value: &_storage._memberCount) }()
-        default: break
-        }
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularMessageField(value: &self._entity) }()
+      case 2: try { try decoder.decodeSingularDoubleField(value: &self.score) }()
+      case 3: try { try decoder.decodeRepeatedMessageField(value: &self.reasons) }()
+      case 4: try { try decoder.decodeSingularMessageField(value: &self._person) }()
+      case 5: try { try decoder.decodeSingularInt32Field(value: &self.memberCount) }()
+      default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every if/case branch local when no optimizations
-      // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
-      // https://github.com/apple/swift-protobuf/issues/1182
-      try { if let v = _storage._entity {
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
-      } }()
-      if _storage._score.bitPattern != 0 {
-        try visitor.visitSingularDoubleField(value: _storage._score, fieldNumber: 2)
-      }
-      if !_storage._reasons.isEmpty {
-        try visitor.visitRepeatedMessageField(value: _storage._reasons, fieldNumber: 3)
-      }
-      try { if let v = _storage._person {
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
-      } }()
-      if _storage._memberCount != 0 {
-        try visitor.visitSingularInt32Field(value: _storage._memberCount, fieldNumber: 5)
-      }
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    try { if let v = self._entity {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
+    } }()
+    if self.score.bitPattern != 0 {
+      try visitor.visitSingularDoubleField(value: self.score, fieldNumber: 2)
+    }
+    if !self.reasons.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.reasons, fieldNumber: 3)
+    }
+    try { if let v = self._person {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
+    } }()
+    if self.memberCount != 0 {
+      try visitor.visitSingularInt32Field(value: self.memberCount, fieldNumber: 5)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Provenencia_Engine_V1_PromoteTargetSuggestion, rhs: Provenencia_Engine_V1_PromoteTargetSuggestion) -> Bool {
-    if lhs._storage !== rhs._storage {
-      let storagesAreEqual: Bool = withExtendedLifetime((lhs._storage, rhs._storage)) { (_args: (_StorageClass, _StorageClass)) in
-        let _storage = _args.0
-        let rhs_storage = _args.1
-        if _storage._entity != rhs_storage._entity {return false}
-        if _storage._score != rhs_storage._score {return false}
-        if _storage._reasons != rhs_storage._reasons {return false}
-        if _storage._person != rhs_storage._person {return false}
-        if _storage._memberCount != rhs_storage._memberCount {return false}
-        return true
-      }
-      if !storagesAreEqual {return false}
-    }
+    if lhs._entity != rhs._entity {return false}
+    if lhs.score != rhs.score {return false}
+    if lhs.reasons != rhs.reasons {return false}
+    if lhs._person != rhs._person {return false}
+    if lhs.memberCount != rhs.memberCount {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

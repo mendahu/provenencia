@@ -16180,6 +16180,30 @@
         }
       }
     },
+    "conclusions.detail.openEvent": {
+      "comment": "Icon button on a Person's birth or death date row that opens the event the date is read from",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open event"
+          }
+        }
+      }
+    },
+    "conclusions.detail.openPlace": {
+      "comment": "Icon button on a derived place row that opens the Place page; argument is the place name",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open %@"
+          }
+        }
+      }
+    },
     "conclusions.person.details": {
       "comment": "Section heading over a Person's fields",
       "extractionState": "manual",

@@ -84,6 +84,8 @@ struct EventDetailTests {
 
     @Test func headerSuppliesSubjectsAndPlace() {
         let james = CatalogCanonicalEntity(id: "p1", ref: "PER-1", subjectTypeID: "t", label: "")
+        let york = CatalogCanonicalEntity(id: "pl1", ref: "PLC-1", subjectTypeID: "t", label: "")
+        let toronto = CatalogCanonicalEntity(id: "pl2", ref: "PLC-2", subjectTypeID: "t", label: "")
         let header = CatalogEventHeader(
             entity: CatalogCanonicalEntity(id: "e1", ref: "EVT-8PL22", subjectTypeID: "t", label: ""),
             eventTypeKey: "birth",
@@ -96,8 +98,8 @@ struct EventDetailTests {
                 ),
             ],
             places: [
-                CatalogHeaderPlace(names: ["York"], nameCount: 1),
-                CatalogHeaderPlace(names: ["Toronto"], nameCount: 1),
+                CatalogHeaderPlace(entity: york, names: ["York"], nameCount: 1),
+                CatalogHeaderPlace(entity: toronto, names: ["Toronto"], nameCount: 1),
             ]
         )
         let page = EventDetailContent(detail: detail(), header: header, locale: en)
@@ -105,6 +107,7 @@ struct EventDetailTests {
         #expect(page.summaryPlace == "York")
         #expect(page.rows[1].lead == "York" && page.rows[1].badge == .mixed && page.rows[1].records.isEmpty)
         #expect(!page.rows[1].lead!.contains(","))
+        #expect(page.rows[1].opens?.location == .placeDetail(entityId: "pl1", ref: "PLC-1", title: "York"))
     }
 
     @Test func placeRowIsEmpty() {

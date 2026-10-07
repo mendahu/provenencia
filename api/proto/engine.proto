@@ -983,6 +983,8 @@ message ListSubjectMembershipsResponse {
 message HeaderPlace {
   repeated string names = 1;
   int32 name_count = 2;
+  // entity is the Place; its page owns the names' Why.
+  CanonicalEntity entity = 3;
 }
 
 // LifeFacts is a birth or a death: the event's date, else its start date,
@@ -991,6 +993,8 @@ message LifeFacts {
   DateValueInput date = 1;
   int32 date_count = 2;
   repeated HeaderPlace places = 3;
+  // event is the birth or death event read; absent when none is linked.
+  CanonicalEntity event = 4;
 }
 
 // EventSubject is one person on an event through a subject-role participation.

@@ -6,6 +6,7 @@ import SwiftUI
 /// alone. Snowflake: Person, Event and Place pages share it from this folder.
 struct ReconciledValueRow: View {
     let model: ReconciledValueRowModel
+    @Environment(WorkspaceNavigation.self) private var navigation
     @State private var showsOtherValues = false
     @State private var showsWhy = false
 
@@ -117,6 +118,12 @@ struct ReconciledValueRow: View {
             if !model.records.isEmpty {
                 PVDisclosureButton(L10n.Conclusions.whyButton, isExpanded: $showsWhy)
                     .accessibilityIdentifier("conclusion.detail.row.\(model.id).why")
+            }
+            if let opens = model.opens {
+                PVIconButton(.arrowUpRight, label: opens.label, size: .sm) {
+                    navigation.go(to: opens.location)
+                }
+                .accessibilityIdentifier("conclusion.detail.row.\(model.id).open")
             }
         }
         .frame(minWidth: 72, alignment: .trailing)

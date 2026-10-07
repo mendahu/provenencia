@@ -50,6 +50,9 @@ func personHeaderProto(h conclusionheaders.PersonHeader) *engine.PersonHeader {
 
 func lifeFactsProto(life conclusionheaders.LifeFacts) *engine.LifeFacts {
 	out := &engine.LifeFacts{DateCount: int32(life.DateCount)}
+	if life.Event != nil {
+		out.Event = canonicalEntityProto(*life.Event)
+	}
 	if life.Date != nil {
 		out.Date = valuecodec.DateToProto(*life.Date)
 	}
@@ -60,7 +63,11 @@ func lifeFactsProto(life conclusionheaders.LifeFacts) *engine.LifeFacts {
 }
 
 func headerPlaceProto(p conclusionheaders.HeaderPlace) *engine.HeaderPlace {
-	return &engine.HeaderPlace{Names: append([]string(nil), p.Names...), NameCount: int32(p.Count)}
+	return &engine.HeaderPlace{
+		Entity:    canonicalEntityProto(p.Entity),
+		Names:     append([]string(nil), p.Names...),
+		NameCount: int32(p.Count),
+	}
 }
 
 func GetPersonHeader(in []byte) ([]byte, error) {

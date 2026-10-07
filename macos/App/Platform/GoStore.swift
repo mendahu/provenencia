@@ -888,6 +888,7 @@ struct GoStore: GenealogyStore {
 
     private static func mapLifeFacts(_ life: Provenencia_Engine_V1_LifeFacts) -> CatalogLifeFacts {
         CatalogLifeFacts(
+            event: life.hasEvent ? mapCanonicalEntity(life.event) : nil,
             date: life.hasDate ? mapDateValue(life.date) : nil,
             dateCount: Int(life.dateCount),
             places: life.places.map(mapHeaderPlace)
@@ -895,7 +896,11 @@ struct GoStore: GenealogyStore {
     }
 
     private static func mapHeaderPlace(_ place: Provenencia_Engine_V1_HeaderPlace) -> CatalogHeaderPlace {
-        CatalogHeaderPlace(names: place.names, nameCount: Int(place.nameCount))
+        CatalogHeaderPlace(
+            entity: mapCanonicalEntity(place.entity),
+            names: place.names,
+            nameCount: Int(place.nameCount)
+        )
     }
 
     private static func mapEventSubject(_ subject: Provenencia_Engine_V1_EventSubject) -> CatalogEventSubject {

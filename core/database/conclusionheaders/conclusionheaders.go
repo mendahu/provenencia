@@ -41,6 +41,9 @@ type PersonHeader struct {
 
 // LifeFacts is a birth or a death composed from the canonical graph.
 type LifeFacts struct {
+	// Event is the birth or death event read; nil when none is linked.
+	// Its page owns the date's Why.
+	Event *canonicalentities.Entity
 	// Date is the event's date, else its start date.
 	Date      *datevalues.Value
 	DateCount int
@@ -48,10 +51,12 @@ type LifeFacts struct {
 }
 
 // HeaderPlace is one Place a walk reached. Names are kept toponyms in rank
-// order. Count is how many were kept (the list's +N). No chain.
+// order. Count is how many were kept. No chain. Entity is the Place, whose
+// page owns the names' Why.
 type HeaderPlace struct {
-	Names []string
-	Count int
+	Entity canonicalentities.Entity
+	Names  []string
+	Count  int
 }
 
 // Unmerged Person handles with their displayed (kept rank-1) name and name count,

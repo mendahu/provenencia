@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/valuecodec"
 )
@@ -17,14 +18,16 @@ const walkBatch = 500
 // A subject-role participation joins a person to an event. Role stays off
 // the association's identity; the walk reads the reconciled rank-1 role.
 const sqlLifeRows = `
-SELECT pe.value_entity_id, tt.key, ev.id, ev.ref,
+SELECT pe.value_entity_id, tt.key,
+	ev.id, ev.subject_type_id, ev.ref, COALESCE(ev.argument, ''), COALESCE(ev.label, ''),
 	d.value_date,
 	(SELECT COUNT(*) FROM auto_reconciler_values c
 		WHERE c.entity_id = ev.id AND c.property_id = dp.id AND c.reason = 'kept'),
 	sd.value_date,
 	(SELECT COUNT(*) FROM auto_reconciler_values c
 		WHERE c.entity_id = ev.id AND c.property_id = sp.id AND c.reason = 'kept'),
-	pl.id, pl.ref, tv.value_text, COALESCE(tv.rank, 0),
+	pl.id, pl.subject_type_id, pl.ref, COALESCE(pl.argument, ''), COALESCE(pl.label, ''),
+	tv.value_text, COALESCE(tv.rank, 0),
 	(SELECT COUNT(*) FROM auto_reconciler_values c
 		WHERE c.entity_id = pl.id AND c.property_id = tp.id AND c.reason = 'kept')
 FROM auto_reconciler_values pe
@@ -85,7 +88,9 @@ LEFT JOIN auto_reconciler_values nv
 WHERE ee.rank = 1 AND ee.reason = 'kept' AND ee.value_entity_id IN (`
 
 const sqlEventPlaces = `
-SELECT ee.value_entity_id, pl.id, pl.ref, tv.value_text, COALESCE(tv.rank, 0),
+SELECT ee.value_entity_id,
+	pl.id, pl.subject_type_id, pl.ref, COALESCE(pl.argument, ''), COALESCE(pl.label, ''),
+	tv.value_text, COALESCE(tv.rank, 0),
 	(SELECT COUNT(*) FROM auto_reconciler_values c
 		WHERE c.entity_id = pl.id AND c.property_id = tp.id AND c.reason = 'kept')
 FROM auto_reconciler_values ee
@@ -142,12 +147,11 @@ func attachEventGraph(q Querier, headers []EventHeader) error {
 type lifeRow struct {
 	personID              []byte
 	kind                  string
-	eventID               []byte
-	eventRef              string
+	event                 canonicalentities.Entity
 	dateBlob, startBlob   []byte
 	dateCount, startCount int
-	placeID               []byte
-	placeRef, name        string
+	place                 canonicalentities.Entity
+	name                  string
 	nameRank, placeCount  int
 }
 
@@ -155,17 +159,20 @@ func loadLives(q Querier, personIDs [][]byte) (map[string]map[string]LifeFacts, 
 	rows, err := queryBatches(q, sqlLifeRows, personIDs, func(sc scanner) (lifeRow, error) {
 		var r lifeRow
 		var name, placeRef sql.NullString
-		if err := sc.Scan(&r.personID, &r.kind, &r.eventID, &r.eventRef,
+		ev, pl := &r.event, &r.place
+		if err := sc.Scan(&r.personID, &r.kind,
+			&ev.ID, &ev.SubjectTypeID, &ev.Ref, &ev.Argument, &ev.Label,
 			&r.dateBlob, &r.dateCount, &r.startBlob, &r.startCount,
-			&r.placeID, &placeRef, &name, &r.nameRank, &r.placeCount); err != nil {
+			&pl.ID, &pl.SubjectTypeID, &placeRef, &pl.Argument, &pl.Label,
+			&name, &r.nameRank, &r.placeCount); err != nil {
 			return lifeRow{}, err
 		}
-		r.placeRef = placeRef.String
+		pl.Ref = placeRef.String
 		r.personID = append([]byte(nil), r.personID...)
-		r.eventID = append([]byte(nil), r.eventID...)
+		r.event = ownEntity(r.event)
 		r.dateBlob = append([]byte(nil), r.dateBlob...)
 		r.startBlob = append([]byte(nil), r.startBlob...)
-		r.placeID = append([]byte(nil), r.placeID...)
+		r.place = ownEntity(r.place)
 		if name.Valid {
 			r.name = strings.TrimSpace(name.String)
 		}
@@ -177,7 +184,7 @@ func loadLives(q Querier, personIDs [][]byte) (map[string]map[string]LifeFacts, 
 	// person → kind → event ref → accumulator. The lowest event ref wins
 	// when several births (or deaths) survive.
 	type ev struct {
-		ref    string
+		entity canonicalentities.Entity
 		date   *datevalues.Value
 		count  int
 		places map[string]*placeBuild
@@ -194,7 +201,7 @@ func loadLives(q Querier, personIDs [][]byte) (map[string]map[string]LifeFacts, 
 			events = map[string]*ev{}
 			kind[r.kind] = events
 		}
-		e := events[string(r.eventID)]
+		e := events[string(r.event.ID)]
 		if e == nil {
 			dateBlob, count := r.dateBlob, r.dateCount
 			if len(dateBlob) == 0 {
@@ -204,13 +211,13 @@ func loadLives(q Querier, personIDs [][]byte) (map[string]map[string]LifeFacts, 
 			if err != nil {
 				return nil, err
 			}
-			e = &ev{ref: r.eventRef, date: date, count: count, places: map[string]*placeBuild{}}
-			events[string(r.eventID)] = e
+			e = &ev{entity: r.event, date: date, count: count, places: map[string]*placeBuild{}}
+			events[string(r.event.ID)] = e
 		}
-		if len(r.placeID) == 0 {
+		if len(r.place.ID) == 0 {
 			continue
 		}
-		e.places[string(r.placeID)] = addPlaceName(e.places[string(r.placeID)], r.placeRef, r.name, r.nameRank, r.placeCount)
+		e.places[string(r.place.ID)] = addPlaceName(e.places[string(r.place.ID)], r.place, r.name, r.nameRank, r.placeCount)
 	}
 	out := map[string]map[string]LifeFacts{}
 	for person, kinds := range byPerson {
@@ -218,11 +225,12 @@ func loadLives(q Querier, personIDs [][]byte) (map[string]map[string]LifeFacts, 
 		for kind, events := range kinds {
 			var best *ev
 			for _, e := range events {
-				if best == nil || e.ref < best.ref {
+				if best == nil || e.entity.Ref < best.entity.Ref {
 					best = e
 				}
 			}
-			out[person][kind] = LifeFacts{Date: best.date, DateCount: best.count, Places: placesOf(best.places)}
+			event := best.entity
+			out[person][kind] = LifeFacts{Event: &event, Date: best.date, DateCount: best.count, Places: placesOf(best.places)}
 		}
 	}
 	return out, nil
@@ -281,8 +289,7 @@ func loadEventSubjects(q Querier, eventIDs [][]byte) (map[string][]EventSubject,
 
 type placeRow struct {
 	eventID []byte
-	placeID []byte
-	ref     string
+	place   canonicalentities.Entity
 	name    string
 	rank    int
 	count   int
@@ -292,11 +299,13 @@ func loadEventPlaces(q Querier, eventIDs [][]byte) (map[string][]HeaderPlace, er
 	rows, err := queryBatches(q, sqlEventPlaces, eventIDs, func(sc scanner) (placeRow, error) {
 		var r placeRow
 		var name *string
-		if err := sc.Scan(&r.eventID, &r.placeID, &r.ref, &name, &r.rank, &r.count); err != nil {
+		pl := &r.place
+		if err := sc.Scan(&r.eventID, &pl.ID, &pl.SubjectTypeID, &pl.Ref, &pl.Argument, &pl.Label,
+			&name, &r.rank, &r.count); err != nil {
 			return placeRow{}, err
 		}
 		r.eventID = append([]byte(nil), r.eventID...)
-		r.placeID = append([]byte(nil), r.placeID...)
+		r.place = ownEntity(r.place)
 		if name != nil {
 			r.name = strings.TrimSpace(*name)
 		}
@@ -312,7 +321,7 @@ func loadEventPlaces(q Querier, eventIDs [][]byte) (map[string][]HeaderPlace, er
 			places = map[string]*placeBuild{}
 			byEvent[string(r.eventID)] = places
 		}
-		places[string(r.placeID)] = addPlaceName(places[string(r.placeID)], r.ref, r.name, r.rank, r.count)
+		places[string(r.place.ID)] = addPlaceName(places[string(r.place.ID)], r.place, r.name, r.rank, r.count)
 	}
 	out := map[string][]HeaderPlace{}
 	for event, places := range byEvent {
@@ -327,14 +336,14 @@ type named struct {
 }
 
 type placeBuild struct {
-	ref   string
-	count int
-	names []named
+	entity canonicalentities.Entity
+	count  int
+	names  []named
 }
 
-func addPlaceName(p *placeBuild, ref, name string, rank, count int) *placeBuild {
+func addPlaceName(p *placeBuild, entity canonicalentities.Entity, name string, rank, count int) *placeBuild {
 	if p == nil {
-		p = &placeBuild{ref: ref, count: count}
+		p = &placeBuild{entity: entity, count: count}
 	}
 	if name == "" {
 		return p
@@ -353,11 +362,11 @@ func placesOf(places map[string]*placeBuild) []HeaderPlace {
 	for _, p := range places {
 		list = append(list, p)
 	}
-	sort.Slice(list, func(i, j int) bool { return list[i].ref < list[j].ref })
+	sort.Slice(list, func(i, j int) bool { return list[i].entity.Ref < list[j].entity.Ref })
 	var out []HeaderPlace
 	for _, p := range list {
 		sort.Slice(p.names, func(i, j int) bool { return p.names[i].rank < p.names[j].rank })
-		h := HeaderPlace{Count: p.count}
+		h := HeaderPlace{Entity: p.entity, Count: p.count}
 		for _, n := range p.names {
 			h.Names = append(h.Names, n.text)
 		}
@@ -460,6 +469,16 @@ func dependentEvents(q Querier, query string, ids [][]byte) ([][]byte, error) {
 		}
 		return append([]byte(nil), id...), nil
 	})
+}
+
+// ownEntity copies an entity's byte fields off the driver's scan buffers.
+func ownEntity(e canonicalentities.Entity) canonicalentities.Entity {
+	if len(e.ID) == 0 {
+		return canonicalentities.Entity{}
+	}
+	e.ID = append([]byte(nil), e.ID...)
+	e.SubjectTypeID = append([]byte(nil), e.SubjectTypeID...)
+	return e
 }
 
 type scanner interface {

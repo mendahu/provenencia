@@ -68,16 +68,19 @@ struct PersonDetailContent: ConclusionDetailBody {
             let side = facts[index]
             let lead: String
             let mixed: Bool
+            let opens: ReconciledValueRowModel.Opens?
             if style == .date {
                 lead = PersonLifeDisplay.dateText(side?.date, locale: locale)
                 mixed = (side?.dateCount ?? 0) > 1
+                opens = side?.event.map(ReconciledValueRowModel.Opens.event)
             } else {
                 lead = DerivedPlace.name(side?.places ?? [])
                 mixed = DerivedPlace.extra(side?.places ?? []) > 0
+                opens = side?.places.first.map(ReconciledValueRowModel.Opens.place)
             }
             rows.append(.derived(
                 id: id, label: L10n.string(label), style: style, lead: lead,
-                emptyText: L10n.string(empty), mixed: mixed
+                emptyText: L10n.string(empty), mixed: mixed, opens: opens
             ))
         }
         for field in fields where field.propertyKey != "name" && !field.outcomes.isEmpty {
@@ -119,6 +122,13 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
         case place
     }
 
+    /// The handle whose page owns a derived value's Why.
+    struct Opens: Equatable {
+        var location: WorkspaceLocation
+        /// Tooltip and spoken label of the open control.
+        var label: String
+    }
+
     struct OtherValue: Equatable, Identifiable {
         var rank: Int
         var text: String
@@ -143,6 +153,9 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
     var whyTitle: String
     var records: [ReconciliationRecord]
     var accessibilityLabel: String
+    /// A derived row opens the Event or Place that owns its Why. Nil
+    /// otherwise.
+    var opens: Opens?
 
     init(field: CatalogConclusionField, locale: Locale = .autoupdatingCurrent) {
         let lead = field.displayedValues.first
@@ -217,14 +230,16 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
     }
 
     /// A date or place read off the canonical graph. A kept count above 1 is
-    /// the mixed badge. The Why stays on the Event or Place that owns it.
+    /// the mixed badge. The Why stays on the Event or Place that owns it,
+    /// which `opens` navigates to.
     static func derived(
         id: String,
         label: String,
         style: ValueStyle,
         lead: String,
         emptyText: String,
-        mixed: Bool
+        mixed: Bool,
+        opens: Opens? = nil
     ) -> Self {
         let shown = lead.isEmpty ? nil : lead
         let spoken: String
@@ -234,12 +249,14 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
         } else {
             spoken = ReconciledValueDisplay.accessibilityLabel(label: label, lead: nil, field: nil)
         }
-        return Self(
+        var row = Self(
             id: id, label: label, style: style, lead: shown, emptyText: emptyText,
             badge: mixed && shown != nil ? .mixed : nil,
             count: nil, against: nil, otherValuesLabel: nil, otherValues: [], listedValues: [],
             whyTitle: "", records: [], accessibilityLabel: spoken
         )
+        row.opens = opens
+        return row
     }
 
     /// A row with nothing behind it yet.
@@ -271,6 +288,28 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
         self.whyTitle = whyTitle
         self.records = records
         self.accessibilityLabel = accessibilityLabel
+    }
+}
+
+extension ReconciledValueRowModel.Opens {
+    /// The Event page a birth or death date is read from.
+    static func event(_ entity: CatalogCanonicalEntity) -> Self {
+        let label = entity.label.trimmingCharacters(in: .whitespacesAndNewlines)
+        return Self(
+            location: .eventDetail(entityId: entity.id, ref: entity.ref, title: label.isEmpty ? nil : label),
+            label: L10n.string(L10n.Conclusions.openEvent)
+        )
+    }
+
+    /// The Place page a place name is read from.
+    static func place(_ place: CatalogHeaderPlace) -> Self {
+        let title = PlaceTitleDisplay.titleSource(
+            PlaceTitleParts(names: place.names, label: place.entity.label, ref: place.entity.ref)
+        ).text
+        return Self(
+            location: .placeDetail(entityId: place.entity.id, ref: place.entity.ref, title: title),
+            label: L10n.Conclusions.openPlace(title)
+        )
     }
 }
 

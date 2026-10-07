@@ -7087,6 +7087,20 @@ enum L10n {
             comment: "Button on a Conclusion field that shows the records behind its value"
         )
 
+        static let openEvent = LocalizedStringResource(
+            "conclusions.detail.openEvent",
+            defaultValue: "Open event",
+            comment: "Icon button on a Person's birth or death date row that opens the event the date is read from"
+        )
+
+        static func openPlace(_ place: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.detail.openPlace",
+                defaultValue: "Open %@",
+                comment: "Icon button on a derived place row that opens the Place page; argument is the place name"
+            ), place)
+        }
+
         static let personDetails = LocalizedStringResource(
             "conclusions.person.details",
             defaultValue: "Details",

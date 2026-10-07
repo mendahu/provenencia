@@ -12,6 +12,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/conclusiondetails"
+	"github.com/mendahu/provenencia/core/database/conclusionheaders"
 	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/database/namevalues/namevaluestest"
@@ -516,4 +517,50 @@ func TestListSubjectMembershipsCarriesAutoReconciledName(t *testing.T) {
 		resp.Memberships[0].GetName().GetForm() != "James Jim Robins" {
 		t.Fatalf("%+v", resp.Memberships)
 	}
+}
+
+func TestLifeFactsProtoCarriesIdentities(t *testing.T) {
+	event := canonicalentities.Entity{ID: mustUUIDBytes(t), Ref: "EVT-1"}
+	place := canonicalentities.Entity{ID: mustUUIDBytes(t), Ref: "PLC-1", Label: "York"}
+	tests := []struct {
+		name      string
+		in        conclusionheaders.LifeFacts
+		wantEvent string
+		wantPlace string
+	}{
+		{name: "no event linked", in: conclusionheaders.LifeFacts{}},
+		{
+			name: "event and place",
+			in: conclusionheaders.LifeFacts{
+				Event:  &event,
+				Places: []conclusionheaders.HeaderPlace{{Entity: place, Names: []string{"York"}, Count: 1}},
+			},
+			wantEvent: "EVT-1",
+			wantPlace: "PLC-1",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := lifeFactsProto(tt.in)
+			if got.GetEvent().GetRef() != tt.wantEvent {
+				t.Fatalf("event %+v", got.GetEvent())
+			}
+			if tt.wantEvent != "" && got.GetEvent().GetId() != uuidString(event.ID) {
+				t.Fatalf("event id %q", got.GetEvent().GetId())
+			}
+			var placeRef string
+			if len(got.GetPlaces()) > 0 {
+				placeRef = got.GetPlaces()[0].GetEntity().GetRef()
+			}
+			if placeRef != tt.wantPlace {
+				t.Fatalf("place %+v", got.GetPlaces())
+			}
+		})
+	}
+}
+
+func mustUUIDBytes(t *testing.T) []byte {
+	t.Helper()
+	id := uuid.Must(uuid.NewV7())
+	return id[:]
 }

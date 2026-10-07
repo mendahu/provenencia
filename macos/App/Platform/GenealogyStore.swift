@@ -269,12 +269,17 @@ struct CatalogNameValue: Sendable, Equatable {
 /// One Place reached from a birth, death, or event. `names` are kept toponyms
 /// in rank order. The parent chain is not here.
 struct CatalogHeaderPlace: Sendable, Equatable {
+    /// The Place; its page owns the names' Why.
+    var entity: CatalogCanonicalEntity
     var names: [String] = []
     var nameCount: Int = 0
 }
 
 /// A birth or a death composed from the canonical graph.
 struct CatalogLifeFacts: Sendable, Equatable {
+    /// The birth or death event read; `nil` when none is linked. Its page
+    /// owns the date's Why.
+    var event: CatalogCanonicalEntity?
     var date: CatalogDateValueInput?
     var dateCount: Int = 0
     var places: [CatalogHeaderPlace] = []

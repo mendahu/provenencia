@@ -85,14 +85,15 @@ struct EventDetailContent: ConclusionDetailBody {
     }
 
     /// The Place row. The first kept name, mixed when more survived. No Why:
-    /// that stays on the Place.
+    /// that stays on the Place, which the row opens.
     static func placeRow(_ header: CatalogEventHeader?) -> ReconciledValueRowModel {
         let label = L10n.string(L10n.Conclusions.eventPlace)
         let empty = L10n.string(L10n.Conclusions.emptyEventPlace)
         let places = header?.places ?? []
         return .derived(
             id: "place", label: label, style: .place, lead: DerivedPlace.name(places),
-            emptyText: empty, mixed: DerivedPlace.extra(places) > 0
+            emptyText: empty, mixed: DerivedPlace.extra(places) > 0,
+            opens: places.first.map(ReconciledValueRowModel.Opens.place)
         )
     }
 

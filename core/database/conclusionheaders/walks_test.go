@@ -160,7 +160,7 @@ func TestCanonicalWalks(t *testing.T) {
 	baptismID := f.promoteSubject(baptism)
 	fireID := f.promoteSubject(fire)
 	yorkID := f.promoteSubject(york)
-	f.promoteSubject(toronto)
+	torontoID := f.promoteSubject(toronto)
 
 	var jamesHeader conclusionheaders.PersonHeader
 	for _, h := range f.list() {
@@ -192,6 +192,20 @@ func TestCanonicalWalks(t *testing.T) {
 	if got := placeNames(jamesHeader.Death.Places); !sameSet(got, []string{"Toronto"}) {
 		t.Fatalf("death places %v", got)
 	}
+	t.Run("life facts name the event and places they read", func(t *testing.T) {
+		if e := jamesHeader.Birth.Event; e == nil || !bytes.Equal(e.ID, birthID) || e.Ref == "" || len(e.SubjectTypeID) != 16 {
+			t.Fatalf("birth event %+v", e)
+		}
+		if e := jamesHeader.Death.Event; e == nil || !bytes.Equal(e.ID, deathID) {
+			t.Fatalf("death event %+v", e)
+		}
+		if p := headerPlace(jamesHeader.Birth.Places, "York"); !bytes.Equal(p.Entity.ID, yorkID) || p.Entity.Ref == "" {
+			t.Fatalf("York entity %+v", p.Entity)
+		}
+		if p := headerPlace(jamesHeader.Death.Places, "Toronto"); !bytes.Equal(p.Entity.ID, torontoID) {
+			t.Fatalf("Toronto entity %+v", p.Entity)
+		}
+	})
 
 	events := map[string]conclusionheaders.EventHeader{}
 	for _, h := range f.events() {
@@ -226,6 +240,9 @@ func TestCanonicalWalks(t *testing.T) {
 	}
 	if got := placeNames(fireHeader.Places); !sameSet(got, []string{"York", "Tkaronto"}) {
 		t.Fatalf("fire places %v", got)
+	}
+	if len(fireHeader.Places) != 1 || !bytes.Equal(fireHeader.Places[0].Entity.ID, yorkID) {
+		t.Fatalf("fire place entity %+v", fireHeader.Places)
 	}
 
 	again := map[string][]string{}
