@@ -1,6 +1,6 @@
 # S9-D11 — Promote: compare
 
-> **Superseded 2026-10-06, never built.** Promote became one page that aligns the whole Evidence graph: [`S9-D16`](../S9-D16-promote-page.md), design in [`promote-alignment.md`](../../../../promote-alignment.md). Kept for history; do not hand this to Claude Design.
+> **Superseded 2026-10-06, never built.** Promote became one page that aligns the whole Evidence graph: [`S9-D16`](../S9-D16-promote-page.md), design in [`promote-graph-alignment.md`](../../../../promote-graph-alignment.md). Kept for history; do not hand this to Claude Design.
 
 **Kind:** Claude Design board  
 **Spike:** Provenencia Spike 9 (canonical entities MVP)  

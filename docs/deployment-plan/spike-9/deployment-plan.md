@@ -6,7 +6,7 @@ MVP for the **Conclusion layer**: assemble canonical Persons, Events, and Places
 
 **Open.** Slices 1–3 landed. **Replanned 2026-10-05** from slice 4 on: the reconciliation design ([`conclusion-reconciliation.md`](../../conclusion-reconciliation.md)) replaces R2's name / date / ranking plan with one reconciler pipeline for every value type, adds per-Property cardinality, and brings place hierarchy into the spike. Briefs S9-D1…D16 in [`design/`](design/) (D7 needs revising; D5 was revised and built in S9-16). Landings go in [`completed.md`](completed.md).
 
-**Replanned again 2026-10-06** from slice 5 on: Promote becomes **one page that aligns a whole Evidence graph** against the canonical graph, proposing a handle, New or Skip for every Subject, with the researcher fine-tuning and one Done ([`promote-alignment.md`](../../promote-alignment.md)). The per-Property compare step and the per-Subject walk are retired (S9-19, S9-29, S9-30; briefs D11, D12). Events, Places, the canonical graph and the place hierarchy all move ahead of Promote; S9-17 / S9-18 are reshaped into one engine PR.
+**Replanned again 2026-10-06** from slice 5 on: Promote becomes **one page that aligns a whole Evidence graph** against the canonical graph, proposing a handle, New or Skip for every Subject, with the researcher fine-tuning and one Done ([`promote-graph-alignment.md`](../../promote-graph-alignment.md)). The per-Property compare step and the per-Subject walk are retired (S9-19, S9-29, S9-30; briefs D11, D12). Events, Places, the canonical graph and the place hierarchy all move ahead of Promote; S9-17 / S9-18 are reshaped into one engine PR.
 
 **Revised 2026-10-07 (slice 8):** place relationships shrink to locked **`part_of`** and **`succeeded_by`**. **No place-nature Property** this spike — several Locations on an Event fold into chains via `part_of`, and unrealted Places stay competing values. **Retired:** S9-D15 / S9-38b (custom term category). Standing model: [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md) §11.1.
 
@@ -87,7 +87,7 @@ Skills: [`add-catalog-migration`](../../../.cursor/skills/add-catalog-migration/
 - **Cardinality** (design §8): each Property is single- or multi-valued. Seeded Properties are single except `toponym`. Multi-valued Properties keep every distinct surviving value.
 - **States:** single, merged, mixed, empty, read off the result's shape. **Concluded** needs Reconciliation Claims, which stay out of scope (design §8: one claim per value for multi-valued Properties); the reconciler takes a concluded input so they plug in later.
 
-The modules' *same value* test (`autoreconcile.Compatible`) is also what Promote alignment counts as an agreement (R7).
+The modules' *same value* test (`autoreconcile.Compatible`) is also what Promote graph alignment counts as an agreement (R7).
 
 ### R3 — Auto-reconciler cache (foundation)
 
@@ -208,15 +208,15 @@ Three sidebar destinations under a new **Conclude** section (sidebar sections: S
 - Every value shows its state — single, merged, mixed, or empty — its ranked values, and **why**: the candidates and their outcomes from R3's reasoning. Drilling into the Observations behind a cluster loads live for that one handle. A member list (Subjects with their Source) is a stretch goal.
 - Read-only this spike.
 
-### R7 — Promote (alignment)
+### R7 — Promote (graph alignment)
 
-**Authoritative design: [`promote-alignment.md`](../../promote-alignment.md)** (replanned 2026-10-06). It replaces the step-by-step compare and walk the model used to describe; model §5.3–§5.4 now state its rules. This section is the spike's slice of it.
+**Authoritative design: [`promote-graph-alignment.md`](../../promote-graph-alignment.md)** (replanned 2026-10-06). It replaces the step-by-step compare and walk the model used to describe; model §5.3–§5.4 now state its rules. This section is the spike's slice of it.
 
 **Promote only creates claims.** It is one-way: nobody comes back into it to edit, re-pin, or remove a claim. Those are a separate workflow with its own place (Spike 10), even though they write the same tables.
 
 1. **Entry.** The **Promote** control on any unpromoted primary card (`person`, `event`, `place`) opens the Promote page with that Subject's row matched to its best handle. Bridge cards are not entry points.
 2. **One page.** *Map the rest of this graph* adds a row for every primary Subject on the Evidence graph. Already-promoted rows are read-only anchors. Each unpromoted row has a target dropdown (best match preselected, alternatives as R4 headers, **New**, **Skip**; weak and unmatched rows default to Skip), an assessment (strong / weak / no match) that opens a sheet of the comparisons with agreeing ones preselected as pins, and the claim fields (Status with one option, Q7; confidence; argument drafted from the agreements).
-3. **Alignment.** A pure function proposes every row from the fixed rows (the researcher's decisions and existing claims): best-first propagation over the layer and a prefetched piece of the canonical graph; agree / conflict / unknown per comparison; weights from catalog statistics; no hard-coded Property lists. It re-runs after every decision; decided rows never change.
+3. **Graph alignment.** A pure function proposes every row from the fixed rows (the researcher's decisions and existing claims): best-first propagation over the layer and a prefetched piece of the canonical graph; agree / conflict / unknown per comparison; weights from catalog statistics; no hard-coded Property lists. It re-runs after every decision; decided rows never change.
 4. **Bridges** file automatically whenever both ends are handles, on the page (a summary line; each bridge can be switched off) and after any other claim create. Identity rules: design §9.1.
 5. **Done** writes the batch in one transaction: claims, minted handles, pins (one-hop neighbors allowed) with backfill (§5.1), bridges, the R3 recompute, one audit revision. It re-validates against the catalog first; a lost race fails Done whole and the page re-proposes.
 6. **After.** The graph cards show membership (handle ref, link to its page). Conclusion caches refresh (see *Data fetching*).
@@ -365,10 +365,10 @@ SLICE 8 — Place hierarchy (the hard way)
   Check: draw Toronto part of Upper Canada / Province of Canada / Ontario with periods → Toronto's page shows each by period;
          a cycle is refused; York succeeded by Toronto shows on both; James's birth place reads with its chain.
 
-SLICE 9 — Promote alignment
+SLICE 9 — Promote graph alignment
   S9-17  Pins + backfill engine (reshaped from #265 / #266; lands now, no UI)
-  S9-41  Align core: pure Go, best-first propagation, data-driven weights, edge signatures, fixed rows
-  S9-42  Alignment loader + stats + proposal read (FFI)
+  S9-41  Graph alignment core: pure Go, best-first propagation, data-driven weights, edge signatures, fixed rows
+  S9-42  Graph alignment loader + stats + proposal read (FFI)
   S9-43  Batch Promote write: one transaction; one-hop pins + backfill; bridges
   ✎ S9-D16 ──▶ S9-44  Promote page (rethink; replaces the S9-11 / S9-12 steps)
   Check: promote Gracie → map the rest of the obituary → strong rows preselected, weak flagged,
@@ -386,9 +386,9 @@ CLOSE
 ```
 
 - **Slices run in order.** Within a slice, PRs run top to bottom; the Go PRs at the top of a slice can usually go side by side (S9-13b / S9-14; S9-20 / S9-21; S9-36 / S9-25). **S9-41** (pure Go) can start once S9-21 and S9-36 land and run beside slices 7–8.
-- **Slice 4 is the foundation for the rest.** S9-13 / S9-14 put every value type on the pipeline. **Promote alignment (slice 9) needs slices 5–7:** dates (S9-21) and cardinality (S9-36) to compare and to tell a conflict from a second value, Event and Place headers (S9-22, S9-25) for its dropdowns, and the canonical graph (S9-28) to walk and to file bridges. **Place hierarchy (slice 8) goes first** so that trying Promote on real research captures part-of and succession links from the start, and alignment is tested with them as edges.
+- **Slice 4 is the foundation for the rest.** S9-13 / S9-14 put every value type on the pipeline. **Promote graph alignment (slice 9) needs slices 5–7:** dates (S9-21) and cardinality (S9-36) to compare and to tell a conflict from a second value, Event and Place headers (S9-22, S9-25) for its dropdowns, and the canonical graph (S9-28) to walk and to file bridges. **Place hierarchy (slice 8) goes first** so that trying Promote on real research captures part-of and succession links from the start, and alignment is tested with them as edges.
 - **Replanned 2026-10-05.** IDs of PRs that keep their purpose stay; new work takes new IDs (S9-13a, S9-13b, S9-36 – S9-40), so handoff notes in [`completed.md`](completed.md) and code comments stay right.
-- **Replanned 2026-10-06 (Promote alignment).** New work: S9-41 – S9-44 and brief S9-D16. **Retired:** S9-19 and S9-D11 (compare → S9-44's evidence sheet), S9-29 (neighborhood read → S9-42), S9-30 and S9-D12 (walk → S9-44), S9-18 (folded into S9-17 and S9-44). S9-17 keeps its ID, reshaped from the closed #265 / #266.
+- **Replanned 2026-10-06 (Promote graph alignment).** New work: S9-41 – S9-44 and brief S9-D16. **Retired:** S9-19 and S9-D11 (compare → S9-44's evidence sheet), S9-29 (neighborhood read → S9-42), S9-30 and S9-D12 (walk → S9-44), S9-18 (folded into S9-17 and S9-44). S9-17 keeps its ID, reshaped from the closed #265 / #266.
 - **Migrations 000037 / 000038 are fixed.** They first shipped on the closed PRs #255 / #256, and the researcher's local projects already carry them. S9-13a lands them on `main` byte-for-byte so those projects open again; nothing else may take those numbers, and later changes are new migrations (000039 on), never edits. **000039** is S9-13's `reason` column; **000040** is S9-14's rename to `auto_reconciler_*` and its outcomes table. **000041** is S9-16's vote on outvoted outcomes (cache version 10). **000042** is S9-20's `event_name` backfill (no cache bump). The next is **000043**; the next cache version **12** (11 is S9-21's date windows). **Cache versions start at 5** after S9-13a: projects may hold a cache stamped 3 or 4 by the closed PRs, and a new meaning must never reuse a stamp.
 - **The cache is honest from slice 2.** S9-06 ships the rebuild-equals-upkeep test; every later PR that adds a write path or trigger adds to it.
 - **Churn is expected.** A confirm-and-mint Promote button (slice 1), stubbed sidebar items, and empty life-date cells are fine between slices. Today's step-based Promote (S9-11 / S9-12) stays in use until S9-44 replaces it; from S9-28 on it already files bridges.
@@ -434,8 +434,8 @@ CLOSE
 | S9-39 Place chain composer | — | S9-38, S9-21, S9-25, S9-31 |
 | S9-40 Place hierarchy in list and detail | (D4 / D7) | S9-39, S9-26, S9-27, S9-32 |
 | S9-17 Pins + backfill engine | — | S9-12, S9-13b |
-| S9-41 Align core | — | S9-17, S9-21, S9-36 |
-| S9-42 Alignment loader + proposal read | — | S9-41, S9-22, S9-25, S9-28 |
+| S9-41 Graph alignment core | — | S9-17, S9-21, S9-36 |
+| S9-42 Graph alignment loader + proposal read | — | S9-41, S9-22, S9-25, S9-28 |
 | S9-43 Batch Promote write | — | S9-17, S9-28, S9-42 |
 | S9-44 Promote page | **S9-D16** (rethink of D9 / D10) | S9-42, S9-43 |
 | S9-33 Deep fixture + timings | — | S9-39, S9-44 |
@@ -497,8 +497,8 @@ In order; each brief sits just above the PR it gates.
 - [x] S9-38 — Place model: relationships, periods → [`completed.md`](completed.md)
 - [x] S9-39 — Place chain composer → [`completed.md`](completed.md)
 - [x] S9-40 — Place hierarchy in list and detail → [`completed.md`](completed.md)
-- [ ] S9-41 — Align core
-- [ ] S9-42 — Alignment loader + proposal read
+- [ ] S9-41 — Graph alignment core
+- [ ] S9-42 — Graph alignment loader + proposal read
 - [ ] S9-43 — Batch Promote write
 - [ ] ✎ S9-D16 — Design: Promote page (rethink)
 - [ ] S9-44 — Promote page
@@ -642,7 +642,7 @@ Researcher's decision while revising **S9-D1**: two configuration views get plai
 - **S9-11:** `listPromoteTargetSuggestions` gives the *Suggested* rows: `CatalogPromoteTargetSuggestion` (score, reasons, `person` header), best first. Search the existing `.personsList` for the picker, and join by passing `entityID` to `promoteSubject`.
 - **S9-12:** grades come from `listClaimConfidenceGrades`; pass `confidenceGradeID` / `argument` on the same `promoteSubject` call.
 - **S9-22 / S9-25:** add an `event` / `place` header to `PromoteTargetSuggestion`; matching for those kinds already ships.
-- **S9-41:** neighbor signals (life dates through edges, family) come from Promote alignment, not new `core/match` Features. `core/match` stays the property-only fallback for Subjects no anchor reaches (S9-28 / S9-29 originally; replanned 2026-10-06).
+- **S9-41:** neighbor signals (life dates through edges, family) come from Promote graph alignment, not new `core/match` Features. `core/match` stays the property-only fallback for Subjects no anchor reaches (S9-28 / S9-29 originally; replanned 2026-10-06).
 
 | | |
 | --- | --- |
@@ -864,7 +864,7 @@ Design: [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md). PR
 
 | | |
 | --- | --- |
-| **In** | The **subject module**: subject-valued Properties map to the target's handle (unpromoted drop out as `no_evidence`) — the canonical graph, in `value_entity_id`. Upkeep: a claim create / remove recomputes handles whose members' Observations point at that subject. **Automatic bridge filing** ([`promote-alignment.md`](../../promote-alignment.md) §9.1): after any claim create, every bridge Subject whose ends are now both handles is filed in the same transaction, joining the association the ends already share or minting one. Keys: participation and location by their ends (role reconciled on the association); relationship and place relationship by their ends and type; direction kept for directed types (a per-type flag, not a code list). A link from a handle to itself is refused; a refused filing doesn't fail the claim and the bridge stays unfiled with its reason. Lift the S9-02 primary-kinds guard for bridges filed this way. Extend the rebuild-equals-upkeep tests. Test that deleting a bridge Subject releases its edge Observations' pins audited (connection-facet release through `ReleaseFacets(KindObservation)`). |
+| **In** | The **subject module**: subject-valued Properties map to the target's handle (unpromoted drop out as `no_evidence`) — the canonical graph, in `value_entity_id`. Upkeep: a claim create / remove recomputes handles whose members' Observations point at that subject. **Automatic bridge filing** ([`promote-graph-alignment.md`](../../promote-graph-alignment.md) §9.1): after any claim create, every bridge Subject whose ends are now both handles is filed in the same transaction, joining the association the ends already share or minting one. Keys: participation and location by their ends (role reconciled on the association); relationship and place relationship by their ends and type; direction kept for directed types (a per-type flag, not a code list). A link from a handle to itself is refused; a refused filing doesn't fail the claim and the bridge stays unfiled with its reason. Lift the S9-02 primary-kinds guard for bridges filed this way. Extend the rebuild-equals-upkeep tests. Test that deleting a bridge Subject releases its edge Observations' pins audited (connection-facet release through `ReleaseFacets(KindObservation)`). |
 | **Testable** | Promote a person, then its birth event (today's single-Subject Promote) → the participation is filed onto a new association; a second record of the same birth joins it; a spouse and a parent link between the same two people are two relationships; direction is kept; a self-link is refused; rebuild equals upkeep. |
 | **Depends on** | S9-12, S9-13 |
 
@@ -912,9 +912,9 @@ Design: [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md) §1
 
 **Done.** See [`completed.md`](completed.md#s9-40--place-hierarchy-in-list-and-detail). Places list truncates chains and joins simultaneous parents with "or"; Place detail fills period, Part of / Contains / Succession with membership spans; Person/Event rows show leaf-plus-chain. Maps, editing, `place_nature`, and search secondary stay out.
 
-### Slice 9 — Promote alignment
+### Slice 9 — Promote graph alignment
 
-Design: [`promote-alignment.md`](../../promote-alignment.md). Brief: [`S9-D16`](design/S9-D16-promote-page.md) (a **rethink** of the Promote board).
+Design: [`promote-graph-alignment.md`](../../promote-graph-alignment.md). Brief: [`S9-D16`](design/S9-D16-promote-page.md) (a **rethink** of the Promote board).
 
 #### S9-17 — Pins + backfill engine
 
@@ -930,19 +930,19 @@ Design: [`promote-alignment.md`](../../promote-alignment.md). Brief: [`S9-D16`](
 | **Depends on** | S9-12, S9-13b |
 | **Note** | Lands ahead of its slice: no UI. Everything it keeps has a consumer in S9-41 / S9-43. |
 
-#### S9-41 — Align core
+#### S9-41 — Graph alignment core
 
 | | |
 | --- | --- |
-| **In** | A pure Go package: `Align(layer, canon, stats, fixed) Proposal` (design §4–§6). Best-first propagation from the fixed pairs (decided rows and existing claims); one handle per Subject within a layer; property-only fallback for unreachable Subjects; agree / conflict / unknown per comparison through the value-type modules and per-Property cardinality; weights log(m/u) with u from `stats` and m from priors per value type; provenance scaling; edge signatures with fan-out; flags for conflicts with decided rows, possible duplicates, self-links and cycles. Deterministic. |
-| **Testable** | Table-driven, plus the obituary golden test against a small canonical tree: Gracie anchors her birth, death, burial and two children; the residences and Medicine Hat come out New / Skip; a decided row never changes on a re-run; the same inputs give the same proposal. |
+| **In** | A pure Go package (own module, design §4–§4.1, §5–§6, **§5.1**): `Align(layer, canon, stats, fixed) Proposal`. **Composable SoC:** pairwise evaluation (shared sameness with `Compatible` / matching) judges a candidate; `Align` only walks, seeds, propagates, and decides; it does not reimplement match logic. Property-only `Rank` remains the unreachable/orphan fallback and should sit on the same pairwise core. Best-first propagation from the fixed pairs (decided rows and existing claims), walking Evidence bridges in **both directions**; one handle per Subject within a layer; agree / conflict / unknown per comparison; weights log(m/u) with u from `stats` and m from priors per value type; provenance scaling; edge signatures with fan-out; flags for conflicts with decided rows, possible duplicates, self-links and cycles. Deterministic. **One alignment config registry** holds walk/band tunables (score bands, conflict penalty, cold-start priors, propagation / support knobs, expansion depth); matching keeps its own registry — same pattern as `core/match`’s `registry.go`. |
+| **Testable** | Table-driven, plus the obituary golden test against a small canonical tree: Gracie anchors her birth, death, burial and two children; the residences and Medicine Hat come out New / Skip; a decided row never changes on a re-run; the same inputs give the same proposal. Fixtures for design §5.1: seed from an already-promoted neighbor into an unpromoted Subject (and the reverse); both ends unpromoted; an orphan with no bridges falls back to property-only / Skip when weak. Registry defaults are what the golden uses; tests can override config without editing the registry. |
 | **Depends on** | S9-17, S9-21, S9-36 |
 
-#### S9-42 — Alignment loader + proposal read
+#### S9-42 — Graph alignment loader + proposal read
 
 | | |
 | --- | --- |
-| **In** | The loader (design §7): the layer (one Source's Subjects, bridges, Observations, provenance); seed handles (fixed rows, existing claims, top-k `core/match` candidates); canonical expansion, one batched query per hop over S9-28's edges; members' Observations in batch. `stats` (value frequencies, signature fan-outs) cached against the latest audit revision. FFI `ProposePromoteAlignment(source, fixed[])` → rows with candidate headers (Person / Event / Place header composers), comparisons, drafted pins, reasons and flags; Swift store + FakeStore. |
+| **In** | The loader (design §7): the layer (one Source's Subjects, bridges, Observations, provenance); seed handles (fixed rows, existing claims, top-k `core/match` candidates); canonical expansion, one batched query per hop over S9-28's edges; members' Observations in batch. `stats` (value frequencies, signature fan-outs) cached against the latest audit revision. FFI `ProposePromoteGraphAlignment(source, fixed[])` → rows with candidate headers (Person / Event / Place header composers), comparisons, drafted pins, reasons and flags; Swift store + FakeStore. |
 | **Testable** | A fixed query count whatever the graph size; a write anywhere invalidates `stats`; the obituary fixture through the real loader matches S9-41's golden. |
 | **Depends on** | S9-41, S9-22, S9-25, S9-28 |
 
@@ -950,8 +950,8 @@ Design: [`promote-alignment.md`](../../promote-alignment.md). Brief: [`S9-D16`](
 
 | | |
 | --- | --- |
-| **In** | One transaction per Done (design §9): re-validate against the revision the proposal saw; a claim per row (status, confidence, argument), a minted handle for New, nothing for Skip; pins from the toggled comparisons, the pair check widened to **one-hop neighbors through a bridge**, with backfill; bridge filing through S9-28, skipping switched-off bridges; one R3 recompute over every touched handle; one audit revision. FFI + Swift store + FakeStore, with pins modelled so S9-44's tests cover pinned deletes from the composer and the graph. |
-| **Testable** | All or nothing on a lost race; one-hop pins land on both claims; each bridge filed once; rebuild equals upkeep after a batch. |
+| **In** | One transaction per Done (design §9): re-validate against the revision the proposal saw; a claim per row (status, confidence, argument), a minted handle for New, nothing for Skip; pins from the toggled comparisons, the pair check widened to **one-hop neighbors through a bridge**, with backfill; bridge filing through S9-28 (including the **both-ends-already-promoted** / missing-relationship case in design §5.1), skipping switched-off bridges; one R3 recompute over every touched handle; one audit revision. FFI + Swift store + FakeStore, with pins modelled so S9-44's tests cover pinned deletes from the composer and the graph. |
+| **Testable** | All or nothing on a lost race; one-hop pins land on both claims; each bridge filed once (including a bridge whose ends were both claimed before this batch); rebuild equals upkeep after a batch. |
 | **Depends on** | S9-17, S9-28, S9-42 |
 
 #### S9-44 — Promote page
@@ -1043,7 +1043,7 @@ Honesty pass against the [goal bar](#goal-dogfood-bar); ledger timings recorded;
 
 | # | Question | Leaning |
 | --- | --- | --- |
-| Q1 | ~~Submit at the end vs commit each step.~~ | **Decided, then revised 2026-10-06:** one transaction per **Done** for the whole Promote page (claims, pins, bridges), re-validated first ([`promote-alignment.md`](../../promote-alignment.md) §9). |
+| Q1 | ~~Submit at the end vs commit each step.~~ | **Decided, then revised 2026-10-06:** one transaction per **Done** for the whole Promote page (claims, pins, bridges), re-validated first ([`promote-graph-alignment.md`](../../promote-graph-alignment.md) §9). |
 | Q2 | ~~Correcting a mistake.~~ | **Descoped to Spike 10:** remove a member, remove its Identity Claim, add evidence to an existing claim. Promote stays create-only. |
 | Q3 | ~~Walk canonical or Interpretation neighbors for derived values?~~ | **Decided:** canonical only. Detail pages show promoted handles and claims; Interpretation neighbors live on the Evidence graph. An unpromoted birth event gives the Person no birth date. |
 | Q4 | ~~Which Participation roles count for a Person's birth / death?~~ | **Decided:** `role = subject` only — that is what the role is for. A father on a birth is not his birth. |
@@ -1059,7 +1059,7 @@ Honesty pass against the [goal bar](#goal-dogfood-bar); ledger timings recorded;
 | Q14 | ~~Label vs composed-from-subjects.~~ | **Decided:** label stays below subject titles; it wins only when there is no subject. Revisit on dogfood. |
 | Q15 | ~~Reconciling values other than names and dates.~~ | **Decided (replan):** every value type gets a module on one pipeline ([`conclusion-reconciliation.md`](../../conclusion-reconciliation.md)). Text is case-insensitive; majority counts Sources; reasoning is cached. |
 | Q16 | ~~Places and their hierarchy.~~ | **Decided (replan; membership span revised 2026-10-06; relationships simplified 2026-10-07):** separate Places linked by locked `part_of` / `succeeded_by`, periods on Places, a span on each hierarchical link, chains at a date; several Locations fold into chains or compete as values; no place-nature Property; evidence by hand this spike (R9). |
-| Q18 | ~~How Promote proves a join.~~ | **Decided 2026-10-06:** automatic alignment of the whole Evidence graph with researcher fine-tuning, not a per-Property checklist or a per-Subject walk ([`promote-alignment.md`](../../promote-alignment.md)). |
+| Q18 | ~~How Promote proves a join.~~ | **Decided 2026-10-06:** automatic graph alignment of the whole Evidence graph with researcher fine-tuning, not a per-Property checklist or a per-Subject walk ([`promote-graph-alignment.md`](../../promote-graph-alignment.md)). |
 | Q19 | ~~Bridge filing.~~ | **Decided 2026-10-06:** automatic whenever both ends are handles; participation / location keyed by ends, relationships by ends + type; direction per type; self-links refused (design §9.1). |
 | Q17 | ~~Multi-valued Properties.~~ | **Decided (replan):** per-Property cardinality; `toponym` is the seeded multi-valued one. Most repeating facts are Events. |
 
@@ -1067,7 +1067,7 @@ Honesty pass against the [goal bar](#goal-dogfood-bar); ledger timings recorded;
 
 ## Docs to update as work lands
 
-- [`conclusion-layer-data-model.md`](../../conclusion-layer-data-model.md): §5.3–§5.4 rewritten for Promote alignment (2026-10-06); as S9-41 – S9-44 land, note what shipped. New section: the auto-reconciler cache as a derived, rebuildable projection; edges as auto-reconciled subject-valued Properties.
+- [`conclusion-layer-data-model.md`](../../conclusion-layer-data-model.md): §5.3–§5.4 rewritten for Promote graph alignment (2026-10-06); as S9-41 – S9-44 land, note what shipped. New section: the auto-reconciler cache as a derived, rebuildable projection; edges as auto-reconciled subject-valued Properties.
 - [`research-judgment-model.md`](../../research-judgment-model.md) §1.1: cached order and reasoning are derived, not stored judgment.
 - [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md) §12: implementation status as each module lands.
 - [`conclusion-layer-data-model.md`](../../conclusion-layer-data-model.md) §13: Place containment answered by place relationships (R9); new `place_relationship` kind; Location folding into chains.

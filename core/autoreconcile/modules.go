@@ -118,7 +118,7 @@ func termKey(v Value) (string, bool) {
 // into the other (J. Robins and James Robins). A unit only one carries does
 // not count against them, as in the pipeline's grouping; values that share
 // no unit, or where either is no evidence, are not compatible. Promote
-// alignment counts a comparison as an agreement by this test (S9-41).
+// graph alignment counts a comparison as an agreement by this test (S9-41).
 func Compatible(valueType string, a, b Value) bool {
 	if !knownValueType(valueType) || !carries(valueType, a) || !carries(valueType, b) {
 		return false

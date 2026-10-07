@@ -804,11 +804,11 @@ Opening a Person now shows their page: every field with its value, how the evide
 
 ### S9-17 — Pins + backfill engine
 
-Promote can now record which records a join was confirmed against, on both claims, with every pin audited. This is the engine only. It's salvaged from the first S9-17 / S9-18 (#265 / #266, closed unmerged) after the replan to Promote alignment, and nothing calls it from the app yet.
+Promote can now record which records a join was confirmed against, on both claims, with every pin audited. This is the engine only. It's salvaged from the first S9-17 / S9-18 (#265 / #266, closed unmerged) after the replan to Promote graph alignment, and nothing calls it from the app yet.
 
 **What shipped**
 
-- **`autoreconcile.Compatible`:** the pipeline's *same value* or *fold* for one pair of values. Every unit both carry must agree (*J. Robins* ~ *James Robins*; *Robins* / *Robbins* differ). A unit only one carries doesn't count against them; no evidence or no shared unit is never compatible. Promote alignment (S9-41) counts agreements with it.
+- **`autoreconcile.Compatible`:** the pipeline's *same value* or *fold* for one pair of values. Every unit both carry must agree (*J. Robins* ~ *James Robins*; *Robins* / *Robbins* differ). A unit only one carries doesn't count against them; no evidence or no shared unit is never compatible. Promote graph alignment (S9-41) counts agreements with it.
 - **Pins:**
   - `identityclaims.PinTx` writes one pin and audits it as `identity_claim_evidence` `create` under the claim's id, the mirror of the audited release. A pin the claim already has is skipped.
   - `PinnedObservations` reads a claim's pins.
@@ -837,7 +837,7 @@ Promote can now record which records a join was confirmed against, on both claim
 
 - Pins one hop through a bridge, and the batch write: **S9-43**.
 - Any UI, FFI or Swift pairs API, and FakeStore pins: **S9-43 / S9-44**.
-- The per-Subject comparison read and the compare step from #265 were dropped; alignment (S9-41) and the evidence sheet (S9-44) replace them.
+- The per-Subject comparison read and the compare step from #265 were dropped; graph alignment (S9-41) and the evidence sheet (S9-44) replace them.
 
 ### S9-20 — Seed `event_name`
 

@@ -247,7 +247,7 @@ The same review applies when a pinned Observation is deleted or its value change
 
 ## 5.3 Promote
 
-The researcher files an Evidence graph's Subjects onto handles from one page. The design (alignment, scoring, the page) is [`promote-alignment.md`](promote-alignment.md); this section holds the model rules. The schema doesn't require the page: accepting a claim with an empty exhibit stays valid, and that claim may show as undocumented. The product proposes; it never blocks an accept.
+The researcher files an Evidence graph's Subjects onto handles from one page. The design (graph alignment, scoring, the page) is [`promote-graph-alignment.md`](promote-graph-alignment.md); this section holds the model rules. The schema doesn't require the page: accepting a claim with an empty exhibit stays valid, and that claim may show as undocumented. The product proposes; it never blocks an accept.
 
 1. Promote from any unpromoted primary Subject (person, event, place) opens the page with that Subject matched to its best handle. *Map the rest of this graph* adds a row for every other primary Subject on the Evidence graph.
 2. Each row's target is **proposed by aligning** the graph with the canonical graph. A Subject's own Properties *and its neighbors'* (its birth event's date, its places, its family) are compared with each candidate's members, and each comparison agrees, conflicts or is unknown. Subjects that are already members are anchors. A handle with no members is grounding: there's nothing to compare.

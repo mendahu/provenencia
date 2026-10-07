@@ -2,7 +2,7 @@
 
 ## Status
 
-**Open.** Requirements, design track (one brief per view), and PR sequence in vertical slices (S9-01…S9-44; replanned 2026-10-06 around [Promote alignment](../../promote-alignment.md)): [`deployment-plan.md`](deployment-plan.md). Finished steps: [`completed.md`](completed.md) — S9-01…S9-12, S9-13a, S9-13, S9-13b, S9-14, S9-15, S9-16, S9-17 and S9-34a (and S9-D1, S9-D2, S9-D5, S9-D8, S9-D9, S9-D10) landed.
+**Open.** Requirements, design track (one brief per view), and PR sequence in vertical slices (S9-01…S9-44; replanned 2026-10-06 around [Promote graph alignment](../../promote-graph-alignment.md)): [`deployment-plan.md`](deployment-plan.md). Finished steps: [`completed.md`](completed.md) — S9-01…S9-12, S9-13a, S9-13, S9-13b, S9-14, S9-15, S9-16, S9-17 and S9-34a (and S9-D1, S9-D2, S9-D5, S9-D8, S9-D9, S9-D10) landed.
 
 Spikes 5–8 built the Interpretation layer: Sources → Citations → Observations on Subjects, drawn on an Evidence graph. Nothing yet says *these three census lines are the same James*. Spike 9 opens the **Conclusion layer**: canonical Persons, Events, and Places assembled from Subjects through **Identity Claims**, with read-only pages that project their values.
 
@@ -30,7 +30,7 @@ Four strands:
 
 Spike 7 made subject types product-seeded and gave each a `ref_prefix` (`PER`, `EVT`, `PLC`, …) next to its `candidate_ref_prefix`. Canonical refs already have a namespace. Spike 8 settled the composer and graph chrome that Promote starts from, and reserved `reconciliation_claim` in delete Impact.
 
-Authoritative model: [`conclusion-layer-data-model.md`](../../conclusion-layer-data-model.md). Promote (§5.3) and bridge filing (§5.4) state the rules of Promote alignment, whose design is [`promote-alignment.md`](../../promote-alignment.md); this spike builds them.
+Authoritative model: [`conclusion-layer-data-model.md`](../../conclusion-layer-data-model.md). Promote (§5.3) and bridge filing (§5.4) state the rules of Promote graph alignment, whose design is [`promote-graph-alignment.md`](../../promote-graph-alignment.md); this spike builds them.
 
 ## Out of scope (for this spike)
 
