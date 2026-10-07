@@ -24,8 +24,14 @@ Copy the stub. Surface + what got in the way is enough. A wanted fix is optional
 - **Date:** 2026-10-07
 - **Where:** Citation composer → Observation name parts modal
 - **Annoyance:** After typing the full name into the single full-form line, I still have to add each name part by hand.
-- **Wanted:** Fill in the structured parts automatically from the full-form line. Split the string on spaces, add one name part per word, and default each part's type to **Given name**. Then I only have to fix the type dropdowns that are wrong and I'm done. Pairs with *Name part type dropdown: shifting width and no type-to-cycle*, since retyping parts is where that dropdown gets used.
-- **Open question:** When does it run: only while the parts list is empty, or on demand (e.g. a "Split" button), so it never overwrites parts I already edited?
+- **Wanted:** Fill in the structured parts automatically from the full-form line. Split it on spaces and add one name part per word.
+  - **Trigger:** run the split on blur, so it happens as soon as you tab out of the full-form line. Also add a **Split** button for people using the mouse.
+  - **Type guessing:** it doesn't have to be perfect; handling 80–90% of names well is enough. Basic rules:
+    - A comma means the surname comes first (`Smith, John Henry` → Surname, Given, Given).
+    - Without a comma, the last word is the Surname and the rest are Given names.
+    - Anything the rules can't place defaults to Given name.
+  - I then fix the types that are wrong and I'm done. Pairs with *Name part type dropdown: shifting width and no type-to-cycle*, since that's the dropdown used for the fixes.
+- **Still open:** what blur does when name parts already exist (e.g. leave them alone, or only replace parts the split created), so it never overwrites parts I edited by hand.
 
 ### Click outside a modal sheet to close it
 
