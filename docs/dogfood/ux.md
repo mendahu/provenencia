@@ -19,6 +19,13 @@ Copy the stub. Surface + what got in the way is enough. A wanted fix is optional
 
 <!-- add below this line -->
 
+### Rethink the Event icon
+
+- **Date:** 2026-10-07
+- **Where:** Event icon / mark (everywhere it's used)
+- **Annoyance:** Events currently use an hourglass, which feels a bit odd for an Event.
+- **Wanted:** A new mark, maybe a calendar or datebook. Worth doing alongside *Sidebar icons don't match Subject card icons* so the new icon gets used everywhere.
+
 ### Show sex / gender on the Person detail page
 
 - **Date:** 2026-10-07
