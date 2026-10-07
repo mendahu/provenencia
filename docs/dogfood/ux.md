@@ -19,6 +19,14 @@ Copy the stub. Surface + what got in the way is enough. A wanted fix is optional
 
 <!-- add below this line -->
 
+### Click outside a modal sheet to close it
+
+- **Date:** 2026-10-07
+- **Where:** Modal sheets (app-wide)
+- **Annoyance:** Clicking outside an open modal sheet doesn't close it.
+- **Wanted:** Clicking outside the sheet closes it.
+- **Open question:** What happens to unsaved edits when the sheet closes this way: discard them, or ask first?
+
 ### Enter should save a Property title edit
 
 - **Date:** 2026-10-07
