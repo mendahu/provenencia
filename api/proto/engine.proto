@@ -1070,8 +1070,9 @@ message PersonHeader {
   LifeFacts death = 5;
 }
 
-// ListPersonHeaders returns every unmerged Person in list order: named
-// Persons by auto-reconciled name, then the rest by ref.
+// ListPersonHeaders returns every unmerged Person in list order: by the title
+// the row shows (auto-reconciled name, else label), ignoring case and
+// diacritics, then ref-only rows by ref. The app shows rows as given.
 message ListPersonHeadersRequest {
   string project_dir = 1;
 }
@@ -1129,8 +1130,9 @@ message PlaceHeader {
   repeated string parents = 6;
 }
 
-// ListPlaceHeaders returns every unmerged Place in list order: named
-// places by the rank-1 toponym, then the rest by ref.
+// ListPlaceHeaders returns every unmerged Place in list order: by the title
+// the row shows (first kept toponym, else label), ignoring case and
+// diacritics, then ref-only rows by ref. The app shows rows as given.
 message ListPlaceHeadersRequest {
   string project_dir = 1;
 }

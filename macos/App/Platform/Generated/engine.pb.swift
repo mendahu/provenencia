@@ -3536,8 +3536,9 @@ public nonisolated struct Provenencia_Engine_V1_PersonHeader: @unchecked Sendabl
   fileprivate var _storage = _StorageClass.defaultInstance
 }
 
-/// ListPersonHeaders returns every unmerged Person in list order: named
-/// Persons by auto-reconciled name, then the rest by ref.
+/// ListPersonHeaders returns every unmerged Person in list order: by the title
+/// the row shows (auto-reconciled name, else label), ignoring case and
+/// diacritics, then ref-only rows by ref. The app shows rows as given.
 public nonisolated struct Provenencia_Engine_V1_ListPersonHeadersRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -3754,8 +3755,9 @@ public nonisolated struct Provenencia_Engine_V1_PlaceHeader: Sendable {
   fileprivate var _endDate: Provenencia_Engine_V1_DateValueInput? = nil
 }
 
-/// ListPlaceHeaders returns every unmerged Place in list order: named
-/// places by the rank-1 toponym, then the rest by ref.
+/// ListPlaceHeaders returns every unmerged Place in list order: by the title
+/// the row shows (first kept toponym, else label), ignoring case and
+/// diacritics, then ref-only rows by ref. The app shows rows as given.
 public nonisolated struct Provenencia_Engine_V1_ListPlaceHeadersRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for

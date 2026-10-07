@@ -106,11 +106,10 @@ struct ConclusionListKindTests {
         #expect([PersonsList.identifierRoot, EventsList.identifierRoot, PlacesList.identifierRoot] == ["persons", "events", "places"])
     }
 
-    @Test func onlyPlacesReorderAndBadgeNames() {
+    @Test func onlyPlacesBadgeNames() {
         let entity = CatalogCanonicalEntity(id: "e1", ref: "PER-1", subjectTypeID: "t", label: "")
         let person = CatalogPersonHeader(entity: entity, name: nil, nameValueCount: 0)
         #expect(PersonsList.extraCount(person) == 0)
-        #expect(PersonsList.ordered([person]) == [person])
         let place = CatalogPlaceHeader(entity: entity, names: ["Montréal", "Montreal"])
         #expect(PlacesList.extraCount(place) == 1)
     }

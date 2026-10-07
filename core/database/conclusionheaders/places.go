@@ -22,8 +22,8 @@ type PlaceHeader struct {
 	Parents   []string
 }
 
-// Unmerged Place handles. Named places first by the rank-1 toponym's
-// sort key, then unnamed by ref (R5).
+// Unmerged Place handles. Order is sortByTitle's (R5), applied after the
+// scan.
 const (
 	sqlPlacesSelect = `SELECT e.id, e.subject_type_id, e.ref, COALESCE(e.argument, ''), COALESCE(e.label, ''),
 		(SELECT json_group_array(tn.value_text ORDER BY tn.rank)
@@ -32,16 +32,12 @@ const (
 	FROM canonical_entities e
 	JOIN subject_types st ON st.id = e.subject_type_id
 	LEFT JOIN properties tp ON tp.key = 'toponym' AND tp.origin = 'provenencia'
-	LEFT JOIN auto_reconciler_values r
-		ON r.entity_id = e.id AND r.property_id = tp.id AND r.rank = 1 AND r.reason = 'kept'
 	WHERE st.key = 'place' AND st.origin = 'provenencia' AND e.merged_into_id IS NULL`
-	sqlPlacesOrder = ` ORDER BY r.sort_key IS NULL, r.sort_key, e.ref COLLATE NOCASE`
-	sqlListPlaces  = sqlPlacesSelect + sqlPlacesOrder
 )
 
 // ListPlaces returns every Place's header in list order, in one query.
 func ListPlaces(q Querier) ([]PlaceHeader, error) {
-	return queryPlaces(q, sqlListPlaces)
+	return queryPlaces(q, sqlPlacesSelect)
 }
 
 // PlacesByIDs returns the headers of the given unmerged Places in list
@@ -51,7 +47,7 @@ func PlacesByIDs(q Querier, ids [][]byte) ([]PlaceHeader, error) {
 	if len(ids) == 0 {
 		return nil, nil
 	}
-	return queryPlaces(q, sqlPlacesSelect+` AND e.id IN (`+database.SQLInPlaceholders(len(ids))+`)`+sqlPlacesOrder,
+	return queryPlaces(q, sqlPlacesSelect+` AND e.id IN (`+database.SQLInPlaceholders(len(ids))+`)`,
 		database.BlobArgs(ids)...)
 }
 
@@ -69,7 +65,11 @@ func queryPlaces(q Querier, query string, args ...any) ([]PlaceHeader, error) {
 		}
 		out = append(out, h)
 	}
-	return out, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	sortByTitle(out, placeTitle, func(h PlaceHeader) string { return h.Entity.Ref })
+	return out, nil
 }
 
 func scanPlace(rows *sql.Rows) (PlaceHeader, error) {

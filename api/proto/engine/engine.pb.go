@@ -9025,8 +9025,9 @@ func (x *PersonHeader) GetDeath() *LifeFacts {
 	return nil
 }
 
-// ListPersonHeaders returns every unmerged Person in list order: named
-// Persons by auto-reconciled name, then the rest by ref.
+// ListPersonHeaders returns every unmerged Person in list order: by the title
+// the row shows (auto-reconciled name, else label), ignoring case and
+// diacritics, then ref-only rows by ref. The app shows rows as given.
 type ListPersonHeadersRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ProjectDir    string                 `protobuf:"bytes,1,opt,name=project_dir,json=projectDir,proto3" json:"project_dir,omitempty"`
@@ -9450,8 +9451,9 @@ func (x *PlaceHeader) GetParents() []string {
 	return nil
 }
 
-// ListPlaceHeaders returns every unmerged Place in list order: named
-// places by the rank-1 toponym, then the rest by ref.
+// ListPlaceHeaders returns every unmerged Place in list order: by the title
+// the row shows (first kept toponym, else label), ignoring case and
+// diacritics, then ref-only rows by ref. The app shows rows as given.
 type ListPlaceHeadersRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ProjectDir    string                 `protobuf:"bytes,1,opt,name=project_dir,json=projectDir,proto3" json:"project_dir,omitempty"`

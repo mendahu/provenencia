@@ -52,8 +52,6 @@ protocol ConclusionListKind {
     static func titleSource(_ row: Row) -> ConclusionTitleSource
     /// Names beyond the one shown. Zero omits the +N badge.
     static func extraCount(_ row: Row) -> Int
-    /// List order. The default keeps the composer's order.
-    static func ordered(_ rows: [Row]) -> [Row]
     static func accessibilityLabel(_ row: Row) -> String
     static func location(_ row: Row) -> WorkspaceLocation
     @MainActor static func secondary(_ row: Row) -> Secondary
@@ -61,7 +59,6 @@ protocol ConclusionListKind {
 
 extension ConclusionListKind {
     static func extraCount(_: Row) -> Int { 0 }
-    static func ordered(_ rows: [Row]) -> [Row] { rows }
 }
 
 /// The shared Conclude list page for one kind. This view does not choose a
@@ -131,7 +128,8 @@ private struct ConclusionListBody<Kind: ConclusionListKind>: View {
                 PVCallout(tone: .danger, message: message)
             case .rows(let rows, _):
                 PVList(
-                    items: Kind.ordered(rows),
+                    // Go owns list order (conclusionheaders.sortByTitle); rows show as given.
+                    items: rows,
                     thumbnail: { _ in ConclusionListRow.thumbnail(mark: Kind.mark) },
                     meta: Kind.ref,
                     label: Kind.title,

@@ -23,10 +23,6 @@ enum PlacesList: ConclusionListKind {
 
     static func extraCount(_ header: CatalogPlaceHeader) -> Int { header.extraNameCount }
 
-    static func ordered(_ headers: [CatalogPlaceHeader]) -> [CatalogPlaceHeader] {
-        PlaceListOrder.sorted(headers)
-    }
-
     static func accessibilityLabel(_ header: CatalogPlaceHeader) -> String {
         L10n.Workspace.placeRowAccessibility(
             title: titleSource(header).text,
@@ -43,43 +39,6 @@ enum PlacesList: ConclusionListKind {
     @MainActor
     static func secondary(_ header: CatalogPlaceHeader) -> PlaceChainLine {
         PlaceChainLine(text: PlaceChainDisplay.line(parents: header.parents))
-    }
-}
-
-/// Displayed-title order for the Places list. A name or label sorts
-/// case- and diacritic-insensitively; a ref-only row sorts last, by ref.
-enum PlaceListOrder {
-    static func sorted(_ headers: [CatalogPlaceHeader], locale: Locale = .current) -> [CatalogPlaceHeader] {
-        headers.sorted { a, b in
-            switch (sortTitle(a), sortTitle(b)) {
-            case (nil, nil):
-                return refOrder(a, b, locale: locale)
-            case (.some, .none):
-                return true
-            case (.none, .some):
-                return false
-            case let (left?, right?):
-                let order = left.compare(right, options: [.caseInsensitive, .diacriticInsensitive], locale: locale)
-                if order == .orderedSame {
-                    return refOrder(a, b, locale: locale)
-                }
-                return order == .orderedAscending
-            }
-        }
-    }
-
-    /// The name or label the row shows. Nil when the title is the ref.
-    private static func sortTitle(_ header: CatalogPlaceHeader) -> String? {
-        switch PlaceTitleDisplay.titleSource(header.titleParts) {
-        case .name(let text), .label(let text):
-            return text
-        case .ref:
-            return nil
-        }
-    }
-
-    private static func refOrder(_ a: CatalogPlaceHeader, _ b: CatalogPlaceHeader, locale: Locale) -> Bool {
-        a.entity.ref.compare(b.entity.ref, options: .caseInsensitive, locale: locale) == .orderedAscending
     }
 }
 

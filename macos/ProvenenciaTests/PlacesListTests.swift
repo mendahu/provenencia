@@ -3,7 +3,6 @@ import Testing
 @testable import Provenencia
 
 struct PlacesListTests {
-    private let locale = Locale(identifier: "en_US")
 
     private func header(
         _ ref: String,
@@ -16,18 +15,6 @@ struct PlacesListTests {
             names: names,
             parents: parents
         )
-    }
-
-    @Test func sortsByDisplayedTitleThenRef() {
-        let rows = PlaceListOrder.sorted([
-            header("PLC-9", names: ["York"]),
-            header("PLC-2", label: "Home"),
-            header("PLC-B"),
-            header("PLC-A"),
-            header("PLC-1", names: ["Montréal"]),
-            header("PLC-3", names: ["montreal"]),
-        ], locale: locale)
-        #expect(rows.map(\.entity.ref) == ["PLC-2", "PLC-1", "PLC-3", "PLC-9", "PLC-A", "PLC-B"])
     }
 
     @Test func headerMetaCountsAndShowsRefreshing() {

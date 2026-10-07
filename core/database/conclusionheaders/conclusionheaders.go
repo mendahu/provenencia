@@ -62,8 +62,8 @@ type HeaderPlace struct {
 	Count  int
 }
 
-// Unmerged Person handles with their displayed (kept rank-1) name and name count,
-// named Persons first by name sort key, then by ref (R5).
+// Unmerged Person handles with their displayed (kept rank-1) name and name
+// count. Order is sortByTitle's (R5), applied after the scan.
 const (
 	sqlPersonsSelect = `SELECT e.id, e.subject_type_id, e.ref, COALESCE(e.argument, ''), COALESCE(e.label, ''),
 		r.value_name,
@@ -75,13 +75,11 @@ const (
 	LEFT JOIN auto_reconciler_values r
 		ON r.entity_id = e.id AND r.property_id = np.id AND r.rank = 1 AND r.reason = 'kept'
 	WHERE st.key = 'person' AND st.origin = 'provenencia' AND e.merged_into_id IS NULL`
-	sqlPersonsOrder = ` ORDER BY r.sort_key IS NULL, r.sort_key, e.ref COLLATE NOCASE`
-	sqlListPersons  = sqlPersonsSelect + sqlPersonsOrder
 )
 
-// ListPersons returns every Person's header in list order, in one query.
+// ListPersons returns every Person's header in list order.
 func ListPersons(q Querier) ([]PersonHeader, error) {
-	return queryPersons(q, sqlListPersons)
+	return queryPersons(q, sqlPersonsSelect)
 }
 
 // PersonsByIDs returns the headers of the given unmerged Persons in list
@@ -91,7 +89,7 @@ func PersonsByIDs(q Querier, ids [][]byte) ([]PersonHeader, error) {
 	if len(ids) == 0 {
 		return nil, nil
 	}
-	return queryPersons(q, sqlPersonsSelect+` AND e.id IN (`+database.SQLInPlaceholders(len(ids))+`)`+sqlPersonsOrder,
+	return queryPersons(q, sqlPersonsSelect+` AND e.id IN (`+database.SQLInPlaceholders(len(ids))+`)`,
 		database.BlobArgs(ids)...)
 }
 
@@ -102,7 +100,7 @@ func personRowsByIDs(q Querier, ids [][]byte) ([]PersonHeader, error) {
 	if len(ids) == 0 {
 		return nil, nil
 	}
-	return scanPersons(q, sqlPersonsSelect+` AND e.id IN (`+database.SQLInPlaceholders(len(ids))+`)`+sqlPersonsOrder,
+	return scanPersons(q, sqlPersonsSelect+` AND e.id IN (`+database.SQLInPlaceholders(len(ids))+`)`,
 		database.BlobArgs(ids)...)
 }
 
@@ -114,6 +112,7 @@ func queryPersons(q Querier, query string, args ...any) ([]PersonHeader, error) 
 	if err := attachLives(q, out); err != nil {
 		return nil, err
 	}
+	sortByTitle(out, personTitle, func(h PersonHeader) string { return h.Entity.Ref })
 	return out, nil
 }
 

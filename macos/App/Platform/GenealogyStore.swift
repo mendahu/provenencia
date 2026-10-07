@@ -1009,7 +1009,7 @@ protocol GenealogyStore: Sendable {
     func listSubjectMemberships(projectDir: String, sourceID: String) async throws -> [CatalogSubjectMembership]
     /// The title of every Event Subject on one Source's Evidence graph, keyed by Subject id.
     func listSourceEventTitles(projectDir: String, sourceID: String) async throws -> [String: CatalogEventTitle]
-    /// Every unmerged Person as a row header, in list order (named by name, then by ref).
+    /// Every unmerged Person as a row header, in Go's list order (by shown title, then ref-only by ref).
     func listPersonHeaders(projectDir: String) async throws -> [CatalogPersonHeader]
     func listEventHeaders(projectDir: String) async throws -> [CatalogEventHeader]
     func listPlaceHeaders(projectDir: String) async throws -> [CatalogPlaceHeader]
