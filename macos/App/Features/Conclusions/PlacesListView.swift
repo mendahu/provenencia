@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// The Places list (S9-26, board S9-D4). The Places place, query key, and
-/// history entry stay Places. The chain line stays empty until S9-40.
+/// history entry stay Places. The chain line reads today's parents from Go.
 typealias PlacesListView = ConclusionListPage<PlacesList>
 
 enum PlacesList: ConclusionListKind {

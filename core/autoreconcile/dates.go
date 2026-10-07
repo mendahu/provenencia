@@ -81,6 +81,165 @@ func DateBounds(d datevalues.Value) (lo, hi *int, ok bool) {
 	return lo, hi, true
 }
 
+// Window is an inclusive proleptic-day span. A nil bound is open.
+// A fully open window is "always" (no place period, undated place).
+type Window struct {
+	Lo, Hi *int
+}
+
+// HoldKind is how a query date relates to a membership span.
+type HoldKind int
+
+const (
+	// HoldMiss: query and membership are disjoint.
+	HoldMiss HoldKind = iota
+	// HoldYes: query lies entirely inside membership.
+	HoldYes
+	// HoldAmbiguous: they overlap but the query is not fully inside
+	// (approximate or ranged date straddling a change).
+	HoldAmbiguous
+)
+
+// Always is a fully open window (no period).
+func Always() Window { return Window{} }
+
+// WindowOfDate is DateBounds as a Window. ok is false when d has no year.
+func WindowOfDate(d datevalues.Value) (Window, bool) {
+	lo, hi, ok := DateBounds(d)
+	if !ok {
+		return Window{}, false
+	}
+	return Window{Lo: lo, Hi: hi}, true
+}
+
+// PeriodWindow is a Place's existence span from optional start and end
+// dates. Missing sides are open; both missing is Always.
+func PeriodWindow(start, end *datevalues.Value) Window {
+	w := Always()
+	if start != nil {
+		if sw, ok := WindowOfDate(*start); ok {
+			w.Lo = sw.Lo
+		}
+	}
+	if end != nil {
+		if ew, ok := WindowOfDate(*end); ok {
+			w.Hi = ew.Hi
+		}
+	}
+	return w
+}
+
+// LinkMembership is when a hierarchical place relationship holds.
+// An undated link (nil start and end) holds on the overlap of the two
+// places' periods. A dated link holds inside its own span and both periods.
+func LinkMembership(linkStart, linkEnd *datevalues.Value, fromPeriod, toPeriod Window) (Window, bool) {
+	base, ok := Intersect(fromPeriod, toPeriod)
+	if !ok {
+		return Window{}, false
+	}
+	if linkStart == nil && linkEnd == nil {
+		return base, true
+	}
+	link := PeriodWindow(linkStart, linkEnd)
+	return Intersect(base, link)
+}
+
+// Overlaps reports whether a and b share any day (open ends included).
+func Overlaps(a, b Window) bool {
+	if a.Lo != nil && b.Hi != nil && *a.Lo > *b.Hi {
+		return false
+	}
+	if b.Lo != nil && a.Hi != nil && *b.Lo > *a.Hi {
+		return false
+	}
+	return true
+}
+
+// Intersect is the overlap of a and b. ok is false when empty.
+func Intersect(a, b Window) (Window, bool) {
+	if !Overlaps(a, b) {
+		return Window{}, false
+	}
+	out := Window{}
+	out.Lo = laterBound(a.Lo, b.Lo)
+	out.Hi = earlierBound(a.Hi, b.Hi)
+	if out.Lo != nil && out.Hi != nil && *out.Lo > *out.Hi {
+		return Window{}, false
+	}
+	return out, true
+}
+
+// Contains reports whether outer fully covers inner.
+func Contains(outer, inner Window) bool {
+	if inner.Lo == nil {
+		if outer.Lo != nil {
+			return false
+		}
+	} else if outer.Lo != nil && *inner.Lo < *outer.Lo {
+		return false
+	}
+	if inner.Hi == nil {
+		if outer.Hi != nil {
+			return false
+		}
+	} else if outer.Hi != nil && *inner.Hi > *outer.Hi {
+		return false
+	}
+	return true
+}
+
+// Relate says how query sits against membership for chain composition.
+func Relate(query, membership Window) HoldKind {
+	if !Overlaps(query, membership) {
+		return HoldMiss
+	}
+	if Contains(membership, query) {
+		return HoldYes
+	}
+	return HoldAmbiguous
+}
+
+// HoldsAt is true when the link should appear in a chain at query
+// (HoldYes or HoldAmbiguous).
+func HoldsAt(query, membership Window) bool {
+	k := Relate(query, membership)
+	return k == HoldYes || k == HoldAmbiguous
+}
+
+func laterBound(a, b *int) *int {
+	switch {
+	case a == nil:
+		return copyBound(b)
+	case b == nil:
+		return copyBound(a)
+	case *a >= *b:
+		return copyBound(a)
+	default:
+		return copyBound(b)
+	}
+}
+
+func earlierBound(a, b *int) *int {
+	switch {
+	case a == nil:
+		return copyBound(b)
+	case b == nil:
+		return copyBound(a)
+	case *a <= *b:
+		return copyBound(a)
+	default:
+		return copyBound(b)
+	}
+}
+
+func copyBound(v *int) *int {
+	if v == nil {
+		return nil
+	}
+	x := *v
+	return &x
+}
+
 func (w dateWindow) contains(inner dateWindow) bool {
 	if !w.openLo && (inner.openLo || inner.lo < w.lo) {
 		return false

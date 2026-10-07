@@ -3027,6 +3027,12 @@ enum L10n {
             comment: "Term picker label on a participation connection row"
         )
 
+        static let connectionPlaceRelationship = LocalizedStringResource(
+            "citationComposer.connectionPlaceRelationship",
+            defaultValue: "Type",
+            comment: "Term picker label on a place_relationship connection row (part of / succeeded by)"
+        )
+
         static let connectionNoRole = LocalizedStringResource(
             "citationComposer.connectionNoRole",
             defaultValue: "No role or type",

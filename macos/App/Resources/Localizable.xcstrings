@@ -13340,6 +13340,18 @@
         }
       }
     },
+    "citationComposer.connectionPlaceRelationship": {
+      "comment": "Term picker label on a place_relationship connection row (part of / succeeded by)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Type"
+          }
+        }
+      }
+    },
     "citationComposer.connectionNoRole": {
       "comment": "Muted slot on a location connection that has no term",
       "extractionState": "manual",

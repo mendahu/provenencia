@@ -8737,12 +8737,13 @@ func (x *ListSubjectMembershipsResponse) GetMemberships() []*SubjectMembership {
 }
 
 // HeaderPlace is one Place a walk reached. names are kept toponyms in rank
-// order. The parent chain is not here (S9-39).
+// order. parents is the hierarchical chain at the walk's date (nearest first).
 type HeaderPlace struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	Names []string               `protobuf:"bytes,1,rep,name=names,proto3" json:"names,omitempty"`
 	// entity is the Place; its page owns the names' Why.
 	Entity        *CanonicalEntity `protobuf:"bytes,3,opt,name=entity,proto3" json:"entity,omitempty"`
+	Parents       []string         `protobuf:"bytes,4,rep,name=parents,proto3" json:"parents,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -8787,6 +8788,13 @@ func (x *HeaderPlace) GetNames() []string {
 func (x *HeaderPlace) GetEntity() *CanonicalEntity {
 	if x != nil {
 		return x.Entity
+	}
+	return nil
+}
+
+func (x *HeaderPlace) GetParents() []string {
+	if x != nil {
+		return x.Parents
 	}
 	return nil
 }
@@ -9127,7 +9135,8 @@ type EventHeader struct {
 	EndDate        *DateValueInput        `protobuf:"bytes,10,opt,name=end_date,json=endDate,proto3" json:"end_date,omitempty"`
 	EndDateCount   int32                  `protobuf:"varint,11,opt,name=end_date_count,json=endDateCount,proto3" json:"end_date_count,omitempty"`
 	// subjects are subject-role persons, participation ref then person ref.
-	// places are every location's kept names. Chains stay empty until S9-39.
+	// places are every location's kept names with hierarchical parents at the
+	// event's date (Locations that share part_of fold into one chain).
 	Subjects []*EventSubject `protobuf:"bytes,12,rep,name=subjects,proto3" json:"subjects,omitempty"`
 	Places   []*HeaderPlace  `protobuf:"bytes,13,rep,name=places,proto3" json:"places,omitempty"`
 	// title is the naming-matrix rule Go chose and the parts it reads.
@@ -9356,8 +9365,8 @@ func (x *ListEventHeadersResponse) GetHeaders() []*EventHeader {
 
 // PlaceHeader is one Place as a row, composed from the auto-reconciler's
 // cache. names are the kept toponyms in rank order (Montréal and Montreal
-// are both names). start_date, end_date, kind, and parents stay empty until
-// S9-38 and S9-39. The app formats the title.
+// are both names). start_date / end_date are the Place's period; parents is
+// today's hierarchical chain. kind stays empty (place_nature deferred).
 type PlaceHeader struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Entity        *CanonicalEntity       `protobuf:"bytes,1,opt,name=entity,proto3" json:"entity,omitempty"`
@@ -16158,10 +16167,11 @@ const file_engine_proto_rawDesc = "" +
 	"projectDir\x12\x1b\n" +
 	"\tsource_id\x18\x02 \x01(\tR\bsourceId\"l\n" +
 	"\x1eListSubjectMembershipsResponse\x12J\n" +
-	"\vmemberships\x18\x01 \x03(\v2(.provenencia.engine.v1.SubjectMembershipR\vmemberships\"u\n" +
+	"\vmemberships\x18\x01 \x03(\v2(.provenencia.engine.v1.SubjectMembershipR\vmemberships\"\x8f\x01\n" +
 	"\vHeaderPlace\x12\x14\n" +
 	"\x05names\x18\x01 \x03(\tR\x05names\x12>\n" +
-	"\x06entity\x18\x03 \x01(\v2&.provenencia.engine.v1.CanonicalEntityR\x06entityJ\x04\b\x02\x10\x03R\n" +
+	"\x06entity\x18\x03 \x01(\v2&.provenencia.engine.v1.CanonicalEntityR\x06entity\x12\x18\n" +
+	"\aparents\x18\x04 \x03(\tR\aparentsJ\x04\b\x02\x10\x03R\n" +
 	"name_count\"\x80\x02\n" +
 	"\tLifeFacts\x129\n" +
 	"\x04date\x18\x01 \x01(\v2%.provenencia.engine.v1.DateValueInputR\x04date\x12\x1d\n" +

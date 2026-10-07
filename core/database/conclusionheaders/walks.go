@@ -64,7 +64,19 @@ func attachEventGraph(q Querier, headers []EventHeader) error {
 	if err != nil {
 		return err
 	}
-	places, err := loadPlacesOf(q, ids)
+	rawPlaces, err := loadPlacesOf(q, ids)
+	if err != nil {
+		return err
+	}
+	atByEvent := map[string]*datevalues.Value{}
+	for i := range headers {
+		at := headers[i].Date
+		if at == nil {
+			at = headers[i].StartDate
+		}
+		atByEvent[string(headers[i].Entity.ID)] = at
+	}
+	places, err := foldPlacesOf(q, rawPlaces, atByEvent)
 	if err != nil {
 		return err
 	}
@@ -101,7 +113,15 @@ func loadLives(q Querier, personIDs [][]byte) (map[string]map[string]LifeFacts, 
 	for _, e := range events {
 		lifeIDs = append(lifeIDs, e.entity.ID)
 	}
-	places, err := loadPlacesOf(q, lifeIDs)
+	rawPlaces, err := loadPlacesOf(q, lifeIDs)
+	if err != nil {
+		return nil, err
+	}
+	atByEvent := map[string]*datevalues.Value{}
+	for _, e := range events {
+		atByEvent[string(e.entity.ID)] = e.date
+	}
+	places, err := foldPlacesOf(q, rawPlaces, atByEvent)
 	if err != nil {
 		return nil, err
 	}
@@ -224,13 +244,14 @@ func loadEventSubjects(q Querier, eventIDs [][]byte) (map[string][]EventSubject,
 }
 
 // loadPlacesOf walks each event's locations to their Places, by place ref.
-// A Place's names are its kept toponyms.
+// A Place's names are its kept toponyms. Folding into chains happens in
+// foldPlacesOf once the event's date is known.
 func loadPlacesOf(q Querier, eventIDs [][]byte) (map[string][]HeaderPlace, error) {
 	edges, err := canonicalgraph.Walk(q, canonicalgraph.PlacesOfEvent, eventIDs)
 	if err != nil {
 		return nil, err
 	}
-	headers, err := PlacesByIDs(q, canonicalgraph.Targets(edges))
+	headers, err := placesWithoutChains(q, canonicalgraph.Targets(edges))
 	if err != nil {
 		return nil, err
 	}
@@ -258,16 +279,40 @@ func loadPlacesOf(q Querier, eventIDs [][]byte) (map[string][]HeaderPlace, error
 	return out, nil
 }
 
+// foldPlacesOf collapses co-located Places that share a part_of graph at
+// each event's date into one chain value.
+func foldPlacesOf(q Querier, byEvent map[string][]HeaderPlace, atByEvent map[string]*datevalues.Value) (map[string][]HeaderPlace, error) {
+	var seeds [][]byte
+	for _, places := range byEvent {
+		for _, p := range places {
+			seeds = append(seeds, p.Entity.ID)
+		}
+	}
+	g, err := loadPlaceGraph(q, seeds)
+	if err != nil {
+		return nil, err
+	}
+	out := make(map[string][]HeaderPlace, len(byEvent))
+	for event, places := range byEvent {
+		out[event] = g.FoldLocations(places, atByEvent[event])
+	}
+	return out, nil
+}
+
 // HeaderDependents is the reverse of the header walks, for a later search
 // reprojection (S9-34): the handles whose header embeds one of ids. A Place
-// reaches its events and those events' subject persons. An Event reaches its
-// subject persons (their birth or death). A Person reaches the events of
-// their subject-role participations. Association handles are not returned.
-// This does not reproject.
+// reaches its child Places (part_of), its events, and those events' subject
+// persons. An Event reaches its subject persons (their birth or death). A
+// Person reaches the events of their subject-role participations.
+// Association handles are not returned. This does not reproject.
 func HeaderDependents(q Querier, ids [][]byte) ([][]byte, error) {
 	ids = database.UniqueBlobIDs(ids)
 	if len(ids) == 0 {
 		return nil, nil
+	}
+	children, err := ChildPlaceIDs(q, ids)
+	if err != nil {
+		return nil, err
 	}
 	placeEdges, err := canonicalgraph.Walk(q, canonicalgraph.EventsAtPlace, ids)
 	if err != nil {
@@ -287,7 +332,7 @@ func HeaderDependents(q Querier, ids [][]byte) ([][]byte, error) {
 	for _, id := range ids {
 		seen[string(id)] = true
 	}
-	for _, group := range [][][]byte{events, canonicalgraph.Targets(personEdges), canonicalgraph.Targets(eventEdges)} {
+	for _, group := range [][][]byte{children, events, canonicalgraph.Targets(personEdges), canonicalgraph.Targets(eventEdges)} {
 		for _, id := range group {
 			if !seen[string(id)] {
 				seen[string(id)] = true

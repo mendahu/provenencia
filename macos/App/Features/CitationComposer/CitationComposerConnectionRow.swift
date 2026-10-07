@@ -97,6 +97,8 @@ struct CitationComposerConnectionRow: View {
             return L10n.CitationComposer.connectionRelationship
         case "participation":
             return L10n.CitationComposer.connectionRole
+        case "place_relationship":
+            return L10n.CitationComposer.connectionPlaceRelationship
         default:
             return L10n.CitationComposer.connectionNoRole
         }

@@ -47,3 +47,4 @@ Agents “update the hash” by shipping the migration and proving tests pass �
 - Add `golang-migrate` or a `schema_migrations` table
 - Put identity / FFI / ingest in the SQL
 - Commit a hand-maintained schema hash / bypass open-time schema verification
+- **Seed vocabulary rows** (`subject_types`, `properties`, `property_terms`, bindings, source types, grades, …) in SQL — use create-time `Install` / registries (`subjectvocab`, `sourcevocab`, …). Pre-production: refresh existing projects by re-running Install on the CLI; do not backfill seeds in migrations until the product owner says the app is in production.

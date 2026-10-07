@@ -498,7 +498,7 @@ func TestPlaceKeepsEveryDistinctToponym(t *testing.T) {
 		t.Fatalf("names %+v", got)
 	}
 	if got[0].StartDate != nil || got[0].EndDate != nil || got[0].Kind != "" || len(got[0].Parents) != 0 {
-		t.Fatalf("period, kind, and parents stay empty: %+v", got[0])
+		t.Fatalf("no period or parents without evidence: %+v", got[0])
 	}
 
 	db, err := f.c.DB()
@@ -565,7 +565,9 @@ func TestListPlacesQueryCountIsConstant(t *testing.T) {
 	}
 	many, err := conclusionheaders.ListPlacesQueryCount(db)
 	must(t, err)
-	if one != 1 || many != one {
+	// Place list is one header scan plus a fixed place-relationship graph
+	// walk for today's chains (S9-39), whatever the row count.
+	if one != many {
 		t.Fatalf("queries: %d for 1 Place, %d for 21", one, many)
 	}
 }

@@ -54,6 +54,7 @@ IDs stay stable (`S9-NN`, `S9-DN`). Do not renumber when moving steps here.
 | S9-31 | PR | Composer walks + header dependents |
 | S9-32 | PR | Fill derived cells in lists and details |
 | S9-38 | PR | Place model: relationships, periods |
+| S9-39 | PR | Place chain composer |
 
 ## Steps
 
@@ -845,7 +846,7 @@ An Event can carry a recorded historical name (*The Great Fire of 1849*) as text
 
 - Property `event_name` (`text`, label *Event name*) in the subjectvocab registry, bound to `event` immediately after `event_type` (sort order 1), unlocked. The three date bindings move to sort orders 2–4 and stay locked.
 - `event_type` on `event`, `role` on `participation`, `relationship_type` on `relationship`, `name` on `person`, and `toponym` on `place` are locked, so the Properties page cannot unbind the slots the walks, rows, and titles read. The lock is in the compiled registry, not a column, so existing catalogs pick it up with no migration.
-- Migration **000042** writes the Property and binding when the provenencia `event` type is already present. A new catalog is empty at that step; Install mints the UUIDv7.
+- Migration **000042** is a no-op version step (seed INSERTs removed). `event_name` comes from create-time Install only; pre-production catalogs re-run Install on the CLI.
 - [`seeded-vocabulary.md`](../../seeded-vocabulary.md) §3.2 / §3.3 list the Property and the binding.
 
 **What changed for researchers**
@@ -1118,7 +1119,7 @@ Places can sit in a containment graph and a succession lineage, with periods on 
 
 **What shipped**
 
-- Migration `000045`: backfill for existing catalogs — subject type `place_relationship`, Properties `from` / `to` / `place_relationship_type`, period bindings on `place`, membership span on the bridge, locked directed terms `part_of` and `succeeded_by`. No category column; walk / cycle behaviour keys off those term keys in Go.
+- Migration `000045` is a no-op version step (seed INSERTs removed). Place-relationship vocabulary comes from create-time `subjectvocab.Install` only; pre-production catalogs re-run Install on the CLI. No category column; walk / cycle behaviour keys off term keys in Go.
 - `subjectvocab` Install seeds the same for new catalogs; connectrules product bridge place↔place (disambiguation `place_relationship_type`); place↔place refusal removed. Mac `productMatrix` and FakeStore match.
 - User `propertyterms.Create` under provenencia `place_relationship_type` returns `ErrLocked`.
 - Bridge filing soft-refuses `part_of` and `succeeded_by` cycles (direct and transitive, same-key graph); the place claims still succeed. Splits and amalgamations file. A hierarchical link keeps its own `start_date` / `end_date` observations.
@@ -1130,3 +1131,21 @@ Places can sit in a containment graph and a succession lineage, with periods on 
 - Place hierarchy in list and detail UI: **S9-40**.
 - `place_nature` Property (deferred).
 - Cache version bump (stays 13); product VERSION bump.
+
+### S9-39 — Place chain composer
+
+A Place's hierarchical parents at a date, Location fold on Event/life walks, and succession lineage reads — composed from the S9-38 graph and S9-21 windows.
+
+**What shipped**
+
+- `autoreconcile` window helpers: `PeriodWindow`, `LinkMembership`, `Overlaps` / `Intersect` / `Relate` / `HoldsAt` (undated link = place-period overlap; dated link ∩ both periods; ambiguous query → candidates).
+- `canonicalgraph` hops: `ParentsOfPlace` / `PartsOfPlace` (`part_of`), `SuccessorsOfPlace` / `PredecessorsOfPlace` (`succeeded_by`).
+- `conclusionheaders` chain composer (`placechains.go`): parents-at-date, parts, succession both ways (splits/amalgamations; succession never builds a display chain), Location fold in `loadPlacesOf`, `PlaceHeader` period + today's `Parents`, `HeaderPlace.parents`, `HeaderDependents` includes child Places.
+- Proto `HeaderPlace.parents`; FFI and Swift `CatalogHeaderPlace.parents` mapping. Places list already renders the chain line once parents fill.
+
+**What stayed out**
+
+- Places list candidate/"or" polish and Place detail period / parts / succession sections: **S9-40**.
+- Person/Event row chain chrome beyond folded leaf names: **S9-40**.
+- Search document secondary = today's chain: **S9-34**.
+- `place_nature` / `Kind`.

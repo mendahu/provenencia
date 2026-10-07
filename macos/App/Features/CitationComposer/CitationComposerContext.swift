@@ -162,14 +162,24 @@ final class CitationComposerContext {
         let rulesHandle: QueryHandle<[CatalogConnectRule]>? = session.queryHandle(connectRulesKey)
         let rules = rulesHandle?.value ?? []
         var terms: [String: [CatalogPropertyTerm]] = [:]
-        for property in fields.properties
-            where property.valueType == PropertyValueType.term.rawValue
-        {
+        var termPropertyIDs = Set(
+            fields.properties
+                .filter { $0.valueType == PropertyValueType.term.rawValue }
+                .map(\.id)
+        )
+        for typeFields in fields.propertiesByTypeID.values {
+            for field in typeFields
+                where field.property.valueType == PropertyValueType.term.rawValue
+            {
+                termPropertyIDs.insert(field.property.id)
+            }
+        }
+        for propertyID in termPropertyIDs {
             let handle: QueryHandle<[CatalogPropertyTerm]>? = session.queryHandle(
-                termsKey(propertyID: property.id)
+                termsKey(propertyID: propertyID)
             )
             if let value = handle?.value {
-                terms[property.id] = value
+                terms[propertyID] = value
             }
         }
         let key = MemoKey(fields: fields, rows: rows, rules: rules, terms: terms)

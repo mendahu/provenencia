@@ -34,8 +34,7 @@ type PersonHeader struct {
 	// structure, so at most 1. More would read as mixed, the extras as +N.
 	NameValueCount int
 	// Birth and Death are read off subject-role participations in a birth or
-	// death event. Place names are the linked Places' kept toponyms; the
-	// parent chain stays empty until S9-39.
+	// death event. Places are folded location chains at the event's date.
 	Birth LifeFacts
 	Death LifeFacts
 }
@@ -53,11 +52,14 @@ type LifeFacts struct {
 	Places    []HeaderPlace
 }
 
-// HeaderPlace is one Place a walk reached. Names are kept toponyms in rank
-// order. No chain. Entity is the Place, whose page owns the names' Why.
+// HeaderPlace is one Place a walk reached (or a folded location chain).
+// Names are kept toponyms in rank order. Parents is the hierarchical chain
+// at the walk's date (nearest first). Entity is the Place (the leaf when
+// folded), whose page owns the names' Why.
 type HeaderPlace struct {
-	Entity canonicalentities.Entity
-	Names  []string
+	Entity  canonicalentities.Entity
+	Names   []string
+	Parents []string
 }
 
 // Unmerged Person handles with their displayed (kept rank-1) name and name

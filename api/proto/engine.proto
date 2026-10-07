@@ -1026,13 +1026,14 @@ message ListSubjectMembershipsResponse {
 }
 
 // HeaderPlace is one Place a walk reached. names are kept toponyms in rank
-// order. The parent chain is not here (S9-39).
+// order. parents is the hierarchical chain at the walk's date (nearest first).
 message HeaderPlace {
   repeated string names = 1;
   reserved 2;
   reserved "name_count"; // always len(names)
   // entity is the Place; its page owns the names' Why.
   CanonicalEntity entity = 3;
+  repeated string parents = 4;
 }
 
 // LifeFacts is a birth or a death: the event's date, else its start date,
@@ -1100,7 +1101,8 @@ message EventHeader {
   DateValueInput end_date = 10;
   int32 end_date_count = 11;
   // subjects are subject-role persons, participation ref then person ref.
-  // places are every location's kept names. Chains stay empty until S9-39.
+  // places are every location's kept names with hierarchical parents at the
+  // event's date (Locations that share part_of fold into one chain).
   repeated EventSubject subjects = 12;
   repeated HeaderPlace places = 13;
   // title is the naming-matrix rule Go chose and the parts it reads.
@@ -1119,8 +1121,8 @@ message ListEventHeadersResponse {
 
 // PlaceHeader is one Place as a row, composed from the auto-reconciler's
 // cache. names are the kept toponyms in rank order (Montréal and Montreal
-// are both names). start_date, end_date, kind, and parents stay empty until
-// S9-38 and S9-39. The app formats the title.
+// are both names). start_date / end_date are the Place's period; parents is
+// today's hierarchical chain. kind stays empty (place_nature deferred).
 message PlaceHeader {
   CanonicalEntity entity = 1;
   repeated string names = 2;

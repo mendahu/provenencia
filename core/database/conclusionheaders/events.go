@@ -22,7 +22,7 @@ type EventType struct {
 // EventHeader is one Event as a row. A rank-1 date wins over a start/end
 // span; the span's counts are still reported. Subjects are the subject-role
 // persons, participation ref then person ref. Places are every location's
-// kept names; chains stay empty until S9-39.
+// kept names with hierarchical parents at the event's date.
 type EventHeader struct {
 	Entity         canonicalentities.Entity
 	EventName      string

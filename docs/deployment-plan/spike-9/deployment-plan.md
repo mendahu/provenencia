@@ -495,7 +495,7 @@ In order; each brief sits just above the PR it gates.
 - [x] S9-31 — Composer walks + header dependents
 - [x] S9-32 — Fill derived cells in lists and details
 - [x] S9-38 — Place model: relationships, periods → [`completed.md`](completed.md)
-- [ ] S9-39 — Place chain composer
+- [x] S9-39 — Place chain composer → [`completed.md`](completed.md)
 - [ ] S9-40 — Place hierarchy in list and detail
 - [ ] S9-41 — Align core
 - [ ] S9-42 — Alignment loader + proposal read
@@ -770,7 +770,7 @@ Design: [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md). PR
 | **In** | `event_name` (`text`) bound to `event`: Install seed + migration. |
 | **Depends on** | — |
 
-**Done.** See [`completed.md`](completed.md#s9-20--seed-event_name). The Property is `event_name` (`text`), bound to `event` at sort order 1, unlocked. Date bindings are 2–4. `event_type`, `role`, `relationship_type`, `name`, and `toponym` are locked in the registry. Migration **000042** backfills catalogs that already have the `event` type; new catalogs get a UUIDv7 from Install. For **S9-22**: read this Property first in the title precedence. Match weights and search documents stay out until **S9-41** / **S9-34**.
+**Done.** See [`completed.md`](completed.md#s9-20--seed-event_name). The Property is `event_name` (`text`), bound to `event` at sort order 1, unlocked. Date bindings are 2–4. `event_type`, `role`, `relationship_type`, `name`, and `toponym` are locked in the registry. Seeded via create-time Install (migration **000042** is a no-op version step). For **S9-22**: read this Property first in the title precedence. Match weights and search documents stay out until **S9-41** / **S9-34**.
 
 #### S9-21 — Date module + windows
 
@@ -900,17 +900,13 @@ Design: [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md) §1
 
 | | |
 | --- | --- |
-| **In** | Seed (Install + migration): subject type `place_relationship` (bridge) with Properties `from` (place), `to` (place), `place_relationship_type` (term), and `start_date` / `end_date` (the membership span); **locked** seeded types `part_of` and `succeeded_by`, both directed — Create of a user term under `place_relationship_type` is refused; the composer offers only those two types (no *Add type…*). Engine walk / cycle behaviour keys off those term keys (containment vs succession), not a schema category. The same `start_date` / `end_date` also bound to `place` (its period). A `connectrules` bridge place ↔ place disambiguated by `place_relationship_type`, so it is drawn and cited on the Evidence graph like any bridge, and filed automatically through S9-28 (keyed by the two places and the type, direction kept). One bridge is one contiguous span. **Succession may branch:** a split is one Place `succeeded_by` several, an amalgamation several Places `succeeded_by` one; nothing assumes one successor. **Loop refusal** in S9-28's bridge filing (alignment flags it before Done): a hierarchical link that would close a cycle among canonical places, or a looping succession, is refused with a clear error. Delete Impact and search registries for the new kind. No `place_nature` Property. |
+| **In** | Seed (create-time Install only; migration **000045** is a no-op version step): subject type `place_relationship` (bridge) with Properties `from` (place), `to` (place), `place_relationship_type` (term), and `start_date` / `end_date` (the membership span); **locked** seeded types `part_of` and `succeeded_by`, both directed — Create of a user term under `place_relationship_type` is refused; the composer offers only those two types (no *Add type…*). Engine walk / cycle behaviour keys off those term keys (containment vs succession), not a schema category. The same `start_date` / `end_date` also bound to `place` (its period). A `connectrules` bridge place ↔ place disambiguated by `place_relationship_type`, so it is drawn and cited on the Evidence graph like any bridge, and filed automatically through S9-28 (keyed by the two places and the type, direction kept). One bridge is one contiguous span. **Succession may branch:** a split is one Place `succeeded_by` several, an amalgamation several Places `succeeded_by` one; nothing assumes one successor. **Loop refusal** in S9-28's bridge filing (alignment flags it before Done): a hierarchical link that would close a cycle among canonical places, or a looping succession, is refused with a clear error. Delete Impact and search registries for the new kind. No `place_nature` Property. |
 | **Testable** | Seeds (locked relationship types + place period bindings); connect rule; cycles refused (direct and transitive); user Create under `place_relationship_type` is refused; a split (one → two) and an amalgamation (two → one) file and read back; a hierarchical link stores its own start and end. |
 | **Depends on** | S9-28, S9-36 |
 
 #### S9-39 — Place chain composer
 
-| | |
-| --- | --- |
-| **In** | Go composer over the cache: a Place's hierarchical (`part_of`) parents at a date. An undated link holds where the two places' periods overlap (no place period = always). A dated link holds only inside its own span, and only while both places' periods hold. Several parents → every candidate (no nature preference); every candidate when the date can't decide; its parts; its succession both ways (a temporal link's dates do not build a chain). **Fold Locations into chains** for Event / life-place walks: Places that share a `part_of` graph at the event's date become one chain value; unrealted Places stay competing values for reconciliation. Plug into S9-31's walks and search. Header dependents for places (a parent's rename reprojects its children's headers). Cycle guard. |
-| **Testable** | Toronto in 1820 / 1850 / 1950 from undated links and the parents' periods; *about 1841* → both; several parents → all candidates; Birth linked to Toronto and Ontario (with `part_of`) → one chain; Birth linked to Toronto and Scotland (no link) → two competing place values; succession never builds a chain; succession both ways with several successors (a split) and several predecessors (an amalgamation); undated places always hold; Ireland part of the United Kingdom until 1922 drops that parent afterward while both places continue. |
-| **Depends on** | S9-38, S9-21, S9-25, S9-31 |
+**Done.** See [`completed.md`](completed.md#s9-39--place-chain-composer). Parents-at-date, parts, succession, and Location fold over `part_of` with S9-21 windows. `PlaceHeader.parents` and `HeaderPlace.parents` fill; Places list shows today's chain. Person/Event chain chrome and Place detail hierarchy stay **S9-40**; search documents stay **S9-34**.
 
 #### S9-40 — Place hierarchy in list and detail
 
