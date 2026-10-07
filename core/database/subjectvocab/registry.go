@@ -53,6 +53,7 @@ type seedBinding struct {
 
 type seedTerm struct {
 	PropertyKey, Key, Label, Description string
+	Directed                             bool
 }
 
 var seedTypes = []seedType{
@@ -202,12 +203,12 @@ var seedTerms = []seedTerm{
 	{PropertyKey: "relationship_type", Key: "spouse", Label: "Spouse"},
 	{PropertyKey: "relationship_type", Key: "sibling", Label: "Sibling"},
 	{PropertyKey: "relationship_type", Key: "cousin", Label: "Cousin"},
-	{PropertyKey: "relationship_type", Key: "parent", Label: "Parent"},
-	{PropertyKey: "relationship_type", Key: "child", Label: "Child"},
-	{PropertyKey: "relationship_type", Key: "grandparent", Label: "Grandparent"},
-	{PropertyKey: "relationship_type", Key: "grandchild", Label: "Grandchild"},
-	{PropertyKey: "relationship_type", Key: "pibling", Label: "Aunt / uncle"},
-	{PropertyKey: "relationship_type", Key: "nibling", Label: "Niece / nephew"},
-	{PropertyKey: "relationship_type", Key: "guardian", Label: "Guardian"},
-	{PropertyKey: "relationship_type", Key: "ward", Label: "Ward"},
+	{PropertyKey: "relationship_type", Key: "parent", Label: "Parent", Directed: true},
+	{PropertyKey: "relationship_type", Key: "child", Label: "Child", Directed: true},
+	{PropertyKey: "relationship_type", Key: "grandparent", Label: "Grandparent", Directed: true},
+	{PropertyKey: "relationship_type", Key: "grandchild", Label: "Grandchild", Directed: true},
+	{PropertyKey: "relationship_type", Key: "pibling", Label: "Aunt / uncle", Directed: true},
+	{PropertyKey: "relationship_type", Key: "nibling", Label: "Niece / nephew", Directed: true},
+	{PropertyKey: "relationship_type", Key: "guardian", Label: "Guardian", Directed: true},
+	{PropertyKey: "relationship_type", Key: "ward", Label: "Ward", Directed: true},
 }

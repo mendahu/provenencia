@@ -92,11 +92,20 @@ func TestReconcile(t *testing.T) {
 				{ObservationID: id(1), Value: Value{TermID: []byte("birth")}},
 				{ObservationID: id(2), Value: Value{TermID: []byte("birth")}},
 			}, nil, [][]byte{{1, 2}}, StateMerged},
-		{"subjects by id", properties.ValueTypeSubject,
+		{"subjects by handle", properties.ValueTypeSubject,
+			[]Candidate{
+				{ObservationID: id(1), Value: Value{SubjectID: []byte("s1"), EntityID: []byte("e1")}},
+				{ObservationID: id(2), Value: Value{SubjectID: []byte("s2"), EntityID: []byte("e2")}},
+			}, nil, [][]byte{{1}, {2}}, StateMixed},
+		{"subjects on one handle merge", properties.ValueTypeSubject,
+			[]Candidate{
+				{ObservationID: id(1), Value: Value{SubjectID: []byte("s1"), EntityID: []byte("e1")}},
+				{ObservationID: id(2), Value: Value{SubjectID: []byte("s2"), EntityID: []byte("e1")}},
+			}, nil, [][]byte{{1, 2}}, StateMerged},
+		{"unpromoted subject is no evidence", properties.ValueTypeSubject,
 			[]Candidate{
 				{ObservationID: id(1), Value: Value{SubjectID: []byte("s1")}},
-				{ObservationID: id(2), Value: Value{SubjectID: []byte("s2")}},
-			}, nil, [][]byte{{1}, {2}}, StateMixed},
+			}, nil, nil, StateEmpty},
 		{"equal dates merge", properties.ValueTypeDate,
 			[]Candidate{date(1, 1985, ip(5), ip(14)), date(2, 1985, ip(5), ip(14))}, nil,
 			[][]byte{{1, 2}}, StateMerged},

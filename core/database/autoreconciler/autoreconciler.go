@@ -63,7 +63,8 @@ import (
 //	11: dates reconcile by window; date_lo / date_hi and the date sort_key
 //	   are stored (S9-21).
 //	12: multiple cardinality keeps every distinct surviving value (S9-36).
-const CacheVersion = 12
+//	13: subject-valued Properties map to the accepted handle (S9-28).
+const CacheVersion = 13
 
 // batchSize bounds the handles per loader batch (and so the IN list length).
 const batchSize = 500
@@ -86,8 +87,8 @@ const (
 
 	sqlInsert = `INSERT INTO auto_reconciler_values
 		(entity_id, property_id, rank, value_text, value_integer, value_term_id,
-		 value_date, value_name, date_lo, date_hi, sort_key, support, against, reason)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+		 value_entity_id, value_date, value_name, date_lo, date_hi, sort_key, support, against, reason)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
 	// One row per Observation on an accepted or provisional member of the
 	// batch (rejected members don't count), with its evidence: polarity, the
@@ -96,7 +97,7 @@ const (
 	// grade, or no vocabulary reads as 0.
 	sqlLoadCandidates = `SELECT ic.entity_id, o.id, o.property_id, p.value_type, p.cardinality,
 			o.value_text, o.value_integer, o.value_date_id, o.value_name_id, o.value_term_id,
-			COALESCE(t.key, ''),
+			COALESCE(t.key, ''), o.value_subject_id,
 			ic.status = 'provisional', o.polarity = 'negative', a.source_id,
 			COALESCE(sg.sort_order - (SELECT sort_order FROM source_credibility_grades
 				WHERE key = 'standard' AND origin = 'provenencia'), 0),
@@ -113,8 +114,17 @@ const (
 		LEFT JOIN source_credibility_grades sg ON sg.id = sca.credibility_grade_id
 		LEFT JOIN claim_confidence_grades cg ON cg.id = ic.confidence_grade_id
 		WHERE ic.status IN ('accepted', 'provisional')
-		  AND p.value_type <> 'subject'
 		  AND ic.entity_id IN (`
+
+	sqlAcceptedEntities = `SELECT subject_id, entity_id FROM identity_claims
+		WHERE status = 'accepted' AND subject_id IN (`
+
+	// Handles whose members cite subjectID as a subject-valued end.
+	sqlHandlesObservingSubject = `SELECT DISTINCT ic.entity_id
+		FROM observations o
+		JOIN identity_claims ic ON ic.subject_id = o.subject_id
+			AND ic.status IN ('accepted', 'provisional')
+		WHERE o.value_subject_id = ?`
 
 	sqlHandlesForSubjects = `SELECT DISTINCT entity_id FROM identity_claims
 		WHERE status IN ('accepted', 'provisional') AND subject_id IN (`
@@ -152,6 +162,26 @@ func RecomputeTx(q Querier, entityIDs [][]byte) error {
 		}
 	}
 	return searchindex.ReprojectHandles(q, ids)
+}
+
+// HandlesObservingSubject returns handles whose members' Observations point
+// at subjectID. A claim create or a subject delete recomputes them so a
+// subject-valued end tracks the handle it resolved to.
+func HandlesObservingSubject(q Querier, subjectID []byte) ([][]byte, error) {
+	if len(subjectID) != 16 {
+		return nil, nil
+	}
+	return listIDs(q, sqlHandlesObservingSubject, subjectID)
+}
+
+// RecomputeTouchingTx recomputes entityIDs plus every handle whose members'
+// Observations point at subjectID.
+func RecomputeTouchingTx(q Querier, entityIDs [][]byte, subjectID []byte) error {
+	extra, err := HandlesObservingSubject(q, subjectID)
+	if err != nil {
+		return err
+	}
+	return RecomputeTx(q, append(entityIDs, extra...))
 }
 
 // RecomputeSubjectsTx recomputes the handles the given Subjects are accepted
@@ -332,18 +362,18 @@ func load(q Querier, ids [][]byte) ([]*group, error) {
 	var dateIDs, nameIDs [][]byte
 	for rows.Next() {
 		var (
-			entityID, obsID, propertyID []byte
-			valueType, cardinality          string
-			text                        sql.NullString
-			integer                     sql.NullInt64
-			dateID, nameID, termID      []byte
-			termKey                     string
-			provisional, negative       bool
-			sourceID                    []byte
-			credibility, confidence     int
-			uncertain                   bool
+			entityID, obsID, propertyID       []byte
+			valueType, cardinality            string
+			text                              sql.NullString
+			integer                           sql.NullInt64
+			dateID, nameID, termID, subjectID []byte
+			termKey                           string
+			provisional, negative             bool
+			sourceID                          []byte
+			credibility, confidence           int
+			uncertain                         bool
 		)
-		if err := rows.Scan(&entityID, &obsID, &propertyID, &valueType, &cardinality, &text, &integer, &dateID, &nameID, &termID, &termKey,
+		if err := rows.Scan(&entityID, &obsID, &propertyID, &valueType, &cardinality, &text, &integer, &dateID, &nameID, &termID, &termKey, &subjectID,
 			&provisional, &negative, &sourceID, &credibility, &uncertain, &confidence); err != nil {
 			_ = rows.Close()
 			return nil, err
@@ -358,7 +388,7 @@ func load(q Querier, ids [][]byte) ([]*group, error) {
 		c := autoreconcile.Candidate{ObservationID: obsID, Value: autoreconcile.Value{
 			Text: text.String, HasText: text.Valid,
 			Integer: integer.Int64, HasInteger: integer.Valid,
-			TermID: termID, TermKey: termKey,
+			TermID: termID, TermKey: termKey, SubjectID: subjectID,
 		}, SourceID: sourceID, Negative: negative, Provisional: provisional,
 			Provenance: autoreconcile.Provenance{Credibility: credibility, Uncertain: uncertain, ClaimConfidence: confidence}}
 		all = append(all, pending{g: g, c: c, dateID: dateID, nameID: nameID})
@@ -373,6 +403,22 @@ func load(q Querier, ids [][]byte) ([]*group, error) {
 	_ = rows.Close()
 	if err != nil {
 		return nil, err
+	}
+
+	var subjectIDs [][]byte
+	for i := range all {
+		if len(all[i].c.Value.SubjectID) > 0 {
+			subjectIDs = append(subjectIDs, all[i].c.Value.SubjectID)
+		}
+	}
+	entities, err := acceptedEntities(q, subjectIDs)
+	if err != nil {
+		return nil, err
+	}
+	for i := range all {
+		if eid, ok := entities[string(all[i].c.Value.SubjectID)]; ok {
+			all[i].c.Value.EntityID = eid
+		}
 	}
 
 	dates, err := datevalues.LookupManyTx(q, dateIDs)
@@ -418,8 +464,37 @@ func hasValue(valueType string, v autoreconcile.Value) bool {
 		return v.Date != nil
 	case properties.ValueTypeName:
 		return v.Name != nil
+	case properties.ValueTypeSubject:
+		return len(v.SubjectID) > 0
 	}
 	return false
+}
+
+func acceptedEntities(q Querier, ids [][]byte) (map[string][]byte, error) {
+	out := map[string][]byte{}
+	ids = database.UniqueBlobIDs(ids)
+	for start := 0; start < len(ids); start += batchSize {
+		end := min(start+batchSize, len(ids))
+		batch := ids[start:end]
+		rows, err := q.Query(sqlAcceptedEntities+database.SQLInPlaceholders(len(batch))+`)`, database.BlobArgs(batch)...)
+		if err != nil {
+			return nil, err
+		}
+		for rows.Next() {
+			var subjectID, entityID []byte
+			if err := rows.Scan(&subjectID, &entityID); err != nil {
+				_ = rows.Close()
+				return nil, err
+			}
+			out[string(subjectID)] = append([]byte(nil), entityID...)
+		}
+		if err := rows.Err(); err != nil {
+			_ = rows.Close()
+			return nil, err
+		}
+		_ = rows.Close()
+	}
+	return out, nil
 }
 
 func insertRow(q Querier, g *group, rank int, cl autoreconcile.ReconciledValue) error {
@@ -428,6 +503,7 @@ func insertRow(q Querier, g *group, rank int, cl autoreconcile.ReconciledValue) 
 		text, sortKey     any
 		integer           any
 		termID            any
+		valueEntity       any
 		dateBlob, nameBlb any
 		dateLo, dateHi    any
 	)
@@ -439,6 +515,9 @@ func insertRow(q Querier, g *group, rank int, cl autoreconcile.ReconciledValue) 
 	}
 	if len(v.TermID) > 0 {
 		termID = v.TermID
+	}
+	if len(v.EntityID) > 0 {
+		valueEntity = v.EntityID
 	}
 	if v.Date != nil {
 		b, err := valuecodec.MarshalDate(*v.Date)
@@ -465,7 +544,7 @@ func insertRow(q Querier, g *group, rank int, cl autoreconcile.ReconciledValue) 
 	if k, ok := autoreconcile.SortKey(g.valueType, v); ok {
 		sortKey = k
 	}
-	_, err := q.Exec(sqlInsert, g.entityID, g.propertyID, rank, text, integer, termID, dateBlob, nameBlb, dateLo, dateHi, sortKey,
+	_, err := q.Exec(sqlInsert, g.entityID, g.propertyID, rank, text, integer, termID, valueEntity, dateBlob, nameBlb, dateLo, dateHi, sortKey,
 		cl.Support, cl.Against, string(cl.Reason))
 	return err
 }

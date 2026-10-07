@@ -266,6 +266,12 @@ func Delete(c *database.Catalog, userID, id []byte) error {
 	}); err != nil {
 		return err
 	}
+	// Handles whose members cite this Subject, captured before its Observations
+	// go. The association it leaves is in released.Handles.
+	inbound, err := autoreconciler.HandlesObservingSubject(tx, id)
+	if err != nil {
+		return err
+	}
 	// Claims (with their pins) and connection-facet Observations (with their
 	// notes, pins, and owned values) are released and audited first.
 	released, err := deleteimpact.ReleaseFacets(tx, deleteimpact.KindSubject, id)
@@ -275,9 +281,9 @@ func Delete(c *database.Catalog, userID, id []byte) error {
 	if _, err := tx.Exec(sqlDelete, id); err != nil {
 		return err
 	}
-	// Handles this Subject left (and whose pins it took) are recomputed
-	// without it. Released.Handles was computed before anything was gone.
-	if err := autoreconciler.RecomputeTx(tx, released.Handles); err != nil {
+	// Handles this Subject left, and handles whose members pointed at it,
+	// are recomputed without it.
+	if err := autoreconciler.RecomputeTx(tx, append(released.Handles, inbound...)); err != nil {
 		return err
 	}
 	fields := map[string]audit.FieldDiff{

@@ -12,6 +12,7 @@ import (
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/audit"
+	"github.com/mendahu/provenencia/core/database/autoreconciler"
 	"github.com/mendahu/provenencia/core/database/project"
 )
 
@@ -83,18 +84,41 @@ func Create(c *database.Catalog, userID []byte, in CreateInput) (Claim, error) {
 	if err != nil {
 		return Claim{}, err
 	}
+	changes := []audit.Change{change}
+	var assocs [][]byte
+	if in.Status == StatusAccepted {
+		assocs, changes, err = AppendFiling(tx, cl.SubjectID, changes)
+		if err != nil {
+			return Claim{}, err
+		}
+	}
 	if _, err := audit.Record(tx, audit.Revision{
 		UserID:     userID,
 		ActionType: "create_identity_claim",
 		CreatedAt:  project.NowUTC(),
-		Changes:    []audit.Change{change},
+		Changes:    changes,
 	}); err != nil {
 		return Claim{}, err
+	}
+	if in.Status == StatusAccepted {
+		if err := autoreconciler.RecomputeTouchingTx(tx, append([][]byte{cl.EntityID}, assocs...), cl.SubjectID); err != nil {
+			return Claim{}, err
+		}
 	}
 	if err := tx.Commit(); err != nil {
 		return Claim{}, err
 	}
 	return cl, nil
+}
+
+// AppendFiling files bridges the new member completes and returns the
+// association handles plus the revision's changes.
+func AppendFiling(tx *sql.Tx, subjectID []byte, changes []audit.Change) ([][]byte, []audit.Change, error) {
+	assocs, filed, err := FileBridgesTx(tx, subjectID)
+	if err != nil {
+		return nil, nil, err
+	}
+	return assocs, append(changes, filed...), nil
 }
 
 // InsertTx inserts a claim on an open transaction (no commit, no revision).

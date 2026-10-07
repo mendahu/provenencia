@@ -16,6 +16,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/autoreconciler"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/claimconfidencegrades"
+	"github.com/mendahu/provenencia/core/database/connect"
 	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/namevalues"
@@ -28,6 +29,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/sourcecredibilitygrades"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
+	"github.com/mendahu/provenencia/core/database/subjectpositions"
 	"github.com/mendahu/provenencia/core/database/subjects"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
@@ -182,6 +184,29 @@ func negative(in observations.Input) observations.Input {
 	return in
 }
 
+func place(f *fixture, s subjects.Subject, x, y int64) error {
+	_, err := subjectpositions.Set(f.c, s.ID, x, y)
+	return err
+}
+
+func mustProp(f *fixture, key string) properties.Property {
+	f.t.Helper()
+	p, err := properties.Lookup(f.c, key, properties.OriginProvenencia)
+	must(f.t, err)
+	return p
+}
+
+func associationOf(f *fixture, typeKey string) []byte {
+	f.t.Helper()
+	db, err := f.c.DB()
+	must(f.t, err)
+	var id []byte
+	must(f.t, db.QueryRow(`SELECT e.id FROM canonical_entities e
+		JOIN subject_types st ON st.id = e.subject_type_id
+		WHERE st.key = ? AND st.origin = 'provenencia'`, typeKey).Scan(&id))
+	return id
+}
+
 func (f *fixture) promote(s subjects.Subject) []byte {
 	f.t.Helper()
 	res, err := promote.Save(f.c, userID, promote.Input{SubjectID: s.ID})
@@ -248,19 +273,21 @@ type row struct {
 	SortKey              *string
 	Support, Against     int
 	Reason               string
+	ValueEntityID        []byte
 }
 
 func snapshot(t *testing.T, q autoreconciler.Querier) []row {
 	t.Helper()
 	rows, err := q.Query(`SELECT entity_id, property_id, rank, value_text, value_integer, value_term_id,
-		value_date, value_name, date_lo, date_hi, sort_key, support, against, reason FROM auto_reconciler_values
+		value_date, value_name, date_lo, date_hi, sort_key, support, against, reason, value_entity_id
+		FROM auto_reconciler_values
 		ORDER BY entity_id, property_id, rank`)
 	must(t, err)
 	defer rows.Close()
 	var out []row
 	for rows.Next() {
 		var r row
-		must(t, rows.Scan(&r.EntityID, &r.PropertyID, &r.Rank, &r.Text, &r.Integer, &r.TermID, &r.Date, &r.Name, &r.DateLo, &r.DateHi, &r.SortKey, &r.Support, &r.Against, &r.Reason))
+		must(t, rows.Scan(&r.EntityID, &r.PropertyID, &r.Rank, &r.Text, &r.Integer, &r.TermID, &r.Date, &r.Name, &r.DateLo, &r.DateHi, &r.SortKey, &r.Support, &r.Against, &r.Reason, &r.ValueEntityID))
 		out = append(out, r)
 	}
 	must(t, rows.Err())
@@ -866,10 +893,9 @@ func handleDocs(t *testing.T, q autoreconciler.Querier) []string {
 // A new write path or trigger adds its operation to the generator and, where
 // it has a characteristic sequence, a scenario.
 //
-// Subject delete is exercised but cannot yet change rows: Impact refuses a
-// Subject that still has Observations, and pins don't feed resolution until
-// S9-14 (claim confidence) / S9-28 (subject-valued ends). Its hook is in place
-// so those PRs only extend these sequences.
+// Subject delete recomputes the handles a member left and the handles whose
+// members cited it. A participation filed by promoting both ends is a named
+// scenario below; the generator does not mint bridges.
 
 func TestRebuildEqualsUpkeep_Scenarios(t *testing.T) {
 	scenarios := []struct {
@@ -979,6 +1005,34 @@ func TestRebuildEqualsUpkeep_Scenarios(t *testing.T) {
 				f.t.Fatalf("toponyms %+v", rows)
 			}
 			must(f.t, f.certainty(obs[0].CitationID, false))
+		}},
+		{"promoting both ends of a participation files it, then the bridge is deleted", func(f *fixture) {
+			person, event := f.subject("person"), f.subject("event")
+			must(f.t, place(f, person, 0, 0))
+			must(f.t, place(f, event, 2, 0))
+			personProp := mustProp(f, "person")
+			eventProp := mustProp(f, "event")
+			roleProp := mustProp(f, "role")
+			role, err := propertyterms.Lookup(f.c, roleProp.ID, "subject", propertyterms.OriginProvenencia)
+			must(f.t, err)
+			bridge, err := connect.CreateCitedBridge(f.c, userID, connect.CreateInput{
+				SourceID: f.source.ID, FromSubjectID: person.ID, ToSubjectID: event.ID, BridgeTypeKey: "participation",
+				Citation: citations.CreateInput{ArtifactID: f.artifact.ID, LocatorJSON: locator},
+				Observations: []observations.Input{
+					{PropertyID: personProp.ID, ValueSubjectID: person.ID},
+					{PropertyID: eventProp.ID, ValueSubjectID: event.ID},
+					{PropertyID: roleProp.ID, ValueTermID: role.ID},
+				},
+			})
+			must(f.t, err)
+			personHandle := f.promote(person)
+			f.promote(event)
+			f.assertUpkeepEqualsRebuild("filed")
+			rows := rowsFor(f.rows(), associationOf(f, "participation"), personProp.ID)
+			if len(rows) != 1 || !bytes.Equal(rows[0].ValueEntityID, personHandle) {
+				f.t.Fatalf("person edge %+v", rows)
+			}
+			must(f.t, subjects.Delete(f.c, userID, bridge.Subject.ID))
 		}},
 		{"emptied member subject deleted", func(f *fixture) {
 			p := f.subject("event")

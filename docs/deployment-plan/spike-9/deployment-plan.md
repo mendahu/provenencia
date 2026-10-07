@@ -491,7 +491,7 @@ In order; each brief sits just above the PR it gates.
 - [x] S9-26 — Places list → [`completed.md`](completed.md)
 - [x] ✎ S9-D7 — Design: Place detail (revise for hierarchy) → [`completed.md`](completed.md)
 - [x] S9-27 — Place detail → [`completed.md`](completed.md)
-- [ ] S9-28 — Subject module + bridge filing
+- [x] S9-28 — Subject module + bridge filing
 - [ ] S9-31 — Composer walks + header dependents
 - [ ] S9-32 — Fill derived cells in lists and details
 - [ ] S9-38 — Place model: relationships, periods
@@ -531,7 +531,7 @@ Retired 2026-10-06: ~~S9-18 — Pinned-Observation delete end to end~~ (folded i
 
 #### S9-02 — Promote write v1
 
-**Done.** See [`completed.md`](completed.md#s9-02--promote-write-v1). v1 refuses non-primary kinds (`promote.unsupported_type`); **S9-28** relaxes that when bridge filing lands.
+**Done.** See [`completed.md`](completed.md#s9-02--promote-write-v1). v1 refuses non-primary kinds (`promote.unsupported_type`). **S9-28** files a bridge from the claim that completes its ends; Promote still refuses a bridge as the entry.
 
 | | |
 | --- | --- |
@@ -576,7 +576,7 @@ Retired 2026-10-06: ~~S9-18 — Pinned-Observation delete end to end~~ (folded i
 
 #### S9-06 — Auto-reconciler cache
 
-**Done.** See [`completed.md`](completed.md#s9-06--resolved-values-cache). Package `core/database/autoreconciler`: `RecomputeTx` / `RecomputeSubjectsTx` are the upkeep calls a new write path adds (and an operation in `TestRebuildEqualsUpkeep_SeededSequences`, plus a scenario in `TestRebuildEqualsUpkeep_Scenarios` where it has a characteristic sequence); a resolution change bumps `CacheVersion`. Still NULL: `date_lo` / `date_hi` and date `sort_key` (**S9-21**), `value_entity_id` — subject-valued Properties are not cached yet (**S9-28**). The loader reads no provenance until **S9-14**. Dates and names are protobuf via `core/valuecodec`.
+**Done.** See [`completed.md`](completed.md#s9-06--resolved-values-cache). Package `core/database/autoreconciler`: `RecomputeTx` / `RecomputeSubjectsTx` are the upkeep calls a new write path adds (and an operation in `TestRebuildEqualsUpkeep_SeededSequences`, plus a scenario in `TestRebuildEqualsUpkeep_Scenarios` where it has a characteristic sequence); a resolution change bumps `CacheVersion`. `value_entity_id` is filled from **S9-28**. The loader reads no provenance until **S9-14**. Dates and names are protobuf via `core/valuecodec`.
 
 | | |
 | --- | --- |
@@ -867,6 +867,8 @@ Design: [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md). PR
 | **In** | The **subject module**: subject-valued Properties map to the target's handle (unpromoted drop out as `no_evidence`) — the canonical graph, in `value_entity_id`. Upkeep: a claim create / remove recomputes handles whose members' Observations point at that subject. **Automatic bridge filing** ([`promote-alignment.md`](../../promote-alignment.md) §9.1): after any claim create, every bridge Subject whose ends are now both handles is filed in the same transaction, joining the association the ends already share or minting one. Keys: participation and location by their ends (role reconciled on the association); relationship and place relationship by their ends and type; direction kept for directed types (a per-type flag, not a code list). A link from a handle to itself is refused; a refused filing doesn't fail the claim and the bridge stays unfiled with its reason. Lift the S9-02 primary-kinds guard for bridges filed this way. Extend the rebuild-equals-upkeep tests. Test that deleting a bridge Subject releases its edge Observations' pins audited (connection-facet release through `ReleaseFacets(KindObservation)`). |
 | **Testable** | Promote a person, then its birth event (today's single-Subject Promote) → the participation is filed onto a new association; a second record of the same birth joins it; a spouse and a parent link between the same two people are two relationships; direction is kept; a self-link is refused; rebuild equals upkeep. |
 | **Depends on** | S9-12, S9-13 |
+
+**Done.** See [`completed.md`](completed.md#s9-28--subject-module--bridge-filing). Promoting both ends of a bridge files the connection. A birth and its person become one participation. Place-relationship seeding and cycle refusal stay in S9-38.
 
 #### S9-31 — Composer walks + header dependents
 
