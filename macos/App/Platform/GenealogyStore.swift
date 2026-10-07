@@ -230,6 +230,49 @@ struct CatalogPromoteResult: Sendable, Equatable {
     var claim: CatalogIdentityClaim
 }
 
+/// One decided or already-chosen Subject→handle anchor for graph alignment.
+struct CatalogPromoteGraphAlignmentFixed: Sendable, Equatable {
+    var subjectID: String
+    var handleID: String
+}
+
+/// One Property comparison on a graph-alignment row (drafted pins when agreeing).
+struct CatalogPromoteGraphAlignmentComparison: Sendable, Equatable {
+    var propertyKey: String
+    var propertyOrigin: String
+    var outcome: String
+    var valueType: String
+    var pinned: Bool
+}
+
+/// A runner-up handle on a graph-alignment row.
+struct CatalogPromoteGraphAlignmentAlternative: Sendable, Equatable {
+    var handleID: String
+    var handleRef: String
+    var score: Double
+}
+
+/// One Subject's proposal from `proposePromoteGraphAlignment` (S9-42).
+struct CatalogPromoteGraphAlignmentRow: Sendable, Equatable, Identifiable {
+    var subjectID: String
+    var kind: String
+    var target: String
+    var handleID: String
+    var handleRef: String
+    var score: Double
+    var assessment: String
+    var reasons: [String]
+    var comparisons: [CatalogPromoteGraphAlignmentComparison]
+    var alternatives: [CatalogPromoteGraphAlignmentAlternative]
+    var conflictWithFixed: Bool
+    var possibleDuplicate: Bool
+    var person: CatalogPersonHeader?
+    var event: CatalogEventHeader?
+    var place: CatalogPlaceHeader?
+
+    var id: String { subjectID }
+}
+
 struct CatalogSubjectPosition: Sendable, Equatable {
     var subjectID: String
     var gridX: Int64
@@ -1023,6 +1066,12 @@ protocol GenealogyStore: Sendable {
         subjectID: String,
         limit: Int
     ) async throws -> [CatalogPromoteTargetSuggestion]
+    /// Propose a handle, New, or Skip for every primary Subject on one Source (graph alignment).
+    func proposePromoteGraphAlignment(
+        projectDir: String,
+        sourceID: String,
+        fixed: [CatalogPromoteGraphAlignmentFixed]
+    ) async throws -> [CatalogPromoteGraphAlignmentRow]
     /// The claim confidence scale, in order.
     func listClaimConfidenceGrades(projectDir: String) async throws -> [CatalogClaimConfidenceGrade]
     /// Accepted handle of every promoted Subject on one Source's Evidence graph.

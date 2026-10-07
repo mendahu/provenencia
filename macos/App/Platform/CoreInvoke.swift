@@ -120,6 +120,7 @@ enum CoreMethod {
     static let listEventHeaders = Int32(Provenencia_Engine_V1_Method.listEventHeaders.rawValue)
     static let listPlaceHeaders = Int32(Provenencia_Engine_V1_Method.listPlaceHeaders.rawValue)
     static let listSourceEventTitles = Int32(Provenencia_Engine_V1_Method.listSourceEventTitles.rawValue)
+    static let proposePromoteGraphAlignment = Int32(Provenencia_Engine_V1_Method.proposePromoteGraphAlignment.rawValue)
 }
 
 func provenenciaInvoke(method: Int32, request: Data) throws -> Data {

@@ -511,6 +511,13 @@ private struct ThrowingStore: GenealogyStore {
     ) async throws -> [CatalogPromoteTargetSuggestion] {
         throw StoreBoom.boom
     }
+    func proposePromoteGraphAlignment(
+        projectDir _: String,
+        sourceID _: String,
+        fixed _: [CatalogPromoteGraphAlignmentFixed]
+    ) async throws -> [CatalogPromoteGraphAlignmentRow] {
+        throw StoreBoom.boom
+    }
     func listClaimConfidenceGrades(projectDir _: String) async throws -> [CatalogClaimConfidenceGrade] {
         throw StoreBoom.boom
     }

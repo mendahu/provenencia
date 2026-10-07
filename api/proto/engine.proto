@@ -106,6 +106,7 @@ enum Method {
   METHOD_LIST_EVENT_HEADERS = 91;
   METHOD_LIST_PLACE_HEADERS = 93;
   METHOD_LIST_SOURCE_EVENT_TITLES = 96;
+  METHOD_PROPOSE_PROMOTE_GRAPH_ALIGNMENT = 97;
 }
 
 message PingRequest {
@@ -1287,6 +1288,58 @@ message PromoteTargetSuggestion {
 
 message ListPromoteTargetSuggestionsResponse {
   repeated PromoteTargetSuggestion suggestions = 1;
+}
+
+// ProposePromoteGraphAlignment loads one Source's Evidence layer and proposes
+// a handle, New, or Skip for every primary Subject (S9-42). fixed are decided
+// or already-chosen anchors; already-promoted Subjects are free anchors too.
+message ProposePromoteGraphAlignmentRequest {
+  string project_dir = 1;
+  string source_id = 2;
+  repeated PromoteGraphAlignmentFixed fixed = 3;
+}
+
+message PromoteGraphAlignmentFixed {
+  string subject_id = 1;
+  string handle_id = 2;
+}
+
+message PromoteGraphAlignmentComparison {
+  string property_key = 1;
+  string property_origin = 2;
+  string outcome = 3; // agree, conflict, unknown
+  string value_type = 4;
+  bool pinned = 5;
+}
+
+message PromoteGraphAlignmentAlternative {
+  string handle_id = 1;
+  string handle_ref = 2;
+  double score = 3;
+}
+
+message PromoteGraphAlignmentRow {
+  string subject_id = 1;
+  string kind = 2;
+  string target = 3; // handle, new, skip
+  string handle_id = 4;
+  string handle_ref = 5;
+  double score = 6;
+  string assessment = 7; // strong, weak, none
+  repeated string reasons = 8;
+  repeated PromoteGraphAlignmentComparison comparisons = 9;
+  repeated PromoteGraphAlignmentAlternative alternatives = 10;
+  bool conflict_with_fixed = 11;
+  bool possible_duplicate = 12;
+  oneof header {
+    PersonHeader person = 13;
+    EventHeader event = 14;
+    PlaceHeader place = 15;
+  }
+}
+
+message ProposePromoteGraphAlignmentResponse {
+  repeated PromoteGraphAlignmentRow rows = 1;
 }
 
 message ListSubjectsRequest {

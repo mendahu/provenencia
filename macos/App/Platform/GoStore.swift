@@ -782,6 +782,68 @@ struct GoStore: GenealogyStore {
         }
     }
 
+    func proposePromoteGraphAlignment(
+        projectDir: String,
+        sourceID: String,
+        fixed: [CatalogPromoteGraphAlignmentFixed]
+    ) async throws -> [CatalogPromoteGraphAlignmentRow] {
+        var req = Provenencia_Engine_V1_ProposePromoteGraphAlignmentRequest()
+        req.projectDir = projectDir
+        req.sourceID = sourceID
+        req.fixed = fixed.map { f in
+            var row = Provenencia_Engine_V1_PromoteGraphAlignmentFixed()
+            row.subjectID = f.subjectID
+            row.handleID = f.handleID
+            return row
+        }
+        let resp: Provenencia_Engine_V1_ProposePromoteGraphAlignmentResponse = try await provenenciaCall(
+            method: CoreMethod.proposePromoteGraphAlignment,
+            request: req
+        )
+        return resp.rows.map { r in
+            var person: CatalogPersonHeader?
+            var event: CatalogEventHeader?
+            var place: CatalogPlaceHeader?
+            switch r.header {
+            case .person(let h): person = Self.mapPersonHeader(h)
+            case .event(let h): event = Self.mapEventHeader(h)
+            case .place(let h): place = Self.mapPlaceHeader(h)
+            case nil: break
+            }
+            return CatalogPromoteGraphAlignmentRow(
+                subjectID: r.subjectID,
+                kind: r.kind,
+                target: r.target,
+                handleID: r.handleID,
+                handleRef: r.handleRef,
+                score: r.score,
+                assessment: r.assessment,
+                reasons: r.reasons,
+                comparisons: r.comparisons.map { c in
+                    CatalogPromoteGraphAlignmentComparison(
+                        propertyKey: c.propertyKey,
+                        propertyOrigin: c.propertyOrigin,
+                        outcome: c.outcome,
+                        valueType: c.valueType,
+                        pinned: c.pinned
+                    )
+                },
+                alternatives: r.alternatives.map { a in
+                    CatalogPromoteGraphAlignmentAlternative(
+                        handleID: a.handleID,
+                        handleRef: a.handleRef,
+                        score: a.score
+                    )
+                },
+                conflictWithFixed: r.conflictWithFixed,
+                possibleDuplicate: r.possibleDuplicate,
+                person: person,
+                event: event,
+                place: place
+            )
+        }
+    }
+
     func listClaimConfidenceGrades(projectDir: String) async throws -> [CatalogClaimConfidenceGrade] {
         var req = Provenencia_Engine_V1_ListClaimConfidenceGradesRequest()
         req.projectDir = projectDir

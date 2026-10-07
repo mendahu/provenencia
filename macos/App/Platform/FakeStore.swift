@@ -1304,6 +1304,75 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         }
     }
 
+    /// Stub graph-alignment proposal: every unpromoted primary Subject is Skip;
+    /// already-promoted Subjects are Target handle with their membership.
+    /// S9-43 / S9-44 will drive richer FakeStore fixtures.
+    func proposePromoteGraphAlignment(
+        projectDir: String,
+        sourceID: String,
+        fixed: [CatalogPromoteGraphAlignmentFixed]
+    ) async throws -> [CatalogPromoteGraphAlignmentRow] {
+        return withState {
+            markCatalogSessionHeld(projectDir)
+            let fixedBySubject = Dictionary(uniqueKeysWithValues: fixed.map { ($0.subjectID, $0.handleID) })
+            let subjects = subjectsBySource[sourceID] ?? []
+            let types = Dictionary(uniqueKeysWithValues: (subjectTypesByProject[projectDir] ?? []).map { ($0.id, $0) })
+            return subjects.compactMap { subject -> CatalogPromoteGraphAlignmentRow? in
+                guard let type = types[subject.subjectTypeID],
+                      ["person", "event", "place"].contains(type.key)
+                else { return nil }
+                if let membership = membershipBySubject[subject.id] {
+                    return CatalogPromoteGraphAlignmentRow(
+                        subjectID: subject.id,
+                        kind: type.key,
+                        target: "handle",
+                        handleID: membership.entity.id,
+                        handleRef: membership.entity.ref,
+                        score: 0,
+                        assessment: "strong",
+                        reasons: ["fixed"],
+                        comparisons: [],
+                        alternatives: [],
+                        conflictWithFixed: false,
+                        possibleDuplicate: false
+                    )
+                }
+                if let handleID = fixedBySubject[subject.id],
+                   let entity = membershipBySubject.values.first(where: { $0.entity.id == handleID })?.entity
+                {
+                    return CatalogPromoteGraphAlignmentRow(
+                        subjectID: subject.id,
+                        kind: type.key,
+                        target: "handle",
+                        handleID: entity.id,
+                        handleRef: entity.ref,
+                        score: 0,
+                        assessment: "strong",
+                        reasons: ["fixed"],
+                        comparisons: [],
+                        alternatives: [],
+                        conflictWithFixed: false,
+                        possibleDuplicate: false
+                    )
+                }
+                return CatalogPromoteGraphAlignmentRow(
+                    subjectID: subject.id,
+                    kind: type.key,
+                    target: "skip",
+                    handleID: "",
+                    handleRef: "",
+                    score: 0,
+                    assessment: "none",
+                    reasons: ["unreachable or empty"],
+                    comparisons: [],
+                    alternatives: [],
+                    conflictWithFixed: false,
+                    possibleDuplicate: false
+                )
+            }
+        }
+    }
+
     /// A stand-in for core/match's person profile on written names (untyped words),
     /// close enough for UI tests: the same folded name scores 10; a shared word of two
     /// or more letters scores 5, as "Mary Robins" ~ "James Robins" does in Go.
