@@ -1,6 +1,6 @@
 # Promote matching: what proves a join
 
-**Status:** direction chosen 2026-10-06; see [`promote-alignment.md`](../promote-alignment.md) for the flow and the alignment function. This note keeps the problem and the directions we explored to get there. Written 2026-10-05 while planning the Promote compare step (S9-D11 / S9-19). The data model doesn't change, so S9-17 (pins + backfill, PR #265) and S9-18 (pinned deletes, PR #266) stand.
+**Status:** direction chosen 2026-10-06; see [`promote-graph-alignment.md`](../promote-graph-alignment.md) for the flow and the graph alignment function. This note keeps the problem and the directions we explored to get there. Written 2026-10-05 while planning the Promote compare step (S9-D11 / S9-19). The data model doesn't change, so S9-17 (pins + backfill, PR #265) and S9-18 (pinned deletes, PR #266) stand.
 
 Model rules today: [`conclusion-layer-data-model.md`](../conclusion-layer-data-model.md) §5 (exhibit pins, backfill, review), §5.3 (compare), §5.4 (walk). Matching today: [`matching.md`](../matching.md).
 

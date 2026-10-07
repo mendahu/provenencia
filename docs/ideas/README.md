@@ -29,7 +29,7 @@ Use this folder when something useful pops up mid-work and would otherwise get l
 - [`evidence-graph-drag-performance.md`](evidence-graph-drag-performance.md)
 - [`place-gazetteer-service.md`](place-gazetteer-service.md)
 - [`possible-values.md`](possible-values.md)
-- [`promote-matching.md`](promote-matching.md) — what proves a join; the direction is now [`promote-alignment.md`](../promote-alignment.md)
+- [`promote-matching.md`](promote-matching.md) — what proves a join; the direction is now [`promote-graph-alignment.md`](../promote-graph-alignment.md)
 
 ## Archived
 

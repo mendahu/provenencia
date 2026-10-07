@@ -1,6 +1,6 @@
 # Matching
 
-How Provenencia scores how much one thing resembles each canonical handle (a Person, Event or Place), from the thing's own Properties. Promote's target suggestions (Spike 9 R7, **S9-10**) are the first consumer. In Promote alignment ([`promote-alignment.md`](promote-alignment.md)) this is the **property-only** part: it seeds each Subject's candidates, and it's the fallback for Subjects no anchor reaches. Evidence through neighbors (birth events, places, family) is alignment's job, not a matching Feature. Merge hints are the second: `ForEntity` already exists, but no UI uses it yet.
+How Provenencia scores how much one thing resembles each canonical handle (a Person, Event or Place), from the thing's own Properties. Promote's target suggestions (Spike 9 R7, **S9-10**) are the first consumer. In Promote graph alignment ([`promote-graph-alignment.md`](promote-graph-alignment.md)) this is the **property-only** part: it seeds each Subject's candidates, and it's the fallback for Subjects no anchor reaches. Evidence through neighbors (birth events, places, family) is graph alignment's job, not a matching Feature. Merge hints are the second: `ForEntity` already exists, but no UI uses it yet.
 
 Code: [`core/match`](../core/match) (the algorithm) and [`core/database/matching`](../core/database/matching) (catalog adapter). Consumers: [`core/database/promotetargets`](../core/database/promotetargets).
 
@@ -179,6 +179,6 @@ Worked examples:
   - a Comparer, if no existing one fits;
   - a Feature in the profile;
   - the adapter putting those values into the probe and the candidates.
-  Signals reached through edges (a Person's birth year through its birth event, its family) are **not** matching Features: Promote alignment compares neighbors directly, over the canonical graph (S9-28), with its own weights (S9-41).
+  Signals reached through edges (a Person's birth year through its birth event, its family) are **not** matching Features: Promote graph alignment compares neighbors directly, over the canonical graph (S9-28), with its own weights (S9-41).
 - **Blocking:** candidates are currently every handle of the type with a cached profile value, read in one query (constant query count, but linear rows). When catalogs outgrow that, narrow candidates in `loadCandidates` using the handle search index (S9-34a: `catalog_search_docs` kinds `person` / `event` / `place`, kept current by the cache's upkeep). Scoring does not change.
 - **Merge hints:** `matching.ForEntity(handle)` ranks the other handles of the same type. A merge-hint surface needs only to shape that result.

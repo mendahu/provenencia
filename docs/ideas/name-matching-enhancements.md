@@ -45,14 +45,14 @@ Accents, scripts, non-Western name structures and nickname tables are in [`inter
 
 ## The engine
 
-- **Derived and edge evidence: moved to Promote alignment.** Features read only a property directly on the probe or the handle, so matching alone can't tell two men of the same name a generation apart. That gap is now closed by alignment ([`promote-alignment.md`](../promote-alignment.md), S9-41), which compares neighbors (birth through the participation, spouse and parents through relationships) instead of folding paths into matching Features. Still open here: **an age converted to a birth year** using the census date, as a derived value on the Subject itself.
+- **Derived and edge evidence: moved to Promote graph alignment.** Features read only a property directly on the probe or the handle, so matching alone can't tell two men of the same name a generation apart. That gap is now closed by graph alignment ([`promote-graph-alignment.md`](../promote-graph-alignment.md), S9-41), which compares neighbors (birth through the participation, spouse and parents through relationships) instead of folding paths into matching Features. Still open here: **an age converted to a birth year** using the census date, as a derived value on the Subject itself.
 - **Remember researcher decisions (Spike 10).**
   - A handle whose claim the researcher *rejected* for this Subject is suggested again today.
   - A handle with a *provisional* claim isn't flagged.
   - Merge hints have no memory of "not the same person".
 
   The claim statuses already exist; matching should exclude or flag those handles. Merge hints need a stored "distinct" decision.
-- **Explain the matched values.** Reasons say which property contributed, but not which two values matched. Promote's evidence sheet (S9-44) gets pairs from alignment; the target suggestions and merge hints would still benefit from the pair (probe value and candidate value, or their observation ids).
+- **Explain the matched values.** Reasons say which property contributed, but not which two values matched. Promote's evidence sheet (S9-44) gets pairs from graph alignment; the target suggestions and merge hints would still benefit from the pair (probe value and candidate value, or their observation ids).
 - **Blocking (S9-34).** Every candidate of the kind is scored. The `loadCandidates` hook should narrow candidates through the search index once catalogs grow.
 
 ## Open questions

@@ -1,4 +1,4 @@
-# S9-D16 — Promote: one page (alignment)
+# S9-D16 — Promote: one page (graph alignment)
 
 **Kind:** Claude Design board (**rethink**)  
 **Spike:** Provenencia Spike 9 (canonical entities MVP)  
@@ -6,7 +6,7 @@
 **Implements later as:** PR **S9-44**  
 **Depends on:** S9-42 (proposal read), S9-43 (batch write)  
 **Replaces:** S9-D9 (shell + choose target) and S9-D10 (claim fields), both built in S9-11 / S9-12; S9-D11 (compare) and S9-D12 (walk), never built  
-**Related:** [`promote-alignment.md`](../../../promote-alignment.md) (the design); [`ideas/promote-matching.md`](../../../ideas/promote-matching.md) (why); conclusion model §5  
+**Related:** [`promote-graph-alignment.md`](../../../promote-graph-alignment.md) (the design); [`ideas/promote-matching.md`](../../../ideas/promote-matching.md) (why); conclusion model §5  
 **Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)  
 **Skill:** [`add-design-brief`](../../../../.cursor/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.cursor/skills/add-ui-component/SKILL.md); [`add-workspace-place`](../../../../.cursor/skills/add-workspace-place/SKILL.md)
 
@@ -80,7 +80,7 @@ Do **not** invent a local Field, Button, Card, Select, Callout, or Confirm.
 
 Promote files an Evidence graph's Subjects onto Persons, Events and Places. Think of it as laying this Source's graph onto the tree: most Subjects line up with handles that already exist, a few branches are new information, and some aren't worth filing yet.
 
-**The app proposes the whole alignment; the researcher fine-tunes it.** One page lists every person, event and place on the graph, each with the handle the app thinks it is, how sure it is and why. The researcher fixes the few rows that need judgment and presses **Done**. Everything is filed in one go.
+**The app proposes the whole graph alignment; the researcher fine-tunes it.** One page lists every person, event and place on the graph, each with the handle the app thinks it is, how sure it is and why. The researcher fixes the few rows that need judgment and presses **Done**. Everything is filed in one go.
 
 ```text
 Promote · Obituary of Grace Gray Gates (Frickleton), Medicine Hat News
@@ -174,7 +174,7 @@ This table is **binding**. Instance the Ship kit rows; do not redraw them. Paths
 | Promote page | Snowflake | **Rethink** | `Features/Promote/PromoteView.swift` | Replaces the step shell; a workspace place. |
 | Promote model | Snowflake | **Rethink** | `Features/Promote/PromoteModel.swift`, `PromoteFlow.swift` | A row list (suggested / decided), not a step machine. |
 | Choose-target step, claim step | Snowflake | **Remove** | `Features/Promote/PromoteTargetStep.swift`, `PromoteClaimStep.swift` | Gone; their pieces move into the row and the sheet. |
-| Alignment row | Snowflake | **New** | `Features/Promote/` | Subject → target → assessment. |
+| Graph alignment row | Snowflake | **New** | `Features/Promote/` | Subject → target → assessment. |
 | Evidence sheet | Snowflake | **New** | `Features/Promote/` | A sheet over the page. |
 | Conclusion row header | Snowflake | Ship (from D2) | `Features/Conclusions/ConclusionListRow.swift` | Candidates in the dropdown, anchors' handles. |
 | Select / ComboBox | Component | Ship | kit | Target dropdown (ComboBox when alternatives need search). |

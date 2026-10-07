@@ -1,8 +1,8 @@
-# Provenencia — Promote Alignment
+# Provenencia — Promote Graph Alignment
 
 ## Status
 
-**Agreed 2026-10-06; scheduled as Spike 9 slice 9** (§10). It replaced the per-Property compare checklist and the per-Subject walk; [`conclusion-layer-data-model.md`](conclusion-layer-data-model.md) §5.3–§5.4 now state its model rules. How we got here, and the directions we turned down: [`ideas/promote-matching.md`](ideas/promote-matching.md). Matching today: [`matching.md`](matching.md).
+**Agreed 2026-10-06; scheduled as Spike 9 slice 9** (§10). Renamed from “Promote alignment” to **Promote graph alignment** (2026-10-07) so the name names the graph-to-graph proposal, not property-only matching. It replaced the per-Property compare checklist and the per-Subject walk; [`conclusion-layer-data-model.md`](conclusion-layer-data-model.md) §5.3–§5.4 now state its model rules. How we got here, and the directions we turned down: [`ideas/promote-matching.md`](ideas/promote-matching.md). Matching today: [`matching.md`](matching.md).
 
 **The data model doesn't change:** one Identity Claim per Subject and handle, with Observation pins on the claim and backfill (§5, §5.1).
 
@@ -20,7 +20,7 @@ Promote files Interpretation Subjects onto canonical handles. A Subject's identi
 
 A vertical link's strongest evidence is the horizontal structure around it lining up too.
 
-**The goal:** Promote proposes the whole alignment automatically, and the researcher fine-tunes the few links that need judgment.
+**The goal:** Promote proposes the whole graph alignment automatically, and the researcher fine-tunes the few links that need judgment.
 
 ---
 
@@ -44,7 +44,7 @@ Promote is one workspace page; the choose-target screen and the separate claim s
 
 - **Entry:** the Promote button on any unpromoted Subject card, as today. The page opens with that Subject's row, preselected to its best match, plus **"Map the rest of this graph (N Subjects)"**. Promoting one Subject is the same page with one row.
 - **Rows:** one per primary Subject on the Evidence graph (person, event, place).
-  - **Already promoted:** shown read-only, with no controls. They are anchors for the alignment, and editing them is a separate workflow (Spike 10).
+  - **Already promoted:** shown read-only, with no controls. They are anchors for the graph alignment, and editing them is a separate workflow (Spike 10).
   - **Unpromoted:** a target dropdown with the best match preselected, the next few alternatives, **New**, and **Skip**.
 - **Assessment:** each row shows **strong**, **weak** or **no match**. Clicking it opens a **sheet** with every comparison that contributed: agree, conflict or unknown, with its weight. The agreeing comparisons are preselected as pins and can be toggled.
 - **Claim fields per row:** status, confidence and argument. The argument can be drafted from the assessment.
@@ -58,19 +58,19 @@ Promote is one workspace page; the choose-target screen and the separate claim s
 Every row is **suggested** (the machine filled it) or **decided**: the researcher changed its dropdown or toggled anything in its sheet.
 
 - **On open,** the only fixed points are the clicked Subject's row and the already-promoted rows.
-- **On any change,** that row becomes decided, and alignment re-runs over the whole page with every decided row held fixed. Suggested rows and their sheets are recomputed; decided rows are never touched.
+- **On any change,** that row becomes decided, and graph alignment re-runs over the whole page with every decided row held fixed. Suggested rows and their sheets are recomputed; decided rows are never touched.
 - **Rows whose suggestion changed** get a brief "updated" mark with the reason ("because Gracie → PER-Z").
 - **A decided row that the new context contradicts** keeps its choice and gets a warning. The researcher resolves it.
 
 ---
 
-# 4. The alignment function
+# 4. The graph alignment function
 
 One pure function, called on open and after every decision:
 
 ```go
 // Align proposes a handle, New or Skip for every primary Subject on one
-// layer, holding the fixed pairs as given.
+// Evidence layer (graph alignment), holding the fixed pairs as given.
 func Align(layer Layer, canon Canon, stats Stats, fixed []Fixed) Proposal
 ```
 
@@ -88,7 +88,7 @@ func Align(layer Layer, canon Canon, stats Stats, fixed []Fixed) Proposal
 - the reasons;
 - flags (conflicts with decided rows, possible duplicates).
 
-**Pure and deterministic,** like the `autoreconcile` / `autoreconciler` split. A pure package aligns, a database package loads the inputs, and ties break by id. The obituary is a golden test.
+**Pure and deterministic,** like the `autoreconcile` / `autoreconciler` split. A pure package (`graphalign` or similar) runs `Align`; a database package loads the inputs; ties break by id. The obituary is a golden test.
 
 ---
 
@@ -97,7 +97,7 @@ func Align(layer Layer, canon Canon, stats Stats, fixed []Fixed) Proposal
 This is collective entity resolution: graph alignment by propagation (cf. PARIS, similarity flooding). The walk is **best-first, not recursive**. A depth-first walk commits to whatever it reaches first; a priority queue lets the strongest matches settle first, so the weaker ones are decided with the most context.
 
 1. **Seed.** For each fixed pair (s, H): look at each bridge from s to an unmapped neighbor t on the layer. For each corresponding edge from H to a handle G in `canon`, push the candidate (t, G).
-2. **Pop the best-scoring candidate.** Accept it if it clears the threshold and keeps the alignment **one-to-one**: within one layer, a handle takes at most one Subject.
+2. **Pop the best-scoring candidate.** Accept it if it clears the threshold and keeps the graph alignment **one-to-one**: within one layer, a handle takes at most one Subject.
 3. **Propagate.** The accepted pair becomes an anchor. Push its neighbors' candidates, and add **support** to queued candidates that are consistent with it. A candidate's score rises as more of its neighbors map consistently. That's the "the structure lines up" evidence.
 4. **Repeat** until the queue is empty.
 5. **Unreachable Subjects** (nothing reaches them from an anchor) fall back to property-only matching, today's `core/match` suggestions. Below the threshold, they default to Skip.
@@ -144,7 +144,7 @@ There are no database calls during the walk. Everything loads in a fixed number 
 
 That's roughly 10–15 queries per proposal, whatever the graph size.
 
-**Canonical adjacency without S9-28.** It can be derived through members: H's member m → bridge → neighbor n → n's accepted claim → G. That's a join, and it loads in batch. S9-28 caches it as canonical edges and adds bridge filing, so a prototype of `Align` doesn't need to wait for it.
+**Canonical adjacency without S9-28.** It can be derived through members: H's member m → bridge → neighbor n → n's accepted claim → G. That's a join, and it loads in batch. S9-28 caches it as canonical edges and adds bridge filing, so a prototype of graph alignment (`Align`) doesn't need to wait for it.
 
 ---
 
@@ -181,7 +181,7 @@ A bridge (participation, relationship, location, place relationship) has **no id
 
 - **Direction:** directed types ("A parent of B", "part of") match only in the same direction. Symmetric types (spouse) ignore order. Whether a type is directed is a property of the type (term or bridge kind), not a list in code.
 - **A link from a handle to itself** (both ends on one handle: a duplicate on the graph, or a wrong match) is refused. On the page it's flagged before Done.
-- **Refused filings don't fail the claim.** A place relationship that would close a hierarchy cycle (S9-38), or a self-link, leaves the bridge unfiled, with its reason visible. On the page, alignment flags it before Done, so the batch never fails on it.
+- **Refused filings don't fail the claim.** A place relationship that would close a hierarchy cycle (S9-38), or a self-link, leaves the bridge unfiled, with its reason visible. On the page, graph alignment flags it before Done, so the batch never fails on it.
 - **An end that leaves later** (its member deleted) leaves the bridge's claim in place. The association loses that end's evidence, and the reconciler shows it. That's §5.2 review territory, not a special case.
 
 ---
@@ -190,10 +190,10 @@ A bridge (participation, relationship, location, place relationship) has **no id
 
 Spike 9 was replanned around this on 2026-10-06: [`deployment-plan/spike-9/deployment-plan.md`](deployment-plan/spike-9/deployment-plan.md), slices 5–10.
 
-- **Events and Places come first** (slices 5–6): alignment needs the date module (S9-21), per-Property cardinality (S9-36), and the Event and Place headers for its dropdowns.
+- **Events and Places come first** (slices 5–6): graph alignment needs the date module (S9-21), per-Property cardinality (S9-36), and the Event and Place headers for its dropdowns.
 - **The canonical graph gets its own slice** (slice 7): the subject module and automatic bridge filing (S9-28), then the derived values that walk it (S9-31 / S9-32).
-- **Place hierarchy comes before Promote** (slice 8): part-of and succession links (splits and amalgamations included) are filed as bridges from the start, so trying Promote on real research captures them, and alignment is tested with them as edges.
-- **Promote alignment is one slice** (slice 9):
+- **Place hierarchy comes before Promote** (slice 8): part-of and succession links (splits and amalgamations included) are filed as bridges from the start, so trying Promote on real research captures them, and graph alignment is tested with them as edges.
+- **Promote graph alignment is one slice** (slice 9):
   - **S9-17**, reshaped from #265 / #266: `Compatible`, pins and backfill, the pinned-delete tests. The per-Subject comparison read and its UI plumbing are dropped.
   - **S9-41:** `Align`, a pure package.
   - **S9-42:** the loader and the proposal read.
