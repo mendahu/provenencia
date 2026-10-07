@@ -21,6 +21,14 @@ enum ConclusionListPresentation<Row: Equatable>: Equatable {
             self = .loading
         }
     }
+
+    /// Header meta from count copy, or none when there are no rows.
+    /// Takes formatters (not MainActor kind methods) so tests and callers can
+    /// pass L10n without crossing isolation.
+    func meta(count: (Int) -> String, refreshing: (Int) -> String) -> String? {
+        guard case .rows(let rows, let isRefreshing) = self, !rows.isEmpty else { return nil }
+        return isRefreshing ? refreshing(rows.count) : count(rows.count)
+    }
 }
 
 /// One Conclude list: what `ConclusionListPage` needs to know about a kind.
