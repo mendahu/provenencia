@@ -202,7 +202,7 @@ func TestForSource(t *testing.T) {
 			if plan.Rule != tt.rule || plan.Parts.Place != tt.place {
 				t.Fatalf("rule %s place %q", plan.Rule, plan.Parts.Place)
 			}
-			if got := subjectForms(plan); len(got) != len(tt.subjects) || (len(got) > 0 && got[0] != tt.subjects[0]) {
+			if got := subjectForms(plan); !sameSet(got, tt.subjects) {
 				t.Fatalf("subjects %q, want %q", got, tt.subjects)
 			}
 		})
@@ -214,6 +214,50 @@ func TestForSource(t *testing.T) {
 		t.Fatalf("type %+v", p)
 	}
 
+	// Subject order is by participation ref, so et al. always names the same
+	// person, read after read.
+	t.Run("subjects are in participation-ref order, every time", func(t *testing.T) {
+		var refs []string
+		rows, err := db.Query(`SELECT s.ref FROM subjects s
+			JOIN observations o ON o.subject_id = s.id AND o.value_subject_id = ?
+			JOIN subject_types st ON st.id = s.subject_type_id AND st.key = 'participation'
+			ORDER BY s.ref`, marriage.ID)
+		must(t, err)
+		for rows.Next() {
+			var r string
+			must(t, rows.Scan(&r))
+			refs = append(refs, r)
+		}
+		must(t, rows.Err())
+		_ = rows.Close()
+		var want []string
+		for _, r := range refs {
+			for _, pair := range []struct {
+				person subjects.Subject
+				form   string
+			}{{james, "James Robins"}, {mary, "Mary Smith"}} {
+				var n int
+				must(t, db.QueryRow(`SELECT COUNT(*) FROM observations o JOIN subjects b ON b.id = o.subject_id
+					WHERE b.ref = ? AND o.value_subject_id = ?`, r, pair.person.ID).Scan(&n))
+				if n > 0 {
+					want = append(want, pair.form)
+				}
+			}
+		}
+		for i := 0; i < 3; i++ {
+			again, err := sourceeventtitles.ForSource(db, f.src.ID)
+			must(t, err)
+			for _, title := range again {
+				if string(title.SubjectID) != string(marriage.ID) {
+					continue
+				}
+				if got := subjectForms(title.Plan); len(got) != 2 || got[0] != want[0] || got[1] != want[1] {
+					t.Fatalf("read %d: %q, want %q", i, got, want)
+				}
+			}
+		}
+	})
+
 	t.Run("an empty Source has no titles", func(t *testing.T) {
 		got, err := sourceeventtitles.ForSource(db, make([]byte, 16))
 		must(t, err)
@@ -221,4 +265,21 @@ func TestForSource(t *testing.T) {
 			t.Fatalf("titled %d", len(got))
 		}
 	})
+}
+
+func sameSet(got, want []string) bool {
+	if len(got) != len(want) {
+		return false
+	}
+	seen := map[string]int{}
+	for _, g := range got {
+		seen[g]++
+	}
+	for _, w := range want {
+		if seen[w] == 0 {
+			return false
+		}
+		seen[w]--
+	}
+	return true
 }
