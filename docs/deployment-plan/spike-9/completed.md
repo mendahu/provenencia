@@ -1008,7 +1008,7 @@ A Place's row can carry every name it goes by. Montréal and Montreal stay two n
 
 - The Places list: **S9-26**, gated by **S9-D4**.
 - The Place page: **S9-27**, gated by **S9-D7**.
-- Periods and relationships: **S9-38**.
+- Nature, periods, and relationships: **S9-38**.
 - The parent chain: **S9-39**.
 - The Evidence-graph Place card still uses the subject's own `toponym`.
 
@@ -1074,7 +1074,7 @@ Promoting both ends of a bridge files the connection, so a birth and its person 
 
 **What stayed out**
 
-- Place-relationship seeding and cycle refusal: **S9-38**.
+- Place nature, place-relationship seeding (`part_of` / `succeeded_by`), and cycle refusal: **S9-38**.
 - Header walks and derived cells: **S9-31**, **S9-32**.
 - Search documents read from headers: **S9-34**.
 

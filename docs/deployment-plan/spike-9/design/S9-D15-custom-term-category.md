@@ -5,7 +5,7 @@
 **View:** Citation Composer — the custom term dialog  
 **Implements later as:** PR **S9-38b**  
 **Depends on:** S9-38 (term categories in the engine)  
-**Related:** S9-D7 (Place detail shows relationships by type)  
+**Related:** S9-D7 (Place detail shows parents grouped by the parent's nature)  
 **Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)  
 **Skill:** [`add-design-brief`](../../../../.cursor/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.cursor/skills/add-ui-component/SKILL.md)
 
@@ -63,7 +63,7 @@ Do **not** invent a local Field, Button, Card, Select, Callout, or Confirm.
 
 ## 1. Objective
 
-When a researcher adds their own **place relationship type** (beyond *administrative*, *geographic*, *ecclesiastical*, *succeeded by*), they say how it behaves: **hierarchical** (one place is part of another) or **temporal** (one place became another).
+When a researcher adds their own **place relationship type** (beyond *part of* and *succeeded by*), they say how it behaves: **hierarchical** (one place is part of another) or **temporal** (one place became another). Place **nature** (administrative / informal / ecclesiastical) lives on the Place itself and is not chosen here.
 
 ```text
 New relationship type
@@ -79,16 +79,17 @@ New relationship type
 
 | Fact | UI implication |
 | --- | --- |
-| Only some Properties use categories | Today only `place_relationship_type`. Terms for other Properties (roles, relationship types, event types) never show the choice. |
+| Only some Properties use categories | Today only `place_relationship_type`. Terms for other Properties (roles, relationship types, event types, **place nature**) never show the choice. |
 | Two categories | **Hierarchical** (*part of*): builds chains like *Toronto, Ontario, Canada*. **Temporal** (*succession*): links a lineage (*York → Toronto*), never a chain. |
 | It is required | A place relationship type without a category can't be used; the dialog can't add one without a choice. |
-| Seeded types already have one | Administrative, geographic, ecclesiastical are hierarchical; *succeeded by* is temporal. |
+| Seeded types already have one | *Part of* is hierarchical; *succeeded by* is temporal. |
 | Where it's met | The researcher is citing a place relationship in the composer (drawing it between two place cards) and picks *Add type…* in its type picker. |
 
 ### 2.1 What this board is not
 
 - Not a term manager.
 - Not the composer's relationship row itself (unchanged).
+- Not choosing a Place's nature (that is a Property on the Place).
 
 ---
 

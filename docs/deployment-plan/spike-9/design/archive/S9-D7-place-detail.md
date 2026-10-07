@@ -93,7 +93,8 @@ The page for one Place: **thumbnail slot, names, ref, period, the places it is p
 | --- | --- |
 | Several names at once | All of a Place's reconciled names show (*Toronto*, *Tkaronto*); each has the D5 *Why*. Spellings and case already merged; a low-trust spelling may be dropped as *weak*. |
 | Period | When the Place existed or mattered (*1834 –*, *until 1867*, unknown). Either end may be missing. |
-| "Part of" has a type | Administrative, geographic, ecclesiastical, plus researcher-added types. Group parents by type. |
+| Nature on the Place | Administrative, informal, or ecclesiastical (optional). Shown on the Place, not on each link. |
+| "Part of" is one relationship | Hierarchical `part_of` (plus researcher-added hierarchical types). Group parents by the **parent's nature**. |
 | Parents change with time | A link holds for its own span: the overlap of the two places' periods, cut shorter when the link has dates, so a membership can end while both places continue. The header shows **today's** chain (or the last one for a place that ended). |
 | Contains | Places that are part of this one (direct children), grouped like parents. Can be long. |
 | Succession | *Succeeded* / *succeeded by* links to the place before or after a rename or merger (York → Toronto). Not part of the hierarchy. |
@@ -123,7 +124,7 @@ The page for one Place: **thumbnail slot, names, ref, period, the places it is p
 | PLD-1 | Title is the first name (fallback label → ref); the other names show beneath with D5 value rows and *Why*. |
 | PLD-2 | The header shows today's chain, or the last one for a place whose period has ended. |
 | PLD-3 | **Period** row: start and end, either may be unknown. |
-| PLD-4 | **Part of** lists parents grouped by relationship type, each with the span the link holds. An undated link shows the overlap of the two places' periods; a link with dates shows that span. |
+| PLD-4 | **Part of** lists parents grouped by the parent's nature, each with the span the link holds. An undated link shows the overlap of the two places' periods; a link with dates shows that span. |
 | PLD-5 | **Contains** lists direct children; long lists truncate with a count. |
 | PLD-6 | **Succession** shows *Succeeded* and *Succeeded by* links with the other place's period. |
 | PLD-7 | Every related place links to its own page. |
@@ -133,9 +134,9 @@ The page for one Place: **thumbnail slot, names, ref, period, the places it is p
 
 ## 5. Suggested frames
 
-1. A city with two names, a period, three administrative parents over time, a geographic parent, children, and a predecessor (Toronto).
+1. A city with two names, a period, nature administrative, three administrative parents over time, an informal parent, children, and a predecessor (Toronto).
 2. A place that ended (Upper Canada: period closed, succeeded by Province of Canada, many children).
-3. A researcher's place (a family farm: one name, one geographic parent, no period).
+3. A researcher's place (a family farm: one name, nature informal, one administrative parent, no period).
 4. A top-level place with no parents (Canada).
 5. Ref-only Place.
 
