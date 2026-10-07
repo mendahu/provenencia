@@ -58,7 +58,7 @@ struct ConclusionDetailPage<Content: ConclusionDetailBody, Summary: View>: View 
     let session: WorkspaceSession
     let entityId: String
     let mark: PVMarkKey
-    let noLikeness: LocalizedStringResource
+    let thumbnailLabel: LocalizedStringResource
     let pageIdentifier: String
     let errorIdentifier: String
     let make: (CatalogConclusionDetail) -> Content
@@ -74,7 +74,7 @@ struct ConclusionDetailPage<Content: ConclusionDetailBody, Summary: View>: View 
                 ConclusionDetailLoaded(
                     handle: handle,
                     mark: mark,
-                    noLikeness: noLikeness,
+                    thumbnailLabel: thumbnailLabel,
                     pageIdentifier: pageIdentifier,
                     errorIdentifier: errorIdentifier,
                     make: make,
@@ -116,7 +116,7 @@ struct ConclusionDetailPage<Content: ConclusionDetailBody, Summary: View>: View 
 private struct ConclusionDetailLoaded<Content: ConclusionDetailBody, Summary: View>: View {
     @Bindable var handle: QueryHandle<CatalogConclusionDetail>
     let mark: PVMarkKey
-    let noLikeness: LocalizedStringResource
+    let thumbnailLabel: LocalizedStringResource
     let pageIdentifier: String
     let errorIdentifier: String
     let make: (CatalogConclusionDetail) -> Content
@@ -144,11 +144,11 @@ private struct ConclusionDetailLoaded<Content: ConclusionDetailBody, Summary: Vi
                 ConclusionDetailHeader(
                     content: content,
                     mark: mark,
-                    noLikeness: noLikeness,
+                    thumbnailLabel: thumbnailLabel,
                     summary: summary
                 )
                 VStack(alignment: .leading, spacing: 0) {
-                    PVSectionHeader(title: L10n.Conclusions.personDetails, aside: {
+                    PVSectionHeader(title: L10n.Conclusions.detailsSection, aside: {
                         if refreshing {
                             ProgressView().controlSize(.small)
                         }
@@ -192,12 +192,12 @@ private struct ConclusionDetailEmptySection: View {
 private struct ConclusionDetailHeader<Content: ConclusionDetailBody, Summary: View>: View {
     let content: Content
     let mark: PVMarkKey
-    let noLikeness: LocalizedStringResource
+    let thumbnailLabel: LocalizedStringResource
     let summary: (Content) -> Summary
 
     var body: some View {
         HStack(alignment: .top, spacing: PVSpacing.space7) {
-            PVThumbnail(.init(mark: mark, label: noLikeness), size: 80)
+            PVThumbnail(.init(mark: mark, label: thumbnailLabel), size: 80)
             VStack(alignment: .leading, spacing: PVSpacing.space4) {
                 title
                 summary(content)

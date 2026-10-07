@@ -411,7 +411,7 @@ func TestLifeFactsProtoCarriesIdentities(t *testing.T) {
 			name: "event and place",
 			in: conclusionheaders.LifeFacts{
 				Event:  &event,
-				Places: []conclusionheaders.HeaderPlace{{Entity: place, Names: []string{"York"}, Count: 1}},
+				Places: []conclusionheaders.HeaderPlace{{Entity: place, Names: []string{"York"}}},
 			},
 			wantEvent: "EVT-1",
 			wantPlace: "PLC-1",

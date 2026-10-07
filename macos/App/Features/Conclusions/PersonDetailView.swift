@@ -12,9 +12,9 @@ struct PersonDetailView: View {
             session: session,
             entityId: entityId,
             mark: .subjectPerson,
-            noLikeness: L10n.Conclusions.personNoLikeness,
-            pageIdentifier: "person.detail",
-            errorIdentifier: "person.detail.error",
+            thumbnailLabel: L10n.Conclusions.personNoLikeness,
+            pageIdentifier: "persons.detail",
+            errorIdentifier: "persons.detail.error",
             make: { PersonDetailContent(detail: $0) },
             summary: { PersonDetailVitals(vitals: $0.vitals) }
         )
@@ -28,38 +28,13 @@ private struct PersonDetailVitals: View {
     var body: some View {
         VStack(alignment: .leading, spacing: PVSpacing.space1) {
             ForEach(vitals, id: \.abbreviation) { vital in
-                vitalLine(vital)
+                ConclusionDatePlaceLine(
+                    leading: vital.abbreviation,
+                    date: vital.date,
+                    place: vital.place,
+                    accessibilityLabel: vital.accessibilityLabel
+                )
             }
         }
-    }
-
-    private func vitalLine(_ vital: PersonDetailContent.Vital) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: PVSpacing.space4) {
-            Text(verbatim: vital.abbreviation)
-                .font(PVFont.body(size: PVTypeScale.bodySmall, italic: true))
-                .foregroundStyle(PVColor.textMuted)
-            if let date = vital.date {
-                Text(verbatim: date)
-                    .font(PVFont.mono(size: PVTypeScale.caption))
-                    .foregroundStyle(PVColor.textPrimary)
-            } else {
-                Text(L10n.Conclusions.personDateUnknown)
-                    .font(PVFont.body(size: PVTypeScale.bodySmall, italic: true))
-                    .foregroundStyle(PVColor.textMuted)
-            }
-            Text(verbatim: "·")
-                .foregroundStyle(PVColor.textFaint)
-            if let place = vital.place {
-                Text(verbatim: place)
-                    .font(PVFont.body(size: PVTypeScale.bodySmall, italic: true))
-                    .foregroundStyle(PVColor.textSecondary)
-            } else {
-                Text(L10n.Conclusions.personPlaceUnknown)
-                    .font(PVFont.body(size: PVTypeScale.bodySmall, italic: true))
-                    .foregroundStyle(PVColor.textMuted)
-            }
-        }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(vital.accessibilityLabel)
     }
 }

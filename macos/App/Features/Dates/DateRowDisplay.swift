@@ -46,7 +46,8 @@ enum DateRowDisplay {
             }
             return appendPhrase(
                 L10n.Dates.rowBetween(start: start, end: end, locale: locale),
-                phrase: draft.phrase
+                phrase: draft.phrase,
+                locale: locale
             )
         }
         guard let point = civil(
@@ -54,7 +55,7 @@ enum DateRowDisplay {
         ) else {
             return DateValueDisplay.string(for: input, locale: locale)
         }
-        return appendPhrase(applyQualifier(draft.qualifier, to: point, locale: locale), phrase: draft.phrase)
+        return appendPhrase(applyQualifier(draft.qualifier, to: point, locale: locale), phrase: draft.phrase, locale: locale)
     }
 
     private static func applyQualifier(_ raw: String, to point: String, locale: Locale) -> String {
@@ -84,15 +85,15 @@ enum DateRowDisplay {
         }()
         switch (day, monthName, year) {
         case let (day?, month?, year?):
-            return "\(day) \(month) \(year)"
+            return L10n.Dates.rowDayMonthYear(day: day, month: month, year: year, locale: locale)
         case let (nil, month?, year?):
-            return "\(month) \(year)"
+            return L10n.Dates.rowMonthYear(month: month, year: year, locale: locale)
         case let (day?, nil, year?):
-            return "\(day) \(year)"
+            return L10n.Dates.rowDayYear(day: day, year: year, locale: locale)
         case let (nil, nil, year?):
             return "\(year)"
         case let (day?, month?, nil):
-            return "\(day) \(month)"
+            return L10n.Dates.rowDayMonth(day: day, month: month, locale: locale)
         case let (nil, month?, nil):
             return month
         case let (day?, nil, nil):
@@ -102,9 +103,9 @@ enum DateRowDisplay {
         }
     }
 
-    private static func appendPhrase(_ structured: String, phrase: String) -> String {
+    private static func appendPhrase(_ structured: String, phrase: String, locale: Locale) -> String {
         let trimmed = phrase.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return structured }
-        return "\(structured) · \(trimmed)"
+        return L10n.Dates.rowWithPhrase(structured, phrase: trimmed, locale: locale)
     }
 }

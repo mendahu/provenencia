@@ -272,7 +272,6 @@ struct CatalogHeaderPlace: Sendable, Equatable {
     /// The Place; its page owns the names' Why.
     var entity: CatalogCanonicalEntity
     var names: [String] = []
-    var nameCount: Int = 0
 }
 
 /// A birth or a death composed from the canonical graph.
@@ -308,10 +307,6 @@ struct CatalogPersonHeader: Sendable, Equatable, Identifiable {
     var death: CatalogLifeFacts = CatalogLifeFacts()
 
     var id: String { entity.id }
-    /// Members disagree on the name; the top-ranked one is shown.
-    var isNameMixed: Bool { nameValueCount > 1 }
-    /// The list's *+N*: displayed name values beyond the one shown.
-    var additionalNameCount: Int { max(0, nameValueCount - 1) }
 }
 
 /// One Event as a row, composed by Go from the auto-reconciler cache (S9-22).

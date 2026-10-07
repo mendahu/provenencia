@@ -367,7 +367,7 @@ struct CatalogQueryRegistryTests {
         let headers = try #require(handle.value)
         #expect(headers.map(\.entity.ref) == [james.entity.ref, bare.entity.ref])
         #expect(headers[0].name?.form == "James Robins")
-        #expect(headers[0].isNameMixed && headers[0].additionalNameCount == 1)
+        #expect(headers[0].nameValueCount == 2)
         #expect(headers[1].name == nil && PersonHeaderDisplay.title(headers[1]) == bare.entity.ref)
         #expect(store.heldCatalogProjectDir == projectDir)
     }

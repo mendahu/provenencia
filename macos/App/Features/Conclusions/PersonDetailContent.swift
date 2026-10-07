@@ -103,8 +103,8 @@ struct PersonDetailContent: ConclusionDetailBody {
             place: place.isEmpty ? nil : place,
             accessibilityLabel: L10n.Conclusions.a11yVital(
                 L10n.string(spoken),
-                date: date.isEmpty ? L10n.string(L10n.Conclusions.personDateUnknown) : date,
-                place: place.isEmpty ? L10n.string(L10n.Conclusions.personPlaceUnknown) : place
+                date: date.isEmpty ? L10n.string(L10n.Conclusions.dateUnknown) : date,
+                place: place.isEmpty ? L10n.string(L10n.Conclusions.placeUnknown) : place
             )
         )
     }

@@ -29,6 +29,10 @@ enum EventsList: ConclusionListKind {
         if !place.isEmpty {
             label = L10n.Conclusions.a11yList(label, rest: place)
         }
+        let extra = DerivedPlace.extra(header.places)
+        if extra > 0 {
+            label = L10n.Conclusions.a11yList(label, rest: L10n.Conclusions.morePlaces(count: extra))
+        }
         return label
     }
 
@@ -52,28 +56,29 @@ struct EventSecondaryLine: View {
     let place: String
     let extraPlaces: Int
 
+    /// Nothing when neither is recorded, so `PVList` lays out no second line.
     var body: some View {
-        HStack(spacing: PVSpacing.space4) {
-            if !date.isEmpty {
-                Text(verbatim: date)
-                    .font(PVFont.mono(size: PVTypeScale.caption))
-                    .fixedSize(horizontal: true, vertical: false)
-            }
-            if !date.isEmpty && !place.isEmpty {
-                Text(verbatim: "·")
-                    .foregroundStyle(PVColor.textFaint)
-            }
-            if !place.isEmpty {
-                Text(verbatim: place)
-                    .italic()
-                    .lineLimit(1)
-            }
-            if extraPlaces > 0 {
-                PVBadge(text: "+\(extraPlaces)", tone: .neutral, subtle: true)
-                    .accessibilityHidden(true)
+        if !date.isEmpty || !place.isEmpty {
+            HStack(spacing: PVSpacing.space4) {
+                if !date.isEmpty {
+                    Text(verbatim: date)
+                        .font(PVFont.mono(size: PVTypeScale.caption))
+                        .fixedSize(horizontal: true, vertical: false)
+                }
+                if !date.isEmpty && !place.isEmpty {
+                    Text(verbatim: "·")
+                        .foregroundStyle(PVColor.textFaint)
+                }
+                if !place.isEmpty {
+                    Text(verbatim: place)
+                        .italic()
+                        .lineLimit(1)
+                }
+                if extraPlaces > 0 {
+                    PVBadge(text: L10n.Conclusions.moreCount(extraPlaces), tone: .neutral, subtle: true)
+                        .accessibilityHidden(true)
+                }
             }
         }
-        .frame(maxHeight: date.isEmpty && place.isEmpty ? 0 : nil)
-        .accessibilityHidden(date.isEmpty && place.isEmpty)
     }
 }

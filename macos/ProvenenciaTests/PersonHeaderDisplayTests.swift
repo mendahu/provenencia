@@ -33,13 +33,4 @@ struct PersonHeaderDisplayTests {
         #expect(PersonHeaderDisplay.title(header(name: nil, label: "Mother of James")) == "Mother of James")
         #expect(PersonHeaderDisplay.title(header(name: nil, label: "  ")) == "PER-7KD45")
     }
-
-    @Test func valueCountDrivesMixedAndPlusN() {
-        let one = header(name: CatalogNameValue(form: "James Robins"), clusters: 1)
-        #expect(!one.isNameMixed && one.additionalNameCount == 0)
-        let three = header(name: CatalogNameValue(form: "James Robins"), clusters: 3)
-        #expect(three.isNameMixed && three.additionalNameCount == 2)
-        let none = header(name: nil, clusters: 0)
-        #expect(!none.isNameMixed && none.additionalNameCount == 0)
-    }
 }

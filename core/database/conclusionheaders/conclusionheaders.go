@@ -54,12 +54,10 @@ type LifeFacts struct {
 }
 
 // HeaderPlace is one Place a walk reached. Names are kept toponyms in rank
-// order. Count is how many were kept. No chain. Entity is the Place, whose
-// page owns the names' Why.
+// order. No chain. Entity is the Place, whose page owns the names' Why.
 type HeaderPlace struct {
 	Entity canonicalentities.Entity
 	Names  []string
-	Count  int
 }
 
 // Unmerged Person handles with their displayed (kept rank-1) name and name

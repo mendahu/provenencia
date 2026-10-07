@@ -15,8 +15,7 @@ struct DerivedPlaceTests {
         let places = names.enumerated().map { index, names in
             CatalogHeaderPlace(
                 entity: CatalogCanonicalEntity(id: "p\(index)", ref: "PLC-\(index)", subjectTypeID: "t", label: ""),
-                names: names,
-                nameCount: names.count
+                names: names
             )
         }
         #expect(DerivedPlace.name(places) == name)

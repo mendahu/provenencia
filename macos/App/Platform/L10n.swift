@@ -887,18 +887,6 @@ enum L10n {
             comment: "Workspace sidebar destination and page title: Places (Conclude section)"
         )
 
-        static let eventsStubMessage = LocalizedStringResource(
-            "workspace.section.events.stubMessage",
-            defaultValue: "This Event's page is on its way.",
-            comment: "Placeholder body on an Event's page until the detail ships"
-        )
-
-        static let placesStubMessage = LocalizedStringResource(
-            "workspace.section.places.stubMessage",
-            defaultValue: "This Place's page is on its way.",
-            comment: "Placeholder body on a Place's page until the detail ships"
-        )
-
         /// Places list header meta: "1 place · by name" / "N places · by name".
         static func placeCount(_ count: Int) -> String {
             L10n.format(LocalizedStringResource(
@@ -1062,12 +1050,6 @@ enum L10n {
                 comment: "VoiceOver label for an Events list row; arguments are the title, the date, and the ref"
             ), title, date, ref)
         }
-
-        static let personsStubMessage = LocalizedStringResource(
-            "workspace.section.persons.stubMessage",
-            defaultValue: "The Persons list is on its way. Promoted people will be listed here.",
-            comment: "Placeholder body on the Persons page until the list ships"
-        )
 
         static let evidenceGraphTitle = LocalizedStringResource(
             "workspace.section.evidenceGraph.title",
@@ -2314,6 +2296,51 @@ enum L10n {
                 comment: "Events list date when an event has a start and an end and no single date. Arguments are the two formatted dates. The separator is an en dash."
             )
             return L10n.format(resource, locale: locale, start, end)
+        }
+
+        static func rowDayMonthYear(day: Int32, month: String, year: Int32, locale: Locale = .autoupdatingCurrent) -> String {
+            let resource = LocalizedStringResource(
+                "dates.row.dayMonthYear",
+                defaultValue: "%1$@ %2$@ %3$@",
+                comment: "Row date with day, abbreviated month, and year (14 May 1817). Day and year are digits, never grouped. Reorder for your locale."
+            )
+            return L10n.format(resource, locale: locale, String(day), month, String(year))
+        }
+
+        static func rowMonthYear(month: String, year: Int32, locale: Locale = .autoupdatingCurrent) -> String {
+            let resource = LocalizedStringResource(
+                "dates.row.monthYear",
+                defaultValue: "%1$@ %2$@",
+                comment: "Row date with abbreviated month and year (Mar 1790). The year is digits, never grouped."
+            )
+            return L10n.format(resource, locale: locale, month, String(year))
+        }
+
+        static func rowDayMonth(day: Int32, month: String, locale: Locale = .autoupdatingCurrent) -> String {
+            let resource = LocalizedStringResource(
+                "dates.row.dayMonth",
+                defaultValue: "%1$@ %2$@",
+                comment: "Row date with day and abbreviated month, no year (14 May)."
+            )
+            return L10n.format(resource, locale: locale, String(day), month)
+        }
+
+        static func rowDayYear(day: Int32, year: Int32, locale: Locale = .autoupdatingCurrent) -> String {
+            let resource = LocalizedStringResource(
+                "dates.row.dayYear",
+                defaultValue: "%1$@ %2$@",
+                comment: "Row date with a day and a year but no month. The year is digits, never grouped."
+            )
+            return L10n.format(resource, locale: locale, String(day), String(year))
+        }
+
+        static func rowWithPhrase(_ date: String, phrase: String, locale: Locale = .autoupdatingCurrent) -> String {
+            let resource = LocalizedStringResource(
+                "dates.row.withPhrase",
+                defaultValue: "%1$@ · %2$@",
+                comment: "Row date followed by its recorded phrase. Arguments are the formatted date and the phrase."
+            )
+            return L10n.format(resource, locale: locale, date, phrase)
         }
     }
 
@@ -7101,8 +7128,68 @@ enum L10n {
             ), place)
         }
 
-        static let personDetails = LocalizedStringResource(
-            "conclusions.person.details",
+        static func moreCount(_ count: Int) -> String {
+            let resource = LocalizedStringResource(
+                "conclusions.list.more",
+                defaultValue: "+%lld",
+                comment: "Badge after a list row title or line: how many more names or places there are. Argument is the count."
+            )
+            return L10n.format(resource, count)
+        }
+
+        static func lifeSpan(born: String, died: String) -> String {
+            let resource = LocalizedStringResource(
+                "conclusions.life.span",
+                defaultValue: "%1$@ – %2$@",
+                comment: "Persons row: birth date, then death date. Arguments are the two formatted dates."
+            )
+            return L10n.format(resource, born, died)
+        }
+
+        static func lifeSpanOpen(born: String) -> String {
+            let resource = LocalizedStringResource(
+                "conclusions.life.spanOpen",
+                defaultValue: "%@ –",
+                comment: "Persons row with a birth and no death: the birth date and an open dash. Argument is the formatted date."
+            )
+            return L10n.format(resource, born)
+        }
+
+        static func lifePlaces(born: String, died: String) -> String {
+            let resource = LocalizedStringResource(
+                "conclusions.life.places",
+                defaultValue: "%1$@ → %2$@",
+                comment: "Persons row: birth place, then death place. Arguments are the two place names."
+            )
+            return L10n.format(resource, born, died)
+        }
+
+        static func lineJoin(first: String, rest: String) -> String {
+            let resource = LocalizedStringResource(
+                "conclusions.line.join",
+                defaultValue: "%1$@ · %2$@",
+                comment: "Joins two parts of one secondary line (dates · places, a date · its phrase). Arguments are the two parts."
+            )
+            return L10n.format(resource, first, rest)
+        }
+
+        static let chainSeparator = LocalizedStringResource(
+            "conclusions.place.chainSeparator",
+            defaultValue: ", ",
+            comment: "Separator between a Place and its parents in the parent chain (York, Upper Canada)"
+        )
+
+        static func morePlaces(count: Int) -> String {
+            let resource = LocalizedStringResource(
+                "conclusions.a11y.morePlaces",
+                defaultValue: "%lld more places",
+                comment: "VoiceOver: other places a row stands for beyond the one it shows. Argument is the count."
+            )
+            return L10n.format(resource, count)
+        }
+
+        static let detailsSection = LocalizedStringResource(
+            "conclusions.detail.details",
             defaultValue: "Details",
             comment: "Section heading over a Person's fields"
         )
@@ -7111,6 +7198,18 @@ enum L10n {
             "conclusions.person.noLikeness",
             defaultValue: "No likeness recorded",
             comment: "Accessibility label of the empty portrait slot on a Person page"
+        )
+
+        static let eventNoImage = LocalizedStringResource(
+            "conclusions.event.noImage",
+            defaultValue: "No image recorded",
+            comment: "Thumbnail placeholder on an Event page when no image is recorded"
+        )
+
+        static let placeNoImage = LocalizedStringResource(
+            "conclusions.place.noImage",
+            defaultValue: "No image recorded",
+            comment: "Thumbnail placeholder on a Place page when no image is recorded"
         )
 
         static let personBornAbbr = LocalizedStringResource(
@@ -7125,14 +7224,14 @@ enum L10n {
             comment: "Abbreviation before a Person's death date and place in the page header"
         )
 
-        static let personDateUnknown = LocalizedStringResource(
-            "conclusions.person.dateUnknown",
+        static let dateUnknown = LocalizedStringResource(
+            "conclusions.detail.dateUnknown",
             defaultValue: "date unknown",
             comment: "Page header: the Person's birth or death date is not known"
         )
 
-        static let personPlaceUnknown = LocalizedStringResource(
-            "conclusions.person.placeUnknown",
+        static let placeUnknown = LocalizedStringResource(
+            "conclusions.detail.placeUnknown",
             defaultValue: "place unknown",
             comment: "Page header: the Person's birth or death place is not known"
         )

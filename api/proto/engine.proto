@@ -1026,11 +1026,11 @@ message ListSubjectMembershipsResponse {
 }
 
 // HeaderPlace is one Place a walk reached. names are kept toponyms in rank
-// order. name_count is how many were kept. The parent chain is not here
-// (S9-39).
+// order. The parent chain is not here (S9-39).
 message HeaderPlace {
   repeated string names = 1;
-  int32 name_count = 2;
+  reserved 2;
+  reserved "name_count"; // always len(names)
   // entity is the Place; its page owns the names' Why.
   CanonicalEntity entity = 3;
 }

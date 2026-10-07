@@ -114,12 +114,12 @@ struct PersonDetailTests {
                 event: birthEvent,
                 date: CatalogDateValueInput(kind: "point", startYear: 1817),
                 dateCount: 1,
-                places: [CatalogHeaderPlace(entity: york, names: ["York"], nameCount: 1)]
+                places: [CatalogHeaderPlace(entity: york, names: ["York"])]
             ),
             death: CatalogLifeFacts(
                 date: CatalogDateValueInput(kind: "point", startYear: 1880),
                 dateCount: 1,
-                places: [CatalogHeaderPlace(entity: toronto, names: ["Toronto"], nameCount: 1)]
+                places: [CatalogHeaderPlace(entity: toronto, names: ["Toronto"])]
             )
         )
         #expect(PersonLifeDisplay.line(james, locale: en).text == "1817 – 1880 · York → Toronto")
@@ -144,7 +144,7 @@ struct PersonDetailTests {
 
         // Two names of one Place are one place: no +N, not mixed.
         var renamed = james
-        renamed.birth.places = [CatalogHeaderPlace(entity: york, names: ["York", "Tkaronto"], nameCount: 2)]
+        renamed.birth.places = [CatalogHeaderPlace(entity: york, names: ["York", "Tkaronto"])]
         #expect(PersonLifeDisplay.line(renamed, locale: en).text == "1817 – 1880 · York → Toronto")
         #expect(PersonLifeDisplay.line(renamed, locale: en).extraPlaces == 0)
         let oneplace = PersonDetailContent(detail: detail(header: renamed), locale: en)
@@ -154,8 +154,8 @@ struct PersonDetailTests {
         var twoPlaces = james
         let upper = CatalogCanonicalEntity(id: "pl3", ref: "PLC-3", subjectTypeID: "t", label: "")
         twoPlaces.birth.places = [
-            CatalogHeaderPlace(entity: york, names: ["York"], nameCount: 1),
-            CatalogHeaderPlace(entity: upper, names: ["Kingston"], nameCount: 1),
+            CatalogHeaderPlace(entity: york, names: ["York"]),
+            CatalogHeaderPlace(entity: upper, names: ["Kingston"]),
         ]
         #expect(PersonLifeDisplay.line(twoPlaces, locale: en).extraPlaces == 1)
         let mixed = PersonDetailContent(detail: detail(header: twoPlaces), locale: en)

@@ -7,6 +7,6 @@ enum PlaceChainDisplay {
         parents
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
-            .joined(separator: ", ")
+            .joined(separator: L10n.string(L10n.Conclusions.chainSeparator))
     }
 }

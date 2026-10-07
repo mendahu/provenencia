@@ -63,9 +63,8 @@ func lifeFactsProto(life conclusionheaders.LifeFacts) *engine.LifeFacts {
 
 func headerPlaceProto(p conclusionheaders.HeaderPlace) *engine.HeaderPlace {
 	return &engine.HeaderPlace{
-		Entity:    canonicalEntityProto(p.Entity),
-		Names:     append([]string(nil), p.Names...),
-		NameCount: int32(p.Count),
+		Entity: canonicalEntityProto(p.Entity),
+		Names:  append([]string(nil), p.Names...),
 	}
 }
 

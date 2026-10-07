@@ -23,9 +23,11 @@ enum PersonsList: ConclusionListKind {
 
     static func accessibilityLabel(_ header: CatalogPersonHeader) -> String {
         let title = ConclusionListRow.accessibilityLabel(titleSource(header), ref: header.entity.ref)
-        let life = PersonLifeDisplay.line(header).text
-        guard !life.isEmpty else { return title }
-        return L10n.Conclusions.a11yList(title, rest: life)
+        let line = PersonLifeDisplay.line(header)
+        guard !line.text.isEmpty else { return title }
+        let label = L10n.Conclusions.a11yList(title, rest: line.text)
+        guard line.extraPlaces > 0 else { return label }
+        return L10n.Conclusions.a11yList(label, rest: L10n.Conclusions.morePlaces(count: line.extraPlaces))
     }
 
     static func location(_ header: CatalogPersonHeader) -> WorkspaceLocation {
@@ -42,16 +44,17 @@ enum PersonsList: ConclusionListKind {
 struct PersonLifeLine: View {
     let line: PersonLifeDisplay.Line
 
+    /// Nothing when nothing is recorded, so `PVList` lays out no second line.
     var body: some View {
-        HStack(spacing: PVSpacing.space4) {
-            Text(verbatim: line.text)
-                .lineLimit(1)
-                .frame(maxHeight: line.text.isEmpty ? 0 : nil)
-            if line.extraPlaces > 0 {
-                PVBadge(text: "+\(line.extraPlaces)", tone: .neutral, subtle: true)
-                    .accessibilityHidden(true)
+        if !line.text.isEmpty {
+            HStack(spacing: PVSpacing.space4) {
+                Text(verbatim: line.text)
+                    .lineLimit(1)
+                if line.extraPlaces > 0 {
+                    PVBadge(text: L10n.Conclusions.moreCount(line.extraPlaces), tone: .neutral, subtle: true)
+                        .accessibilityHidden(true)
+                }
             }
         }
-        .accessibilityHidden(line.text.isEmpty)
     }
 }

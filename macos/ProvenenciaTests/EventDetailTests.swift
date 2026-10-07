@@ -108,8 +108,8 @@ struct EventDetailTests {
                 ),
             ],
             places: [
-                CatalogHeaderPlace(entity: york, names: ["York"], nameCount: 1),
-                CatalogHeaderPlace(entity: toronto, names: ["Toronto"], nameCount: 1),
+                CatalogHeaderPlace(entity: york, names: ["York"]),
+                CatalogHeaderPlace(entity: toronto, names: ["Toronto"]),
             ],
             title: CatalogEventTitle(
                 rule: .subject, ref: "EVT-8PL22", typeKey: "birth", typeLabel: "Birth",

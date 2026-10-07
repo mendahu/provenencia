@@ -48,7 +48,7 @@ struct ReconciliationReasoningView: View {
                             }
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .help(record.sourceTitle)
-                            .accessibilityIdentifier("person.detail.why.\(record.id).source")
+                            .accessibilityIdentifier("conclusion.detail.why.\(record.id).source")
                             ReconciliationOutcome(mark: record.mark, phrase: record.phrase)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                             Color.clear.frame(width: Self.actionColumnWidth, height: 1)

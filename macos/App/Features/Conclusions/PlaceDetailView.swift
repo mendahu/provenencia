@@ -12,7 +12,7 @@ struct PlaceDetailView: View {
             session: session,
             entityId: entityId,
             mark: .subjectPlace,
-            noLikeness: L10n.Conclusions.personNoLikeness,
+            thumbnailLabel: L10n.Conclusions.placeNoImage,
             pageIdentifier: "places.detail",
             errorIdentifier: "places.detail.error",
             make: { PlaceDetailContent(detail: $0) },

@@ -13,7 +13,7 @@ struct EventDetailView: View {
             session: session,
             entityId: entityId,
             mark: .subjectEvent,
-            noLikeness: L10n.Conclusions.personNoLikeness,
+            thumbnailLabel: L10n.Conclusions.eventNoImage,
             pageIdentifier: "events.detail",
             errorIdentifier: "events.detail.error",
             make: { EventDetailContent(detail: $0) },
@@ -28,32 +28,13 @@ private struct EventDetailSummary: View {
     let place: String?
 
     var body: some View {
-        HStack(alignment: .firstTextBaseline, spacing: PVSpacing.space4) {
-            if let date {
-                Text(verbatim: date)
-                    .font(PVFont.mono(size: PVTypeScale.caption))
-                    .foregroundStyle(PVColor.textPrimary)
-            } else {
-                Text(L10n.Conclusions.personDateUnknown)
-                    .font(PVFont.body(size: PVTypeScale.bodySmall, italic: true))
-                    .foregroundStyle(PVColor.textMuted)
-            }
-            Text(verbatim: "·")
-                .foregroundStyle(PVColor.textFaint)
-            if let place {
-                Text(verbatim: place)
-                    .font(PVFont.body(size: PVTypeScale.bodySmall, italic: true))
-                    .foregroundStyle(PVColor.textSecondary)
-            } else {
-                Text(L10n.Conclusions.personPlaceUnknown)
-                    .font(PVFont.body(size: PVTypeScale.bodySmall, italic: true))
-                    .foregroundStyle(PVColor.textMuted)
-            }
-        }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(L10n.Conclusions.a11yList(
-            date ?? L10n.string(L10n.Conclusions.personDateUnknown),
-            rest: place ?? L10n.string(L10n.Conclusions.personPlaceUnknown)
-        ))
+        ConclusionDatePlaceLine(
+            date: date,
+            place: place,
+            accessibilityLabel: L10n.Conclusions.a11yList(
+                date ?? L10n.string(L10n.Conclusions.dateUnknown),
+                rest: place ?? L10n.string(L10n.Conclusions.placeUnknown)
+            )
+        )
     }
 }

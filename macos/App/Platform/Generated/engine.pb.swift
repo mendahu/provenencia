@@ -3372,16 +3372,13 @@ public nonisolated struct Provenencia_Engine_V1_ListSubjectMembershipsResponse: 
 }
 
 /// HeaderPlace is one Place a walk reached. names are kept toponyms in rank
-/// order. name_count is how many were kept. The parent chain is not here
-/// (S9-39).
+/// order. The parent chain is not here (S9-39).
 public nonisolated struct Provenencia_Engine_V1_HeaderPlace: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
   public var names: [String] = []
-
-  public var nameCount: Int32 = 0
 
   /// entity is the Place; its page owns the names' Why.
   public var entity: Provenencia_Engine_V1_CanonicalEntity {
@@ -11520,7 +11517,7 @@ nonisolated extension Provenencia_Engine_V1_ListSubjectMembershipsResponse: Swif
 
 nonisolated extension Provenencia_Engine_V1_HeaderPlace: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".HeaderPlace"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}names\0\u{3}name_count\0\u{1}entity\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}names\0\u{2}\u{2}entity\0\u{b}name_count\0\u{c}\u{2}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -11529,7 +11526,6 @@ nonisolated extension Provenencia_Engine_V1_HeaderPlace: SwiftProtobuf.Message, 
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeRepeatedStringField(value: &self.names) }()
-      case 2: try { try decoder.decodeSingularInt32Field(value: &self.nameCount) }()
       case 3: try { try decoder.decodeSingularMessageField(value: &self._entity) }()
       default: break
       }
@@ -11544,9 +11540,6 @@ nonisolated extension Provenencia_Engine_V1_HeaderPlace: SwiftProtobuf.Message, 
     if !self.names.isEmpty {
       try visitor.visitRepeatedStringField(value: self.names, fieldNumber: 1)
     }
-    if self.nameCount != 0 {
-      try visitor.visitSingularInt32Field(value: self.nameCount, fieldNumber: 2)
-    }
     try { if let v = self._entity {
       try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
     } }()
@@ -11555,7 +11548,6 @@ nonisolated extension Provenencia_Engine_V1_HeaderPlace: SwiftProtobuf.Message, 
 
   public static func ==(lhs: Provenencia_Engine_V1_HeaderPlace, rhs: Provenencia_Engine_V1_HeaderPlace) -> Bool {
     if lhs.names != rhs.names {return false}
-    if lhs.nameCount != rhs.nameCount {return false}
     if lhs._entity != rhs._entity {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true

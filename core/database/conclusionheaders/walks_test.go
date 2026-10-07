@@ -187,7 +187,7 @@ func TestCanonicalWalks(t *testing.T) {
 		}
 	}
 	yorkPlace := headerPlace(jamesHeader.Birth.Places, "York")
-	if yorkPlace.Count != 2 || !sameSet(yorkPlace.Names, []string{"York", "Tkaronto"}) {
+	if !sameSet(yorkPlace.Names, []string{"York", "Tkaronto"}) {
 		t.Fatalf("York names %+v", yorkPlace)
 	}
 	if got := placeNames(jamesHeader.Death.Places); !sameSet(got, []string{"Toronto"}) {

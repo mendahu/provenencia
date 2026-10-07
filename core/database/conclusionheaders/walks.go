@@ -248,7 +248,7 @@ func loadPlacesOf(q Querier, eventIDs [][]byte) (map[string][]HeaderPlace, error
 		}
 		seen[key] = true
 		out[string(edge.From)] = append(out[string(edge.From)], HeaderPlace{
-			Entity: h.Entity, Names: h.Names, Count: len(h.Names),
+			Entity: h.Entity, Names: h.Names,
 		})
 	}
 	for event, places := range out {

@@ -915,8 +915,7 @@ struct GoStore: GenealogyStore {
     private static func mapHeaderPlace(_ place: Provenencia_Engine_V1_HeaderPlace) -> CatalogHeaderPlace {
         CatalogHeaderPlace(
             entity: mapCanonicalEntity(place.entity),
-            names: place.names,
-            nameCount: Int(place.nameCount)
+            names: place.names
         )
     }
 

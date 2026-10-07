@@ -46,11 +46,12 @@ enum PlacesList: ConclusionListKind {
 struct PlaceChainLine: View {
     let text: String
 
+    /// Nothing when the place has no parents, so `PVList` lays out no second line.
     var body: some View {
-        Text(verbatim: text)
-            .italic()
-            .lineLimit(1)
-            .frame(maxHeight: text.isEmpty ? 0 : nil)
-            .accessibilityHidden(text.isEmpty)
+        if !text.isEmpty {
+            Text(verbatim: text)
+                .italic()
+                .lineLimit(1)
+        }
     }
 }

@@ -22,7 +22,7 @@ enum PersonLifeDisplay {
         case (true, false):
             text = places
         case (false, false):
-            text = "\(dates) · \(places)"
+            text = L10n.Conclusions.lineJoin(first: dates, rest: places)
         }
         return Line(text: text, extraPlaces: extra)
     }
@@ -44,11 +44,11 @@ enum PersonLifeDisplay {
         case (true, true):
             return ""
         case (false, true):
-            return "\(born) –"
+            return L10n.Conclusions.lifeSpanOpen(born: born)
         case (true, false):
             return died
         case (false, false):
-            return "\(born) – \(died)"
+            return L10n.Conclusions.lifeSpan(born: born, died: died)
         }
     }
 
@@ -63,7 +63,7 @@ enum PersonLifeDisplay {
         case (true, false):
             return died
         case (false, false):
-            return "\(born) → \(died)"
+            return L10n.Conclusions.lifePlaces(born: born, died: died)
         }
     }
 }

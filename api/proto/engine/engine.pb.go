@@ -8737,12 +8737,10 @@ func (x *ListSubjectMembershipsResponse) GetMemberships() []*SubjectMembership {
 }
 
 // HeaderPlace is one Place a walk reached. names are kept toponyms in rank
-// order. name_count is how many were kept. The parent chain is not here
-// (S9-39).
+// order. The parent chain is not here (S9-39).
 type HeaderPlace struct {
-	state     protoimpl.MessageState `protogen:"open.v1"`
-	Names     []string               `protobuf:"bytes,1,rep,name=names,proto3" json:"names,omitempty"`
-	NameCount int32                  `protobuf:"varint,2,opt,name=name_count,json=nameCount,proto3" json:"name_count,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Names []string               `protobuf:"bytes,1,rep,name=names,proto3" json:"names,omitempty"`
 	// entity is the Place; its page owns the names' Why.
 	Entity        *CanonicalEntity `protobuf:"bytes,3,opt,name=entity,proto3" json:"entity,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -8784,13 +8782,6 @@ func (x *HeaderPlace) GetNames() []string {
 		return x.Names
 	}
 	return nil
-}
-
-func (x *HeaderPlace) GetNameCount() int32 {
-	if x != nil {
-		return x.NameCount
-	}
-	return 0
 }
 
 func (x *HeaderPlace) GetEntity() *CanonicalEntity {
@@ -16167,12 +16158,11 @@ const file_engine_proto_rawDesc = "" +
 	"projectDir\x12\x1b\n" +
 	"\tsource_id\x18\x02 \x01(\tR\bsourceId\"l\n" +
 	"\x1eListSubjectMembershipsResponse\x12J\n" +
-	"\vmemberships\x18\x01 \x03(\v2(.provenencia.engine.v1.SubjectMembershipR\vmemberships\"\x82\x01\n" +
+	"\vmemberships\x18\x01 \x03(\v2(.provenencia.engine.v1.SubjectMembershipR\vmemberships\"u\n" +
 	"\vHeaderPlace\x12\x14\n" +
-	"\x05names\x18\x01 \x03(\tR\x05names\x12\x1d\n" +
-	"\n" +
-	"name_count\x18\x02 \x01(\x05R\tnameCount\x12>\n" +
-	"\x06entity\x18\x03 \x01(\v2&.provenencia.engine.v1.CanonicalEntityR\x06entity\"\x80\x02\n" +
+	"\x05names\x18\x01 \x03(\tR\x05names\x12>\n" +
+	"\x06entity\x18\x03 \x01(\v2&.provenencia.engine.v1.CanonicalEntityR\x06entityJ\x04\b\x02\x10\x03R\n" +
+	"name_count\"\x80\x02\n" +
 	"\tLifeFacts\x129\n" +
 	"\x04date\x18\x01 \x01(\v2%.provenencia.engine.v1.DateValueInputR\x04date\x12\x1d\n" +
 	"\n" +

@@ -113,4 +113,30 @@ struct ConclusionListKindTests {
         let place = CatalogPlaceHeader(entity: entity, names: ["Montréal", "Montreal"])
         #expect(PlacesList.extraCount(place) == 1)
     }
+
+    @Test func rowLabelsSpeakThePlacesTheBadgeCounts() {
+        let york = CatalogCanonicalEntity(id: "pl1", ref: "PLC-1", subjectTypeID: "t", label: "")
+        let kingston = CatalogCanonicalEntity(id: "pl2", ref: "PLC-2", subjectTypeID: "t", label: "")
+        let places = [
+            CatalogHeaderPlace(entity: york, names: ["York"]),
+            CatalogHeaderPlace(entity: kingston, names: ["Kingston"]),
+        ]
+        var person = CatalogPersonHeader(
+            entity: CatalogCanonicalEntity(id: "e1", ref: "PER-1", subjectTypeID: "t", label: ""),
+            name: CatalogNameValue(form: "James Robins"), nameValueCount: 1
+        )
+        person.birth.places = places
+        #expect(PersonsList.accessibilityLabel(person).hasSuffix(L10n.Conclusions.morePlaces(count: 1)))
+        person.birth.places = [places[0]]
+        #expect(!PersonsList.accessibilityLabel(person).contains(L10n.Conclusions.morePlaces(count: 1)))
+
+        let event = CatalogEventHeader(
+            entity: CatalogCanonicalEntity(id: "ev1", ref: "EVT-1", subjectTypeID: "t", label: ""),
+            places: places,
+            title: CatalogEventTitle(rule: .typeAtPlace, ref: "EVT-1", typeLabel: "Fire", place: "York")
+        )
+        #expect(EventsList.accessibilityLabel(event).hasSuffix(L10n.Conclusions.morePlaces(count: 1)))
+        #expect(L10n.Conclusions.morePlaces(count: 1) == "1 more place")
+        #expect(L10n.Conclusions.morePlaces(count: 2) == "2 more places")
+    }
 }
