@@ -14,9 +14,10 @@
 //
 // Upkeep: RecomputeTx / RecomputeSubjectsTx for Observation, Promote and
 // Subject writes; RecomputeSourceTx for a Source credibility change;
-// RecomputeCitationTx for a Citation certainty change. Claim confidence and
-// status have no edit path yet; when one lands it recomputes the claim's
-// handle.
+// RecomputeCitationTx for a Citation certainty change. A claim create of any
+// status recomputes the claim's handle (identityclaims.Create). Claim
+// confidence and status have no edit path yet; when one lands it recomputes
+// the claim's handle the same way.
 //
 // Recompute is per handle: all of a handle's Properties are rewritten together.
 // Narrowing to (handle, Property) waits for timings that need it.

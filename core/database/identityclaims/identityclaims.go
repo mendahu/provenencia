@@ -100,15 +100,26 @@ func Create(c *database.Catalog, userID []byte, in CreateInput) (Claim, error) {
 	}); err != nil {
 		return Claim{}, err
 	}
-	if in.Status == StatusAccepted {
-		if err := autoreconciler.RecomputeTouchingTx(tx, append([][]byte{cl.EntityID}, assocs...), cl.SubjectID); err != nil {
-			return Claim{}, err
-		}
+	if err := recomputeTx(tx, cl, assocs); err != nil {
+		return Claim{}, err
 	}
 	if err := tx.Commit(); err != nil {
 		return Claim{}, err
 	}
 	return cl, nil
+}
+
+// recomputeTx refreshes the auto-reconciler cache for a new claim. Every
+// status changes the handle's values: an accepted member's Observations are
+// evidence, a provisional one's are reasoning, a rejected one's are dropped.
+// Only an accepted claim moves where subject-valued ends resolve, so only it
+// recomputes the handles observing the subject and the filed associations.
+// A claim status edit, when one lands, recomputes through here too.
+func recomputeTx(tx *sql.Tx, cl Claim, assocs [][]byte) error {
+	if cl.Status == StatusAccepted {
+		return autoreconciler.RecomputeTouchingTx(tx, append([][]byte{cl.EntityID}, assocs...), cl.SubjectID)
+	}
+	return autoreconciler.RecomputeTx(tx, [][]byte{cl.EntityID})
 }
 
 // AppendFiling files bridges the new member completes and returns the
