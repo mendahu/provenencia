@@ -26,7 +26,7 @@ Items marked **TBD** are expected seeds whose exact set is still being refined.
 2. This file may stay ahead of the product. Keeping a larger catalog here is documentation, not a commitment to pre-make unused pickers, metadata fields, or event types.
 3. Seeds are data inserted into a project database, not SQL enums.
 4. Shipped keys are not structurally privileged subclasses; they are convenient defaults with optional first-class UX. Their privilege is **origin**, not a separate table or enum.
-5. **Property terms** (`event_type`, `role`, `relationship_type`, `place_nature`, `place_relationship_type`, and similar kind/edge vocabularies) are vocabulary-definition rows with `origin` (§1.1), not free-text Observation strings. **Term-typed Properties are Install/registry only** (product or plugin) — researchers do not create Properties with `value_type = term`. Product/plugin Install seeds large term sets; researchers may usually add `origin=user` **term rows** under those Properties without a dedicated Event types / Roles admin destination. **Exception:** `place_relationship_type` is product-only (locked `part_of` / `succeeded_by`); the UI does not offer *Add type…* there. True prose Properties (`remark`, `toponym`) stay `value_type = text`. Name part `type` on NameValue is a **compiled product registry** (not `property_terms`); user-minted part types are TBD. `place_relationship_type` terms carry a **category** (`hierarchical` / `temporal`) for the engine; `place_nature` does not.
+5. **Property terms** (`event_type`, `role`, `relationship_type`, `place_relationship_type`, and similar kind/edge vocabularies) are vocabulary-definition rows with `origin` (§1.1), not free-text Observation strings. **Term-typed Properties are Install/registry only** (product or plugin) — researchers do not create Properties with `value_type = term`. Product/plugin Install seeds large term sets; researchers may usually add `origin=user` **term rows** under those Properties without a dedicated Event types / Roles admin destination. **Exception:** `place_relationship_type` is product-only (locked `part_of` / `succeeded_by`); the UI does not offer *Add type…* there. True prose Properties (`remark`, `toponym`) stay `value_type = text`. Name part `type` on NameValue is a **compiled product registry** (not `property_terms`); user-minted part types are TBD. `place_relationship_type` terms carry a **category** (`hierarchical` / `temporal`) for the engine.
 6. Do not seed a fine-grained source-quality ontology (`is_authentic`, defect codes, and similar) on Source catalog rows or as Observation defect codes unless a concrete workflow requires it. First-class **Source credibility** uses the three-point assessment vocabulary in §3.0 and [`research-judgment-model.md`](research-judgment-model.md), not ad hoc Source metadata.
 7. Expanding this catalog does not require a schema migration when the underlying tables already use open keys.
 8. Source credibility grades and Claim confidence grades share a three-point *shape* but **must not share keys or labels** — they answer different questions.
@@ -326,8 +326,7 @@ start_date          date          span start; locked on event — leave empty if
 end_date            date          span end; locked on event — leave empty if only Date applies
 role                term          participation edge label; terms §3.5
 relationship_type   term          directed: person is this of related_to; terms §3.6
-place_nature        term          administrative / informal / ecclesiastical; on `place` (S9-38); terms §3.8
-place_relationship_type  term     part_of / succeeded_by only (product-locked); categories hierarchical / temporal; terms §3.9
+place_relationship_type  term     part_of / succeeded_by only (product-locked); categories hierarchical / temporal; terms §3.8
 from                subject       app target hint: place (place relationship: the part or predecessor)
 to                  subject       app target hint: place (place relationship: the whole or successor)
 person              subject       app target hint: person (also relationship “who is the X”)
@@ -345,7 +344,7 @@ Target Subject type hints are application-only (not SQL allow-lists). See the In
 
 Create-time Install seeds the full §3.2 matrix, including kind/edge and person term Properties as `value_type = term` with `property_terms` (§3.4–3.7).
 
-Event date Properties (`date`, `start_date`, `end_date`) are locked on `event`: Conclusion ordering and timelines may key into them; the Properties page must not unbind them. `event_type` on `event`, `role` on `participation`, and `relationship_type` on `relationship` are locked for the same reason: birth and death walks, the subject principal, and relationship identity read those slots. `name` on `person` and `toponym` on `place` are locked because the Person and Place rows, search, and composed titles read them. Place `start_date` / `end_date` (period) and `place_nature` are locked on `place`; `place_relationship_type` / `from` / `to` / the link's dates are locked on `place_relationship`. **Coexistence:** use `date` for a single point (birth, death, marriage day); use `start_date` / `end_date` when the event spans time (residence, service, voyage). Instantaneous events leave start/end empty; spanned events may leave `date` empty when only the range is known. On a Place, the same `start_date` / `end_date` keys mean its period, not an event span.
+Event date Properties (`date`, `start_date`, `end_date`) are locked on `event`: Conclusion ordering and timelines may key into them; the Properties page must not unbind them. `event_type` on `event`, `role` on `participation`, and `relationship_type` on `relationship` are locked for the same reason: birth and death walks, the subject principal, and relationship identity read those slots. `name` on `person` and `toponym` on `place` are locked because the Person and Place rows, search, and composed titles read them. Place `start_date` / `end_date` (period) are locked on `place`; `place_relationship_type` / `from` / `to` / the link's dates are locked on `place_relationship`. **Coexistence:** use `date` for a single point (birth, death, marriage day); use `start_date` / `end_date` when the event spans time (residence, service, voyage). Instantaneous events leave start/end empty; spanned events may leave `date` empty when only the range is known. On a Place, the same `start_date` / `end_date` keys mean its period, not an event span.
 
 Additional Properties may be seeded as workflows need them (shared DNA, predicted relationship, and similar). Treat those as **TBD** until a concrete UI requires them.
 
@@ -363,7 +362,6 @@ event           start_date          # locked
 event           end_date            # locked
 
 place           toponym             # locked
-place           place_nature        # term; locked (S9-38)
 place           start_date          # locked; period start (S9-38)
 place           end_date            # locked; period end (S9-38)
 
@@ -457,19 +455,7 @@ unknown
 
 Use `intersex` when the source indicates intersex / DSD variation; `indeterminate` when sex was considered but could not be determined; `unknown` when the source is silent, illegible, or explicitly unknown. Researchers may add further `origin=user` terms for source-specific wording. Do not treat these as free-text Observation strings.
 
-## 3.8 Property terms: `place_nature` (S9-38)
-
-Institutional nature of a Place — **not** grain (township / county / province). Bound only to `place`. Optional; single-valued.
-
-```text
-administrative   -- political or civil unit (Ontario, Guam, a municipality)
-informal         -- region, locality, farm, or other non-institutional place (the Lower Mainland)
-ecclesiastical   -- church hierarchy (parish, diocese)
-```
-
-Cross-containment is normal: an informal place may be part of an administrative one, a parish inside a country, Canada part of North America. Researchers may add further `origin=user` terms via the ordinary custom-term dialog (no category). Nature is not hierarchical vs temporal.
-
-## 3.9 Property terms: `place_relationship_type` (S9-38)
+## 3.8 Property terms: `place_relationship_type` (S9-38)
 
 How two Places relate. **Product-only:** the two seeded terms are locked; Create of a user term under this Property is refused; the composer does not offer *Add type…*. Each term has a **category** on `property_terms` (`hierarchical` or `temporal`) so filing and chains know how to behave. Bound only to `place_relationship`. Both terms are directed.
 
@@ -478,7 +464,7 @@ part_of        hierarchical   -- from is part of to (builds display chains)
 succeeded_by   temporal       -- from was succeeded by to (lineage; never a chain)
 ```
 
-Administrative / informal / ecclesiastical are **not** relationship types — they live on `place_nature`.
+A place-nature vocabulary (administrative / informal / …) is **deferred**; several Locations on an Event fold into chains via `part_of` instead ([`conclusion-reconciliation.md`](conclusion-reconciliation.md) §11.1).
 
 ---
 

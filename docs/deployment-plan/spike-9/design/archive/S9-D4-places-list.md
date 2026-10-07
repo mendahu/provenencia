@@ -84,7 +84,7 @@ A list of every Place. Row: **thumbnail slot · name (+N) · parent chain · ref
 | A rename is a different Place | *York* and *Toronto* are two rows; one succeeded the other (shown on detail, not here). |
 | Places are any grain | Township, county, province, country, a region, a family farm. No fixed levels. |
 | Parent chain depends on the date | The row shows **today's** chain (or the latest one, for a place that no longer exists: *York → Upper Canada*). A place with no parents shows no chain. |
-| Several parents | A place can be part of several places (any natures). The row follows the chain that prefers parents whose nature is administrative. |
+| Several parents | A place can be part of several places. The row shows candidate chains (or a combined display) — no nature-based preference. |
 | Fallback | name → label → ref. |
 | No geography | No map or coordinates. |
 

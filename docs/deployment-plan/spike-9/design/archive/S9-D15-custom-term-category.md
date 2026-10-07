@@ -1,6 +1,6 @@
 # S9-D15 — Custom term: category
 
-> **Retired 2026-10-07.** Never built. Place relationships are locked `part_of` / `succeeded_by` (UI-driven); `place_nature` uses the ordinary custom-term dialog with no category. Kept for history only.
+> **Retired 2026-10-07.** Never built. Place relationships are locked `part_of` / `succeeded_by` (UI-driven); place nature was deferred entirely. Kept for history only.
 
 **Kind:** Claude Design board  
 **Spike:** Provenencia Spike 9 (canonical entities MVP)  

@@ -33,7 +33,7 @@ Design track and gating: [`../deployment-plan.md`](../deployment-plan.md#design-
 | --- | --- | --- |
 | S9-D11 | [Promote — compare](archive/S9-D11-promote-compare.md) | Never built. Replaced by S9-D16's evidence sheet (2026-10-06). |
 | S9-D12 | [Promote — walk](archive/S9-D12-promote-walk.md) | Never built. Replaced by S9-D16's whole-graph page (2026-10-06). |
-| S9-D15 | [Custom term — category](archive/S9-D15-custom-term-category.md) | Never built. Place relationships are locked `part_of` / `succeeded_by`; nature is an ordinary term Property (2026-10-07). |
+| S9-D15 | [Custom term — category](archive/S9-D15-custom-term-category.md) | Never built. Place relationships are locked `part_of` / `succeeded_by`; place nature deferred (2026-10-07). |
 
 Design each brief alongside its feature, just before the PR it gates. Order and dependencies: [PR sequence](../deployment-plan.md#pr-sequence).
 
@@ -43,7 +43,7 @@ Design each brief alongside its feature, just before the PR it gates. Order and 
 - In the UI a canonical `person` row is a **Person** (`PER-7KD45`), not a "canonical entity." Interpretation Subjects keep candidate refs (`CPR-…`).
 - A handle's **members** are the Subjects with an accepted Identity Claim for it. Each Property collects values from every member and the engine **reconciles** them ([`conclusion-reconciliation.md`](../../../conclusion-reconciliation.md)). Nothing on these pages is a committed value (no Reconciliation Claims this spike).
 - Each field shows its reconciled value in a state: **single**, **merged**, **mixed** (every surviving value shown), or empty. Details explain every value: each record considered and its outcome (kept, folded, outvoted, weak, denied, no usable value); support counts Sources. List rows show one value plus *+N*, never a mixed marker. A few Properties hold several true values (a Place's names). A future **concluded** state (Reconciliation Claim) needs room too.
-- **Places form a hierarchy.** Each Place may have a **nature** (administrative, informal, ecclesiastical). Relationships between places are *part of* or *succeeded by* (York → Toronto). Places have periods, and a part-of link has its own span. An undated link holds for the overlap of the places' periods; a dated link can end while both places continue. A place's parents depend on the date; display prefers administrative parents.
+- **Places form a hierarchy.** Relationships between places are *part of* or *succeeded by* (York → Toronto). Places have periods, and a part-of link has its own span. An undated link holds for the overlap of the places' periods; a dated link can end while both places continue. A place's parents depend on the date. Several Locations on an Event that share a containment graph fold into one chain; unrealted Places stay competing values.
 - Promote only **creates** claims. It is **one page** that proposes a handle, New or Skip for every person, event and place on an Evidence graph, with the researcher fine-tuning and one **Done** filing everything; bridges file automatically ([`promote-alignment.md`](../../../promote-alignment.md), brief S9-D16). Editing or removing claims is a separate workflow (Spike 10).
 - Promote's claim fields include a **Status dropdown** with one option (`accepted`) this spike. Lay it out for `provisional` / `rejected` too; they arrive later.
 - Promote starts from a subject card on the Evidence graph. Do **not** redesign the graph, cards, or composer except for the Promote entry point and membership chrome.
