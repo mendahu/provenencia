@@ -8,6 +8,8 @@ enum ConnectionTermCopy {
             return L10n.string(L10n.CitationComposer.connectionRelationship)
         case "role":
             return L10n.string(L10n.CitationComposer.connectionRole)
+        case "place_relationship_type":
+            return L10n.string(L10n.CitationComposer.connectionPlaceRelationship)
         default:
             return L10n.string(L10n.CitationComposer.connectionNoRole)
         }

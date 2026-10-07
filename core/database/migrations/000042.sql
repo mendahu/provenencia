@@ -14,8 +14,9 @@ AND NOT EXISTS (
 	SELECT 1 FROM properties WHERE key = 'event_name' AND origin = 'provenencia'
 );
 
+-- Fixed UUIDv7 (not randomblob); FFI parseID requires version 7.
 INSERT INTO properties (id, key, origin, label, description, value_type)
-SELECT randomblob(16), 'event_name', 'provenencia', 'Event name',
+SELECT X'01a11826b4887b4e93d4e39ada6fa988', 'event_name', 'provenencia', 'Event name',
 	'Recorded name of a historical event. Not a personal NameValue.',
 	'text'
 WHERE EXISTS (

@@ -2,10 +2,13 @@
 -- properties, terms, and bindings; new catalogs are empty here and Install
 -- mints UUIDv7s. Hierarchical vs temporal behaviour is keyed by the locked
 -- term keys part_of / succeeded_by in Go (no schema category column).
+--
+-- Seed row ids are fixed UUIDv7 blobs (not randomblob). FFI parseID requires
+-- version 7; random 16-byte ids broke ListPropertyTerms for migrated catalogs.
 
 -- Subject type place_relationship (only when provenencia types already exist).
 INSERT INTO subject_types (id, key, origin, label, description, ref_prefix, candidate_ref_prefix)
-SELECT randomblob(16), 'place_relationship', 'provenencia', 'Place relationship',
+SELECT X'01a11826b4887ac9bd3bd6b43034e563', 'place_relationship', 'provenencia', 'Place relationship',
 	'Association between two places: part-of or succession.',
 	'PLR', 'CLR'
 WHERE EXISTS (
@@ -16,7 +19,7 @@ AND NOT EXISTS (
 );
 
 INSERT INTO properties (id, key, origin, label, description, value_type, cardinality)
-SELECT randomblob(16), 'from', 'provenencia', 'From',
+SELECT X'01a11826b4887b3381e489717f659735', 'from', 'provenencia', 'From',
 	'Place relationship: the part, or the predecessor',
 	'subject', 'single'
 WHERE EXISTS (
@@ -27,7 +30,7 @@ AND NOT EXISTS (
 );
 
 INSERT INTO properties (id, key, origin, label, description, value_type, cardinality)
-SELECT randomblob(16), 'to', 'provenencia', 'To',
+SELECT X'01a11826b4887b3e94b2c64e733a56e3', 'to', 'provenencia', 'To',
 	'Place relationship: the whole, or the successor',
 	'subject', 'single'
 WHERE EXISTS (
@@ -38,7 +41,7 @@ AND NOT EXISTS (
 );
 
 INSERT INTO properties (id, key, origin, label, description, value_type, cardinality)
-SELECT randomblob(16), 'place_relationship_type', 'provenencia', 'Place relationship type',
+SELECT X'01a11826b4887b42b681fc09b599509d', 'place_relationship_type', 'provenencia', 'Place relationship type',
 	'Part of or succeeded by. Product-locked vocabulary.',
 	'term', 'single'
 WHERE EXISTS (
@@ -121,7 +124,7 @@ AND NOT EXISTS (
 );
 
 INSERT INTO property_terms (id, property_id, key, origin, label, description, directed)
-SELECT randomblob(16), p.id, 'part_of', 'provenencia', 'Part of',
+SELECT X'01a11826b4887b4696fbdda9e2f03e58', p.id, 'part_of', 'provenencia', 'Part of',
 	'From is part of to. Builds display chains.',
 	1
 FROM properties p
@@ -132,7 +135,7 @@ AND NOT EXISTS (
 );
 
 INSERT INTO property_terms (id, property_id, key, origin, label, description, directed)
-SELECT randomblob(16), p.id, 'succeeded_by', 'provenencia', 'Succeeded by',
+SELECT X'01a11826b4887b4aaffb28e3770aac1b', p.id, 'succeeded_by', 'provenencia', 'Succeeded by',
 	'From was succeeded by to. Lineage; never a chain.',
 	1
 FROM properties p
