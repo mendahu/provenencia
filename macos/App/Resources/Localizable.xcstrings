@@ -16787,7 +16787,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Grouped by type · span is when the link holds"
+            "value": "Span is when the link holds"
           }
         }
       }
@@ -17233,6 +17233,78 @@
           "stringUnit": {
             "state": "translated",
             "value": "Succeeded by"
+          }
+        }
+      }
+    },
+    "conclusions.place.chainOr": {
+      "comment": "Joins two simultaneous parent places when the date cannot pick one",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ or %2$@"
+          }
+        }
+      }
+    },
+    "conclusions.place.periodOpen": {
+      "comment": "Place period with a start and no end",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ –"
+          }
+        }
+      }
+    },
+    "conclusions.place.periodUntil": {
+      "comment": "Place period with an end and no start",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "– %@"
+          }
+        }
+      }
+    },
+    "conclusions.place.succeeded": {
+      "comment": "Role on a Succession row: this Place succeeded the named Place",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Succeeded"
+          }
+        }
+      }
+    },
+    "conclusions.place.succeededBy": {
+      "comment": "Role on a Succession row: this Place was succeeded by the named Place",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Succeeded by"
+          }
+        }
+      }
+    },
+    "conclusions.place.containsMore": {
+      "comment": "Remainder when Contains truncates a long list of child Places",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld more"
           }
         }
       }

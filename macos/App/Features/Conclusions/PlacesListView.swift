@@ -27,7 +27,10 @@ enum PlacesList: ConclusionListKind {
         L10n.Workspace.placeRowAccessibility(
             title: titleSource(header).text,
             extra: header.extraNameCount,
-            chain: PlaceChainDisplay.line(parents: header.parents),
+            chain: PlaceChainDisplay.line(
+                parents: header.parents,
+                candidates: header.parentsAreCandidates
+            ),
             ref: header.entity.ref
         )
     }
@@ -38,7 +41,10 @@ enum PlacesList: ConclusionListKind {
 
     @MainActor
     static func secondary(_ header: CatalogPlaceHeader) -> PlaceChainLine {
-        PlaceChainLine(text: PlaceChainDisplay.line(parents: header.parents))
+        PlaceChainLine(text: PlaceChainDisplay.line(
+            parents: header.parents,
+            candidates: header.parentsAreCandidates
+        ))
     }
 }
 

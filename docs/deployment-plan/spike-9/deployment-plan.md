@@ -496,7 +496,7 @@ In order; each brief sits just above the PR it gates.
 - [x] S9-32 — Fill derived cells in lists and details
 - [x] S9-38 — Place model: relationships, periods → [`completed.md`](completed.md)
 - [x] S9-39 — Place chain composer → [`completed.md`](completed.md)
-- [ ] S9-40 — Place hierarchy in list and detail
+- [x] S9-40 — Place hierarchy in list and detail → [`completed.md`](completed.md)
 - [ ] S9-41 — Align core
 - [ ] S9-42 — Alignment loader + proposal read
 - [ ] S9-43 — Batch Promote write
@@ -888,7 +888,7 @@ Design: [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md). PR
 | **Check** | *Birth of James Robins*; James shows *1817 – 1880 · York → Toronto* (chains follow in S9-40). |
 | **Depends on** | S9-31, S9-23, S9-24 |
 
-**Done.** See [`completed.md`](completed.md#s9-32--fill-derived-cells). The Persons and Events pages show the birth, the death, and who the event is about. Place chains stay names only until S9-40.
+**Done.** See [`completed.md`](completed.md#s9-32--fill-derived-cells). The Persons and Events pages show the birth, the death, and who the event is about. Place chain chrome on those rows ships in **S9-40**.
 
 ### Slice 8 — Place hierarchy (the hard way)
 
@@ -910,11 +910,7 @@ Design: [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md) §1
 
 #### S9-40 — Place hierarchy in list and detail
 
-| | |
-| --- | --- |
-| **In** | Places list chain cell (today's chain; several parents → candidates / combined display per D4); Place detail period, parents with the span the link holds (ungrouped by nature), parts, succession — designed in **S9-D4 / S9-D7**; no new brief. |
-| **Check** | Draw Toronto part of Upper Canada, Province of Canada and Ontario with periods → Toronto's page shows each by period; a membership that ends while both places continue (Ireland in the United Kingdom until 1922) drops off after that date; York succeeded by Toronto shows on both pages; Event place with Toronto + Ontario folds to one chain on the Person / Event row. |
-| **Depends on** | S9-39, S9-26, S9-27, S9-32 |
+**Done.** See [`completed.md`](completed.md#s9-40--place-hierarchy-in-list-and-detail). Places list truncates chains and joins simultaneous parents with "or"; Place detail fills period, Part of / Contains / Succession with membership spans; Person/Event rows show leaf-plus-chain. Maps, editing, `place_nature`, and search secondary stay out.
 
 ### Slice 9 — Promote alignment
 

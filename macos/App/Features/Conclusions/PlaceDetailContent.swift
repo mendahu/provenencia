@@ -1,9 +1,11 @@
 import Foundation
 
-/// The Place page, worded from one `CatalogConclusionDetail` (S9-27, board
-/// S9-D7 frame 1f). Pure: views only lay it out. Period, Part of, Contains,
-/// and Succession stay stated empty until S9-40.
+/// The Place page, worded from one `CatalogConclusionDetail` (S9-27 / S9-40,
+/// board S9-D7). Pure: views only lay it out.
 struct PlaceDetailContent: ConclusionDetailBody {
+    /// Soft cap for Contains before showing a remainder count.
+    static let containsVisibleLimit = 12
+
     var title: ConclusionTitleSource
     var ref: String
     /// The ref is repeated at the right only when it isn't the title.
@@ -26,19 +28,18 @@ struct PlaceDetailContent: ConclusionDetailBody {
         )
         ref = detail.entity.ref
         members = L10n.Conclusions.memberCount(detail.memberCount)
-        let line = PlaceChainDisplay.line(parents: [])
+        let header = detail.placeHeader
+        let line = PlaceChainDisplay.line(
+            parents: header?.parents ?? [],
+            candidates: header?.parentsAreCandidates ?? false
+        )
         chainIsRecorded = !line.isEmpty
         chain = chainIsRecorded ? line : L10n.string(L10n.Conclusions.placeNoParent)
         rows = [
             Self.namesRow(toponym, locale: locale),
-            .empty(
-                id: "period",
-                label: L10n.string(L10n.Conclusions.placePeriod),
-                style: .date,
-                emptyText: L10n.string(L10n.Conclusions.emptyPlacePeriod)
-            ),
+            Self.periodRow(detail: detail, header: header, locale: locale),
         ]
-        sections = Self.relationshipSections
+        sections = Self.relationshipSections(header: header)
     }
 
     /// The Names row is the `toponym` field, relabeled. Several kept names
@@ -66,25 +67,76 @@ struct PlaceDetailContent: ConclusionDetailBody {
         return row
     }
 
-    /// Part of, Contains, and Succession, each a header and an empty sentence.
-    static let relationshipSections: [ConclusionDetailSection] = [
-        ConclusionDetailSection(
-            id: "partOf",
-            title: L10n.Conclusions.placePartOf,
-            aside: L10n.string(L10n.Conclusions.placePartOfAside),
-            emptyText: L10n.string(L10n.Conclusions.placePartOfEmpty)
-        ),
-        ConclusionDetailSection(
-            id: "contains",
-            title: L10n.Conclusions.placeContains,
-            aside: L10n.string(L10n.Conclusions.placeContainsAside),
-            emptyText: L10n.string(L10n.Conclusions.placeContainsEmpty)
-        ),
-        ConclusionDetailSection(
-            id: "succession",
-            title: L10n.Conclusions.placeSuccession,
-            aside: L10n.string(L10n.Conclusions.placeSuccessionAside),
-            emptyText: L10n.string(L10n.Conclusions.placeSuccessionEmpty)
-        ),
-    ]
+    static func periodRow(
+        detail: CatalogConclusionDetail,
+        header: CatalogPlaceHeader?,
+        locale: Locale
+    ) -> ReconciledValueRowModel {
+        let label = L10n.string(L10n.Conclusions.placePeriod)
+        let empty = L10n.string(L10n.Conclusions.emptyPlacePeriod)
+        let lead = PlacePeriodDisplay.span(
+            start: header?.startDate,
+            end: header?.endDate,
+            locale: locale
+        )
+        let fields = detail.fields.filter {
+            $0.propertyKey == SeededPropertyKey.startDate || $0.propertyKey == SeededPropertyKey.endDate
+        }
+        return .spanning(
+            id: "period",
+            label: label,
+            lead: lead.isEmpty ? nil : lead,
+            emptyText: empty,
+            fields: fields,
+            locale: locale
+        )
+    }
+
+    static func relationshipSections(header: CatalogPlaceHeader?) -> [ConclusionDetailSection] {
+        let partOf = header?.partOf ?? []
+        let contains = header?.contains ?? []
+        let predecessors = header?.predecessors ?? []
+        let successors = header?.successors ?? []
+        let visibleContains = Array(contains.prefix(containsVisibleLimit))
+        let omitted = max(0, contains.count - visibleContains.count)
+
+        var successionRows: [ConclusionDetailRelationship] = []
+        for r in predecessors {
+            successionRows.append(ConclusionDetailRelationship(
+                relationship: r,
+                role: L10n.string(L10n.Conclusions.placeSucceeded)
+            ))
+        }
+        for r in successors {
+            successionRows.append(ConclusionDetailRelationship(
+                relationship: r,
+                role: L10n.string(L10n.Conclusions.placeSucceededBy)
+            ))
+        }
+
+        return [
+            ConclusionDetailSection(
+                id: "partOf",
+                title: L10n.Conclusions.placePartOf,
+                aside: L10n.string(L10n.Conclusions.placePartOfAside),
+                emptyText: L10n.string(L10n.Conclusions.placePartOfEmpty),
+                relationships: partOf.map { ConclusionDetailRelationship(relationship: $0) }
+            ),
+            ConclusionDetailSection(
+                id: "contains",
+                title: L10n.Conclusions.placeContains,
+                aside: L10n.string(L10n.Conclusions.placeContainsAside),
+                emptyText: L10n.string(L10n.Conclusions.placeContainsEmpty),
+                relationships: visibleContains.map { ConclusionDetailRelationship(relationship: $0) },
+                omittedCount: omitted
+            ),
+            ConclusionDetailSection(
+                id: "succession",
+                title: L10n.Conclusions.placeSuccession,
+                aside: L10n.string(L10n.Conclusions.placeSuccessionAside),
+                emptyText: L10n.string(L10n.Conclusions.placeSuccessionEmpty),
+                relationships: successionRows
+            ),
+        ]
+    }
 }

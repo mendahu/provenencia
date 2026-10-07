@@ -55,6 +55,7 @@ IDs stay stable (`S9-NN`, `S9-DN`). Do not renumber when moving steps here.
 | S9-32 | PR | Fill derived cells in lists and details |
 | S9-38 | PR | Place model: relationships, periods |
 | S9-39 | PR | Place chain composer |
+| S9-40 | PR | Place hierarchy in list and detail |
 
 ## Steps
 
@@ -1149,3 +1150,21 @@ A Place's hierarchical parents at a date, Location fold on Event/life walks, and
 - Person/Event row chain chrome beyond folded leaf names: **S9-40**.
 - Search document secondary = today's chain: **S9-34**.
 - `place_nature` / `Kind`.
+
+### S9-40 — Place hierarchy in list and detail
+
+Places list chain polish, Place detail period and relationship sections with membership spans, and Person/Event row chains — on the S9-39 composer and S9-D4 / S9-D7 boards.
+
+**What shipped**
+
+- `PlaceRelationship` on `PlaceHeader` (proto / FFI / Swift): Part of (every parent with membership span), Contains (today's children), Predecessors / Successors (other place's period). `AttachPlaceRelationships` on conclusion detail.
+- Places list: truncate hierarchy from the top; simultaneous parents join with "or" (`ParentsAreCandidates`).
+- Place detail: period from header dates; `PlaceRelationshipRow`; Part of / Contains / Succession filled; Contains truncates with a remainder count.
+- `DerivedPlace` / life and Event rows use `HeaderPlace.parents` via `PlaceChainDisplay.placeLine`.
+
+**What stayed out**
+
+- Maps, gazetteer, events-at-this-place, inline relationship editing.
+- `place_nature` / Kind.
+- Search document secondary = today's chain: **S9-34**.
+- Migrations / product VERSION bump.

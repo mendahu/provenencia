@@ -1033,7 +1033,10 @@ message HeaderPlace {
   reserved "name_count"; // always len(names)
   // entity is the Place; its page owns the names' Why.
   CanonicalEntity entity = 3;
+  // parents is the hierarchical chain at the walk's date (nearest first).
+  // parents_are_candidates is true when several parents hold at once.
   repeated string parents = 4;
+  bool parents_are_candidates = 5;
 }
 
 // LifeFacts is a birth or a death: the event's date, else its start date,
@@ -1119,10 +1122,25 @@ message ListEventHeadersResponse {
   repeated EventHeader headers = 1;
 }
 
+// PlaceRelationship is one related Place on a Place detail (S9-40).
+// kind is part_of, contains, predecessor, or successor. start_date /
+// end_date are the membership span (part_of / contains) or the other
+// place's period (succession).
+message PlaceRelationship {
+  CanonicalEntity entity = 1;
+  string title = 2;
+  string kind = 3;
+  DateValueInput start_date = 4;
+  DateValueInput end_date = 5;
+}
+
 // PlaceHeader is one Place as a row, composed from the auto-reconciler's
 // cache. names are the kept toponyms in rank order (Montréal and Montreal
 // are both names). start_date / end_date are the Place's period; parents is
-// today's hierarchical chain. kind stays empty (place_nature deferred).
+// today's hierarchical chain (or the last chain when the period has ended).
+// parents_are_candidates is true when several parents hold at once.
+// Relationship lists are filled on GetConclusionDetail only. kind stays
+// empty (place_nature deferred).
 message PlaceHeader {
   CanonicalEntity entity = 1;
   repeated string names = 2;
@@ -1130,6 +1148,11 @@ message PlaceHeader {
   DateValueInput end_date = 4;
   string kind = 5;
   repeated string parents = 6;
+  bool parents_are_candidates = 7;
+  repeated PlaceRelationship part_of = 8;
+  repeated PlaceRelationship contains = 9;
+  repeated PlaceRelationship predecessors = 10;
+  repeated PlaceRelationship successors = 11;
 }
 
 // ListPlaceHeaders returns every unmerged Place in list order: by the title

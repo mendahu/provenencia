@@ -21,4 +21,24 @@ struct DerivedPlaceTests {
         #expect(DerivedPlace.name(places) == name)
         #expect(DerivedPlace.extra(places) == extra)
     }
+
+    @Test func placeLineIncludesParents() {
+        let place = CatalogHeaderPlace(
+            entity: CatalogCanonicalEntity(id: "p0", ref: "PLC-0", subjectTypeID: "t", label: ""),
+            names: ["Toronto"],
+            parents: ["Ontario", "Canada"]
+        )
+        #expect(DerivedPlace.name([place]) == "Toronto, Ontario, Canada")
+        #expect(PlaceChainDisplay.placeLine(place) == "Toronto, Ontario, Canada")
+    }
+
+    @Test func placeLineJoinsCandidateParentsWithOr() {
+        let place = CatalogHeaderPlace(
+            entity: CatalogCanonicalEntity(id: "p0", ref: "PLC-0", subjectTypeID: "t", label: ""),
+            names: ["The Farm"],
+            parents: ["York Township", "York County"],
+            parentsAreCandidates: true
+        )
+        #expect(DerivedPlace.name([place]) == "The Farm, York Township or York County")
+    }
 }
