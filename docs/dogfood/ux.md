@@ -19,6 +19,13 @@ Copy the stub. Surface + what got in the way is enough. A wanted fix is optional
 
 <!-- add below this line -->
 
+### Enter should save a Property title edit
+
+- **Date:** 2026-10-07
+- **Where:** Properties view
+- **Annoyance:** Pressing Enter while editing a Property's title doesn't save it.
+- **Wanted:** Enter saves the title edit.
+
 ### Rethink the Event icon
 
 - **Date:** 2026-10-07
