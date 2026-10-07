@@ -95,46 +95,4 @@ struct EventTitleDisplayTests {
         labelled.label = "Grandpa's fire"
         #expect(EventTitleDisplay.untitled(labelled) == .label("Grandpa's fire"))
     }
-
-    @Test func dateLineUsesThePointOrTheSpan() {
-        let day = CatalogDateValueInput(kind: "point", startYear: 1817, startMonth: 5, startDay: 14)
-        let start = CatalogDateValueInput(kind: "point", startYear: 1849)
-        let end = CatalogDateValueInput(kind: "point", startYear: 1851)
-        #expect(EventTitleDisplay.dateLine(date: day, start: start, end: end, locale: en) == "14 May 1817")
-        #expect(EventTitleDisplay.dateLine(date: nil, start: start, end: end, locale: en) == "1849–1851")
-        #expect(EventTitleDisplay.dateLine(date: nil, start: start, locale: en) == "1849")
-        #expect(EventTitleDisplay.dateLine(date: nil, end: end, locale: en) == "1851")
-        #expect(EventTitleDisplay.dateLine(date: nil, locale: en) == "")
-    }
-
-    @Test func dateLineKeepsQualifiersAndRanges() {
-        let about = CatalogDateValueInput(kind: "point", qualifier: "ABT", startYear: 1810)
-        let before = CatalogDateValueInput(kind: "point", qualifier: "BEF", startYear: 1790, startMonth: 3)
-        let after = CatalogDateValueInput(kind: "point", qualifier: "AFT", startYear: 1880)
-        var range = CatalogDateValueInput(kind: "range", startYear: 1803)
-        range.endYear = 1806
-        #expect(EventTitleDisplay.dateLine(date: about, locale: en) == "abt 1810")
-        #expect(EventTitleDisplay.dateLine(date: before, locale: en) == "bef Mar 1790")
-        #expect(EventTitleDisplay.dateLine(date: after, locale: en) == "aft 1880")
-        #expect(EventTitleDisplay.dateLine(date: range, locale: en) == "bet 1803 and 1806")
-    }
-
-    @Test(arguments: [
-        (names: [["York", "Tkaronto"]], name: "York", extra: 0),
-        (names: [["York"], ["Toronto"]], name: "York", extra: 1),
-        (names: [[], ["Toronto"]], name: "Toronto", extra: 1),
-        (names: [[String]](), name: "", extra: 0),
-        (names: [[]], name: "", extra: 1),
-    ])
-    func derivedPlaceCountsPlacesNotNames(names: [[String]], name: String, extra: Int) {
-        let places = names.enumerated().map { index, names in
-            CatalogHeaderPlace(
-                entity: CatalogCanonicalEntity(id: "p\(index)", ref: "PLC-\(index)", subjectTypeID: "t", label: ""),
-                names: names,
-                nameCount: names.count
-            )
-        }
-        #expect(DerivedPlace.name(places) == name)
-        #expect(DerivedPlace.extra(places) == extra)
-    }
 }

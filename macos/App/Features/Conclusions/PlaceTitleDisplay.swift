@@ -36,3 +36,11 @@ enum PlaceTitleDisplay {
         value.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }
+
+extension CatalogPlaceHeader {
+    var titleParts: PlaceTitleParts {
+        PlaceTitleParts(names: names, label: entity.label, ref: entity.ref)
+    }
+
+    var extraNameCount: Int { PlaceTitleDisplay.extraNameCount(titleParts) }
+}

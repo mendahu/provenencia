@@ -86,7 +86,7 @@ enum ReconciledValueDisplay {
         case .term(_, let key, let label):
             return label.isEmpty ? key : label
         case .date(let date):
-            return EventTitleDisplay.dateLine(date: date, locale: locale)
+            return DateRowDisplay.line(date: date, locale: locale)
         case .name(let name):
             return NameValueDisplay.string(for: name)
         }

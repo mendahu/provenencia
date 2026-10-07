@@ -378,12 +378,6 @@ struct CatalogPlaceHeader: Sendable, Equatable, Identifiable {
     var parents: [String] = []
 
     var id: String { entity.id }
-
-    var titleParts: PlaceTitleParts {
-        PlaceTitleParts(names: names, label: entity.label, ref: entity.ref)
-    }
-
-    var extraNameCount: Int { PlaceTitleDisplay.extraNameCount(titleParts) }
 }
 
 /// One Property value on a Conclusion detail: exactly one case per value type.

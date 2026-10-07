@@ -31,10 +31,10 @@ struct EventDetailContent: ConclusionDetailBody {
     static func summaryDate(_ fields: [CatalogConclusionField], locale: Locale) -> String? {
         if let date = fields.first(where: { $0.propertyKey == "date" }), !date.outcomes.isEmpty {
             guard let value = dateValue(date) else { return nil }
-            let line = EventTitleDisplay.dateLine(date: value, locale: locale)
+            let line = DateRowDisplay.line(date: value, locale: locale)
             return line.isEmpty ? nil : line
         }
-        let line = EventTitleDisplay.dateLine(
+        let line = DateRowDisplay.line(
             date: nil,
             start: dateValue(fields, key: "start_date"),
             end: dateValue(fields, key: "end_date"),
@@ -61,7 +61,7 @@ struct EventDetailContent: ConclusionDetailBody {
         if span.count == 1, let only = span.first {
             return labeled(ReconciledValueRowModel(field: only, locale: locale), label, field: only)
         }
-        let lead = EventTitleDisplay.dateLine(
+        let lead = DateRowDisplay.line(
             date: nil,
             start: dateValue(fields, key: "start_date"),
             end: dateValue(fields, key: "end_date"),

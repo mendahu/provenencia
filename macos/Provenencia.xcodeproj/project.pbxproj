@@ -334,6 +334,13 @@
 		B9110000000000000000000C /* PromoteModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9110000000000000000000B /* PromoteModelTests.swift */; };
 		B9110000000000000000000E /* PromoteFlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9110000000000000000000D /* PromoteFlow.swift */; };
 		B91100000000000000000010 /* PromoteFlowTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9110000000000000000000F /* PromoteFlowTests.swift */; };
+		B02746CAC03F94127373BB92 /* DateRowDisplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = B052AEDEE88EFC9ED8413469 /* DateRowDisplay.swift */; };
+		B0F71D26711A163E3B415FCB /* DerivedPlace.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0628D2BFA20C5351EA2685B /* DerivedPlace.swift */; };
+		B071F1D64BED98AE2965E8AD /* PersonLifeDisplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = B066DC6442EFA8875D71F9AE /* PersonLifeDisplay.swift */; };
+		B0AAC26F5EC2839B696B4874 /* ReconciledValueRowModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0C7C12C062A7FFEC4100AF0 /* ReconciledValueRowModel.swift */; };
+		B053526B050C75CF562118C1 /* ReconciliationRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = B066A6D4E7DF393AEE952114 /* ReconciliationRecord.swift */; };
+		B0E27559D6CFFEBA2093C436 /* DateRowDisplayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0D89A265AAED569EA0CA31E /* DateRowDisplayTests.swift */; };
+		B0E8631619214033F0948729 /* DerivedPlaceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B042B09EC818DE35F967C981 /* DerivedPlaceTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -691,6 +698,13 @@
 		B9110000000000000000000B /* PromoteModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PromoteModelTests.swift; sourceTree = "<group>"; };
 		B9110000000000000000000D /* PromoteFlow.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PromoteFlow.swift; sourceTree = "<group>"; };
 		B9110000000000000000000F /* PromoteFlowTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PromoteFlowTests.swift; sourceTree = "<group>"; };
+		B052AEDEE88EFC9ED8413469 /* DateRowDisplay.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DateRowDisplay.swift; sourceTree = "<group>"; };
+		B0628D2BFA20C5351EA2685B /* DerivedPlace.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DerivedPlace.swift; sourceTree = "<group>"; };
+		B066DC6442EFA8875D71F9AE /* PersonLifeDisplay.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PersonLifeDisplay.swift; sourceTree = "<group>"; };
+		B0C7C12C062A7FFEC4100AF0 /* ReconciledValueRowModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ReconciledValueRowModel.swift; sourceTree = "<group>"; };
+		B066A6D4E7DF393AEE952114 /* ReconciliationRecord.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ReconciliationRecord.swift; sourceTree = "<group>"; };
+		B0D89A265AAED569EA0CA31E /* DateRowDisplayTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DateRowDisplayTests.swift; sourceTree = "<group>"; };
+		B042B09EC818DE35F967C981 /* DerivedPlaceTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DerivedPlaceTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -989,7 +1003,6 @@
 				AA0000000000000000000316 /* Sources */,
 				AA0000000000000000000334 /* Dates */,
 				A70D00000000000000000010 /* Names */,
-				A90700000000000000000010 /* Persons */,
 				A90800000000000000000010 /* Conclusions */,
 				A70B0000000000000000000D /* ArtifactViewer */,
 				A70800000000000000000007 /* CitationComposer */,
@@ -1060,6 +1073,7 @@
 				AA0000000000000000000330 /* DateValueDraft.swift */,
 				A70900000000000000000001 /* DateValueDisplay.swift */,
 				AA0000000000000000000336 /* DateValueEditorForm.swift */,
+				B052AEDEE88EFC9ED8413469 /* DateRowDisplay.swift */,
 			);
 			path = Dates;
 			sourceTree = "<group>";
@@ -1087,16 +1101,13 @@
 				A91600000000000000000023 /* PersonDetailView.swift */,
 				A91600000000000000000021 /* PersonDetailContent.swift */,
 				A90900000000000000000011 /* ConclusionListRow.swift */,
-			);
-			path = Conclusions;
-			sourceTree = "<group>";
-		};
-		A90700000000000000000010 /* Persons */ = {
-			isa = PBXGroup;
-			children = (
+				B0628D2BFA20C5351EA2685B /* DerivedPlace.swift */,
+				B066DC6442EFA8875D71F9AE /* PersonLifeDisplay.swift */,
+				B0C7C12C062A7FFEC4100AF0 /* ReconciledValueRowModel.swift */,
+				B066A6D4E7DF393AEE952114 /* ReconciliationRecord.swift */,
 				A90700000000000000000001 /* PersonHeaderDisplay.swift */,
 			);
-			path = Persons;
+			path = Conclusions;
 			sourceTree = "<group>";
 		};
 		A70D00000000000000000010 /* Names */ = {
@@ -1265,6 +1276,8 @@
 				AA0000000000000000000232 /* PVComboBoxTests.swift */,
 				B9110000000000000000000B /* PromoteModelTests.swift */,
 				B9110000000000000000000F /* PromoteFlowTests.swift */,
+				B0D89A265AAED569EA0CA31E /* DateRowDisplayTests.swift */,
+				B042B09EC818DE35F967C981 /* DerivedPlaceTests.swift */,
 			);
 			path = ProvenenciaTests;
 			sourceTree = "<group>";
@@ -2025,6 +2038,11 @@
 				B9110000000000000000000A /* PromoteTargetStep.swift in Sources */,
 				B9120000000000000000000C /* PromoteClaimStep.swift in Sources */,
 				B9110000000000000000000E /* PromoteFlow.swift in Sources */,
+				B02746CAC03F94127373BB92 /* DateRowDisplay.swift in Sources */,
+				B0F71D26711A163E3B415FCB /* DerivedPlace.swift in Sources */,
+				B071F1D64BED98AE2965E8AD /* PersonLifeDisplay.swift in Sources */,
+				B0AAC26F5EC2839B696B4874 /* ReconciledValueRowModel.swift in Sources */,
+				B053526B050C75CF562118C1 /* ReconciliationRecord.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -2112,6 +2130,8 @@
 				A71000000000000000000006 /* PropertyTermDisplayTests.swift in Sources */,
 				B9110000000000000000000C /* PromoteModelTests.swift in Sources */,
 				B91100000000000000000010 /* PromoteFlowTests.swift in Sources */,
+				B0E27559D6CFFEBA2093C436 /* DateRowDisplayTests.swift in Sources */,
+				B0E8631619214033F0948729 /* DerivedPlaceTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

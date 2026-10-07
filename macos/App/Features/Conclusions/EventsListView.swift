@@ -23,7 +23,7 @@ enum EventsList: ConclusionListKind {
     }
 
     static func accessibilityLabel(_ header: CatalogEventHeader) -> String {
-        let date = EventTitleDisplay.dateLine(date: header.date, start: header.startDate, end: header.endDate)
+        let date = DateRowDisplay.line(date: header.date, start: header.startDate, end: header.endDate)
         var label = L10n.Workspace.eventRowAccessibility(title: titleSource(header).text, date: date, ref: header.entity.ref)
         let place = DerivedPlace.name(header.places)
         if !place.isEmpty {
@@ -39,7 +39,7 @@ enum EventsList: ConclusionListKind {
     @MainActor
     static func secondary(_ header: CatalogEventHeader) -> EventSecondaryLine {
         EventSecondaryLine(
-            date: EventTitleDisplay.dateLine(date: header.date, start: header.startDate, end: header.endDate),
+            date: DateRowDisplay.line(date: header.date, start: header.startDate, end: header.endDate),
             place: DerivedPlace.name(header.places),
             extraPlaces: DerivedPlace.extra(header.places)
         )
