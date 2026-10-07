@@ -71,6 +71,8 @@ Copy the stub. Surface + what got in the way is enough. A wanted fix is optional
 - **Where:** Person detail page
 - **Annoyance:** The Person detail page doesn't show a Person's sex or gender visually, so you can't tell at a glance.
 - **Wanted:** Use sex / gender to style the page, e.g. an accent color or a small flag/badge. It should also handle unknown or conflicting values.
+  - **Seed a `gender` Property**, separate from the existing `sex_at_birth` (which is explicitly not gender identity; see [seeded vocabulary §3.7](../seeded-vocabulary.md)). It needs its own term set.
+  - **Styling precedence:** use `gender` when a Person has it, and fall back to `sex_at_birth` when they don't.
 
 ### Sidebar icons don't match Subject card icons
 
