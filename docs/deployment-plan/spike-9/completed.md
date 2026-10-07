@@ -52,6 +52,7 @@ IDs stay stable (`S9-NN`, `S9-DN`). Do not renumber when moving steps here.
 | S9-27 | PR | Place detail |
 | S9-28 | PR | Subject module + bridge filing |
 | S9-31 | PR | Composer walks + header dependents |
+| S9-32 | PR | Fill derived cells in lists and details |
 
 ## Steps
 
@@ -1093,3 +1094,19 @@ A Person's birth and an Event's title are read off the canonical graph, so the p
 - Filling the list and detail cells: **S9-32**.
 - Place chains: **S9-39**.
 - Search reprojection from these dependents: **S9-34**.
+
+### S9-32 — Fill derived cells
+
+The Persons and Events pages show the birth, the death, and who the event is about, from the headers the graph already composed.
+
+**What shipped**
+
+- A Persons row reads birth date – death date, then birth place → death place. A missing half is omitted. A lone birth keeps the dash. Extra places are +N. There is no mixed marker on the row.
+- An Events row puts the place after the date, with +N when more locations survived. The title now includes subjects and place, so the existing matrix reads *Birth of James Robins*.
+- Person detail vitals and the four life rows, and the Event title, summary place, and Place row, take those headers. A kept count above 1 is the detail row's mixed badge. The Why for that date or place stays on the Event or Place page.
+- `GetPersonHeader` joins `GetEventHeader`. The person page and the event page warm them beside the detail.
+
+**What stayed out**
+
+- Place chains (*York, Upper Canada*): **S9-40**.
+- Search documents from these headers: **S9-34**.

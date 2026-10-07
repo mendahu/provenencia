@@ -289,7 +289,7 @@ struct CatalogEventSubject: Sendable, Equatable {
 
 /// One Person as a row, composed by Go from the auto-reconciler cache (S9-07).
 /// Structures only; `PersonHeaderDisplay` formats the title. Birth and death
-/// are filled from S9-31; the list still leaves those cells empty until S9-32.
+/// are read by `PersonLifeDisplay`.
 struct CatalogPersonHeader: Sendable, Equatable, Identifiable {
     var entity: CatalogCanonicalEntity
     /// Displayed auto-reconciled name; `nil` when no member names the Person.
@@ -322,21 +322,26 @@ struct CatalogEventHeader: Sendable, Equatable, Identifiable {
     var startDateCount: Int = 0
     var endDate: CatalogDateValueInput?
     var endDateCount: Int = 0
-    /// Subject-role persons, then every location's kept names. The list title
-    /// does not read these until S9-32.
+    /// Subject-role persons, then every location's kept names.
     var subjects: [CatalogEventSubject] = []
     var places: [CatalogHeaderPlace] = []
 
     var id: String { entity.id }
 
     var titleParts: EventTitleParts {
-        EventTitleParts(
+        var parts = EventTitleParts(
             recordedName: eventName,
             label: entity.label,
             ref: entity.ref,
             typeKey: eventTypeKey,
             typeLabel: eventTypeLabel
         )
+        parts.subjects = subjects.map { subject in
+            guard let name = subject.name else { return "" }
+            return NameValueDisplay.string(for: name)
+        }
+        parts.place = DerivedPlace.name(places)
+        return parts
     }
 }
 
@@ -967,6 +972,7 @@ protocol GenealogyStore: Sendable {
     func listSubjectMemberships(projectDir: String, sourceID: String) async throws -> [CatalogSubjectMembership]
     /// Every unmerged Person as a row header, in list order (named by name, then by ref).
     func listPersonHeaders(projectDir: String) async throws -> [CatalogPersonHeader]
+    func personHeader(projectDir: String, entityID: String) async throws -> CatalogPersonHeader
     func listEventHeaders(projectDir: String) async throws -> [CatalogEventHeader]
     func eventHeader(projectDir: String, entityID: String) async throws -> CatalogEventHeader
     func listPlaceHeaders(projectDir: String) async throws -> [CatalogPlaceHeader]

@@ -2,12 +2,12 @@ import SwiftUI
 
 /// The Events list (S9-23, board S9-D3). A configuration of
 /// `ConclusionListPage`. The Events place, query key, and history entry stay
-/// Events. Subject titles and places wait for S9-32.
+/// Events. The title includes subjects; the secondary line adds the place.
 struct EventsListView: View {
     let session: WorkspaceSession
 
     var body: some View {
-        ConclusionListPage<CatalogEventHeader, EventDateLine>(
+        ConclusionListPage<CatalogEventHeader, EventSecondaryLine>(
             session: session,
             key: .eventsList(project: session.projectKey),
             title: L10n.Workspace.eventsTitle,
@@ -24,7 +24,7 @@ struct EventsListView: View {
             titleSource: { EventTitleDisplay.titleSource($0.titleParts) },
             accessibilityLabel: Self.rowLabel,
             location: Self.location,
-            secondary: Self.dateLine
+            secondary: Self.secondary
         )
     }
 
@@ -33,7 +33,12 @@ struct EventsListView: View {
         let date = EventTitleDisplay.dateLine(
             date: header.date, start: header.startDate, end: header.endDate
         )
-        return L10n.Workspace.eventRowAccessibility(title: source.text, date: date, ref: header.entity.ref)
+        var label = L10n.Workspace.eventRowAccessibility(title: source.text, date: date, ref: header.entity.ref)
+        let place = DerivedPlace.name(header.places)
+        if !place.isEmpty {
+            label = L10n.Conclusions.a11yList(label, rest: place)
+        }
+        return label
     }
 
     private static func location(_ header: CatalogEventHeader) -> WorkspaceLocation {
@@ -44,25 +49,45 @@ struct EventsListView: View {
         )
     }
 
-    private static func dateLine(_ header: CatalogEventHeader) -> EventDateLine {
-        EventDateLine(
-            text: EventTitleDisplay.dateLine(
+    private static func secondary(_ header: CatalogEventHeader) -> EventSecondaryLine {
+        EventSecondaryLine(
+            date: EventTitleDisplay.dateLine(
                 date: header.date, start: header.startDate, end: header.endDate
-            )
+            ),
+            place: DerivedPlace.name(header.places),
+            extraPlaces: DerivedPlace.extra(header.places)
         )
     }
 }
 
-/// The Events row's date, mono, omitted when the line is empty. The date
-/// does not share the title's truncation.
-private struct EventDateLine: View {
-    let text: String
+/// The Events row's date, then its place. The +N is other kept places.
+private struct EventSecondaryLine: View {
+    let date: String
+    let place: String
+    let extraPlaces: Int
 
     var body: some View {
-        Text(verbatim: text)
-            .font(PVFont.mono(size: PVTypeScale.caption))
-            .fixedSize(horizontal: true, vertical: false)
-            .frame(maxHeight: text.isEmpty ? 0 : nil)
-            .accessibilityHidden(text.isEmpty)
+        HStack(spacing: PVSpacing.space4) {
+            if !date.isEmpty {
+                Text(verbatim: date)
+                    .font(PVFont.mono(size: PVTypeScale.caption))
+                    .fixedSize(horizontal: true, vertical: false)
+            }
+            if !date.isEmpty && !place.isEmpty {
+                Text(verbatim: "·")
+                    .foregroundStyle(PVColor.textFaint)
+            }
+            if !place.isEmpty {
+                Text(verbatim: place)
+                    .italic()
+                    .lineLimit(1)
+            }
+            if extraPlaces > 0 {
+                PVBadge(text: "+\(extraPlaces)", tone: .neutral, subtle: true)
+                    .accessibilityHidden(true)
+            }
+        }
+        .frame(maxHeight: date.isEmpty && place.isEmpty ? 0 : nil)
+        .accessibilityHidden(date.isEmpty && place.isEmpty)
     }
 }

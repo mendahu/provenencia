@@ -493,7 +493,7 @@ In order; each brief sits just above the PR it gates.
 - [x] S9-27 — Place detail → [`completed.md`](completed.md)
 - [x] S9-28 — Subject module + bridge filing
 - [x] S9-31 — Composer walks + header dependents
-- [ ] S9-32 — Fill derived cells in lists and details
+- [x] S9-32 — Fill derived cells in lists and details
 - [ ] S9-38 — Place model: relationships, periods
 - [ ] ✎ S9-D15 — Design: custom term category
 - [ ] S9-38b — Custom term dialog: category
@@ -887,6 +887,8 @@ Design: [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md). PR
 | **In** | Persons / Events lists and Person / Event detail render the new cells — already designed in **S9-D2 / D3 / D5 / D6**; no new brief. |
 | **Check** | *Birth of James Robins*; James shows *1817 – 1880 · York → Toronto* (chains follow in S9-40). |
 | **Depends on** | S9-31, S9-23, S9-24 |
+
+**Done.** See [`completed.md`](completed.md#s9-32--fill-derived-cells). The Persons and Events pages show the birth, the death, and who the event is about. Place chains stay names only until S9-40.
 
 ### Slice 8 — Place hierarchy (the hard way)
 

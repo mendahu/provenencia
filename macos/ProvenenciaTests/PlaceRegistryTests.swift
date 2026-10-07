@@ -254,7 +254,10 @@ struct PlaceRegistryTests {
         #expect(place?.queryKeys == [.eventsList(project: project)])
         let detail = resolve(.eventDetail(entityId: "evt-1", ref: "EVT-1", title: "Fire at York"))
         #expect(detail?.placeID == .eventDetail)
-        #expect(detail?.queryKeys == [.conclusionDetail(project: project, entityId: "evt-1")])
+        #expect(detail?.queryKeys == [
+            .conclusionDetail(project: project, entityId: "evt-1"),
+            .eventHeader(project: project, entityId: "evt-1"),
+        ])
         #expect(detail?.deepId == "evt-1")
         let persons = resolve(.sectionRoot(.persons))
         #expect(persons?.placeID == .personsList)

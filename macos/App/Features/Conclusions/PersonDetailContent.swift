@@ -3,8 +3,8 @@ import Foundation
 /// The Person page, worded from one `CatalogConclusionDetail` (S9-16, board
 /// S9-D5). Pure: views only lay it out.
 struct PersonDetailContent: ConclusionDetailBody {
-    /// One header line: *b. 14 May 1817 · York, Upper Canada*. Date and
-    /// place come from the birth / death Events (S9-32); nil until then.
+    /// One header line: *b. 14 May 1817 · York*. Date and place come from
+    /// the Person header. Nil when that half is not recorded.
     struct Vital: Equatable {
         var abbreviation: String
         var date: String?
@@ -21,7 +21,11 @@ struct PersonDetailContent: ConclusionDetailBody {
     var vitals: [Vital]
     var rows: [ReconciledValueRowModel]
 
-    init(detail: CatalogConclusionDetail, locale: Locale = .autoupdatingCurrent) {
+    init(
+        detail: CatalogConclusionDetail,
+        header: CatalogPersonHeader? = nil,
+        locale: Locale = .autoupdatingCurrent
+    ) {
         let nameField = detail.fields.first { $0.propertyKey == "name" }
         var leadName: CatalogNameValue?
         if case .name(let name)? = nameField?.displayedValues.first?.value { leadName = name }
@@ -29,16 +33,20 @@ struct PersonDetailContent: ConclusionDetailBody {
         ref = detail.entity.ref
         members = L10n.Conclusions.memberCount(detail.memberCount)
         vitals = [
-            Self.vital(L10n.Conclusions.personBornAbbr, spoken: L10n.Conclusions.a11yBorn),
-            Self.vital(L10n.Conclusions.personDiedAbbr, spoken: L10n.Conclusions.a11yDied),
+            Self.vital(L10n.Conclusions.personBornAbbr, spoken: L10n.Conclusions.a11yBorn, facts: header?.birth, locale: locale),
+            Self.vital(L10n.Conclusions.personDiedAbbr, spoken: L10n.Conclusions.a11yDied, facts: header?.death, locale: locale),
         ]
-        rows = Self.rows(detail.fields, locale: locale)
+        rows = Self.rows(detail.fields, header: header, locale: locale)
     }
 
     /// A Person always shows its name and four life rows, stated empty when
     /// nothing is recorded. Every other field shows only once a record
     /// speaks to it (sex at birth, a custom birth weight), in binding order.
-    static func rows(_ fields: [CatalogConclusionField], locale: Locale) -> [ReconciledValueRowModel] {
+    static func rows(
+        _ fields: [CatalogConclusionField],
+        header: CatalogPersonHeader? = nil,
+        locale: Locale
+    ) -> [ReconciledValueRowModel] {
         var rows: [ReconciledValueRowModel] = []
         if let name = fields.first(where: { $0.propertyKey == "name" }) {
             rows.append(ReconciledValueRowModel(field: name, locale: locale))
@@ -54,8 +62,23 @@ struct PersonDetailContent: ConclusionDetailBody {
             ("life.deathDate", L10n.Conclusions.personDeathDate, L10n.Conclusions.emptyDeathDate, .date),
             ("life.deathPlace", L10n.Conclusions.personDeathPlace, L10n.Conclusions.emptyDeathPlace, .place),
         ]
-        for (id, label, empty, style) in life {
-            rows.append(.empty(id: id, label: L10n.string(label), style: style, emptyText: L10n.string(empty)))
+        let facts: [CatalogLifeFacts?] = [header?.birth, header?.birth, header?.death, header?.death]
+        for (index, entry) in life.enumerated() {
+            let (id, label, empty, style) = entry
+            let side = facts[index]
+            let lead: String
+            let mixed: Bool
+            if style == .date {
+                lead = PersonLifeDisplay.dateText(side?.date, locale: locale)
+                mixed = (side?.dateCount ?? 0) > 1
+            } else {
+                lead = DerivedPlace.name(side?.places ?? [])
+                mixed = DerivedPlace.extra(side?.places ?? []) > 0
+            }
+            rows.append(.derived(
+                id: id, label: L10n.string(label), style: style, lead: lead,
+                emptyText: L10n.string(empty), mixed: mixed
+            ))
         }
         for field in fields where field.propertyKey != "name" && !field.outcomes.isEmpty {
             rows.append(ReconciledValueRowModel(field: field, locale: locale))
@@ -63,15 +86,22 @@ struct PersonDetailContent: ConclusionDetailBody {
         return rows
     }
 
-    private static func vital(_ abbreviation: LocalizedStringResource, spoken: LocalizedStringResource) -> Vital {
-        Vital(
+    private static func vital(
+        _ abbreviation: LocalizedStringResource,
+        spoken: LocalizedStringResource,
+        facts: CatalogLifeFacts?,
+        locale: Locale
+    ) -> Vital {
+        let date = PersonLifeDisplay.dateText(facts?.date, locale: locale)
+        let place = DerivedPlace.name(facts?.places ?? [])
+        return Vital(
             abbreviation: L10n.string(abbreviation),
-            date: nil,
-            place: nil,
+            date: date.isEmpty ? nil : date,
+            place: place.isEmpty ? nil : place,
             accessibilityLabel: L10n.Conclusions.a11yVital(
                 L10n.string(spoken),
-                date: L10n.string(L10n.Conclusions.personDateUnknown),
-                place: L10n.string(L10n.Conclusions.personPlaceUnknown)
+                date: date.isEmpty ? L10n.string(L10n.Conclusions.personDateUnknown) : date,
+                place: place.isEmpty ? L10n.string(L10n.Conclusions.personPlaceUnknown) : place
             )
         )
     }
@@ -186,7 +216,33 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
         )
     }
 
-    /// A row with nothing behind it yet (the life rows until S9-32).
+    /// A date or place read off the canonical graph. A kept count above 1 is
+    /// the mixed badge. The Why stays on the Event or Place that owns it.
+    static func derived(
+        id: String,
+        label: String,
+        style: ValueStyle,
+        lead: String,
+        emptyText: String,
+        mixed: Bool
+    ) -> Self {
+        let shown = lead.isEmpty ? nil : lead
+        let spoken: String
+        if let shown {
+            let parts = [label, shown] + (mixed ? [L10n.string(L10n.Conclusions.badgeMixed)] : [])
+            spoken = parts.dropFirst().reduce(parts[0]) { L10n.Conclusions.a11yList($0, rest: $1) }
+        } else {
+            spoken = ReconciledValueDisplay.accessibilityLabel(label: label, lead: nil, field: nil)
+        }
+        return Self(
+            id: id, label: label, style: style, lead: shown, emptyText: emptyText,
+            badge: mixed && shown != nil ? .mixed : nil,
+            count: nil, against: nil, otherValuesLabel: nil, otherValues: [], listedValues: [],
+            whyTitle: "", records: [], accessibilityLabel: spoken
+        )
+    }
+
+    /// A row with nothing behind it yet.
     static func empty(id: String, label: String, style: ValueStyle, emptyText: String) -> Self {
         Self(
             id: id, label: label, style: style, lead: nil, emptyText: emptyText, badge: nil, count: nil,

@@ -104,6 +104,7 @@ enum Method {
   METHOD_GET_EVENT_HEADER = 92;
   METHOD_LIST_PLACE_HEADERS = 93;
   METHOD_GET_PLACE_HEADER = 94;
+  METHOD_GET_PERSON_HEADER = 95;
 }
 
 message PingRequest {
@@ -1022,6 +1023,17 @@ message ListPersonHeadersRequest {
 
 message ListPersonHeadersResponse {
   repeated PersonHeader headers = 1;
+}
+
+// GetPersonHeader returns one unmerged Person's header. Unknown, merged,
+// and non-Person ids are not found.
+message GetPersonHeaderRequest {
+  string project_dir = 1;
+  string entity_id = 2;
+}
+
+message GetPersonHeaderResponse {
+  PersonHeader header = 1;
 }
 
 // EventHeader is one Event as a row, composed from the auto-reconciler's

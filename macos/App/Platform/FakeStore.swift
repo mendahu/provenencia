@@ -1392,6 +1392,16 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         }
     }
 
+    func personHeader(projectDir: String, entityID: String) async throws -> CatalogPersonHeader {
+        try withState {
+            markCatalogSessionHeld(projectDir)
+            guard let header = personHeaders().first(where: { $0.entity.id == entityID }) else {
+                throw CoreInvokeError.coded(status: 1, code: "conclusiondetails.not_found", kind: .user, params: [])
+            }
+            return header
+        }
+    }
+
     func listEventHeaders(projectDir: String) async throws -> [CatalogEventHeader] {
         withState {
             markCatalogSessionHeld(projectDir)

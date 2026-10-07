@@ -82,6 +82,31 @@ struct EventDetailTests {
         #expect(page.summaryDate == page.rows[0].lead)
     }
 
+    @Test func headerSuppliesSubjectsAndPlace() {
+        let james = CatalogCanonicalEntity(id: "p1", ref: "PER-1", subjectTypeID: "t", label: "")
+        let header = CatalogEventHeader(
+            entity: CatalogCanonicalEntity(id: "e1", ref: "EVT-8PL22", subjectTypeID: "t", label: ""),
+            eventTypeKey: "birth",
+            eventTypeLabel: "Birth",
+            subjects: [
+                CatalogEventSubject(
+                    entity: james,
+                    name: CatalogNameValue(form: "James Robins"),
+                    nameValueCount: 1
+                ),
+            ],
+            places: [
+                CatalogHeaderPlace(names: ["York"], nameCount: 1),
+                CatalogHeaderPlace(names: ["Toronto"], nameCount: 1),
+            ]
+        )
+        let page = EventDetailContent(detail: detail(), header: header, locale: en)
+        #expect(page.title == .name(L10n.EventTitle.ofOne(type: "Birth", subject: "James Robins", locale: en)))
+        #expect(page.summaryPlace == "York")
+        #expect(page.rows[1].lead == "York" && page.rows[1].badge == .mixed && page.rows[1].records.isEmpty)
+        #expect(!page.rows[1].lead!.contains(","))
+    }
+
     @Test func placeRowIsEmpty() {
         let page = content(detail(fields: [
             dateField("date", CatalogDateValueInput(kind: "point", startYear: 1810), id: "d"),

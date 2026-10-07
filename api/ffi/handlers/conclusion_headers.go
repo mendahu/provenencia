@@ -63,6 +63,37 @@ func headerPlaceProto(p conclusionheaders.HeaderPlace) *engine.HeaderPlace {
 	return &engine.HeaderPlace{Names: append([]string(nil), p.Names...), NameCount: int32(p.Count)}
 }
 
+func GetPersonHeader(in []byte) ([]byte, error) {
+	var req engine.GetPersonHeaderRequest
+	if err := proto.Unmarshal(in, &req); err != nil {
+		return nil, unmarshalErr("get_person_header", err)
+	}
+	entityID, err := parseID(req.GetEntityId())
+	if err != nil {
+		return nil, conclusiondetails.ErrNotFound
+	}
+	out := &engine.GetPersonHeaderResponse{}
+	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
+		db, err := c.DB()
+		if err != nil {
+			return err
+		}
+		headers, err := conclusionheaders.PersonsByIDs(db, [][]byte{entityID})
+		if err != nil {
+			return err
+		}
+		if len(headers) != 1 {
+			return conclusiondetails.ErrNotFound
+		}
+		out.Header = personHeaderProto(headers[0])
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return proto.Marshal(out)
+}
+
 func ListEventHeaders(in []byte) ([]byte, error) {
 	var req engine.ListEventHeadersRequest
 	if err := proto.Unmarshal(in, &req); err != nil {

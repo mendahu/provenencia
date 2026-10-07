@@ -823,6 +823,17 @@ struct GoStore: GenealogyStore {
         return resp.headers.map(Self.mapPersonHeader)
     }
 
+    func personHeader(projectDir: String, entityID: String) async throws -> CatalogPersonHeader {
+        var req = Provenencia_Engine_V1_GetPersonHeaderRequest()
+        req.projectDir = projectDir
+        req.entityID = entityID
+        let resp: Provenencia_Engine_V1_GetPersonHeaderResponse = try await provenenciaCall(
+            method: CoreMethod.getPersonHeader,
+            request: req
+        )
+        return Self.mapPersonHeader(resp.header)
+    }
+
     func listEventHeaders(projectDir: String) async throws -> [CatalogEventHeader] {
         var req = Provenencia_Engine_V1_ListEventHeadersRequest()
         req.projectDir = projectDir

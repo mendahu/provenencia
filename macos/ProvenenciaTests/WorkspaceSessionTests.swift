@@ -478,7 +478,10 @@ struct WorkspaceSessionTests {
         let firstHandle: QueryHandle<CatalogConclusionDetail> = try #require(session.queryHandle(firstKey))
         await waitForFetchComplete(firstHandle)
         session.apply(location: .personDetail(entityId: second.entity.id, ref: second.entity.ref, title: nil))
-        #expect(session.visibleKeys == [secondKey])
+        #expect(session.visibleKeys == [
+            secondKey,
+            .personHeader(project: session.projectKey, entityId: second.entity.id),
+        ])
         let secondHandle: QueryHandle<CatalogConclusionDetail> = try #require(session.queryHandle(secondKey))
         await waitForFetchComplete(secondHandle)
         #expect(secondHandle.value?.fields.first?.state == "")

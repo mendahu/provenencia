@@ -1,13 +1,18 @@
 import SwiftUI
 
 /// The Person page (S9-16, board S9-D5). A configuration of
-/// `ConclusionDetailPage`: portrait, name, and the b. / d. lines. Life rows
-/// stay stated empty until the birth and death Events arrive (S9-32).
+/// `ConclusionDetailPage`: portrait, name, and the b. / d. lines. Life dates
+/// and places come from the Person header.
 struct PersonDetailView: View {
     let session: WorkspaceSession
     let entityId: String
 
+    private var headerKey: CatalogQueryKey {
+        .personHeader(project: session.projectKey, entityId: entityId)
+    }
+
     var body: some View {
+        let header: CatalogPersonHeader? = session.queryHandle(headerKey)?.value
         ConclusionDetailPage<PersonDetailContent, PersonDetailVitals>(
             session: session,
             entityId: entityId,
@@ -15,9 +20,12 @@ struct PersonDetailView: View {
             noLikeness: L10n.Conclusions.personNoLikeness,
             pageIdentifier: "person.detail",
             errorIdentifier: "person.detail.error",
-            make: { PersonDetailContent(detail: $0) },
+            make: { PersonDetailContent(detail: $0, header: header) },
             summary: { PersonDetailVitals(vitals: $0.vitals) }
         )
+        .task(id: entityId) {
+            let _: QueryHandle<CatalogPersonHeader> = session.query(headerKey)
+        }
     }
 }
 

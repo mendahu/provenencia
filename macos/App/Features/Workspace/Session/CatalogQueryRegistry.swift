@@ -181,6 +181,18 @@ struct CatalogQueryRegistry: Sendable {
             invalidateOn: CatalogQueryRegistry.conclusionTriggers,
             evictWhenHidden: true
         ),
+        Spec(
+            kind: .personHeader,
+            stalePolicy: .sessionFresh,
+            invalidateOn: CatalogQueryRegistry.conclusionTriggers,
+            evictWhenHidden: true
+        ),
+        Spec(
+            kind: .eventHeader,
+            stalePolicy: .sessionFresh,
+            invalidateOn: CatalogQueryRegistry.conclusionTriggers,
+            evictWhenHidden: true
+        ),
     ]
 
     func stalePolicy(for key: CatalogQueryKey) -> CatalogQueryStalePolicy {
@@ -267,6 +279,10 @@ struct CatalogQueryRegistry: Sendable {
             )
         case .conclusionDetail(let project, let entityId):
             return try await store.getConclusionDetail(projectDir: project.projectDir, entityID: entityId)
+        case .personHeader(let project, let entityId):
+            return try await store.personHeader(projectDir: project.projectDir, entityID: entityId)
+        case .eventHeader(let project, let entityId):
+            return try await store.eventHeader(projectDir: project.projectDir, entityID: entityId)
         }
     }
 
@@ -367,6 +383,10 @@ private extension CatalogQueryKey.Kind {
             // Any Conclusion edit can touch any handle (a merge, a member's
             // Observation), so every cached detail is stale.
             return .allCached(.conclusionDetail)
+        case .personHeader:
+            return .allCached(.personHeader)
+        case .eventHeader:
+            return .allCached(.eventHeader)
         }
     }
 }

@@ -16,8 +16,8 @@ enum ConclusionTitleSource: Equatable {
 
 /// The S9-D2 row anatomy for a Conclusion list, supplying `PVList`'s slots.
 /// Shared by Persons (S9-09), Events (S9-23), and Places (S9-26). The
-/// secondary line is per kind: empty for Persons until S9-32, the date for
-/// Events, the parent chain for Places.
+/// secondary line is per kind: birth and death for Persons, the date and
+/// place for Events, the parent chain for Places.
 ///
 /// - **thumbnail:** always reserved; the kind's `subject_*` mark, never a photo.
 /// - **title:** auto-reconciled value → *italic* working label → mono ref.

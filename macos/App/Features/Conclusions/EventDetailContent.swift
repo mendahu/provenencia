@@ -1,8 +1,8 @@
 import Foundation
 
-/// The Event page, worded from one `CatalogConclusionDetail` (S9-24, board
-/// S9-D6 frame 2f). Pure: views only lay it out. Subjects and places stay
-/// empty until S9-32; the title does not read a Person's name.
+/// The Event page, worded from one `CatalogConclusionDetail` and, when the
+/// page has it, the Event header (S9-24, board S9-D6). The header supplies
+/// the subjects and places. The date's Why stays on this page's date row.
 struct EventDetailContent: ConclusionDetailBody {
     var title: ConclusionTitleSource
     var ref: String
@@ -10,14 +10,23 @@ struct EventDetailContent: ConclusionDetailBody {
     var members: String
     /// Compact date under the title. Nil when none is recorded.
     var summaryDate: String?
+    /// First place name under the title. Nil when none is recorded.
+    var summaryPlace: String?
     var rows: [ReconciledValueRowModel]
 
-    init(detail: CatalogConclusionDetail, locale: Locale = .autoupdatingCurrent) {
-        title = EventTitleDisplay.titleSource(Self.parts(detail), locale: locale)
+    init(
+        detail: CatalogConclusionDetail,
+        header: CatalogEventHeader? = nil,
+        locale: Locale = .autoupdatingCurrent
+    ) {
+        let parts = header?.titleParts ?? Self.parts(detail)
+        title = EventTitleDisplay.titleSource(parts, locale: locale)
         ref = detail.entity.ref
         members = L10n.Conclusions.memberCount(detail.memberCount)
         summaryDate = Self.summaryDate(detail.fields, locale: locale)
-        rows = [Self.dateRow(detail.fields, locale: locale), Self.placeRow()]
+        let place = header.map { DerivedPlace.name($0.places) } ?? ""
+        summaryPlace = place.isEmpty ? nil : place
+        rows = [Self.dateRow(detail.fields, locale: locale), Self.placeRow(header)]
     }
 
     private static func parts(_ detail: CatalogConclusionDetail) -> EventTitleParts {
@@ -75,13 +84,15 @@ struct EventDetailContent: ConclusionDetailBody {
         return .spanning(id: "date", label: label, lead: lead, emptyText: empty, fields: span, locale: locale)
     }
 
-    /// Place stays stated empty until S9-32 fills it.
-    static func placeRow() -> ReconciledValueRowModel {
-        .empty(
-            id: "place",
-            label: L10n.string(L10n.Conclusions.eventPlace),
-            style: .place,
-            emptyText: L10n.string(L10n.Conclusions.emptyEventPlace)
+    /// The Place row. The first kept name, mixed when more survived. No Why:
+    /// that stays on the Place.
+    static func placeRow(_ header: CatalogEventHeader?) -> ReconciledValueRowModel {
+        let label = L10n.string(L10n.Conclusions.eventPlace)
+        let empty = L10n.string(L10n.Conclusions.emptyEventPlace)
+        let places = header?.places ?? []
+        return .derived(
+            id: "place", label: label, style: .place, lead: DerivedPlace.name(places),
+            emptyText: empty, mixed: DerivedPlace.extra(places) > 0
         )
     }
 
