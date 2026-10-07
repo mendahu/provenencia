@@ -270,6 +270,13 @@ func TestCanonicalWalks(t *testing.T) {
 	if hasID(fromJames, yorkID) || hasID(fromJames, baptismID) {
 		t.Fatal("person walk reached a place or someone else's event")
 	}
+	// James's header embeds his birth's date: a change to the birth must
+	// reach him. The witness is not a subject, so they are not reached.
+	fromBirth, err := conclusionheaders.HeaderDependents(db, [][]byte{birthID})
+	must(t, err)
+	if !hasID(fromBirth, jamesID) || hasID(fromBirth, birthID) || hasID(fromBirth, yorkID) {
+		t.Fatalf("event dependents %d: missing James, or included the event or its place", len(fromBirth))
+	}
 }
 
 func placeNames(places []conclusionheaders.HeaderPlace) []string {

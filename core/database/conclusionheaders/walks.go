@@ -4,44 +4,40 @@ import (
 	"bytes"
 	"database/sql"
 	"sort"
-	"strings"
 
+	"github.com/mendahu/provenencia/core/connectrules"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
+	"github.com/mendahu/provenencia/core/database/canonicalgraph"
 	"github.com/mendahu/provenencia/core/database/datevalues"
-	"github.com/mendahu/provenencia/core/valuecodec"
 )
 
 // walkBatch bounds an IN list. A list is still a fixed number of queries.
 const walkBatch = 500
 
-// A subject-role participation joins a person to an event. Role stays off
-// the association's identity; the walk reads the reconciled rank-1 role.
-const sqlLifeRows = `
-SELECT pe.value_entity_id, tt.key,
-	ev.id, ev.subject_type_id, ev.ref, COALESCE(ev.argument, ''), COALESCE(ev.label, ''),
+// The hops headers read. A subject-role participation joins a person to an
+// event (role stays off the association's identity; the walk reads the
+// kept rank-1 role). A location joins an event to a place.
+var (
+	eventsOfPerson = canonicalgraph.MustHop("participation", "person", "event",
+		&canonicalgraph.TermFilter{PropertyKey: connectrules.DisambiguationRole, TermKey: "subject"})
+	personsOfEvent = eventsOfPerson.Reverse()
+	placesOfEvent  = canonicalgraph.MustHop("location", "event", "place", nil)
+	eventsAtPlace  = placesOfEvent.Reverse()
+)
+
+// Birth and death events among the given handles, with the date a life row
+// shows (the date, else the start date) and its sort key.
+const sqlLifeEvents = `SELECT ev.id, ev.subject_type_id, ev.ref, COALESCE(ev.argument, ''), COALESCE(ev.label, ''),
+	tt.key,
 	d.value_date,
 	(SELECT COUNT(*) FROM auto_reconciler_values c
 		WHERE c.entity_id = ev.id AND c.property_id = dp.id AND c.reason = 'kept'),
 	sd.value_date,
 	(SELECT COUNT(*) FROM auto_reconciler_values c
 		WHERE c.entity_id = ev.id AND c.property_id = sp.id AND c.reason = 'kept'),
-	COALESCE(d.sort_key, sd.sort_key),
-	pl.id, pl.subject_type_id, pl.ref, COALESCE(pl.argument, ''), COALESCE(pl.label, ''),
-	tv.value_text, COALESCE(tv.rank, 0),
-	(SELECT COUNT(*) FROM auto_reconciler_values c
-		WHERE c.entity_id = pl.id AND c.property_id = tp.id AND c.reason = 'kept')
-FROM auto_reconciler_values pe
-JOIN properties pp ON pp.id = pe.property_id AND pp.key = 'person' AND pp.origin = 'provenencia'
-JOIN canonical_entities assoc ON assoc.id = pe.entity_id
-JOIN subject_types ast ON ast.id = assoc.subject_type_id
-	AND ast.key = 'participation' AND ast.origin = 'provenencia'
-JOIN auto_reconciler_values role ON role.entity_id = assoc.id AND role.rank = 1 AND role.reason = 'kept'
-JOIN properties rp ON rp.id = role.property_id AND rp.key = 'role' AND rp.origin = 'provenencia'
-JOIN property_terms rt ON rt.id = role.value_term_id AND rt.key = 'subject'
-JOIN auto_reconciler_values ee ON ee.entity_id = assoc.id AND ee.rank = 1 AND ee.reason = 'kept'
-JOIN properties ep ON ep.id = ee.property_id AND ep.key = 'event' AND ep.origin = 'provenencia'
-JOIN canonical_entities ev ON ev.id = ee.value_entity_id AND ev.merged_into_id IS NULL
+	COALESCE(d.sort_key, sd.sort_key)
+FROM canonical_entities ev
 JOIN auto_reconciler_values et ON et.entity_id = ev.id AND et.rank = 1 AND et.reason = 'kept'
 JOIN properties etp ON etp.id = et.property_id AND etp.key = 'event_type' AND etp.origin = 'provenencia'
 JOIN property_terms tt ON tt.id = et.value_term_id AND tt.key IN ('birth', 'death')
@@ -51,61 +47,7 @@ LEFT JOIN auto_reconciler_values d
 LEFT JOIN properties sp ON sp.key = 'start_date' AND sp.origin = 'provenencia'
 LEFT JOIN auto_reconciler_values sd
 	ON sd.entity_id = ev.id AND sd.property_id = sp.id AND sd.rank = 1 AND sd.reason = 'kept'
-LEFT JOIN auto_reconciler_values lee
-	ON lee.value_entity_id = ev.id AND lee.rank = 1 AND lee.reason = 'kept'
-LEFT JOIN properties lep ON lep.id = lee.property_id AND lep.key = 'event' AND lep.origin = 'provenencia'
-LEFT JOIN canonical_entities loc ON loc.id = lee.entity_id AND lep.id IS NOT NULL
-LEFT JOIN subject_types lst ON lst.id = loc.subject_type_id
-	AND lst.key = 'location' AND lst.origin = 'provenencia'
-LEFT JOIN auto_reconciler_values lpe
-	ON lst.id IS NOT NULL AND lpe.entity_id = loc.id AND lpe.rank = 1 AND lpe.reason = 'kept'
-LEFT JOIN properties lpp ON lpp.id = lpe.property_id AND lpp.key = 'place' AND lpp.origin = 'provenencia'
-LEFT JOIN canonical_entities pl ON pl.id = lpe.value_entity_id AND pl.merged_into_id IS NULL AND lpp.id IS NOT NULL
-LEFT JOIN properties tp ON tp.key = 'toponym' AND tp.origin = 'provenencia'
-LEFT JOIN auto_reconciler_values tv
-	ON tv.entity_id = pl.id AND tv.property_id = tp.id AND tv.reason = 'kept'
-WHERE pe.rank = 1 AND pe.reason = 'kept' AND pe.value_entity_id IN (`
-
-const sqlEventSubjects = `
-SELECT ee.value_entity_id, assoc.ref,
-	per.id, per.subject_type_id, per.ref, COALESCE(per.argument, ''), COALESCE(per.label, ''),
-	nv.value_name,
-	(SELECT COUNT(*) FROM auto_reconciler_values c
-		WHERE c.entity_id = per.id AND c.property_id = np.id AND c.reason = 'kept')
-FROM auto_reconciler_values ee
-JOIN properties ep ON ep.id = ee.property_id AND ep.key = 'event' AND ep.origin = 'provenencia'
-JOIN canonical_entities assoc ON assoc.id = ee.entity_id
-JOIN subject_types ast ON ast.id = assoc.subject_type_id
-	AND ast.key = 'participation' AND ast.origin = 'provenencia'
-JOIN auto_reconciler_values role ON role.entity_id = assoc.id AND role.rank = 1 AND role.reason = 'kept'
-JOIN properties rp ON rp.id = role.property_id AND rp.key = 'role' AND rp.origin = 'provenencia'
-JOIN property_terms rt ON rt.id = role.value_term_id AND rt.key = 'subject'
-JOIN auto_reconciler_values pe ON pe.entity_id = assoc.id AND pe.rank = 1 AND pe.reason = 'kept'
-JOIN properties pp ON pp.id = pe.property_id AND pp.key = 'person' AND pp.origin = 'provenencia'
-JOIN canonical_entities per ON per.id = pe.value_entity_id AND per.merged_into_id IS NULL
-LEFT JOIN properties np ON np.key = 'name' AND np.origin = 'provenencia'
-LEFT JOIN auto_reconciler_values nv
-	ON nv.entity_id = per.id AND nv.property_id = np.id AND nv.rank = 1 AND nv.reason = 'kept'
-WHERE ee.rank = 1 AND ee.reason = 'kept' AND ee.value_entity_id IN (`
-
-const sqlEventPlaces = `
-SELECT ee.value_entity_id,
-	pl.id, pl.subject_type_id, pl.ref, COALESCE(pl.argument, ''), COALESCE(pl.label, ''),
-	tv.value_text, COALESCE(tv.rank, 0),
-	(SELECT COUNT(*) FROM auto_reconciler_values c
-		WHERE c.entity_id = pl.id AND c.property_id = tp.id AND c.reason = 'kept')
-FROM auto_reconciler_values ee
-JOIN properties ep ON ep.id = ee.property_id AND ep.key = 'event' AND ep.origin = 'provenencia'
-JOIN canonical_entities loc ON loc.id = ee.entity_id
-JOIN subject_types lst ON lst.id = loc.subject_type_id
-	AND lst.key = 'location' AND lst.origin = 'provenencia'
-JOIN auto_reconciler_values lpe ON lpe.entity_id = loc.id AND lpe.rank = 1 AND lpe.reason = 'kept'
-JOIN properties lpp ON lpp.id = lpe.property_id AND lpp.key = 'place' AND lpp.origin = 'provenencia'
-JOIN canonical_entities pl ON pl.id = lpe.value_entity_id AND pl.merged_into_id IS NULL
-LEFT JOIN properties tp ON tp.key = 'toponym' AND tp.origin = 'provenencia'
-LEFT JOIN auto_reconciler_values tv
-	ON tv.entity_id = pl.id AND tv.property_id = tp.id AND tv.reason = 'kept'
-WHERE ee.rank = 1 AND ee.reason = 'kept' AND ee.value_entity_id IN (`
+WHERE ev.merged_into_id IS NULL AND ev.id IN (`
 
 func attachLives(q Querier, headers []PersonHeader) error {
 	ids := make([][]byte, len(headers))
@@ -134,7 +76,7 @@ func attachEventGraph(q Querier, headers []EventHeader) error {
 	if err != nil {
 		return err
 	}
-	places, err := loadEventPlaces(q, ids)
+	places, err := loadPlacesOf(q, ids)
 	if err != nil {
 		return err
 	}
@@ -145,99 +87,72 @@ func attachEventGraph(q Querier, headers []EventHeader) error {
 	return nil
 }
 
-type lifeRow struct {
-	personID              []byte
-	kind                  string
-	event                 canonicalentities.Entity
-	dateBlob, startBlob   []byte
-	dateCount, startCount int
-	dateSort              sql.NullString
-	place                 canonicalentities.Entity
-	name                  string
-	nameRank, placeCount  int
+type lifeEvent struct {
+	entity canonicalentities.Entity
+	kind   string
+	date   *datevalues.Value
+	count  int
+	sort   sql.NullString
 }
 
+// loadLives walks each person's subject-role events, keeps the births and
+// deaths, and reads their places. When several births (or deaths) survive,
+// the header leads with the earliest dated one (undated last, then by ref)
+// and counts them all: more than one is a disagreement the page shows as
+// mixed.
 func loadLives(q Querier, personIDs [][]byte) (map[string]map[string]LifeFacts, error) {
-	rows, err := queryBatches(q, sqlLifeRows, personIDs, func(sc scanner) (lifeRow, error) {
-		var r lifeRow
-		var name, placeRef sql.NullString
-		ev, pl := &r.event, &r.place
-		if err := sc.Scan(&r.personID, &r.kind,
-			&ev.ID, &ev.SubjectTypeID, &ev.Ref, &ev.Argument, &ev.Label,
-			&r.dateBlob, &r.dateCount, &r.startBlob, &r.startCount, &r.dateSort,
-			&pl.ID, &pl.SubjectTypeID, &placeRef, &pl.Argument, &pl.Label,
-			&name, &r.nameRank, &r.placeCount); err != nil {
-			return lifeRow{}, err
-		}
-		pl.Ref = placeRef.String
-		r.personID = append([]byte(nil), r.personID...)
-		r.event = ownEntity(r.event)
-		r.dateBlob = append([]byte(nil), r.dateBlob...)
-		r.startBlob = append([]byte(nil), r.startBlob...)
-		r.place = ownEntity(r.place)
-		if name.Valid {
-			r.name = strings.TrimSpace(name.String)
-		}
-		return r, nil
-	})
+	edges, err := canonicalgraph.Walk(q, eventsOfPerson, personIDs)
 	if err != nil {
 		return nil, err
 	}
-	// person → kind → event id → accumulator. When several births (or
-	// deaths) survive, the header leads with the earliest dated one (undated
-	// last, then by ref) and counts them all: more than one is a
-	// disagreement the page shows as mixed.
-	type ev struct {
-		entity canonicalentities.Entity
-		sort   sql.NullString
-		date   *datevalues.Value
-		count  int
-		places map[string]*placeBuild
+	events, err := loadLifeEvents(q, canonicalgraph.Targets(edges))
+	if err != nil {
+		return nil, err
 	}
-	byPerson := map[string]map[string]map[string]*ev{}
-	for _, r := range rows {
-		kind := byPerson[string(r.personID)]
-		if kind == nil {
-			kind = map[string]map[string]*ev{}
-			byPerson[string(r.personID)] = kind
-		}
-		events := kind[r.kind]
-		if events == nil {
-			events = map[string]*ev{}
-			kind[r.kind] = events
-		}
-		e := events[string(r.event.ID)]
-		if e == nil {
-			dateBlob, count := r.dateBlob, r.dateCount
-			if len(dateBlob) == 0 {
-				dateBlob, count = r.startBlob, r.startCount
-			}
-			date, err := unmarshalDate(dateBlob)
-			if err != nil {
-				return nil, err
-			}
-			e = &ev{entity: r.event, sort: r.dateSort, date: date, count: count, places: map[string]*placeBuild{}}
-			events[string(r.event.ID)] = e
-		}
-		if len(r.place.ID) == 0 {
+	lifeIDs := make([][]byte, 0, len(events))
+	for _, e := range events {
+		lifeIDs = append(lifeIDs, e.entity.ID)
+	}
+	places, err := loadPlacesOf(q, lifeIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	// person → kind → lead event and count
+	type pick struct {
+		lead  *lifeEvent
+		count int
+	}
+	byPerson := map[string]map[string]*pick{}
+	for _, edge := range edges {
+		e, ok := events[string(edge.To)]
+		if !ok {
 			continue
 		}
-		e.places[string(r.place.ID)] = addPlaceName(e.places[string(r.place.ID)], r.place, r.name, r.nameRank, r.placeCount)
+		kinds := byPerson[string(edge.From)]
+		if kinds == nil {
+			kinds = map[string]*pick{}
+			byPerson[string(edge.From)] = kinds
+		}
+		p := kinds[e.kind]
+		if p == nil {
+			p = &pick{}
+			kinds[e.kind] = p
+		}
+		p.count++
+		if p.lead == nil || leadsLife(e, p.lead) {
+			p.lead = e
+		}
 	}
 	out := map[string]map[string]LifeFacts{}
 	for person, kinds := range byPerson {
 		out[person] = map[string]LifeFacts{}
-		for kind, events := range kinds {
-			var best *ev
-			for _, e := range events {
-				if best == nil || leadsLife(e.sort, e.entity.Ref, best.sort, best.entity.Ref) {
-					best = e
-				}
-			}
-			event := best.entity
+		for kind, p := range kinds {
+			event := p.lead.entity
 			out[person][kind] = LifeFacts{
-				Event: &event, EventCount: len(events),
-				Date: best.date, DateCount: best.count, Places: placesOf(best.places),
+				Event: &event, EventCount: p.count,
+				Date: p.lead.date, DateCount: p.lead.count,
+				Places: places[string(event.ID)],
 			}
 		}
 	}
@@ -246,249 +161,154 @@ func loadLives(q Querier, personIDs [][]byte) (map[string]map[string]LifeFacts, 
 
 // leadsLife orders competing births or deaths: dated before undated, then
 // by the date's sort key, then by ref so the choice is stable.
-func leadsLife(aSort sql.NullString, aRef string, bSort sql.NullString, bRef string) bool {
-	if aSort.Valid != bSort.Valid {
-		return aSort.Valid
+func leadsLife(a, b *lifeEvent) bool {
+	if a.sort.Valid != b.sort.Valid {
+		return a.sort.Valid
 	}
-	if aSort.String != bSort.String {
-		return aSort.String < bSort.String
+	if a.sort.String != b.sort.String {
+		return a.sort.String < b.sort.String
 	}
-	return aRef < bRef
+	return a.entity.Ref < b.entity.Ref
 }
 
-type subjectRow struct {
-	eventID []byte
-	partRef string
-	subject EventSubject
-}
-
-func loadEventSubjects(q Querier, eventIDs [][]byte) (map[string][]EventSubject, error) {
-	rows, err := queryBatches(q, sqlEventSubjects, eventIDs, func(sc scanner) (subjectRow, error) {
+func loadLifeEvents(q Querier, eventIDs [][]byte) (map[string]*lifeEvent, error) {
+	rows, err := queryBatches(q, sqlLifeEvents, eventIDs, func(sc scanner) (*lifeEvent, error) {
 		var (
-			r        subjectRow
-			nameBlob []byte
+			e                   lifeEvent
+			dateBlob, startBlob []byte
+			dateCount, startCnt int
 		)
-		e := &r.subject.Entity
-		if err := sc.Scan(&r.eventID, &r.partRef, &e.ID, &e.SubjectTypeID, &e.Ref, &e.Argument, &e.Label,
-			&nameBlob, &r.subject.NameValueCount); err != nil {
-			return subjectRow{}, err
+		ent := &e.entity
+		if err := sc.Scan(&ent.ID, &ent.SubjectTypeID, &ent.Ref, &ent.Argument, &ent.Label,
+			&e.kind, &dateBlob, &dateCount, &startBlob, &startCnt, &e.sort); err != nil {
+			return nil, err
 		}
-		r.eventID = append([]byte(nil), r.eventID...)
-		e.ID = append([]byte(nil), e.ID...)
-		e.SubjectTypeID = append([]byte(nil), e.SubjectTypeID...)
-		if len(nameBlob) > 0 {
-			n, err := valuecodec.UnmarshalName(nameBlob)
-			if err != nil {
-				return subjectRow{}, err
-			}
-			r.subject.Name = &n
+		e.entity = ownEntity(e.entity)
+		if len(dateBlob) == 0 {
+			dateBlob, dateCount = startBlob, startCnt
 		}
-		return r, nil
+		date, err := unmarshalDate(dateBlob)
+		if err != nil {
+			return nil, err
+		}
+		e.date, e.count = date, dateCount
+		return &e, nil
 	})
 	if err != nil {
 		return nil, err
 	}
-	sort.SliceStable(rows, func(i, j int) bool {
-		if rows[i].partRef != rows[j].partRef {
-			return rows[i].partRef < rows[j].partRef
-		}
-		return rows[i].subject.Entity.Ref < rows[j].subject.Entity.Ref
-	})
+	out := make(map[string]*lifeEvent, len(rows))
+	for _, e := range rows {
+		out[string(e.entity.ID)] = e
+	}
+	return out, nil
+}
+
+// loadEventSubjects walks each event's subject-role persons, participation
+// ref then person ref, each person once.
+func loadEventSubjects(q Querier, eventIDs [][]byte) (map[string][]EventSubject, error) {
+	edges, err := canonicalgraph.Walk(q, personsOfEvent, eventIDs)
+	if err != nil {
+		return nil, err
+	}
+	persons, err := personRowsByIDs(q, canonicalgraph.Targets(edges))
+	if err != nil {
+		return nil, err
+	}
+	byID := make(map[string]PersonHeader, len(persons))
+	for _, p := range persons {
+		byID[string(p.Entity.ID)] = p
+	}
 	out := map[string][]EventSubject{}
 	seen := map[string]bool{}
-	for _, r := range rows {
-		key := string(r.eventID) + "\x00" + string(r.subject.Entity.ID)
-		if seen[key] {
+	for _, edge := range edges {
+		p, ok := byID[string(edge.To)]
+		key := string(edge.From) + "\x00" + string(edge.To)
+		if !ok || seen[key] {
 			continue
 		}
 		seen[key] = true
-		out[string(r.eventID)] = append(out[string(r.eventID)], r.subject)
+		out[string(edge.From)] = append(out[string(edge.From)], EventSubject{
+			Entity: p.Entity, Name: p.Name, NameValueCount: p.NameValueCount,
+		})
 	}
 	return out, nil
 }
 
-type placeRow struct {
-	eventID []byte
-	place   canonicalentities.Entity
-	name    string
-	rank    int
-	count   int
-}
-
-func loadEventPlaces(q Querier, eventIDs [][]byte) (map[string][]HeaderPlace, error) {
-	rows, err := queryBatches(q, sqlEventPlaces, eventIDs, func(sc scanner) (placeRow, error) {
-		var r placeRow
-		var name *string
-		pl := &r.place
-		if err := sc.Scan(&r.eventID, &pl.ID, &pl.SubjectTypeID, &pl.Ref, &pl.Argument, &pl.Label,
-			&name, &r.rank, &r.count); err != nil {
-			return placeRow{}, err
-		}
-		r.eventID = append([]byte(nil), r.eventID...)
-		r.place = ownEntity(r.place)
-		if name != nil {
-			r.name = strings.TrimSpace(*name)
-		}
-		return r, nil
-	})
+// loadPlacesOf walks each event's locations to their Places, by place ref.
+// A Place's names are its kept toponyms.
+func loadPlacesOf(q Querier, eventIDs [][]byte) (map[string][]HeaderPlace, error) {
+	edges, err := canonicalgraph.Walk(q, placesOfEvent, eventIDs)
 	if err != nil {
 		return nil, err
 	}
-	byEvent := map[string]map[string]*placeBuild{}
-	for _, r := range rows {
-		places := byEvent[string(r.eventID)]
-		if places == nil {
-			places = map[string]*placeBuild{}
-			byEvent[string(r.eventID)] = places
-		}
-		places[string(r.place.ID)] = addPlaceName(places[string(r.place.ID)], r.place, r.name, r.rank, r.count)
+	headers, err := PlacesByIDs(q, canonicalgraph.Targets(edges))
+	if err != nil {
+		return nil, err
+	}
+	byID := make(map[string]PlaceHeader, len(headers))
+	for _, h := range headers {
+		byID[string(h.Entity.ID)] = h
 	}
 	out := map[string][]HeaderPlace{}
-	for event, places := range byEvent {
-		out[event] = placesOf(places)
+	seen := map[string]bool{}
+	for _, edge := range edges {
+		h, ok := byID[string(edge.To)]
+		key := string(edge.From) + "\x00" + string(edge.To)
+		if !ok || seen[key] {
+			continue
+		}
+		seen[key] = true
+		out[string(edge.From)] = append(out[string(edge.From)], HeaderPlace{
+			Entity: h.Entity, Names: h.Names, Count: len(h.Names),
+		})
+	}
+	for event, places := range out {
+		sort.SliceStable(places, func(i, j int) bool { return places[i].Entity.Ref < places[j].Entity.Ref })
+		out[event] = places
 	}
 	return out, nil
 }
 
-type named struct {
-	rank int
-	text string
-}
-
-type placeBuild struct {
-	entity canonicalentities.Entity
-	count  int
-	names  []named
-}
-
-func addPlaceName(p *placeBuild, entity canonicalentities.Entity, name string, rank, count int) *placeBuild {
-	if p == nil {
-		p = &placeBuild{entity: entity, count: count}
-	}
-	if name == "" {
-		return p
-	}
-	for _, n := range p.names {
-		if n.rank == rank && n.text == name {
-			return p
-		}
-	}
-	p.names = append(p.names, named{rank: rank, text: name})
-	return p
-}
-
-func placesOf(places map[string]*placeBuild) []HeaderPlace {
-	list := make([]*placeBuild, 0, len(places))
-	for _, p := range places {
-		list = append(list, p)
-	}
-	sort.Slice(list, func(i, j int) bool { return list[i].entity.Ref < list[j].entity.Ref })
-	var out []HeaderPlace
-	for _, p := range list {
-		sort.Slice(p.names, func(i, j int) bool { return p.names[i].rank < p.names[j].rank })
-		h := HeaderPlace{Entity: p.entity, Count: p.count}
-		for _, n := range p.names {
-			h.Names = append(h.Names, n.text)
-		}
-		out = append(out, h)
-	}
-	return out
-}
-
 // HeaderDependents is the reverse of the header walks, for a later search
-// reprojection (S9-34). A Place reaches its locations' events and those
-// events' subject persons. A Person reaches the events of their subject-role
-// participations. Association handles are not returned. This does not
-// reproject.
+// reprojection (S9-34): the handles whose header embeds one of ids. A Place
+// reaches its events and those events' subject persons. An Event reaches its
+// subject persons (their birth or death). A Person reaches the events of
+// their subject-role participations. Association handles are not returned.
+// This does not reproject.
 func HeaderDependents(q Querier, ids [][]byte) ([][]byte, error) {
 	ids = database.UniqueBlobIDs(ids)
 	if len(ids) == 0 {
 		return nil, nil
 	}
-	events, err := dependentEvents(q, sqlPlaceEvents, ids)
+	placeEdges, err := canonicalgraph.Walk(q, eventsAtPlace, ids)
 	if err != nil {
 		return nil, err
 	}
-	persons, err := dependentEvents(q, sqlEventPersons, events)
+	events := canonicalgraph.Targets(placeEdges)
+	personEdges, err := canonicalgraph.Walk(q, personsOfEvent, append(append([][]byte(nil), events...), ids...))
 	if err != nil {
 		return nil, err
 	}
-	fromPerson, err := dependentEvents(q, sqlPersonEvents, ids)
+	eventEdges, err := canonicalgraph.Walk(q, eventsOfPerson, ids)
 	if err != nil {
 		return nil, err
 	}
 	var out [][]byte
 	seen := map[string]bool{}
-	add := func(id []byte) {
-		if len(id) != 16 || seen[string(id)] {
-			return
-		}
+	for _, id := range ids {
 		seen[string(id)] = true
-		out = append(out, id)
 	}
-	for _, id := range events {
-		add(id)
-	}
-	for _, id := range persons {
-		add(id)
-	}
-	for _, id := range fromPerson {
-		add(id)
+	for _, group := range [][][]byte{events, canonicalgraph.Targets(personEdges), canonicalgraph.Targets(eventEdges)} {
+		for _, id := range group {
+			if !seen[string(id)] {
+				seen[string(id)] = true
+				out = append(out, id)
+			}
+		}
 	}
 	sort.Slice(out, func(i, j int) bool { return bytes.Compare(out[i], out[j]) < 0 })
 	return out, nil
-}
-
-const sqlPlaceEvents = `
-SELECT DISTINCT ee.value_entity_id
-FROM auto_reconciler_values pe
-JOIN properties pp ON pp.id = pe.property_id AND pp.key = 'place' AND pp.origin = 'provenencia'
-JOIN canonical_entities loc ON loc.id = pe.entity_id
-JOIN subject_types lst ON lst.id = loc.subject_type_id
-	AND lst.key = 'location' AND lst.origin = 'provenencia'
-JOIN auto_reconciler_values ee ON ee.entity_id = loc.id AND ee.rank = 1 AND ee.reason = 'kept'
-JOIN properties ep ON ep.id = ee.property_id AND ep.key = 'event' AND ep.origin = 'provenencia'
-WHERE pe.rank = 1 AND pe.reason = 'kept' AND pe.value_entity_id IN (`
-
-const sqlEventPersons = `
-SELECT DISTINCT pe.value_entity_id
-FROM auto_reconciler_values ee
-JOIN properties ep ON ep.id = ee.property_id AND ep.key = 'event' AND ep.origin = 'provenencia'
-JOIN canonical_entities assoc ON assoc.id = ee.entity_id
-JOIN subject_types ast ON ast.id = assoc.subject_type_id
-	AND ast.key = 'participation' AND ast.origin = 'provenencia'
-JOIN auto_reconciler_values role ON role.entity_id = assoc.id AND role.rank = 1 AND role.reason = 'kept'
-JOIN properties rp ON rp.id = role.property_id AND rp.key = 'role' AND rp.origin = 'provenencia'
-JOIN property_terms rt ON rt.id = role.value_term_id AND rt.key = 'subject'
-JOIN auto_reconciler_values pe ON pe.entity_id = assoc.id AND pe.rank = 1 AND pe.reason = 'kept'
-JOIN properties pp ON pp.id = pe.property_id AND pp.key = 'person' AND pp.origin = 'provenencia'
-WHERE ee.rank = 1 AND ee.reason = 'kept' AND ee.value_entity_id IN (`
-
-const sqlPersonEvents = `
-SELECT DISTINCT ee.value_entity_id
-FROM auto_reconciler_values pe
-JOIN properties pp ON pp.id = pe.property_id AND pp.key = 'person' AND pp.origin = 'provenencia'
-JOIN canonical_entities assoc ON assoc.id = pe.entity_id
-JOIN subject_types ast ON ast.id = assoc.subject_type_id
-	AND ast.key = 'participation' AND ast.origin = 'provenencia'
-JOIN auto_reconciler_values role ON role.entity_id = assoc.id AND role.rank = 1 AND role.reason = 'kept'
-JOIN properties rp ON rp.id = role.property_id AND rp.key = 'role' AND rp.origin = 'provenencia'
-JOIN property_terms rt ON rt.id = role.value_term_id AND rt.key = 'subject'
-JOIN auto_reconciler_values ee ON ee.entity_id = assoc.id AND ee.rank = 1 AND ee.reason = 'kept'
-JOIN properties ep ON ep.id = ee.property_id AND ep.key = 'event' AND ep.origin = 'provenencia'
-WHERE pe.rank = 1 AND pe.reason = 'kept' AND pe.value_entity_id IN (`
-
-func dependentEvents(q Querier, query string, ids [][]byte) ([][]byte, error) {
-	if len(ids) == 0 {
-		return nil, nil
-	}
-	return queryBatches(q, query, ids, func(sc scanner) ([]byte, error) {
-		var id []byte
-		if err := sc.Scan(&id); err != nil {
-			return nil, err
-		}
-		return append([]byte(nil), id...), nil
-	})
 }
 
 // ownEntity copies an entity's byte fields off the driver's scan buffers.

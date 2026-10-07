@@ -94,7 +94,29 @@ func PersonsByIDs(q Querier, ids [][]byte) ([]PersonHeader, error) {
 		database.BlobArgs(ids)...)
 }
 
+// personRowsByIDs is PersonsByIDs without the birth and death walk, for an
+// Event's subjects.
+func personRowsByIDs(q Querier, ids [][]byte) ([]PersonHeader, error) {
+	ids = database.UniqueBlobIDs(ids)
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	return scanPersons(q, sqlPersonsSelect+` AND e.id IN (`+database.SQLInPlaceholders(len(ids))+`)`+sqlPersonsOrder,
+		database.BlobArgs(ids)...)
+}
+
 func queryPersons(q Querier, query string, args ...any) ([]PersonHeader, error) {
+	out, err := scanPersons(q, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	if err := attachLives(q, out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func scanPersons(q Querier, query string, args ...any) ([]PersonHeader, error) {
 	rows, err := q.Query(query, args...)
 	if err != nil {
 		return nil, err
@@ -119,11 +141,5 @@ func queryPersons(q Querier, query string, args ...any) ([]PersonHeader, error) 
 		}
 		out = append(out, h)
 	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	if err := attachLives(q, out); err != nil {
-		return nil, err
-	}
-	return out, nil
+	return out, rows.Err()
 }
