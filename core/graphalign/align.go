@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"container/heap"
 	"sort"
-	"strconv"
 
 	"github.com/mendahu/provenencia/core/match"
 )
@@ -191,76 +190,16 @@ func (st *state) recordBest(sk string, sc scoredCand) {
 func (st *state) scoreCandidate(subjectID []byte, h *Handle, via EdgeSignature) scoredCand {
 	s := st.subjects[string(subjectID)]
 	ev := match.Evaluate(s.Values, h.Values, st.metas)
-	node, reasons := st.nodeScore(ev, s)
 	edge := st.edgeSupport(subjectID, h.ID, via)
-	if edge > 0 {
-		reasons = append(reasons, "edge support")
-	}
-	prov := s.Provenance
-	if prov <= 0 {
-		prov = 1
-	}
+	sc := ScoreCandidate(ev, s.Values, edge, s.Provenance, st.cfg, st.stats)
 	return scoredCand{
 		handleID: append([]byte(nil), h.ID...),
 		ref:      h.Ref,
-		score:    (node + edge) * prov,
-		eval:     ev,
-		reasons:  reasons,
-		edge:     edge,
+		score:    sc.Score,
+		eval:     sc.Eval,
+		reasons:  sc.Reasons,
+		edge:     sc.Edge,
 	}
-}
-
-func (st *state) nodeScore(ev match.Evaluation, s *Subject) (float64, []string) {
-	var score float64
-	var reasons []string
-	for _, pc := range ev.Comparisons {
-		switch pc.Outcome {
-		case match.OutcomeAgree:
-			u := st.uFor(pc.Property.Key, s.Values[pc.Property])
-			m := st.cfg.mFor(pc.ValueType)
-			w := logOdds(m, st.cfg.uOr(u))
-			score += w
-			reasons = append(reasons, "agree "+pc.Property.Key)
-		case match.OutcomeConflict:
-			score -= st.cfg.ConflictPenalty
-			reasons = append(reasons, "conflict "+pc.Property.Key)
-		}
-	}
-	return score, reasons
-}
-
-func (st *state) uFor(propertyKey string, vals []match.Value) float64 {
-	if st.stats.ValueFreq == nil {
-		return 0
-	}
-	byVal := st.stats.ValueFreq[propertyKey]
-	if byVal == nil || len(vals) == 0 {
-		return 0
-	}
-	// Use the first carrying text/term as the frequency key.
-	for _, v := range vals {
-		k := valueKey(v)
-		if k == "" {
-			continue
-		}
-		if u, ok := byVal[k]; ok {
-			return u
-		}
-	}
-	return 0
-}
-
-func valueKey(v match.Value) string {
-	if v.HasText {
-		return v.Text
-	}
-	if v.Term != "" {
-		return v.Term
-	}
-	if v.HasInteger {
-		return strconv.FormatInt(v.Integer, 10)
-	}
-	return ""
 }
 
 func (st *state) edgeSupport(subjectID, handleID []byte, via EdgeSignature) float64 {
