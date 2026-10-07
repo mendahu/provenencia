@@ -1,46 +1,41 @@
 import Foundation
 
-/// Parts of an Event title. Go supplies the ones it has composed. The
-/// Persons and Events lists pass subjects and place through in S9-32. The
-/// date is not part of the title.
-struct EventTitleParts: Equatable, Sendable {
-    var recordedName: String = ""
-    var label: String = ""
-    var ref: String = ""
-    var typeKey: String = ""
-    var typeLabel: String = ""
-    var subjects: [String] = []
-    var place: String = ""
-}
-
-/// Event titles from the naming matrix (R4). A recorded name wins, then
-/// subjects, then the working label, then type and place, then the ref.
+/// Event titles from the naming matrix (R4). Go chooses the rule and its
+/// parts (`CatalogEventTitle`); this fills the rule's L10n template. It never
+/// chooses a rule, so every surface titles an Event the same way.
 enum EventTitleDisplay {
-    static func titleSource(_ parts: EventTitleParts, locale: Locale = .autoupdatingCurrent) -> ConclusionTitleSource {
-        let recorded = trim(parts.recordedName)
-        if !recorded.isEmpty {
-            return .name(recorded)
-        }
-        if !parts.subjects.isEmpty {
-            return .name(subjectTitle(parts, locale: locale))
-        }
-        let label = trim(parts.label)
-        if !label.isEmpty {
-            return .label(label)
-        }
-        let place = trim(parts.place)
-        let type = typeWord(parts)
-        if !place.isEmpty {
-            return .name(L10n.EventTitle.atPlace(type: type, place: place, locale: locale))
-        }
-        if hasType(parts) {
+    static func titleSource(_ title: CatalogEventTitle, locale: Locale = .autoupdatingCurrent) -> ConclusionTitleSource {
+        let type = typeWord(title)
+        switch title.rule {
+        case .recordedName:
+            return .name(title.recordedName)
+        case .subject:
+            return .name(L10n.EventTitle.ofOne(type: type, subject: subjectName(title, at: 0), locale: locale))
+        case .couple:
+            return .name(L10n.EventTitle.marriage(
+                a: subjectName(title, at: 0), b: subjectName(title, at: 1), locale: locale
+            ))
+        case .subjects:
+            return .name(L10n.EventTitle.etAl(type: type, first: subjectName(title, at: 0), locale: locale))
+        case .label:
+            return .label(title.label)
+        case .typeAtPlace:
+            return .name(L10n.EventTitle.atPlace(type: type, place: title.place, locale: locale))
+        case .type:
             return .name(L10n.EventTitle.unspecified(type: type.lowercased(with: locale), locale: locale))
+        case .ref:
+            return .ref(title.ref)
         }
-        return .ref(trim(parts.ref))
     }
 
-    static func title(_ parts: EventTitleParts, locale: Locale = .autoupdatingCurrent) -> String {
-        titleSource(parts, locale: locale).text
+    static func title(_ title: CatalogEventTitle, locale: Locale = .autoupdatingCurrent) -> String {
+        titleSource(title, locale: locale).text
+    }
+
+    /// An Event whose header has not loaded: its label, else its ref.
+    static func untitled(_ entity: CatalogCanonicalEntity) -> ConclusionTitleSource {
+        let label = entity.label.trimmingCharacters(in: .whitespacesAndNewlines)
+        return label.isEmpty ? .ref(entity.ref) : .label(label)
     }
 
     /// The row's date: a compact genealogical line. A point date wins; otherwise
@@ -148,35 +143,18 @@ enum EventTitleDisplay {
         return "\(structured) · \(trimmed)"
     }
 
-    private static func subjectTitle(_ parts: EventTitleParts, locale: Locale) -> String {
-        let type = typeWord(parts)
-        let names = parts.subjects.map { name in
-            let trimmed = trim(name)
-            return trimmed.isEmpty ? L10n.string(L10n.EventTitle.unnamedPerson) : trimmed
+    /// A subject's displayed name, or "unnamed person".
+    private static func subjectName(_ title: CatalogEventTitle, at index: Int) -> String {
+        guard title.subjects.indices.contains(index), let name = title.subjects[index] else {
+            return L10n.string(L10n.EventTitle.unnamedPerson)
         }
-        if names.count == 1 {
-            return L10n.EventTitle.ofOne(type: type, subject: names[0], locale: locale)
-        }
-        if names.count == 2, parts.typeKey == "marriage" {
-            return L10n.EventTitle.marriage(a: names[0], b: names[1], locale: locale)
-        }
-        return L10n.EventTitle.etAl(type: type, first: names[0], locale: locale)
+        let text = NameValueDisplay.string(for: name).trimmingCharacters(in: .whitespacesAndNewlines)
+        return text.isEmpty ? L10n.string(L10n.EventTitle.unnamedPerson) : text
     }
 
-    private static func typeWord(_ parts: EventTitleParts) -> String {
-        let label = trim(parts.typeLabel)
-        if !label.isEmpty {
-            return label
-        }
-        return L10n.string(L10n.EventTitle.fallbackType)
-    }
-
-    private static func hasType(_ parts: EventTitleParts) -> Bool {
-        !trim(parts.typeLabel).isEmpty || !trim(parts.typeKey).isEmpty
-    }
-
-    private static func trim(_ value: String) -> String {
-        value.trimmingCharacters(in: .whitespacesAndNewlines)
+    /// The type's label, else "Event".
+    private static func typeWord(_ title: CatalogEventTitle) -> String {
+        title.typeLabel.isEmpty ? L10n.string(L10n.EventTitle.fallbackType) : title.typeLabel
     }
 }
 

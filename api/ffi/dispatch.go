@@ -103,6 +103,7 @@ const (
 	MethodListPlaceHeaders                  = int32(engine.Method_METHOD_LIST_PLACE_HEADERS)
 	MethodGetPlaceHeader                    = int32(engine.Method_METHOD_GET_PLACE_HEADER)
 	MethodGetPersonHeader                   = int32(engine.Method_METHOD_GET_PERSON_HEADER)
+	MethodListSourceEventTitles             = int32(engine.Method_METHOD_LIST_SOURCE_EVENT_TITLES)
 )
 
 // Call routes one coarse FFI operation to api/ffi/handlers.
@@ -294,6 +295,8 @@ func Call(method int32, in []byte) ([]byte, error) {
 		return handlers.GetPlaceHeader(in)
 	case MethodGetPersonHeader:
 		return handlers.GetPersonHeader(in)
+	case MethodListSourceEventTitles:
+		return handlers.ListSourceEventTitles(in)
 	default:
 		return nil, apperr.New(apperr.CodeInternalUnknownMethod, apperr.KindInternal, strconv.Itoa(int(method)))
 	}

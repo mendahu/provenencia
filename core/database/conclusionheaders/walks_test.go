@@ -13,6 +13,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/propertyterms"
 	"github.com/mendahu/provenencia/core/database/subjectpositions"
 	"github.com/mendahu/provenencia/core/database/subjects"
+	"github.com/mendahu/provenencia/core/eventtitle"
 )
 
 func (f *fixture) bare(kind string) subjects.Subject {
@@ -244,6 +245,35 @@ func TestCanonicalWalks(t *testing.T) {
 	if len(fireHeader.Places) != 1 || !bytes.Equal(fireHeader.Places[0].Entity.ID, yorkID) {
 		t.Fatalf("fire place entity %+v", fireHeader.Places)
 	}
+
+	t.Run("each event's title rule comes from its own parts", func(t *testing.T) {
+		tests := []struct {
+			name     string
+			id       []byte
+			want     eventtitle.Rule
+			subjects int
+		}{
+			{name: "birth of one subject", id: birthID, want: eventtitle.RuleSubject, subjects: 1},
+			{name: "marriage of two", id: marriageID, want: eventtitle.RuleCouple, subjects: 2},
+			{name: "census of three", id: censusID, want: eventtitle.RuleSubjects, subjects: 3},
+			{name: "baptism of an unnamed person", id: baptismID, want: eventtitle.RuleSubject, subjects: 1},
+			{name: "fire at York", id: fireID, want: eventtitle.RuleTypeAtPlace},
+		}
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				title := events[string(tt.id)].Title
+				if title.Rule != tt.want || len(title.Parts.Subjects) != tt.subjects {
+					t.Fatalf("rule %s with %d subjects", title.Rule, len(title.Parts.Subjects))
+				}
+			})
+		}
+		if p := events[string(fireID)].Title.Parts; p.Place != "York" || p.TypeLabel != "Fire" {
+			t.Fatalf("fire parts %+v", p)
+		}
+		if s := events[string(baptismID)].Title.Parts.Subjects; s[0].Name != nil {
+			t.Fatalf("unnamed subject carried a name %+v", s[0].Name)
+		}
+	})
 
 	again := map[string][]string{}
 	for _, h := range f.events() {

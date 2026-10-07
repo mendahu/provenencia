@@ -19,25 +19,14 @@ struct EventDetailContent: ConclusionDetailBody {
         header: CatalogEventHeader? = nil,
         locale: Locale = .autoupdatingCurrent
     ) {
-        let parts = header?.titleParts ?? Self.parts(detail)
-        title = EventTitleDisplay.titleSource(parts, locale: locale)
+        title = header.map { EventTitleDisplay.titleSource($0.title, locale: locale) }
+            ?? EventTitleDisplay.untitled(detail.entity)
         ref = detail.entity.ref
         members = L10n.Conclusions.memberCount(detail.memberCount)
         summaryDate = Self.summaryDate(detail.fields, locale: locale)
         let place = header.map { DerivedPlace.name($0.places) } ?? ""
         summaryPlace = place.isEmpty ? nil : place
         rows = [Self.dateRow(detail.fields, locale: locale), Self.placeRow(header)]
-    }
-
-    private static func parts(_ detail: CatalogConclusionDetail) -> EventTitleParts {
-        let type = term(detail.fields, propertyKey: "event_type")
-        return EventTitleParts(
-            recordedName: text(detail.fields, key: "event_name"),
-            label: detail.entity.label,
-            ref: detail.entity.ref,
-            typeKey: type.key,
-            typeLabel: type.label
-        )
     }
 
     /// A recorded `date` wins. Otherwise the start–end span. Empty when
@@ -106,20 +95,6 @@ struct EventDetailContent: ConclusionDetailBody {
         row.label = label
         row.accessibilityLabel = ReconciledValueDisplay.accessibilityLabel(label: label, lead: row.lead, field: field)
         return row
-    }
-
-    private static func text(_ fields: [CatalogConclusionField], key: String) -> String {
-        guard let field = fields.first(where: { $0.propertyKey == key }),
-              case .text(let text)? = field.displayedValues.first?.value
-        else { return "" }
-        return text
-    }
-
-    private static func term(_ fields: [CatalogConclusionField], propertyKey: String) -> (key: String, label: String) {
-        guard let field = fields.first(where: { $0.propertyKey == propertyKey }),
-              case .term(_, let key, let label)? = field.displayedValues.first?.value
-        else { return ("", "") }
-        return (key, label)
     }
 
     private static func dateValue(_ field: CatalogConclusionField) -> CatalogDateValueInput? {

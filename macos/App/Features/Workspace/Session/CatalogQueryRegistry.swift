@@ -237,12 +237,17 @@ struct CatalogQueryRegistry: Sendable {
                 projectDir: project.projectDir,
                 sourceID: sourceId
             )
+            async let eventTitles = store.listSourceEventTitles(
+                projectDir: project.projectDir,
+                sourceID: sourceId
+            )
             return SourceGraphRows(
                 sourceId: sourceId,
                 subjects: try await subjects,
                 positions: try await positions,
                 observations: try await observations,
-                memberships: try await memberships
+                memberships: try await memberships,
+                eventTitles: try await eventTitles
             )
         case .connectRules:
             return try await store.listConnectRules()

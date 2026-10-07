@@ -23,6 +23,11 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var subjectsBySource: [String: [CatalogSubject]] = [:]
     /// Accepted Identity Claim per Subject id (Promote): the claim and its handle.
     var membershipBySubject: [String: CatalogSubjectMembership] = [:]
+    /// Event titles Go would choose, seeded by tests: per Source (cards) and
+    /// per handle (headers). FakeStore does not run the naming matrix; an
+    /// unseeded Event is titled by its ref.
+    var eventTitlesBySource: [String: [String: CatalogEventTitle]] = [:]
+    var eventTitleByEntity: [String: CatalogEventTitle] = [:]
     /// The Identity Claim Promote wrote per Subject id (confidence, argument).
     var claimBySubject: [String: CatalogIdentityClaim] = [:]
     var subjectPositionsBySubject: [String: CatalogSubjectPosition] = [:]
@@ -1363,6 +1368,13 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         }
     }
 
+    func listSourceEventTitles(projectDir: String, sourceID: String) async throws -> [String: CatalogEventTitle] {
+        withState {
+            markCatalogSessionHeld(projectDir)
+            return eventTitlesBySource[sourceID] ?? [:]
+        }
+    }
+
     func listSubjectMemberships(projectDir: String, sourceID: String) async throws -> [CatalogSubjectMembership] {
         // Reads do not append to `recordedCalls`: graph reads run as parallel
         // `async let`s beside position writes that log their calls.
@@ -1476,7 +1488,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 startDate: point == nil ? start.first : nil,
                 startDateCount: start.count,
                 endDate: point == nil ? end.first : nil,
-                endDateCount: end.count
+                endDateCount: end.count,
+                title: eventTitleByEntity[entity.id] ?? CatalogEventTitle(rule: .ref, ref: entity.ref)
             )
         }
         return headers.sorted { a, b in

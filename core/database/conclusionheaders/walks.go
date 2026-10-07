@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"sort"
 
-	"github.com/mendahu/provenencia/core/connectrules"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/canonicalgraph"
@@ -14,17 +13,6 @@ import (
 
 // walkBatch bounds an IN list. A list is still a fixed number of queries.
 const walkBatch = 500
-
-// The hops headers read. A subject-role participation joins a person to an
-// event (role stays off the association's identity; the walk reads the
-// kept rank-1 role). A location joins an event to a place.
-var (
-	eventsOfPerson = canonicalgraph.MustHop("participation", "person", "event",
-		&canonicalgraph.TermFilter{PropertyKey: connectrules.DisambiguationRole, TermKey: "subject"})
-	personsOfEvent = eventsOfPerson.Reverse()
-	placesOfEvent  = canonicalgraph.MustHop("location", "event", "place", nil)
-	eventsAtPlace  = placesOfEvent.Reverse()
-)
 
 // Birth and death events among the given handles, with the date a life row
 // shows (the date, else the start date) and its sort key.
@@ -101,7 +89,7 @@ type lifeEvent struct {
 // and counts them all: more than one is a disagreement the page shows as
 // mixed.
 func loadLives(q Querier, personIDs [][]byte) (map[string]map[string]LifeFacts, error) {
-	edges, err := canonicalgraph.Walk(q, eventsOfPerson, personIDs)
+	edges, err := canonicalgraph.Walk(q, canonicalgraph.EventsOfSubject, personIDs)
 	if err != nil {
 		return nil, err
 	}
@@ -207,7 +195,7 @@ func loadLifeEvents(q Querier, eventIDs [][]byte) (map[string]*lifeEvent, error)
 // loadEventSubjects walks each event's subject-role persons, participation
 // ref then person ref, each person once.
 func loadEventSubjects(q Querier, eventIDs [][]byte) (map[string][]EventSubject, error) {
-	edges, err := canonicalgraph.Walk(q, personsOfEvent, eventIDs)
+	edges, err := canonicalgraph.Walk(q, canonicalgraph.SubjectsOfEvent, eventIDs)
 	if err != nil {
 		return nil, err
 	}
@@ -238,7 +226,7 @@ func loadEventSubjects(q Querier, eventIDs [][]byte) (map[string][]EventSubject,
 // loadPlacesOf walks each event's locations to their Places, by place ref.
 // A Place's names are its kept toponyms.
 func loadPlacesOf(q Querier, eventIDs [][]byte) (map[string][]HeaderPlace, error) {
-	edges, err := canonicalgraph.Walk(q, placesOfEvent, eventIDs)
+	edges, err := canonicalgraph.Walk(q, canonicalgraph.PlacesOfEvent, eventIDs)
 	if err != nil {
 		return nil, err
 	}
@@ -281,16 +269,16 @@ func HeaderDependents(q Querier, ids [][]byte) ([][]byte, error) {
 	if len(ids) == 0 {
 		return nil, nil
 	}
-	placeEdges, err := canonicalgraph.Walk(q, eventsAtPlace, ids)
+	placeEdges, err := canonicalgraph.Walk(q, canonicalgraph.EventsAtPlace, ids)
 	if err != nil {
 		return nil, err
 	}
 	events := canonicalgraph.Targets(placeEdges)
-	personEdges, err := canonicalgraph.Walk(q, personsOfEvent, append(append([][]byte(nil), events...), ids...))
+	personEdges, err := canonicalgraph.Walk(q, canonicalgraph.SubjectsOfEvent, append(append([][]byte(nil), events...), ids...))
 	if err != nil {
 		return nil, err
 	}
-	eventEdges, err := canonicalgraph.Walk(q, eventsOfPerson, ids)
+	eventEdges, err := canonicalgraph.Walk(q, canonicalgraph.EventsOfSubject, ids)
 	if err != nil {
 		return nil, err
 	}

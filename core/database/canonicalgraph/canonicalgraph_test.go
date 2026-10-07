@@ -233,3 +233,71 @@ func sameIDs(got, want [][]byte) bool {
 	}
 	return true
 }
+
+func TestWalkSource(t *testing.T) {
+	f := newFixture(t)
+	james, birth, wedding, york := f.subject("person"), f.subject("event"), f.subject("event"), f.subject("place")
+	f.participation(james, birth, "subject")
+	f.participation(james, wedding, "witness")
+	f.bridge("location", birth, york,
+		observations.Input{PropertyID: f.prop("event"), ValueSubjectID: birth.ID},
+		observations.Input{PropertyID: f.prop("place"), ValueSubjectID: york.ID},
+	)
+	participates := canonicalgraph.MustHop("participation", "person", "event", nil)
+
+	tests := []struct {
+		name string
+		hop  canonicalgraph.Hop
+		from []subjects.Subject
+		want []subjects.Subject
+	}{
+		{name: "every participation", hop: participates, from: []subjects.Subject{james}, want: []subjects.Subject{birth, wedding}},
+		{name: "subject role only", hop: canonicalgraph.EventsOfSubject, from: []subjects.Subject{james}, want: []subjects.Subject{birth}},
+		{name: "an event's subjects", hop: canonicalgraph.SubjectsOfEvent, from: []subjects.Subject{birth, wedding}, want: []subjects.Subject{james}},
+		{name: "a location", hop: canonicalgraph.PlacesOfEvent, from: []subjects.Subject{birth}, want: []subjects.Subject{york}},
+		{name: "an event with no location", hop: canonicalgraph.PlacesOfEvent, from: []subjects.Subject{wedding}},
+		{name: "a place's events", hop: canonicalgraph.EventsAtPlace, from: []subjects.Subject{york}, want: []subjects.Subject{birth}},
+	}
+	db, err := f.c.DB()
+	must(t, err)
+	ids := func(ss []subjects.Subject) [][]byte {
+		var out [][]byte
+		for _, s := range ss {
+			out = append(out, s.ID)
+		}
+		return out
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			edges, err := canonicalgraph.WalkSource(db, f.src.ID, tt.hop, ids(tt.from))
+			must(t, err)
+			if got := canonicalgraph.Targets(edges); !sameIDs(got, ids(tt.want)) {
+				t.Fatalf("got %d targets, want %d", len(got), len(tt.want))
+			}
+		})
+	}
+
+	t.Run("another Source's graph is not walked", func(t *testing.T) {
+		edges, err := canonicalgraph.WalkSource(db, make([]byte, 16), canonicalgraph.EventsOfSubject, [][]byte{james.ID})
+		must(t, err)
+		if len(edges) != 0 {
+			t.Fatalf("walked %d edges", len(edges))
+		}
+	})
+
+	t.Run("the walk reads indexes, not whole tables", func(t *testing.T) {
+		query, args := canonicalgraph.WalkSourceSQL(canonicalgraph.EventsOfSubject, f.src.ID, [][]byte{james.ID})
+		rows, err := db.Query(`EXPLAIN QUERY PLAN `+query, args...)
+		must(t, err)
+		defer rows.Close()
+		for rows.Next() {
+			var id, parent, notUsed int
+			var detail string
+			must(t, rows.Scan(&id, &parent, &notUsed, &detail))
+			if strings.HasPrefix(detail, "SCAN ") {
+				t.Fatalf("full scan: %s", detail)
+			}
+		}
+		must(t, rows.Err())
+	})
+}

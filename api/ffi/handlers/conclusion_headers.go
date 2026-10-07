@@ -197,6 +197,7 @@ func eventHeaderProto(h conclusionheaders.EventHeader) *engine.EventHeader {
 	for _, p := range h.Places {
 		eh.Places = append(eh.Places, headerPlaceProto(p))
 	}
+	eh.Title = eventTitleProto(h.Title)
 	return eh
 }
 

@@ -4,8 +4,9 @@
 // as a row: lists, Promote's target picker, omnibar hits, later tree nodes.
 //
 // Headers are composed at read time, never stored, and set-based: a whole
-// list is one query whatever its length. Go returns structures; the app
-// formats text, including an Event's title precedence.
+// list is a fixed number of queries whatever its length. Go returns
+// structures, including which naming-matrix rule titles an Event
+// (eventtitle); the app formats text.
 package conclusionheaders
 
 import (

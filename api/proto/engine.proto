@@ -105,6 +105,7 @@ enum Method {
   METHOD_LIST_PLACE_HEADERS = 93;
   METHOD_GET_PLACE_HEADER = 94;
   METHOD_GET_PERSON_HEADER = 95;
+  METHOD_LIST_SOURCE_EVENT_TITLES = 96;
 }
 
 message PingRequest {
@@ -966,6 +967,53 @@ message SubjectMembership {
   NameValueInput name = 5; // handle's displayed auto-reconciled name; absent when none
 }
 
+// EventTitleRule is one row of the Event naming matrix (Spike 9 R4), in
+// precedence order. Go chooses the rule; the app fills its L10n template.
+enum EventTitleRule {
+  EVENT_TITLE_RULE_UNSPECIFIED = 0;
+  EVENT_TITLE_RULE_RECORDED_NAME = 1; // event_name
+  EVENT_TITLE_RULE_SUBJECT = 2;       // {Type} of {subject}
+  EVENT_TITLE_RULE_COUPLE = 3;        // Marriage of {a} and {b}
+  EVENT_TITLE_RULE_SUBJECTS = 4;      // {Type} of {first} et al.
+  EVENT_TITLE_RULE_LABEL = 5;         // working label
+  EVENT_TITLE_RULE_TYPE_AT_PLACE = 6; // {Type} at {place}
+  EVENT_TITLE_RULE_TYPE = 7;          // Unspecified {type}
+  EVENT_TITLE_RULE_REF = 8;
+}
+
+// EventTitleSubject is one subject-role person; no name reads "unnamed person".
+message EventTitleSubject {
+  NameValueInput name = 1;
+}
+
+// EventTitle is the chosen rule and the trimmed parts it reads.
+message EventTitle {
+  EventTitleRule rule = 1;
+  string recorded_name = 2;
+  string label = 3;
+  string ref = 4;
+  string type_key = 5;
+  string type_label = 6;
+  repeated EventTitleSubject subjects = 7;
+  string place = 8;
+}
+
+// ListSourceEventTitles titles every Event Subject on one Source's Evidence
+// graph from what that Source cites, by the same rule as Event headers.
+message ListSourceEventTitlesRequest {
+  string project_dir = 1;
+  string source_id = 2;
+}
+
+message SourceEventTitle {
+  string subject_id = 1;
+  EventTitle title = 2;
+}
+
+message ListSourceEventTitlesResponse {
+  repeated SourceEventTitle titles = 1;
+}
+
 // ListSubjectMemberships returns the handle of every promoted Subject on one
 // Source's Evidence graph. Unpromoted Subjects are absent.
 message ListSubjectMembershipsRequest {
@@ -1065,6 +1113,8 @@ message EventHeader {
   // places are every location's kept names. Chains stay empty until S9-39.
   repeated EventSubject subjects = 12;
   repeated HeaderPlace places = 13;
+  // title is the naming-matrix rule Go chose and the parts it reads.
+  EventTitle title = 14;
 }
 
 // ListEventHeaders returns every unmerged Event in list order: dated

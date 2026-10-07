@@ -21,7 +21,7 @@ struct EventsListView: View {
             mark: .subjectEvent,
             ref: { $0.entity.ref },
             rowAccessibilityIdentifier: { "events.row.\($0.entity.ref)" },
-            titleSource: { EventTitleDisplay.titleSource($0.titleParts) },
+            titleSource: { EventTitleDisplay.titleSource($0.title) },
             accessibilityLabel: Self.rowLabel,
             location: Self.location,
             secondary: Self.secondary
@@ -29,7 +29,7 @@ struct EventsListView: View {
     }
 
     private static func rowLabel(_ header: CatalogEventHeader) -> String {
-        let source = EventTitleDisplay.titleSource(header.titleParts)
+        let source = EventTitleDisplay.titleSource(header.title)
         let date = EventTitleDisplay.dateLine(
             date: header.date, start: header.startDate, end: header.endDate
         )
@@ -45,7 +45,7 @@ struct EventsListView: View {
         .eventDetail(
             entityId: header.entity.id,
             ref: header.entity.ref,
-            title: EventTitleDisplay.title(header.titleParts)
+            title: EventTitleDisplay.title(header.title)
         )
     }
 

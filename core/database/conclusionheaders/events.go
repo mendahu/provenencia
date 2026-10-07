@@ -8,6 +8,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/namevalues"
+	"github.com/mendahu/provenencia/core/eventtitle"
 	"github.com/mendahu/provenencia/core/valuecodec"
 )
 
@@ -36,6 +37,8 @@ type EventHeader struct {
 	EndDateCount   int
 	Subjects       []EventSubject
 	Places         []HeaderPlace
+	// Title is the naming-matrix rule and parts, chosen from the above.
+	Title eventtitle.Plan
 }
 
 // EventSubject is one person on an event through a subject-role participation.
@@ -123,7 +126,40 @@ func queryEvents(q Querier, query string, args ...any) ([]EventHeader, error) {
 	if err := attachEventGraph(q, out); err != nil {
 		return nil, err
 	}
+	for i := range out {
+		out[i].Title = eventTitle(out[i])
+	}
 	return out, nil
+}
+
+// eventTitle chooses the header's title from its own parts: subjects in
+// header order, and the first named place.
+func eventTitle(h EventHeader) eventtitle.Plan {
+	parts := eventtitle.Parts{
+		RecordedName: h.EventName,
+		Label:        h.Entity.Label,
+		Ref:          h.Entity.Ref,
+		Place:        FirstPlaceName(h.Places),
+	}
+	if h.EventType != nil {
+		parts.TypeKey, parts.TypeLabel = h.EventType.Key, h.EventType.Label
+	}
+	for _, s := range h.Subjects {
+		parts.Subjects = append(parts.Subjects, eventtitle.Subject{Name: s.Name})
+	}
+	return eventtitle.Choose(parts)
+}
+
+// FirstPlaceName is the first kept name of the first named Place.
+func FirstPlaceName(places []HeaderPlace) string {
+	for _, p := range places {
+		for _, n := range p.Names {
+			if n = strings.TrimSpace(n); n != "" {
+				return n
+			}
+		}
+	}
+	return ""
 }
 
 func scanEvent(rows *sql.Rows) (EventHeader, error) {

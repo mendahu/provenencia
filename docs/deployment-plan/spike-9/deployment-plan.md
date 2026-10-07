@@ -164,7 +164,7 @@ Each hop is an indexed lookup on R3. List composers run set-based over the whole
 4. **Composed without subjects** — type and place (*Fire at York*), or *Unspecified fire*.
 5. **`ref`**.
 
-**Matrix.** Go returns the parts (event type key + label, auto-reconciled names of the `subject` Persons in a stable order, auto-reconciled place); Swift formats them through L10n templates keyed by `event_type`, so the matrix is localizable and lives in one table.
+**Matrix.** Go chooses the row (`core/eventtitle.Choose`) and returns it with the parts that row reads (event type key + label, auto-reconciled names of the `subject` Persons in a stable order, auto-reconciled place) as an `EventTitle`. Swift fills the row's L10n template (`EventTitleDisplay`) and never chooses, so the matrix is localizable and every surface (canonical headers, Evidence graph cards via `ListSourceEventTitles`, later search) titles an Event the same way.
 
 | Case | Template | Example |
 | --- | --- | --- |

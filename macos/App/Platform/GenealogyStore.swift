@@ -333,24 +333,37 @@ struct CatalogEventHeader: Sendable, Equatable, Identifiable {
     /// Subject-role persons, then every location's kept names.
     var subjects: [CatalogEventSubject] = []
     var places: [CatalogHeaderPlace] = []
+    /// The naming-matrix rule Go chose, and its parts.
+    var title: CatalogEventTitle
 
     var id: String { entity.id }
+}
 
-    var titleParts: EventTitleParts {
-        var parts = EventTitleParts(
-            recordedName: eventName,
-            label: entity.label,
-            ref: entity.ref,
-            typeKey: eventTypeKey,
-            typeLabel: eventTypeLabel
-        )
-        parts.subjects = subjects.map { subject in
-            guard let name = subject.name else { return "" }
-            return NameValueDisplay.string(for: name)
-        }
-        parts.place = DerivedPlace.name(places)
-        return parts
+/// An Event's title as Go chose it (Spike 9 R4): which row of the naming
+/// matrix applies, and the parts that row reads. Canonical headers and
+/// Evidence graph cards both carry one, so they can't disagree.
+/// `EventTitleDisplay` fills the rule's L10n template; it does not choose.
+struct CatalogEventTitle: Sendable, Equatable {
+    enum Rule: Sendable, Equatable {
+        case recordedName
+        case subject
+        case couple
+        case subjects
+        case label
+        case typeAtPlace
+        case type
+        case ref
     }
+
+    var rule: Rule
+    var recordedName: String = ""
+    var label: String = ""
+    var ref: String = ""
+    var typeKey: String = ""
+    var typeLabel: String = ""
+    /// Subject-role persons in stable order; `nil` reads "unnamed person".
+    var subjects: [CatalogNameValue?] = []
+    var place: String = ""
 }
 
 /// One Place as a row, composed by Go from the auto-reconciler cache (S9-25).
@@ -978,6 +991,8 @@ protocol GenealogyStore: Sendable {
     func listClaimConfidenceGrades(projectDir: String) async throws -> [CatalogClaimConfidenceGrade]
     /// Accepted handle of every promoted Subject on one Source's Evidence graph.
     func listSubjectMemberships(projectDir: String, sourceID: String) async throws -> [CatalogSubjectMembership]
+    /// The title of every Event Subject on one Source's Evidence graph, keyed by Subject id.
+    func listSourceEventTitles(projectDir: String, sourceID: String) async throws -> [String: CatalogEventTitle]
     /// Every unmerged Person as a row header, in list order (named by name, then by ref).
     func listPersonHeaders(projectDir: String) async throws -> [CatalogPersonHeader]
     func personHeader(projectDir: String, entityID: String) async throws -> CatalogPersonHeader

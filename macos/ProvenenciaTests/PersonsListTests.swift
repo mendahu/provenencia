@@ -55,8 +55,8 @@ struct PersonsListTests {
     }
 
     @Test func eventsHeaderMetaNamesTheDateSort() {
-        let one = [CatalogEventHeader(entity: CatalogCanonicalEntity(id: "e1", ref: "EVT-1", subjectTypeID: "t", label: ""))]
-        let two = one + [CatalogEventHeader(entity: CatalogCanonicalEntity(id: "e2", ref: "EVT-2", subjectTypeID: "t", label: ""))]
+        let one = [CatalogEventHeader(entity: CatalogCanonicalEntity(id: "e1", ref: "EVT-1", subjectTypeID: "t", label: ""), title: CatalogEventTitle(rule: .ref, ref: "EVT-1"))]
+        let two = one + [CatalogEventHeader(entity: CatalogCanonicalEntity(id: "e2", ref: "EVT-2", subjectTypeID: "t", label: ""), title: CatalogEventTitle(rule: .ref, ref: "EVT-2"))]
         #expect(ConclusionListPresentation.rows(one, refreshing: false).meta(
             count: L10n.Workspace.eventCount, refreshing: L10n.Workspace.eventCountRefreshing
         ) == "1 event · by date")

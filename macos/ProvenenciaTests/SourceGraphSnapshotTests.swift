@@ -452,24 +452,14 @@ struct SourceGraphSnapshotTests {
         // A toponym doesn't name a Person, nor a name a Place.
         #expect(placed(.person, label: "James", [observation("toponym", text: "York")]).displayName == "James")
         #expect(placed(.place, label: "the town", [observation("name", nameForm: "York")]).displayName == "the town")
-        // A personal name does not name an Event; the working label does until event_name.
+        // An Event is titled by Go (sourceeventtitles); until it is, its label.
         #expect(placed(.event, label: "Baptism", [observation("name", nameForm: "James")]).displayName == "Baptism")
-        #expect(placed(.event, label: "Grandpa's fire", [observation("event_name", text: "The Great Fire")]).displayName == "The Great Fire")
-        #expect(
-            placed(.event, label: "", [observation("event_type", text: "Birth", termKey: "birth")]).displayName
-                == L10n.EventTitle.unspecified(type: "birth")
-        )
+        var titled = placed(.event, label: "Grandpa's fire", [observation("event_name", text: "The Great Fire")])
+        titled.eventTitle = CatalogEventTitle(rule: .recordedName, recordedName: "The Great Fire", label: "Grandpa's fire")
+        #expect(titled.displayName == "The Great Fire")
     }
 
-    @Test func eventDisplayNameUsesParticipationAndLocation() {
-        let participationType = CatalogSubjectType(
-            id: "type-participation", key: "participation", origin: "provenencia",
-            label: "Participation", description: "", refPrefix: "PTN", candidateRefPrefix: "CPA"
-        )
-        let placeType = CatalogSubjectType(
-            id: "type-place", key: "place", origin: "provenencia",
-            label: "Place", description: "", refPrefix: "PLC", candidateRefPrefix: "CPL"
-        )
+    @Test func eventCardsTakeGosTitleForTheirSubject() {
         let james = CatalogSubject(
             id: "s-james", ref: "CPR-J", sourceID: "src-1", subjectTypeID: personType.id,
             label: "James", description: ""
@@ -478,74 +468,25 @@ struct SourceGraphSnapshotTests {
             id: "s-baptism", ref: "CEV-B", sourceID: "src-1", subjectTypeID: eventType.id,
             label: "Baptism", description: ""
         )
-        let york = CatalogSubject(
-            id: "s-york", ref: "CPL-Y", sourceID: "src-1", subjectTypeID: placeType.id,
-            label: "the town", description: ""
+        let baptismTitle = CatalogEventTitle(
+            rule: .subject, label: "Baptism", ref: "CEV-B", typeKey: "baptism", typeLabel: "Baptism",
+            subjects: [CatalogNameValue(form: "James Robins")]
         )
-        let part = CatalogSubject(
-            id: "s-part", ref: "CPA-1", sourceID: "src-1", subjectTypeID: participationType.id,
-            label: "", description: ""
-        )
-        let loc = CatalogSubject(
-            id: "s-loc", ref: "CLO-1", sourceID: "src-1", subjectTypeID: locationType.id,
-            label: "", description: ""
-        )
-        func edge(_ id: String, subject: String, key: String, valueSubject: String, termKey: String = "", text: String = "", nameForm: String = "") -> CatalogObservation {
-            CatalogObservation(
-                id: id, ref: "OBS-\(id)", citationID: "cit-1", subjectID: subject, propertyID: "p-\(key)",
-                polarity: "positive", valueText: text, valueInteger: nil, valueDateID: "",
-                valueNameID: "", nameForm: nameForm, valueSubjectID: valueSubject, valueTermID: "",
-                propertyKey: key, propertyLabel: key, propertyValueType: "text", valueTermKey: termKey
-            )
-        }
-        let snapshot = SourceGraphSnapshot.build(
+        let rows = SourceGraphRows(
             sourceId: "src-1",
-            subjects: [james, baptism, york, part, loc],
-            positions: [james, baptism, york, part, loc].map {
-                CatalogSubjectPosition(subjectID: $0.id, gridX: 0, gridY: 0)
-            },
-            types: [personType, eventType, placeType, participationType, locationType],
-            observations: [
-                edge("name", subject: james.id, key: "name", valueSubject: "", nameForm: "James Robins"),
-                edge("type", subject: baptism.id, key: "event_type", valueSubject: "", termKey: "baptism", text: "Baptism"),
-                edge("person", subject: part.id, key: "person", valueSubject: james.id),
-                edge("event", subject: part.id, key: "event", valueSubject: baptism.id),
-                edge("role", subject: part.id, key: "role", valueSubject: "", termKey: "subject", text: "Subject"),
-                edge("toponym", subject: york.id, key: "toponym", valueSubject: "", text: "York"),
-                edge("loc-event", subject: loc.id, key: "event", valueSubject: baptism.id),
-                edge("loc-place", subject: loc.id, key: "place", valueSubject: york.id),
-            ],
-            rules: CatalogConnectRule.productMatrix
+            subjects: [james, baptism],
+            positions: [james, baptism].map { CatalogSubjectPosition(subjectID: $0.id, gridX: 0, gridY: 0) },
+            eventTitles: [baptism.id: baptismTitle, james.id: baptismTitle]
         )
+        let snapshot = SourceGraphSnapshot.build(rows: rows, types: [personType, eventType], rules: CatalogConnectRule.productMatrix)
         let card = snapshot.subjects.first { $0.id == baptism.id }
+        #expect(card?.eventTitle == baptismTitle)
         #expect(card?.displayName == L10n.EventTitle.ofOne(type: "Baptism", subject: "James Robins"))
-        #expect(snapshot.subjects.first { $0.id == james.id }?.displayName == "James Robins")
-
-        let fire = CatalogSubject(
-            id: "s-fire", ref: "CEV-F", sourceID: "src-1", subjectTypeID: eventType.id,
-            label: "", description: ""
-        )
-        let fireLoc = CatalogSubject(
-            id: "s-fire-loc", ref: "CLO-F", sourceID: "src-1", subjectTypeID: locationType.id,
-            label: "", description: ""
-        )
-        let fireGraph = SourceGraphSnapshot.build(
-            sourceId: "src-1",
-            subjects: [fire, york, fireLoc],
-            positions: [fire, york, fireLoc].map { CatalogSubjectPosition(subjectID: $0.id, gridX: 0, gridY: 0) },
-            types: [eventType, placeType, locationType],
-            observations: [
-                edge("fire-type", subject: fire.id, key: "event_type", valueSubject: "", termKey: "fire", text: "Fire"),
-                edge("fire-toponym", subject: york.id, key: "toponym", valueSubject: "", text: "York"),
-                edge("fire-event", subject: fireLoc.id, key: "event", valueSubject: fire.id),
-                edge("fire-place", subject: fireLoc.id, key: "place", valueSubject: york.id),
-            ],
-            rules: CatalogConnectRule.productMatrix
-        )
-        #expect(
-            fireGraph.subjects.first { $0.id == fire.id }?.displayName
-                == L10n.EventTitle.atPlace(type: "Fire", place: "York")
-        )
+        // A Person is never titled as an Event.
+        let person = snapshot.subjects.first { $0.id == james.id }
+        #expect(person?.eventTitle == nil && person?.displayName == "James")
+        // A position move keeps the titles.
+        #expect(rows.updatingPosition(subjectID: james.id, gridX: 2, gridY: 2).eventTitles == rows.eventTitles)
     }
 
     @Test func displayNameSkipsDeniedAndBlankValues() {

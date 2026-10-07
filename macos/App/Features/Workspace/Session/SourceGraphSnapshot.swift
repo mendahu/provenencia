@@ -29,45 +29,24 @@ struct SourceGraphPlacedSubject: Identifiable, Sendable, Equatable {
     /// The handle this subject belongs to (accepted Identity Claim), or nil.
     var membership: CatalogSubjectMembership?
 
-    /// Subject names and the first place name, filled from this Source's
-    /// participation and location bridges when the snapshot is built. People
-    /// stay on their own name, then label.
-    var subjectNames: [String] = []
-    var placeName: String = ""
+    /// An Event's title as Go chose it from this Source's citations (its
+    /// subject-role participations and locations), by the same naming matrix
+    /// as Event headers. Nil for people and places, and until Go has titled it.
+    var eventTitle: CatalogEventTitle?
 
     /// What the subject is called where it is promoted: its first asserted
     /// naming Observation (a Person's `name` form, a Place's `toponym`), else
-    /// its working label, else its ref. An Event uses `EventTitleDisplay`.
-    /// Subject and place parts come from the participation and location
-    /// bridges on this graph. The date is not part of the title.
+    /// its working label, else its ref. An Event uses its Go-chosen title.
+    /// The date is not part of the title.
     var displayName: String {
-        if kind == .event {
-            return EventTitleDisplay.title(eventTitleParts)
+        if kind == .event, let eventTitle {
+            return EventTitleDisplay.title(eventTitle)
         }
         if let named = observations.lazy.compactMap(Self.namingValue(for: kind)).first {
             return named
         }
         let label = subject.label.trimmingCharacters(in: .whitespacesAndNewlines)
         return label.isEmpty ? subject.ref : label
-    }
-
-    private var eventTitleParts: EventTitleParts {
-        var parts = EventTitleParts(label: subject.label, ref: subject.ref)
-        for observation in observations where observation.polarity != "negative" {
-            let text = observation.valueText.trimmingCharacters(in: .whitespacesAndNewlines)
-            switch observation.propertyKey {
-            case "event_name" where parts.recordedName.isEmpty && !text.isEmpty:
-                parts.recordedName = text
-            case "event_type" where parts.typeLabel.isEmpty && parts.typeKey.isEmpty:
-                parts.typeLabel = text
-                parts.typeKey = observation.valueTermKey
-            default:
-                break
-            }
-        }
-        parts.subjects = subjectNames
-        parts.place = placeName
-        return parts
     }
 
     /// The value of an asserted Observation that names a subject of this kind.
@@ -114,19 +93,23 @@ struct SourceGraphRows: Sendable, Equatable {
     var observations: [CatalogObservation]
     /// Accepted handles of promoted subjects; absent subjects are unpromoted.
     var memberships: [CatalogSubjectMembership]
+    /// Go's title for each Event Subject, keyed by Subject id.
+    var eventTitles: [String: CatalogEventTitle]
 
     init(
         sourceId: String,
         subjects: [CatalogSubject] = [],
         positions: [CatalogSubjectPosition] = [],
         observations: [CatalogObservation] = [],
-        memberships: [CatalogSubjectMembership] = []
+        memberships: [CatalogSubjectMembership] = [],
+        eventTitles: [String: CatalogEventTitle] = [:]
     ) {
         self.sourceId = sourceId
         self.subjects = subjects
         self.positions = positions
         self.observations = observations
         self.memberships = memberships
+        self.eventTitles = eventTitles
     }
 
     /// Returns a copy with one subject's grid cell updated.
@@ -143,7 +126,8 @@ struct SourceGraphRows: Sendable, Equatable {
             subjects: subjects,
             positions: next,
             observations: observations,
-            memberships: memberships
+            memberships: memberships,
+            eventTitles: eventTitles
         )
     }
 }
@@ -179,6 +163,7 @@ struct SourceGraphSnapshot: Sendable, Equatable {
             types: types,
             observations: rows.observations,
             memberships: rows.memberships,
+            eventTitles: rows.eventTitles,
             rules: rules
         )
     }
@@ -198,6 +183,7 @@ struct SourceGraphSnapshot: Sendable, Equatable {
         types: [CatalogSubjectType],
         observations: [CatalogObservation] = [],
         memberships: [CatalogSubjectMembership] = [],
+        eventTitles: [String: CatalogEventTitle] = [:],
         rules: [CatalogConnectRule] = []
     ) -> SourceGraphSnapshot {
         let typeByID = Dictionary(uniqueKeysWithValues: types.map { ($0.id, $0) })
@@ -232,7 +218,8 @@ struct SourceGraphSnapshot: Sendable, Equatable {
                         gridY: position.gridY,
                         isCited: !subjectObservations.isEmpty,
                         observations: subjectObservations,
-                        membership: membershipBySubject[subject.id]
+                        membership: membershipBySubject[subject.id],
+                        eventTitle: kind == .event ? eventTitles[subject.id] : nil
                     )
                 )
             } else if let kind = EvidenceBridgeKind(rawValue: type.key) {
@@ -260,7 +247,6 @@ struct SourceGraphSnapshot: Sendable, Equatable {
             }
         }
 
-        placed = Self.eventTitles(subjects: placed, bridges: placedBridges)
         placed.sort { lhs, rhs in
             let labelCompare = lhs.subject.label.localizedStandardCompare(rhs.subject.label)
             if labelCompare != .orderedSame { return labelCompare == .orderedAscending }
@@ -272,66 +258,6 @@ struct SourceGraphSnapshot: Sendable, Equatable {
             return lhs.subject.ref.localizedStandardCompare(rhs.subject.ref) == .orderedAscending
         }
         return SourceGraphSnapshot(sourceId: sourceId, subjects: placed, bridges: placedBridges)
-    }
-
-    /// Event cards take their subject and place parts from this graph's
-    /// bridges: a subject-role participation names a person, a location names
-    /// a place. People keep their own naming rule.
-    private static func eventTitles(
-        subjects: [SourceGraphPlacedSubject],
-        bridges: [SourceGraphPlacedBridge]
-    ) -> [SourceGraphPlacedSubject] {
-        let byID = Dictionary(uniqueKeysWithValues: subjects.map { ($0.id, $0) })
-        return subjects.map { subject in
-            guard subject.kind == .event else { return subject }
-            var people: [(bridgeRef: String, personRef: String, name: String)] = []
-            var places: [(ref: String, name: String)] = []
-            for bridge in bridges {
-                guard let otherID = counterpart(bridge, of: subject.id),
-                      let other = byID[otherID]
-                else { continue }
-                switch (bridge.kind, other.kind) {
-                case (.participation, .person) where isSubjectRole(bridge):
-                    people.append((bridge.subject.ref, other.subject.ref, citedText(other, key: "name", name: true)))
-                case (.location, .place):
-                    places.append((other.subject.ref, citedText(other, key: "toponym", name: false)))
-                default:
-                    break
-                }
-            }
-            people.sort { lhs, rhs in
-                if lhs.bridgeRef != rhs.bridgeRef { return lhs.bridgeRef < rhs.bridgeRef }
-                return lhs.personRef < rhs.personRef
-            }
-            places.sort { $0.ref < $1.ref }
-            var copy = subject
-            copy.subjectNames = people.map(\.name)
-            copy.placeName = places.first?.name ?? ""
-            return copy
-        }
-    }
-
-    private static func counterpart(_ bridge: SourceGraphPlacedBridge, of id: String) -> String? {
-        if bridge.endpointAID == id { return bridge.endpointBID }
-        if bridge.endpointBID == id { return bridge.endpointAID }
-        return nil
-    }
-
-    private static func isSubjectRole(_ bridge: SourceGraphPlacedBridge) -> Bool {
-        bridge.observations.contains {
-            $0.propertyKey == "role" && $0.polarity != "negative" && $0.valueTermKey == "subject"
-        }
-    }
-
-    /// The first asserted name form, or toponym text. Empty when the subject
-    /// has none, so an Event title can still say "unnamed person".
-    private static func citedText(_ subject: SourceGraphPlacedSubject, key: String, name: Bool) -> String {
-        for observation in subject.observations where observation.polarity != "negative" && observation.propertyKey == key {
-            let value = (name ? observation.nameForm : observation.valueText)
-                .trimmingCharacters(in: .whitespacesAndNewlines)
-            if !value.isEmpty { return value }
-        }
-        return ""
     }
 
     /// Cited A/B endpoints from the matching rule's `edges` (A then B).

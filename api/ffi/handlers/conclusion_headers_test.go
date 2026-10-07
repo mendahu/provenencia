@@ -564,3 +564,75 @@ func mustUUIDBytes(t *testing.T) []byte {
 	id := uuid.Must(uuid.NewV7())
 	return id[:]
 }
+
+func eventSourceID(t *testing.T, dir string) string {
+	t.Helper()
+	var sourceID string
+	if err := withProjectCatalog(dir, func(c *database.Catalog) error {
+		db, err := c.DB()
+		if err != nil {
+			return err
+		}
+		var id []byte
+		if err := db.QueryRow(`SELECT s.source_id FROM subjects s
+			JOIN subject_types st ON st.id = s.subject_type_id AND st.key = 'event' LIMIT 1`).Scan(&id); err != nil {
+			return err
+		}
+		sourceID = uuidString(id)
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	return sourceID
+}
+
+func TestEventTitlesUseOneRule(t *testing.T) {
+	t.Run("an Event header carries its chosen title", func(t *testing.T) {
+		dir, _ := citedEvent(t)
+		t.Cleanup(func() { _ = catalogsession.CloseAll() })
+		out, err := ListEventHeaders(marshalProto(t, &engine.ListEventHeadersRequest{ProjectDir: dir}))
+		if err != nil {
+			t.Fatal(err)
+		}
+		var resp engine.ListEventHeadersResponse
+		if err := proto.Unmarshal(out, &resp); err != nil {
+			t.Fatal(err)
+		}
+		title := resp.GetHeaders()[0].GetTitle()
+		if title.GetRule() != engine.EventTitleRule_EVENT_TITLE_RULE_RECORDED_NAME || title.GetRecordedName() != "The Great Fire" ||
+			title.GetTypeKey() != "birth" || !strings.HasPrefix(title.GetRef(), "EVT-") {
+			t.Fatalf("%+v", title)
+		}
+	})
+	runRPC(t, ListSourceEventTitles, []rpcTest{
+		{name: "bad proto", raw: []byte{0xff}, wantErr: true},
+		{
+			name: "bad source id",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, _, _, _ := subjectFixture(t)
+				return &engine.ListSourceEventTitlesRequest{ProjectDir: dir, SourceId: "nope"}
+			},
+			wantErr: true,
+		},
+		{
+			name: "the Source's Event card is titled by the same rule",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, _ := citedEvent(t)
+				return &engine.ListSourceEventTitlesRequest{ProjectDir: dir, SourceId: eventSourceID(t, dir)}
+			},
+			after: func(t *testing.T, out []byte, _ proto.Message) {
+				var resp engine.ListSourceEventTitlesResponse
+				if err := proto.Unmarshal(out, &resp); err != nil {
+					t.Fatal(err)
+				}
+				if len(resp.Titles) != 1 || resp.Titles[0].GetSubjectId() == "" {
+					t.Fatalf("%+v", resp.Titles)
+				}
+				title := resp.Titles[0].GetTitle()
+				if title.GetRule() != engine.EventTitleRule_EVENT_TITLE_RULE_RECORDED_NAME || title.GetRecordedName() != "The Great Fire" {
+					t.Fatalf("%+v", title)
+				}
+			},
+		},
+	})
+}

@@ -35,21 +35,30 @@ struct EventDetailTests {
         )
     }
 
-    @Test func recordedNameIsAPlainTitle() {
-        let page = content(detail(fields: [
-            D.field("single", key: "event_name", label: "Event name", valueType: "text", [D.value(1, "kept", .text("Fire at York"))]),
-        ]))
+    private func header(_ title: CatalogEventTitle) -> CatalogEventHeader {
+        CatalogEventHeader(
+            entity: CatalogCanonicalEntity(id: "e1", ref: "EVT-8PL22", subjectTypeID: "t", label: ""),
+            title: title
+        )
+    }
+
+    @Test func titleIsTheHeadersChosenTitle() {
+        let page = EventDetailContent(
+            detail: detail(),
+            header: header(CatalogEventTitle(rule: .recordedName, recordedName: "Fire at York", ref: "EVT-8PL22")),
+            locale: en
+        )
         #expect(page.title == .name("Fire at York"))
         #expect(page.showsRef)
         #expect(page.ref == "EVT-8PL22")
     }
 
-    @Test func typeOnlyBecomesUnspecified() {
-        let type = D.field(
-            "single", key: "event_type", label: "Event type", valueType: "term",
-            [D.value(1, "kept", .term(id: "t", key: "birth", label: "Birth"))]
-        )
-        #expect(content(detail(fields: [type])).title == .name("Unspecified birth"))
+    @Test func untilTheHeaderLoadsTheTitleIsTheLabelThenTheRef() {
+        // A recorded name in the detail does not choose a title; only Go's header does.
+        let named = content(detail(label: "Grandpa's fire", fields: [
+            D.field("single", key: "event_name", label: "Event name", valueType: "text", [D.value(1, "kept", .text("Fire at York"))]),
+        ]))
+        #expect(named.title == .label("Grandpa's fire"))
     }
 
     @Test func refTitleHidesTheTrailingRef() {
@@ -100,7 +109,11 @@ struct EventDetailTests {
             places: [
                 CatalogHeaderPlace(entity: york, names: ["York"], nameCount: 1),
                 CatalogHeaderPlace(entity: toronto, names: ["Toronto"], nameCount: 1),
-            ]
+            ],
+            title: CatalogEventTitle(
+                rule: .subject, ref: "EVT-8PL22", typeKey: "birth", typeLabel: "Birth",
+                subjects: [CatalogNameValue(form: "James Robins")], place: "York"
+            )
         )
         let page = EventDetailContent(detail: detail(), header: header, locale: en)
         #expect(page.title == .name(L10n.EventTitle.ofOne(type: "Birth", subject: "James Robins", locale: en)))
