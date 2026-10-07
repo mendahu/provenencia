@@ -497,7 +497,7 @@ In order; each brief sits just above the PR it gates.
 - [x] S9-38 — Place model: relationships, periods → [`completed.md`](completed.md)
 - [x] S9-39 — Place chain composer → [`completed.md`](completed.md)
 - [x] S9-40 — Place hierarchy in list and detail → [`completed.md`](completed.md)
-- [ ] S9-41 — Graph alignment core
+- [x] S9-41 — Graph alignment core → [`completed.md`](completed.md)
 - [ ] S9-42 — Graph alignment loader + proposal read
 - [ ] S9-43 — Batch Promote write
 - [ ] ✎ S9-D16 — Design: Promote page (rethink)
@@ -932,11 +932,7 @@ Design: [`promote-graph-alignment.md`](../../promote-graph-alignment.md). Brief:
 
 #### S9-41 — Graph alignment core
 
-| | |
-| --- | --- |
-| **In** | A pure Go package (own module, design §4–§4.1, §5–§6, **§5.1**): `Align(layer, canon, stats, fixed) Proposal`. **Composable SoC:** pairwise evaluation (shared sameness with `Compatible` / matching) judges a candidate; `Align` only walks, seeds, propagates, and decides; it does not reimplement match logic. Property-only `Rank` remains the unreachable/orphan fallback and should sit on the same pairwise core. Best-first propagation from the fixed pairs (decided rows and existing claims), walking Evidence bridges in **both directions**; one handle per Subject within a layer; agree / conflict / unknown per comparison; weights log(m/u) with u from `stats` and m from priors per value type; provenance scaling; edge signatures with fan-out; flags for conflicts with decided rows, possible duplicates, self-links and cycles. Deterministic. **One alignment config registry** holds walk/band tunables (score bands, conflict penalty, cold-start priors, propagation / support knobs, expansion depth); matching keeps its own registry — same pattern as `core/match`’s `registry.go`. |
-| **Testable** | Table-driven, plus the obituary golden test against a small canonical tree: Gracie anchors her birth, death, burial and two children; the residences and Medicine Hat come out New / Skip; a decided row never changes on a re-run; the same inputs give the same proposal. Fixtures for design §5.1: seed from an already-promoted neighbor into an unpromoted Subject (and the reverse); both ends unpromoted; an orphan with no bridges falls back to property-only / Skip when weak. Registry defaults are what the golden uses; tests can override config without editing the registry. |
-| **Depends on** | S9-17, S9-21, S9-36 |
+**Done.** See [`completed.md`](completed.md#s9-41--graph-alignment-core). Pure `graphalign.Align` with a config registry, pairwise `match.Evaluate` via `Compatible`, Rank fallback for orphans, and Gracie / §5.1 tests. Loader and FFI stay **S9-42**.
 
 #### S9-42 — Graph alignment loader + proposal read
 
