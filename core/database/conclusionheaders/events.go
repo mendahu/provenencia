@@ -11,7 +11,7 @@ import (
 	"github.com/mendahu/provenencia/core/valuecodec"
 )
 
-// EventType is the rank-1 auto-reconciled event_type term.
+// EventType is the displayed (kept rank-1) event_type term.
 type EventType struct {
 	ID    []byte
 	Key   string
@@ -68,20 +68,20 @@ const (
 	JOIN subject_types st ON st.id = e.subject_type_id
 	LEFT JOIN properties enp ON enp.key = 'event_name' AND enp.origin = 'provenencia'
 	LEFT JOIN auto_reconciler_values en
-		ON en.entity_id = e.id AND en.property_id = enp.id AND en.rank = 1
+		ON en.entity_id = e.id AND en.property_id = enp.id AND en.rank = 1 AND en.reason = 'kept'
 	LEFT JOIN properties etp ON etp.key = 'event_type' AND etp.origin = 'provenencia'
 	LEFT JOIN auto_reconciler_values et
-		ON et.entity_id = e.id AND et.property_id = etp.id AND et.rank = 1
+		ON et.entity_id = e.id AND et.property_id = etp.id AND et.rank = 1 AND et.reason = 'kept'
 	LEFT JOIN property_terms t ON t.id = et.value_term_id
 	LEFT JOIN properties dp ON dp.key = 'date' AND dp.origin = 'provenencia'
 	LEFT JOIN auto_reconciler_values d
-		ON d.entity_id = e.id AND d.property_id = dp.id AND d.rank = 1
+		ON d.entity_id = e.id AND d.property_id = dp.id AND d.rank = 1 AND d.reason = 'kept'
 	LEFT JOIN properties sp ON sp.key = 'start_date' AND sp.origin = 'provenencia'
 	LEFT JOIN auto_reconciler_values sd
-		ON sd.entity_id = e.id AND sd.property_id = sp.id AND sd.rank = 1
+		ON sd.entity_id = e.id AND sd.property_id = sp.id AND sd.rank = 1 AND sd.reason = 'kept'
 	LEFT JOIN properties ep ON ep.key = 'end_date' AND ep.origin = 'provenencia'
 	LEFT JOIN auto_reconciler_values ed
-		ON ed.entity_id = e.id AND ed.property_id = ep.id AND ed.rank = 1
+		ON ed.entity_id = e.id AND ed.property_id = ep.id AND ed.rank = 1 AND ed.reason = 'kept'
 	WHERE st.key = 'event' AND st.origin = 'provenencia' AND e.merged_into_id IS NULL`
 	sqlEventsOrder = ` ORDER BY COALESCE(d.sort_key, sd.sort_key) IS NULL, COALESCE(d.sort_key, sd.sort_key), e.ref COLLATE NOCASE`
 	sqlListEvents  = sqlEventsSelect + sqlEventsOrder

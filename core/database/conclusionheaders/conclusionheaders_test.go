@@ -6,11 +6,13 @@ import (
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
+	"github.com/mendahu/provenencia/core/database/autoreconciler"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/conclusiondetails"
 	"github.com/mendahu/provenencia/core/database/conclusionheaders"
 	"github.com/mendahu/provenencia/core/database/datevalues"
+	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/namevalues/namevaluestest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
@@ -163,6 +165,71 @@ func TestPersonNameCountIsDisplayedOnly(t *testing.T) {
 		if h.NameValueCount != 1 {
 			t.Fatalf("%s counts %d", h.Name.Form, h.NameValueCount)
 		}
+	}
+}
+
+// A header shows what the detail page displays: a kept value. When every
+// value is held back (here, only a provisional member speaks), rank 1 is not
+// kept, so the row falls back to the label or ref.
+func TestHeadersShowKeptValuesOnly(t *testing.T) {
+	tests := []struct {
+		name  string
+		kind  string
+		cite  func(f *fixture) []observations.Input
+		check func(t *testing.T, f *fixture, entityID []byte)
+	}{
+		{
+			name: "a provisional member's name is not the Person's name",
+			kind: "person",
+			cite: func(f *fixture) []observations.Input {
+				return []observations.Input{{PropertyID: f.name.ID, Name: namevaluestest.Western("Ghost Name")}}
+			},
+			check: func(t *testing.T, f *fixture, entityID []byte) {
+				for _, h := range f.list() {
+					if string(h.Entity.ID) == string(entityID) && h.Name != nil {
+						t.Fatalf("listed provisional name %q", h.Name.Form)
+					}
+				}
+			},
+		},
+		{
+			name: "a provisional member's name, type, and date are not the Event's",
+			kind: "event",
+			cite: func(f *fixture) []observations.Input {
+				return []observations.Input{
+					{PropertyID: f.prop("event_name").ID, ValueText: "Phantom Fair", HasText: true},
+					{PropertyID: f.prop("event_type").ID, ValueTermID: f.term("event_type", "birth").ID},
+					{PropertyID: f.prop("date").ID, Date: pointYear(1801)},
+				}
+			},
+			check: func(t *testing.T, f *fixture, entityID []byte) {
+				for _, h := range f.events() {
+					if string(h.Entity.ID) != string(entityID) {
+						continue
+					}
+					if h.EventName != "" || h.EventType != nil || h.Date != nil {
+						t.Fatalf("listed provisional values %+v", h)
+					}
+				}
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			f := newFixture(t)
+			handle, err := canonicalentities.Create(f.c, userID, canonicalentities.CreateInput{SubjectTypeID: f.typeID(tt.kind)})
+			must(t, err)
+			s := f.bare(tt.kind)
+			f.cite(s, tt.cite(f)...)
+			_, err = identityclaims.Create(f.c, userID, identityclaims.CreateInput{
+				SubjectID: s.ID, EntityID: handle.ID, Status: identityclaims.StatusProvisional,
+			})
+			must(t, err)
+			db, err := f.c.DB()
+			must(t, err)
+			must(t, autoreconciler.RecomputeTx(db, [][]byte{handle.ID}))
+			tt.check(t, f, handle.ID)
+		})
 	}
 }
 

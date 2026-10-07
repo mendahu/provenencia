@@ -54,7 +54,7 @@ type HeaderPlace struct {
 	Count int
 }
 
-// Unmerged Person handles with their rank-1 name row and displayed name count,
+// Unmerged Person handles with their displayed (kept rank-1) name and name count,
 // named Persons first by name sort key, then by ref (R5).
 const (
 	sqlPersonsSelect = `SELECT e.id, e.subject_type_id, e.ref, COALESCE(e.argument, ''), COALESCE(e.label, ''),
@@ -65,7 +65,7 @@ const (
 	JOIN subject_types st ON st.id = e.subject_type_id
 	LEFT JOIN properties np ON np.key = 'name' AND np.origin = 'provenencia'
 	LEFT JOIN auto_reconciler_values r
-		ON r.entity_id = e.id AND r.property_id = np.id AND r.rank = 1
+		ON r.entity_id = e.id AND r.property_id = np.id AND r.rank = 1 AND r.reason = 'kept'
 	WHERE st.key = 'person' AND st.origin = 'provenencia' AND e.merged_into_id IS NULL`
 	sqlPersonsOrder = ` ORDER BY r.sort_key IS NULL, r.sort_key, e.ref COLLATE NOCASE`
 	sqlListPersons  = sqlPersonsSelect + sqlPersonsOrder
