@@ -19,6 +19,13 @@ Copy the stub. Surface + what got in the way is enough. A wanted fix is optional
 
 <!-- add below this line -->
 
+### Show sex / gender on the Person detail page
+
+- **Date:** 2026-10-07
+- **Where:** Person detail page
+- **Annoyance:** The Person detail page doesn't show a Person's sex or gender visually, so you can't tell at a glance.
+- **Wanted:** Use sex / gender to style the page, e.g. an accent color or a small flag/badge. It should also handle unknown or conflicting values.
+
 ### Sidebar icons don't match Subject card icons
 
 - **Date:** 2026-10-06
