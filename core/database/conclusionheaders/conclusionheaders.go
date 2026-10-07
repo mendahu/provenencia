@@ -54,12 +54,14 @@ type LifeFacts struct {
 
 // HeaderPlace is one Place a walk reached (or a folded location chain).
 // Names are kept toponyms in rank order. Parents is the hierarchical chain
-// at the walk's date (nearest first). Entity is the Place (the leaf when
-// folded), whose page owns the names' Why.
+// at the walk's date (nearest first); ParentsAreCandidates when several
+// parents hold at once. Entity is the Place (the leaf when folded), whose
+// page owns the names' Why.
 type HeaderPlace struct {
-	Entity  canonicalentities.Entity
-	Names   []string
-	Parents []string
+	Entity               canonicalentities.Entity
+	Names                []string
+	Parents              []string
+	ParentsAreCandidates bool
 }
 
 // Unmerged Person handles with their displayed (kept rank-1) name and name

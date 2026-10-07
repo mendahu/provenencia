@@ -7,6 +7,7 @@ import (
 
 	"github.com/mendahu/provenencia/core/autoreconcile"
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/canonicalgraph"
 	"github.com/mendahu/provenencia/core/database/datevalues"
 )
@@ -347,17 +348,23 @@ func (g *placeGraph) displayName(id []byte) string {
 	return h.Entity.Ref
 }
 
-// ParentChainNames walks hierarchical parents at at. One unambiguous parent
-// path is nearest-first ancestors. Several parents at a level are every
-// candidate's display name (no nature preference). Cycle-guarded.
-func (g *placeGraph) ParentChainNames(placeID []byte, at *datevalues.Value) []string {
-	return g.parentChainNames(placeID, at, map[string]bool{string(placeID): true})
+// ParentChain walks hierarchical parents at at. One unambiguous path is
+// nearest-first ancestors. Several parents at a level are every candidate
+// (candidates=true; no nature preference). Cycle-guarded.
+func (g *placeGraph) ParentChain(placeID []byte, at *datevalues.Value) (names []string, candidates bool) {
+	return g.parentChain(placeID, at, map[string]bool{string(placeID): true})
 }
 
-func (g *placeGraph) parentChainNames(placeID []byte, at *datevalues.Value, seen map[string]bool) []string {
+// ParentChainNames is ParentChain's names only.
+func (g *placeGraph) ParentChainNames(placeID []byte, at *datevalues.Value) []string {
+	names, _ := g.ParentChain(placeID, at)
+	return names
+}
+
+func (g *placeGraph) parentChain(placeID []byte, at *datevalues.Value, seen map[string]bool) ([]string, bool) {
 	parents := g.ImmediateParents(placeID, at)
 	if len(parents) == 0 {
-		return nil
+		return nil, false
 	}
 	if len(parents) > 1 {
 		names := make([]string, 0, len(parents))
@@ -366,19 +373,19 @@ func (g *placeGraph) parentChainNames(placeID []byte, at *datevalues.Value, seen
 				names = append(names, n)
 			}
 		}
-		return names
+		return names, true
 	}
 	p := parents[0]
 	if seen[string(p)] {
-		return nil
+		return nil, false
 	}
 	seen[string(p)] = true
 	name := g.displayName(p)
-	rest := g.parentChainNames(p, at, seen)
+	rest, _ := g.parentChain(p, at, seen)
 	if name == "" {
-		return rest
+		return rest, false
 	}
-	return append([]string{name}, rest...)
+	return append([]string{name}, rest...), false
 }
 
 // isAncestor reports whether ancestor reaches descendant via holding
@@ -414,7 +421,7 @@ func (g *placeGraph) FoldLocations(places []HeaderPlace, at *datevalues.Value) [
 		out := make([]HeaderPlace, len(places))
 		copy(out, places)
 		for i := range out {
-			out[i].Parents = g.ParentChainNames(out[i].Entity.ID, at)
+			out[i].Parents, out[i].ParentsAreCandidates = g.ParentChain(out[i].Entity.ID, at)
 		}
 		return out
 	}
@@ -459,7 +466,7 @@ func (g *placeGraph) FoldLocations(places []HeaderPlace, at *datevalues.Value) [
 			}
 		}
 		h := places[leaf]
-		h.Parents = g.ParentChainNames(h.Entity.ID, at)
+		h.Parents, h.ParentsAreCandidates = g.ParentChain(h.Entity.ID, at)
 		out = append(out, h)
 	}
 	sort.SliceStable(out, func(i, j int) bool {
@@ -468,8 +475,25 @@ func (g *placeGraph) FoldLocations(places []HeaderPlace, at *datevalues.Value) [
 	return out
 }
 
-// attachPlaceChains fills Parents for today's (or at) hierarchical chain.
-func attachPlaceChains(q Querier, headers []PlaceHeader, at datevalues.Value) error {
+// chainQueryDate is today, or the Place's end when today is after its period
+// (D7: show the last chain for a place whose period has ended).
+func chainQueryDate(h PlaceHeader, today datevalues.Value) datevalues.Value {
+	if h.EndDate == nil {
+		return today
+	}
+	tw, tok := autoreconcile.WindowOfDate(today)
+	ew, eok := autoreconcile.WindowOfDate(*h.EndDate)
+	if !tok || !eok || tw.Lo == nil || ew.Hi == nil {
+		return today
+	}
+	if *tw.Lo > *ew.Hi {
+		return *h.EndDate
+	}
+	return today
+}
+
+// attachPlaceChains fills Parents for today's (or last) hierarchical chain.
+func attachPlaceChains(q Querier, headers []PlaceHeader, today datevalues.Value) error {
 	if len(headers) == 0 {
 		return nil
 	}
@@ -485,9 +509,129 @@ func attachPlaceChains(q Querier, headers []PlaceHeader, at datevalues.Value) er
 		// Prefer the header we already scanned (has Names/period); merge into graph.
 		g.byID[string(headers[i].Entity.ID)] = headers[i]
 		g.period[string(headers[i].Entity.ID)] = autoreconcile.PeriodWindow(headers[i].StartDate, headers[i].EndDate)
-		headers[i].Parents = g.ParentChainNames(headers[i].Entity.ID, &at)
+		at := chainQueryDate(headers[i], today)
+		headers[i].Parents, headers[i].ParentsAreCandidates = g.ParentChain(headers[i].Entity.ID, &at)
 	}
 	return nil
+}
+
+// AttachPlaceRelationships fills PartOf / Contains / Predecessors /
+// Successors on a Place detail header (every part_of parent with its
+// membership span; children that hold today; succession both ways).
+func AttachPlaceRelationships(q Querier, h *PlaceHeader) error {
+	if h == nil || len(h.Entity.ID) == 0 {
+		return nil
+	}
+	g, err := loadPlaceGraph(q, [][]byte{h.Entity.ID})
+	if err != nil {
+		return err
+	}
+	g.byID[string(h.Entity.ID)] = *h
+	g.period[string(h.Entity.ID)] = autoreconcile.PeriodWindow(h.StartDate, h.EndDate)
+	today := TodayDate()
+
+	seenPart := map[string]bool{}
+	for _, l := range g.partOf {
+		if !bytes.Equal(l.from, h.Entity.ID) {
+			continue
+		}
+		if _, ok := autoreconcile.LinkMembership(l.start, l.end, g.periodOf(l.from), g.periodOf(l.to)); !ok {
+			continue
+		}
+		key := string(l.to)
+		if seenPart[key] {
+			continue
+		}
+		seenPart[key] = true
+		rel := g.relationship(l.to, RelPartOf)
+		rel.StartDate, rel.EndDate = membershipDates(l, g.byID[string(l.from)], g.byID[string(l.to)])
+		h.PartOf = append(h.PartOf, rel)
+	}
+	sort.SliceStable(h.PartOf, func(i, j int) bool {
+		return h.PartOf[i].Title < h.PartOf[j].Title
+	})
+
+	for _, id := range g.ImmediateParts(h.Entity.ID, &today) {
+		rel := g.relationship(id, RelContains)
+		for _, l := range g.partOf {
+			if bytes.Equal(l.to, h.Entity.ID) && bytes.Equal(l.from, id) {
+				rel.StartDate, rel.EndDate = membershipDates(l, g.byID[string(l.from)], g.byID[string(l.to)])
+				break
+			}
+		}
+		h.Contains = append(h.Contains, rel)
+	}
+
+	for _, id := range g.Predecessors(h.Entity.ID) {
+		rel := g.relationship(id, RelPredecessor)
+		if other, ok := g.byID[string(id)]; ok {
+			rel.StartDate, rel.EndDate = other.StartDate, other.EndDate
+		}
+		h.Predecessors = append(h.Predecessors, rel)
+	}
+	for _, id := range g.Successors(h.Entity.ID) {
+		rel := g.relationship(id, RelSuccessor)
+		if other, ok := g.byID[string(id)]; ok {
+			rel.StartDate, rel.EndDate = other.StartDate, other.EndDate
+		}
+		h.Successors = append(h.Successors, rel)
+	}
+	return nil
+}
+
+func (g *placeGraph) relationship(id []byte, kind string) PlaceRelationship {
+	title := g.displayName(id)
+	rel := PlaceRelationship{Kind: kind, Title: title}
+	if h, ok := g.byID[string(id)]; ok {
+		rel.Entity = h.Entity
+	} else {
+		rel.Entity = canonicalentities.Entity{ID: append([]byte(nil), id...)}
+	}
+	return rel
+}
+
+// membershipDates is the span a hierarchical link shows: the link's own
+// dates when present, else the overlap of the two places' periods.
+func membershipDates(l placeLink, from, to PlaceHeader) (start, end *datevalues.Value) {
+	if l.start != nil || l.end != nil {
+		return l.start, l.end
+	}
+	return laterStart(from.StartDate, to.StartDate), earlierEnd(from.EndDate, to.EndDate)
+}
+
+func yearOf(d *datevalues.Value) *int {
+	if d == nil || d.StartYear == nil {
+		return nil
+	}
+	return d.StartYear
+}
+
+func laterStart(a, b *datevalues.Value) *datevalues.Value {
+	ya, yb := yearOf(a), yearOf(b)
+	switch {
+	case a == nil:
+		return b
+	case b == nil:
+		return a
+	case ya != nil && yb != nil && *yb > *ya:
+		return b
+	default:
+		return a
+	}
+}
+
+func earlierEnd(a, b *datevalues.Value) *datevalues.Value {
+	ya, yb := yearOf(a), yearOf(b)
+	switch {
+	case a == nil:
+		return b
+	case b == nil:
+		return a
+	case ya != nil && yb != nil && *yb < *ya:
+		return b
+	default:
+		return a
+	}
 }
 
 // ChildPlaceIDs returns Places that name id as a part_of parent (any span).

@@ -1,8 +1,8 @@
 import SwiftUI
 
-/// The Place page (S9-27, board S9-D7 frame 1f). A configuration of
-/// `ConclusionDetailPage`: every kept name and its Why, and period,
-/// hierarchy, and succession drawn empty until S9-40.
+/// The Place page (S9-27 / S9-40, board S9-D7). A configuration of
+/// `ConclusionDetailPage`: names with Why, period, parent chain, and
+/// Part of / Contains / Succession relationship rows.
 struct PlaceDetailView: View {
     let session: WorkspaceSession
     let entityId: String
@@ -21,8 +21,7 @@ struct PlaceDetailView: View {
     }
 }
 
-/// The parent chain under the title. Empty until S9-40 walks it, so the
-/// line is the stated sentence. A recorded chain uses the same line.
+/// The parent chain under the title, or the sentence that none is recorded.
 private struct PlaceDetailChain: View {
     let text: String
     let recorded: Bool

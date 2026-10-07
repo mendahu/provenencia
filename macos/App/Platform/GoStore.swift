@@ -916,7 +916,8 @@ struct GoStore: GenealogyStore {
         CatalogHeaderPlace(
             entity: mapCanonicalEntity(place.entity),
             names: place.names,
-            parents: place.parents
+            parents: place.parents,
+            parentsAreCandidates: place.parentsAreCandidates
         )
     }
 
@@ -955,7 +956,24 @@ struct GoStore: GenealogyStore {
             startDate: h.hasStartDate ? mapDateValue(h.startDate) : nil,
             endDate: h.hasEndDate ? mapDateValue(h.endDate) : nil,
             kind: h.kind,
-            parents: h.parents
+            parents: h.parents,
+            parentsAreCandidates: h.parentsAreCandidates,
+            partOf: h.partOf.map(mapPlaceRelationship),
+            contains: h.contains.map(mapPlaceRelationship),
+            predecessors: h.predecessors.map(mapPlaceRelationship),
+            successors: h.successors.map(mapPlaceRelationship)
+        )
+    }
+
+    private static func mapPlaceRelationship(
+        _ r: Provenencia_Engine_V1_PlaceRelationship
+    ) -> CatalogPlaceRelationship {
+        CatalogPlaceRelationship(
+            entity: mapCanonicalEntity(r.entity),
+            title: r.title,
+            kind: r.kind,
+            startDate: r.hasStartDate ? mapDateValue(r.startDate) : nil,
+            endDate: r.hasEndDate ? mapDateValue(r.endDate) : nil
         )
     }
 

@@ -273,6 +273,20 @@ struct CatalogHeaderPlace: Sendable, Equatable {
     var entity: CatalogCanonicalEntity
     var names: [String] = []
     var parents: [String] = []
+    /// True when several parents hold at once (join with "or").
+    var parentsAreCandidates: Bool = false
+}
+
+/// One related Place on a Place detail (S9-40).
+struct CatalogPlaceRelationship: Sendable, Equatable, Identifiable {
+    var entity: CatalogCanonicalEntity
+    var title: String
+    /// `part_of`, `contains`, `predecessor`, or `successor`.
+    var kind: String
+    var startDate: CatalogDateValueInput?
+    var endDate: CatalogDateValueInput?
+
+    var id: String { "\(kind)-\(entity.id)" }
 }
 
 /// A birth or a death composed from the canonical graph.
@@ -373,6 +387,11 @@ struct CatalogPlaceHeader: Sendable, Equatable, Identifiable {
     var endDate: CatalogDateValueInput?
     var kind: String = ""
     var parents: [String] = []
+    var parentsAreCandidates: Bool = false
+    var partOf: [CatalogPlaceRelationship] = []
+    var contains: [CatalogPlaceRelationship] = []
+    var predecessors: [CatalogPlaceRelationship] = []
+    var successors: [CatalogPlaceRelationship] = []
 
     var id: String { entity.id }
 }

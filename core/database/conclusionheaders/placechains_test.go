@@ -304,6 +304,90 @@ func TestPlaceHeaderParentsAndPeriod(t *testing.T) {
 	}
 }
 
+func TestAttachPlaceRelationships(t *testing.T) {
+	f := newFixture(t)
+	toronto := f.placeSubject("Toronto", year(1834), nil, 0, 0)
+	uc := f.placeSubject("Upper Canada", year(1791), year(1841), 2, 0)
+	ontario := f.placeSubject("Ontario", year(1867), nil, 4, 0)
+	york := f.placeSubject("York", year(1793), year(1834), 6, 0)
+	f.placeRel(toronto, uc, propertyterms.KeyPartOf, nil, nil)
+	f.placeRel(toronto, ontario, propertyterms.KeyPartOf, nil, nil)
+	f.placeRel(york, toronto, propertyterms.KeySucceededBy, nil, nil)
+	torontoID := f.promoteSubject(toronto)
+	f.promoteSubject(uc)
+	f.promoteSubject(ontario)
+	yorkID := f.promoteSubject(york)
+	db, err := f.c.DB()
+	must(t, err)
+	headers, err := conclusionheaders.PlacesByIDs(db, [][]byte{torontoID})
+	must(t, err)
+	if len(headers) != 1 {
+		t.Fatalf("%d", len(headers))
+	}
+	h := headers[0]
+	must(t, conclusionheaders.AttachPlaceRelationships(db, &h))
+	if len(h.PartOf) != 2 {
+		t.Fatalf("part_of %+v", h.PartOf)
+	}
+	titles := map[string]bool{}
+	for _, r := range h.PartOf {
+		titles[r.Title] = true
+		if r.Kind != conclusionheaders.RelPartOf {
+			t.Fatalf("kind %s", r.Kind)
+		}
+	}
+	if !titles["Upper Canada"] || !titles["Ontario"] {
+		t.Fatalf("part_of titles %v", titles)
+	}
+	if len(h.Predecessors) != 1 || h.Predecessors[0].Title != "York" {
+		t.Fatalf("predecessors %+v", h.Predecessors)
+	}
+	if len(h.Successors) != 0 {
+		t.Fatalf("successors %+v", h.Successors)
+	}
+	// York → Toronto succession both ways; successor shows Toronto's period.
+	yh, err := conclusionheaders.PlacesByIDs(db, [][]byte{yorkID})
+	must(t, err)
+	must(t, conclusionheaders.AttachPlaceRelationships(db, &yh[0]))
+	if len(yh[0].Successors) != 1 || yh[0].Successors[0].Title != "Toronto" {
+		t.Fatalf("york successors %+v", yh[0].Successors)
+	}
+	if yh[0].Successors[0].StartDate == nil || yh[0].Successors[0].StartDate.StartYear == nil ||
+		*yh[0].Successors[0].StartDate.StartYear != 1834 {
+		t.Fatalf("york successor period %+v", yh[0].Successors[0])
+	}
+}
+
+func TestAttachPlaceRelationshipsIrelandMembershipSpan(t *testing.T) {
+	f := newFixture(t)
+	ireland := f.placeSubject("Ireland", nil, nil, 0, 0)
+	uk := f.placeSubject("United Kingdom", nil, nil, 2, 0)
+	f.placeRel(ireland, uk, propertyterms.KeyPartOf, nil, year(1922))
+	irelandID := f.promoteSubject(ireland)
+	ukID := f.promoteSubject(uk)
+	db, err := f.c.DB()
+	must(t, err)
+	ih, err := conclusionheaders.PlacesByIDs(db, [][]byte{irelandID})
+	must(t, err)
+	must(t, conclusionheaders.AttachPlaceRelationships(db, &ih[0]))
+	if len(ih[0].PartOf) != 1 || ih[0].PartOf[0].Title != "United Kingdom" {
+		t.Fatalf("ireland part_of %+v", ih[0].PartOf)
+	}
+	if ih[0].PartOf[0].EndDate == nil || ih[0].PartOf[0].EndDate.StartYear == nil ||
+		*ih[0].PartOf[0].EndDate.StartYear != 1922 {
+		t.Fatalf("ireland membership end %+v", ih[0].PartOf[0])
+	}
+	uh, err := conclusionheaders.PlacesByIDs(db, [][]byte{ukID})
+	must(t, err)
+	must(t, conclusionheaders.AttachPlaceRelationships(db, &uh[0]))
+	// Contains is "today"; a membership that ended in 1922 is not listed.
+	for _, c := range uh[0].Contains {
+		if c.Title == "Ireland" {
+			t.Fatalf("UK contains former Ireland %+v", uh[0].Contains)
+		}
+	}
+}
+
 func TestHeaderDependentsIncludeChildPlaces(t *testing.T) {
 	f := newFixture(t)
 	toronto := f.placeSubject("Toronto", nil, nil, 0, 0)

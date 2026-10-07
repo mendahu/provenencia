@@ -63,9 +63,10 @@ func lifeFactsProto(life conclusionheaders.LifeFacts) *engine.LifeFacts {
 
 func headerPlaceProto(p conclusionheaders.HeaderPlace) *engine.HeaderPlace {
 	return &engine.HeaderPlace{
-		Entity:  canonicalEntityProto(p.Entity),
-		Names:   append([]string(nil), p.Names...),
-		Parents: append([]string(nil), p.Parents...),
+		Entity:               canonicalEntityProto(p.Entity),
+		Names:                append([]string(nil), p.Names...),
+		Parents:              append([]string(nil), p.Parents...),
+		ParentsAreCandidates: p.ParentsAreCandidates,
 	}
 }
 
@@ -166,10 +167,11 @@ func ListPlaceHeaders(in []byte) ([]byte, error) {
 
 func placeHeaderProto(h conclusionheaders.PlaceHeader) *engine.PlaceHeader {
 	ph := &engine.PlaceHeader{
-		Entity:  canonicalEntityProto(h.Entity),
-		Names:   h.Names,
-		Kind:    h.Kind,
-		Parents: h.Parents,
+		Entity:               canonicalEntityProto(h.Entity),
+		Names:                h.Names,
+		Kind:                 h.Kind,
+		Parents:              h.Parents,
+		ParentsAreCandidates: h.ParentsAreCandidates,
 	}
 	if h.StartDate != nil {
 		ph.StartDate = valuecodec.DateToProto(*h.StartDate)
@@ -177,5 +179,32 @@ func placeHeaderProto(h conclusionheaders.PlaceHeader) *engine.PlaceHeader {
 	if h.EndDate != nil {
 		ph.EndDate = valuecodec.DateToProto(*h.EndDate)
 	}
+	for _, r := range h.PartOf {
+		ph.PartOf = append(ph.PartOf, placeRelationshipProto(r))
+	}
+	for _, r := range h.Contains {
+		ph.Contains = append(ph.Contains, placeRelationshipProto(r))
+	}
+	for _, r := range h.Predecessors {
+		ph.Predecessors = append(ph.Predecessors, placeRelationshipProto(r))
+	}
+	for _, r := range h.Successors {
+		ph.Successors = append(ph.Successors, placeRelationshipProto(r))
+	}
 	return ph
+}
+
+func placeRelationshipProto(r conclusionheaders.PlaceRelationship) *engine.PlaceRelationship {
+	out := &engine.PlaceRelationship{
+		Entity: canonicalEntityProto(r.Entity),
+		Title:  r.Title,
+		Kind:   r.Kind,
+	}
+	if r.StartDate != nil {
+		out.StartDate = valuecodec.DateToProto(*r.StartDate)
+	}
+	if r.EndDate != nil {
+		out.EndDate = valuecodec.DateToProto(*r.EndDate)
+	}
+	return out
 }

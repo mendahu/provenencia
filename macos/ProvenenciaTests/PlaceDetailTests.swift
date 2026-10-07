@@ -10,17 +10,35 @@ struct PlaceDetailTests {
         label: String = "",
         ref: String = "PLC-2MT40",
         fields: [CatalogConclusionField] = [],
-        members: Int = 1
+        members: Int = 1,
+        placeHeader: CatalogPlaceHeader? = nil
     ) -> CatalogConclusionDetail {
         CatalogConclusionDetail(
             entity: CatalogCanonicalEntity(id: "e1", ref: ref, subjectTypeID: "t", label: label),
             fields: fields,
-            memberCount: members
+            memberCount: members,
+            header: placeHeader.map { .place($0) }
         )
     }
 
     private func content(_ detail: CatalogConclusionDetail) -> PlaceDetailContent {
         PlaceDetailContent(detail: detail, locale: en)
+    }
+
+    private func rel(
+        id: String,
+        title: String,
+        kind: String,
+        start: Int? = nil,
+        end: Int? = nil
+    ) -> CatalogPlaceRelationship {
+        CatalogPlaceRelationship(
+            entity: CatalogCanonicalEntity(id: id, ref: "PLC-\(id)", subjectTypeID: "t", label: ""),
+            title: title,
+            kind: kind,
+            startDate: start.map { CatalogDateValueInput(kind: "point", startYear: Int32($0)) },
+            endDate: end.map { CatalogDateValueInput(kind: "point", startYear: Int32($0)) }
+        )
     }
 
     /// Two kept toponyms are both listed, each with its Source count. A weak
@@ -66,7 +84,7 @@ struct PlaceDetailTests {
         #expect(!page.chainIsRecorded)
         #expect(page.sections.map { L10n.string($0.title) } == ["Part of", "Contains", "Succession"])
         #expect(page.sections.map(\.aside) == [
-            "Grouped by type · span is when the link holds",
+            "Span is when the link holds",
             "Direct children only",
             "Renames and mergers · not part of the hierarchy",
         ])
@@ -75,6 +93,35 @@ struct PlaceDetailTests {
             "No places recorded as part of this one",
             "No predecessor or successor recorded",
         ])
+        #expect(page.sections.map(\.relationships) == [[], [], []])
+    }
+
+    @Test func periodAndRelationshipsFillFromTheHeader() {
+        let header = CatalogPlaceHeader(
+            entity: CatalogCanonicalEntity(id: "e1", ref: "PLC-2MT40", subjectTypeID: "t", label: ""),
+            names: ["Toronto"],
+            startDate: CatalogDateValueInput(kind: "point", startYear: 1834 as Int32),
+            parents: ["Ontario", "Canada"],
+            partOf: [
+                rel(id: "uc", title: "Upper Canada", kind: "part_of", start: 1791, end: 1841),
+                rel(id: "on", title: "Ontario", kind: "part_of", start: 1867),
+            ],
+            contains: (1...14).map { rel(id: "c\($0)", title: "Ward \($0)", kind: "contains") },
+            predecessors: [rel(id: "york", title: "York", kind: "predecessor", start: 1793, end: 1834)],
+            successors: []
+        )
+        let page = content(detail(label: "Toronto", placeHeader: header))
+        #expect(page.chain == "Ontario, Canada")
+        #expect(page.chainIsRecorded)
+        #expect(page.rows[1].lead == "1834 –")
+        #expect(page.sections[0].relationships.map(\.relationship.title) == ["Upper Canada", "Ontario"])
+        #expect(page.sections[0].relationships.map { PlacePeriodDisplay.span(
+            start: $0.relationship.startDate, end: $0.relationship.endDate, locale: en
+        ) } == ["1791 – 1841", "1867 –"])
+        #expect(page.sections[1].relationships.count == PlaceDetailContent.containsVisibleLimit)
+        #expect(page.sections[1].omittedCount == 2)
+        #expect(page.sections[2].relationships.map(\.relationship.title) == ["York"])
+        #expect(page.sections[2].relationships.map(\.role) == ["Succeeded"])
     }
 
     @Test func refTitleHidesTheTrailingRef() {

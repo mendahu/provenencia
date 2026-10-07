@@ -8,12 +8,14 @@ struct PlacesListTests {
         _ ref: String,
         names: [String] = [],
         label: String = "",
-        parents: [String] = []
+        parents: [String] = [],
+        candidates: Bool = false
     ) -> CatalogPlaceHeader {
         CatalogPlaceHeader(
             entity: CatalogCanonicalEntity(id: "id-\(ref)", ref: ref, subjectTypeID: "t", label: label),
             names: names,
-            parents: parents
+            parents: parents,
+            parentsAreCandidates: candidates
         )
     }
 
@@ -53,6 +55,21 @@ struct PlacesListTests {
         #expect(PlaceChainDisplay.line(parents: []) == "")
         #expect(PlaceChainDisplay.line(parents: [" ", ""]) == "")
         #expect(PlaceChainDisplay.line(parents: [" Ontario ", "Canada"]) == "Ontario, Canada")
+    }
+
+    @Test func chainLineTruncatesFromTheTopOfTheHierarchy() {
+        let deep = ["Ward", "City", "County", "Province", "Country", "Continent"]
+        #expect(PlaceChainDisplay.line(parents: deep) == "Ward, City, County, Province")
+        #expect(PlaceChainDisplay.line(parents: deep, maxSegments: 2) == "Ward, City")
+    }
+
+    @Test func chainLineJoinsSimultaneousParentsWithOr() {
+        #expect(PlaceChainDisplay.line(
+            parents: ["Upper Canada", "Province of Canada"],
+            candidates: true
+        ) == "Upper Canada or Province of Canada")
+        #expect(PlaceChainDisplay.line(parents: ["A", "B", "C"], candidates: true)
+            == "A, B or C")
     }
 
     @Test func rowOpensThePlaceDetailPlace() {

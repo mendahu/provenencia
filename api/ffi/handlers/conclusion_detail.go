@@ -134,6 +134,9 @@ func attachHeader(c *database.Catalog, db conclusionheaders.Querier, d conclusio
 		if err != nil || len(h) != 1 {
 			return err
 		}
+		if err := conclusionheaders.AttachPlaceRelationships(db, &h[0]); err != nil {
+			return err
+		}
 		out.Header = &engine.ConclusionDetail_Place{Place: placeHeaderProto(h[0])}
 	}
 	return nil

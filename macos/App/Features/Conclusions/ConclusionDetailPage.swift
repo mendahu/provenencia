@@ -25,13 +25,29 @@ enum ConclusionDetailPresentation<Content: Equatable>: Equatable {
     }
 }
 
-/// One section under Details. Empty until a later slice fills its rows.
-/// The kind names it; the page draws it.
+/// One related-place row inside a Place detail section (S9-40).
+struct ConclusionDetailRelationship: Equatable, Identifiable {
+    var relationship: CatalogPlaceRelationship
+    var role: String? = nil
+
+    var id: String {
+        if let role, !role.isEmpty {
+            return "\(relationship.id)-\(role)"
+        }
+        return relationship.id
+    }
+}
+
+/// One section under Details. Place hierarchy sections carry relationship
+/// rows when Go filled them; otherwise the empty sentence.
 struct ConclusionDetailSection: Equatable, Identifiable {
     var id: String
     var title: LocalizedStringResource
     var aside: String
     var emptyText: String
+    var relationships: [ConclusionDetailRelationship] = []
+    /// Contains remainder when the list is truncated (PLD-5).
+    var omittedCount: Int = 0
 }
 
 /// The fields a Conclusion detail page lays out. Each kind owns how it
@@ -158,15 +174,15 @@ private struct ConclusionDetailLoaded<Content: ConclusionDetailBody, Summary: Vi
                     }
                 }
                 ForEach(content.sections) { section in
-                    ConclusionDetailEmptySection(section: section)
+                    ConclusionDetailRelationshipSection(section: section)
                 }
             }
         }
     }
 }
 
-/// A relationship section with its header and an empty sentence. S9-40 fills the rows.
-private struct ConclusionDetailEmptySection: View {
+/// A relationship section: header, rows when present, otherwise the empty sentence.
+private struct ConclusionDetailRelationshipSection: View {
     let section: ConclusionDetailSection
 
     var body: some View {
@@ -177,14 +193,30 @@ private struct ConclusionDetailEmptySection: View {
                     .foregroundStyle(PVColor.textMuted)
                     .lineLimit(2)
             })
-            Text(verbatim: section.emptyText)
-                .font(PVFont.body(size: PVTypeScale.bodySmall, italic: true))
-                .foregroundStyle(PVColor.textMuted)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.vertical, PVSpacing.space5)
+            if section.relationships.isEmpty {
+                Text(verbatim: section.emptyText)
+                    .font(PVFont.body(size: PVTypeScale.bodySmall, italic: true))
+                    .foregroundStyle(PVColor.textMuted)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.vertical, PVSpacing.space5)
+            } else {
+                ForEach(section.relationships) { row in
+                    PlaceRelationshipRow(relationship: row.relationship, role: row.role)
+                }
+                if section.omittedCount > 0 {
+                    Text(verbatim: L10n.Conclusions.placeContainsMore(section.omittedCount))
+                        .font(PVFont.body(size: PVTypeScale.caption, italic: true))
+                        .foregroundStyle(PVColor.textMuted)
+                        .padding(.vertical, PVSpacing.space3)
+                }
+            }
         }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(L10n.Conclusions.a11yList(L10n.string(section.title), rest: section.emptyText))
+        .accessibilityElement(children: section.relationships.isEmpty ? .combine : .contain)
+        .accessibilityLabel(
+            section.relationships.isEmpty
+                ? L10n.Conclusions.a11yList(L10n.string(section.title), rest: section.emptyText)
+                : L10n.string(section.title)
+        )
     }
 }
 

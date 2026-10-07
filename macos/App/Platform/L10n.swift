@@ -7242,6 +7242,50 @@ enum L10n {
             comment: "Separator between a Place and its parents in the parent chain (York, Upper Canada)"
         )
 
+        static func chainOrPair(first: String, second: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.place.chainOr",
+                defaultValue: "%1$@ or %2$@",
+                comment: "Joins two simultaneous parent places when the date cannot pick one"
+            ), first, second)
+        }
+
+        static func placePeriodOpen(start: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.place.periodOpen",
+                defaultValue: "%@ –",
+                comment: "Place period with a start and no end"
+            ), start)
+        }
+
+        static func placePeriodUntil(end: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.place.periodUntil",
+                defaultValue: "– %@",
+                comment: "Place period with an end and no start"
+            ), end)
+        }
+
+        static let placeSucceeded = LocalizedStringResource(
+            "conclusions.place.succeeded",
+            defaultValue: "Succeeded",
+            comment: "Role on a Succession row: this Place succeeded the named Place"
+        )
+
+        static let placeSucceededBy = LocalizedStringResource(
+            "conclusions.place.succeededBy",
+            defaultValue: "Succeeded by",
+            comment: "Role on a Succession row: this Place was succeeded by the named Place"
+        )
+
+        static func placeContainsMore(_ count: Int) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.place.containsMore",
+                defaultValue: "%lld more",
+                comment: "Remainder when Contains truncates a long list of child Places"
+            ), count)
+        }
+
         static func morePlaces(count: Int) -> String {
             let resource = LocalizedStringResource(
                 "conclusions.a11y.morePlaces",
@@ -7361,7 +7405,7 @@ enum L10n {
 
         static let placePartOfAside = LocalizedStringResource(
             "conclusions.place.partOfAside",
-            defaultValue: "Grouped by type · span is when the link holds",
+            defaultValue: "Span is when the link holds",
             comment: "Aside under the Part of heading on a Place page"
         )
 
