@@ -202,8 +202,15 @@ final class PromoteModel {
 
     private func repropose(generation: Int) async {
         let fixed = flow.rows.compactMap { row -> CatalogPromoteGraphAlignmentFixed? in
-            guard row.decided, let id = row.target.handleID else { return nil }
-            return CatalogPromoteGraphAlignmentFixed(subjectID: row.subjectID, handleID: id)
+            guard row.decided else { return nil }
+            switch row.target {
+            case .handle(let id, _, _):
+                return CatalogPromoteGraphAlignmentFixed(subjectID: row.subjectID, handleID: id)
+            case .newKind:
+                return CatalogPromoteGraphAlignmentFixed(subjectID: row.subjectID, target: "new")
+            case .skip:
+                return CatalogPromoteGraphAlignmentFixed(subjectID: row.subjectID, target: "skip")
+            }
         }
         do {
             let proposal = try await store.proposePromoteGraphAlignment(

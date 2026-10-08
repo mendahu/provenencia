@@ -1300,9 +1300,12 @@ message ProposePromoteGraphAlignmentRequest {
   repeated PromoteGraphAlignmentFixed fixed = 3;
 }
 
+// A decided row Align holds as given. target is handle (handle_id set), new,
+// or skip; empty means handle. A New or Skip row stays off every handle.
 message PromoteGraphAlignmentFixed {
   string subject_id = 1;
   string handle_id = 2;
+  string target = 3;
 }
 
 message PromoteGraphAlignmentComparison {
@@ -1355,6 +1358,9 @@ message PromoteGraphAlignmentRow {
   string via_neighbor_subject_id = 16;
   string via_bridge_type = 17;
   string via_role = 18;
+  // With possible_duplicate: the other row on this layer this one may be the
+  // same as (it took the handle this row wanted, or both are New and alike).
+  string duplicate_of_subject_id = 19;
 }
 
 message ProposePromoteGraphAlignmentResponse {

@@ -76,12 +76,27 @@ func mergeFixed(q Querier, sourceID []byte, primary map[string]primarySubject, c
 	seen := map[string]bool{}
 
 	for _, f := range caller {
-		if len(f.SubjectID) != 16 || len(f.HandleID) != 16 {
+		if len(f.SubjectID) != 16 {
 			return nil, promote.ErrInvalid
 		}
 		sk := string(f.SubjectID)
 		ps, ok := primary[sk]
 		if !ok {
+			return nil, promote.ErrInvalid
+		}
+		switch f.Target {
+		case graphalign.TargetNew, graphalign.TargetSkip:
+			if len(f.HandleID) != 0 {
+				return nil, promote.ErrInvalid
+			}
+			out = append(out, graphalign.Fixed{SubjectID: append([]byte(nil), f.SubjectID...), Target: f.Target})
+			seen[sk] = true
+			continue
+		case "", graphalign.TargetHandle:
+		default:
+			return nil, promote.ErrInvalid
+		}
+		if len(f.HandleID) != 16 {
 			return nil, promote.ErrInvalid
 		}
 		var kind string

@@ -168,6 +168,24 @@ struct PromoteModelTests {
         #expect(store.lastPromoteBatch == nil)
     }
 
+    @Test func newAndSkipDecisionsAreHeldOnTheNextProposal() async {
+        let subjects = [subject("a", ref: "CPR-A", label: "Ada"), subject("b", ref: "CPR-B", label: "Bea")]
+        let store = store(subjects: subjects)
+        store.promoteProposals = [CatalogPromoteGraphAlignmentProposal(revision: 1, rows: [row("a", handleID: "e1"), row("b", handleID: "e2")])]
+        let model = model(store: store, subjectID: "a")
+        await model.load()
+        model.mapRest()
+        model.setTarget(subjectID: "a", token: "new")
+        _ = await waitUntil { !model.isProposing }
+        model.setTarget(subjectID: "b", token: "skip")
+        _ = await waitUntil { !model.isProposing }
+        let held = store.lastPromoteFixed.sorted { $0.subjectID < $1.subjectID }
+        #expect(held == [
+            CatalogPromoteGraphAlignmentFixed(subjectID: "a", target: "new"),
+            CatalogPromoteGraphAlignmentFixed(subjectID: "b", target: "skip"),
+        ])
+    }
+
     @Test func leaveGuardAsksOnlyAfterAManualChange() async {
         let subjects = [subject("a", ref: "CPR-A", label: "Ada")]
         let store = store(subjects: subjects)

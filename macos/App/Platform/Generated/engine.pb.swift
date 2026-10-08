@@ -4317,6 +4317,8 @@ public nonisolated struct Provenencia_Engine_V1_ProposePromoteGraphAlignmentRequ
   public init() {}
 }
 
+/// A decided row Align holds as given. target is handle (handle_id set), new,
+/// or skip; empty means handle. A New or Skip row stays off every handle.
 public nonisolated struct Provenencia_Engine_V1_PromoteGraphAlignmentFixed: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -4325,6 +4327,8 @@ public nonisolated struct Provenencia_Engine_V1_PromoteGraphAlignmentFixed: Send
   public var subjectID: String = String()
 
   public var handleID: String = String()
+
+  public var target: String = String()
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -4542,6 +4546,13 @@ public nonisolated struct Provenencia_Engine_V1_PromoteGraphAlignmentRow: @unche
   public var viaRole: String {
     get {_storage._viaRole}
     set {_uniqueStorage()._viaRole = newValue}
+  }
+
+  /// With possible_duplicate: the other row on this layer this one may be the
+  /// same as (it took the handle this row wanted, or both are New and alike).
+  public var duplicateOfSubjectID: String {
+    get {_storage._duplicateOfSubjectID}
+    set {_uniqueStorage()._duplicateOfSubjectID = newValue}
   }
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
@@ -13554,7 +13565,7 @@ nonisolated extension Provenencia_Engine_V1_ProposePromoteGraphAlignmentRequest:
 
 nonisolated extension Provenencia_Engine_V1_PromoteGraphAlignmentFixed: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".PromoteGraphAlignmentFixed"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}subject_id\0\u{3}handle_id\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}subject_id\0\u{3}handle_id\0\u{1}target\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -13564,6 +13575,7 @@ nonisolated extension Provenencia_Engine_V1_PromoteGraphAlignmentFixed: SwiftPro
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularStringField(value: &self.subjectID) }()
       case 2: try { try decoder.decodeSingularStringField(value: &self.handleID) }()
+      case 3: try { try decoder.decodeSingularStringField(value: &self.target) }()
       default: break
       }
     }
@@ -13576,12 +13588,16 @@ nonisolated extension Provenencia_Engine_V1_PromoteGraphAlignmentFixed: SwiftPro
     if !self.handleID.isEmpty {
       try visitor.visitSingularStringField(value: self.handleID, fieldNumber: 2)
     }
+    if !self.target.isEmpty {
+      try visitor.visitSingularStringField(value: self.target, fieldNumber: 3)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Provenencia_Engine_V1_PromoteGraphAlignmentFixed, rhs: Provenencia_Engine_V1_PromoteGraphAlignmentFixed) -> Bool {
     if lhs.subjectID != rhs.subjectID {return false}
     if lhs.handleID != rhs.handleID {return false}
+    if lhs.target != rhs.target {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -13820,7 +13836,7 @@ nonisolated extension Provenencia_Engine_V1_PromoteGraphAlignmentAlternative: Sw
 
 nonisolated extension Provenencia_Engine_V1_PromoteGraphAlignmentRow: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".PromoteGraphAlignmentRow"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}subject_id\0\u{1}kind\0\u{1}target\0\u{3}handle_id\0\u{3}handle_ref\0\u{1}score\0\u{1}assessment\0\u{1}reasons\0\u{1}comparisons\0\u{1}alternatives\0\u{3}conflict_with_fixed\0\u{3}possible_duplicate\0\u{1}person\0\u{1}event\0\u{1}place\0\u{3}via_neighbor_subject_id\0\u{3}via_bridge_type\0\u{3}via_role\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}subject_id\0\u{1}kind\0\u{1}target\0\u{3}handle_id\0\u{3}handle_ref\0\u{1}score\0\u{1}assessment\0\u{1}reasons\0\u{1}comparisons\0\u{1}alternatives\0\u{3}conflict_with_fixed\0\u{3}possible_duplicate\0\u{1}person\0\u{1}event\0\u{1}place\0\u{3}via_neighbor_subject_id\0\u{3}via_bridge_type\0\u{3}via_role\0\u{3}duplicate_of_subject_id\0")
 
   fileprivate class _StorageClass {
     var _subjectID: String = String()
@@ -13839,6 +13855,7 @@ nonisolated extension Provenencia_Engine_V1_PromoteGraphAlignmentRow: SwiftProto
     var _viaNeighborSubjectID: String = String()
     var _viaBridgeType: String = String()
     var _viaRole: String = String()
+    var _duplicateOfSubjectID: String = String()
 
       // This property is used as the initial default value for new instances of the type.
       // The type itself is protecting the reference to its storage via CoW semantics.
@@ -13865,6 +13882,7 @@ nonisolated extension Provenencia_Engine_V1_PromoteGraphAlignmentRow: SwiftProto
       _viaNeighborSubjectID = source._viaNeighborSubjectID
       _viaBridgeType = source._viaBridgeType
       _viaRole = source._viaRole
+      _duplicateOfSubjectID = source._duplicateOfSubjectID
     }
   }
 
@@ -13937,6 +13955,7 @@ nonisolated extension Provenencia_Engine_V1_PromoteGraphAlignmentRow: SwiftProto
         case 16: try { try decoder.decodeSingularStringField(value: &_storage._viaNeighborSubjectID) }()
         case 17: try { try decoder.decodeSingularStringField(value: &_storage._viaBridgeType) }()
         case 18: try { try decoder.decodeSingularStringField(value: &_storage._viaRole) }()
+        case 19: try { try decoder.decodeSingularStringField(value: &_storage._duplicateOfSubjectID) }()
         default: break
         }
       }
@@ -14009,6 +14028,9 @@ nonisolated extension Provenencia_Engine_V1_PromoteGraphAlignmentRow: SwiftProto
       if !_storage._viaRole.isEmpty {
         try visitor.visitSingularStringField(value: _storage._viaRole, fieldNumber: 18)
       }
+      if !_storage._duplicateOfSubjectID.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._duplicateOfSubjectID, fieldNumber: 19)
+      }
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -14034,6 +14056,7 @@ nonisolated extension Provenencia_Engine_V1_PromoteGraphAlignmentRow: SwiftProto
         if _storage._viaNeighborSubjectID != rhs_storage._viaNeighborSubjectID {return false}
         if _storage._viaBridgeType != rhs_storage._viaBridgeType {return false}
         if _storage._viaRole != rhs_storage._viaRole {return false}
+        if _storage._duplicateOfSubjectID != rhs_storage._duplicateOfSubjectID {return false}
         return true
       }
       if !storagesAreEqual {return false}

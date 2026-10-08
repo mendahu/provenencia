@@ -516,20 +516,24 @@ private struct PromoteAlignmentRow: View {
                 .padding(.leading, 42)
             }
             if let note = row.duplicateNote {
-                let parts = note.split(separator: "|", maxSplits: 1).map(String.init)
-                if parts.count == 2 {
-                    PVCallout(
-                        tone: .warning,
-                        title: L10n.Promote.duplicateTitle(name: parts[0], ref: parts[1]),
-                        message: L10n.string(L10n.Promote.duplicateBody),
-                        compact: true
-                    )
-                    .padding(.leading, 42)
-                }
+                PVCallout(
+                    tone: .warning,
+                    title: duplicateTitle(note),
+                    message: L10n.string(L10n.Promote.duplicateBody),
+                    compact: true
+                )
+                .padding(.leading, 42)
             }
         }
         .padding(.vertical, PVSpacing.space3)
         .overlay(alignment: .top) { PVDivider() }
+    }
+
+    private func duplicateTitle(_ note: PromoteFlow.DuplicateNote) -> String {
+        switch note {
+        case .sharesHandle(let other, let ref): L10n.Promote.duplicateTitle(name: other, ref: ref)
+        case .alsoNew(let other): L10n.Promote.duplicateNewTitle(name: other)
+        }
     }
 
     private var kindMark: some View {

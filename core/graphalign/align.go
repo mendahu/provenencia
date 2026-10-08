@@ -19,6 +19,7 @@ func Align(layer Layer, canon Canon, stats Stats, fixed []Fixed, cfg *Config) Pr
 	st.seed()
 	st.walk()
 	st.fallbackUnreachable()
+	st.scoreFixed()
 	return st.proposal()
 }
 
@@ -41,6 +42,10 @@ type state struct {
 	fixedSet map[string]bool
 	// handleID → subjectID (one-to-one within the layer)
 	handleOwner map[string]string
+	// held New or Skip decisions: never mapped, never walked through
+	held map[string]Target
+	// subjectID → subjectID that took a handle this one cleared the bar for
+	lostTo map[string]string
 
 	// best scored candidates per subject (for alternatives / fallback)
 	best map[string][]scoredCand
@@ -84,6 +89,8 @@ func newState(layer Layer, canon Canon, stats Stats, fixed []Fixed, cfg Config) 
 		assigned:    map[string][]byte{},
 		fixedSet:    map[string]bool{},
 		handleOwner: map[string]string{},
+		held:        map[string]Target{},
+		lostTo:      map[string]string{},
 		best:        map[string][]scoredCand{},
 		seen:        map[string]bool{},
 	}
@@ -108,6 +115,10 @@ func newState(layer Layer, canon Canon, stats Stats, fixed []Fixed, cfg Config) 
 	for _, f := range fixed {
 		sk, hk := string(f.SubjectID), string(f.HandleID)
 		if _, ok := st.subjects[sk]; !ok {
+			continue
+		}
+		if f.Target == TargetNew || f.Target == TargetSkip {
+			st.held[sk] = f.Target
 			continue
 		}
 		if _, ok := st.handles[hk]; !ok {
@@ -149,6 +160,9 @@ func (st *state) pushFromAnchor(subjectID, handleID []byte) {
 	for _, link := range st.layerAdj[sk] {
 		nk := string(link.neighbor)
 		if _, taken := st.assigned[nk]; taken {
+			continue
+		}
+		if _, decided := st.held[nk]; decided {
 			continue
 		}
 		ns := st.subjects[nk]
@@ -273,11 +287,11 @@ func (st *state) walk() {
 		if _, taken := st.assigned[sk]; taken {
 			continue
 		}
-		if owner, ok := st.handleOwner[hk]; ok && owner != sk {
-			continue // one-to-one
-		}
 		if item.score < st.cfg.AcceptScore {
 			continue
+		}
+		if st.lostContest(sk, hk) {
+			continue // one-to-one
 		}
 		st.assigned[sk] = append([]byte(nil), item.handleID...)
 		st.handleOwner[hk] = sk
@@ -295,6 +309,9 @@ func (st *state) fallbackUnreachable() {
 	for _, s := range st.sortedSubjects() {
 		sk := string(s.ID)
 		if _, ok := st.assigned[sk]; ok {
+			continue
+		}
+		if _, decided := st.held[sk]; decided {
 			continue
 		}
 		profile, ok := match.DefaultProfile(s.Kind)
@@ -320,14 +337,63 @@ func (st *state) fallbackUnreachable() {
 		if _, taken := st.assigned[sk]; taken {
 			continue
 		}
-		if _, owned := st.handleOwner[hk]; owned {
+		if item.score < st.cfg.AcceptScore {
 			continue
 		}
-		if item.score < st.cfg.AcceptScore {
+		if st.lostContest(sk, hk) {
 			continue
 		}
 		st.assigned[sk] = append([]byte(nil), item.handleID...)
 		st.handleOwner[hk] = sk
+	}
+}
+
+// lostContest reports whether another Subject already holds the handle, and
+// remembers the first such rival: a row that cleared the bar for a handle
+// another row took may be that row's duplicate.
+func (st *state) lostContest(sk, hk string) bool {
+	owner, ok := st.handleOwner[hk]
+	if !ok || owner == sk {
+		return false
+	}
+	if _, seen := st.lostTo[sk]; !seen {
+		st.lostTo[sk] = owner
+	}
+	return true
+}
+
+// scoreFixed scores each held handle with its now-mapped neighbors, and
+// scores the handles those neighbors point at instead, so a decision the
+// rest of the page contradicts can carry a warning (design §3.1).
+func (st *state) scoreFixed() {
+	for _, s := range st.sortedSubjects() {
+		sk := string(s.ID)
+		if !st.fixedSet[sk] {
+			continue
+		}
+		hid := st.assigned[sk]
+		if h := st.handles[string(hid)]; h != nil {
+			st.recordBest(sk, st.scoreCandidate(s.ID, h))
+		}
+		for _, link := range st.layerAdj[sk] {
+			g, ok := st.assigned[string(link.neighbor)]
+			if !ok {
+				continue
+			}
+			for _, ce := range st.canonAdj[string(g)] {
+				if ce.sig.Key() != link.sig.Key() || bytes.Equal(ce.neighbor, hid) {
+					continue
+				}
+				h := st.handles[string(ce.neighbor)]
+				if h == nil || h.Kind != s.Kind {
+					continue
+				}
+				sc := st.scoreCandidate(s.ID, h)
+				sc.viaNeighbor = append([]byte(nil), link.neighbor...)
+				sc.viaSig = link.sig
+				st.recordBest(sk, sc)
+			}
+		}
 	}
 }
 
@@ -378,15 +444,23 @@ func (st *state) proposal() Proposal {
 					Signature:         sc.viaSig,
 				}
 			}
-			row.Assessment = st.band(sc.score, st.fixedSet[sk])
+			row.Assessment = st.band(sc.score)
 			row.Alternatives = st.alts(sk, hid)
 			if st.fixedSet[sk] {
 				if best := st.bestNonAssigned(sk, hid); best != nil && best.score > sc.score+st.cfg.ConflictPenalty {
 					row.Flags.ConflictWithFixed = true
 				}
 			}
+		} else if decided, ok := st.held[sk]; ok {
+			row.Target = decided
+			row.Assessment = AssessNone
+			row.Reasons = []string{"decided"}
 		} else {
 			row.Assessment = AssessNone
+			if owner, ok := st.lostTo[sk]; ok {
+				row.Flags.PossibleDuplicate = true
+				row.Flags.DuplicateOf = []byte(owner)
+			}
 			if best := st.bestNonAssigned(sk, nil); best != nil {
 				// A candidate existed but was not accepted (weak Rank or
 				// one-to-one loss): Skip, never force a merge.
@@ -395,7 +469,7 @@ func (st *state) proposal() Proposal {
 				row.Alternatives = st.alts(sk, nil)
 				row.Reasons = best.reasons
 				if best.score >= st.cfg.WeakScore {
-					row.Assessment = st.band(best.score, false)
+					row.Assessment = st.band(best.score)
 				} else {
 					row.Reasons = append([]string{"weak match"}, best.reasons...)
 				}
@@ -409,20 +483,58 @@ func (st *state) proposal() Proposal {
 		}
 		rows = append(rows, row)
 	}
-	// Duplicate flag: two rows wanting same handle shouldn't happen if
-	// one-to-one held; mark if best lists collide.
-	ownerCount := map[string]int{}
-	for _, r := range rows {
-		if r.Target == TargetHandle && len(r.HandleID) > 0 {
-			ownerCount[string(r.HandleID)]++
-		}
-	}
-	for i := range rows {
-		if rows[i].Target == TargetHandle && ownerCount[string(rows[i].HandleID)] > 1 {
-			rows[i].Flags.PossibleDuplicate = true
-		}
-	}
+	st.flagSharedHandles(rows)
+	st.flagAlikeNewRows(rows)
 	return Proposal{Rows: rows}
+}
+
+// flagSharedHandles marks rows held on one handle (one-to-one keeps the walk
+// from doing this; two decisions can).
+func (st *state) flagSharedHandles(rows []Row) {
+	byHandle := map[string][]int{}
+	for i, r := range rows {
+		if r.Target == TargetHandle && len(r.HandleID) > 0 {
+			byHandle[string(r.HandleID)] = append(byHandle[string(r.HandleID)], i)
+		}
+	}
+	for _, idx := range byHandle {
+		if len(idx) < 2 {
+			continue
+		}
+		for _, i := range idx {
+			other := idx[0]
+			if other == i {
+				other = idx[1]
+			}
+			rows[i].Flags.PossibleDuplicate = true
+			rows[i].Flags.DuplicateOf = append([]byte(nil), rows[other].SubjectID...)
+		}
+	}
+}
+
+// flagAlikeNewRows marks two New rows of one kind whose values would clear
+// the accept bar against each other: filing both mints two handles for what
+// may be one entity. It only warns, so the bar is acceptance, not strong.
+func (st *state) flagAlikeNewRows(rows []Row) {
+	for i := range rows {
+		if rows[i].Target != TargetNew || rows[i].Flags.PossibleDuplicate {
+			continue
+		}
+		a := st.subjects[string(rows[i].SubjectID)]
+		for j := range rows {
+			if j == i || rows[j].Target != TargetNew || rows[j].Kind != rows[i].Kind {
+				continue
+			}
+			b := st.subjects[string(rows[j].SubjectID)]
+			ev := match.Evaluate(a.Values, b.Values, st.metas)
+			if ScoreCandidate(ev, a.Values, 0, 1, st.cfg, st.stats).Score < st.cfg.AcceptScore {
+				continue
+			}
+			rows[i].Flags.PossibleDuplicate = true
+			rows[i].Flags.DuplicateOf = append([]byte(nil), rows[j].SubjectID...)
+			break
+		}
+	}
 }
 
 func comparisonsFrom(ev match.Evaluation, probe match.Values, cfg Config, stats Stats) []Comparison {
@@ -490,10 +602,7 @@ func subjectHasValues(s *Subject) bool {
 	return false
 }
 
-func (st *state) band(score float64, fixed bool) Assessment {
-	if fixed {
-		return AssessStrong
-	}
+func (st *state) band(score float64) Assessment {
 	if score >= st.cfg.StrongScore {
 		return AssessStrong
 	}

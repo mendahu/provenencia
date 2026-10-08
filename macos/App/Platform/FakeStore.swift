@@ -30,6 +30,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     /// Per-call delay before a proposal returns, consumed in call order, so
     /// tests can answer an earlier call after a later one.
     var promoteProposeDelays: [Duration] = []
+    /// The decided rows the last proposal call held.
+    var lastPromoteFixed: [CatalogPromoteGraphAlignmentFixed] = []
     /// The last Done the page filed, for tests.
     var lastPromoteBatch: (rows: [CatalogPromoteBatchRow], skipBridgeIDs: [String])?
     /// Event and Place headers as Go would compose them, seeded by tests in
@@ -1320,7 +1322,10 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         sourceID: String,
         fixed: [CatalogPromoteGraphAlignmentFixed]
     ) async throws -> CatalogPromoteGraphAlignmentProposal {
-        let delay: Duration? = withState { promoteProposeDelays.isEmpty ? nil : promoteProposeDelays.removeFirst() }
+        let delay: Duration? = withState {
+            lastPromoteFixed = fixed
+            return promoteProposeDelays.isEmpty ? nil : promoteProposeDelays.removeFirst()
+        }
         let proposal = buildPromoteProposal(projectDir: projectDir, sourceID: sourceID, fixed: fixed)
         if let delay { try? await Task.sleep(for: delay) }
         return proposal

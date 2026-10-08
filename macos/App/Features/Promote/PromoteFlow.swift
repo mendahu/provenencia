@@ -22,6 +22,14 @@ struct PromoteFlow: Equatable, Sendable {
         }
     }
 
+    /// Why a row may be the same entity as another row on this page.
+    enum DuplicateNote: Equatable, Sendable {
+        /// Both rows land on one handle (or the other took the one this wanted).
+        case sharesHandle(otherName: String, ref: String)
+        /// Both rows mint New handles and their values match.
+        case alsoNew(otherName: String)
+    }
+
     struct Alternative: Equatable, Sendable, Identifiable {
         var id: String
         var ref: String
@@ -48,8 +56,11 @@ struct PromoteFlow: Equatable, Sendable {
         var argumentEdited = false
         var decided: Bool
         var updatedNote: String?
+        /// Ref of the stronger handle a decided row's neighbors point at.
         var conflictNote: String?
-        var duplicateNote: String?
+        /// The row the proposal says this one may duplicate.
+        var proposedDuplicateOf: String?
+        var duplicateNote: DuplicateNote?
         var id: String { subjectID }
     }
 
@@ -305,6 +316,8 @@ struct PromoteFlow: Equatable, Sendable {
 
     mutating func cancelLeave() { pendingLeave = nil }
 
+    /// Rows that would land on one handle, or that the proposal says may be
+    /// the same entity, name each other.
     private mutating func noteDuplicates() {
         var owners: [String: [Int]] = [:]
         for index in rows.indices {
@@ -314,11 +327,20 @@ struct PromoteFlow: Equatable, Sendable {
             }
         }
         for (_, indexes) in owners where indexes.count > 1 {
-            let names = indexes.map { rows[$0].name }
             for index in indexes {
-                let other = names.filter { $0 != rows[index].name }.first ?? names[0]
-                let ref = rows[index].target.handleID ?? ""
-                rows[index].duplicateNote = other + "|" + ref
+                guard case .handle(_, let ref, _) = rows[index].target else { continue }
+                let other = indexes.first { $0 != index } ?? index
+                rows[index].duplicateNote = .sharesHandle(otherName: rows[other].name, ref: ref)
+            }
+        }
+        for index in rows.indices where rows[index].duplicateNote == nil && !rows[index].anchor {
+            guard let otherID = rows[index].proposedDuplicateOf,
+                  let other = rows.first(where: { $0.subjectID == otherID })
+            else { continue }
+            if case .handle(_, let ref, _) = other.target {
+                rows[index].duplicateNote = .sharesHandle(otherName: other.name, ref: ref)
+            } else if rows[index].target == .newKind, other.target == .newKind {
+                rows[index].duplicateNote = .alsoNew(otherName: other.name)
             }
         }
     }
@@ -346,7 +368,7 @@ struct PromoteFlow: Equatable, Sendable {
                 anchor: true, assessment: "strong", reason: "fixed",
                 target: .handle(id: anchor.id, ref: anchor.ref, title: anchor.title),
                 menu: [], comparisons: [], pins: [], confidenceGradeID: nil, argument: "",
-                decided: false, updatedNote: nil, conflictNote: nil, duplicateNote: nil
+                decided: false, updatedNote: nil, conflictNote: nil, proposedDuplicateOf: nil, duplicateNote: nil
             )
         }
         let menu = menu(for: proposal, kind: fact.kind)
@@ -368,9 +390,8 @@ struct PromoteFlow: Equatable, Sendable {
             if !previous.argumentEdited {
                 kept.argument = draftedArgument(lines)
             }
-            if proposal.conflictWithFixed, let rival = menu.first {
-                kept.conflictNote = rival.ref
-            }
+            kept.conflictNote = proposal.conflictWithFixed ? proposal.alternatives.first?.handleRef : nil
+            kept.proposedDuplicateOf = duplicateOf(proposal)
             return kept
         }
         let lines = drafted.handleID == nil ? [] : proposal.comparisons
@@ -384,8 +405,13 @@ struct PromoteFlow: Equatable, Sendable {
             reason: reason(proposal, kind: fact.kind),
             target: drafted, menu: menu, comparisons: proposal.comparisons,
             pins: draftedPins(lines), confidenceGradeID: nil, argument: draftedArgument(lines),
-            decided: false, updatedNote: updated, conflictNote: nil, duplicateNote: nil
+            decided: false, updatedNote: updated, conflictNote: nil,
+            proposedDuplicateOf: duplicateOf(proposal), duplicateNote: nil
         )
+    }
+
+    private static func duplicateOf(_ proposal: CatalogPromoteGraphAlignmentRow) -> String? {
+        proposal.possibleDuplicate && !proposal.duplicateOfSubjectID.isEmpty ? proposal.duplicateOfSubjectID : nil
     }
 
     private static func draftedPins(_ lines: [CatalogPromoteGraphAlignmentComparison]) -> Set<String> {

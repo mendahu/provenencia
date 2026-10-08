@@ -18125,6 +18125,18 @@
         }
       }
     },
+    "promote.warning.duplicateNewTitle": {
+      "comment": "Warning title when two New rows on the page match each other; argument is the other subject's name",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ is also filed New and looks the same"
+          }
+        }
+      }
+    },
     "promote.warning.duplicateBody": {
       "comment": "Warning body when two rows share a handle",
       "extractionState": "manual",

@@ -10739,10 +10739,13 @@ func (x *ProposePromoteGraphAlignmentRequest) GetFixed() []*PromoteGraphAlignmen
 	return nil
 }
 
+// A decided row Align holds as given. target is handle (handle_id set), new,
+// or skip; empty means handle. A New or Skip row stays off every handle.
 type PromoteGraphAlignmentFixed struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	SubjectId     string                 `protobuf:"bytes,1,opt,name=subject_id,json=subjectId,proto3" json:"subject_id,omitempty"`
 	HandleId      string                 `protobuf:"bytes,2,opt,name=handle_id,json=handleId,proto3" json:"handle_id,omitempty"`
+	Target        string                 `protobuf:"bytes,3,opt,name=target,proto3" json:"target,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -10787,6 +10790,13 @@ func (x *PromoteGraphAlignmentFixed) GetSubjectId() string {
 func (x *PromoteGraphAlignmentFixed) GetHandleId() string {
 	if x != nil {
 		return x.HandleId
+	}
+	return ""
+}
+
+func (x *PromoteGraphAlignmentFixed) GetTarget() string {
+	if x != nil {
+		return x.Target
 	}
 	return ""
 }
@@ -11078,6 +11088,9 @@ type PromoteGraphAlignmentRow struct {
 	ViaNeighborSubjectId string `protobuf:"bytes,16,opt,name=via_neighbor_subject_id,json=viaNeighborSubjectId,proto3" json:"via_neighbor_subject_id,omitempty"`
 	ViaBridgeType        string `protobuf:"bytes,17,opt,name=via_bridge_type,json=viaBridgeType,proto3" json:"via_bridge_type,omitempty"`
 	ViaRole              string `protobuf:"bytes,18,opt,name=via_role,json=viaRole,proto3" json:"via_role,omitempty"`
+	// With possible_duplicate: the other row on this layer this one may be the
+	// same as (it took the handle this row wanted, or both are New and alike).
+	DuplicateOfSubjectId string `protobuf:"bytes,19,opt,name=duplicate_of_subject_id,json=duplicateOfSubjectId,proto3" json:"duplicate_of_subject_id,omitempty"`
 	unknownFields        protoimpl.UnknownFields
 	sizeCache            protoimpl.SizeCache
 }
@@ -11247,6 +11260,13 @@ func (x *PromoteGraphAlignmentRow) GetViaBridgeType() string {
 func (x *PromoteGraphAlignmentRow) GetViaRole() string {
 	if x != nil {
 		return x.ViaRole
+	}
+	return ""
+}
+
+func (x *PromoteGraphAlignmentRow) GetDuplicateOfSubjectId() string {
+	if x != nil {
+		return x.DuplicateOfSubjectId
 	}
 	return ""
 }
@@ -17465,11 +17485,12 @@ const file_engine_proto_rawDesc = "" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
 	"projectDir\x12\x1b\n" +
 	"\tsource_id\x18\x02 \x01(\tR\bsourceId\x12G\n" +
-	"\x05fixed\x18\x03 \x03(\v21.provenencia.engine.v1.PromoteGraphAlignmentFixedR\x05fixed\"X\n" +
+	"\x05fixed\x18\x03 \x03(\v21.provenencia.engine.v1.PromoteGraphAlignmentFixedR\x05fixed\"p\n" +
 	"\x1aPromoteGraphAlignmentFixed\x12\x1d\n" +
 	"\n" +
 	"subject_id\x18\x01 \x01(\tR\tsubjectId\x12\x1b\n" +
-	"\thandle_id\x18\x02 \x01(\tR\bhandleId\"\x83\x04\n" +
+	"\thandle_id\x18\x02 \x01(\tR\bhandleId\x12\x16\n" +
+	"\x06target\x18\x03 \x01(\tR\x06target\"\x83\x04\n" +
 	"\x1fPromoteGraphAlignmentComparison\x12!\n" +
 	"\fproperty_key\x18\x01 \x01(\tR\vpropertyKey\x12'\n" +
 	"\x0fproperty_origin\x18\x02 \x01(\tR\x0epropertyOrigin\x12\x18\n" +
@@ -17495,7 +17516,7 @@ const file_engine_proto_rawDesc = "" +
 	"\x06person\x18\x04 \x01(\v2#.provenencia.engine.v1.PersonHeaderH\x00R\x06person\x12:\n" +
 	"\x05event\x18\x05 \x01(\v2\".provenencia.engine.v1.EventHeaderH\x00R\x05event\x12:\n" +
 	"\x05place\x18\x06 \x01(\v2\".provenencia.engine.v1.PlaceHeaderH\x00R\x05placeB\b\n" +
-	"\x06header\"\xc2\x06\n" +
+	"\x06header\"\xf9\x06\n" +
 	"\x18PromoteGraphAlignmentRow\x12\x1d\n" +
 	"\n" +
 	"subject_id\x18\x01 \x01(\tR\tsubjectId\x12\x12\n" +
@@ -17519,7 +17540,8 @@ const file_engine_proto_rawDesc = "" +
 	"\x05place\x18\x0f \x01(\v2\".provenencia.engine.v1.PlaceHeaderH\x00R\x05place\x125\n" +
 	"\x17via_neighbor_subject_id\x18\x10 \x01(\tR\x14viaNeighborSubjectId\x12&\n" +
 	"\x0fvia_bridge_type\x18\x11 \x01(\tR\rviaBridgeType\x12\x19\n" +
-	"\bvia_role\x18\x12 \x01(\tR\aviaRoleB\b\n" +
+	"\bvia_role\x18\x12 \x01(\tR\aviaRole\x125\n" +
+	"\x17duplicate_of_subject_id\x18\x13 \x01(\tR\x14duplicateOfSubjectIdB\b\n" +
 	"\x06header\"\x87\x01\n" +
 	"$ProposePromoteGraphAlignmentResponse\x12C\n" +
 	"\x04rows\x18\x01 \x03(\v2/.provenencia.engine.v1.PromoteGraphAlignmentRowR\x04rows\x12\x1a\n" +

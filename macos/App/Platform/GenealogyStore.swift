@@ -231,9 +231,12 @@ struct CatalogPromoteResult: Sendable, Equatable {
 }
 
 /// One decided or already-chosen Subject→handle anchor for graph alignment.
+/// A decided row the proposal holds as given: on `handleID` (target handle),
+/// or off every handle (target new or skip, no handle).
 struct CatalogPromoteGraphAlignmentFixed: Sendable, Equatable {
     var subjectID: String
-    var handleID: String
+    var handleID: String = ""
+    var target: String = "handle"
 }
 
 /// One Property comparison on a graph-alignment row. Agreeing lines with
@@ -281,6 +284,8 @@ struct CatalogPromoteGraphAlignmentRow: Sendable, Equatable, Identifiable {
     var alternatives: [CatalogPromoteGraphAlignmentAlternative]
     var conflictWithFixed: Bool
     var possibleDuplicate: Bool
+    /// With `possibleDuplicate`, the other row this one may be the same as.
+    var duplicateOfSubjectID: String = ""
     var viaNeighborSubjectID: String = ""
     var viaBridgeType: String = ""
     var viaRole: String = ""

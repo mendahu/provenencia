@@ -69,10 +69,14 @@ type Stats struct {
 	FanOut map[string]float64
 }
 
-// Fixed is a decided or already-promoted Subject→handle anchor.
+// Fixed is a decided or already-promoted row Align holds as given. Target
+// empty or TargetHandle anchors SubjectID on HandleID; TargetNew or
+// TargetSkip keeps the Subject off every handle, so the walk neither maps it
+// nor walks through it.
 type Fixed struct {
 	SubjectID []byte
 	HandleID  []byte
+	Target    Target
 }
 
 // Target is what Align proposes for one Subject.
@@ -138,8 +142,14 @@ type Alternative struct {
 
 // RowFlags call out conflicts and duplicates for the page.
 type RowFlags struct {
+	// ConflictWithFixed: a held handle row whose neighbors now point at a
+	// clearly stronger handle (Alternatives[0]).
 	ConflictWithFixed bool
-	PossibleDuplicate bool // another row already took this handle
+	// PossibleDuplicate: DuplicateOf may be the same entity as this row. It
+	// took the handle this row would have matched, holds the same handle,
+	// or both rows are New and score alike.
+	PossibleDuplicate bool
+	DuplicateOf       []byte
 }
 
 // Row is one Subject's proposal.

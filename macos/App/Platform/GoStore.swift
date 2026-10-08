@@ -794,6 +794,7 @@ struct GoStore: GenealogyStore {
             var row = Provenencia_Engine_V1_PromoteGraphAlignmentFixed()
             row.subjectID = f.subjectID
             row.handleID = f.handleID
+            row.target = f.target
             return row
         }
         let resp: Provenencia_Engine_V1_ProposePromoteGraphAlignmentResponse = try await provenenciaCall(
@@ -857,6 +858,7 @@ struct GoStore: GenealogyStore {
                 },
                 conflictWithFixed: r.conflictWithFixed,
                 possibleDuplicate: r.possibleDuplicate,
+                duplicateOfSubjectID: r.duplicateOfSubjectID,
                 viaNeighborSubjectID: r.viaNeighborSubjectID,
                 viaBridgeType: r.viaBridgeType,
                 viaRole: r.viaRole,

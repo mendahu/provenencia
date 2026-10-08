@@ -26,11 +26,11 @@ func ProposePromoteGraphAlignment(in []byte) ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-		hid, err := parseID(f.GetHandleId())
+		hid, err := optionalID(f.GetHandleId())
 		if err != nil {
 			return nil, err
 		}
-		fixed = append(fixed, graphalign.Fixed{SubjectID: sid, HandleID: hid})
+		fixed = append(fixed, graphalign.Fixed{SubjectID: sid, HandleID: hid, Target: graphalign.Target(f.GetTarget())})
 	}
 
 	var out *engine.ProposePromoteGraphAlignmentResponse
@@ -107,16 +107,17 @@ func proposalProto(q conclusionheaders.Querier, prop graphalign.Proposal) (*engi
 
 	for _, r := range prop.Rows {
 		row := &engine.PromoteGraphAlignmentRow{
-			SubjectId:         uuidString(r.SubjectID),
-			Kind:              r.Kind,
-			Target:            string(r.Target),
-			HandleId:          uuidString(r.HandleID),
-			HandleRef:         r.HandleRef,
-			Score:             r.Score,
-			Assessment:        string(r.Assessment),
-			Reasons:           append([]string(nil), r.Reasons...),
-			ConflictWithFixed: r.Flags.ConflictWithFixed,
-			PossibleDuplicate: r.Flags.PossibleDuplicate,
+			SubjectId:            uuidString(r.SubjectID),
+			Kind:                 r.Kind,
+			Target:               string(r.Target),
+			HandleId:             uuidString(r.HandleID),
+			HandleRef:            r.HandleRef,
+			Score:                r.Score,
+			Assessment:           string(r.Assessment),
+			Reasons:              append([]string(nil), r.Reasons...),
+			ConflictWithFixed:    r.Flags.ConflictWithFixed,
+			PossibleDuplicate:    r.Flags.PossibleDuplicate,
+			DuplicateOfSubjectId: uuidString(r.Flags.DuplicateOf),
 		}
 		if r.Via != nil {
 			row.ViaNeighborSubjectId = uuidString(r.Via.NeighborSubjectID)

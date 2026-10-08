@@ -456,3 +456,41 @@ func TestProposeOneHopExhibitsPairOnlyTheMappedNeighbor(t *testing.T) {
 		})
 	}
 }
+
+func TestProposeHoldsNewAndSkipDecisions(t *testing.T) {
+	tests := []struct {
+		name    string
+		fixed   func(handle []byte) graphalign.Fixed
+		want    graphalign.Target
+		wantErr bool
+	}{
+		{name: "a row decided New stays New", fixed: func([]byte) graphalign.Fixed { return graphalign.Fixed{Target: graphalign.TargetNew} }, want: graphalign.TargetNew},
+		{name: "a row decided Skip stays Skip", fixed: func([]byte) graphalign.Fixed { return graphalign.Fixed{Target: graphalign.TargetSkip} }, want: graphalign.TargetSkip},
+		{name: "a New decision with a handle is refused", fixed: func(h []byte) graphalign.Fixed {
+			return graphalign.Fixed{Target: graphalign.TargetNew, HandleID: h}
+		}, wantErr: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			f := newFixture(t)
+			per := f.promote(f.person(f.source, f.artifact, "Gracie"))
+			srcB, artB := f.newSource("Obituary")
+			again := f.person(srcB, artB, "Gracie")
+			fixed := tt.fixed(per.Entity.ID)
+			fixed.SubjectID = again.ID
+			db, err := f.c.DB()
+			must(t, err)
+			p, _, err := promotealign.Propose(db, srcB.ID, []graphalign.Fixed{fixed})
+			if tt.wantErr {
+				if err != promote.ErrInvalid {
+					t.Fatalf("err %v, want promote.ErrInvalid", err)
+				}
+				return
+			}
+			must(t, err)
+			if row := rowFor(p, again.ID); row.Target != tt.want {
+				t.Fatalf("row %+v, want %s", row, tt.want)
+			}
+		})
+	}
+}

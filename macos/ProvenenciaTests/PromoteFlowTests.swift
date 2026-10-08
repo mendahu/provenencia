@@ -193,4 +193,44 @@ struct PromoteFlowTests {
         flow.merge(proposal(rows: [row(id: "a")], revision: 4), subjects: [fact("a")])
         #expect(flow.rows[0].pins.isEmpty)
     }
+
+    @Test func duplicateNotesNameTheOtherRowAndItsRef() {
+        var lost = row(id: "b", target: "skip", handleID: "", assessment: "strong")
+        lost.possibleDuplicate = true
+        lost.duplicateOfSubjectID = "a"
+        var newA = row(id: "c", target: "new", handleID: "", assessment: "strong")
+        newA.possibleDuplicate = true
+        newA.duplicateOfSubjectID = "d"
+        var newB = row(id: "d", target: "new", handleID: "", assessment: "strong")
+        newB.possibleDuplicate = true
+        newB.duplicateOfSubjectID = "c"
+        var flow = PromoteFlow(entryID: "a")
+        flow.load(
+            entryID: "a",
+            proposal: proposal(rows: [row(id: "a"), lost, newA, newB, row(id: "e", handleID: "e2")]),
+            subjects: [fact("a"), fact("b"), fact("c"), fact("d"), fact("e")],
+            bridges: []
+        )
+        let note = { (id: String) in flow.rows.first { $0.subjectID == id }?.duplicateNote }
+        #expect(note("b") == .sharesHandle(otherName: "a", ref: "PER-1"))
+        #expect(note("c") == .alsoNew(otherName: "d"))
+        #expect(note("d") == .alsoNew(otherName: "c"))
+
+        flow.mapRest()
+        flow.setTarget(subjectID: "e", token: "handle:e2")
+        flow.setTarget(subjectID: "a", token: "handle:e2")
+        #expect(note("a") == .sharesHandle(otherName: "e", ref: "PER-2"))
+    }
+
+    @Test func aConflictNamesTheStrongerHandleNotTheDecidedOne() {
+        var flow = PromoteFlow(entryID: "a")
+        flow.load(entryID: "a", proposal: proposal(rows: [row(id: "a")]), subjects: [fact("a")], bridges: [])
+        flow.setTarget(subjectID: "a", token: "handle:e2")
+        var held = row(id: "a", handleID: "e2")
+        held.handleRef = "PER-2"
+        held.conflictWithFixed = true
+        held.alternatives = [CatalogPromoteGraphAlignmentAlternative(handleID: "e1", handleRef: "PER-1", score: 6)]
+        flow.merge(proposal(rows: [held], revision: 4), subjects: [fact("a")])
+        #expect(flow.rows[0].conflictNote == "PER-1")
+    }
 }
