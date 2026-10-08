@@ -19,6 +19,13 @@ Copy the stub. Surface + what got in the way is enough. A wanted fix is optional
 
 <!-- add below this line -->
 
+### Citation composer slows down with many Observations
+
+- **Date:** 2026-10-08
+- **Where:** Citation composer
+- **Annoyance:** Opening a Citation with a lot of Observations gets slow quickly. Real Citations with around 10–20 Observations are already noticeably sluggish.
+- **Wanted:** The composer stays responsive at 20+ Observations. Profile the load first to see whether the time goes to data fetching or to view rendering.
+
 ### Drag and drop files into the Artifact section
 
 - **Date:** 2026-10-08
