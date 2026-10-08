@@ -17320,6 +17320,570 @@
           }
         }
       }
+    },
+    "promote.page.title": {
+      "comment": "Promote page title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Promote"
+          }
+        }
+      }
+    },
+    "promote.page.mapRest": {
+      "comment": "Adds every other person, event, and place; argument is how many",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Map the rest of this graph (%lld)"
+          }
+        }
+      }
+    },
+    "promote.page.rowCount": {
+      "comment": "How many rows are on the Promote page",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld rows"
+          }
+        }
+      }
+    },
+    "promote.page.group.kind": {
+      "comment": "Group Promote rows by person, event, or place",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kind"
+          }
+        }
+      }
+    },
+    "promote.page.group.assessment": {
+      "comment": "Group Promote rows by how sure the match is",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Assessment"
+          }
+        }
+      }
+    },
+    "promote.page.group.label": {
+      "comment": "Accessibility label for the Promote grouping menu",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Group rows"
+          }
+        }
+      }
+    },
+    "promote.page.kind.person": {
+      "comment": "Promote section of person rows",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "People"
+          }
+        }
+      }
+    },
+    "promote.page.kind.event": {
+      "comment": "Promote section of event rows",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Events"
+          }
+        }
+      }
+    },
+    "promote.page.kind.place": {
+      "comment": "Promote section of place rows",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Places"
+          }
+        }
+      }
+    },
+    "promote.assessment.strong": {
+      "comment": "Promote match assessment",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Strong"
+          }
+        }
+      }
+    },
+    "promote.assessment.weak": {
+      "comment": "Promote match assessment",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weak"
+          }
+        }
+      }
+    },
+    "promote.assessment.none": {
+      "comment": "Promote match assessment when nothing lines up",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No match"
+          }
+        }
+      }
+    },
+    "promote.row.decided": {
+      "comment": "A Promote row the researcher has changed",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Decided"
+          }
+        }
+      }
+    },
+    "promote.row.updated": {
+      "comment": "A suggested Promote row that moved after a re-proposal",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Updated"
+          }
+        }
+      }
+    },
+    "promote.row.anchor": {
+      "comment": "An already-promoted row, shown read-only",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Filed"
+          }
+        }
+      }
+    },
+    "promote.target.skip": {
+      "comment": "Leave this subject unfiled",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skip"
+          }
+        }
+      }
+    },
+    "promote.target.label": {
+      "comment": "Accessibility label for a row's target menu; argument is the subject's name",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Target for %@"
+          }
+        }
+      }
+    },
+    "promote.reason.via": {
+      "comment": "Why a row was matched: neighbor name, neighbor ref, relationship",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "via %1$@ → %2$@ (%3$@)"
+          }
+        }
+      }
+    },
+    "promote.reason.filed": {
+      "comment": "Reason on a read-only promoted row",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Already filed"
+          }
+        }
+      }
+    },
+    "promote.reason.agrees": {
+      "comment": "Reason naming the property that agrees; argument is the property key",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Agrees on %@"
+          }
+        }
+      }
+    },
+    "promote.row.updatedDetail": {
+      "comment": "What a suggested row changed to",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Updated · %@"
+          }
+        }
+      }
+    },
+    "promote.warning.conflict": {
+      "comment": "A decided row the new proposal contradicts; argument is the other handle ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A stronger match is %@. This choice is kept."
+          }
+        }
+      }
+    },
+    "promote.warning.duplicate": {
+      "comment": "Two rows share a handle; 1 = the other subject's name, 2 = the handle ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ is also filed on %2$@. These may be the same person. Combine them on the Evidence graph."
+          }
+        }
+      }
+    },
+    "promote.sheet.title": {
+      "comment": "Title of the Promote evidence sheet",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Evidence"
+          }
+        }
+      }
+    },
+    "promote.sheet.back": {
+      "comment": "Closes the Promote evidence sheet",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Back to all rows"
+          }
+        }
+      }
+    },
+    "promote.sheet.own": {
+      "comment": "Evidence group for the subject's own records",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This subject"
+          }
+        }
+      }
+    },
+    "promote.sheet.status": {
+      "comment": "Claim status field",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Status"
+          }
+        }
+      }
+    },
+    "promote.sheet.confidence": {
+      "comment": "Claim confidence field",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Confidence"
+          }
+        }
+      }
+    },
+    "promote.sheet.confidence.unset": {
+      "comment": "No confidence grade chosen",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not stated"
+          }
+        }
+      }
+    },
+    "promote.sheet.argument": {
+      "comment": "Claim argument field",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Argument"
+          }
+        }
+      }
+    },
+    "promote.sheet.pin": {
+      "comment": "Toggle that pins a comparison as claim evidence",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pin"
+          }
+        }
+      }
+    },
+    "promote.sheet.agrees": {
+      "comment": "A comparison that agrees",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Agrees"
+          }
+        }
+      }
+    },
+    "promote.sheet.conflicts": {
+      "comment": "A comparison that disagrees",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conflicts"
+          }
+        }
+      }
+    },
+    "promote.sheet.unknown": {
+      "comment": "A comparison with nothing to compare",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unknown"
+          }
+        }
+      }
+    },
+    "promote.connections.count": {
+      "comment": "Bridge summary; argument is how many will be filed",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld connections will be filed"
+          }
+        }
+      }
+    },
+    "promote.connections.filed": {
+      "comment": "Switch label for a connection that will be filed",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Filed"
+          }
+        }
+      }
+    },
+    "promote.connections.off": {
+      "comment": "A connection the researcher switched off",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not filed this time"
+          }
+        }
+      }
+    },
+    "promote.connections.self": {
+      "comment": "A connection whose ends resolve to one handle",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not filed · both ends are the same record"
+          }
+        }
+      }
+    },
+    "promote.connections.skipped": {
+      "comment": "A connection that stays unfiled because an end is not being filed",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not filed · an end is skipped"
+          }
+        }
+      }
+    },
+    "promote.done.summary": {
+      "comment": "Footer: how many rows will be filed, skipped, and how many connections",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "File %1$lld · Skip %2$lld · %3$lld connections"
+          }
+        }
+      }
+    },
+    "promote.done.filing": {
+      "comment": "Done button while the batch is writing",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Filing"
+          }
+        }
+      }
+    },
+    "promote.done.action": {
+      "comment": "Files the Promote page",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Done"
+          }
+        }
+      }
+    },
+    "promote.cancel": {
+      "comment": "Leaves the Promote page",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancel"
+          }
+        }
+      }
+    },
+    "promote.stale.notice": {
+      "comment": "Shown when Done loses the revision race and the page proposes again",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The catalog changed. This proposal was read again."
+          }
+        }
+      }
+    },
+    "promote.toast.filed": {
+      "comment": "Toast after Done; skipped subjects are not a rejection",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Filed %1$lld. %2$lld not filed yet."
+          }
+        }
+      }
+    },
+    "promote.leave.pageTitle": {
+      "comment": "Leave guard title when the Promote page has manual changes",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leave without filing?"
+          }
+        }
+      }
+    },
+    "promote.leave.pageMessage": {
+      "comment": "Leave guard body",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your changes on this page will be discarded."
+          }
+        }
+      }
     }
   },
   "version": "1.1"

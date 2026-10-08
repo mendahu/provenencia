@@ -33,6 +33,7 @@ struct PlaceRegistry: Sendable {
                     .promoteTargets(project: project, subjectId: subjectId),
                     .confidenceGradesList(project: project),
                     .propertiesWorkspace(project: project),
+                    .connectRules(project: project),
                 ]
             },
             deepId: { $0.subjectId }

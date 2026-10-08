@@ -329,8 +329,6 @@
 		B91100000000000000000003 /* PVRadio.swift in Sources */ = {isa = PBXBuildFile; fileRef = B91100000000000000000002 /* PVRadio.swift */; };
 		B91100000000000000000006 /* PromoteModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B91100000000000000000005 /* PromoteModel.swift */; };
 		B91100000000000000000008 /* PromoteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B91100000000000000000007 /* PromoteView.swift */; };
-		B9110000000000000000000A /* PromoteTargetStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = B91100000000000000000009 /* PromoteTargetStep.swift */; };
-		B9120000000000000000000C /* PromoteClaimStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9120000000000000000000B /* PromoteClaimStep.swift */; };
 		B9110000000000000000000C /* PromoteModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9110000000000000000000B /* PromoteModelTests.swift */; };
 		B9110000000000000000000E /* PromoteFlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9110000000000000000000D /* PromoteFlow.swift */; };
 		B91100000000000000000010 /* PromoteFlowTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9110000000000000000000F /* PromoteFlowTests.swift */; };
@@ -695,8 +693,6 @@
 		B91100000000000000000002 /* PVRadio.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVRadio.swift; sourceTree = "<group>"; };
 		B91100000000000000000005 /* PromoteModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PromoteModel.swift; sourceTree = "<group>"; };
 		B91100000000000000000007 /* PromoteView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PromoteView.swift; sourceTree = "<group>"; };
-		B91100000000000000000009 /* PromoteTargetStep.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PromoteTargetStep.swift; sourceTree = "<group>"; };
-		B9120000000000000000000B /* PromoteClaimStep.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PromoteClaimStep.swift; sourceTree = "<group>"; };
 		B9110000000000000000000B /* PromoteModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PromoteModelTests.swift; sourceTree = "<group>"; };
 		B9110000000000000000000D /* PromoteFlow.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PromoteFlow.swift; sourceTree = "<group>"; };
 		B9110000000000000000000F /* PromoteFlowTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PromoteFlowTests.swift; sourceTree = "<group>"; };
@@ -1666,8 +1662,6 @@
 			children = (
 				B91100000000000000000005 /* PromoteModel.swift */,
 				B91100000000000000000007 /* PromoteView.swift */,
-				B91100000000000000000009 /* PromoteTargetStep.swift */,
-				B9120000000000000000000B /* PromoteClaimStep.swift */,
 				B9110000000000000000000D /* PromoteFlow.swift */,
 			);
 			path = Promote;
@@ -2041,8 +2035,6 @@
 				B91100000000000000000003 /* PVRadio.swift in Sources */,
 				B91100000000000000000006 /* PromoteModel.swift in Sources */,
 				B91100000000000000000008 /* PromoteView.swift in Sources */,
-				B9110000000000000000000A /* PromoteTargetStep.swift in Sources */,
-				B9120000000000000000000C /* PromoteClaimStep.swift in Sources */,
 				B9110000000000000000000E /* PromoteFlow.swift in Sources */,
 				B02746CAC03F94127373BB92 /* DateRowDisplay.swift in Sources */,
 				B0F71D26711A163E3B415FCB /* DerivedPlace.swift in Sources */,

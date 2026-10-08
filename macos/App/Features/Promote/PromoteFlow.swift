@@ -1,434 +1,398 @@
 import Foundation
 
-/// One step screen of the Promote flow (S9-D9 … D12).
-enum PromoteStep: String, CaseIterable, Sendable {
-    case chooseTarget
-    /// Compare the subject with the chosen handle's members (S9-19).
-    case compare
-    /// Status, confidence and argument (S9-12).
-    case claim
-
-    /// Steps whose screens exist. The step row shows the whole plan as
-    /// designed; advancing skips steps that aren't built yet, so a later PR
-    /// adds its step here and the flow starts stopping on it.
-    static let built: Set<PromoteStep> = [.chooseTarget, .claim]
-
-    var isBuilt: Bool { Self.built.contains(self) }
-}
-
-/// The Promote flow as a state machine: the single source of truth for where
-/// the researcher is, what they've chosen, and what is in flight.
-///
-/// It is a pure value. `send(_:)` applies one event and returns the effects
-/// the model must run (write, navigate, recount); results come back as more
-/// events. Nothing else changes flow state, so every transition is in one
-/// switch and testable without a store or a view.
-///
-/// **Shape.** A walk is a queue of subjects (S9-11: one; S9-30 appends
-/// neighbours as they are filed). Each subject runs its *plan* — the steps
-/// its choice implies — with a draft that only becomes a write when the last
-/// built step advances. `phase` says whether input is accepted, a write is
-/// running, the leave guard is asking, a write was refused for good, or the
-/// flow is over.
-///
-/// **Navigation.** Moving between steps is `.advance` and `.stepBack`, and
-/// `controls` is everything the footer shows: where Back goes, whether Next
-/// moves or writes, and what is enabled. A new step is a case on
-/// `PromoteStep`, an entry in `built`, its screen, and the edits it owns
-/// (`Edit.step`) — the footer and model don't change.
-///
-/// **Draft across steps.** Back and forward keep the whole draft. Nothing is
-/// drafted from the target yet, so changing it keeps the claim fields; when
-/// Compare drafts the argument (S9-19), a changed target must clear what was
-/// drafted from it.
+/// One page of Promote (S9-44): a row list, not a step machine. Decisions
+/// live here. The model loads the proposal and files Done.
 struct PromoteFlow: Equatable, Sendable {
-    // MARK: Types
+    enum Target: Equatable, Sendable {
+        case handle(id: String, ref: String, title: String)
+        case newKind
+        case skip
 
-    struct Subject: Equatable, Sendable {
-        let id: String
-        /// Candidate ref (CPR-…).
-        let ref: String
-        /// Working label, else the ref.
-        let name: String
-        let kind: EvidencePrimaryKind
-    }
-
-    enum Choice: Equatable, Sendable {
-        case none, new, existing
-    }
-
-    /// An existing handle the subject would join.
-    struct Target: Equatable, Sendable {
-        let entityID: String
-        let ref: String
-        let title: String
-        let memberCount: Int
-    }
-
-    /// The Identity Claim's status. Promote writes accepted claims only
-    /// (S9-D10); Provisional and Rejected are later cases, a data change for
-    /// the step's Select.
-    enum ClaimStatus: String, CaseIterable, Sendable {
-        case accepted
-    }
-
-    /// What the researcher has entered for the current subject. Grows with
-    /// later steps (confirmed pairs in S9-19).
-    struct Draft: Equatable, Sendable {
-        var choice: Choice = .none
-        var target: Target?
-        var status: ClaimStatus = .accepted
-        var confidenceGradeID: String?
-        var argument = ""
-
-        var isEmpty: Bool { self == Draft() }
-    }
-
-    /// A write the engine refused for good — retrying cannot succeed.
-    struct Failure: Equatable, Sendable {
-        let message: String
-        /// The handle the subject was filed on elsewhere, once the graph shows it.
-        var filedOn: String?
-    }
-
-    enum Phase: Equatable, Sendable {
-        /// The current step takes input.
-        case editing
-        /// The subject's write is in flight; input is locked. A navigation
-        /// asked for meanwhile is held and honoured once the write lands.
-        case saving(heldLeave: PendingNavigation?)
-        /// The leave guard is asking about this navigation.
-        case confirmingLeave(PendingNavigation)
-        /// The write was refused for good (the subject was filed elsewhere).
-        /// Nothing was written, so leaving never asks; the step stays on
-        /// screen with the reason.
-        case blocked(Failure)
-        /// The flow is over; leaving never asks.
-        case finished
-    }
-
-    /// The write for one subject.
-    struct Save: Equatable, Sendable {
-        let subjectID: String
-        /// Nil mints a new handle.
-        let entityID: String?
-        let confidenceGradeID: String?
-        let argument: String
-    }
-
-    /// An input on a step's screen. Each edit belongs to one step; `send`
-    /// ignores it anywhere else.
-    enum Edit: Equatable, Sendable {
-        case choose(Choice)
-        case selectTarget(Target)
-        case setConfidence(String?)
-        case setArgument(String)
-
-        var step: PromoteStep {
+        var token: String {
             switch self {
-            case .choose, .selectTarget: .chooseTarget
-            case .setConfidence, .setArgument: .claim
+            case .handle(let id, _, _): "handle:\(id)"
+            case .newKind: "new"
+            case .skip: "skip"
+            }
+        }
+
+        var handleID: String? {
+            if case .handle(let id, _, _) = self { return id }
+            return nil
+        }
+    }
+
+    struct Alternative: Equatable, Sendable, Identifiable {
+        var id: String
+        var ref: String
+        var title: String
+    }
+
+    struct Row: Equatable, Sendable, Identifiable {
+        var subjectID: String
+        var kind: EvidencePrimaryKind
+        var name: String
+        var ref: String
+        var anchor: Bool
+        var assessment: String
+        var reason: String
+        var target: Target
+        var menu: [Alternative]
+        var comparisons: [CatalogPromoteGraphAlignmentComparison]
+        var pins: Set<String>
+        var confidenceGradeID: String?
+        var argument: String
+        var decided: Bool
+        var updatedNote: String?
+        var conflictNote: String?
+        var duplicateNote: String?
+        var id: String { subjectID }
+    }
+
+    struct Bridge: Equatable, Sendable, Identifiable {
+        var id: String
+        var sentence: String
+        var endA: String?
+        var endB: String?
+        var files: Bool
+        var why: String
+    }
+
+    struct Anchor: Equatable, Sendable {
+        var id: String
+        var ref: String
+        var title: String
+    }
+
+    struct SubjectFact: Equatable, Sendable {
+        var id: String
+        var kind: EvidencePrimaryKind
+        var name: String
+        var ref: String
+        /// Set when the subject is already filed.
+        var anchor: Anchor?
+    }
+
+    struct BridgeFact: Equatable, Sendable {
+        var id: String
+        var sentence: String
+        var endA: String?
+        var endB: String?
+    }
+
+    var entryID: String
+    var mappedRest = false
+    var rows: [Row] = []
+    var bridges: [BridgeFact] = []
+    var bridgeOff: Set<String> = []
+    var revision: Int64 = 0
+    var saving = false
+    var staleNote: String?
+    var manual = false
+    var pendingLeave: PendingNavigation?
+    var sheetSubjectID: String?
+    /// Kind or assessment.
+    var group = "kind"
+    var bridgesOpen = false
+
+    var visibleRows: [Row] {
+        guard mappedRest else { return rows.filter { $0.subjectID == entryID } }
+        return rows
+    }
+
+    var restCount: Int { rows.filter { $0.subjectID != entryID }.count }
+
+    var fileCount: Int {
+        scope.filter { row in
+            guard !row.anchor else { return false }
+            switch row.target {
+            case .handle, .newKind: return true
+            case .skip: return false
+            }
+        }.count
+    }
+
+    var skipCount: Int { scope.filter { !$0.anchor && $0.target.token == "skip" }.count }
+
+    var connectionCount: Int { filedBridges.filter(\.files).count }
+
+    private var scope: [Row] { visibleRows }
+
+    func connectionLines() -> [Bridge] { filedBridges }
+
+    private var filedBridges: [Bridge] {
+        bridges.map { bridge in
+            if bridgeOff.contains(bridge.id) {
+                return Bridge(id: bridge.id, sentence: bridge.sentence, endA: bridge.endA, endB: bridge.endB, files: false, why: "off")
+            }
+            guard let left = resolve(bridge.endA), let right = resolve(bridge.endB) else {
+                return Bridge(id: bridge.id, sentence: bridge.sentence, endA: bridge.endA, endB: bridge.endB, files: false, why: "skipped")
+            }
+            if left == right {
+                return Bridge(id: bridge.id, sentence: bridge.sentence, endA: bridge.endA, endB: bridge.endB, files: false, why: "self")
+            }
+            return Bridge(id: bridge.id, sentence: bridge.sentence, endA: bridge.endA, endB: bridge.endB, files: true, why: "")
+        }
+    }
+
+    /// The handle a subject will be, or nil when it stays unfiled.
+    private func resolve(_ subjectID: String?) -> String? {
+        guard let subjectID, let row = rows.first(where: { $0.subjectID == subjectID }) else { return nil }
+        if row.anchor { return row.target.handleID }
+        if !mappedRest && subjectID != entryID { return nil }
+        switch row.target {
+        case .handle(let id, _, _): return id
+        case .newKind: return "new:" + subjectID
+        case .skip: return nil
+        }
+    }
+
+    mutating func load(
+        entryID: String,
+        proposal: CatalogPromoteGraphAlignmentProposal,
+        subjects: [SubjectFact],
+        bridges: [BridgeFact]
+    ) {
+        self.entryID = entryID
+        self.bridges = bridges
+        revision = proposal.revision
+        let byID = Dictionary(uniqueKeysWithValues: subjects.map { ($0.id, $0) })
+        rows = proposal.rows.compactMap { proposalRow in
+            guard let fact = byID[proposalRow.subjectID] else { return nil }
+            return Self.makeRow(proposalRow, fact: fact, previous: nil)
+        }
+        noteDuplicates()
+    }
+
+    mutating func mapRest() {
+        mappedRest = true
+    }
+
+    /// Returns true when suggested rows should be proposed again.
+    @discardableResult
+    mutating func setTarget(subjectID: String, token: String) -> Bool {
+        guard let index = rows.firstIndex(where: { $0.subjectID == subjectID }), !rows[index].anchor else { return false }
+        rows[index].target = target(for: token, on: rows[index])
+        rows[index].decided = true
+        rows[index].updatedNote = nil
+        manual = true
+        noteDuplicates()
+        return true
+    }
+
+    mutating func togglePin(subjectID: String, comparisonID: String) {
+        guard let index = rows.firstIndex(where: { $0.subjectID == subjectID }) else { return }
+        if rows[index].pins.contains(comparisonID) {
+            rows[index].pins.remove(comparisonID)
+        } else {
+            rows[index].pins.insert(comparisonID)
+        }
+        rows[index].decided = true
+        manual = true
+    }
+
+    mutating func setArgument(subjectID: String, argument: String) {
+        guard let index = rows.firstIndex(where: { $0.subjectID == subjectID }) else { return }
+        rows[index].argument = argument
+        rows[index].decided = true
+        manual = true
+    }
+
+    mutating func setConfidence(subjectID: String, gradeID: String?) {
+        guard let index = rows.firstIndex(where: { $0.subjectID == subjectID }) else { return }
+        rows[index].confidenceGradeID = gradeID
+        rows[index].decided = true
+        manual = true
+    }
+
+    mutating func toggleBridge(_ id: String) {
+        if bridgeOff.contains(id) { bridgeOff.remove(id) } else { bridgeOff.insert(id) }
+        manual = true
+    }
+
+    /// Fold a new proposal. Decided rows keep their choice.
+    mutating func merge(_ proposal: CatalogPromoteGraphAlignmentProposal, subjects: [SubjectFact]) {
+        revision = proposal.revision
+        let byID = Dictionary(uniqueKeysWithValues: subjects.map { ($0.id, $0) })
+        let previous = Dictionary(uniqueKeysWithValues: rows.map { ($0.subjectID, $0) })
+        rows = proposal.rows.compactMap { proposalRow in
+            guard let fact = byID[proposalRow.subjectID] else { return nil }
+            return Self.makeRow(proposalRow, fact: fact, previous: previous[proposalRow.subjectID])
+        }
+        noteDuplicates()
+    }
+
+    func batchRows() -> [CatalogPromoteBatchRow] {
+        scope.filter { !$0.anchor }.map { row in
+            let pairs: [CatalogPromoteGraphAlignmentPair]
+            if case .handle = row.target {
+                pairs = row.comparisons.compactMap { comparison in
+                    guard row.pins.contains(comparison.id),
+                          !comparison.incomingObservationID.isEmpty,
+                          !comparison.memberObservationID.isEmpty
+                    else { return nil }
+                    return CatalogPromoteGraphAlignmentPair(
+                        incomingObservationID: comparison.incomingObservationID,
+                        memberObservationID: comparison.memberObservationID
+                    )
+                }
+            } else {
+                pairs = []
+            }
+            let entityID: String?
+            let target: String
+            switch row.target {
+            case .handle(let id, _, _):
+                target = "handle"
+                entityID = id
+            case .newKind:
+                target = "new"
+                entityID = nil
+            case .skip:
+                target = "skip"
+                entityID = nil
+            }
+            return CatalogPromoteBatchRow(
+                subjectID: row.subjectID,
+                target: target,
+                entityID: entityID,
+                confidenceGradeID: row.confidenceGradeID,
+                argument: row.argument,
+                pairs: pairs
+            )
+        }
+    }
+
+    func skipBridgeIDs() -> [String] { bridgeOff.sorted() }
+
+    mutating func requestLeave(_ pending: PendingNavigation) -> Bool {
+        guard manual, !saving else { return false }
+        pendingLeave = pending
+        return true
+    }
+
+    mutating func cancelLeave() { pendingLeave = nil }
+
+    private mutating func noteDuplicates() {
+        var owners: [String: [Int]] = [:]
+        for index in rows.indices {
+            rows[index].duplicateNote = nil
+            if let id = rows[index].target.handleID, !rows[index].anchor {
+                owners[id, default: []].append(index)
+            }
+        }
+        for (_, indexes) in owners where indexes.count > 1 {
+            let names = indexes.map { rows[$0].name }
+            for index in indexes {
+                let other = names.filter { $0 != rows[index].name }.first ?? names[0]
+                let ref = rows[index].target.handleID ?? ""
+                rows[index].duplicateNote = other + "|" + ref
             }
         }
     }
 
-    enum Event: Equatable, Sendable {
-        case edit(Edit)
-        /// Next: the following built step, or the write after the last one.
-        case advance
-        /// Back within the flow (to the previous built step). Never asks:
-        /// the draft is kept.
-        case stepBack
-        /// The write landed; `entityRef` is the handle the subject is now on.
-        case saveSucceeded(entityRef: String)
-        /// The write failed. A retryable failure keeps the step editable; one
-        /// that isn't blocks it.
-        case saveFailed(message: String, retryable: Bool)
-        /// The subject left the graph or was promoted elsewhere (`filedOn`
-        /// is that handle's ref, when known).
-        case subjectUnavailable(filedOn: String?)
-        /// Done: end the walk; the navigation it starts goes through the guard
-        /// (`requestLeave`).
-        case done
-        case leaveConfirmed
-        case leaveCancelled
-    }
-
-    enum Effect: Equatable, Sendable {
-        case save(Save)
-        /// After a write: invalidate the graph and recount the sidebar.
-        case refreshAfterSave
-        /// Tell the researcher a subject was filed (a toast that outlives the place).
-        case announceFiled(subjectName: String, entityRef: String)
-        case navigateToGraph
-        case resumeNavigation
-        case cancelNavigation
-    }
-
-    /// How the guard answers a navigation away from the place.
-    enum LeaveAnswer: Equatable, Sendable {
-        case allow
-        /// Hold it; the flow has asked (or will act once its write lands).
-        case hold
-    }
-
-    /// What the primary button does from the current step.
-    enum Advance: Equatable, Sendable {
-        /// Moves to this step.
-        case step(PromoteStep)
-        /// Writes the subject's claim.
-        case save
-    }
-
-    /// Everything the footer needs, derived in one place.
-    struct Controls: Equatable, Sendable {
-        /// Where Back goes; nil hides it.
-        var back: PromoteStep?
-        var advance: Advance
-        var canGoBack: Bool
-        var canAdvance: Bool
-        /// Step inputs are read-only (writing, refused, asking, or over).
-        var isLocked: Bool
-    }
-
-    // MARK: State
-
-    private(set) var queue: [Subject]
-    private(set) var index = 0
-    private(set) var draft = Draft()
-    private(set) var step: PromoteStep = .chooseTarget
-    private(set) var phase: Phase = .editing
-    /// The last retryable write failure, shown on the step until the next edit.
-    private(set) var error: String?
-    /// Subjects filed in this walk.
-    private(set) var savedCount = 0
-    /// Which steps have screens (`PromoteStep.built`; tests pass others).
-    let builtSteps: Set<PromoteStep>
-
-    init(subject: Subject, builtSteps: Set<PromoteStep> = PromoteStep.built) {
-        queue = [subject]
-        self.builtSteps = builtSteps
-    }
-
-    // MARK: Derived
-
-    var subject: Subject { queue[index] }
-
-    /// The steps this subject's choice implies, as designed: joining adds
-    /// Compare. Until Existing is chosen the plan is the mint path.
-    var plan: [PromoteStep] {
-        draft.choice == .existing ? [.chooseTarget, .compare, .claim] : [.chooseTarget, .claim]
-    }
-
-    /// 1-based position of the current step in the plan.
-    var stepNumber: Int { (plan.firstIndex(of: step) ?? 0) + 1 }
-
-    var isEditing: Bool { phase == .editing }
-
-    var isSaving: Bool {
-        if case .saving = phase { return true }
-        return false
-    }
-
-    var failure: Failure? {
-        if case .blocked(let failure) = phase { return failure }
-        return nil
-    }
-
-    var isBlocked: Bool { failure != nil }
-
-    var pendingLeave: PendingNavigation? {
-        if case .confirmingLeave(let pending) = phase { return pending }
-        return nil
-    }
-
-    /// The current step has what it needs to move on.
-    var isStepComplete: Bool {
-        switch step {
-        case .chooseTarget:
-            switch draft.choice {
-            case .new: return true
-            case .existing: return draft.target != nil
-            case .none: return false
+    private func target(for token: String, on row: Row) -> Target {
+        if token == "skip" { return .skip }
+        if token == "new" { return .newKind }
+        if token.hasPrefix("handle:") {
+            let id = String(token.dropFirst("handle:".count))
+            if let alt = row.menu.first(where: { $0.id == id }) {
+                return .handle(id: alt.id, ref: alt.ref, title: alt.title)
             }
-        case .compare, .claim:
-            return true
         }
+        return row.target
     }
 
-    var controls: Controls {
-        let back = previousBuiltStep(before: step)
-        return Controls(
-            back: back,
-            advance: nextBuiltStep(after: step).map(Advance.step) ?? .save,
-            canGoBack: isEditing && back != nil,
-            canAdvance: isEditing && isStepComplete,
-            isLocked: !isEditing
+    private static func makeRow(
+        _ proposal: CatalogPromoteGraphAlignmentRow,
+        fact: SubjectFact,
+        previous: Row?
+    ) -> Row {
+        if let anchor = fact.anchor {
+            return Row(
+                subjectID: fact.id, kind: fact.kind, name: fact.name, ref: fact.ref,
+                anchor: true, assessment: "strong", reason: "fixed",
+                target: .handle(id: anchor.id, ref: anchor.ref, title: anchor.title),
+                menu: [], comparisons: [], pins: [], confidenceGradeID: nil, argument: "",
+                decided: false, updatedNote: nil, conflictNote: nil, duplicateNote: nil
+            )
+        }
+        let menu = menu(for: proposal, kind: fact.kind)
+        let drafted = draftTarget(proposal, menu: menu)
+        let pins = Set(proposal.comparisons.filter(\.pinned).map(\.id))
+        let argument = proposal.comparisons
+            .filter { $0.outcome == "agree" && !$0.incomingDisplay.isEmpty }
+            .map(\.incomingDisplay)
+            .joined(separator: "; ")
+        if let previous, previous.decided {
+            var kept = previous
+            kept.assessment = proposal.assessment
+            kept.reason = reason(proposal, kind: fact.kind)
+            kept.comparisons = proposal.comparisons
+            if proposal.conflictWithFixed, let rival = menu.first {
+                kept.conflictNote = rival.ref
+            }
+            return kept
+        }
+        var updated: String?
+        if let previous, !previous.anchor, previous.target.token != drafted.token {
+            updated = drafted.token
+        }
+        return Row(
+            subjectID: fact.id, kind: fact.kind, name: fact.name, ref: fact.ref,
+            anchor: false, assessment: proposal.assessment,
+            reason: reason(proposal, kind: fact.kind),
+            target: drafted, menu: menu, comparisons: proposal.comparisons,
+            pins: pins, confidenceGradeID: nil, argument: argument,
+            decided: false, updatedNote: updated, conflictNote: nil, duplicateNote: nil
         )
     }
 
-    var canAdvance: Bool { controls.canAdvance }
-
-    /// Leaving now would drop something the researcher entered.
-    var hasUnsavedWork: Bool {
-        switch phase {
-        case .editing, .confirmingLeave: return !draft.isEmpty
-        case .saving: return true
-        case .blocked, .finished: return false
+    private static func draftTarget(_ proposal: CatalogPromoteGraphAlignmentRow, menu: [Alternative]) -> Target {
+        if proposal.assessment == "strong", proposal.target == "handle", let first = menu.first, first.id == proposal.handleID {
+            return .handle(id: first.id, ref: first.ref, title: first.title)
         }
-    }
-
-    // MARK: Transitions
-
-    /// Applies one event and returns the effects to run, in order. Events that
-    /// don't fit the current phase are ignored (no state change, no effects).
-    mutating func send(_ event: Event) -> [Effect] {
-        switch (phase, event) {
-        case (.editing, .edit(let edit)):
-            guard edit.step == step else { return [] }
-            apply(edit)
-            return []
-
-        case (.editing, .advance):
-            guard isStepComplete else { return [] }
-            if let next = nextBuiltStep(after: step) {
-                step = next
-                return []
-            }
-            phase = .saving(heldLeave: nil)
-            error = nil
-            return [.save(Save(
-                subjectID: subject.id,
-                entityID: draft.choice == .existing ? draft.target?.entityID : nil,
-                confidenceGradeID: draft.confidenceGradeID,
-                argument: draft.argument
-            ))]
-
-        case (.editing, .stepBack):
-            if let previous = previousBuiltStep(before: step) {
-                step = previous
-            }
-            return []
-
-        case (.saving(let held), .saveSucceeded(let entityRef)):
-            savedCount += 1
-            var effects: [Effect] = [
-                .refreshAfterSave,
-                .announceFiled(subjectName: subject.name, entityRef: entityRef),
-            ]
-            if index + 1 < queue.count {
-                index += 1
-                draft = Draft()
-                step = .chooseTarget
-                phase = .editing
-                if held != nil { effects.append(.resumeNavigation) }
-                return effects
-            }
-            phase = .finished
-            effects.append(held != nil ? .resumeNavigation : .navigateToGraph)
-            return effects
-
-        case (.saving(let held), .saveFailed(let message, let retryable)):
-            if retryable {
-                phase = .editing
-                error = message
-                return held != nil ? [.cancelNavigation] : []
-            }
-            // Someone else filed the subject: reload so the graph (and the
-            // callout's handle) catch up. Nothing is unsaved, so a held
-            // navigation goes ahead.
-            phase = .blocked(Failure(message: message))
-            error = nil
-            return held != nil ? [.refreshAfterSave, .resumeNavigation] : [.refreshAfterSave]
-
-        case (.blocked(var failure), .subjectUnavailable(let filedOn)):
-            // Stay on the refusal; just learn which handle it was.
-            if let filedOn, failure.filedOn != filedOn {
-                failure.filedOn = filedOn
-                phase = .blocked(failure)
-            }
-            return []
-
-        case (_, .subjectUnavailable) where phase != .finished:
-            let wasHolding: Bool
-            switch phase {
-            case .saving(let held): wasHolding = held != nil
-            case .confirmingLeave: wasHolding = true
-            default: wasHolding = false
-            }
-            phase = .finished
-            return wasHolding ? [.cancelNavigation, .navigateToGraph] : [.navigateToGraph]
-
-        case (.editing, .done), (.blocked, .done), (.finished, .done):
-            return [.navigateToGraph]
-
-        case (.confirmingLeave, .leaveConfirmed):
-            phase = .finished
-            return [.resumeNavigation]
-
-        case (.confirmingLeave, .leaveCancelled):
-            phase = .editing
-            return [.cancelNavigation]
-
-        default:
-            return []
+        if proposal.assessment == "strong", proposal.target == "new" {
+            return .newKind
         }
+        return .skip
     }
 
-    /// The guard's answer to a navigation away, applying it to the flow.
-    mutating func requestLeave(_ pending: PendingNavigation) -> LeaveAnswer {
-        switch phase {
-        case .finished, .blocked:
-            return .allow
-        case .editing:
-            guard !draft.isEmpty else { return .allow }
-            phase = .confirmingLeave(pending)
-            return .hold
-        case .saving:
-            // Let the write land first; the navigation follows it.
-            phase = .saving(heldLeave: pending)
-            return .hold
-        case .confirmingLeave:
-            // Already asking about another navigation: replace it.
-            phase = .confirmingLeave(pending)
-            return .hold
+    private static func menu(for proposal: CatalogPromoteGraphAlignmentRow, kind: EvidencePrimaryKind) -> [Alternative] {
+        var out: [Alternative] = []
+        if proposal.target == "handle", !proposal.handleID.isEmpty {
+            out.append(Alternative(id: proposal.handleID, ref: proposal.handleRef, title: headerTitle(proposal)))
         }
-    }
-
-    // MARK: Walk
-
-    /// Adds subjects to walk after the current one (S9-29 / S9-30).
-    mutating func enqueue(_ subjects: [Subject]) {
-        let known = Set(queue.map(\.id))
-        queue.append(contentsOf: subjects.filter { !known.contains($0.id) })
-    }
-
-    // MARK: Helpers
-
-    private mutating func apply(_ edit: Edit) {
-        switch edit {
-        case .choose(let choice):
-            guard draft.choice != choice else { return }
-            draft.choice = choice
-            if choice != .existing { draft.target = nil }
-        case .selectTarget(let target):
-            draft.choice = .existing
-            draft.target = target
-        case .setConfidence(let gradeID):
-            draft.confidenceGradeID = gradeID
-        case .setArgument(let argument):
-            draft.argument = argument
+        for alt in proposal.alternatives where alt.handleID != proposal.handleID {
+            out.append(Alternative(id: alt.handleID, ref: alt.handleRef, title: headerTitle(alt, kind: kind)))
         }
-        error = nil
+        return out
     }
 
-    private func nextBuiltStep(after step: PromoteStep) -> PromoteStep? {
-        guard let at = plan.firstIndex(of: step) else { return nil }
-        return plan[(at + 1)...].first(where: builtSteps.contains)
+    private static func headerTitle(_ row: CatalogPromoteGraphAlignmentRow) -> String {
+        if let person = row.person, let name = person.name?.form, !name.isEmpty { return name }
+        if let event = row.event { return event.eventName.isEmpty ? row.handleRef : event.eventName }
+        if let place = row.place, let name = place.names.first, !name.isEmpty { return name }
+        return row.handleRef
     }
 
-    private func previousBuiltStep(before step: PromoteStep) -> PromoteStep? {
-        guard let at = plan.firstIndex(of: step) else { return nil }
-        return plan[..<at].last(where: builtSteps.contains)
+    private static func headerTitle(_ alt: CatalogPromoteGraphAlignmentAlternative, kind: EvidencePrimaryKind) -> String {
+        switch kind {
+        case .person:
+            if let name = alt.person?.name?.form, !name.isEmpty { return name }
+        case .event:
+            if let name = alt.event?.eventName, !name.isEmpty { return name }
+        case .place:
+            if let name = alt.place?.names.first, !name.isEmpty { return name }
+        }
+        return alt.handleRef
+    }
+
+    private static func reason(_ row: CatalogPromoteGraphAlignmentRow, kind _: EvidencePrimaryKind) -> String {
+        if !row.viaNeighborSubjectID.isEmpty {
+            let role = row.viaRole.isEmpty ? row.viaBridgeType : row.viaRole
+            return row.viaNeighborSubjectID + "|" + role
+        }
+        return row.reasons.first ?? ""
     }
 }

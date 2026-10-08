@@ -1240,6 +1240,83 @@ enum L10n {
     /// Promote flow place (S9-11, board S9-D9). Generated table; kind-specific
     /// copy switches on the subject's kind.
     enum Promote {
+        static let pageTitle = LocalizedStringResource("promote.page.title", defaultValue: "Promote", comment: "Promote page title")
+        static func mapRest(count: Int) -> String {
+            L10n.format(LocalizedStringResource("promote.page.mapRest", defaultValue: "Map the rest of this graph (%lld)", comment: "Adds every other person, event, and place; argument is how many"), count)
+        }
+        static func rowCount(count: Int) -> String {
+            L10n.format(LocalizedStringResource("promote.page.rowCount", defaultValue: "%lld rows", comment: "How many rows are on the Promote page"), count)
+        }
+        static let groupKind = LocalizedStringResource("promote.page.group.kind", defaultValue: "Kind", comment: "Group Promote rows by person, event, or place")
+        static let groupAssessment = LocalizedStringResource("promote.page.group.assessment", defaultValue: "Assessment", comment: "Group Promote rows by how sure the match is")
+        static let groupLabel = LocalizedStringResource("promote.page.group.label", defaultValue: "Group rows", comment: "Accessibility label for the Promote grouping menu")
+        static let kindPerson = LocalizedStringResource("promote.page.kind.person", defaultValue: "People", comment: "Promote section of person rows")
+        static let kindEvent = LocalizedStringResource("promote.page.kind.event", defaultValue: "Events", comment: "Promote section of event rows")
+        static let kindPlace = LocalizedStringResource("promote.page.kind.place", defaultValue: "Places", comment: "Promote section of place rows")
+        static let assessmentStrong = LocalizedStringResource("promote.assessment.strong", defaultValue: "Strong", comment: "Promote match assessment")
+        static let assessmentWeak = LocalizedStringResource("promote.assessment.weak", defaultValue: "Weak", comment: "Promote match assessment")
+        static let assessmentNone = LocalizedStringResource("promote.assessment.none", defaultValue: "No match", comment: "Promote match assessment when nothing lines up")
+        static let decided = LocalizedStringResource("promote.row.decided", defaultValue: "Decided", comment: "A Promote row the researcher has changed")
+        static let updated = LocalizedStringResource("promote.row.updated", defaultValue: "Updated", comment: "A suggested Promote row that moved after a re-proposal")
+        static let anchorBadge = LocalizedStringResource("promote.row.anchor", defaultValue: "Filed", comment: "An already-promoted row, shown read-only")
+        static let skip = LocalizedStringResource("promote.target.skip", defaultValue: "Skip", comment: "Leave this subject unfiled")
+        static func targetLabel(name: String) -> String {
+            L10n.format(LocalizedStringResource("promote.target.label", defaultValue: "Target for %@", comment: "Accessibility label for a row's target menu; argument is the subject's name"), name)
+        }
+        static func via(neighbor: String, ref: String, role: String) -> String {
+            L10n.format(LocalizedStringResource("promote.reason.via", defaultValue: "via %1$@ → %2$@ (%3$@)", comment: "Why a row was matched: neighbor name, neighbor ref, relationship"), neighbor, ref, role)
+        }
+        static let alreadyFiled = LocalizedStringResource("promote.reason.filed", defaultValue: "Already filed", comment: "Reason on a read-only promoted row")
+        static func agreesOn(property: String) -> String {
+            L10n.format(LocalizedStringResource("promote.reason.agrees", defaultValue: "Agrees on %@", comment: "Reason naming the property that agrees; argument is the property key"), property)
+        }
+        static func updatedDetail(_ token: String) -> String {
+            L10n.format(LocalizedStringResource("promote.row.updatedDetail", defaultValue: "Updated · %@", comment: "What a suggested row changed to"), token)
+        }
+        static func conflict(ref: String) -> String {
+            L10n.format(LocalizedStringResource("promote.warning.conflict", defaultValue: "A stronger match is %@. This choice is kept.", comment: "A decided row the new proposal contradicts; argument is the other handle ref"), ref)
+        }
+        static func duplicate(name: String, ref: String) -> String {
+            L10n.format(LocalizedStringResource("promote.warning.duplicate", defaultValue: "%1$@ is also filed on %2$@. These may be the same person. Combine them on the Evidence graph.", comment: "Two rows share a handle; 1 = the other subject's name, 2 = the handle ref"), name, ref)
+        }
+        static let evidenceTitle = LocalizedStringResource("promote.sheet.title", defaultValue: "Evidence", comment: "Title of the Promote evidence sheet")
+        static let backToRows = LocalizedStringResource("promote.sheet.back", defaultValue: "Back to all rows", comment: "Closes the Promote evidence sheet")
+        static let ownRecords = LocalizedStringResource("promote.sheet.own", defaultValue: "This subject", comment: "Evidence group for the subject's own records")
+        static let status = LocalizedStringResource("promote.sheet.status", defaultValue: "Status", comment: "Claim status field")
+        static let confidence = LocalizedStringResource("promote.sheet.confidence", defaultValue: "Confidence", comment: "Claim confidence field")
+        static let confidenceUnset = LocalizedStringResource("promote.sheet.confidence.unset", defaultValue: "Not stated", comment: "No confidence grade chosen")
+        static let argument = LocalizedStringResource("promote.sheet.argument", defaultValue: "Argument", comment: "Claim argument field")
+        static let pin = LocalizedStringResource("promote.sheet.pin", defaultValue: "Pin", comment: "Toggle that pins a comparison as claim evidence")
+        static func outcome(_ outcome: String) -> LocalizedStringResource {
+            switch outcome {
+            case "agree": LocalizedStringResource("promote.sheet.agrees", defaultValue: "Agrees", comment: "A comparison that agrees")
+            case "conflict": LocalizedStringResource("promote.sheet.conflicts", defaultValue: "Conflicts", comment: "A comparison that disagrees")
+            default: LocalizedStringResource("promote.sheet.unknown", defaultValue: "Unknown", comment: "A comparison with nothing to compare")
+            }
+        }
+        static func connections(count: Int) -> String {
+            L10n.format(LocalizedStringResource("promote.connections.count", defaultValue: "%lld connections will be filed", comment: "Bridge summary; argument is how many will be filed"), count)
+        }
+        static let connectionFiled = LocalizedStringResource("promote.connections.filed", defaultValue: "Filed", comment: "Switch label for a connection that will be filed")
+        static func connectionWhy(_ why: String) -> LocalizedStringResource {
+            switch why {
+            case "off": LocalizedStringResource("promote.connections.off", defaultValue: "Not filed this time", comment: "A connection the researcher switched off")
+            case "self": LocalizedStringResource("promote.connections.self", defaultValue: "Not filed · both ends are the same record", comment: "A connection whose ends resolve to one handle")
+            default: LocalizedStringResource("promote.connections.skipped", defaultValue: "Not filed · an end is skipped", comment: "A connection that stays unfiled because an end is not being filed")
+            }
+        }
+        static func doneSummary(file: Int, skip: Int, connections: Int) -> String {
+            L10n.format(LocalizedStringResource("promote.done.summary", defaultValue: "File %1$lld · Skip %2$lld · %3$lld connections", comment: "Footer: how many rows will be filed, skipped, and how many connections"), file, skip, connections)
+        }
+        static let filing = LocalizedStringResource("promote.done.filing", defaultValue: "Filing", comment: "Done button while the batch is writing")
+        static let done = LocalizedStringResource("promote.done.action", defaultValue: "Done", comment: "Files the Promote page")
+        static let cancel = LocalizedStringResource("promote.cancel", defaultValue: "Cancel", comment: "Leaves the Promote page")
+        static let stale = LocalizedStringResource("promote.stale.notice", defaultValue: "The catalog changed. This proposal was read again.", comment: "Shown when Done loses the revision race and the page proposes again")
+        static func filedToast(filed: Int, skipped: Int) -> String {
+            L10n.format(LocalizedStringResource("promote.toast.filed", defaultValue: "Filed %1$lld. %2$lld not filed yet.", comment: "Toast after Done; skipped subjects are not a rejection"), filed, skipped)
+        }
+        static let leaveTitle = LocalizedStringResource("promote.leave.pageTitle", defaultValue: "Leave without filing?", comment: "Leave guard title when the Promote page has manual changes")
+        static let leaveMessage = LocalizedStringResource("promote.leave.pageMessage", defaultValue: "Your changes on this page will be discarded.", comment: "Leave guard body")
         static func eyebrow(_ kind: EvidencePrimaryKind) -> LocalizedStringResource {
             let resource: LocalizedStringResource = switch kind {
             case .person: LocalizedStringResource("promote.eyebrow.person", defaultValue: "Promoting a person", comment: "Promote place header eyebrow above the subject's name")
@@ -1377,7 +1454,6 @@ enum L10n {
         static func hintExisting(name: String, ref: String, members: String) -> String {
             L10n.format(LocalizedStringResource("promote.hint.existing", defaultValue: "%1$@ will join %2$@ and its %3$@", comment: "Promote footer hint for an existing handle (interim until compare, S9-19); 1 = subject name, 2 = handle ref, 3 = member count"), name, ref, members)
         }
-        static let done = LocalizedStringResource("promote.done", defaultValue: "Done", comment: "Promote footer: leave the flow")
         static let next = LocalizedStringResource("promote.next", defaultValue: "Next", comment: "Promote footer: continue to the next step")
         static func leaveTitle(name: String) -> String {
             L10n.format(LocalizedStringResource("promote.leave.title", defaultValue: "Leave Promote without filing %@?", comment: "Promote leave guard title; argument is the subject's name or ref"), name)
