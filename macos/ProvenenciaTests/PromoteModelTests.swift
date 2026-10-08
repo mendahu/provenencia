@@ -132,6 +132,42 @@ struct PromoteModelTests {
         #expect(model.isSaving == false)
     }
 
+    @Test func anOlderProposalAnsweringLastIsDropped() async {
+        let subjects = [subject("a", ref: "CPR-A", label: "Ada"), subject("b", ref: "CPR-B", label: "Bea")]
+        let store = store(subjects: subjects)
+        store.promoteProposals = [
+            CatalogPromoteGraphAlignmentProposal(revision: 1, rows: [row("a", handleID: "e1"), row("b", handleID: "e1")]),
+            CatalogPromoteGraphAlignmentProposal(revision: 1, rows: [row("a", handleID: "other"), row("b", handleID: "e-old")]),
+            CatalogPromoteGraphAlignmentProposal(revision: 1, rows: [row("a", handleID: "e1"), row("b", handleID: "e-new")]),
+        ]
+        store.promoteProposeDelays = [.zero, .milliseconds(300), .zero]
+        let model = model(store: store, subjectID: "a")
+        await model.load()
+        model.mapRest()
+        model.setTarget(subjectID: "a", token: "handle:other")
+        model.setTarget(subjectID: "a", token: "handle:e1")
+        let settled = await waitUntil { !model.isProposing }
+        #expect(settled)
+        try? await Task.sleep(for: .milliseconds(400))
+        #expect(model.flow.rows.first { $0.subjectID == "b" }?.target.handleID == "e-new")
+    }
+
+    @Test func doneWaitsForAPendingProposal() async {
+        let subjects = [subject("a", ref: "CPR-A", label: "Ada")]
+        let store = store(subjects: subjects)
+        store.promoteProposals = [CatalogPromoteGraphAlignmentProposal(revision: 1, rows: [row("a", handleID: "e1")])]
+        store.promoteProposeDelays = [.zero, .milliseconds(200)]
+        let model = model(store: store, subjectID: "a")
+        await model.load()
+        model.setTarget(subjectID: "a", token: "handle:other")
+        #expect(model.canFinish == false)
+        model.done()
+        #expect(model.isSaving == false)
+        let settled = await waitUntil { model.canFinish }
+        #expect(settled)
+        #expect(store.lastPromoteBatch == nil)
+    }
+
     @Test func leaveGuardAsksOnlyAfterAManualChange() async {
         let subjects = [subject("a", ref: "CPR-A", label: "Ada")]
         let store = store(subjects: subjects)

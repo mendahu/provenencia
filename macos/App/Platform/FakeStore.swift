@@ -27,6 +27,9 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var pinsByObservation: [String: [CatalogCanonicalEntity]] = [:]
     /// Queued graph-alignment proposals. The first is consumed; the last repeats.
     var promoteProposals: [CatalogPromoteGraphAlignmentProposal] = []
+    /// Per-call delay before a proposal returns, consumed in call order, so
+    /// tests can answer an earlier call after a later one.
+    var promoteProposeDelays: [Duration] = []
     /// The last Done the page filed, for tests.
     var lastPromoteBatch: (rows: [CatalogPromoteBatchRow], skipBridgeIDs: [String])?
     /// Event and Place headers as Go would compose them, seeded by tests in
@@ -1317,7 +1320,18 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         sourceID: String,
         fixed: [CatalogPromoteGraphAlignmentFixed]
     ) async throws -> CatalogPromoteGraphAlignmentProposal {
-        return withState {
+        let delay: Duration? = withState { promoteProposeDelays.isEmpty ? nil : promoteProposeDelays.removeFirst() }
+        let proposal = buildPromoteProposal(projectDir: projectDir, sourceID: sourceID, fixed: fixed)
+        if let delay { try? await Task.sleep(for: delay) }
+        return proposal
+    }
+
+    private func buildPromoteProposal(
+        projectDir: String,
+        sourceID: String,
+        fixed: [CatalogPromoteGraphAlignmentFixed]
+    ) -> CatalogPromoteGraphAlignmentProposal {
+        withState {
             markCatalogSessionHeld(projectDir)
             if !promoteProposals.isEmpty {
                 let next = promoteProposals.count > 1 ? promoteProposals.removeFirst() : promoteProposals[0]
@@ -1402,7 +1416,22 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             }
             var written: [CatalogPromoteBatchWritten] = []
             for row in rows {
-                guard row.target != "skip" else { continue }
+                // Go's applyRow: a Skip writes nothing and carries nothing; a New has no pins.
+                switch row.target {
+                case "skip":
+                    guard row.entityID == nil, row.pairs.isEmpty, row.confidenceGradeID == nil, row.argument.isEmpty else {
+                        throw CoreInvokeError.coded(status: 1, code: "promote.invalid", kind: .user, params: [])
+                    }
+                    continue
+                case "new":
+                    guard row.entityID == nil, row.pairs.isEmpty else {
+                        throw CoreInvokeError.coded(status: 1, code: "promote.invalid", kind: .user, params: [])
+                    }
+                case "handle":
+                    break
+                default:
+                    throw CoreInvokeError.coded(status: 1, code: "promote.invalid", kind: .user, params: [])
+                }
                 guard let subject = (subjectsBySource[sourceID] ?? []).first(where: { $0.id == row.subjectID }),
                       let type = subjectTypesByProject[projectDir]?.first(where: { $0.id == subject.subjectTypeID }),
                       ["person", "event", "place"].contains(type.key)

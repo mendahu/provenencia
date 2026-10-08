@@ -139,4 +139,58 @@ struct PromoteFlowTests {
         flow.setArgument(subjectID: "a", argument: "because")
         #expect(flow.requestLeave(.back) == true)
     }
+
+    @Test func aSkipRowFilesNoArgumentConfidenceOrPins() {
+        var flow = PromoteFlow(entryID: "a")
+        flow.load(
+            entryID: "a",
+            proposal: proposal(rows: [row(id: "a", assessment: "weak"), row(id: "b")]),
+            subjects: [fact("a"), fact("b")],
+            bridges: []
+        )
+        flow.mapRest()
+        flow.setConfidence(subjectID: "b", gradeID: "grade-1")
+        flow.setArgument(subjectID: "b", argument: "names agree")
+        flow.setTarget(subjectID: "b", token: "skip")
+        for line in flow.batchRows() {
+            #expect(line.target == "skip")
+            #expect(line.argument.isEmpty)
+            #expect(line.confidenceGradeID == nil)
+            #expect(line.pairs.isEmpty)
+        }
+    }
+
+    @Test func aRetargetRedraftsPinsAndArgumentForTheNewTarget() {
+        var flow = PromoteFlow(entryID: "a")
+        flow.load(entryID: "a", proposal: proposal(rows: [row(id: "a")]), subjects: [fact("a")], bridges: [])
+        #expect(flow.rows[0].argument == "James")
+
+        flow.setTarget(subjectID: "a", token: "handle:e2")
+        #expect(flow.rows[0].pins.isEmpty)
+        #expect(flow.rows[0].comparisons.isEmpty)
+        #expect(flow.batchRows()[0].pairs.isEmpty)
+
+        var onE2 = row(id: "a", handleID: "e2")
+        onE2.comparisons[0].incomingObservationID = "obs-in-2"
+        onE2.comparisons[0].memberObservationID = "obs-mem-2"
+        onE2.comparisons[0].incomingDisplay = "Jim"
+        flow.merge(proposal(rows: [onE2], revision: 4), subjects: [fact("a")])
+        #expect(flow.rows[0].pins == [onE2.comparisons[0].id])
+        #expect(flow.rows[0].argument == "Jim")
+        #expect(flow.batchRows()[0].pairs.first?.memberObservationID == "obs-mem-2")
+
+        flow.setArgument(subjectID: "a", argument: "my reasons")
+        flow.setTarget(subjectID: "a", token: "new")
+        #expect(flow.rows[0].argument == "my reasons")
+    }
+
+    @Test func aManualPinOnTheSameTargetSurvivesAReproposal() {
+        var flow = PromoteFlow(entryID: "a")
+        flow.load(entryID: "a", proposal: proposal(rows: [row(id: "a")]), subjects: [fact("a")], bridges: [])
+        let line = flow.rows[0].comparisons[0].id
+        flow.togglePin(subjectID: "a", comparisonID: line)
+        #expect(flow.rows[0].pins.isEmpty)
+        flow.merge(proposal(rows: [row(id: "a")], revision: 4), subjects: [fact("a")])
+        #expect(flow.rows[0].pins.isEmpty)
+    }
 }

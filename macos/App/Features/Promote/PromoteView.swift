@@ -102,6 +102,9 @@ struct PromoteView: View {
                     message: L10n.string(L10n.Promote.stale)
                 )
             }
+            if let error = model.proposeError {
+                PVCallout(tone: .danger, message: error)
+            }
             if let error = model.saveError {
                 PVCallout(tone: .danger, message: error)
             }
@@ -350,6 +353,7 @@ struct PromoteView: View {
             PVButton(model.isSaving ? L10n.Promote.filing : L10n.Promote.done, variant: .primary, loading: model.isSaving) {
                 model.done()
             }
+            .disabled(!model.canFinish)
         }
         .padding(.horizontal, PVSpacing.space10)
         .padding(.vertical, PVSpacing.space4)

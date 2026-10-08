@@ -83,6 +83,11 @@ final class PromoteModel {
     private(set) var sourceMark: PVMarkKey = .defaultTypeMark
     private(set) var loadError: String?
     private(set) var saveError: String?
+    private(set) var proposeError: String?
+    /// A proposal after a decision is in flight; Done waits for it.
+    private(set) var isProposing = false
+    /// Bumped per proposal; only the latest one's answer is merged.
+    private var proposeGeneration = 0
 
     var graphKey: CatalogQueryKey { .sourceGraph(project: session.projectKey, sourceId: entry.sourceID) }
     var confidenceKey: CatalogQueryKey { .confidenceGradesList(project: session.projectKey) }
@@ -94,6 +99,7 @@ final class PromoteModel {
     var hasUnsavedWork: Bool { flow.manual }
     var pendingLeave: PendingLeave? { flow.pendingLeave.map(PendingLeave.init(navigation:)) }
     var isSaving: Bool { flow.saving }
+    var canFinish: Bool { !flow.saving && !isProposing && loadError == nil }
 
     init(
         entry: PromoteEntry,
@@ -131,7 +137,9 @@ final class PromoteModel {
 
     func setTarget(subjectID: String, token: String) {
         guard flow.setTarget(subjectID: subjectID, token: token) else { return }
-        Task { await repropose() }
+        flow.staleNote = nil
+        let generation = nextProposal()
+        Task { await repropose(generation: generation) }
     }
 
     func togglePin(subjectID: String, comparisonID: String) {
@@ -158,8 +166,9 @@ final class PromoteModel {
     func setSheetSubject(_ id: String?) { flow.sheetSubjectID = id }
 
     func done() {
-        guard !flow.saving else { return }
+        guard canFinish else { return }
         flow.saving = true
+        flow.staleNote = nil
         saveError = nil
         Task { await file() }
     }
@@ -185,7 +194,13 @@ final class PromoteModel {
         return row.reason
     }
 
-    private func repropose() async {
+    private func nextProposal() -> Int {
+        proposeGeneration += 1
+        isProposing = true
+        return proposeGeneration
+    }
+
+    private func repropose(generation: Int) async {
         let fixed = flow.rows.compactMap { row -> CatalogPromoteGraphAlignmentFixed? in
             guard row.decided, let id = row.target.handleID else { return nil }
             return CatalogPromoteGraphAlignmentFixed(subjectID: row.subjectID, handleID: id)
@@ -197,10 +212,14 @@ final class PromoteModel {
                 fixed: fixed
             )
             let facts = await facts()
+            guard generation == proposeGeneration else { return }
             flow.merge(proposal, subjects: facts.subjects)
+            proposeError = nil
         } catch {
-            saveError = L10n.Errors.message(for: error)
+            guard generation == proposeGeneration else { return }
+            proposeError = L10n.Errors.message(for: error)
         }
+        isProposing = false
     }
 
     private func file() async {
@@ -229,7 +248,7 @@ final class PromoteModel {
             flow.saving = false
             if case CoreInvokeError.coded(_, let code, _, _) = error, code == "promote.stale" {
                 flow.staleNote = L10n.string(L10n.Promote.stale)
-                await repropose()
+                await repropose(generation: nextProposal())
                 return
             }
             saveError = L10n.Errors.message(for: error)

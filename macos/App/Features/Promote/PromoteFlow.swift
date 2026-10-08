@@ -44,6 +44,8 @@ struct PromoteFlow: Equatable, Sendable {
         var pins: Set<String>
         var confidenceGradeID: String?
         var argument: String
+        /// The researcher typed the argument; a retarget keeps it instead of re-drafting.
+        var argumentEdited = false
         var decided: Bool
         var updatedNote: String?
         var conflictNote: String?
@@ -190,7 +192,15 @@ struct PromoteFlow: Equatable, Sendable {
     @discardableResult
     mutating func setTarget(subjectID: String, token: String) -> Bool {
         guard let index = rows.firstIndex(where: { $0.subjectID == subjectID }), !rows[index].anchor else { return false }
-        rows[index].target = target(for: token, on: rows[index])
+        let next = target(for: token, on: rows[index])
+        if next != rows[index].target {
+            // The lines and pins compared the old target; the next proposal
+            // drafts them for this one.
+            rows[index].target = next
+            rows[index].comparisons = []
+            rows[index].pins = []
+            if !rows[index].argumentEdited { rows[index].argument = "" }
+        }
         rows[index].decided = true
         rows[index].updatedNote = nil
         manual = true
@@ -212,6 +222,7 @@ struct PromoteFlow: Equatable, Sendable {
     mutating func setArgument(subjectID: String, argument: String) {
         guard let index = rows.firstIndex(where: { $0.subjectID == subjectID }) else { return }
         rows[index].argument = argument
+        rows[index].argumentEdited = true
         rows[index].decided = true
         manual = true
     }
@@ -240,6 +251,8 @@ struct PromoteFlow: Equatable, Sendable {
         noteDuplicates()
     }
 
+    /// One line per row to file. A Skip writes nothing, so it carries no
+    /// argument, confidence, or pins, whatever the row was drafted with.
     func batchRows() -> [CatalogPromoteBatchRow] {
         scope.filter { !$0.anchor }.map { row in
             let pairs: [CatalogPromoteGraphAlignmentPair]
@@ -270,12 +283,13 @@ struct PromoteFlow: Equatable, Sendable {
                 target = "skip"
                 entityID = nil
             }
+            let files = target != "skip"
             return CatalogPromoteBatchRow(
                 subjectID: row.subjectID,
                 target: target,
                 entityID: entityID,
-                confidenceGradeID: row.confidenceGradeID,
-                argument: row.argument,
+                confidenceGradeID: files ? row.confidenceGradeID : nil,
+                argument: files ? row.argument : "",
                 pairs: pairs
             )
         }
@@ -337,21 +351,29 @@ struct PromoteFlow: Equatable, Sendable {
         }
         let menu = menu(for: proposal, kind: fact.kind)
         let drafted = draftTarget(proposal, menu: menu)
-        let pins = Set(proposal.comparisons.filter(\.pinned).map(\.id))
-        let argument = proposal.comparisons
-            .filter { $0.outcome == "agree" && !$0.incomingDisplay.isEmpty }
-            .map(\.incomingDisplay)
-            .joined(separator: "; ")
         if let previous, previous.decided {
             var kept = previous
             kept.assessment = proposal.assessment
             kept.reason = reason(proposal, kind: fact.kind)
-            kept.comparisons = proposal.comparisons
+            // Lines only describe the row's own target: a decided handle is
+            // sent as fixed, so the proposal compares exactly that handle.
+            let lines = proposal.target == "handle" && proposal.handleID == previous.target.handleID
+                ? proposal.comparisons : []
+            if previous.comparisons.isEmpty {
+                kept.pins = draftedPins(lines)
+            } else {
+                kept.pins = previous.pins.intersection(lines.map(\.id))
+            }
+            kept.comparisons = lines
+            if !previous.argumentEdited {
+                kept.argument = draftedArgument(lines)
+            }
             if proposal.conflictWithFixed, let rival = menu.first {
                 kept.conflictNote = rival.ref
             }
             return kept
         }
+        let lines = drafted.handleID == nil ? [] : proposal.comparisons
         var updated: String?
         if let previous, !previous.anchor, previous.target.token != drafted.token {
             updated = drafted.token
@@ -361,9 +383,21 @@ struct PromoteFlow: Equatable, Sendable {
             anchor: false, assessment: proposal.assessment,
             reason: reason(proposal, kind: fact.kind),
             target: drafted, menu: menu, comparisons: proposal.comparisons,
-            pins: pins, confidenceGradeID: nil, argument: argument,
+            pins: draftedPins(lines), confidenceGradeID: nil, argument: draftedArgument(lines),
             decided: false, updatedNote: updated, conflictNote: nil, duplicateNote: nil
         )
+    }
+
+    private static func draftedPins(_ lines: [CatalogPromoteGraphAlignmentComparison]) -> Set<String> {
+        Set(lines.filter(\.pinned).map(\.id))
+    }
+
+    /// The agreeing values, as a starting argument the researcher can edit.
+    private static func draftedArgument(_ lines: [CatalogPromoteGraphAlignmentComparison]) -> String {
+        lines
+            .filter { $0.outcome == "agree" && !$0.incomingDisplay.isEmpty }
+            .map(\.incomingDisplay)
+            .joined(separator: "; ")
     }
 
     private static func draftTarget(_ proposal: CatalogPromoteGraphAlignmentRow, menu: [Alternative]) -> Target {
