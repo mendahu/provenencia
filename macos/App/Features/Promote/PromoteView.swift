@@ -167,10 +167,12 @@ struct PromoteView: View {
 
     private var mappedBar: some View {
         HStack(alignment: .center) {
-            Text(verbatim: L10n.Promote.openedFrom(name: model.entry.subjectName))
-                .font(PVFont.body(size: PVTypeScale.bodySmall))
-                .italic()
-                .foregroundStyle(PVColor.textSecondary)
+            if !model.entry.mapAll {
+                Text(verbatim: L10n.Promote.openedFrom(name: model.entry.subjectName))
+                    .font(PVFont.body(size: PVTypeScale.bodySmall))
+                    .italic()
+                    .foregroundStyle(PVColor.textSecondary)
+            }
             Spacer(minLength: PVSpacing.space4)
             PVSelect(
                 selection: groupBinding,
@@ -375,7 +377,7 @@ struct PromoteView: View {
         let working = model.flow.visibleRows.filter { !$0.anchor }
         let anchors = model.flow.mappedRest ? model.flow.rows.filter(\.anchor) : []
         if model.flow.group == .assessment {
-            return [PromoteFlow.Assessment.strong, .weak, .none].map { band in
+            return [PromoteFlow.Assessment.strong, .medium, .weak, .none].map { band in
                 section(band.rawValue, PromoteAssessmentCopy.title(band), working.filter { $0.assessment == band }, [])
             }.filter { !$0.rows.isEmpty }
         }
@@ -468,36 +470,46 @@ private struct PromoteAlignmentRow: View {
                     selection: targetBinding,
                     options: targetOptions,
                     size: .sm,
+                    placeholder: row.target == .unset ? L10n.string(L10n.Promote.targetPlaceholder) : nil,
                     menuWidth: PromoteLayout.targetColumn,
                     fillsWidth: true,
                     rowHeight: 46,
                     isDisabled: model.isSaving,
+                    isInvalid: row.target == .unset,
                     accessibilitySpokenLabel: L10n.Promote.filesOn(name: row.name),
                     accessibilityIdentifier: "promote.row.\(row.ref).target"
                 ) { option in
                     PromoteTargetMenuRow(option: option, row: row)
                 }
                 .frame(width: PromoteLayout.targetColumn)
-                Button { model.openSheet(row.subjectID) } label: {
-                    HStack(spacing: PVSpacing.space3) {
-                        PVBadge(PromoteAssessmentCopy.title(row.assessment), tone: badgeTone)
-                        Text(verbatim: model.reasonText(for: row))
-                            .font(PVFont.body(size: PVTypeScale.caption))
-                            .italic()
-                            .foregroundStyle(PVColor.textSecondary)
-                            .lineLimit(1)
-                        Spacer(minLength: 0)
-                        PVIcon(.chevronForward, size: 14)
-                            .foregroundStyle(PVColor.textMuted)
+                // A real stack, not a Group: Group forwards its frame to each
+                // child, so an empty assessment column collapses and the
+                // target menu slides into the gap.
+                HStack(spacing: PVSpacing.space3) {
+                    if let readout = row.selectionReadout {
+                        Button { model.openSheet(row.subjectID) } label: {
+                            HStack(spacing: PVSpacing.space3) {
+                                PVBadge(PromoteAssessmentCopy.title(readout.assessment), tone: badgeTone(readout.assessment))
+                                Text(verbatim: model.reasonText(readout.reason, on: row))
+                                    .font(PVFont.body(size: PVTypeScale.caption))
+                                    .italic()
+                                    .foregroundStyle(PVColor.textSecondary)
+                                    .lineLimit(1)
+                                Spacer(minLength: 0)
+                                PVIcon(.chevronForward, size: 14)
+                                    .foregroundStyle(PVColor.textMuted)
+                            }
+                        }
+                        .buttonStyle(.plain)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .accessibilityLabel(Text(verbatim: L10n.Promote.evidenceFor(
+                            name: row.name,
+                            assessment: L10n.string(PromoteAssessmentCopy.title(readout.assessment)),
+                            reason: model.reasonText(readout.reason, on: row)
+                        )))
+                        .accessibilityIdentifier("promote.row.\(row.ref).evidence")
                     }
                 }
-                .buttonStyle(.plain)
-                .accessibilityLabel(Text(verbatim: L10n.Promote.evidenceFor(
-                    name: row.name,
-                    assessment: L10n.string(PromoteAssessmentCopy.title(row.assessment)),
-                    reason: model.reasonText(for: row)
-                )))
-                .accessibilityIdentifier("promote.row.\(row.ref).evidence")
                 .frame(maxWidth: .infinity, alignment: .leading)
                 HStack(spacing: PVSpacing.space2) {
                     if row.updated {
@@ -550,9 +562,10 @@ private struct PromoteAlignmentRow: View {
         PromoteKindTile(kind: row.kind, size: PromoteLayout.kindTile, markSize: 16, background: PVColor.surfaceSunken)
     }
 
-    private var badgeTone: PVBadgeTone {
-        switch row.assessment {
+    private func badgeTone(_ assessment: PromoteFlow.Assessment) -> PVBadgeTone {
+        switch assessment {
         case .strong: .success
+        case .medium: .info
         case .weak: .warning
         case .none: .neutral
         }
@@ -653,7 +666,7 @@ private struct PromoteEvidenceSheet: View {
     let model: PromoteModel
 
     var body: some View {
-        PVPanel(title: Text(verbatim: sheetTitle), subtitle: Text(verbatim: sheetSubtitle), width: 880) {
+        PVPanel(title: Text(verbatim: sheetTitle), subtitle: sheetSubtitle, width: 880) {
             ScrollView {
                 VStack(alignment: .leading, spacing: PVSpacing.space5) {
                     if row.comparisons.contains(where: { $0.outcome == "conflict" }) {
@@ -727,16 +740,17 @@ private struct PromoteEvidenceSheet: View {
             return "\(row.name) → \(ref) \(title)"
         case .newKind:
             return "\(row.name) → \(L10n.string(L10n.Promote.newOption(row.kind)))"
-        case .skip:
+        case .skip, .unset:
             return row.name
         }
     }
 
-    private var sheetSubtitle: String {
-        L10n.Promote.sheetSubtitle(
-            assessment: L10n.string(PromoteAssessmentCopy.title(row.assessment)),
-            reason: model.reasonText(for: row)
-        )
+    private var sheetSubtitle: Text? {
+        guard let readout = row.selectionReadout else { return nil }
+        return Text(verbatim: L10n.Promote.sheetSubtitle(
+            assessment: L10n.string(PromoteAssessmentCopy.title(readout.assessment)),
+            reason: model.reasonText(readout.reason, on: row)
+        ))
     }
 
     private var sheetColumns: some View {
@@ -757,6 +771,7 @@ private struct PromoteEvidenceSheet: View {
         case .handle(_, let ref, _): ref
         case .newKind: L10n.string(L10n.Promote.newOption(row.kind))
         case .skip: L10n.string(L10n.Promote.skip)
+        case .unset: L10n.string(L10n.Promote.targetPlaceholder)
         }
     }
 
@@ -832,6 +847,7 @@ private struct PromoteEvidenceSheet: View {
     private func outcomeTone(_ outcome: String) -> PVBadgeTone {
         switch outcome {
         case "agree": .success
+        case "partial": .info
         case "conflict": .danger
         default: .neutral
         }
@@ -882,6 +898,7 @@ private enum PromoteAssessmentCopy {
     static func title(_ assessment: PromoteFlow.Assessment) -> LocalizedStringResource {
         switch assessment {
         case .strong: L10n.Promote.assessmentStrong
+        case .medium: L10n.Promote.assessmentMedium
         case .weak: L10n.Promote.assessmentWeak
         case .none: L10n.Promote.assessmentNone
         }

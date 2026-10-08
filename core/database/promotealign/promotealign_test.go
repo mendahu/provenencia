@@ -549,6 +549,126 @@ func TestProposeQueryCountDoesNotGrowWithTheLayer(t *testing.T) {
 	}
 }
 
+// A city, state, and country that agree on toponym and on part-of, with
+// nothing decided yet, are strong. The hierarchy is one hop of context.
+func TestPartOfChainIsAStrongMatch(t *testing.T) {
+	f := newFixture(t)
+	city := f.place(f.source, f.artifact, "Gumptiontown")
+	state := f.place(f.source, f.artifact, "Provenance")
+	country := f.place(f.source, f.artifact, "Arcadia")
+	f.placeRel(f.source, f.artifact, city, state, "part_of")
+	f.placeRel(f.source, f.artifact, state, country, "part_of")
+	cityH := f.promote(city)
+	stateH := f.promote(state)
+	countryH := f.promote(country)
+
+	srcB, artB := f.newSource("Gazetteer")
+	city2 := f.place(srcB, artB, "Gumptiontown")
+	state2 := f.place(srcB, artB, "Provenance")
+	country2 := f.place(srcB, artB, "Arcadia")
+	f.placeRel(srcB, artB, city2, state2, "part_of")
+	f.placeRel(srcB, artB, state2, country2, "part_of")
+
+	prop := f.propose(srcB.ID, nil)
+	cfg := graphalign.DefaultConfig()
+	for _, pair := range []struct {
+		sub    subjects.Subject
+		handle []byte
+	}{
+		{city2, cityH.Entity.ID},
+		{state2, stateH.Entity.ID},
+		{country2, countryH.Entity.ID},
+	} {
+		row := rowFor(prop, pair.sub.ID)
+		if row.Target != graphalign.TargetHandle || !bytes.Equal(row.HandleID, pair.handle) ||
+			row.Assessment != graphalign.AssessStrong || row.Score < cfg.StrongScore {
+			t.Fatalf("%s: %+v", pair.sub.Ref, row)
+		}
+	}
+}
+
+// A place that shares its only toponym with a handle is a medium match, even
+// when another place in the catalog makes that name look common.
+func TestSameToponymAloneIsAMediumMatch(t *testing.T) {
+	f := newFixture(t)
+	york := f.promote(f.place(f.source, f.artifact, "York"))
+	f.promote(f.place(f.source, f.artifact, "Leeds"))
+
+	srcB, artB := f.newSource("Gazetteer")
+	again := f.place(srcB, artB, "York")
+	row := rowFor(f.propose(srcB.ID, nil), again.ID)
+	if row.Target != graphalign.TargetHandle || !bytes.Equal(row.HandleID, york.Entity.ID) ||
+		row.Assessment != graphalign.AssessMedium {
+		t.Fatalf("york row %+v, want %s as a weak match", row, york.Entity.Ref)
+	}
+}
+
+func TestShorterStructuredNameIsAWeakMatch(t *testing.T) {
+	cases := []struct {
+		full, short string
+	}{
+		{"James Kenneth Robins", "James Robins"},
+		{"Lee-Ellen Matilda Breakell", "Lee Breakell"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.short, func(t *testing.T) {
+			f := newFixture(t)
+			known := f.promote(f.person(f.source, f.artifact, tc.full))
+			srcB, artB := f.newSource("Census")
+			again := f.person(srcB, artB, tc.short)
+			row := rowFor(f.propose(srcB.ID, nil), again.ID)
+			cfg := graphalign.DefaultConfig()
+			if row.Target != graphalign.TargetHandle || !bytes.Equal(row.HandleID, known.Entity.ID) ||
+				row.Assessment != graphalign.AssessWeak ||
+				row.Score < cfg.WeakScore || row.Score >= cfg.MediumScore {
+				t.Fatalf("%s row %+v, want %s as a weak match", tc.short, row, known.Entity.Ref)
+			}
+			var saw bool
+			for _, ex := range row.Exhibits {
+				if ex.Property.Key != "name" {
+					continue
+				}
+				saw = true
+				if ex.Outcome == "conflict" || ex.Outcome == "unknown" {
+					t.Fatalf("name line %+v", ex)
+				}
+			}
+			if !saw {
+				t.Fatal("missing name exhibit")
+			}
+		})
+	}
+}
+
+func TestSpellingVariantToponymIsAWeakMatch(t *testing.T) {
+	f := newFixture(t)
+	named := f.promote(f.place(f.source, f.artifact, "Provenanced"))
+	f.promote(f.place(f.source, f.artifact, "Leeds"))
+
+	srcB, artB := f.newSource("Gazetteer")
+	again := f.place(srcB, artB, "Provenance")
+	row := rowFor(f.propose(srcB.ID, nil), again.ID)
+	cfg := graphalign.DefaultConfig()
+	if row.Target != graphalign.TargetHandle || !bytes.Equal(row.HandleID, named.Entity.ID) ||
+		row.Assessment != graphalign.AssessWeak ||
+		row.Score < cfg.WeakScore || row.Score >= cfg.MediumScore {
+		t.Fatalf("provenance row %+v, want %s as a weak match", row, named.Entity.Ref)
+	}
+	var saw bool
+	for _, ex := range row.Exhibits {
+		if ex.Property.Key != "toponym" {
+			continue
+		}
+		saw = true
+		if ex.Outcome != "partial" || ex.Pinned {
+			t.Fatalf("toponym exhibit %+v", ex)
+		}
+	}
+	if !saw {
+		t.Fatal("missing toponym exhibit")
+	}
+}
+
 // A directed term is matched from the same end: the fixed place's part (not
 // its whole, though both are named York) is what the layer's part matches.
 func TestProposePartOfMatchesTheSameEnd(t *testing.T) {

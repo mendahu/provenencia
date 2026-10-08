@@ -4,12 +4,15 @@ import Foundation
 /// live here. The model loads the proposal and files Done.
 struct PromoteFlow: Equatable, Sendable {
     enum Target: Equatable, Sendable {
+        /// No choice yet. A no-match row starts here so Skip and New are explicit.
+        case unset
         case handle(id: String, ref: String, title: String)
         case newKind
         case skip
 
         var token: String {
             switch self {
+            case .unset: ""
             case .handle(let id, _, _): "handle:\(id)"
             case .newKind: "new"
             case .skip: "skip"
@@ -23,7 +26,7 @@ struct PromoteFlow: Equatable, Sendable {
     }
 
     enum Assessment: String, Equatable, Sendable {
-        case strong, weak, none
+        case strong, medium, weak, none
 
         init(wire: String) { self = Assessment(rawValue: wire) ?? .none }
     }
@@ -44,16 +47,34 @@ struct PromoteFlow: Equatable, Sendable {
         case noMatch
         case empty
 
-        init(_ row: CatalogPromoteGraphAlignmentRow) {
-            switch row.reason {
-            case "via" where !row.viaNeighborSubjectID.isEmpty: self = .via(neighborID: row.viaNeighborSubjectID)
+        init(code: String, propertyKey: String, propertyOrigin: String, viaNeighborID: String) {
+            switch code {
+            case "via" where !viaNeighborID.isEmpty: self = .via(neighborID: viaNeighborID)
             case "decided": self = .decided
-            case "agrees": self = .agrees(key: row.reasonPropertyKey, origin: row.reasonPropertyOrigin)
+            case "agrees": self = .agrees(key: propertyKey, origin: propertyOrigin)
             case "weak": self = .weak
             case "taken": self = .taken
             case "no_match": self = .noMatch
             default: self = .empty
             }
+        }
+
+        init(_ row: CatalogPromoteGraphAlignmentRow) {
+            self.init(
+                code: row.reason,
+                propertyKey: row.reasonPropertyKey,
+                propertyOrigin: row.reasonPropertyOrigin,
+                viaNeighborID: row.viaNeighborSubjectID
+            )
+        }
+
+        init(_ alt: CatalogPromoteGraphAlignmentAlternative) {
+            self.init(
+                code: alt.reason,
+                propertyKey: alt.reasonPropertyKey,
+                propertyOrigin: alt.reasonPropertyOrigin,
+                viaNeighborID: alt.viaNeighborSubjectID
+            )
         }
     }
 
@@ -80,12 +101,20 @@ struct PromoteFlow: Equatable, Sendable {
         case alsoNew(otherName: String)
     }
 
+    /// The assessment column for one selected record.
+    struct SelectionReadout: Equatable, Sendable {
+        var assessment: Assessment
+        var reason: Reason
+    }
+
     struct Alternative: Equatable, Sendable, Identifiable {
         var id: String
         var ref: String
         var title: String
         /// Dates, place, or other secondary line under the name.
         var subtitle: String = ""
+        var assessment: Assessment = .none
+        var reason: Reason = .empty
     }
 
     struct Row: Equatable, Sendable, Identifiable {
@@ -113,6 +142,13 @@ struct PromoteFlow: Equatable, Sendable {
         var proposedDuplicateOf: String?
         var duplicateNote: DuplicateNote?
         var id: String { subjectID }
+
+        /// The selected record's band and why. Skip, New, and an empty menu show nothing.
+        var selectionReadout: SelectionReadout? {
+            guard case .handle(let id, _, _) = target,
+                  let alt = menu.first(where: { $0.id == id }) else { return nil }
+            return SelectionReadout(assessment: alt.assessment, reason: alt.reason)
+        }
     }
 
     struct Bridge: Equatable, Sendable, Identifiable {
@@ -152,6 +188,9 @@ struct PromoteFlow: Equatable, Sendable {
         var mark: PVMarkKey = .subjectRelationship
         var endA: String?
         var endB: String?
+        /// Already an accepted association. Hidden from the will-file list;
+        /// Done does not file it again.
+        var alreadyFiled: Bool = false
     }
 
     var entryID: String
@@ -180,12 +219,17 @@ struct PromoteFlow: Equatable, Sendable {
             guard !row.anchor else { return false }
             switch row.target {
             case .handle, .newKind: return true
-            case .skip: return false
+            case .skip, .unset: return false
             }
         }.count
     }
 
     var skipCount: Int { scope.filter { !$0.anchor && $0.target == .skip }.count }
+
+    /// Every visible row has a target. An unselected no-match menu blocks Done.
+    var targetsChosen: Bool {
+        scope.allSatisfy { $0.anchor || $0.target != .unset }
+    }
 
     var connectionCount: Int { filedBridges.filter(\.files).count }
 
@@ -202,7 +246,7 @@ struct PromoteFlow: Equatable, Sendable {
     }
 
     private var filedBridges: [Bridge] {
-        bridges.map { bridge in
+        bridges.filter { !$0.alreadyFiled }.map { bridge in
             if bridgeOff.contains(bridge.id) {
                 return lined(bridge, .off)
             }
@@ -224,7 +268,7 @@ struct PromoteFlow: Equatable, Sendable {
         switch row.target {
         case .handle(let id, _, _): return id
         case .newKind: return "new:" + subjectID
-        case .skip: return nil
+        case .skip, .unset: return nil
         }
     }
 
@@ -315,45 +359,50 @@ struct PromoteFlow: Equatable, Sendable {
     /// One line per row to file. A Skip writes nothing, so it carries no
     /// argument, confidence, or pins, whatever the row was drafted with.
     func batchRows() -> [CatalogPromoteBatchRow] {
-        scope.filter { !$0.anchor }.map { row in
-            let pairs: [CatalogPromoteGraphAlignmentPair]
-            if case .handle = row.target {
-                pairs = row.comparisons.compactMap { comparison in
-                    guard row.pins.contains(comparison.id),
-                          !comparison.incomingObservationID.isEmpty,
-                          !comparison.memberObservationID.isEmpty
-                    else { return nil }
-                    return CatalogPromoteGraphAlignmentPair(
-                        incomingObservationID: comparison.incomingObservationID,
-                        memberObservationID: comparison.memberObservationID
-                    )
-                }
-            } else {
-                pairs = []
-            }
-            let entityID: String?
-            let target: String
-            switch row.target {
-            case .handle(let id, _, _):
-                target = "handle"
-                entityID = id
-            case .newKind:
-                target = "new"
-                entityID = nil
-            case .skip:
-                target = "skip"
-                entityID = nil
-            }
-            let files = target != "skip"
-            return CatalogPromoteBatchRow(
-                subjectID: row.subjectID,
-                target: target,
-                entityID: entityID,
-                confidenceGradeID: files ? row.confidenceGradeID : nil,
-                argument: files ? row.argument : "",
-                pairs: pairs
-            )
+        scope.compactMap { row in
+            if row.anchor || row.target == .unset { return nil }
+            return batchRow(row)
         }
+    }
+
+    private func batchRow(_ row: Row) -> CatalogPromoteBatchRow {
+        let pairs: [CatalogPromoteGraphAlignmentPair]
+        if case .handle = row.target {
+            pairs = row.comparisons.compactMap { comparison in
+                guard row.pins.contains(comparison.id),
+                      !comparison.incomingObservationID.isEmpty,
+                      !comparison.memberObservationID.isEmpty
+                else { return nil }
+                return CatalogPromoteGraphAlignmentPair(
+                    incomingObservationID: comparison.incomingObservationID,
+                    memberObservationID: comparison.memberObservationID
+                )
+            }
+        } else {
+            pairs = []
+        }
+        let entityID: String?
+        let target: String
+        switch row.target {
+        case .handle(let id, _, _):
+            target = "handle"
+            entityID = id
+        case .newKind:
+            target = "new"
+            entityID = nil
+        case .skip, .unset:
+            target = "skip"
+            entityID = nil
+        }
+        let files = target != "skip"
+        return CatalogPromoteBatchRow(
+            subjectID: row.subjectID,
+            target: target,
+            entityID: entityID,
+            confidenceGradeID: files ? row.confidenceGradeID : nil,
+            argument: files ? row.argument : "",
+            pairs: pairs
+        )
     }
 
     func skipBridgeIDs() -> [String] { bridgeOff.sorted() }
@@ -427,6 +476,18 @@ struct PromoteFlow: Equatable, Sendable {
             var kept = previous
             kept.assessment = Assessment(wire: proposal.assessment)
             kept.reason = Reason(proposal)
+            // The column shows the selected record. A held handle is rescored,
+            // so refresh that record's band. "Your choice" stays off the column;
+            // the match sentence already on the menu item remains.
+            if case .handle(let id, _, _) = kept.target,
+               proposal.target == "handle", proposal.handleID == id,
+               let menuIndex = kept.menu.firstIndex(where: { $0.id == id }) {
+                kept.menu[menuIndex].assessment = Assessment(wire: proposal.assessment)
+                let matchReason = Reason(proposal)
+                if matchReason != .decided {
+                    kept.menu[menuIndex].reason = matchReason
+                }
+            }
             // Lines only describe the row's own target: a decided handle is
             // sent as fixed, so the proposal compares exactly that handle.
             let lines = proposal.target == "handle" && proposal.handleID == previous.target.handleID
@@ -474,11 +535,20 @@ struct PromoteFlow: Equatable, Sendable {
     }
 
     private static func draftTarget(_ proposal: CatalogPromoteGraphAlignmentRow, menu: [Alternative]) -> Target {
-        let strong = Assessment(wire: proposal.assessment) == .strong
-        if strong, proposal.target == "handle", let first = menu.first, first.id == proposal.handleID {
+        let assessment = Assessment(wire: proposal.assessment)
+        // No match: leave the menu empty so Skip and New are a choice.
+        if assessment == .none {
+            return .unset
+        }
+        if proposal.target == "handle", let first = menu.first, first.id == proposal.handleID {
             return .handle(id: first.id, ref: first.ref, title: first.title)
         }
-        if strong, proposal.target == "new" {
+        // Below the accept bar the candidate is an alternative, not the row
+        // target. Still open on that match.
+        if assessment == .weak, let match = menu.first {
+            return .handle(id: match.id, ref: match.ref, title: match.title)
+        }
+        if assessment == .strong, proposal.target == "new" {
             return .newKind
         }
         return .skip
@@ -489,61 +559,85 @@ struct PromoteFlow: Equatable, Sendable {
         if proposal.target == "handle", !proposal.handleID.isEmpty {
             out.append(Alternative(
                 id: proposal.handleID, ref: proposal.handleRef,
-                title: headerTitle(proposal), subtitle: headerSubtitle(proposal)
+                title: headerTitle(proposal), subtitle: headerSubtitle(proposal),
+                assessment: Assessment(wire: proposal.assessment), reason: Reason(proposal)
             ))
         }
         for alt in proposal.alternatives where alt.handleID != proposal.handleID {
             out.append(Alternative(
                 id: alt.handleID, ref: alt.handleRef,
-                title: headerTitle(alt, kind: kind), subtitle: headerSubtitle(alt, kind: kind)
+                title: headerTitle(alt, kind: kind), subtitle: headerSubtitle(alt, kind: kind),
+                assessment: Assessment(wire: alt.assessment), reason: Reason(alt)
             ))
         }
         return out
     }
 
     private static func headerSubtitle(_ row: CatalogPromoteGraphAlignmentRow) -> String {
-        if let person = row.person { return PersonLifeDisplay.line(person).text }
-        if let event = row.event { return eventSubtitle(event) }
-        if let place = row.place { return place.parents.first ?? "" }
-        return ""
+        conclusionSubtitle(
+            kind: EvidencePrimaryKind(rawValue: row.kind),
+            person: row.person, event: row.event, place: row.place
+        )
     }
 
     private static func headerSubtitle(_ alt: CatalogPromoteGraphAlignmentAlternative, kind: EvidencePrimaryKind) -> String {
-        switch kind {
-        case .person:
-            if let person = alt.person { return PersonLifeDisplay.line(person).text }
-        case .event:
-            if let event = alt.event { return eventSubtitle(event) }
-        case .place:
-            return alt.place?.parents.first ?? ""
-        }
-        return ""
-    }
-
-    private static func eventSubtitle(_ event: CatalogEventHeader) -> String {
-        let date = PersonLifeDisplay.dateText(event.date ?? event.startDate)
-        let place = event.places.first?.names.first ?? ""
-        if date.isEmpty { return place }
-        if place.isEmpty { return date }
-        return date + " · " + place
+        conclusionSubtitle(kind: kind, person: alt.person, event: alt.event, place: alt.place)
     }
 
     private static func headerTitle(_ row: CatalogPromoteGraphAlignmentRow) -> String {
-        if let person = row.person, let name = person.name?.form, !name.isEmpty { return name }
-        if let event = row.event { return event.eventName.isEmpty ? row.handleRef : event.eventName }
-        if let place = row.place, let name = place.names.first, !name.isEmpty { return name }
-        return row.handleRef
+        conclusionTitle(
+            kind: EvidencePrimaryKind(rawValue: row.kind),
+            person: row.person, event: row.event, place: row.place,
+            fallback: row.handleRef
+        )
     }
 
     private static func headerTitle(_ alt: CatalogPromoteGraphAlignmentAlternative, kind: EvidencePrimaryKind) -> String {
+        conclusionTitle(
+            kind: kind,
+            person: alt.person, event: alt.event, place: alt.place,
+            fallback: alt.handleRef
+        )
+    }
+
+    private static func conclusionTitle(
+        kind: EvidencePrimaryKind?,
+        person: CatalogPersonHeader?,
+        event: CatalogEventHeader?,
+        place: CatalogPlaceHeader?,
+        fallback: String
+    ) -> String {
         switch kind {
         case .person:
-            if let name = alt.person?.name?.form, !name.isEmpty { return name }
+            if let person { return PersonHeaderDisplay.title(person) }
         case .event:
-            if let name = alt.event?.eventName, !name.isEmpty { return name }
+            if let event { return EventTitleDisplay.title(event) }
         case .place:
-            if let name = alt.place?.names.first, !name.isEmpty { return name }
+            if let place { return PlaceTitleDisplay.title(place) }
+        case nil:
+            break
         }
-        return alt.handleRef
+        return fallback
+    }
+
+    private static func conclusionSubtitle(
+        kind: EvidencePrimaryKind?,
+        person: CatalogPersonHeader?,
+        event: CatalogEventHeader?,
+        place: CatalogPlaceHeader?
+    ) -> String {
+        switch kind {
+        case .person:
+            if let person { return PersonLifeDisplay.line(person).text }
+        case .event:
+            if let event { return EventSecondaryDisplay.line(event) }
+        case .place:
+            if let place {
+                return PlaceChainDisplay.line(parents: place.parents, candidates: place.parentsAreCandidates)
+            }
+        case nil:
+            break
+        }
+        return ""
     }
 }

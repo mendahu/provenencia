@@ -3,16 +3,30 @@ package match
 import (
 	"fmt"
 	"math"
+	"strings"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database/namevalues"
 )
 
-func name(form string) Value { return Value{Name: &namevalues.Value{Form: form}} }
-func text(s string) Value    { return Value{Text: s, HasText: true} }
-func term(k string) Value    { return Value{Term: k} }
-func integer(n int64) Value  { return Value{Integer: n, HasInteger: true} }
-func ip(n int) *int          { return &n }
+// name is a structured name. The form is a transcription and is not compared;
+// the words become given names and a surname, the way a researcher files parts.
+func name(form string) Value {
+	n := &namevalues.Value{Form: form}
+	words := strings.Fields(form)
+	for i, w := range words {
+		typ := namevalues.PartTypeGiven
+		if i == len(words)-1 {
+			typ = namevalues.PartTypeSurname
+		}
+		n.Parts = append(n.Parts, namevalues.Part{Idx: i, Value: w, Type: typ})
+	}
+	return Value{Name: n}
+}
+func text(s string) Value   { return Value{Text: s, HasText: true} }
+func term(k string) Value   { return Value{Term: k} }
+func integer(n int64) Value { return Value{Integer: n, HasInteger: true} }
+func ip(n int) *int         { return &n }
 func approx(near float64) func(float64) bool {
 	return func(got float64) bool { return math.Abs(got-near) < 1e-9 }
 }
@@ -93,22 +107,22 @@ func TestRankPersons(t *testing.T) {
 	candidates := []Candidate{
 		person("PER-B", []string{"Jim Robins", "James Robins"}, "male"), // best cluster wins: 10 + 1
 		person("PER-A", []string{"James Robins"}, ""),                   // no sex to compare: 10
-		person("PER-C", []string{"Mary Robins"}, "unknown"),             // neutral sex: 5
-		person("PER-D", []string{"James Robins"}, "female"),             // 10 − 8 = 2, below MinScore
+		person("PER-C", []string{"Mary Robins"}, "unknown"),             // neutral sex: 6
+		person("PER-D", []string{"James Robins"}, "female"),             // 10 − 2 = 8, still shown
 		person("PER-E", []string{"Ada Lovelace"}, "male"),               // 0 + 1, below
 		person("PER-F", nil, "male"),                                    // no name: 1, below
 	}
 	got := Rank(p, probe, candidates, 0)
-	if want := "[PER-B=11.0 PER-A=10.0 PER-C=5.0]"; refs(got) != want {
+	if want := "[PER-B=11.0 PER-A=10.0 PER-D=8.0 PER-C=6.0]"; refs(got) != want {
 		t.Fatalf("got %s, want %s", refs(got), want)
 	}
 	if r := got[0].Reasons; len(r) != 2 || r[0].Property.Key != "name" || r[0].Similarity != 1 || r[1].Contribution != 1 {
 		t.Fatalf("reasons %+v", r)
 	}
-	if r := got[2].Reasons; len(r) != 1 {
+	if r := got[3].Reasons; len(r) != 1 {
 		t.Fatalf("a neutral term is not a reason: %+v", r)
 	}
-	if contra := Score(p, probe, candidates[3]); contra.Reasons[1].Contribution != -8 {
+	if contra := Score(p, probe, candidates[3]); contra.Reasons[1].Contribution != -2 {
 		t.Fatalf("contradiction %+v", contra.Reasons)
 	}
 
@@ -134,11 +148,11 @@ func TestRankPersons(t *testing.T) {
 	t.Run("tuned profile", func(t *testing.T) {
 		lenient := p.With(Feature{Property: product("sex_at_birth"), Comparer: TermComparer{}, Weight: 1})
 		lenient.MinScore = 1
-		if len(lenient.Features) != 2 || len(p.Features) != 2 || p.Features[1].Contradiction != 8 {
+		if len(lenient.Features) != 2 || len(p.Features) != 2 || p.Features[1].Contradiction != 2 {
 			t.Fatal("With must replace in a copy")
 		}
 		got := Rank(lenient, probe, candidates, 0)
-		if want := "[PER-B=11.0 PER-A=10.0 PER-D=10.0 PER-C=5.0 PER-E=1.0 PER-F=1.0]"; refs(got) != want {
+		if want := "[PER-B=11.0 PER-A=10.0 PER-D=10.0 PER-C=6.0 PER-E=1.0 PER-F=1.0]"; refs(got) != want {
 			t.Fatalf("got %s, want %s", refs(got), want)
 		}
 	})

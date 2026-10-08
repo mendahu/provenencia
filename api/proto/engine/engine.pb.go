@@ -10546,7 +10546,7 @@ type PromoteGraphAlignmentComparison struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	PropertyKey    string                 `protobuf:"bytes,1,opt,name=property_key,json=propertyKey,proto3" json:"property_key,omitempty"`
 	PropertyOrigin string                 `protobuf:"bytes,2,opt,name=property_origin,json=propertyOrigin,proto3" json:"property_origin,omitempty"`
-	Outcome        string                 `protobuf:"bytes,3,opt,name=outcome,proto3" json:"outcome,omitempty"` // agree, conflict, unknown
+	Outcome        string                 `protobuf:"bytes,3,opt,name=outcome,proto3" json:"outcome,omitempty"` // agree, partial, conflict, unknown
 	ValueType      string                 `protobuf:"bytes,4,opt,name=value_type,json=valueType,proto3" json:"value_type,omitempty"`
 	Pinned         bool                   `protobuf:"varint,5,opt,name=pinned,proto3" json:"pinned,omitempty"`
 	Weight         float64                `protobuf:"fixed64,6,opt,name=weight,proto3" json:"weight,omitempty"`
@@ -10693,9 +10693,18 @@ type PromoteGraphAlignmentAlternative struct {
 	//	*PromoteGraphAlignmentAlternative_Person
 	//	*PromoteGraphAlignmentAlternative_Event
 	//	*PromoteGraphAlignmentAlternative_Place
-	Header        isPromoteGraphAlignmentAlternative_Header `protobuf_oneof:"header"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Header isPromoteGraphAlignmentAlternative_Header `protobuf_oneof:"header"`
+	// This record's own band and why, so the page can show it when the
+	// researcher selects this record. strong, medium, weak, none.
+	Assessment string `protobuf:"bytes,7,opt,name=assessment,proto3" json:"assessment,omitempty"`
+	// via, agrees, or weak. The page words it. With agrees, the Property.
+	Reason               string `protobuf:"bytes,8,opt,name=reason,proto3" json:"reason,omitempty"`
+	ReasonPropertyKey    string `protobuf:"bytes,9,opt,name=reason_property_key,json=reasonPropertyKey,proto3" json:"reason_property_key,omitempty"`
+	ReasonPropertyOrigin string `protobuf:"bytes,10,opt,name=reason_property_origin,json=reasonPropertyOrigin,proto3" json:"reason_property_origin,omitempty"`
+	// Set when reason is via: the layer neighbor that reached this record.
+	ViaNeighborSubjectId string `protobuf:"bytes,11,opt,name=via_neighbor_subject_id,json=viaNeighborSubjectId,proto3" json:"via_neighbor_subject_id,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
 }
 
 func (x *PromoteGraphAlignmentAlternative) Reset() {
@@ -10783,6 +10792,41 @@ func (x *PromoteGraphAlignmentAlternative) GetPlace() *PlaceHeader {
 	return nil
 }
 
+func (x *PromoteGraphAlignmentAlternative) GetAssessment() string {
+	if x != nil {
+		return x.Assessment
+	}
+	return ""
+}
+
+func (x *PromoteGraphAlignmentAlternative) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+func (x *PromoteGraphAlignmentAlternative) GetReasonPropertyKey() string {
+	if x != nil {
+		return x.ReasonPropertyKey
+	}
+	return ""
+}
+
+func (x *PromoteGraphAlignmentAlternative) GetReasonPropertyOrigin() string {
+	if x != nil {
+		return x.ReasonPropertyOrigin
+	}
+	return ""
+}
+
+func (x *PromoteGraphAlignmentAlternative) GetViaNeighborSubjectId() string {
+	if x != nil {
+		return x.ViaNeighborSubjectId
+	}
+	return ""
+}
+
 type isPromoteGraphAlignmentAlternative_Header interface {
 	isPromoteGraphAlignmentAlternative_Header()
 }
@@ -10813,7 +10857,7 @@ type PromoteGraphAlignmentRow struct {
 	HandleId          string                              `protobuf:"bytes,4,opt,name=handle_id,json=handleId,proto3" json:"handle_id,omitempty"`
 	HandleRef         string                              `protobuf:"bytes,5,opt,name=handle_ref,json=handleRef,proto3" json:"handle_ref,omitempty"`
 	Score             float64                             `protobuf:"fixed64,6,opt,name=score,proto3" json:"score,omitempty"`
-	Assessment        string                              `protobuf:"bytes,7,opt,name=assessment,proto3" json:"assessment,omitempty"` // strong, weak, none
+	Assessment        string                              `protobuf:"bytes,7,opt,name=assessment,proto3" json:"assessment,omitempty"` // strong, medium, weak, none
 	Comparisons       []*PromoteGraphAlignmentComparison  `protobuf:"bytes,9,rep,name=comparisons,proto3" json:"comparisons,omitempty"`
 	Alternatives      []*PromoteGraphAlignmentAlternative `protobuf:"bytes,10,rep,name=alternatives,proto3" json:"alternatives,omitempty"`
 	ConflictWithFixed bool                                `protobuf:"varint,11,opt,name=conflict_with_fixed,json=conflictWithFixed,proto3" json:"conflict_with_fixed,omitempty"`
@@ -17244,7 +17288,7 @@ const file_engine_proto_rawDesc = "" +
 	" \x01(\tR\x0eincomingSource\x122\n" +
 	"\x15member_observation_id\x18\v \x01(\tR\x13memberObservationId\x12%\n" +
 	"\x0emember_display\x18\f \x01(\tR\rmemberDisplay\x12#\n" +
-	"\rmember_source\x18\r \x01(\tR\fmemberSourceJ\x04\b\a\x10\b\"\xb5\x02\n" +
+	"\rmember_source\x18\r \x01(\tR\fmemberSourceJ\x04\b\a\x10\b\"\x8a\x04\n" +
 	" PromoteGraphAlignmentAlternative\x12\x1b\n" +
 	"\thandle_id\x18\x01 \x01(\tR\bhandleId\x12\x1d\n" +
 	"\n" +
@@ -17252,7 +17296,15 @@ const file_engine_proto_rawDesc = "" +
 	"\x05score\x18\x03 \x01(\x01R\x05score\x12=\n" +
 	"\x06person\x18\x04 \x01(\v2#.provenencia.engine.v1.PersonHeaderH\x00R\x06person\x12:\n" +
 	"\x05event\x18\x05 \x01(\v2\".provenencia.engine.v1.EventHeaderH\x00R\x05event\x12:\n" +
-	"\x05place\x18\x06 \x01(\v2\".provenencia.engine.v1.PlaceHeaderH\x00R\x05placeB\b\n" +
+	"\x05place\x18\x06 \x01(\v2\".provenencia.engine.v1.PlaceHeaderH\x00R\x05place\x12\x1e\n" +
+	"\n" +
+	"assessment\x18\a \x01(\tR\n" +
+	"assessment\x12\x16\n" +
+	"\x06reason\x18\b \x01(\tR\x06reason\x12.\n" +
+	"\x13reason_property_key\x18\t \x01(\tR\x11reasonPropertyKey\x124\n" +
+	"\x16reason_property_origin\x18\n" +
+	" \x01(\tR\x14reasonPropertyOrigin\x125\n" +
+	"\x17via_neighbor_subject_id\x18\v \x01(\tR\x14viaNeighborSubjectIdB\b\n" +
 	"\x06header\"\xe3\a\n" +
 	"\x18PromoteGraphAlignmentRow\x12\x1d\n" +
 	"\n" +

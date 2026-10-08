@@ -50,7 +50,7 @@ A candidate is returned when its total reaches `MinScore`. Results are sorted by
 
 | Comparer | Value type | Similarity |
 | --- | --- | --- |
-| `NameComparer` | name | **By typed parts** when both names have a surname or given part (see below). Otherwise it falls back to `form`: the same normalized form scores 1, else `Partial` (0.8) × the overlap of best-paired words. |
+| `NameComparer` | name | **Parts only.** `form` is never read. A name with no parts is not comparable. |
 | `TextComparer` | text | Same as names, but with no initials and `Partial` 0.7. |
 | `TermComparer` | term (by key) | The same term scores 1, a different one 0. `Neutral` terms are not comparable. |
 | `DateComparer` | date | Dates are spans of years. **Identical dates score 1** at any precision. **Two points** (exact or ABT): same month with a day missing on one side 0.9; same year with a month missing on one side 0.8; same month with different known days 0.7; different known months 0.6. Up to `Tolerance` years apart (default 2) falls off linearly from 0.8; beyond that scores 0. ABT doubles the tolerance. **A range (FROM/TO/BET) or a bound (BEF, AFT) on either side:** overlapping spans score by the wider span's width: 0.8 for one year, 0.05 less per extra year, never below 0.2. Open spans (BEF, AFT, FROM with no TO) score 0.2. Spans apart fall off from that score within the tolerance, and beyond it score 0, so BEF 1820 vs 1823 is a disagreement. An inverted range reads as its years. |
@@ -70,7 +70,7 @@ A candidate is returned when its total reaches `MinScore`. Results are sorted by
   | family | `surname` | 1.5 |
   | given | `given`, `initial` | 1 for the first, 0.5 for the rest |
   | nick | `nick` | 0.3 |
-  | untyped | `undetermined`, untyped, or a word of `form` | 1 |
+  | untyped | `undetermined`, or a part with no type | 1 |
   | generation | `suffix` | compared separately (below) |
   | ignored | `prefix` (titles), `surname_prefix` ("van") | — |
 
@@ -92,7 +92,7 @@ A candidate is returned when its total reaches `MinScore`. Results are sorted by
 - **Surname conflict:** an initial doesn't count as resembling a surname, so "S." doesn't hide a Smith/Robins conflict.
   - An initial is a lone cased letter ("J").
   - A lone character in an uncased script (蒋, 王) is a whole word.
-- **No parts:** a name whose parts give no comparable word is read from its `form` as untyped words. This is the same rule, not a separate fallback.
+- **No parts:** nothing to compare. `form` is not a match input.
 
 Every weight and affinity is a `NameComparer` field.
 
@@ -102,7 +102,7 @@ Worked examples:
 | --- | --- |
 | James Robins vs James Robins (forms "ROBINS, Jas." and "James Robins") | 1 |
 | J. Robins vs James Robins | 0.8 |
-| typed James Robins vs the form "James Robins" | 0.8 |
+| James Robins vs James Kenneth Robins (parts; the forms can disagree) | 0.91 |
 | Robins (surname only) vs James Robins | 0.75 |
 | Mary Robins vs James Robins | 0.6 |
 | surname "James", given "Robins" (types swapped) vs James Robins | 0.5 |
@@ -110,7 +110,7 @@ Worked examples:
 | James Smith vs James Robins | 0.2 |
 
 Tests: [`core/match/names_test.go`](../core/match/names_test.go) has three layers:
-- **Exact scores per rule:** identity and normalization, surname, given, cross-format pairs (swapped types, typed vs untyped, profile-supplied roles), a surname conflict, suffix, ignored parts, names read from `form`, and the tuning knobs. Expected values are written as the weighted arithmetic.
+- **Exact scores per rule:** identity and normalization, surname, given, cross-format pairs (swapped types, typed vs untyped, profile-supplied roles), a surname conflict, suffix, ignored parts, and the tuning knobs. Expected values are written as the weighted arithmetic. A name with only a form is not comparable.
 - **Ladders:** which name must outrank which, so they hold when weights are retuned.
 - **Generated permutations from fixed seeds**, checked for:
   - symmetry;
@@ -128,7 +128,7 @@ Not yet handled:
 - **Accents, scripts, non-Western structures, nicknames:** see [`ideas/international-names.md`](ideas/international-names.md).
 - **Abbreviations (Jas., Wm.), name frequency, spaced particles ("O Brien"), sound-alikes, name changes:** see [`ideas/name-matching-enhancements.md`](ideas/name-matching-enhancements.md), with the engine-level items (support weighting, derived features, researcher decisions).
 
-**Resolution is separate.** The reconciler compares names by structured parts only (**S9-13b**, `core/autoreconcile/names.go`): part types are identifiers, initials fold into full parts, and names with no parts are no evidence. Matching still reads `form` when a name has no parts. The cache name `sort_key` (so list order) is the normalized form of the reconciled name, and list and card text shows it, until the name-format work.
+**Resolution uses the same parts.** The reconciler (`core/autoreconcile/names.go`) and `NameComparer` both ignore `form`. A name with no parts is no evidence there and not comparable here. The cache name `sort_key` (list order) is still the normalized form, and list and card text shows it. That sort key is not a match.
 
 `match.ComparerFor(valueType)` gives the default comparer for any Property, so a profile can also weigh researcher-defined Properties.
 

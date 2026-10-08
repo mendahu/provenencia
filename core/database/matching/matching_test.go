@@ -170,7 +170,8 @@ func TestForSubjectPersons(t *testing.T) {
 		t.Fatalf("%+v", res)
 	}
 	// Fixture names are typed (given, surname), so a surname weighs more than a given name.
-	want := fmt.Sprintf("[%s=11.0 %s=9.1 %s=6.0]", exact.Entity.Ref, variant.Entity.Ref, surname.Entity.Ref)
+	// A sex mismatch subtracts 2, so the female James stays in the list at 8.
+	want := fmt.Sprintf("[%s=11.0 %s=9.1 %s=8.0 %s=6.0]", exact.Entity.Ref, variant.Entity.Ref, female.Entity.Ref, surname.Entity.Ref)
 	if refs(res.Matches) != want {
 		t.Fatalf("got %s, want %s", refs(res.Matches), want)
 	}
@@ -201,7 +202,7 @@ func TestForSubjectPersons(t *testing.T) {
 		must(t, err)
 		res, err := matching.ForSubject(f.db, james.ID, matching.Options{})
 		must(t, err)
-		if want := fmt.Sprintf("[%s=9.1 %s=6.0]", variant.Entity.Ref, surname.Entity.Ref); refs(res.Matches) != want {
+		if want := fmt.Sprintf("[%s=9.1 %s=8.0 %s=6.0]", variant.Entity.Ref, female.Entity.Ref, surname.Entity.Ref); refs(res.Matches) != want {
 			t.Fatalf("got %s, want %s", refs(res.Matches), want)
 		}
 	})

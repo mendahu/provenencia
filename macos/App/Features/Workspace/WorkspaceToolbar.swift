@@ -236,10 +236,13 @@ struct WorkspaceToolbar: View {
                 )
             )
             if location.sourceSurface == .promote {
+                let label = location.promoteAll
+                    ? L10n.string(L10n.EvidenceGraph.promoteAll)
+                    : L10n.Promote.breadcrumb(ref: location.ref.flatMap { $0.nilIfEmpty } ?? scope)
                 items.append(
                     PVBreadcrumbItem(
                         id: "promote-\(sourceID)",
-                        label: L10n.Promote.breadcrumb(ref: location.ref.flatMap { $0.nilIfEmpty } ?? scope),
+                        label: label,
                         action: nil
                     )
                 )

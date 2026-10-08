@@ -4,6 +4,19 @@ import Foundation
 /// parts (`CatalogEventTitle`); this fills the rule's L10n template. It never
 /// chooses a rule, so every surface titles an Event the same way.
 enum EventTitleDisplay {
+    /// The header's event type fills a title plan that omitted it. List,
+    /// detail, and promote all title through this, so they can't disagree.
+    static func titleSource(_ header: CatalogEventHeader, locale: Locale = .autoupdatingCurrent) -> ConclusionTitleSource {
+        var title = header.title
+        if title.typeKey.isEmpty { title.typeKey = header.eventTypeKey }
+        if title.typeLabel.isEmpty { title.typeLabel = header.eventTypeLabel }
+        return titleSource(title, locale: locale)
+    }
+
+    static func title(_ header: CatalogEventHeader, locale: Locale = .autoupdatingCurrent) -> String {
+        titleSource(header, locale: locale).text
+    }
+
     static func titleSource(_ title: CatalogEventTitle, locale: Locale = .autoupdatingCurrent) -> ConclusionTitleSource {
         let type = typeWord(title)
         switch title.rule {
@@ -47,8 +60,15 @@ enum EventTitleDisplay {
         return text.isEmpty ? L10n.string(L10n.EventTitle.unnamedPerson) : text
     }
 
-    /// The type's label, else "Event".
+    /// Product name for the type key, else the catalog label, else the key.
+    /// "Event" only when neither a key nor a label was recorded.
     private static func typeWord(_ title: CatalogEventTitle) -> String {
-        title.typeLabel.isEmpty ? L10n.string(L10n.EventTitle.fallbackType) : title.typeLabel
+        let key = title.typeKey.trimmingCharacters(in: .whitespacesAndNewlines)
+        let label = title.typeLabel.trimmingCharacters(in: .whitespacesAndNewlines)
+        if key.isEmpty, label.isEmpty {
+            return L10n.string(L10n.EventTitle.fallbackType)
+        }
+        let named = PropertyTermDisplay.name(key: key, propertyKey: "event_type", catalogLabel: label)
+        return named.isEmpty ? L10n.string(L10n.EventTitle.fallbackType) : named
     }
 }

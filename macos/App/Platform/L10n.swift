@@ -1251,10 +1251,12 @@ enum L10n {
         static let kindEvent = LocalizedStringResource("promote.page.kind.event", defaultValue: "Events", comment: "Promote section of event rows")
         static let kindPlace = LocalizedStringResource("promote.page.kind.place", defaultValue: "Places", comment: "Promote section of place rows")
         static let assessmentStrong = LocalizedStringResource("promote.assessment.strong", defaultValue: "Strong", comment: "Promote match assessment")
+        static let assessmentMedium = LocalizedStringResource("promote.assessment.medium", defaultValue: "Medium", comment: "Promote match assessment between strong and weak")
         static let assessmentWeak = LocalizedStringResource("promote.assessment.weak", defaultValue: "Weak", comment: "Promote match assessment")
         static let assessmentNone = LocalizedStringResource("promote.assessment.none", defaultValue: "No match", comment: "Promote match assessment when nothing lines up")
         static let decided = LocalizedStringResource("promote.row.decided", defaultValue: "Decided", comment: "A Promote row the researcher has changed")
         static let updated = LocalizedStringResource("promote.row.updated", defaultValue: "Updated", comment: "A suggested Promote row that moved after a re-proposal")
+        static let targetPlaceholder = LocalizedStringResource("promote.target.placeholder", defaultValue: "Select where this files", comment: "Promote target menu when no record, New, or Skip is chosen yet")
         static let skip = LocalizedStringResource("promote.target.skip", defaultValue: "Skip — not filed yet", comment: "Leave this subject unfiled; Skip is not a rejection")
         static func via(neighbor: String, ref: String, role: String) -> String {
             L10n.format(LocalizedStringResource("promote.reason.via", defaultValue: "via %1$@ → %2$@ (%3$@)", comment: "Why a row was matched: neighbor name, neighbor ref, relationship"), neighbor, ref, role)
@@ -1292,6 +1294,7 @@ enum L10n {
         static func outcome(_ outcome: String) -> LocalizedStringResource {
             switch outcome {
             case "agree": LocalizedStringResource("promote.sheet.agrees", defaultValue: "Agrees", comment: "A comparison that agrees")
+            case "partial": LocalizedStringResource("promote.sheet.similar", defaultValue: "Similar", comment: "A comparison whose text is a spelling variant or shares words")
             case "conflict": LocalizedStringResource("promote.sheet.conflicts", defaultValue: "Conflicts", comment: "A comparison that disagrees")
             default: LocalizedStringResource("promote.sheet.unknown", defaultValue: "Unknown", comment: "A comparison with nothing to compare")
             }
@@ -1700,6 +1703,12 @@ enum L10n {
             return L10n.format(resource, ref)
         }
 
+        static let promoteAll = LocalizedStringResource(
+            "evidenceGraph.header.promoteAll",
+            defaultValue: "Promote all",
+            comment: "Secondary header button that opens Promote with every subject expanded; also the breadcrumb for that entry"
+        )
+
         static let jumpToSourcePage = LocalizedStringResource(
             "evidenceGraph.header.jumpToSourcePage",
             defaultValue: "Jump to Source page",
@@ -2069,6 +2078,14 @@ enum L10n {
     enum PropertyTerm {
         static func resource(propertyKey: String, termKey: String) -> LocalizedStringResource? {
             switch (propertyKey, termKey) {
+            case ("event_type", "birth"): return eventTypeBirth
+            case ("event_type", "death"): return eventTypeDeath
+            case ("event_type", "marriage"): return eventTypeMarriage
+            case ("event_type", "baptism"): return eventTypeBaptism
+            case ("event_type", "burial"): return eventTypeBurial
+            case ("event_type", "census"): return eventTypeCensus
+            case ("event_type", "residence"): return eventTypeResidence
+            case ("event_type", "migration"): return eventTypeMigration
             case ("role", "subject"): return roleSubject
             case ("role", "father"): return roleFather
             case ("role", "mother"): return roleMother
@@ -2093,6 +2110,46 @@ enum L10n {
             }
         }
 
+        static let eventTypeBirth = LocalizedStringResource(
+            "propertyTerm.event_type.birth",
+            defaultValue: "Birth",
+            comment: "Product event_type term: birth"
+        )
+        static let eventTypeDeath = LocalizedStringResource(
+            "propertyTerm.event_type.death",
+            defaultValue: "Death",
+            comment: "Product event_type term: death"
+        )
+        static let eventTypeMarriage = LocalizedStringResource(
+            "propertyTerm.event_type.marriage",
+            defaultValue: "Marriage",
+            comment: "Product event_type term: marriage"
+        )
+        static let eventTypeBaptism = LocalizedStringResource(
+            "propertyTerm.event_type.baptism",
+            defaultValue: "Baptism",
+            comment: "Product event_type term: baptism"
+        )
+        static let eventTypeBurial = LocalizedStringResource(
+            "propertyTerm.event_type.burial",
+            defaultValue: "Burial",
+            comment: "Product event_type term: burial"
+        )
+        static let eventTypeCensus = LocalizedStringResource(
+            "propertyTerm.event_type.census",
+            defaultValue: "Census Enumeration",
+            comment: "Product event_type term: census"
+        )
+        static let eventTypeResidence = LocalizedStringResource(
+            "propertyTerm.event_type.residence",
+            defaultValue: "Residence",
+            comment: "Product event_type term: residence"
+        )
+        static let eventTypeMigration = LocalizedStringResource(
+            "propertyTerm.event_type.migration",
+            defaultValue: "Migration",
+            comment: "Product event_type term: migration"
+        )
         static let roleSubject = LocalizedStringResource(
             "propertyTerm.role.subject",
             defaultValue: "Subject",
@@ -6909,8 +6966,8 @@ enum L10n {
     }
 
     /// Event title templates (S9-22). `EventTitleDisplay` fills them. The
-    /// type word is the term label as stored, or `fallbackType` when the
-    /// event has no type.
+    /// type word is the product name for the type key, else the catalog
+    /// label, else `fallbackType` when the event has no type.
     enum EventTitle {
         static func ofOne(type: String, subject: String, locale: Locale = .autoupdatingCurrent) -> String {
             let resource = LocalizedStringResource(

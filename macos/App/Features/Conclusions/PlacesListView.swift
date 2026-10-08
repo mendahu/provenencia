@@ -36,7 +36,7 @@ enum PlacesList: ConclusionListKind {
     }
 
     static func location(_ header: CatalogPlaceHeader) -> WorkspaceLocation {
-        .placeDetail(entityId: header.entity.id, ref: header.entity.ref, title: titleSource(header).text)
+        .placeDetail(entityId: header.entity.id, ref: header.entity.ref, title: PlaceTitleDisplay.title(header))
     }
 
     @MainActor

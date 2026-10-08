@@ -2,6 +2,7 @@ package graphalign_test
 
 import (
 	"bytes"
+	"math"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database/namevalues"
@@ -168,6 +169,119 @@ func TestBothUnpromotedOnceOneFixed(t *testing.T) {
 	p := graphalign.Align(layer, canon, graphalign.Stats{}, fixed, nil)
 	if row := rowBySubject(p, b); row.Target != graphalign.TargetHandle || !bytes.Equal(row.HandleID, hb) {
 		t.Fatalf("spouse: %+v", row)
+	}
+}
+
+func TestOneAgreeingPropertyStaysAWeakMatch(t *testing.T) {
+	// York is one of two toponyms, so its frequency is 0.5 and the raw
+	// log-odds sits under the accept bar. The agreement is still a weak match.
+	orphan := id("s-orphan")
+	known := id("h-known")
+	n, v := textProp("toponym", "York")
+	stats := graphalign.Stats{ValueFreq: map[string]map[string]float64{
+		"toponym": {"York": 0.5},
+	}}
+	layer := graphalign.Layer{
+		Subjects: []graphalign.Subject{
+			{ID: orphan, Ref: "PLC-O", Kind: "place", Values: vals(n, v)},
+		},
+		Metas: placeMetas(),
+	}
+	canon := graphalign.Canon{
+		Handles: []graphalign.Handle{
+			{ID: known, Ref: "PLC-K", Kind: "place", Values: vals(n, v)},
+		},
+	}
+	row := rowBySubject(graphalign.Align(layer, canon, stats, nil, nil), orphan)
+	if row.Target != graphalign.TargetHandle || !bytes.Equal(row.HandleID, known) ||
+		row.Assessment != graphalign.AssessMedium || row.Reason != graphalign.ReasonAgrees ||
+		row.ReasonProperty.Key != "toponym" {
+		t.Fatalf("same toponym: %+v", row)
+	}
+	if row.Score >= graphalign.DefaultConfig().StrongScore {
+		t.Fatalf("toponym alone is not strong: score %.2f", row.Score)
+	}
+
+	// Without the registry weight, the same common toponym stays weak.
+	cfg := graphalign.DefaultConfig()
+	cfg.PropertyAgreement = nil
+	row = rowBySubject(graphalign.Align(layer, canon, stats, nil, &cfg), orphan)
+	if row.Assessment != graphalign.AssessWeak {
+		t.Fatalf("toponym without the registry weight: %+v", row)
+	}
+
+	other, ov := textProp("toponym", "Leeds")
+	canon.Handles[0].Values = vals(other, ov)
+	row = rowBySubject(graphalign.Align(layer, canon, stats, nil, nil), orphan)
+	if row.Target == graphalign.TargetHandle || row.Assessment != graphalign.AssessNone {
+		t.Fatalf("different toponym should not match: %+v", row)
+	}
+}
+
+func TestSpellingVariantIsAWeakerTextMatch(t *testing.T) {
+	// One added letter on a toponym is a match, weaker than the exact spelling.
+	// The frequency is the incoming spelling, so the small-catalog floor applies
+	// and the resemblance scales it: about 0.91 × 3, which is weak, not medium.
+	orphan := id("s-orphan")
+	known := id("h-known")
+	probe, pv := textProp("toponym", "Provenance")
+	canonProp, cv := textProp("toponym", "Provenanced")
+	stats := graphalign.Stats{ValueFreq: map[string]map[string]float64{
+		"toponym": {"Provenance": 0.5},
+	}}
+	layer := graphalign.Layer{
+		Subjects: []graphalign.Subject{
+			{ID: orphan, Ref: "PLC-O", Kind: "place", Values: vals(probe, pv)},
+		},
+		Metas: placeMetas(),
+	}
+	canon := graphalign.Canon{
+		Handles: []graphalign.Handle{
+			{ID: known, Ref: "PLC-K", Kind: "place", Values: vals(canonProp, cv)},
+		},
+	}
+	cfg := graphalign.DefaultConfig()
+	row := rowBySubject(graphalign.Align(layer, canon, stats, nil, nil), orphan)
+	if row.Target != graphalign.TargetHandle || !bytes.Equal(row.HandleID, known) ||
+		row.Assessment != graphalign.AssessWeak || row.Reason != graphalign.ReasonAgrees ||
+		row.ReasonProperty.Key != "toponym" ||
+		row.Score < cfg.WeakScore || row.Score >= cfg.MediumScore {
+		t.Fatalf("spelling variant: %+v", row)
+	}
+	var partial bool
+	for _, c := range row.Comparisons {
+		if c.Property.Key != "toponym" {
+			continue
+		}
+		if c.Outcome != match.OutcomePartial || c.Pinned {
+			t.Fatalf("comparison %+v", c)
+		}
+		partial = true
+	}
+	if !partial {
+		t.Fatal("missing toponym comparison")
+	}
+
+	// Without the toponym bonus the scaled floor (accept bar × resemblance)
+	// stays under weak. The resemblance itself is any text property; the
+	// bonus is what makes a toponym clear the bar.
+	bare := graphalign.DefaultConfig()
+	bare.PropertyAgreement = nil
+	row = rowBySubject(graphalign.Align(layer, canon, stats, nil, &bare), orphan)
+	if row.Target == graphalign.TargetHandle || row.Assessment != graphalign.AssessNone {
+		t.Fatalf("spelling variant without the registry weight: %+v", row)
+	}
+
+	// Sharing one word of a longer toponym is a resemblance, not a match.
+	york, yv := textProp("toponym", "York")
+	longer, lv := textProp("toponym", "York, Upper Canada")
+	layer.Metas = placeMetas()
+	layer.Subjects[0].Values = vals(york, yv)
+	canon.Handles[0].Values = vals(longer, lv)
+	stats.ValueFreq = map[string]map[string]float64{"toponym": {"York": 0.5}}
+	row = rowBySubject(graphalign.Align(layer, canon, stats, nil, nil), orphan)
+	if row.Target == graphalign.TargetHandle || row.Assessment != graphalign.AssessNone {
+		t.Fatalf("shared word should stay under the bar: %+v", row)
 	}
 }
 
@@ -426,6 +540,106 @@ func TestUnreachableFallbackScoresOnTheWalkScale(t *testing.T) {
 	}
 }
 
+func TestPartialNamesAreWeak(t *testing.T) {
+	given := func(i int, v string) namevalues.Part {
+		return namevalues.Part{Idx: i, Type: namevalues.PartTypeGiven, Value: v}
+	}
+	sur := func(i int, v string) namevalues.Part {
+		return namevalues.Part{Idx: i, Type: namevalues.PartTypeSurname, Value: v}
+	}
+	full := func(parts ...namevalues.Part) match.Values {
+		p := match.Property{Key: "name", Origin: "provenencia"}
+		return match.Values{p: {{Name: &namevalues.Value{Parts: parts}}}}
+	}
+	alignOne := func(probe, handle match.Values) graphalign.Row {
+		s, h := id("s"), id("h")
+		return rowBySubject(graphalign.Align(
+			graphalign.Layer{Subjects: []graphalign.Subject{{ID: s, Ref: "SUB", Kind: "person", Values: probe}}, Metas: nameMetas()},
+			graphalign.Canon{Handles: []graphalign.Handle{{ID: h, Ref: "PER-1", Kind: "person", Values: handle}}},
+			graphalign.Stats{}, nil, nil,
+		), s)
+	}
+	james := alignOne(
+		full(given(0, "James"), sur(1, "Robins")),
+		full(given(0, "James"), given(1, "Kenneth"), sur(2, "Robins")),
+	)
+	if james.Target != graphalign.TargetHandle || james.Assessment != graphalign.AssessWeak || james.Score >= graphalign.DefaultConfig().MediumScore {
+		t.Fatalf("James / James Kenneth: %+v", james)
+	}
+	lee := alignOne(
+		full(given(0, "Lee"), sur(1, "Breakell")),
+		full(given(0, "Lee-Ellen"), given(1, "Matilda"), sur(2, "Breakell")),
+	)
+	if lee.Target != graphalign.TargetHandle || lee.Assessment != graphalign.AssessWeak || lee.Score >= graphalign.DefaultConfig().MediumScore {
+		t.Fatalf("Lee / Lee-Ellen: %+v", lee)
+	}
+	// The stored forms disagree. The parts are what match: surname first on
+	// the certificate, given name first on the new subject.
+	withForm := func(base match.Values, form string) match.Values {
+		out := match.Values{}
+		for k, vs := range base {
+			cp := append([]match.Value(nil), vs...)
+			if cp[0].Name != nil {
+				n := *cp[0].Name
+				n.Form = form
+				cp[0].Name = &n
+			}
+			out[k] = cp
+		}
+		return out
+	}
+	certificate := alignOne(
+		withForm(full(given(0, "James"), sur(1, "Robins")), "unrelated transcription"),
+		withForm(full(sur(0, "Robins"), given(1, "James"), given(2, "Kenneth")), "Robins, James Kenneth"),
+	)
+	if certificate.Target != graphalign.TargetHandle || certificate.Assessment != graphalign.AssessWeak ||
+		math.Abs(certificate.Score-james.Score) > 1e-9 {
+		t.Fatalf("parts James / certificate parts: %+v, james score %.3f", certificate, james.Score)
+	}
+
+	sex := match.Property{Key: "sex_at_birth", Origin: "provenencia"}
+	metas := append(nameMetas(), match.PropertyMeta{Property: sex, ValueType: properties.ValueTypeTerm})
+	withSex := func(base match.Values, term string) match.Values {
+		out := match.Values{}
+		for k, v := range base {
+			out[k] = v
+		}
+		out[sex] = []match.Value{{Term: term}}
+		return out
+	}
+	probe := full(given(0, "James"), sur(1, "Robins"))
+	handle := full(given(0, "James"), given(1, "Kenneth"), sur(2, "Robins"))
+	s, h := id("s"), id("h")
+	mismatch := rowBySubject(graphalign.Align(
+		graphalign.Layer{Subjects: []graphalign.Subject{{ID: s, Ref: "SUB", Kind: "person", Values: withSex(probe, "female")}}, Metas: metas},
+		graphalign.Canon{Handles: []graphalign.Handle{{ID: h, Ref: "PER-1", Kind: "person", Values: withSex(handle, "male")}}},
+		graphalign.Stats{}, nil, nil,
+	), s)
+	if diff := james.Score - mismatch.Score; diff < 0.99 || diff > 1.01 {
+		t.Fatalf("sex mismatch subtracted %.3f, want 1 (name %.3f, with sex %.3f)", diff, james.Score, mismatch.Score)
+	}
+}
+
+func TestSexAgreementAloneStaysUnderWeak(t *testing.T) {
+	sex := match.Property{Key: "sex_at_birth", Origin: "provenencia"}
+	meta := []match.PropertyMeta{{Property: sex, ValueType: properties.ValueTypeTerm}}
+	male := match.Values{sex: {{Term: "male"}}}
+	ev := match.Evaluate(male, male, meta)
+	sc := graphalign.ScoreCandidate(ev, male, 0, 1, graphalign.DefaultConfig(), graphalign.Stats{})
+	if sc.Score < 0.59 || sc.Score > 0.61 || sc.Score >= graphalign.DefaultConfig().WeakScore {
+		t.Fatalf("sex alone scored %.3f", sc.Score)
+	}
+	s, h := id("s"), id("h")
+	row := rowBySubject(graphalign.Align(
+		graphalign.Layer{Subjects: []graphalign.Subject{{ID: s, Ref: "SUB", Kind: "person", Values: male}}, Metas: meta},
+		graphalign.Canon{Handles: []graphalign.Handle{{ID: h, Ref: "PER-1", Kind: "person", Values: male}}},
+		graphalign.Stats{}, nil, nil,
+	), s)
+	if row.Target == graphalign.TargetHandle || row.Assessment != graphalign.AssessNone {
+		t.Fatalf("sex alone published %+v", row)
+	}
+}
+
 func TestContestedHandleIsDecidedTheSameEveryRun(t *testing.T) {
 	tests := []struct {
 		name   string
@@ -600,6 +814,10 @@ func TestDecidedRowTheNeighborsContradict(t *testing.T) {
 	if !row.Flags.ConflictWithFixed || len(row.Alternatives) == 0 || !bytes.Equal(row.Alternatives[0].HandleID, id("h-gracie")) {
 		t.Fatalf("want a conflict naming PER-2 first, got flags %+v alts %+v", row.Flags, row.Alternatives)
 	}
+	alt := row.Alternatives[0]
+	if alt.Assessment == "" || (alt.Reason != graphalign.ReasonAgrees && alt.Reason != graphalign.ReasonVia) {
+		t.Fatalf("the other record should carry its own band, got %+v", alt)
+	}
 	if row.Assessment == graphalign.AssessStrong {
 		t.Fatalf("a conflicting decision should not read strong: %+v", row)
 	}
@@ -711,6 +929,104 @@ func TestRowReasons(t *testing.T) {
 				t.Fatalf("reason %q / %+v, want %q / %+v", row.Reason, row.ReasonProperty, tt.want, tt.wantProp)
 			}
 		})
+	}
+}
+
+func partOfSig() graphalign.EdgeSignature {
+	return graphalign.EdgeSignature{
+		BridgeType: "place_relationship", RoleOrType: "part_of",
+		NeighborKind: "place", Directed: true,
+	}
+}
+
+func TestPartOfChainIsStrongWithoutADecision(t *testing.T) {
+	sig := partOfSig()
+	city, state, country := id("s-city"), id("s-state"), id("s-country")
+	hCity, hState, hCountry := id("h-city"), id("h-state"), id("h-country")
+	cn, cv := textProp("toponym", "Gumptiontown")
+	sn, sv := textProp("toponym", "Provenance")
+	un, uv := textProp("toponym", "Arcadia")
+	layer := graphalign.Layer{
+		Subjects: []graphalign.Subject{
+			{ID: city, Ref: "CPL-C", Kind: "place", Values: vals(cn, cv)},
+			{ID: state, Ref: "CPL-S", Kind: "place", Values: vals(sn, sv)},
+			{ID: country, Ref: "CPL-U", Kind: "place", Values: vals(un, uv)},
+		},
+		Bridges: []graphalign.Bridge{
+			{A: city, B: state, Signature: sig},
+			{A: state, B: country, Signature: sig},
+		},
+		Metas: placeMetas(),
+	}
+	canon := graphalign.Canon{
+		Handles: []graphalign.Handle{
+			{ID: hCity, Ref: "PLC-C", Kind: "place", Values: vals(cn, cv)},
+			{ID: hState, Ref: "PLC-S", Kind: "place", Values: vals(sn, sv)},
+			{ID: hCountry, Ref: "PLC-U", Kind: "place", Values: vals(un, uv)},
+		},
+		Edges: []graphalign.CanonEdge{
+			{From: hCity, To: hState, Signature: sig},
+			{From: hState, To: hCountry, Signature: sig},
+		},
+	}
+	stats := graphalign.Stats{FanOut: map[string]float64{sig.Key(): 1}}
+	p := graphalign.Align(layer, canon, stats, nil, nil)
+	cfg := graphalign.DefaultConfig()
+	for _, pair := range []struct{ sub, handle []byte }{
+		{city, hCity}, {state, hState}, {country, hCountry},
+	} {
+		row := rowBySubject(p, pair.sub)
+		if row.Target != graphalign.TargetHandle || !bytes.Equal(row.HandleID, pair.handle) ||
+			row.Assessment != graphalign.AssessStrong || row.Score < cfg.StrongScore ||
+			row.Reason != graphalign.ReasonAgrees || row.ReasonProperty.Key != "toponym" {
+			t.Fatalf("%s: %+v", pair.sub, row)
+		}
+	}
+}
+
+func TestPartOfBreaksASharedToponym(t *testing.T) {
+	// Both Springfields score the same on the name. PLC-A sorts first, and
+	// it is the one whose parent is not Illinois. The part-of link has to
+	// move the row onto PLC-Z.
+	sig := partOfSig()
+	spring, ill := id("s-spring"), id("s-ill")
+	hWrong, hRight := id("h-wrong"), id("h-right")
+	hIll, hOhio := id("h-ill"), id("h-ohio")
+	sn, sv := textProp("toponym", "Springfield")
+	in, iv := textProp("toponym", "Illinois")
+	on, ov := textProp("toponym", "Ohio")
+	layer := graphalign.Layer{
+		Subjects: []graphalign.Subject{
+			{ID: spring, Ref: "CPL-S", Kind: "place", Values: vals(sn, sv)},
+			{ID: ill, Ref: "CPL-I", Kind: "place", Values: vals(in, iv)},
+		},
+		Bridges: []graphalign.Bridge{{A: spring, B: ill, Signature: sig}},
+		Metas:   placeMetas(),
+	}
+	canon := graphalign.Canon{
+		Handles: []graphalign.Handle{
+			{ID: hWrong, Ref: "PLC-A", Kind: "place", Values: vals(sn, sv)},
+			{ID: hRight, Ref: "PLC-Z", Kind: "place", Values: vals(sn, sv)},
+			{ID: hIll, Ref: "PLC-I", Kind: "place", Values: vals(in, iv)},
+			{ID: hOhio, Ref: "PLC-O", Kind: "place", Values: vals(on, ov)},
+		},
+		Edges: []graphalign.CanonEdge{
+			{From: hWrong, To: hOhio, Signature: sig},
+			{From: hRight, To: hIll, Signature: sig},
+		},
+	}
+	stats := graphalign.Stats{FanOut: map[string]float64{sig.Key(): 1}}
+	p := graphalign.Align(layer, canon, stats, nil, nil)
+	cfg := graphalign.DefaultConfig()
+	got := rowBySubject(p, spring)
+	if got.Target != graphalign.TargetHandle || !bytes.Equal(got.HandleID, hRight) ||
+		got.Assessment != graphalign.AssessStrong || got.Score < cfg.StrongScore {
+		t.Fatalf("springfield %+v, want %s", got, hRight)
+	}
+	parent := rowBySubject(p, ill)
+	if parent.Target != graphalign.TargetHandle || !bytes.Equal(parent.HandleID, hIll) ||
+		parent.Assessment != graphalign.AssessStrong || parent.Score < cfg.StrongScore {
+		t.Fatalf("illinois %+v", parent)
 	}
 }
 

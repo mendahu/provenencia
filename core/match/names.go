@@ -78,7 +78,8 @@ func (s NamePatternSet) NamePattern(key string) (NamePattern, bool) {
 // its name pattern (Value.NamePattern, else Pattern); any word may pair with
 // any word of the other name, discounted when their roles differ, so names
 // entered in different formats, or under different patterns, still connect.
-// A name with no typed parts is read from its form as untyped words.
+// Comparison reads parts only. form is the transcription and is never read;
+// a name with no parts is not comparable.
 //
 // Nothing here is culture-specific; that is the pattern's job. Settings
 // default to DefaultNames (registry.go).
@@ -134,8 +135,8 @@ type nameWord struct {
 }
 
 // nameWords splits a name into weighted, role-tagged words under its
-// pattern. A name whose parts yield no comparable word is read from its form
-// as untyped words. Generation words come back separately.
+// pattern. Only parts are read. Generation words come back separately. A
+// name whose parts yield no comparable word is not comparable.
 func nameWords(n *namevalues.Value, p NamePattern) (words []nameWord, generation []string) {
 	firstGiven := true
 	for _, part := range n.Parts {
@@ -151,11 +152,6 @@ func nameWords(n *namevalues.Value, p NamePattern) (words []nameWord, generation
 					firstGiven = false
 				}
 			}
-		}
-	}
-	if len(words) == 0 {
-		for _, w := range splitWords(n.Form) {
-			words = append(words, nameWord{text: w, role: RoleUntyped, weight: p.weight(RoleUntyped, false)})
 		}
 	}
 	return words, generation

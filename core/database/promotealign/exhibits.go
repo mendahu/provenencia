@@ -9,18 +9,20 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/namevalues"
+	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/graphalign"
 	"github.com/mendahu/provenencia/core/match"
 )
 
 type exhibitObs struct {
-	id        []byte
-	subjectID []byte
-	prop      match.Property
-	valueType string
-	display   string
-	source    string
-	value     match.Value
+	id          []byte
+	subjectID   []byte
+	prop        match.Property
+	valueType   string
+	cardinality string
+	display     string
+	source      string
+	value       match.Value
 }
 
 // attachExhibits fills pin lines on handle rows. The Subject's own records
@@ -152,9 +154,11 @@ func attachExhibits(q Querier, layer graphalign.Layer, prop *graphalign.Proposal
 	return nil
 }
 
-// pairExhibits pairs each incoming record with an agreeing (else clashing)
-// record on the same Property. neighbor is nil for the Subject's own records
-// and names the layer neighbor for a one-hop group.
+// pairExhibits pairs each incoming record with the closest record on the
+// same Property. A same-value pair (Compatible) is preferred and pinned.
+// The line's outcome and weight come from the promote scale. neighbor is
+// nil for the Subject's own records and names the layer neighbor for a
+// one-hop group.
 func pairExhibits(incoming []exhibitObs, neighbor []byte, memberObs []exhibitObs, cfg graphalign.Config, stats graphalign.Stats) []graphalign.Exhibit {
 	var out []graphalign.Exhibit
 	used := map[string]bool{}
@@ -162,65 +166,78 @@ func pairExhibits(incoming []exhibitObs, neighbor []byte, memberObs []exhibitObs
 		if in.valueType == "" || in.valueType == "subject" {
 			continue
 		}
-		var agree, clash *exhibitObs
+		cmp := match.ComparerFor(in.valueType)
+		var chosen *exhibitObs
+		var sim float64
+		var comparable bool
+		pinned := false
 		for i := range memberObs {
 			mem := &memberObs[i]
 			if mem.prop != in.prop || mem.valueType != in.valueType {
 				continue
 			}
 			if exhibitCompatible(in.valueType, in.value, mem.value) {
-				agree = mem
+				chosen = mem
+				pinned = true
+				sim, comparable = comparerSimilarity(cmp, in.value, mem.value)
 				break
 			}
-			if clash == nil && carries(in.valueType, in.value) && carries(mem.valueType, mem.value) {
-				clash = mem
+			s, ok := comparerSimilarity(cmp, in.value, mem.value)
+			if !ok {
+				continue
+			}
+			if chosen == nil || s > sim {
+				chosen = mem
+				sim = s
+				comparable = true
 			}
 		}
-		var mem *exhibitObs
-		outcome := match.OutcomeUnknown
-		pinned := false
-		switch {
-		case agree != nil:
-			mem = agree
-			outcome = match.OutcomeAgree
-			pinned = true
-		case clash != nil:
-			mem = clash
-			outcome = match.OutcomeConflict
-		default:
+		if chosen == nil {
 			continue
 		}
-		key := string(in.id) + "|" + string(mem.id)
+		if pinned && !comparable {
+			sim, comparable = 1, true
+		}
+		card := in.cardinality
+		if card == "" {
+			card = properties.CardinalitySingle
+		}
+		outcome, weight := graphalign.ScoreSimilarity(sim, comparable, card, in.prop, in.valueType, []match.Value{in.value}, cfg, stats)
+		if outcome == match.OutcomeUnknown {
+			continue
+		}
+		key := string(in.id) + "|" + string(chosen.id)
 		if used[key] {
 			continue
 		}
 		used[key] = true
-		probe := match.Values{in.prop: {in.value}}
 		out = append(out, graphalign.Exhibit{
 			Property:              in.prop,
 			Outcome:               outcome,
 			ValueType:             in.valueType,
 			Pinned:                pinned,
-			Weight:                graphalign.PropertyWeight(outcome, in.valueType, in.prop, probe, cfg, stats),
+			Weight:                weight,
 			GroupSubjectID:        append([]byte(nil), neighbor...),
 			IncomingObservationID: append([]byte(nil), in.id...),
 			IncomingDisplay:       in.display,
 			IncomingSource:        in.source,
-			MemberObservationID:   append([]byte(nil), mem.id...),
-			MemberDisplay:         mem.display,
-			MemberSource:          mem.source,
+			MemberObservationID:   append([]byte(nil), chosen.id...),
+			MemberDisplay:         chosen.display,
+			MemberSource:          chosen.source,
 		})
 	}
 	return out
 }
 
-func exhibitCompatible(valueType string, a, b match.Value) bool {
-	return autoreconcile.Compatible(valueType, exhibitAuto(a), exhibitAuto(b))
+func comparerSimilarity(cmp match.Comparer, a, b match.Value) (float64, bool) {
+	if cmp == nil {
+		return 0, false
+	}
+	return cmp.Compare(a, b)
 }
 
-func carries(valueType string, v match.Value) bool {
-	av := exhibitAuto(v)
-	return autoreconcile.Compatible(valueType, av, av)
+func exhibitCompatible(valueType string, a, b match.Value) bool {
+	return autoreconcile.Compatible(valueType, exhibitAuto(a), exhibitAuto(b))
 }
 
 func exhibitAuto(v match.Value) autoreconcile.Value {
@@ -311,7 +328,7 @@ func bridgeNeighbors(q Querier, subjectIDs [][]byte) (map[string][][]byte, error
 }
 
 func loadExhibitObservations(q Querier, subjectIDs [][]byte) ([]exhibitObs, error) {
-	query := `SELECT o.id, o.subject_id, p.key, p.origin, p.value_type,
+	query := `SELECT o.id, o.subject_id, p.key, p.origin, p.value_type, p.cardinality,
 			o.value_text, o.value_integer, o.value_date_id, o.value_name_id, t.key, t.label, src.title
 		FROM observations o
 		JOIN properties p ON p.id = o.property_id
@@ -342,7 +359,7 @@ func loadExhibitObservations(q Querier, subjectIDs [][]byte) ([]exhibitObs, erro
 			text, term, termLabel sql.NullString
 			integer               sql.NullInt64
 		)
-		if err := rows.Scan(&p.o.id, &p.o.subjectID, &p.o.prop.Key, &p.o.prop.Origin, &valueType,
+		if err := rows.Scan(&p.o.id, &p.o.subjectID, &p.o.prop.Key, &p.o.prop.Origin, &valueType, &p.o.cardinality,
 			&text, &integer, &p.dateID, &p.nameID, &term, &termLabel, &p.o.source); err != nil {
 			_ = rows.Close()
 			return nil, err

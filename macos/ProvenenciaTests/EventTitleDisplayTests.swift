@@ -66,6 +66,30 @@ struct EventTitleDisplayTests {
         #expect(EventTitleDisplay.titleSource(title(.type, typeLabel: "Birth"), locale: en) == .name("Unspecified birth"))
     }
 
+    @Test func typeKeyNamesTheEventWhenTheLabelIsEmpty() {
+        let birth = L10n.string(L10n.PropertyTerm.eventTypeBirth)
+        #expect(
+            EventTitleDisplay.title(title(.subject, typeKey: "birth", subjects: ["Jeremiah Arthur Gumtree"]), locale: en)
+                == L10n.EventTitle.ofOne(type: birth, subject: "Jeremiah Arthur Gumtree", locale: en)
+        )
+    }
+
+    @Test func headerTypeFillsATitleThatOmittedIt() {
+        let header = CatalogEventHeader(
+            entity: CatalogCanonicalEntity(id: "e", ref: "EVT-1", subjectTypeID: "t", label: ""),
+            eventTypeKey: "birth",
+            title: title(.subject, subjects: ["Jeremiah Arthur Gumtree"])
+        )
+        #expect(
+            EventTitleDisplay.title(header, locale: en)
+                == L10n.EventTitle.ofOne(
+                    type: L10n.string(L10n.PropertyTerm.eventTypeBirth),
+                    subject: "Jeremiah Arthur Gumtree",
+                    locale: en
+                )
+        )
+    }
+
     @Test func missingTypeUsesEvent() {
         #expect(
             EventTitleDisplay.title(title(.subject, subjects: ["James Robins"]), locale: en)

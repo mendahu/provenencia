@@ -205,7 +205,10 @@ private struct EvidenceGraphContent: View {
             }
             subjectCountLabel
             Spacer(minLength: 0)
-            jumpToSourcePageButton
+            HStack(spacing: PVSpacing.space3) {
+                promoteAllButton
+                jumpToSourcePageButton
+            }
         }
         .padding(.horizontal, PVSpacing.space7)
         .padding(.vertical, PVSpacing.space5)
@@ -219,6 +222,21 @@ private struct EvidenceGraphContent: View {
         }
         .font(PVFont.mono(size: PVTypeScale.caption))
         .foregroundStyle(PVColor.textFaint)
+    }
+
+    private var promoteAllButton: some View {
+        PVButton(
+            L10n.EvidenceGraph.promoteAll,
+            variant: .secondary,
+            size: .sm,
+            icon: .arrowUpRight
+        ) {
+            if let location = model.promoteAllLocation() {
+                navigation.go(to: location)
+            }
+        }
+        .disabled(model.promoteAllLocation() == nil)
+        .accessibilityIdentifier("evidenceGraph.header.promoteAll")
     }
 
     private var jumpToSourcePageButton: some View {

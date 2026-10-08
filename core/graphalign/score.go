@@ -3,6 +3,7 @@ package graphalign
 import (
 	"strconv"
 
+	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/match"
 )
 
@@ -14,40 +15,82 @@ type Scored struct {
 }
 
 // ScoreCandidate combines a pairwise Evaluation with edge support into one
-// Fellegi–Sunter score. Align and any future caller share this path.
-// provenance scales the total (≤0 treated as 1). edge is precomputed support
-// from corresponding layer/canon bridges.
+// score. Align and any future caller share this path. provenance scales the
+// total (≤0 treated as 1). edge is precomputed support from corresponding
+// layer/canon bridges.
 func ScoreCandidate(ev match.Evaluation, probe match.Values, edge, provenance float64, cfg Config, stats Stats) Scored {
-	node := nodeScore(ev, probe, cfg, stats)
+	var total float64
+	for i := range ev.Comparisons {
+		pc := &ev.Comparisons[i]
+		outcome, points := ScoreSimilarity(pc.Similarity, pc.Comparable, pc.Cardinality, pc.Property, pc.ValueType, probe[pc.Property], cfg, stats)
+		pc.Outcome = outcome
+		total += points
+	}
 	if provenance <= 0 {
 		provenance = 1
 	}
 	return Scored{
-		Score: (node + edge) * provenance,
+		Score: (total + edge) * provenance,
 		Edge:  edge,
 		Eval:  ev,
 	}
 }
 
-// PropertyWeight is the log-odds nodeScore adds for one outcome.
-func PropertyWeight(outcome match.Outcome, valueType string, property match.Property, probe match.Values, cfg Config, stats Stats) float64 {
-	switch outcome {
-	case match.OutcomeAgree:
-		u := uFor(stats, property.Key, probe[property])
-		return logOdds(cfg.mFor(valueType), cfg.uOr(u))
-	case match.OutcomeConflict:
-		return -cfg.ConflictPenalty
-	default:
-		return 0
-	}
+// ScoreSimilarity looks up the scale for a property and applies it. The
+// scale is registry data; this function does not name a property or a value
+// type beyond using them as lookup keys.
+func ScoreSimilarity(similarity float64, comparable bool, cardinality string, property match.Property, valueType string, vals []match.Value, cfg Config, stats Stats) (match.Outcome, float64) {
+	return ApplyScale(similarity, comparable, cardinality, cfg.resolvedScale(property, valueType, vals, stats))
 }
 
-func nodeScore(ev match.Evaluation, probe match.Values, cfg Config, stats Stats) float64 {
-	var score float64
-	for _, pc := range ev.Comparisons {
-		score += PropertyWeight(pc.Outcome, pc.ValueType, pc.Property, probe, cfg, stats)
+// ApplyScale turns one similarity into an outcome and points. It has no
+// property names, value types, or catalog lookups.
+func ApplyScale(similarity float64, comparable bool, cardinality string, scale Scale) (match.Outcome, float64) {
+	if !comparable {
+		return match.OutcomeUnknown, 0
 	}
-	return score
+	if similarity > 1 {
+		similarity = 1
+	}
+	if similarity > 0 && similarity >= scale.Floor {
+		points := scale.Weight * similarity
+		if similarity >= 1 {
+			return match.OutcomeAgree, points
+		}
+		return match.OutcomePartial, points
+	}
+	if cardinality == properties.CardinalityMultiple {
+		return match.OutcomeUnknown, 0
+	}
+	return match.OutcomeConflict, -scale.Contradiction
+}
+
+// resolvedScale is the property's scale, else its value type's, with a
+// frequency weight filled in when the scale asks for one.
+func (c Config) resolvedScale(property match.Property, valueType string, vals []match.Value, stats Stats) Scale {
+	scale, ok := c.PropertyScale[property]
+	if !ok && c.ValueTypeScale != nil {
+		scale = c.ValueTypeScale[valueType]
+	}
+	if scale.Frequency {
+		if scale.Contradiction == 0 {
+			scale.Contradiction = c.ConflictPenalty
+		}
+		scale.Weight = flooredAgreementWeight(valueType, property, vals, c, stats)
+	}
+	return scale
+}
+
+// flooredAgreementWeight is what one exact agreement on this Property would
+// contribute on its own: log-odds, lifted to the accept bar when a small
+// catalog makes it look cheap, plus any registry bonus.
+func flooredAgreementWeight(valueType string, property match.Property, vals []match.Value, cfg Config, stats Stats) float64 {
+	raw := logOdds(cfg.mFor(valueType), cfg.uOr(uFor(stats, property.Key, vals)))
+	bonus := cfg.agreementWeight(property)
+	if raw < cfg.AcceptScore {
+		return cfg.AcceptScore + bonus
+	}
+	return raw + bonus
 }
 
 func uFor(stats Stats, propertyKey string, vals []match.Value) float64 {

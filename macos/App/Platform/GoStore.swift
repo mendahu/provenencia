@@ -824,7 +824,12 @@ struct GoStore: GenealogyStore {
                         score: a.score,
                         person: altPerson,
                         event: altEvent,
-                        place: altPlace
+                        place: altPlace,
+                        assessment: a.assessment,
+                        reason: a.reason,
+                        reasonPropertyKey: a.reasonPropertyKey,
+                        reasonPropertyOrigin: a.reasonPropertyOrigin,
+                        viaNeighborSubjectID: a.viaNeighborSubjectID
                     )
                 },
                 conflictWithFixed: r.conflictWithFixed,

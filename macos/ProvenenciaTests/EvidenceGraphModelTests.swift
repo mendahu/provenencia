@@ -1420,6 +1420,54 @@ struct EvidenceGraphModelTests {
         #expect(!store.recordedCalls.contains { $0.hasPrefix("promoteSubject") })
     }
 
+    /// Promote all opens the same place with every subject expanded, including
+    /// when the card itself is already filed.
+    @Test func promoteAllOpensTheExpandedPromotePlace() async {
+        let (_, model) = await promotableModel()
+        let card = model.promoteLocation(for: "s-james")
+        let location = model.promoteAllLocation()
+        #expect(location?.promoteAll == true)
+        #expect(location?.sourceSurface == .promote)
+        #expect(location?.sourceId == sourceID)
+        #expect(location?.subjectId == "s-james")
+        #expect(location?.subjectTypeKey == "person")
+        #expect(location != card)
+        #expect(PromoteEntry(location: location!)?.mapAll == true)
+        #expect(PromoteEntry(location: location!)?.identityKey == "promote|\(sourceID)|all")
+    }
+
+    @Test func promoteAllOpensWhenEveryCardIsAlreadyFiled() async {
+        let store = makeStore()
+        let subject = CatalogSubject(
+            id: "s-james", ref: "CPR-2AB91", sourceID: sourceID, subjectTypeID: personTypeID,
+            label: "James Robins", description: ""
+        )
+        store.subjectsBySource[sourceID] = [subject]
+        store.subjectPositionsBySubject["s-james"] = CatalogSubjectPosition(subjectID: "s-james", gridX: 1, gridY: 1)
+        let model = makeModel(store: store)
+        await model.prepare()
+        model.session.setQueryValue(
+            CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID),
+            value: SourceGraphRows(
+                sourceId: sourceID,
+                subjects: [subject],
+                positions: [CatalogSubjectPosition(subjectID: "s-james", gridX: 1, gridY: 1)],
+                memberships: [
+                    CatalogSubjectMembership(
+                        subjectID: "s-james",
+                        claimID: "claim-1",
+                        entity: CatalogCanonicalEntity(id: "e-james", ref: "PER-7KD45", subjectTypeID: personTypeID, label: ""),
+                        kind: "person"
+                    ),
+                ]
+            )
+        )
+        #expect(model.promoteLocation(for: "s-james") == nil)
+        let location = model.promoteAllLocation()
+        #expect(location?.promoteAll == true)
+        #expect(location?.subjectId == "s-james")
+    }
+
     /// Promote names the subject by its name Observation's form, falling back
     /// to the label, then the ref.
     @Test func promoteTitleUsesTheNameFormThenTheLabel() async {

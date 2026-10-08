@@ -10,16 +10,17 @@ enum NameValueDisplay {
         form.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    /// Display text for a structured NameValue from the engine. There is no
-    /// name format profile yet (Spike 9 R2), so the full-form reading wins;
-    /// a blank form falls back to the parts in order. Empty when neither
-    /// carries text.
+    /// Display text for a structured NameValue. Parts win, joined in the
+    /// order they were reconciled (stored `idx`). That order is temporary:
+    /// name format profiles will take over cultural ordering
+    /// (`structured-name-model` §4). A name with no parts falls back to
+    /// `form`. Empty when neither carries text.
     static func string(for name: CatalogNameValue) -> String {
-        let form = string(form: name.form)
-        if !form.isEmpty { return form }
-        return name.parts
+        let parts = name.parts
             .map { $0.value.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
             .joined(separator: " ")
+        if !parts.isEmpty { return parts }
+        return string(form: name.form)
     }
 }

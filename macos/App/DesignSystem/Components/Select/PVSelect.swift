@@ -55,6 +55,7 @@ struct PVSelect<Row: View>: View {
     private let maxVisibleRows: Int
     private let rowHeight: CGFloat
     private let isDisabled: Bool
+    private let isInvalid: Bool
     private let accessibilityLabelResource: LocalizedStringResource?
     private let accessibilitySpokenLabel: String?
     private let accessibilityIdentifier: String?
@@ -81,6 +82,7 @@ struct PVSelect<Row: View>: View {
         maxVisibleRows: Int = PVSelectPlacement.defaultMaxVisibleRows,
         rowHeight: CGFloat = PVSelectPlacement.rowHeight,
         isDisabled: Bool = false,
+        isInvalid: Bool = false,
         accessibilityLabel: LocalizedStringResource? = nil,
         accessibilitySpokenLabel: String? = nil,
         accessibilityIdentifier: String? = nil,
@@ -98,6 +100,7 @@ struct PVSelect<Row: View>: View {
         self.maxVisibleRows = maxVisibleRows
         self.rowHeight = rowHeight
         self.isDisabled = isDisabled
+        self.isInvalid = isInvalid
         self.accessibilityLabelResource = accessibilityLabel
         self.accessibilitySpokenLabel = accessibilitySpokenLabel
         self.accessibilityIdentifier = accessibilityIdentifier
@@ -345,12 +348,22 @@ struct PVSelect<Row: View>: View {
             RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous)
                 .fill(PVColor.surfaceRaised)
         )
-        .overlay(
-            RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous)
-                .stroke(isFocused ? PVColor.borderFocus : PVColor.borderDefault, lineWidth: 1)
-        )
+        .overlay(triggerBorder)
         .pvInsetShadow(cornerRadius: PVRadius.sm, visible: !isFocused)
         .pvFocusRing(isFocused, cornerRadius: PVRadius.sm)
+    }
+
+    private var triggerBorder: some View {
+        RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous)
+            .stroke(triggerBorderColor, lineWidth: 1)
+            .allowsHitTesting(false)
+            .pvAnimation(PVMotion.fastStandard, value: isFocused)
+            .pvAnimation(PVMotion.fastStandard, value: isInvalid)
+    }
+
+    private var triggerBorderColor: Color {
+        if isInvalid { return PVColor.danger }
+        return isFocused ? PVColor.borderFocus : PVColor.borderDefault
     }
 
     private var chipTrigger: some View {
@@ -372,10 +385,7 @@ struct PVSelect<Row: View>: View {
             RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous)
                 .fill(PVColor.surfaceRaised)
         )
-        .overlay(
-            RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous)
-                .stroke(isFocused ? PVColor.borderFocus : PVColor.borderDefault, lineWidth: 1)
-        )
+        .overlay(triggerBorder)
         .pvFocusRing(isFocused, cornerRadius: PVRadius.sm)
     }
 
@@ -410,6 +420,7 @@ extension PVSelect where Row == PVSelectPlainRow {
         maxVisibleRows: Int = PVSelectPlacement.defaultMaxVisibleRows,
         rowHeight: CGFloat = PVSelectPlacement.rowHeight,
         isDisabled: Bool = false,
+        isInvalid: Bool = false,
         accessibilityLabel: LocalizedStringResource? = nil,
         accessibilitySpokenLabel: String? = nil,
         accessibilityIdentifier: String? = nil
@@ -427,6 +438,7 @@ extension PVSelect where Row == PVSelectPlainRow {
             maxVisibleRows: maxVisibleRows,
             rowHeight: rowHeight,
             isDisabled: isDisabled,
+            isInvalid: isInvalid,
             accessibilityLabel: accessibilityLabel,
             accessibilitySpokenLabel: accessibilitySpokenLabel,
             accessibilityIdentifier: accessibilityIdentifier

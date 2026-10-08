@@ -1322,13 +1322,21 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         sourceID: String,
         fixed: [CatalogPromoteGraphAlignmentFixed]
     ) async throws -> CatalogPromoteGraphAlignmentProposal {
-        let delay: Duration? = withState {
+        // Delay and scripted rows are one claim. Concurrent calls must not
+        // pair this call's wait with the next call's proposal.
+        let claimed: (delay: Duration?, proposal: CatalogPromoteGraphAlignmentProposal?) = withState {
+            markCatalogSessionHeld(projectDir)
             lastPromoteFixed = fixed
-            return promoteProposeDelays.isEmpty ? nil : promoteProposeDelays.removeFirst()
+            recordedCalls.append("proposePromoteGraphAlignment")
+            let delay: Duration? = promoteProposeDelays.isEmpty ? nil : promoteProposeDelays.removeFirst()
+            guard !promoteProposals.isEmpty else { return (delay, nil) }
+            let next = promoteProposals.count > 1 ? promoteProposals.removeFirst() : promoteProposals[0]
+            let proposal = CatalogPromoteGraphAlignmentProposal(revision: nextAuditRevision - 1, rows: next.rows)
+            return (delay, proposal)
         }
-        let proposal = buildPromoteProposal(projectDir: projectDir, sourceID: sourceID, fixed: fixed)
-        if let delay { try? await Task.sleep(for: delay) }
-        return proposal
+        if let delay = claimed.delay { try? await Task.sleep(for: delay) }
+        if let proposal = claimed.proposal { return proposal }
+        return buildPromoteProposal(projectDir: projectDir, sourceID: sourceID, fixed: fixed)
     }
 
     private func buildPromoteProposal(

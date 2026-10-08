@@ -19,34 +19,55 @@ enum EventsList: ConclusionListKind {
     static func ref(_ header: CatalogEventHeader) -> String { header.entity.ref }
 
     static func titleSource(_ header: CatalogEventHeader) -> ConclusionTitleSource {
-        EventTitleDisplay.titleSource(header.title)
+        EventTitleDisplay.titleSource(header)
     }
 
     static func accessibilityLabel(_ header: CatalogEventHeader) -> String {
-        let date = DateRowDisplay.line(date: header.date, start: header.startDate, end: header.endDate)
-        var label = L10n.Workspace.eventRowAccessibility(title: titleSource(header).text, date: date, ref: header.entity.ref)
-        let place = DerivedPlace.name(header.places)
-        if !place.isEmpty {
-            label = L10n.Conclusions.a11yList(label, rest: place)
+        let line = EventSecondaryDisplay.content(header)
+        var label = L10n.Workspace.eventRowAccessibility(title: titleSource(header).text, date: line.date, ref: header.entity.ref)
+        if !line.place.isEmpty {
+            label = L10n.Conclusions.a11yList(label, rest: line.place)
         }
-        let extra = DerivedPlace.extra(header.places)
-        if extra > 0 {
-            label = L10n.Conclusions.a11yList(label, rest: L10n.Conclusions.morePlaces(count: extra))
+        if line.extraPlaces > 0 {
+            label = L10n.Conclusions.a11yList(label, rest: L10n.Conclusions.morePlaces(count: line.extraPlaces))
         }
         return label
     }
 
     static func location(_ header: CatalogEventHeader) -> WorkspaceLocation {
-        .eventDetail(entityId: header.entity.id, ref: header.entity.ref, title: EventTitleDisplay.title(header.title))
+        .eventDetail(entityId: header.entity.id, ref: header.entity.ref, title: EventTitleDisplay.title(header))
     }
 
     @MainActor
     static func secondary(_ header: CatalogEventHeader) -> EventSecondaryLine {
-        EventSecondaryLine(
+        let line = EventSecondaryDisplay.content(header)
+        return EventSecondaryLine(date: line.date, place: line.place, extraPlaces: line.extraPlaces)
+    }
+}
+
+/// Date, place, and how many other places an Event row counts. Not a view,
+/// so the list and Promote can share it off the main actor.
+enum EventSecondaryDisplay {
+    struct Content: Equatable, Sendable {
+        var date: String
+        var place: String
+        var extraPlaces: Int
+    }
+
+    static func content(_ header: CatalogEventHeader) -> Content {
+        Content(
             date: DateRowDisplay.line(date: header.date, start: header.startDate, end: header.endDate),
             place: DerivedPlace.name(header.places),
             extraPlaces: DerivedPlace.extra(header.places)
         )
+    }
+
+    /// The same date and place on one line. Empty when the event has neither.
+    static func line(_ header: CatalogEventHeader) -> String {
+        let line = content(header)
+        if line.date.isEmpty { return line.place }
+        if line.place.isEmpty { return line.date }
+        return line.date + " · " + line.place
     }
 }
 

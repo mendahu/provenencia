@@ -697,6 +697,27 @@ final class EvidenceGraphModel {
         )
     }
 
+    /// Promote with every subject expanded. Works after the cards are filed,
+    /// so a relationship added later can still be filed from this page.
+    /// Nil when the graph has no primary subjects.
+    func promoteAllLocation() -> WorkspaceLocation? {
+        let subjects = currentSnapshot()?.subjects ?? []
+        let placed = subjects
+            .filter { $0.membership == nil }
+            .min { $0.id < $1.id }
+            ?? subjects.min { $0.id < $1.id }
+        guard let placed else { return nil }
+        return .promote(
+            sourceId: sourceID,
+            subjectId: placed.id,
+            kind: placed.kind,
+            ref: placed.subject.ref,
+            title: placed.displayName,
+            sourceTitle: resolvedSourceTitle(),
+            mapAll: true
+        )
+    }
+
     /// Location of a promoted subject's handle page. Persons, Events, and
     /// Places open their pages.
     func openHandle(subjectID: String) -> WorkspaceLocation? {

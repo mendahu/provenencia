@@ -46,29 +46,191 @@ struct PromoteFlowTests {
         )
     }
 
-    private func fact(_ id: String, anchor: Bool = false) -> PromoteFlow.SubjectFact {
+    private func fact(_ id: String, anchor: Bool = false, handleID: String = "e-anchor") -> PromoteFlow.SubjectFact {
         PromoteFlow.SubjectFact(
             id: id, kind: .person, name: id, ref: "CPR-\(id)",
-            anchor: anchor ? PromoteFlow.Anchor(id: "e-anchor", ref: "PER-A", title: "Filed") : nil
+            anchor: anchor ? PromoteFlow.Anchor(id: handleID, ref: "PER-A", title: "Filed") : nil
         )
     }
 
-    @Test func weakAndUnmatchedStartOnSkip() {
+    @Test func matchMenusUseConclusionTitles() {
+        let birth = CatalogEventTitle(rule: .typeAtPlace, ref: "EVT-D1JBR", typeLabel: "Birth", place: "Gumpertz")
+        var event = row(id: "e", assessment: "medium")
+        event.kind = "event"
+        event.handleRef = "EVT-D1JBR"
+        event.event = CatalogEventHeader(
+            entity: CatalogCanonicalEntity(id: "e1", ref: "EVT-D1JBR", subjectTypeID: "t", label: ""),
+            eventName: "",
+            title: birth
+        )
+        event.alternatives = [
+            CatalogPromoteGraphAlignmentAlternative(
+                handleID: "e2", handleRef: "EVT-2", score: 1,
+                event: CatalogEventHeader(
+                    entity: CatalogCanonicalEntity(id: "e2", ref: "EVT-2", subjectTypeID: "t", label: ""),
+                    title: CatalogEventTitle(rule: .label, label: "Working title", ref: "EVT-2")
+                )
+            ),
+        ]
+
+        var person = row(id: "p", assessment: "medium")
+        person.person = CatalogPersonHeader(
+            entity: CatalogCanonicalEntity(id: "e1", ref: "PER-1", subjectTypeID: "t", label: "Grandpa"),
+            name: nil,
+            nameValueCount: 0
+        )
+
+        var place = row(id: "l", assessment: "medium")
+        place.kind = "place"
+        place.handleRef = "PLC-1"
+        place.place = CatalogPlaceHeader(
+            entity: CatalogCanonicalEntity(id: "e1", ref: "PLC-1", subjectTypeID: "t", label: "The farm"),
+            names: [],
+            parents: ["Ontario", "Canada"]
+        )
+
+        var flow = PromoteFlow(entryID: "e")
+        flow.load(
+            entryID: "e",
+            proposal: proposal(rows: [event, person, place]),
+            subjects: [
+                PromoteFlow.SubjectFact(id: "e", kind: .event, name: "e", ref: "CPR-e"),
+                PromoteFlow.SubjectFact(id: "p", kind: .person, name: "p", ref: "CPR-p"),
+                PromoteFlow.SubjectFact(id: "l", kind: .place, name: "l", ref: "CPR-l"),
+            ],
+            bridges: []
+        )
+        let eventRow = flow.rows.first { $0.subjectID == "e" }
+        let personRow = flow.rows.first { $0.subjectID == "p" }
+        let placeRow = flow.rows.first { $0.subjectID == "l" }
+        #expect(eventRow?.menu.map(\.title) == [
+            EventTitleDisplay.title(birth),
+            "Working title",
+        ])
+        #expect(eventRow?.target == .handle(id: "e1", ref: "EVT-D1JBR", title: EventTitleDisplay.title(birth)))
+        #expect(personRow?.menu.first?.title == "Grandpa")
+        #expect(placeRow?.menu.first?.title == "The farm")
+        #expect(placeRow?.menu.first?.subtitle == PlaceChainDisplay.line(parents: ["Ontario", "Canada"]))
+    }
+
+    @Test func aMediumMatchStartsOnItsHandle() {
+        var flow = PromoteFlow(entryID: "a")
+        flow.load(
+            entryID: "a",
+            proposal: proposal(rows: [row(id: "a", assessment: "medium")]),
+            subjects: [fact("a")],
+            bridges: []
+        )
+        #expect(flow.rows.first?.target == .handle(id: "e1", ref: "PER-1", title: "PER-1"))
+        #expect(flow.rows.first?.selectionReadout == PromoteFlow.SelectionReadout(
+            assessment: .medium, reason: .agrees(key: "name", origin: "provenencia")
+        ))
+    }
+
+    @Test func aWeakMatchStartsOnItsHandle() {
+        var flow = PromoteFlow(entryID: "a")
+        flow.load(
+            entryID: "a",
+            proposal: proposal(rows: [row(id: "a", assessment: "weak")]),
+            subjects: [fact("a")],
+            bridges: []
+        )
+        let ada = flow.rows.first
+        #expect(ada?.target == .handle(id: "e1", ref: "PER-1", title: "PER-1"))
+        #expect(ada?.selectionReadout == PromoteFlow.SelectionReadout(
+            assessment: .weak, reason: .agrees(key: "name", origin: "provenencia")
+        ))
+        #expect(flow.targetsChosen)
+    }
+
+    /// A score under the accept bar is still a named candidate. The menu
+    /// opens on it; only a no-match stays empty.
+    @Test func aWeakCandidateBelowTheBarStartsSelected() {
+        var below = row(id: "a", target: "skip", handleID: "", assessment: "weak")
+        below.reason = "weak"
+        below.comparisons = []
+        below.alternatives = [
+            CatalogPromoteGraphAlignmentAlternative(
+                handleID: "e9", handleRef: "PER-9", score: 1,
+                assessment: "weak", reason: "weak"
+            ),
+        ]
+        var flow = PromoteFlow(entryID: "a")
+        flow.load(
+            entryID: "a",
+            proposal: proposal(rows: [below]),
+            subjects: [fact("a")],
+            bridges: []
+        )
+        let ada = flow.rows.first
+        #expect(ada?.target == .handle(id: "e9", ref: "PER-9", title: "PER-9"))
+        #expect(ada?.selectionReadout?.assessment == .weak)
+        #expect(flow.targetsChosen)
+    }
+
+    @Test func theAssessmentFollowsTheSelectedRecord() {
+        var chosen = row(id: "a", assessment: "medium")
+        chosen.alternatives = [
+            CatalogPromoteGraphAlignmentAlternative(
+                handleID: "e2", handleRef: "PER-2", score: 2.5,
+                assessment: "weak", reason: "agrees",
+                reasonPropertyKey: "name", reasonPropertyOrigin: "provenencia"
+            ),
+        ]
+        var flow = PromoteFlow(entryID: "a")
+        flow.load(
+            entryID: "a",
+            proposal: proposal(rows: [chosen]),
+            subjects: [fact("a")],
+            bridges: []
+        )
+        #expect(flow.rows.first?.selectionReadout?.assessment == .medium)
+
+        flow.setTarget(subjectID: "a", token: "handle:e2")
+        #expect(flow.rows.first?.selectionReadout == PromoteFlow.SelectionReadout(
+            assessment: .weak, reason: .agrees(key: "name", origin: "provenencia")
+        ))
+
+        flow.setTarget(subjectID: "a", token: "skip")
+        #expect(flow.rows.first?.selectionReadout == nil)
+        flow.setTarget(subjectID: "a", token: "new")
+        #expect(flow.rows.first?.selectionReadout == nil)
+
+        flow.setTarget(subjectID: "a", token: "handle:e2")
+        var rescored = row(id: "a", handleID: "e2", assessment: "medium")
+        rescored.handleRef = "PER-2"
+        rescored.reason = "decided"
+        flow.merge(proposal(rows: [rescored], revision: 4), subjects: [fact("a")])
+        #expect(flow.rows.first?.selectionReadout == PromoteFlow.SelectionReadout(
+            assessment: .medium, reason: .agrees(key: "name", origin: "provenencia")
+        ))
+    }
+
+    @Test func anUnmatchedRowStartsUnselected() {
         var flow = PromoteFlow(entryID: "a")
         flow.load(
             entryID: "a",
             proposal: proposal(rows: [
-                row(id: "a", assessment: "weak"),
-                row(id: "b", target: "new", handleID: "", assessment: "none"),
+                row(id: "a", target: "new", handleID: "", assessment: "none"),
+                row(id: "b", assessment: "strong"),
             ]),
             subjects: [fact("a"), fact("b")],
             bridges: []
         )
-        let ada = flow.rows.first { $0.subjectID == "a" }
-        let bea = flow.rows.first { $0.subjectID == "b" }
-        #expect(ada?.target == PromoteFlow.Target.skip)
-        #expect(ada?.menu.first?.id == "e1")
-        #expect(bea?.target == PromoteFlow.Target.skip)
+        #expect(flow.rows.first { $0.subjectID == "a" }?.target == PromoteFlow.Target.unset)
+        #expect(flow.rows.first { $0.subjectID == "a" }?.selectionReadout == nil)
+        #expect(flow.targetsChosen == false)
+        flow.mapRest()
+        #expect(flow.batchRows().map(\.subjectID) == ["b"])
+
+        flow.setTarget(subjectID: "a", token: "new")
+        #expect(flow.rows.first { $0.subjectID == "a" }?.target == .newKind)
+        #expect(flow.targetsChosen)
+        #expect(flow.batchRows().first { $0.subjectID == "a" }?.target == "new")
+
+        flow.setTarget(subjectID: "a", token: "skip")
+        #expect(flow.rows.first { $0.subjectID == "a" }?.target == .skip)
+        #expect(flow.batchRows().first { $0.subjectID == "a" }?.target == "skip")
     }
 
     @Test func decidedRowsSurviveAReproposal() {
@@ -106,6 +268,26 @@ struct PromoteFlowTests {
         #expect(batch[0].pairs[0].incomingObservationID == "obs-in")
         #expect(flow.skipBridgeIDs() == ["br"])
         #expect(flow.connectionLines().first?.state == .off)
+    }
+
+    @Test func promoteAllStartsExpandedAndHidesFiledBridges() {
+        var flow = PromoteFlow(entryID: "a")
+        flow.mappedRest = true
+        flow.load(
+            entryID: "a",
+            proposal: proposal(rows: [row(id: "a"), row(id: "b")]),
+            subjects: [fact("a", anchor: true, handleID: "e-a"), fact("b", anchor: true, handleID: "e-b")],
+            bridges: [
+                PromoteFlow.BridgeFact(id: "old", sentence: "old", endA: "a", endB: "b", alreadyFiled: true),
+                PromoteFlow.BridgeFact(id: "new", sentence: "new", endA: "a", endB: "b"),
+            ]
+        )
+        #expect(flow.visibleRows.map(\.subjectID) == ["a", "b"])
+        #expect(flow.targetsChosen)
+        #expect(flow.connectionLines().map(\.id) == ["new"])
+        #expect(flow.connectionLines().first?.state == .files)
+        #expect(flow.connectionCount == 1)
+        #expect(flow.skipBridgeIDs().isEmpty)
     }
 
     @Test func anchorsAreReadOnly() {
@@ -149,6 +331,7 @@ struct PromoteFlowTests {
             bridges: []
         )
         flow.mapRest()
+        flow.setTarget(subjectID: "a", token: "skip")
         flow.setConfidence(subjectID: "b", gradeID: "grade-1")
         flow.setArgument(subjectID: "b", argument: "names agree")
         flow.setTarget(subjectID: "b", token: "skip")

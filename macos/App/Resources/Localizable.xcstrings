@@ -10382,6 +10382,18 @@
         }
       }
     },
+    "evidenceGraph.header.promoteAll": {
+      "comment": "Secondary header button that opens Promote with every subject expanded; also the breadcrumb for that entry",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Promote all"
+          }
+        }
+      }
+    },
     "evidenceGraph.header.jumpToSourcePage": {
       "comment": "Secondary header button that opens this Source’s filing page",
       "extractionState": "manual",
@@ -12610,6 +12622,102 @@
           "stringUnit": {
             "state": "translated",
             "value": "Value — name"
+          }
+        }
+      }
+    },
+    "propertyTerm.event_type.birth": {
+      "comment": "Product event_type term: birth",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Birth"
+          }
+        }
+      }
+    },
+    "propertyTerm.event_type.death": {
+      "comment": "Product event_type term: death",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Death"
+          }
+        }
+      }
+    },
+    "propertyTerm.event_type.marriage": {
+      "comment": "Product event_type term: marriage",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Marriage"
+          }
+        }
+      }
+    },
+    "propertyTerm.event_type.baptism": {
+      "comment": "Product event_type term: baptism",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Baptism"
+          }
+        }
+      }
+    },
+    "propertyTerm.event_type.burial": {
+      "comment": "Product event_type term: burial",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Burial"
+          }
+        }
+      }
+    },
+    "propertyTerm.event_type.census": {
+      "comment": "Product event_type term: census",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Census Enumeration"
+          }
+        }
+      }
+    },
+    "propertyTerm.event_type.residence": {
+      "comment": "Product event_type term: residence",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Residence"
+          }
+        }
+      }
+    },
+    "propertyTerm.event_type.migration": {
+      "comment": "Product event_type term: migration",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Migration"
           }
         }
       }
@@ -16277,6 +16385,18 @@
         }
       }
     },
+    "promote.assessment.medium": {
+      "comment": "Promote match assessment between strong and weak",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Medium"
+          }
+        }
+      }
+    },
     "promote.assessment.strong": {
       "comment": "Promote match assessment",
       "extractionState": "manual",
@@ -16333,6 +16453,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Updated"
+          }
+        }
+      }
+    },
+    "promote.target.placeholder": {
+      "comment": "Promote target menu when no record, New, or Skip is chosen yet",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select where this files"
           }
         }
       }
@@ -16609,6 +16741,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Conflicts"
+          }
+        }
+      }
+    },
+    "promote.sheet.similar": {
+      "comment": "A comparison whose text is a spelling variant or shares words",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Similar"
           }
         }
       }
