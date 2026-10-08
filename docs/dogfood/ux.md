@@ -19,6 +19,13 @@ Copy the stub. Surface + what got in the way is enough. A wanted fix is optional
 
 <!-- add below this line -->
 
+### Drag and drop files into the Artifact section
+
+- **Date:** 2026-10-08
+- **Where:** Source detail page → Artifact section
+- **Annoyance:** Uploading an Artifact means going through the file picker. You can't drop a file from Finder onto the Source.
+- **Wanted:** Drag a file onto the Artifact section to upload it, with a visible drop-target highlight while dragging.
+
 ### Prefill the structured date modal from the transcription
 
 - **Date:** 2026-10-07
