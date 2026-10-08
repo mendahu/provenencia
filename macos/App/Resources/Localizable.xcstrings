@@ -15401,25 +15401,25 @@
       }
     },
     "promote.leave.confirm": {
-      "comment": "Promote leave guard: leave",
+      "comment": "Promote leave guard: leave and drop the mapping",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Leave Promote"
+            "value": "Discard changes"
           }
         }
       }
     },
     "promote.leave.cancel": {
-      "comment": "Promote leave guard: stay",
+      "comment": "Promote leave guard: stay on the page",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Keep promoting"
+            "value": "Keep mapping"
           }
         }
       }
@@ -17502,13 +17502,13 @@
       }
     },
     "promote.target.skip": {
-      "comment": "Leave this subject unfiled",
+      "comment": "Leave this subject unfiled; Skip is not a rejection",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Skip"
+            "value": "Skip — not filed yet"
           }
         }
       }
@@ -17838,13 +17838,13 @@
       }
     },
     "promote.stale.notice": {
-      "comment": "Shown when Done loses the revision race and the page proposes again",
+      "comment": "Callout body when Done loses the revision race",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The catalog changed. This proposal was read again."
+            "value": "Provenencia proposed the rows again. Rows you decided are kept. Review the updated rows and press Done."
           }
         }
       }
@@ -17868,19 +17868,463 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Leave without filing?"
+            "value": "Discard your changes to this mapping?"
           }
         }
       }
     },
     "promote.leave.pageMessage": {
-      "comment": "Leave guard body",
+      "comment": "Leave guard body; 1 = rows changed, 2 = connections switched off",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Your changes on this page will be discarded."
+            "value": "You chose targets on %1$lld rows and switched off %2$lld connections. Nothing has been filed; opening Promote again proposes the graph afresh."
+          }
+        }
+      }
+    },
+    "promote.sheet.claim": {
+      "comment": "Heading above status, confidence, and argument on the evidence sheet",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claim"
+          }
+        }
+      }
+    },
+    "promote.stale.title": {
+      "comment": "Callout title when Done loses the revision race",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing was filed — the catalog changed while this page was open"
+          }
+        }
+      }
+    },
+    "promote.toast.filedTitle": {
+      "comment": "Toast title after Done; 1 = subjects filed, 2 = connections filed",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Filed %1$lld subjects and %2$lld connections"
+          }
+        }
+      }
+    },
+    "promote.toast.filedBody": {
+      "comment": "Toast body after Done; skipped subjects are not a rejection",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld subjects are still on the graph, not filed yet"
+          }
+        }
+      }
+    },
+    "promote.page.openedFrom": {
+      "comment": "Shown once the rest of the graph is mapped; argument is the subject the page opened on",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opened from %@ · weak and unmatched rows start as Skip"
+          }
+        }
+      }
+    },
+    "promote.page.promoting": {
+      "comment": "Header count once the whole graph is mapped",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld subjects on this graph"
+          }
+        }
+      }
+    },
+    "promote.page.rowSummary": {
+      "comment": "Header once the whole graph is mapped; 1 = row count, 2 = already-filed anchors",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld rows · %2$lld already filed"
+          }
+        }
+      }
+    },
+    "promote.page.singleSummary": {
+      "comment": "Header before the rest of the graph is mapped; argument is how many other subjects",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 row · %lld more on this graph"
+          }
+        }
+      }
+    },
+    "promote.page.mapRestHint": {
+      "comment": "Beside the control that maps the rest of the graph",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adds a row for every other person, event and place on this Source"
+          }
+        }
+      }
+    },
+    "promote.page.column.source": {
+      "comment": "Promote row column: the subject on this Source",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "On this Source"
+          }
+        }
+      }
+    },
+    "promote.page.column.target": {
+      "comment": "Promote row column: the handle the subject will file on",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Files on"
+          }
+        }
+      }
+    },
+    "promote.page.column.assessment": {
+      "comment": "Promote row column: how sure the match is",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Assessment"
+          }
+        }
+      }
+    },
+    "promote.page.grouped.kind": {
+      "comment": "Closed label of the grouping menu when rows are grouped by kind",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grouped by kind"
+          }
+        }
+      }
+    },
+    "promote.page.grouped.assessment": {
+      "comment": "Closed label of the grouping menu when rows are grouped by assessment",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grouped by assessment"
+          }
+        }
+      }
+    },
+    "promote.section.count": {
+      "comment": "How many rows are in a Promote section",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld"
+          }
+        }
+      }
+    },
+    "promote.section.countFiled": {
+      "comment": "Promote section count when some rows were filed earlier; 1 = rows, 2 = already filed",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld · %2$lld already filed"
+          }
+        }
+      }
+    },
+    "promote.row.alreadyFiledHeading": {
+      "comment": "Heading above read-only rows filed from this Source earlier",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Already filed"
+          }
+        }
+      }
+    },
+    "promote.row.filedEarlier": {
+      "comment": "Assessment stand-in on a read-only already-filed row",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Filed from this Source earlier"
+          }
+        }
+      }
+    },
+    "promote.target.filesOn": {
+      "comment": "Accessibility label for a row's target menu; argument is the subject's name",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Files %@ on"
+          }
+        }
+      }
+    },
+    "promote.warning.duplicateTitle": {
+      "comment": "Warning title when two rows share a handle; 1 = the other subject's name, 2 = the handle ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ is also filed on %2$@"
+          }
+        }
+      }
+    },
+    "promote.warning.duplicateBody": {
+      "comment": "Warning body when two rows share a handle",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "These may be the same person. Combine them on the Evidence graph, or pick another target for one row."
+          }
+        }
+      }
+    },
+    "promote.warning.conflictTitle": {
+      "comment": "Warning title when a decided row disagrees with a new proposal; argument is the other handle ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A stronger match is %@"
+          }
+        }
+      }
+    },
+    "promote.warning.conflictBody": {
+      "comment": "Warning body when a decided row disagrees with a new proposal",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This choice is kept."
+          }
+        }
+      }
+    },
+    "promote.connections.title": {
+      "comment": "Title of the connections list",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connections"
+          }
+        }
+      }
+    },
+    "promote.connections.meta": {
+      "comment": "Connections list summary; 1 = filed, 2 = switched off, 3 = not filed",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld filed · %2$lld switched off · %3$lld not filed"
+          }
+        }
+      }
+    },
+    "promote.connections.hint": {
+      "comment": "Hint in the connections list",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Switch off a relationship you don’t accept from this Source; it stays on the graph"
+          }
+        }
+      }
+    },
+    "promote.sheet.column.here": {
+      "comment": "Evidence sheet column: the value on this Source",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This source"
+          }
+        }
+      }
+    },
+    "promote.sheet.column.pin": {
+      "comment": "Evidence sheet column: whether the comparison is pinned",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pin"
+          }
+        }
+      }
+    },
+    "promote.sheet.column.compared": {
+      "comment": "Evidence sheet column: what is being compared",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Compared"
+          }
+        }
+      }
+    },
+    "promote.sheet.column.result": {
+      "comment": "Evidence sheet column: agrees, conflicts, or unknown",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Result"
+          }
+        }
+      }
+    },
+    "promote.sheet.column.weight": {
+      "comment": "Evidence sheet column: how much the comparison counted",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weight"
+          }
+        }
+      }
+    },
+    "promote.sheet.status.hint": {
+      "comment": "Hint under claim status; only Accepted can be filed",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Provisional and rejected arrive in a later spike"
+          }
+        }
+      }
+    },
+    "promote.sheet.argument.hint": {
+      "comment": "Hint under the claim argument; argument is how many comparisons are pinned",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Drafted from the %lld pinned comparisons · edit before filing"
+          }
+        }
+      }
+    },
+    "promote.sheet.subtitle": {
+      "comment": "Evidence sheet subtitle; 1 = assessment, 2 = why this row matched",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · %2$@. Agreeing comparisons are pinned as this claim’s evidence."
+          }
+        }
+      }
+    },
+    "promote.sheet.through": {
+      "comment": "Evidence group reached through a neighbor; argument is the neighbor's name",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Through %@"
+          }
+        }
+      }
+    },
+    "promote.sheet.conflict.title": {
+      "comment": "Evidence sheet callout when one comparison conflicts",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A comparison disagrees"
+          }
+        }
+      }
+    },
+    "promote.sheet.conflict.body": {
+      "comment": "Evidence sheet callout body for a conflict",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The conflicting comparison is not pinned. The claim can still be filed."
           }
         }
       }

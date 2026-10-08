@@ -30,6 +30,7 @@ struct PlaceRegistry: Sendable {
                 return [
                     .sourceGraph(project: project, sourceId: sourceId),
                     .sourcesList(project: project),
+                    .sourceTypesList(project: project),
                     .promoteTargets(project: project, subjectId: subjectId),
                     .confidenceGradesList(project: project),
                     .propertiesWorkspace(project: project),

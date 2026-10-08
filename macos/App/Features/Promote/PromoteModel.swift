@@ -79,6 +79,8 @@ final class PromoteModel {
 
     private(set) var flow: PromoteFlow
     private(set) var grades: [CatalogClaimConfidenceGrade] = []
+    private(set) var sourceRef: String = ""
+    private(set) var sourceMark: PVMarkKey = .defaultTypeMark
     private(set) var loadError: String?
     private(set) var saveError: String?
 
@@ -86,6 +88,8 @@ final class PromoteModel {
     var confidenceKey: CatalogQueryKey { .confidenceGradesList(project: session.projectKey) }
     var propertiesKey: CatalogQueryKey { .propertiesWorkspace(project: session.projectKey) }
     var rulesKey: CatalogQueryKey { .connectRules(project: session.projectKey) }
+    var sourcesKey: CatalogQueryKey { .sourcesList(project: session.projectKey) }
+    var sourceTypesKey: CatalogQueryKey { .sourceTypesList(project: session.projectKey) }
 
     var hasUnsavedWork: Bool { flow.manual }
     var pendingLeave: PendingLeave? { flow.pendingLeave.map(PendingLeave.init(navigation:)) }
@@ -115,6 +119,7 @@ final class PromoteModel {
             )
             let facts = await facts()
             grades = await session.readyValue(confidenceKey) ?? []
+            await attachSource()
             flow.load(entryID: entry.subjectID, proposal: proposal, subjects: facts.subjects, bridges: facts.bridges)
             loadError = nil
         } catch {
@@ -213,8 +218,8 @@ final class PromoteModel {
             session.apply(.promotedSubject(sourceId: entry.sourceID))
             await catalogCounts?.refreshAll()
             session.noticeToast = VocabularyToast(
-                title: L10n.Promote.filedToast(filed: flow.fileCount, skipped: flow.skipCount),
-                body: "",
+                title: L10n.Promote.filedTitle(filed: flow.fileCount, connections: flow.connectionCount),
+                body: flow.skipCount > 0 ? L10n.Promote.filedBody(skipped: flow.skipCount) : "",
                 tone: .success
             )
             flow.saving = false
@@ -257,15 +262,30 @@ final class PromoteModel {
                 anchor: anchor
             )
         }
+        let nameByID = Dictionary(uniqueKeysWithValues: subjects.map { ($0.id, $0.name) })
         let bridges = snapshot.bridges.map { bridge in
             PromoteFlow.BridgeFact(
                 id: bridge.subject.id,
                 sentence: EvidenceBridgeEdgeSummary.sentence(for: bridge, in: snapshot),
+                phrase: EvidenceBridgeEdgeSummary.phrase(for: bridge),
+                endAName: bridge.endpointAID.flatMap { nameByID[$0] } ?? "",
+                endBName: bridge.endpointBID.flatMap { nameByID[$0] } ?? "",
+                mark: bridge.kind.markKey,
                 endA: bridge.endpointAID,
                 endB: bridge.endpointBID
             )
         }
         return (subjects, bridges)
+    }
+
+    private func attachSource() async {
+        let sources: [CatalogSource]? = await session.readyValue(sourcesKey)
+        let types: [CatalogSourceType]? = await session.readyValue(sourceTypesKey)
+        guard let source = sources?.first(where: { $0.id == entry.sourceID }) else { return }
+        sourceRef = source.ref
+        if let type = types?.first(where: { $0.id == source.sourceTypeID }) {
+            sourceMark = PVMarkKey(catalogKey: type.iconKey)
+        }
     }
 }
 

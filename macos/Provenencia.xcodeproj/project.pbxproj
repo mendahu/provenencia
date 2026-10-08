@@ -327,6 +327,8 @@
 		E9178C44063AD95B47B5D524 /* PVSidebarNav.swift in Sources */ = {isa = PBXBuildFile; fileRef = E98DA667F92287934B46B640 /* PVSidebarNav.swift */; };
 		ECC25906B62C6453A5CB9D25 /* PVInput.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40F72A548E04F25E0AA30CDB /* PVInput.swift */; };
 		B91100000000000000000003 /* PVRadio.swift in Sources */ = {isa = PBXBuildFile; fileRef = B91100000000000000000002 /* PVRadio.swift */; };
+		B91300000000000000000003 /* PVCheckbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = B91300000000000000000002 /* PVCheckbox.swift */; };
+		B91400000000000000000003 /* PVSwitch.swift in Sources */ = {isa = PBXBuildFile; fileRef = B91400000000000000000002 /* PVSwitch.swift */; };
 		B91100000000000000000006 /* PromoteModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B91100000000000000000005 /* PromoteModel.swift */; };
 		B91100000000000000000008 /* PromoteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B91100000000000000000007 /* PromoteView.swift */; };
 		B9110000000000000000000C /* PromoteModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9110000000000000000000B /* PromoteModelTests.swift */; };
@@ -691,6 +693,8 @@
 		D0E1F203948576A1B2C3D4E3 /* WorkspaceSection.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkspaceSection.swift; sourceTree = "<group>"; };
 		E1F203948576A1B2C3D4E5F4 /* WorkspaceNavigation.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkspaceNavigation.swift; sourceTree = "<group>"; };
 		B91100000000000000000002 /* PVRadio.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVRadio.swift; sourceTree = "<group>"; };
+		B91300000000000000000002 /* PVCheckbox.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVCheckbox.swift; sourceTree = "<group>"; };
+		B91400000000000000000002 /* PVSwitch.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVSwitch.swift; sourceTree = "<group>"; };
 		B91100000000000000000005 /* PromoteModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PromoteModel.swift; sourceTree = "<group>"; };
 		B91100000000000000000007 /* PromoteView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PromoteView.swift; sourceTree = "<group>"; };
 		B9110000000000000000000B /* PromoteModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PromoteModelTests.swift; sourceTree = "<group>"; };
@@ -1633,6 +1637,8 @@
 				D5C000000000000000000017 /* Table */,
 				D5C000000000000000000004 /* ReorderableList */,
 				B91100000000000000000001 /* Radio */,
+				B91300000000000000000001 /* Checkbox */,
+				B91400000000000000000001 /* Switch */,
 			);
 			name = Components;
 			path = Components;
@@ -1655,6 +1661,22 @@
 				B91100000000000000000002 /* PVRadio.swift */,
 			);
 			path = Radio;
+			sourceTree = "<group>";
+		};
+		B91300000000000000000001 /* Checkbox */ = {
+			isa = PBXGroup;
+			children = (
+				B91300000000000000000002 /* PVCheckbox.swift */,
+			);
+			path = Checkbox;
+			sourceTree = "<group>";
+		};
+		B91400000000000000000001 /* Switch */ = {
+			isa = PBXGroup;
+			children = (
+				B91400000000000000000002 /* PVSwitch.swift */,
+			);
+			path = Switch;
 			sourceTree = "<group>";
 		};
 		B91100000000000000000004 /* Promote */ = {
@@ -2033,6 +2055,8 @@
 				AA0000000000000000000469 /* SourcesSplitRow.swift in Sources */,
 				AA0000000000000000000351 /* TimestampFormat.swift in Sources */,
 				B91100000000000000000003 /* PVRadio.swift in Sources */,
+				B91300000000000000000003 /* PVCheckbox.swift in Sources */,
+				B91400000000000000000003 /* PVSwitch.swift in Sources */,
 				B91100000000000000000006 /* PromoteModel.swift in Sources */,
 				B91100000000000000000008 /* PromoteView.swift in Sources */,
 				B9110000000000000000000E /* PromoteFlow.swift in Sources */,

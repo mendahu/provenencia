@@ -26,6 +26,8 @@ struct PromoteFlow: Equatable, Sendable {
         var id: String
         var ref: String
         var title: String
+        /// Dates, place, or other secondary line under the name.
+        var subtitle: String = ""
     }
 
     struct Row: Equatable, Sendable, Identifiable {
@@ -52,6 +54,10 @@ struct PromoteFlow: Equatable, Sendable {
     struct Bridge: Equatable, Sendable, Identifiable {
         var id: String
         var sentence: String
+        var phrase: String
+        var endAName: String
+        var endBName: String
+        var mark: PVMarkKey
         var endA: String?
         var endB: String?
         var files: Bool
@@ -76,6 +82,10 @@ struct PromoteFlow: Equatable, Sendable {
     struct BridgeFact: Equatable, Sendable {
         var id: String
         var sentence: String
+        var phrase: String = ""
+        var endAName: String = ""
+        var endBName: String = ""
+        var mark: PVMarkKey = .subjectRelationship
         var endA: String?
         var endB: String?
     }
@@ -120,18 +130,26 @@ struct PromoteFlow: Equatable, Sendable {
 
     func connectionLines() -> [Bridge] { filedBridges }
 
+    private func lined(_ bridge: BridgeFact, files: Bool, why: String) -> Bridge {
+        Bridge(
+            id: bridge.id, sentence: bridge.sentence, phrase: bridge.phrase,
+            endAName: bridge.endAName, endBName: bridge.endBName, mark: bridge.mark,
+            endA: bridge.endA, endB: bridge.endB, files: files, why: why
+        )
+    }
+
     private var filedBridges: [Bridge] {
         bridges.map { bridge in
             if bridgeOff.contains(bridge.id) {
-                return Bridge(id: bridge.id, sentence: bridge.sentence, endA: bridge.endA, endB: bridge.endB, files: false, why: "off")
+                return lined(bridge, files: false, why: "off")
             }
             guard let left = resolve(bridge.endA), let right = resolve(bridge.endB) else {
-                return Bridge(id: bridge.id, sentence: bridge.sentence, endA: bridge.endA, endB: bridge.endB, files: false, why: "skipped")
+                return lined(bridge, files: false, why: "skipped")
             }
             if left == right {
-                return Bridge(id: bridge.id, sentence: bridge.sentence, endA: bridge.endA, endB: bridge.endB, files: false, why: "self")
+                return lined(bridge, files: false, why: "self")
             }
-            return Bridge(id: bridge.id, sentence: bridge.sentence, endA: bridge.endA, endB: bridge.endB, files: true, why: "")
+            return lined(bridge, files: true, why: "")
         }
     }
 
@@ -361,12 +379,45 @@ struct PromoteFlow: Equatable, Sendable {
     private static func menu(for proposal: CatalogPromoteGraphAlignmentRow, kind: EvidencePrimaryKind) -> [Alternative] {
         var out: [Alternative] = []
         if proposal.target == "handle", !proposal.handleID.isEmpty {
-            out.append(Alternative(id: proposal.handleID, ref: proposal.handleRef, title: headerTitle(proposal)))
+            out.append(Alternative(
+                id: proposal.handleID, ref: proposal.handleRef,
+                title: headerTitle(proposal), subtitle: headerSubtitle(proposal)
+            ))
         }
         for alt in proposal.alternatives where alt.handleID != proposal.handleID {
-            out.append(Alternative(id: alt.handleID, ref: alt.handleRef, title: headerTitle(alt, kind: kind)))
+            out.append(Alternative(
+                id: alt.handleID, ref: alt.handleRef,
+                title: headerTitle(alt, kind: kind), subtitle: headerSubtitle(alt, kind: kind)
+            ))
         }
         return out
+    }
+
+    private static func headerSubtitle(_ row: CatalogPromoteGraphAlignmentRow) -> String {
+        if let person = row.person { return PersonLifeDisplay.line(person).text }
+        if let event = row.event { return eventSubtitle(event) }
+        if let place = row.place { return place.parents.first ?? "" }
+        return ""
+    }
+
+    private static func headerSubtitle(_ alt: CatalogPromoteGraphAlignmentAlternative, kind: EvidencePrimaryKind) -> String {
+        switch kind {
+        case .person:
+            if let person = alt.person { return PersonLifeDisplay.line(person).text }
+        case .event:
+            if let event = alt.event { return eventSubtitle(event) }
+        case .place:
+            return alt.place?.parents.first ?? ""
+        }
+        return ""
+    }
+
+    private static func eventSubtitle(_ event: CatalogEventHeader) -> String {
+        let date = PersonLifeDisplay.dateText(event.date ?? event.startDate)
+        let place = event.places.first?.names.first ?? ""
+        if date.isEmpty { return place }
+        if place.isEmpty { return date }
+        return date + " · " + place
     }
 
     private static func headerTitle(_ row: CatalogPromoteGraphAlignmentRow) -> String {
