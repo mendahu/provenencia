@@ -305,57 +305,91 @@ func TestSaveBatchStaleWritesNothing(t *testing.T) {
 }
 
 func TestSaveBatchOneHopPin(t *testing.T) {
-	f := newBatchFixture(t)
-	person := f.bare("person")
-	event := f.bare("event")
-	memberDate := f.cite(event, observations.Input{
-		PropertyID: f.prop("date").ID, Date: yearDate(1849),
-	})
-	f.participation(person, event)
-	per, err := promote.Save(f.c, userID, promote.Input{SubjectID: person.ID})
-	if err != nil {
-		t.Fatal(err)
+	tests := []struct {
+		name string
+		// eventTarget is how the layer's own event is filed in the same Done.
+		eventTarget string
+		// pinDeath pairs with the handle person's death date, not their birth.
+		pinDeath bool
+		wantErr  bool
+	}{
+		{name: "a neighbor filed on the matching handle pins and backfills", eventTarget: promote.TargetHandle},
+		{name: "a neighbor filed New pins nothing", eventTarget: promote.TargetNew, wantErr: true},
+		{name: "a skipped neighbor pins nothing", eventTarget: promote.TargetSkip, wantErr: true},
+		{name: "a record from another of the handle's events is refused", eventTarget: promote.TargetHandle, pinDeath: true, wantErr: true},
 	}
-	evt, err := promote.Save(f.c, userID, promote.Input{SubjectID: event.ID})
-	if err != nil {
-		t.Fatal(err)
-	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			f := newBatchFixture(t)
+			person := f.bare("person")
+			birth := f.bare("event")
+			birthDate := f.cite(birth, observations.Input{PropertyID: f.prop("date").ID, Date: yearDate(1849)})
+			death := f.bare("event")
+			deathDate := f.cite(death, observations.Input{PropertyID: f.prop("date").ID, Date: yearDate(1849)})
+			f.participation(person, birth)
+			f.participation(person, death)
+			per, err := promote.Save(f.c, userID, promote.Input{SubjectID: person.ID})
+			if err != nil {
+				t.Fatal(err)
+			}
+			birthH, err := promote.Save(f.c, userID, promote.Input{SubjectID: birth.ID})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := promote.Save(f.c, userID, promote.Input{SubjectID: death.ID}); err != nil {
+				t.Fatal(err)
+			}
 
-	// A second layer: the birth date sits on the event, one hop from the person.
-	srcB := f.source
-	_ = srcB
-	personB := f.bare("person")
-	eventB := f.bare("event")
-	incoming := f.cite(eventB, observations.Input{
-		PropertyID: f.prop("date").ID, Date: yearDate(1849),
-	})
-	f.participation(personB, eventB)
+			// A second layer: the birth date sits on the event, one hop from the person.
+			personB := f.bare("person")
+			eventB := f.bare("event")
+			incoming := f.cite(eventB, observations.Input{PropertyID: f.prop("date").ID, Date: yearDate(1849)})
+			f.participation(personB, eventB)
 
-	res := f.save(promote.Batch{
-		SourceID: f.source.ID, SeenRevision: f.revision(),
-		Rows: []promote.BatchRow{{
-			SubjectID: personB.ID, Target: promote.TargetHandle, EntityID: per.Entity.ID,
-			Pairs: []promote.Pair{{
-				IncomingObservationID: incoming[0].ID,
-				MemberObservationID:   memberDate[0].ID,
-			}},
-		}},
-	})
-	if len(res.Written) != 1 || res.Written[0].Pins < 2 {
-		t.Fatalf("written %+v", res.Written)
-	}
-	db, err := f.c.DB()
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, claimID := range [][]byte{res.Written[0].Claim.ID, evt.Claim.ID} {
-		pins, err := identityclaims.PinnedObservations(db, claimID)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if !containsID(pins, incoming[0].ID) || !containsID(pins, memberDate[0].ID) {
-			t.Fatalf("claim %x pins %d, want both dates", claimID, len(pins))
-		}
+			member := birthDate[0].ID
+			if tt.pinDeath {
+				member = deathDate[0].ID
+			}
+			eventRow := promote.BatchRow{SubjectID: eventB.ID, Target: tt.eventTarget}
+			if tt.eventTarget == promote.TargetHandle {
+				eventRow.EntityID = birthH.Entity.ID
+			}
+			res, err := promote.SaveBatch(f.c, userID, promote.Batch{
+				SourceID: f.source.ID, SeenRevision: f.revision(),
+				Rows: []promote.BatchRow{{
+					SubjectID: personB.ID, Target: promote.TargetHandle, EntityID: per.Entity.ID,
+					Pairs: []promote.Pair{{IncomingObservationID: incoming[0].ID, MemberObservationID: member}},
+				}, eventRow},
+			})
+			if tt.wantErr {
+				if !errors.Is(err, promote.ErrInvalid) {
+					t.Fatalf("err %v, want promote.ErrInvalid", err)
+				}
+				if f.hasClaim(personB.ID) {
+					t.Fatal("a refused pin still filed the claim")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(res.Written) != 2 || res.Written[0].Pins < 2 {
+				t.Fatalf("written %+v", res.Written)
+			}
+			db, err := f.c.DB()
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, claimID := range [][]byte{res.Written[0].Claim.ID, birthH.Claim.ID} {
+				pins, err := identityclaims.PinnedObservations(db, claimID)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if !containsID(pins, incoming[0].ID) || !containsID(pins, member) {
+					t.Fatalf("claim %x pins %d, want both dates", claimID, len(pins))
+				}
+			}
+		})
 	}
 }
 

@@ -391,3 +391,68 @@ func TestStatsFanOut(t *testing.T) {
 		}
 	})
 }
+
+// One-hop exhibits compare a neighbor only with the handle Align mapped it to.
+// The handle's person also has a death in 1901; a layer event dated 1901 must
+// not "agree" with it unless that event is mapped to the death.
+func TestProposeOneHopExhibitsPairOnlyTheMappedNeighbor(t *testing.T) {
+	yearOf := func(y int) *datevalues.Value {
+		return &datevalues.Value{Kind: datevalues.KindPoint, Calendar: "gregorian", StartYear: &y}
+	}
+	tests := []struct {
+		name        string
+		layerType   string
+		fixLayerEvt bool // fix the layer event to the canon birth
+		want        string
+	}{
+		{name: "a birth mapped to the birth compares with the birth", layerType: "birth", fixLayerEvt: true, want: "conflict"},
+		{name: "an event mapped to nothing adds no one-hop lines", layerType: "marriage", want: ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			f := newFixture(t)
+			event := func(src sources.Source, art artifacts.Artifact, kind string, year int) subjects.Subject {
+				s := f.bare(src, "event")
+				f.cite(art, s,
+					observations.Input{PropertyID: f.prop("event_type").ID, ValueTermID: f.term("event_type", kind).ID},
+					observations.Input{PropertyID: f.prop("date").ID, Date: yearOf(year)},
+				)
+				return s
+			}
+			aPerson := f.person(f.source, f.artifact, "Gracie")
+			aBirth := event(f.source, f.artifact, "birth", 1880)
+			aDeath := event(f.source, f.artifact, "death", 1901)
+			f.participation(f.source, f.artifact, aPerson, aBirth, "subject")
+			f.participation(f.source, f.artifact, aPerson, aDeath, "subject")
+			per := f.promote(aPerson)
+			birthH := f.promote(aBirth)
+			f.promote(aDeath)
+
+			srcB, artB := f.newSource("Obituary")
+			bPerson := f.person(srcB, artB, "Gracie")
+			bEvent := event(srcB, artB, tt.layerType, 1901)
+			f.participation(srcB, artB, bPerson, bEvent, "subject")
+
+			fixed := []graphalign.Fixed{{SubjectID: bPerson.ID, HandleID: per.Entity.ID}}
+			if tt.fixLayerEvt {
+				fixed = append(fixed, graphalign.Fixed{SubjectID: bEvent.ID, HandleID: birthH.Entity.ID})
+			}
+			row := rowFor(f.propose(srcB.ID, fixed), bPerson.ID)
+			got := ""
+			for _, ex := range row.Exhibits {
+				if ex.Property.Key == "date" {
+					if got != "" {
+						t.Fatalf("more than one date line: %+v", row.Exhibits)
+					}
+					got = string(ex.Outcome)
+					if ex.Pinned != (ex.Outcome == "agree") {
+						t.Fatalf("pinned %v on a %s line", ex.Pinned, ex.Outcome)
+					}
+				}
+			}
+			if got != tt.want {
+				t.Fatalf("date line %q, want %q", got, tt.want)
+			}
+		})
+	}
+}

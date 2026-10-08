@@ -6,6 +6,8 @@ import (
 	"strings"
 
 	"github.com/mendahu/provenencia/core/autoreconcile"
+	"github.com/mendahu/provenencia/core/connectrules"
+	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/graphalign"
@@ -22,9 +24,12 @@ type exhibitObs struct {
 	value     match.Value
 }
 
-// attachExhibits fills pin lines on handle rows: the Subject's own records
-// and one hop through a bridge, paired with a member observation of the
-// chosen handle (or one hop from that member) on the same Property.
+// attachExhibits fills pin lines on handle rows. The Subject's own records
+// pair with records on the chosen handle's members. A neighbor's records pair
+// only with records on the handle Align mapped that neighbor to, and only on
+// members one hop from the chosen handle's members: "her birth date matches"
+// compares this birth with that birth, never with some other event's date.
+// A neighbor Align didn't map (New, Skip, unreachable) contributes nothing.
 func attachExhibits(q Querier, layer graphalign.Layer, prop *graphalign.Proposal, cfg graphalign.Config, stats graphalign.Stats) error {
 	if prop == nil || len(prop.Rows) == 0 {
 		return nil
@@ -34,7 +39,50 @@ func attachExhibits(q Querier, layer graphalign.Layer, prop *graphalign.Proposal
 		neighbors[string(b.A)] = append(neighbors[string(b.A)], b.B)
 		neighbors[string(b.B)] = append(neighbors[string(b.B)], b.A)
 	}
-	memberHops, err := bridgeNeighbors(q)
+	mappedTo := map[string][]byte{}
+	for _, r := range prop.Rows {
+		if r.Target == graphalign.TargetHandle && len(r.HandleID) == 16 {
+			mappedTo[string(r.SubjectID)] = r.HandleID
+		}
+	}
+
+	members := map[string][][]byte{} // handle → accepted member subjects
+	membersOf := func(handleID []byte) ([][]byte, error) {
+		if ms, ok := members[string(handleID)]; ok {
+			return ms, nil
+		}
+		ms, err := acceptedMembers(q, handleID)
+		if err != nil {
+			return nil, err
+		}
+		members[string(handleID)] = ms
+		return ms, nil
+	}
+
+	type neighborPair struct {
+		neighbor []byte   // layer neighbor of the row's Subject
+		sides    [][]byte // its handle's members one hop from the row's handle
+	}
+	type rowPlan struct {
+		idx       int
+		own       [][]byte // the row handle's members
+		neighbors []neighborPair
+	}
+	var plans []rowPlan
+	var memberIDs [][]byte
+	for i := range prop.Rows {
+		r := &prop.Rows[i]
+		if r.Target != graphalign.TargetHandle || len(r.HandleID) != 16 {
+			continue
+		}
+		own, err := membersOf(r.HandleID)
+		if err != nil {
+			return err
+		}
+		memberIDs = append(memberIDs, own...)
+		plans = append(plans, rowPlan{idx: i, own: own})
+	}
+	hops, err := bridgeNeighbors(q, memberIDs)
 	if err != nil {
 		return err
 	}
@@ -48,32 +96,43 @@ func attachExhibits(q Querier, layer graphalign.Layer, prop *graphalign.Proposal
 		seen[string(id)] = true
 		want = append(want, id)
 	}
-
-	type rowMembers struct {
-		idx     int
-		members [][]byte
-	}
-	var rows []rowMembers
-	for i := range prop.Rows {
-		r := &prop.Rows[i]
-		if r.Target != graphalign.TargetHandle || len(r.HandleID) != 16 {
-			continue
-		}
-		members, err := acceptedMembers(q, r.HandleID)
-		if err != nil {
-			return err
-		}
+	for pi := range plans {
+		plan := &plans[pi]
+		r := &prop.Rows[plan.idx]
 		add(r.SubjectID)
-		for _, n := range neighbors[string(r.SubjectID)] {
-			add(n)
-		}
-		for _, m := range members {
+		for _, m := range plan.own {
 			add(m)
-			for _, n := range memberHops[string(m)] {
-				add(n)
+		}
+		near := map[string]bool{}
+		for _, m := range plan.own {
+			for _, n := range hops[string(m)] {
+				near[string(n)] = true
 			}
 		}
-		rows = append(rows, rowMembers{idx: i, members: members})
+		for _, n := range neighbors[string(r.SubjectID)] {
+			g, ok := mappedTo[string(n)]
+			if !ok {
+				continue
+			}
+			gMembers, err := membersOf(g)
+			if err != nil {
+				return err
+			}
+			var sides [][]byte
+			for _, gm := range gMembers {
+				if near[string(gm)] {
+					sides = append(sides, gm)
+				}
+			}
+			if len(sides) == 0 {
+				continue
+			}
+			add(n)
+			for _, side := range sides {
+				add(side)
+			}
+			plan.neighbors = append(plan.neighbors, neighborPair{neighbor: n, sides: sides})
+		}
 	}
 	if len(want) == 0 {
 		return nil
@@ -86,29 +145,33 @@ func attachExhibits(q Querier, layer graphalign.Layer, prop *graphalign.Proposal
 	for _, o := range obs {
 		bySubject[string(o.subjectID)] = append(bySubject[string(o.subjectID)], o)
 	}
+	collect := func(ids [][]byte) []exhibitObs {
+		var out []exhibitObs
+		for _, id := range ids {
+			out = append(out, bySubject[string(id)]...)
+		}
+		return out
+	}
 
-	for _, rm := range rows {
-		r := &prop.Rows[rm.idx]
-		var incoming []exhibitObs
-		incoming = append(incoming, bySubject[string(r.SubjectID)]...)
-		hopLabel := map[string]string{}
-		for _, n := range neighbors[string(r.SubjectID)] {
-			hopLabel[string(n)] = labels[string(n)]
-			incoming = append(incoming, bySubject[string(n)]...)
-		}
-		var memberObs []exhibitObs
-		for _, m := range rm.members {
-			memberObs = append(memberObs, bySubject[string(m)]...)
-			for _, n := range memberHops[string(m)] {
-				memberObs = append(memberObs, bySubject[string(n)]...)
+	for _, plan := range plans {
+		r := &prop.Rows[plan.idx]
+		exhibits := pairExhibits(bySubject[string(r.SubjectID)], "", collect(plan.own), cfg, stats)
+		for _, np := range plan.neighbors {
+			label := labels[string(np.neighbor)]
+			if label == "" {
+				label = "Neighbor"
 			}
+			exhibits = append(exhibits, pairExhibits(bySubject[string(np.neighbor)], label, collect(np.sides), cfg, stats)...)
 		}
-		r.Exhibits = pairExhibits(r.SubjectID, incoming, hopLabel, memberObs, cfg, stats)
+		r.Exhibits = exhibits
 	}
 	return nil
 }
 
-func pairExhibits(subjectID []byte, incoming []exhibitObs, hopLabel map[string]string, memberObs []exhibitObs, cfg graphalign.Config, stats graphalign.Stats) []graphalign.Exhibit {
+// pairExhibits pairs each incoming record with an agreeing (else clashing)
+// record on the same Property. hopLabel is empty for the Subject's own
+// records and names the neighbor for a one-hop group.
+func pairExhibits(incoming []exhibitObs, hopLabel string, memberObs []exhibitObs, cfg graphalign.Config, stats graphalign.Stats) []graphalign.Exhibit {
 	var out []graphalign.Exhibit
 	used := map[string]bool{}
 	for _, in := range incoming {
@@ -149,12 +212,8 @@ func pairExhibits(subjectID []byte, incoming []exhibitObs, hopLabel map[string]s
 		}
 		used[key] = true
 		group := ""
-		if string(in.subjectID) != string(subjectID) {
-			label := hopLabel[string(in.subjectID)]
-			if label == "" {
-				label = "Neighbor"
-			}
-			group = label + " · " + strings.ReplaceAll(in.prop.Key, "_", " ")
+		if hopLabel != "" {
+			group = hopLabel + " · " + strings.ReplaceAll(in.prop.Key, "_", " ")
 		}
 		probe := match.Values{in.prop: {in.value}}
 		out = append(out, graphalign.Exhibit{
@@ -213,7 +272,20 @@ func acceptedMembers(q Querier, entityID []byte) ([][]byte, error) {
 	return out, rows.Err()
 }
 
-func bridgeNeighbors(q Querier) (map[string][][]byte, error) {
+// bridgeNeighbors maps each of subjectIDs to the Subjects one bridge away.
+func bridgeNeighbors(q Querier, subjectIDs [][]byte) (map[string][][]byte, error) {
+	out := map[string][][]byte{}
+	keys := connectrules.BridgeTypeKeys()
+	if len(subjectIDs) == 0 || len(keys) == 0 {
+		return out, nil
+	}
+	args := make([]any, 0, len(keys)+len(subjectIDs))
+	for _, k := range keys {
+		args = append(args, k)
+	}
+	for _, id := range subjectIDs {
+		args = append(args, id)
+	}
 	rows, err := q.Query(`SELECT e1.value_subject_id, e2.value_subject_id
 		FROM observations e1
 		JOIN observations e2 ON e2.subject_id = e1.subject_id AND e2.id != e1.id
@@ -221,13 +293,13 @@ func bridgeNeighbors(q Querier) (map[string][][]byte, error) {
 		JOIN subjects bs ON bs.id = e1.subject_id
 		JOIN subject_types st ON st.id = bs.subject_type_id
 			AND st.origin = 'provenencia'
-			AND st.key IN ('participation', 'relationship', 'location', 'place_relationship')
-		WHERE e1.polarity = 'positive' AND e1.value_subject_id IS NOT NULL`)
+			AND st.key IN (`+database.SQLInPlaceholders(len(keys))+`)
+		WHERE e1.polarity = 'positive'
+			AND e1.value_subject_id IN (`+database.SQLInPlaceholders(len(subjectIDs))+`)`, args...)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	out := map[string][][]byte{}
 	seen := map[string]bool{}
 	for rows.Next() {
 		var a, b []byte

@@ -107,8 +107,16 @@ func SaveBatch(c *database.Catalog, userID []byte, in Batch) (BatchResult, error
 		subjects [][]byte
 		written  []Written
 	)
+	targets := pinTargets{}
 	for _, row := range in.Rows {
-		w, rowChanges, entityID, err := applyRow(tx, in.SourceID, row)
+		if row.Target == TargetHandle {
+			targets[string(row.SubjectID)] = row.EntityID
+		} else {
+			targets[string(row.SubjectID)] = nil
+		}
+	}
+	for _, row := range in.Rows {
+		w, rowChanges, entityID, err := applyRow(tx, in.SourceID, row, targets)
 		if err != nil {
 			return BatchResult{}, err
 		}
@@ -163,7 +171,7 @@ func latestRevision(tx *sql.Tx) (int64, error) {
 }
 
 // applyRow files one claim. A nil Written is an anchor or a skip.
-func applyRow(tx *sql.Tx, sourceID []byte, row BatchRow) (*Written, []audit.Change, []byte, error) {
+func applyRow(tx *sql.Tx, sourceID []byte, row BatchRow, targets pinTargets) (*Written, []audit.Change, []byte, error) {
 	switch row.Target {
 	case TargetSkip:
 		if len(row.EntityID) != 0 || len(row.Pairs) != 0 || len(row.ConfidenceGradeID) != 0 || row.Argument != "" {
@@ -246,7 +254,7 @@ func applyRow(tx *sql.Tx, sourceID []byte, row BatchRow) (*Written, []audit.Chan
 		return nil, nil, nil, err
 	}
 	changes = append(changes, claimChange)
-	pins, pinChanges, err := pinPairs(tx, claim, row.Pairs)
+	pins, pinChanges, err := pinPairs(tx, claim, row.Pairs, targets)
 	if err != nil {
 		return nil, nil, nil, err
 	}
