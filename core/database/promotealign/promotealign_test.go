@@ -177,7 +177,7 @@ func (f *fixture) propose(sourceID []byte, fixed []graphalign.Fixed) graphalign.
 	f.t.Helper()
 	db, err := f.c.DB()
 	must(f.t, err)
-	p, err := promotealign.Propose(db, sourceID, fixed)
+	p, _, err := promotealign.Propose(db, sourceID, fixed)
 	must(f.t, err)
 	return p
 }
@@ -249,7 +249,7 @@ func TestProposeInvalidSource(t *testing.T) {
 	f := newFixture(t)
 	db, err := f.c.DB()
 	must(t, err)
-	_, err = promotealign.Propose(db, make([]byte, 16), nil)
+	_, _, err = promotealign.Propose(db, make([]byte, 16), nil)
 	if err != promote.ErrInvalid {
 		t.Fatalf("err %v, want promote.ErrInvalid", err)
 	}
@@ -261,7 +261,7 @@ func TestStatsCacheInvalidatesOnWrite(t *testing.T) {
 	must(t, err)
 
 	// Prime cache.
-	_, err = promotealign.Propose(db, f.source.ID, nil)
+	_, _, err = promotealign.Propose(db, f.source.ID, nil)
 	must(t, err)
 
 	// A write bumps audit revision; next Propose must recompute (no panic / stale).

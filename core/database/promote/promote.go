@@ -24,6 +24,8 @@ import (
 var (
 	ErrInvalid         = apperr.New(apperr.CodePromoteInvalid, apperr.KindUser)
 	ErrUnsupportedType = apperr.New(apperr.CodePromoteUnsupportedType, apperr.KindUser)
+	// ErrStale is a lost race: the catalog changed since the proposal was read.
+	ErrStale = apperr.New(apperr.CodePromoteStale, apperr.KindConflict)
 )
 
 // primaryKinds are the Subject types Promote starts from. Bridge kinds
@@ -162,15 +164,46 @@ func Save(c *database.Catalog, userID []byte, in Input) (Result, error) {
 	return Result{Entity: entity, Claim: claim, Pins: pins}, nil
 }
 
-// sqlPairClaim checks one pair and returns the member's claim: the incoming
-// Observation is the Subject's, the member Observation is on the same
-// Property, and its Subject is an accepted member of the claim's handle.
+// sqlPairClaim checks one pair and returns the claim that owns the member
+// Observation. The incoming Observation is on the Subject or one hop through
+// a bridge; the member Observation is on an accepted member of the target or
+// one hop from such a member; both share a Property. Same-Subject pairs still
+// match. The returned claim is the accepted claim of the member Observation's
+// Subject (the target's member, or the neighbor's own claim).
 const sqlPairClaim = `SELECT ic.id
 	FROM observations a
-	JOIN observations b ON b.property_id = a.property_id
-	JOIN identity_claims ic ON ic.subject_id = b.subject_id
-		AND ic.entity_id = ? AND ic.status = 'accepted'
-	WHERE a.id = ? AND a.subject_id = ? AND b.id = ?`
+	JOIN observations b ON b.id = ? AND b.property_id = a.property_id
+	JOIN identity_claims ic ON ic.subject_id = b.subject_id AND ic.status = 'accepted'
+	WHERE a.id = ?
+	  AND (
+	    a.subject_id = ?
+	    OR EXISTS (
+	      SELECT 1 FROM observations e1
+	      JOIN observations e2 ON e2.subject_id = e1.subject_id
+	        AND e2.value_subject_id = a.subject_id AND e2.id != e1.id
+	        AND e2.polarity = 'positive'
+	      JOIN subjects bs ON bs.id = e1.subject_id
+	      JOIN subject_types st ON st.id = bs.subject_type_id
+	        AND st.origin = 'provenencia'
+	        AND st.key IN ('participation', 'relationship', 'location', 'place_relationship')
+	      WHERE e1.value_subject_id = ? AND e1.polarity = 'positive'
+	    )
+	  )
+	  AND (
+	    ic.entity_id = ?
+	    OR EXISTS (
+	      SELECT 1 FROM identity_claims m
+	      JOIN observations e1 ON e1.value_subject_id = m.subject_id AND e1.polarity = 'positive'
+	      JOIN observations e2 ON e2.subject_id = e1.subject_id
+	        AND e2.value_subject_id = b.subject_id AND e2.id != e1.id
+	        AND e2.polarity = 'positive'
+	      JOIN subjects bs ON bs.id = e1.subject_id
+	      JOIN subject_types st ON st.id = bs.subject_type_id
+	        AND st.origin = 'provenencia'
+	        AND st.key IN ('participation', 'relationship', 'location', 'place_relationship')
+	      WHERE m.entity_id = ? AND m.status = 'accepted'
+	    )
+	  )`
 
 // pinPairs pins both Observations of every pair on the new claim and on the
 // member's claim (backfill). Pins a claim already carries are skipped; it
@@ -185,8 +218,8 @@ func pinPairs(tx *sql.Tx, claim identityclaims.Claim, pairs []Pair) (int, []audi
 			return 0, nil, ErrInvalid
 		}
 		var memberClaimID []byte
-		err := tx.QueryRow(sqlPairClaim, claim.EntityID, p.IncomingObservationID, claim.SubjectID,
-			p.MemberObservationID).Scan(&memberClaimID)
+		err := tx.QueryRow(sqlPairClaim, p.MemberObservationID, p.IncomingObservationID,
+			claim.SubjectID, claim.SubjectID, claim.EntityID, claim.EntityID).Scan(&memberClaimID)
 		if errors.Is(err, sql.ErrNoRows) {
 			return 0, nil, ErrInvalid
 		}

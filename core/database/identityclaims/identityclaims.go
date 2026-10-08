@@ -125,7 +125,7 @@ func recomputeTx(tx *sql.Tx, cl Claim, assocs [][]byte) error {
 // AppendFiling files bridges the new member completes and returns the
 // association handles plus the revision's changes.
 func AppendFiling(tx *sql.Tx, subjectID []byte, changes []audit.Change) ([][]byte, []audit.Change, error) {
-	assocs, filed, err := FileBridgesTx(tx, subjectID)
+	assocs, filed, err := FileBridgesTx(tx, subjectID, nil)
 	if err != nil {
 		return nil, nil, err
 	}
