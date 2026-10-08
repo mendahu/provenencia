@@ -147,7 +147,11 @@ func ForSource(q Querier, sourceID []byte) ([]Title, error) {
 			parts.RecordedName = n.text
 		}
 		if n, ok := first[key(e.id, "event_type")]; ok {
-			parts.TypeKey, parts.TypeLabel = n.termKey, n.termText
+			parts.TypeKey = n.termKey
+			parts.TypeLabel = n.termText
+			if parts.TypeLabel == "" {
+				parts.TypeLabel = n.text
+			}
 		}
 		out = append(out, Title{SubjectID: e.id, Plan: eventtitle.Choose(parts)})
 	}

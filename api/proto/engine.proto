@@ -1278,7 +1278,7 @@ message PromoteGraphAlignmentFixed {
 message PromoteGraphAlignmentComparison {
   string property_key = 1;
   string property_origin = 2;
-  string outcome = 3; // agree, conflict, unknown
+  string outcome = 3; // agree, partial, conflict, unknown
   string value_type = 4;
   bool pinned = 5;
   double weight = 6;
@@ -1302,6 +1302,15 @@ message PromoteGraphAlignmentAlternative {
     EventHeader event = 5;
     PlaceHeader place = 6;
   }
+  // This record's own band and why, so the page can show it when the
+  // researcher selects this record. strong, medium, weak, none.
+  string assessment = 7;
+  // via, agrees, or weak. The page words it. With agrees, the Property.
+  string reason = 8;
+  string reason_property_key = 9;
+  string reason_property_origin = 10;
+  // Set when reason is via: the layer neighbor that reached this record.
+  string via_neighbor_subject_id = 11;
 }
 
 message PromoteGraphAlignmentRow {

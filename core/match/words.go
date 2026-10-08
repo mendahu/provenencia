@@ -47,6 +47,27 @@ func splitWords(s string) []string {
 	return strings.Split(n, " ")
 }
 
+// TextResemblance is how close two free-text strings are for scoring when
+// they are not the same value. 1 is the same normalized form. A single-word
+// spelling variant is the edit-distance ratio: Rank's Partial cap on every
+// non-identical string would leave a one-letter typo under the weak bar.
+// Longer text that shares words is that cap times the word overlap. 0 means
+// no resemblance.
+func TextResemblance(a, b string) float64 {
+	wa, wb := splitWords(a), splitWords(b)
+	if len(wa) == 0 || len(wb) == 0 {
+		return 0
+	}
+	if strings.Join(wa, " ") == strings.Join(wb, " ") {
+		return 1
+	}
+	rules := DefaultText.Words.resolve(false)
+	if len(wa) == 1 && len(wb) == 1 {
+		return wordSimilarity(wa[0], wb[0], rules)
+	}
+	return setting(DefaultText.Partial, 0) * wordDice(wa, wb, rules)
+}
+
 // compareForms is 1 for the same normalized form, else partial × the share
 // of words the two forms have in common (wordDice). Empty forms are not
 // comparable.

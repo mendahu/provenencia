@@ -158,9 +158,14 @@ func proposalProto(q conclusionheaders.Querier, prop graphalign.Proposal) (*engi
 		}
 		for _, a := range r.Alternatives {
 			alt := &engine.PromoteGraphAlignmentAlternative{
-				HandleId:  uuidString(a.HandleID),
-				HandleRef: a.Ref,
-				Score:     a.Score,
+				HandleId:             uuidString(a.HandleID),
+				HandleRef:            a.Ref,
+				Score:                a.Score,
+				Assessment:           string(a.Assessment),
+				Reason:               string(a.Reason),
+				ReasonPropertyKey:    a.ReasonProperty.Key,
+				ReasonPropertyOrigin: a.ReasonProperty.Origin,
+				ViaNeighborSubjectId: uuidString(a.ViaNeighbor),
 			}
 			switch r.Kind {
 			case "person":

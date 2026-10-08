@@ -110,7 +110,7 @@ type Comparison struct {
 	Property  match.Property
 	Outcome   match.Outcome
 	ValueType string
-	Pinned    bool // drafted true when OutcomeAgree
+	Pinned    bool // drafted true when OutcomeAgree; a partial resemblance stays unpinned
 	// Weight is the log-odds this outcome added (negative for a conflict).
 	Weight float64
 }
@@ -154,11 +154,17 @@ const (
 	ReasonEmpty   Reason = "empty"    // nothing to match on: Skip
 )
 
-// Alternative is a runner-up handle suggestion.
+// Alternative is a handle the researcher can choose. Assessment and Reason
+// describe this record on its own, so the page can show them for the
+// selected record and show nothing for Skip, New, or an empty menu.
 type Alternative struct {
-	HandleID []byte
-	Ref      string
-	Score    float64
+	HandleID       []byte
+	Ref            string
+	Score          float64
+	Assessment     Assessment
+	Reason         Reason // via, agrees, or weak
+	ReasonProperty match.Property
+	ViaNeighbor    []byte
 }
 
 // RowFlags call out conflicts and duplicates for the page.

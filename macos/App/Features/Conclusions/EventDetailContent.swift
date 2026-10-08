@@ -16,7 +16,7 @@ struct EventDetailContent: ConclusionDetailBody {
 
     init(detail: CatalogConclusionDetail, locale: Locale = .autoupdatingCurrent) {
         let header = detail.eventHeader
-        title = header.map { EventTitleDisplay.titleSource($0.title, locale: locale) }
+        title = header.map { EventTitleDisplay.titleSource($0, locale: locale) }
             ?? EventTitleDisplay.untitled(detail.entity)
         ref = detail.entity.ref
         members = L10n.Conclusions.memberCount(detail.memberCount)

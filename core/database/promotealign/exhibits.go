@@ -9,6 +9,7 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/namevalues"
+	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/graphalign"
 	"github.com/mendahu/provenencia/core/match"
 )
@@ -162,7 +163,8 @@ func pairExhibits(incoming []exhibitObs, neighbor []byte, memberObs []exhibitObs
 		if in.valueType == "" || in.valueType == "subject" {
 			continue
 		}
-		var agree, clash *exhibitObs
+		var agree, resemble, clash *exhibitObs
+		var resembleSim float64
 		for i := range memberObs {
 			mem := &memberObs[i]
 			if mem.prop != in.prop || mem.valueType != in.valueType {
@@ -172,6 +174,19 @@ func pairExhibits(incoming []exhibitObs, neighbor []byte, memberObs []exhibitObs
 				agree = mem
 				break
 			}
+			if in.valueType == properties.ValueTypeText {
+				if sim := match.TextResemblance(in.value.Text, mem.value.Text); sim > 0 {
+					if sim >= 1 {
+						agree = mem
+						break
+					}
+					if sim > resembleSim {
+						resemble = mem
+						resembleSim = sim
+					}
+					continue
+				}
+			}
 			if clash == nil && carries(in.valueType, in.value) && carries(mem.valueType, mem.value) {
 				clash = mem
 			}
@@ -179,11 +194,16 @@ func pairExhibits(incoming []exhibitObs, neighbor []byte, memberObs []exhibitObs
 		var mem *exhibitObs
 		outcome := match.OutcomeUnknown
 		pinned := false
+		similarity := 0.0
 		switch {
 		case agree != nil:
 			mem = agree
 			outcome = match.OutcomeAgree
 			pinned = true
+		case resemble != nil:
+			mem = resemble
+			outcome = match.OutcomePartial
+			similarity = resembleSim
 		case clash != nil:
 			mem = clash
 			outcome = match.OutcomeConflict
@@ -201,7 +221,7 @@ func pairExhibits(incoming []exhibitObs, neighbor []byte, memberObs []exhibitObs
 			Outcome:               outcome,
 			ValueType:             in.valueType,
 			Pinned:                pinned,
-			Weight:                graphalign.PropertyWeight(outcome, in.valueType, in.prop, probe, cfg, stats),
+			Weight:                graphalign.PropertyWeight(outcome, in.valueType, in.prop, similarity, probe, cfg, stats),
 			GroupSubjectID:        append([]byte(nil), neighbor...),
 			IncomingObservationID: append([]byte(nil), in.id...),
 			IncomingDisplay:       in.display,

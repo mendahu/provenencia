@@ -245,6 +245,13 @@ struct CatalogPromoteGraphAlignmentAlternative: Sendable, Equatable {
     var person: CatalogPersonHeader?
     var event: CatalogEventHeader?
     var place: CatalogPlaceHeader?
+    /// strong, medium, weak, none — this record's own band.
+    var assessment: String = ""
+    /// via, agrees, or weak. The page words it.
+    var reason: String = ""
+    var reasonPropertyKey: String = ""
+    var reasonPropertyOrigin: String = ""
+    var viaNeighborSubjectID: String = ""
 }
 
 /// One Subject's proposal from `proposePromoteGraphAlignment` (S9-42).

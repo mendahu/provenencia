@@ -19,6 +19,7 @@ func Align(layer Layer, canon Canon, stats Stats, fixed []Fixed, cfg *Config) Pr
 	st.seed()
 	st.walk()
 	st.fallbackUnreachable()
+	st.refineOneHop()
 	st.scoreFixed()
 	return st.proposal()
 }
@@ -217,6 +218,12 @@ func (st *state) recordBest(sk string, sc scoredCand) {
 	for i := range list {
 		if bytes.Equal(list[i].handleID, sc.handleID) {
 			if sc.score > list[i].score {
+				// A walk remembers which neighbor proposed this handle.
+				// Rescoring raises the number and keeps that path.
+				if len(sc.viaNeighbor) == 0 && len(list[i].viaNeighbor) > 0 {
+					sc.viaNeighbor = append([]byte(nil), list[i].viaNeighbor...)
+					sc.viaSig = list[i].viaSig
+				}
 				list[i] = sc
 			}
 			replaced = true
@@ -289,32 +296,40 @@ func (st *state) edgeSupport(subjectID, handleID []byte) float64 {
 func (st *state) walk() {
 	for st.queue.Len() > 0 {
 		item := heap.Pop(&st.queue).(queueItem)
-		sk, hk := string(item.subjectID), string(item.handleID)
-		seenKey := sk + "|" + hk
+		seenKey := string(item.subjectID) + "|" + string(item.handleID)
 		if st.seen[seenKey] {
 			continue
 		}
 		st.seen[seenKey] = true
-		if _, taken := st.assigned[sk]; taken {
-			continue
+		if st.accept(item.subjectID, item.handleID, item.score) {
+			st.pushFromAnchor(item.subjectID, item.handleID)
 		}
-		if item.score < st.cfg.AcceptScore {
-			continue
-		}
-		if st.lostContest(sk, hk) {
-			continue // one-to-one
-		}
-		st.assigned[sk] = append([]byte(nil), item.handleID...)
-		st.handleOwner[hk] = sk
-		st.pushFromAnchor(item.subjectID, item.handleID)
 	}
 }
 
+// accept stores the pair when the subject is free, the score clears the bar,
+// and one-to-one still holds. Callers propagate; this only records the mapping.
+func (st *state) accept(subjectID, handleID []byte, score float64) bool {
+	sk, hk := string(subjectID), string(handleID)
+	if _, taken := st.assigned[sk]; taken {
+		return false
+	}
+	if score < st.cfg.AcceptScore {
+		return false
+	}
+	if st.lostContest(sk, hk) {
+		return false
+	}
+	st.assigned[sk] = append([]byte(nil), handleID...)
+	st.handleOwner[hk] = sk
+	return true
+}
+
 // fallbackUnreachable handles Subjects no anchor reached. Property-only Rank
-// picks each one's candidates; each is then scored by the same pairwise path
-// the walk uses, so assignment and assessment share one scale. Assignment is
-// best-first across every unreachable Subject, so a contest over one handle
-// goes to the stronger match, not to whichever Subject came first.
+// picks each one's candidates; each is scored by the same pairwise path the
+// walk uses. Assignment is best-first, so a contest over one handle goes to
+// the stronger match. refineOneHop then rescores this set from the mapping;
+// the band published for these rows is that later score.
 func (st *state) fallbackUnreachable() {
 	var queue candHeap
 	for _, s := range st.sortedSubjects() {
@@ -343,19 +358,96 @@ func (st *state) fallbackUnreachable() {
 	}
 	for queue.Len() > 0 {
 		item := heap.Pop(&queue).(queueItem)
-		sk, hk := string(item.subjectID), string(item.handleID)
-		if _, taken := st.assigned[sk]; taken {
-			continue
-		}
-		if item.score < st.cfg.AcceptScore {
-			continue
-		}
-		if st.lostContest(sk, hk) {
-			continue
-		}
-		st.assigned[sk] = append([]byte(nil), item.handleID...)
-		st.handleOwner[hk] = sk
+		st.accept(item.subjectID, item.handleID, item.score)
 	}
+}
+
+// refineOneHop rescores every candidate from the mapping the property pass
+// just published, then reassigns unfixed rows. A neighbor's handle counts;
+// that neighbor's own edge bonus does not, so support stays one hop.
+// Repeat until the mapping settles, and at most once per subject.
+func (st *state) refineOneHop() {
+	rounds := len(st.subjects)
+	for range rounds {
+		items := st.rescoreBest()
+		if !st.reassignUnfixed(items) {
+			return
+		}
+	}
+}
+
+// rescoreBest scores the candidates Rank and the walk already recorded,
+// against the mapping as it stands. It does not add handles.
+func (st *state) rescoreBest() []queueItem {
+	var items []queueItem
+	for _, s := range st.sortedSubjects() {
+		sk := string(s.ID)
+		if st.fixedSet[sk] {
+			continue
+		}
+		if _, held := st.held[sk]; held {
+			continue
+		}
+		prev := append([]scoredCand(nil), st.best[sk]...)
+		for _, cand := range prev {
+			h := st.handles[string(cand.handleID)]
+			if h == nil {
+				continue
+			}
+			st.recordBest(sk, st.scoreCandidate(s.ID, h))
+		}
+		for _, cand := range st.best[sk] {
+			items = append(items, queueItem{
+				subjectID: append([]byte(nil), s.ID...),
+				handleID:  append([]byte(nil), cand.handleID...),
+				ref:       cand.ref,
+				score:     cand.score,
+			})
+		}
+	}
+	return items
+}
+
+// reassignUnfixed drops every unfixed pair and accepts the rescored
+// candidates. changed is false when that mapping is the one just scored.
+func (st *state) reassignUnfixed(items []queueItem) bool {
+	before := map[string]string{}
+	for sk, hid := range st.assigned {
+		if st.fixedSet[sk] {
+			continue
+		}
+		before[sk] = string(hid)
+		if st.handleOwner[string(hid)] == sk {
+			delete(st.handleOwner, string(hid))
+		}
+		delete(st.assigned, sk)
+	}
+	st.lostTo = map[string]string{}
+
+	var queue candHeap
+	for _, item := range items {
+		heap.Push(&queue, item)
+	}
+	for queue.Len() > 0 {
+		item := heap.Pop(&queue).(queueItem)
+		st.accept(item.subjectID, item.handleID, item.score)
+	}
+
+	after := map[string]string{}
+	for sk, hid := range st.assigned {
+		if !st.fixedSet[sk] {
+			after[sk] = string(hid)
+		}
+	}
+	if len(before) != len(after) {
+		return true
+	}
+	for sk, hid := range before {
+		if after[sk] != hid {
+			return true
+		}
+	}
+	return false
 }
 
 // lostContest reports whether another Subject already holds the handle, and
@@ -552,12 +644,13 @@ func (st *state) flagAlikeNewRows(rows []Row) {
 	}
 }
 
-// strongestAgreement is the agreeing Property that added the most weight.
+// strongestAgreement is the agreeing or resembling Property that added the
+// most weight.
 func strongestAgreement(cs []Comparison) match.Property {
 	var top match.Property
 	best := 0.0
 	for _, c := range cs {
-		if c.Outcome == match.OutcomeAgree && c.Weight > best {
+		if (c.Outcome == match.OutcomeAgree || c.Outcome == match.OutcomePartial) && c.Weight > best {
 			top, best = c.Property, c.Weight
 		}
 	}
@@ -572,7 +665,7 @@ func comparisonsFrom(ev match.Evaluation, probe match.Values, cfg Config, stats 
 			Outcome:   pc.Outcome,
 			ValueType: pc.ValueType,
 			Pinned:    pc.Outcome == match.OutcomeAgree,
-			Weight:    PropertyWeight(pc.Outcome, pc.ValueType, pc.Property, probe, cfg, stats),
+			Weight:    PropertyWeight(pc.Outcome, pc.ValueType, pc.Property, pc.Similarity, probe, cfg, stats),
 		})
 	}
 	return out
@@ -603,21 +696,49 @@ func (st *state) alts(sk string, except []byte) []Alternative {
 	if limit <= 0 {
 		limit = 3
 	}
+	var probe match.Values
+	if s := st.subjects[sk]; s != nil {
+		probe = s.Values
+	}
 	var out []Alternative
 	for _, sc := range st.best[sk] {
 		if except != nil && bytes.Equal(sc.handleID, except) {
 			continue
 		}
-		out = append(out, Alternative{
-			HandleID: append([]byte(nil), sc.handleID...),
-			Ref:      sc.ref,
-			Score:    sc.score,
-		})
+		out = append(out, st.alternative(sc, probe))
 		if len(out) >= limit {
 			break
 		}
 	}
 	return out
+}
+
+// alternative is one selectable record: its band, and the sentence that
+// explains that band. A via walk wins; otherwise the strongest agreeing
+// property; otherwise there was too little to name.
+func (st *state) alternative(sc scoredCand, probe match.Values) Alternative {
+	alt := Alternative{
+		HandleID:   append([]byte(nil), sc.handleID...),
+		Ref:        sc.ref,
+		Score:      sc.score,
+		Assessment: st.band(sc.score),
+		Reason:     ReasonWeak,
+	}
+	if len(sc.viaNeighbor) > 0 {
+		alt.Reason = ReasonVia
+		alt.ViaNeighbor = append([]byte(nil), sc.viaNeighbor...)
+		return alt
+	}
+	// Below the weak bar there is not enough to name an agreement.
+	if alt.Assessment == AssessNone {
+		return alt
+	}
+	prop := strongestAgreement(comparisonsFrom(sc.eval, probe, st.cfg, st.stats))
+	if prop.Key != "" {
+		alt.Reason = ReasonAgrees
+		alt.ReasonProperty = prop
+	}
+	return alt
 }
 
 func subjectHasValues(s *Subject) bool {

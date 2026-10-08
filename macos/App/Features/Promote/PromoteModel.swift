@@ -10,6 +10,8 @@ struct PromoteEntry: Equatable, Sendable {
     let subjectRef: String
     let subjectName: String
     let sourceTitle: String?
+    /// Opened from Promote all: every subject starts expanded.
+    let mapAll: Bool
 
     init?(location: WorkspaceLocation) {
         guard location.section == .sources,
@@ -25,9 +27,12 @@ struct PromoteEntry: Equatable, Sendable {
         subjectRef = ref
         subjectName = Self.trimmed(location.title) ?? ref
         sourceTitle = Self.trimmed(location.sourceTitle)
+        mapAll = location.promoteAll
     }
 
-    var identityKey: String { "promote|\(sourceID)|\(subjectID)" }
+    var identityKey: String {
+        mapAll ? "promote|\(sourceID)|all" : "promote|\(sourceID)|\(subjectID)"
+    }
 
     var graphLocation: WorkspaceLocation {
         WorkspaceLocation(section: .sources, sourceId: sourceID, sourceSurface: .graph, title: sourceTitle)
@@ -46,7 +51,8 @@ extension WorkspaceLocation {
         kind: EvidencePrimaryKind,
         ref: String?,
         title: String?,
-        sourceTitle: String?
+        sourceTitle: String?,
+        mapAll: Bool = false
     ) -> WorkspaceLocation {
         WorkspaceLocation(
             section: .sources,
@@ -54,6 +60,7 @@ extension WorkspaceLocation {
             subjectId: subjectId,
             subjectTypeKey: kind.rawValue,
             sourceSurface: .promote,
+            promoteAll: mapAll,
             ref: ref,
             title: title,
             sourceTitle: sourceTitle
@@ -101,7 +108,7 @@ final class PromoteModel {
     var hasUnsavedWork: Bool { flow.manual }
     var pendingLeave: PendingLeave? { flow.pendingLeave.map(PendingLeave.init(navigation:)) }
     var isSaving: Bool { flow.saving }
-    var canFinish: Bool { !flow.saving && !isProposing && loadError == nil }
+    var canFinish: Bool { !flow.saving && !isProposing && loadError == nil && flow.targetsChosen }
 
     init(
         entry: PromoteEntry,
@@ -115,7 +122,9 @@ final class PromoteModel {
         self.store = store
         self.userID = userID
         self.catalogCounts = catalogCounts
-        flow = PromoteFlow(entryID: entry.subjectID)
+        var flow = PromoteFlow(entryID: entry.subjectID)
+        flow.mappedRest = entry.mapAll
+        self.flow = flow
     }
 
     func load() async {
@@ -185,7 +194,11 @@ final class PromoteModel {
     func keepPromoting() { flow.cancelLeave() }
 
     func reasonText(for row: PromoteFlow.Row) -> String {
-        switch row.reason {
+        reasonText(row.reason, on: row)
+    }
+
+    func reasonText(_ reason: PromoteFlow.Reason, on row: PromoteFlow.Row) -> String {
+        switch reason {
         case .via(let neighborID):
             guard let neighbor = flow.rows.first(where: { $0.subjectID == neighborID }) else {
                 return L10n.string(L10n.Promote.reasonVia)
@@ -229,6 +242,8 @@ final class PromoteModel {
                 return CatalogPromoteGraphAlignmentFixed(subjectID: row.subjectID, target: "new")
             case .skip:
                 return CatalogPromoteGraphAlignmentFixed(subjectID: row.subjectID, target: "skip")
+            case .unset:
+                return nil
             }
         }
         do {
@@ -323,7 +338,8 @@ final class PromoteModel {
                 endBName: bridge.endpointBID.flatMap { nameByID[$0] } ?? "",
                 mark: bridge.kind.markKey,
                 endA: bridge.endpointAID,
-                endB: bridge.endpointBID
+                endB: bridge.endpointBID,
+                alreadyFiled: bridge.membership != nil
             )
         }
         return (subjects, bridges)

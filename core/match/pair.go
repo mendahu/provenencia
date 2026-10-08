@@ -6,16 +6,18 @@ import (
 )
 
 // Pairwise evaluation (S9-41) judges two value sets with the same sameness
-// notion as reconciliation (`autoreconcile.Compatible`). Graph alignment
-// calls Evaluate for structure-backed candidates. Rank remains the
-// property-only bulk path (fuzzy Feature scores); unifying Rank onto
-// Compatible is a later step so Promote never grows a second sameness story.
+// notion as reconciliation (`autoreconcile.Compatible`). Free text that is
+// not the same value can still be a partial resemblance (TextResemblance):
+// a spelling variant or shared words. That outcome is for scoring only.
+// Reconciliation stays exact, so two spellings remain two values on a handle.
+// Rank remains the property-only bulk path (fuzzy Feature scores).
 
 // Outcome is how one Property compares on two sides.
 type Outcome string
 
 const (
 	OutcomeAgree    Outcome = "agree"
+	OutcomePartial  Outcome = "partial" // text resembles, but is not the same value
 	OutcomeConflict Outcome = "conflict"
 	OutcomeUnknown  Outcome = "unknown"
 )
@@ -33,6 +35,9 @@ type PropertyComparison struct {
 	Outcome     Outcome
 	ValueType   string
 	Cardinality string
+	// Similarity is set for OutcomePartial: how close the text is, in 0…1.
+	// An exact agreement leaves it 0; that weight is the full agreement.
+	Similarity float64
 }
 
 // Evaluation is the pairwise result for every Property listed in metas.
@@ -43,10 +48,11 @@ type Evaluation struct {
 // Evaluate compares probe and candidate property values using Compatible.
 // metas supplies value type and cardinality for each Property.
 //
-// Agree: at least one Compatible pair. Conflict (single cardinality): both
-// sides carry values and none are Compatible. Multiple cardinality never
-// conflicts on a difference — non-agreeing populated sides are unknown.
-// Unknown: one side has no carrying values for the Property.
+// Agree: at least one Compatible pair. Partial: free text that is not the
+// same value but resembles (a spelling variant, or shared words). Conflict
+// (single cardinality): both sides carry values and none agree or resemble.
+// Multiple cardinality never conflicts on a difference — non-agreeing
+// populated sides are unknown. Unknown: one side has no carrying values.
 func Evaluate(probe, candidate Values, metas []PropertyMeta) Evaluation {
 	var out Evaluation
 	for _, m := range metas {
@@ -57,29 +63,60 @@ func Evaluate(probe, candidate Values, metas []PropertyMeta) Evaluation {
 		if card == "" {
 			card = properties.CardinalitySingle
 		}
-		out.Comparisons = append(out.Comparisons, PropertyComparison{
+		outcome, sim := compareProperty(m.ValueType, card, probe[m.Property], candidate[m.Property])
+		pc := PropertyComparison{
 			Property:    m.Property,
 			ValueType:   m.ValueType,
 			Cardinality: card,
-			Outcome:     compareProperty(m.ValueType, card, probe[m.Property], candidate[m.Property]),
-		})
+			Outcome:     outcome,
+		}
+		if outcome == OutcomePartial {
+			pc.Similarity = sim
+		}
+		out.Comparisons = append(out.Comparisons, pc)
 	}
 	return out
 }
 
-func compareProperty(valueType, cardinality string, a, b []Value) Outcome {
+func compareProperty(valueType, cardinality string, a, b []Value) (Outcome, float64) {
 	aOK := hasCarrying(valueType, a)
 	bOK := hasCarrying(valueType, b)
 	if !aOK || !bOK {
-		return OutcomeUnknown
+		return OutcomeUnknown, 0
 	}
 	if anyCompatible(valueType, a, b) {
-		return OutcomeAgree
+		return OutcomeAgree, 0
+	}
+	if valueType == properties.ValueTypeText {
+		if sim := bestTextResemblance(a, b); sim >= 1 {
+			return OutcomeAgree, 0
+		} else if sim > 0 {
+			return OutcomePartial, sim
+		}
 	}
 	if cardinality == properties.CardinalityMultiple {
-		return OutcomeUnknown
+		return OutcomeUnknown, 0
 	}
-	return OutcomeConflict
+	return OutcomeConflict, 0
+}
+
+// bestTextResemblance is the closest carrying text pair. 0 when none resemble.
+func bestTextResemblance(a, b []Value) float64 {
+	var best float64
+	for _, x := range a {
+		if !x.HasText {
+			continue
+		}
+		for _, y := range b {
+			if !y.HasText {
+				continue
+			}
+			if sim := TextResemblance(x.Text, y.Text); sim > best {
+				best = sim
+			}
+		}
+	}
+	return best
 }
 
 func hasCarrying(valueType string, vs []Value) bool {

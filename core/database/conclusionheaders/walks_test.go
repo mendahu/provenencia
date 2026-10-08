@@ -267,6 +267,9 @@ func TestCanonicalWalks(t *testing.T) {
 				}
 			})
 		}
+		if p := events[string(birthID)].Title.Parts; p.TypeKey != "birth" || p.TypeLabel != "Birth" {
+			t.Fatalf("birth parts %+v", p)
+		}
 		if p := events[string(fireID)].Title.Parts; p.Place != "York" || p.TypeLabel != "Fire" {
 			t.Fatalf("fire parts %+v", p)
 		}

@@ -68,3 +68,48 @@ func TestEvaluateTermByKey(t *testing.T) {
 		t.Fatalf("term conflict: %+v", ev)
 	}
 }
+
+func TestEvaluateTextResemblance(t *testing.T) {
+	top := match.Property{Key: "toponym", Origin: "provenencia"}
+	single := []match.PropertyMeta{{
+		Property: top, ValueType: properties.ValueTypeText,
+		Cardinality: properties.CardinalitySingle,
+	}}
+	multi := []match.PropertyMeta{{
+		Property: top, ValueType: properties.ValueTypeText,
+		Cardinality: properties.CardinalityMultiple,
+	}}
+	text := func(s string) match.Values {
+		return match.Values{top: {{Text: s, HasText: true}}}
+	}
+
+	ev := match.Evaluate(text("Provenance"), text("Provenanced"), single)
+	sim := match.TextResemblance("Provenance", "Provenanced")
+	if ev.Comparisons[0].Outcome != match.OutcomePartial || ev.Comparisons[0].Similarity != sim || sim < 0.9 {
+		t.Fatalf("spelling variant: %+v sim %v", ev.Comparisons[0], sim)
+	}
+	ev = match.Evaluate(text("Provenance"), text("Provenanced"), multi)
+	if ev.Comparisons[0].Outcome != match.OutcomePartial {
+		t.Fatalf("multiple spelling variant: %+v", ev.Comparisons[0])
+	}
+
+	ev = match.Evaluate(text("York."), text("York"), single)
+	if ev.Comparisons[0].Outcome != match.OutcomeAgree || ev.Comparisons[0].Similarity != 0 {
+		t.Fatalf("same normalized form: %+v", ev.Comparisons[0])
+	}
+
+	ev = match.Evaluate(text("York"), text("York, Upper Canada"), multi)
+	shared := ev.Comparisons[0].Similarity
+	if ev.Comparisons[0].Outcome != match.OutcomePartial || shared <= 0 || shared >= 0.5 {
+		t.Fatalf("shared words: %+v", ev.Comparisons[0])
+	}
+
+	ev = match.Evaluate(text("York"), text("Toronto"), single)
+	if ev.Comparisons[0].Outcome != match.OutcomeConflict {
+		t.Fatalf("different text: %+v", ev.Comparisons[0])
+	}
+	ev = match.Evaluate(text("York"), text("Toronto"), multi)
+	if ev.Comparisons[0].Outcome != match.OutcomeUnknown {
+		t.Fatalf("multiple different text: %+v", ev.Comparisons[0])
+	}
+}

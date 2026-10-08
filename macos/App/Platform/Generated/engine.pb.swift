@@ -4248,7 +4248,7 @@ public nonisolated struct Provenencia_Engine_V1_PromoteGraphAlignmentComparison:
 
   public var propertyOrigin: String = String()
 
-  /// agree, conflict, unknown
+  /// agree, partial, conflict, unknown
   public var outcome: String = String()
 
   public var valueType: String = String()
@@ -4324,6 +4324,35 @@ public nonisolated struct Provenencia_Engine_V1_PromoteGraphAlignmentAlternative
       return Provenencia_Engine_V1_PlaceHeader()
     }
     set {_uniqueStorage()._header = .place(newValue)}
+  }
+
+  /// This record's own band and why, so the page can show it when the
+  /// researcher selects this record. strong, medium, weak, none.
+  public var assessment: String {
+    get {_storage._assessment}
+    set {_uniqueStorage()._assessment = newValue}
+  }
+
+  /// via, agrees, or weak. The page words it. With agrees, the Property.
+  public var reason: String {
+    get {_storage._reason}
+    set {_uniqueStorage()._reason = newValue}
+  }
+
+  public var reasonPropertyKey: String {
+    get {_storage._reasonPropertyKey}
+    set {_uniqueStorage()._reasonPropertyKey = newValue}
+  }
+
+  public var reasonPropertyOrigin: String {
+    get {_storage._reasonPropertyOrigin}
+    set {_uniqueStorage()._reasonPropertyOrigin = newValue}
+  }
+
+  /// Set when reason is via: the layer neighbor that reached this record.
+  public var viaNeighborSubjectID: String {
+    get {_storage._viaNeighborSubjectID}
+    set {_uniqueStorage()._viaNeighborSubjectID = newValue}
   }
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
@@ -13442,13 +13471,18 @@ nonisolated extension Provenencia_Engine_V1_PromoteGraphAlignmentComparison: Swi
 
 nonisolated extension Provenencia_Engine_V1_PromoteGraphAlignmentAlternative: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".PromoteGraphAlignmentAlternative"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}handle_id\0\u{3}handle_ref\0\u{1}score\0\u{1}person\0\u{1}event\0\u{1}place\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}handle_id\0\u{3}handle_ref\0\u{1}score\0\u{1}person\0\u{1}event\0\u{1}place\0\u{1}assessment\0\u{1}reason\0\u{3}reason_property_key\0\u{3}reason_property_origin\0\u{3}via_neighbor_subject_id\0")
 
   fileprivate class _StorageClass {
     var _handleID: String = String()
     var _handleRef: String = String()
     var _score: Double = 0
     var _header: Provenencia_Engine_V1_PromoteGraphAlignmentAlternative.OneOf_Header?
+    var _assessment: String = String()
+    var _reason: String = String()
+    var _reasonPropertyKey: String = String()
+    var _reasonPropertyOrigin: String = String()
+    var _viaNeighborSubjectID: String = String()
 
       // This property is used as the initial default value for new instances of the type.
       // The type itself is protecting the reference to its storage via CoW semantics.
@@ -13463,6 +13497,11 @@ nonisolated extension Provenencia_Engine_V1_PromoteGraphAlignmentAlternative: Sw
       _handleRef = source._handleRef
       _score = source._score
       _header = source._header
+      _assessment = source._assessment
+      _reason = source._reason
+      _reasonPropertyKey = source._reasonPropertyKey
+      _reasonPropertyOrigin = source._reasonPropertyOrigin
+      _viaNeighborSubjectID = source._viaNeighborSubjectID
     }
   }
 
@@ -13523,6 +13562,11 @@ nonisolated extension Provenencia_Engine_V1_PromoteGraphAlignmentAlternative: Sw
             _storage._header = .place(v)
           }
         }()
+        case 7: try { try decoder.decodeSingularStringField(value: &_storage._assessment) }()
+        case 8: try { try decoder.decodeSingularStringField(value: &_storage._reason) }()
+        case 9: try { try decoder.decodeSingularStringField(value: &_storage._reasonPropertyKey) }()
+        case 10: try { try decoder.decodeSingularStringField(value: &_storage._reasonPropertyOrigin) }()
+        case 11: try { try decoder.decodeSingularStringField(value: &_storage._viaNeighborSubjectID) }()
         default: break
         }
       }
@@ -13559,6 +13603,21 @@ nonisolated extension Provenencia_Engine_V1_PromoteGraphAlignmentAlternative: Sw
       }()
       case nil: break
       }
+      if !_storage._assessment.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._assessment, fieldNumber: 7)
+      }
+      if !_storage._reason.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._reason, fieldNumber: 8)
+      }
+      if !_storage._reasonPropertyKey.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._reasonPropertyKey, fieldNumber: 9)
+      }
+      if !_storage._reasonPropertyOrigin.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._reasonPropertyOrigin, fieldNumber: 10)
+      }
+      if !_storage._viaNeighborSubjectID.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._viaNeighborSubjectID, fieldNumber: 11)
+      }
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -13572,6 +13631,11 @@ nonisolated extension Provenencia_Engine_V1_PromoteGraphAlignmentAlternative: Sw
         if _storage._handleRef != rhs_storage._handleRef {return false}
         if _storage._score != rhs_storage._score {return false}
         if _storage._header != rhs_storage._header {return false}
+        if _storage._assessment != rhs_storage._assessment {return false}
+        if _storage._reason != rhs_storage._reason {return false}
+        if _storage._reasonPropertyKey != rhs_storage._reasonPropertyKey {return false}
+        if _storage._reasonPropertyOrigin != rhs_storage._reasonPropertyOrigin {return false}
+        if _storage._viaNeighborSubjectID != rhs_storage._viaNeighborSubjectID {return false}
         return true
       }
       if !storagesAreEqual {return false}

@@ -10,9 +10,18 @@ struct PersonHeaderDisplayTests {
         )
     }
 
-    @Test func nameFormWins() {
+    @Test func partsWinOverTheTranscription() {
+        let h = header(name: CatalogNameValue(form: " Jeremiah Arthurt Gumtree ", parts: [
+            CatalogNameValuePart(value: "Jeremiah", type: "given"),
+            CatalogNameValuePart(value: "Arthur", type: "given"),
+            CatalogNameValuePart(value: "Gumtree", type: "surname"),
+        ]), label: "Grandpa", clusters: 1)
+        #expect(PersonHeaderDisplay.title(h) == "Jeremiah Arthur Gumtree")
+    }
+
+    @Test func formIsTheFallbackWhenThereAreNoParts() {
         let h = header(name: CatalogNameValue(form: " James Robins ", parts: [
-            CatalogNameValuePart(value: "Jim", type: "given"),
+            CatalogNameValuePart(value: " ", type: "given"),
         ]), label: "Grandpa", clusters: 1)
         #expect(PersonHeaderDisplay.title(h) == "James Robins")
     }

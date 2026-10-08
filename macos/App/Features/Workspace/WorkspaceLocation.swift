@@ -52,6 +52,9 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
     /// Page vs Evidence graph vs composer when `section == .sources` and `sourceId` is set.
     /// Legacy history without this key decodes as `.page`.
     var sourceSurface: SourceSurface
+    /// Promote opened from the graph's Promote all control, with every subject
+    /// already expanded. Card Promote leaves this false. Legacy history decodes as false.
+    var promoteAll: Bool
     /// Denormalized jump-menu cache; ignored for navigation identity.
     var ref: String?
     /// Denormalized jump-menu cache; ignored for navigation identity.
@@ -65,7 +68,7 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
         case section, sourceId, fieldId, typeId, subjectId, citationId, artifactId, observationId
         case connectFromSubjectId, connectToSubjectId, connectBridgeTypeKey
         case subjectTypeKey, propertyId, entityId
-        case sourceSurface, ref, title, sourceTitle
+        case sourceSurface, promoteAll, ref, title, sourceTitle
     }
 
     init(
@@ -84,6 +87,7 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
         propertyId: String? = nil,
         entityId: String? = nil,
         sourceSurface: SourceSurface = .page,
+        promoteAll: Bool = false,
         ref: String? = nil,
         title: String? = nil,
         sourceTitle: String? = nil
@@ -103,6 +107,7 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
         self.propertyId = Self.nilIfEmpty(propertyId)
         self.entityId = Self.nilIfEmpty(entityId)
         self.sourceSurface = sourceSurface
+        self.promoteAll = promoteAll
         self.ref = Self.nilIfEmpty(ref)
         self.title = Self.nilIfEmpty(title)
         self.sourceTitle = Self.nilIfEmpty(sourceTitle)
@@ -125,6 +130,7 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
         propertyId = Self.nilIfEmpty(try container.decodeIfPresent(String.self, forKey: .propertyId))
         entityId = Self.nilIfEmpty(try container.decodeIfPresent(String.self, forKey: .entityId))
         sourceSurface = try container.decodeIfPresent(SourceSurface.self, forKey: .sourceSurface) ?? .page
+        promoteAll = try container.decodeIfPresent(Bool.self, forKey: .promoteAll) ?? false
         ref = Self.nilIfEmpty(try container.decodeIfPresent(String.self, forKey: .ref))
         title = Self.nilIfEmpty(try container.decodeIfPresent(String.self, forKey: .title))
         sourceTitle = Self.nilIfEmpty(try container.decodeIfPresent(String.self, forKey: .sourceTitle))
@@ -167,6 +173,7 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
             && lhs.propertyId == rhs.propertyId
             && lhs.entityId == rhs.entityId
             && lhs.sourceSurface == rhs.sourceSurface
+            && lhs.promoteAll == rhs.promoteAll
     }
 
     /// Pending Connect handoff: endpoints are known, the bridge is not written yet.
