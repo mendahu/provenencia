@@ -177,11 +177,11 @@ struct PromoteView: View {
             PVSelect(
                 selection: groupBinding,
                 options: [
-                    PVSelectOption(value: "kind", label: L10n.string(L10n.Promote.groupKind)),
-                    PVSelectOption(value: "assess", label: L10n.string(L10n.Promote.groupAssessment)),
+                    PVSelectOption(value: PromoteFlow.Grouping.kind.rawValue, label: L10n.string(L10n.Promote.groupKind)),
+                    PVSelectOption(value: PromoteFlow.Grouping.assessment.rawValue, label: L10n.string(L10n.Promote.groupAssessment)),
                 ],
                 icon: .layers,
-                displayLabel: model.flow.group == "assess"
+                displayLabel: model.flow.group == .assessment
                     ? L10n.string(L10n.Promote.groupedByAssessment)
                     : L10n.string(L10n.Promote.groupedByKind),
                 fillsWidth: false,
@@ -302,14 +302,14 @@ struct PromoteView: View {
                 .font(PVFont.body(size: PVTypeScale.bodySmall))
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
-            if bridge.files || bridge.why == "off" {
+            if bridge.state == .files || bridge.state == .off {
                 PVSwitch(
-                    model.flow.bridgeOff.contains(bridge.id) ? L10n.Promote.connectionWhy("off") : L10n.Promote.connectionFiled,
+                    L10n.Promote.connectionState(bridge.state),
                     isOn: bridgeOn(bridge.id),
                     isDisabled: model.isSaving
                 )
             } else {
-                Text(L10n.Promote.connectionWhy(bridge.why))
+                Text(L10n.Promote.connectionState(bridge.state))
                     .font(PVFont.body(size: PVTypeScale.caption))
                     .italic()
                     .foregroundStyle(PVColor.textMuted)
@@ -324,8 +324,8 @@ struct PromoteView: View {
         let lines = model.flow.connectionLines()
         return L10n.Promote.connectionsMeta(
             filed: lines.filter(\.files).count,
-            off: lines.filter { $0.why == "off" }.count,
-            unfiled: lines.filter { !$0.files && $0.why != "off" }.count
+            off: lines.filter { $0.state == .off }.count,
+            unfiled: lines.filter { $0.state == .endSkipped || $0.state == .selfLink }.count
         )
     }
 
@@ -372,12 +372,10 @@ struct PromoteView: View {
     private var sections: [Section] {
         let working = model.flow.visibleRows.filter { !$0.anchor }
         let anchors = model.flow.mappedRest ? model.flow.rows.filter(\.anchor) : []
-        if model.flow.group == "assess" {
-            return [
-                section("strong", L10n.Promote.assessmentStrong, working.filter { $0.assessment == "strong" }, []),
-                section("weak", L10n.Promote.assessmentWeak, working.filter { $0.assessment == "weak" }, []),
-                section("none", L10n.Promote.assessmentNone, working.filter { $0.assessment == "none" }, []),
-            ].filter { !$0.rows.isEmpty }
+        if model.flow.group == .assessment {
+            return [PromoteFlow.Assessment.strong, .weak, .none].map { band in
+                section(band.rawValue, PromoteAssessmentCopy.title(band), working.filter { $0.assessment == band }, [])
+            }.filter { !$0.rows.isEmpty }
         }
         return [
             kindSection("person", L10n.Promote.kindPerson, .person, working, anchors),
@@ -412,7 +410,10 @@ struct PromoteView: View {
     }
 
     private var groupBinding: Binding<String> {
-        Binding(get: { model.flow.group }, set: { model.setGroup($0) })
+        Binding(
+            get: { model.flow.group.rawValue },
+            set: { model.setGroup(PromoteFlow.Grouping(rawValue: $0) ?? .kind) }
+        )
     }
 
     private var bridgesOpen: Binding<Bool> {
@@ -476,7 +477,7 @@ private struct PromoteAlignmentRow: View {
                 .frame(width: 330)
                 Button { model.openSheet(row.subjectID) } label: {
                     HStack(spacing: PVSpacing.space3) {
-                        PVBadge(assessmentTitle(row.assessment), tone: badgeTone)
+                        PVBadge(PromoteAssessmentCopy.title(row.assessment), tone: badgeTone)
                         Text(verbatim: model.reasonText(for: row))
                             .font(PVFont.body(size: PVTypeScale.caption))
                             .italic()
@@ -490,7 +491,7 @@ private struct PromoteAlignmentRow: View {
                 .buttonStyle(.plain)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 HStack(spacing: PVSpacing.space2) {
-                    if row.updatedNote != nil {
+                    if row.updated {
                         PVBadge(L10n.Promote.updated, tone: .info, icon: .refresh)
                     }
                     if row.decided {
@@ -499,8 +500,8 @@ private struct PromoteAlignmentRow: View {
                 }
                 .frame(width: 112, alignment: .trailing)
             }
-            if let note = row.updatedNote {
-                Text(verbatim: L10n.Promote.updatedDetail(note))
+            if row.updated {
+                Text(verbatim: L10n.Promote.updatedDetail(model.reasonText(for: row)))
                     .font(PVFont.body(size: PVTypeScale.caption))
                     .italic()
                     .foregroundStyle(PVColor.textSecondary)
@@ -540,19 +541,11 @@ private struct PromoteAlignmentRow: View {
         PromoteKindTile(kind: row.kind, size: 28, markSize: 16, background: PVColor.surfaceSunken)
     }
 
-    private func assessmentTitle(_ assessment: String) -> LocalizedStringResource {
-        switch assessment {
-        case "strong": L10n.Promote.assessmentStrong
-        case "weak": L10n.Promote.assessmentWeak
-        default: L10n.Promote.assessmentNone
-        }
-    }
-
     private var badgeTone: PVBadgeTone {
         switch row.assessment {
-        case "strong": .success
-        case "weak": .warning
-        default: .neutral
+        case .strong: .success
+        case .weak: .warning
+        case .none: .neutral
         }
     }
 
@@ -725,15 +718,10 @@ private struct PromoteEvidenceSheet: View {
     }
 
     private var sheetSubtitle: String {
-        L10n.Promote.sheetSubtitle(assessment: L10n.string(assessmentTitle(row.assessment)), reason: model.reasonText(for: row))
-    }
-
-    private func assessmentTitle(_ assessment: String) -> LocalizedStringResource {
-        switch assessment {
-        case "strong": L10n.Promote.assessmentStrong
-        case "weak": L10n.Promote.assessmentWeak
-        default: L10n.Promote.assessmentNone
-        }
+        L10n.Promote.sheetSubtitle(
+            assessment: L10n.string(PromoteAssessmentCopy.title(row.assessment)),
+            reason: model.reasonText(for: row)
+        )
     }
 
     private var sheetColumns: some View {
@@ -807,27 +795,22 @@ private struct PromoteEvidenceSheet: View {
         var order: [String] = []
         var lines: [String: [CatalogPromoteGraphAlignmentComparison]] = [:]
         for line in row.comparisons {
-            let key = neighbor(line.groupLabel)
+            let key = line.groupSubjectID
             if lines[key] == nil { order.append(key) }
             lines[key, default: []].append(line)
         }
         return order.map { key in
-            let title = key.isEmpty ? L10n.string(L10n.Promote.ownRecords) : L10n.Promote.through(key)
-            let ref = key.isEmpty ? row.ref : ""
-            return ExhibitGroup(id: key.isEmpty ? "own" : key, title: title, ref: ref, lines: lines[key] ?? [])
+            guard !key.isEmpty else {
+                return ExhibitGroup(id: "own", title: L10n.string(L10n.Promote.ownRecords), ref: row.ref, lines: lines[key] ?? [])
+            }
+            let neighbor = model.flow.rows.first { $0.subjectID == key }
+            let name = neighbor?.name ?? L10n.string(L10n.Promote.sheetNeighbor)
+            return ExhibitGroup(id: key, title: L10n.Promote.through(name), ref: neighbor?.ref ?? "", lines: lines[key] ?? [])
         }
-    }
-
-    private func neighbor(_ label: String) -> String {
-        guard let split = label.range(of: " · ", options: .backwards) else { return label }
-        return String(label[..<split.lowerBound])
     }
 
     private func compared(_ line: CatalogPromoteGraphAlignmentComparison) -> String {
-        guard let split = line.groupLabel.range(of: " · ", options: .backwards) else {
-            return line.propertyKey.replacingOccurrences(of: "_", with: " ")
-        }
-        return String(line.groupLabel[split.upperBound...])
+        model.propertyLabel(key: line.propertyKey, origin: line.propertyOrigin)
     }
 
     private func outcomeTone(_ outcome: String) -> PVBadgeTone {
@@ -865,6 +848,16 @@ private struct PromoteEvidenceSheet: View {
     private var confidenceOptions: [PVSelectOption] {
         [PVSelectOption(value: "", label: L10n.string(L10n.Promote.confidenceUnset))]
             + grades.map { PVSelectOption(value: $0.id, label: $0.label) }
+    }
+}
+
+private enum PromoteAssessmentCopy {
+    static func title(_ assessment: PromoteFlow.Assessment) -> LocalizedStringResource {
+        switch assessment {
+        case .strong: L10n.Promote.assessmentStrong
+        case .weak: L10n.Promote.assessmentWeak
+        case .none: L10n.Promote.assessmentNone
+        }
     }
 }
 

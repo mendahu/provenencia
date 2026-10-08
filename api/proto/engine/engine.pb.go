@@ -10809,8 +10809,8 @@ type PromoteGraphAlignmentComparison struct {
 	ValueType      string                 `protobuf:"bytes,4,opt,name=value_type,json=valueType,proto3" json:"value_type,omitempty"`
 	Pinned         bool                   `protobuf:"varint,5,opt,name=pinned,proto3" json:"pinned,omitempty"`
 	Weight         float64                `protobuf:"fixed64,6,opt,name=weight,proto3" json:"weight,omitempty"`
-	// Empty for the Subject's own records; a neighbor label for a one-hop record.
-	GroupLabel            string `protobuf:"bytes,7,opt,name=group_label,json=groupLabel,proto3" json:"group_label,omitempty"`
+	// Empty for the Subject's own records; the layer neighbor for a one-hop record.
+	GroupSubjectId        string `protobuf:"bytes,14,opt,name=group_subject_id,json=groupSubjectId,proto3" json:"group_subject_id,omitempty"`
 	IncomingObservationId string `protobuf:"bytes,8,opt,name=incoming_observation_id,json=incomingObservationId,proto3" json:"incoming_observation_id,omitempty"`
 	IncomingDisplay       string `protobuf:"bytes,9,opt,name=incoming_display,json=incomingDisplay,proto3" json:"incoming_display,omitempty"`
 	IncomingSource        string `protobuf:"bytes,10,opt,name=incoming_source,json=incomingSource,proto3" json:"incoming_source,omitempty"`
@@ -10893,9 +10893,9 @@ func (x *PromoteGraphAlignmentComparison) GetWeight() float64 {
 	return 0
 }
 
-func (x *PromoteGraphAlignmentComparison) GetGroupLabel() string {
+func (x *PromoteGraphAlignmentComparison) GetGroupSubjectId() string {
 	if x != nil {
-		return x.GroupLabel
+		return x.GroupSubjectId
 	}
 	return ""
 }
@@ -11073,7 +11073,6 @@ type PromoteGraphAlignmentRow struct {
 	HandleRef         string                              `protobuf:"bytes,5,opt,name=handle_ref,json=handleRef,proto3" json:"handle_ref,omitempty"`
 	Score             float64                             `protobuf:"fixed64,6,opt,name=score,proto3" json:"score,omitempty"`
 	Assessment        string                              `protobuf:"bytes,7,opt,name=assessment,proto3" json:"assessment,omitempty"` // strong, weak, none
-	Reasons           []string                            `protobuf:"bytes,8,rep,name=reasons,proto3" json:"reasons,omitempty"`
 	Comparisons       []*PromoteGraphAlignmentComparison  `protobuf:"bytes,9,rep,name=comparisons,proto3" json:"comparisons,omitempty"`
 	Alternatives      []*PromoteGraphAlignmentAlternative `protobuf:"bytes,10,rep,name=alternatives,proto3" json:"alternatives,omitempty"`
 	ConflictWithFixed bool                                `protobuf:"varint,11,opt,name=conflict_with_fixed,json=conflictWithFixed,proto3" json:"conflict_with_fixed,omitempty"`
@@ -11091,6 +11090,11 @@ type PromoteGraphAlignmentRow struct {
 	// With possible_duplicate: the other row on this layer this one may be the
 	// same as (it took the handle this row wanted, or both are New and alike).
 	DuplicateOfSubjectId string `protobuf:"bytes,19,opt,name=duplicate_of_subject_id,json=duplicateOfSubjectId,proto3" json:"duplicate_of_subject_id,omitempty"`
+	// Why the row reads as it does: via, decided, agrees, weak, taken,
+	// no_match, empty. The page words it. With agrees, the agreeing Property.
+	Reason               string `protobuf:"bytes,20,opt,name=reason,proto3" json:"reason,omitempty"`
+	ReasonPropertyKey    string `protobuf:"bytes,21,opt,name=reason_property_key,json=reasonPropertyKey,proto3" json:"reason_property_key,omitempty"`
+	ReasonPropertyOrigin string `protobuf:"bytes,22,opt,name=reason_property_origin,json=reasonPropertyOrigin,proto3" json:"reason_property_origin,omitempty"`
 	unknownFields        protoimpl.UnknownFields
 	sizeCache            protoimpl.SizeCache
 }
@@ -11172,13 +11176,6 @@ func (x *PromoteGraphAlignmentRow) GetAssessment() string {
 		return x.Assessment
 	}
 	return ""
-}
-
-func (x *PromoteGraphAlignmentRow) GetReasons() []string {
-	if x != nil {
-		return x.Reasons
-	}
-	return nil
 }
 
 func (x *PromoteGraphAlignmentRow) GetComparisons() []*PromoteGraphAlignmentComparison {
@@ -11267,6 +11264,27 @@ func (x *PromoteGraphAlignmentRow) GetViaRole() string {
 func (x *PromoteGraphAlignmentRow) GetDuplicateOfSubjectId() string {
 	if x != nil {
 		return x.DuplicateOfSubjectId
+	}
+	return ""
+}
+
+func (x *PromoteGraphAlignmentRow) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+func (x *PromoteGraphAlignmentRow) GetReasonPropertyKey() string {
+	if x != nil {
+		return x.ReasonPropertyKey
+	}
+	return ""
+}
+
+func (x *PromoteGraphAlignmentRow) GetReasonPropertyOrigin() string {
+	if x != nil {
+		return x.ReasonPropertyOrigin
 	}
 	return ""
 }
@@ -17490,7 +17508,7 @@ const file_engine_proto_rawDesc = "" +
 	"\n" +
 	"subject_id\x18\x01 \x01(\tR\tsubjectId\x12\x1b\n" +
 	"\thandle_id\x18\x02 \x01(\tR\bhandleId\x12\x16\n" +
-	"\x06target\x18\x03 \x01(\tR\x06target\"\x83\x04\n" +
+	"\x06target\x18\x03 \x01(\tR\x06target\"\x92\x04\n" +
 	"\x1fPromoteGraphAlignmentComparison\x12!\n" +
 	"\fproperty_key\x18\x01 \x01(\tR\vpropertyKey\x12'\n" +
 	"\x0fproperty_origin\x18\x02 \x01(\tR\x0epropertyOrigin\x12\x18\n" +
@@ -17498,16 +17516,15 @@ const file_engine_proto_rawDesc = "" +
 	"\n" +
 	"value_type\x18\x04 \x01(\tR\tvalueType\x12\x16\n" +
 	"\x06pinned\x18\x05 \x01(\bR\x06pinned\x12\x16\n" +
-	"\x06weight\x18\x06 \x01(\x01R\x06weight\x12\x1f\n" +
-	"\vgroup_label\x18\a \x01(\tR\n" +
-	"groupLabel\x126\n" +
+	"\x06weight\x18\x06 \x01(\x01R\x06weight\x12(\n" +
+	"\x10group_subject_id\x18\x0e \x01(\tR\x0egroupSubjectId\x126\n" +
 	"\x17incoming_observation_id\x18\b \x01(\tR\x15incomingObservationId\x12)\n" +
 	"\x10incoming_display\x18\t \x01(\tR\x0fincomingDisplay\x12'\n" +
 	"\x0fincoming_source\x18\n" +
 	" \x01(\tR\x0eincomingSource\x122\n" +
 	"\x15member_observation_id\x18\v \x01(\tR\x13memberObservationId\x12%\n" +
 	"\x0emember_display\x18\f \x01(\tR\rmemberDisplay\x12#\n" +
-	"\rmember_source\x18\r \x01(\tR\fmemberSource\"\xb5\x02\n" +
+	"\rmember_source\x18\r \x01(\tR\fmemberSourceJ\x04\b\a\x10\b\"\xb5\x02\n" +
 	" PromoteGraphAlignmentAlternative\x12\x1b\n" +
 	"\thandle_id\x18\x01 \x01(\tR\bhandleId\x12\x1d\n" +
 	"\n" +
@@ -17516,7 +17533,7 @@ const file_engine_proto_rawDesc = "" +
 	"\x06person\x18\x04 \x01(\v2#.provenencia.engine.v1.PersonHeaderH\x00R\x06person\x12:\n" +
 	"\x05event\x18\x05 \x01(\v2\".provenencia.engine.v1.EventHeaderH\x00R\x05event\x12:\n" +
 	"\x05place\x18\x06 \x01(\v2\".provenencia.engine.v1.PlaceHeaderH\x00R\x05placeB\b\n" +
-	"\x06header\"\xf9\x06\n" +
+	"\x06header\"\xe3\a\n" +
 	"\x18PromoteGraphAlignmentRow\x12\x1d\n" +
 	"\n" +
 	"subject_id\x18\x01 \x01(\tR\tsubjectId\x12\x12\n" +
@@ -17528,8 +17545,7 @@ const file_engine_proto_rawDesc = "" +
 	"\x05score\x18\x06 \x01(\x01R\x05score\x12\x1e\n" +
 	"\n" +
 	"assessment\x18\a \x01(\tR\n" +
-	"assessment\x12\x18\n" +
-	"\areasons\x18\b \x03(\tR\areasons\x12X\n" +
+	"assessment\x12X\n" +
 	"\vcomparisons\x18\t \x03(\v26.provenencia.engine.v1.PromoteGraphAlignmentComparisonR\vcomparisons\x12[\n" +
 	"\falternatives\x18\n" +
 	" \x03(\v27.provenencia.engine.v1.PromoteGraphAlignmentAlternativeR\falternatives\x12.\n" +
@@ -17541,8 +17557,11 @@ const file_engine_proto_rawDesc = "" +
 	"\x17via_neighbor_subject_id\x18\x10 \x01(\tR\x14viaNeighborSubjectId\x12&\n" +
 	"\x0fvia_bridge_type\x18\x11 \x01(\tR\rviaBridgeType\x12\x19\n" +
 	"\bvia_role\x18\x12 \x01(\tR\aviaRole\x125\n" +
-	"\x17duplicate_of_subject_id\x18\x13 \x01(\tR\x14duplicateOfSubjectIdB\b\n" +
-	"\x06header\"\x87\x01\n" +
+	"\x17duplicate_of_subject_id\x18\x13 \x01(\tR\x14duplicateOfSubjectId\x12\x16\n" +
+	"\x06reason\x18\x14 \x01(\tR\x06reason\x12.\n" +
+	"\x13reason_property_key\x18\x15 \x01(\tR\x11reasonPropertyKey\x124\n" +
+	"\x16reason_property_origin\x18\x16 \x01(\tR\x14reasonPropertyOriginB\b\n" +
+	"\x06headerJ\x04\b\b\x10\t\"\x87\x01\n" +
 	"$ProposePromoteGraphAlignmentResponse\x12C\n" +
 	"\x04rows\x18\x01 \x03(\v2/.provenencia.engine.v1.PromoteGraphAlignmentRowR\x04rows\x12\x1a\n" +
 	"\brevision\x18\x02 \x01(\x03R\brevision\"\x91\x02\n" +

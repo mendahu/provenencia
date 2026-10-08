@@ -17550,7 +17550,7 @@
       }
     },
     "promote.reason.agrees": {
-      "comment": "Reason naming the property that agrees; argument is the property key",
+      "comment": "Reason naming the property that agrees most; argument is the property's label",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -17561,8 +17561,92 @@
         }
       }
     },
+    "promote.reason.viaNeighbor": {
+      "comment": "Why a row was matched when the connection has no phrase: neighbor name, neighbor's handle ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "via %1$@ → %2$@"
+          }
+        }
+      }
+    },
+    "promote.reason.viaUnknown": {
+      "comment": "Why a row was matched, when the neighbor row is not on the page",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reached from a matched neighbor"
+          }
+        }
+      }
+    },
+    "promote.reason.decided": {
+      "comment": "Reason on a row whose target the researcher chose",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your choice"
+          }
+        }
+      }
+    },
+    "promote.reason.weak": {
+      "comment": "Reason on a row whose best candidate is below the bar",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Too little agrees to suggest a match"
+          }
+        }
+      }
+    },
+    "promote.reason.taken": {
+      "comment": "Reason on a row whose best handle went to another row on the page",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Another row took the best match"
+          }
+        }
+      }
+    },
+    "promote.reason.noMatch": {
+      "comment": "Reason on a row with no candidate handle",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No matching record"
+          }
+        }
+      }
+    },
+    "promote.reason.empty": {
+      "comment": "Reason on a row whose subject has no values to compare",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing to match on"
+          }
+        }
+      }
+    },
     "promote.row.updatedDetail": {
-      "comment": "What a suggested row changed to",
+      "comment": "A suggested row moved on the last proposal; argument is why, e.g. via a neighbor",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -17629,6 +17713,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "This subject"
+          }
+        }
+      }
+    },
+    "promote.sheet.neighbor": {
+      "comment": "Evidence group name when the neighbor row is not on the page; shown after 'Through'",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "a neighbor"
           }
         }
       }

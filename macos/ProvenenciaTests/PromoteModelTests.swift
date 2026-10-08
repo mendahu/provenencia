@@ -40,7 +40,7 @@ struct PromoteModelTests {
     private func row(_ id: String, handleID: String, assessment: String = "strong") -> CatalogPromoteGraphAlignmentRow {
         CatalogPromoteGraphAlignmentRow(
             subjectID: id, kind: "person", target: "handle", handleID: handleID, handleRef: "PER-\(handleID)",
-            score: 5, assessment: assessment, reasons: ["agree name"],
+            score: 5, assessment: assessment, reason: "agrees", reasonPropertyKey: "name", reasonPropertyOrigin: "provenencia",
             comparisons: [
                 CatalogPromoteGraphAlignmentComparison(
                     propertyKey: "name", propertyOrigin: "provenencia", outcome: "agree", valueType: "name",
@@ -90,7 +90,7 @@ struct PromoteModelTests {
         await model.load()
         model.mapRest()
         model.setTarget(subjectID: "a", token: "handle:other")
-        let moved = await waitUntil { model.flow.rows.first { $0.subjectID == "b" }?.updatedNote != nil }
+        let moved = await waitUntil { model.flow.rows.first { $0.subjectID == "b" }?.updated == true }
         #expect(moved)
         let ada = model.flow.rows.first { $0.subjectID == "a" }
         let bea = model.flow.rows.first { $0.subjectID == "b" }
@@ -184,6 +184,24 @@ struct PromoteModelTests {
             CatalogPromoteGraphAlignmentFixed(subjectID: "a", target: "new"),
             CatalogPromoteGraphAlignmentFixed(subjectID: "b", target: "skip"),
         ])
+    }
+
+    @Test func reasonsAreWordedWithLabelsAndRefs() async {
+        let subjects = [subject("a", ref: "CPR-A", label: "Ada"), subject("b", ref: "CPR-B", label: "Bea")]
+        let store = store(subjects: subjects)
+        store.propertiesByProject[projectDir] = [
+            CatalogProperty(id: "p-name", key: "name", origin: "provenencia", label: "Full name", description: "", valueType: "name"),
+        ]
+        var viaA = row("b", handleID: "e2")
+        viaA.reason = "via"
+        viaA.viaNeighborSubjectID = "a"
+        store.promoteProposals = [CatalogPromoteGraphAlignmentProposal(revision: 1, rows: [row("a", handleID: "e1"), viaA])]
+        let model = model(store: store, subjectID: "a")
+        await model.load()
+        let ada = model.flow.rows.first { $0.subjectID == "a" }!
+        let bea = model.flow.rows.first { $0.subjectID == "b" }!
+        #expect(model.reasonText(for: ada) == L10n.Promote.agreesOn(property: "Full name"))
+        #expect(model.reasonText(for: bea) == L10n.Promote.viaNeighbor(neighbor: "Ada", ref: "PER-e1"))
     }
 
     @Test func leaveGuardAsksOnlyAfterAManualChange() async {

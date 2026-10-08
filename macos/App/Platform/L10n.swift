@@ -1268,10 +1268,19 @@ enum L10n {
         }
         static let alreadyFiled = LocalizedStringResource("promote.reason.filed", defaultValue: "Already filed", comment: "Reason on a read-only promoted row")
         static func agreesOn(property: String) -> String {
-            L10n.format(LocalizedStringResource("promote.reason.agrees", defaultValue: "Agrees on %@", comment: "Reason naming the property that agrees; argument is the property key"), property)
+            L10n.format(LocalizedStringResource("promote.reason.agrees", defaultValue: "Agrees on %@", comment: "Reason naming the property that agrees most; argument is the property's label"), property)
         }
-        static func updatedDetail(_ token: String) -> String {
-            L10n.format(LocalizedStringResource("promote.row.updatedDetail", defaultValue: "Updated · %@", comment: "What a suggested row changed to"), token)
+        static func viaNeighbor(neighbor: String, ref: String) -> String {
+            L10n.format(LocalizedStringResource("promote.reason.viaNeighbor", defaultValue: "via %1$@ → %2$@", comment: "Why a row was matched when the connection has no phrase: neighbor name, neighbor's handle ref"), neighbor, ref)
+        }
+        static let reasonVia = LocalizedStringResource("promote.reason.viaUnknown", defaultValue: "Reached from a matched neighbor", comment: "Why a row was matched, when the neighbor row is not on the page")
+        static let reasonDecided = LocalizedStringResource("promote.reason.decided", defaultValue: "Your choice", comment: "Reason on a row whose target the researcher chose")
+        static let reasonWeak = LocalizedStringResource("promote.reason.weak", defaultValue: "Too little agrees to suggest a match", comment: "Reason on a row whose best candidate is below the bar")
+        static let reasonTaken = LocalizedStringResource("promote.reason.taken", defaultValue: "Another row took the best match", comment: "Reason on a row whose best handle went to another row on the page")
+        static let reasonNoMatch = LocalizedStringResource("promote.reason.noMatch", defaultValue: "No matching record", comment: "Reason on a row with no candidate handle")
+        static let reasonEmpty = LocalizedStringResource("promote.reason.empty", defaultValue: "Nothing to match on", comment: "Reason on a row whose subject has no values to compare")
+        static func updatedDetail(_ reason: String) -> String {
+            L10n.format(LocalizedStringResource("promote.row.updatedDetail", defaultValue: "Updated · %@", comment: "A suggested row moved on the last proposal; argument is why, e.g. via a neighbor"), reason)
         }
         static func conflict(ref: String) -> String {
             L10n.format(LocalizedStringResource("promote.warning.conflict", defaultValue: "A stronger match is %@. This choice is kept.", comment: "A decided row the new proposal contradicts; argument is the other handle ref"), ref)
@@ -1282,6 +1291,7 @@ enum L10n {
         static let evidenceTitle = LocalizedStringResource("promote.sheet.title", defaultValue: "Evidence", comment: "Title of the Promote evidence sheet")
         static let claimHeading = LocalizedStringResource("promote.sheet.claim", defaultValue: "Claim", comment: "Heading above status, confidence, and argument on the evidence sheet")
         static let backToRows = LocalizedStringResource("promote.sheet.back", defaultValue: "Back to all rows", comment: "Closes the Promote evidence sheet")
+        static let sheetNeighbor = LocalizedStringResource("promote.sheet.neighbor", defaultValue: "a neighbor", comment: "Evidence group name when the neighbor row is not on the page; shown after 'Through'")
         static let ownRecords = LocalizedStringResource("promote.sheet.own", defaultValue: "This subject", comment: "Evidence group for the subject's own records")
         static let status = LocalizedStringResource("promote.sheet.status", defaultValue: "Status", comment: "Claim status field")
         static let confidence = LocalizedStringResource("promote.sheet.confidence", defaultValue: "Confidence", comment: "Claim confidence field")
@@ -1299,11 +1309,12 @@ enum L10n {
             L10n.format(LocalizedStringResource("promote.connections.count", defaultValue: "%lld connections will be filed", comment: "Bridge summary; argument is how many will be filed"), count)
         }
         static let connectionFiled = LocalizedStringResource("promote.connections.filed", defaultValue: "Filed", comment: "Switch label for a connection that will be filed")
-        static func connectionWhy(_ why: String) -> LocalizedStringResource {
-            switch why {
-            case "off": LocalizedStringResource("promote.connections.off", defaultValue: "Not filed this time", comment: "A connection the researcher switched off")
-            case "self": LocalizedStringResource("promote.connections.self", defaultValue: "Not filed · both ends are the same record", comment: "A connection whose ends resolve to one handle")
-            default: LocalizedStringResource("promote.connections.skipped", defaultValue: "Not filed · an end is skipped", comment: "A connection that stays unfiled because an end is not being filed")
+        static func connectionState(_ state: PromoteFlow.ConnectionState) -> LocalizedStringResource {
+            switch state {
+            case .files: connectionFiled
+            case .off: LocalizedStringResource("promote.connections.off", defaultValue: "Not filed this time", comment: "A connection the researcher switched off")
+            case .selfLink: LocalizedStringResource("promote.connections.self", defaultValue: "Not filed · both ends are the same record", comment: "A connection whose ends resolve to one handle")
+            case .endSkipped: LocalizedStringResource("promote.connections.skipped", defaultValue: "Not filed · an end is skipped", comment: "A connection that stays unfiled because an end is not being filed")
             }
         }
         static func doneSummary(file: Int, skip: Int, connections: Int) -> String {

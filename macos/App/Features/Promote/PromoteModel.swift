@@ -81,6 +81,8 @@ final class PromoteModel {
     private(set) var grades: [CatalogClaimConfidenceGrade] = []
     private(set) var sourceRef: String = ""
     private(set) var sourceMark: PVMarkKey = .defaultTypeMark
+    /// Property labels by "key|origin", from the Properties snapshot.
+    private(set) var propertyLabels: [String: String] = [:]
     private(set) var loadError: String?
     private(set) var saveError: String?
     private(set) var proposeError: String?
@@ -159,7 +161,7 @@ final class PromoteModel {
     func openSheet(_ subjectID: String) { flow.sheetSubjectID = subjectID }
     func closeSheet() { flow.sheetSubjectID = nil }
 
-    func setGroup(_ group: String) { flow.group = group }
+    func setGroup(_ group: PromoteFlow.Grouping) { flow.group = group }
 
     func setBridgesOpen(_ open: Bool) { flow.bridgesOpen = open }
 
@@ -183,15 +185,32 @@ final class PromoteModel {
     func keepPromoting() { flow.cancelLeave() }
 
     func reasonText(for row: PromoteFlow.Row) -> String {
-        let parts = row.reason.split(separator: "|", maxSplits: 1).map(String.init)
-        if parts.count == 2, let neighbor = flow.rows.first(where: { $0.subjectID == parts[0] }) {
-            return L10n.Promote.via(neighbor: neighbor.name, ref: neighbor.ref, role: parts[1])
+        switch row.reason {
+        case .via(let neighborID):
+            guard let neighbor = flow.rows.first(where: { $0.subjectID == neighborID }) else {
+                return L10n.string(L10n.Promote.reasonVia)
+            }
+            let ref: String
+            if case .handle(_, let handleRef, _) = neighbor.target { ref = handleRef } else { ref = neighbor.ref }
+            let phrase = flow.bridges.first { bridge in
+                Set([bridge.endA, bridge.endB]) == Set([row.subjectID, neighborID])
+            }?.phrase ?? ""
+            return phrase.isEmpty
+                ? L10n.Promote.viaNeighbor(neighbor: neighbor.name, ref: ref)
+                : L10n.Promote.via(neighbor: neighbor.name, ref: ref, role: phrase)
+        case .filed: return L10n.string(L10n.Promote.alreadyFiled)
+        case .decided: return L10n.string(L10n.Promote.reasonDecided)
+        case .agrees(let key, let origin): return L10n.Promote.agreesOn(property: propertyLabel(key: key, origin: origin))
+        case .weak: return L10n.string(L10n.Promote.reasonWeak)
+        case .taken: return L10n.string(L10n.Promote.reasonTaken)
+        case .noMatch: return L10n.string(L10n.Promote.reasonNoMatch)
+        case .empty: return L10n.string(L10n.Promote.reasonEmpty)
         }
-        if row.reason == "fixed" { return L10n.string(L10n.Promote.alreadyFiled) }
-        if row.reason.hasPrefix("agree ") {
-            return L10n.Promote.agreesOn(property: String(row.reason.dropFirst("agree ".count)))
-        }
-        return row.reason
+    }
+
+    /// The catalog label for a Property, or its key when the snapshot lacks it.
+    func propertyLabel(key: String, origin: String) -> String {
+        propertyLabels[key + "|" + origin] ?? key
     }
 
     private func nextProposal() -> Int {
@@ -266,6 +285,12 @@ final class PromoteModel {
         let rows: SourceGraphRows? = await session.readyValue(graphKey)
         let properties: PropertiesSnapshot? = await session.readyValue(propertiesKey)
         let rules: [CatalogConnectRule]? = await session.readyValue(rulesKey)
+        if let properties {
+            propertyLabels = Dictionary(
+                properties.properties.map { ($0.key + "|" + $0.origin, $0.label) },
+                uniquingKeysWith: { first, _ in first }
+            )
+        }
         guard let rows else { return ([], []) }
         let snapshot = SourceGraphSnapshot.build(
             rows: rows,

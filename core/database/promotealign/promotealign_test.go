@@ -292,12 +292,17 @@ func TestProposeOneHopDateExhibit(t *testing.T) {
 	var hop bool
 	for _, ex := range row.Exhibits {
 		if ex.Property.Key == "date" && ex.Outcome == "agree" && ex.Pinned &&
-			ex.GroupLabel != "" && ex.IncomingDisplay == "1901" && ex.MemberDisplay == "1901" {
+			bytes.Equal(ex.GroupSubjectID, bBirth.ID) && ex.IncomingDisplay == "1901" && ex.MemberDisplay == "1901" {
 			hop = true
 		}
 	}
 	if !hop {
 		t.Fatalf("one-hop date exhibit missing in %+v", row.Exhibits)
+	}
+	for _, ex := range row.Exhibits {
+		if ex.Property.Key == "event_type" && (ex.IncomingDisplay != "Birth" || ex.MemberDisplay != "Birth") {
+			t.Fatalf("a term shows its label, not its key: %+v", ex)
+		}
 	}
 }
 

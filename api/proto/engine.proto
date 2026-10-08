@@ -1315,8 +1315,9 @@ message PromoteGraphAlignmentComparison {
   string value_type = 4;
   bool pinned = 5;
   double weight = 6;
-  // Empty for the Subject's own records; a neighbor label for a one-hop record.
-  string group_label = 7;
+  reserved 7; // group_label: English built in Go; the page words groups now
+  // Empty for the Subject's own records; the layer neighbor for a one-hop record.
+  string group_subject_id = 14;
   string incoming_observation_id = 8;
   string incoming_display = 9;
   string incoming_source = 10;
@@ -1344,7 +1345,7 @@ message PromoteGraphAlignmentRow {
   string handle_ref = 5;
   double score = 6;
   string assessment = 7; // strong, weak, none
-  repeated string reasons = 8;
+  reserved 8; // reasons: English strings; see reason
   repeated PromoteGraphAlignmentComparison comparisons = 9;
   repeated PromoteGraphAlignmentAlternative alternatives = 10;
   bool conflict_with_fixed = 11;
@@ -1361,6 +1362,11 @@ message PromoteGraphAlignmentRow {
   // With possible_duplicate: the other row on this layer this one may be the
   // same as (it took the handle this row wanted, or both are New and alike).
   string duplicate_of_subject_id = 19;
+  // Why the row reads as it does: via, decided, agrees, weak, taken,
+  // no_match, empty. The page words it. With agrees, the agreeing Property.
+  string reason = 20;
+  string reason_property_key = 21;
+  string reason_property_origin = 22;
 }
 
 message ProposePromoteGraphAlignmentResponse {

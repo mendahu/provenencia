@@ -116,15 +116,16 @@ type Via struct {
 }
 
 // Exhibit is one pin-able observation pair the loader attaches after Align.
-// GroupLabel is empty for the Subject's own records and a neighbor label
-// ("Birth · date") for a one-hop record.
+// GroupSubjectID is empty for the Subject's own records and names the layer
+// neighbor for a one-hop record. Displays are values (term labels for
+// terms), not copy.
 type Exhibit struct {
 	Property              match.Property
 	Outcome               match.Outcome
 	ValueType             string
 	Pinned                bool
 	Weight                float64
-	GroupLabel            string
+	GroupSubjectID        []byte
 	IncomingObservationID []byte
 	IncomingDisplay       string
 	IncomingSource        string
@@ -132,6 +133,19 @@ type Exhibit struct {
 	MemberDisplay         string
 	MemberSource          string
 }
+
+// Reason is why a row reads as it does. Codes, not copy: the page words them.
+type Reason string
+
+const (
+	ReasonVia     Reason = "via"      // reached from a mapped neighbor (Row.Via)
+	ReasonDecided Reason = "decided"  // held as given (a decision or an existing claim)
+	ReasonAgrees  Reason = "agrees"   // property-only match; ReasonProperty agrees most
+	ReasonWeak    Reason = "weak"     // the best candidate is below the accept bar
+	ReasonTaken   Reason = "taken"    // another row took the handle (Flags.DuplicateOf)
+	ReasonNoMatch Reason = "no_match" // no candidate at all: New
+	ReasonEmpty   Reason = "empty"    // nothing to match on: Skip
+)
 
 // Alternative is a runner-up handle suggestion.
 type Alternative struct {
@@ -164,9 +178,11 @@ type Row struct {
 	Alternatives []Alternative
 	Comparisons  []Comparison
 	Exhibits     []Exhibit
-	Reasons      []string
-	Via          *Via
-	Flags        RowFlags
+	Reason       Reason
+	// ReasonProperty is the agreeing Property behind ReasonAgrees.
+	ReasonProperty match.Property
+	Via            *Via
+	Flags          RowFlags
 }
 
 // Proposal is Align's full output: one row per primary Subject.

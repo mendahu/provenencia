@@ -69,7 +69,6 @@ type scoredCand struct {
 	ref         string
 	score       float64
 	eval        match.Evaluation
-	reasons     []string
 	edge        float64
 	viaNeighbor []byte
 	viaSig      EdgeSignature
@@ -236,7 +235,6 @@ func (st *state) scoreCandidate(subjectID []byte, h *Handle) scoredCand {
 		ref:      h.Ref,
 		score:    sc.Score,
 		eval:     sc.Eval,
-		reasons:  sc.Reasons,
 		edge:     sc.Edge,
 	}
 }
@@ -321,7 +319,6 @@ func (st *state) fallbackUnreachable() {
 		for _, m := range match.Rank(profile, s.Values, st.candidatesOfKind(s.Kind), st.cfg.AlternativeLimit) {
 			h := st.handles[string(m.EntityID)]
 			sc := st.scoreCandidate(s.ID, h)
-			sc.reasons = append([]string{"property-only match"}, sc.reasons...)
 			st.recordBest(sk, sc)
 			heap.Push(&queue, queueItem{
 				subjectID: append([]byte(nil), s.ID...),
@@ -430,19 +427,22 @@ func (st *state) proposal() Proposal {
 				row.HandleRef = h.Ref
 				if len(sc.eval.Comparisons) == 0 {
 					sc.eval = match.Evaluate(s.Values, h.Values, st.metas)
-					if len(sc.reasons) == 0 {
-						sc.reasons = []string{"fixed"}
-					}
 				}
 			}
 			row.Score = sc.score
-			row.Reasons = sc.reasons
 			row.Comparisons = comparisonsFrom(sc.eval, s.Values, st.cfg, st.stats)
-			if len(sc.viaNeighbor) > 0 {
+			switch {
+			case st.fixedSet[sk]:
+				row.Reason = ReasonDecided
+			case len(sc.viaNeighbor) > 0:
+				row.Reason = ReasonVia
 				row.Via = &Via{
 					NeighborSubjectID: append([]byte(nil), sc.viaNeighbor...),
 					Signature:         sc.viaSig,
 				}
+			default:
+				row.Reason = ReasonAgrees
+				row.ReasonProperty = strongestAgreement(row.Comparisons)
 			}
 			row.Assessment = st.band(sc.score)
 			row.Alternatives = st.alts(sk, hid)
@@ -454,31 +454,30 @@ func (st *state) proposal() Proposal {
 		} else if decided, ok := st.held[sk]; ok {
 			row.Target = decided
 			row.Assessment = AssessNone
-			row.Reasons = []string{"decided"}
+			row.Reason = ReasonDecided
 		} else {
 			row.Assessment = AssessNone
-			if owner, ok := st.lostTo[sk]; ok {
-				row.Flags.PossibleDuplicate = true
-				row.Flags.DuplicateOf = []byte(owner)
-			}
 			if best := st.bestNonAssigned(sk, nil); best != nil {
-				// A candidate existed but was not accepted (weak Rank or
-				// one-to-one loss): Skip, never force a merge.
+				// A candidate existed but was not accepted (below the bar or
+				// lost one-to-one): Skip, never force a merge.
 				row.Target = TargetSkip
 				row.Score = best.score
 				row.Alternatives = st.alts(sk, nil)
-				row.Reasons = best.reasons
+				row.Reason = ReasonWeak
 				if best.score >= st.cfg.WeakScore {
 					row.Assessment = st.band(best.score)
-				} else {
-					row.Reasons = append([]string{"weak match"}, best.reasons...)
 				}
 			} else if subjectHasValues(s) {
 				row.Target = TargetNew
-				row.Reasons = []string{"no matching handle"}
+				row.Reason = ReasonNoMatch
 			} else {
 				row.Target = TargetSkip
-				row.Reasons = []string{"unreachable or empty"}
+				row.Reason = ReasonEmpty
+			}
+			if owner, ok := st.lostTo[sk]; ok {
+				row.Reason = ReasonTaken
+				row.Flags.PossibleDuplicate = true
+				row.Flags.DuplicateOf = []byte(owner)
 			}
 		}
 		rows = append(rows, row)
@@ -537,6 +536,18 @@ func (st *state) flagAlikeNewRows(rows []Row) {
 	}
 }
 
+// strongestAgreement is the agreeing Property that added the most weight.
+func strongestAgreement(cs []Comparison) match.Property {
+	var top match.Property
+	best := 0.0
+	for _, c := range cs {
+		if c.Outcome == match.OutcomeAgree && c.Weight > best {
+			top, best = c.Property, c.Weight
+		}
+	}
+	return top
+}
+
 func comparisonsFrom(ev match.Evaluation, probe match.Values, cfg Config, stats Stats) []Comparison {
 	out := make([]Comparison, 0, len(ev.Comparisons))
 	for _, pc := range ev.Comparisons {
@@ -557,7 +568,7 @@ func (st *state) pickScore(sk string, hid []byte) scoredCand {
 			return sc
 		}
 	}
-	return scoredCand{handleID: hid, score: st.cfg.StrongScore, reasons: []string{"fixed"}}
+	return scoredCand{handleID: hid, score: st.cfg.StrongScore}
 }
 
 func (st *state) bestNonAssigned(sk string, except []byte) *scoredCand {

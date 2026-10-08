@@ -636,6 +636,79 @@ func TestPossibleDuplicates(t *testing.T) {
 				if r.Flags.PossibleDuplicate != flagged || string(r.Flags.DuplicateOf) != want {
 					t.Fatalf("%s: flags %+v, want duplicate of %q", r.SubjectID, r.Flags, want)
 				}
+				if r.Target == graphalign.TargetSkip && flagged && r.Reason != graphalign.ReasonTaken {
+					t.Fatalf("%s: reason %q, want taken", r.SubjectID, r.Reason)
+				}
+			}
+		})
+	}
+}
+
+func TestRowReasons(t *testing.T) {
+	nameKey := match.Property{Key: "name", Origin: "provenencia"}
+	sig := relSig("spouse")
+	tests := []struct {
+		name     string
+		layer    []graphalign.Subject
+		handles  []graphalign.Handle
+		bridges  []graphalign.Bridge
+		edges    []graphalign.CanonEdge
+		fixed    []graphalign.Fixed
+		subject  string
+		want     graphalign.Reason
+		wantProp match.Property
+	}{
+		{
+			name:    "a property-only match names the agreeing property",
+			layer:   []graphalign.Subject{{ID: id("s-a"), Ref: "A", Kind: "person", Values: nameVals("Ann", "Ames")}},
+			handles: []graphalign.Handle{{ID: id("h-a"), Ref: "PER-1", Kind: "person", Values: nameVals("Ann", "Ames")}},
+			subject: "s-a", want: graphalign.ReasonAgrees, wantProp: nameKey,
+		},
+		{
+			name:    "a candidate below the bar is weak",
+			layer:   []graphalign.Subject{{ID: id("s-a"), Ref: "A", Kind: "person", Values: nameVals("Ann", "Ames")}},
+			handles: []graphalign.Handle{{ID: id("h-a"), Ref: "PER-1", Kind: "person", Values: nameVals("Bob", "Ames")}},
+			subject: "s-a", want: graphalign.ReasonWeak,
+		},
+		{
+			name:    "no candidate is no match",
+			layer:   []graphalign.Subject{{ID: id("s-a"), Ref: "A", Kind: "person", Values: nameVals("Ann", "Ames")}},
+			subject: "s-a", want: graphalign.ReasonNoMatch,
+		},
+		{
+			name:    "no values is empty",
+			layer:   []graphalign.Subject{{ID: id("s-a"), Ref: "A", Kind: "person"}},
+			subject: "s-a", want: graphalign.ReasonEmpty,
+		},
+		{
+			name: "a neighbor-reached row is via",
+			layer: []graphalign.Subject{
+				{ID: id("s-a"), Ref: "A", Kind: "person", Values: nameVals("Ann", "Ames")},
+				{ID: id("s-b"), Ref: "B", Kind: "person", Values: nameVals("Bob", "Ames")},
+			},
+			handles: []graphalign.Handle{
+				{ID: id("h-a"), Ref: "PER-1", Kind: "person", Values: nameVals("Ann", "Ames")},
+				{ID: id("h-b"), Ref: "PER-2", Kind: "person", Values: nameVals("Bob", "Ames")},
+			},
+			bridges: []graphalign.Bridge{{A: id("s-a"), B: id("s-b"), Signature: sig}},
+			edges:   []graphalign.CanonEdge{{From: id("h-a"), To: id("h-b"), Signature: sig}},
+			fixed:   []graphalign.Fixed{{SubjectID: id("s-a"), HandleID: id("h-a")}},
+			subject: "s-b", want: graphalign.ReasonVia,
+		},
+		{
+			name:    "a held row is decided",
+			layer:   []graphalign.Subject{{ID: id("s-a"), Ref: "A", Kind: "person", Values: nameVals("Ann", "Ames")}},
+			fixed:   []graphalign.Fixed{{SubjectID: id("s-a"), Target: graphalign.TargetSkip}},
+			subject: "s-a", want: graphalign.ReasonDecided,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			layer := graphalign.Layer{Subjects: tt.layer, Bridges: tt.bridges, Metas: nameMetas()}
+			canon := graphalign.Canon{Handles: tt.handles, Edges: tt.edges}
+			row := rowBySubject(graphalign.Align(layer, canon, graphalign.Stats{}, tt.fixed, nil), id(tt.subject))
+			if row.Reason != tt.want || row.ReasonProperty != tt.wantProp {
+				t.Fatalf("reason %q / %+v, want %q / %+v", row.Reason, row.ReasonProperty, tt.want, tt.wantProp)
 			}
 		})
 	}

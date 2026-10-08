@@ -248,8 +248,8 @@ struct CatalogPromoteGraphAlignmentComparison: Sendable, Equatable, Identifiable
     var valueType: String
     var pinned: Bool
     var weight: Double = 0
-    /// Empty for the Subject's own records; a neighbor label for a one-hop record.
-    var groupLabel: String = ""
+    /// Empty for the Subject's own records; the layer neighbor for a one-hop record.
+    var groupSubjectID: String = ""
     var incomingObservationID: String = ""
     var incomingDisplay: String = ""
     var incomingSource: String = ""
@@ -279,7 +279,11 @@ struct CatalogPromoteGraphAlignmentRow: Sendable, Equatable, Identifiable {
     var handleRef: String
     var score: Double
     var assessment: String
-    var reasons: [String]
+    /// via, decided, agrees, weak, taken, no_match, empty — worded by the page.
+    var reason: String = ""
+    /// With reason agrees: the Property that agrees most.
+    var reasonPropertyKey: String = ""
+    var reasonPropertyOrigin: String = ""
     var comparisons: [CatalogPromoteGraphAlignmentComparison]
     var alternatives: [CatalogPromoteGraphAlignmentAlternative]
     var conflictWithFixed: Bool

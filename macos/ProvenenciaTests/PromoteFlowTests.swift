@@ -22,7 +22,7 @@ struct PromoteFlowTests {
             handleRef: "PER-1",
             score: 5,
             assessment: assessment,
-            reasons: ["agree name"],
+            reason: "agrees", reasonPropertyKey: "name", reasonPropertyOrigin: "provenencia",
             comparisons: [
                 CatalogPromoteGraphAlignmentComparison(
                     propertyKey: "name",
@@ -87,7 +87,7 @@ struct PromoteFlowTests {
         let ada = flow.rows.first { $0.subjectID == "a" }
         let bea = flow.rows.first { $0.subjectID == "b" }
         #expect(ada?.target.handleID == "e2")
-        #expect(bea?.updatedNote != nil)
+        #expect(bea?.updated == true)
         #expect(bea?.decided == false)
     }
 
@@ -105,7 +105,7 @@ struct PromoteFlowTests {
         #expect(batch[0].pairs.count == 1)
         #expect(batch[0].pairs[0].incomingObservationID == "obs-in")
         #expect(flow.skipBridgeIDs() == ["br"])
-        #expect(flow.connectionLines().first?.why == "self" || flow.connectionLines().first?.why == "off")
+        #expect(flow.connectionLines().first?.state == .off)
     }
 
     @Test func anchorsAreReadOnly() {

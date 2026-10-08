@@ -3,7 +3,6 @@ package promotealign
 import (
 	"database/sql"
 	"strconv"
-	"strings"
 
 	"github.com/mendahu/provenencia/core/autoreconcile"
 	"github.com/mendahu/provenencia/core/connectrules"
@@ -137,7 +136,7 @@ func attachExhibits(q Querier, layer graphalign.Layer, prop *graphalign.Proposal
 	if len(want) == 0 {
 		return nil
 	}
-	obs, labels, err := loadExhibitObservations(q, want)
+	obs, err := loadExhibitObservations(q, want)
 	if err != nil {
 		return err
 	}
@@ -155,13 +154,9 @@ func attachExhibits(q Querier, layer graphalign.Layer, prop *graphalign.Proposal
 
 	for _, plan := range plans {
 		r := &prop.Rows[plan.idx]
-		exhibits := pairExhibits(bySubject[string(r.SubjectID)], "", collect(plan.own), cfg, stats)
+		exhibits := pairExhibits(bySubject[string(r.SubjectID)], nil, collect(plan.own), cfg, stats)
 		for _, np := range plan.neighbors {
-			label := labels[string(np.neighbor)]
-			if label == "" {
-				label = "Neighbor"
-			}
-			exhibits = append(exhibits, pairExhibits(bySubject[string(np.neighbor)], label, collect(np.sides), cfg, stats)...)
+			exhibits = append(exhibits, pairExhibits(bySubject[string(np.neighbor)], np.neighbor, collect(np.sides), cfg, stats)...)
 		}
 		r.Exhibits = exhibits
 	}
@@ -169,9 +164,9 @@ func attachExhibits(q Querier, layer graphalign.Layer, prop *graphalign.Proposal
 }
 
 // pairExhibits pairs each incoming record with an agreeing (else clashing)
-// record on the same Property. hopLabel is empty for the Subject's own
-// records and names the neighbor for a one-hop group.
-func pairExhibits(incoming []exhibitObs, hopLabel string, memberObs []exhibitObs, cfg graphalign.Config, stats graphalign.Stats) []graphalign.Exhibit {
+// record on the same Property. neighbor is nil for the Subject's own records
+// and names the layer neighbor for a one-hop group.
+func pairExhibits(incoming []exhibitObs, neighbor []byte, memberObs []exhibitObs, cfg graphalign.Config, stats graphalign.Stats) []graphalign.Exhibit {
 	var out []graphalign.Exhibit
 	used := map[string]bool{}
 	for _, in := range incoming {
@@ -211,10 +206,6 @@ func pairExhibits(incoming []exhibitObs, hopLabel string, memberObs []exhibitObs
 			continue
 		}
 		used[key] = true
-		group := ""
-		if hopLabel != "" {
-			group = hopLabel + " · " + strings.ReplaceAll(in.prop.Key, "_", " ")
-		}
 		probe := match.Values{in.prop: {in.value}}
 		out = append(out, graphalign.Exhibit{
 			Property:              in.prop,
@@ -222,7 +213,7 @@ func pairExhibits(incoming []exhibitObs, hopLabel string, memberObs []exhibitObs
 			ValueType:             in.valueType,
 			Pinned:                pinned,
 			Weight:                graphalign.PropertyWeight(outcome, in.valueType, in.prop, probe, cfg, stats),
-			GroupLabel:            group,
+			GroupSubjectID:        append([]byte(nil), neighbor...),
 			IncomingObservationID: append([]byte(nil), in.id...),
 			IncomingDisplay:       in.display,
 			IncomingSource:        in.source,
@@ -319,46 +310,42 @@ func bridgeNeighbors(q Querier, subjectIDs [][]byte) (map[string][][]byte, error
 	return out, rows.Err()
 }
 
-func loadExhibitObservations(q Querier, subjectIDs [][]byte) ([]exhibitObs, map[string]string, error) {
-	placeholders := make([]string, len(subjectIDs))
-	args := make([]any, len(subjectIDs))
-	for i, id := range subjectIDs {
-		placeholders[i] = "?"
-		args[i] = id
-	}
-	query := `SELECT o.id, o.subject_id, s.ref, p.key, p.origin, p.value_type,
-			o.value_text, o.value_integer, o.value_date_id, o.value_name_id, t.key, src.title
+func loadExhibitObservations(q Querier, subjectIDs [][]byte) ([]exhibitObs, error) {
+	query := `SELECT o.id, o.subject_id, p.key, p.origin, p.value_type,
+			o.value_text, o.value_integer, o.value_date_id, o.value_name_id, t.key, t.label, src.title
 		FROM observations o
-		JOIN subjects s ON s.id = o.subject_id
 		JOIN properties p ON p.id = o.property_id
 		JOIN citations c ON c.id = o.citation_id
 		JOIN artifacts a ON a.id = c.artifact_id
 		JOIN sources src ON src.id = a.source_id
 		LEFT JOIN property_terms t ON t.id = o.value_term_id
-		WHERE o.polarity = 'positive' AND o.subject_id IN (` + strings.Join(placeholders, ",") + `)`
+		WHERE o.polarity = 'positive' AND o.subject_id IN (` + database.SQLInPlaceholders(len(subjectIDs)) + `)`
+	args := make([]any, len(subjectIDs))
+	for i, id := range subjectIDs {
+		args[i] = id
+	}
 	rows, err := q.Query(query, args...)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	type pending struct {
 		o              exhibitObs
 		dateID, nameID []byte
-		term           string
+		termLabel      string
 	}
 	var all []pending
 	var dateIDs, nameIDs [][]byte
-	labels := map[string]string{}
 	for rows.Next() {
 		var (
-			p              pending
-			ref, valueType string
-			text, term     sql.NullString
-			integer        sql.NullInt64
+			p                     pending
+			valueType             string
+			text, term, termLabel sql.NullString
+			integer               sql.NullInt64
 		)
-		if err := rows.Scan(&p.o.id, &p.o.subjectID, &ref, &p.o.prop.Key, &p.o.prop.Origin, &valueType,
-			&text, &integer, &p.dateID, &p.nameID, &term, &p.o.source); err != nil {
+		if err := rows.Scan(&p.o.id, &p.o.subjectID, &p.o.prop.Key, &p.o.prop.Origin, &valueType,
+			&text, &integer, &p.dateID, &p.nameID, &term, &termLabel, &p.o.source); err != nil {
 			_ = rows.Close()
-			return nil, nil, err
+			return nil, err
 		}
 		p.o.valueType = valueType
 		p.o.value = match.Value{
@@ -366,10 +353,7 @@ func loadExhibitObservations(q Querier, subjectIDs [][]byte) ([]exhibitObs, map[
 			Integer: integer.Int64, HasInteger: integer.Valid,
 			Term: term.String,
 		}
-		p.term = term.String
-		if _, ok := labels[string(p.o.subjectID)]; !ok {
-			labels[string(p.o.subjectID)] = ref
-		}
+		p.termLabel = termLabel.String
 		all = append(all, p)
 		if len(p.dateID) > 0 {
 			dateIDs = append(dateIDs, p.dateID)
@@ -380,17 +364,17 @@ func loadExhibitObservations(q Querier, subjectIDs [][]byte) ([]exhibitObs, map[
 	}
 	if err := rows.Err(); err != nil {
 		_ = rows.Close()
-		return nil, nil, err
+		return nil, err
 	}
 	_ = rows.Close()
 
 	dates, err := datevalues.LookupManyTx(q, dateIDs)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	names, err := namevalues.LookupManyTx(q, nameIDs)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	out := make([]exhibitObs, 0, len(all))
 	for _, p := range all {
@@ -402,27 +386,18 @@ func loadExhibitObservations(q Querier, subjectIDs [][]byte) ([]exhibitObs, map[
 		}
 		if n, ok := names[string(p.nameID)]; ok {
 			p.o.value.Name = &n
-			if n.Form != "" {
-				p.o.display = n.Form
-				labels[string(p.o.subjectID)] = n.Form
-			}
+			p.o.display = n.Form
 		}
-		if p.o.display == "" && p.o.value.HasText && p.o.value.Text != "" {
+		if p.o.display == "" && p.o.value.HasText {
 			p.o.display = p.o.value.Text
-			if p.o.prop.Key == "toponym" {
-				labels[string(p.o.subjectID)] = p.o.value.Text
-			}
 		}
-		if p.o.display == "" && p.term != "" {
-			p.o.display = p.term
-			if p.o.prop.Key == "event_type" {
-				labels[string(p.o.subjectID)] = p.term
-			}
+		if p.o.display == "" && p.termLabel != "" {
+			p.o.display = p.termLabel
 		}
 		if p.o.display == "" && p.o.value.HasInteger {
 			p.o.display = strconv.FormatInt(p.o.value.Integer, 10)
 		}
 		out = append(out, p.o)
 	}
-	return out, labels, nil
+	return out, nil
 }

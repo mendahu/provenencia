@@ -22,6 +22,56 @@ struct PromoteFlow: Equatable, Sendable {
         }
     }
 
+    enum Assessment: String, Equatable, Sendable {
+        case strong, weak, none
+
+        init(wire: String) { self = Assessment(rawValue: wire) ?? .none }
+    }
+
+    /// Why a row reads as it does. The page words it.
+    enum Reason: Equatable, Sendable {
+        /// Reached from this neighbor row once it was matched.
+        case via(neighborID: String)
+        /// Filed before this page opened.
+        case filed
+        /// The researcher's choice, held as given.
+        case decided
+        /// A property-only match; this Property agrees most.
+        case agrees(key: String, origin: String)
+        case weak
+        /// Another row on the page took this match.
+        case taken
+        case noMatch
+        case empty
+
+        init(_ row: CatalogPromoteGraphAlignmentRow) {
+            switch row.reason {
+            case "via" where !row.viaNeighborSubjectID.isEmpty: self = .via(neighborID: row.viaNeighborSubjectID)
+            case "decided": self = .decided
+            case "agrees": self = .agrees(key: row.reasonPropertyKey, origin: row.reasonPropertyOrigin)
+            case "weak": self = .weak
+            case "taken": self = .taken
+            case "no_match": self = .noMatch
+            default: self = .empty
+            }
+        }
+    }
+
+    enum Grouping: String, Equatable, Sendable {
+        case kind, assessment
+    }
+
+    /// Whether a connection files on Done, and if not, why.
+    enum ConnectionState: Equatable, Sendable {
+        case files
+        /// The researcher switched it off.
+        case off
+        /// An end is skipped or not on the page.
+        case endSkipped
+        /// Both ends land on one handle.
+        case selfLink
+    }
+
     /// Why a row may be the same entity as another row on this page.
     enum DuplicateNote: Equatable, Sendable {
         /// Both rows land on one handle (or the other took the one this wanted).
@@ -44,8 +94,8 @@ struct PromoteFlow: Equatable, Sendable {
         var name: String
         var ref: String
         var anchor: Bool
-        var assessment: String
-        var reason: String
+        var assessment: Assessment
+        var reason: Reason
         var target: Target
         var menu: [Alternative]
         var comparisons: [CatalogPromoteGraphAlignmentComparison]
@@ -55,7 +105,8 @@ struct PromoteFlow: Equatable, Sendable {
         /// The researcher typed the argument; a retarget keeps it instead of re-drafting.
         var argumentEdited = false
         var decided: Bool
-        var updatedNote: String?
+        /// A suggested row whose target moved on the last proposal.
+        var updated: Bool
         /// Ref of the stronger handle a decided row's neighbors point at.
         var conflictNote: String?
         /// The row the proposal says this one may duplicate.
@@ -73,8 +124,8 @@ struct PromoteFlow: Equatable, Sendable {
         var mark: PVMarkKey
         var endA: String?
         var endB: String?
-        var files: Bool
-        var why: String
+        var state: ConnectionState
+        var files: Bool { state == .files }
     }
 
     struct Anchor: Equatable, Sendable {
@@ -114,8 +165,7 @@ struct PromoteFlow: Equatable, Sendable {
     var manual = false
     var pendingLeave: PendingNavigation?
     var sheetSubjectID: String?
-    /// Kind or assessment.
-    var group = "kind"
+    var group = Grouping.kind
     var bridgesOpen = false
 
     var visibleRows: [Row] {
@@ -135,7 +185,7 @@ struct PromoteFlow: Equatable, Sendable {
         }.count
     }
 
-    var skipCount: Int { scope.filter { !$0.anchor && $0.target.token == "skip" }.count }
+    var skipCount: Int { scope.filter { !$0.anchor && $0.target == .skip }.count }
 
     var connectionCount: Int { filedBridges.filter(\.files).count }
 
@@ -143,26 +193,26 @@ struct PromoteFlow: Equatable, Sendable {
 
     func connectionLines() -> [Bridge] { filedBridges }
 
-    private func lined(_ bridge: BridgeFact, files: Bool, why: String) -> Bridge {
+    private func lined(_ bridge: BridgeFact, _ state: ConnectionState) -> Bridge {
         Bridge(
             id: bridge.id, sentence: bridge.sentence, phrase: bridge.phrase,
             endAName: bridge.endAName, endBName: bridge.endBName, mark: bridge.mark,
-            endA: bridge.endA, endB: bridge.endB, files: files, why: why
+            endA: bridge.endA, endB: bridge.endB, state: state
         )
     }
 
     private var filedBridges: [Bridge] {
         bridges.map { bridge in
             if bridgeOff.contains(bridge.id) {
-                return lined(bridge, files: false, why: "off")
+                return lined(bridge, .off)
             }
             guard let left = resolve(bridge.endA), let right = resolve(bridge.endB) else {
-                return lined(bridge, files: false, why: "skipped")
+                return lined(bridge, .endSkipped)
             }
             if left == right {
-                return lined(bridge, files: false, why: "self")
+                return lined(bridge, .selfLink)
             }
-            return lined(bridge, files: true, why: "")
+            return lined(bridge, .files)
         }
     }
 
@@ -213,7 +263,7 @@ struct PromoteFlow: Equatable, Sendable {
             if !rows[index].argumentEdited { rows[index].argument = "" }
         }
         rows[index].decided = true
-        rows[index].updatedNote = nil
+        rows[index].updated = false
         manual = true
         noteDuplicates()
         return true
@@ -365,18 +415,18 @@ struct PromoteFlow: Equatable, Sendable {
         if let anchor = fact.anchor {
             return Row(
                 subjectID: fact.id, kind: fact.kind, name: fact.name, ref: fact.ref,
-                anchor: true, assessment: "strong", reason: "fixed",
+                anchor: true, assessment: .strong, reason: .filed,
                 target: .handle(id: anchor.id, ref: anchor.ref, title: anchor.title),
                 menu: [], comparisons: [], pins: [], confidenceGradeID: nil, argument: "",
-                decided: false, updatedNote: nil, conflictNote: nil, proposedDuplicateOf: nil, duplicateNote: nil
+                decided: false, updated: false, conflictNote: nil, proposedDuplicateOf: nil, duplicateNote: nil
             )
         }
         let menu = menu(for: proposal, kind: fact.kind)
         let drafted = draftTarget(proposal, menu: menu)
         if let previous, previous.decided {
             var kept = previous
-            kept.assessment = proposal.assessment
-            kept.reason = reason(proposal, kind: fact.kind)
+            kept.assessment = Assessment(wire: proposal.assessment)
+            kept.reason = Reason(proposal)
             // Lines only describe the row's own target: a decided handle is
             // sent as fixed, so the proposal compares exactly that handle.
             let lines = proposal.target == "handle" && proposal.handleID == previous.target.handleID
@@ -395,17 +445,14 @@ struct PromoteFlow: Equatable, Sendable {
             return kept
         }
         let lines = drafted.handleID == nil ? [] : proposal.comparisons
-        var updated: String?
-        if let previous, !previous.anchor, previous.target.token != drafted.token {
-            updated = drafted.token
-        }
+        let updated = previous.map { !$0.anchor && $0.target != drafted } ?? false
         return Row(
             subjectID: fact.id, kind: fact.kind, name: fact.name, ref: fact.ref,
-            anchor: false, assessment: proposal.assessment,
-            reason: reason(proposal, kind: fact.kind),
+            anchor: false, assessment: Assessment(wire: proposal.assessment),
+            reason: Reason(proposal),
             target: drafted, menu: menu, comparisons: proposal.comparisons,
             pins: draftedPins(lines), confidenceGradeID: nil, argument: draftedArgument(lines),
-            decided: false, updatedNote: updated, conflictNote: nil,
+            decided: false, updated: updated, conflictNote: nil,
             proposedDuplicateOf: duplicateOf(proposal), duplicateNote: nil
         )
     }
@@ -427,10 +474,11 @@ struct PromoteFlow: Equatable, Sendable {
     }
 
     private static func draftTarget(_ proposal: CatalogPromoteGraphAlignmentRow, menu: [Alternative]) -> Target {
-        if proposal.assessment == "strong", proposal.target == "handle", let first = menu.first, first.id == proposal.handleID {
+        let strong = Assessment(wire: proposal.assessment) == .strong
+        if strong, proposal.target == "handle", let first = menu.first, first.id == proposal.handleID {
             return .handle(id: first.id, ref: first.ref, title: first.title)
         }
-        if proposal.assessment == "strong", proposal.target == "new" {
+        if strong, proposal.target == "new" {
             return .newKind
         }
         return .skip
@@ -497,13 +545,5 @@ struct PromoteFlow: Equatable, Sendable {
             if let name = alt.place?.names.first, !name.isEmpty { return name }
         }
         return alt.handleRef
-    }
-
-    private static func reason(_ row: CatalogPromoteGraphAlignmentRow, kind _: EvidencePrimaryKind) -> String {
-        if !row.viaNeighborSubjectID.isEmpty {
-            let role = row.viaRole.isEmpty ? row.viaBridgeType : row.viaRole
-            return row.viaNeighborSubjectID + "|" + role
-        }
-        return row.reasons.first ?? ""
     }
 }

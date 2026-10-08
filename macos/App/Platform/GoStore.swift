@@ -819,7 +819,9 @@ struct GoStore: GenealogyStore {
                 handleRef: r.handleRef,
                 score: r.score,
                 assessment: r.assessment,
-                reasons: r.reasons,
+                reason: r.reason,
+                reasonPropertyKey: r.reasonPropertyKey,
+                reasonPropertyOrigin: r.reasonPropertyOrigin,
                 comparisons: r.comparisons.map { c in
                     CatalogPromoteGraphAlignmentComparison(
                         propertyKey: c.propertyKey,
@@ -828,7 +830,7 @@ struct GoStore: GenealogyStore {
                         valueType: c.valueType,
                         pinned: c.pinned,
                         weight: c.weight,
-                        groupLabel: c.groupLabel,
+                        groupSubjectID: c.groupSubjectID,
                         incomingObservationID: c.incomingObservationID,
                         incomingDisplay: c.incomingDisplay,
                         incomingSource: c.incomingSource,
