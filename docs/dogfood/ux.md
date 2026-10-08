@@ -19,6 +19,13 @@ Copy the stub. Surface + what got in the way is enough. A wanted fix is optional
 
 <!-- add below this line -->
 
+### Evidence graph canvas is too small
+
+- **Date:** 2026-10-08
+- **Where:** Evidence graph
+- **Annoyance:** I've already hit the edge of the canvas on some real Sources.
+- **Wanted:** A bigger canvas, or one that grows as cards get close to the edge. Related: *Box-select and move multiple Subject cards*, since growing cards are part of what pushes layouts outward.
+
 ### Citation composer slows down with many Observations
 
 - **Date:** 2026-10-08
