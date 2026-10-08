@@ -62,6 +62,22 @@ struct PVCheckbox: View {
         self.accessibilityLabelText = Text(accessibilityLabel)
     }
 
+    /// Box only, with spoken copy the caller composed (an `L10n` format
+    /// filled with what this box marks), when one fixed label can't say it.
+    init(
+        isChecked: Binding<Bool>,
+        isIndeterminate: Bool = false,
+        isDisabled: Bool = false,
+        accessibilitySpokenLabel: String
+    ) {
+        self.label = nil
+        self.description = nil
+        self._isChecked = isChecked
+        self.isIndeterminate = isIndeterminate
+        self.isDisabled = isDisabled
+        self.accessibilityLabelText = Text(verbatim: accessibilitySpokenLabel)
+    }
+
     var body: some View {
         Button {
             isChecked.toggle()
@@ -172,7 +188,7 @@ private struct PVCheckboxPreview: View {
             PVCheckbox(verbatim: "Include the index", isChecked: $index)
             PVCheckbox(verbatim: "Disabled", isChecked: .constant(true), isDisabled: true)
             HStack(spacing: PVSpacing.space4) {
-                PVCheckbox(isChecked: $pin, accessibilityLabel: "Pin")
+                PVCheckbox(isChecked: $pin, accessibilitySpokenLabel: "Pin")
                 PVCheckboxMark(isChecked: false)
                 PVCheckboxMark(isChecked: false, isIndeterminate: true)
                 PVCheckboxMark(isChecked: true, isLocked: true)

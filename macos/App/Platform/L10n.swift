@@ -1297,7 +1297,12 @@ enum L10n {
         static let confidence = LocalizedStringResource("promote.sheet.confidence", defaultValue: "Confidence", comment: "Claim confidence field")
         static let confidenceUnset = LocalizedStringResource("promote.sheet.confidence.unset", defaultValue: "Not stated", comment: "No confidence grade chosen")
         static let argument = LocalizedStringResource("promote.sheet.argument", defaultValue: "Argument", comment: "Claim argument field")
-        static let pin = LocalizedStringResource("promote.sheet.pin", defaultValue: "Pin", comment: "Toggle that pins a comparison as claim evidence")
+        static func pinLine(property: String, here: String, there: String) -> String {
+            L10n.format(LocalizedStringResource("promote.sheet.pinLine", defaultValue: "Pin %1$@: %2$@ and %3$@", comment: "VoiceOver label for one pin box; 1 = property, 2 = this source's value, 3 = the matched record's value"), property, here, there)
+        }
+        static func evidenceFor(name: String, assessment: String, reason: String) -> String {
+            L10n.format(LocalizedStringResource("promote.row.evidenceFor", defaultValue: "Evidence for %1$@: %2$@, %3$@", comment: "VoiceOver label for the button that opens a row's evidence; 1 = subject name, 2 = assessment, 3 = reason"), name, assessment, reason)
+        }
         static func outcome(_ outcome: String) -> LocalizedStringResource {
             switch outcome {
             case "agree": LocalizedStringResource("promote.sheet.agrees", defaultValue: "Agrees", comment: "A comparison that agrees")

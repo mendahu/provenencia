@@ -185,7 +185,8 @@ struct PromoteView: View {
                     ? L10n.string(L10n.Promote.groupedByAssessment)
                     : L10n.string(L10n.Promote.groupedByKind),
                 fillsWidth: false,
-                accessibilityLabel: L10n.Promote.groupLabel
+                accessibilityLabel: L10n.Promote.groupLabel,
+                accessibilityIdentifier: "promote.group"
             )
             .disabled(model.isSaving)
         }
@@ -195,6 +196,7 @@ struct PromoteView: View {
         HStack(alignment: .center, spacing: PVSpacing.space4) {
             PVButton(L10n.Promote.mapRest(count: model.flow.restCount), variant: .secondary, icon: .network, action: model.mapRest)
                 .disabled(model.isSaving)
+                .accessibilityIdentifier("promote.mapRest")
             Text(L10n.Promote.mapRestHint)
                 .font(PVFont.body(size: PVTypeScale.bodySmall))
                 .italic()
@@ -308,6 +310,7 @@ struct PromoteView: View {
                     isOn: bridgeOn(bridge.id),
                     isDisabled: model.isSaving
                 )
+                .accessibilityIdentifier("promote.connection.\(bridge.id)")
             } else {
                 Text(L10n.Promote.connectionState(bridge.state))
                     .font(PVFont.body(size: PVTypeScale.caption))
@@ -318,6 +321,8 @@ struct PromoteView: View {
         }
         .padding(.vertical, PVSpacing.space2)
         .overlay(alignment: .top) { PVDivider() }
+        // One element: the connection's sentence, then its switch or why it won't file.
+        .accessibilityElement(children: .combine)
     }
 
     private var connectionMeta: String {
@@ -340,6 +345,7 @@ struct PromoteView: View {
                 model.setBridgesOpen(!model.flow.bridgesOpen)
             }
             .disabled(model.isSaving)
+            .accessibilityIdentifier("promote.connections.toggle")
             Spacer()
             Text(verbatim: L10n.Promote.doneSummary(
                 file: model.flow.fileCount,
@@ -350,10 +356,12 @@ struct PromoteView: View {
             .foregroundStyle(PVColor.textSecondary)
             PVButton(L10n.Promote.cancel, variant: .secondary) { model.leave() }
                 .disabled(model.isSaving)
+                .accessibilityIdentifier("promote.cancel")
             PVButton(model.isSaving ? L10n.Promote.filing : L10n.Promote.done, variant: .primary, loading: model.isSaving) {
                 model.done()
             }
             .disabled(!model.canFinish)
+            .accessibilityIdentifier("promote.done")
         }
         .padding(.horizontal, PVSpacing.space10)
         .padding(.vertical, PVSpacing.space4)
@@ -470,7 +478,8 @@ private struct PromoteAlignmentRow: View {
                     fillsWidth: true,
                     rowHeight: 46,
                     isDisabled: model.isSaving,
-                    accessibilitySpokenLabel: L10n.Promote.filesOn(name: row.name)
+                    accessibilitySpokenLabel: L10n.Promote.filesOn(name: row.name),
+                    accessibilityIdentifier: "promote.row.\(row.ref).target"
                 ) { option in
                     PromoteTargetMenuRow(option: option, row: row)
                 }
@@ -489,6 +498,12 @@ private struct PromoteAlignmentRow: View {
                     }
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel(Text(verbatim: L10n.Promote.evidenceFor(
+                    name: row.name,
+                    assessment: L10n.string(PromoteAssessmentCopy.title(row.assessment)),
+                    reason: model.reasonText(for: row)
+                )))
+                .accessibilityIdentifier("promote.row.\(row.ref).evidence")
                 .frame(maxWidth: .infinity, alignment: .leading)
                 HStack(spacing: PVSpacing.space2) {
                     if row.updated {
@@ -691,11 +706,16 @@ private struct PromoteEvidenceSheet: View {
                                 )
                             }
                             PVField(label: L10n.Promote.confidence) {
-                                PVSelect(selection: confidenceBinding, options: confidenceOptions)
+                                PVSelect(
+                                    selection: confidenceBinding,
+                                    options: confidenceOptions,
+                                    accessibilityIdentifier: "promote.sheet.confidence"
+                                )
                             }
                         }
                         PVField(label: L10n.Promote.argument, hint: L10n.Promote.argumentHint(pinned: row.pins.count)) {
                             PVTextArea(text: argumentBinding)
+                                .accessibilityIdentifier("promote.sheet.argument")
                         }
                     }
                 }
@@ -703,6 +723,7 @@ private struct PromoteEvidenceSheet: View {
             }
         } footer: {
             PVButton(L10n.Promote.backToRows, variant: .primary) { model.closeSheet() }
+                .accessibilityIdentifier("promote.sheet.close")
         }
     }
 
@@ -752,8 +773,11 @@ private struct PromoteEvidenceSheet: View {
             PVCheckbox(
                 isChecked: pin(line.id),
                 isDisabled: line.incomingObservationID.isEmpty || line.outcome == "unknown",
-                accessibilityLabel: L10n.Promote.pin
+                accessibilitySpokenLabel: L10n.Promote.pinLine(
+                    property: compared(line), here: line.incomingDisplay, there: line.memberDisplay
+                )
             )
+            .accessibilityIdentifier("promote.sheet.pin.\(line.id)")
             .frame(width: 22)
             Text(verbatim: compared(line))
                 .font(PVFont.body(size: PVTypeScale.caption, weight: PVFontWeight.medium))
