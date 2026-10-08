@@ -215,7 +215,9 @@ func pairExhibits(incoming []exhibitObs, neighbor []byte, memberObs []exhibitObs
 			Property:              in.prop,
 			Outcome:               outcome,
 			ValueType:             in.valueType,
-			Pinned:                pinned,
+			// Compatible prefers the pair. A conflict is shown and left
+			// unpinned; the sheet says a disagreement is not evidence.
+			Pinned:                pinned && outcome == match.OutcomeAgree,
 			Weight:                weight,
 			GroupSubjectID:        append([]byte(nil), neighbor...),
 			IncomingObservationID: append([]byte(nil), in.id...),
