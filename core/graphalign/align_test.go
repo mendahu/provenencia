@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"testing"
 
+	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/graphalign"
 	"github.com/mendahu/provenencia/core/match"
@@ -103,6 +104,9 @@ func TestSeedFromAlreadyPromotedNeighbor(t *testing.T) {
 	row := rowBySubject(p, perSub)
 	if row.Target != graphalign.TargetHandle || !bytes.Equal(row.HandleID, perH) {
 		t.Fatalf("person from promoted event: %+v", row)
+	}
+	if row.Via == nil || !bytes.Equal(row.Via.NeighborSubjectID, evSub) {
+		t.Fatalf("person should be reached via the event: %+v", row.Via)
 	}
 }
 
@@ -367,5 +371,388 @@ func TestGracieObituaryGolden(t *testing.T) {
 	rG := rowBySubject(p1, gracie)
 	if rG.Target != graphalign.TargetHandle || !bytes.Equal(rG.HandleID, hGracie) {
 		t.Fatalf("fixed gracie: %+v", rG)
+	}
+}
+
+func nameVals(given, surname string) match.Values {
+	p := match.Property{Key: "name", Origin: "provenencia"}
+	return match.Values{p: {{Name: &namevalues.Value{
+		Form: given + " " + surname,
+		Parts: []namevalues.Part{
+			{Idx: 0, Type: namevalues.PartTypeGiven, Value: given},
+			{Idx: 1, Type: namevalues.PartTypeSurname, Value: surname},
+		},
+	}}}}
+}
+
+func nameMetas() []match.PropertyMeta {
+	return []match.PropertyMeta{
+		{Property: match.Property{Key: "name", Origin: "provenencia"}, ValueType: properties.ValueTypeName},
+	}
+}
+
+func TestUnreachableFallbackScoresOnTheWalkScale(t *testing.T) {
+	tests := []struct {
+		name       string
+		probe      match.Values
+		handle     match.Values
+		wantTarget graphalign.Target
+		wantAssess graphalign.Assessment
+	}{
+		{
+			name:  "a shared surname alone is not a match",
+			probe: nameVals("Mary", "Robins"), handle: nameVals("James", "Robins"),
+			wantTarget: graphalign.TargetSkip, wantAssess: graphalign.AssessNone,
+		},
+		{
+			name:  "the same name alone is a weak match, never strong",
+			probe: nameVals("Mary", "Robins"), handle: nameVals("Mary", "Robins"),
+			wantTarget: graphalign.TargetHandle, wantAssess: graphalign.AssessWeak,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s, h := id("s-orphan"), id("h-known")
+			layer := graphalign.Layer{
+				Subjects: []graphalign.Subject{{ID: s, Ref: "PER-S", Kind: "person", Values: tt.probe}},
+				Metas:    nameMetas(),
+			}
+			canon := graphalign.Canon{Handles: []graphalign.Handle{{ID: h, Ref: "PER-1", Kind: "person", Values: tt.handle}}}
+			row := rowBySubject(graphalign.Align(layer, canon, graphalign.Stats{}, nil, nil), s)
+			if row.Target != tt.wantTarget || row.Assessment != tt.wantAssess {
+				t.Fatalf("got %s / %s (score %.2f), want %s / %s", row.Target, row.Assessment, row.Score, tt.wantTarget, tt.wantAssess)
+			}
+		})
+	}
+}
+
+func TestContestedHandleIsDecidedTheSameEveryRun(t *testing.T) {
+	tests := []struct {
+		name   string
+		a, b   match.Values
+		winner string
+	}{
+		{name: "equal claims go to the first ref", a: nameVals("John", "Smith"), b: nameVals("John", "Smith"), winner: "s-a"},
+		{name: "the stronger claim wins whatever its ref", a: nameVals("Jon", "Smith"), b: nameVals("John", "Smith"), winner: "s-b"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sex := match.Property{Key: "sex_at_birth", Origin: "provenencia"}
+			male := match.Value{Term: "male"}
+			b := tt.b
+			if tt.winner == "s-b" {
+				b = match.Values{}
+				for k, v := range tt.b {
+					b[k] = v
+				}
+				b[sex] = []match.Value{male}
+			}
+			handle := nameVals("John", "Smith")
+			handle[sex] = []match.Value{male}
+			metas := append(nameMetas(), match.PropertyMeta{Property: sex, ValueType: properties.ValueTypeTerm})
+			layer := graphalign.Layer{
+				Subjects: []graphalign.Subject{
+					{ID: id("s-a"), Ref: "PER-A", Kind: "person", Values: tt.a},
+					{ID: id("s-b"), Ref: "PER-B", Kind: "person", Values: b},
+				},
+				Metas: metas,
+			}
+			canon := graphalign.Canon{Handles: []graphalign.Handle{{ID: id("h-1"), Ref: "PER-1", Kind: "person", Values: handle}}}
+			for run := 0; run < 50; run++ {
+				p := graphalign.Align(layer, canon, graphalign.Stats{}, nil, nil)
+				var got []string
+				for _, r := range p.Rows {
+					if r.Target == graphalign.TargetHandle {
+						got = append(got, string(r.SubjectID))
+					}
+				}
+				if len(got) != 1 || got[0] != tt.winner {
+					t.Fatalf("run %d: handle went to %v, want %s", run, got, tt.winner)
+				}
+			}
+		})
+	}
+}
+
+func TestEdgeSupportCountsTheSeedingNeighborOnce(t *testing.T) {
+	sig := partSig("subject", "event", "birth")
+	evSub, perSub, evH, perH := id("s-event"), id("s-person"), id("h-event"), id("h-person")
+	layer := graphalign.Layer{
+		Subjects: []graphalign.Subject{
+			{ID: evSub, Ref: "EVT-S", Kind: "event"},
+			{ID: perSub, Ref: "PER-S", Kind: "person"},
+		},
+		Bridges: []graphalign.Bridge{{A: perSub, B: evSub, Signature: sig}},
+		Metas:   personMetas(),
+	}
+	canon := graphalign.Canon{
+		Handles: []graphalign.Handle{{ID: evH, Ref: "EVT-1", Kind: "event"}, {ID: perH, Ref: "PER-1", Kind: "person"}},
+		Edges:   []graphalign.CanonEdge{{From: perH, To: evH, Signature: sig}},
+	}
+	stats := graphalign.Stats{FanOut: map[string]float64{sig.Key(): 1}}
+	fixed := []graphalign.Fixed{{SubjectID: evSub, HandleID: evH}}
+	row := rowBySubject(graphalign.Align(layer, canon, stats, fixed, nil), perSub)
+	cfg := graphalign.DefaultConfig()
+	if row.Score != cfg.EdgeSupportLow {
+		t.Fatalf("score %.2f, want one edge's support %.2f", row.Score, cfg.EdgeSupportLow)
+	}
+	if row.Target == graphalign.TargetHandle {
+		t.Fatalf("one edge and no shared values should not merge: %+v", row)
+	}
+}
+
+func TestHeldNewAndSkipDecisions(t *testing.T) {
+	sig := relSig("spouse")
+	tests := []struct {
+		name  string
+		hold  graphalign.Target
+		check func(t *testing.T, p graphalign.Proposal)
+	}{
+		{
+			name: "a row held New frees the handle for its twin",
+			hold: graphalign.TargetNew,
+			check: func(t *testing.T, p graphalign.Proposal) {
+				x, y := rowBySubject(p, id("s-x")), rowBySubject(p, id("s-y"))
+				if x.Target != graphalign.TargetNew {
+					t.Fatalf("held row %+v, want New", x)
+				}
+				if y.Target != graphalign.TargetHandle || !bytes.Equal(y.HandleID, id("h-x")) {
+					t.Fatalf("twin %+v, want the freed handle", y)
+				}
+			},
+		},
+		{
+			name: "a row held Skip is not walked through",
+			hold: graphalign.TargetSkip,
+			check: func(t *testing.T, p graphalign.Proposal) {
+				if x := rowBySubject(p, id("s-x")); x.Target != graphalign.TargetSkip {
+					t.Fatalf("held row %+v, want Skip", x)
+				}
+				if z := rowBySubject(p, id("s-z")); z.Via != nil && bytes.Equal(z.Via.NeighborSubjectID, id("s-x")) {
+					t.Fatalf("walk went through the skipped row: %+v", z.Via)
+				}
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// anchor —spouse— x (held) —spouse— z; y is x's twin with no edges.
+			layer := graphalign.Layer{
+				Subjects: []graphalign.Subject{
+					{ID: id("s-a"), Ref: "PER-A", Kind: "person", Values: nameVals("Ann", "Ames")},
+					{ID: id("s-x"), Ref: "PER-X", Kind: "person", Values: nameVals("Xavier", "Xu")},
+					{ID: id("s-y"), Ref: "PER-Y", Kind: "person", Values: nameVals("Xavier", "Xu")},
+					{ID: id("s-z"), Ref: "PER-Z", Kind: "person"},
+				},
+				Bridges: []graphalign.Bridge{
+					{A: id("s-a"), B: id("s-x"), Signature: sig},
+					{A: id("s-x"), B: id("s-z"), Signature: sig},
+				},
+				Metas: nameMetas(),
+			}
+			canon := graphalign.Canon{
+				Handles: []graphalign.Handle{
+					{ID: id("h-a"), Ref: "PER-1", Kind: "person", Values: nameVals("Ann", "Ames")},
+					{ID: id("h-x"), Ref: "PER-2", Kind: "person", Values: nameVals("Xavier", "Xu")},
+					{ID: id("h-z"), Ref: "PER-3", Kind: "person"},
+				},
+				Edges: []graphalign.CanonEdge{
+					{From: id("h-a"), To: id("h-x"), Signature: sig},
+					{From: id("h-x"), To: id("h-z"), Signature: sig},
+				},
+			}
+			fixed := []graphalign.Fixed{
+				{SubjectID: id("s-a"), HandleID: id("h-a")},
+				{SubjectID: id("s-x"), Target: tt.hold},
+			}
+			tt.check(t, graphalign.Align(layer, canon, graphalign.Stats{}, fixed, nil))
+		})
+	}
+}
+
+func TestDecidedRowTheNeighborsContradict(t *testing.T) {
+	sig := partSig("subject", "event", "birth")
+	et, etv := termProp("event_type", "birth")
+	layer := graphalign.Layer{
+		Subjects: []graphalign.Subject{
+			{ID: id("s-person"), Ref: "PER-S", Kind: "person", Values: nameVals("Gracie", "Gates")},
+			{ID: id("s-birth"), Ref: "EVT-S", Kind: "event", Values: vals(et, etv)},
+		},
+		Bridges: []graphalign.Bridge{{A: id("s-person"), B: id("s-birth"), Signature: sig}},
+		Metas:   append(nameMetas(), eventMetas()...),
+	}
+	canon := graphalign.Canon{
+		Handles: []graphalign.Handle{
+			{ID: id("h-chosen"), Ref: "PER-1", Kind: "person", Values: nameVals("Mabel", "Moss")},
+			{ID: id("h-gracie"), Ref: "PER-2", Kind: "person", Values: nameVals("Gracie", "Gates")},
+			{ID: id("h-birth"), Ref: "EVT-1", Kind: "event", Values: vals(et, etv)},
+		},
+		Edges: []graphalign.CanonEdge{{From: id("h-gracie"), To: id("h-birth"), Signature: sig}},
+	}
+	fixed := []graphalign.Fixed{
+		{SubjectID: id("s-person"), HandleID: id("h-chosen")},
+		{SubjectID: id("s-birth"), HandleID: id("h-birth")},
+	}
+	row := rowBySubject(graphalign.Align(layer, canon, graphalign.Stats{}, fixed, nil), id("s-person"))
+	if !bytes.Equal(row.HandleID, id("h-chosen")) {
+		t.Fatalf("decided row moved: %+v", row)
+	}
+	if !row.Flags.ConflictWithFixed || len(row.Alternatives) == 0 || !bytes.Equal(row.Alternatives[0].HandleID, id("h-gracie")) {
+		t.Fatalf("want a conflict naming PER-2 first, got flags %+v alts %+v", row.Flags, row.Alternatives)
+	}
+	if row.Assessment == graphalign.AssessStrong {
+		t.Fatalf("a conflicting decision should not read strong: %+v", row)
+	}
+}
+
+func TestPossibleDuplicates(t *testing.T) {
+	tests := []struct {
+		name    string
+		handles []graphalign.Handle
+		want    map[string]string // subject → duplicate of
+	}{
+		{
+			name:    "the row that lost a handle names the row that took it",
+			handles: []graphalign.Handle{{ID: id("h-1"), Ref: "PER-1", Kind: "person", Values: nameVals("John", "Smith")}},
+			want:    map[string]string{"s-b": "s-a"},
+		},
+		{
+			name: "two New rows that match each other name each other",
+			want: map[string]string{"s-a": "s-b", "s-b": "s-a"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			layer := graphalign.Layer{
+				Subjects: []graphalign.Subject{
+					{ID: id("s-a"), Ref: "PER-A", Kind: "person", Values: nameVals("John", "Smith")},
+					{ID: id("s-b"), Ref: "PER-B", Kind: "person", Values: nameVals("John", "Smith")},
+				},
+				Metas: nameMetas(),
+			}
+			p := graphalign.Align(layer, graphalign.Canon{Handles: tt.handles}, graphalign.Stats{}, nil, nil)
+			for _, r := range p.Rows {
+				want, flagged := tt.want[string(r.SubjectID)]
+				if r.Flags.PossibleDuplicate != flagged || string(r.Flags.DuplicateOf) != want {
+					t.Fatalf("%s: flags %+v, want duplicate of %q", r.SubjectID, r.Flags, want)
+				}
+				if r.Target == graphalign.TargetSkip && flagged && r.Reason != graphalign.ReasonTaken {
+					t.Fatalf("%s: reason %q, want taken", r.SubjectID, r.Reason)
+				}
+			}
+		})
+	}
+}
+
+func TestRowReasons(t *testing.T) {
+	nameKey := match.Property{Key: "name", Origin: "provenencia"}
+	sig := relSig("spouse")
+	tests := []struct {
+		name     string
+		layer    []graphalign.Subject
+		handles  []graphalign.Handle
+		bridges  []graphalign.Bridge
+		edges    []graphalign.CanonEdge
+		fixed    []graphalign.Fixed
+		subject  string
+		want     graphalign.Reason
+		wantProp match.Property
+	}{
+		{
+			name:    "a property-only match names the agreeing property",
+			layer:   []graphalign.Subject{{ID: id("s-a"), Ref: "A", Kind: "person", Values: nameVals("Ann", "Ames")}},
+			handles: []graphalign.Handle{{ID: id("h-a"), Ref: "PER-1", Kind: "person", Values: nameVals("Ann", "Ames")}},
+			subject: "s-a", want: graphalign.ReasonAgrees, wantProp: nameKey,
+		},
+		{
+			name:    "a candidate below the bar is weak",
+			layer:   []graphalign.Subject{{ID: id("s-a"), Ref: "A", Kind: "person", Values: nameVals("Ann", "Ames")}},
+			handles: []graphalign.Handle{{ID: id("h-a"), Ref: "PER-1", Kind: "person", Values: nameVals("Bob", "Ames")}},
+			subject: "s-a", want: graphalign.ReasonWeak,
+		},
+		{
+			name:    "no candidate is no match",
+			layer:   []graphalign.Subject{{ID: id("s-a"), Ref: "A", Kind: "person", Values: nameVals("Ann", "Ames")}},
+			subject: "s-a", want: graphalign.ReasonNoMatch,
+		},
+		{
+			name:    "no values is empty",
+			layer:   []graphalign.Subject{{ID: id("s-a"), Ref: "A", Kind: "person"}},
+			subject: "s-a", want: graphalign.ReasonEmpty,
+		},
+		{
+			name: "a neighbor-reached row is via",
+			layer: []graphalign.Subject{
+				{ID: id("s-a"), Ref: "A", Kind: "person", Values: nameVals("Ann", "Ames")},
+				{ID: id("s-b"), Ref: "B", Kind: "person", Values: nameVals("Bob", "Ames")},
+			},
+			handles: []graphalign.Handle{
+				{ID: id("h-a"), Ref: "PER-1", Kind: "person", Values: nameVals("Ann", "Ames")},
+				{ID: id("h-b"), Ref: "PER-2", Kind: "person", Values: nameVals("Bob", "Ames")},
+			},
+			bridges: []graphalign.Bridge{{A: id("s-a"), B: id("s-b"), Signature: sig}},
+			edges:   []graphalign.CanonEdge{{From: id("h-a"), To: id("h-b"), Signature: sig}},
+			fixed:   []graphalign.Fixed{{SubjectID: id("s-a"), HandleID: id("h-a")}},
+			subject: "s-b", want: graphalign.ReasonVia,
+		},
+		{
+			name:    "a held row is decided",
+			layer:   []graphalign.Subject{{ID: id("s-a"), Ref: "A", Kind: "person", Values: nameVals("Ann", "Ames")}},
+			fixed:   []graphalign.Fixed{{SubjectID: id("s-a"), Target: graphalign.TargetSkip}},
+			subject: "s-a", want: graphalign.ReasonDecided,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			layer := graphalign.Layer{Subjects: tt.layer, Bridges: tt.bridges, Metas: nameMetas()}
+			canon := graphalign.Canon{Handles: tt.handles, Edges: tt.edges}
+			row := rowBySubject(graphalign.Align(layer, canon, graphalign.Stats{}, tt.fixed, nil), id(tt.subject))
+			if row.Reason != tt.want || row.ReasonProperty != tt.wantProp {
+				t.Fatalf("reason %q / %+v, want %q / %+v", row.Reason, row.ReasonProperty, tt.want, tt.wantProp)
+			}
+		})
+	}
+}
+
+func TestDirectedRelationshipsMatchFromTheSameEnd(t *testing.T) {
+	tests := []struct {
+		name     string
+		directed bool
+		want     string
+	}{
+		// PER-0 is the anchor's parent, PER-9 its child; Bob is the anchor's
+		// child. Undirected, the tie goes to the first ref (the parent).
+		{name: "a symmetric term reaches either end", directed: false, want: "h-parent"},
+		{name: "a directed term reaches only the same end", directed: true, want: "h-child"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sig := relSig("parent_of")
+			sig.Directed = tt.directed
+			layer := graphalign.Layer{
+				Subjects: []graphalign.Subject{
+					{ID: id("s-a"), Ref: "A", Kind: "person", Values: nameVals("Ann", "Ames")},
+					{ID: id("s-b"), Ref: "B", Kind: "person", Values: nameVals("Bob", "Ames")},
+				},
+				Bridges: []graphalign.Bridge{{A: id("s-a"), B: id("s-b"), Signature: sig}}, // Ann parent_of Bob
+				Metas:   nameMetas(),
+			}
+			canon := graphalign.Canon{
+				Handles: []graphalign.Handle{
+					{ID: id("h-a"), Ref: "PER-5", Kind: "person", Values: nameVals("Ann", "Ames")},
+					{ID: id("h-parent"), Ref: "PER-0", Kind: "person", Values: nameVals("Bob", "Ames")},
+					{ID: id("h-child"), Ref: "PER-9", Kind: "person", Values: nameVals("Bob", "Ames")},
+				},
+				Edges: []graphalign.CanonEdge{
+					{From: id("h-parent"), To: id("h-a"), Signature: sig}, // PER-0 parent_of Ann
+					{From: id("h-a"), To: id("h-child"), Signature: sig},  // Ann parent_of PER-9
+				},
+			}
+			fixed := []graphalign.Fixed{{SubjectID: id("s-a"), HandleID: id("h-a")}}
+			row := rowBySubject(graphalign.Align(layer, canon, graphalign.Stats{}, fixed, nil), id("s-b"))
+			if row.Target != graphalign.TargetHandle || string(row.HandleID) != tt.want || row.Reason != graphalign.ReasonVia {
+				t.Fatalf("got %s %q (%s), want %q via the anchor", row.Target, row.HandleID, row.Reason, tt.want)
+			}
+		})
 	}
 }

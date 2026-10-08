@@ -9,13 +9,14 @@ import "math"
 // DefaultConfig is the shipped walk/band configuration.
 func DefaultConfig() Config {
 	return Config{
-		AcceptScore:     2.0,
-		StrongScore:     4.0,
-		WeakScore:       2.0,
-		ConflictPenalty: 3.0,
-		EdgeSupportLow:  1.5, // fan-out ≈1 correspondence
-		EdgeSupportHigh: 0.25,
-		FanOutLowMax:    1.5, // signatures with fan-out ≤ this get EdgeSupportLow
+		AcceptScore:      2.0,
+		StrongScore:      4.0,
+		WeakScore:        2.0,
+		ConflictPenalty:  3.0,
+		EdgeSupportLow:   1.5, // fan-out ≈1 correspondence
+		EdgeSupportHigh:  0.25,
+		FanOutLowMax:     1.5, // signatures with fan-out ≤ this get EdgeSupportLow
+		FanOutUnknown:    2.0, // a signature the catalog has no fan-out for yet
 		AlternativeLimit: 3,
 		MPrior: map[string]float64{
 			"text":    0.9,
@@ -38,6 +39,7 @@ type Config struct {
 	EdgeSupportLow   float64
 	EdgeSupportHigh  float64
 	FanOutLowMax     float64
+	FanOutUnknown    float64
 	AlternativeLimit int
 	MPrior           map[string]float64 // value type → m
 	UPrior           float64

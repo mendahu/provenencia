@@ -1,9 +1,6 @@
 import SwiftUI
 
-/// The Promote place (S9-11, board S9-D9): a workspace place, not a sheet, so
-/// the walk (S9-30) and compare (S9-19) get the page's width and the toolbar's
-/// Back returns to the graph. The shell carries the subject being promoted,
-/// step progress, Done, and the leave guard on every step.
+/// The Promote place (S9-44): one page, laid out as the S9-D16 board.
 struct PromoteView: View {
     @Environment(WorkspaceNavigation.self) private var navigation
     @State private var model: PromoteModel
@@ -27,28 +24,31 @@ struct PromoteView: View {
     var body: some View {
         let model = model
         VStack(spacing: 0) {
-            PromoteHeader(
-                subject: model.subject,
-                sourceTitle: model.entry.sourceTitle,
-                steps: model.steps,
-                currentStep: model.currentStepIndex
-            )
+            header
             ScrollView {
-                stepScreen
-                    .frame(maxWidth: 700, alignment: .leading)
-                    .padding(.horizontal, PVSpacing.space10)
-                    .padding(.top, 28)
-                    .padding(.bottom, PVSpacing.space8)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                VStack(alignment: .leading, spacing: PVSpacing.space7) {
+                    notices
+                    if model.flow.mappedRest {
+                        mappedBar
+                    }
+                    ForEach(sections, id: \.id) { section in
+                        sectionBlock(section)
+                    }
+                    if !model.flow.mappedRest && model.flow.restCount > 0 {
+                        mapRest
+                    }
+                }
+                .padding(.horizontal, PVSpacing.space10)
+                .padding(.vertical, PVSpacing.space6)
+                .frame(maxWidth: 1200, alignment: .leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            if bridgesOpen.wrappedValue {
+                connectionsPanel
             }
             footer
         }
         .background(PVColor.surfacePage)
-        .background {
-            if let graph: QueryHandle<SourceGraphRows> = model.session.queryHandle(model.graphKey) {
-                PromoteSubjectWatch(handle: graph, model: model)
-            }
-        }
         .onAppear {
             model.navigation = navigation
             navigation.leaveGuard = model
@@ -60,225 +60,835 @@ struct PromoteView: View {
         }
         .task {
             let _: QueryHandle<SourceGraphRows> = model.session.query(model.graphKey)
-            let _: QueryHandle<[CatalogPromoteTargetSuggestion]> = model.session.query(model.suggestionsKey)
             let _: QueryHandle<[CatalogClaimConfidenceGrade]> = model.session.query(model.confidenceKey)
             let _: QueryHandle<PropertiesSnapshot> = model.session.query(model.propertiesKey)
+            let _: QueryHandle<[CatalogConnectRule]> = model.session.query(model.rulesKey)
+            let _: QueryHandle<[CatalogSource]> = model.session.query(model.sourcesKey)
+            let _: QueryHandle<[CatalogSourceType]> = model.session.query(model.sourceTypesKey)
+            await model.load()
+        }
+        .sheet(item: sheetBinding) { row in
+            PromoteEvidenceSheet(row: row, grades: model.grades, model: model)
         }
         .pvConfirm(
             item: leaveBinding,
             copy: { _ in
                 PVConfirmCopy(
-                    title: model.leaveTitle,
-                    message: model.leaveMessage,
+                    title: L10n.string(L10n.Promote.leaveTitle),
+                    message: L10n.Promote.leaveDetail(
+                        rows: model.flow.rows.filter(\.decided).count,
+                        connections: model.flow.bridgeOff.count
+                    ),
                     confirm: L10n.Promote.leaveConfirm,
                     cancel: L10n.Promote.leaveCancel
                 )
             },
-            tone: .irreversible,
+            tone: .danger,
             accessibilityIdentifierPrefix: "promote.leave",
             onConfirm: { model.leave() },
             detail: { _ in EmptyView() }
         )
-        .accessibilityIdentifier("workspace.destination.promote")
     }
 
-    /// The current step's screen; the flow decides which step that is.
-    @ViewBuilder
-    private var stepScreen: some View {
-        switch model.flow.step {
-        case .chooseTarget:
-            PromoteTargetStep(
-                model: model,
-                suggestions: model.session.queryHandle(model.suggestionsKey)
-            )
-        case .claim:
-            PromoteClaimStep(
-                model: model,
-                grades: model.session.queryHandle(model.confidenceKey),
-                properties: model.session.queryHandle(model.propertiesKey)
-            )
-        case .compare:
-            // Not built until S9-19; the flow never stops here.
-            EmptyView()
+    private var notices: some View {
+        VStack(alignment: .leading, spacing: PVSpacing.space4) {
+            if let error = model.loadError {
+                PVCallout(tone: .danger, message: error)
+            }
+            if model.flow.staleNote != nil {
+                PVCallout(
+                    tone: .danger,
+                    title: L10n.Promote.staleTitle,
+                    message: L10n.string(L10n.Promote.stale)
+                )
+            }
+            if let error = model.proposeError {
+                PVCallout(tone: .danger, message: error)
+            }
+            if let error = model.saveError {
+                PVCallout(tone: .danger, message: error)
+            }
         }
     }
 
-    /// Back, the hint, Done and Next. Everything here reads `model.controls`
-    /// (from the flow), never the step itself.
-    private var footer: some View {
-        let controls = model.controls
-        return HStack(spacing: PVSpacing.space6) {
-            if let backLabel = model.backLabel {
-                PVButton(backLabel, variant: .ghost, icon: .arrowLeft) {
-                    model.stepBack()
+    private var header: some View {
+        HStack(alignment: .center, spacing: PVSpacing.space5) {
+            RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous)
+                .fill(PVColor.surfaceSunken)
+                .overlay(RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous).strokeBorder(PVColor.borderSubtle, lineWidth: 1))
+                .overlay(PVMark(model.sourceMark, size: 24, decorative: true).foregroundStyle(PVColor.textSecondary))
+                .frame(width: 44, height: 44)
+            VStack(alignment: .leading, spacing: PVSpacing.space2) {
+                Text(L10n.Promote.pageTitle)
+                    .pvMicroCaps()
+                    .foregroundStyle(PVColor.textMuted)
+                if let title = model.entry.sourceTitle {
+                    Text(verbatim: title)
+                        .font(PVFont.display(size: PVTypeScale.h3, weight: PVFontWeight.semibold))
+                        .foregroundStyle(PVColor.textDisplay)
                 }
-                .disabled(!controls.canGoBack)
-                .accessibilityIdentifier("promote.back")
+                if !model.sourceRef.isEmpty {
+                    Text(verbatim: model.sourceRef)
+                        .font(PVFont.mono(size: PVTypeScale.caption))
+                        .foregroundStyle(PVColor.textMuted)
+                }
             }
-            Text(verbatim: model.hint)
-                .font(PVFont.body(size: PVTypeScale.caption, italic: true))
-                .foregroundStyle(PVColor.textMuted)
-                .lineLimit(2)
-                .accessibilityIdentifier("promote.hint")
             Spacer(minLength: PVSpacing.space6)
-            PVButton(L10n.Promote.done, variant: .secondary) {
-                model.done()
+            VStack(alignment: .trailing, spacing: PVSpacing.space1) {
+                Text(verbatim: promoting)
+                    .font(PVFont.body(size: PVTypeScale.bodySmall, weight: PVFontWeight.medium))
+                Text(verbatim: countLine)
+                    .font(PVFont.mono(size: PVTypeScale.caption))
+                    .foregroundStyle(PVColor.textMuted)
             }
-            .disabled(model.isSaving)
-            .accessibilityIdentifier("promote.done")
-            PVButton(model.nextLabel, variant: .primary, iconRight: .arrowRight, loading: model.isSaving) {
-                Task { await model.next() }
-            }
-            .disabled(!controls.canAdvance)
-            .accessibilityIdentifier("promote.next")
         }
         .padding(.horizontal, PVSpacing.space10)
-        .padding(.vertical, 14)
+        .padding(.vertical, PVSpacing.space6)
         .background(PVColor.surfaceCard)
-        .overlay(alignment: .top) {
-            Rectangle().fill(PVColor.borderSubtle).frame(height: 1)
+        .overlay(alignment: .bottom) { PVDivider() }
+    }
+
+    private var promoting: String {
+        if model.flow.mappedRest {
+            return L10n.Promote.promoting(count: model.flow.rows.count)
+        }
+        return model.entry.subjectName
+    }
+
+    private var countLine: String {
+        if model.flow.mappedRest {
+            return L10n.Promote.rowSummary(
+                rows: model.flow.rows.count,
+                filed: model.flow.rows.filter(\.anchor).count
+            )
+        }
+        return L10n.Promote.singleSummary(more: model.flow.restCount)
+    }
+
+    private var mappedBar: some View {
+        HStack(alignment: .center) {
+            Text(verbatim: L10n.Promote.openedFrom(name: model.entry.subjectName))
+                .font(PVFont.body(size: PVTypeScale.bodySmall))
+                .italic()
+                .foregroundStyle(PVColor.textSecondary)
+            Spacer(minLength: PVSpacing.space4)
+            PVSelect(
+                selection: groupBinding,
+                options: [
+                    PVSelectOption(value: PromoteFlow.Grouping.kind.rawValue, label: L10n.string(L10n.Promote.groupKind)),
+                    PVSelectOption(value: PromoteFlow.Grouping.assessment.rawValue, label: L10n.string(L10n.Promote.groupAssessment)),
+                ],
+                icon: .layers,
+                displayLabel: model.flow.group == .assessment
+                    ? L10n.string(L10n.Promote.groupedByAssessment)
+                    : L10n.string(L10n.Promote.groupedByKind),
+                fillsWidth: false,
+                accessibilityLabel: L10n.Promote.groupLabel,
+                accessibilityIdentifier: "promote.group"
+            )
+            .disabled(model.isSaving)
         }
     }
 
-    /// The flow owns the question; dismissing the sheet answers "keep promoting".
+    private var mapRest: some View {
+        HStack(alignment: .center, spacing: PVSpacing.space4) {
+            PVButton(L10n.Promote.mapRest(count: model.flow.restCount), variant: .secondary, icon: .network, action: model.mapRest)
+                .disabled(model.isSaving)
+                .accessibilityIdentifier("promote.mapRest")
+            Text(L10n.Promote.mapRestHint)
+                .font(PVFont.body(size: PVTypeScale.bodySmall))
+                .italic()
+                .foregroundStyle(PVColor.textSecondary)
+        }
+    }
+
+    private func sectionBlock(_ section: Section) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            PVSectionHeader(title: section.title, meta: section.meta)
+            if !section.rows.isEmpty {
+                columnHeaders
+                ForEach(section.rows) { row in
+                    PromoteAlignmentRow(row: row, model: model)
+                        .disabled(model.isSaving)
+                }
+            }
+            if !section.anchors.isEmpty {
+                VStack(alignment: .leading, spacing: 0) {
+                    Text(L10n.Promote.alreadyFiledHeading)
+                        .pvMicroCaps()
+                        .foregroundStyle(PVColor.textMuted)
+                        .padding(.top, PVSpacing.space3)
+                        .padding(.bottom, PVSpacing.space2)
+                    ForEach(section.anchors) { row in
+                        PromoteAnchorRow(row: row)
+                    }
+                }
+                .padding(.horizontal, PVSpacing.space4)
+                .background(PVColor.surfaceSunken)
+            }
+        }
+    }
+
+    private var columnHeaders: some View {
+        HStack(spacing: PromoteLayout.columnGap) {
+            Color.clear.frame(width: PromoteLayout.kindTile, height: 1)
+            columnLabel(L10n.Promote.columnSource)
+            Color.clear.frame(width: 14, height: 1)
+            columnLabel(L10n.Promote.columnTarget).frame(width: PromoteLayout.targetColumn, alignment: .leading)
+            columnLabel(L10n.Promote.columnAssessment)
+            Color.clear.frame(width: PromoteLayout.badgeColumn, height: 1)
+        }
+        .padding(.top, PVSpacing.space5)
+        .padding(.bottom, PVSpacing.space3)
+    }
+
+    private func columnLabel(_ title: LocalizedStringResource) -> some View {
+        Text(title)
+            .pvMicroCaps()
+            .foregroundStyle(PVColor.textMuted)
+            .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var connectionsPanel: some View {
+        VStack(alignment: .leading, spacing: PVSpacing.space3) {
+            HStack(alignment: .firstTextBaseline, spacing: PVSpacing.space4) {
+                Text(L10n.Promote.connectionsTitle)
+                    .font(PVFont.display(size: PVTypeScale.h4, weight: PVFontWeight.semibold))
+                    .foregroundStyle(PVColor.textDisplay)
+                Text(verbatim: connectionMeta)
+                    .font(PVFont.mono(size: PVTypeScale.caption))
+                    .foregroundStyle(PVColor.textMuted)
+                Text(L10n.Promote.connectionsHint)
+                    .font(PVFont.body(size: PVTypeScale.bodySmall))
+                    .italic()
+                    .foregroundStyle(PVColor.textSecondary)
+            }
+            ScrollView {
+                VStack(spacing: 0) {
+                    ForEach(model.flow.connectionLines()) { bridge in
+                        connectionRow(bridge)
+                    }
+                }
+            }
+            .frame(maxHeight: 420)
+        }
+        .padding(.horizontal, PVSpacing.space10)
+        .padding(.vertical, PVSpacing.space4)
+        .background(PVColor.surfaceCard)
+        .overlay(alignment: .top) { PVDivider() }
+    }
+
+    private func connectionRow(_ bridge: PromoteFlow.Bridge) -> some View {
+        HStack(alignment: .center, spacing: PromoteLayout.columnGap) {
+            PVMark(bridge.mark, size: 16, decorative: true)
+                .foregroundStyle(PVColor.textMuted)
+                .frame(width: 20)
+            if bridge.endAName.isEmpty || bridge.endBName.isEmpty {
+                Text(verbatim: bridge.sentence)
+                    .font(PVFont.body(size: PVTypeScale.bodySmall))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            } else {
+                HStack(spacing: PVSpacing.space2) {
+                    Text(verbatim: bridge.endAName)
+                    Text(verbatim: bridge.phrase)
+                        .italic()
+                        .foregroundStyle(PVColor.textSecondary)
+                    Text(verbatim: bridge.endBName)
+                }
+                .font(PVFont.body(size: PVTypeScale.bodySmall))
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            if bridge.state == .files || bridge.state == .off {
+                PVSwitch(
+                    L10n.Promote.connectionState(bridge.state),
+                    isOn: bridgeOn(bridge.id),
+                    isDisabled: model.isSaving
+                )
+                .accessibilityIdentifier("promote.connection.\(bridge.id)")
+            } else {
+                Text(L10n.Promote.connectionState(bridge.state))
+                    .font(PVFont.body(size: PVTypeScale.caption))
+                    .italic()
+                    .foregroundStyle(PVColor.textMuted)
+                    .multilineTextAlignment(.trailing)
+            }
+        }
+        .padding(.vertical, PVSpacing.space2)
+        .overlay(alignment: .top) { PVDivider() }
+        // One element: the connection's sentence, then its switch or why it won't file.
+        .accessibilityElement(children: .combine)
+    }
+
+    private var connectionMeta: String {
+        let lines = model.flow.connectionLines()
+        return L10n.Promote.connectionsMeta(
+            filed: lines.filter(\.files).count,
+            off: lines.filter { $0.state == .off }.count,
+            unfiled: lines.filter { $0.state == .endSkipped || $0.state == .selfLink }.count
+        )
+    }
+
+    private var footer: some View {
+        HStack(spacing: PVSpacing.space4) {
+            PVButton(
+                L10n.Promote.connections(count: model.flow.connectionCount),
+                variant: .ghost,
+                size: .sm,
+                iconRight: bridgesOpen.wrappedValue ? .chevronUp : .chevronDown
+            ) {
+                model.setBridgesOpen(!model.flow.bridgesOpen)
+            }
+            .disabled(model.isSaving)
+            .accessibilityIdentifier("promote.connections.toggle")
+            Spacer()
+            Text(verbatim: L10n.Promote.doneSummary(
+                file: model.flow.fileCount,
+                skip: model.flow.skipCount,
+                connections: model.flow.connectionCount
+            ))
+            .font(PVFont.mono(size: PVTypeScale.caption))
+            .foregroundStyle(PVColor.textSecondary)
+            PVButton(L10n.Promote.cancel, variant: .secondary) { model.leave() }
+                .disabled(model.isSaving)
+                .accessibilityIdentifier("promote.cancel")
+            PVButton(model.isSaving ? L10n.Promote.filing : L10n.Promote.done, variant: .primary, loading: model.isSaving) {
+                model.done()
+            }
+            .disabled(!model.canFinish)
+            .accessibilityIdentifier("promote.done")
+        }
+        .padding(.horizontal, PVSpacing.space10)
+        .padding(.vertical, PVSpacing.space4)
+        .background(PVColor.surfaceCard)
+        .overlay(alignment: .top) { PVDivider() }
+    }
+
+    private struct Section {
+        var id: String
+        var title: LocalizedStringResource
+        var meta: String
+        var rows: [PromoteFlow.Row]
+        var anchors: [PromoteFlow.Row]
+    }
+
+    private var sections: [Section] {
+        let working = model.flow.visibleRows.filter { !$0.anchor }
+        let anchors = model.flow.mappedRest ? model.flow.rows.filter(\.anchor) : []
+        if model.flow.group == .assessment {
+            return [PromoteFlow.Assessment.strong, .weak, .none].map { band in
+                section(band.rawValue, PromoteAssessmentCopy.title(band), working.filter { $0.assessment == band }, [])
+            }.filter { !$0.rows.isEmpty }
+        }
+        return [
+            kindSection("person", L10n.Promote.kindPerson, .person, working, anchors),
+            kindSection("event", L10n.Promote.kindEvent, .event, working, anchors),
+            kindSection("place", L10n.Promote.kindPlace, .place, working, anchors),
+        ].filter { !$0.rows.isEmpty || !$0.anchors.isEmpty }
+    }
+
+    private func kindSection(
+        _ id: String,
+        _ title: LocalizedStringResource,
+        _ kind: EvidencePrimaryKind,
+        _ working: [PromoteFlow.Row],
+        _ anchors: [PromoteFlow.Row]
+    ) -> Section {
+        let rows = working.filter { $0.kind == kind }
+        let filed = anchors.filter { $0.kind == kind }
+        return section(id, title, rows, filed)
+    }
+
+    private func section(
+        _ id: String,
+        _ title: LocalizedStringResource,
+        _ rows: [PromoteFlow.Row],
+        _ anchors: [PromoteFlow.Row]
+    ) -> Section {
+        let total = rows.count + anchors.count
+        let meta = anchors.isEmpty
+            ? L10n.Promote.sectionCount(total)
+            : L10n.Promote.sectionCountFiled(rows: total, filed: anchors.count)
+        return Section(id: id, title: title, meta: meta, rows: rows, anchors: anchors)
+    }
+
+    private var groupBinding: Binding<String> {
+        Binding(
+            get: { model.flow.group.rawValue },
+            set: { model.setGroup(PromoteFlow.Grouping(rawValue: $0) ?? .kind) }
+        )
+    }
+
+    private var bridgesOpen: Binding<Bool> {
+        Binding(get: { model.flow.bridgesOpen }, set: { model.setBridgesOpen($0) })
+    }
+
+    private func bridgeOn(_ id: String) -> Binding<Bool> {
+        Binding(
+            get: { !model.flow.bridgeOff.contains(id) },
+            set: { _ in model.toggleBridge(id) }
+        )
+    }
+
+    private var sheetBinding: Binding<PromoteFlow.Row?> {
+        Binding(
+            get: { model.flow.rows.first { $0.subjectID == model.flow.sheetSubjectID } },
+            set: { model.setSheetSubject($0?.subjectID) }
+        )
+    }
+
     private var leaveBinding: Binding<PromoteModel.PendingLeave?> {
         Binding(
             get: { model.pendingLeave },
-            set: { newValue in
-                if newValue == nil, model.pendingLeave != nil {
-                    model.keepPromoting()
-                }
-            }
+            set: { if $0 == nil { model.keepPromoting() } }
         )
     }
 }
 
-/// Tells the flow when the current subject is gone or was promoted elsewhere;
-/// the flow sends the place back to the graph.
-private struct PromoteSubjectWatch: View {
-    @Bindable var handle: QueryHandle<SourceGraphRows>
+private struct PromoteAlignmentRow: View {
+    let row: PromoteFlow.Row
     let model: PromoteModel
 
     var body: some View {
-        Color.clear
-            .onChange(of: model.subjectStatus(rows: handle.value), initial: true) { _, status in
-                model.subjectStatusChanged(status)
+        VStack(alignment: .leading, spacing: PVSpacing.space2) {
+            HStack(alignment: .center, spacing: PromoteLayout.columnGap) {
+                kindMark
+                VStack(alignment: .leading, spacing: 0) {
+                    Text(verbatim: row.name)
+                        .font(PVFont.body(size: PVTypeScale.bodySmall, weight: PVFontWeight.medium))
+                        .lineLimit(1)
+                    Text(verbatim: row.ref)
+                        .font(PVFont.mono(size: PVTypeScale.caption))
+                        .foregroundStyle(PVColor.textMuted)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                PVIcon(.arrowRight, size: 14)
+                    .foregroundStyle(PVColor.textMuted)
+                    .frame(width: 14)
+                PVSelect(
+                    selection: targetBinding,
+                    options: targetOptions,
+                    size: .sm,
+                    menuWidth: PromoteLayout.targetColumn,
+                    fillsWidth: true,
+                    rowHeight: 46,
+                    isDisabled: model.isSaving,
+                    accessibilitySpokenLabel: L10n.Promote.filesOn(name: row.name),
+                    accessibilityIdentifier: "promote.row.\(row.ref).target"
+                ) { option in
+                    PromoteTargetMenuRow(option: option, row: row)
+                }
+                .frame(width: PromoteLayout.targetColumn)
+                Button { model.openSheet(row.subjectID) } label: {
+                    HStack(spacing: PVSpacing.space3) {
+                        PVBadge(PromoteAssessmentCopy.title(row.assessment), tone: badgeTone)
+                        Text(verbatim: model.reasonText(for: row))
+                            .font(PVFont.body(size: PVTypeScale.caption))
+                            .italic()
+                            .foregroundStyle(PVColor.textSecondary)
+                            .lineLimit(1)
+                        Spacer(minLength: 0)
+                        PVIcon(.chevronForward, size: 14)
+                            .foregroundStyle(PVColor.textMuted)
+                    }
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(Text(verbatim: L10n.Promote.evidenceFor(
+                    name: row.name,
+                    assessment: L10n.string(PromoteAssessmentCopy.title(row.assessment)),
+                    reason: model.reasonText(for: row)
+                )))
+                .accessibilityIdentifier("promote.row.\(row.ref).evidence")
+                .frame(maxWidth: .infinity, alignment: .leading)
+                HStack(spacing: PVSpacing.space2) {
+                    if row.updated {
+                        PVBadge(L10n.Promote.updated, tone: .info, icon: .refresh)
+                    }
+                    if row.decided {
+                        PVBadge(L10n.Promote.decided, tone: .neutral, icon: .check, subtle: true)
+                    }
+                }
+                .frame(width: PromoteLayout.badgeColumn, alignment: .trailing)
             }
+            if row.updated {
+                Text(verbatim: L10n.Promote.updatedDetail(model.reasonText(for: row)))
+                    .font(PVFont.body(size: PVTypeScale.caption))
+                    .italic()
+                    .foregroundStyle(PVColor.textSecondary)
+                    .padding(.leading, PromoteLayout.noteIndent)
+            }
+            if let ref = row.conflictNote {
+                PVCallout(
+                    tone: .warning,
+                    title: L10n.Promote.conflictTitle(ref: ref),
+                    message: L10n.string(L10n.Promote.conflictBody),
+                    compact: true
+                )
+                .padding(.leading, PromoteLayout.noteIndent)
+            }
+            if let note = row.duplicateNote {
+                PVCallout(
+                    tone: .warning,
+                    title: duplicateTitle(note),
+                    message: L10n.string(L10n.Promote.duplicateBody),
+                    compact: true
+                )
+                .padding(.leading, PromoteLayout.noteIndent)
+            }
+        }
+        .padding(.vertical, PVSpacing.space3)
+        .overlay(alignment: .top) { PVDivider() }
+    }
+
+    private func duplicateTitle(_ note: PromoteFlow.DuplicateNote) -> String {
+        switch note {
+        case .sharesHandle(let other, let ref): L10n.Promote.duplicateTitle(name: other, ref: ref)
+        case .alsoNew(let other): L10n.Promote.duplicateNewTitle(name: other)
+        }
+    }
+
+    private var kindMark: some View {
+        PromoteKindTile(kind: row.kind, size: PromoteLayout.kindTile, markSize: 16, background: PVColor.surfaceSunken)
+    }
+
+    private var badgeTone: PVBadgeTone {
+        switch row.assessment {
+        case .strong: .success
+        case .weak: .warning
+        case .none: .neutral
+        }
+    }
+
+    private var targetOptions: [PVSelectOption] {
+        var options = row.menu.map { alt in
+            PVSelectOption(value: "handle:\(alt.id)", label: "\(alt.ref)  \(alt.title)")
+        }
+        options.append(PVSelectOption(value: "new", label: L10n.string(L10n.Promote.newOption(row.kind))))
+        options.append(PVSelectOption(value: "skip", label: L10n.string(L10n.Promote.skip)))
+        return options
+    }
+
+    private var targetBinding: Binding<String> {
+        Binding(
+            get: { row.target.token },
+            set: { model.setTarget(subjectID: row.subjectID, token: $0) }
+        )
     }
 }
 
-/// Subject header band: the kind's wash, a tile with its mark, the eyebrow,
-/// name and ref, the Source, and the step row on the right.
-struct PromoteHeader: View {
-    let subject: PromoteFlow.Subject
-    let sourceTitle: String?
-    let steps: [LocalizedStringResource]
-    let currentStep: Int
-
-    private var style: EvidenceSubjectKindStyle { .forKind(subject.kind) }
+private struct PromoteTargetMenuRow: View {
+    let option: PVSelectOption
+    let row: PromoteFlow.Row
 
     var body: some View {
-        HStack(alignment: .center, spacing: PVSpacing.space6) {
-            PromoteKindTile(kind: subject.kind, size: 40, markSize: 20, background: style.chip)
-            VStack(alignment: .leading, spacing: PVSpacing.space2) {
-                Text(L10n.Promote.eyebrow(subject.kind))
-                    .font(PVFont.body(size: PVTypeScale.micro, weight: PVFontWeight.semibold))
-                    .tracking(PVTypeScale.micro * PVTracking.caps)
-                    .textCase(.uppercase)
-                    .foregroundStyle(style.ink)
-                HStack(alignment: .firstTextBaseline, spacing: 10) {
-                    Text(verbatim: subject.name)
-                        .font(PVFont.display(size: 24, weight: PVFontWeight.medium))
-                        .tracking(24 * PVTracking.display)
-                        .foregroundStyle(PVColor.textDisplay)
+        if option.id == "new" || option.id == "skip" {
+            Text(verbatim: option.label)
+                .font(PVFont.body(size: PVTypeScale.bodySmall))
+                .foregroundStyle(PVColor.textPrimary)
+        } else if let alt = row.menu.first(where: { "handle:\($0.id)" == option.id }) {
+            HStack(spacing: PVSpacing.space3) {
+                PVMark(row.kind.markKey, size: 16, decorative: true)
+                    .foregroundStyle(PVColor.textSecondary)
+                VStack(alignment: .leading, spacing: 0) {
+                    Text(verbatim: alt.title)
+                        .font(PVFont.body(size: PVTypeScale.bodySmall, weight: PVFontWeight.medium))
                         .lineLimit(1)
-                    Text(verbatim: subject.ref)
-                        .font(PVFont.mono(size: 12))
-                        .foregroundStyle(style.ink)
+                    Text(verbatim: alt.subtitle.isEmpty ? alt.ref : "\(alt.ref) · \(alt.subtitle)")
+                        .font(PVFont.mono(size: PVTypeScale.caption))
+                        .foregroundStyle(PVColor.textMuted)
+                        .lineLimit(1)
                 }
-                if let source = sourceTitle {
-                    Text(verbatim: source)
-                        .font(PVFont.body(size: PVTypeScale.caption, italic: true))
+            }
+        }
+    }
+}
+
+private struct PromoteAnchorRow: View {
+    let row: PromoteFlow.Row
+
+    var body: some View {
+        HStack(alignment: .center, spacing: PromoteLayout.columnGap) {
+            PVMark(row.kind.markKey, size: 16, decorative: true)
+                .foregroundStyle(PVColor.textMuted)
+                .frame(width: PromoteLayout.kindTile, height: PromoteLayout.kindTile)
+            VStack(alignment: .leading, spacing: 0) {
+                Text(verbatim: row.name)
+                    .font(PVFont.body(size: PVTypeScale.bodySmall))
+                    .foregroundStyle(PVColor.textSecondary)
+                    .lineLimit(1)
+                Text(verbatim: row.ref)
+                    .font(PVFont.mono(size: PVTypeScale.caption))
+                    .foregroundStyle(PVColor.textMuted)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            PVIcon(.arrowRight, size: 14)
+                .foregroundStyle(PVColor.textMuted)
+                .frame(width: 14)
+            if case .handle(_, let ref, let title) = row.target {
+                VStack(alignment: .leading, spacing: 0) {
+                    Text(verbatim: title)
+                        .font(PVFont.body(size: PVTypeScale.bodySmall))
                         .foregroundStyle(PVColor.textSecondary)
                         .lineLimit(1)
+                    Text(verbatim: ref)
+                        .font(PVFont.mono(size: PVTypeScale.caption))
+                        .foregroundStyle(PVColor.textMuted)
                 }
+                .frame(width: PromoteLayout.targetColumn, alignment: .leading)
             }
-            .accessibilityElement(children: .combine)
-            Spacer(minLength: PVSpacing.space6)
-            PromoteStepRow(steps: steps, current: currentStep, ink: style.ink, line: style.line)
+            Text(L10n.Promote.filedEarlier)
+                .font(PVFont.body(size: PVTypeScale.caption))
+                .italic()
+                .foregroundStyle(PVColor.textMuted)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            Color.clear.frame(width: PromoteLayout.badgeColumn, height: 1)
         }
-        .padding(.horizontal, PVSpacing.space10)
-        .padding(.vertical, 18)
-        .background(style.tint)
-        .overlay(alignment: .bottom) {
-            Rectangle().fill(style.line).frame(height: 1)
-        }
+        .padding(.vertical, PVSpacing.space2)
+        .overlay(alignment: .top) { PVDivider() }
     }
 }
 
-/// Step progress composed from text and one icon — no stepper component;
-/// this flow is its only user (S9-D9).
-struct PromoteStepRow: View {
-    let steps: [LocalizedStringResource]
-    let current: Int
-    let ink: Color
-    let line: Color
+private struct PromoteEvidenceSheet: View {
+    let row: PromoteFlow.Row
+    let grades: [CatalogClaimConfidenceGrade]
+    let model: PromoteModel
 
     var body: some View {
-        HStack(spacing: 10) {
-            ForEach(Array(steps.enumerated()), id: \.offset) { index, label in
-                if index > 0 {
-                    PVIcon(.chevronForward, size: 12)
-                        .foregroundStyle(PVColor.textFaint)
-                        .accessibilityHidden(true)
+        PVPanel(title: Text(verbatim: sheetTitle), subtitle: Text(verbatim: sheetSubtitle), width: 880) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: PVSpacing.space5) {
+                    if row.comparisons.contains(where: { $0.outcome == "conflict" }) {
+                        PVCallout(
+                            tone: .warning,
+                            title: L10n.Promote.conflictCalloutTitle,
+                            message: L10n.string(L10n.Promote.conflictCalloutBody),
+                            compact: true
+                        )
+                    }
+                    sheetColumns
+                    ForEach(groups) { group in
+                        PVCard {
+                            VStack(alignment: .leading, spacing: 0) {
+                                HStack(alignment: .firstTextBaseline, spacing: PVSpacing.space3) {
+                                    Text(verbatim: group.title)
+                                        .font(PVFont.display(size: PVTypeScale.h4, weight: PVFontWeight.medium))
+                                        .foregroundStyle(PVColor.textDisplay)
+                                    if !group.ref.isEmpty {
+                                        Text(verbatim: group.ref)
+                                            .font(PVFont.mono(size: PVTypeScale.caption))
+                                            .foregroundStyle(PVColor.textMuted)
+                                    }
+                                }
+                                .padding(.horizontal, PVSpacing.space4)
+                                .padding(.vertical, PVSpacing.space3)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .background(PVColor.surfaceSunken)
+                                ForEach(group.lines) { line in
+                                    comparisonLine(line)
+                                }
+                            }
+                        }
+                    }
+                    VStack(alignment: .leading, spacing: PVSpacing.space4) {
+                        Text(L10n.Promote.claimHeading)
+                            .font(PVFont.display(size: PVTypeScale.h4, weight: PVFontWeight.semibold))
+                            .foregroundStyle(PVColor.textDisplay)
+                        HStack(alignment: .top, spacing: PVSpacing.space5) {
+                            PVField(label: L10n.Promote.status, hint: L10n.Promote.sheetStatusHint) {
+                                PVSelect(
+                                    selection: .constant("accepted"),
+                                    options: [PVSelectOption(value: "accepted", label: L10n.string(L10n.Promote.statusAccepted))]
+                                )
+                            }
+                            PVField(label: L10n.Promote.confidence) {
+                                PVSelect(
+                                    selection: confidenceBinding,
+                                    options: confidenceOptions,
+                                    accessibilityIdentifier: "promote.sheet.confidence"
+                                )
+                            }
+                        }
+                        PVField(label: L10n.Promote.argument, hint: L10n.Promote.argumentHint(pinned: row.pins.count)) {
+                            PVTextArea(text: argumentBinding)
+                                .accessibilityIdentifier("promote.sheet.argument")
+                        }
+                    }
                 }
-                step(index: index, label: label)
+                .padding(PVSpacing.space5)
             }
+        } footer: {
+            PVButton(L10n.Promote.backToRows, variant: .primary) { model.closeSheet() }
+                .accessibilityIdentifier("promote.sheet.close")
         }
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel(Text(L10n.Promote.steps))
     }
 
-    @ViewBuilder
-    private func step(index: Int, label: LocalizedStringResource) -> some View {
-        let number = Text(verbatim: "\(index + 1)")
-        if index == current {
-            HStack(spacing: 7) {
-                number
-                    .font(PVFont.mono(size: PVTypeScale.micro, weight: PVFontWeight.medium))
-                    .foregroundStyle(ink)
-                Text(label)
-                    .font(PVFont.body(size: PVTypeScale.caption, weight: PVFontWeight.medium))
-                    .foregroundStyle(PVColor.textPrimary)
-                    .fixedSize()
-            }
-            .padding(.vertical, 5)
-            .padding(.horizontal, 10)
-            .background(
-                RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous).fill(PVColor.surfaceCard)
+    private var sheetTitle: String {
+        switch row.target {
+        case .handle(_, let ref, let title):
+            return "\(row.name) → \(ref) \(title)"
+        case .newKind:
+            return "\(row.name) → \(L10n.string(L10n.Promote.newOption(row.kind)))"
+        case .skip:
+            return row.name
+        }
+    }
+
+    private var sheetSubtitle: String {
+        L10n.Promote.sheetSubtitle(
+            assessment: L10n.string(PromoteAssessmentCopy.title(row.assessment)),
+            reason: model.reasonText(for: row)
+        )
+    }
+
+    private var sheetColumns: some View {
+        HStack(spacing: PromoteLayout.columnGap) {
+            Text(L10n.Promote.sheetPin).frame(width: 22, alignment: .leading)
+            Text(L10n.Promote.sheetCompared).frame(width: 150, alignment: .leading)
+            Text(L10n.Promote.sheetHere).frame(maxWidth: .infinity, alignment: .leading)
+            Text(verbatim: targetColumn).frame(maxWidth: .infinity, alignment: .leading)
+            Text(L10n.Promote.sheetResult).frame(width: 92, alignment: .leading)
+            Text(L10n.Promote.sheetWeight).frame(width: 48, alignment: .trailing)
+        }
+        .pvMicroCaps()
+        .foregroundStyle(PVColor.textMuted)
+    }
+
+    private var targetColumn: String {
+        switch row.target {
+        case .handle(_, let ref, _): ref
+        case .newKind: L10n.string(L10n.Promote.newOption(row.kind))
+        case .skip: L10n.string(L10n.Promote.skip)
+        }
+    }
+
+    private func comparisonLine(_ line: CatalogPromoteGraphAlignmentComparison) -> some View {
+        HStack(alignment: .top, spacing: PromoteLayout.columnGap) {
+            PVCheckbox(
+                isChecked: pin(line.id),
+                isDisabled: line.incomingObservationID.isEmpty || line.outcome == "unknown",
+                accessibilitySpokenLabel: L10n.Promote.pinLine(
+                    property: compared(line), here: line.incomingDisplay, there: line.memberDisplay
+                )
             )
-            .overlay(
-                RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous).strokeBorder(line, lineWidth: 1)
-            )
-            .accessibilityElement(children: .combine)
-            .accessibilityAddTraits(.isSelected)
-        } else {
-            HStack(spacing: 7) {
-                number
-                    .font(PVFont.mono(size: PVTypeScale.micro))
-                Text(label)
+            .accessibilityIdentifier("promote.sheet.pin.\(line.id)")
+            .frame(width: 22)
+            Text(verbatim: compared(line))
+                .font(PVFont.body(size: PVTypeScale.caption, weight: PVFontWeight.medium))
+                .frame(width: 150, alignment: .leading)
+            Text(verbatim: line.incomingDisplay)
+                .font(PVFont.body(size: PVTypeScale.caption))
+                .frame(maxWidth: .infinity, alignment: .leading)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(verbatim: line.memberDisplay)
                     .font(PVFont.body(size: PVTypeScale.caption))
-                    .fixedSize()
+                if !line.memberSource.isEmpty {
+                    Text(verbatim: line.memberSource)
+                        .font(PVFont.body(size: PVTypeScale.caption))
+                        .italic()
+                        .foregroundStyle(PVColor.textMuted)
+                }
             }
-            .foregroundStyle(PVColor.textMuted)
-            .padding(.vertical, 5)
-            .accessibilityElement(children: .combine)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            PVBadge(L10n.Promote.outcome(line.outcome), tone: outcomeTone(line.outcome), subtle: true)
+                .frame(width: 92, alignment: .leading)
+            Text(verbatim: weightText(line.weight))
+                .font(PVFont.mono(size: PVTypeScale.caption))
+                .foregroundStyle(PVColor.textSecondary)
+                .frame(width: 48, alignment: .trailing)
+        }
+        .padding(.horizontal, PVSpacing.space4)
+        .padding(.vertical, PVSpacing.space3)
+        .overlay(alignment: .top) { PVDivider() }
+    }
+
+    private struct ExhibitGroup: Identifiable {
+        var id: String
+        var title: String
+        var ref: String
+        var lines: [CatalogPromoteGraphAlignmentComparison]
+    }
+
+    private var groups: [ExhibitGroup] {
+        var order: [String] = []
+        var lines: [String: [CatalogPromoteGraphAlignmentComparison]] = [:]
+        for line in row.comparisons {
+            let key = line.groupSubjectID
+            if lines[key] == nil { order.append(key) }
+            lines[key, default: []].append(line)
+        }
+        return order.map { key in
+            guard !key.isEmpty else {
+                return ExhibitGroup(id: "own", title: L10n.string(L10n.Promote.ownRecords), ref: row.ref, lines: lines[key] ?? [])
+            }
+            let neighbor = model.flow.rows.first { $0.subjectID == key }
+            let name = neighbor?.name ?? L10n.string(L10n.Promote.sheetNeighbor)
+            return ExhibitGroup(id: key, title: L10n.Promote.through(name), ref: neighbor?.ref ?? "", lines: lines[key] ?? [])
+        }
+    }
+
+    private func compared(_ line: CatalogPromoteGraphAlignmentComparison) -> String {
+        model.propertyLabel(key: line.propertyKey, origin: line.propertyOrigin)
+    }
+
+    private func outcomeTone(_ outcome: String) -> PVBadgeTone {
+        switch outcome {
+        case "agree": .success
+        case "conflict": .danger
+        default: .neutral
+        }
+    }
+
+    private func weightText(_ weight: Double) -> String {
+        if weight == 0 { return "0" }
+        let sign = weight > 0 ? "+" : "−"
+        return sign + String(format: "%.2f", abs(weight))
+    }
+
+    private func pin(_ id: String) -> Binding<Bool> {
+        Binding(
+            get: { row.pins.contains(id) },
+            set: { _ in model.togglePin(subjectID: row.subjectID, comparisonID: id) }
+        )
+    }
+
+    private var argumentBinding: Binding<String> {
+        Binding(get: { row.argument }, set: { model.setArgument(subjectID: row.subjectID, argument: $0) })
+    }
+
+    private var confidenceBinding: Binding<String> {
+        Binding(
+            get: { row.confidenceGradeID ?? "" },
+            set: { model.setConfidence(subjectID: row.subjectID, gradeID: $0.isEmpty ? nil : $0) }
+        )
+    }
+
+    private var confidenceOptions: [PVSelectOption] {
+        [PVSelectOption(value: "", label: L10n.string(L10n.Promote.confidenceUnset))]
+            + grades.map { PVSelectOption(value: $0.id, label: $0.label) }
+    }
+}
+
+/// The board's column grid, shared by the header row and every row so the
+/// columns line up.
+private enum PromoteLayout {
+    static let columnGap = PVSpacing.space5
+    static let kindTile: CGFloat = 28
+    static let targetColumn: CGFloat = 330
+    static let badgeColumn: CGFloat = 112
+    /// Notes under a row start where its name does.
+    static let noteIndent = kindTile + columnGap
+}
+
+private enum PromoteAssessmentCopy {
+    static func title(_ assessment: PromoteFlow.Assessment) -> LocalizedStringResource {
+        switch assessment {
+        case .strong: L10n.Promote.assessmentStrong
+        case .weak: L10n.Promote.assessmentWeak
+        case .none: L10n.Promote.assessmentNone
         }
     }
 }
 
-/// A kind's mark on a small tile in the kind's colours.
-struct PromoteKindTile: View {
+private struct PromoteKindTile: View {
     let kind: EvidencePrimaryKind
     let size: CGFloat
     let markSize: CGFloat
@@ -286,16 +896,10 @@ struct PromoteKindTile: View {
 
     var body: some View {
         let style = EvidenceSubjectKindStyle.forKind(kind)
-        RoundedRectangle(cornerRadius: size >= 40 ? 5 : 4, style: .continuous)
+        RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous)
             .fill(background)
-            .overlay(
-                RoundedRectangle(cornerRadius: size >= 40 ? 5 : 4, style: .continuous)
-                    .strokeBorder(style.line, lineWidth: 1)
-            )
-            .overlay(
-                PVMark(kind.markKey, size: markSize, decorative: true)
-                    .foregroundStyle(style.ink)
-            )
+            .overlay(RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous).strokeBorder(style.line, lineWidth: 1))
+            .overlay(PVMark(kind.markKey, size: markSize, decorative: true).foregroundStyle(style.ink))
             .frame(width: size, height: size)
             .accessibilityHidden(true)
     }

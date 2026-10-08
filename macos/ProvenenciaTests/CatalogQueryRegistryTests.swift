@@ -419,7 +419,6 @@ struct CatalogQueryRegistryTests {
         let project = ProjectKey(projectDir: projectDir)
         #expect(registry.evictsWhenHidden(.conclusionDetail(project: project, entityId: "e1")))
         #expect(!registry.evictsWhenHidden(.personsList(project: project)))
-        #expect(!registry.evictsWhenHidden(.promoteTargets(project: project, subjectId: "s1")))
         #expect(!registry.evictsWhenHidden(.sourceWorkspace(project: project, sourceId: "s1")))
     }
 
@@ -745,7 +744,6 @@ struct CatalogQueryRegistryTests {
             .key(.personsList(project: project)),
             .key(.eventsList(project: project)),
             .key(.placesList(project: project)),
-            .allCached(.promoteTargets),
             .allCached(.conclusionDetail),
         ])
         // Adding vocabulary touches only the list that owns it — the Source
@@ -798,7 +796,6 @@ struct CatalogQueryRegistryTests {
             .key(.personsList(project: project)),
             .key(.eventsList(project: project)),
             .key(.placesList(project: project)),
-            .allCached(.promoteTargets),
             .allCached(.conclusionDetail),
         ])
         #expect(registry.invalidations(by: .deletedSubject(sourceId: "s1"), project: project) == [
@@ -809,7 +806,6 @@ struct CatalogQueryRegistryTests {
             .key(.personsList(project: project)),
             .key(.eventsList(project: project)),
             .key(.placesList(project: project)),
-            .allCached(.promoteTargets),
             .allCached(.conclusionDetail),
         ])
         // A Promote changes that Source's graph cards (their membership row)
@@ -819,7 +815,6 @@ struct CatalogQueryRegistryTests {
             .key(.personsList(project: project)),
             .key(.eventsList(project: project)),
             .key(.placesList(project: project)),
-            .allCached(.promoteTargets),
             .allCached(.conclusionDetail),
         ])
         #expect(registry.invalidations(by: .createdPropertyTerm(propertyId: "p1"), project: project) == [
@@ -856,7 +851,6 @@ struct CatalogQueryRegistryTests {
             .key(.personsList(project: project)),
             .key(.eventsList(project: project)),
             .key(.placesList(project: project)),
-            .allCached(.promoteTargets),
             .allCached(.conclusionDetail),
         ])
         // Every Conclusion trigger stales the Person, Event, and Place lists and

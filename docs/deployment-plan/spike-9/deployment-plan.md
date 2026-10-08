@@ -391,7 +391,7 @@ CLOSE
 - **Replanned 2026-10-06 (Promote graph alignment).** New work: S9-41 – S9-44 and brief S9-D16. **Retired:** S9-19 and S9-D11 (compare → S9-44's evidence sheet), S9-29 (neighborhood read → S9-42), S9-30 and S9-D12 (walk → S9-44), S9-18 (folded into S9-17 and S9-44). S9-17 keeps its ID, reshaped from the closed #265 / #266.
 - **Migrations 000037 / 000038 are fixed.** They first shipped on the closed PRs #255 / #256, and the researcher's local projects already carry them. S9-13a lands them on `main` byte-for-byte so those projects open again; nothing else may take those numbers, and later changes are new migrations (000039 on), never edits. **000039** is S9-13's `reason` column; **000040** is S9-14's rename to `auto_reconciler_*` and its outcomes table. **000041** is S9-16's vote on outvoted outcomes (cache version 10). **000042** is S9-20's `event_name` backfill (no cache bump). The next is **000043**; the next cache version **12** (11 is S9-21's date windows). **Cache versions start at 5** after S9-13a: projects may hold a cache stamped 3 or 4 by the closed PRs, and a new meaning must never reuse a stamp.
 - **The cache is honest from slice 2.** S9-06 ships the rebuild-equals-upkeep test; every later PR that adds a write path or trigger adds to it.
-- **Churn is expected.** A confirm-and-mint Promote button (slice 1), stubbed sidebar items, and empty life-date cells are fine between slices. Today's step-based Promote (S9-11 / S9-12) stays in use until S9-44 replaces it; from S9-28 on it already files bridges.
+- **Churn is expected.** A confirm-and-mint Promote button (slice 1), stubbed sidebar items, and empty life-date cells are fine between slices. S9-44 replaced the step-based Promote (S9-11 / S9-12) with one page; from S9-28 on filing already includes bridges.
 
 ### Dependencies at a glance
 
@@ -498,10 +498,10 @@ In order; each brief sits just above the PR it gates.
 - [x] S9-39 — Place chain composer → [`completed.md`](completed.md)
 - [x] S9-40 — Place hierarchy in list and detail → [`completed.md`](completed.md)
 - [x] S9-41 — Graph alignment core → [`completed.md`](completed.md)
-- [ ] S9-42 — Graph alignment loader + proposal read
-- [ ] S9-43 — Batch Promote write
-- [ ] ✎ S9-D16 — Design: Promote page (rethink)
-- [ ] S9-44 — Promote page
+- [x] S9-42 — Graph alignment loader + proposal read → [`completed.md`](completed.md)
+- [x] S9-43 — Batch Promote write → [`completed.md`](completed.md)
+- [x] ✎ S9-D16 — Design: Promote page (rethink) → [`completed.md`](completed.md)
+- [x] S9-44 — Promote page → [`completed.md`](completed.md)
 - [ ] S9-33 — Deep fixture + timings
 - [ ] S9-34 — Search documents from headers + dependents
 - [ ] ✎ S9-D13 — Design: omnibar hits
@@ -936,27 +936,15 @@ Design: [`promote-graph-alignment.md`](../../promote-graph-alignment.md). Brief:
 
 #### S9-42 — Graph alignment loader + proposal read
 
-| | |
-| --- | --- |
-| **In** | The loader (design §7): the layer (one Source's Subjects, bridges, Observations, provenance); seed handles (fixed rows, existing claims, top-k `core/match` candidates); canonical expansion, one batched query per hop over S9-28's edges; members' Observations in batch. `stats` (value frequencies, signature fan-outs) cached against the latest audit revision. FFI `ProposePromoteGraphAlignment(source, fixed[])` → rows with candidate headers (Person / Event / Place header composers), comparisons, drafted pins, reasons and flags; Swift store + FakeStore. |
-| **Testable** | A fixed query count whatever the graph size; a write anywhere invalidates `stats`; the obituary fixture through the real loader matches S9-41's golden. |
-| **Depends on** | S9-41, S9-22, S9-25, S9-28 |
+**Done.** See [`completed.md`](completed.md#s9-42--graph-alignment-loader--proposal-read). Catalog `promotealign.Propose` loads Layer / Canon / Stats and calls pure `graphalign.Align`; FFI `ProposePromoteGraphAlignment` + Swift store / FakeStore.
 
 #### S9-43 — Batch Promote write
 
-| | |
-| --- | --- |
-| **In** | One transaction per Done (design §9): re-validate against the revision the proposal saw; a claim per row (status, confidence, argument), a minted handle for New, nothing for Skip; pins from the toggled comparisons, the pair check widened to **one-hop neighbors through a bridge**, with backfill; bridge filing through S9-28 (including the **both-ends-already-promoted** / missing-relationship case in design §5.1), skipping switched-off bridges; one R3 recompute over every touched handle; one audit revision. FFI + Swift store + FakeStore, with pins modelled so S9-44's tests cover pinned deletes from the composer and the graph. |
-| **Testable** | All or nothing on a lost race; one-hop pins land on both claims; each bridge filed once (including a bridge whose ends were both claimed before this batch); rebuild equals upkeep after a batch. |
-| **Depends on** | S9-17, S9-28, S9-42 |
+**Done.** See [`completed.md`](completed.md#s9-43--batch-promote-write). `promote.SaveBatch` files claims, one-hop pins, and source bridges in one revision; FFI `ApplyPromoteGraphAlignment` + FakeStore pin impact. Promote page stays **S9-44**.
 
 #### S9-44 — Promote page
 
-| | |
-| --- | --- |
-| **In** | Per **S9-D16** (rethink). The Promote place becomes one page: the choose-target and claim steps (S9-11 / S9-12) and `PromoteFlow`'s step machine are replaced by a row list (suggested / decided, target, claim fields, pin toggles). Entry from any card opens with that row; *Map the rest of this graph*; re-propose after every decision with *updated* marks; the evidence sheet; the bridge summary with switches; duplicate and conflict warnings; Done; leave guard. The app half of the old S9-18: pinned deletes from the composer and the graph, covered through FakeStore pins. |
-| **Check** | Promote Gracie → map the rest → strong rows preselected, weak flagged, the rest Skip; retarget a child → only suggested rows move; Done files everything at once; delete a pinned Observation → the confirm names the Person. |
-| **Depends on** | **S9-D16**, S9-42, S9-43 |
+**Done.** See [`completed.md`](completed.md#s9-44--promote-page). One page replaces the step wizard: row list, evidence sheet, connection switches, Done, leave guard. Exhibit lines carry the pin pairs. No claim editing.
 
 ### Slice 10 — Search + timings
 

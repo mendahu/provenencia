@@ -751,35 +751,146 @@ struct GoStore: GenealogyStore {
         )
     }
 
-    func listPromoteTargetSuggestions(
+    func proposePromoteGraphAlignment(
         projectDir: String,
-        subjectID: String,
-        limit: Int
-    ) async throws -> [CatalogPromoteTargetSuggestion] {
-        var req = Provenencia_Engine_V1_ListPromoteTargetSuggestionsRequest()
+        sourceID: String,
+        fixed: [CatalogPromoteGraphAlignmentFixed]
+    ) async throws -> CatalogPromoteGraphAlignmentProposal {
+        var req = Provenencia_Engine_V1_ProposePromoteGraphAlignmentRequest()
         req.projectDir = projectDir
-        req.subjectID = subjectID
-        req.limit = Int32(clamping: limit)
-        let resp: Provenencia_Engine_V1_ListPromoteTargetSuggestionsResponse = try await provenenciaCall(
-            method: CoreMethod.listPromoteTargetSuggestions,
+        req.sourceID = sourceID
+        req.fixed = fixed.map { f in
+            var row = Provenencia_Engine_V1_PromoteGraphAlignmentFixed()
+            row.subjectID = f.subjectID
+            row.handleID = f.handleID
+            row.target = f.target
+            return row
+        }
+        let resp: Provenencia_Engine_V1_ProposePromoteGraphAlignmentResponse = try await provenenciaCall(
+            method: CoreMethod.proposePromoteGraphAlignment,
             request: req
         )
-        return resp.suggestions.map { sg in
-            CatalogPromoteTargetSuggestion(
-                entity: Self.mapCanonicalEntity(sg.entity),
-                score: sg.score,
-                reasons: sg.reasons.map { r in
-                    CatalogMatchReason(
-                        propertyKey: r.propertyKey,
-                        propertyOrigin: r.propertyOrigin,
-                        similarity: r.similarity,
-                        contribution: r.contribution
+        let rows: [CatalogPromoteGraphAlignmentRow] = resp.rows.map { r in
+            var person: CatalogPersonHeader?
+            var event: CatalogEventHeader?
+            var place: CatalogPlaceHeader?
+            switch r.header {
+            case .person(let h): person = Self.mapPersonHeader(h)
+            case .event(let h): event = Self.mapEventHeader(h)
+            case .place(let h): place = Self.mapPlaceHeader(h)
+            case nil: break
+            }
+            return CatalogPromoteGraphAlignmentRow(
+                subjectID: r.subjectID,
+                kind: r.kind,
+                target: r.target,
+                handleID: r.handleID,
+                handleRef: r.handleRef,
+                score: r.score,
+                assessment: r.assessment,
+                reason: r.reason,
+                reasonPropertyKey: r.reasonPropertyKey,
+                reasonPropertyOrigin: r.reasonPropertyOrigin,
+                comparisons: r.comparisons.map { c in
+                    CatalogPromoteGraphAlignmentComparison(
+                        propertyKey: c.propertyKey,
+                        propertyOrigin: c.propertyOrigin,
+                        outcome: c.outcome,
+                        valueType: c.valueType,
+                        pinned: c.pinned,
+                        weight: c.weight,
+                        groupSubjectID: c.groupSubjectID,
+                        incomingObservationID: c.incomingObservationID,
+                        incomingDisplay: c.incomingDisplay,
+                        incomingSource: c.incomingSource,
+                        memberObservationID: c.memberObservationID,
+                        memberDisplay: c.memberDisplay,
+                        memberSource: c.memberSource
                     )
                 },
-                person: sg.hasPerson ? Self.mapPersonHeader(sg.person) : nil,
-                memberCount: Int(sg.memberCount)
+                alternatives: r.alternatives.map { a in
+                    var altPerson: CatalogPersonHeader?
+                    var altEvent: CatalogEventHeader?
+                    var altPlace: CatalogPlaceHeader?
+                    switch a.header {
+                    case .person(let h): altPerson = Self.mapPersonHeader(h)
+                    case .event(let h): altEvent = Self.mapEventHeader(h)
+                    case .place(let h): altPlace = Self.mapPlaceHeader(h)
+                    case nil: break
+                    }
+                    return CatalogPromoteGraphAlignmentAlternative(
+                        handleID: a.handleID,
+                        handleRef: a.handleRef,
+                        score: a.score,
+                        person: altPerson,
+                        event: altEvent,
+                        place: altPlace
+                    )
+                },
+                conflictWithFixed: r.conflictWithFixed,
+                possibleDuplicate: r.possibleDuplicate,
+                duplicateOfSubjectID: r.duplicateOfSubjectID,
+                viaNeighborSubjectID: r.viaNeighborSubjectID,
+                viaBridgeType: r.viaBridgeType,
+                viaRole: r.viaRole,
+                person: person,
+                event: event,
+                place: place
             )
         }
+        return CatalogPromoteGraphAlignmentProposal(revision: resp.revision, rows: rows)
+    }
+
+    func applyPromoteGraphAlignment(
+        projectDir: String,
+        userID: String,
+        sourceID: String,
+        seenRevision: Int64,
+        rows: [CatalogPromoteBatchRow],
+        skipBridgeIDs: [String]
+    ) async throws -> CatalogPromoteBatchResult {
+        var req = Provenencia_Engine_V1_ApplyPromoteGraphAlignmentRequest()
+        req.projectDir = projectDir
+        req.userID = userID
+        req.sourceID = sourceID
+        req.seenRevision = seenRevision
+        req.skipBridgeIds = skipBridgeIDs
+        req.rows = rows.map { row in
+            var proto = Provenencia_Engine_V1_ApplyPromoteGraphAlignmentRow()
+            proto.subjectID = row.subjectID
+            proto.target = row.target
+            if let entityID = row.entityID { proto.entityID = entityID }
+            if let gradeID = row.confidenceGradeID { proto.confidenceGradeID = gradeID }
+            proto.argument = row.argument
+            proto.pairs = row.pairs.map { pair in
+                var p = Provenencia_Engine_V1_ApplyPromoteGraphAlignmentPair()
+                p.incomingObservationID = pair.incomingObservationID
+                p.memberObservationID = pair.memberObservationID
+                return p
+            }
+            return proto
+        }
+        let resp: Provenencia_Engine_V1_ApplyPromoteGraphAlignmentResponse = try await provenenciaCall(
+            method: CoreMethod.applyPromoteGraphAlignment,
+            request: req
+        )
+        return CatalogPromoteBatchResult(
+            revision: resp.revision,
+            written: resp.written.map { w in
+                CatalogPromoteBatchWritten(
+                    entity: Self.mapCanonicalEntity(w.entity),
+                    claim: CatalogIdentityClaim(
+                        id: w.claim.id,
+                        subjectID: w.claim.subjectID,
+                        entityID: w.claim.entityID,
+                        status: w.claim.status,
+                        confidenceGradeID: w.claim.confidenceGradeID.isEmpty ? nil : w.claim.confidenceGradeID,
+                        argument: w.claim.argument
+                    ),
+                    pins: Int(w.pins)
+                )
+            }
+        )
     }
 
     func listClaimConfidenceGrades(projectDir: String) async throws -> [CatalogClaimConfidenceGrade] {

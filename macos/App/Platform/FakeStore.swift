@@ -23,6 +23,17 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var subjectsBySource: [String: [CatalogSubject]] = [:]
     /// Accepted Identity Claim per Subject id (Promote): the claim and its handle.
     var membershipBySubject: [String: CatalogSubjectMembership] = [:]
+    /// Distinct handles that pin an Observation, for delete-impact confirms.
+    var pinsByObservation: [String: [CatalogCanonicalEntity]] = [:]
+    /// Queued graph-alignment proposals. The first is consumed; the last repeats.
+    var promoteProposals: [CatalogPromoteGraphAlignmentProposal] = []
+    /// Per-call delay before a proposal returns, consumed in call order, so
+    /// tests can answer an earlier call after a later one.
+    var promoteProposeDelays: [Duration] = []
+    /// The decided rows the last proposal call held.
+    var lastPromoteFixed: [CatalogPromoteGraphAlignmentFixed] = []
+    /// The last Done the page filed, for tests.
+    var lastPromoteBatch: (rows: [CatalogPromoteBatchRow], skipBridgeIDs: [String])?
     /// Event and Place headers as Go would compose them, seeded by tests in
     /// list order. FakeStore does not reconcile, walk, or title them; Go owns
     /// those rules (`conclusionheaders`, `eventtitle`) and their tests.
@@ -1304,62 +1315,202 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         }
     }
 
-    /// A stand-in for core/match's person profile on written names (untyped words),
-    /// close enough for UI tests: the same folded name scores 10; a shared word of two
-    /// or more letters scores 5, as "Mary Robins" ~ "James Robins" does in Go.
-    func listPromoteTargetSuggestions(
+    /// Stub graph-alignment proposal: every unpromoted primary Subject is Skip;
+    /// already-promoted Subjects are Target handle with their membership.
+    func proposePromoteGraphAlignment(
         projectDir: String,
-        subjectID: String,
-        limit: Int
-    ) async throws -> [CatalogPromoteTargetSuggestion] {
-        // A read: no `recordedCalls`.
-        return withState {
+        sourceID: String,
+        fixed: [CatalogPromoteGraphAlignmentFixed]
+    ) async throws -> CatalogPromoteGraphAlignmentProposal {
+        let delay: Duration? = withState {
+            lastPromoteFixed = fixed
+            return promoteProposeDelays.isEmpty ? nil : promoteProposeDelays.removeFirst()
+        }
+        let proposal = buildPromoteProposal(projectDir: projectDir, sourceID: sourceID, fixed: fixed)
+        if let delay { try? await Task.sleep(for: delay) }
+        return proposal
+    }
+
+    private func buildPromoteProposal(
+        projectDir: String,
+        sourceID: String,
+        fixed: [CatalogPromoteGraphAlignmentFixed]
+    ) -> CatalogPromoteGraphAlignmentProposal {
+        withState {
             markCatalogSessionHeld(projectDir)
-            let own = membershipBySubject[subjectID]?.entity.id
-            let names = observationsBySource.values.flatMap { $0 }
-                .filter { $0.subjectID == subjectID && $0.propertyKey == "name" && !$0.nameForm.isEmpty }
-                .map { Self.foldName($0.nameForm) }
-            guard !names.isEmpty else { return [] }
-            let words = Set(names.flatMap(Self.nameWords))
-            let scored = personHeaders().compactMap { header -> CatalogPromoteTargetSuggestion? in
-                guard header.entity.id != own, let name = header.name.map({ Self.foldName($0.form) }) else { return nil }
-                let similarity: Double
-                if names.contains(name) {
-                    similarity = 1
-                } else if !words.isDisjoint(with: Self.nameWords(name)) {
-                    similarity = 0.5
-                } else {
-                    return nil
+            if !promoteProposals.isEmpty {
+                let next = promoteProposals.count > 1 ? promoteProposals.removeFirst() : promoteProposals[0]
+                return CatalogPromoteGraphAlignmentProposal(revision: nextAuditRevision - 1, rows: next.rows)
+            }
+            let fixedBySubject = Dictionary(uniqueKeysWithValues: fixed.map { ($0.subjectID, $0.handleID) })
+            let subjects = subjectsBySource[sourceID] ?? []
+            let types = Dictionary(uniqueKeysWithValues: (subjectTypesByProject[projectDir] ?? []).map { ($0.id, $0) })
+            let rows = subjects.compactMap { subject -> CatalogPromoteGraphAlignmentRow? in
+                guard let type = types[subject.subjectTypeID],
+                      ["person", "event", "place"].contains(type.key)
+                else { return nil }
+                if let membership = membershipBySubject[subject.id] {
+                    return CatalogPromoteGraphAlignmentRow(
+                        subjectID: subject.id,
+                        kind: type.key,
+                        target: "handle",
+                        handleID: membership.entity.id,
+                        handleRef: membership.entity.ref,
+                        score: 0,
+                        assessment: "strong",
+                        reason: "decided",
+                        comparisons: [],
+                        alternatives: [],
+                        conflictWithFixed: false,
+                        possibleDuplicate: false
+                    )
                 }
-                let reason = CatalogMatchReason(
-                    propertyKey: "name", propertyOrigin: "provenencia",
-                    similarity: similarity, contribution: 10 * similarity
-                )
-                return CatalogPromoteTargetSuggestion(
-                    entity: header.entity, score: 10 * similarity, reasons: [reason], person: header,
-                    memberCount: membershipBySubject.values.filter { $0.entity.id == header.entity.id }.count
+                if let handleID = fixedBySubject[subject.id],
+                   let entity = membershipBySubject.values.first(where: { $0.entity.id == handleID })?.entity
+                {
+                    return CatalogPromoteGraphAlignmentRow(
+                        subjectID: subject.id,
+                        kind: type.key,
+                        target: "handle",
+                        handleID: entity.id,
+                        handleRef: entity.ref,
+                        score: 0,
+                        assessment: "strong",
+                        reason: "decided",
+                        comparisons: [],
+                        alternatives: [],
+                        conflictWithFixed: false,
+                        possibleDuplicate: false
+                    )
+                }
+                return CatalogPromoteGraphAlignmentRow(
+                    subjectID: subject.id,
+                    kind: type.key,
+                    target: "skip",
+                    handleID: "",
+                    handleRef: "",
+                    score: 0,
+                    assessment: "none",
+                    reason: "empty",
+                    comparisons: [],
+                    alternatives: [],
+                    conflictWithFixed: false,
+                    possibleDuplicate: false
                 )
             }
-            let sorted = scored.sorted { a, b in
-                a.score != b.score ? a.score > b.score : a.entity.ref < b.entity.ref
-            }
-            return Array(sorted.prefix(limit > 0 ? limit : 10))
+            return CatalogPromoteGraphAlignmentProposal(revision: nextAuditRevision - 1, rows: rows)
         }
     }
 
-    /// Mirrors autoreconcile.NormalizeForm: dashes and slashes separate words; other
-    /// punctuation is dropped.
-    private static func foldName(_ form: String) -> String {
-        let spaced = String(form.lowercased().map { "-–—/".contains($0) ? " " : $0 })
-        return spaced
-            .filter { !$0.isPunctuation }
-            .split(whereSeparator: \.isWhitespace)
-            .map(String.init)
-            .joined(separator: " ")
+    /// Files claims and records pins so a pinned Observation's delete names each handle.
+    func applyPromoteGraphAlignment(
+        projectDir: String,
+        userID _: String,
+        sourceID: String,
+        seenRevision: Int64,
+        rows: [CatalogPromoteBatchRow],
+        skipBridgeIDs: [String]
+    ) async throws -> CatalogPromoteBatchResult {
+        try withState {
+            markCatalogSessionHeld(projectDir)
+            recordedCalls.append("applyPromoteGraphAlignment source=\(sourceID) rows=\(rows.count)")
+            lastPromoteBatch = (rows, skipBridgeIDs)
+            let current = nextAuditRevision - 1
+            guard seenRevision == current else {
+                throw CoreInvokeError.coded(status: 1, code: "promote.stale", kind: .conflict, params: [])
+            }
+            var written: [CatalogPromoteBatchWritten] = []
+            for row in rows {
+                // Go's applyRow: a Skip writes nothing and carries nothing; a New has no pins.
+                switch row.target {
+                case "skip":
+                    guard row.entityID == nil, row.pairs.isEmpty, row.confidenceGradeID == nil, row.argument.isEmpty else {
+                        throw CoreInvokeError.coded(status: 1, code: "promote.invalid", kind: .user, params: [])
+                    }
+                    continue
+                case "new":
+                    guard row.entityID == nil, row.pairs.isEmpty else {
+                        throw CoreInvokeError.coded(status: 1, code: "promote.invalid", kind: .user, params: [])
+                    }
+                case "handle":
+                    break
+                default:
+                    throw CoreInvokeError.coded(status: 1, code: "promote.invalid", kind: .user, params: [])
+                }
+                guard let subject = (subjectsBySource[sourceID] ?? []).first(where: { $0.id == row.subjectID }),
+                      let type = subjectTypesByProject[projectDir]?.first(where: { $0.id == subject.subjectTypeID }),
+                      ["person", "event", "place"].contains(type.key)
+                else {
+                    throw CoreInvokeError.coded(status: 1, code: "promote.invalid", kind: .user, params: [])
+                }
+                if let existing = membershipBySubject[subject.id] {
+                    if row.target == "handle", existing.entity.id == row.entityID, row.pairs.isEmpty {
+                        continue
+                    }
+                    throw CoreInvokeError.coded(status: 1, code: "identityclaims.already_member", kind: .conflict, params: [])
+                }
+                let entity: CatalogCanonicalEntity
+                if row.target == "handle" {
+                    guard let entityID = row.entityID,
+                          let existing = membershipBySubject.values.first(where: { $0.entity.id == entityID })?.entity,
+                          existing.subjectTypeID == type.id
+                    else {
+                        throw CoreInvokeError.coded(status: 1, code: "promote.invalid", kind: .user, params: [])
+                    }
+                    entity = existing
+                } else {
+                    entity = CatalogCanonicalEntity(
+                        id: UUID().uuidString.lowercased(),
+                        ref: "\(type.refPrefix)-FAKE\(membershipBySubject.count + 1)",
+                        subjectTypeID: type.id,
+                        label: ""
+                    )
+                }
+                let claim = CatalogIdentityClaim(
+                    id: UUID().uuidString.lowercased(),
+                    subjectID: subject.id,
+                    entityID: entity.id,
+                    status: "accepted",
+                    confidenceGradeID: row.confidenceGradeID,
+                    argument: row.argument.trimmingCharacters(in: .whitespacesAndNewlines)
+                )
+                membershipBySubject[subject.id] = CatalogSubjectMembership(
+                    subjectID: subject.id,
+                    claimID: claim.id,
+                    entity: entity,
+                    kind: type.key
+                )
+                claimBySubject[subject.id] = claim
+                for pair in row.pairs {
+                    recordPin(observationID: pair.incomingObservationID, entity: entity)
+                    recordPin(observationID: pair.memberObservationID, entity: entity)
+                    if let member = observationsBySource.values.flatMap({ $0 }).first(where: { $0.id == pair.memberObservationID }),
+                       let memberEntity = membershipBySubject[member.subjectID]?.entity,
+                       memberEntity.id != entity.id
+                    {
+                        recordPin(observationID: pair.incomingObservationID, entity: memberEntity)
+                        recordPin(observationID: pair.memberObservationID, entity: memberEntity)
+                    }
+                }
+                written.append(CatalogPromoteBatchWritten(entity: entity, claim: claim, pins: row.pairs.count * 2))
+            }
+            let revision: Int64
+            if written.isEmpty {
+                revision = seenRevision
+            } else {
+                revision = nextAuditRevision
+                nextAuditRevision += 1
+            }
+            return CatalogPromoteBatchResult(revision: revision, written: written)
+        }
     }
 
-    private static func nameWords(_ folded: String) -> [String] {
-        folded.split(separator: " ").map(String.init).filter { $0.count >= 2 }
+    private func recordPin(observationID: String, entity: CatalogCanonicalEntity) {
+        var list = pinsByObservation[observationID] ?? []
+        if !list.contains(where: { $0.id == entity.id }) {
+            list.append(entity)
+        }
+        pinsByObservation[observationID] = list
     }
 
     func listClaimConfidenceGrades(projectDir: String) async throws -> [CatalogClaimConfidenceGrade] {
@@ -2224,6 +2375,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 observationsBySource[sourceID] = list.filter { $0.id != observationID }
                 bumpSource(sourceID)
             }
+            pinsByObservation[observationID] = nil
         }
     }
 
@@ -2599,7 +2751,30 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         if isEdgeLocked(observation: existing, projectDir: projectDir) {
             return CatalogDeleteImpact(allowed: false, gate: .edgeLocked, groups: [])
         }
-        return CatalogDeleteImpact(allowed: true, gate: .ok, groups: [])
+        let handles = pinsByObservation[id] ?? []
+        guard !handles.isEmpty else {
+            return CatalogDeleteImpact(allowed: true, gate: .ok, groups: [])
+        }
+        return CatalogDeleteImpact(
+            allowed: true,
+            gate: .ok,
+            groups: [],
+            cascades: [
+                CatalogDeleteImpactGroup(
+                    via: "identity_claim_evidence.observation_id",
+                    kind: "canonical_entity",
+                    total: handles.count,
+                    listed: handles.map { entity in
+                        CatalogDeleteImpactListed(
+                            id: entity.id,
+                            ref: entity.ref,
+                            title: entity.ref,
+                            location: WorkspaceLocation(section: .sources, ref: entity.ref, title: entity.ref)
+                        )
+                    }
+                ),
+            ]
+        )
     }
 
     private func subjectDeleteImpact(projectDir: String, id: String) -> CatalogDeleteImpact {

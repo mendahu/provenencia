@@ -172,12 +172,11 @@ struct CitationComposerFormPane: View {
                 hint: model.transcriptionActionHint
             ) {
                 HStack(spacing: PVSpacing.space4) {
-                    Toggle(isOn: $model.transcriptionUncertain) {
-                        Text(L10n.CitationComposer.uncertainLabel)
-                            .font(PVFont.body(size: PVTypeScale.caption))
-                    }
-                    .toggleStyle(.checkbox)
-                    .disabled(model.isTranscribing)
+                    PVCheckbox(
+                        L10n.CitationComposer.uncertainLabel,
+                        isChecked: $model.transcriptionUncertain,
+                        isDisabled: model.isTranscribing
+                    )
                     .accessibilityIdentifier("citationComposer.uncertain")
                     Spacer(minLength: 0)
                     if model.isPDFArtifact {

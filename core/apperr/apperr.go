@@ -81,6 +81,7 @@ const (
 	CodeConclusionDetailsNotFound     = "conclusiondetails.not_found"
 	CodePromoteInvalid                = "promote.invalid"
 	CodePromoteUnsupportedType        = "promote.unsupported_type"
+	CodePromoteStale                  = "promote.stale"
 	CodeSourceMetadataInvalid         = "sourcemetadata.invalid"
 	CodeFileDerivativesInvalid        = "filederivatives.invalid"
 	CodeIngestInvalid                 = "ingest.invalid"

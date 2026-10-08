@@ -72,6 +72,10 @@ enum PVSymbol: String {
     case filter = "line.3.horizontal.decrease"
     /// Lucide `network` — Evidence graph zone glyph (S5-D2 / S5-08).
     case network = "point.3.connected.trianglepath.dotted"
+    /// Lucide `layers` — group rows on the Promote page.
+    case layers = "square.3.layers.3d.down.right"
+    /// Lucide `refresh-cw` — a suggested Promote row that moved.
+    case refresh = "arrow.clockwise"
     case shieldCheck = "checkmark.shield.fill"
     case calendar = "calendar"
     case textType = "textformat"

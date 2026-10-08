@@ -19,10 +19,11 @@ import (
 // Role stays off the key (it is reconciled on the association). A relationship
 // type, and any later non-role disambiguation such as place_relationship_type,
 // is part of the key; a directed term keeps order and a symmetric one does not.
+// skip names bridge Subjects the caller switched off; nil files every bridge.
 //
 // Returned association ids are the handles whose cache the caller recomputes.
 // Changes belong on the caller's revision. Does not commit.
-func FileBridgesTx(tx *sql.Tx, subjectID []byte) (assocIDs [][]byte, changes []audit.Change, err error) {
+func FileBridgesTx(tx *sql.Tx, subjectID []byte, skip map[string]struct{}) (assocIDs [][]byte, changes []audit.Change, err error) {
 	if len(subjectID) != 16 {
 		return nil, nil, nil
 	}
@@ -30,8 +31,57 @@ func FileBridgesTx(tx *sql.Tx, subjectID []byte) (assocIDs [][]byte, changes []a
 	if err != nil {
 		return nil, nil, err
 	}
+	return fileHeads(tx, bridges, skip)
+}
+
+// FileSourceBridgesTx files every unfiled bridge homed to sourceID whose ends
+// are both handles, including a bridge whose ends were claimed before this
+// call. skip names bridge Subjects to leave unfiled. Does not commit.
+func FileSourceBridgesTx(tx *sql.Tx, sourceID []byte, skip map[string]struct{}) (assocIDs [][]byte, changes []audit.Change, err error) {
+	if len(sourceID) != 16 {
+		return nil, nil, nil
+	}
+	keys := connectrules.BridgeTypeKeys()
+	if len(keys) == 0 {
+		return nil, nil, nil
+	}
+	args := make([]any, 0, len(keys)+1)
+	args = append(args, sourceID)
+	for _, k := range keys {
+		args = append(args, k)
+	}
+	rows, err := tx.Query(`SELECT s.id, st.key, s.subject_type_id
+		FROM subjects s
+		JOIN subject_types st ON st.id = s.subject_type_id AND st.origin = 'provenencia'
+		WHERE s.source_id = ? AND st.key IN (`+database.SQLInPlaceholders(len(keys))+`)`, args...)
+	if err != nil {
+		return nil, nil, err
+	}
+	var heads []bridgeHead
+	for rows.Next() {
+		var b bridgeHead
+		if err := rows.Scan(&b.id, &b.typeKey, &b.typeID); err != nil {
+			_ = rows.Close()
+			return nil, nil, err
+		}
+		b.id = append([]byte(nil), b.id...)
+		b.typeID = append([]byte(nil), b.typeID...)
+		heads = append(heads, b)
+	}
+	if err := rows.Err(); err != nil {
+		_ = rows.Close()
+		return nil, nil, err
+	}
+	_ = rows.Close()
+	return fileHeads(tx, heads, skip)
+}
+
+func fileHeads(tx *sql.Tx, bridges []bridgeHead, skip map[string]struct{}) (assocIDs [][]byte, changes []audit.Change, err error) {
 	seen := map[string]bool{}
 	for _, b := range bridges {
+		if _, off := skip[string(b.id)]; off {
+			continue
+		}
 		id, ch, filed, err := fileBridge(tx, b)
 		if err != nil {
 			return nil, nil, err

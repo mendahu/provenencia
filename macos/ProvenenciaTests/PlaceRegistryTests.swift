@@ -124,9 +124,10 @@ struct PlaceRegistryTests {
                 [
                     .sourceGraph(project: project, sourceId: "s1"),
                     .sourcesList(project: project),
-                    .promoteTargets(project: project, subjectId: "sub-1"),
+                    .sourceTypesList(project: project),
                     .confidenceGradesList(project: project),
                     .propertiesWorkspace(project: project),
+                    .connectRules(project: project),
                 ]
             ),
             (

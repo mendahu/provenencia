@@ -57,6 +57,10 @@ IDs stay stable (`S9-NN`, `S9-DN`). Do not renumber when moving steps here.
 | S9-39 | PR | Place chain composer |
 | S9-40 | PR | Place hierarchy in list and detail |
 | S9-41 | PR | Graph alignment core |
+| S9-42 | PR | Graph alignment loader + proposal read |
+| S9-43 | PR | Batch Promote write |
+| S9-D16 | Design | Promote page |
+| S9-44 | PR | Promote page |
 
 ## Steps
 
@@ -1187,3 +1191,83 @@ Pure in-memory graph alignment for Promote: propose a handle, New, or Skip for e
 - Promote page: **S9-44**.
 - Rewiring `Rank`’s fuzzy scorer onto Compatible.
 - Migrations / product VERSION bump.
+
+### S9-42 — Graph alignment loader + proposal read
+
+Catalog adapter for Promote graph alignment: load Layer / Canon / Stats, call pure `Align`, expose the proposal over FFI.
+
+**What shipped**
+
+- `graphalign.ScoreCandidate`: shared Fellegi–Sunter pairwise + edge scoring path Align uses (composable unit under the walk).
+- `core/database/promotealign`: `Propose(q, sourceID, fixed)` loads primary Subjects and bridges (`WalkSource`), merges caller fixed with already-promoted anchors, seeds top-k `matching.ForSubject` candidates, expands a bounded canon via `canonicalgraph.Walk`, caches `stats` against `MAX(audit_transactions.revision)`, then calls `graphalign.Align`. No walk policy or pair scoring in the loader.
+- FFI `ProposePromoteGraphAlignment` → rows with comparisons, drafted pins, alternatives, flags, and Person / Event / Place headers; Swift `GenealogyStore` + `FakeStore` stub (UI sheet is S9-44).
+- Tests: Gracie-style seed-from-promoted-neighbor and place `part_of` chain through the real loader; stats cache invalidates on write; handler `runRPC` coverage.
+
+**What stayed out**
+
+- Batch Done / bridge filing / pins write: **S9-43**.
+- Promote page: **S9-44**.
+- Rewiring `Rank` onto Compatible.
+- Migrations / product VERSION bump.
+
+### S9-43 — Batch Promote write
+
+One Done transaction: claims, one-hop pins with backfill, and source-wide bridge filing, then FFI.
+
+**What shipped**
+
+- `promote.SaveBatch`: lost-race check against the revision `Propose` stamped (`promote.stale`); Skip writes nothing; New mints a handle and an accepted claim; Handle joins an unmerged same-type handle; an existing claim on that same handle is an anchor. One `promote_batch` audit revision and one auto-reconciler recompute.
+- Pair check widened to one hop through a bridge (participation, relationship, location, place relationship), same Property. Both Observations pin the new claim and backfill onto the member's claim.
+- `FileSourceBridgesTx` files unfiled bridges on the Source whose ends are both handles, including a bridge whose ends were claimed before this batch. Switched-off bridges are skipped. Self-links and place-hierarchy cycles stay unfiled.
+- FFI `ApplyPromoteGraphAlignment` and a `revision` on `ProposePromoteGraphAlignment`. Swift `GenealogyStore` / `GoStore`. FakeStore records pins and `observationDeleteImpact` names each distinct handle, so S9-44 can assert a pinned delete names the Person.
+- Tests: stale revision writes nothing; two new ends file one participation; an already-promoted pair files on a later batch; a skipped bridge stays unfiled; a person's claim pins a one-hop birth date and that pin is backfilled; cache matches a rebuild.
+
+**What stayed out**
+
+- Promote page, evidence sheet, leave guard: **S9-44**.
+- Editing or removing an existing claim (Spike 10).
+- Rewiring `Rank` onto Compatible.
+- Migrations / product VERSION bump.
+
+### S9-D16 — Promote page
+
+Design brief for the one-page Promote flow. Board: twelve frames, kit only. Gates **S9-44**. Replaces S9-D9 / S9-D10.
+
+### S9-44 — Promote page
+
+The Promote place is one page. The step wizard is gone.
+
+**What shipped**
+
+- After Align, `promotealign` attaches exhibit lines (own properties and one hop through a bridge): group label, outcome, weight, both displays, both sources, both observation ids. Agreeing lines default pinned. Alternatives carry Person / Event / Place headers. The seeding neighbor and edge signature stay on the row as the via path.
+- The page opens on the clicked subject. *Map the rest of this graph* reveals the others. Already-filed rows are read-only anchors. A weak or unmatched row starts on Skip and keeps its handle at the top of the menu. A touched row is decided and is not overwritten; suggested rows that move show Updated. Two rows on one existing handle warn that combining belongs on the Evidence graph.
+- Evidence sheet: exhibit groups, pin toggles, status Accepted only, confidence, argument drafted from the agreeing lines. Connections file when both ends resolve to a handle, the switch is on, and the ends are not the same handle.
+- Done sends the seen revision, the rows in scope, the pins still on, and the switched-off bridges. A stale revision files nothing and proposes again. Leave asks only after a manual change. A pinned Observation's delete confirm names the Person.
+- Tests: row list, re-propose, pins and skipped bridges, stale Done, leave guard, pinned-delete copy.
+
+**What stayed out**
+
+- Provisional or rejected status, editing or removing a claim (Spike 10), saved drafts, learned weights.
+- Rewiring `Rank` onto Compatible.
+- Previewing a place-hierarchy cycle before Done.
+- A check that two New rows may be the same person, and a stale failure that explains a merge.
+- Migrations / product VERSION bump.
+
+### S9-44 review — Promote graph alignment fixes
+
+An app-health review of S9-41 – S9-44, fixed as a stack of eight PRs (#307 – #314). What's built and what still differs from the design: [`promote-graph-alignment.md`](../../promote-graph-alignment.md) §12.
+
+**What shipped**
+
+- **Precision and determinism:** the property-only fallback scores on the walk's scale, so a shared surname no longer reads as a strong match. Contests over a handle are decided best-first, and every tie breaks by ref and id. Edge support counts each neighbor once; fan-out is keyed like the signatures; the stats cache is per catalog.
+- **Pins:** a neighbor's record pairs only with the handle that neighbor is filed on, in the exhibits and in the batch write's check.
+- **Done:** Skip rows file nothing but the skip; a retarget re-drafts pins and argument; only the latest proposal merges, and Done waits for it.
+- **Decisions and warnings:** New and Skip decisions are held. Conflict, lost-handle, and alike-New warnings fire.
+- **Copy:** reasons are codes the page words; the evidence sheet uses Property and term labels and neighbor names; row state is typed.
+- **Cost:** every proposal read is batched; the query count no longer grows with the layer.
+- **Accessibility:** identifiers on every control on the page and sheet; pins and the evidence button say what they refer to.
+- **Cleanup:** directed terms match from the same end; the step flow's target-suggestions RPC, cache key, and strings are gone.
+
+**What stayed out**
+
+- The §12 differences: provenance scaling, comparing every shared Property, name frequencies, fallback islands seeding a walk, bridge kinds in the loaders' hop tables.

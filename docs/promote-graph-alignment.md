@@ -58,7 +58,7 @@ Promote is one workspace page; the choose-target screen and the separate claim s
 Every row is **suggested** (the machine filled it) or **decided**: the researcher changed its dropdown or toggled anything in its sheet.
 
 - **On open,** the only fixed points are the clicked Subject's row and the already-promoted rows.
-- **On any change,** that row becomes decided, and graph alignment re-runs over the whole page with every decided row held fixed. Suggested rows and their sheets are recomputed; decided rows are never touched.
+- **On any change,** that row becomes decided, and graph alignment re-runs over the whole page with every decided row held fixed. Suggested rows and their sheets are recomputed; decided rows are never touched. A row decided New or Skip is held too: it takes no handle and the walk doesn't pass through it.
 - **Rows whose suggestion changed** get a brief "updated" mark with the reason ("because Gracie → PER-Z").
 - **A decided row that the new context contradicts** keeps its choice and gets a warning. The researcher resolves it.
 
@@ -130,7 +130,7 @@ This is collective entity resolution: graph alignment by propagation (cf. PARIS,
 2. **Pop the best-scoring candidate.** Accept it if it clears the threshold and keeps the graph alignment **one-to-one**: within one layer, a handle takes at most one Subject.
 3. **Propagate.** The accepted pair becomes an anchor. Push its neighbors' candidates, and add **support** to queued candidates that are consistent with it. A candidate's score rises as more of its neighbors map consistently. That's the "the structure lines up" evidence.
 4. **Repeat** until the queue is empty.
-5. **Unreachable Subjects** (nothing reaches them from an anchor) fall back to property-only matching, today's `core/match` suggestions. Below the threshold, they default to Skip.
+5. **Unreachable Subjects** (nothing reaches them from an anchor) fall back to property-only matching: `core/match` `Rank` picks their candidates, and each is scored by the same pairwise path the walk uses, so assignment and the assessment bands share one scale. They are assigned best-first across the layer, so a contest over one handle goes to the stronger match. Below the threshold, they default to Skip.
 
 The work is about (Subjects + bridges) × candidates × log: well under a millisecond at obituary scale.
 
@@ -206,7 +206,7 @@ That's roughly 10–15 queries per proposal, whatever the graph size.
 
 - **Done is one transaction for the whole batch:** all or nothing. Bridges need handles minted in the same batch, so a partial write could leave things half-linked. It's re-validated against the current state first: a write elsewhere since the proposal fails Done cleanly, and the page re-proposes. One audit revision covers the batch.
 - **Per row:** the Identity Claim with status, confidence and argument; a minted handle for New; nothing for Skip.
-- **Pins:** each toggled comparison pins its Observations on the row's claim and backfills them onto the member's claim (§5.1). The pair check widens from same Subject and same Property (S9-17) to **one-hop neighbors through a bridge**, so "her birth date matches" can be pinned on the person's claim.
+- **Pins:** each toggled comparison pins its Observations on the row's claim and backfills them onto the member's claim (§5.1). The pair check widens from same Subject and same Property (S9-17) to **one-hop neighbors through a bridge**, so "her birth date matches" can be pinned on the person's claim. A one-hop pair compares a neighbor only with the handle that neighbor is filed on, in this Done or earlier: this birth with that birth, never with another of the handle's events. A neighbor filed New or skipped pins nothing.
 - **Duplicate pins are accepted on purpose.** The same agreement may be pinned on several claims (the person's and the birth event's). The machine drafts the pins, so this costs the researcher nothing.
 - **Bridges** are filed by the rules in §9.1; switched-off bridges are skipped.
 
@@ -262,3 +262,28 @@ Spike 9 was replanned around this on 2026-10-06: [`deployment-plan/spike-9/deplo
 - **Typed name parts:** a name entered as one form ("Gracie Gray Gates (Frickleton)") weakens name comparison. Is that a composer nudge, or a parsing step?
 - **Naming:** what is the "map the rest of this graph" action called?
 - **The decision log:** what to record, and where, so it stays local and private.
+
+---
+
+# 12. Implementation status
+
+As built at the end of Spike 9 slice 9 (S9-41 – S9-44 and the review fixes stacked on them). Read this before assuming a section above is in the code.
+
+**Built as designed**
+
+- One pure `core/graphalign.Align` over `core/match.Evaluate`, with every walk and band tunable in `core/graphalign/registry.go`. Deterministic: subjects, the queue, and candidate lists all break ties by ref, then id.
+- Best-first walk, one-to-one, propagation: an accepted anchor re-scores the candidates it reaches, so support accumulates as neighbors map. Edge support counts each corresponding neighbor once.
+- Directed terms (parent, part of, …) correspond only from the same end. Whether a term is directed is the catalog's `property_terms.directed`, not a list in code.
+- Fan-out is measured per bridge from `connectrules`, keyed exactly like the edge signatures. Stats are cached per catalog file and audit revision.
+- Decided rows (handle, New, Skip) are held. Warnings: a held handle its neighbors contradict (`ConflictWithFixed`); a row that lost a handle to another row; two New rows that match each other.
+- Rows carry reason codes (`via`, `decided`, `agrees`, `weak`, `taken`, `no_match`, `empty`); the page words them.
+- Done is one transaction with the stale check, one-hop pins (§9), and bridge filing with switch-offs (§9.1).
+
+**Differs from the text above**
+
+- **Query count (§7):** every read is batched, so a proposal's cost doesn't grow with the layer or catalog. It is about 60 queries, not 10–15: the expansion runs one walk per bridge direction per hop (9 × up to 5 hops).
+- **Properties compared (§6):** only the Properties in each kind's `core/match` default profile (name and sex; event type and dates; toponym), not every Property both sides carry. Value frequencies (`u`) cover name, sex, event type, and toponym, and structured names have no frequency key yet, so names score on the cold-start prior.
+- **Provenance (§6):** not applied. Every Subject's provenance is 1; credibility, transcription certainty, and member claim confidence don't scale comparisons yet.
+- **Bridge kinds in the loaders:** the layer and canon loaders list their hops (participation, location, relationship, part of, succeeded by) in code. Pins and filing read bridge kinds from `connectrules`.
+- **Fallback islands:** a Subject matched by the property-only fallback doesn't seed a walk of its own neighbors.
+- **Exhibit values:** dates show their start year only.
