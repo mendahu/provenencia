@@ -51,7 +51,7 @@ func Propose(q Querier, sourceID []byte, fixed []graphalign.Fixed) (graphalign.P
 		return graphalign.Proposal{}, 0, err
 	}
 
-	canon, err := loadCanon(q, primary, anchors)
+	canon, err := loadCanon(q, layer, anchors)
 	if err != nil {
 		return graphalign.Proposal{}, 0, err
 	}

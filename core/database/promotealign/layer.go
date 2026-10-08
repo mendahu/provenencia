@@ -30,7 +30,7 @@ func loadLayer(q Querier, sourceID []byte) (graphalign.Layer, map[string]primary
 	defer rows.Close()
 
 	// Collect ids first: Catalog uses MaxOpenConns(1), so we must not hold
-	// this rows cursor open while LoadSubjectValues runs another query.
+	// this rows cursor open while the value reads run.
 	type row struct {
 		id           []byte
 		ref, key, or string
@@ -51,24 +51,39 @@ func loadLayer(q Querier, sourceID []byte) (graphalign.Layer, map[string]primary
 	primary := map[string]primarySubject{}
 	var subjects []graphalign.Subject
 	byKind := map[string][][]byte{}
-
 	for _, r := range listed {
 		if !promote.PrimaryKind(r.key, r.or) {
 			continue
 		}
-		profile, ok := match.DefaultProfile(r.key)
-		if !ok {
+		if _, ok := match.DefaultProfile(r.key); !ok {
 			continue
 		}
-		vals, err := matching.LoadSubjectValues(q, r.id, profile)
+		primary[string(r.id)] = primarySubject{id: append([]byte(nil), r.id...), ref: r.ref, kind: r.key}
+		byKind[r.key] = append(byKind[r.key], append([]byte(nil), r.id...))
+	}
+	values := map[string]match.Values{}
+	for kind, ids := range byKind {
+		profile, _ := match.DefaultProfile(kind)
+		vals, err := matching.SubjectsValues(q, ids, profile)
 		if err != nil {
 			return graphalign.Layer{}, nil, err
 		}
+		for id, v := range vals {
+			values[id] = v
+		}
+	}
+	for _, r := range listed {
+		ps, ok := primary[string(r.id)]
+		if !ok {
+			continue
+		}
+		vals := values[string(r.id)]
+		if vals == nil {
+			vals = match.Values{}
+		}
 		subjects = append(subjects, graphalign.Subject{
-			ID: append([]byte(nil), r.id...), Ref: r.ref, Kind: r.key, Values: vals, Provenance: 1,
+			ID: ps.id, Ref: ps.ref, Kind: ps.kind, Values: vals, Provenance: 1,
 		})
-		primary[string(r.id)] = primarySubject{id: append([]byte(nil), r.id...), ref: r.ref, kind: r.key}
-		byKind[r.key] = append(byKind[r.key], append([]byte(nil), r.id...))
 	}
 
 	metas, err := loadMetas(q)
@@ -146,77 +161,84 @@ func loadLayerBridges(q Querier, sourceID []byte, primary map[string]primarySubj
 			A: append([]byte(nil), a...), B: append([]byte(nil), b...), Signature: sig,
 		})
 	}
+	walk := func(kind string, hop canonicalgraph.Hop) ([]canonicalgraph.Edge, error) {
+		if len(byKind[kind]) == 0 {
+			return nil, nil
+		}
+		return canonicalgraph.WalkSource(q, sourceID, hop, byKind[kind])
+	}
+	assocs := func(edges []canonicalgraph.Edge) [][]byte {
+		ids := make([][]byte, len(edges))
+		for i, e := range edges {
+			ids[i] = e.Association
+		}
+		return ids
+	}
 
 	// Person ↔ event (participation), any role.
-	if ids := byKind["person"]; len(ids) > 0 {
-		edges, err := canonicalgraph.WalkSource(q, sourceID, hopPersonToEvent, ids)
-		if err != nil {
-			return nil, err
-		}
-		for _, e := range edges {
-			role, err := termOnSubject(q, e.Association, connectrules.DisambiguationRole)
-			if err != nil {
-				return nil, err
-			}
-			typeTerm, err := termOnSubject(q, e.To, neighborTypeProperty["event"])
-			if err != nil {
-				return nil, err
-			}
-			add(e.From, e.To, graphalign.EdgeSignature{
-				BridgeType: "participation", RoleOrType: role,
-				NeighborKind: "event", NeighborTypeTerm: typeTerm,
-			})
-		}
+	participations, err := walk("person", hopPersonToEvent)
+	if err != nil {
+		return nil, err
+	}
+	roles, err := observedTerms(q, assocs(participations), connectrules.DisambiguationRole)
+	if err != nil {
+		return nil, err
+	}
+	var events [][]byte
+	for _, e := range participations {
+		events = append(events, e.To)
+	}
+	eventTypes, err := observedTerms(q, events, neighborTypeProperty["event"])
+	if err != nil {
+		return nil, err
+	}
+	for _, e := range participations {
+		add(e.From, e.To, graphalign.EdgeSignature{
+			BridgeType: "participation", RoleOrType: roles[string(e.Association)],
+			NeighborKind: "event", NeighborTypeTerm: eventTypes[string(e.To)],
+		})
 	}
 
 	// Event ↔ place (location).
-	if ids := byKind["event"]; len(ids) > 0 {
-		edges, err := canonicalgraph.WalkSource(q, sourceID, hopEventToPlace, ids)
-		if err != nil {
-			return nil, err
-		}
-		for _, e := range edges {
-			add(e.From, e.To, graphalign.EdgeSignature{
-				BridgeType: "location", NeighborKind: "place",
-			})
-		}
+	locations, err := walk("event", hopEventToPlace)
+	if err != nil {
+		return nil, err
+	}
+	for _, e := range locations {
+		add(e.From, e.To, graphalign.EdgeSignature{BridgeType: "location", NeighborKind: "place"})
 	}
 
 	// Person ↔ person (relationship).
-	if ids := byKind["person"]; len(ids) > 0 {
-		edges, err := canonicalgraph.WalkSource(q, sourceID, hopPersonRelated, ids)
+	relationships, err := walk("person", hopPersonRelated)
+	if err != nil {
+		return nil, err
+	}
+	relTypes, err := observedTerms(q, assocs(relationships), connectrules.DisambiguationRelationshipType)
+	if err != nil {
+		return nil, err
+	}
+	for _, e := range relationships {
+		add(e.From, e.To, graphalign.EdgeSignature{
+			BridgeType: "relationship", RoleOrType: relTypes[string(e.Association)], NeighborKind: "person",
+		})
+	}
+
+	// Place ↔ place (part_of / succeeded_by).
+	for _, step := range []struct {
+		hop  canonicalgraph.Hop
+		term string
+	}{
+		{hopPlaceParent, "part_of"},
+		{hopPlaceSuccessor, "succeeded_by"},
+	} {
+		edges, err := walk("place", step.hop)
 		if err != nil {
 			return nil, err
 		}
 		for _, e := range edges {
-			rel, err := termOnSubject(q, e.Association, connectrules.DisambiguationRelationshipType)
-			if err != nil {
-				return nil, err
-			}
 			add(e.From, e.To, graphalign.EdgeSignature{
-				BridgeType: "relationship", RoleOrType: rel, NeighborKind: "person",
+				BridgeType: "place_relationship", RoleOrType: step.term, NeighborKind: "place",
 			})
-		}
-	}
-
-	// Place ↔ place (part_of / succeeded_by).
-	if ids := byKind["place"]; len(ids) > 0 {
-		for _, step := range []struct {
-			hop  canonicalgraph.Hop
-			term string
-		}{
-			{hopPlaceParent, "part_of"},
-			{hopPlaceSuccessor, "succeeded_by"},
-		} {
-			edges, err := canonicalgraph.WalkSource(q, sourceID, step.hop, ids)
-			if err != nil {
-				return nil, err
-			}
-			for _, e := range edges {
-				add(e.From, e.To, graphalign.EdgeSignature{
-					BridgeType: "place_relationship", RoleOrType: step.term, NeighborKind: "place",
-				})
-			}
 		}
 	}
 
@@ -228,17 +250,4 @@ func bridgeKey(a, b []byte, sig graphalign.EdgeSignature) string {
 		a, b = b, a
 	}
 	return string(a) + "|" + string(b) + "|" + sig.Key()
-}
-
-func termOnSubject(q Querier, subjectID []byte, propertyKey string) (string, error) {
-	var term string
-	err := q.QueryRow(`SELECT t.key FROM observations o
-		JOIN properties p ON p.id = o.property_id AND p.key = ? AND p.origin = 'provenencia'
-		JOIN property_terms t ON t.id = o.value_term_id
-		WHERE o.subject_id = ? AND o.polarity = 'positive'
-		LIMIT 1`, propertyKey, subjectID).Scan(&term)
-	if err == sql.ErrNoRows {
-		return "", nil
-	}
-	return term, err
 }

@@ -2,6 +2,8 @@ package promotealign_test
 
 import (
 	"bytes"
+	"database/sql"
+	"fmt"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
@@ -497,5 +499,52 @@ func TestProposeHoldsNewAndSkipDecisions(t *testing.T) {
 				t.Fatalf("row %+v, want %s", row, tt.want)
 			}
 		})
+	}
+}
+
+type countingQuerier struct {
+	db *sql.DB
+	n  int
+}
+
+func (c *countingQuerier) Query(query string, args ...any) (*sql.Rows, error) {
+	c.n++
+	return c.db.Query(query, args...)
+}
+
+func (c *countingQuerier) QueryRow(query string, args ...any) *sql.Row {
+	c.n++
+	return c.db.QueryRow(query, args...)
+}
+
+// Every read in Propose is batched, so a bigger layer and catalog cost no
+// more queries than a small one of the same shape.
+func TestProposeQueryCountDoesNotGrowWithTheLayer(t *testing.T) {
+	queries := func(people int) int {
+		f := newFixture(t)
+		srcB, artB := f.newSource("Obituary")
+		for i := 0; i < people; i++ {
+			name := fmt.Sprintf("Person %c", 'A'+i)
+			p := f.person(f.source, f.artifact, name)
+			b := f.birth(f.source, f.artifact)
+			f.participation(f.source, f.artifact, p, b, "subject")
+			f.promote(p)
+			f.promote(b)
+			pb := f.person(srcB, artB, name)
+			bb := f.birth(srcB, artB)
+			f.participation(srcB, artB, pb, bb, "subject")
+		}
+		db, err := f.c.DB()
+		must(t, err)
+		promotealign.ResetStatsCacheForTest()
+		counter := &countingQuerier{db: db}
+		_, _, err = promotealign.Propose(counter, srcB.ID, nil)
+		must(t, err)
+		return counter.n
+	}
+	small, large := queries(2), queries(6)
+	t.Logf("%d queries per proposal", small)
+	if small != large {
+		t.Fatalf("2 people took %d queries, 6 took %d; a read grew with the layer", small, large)
 	}
 }

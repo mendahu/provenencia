@@ -45,17 +45,13 @@ func attachExhibits(q Querier, layer graphalign.Layer, prop *graphalign.Proposal
 		}
 	}
 
-	members := map[string][][]byte{} // handle → accepted member subjects
-	membersOf := func(handleID []byte) ([][]byte, error) {
-		if ms, ok := members[string(handleID)]; ok {
-			return ms, nil
-		}
-		ms, err := acceptedMembers(q, handleID)
-		if err != nil {
-			return nil, err
-		}
-		members[string(handleID)] = ms
-		return ms, nil
+	var handleIDs [][]byte
+	for _, h := range mappedTo {
+		handleIDs = append(handleIDs, h)
+	}
+	members, err := acceptedMembers(q, handleIDs) // every row's handle, neighbors' included
+	if err != nil {
+		return err
 	}
 
 	type neighborPair struct {
@@ -74,10 +70,7 @@ func attachExhibits(q Querier, layer graphalign.Layer, prop *graphalign.Proposal
 		if r.Target != graphalign.TargetHandle || len(r.HandleID) != 16 {
 			continue
 		}
-		own, err := membersOf(r.HandleID)
-		if err != nil {
-			return err
-		}
+		own := members[string(r.HandleID)]
 		memberIDs = append(memberIDs, own...)
 		plans = append(plans, rowPlan{idx: i, own: own})
 	}
@@ -113,12 +106,8 @@ func attachExhibits(q Querier, layer graphalign.Layer, prop *graphalign.Proposal
 			if !ok {
 				continue
 			}
-			gMembers, err := membersOf(g)
-			if err != nil {
-				return err
-			}
 			var sides [][]byte
-			for _, gm := range gMembers {
+			for _, gm := range members[string(g)] {
 				if near[string(gm)] {
 					sides = append(sides, gm)
 				}
@@ -245,22 +234,33 @@ func exhibitAuto(v match.Value) autoreconcile.Value {
 	}
 }
 
-func acceptedMembers(q Querier, entityID []byte) ([][]byte, error) {
-	rows, err := q.Query(`SELECT subject_id FROM identity_claims
-		WHERE entity_id = ? AND status = 'accepted' ORDER BY subject_id`, entityID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var out [][]byte
-	for rows.Next() {
-		var id []byte
-		if err := rows.Scan(&id); err != nil {
+// acceptedMembers maps each handle to its accepted member Subjects.
+func acceptedMembers(q Querier, entityIDs [][]byte) (map[string][][]byte, error) {
+	out := map[string][][]byte{}
+	ids := database.UniqueBlobIDs(entityIDs)
+	for start := 0; start < len(ids); start += inBatch {
+		chunk := ids[start:min(start+inBatch, len(ids))]
+		rows, err := q.Query(`SELECT entity_id, subject_id FROM identity_claims
+			WHERE status = 'accepted' AND entity_id IN (`+database.SQLInPlaceholders(len(chunk))+`)
+			ORDER BY entity_id, subject_id`, database.BlobArgs(chunk)...)
+		if err != nil {
 			return nil, err
 		}
-		out = append(out, append([]byte(nil), id...))
+		for rows.Next() {
+			var entity, subject []byte
+			if err := rows.Scan(&entity, &subject); err != nil {
+				_ = rows.Close()
+				return nil, err
+			}
+			out[string(entity)] = append(out[string(entity)], subject)
+		}
+		err = rows.Err()
+		_ = rows.Close()
+		if err != nil {
+			return nil, err
+		}
 	}
-	return out, rows.Err()
+	return out, nil
 }
 
 // bridgeNeighbors maps each of subjectIDs to the Subjects one bridge away.

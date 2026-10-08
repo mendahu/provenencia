@@ -1,10 +1,8 @@
 package promotealign
 
 import (
-	"database/sql"
-	"errors"
-
 	"github.com/mendahu/provenencia/core/connectrules"
+	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/canonicalgraph"
 	"github.com/mendahu/provenencia/core/database/matching"
 	"github.com/mendahu/provenencia/core/graphalign"
@@ -17,110 +15,116 @@ const canonDiameter = 5
 // seedCandidateLimit is top-k property-only candidates per unpromoted Subject.
 const seedCandidateLimit = 5
 
-func loadCanon(q Querier, primary map[string]primarySubject, fixed []graphalign.Fixed) (graphalign.Canon, error) {
-	seeds := map[string][]byte{} // handleID → copy
-	addSeed := func(id []byte) {
-		if len(id) != 16 {
-			return
-		}
-		seeds[string(id)] = append([]byte(nil), id...)
-	}
+// canonStep is one hop the expansion follows, and how its edges sign.
+type canonStep struct {
+	hop          canonicalgraph.Hop
+	bridgeType   string
+	roleFallback string // the hop's fixed term, when it filters on one
+	toKind       string
+}
+
+var canonSteps = []canonStep{
+	{hopPersonToEvent, "participation", "", "event"},
+	{canonicalgraph.SubjectsOfEvent, "participation", "subject", "person"},
+	{hopEventToPlace, "location", "", "place"},
+	{canonicalgraph.EventsAtPlace, "location", "", "event"},
+	{hopPersonRelated, "relationship", "", "person"},
+	{hopPlaceParent, "place_relationship", "part_of", "place"},
+	{canonicalgraph.PartsOfPlace, "place_relationship", "part_of", "place"},
+	{hopPlaceSuccessor, "place_relationship", "succeeded_by", "place"},
+	{canonicalgraph.PredecessorsOfPlace, "place_relationship", "succeeded_by", "place"},
+}
+
+// loadCanon gathers a bounded piece of the canonical graph around the layer:
+// the fixed handles and each unfixed Subject's top property-only candidates,
+// expanded breadth-first. Every read is batched — candidates once per kind,
+// one walk per step per hop, terms and handle values per hop — so the query
+// count follows the hop count, not the size of the layer or the catalog.
+func loadCanon(q Querier, layer graphalign.Layer, fixed []graphalign.Fixed) (graphalign.Canon, error) {
+	handles := map[string]graphalign.Handle{}
+	var seeds [][]byte
 	for _, f := range fixed {
-		addSeed(f.HandleID)
+		if len(f.HandleID) == 16 {
+			seeds = append(seeds, f.HandleID)
+		}
 	}
 
-	// Top-k property-only candidates for unpromoted Subjects.
+	// Top-k property-only candidates for unfixed Subjects: each kind's
+	// candidates load once, and every Subject of that kind ranks against them.
 	fixedSubjects := map[string]bool{}
 	for _, f := range fixed {
 		fixedSubjects[string(f.SubjectID)] = true
 	}
-	for _, ps := range primary {
-		if fixedSubjects[string(ps.id)] {
+	candidates := map[string][]match.Candidate{}
+	for _, s := range layer.Subjects {
+		if fixedSubjects[string(s.ID)] || len(s.Values) == 0 {
 			continue
 		}
-		res, err := matching.ForSubject(q, ps.id, matching.Options{Limit: seedCandidateLimit})
-		if err != nil {
-			return graphalign.Canon{}, err
+		profile, ok := match.DefaultProfile(s.Kind)
+		if !ok {
+			continue
 		}
-		for _, m := range res.Matches {
-			addSeed(m.EntityID)
-		}
-	}
-
-	frontier := make([][]byte, 0, len(seeds))
-	for _, id := range seeds {
-		frontier = append(frontier, id)
-	}
-
-	handles := map[string]graphalign.Handle{}
-	var edges []graphalign.CanonEdge
-	edgeSeen := map[string]bool{}
-
-	loadHandles := func(ids [][]byte) error {
-		for _, id := range ids {
-			if _, ok := handles[string(id)]; ok {
-				continue
-			}
-			var (
-				ref, kind, origin string
-			)
-			err := q.QueryRow(`SELECT e.ref, st.key, st.origin FROM canonical_entities e
-				JOIN subject_types st ON st.id = e.subject_type_id
-				WHERE e.id = ? AND e.merged_into_id IS NULL`, id).Scan(&ref, &kind, &origin)
-			if err != nil {
-				return err
-			}
-			if !promotePrimary(kind, origin) {
-				continue
-			}
-			profile, ok := match.DefaultProfile(kind)
-			if !ok {
-				continue
-			}
-			vals, _, err := matching.LoadEntityValues(q, id, profile)
-			if err != nil {
-				return err
-			}
-			handles[string(id)] = graphalign.Handle{
-				ID: append([]byte(nil), id...), Ref: ref, Kind: kind, Values: vals,
-			}
-		}
-		return nil
-	}
-	if err := loadHandles(frontier); err != nil {
-		return graphalign.Canon{}, err
-	}
-
-	hops := []struct {
-		hop          canonicalgraph.Hop
-		bridgeType   string
-		roleFallback string // used when filter term is fixed on the hop
-		toKind       string
-	}{
-		{hopPersonToEvent, "participation", "", "event"},
-		{canonicalgraph.SubjectsOfEvent, "participation", "subject", "person"},
-		{hopEventToPlace, "location", "", "place"},
-		{canonicalgraph.EventsAtPlace, "location", "", "event"},
-		{hopPersonRelated, "relationship", "", "person"},
-		{hopPlaceParent, "place_relationship", "part_of", "place"},
-		{canonicalgraph.PartsOfPlace, "place_relationship", "part_of", "place"},
-		{hopPlaceSuccessor, "place_relationship", "succeeded_by", "place"},
-		{canonicalgraph.PredecessorsOfPlace, "place_relationship", "succeeded_by", "place"},
-	}
-
-	for depth := 0; depth < canonDiameter && len(frontier) > 0; depth++ {
-		var next [][]byte
-		nextSeen := map[string]bool{}
-		for _, step := range hops {
-			walked, err := canonicalgraph.Walk(q, step.hop, frontier)
+		cands, loaded := candidates[s.Kind]
+		if !loaded {
+			var err error
+			cands, err = matching.CandidatesOfType(q, s.Kind, "provenencia", profile)
 			if err != nil {
 				return graphalign.Canon{}, err
 			}
-			for _, e := range walked {
-				sig, err := canonEdgeSignature(q, e, step.bridgeType, step.roleFallback, step.toKind)
-				if err != nil {
-					return graphalign.Canon{}, err
+			candidates[s.Kind] = cands
+		}
+		for _, m := range match.Rank(profile, s.Values, cands, seedCandidateLimit) {
+			seeds = append(seeds, m.EntityID)
+		}
+	}
+
+	frontier, err := loadHandles(q, database.UniqueBlobIDs(seeds), handles)
+	if err != nil {
+		return graphalign.Canon{}, err
+	}
+
+	var edges []graphalign.CanonEdge
+	edgeSeen := map[string]bool{}
+	for depth := 0; depth < canonDiameter && len(frontier) > 0; depth++ {
+		type walked struct {
+			step  canonStep
+			edges []canonicalgraph.Edge
+		}
+		var all []walked
+		var assocRoles, assocRels, events [][]byte
+		for _, step := range canonSteps {
+			es, err := canonicalgraph.Walk(q, step.hop, frontier)
+			if err != nil {
+				return graphalign.Canon{}, err
+			}
+			all = append(all, walked{step, es})
+			for _, e := range es {
+				switch step.bridgeType {
+				case "participation":
+					assocRoles = append(assocRoles, e.Association)
+					events = append(events, e.From, e.To)
+				case "relationship":
+					assocRels = append(assocRels, e.Association)
 				}
+			}
+		}
+		roles, err := keptTerms(q, assocRoles, connectrules.DisambiguationRole)
+		if err != nil {
+			return graphalign.Canon{}, err
+		}
+		rels, err := keptTerms(q, assocRels, connectrules.DisambiguationRelationshipType)
+		if err != nil {
+			return graphalign.Canon{}, err
+		}
+		eventTypes, err := keptTerms(q, events, neighborTypeProperty["event"])
+		if err != nil {
+			return graphalign.Canon{}, err
+		}
+
+		var next [][]byte
+		for _, w := range all {
+			for _, e := range w.edges {
+				sig := canonEdgeSignature(e, w.step, roles, rels, eventTypes)
 				ek := string(e.From) + "|" + string(e.To) + "|" + sig.Key()
 				if !edgeSeen[ek] {
 					edgeSeen[ek] = true
@@ -130,23 +134,15 @@ func loadCanon(q Querier, primary map[string]primarySubject, fixed []graphalign.
 						Signature: sig,
 					})
 				}
-				if _, ok := handles[string(e.To)]; !ok && !nextSeen[string(e.To)] {
-					nextSeen[string(e.To)] = true
-					next = append(next, append([]byte(nil), e.To...))
+				if _, ok := handles[string(e.To)]; !ok {
+					next = append(next, e.To)
 				}
 			}
 		}
-		if err := loadHandles(next); err != nil {
+		frontier, err = loadHandles(q, database.UniqueBlobIDs(next), handles)
+		if err != nil {
 			return graphalign.Canon{}, err
 		}
-		// Drop non-primary that loadHandles skipped.
-		kept := next[:0]
-		for _, id := range next {
-			if _, ok := handles[string(id)]; ok {
-				kept = append(kept, id)
-			}
-		}
-		frontier = kept
 	}
 
 	out := graphalign.Canon{Edges: edges}
@@ -156,73 +152,95 @@ func loadCanon(q Querier, primary map[string]primarySubject, fixed []graphalign.
 	return out, nil
 }
 
+// loadHandles adds the primary handles among ids to handles (one header read
+// and one values read per kind, per IN batch) and returns the ids it added.
+func loadHandles(q Querier, ids [][]byte, handles map[string]graphalign.Handle) ([][]byte, error) {
+	var fresh [][]byte
+	for _, id := range ids {
+		if _, ok := handles[string(id)]; !ok && len(id) == 16 {
+			fresh = append(fresh, id)
+		}
+	}
+	byKind := map[string][][]byte{}
+	refs := map[string]string{}
+	for start := 0; start < len(fresh); start += inBatch {
+		chunk := fresh[start:min(start+inBatch, len(fresh))]
+		rows, err := q.Query(`SELECT e.id, e.ref, st.key, st.origin FROM canonical_entities e
+			JOIN subject_types st ON st.id = e.subject_type_id
+			WHERE e.merged_into_id IS NULL AND e.id IN (`+database.SQLInPlaceholders(len(chunk))+`)`,
+			database.BlobArgs(chunk)...)
+		if err != nil {
+			return nil, err
+		}
+		for rows.Next() {
+			var id []byte
+			var ref, kind, origin string
+			if err := rows.Scan(&id, &ref, &kind, &origin); err != nil {
+				_ = rows.Close()
+				return nil, err
+			}
+			if !promotePrimary(kind, origin) {
+				continue
+			}
+			refs[string(id)] = ref
+			byKind[kind] = append(byKind[kind], id)
+		}
+		err = rows.Err()
+		_ = rows.Close()
+		if err != nil {
+			return nil, err
+		}
+	}
+	var added [][]byte
+	for _, kind := range []string{"person", "event", "place"} {
+		ids := byKind[kind]
+		if len(ids) == 0 {
+			continue
+		}
+		profile, _ := match.DefaultProfile(kind)
+		values, err := matching.EntitiesValues(q, ids, profile)
+		if err != nil {
+			return nil, err
+		}
+		for _, id := range ids {
+			vals := values[string(id)]
+			if vals == nil {
+				vals = match.Values{}
+			}
+			handles[string(id)] = graphalign.Handle{ID: id, Ref: refs[string(id)], Kind: kind, Values: vals}
+			added = append(added, id)
+		}
+	}
+	return added, nil
+}
+
 func promotePrimary(kind, origin string) bool {
 	return origin == "provenencia" && (kind == "person" || kind == "event" || kind == "place")
 }
 
-func canonEdgeSignature(q Querier, e canonicalgraph.Edge, bridgeType, roleFallback, toKind string) (graphalign.EdgeSignature, error) {
-	sig := graphalign.EdgeSignature{
-		BridgeType:   bridgeType,
-		RoleOrType:   roleFallback,
-		NeighborKind: toKind,
-	}
-	switch bridgeType {
+// canonEdgeSignature signs a walked edge the way the layer signs its
+// bridges, whichever way the walk crossed it: a participation is person →
+// event carrying the event's type, a location is event → place.
+func canonEdgeSignature(e canonicalgraph.Edge, step canonStep, roles, rels, eventTypes map[string]string) graphalign.EdgeSignature {
+	switch step.bridgeType {
 	case "participation":
-		if roleFallback == "" {
-			role, err := termOnEntity(q, e.Association, connectrules.DisambiguationRole)
-			if err != nil {
-				return sig, err
-			}
-			sig.RoleOrType = role
+		role := step.roleFallback
+		if role == "" {
+			role = roles[string(e.Association)]
 		}
-		typeTerm, err := termOnEntity(q, e.To, neighborTypeProperty["event"])
-		if err != nil {
-			return sig, err
+		event := e.To
+		if step.toKind != "event" {
+			event = e.From
 		}
-		if toKind == "event" {
-			sig.NeighborTypeTerm = typeTerm
-		} else {
-			// Walking event → person: type term is on the from (event) side for
-			// matching the layer's person→event signature neighbor type.
-			fromType, err := termOnEntity(q, e.From, neighborTypeProperty["event"])
-			if err != nil {
-				return sig, err
-			}
-			sig.NeighborKind = "person"
-			sig.NeighborTypeTerm = ""
-			_ = fromType
-			// Align matches signatures by full Key(); layer uses NeighborKind=event
-			// with the event's type. Canon edges are stored undirected in Align's
-			// adjacency, so store the person→event orientation's signature.
-			sig = graphalign.EdgeSignature{
-				BridgeType: "participation", RoleOrType: sig.RoleOrType,
-				NeighborKind: "event", NeighborTypeTerm: fromType,
-			}
+		return graphalign.EdgeSignature{
+			BridgeType: "participation", RoleOrType: role,
+			NeighborKind: "event", NeighborTypeTerm: eventTypes[string(event)],
 		}
 	case "relationship":
-		rel, err := termOnEntity(q, e.Association, connectrules.DisambiguationRelationshipType)
-		if err != nil {
-			return sig, err
-		}
-		sig.RoleOrType = rel
-		sig.NeighborKind = "person"
-	case "place_relationship":
-		sig.NeighborKind = "place"
+		return graphalign.EdgeSignature{BridgeType: "relationship", RoleOrType: rels[string(e.Association)], NeighborKind: "person"}
 	case "location":
-		sig.NeighborKind = toKind
+		return graphalign.EdgeSignature{BridgeType: "location", NeighborKind: "place"}
+	default:
+		return graphalign.EdgeSignature{BridgeType: step.bridgeType, RoleOrType: step.roleFallback, NeighborKind: "place"}
 	}
-	return sig, nil
-}
-
-func termOnEntity(q Querier, entityID []byte, propertyKey string) (string, error) {
-	var term string
-	err := q.QueryRow(`SELECT t.key FROM auto_reconciler_values r
-		JOIN properties p ON p.id = r.property_id AND p.key = ? AND p.origin = 'provenencia'
-		JOIN property_terms t ON t.id = r.value_term_id
-		WHERE r.entity_id = ? AND r.rank = 1 AND r.reason = 'kept'
-		LIMIT 1`, propertyKey, entityID).Scan(&term)
-	if errors.Is(err, sql.ErrNoRows) {
-		return "", nil
-	}
-	return term, err
 }
