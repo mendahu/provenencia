@@ -39,7 +39,8 @@ enum Method {
   reserved 71;
   reserved "METHOD_UPDATE_CITATION_WITH_OBSERVATIONS";
   // Per-entity headers ride GetConclusionDetail.
-  reserved 92, 94, 95;
+  reserved 88, 92, 94, 95;
+  reserved "METHOD_LIST_PROMOTE_TARGET_SUGGESTIONS";
   reserved "METHOD_GET_EVENT_HEADER", "METHOD_GET_PLACE_HEADER", "METHOD_GET_PERSON_HEADER";
   METHOD_UPDATE_METADATA_FIELD = 28;
   METHOD_DELETE_SOURCE_TYPE = 29;
@@ -100,7 +101,6 @@ enum Method {
   METHOD_PROMOTE_SUBJECT = 85;
   METHOD_LIST_SUBJECT_MEMBERSHIPS = 86;
   METHOD_LIST_PERSON_HEADERS = 87;
-  METHOD_LIST_PROMOTE_TARGET_SUGGESTIONS = 88;
   METHOD_LIST_CLAIM_CONFIDENCE_GRADES = 89;
   METHOD_GET_CONCLUSION_DETAIL = 90;
   METHOD_LIST_EVENT_HEADERS = 91;
@@ -1256,39 +1256,6 @@ message ConclusionDetail {
     EventHeader event = 5;
     PlaceHeader place = 6;
   }
-}
-
-// ListPromoteTargetSuggestions returns existing handles a Subject could join,
-// best first: same type, unmerged, not its own handle, scored by the type's
-// match profile (core/match). limit 0 = the engine default.
-message ListPromoteTargetSuggestionsRequest {
-  string project_dir = 1;
-  string subject_id = 2;
-  int32 limit = 3;
-}
-
-// MatchReason is one Property's part in a match score: its best similarity
-// (0…1) and the points it added (negative for a clear disagreement).
-message MatchReason {
-  string property_key = 1;
-  string property_origin = 2;
-  double similarity = 3;
-  double contribution = 4;
-}
-
-// PromoteTargetSuggestion is one handle the Subject could join. person is
-// the row header for Person handles; Events and Places carry the handle
-// alone until their header composers land.
-message PromoteTargetSuggestion {
-  CanonicalEntity entity = 1;
-  double score = 2;
-  repeated MatchReason reasons = 3;
-  PersonHeader person = 4;
-  int32 member_count = 5; // accepted members of the handle
-}
-
-message ListPromoteTargetSuggestionsResponse {
-  repeated PromoteTargetSuggestion suggestions = 1;
 }
 
 // ProposePromoteGraphAlignment loads one Source's Evidence layer and proposes

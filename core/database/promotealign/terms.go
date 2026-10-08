@@ -18,6 +18,27 @@ func keptTerms(q Querier, entityIDs [][]byte, propertyKey string) (map[string]st
 		entityIDs, propertyKey)
 }
 
+// directedTerms is every directed term ("propertyKey|termKey"): a term whose
+// order is part of its meaning (parent of, part of), as the catalog marks it.
+func directedTerms(q Querier) (map[string]bool, error) {
+	rows, err := q.Query(`SELECT p.key, t.key FROM property_terms t
+		JOIN properties p ON p.id = t.property_id
+		WHERE t.directed = 1`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := map[string]bool{}
+	for rows.Next() {
+		var prop, term string
+		if err := rows.Scan(&prop, &term); err != nil {
+			return nil, err
+		}
+		out[prop+"|"+term] = true
+	}
+	return out, rows.Err()
+}
+
 // observedTerms maps each Subject to the key of a positive Observation's
 // term on the Property (first key in order wins).
 func observedTerms(q Querier, subjectIDs [][]byte, propertyKey string) (map[string]string, error) {

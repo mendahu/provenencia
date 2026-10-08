@@ -161,6 +161,10 @@ func loadLayerBridges(q Querier, sourceID []byte, primary map[string]primarySubj
 			A: append([]byte(nil), a...), B: append([]byte(nil), b...), Signature: sig,
 		})
 	}
+	directed, err := directedTerms(q)
+	if err != nil {
+		return nil, err
+	}
 	walk := func(kind string, hop canonicalgraph.Hop) ([]canonicalgraph.Edge, error) {
 		if len(byKind[kind]) == 0 {
 			return nil, nil
@@ -218,8 +222,10 @@ func loadLayerBridges(q Querier, sourceID []byte, primary map[string]primarySubj
 		return nil, err
 	}
 	for _, e := range relationships {
+		rel := relTypes[string(e.Association)]
 		add(e.From, e.To, graphalign.EdgeSignature{
-			BridgeType: "relationship", RoleOrType: relTypes[string(e.Association)], NeighborKind: "person",
+			BridgeType: "relationship", RoleOrType: rel, NeighborKind: "person",
+			Directed: directed[connectrules.DisambiguationRelationshipType+"|"+rel],
 		})
 	}
 
@@ -238,6 +244,7 @@ func loadLayerBridges(q Querier, sourceID []byte, primary map[string]primarySubj
 		for _, e := range edges {
 			add(e.From, e.To, graphalign.EdgeSignature{
 				BridgeType: "place_relationship", RoleOrType: step.term, NeighborKind: "place",
+				Directed: directed[connectrules.DisambiguationPlaceRelationshipType+"|"+step.term],
 			})
 		}
 	}

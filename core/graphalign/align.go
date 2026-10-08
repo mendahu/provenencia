@@ -54,14 +54,27 @@ type state struct {
 	seen  map[string]bool // subject|handle already accepted or rejected for queue
 }
 
+// A link is one end's view of an edge; fromEnd is true at the edge's first
+// endpoint (Bridge.A, CanonEdge.From).
 type layerLink struct {
 	neighbor []byte
 	sig      EdgeSignature
+	fromEnd  bool
 }
 
 type canonLink struct {
 	neighbor []byte
 	sig      EdgeSignature
+	fromEnd  bool
+}
+
+// corresponds reports whether a canon link can stand for a layer link: same
+// signature, and for a directed term, seen from the same end.
+func corresponds(l layerLink, c canonLink) bool {
+	if c.sig.Key() != l.sig.Key() {
+		return false
+	}
+	return !(l.sig.Directed || c.sig.Directed) || l.fromEnd == c.fromEnd
 }
 
 type scoredCand struct {
@@ -103,12 +116,12 @@ func newState(layer Layer, canon Canon, stats Stats, fixed []Fixed, cfg Config) 
 	}
 	for _, b := range layer.Bridges {
 		a, c := string(b.A), string(b.B)
-		st.layerAdj[a] = append(st.layerAdj[a], layerLink{neighbor: b.B, sig: b.Signature})
+		st.layerAdj[a] = append(st.layerAdj[a], layerLink{neighbor: b.B, sig: b.Signature, fromEnd: true})
 		st.layerAdj[c] = append(st.layerAdj[c], layerLink{neighbor: b.A, sig: b.Signature})
 	}
 	for _, e := range canon.Edges {
 		f, t := string(e.From), string(e.To)
-		st.canonAdj[f] = append(st.canonAdj[f], canonLink{neighbor: e.To, sig: e.Signature})
+		st.canonAdj[f] = append(st.canonAdj[f], canonLink{neighbor: e.To, sig: e.Signature, fromEnd: true})
 		st.canonAdj[t] = append(st.canonAdj[t], canonLink{neighbor: e.From, sig: e.Signature})
 	}
 	for _, f := range fixed {
@@ -169,7 +182,7 @@ func (st *state) pushFromAnchor(subjectID, handleID []byte) {
 			continue
 		}
 		for _, ce := range st.canonAdj[string(handleID)] {
-			if ce.sig.Key() != link.sig.Key() {
+			if !corresponds(link, ce) {
 				continue
 			}
 			h := st.handles[string(ce.neighbor)]
@@ -264,7 +277,7 @@ func (st *state) edgeSupport(subjectID, handleID []byte) float64 {
 		}
 		// Does canon connect handleID to hid with the same signature?
 		for _, ce := range st.canonAdj[string(handleID)] {
-			if ce.sig.Key() == link.sig.Key() && bytes.Equal(ce.neighbor, hid) {
+			if corresponds(link, ce) && bytes.Equal(ce.neighbor, hid) {
 				add(link.sig)
 				break
 			}
@@ -377,8 +390,11 @@ func (st *state) scoreFixed() {
 			if !ok {
 				continue
 			}
+			// canonAdj[g] is seen from the neighbor's end, so compare the
+			// neighbor's view of this link.
+			fromNeighbor := layerLink{neighbor: s.ID, sig: link.sig, fromEnd: !link.fromEnd}
 			for _, ce := range st.canonAdj[string(g)] {
-				if ce.sig.Key() != link.sig.Key() || bytes.Equal(ce.neighbor, hid) {
+				if !corresponds(fromNeighbor, ce) || bytes.Equal(ce.neighbor, hid) {
 					continue
 				}
 				h := st.handles[string(ce.neighbor)]

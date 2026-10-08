@@ -751,37 +751,6 @@ struct GoStore: GenealogyStore {
         )
     }
 
-    func listPromoteTargetSuggestions(
-        projectDir: String,
-        subjectID: String,
-        limit: Int
-    ) async throws -> [CatalogPromoteTargetSuggestion] {
-        var req = Provenencia_Engine_V1_ListPromoteTargetSuggestionsRequest()
-        req.projectDir = projectDir
-        req.subjectID = subjectID
-        req.limit = Int32(clamping: limit)
-        let resp: Provenencia_Engine_V1_ListPromoteTargetSuggestionsResponse = try await provenenciaCall(
-            method: CoreMethod.listPromoteTargetSuggestions,
-            request: req
-        )
-        return resp.suggestions.map { sg in
-            CatalogPromoteTargetSuggestion(
-                entity: Self.mapCanonicalEntity(sg.entity),
-                score: sg.score,
-                reasons: sg.reasons.map { r in
-                    CatalogMatchReason(
-                        propertyKey: r.propertyKey,
-                        propertyOrigin: r.propertyOrigin,
-                        similarity: r.similarity,
-                        contribution: r.contribution
-                    )
-                },
-                person: sg.hasPerson ? Self.mapPersonHeader(sg.person) : nil,
-                memberCount: Int(sg.memberCount)
-            )
-        }
-    }
-
     func proposePromoteGraphAlignment(
         projectDir: String,
         sourceID: String,

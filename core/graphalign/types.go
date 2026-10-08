@@ -7,11 +7,17 @@ import "github.com/mendahu/provenencia/core/match"
 
 // EdgeSignature identifies corresponding bridges on the layer and edges on
 // the canonical graph (design §6).
+//
+// Directed marks a term whose order is part of its meaning (parent of, part
+// of). A directed edge corresponds only from the same end: Bridge.A and
+// CanonEdge.From are the bridge's first endpoint. Key leaves it out, since
+// both ends of one bridge share a fan-out entry and a signature identity.
 type EdgeSignature struct {
 	BridgeType       string // participation, relationship, location, place_relationship
 	RoleOrType       string // role or relationship / place-relationship term key
 	NeighborKind     string // person, event, place
 	NeighborTypeTerm string // e.g. birth on an event
+	Directed         bool
 }
 
 // Key is a stable map key for the signature.

@@ -16,23 +16,26 @@ const canonDiameter = 5
 const seedCandidateLimit = 5
 
 // canonStep is one hop the expansion follows, and how its edges sign.
+// reversed hops walk from the bridge's second endpoint; their edges are
+// flipped so CanonEdge.From is always the first, as on the layer.
 type canonStep struct {
 	hop          canonicalgraph.Hop
 	bridgeType   string
 	roleFallback string // the hop's fixed term, when it filters on one
 	toKind       string
+	reversed     bool
 }
 
 var canonSteps = []canonStep{
-	{hopPersonToEvent, "participation", "", "event"},
-	{canonicalgraph.SubjectsOfEvent, "participation", "subject", "person"},
-	{hopEventToPlace, "location", "", "place"},
-	{canonicalgraph.EventsAtPlace, "location", "", "event"},
-	{hopPersonRelated, "relationship", "", "person"},
-	{hopPlaceParent, "place_relationship", "part_of", "place"},
-	{canonicalgraph.PartsOfPlace, "place_relationship", "part_of", "place"},
-	{hopPlaceSuccessor, "place_relationship", "succeeded_by", "place"},
-	{canonicalgraph.PredecessorsOfPlace, "place_relationship", "succeeded_by", "place"},
+	{hopPersonToEvent, "participation", "", "event", false},
+	{canonicalgraph.SubjectsOfEvent, "participation", "subject", "person", true},
+	{hopEventToPlace, "location", "", "place", false},
+	{canonicalgraph.EventsAtPlace, "location", "", "event", true},
+	{hopPersonRelated, "relationship", "", "person", false},
+	{hopPlaceParent, "place_relationship", "part_of", "place", false},
+	{canonicalgraph.PartsOfPlace, "place_relationship", "part_of", "place", true},
+	{hopPlaceSuccessor, "place_relationship", "succeeded_by", "place", false},
+	{canonicalgraph.PredecessorsOfPlace, "place_relationship", "succeeded_by", "place", true},
 }
 
 // loadCanon gathers a bounded piece of the canonical graph around the layer:
@@ -83,6 +86,10 @@ func loadCanon(q Querier, layer graphalign.Layer, fixed []graphalign.Fixed) (gra
 		return graphalign.Canon{}, err
 	}
 
+	directed, err := directedTerms(q)
+	if err != nil {
+		return graphalign.Canon{}, err
+	}
 	var edges []graphalign.CanonEdge
 	edgeSeen := map[string]bool{}
 	for depth := 0; depth < canonDiameter && len(frontier) > 0; depth++ {
@@ -124,13 +131,17 @@ func loadCanon(q Querier, layer graphalign.Layer, fixed []graphalign.Fixed) (gra
 		var next [][]byte
 		for _, w := range all {
 			for _, e := range w.edges {
-				sig := canonEdgeSignature(e, w.step, roles, rels, eventTypes)
-				ek := string(e.From) + "|" + string(e.To) + "|" + sig.Key()
+				sig := canonEdgeSignature(e, w.step, roles, rels, eventTypes, directed)
+				from, to := e.From, e.To
+				if w.step.reversed {
+					from, to = to, from
+				}
+				ek := string(from) + "|" + string(to) + "|" + sig.Key()
 				if !edgeSeen[ek] {
 					edgeSeen[ek] = true
 					edges = append(edges, graphalign.CanonEdge{
-						From:      append([]byte(nil), e.From...),
-						To:        append([]byte(nil), e.To...),
+						From:      append([]byte(nil), from...),
+						To:        append([]byte(nil), to...),
 						Signature: sig,
 					})
 				}
@@ -221,7 +232,7 @@ func promotePrimary(kind, origin string) bool {
 // canonEdgeSignature signs a walked edge the way the layer signs its
 // bridges, whichever way the walk crossed it: a participation is person →
 // event carrying the event's type, a location is event → place.
-func canonEdgeSignature(e canonicalgraph.Edge, step canonStep, roles, rels, eventTypes map[string]string) graphalign.EdgeSignature {
+func canonEdgeSignature(e canonicalgraph.Edge, step canonStep, roles, rels, eventTypes map[string]string, directed map[string]bool) graphalign.EdgeSignature {
 	switch step.bridgeType {
 	case "participation":
 		role := step.roleFallback
@@ -237,10 +248,17 @@ func canonEdgeSignature(e canonicalgraph.Edge, step canonStep, roles, rels, even
 			NeighborKind: "event", NeighborTypeTerm: eventTypes[string(event)],
 		}
 	case "relationship":
-		return graphalign.EdgeSignature{BridgeType: "relationship", RoleOrType: rels[string(e.Association)], NeighborKind: "person"}
+		rel := rels[string(e.Association)]
+		return graphalign.EdgeSignature{
+			BridgeType: "relationship", RoleOrType: rel, NeighborKind: "person",
+			Directed: directed[connectrules.DisambiguationRelationshipType+"|"+rel],
+		}
 	case "location":
 		return graphalign.EdgeSignature{BridgeType: "location", NeighborKind: "place"}
 	default:
-		return graphalign.EdgeSignature{BridgeType: step.bridgeType, RoleOrType: step.roleFallback, NeighborKind: "place"}
+		return graphalign.EdgeSignature{
+			BridgeType: step.bridgeType, RoleOrType: step.roleFallback, NeighborKind: "place",
+			Directed: directed[connectrules.DisambiguationPlaceRelationshipType+"|"+step.roleFallback],
+		}
 	}
 }

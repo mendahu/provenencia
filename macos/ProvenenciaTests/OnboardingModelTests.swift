@@ -504,13 +504,6 @@ private struct ThrowingStore: GenealogyStore {
     ) async throws -> CatalogPromoteResult {
         throw StoreBoom.boom
     }
-    func listPromoteTargetSuggestions(
-        projectDir _: String,
-        subjectID _: String,
-        limit _: Int
-    ) async throws -> [CatalogPromoteTargetSuggestion] {
-        throw StoreBoom.boom
-    }
     func proposePromoteGraphAlignment(
         projectDir _: String,
         sourceID _: String,

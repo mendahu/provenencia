@@ -113,16 +113,14 @@ struct PromoteView: View {
 
     private var header: some View {
         HStack(alignment: .center, spacing: PVSpacing.space5) {
-            RoundedRectangle(cornerRadius: 4, style: .continuous)
+            RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous)
                 .fill(PVColor.surfaceSunken)
-                .overlay(RoundedRectangle(cornerRadius: 4, style: .continuous).strokeBorder(PVColor.borderSubtle, lineWidth: 1))
+                .overlay(RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous).strokeBorder(PVColor.borderSubtle, lineWidth: 1))
                 .overlay(PVMark(model.sourceMark, size: 24, decorative: true).foregroundStyle(PVColor.textSecondary))
                 .frame(width: 44, height: 44)
             VStack(alignment: .leading, spacing: PVSpacing.space2) {
                 Text(L10n.Promote.pageTitle)
-                    .font(PVFont.body(size: 11, weight: PVFontWeight.semibold))
-                    .tracking(1.2)
-                    .textCase(.uppercase)
+                    .pvMicroCaps()
                     .foregroundStyle(PVColor.textMuted)
                 if let title = model.entry.sourceTitle {
                     Text(verbatim: title)
@@ -217,9 +215,7 @@ struct PromoteView: View {
             if !section.anchors.isEmpty {
                 VStack(alignment: .leading, spacing: 0) {
                     Text(L10n.Promote.alreadyFiledHeading)
-                        .font(PVFont.body(size: 11, weight: PVFontWeight.semibold))
-                        .tracking(1.2)
-                        .textCase(.uppercase)
+                        .pvMicroCaps()
                         .foregroundStyle(PVColor.textMuted)
                         .padding(.top, PVSpacing.space3)
                         .padding(.bottom, PVSpacing.space2)
@@ -234,23 +230,21 @@ struct PromoteView: View {
     }
 
     private var columnHeaders: some View {
-        HStack(spacing: 14) {
-            Color.clear.frame(width: 28, height: 1)
+        HStack(spacing: PromoteLayout.columnGap) {
+            Color.clear.frame(width: PromoteLayout.kindTile, height: 1)
             columnLabel(L10n.Promote.columnSource)
             Color.clear.frame(width: 14, height: 1)
-            columnLabel(L10n.Promote.columnTarget).frame(width: 330, alignment: .leading)
+            columnLabel(L10n.Promote.columnTarget).frame(width: PromoteLayout.targetColumn, alignment: .leading)
             columnLabel(L10n.Promote.columnAssessment)
-            Color.clear.frame(width: 112, height: 1)
+            Color.clear.frame(width: PromoteLayout.badgeColumn, height: 1)
         }
-        .padding(.top, 10)
+        .padding(.top, PVSpacing.space5)
         .padding(.bottom, PVSpacing.space3)
     }
 
     private func columnLabel(_ title: LocalizedStringResource) -> some View {
         Text(title)
-            .font(PVFont.body(size: 11, weight: PVFontWeight.semibold))
-            .tracking(1.2)
-            .textCase(.uppercase)
+            .pvMicroCaps()
             .foregroundStyle(PVColor.textMuted)
             .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -285,7 +279,7 @@ struct PromoteView: View {
     }
 
     private func connectionRow(_ bridge: PromoteFlow.Bridge) -> some View {
-        HStack(alignment: .center, spacing: 14) {
+        HStack(alignment: .center, spacing: PromoteLayout.columnGap) {
             PVMark(bridge.mark, size: 16, decorative: true)
                 .foregroundStyle(PVColor.textMuted)
                 .frame(width: 20)
@@ -456,7 +450,7 @@ private struct PromoteAlignmentRow: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: PVSpacing.space2) {
-            HStack(alignment: .center, spacing: 14) {
+            HStack(alignment: .center, spacing: PromoteLayout.columnGap) {
                 kindMark
                 VStack(alignment: .leading, spacing: 0) {
                     Text(verbatim: row.name)
@@ -474,7 +468,7 @@ private struct PromoteAlignmentRow: View {
                     selection: targetBinding,
                     options: targetOptions,
                     size: .sm,
-                    menuWidth: 330,
+                    menuWidth: PromoteLayout.targetColumn,
                     fillsWidth: true,
                     rowHeight: 46,
                     isDisabled: model.isSaving,
@@ -483,7 +477,7 @@ private struct PromoteAlignmentRow: View {
                 ) { option in
                     PromoteTargetMenuRow(option: option, row: row)
                 }
-                .frame(width: 330)
+                .frame(width: PromoteLayout.targetColumn)
                 Button { model.openSheet(row.subjectID) } label: {
                     HStack(spacing: PVSpacing.space3) {
                         PVBadge(PromoteAssessmentCopy.title(row.assessment), tone: badgeTone)
@@ -513,14 +507,14 @@ private struct PromoteAlignmentRow: View {
                         PVBadge(L10n.Promote.decided, tone: .neutral, icon: .check, subtle: true)
                     }
                 }
-                .frame(width: 112, alignment: .trailing)
+                .frame(width: PromoteLayout.badgeColumn, alignment: .trailing)
             }
             if row.updated {
                 Text(verbatim: L10n.Promote.updatedDetail(model.reasonText(for: row)))
                     .font(PVFont.body(size: PVTypeScale.caption))
                     .italic()
                     .foregroundStyle(PVColor.textSecondary)
-                    .padding(.leading, 42)
+                    .padding(.leading, PromoteLayout.noteIndent)
             }
             if let ref = row.conflictNote {
                 PVCallout(
@@ -529,7 +523,7 @@ private struct PromoteAlignmentRow: View {
                     message: L10n.string(L10n.Promote.conflictBody),
                     compact: true
                 )
-                .padding(.leading, 42)
+                .padding(.leading, PromoteLayout.noteIndent)
             }
             if let note = row.duplicateNote {
                 PVCallout(
@@ -538,7 +532,7 @@ private struct PromoteAlignmentRow: View {
                     message: L10n.string(L10n.Promote.duplicateBody),
                     compact: true
                 )
-                .padding(.leading, 42)
+                .padding(.leading, PromoteLayout.noteIndent)
             }
         }
         .padding(.vertical, PVSpacing.space3)
@@ -553,7 +547,7 @@ private struct PromoteAlignmentRow: View {
     }
 
     private var kindMark: some View {
-        PromoteKindTile(kind: row.kind, size: 28, markSize: 16, background: PVColor.surfaceSunken)
+        PromoteKindTile(kind: row.kind, size: PromoteLayout.kindTile, markSize: 16, background: PVColor.surfaceSunken)
     }
 
     private var badgeTone: PVBadgeTone {
@@ -612,10 +606,10 @@ private struct PromoteAnchorRow: View {
     let row: PromoteFlow.Row
 
     var body: some View {
-        HStack(alignment: .center, spacing: 14) {
+        HStack(alignment: .center, spacing: PromoteLayout.columnGap) {
             PVMark(row.kind.markKey, size: 16, decorative: true)
                 .foregroundStyle(PVColor.textMuted)
-                .frame(width: 28, height: 28)
+                .frame(width: PromoteLayout.kindTile, height: PromoteLayout.kindTile)
             VStack(alignment: .leading, spacing: 0) {
                 Text(verbatim: row.name)
                     .font(PVFont.body(size: PVTypeScale.bodySmall))
@@ -639,14 +633,14 @@ private struct PromoteAnchorRow: View {
                         .font(PVFont.mono(size: PVTypeScale.caption))
                         .foregroundStyle(PVColor.textMuted)
                 }
-                .frame(width: 330, alignment: .leading)
+                .frame(width: PromoteLayout.targetColumn, alignment: .leading)
             }
             Text(L10n.Promote.filedEarlier)
                 .font(PVFont.body(size: PVTypeScale.caption))
                 .italic()
                 .foregroundStyle(PVColor.textMuted)
                 .frame(maxWidth: .infinity, alignment: .leading)
-            Color.clear.frame(width: 100, height: 1)
+            Color.clear.frame(width: PromoteLayout.badgeColumn, height: 1)
         }
         .padding(.vertical, PVSpacing.space2)
         .overlay(alignment: .top) { PVDivider() }
@@ -746,7 +740,7 @@ private struct PromoteEvidenceSheet: View {
     }
 
     private var sheetColumns: some View {
-        HStack(spacing: 14) {
+        HStack(spacing: PromoteLayout.columnGap) {
             Text(L10n.Promote.sheetPin).frame(width: 22, alignment: .leading)
             Text(L10n.Promote.sheetCompared).frame(width: 150, alignment: .leading)
             Text(L10n.Promote.sheetHere).frame(maxWidth: .infinity, alignment: .leading)
@@ -754,9 +748,7 @@ private struct PromoteEvidenceSheet: View {
             Text(L10n.Promote.sheetResult).frame(width: 92, alignment: .leading)
             Text(L10n.Promote.sheetWeight).frame(width: 48, alignment: .trailing)
         }
-        .font(PVFont.body(size: 11, weight: PVFontWeight.semibold))
-        .tracking(1.2)
-        .textCase(.uppercase)
+        .pvMicroCaps()
         .foregroundStyle(PVColor.textMuted)
     }
 
@@ -769,7 +761,7 @@ private struct PromoteEvidenceSheet: View {
     }
 
     private func comparisonLine(_ line: CatalogPromoteGraphAlignmentComparison) -> some View {
-        HStack(alignment: .top, spacing: 14) {
+        HStack(alignment: .top, spacing: PromoteLayout.columnGap) {
             PVCheckbox(
                 isChecked: pin(line.id),
                 isDisabled: line.incomingObservationID.isEmpty || line.outcome == "unknown",
@@ -875,6 +867,17 @@ private struct PromoteEvidenceSheet: View {
     }
 }
 
+/// The board's column grid, shared by the header row and every row so the
+/// columns line up.
+private enum PromoteLayout {
+    static let columnGap = PVSpacing.space5
+    static let kindTile: CGFloat = 28
+    static let targetColumn: CGFloat = 330
+    static let badgeColumn: CGFloat = 112
+    /// Notes under a row start where its name does.
+    static let noteIndent = kindTile + columnGap
+}
+
 private enum PromoteAssessmentCopy {
     static func title(_ assessment: PromoteFlow.Assessment) -> LocalizedStringResource {
         switch assessment {
@@ -893,9 +896,9 @@ private struct PromoteKindTile: View {
 
     var body: some View {
         let style = EvidenceSubjectKindStyle.forKind(kind)
-        RoundedRectangle(cornerRadius: 4, style: .continuous)
+        RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous)
             .fill(background)
-            .overlay(RoundedRectangle(cornerRadius: 4, style: .continuous).strokeBorder(style.line, lineWidth: 1))
+            .overlay(RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous).strokeBorder(style.line, lineWidth: 1))
             .overlay(PVMark(kind.markKey, size: markSize, decorative: true).foregroundStyle(style.ink))
             .frame(width: size, height: size)
             .accessibilityHidden(true)

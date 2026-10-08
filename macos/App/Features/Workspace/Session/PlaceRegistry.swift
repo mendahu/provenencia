@@ -26,12 +26,11 @@ struct PlaceRegistry: Sendable {
                     && $0.subjectId != nil
             },
             queryKeys: { project, location in
-                guard let sourceId = location.sourceId, let subjectId = location.subjectId else { return [] }
+                guard let sourceId = location.sourceId else { return [] }
                 return [
                     .sourceGraph(project: project, sourceId: sourceId),
                     .sourcesList(project: project),
                     .sourceTypesList(project: project),
-                    .promoteTargets(project: project, subjectId: subjectId),
                     .confidenceGradesList(project: project),
                     .propertiesWorkspace(project: project),
                     .connectRules(project: project),

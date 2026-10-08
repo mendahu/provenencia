@@ -3,8 +3,9 @@
 // and the candidate handles of the same Subject type (their auto-reconciled values
 // from the cache, every rank), then ranks them with the type's Profile.
 //
-// Consumers shape the result for their surface: Promote's target
-// suggestions (promotetargets) from ForSubject; merge hints from ForEntity.
+// Promote graph alignment (promotealign) reads CandidatesOfType once per
+// kind and ranks every Subject in memory. ForSubject and ForEntity rank one
+// probe; ForEntity is the basis for merge hints.
 //
 // Candidates are every unmerged handle of the type that has a cached value
 // for a profile Property, read in one query. When catalogs outgrow a scan,

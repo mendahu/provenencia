@@ -548,3 +548,31 @@ func TestProposeQueryCountDoesNotGrowWithTheLayer(t *testing.T) {
 		t.Fatalf("2 people took %d queries, 6 took %d; a read grew with the layer", small, large)
 	}
 }
+
+// A directed term is matched from the same end: the fixed place's part (not
+// its whole, though both are named York) is what the layer's part matches.
+func TestProposePartOfMatchesTheSameEnd(t *testing.T) {
+	f := newFixture(t)
+	part := f.place(f.source, f.artifact, "York")
+	middle := f.place(f.source, f.artifact, "Ontario")
+	whole := f.place(f.source, f.artifact, "York")
+	f.placeRel(f.source, f.artifact, part, middle, "part_of")
+	f.placeRel(f.source, f.artifact, middle, whole, "part_of")
+	partH := f.promote(part)
+	middleH := f.promote(middle)
+	f.promote(whole)
+	// Other places, so "York" is not a common name and the edge decides.
+	for _, name := range []string{"Bath", "Leeds", "Hull", "Derby", "Ely", "Wells"} {
+		f.promote(f.place(f.source, f.artifact, name))
+	}
+
+	srcB, artB := f.newSource("Gazetteer")
+	york := f.place(srcB, artB, "York")
+	ontario := f.place(srcB, artB, "Ontario")
+	f.placeRel(srcB, artB, york, ontario, "part_of")
+
+	row := rowFor(f.propose(srcB.ID, []graphalign.Fixed{{SubjectID: ontario.ID, HandleID: middleH.Entity.ID}}), york.ID)
+	if row.Reason != graphalign.ReasonVia || !bytes.Equal(row.HandleID, partH.Entity.ID) {
+		t.Fatalf("york row %+v, want the part %s via Ontario", row, partH.Entity.Ref)
+	}
+}

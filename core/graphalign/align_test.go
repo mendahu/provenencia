@@ -713,3 +713,46 @@ func TestRowReasons(t *testing.T) {
 		})
 	}
 }
+
+func TestDirectedRelationshipsMatchFromTheSameEnd(t *testing.T) {
+	tests := []struct {
+		name     string
+		directed bool
+		want     string
+	}{
+		// PER-0 is the anchor's parent, PER-9 its child; Bob is the anchor's
+		// child. Undirected, the tie goes to the first ref (the parent).
+		{name: "a symmetric term reaches either end", directed: false, want: "h-parent"},
+		{name: "a directed term reaches only the same end", directed: true, want: "h-child"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sig := relSig("parent_of")
+			sig.Directed = tt.directed
+			layer := graphalign.Layer{
+				Subjects: []graphalign.Subject{
+					{ID: id("s-a"), Ref: "A", Kind: "person", Values: nameVals("Ann", "Ames")},
+					{ID: id("s-b"), Ref: "B", Kind: "person", Values: nameVals("Bob", "Ames")},
+				},
+				Bridges: []graphalign.Bridge{{A: id("s-a"), B: id("s-b"), Signature: sig}}, // Ann parent_of Bob
+				Metas:   nameMetas(),
+			}
+			canon := graphalign.Canon{
+				Handles: []graphalign.Handle{
+					{ID: id("h-a"), Ref: "PER-5", Kind: "person", Values: nameVals("Ann", "Ames")},
+					{ID: id("h-parent"), Ref: "PER-0", Kind: "person", Values: nameVals("Bob", "Ames")},
+					{ID: id("h-child"), Ref: "PER-9", Kind: "person", Values: nameVals("Bob", "Ames")},
+				},
+				Edges: []graphalign.CanonEdge{
+					{From: id("h-parent"), To: id("h-a"), Signature: sig}, // PER-0 parent_of Ann
+					{From: id("h-a"), To: id("h-child"), Signature: sig},  // Ann parent_of PER-9
+				},
+			}
+			fixed := []graphalign.Fixed{{SubjectID: id("s-a"), HandleID: id("h-a")}}
+			row := rowBySubject(graphalign.Align(layer, canon, graphalign.Stats{}, fixed, nil), id("s-b"))
+			if row.Target != graphalign.TargetHandle || string(row.HandleID) != tt.want || row.Reason != graphalign.ReasonVia {
+				t.Fatalf("got %s %q (%s), want %q via the anchor", row.Target, row.HandleID, row.Reason, tt.want)
+			}
+		})
+	}
+}

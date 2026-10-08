@@ -1513,64 +1513,6 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         pinsByObservation[observationID] = list
     }
 
-    /// A stand-in for core/match's person profile on written names (untyped words),
-    /// close enough for UI tests: the same folded name scores 10; a shared word of two
-    /// or more letters scores 5, as "Mary Robins" ~ "James Robins" does in Go.
-    func listPromoteTargetSuggestions(
-        projectDir: String,
-        subjectID: String,
-        limit: Int
-    ) async throws -> [CatalogPromoteTargetSuggestion] {
-        // A read: no `recordedCalls`.
-        return withState {
-            markCatalogSessionHeld(projectDir)
-            let own = membershipBySubject[subjectID]?.entity.id
-            let names = observationsBySource.values.flatMap { $0 }
-                .filter { $0.subjectID == subjectID && $0.propertyKey == "name" && !$0.nameForm.isEmpty }
-                .map { Self.foldName($0.nameForm) }
-            guard !names.isEmpty else { return [] }
-            let words = Set(names.flatMap(Self.nameWords))
-            let scored = personHeaders().compactMap { header -> CatalogPromoteTargetSuggestion? in
-                guard header.entity.id != own, let name = header.name.map({ Self.foldName($0.form) }) else { return nil }
-                let similarity: Double
-                if names.contains(name) {
-                    similarity = 1
-                } else if !words.isDisjoint(with: Self.nameWords(name)) {
-                    similarity = 0.5
-                } else {
-                    return nil
-                }
-                let reason = CatalogMatchReason(
-                    propertyKey: "name", propertyOrigin: "provenencia",
-                    similarity: similarity, contribution: 10 * similarity
-                )
-                return CatalogPromoteTargetSuggestion(
-                    entity: header.entity, score: 10 * similarity, reasons: [reason], person: header,
-                    memberCount: membershipBySubject.values.filter { $0.entity.id == header.entity.id }.count
-                )
-            }
-            let sorted = scored.sorted { a, b in
-                a.score != b.score ? a.score > b.score : a.entity.ref < b.entity.ref
-            }
-            return Array(sorted.prefix(limit > 0 ? limit : 10))
-        }
-    }
-
-    /// Mirrors autoreconcile.NormalizeForm: dashes and slashes separate words; other
-    /// punctuation is dropped.
-    private static func foldName(_ form: String) -> String {
-        let spaced = String(form.lowercased().map { "-–—/".contains($0) ? " " : $0 })
-        return spaced
-            .filter { !$0.isPunctuation }
-            .split(whereSeparator: \.isWhitespace)
-            .map(String.init)
-            .joined(separator: " ")
-    }
-
-    private static func nameWords(_ folded: String) -> [String] {
-        folded.split(separator: " ").map(String.init).filter { $0.count >= 2 }
-    }
-
     func listClaimConfidenceGrades(projectDir: String) async throws -> [CatalogClaimConfidenceGrade] {
         return withState {
             markCatalogSessionHeld(projectDir)
