@@ -54,18 +54,11 @@ func splitWords(s string) []string {
 // Longer text that shares words is that cap times the word overlap. 0 means
 // no resemblance.
 func TextResemblance(a, b string) float64 {
-	wa, wb := splitWords(a), splitWords(b)
-	if len(wa) == 0 || len(wb) == 0 {
+	sim, ok := compareForms(a, b, setting(DefaultText.Partial, 0), DefaultText.Words.resolve(false))
+	if !ok {
 		return 0
 	}
-	if strings.Join(wa, " ") == strings.Join(wb, " ") {
-		return 1
-	}
-	rules := DefaultText.Words.resolve(false)
-	if len(wa) == 1 && len(wb) == 1 {
-		return wordSimilarity(wa[0], wb[0], rules)
-	}
-	return setting(DefaultText.Partial, 0) * wordDice(wa, wb, rules)
+	return sim
 }
 
 // compareForms is 1 for the same normalized form, else partial × the share
@@ -78,6 +71,11 @@ func compareForms(a, b string, partial float64, r wordRules) (float64, bool) {
 	}
 	if strings.Join(wa, " ") == strings.Join(wb, " ") {
 		return 1, true
+	}
+	// A one-word spelling variant is the edit-distance ratio. Capping it
+	// would leave a one-letter typo under the promote weak bar.
+	if len(wa) == 1 && len(wb) == 1 {
+		return wordSimilarity(wa[0], wb[0], r), true
 	}
 	return partial * wordDice(wa, wb, r), true
 }

@@ -110,8 +110,8 @@ type Comparison struct {
 	Property  match.Property
 	Outcome   match.Outcome
 	ValueType string
-	Pinned    bool // drafted true when OutcomeAgree; a partial resemblance stays unpinned
-	// Weight is the log-odds this outcome added (negative for a conflict).
+	Pinned    bool // drafted true when the values are the same; a partial resemblance stays unpinned
+	// Weight is the points this outcome added (negative for a conflict).
 	Weight float64
 }
 

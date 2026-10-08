@@ -98,13 +98,13 @@ func Align(layer Layer, canon Canon, stats Stats, fixed []Fixed) Proposal
 
 | Layer | Responsibility | Does not |
 | --- | --- | --- |
-| **Pairwise evaluation** | Given two sides’ values (and optional mapped-neighbor edge context), return agree / conflict / unknown, score, and reasons — built on the value-type modules / `Compatible`, one sameness notion with reconciliation | Walk the graph, load the catalog, choose New/Skip for a whole layer |
+| **Pairwise evaluation** | Given two sides’ values, return a comparer similarity per property. The promote scale turns that into agree / partial / conflict / unknown and points. `Compatible` is sameness for reconciliation and pins, not the score | Walk the graph, load the catalog, choose New/Skip for a whole layer |
 | **Property-only matching** ([`matching.md`](matching.md)) | Rank one probe against many handles by looping the pairwise unit with a profile (`Rank`) | Know Evidence bridges, fixed anchors, or propagation |
 | **Graph alignment** (`Align`) | Seed, priority walk, one-to-one, propagate structural support; call pairwise evaluation on each candidate; fall back to property-only matching when unreachable | Own a second “are these the same?” implementation; talk to SQLite |
 | **Catalog adapter** (S9-42) | Build `Layer` / `Canon` / `Stats`, call `Align`, map the proposal to FFI | Contain scoring or walk policy |
 | **Promote page** (S9-44) | Present rows, decisions, Done | Reimplement alignment |
 
-Alignment **orchestrates**; matching / pairwise evaluation **judges a pair**. Alignment must not call only today’s bulk `Rank` API for every hop — that API is “score against the catalog.” It calls the **pairwise** unit (with edge terms when neighbors are already mapped). `Rank` stays the property-only bulk path and should sit on the same pairwise core so Promote never disagrees with itself about whether two values match.
+Alignment **orchestrates**; matching / pairwise evaluation **judges a pair**. Alignment must not call only today’s bulk `Rank` API for every hop — that API is “score against the catalog.” It calls the **pairwise** unit (with edge terms when neighbors are already mapped). `Rank` and the promote score share `ComparerFor` and keep their own scales, so a menu point total is not a promote score.
 
 **Package boundary:** graph alignment is **its own module**, not folded into Promote UI or FFI handlers. Config for the walk and scorer lives in **one registry file** in that pure package (same idea as matching’s `registry.go`): every tunable dogfood will tweak —
 
@@ -156,15 +156,18 @@ A layer is **one Source’s Subjects**, not one connected component. *Map the re
 
 Nothing names a Property or a relationship. Every weight comes from metadata or from data.
 
-**Node comparisons.**
-- For each Property both sides carry, the value-type module compares the values. The result is **agrees** (`autoreconcile.Compatible`), **conflicts** (both have values and none are compatible) or **unknown** (one side has none).
-- **Cardinality:** a Property that can hold several values (residences) never conflicts on a difference; per-Property cardinality decides which ones.
+**Node comparisons.** The score does not name a property. For each property both sides carry, `ComparerFor` returns a similarity (the same comparer `Rank` uses; `Rank`'s point total stays its own). A registry scale turns that similarity into points:
 
-**Weights, Fellegi–Sunter style.**
-- **u:** how often two *unrelated* handles agree on this Property, measured from the catalog's value frequencies. This is how commonness enters: "John Smith" and "farmer" earn little, a rare surname a lot.
-- **m:** how often the *same* entity's records agree, from a prior per value type.
-- **Score:** Σ log(m/u) over agreements, minus a conflict penalty; unknowns are 0.
-- A Property added later is weighted from its own data.
+- Similarity at or above the scale's floor contributes `weight × similarity`. Similarity 1 agrees. A lower resemblance is partial.
+- Similarity below the floor conflicts for a single-value property and is unknown for a multiple-value one (residences never conflict on a difference). A comparable zero is below every floor.
+- Unknown (nothing to compare) is 0.
+
+The scale is looked up by property, then by value type. A property added later is another entry.
+
+- **Frequency scales** (text, terms, dates, integers, unless a property replaces them) derive the weight from catalog frequency: `u` is how often unrelated handles share the value, `m` is the prior that the same entity's records agree. A lone exact agreement is lifted to the weak bar, and any agreement bonus is kept. A toponym's bonus makes an exact toponym medium and leaves it short of strong until an edge adds support. A partial is that lifted weight times the similarity, so a one-letter toponym typo is weak.
+- **Fixed scales** are not lifted. Name: floor 0.8, weight 2.5, contradiction 3. An exact surname plus a shared given name (James / James Kenneth, Lee / Lee-Ellen) is weak. An identical name is 2.5, still under medium. A shared surname with a different given name (about 0.55) conflicts. Sex at birth: floor 1, weight 0.6, contradiction 1. Agreement is a small nudge. A mismatch subtracts 1 and does not erase a name that cleared its floor.
+
+`autoreconcile.Compatible` is sameness for reconciliation and for pins. A partial name can make the row weak without being pinned. A line is pinned only when the values are the same.
 
 **Provenance scales each comparison:** Source credibility, transcription uncertainty, and the claim confidence of the member the evidence came from. These are the same inputs the auto-reconciler's provenance uses ([`conclusion-reconciliation.md`](conclusion-reconciliation.md) §4).
 

@@ -2,6 +2,7 @@ package graphalign_test
 
 import (
 	"bytes"
+	"math"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database/namevalues"
@@ -536,6 +537,106 @@ func TestUnreachableFallbackScoresOnTheWalkScale(t *testing.T) {
 				t.Fatalf("got %s / %s (score %.2f), want %s / %s", row.Target, row.Assessment, row.Score, tt.wantTarget, tt.wantAssess)
 			}
 		})
+	}
+}
+
+func TestPartialNamesAreWeak(t *testing.T) {
+	given := func(i int, v string) namevalues.Part {
+		return namevalues.Part{Idx: i, Type: namevalues.PartTypeGiven, Value: v}
+	}
+	sur := func(i int, v string) namevalues.Part {
+		return namevalues.Part{Idx: i, Type: namevalues.PartTypeSurname, Value: v}
+	}
+	full := func(parts ...namevalues.Part) match.Values {
+		p := match.Property{Key: "name", Origin: "provenencia"}
+		return match.Values{p: {{Name: &namevalues.Value{Parts: parts}}}}
+	}
+	alignOne := func(probe, handle match.Values) graphalign.Row {
+		s, h := id("s"), id("h")
+		return rowBySubject(graphalign.Align(
+			graphalign.Layer{Subjects: []graphalign.Subject{{ID: s, Ref: "SUB", Kind: "person", Values: probe}}, Metas: nameMetas()},
+			graphalign.Canon{Handles: []graphalign.Handle{{ID: h, Ref: "PER-1", Kind: "person", Values: handle}}},
+			graphalign.Stats{}, nil, nil,
+		), s)
+	}
+	james := alignOne(
+		full(given(0, "James"), sur(1, "Robins")),
+		full(given(0, "James"), given(1, "Kenneth"), sur(2, "Robins")),
+	)
+	if james.Target != graphalign.TargetHandle || james.Assessment != graphalign.AssessWeak || james.Score >= graphalign.DefaultConfig().MediumScore {
+		t.Fatalf("James / James Kenneth: %+v", james)
+	}
+	lee := alignOne(
+		full(given(0, "Lee"), sur(1, "Breakell")),
+		full(given(0, "Lee-Ellen"), given(1, "Matilda"), sur(2, "Breakell")),
+	)
+	if lee.Target != graphalign.TargetHandle || lee.Assessment != graphalign.AssessWeak || lee.Score >= graphalign.DefaultConfig().MediumScore {
+		t.Fatalf("Lee / Lee-Ellen: %+v", lee)
+	}
+	// The stored forms disagree. The parts are what match: surname first on
+	// the certificate, given name first on the new subject.
+	withForm := func(base match.Values, form string) match.Values {
+		out := match.Values{}
+		for k, vs := range base {
+			cp := append([]match.Value(nil), vs...)
+			if cp[0].Name != nil {
+				n := *cp[0].Name
+				n.Form = form
+				cp[0].Name = &n
+			}
+			out[k] = cp
+		}
+		return out
+	}
+	certificate := alignOne(
+		withForm(full(given(0, "James"), sur(1, "Robins")), "unrelated transcription"),
+		withForm(full(sur(0, "Robins"), given(1, "James"), given(2, "Kenneth")), "Robins, James Kenneth"),
+	)
+	if certificate.Target != graphalign.TargetHandle || certificate.Assessment != graphalign.AssessWeak ||
+		math.Abs(certificate.Score-james.Score) > 1e-9 {
+		t.Fatalf("parts James / certificate parts: %+v, james score %.3f", certificate, james.Score)
+	}
+
+	sex := match.Property{Key: "sex_at_birth", Origin: "provenencia"}
+	metas := append(nameMetas(), match.PropertyMeta{Property: sex, ValueType: properties.ValueTypeTerm})
+	withSex := func(base match.Values, term string) match.Values {
+		out := match.Values{}
+		for k, v := range base {
+			out[k] = v
+		}
+		out[sex] = []match.Value{{Term: term}}
+		return out
+	}
+	probe := full(given(0, "James"), sur(1, "Robins"))
+	handle := full(given(0, "James"), given(1, "Kenneth"), sur(2, "Robins"))
+	s, h := id("s"), id("h")
+	mismatch := rowBySubject(graphalign.Align(
+		graphalign.Layer{Subjects: []graphalign.Subject{{ID: s, Ref: "SUB", Kind: "person", Values: withSex(probe, "female")}}, Metas: metas},
+		graphalign.Canon{Handles: []graphalign.Handle{{ID: h, Ref: "PER-1", Kind: "person", Values: withSex(handle, "male")}}},
+		graphalign.Stats{}, nil, nil,
+	), s)
+	if diff := james.Score - mismatch.Score; diff < 0.99 || diff > 1.01 {
+		t.Fatalf("sex mismatch subtracted %.3f, want 1 (name %.3f, with sex %.3f)", diff, james.Score, mismatch.Score)
+	}
+}
+
+func TestSexAgreementAloneStaysUnderWeak(t *testing.T) {
+	sex := match.Property{Key: "sex_at_birth", Origin: "provenencia"}
+	meta := []match.PropertyMeta{{Property: sex, ValueType: properties.ValueTypeTerm}}
+	male := match.Values{sex: {{Term: "male"}}}
+	ev := match.Evaluate(male, male, meta)
+	sc := graphalign.ScoreCandidate(ev, male, 0, 1, graphalign.DefaultConfig(), graphalign.Stats{})
+	if sc.Score < 0.59 || sc.Score > 0.61 || sc.Score >= graphalign.DefaultConfig().WeakScore {
+		t.Fatalf("sex alone scored %.3f", sc.Score)
+	}
+	s, h := id("s"), id("h")
+	row := rowBySubject(graphalign.Align(
+		graphalign.Layer{Subjects: []graphalign.Subject{{ID: s, Ref: "SUB", Kind: "person", Values: male}}, Metas: meta},
+		graphalign.Canon{Handles: []graphalign.Handle{{ID: h, Ref: "PER-1", Kind: "person", Values: male}}},
+		graphalign.Stats{}, nil, nil,
+	), s)
+	if row.Target == graphalign.TargetHandle || row.Assessment != graphalign.AssessNone {
+		t.Fatalf("sex alone published %+v", row)
 	}
 }
 

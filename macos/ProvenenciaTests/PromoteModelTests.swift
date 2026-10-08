@@ -145,6 +145,13 @@ struct PromoteModelTests {
         await model.load()
         model.mapRest()
         model.setTarget(subjectID: "a", token: "handle:other")
+        // The first retarget has to claim its slow proposal before the next
+        // call takes a slot. Otherwise the newer request can sleep on the
+        // older answer and, being current, keep it.
+        let claimed = await waitUntil {
+            store.recordedCalls.filter { $0 == "proposePromoteGraphAlignment" }.count >= 2
+        }
+        #expect(claimed)
         model.setTarget(subjectID: "a", token: "handle:e1")
         let settled = await waitUntil { !model.isProposing }
         #expect(settled)

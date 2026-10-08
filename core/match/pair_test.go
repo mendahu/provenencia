@@ -94,7 +94,7 @@ func TestEvaluateTextResemblance(t *testing.T) {
 	}
 
 	ev = match.Evaluate(text("York."), text("York"), single)
-	if ev.Comparisons[0].Outcome != match.OutcomeAgree || ev.Comparisons[0].Similarity != 0 {
+	if ev.Comparisons[0].Outcome != match.OutcomeAgree || ev.Comparisons[0].Similarity != 1 {
 		t.Fatalf("same normalized form: %+v", ev.Comparisons[0])
 	}
 

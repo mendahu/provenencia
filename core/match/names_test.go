@@ -147,7 +147,6 @@ var nameCases = []nameCase{
 
 	// Types are data: words of different types still pair, discounted.
 	{"cross-format", "surname and given swapped", NameComparer{}, nv("g=Robins|s=James"), nv("g=James|s=Robins"), (0.5*(G1+F) + 0.5*(F+G1)) / (2 * (G1 + F))},
-	{"cross-format", "typed vs form-only", NameComparer{}, withForm(nv("g=James|s=Robins"), "x"), formOnly("James Robins"), (0.8*(G1+U) + 0.8*(F+U)) / (G1 + F + 2*U)},
 	{"cross-format", "typed vs untyped parts", NameComparer{}, nv("g=James|s=Robins"), nv("_=James|u=Robins"), (0.8*(G1+U) + 0.8*(F+U)) / (G1 + F + 2*U)},
 	{"cross-format", "an extra untyped word", NameComparer{}, nv("g=James|u=Kendall|s=Robins"), nv("g=James|s=Robins"), (2*G1 + 2*F) / (G1 + U + F + G1 + F)},
 	{"cross-format", "surname-first entry typed by position", NameComparer{}, nv("g=Wang|s=Fang"), nv("s=Wang|g=Fang"), 0.5},
@@ -178,22 +177,12 @@ var nameCases = []nameCase{
 	// Titles and surname particles carry no weight.
 	{"ignored", "different titles", NameComparer{}, nv("p=Rev.|g=James|s=Robins"), nv("p=Dr.|g=James|s=Robins"), 1},
 
-	// Names with no typed parts are read from their form as untyped words.
-	{"form", "spelling variant", NameComparer{}, formOnly("James Robbins"), formOnly("James Robins"), (2*U + robbins*2*U) / (4 * U)},
-	{"form", "not a variant", NameComparer{}, formOnly("Mary"), formOnly("Mark"), 0},
-	{"form", "fuzzy off", NameComparer{Words: WordRules{FuzzyFloor: Set(1.0)}}, formOnly("Robbins"), formOnly("Robins"), 0},
-	{"form", "both form-only, same", NameComparer{}, formOnly("James Robins"), formOnly("james  robins."), 1},
-	{"form", "both form-only, reordered", NameComparer{}, formOnly("Robins, James"), formOnly("James Robins"), 1},
-	{"form", "both form-only, shared surname", NameComparer{}, formOnly("Mary Robins"), formOnly("James Robins"), 0.5},
-	{"form", "initial in the form", NameComparer{}, formOnly("J. Robins"), formOnly("James Robins"), (0.5*2*U + 2*U) / (4 * U)},
-	{"form", "only a title and suffix parts", NameComparer{}, withForm(nv("p=Rev.|x=Jr."), "Rev. Robins Jr."), formOnly("Robins"), 2 * U / (4 * U)},
-
 	// Tuning knobs.
 	{"tuning", "equal weights", patterned(func(p *NamePattern) { p.Weights.Family = 1 }), nv("g=Mary|s=Robins"), nv("g=James|s=Robins"), 0.5},
 	{"tuning", "cross-role at full", NameComparer{CrossRole: Set(1.0)}, nv("g=Robins|s=James"), nv("g=James|s=Robins"), 1},
 	{"tuning", "cross-role zero: types are strict", NameComparer{CrossRole: Set(0.0)}, nv("g=Robins|s=James"), nv("g=James|s=Robins"), 0},
 	{"tuning", "fuzzy off also stops short-word variants", NameComparer{Words: WordRules{FuzzyFloor: Set(1.0)}}, nv("g=Ann|s=Robins"), nv("g=Anne|s=Robins"), 2 * F / (2 * (G1 + F))},
-	{"tuning", "untyped at full", NameComparer{UntypedAffinity: Set(1.0)}, withForm(nv("g=James|s=Robins"), "x"), formOnly("James Robins"), 1},
+	{"tuning", "untyped at full", NameComparer{UntypedAffinity: Set(1.0)}, nv("g=James|s=Robins"), nv("_=James|_=Robins"), 1},
 	{"tuning", "fuzzy off", NameComparer{Words: WordRules{FuzzyFloor: Set(1.0)}}, nv("g=James|s=Robbins"), nv("g=James|s=Robins"), 2 * G1 / (2 * (G1 + F)) * 0.5},
 	{"tuning", "looser fuzzy floor", NameComparer{Words: WordRules{FuzzyFloor: Set(0.7)}}, nv("g=Mary|s=Robins"), nv("g=Mark|s=Robins"), (0.75*2*G1 + 2*F) / (2 * (G1 + F))},
 }
@@ -217,10 +206,10 @@ func TestNameComparerScores(t *testing.T) {
 
 func TestNameComparerNotComparable(t *testing.T) {
 	for name, pair := range map[string][2]Value{
-		"no name":           {Value{}, nv("g=James")},
-		"empty form":        {formOnly(""), formOnly("James")},
-		"punctuation form":  {formOnly("—"), formOnly("James")},
-		"blank parts, form": {withForm(nv("g= |s=."), ""), formOnly("James")},
+		"no name":          {Value{}, nv("g=James")},
+		"form only":        {formOnly("James Robins"), formOnly("James Kenneth Robins")},
+		"form looks alike": {formOnly("Robins, James Kenneth"), nv("g=James|g=Kenneth|s=Robins")},
+		"blank parts":      {withForm(nv("g= |s=."), "James Robins"), nv("g=James|s=Robins")},
 	} {
 		if s, ok := (NameComparer{}).Compare(pair[0], pair[1]); ok {
 			t.Errorf("%s: comparable (%.3f)", name, s)

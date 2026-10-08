@@ -603,6 +603,43 @@ func TestSameToponymAloneIsAMediumMatch(t *testing.T) {
 	}
 }
 
+func TestShorterStructuredNameIsAWeakMatch(t *testing.T) {
+	cases := []struct {
+		full, short string
+	}{
+		{"James Kenneth Robins", "James Robins"},
+		{"Lee-Ellen Matilda Breakell", "Lee Breakell"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.short, func(t *testing.T) {
+			f := newFixture(t)
+			known := f.promote(f.person(f.source, f.artifact, tc.full))
+			srcB, artB := f.newSource("Census")
+			again := f.person(srcB, artB, tc.short)
+			row := rowFor(f.propose(srcB.ID, nil), again.ID)
+			cfg := graphalign.DefaultConfig()
+			if row.Target != graphalign.TargetHandle || !bytes.Equal(row.HandleID, known.Entity.ID) ||
+				row.Assessment != graphalign.AssessWeak ||
+				row.Score < cfg.WeakScore || row.Score >= cfg.MediumScore {
+				t.Fatalf("%s row %+v, want %s as a weak match", tc.short, row, known.Entity.Ref)
+			}
+			var saw bool
+			for _, ex := range row.Exhibits {
+				if ex.Property.Key != "name" {
+					continue
+				}
+				saw = true
+				if ex.Outcome == "conflict" || ex.Outcome == "unknown" {
+					t.Fatalf("name line %+v", ex)
+				}
+			}
+			if !saw {
+				t.Fatal("missing name exhibit")
+			}
+		})
+	}
+}
+
 func TestSpellingVariantToponymIsAWeakMatch(t *testing.T) {
 	f := newFixture(t)
 	named := f.promote(f.place(f.source, f.artifact, "Provenanced"))
