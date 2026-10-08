@@ -715,6 +715,144 @@ func TestEdgeSupportCountsTheSeedingNeighborOnce(t *testing.T) {
 	}
 }
 
+func hasAlt(row graphalign.Row, handle []byte) bool {
+	for _, alt := range row.Alternatives {
+		if bytes.Equal(alt.HandleID, handle) {
+			return true
+		}
+	}
+	return false
+}
+
+func TestAcceptedPropertyMatchNominatesItsNeighbor(t *testing.T) {
+	// Two names clear the bar. The third subject does not: its only property
+	// is a shared term, under that kind's Rank minimum. Both accepted handles
+	// bridge to it, and both canon edges share that bridge's signature, so
+	// the walk nominates the neighbor and the score counts both edges. A
+	// canon neighbor on a different signature is not a suggestion.
+	sig := partSig("subject", "event", "gathering")
+	other := partSig("subject", "event", "other")
+	a, b, mid := id("s-a"), id("s-b"), id("s-mid")
+	ha, hb, hMid, hWrong := id("h-a"), id("h-b"), id("h-mid"), id("h-wrong")
+	et, etv := termProp("event_type", "gathering")
+	layer := graphalign.Layer{
+		Subjects: []graphalign.Subject{
+			{ID: a, Ref: "PER-A", Kind: "person", Values: nameVals("Ann", "Ames")},
+			{ID: b, Ref: "PER-B", Kind: "person", Values: nameVals("Bob", "Ames")},
+			{ID: mid, Ref: "EVT-M", Kind: "event", Values: vals(et, etv)},
+		},
+		Bridges: []graphalign.Bridge{
+			{A: a, B: mid, Signature: sig},
+			{A: b, B: mid, Signature: sig},
+		},
+		Metas: append(nameMetas(), eventMetas()...),
+	}
+	canon := graphalign.Canon{
+		Handles: []graphalign.Handle{
+			{ID: ha, Ref: "PER-1", Kind: "person", Values: nameVals("Ann", "Ames")},
+			{ID: hb, Ref: "PER-2", Kind: "person", Values: nameVals("Bob", "Ames")},
+			{ID: hMid, Ref: "EVT-1", Kind: "event", Values: vals(et, etv)},
+			{ID: hWrong, Ref: "EVT-9", Kind: "event", Values: vals(et, etv)},
+		},
+		Edges: []graphalign.CanonEdge{
+			{From: ha, To: hMid, Signature: sig},
+			{From: hb, To: hMid, Signature: sig},
+			{From: ha, To: hWrong, Signature: other},
+			{From: hb, To: hWrong, Signature: other},
+		},
+	}
+	stats := graphalign.Stats{FanOut: map[string]float64{sig.Key(): 1, other.Key(): 1}}
+	row := rowBySubject(graphalign.Align(layer, canon, stats, nil, nil), mid)
+	cfg := graphalign.DefaultConfig()
+	term := math.Log(cfg.MPrior["term"] / cfg.UPrior)
+	want := term + 2*cfg.EdgeSupportLow
+	if row.Target != graphalign.TargetHandle || !bytes.Equal(row.HandleID, hMid) ||
+		math.Abs(row.Score-want) > 1e-9 || hasAlt(row, hWrong) {
+		t.Fatalf("nominated neighbor %+v, want %s at %.4f", row, hMid, want)
+	}
+}
+
+func TestRankLoserDoesNotNominate(t *testing.T) {
+	// The exact name wins the row. Anne still clears Rank, and only that
+	// handle bridges to the third subject. Walking the loser would nominate
+	// it; walking the winner must not.
+	sig := partSig("subject", "event", "gathering")
+	person, mid := id("s-person"), id("s-mid")
+	win, lose, hMid := id("h-win"), id("h-lose"), id("h-mid")
+	et, etv := termProp("event_type", "gathering")
+	lesser := nameVals("Ann", "Ames")
+	lesser[match.Property{Key: "name", Origin: "provenencia"}][0].Name.Parts[0].Value = "Anne"
+	layer := graphalign.Layer{
+		Subjects: []graphalign.Subject{
+			{ID: person, Ref: "PER-A", Kind: "person", Values: nameVals("Ann", "Ames")},
+			{ID: mid, Ref: "EVT-M", Kind: "event", Values: vals(et, etv)},
+		},
+		Bridges: []graphalign.Bridge{{A: person, B: mid, Signature: sig}},
+		Metas:   append(nameMetas(), eventMetas()...),
+	}
+	canon := graphalign.Canon{
+		Handles: []graphalign.Handle{
+			{ID: win, Ref: "PER-1", Kind: "person", Values: nameVals("Ann", "Ames")},
+			{ID: lose, Ref: "PER-9", Kind: "person", Values: lesser},
+			{ID: hMid, Ref: "EVT-1", Kind: "event", Values: vals(et, etv)},
+		},
+		Edges: []graphalign.CanonEdge{{From: lose, To: hMid, Signature: sig}},
+	}
+	p := graphalign.Align(layer, canon, graphalign.Stats{}, nil, nil)
+	personRow := rowBySubject(p, person)
+	if personRow.Target != graphalign.TargetHandle || !bytes.Equal(personRow.HandleID, win) || !hasAlt(personRow, lose) {
+		t.Fatalf("winner %+v, want %s with %s still suggested", personRow, win, lose)
+	}
+	row := rowBySubject(p, mid)
+	if row.Target == graphalign.TargetHandle || hasAlt(row, hMid) {
+		t.Fatalf("loser nominated a neighbor: %+v", row)
+	}
+}
+
+func TestBelowBarNominationDoesNotPropagate(t *testing.T) {
+	// The accepted name nominates a neighbor with no comparable values.
+	// One low-fan-out edge is under the accept bar, so that neighbor is a
+	// suggestion and does not nominate the subject beyond it.
+	sig := relSig("kin")
+	person, mid, far := id("s-person"), id("s-mid"), id("s-far")
+	hp, hm, hf := id("h-person"), id("h-mid"), id("h-far")
+	layer := graphalign.Layer{
+		Subjects: []graphalign.Subject{
+			{ID: person, Ref: "PER-A", Kind: "person", Values: nameVals("Ann", "Ames")},
+			{ID: mid, Ref: "PER-M", Kind: "person"},
+			{ID: far, Ref: "PER-F", Kind: "person"},
+		},
+		Bridges: []graphalign.Bridge{
+			{A: person, B: mid, Signature: sig},
+			{A: mid, B: far, Signature: sig},
+		},
+		Metas: nameMetas(),
+	}
+	canon := graphalign.Canon{
+		Handles: []graphalign.Handle{
+			{ID: hp, Ref: "PER-1", Kind: "person", Values: nameVals("Ann", "Ames")},
+			{ID: hm, Ref: "PER-2", Kind: "person"},
+			{ID: hf, Ref: "PER-3", Kind: "person"},
+		},
+		Edges: []graphalign.CanonEdge{
+			{From: hp, To: hm, Signature: sig},
+			{From: hm, To: hf, Signature: sig},
+		},
+	}
+	stats := graphalign.Stats{FanOut: map[string]float64{sig.Key(): 1}}
+	p := graphalign.Align(layer, canon, stats, nil, nil)
+	cfg := graphalign.DefaultConfig()
+	midRow := rowBySubject(p, mid)
+	if midRow.Target == graphalign.TargetHandle || !hasAlt(midRow, hm) ||
+		math.Abs(midRow.Score-cfg.EdgeSupportLow) > 1e-9 || midRow.Score >= cfg.AcceptScore {
+		t.Fatalf("below-bar suggestion %+v, want %s at %.2f", midRow, hm, cfg.EdgeSupportLow)
+	}
+	farRow := rowBySubject(p, far)
+	if farRow.Target == graphalign.TargetHandle || hasAlt(farRow, hf) || len(farRow.Alternatives) != 0 {
+		t.Fatalf("propagated past the bar: %+v", farRow)
+	}
+}
+
 func TestHeldNewAndSkipDecisions(t *testing.T) {
 	sig := relSig("spouse")
 	tests := []struct {

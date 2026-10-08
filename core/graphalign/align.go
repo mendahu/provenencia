@@ -18,7 +18,13 @@ func Align(layer Layer, canon Canon, stats Stats, fixed []Fixed, cfg *Config) Pr
 	st := newState(layer, canon, stats, fixed, c)
 	st.seed()
 	st.walk()
+	// Property matches that clear the bar seed the same walk. Candidates
+	// Rank only recorded are not anchors, and a pair this walk refuses
+	// does not propagate further.
+	anchored := st.assignedIDs()
 	st.fallbackUnreachable()
+	st.propagateNew(anchored)
+	st.walk()
 	st.refineOneHop()
 	st.scoreFixed()
 	return st.proposal()
@@ -328,8 +334,9 @@ func (st *state) accept(subjectID, handleID []byte, score float64) bool {
 // fallbackUnreachable handles Subjects no anchor reached. Property-only Rank
 // picks each one's candidates; each is scored by the same pairwise path the
 // walk uses. Assignment is best-first, so a contest over one handle goes to
-// the stronger match. refineOneHop then rescores this set from the mapping;
-// the band published for these rows is that later score.
+// the stronger match. propagateNew then walks from the pairs this pass
+// accepts. refineOneHop rescores the recorded set; the band published for
+// these rows is that later score.
 func (st *state) fallbackUnreachable() {
 	var queue candHeap
 	for _, s := range st.sortedSubjects() {
@@ -359,6 +366,33 @@ func (st *state) fallbackUnreachable() {
 	for queue.Len() > 0 {
 		item := heap.Pop(&queue).(queueItem)
 		st.accept(item.subjectID, item.handleID, item.score)
+	}
+}
+
+// assignedIDs is the subjects that already have a handle, so a later pass
+// can tell its own accepts from anchors the walk already propagated.
+func (st *state) assignedIDs() map[string]bool {
+	out := map[string]bool{}
+	for sk := range st.assigned {
+		out[sk] = true
+	}
+	return out
+}
+
+// propagateNew seeds the walk from accepts that were not already anchors.
+// pushFromAnchor nominates an unmapped neighbor only when a canon edge
+// carries the same signature as the layer bridge.
+func (st *state) propagateNew(already map[string]bool) {
+	for _, s := range st.sortedSubjects() {
+		sk := string(s.ID)
+		if already[sk] {
+			continue
+		}
+		hid, ok := st.assigned[sk]
+		if !ok {
+			continue
+		}
+		st.pushFromAnchor(s.ID, hid)
 	}
 }
 
