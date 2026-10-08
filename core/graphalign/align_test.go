@@ -171,6 +171,44 @@ func TestBothUnpromotedOnceOneFixed(t *testing.T) {
 	}
 }
 
+func TestOneAgreeingPropertyStaysAWeakMatch(t *testing.T) {
+	// York is one of two toponyms, so its frequency is 0.5 and the raw
+	// log-odds sits under the accept bar. The agreement is still a weak match.
+	orphan := id("s-orphan")
+	known := id("h-known")
+	n, v := textProp("toponym", "York")
+	stats := graphalign.Stats{ValueFreq: map[string]map[string]float64{
+		"toponym": {"York": 0.5},
+	}}
+	layer := graphalign.Layer{
+		Subjects: []graphalign.Subject{
+			{ID: orphan, Ref: "PLC-O", Kind: "place", Values: vals(n, v)},
+		},
+		Metas: placeMetas(),
+	}
+	canon := graphalign.Canon{
+		Handles: []graphalign.Handle{
+			{ID: known, Ref: "PLC-K", Kind: "place", Values: vals(n, v)},
+		},
+	}
+	row := rowBySubject(graphalign.Align(layer, canon, stats, nil, nil), orphan)
+	if row.Target != graphalign.TargetHandle || !bytes.Equal(row.HandleID, known) ||
+		row.Assessment != graphalign.AssessWeak || row.Reason != graphalign.ReasonAgrees ||
+		row.ReasonProperty.Key != "toponym" {
+		t.Fatalf("same toponym: %+v", row)
+	}
+	if row.Score >= graphalign.DefaultConfig().StrongScore {
+		t.Fatalf("one agreement is not strong: score %.2f", row.Score)
+	}
+
+	other, ov := textProp("toponym", "Leeds")
+	canon.Handles[0].Values = vals(other, ov)
+	row = rowBySubject(graphalign.Align(layer, canon, stats, nil, nil), orphan)
+	if row.Target == graphalign.TargetHandle || row.Assessment != graphalign.AssessNone {
+		t.Fatalf("different toponym should not match: %+v", row)
+	}
+}
+
 func TestOrphanFallsBackToPropertyOnlyOrSkip(t *testing.T) {
 	// Place orphans use toponym + DefaultText Rank (names need namevalues).
 	orphan := id("s-orphan")

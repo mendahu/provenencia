@@ -549,6 +549,22 @@ func TestProposeQueryCountDoesNotGrowWithTheLayer(t *testing.T) {
 	}
 }
 
+// A place that shares its only toponym with a handle is a weak match, even
+// when another place in the catalog makes that name look common.
+func TestSameToponymAloneIsAWeakMatch(t *testing.T) {
+	f := newFixture(t)
+	york := f.promote(f.place(f.source, f.artifact, "York"))
+	f.promote(f.place(f.source, f.artifact, "Leeds"))
+
+	srcB, artB := f.newSource("Gazetteer")
+	again := f.place(srcB, artB, "York")
+	row := rowFor(f.propose(srcB.ID, nil), again.ID)
+	if row.Target != graphalign.TargetHandle || !bytes.Equal(row.HandleID, york.Entity.ID) ||
+		row.Assessment != graphalign.AssessWeak {
+		t.Fatalf("york row %+v, want %s as a weak match", row, york.Entity.Ref)
+	}
+}
+
 // A directed term is matched from the same end: the fixed place's part (not
 // its whole, though both are named York) is what the layer's part matches.
 func TestProposePartOfMatchesTheSameEnd(t *testing.T) {

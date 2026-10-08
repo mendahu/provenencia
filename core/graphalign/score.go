@@ -19,6 +19,15 @@ type Scored struct {
 // from corresponding layer/canon bridges.
 func ScoreCandidate(ev match.Evaluation, probe match.Values, edge, provenance float64, cfg Config, stats Stats) Scored {
 	node := nodeScore(ev, probe, cfg, stats)
+	// One exact agreement (a place's only toponym, a person's only name) is
+	// a weak match. A small catalog's frequency can push that log-odds under
+	// the accept bar — two places make a unique toponym look common — and
+	// the page then says no match. The cold-start prior already clears the
+	// bar; keep the agreement at least there. A conflict is not lifted, and
+	// the score stays short of strong.
+	if unconflictedAgreement(ev) && node < cfg.AcceptScore {
+		node = cfg.AcceptScore
+	}
 	if provenance <= 0 {
 		provenance = 1
 	}
@@ -27,6 +36,20 @@ func ScoreCandidate(ev match.Evaluation, probe match.Values, edge, provenance fl
 		Edge:  edge,
 		Eval:  ev,
 	}
+}
+
+// unconflictedAgreement is true when at least one Property agrees and none conflict.
+func unconflictedAgreement(ev match.Evaluation) bool {
+	agrees := 0
+	for _, pc := range ev.Comparisons {
+		switch pc.Outcome {
+		case match.OutcomeAgree:
+			agrees++
+		case match.OutcomeConflict:
+			return false
+		}
+	}
+	return agrees > 0
 }
 
 // PropertyWeight is the log-odds nodeScore adds for one outcome.
