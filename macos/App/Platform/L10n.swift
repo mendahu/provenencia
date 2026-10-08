@@ -1251,6 +1251,7 @@ enum L10n {
         static let kindEvent = LocalizedStringResource("promote.page.kind.event", defaultValue: "Events", comment: "Promote section of event rows")
         static let kindPlace = LocalizedStringResource("promote.page.kind.place", defaultValue: "Places", comment: "Promote section of place rows")
         static let assessmentStrong = LocalizedStringResource("promote.assessment.strong", defaultValue: "Strong", comment: "Promote match assessment")
+        static let assessmentMedium = LocalizedStringResource("promote.assessment.medium", defaultValue: "Medium", comment: "Promote match assessment between strong and weak")
         static let assessmentWeak = LocalizedStringResource("promote.assessment.weak", defaultValue: "Weak", comment: "Promote match assessment")
         static let assessmentNone = LocalizedStringResource("promote.assessment.none", defaultValue: "No match", comment: "Promote match assessment when nothing lines up")
         static let decided = LocalizedStringResource("promote.row.decided", defaultValue: "Decided", comment: "A Promote row the researcher has changed")

@@ -549,9 +549,9 @@ func TestProposeQueryCountDoesNotGrowWithTheLayer(t *testing.T) {
 	}
 }
 
-// A place that shares its only toponym with a handle is a weak match, even
+// A place that shares its only toponym with a handle is a medium match, even
 // when another place in the catalog makes that name look common.
-func TestSameToponymAloneIsAWeakMatch(t *testing.T) {
+func TestSameToponymAloneIsAMediumMatch(t *testing.T) {
 	f := newFixture(t)
 	york := f.promote(f.place(f.source, f.artifact, "York"))
 	f.promote(f.place(f.source, f.artifact, "Leeds"))
@@ -560,7 +560,7 @@ func TestSameToponymAloneIsAWeakMatch(t *testing.T) {
 	again := f.place(srcB, artB, "York")
 	row := rowFor(f.propose(srcB.ID, nil), again.ID)
 	if row.Target != graphalign.TargetHandle || !bytes.Equal(row.HandleID, york.Entity.ID) ||
-		row.Assessment != graphalign.AssessWeak {
+		row.Assessment != graphalign.AssessMedium {
 		t.Fatalf("york row %+v, want %s as a weak match", row, york.Entity.Ref)
 	}
 }

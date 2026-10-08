@@ -193,12 +193,20 @@ func TestOneAgreeingPropertyStaysAWeakMatch(t *testing.T) {
 	}
 	row := rowBySubject(graphalign.Align(layer, canon, stats, nil, nil), orphan)
 	if row.Target != graphalign.TargetHandle || !bytes.Equal(row.HandleID, known) ||
-		row.Assessment != graphalign.AssessWeak || row.Reason != graphalign.ReasonAgrees ||
+		row.Assessment != graphalign.AssessMedium || row.Reason != graphalign.ReasonAgrees ||
 		row.ReasonProperty.Key != "toponym" {
 		t.Fatalf("same toponym: %+v", row)
 	}
 	if row.Score >= graphalign.DefaultConfig().StrongScore {
-		t.Fatalf("one agreement is not strong: score %.2f", row.Score)
+		t.Fatalf("toponym alone is not strong: score %.2f", row.Score)
+	}
+
+	// Without the registry weight, the same common toponym stays weak.
+	cfg := graphalign.DefaultConfig()
+	cfg.PropertyAgreement = nil
+	row = rowBySubject(graphalign.Align(layer, canon, stats, nil, &cfg), orphan)
+	if row.Assessment != graphalign.AssessWeak {
+		t.Fatalf("toponym without the registry weight: %+v", row)
 	}
 
 	other, ov := textProp("toponym", "Leeds")

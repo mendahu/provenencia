@@ -633,6 +633,9 @@ func (st *state) band(score float64) Assessment {
 	if score >= st.cfg.StrongScore {
 		return AssessStrong
 	}
+	if st.cfg.MediumScore > 0 && score >= st.cfg.MediumScore {
+		return AssessMedium
+	}
 	if score >= st.cfg.WeakScore {
 		return AssessWeak
 	}

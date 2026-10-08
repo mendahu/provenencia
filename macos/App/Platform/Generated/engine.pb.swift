@@ -4376,7 +4376,7 @@ public nonisolated struct Provenencia_Engine_V1_PromoteGraphAlignmentRow: @unche
     set {_uniqueStorage()._score = newValue}
   }
 
-  /// strong, weak, none
+  /// strong, medium, weak, none
   public var assessment: String {
     get {_storage._assessment}
     set {_uniqueStorage()._assessment = newValue}

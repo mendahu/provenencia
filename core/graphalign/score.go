@@ -19,14 +19,16 @@ type Scored struct {
 // from corresponding layer/canon bridges.
 func ScoreCandidate(ev match.Evaluation, probe match.Values, edge, provenance float64, cfg Config, stats Stats) Scored {
 	node := nodeScore(ev, probe, cfg, stats)
-	// One exact agreement (a place's only toponym, a person's only name) is
-	// a weak match. A small catalog's frequency can push that log-odds under
-	// the accept bar — two places make a unique toponym look common — and
-	// the page then says no match. The cold-start prior already clears the
-	// bar; keep the agreement at least there. A conflict is not lifted, and
-	// the score stays short of strong.
-	if unconflictedAgreement(ev) && node < cfg.AcceptScore {
-		node = cfg.AcceptScore
+	// One exact agreement is at least a weak match. A small catalog's
+	// frequency can push that log-odds under the accept bar. Lift the
+	// log-odds to the bar and keep any PropertyAgreement weight on top, so
+	// a toponym can clear medium while a name stays weak. A conflict is
+	// not lifted.
+	if unconflictedAgreement(ev) {
+		bonus := agreementBonus(ev, cfg)
+		if node-bonus < cfg.AcceptScore {
+			node = cfg.AcceptScore + bonus
+		}
 	}
 	if provenance <= 0 {
 		provenance = 1
@@ -52,12 +54,22 @@ func unconflictedAgreement(ev match.Evaluation) bool {
 	return agrees > 0
 }
 
+func agreementBonus(ev match.Evaluation, cfg Config) float64 {
+	var bonus float64
+	for _, pc := range ev.Comparisons {
+		if pc.Outcome == match.OutcomeAgree {
+			bonus += cfg.agreementWeight(pc.Property)
+		}
+	}
+	return bonus
+}
+
 // PropertyWeight is the log-odds nodeScore adds for one outcome.
 func PropertyWeight(outcome match.Outcome, valueType string, property match.Property, probe match.Values, cfg Config, stats Stats) float64 {
 	switch outcome {
 	case match.OutcomeAgree:
 		u := uFor(stats, property.Key, probe[property])
-		return logOdds(cfg.mFor(valueType), cfg.uOr(u))
+		return logOdds(cfg.mFor(valueType), cfg.uOr(u)) + cfg.agreementWeight(property)
 	case match.OutcomeConflict:
 		return -cfg.ConflictPenalty
 	default:

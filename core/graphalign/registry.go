@@ -1,6 +1,10 @@
 package graphalign
 
-import "math"
+import (
+	"math"
+
+	"github.com/mendahu/provenencia/core/match"
+)
 
 // The registry: every walk and band tunable graph alignment reads, in one
 // file. Tune here while dogfooding. Pairwise / Rank tunables stay in
@@ -9,10 +13,18 @@ import "math"
 // DefaultConfig is the shipped walk/band configuration.
 func DefaultConfig() Config {
 	return Config{
-		AcceptScore:      2.0,
-		StrongScore:      4.0,
-		WeakScore:        2.0,
-		ConflictPenalty:  3.0,
+		AcceptScore:     2.0,
+		StrongScore:     4.0,
+		MediumScore:     3.0,
+		WeakScore:       2.0,
+		ConflictPenalty: 3.0,
+		// Added when that Property agrees, on top of its log-odds. A small
+		// catalog can make a real agreement look cheap; this is the finger
+		// on the scale. Toponym +1 clears medium (3) and stays short of
+		// strong (4) until an edge adds support.
+		PropertyAgreement: map[match.Property]float64{
+			{Key: "toponym", Origin: "provenencia"}: 1,
+		},
 		EdgeSupportLow:   1.5, // fan-out ≈1 correspondence
 		EdgeSupportHigh:  0.25,
 		FanOutLowMax:     1.5, // signatures with fan-out ≤ this get EdgeSupportLow
@@ -32,17 +44,26 @@ func DefaultConfig() Config {
 
 // Config holds every graph-alignment tunable Align reads.
 type Config struct {
-	AcceptScore      float64 // minimum score to accept a structure-backed candidate
-	StrongScore      float64 // assessment ≥ this → strong
-	WeakScore        float64 // assessment ≥ this (and < Strong) → weak; else no match
-	ConflictPenalty  float64
-	EdgeSupportLow   float64
-	EdgeSupportHigh  float64
-	FanOutLowMax     float64
-	FanOutUnknown    float64
-	AlternativeLimit int
-	MPrior           map[string]float64 // value type → m
-	UPrior           float64
+	AcceptScore       float64 // minimum score to accept a structure-backed candidate
+	StrongScore       float64 // assessment ≥ this → strong
+	MediumScore       float64 // assessment ≥ this (and < Strong) → medium
+	WeakScore         float64 // assessment ≥ this (and < Medium) → weak; else no match
+	ConflictPenalty   float64
+	PropertyAgreement map[match.Property]float64 // extra weight when this Property agrees
+	EdgeSupportLow    float64
+	EdgeSupportHigh   float64
+	FanOutLowMax      float64
+	FanOutUnknown     float64
+	AlternativeLimit  int
+	MPrior            map[string]float64 // value type → m
+	UPrior            float64
+}
+
+func (c Config) agreementWeight(p match.Property) float64 {
+	if c.PropertyAgreement == nil {
+		return 0
+	}
+	return c.PropertyAgreement[p]
 }
 
 func (c Config) mFor(valueType string) float64 {

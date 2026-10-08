@@ -53,6 +53,17 @@ struct PromoteFlowTests {
         )
     }
 
+    @Test func aMediumMatchStartsOnItsHandle() {
+        var flow = PromoteFlow(entryID: "a")
+        flow.load(
+            entryID: "a",
+            proposal: proposal(rows: [row(id: "a", assessment: "medium")]),
+            subjects: [fact("a")],
+            bridges: []
+        )
+        #expect(flow.rows.first?.target == .handle(id: "e1", ref: "PER-1", title: "PER-1"))
+    }
+
     @Test func weakAndUnmatchedStartOnSkip() {
         var flow = PromoteFlow(entryID: "a")
         flow.load(

@@ -94,11 +94,12 @@ const (
 	TargetSkip   Target = "skip"
 )
 
-// Assessment is the strong / weak / no-match band.
+// Assessment is the strong / medium / weak / no-match band.
 type Assessment string
 
 const (
 	AssessStrong Assessment = "strong"
+	AssessMedium Assessment = "medium"
 	AssessWeak   Assessment = "weak"
 	AssessNone   Assessment = "none"
 )

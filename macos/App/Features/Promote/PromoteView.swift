@@ -375,7 +375,7 @@ struct PromoteView: View {
         let working = model.flow.visibleRows.filter { !$0.anchor }
         let anchors = model.flow.mappedRest ? model.flow.rows.filter(\.anchor) : []
         if model.flow.group == .assessment {
-            return [PromoteFlow.Assessment.strong, .weak, .none].map { band in
+            return [PromoteFlow.Assessment.strong, .medium, .weak, .none].map { band in
                 section(band.rawValue, PromoteAssessmentCopy.title(band), working.filter { $0.assessment == band }, [])
             }.filter { !$0.rows.isEmpty }
         }
@@ -553,6 +553,7 @@ private struct PromoteAlignmentRow: View {
     private var badgeTone: PVBadgeTone {
         switch row.assessment {
         case .strong: .success
+        case .medium: .info
         case .weak: .warning
         case .none: .neutral
         }
@@ -882,6 +883,7 @@ private enum PromoteAssessmentCopy {
     static func title(_ assessment: PromoteFlow.Assessment) -> LocalizedStringResource {
         switch assessment {
         case .strong: L10n.Promote.assessmentStrong
+        case .medium: L10n.Promote.assessmentMedium
         case .weak: L10n.Promote.assessmentWeak
         case .none: L10n.Promote.assessmentNone
         }

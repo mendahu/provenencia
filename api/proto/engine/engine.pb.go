@@ -10813,7 +10813,7 @@ type PromoteGraphAlignmentRow struct {
 	HandleId          string                              `protobuf:"bytes,4,opt,name=handle_id,json=handleId,proto3" json:"handle_id,omitempty"`
 	HandleRef         string                              `protobuf:"bytes,5,opt,name=handle_ref,json=handleRef,proto3" json:"handle_ref,omitempty"`
 	Score             float64                             `protobuf:"fixed64,6,opt,name=score,proto3" json:"score,omitempty"`
-	Assessment        string                              `protobuf:"bytes,7,opt,name=assessment,proto3" json:"assessment,omitempty"` // strong, weak, none
+	Assessment        string                              `protobuf:"bytes,7,opt,name=assessment,proto3" json:"assessment,omitempty"` // strong, medium, weak, none
 	Comparisons       []*PromoteGraphAlignmentComparison  `protobuf:"bytes,9,rep,name=comparisons,proto3" json:"comparisons,omitempty"`
 	Alternatives      []*PromoteGraphAlignmentAlternative `protobuf:"bytes,10,rep,name=alternatives,proto3" json:"alternatives,omitempty"`
 	ConflictWithFixed bool                                `protobuf:"varint,11,opt,name=conflict_with_fixed,json=conflictWithFixed,proto3" json:"conflict_with_fixed,omitempty"`

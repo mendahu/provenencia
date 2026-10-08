@@ -16277,6 +16277,18 @@
         }
       }
     },
+    "promote.assessment.medium": {
+      "comment": "Promote match assessment between strong and weak",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Medium"
+          }
+        }
+      }
+    },
     "promote.assessment.strong": {
       "comment": "Promote match assessment",
       "extractionState": "manual",

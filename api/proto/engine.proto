@@ -1311,7 +1311,7 @@ message PromoteGraphAlignmentRow {
   string handle_id = 4;
   string handle_ref = 5;
   double score = 6;
-  string assessment = 7; // strong, weak, none
+  string assessment = 7; // strong, medium, weak, none
   reserved 8; // reasons: English strings; see reason
   repeated PromoteGraphAlignmentComparison comparisons = 9;
   repeated PromoteGraphAlignmentAlternative alternatives = 10;

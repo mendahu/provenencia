@@ -23,7 +23,7 @@ struct PromoteFlow: Equatable, Sendable {
     }
 
     enum Assessment: String, Equatable, Sendable {
-        case strong, weak, none
+        case strong, medium, weak, none
 
         init(wire: String) { self = Assessment(rawValue: wire) ?? .none }
     }
@@ -474,11 +474,12 @@ struct PromoteFlow: Equatable, Sendable {
     }
 
     private static func draftTarget(_ proposal: CatalogPromoteGraphAlignmentRow, menu: [Alternative]) -> Target {
-        let strong = Assessment(wire: proposal.assessment) == .strong
-        if strong, proposal.target == "handle", let first = menu.first, first.id == proposal.handleID {
+        let assessment = Assessment(wire: proposal.assessment)
+        if assessment == .strong || assessment == .medium,
+           proposal.target == "handle", let first = menu.first, first.id == proposal.handleID {
             return .handle(id: first.id, ref: first.ref, title: first.title)
         }
-        if strong, proposal.target == "new" {
+        if assessment == .strong, proposal.target == "new" {
             return .newKind
         }
         return .skip
