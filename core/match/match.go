@@ -36,6 +36,9 @@ type Value struct {
 	Integer    int64
 	HasInteger bool
 	Term       string
+	// TermID is the catalog term id when known. Pairwise evaluation
+	// (Compatible) prefers it; if empty, Evaluate falls back to Term bytes.
+	TermID     []byte
 	Date       *datevalues.Value
 	Name       *namevalues.Value
 	// NamePattern is the name pattern key for Name (its Person's name

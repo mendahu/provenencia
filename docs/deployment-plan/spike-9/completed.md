@@ -56,6 +56,7 @@ IDs stay stable (`S9-NN`, `S9-DN`). Do not renumber when moving steps here.
 | S9-38 | PR | Place model: relationships, periods |
 | S9-39 | PR | Place chain composer |
 | S9-40 | PR | Place hierarchy in list and detail |
+| S9-41 | PR | Graph alignment core |
 
 ## Steps
 
@@ -1167,4 +1168,22 @@ Places list chain polish, Place detail period and relationship sections with mem
 - Maps, gazetteer, events-at-this-place, inline relationship editing.
 - `place_nature` / Kind.
 - Search document secondary = today's chain: **S9-34**.
+- Migrations / product VERSION bump.
+
+### S9-41 — Graph alignment core
+
+Pure in-memory graph alignment for Promote: propose a handle, New, or Skip for every primary Subject on one Evidence layer.
+
+**What shipped**
+
+- `core/match.Evaluate`: Compatible-based pairwise property outcomes (agree / conflict / unknown); multiple cardinality never conflicts on a difference. Rank stays the property-only bulk path (unification onto Compatible deferred).
+- `core/graphalign`: `Align(layer, canon, stats, fixed, cfg)`, best-first undirected seed/propagate, one-to-one in-layer, Fellegi–Sunter node scores + edge fan-out support, Rank fallback for unreachable Subjects, Skip/New when weak or unmatched. One `registry.go` for walk/band tunables; tests override `Config`.
+- Tests: §5.1 pair-status fixtures, orphan Rank/Skip, config override, Gracie obituary golden (fixed person anchors birth/death/burial/children; residences / Medicine Hat → New or Skip; deterministic re-run).
+
+**What stayed out**
+
+- Catalog loader, stats cache, FFI `ProposePromoteGraphAlignment`: **S9-42**.
+- Batch Done / bridge filing / pins write: **S9-43**.
+- Promote page: **S9-44**.
+- Rewiring `Rank`’s fuzzy scorer onto Compatible.
 - Migrations / product VERSION bump.
