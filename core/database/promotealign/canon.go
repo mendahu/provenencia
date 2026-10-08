@@ -125,8 +125,8 @@ func loadCanon(q Querier, primary map[string]primarySubject, fixed []graphalign.
 				if !edgeSeen[ek] {
 					edgeSeen[ek] = true
 					edges = append(edges, graphalign.CanonEdge{
-						From: append([]byte(nil), e.From...),
-						To:   append([]byte(nil), e.To...),
+						From:      append([]byte(nil), e.From...),
+						To:        append([]byte(nil), e.To...),
 						Signature: sig,
 					})
 				}
@@ -175,7 +175,7 @@ func canonEdgeSignature(q Querier, e canonicalgraph.Edge, bridgeType, roleFallba
 			}
 			sig.RoleOrType = role
 		}
-		typeTerm, err := termOnEntity(q, e.To, "event_type")
+		typeTerm, err := termOnEntity(q, e.To, neighborTypeProperty["event"])
 		if err != nil {
 			return sig, err
 		}
@@ -184,7 +184,7 @@ func canonEdgeSignature(q Querier, e canonicalgraph.Edge, bridgeType, roleFallba
 		} else {
 			// Walking event → person: type term is on the from (event) side for
 			// matching the layer's person→event signature neighbor type.
-			fromType, err := termOnEntity(q, e.From, "event_type")
+			fromType, err := termOnEntity(q, e.From, neighborTypeProperty["event"])
 			if err != nil {
 				return sig, err
 			}

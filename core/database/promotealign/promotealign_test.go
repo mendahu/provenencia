@@ -327,3 +327,67 @@ func TestStatsCacheInvalidatesOnWrite(t *testing.T) {
 		t.Fatalf("rows %d", len(got.Rows))
 	}
 }
+
+func TestStatsFanOut(t *testing.T) {
+	subjectAtBirth := graphalign.EdgeSignature{
+		BridgeType: "participation", RoleOrType: "subject", NeighborKind: "event", NeighborTypeTerm: "birth",
+	}
+	revision := func(f *fixture) int64 {
+		db, err := f.c.DB()
+		must(f.t, err)
+		var rev int64
+		must(f.t, db.QueryRow(`SELECT MAX(revision) FROM audit_transactions`).Scan(&rev))
+		return rev
+	}
+	stats := func(f *fixture) graphalign.Stats {
+		db, err := f.c.DB()
+		must(f.t, err)
+		st, err := promotealign.LoadStatsForTest(db)
+		must(f.t, err)
+		return st
+	}
+	// Both catalogs hold a person, their birth, and a lone place. Filing
+	// person and birth files the participation; filing person and place doesn't.
+	build := func(t *testing.T, fileBirth bool) *fixture {
+		f := &fixture{t: t}
+		c, err := database.Create(t.TempDir(), "t.provenencia")
+		must(t, err)
+		t.Cleanup(func() { _ = c.Close() })
+		r, err := ref.Mint(ref.PrefixUser)
+		must(t, err)
+		must(t, users.Upsert(c, userID, "Tester", r))
+		must(t, subjectvocab.Install(c))
+		f.c = c
+		f.source, f.artifact = f.newSource("Register")
+		person := f.person(f.source, f.artifact, "Gracie")
+		birth := f.birth(f.source, f.artifact)
+		place := f.place(f.source, f.artifact, "York")
+		f.participation(f.source, f.artifact, person, birth, "subject")
+		f.promote(person)
+		if fileBirth {
+			f.promote(birth)
+		} else {
+			f.promote(place)
+		}
+		return f
+	}
+
+	t.Run("keys match the walk's edge signature", func(t *testing.T) {
+		promotealign.ResetStatsCacheForTest()
+		f := build(t, true)
+		if got, ok := stats(f).FanOut[subjectAtBirth.Key()]; !ok || got != 1 {
+			t.Fatalf("fan-out %v (present %v), want 1 under %q", got, ok, subjectAtBirth.Key())
+		}
+	})
+	t.Run("another project at the same revision recomputes", func(t *testing.T) {
+		promotealign.ResetStatsCacheForTest()
+		filed, other := build(t, true), build(t, false)
+		if revision(filed) != revision(other) {
+			t.Fatalf("revisions %d and %d differ; the test needs them equal", revision(filed), revision(other))
+		}
+		_ = stats(filed)
+		if _, leaked := stats(other).FanOut[subjectAtBirth.Key()]; leaked {
+			t.Fatal("stats from the first catalog were served for the second")
+		}
+	})
+}

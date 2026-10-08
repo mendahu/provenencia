@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"testing"
 
+	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/graphalign"
 	"github.com/mendahu/provenencia/core/match"
@@ -103,6 +104,9 @@ func TestSeedFromAlreadyPromotedNeighbor(t *testing.T) {
 	row := rowBySubject(p, perSub)
 	if row.Target != graphalign.TargetHandle || !bytes.Equal(row.HandleID, perH) {
 		t.Fatalf("person from promoted event: %+v", row)
+	}
+	if row.Via == nil || !bytes.Equal(row.Via.NeighborSubjectID, evSub) {
+		t.Fatalf("person should be reached via the event: %+v", row.Via)
 	}
 }
 
@@ -367,5 +371,132 @@ func TestGracieObituaryGolden(t *testing.T) {
 	rG := rowBySubject(p1, gracie)
 	if rG.Target != graphalign.TargetHandle || !bytes.Equal(rG.HandleID, hGracie) {
 		t.Fatalf("fixed gracie: %+v", rG)
+	}
+}
+
+func nameVals(given, surname string) match.Values {
+	p := match.Property{Key: "name", Origin: "provenencia"}
+	return match.Values{p: {{Name: &namevalues.Value{
+		Form: given + " " + surname,
+		Parts: []namevalues.Part{
+			{Idx: 0, Type: namevalues.PartTypeGiven, Value: given},
+			{Idx: 1, Type: namevalues.PartTypeSurname, Value: surname},
+		},
+	}}}}
+}
+
+func nameMetas() []match.PropertyMeta {
+	return []match.PropertyMeta{
+		{Property: match.Property{Key: "name", Origin: "provenencia"}, ValueType: properties.ValueTypeName},
+	}
+}
+
+func TestUnreachableFallbackScoresOnTheWalkScale(t *testing.T) {
+	tests := []struct {
+		name       string
+		probe      match.Values
+		handle     match.Values
+		wantTarget graphalign.Target
+		wantAssess graphalign.Assessment
+	}{
+		{
+			name:  "a shared surname alone is not a match",
+			probe: nameVals("Mary", "Robins"), handle: nameVals("James", "Robins"),
+			wantTarget: graphalign.TargetSkip, wantAssess: graphalign.AssessNone,
+		},
+		{
+			name:  "the same name alone is a weak match, never strong",
+			probe: nameVals("Mary", "Robins"), handle: nameVals("Mary", "Robins"),
+			wantTarget: graphalign.TargetHandle, wantAssess: graphalign.AssessWeak,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s, h := id("s-orphan"), id("h-known")
+			layer := graphalign.Layer{
+				Subjects: []graphalign.Subject{{ID: s, Ref: "PER-S", Kind: "person", Values: tt.probe}},
+				Metas:    nameMetas(),
+			}
+			canon := graphalign.Canon{Handles: []graphalign.Handle{{ID: h, Ref: "PER-1", Kind: "person", Values: tt.handle}}}
+			row := rowBySubject(graphalign.Align(layer, canon, graphalign.Stats{}, nil, nil), s)
+			if row.Target != tt.wantTarget || row.Assessment != tt.wantAssess {
+				t.Fatalf("got %s / %s (score %.2f), want %s / %s", row.Target, row.Assessment, row.Score, tt.wantTarget, tt.wantAssess)
+			}
+		})
+	}
+}
+
+func TestContestedHandleIsDecidedTheSameEveryRun(t *testing.T) {
+	tests := []struct {
+		name   string
+		a, b   match.Values
+		winner string
+	}{
+		{name: "equal claims go to the first ref", a: nameVals("John", "Smith"), b: nameVals("John", "Smith"), winner: "s-a"},
+		{name: "the stronger claim wins whatever its ref", a: nameVals("Jon", "Smith"), b: nameVals("John", "Smith"), winner: "s-b"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sex := match.Property{Key: "sex_at_birth", Origin: "provenencia"}
+			male := match.Value{Term: "male"}
+			b := tt.b
+			if tt.winner == "s-b" {
+				b = match.Values{}
+				for k, v := range tt.b {
+					b[k] = v
+				}
+				b[sex] = []match.Value{male}
+			}
+			handle := nameVals("John", "Smith")
+			handle[sex] = []match.Value{male}
+			metas := append(nameMetas(), match.PropertyMeta{Property: sex, ValueType: properties.ValueTypeTerm})
+			layer := graphalign.Layer{
+				Subjects: []graphalign.Subject{
+					{ID: id("s-a"), Ref: "PER-A", Kind: "person", Values: tt.a},
+					{ID: id("s-b"), Ref: "PER-B", Kind: "person", Values: b},
+				},
+				Metas: metas,
+			}
+			canon := graphalign.Canon{Handles: []graphalign.Handle{{ID: id("h-1"), Ref: "PER-1", Kind: "person", Values: handle}}}
+			for run := 0; run < 50; run++ {
+				p := graphalign.Align(layer, canon, graphalign.Stats{}, nil, nil)
+				var got []string
+				for _, r := range p.Rows {
+					if r.Target == graphalign.TargetHandle {
+						got = append(got, string(r.SubjectID))
+					}
+				}
+				if len(got) != 1 || got[0] != tt.winner {
+					t.Fatalf("run %d: handle went to %v, want %s", run, got, tt.winner)
+				}
+			}
+		})
+	}
+}
+
+func TestEdgeSupportCountsTheSeedingNeighborOnce(t *testing.T) {
+	sig := partSig("subject", "event", "birth")
+	evSub, perSub, evH, perH := id("s-event"), id("s-person"), id("h-event"), id("h-person")
+	layer := graphalign.Layer{
+		Subjects: []graphalign.Subject{
+			{ID: evSub, Ref: "EVT-S", Kind: "event"},
+			{ID: perSub, Ref: "PER-S", Kind: "person"},
+		},
+		Bridges: []graphalign.Bridge{{A: perSub, B: evSub, Signature: sig}},
+		Metas:   personMetas(),
+	}
+	canon := graphalign.Canon{
+		Handles: []graphalign.Handle{{ID: evH, Ref: "EVT-1", Kind: "event"}, {ID: perH, Ref: "PER-1", Kind: "person"}},
+		Edges:   []graphalign.CanonEdge{{From: perH, To: evH, Signature: sig}},
+	}
+	stats := graphalign.Stats{FanOut: map[string]float64{sig.Key(): 1}}
+	fixed := []graphalign.Fixed{{SubjectID: evSub, HandleID: evH}}
+	row := rowBySubject(graphalign.Align(layer, canon, stats, fixed, nil), perSub)
+	cfg := graphalign.DefaultConfig()
+	if row.Score != cfg.EdgeSupportLow {
+		t.Fatalf("score %.2f, want one edge's support %.2f", row.Score, cfg.EdgeSupportLow)
+	}
+	if row.Target == graphalign.TargetHandle {
+		t.Fatalf("one edge and no shared values should not merge: %+v", row)
 	}
 }

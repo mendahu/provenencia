@@ -121,9 +121,27 @@ func newState(layer Layer, canon Canon, stats Stats, fixed []Fixed, cfg Config) 
 }
 
 func (st *state) seed() {
-	for sk, hid := range st.assigned {
-		st.pushFromAnchor([]byte(sk), hid)
+	for _, s := range st.sortedSubjects() {
+		if hid, ok := st.assigned[string(s.ID)]; ok {
+			st.pushFromAnchor(s.ID, hid)
+		}
 	}
+}
+
+// sortedSubjects is the layer in a stable order (ref, then id) so nothing
+// Align decides depends on map iteration.
+func (st *state) sortedSubjects() []*Subject {
+	subs := make([]*Subject, 0, len(st.subjects))
+	for _, s := range st.subjects {
+		subs = append(subs, s)
+	}
+	sort.SliceStable(subs, func(i, j int) bool {
+		if subs[i].Ref != subs[j].Ref {
+			return subs[i].Ref < subs[j].Ref
+		}
+		return bytes.Compare(subs[i].ID, subs[j].ID) < 0
+	})
+	return subs
 }
 
 func (st *state) pushFromAnchor(subjectID, handleID []byte) {
@@ -155,11 +173,9 @@ func (st *state) enqueue(subjectID []byte, h *Handle, via EdgeSignature, viaNeig
 	if st.seen[key] {
 		return
 	}
-	sc := st.scoreCandidate(subjectID, h, via)
-	if len(viaNeighbor) == 16 {
-		sc.viaNeighbor = append([]byte(nil), viaNeighbor...)
-		sc.viaSig = via
-	}
+	sc := st.scoreCandidate(subjectID, h)
+	sc.viaNeighbor = append([]byte(nil), viaNeighbor...)
+	sc.viaSig = via
 	st.recordBest(string(subjectID), sc)
 	heap.Push(&st.queue, queueItem{
 		subjectID: append([]byte(nil), subjectID...),
@@ -188,15 +204,18 @@ func (st *state) recordBest(sk string, sc scoredCand) {
 		if list[i].score != list[j].score {
 			return list[i].score > list[j].score
 		}
-		return list[i].ref < list[j].ref
+		if list[i].ref != list[j].ref {
+			return list[i].ref < list[j].ref
+		}
+		return bytes.Compare(list[i].handleID, list[j].handleID) < 0
 	})
 	st.best[sk] = list
 }
 
-func (st *state) scoreCandidate(subjectID []byte, h *Handle, via EdgeSignature) scoredCand {
+func (st *state) scoreCandidate(subjectID []byte, h *Handle) scoredCand {
 	s := st.subjects[string(subjectID)]
 	ev := match.Evaluate(s.Values, h.Values, st.metas)
-	edge := st.edgeSupport(subjectID, h.ID, via)
+	edge := st.edgeSupport(subjectID, h.ID)
 	sc := ScoreCandidate(ev, s.Values, edge, s.Provenance, st.cfg, st.stats)
 	return scoredCand{
 		handleID: append([]byte(nil), h.ID...),
@@ -208,25 +227,21 @@ func (st *state) scoreCandidate(subjectID []byte, h *Handle, via EdgeSignature) 
 	}
 }
 
-func (st *state) edgeSupport(subjectID, handleID []byte, via EdgeSignature) float64 {
-	// Support from the seeding edge plus any other mapped neighbor that
-	// lines up with a corresponding canon edge.
+// edgeSupport sums one term per mapped layer neighbor whose handle the
+// candidate reaches through a canon edge with the same signature. The edge
+// that seeded the candidate is one of those neighbors, so it counts once.
+func (st *state) edgeSupport(subjectID, handleID []byte) float64 {
 	var support float64
 	add := func(sig EdgeSignature) {
-		fan := 2.0
-		if st.stats.FanOut != nil {
-			if f, ok := st.stats.FanOut[sig.Key()]; ok {
-				fan = f
-			}
+		fan, ok := st.stats.FanOut[sig.Key()]
+		if !ok {
+			fan = st.cfg.FanOutUnknown
 		}
 		if fan <= st.cfg.FanOutLowMax {
 			support += st.cfg.EdgeSupportLow
 		} else {
 			support += st.cfg.EdgeSupportHigh
 		}
-	}
-	if via.BridgeType != "" {
-		add(via)
 	}
 	sk := string(subjectID)
 	for _, link := range st.layerAdj[sk] {
@@ -270,8 +285,15 @@ func (st *state) walk() {
 	}
 }
 
+// fallbackUnreachable handles Subjects no anchor reached. Property-only Rank
+// picks each one's candidates; each is then scored by the same pairwise path
+// the walk uses, so assignment and assessment share one scale. Assignment is
+// best-first across every unreachable Subject, so a contest over one handle
+// goes to the stronger match, not to whichever Subject came first.
 func (st *state) fallbackUnreachable() {
-	for sk, s := range st.subjects {
+	var queue candHeap
+	for _, s := range st.sortedSubjects() {
+		sk := string(s.ID)
 		if _, ok := st.assigned[sk]; ok {
 			continue
 		}
@@ -279,55 +301,58 @@ func (st *state) fallbackUnreachable() {
 		if !ok {
 			continue
 		}
-		var cands []match.Candidate
-		for _, h := range st.handles {
-			if h.Kind != s.Kind {
-				continue
-			}
-			if owner, taken := st.handleOwner[string(h.ID)]; taken && owner != sk {
-				continue
-			}
-			cands = append(cands, match.Candidate{
-				EntityID: h.ID, Ref: h.Ref, Values: h.Values,
+		for _, m := range match.Rank(profile, s.Values, st.candidatesOfKind(s.Kind), st.cfg.AlternativeLimit) {
+			h := st.handles[string(m.EntityID)]
+			sc := st.scoreCandidate(s.ID, h)
+			sc.reasons = append([]string{"property-only match"}, sc.reasons...)
+			st.recordBest(sk, sc)
+			heap.Push(&queue, queueItem{
+				subjectID: append([]byte(nil), s.ID...),
+				handleID:  append([]byte(nil), h.ID...),
+				ref:       h.Ref,
+				score:     sc.score,
 			})
 		}
-		ranked := match.Rank(profile, s.Values, cands, st.cfg.AlternativeLimit)
-		for _, m := range ranked {
-			// Rank uses point weights; store as-is for alternatives. Assignment
-			// uses profile.MinScore (not Align AcceptScore).
-			st.recordBest(sk, scoredCand{
-				handleID: append([]byte(nil), m.EntityID...),
-				ref:      m.Ref,
-				score:    m.Score,
-				reasons:  []string{"property-only match"},
-			})
-		}
-		if len(ranked) == 0 || ranked[0].Score < profile.MinScore {
-			continue
-		}
-		top := ranked[0]
-		if owner, taken := st.handleOwner[string(top.EntityID)]; taken && owner != sk {
-			continue
-		}
-		st.assigned[sk] = append([]byte(nil), top.EntityID...)
-		st.handleOwner[string(top.EntityID)] = sk
 	}
+	for queue.Len() > 0 {
+		item := heap.Pop(&queue).(queueItem)
+		sk, hk := string(item.subjectID), string(item.handleID)
+		if _, taken := st.assigned[sk]; taken {
+			continue
+		}
+		if _, owned := st.handleOwner[hk]; owned {
+			continue
+		}
+		if item.score < st.cfg.AcceptScore {
+			continue
+		}
+		st.assigned[sk] = append([]byte(nil), item.handleID...)
+		st.handleOwner[hk] = sk
+	}
+}
+
+// candidatesOfKind lists the canon handles of one kind in a stable order.
+func (st *state) candidatesOfKind(kind string) []match.Candidate {
+	var out []match.Candidate
+	for i := range st.canon.Handles {
+		h := &st.canon.Handles[i]
+		if h.Kind != kind {
+			continue
+		}
+		out = append(out, match.Candidate{EntityID: h.ID, Ref: h.Ref, Values: h.Values})
+	}
+	sort.SliceStable(out, func(i, j int) bool {
+		if out[i].Ref != out[j].Ref {
+			return out[i].Ref < out[j].Ref
+		}
+		return bytes.Compare(out[i].EntityID, out[j].EntityID) < 0
+	})
+	return out
 }
 
 func (st *state) proposal() Proposal {
 	var rows []Row
-	// Stable subject order by Ref then ID.
-	subs := make([]*Subject, 0, len(st.subjects))
-	for _, s := range st.subjects {
-		subs = append(subs, s)
-	}
-	sort.SliceStable(subs, func(i, j int) bool {
-		if subs[i].Ref != subs[j].Ref {
-			return subs[i].Ref < subs[j].Ref
-		}
-		return bytes.Compare(subs[i].ID, subs[j].ID) < 0
-	})
-	for _, s := range subs {
+	for _, s := range st.sortedSubjects() {
 		sk := string(s.ID)
 		row := Row{SubjectID: append([]byte(nil), s.ID...), Kind: s.Kind}
 		if hid, ok := st.assigned[sk]; ok {
@@ -347,13 +372,13 @@ func (st *state) proposal() Proposal {
 			row.Score = sc.score
 			row.Reasons = sc.reasons
 			row.Comparisons = comparisonsFrom(sc.eval, s.Values, st.cfg, st.stats)
-			if len(sc.viaNeighbor) == 16 {
+			if len(sc.viaNeighbor) > 0 {
 				row.Via = &Via{
 					NeighborSubjectID: append([]byte(nil), sc.viaNeighbor...),
 					Signature:         sc.viaSig,
 				}
 			}
-			row.Assessment = st.band(sc.score, st.fixedSet[sk], true)
+			row.Assessment = st.band(sc.score, st.fixedSet[sk])
 			row.Alternatives = st.alts(sk, hid)
 			if st.fixedSet[sk] {
 				if best := st.bestNonAssigned(sk, hid); best != nil && best.score > sc.score+st.cfg.ConflictPenalty {
@@ -370,7 +395,7 @@ func (st *state) proposal() Proposal {
 				row.Alternatives = st.alts(sk, nil)
 				row.Reasons = best.reasons
 				if best.score >= st.cfg.WeakScore {
-					row.Assessment = st.band(best.score, false, false)
+					row.Assessment = st.band(best.score, false)
 				} else {
 					row.Reasons = append([]string{"weak match"}, best.reasons...)
 				}
@@ -465,18 +490,9 @@ func subjectHasValues(s *Subject) bool {
 	return false
 }
 
-func (st *state) band(score float64, fixed, assigned bool) Assessment {
+func (st *state) band(score float64, fixed bool) Assessment {
 	if fixed {
 		return AssessStrong
-	}
-	if !assigned {
-		if score >= st.cfg.StrongScore {
-			return AssessStrong
-		}
-		if score >= st.cfg.WeakScore {
-			return AssessWeak
-		}
-		return AssessNone
 	}
 	if score >= st.cfg.StrongScore {
 		return AssessStrong
@@ -487,7 +503,8 @@ func (st *state) band(score float64, fixed, assigned bool) Assessment {
 	return AssessNone
 }
 
-// Priority queue of candidates (best score first; ties by ref then id).
+// Priority queue of candidates (best score first; ties by ref, handle id,
+// then subject id, so equal candidates pop in one order every run).
 type queueItem struct {
 	subjectID []byte
 	handleID  []byte
@@ -507,7 +524,10 @@ func (h candHeap) Less(i, j int) bool {
 	if h[i].ref != h[j].ref {
 		return h[i].ref < h[j].ref
 	}
-	return bytes.Compare(h[i].handleID, h[j].handleID) < 0
+	if c := bytes.Compare(h[i].handleID, h[j].handleID); c != 0 {
+		return c < 0
+	}
+	return bytes.Compare(h[i].subjectID, h[j].subjectID) < 0
 }
 
 func (h candHeap) Swap(i, j int) {

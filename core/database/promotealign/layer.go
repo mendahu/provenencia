@@ -114,12 +114,16 @@ func loadMetas(q Querier) ([]match.PropertyMeta, error) {
 	return out, nil
 }
 
+// neighborTypeProperty is the Property whose term types a bridge's neighbor
+// in an edge signature (an event's type). Kinds without one sign by kind only.
+var neighborTypeProperty = map[string]string{"event": "event_type"}
+
 // Product hops used to discover undirected bridges on the layer.
 var (
-	hopPersonToEvent = canonicalgraph.MustHop("participation", "person", "event", nil)
-	hopEventToPlace  = canonicalgraph.PlacesOfEvent
-	hopPersonRelated = canonicalgraph.MustHop("relationship", "person", "related_to", nil)
-	hopPlaceParent   = canonicalgraph.ParentsOfPlace
+	hopPersonToEvent  = canonicalgraph.MustHop("participation", "person", "event", nil)
+	hopEventToPlace   = canonicalgraph.PlacesOfEvent
+	hopPersonRelated  = canonicalgraph.MustHop("relationship", "person", "related_to", nil)
+	hopPlaceParent    = canonicalgraph.ParentsOfPlace
 	hopPlaceSuccessor = canonicalgraph.SuccessorsOfPlace
 )
 
@@ -154,7 +158,7 @@ func loadLayerBridges(q Querier, sourceID []byte, primary map[string]primarySubj
 			if err != nil {
 				return nil, err
 			}
-			typeTerm, err := termOnSubject(q, e.To, "event_type")
+			typeTerm, err := termOnSubject(q, e.To, neighborTypeProperty["event"])
 			if err != nil {
 				return nil, err
 			}
