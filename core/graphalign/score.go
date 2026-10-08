@@ -8,10 +8,9 @@ import (
 
 // Scored is the pairwise + edge result ScoreCandidate returns.
 type Scored struct {
-	Score   float64
-	Reasons []string
-	Edge    float64
-	Eval    match.Evaluation
+	Score float64
+	Edge  float64
+	Eval  match.Evaluation
 }
 
 // ScoreCandidate combines a pairwise Evaluation with edge support into one
@@ -19,38 +18,36 @@ type Scored struct {
 // provenance scales the total (≤0 treated as 1). edge is precomputed support
 // from corresponding layer/canon bridges.
 func ScoreCandidate(ev match.Evaluation, probe match.Values, edge, provenance float64, cfg Config, stats Stats) Scored {
-	node, reasons := nodeScore(ev, probe, cfg, stats)
-	if edge > 0 {
-		reasons = append(reasons, "edge support")
-	}
+	node := nodeScore(ev, probe, cfg, stats)
 	if provenance <= 0 {
 		provenance = 1
 	}
 	return Scored{
-		Score:   (node + edge) * provenance,
-		Reasons: reasons,
-		Edge:    edge,
-		Eval:    ev,
+		Score: (node + edge) * provenance,
+		Edge:  edge,
+		Eval:  ev,
 	}
 }
 
-func nodeScore(ev match.Evaluation, probe match.Values, cfg Config, stats Stats) (float64, []string) {
-	var score float64
-	var reasons []string
-	for _, pc := range ev.Comparisons {
-		switch pc.Outcome {
-		case match.OutcomeAgree:
-			u := uFor(stats, pc.Property.Key, probe[pc.Property])
-			m := cfg.mFor(pc.ValueType)
-			w := logOdds(m, cfg.uOr(u))
-			score += w
-			reasons = append(reasons, "agree "+pc.Property.Key)
-		case match.OutcomeConflict:
-			score -= cfg.ConflictPenalty
-			reasons = append(reasons, "conflict "+pc.Property.Key)
-		}
+// PropertyWeight is the log-odds nodeScore adds for one outcome.
+func PropertyWeight(outcome match.Outcome, valueType string, property match.Property, probe match.Values, cfg Config, stats Stats) float64 {
+	switch outcome {
+	case match.OutcomeAgree:
+		u := uFor(stats, property.Key, probe[property])
+		return logOdds(cfg.mFor(valueType), cfg.uOr(u))
+	case match.OutcomeConflict:
+		return -cfg.ConflictPenalty
+	default:
+		return 0
 	}
-	return score, reasons
+}
+
+func nodeScore(ev match.Evaluation, probe match.Values, cfg Config, stats Stats) float64 {
+	var score float64
+	for _, pc := range ev.Comparisons {
+		score += PropertyWeight(pc.Outcome, pc.ValueType, pc.Property, probe, cfg, stats)
+	}
+	return score
 }
 
 func uFor(stats Stats, propertyKey string, vals []match.Value) float64 {

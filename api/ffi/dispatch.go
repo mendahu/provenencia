@@ -95,8 +95,8 @@ const (
 	MethodPromoteSubject                    = int32(engine.Method_METHOD_PROMOTE_SUBJECT)
 	MethodListSubjectMemberships            = int32(engine.Method_METHOD_LIST_SUBJECT_MEMBERSHIPS)
 	MethodListPersonHeaders                 = int32(engine.Method_METHOD_LIST_PERSON_HEADERS)
-	MethodListPromoteTargetSuggestions      = int32(engine.Method_METHOD_LIST_PROMOTE_TARGET_SUGGESTIONS)
 	MethodProposePromoteGraphAlignment      = int32(engine.Method_METHOD_PROPOSE_PROMOTE_GRAPH_ALIGNMENT)
+	MethodApplyPromoteGraphAlignment        = int32(engine.Method_METHOD_APPLY_PROMOTE_GRAPH_ALIGNMENT)
 	MethodListClaimConfidenceGrades         = int32(engine.Method_METHOD_LIST_CLAIM_CONFIDENCE_GRADES)
 	MethodGetConclusionDetail               = int32(engine.Method_METHOD_GET_CONCLUSION_DETAIL)
 	MethodListEventHeaders                  = int32(engine.Method_METHOD_LIST_EVENT_HEADERS)
@@ -277,10 +277,10 @@ func Call(method int32, in []byte) ([]byte, error) {
 		return handlers.ListSubjectMemberships(in)
 	case MethodListPersonHeaders:
 		return handlers.ListPersonHeaders(in)
-	case MethodListPromoteTargetSuggestions:
-		return handlers.ListPromoteTargetSuggestions(in)
 	case MethodProposePromoteGraphAlignment:
 		return handlers.ProposePromoteGraphAlignment(in)
+	case MethodApplyPromoteGraphAlignment:
+		return handlers.ApplyPromoteGraphAlignment(in)
 	case MethodListClaimConfidenceGrades:
 		return handlers.ListClaimConfidenceGrades(in)
 	case MethodGetConclusionDetail:

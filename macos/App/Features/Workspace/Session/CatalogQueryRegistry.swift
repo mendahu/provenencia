@@ -171,11 +171,6 @@ struct CatalogQueryRegistry: Sendable {
             invalidateOn: CatalogQueryRegistry.conclusionTriggers
         ),
         Spec(
-            kind: .promoteTargets,
-            stalePolicy: .sessionFresh,
-            invalidateOn: CatalogQueryRegistry.conclusionTriggers
-        ),
-        Spec(
             kind: .conclusionDetail,
             stalePolicy: .sessionFresh,
             invalidateOn: CatalogQueryRegistry.conclusionTriggers,
@@ -264,12 +259,6 @@ struct CatalogQueryRegistry: Sendable {
             return try await store.listEventHeaders(projectDir: project.projectDir)
         case .placesList(let project):
             return try await store.listPlaceHeaders(projectDir: project.projectDir)
-        case .promoteTargets(let project, let subjectId):
-            return try await store.listPromoteTargetSuggestions(
-                projectDir: project.projectDir,
-                subjectID: subjectId,
-                limit: 0
-            )
         case .conclusionDetail(let project, let entityId):
             return try await store.getConclusionDetail(projectDir: project.projectDir, entityID: entityId)
         }
@@ -366,8 +355,6 @@ private extension CatalogQueryKey.Kind {
             return .key(.eventsList(project: project))
         case .placesList:
             return .key(.placesList(project: project))
-        case .promoteTargets:
-            return .allCached(.promoteTargets)
         case .conclusionDetail:
             // Any Conclusion edit can touch any handle (a merge, a member's
             // Observation), so every cached detail is stale.

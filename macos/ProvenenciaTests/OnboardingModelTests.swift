@@ -504,18 +504,21 @@ private struct ThrowingStore: GenealogyStore {
     ) async throws -> CatalogPromoteResult {
         throw StoreBoom.boom
     }
-    func listPromoteTargetSuggestions(
-        projectDir _: String,
-        subjectID _: String,
-        limit _: Int
-    ) async throws -> [CatalogPromoteTargetSuggestion] {
-        throw StoreBoom.boom
-    }
     func proposePromoteGraphAlignment(
         projectDir _: String,
         sourceID _: String,
         fixed _: [CatalogPromoteGraphAlignmentFixed]
-    ) async throws -> [CatalogPromoteGraphAlignmentRow] {
+    ) async throws -> CatalogPromoteGraphAlignmentProposal {
+        throw StoreBoom.boom
+    }
+    func applyPromoteGraphAlignment(
+        projectDir _: String,
+        userID _: String,
+        sourceID _: String,
+        seenRevision _: Int64,
+        rows _: [CatalogPromoteBatchRow],
+        skipBridgeIDs _: [String]
+    ) async throws -> CatalogPromoteBatchResult {
         throw StoreBoom.boom
     }
     func listClaimConfidenceGrades(projectDir _: String) async throws -> [CatalogClaimConfidenceGrade] {

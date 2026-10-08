@@ -1,29 +1,40 @@
 package promotealign
 
 import (
-	"database/sql"
 	"sync"
 
+	"github.com/mendahu/provenencia/core/connectrules"
 	"github.com/mendahu/provenencia/core/graphalign"
 )
 
-// Process-local stats cache keyed by the catalog's latest audit revision
-// (design §8). Any write bumps revision and invalidates.
+// Process-local stats cache keyed by the catalog file and its latest audit
+// revision (design §8). Any write bumps the revision and invalidates; a
+// different project never reads another's frequencies.
 var (
-	statsMu    sync.Mutex
-	statsRev   int64
+	statsMu     sync.Mutex
+	statsKey    statsStamp
 	statsCached graphalign.Stats
+	statsValid  bool
 )
 
+type statsStamp struct {
+	file string
+	rev  int64
+}
+
 func loadStats(q Querier) (graphalign.Stats, error) {
-	var rev int64
-	if err := q.QueryRow(`SELECT COALESCE(MAX(revision), 0) FROM audit_transactions`).Scan(&rev); err != nil {
+	var stamp statsStamp
+	if err := q.QueryRow(`SELECT file FROM pragma_database_list WHERE name = 'main'`).Scan(&stamp.file); err != nil {
+		return graphalign.Stats{}, err
+	}
+	if err := q.QueryRow(`SELECT COALESCE(MAX(revision), 0) FROM audit_transactions`).Scan(&stamp.rev); err != nil {
 		return graphalign.Stats{}, err
 	}
 
 	statsMu.Lock()
 	defer statsMu.Unlock()
-	if rev == statsRev && statsRev >= 0 {
+	// An in-memory catalog has no file, so it can't be told apart: never cache it.
+	if statsValid && stamp.file != "" && stamp == statsKey {
 		return cloneStats(statsCached), nil
 	}
 
@@ -31,8 +42,7 @@ func loadStats(q Querier) (graphalign.Stats, error) {
 	if err != nil {
 		return graphalign.Stats{}, err
 	}
-	statsRev = rev
-	statsCached = st
+	statsKey, statsCached, statsValid = stamp, st, true
 	return cloneStats(st), nil
 }
 
@@ -40,8 +50,7 @@ func loadStats(q Querier) (graphalign.Stats, error) {
 func ResetStatsCacheForTest() {
 	statsMu.Lock()
 	defer statsMu.Unlock()
-	statsRev = -1
-	statsCached = graphalign.Stats{}
+	statsKey, statsCached, statsValid = statsStamp{}, graphalign.Stats{}, false
 }
 
 func computeStats(q Querier) (graphalign.Stats, error) {
@@ -93,6 +102,7 @@ func computeStats(q Querier) (graphalign.Stats, error) {
 	if err := rows.Err(); err != nil {
 		return graphalign.Stats{}, err
 	}
+	_ = rows.Close()
 	for _, c := range cells {
 		den := totals[c.prop]
 		if den <= 0 {
@@ -104,65 +114,72 @@ func computeStats(q Querier) (graphalign.Stats, error) {
 		st.ValueFreq[c.prop][c.key] = c.n / den
 	}
 
-	// Fan-out: average neighbors per handle through each product hop signature
-	// class. Cold catalogs leave FanOut empty (Align uses EdgeSupportHigh path
-	// via FanOutLowMax defaults when missing — see edgeSupport).
-	for _, step := range []struct {
-		sig graphalign.EdgeSignature
-		sql string
-	}{
-		{
-			sig: graphalign.EdgeSignature{BridgeType: "participation", RoleOrType: "subject", NeighborKind: "event"},
-			sql: `SELECT AVG(cnt) FROM (
-				SELECT COUNT(*) AS cnt FROM auto_reconciler_values a
-				JOIN canonical_entities assoc ON assoc.id = a.entity_id AND assoc.merged_into_id IS NULL
-				JOIN subject_types st ON st.id = assoc.subject_type_id AND st.key = 'participation' AND st.origin = 'provenencia'
-				JOIN auto_reconciler_values role ON role.entity_id = a.entity_id AND role.rank = 1 AND role.reason = 'kept'
-				JOIN properties rp ON rp.id = role.property_id AND rp.key = 'role' AND rp.origin = 'provenencia'
-				JOIN property_terms rt ON rt.id = role.value_term_id AND rt.key = 'subject'
-				WHERE a.rank = 1 AND a.reason = 'kept'
-					AND a.property_id = (SELECT id FROM properties WHERE key = 'person' AND origin = 'provenencia')
-				GROUP BY a.value_entity_id
-			)`,
-		},
-		{
-			sig: graphalign.EdgeSignature{BridgeType: "location", NeighborKind: "place"},
-			sql: `SELECT AVG(cnt) FROM (
-				SELECT COUNT(*) AS cnt FROM auto_reconciler_values a
-				JOIN canonical_entities assoc ON assoc.id = a.entity_id AND assoc.merged_into_id IS NULL
-				JOIN subject_types st ON st.id = assoc.subject_type_id AND st.key = 'location' AND st.origin = 'provenencia'
-				WHERE a.rank = 1 AND a.reason = 'kept'
-					AND a.property_id = (SELECT id FROM properties WHERE key = 'event' AND origin = 'provenencia')
-				GROUP BY a.value_entity_id
-			)`,
-		},
-		{
-			sig: graphalign.EdgeSignature{BridgeType: "place_relationship", RoleOrType: "part_of", NeighborKind: "place"},
-			sql: `SELECT AVG(cnt) FROM (
-				SELECT COUNT(*) AS cnt FROM auto_reconciler_values a
-				JOIN canonical_entities assoc ON assoc.id = a.entity_id AND assoc.merged_into_id IS NULL
-				JOIN subject_types st ON st.id = assoc.subject_type_id AND st.key = 'place_relationship' AND st.origin = 'provenencia'
-				JOIN auto_reconciler_values typ ON typ.entity_id = a.entity_id AND typ.rank = 1 AND typ.reason = 'kept'
-				JOIN properties tp ON tp.id = typ.property_id AND tp.key = 'place_relationship_type' AND tp.origin = 'provenencia'
-				JOIN property_terms tt ON tt.id = typ.value_term_id AND tt.key = 'part_of'
-				WHERE a.rank = 1 AND a.reason = 'kept'
-					AND a.property_id = (SELECT id FROM properties WHERE key = 'from' AND origin = 'provenencia')
-				GROUP BY a.value_entity_id
-			)`,
-		},
-	} {
-		var avg sql.NullFloat64
-		if err := q.QueryRow(step.sql).Scan(&avg); err != nil {
+	for _, b := range connectrules.Bridges() {
+		if err := addFanOut(q, b, st.FanOut); err != nil {
 			return graphalign.Stats{}, err
 		}
-		if avg.Valid && avg.Float64 > 0 {
-			st.FanOut[step.sig.Key()] = avg.Float64
-		}
 	}
-
 	return st, nil
 }
 
+// sqlFanOut averages, per (disambiguation term, neighbor type term), how many
+// filed associations of one bridge type each from-end handle has. Those two
+// terms plus the bridge type and neighbor kind are the edge signature the
+// layer and canon loaders build, so the keys line up exactly.
+const sqlFanOut = `SELECT COALESCE(dt.key, ''), COALESCE(nt.key, ''),
+		COUNT(*), COUNT(DISTINCT f.value_entity_id)
+	FROM canonical_entities assoc
+	JOIN subject_types st ON st.id = assoc.subject_type_id AND st.key = ? AND st.origin = ?
+	JOIN auto_reconciler_values f ON f.entity_id = assoc.id AND f.rank = 1 AND f.reason = 'kept'
+		AND f.property_id = (SELECT id FROM properties WHERE key = ? AND origin = ?)
+	JOIN auto_reconciler_values n ON n.entity_id = assoc.id AND n.rank = 1 AND n.reason = 'kept'
+		AND n.property_id = (SELECT id FROM properties WHERE key = ? AND origin = ?)
+	LEFT JOIN auto_reconciler_values d ON d.entity_id = assoc.id AND d.rank = 1 AND d.reason = 'kept'
+		AND d.property_id = (SELECT id FROM properties WHERE key = ? AND origin = ?)
+	LEFT JOIN property_terms dt ON dt.id = d.value_term_id
+	LEFT JOIN auto_reconciler_values nv ON nv.entity_id = n.value_entity_id AND nv.rank = 1 AND nv.reason = 'kept'
+		AND nv.property_id = (SELECT id FROM properties WHERE key = ? AND origin = 'provenencia')
+	LEFT JOIN property_terms nt ON nt.id = nv.value_term_id
+	WHERE assoc.merged_into_id IS NULL
+	GROUP BY dt.key, nt.key`
+
+func addFanOut(q Querier, b connectrules.Bridge, into map[string]float64) error {
+	if len(b.Endpoints) != 2 {
+		return nil
+	}
+	from, to := b.Endpoints[0], b.Endpoints[1]
+	disamb := ""
+	if connectrules.HasDisambiguation(b.Disambiguation) {
+		disamb = b.Disambiguation
+	}
+	rows, err := q.Query(sqlFanOut,
+		b.BridgeTypeKey, b.Origin,
+		from.PropertyKey, b.Origin,
+		to.PropertyKey, b.Origin,
+		disamb, b.Origin,
+		neighborTypeProperty[to.TypeKey],
+	)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var term, neighborType string
+		var edges, ends float64
+		if err := rows.Scan(&term, &neighborType, &edges, &ends); err != nil {
+			return err
+		}
+		if ends <= 0 {
+			continue
+		}
+		sig := graphalign.EdgeSignature{
+			BridgeType: b.BridgeTypeKey, RoleOrType: term,
+			NeighborKind: to.TypeKey, NeighborTypeTerm: neighborType,
+		}
+		into[sig.Key()] = edges / ends
+	}
+	return rows.Err()
+}
 func cloneStats(s graphalign.Stats) graphalign.Stats {
 	out := graphalign.Stats{
 		ValueFreq: map[string]map[string]float64{},

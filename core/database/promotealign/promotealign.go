@@ -19,44 +19,54 @@ type Querier interface {
 
 // Propose loads the Evidence layer for sourceID, expands a bounded canon
 // neighborhood, merges caller fixed with already-promoted anchors, and runs
-// graphalign.Align. An unknown or empty sourceID is promote.ErrInvalid.
-func Propose(q Querier, sourceID []byte, fixed []graphalign.Fixed) (graphalign.Proposal, error) {
+// graphalign.Align. The int64 is MAX(audit_transactions.revision) at load
+// time, the stamp Done sends back. An unknown or empty sourceID is
+// promote.ErrInvalid.
+func Propose(q Querier, sourceID []byte, fixed []graphalign.Fixed) (graphalign.Proposal, int64, error) {
 	if len(sourceID) != 16 {
-		return graphalign.Proposal{}, promote.ErrInvalid
+		return graphalign.Proposal{}, 0, promote.ErrInvalid
+	}
+	var rev int64
+	if err := q.QueryRow(`SELECT COALESCE(MAX(revision), 0) FROM audit_transactions`).Scan(&rev); err != nil {
+		return graphalign.Proposal{}, 0, err
 	}
 	var exists int
 	if err := q.QueryRow(`SELECT 1 FROM sources WHERE id = ?`, sourceID).Scan(&exists); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return graphalign.Proposal{}, promote.ErrInvalid
+			return graphalign.Proposal{}, 0, promote.ErrInvalid
 		}
-		return graphalign.Proposal{}, err
+		return graphalign.Proposal{}, 0, err
 	}
 
 	layer, primary, err := loadLayer(q, sourceID)
 	if err != nil {
-		return graphalign.Proposal{}, err
+		return graphalign.Proposal{}, 0, err
 	}
 	if len(layer.Subjects) == 0 {
-		return graphalign.Proposal{Rows: nil}, nil
+		return graphalign.Proposal{Rows: nil}, rev, nil
 	}
 
 	anchors, err := mergeFixed(q, sourceID, primary, fixed)
 	if err != nil {
-		return graphalign.Proposal{}, err
+		return graphalign.Proposal{}, 0, err
 	}
 
-	canon, err := loadCanon(q, primary, anchors)
+	canon, err := loadCanon(q, layer, anchors)
 	if err != nil {
-		return graphalign.Proposal{}, err
+		return graphalign.Proposal{}, 0, err
 	}
 
 	stats, err := loadStats(q)
 	if err != nil {
-		return graphalign.Proposal{}, err
+		return graphalign.Proposal{}, 0, err
 	}
 
 	cfg := graphalign.DefaultConfig()
-	return graphalign.Align(layer, canon, stats, anchors, &cfg), nil
+	prop := graphalign.Align(layer, canon, stats, anchors, &cfg)
+	if err := attachExhibits(q, layer, &prop, cfg, stats); err != nil {
+		return graphalign.Proposal{}, 0, err
+	}
+	return prop, rev, nil
 }
 
 // mergeFixed validates caller fixed pairs and adds already-promoted Subjects
@@ -66,12 +76,27 @@ func mergeFixed(q Querier, sourceID []byte, primary map[string]primarySubject, c
 	seen := map[string]bool{}
 
 	for _, f := range caller {
-		if len(f.SubjectID) != 16 || len(f.HandleID) != 16 {
+		if len(f.SubjectID) != 16 {
 			return nil, promote.ErrInvalid
 		}
 		sk := string(f.SubjectID)
 		ps, ok := primary[sk]
 		if !ok {
+			return nil, promote.ErrInvalid
+		}
+		switch f.Target {
+		case graphalign.TargetNew, graphalign.TargetSkip:
+			if len(f.HandleID) != 0 {
+				return nil, promote.ErrInvalid
+			}
+			out = append(out, graphalign.Fixed{SubjectID: append([]byte(nil), f.SubjectID...), Target: f.Target})
+			seen[sk] = true
+			continue
+		case "", graphalign.TargetHandle:
+		default:
+			return nil, promote.ErrInvalid
+		}
+		if len(f.HandleID) != 16 {
 			return nil, promote.ErrInvalid
 		}
 		var kind string

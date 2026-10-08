@@ -7,11 +7,17 @@ import "github.com/mendahu/provenencia/core/match"
 
 // EdgeSignature identifies corresponding bridges on the layer and edges on
 // the canonical graph (design §6).
+//
+// Directed marks a term whose order is part of its meaning (parent of, part
+// of). A directed edge corresponds only from the same end: Bridge.A and
+// CanonEdge.From are the bridge's first endpoint. Key leaves it out, since
+// both ends of one bridge share a fan-out entry and a signature identity.
 type EdgeSignature struct {
 	BridgeType       string // participation, relationship, location, place_relationship
 	RoleOrType       string // role or relationship / place-relationship term key
 	NeighborKind     string // person, event, place
 	NeighborTypeTerm string // e.g. birth on an event
+	Directed         bool
 }
 
 // Key is a stable map key for the signature.
@@ -69,10 +75,14 @@ type Stats struct {
 	FanOut map[string]float64
 }
 
-// Fixed is a decided or already-promoted Subject→handle anchor.
+// Fixed is a decided or already-promoted row Align holds as given. Target
+// empty or TargetHandle anchors SubjectID on HandleID; TargetNew or
+// TargetSkip keeps the Subject off every handle, so the walk neither maps it
+// nor walks through it.
 type Fixed struct {
 	SubjectID []byte
 	HandleID  []byte
+	Target    Target
 }
 
 // Target is what Align proposes for one Subject.
@@ -96,11 +106,52 @@ const (
 // Comparison is one Property outcome on the chosen (or top) candidate,
 // suitable for drafting pins later (S9-43).
 type Comparison struct {
-	Property match.Property
-	Outcome  match.Outcome
+	Property  match.Property
+	Outcome   match.Outcome
 	ValueType string
-	Pinned   bool // drafted true when OutcomeAgree
+	Pinned    bool // drafted true when OutcomeAgree
+	// Weight is the log-odds this outcome added (negative for a conflict).
+	Weight float64
 }
+
+// Via is the layer edge that seeded this row's handle, when the walk
+// reached it from an already-decided neighbor.
+type Via struct {
+	NeighborSubjectID []byte
+	Signature         EdgeSignature
+}
+
+// Exhibit is one pin-able observation pair the loader attaches after Align.
+// GroupSubjectID is empty for the Subject's own records and names the layer
+// neighbor for a one-hop record. Displays are values (term labels for
+// terms), not copy.
+type Exhibit struct {
+	Property              match.Property
+	Outcome               match.Outcome
+	ValueType             string
+	Pinned                bool
+	Weight                float64
+	GroupSubjectID        []byte
+	IncomingObservationID []byte
+	IncomingDisplay       string
+	IncomingSource        string
+	MemberObservationID   []byte
+	MemberDisplay         string
+	MemberSource          string
+}
+
+// Reason is why a row reads as it does. Codes, not copy: the page words them.
+type Reason string
+
+const (
+	ReasonVia     Reason = "via"      // reached from a mapped neighbor (Row.Via)
+	ReasonDecided Reason = "decided"  // held as given (a decision or an existing claim)
+	ReasonAgrees  Reason = "agrees"   // property-only match; ReasonProperty agrees most
+	ReasonWeak    Reason = "weak"     // the best candidate is below the accept bar
+	ReasonTaken   Reason = "taken"    // another row took the handle (Flags.DuplicateOf)
+	ReasonNoMatch Reason = "no_match" // no candidate at all: New
+	ReasonEmpty   Reason = "empty"    // nothing to match on: Skip
+)
 
 // Alternative is a runner-up handle suggestion.
 type Alternative struct {
@@ -111,8 +162,14 @@ type Alternative struct {
 
 // RowFlags call out conflicts and duplicates for the page.
 type RowFlags struct {
+	// ConflictWithFixed: a held handle row whose neighbors now point at a
+	// clearly stronger handle (Alternatives[0]).
 	ConflictWithFixed bool
-	PossibleDuplicate bool // another row already took this handle
+	// PossibleDuplicate: DuplicateOf may be the same entity as this row. It
+	// took the handle this row would have matched, holds the same handle,
+	// or both rows are New and score alike.
+	PossibleDuplicate bool
+	DuplicateOf       []byte
 }
 
 // Row is one Subject's proposal.
@@ -126,8 +183,12 @@ type Row struct {
 	Assessment   Assessment
 	Alternatives []Alternative
 	Comparisons  []Comparison
-	Reasons      []string
-	Flags        RowFlags
+	Exhibits     []Exhibit
+	Reason       Reason
+	// ReasonProperty is the agreeing Property behind ReasonAgrees.
+	ReasonProperty match.Property
+	Via            *Via
+	Flags          RowFlags
 }
 
 // Proposal is Align's full output: one row per primary Subject.

@@ -41,41 +41,6 @@ struct PropertiesSnapshot: Sendable, Equatable {
     }
 }
 
-// MARK: - Board bind control (16×16 filled box — not a native checkbox)
-
-/// Matches the board `box(on, locked)` control used in On column + inspector binds.
-struct PropertiesBindBox: View {
-    var on: Bool
-    var locked: Bool
-
-    var body: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: PVRadius.xs, style: .continuous)
-                .fill(fill)
-                .overlay(
-                    RoundedRectangle(cornerRadius: PVRadius.xs, style: .continuous)
-                        .strokeBorder(stroke, lineWidth: 1)
-                )
-            if on {
-                Image(systemName: locked ? "lock.fill" : "checkmark")
-                    .font(.system(size: 9, weight: .bold))
-                    .foregroundStyle(PVColor.accentForeground)
-            }
-        }
-        .frame(width: 16, height: 16)
-        .accessibilityHidden(true)
-    }
-
-    private var fill: Color {
-        guard on else { return PVColor.surfaceCard }
-        return locked ? PVPalette.paper500 : PVColor.accent
-    }
-
-    private var stroke: Color {
-        on ? .clear : PVColor.borderDefault
-    }
-}
-
 struct PropertiesValueTypePill: View {
     let valueType: String
 

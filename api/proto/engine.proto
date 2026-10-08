@@ -39,7 +39,8 @@ enum Method {
   reserved 71;
   reserved "METHOD_UPDATE_CITATION_WITH_OBSERVATIONS";
   // Per-entity headers ride GetConclusionDetail.
-  reserved 92, 94, 95;
+  reserved 88, 92, 94, 95;
+  reserved "METHOD_LIST_PROMOTE_TARGET_SUGGESTIONS";
   reserved "METHOD_GET_EVENT_HEADER", "METHOD_GET_PLACE_HEADER", "METHOD_GET_PERSON_HEADER";
   METHOD_UPDATE_METADATA_FIELD = 28;
   METHOD_DELETE_SOURCE_TYPE = 29;
@@ -100,13 +101,13 @@ enum Method {
   METHOD_PROMOTE_SUBJECT = 85;
   METHOD_LIST_SUBJECT_MEMBERSHIPS = 86;
   METHOD_LIST_PERSON_HEADERS = 87;
-  METHOD_LIST_PROMOTE_TARGET_SUGGESTIONS = 88;
   METHOD_LIST_CLAIM_CONFIDENCE_GRADES = 89;
   METHOD_GET_CONCLUSION_DETAIL = 90;
   METHOD_LIST_EVENT_HEADERS = 91;
   METHOD_LIST_PLACE_HEADERS = 93;
   METHOD_LIST_SOURCE_EVENT_TITLES = 96;
   METHOD_PROPOSE_PROMOTE_GRAPH_ALIGNMENT = 97;
+  METHOD_APPLY_PROMOTE_GRAPH_ALIGNMENT = 98;
 }
 
 message PingRequest {
@@ -1257,39 +1258,6 @@ message ConclusionDetail {
   }
 }
 
-// ListPromoteTargetSuggestions returns existing handles a Subject could join,
-// best first: same type, unmerged, not its own handle, scored by the type's
-// match profile (core/match). limit 0 = the engine default.
-message ListPromoteTargetSuggestionsRequest {
-  string project_dir = 1;
-  string subject_id = 2;
-  int32 limit = 3;
-}
-
-// MatchReason is one Property's part in a match score: its best similarity
-// (0…1) and the points it added (negative for a clear disagreement).
-message MatchReason {
-  string property_key = 1;
-  string property_origin = 2;
-  double similarity = 3;
-  double contribution = 4;
-}
-
-// PromoteTargetSuggestion is one handle the Subject could join. person is
-// the row header for Person handles; Events and Places carry the handle
-// alone until their header composers land.
-message PromoteTargetSuggestion {
-  CanonicalEntity entity = 1;
-  double score = 2;
-  repeated MatchReason reasons = 3;
-  PersonHeader person = 4;
-  int32 member_count = 5; // accepted members of the handle
-}
-
-message ListPromoteTargetSuggestionsResponse {
-  repeated PromoteTargetSuggestion suggestions = 1;
-}
-
 // ProposePromoteGraphAlignment loads one Source's Evidence layer and proposes
 // a handle, New, or Skip for every primary Subject (S9-42). fixed are decided
 // or already-chosen anchors; already-promoted Subjects are free anchors too.
@@ -1299,9 +1267,12 @@ message ProposePromoteGraphAlignmentRequest {
   repeated PromoteGraphAlignmentFixed fixed = 3;
 }
 
+// A decided row Align holds as given. target is handle (handle_id set), new,
+// or skip; empty means handle. A New or Skip row stays off every handle.
 message PromoteGraphAlignmentFixed {
   string subject_id = 1;
   string handle_id = 2;
+  string target = 3;
 }
 
 message PromoteGraphAlignmentComparison {
@@ -1310,12 +1281,27 @@ message PromoteGraphAlignmentComparison {
   string outcome = 3; // agree, conflict, unknown
   string value_type = 4;
   bool pinned = 5;
+  double weight = 6;
+  reserved 7; // group_label: English built in Go; the page words groups now
+  // Empty for the Subject's own records; the layer neighbor for a one-hop record.
+  string group_subject_id = 14;
+  string incoming_observation_id = 8;
+  string incoming_display = 9;
+  string incoming_source = 10;
+  string member_observation_id = 11;
+  string member_display = 12;
+  string member_source = 13;
 }
 
 message PromoteGraphAlignmentAlternative {
   string handle_id = 1;
   string handle_ref = 2;
   double score = 3;
+  oneof header {
+    PersonHeader person = 4;
+    EventHeader event = 5;
+    PlaceHeader place = 6;
+  }
 }
 
 message PromoteGraphAlignmentRow {
@@ -1326,7 +1312,7 @@ message PromoteGraphAlignmentRow {
   string handle_ref = 5;
   double score = 6;
   string assessment = 7; // strong, weak, none
-  repeated string reasons = 8;
+  reserved 8; // reasons: English strings; see reason
   repeated PromoteGraphAlignmentComparison comparisons = 9;
   repeated PromoteGraphAlignmentAlternative alternatives = 10;
   bool conflict_with_fixed = 11;
@@ -1336,10 +1322,61 @@ message PromoteGraphAlignmentRow {
     EventHeader event = 14;
     PlaceHeader place = 15;
   }
+  // Subject the walk reached this row from, when a neighbor seeded it.
+  string via_neighbor_subject_id = 16;
+  string via_bridge_type = 17;
+  string via_role = 18;
+  // With possible_duplicate: the other row on this layer this one may be the
+  // same as (it took the handle this row wanted, or both are New and alike).
+  string duplicate_of_subject_id = 19;
+  // Why the row reads as it does: via, decided, agrees, weak, taken,
+  // no_match, empty. The page words it. With agrees, the agreeing Property.
+  string reason = 20;
+  string reason_property_key = 21;
+  string reason_property_origin = 22;
 }
 
 message ProposePromoteGraphAlignmentResponse {
   repeated PromoteGraphAlignmentRow rows = 1;
+  // Audit revision the proposal was read at. Done sends it back as seen_revision.
+  int64 revision = 2;
+}
+
+// ApplyPromoteGraphAlignment files one Done: claims, pins, and bridges, in
+// one transaction. seen_revision is the proposal's revision; a later write
+// fails the batch (promote.stale).
+message ApplyPromoteGraphAlignmentRequest {
+  string project_dir = 1;
+  string user_id = 2;
+  string source_id = 3;
+  int64 seen_revision = 4;
+  repeated ApplyPromoteGraphAlignmentRow rows = 5;
+  repeated string skip_bridge_ids = 6;
+}
+
+message ApplyPromoteGraphAlignmentPair {
+  string incoming_observation_id = 1;
+  string member_observation_id = 2;
+}
+
+message ApplyPromoteGraphAlignmentRow {
+  string subject_id = 1;
+  string target = 2; // handle, new, skip
+  string entity_id = 3;
+  string confidence_grade_id = 4;
+  string argument = 5;
+  repeated ApplyPromoteGraphAlignmentPair pairs = 6;
+}
+
+message ApplyPromoteGraphAlignmentWritten {
+  CanonicalEntity entity = 1;
+  IdentityClaim claim = 2;
+  int32 pins = 3;
+}
+
+message ApplyPromoteGraphAlignmentResponse {
+  int64 revision = 1;
+  repeated ApplyPromoteGraphAlignmentWritten written = 2;
 }
 
 message ListSubjectsRequest {

@@ -3,8 +3,9 @@
 // and the candidate handles of the same Subject type (their auto-reconciled values
 // from the cache, every rank), then ranks them with the type's Profile.
 //
-// Consumers shape the result for their surface: Promote's target
-// suggestions (promotetargets) from ForSubject; merge hints from ForEntity.
+// Promote graph alignment (promotealign) reads CandidatesOfType once per
+// kind and ranks every Subject in memory. ForSubject and ForEntity rank one
+// probe; ForEntity is the basis for merge hints.
 //
 // Candidates are every unmerged handle of the type that has a cached value
 // for a profile Property, read in one query. When catalogs outgrow a scan,
@@ -17,6 +18,7 @@ import (
 	"database/sql"
 	"errors"
 
+	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/match"
@@ -57,13 +59,13 @@ const (
 	sqlOwnHandle = `SELECT entity_id FROM identity_claims
 		WHERE subject_id = ? AND status = 'accepted'`
 
-	// A Subject's positive Observations, terms by key.
-	sqlSubjectValues = `SELECT p.key, p.origin, o.value_text, o.value_integer,
+	// Positive Observations of many Subjects, terms by key; the caller closes the IN list.
+	sqlSubjectsValues = `SELECT o.subject_id, p.key, p.origin, o.value_text, o.value_integer,
 			o.value_date_id, o.value_name_id, t.key
 		FROM observations o
 		JOIN properties p ON p.id = o.property_id
 		LEFT JOIN property_terms t ON t.id = o.value_term_id
-		WHERE o.subject_id = ? AND o.polarity = 'positive'`
+		WHERE o.polarity = 'positive' AND o.subject_id IN (`
 
 	// Cached auto-reconciled values (every rank) of unmerged handles, terms by key.
 	sqlEntityValues = `SELECT r.entity_id, e.ref, p.key, p.origin, r.value_text, r.value_integer,
@@ -174,38 +176,54 @@ func loadCandidates(q Querier, typeID []byte, profile match.Profile) ([]match.Ca
 	return scanEntityValues(rows, profile)
 }
 
-// LoadSubjectValues reads the Subject's positive Observations for the
-// profile's Properties: one query, plus the date and name lookups.
-func LoadSubjectValues(q Querier, subjectID []byte, profile match.Profile) (match.Values, error) {
-	return loadSubjectValues(q, subjectID, profile)
-}
+// inBatch bounds an IN list; a batched read is still a fixed number of queries.
+const inBatch = 500
 
-// LoadEntityValues reads one handle's cached auto-reconciled values for the
-// profile's Properties.
-func LoadEntityValues(q Querier, entityID []byte, profile match.Profile) (match.Values, string, error) {
-	rows, err := q.Query(sqlEntityValuesOfOne, entityID)
-	if err != nil {
-		return nil, "", err
+// CandidatesOfType reads every unmerged handle of the Subject type (key,
+// origin) with a cached value for a profile Property: the same one query
+// ForSubject ranks against, for callers that rank many probes at once.
+func CandidatesOfType(q Querier, typeKey, origin string, profile match.Profile) ([]match.Candidate, error) {
+	var typeID []byte
+	err := q.QueryRow(`SELECT id FROM subject_types WHERE key = ? AND origin = ?`, typeKey, origin).Scan(&typeID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
 	}
-	cands, err := scanEntityValues(rows, profile)
-	if err != nil {
-		return nil, "", err
-	}
-	if len(cands) == 0 {
-		return match.Values{}, "", nil
-	}
-	return cands[0].Values, cands[0].Ref, nil
-}
-
-// loadSubjectValues reads the Subject's positive Observations for the
-// profile's Properties: one query, plus the date and name lookups.
-func loadSubjectValues(q Querier, subjectID []byte, profile match.Profile) (match.Values, error) {
-	wanted := propertySet(profile)
-	rows, err := q.Query(sqlSubjectValues, subjectID)
 	if err != nil {
 		return nil, err
 	}
+	return loadCandidates(q, typeID, profile)
+}
+
+// EntitiesValues reads many handles' cached values for the profile's
+// Properties, by handle id. A handle with none is absent.
+func EntitiesValues(q Querier, entityIDs [][]byte, profile match.Profile) (map[string]match.Values, error) {
+	out := map[string]match.Values{}
+	ids := database.UniqueBlobIDs(entityIDs)
+	for start := 0; start < len(ids); start += inBatch {
+		chunk := ids[start:min(start+inBatch, len(ids))]
+		rows, err := q.Query(sqlEntityValues+` AND e.id IN (`+database.SQLInPlaceholders(len(chunk))+`) ORDER BY r.entity_id`,
+			database.BlobArgs(chunk)...)
+		if err != nil {
+			return nil, err
+		}
+		cands, err := scanEntityValues(rows, profile)
+		if err != nil {
+			return nil, err
+		}
+		for _, c := range cands {
+			out[string(c.EntityID)] = c.Values
+		}
+	}
+	return out, nil
+}
+
+// SubjectsValues reads many Subjects' positive Observations for the
+// profile's Properties: one query per IN batch, plus one date and one name
+// lookup for all of them. A Subject with none is absent.
+func SubjectsValues(q Querier, subjectIDs [][]byte, profile match.Profile) (map[string]match.Values, error) {
+	wanted := propertySet(profile)
 	type pending struct {
+		subject        string
 		prop           match.Property
 		v              match.Value
 		dateID, nameID []byte
@@ -214,32 +232,42 @@ func loadSubjectValues(q Querier, subjectID []byte, profile match.Profile) (matc
 		all              []pending
 		dateIDs, nameIDs [][]byte
 	)
-	for rows.Next() {
-		var (
-			p             pending
-			text, termKey sql.NullString
-			integer       sql.NullInt64
-		)
-		if err := rows.Scan(&p.prop.Key, &p.prop.Origin, &text, &integer, &p.dateID, &p.nameID, &termKey); err != nil {
-			_ = rows.Close()
+	ids := database.UniqueBlobIDs(subjectIDs)
+	for start := 0; start < len(ids); start += inBatch {
+		chunk := ids[start:min(start+inBatch, len(ids))]
+		rows, err := q.Query(sqlSubjectsValues+database.SQLInPlaceholders(len(chunk))+`)`, database.BlobArgs(chunk)...)
+		if err != nil {
 			return nil, err
 		}
-		if !wanted[p.prop] {
-			continue
+		for rows.Next() {
+			var (
+				p             pending
+				subjectID     []byte
+				text, termKey sql.NullString
+				integer       sql.NullInt64
+			)
+			if err := rows.Scan(&subjectID, &p.prop.Key, &p.prop.Origin, &text, &integer, &p.dateID, &p.nameID, &termKey); err != nil {
+				_ = rows.Close()
+				return nil, err
+			}
+			if !wanted[p.prop] {
+				continue
+			}
+			p.subject = string(subjectID)
+			p.v = match.Value{Text: text.String, HasText: text.Valid, Integer: integer.Int64, HasInteger: integer.Valid, Term: termKey.String}
+			all = append(all, p)
+			if len(p.dateID) > 0 {
+				dateIDs = append(dateIDs, p.dateID)
+			}
+			if len(p.nameID) > 0 {
+				nameIDs = append(nameIDs, p.nameID)
+			}
 		}
-		p.v = match.Value{Text: text.String, HasText: text.Valid, Integer: integer.Int64, HasInteger: integer.Valid, Term: termKey.String}
-		all = append(all, p)
-		if len(p.dateID) > 0 {
-			dateIDs = append(dateIDs, p.dateID)
+		err = rows.Err()
+		_ = rows.Close()
+		if err != nil {
+			return nil, err
 		}
-		if len(p.nameID) > 0 {
-			nameIDs = append(nameIDs, p.nameID)
-		}
-	}
-	err = rows.Err()
-	_ = rows.Close()
-	if err != nil {
-		return nil, err
 	}
 	dates, err := datevalues.LookupManyTx(q, dateIDs)
 	if err != nil {
@@ -249,7 +277,7 @@ func loadSubjectValues(q Querier, subjectID []byte, profile match.Profile) (matc
 	if err != nil {
 		return nil, err
 	}
-	out := match.Values{}
+	out := map[string]match.Values{}
 	for _, p := range all {
 		if d, ok := dates[string(p.dateID)]; ok {
 			p.v.Date = &d
@@ -257,9 +285,22 @@ func loadSubjectValues(q Querier, subjectID []byte, profile match.Profile) (matc
 		if n, ok := names[string(p.nameID)]; ok {
 			p.v.Name = &n
 		}
-		out[p.prop] = append(out[p.prop], p.v)
+		if out[p.subject] == nil {
+			out[p.subject] = match.Values{}
+		}
+		out[p.subject][p.prop] = append(out[p.subject][p.prop], p.v)
 	}
 	return out, nil
+}
+
+// loadSubjectValues reads the Subject's positive Observations for the
+// profile's Properties.
+func loadSubjectValues(q Querier, subjectID []byte, profile match.Profile) (match.Values, error) {
+	vals, err := SubjectsValues(q, [][]byte{subjectID}, profile)
+	if err != nil {
+		return nil, err
+	}
+	return vals[string(subjectID)], nil
 }
 
 // scanEntityValues groups cache rows into one Candidate per handle, in row

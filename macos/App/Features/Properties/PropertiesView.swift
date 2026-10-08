@@ -363,7 +363,7 @@ private struct PropertiesContent: View {
                 model.selectProperty(property.id)
                 Task { await model.toggleBinding(to: type) }
             } label: {
-                PropertiesBindBox(on: bound, locked: locked)
+                PVCheckboxMark(isChecked: bound, isLocked: locked)
             }
             .buttonStyle(.plain)
             .disabled(locked)
@@ -601,7 +601,7 @@ private struct PropertiesContent: View {
             Task { await model.toggleBinding(to: type) }
         } label: {
             HStack(spacing: PVSpacing.space5) {
-                PropertiesBindBox(on: bound, locked: locked)
+                PVCheckboxMark(isChecked: bound, isLocked: locked)
                 if let mark = PropertiesTypeChrome.stripMarkKey(typeKey: type.key) {
                     PVMark(mark, size: 14)
                         .foregroundStyle(ink)
@@ -901,7 +901,7 @@ private struct PropertiesCreateHost: View {
             toggleBind(typeID: type.id)
         } label: {
             HStack(spacing: PVSpacing.space5) {
-                PropertiesBindBox(on: on, locked: false)
+                PVCheckboxMark(isChecked: on)
                 if let mark = PropertiesTypeChrome.stripMarkKey(typeKey: type.key) {
                     PVMark(mark, size: 14)
                         .foregroundStyle(ink)

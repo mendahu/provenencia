@@ -177,29 +177,6 @@ struct CatalogIdentityClaim: Sendable, Equatable, Identifiable {
     var argument: String = ""
 }
 
-/// One Property's part in a match score (core/match): its best similarity,
-/// 0…1, and the points it added (negative for a clear disagreement).
-struct CatalogMatchReason: Sendable, Equatable {
-    var propertyKey: String
-    var propertyOrigin: String
-    var similarity: Double
-    var contribution: Double
-}
-
-/// One existing handle a Subject could join in Promote, best first. `person`
-/// is the row header for Person handles; Events and Places carry the handle
-/// alone until their header composers land.
-struct CatalogPromoteTargetSuggestion: Sendable, Equatable, Identifiable {
-    var entity: CatalogCanonicalEntity
-    var score: Double
-    var reasons: [CatalogMatchReason]
-    var person: CatalogPersonHeader?
-    /// Accepted members of the handle.
-    var memberCount: Int = 0
-
-    var id: String { entity.id }
-}
-
 /// One claim confidence grade (Low / Moderate / High): the scale on Identity
 /// Claims. Not Source credibility, though the shape matches.
 struct CatalogClaimConfidenceGrade: Sendable, Equatable, Identifiable {
@@ -231,18 +208,33 @@ struct CatalogPromoteResult: Sendable, Equatable {
 }
 
 /// One decided or already-chosen Subject→handle anchor for graph alignment.
+/// A decided row the proposal holds as given: on `handleID` (target handle),
+/// or off every handle (target new or skip, no handle).
 struct CatalogPromoteGraphAlignmentFixed: Sendable, Equatable {
     var subjectID: String
-    var handleID: String
+    var handleID: String = ""
+    var target: String = "handle"
 }
 
-/// One Property comparison on a graph-alignment row (drafted pins when agreeing).
-struct CatalogPromoteGraphAlignmentComparison: Sendable, Equatable {
+/// One Property comparison on a graph-alignment row. Agreeing lines with
+/// observation ids are the drafted pins.
+struct CatalogPromoteGraphAlignmentComparison: Sendable, Equatable, Identifiable {
     var propertyKey: String
     var propertyOrigin: String
     var outcome: String
     var valueType: String
     var pinned: Bool
+    var weight: Double = 0
+    /// Empty for the Subject's own records; the layer neighbor for a one-hop record.
+    var groupSubjectID: String = ""
+    var incomingObservationID: String = ""
+    var incomingDisplay: String = ""
+    var incomingSource: String = ""
+    var memberObservationID: String = ""
+    var memberDisplay: String = ""
+    var memberSource: String = ""
+
+    var id: String { incomingObservationID + "|" + memberObservationID + "|" + propertyKey }
 }
 
 /// A runner-up handle on a graph-alignment row.
@@ -250,6 +242,9 @@ struct CatalogPromoteGraphAlignmentAlternative: Sendable, Equatable {
     var handleID: String
     var handleRef: String
     var score: Double
+    var person: CatalogPersonHeader?
+    var event: CatalogEventHeader?
+    var place: CatalogPlaceHeader?
 }
 
 /// One Subject's proposal from `proposePromoteGraphAlignment` (S9-42).
@@ -261,16 +256,60 @@ struct CatalogPromoteGraphAlignmentRow: Sendable, Equatable, Identifiable {
     var handleRef: String
     var score: Double
     var assessment: String
-    var reasons: [String]
+    /// via, decided, agrees, weak, taken, no_match, empty — worded by the page.
+    var reason: String = ""
+    /// With reason agrees: the Property that agrees most.
+    var reasonPropertyKey: String = ""
+    var reasonPropertyOrigin: String = ""
     var comparisons: [CatalogPromoteGraphAlignmentComparison]
     var alternatives: [CatalogPromoteGraphAlignmentAlternative]
     var conflictWithFixed: Bool
     var possibleDuplicate: Bool
+    /// With `possibleDuplicate`, the other row this one may be the same as.
+    var duplicateOfSubjectID: String = ""
+    var viaNeighborSubjectID: String = ""
+    var viaBridgeType: String = ""
+    var viaRole: String = ""
     var person: CatalogPersonHeader?
     var event: CatalogEventHeader?
     var place: CatalogPlaceHeader?
 
     var id: String { subjectID }
+}
+
+/// A proposal plus the audit revision it was read at. Done sends the revision back.
+struct CatalogPromoteGraphAlignmentProposal: Sendable, Equatable {
+    var revision: Int64
+    var rows: [CatalogPromoteGraphAlignmentRow]
+}
+
+/// One confirmed comparison on a Done row.
+struct CatalogPromoteGraphAlignmentPair: Sendable, Equatable {
+    var incomingObservationID: String
+    var memberObservationID: String
+}
+
+/// One Subject on a Done.
+struct CatalogPromoteBatchRow: Sendable, Equatable {
+    var subjectID: String
+    var target: String
+    var entityID: String?
+    var confidenceGradeID: String?
+    var argument: String
+    var pairs: [CatalogPromoteGraphAlignmentPair]
+}
+
+/// One claim a Done filed.
+struct CatalogPromoteBatchWritten: Sendable, Equatable {
+    var entity: CatalogCanonicalEntity
+    var claim: CatalogIdentityClaim
+    var pins: Int
+}
+
+/// The revision a Done wrote, and the claims it filed.
+struct CatalogPromoteBatchResult: Sendable, Equatable {
+    var revision: Int64
+    var written: [CatalogPromoteBatchWritten]
 }
 
 struct CatalogSubjectPosition: Sendable, Equatable {
@@ -1060,18 +1099,21 @@ protocol GenealogyStore: Sendable {
         confidenceGradeID: String?,
         argument: String
     ) async throws -> CatalogPromoteResult
-    /// Existing handles the Subject could join, best first: same type, scored by the type's match profile.
-    func listPromoteTargetSuggestions(
-        projectDir: String,
-        subjectID: String,
-        limit: Int
-    ) async throws -> [CatalogPromoteTargetSuggestion]
     /// Propose a handle, New, or Skip for every primary Subject on one Source (graph alignment).
     func proposePromoteGraphAlignment(
         projectDir: String,
         sourceID: String,
         fixed: [CatalogPromoteGraphAlignmentFixed]
-    ) async throws -> [CatalogPromoteGraphAlignmentRow]
+    ) async throws -> CatalogPromoteGraphAlignmentProposal
+    /// File one Done: claims, pins, and bridges. `seenRevision` is the proposal's revision.
+    func applyPromoteGraphAlignment(
+        projectDir: String,
+        userID: String,
+        sourceID: String,
+        seenRevision: Int64,
+        rows: [CatalogPromoteBatchRow],
+        skipBridgeIDs: [String]
+    ) async throws -> CatalogPromoteBatchResult
     /// The claim confidence scale, in order.
     func listClaimConfidenceGrades(projectDir: String) async throws -> [CatalogClaimConfidenceGrade]
     /// Accepted handle of every promoted Subject on one Source's Evidence graph.
