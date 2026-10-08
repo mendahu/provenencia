@@ -34,19 +34,30 @@ func ScoreCandidate(ev match.Evaluation, probe match.Values, edge, provenance fl
 	}
 }
 
+// PropertyWeight is the log-odds nodeScore adds for one outcome.
+func PropertyWeight(outcome match.Outcome, valueType string, property match.Property, probe match.Values, cfg Config, stats Stats) float64 {
+	switch outcome {
+	case match.OutcomeAgree:
+		u := uFor(stats, property.Key, probe[property])
+		return logOdds(cfg.mFor(valueType), cfg.uOr(u))
+	case match.OutcomeConflict:
+		return -cfg.ConflictPenalty
+	default:
+		return 0
+	}
+}
+
 func nodeScore(ev match.Evaluation, probe match.Values, cfg Config, stats Stats) (float64, []string) {
 	var score float64
 	var reasons []string
 	for _, pc := range ev.Comparisons {
+		w := PropertyWeight(pc.Outcome, pc.ValueType, pc.Property, probe, cfg, stats)
 		switch pc.Outcome {
 		case match.OutcomeAgree:
-			u := uFor(stats, pc.Property.Key, probe[pc.Property])
-			m := cfg.mFor(pc.ValueType)
-			w := logOdds(m, cfg.uOr(u))
 			score += w
 			reasons = append(reasons, "agree "+pc.Property.Key)
 		case match.OutcomeConflict:
-			score -= cfg.ConflictPenalty
+			score += w
 			reasons = append(reasons, "conflict "+pc.Property.Key)
 		}
 	}

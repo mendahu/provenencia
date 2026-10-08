@@ -23,11 +23,11 @@ func Align(layer Layer, canon Canon, stats Stats, fixed []Fixed, cfg *Config) Pr
 }
 
 type state struct {
-	cfg    Config
-	layer  Layer
-	canon  Canon
-	stats  Stats
-	metas  []match.PropertyMeta
+	cfg   Config
+	layer Layer
+	canon Canon
+	stats Stats
+	metas []match.PropertyMeta
 
 	subjects map[string]*Subject
 	handles  map[string]*Handle
@@ -60,12 +60,14 @@ type canonLink struct {
 }
 
 type scoredCand struct {
-	handleID []byte
-	ref      string
-	score    float64
-	eval     match.Evaluation
-	reasons  []string
-	edge     float64
+	handleID    []byte
+	ref         string
+	score       float64
+	eval        match.Evaluation
+	reasons     []string
+	edge        float64
+	viaNeighbor []byte
+	viaSig      EdgeSignature
 }
 
 func newState(layer Layer, canon Canon, stats Stats, fixed []Fixed, cfg Config) *state {
@@ -143,17 +145,21 @@ func (st *state) pushFromAnchor(subjectID, handleID []byte) {
 			if h == nil || h.Kind != ns.Kind {
 				continue
 			}
-			st.enqueue(ns.ID, h, link.sig)
+			st.enqueue(ns.ID, h, link.sig, subjectID)
 		}
 	}
 }
 
-func (st *state) enqueue(subjectID []byte, h *Handle, via EdgeSignature) {
+func (st *state) enqueue(subjectID []byte, h *Handle, via EdgeSignature, viaNeighbor []byte) {
 	key := string(subjectID) + "|" + string(h.ID)
 	if st.seen[key] {
 		return
 	}
 	sc := st.scoreCandidate(subjectID, h, via)
+	if len(viaNeighbor) == 16 {
+		sc.viaNeighbor = append([]byte(nil), viaNeighbor...)
+		sc.viaSig = via
+	}
 	st.recordBest(string(subjectID), sc)
 	heap.Push(&st.queue, queueItem{
 		subjectID: append([]byte(nil), subjectID...),
@@ -340,7 +346,13 @@ func (st *state) proposal() Proposal {
 			}
 			row.Score = sc.score
 			row.Reasons = sc.reasons
-			row.Comparisons = comparisonsFrom(sc.eval)
+			row.Comparisons = comparisonsFrom(sc.eval, s.Values, st.cfg, st.stats)
+			if len(sc.viaNeighbor) == 16 {
+				row.Via = &Via{
+					NeighborSubjectID: append([]byte(nil), sc.viaNeighbor...),
+					Signature:         sc.viaSig,
+				}
+			}
 			row.Assessment = st.band(sc.score, st.fixedSet[sk], true)
 			row.Alternatives = st.alts(sk, hid)
 			if st.fixedSet[sk] {
@@ -388,7 +400,7 @@ func (st *state) proposal() Proposal {
 	return Proposal{Rows: rows}
 }
 
-func comparisonsFrom(ev match.Evaluation) []Comparison {
+func comparisonsFrom(ev match.Evaluation, probe match.Values, cfg Config, stats Stats) []Comparison {
 	out := make([]Comparison, 0, len(ev.Comparisons))
 	for _, pc := range ev.Comparisons {
 		out = append(out, Comparison{
@@ -396,6 +408,7 @@ func comparisonsFrom(ev match.Evaluation) []Comparison {
 			Outcome:   pc.Outcome,
 			ValueType: pc.ValueType,
 			Pinned:    pc.Outcome == match.OutcomeAgree,
+			Weight:    PropertyWeight(pc.Outcome, pc.ValueType, pc.Property, probe, cfg, stats),
 		})
 	}
 	return out

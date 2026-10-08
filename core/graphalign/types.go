@@ -96,10 +96,37 @@ const (
 // Comparison is one Property outcome on the chosen (or top) candidate,
 // suitable for drafting pins later (S9-43).
 type Comparison struct {
-	Property match.Property
-	Outcome  match.Outcome
+	Property  match.Property
+	Outcome   match.Outcome
 	ValueType string
-	Pinned   bool // drafted true when OutcomeAgree
+	Pinned    bool // drafted true when OutcomeAgree
+	// Weight is the log-odds this outcome added (negative for a conflict).
+	Weight float64
+}
+
+// Via is the layer edge that seeded this row's handle, when the walk
+// reached it from an already-decided neighbor.
+type Via struct {
+	NeighborSubjectID []byte
+	Signature         EdgeSignature
+}
+
+// Exhibit is one pin-able observation pair the loader attaches after Align.
+// GroupLabel is empty for the Subject's own records and a neighbor label
+// ("Birth · date") for a one-hop record.
+type Exhibit struct {
+	Property              match.Property
+	Outcome               match.Outcome
+	ValueType             string
+	Pinned                bool
+	Weight                float64
+	GroupLabel            string
+	IncomingObservationID []byte
+	IncomingDisplay       string
+	IncomingSource        string
+	MemberObservationID   []byte
+	MemberDisplay         string
+	MemberSource          string
 }
 
 // Alternative is a runner-up handle suggestion.
@@ -126,7 +153,9 @@ type Row struct {
 	Assessment   Assessment
 	Alternatives []Alternative
 	Comparisons  []Comparison
+	Exhibits     []Exhibit
 	Reasons      []string
+	Via          *Via
 	Flags        RowFlags
 }
 

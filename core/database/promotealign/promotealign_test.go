@@ -8,6 +8,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/connect"
+	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/namevalues/namevaluestest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
@@ -216,6 +217,20 @@ func TestProposeSeedFromPromotedNeighbor(t *testing.T) {
 	if row.Target != graphalign.TargetHandle || !bytes.Equal(row.HandleID, per.Entity.ID) {
 		t.Fatalf("person row %+v, want handle %x", row, per.Entity.ID)
 	}
+	if row.Via == nil || !bytes.Equal(row.Via.NeighborSubjectID, bBirth.ID) || row.Via.Signature.BridgeType != "participation" {
+		t.Fatalf("via %+v, want birth participation", row.Via)
+	}
+	var namePinned bool
+	for _, ex := range row.Exhibits {
+		if ex.Property.Key == "name" && ex.Outcome == "agree" && ex.Pinned &&
+			len(ex.IncomingObservationID) == 16 && len(ex.MemberObservationID) == 16 &&
+			ex.IncomingDisplay == "Gracie" && ex.IncomingSource == "Obituary" {
+			namePinned = true
+		}
+	}
+	if !namePinned {
+		t.Fatalf("name exhibit missing in %+v", row.Exhibits)
+	}
 	birthRow := rowFor(got, bBirth.ID)
 	if birthRow.Target != graphalign.TargetHandle || !bytes.Equal(birthRow.HandleID, evt.Entity.ID) {
 		t.Fatalf("birth row %+v, want fixed %x", birthRow, evt.Entity.ID)
@@ -242,6 +257,47 @@ func TestProposePlacePartOfChain(t *testing.T) {
 	row := rowFor(got, york2.ID)
 	if row.Target != graphalign.TargetHandle || !bytes.Equal(row.HandleID, yorkH.Entity.ID) {
 		t.Fatalf("york row %+v, want handle %x", row, yorkH.Entity.ID)
+	}
+}
+
+func TestProposeOneHopDateExhibit(t *testing.T) {
+	f := newFixture(t)
+	year := 1901
+	date := &datevalues.Value{Kind: datevalues.KindPoint, Calendar: "gregorian", StartYear: &year}
+
+	aPerson := f.person(f.source, f.artifact, "Gracie")
+	aBirth := f.bare(f.source, "event")
+	f.cite(f.artifact, aBirth,
+		observations.Input{PropertyID: f.prop("event_type").ID, ValueTermID: f.term("event_type", "birth").ID},
+		observations.Input{PropertyID: f.prop("date").ID, Date: date},
+	)
+	f.participation(f.source, f.artifact, aPerson, aBirth, "subject")
+	per := f.promote(aPerson)
+	evt := f.promote(aBirth)
+
+	srcB, artB := f.newSource("Obituary")
+	bPerson := f.person(srcB, artB, "Gracie")
+	bBirth := f.bare(srcB, "event")
+	f.cite(artB, bBirth,
+		observations.Input{PropertyID: f.prop("event_type").ID, ValueTermID: f.term("event_type", "birth").ID},
+		observations.Input{PropertyID: f.prop("date").ID, Date: date},
+	)
+	f.participation(srcB, artB, bPerson, bBirth, "subject")
+
+	got := f.propose(srcB.ID, []graphalign.Fixed{{SubjectID: bBirth.ID, HandleID: evt.Entity.ID}})
+	row := rowFor(got, bPerson.ID)
+	if !bytes.Equal(row.HandleID, per.Entity.ID) {
+		t.Fatalf("person %+v", row.Target)
+	}
+	var hop bool
+	for _, ex := range row.Exhibits {
+		if ex.Property.Key == "date" && ex.Outcome == "agree" && ex.Pinned &&
+			ex.GroupLabel != "" && ex.IncomingDisplay == "1901" && ex.MemberDisplay == "1901" {
+			hop = true
+		}
+	}
+	if !hop {
+		t.Fatalf("one-hop date exhibit missing in %+v", row.Exhibits)
 	}
 }
 

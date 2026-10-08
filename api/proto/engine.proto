@@ -1311,12 +1311,26 @@ message PromoteGraphAlignmentComparison {
   string outcome = 3; // agree, conflict, unknown
   string value_type = 4;
   bool pinned = 5;
+  double weight = 6;
+  // Empty for the Subject's own records; a neighbor label for a one-hop record.
+  string group_label = 7;
+  string incoming_observation_id = 8;
+  string incoming_display = 9;
+  string incoming_source = 10;
+  string member_observation_id = 11;
+  string member_display = 12;
+  string member_source = 13;
 }
 
 message PromoteGraphAlignmentAlternative {
   string handle_id = 1;
   string handle_ref = 2;
   double score = 3;
+  oneof header {
+    PersonHeader person = 4;
+    EventHeader event = 5;
+    PlaceHeader place = 6;
+  }
 }
 
 message PromoteGraphAlignmentRow {
@@ -1337,6 +1351,10 @@ message PromoteGraphAlignmentRow {
     EventHeader event = 14;
     PlaceHeader place = 15;
   }
+  // Subject the walk reached this row from, when a neighbor seeded it.
+  string via_neighbor_subject_id = 16;
+  string via_bridge_type = 17;
+  string via_role = 18;
 }
 
 message ProposePromoteGraphAlignmentResponse {

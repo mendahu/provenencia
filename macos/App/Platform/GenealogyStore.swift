@@ -236,13 +236,25 @@ struct CatalogPromoteGraphAlignmentFixed: Sendable, Equatable {
     var handleID: String
 }
 
-/// One Property comparison on a graph-alignment row (drafted pins when agreeing).
-struct CatalogPromoteGraphAlignmentComparison: Sendable, Equatable {
+/// One Property comparison on a graph-alignment row. Agreeing lines with
+/// observation ids are the drafted pins.
+struct CatalogPromoteGraphAlignmentComparison: Sendable, Equatable, Identifiable {
     var propertyKey: String
     var propertyOrigin: String
     var outcome: String
     var valueType: String
     var pinned: Bool
+    var weight: Double = 0
+    /// Empty for the Subject's own records; a neighbor label for a one-hop record.
+    var groupLabel: String = ""
+    var incomingObservationID: String = ""
+    var incomingDisplay: String = ""
+    var incomingSource: String = ""
+    var memberObservationID: String = ""
+    var memberDisplay: String = ""
+    var memberSource: String = ""
+
+    var id: String { incomingObservationID + "|" + memberObservationID + "|" + propertyKey }
 }
 
 /// A runner-up handle on a graph-alignment row.
@@ -250,6 +262,9 @@ struct CatalogPromoteGraphAlignmentAlternative: Sendable, Equatable {
     var handleID: String
     var handleRef: String
     var score: Double
+    var person: CatalogPersonHeader?
+    var event: CatalogEventHeader?
+    var place: CatalogPlaceHeader?
 }
 
 /// One Subject's proposal from `proposePromoteGraphAlignment` (S9-42).
@@ -266,6 +281,9 @@ struct CatalogPromoteGraphAlignmentRow: Sendable, Equatable, Identifiable {
     var alternatives: [CatalogPromoteGraphAlignmentAlternative]
     var conflictWithFixed: Bool
     var possibleDuplicate: Bool
+    var viaNeighborSubjectID: String = ""
+    var viaBridgeType: String = ""
+    var viaRole: String = ""
     var person: CatalogPersonHeader?
     var event: CatalogEventHeader?
     var place: CatalogPlaceHeader?

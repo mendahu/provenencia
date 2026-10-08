@@ -59,17 +59,25 @@ func ProposePromoteGraphAlignment(in []byte) ([]byte, error) {
 func proposalProto(q conclusionheaders.Querier, prop graphalign.Proposal) (*engine.ProposePromoteGraphAlignmentResponse, error) {
 	out := &engine.ProposePromoteGraphAlignmentResponse{}
 	var personIDs, eventIDs, placeIDs [][]byte
-	for _, r := range prop.Rows {
-		if r.Target != graphalign.TargetHandle || len(r.HandleID) == 0 {
-			continue
+	addHeaderID := func(kind string, id []byte) {
+		if len(id) != 16 {
+			return
 		}
-		switch r.Kind {
+		switch kind {
 		case "person":
-			personIDs = append(personIDs, r.HandleID)
+			personIDs = append(personIDs, id)
 		case "event":
-			eventIDs = append(eventIDs, r.HandleID)
+			eventIDs = append(eventIDs, id)
 		case "place":
-			placeIDs = append(placeIDs, r.HandleID)
+			placeIDs = append(placeIDs, id)
+		}
+	}
+	for _, r := range prop.Rows {
+		if r.Target == graphalign.TargetHandle {
+			addHeaderID(r.Kind, r.HandleID)
+		}
+		for _, a := range r.Alternatives {
+			addHeaderID(r.Kind, a.HandleID)
 		}
 	}
 	persons, err := conclusionheaders.PersonsByIDs(q, personIDs)
@@ -110,21 +118,62 @@ func proposalProto(q conclusionheaders.Querier, prop graphalign.Proposal) (*engi
 			ConflictWithFixed: r.Flags.ConflictWithFixed,
 			PossibleDuplicate: r.Flags.PossibleDuplicate,
 		}
-		for _, c := range r.Comparisons {
-			row.Comparisons = append(row.Comparisons, &engine.PromoteGraphAlignmentComparison{
-				PropertyKey:    c.Property.Key,
-				PropertyOrigin: c.Property.Origin,
-				Outcome:        string(c.Outcome),
-				ValueType:      c.ValueType,
-				Pinned:         c.Pinned,
-			})
+		if r.Via != nil {
+			row.ViaNeighborSubjectId = uuidString(r.Via.NeighborSubjectID)
+			row.ViaBridgeType = r.Via.Signature.BridgeType
+			row.ViaRole = r.Via.Signature.RoleOrType
+		}
+		if len(r.Exhibits) > 0 {
+			for _, ex := range r.Exhibits {
+				row.Comparisons = append(row.Comparisons, &engine.PromoteGraphAlignmentComparison{
+					PropertyKey:           ex.Property.Key,
+					PropertyOrigin:        ex.Property.Origin,
+					Outcome:               string(ex.Outcome),
+					ValueType:             ex.ValueType,
+					Pinned:                ex.Pinned,
+					Weight:                ex.Weight,
+					GroupLabel:            ex.GroupLabel,
+					IncomingObservationId: uuidString(ex.IncomingObservationID),
+					IncomingDisplay:       ex.IncomingDisplay,
+					IncomingSource:        ex.IncomingSource,
+					MemberObservationId:   uuidString(ex.MemberObservationID),
+					MemberDisplay:         ex.MemberDisplay,
+					MemberSource:          ex.MemberSource,
+				})
+			}
+		} else {
+			for _, c := range r.Comparisons {
+				row.Comparisons = append(row.Comparisons, &engine.PromoteGraphAlignmentComparison{
+					PropertyKey:    c.Property.Key,
+					PropertyOrigin: c.Property.Origin,
+					Outcome:        string(c.Outcome),
+					ValueType:      c.ValueType,
+					Pinned:         c.Pinned,
+					Weight:         c.Weight,
+				})
+			}
 		}
 		for _, a := range r.Alternatives {
-			row.Alternatives = append(row.Alternatives, &engine.PromoteGraphAlignmentAlternative{
+			alt := &engine.PromoteGraphAlignmentAlternative{
 				HandleId:  uuidString(a.HandleID),
 				HandleRef: a.Ref,
 				Score:     a.Score,
-			})
+			}
+			switch r.Kind {
+			case "person":
+				if h, ok := personByID[string(a.HandleID)]; ok {
+					alt.Header = &engine.PromoteGraphAlignmentAlternative_Person{Person: personHeaderProto(h)}
+				}
+			case "event":
+				if h, ok := eventByID[string(a.HandleID)]; ok {
+					alt.Header = &engine.PromoteGraphAlignmentAlternative_Event{Event: eventHeaderProto(h)}
+				}
+			case "place":
+				if h, ok := placeByID[string(a.HandleID)]; ok {
+					alt.Header = &engine.PromoteGraphAlignmentAlternative_Place{Place: placeHeaderProto(h)}
+				}
+			}
+			row.Alternatives = append(row.Alternatives, alt)
 		}
 		if r.Target == graphalign.TargetHandle && len(r.HandleID) == 16 {
 			switch r.Kind {

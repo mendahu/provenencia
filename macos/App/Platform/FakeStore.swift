@@ -25,6 +25,10 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var membershipBySubject: [String: CatalogSubjectMembership] = [:]
     /// Distinct handles that pin an Observation, for delete-impact confirms.
     var pinsByObservation: [String: [CatalogCanonicalEntity]] = [:]
+    /// Queued graph-alignment proposals. The first is consumed; the last repeats.
+    var promoteProposals: [CatalogPromoteGraphAlignmentProposal] = []
+    /// The last Done the page filed, for tests.
+    var lastPromoteBatch: (rows: [CatalogPromoteBatchRow], skipBridgeIDs: [String])?
     /// Event and Place headers as Go would compose them, seeded by tests in
     /// list order. FakeStore does not reconcile, walk, or title them; Go owns
     /// those rules (`conclusionheaders`, `eventtitle`) and their tests.
@@ -1315,6 +1319,10 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     ) async throws -> CatalogPromoteGraphAlignmentProposal {
         return withState {
             markCatalogSessionHeld(projectDir)
+            if !promoteProposals.isEmpty {
+                let next = promoteProposals.count > 1 ? promoteProposals.removeFirst() : promoteProposals[0]
+                return CatalogPromoteGraphAlignmentProposal(revision: nextAuditRevision - 1, rows: next.rows)
+            }
             let fixedBySubject = Dictionary(uniqueKeysWithValues: fixed.map { ($0.subjectID, $0.handleID) })
             let subjects = subjectsBySource[sourceID] ?? []
             let types = Dictionary(uniqueKeysWithValues: (subjectTypesByProject[projectDir] ?? []).map { ($0.id, $0) })
@@ -1382,11 +1390,12 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         sourceID: String,
         seenRevision: Int64,
         rows: [CatalogPromoteBatchRow],
-        skipBridgeIDs _: [String]
+        skipBridgeIDs: [String]
     ) async throws -> CatalogPromoteBatchResult {
         try withState {
             markCatalogSessionHeld(projectDir)
             recordedCalls.append("applyPromoteGraphAlignment source=\(sourceID) rows=\(rows.count)")
+            lastPromoteBatch = (rows, skipBridgeIDs)
             let current = nextAuditRevision - 1
             guard seenRevision == current else {
                 throw CoreInvokeError.coded(status: 1, code: "promote.stale", kind: .conflict, params: [])

@@ -10798,8 +10798,17 @@ type PromoteGraphAlignmentComparison struct {
 	Outcome        string                 `protobuf:"bytes,3,opt,name=outcome,proto3" json:"outcome,omitempty"` // agree, conflict, unknown
 	ValueType      string                 `protobuf:"bytes,4,opt,name=value_type,json=valueType,proto3" json:"value_type,omitempty"`
 	Pinned         bool                   `protobuf:"varint,5,opt,name=pinned,proto3" json:"pinned,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	Weight         float64                `protobuf:"fixed64,6,opt,name=weight,proto3" json:"weight,omitempty"`
+	// Empty for the Subject's own records; a neighbor label for a one-hop record.
+	GroupLabel            string `protobuf:"bytes,7,opt,name=group_label,json=groupLabel,proto3" json:"group_label,omitempty"`
+	IncomingObservationId string `protobuf:"bytes,8,opt,name=incoming_observation_id,json=incomingObservationId,proto3" json:"incoming_observation_id,omitempty"`
+	IncomingDisplay       string `protobuf:"bytes,9,opt,name=incoming_display,json=incomingDisplay,proto3" json:"incoming_display,omitempty"`
+	IncomingSource        string `protobuf:"bytes,10,opt,name=incoming_source,json=incomingSource,proto3" json:"incoming_source,omitempty"`
+	MemberObservationId   string `protobuf:"bytes,11,opt,name=member_observation_id,json=memberObservationId,proto3" json:"member_observation_id,omitempty"`
+	MemberDisplay         string `protobuf:"bytes,12,opt,name=member_display,json=memberDisplay,proto3" json:"member_display,omitempty"`
+	MemberSource          string `protobuf:"bytes,13,opt,name=member_source,json=memberSource,proto3" json:"member_source,omitempty"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
 }
 
 func (x *PromoteGraphAlignmentComparison) Reset() {
@@ -10867,11 +10876,73 @@ func (x *PromoteGraphAlignmentComparison) GetPinned() bool {
 	return false
 }
 
+func (x *PromoteGraphAlignmentComparison) GetWeight() float64 {
+	if x != nil {
+		return x.Weight
+	}
+	return 0
+}
+
+func (x *PromoteGraphAlignmentComparison) GetGroupLabel() string {
+	if x != nil {
+		return x.GroupLabel
+	}
+	return ""
+}
+
+func (x *PromoteGraphAlignmentComparison) GetIncomingObservationId() string {
+	if x != nil {
+		return x.IncomingObservationId
+	}
+	return ""
+}
+
+func (x *PromoteGraphAlignmentComparison) GetIncomingDisplay() string {
+	if x != nil {
+		return x.IncomingDisplay
+	}
+	return ""
+}
+
+func (x *PromoteGraphAlignmentComparison) GetIncomingSource() string {
+	if x != nil {
+		return x.IncomingSource
+	}
+	return ""
+}
+
+func (x *PromoteGraphAlignmentComparison) GetMemberObservationId() string {
+	if x != nil {
+		return x.MemberObservationId
+	}
+	return ""
+}
+
+func (x *PromoteGraphAlignmentComparison) GetMemberDisplay() string {
+	if x != nil {
+		return x.MemberDisplay
+	}
+	return ""
+}
+
+func (x *PromoteGraphAlignmentComparison) GetMemberSource() string {
+	if x != nil {
+		return x.MemberSource
+	}
+	return ""
+}
+
 type PromoteGraphAlignmentAlternative struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	HandleId      string                 `protobuf:"bytes,1,opt,name=handle_id,json=handleId,proto3" json:"handle_id,omitempty"`
-	HandleRef     string                 `protobuf:"bytes,2,opt,name=handle_ref,json=handleRef,proto3" json:"handle_ref,omitempty"`
-	Score         float64                `protobuf:"fixed64,3,opt,name=score,proto3" json:"score,omitempty"`
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	HandleId  string                 `protobuf:"bytes,1,opt,name=handle_id,json=handleId,proto3" json:"handle_id,omitempty"`
+	HandleRef string                 `protobuf:"bytes,2,opt,name=handle_ref,json=handleRef,proto3" json:"handle_ref,omitempty"`
+	Score     float64                `protobuf:"fixed64,3,opt,name=score,proto3" json:"score,omitempty"`
+	// Types that are valid to be assigned to Header:
+	//
+	//	*PromoteGraphAlignmentAlternative_Person
+	//	*PromoteGraphAlignmentAlternative_Event
+	//	*PromoteGraphAlignmentAlternative_Place
+	Header        isPromoteGraphAlignmentAlternative_Header `protobuf_oneof:"header"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -10927,6 +10998,62 @@ func (x *PromoteGraphAlignmentAlternative) GetScore() float64 {
 	return 0
 }
 
+func (x *PromoteGraphAlignmentAlternative) GetHeader() isPromoteGraphAlignmentAlternative_Header {
+	if x != nil {
+		return x.Header
+	}
+	return nil
+}
+
+func (x *PromoteGraphAlignmentAlternative) GetPerson() *PersonHeader {
+	if x != nil {
+		if x, ok := x.Header.(*PromoteGraphAlignmentAlternative_Person); ok {
+			return x.Person
+		}
+	}
+	return nil
+}
+
+func (x *PromoteGraphAlignmentAlternative) GetEvent() *EventHeader {
+	if x != nil {
+		if x, ok := x.Header.(*PromoteGraphAlignmentAlternative_Event); ok {
+			return x.Event
+		}
+	}
+	return nil
+}
+
+func (x *PromoteGraphAlignmentAlternative) GetPlace() *PlaceHeader {
+	if x != nil {
+		if x, ok := x.Header.(*PromoteGraphAlignmentAlternative_Place); ok {
+			return x.Place
+		}
+	}
+	return nil
+}
+
+type isPromoteGraphAlignmentAlternative_Header interface {
+	isPromoteGraphAlignmentAlternative_Header()
+}
+
+type PromoteGraphAlignmentAlternative_Person struct {
+	Person *PersonHeader `protobuf:"bytes,4,opt,name=person,proto3,oneof"`
+}
+
+type PromoteGraphAlignmentAlternative_Event struct {
+	Event *EventHeader `protobuf:"bytes,5,opt,name=event,proto3,oneof"`
+}
+
+type PromoteGraphAlignmentAlternative_Place struct {
+	Place *PlaceHeader `protobuf:"bytes,6,opt,name=place,proto3,oneof"`
+}
+
+func (*PromoteGraphAlignmentAlternative_Person) isPromoteGraphAlignmentAlternative_Header() {}
+
+func (*PromoteGraphAlignmentAlternative_Event) isPromoteGraphAlignmentAlternative_Header() {}
+
+func (*PromoteGraphAlignmentAlternative_Place) isPromoteGraphAlignmentAlternative_Header() {}
+
 type PromoteGraphAlignmentRow struct {
 	state             protoimpl.MessageState              `protogen:"open.v1"`
 	SubjectId         string                              `protobuf:"bytes,1,opt,name=subject_id,json=subjectId,proto3" json:"subject_id,omitempty"`
@@ -10946,9 +11073,13 @@ type PromoteGraphAlignmentRow struct {
 	//	*PromoteGraphAlignmentRow_Person
 	//	*PromoteGraphAlignmentRow_Event
 	//	*PromoteGraphAlignmentRow_Place
-	Header        isPromoteGraphAlignmentRow_Header `protobuf_oneof:"header"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Header isPromoteGraphAlignmentRow_Header `protobuf_oneof:"header"`
+	// Subject the walk reached this row from, when a neighbor seeded it.
+	ViaNeighborSubjectId string `protobuf:"bytes,16,opt,name=via_neighbor_subject_id,json=viaNeighborSubjectId,proto3" json:"via_neighbor_subject_id,omitempty"`
+	ViaBridgeType        string `protobuf:"bytes,17,opt,name=via_bridge_type,json=viaBridgeType,proto3" json:"via_bridge_type,omitempty"`
+	ViaRole              string `protobuf:"bytes,18,opt,name=via_role,json=viaRole,proto3" json:"via_role,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
 }
 
 func (x *PromoteGraphAlignmentRow) Reset() {
@@ -11097,6 +11228,27 @@ func (x *PromoteGraphAlignmentRow) GetPlace() *PlaceHeader {
 		}
 	}
 	return nil
+}
+
+func (x *PromoteGraphAlignmentRow) GetViaNeighborSubjectId() string {
+	if x != nil {
+		return x.ViaNeighborSubjectId
+	}
+	return ""
+}
+
+func (x *PromoteGraphAlignmentRow) GetViaBridgeType() string {
+	if x != nil {
+		return x.ViaBridgeType
+	}
+	return ""
+}
+
+func (x *PromoteGraphAlignmentRow) GetViaRole() string {
+	if x != nil {
+		return x.ViaRole
+	}
+	return ""
 }
 
 type isPromoteGraphAlignmentRow_Header interface {
@@ -17317,19 +17469,33 @@ const file_engine_proto_rawDesc = "" +
 	"\x1aPromoteGraphAlignmentFixed\x12\x1d\n" +
 	"\n" +
 	"subject_id\x18\x01 \x01(\tR\tsubjectId\x12\x1b\n" +
-	"\thandle_id\x18\x02 \x01(\tR\bhandleId\"\xbe\x01\n" +
+	"\thandle_id\x18\x02 \x01(\tR\bhandleId\"\x83\x04\n" +
 	"\x1fPromoteGraphAlignmentComparison\x12!\n" +
 	"\fproperty_key\x18\x01 \x01(\tR\vpropertyKey\x12'\n" +
 	"\x0fproperty_origin\x18\x02 \x01(\tR\x0epropertyOrigin\x12\x18\n" +
 	"\aoutcome\x18\x03 \x01(\tR\aoutcome\x12\x1d\n" +
 	"\n" +
 	"value_type\x18\x04 \x01(\tR\tvalueType\x12\x16\n" +
-	"\x06pinned\x18\x05 \x01(\bR\x06pinned\"t\n" +
+	"\x06pinned\x18\x05 \x01(\bR\x06pinned\x12\x16\n" +
+	"\x06weight\x18\x06 \x01(\x01R\x06weight\x12\x1f\n" +
+	"\vgroup_label\x18\a \x01(\tR\n" +
+	"groupLabel\x126\n" +
+	"\x17incoming_observation_id\x18\b \x01(\tR\x15incomingObservationId\x12)\n" +
+	"\x10incoming_display\x18\t \x01(\tR\x0fincomingDisplay\x12'\n" +
+	"\x0fincoming_source\x18\n" +
+	" \x01(\tR\x0eincomingSource\x122\n" +
+	"\x15member_observation_id\x18\v \x01(\tR\x13memberObservationId\x12%\n" +
+	"\x0emember_display\x18\f \x01(\tR\rmemberDisplay\x12#\n" +
+	"\rmember_source\x18\r \x01(\tR\fmemberSource\"\xb5\x02\n" +
 	" PromoteGraphAlignmentAlternative\x12\x1b\n" +
 	"\thandle_id\x18\x01 \x01(\tR\bhandleId\x12\x1d\n" +
 	"\n" +
 	"handle_ref\x18\x02 \x01(\tR\thandleRef\x12\x14\n" +
-	"\x05score\x18\x03 \x01(\x01R\x05score\"\xc8\x05\n" +
+	"\x05score\x18\x03 \x01(\x01R\x05score\x12=\n" +
+	"\x06person\x18\x04 \x01(\v2#.provenencia.engine.v1.PersonHeaderH\x00R\x06person\x12:\n" +
+	"\x05event\x18\x05 \x01(\v2\".provenencia.engine.v1.EventHeaderH\x00R\x05event\x12:\n" +
+	"\x05place\x18\x06 \x01(\v2\".provenencia.engine.v1.PlaceHeaderH\x00R\x05placeB\b\n" +
+	"\x06header\"\xc2\x06\n" +
 	"\x18PromoteGraphAlignmentRow\x12\x1d\n" +
 	"\n" +
 	"subject_id\x18\x01 \x01(\tR\tsubjectId\x12\x12\n" +
@@ -17350,7 +17516,10 @@ const file_engine_proto_rawDesc = "" +
 	"\x12possible_duplicate\x18\f \x01(\bR\x11possibleDuplicate\x12=\n" +
 	"\x06person\x18\r \x01(\v2#.provenencia.engine.v1.PersonHeaderH\x00R\x06person\x12:\n" +
 	"\x05event\x18\x0e \x01(\v2\".provenencia.engine.v1.EventHeaderH\x00R\x05event\x12:\n" +
-	"\x05place\x18\x0f \x01(\v2\".provenencia.engine.v1.PlaceHeaderH\x00R\x05placeB\b\n" +
+	"\x05place\x18\x0f \x01(\v2\".provenencia.engine.v1.PlaceHeaderH\x00R\x05place\x125\n" +
+	"\x17via_neighbor_subject_id\x18\x10 \x01(\tR\x14viaNeighborSubjectId\x12&\n" +
+	"\x0fvia_bridge_type\x18\x11 \x01(\tR\rviaBridgeType\x12\x19\n" +
+	"\bvia_role\x18\x12 \x01(\tR\aviaRoleB\b\n" +
 	"\x06header\"\x87\x01\n" +
 	"$ProposePromoteGraphAlignmentResponse\x12C\n" +
 	"\x04rows\x18\x01 \x03(\v2/.provenencia.engine.v1.PromoteGraphAlignmentRowR\x04rows\x12\x1a\n" +
@@ -18287,73 +18456,76 @@ var file_engine_proto_depIdxs = []int32{
 	141, // 100: provenencia.engine.v1.PromoteTargetSuggestion.person:type_name -> provenencia.engine.v1.PersonHeader
 	160, // 101: provenencia.engine.v1.ListPromoteTargetSuggestionsResponse.suggestions:type_name -> provenencia.engine.v1.PromoteTargetSuggestion
 	163, // 102: provenencia.engine.v1.ProposePromoteGraphAlignmentRequest.fixed:type_name -> provenencia.engine.v1.PromoteGraphAlignmentFixed
-	164, // 103: provenencia.engine.v1.PromoteGraphAlignmentRow.comparisons:type_name -> provenencia.engine.v1.PromoteGraphAlignmentComparison
-	165, // 104: provenencia.engine.v1.PromoteGraphAlignmentRow.alternatives:type_name -> provenencia.engine.v1.PromoteGraphAlignmentAlternative
-	141, // 105: provenencia.engine.v1.PromoteGraphAlignmentRow.person:type_name -> provenencia.engine.v1.PersonHeader
-	144, // 106: provenencia.engine.v1.PromoteGraphAlignmentRow.event:type_name -> provenencia.engine.v1.EventHeader
-	148, // 107: provenencia.engine.v1.PromoteGraphAlignmentRow.place:type_name -> provenencia.engine.v1.PlaceHeader
-	166, // 108: provenencia.engine.v1.ProposePromoteGraphAlignmentResponse.rows:type_name -> provenencia.engine.v1.PromoteGraphAlignmentRow
-	170, // 109: provenencia.engine.v1.ApplyPromoteGraphAlignmentRequest.rows:type_name -> provenencia.engine.v1.ApplyPromoteGraphAlignmentRow
-	169, // 110: provenencia.engine.v1.ApplyPromoteGraphAlignmentRow.pairs:type_name -> provenencia.engine.v1.ApplyPromoteGraphAlignmentPair
-	123, // 111: provenencia.engine.v1.ApplyPromoteGraphAlignmentWritten.entity:type_name -> provenencia.engine.v1.CanonicalEntity
-	124, // 112: provenencia.engine.v1.ApplyPromoteGraphAlignmentWritten.claim:type_name -> provenencia.engine.v1.IdentityClaim
-	171, // 113: provenencia.engine.v1.ApplyPromoteGraphAlignmentResponse.written:type_name -> provenencia.engine.v1.ApplyPromoteGraphAlignmentWritten
-	113, // 114: provenencia.engine.v1.ListSubjectsResponse.subjects:type_name -> provenencia.engine.v1.Subject
-	114, // 115: provenencia.engine.v1.SetSubjectPositionResponse.position:type_name -> provenencia.engine.v1.SubjectPosition
-	114, // 116: provenencia.engine.v1.ListSubjectPositionsResponse.positions:type_name -> provenencia.engine.v1.SubjectPosition
-	181, // 117: provenencia.engine.v1.SubjectTypeProperty.property:type_name -> provenencia.engine.v1.Property
-	186, // 118: provenencia.engine.v1.ConnectRule.edges:type_name -> provenencia.engine.v1.ConnectEdge
-	181, // 119: provenencia.engine.v1.ListPropertiesResponse.properties:type_name -> provenencia.engine.v1.Property
-	181, // 120: provenencia.engine.v1.CreatePropertyResponse.property:type_name -> provenencia.engine.v1.Property
-	181, // 121: provenencia.engine.v1.UpdatePropertyResponse.property:type_name -> provenencia.engine.v1.Property
-	183, // 122: provenencia.engine.v1.ListSubjectTypePropertiesResponse.properties:type_name -> provenencia.engine.v1.SubjectTypeProperty
-	184, // 123: provenencia.engine.v1.ListPlaceableSubjectTypesResponse.types:type_name -> provenencia.engine.v1.SubjectTypePresentation
-	184, // 124: provenencia.engine.v1.GetSubjectTypePresentationResponse.presentation:type_name -> provenencia.engine.v1.SubjectTypePresentation
-	185, // 125: provenencia.engine.v1.ListConnectRulesResponse.rules:type_name -> provenencia.engine.v1.ConnectRule
-	182, // 126: provenencia.engine.v1.ListPropertyTermsResponse.terms:type_name -> provenencia.engine.v1.PropertyTerm
-	182, // 127: provenencia.engine.v1.CreatePropertyTermResponse.term:type_name -> provenencia.engine.v1.PropertyTerm
-	182, // 128: provenencia.engine.v1.UpdatePropertyTermResponse.term:type_name -> provenencia.engine.v1.PropertyTerm
-	215, // 129: provenencia.engine.v1.NameValueInput.parts:type_name -> provenencia.engine.v1.NameValuePartInput
-	38,  // 130: provenencia.engine.v1.Observation.date:type_name -> provenencia.engine.v1.DateValueInput
-	216, // 131: provenencia.engine.v1.Observation.name:type_name -> provenencia.engine.v1.NameValueInput
-	38,  // 132: provenencia.engine.v1.ObservationDraft.date:type_name -> provenencia.engine.v1.DateValueInput
-	216, // 133: provenencia.engine.v1.ObservationDraft.name:type_name -> provenencia.engine.v1.NameValueInput
-	219, // 134: provenencia.engine.v1.CreateCitationWithObservationsRequest.observations:type_name -> provenencia.engine.v1.ObservationDraft
-	217, // 135: provenencia.engine.v1.CreateCitationWithObservationsResponse.citation:type_name -> provenencia.engine.v1.Citation
-	218, // 136: provenencia.engine.v1.CreateCitationWithObservationsResponse.observations:type_name -> provenencia.engine.v1.Observation
-	219, // 137: provenencia.engine.v1.AddObservationsToCitationRequest.observations:type_name -> provenencia.engine.v1.ObservationDraft
-	218, // 138: provenencia.engine.v1.AddObservationsToCitationResponse.observations:type_name -> provenencia.engine.v1.Observation
-	218, // 139: provenencia.engine.v1.ListObservationsBySourceResponse.observations:type_name -> provenencia.engine.v1.Observation
-	227, // 140: provenencia.engine.v1.CitationCountsBySourceResponse.counts:type_name -> provenencia.engine.v1.ArtifactCitationCount
-	217, // 141: provenencia.engine.v1.ListedCitation.citation:type_name -> provenencia.engine.v1.Citation
-	229, // 142: provenencia.engine.v1.ListCitationsByArtifactResponse.citations:type_name -> provenencia.engine.v1.ListedCitation
-	217, // 143: provenencia.engine.v1.GetCitationResponse.citation:type_name -> provenencia.engine.v1.Citation
-	218, // 144: provenencia.engine.v1.GetCitationResponse.observations:type_name -> provenencia.engine.v1.Observation
-	219, // 145: provenencia.engine.v1.CreateCitedBridgeRequest.observations:type_name -> provenencia.engine.v1.ObservationDraft
-	113, // 146: provenencia.engine.v1.CreateCitedBridgeResponse.subject:type_name -> provenencia.engine.v1.Subject
-	217, // 147: provenencia.engine.v1.CreateCitedBridgeResponse.citation:type_name -> provenencia.engine.v1.Citation
-	218, // 148: provenencia.engine.v1.CreateCitedBridgeResponse.observations:type_name -> provenencia.engine.v1.Observation
-	217, // 149: provenencia.engine.v1.UpdateCitationResponse.citation:type_name -> provenencia.engine.v1.Citation
-	218, // 150: provenencia.engine.v1.UpdateObservationRequest.observation:type_name -> provenencia.engine.v1.Observation
-	218, // 151: provenencia.engine.v1.UpdateObservationResponse.observation:type_name -> provenencia.engine.v1.Observation
-	183, // 152: provenencia.engine.v1.SubjectTypePropertiesGroup.properties:type_name -> provenencia.engine.v1.SubjectTypeProperty
-	184, // 153: provenencia.engine.v1.SubjectTypePropertiesGroup.presentation:type_name -> provenencia.engine.v1.SubjectTypePresentation
-	181, // 154: provenencia.engine.v1.GetPropertiesWorkspaceResponse.properties:type_name -> provenencia.engine.v1.Property
-	112, // 155: provenencia.engine.v1.GetPropertiesWorkspaceResponse.types:type_name -> provenencia.engine.v1.SubjectType
-	243, // 156: provenencia.engine.v1.GetPropertiesWorkspaceResponse.groups:type_name -> provenencia.engine.v1.SubjectTypePropertiesGroup
-	245, // 157: provenencia.engine.v1.ListSourceGraphProgressResponse.rows:type_name -> provenencia.engine.v1.SourceGraphProgress
-	245, // 158: provenencia.engine.v1.GetSourceGraphProgressResponse.progress:type_name -> provenencia.engine.v1.SourceGraphProgress
-	2,   // 159: provenencia.engine.v1.GetDeleteImpactResponse.gate:type_name -> provenencia.engine.v1.DeleteImpactGate
-	252, // 160: provenencia.engine.v1.GetDeleteImpactResponse.groups:type_name -> provenencia.engine.v1.DeleteImpactGroup
-	252, // 161: provenencia.engine.v1.GetDeleteImpactResponse.cascades:type_name -> provenencia.engine.v1.DeleteImpactGroup
-	253, // 162: provenencia.engine.v1.DeleteImpactGroup.listed:type_name -> provenencia.engine.v1.DeleteImpactListed
-	108, // 163: provenencia.engine.v1.DeleteImpactListed.location:type_name -> provenencia.engine.v1.WorkspaceLocation
-	3,   // 164: provenencia.engine.v1.Error.kind:type_name -> provenencia.engine.v1.ErrorKind
-	165, // [165:165] is the sub-list for method output_type
-	165, // [165:165] is the sub-list for method input_type
-	165, // [165:165] is the sub-list for extension type_name
-	165, // [165:165] is the sub-list for extension extendee
-	0,   // [0:165] is the sub-list for field type_name
+	141, // 103: provenencia.engine.v1.PromoteGraphAlignmentAlternative.person:type_name -> provenencia.engine.v1.PersonHeader
+	144, // 104: provenencia.engine.v1.PromoteGraphAlignmentAlternative.event:type_name -> provenencia.engine.v1.EventHeader
+	148, // 105: provenencia.engine.v1.PromoteGraphAlignmentAlternative.place:type_name -> provenencia.engine.v1.PlaceHeader
+	164, // 106: provenencia.engine.v1.PromoteGraphAlignmentRow.comparisons:type_name -> provenencia.engine.v1.PromoteGraphAlignmentComparison
+	165, // 107: provenencia.engine.v1.PromoteGraphAlignmentRow.alternatives:type_name -> provenencia.engine.v1.PromoteGraphAlignmentAlternative
+	141, // 108: provenencia.engine.v1.PromoteGraphAlignmentRow.person:type_name -> provenencia.engine.v1.PersonHeader
+	144, // 109: provenencia.engine.v1.PromoteGraphAlignmentRow.event:type_name -> provenencia.engine.v1.EventHeader
+	148, // 110: provenencia.engine.v1.PromoteGraphAlignmentRow.place:type_name -> provenencia.engine.v1.PlaceHeader
+	166, // 111: provenencia.engine.v1.ProposePromoteGraphAlignmentResponse.rows:type_name -> provenencia.engine.v1.PromoteGraphAlignmentRow
+	170, // 112: provenencia.engine.v1.ApplyPromoteGraphAlignmentRequest.rows:type_name -> provenencia.engine.v1.ApplyPromoteGraphAlignmentRow
+	169, // 113: provenencia.engine.v1.ApplyPromoteGraphAlignmentRow.pairs:type_name -> provenencia.engine.v1.ApplyPromoteGraphAlignmentPair
+	123, // 114: provenencia.engine.v1.ApplyPromoteGraphAlignmentWritten.entity:type_name -> provenencia.engine.v1.CanonicalEntity
+	124, // 115: provenencia.engine.v1.ApplyPromoteGraphAlignmentWritten.claim:type_name -> provenencia.engine.v1.IdentityClaim
+	171, // 116: provenencia.engine.v1.ApplyPromoteGraphAlignmentResponse.written:type_name -> provenencia.engine.v1.ApplyPromoteGraphAlignmentWritten
+	113, // 117: provenencia.engine.v1.ListSubjectsResponse.subjects:type_name -> provenencia.engine.v1.Subject
+	114, // 118: provenencia.engine.v1.SetSubjectPositionResponse.position:type_name -> provenencia.engine.v1.SubjectPosition
+	114, // 119: provenencia.engine.v1.ListSubjectPositionsResponse.positions:type_name -> provenencia.engine.v1.SubjectPosition
+	181, // 120: provenencia.engine.v1.SubjectTypeProperty.property:type_name -> provenencia.engine.v1.Property
+	186, // 121: provenencia.engine.v1.ConnectRule.edges:type_name -> provenencia.engine.v1.ConnectEdge
+	181, // 122: provenencia.engine.v1.ListPropertiesResponse.properties:type_name -> provenencia.engine.v1.Property
+	181, // 123: provenencia.engine.v1.CreatePropertyResponse.property:type_name -> provenencia.engine.v1.Property
+	181, // 124: provenencia.engine.v1.UpdatePropertyResponse.property:type_name -> provenencia.engine.v1.Property
+	183, // 125: provenencia.engine.v1.ListSubjectTypePropertiesResponse.properties:type_name -> provenencia.engine.v1.SubjectTypeProperty
+	184, // 126: provenencia.engine.v1.ListPlaceableSubjectTypesResponse.types:type_name -> provenencia.engine.v1.SubjectTypePresentation
+	184, // 127: provenencia.engine.v1.GetSubjectTypePresentationResponse.presentation:type_name -> provenencia.engine.v1.SubjectTypePresentation
+	185, // 128: provenencia.engine.v1.ListConnectRulesResponse.rules:type_name -> provenencia.engine.v1.ConnectRule
+	182, // 129: provenencia.engine.v1.ListPropertyTermsResponse.terms:type_name -> provenencia.engine.v1.PropertyTerm
+	182, // 130: provenencia.engine.v1.CreatePropertyTermResponse.term:type_name -> provenencia.engine.v1.PropertyTerm
+	182, // 131: provenencia.engine.v1.UpdatePropertyTermResponse.term:type_name -> provenencia.engine.v1.PropertyTerm
+	215, // 132: provenencia.engine.v1.NameValueInput.parts:type_name -> provenencia.engine.v1.NameValuePartInput
+	38,  // 133: provenencia.engine.v1.Observation.date:type_name -> provenencia.engine.v1.DateValueInput
+	216, // 134: provenencia.engine.v1.Observation.name:type_name -> provenencia.engine.v1.NameValueInput
+	38,  // 135: provenencia.engine.v1.ObservationDraft.date:type_name -> provenencia.engine.v1.DateValueInput
+	216, // 136: provenencia.engine.v1.ObservationDraft.name:type_name -> provenencia.engine.v1.NameValueInput
+	219, // 137: provenencia.engine.v1.CreateCitationWithObservationsRequest.observations:type_name -> provenencia.engine.v1.ObservationDraft
+	217, // 138: provenencia.engine.v1.CreateCitationWithObservationsResponse.citation:type_name -> provenencia.engine.v1.Citation
+	218, // 139: provenencia.engine.v1.CreateCitationWithObservationsResponse.observations:type_name -> provenencia.engine.v1.Observation
+	219, // 140: provenencia.engine.v1.AddObservationsToCitationRequest.observations:type_name -> provenencia.engine.v1.ObservationDraft
+	218, // 141: provenencia.engine.v1.AddObservationsToCitationResponse.observations:type_name -> provenencia.engine.v1.Observation
+	218, // 142: provenencia.engine.v1.ListObservationsBySourceResponse.observations:type_name -> provenencia.engine.v1.Observation
+	227, // 143: provenencia.engine.v1.CitationCountsBySourceResponse.counts:type_name -> provenencia.engine.v1.ArtifactCitationCount
+	217, // 144: provenencia.engine.v1.ListedCitation.citation:type_name -> provenencia.engine.v1.Citation
+	229, // 145: provenencia.engine.v1.ListCitationsByArtifactResponse.citations:type_name -> provenencia.engine.v1.ListedCitation
+	217, // 146: provenencia.engine.v1.GetCitationResponse.citation:type_name -> provenencia.engine.v1.Citation
+	218, // 147: provenencia.engine.v1.GetCitationResponse.observations:type_name -> provenencia.engine.v1.Observation
+	219, // 148: provenencia.engine.v1.CreateCitedBridgeRequest.observations:type_name -> provenencia.engine.v1.ObservationDraft
+	113, // 149: provenencia.engine.v1.CreateCitedBridgeResponse.subject:type_name -> provenencia.engine.v1.Subject
+	217, // 150: provenencia.engine.v1.CreateCitedBridgeResponse.citation:type_name -> provenencia.engine.v1.Citation
+	218, // 151: provenencia.engine.v1.CreateCitedBridgeResponse.observations:type_name -> provenencia.engine.v1.Observation
+	217, // 152: provenencia.engine.v1.UpdateCitationResponse.citation:type_name -> provenencia.engine.v1.Citation
+	218, // 153: provenencia.engine.v1.UpdateObservationRequest.observation:type_name -> provenencia.engine.v1.Observation
+	218, // 154: provenencia.engine.v1.UpdateObservationResponse.observation:type_name -> provenencia.engine.v1.Observation
+	183, // 155: provenencia.engine.v1.SubjectTypePropertiesGroup.properties:type_name -> provenencia.engine.v1.SubjectTypeProperty
+	184, // 156: provenencia.engine.v1.SubjectTypePropertiesGroup.presentation:type_name -> provenencia.engine.v1.SubjectTypePresentation
+	181, // 157: provenencia.engine.v1.GetPropertiesWorkspaceResponse.properties:type_name -> provenencia.engine.v1.Property
+	112, // 158: provenencia.engine.v1.GetPropertiesWorkspaceResponse.types:type_name -> provenencia.engine.v1.SubjectType
+	243, // 159: provenencia.engine.v1.GetPropertiesWorkspaceResponse.groups:type_name -> provenencia.engine.v1.SubjectTypePropertiesGroup
+	245, // 160: provenencia.engine.v1.ListSourceGraphProgressResponse.rows:type_name -> provenencia.engine.v1.SourceGraphProgress
+	245, // 161: provenencia.engine.v1.GetSourceGraphProgressResponse.progress:type_name -> provenencia.engine.v1.SourceGraphProgress
+	2,   // 162: provenencia.engine.v1.GetDeleteImpactResponse.gate:type_name -> provenencia.engine.v1.DeleteImpactGate
+	252, // 163: provenencia.engine.v1.GetDeleteImpactResponse.groups:type_name -> provenencia.engine.v1.DeleteImpactGroup
+	252, // 164: provenencia.engine.v1.GetDeleteImpactResponse.cascades:type_name -> provenencia.engine.v1.DeleteImpactGroup
+	253, // 165: provenencia.engine.v1.DeleteImpactGroup.listed:type_name -> provenencia.engine.v1.DeleteImpactListed
+	108, // 166: provenencia.engine.v1.DeleteImpactListed.location:type_name -> provenencia.engine.v1.WorkspaceLocation
+	3,   // 167: provenencia.engine.v1.Error.kind:type_name -> provenencia.engine.v1.ErrorKind
+	168, // [168:168] is the sub-list for method output_type
+	168, // [168:168] is the sub-list for method input_type
+	168, // [168:168] is the sub-list for extension type_name
+	168, // [168:168] is the sub-list for extension extendee
+	0,   // [0:168] is the sub-list for field type_name
 }
 
 func init() { file_engine_proto_init() }
@@ -18373,6 +18545,11 @@ func file_engine_proto_init() {
 		(*ConclusionDetail_Person)(nil),
 		(*ConclusionDetail_Event)(nil),
 		(*ConclusionDetail_Place)(nil),
+	}
+	file_engine_proto_msgTypes[161].OneofWrappers = []any{
+		(*PromoteGraphAlignmentAlternative_Person)(nil),
+		(*PromoteGraphAlignmentAlternative_Event)(nil),
+		(*PromoteGraphAlignmentAlternative_Place)(nil),
 	}
 	file_engine_proto_msgTypes[162].OneofWrappers = []any{
 		(*PromoteGraphAlignmentRow_Person)(nil),

@@ -825,18 +825,41 @@ struct GoStore: GenealogyStore {
                         propertyOrigin: c.propertyOrigin,
                         outcome: c.outcome,
                         valueType: c.valueType,
-                        pinned: c.pinned
+                        pinned: c.pinned,
+                        weight: c.weight,
+                        groupLabel: c.groupLabel,
+                        incomingObservationID: c.incomingObservationID,
+                        incomingDisplay: c.incomingDisplay,
+                        incomingSource: c.incomingSource,
+                        memberObservationID: c.memberObservationID,
+                        memberDisplay: c.memberDisplay,
+                        memberSource: c.memberSource
                     )
                 },
                 alternatives: r.alternatives.map { a in
-                    CatalogPromoteGraphAlignmentAlternative(
+                    var altPerson: CatalogPersonHeader?
+                    var altEvent: CatalogEventHeader?
+                    var altPlace: CatalogPlaceHeader?
+                    switch a.header {
+                    case .person(let h): altPerson = Self.mapPersonHeader(h)
+                    case .event(let h): altEvent = Self.mapEventHeader(h)
+                    case .place(let h): altPlace = Self.mapPlaceHeader(h)
+                    case nil: break
+                    }
+                    return CatalogPromoteGraphAlignmentAlternative(
                         handleID: a.handleID,
                         handleRef: a.handleRef,
-                        score: a.score
+                        score: a.score,
+                        person: altPerson,
+                        event: altEvent,
+                        place: altPlace
                     )
                 },
                 conflictWithFixed: r.conflictWithFixed,
                 possibleDuplicate: r.possibleDuplicate,
+                viaNeighborSubjectID: r.viaNeighborSubjectID,
+                viaBridgeType: r.viaBridgeType,
+                viaRole: r.viaRole,
                 person: person,
                 event: event,
                 place: place

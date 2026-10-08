@@ -62,7 +62,11 @@ func Propose(q Querier, sourceID []byte, fixed []graphalign.Fixed) (graphalign.P
 	}
 
 	cfg := graphalign.DefaultConfig()
-	return graphalign.Align(layer, canon, stats, anchors, &cfg), rev, nil
+	prop := graphalign.Align(layer, canon, stats, anchors, &cfg)
+	if err := attachExhibits(q, layer, &prop, cfg, stats); err != nil {
+		return graphalign.Proposal{}, 0, err
+	}
+	return prop, rev, nil
 }
 
 // mergeFixed validates caller fixed pairs and adds already-promoted Subjects
