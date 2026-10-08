@@ -1252,3 +1252,22 @@ The Promote place is one page. The step wizard is gone.
 - Previewing a place-hierarchy cycle before Done.
 - A check that two New rows may be the same person, and a stale failure that explains a merge.
 - Migrations / product VERSION bump.
+
+### S9-44 review — Promote graph alignment fixes
+
+An app-health review of S9-41 – S9-44, fixed as a stack of eight PRs (#307 – #314). What's built and what still differs from the design: [`promote-graph-alignment.md`](../../promote-graph-alignment.md) §12.
+
+**What shipped**
+
+- **Precision and determinism:** the property-only fallback scores on the walk's scale, so a shared surname no longer reads as a strong match. Contests over a handle are decided best-first, and every tie breaks by ref and id. Edge support counts each neighbor once; fan-out is keyed like the signatures; the stats cache is per catalog.
+- **Pins:** a neighbor's record pairs only with the handle that neighbor is filed on, in the exhibits and in the batch write's check.
+- **Done:** Skip rows file nothing but the skip; a retarget re-drafts pins and argument; only the latest proposal merges, and Done waits for it.
+- **Decisions and warnings:** New and Skip decisions are held. Conflict, lost-handle, and alike-New warnings fire.
+- **Copy:** reasons are codes the page words; the evidence sheet uses Property and term labels and neighbor names; row state is typed.
+- **Cost:** every proposal read is batched; the query count no longer grows with the layer.
+- **Accessibility:** identifiers on every control on the page and sheet; pins and the evidence button say what they refer to.
+- **Cleanup:** directed terms match from the same end; the step flow's target-suggestions RPC, cache key, and strings are gone.
+
+**What stayed out**
+
+- The §12 differences: provenance scaling, comparing every shared Property, name frequencies, fallback islands seeding a walk, bridge kinds in the loaders' hop tables.
