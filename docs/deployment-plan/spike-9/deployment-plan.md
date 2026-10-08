@@ -499,7 +499,7 @@ In order; each brief sits just above the PR it gates.
 - [x] S9-40 — Place hierarchy in list and detail → [`completed.md`](completed.md)
 - [x] S9-41 — Graph alignment core → [`completed.md`](completed.md)
 - [x] S9-42 — Graph alignment loader + proposal read → [`completed.md`](completed.md)
-- [ ] S9-43 — Batch Promote write
+- [x] S9-43 — Batch Promote write → [`completed.md`](completed.md)
 - [ ] ✎ S9-D16 — Design: Promote page (rethink)
 - [ ] S9-44 — Promote page
 - [ ] S9-33 — Deep fixture + timings
@@ -936,15 +936,11 @@ Design: [`promote-graph-alignment.md`](../../promote-graph-alignment.md). Brief:
 
 #### S9-42 — Graph alignment loader + proposal read
 
-**Done.** See [`completed.md`](completed.md#s9-42--graph-alignment-loader--proposal-read). Catalog `promotealign.Propose` loads Layer / Canon / Stats and calls pure `graphalign.Align`; FFI `ProposePromoteGraphAlignment` + Swift store / FakeStore. Batch Done stays **S9-43**.
+**Done.** See [`completed.md`](completed.md#s9-42--graph-alignment-loader--proposal-read). Catalog `promotealign.Propose` loads Layer / Canon / Stats and calls pure `graphalign.Align`; FFI `ProposePromoteGraphAlignment` + Swift store / FakeStore.
 
 #### S9-43 — Batch Promote write
 
-| | |
-| --- | --- |
-| **In** | One transaction per Done (design §9): re-validate against the revision the proposal saw; a claim per row (status, confidence, argument), a minted handle for New, nothing for Skip; pins from the toggled comparisons, the pair check widened to **one-hop neighbors through a bridge**, with backfill; bridge filing through S9-28 (including the **both-ends-already-promoted** / missing-relationship case in design §5.1), skipping switched-off bridges; one R3 recompute over every touched handle; one audit revision. FFI + Swift store + FakeStore, with pins modelled so S9-44's tests cover pinned deletes from the composer and the graph. |
-| **Testable** | All or nothing on a lost race; one-hop pins land on both claims; each bridge filed once (including a bridge whose ends were both claimed before this batch); rebuild equals upkeep after a batch. |
-| **Depends on** | S9-17, S9-28, S9-42 |
+**Done.** See [`completed.md`](completed.md#s9-43--batch-promote-write). `promote.SaveBatch` files claims, one-hop pins, and source bridges in one revision; FFI `ApplyPromoteGraphAlignment` + FakeStore pin impact. Promote page stays **S9-44**.
 
 #### S9-44 — Promote page
 

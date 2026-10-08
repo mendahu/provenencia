@@ -1205,3 +1205,22 @@ Catalog adapter for Promote graph alignment: load Layer / Canon / Stats, call pu
 - Promote page: **S9-44**.
 - Rewiring `Rank` onto Compatible.
 - Migrations / product VERSION bump.
+
+### S9-43 — Batch Promote write
+
+One Done transaction: claims, one-hop pins with backfill, and source-wide bridge filing, then FFI.
+
+**What shipped**
+
+- `promote.SaveBatch`: lost-race check against the revision `Propose` stamped (`promote.stale`); Skip writes nothing; New mints a handle and an accepted claim; Handle joins an unmerged same-type handle; an existing claim on that same handle is an anchor. One `promote_batch` audit revision and one auto-reconciler recompute.
+- Pair check widened to one hop through a bridge (participation, relationship, location, place relationship), same Property. Both Observations pin the new claim and backfill onto the member's claim.
+- `FileSourceBridgesTx` files unfiled bridges on the Source whose ends are both handles, including a bridge whose ends were claimed before this batch. Switched-off bridges are skipped. Self-links and place-hierarchy cycles stay unfiled.
+- FFI `ApplyPromoteGraphAlignment` and a `revision` on `ProposePromoteGraphAlignment`. Swift `GenealogyStore` / `GoStore`. FakeStore records pins and `observationDeleteImpact` names each distinct handle, so S9-44 can assert a pinned delete names the Person.
+- Tests: stale revision writes nothing; two new ends file one participation; an already-promoted pair files on a later batch; a skipped bridge stays unfiled; a person's claim pins a one-hop birth date and that pin is backfilled; cache matches a rebuild.
+
+**What stayed out**
+
+- Promote page, evidence sheet, leave guard: **S9-44**.
+- Editing or removing an existing claim (Spike 10).
+- Rewiring `Rank` onto Compatible.
+- Migrations / product VERSION bump.
