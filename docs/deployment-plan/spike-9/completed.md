@@ -57,6 +57,10 @@ IDs stay stable (`S9-NN`, `S9-DN`). Do not renumber when moving steps here.
 | S9-39 | PR | Place chain composer |
 | S9-40 | PR | Place hierarchy in list and detail |
 | S9-41 | PR | Graph alignment core |
+| S9-42 | PR | Graph alignment loader + proposal read |
+| S9-43 | PR | Batch Promote write |
+| S9-D16 | Design | Promote page |
+| S9-44 | PR | Promote page |
 
 ## Steps
 
@@ -1223,4 +1227,28 @@ One Done transaction: claims, one-hop pins with backfill, and source-wide bridge
 - Promote page, evidence sheet, leave guard: **S9-44**.
 - Editing or removing an existing claim (Spike 10).
 - Rewiring `Rank` onto Compatible.
+- Migrations / product VERSION bump.
+
+### S9-D16 — Promote page
+
+Design brief for the one-page Promote flow. Board: twelve frames, kit only. Gates **S9-44**. Replaces S9-D9 / S9-D10.
+
+### S9-44 — Promote page
+
+The Promote place is one page. The step wizard is gone.
+
+**What shipped**
+
+- After Align, `promotealign` attaches exhibit lines (own properties and one hop through a bridge): group label, outcome, weight, both displays, both sources, both observation ids. Agreeing lines default pinned. Alternatives carry Person / Event / Place headers. The seeding neighbor and edge signature stay on the row as the via path.
+- The page opens on the clicked subject. *Map the rest of this graph* reveals the others. Already-filed rows are read-only anchors. A weak or unmatched row starts on Skip and keeps its handle at the top of the menu. A touched row is decided and is not overwritten; suggested rows that move show Updated. Two rows on one existing handle warn that combining belongs on the Evidence graph.
+- Evidence sheet: exhibit groups, pin toggles, status Accepted only, confidence, argument drafted from the agreeing lines. Connections file when both ends resolve to a handle, the switch is on, and the ends are not the same handle.
+- Done sends the seen revision, the rows in scope, the pins still on, and the switched-off bridges. A stale revision files nothing and proposes again. Leave asks only after a manual change. A pinned Observation's delete confirm names the Person.
+- Tests: row list, re-propose, pins and skipped bridges, stale Done, leave guard, pinned-delete copy.
+
+**What stayed out**
+
+- Provisional or rejected status, editing or removing a claim (Spike 10), saved drafts, learned weights.
+- Rewiring `Rank` onto Compatible.
+- Previewing a place-hierarchy cycle before Done.
+- A check that two New rows may be the same person, and a stale failure that explains a merge.
 - Migrations / product VERSION bump.
