@@ -49,7 +49,7 @@ Promote is one workspace page; the choose-target screen and the separate claim s
 - **Assessment:** each row shows **strong**, **weak** or **no match**. Clicking it opens a **sheet** with every comparison that contributed: agree, conflict or unknown, with its weight. The agreeing comparisons are preselected as pins and can be toggled.
 - **Claim fields per row:** status, confidence and argument. The argument can be drafted from the assessment.
 - **Bridges aren't rows** (participation, relationship, location). A summary line reads "22 connections will be filed". It expands to a list where each bridge can be switched off, for a relationship the researcher doesn't accept from this Source. Filing rules: §9.1.
-- **Possible duplicates:** two rows landing on the same existing handle, or two New rows that score as near-identical, get a warning ("these may be the same person; combine them on the Evidence graph"). There is no row-to-row option.
+- **Possible duplicates:** two rows landing on the same existing handle, or two New rows whose properties clear the accept bar, get a warning ("these may be the same record; combine them on the Evidence graph"). A signature both rows have neighbors for suppresses the warning when none of those neighbors are the same subject or a match. There is no row-to-row option.
 - **Done** writes the whole batch in one transaction (§9).
 - **Leaving:** the leave guard covers accidental navigation. Drafts aren't persisted: re-opening re-proposes everything, and only manual changes are lost.
 
@@ -291,4 +291,4 @@ As built at the end of Spike 9 slice 9 (S9-41 – S9-44 and the review fixes sta
 - **Provenance (§6):** not applied. Every Subject's provenance is 1; credibility, transcription certainty, and member claim confidence don't scale comparisons yet.
 - **Bridge kinds in the loaders:** the layer and canon loaders list their hops (participation, location, relationship, part of, succeeded by) in code. Pins and filing read bridge kinds from `connectrules`.
 - **Fallback islands:** an accepted property match seeds the same walk as a fixed anchor. A `Rank` loser does not. One-hop refinement still does not add handles; it only rescores candidates the walk or `Rank` already recorded.
-- **Exhibit values:** dates show their start year only.
+- **Exhibit values:** a date travels as a structured value. The Mac client formats it with `DateValueDisplay` for the user's locale. The display string is the portable fallback (`Before 2001-03-31`).

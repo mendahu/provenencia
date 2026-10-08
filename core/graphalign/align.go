@@ -659,9 +659,11 @@ func (st *state) flagSharedHandles(rows []Row) {
 	}
 }
 
-// flagAlikeNewRows marks two New rows of one kind whose values would clear
-// the accept bar against each other: filing both mints two handles for what
-// may be one entity. It only warns, so the bar is acceptance, not strong.
+// flagAlikeNewRows marks two New rows of one kind that would clear the accept
+// bar against each other: filing both mints two handles for what may be one
+// entity. A signature both rows have neighbors for suppresses the warning
+// when none of those neighbors are the same subject or a match. It only
+// warns, so the bar is acceptance, not strong.
 func (st *state) flagAlikeNewRows(rows []Row) {
 	for i := range rows {
 		if rows[i].Target != TargetNew || rows[i].Flags.PossibleDuplicate {
@@ -673,8 +675,7 @@ func (st *state) flagAlikeNewRows(rows []Row) {
 				continue
 			}
 			b := st.subjects[string(rows[j].SubjectID)]
-			ev := match.Evaluate(a.Values, b.Values, st.metas)
-			if ScoreCandidate(ev, a.Values, 0, 1, st.cfg, st.stats).Score < st.cfg.AcceptScore {
+			if !st.alikeNew(a, b) {
 				continue
 			}
 			rows[i].Flags.PossibleDuplicate = true
@@ -682,6 +683,92 @@ func (st *state) flagAlikeNewRows(rows []Row) {
 			break
 		}
 	}
+}
+
+// alikeNew reports whether two New subjects score as one entity. Properties
+// are scored as usual. Each signature both have neighbors for adds one link
+// when a neighbor matches, and rejects the pair when none do.
+func (st *state) alikeNew(a, b *Subject) bool {
+	facts, disagree := st.newPairFacts(a.ID, b.ID)
+	if disagree {
+		return false
+	}
+	ev := match.Evaluate(a.Values, b.Values, st.metas)
+	return ScoreCandidate(ev, a.Values, EdgePoints(facts, st.cfg), 1, st.cfg, st.stats).Score >= st.cfg.AcceptScore
+}
+
+// newPairFacts compares the layer neighbors of two subjects. A signature only
+// one of them has stays out. A signature both have disagrees when no neighbor
+// pair is the same subject or clears the accept bar on its own properties.
+func (st *state) newPairFacts(a, b []byte) ([]EdgeFact, bool) {
+	gb := map[string][][]byte{}
+	for _, link := range st.layerAdj[string(b)] {
+		gb[link.sig.Key()] = append(gb[link.sig.Key()], link.neighbor)
+	}
+	seen := map[string]bool{}
+	var facts []EdgeFact
+	for _, linkA := range st.layerAdj[string(a)] {
+		key := linkA.sig.Key()
+		if seen[key] {
+			continue
+		}
+		nb := gb[key]
+		if len(nb) == 0 {
+			continue
+		}
+		seen[key] = true
+		var na [][]byte
+		for _, link := range st.layerAdj[string(a)] {
+			if link.sig.Key() == key {
+				na = append(na, link.neighbor)
+			}
+		}
+		best, ok := 0.0, false
+		for _, naID := range na {
+			for _, nbID := range nb {
+				if !st.neighborsMatch(naID, nbID) {
+					continue
+				}
+				if node := st.pairNode(naID, nbID); !ok || node > best {
+					best, ok = node, true
+				}
+			}
+		}
+		if !ok {
+			return nil, true
+		}
+		fan, found := st.stats.FanOut[key]
+		if !found {
+			fan = st.cfg.FanOutUnknown
+		}
+		facts = append(facts, EdgeFact{FanOut: fan, NeighborNode: best})
+	}
+	return facts, false
+}
+
+// neighborsMatch is the same subject, or two subjects whose properties clear
+// the accept bar. It does not look at their links.
+func (st *state) neighborsMatch(a, b []byte) bool {
+	if bytes.Equal(a, b) {
+		return true
+	}
+	sa, sb := st.subjects[string(a)], st.subjects[string(b)]
+	if sa == nil || sb == nil || sa.Kind != sb.Kind {
+		return false
+	}
+	ev := match.Evaluate(sa.Values, sb.Values, st.metas)
+	return ScoreCandidate(ev, sa.Values, 0, 1, st.cfg, st.stats).Score >= st.cfg.AcceptScore
+}
+
+// pairNode is the property total for two subjects, one of them compared with
+// itself when they are the same subject.
+func (st *state) pairNode(a, b []byte) float64 {
+	sa, sb := st.subjects[string(a)], st.subjects[string(b)]
+	if sa == nil || sb == nil {
+		return 0
+	}
+	ev := match.Evaluate(sa.Values, sb.Values, st.metas)
+	return propertyPoints(&ev, sa.Values, st.cfg, st.stats)
 }
 
 // strongestAgreement is the agreeing or resembling Property that added the

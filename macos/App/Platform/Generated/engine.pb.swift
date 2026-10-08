@@ -4272,9 +4272,33 @@ public nonisolated struct Provenencia_Engine_V1_PromoteGraphAlignmentComparison:
 
   public var memberSource: String = String()
 
+  /// Structured dates, when the comparison is a date. The client formats
+  /// these for the user's locale. The display strings stay the portable
+  /// fallback.
+  public var incomingDate: Provenencia_Engine_V1_DateValueInput {
+    get {_incomingDate ?? Provenencia_Engine_V1_DateValueInput()}
+    set {_incomingDate = newValue}
+  }
+  /// Returns true if `incomingDate` has been explicitly set.
+  public var hasIncomingDate: Bool {self._incomingDate != nil}
+  /// Clears the value of `incomingDate`. Subsequent reads from it will return its default value.
+  public mutating func clearIncomingDate() {self._incomingDate = nil}
+
+  public var memberDate: Provenencia_Engine_V1_DateValueInput {
+    get {_memberDate ?? Provenencia_Engine_V1_DateValueInput()}
+    set {_memberDate = newValue}
+  }
+  /// Returns true if `memberDate` has been explicitly set.
+  public var hasMemberDate: Bool {self._memberDate != nil}
+  /// Clears the value of `memberDate`. Subsequent reads from it will return its default value.
+  public mutating func clearMemberDate() {self._memberDate = nil}
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
+
+  fileprivate var _incomingDate: Provenencia_Engine_V1_DateValueInput? = nil
+  fileprivate var _memberDate: Provenencia_Engine_V1_DateValueInput? = nil
 }
 
 public nonisolated struct Provenencia_Engine_V1_PromoteGraphAlignmentAlternative: @unchecked Sendable {
@@ -13381,7 +13405,7 @@ nonisolated extension Provenencia_Engine_V1_PromoteGraphAlignmentFixed: SwiftPro
 
 nonisolated extension Provenencia_Engine_V1_PromoteGraphAlignmentComparison: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".PromoteGraphAlignmentComparison"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}property_key\0\u{3}property_origin\0\u{1}outcome\0\u{3}value_type\0\u{1}pinned\0\u{1}weight\0\u{4}\u{2}incoming_observation_id\0\u{3}incoming_display\0\u{3}incoming_source\0\u{3}member_observation_id\0\u{3}member_display\0\u{3}member_source\0\u{3}group_subject_id\0\u{c}\u{7}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}property_key\0\u{3}property_origin\0\u{1}outcome\0\u{3}value_type\0\u{1}pinned\0\u{1}weight\0\u{4}\u{2}incoming_observation_id\0\u{3}incoming_display\0\u{3}incoming_source\0\u{3}member_observation_id\0\u{3}member_display\0\u{3}member_source\0\u{3}group_subject_id\0\u{3}incoming_date\0\u{3}member_date\0\u{c}\u{7}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -13402,12 +13426,18 @@ nonisolated extension Provenencia_Engine_V1_PromoteGraphAlignmentComparison: Swi
       case 12: try { try decoder.decodeSingularStringField(value: &self.memberDisplay) }()
       case 13: try { try decoder.decodeSingularStringField(value: &self.memberSource) }()
       case 14: try { try decoder.decodeSingularStringField(value: &self.groupSubjectID) }()
+      case 15: try { try decoder.decodeSingularMessageField(value: &self._incomingDate) }()
+      case 16: try { try decoder.decodeSingularMessageField(value: &self._memberDate) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
     if !self.propertyKey.isEmpty {
       try visitor.visitSingularStringField(value: self.propertyKey, fieldNumber: 1)
     }
@@ -13447,6 +13477,12 @@ nonisolated extension Provenencia_Engine_V1_PromoteGraphAlignmentComparison: Swi
     if !self.groupSubjectID.isEmpty {
       try visitor.visitSingularStringField(value: self.groupSubjectID, fieldNumber: 14)
     }
+    try { if let v = self._incomingDate {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 15)
+    } }()
+    try { if let v = self._memberDate {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 16)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -13464,6 +13500,8 @@ nonisolated extension Provenencia_Engine_V1_PromoteGraphAlignmentComparison: Swi
     if lhs.memberObservationID != rhs.memberObservationID {return false}
     if lhs.memberDisplay != rhs.memberDisplay {return false}
     if lhs.memberSource != rhs.memberSource {return false}
+    if lhs._incomingDate != rhs._incomingDate {return false}
+    if lhs._memberDate != rhs._memberDate {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

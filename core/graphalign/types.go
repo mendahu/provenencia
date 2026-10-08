@@ -3,7 +3,10 @@
 // Layer / Canon / Stats and calls Align.
 package graphalign
 
-import "github.com/mendahu/provenencia/core/match"
+import (
+	"github.com/mendahu/provenencia/core/database/datevalues"
+	"github.com/mendahu/provenencia/core/match"
+)
 
 // EdgeSignature identifies corresponding bridges on the layer and edges on
 // the canonical graph (design §6).
@@ -136,9 +139,11 @@ type Exhibit struct {
 	IncomingObservationID []byte
 	IncomingDisplay       string
 	IncomingSource        string
+	IncomingDate          *datevalues.Value
 	MemberObservationID   []byte
 	MemberDisplay         string
 	MemberSource          string
+	MemberDate            *datevalues.Value
 }
 
 // Reason is why a row reads as it does. Codes, not copy: the page words them.

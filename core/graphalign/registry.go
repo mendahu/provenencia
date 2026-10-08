@@ -31,7 +31,10 @@ func DefaultConfig() Config {
 			"text":    {Floor: 0, Frequency: true},
 			"term":    {Floor: 1, Frequency: true},
 			"integer": {Floor: 1, Frequency: true},
-			"date":    {Floor: 1, Frequency: true},
+			// Any resemblance the date comparer reports is partial. A
+			// disagreement scores 0 and conflicts. Open bounds that overlap
+			// (before 2001, before 1985) resemble; they are not the same date.
+			"date":    {Floor: 0, Frequency: true},
 			"name":    {Floor: 1, Frequency: true},
 			"subject": {Floor: 1, Frequency: true},
 		},

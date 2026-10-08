@@ -10558,8 +10558,13 @@ type PromoteGraphAlignmentComparison struct {
 	MemberObservationId   string `protobuf:"bytes,11,opt,name=member_observation_id,json=memberObservationId,proto3" json:"member_observation_id,omitempty"`
 	MemberDisplay         string `protobuf:"bytes,12,opt,name=member_display,json=memberDisplay,proto3" json:"member_display,omitempty"`
 	MemberSource          string `protobuf:"bytes,13,opt,name=member_source,json=memberSource,proto3" json:"member_source,omitempty"`
-	unknownFields         protoimpl.UnknownFields
-	sizeCache             protoimpl.SizeCache
+	// Structured dates, when the comparison is a date. The client formats
+	// these for the user's locale. The display strings stay the portable
+	// fallback.
+	IncomingDate  *DateValueInput `protobuf:"bytes,15,opt,name=incoming_date,json=incomingDate,proto3" json:"incoming_date,omitempty"`
+	MemberDate    *DateValueInput `protobuf:"bytes,16,opt,name=member_date,json=memberDate,proto3" json:"member_date,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *PromoteGraphAlignmentComparison) Reset() {
@@ -10681,6 +10686,20 @@ func (x *PromoteGraphAlignmentComparison) GetMemberSource() string {
 		return x.MemberSource
 	}
 	return ""
+}
+
+func (x *PromoteGraphAlignmentComparison) GetIncomingDate() *DateValueInput {
+	if x != nil {
+		return x.IncomingDate
+	}
+	return nil
+}
+
+func (x *PromoteGraphAlignmentComparison) GetMemberDate() *DateValueInput {
+	if x != nil {
+		return x.MemberDate
+	}
+	return nil
 }
 
 type PromoteGraphAlignmentAlternative struct {
@@ -17272,7 +17291,7 @@ const file_engine_proto_rawDesc = "" +
 	"\n" +
 	"subject_id\x18\x01 \x01(\tR\tsubjectId\x12\x1b\n" +
 	"\thandle_id\x18\x02 \x01(\tR\bhandleId\x12\x16\n" +
-	"\x06target\x18\x03 \x01(\tR\x06target\"\x92\x04\n" +
+	"\x06target\x18\x03 \x01(\tR\x06target\"\xa6\x05\n" +
 	"\x1fPromoteGraphAlignmentComparison\x12!\n" +
 	"\fproperty_key\x18\x01 \x01(\tR\vpropertyKey\x12'\n" +
 	"\x0fproperty_origin\x18\x02 \x01(\tR\x0epropertyOrigin\x12\x18\n" +
@@ -17288,7 +17307,10 @@ const file_engine_proto_rawDesc = "" +
 	" \x01(\tR\x0eincomingSource\x122\n" +
 	"\x15member_observation_id\x18\v \x01(\tR\x13memberObservationId\x12%\n" +
 	"\x0emember_display\x18\f \x01(\tR\rmemberDisplay\x12#\n" +
-	"\rmember_source\x18\r \x01(\tR\fmemberSourceJ\x04\b\a\x10\b\"\x8a\x04\n" +
+	"\rmember_source\x18\r \x01(\tR\fmemberSource\x12J\n" +
+	"\rincoming_date\x18\x0f \x01(\v2%.provenencia.engine.v1.DateValueInputR\fincomingDate\x12F\n" +
+	"\vmember_date\x18\x10 \x01(\v2%.provenencia.engine.v1.DateValueInputR\n" +
+	"memberDateJ\x04\b\a\x10\b\"\x8a\x04\n" +
 	" PromoteGraphAlignmentAlternative\x12\x1b\n" +
 	"\thandle_id\x18\x01 \x01(\tR\bhandleId\x12\x1d\n" +
 	"\n" +
@@ -18260,76 +18282,78 @@ var file_engine_proto_depIdxs = []int32{
 	144, // 96: provenencia.engine.v1.ConclusionDetail.event:type_name -> provenencia.engine.v1.EventHeader
 	148, // 97: provenencia.engine.v1.ConclusionDetail.place:type_name -> provenencia.engine.v1.PlaceHeader
 	159, // 98: provenencia.engine.v1.ProposePromoteGraphAlignmentRequest.fixed:type_name -> provenencia.engine.v1.PromoteGraphAlignmentFixed
-	141, // 99: provenencia.engine.v1.PromoteGraphAlignmentAlternative.person:type_name -> provenencia.engine.v1.PersonHeader
-	144, // 100: provenencia.engine.v1.PromoteGraphAlignmentAlternative.event:type_name -> provenencia.engine.v1.EventHeader
-	148, // 101: provenencia.engine.v1.PromoteGraphAlignmentAlternative.place:type_name -> provenencia.engine.v1.PlaceHeader
-	160, // 102: provenencia.engine.v1.PromoteGraphAlignmentRow.comparisons:type_name -> provenencia.engine.v1.PromoteGraphAlignmentComparison
-	161, // 103: provenencia.engine.v1.PromoteGraphAlignmentRow.alternatives:type_name -> provenencia.engine.v1.PromoteGraphAlignmentAlternative
-	141, // 104: provenencia.engine.v1.PromoteGraphAlignmentRow.person:type_name -> provenencia.engine.v1.PersonHeader
-	144, // 105: provenencia.engine.v1.PromoteGraphAlignmentRow.event:type_name -> provenencia.engine.v1.EventHeader
-	148, // 106: provenencia.engine.v1.PromoteGraphAlignmentRow.place:type_name -> provenencia.engine.v1.PlaceHeader
-	162, // 107: provenencia.engine.v1.ProposePromoteGraphAlignmentResponse.rows:type_name -> provenencia.engine.v1.PromoteGraphAlignmentRow
-	166, // 108: provenencia.engine.v1.ApplyPromoteGraphAlignmentRequest.rows:type_name -> provenencia.engine.v1.ApplyPromoteGraphAlignmentRow
-	165, // 109: provenencia.engine.v1.ApplyPromoteGraphAlignmentRow.pairs:type_name -> provenencia.engine.v1.ApplyPromoteGraphAlignmentPair
-	123, // 110: provenencia.engine.v1.ApplyPromoteGraphAlignmentWritten.entity:type_name -> provenencia.engine.v1.CanonicalEntity
-	124, // 111: provenencia.engine.v1.ApplyPromoteGraphAlignmentWritten.claim:type_name -> provenencia.engine.v1.IdentityClaim
-	167, // 112: provenencia.engine.v1.ApplyPromoteGraphAlignmentResponse.written:type_name -> provenencia.engine.v1.ApplyPromoteGraphAlignmentWritten
-	113, // 113: provenencia.engine.v1.ListSubjectsResponse.subjects:type_name -> provenencia.engine.v1.Subject
-	114, // 114: provenencia.engine.v1.SetSubjectPositionResponse.position:type_name -> provenencia.engine.v1.SubjectPosition
-	114, // 115: provenencia.engine.v1.ListSubjectPositionsResponse.positions:type_name -> provenencia.engine.v1.SubjectPosition
-	177, // 116: provenencia.engine.v1.SubjectTypeProperty.property:type_name -> provenencia.engine.v1.Property
-	182, // 117: provenencia.engine.v1.ConnectRule.edges:type_name -> provenencia.engine.v1.ConnectEdge
-	177, // 118: provenencia.engine.v1.ListPropertiesResponse.properties:type_name -> provenencia.engine.v1.Property
-	177, // 119: provenencia.engine.v1.CreatePropertyResponse.property:type_name -> provenencia.engine.v1.Property
-	177, // 120: provenencia.engine.v1.UpdatePropertyResponse.property:type_name -> provenencia.engine.v1.Property
-	179, // 121: provenencia.engine.v1.ListSubjectTypePropertiesResponse.properties:type_name -> provenencia.engine.v1.SubjectTypeProperty
-	180, // 122: provenencia.engine.v1.ListPlaceableSubjectTypesResponse.types:type_name -> provenencia.engine.v1.SubjectTypePresentation
-	180, // 123: provenencia.engine.v1.GetSubjectTypePresentationResponse.presentation:type_name -> provenencia.engine.v1.SubjectTypePresentation
-	181, // 124: provenencia.engine.v1.ListConnectRulesResponse.rules:type_name -> provenencia.engine.v1.ConnectRule
-	178, // 125: provenencia.engine.v1.ListPropertyTermsResponse.terms:type_name -> provenencia.engine.v1.PropertyTerm
-	178, // 126: provenencia.engine.v1.CreatePropertyTermResponse.term:type_name -> provenencia.engine.v1.PropertyTerm
-	178, // 127: provenencia.engine.v1.UpdatePropertyTermResponse.term:type_name -> provenencia.engine.v1.PropertyTerm
-	211, // 128: provenencia.engine.v1.NameValueInput.parts:type_name -> provenencia.engine.v1.NameValuePartInput
-	38,  // 129: provenencia.engine.v1.Observation.date:type_name -> provenencia.engine.v1.DateValueInput
-	212, // 130: provenencia.engine.v1.Observation.name:type_name -> provenencia.engine.v1.NameValueInput
-	38,  // 131: provenencia.engine.v1.ObservationDraft.date:type_name -> provenencia.engine.v1.DateValueInput
-	212, // 132: provenencia.engine.v1.ObservationDraft.name:type_name -> provenencia.engine.v1.NameValueInput
-	215, // 133: provenencia.engine.v1.CreateCitationWithObservationsRequest.observations:type_name -> provenencia.engine.v1.ObservationDraft
-	213, // 134: provenencia.engine.v1.CreateCitationWithObservationsResponse.citation:type_name -> provenencia.engine.v1.Citation
-	214, // 135: provenencia.engine.v1.CreateCitationWithObservationsResponse.observations:type_name -> provenencia.engine.v1.Observation
-	215, // 136: provenencia.engine.v1.AddObservationsToCitationRequest.observations:type_name -> provenencia.engine.v1.ObservationDraft
-	214, // 137: provenencia.engine.v1.AddObservationsToCitationResponse.observations:type_name -> provenencia.engine.v1.Observation
-	214, // 138: provenencia.engine.v1.ListObservationsBySourceResponse.observations:type_name -> provenencia.engine.v1.Observation
-	223, // 139: provenencia.engine.v1.CitationCountsBySourceResponse.counts:type_name -> provenencia.engine.v1.ArtifactCitationCount
-	213, // 140: provenencia.engine.v1.ListedCitation.citation:type_name -> provenencia.engine.v1.Citation
-	225, // 141: provenencia.engine.v1.ListCitationsByArtifactResponse.citations:type_name -> provenencia.engine.v1.ListedCitation
-	213, // 142: provenencia.engine.v1.GetCitationResponse.citation:type_name -> provenencia.engine.v1.Citation
-	214, // 143: provenencia.engine.v1.GetCitationResponse.observations:type_name -> provenencia.engine.v1.Observation
-	215, // 144: provenencia.engine.v1.CreateCitedBridgeRequest.observations:type_name -> provenencia.engine.v1.ObservationDraft
-	113, // 145: provenencia.engine.v1.CreateCitedBridgeResponse.subject:type_name -> provenencia.engine.v1.Subject
-	213, // 146: provenencia.engine.v1.CreateCitedBridgeResponse.citation:type_name -> provenencia.engine.v1.Citation
-	214, // 147: provenencia.engine.v1.CreateCitedBridgeResponse.observations:type_name -> provenencia.engine.v1.Observation
-	213, // 148: provenencia.engine.v1.UpdateCitationResponse.citation:type_name -> provenencia.engine.v1.Citation
-	214, // 149: provenencia.engine.v1.UpdateObservationRequest.observation:type_name -> provenencia.engine.v1.Observation
-	214, // 150: provenencia.engine.v1.UpdateObservationResponse.observation:type_name -> provenencia.engine.v1.Observation
-	179, // 151: provenencia.engine.v1.SubjectTypePropertiesGroup.properties:type_name -> provenencia.engine.v1.SubjectTypeProperty
-	180, // 152: provenencia.engine.v1.SubjectTypePropertiesGroup.presentation:type_name -> provenencia.engine.v1.SubjectTypePresentation
-	177, // 153: provenencia.engine.v1.GetPropertiesWorkspaceResponse.properties:type_name -> provenencia.engine.v1.Property
-	112, // 154: provenencia.engine.v1.GetPropertiesWorkspaceResponse.types:type_name -> provenencia.engine.v1.SubjectType
-	239, // 155: provenencia.engine.v1.GetPropertiesWorkspaceResponse.groups:type_name -> provenencia.engine.v1.SubjectTypePropertiesGroup
-	241, // 156: provenencia.engine.v1.ListSourceGraphProgressResponse.rows:type_name -> provenencia.engine.v1.SourceGraphProgress
-	241, // 157: provenencia.engine.v1.GetSourceGraphProgressResponse.progress:type_name -> provenencia.engine.v1.SourceGraphProgress
-	2,   // 158: provenencia.engine.v1.GetDeleteImpactResponse.gate:type_name -> provenencia.engine.v1.DeleteImpactGate
-	248, // 159: provenencia.engine.v1.GetDeleteImpactResponse.groups:type_name -> provenencia.engine.v1.DeleteImpactGroup
-	248, // 160: provenencia.engine.v1.GetDeleteImpactResponse.cascades:type_name -> provenencia.engine.v1.DeleteImpactGroup
-	249, // 161: provenencia.engine.v1.DeleteImpactGroup.listed:type_name -> provenencia.engine.v1.DeleteImpactListed
-	108, // 162: provenencia.engine.v1.DeleteImpactListed.location:type_name -> provenencia.engine.v1.WorkspaceLocation
-	3,   // 163: provenencia.engine.v1.Error.kind:type_name -> provenencia.engine.v1.ErrorKind
-	164, // [164:164] is the sub-list for method output_type
-	164, // [164:164] is the sub-list for method input_type
-	164, // [164:164] is the sub-list for extension type_name
-	164, // [164:164] is the sub-list for extension extendee
-	0,   // [0:164] is the sub-list for field type_name
+	38,  // 99: provenencia.engine.v1.PromoteGraphAlignmentComparison.incoming_date:type_name -> provenencia.engine.v1.DateValueInput
+	38,  // 100: provenencia.engine.v1.PromoteGraphAlignmentComparison.member_date:type_name -> provenencia.engine.v1.DateValueInput
+	141, // 101: provenencia.engine.v1.PromoteGraphAlignmentAlternative.person:type_name -> provenencia.engine.v1.PersonHeader
+	144, // 102: provenencia.engine.v1.PromoteGraphAlignmentAlternative.event:type_name -> provenencia.engine.v1.EventHeader
+	148, // 103: provenencia.engine.v1.PromoteGraphAlignmentAlternative.place:type_name -> provenencia.engine.v1.PlaceHeader
+	160, // 104: provenencia.engine.v1.PromoteGraphAlignmentRow.comparisons:type_name -> provenencia.engine.v1.PromoteGraphAlignmentComparison
+	161, // 105: provenencia.engine.v1.PromoteGraphAlignmentRow.alternatives:type_name -> provenencia.engine.v1.PromoteGraphAlignmentAlternative
+	141, // 106: provenencia.engine.v1.PromoteGraphAlignmentRow.person:type_name -> provenencia.engine.v1.PersonHeader
+	144, // 107: provenencia.engine.v1.PromoteGraphAlignmentRow.event:type_name -> provenencia.engine.v1.EventHeader
+	148, // 108: provenencia.engine.v1.PromoteGraphAlignmentRow.place:type_name -> provenencia.engine.v1.PlaceHeader
+	162, // 109: provenencia.engine.v1.ProposePromoteGraphAlignmentResponse.rows:type_name -> provenencia.engine.v1.PromoteGraphAlignmentRow
+	166, // 110: provenencia.engine.v1.ApplyPromoteGraphAlignmentRequest.rows:type_name -> provenencia.engine.v1.ApplyPromoteGraphAlignmentRow
+	165, // 111: provenencia.engine.v1.ApplyPromoteGraphAlignmentRow.pairs:type_name -> provenencia.engine.v1.ApplyPromoteGraphAlignmentPair
+	123, // 112: provenencia.engine.v1.ApplyPromoteGraphAlignmentWritten.entity:type_name -> provenencia.engine.v1.CanonicalEntity
+	124, // 113: provenencia.engine.v1.ApplyPromoteGraphAlignmentWritten.claim:type_name -> provenencia.engine.v1.IdentityClaim
+	167, // 114: provenencia.engine.v1.ApplyPromoteGraphAlignmentResponse.written:type_name -> provenencia.engine.v1.ApplyPromoteGraphAlignmentWritten
+	113, // 115: provenencia.engine.v1.ListSubjectsResponse.subjects:type_name -> provenencia.engine.v1.Subject
+	114, // 116: provenencia.engine.v1.SetSubjectPositionResponse.position:type_name -> provenencia.engine.v1.SubjectPosition
+	114, // 117: provenencia.engine.v1.ListSubjectPositionsResponse.positions:type_name -> provenencia.engine.v1.SubjectPosition
+	177, // 118: provenencia.engine.v1.SubjectTypeProperty.property:type_name -> provenencia.engine.v1.Property
+	182, // 119: provenencia.engine.v1.ConnectRule.edges:type_name -> provenencia.engine.v1.ConnectEdge
+	177, // 120: provenencia.engine.v1.ListPropertiesResponse.properties:type_name -> provenencia.engine.v1.Property
+	177, // 121: provenencia.engine.v1.CreatePropertyResponse.property:type_name -> provenencia.engine.v1.Property
+	177, // 122: provenencia.engine.v1.UpdatePropertyResponse.property:type_name -> provenencia.engine.v1.Property
+	179, // 123: provenencia.engine.v1.ListSubjectTypePropertiesResponse.properties:type_name -> provenencia.engine.v1.SubjectTypeProperty
+	180, // 124: provenencia.engine.v1.ListPlaceableSubjectTypesResponse.types:type_name -> provenencia.engine.v1.SubjectTypePresentation
+	180, // 125: provenencia.engine.v1.GetSubjectTypePresentationResponse.presentation:type_name -> provenencia.engine.v1.SubjectTypePresentation
+	181, // 126: provenencia.engine.v1.ListConnectRulesResponse.rules:type_name -> provenencia.engine.v1.ConnectRule
+	178, // 127: provenencia.engine.v1.ListPropertyTermsResponse.terms:type_name -> provenencia.engine.v1.PropertyTerm
+	178, // 128: provenencia.engine.v1.CreatePropertyTermResponse.term:type_name -> provenencia.engine.v1.PropertyTerm
+	178, // 129: provenencia.engine.v1.UpdatePropertyTermResponse.term:type_name -> provenencia.engine.v1.PropertyTerm
+	211, // 130: provenencia.engine.v1.NameValueInput.parts:type_name -> provenencia.engine.v1.NameValuePartInput
+	38,  // 131: provenencia.engine.v1.Observation.date:type_name -> provenencia.engine.v1.DateValueInput
+	212, // 132: provenencia.engine.v1.Observation.name:type_name -> provenencia.engine.v1.NameValueInput
+	38,  // 133: provenencia.engine.v1.ObservationDraft.date:type_name -> provenencia.engine.v1.DateValueInput
+	212, // 134: provenencia.engine.v1.ObservationDraft.name:type_name -> provenencia.engine.v1.NameValueInput
+	215, // 135: provenencia.engine.v1.CreateCitationWithObservationsRequest.observations:type_name -> provenencia.engine.v1.ObservationDraft
+	213, // 136: provenencia.engine.v1.CreateCitationWithObservationsResponse.citation:type_name -> provenencia.engine.v1.Citation
+	214, // 137: provenencia.engine.v1.CreateCitationWithObservationsResponse.observations:type_name -> provenencia.engine.v1.Observation
+	215, // 138: provenencia.engine.v1.AddObservationsToCitationRequest.observations:type_name -> provenencia.engine.v1.ObservationDraft
+	214, // 139: provenencia.engine.v1.AddObservationsToCitationResponse.observations:type_name -> provenencia.engine.v1.Observation
+	214, // 140: provenencia.engine.v1.ListObservationsBySourceResponse.observations:type_name -> provenencia.engine.v1.Observation
+	223, // 141: provenencia.engine.v1.CitationCountsBySourceResponse.counts:type_name -> provenencia.engine.v1.ArtifactCitationCount
+	213, // 142: provenencia.engine.v1.ListedCitation.citation:type_name -> provenencia.engine.v1.Citation
+	225, // 143: provenencia.engine.v1.ListCitationsByArtifactResponse.citations:type_name -> provenencia.engine.v1.ListedCitation
+	213, // 144: provenencia.engine.v1.GetCitationResponse.citation:type_name -> provenencia.engine.v1.Citation
+	214, // 145: provenencia.engine.v1.GetCitationResponse.observations:type_name -> provenencia.engine.v1.Observation
+	215, // 146: provenencia.engine.v1.CreateCitedBridgeRequest.observations:type_name -> provenencia.engine.v1.ObservationDraft
+	113, // 147: provenencia.engine.v1.CreateCitedBridgeResponse.subject:type_name -> provenencia.engine.v1.Subject
+	213, // 148: provenencia.engine.v1.CreateCitedBridgeResponse.citation:type_name -> provenencia.engine.v1.Citation
+	214, // 149: provenencia.engine.v1.CreateCitedBridgeResponse.observations:type_name -> provenencia.engine.v1.Observation
+	213, // 150: provenencia.engine.v1.UpdateCitationResponse.citation:type_name -> provenencia.engine.v1.Citation
+	214, // 151: provenencia.engine.v1.UpdateObservationRequest.observation:type_name -> provenencia.engine.v1.Observation
+	214, // 152: provenencia.engine.v1.UpdateObservationResponse.observation:type_name -> provenencia.engine.v1.Observation
+	179, // 153: provenencia.engine.v1.SubjectTypePropertiesGroup.properties:type_name -> provenencia.engine.v1.SubjectTypeProperty
+	180, // 154: provenencia.engine.v1.SubjectTypePropertiesGroup.presentation:type_name -> provenencia.engine.v1.SubjectTypePresentation
+	177, // 155: provenencia.engine.v1.GetPropertiesWorkspaceResponse.properties:type_name -> provenencia.engine.v1.Property
+	112, // 156: provenencia.engine.v1.GetPropertiesWorkspaceResponse.types:type_name -> provenencia.engine.v1.SubjectType
+	239, // 157: provenencia.engine.v1.GetPropertiesWorkspaceResponse.groups:type_name -> provenencia.engine.v1.SubjectTypePropertiesGroup
+	241, // 158: provenencia.engine.v1.ListSourceGraphProgressResponse.rows:type_name -> provenencia.engine.v1.SourceGraphProgress
+	241, // 159: provenencia.engine.v1.GetSourceGraphProgressResponse.progress:type_name -> provenencia.engine.v1.SourceGraphProgress
+	2,   // 160: provenencia.engine.v1.GetDeleteImpactResponse.gate:type_name -> provenencia.engine.v1.DeleteImpactGate
+	248, // 161: provenencia.engine.v1.GetDeleteImpactResponse.groups:type_name -> provenencia.engine.v1.DeleteImpactGroup
+	248, // 162: provenencia.engine.v1.GetDeleteImpactResponse.cascades:type_name -> provenencia.engine.v1.DeleteImpactGroup
+	249, // 163: provenencia.engine.v1.DeleteImpactGroup.listed:type_name -> provenencia.engine.v1.DeleteImpactListed
+	108, // 164: provenencia.engine.v1.DeleteImpactListed.location:type_name -> provenencia.engine.v1.WorkspaceLocation
+	3,   // 165: provenencia.engine.v1.Error.kind:type_name -> provenencia.engine.v1.ErrorKind
+	166, // [166:166] is the sub-list for method output_type
+	166, // [166:166] is the sub-list for method input_type
+	166, // [166:166] is the sub-list for extension type_name
+	166, // [166:166] is the sub-list for extension extendee
+	0,   // [0:166] is the sub-list for field type_name
 }
 
 func init() { file_engine_proto_init() }

@@ -262,6 +262,57 @@ func TestProposePlacePartOfChain(t *testing.T) {
 	}
 }
 
+func TestProposeOverlappingBoundShowsTheDateAndResembles(t *testing.T) {
+	f := newFixture(t)
+	bef := func(year, month, day int) *datevalues.Value {
+		y, m, d := year, month, day
+		return &datevalues.Value{
+			Kind: datevalues.KindPoint, Qualifier: datevalues.QualifierBEF,
+			StartYear: &y, StartMonth: &m, StartDay: &d,
+		}
+	}
+	earlier, later := bef(1985, 2, 1), bef(2001, 3, 31)
+
+	aPerson := f.person(f.source, f.artifact, "Doug")
+	aEvent := f.bare(f.source, "event")
+	f.cite(f.artifact, aEvent,
+		observations.Input{PropertyID: f.prop("event_type").ID, ValueTermID: f.term("event_type", "birth").ID},
+		observations.Input{PropertyID: f.prop("start_date").ID, Date: earlier},
+	)
+	f.participation(f.source, f.artifact, aPerson, aEvent, "subject")
+	per := f.promote(aPerson)
+	evt := f.promote(aEvent)
+
+	srcB, artB := f.newSource("Letter")
+	bPerson := f.person(srcB, artB, "Doug")
+	bEvent := f.bare(srcB, "event")
+	f.cite(artB, bEvent,
+		observations.Input{PropertyID: f.prop("event_type").ID, ValueTermID: f.term("event_type", "birth").ID},
+		observations.Input{PropertyID: f.prop("start_date").ID, Date: later},
+	)
+	f.participation(srcB, artB, bPerson, bEvent, "subject")
+
+	got := f.propose(srcB.ID, []graphalign.Fixed{{SubjectID: bPerson.ID, HandleID: per.Entity.ID}})
+	row := rowFor(got, bEvent.ID)
+	if !bytes.Equal(row.HandleID, evt.Entity.ID) {
+		t.Fatalf("event %+v, want %s", row, evt.Entity.Ref)
+	}
+	var saw bool
+	for _, ex := range row.Exhibits {
+		if ex.Property.Key != "start_date" {
+			continue
+		}
+		saw = true
+		if ex.Outcome != "partial" || ex.Pinned || ex.Weight <= 0 ||
+			ex.IncomingDisplay != "Before 2001-03-31" || ex.MemberDisplay != "Before 1985-02-01" {
+			t.Fatalf("start date %+v", ex)
+		}
+	}
+	if !saw {
+		t.Fatalf("missing start date in %+v", row.Exhibits)
+	}
+}
+
 func TestProposeOneHopDateExhibit(t *testing.T) {
 	f := newFixture(t)
 	year := 1901

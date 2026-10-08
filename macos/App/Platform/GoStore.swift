@@ -801,10 +801,16 @@ struct GoStore: GenealogyStore {
                         weight: c.weight,
                         groupSubjectID: c.groupSubjectID,
                         incomingObservationID: c.incomingObservationID,
-                        incomingDisplay: c.incomingDisplay,
+                        incomingDisplay: ComparisonValueDisplay.string(
+                            date: c.hasIncomingDate ? Self.mapDateValue(c.incomingDate) : nil,
+                            fallback: c.incomingDisplay
+                        ),
                         incomingSource: c.incomingSource,
                         memberObservationID: c.memberObservationID,
-                        memberDisplay: c.memberDisplay,
+                        memberDisplay: ComparisonValueDisplay.string(
+                            date: c.hasMemberDate ? Self.mapDateValue(c.memberDate) : nil,
+                            fallback: c.memberDisplay
+                        ),
                         memberSource: c.memberSource
                     )
                 },

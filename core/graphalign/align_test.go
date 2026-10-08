@@ -1095,6 +1095,75 @@ func TestPossibleDuplicates(t *testing.T) {
 	}
 }
 
+func TestNewEventsDisagreeWhenTheirParticipantsDo(t *testing.T) {
+	part := partSig("subject", "person", "")
+	place := graphalign.EdgeSignature{BridgeType: "location", RoleOrType: "took_place_in", NeighborKind: "place"}
+	et, residence := termProp("event_type", "residence")
+	hatP, hatV := textProp("toponym", "Medicine Hat")
+	calP, calV := textProp("toponym", "Calgary")
+	base := []graphalign.Subject{
+		{ID: id("e-a"), Ref: "EVT-A", Kind: "event", Values: vals(et, residence)},
+		{ID: id("e-b"), Ref: "EVT-B", Kind: "event", Values: vals(et, residence)},
+		{ID: id("p-paty"), Ref: "PER-A", Kind: "person", Values: nameVals("Paty", "Robins")},
+		{ID: id("p-sandra"), Ref: "PER-B", Kind: "person", Values: nameVals("Sandra", "Robins")},
+	}
+	places := []graphalign.Subject{
+		{ID: id("l-hat"), Ref: "PLC-H", Kind: "place", Values: vals(hatP, hatV)},
+		{ID: id("l-calgary"), Ref: "PLC-C", Kind: "place", Values: vals(calP, calV)},
+	}
+	tests := []struct {
+		name     string
+		bridges  []graphalign.Bridge
+		subjects []graphalign.Subject
+		dup      bool
+	}{
+		{
+			name: "different participants",
+			bridges: []graphalign.Bridge{
+				{A: id("p-paty"), B: id("e-a"), Signature: part},
+				{A: id("p-sandra"), B: id("e-b"), Signature: part},
+			},
+			subjects: base,
+		},
+		{
+			name: "the same participant",
+			bridges: []graphalign.Bridge{
+				{A: id("p-paty"), B: id("e-a"), Signature: part},
+				{A: id("p-paty"), B: id("e-b"), Signature: part},
+			},
+			subjects: base,
+			dup:      true,
+		},
+		{name: "no participants", subjects: base, dup: true},
+		{
+			name: "the same participant and different places",
+			bridges: []graphalign.Bridge{
+				{A: id("p-paty"), B: id("e-a"), Signature: part},
+				{A: id("p-paty"), B: id("e-b"), Signature: part},
+				{A: id("e-a"), B: id("l-hat"), Signature: place},
+				{A: id("e-b"), B: id("l-calgary"), Signature: place},
+			},
+			subjects: append(append([]graphalign.Subject{}, base...), places...),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			layer := graphalign.Layer{
+				Subjects: tt.subjects,
+				Bridges:  tt.bridges,
+				Metas:    append(nameMetas(), append(eventMetas(), placeMetas()...)...),
+			}
+			p := graphalign.Align(layer, graphalign.Canon{}, graphalign.Stats{}, nil, nil)
+			for _, sub := range []string{"e-a", "e-b"} {
+				row := rowBySubject(p, id(sub))
+				if row.Flags.PossibleDuplicate != tt.dup {
+					t.Fatalf("%s duplicate %v, want %v (%+v)", sub, row.Flags.PossibleDuplicate, tt.dup, row.Flags)
+				}
+			}
+		})
+	}
+}
+
 func TestRowReasons(t *testing.T) {
 	nameKey := match.Property{Key: "name", Origin: "provenencia"}
 	sig := relSig("spouse")

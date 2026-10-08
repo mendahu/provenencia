@@ -9,11 +9,11 @@ import (
 	"github.com/mendahu/provenencia/core/match"
 )
 
-func TestOverlappingBoundStaysUnpinnedWhenItConflicts(t *testing.T) {
+func TestOverlappingBoundsAreSimilarAndUnpinned(t *testing.T) {
 	prop := match.Property{Key: "start_date", Origin: "provenencia"}
 	incoming := exhibitObs{
 		id: []byte("in"), prop: prop, valueType: properties.ValueTypeDate,
-		value: match.Value{Date: befDate(1990, 12, 27)},
+		value: match.Value{Date: befDate(2001, 3, 31)},
 	}
 	member := exhibitObs{
 		id: []byte("mem"), prop: prop, valueType: properties.ValueTypeDate,
@@ -23,8 +23,30 @@ func TestOverlappingBoundStaysUnpinnedWhenItConflicts(t *testing.T) {
 	if len(lines) != 1 {
 		t.Fatalf("lines %+v", lines)
 	}
-	if lines[0].Outcome != match.OutcomeConflict || lines[0].Pinned {
-		t.Fatalf("overlap %+v, want an unpinned conflict", lines[0])
+	if lines[0].Outcome != match.OutcomePartial || lines[0].Pinned || lines[0].Weight <= 0 {
+		t.Fatalf("overlap %+v, want an unpinned resemblance", lines[0])
+	}
+	if lines[0].IncomingDate == nil || lines[0].MemberDate == nil ||
+		lines[0].IncomingDate.Qualifier != datevalues.QualifierBEF ||
+		lines[0].MemberDate.StartYear == nil || *lines[0].MemberDate.StartYear != 1985 {
+		t.Fatalf("dates %+v %+v", lines[0].IncomingDate, lines[0].MemberDate)
+	}
+}
+
+func TestDisjointDatesConflict(t *testing.T) {
+	prop := match.Property{Key: "start_date", Origin: "provenencia"}
+	incoming := exhibitObs{
+		id: []byte("in"), prop: prop, valueType: properties.ValueTypeDate,
+		value: match.Value{Date: befDate(1985, 2, 1)},
+	}
+	year := 2001
+	member := exhibitObs{
+		id: []byte("mem"), prop: prop, valueType: properties.ValueTypeDate,
+		value: match.Value{Date: &datevalues.Value{Kind: datevalues.KindPoint, StartYear: &year}},
+	}
+	lines := pairExhibits([]exhibitObs{incoming}, nil, []exhibitObs{member}, graphalign.DefaultConfig(), graphalign.Stats{})
+	if len(lines) != 1 || lines[0].Outcome != match.OutcomeConflict || lines[0].Pinned {
+		t.Fatalf("disjoint %+v, want an unpinned conflict", lines)
 	}
 }
 

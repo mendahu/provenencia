@@ -17178,13 +17178,13 @@
       }
     },
     "promote.warning.duplicateBody": {
-      "comment": "Warning body when two rows share a handle",
+      "comment": "Warning body when two rows may be the same record",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "These may be the same person. Combine them on the Evidence graph, or pick another target for one row."
+            "value": "These may be the same record. Combine them on the Evidence graph, or pick another target for one row."
           }
         }
       }
