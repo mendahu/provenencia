@@ -254,7 +254,7 @@ func (st *state) recordBest(sk string, sc scoredCand) {
 func (st *state) scoreCandidate(subjectID []byte, h *Handle) scoredCand {
 	s := st.subjects[string(subjectID)]
 	ev := match.Evaluate(s.Values, h.Values, st.metas)
-	edge := st.edgeSupport(subjectID, h.ID)
+	edge := EdgePoints(st.edgeFacts(subjectID, h.ID), st.cfg)
 	sc := ScoreCandidate(ev, s.Values, edge, s.Provenance, st.cfg, st.stats)
 	return scoredCand{
 		handleID: append([]byte(nil), h.ID...),
@@ -265,22 +265,13 @@ func (st *state) scoreCandidate(subjectID []byte, h *Handle) scoredCand {
 	}
 }
 
-// edgeSupport sums one term per mapped layer neighbor whose handle the
+// edgeFacts lists one fact per mapped layer neighbor whose handle the
 // candidate reaches through a canon edge with the same signature. The edge
 // that seeded the candidate is one of those neighbors, so it counts once.
-func (st *state) edgeSupport(subjectID, handleID []byte) float64 {
-	var support float64
-	add := func(sig EdgeSignature) {
-		fan, ok := st.stats.FanOut[sig.Key()]
-		if !ok {
-			fan = st.cfg.FanOutUnknown
-		}
-		if fan <= st.cfg.FanOutLowMax {
-			support += st.cfg.EdgeSupportLow
-		} else {
-			support += st.cfg.EdgeSupportHigh
-		}
-	}
+// NeighborNode is that pair's properties only, so a later hop cannot
+// inherit this neighbor's own links.
+func (st *state) edgeFacts(subjectID, handleID []byte) []EdgeFact {
+	var facts []EdgeFact
 	sk := string(subjectID)
 	for _, link := range st.layerAdj[sk] {
 		nk := string(link.neighbor)
@@ -288,15 +279,30 @@ func (st *state) edgeSupport(subjectID, handleID []byte) float64 {
 		if !ok {
 			continue
 		}
-		// Does canon connect handleID to hid with the same signature?
 		for _, ce := range st.canonAdj[string(handleID)] {
 			if corresponds(link, ce) && bytes.Equal(ce.neighbor, hid) {
-				add(link.sig)
+				fan, ok := st.stats.FanOut[link.sig.Key()]
+				if !ok {
+					fan = st.cfg.FanOutUnknown
+				}
+				facts = append(facts, EdgeFact{FanOut: fan, NeighborNode: st.nodeScore(link.neighbor, hid)})
 				break
 			}
 		}
 	}
-	return support
+	return facts
+}
+
+// nodeScore is the pairwise total for an already mapped neighbor. It does
+// not call edgeFacts.
+func (st *state) nodeScore(subjectID, handleID []byte) float64 {
+	s := st.subjects[string(subjectID)]
+	h := st.handles[string(handleID)]
+	if s == nil || h == nil {
+		return 0
+	}
+	ev := match.Evaluate(s.Values, h.Values, st.metas)
+	return propertyPoints(&ev, s.Values, st.cfg, st.stats)
 }
 
 func (st *state) walk() {
