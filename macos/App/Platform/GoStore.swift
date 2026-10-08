@@ -786,7 +786,7 @@ struct GoStore: GenealogyStore {
         projectDir: String,
         sourceID: String,
         fixed: [CatalogPromoteGraphAlignmentFixed]
-    ) async throws -> [CatalogPromoteGraphAlignmentRow] {
+    ) async throws -> CatalogPromoteGraphAlignmentProposal {
         var req = Provenencia_Engine_V1_ProposePromoteGraphAlignmentRequest()
         req.projectDir = projectDir
         req.sourceID = sourceID
@@ -800,7 +800,7 @@ struct GoStore: GenealogyStore {
             method: CoreMethod.proposePromoteGraphAlignment,
             request: req
         )
-        return resp.rows.map { r in
+        let rows: [CatalogPromoteGraphAlignmentRow] = resp.rows.map { r in
             var person: CatalogPersonHeader?
             var event: CatalogEventHeader?
             var place: CatalogPlaceHeader?
@@ -842,6 +842,59 @@ struct GoStore: GenealogyStore {
                 place: place
             )
         }
+        return CatalogPromoteGraphAlignmentProposal(revision: resp.revision, rows: rows)
+    }
+
+    func applyPromoteGraphAlignment(
+        projectDir: String,
+        userID: String,
+        sourceID: String,
+        seenRevision: Int64,
+        rows: [CatalogPromoteBatchRow],
+        skipBridgeIDs: [String]
+    ) async throws -> CatalogPromoteBatchResult {
+        var req = Provenencia_Engine_V1_ApplyPromoteGraphAlignmentRequest()
+        req.projectDir = projectDir
+        req.userID = userID
+        req.sourceID = sourceID
+        req.seenRevision = seenRevision
+        req.skipBridgeIds = skipBridgeIDs
+        req.rows = rows.map { row in
+            var proto = Provenencia_Engine_V1_ApplyPromoteGraphAlignmentRow()
+            proto.subjectID = row.subjectID
+            proto.target = row.target
+            if let entityID = row.entityID { proto.entityID = entityID }
+            if let gradeID = row.confidenceGradeID { proto.confidenceGradeID = gradeID }
+            proto.argument = row.argument
+            proto.pairs = row.pairs.map { pair in
+                var p = Provenencia_Engine_V1_ApplyPromoteGraphAlignmentPair()
+                p.incomingObservationID = pair.incomingObservationID
+                p.memberObservationID = pair.memberObservationID
+                return p
+            }
+            return proto
+        }
+        let resp: Provenencia_Engine_V1_ApplyPromoteGraphAlignmentResponse = try await provenenciaCall(
+            method: CoreMethod.applyPromoteGraphAlignment,
+            request: req
+        )
+        return CatalogPromoteBatchResult(
+            revision: resp.revision,
+            written: resp.written.map { w in
+                CatalogPromoteBatchWritten(
+                    entity: Self.mapCanonicalEntity(w.entity),
+                    claim: CatalogIdentityClaim(
+                        id: w.claim.id,
+                        subjectID: w.claim.subjectID,
+                        entityID: w.claim.entityID,
+                        status: w.claim.status,
+                        confidenceGradeID: w.claim.confidenceGradeID.isEmpty ? nil : w.claim.confidenceGradeID,
+                        argument: w.claim.argument
+                    ),
+                    pins: Int(w.pins)
+                )
+            }
+        )
     }
 
     func listClaimConfidenceGrades(projectDir: String) async throws -> [CatalogClaimConfidenceGrade] {

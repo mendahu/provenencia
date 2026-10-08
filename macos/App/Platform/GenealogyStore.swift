@@ -273,6 +273,41 @@ struct CatalogPromoteGraphAlignmentRow: Sendable, Equatable, Identifiable {
     var id: String { subjectID }
 }
 
+/// A proposal plus the audit revision it was read at. Done sends the revision back.
+struct CatalogPromoteGraphAlignmentProposal: Sendable, Equatable {
+    var revision: Int64
+    var rows: [CatalogPromoteGraphAlignmentRow]
+}
+
+/// One confirmed comparison on a Done row.
+struct CatalogPromoteGraphAlignmentPair: Sendable, Equatable {
+    var incomingObservationID: String
+    var memberObservationID: String
+}
+
+/// One Subject on a Done.
+struct CatalogPromoteBatchRow: Sendable, Equatable {
+    var subjectID: String
+    var target: String
+    var entityID: String?
+    var confidenceGradeID: String?
+    var argument: String
+    var pairs: [CatalogPromoteGraphAlignmentPair]
+}
+
+/// One claim a Done filed.
+struct CatalogPromoteBatchWritten: Sendable, Equatable {
+    var entity: CatalogCanonicalEntity
+    var claim: CatalogIdentityClaim
+    var pins: Int
+}
+
+/// The revision a Done wrote, and the claims it filed.
+struct CatalogPromoteBatchResult: Sendable, Equatable {
+    var revision: Int64
+    var written: [CatalogPromoteBatchWritten]
+}
+
 struct CatalogSubjectPosition: Sendable, Equatable {
     var subjectID: String
     var gridX: Int64
@@ -1071,7 +1106,16 @@ protocol GenealogyStore: Sendable {
         projectDir: String,
         sourceID: String,
         fixed: [CatalogPromoteGraphAlignmentFixed]
-    ) async throws -> [CatalogPromoteGraphAlignmentRow]
+    ) async throws -> CatalogPromoteGraphAlignmentProposal
+    /// File one Done: claims, pins, and bridges. `seenRevision` is the proposal's revision.
+    func applyPromoteGraphAlignment(
+        projectDir: String,
+        userID: String,
+        sourceID: String,
+        seenRevision: Int64,
+        rows: [CatalogPromoteBatchRow],
+        skipBridgeIDs: [String]
+    ) async throws -> CatalogPromoteBatchResult
     /// The claim confidence scale, in order.
     func listClaimConfidenceGrades(projectDir: String) async throws -> [CatalogClaimConfidenceGrade]
     /// Accepted handle of every promoted Subject on one Source's Evidence graph.

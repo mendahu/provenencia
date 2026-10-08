@@ -14428,6 +14428,18 @@
         }
       }
     },
+    "error.promote.stale": {
+      "comment": "FFI error promote.stale when a Done loses the revision race",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The catalog changed while this proposal was open. Review it again."
+          }
+        }
+      }
+    },
     "error.conclusiondetails.not_found": {
       "comment": "FFI error conclusiondetails.not_found: the handle was merged or deleted",
       "extractionState": "manual",

@@ -23,6 +23,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var subjectsBySource: [String: [CatalogSubject]] = [:]
     /// Accepted Identity Claim per Subject id (Promote): the claim and its handle.
     var membershipBySubject: [String: CatalogSubjectMembership] = [:]
+    /// Distinct handles that pin an Observation, for delete-impact confirms.
+    var pinsByObservation: [String: [CatalogCanonicalEntity]] = [:]
     /// Event and Place headers as Go would compose them, seeded by tests in
     /// list order. FakeStore does not reconcile, walk, or title them; Go owns
     /// those rules (`conclusionheaders`, `eventtitle`) and their tests.
@@ -1306,18 +1308,17 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
 
     /// Stub graph-alignment proposal: every unpromoted primary Subject is Skip;
     /// already-promoted Subjects are Target handle with their membership.
-    /// S9-43 / S9-44 will drive richer FakeStore fixtures.
     func proposePromoteGraphAlignment(
         projectDir: String,
         sourceID: String,
         fixed: [CatalogPromoteGraphAlignmentFixed]
-    ) async throws -> [CatalogPromoteGraphAlignmentRow] {
+    ) async throws -> CatalogPromoteGraphAlignmentProposal {
         return withState {
             markCatalogSessionHeld(projectDir)
             let fixedBySubject = Dictionary(uniqueKeysWithValues: fixed.map { ($0.subjectID, $0.handleID) })
             let subjects = subjectsBySource[sourceID] ?? []
             let types = Dictionary(uniqueKeysWithValues: (subjectTypesByProject[projectDir] ?? []).map { ($0.id, $0) })
-            return subjects.compactMap { subject -> CatalogPromoteGraphAlignmentRow? in
+            let rows = subjects.compactMap { subject -> CatalogPromoteGraphAlignmentRow? in
                 guard let type = types[subject.subjectTypeID],
                       ["person", "event", "place"].contains(type.key)
                 else { return nil }
@@ -1370,7 +1371,103 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                     possibleDuplicate: false
                 )
             }
+            return CatalogPromoteGraphAlignmentProposal(revision: nextAuditRevision - 1, rows: rows)
         }
+    }
+
+    /// Files claims and records pins so a pinned Observation's delete names each handle.
+    func applyPromoteGraphAlignment(
+        projectDir: String,
+        userID _: String,
+        sourceID: String,
+        seenRevision: Int64,
+        rows: [CatalogPromoteBatchRow],
+        skipBridgeIDs _: [String]
+    ) async throws -> CatalogPromoteBatchResult {
+        try withState {
+            markCatalogSessionHeld(projectDir)
+            recordedCalls.append("applyPromoteGraphAlignment source=\(sourceID) rows=\(rows.count)")
+            let current = nextAuditRevision - 1
+            guard seenRevision == current else {
+                throw CoreInvokeError.coded(status: 1, code: "promote.stale", kind: .conflict, params: [])
+            }
+            var written: [CatalogPromoteBatchWritten] = []
+            for row in rows {
+                guard row.target != "skip" else { continue }
+                guard let subject = (subjectsBySource[sourceID] ?? []).first(where: { $0.id == row.subjectID }),
+                      let type = subjectTypesByProject[projectDir]?.first(where: { $0.id == subject.subjectTypeID }),
+                      ["person", "event", "place"].contains(type.key)
+                else {
+                    throw CoreInvokeError.coded(status: 1, code: "promote.invalid", kind: .user, params: [])
+                }
+                if let existing = membershipBySubject[subject.id] {
+                    if row.target == "handle", existing.entity.id == row.entityID, row.pairs.isEmpty {
+                        continue
+                    }
+                    throw CoreInvokeError.coded(status: 1, code: "identityclaims.already_member", kind: .conflict, params: [])
+                }
+                let entity: CatalogCanonicalEntity
+                if row.target == "handle" {
+                    guard let entityID = row.entityID,
+                          let existing = membershipBySubject.values.first(where: { $0.entity.id == entityID })?.entity,
+                          existing.subjectTypeID == type.id
+                    else {
+                        throw CoreInvokeError.coded(status: 1, code: "promote.invalid", kind: .user, params: [])
+                    }
+                    entity = existing
+                } else {
+                    entity = CatalogCanonicalEntity(
+                        id: UUID().uuidString.lowercased(),
+                        ref: "\(type.refPrefix)-FAKE\(membershipBySubject.count + 1)",
+                        subjectTypeID: type.id,
+                        label: ""
+                    )
+                }
+                let claim = CatalogIdentityClaim(
+                    id: UUID().uuidString.lowercased(),
+                    subjectID: subject.id,
+                    entityID: entity.id,
+                    status: "accepted",
+                    confidenceGradeID: row.confidenceGradeID,
+                    argument: row.argument.trimmingCharacters(in: .whitespacesAndNewlines)
+                )
+                membershipBySubject[subject.id] = CatalogSubjectMembership(
+                    subjectID: subject.id,
+                    claimID: claim.id,
+                    entity: entity,
+                    kind: type.key
+                )
+                claimBySubject[subject.id] = claim
+                for pair in row.pairs {
+                    recordPin(observationID: pair.incomingObservationID, entity: entity)
+                    recordPin(observationID: pair.memberObservationID, entity: entity)
+                    if let member = observationsBySource.values.flatMap({ $0 }).first(where: { $0.id == pair.memberObservationID }),
+                       let memberEntity = membershipBySubject[member.subjectID]?.entity,
+                       memberEntity.id != entity.id
+                    {
+                        recordPin(observationID: pair.incomingObservationID, entity: memberEntity)
+                        recordPin(observationID: pair.memberObservationID, entity: memberEntity)
+                    }
+                }
+                written.append(CatalogPromoteBatchWritten(entity: entity, claim: claim, pins: row.pairs.count * 2))
+            }
+            let revision: Int64
+            if written.isEmpty {
+                revision = seenRevision
+            } else {
+                revision = nextAuditRevision
+                nextAuditRevision += 1
+            }
+            return CatalogPromoteBatchResult(revision: revision, written: written)
+        }
+    }
+
+    private func recordPin(observationID: String, entity: CatalogCanonicalEntity) {
+        var list = pinsByObservation[observationID] ?? []
+        if !list.contains(where: { $0.id == entity.id }) {
+            list.append(entity)
+        }
+        pinsByObservation[observationID] = list
     }
 
     /// A stand-in for core/match's person profile on written names (untyped words),
@@ -2293,6 +2390,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 observationsBySource[sourceID] = list.filter { $0.id != observationID }
                 bumpSource(sourceID)
             }
+            pinsByObservation[observationID] = nil
         }
     }
 
@@ -2668,7 +2766,30 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         if isEdgeLocked(observation: existing, projectDir: projectDir) {
             return CatalogDeleteImpact(allowed: false, gate: .edgeLocked, groups: [])
         }
-        return CatalogDeleteImpact(allowed: true, gate: .ok, groups: [])
+        let handles = pinsByObservation[id] ?? []
+        guard !handles.isEmpty else {
+            return CatalogDeleteImpact(allowed: true, gate: .ok, groups: [])
+        }
+        return CatalogDeleteImpact(
+            allowed: true,
+            gate: .ok,
+            groups: [],
+            cascades: [
+                CatalogDeleteImpactGroup(
+                    via: "identity_claim_evidence.observation_id",
+                    kind: "canonical_entity",
+                    total: handles.count,
+                    listed: handles.map { entity in
+                        CatalogDeleteImpactListed(
+                            id: entity.id,
+                            ref: entity.ref,
+                            title: entity.ref,
+                            location: WorkspaceLocation(section: .sources, ref: entity.ref, title: entity.ref)
+                        )
+                    }
+                ),
+            ]
+        )
     }
 
     private func subjectDeleteImpact(projectDir: String, id: String) -> CatalogDeleteImpact {

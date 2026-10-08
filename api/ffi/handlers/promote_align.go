@@ -39,12 +39,16 @@ func ProposePromoteGraphAlignment(in []byte) ([]byte, error) {
 		if err != nil {
 			return err
 		}
-		prop, _, err := promotealign.Propose(db, sourceID, fixed)
+		prop, rev, err := promotealign.Propose(db, sourceID, fixed)
 		if err != nil {
 			return err
 		}
 		out, err = proposalProto(db, prop)
-		return err
+		if err != nil {
+			return err
+		}
+		out.Revision = rev
+		return nil
 	})
 	if err != nil {
 		return nil, err

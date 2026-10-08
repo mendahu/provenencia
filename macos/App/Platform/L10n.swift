@@ -7862,6 +7862,11 @@ enum L10n {
             defaultValue: "Only people, events, and places can be promoted.",
             comment: "FFI error promote.unsupported_type for bridge subjects"
         )
+        static let promoteStale = LocalizedStringResource(
+            "error.promote.stale",
+            defaultValue: "The catalog changed while this proposal was open. Review it again.",
+            comment: "FFI error promote.stale when a Done loses the revision race"
+        )
         static let conclusionDetailsNotFound = LocalizedStringResource(
             "error.conclusiondetails.not_found",
             defaultValue: "This record no longer exists. It may have been merged into another.",
@@ -8430,6 +8435,8 @@ enum L10n {
                 return L10n.string(promoteInvalid)
             case "promote.unsupported_type":
                 return L10n.string(promoteUnsupportedType)
+            case "promote.stale":
+                return L10n.string(promoteStale)
             case "conclusiondetails.not_found":
                 return L10n.string(conclusionDetailsNotFound)
             case "subjectpositions.invalid":
