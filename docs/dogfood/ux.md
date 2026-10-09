@@ -29,7 +29,8 @@ Copy the stub. Surface + what got in the way is enough. A wanted fix is optional
   - **About 3–8 options** → a simple dropdown (`PVSelect`). The cutoff is up for debate.
   - **More than that** → a searchable combo box (`PVComboBox`).
   - Useful in many places. Would also cover *Name part type dropdown: shifting width and no type-to-cycle* if that list ends up as a combo box.
-- **Open question:** A field switches control when a researcher adds a term that crosses a cutoff (e.g. radio → dropdown). Is that acceptable, or should a field keep its control once it's been shown?
+- **Control switching:** not a real concern. Vocabulary is edited on different views from where these fields appear, so a control won't change while someone is using it.
+- **Layout implication:** views that host these fields need room for whichever control shows up: a radio row, a dropdown, or a combo box. Don't size a form around one specific control.
 
 ### Prefill sensible defaults for common Observation kinds
 
