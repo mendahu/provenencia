@@ -21,6 +21,11 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
+      - name: Vet
+        env:
+          CGO_ENABLED: "1"
+        # go test runs only a subset of vet's checks (not copylocks, for one).
+        run: go vet -tags fts5 ./api/... ./core/...
       - name: Run unit tests
         env:
           CGO_ENABLED: "1"

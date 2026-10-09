@@ -628,7 +628,6 @@ func TestDeleteObservation(t *testing.T) {
 				if err := proto.Unmarshal(out, &deleted); err != nil {
 					t.Fatal(err)
 				}
-				_ = deleted
 				dr := req.(*engine.DeleteObservationRequest)
 				assertLatestAuditAction(t, dr.ProjectDir, "delete_observation")
 			},
