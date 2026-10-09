@@ -381,20 +381,25 @@ func GetMany(c *database.Catalog, ids [][]byte) (map[string]Artifact, error) {
 	if err != nil {
 		return nil, err
 	}
-	q := sqlGetMany + database.SQLInPlaceholders(len(ids)) + `)`
-	rows, err := db.Query(q, database.BlobArgs(ids)...)
+	err = database.ForEachBatch(ids, func(batch [][]byte) error {
+		rows, err := db.Query(sqlGetMany+database.SQLInPlaceholders(len(batch))+`)`, database.BlobArgs(batch)...)
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+		for rows.Next() {
+			a, err := scanArtifact(rows)
+			if err != nil {
+				return err
+			}
+			out[string(a.ID)] = a
+		}
+		return rows.Err()
+	})
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-	for rows.Next() {
-		a, err := scanArtifact(rows)
-		if err != nil {
-			return nil, err
-		}
-		out[string(a.ID)] = a
-	}
-	return out, rows.Err()
+	return out, nil
 }
 
 // getByRef returns an Artifact by ART-… ref, or sql.ErrNoRows.

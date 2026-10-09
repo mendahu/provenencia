@@ -85,25 +85,27 @@ func ListPersons(q Querier) ([]PersonHeader, error) {
 }
 
 // PersonsByIDs returns the headers of the given unmerged Persons in list
-// order, in one query. Unknown, merged, and non-Person ids are absent.
+// order, one query per database.InBatch ids. Unknown, merged, and non-Person
+// ids are absent.
 func PersonsByIDs(q Querier, ids [][]byte) ([]PersonHeader, error) {
-	ids = database.UniqueBlobIDs(ids)
-	if len(ids) == 0 {
-		return nil, nil
+	out, err := personRowsByIDs(q, ids)
+	if err != nil || len(out) == 0 {
+		return nil, err
 	}
-	return queryPersons(q, sqlPersonsSelect+` AND e.id IN (`+database.SQLInPlaceholders(len(ids))+`)`,
-		database.BlobArgs(ids)...)
+	return withLives(q, out)
 }
 
 // personRowsByIDs is PersonsByIDs without the birth and death walk, for an
 // Event's subjects.
 func personRowsByIDs(q Querier, ids [][]byte) ([]PersonHeader, error) {
-	ids = database.UniqueBlobIDs(ids)
-	if len(ids) == 0 {
-		return nil, nil
-	}
-	return scanPersons(q, sqlPersonsSelect+` AND e.id IN (`+database.SQLInPlaceholders(len(ids))+`)`,
-		database.BlobArgs(ids)...)
+	var out []PersonHeader
+	err := database.ForEachBatch(database.UniqueBlobIDs(ids), func(batch [][]byte) error {
+		rows, err := scanPersons(q, sqlPersonsSelect+` AND e.id IN (`+database.SQLInPlaceholders(len(batch))+`)`,
+			database.BlobArgs(batch)...)
+		out = append(out, rows...)
+		return err
+	})
+	return out, err
 }
 
 func queryPersons(q Querier, query string, args ...any) ([]PersonHeader, error) {
@@ -111,6 +113,11 @@ func queryPersons(q Querier, query string, args ...any) ([]PersonHeader, error) 
 	if err != nil {
 		return nil, err
 	}
+	return withLives(q, out)
+}
+
+// withLives attaches births and deaths and applies the list order.
+func withLives(q Querier, out []PersonHeader) ([]PersonHeader, error) {
 	if err := attachLives(q, out); err != nil {
 		return nil, err
 	}

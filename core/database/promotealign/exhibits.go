@@ -305,59 +305,63 @@ func acceptedMembers(q Querier, entityIDs [][]byte) (map[string][][]byte, error)
 }
 
 // bridgeNeighbors maps each of subjectIDs to the Subjects among targets one
-// bridge away.
+// bridge away. Both lists are read in database.InBatch slices.
 func bridgeNeighbors(q Querier, subjectIDs, targets [][]byte) (map[string][][]byte, error) {
 	out := map[string][][]byte{}
 	keys := connectrules.BridgeTypeKeys()
 	if len(subjectIDs) == 0 || len(targets) == 0 || len(keys) == 0 {
 		return out, nil
 	}
-	args := make([]any, 0, len(keys)+len(subjectIDs)+len(targets))
-	for _, k := range keys {
-		args = append(args, k)
-	}
-	for _, id := range subjectIDs {
-		args = append(args, id)
-	}
-	for _, id := range targets {
-		args = append(args, id)
-	}
-	rows, err := q.Query(`SELECT e1.value_subject_id, e2.value_subject_id
-		FROM observations e1
-		JOIN observations e2 ON e2.subject_id = e1.subject_id AND e2.id != e1.id
-			AND e2.polarity = 'positive' AND e2.value_subject_id IS NOT NULL
-		JOIN subjects bs ON bs.id = e1.subject_id
-		JOIN subject_types st ON st.id = bs.subject_type_id
-			AND st.origin = 'provenencia'
-			AND st.key IN (`+database.SQLInPlaceholders(len(keys))+`)
-		WHERE e1.polarity = 'positive'
-			AND e1.value_subject_id IN (`+database.SQLInPlaceholders(len(subjectIDs))+`)
-			AND e2.value_subject_id IN (`+database.SQLInPlaceholders(len(targets))+`)`, args...)
+	seen := map[string]bool{}
+	err := database.ForEachBatch(subjectIDs, func(from [][]byte) error {
+		return database.ForEachBatch(targets, func(to [][]byte) error {
+			args := make([]any, 0, len(keys)+len(from)+len(to))
+			for _, k := range keys {
+				args = append(args, k)
+			}
+			args = append(args, database.BlobArgs(from)...)
+			args = append(args, database.BlobArgs(to)...)
+			rows, err := q.Query(`SELECT e1.value_subject_id, e2.value_subject_id
+				FROM observations e1
+				JOIN observations e2 ON e2.subject_id = e1.subject_id AND e2.id != e1.id
+					AND e2.polarity = 'positive' AND e2.value_subject_id IS NOT NULL
+				JOIN subjects bs ON bs.id = e1.subject_id
+				JOIN subject_types st ON st.id = bs.subject_type_id
+					AND st.origin = 'provenencia'
+					AND st.key IN (`+database.SQLInPlaceholders(len(keys))+`)
+				WHERE e1.polarity = 'positive'
+					AND e1.value_subject_id IN (`+database.SQLInPlaceholders(len(from))+`)
+					AND e2.value_subject_id IN (`+database.SQLInPlaceholders(len(to))+`)`, args...)
+			if err != nil {
+				return err
+			}
+			defer rows.Close()
+			for rows.Next() {
+				var a, b []byte
+				if err := rows.Scan(&a, &b); err != nil {
+					return err
+				}
+				if len(a) != 16 || len(b) != 16 || string(a) == string(b) {
+					continue
+				}
+				key := string(a) + "|" + string(b)
+				if seen[key] {
+					continue
+				}
+				seen[key] = true
+				out[string(a)] = append(out[string(a)], append([]byte(nil), b...))
+			}
+			return rows.Err()
+		})
+	})
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-	seen := map[string]bool{}
-	for rows.Next() {
-		var a, b []byte
-		if err := rows.Scan(&a, &b); err != nil {
-			return nil, err
-		}
-		if len(a) != 16 || len(b) != 16 || string(a) == string(b) {
-			continue
-		}
-		key := string(a) + "|" + string(b)
-		if seen[key] {
-			continue
-		}
-		seen[key] = true
-		out[string(a)] = append(out[string(a)], append([]byte(nil), b...))
-	}
-	return out, rows.Err()
+	return out, nil
 }
 
 func loadExhibitObservations(q Querier, subjectIDs [][]byte) ([]exhibitObs, error) {
-	query := `SELECT o.id, o.subject_id, p.key, p.origin, p.value_type, p.cardinality,
+	const query = `SELECT o.id, o.subject_id, p.key, p.origin, p.value_type, p.cardinality,
 			o.value_text, o.value_integer, o.value_date_id, o.value_name_id, t.key, t.label, src.title
 		FROM observations o
 		JOIN properties p ON p.id = o.property_id
@@ -365,15 +369,7 @@ func loadExhibitObservations(q Querier, subjectIDs [][]byte) ([]exhibitObs, erro
 		JOIN artifacts a ON a.id = c.artifact_id
 		JOIN sources src ON src.id = a.source_id
 		LEFT JOIN property_terms t ON t.id = o.value_term_id
-		WHERE o.polarity = 'positive' AND o.subject_id IN (` + database.SQLInPlaceholders(len(subjectIDs)) + `)`
-	args := make([]any, len(subjectIDs))
-	for i, id := range subjectIDs {
-		args[i] = id
-	}
-	rows, err := q.Query(query, args...)
-	if err != nil {
-		return nil, err
-	}
+		WHERE o.polarity = 'positive' AND o.subject_id IN (`
 	type pending struct {
 		o              exhibitObs
 		dateID, nameID []byte
@@ -381,38 +377,43 @@ func loadExhibitObservations(q Querier, subjectIDs [][]byte) ([]exhibitObs, erro
 	}
 	var all []pending
 	var dateIDs, nameIDs [][]byte
-	for rows.Next() {
-		var (
-			p                     pending
-			valueType             string
-			text, term, termLabel sql.NullString
-			integer               sql.NullInt64
-		)
-		if err := rows.Scan(&p.o.id, &p.o.subjectID, &p.o.prop.Key, &p.o.prop.Origin, &valueType, &p.o.cardinality,
-			&text, &integer, &p.dateID, &p.nameID, &term, &termLabel, &p.o.source); err != nil {
-			_ = rows.Close()
-			return nil, err
+	err := database.ForEachBatch(subjectIDs, func(batch [][]byte) error {
+		rows, err := q.Query(query+database.SQLInPlaceholders(len(batch))+`)`, database.BlobArgs(batch)...)
+		if err != nil {
+			return err
 		}
-		p.o.valueType = valueType
-		p.o.value = match.Value{
-			Text: text.String, HasText: text.Valid,
-			Integer: integer.Int64, HasInteger: integer.Valid,
-			Term: term.String,
+		defer rows.Close()
+		for rows.Next() {
+			var (
+				p                     pending
+				valueType             string
+				text, term, termLabel sql.NullString
+				integer               sql.NullInt64
+			)
+			if err := rows.Scan(&p.o.id, &p.o.subjectID, &p.o.prop.Key, &p.o.prop.Origin, &valueType, &p.o.cardinality,
+				&text, &integer, &p.dateID, &p.nameID, &term, &termLabel, &p.o.source); err != nil {
+				return err
+			}
+			p.o.valueType = valueType
+			p.o.value = match.Value{
+				Text: text.String, HasText: text.Valid,
+				Integer: integer.Int64, HasInteger: integer.Valid,
+				Term: term.String,
+			}
+			p.termLabel = termLabel.String
+			all = append(all, p)
+			if len(p.dateID) > 0 {
+				dateIDs = append(dateIDs, p.dateID)
+			}
+			if len(p.nameID) > 0 {
+				nameIDs = append(nameIDs, p.nameID)
+			}
 		}
-		p.termLabel = termLabel.String
-		all = append(all, p)
-		if len(p.dateID) > 0 {
-			dateIDs = append(dateIDs, p.dateID)
-		}
-		if len(p.nameID) > 0 {
-			nameIDs = append(nameIDs, p.nameID)
-		}
-	}
-	if err := rows.Err(); err != nil {
-		_ = rows.Close()
+		return rows.Err()
+	})
+	if err != nil {
 		return nil, err
 	}
-	_ = rows.Close()
 
 	dates, err := datevalues.LookupManyTx(q, dateIDs)
 	if err != nil {

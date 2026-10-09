@@ -282,25 +282,24 @@ func loadAssociationDates(q Querier, ids [][]byte) (map[string]assocDates, error
 // placesWithoutChains is PlacesByIDs without attaching Parents (avoids
 // recursion when the graph loader needs raw headers).
 func placesWithoutChains(q Querier, ids [][]byte) ([]PlaceHeader, error) {
-	ids = database.UniqueBlobIDs(ids)
-	if len(ids) == 0 {
-		return nil, nil
-	}
-	rows, err := q.Query(sqlPlacesSelect+` AND e.id IN (`+database.SQLInPlaceholders(len(ids))+`)`,
-		database.BlobArgs(ids)...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
 	var out []PlaceHeader
-	for rows.Next() {
-		h, err := scanPlace(rows)
+	err := database.ForEachBatch(database.UniqueBlobIDs(ids), func(batch [][]byte) error {
+		rows, err := q.Query(sqlPlacesSelect+` AND e.id IN (`+database.SQLInPlaceholders(len(batch))+`)`,
+			database.BlobArgs(batch)...)
 		if err != nil {
-			return nil, err
+			return err
 		}
-		out = append(out, h)
-	}
-	return out, rows.Err()
+		defer rows.Close()
+		for rows.Next() {
+			h, err := scanPlace(rows)
+			if err != nil {
+				return err
+			}
+			out = append(out, h)
+		}
+		return rows.Err()
+	})
+	return out, err
 }
 
 func (g *placeGraph) periodOf(id []byte) autoreconcile.Window {

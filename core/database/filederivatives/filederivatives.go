@@ -62,21 +62,26 @@ func LookupMany(c *database.Catalog, sourceFileIDs [][]byte, derivativeType stri
 	if err != nil {
 		return nil, err
 	}
-	args := append([]any{derivativeType}, database.BlobArgs(ids)...)
-	q := sqlLookupMany + database.SQLInPlaceholders(len(ids)) + `)`
-	rows, err := db.Query(q, args...)
+	err = database.ForEachBatch(ids, func(batch [][]byte) error {
+		args := append([]any{derivativeType}, database.BlobArgs(batch)...)
+		rows, err := db.Query(sqlLookupMany+database.SQLInPlaceholders(len(batch))+`)`, args...)
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+		for rows.Next() {
+			link, err := scanLink(rows)
+			if err != nil {
+				return err
+			}
+			out[string(link.SourceFileID)] = link
+		}
+		return rows.Err()
+	})
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-	for rows.Next() {
-		link, err := scanLink(rows)
-		if err != nil {
-			return nil, err
-		}
-		out[string(link.SourceFileID)] = link
-	}
-	return out, rows.Err()
+	return out, nil
 }
 
 // Insert writes a new derivative link on tx.

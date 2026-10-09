@@ -73,20 +73,25 @@ func LookupMany(c *database.Catalog, ids [][]byte) (map[string]File, error) {
 	if err != nil {
 		return nil, err
 	}
-	q := sqlLookupMany + database.SQLInPlaceholders(len(ids)) + `)`
-	rows, err := db.Query(q, database.BlobArgs(ids)...)
+	err = database.ForEachBatch(ids, func(batch [][]byte) error {
+		rows, err := db.Query(sqlLookupMany+database.SQLInPlaceholders(len(batch))+`)`, database.BlobArgs(batch)...)
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+		for rows.Next() {
+			f, err := scanFile(rows)
+			if err != nil {
+				return err
+			}
+			out[string(f.ID)] = f
+		}
+		return rows.Err()
+	})
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-	for rows.Next() {
-		f, err := scanFile(rows)
-		if err != nil {
-			return nil, err
-		}
-		out[string(f.ID)] = f
-	}
-	return out, rows.Err()
+	return out, nil
 }
 
 // LookupByChecksum returns a File by SHA-256 hex, or sql.ErrNoRows.

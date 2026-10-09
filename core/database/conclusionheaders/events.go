@@ -2,6 +2,7 @@ package conclusionheaders
 
 import (
 	"database/sql"
+	"sort"
 	"strings"
 
 	"github.com/mendahu/provenencia/core/database"
@@ -39,6 +40,9 @@ type EventHeader struct {
 	Places         []HeaderPlace
 	// Title is the naming-matrix rule and parts, chosen from the above.
 	Title eventtitle.Plan
+
+	// sortKey is the date's (else the start date's) sort key; list order.
+	sortKey sql.NullString
 }
 
 // EventSubject is one person on an event through a subject-role participation.
@@ -66,7 +70,8 @@ const (
 			WHERE c.entity_id = e.id AND c.property_id = sp.id AND c.reason = 'kept'),
 		ed.value_date,
 		(SELECT COUNT(*) FROM auto_reconciler_values c
-			WHERE c.entity_id = e.id AND c.property_id = ep.id AND c.reason = 'kept')
+			WHERE c.entity_id = e.id AND c.property_id = ep.id AND c.reason = 'kept'),
+		COALESCE(d.sort_key, sd.sort_key)
 	FROM canonical_entities e
 	JOIN subject_types st ON st.id = e.subject_type_id
 	LEFT JOIN properties enp ON enp.key = 'event_name' AND enp.origin = 'provenencia'
@@ -96,17 +101,32 @@ func ListEvents(q Querier) ([]EventHeader, error) {
 }
 
 // EventsByIDs returns the headers of the given unmerged Events in list
-// order, in one query. Unknown, merged, and non-Event ids are absent.
+// order, one query per database.InBatch ids. Unknown, merged, and non-Event
+// ids are absent.
 func EventsByIDs(q Querier, ids [][]byte) ([]EventHeader, error) {
-	ids = database.UniqueBlobIDs(ids)
-	if len(ids) == 0 {
-		return nil, nil
+	var out []EventHeader
+	err := database.ForEachBatch(database.UniqueBlobIDs(ids), func(batch [][]byte) error {
+		rows, err := scanEvents(q, sqlEventsSelect+` AND e.id IN (`+database.SQLInPlaceholders(len(batch))+`)`,
+			database.BlobArgs(batch)...)
+		out = append(out, rows...)
+		return err
+	})
+	if err != nil || len(out) == 0 {
+		return nil, err
 	}
-	return queryEvents(q, sqlEventsSelect+` AND e.id IN (`+database.SQLInPlaceholders(len(ids))+`)`+sqlEventsOrder,
-		database.BlobArgs(ids)...)
+	sortEvents(out)
+	return withEventGraph(q, out)
 }
 
 func queryEvents(q Querier, query string, args ...any) ([]EventHeader, error) {
+	out, err := scanEvents(q, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	return withEventGraph(q, out)
+}
+
+func scanEvents(q Querier, query string, args ...any) ([]EventHeader, error) {
 	rows, err := q.Query(query, args...)
 	if err != nil {
 		return nil, err
@@ -120,9 +140,26 @@ func queryEvents(q Querier, query string, args ...any) ([]EventHeader, error) {
 		}
 		out = append(out, h)
 	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
+	return out, rows.Err()
+}
+
+// sortEvents is sqlEventsOrder in Go, for rows read in several batches:
+// dated first by sort key, then undated, ties by ref ignoring case.
+func sortEvents(out []EventHeader) {
+	sort.SliceStable(out, func(i, j int) bool {
+		a, b := out[i], out[j]
+		if a.sortKey.Valid != b.sortKey.Valid {
+			return a.sortKey.Valid
+		}
+		if a.sortKey.String != b.sortKey.String {
+			return a.sortKey.String < b.sortKey.String
+		}
+		return strings.ToLower(a.Entity.Ref) < strings.ToLower(b.Entity.Ref)
+	})
+}
+
+// withEventGraph attaches subjects and places, then titles.
+func withEventGraph(q Querier, out []EventHeader) ([]EventHeader, error) {
 	if err := attachEventGraph(q, out); err != nil {
 		return nil, err
 	}
@@ -178,6 +215,7 @@ func scanEvent(rows *sql.Rows) (EventHeader, error) {
 		&dateBlob, &h.DateCount,
 		&startBlob, &h.StartDateCount,
 		&endBlob, &h.EndDateCount,
+		&h.sortKey,
 	); err != nil {
 		return EventHeader{}, err
 	}
