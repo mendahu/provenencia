@@ -32,6 +32,7 @@ Use this folder when something useful pops up mid-work and would otherwise get l
 - [`promote-matching.md`](promote-matching.md) — what proves a join; the direction is now [`promote-graph-alignment.md`](../promote-graph-alignment.md)
 - [`promote-connection-subrows.md`](promote-connection-subrows.md) — connections as subrows of the subjects they join, with no switch-off
 - [`term-management.md`](term-management.md) — one place to manage terms, including relationship direction and inverses
+- [`catalog-graph-cache.md`](catalog-graph-cache.md) — the canonical graph in memory, kept current by the auto-reconciler's recompute
 
 ## Archived
 
