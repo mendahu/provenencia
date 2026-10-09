@@ -41,6 +41,7 @@ import (
 
 	"github.com/mendahu/provenencia/core/autoreconcile"
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/conclusionheaders"
 	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/database/properties"
@@ -151,9 +152,9 @@ const (
 
 // RecomputeTx rewrites the cached rows of the given handles from truth tables.
 // A handle with no members (or no cacheable values) ends with no rows. The
-// handles' search documents are reprojected from the new rows in the same
-// transaction (searchindex.ReprojectHandles): every write that changes a
-// handle's values comes through here, so search can't drift from the cache.
+// handles' search documents, and the documents of handles whose headers read
+// them, are reprojected in the same transaction. Deletes pass Released.Handles
+// through the same call, so a removed member updates the rows that named it.
 func RecomputeTx(q Querier, entityIDs [][]byte) error {
 	ids := database.UniqueBlobIDs(entityIDs)
 	for start := 0; start < len(ids); start += batchSize {
@@ -162,7 +163,11 @@ func RecomputeTx(q Querier, entityIDs [][]byte) error {
 			return err
 		}
 	}
-	return searchindex.ReprojectHandles(q, ids)
+	deps, err := conclusionheaders.HeaderDependents(q, ids)
+	if err != nil {
+		return err
+	}
+	return searchindex.ReprojectHandles(q, append(ids, deps...))
 }
 
 // HandlesObservingSubject returns handles whose members' Observations point

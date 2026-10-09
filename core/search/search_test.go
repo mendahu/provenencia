@@ -3,6 +3,7 @@ package search
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -106,6 +107,40 @@ func TestSearchRanksTitleOverDescriptionAndMapsLocation(t *testing.T) {
 	}
 	if hits[0].Score <= hits[1].Score {
 		t.Fatalf("title score %v should beat description %v", hits[0].Score, hits[1].Score)
+	}
+}
+
+func TestShorterTitleOutranksALongerTitle(t *testing.T) {
+	c, err := database.Create(t.TempDir(), "t.provenencia")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	userID := seedUser(t, c)
+	typeID := seedType(t, c, "Book", "")
+	short, err := sources.Create(c, userID, sources.CreateInput{
+		SourceTypeID: typeID,
+		Title:        "Jake Robins",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	long, err := sources.Create(c, userID, sources.CreateInput{
+		SourceTypeID: typeID,
+		Title:        "Engagement of Jake Robins and Amy Long",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	hits, err := DefaultEngine().Search(context.Background(), c, Query{Text: "Jake"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(hits) < 2 || hits[0].ID != uuidString(short.ID) {
+		t.Fatalf("shorter title should rank first, got %+v", hits)
+	}
+	if hits[0].Score <= hits[1].Score || hits[1].ID != uuidString(long.ID) {
+		t.Fatalf("scores %+v", hits)
 	}
 }
 
@@ -317,7 +352,7 @@ func TestPrefixRefPromotesSource(t *testing.T) {
 	}
 }
 
-func TestSourcesContextFloatsSourceAboveVocab(t *testing.T) {
+func TestSharedTokenFindsSourceAndVocab(t *testing.T) {
 	c, err := database.Create(t.TempDir(), "t.provenencia")
 	if err != nil {
 		t.Fatal(err)
@@ -339,8 +374,6 @@ func TestSourcesContextFloatsSourceAboveVocab(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_ = field
-
 	hits, err := DefaultEngine().Search(context.Background(), c, Query{
 		Text:     "SharedToken",
 		Location: WorkspaceLocation{Section: SectionSources},
@@ -351,20 +384,19 @@ func TestSourcesContextFloatsSourceAboveVocab(t *testing.T) {
 	if len(hits) < 3 {
 		t.Fatalf("want Source+type+field, got %+v", hits)
 	}
-	if hits[0].Kind != KindSource || hits[0].ID != uuidString(src.ID) {
-		t.Fatalf("want Source first under sources context, got %+v", hits[0])
-	}
-	var sawType, sawField bool
+	var sawSource, sawType, sawField bool
 	for _, h := range hits {
-		if h.Kind == KindSourceType {
+		switch {
+		case h.ID == uuidString(src.ID):
+			sawSource = true
+		case h.Kind == KindSourceType && h.ID == uuidString(ty.ID):
 			sawType = true
-		}
-		if h.Kind == KindMetadataField {
+		case h.Kind == KindMetadataField && h.ID == uuidString(field.ID):
 			sawField = true
 		}
 	}
-	if !sawType || !sawField {
-		t.Fatalf("vocab should still appear: %+v", hits)
+	if !sawSource || !sawType || !sawField {
+		t.Fatalf("want source, type, and field, got %+v", hits)
 	}
 }
 
@@ -481,7 +513,7 @@ func TestSearchRecoversCommonTypo(t *testing.T) {
 	}
 }
 
-func TestSearchExactOutranksFuzzyNeighbor(t *testing.T) {
+func TestTighterTitleOutranksALongerExactTitle(t *testing.T) {
 	c, err := database.Create(t.TempDir(), "t.provenencia")
 	if err != nil {
 		t.Fatal(err)
@@ -496,20 +528,31 @@ func TestSearchExactOutranksFuzzyNeighbor(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = sources.Create(c, userID, sources.CreateInput{
+	tighter, err := sources.Create(c, userID, sources.CreateInput{
 		SourceTypeID: typeID,
 		Title:        "Ilminsterish notes",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
+	for i := 0; i < 20; i++ {
+		if _, err := sources.Create(c, userID, sources.CreateInput{
+			SourceTypeID: typeID,
+			Title:        fmt.Sprintf("Unrelated deed %d", i),
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
 
 	hits, err := DefaultEngine().Search(context.Background(), c, Query{Text: "Ilminster"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(hits) == 0 || hits[0].ID != uuidString(exact.ID) {
-		t.Fatalf("exact title should win, got %+v", hits)
+	if len(hits) < 2 || hits[0].ID != uuidString(tighter.ID) || hits[1].ID != uuidString(exact.ID) {
+		t.Fatalf("tighter title should rank first, got %+v", hits)
+	}
+	if hits[0].Score <= hits[1].Score {
+		t.Fatalf("scores %+v", hits)
 	}
 }
 

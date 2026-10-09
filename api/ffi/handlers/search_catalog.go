@@ -5,6 +5,7 @@ import (
 
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/conclusionheaders"
 	"github.com/mendahu/provenencia/core/search"
 	"google.golang.org/protobuf/proto"
 )
@@ -31,7 +32,11 @@ func SearchCatalog(in []byte) ([]byte, error) {
 		for _, h := range hits {
 			out.Hits = append(out.Hits, hitToProto(h))
 		}
-		return nil
+		db, err := c.DB()
+		if err != nil {
+			return err
+		}
+		return fillHitHeaders(db, out.Hits)
 	})
 	if err != nil {
 		return nil, err
@@ -86,6 +91,66 @@ func locationToProto(loc search.WorkspaceLocation) *engine.WorkspaceLocation {
 		Title:                loc.Title,
 		SourceTitle:          loc.SourceTitle,
 	}
+}
+
+// fillHitHeaders attaches the list header for each person, event, and place hit.
+func fillHitHeaders(db conclusionheaders.Querier, hits []*engine.SearchHit) error {
+	var persons, events, places [][]byte
+	for _, h := range hits {
+		id, err := parseID(h.GetId())
+		if err != nil {
+			continue
+		}
+		switch h.GetKind() {
+		case search.KindPerson:
+			persons = append(persons, id)
+		case search.KindEvent:
+			events = append(events, id)
+		case search.KindPlace:
+			places = append(places, id)
+		}
+	}
+	listedPersons, err := conclusionheaders.PersonsByIDs(db, persons)
+	if err != nil {
+		return err
+	}
+	listedEvents, err := conclusionheaders.EventsByIDs(db, events)
+	if err != nil {
+		return err
+	}
+	listedPlaces, err := conclusionheaders.PlacesByIDs(db, places)
+	if err != nil {
+		return err
+	}
+	personByID := map[string]conclusionheaders.PersonHeader{}
+	for _, p := range listedPersons {
+		personByID[uuidString(p.Entity.ID)] = p
+	}
+	eventByID := map[string]conclusionheaders.EventHeader{}
+	for _, e := range listedEvents {
+		eventByID[uuidString(e.Entity.ID)] = e
+	}
+	placeByID := map[string]conclusionheaders.PlaceHeader{}
+	for _, p := range listedPlaces {
+		placeByID[uuidString(p.Entity.ID)] = p
+	}
+	for _, h := range hits {
+		switch h.GetKind() {
+		case search.KindPerson:
+			if p, ok := personByID[h.GetId()]; ok {
+				h.Header = &engine.SearchHit_Person{Person: personHeaderProto(p)}
+			}
+		case search.KindEvent:
+			if e, ok := eventByID[h.GetId()]; ok {
+				h.Header = &engine.SearchHit_Event{Event: eventHeaderProto(e)}
+			}
+		case search.KindPlace:
+			if p, ok := placeByID[h.GetId()]; ok {
+				h.Header = &engine.SearchHit_Place{Place: placeHeaderProto(p)}
+			}
+		}
+	}
+	return nil
 }
 
 func hitToProto(h search.Hit) *engine.SearchHit {
