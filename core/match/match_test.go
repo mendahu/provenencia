@@ -194,3 +194,21 @@ func TestRankEventsAndPlaces(t *testing.T) {
 		t.Fatal("bridge kinds have no profile")
 	}
 }
+
+// Pairwise evaluation treats a neutral term as nothing to compare, as Rank's
+// person profile and the reconciler do: "unknown" neither conflicts with
+// "male" nor agrees with another "unknown".
+func TestEvaluateNeutralTermIsNotComparable(t *testing.T) {
+	sex := Property{Key: "sex_at_birth", Origin: "provenencia"}
+	metas := []PropertyMeta{{Property: sex, ValueType: "term"}}
+	for _, other := range []string{"male", "unknown", "indeterminate"} {
+		ev := Evaluate(Values{sex: {{Term: "unknown"}}}, Values{sex: {{Term: other}}}, metas)
+		if c := ev.Comparisons[0]; c.Comparable || c.Outcome != OutcomeUnknown {
+			t.Fatalf("unknown vs %s: comparable=%v outcome=%s, want not comparable", other, c.Comparable, c.Outcome)
+		}
+	}
+	ev := Evaluate(Values{sex: {{Term: "female"}}}, Values{sex: {{Term: "male"}}}, metas)
+	if c := ev.Comparisons[0]; !c.Comparable || c.Outcome != OutcomeConflict {
+		t.Fatalf("female vs male: comparable=%v outcome=%s, want a conflict", c.Comparable, c.Outcome)
+	}
+}

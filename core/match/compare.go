@@ -22,7 +22,7 @@ func ComparerFor(valueType string) Comparer {
 	case properties.ValueTypeText:
 		return DefaultText
 	case properties.ValueTypeTerm:
-		return TermComparer{}
+		return DefaultTerms
 	case properties.ValueTypeDate:
 		return DefaultDates
 	case properties.ValueTypeInteger:
