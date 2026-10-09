@@ -66,17 +66,29 @@ func attachExhibits(q Querier, layer graphalign.Layer, prop *graphalign.Proposal
 		neighbors []neighborPair
 	}
 	var plans []rowPlan
-	var memberIDs [][]byte
+	// Only rows with a mapped layer neighbor need one-hop pairs, and only
+	// toward that neighbor's handle members: a hub handle's other bridges
+	// are never read.
+	var hopFrom, hopTo [][]byte
 	for i := range prop.Rows {
 		r := &prop.Rows[i]
 		if r.Target != graphalign.TargetHandle || len(r.HandleID) != 16 {
 			continue
 		}
 		own := members[string(r.HandleID)]
-		memberIDs = append(memberIDs, own...)
 		plans = append(plans, rowPlan{idx: i, own: own})
+		mapped := false
+		for _, n := range neighbors[string(r.SubjectID)] {
+			if g, ok := mappedTo[string(n)]; ok {
+				mapped = true
+				hopTo = append(hopTo, members[string(g)]...)
+			}
+		}
+		if mapped {
+			hopFrom = append(hopFrom, own...)
+		}
 	}
-	hops, err := bridgeNeighbors(q, memberIDs)
+	hops, err := bridgeNeighbors(q, database.UniqueBlobIDs(hopFrom), database.UniqueBlobIDs(hopTo))
 	if err != nil {
 		return err
 	}
@@ -292,18 +304,22 @@ func acceptedMembers(q Querier, entityIDs [][]byte) (map[string][][]byte, error)
 	return out, nil
 }
 
-// bridgeNeighbors maps each of subjectIDs to the Subjects one bridge away.
-func bridgeNeighbors(q Querier, subjectIDs [][]byte) (map[string][][]byte, error) {
+// bridgeNeighbors maps each of subjectIDs to the Subjects among targets one
+// bridge away.
+func bridgeNeighbors(q Querier, subjectIDs, targets [][]byte) (map[string][][]byte, error) {
 	out := map[string][][]byte{}
 	keys := connectrules.BridgeTypeKeys()
-	if len(subjectIDs) == 0 || len(keys) == 0 {
+	if len(subjectIDs) == 0 || len(targets) == 0 || len(keys) == 0 {
 		return out, nil
 	}
-	args := make([]any, 0, len(keys)+len(subjectIDs))
+	args := make([]any, 0, len(keys)+len(subjectIDs)+len(targets))
 	for _, k := range keys {
 		args = append(args, k)
 	}
 	for _, id := range subjectIDs {
+		args = append(args, id)
+	}
+	for _, id := range targets {
 		args = append(args, id)
 	}
 	rows, err := q.Query(`SELECT e1.value_subject_id, e2.value_subject_id
@@ -315,7 +331,8 @@ func bridgeNeighbors(q Querier, subjectIDs [][]byte) (map[string][][]byte, error
 			AND st.origin = 'provenencia'
 			AND st.key IN (`+database.SQLInPlaceholders(len(keys))+`)
 		WHERE e1.polarity = 'positive'
-			AND e1.value_subject_id IN (`+database.SQLInPlaceholders(len(subjectIDs))+`)`, args...)
+			AND e1.value_subject_id IN (`+database.SQLInPlaceholders(len(subjectIDs))+`)
+			AND e2.value_subject_id IN (`+database.SQLInPlaceholders(len(targets))+`)`, args...)
 	if err != nil {
 		return nil, err
 	}

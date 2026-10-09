@@ -97,6 +97,9 @@ final class PromoteModel {
     private(set) var isProposing = false
     /// Bumped per proposal; only the latest one's answer is merged.
     private var proposeGeneration = 0
+    /// Quick successive decisions fold into one proposal: each one waits
+    /// this long, and only the last still asks.
+    static let reproposeDelay: Duration = .milliseconds(250)
 
     var graphKey: CatalogQueryKey { .sourceGraph(project: session.projectKey, sourceId: entry.sourceID) }
     var confidenceKey: CatalogQueryKey { .confidenceGradesList(project: session.projectKey) }
@@ -150,7 +153,11 @@ final class PromoteModel {
         guard flow.setTarget(subjectID: subjectID, token: token) else { return }
         flow.staleNote = nil
         let generation = nextProposal()
-        Task { await repropose(generation: generation) }
+        Task {
+            try? await Task.sleep(for: Self.reproposeDelay)
+            guard generation == proposeGeneration else { return }
+            await repropose(generation: generation)
+        }
     }
 
     func togglePin(subjectID: String, comparisonID: String) {
