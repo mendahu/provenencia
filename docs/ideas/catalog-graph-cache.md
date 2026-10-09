@@ -1,4 +1,4 @@
-# A catalog graph in memory
+# A catalog graph in memory, and one write path
 
 **Status:** idea, 2026-10-09. Direction agreed in review of the Promote cost fix (mendahu/provenencia#327, to be redone on this). Not scheduled.
 
@@ -25,7 +25,7 @@ Two tiers of the same data:
 - **Persistent tier:** ARV, as today. Survives restarts; SQL and the search index read it.
 - **Memory tier:** a graph of nodes held on the open catalog session, built from ARV (plus a few small lookups), shaped for walking: each node holds its values and its adjacency, and points at its neighbors.
 
-`RecomputeTx` and `Rebuild` stay the only ways the canonical graph changes. They already rewrite ARV; they also note which entries are now stale on the write's transaction, and the memory tier drops them when that transaction commits. Writes move onto one transaction wrapper so that commit is the moment the cache hears about them.
+Every write goes through one orchestrator (`writes.Run`) that owns the transaction and its three duties: write the data, record audit, bring derived data up to date. An effects registry says what each kind of change touches. ARV is rewritten inside the transaction as today; the memory tier is told after commit.
 
 Two stores live in the memory tier:
 
@@ -49,7 +49,7 @@ Two kinds of data on one node.
 
 **Display** (lists, headers, detail):
 
-- A memo built from the node and its neighbors the first time a header or detail is asked for, and dropped when the node or a neighbor it reads changes (see Invalidation). It is derived from structure, never filled independently, so it cannot drift from it.
+- A memo built from the node and its neighbors the first time a header or detail is asked for, and dropped when the node or a neighbor it reads changes (see Writes). It is derived from structure, never filled independently, so it cannot drift from it.
 - It holds ids, not labels: term and property labels, Source titles, and "today" are resolved when read (see What isn't in ARV).
 
 ```go
@@ -105,144 +105,162 @@ func (g *Graph) Header(q Querier, id []byte) (*Display, error)
 func (g *Graph) Stats(q Querier) (graphalign.Stats, error)
 ```
 
-Writes update the graph as they commit (see Invalidation), so a read never has to check for staleness first.
+Writes update the graph as they commit (see Writes), so a read never has to check for staleness first.
 
-## Invalidation
+## Writes: one orchestrator
 
-### One function, already called everywhere
+Every write the app makes has three duties:
 
-Every write that changes the canonical graph ends in `autoreconciler.RecomputeTx(ids)`, through one of six entry points:
+1. **Write the persistent data** (the rows the operation is about).
+2. **Record audit** (`audit.Record`: the revision, and each row's old and new fields).
+3. **Bring derived data up to date:** the persistent tier (ARV and the search index, inside the transaction) and the memory tier (after commit).
 
-| Entry point | Called by | Resolves to |
-| --- | --- | --- |
-| `RecomputeSubjectsTx` | observation create, update and delete | handles the Subjects are members of |
-| `RecomputeTouchingTx` | identity claim create, single promote | the handles plus handles whose members point at the Subject |
-| `RecomputeCitationTx` | citation certainty | handles with Observations under the citation |
-| `RecomputeSourceTx` | source credibility | handles with Observations in the Source |
-| `RecomputePropertyTx` | property cardinality | handles with Observations of the property |
-| `RecomputeTx` | all of the above; also directly by promote batch, subject delete, observation delete (released handles), identity claim create | the handles themselves |
+Today each write function does all three by hand: about 45 transaction sites, 40 `audit.Record` calls and 13 hand-placed `Recompute…Tx` calls, each write choosing which derived data it affects. Duty 3 is the fragile one.
 
-`RecomputeTx` then computes `conclusionheaders.HeaderDependents(ids)`, the handles whose headers embed one of these (a Place reaches its child places, its events and their subject persons; an Event its subject persons; a Person the events of their subject-role participations), and reprojects search for both sets.
+The split:
 
-So the question "I changed observation X, what is stale?" is already answered on every write, inside the write's transaction, and tests already depend on it: a write path that skipped it would leave ARV and search stale.
+- **Write functions** write their rows and return what they changed, as `[]audit.Change`. No transaction handling, no audit call, no recompute.
+- **The orchestrator** (`writes.Run`) owns the transaction and the order of the duties.
+- **The effects registry** says, per entity type, what a change to it touches.
 
-### Two kinds of stale per write
+The frontend doesn't change. It already names the operation it wants (`UpdateObservation`, `DeleteSubject`, …). It does not also declare what it's updating: that would be a second description of the write that could disagree with what the write did, which is what the Swift `CatalogMutation` map is today. What changed comes from the write function's own changes, with old and new values, the same data audit already records.
+
+### The orchestrator
+
+```go
+// package writes: the one write path between the FFI and domain code.
+
+type Op struct {
+	Action      string // audit action_type, e.g. "delete_observation"
+	Description string
+	UserID      []byte
+}
+
+type Result struct {
+	Revision int64
+	Effects  effects.Set // handles, header dependents, Sources, vocabulary
+}
+
+func Run(c *database.Catalog, op Op, fn func(tx *database.Tx) ([]audit.Change, error)) (Result, error) {
+	tx := begin(c)
+	changes, err := fn(tx)                       // 1. persistent data
+	// on error: rollback, nothing else happens
+	rev := audit.Record(tx, op, changes)         // 2. audit (skipped for unaudited types)
+	fx := effects.Resolve(tx, changes)           //    what the changes touch
+	autoreconciler.RecomputeTx(tx, fx.Handles)   // 3a. ARV + search, inside the transaction
+	commit(tx)
+	c.notify(rev, fx)                            // 3b. memory tier, only after commit
+	return Result{Revision: rev, Effects: fx}, nil
+}
+```
+
+A write function, before and after:
+
+```go
+// before: owns its transaction, records audit, picks its recomputes
+func DeleteObservation(c *database.Catalog, userID, id []byte) error {
+	tx, err := db.Begin()
+	// … read prev, refuse, release facets, delete …
+	autoreconciler.RecomputeSubjectsTx(tx, [][]byte{prev.SubjectID})
+	autoreconciler.RecomputeTx(tx, released.Handles)
+	audit.Record(tx, audit.Revision{ActionType: "delete_observation", Changes: changes})
+	return tx.Commit()
+}
+
+// after: writes and reports
+func DeleteObservation(tx *database.Tx, id []byte) ([]audit.Change, error) {
+	// … read prev, refuse, release facets, delete — as today …
+	return append(released.Changes, audit.Change{
+		EntityType: "observation", EntityID: id, Action: audit.ActionDelete,
+		Fields: audit.DeletedRow(observationRowMap(prev)),
+	}), nil
+}
+
+// the FFI handler
+res, err := writes.Run(c, writes.Op{Action: "delete_observation", UserID: user},
+	func(tx *database.Tx) ([]audit.Change, error) {
+		return observations.DeleteObservation(tx, id)
+	})
+```
+
+`database.Tx` embeds `*sql.Tx`, and only `writes.Run` creates one. Write functions take `*database.Tx`, so a write can't run outside the orchestrator. A test that fails on any `.Begin()` outside `core/database` and `core/writes` keeps it that way.
+
+### Order inside a write
+
+Derived data is brought up to date once, after the write function returns and before commit. That's equivalent to today: in every write that recomputes (single and batch promote, identity claim create, subject delete, observation write and delete), the recompute is already the last step before commit, and nothing in the write reads ARV after it. Bridge filing in promote reads `identity_claims`, not ARV.
+
+Write functions don't read derived data back. A write returns what it changed and the revision. If the app needs the new state, it reads it with a separate call, which the memory tier serves fresh because it was updated at commit. Writes and reads stay separate calls.
+
+### The effects registry
+
+Audit already has half of this: `audit/scopes.go` maps every audited entity type to the Sources a change belongs to, and `Record` rejects a type without a resolver. The effects registry extends each entry with the handles it touches and whether it's vocabulary, so one table keyed by entity type answers every "what does this affect" question. A new audited table has to decide all of its effects in one place.
+
+```go
+// package effects
+
+type Effect struct {
+	Source     sourceResolver // today's audit scope resolver, moved here
+	Handles    handleResolver // handles whose ARV rows must be rewritten
+	Vocabulary bool           // drop the label map
+	Unaudited  bool           // no audit row; Run still owns the transaction
+}
+
+var registry = map[string]Effect{
+	"observation": {
+		Source:  viaCitation,
+		Handles: membersOf("subject_id"), // old and new subject_id from the change's fields
+	},
+	"citation": {
+		Source:  viaArtifact,
+		Handles: onField("certainty", handlesUnderCitation),
+	},
+	"source_credibility_assessment": {Source: direct, Handles: handlesInSource},
+	"identity_claim":          {Handles: claimEntityAndObservers},
+	"identity_claim_evidence": {Handles: claimEntity}, // released pins
+	"property":                {Vocabulary: true, Handles: onField("cardinality", handlesObservingProperty)},
+	"property_term":           {Vocabulary: true},
+	"subject_position":        {Unaudited: true}, // layout only
+	// … every audited type
+}
+```
+
+For an unaudited type, `Run` skips `audit.Record` and resolves no effects. It still owns the transaction, so every write goes through the same path: subject positions, type–property bindings and onboarding seeds included.
+
+Header dependents aren't a registry concern. `RecomputeTx` already computes them from the handles it rewrites (`conclusionheaders.HeaderDependents`), and returns them for the memory tier.
+
+### Effects the changed rows don't name
+
+Most effects come straight from a change's fields: an Observation change names its `subject_id`, so the handles that Subject belongs to are rewritten.
+
+Some don't. A Subject can be the *value* of other Subjects' Observations. A participation says "person: John"; a relationship says "related to: John". ARV stores those values resolved to John's handle. So when John's membership changes (promote, claim accepted, John deleted), every handle with a member whose Observation points at John must be rewritten too, because its value now resolves somewhere else. None of those handles appear in the changed rows. The rows name John and his own handle. This is `RecomputeTouchingTx` / `HandlesObservingSubject` today.
+
+The registry entry for `identity_claim` expresses it as a lookup: "Observations whose value is this Subject → their Subjects → those Subjects' handles". That's an ordinary SQL resolver, like the scope resolvers.
+
+The hard case is deletes. Effects are resolved after the write, and by then a deleted Subject's inbound Observations may be gone too, so the lookup finds nothing. Subject delete handles this today by collecting `inbound` and `ends` before it deletes. With the registry, every row a delete removes must come back as an `audit.Change` with its old fields (the deleted Observation, with its old `subject_id` and value). The resolver then reads the old fields, as audit's scope resolvers already do for deleted rows (`ghostMap`). Rows removed by `ON DELETE CASCADE` without being reported would be invisible, so a delete reports what it cascades, or its effects are resolved from the change before the row goes.
+
+This is the part to test hardest. The shadow check (below) catches a missed effect: ARV would disagree with a full recompute.
+
+During the migration, a second check helps: while a write still has its hand-placed recompute calls, a test-only assertion compares the handles it recomputed by hand with the handles the registry resolves for the same changes. A write migrates only when the registry covers everything it did by hand.
+
+### What the memory tier is told
 
 - **Structure:** the handles `RecomputeTx` rewrote. Their nodes reload.
-- **Display:** those handles plus `HeaderDependents`. Their display memos clear.
+- **Display:** those plus `HeaderDependents`. Their display memos clear.
+- **Sources:** the resolved Source scopes. The Source store drops those Sources.
+- **Vocabulary:** drop the label map.
+- **All:** `Rebuild` (open-time, on a `CacheVersion` change).
 
-`Rebuild` (open-time, on a `CacheVersion` change) makes everything stale.
+Only after commit. A rollback drops it with the transaction, so the memory tier never sees uncommitted data and never misses a committed change. `catalogsession.Do` serializes every operation, so the next read can't start before the cache is updated, with no lock needed.
 
-### Writes go through one wrapper that knows how they ended
+`Result.Effects` is also what a write's FFI response could carry back to Swift later ("these handles and Sources changed"), so the client's session cache invalidates by handle instead of the hand-kept `CatalogMutation` map. It is the commit's outcome, not a stored feed: audit stays the record of what changed, and ARV the record of what the graph is.
 
-Today about 24 packages call `db.Begin()` themselves (some 45 call sites) and commit or roll back on their own. That's why `RecomputeTx` can't safely tell the memory tier anything: it only holds the write's `*sql.Tx`, and it can't know whether that transaction will commit.
-
-Instead, every write runs through one wrapper on the catalog. The wrapper owns the transaction, collects what the write changed, and tells the memory tier only after a successful commit:
-
-```go
-// package database
-
-// Tx is a write transaction. It is a Querier, and it collects what the write
-// changed so listeners hear about it after commit, never before.
-type Tx struct {
-	*sql.Tx
-	changes Changes
-}
-
-// Changes is what one committed write touched. It lives for one write and is
-// never stored.
-type Changes struct {
-	Handles    [][]byte // structure: ARV rows rewritten (RecomputeTx)
-	Dependents [][]byte // display only: HeaderDependents
-	Sources    [][]byte // source scopes (audit.Record)
-	Vocabulary bool     // properties or property_terms written
-	All        bool     // Rebuild
-}
-
-// Write runs fn in a transaction. On success it commits, then hands the
-// collected Changes to every listener. On error or panic it rolls back and
-// the Changes are dropped.
-func (c *Catalog) Write(fn func(tx *Tx) error) error {
-	sqlTx, err := c.db.Begin()
-	if err != nil {
-		return err
-	}
-	tx := &Tx{Tx: sqlTx}
-	if err := fn(tx); err != nil {
-		_ = sqlTx.Rollback()
-		return err
-	}
-	if err := sqlTx.Commit(); err != nil {
-		return err
-	}
-	for _, l := range c.listeners {
-		l.Committed(tx.changes)
-	}
-	return nil
-}
-
-// OnCommit registers a listener. The graph cache registers itself when the
-// catalog session opens.
-func (c *Catalog) OnCommit(l CommitListener)
-```
-
-The functions that already know what changed note it on the `Tx`:
-
-```go
-// package autoreconciler: the signature takes *database.Tx, not a Querier,
-// so a write can't call it outside the wrapper.
-func RecomputeTx(tx *database.Tx, entityIDs [][]byte) error {
-	// … rewrite ARV rows, compute deps, reproject search, as today …
-	tx.Touched(ids, deps)
-	return nil
-}
-
-// package audit: scopes are already resolved here.
-func Record(tx *database.Tx, rev Revision) (int64, error) {
-	// … as today …
-	tx.TouchedSources(sourceIDs)
-}
-
-// package propertyterms / properties: any write
-tx.TouchedVocabulary()
-```
-
-A write path reads the same as today, minus its own begin, commit and rollback:
-
-```go
-// before
-tx, err := db.Begin()
-if err != nil { return err }
-defer tx.Rollback()
-// … writes, audit.Record, autoreconciler.RecomputeSubjectsTx …
-return tx.Commit()
-
-// after
-return c.Write(func(tx *database.Tx) error {
-	// … writes, audit.Record, autoreconciler.RecomputeSubjectsTx …
-	return nil
-})
-```
-
-What this gets:
-
-- **Exact:** the memory tier hears about a write only once it has committed, and always hears about one that has. A rollback drops the `Changes` with the transaction.
-- **No new table, nothing stored.** `Changes` is the outcome of one transaction, held in memory until commit and then handed over. It isn't a feed or a log: audit stays the record of what changed, and ARV stays the record of what the graph is.
-- **Enforced by the compiler.** `RecomputeTx` and `audit.Record` take `*database.Tx`, which only `Catalog.Write` makes. A write that bypasses the wrapper doesn't compile against them. A small test that fails on any `.Begin()` outside `core/database` keeps it that way.
-- **One mechanism for both stores.** The Source store hears `Sources` from the same `Changes` instead of querying audit scopes.
-- **Vocabulary included.** Term and property writes set `Vocabulary`, so the label map drops on exactly those writes.
-- **Reads don't check anything** before serving. Everything was applied at commit.
-
-`catalogsession.Do` already serializes every operation, so listeners run before the next read can start, with no lock needed.
-
-The restructure is mechanical but wide: about 45 begin sites in 24 packages move to `Catalog.Write`, and functions that take a `*sql.Tx` today take a `*database.Tx` (it embeds `*sql.Tx`, so their bodies don't change). Paths that write outside a project catalog (onboarding before the session opens, `core/derivatives`) use the same wrapper; with no listeners registered they behave as today.
-
-Alternatives considered:
+### Alternatives considered
 
 - **A marks table** written by `RecomputeTx` in the same transaction, drained on read. Exact and needs no restructure, but adds a table and a query before every read.
-- **Mark memory directly from `RecomputeTx`.** Can't know whether the transaction commits; a rollback leaves memory marked for data that never landed.
-- **Drop everything on any revision change.** Simple and fine for Promote, which makes no writes between decisions. Not fine once lists read the cache: one edit in the Citation Composer would reload every Person.
-- **A persisted change feed.** Rejected: it would duplicate audit (what changed) and ARV (what the graph is now).
+- **Mark memory directly from `RecomputeTx`.** Can't know whether the transaction commits.
+- **A transaction wrapper only** (`Catalog.Write`), with write functions still calling audit and recompute themselves. Exact, but leaves duty 3 scattered across every write.
+- **Drop everything on any revision change.** Fine for Promote, not once lists read the cache.
+- **A persisted change feed.** Rejected: it would duplicate audit and ARV.
 
 ### What isn't in ARV
 
@@ -254,7 +272,7 @@ These change without `RecomputeTx`, so nodes don't copy them. They are resolved 
 
 ### Safety net
 
-The memory tier records the audit revision of the last commit it heard about. If a read finds a newer revision it never heard about (a write that slipped past the wrapper), it drops everything and logs it. That log line is a bug report. With the compiler and the `.Begin()` test in place it should never fire.
+The memory tier records the audit revision of the last commit it heard about. If a read finds a newer revision it never heard about (a write that slipped past `writes.Run`), it drops everything and logs it. That log line is a bug report. With the compiler and the `.Begin()` test in place it should never fire.
 
 ### Verifying it
 
@@ -270,7 +288,7 @@ The existing suites exercise every write path, so turning the check on in CI cov
 
 ## The Source store
 
-Same pattern. `audit.Record` already resolves every transaction to the Sources it touched (the scopes in `audit_transaction_scopes`); it notes them on the `Tx`, and the Source store drops those Sources when the write commits.
+Same pattern. The effects registry resolves every write's Source scopes (the resolvers audit uses today), and the Source store drops those Sources when the write commits.
 
 ```go
 type SourceGraph struct {
@@ -342,21 +360,31 @@ If it's too much, `Values` can hold only kept rank-1 rows and the detail page re
 
 ## Plan
 
-Each step is its own PR, measured against the one before.
+Each step is its own PR, measured against the one before. PRs that only repoint callers are kept apart from PRs that add behavior, so the churn reviews as churn.
 
-1. **The write wrapper.** `Catalog.Write`, `database.Tx`, `Changes` and commit listeners; every begin site moved onto it; `RecomputeTx` and `audit.Record` take `*database.Tx`; the `.Begin()` test. No cache yet, so it lands and settles on its own.
-2. **The graph and Promote.** `graphcache` on the catalog session, registered as a commit listener; nodes with structure; lazy fill; the revision safety net; `Verify` in CI. Promote reads through `CanonGraph`; stats and candidates move onto the graph; `canonSteps`, the 5-hop expansion and the #327 caps go. The #327 debounce and narrowed exhibits stay. Benchmark.
-3. **Display.** Header memos; lists and `…ByIDs` from the graph; the vocabulary map; "today" at read time.
-4. **Place chains** from links, replacing #328's per-request index.
-5. **Conclusion detail** from node values, with the "Why" outcomes dropped with the display memo.
-6. **The Source store**, fed by `Changes.Sources`; Promote's layer, the Evidence graph and the Composer on it.
+**Writes**
 
-Later, and separately: the same `Changes` could ride back to Swift on each write's response ("these handles and Sources changed"), so the client's session cache invalidates by handle instead of the hand-kept `CatalogMutation` map. That reuses the commit's `Changes`; it is not another feed.
+1. **The orchestrator and registry** (logic). `writes.Run`, `database.Tx`, `Op`, `Result`, commit listeners; the effects registry for every audited type, with audit's scope resolvers moved into it; `audit.Record` and `RecomputeTx` take `*database.Tx`; the migration assertion. One small write path (property terms) migrated as the pilot.
+2. **Migrate Source-layer writes** (churn). Sources, notes, metadata, source types, metadata fields, artifacts, ingest.
+3. **Migrate Evidence-layer writes** (churn). Citations, observations, subjects, name values, connect, positions.
+4. **Migrate conclusion-layer writes** (churn). Promote single and batch, identity claims, canonical entities, credibility, properties, subject definitions.
+5. **Close the old path** (small). Hand-placed recompute calls and the migration assertion go; old entry points become private; the `.Begin()` test.
+
+**The graph**
+
+6. **The graph and Promote.** `graphcache` on the catalog session, registered as a commit listener; nodes with structure; lazy fill; the revision safety net; `Verify` in CI. Promote reads through `CanonGraph`; stats and candidates move onto the graph; `canonSteps`, the 5-hop expansion and the #327 caps go. The #327 debounce and narrowed exhibits stay. Benchmark.
+7. **Display.** Header memos; lists and `…ByIDs` from the graph; the vocabulary map; "today" at read time.
+8. **Place chains** from links, replacing #328's per-request index.
+9. **Conclusion detail** from node values, with the "Why" outcomes dropped with the display memo.
+10. **The Source store**, fed by resolved Source scopes; Promote's layer, the Evidence graph and the Composer on it.
+
+Later, and separately: `Result.Effects` rides back to Swift on each write's response, and the client's session cache invalidates by handle and Source instead of the hand-kept `CatalogMutation` map.
 
 ## Open questions
 
 1. **Where the graph hangs.** A field on `database.Catalog` (low in the import graph, so an opaque slot), or a map in `graphcache` keyed by `*database.Catalog`, set up in `catalogsession.openResearcher` and dropped on close.
-2. **Nested writes.** A few write functions call others that open their own transaction today. With the wrapper, inner functions should take the outer `*database.Tx`; find any that can't.
-3. **Stats by counts or recompute.** Adjusting value-frequency and fan-out counts from each commit's `Changes` is exact but fiddly. Recomputing from the graph per revision is simpler and may be fast enough in memory.
-4. **Detail "Why" outcomes.** Cache them per handle, or keep the SQL read; decide after measuring.
-5. **Concurrency.** `Do` serializes everything today. If reads ever run alongside writes, immutable nodes plus a lock around the maps is enough; nothing here should assume serialization beyond that.
+2. **Nested writes.** A few write functions call others that open their own transaction today. Under `writes.Run`, inner functions take the outer `*database.Tx`; find any that can't.
+3. **Cascaded deletes.** List every `ON DELETE CASCADE` that removes a row the registry needs to see (Observations under a deleted Subject or citation), and make the delete report it.
+4. **Stats by counts or recompute.** Adjusting value-frequency and fan-out counts from each commit's effects is exact but fiddly. Recomputing from the graph per revision is simpler and may be fast enough in memory.
+5. **Detail "Why" outcomes.** Cache them per handle, or keep the SQL read; decide after measuring.
+6. **Concurrency.** `Do` serializes everything today. If reads ever run alongside writes, immutable nodes plus a lock around the maps is enough; nothing here should assume serialization beyond that.
