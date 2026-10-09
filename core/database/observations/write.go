@@ -3,6 +3,7 @@ package observations
 import (
 	"database/sql"
 	"errors"
+	"github.com/mendahu/provenencia/core/database/catalogmodel"
 	"strings"
 
 	"github.com/google/uuid"
@@ -116,7 +117,7 @@ func Delete(c *database.Catalog, userID, id []byte) error {
 		return ErrEdgeLocked
 	}
 
-	report, err := deleteimpact.Impact(tx, deleteimpact.KindObservation, id)
+	report, err := deleteimpact.Impact(tx, catalogmodel.KindObservation, id)
 	if err != nil {
 		return err
 	}
@@ -128,12 +129,12 @@ func Delete(c *database.Catalog, userID, id []byte) error {
 
 	// Notes and pins are released and audited first; claims that pinned this
 	// Observation stay, weaker (model §5.2).
-	released, err := deleteimpact.ReleaseFacets(tx, deleteimpact.KindObservation, id)
+	released, err := deleteimpact.ReleaseFacets(tx, catalogmodel.KindObservation, id)
 	if err != nil {
 		return err
 	}
 	changes := released.Changes
-	snap, err := deleteimpact.SnapshotOwned(tx, deleteimpact.KindObservation, id)
+	snap, err := deleteimpact.SnapshotOwned(tx, catalogmodel.KindObservation, id)
 	if err != nil {
 		return err
 	}

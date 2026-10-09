@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"github.com/mendahu/provenencia/core/database/catalogmodel"
 	"strings"
 	"testing"
 
@@ -221,12 +222,12 @@ func TestPinnedObservationDeleteEndToEnd(t *testing.T) {
 	}
 
 	// The confirm: allowed, and it names the handle once though two claims pin it.
-	report := mustImpact(t, h.c, deleteimpact.KindObservation, h.aName)
+	report := mustImpact(t, h.c, catalogmodel.KindObservation, h.aName)
 	if !report.Allowed || report.Gate != deleteimpact.GateOK || len(report.Groups) != 0 || len(report.Cascades) != 1 {
 		t.Fatalf("%+v", report)
 	}
 	g := report.Cascades[0]
-	if g.Via != "identity_claim_evidence.observation_id" || g.Kind != deleteimpact.KindCanonicalEntity ||
+	if g.Via != "identity_claim_evidence.observation_id" || g.Kind != catalogmodel.KindCanonicalEntity ||
 		g.Total != 1 || len(g.Listed) != 1 || g.Listed[0].Ref != h.entityRef {
 		t.Fatalf("%+v", g)
 	}
@@ -269,7 +270,7 @@ func TestPinnedMemberDeleteEndToEnd(t *testing.T) {
 
 	// B's own Observations block deleting B; each goes first, off both claims.
 	for _, id := range [][]byte{h.bName, h.bAlt} {
-		report := mustImpact(t, h.c, deleteimpact.KindObservation, id)
+		report := mustImpact(t, h.c, catalogmodel.KindObservation, id)
 		if !report.Allowed || len(report.Cascades) != 1 || report.Cascades[0].Listed[0].Ref != h.entityRef {
 			t.Fatalf("%+v", report)
 		}
@@ -283,7 +284,7 @@ func TestPinnedMemberDeleteEndToEnd(t *testing.T) {
 
 	// B is empty; its confirm names the handle it leaves, and its claim still
 	// pins A's records (the backfill), which go with it, audited.
-	report := mustImpact(t, h.c, deleteimpact.KindSubject, h.b.ID)
+	report := mustImpact(t, h.c, catalogmodel.KindSubject, h.b.ID)
 	if !report.Allowed {
 		t.Fatalf("%+v", report)
 	}

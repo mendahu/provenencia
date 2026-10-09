@@ -5,6 +5,7 @@ package citations
 import (
 	"database/sql"
 	"errors"
+	"github.com/mendahu/provenencia/core/database/catalogmodel"
 	"strings"
 
 	"github.com/google/uuid"
@@ -441,7 +442,7 @@ func Delete(c *database.Catalog, userID, id []byte) error {
 	}
 	defer func() { _ = tx.Rollback() }()
 
-	report, err := deleteimpact.Impact(tx, deleteimpact.KindCitation, id)
+	report, err := deleteimpact.Impact(tx, catalogmodel.KindCitation, id)
 	if err != nil {
 		return err
 	}
@@ -450,7 +451,7 @@ func Delete(c *database.Catalog, userID, id []byte) error {
 	}); err != nil {
 		return err
 	}
-	released, err := deleteimpact.ReleaseFacets(tx, deleteimpact.KindCitation, id)
+	released, err := deleteimpact.ReleaseFacets(tx, catalogmodel.KindCitation, id)
 	if err != nil {
 		return err
 	}

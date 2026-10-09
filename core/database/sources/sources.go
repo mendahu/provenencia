@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"database/sql"
 	"errors"
+	"github.com/mendahu/provenencia/core/database/catalogmodel"
 	"strings"
 
 	"github.com/google/uuid"
@@ -370,7 +371,7 @@ func Delete(c *database.Catalog, userID, id []byte) error {
 	}
 	defer func() { _ = tx.Rollback() }()
 
-	report, err := deleteimpact.Impact(tx, deleteimpact.KindSource, id)
+	report, err := deleteimpact.Impact(tx, catalogmodel.KindSource, id)
 	if err != nil {
 		return err
 	}
@@ -380,7 +381,7 @@ func Delete(c *database.Catalog, userID, id []byte) error {
 		return err
 	}
 	// Notes, metadata, credibility, and layout are released and audited first.
-	released, err := deleteimpact.ReleaseFacets(tx, deleteimpact.KindSource, id)
+	released, err := deleteimpact.ReleaseFacets(tx, catalogmodel.KindSource, id)
 	if err != nil {
 		return err
 	}

@@ -25,7 +25,7 @@ Two tiers of the same data:
 - **Persistent tier:** ARV, as today. Survives restarts; SQL and the search index read it.
 - **Memory tier:** a graph of nodes held on the open catalog session, built from ARV (plus a few small lookups), shaped for walking: each node holds its values and its adjacency, and points at its neighbors.
 
-Every write goes through one orchestrator (`writes.Run`) that owns the transaction and its three duties: write the data, record audit, bring derived data up to date. An effects registry, built on the same declared schema `deleteimpact` uses, says what each kind of change touches. ARV is rewritten inside the transaction as today; the memory tier is told after commit.
+Every write goes through one orchestrator (`writes.Run`) that owns the transaction and its three duties: write the data, record audit, bring derived data up to date. An effects registry, built on `catalogmodel` (the same declared model `deleteimpact` reads), says what each kind of change touches. ARV is rewritten inside the transaction as today; the memory tier is told after commit.
 
 Two stores live in the memory tier:
 
@@ -126,7 +126,7 @@ The split:
 
 - **Write functions** write their rows and return what they changed, as `[]audit.Change`. No transaction handling, no audit call, no recompute.
 - **The orchestrator** (`writes.Run`) owns the transaction and the order of the duties.
-- **The effects registry** says, per table, what a change to one of its rows touches. It's built on a declared schema model shared with `deleteimpact` and audit.
+- **The effects registry** says, per table, what a change to one of its rows touches. It's built on `catalogmodel`, shared with `deleteimpact` and audit.
 
 The frontend doesn't change. It already names the operation it wants (`UpdateObservation`, `DeleteSubject`, …). It does not also declare what it's updating: that would be a second description of the write that could disagree with what the write did, which is what the Swift `CatalogMutation` map is today. What changed comes from the write function's own changes, with old and new values, the same data audit already records.
 
@@ -206,20 +206,20 @@ Derived data is brought up to date once, after the write function returns and be
 
 Write functions don't read derived data back. A write returns what it changed and the revision. If the app needs the new state, it reads it with a separate call, which the memory tier serves fresh because it was updated at commit. Writes and reads stay separate calls.
 
-### One schema model under every registry
+### One catalog model under every registry
 
 Three registries in the codebase answer questions about the same graph of tables:
 
-- **`deleteimpact/register.go`** declares every table (kind and bucket: resource, vocabulary, facet, owned, skip) and every foreign key (with its `ON DELETE`). An honesty test compares it against `PRAGMA foreign_key_list`, so it can't drift from the real schema.
+- **`core/database/catalogmodel`** declares every table (kind and bucket: resource, vocabulary, facet, owned, skip) and every foreign key (with its `ON DELETE`). An honesty test compares it against `PRAGMA foreign_key_list`, so it can't drift from the real schema.
 - **`audit/scopes.go`** resolves a change to its Source by hand-written walks up those same foreign keys: observation → citation → artifact → source; a note → its citation → …; a subject or artifact directly by `source_id`.
 - **The auto-reconciler's handle lookups** (`sqlHandlesForCitation`, `sqlHandlesForProperty`, `HandlesObservingSubject`, …) are hand-written walks too: observation → subject → `identity_claims` → handle, or inbound on `observations.value_subject_id` for "who points at John".
 
 Only the first is declared and checked against the schema. The other two are SQL strings that happen to follow its edges.
 
-So the table and foreign-key declarations move out of `deleteimpact` into a small `schema` package, with the PRAGMA honesty test. `deleteimpact` keeps its own logic (probes, refusals, releases) and reads the model from `schema`. The effects registry is built on the same model.
+Those declarations live in `catalogmodel`, with the PRAGMA honesty test. `deleteimpact` keeps probes, refusals, and releases, and reads the model from `catalogmodel`. The effects registry is built on the same model.
 
 ```go
-// package schema: the declared catalog schema, checked against SQLite.
+// package catalogmodel: the declared catalog model, checked against SQLite.
 
 type Table struct {
 	Name   string
@@ -387,12 +387,12 @@ The rule: **the schema and the infrastructure never name a vocabulary key.** Sub
 
 | Layer | Holds | Vocabulary |
 | --- | --- | --- |
-| **Schema** (`schema`) | tables, columns, foreign keys, buckets, `CHECK` enums (claim `status`, ARV `reason`) | none |
+| **Catalog model** (`catalogmodel`) | tables, columns, foreign keys, buckets, `CHECK` enums (claim `status`, ARV `reason`) | none |
 | **Infrastructure** (`effects`, `writes`, `graphcache`, `canonicalgraph.Walk`, `graphalign`'s walk and scoring) | mechanisms over the schema; kinds, property keys, terms and edge signatures as opaque values | none: it may carry keys, never compare against a literal |
 | **Registries** | which keys mean what | all of it |
 | **Features** (Promote, the lists, the place page) | use registries by name | through registries |
 
-The effects registry is keyed by table and column, so it stays on the schema side. `onField("certainty")` and `onField("cardinality")` are columns; `onStatus("accepted")` is a `CHECK` enum on `identity_claims.status`. None of its entries name a term, role or kind.
+The effects registry is keyed by table and column, so it stays on the catalog-model side. `onField("certainty")` and `onField("cardinality")` are columns; `onStatus("accepted")` is a `CHECK` enum on `identity_claims.status`. None of its entries name a term, role or kind.
 
 ### The registries
 
@@ -499,10 +499,9 @@ Each step is its own PR, measured against the one before. PRs that only repoint 
 
 - **The paused stack.** Decided: [mendahu/provenencia#327](https://github.com/mendahu/provenencia/pull/327) to [mendahu/provenencia#340](https://github.com/mendahu/provenencia/pull/340) stay paused until this plan has landed, then each is refactored and rebased onto it in turn. #327 is replaced by PR 8 (its debounce and narrowed exhibits carry over), #328 by PR 10, and #330 is re-judged against the graph-backed readers. #331 to #334 are rebuilt on the `CanonGraph` version of `align.go`.
 
-**Schema and effects**
+**Catalog model and effects**
 
-1. **Extract the schema model** (churn). Tables and foreign keys move from `deleteimpact/register.go` into `schema`, with the PRAGMA honesty test; `deleteimpact` reads them from there. No behavior change.
-   - *Open:* where `schema` sits. It must stay below `audit`, `deleteimpact`, `effects` and `writes` in the import graph; `database` is the likely parent.
+1. **Extract the catalog model** (done). Tables and foreign keys live in `core/database/catalogmodel` (`Tables`, `FKs`, `Kind`, `Bucket`), with the PRAGMA honesty test. `deleteimpact` reads them from there and keeps probes and releases. No behavior change.
 2. **Paths and the effects registry** (logic). The path combinators; an entry for every table outside the skip bucket, including search and vocabulary effects; audit's scope resolvers re-expressed as `Source` paths, with a test that they resolve the same Sources as the old resolvers on the existing fixtures; the completeness tests. Nothing calls the `Handles` side yet.
    - *Open:* claim statuses in paths. The recompute SQL counts `accepted` and `provisional` claims as members; `across("identity_claims", …)` must filter the same way. Decide whether status filters are a path option or part of each declaration.
    - *Open:* unchanged foreign keys. Update diffs record a column only when it changed: `observationUpdateChange` omits `subject_id` on a polarity edit, a term swap, or a `value_subject_id` move, and `from("subject_id", membersOf)` then resolves no handles. Today's `Update` still recomputes both subjects. `audit.via` already reads the live row when the parent id is absent from the diff, and uses ghosts only for deletes. Paths have to do both, or a `transcription_uncertain` edit that doesn't diff `artifact_id` fails the "same Sources as the old resolvers" test. Decide that lookup rule before any `Handles` entry is trusted.
@@ -510,7 +509,7 @@ Each step is its own PR, measured against the one before. PRs that only repoint 
    - *Open:* status on both sides of a claim change. `onStatus("accepted")` checked against the new value matches `identityclaims.recomputeTx` for a create. A later accepted→rejected edit has to recompute observers too, or subject-valued ends keep resolving at the old handle. Fire when either the old or the new status is `accepted`. There is no status-edit path yet; the registry still has to state the rule.
    - *Open:* name and date values. An in-place rewrite keeps `value_name_id` / `value_date_id` and is audited as `name_value` / `date_value` (`nameUpdateChange`, `dateUpdateChange`), not as an observation-column change. The handle path is inbound `observations`, then `membersOf`. A shared date value touches every observation that points at it. These tables are outside the skip bucket and missing from the sample registry.
    - *Open:* one map or one registry per consumer. Source history, ARV handles, search documents, and vocabulary invalidation are different questions. `identity_claim` is `noScope` in `audit/scopes.go` and still changes canonical handles; a cache Source scope for the Source store (PR 12) is not an audit scope. Share the path combinators. Decide whether each consumer keeps its own registry or one `Effect` struct grows a field per consumer. Keep `sql()` for walks the combinators cannot say; citation and name-value walks should become `inbound` plus `membersOf` once unchanged keys are visible.
-   - *Open:* where `Change` lives. `effects` cannot take `[]audit.Change` if `audit.Record` calls back into `effects`. Move `Change` down next to `schema`, or have `writes.Run` resolve scopes and pass them into `Record`. Settle it in this PR; PR 3 wires the call.
+   - *Open:* where `Change` lives. `effects` cannot take `[]audit.Change` if `audit.Record` calls back into `effects`. Move `Change` down next to `catalogmodel`, or have `writes.Run` resolve scopes and pass them into `Record`. Settle it in this PR; PR 3 wires the call.
 
 **Writes**
 
@@ -525,7 +524,7 @@ Each step is its own PR, measured against the one before. PRs that only repoint 
    - *Open:* assertion fixtures for diffs that omit the handle key. The migration assertion has to include an in-place name edit, an in-place date edit, a polarity-only observation edit, and a `value_subject_id` move. Those writes recompute today via unconditional `RecomputeSubjectsTx`; the handle does not appear as `subject_id` on the observation diff. The registry's handle set has to match or this PR does not migrate them.
 6. **Migrate conclusion-layer writes** (churn). Promote single and batch, identity claims, canonical entities, credibility, properties, subject definitions. Includes the transactions in FFI handlers (`api/ffi/handlers/subject_defs.go`, `delete_impact.go`).
    - *Open:* promote and claim-create assertions. Compare the registry's handle set to today's `RecomputeTouchingTx` result: the claim's handle, the associations `AppendFiling` filed, and the observers. `field("entity_id")` alone is short of that set. Credibility migrations assert `RecomputeSourceTx` only when the grade id changed.
-7. **Close the old path** (small). Hand-placed recompute and reproject calls, `released.Handles`, the old scope resolvers and the migration assertion go; old entry points become private; the `.Begin()` test; the typed-key literal test over `schema`, `effects` and `writes` (later PRs extend it to `graphcache`).
+7. **Close the old path** (small). Hand-placed recompute and reproject calls, `released.Handles`, the old scope resolvers and the migration assertion go; old entry points become private; the `.Begin()` test; the typed-key literal test over `catalogmodel`, `effects` and `writes` (later PRs extend it to `graphcache`).
    - *Open:* what still catches a missed effect. This PR deletes the migration assertion, and the graph's `Verify` does not exist until PR 8. The rebuild-equals-upkeep tests have to stay pointed at the registry-driven handle set. `Verify` later compares a loaded node with the read that filled it, so a short recompute set (stale ARV on both sides) does not fail it.
    - *Open:* what the literal test actually forbids. A `type Kind string` still allows `k == "person"`, and a scan for `TermKey("…")` conversions misses that and misses SQL literals (`standard` and `moderate` in `sqlLoadCandidates`). Decide the representation with PR 8's node shape before this test freezes the weak check. Infrastructure holds ids (`subject_type_id`, property id, term id); registries are the layer that binds a product key to an id. A seed-only `subjectvocab.Kind` cannot name a researcher-minted subject type, which is a row.
 

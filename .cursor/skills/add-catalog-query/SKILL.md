@@ -11,7 +11,7 @@ description: >-
 
 Table SQL and functions live in **`core/database/<domain>/`**, not in the `database` package root. Root stays the exclusive catalog client (`Catalog`, `Create`/`Open`/`Close`, format errors, migrations).
 
-New **schema** is a separate step: follow `.cursor/skills/add-catalog-migration/SKILL.md` first if the table does not exist yet.
+New **schema** is a separate step: follow `.cursor/skills/add-catalog-migration/SKILL.md` first if the table does not exist yet, and register the table and its FKs in the same PR (`.cursor/skills/add-catalog-model/SKILL.md`).
 
 ## Layout
 

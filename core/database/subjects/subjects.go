@@ -4,6 +4,7 @@ package subjects
 import (
 	"database/sql"
 	"errors"
+	"github.com/mendahu/provenencia/core/database/catalogmodel"
 	"strings"
 
 	"github.com/google/uuid"
@@ -258,7 +259,7 @@ func Delete(c *database.Catalog, userID, id []byte) error {
 	}
 	defer func() { _ = tx.Rollback() }()
 
-	report, err := deleteimpact.Impact(tx, deleteimpact.KindSubject, id)
+	report, err := deleteimpact.Impact(tx, catalogmodel.KindSubject, id)
 	if err != nil {
 		return err
 	}
@@ -285,7 +286,7 @@ func Delete(c *database.Catalog, userID, id []byte) error {
 	}
 	// Claims (with their pins) and connection-facet Observations (with their
 	// notes, pins, and owned values) are released and audited first.
-	released, err := deleteimpact.ReleaseFacets(tx, deleteimpact.KindSubject, id)
+	released, err := deleteimpact.ReleaseFacets(tx, catalogmodel.KindSubject, id)
 	if err != nil {
 		return err
 	}

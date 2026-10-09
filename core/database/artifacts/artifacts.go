@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"database/sql"
 	"errors"
+	"github.com/mendahu/provenencia/core/database/catalogmodel"
 	"os"
 	"path/filepath"
 	"strings"
@@ -280,7 +281,7 @@ func Delete(c *database.Catalog, userID, id []byte) error {
 	}
 	defer func() { _ = tx.Rollback() }()
 
-	report, err := deleteimpact.Impact(tx, deleteimpact.KindArtifact, id)
+	report, err := deleteimpact.Impact(tx, catalogmodel.KindArtifact, id)
 	if err != nil {
 		return err
 	}
@@ -290,7 +291,7 @@ func Delete(c *database.Catalog, userID, id []byte) error {
 		return err
 	}
 
-	snap, err := deleteimpact.SnapshotOwned(tx, deleteimpact.KindArtifact, id)
+	snap, err := deleteimpact.SnapshotOwned(tx, catalogmodel.KindArtifact, id)
 	if err != nil {
 		return err
 	}

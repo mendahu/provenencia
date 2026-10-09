@@ -4,6 +4,7 @@ package sourcetypes
 import (
 	"database/sql"
 	"errors"
+	"github.com/mendahu/provenencia/core/database/catalogmodel"
 	"strings"
 
 	"github.com/google/uuid"
@@ -342,7 +343,7 @@ func Delete(c *database.Catalog, userID, id []byte) error {
 	}
 	defer func() { _ = tx.Rollback() }()
 
-	report, err := deleteimpact.Impact(tx, deleteimpact.KindSourceType, id)
+	report, err := deleteimpact.Impact(tx, catalogmodel.KindSourceType, id)
 	if err != nil {
 		return err
 	}

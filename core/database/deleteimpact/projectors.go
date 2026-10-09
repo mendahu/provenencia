@@ -2,12 +2,13 @@ package deleteimpact
 
 import (
 	"database/sql"
+	"github.com/mendahu/provenencia/core/database/catalogmodel"
 	"strings"
 )
 
 const listedSnippetMaxRunes = 80
 
-func projectListed(tx *sql.Tx, kind Kind, row probeRow) (Listed, error) {
+func projectListed(tx *sql.Tx, kind catalogmodel.Kind, row probeRow) (Listed, error) {
 	out := Listed{ID: row.ID, Ref: row.Ref}
 	title, loc, err := projectKind(tx, kind, row)
 	if err != nil {
@@ -24,35 +25,35 @@ func projectListed(tx *sql.Tx, kind Kind, row probeRow) (Listed, error) {
 	return out, nil
 }
 
-func projectKind(tx *sql.Tx, kind Kind, row probeRow) (string, Location, error) {
+func projectKind(tx *sql.Tx, kind catalogmodel.Kind, row probeRow) (string, Location, error) {
 	switch kind {
-	case KindObservation:
+	case catalogmodel.KindObservation:
 		return projectObservation(tx, row.ID, row.Ref)
-	case KindSubject:
+	case catalogmodel.KindSubject:
 		return projectSubject(tx, row.ID, row.Ref)
-	case KindCitation:
+	case catalogmodel.KindCitation:
 		return projectCitation(tx, row.ID, row.Ref)
-	case KindArtifact:
+	case catalogmodel.KindArtifact:
 		return projectArtifact(tx, row.ID, row.Ref)
-	case KindSource:
+	case catalogmodel.KindSource:
 		return projectSource(tx, row.ID, row.Ref)
-	case KindSourceType:
+	case catalogmodel.KindSourceType:
 		return projectVocab(tx, `SELECT label FROM source_types WHERE id = ?`, row.ID, row.Ref, Location{
 			Section: sectionSourceTypes, TypeID: uuidString(row.ID),
 		})
-	case KindMetadataField:
+	case catalogmodel.KindMetadataField:
 		return projectVocab(tx, `SELECT label FROM source_metadata_fields WHERE id = ?`, row.ID, row.Ref, Location{
 			Section: sectionMetadata, FieldID: uuidString(row.ID),
 		})
-	case KindProperty:
+	case catalogmodel.KindProperty:
 		return projectVocab(tx, `SELECT label FROM properties WHERE id = ?`, row.ID, row.Ref, Location{
 			Section: sectionProperties, PropertyID: uuidString(row.ID),
 		})
-	case KindPropertyTerm:
+	case catalogmodel.KindPropertyTerm:
 		return projectPropertyTerm(tx, row.ID, row.Ref)
-	case KindSubjectType:
+	case catalogmodel.KindSubjectType:
 		return projectSubjectType(tx, row.ID, row.Ref)
-	case KindCredibilityGrade:
+	case catalogmodel.KindCredibilityGrade:
 		return projectVocab(tx, `SELECT label FROM source_credibility_grades WHERE id = ?`, row.ID, row.Ref, Location{
 			Section: sectionSources,
 		})

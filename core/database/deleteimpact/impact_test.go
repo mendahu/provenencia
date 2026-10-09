@@ -3,6 +3,7 @@ package deleteimpact_test
 import (
 	"errors"
 	"fmt"
+	"github.com/mendahu/provenencia/core/database/catalogmodel"
 	"testing"
 
 	"github.com/google/uuid"
@@ -41,18 +42,18 @@ func TestImpactGates(t *testing.T) {
 		if _, err := deleteimpact.ParseKind("nope"); !errors.Is(err, deleteimpact.ErrInvalid) {
 			t.Fatalf("parse %v", err)
 		}
-		mustImpactErr(t, c, deleteimpact.Kind("nope"), fakeID(t), deleteimpact.ErrInvalid)
+		mustImpactErr(t, c, catalogmodel.Kind("nope"), fakeID(t), deleteimpact.ErrInvalid)
 	})
 
 	t.Run("missing id", func(t *testing.T) {
-		got := mustImpact(t, c, deleteimpact.KindCitation, fakeID(t))
+		got := mustImpact(t, c, catalogmodel.KindCitation, fakeID(t))
 		if got.Allowed || got.Gate != deleteimpact.GateNotFound || len(got.Groups) != 0 {
 			t.Fatalf("%+v", got)
 		}
 	})
 
 	t.Run("infra kinds", func(t *testing.T) {
-		for _, kind := range []deleteimpact.Kind{deleteimpact.KindUser, deleteimpact.KindProject} {
+		for _, kind := range []catalogmodel.Kind{catalogmodel.KindUser, catalogmodel.KindProject} {
 			got := mustImpact(t, c, kind, fakeID(t))
 			if got.Allowed || got.Gate != deleteimpact.GateInfra {
 				t.Fatalf("%s %+v", kind, got)
@@ -67,7 +68,7 @@ func TestImpactGates(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		got := mustImpact(t, c, deleteimpact.KindSourceType, id)
+		got := mustImpact(t, c, catalogmodel.KindSourceType, id)
 		if got.Allowed || got.Gate != deleteimpact.GateOriginLocked {
 			t.Fatalf("%+v", got)
 		}
@@ -78,7 +79,7 @@ func TestImpactGates(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		got := mustImpact(t, c, deleteimpact.KindProperty, p.ID)
+		got := mustImpact(t, c, catalogmodel.KindProperty, p.ID)
 		if got.Allowed || got.Gate != deleteimpact.GateOriginLocked {
 			t.Fatalf("%+v", got)
 		}
@@ -93,7 +94,7 @@ func TestImpactGates(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		got := mustImpact(t, c, deleteimpact.KindPropertyTerm, term.ID)
+		got := mustImpact(t, c, catalogmodel.KindPropertyTerm, term.ID)
 		if got.Allowed || got.Gate != deleteimpact.GateOriginLocked {
 			t.Fatalf("%+v", got)
 		}
@@ -106,7 +107,7 @@ func TestImpactGates(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		got := mustImpact(t, c, deleteimpact.KindSourceType, id)
+		got := mustImpact(t, c, catalogmodel.KindSourceType, id)
 		if !got.Allowed || got.Gate != deleteimpact.GateOK {
 			t.Fatalf("%+v", got)
 		}
@@ -117,7 +118,7 @@ func TestImpactGates(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		got := mustImpact(t, c, deleteimpact.KindSubjectType, person.ID)
+		got := mustImpact(t, c, catalogmodel.KindSubjectType, person.ID)
 		if !got.Allowed || got.Gate != deleteimpact.GateOK {
 			t.Fatalf("person type %+v", got)
 		}
@@ -125,7 +126,7 @@ func TestImpactGates(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		got = mustImpact(t, c, deleteimpact.KindCredibilityGrade, grade.ID)
+		got = mustImpact(t, c, catalogmodel.KindCredibilityGrade, grade.ID)
 		if !got.Allowed || got.Gate != deleteimpact.GateOK {
 			t.Fatalf("grade %+v", got)
 		}
@@ -137,7 +138,7 @@ func TestImpactGates(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		got = mustImpact(t, c, deleteimpact.KindPropertyTerm, term.ID)
+		got = mustImpact(t, c, catalogmodel.KindPropertyTerm, term.ID)
 		if !got.Allowed || got.Gate != deleteimpact.GateOK {
 			t.Fatalf("user term %+v", got)
 		}
@@ -154,7 +155,7 @@ func TestImpactGates(t *testing.T) {
 		if _, err := propertyterms.Create(c, userID, propID, "Grant", ""); err != nil {
 			t.Fatal(err)
 		}
-		got := mustImpact(t, c, deleteimpact.KindProperty, propID)
+		got := mustImpact(t, c, catalogmodel.KindProperty, propID)
 		if got.Allowed || got.Gate != deleteimpact.GateInbound {
 			t.Fatalf("%+v", got)
 		}
@@ -181,7 +182,7 @@ func TestImpactGates(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		got := mustImpact(t, c, deleteimpact.KindMetadataField, id)
+		got := mustImpact(t, c, catalogmodel.KindMetadataField, id)
 		if got.Allowed || got.Gate != deleteimpact.GateOriginLocked {
 			t.Fatalf("%+v", got)
 		}
@@ -251,12 +252,12 @@ func TestImpactCitationAndSubject(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		got := mustImpact(t, c, deleteimpact.KindCitation, res.Citation.ID)
+		got := mustImpact(t, c, catalogmodel.KindCitation, res.Citation.ID)
 		if got.Allowed || got.Gate != deleteimpact.GateInbound || len(got.Groups) != 1 {
 			t.Fatalf("%+v", got)
 		}
 		g := got.Groups[0]
-		if g.Via != "observations.citation_id" || g.Kind != deleteimpact.KindObservation || g.Total != 1 || len(g.Listed) != 1 {
+		if g.Via != "observations.citation_id" || g.Kind != catalogmodel.KindObservation || g.Total != 1 || len(g.Listed) != 1 {
 			t.Fatalf("%+v", g)
 		}
 		listed := g.Listed[0]
@@ -306,7 +307,7 @@ func TestImpactCitationAndSubject(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		got := mustImpact(t, c, deleteimpact.KindCitation, res.Citation.ID)
+		got := mustImpact(t, c, catalogmodel.KindCitation, res.Citation.ID)
 		if got.Allowed || len(got.Groups) != 1 {
 			t.Fatalf("%+v", got)
 		}
@@ -348,7 +349,7 @@ func TestImpactCitationAndSubject(t *testing.T) {
 				{PropertyID: roleProp.ID, ValueTermID: roleTerm.ID},
 			},
 		})
-		got := mustImpact(t, c, deleteimpact.KindSubject, alice.ID)
+		got := mustImpact(t, c, catalogmodel.KindSubject, alice.ID)
 		if got.Allowed || got.Gate != deleteimpact.GateInbound {
 			t.Fatalf("alice %+v", got)
 		}
@@ -363,7 +364,7 @@ func TestImpactCitationAndSubject(t *testing.T) {
 		}
 
 		t.Run("bridge only connection facets allowed", func(t *testing.T) {
-			got := mustImpact(t, c, deleteimpact.KindSubject, bridge.Subject.ID)
+			got := mustImpact(t, c, catalogmodel.KindSubject, bridge.Subject.ID)
 			if !got.Allowed || got.Gate != deleteimpact.GateOK {
 				t.Fatalf("bridge %+v", got)
 			}
@@ -379,7 +380,7 @@ func TestImpactCitationAndSubject(t *testing.T) {
 			if _, err := tx.Exec(`DELETE FROM subjects WHERE id = ?`, bridge.Subject.ID); err == nil {
 				t.Fatal("raw subject delete should fail while facets remain")
 			}
-			if _, err := deleteimpact.ReleaseFacets(tx, deleteimpact.KindSubject, bridge.Subject.ID); err != nil {
+			if _, err := deleteimpact.ReleaseFacets(tx, catalogmodel.KindSubject, bridge.Subject.ID); err != nil {
 				t.Fatal(err)
 			}
 			if _, err := tx.Exec(`DELETE FROM subjects WHERE id = ?`, bridge.Subject.ID); err != nil {
@@ -396,7 +397,7 @@ func TestImpactCitationAndSubject(t *testing.T) {
 			}}); err != nil {
 				t.Fatal(err)
 			}
-			got := mustImpact(t, c, deleteimpact.KindSubject, bridge.Subject.ID)
+			got := mustImpact(t, c, catalogmodel.KindSubject, bridge.Subject.ID)
 			if got.Allowed || got.Gate != deleteimpact.GateInbound {
 				t.Fatalf("%+v", got)
 			}
@@ -414,7 +415,7 @@ func TestImpactCitationAndSubject(t *testing.T) {
 		t.Run("edge observation edge_locked", func(t *testing.T) {
 			var edgeID []byte
 			for _, o := range bridge.Observations {
-				if impact := mustImpact(t, c, deleteimpact.KindObservation, o.ID); impact.Gate == deleteimpact.GateEdgeLocked {
+				if impact := mustImpact(t, c, catalogmodel.KindObservation, o.ID); impact.Gate == deleteimpact.GateEdgeLocked {
 					edgeID = o.ID
 					if impact.Allowed {
 						t.Fatalf("allowed edge %+v", impact)
@@ -450,7 +451,7 @@ func TestImpactCitationAndSubject(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		got := mustImpact(t, c, deleteimpact.KindSubject, alice.ID)
+		got := mustImpact(t, c, catalogmodel.KindSubject, alice.ID)
 		if got.Allowed || got.Gate != deleteimpact.GateInbound {
 			t.Fatalf("alice %+v", got)
 		}
@@ -503,7 +504,7 @@ func TestImpactCitationAndSubject(t *testing.T) {
 		}}); err != nil {
 			t.Fatal(err)
 		}
-		got := mustImpact(t, c, deleteimpact.KindSubject, bob.ID)
+		got := mustImpact(t, c, catalogmodel.KindSubject, bob.ID)
 		if got.Allowed || got.Gate != deleteimpact.GateInbound {
 			t.Fatalf("bob %+v", got)
 		}
@@ -581,7 +582,7 @@ func TestSnapshotOwnedThenRelease(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	snap1, err := deleteimpact.SnapshotOwned(tx, deleteimpact.KindArtifact, art1.ID)
+	snap1, err := deleteimpact.SnapshotOwned(tx, catalogmodel.KindArtifact, art1.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -606,7 +607,7 @@ func TestSnapshotOwnedThenRelease(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	snap2, err := deleteimpact.SnapshotOwned(tx, deleteimpact.KindArtifact, art2.ID)
+	snap2, err := deleteimpact.SnapshotOwned(tx, catalogmodel.KindArtifact, art2.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -644,7 +645,7 @@ func TestImpactSourceAndArtifact(t *testing.T) {
 	}
 
 	t.Run("empty source allowed", func(t *testing.T) {
-		got := mustImpact(t, c, deleteimpact.KindSource, src.ID)
+		got := mustImpact(t, c, catalogmodel.KindSource, src.ID)
 		if !got.Allowed || got.Gate != deleteimpact.GateOK || len(got.Groups) != 0 {
 			t.Fatalf("%+v", got)
 		}
@@ -656,7 +657,7 @@ func TestImpactSourceAndArtifact(t *testing.T) {
 	}
 
 	t.Run("source blocked by artifact", func(t *testing.T) {
-		got := mustImpact(t, c, deleteimpact.KindSource, src.ID)
+		got := mustImpact(t, c, catalogmodel.KindSource, src.ID)
 		if got.Allowed || got.Gate != deleteimpact.GateInbound {
 			t.Fatalf("%+v", got)
 		}
@@ -669,7 +670,7 @@ func TestImpactSourceAndArtifact(t *testing.T) {
 	})
 
 	t.Run("empty artifact allowed", func(t *testing.T) {
-		got := mustImpact(t, c, deleteimpact.KindArtifact, art.ID)
+		got := mustImpact(t, c, catalogmodel.KindArtifact, art.ID)
 		if !got.Allowed || got.Gate != deleteimpact.GateOK {
 			t.Fatalf("%+v", got)
 		}
@@ -684,7 +685,7 @@ func TestImpactSourceAndArtifact(t *testing.T) {
 	}
 
 	t.Run("artifact blocked by citation", func(t *testing.T) {
-		got := mustImpact(t, c, deleteimpact.KindArtifact, art.ID)
+		got := mustImpact(t, c, catalogmodel.KindArtifact, art.ID)
 		if got.Allowed || got.Gate != deleteimpact.GateInbound {
 			t.Fatalf("%+v", got)
 		}
@@ -719,7 +720,7 @@ func TestImpactSourceAndArtifact(t *testing.T) {
 	}
 
 	t.Run("source blocked by subject", func(t *testing.T) {
-		got := mustImpact(t, c, deleteimpact.KindSource, empty.ID)
+		got := mustImpact(t, c, catalogmodel.KindSource, empty.ID)
 		if got.Allowed || got.Gate != deleteimpact.GateInbound {
 			t.Fatalf("%+v", got)
 		}
@@ -746,7 +747,7 @@ func TestImpactAgreesWithSQLite(t *testing.T) {
 	}
 
 	t.Run("empty source raw delete matches Impact", func(t *testing.T) {
-		got := mustImpact(t, c, deleteimpact.KindSource, src.ID)
+		got := mustImpact(t, c, catalogmodel.KindSource, src.ID)
 		if !got.Allowed {
 			t.Fatalf("%+v", got)
 		}
@@ -760,7 +761,7 @@ func TestImpactAgreesWithSQLite(t *testing.T) {
 	}
 
 	t.Run("inbound source raw delete matches Impact", func(t *testing.T) {
-		got := mustImpact(t, c, deleteimpact.KindSource, src.ID)
+		got := mustImpact(t, c, catalogmodel.KindSource, src.ID)
 		if got.Allowed {
 			t.Fatalf("%+v", got)
 		}
@@ -785,7 +786,7 @@ func rawDeleteOK(t *testing.T, c *database.Catalog, table string, id []byte) boo
 	return err == nil
 }
 
-func mustImpact(t *testing.T, c *database.Catalog, kind deleteimpact.Kind, id []byte) deleteimpact.Report {
+func mustImpact(t *testing.T, c *database.Catalog, kind catalogmodel.Kind, id []byte) deleteimpact.Report {
 	t.Helper()
 	db, err := c.DB()
 	if err != nil {
@@ -803,7 +804,7 @@ func mustImpact(t *testing.T, c *database.Catalog, kind deleteimpact.Kind, id []
 	return got
 }
 
-func mustImpactErr(t *testing.T, c *database.Catalog, kind deleteimpact.Kind, id []byte, want error) {
+func mustImpactErr(t *testing.T, c *database.Catalog, kind catalogmodel.Kind, id []byte, want error) {
 	t.Helper()
 	db, err := c.DB()
 	if err != nil {

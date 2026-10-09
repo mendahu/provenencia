@@ -1,6 +1,7 @@
 package deleteimpact_test
 
 import (
+	"github.com/mendahu/provenencia/core/database/catalogmodel"
 	"strings"
 	"testing"
 
@@ -75,12 +76,12 @@ func TestImpactConclusion(t *testing.T) {
 	}
 
 	t.Run("subject type in use names its handle", func(t *testing.T) {
-		got := mustImpact(t, c, deleteimpact.KindSubjectType, place.ID)
+		got := mustImpact(t, c, catalogmodel.KindSubjectType, place.ID)
 		if got.Allowed {
 			t.Fatalf("%+v", got)
 		}
 		g := findGroup(t, got, "canonical_entities.subject_type_id")
-		if g.Kind != deleteimpact.KindCanonicalEntity || g.Total != 1 || g.Listed[0].Ref != plc.Ref {
+		if g.Kind != catalogmodel.KindCanonicalEntity || g.Total != 1 || g.Listed[0].Ref != plc.Ref {
 			t.Fatalf("%+v", g)
 		}
 	})
@@ -88,7 +89,7 @@ func TestImpactConclusion(t *testing.T) {
 	var otherClaimID []byte // a second handle's claim, for cross-claim pins
 
 	t.Run("blocked promoted subject reports groups and the handle it leaves", func(t *testing.T) {
-		got := mustImpact(t, c, deleteimpact.KindSubject, york.ID)
+		got := mustImpact(t, c, catalogmodel.KindSubject, york.ID)
 		if got.Allowed || len(got.Groups) == 0 {
 			t.Fatalf("%+v", got)
 		}
@@ -102,7 +103,7 @@ func TestImpactConclusion(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		got := mustImpact(t, c, deleteimpact.KindSubject, leeds.ID)
+		got := mustImpact(t, c, catalogmodel.KindSubject, leeds.ID)
 		if !got.Allowed || len(got.Cascades) != 0 {
 			t.Fatalf("unpromoted %+v", got)
 		}
@@ -110,7 +111,7 @@ func TestImpactConclusion(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		got = mustImpact(t, c, deleteimpact.KindSubject, leeds.ID)
+		got = mustImpact(t, c, catalogmodel.KindSubject, leeds.ID)
 		if !got.Allowed || len(got.Groups) != 0 {
 			t.Fatalf("%+v", got)
 		}
@@ -130,12 +131,12 @@ func TestImpactConclusion(t *testing.T) {
 				t.Fatal(err)
 			}
 		}
-		got := mustImpact(t, c, deleteimpact.KindObservation, obsID)
+		got := mustImpact(t, c, catalogmodel.KindObservation, obsID)
 		if !got.Allowed || len(got.Groups) != 0 || len(got.Cascades) != 1 {
 			t.Fatalf("%+v", got)
 		}
 		g := got.Cascades[0]
-		if g.Via != "identity_claim_evidence.observation_id" || g.Kind != deleteimpact.KindCanonicalEntity ||
+		if g.Via != "identity_claim_evidence.observation_id" || g.Kind != catalogmodel.KindCanonicalEntity ||
 			g.Total != 2 || len(g.Listed) != 2 {
 			t.Fatalf("%+v", g)
 		}
@@ -218,7 +219,7 @@ func assertLeaves(t *testing.T, r deleteimpact.Report, handleRef string) {
 		t.Fatalf("cascades %+v", r.Cascades)
 	}
 	g := r.Cascades[0]
-	if g.Via != "identity_claims.subject_id" || g.Kind != deleteimpact.KindCanonicalEntity ||
+	if g.Via != "identity_claims.subject_id" || g.Kind != catalogmodel.KindCanonicalEntity ||
 		g.Total != 1 || len(g.Listed) != 1 || g.Listed[0].Ref != handleRef {
 		t.Fatalf("%+v", g)
 	}

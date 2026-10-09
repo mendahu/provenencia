@@ -4,6 +4,7 @@ package metadatafields
 import (
 	"database/sql"
 	"errors"
+	"github.com/mendahu/provenencia/core/database/catalogmodel"
 	"strings"
 
 	"github.com/google/uuid"
@@ -326,7 +327,7 @@ func Delete(c *database.Catalog, userID, id []byte) error {
 	}
 	defer func() { _ = tx.Rollback() }()
 
-	report, err := deleteimpact.Impact(tx, deleteimpact.KindMetadataField, id)
+	report, err := deleteimpact.Impact(tx, catalogmodel.KindMetadataField, id)
 	if err != nil {
 		return err
 	}
@@ -336,7 +337,7 @@ func Delete(c *database.Catalog, userID, id []byte) error {
 		return err
 	}
 	// Per-Source layout rows (order, dismissed suggestions) are released and audited.
-	released, err := deleteimpact.ReleaseFacets(tx, deleteimpact.KindMetadataField, id)
+	released, err := deleteimpact.ReleaseFacets(tx, catalogmodel.KindMetadataField, id)
 	if err != nil {
 		return err
 	}

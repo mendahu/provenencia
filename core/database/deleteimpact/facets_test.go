@@ -2,6 +2,7 @@ package deleteimpact_test
 
 import (
 	"bytes"
+	"github.com/mendahu/provenencia/core/database/catalogmodel"
 	"sort"
 	"strings"
 	"testing"
@@ -139,7 +140,7 @@ func TestReleaseFacetsReportsHandles(t *testing.T) {
 	}
 	defer func() { _ = tx.Rollback() }()
 	// obsA is pinned on both claims of one handle: one handle, reported once.
-	got, err := deleteimpact.ReleaseFacets(tx, deleteimpact.KindObservation, f.obsA)
+	got, err := deleteimpact.ReleaseFacets(tx, catalogmodel.KindObservation, f.obsA)
 	if err != nil {
 		t.Fatal(err)
 	}

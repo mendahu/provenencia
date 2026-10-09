@@ -2,12 +2,13 @@ package deleteimpact
 
 import (
 	"database/sql"
+	"github.com/mendahu/provenencia/core/database/catalogmodel"
 	"strings"
 )
 
-// ParseKind maps a GetDeleteImpact kind string to a registered Kind.
-func ParseKind(s string) (Kind, error) {
-	k := Kind(strings.TrimSpace(s))
+// ParseKind maps a GetDeleteImpact kind string to a registered kind.
+func ParseKind(s string) (catalogmodel.Kind, error) {
+	k := catalogmodel.Kind(strings.TrimSpace(s))
 	if _, ok := tableByKind(k); !ok {
 		return "", ErrInvalid
 	}
@@ -15,7 +16,7 @@ func ParseKind(s string) (Kind, error) {
 }
 
 // Impact reports whether id of kind can be erased and, if not, the inbound list.
-func Impact(tx *sql.Tx, kind Kind, id []byte) (Report, error) {
+func Impact(tx *sql.Tx, kind catalogmodel.Kind, id []byte) (Report, error) {
 	if tx == nil {
 		return Report{}, ErrInvalid
 	}
@@ -23,7 +24,7 @@ func Impact(tx *sql.Tx, kind Kind, id []byte) (Report, error) {
 	if !ok {
 		return Report{}, ErrInvalid
 	}
-	if spec.Bucket == BucketInfra || spec.Bucket == BucketSkip {
+	if spec.Bucket == catalogmodel.BucketInfra || spec.Bucket == catalogmodel.BucketSkip {
 		return Report{Allowed: false, Gate: GateInfra}, nil
 	}
 	if len(id) != 16 {
@@ -39,7 +40,7 @@ func Impact(tx *sql.Tx, kind Kind, id []byte) (Report, error) {
 		return Report{}, err
 	}
 
-	if kind == KindObservation {
+	if kind == catalogmodel.KindObservation {
 		edge, err := isEdgeObservation(tx, id)
 		if err != nil {
 			return Report{}, err
@@ -102,7 +103,7 @@ func collectGroups(tx *sql.Tx, edges []inboundEdge, id []byte) ([]Group, error) 
 	return groups, nil
 }
 
-func originGate(tx *sql.Tx, kind Kind, id []byte) (Gate, error) {
+func originGate(tx *sql.Tx, kind catalogmodel.Kind, id []byte) (Gate, error) {
 	rule, ok := originRuleFor(kind)
 	if !ok {
 		return GateOK, nil

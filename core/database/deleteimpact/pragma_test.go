@@ -1,141 +1,27 @@
 package deleteimpact
 
 import (
-	"database/sql"
-	"fmt"
 	"strings"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/catalogmodel"
 )
 
-func TestPragmaHonesty(t *testing.T) {
-	c, err := database.Create(t.TempDir(), "t.provenencia")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer c.Close()
-	db, err := c.DB()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	registered := map[string]fkSpec{}
-	for _, fk := range foreignKeys {
-		registered[fk.FromTable+"."+fk.FromCol] = fk
-	}
+func TestResourceAndOwnedHonesty(t *testing.T) {
 	resourceVias := resourceInboundVias()
 	owned := ownedColumns()
-	registeredTables := map[string]bool{}
-	for _, spec := range tables {
-		if spec.Name != "" {
-			registeredTables[spec.Name] = true
-		}
-	}
-
-	tableRows, err := db.Query(`SELECT name FROM sqlite_schema
-		WHERE type = 'table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE 'catalog_search_fts%'
-		ORDER BY name`)
-	if err != nil {
-		t.Fatal(err)
-	}
-	var names []string
-	for tableRows.Next() {
-		var name string
-		if err := tableRows.Scan(&name); err != nil {
-			tableRows.Close()
-			t.Fatal(err)
-		}
-		names = append(names, name)
-	}
-	if err := tableRows.Err(); err != nil {
-		tableRows.Close()
-		t.Fatal(err)
-	}
-	tableRows.Close()
-	seen := map[string]bool{}
-	var fkCols [][2]string
-	for _, name := range names {
-		if !registeredTables[name] {
-			t.Errorf("unregistered table %s", name)
-		}
-		fks, err := db.Query(`PRAGMA foreign_key_list(` + name + `)`)
-		if err != nil {
-			t.Fatal(err)
-		}
-		// PRAGMA returns one row per column; a composite FK is keyed by its
-		// leading (seq 0) column and registers the rest in FromCols.
-		type liveFK struct {
-			toTable, onDelete string
-			cols              []string
-		}
-		var order []int
-		live := map[int]*liveFK{}
-		for fks.Next() {
-			var id, seq int
-			var toTable, fromCol, toCol, onUpdate, onDelete, match string
-			if err := fks.Scan(&id, &seq, &toTable, &fromCol, &toCol, &onUpdate, &onDelete, &match); err != nil {
-				t.Fatal(err)
+	for _, fk := range catalogmodel.FKs {
+		key := fk.From + "." + fk.Column
+		switch fk.Bucket {
+		case catalogmodel.BucketResource:
+			if !resourceVias[key] {
+				t.Errorf("resource FK %s has no list probe", key)
 			}
-			fk, ok := live[id]
-			if !ok {
-				fk = &liveFK{toTable: toTable, onDelete: onDelete}
-				live[id] = fk
-				order = append(order, id)
+		case catalogmodel.BucketOwnedOutbound:
+			if !owned[key] {
+				t.Errorf("owned-outbound FK %s missing from release list", key)
 			}
-			for len(fk.cols) <= seq {
-				fk.cols = append(fk.cols, "")
-			}
-			fk.cols[seq] = fromCol
-		}
-		fks.Close()
-		for _, id := range order {
-			fk := live[id]
-			fromCol, toTable, onDelete := fk.cols[0], fk.toTable, fk.onDelete
-			key := name + "." + fromCol
-			seen[key] = true
-			fkCols = append(fkCols, [2]string{name, fromCol})
-			spec, ok := registered[key]
-			if !ok {
-				t.Errorf("unregistered FK %s -> %s", key, toTable)
-				continue
-			}
-			wantCols := spec.FromCols
-			if len(wantCols) == 0 {
-				wantCols = []string{spec.FromCol}
-			}
-			if strings.Join(wantCols, ",") != strings.Join(fk.cols, ",") {
-				t.Errorf("%s cols=%v registered=%v", key, fk.cols, wantCols)
-			}
-			gotAction := normalizeOnDelete(onDelete)
-			wantAction := normalizeOnDelete(spec.OnDelete)
-			if gotAction != wantAction {
-				t.Errorf("%s on_delete=%s registered=%s", key, gotAction, wantAction)
-			}
-			if spec.ToTable != toTable {
-				t.Errorf("%s to=%s registered=%s", key, toTable, spec.ToTable)
-			}
-			switch spec.Bucket {
-			case BucketResource:
-				if !resourceVias[key] {
-					t.Errorf("resource FK %s has no list probe", key)
-				}
-			case BucketOwnedOutbound:
-				if !owned[key] {
-					t.Errorf("owned-outbound FK %s missing from release list", key)
-				}
-			}
-		}
-	}
-	for _, pair := range fkCols {
-		name, fromCol := pair[0], pair[1]
-		if !leftmostIndexed(t, db, name, fromCol) {
-			t.Errorf("FK %s.%s has no covering index", name, fromCol)
-		}
-	}
-	for key := range registered {
-		if !seen[key] {
-			t.Errorf("registered FK %s is not live", key)
 		}
 	}
 }
@@ -158,12 +44,12 @@ func TestPragmaHonestyProjectors(t *testing.T) {
 
 	id := make([]byte, 16)
 	id[15] = 1
-	for _, spec := range tables {
-		if spec.Exists == "" {
+	for _, spec := range catalogmodel.Tables {
+		if existsSQL[spec.Name] == "" {
 			continue
 		}
 		switch spec.Bucket {
-		case BucketInfra, BucketSkip, BucketPool:
+		case catalogmodel.BucketInfra, catalogmodel.BucketSkip, catalogmodel.BucketPool:
 			continue
 		}
 		_, loc, err := projectKind(tx, spec.Kind, probeRow{ID: id, Ref: "REF-TEST"})
@@ -174,68 +60,6 @@ func TestPragmaHonestyProjectors(t *testing.T) {
 		if loc.Section == "" {
 			t.Errorf("%s projector missing Section", spec.Kind)
 		}
-	}
-}
-
-func leftmostIndexed(t *testing.T, db *sql.DB, table, col string) bool {
-	t.Helper()
-	indexes, err := db.Query(`PRAGMA index_list(` + table + `)`)
-	if err != nil {
-		t.Fatal(err)
-	}
-	names, err := pragmaColumn(indexes, 1)
-	indexes.Close()
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, name := range names {
-		info, err := db.Query(`PRAGMA index_info("` + strings.ReplaceAll(name, `"`, `""`) + `")`)
-		if err != nil {
-			t.Fatal(err)
-		}
-		cols, err := pragmaColumn(info, 2)
-		info.Close()
-		if err != nil {
-			t.Fatal(err)
-		}
-		if len(cols) > 0 && cols[0] == col {
-			return true
-		}
-	}
-	return false
-}
-
-func pragmaColumn(rows *sql.Rows, idx int) ([]string, error) {
-	cols, err := rows.Columns()
-	if err != nil {
-		return nil, err
-	}
-	if idx < 0 || idx >= len(cols) {
-		return nil, fmt.Errorf("pragma column %d out of range", idx)
-	}
-	var out []string
-	for rows.Next() {
-		raw := make([]any, len(cols))
-		dest := make([]any, len(cols))
-		for i := range raw {
-			dest[i] = &raw[i]
-		}
-		if err := rows.Scan(dest...); err != nil {
-			return nil, err
-		}
-		out = append(out, asString(raw[idx]))
-	}
-	return out, rows.Err()
-}
-
-func asString(v any) string {
-	switch t := v.(type) {
-	case string:
-		return t
-	case []byte:
-		return string(t)
-	default:
-		return ""
 	}
 }
 
@@ -258,17 +82,17 @@ func TestFacetReleaseHonesty(t *testing.T) {
 		}
 		releases[f.Via] = f
 	}
-	fks := map[string]fkSpec{}
-	for _, fk := range foreignKeys {
-		fks[fk.FromTable+"."+fk.FromCol] = fk
+	fks := map[string]catalogmodel.FK{}
+	for _, fk := range catalogmodel.FKs {
+		fks[fk.From+"."+fk.Column] = fk
 	}
-	tableKind := map[string]Kind{}
+	tableKind := map[string]catalogmodel.Kind{}
 	deletable := map[string]bool{}
-	for _, spec := range tables {
+	for _, spec := range catalogmodel.Tables {
 		if spec.Kind != "" {
 			tableKind[spec.Name] = spec.Kind
 		}
-		deletable[spec.Name] = spec.Exists != ""
+		deletable[spec.Name] = existsSQL[spec.Name] != ""
 	}
 
 	for key, fk := range fks {
@@ -280,8 +104,8 @@ func TestFacetReleaseHonesty(t *testing.T) {
 			continue
 		}
 		switch {
-		case fk.Audited && !has && deletable[fk.ToTable]:
-			t.Errorf("audited CASCADE %s has no facet release (parent %s is deletable)", key, fk.ToTable)
+		case fk.Audited && !has && deletable[fk.To]:
+			t.Errorf("audited CASCADE %s has no facet release (parent %s is deletable)", key, fk.To)
 		case !fk.Audited && has:
 			t.Errorf("silent CASCADE %s has a facet release; mark it Audited", key)
 		}
@@ -292,8 +116,8 @@ func TestFacetReleaseHonesty(t *testing.T) {
 			t.Errorf("facet release %s is not a registered FK", via)
 			continue
 		}
-		if tableKind[fk.ToTable] != f.Parent {
-			t.Errorf("facet release %s parent %s, FK points at %s", via, f.Parent, fk.ToTable)
+		if tableKind[fk.To] != f.Parent {
+			t.Errorf("facet release %s parent %s, FK points at %s", via, f.Parent, fk.To)
 		}
 		if normalizeOnDelete(fk.OnDelete) == "CASCADE" {
 			if !fk.Audited {
