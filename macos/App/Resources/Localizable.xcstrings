@@ -15316,6 +15316,18 @@
         }
       }
     },
+    "conclusions.life.spanDeathOnly": {
+      "comment": "Persons row with a death and no birth: an open dash, then the death date, so it doesn't read as a birth. Argument is the formatted date.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "– %@"
+          }
+        }
+      }
+    },
     "conclusions.life.places": {
       "comment": "Persons row: birth place, then death place. Arguments are the two place names.",
       "extractionState": "manual",
@@ -15324,6 +15336,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "%1$@ → %2$@"
+          }
+        }
+      }
+    },
+    "conclusions.life.placeDeathOnly": {
+      "comment": "Persons row with a death place and no birth place: the arrow marks it as where they died. Argument is the place name.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "→ %@"
           }
         }
       }
@@ -17425,6 +17449,30 @@
           "stringUnit": {
             "state": "translated",
             "value": "%1$@ · %2$@. Agreeing comparisons are pinned as this claim’s evidence."
+          }
+        }
+      }
+    },
+    "promote.sheet.titleHandle": {
+      "comment": "Evidence sheet title for a row filed on an existing record; 1 = the row's name, 2 = the record's ref, 3 = the record's title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ → %2$@ %3$@"
+          }
+        }
+      }
+    },
+    "promote.sheet.titleNew": {
+      "comment": "Evidence sheet title for a row filed as a new record; 1 = the row's name, 2 = the New option, e.g. New person",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ → %2$@"
           }
         }
       }
