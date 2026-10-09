@@ -53,6 +53,7 @@ Copy the stub. Surface + what got in the way is enough. A wanted fix is optional
 - **Annoyance:** Some Observation fields have the same answer nearly every time, but I still have to pick them by hand.
 - **Wanted:** Prefill fields with a default for specific kinds of Observation, leaving them editable.
   - **First case:** when connecting a Person to an Event, prefill **role** with the seeded `subject` term ([seeded vocabulary §3.5](../seeded-vocabulary.md)). That covers about 90% of these connections.
+  - **Place → Place:** default the relationship to **part of** (e.g. a town is part of a county). I couldn't find a seeded place-to-place relationship term in [seeded vocabulary](../seeded-vocabulary.md), so this may need seeding first.
   - Add more defaults as dogfooding turns them up.
 
 ### Multi-line text areas need a scrollbar
