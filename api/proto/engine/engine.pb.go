@@ -7278,11 +7278,8 @@ type Subject struct {
 	SubjectTypeId string                 `protobuf:"bytes,4,opt,name=subject_type_id,json=subjectTypeId,proto3" json:"subject_type_id,omitempty"`
 	Label         string                 `protobuf:"bytes,5,opt,name=label,proto3" json:"label,omitempty"`
 	Description   string                 `protobuf:"bytes,6,opt,name=description,proto3" json:"description,omitempty"`
-	// A bridge the researcher switched off on the Promote page: filing leaves
-	// it unfiled until a later Done switches it back on.
-	FilingDeclined bool `protobuf:"varint,7,opt,name=filing_declined,json=filingDeclined,proto3" json:"filing_declined,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Subject) Reset() {
@@ -7355,13 +7352,6 @@ func (x *Subject) GetDescription() string {
 		return x.Description
 	}
 	return ""
-}
-
-func (x *Subject) GetFilingDeclined() bool {
-	if x != nil {
-		return x.FilingDeclined
-	}
-	return false
 }
 
 // SubjectPosition is unaudited graph layout for one subject.
@@ -17092,15 +17082,14 @@ const file_engine_proto_rawDesc = "" +
 	"\vdescription\x18\x05 \x01(\tR\vdescription\x12\x1d\n" +
 	"\n" +
 	"ref_prefix\x18\x06 \x01(\tR\trefPrefix\x120\n" +
-	"\x14candidate_ref_prefix\x18\a \x01(\tR\x12candidateRefPrefix\"\xd1\x01\n" +
+	"\x14candidate_ref_prefix\x18\a \x01(\tR\x12candidateRefPrefix\"\xa8\x01\n" +
 	"\aSubject\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x10\n" +
 	"\x03ref\x18\x02 \x01(\tR\x03ref\x12\x1b\n" +
 	"\tsource_id\x18\x03 \x01(\tR\bsourceId\x12&\n" +
 	"\x0fsubject_type_id\x18\x04 \x01(\tR\rsubjectTypeId\x12\x14\n" +
 	"\x05label\x18\x05 \x01(\tR\x05label\x12 \n" +
-	"\vdescription\x18\x06 \x01(\tR\vdescription\x12'\n" +
-	"\x0ffiling_declined\x18\a \x01(\bR\x0efilingDeclined\"^\n" +
+	"\vdescription\x18\x06 \x01(\tR\vdescription\"^\n" +
 	"\x0fSubjectPosition\x12\x1d\n" +
 	"\n" +
 	"subject_id\x18\x01 \x01(\tR\tsubjectId\x12\x15\n" +

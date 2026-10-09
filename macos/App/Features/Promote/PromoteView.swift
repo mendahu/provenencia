@@ -77,7 +77,7 @@ struct PromoteView: View {
                     title: L10n.string(L10n.Promote.leaveTitle),
                     message: L10n.Promote.leaveDetail(
                         rows: model.flow.rows.filter(\.decided).count,
-                        connections: model.flow.connectionChanges
+                        connections: model.flow.bridgeOff.count
                     ),
                     confirm: L10n.Promote.leaveConfirm,
                     cancel: L10n.Promote.leaveCancel

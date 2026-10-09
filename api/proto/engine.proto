@@ -858,9 +858,6 @@ message Subject {
   string subject_type_id = 4;
   string label = 5;
   string description = 6;
-  // A bridge the researcher switched off on the Promote page: filing leaves
-  // it unfiled until a later Done switches it back on.
-  bool filing_declined = 7;
 }
 
 // SubjectPosition is unaudited graph layout for one subject.

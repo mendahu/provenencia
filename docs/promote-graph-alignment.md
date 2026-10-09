@@ -213,7 +213,7 @@ That's roughly 10–15 queries per proposal, whatever the graph size.
 - **Per row:** the Identity Claim with status, confidence and argument; a minted handle for New; nothing for Skip.
 - **Pins:** each toggled comparison pins its Observations on the row's claim and backfills them onto the member's claim (§5.1). The pair check widens from same Subject and same Property (S9-17) to **one-hop neighbors through a bridge**, so "her birth date matches" can be pinned on the person's claim. A one-hop pair compares a neighbor only with the handle that neighbor is filed on, in this Done or earlier: this birth with that birth, never with another of the handle's events. A neighbor filed New or skipped pins nothing.
 - **Duplicate pins are accepted on purpose.** The same agreement may be pinned on several claims (the person's and the birth event's). The machine drafts the pins, so this costs the researcher nothing.
-- **Bridges** are filed by the rules in §9.1; switched-off bridges are skipped. The switched-off set is the page's answer for the Source's unfiled bridges: it is recorded as declined (`subjects.filing_declined`), so a later Done or claim does not file them, and every other unfiled bridge is switched back on.
+- **Bridges** are filed by the rules in §9.1; switched-off bridges are skipped.
 
 ## 9.1 Bridge filing
 

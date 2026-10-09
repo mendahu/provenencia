@@ -2965,10 +2965,6 @@ public nonisolated struct Provenencia_Engine_V1_Subject: Sendable {
 
   public var description_p: String = String()
 
-  /// A bridge the researcher switched off on the Promote page: filing leaves
-  /// it unfiled until a later Done switches it back on.
-  public var filingDeclined: Bool = false
-
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -11126,7 +11122,7 @@ nonisolated extension Provenencia_Engine_V1_SubjectType: SwiftProtobuf.Message, 
 
 nonisolated extension Provenencia_Engine_V1_Subject: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".Subject"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}ref\0\u{3}source_id\0\u{3}subject_type_id\0\u{1}label\0\u{1}description\0\u{3}filing_declined\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}ref\0\u{3}source_id\0\u{3}subject_type_id\0\u{1}label\0\u{1}description\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -11140,7 +11136,6 @@ nonisolated extension Provenencia_Engine_V1_Subject: SwiftProtobuf.Message, Swif
       case 4: try { try decoder.decodeSingularStringField(value: &self.subjectTypeID) }()
       case 5: try { try decoder.decodeSingularStringField(value: &self.label) }()
       case 6: try { try decoder.decodeSingularStringField(value: &self.description_p) }()
-      case 7: try { try decoder.decodeSingularBoolField(value: &self.filingDeclined) }()
       default: break
       }
     }
@@ -11165,9 +11160,6 @@ nonisolated extension Provenencia_Engine_V1_Subject: SwiftProtobuf.Message, Swif
     if !self.description_p.isEmpty {
       try visitor.visitSingularStringField(value: self.description_p, fieldNumber: 6)
     }
-    if self.filingDeclined != false {
-      try visitor.visitSingularBoolField(value: self.filingDeclined, fieldNumber: 7)
-    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -11178,7 +11170,6 @@ nonisolated extension Provenencia_Engine_V1_Subject: SwiftProtobuf.Message, Swif
     if lhs.subjectTypeID != rhs.subjectTypeID {return false}
     if lhs.label != rhs.label {return false}
     if lhs.description_p != rhs.description_p {return false}
-    if lhs.filingDeclined != rhs.filingDeclined {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

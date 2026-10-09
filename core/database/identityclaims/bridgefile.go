@@ -3,14 +3,12 @@ package identityclaims
 import (
 	"bytes"
 	"database/sql"
-	"errors"
 
 	"github.com/mendahu/provenencia/core/connectrules"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/audit"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
-	"github.com/mendahu/provenencia/core/database/subjects"
 )
 
 // FileBridgesTx files every unfiled bridge whose ends touch subjectID, in
@@ -21,8 +19,7 @@ import (
 // Role stays off the key (it is reconciled on the association). A relationship
 // type, and any later non-role disambiguation such as place_relationship_type,
 // is part of the key; a directed term keeps order and a symmetric one does not.
-// skip names bridge Subjects the caller switched off; nil files every bridge
-// that is not declined. A declined bridge is never filed here.
+// skip names bridge Subjects the caller switched off; nil files every bridge.
 //
 // Returned association ids are the handles whose cache the caller recomputes.
 // Changes belong on the caller's revision. Does not commit.
@@ -39,109 +36,50 @@ func FileBridgesTx(tx *sql.Tx, subjectID []byte, skip map[string]struct{}) (asso
 
 // FileSourceBridgesTx files every unfiled bridge homed to sourceID whose ends
 // are both handles, including a bridge whose ends were claimed before this
-// call. skip names bridge Subjects to leave unfiled; a declined bridge
-// (SetSourceDeclinesTx) is always left unfiled. Does not commit.
+// call. skip names bridge Subjects to leave unfiled. Does not commit.
 func FileSourceBridgesTx(tx *sql.Tx, sourceID []byte, skip map[string]struct{}) (assocIDs [][]byte, changes []audit.Change, err error) {
-	heads, err := sourceBridgeHeads(tx, sourceID)
-	if err != nil {
-		return nil, nil, err
-	}
-	return fileHeads(tx, heads, skip)
-}
-
-// SetSourceDeclinesTx records which of a Source's unfiled bridges the
-// researcher switched off: each one named in declined stays unfiled on every
-// later filing, and every other unfiled bridge is switched back on. A bridge
-// already filed keeps its claim and its flag. An id that is not a bridge
-// homed to sourceID is ErrInvalid. Changes belong on the caller's revision.
-// Does not commit.
-func SetSourceDeclinesTx(tx *sql.Tx, sourceID []byte, declined map[string]struct{}) ([]audit.Change, error) {
-	heads, err := sourceBridgeHeads(tx, sourceID)
-	if err != nil {
-		return nil, err
-	}
-	homed := make(map[string]bool, len(heads))
-	for _, b := range heads {
-		homed[string(b.id)] = true
-	}
-	for id := range declined {
-		if !homed[id] {
-			return nil, ErrInvalid
-		}
-	}
-	var changes []audit.Change
-	for _, b := range heads {
-		_, want := declined[string(b.id)]
-		if want == b.declined {
-			continue
-		}
-		filed, err := hasAcceptedClaim(tx, b.id)
-		if err != nil {
-			return nil, err
-		}
-		if filed {
-			continue
-		}
-		change, changed, err := subjects.SetFilingDeclinedTx(tx, b.id, want)
-		if err != nil {
-			return nil, err
-		}
-		if changed {
-			changes = append(changes, change)
-		}
-	}
-	return changes, nil
-}
-
-// sourceBridgeHeads lists the bridge Subjects homed to sourceID.
-func sourceBridgeHeads(tx *sql.Tx, sourceID []byte) ([]bridgeHead, error) {
 	if len(sourceID) != 16 {
-		return nil, nil
+		return nil, nil, nil
 	}
 	keys := connectrules.BridgeTypeKeys()
 	if len(keys) == 0 {
-		return nil, nil
+		return nil, nil, nil
 	}
 	args := make([]any, 0, len(keys)+1)
 	args = append(args, sourceID)
 	for _, k := range keys {
 		args = append(args, k)
 	}
-	rows, err := tx.Query(`SELECT s.id, st.key, s.subject_type_id, s.filing_declined
+	rows, err := tx.Query(`SELECT s.id, st.key, s.subject_type_id
 		FROM subjects s
 		JOIN subject_types st ON st.id = s.subject_type_id AND st.origin = 'provenencia'
 		WHERE s.source_id = ? AND st.key IN (`+database.SQLInPlaceholders(len(keys))+`)`, args...)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	defer rows.Close()
 	var heads []bridgeHead
 	for rows.Next() {
 		var b bridgeHead
-		if err := rows.Scan(&b.id, &b.typeKey, &b.typeID, &b.declined); err != nil {
-			return nil, err
+		if err := rows.Scan(&b.id, &b.typeKey, &b.typeID); err != nil {
+			_ = rows.Close()
+			return nil, nil, err
 		}
 		b.id = append([]byte(nil), b.id...)
 		b.typeID = append([]byte(nil), b.typeID...)
 		heads = append(heads, b)
 	}
-	return heads, rows.Err()
-}
-
-func hasAcceptedClaim(tx *sql.Tx, subjectID []byte) (bool, error) {
-	var one int
-	err := tx.QueryRow(`SELECT 1 FROM identity_claims
-		WHERE subject_id = ? AND status = 'accepted'`, subjectID).Scan(&one)
-	if errors.Is(err, sql.ErrNoRows) {
-		return false, nil
+	if err := rows.Err(); err != nil {
+		_ = rows.Close()
+		return nil, nil, err
 	}
-	return err == nil, err
+	_ = rows.Close()
+	return fileHeads(tx, heads, skip)
 }
 
 func fileHeads(tx *sql.Tx, bridges []bridgeHead, skip map[string]struct{}) (assocIDs [][]byte, changes []audit.Change, err error) {
 	seen := map[string]bool{}
 	for _, b := range bridges {
-		if _, off := skip[string(b.id)]; off || b.declined {
+		if _, off := skip[string(b.id)]; off {
 			continue
 		}
 		id, ch, filed, err := fileBridge(tx, b)
@@ -161,10 +99,9 @@ func fileHeads(tx *sql.Tx, bridges []bridgeHead, skip map[string]struct{}) (asso
 }
 
 type bridgeHead struct {
-	id       []byte
-	typeKey  string
-	typeID   []byte
-	declined bool // switched off on a Promote page; never filed
+	id      []byte
+	typeKey string
+	typeID  []byte
 }
 
 func bridgesTouching(tx *sql.Tx, subjectID []byte) ([]bridgeHead, error) {
@@ -177,7 +114,7 @@ func bridgesTouching(tx *sql.Tx, subjectID []byte) ([]bridgeHead, error) {
 		args = append(args, k)
 	}
 	args = append(args, subjectID, subjectID)
-	q := `SELECT s.id, st.key, s.subject_type_id, s.filing_declined
+	q := `SELECT s.id, st.key, s.subject_type_id
 		FROM subjects s
 		JOIN subject_types st ON st.id = s.subject_type_id AND st.origin = 'provenencia'
 		WHERE st.key IN (` + database.SQLInPlaceholders(len(keys)) + `)
@@ -196,7 +133,7 @@ func bridgesTouching(tx *sql.Tx, subjectID []byte) ([]bridgeHead, error) {
 	var out []bridgeHead
 	for rows.Next() {
 		var b bridgeHead
-		if err := rows.Scan(&b.id, &b.typeKey, &b.typeID, &b.declined); err != nil {
+		if err := rows.Scan(&b.id, &b.typeKey, &b.typeID); err != nil {
 			return nil, err
 		}
 		b.id = append([]byte(nil), b.id...)
@@ -219,8 +156,13 @@ func fileBridge(tx *sql.Tx, b bridgeHead) (assocID []byte, changes []audit.Chang
 	if !ok || len(rule.Endpoints) == 0 {
 		return nil, nil, false, nil
 	}
-	already, err := hasAcceptedClaim(tx, b.id)
-	if err != nil || already {
+	var exists int
+	err = tx.QueryRow(`SELECT 1 FROM identity_claims
+		WHERE subject_id = ? AND status = 'accepted'`, b.id).Scan(&exists)
+	if err == nil {
+		return nil, nil, false, nil
+	}
+	if err != sql.ErrNoRows {
 		return nil, nil, false, err
 	}
 

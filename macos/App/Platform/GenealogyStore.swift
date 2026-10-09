@@ -158,9 +158,6 @@ struct CatalogSubject: Sendable, Equatable, Identifiable {
     var subjectTypeID: String
     var label: String
     var description: String
-    /// A bridge switched off on a Promote page; filing leaves it unfiled
-    /// until a later Done switches it back on.
-    var filingDeclined: Bool = false
 }
 
 /// A Conclusion handle (PER-…, EVT-…, PLC-…).

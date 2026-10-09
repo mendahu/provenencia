@@ -27,14 +27,13 @@ var (
 const (
 	sqlInsert = `INSERT INTO subjects (id, ref, source_id, subject_type_id, label, description)
 		VALUES (?, ?, ?, ?, ?, ?)`
-	sqlUpdate            = `UPDATE subjects SET label = ?, description = ? WHERE id = ?`
-	sqlSetFilingDeclined = `UPDATE subjects SET filing_declined = ? WHERE id = ?`
-	sqlDelete            = `DELETE FROM subjects WHERE id = ?`
-	sqlGet               = `SELECT id, ref, source_id, subject_type_id, COALESCE(label, ''), COALESCE(description, ''), filing_declined
+	sqlUpdate = `UPDATE subjects SET label = ?, description = ? WHERE id = ?`
+	sqlDelete = `DELETE FROM subjects WHERE id = ?`
+	sqlGet    = `SELECT id, ref, source_id, subject_type_id, COALESCE(label, ''), COALESCE(description, '')
 		FROM subjects WHERE id = ?`
-	sqlGetByRef = `SELECT id, ref, source_id, subject_type_id, COALESCE(label, ''), COALESCE(description, ''), filing_declined
+	sqlGetByRef = `SELECT id, ref, source_id, subject_type_id, COALESCE(label, ''), COALESCE(description, '')
 		FROM subjects WHERE ref = ?`
-	sqlListBySource = `SELECT id, ref, source_id, subject_type_id, COALESCE(label, ''), COALESCE(description, ''), filing_declined
+	sqlListBySource = `SELECT id, ref, source_id, subject_type_id, COALESCE(label, ''), COALESCE(description, '')
 		FROM subjects WHERE source_id = ?
 		ORDER BY label COLLATE NOCASE, ref COLLATE NOCASE`
 	sqlSourceExists = `SELECT 1 FROM sources WHERE id = ?`
@@ -50,9 +49,6 @@ type Subject struct {
 	SubjectTypeID []byte
 	Label         string
 	Description   string
-	// FilingDeclined marks a bridge the researcher switched off on the
-	// Promote page; filing leaves it unfiled until it is switched back on.
-	FilingDeclined bool
 }
 
 // CreateInput is the mutable fields for a new Subject.
@@ -235,34 +231,6 @@ func Update(c *database.Catalog, userID, id []byte, label, description string) e
 	return tx.Commit()
 }
 
-// SetFilingDeclinedTx records whether filing should leave this bridge
-// Subject unfiled (the researcher switched it off on the Promote page). It
-// returns the change, or false when the flag already holds. Callers own the
-// revision and check that the Subject is a bridge. Does not commit.
-func SetFilingDeclinedTx(tx *sql.Tx, id []byte, declined bool) (audit.Change, bool, error) {
-	prev, err := getTx(tx, id)
-	if errors.Is(err, sql.ErrNoRows) {
-		return audit.Change{}, false, ErrInvalid
-	}
-	if err != nil {
-		return audit.Change{}, false, err
-	}
-	if prev.FilingDeclined == declined {
-		return audit.Change{}, false, nil
-	}
-	if _, err := tx.Exec(sqlSetFilingDeclined, declined, id); err != nil {
-		return audit.Change{}, false, err
-	}
-	return audit.Change{
-		EntityType: "subject",
-		EntityID:   append([]byte(nil), id...),
-		Action:     audit.ActionUpdate,
-		Fields: map[string]audit.FieldDiff{
-			"filing_declined": {Old: prev.FilingDeclined, New: declined},
-		},
-	}, true, nil
-}
-
 // Delete erases a Subject when Impact allows it. Connection facets (edge +
 // disambiguation rows on a bridge) are released first. Positions CASCADE.
 func Delete(c *database.Catalog, userID, id []byte) error {
@@ -430,7 +398,7 @@ func getTx(tx *sql.Tx, id []byte) (Subject, error) {
 
 func scanSubject(row rowScanner) (Subject, error) {
 	var s Subject
-	if err := row.Scan(&s.ID, &s.Ref, &s.SourceID, &s.SubjectTypeID, &s.Label, &s.Description, &s.FilingDeclined); err != nil {
+	if err := row.Scan(&s.ID, &s.Ref, &s.SourceID, &s.SubjectTypeID, &s.Label, &s.Description); err != nil {
 		return Subject{}, err
 	}
 	return s, nil
