@@ -497,7 +497,7 @@ Each step is its own PR, measured against the one before. PRs that only repoint 
 
 **Before starting**
 
-- **The paused stack.** [mendahu/provenencia#331](https://github.com/mendahu/provenencia/pull/331) to [mendahu/provenencia#334](https://github.com/mendahu/provenencia/pull/334) (rescoring, directed duplicates, neutral terms, graphalign cleanup) all edit `align.go`, which PR 8 restructures. Decide whether they land first or are redone after PR 8. [mendahu/provenencia#327](https://github.com/mendahu/provenencia/pull/327) is replaced by PR 8 (its debounce and narrowed exhibits carry over), and [mendahu/provenencia#328](https://github.com/mendahu/provenencia/pull/328) by PR 10. [mendahu/provenencia#330](https://github.com/mendahu/provenencia/pull/330) batches readers that PRs 8–11 replace; decide whether it's still worth landing.
+- **The paused stack.** Decided: [mendahu/provenencia#327](https://github.com/mendahu/provenencia/pull/327) to [mendahu/provenencia#340](https://github.com/mendahu/provenencia/pull/340) stay paused until this plan has landed, then each is refactored and rebased onto it in turn. #327 is replaced by PR 8 (its debounce and narrowed exhibits carry over), #328 by PR 10, and #330 is re-judged against the graph-backed readers. #331 to #334 are rebuilt on the `CanonGraph` version of `align.go`.
 
 **Schema and effects**
 
