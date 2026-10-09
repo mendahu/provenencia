@@ -805,8 +805,8 @@ message SearchCatalogRequest {
   string project_dir = 1;
   string query = 2;
   WorkspaceLocation location = 3; // current place; at least section for context boosts
-  // Restrict hits to these kinds. Empty = the omnibar's default set, which
-  // excludes person / event / place until S9-35.
+  // Restrict hits to these kinds. Empty = the omnibar's default set
+  // (sources, types, metadata fields, persons, events, and places).
   repeated string kinds = 4;
 }
 
@@ -826,6 +826,13 @@ message SearchHit {
   // Optional raw snippet for body/rollup matches (notes/metadata/filename). No English prefix.
   string match_snippet = 10;
   int32 member_count = 11; // accepted members, for person / event / place hits
+  // The list header for a person, event, or place hit. Title and subtitle
+  // stay match text; the app formats the row from this header (S9-35).
+  oneof header {
+    PersonHeader person = 12;
+    EventHeader event = 13;
+    PlaceHeader place = 14;
+  }
 }
 
 message SearchCatalogResponse {

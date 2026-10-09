@@ -11,6 +11,7 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/audit"
 	"github.com/mendahu/provenencia/core/database/autoreconciler"
+	"github.com/mendahu/provenencia/core/database/conclusionheaders"
 	"github.com/mendahu/provenencia/core/database/deleteimpact"
 	"github.com/mendahu/provenencia/core/database/project"
 	"github.com/mendahu/provenencia/core/database/searchindex"
@@ -299,8 +300,18 @@ func Delete(c *database.Catalog, userID, id []byte) error {
 		return err
 	}
 	// Handles whose members cite this Subject, captured before its Observations
-	// go. The association it leaves is in released.Handles.
+	// go. The association it leaves is in released.Handles. Header dependents
+	// are snapshotted while the link still exists, so deleting a bridge
+	// reprojects the event it titled.
 	inbound, err := autoreconciler.HandlesObservingSubject(tx, id)
+	if err != nil {
+		return err
+	}
+	ends, err := linkedHandles(tx, id)
+	if err != nil {
+		return err
+	}
+	deps, err := conclusionheaders.HeaderDependents(tx, ends)
 	if err != nil {
 		return err
 	}
@@ -315,7 +326,8 @@ func Delete(c *database.Catalog, userID, id []byte) error {
 	}
 	// Handles this Subject left, and handles whose members pointed at it,
 	// are recomputed without it.
-	if err := autoreconciler.RecomputeTx(tx, append(released.Handles, inbound...)); err != nil {
+	touched := append(append(released.Handles, inbound...), ends...)
+	if err := autoreconciler.RecomputeTx(tx, append(touched, deps...)); err != nil {
 		return err
 	}
 	fields := map[string]audit.FieldDiff{
@@ -461,6 +473,28 @@ func nullJSON(s string) any {
 		return nil
 	}
 	return s
+}
+
+// linkedHandles are accepted handles of Subjects this one points at.
+func linkedHandles(tx *sql.Tx, subjectID []byte) ([][]byte, error) {
+	rows, err := tx.Query(`
+		SELECT DISTINCT ic.entity_id
+		FROM observations o
+		JOIN identity_claims ic ON ic.subject_id = o.value_subject_id AND ic.status = 'accepted'
+		WHERE o.subject_id = ?`, subjectID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out [][]byte
+	for rows.Next() {
+		var id []byte
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		out = append(out, id)
+	}
+	return out, rows.Err()
 }
 
 func uuidString(id []byte) string {
