@@ -7818,6 +7818,11 @@ enum L10n {
             defaultValue: "File not found.",
             comment: "FFI error file.not_found"
         )
+        static let requestInvalidID = LocalizedStringResource(
+            "error.request.invalid_id",
+            defaultValue: "Provenencia couldn't read the ID of that record.",
+            comment: "FFI error request.invalid_id: a request named a record (any kind) by a malformed ID"
+        )
         static let sourcesInvalid = LocalizedStringResource(
             "error.sources.invalid",
             defaultValue: "Invalid source.",
@@ -8421,6 +8426,8 @@ enum L10n {
                 return L10n.string(onboardingUnknownUser)
             case "file.not_found":
                 return L10n.string(fileNotFound)
+            case "request.invalid_id":
+                return L10n.string(requestInvalidID)
             case "sources.invalid":
                 return L10n.string(sourcesInvalid)
             case "sources.in_use":

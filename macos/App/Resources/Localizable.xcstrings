@@ -2406,6 +2406,18 @@
         }
       }
     },
+    "error.request.invalid_id": {
+      "comment": "FFI error request.invalid_id: a request named a record (any kind) by a malformed ID",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Provenencia couldn't read the ID of that record."
+          }
+        }
+      }
+    },
     "error.filederivatives.corrupt_object": {
       "comment": "FFI error filederivatives.corrupt_object",
       "extractionState": "manual",

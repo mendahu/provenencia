@@ -505,11 +505,22 @@ func TestDeleteSource(t *testing.T) {
 			reqFn: func(t *testing.T) proto.Message {
 				dir, userID, _ := sourceFixture(t)
 				return &engine.DeleteSourceRequest{
-					ProjectDir: dir, UserId: userID, SourceId: "00000000-0000-0000-0000-000000000001",
+					ProjectDir: dir, UserId: userID, SourceId: "01890000-0000-7000-8000-000000000001",
 				}
 			},
 			wantErr:   true,
 			wantErrIs: sources.ErrInvalid,
+		},
+		{
+			name: "malformed id refuses as an id, not a source",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, userID, _ := sourceFixture(t)
+				return &engine.DeleteSourceRequest{
+					ProjectDir: dir, UserId: userID, SourceId: "00000000-0000-0000-0000-000000000001",
+				}
+			},
+			wantErr:   true,
+			wantErrIs: errInvalidID,
 		},
 	})
 }
