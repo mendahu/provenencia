@@ -67,7 +67,7 @@ enum EventSecondaryDisplay {
         let line = content(header)
         if line.date.isEmpty { return line.place }
         if line.place.isEmpty { return line.date }
-        return line.date + " · " + line.place
+        return L10n.Conclusions.lineJoin(first: line.date, rest: line.place)
     }
 }
 

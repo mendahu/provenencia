@@ -142,6 +142,11 @@ struct PersonDetailTests {
         loneBirth.death = CatalogLifeFacts()
         #expect(PersonLifeDisplay.line(loneBirth, locale: en).text == "1817 – · York")
 
+        // A death with no birth is marked as a death, never read as a birth.
+        var loneDeath = james
+        loneDeath.birth = CatalogLifeFacts()
+        #expect(PersonLifeDisplay.line(loneDeath, locale: en).text == "– 1880 · → Toronto")
+
         // Two names of one Place are one place: no +N, not mixed.
         var renamed = james
         renamed.birth.places = [CatalogHeaderPlace(entity: york, names: ["York", "Tkaronto"])]
