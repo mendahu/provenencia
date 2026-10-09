@@ -272,7 +272,7 @@ func exhibitAuto(v match.Value) autoreconcile.Value {
 	}
 	return autoreconcile.Value{
 		Text: v.Text, HasText: v.HasText, Integer: v.Integer, HasInteger: v.HasInteger,
-		TermKey: v.Term, TermID: termID, Date: v.Date, Name: v.Name,
+		TermKey: v.Term, TermID: termID, Neutral: v.Neutral, Date: v.Date, Name: v.Name,
 	}
 }
 
@@ -355,7 +355,7 @@ func bridgeNeighbors(q Querier, from, toward [][]byte) (map[string][][]byte, err
 
 func loadExhibitObservations(q Querier, subjectIDs [][]byte) ([]exhibitObs, error) {
 	query := `SELECT o.id, o.subject_id, p.key, p.origin, p.value_type, p.cardinality,
-			o.value_text, o.value_integer, o.value_date_id, o.value_name_id, t.key, t.label, src.title
+			o.value_text, o.value_integer, o.value_date_id, o.value_name_id, t.key, t.label, COALESCE(t.neutral, 0), src.title
 		FROM observations o
 		JOIN properties p ON p.id = o.property_id
 		JOIN citations c ON c.id = o.citation_id
@@ -378,14 +378,14 @@ func loadExhibitObservations(q Querier, subjectIDs [][]byte) ([]exhibitObs, erro
 			integer               sql.NullInt64
 		)
 		if err := rows.Scan(&p.o.id, &p.o.subjectID, &p.o.prop.Key, &p.o.prop.Origin, &valueType, &p.o.cardinality,
-			&text, &integer, &p.dateID, &p.nameID, &term, &termLabel, &p.o.source); err != nil {
+			&text, &integer, &p.dateID, &p.nameID, &term, &termLabel, &p.o.value.Neutral, &p.o.source); err != nil {
 			return err
 		}
 		p.o.valueType = valueType
 		p.o.value = match.Value{
 			Text: text.String, HasText: text.Valid,
 			Integer: integer.Int64, HasInteger: integer.Valid,
-			Term: term.String,
+			Term: term.String, Neutral: p.o.value.Neutral,
 		}
 		p.termLabel = termLabel.String
 		all = append(all, p)

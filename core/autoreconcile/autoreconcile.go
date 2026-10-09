@@ -78,7 +78,8 @@ type Value struct {
 	Integer    int64
 	HasInteger bool
 	TermID     []byte
-	TermKey    string // the term's key, when known; NeutralTermKeys are no evidence
+	TermKey    string // the term's key, when known
+	Neutral    bool   // the term is no evidence either way (its catalog flag)
 	SubjectID  []byte // the cited subject
 	EntityID   []byte // that subject's accepted handle, when the loader resolved one
 	Date       *datevalues.Value

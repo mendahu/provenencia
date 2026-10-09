@@ -337,3 +337,24 @@ func TestInstallStoresInverses(t *testing.T) {
 		}
 	}
 }
+
+func TestInstallFlagsNeutralTerms(t *testing.T) {
+	c, err := database.Create(t.TempDir(), "t.provenencia")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = c.Close() })
+	if err := Install(c); err != nil {
+		t.Fatal(err)
+	}
+	sex, err := properties.Lookup(c, "sex_at_birth", properties.OriginProvenencia)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for key, want := range map[string]bool{"unknown": true, "indeterminate": true, "male": false, "female": false} {
+		term, err := propertyterms.Lookup(c, sex.ID, key, propertyterms.OriginProvenencia)
+		if err != nil || term.Neutral != want {
+			t.Fatalf("%s neutral %v (%v), want %v", key, term.Neutral, err, want)
+		}
+	}
+}

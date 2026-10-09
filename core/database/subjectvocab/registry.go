@@ -57,6 +57,8 @@ type seedTerm struct {
 	Directed                             bool
 	// Inverse is the term that reads this relationship from the other end.
 	Inverse string
+	// Neutral terms are no evidence either way (an "unknown" sex at birth).
+	Neutral bool
 }
 
 var seedTypes = []seedType{
@@ -203,8 +205,8 @@ var seedTerms = []seedTerm{
 	{PropertyKey: "sex_at_birth", Key: "female", Label: "Female"},
 	{PropertyKey: "sex_at_birth", Key: "male", Label: "Male"},
 	{PropertyKey: "sex_at_birth", Key: "intersex", Label: "Intersex"},
-	{PropertyKey: "sex_at_birth", Key: "indeterminate", Label: "Indeterminate"},
-	{PropertyKey: "sex_at_birth", Key: "unknown", Label: "Unknown"},
+	{PropertyKey: "sex_at_birth", Key: "indeterminate", Label: "Indeterminate", Neutral: true},
+	{PropertyKey: "sex_at_birth", Key: "unknown", Label: "Unknown", Neutral: true},
 
 	{PropertyKey: "event_type", Key: "birth", Label: "Birth"},
 	{PropertyKey: "event_type", Key: "death", Label: "Death"},

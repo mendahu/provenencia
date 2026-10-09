@@ -138,7 +138,7 @@ These live in [`core/match/registry.go`](../core/match/registry.go), with every 
 
 | Kind | Features (Weight / Contradiction) | MinScore |
 | --- | --- | --- |
-| person | name 10 / 0 · sex_at_birth 1 / 8 (unknown, indeterminate neutral) | 3 |
+| person | name 10 / 0 · sex_at_birth 1 / 8 (neutral terms not compared) | 3 |
 | event | event_type 4 / 6 · date 6 / 4 · start_date 3 / 2 · end_date 3 / 2 | 5 |
 | place | toponym 10 / 0 | 3 |
 
@@ -155,11 +155,11 @@ Worked examples:
   - name patterns (`WesternNamePattern`, `BuiltinNamePatterns`)
   - date scores and span scoring (`DefaultDates`)
   - text and integer settings
-  - neutral terms
   - default profiles
   - the suggestion limit
 
   Comparers fall back to these values, so a bare `NameComparer{}` scores exactly like `DefaultNames`, and no number is written twice.
+- **Neutral terms** are not in the registry: a term flagged `property_terms.neutral` (seeded on *unknown* and *indeterminate* sex at birth, [`seeded-vocabulary.md`](seeded-vocabulary.md) §3.7) reaches the comparer as `Value.Neutral`, and `TermComparer` treats it as not comparable.
 - **Guard tests** (`registry_test.go`):
   - Every comparer setting must have a registry value.
   - Bare comparers must score like the registry's.

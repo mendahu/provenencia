@@ -270,6 +270,7 @@ func Install(c *database.Catalog) error {
 			Description: term.Description,
 			Directed:    term.Directed,
 			InverseKey:  term.Inverse,
+			Neutral:     term.Neutral,
 		}); err != nil {
 			return err
 		}

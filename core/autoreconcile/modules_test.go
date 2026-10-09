@@ -12,6 +12,13 @@ func term(n byte, termID, key string) Candidate {
 	return Candidate{ObservationID: id(n), Value: Value{TermID: []byte(termID), TermKey: key}}
 }
 
+// neutralTerm is a term the catalog flags as no evidence ("unknown").
+func neutralTerm(n byte, termID, key string) Candidate {
+	c := term(n, termID, key)
+	c.Value.Neutral = true
+	return c
+}
+
 func integer(n byte, v int64) Candidate {
 	return Candidate{ObservationID: id(n), Value: Value{Integer: v, HasInteger: true}}
 }
@@ -43,9 +50,9 @@ func TestModules(t *testing.T) {
 		{"term", "the same term", properties.ValueTypeTerm,
 			[]Candidate{term(1, "m", "male"), term(2, "m", "male")}, [][]byte{{1, 2}}, StateMerged, ""},
 		{"term", "a neutral term is no evidence", properties.ValueTypeTerm,
-			[]Candidate{term(1, "m", "male"), term(2, "u", "unknown"), term(3, "i", "indeterminate")}, [][]byte{{1}}, StateSingle, ""},
+			[]Candidate{term(1, "m", "male"), neutralTerm(2, "u", "unknown"), neutralTerm(3, "i", "indeterminate")}, [][]byte{{1}}, StateSingle, ""},
 		{"term", "only neutral terms: empty", properties.ValueTypeTerm,
-			[]Candidate{term(1, "u", "unknown")}, nil, StateEmpty, ""},
+			[]Candidate{neutralTerm(1, "u", "unknown")}, nil, StateEmpty, ""},
 		{"term", "a term with no key still counts", properties.ValueTypeTerm,
 			[]Candidate{term(1, "f", ""), term(2, "m", "")}, [][]byte{{1}, {2}}, StateMixed, ""},
 		{"name", "a name with no parts is no evidence, whatever its form", properties.ValueTypeName,
@@ -132,7 +139,7 @@ func TestCompatible(t *testing.T) {
 		{"integer: different", properties.ValueTypeInteger, integer(1, 34), integer(2, 35), false},
 		{"term: the same term", properties.ValueTypeTerm, term(1, "m", "male"), term(2, "m", "male"), true},
 		{"term: different terms", properties.ValueTypeTerm, term(1, "m", "male"), term(2, "f", "female"), false},
-		{"term: a neutral term is no evidence", properties.ValueTypeTerm, term(1, "u", "unknown"), term(2, "u", "unknown"), false},
+		{"term: a neutral term is no evidence", properties.ValueTypeTerm, neutralTerm(1, "u", "unknown"), neutralTerm(2, "u", "unknown"), false},
 		{"name: the same parts", properties.ValueTypeName,
 			nm(1, "given=James|surname=Robins"), nm(2, "given=James|surname=Robins"), true},
 		{"name: an initial folds into the full given name", properties.ValueTypeName,

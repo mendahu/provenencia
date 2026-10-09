@@ -138,9 +138,6 @@ var DefaultIntegers = IntegerComparer{
 	Tolerance: Set(int64(0)),
 }
 
-// SexAtBirthNeutral are sex_at_birth terms that are no evidence either way.
-var SexAtBirthNeutral = map[string]bool{"unknown": true, "indeterminate": true}
-
 // ---------------------------------------------------------------------------
 // Profiles and consumers
 
@@ -168,7 +165,7 @@ func DefaultProfile(kind string) (Profile, bool) {
 			Kind: "person",
 			Features: []Feature{
 				{Property: product("name"), Comparer: DefaultNames, Weight: 10},
-				{Property: product("sex_at_birth"), Comparer: TermComparer{Neutral: SexAtBirthNeutral}, Weight: 1, Contradiction: 2},
+				{Property: product("sex_at_birth"), Comparer: TermComparer{}, Weight: 1, Contradiction: 2},
 			},
 			// "Mary Robins" ~ "James Robins" is 10 × 0.55 = 5.5 typed (5 as
 			// forms): shown, low. "James Smith" is 10 × 0.2 = 2: hidden.
