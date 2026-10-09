@@ -104,15 +104,13 @@ var Registry = []KindSpec{
 	},
 }
 
-// Handle kinds: searchable on request (Query.Kinds), not in the omnibar's
-// default set until S9-35 designs their rows. Documents come from the
-// auto-reconciler cache (searchindex/handles.go): title is the rank-1 name,
-// toponym or event type; "other" is every other cached value.
+// Handle kinds interleave with Sources in the omnibar default (S9-35).
+// Documents are match text from the list headers (searchindex/handles.go).
 func init() {
 	for _, k := range []string{KindPerson, KindEvent, KindPlace} {
 		Registry = append(Registry, KindSpec{
 			Kind:                k,
-			DefaultInEverything: false,
+			DefaultInEverything: true,
 			Fields: []FieldWeight{
 				{Name: "title", Weight: 10},
 				{Name: "ref", Weight: 12},
@@ -214,6 +212,31 @@ func scoreFields(spec KindSpec, values map[string]string, tokens []string) (scor
 		snippet = matchSnippetForField(bestField, values[bestField], tokens)
 	}
 	return score, field, snippet
+}
+
+// alternateMatch is the name or toponym line that matched when the title did not.
+// Those lines are tagged in the secondary field (name: / toponym:).
+func alternateMatch(secondary string, tokens []string) (field, snippet string) {
+	for _, line := range strings.Split(secondary, "\n") {
+		lower := strings.ToLower(line)
+		hit := false
+		for _, tok := range tokens {
+			if tok != "" && strings.Contains(lower, tok) {
+				hit = true
+				break
+			}
+		}
+		if !hit {
+			continue
+		}
+		switch {
+		case strings.HasPrefix(line, "name:\t"):
+			return "name", strings.TrimPrefix(line, "name:\t")
+		case strings.HasPrefix(line, "toponym:\t"):
+			return "place", strings.TrimPrefix(line, "toponym:\t")
+		}
+	}
+	return "", ""
 }
 
 func matchSnippetForField(field, value string, tokens []string) string {

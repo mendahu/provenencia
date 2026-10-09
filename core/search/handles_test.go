@@ -126,8 +126,9 @@ func TestHandleSearch(t *testing.T) {
 	james := f.promote(f.person("James Robins", "Jim Robins"), nil)
 	f.promote(f.person("Mary Smith"), nil)
 
-	t.Run("the omnibar default leaves handles out", func(t *testing.T) {
-		if hits := f.search("Robins"); len(hits) != 0 {
+	t.Run("the omnibar default includes handles", func(t *testing.T) {
+		hits := f.search("Robins")
+		if refsOf(hits) != fmt.Sprint([]string{"person:" + james.Entity.Ref}) {
 			t.Fatalf("got %s", refsOf(hits))
 		}
 	})
@@ -312,6 +313,23 @@ func (f *handleFixture) fileBridges() {
 	}
 	if _, err := promote.SaveBatch(f.c, f.user, promote.Batch{SourceID: f.source, SeenRevision: rev}); err != nil {
 		f.t.Fatal(err)
+	}
+}
+
+func TestAlternateToponymIsMatchContext(t *testing.T) {
+	f := newHandleFixture(t)
+	place := f.promote(f.subject("place", func(s subjects.Subject) []observations.Input {
+		return []observations.Input{
+			{SubjectID: s.ID, PropertyID: f.prop("toponym").ID, ValueText: "Montréal", HasText: true},
+			{SubjectID: s.ID, PropertyID: f.prop("toponym").ID, ValueText: "Montreal", HasText: true},
+		}
+	}), nil)
+	hits := f.search("Montreal", KindPlace)
+	if len(hits) != 1 || hits[0].Ref != place.Entity.Ref || hits[0].Title != "Montréal" {
+		t.Fatalf("title %+v", hits)
+	}
+	if hits[0].MatchReason != "place" || hits[0].MatchSnippet != "Montreal" {
+		t.Fatalf("context %+v", hits[0])
 	}
 }
 

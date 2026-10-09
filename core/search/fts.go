@@ -132,6 +132,9 @@ func (f *FTSSearcher) Search(ctx context.Context, c *database.Catalog, q Query) 
 			if score <= 0 {
 				score = 12 // ref field weight floor
 			}
+		} else if field, line := alternateMatch(d.secondary, scoreTokens); reason == "other" && field != "" {
+			reason = field
+			snippet = line
 		} else if score <= 0 && d.fromFuzzy && d.fuzzySim >= FuzzyWeights.JaroWinklerMin {
 			// Substring scorer missed (typo); keep JW-gated fuzzy hit below exact FTS.
 			score = d.fuzzySim * 12 * FuzzyWeights.ScoreScale

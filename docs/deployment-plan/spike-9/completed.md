@@ -1287,3 +1287,24 @@ Handle search documents are the text the lists show, and a write refreshes every
 
 - Omnibar rows for these kinds (**S9-35**). `DefaultInEverything` stays off.
 - Migrations / product VERSION bump.
+
+### S9-D13 — Omnibar: Person / Event / Place hits
+
+Design brief for Conclusion hits in the shipped omnibar row. Board: mixed results, an exact ref, and an alternate-name match. The brief stays in `design/` until the spike archive.
+
+### S9-35 — Omnibar Conclusion hits
+
+Person, Event, and Place hits use `PVOmnibarHitRow`. They interleave with Sources by score.
+
+**What shipped**
+
+- `DefaultInEverything` is on for the three kinds.
+- Lead is the list's subject mark. Title and secondary come from `PersonHeaderDisplay` / `PersonLifeDisplay`, `EventTitleDisplay` / `EventSecondaryDisplay`, and the place title and chain, using the header on the hit.
+- Kind labels are Person, Event, and Place. An alternate name or toponym that matched, and not the title, shows as Name or Place context. An exact ref keeps the accent ref style.
+- A ref, *Jim Robins*, a birth titled with the person's name, and a place name each find their handle. Editing the member name retitles the event (S9-34).
+
+**What stayed out**
+
+- A new row variant.
+- Archiving the S9-D13 brief (spike archive, S9-99).
+- Migrations / product VERSION bump.

@@ -2781,8 +2781,8 @@ public nonisolated struct Provenencia_Engine_V1_SearchCatalogRequest: Sendable {
   /// Clears the value of `location`. Subsequent reads from it will return its default value.
   public mutating func clearLocation() {self._location = nil}
 
-  /// Restrict hits to these kinds. Empty = the omnibar's default set, which
-  /// excludes person / event / place until S9-35.
+  /// Restrict hits to these kinds. Empty = the omnibar's default set
+  /// (sources, types, metadata fields, persons, events, and places).
   public var kinds: [String] = []
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()

@@ -504,8 +504,8 @@ In order; each brief sits just above the PR it gates.
 - [x] S9-44 — Promote page → [`completed.md`](completed.md)
 - [ ] S9-33 — Deep fixture + timings
 - [x] S9-34 — Search documents from headers + dependents → [`completed.md`](completed.md)
-- [ ] ✎ S9-D13 — Design: omnibar hits
-- [ ] S9-35 — Omnibar Conclusion hits
+- [x] ✎ S9-D13 — Design: omnibar hits → [`completed.md`](completed.md)
+- [x] S9-35 — Omnibar Conclusion hits → [`completed.md`](completed.md)
 - [ ] S9-99 — Dogfood close / docs
 
 Retired 2026-10-06: ~~S9-18 — Pinned-Observation delete end to end~~ (folded into S9-17 / S9-44) · ~~✎ S9-D11 / S9-19 — Promote compare~~ · ~~S9-29 — Neighborhood read~~ · ~~✎ S9-D12 / S9-30 — Promote walk~~.
@@ -961,11 +961,7 @@ Design: [`promote-graph-alignment.md`](../../promote-graph-alignment.md). Brief:
 
 #### S9-35 — Omnibar Conclusion hits
 
-| | |
-| --- | --- |
-| **In** | Per **S9-D13**. |
-| **Check** | `PER-7KD45`, *Jim Robins*, *Birth of James*, a place name → each finds its handle; a member name edit updates the hit. |
-| **Depends on** | **S9-D13**, S9-34 |
+**Done.** See [`completed.md`](completed.md#s9-35--omnibar-conclusion-hits). Person, Event, and Place hits use the shipped row and the list's header. The S9-D13 brief stays in `design/` until the spike archive.
 
 ### S9-99 — Dogfood close / docs
 
