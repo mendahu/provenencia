@@ -553,13 +553,17 @@ struct PromoteFlow: Equatable, Sendable {
         if proposal.target == "handle", let first = menu.first, first.id == proposal.handleID {
             return .handle(id: first.id, ref: first.ref, title: first.title)
         }
-        // Below the accept bar the candidate is an alternative, not the row
-        // target. Still open on that match.
+        // Another row on the page took this record. Drafting it again would
+        // file two subjects on one handle, so the choice stays open, with the
+        // duplicate note naming the other row, whatever the band.
+        if Reason(proposal) == .taken {
+            return .unset
+        }
+        // Below the accept bar (a registry where the weak bar sits under it)
+        // the candidate is an alternative, not the row target. Still open on
+        // that match.
         if assessment == .weak, let match = menu.first {
             return .handle(id: match.id, ref: match.ref, title: match.title)
-        }
-        if assessment == .strong, proposal.target == "new" {
-            return .newKind
         }
         return .skip
     }

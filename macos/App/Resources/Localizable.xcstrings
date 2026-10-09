@@ -16889,6 +16889,30 @@
         }
       }
     },
+    "promote.error.graphUnavailable": {
+      "comment": "Callout when the Promote page opens without the Source's graph; the page would otherwise look empty",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Provenencia couldn't read this Source's Evidence graph, so it can't list the rows to promote. Go back to the graph and open Promote again."
+          }
+        }
+      }
+    },
+    "promote.error.graphUnavailableRepropose": {
+      "comment": "Callout when proposing again after a decision can't read the Source's graph",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Provenencia couldn't read this Source's Evidence graph to propose the rows again. Your rows and decisions are kept."
+          }
+        }
+      }
+    },
     "promote.toast.filed": {
       "comment": "Toast after Done; skipped subjects are not a rejection",
       "extractionState": "manual",
