@@ -69,6 +69,13 @@ func checkNewEffects(t *testing.T, c *database.Catalog) {
 		if err != nil {
 			t.Fatalf("revision %d: %v", r.revision, err)
 		}
+		legacy, err := audit.LegacySourceIDs(tx, changes)
+		if err != nil {
+			t.Fatalf("revision %d: %v", r.revision, err)
+		}
+		if !sameIDSet(got, legacy) {
+			t.Fatalf("revision %d: effects.Sources = %d ids, old resolvers = %d", r.revision, len(got), len(legacy))
+		}
 		if !sameIDSet(got, want) {
 			t.Fatalf("revision %d: effects.Sources = %d ids, stored source scopes = %d", r.revision, len(got), len(want))
 		}

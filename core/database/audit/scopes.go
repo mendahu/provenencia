@@ -210,6 +210,22 @@ func (r scopeResolver) sources(query string, args ...any) ([]Scope, error) {
 	return out, rows.Err()
 }
 
+// LegacySourceIDs is the pre-registry source walk. Record stores
+// effects.Sources. Tests compare the two until this resolver is removed.
+func LegacySourceIDs(tx *sql.Tx, changes []rowchange.Change) ([][]byte, error) {
+	scopes, err := resolveScopes(tx, changes)
+	if err != nil {
+		return nil, err
+	}
+	var ids [][]byte
+	for _, s := range scopes {
+		if s.Type == ScopeSource && len(s.ID) == 16 {
+			ids = append(ids, append([]byte(nil), s.ID...))
+		}
+	}
+	return ids, nil
+}
+
 // resolveScopes derives the de-duplicated scopes of a revision's changes.
 func resolveScopes(tx *sql.Tx, changes []rowchange.Change) ([]Scope, error) {
 	ghosts := ghostMap{}

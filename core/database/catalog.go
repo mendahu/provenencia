@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 )
 
 // ApplicationID is the SQLite application_id FourCC 'PROV' (0x50524F56).
@@ -26,6 +27,10 @@ const (
 type Catalog struct {
 	dir string
 	db  *sql.DB
+
+	mu        sync.Mutex
+	writing   bool
+	listeners []CommitListener
 }
 
 func (c *Catalog) Dir() string {

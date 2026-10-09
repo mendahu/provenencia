@@ -146,9 +146,9 @@ type Result struct {
 	Effects  effects.Set // handles, header dependents, Sources, vocabulary, search
 }
 
-func Run(c *database.Catalog, op Op, fn func(tx *database.Tx) ([]rowchange.Change, error)) (Result, error) {
+func Run[T any](c *database.Catalog, op Op, fn func(tx *database.Tx) (T, []rowchange.Change, error)) (T, Result, error) {
 	tx := begin(c)
-	changes, err := fn(tx)                       // 1. persistent data
+	value, changes, err := fn(tx)                // 1. persistent data
 	// on error: rollback, nothing else happens
 	rev := audit.Record(tx, op, changes)         // 2. audit (skipped for unaudited types)
 	fx := effects.Resolve(tx, changes)           //    what the changes touch
@@ -157,7 +157,7 @@ func Run(c *database.Catalog, op Op, fn func(tx *database.Tx) ([]rowchange.Chang
 	commit(tx)
 	tx.runAfterCommit()                          //     disk work the write deferred
 	c.notify(rev, fx)                            // 3b. memory tier, only after commit
-	return Result{Revision: rev, Effects: fx}, nil
+	return value, Result{Revision: rev, Effects: fx}, nil
 }
 ```
 
@@ -190,9 +190,10 @@ func DeleteObservation(tx *database.Tx, id []byte) ([]rowchange.Change, error) {
 }
 
 // the FFI handler
-res, err := writes.Run(c, writes.Op{Action: "delete_observation", UserID: user},
-	func(tx *database.Tx) ([]rowchange.Change, error) {
-		return observations.DeleteObservation(tx, id)
+_, res, err := writes.Run(c, writes.Op{Action: "delete_observation", UserID: user},
+	func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+		changes, err := observations.DeleteObservation(tx, id)
+		return struct{}{}, changes, err
 	})
 ```
 
@@ -503,9 +504,9 @@ Each step is its own PR, measured against the one before. PRs that only repoint 
 **Catalog model and effects**
 
 1. **Extract the catalog model** (done). Tables and foreign keys live in `core/database/catalogmodel` (`Tables`, `FKs`, `Kind`, `Bucket`), with the PRAGMA honesty test. `deleteimpact` reads them from there and keeps probes and releases. No behavior change.
-2. **Paths and the effects registry** (done). `core/database/effects` has the path combinators and one `Effect` per table outside the skip bucket. `audit.Record` and `RecomputeTx` do not call it yet.
+2. **Paths and the effects registry** (done). `core/database/effects` has the path combinators and one `Effect` per table outside the skip bucket. `RecomputeTx` does not call it. `audit.Record` stores source scopes from `effects.Sources` (PR 3).
    - **One `Effect` per table**, with a field per job: `Source`, `Handles`, `Search`, `Vocabulary`, `Structure`. An empty field means that job is unaffected. `None: true` is an explicit empty entry (`users`, layout-only `subject_positions`, and the grade tables). An identity claim keeps an empty `Source` (today's `noScope`) and a `Handles` path. A later cache Source scope can be another field. It is not an audit scope.
-   - **`Change` lives in `core/database/rowchange`** (`Change`, `FieldDiff`, `FullRow`, `DeletedRow`, and the action constants). `Revision` and `Record` stay in `audit`. Writers say `rowchange.Change`. No aliases. `effects` imports `rowchange` and `catalogmodel`. It does not import `audit`. `audit` does not import `effects`.
+   - **`Change` lives in `core/database/rowchange`** (`Change`, `FieldDiff`, `FullRow`, `DeletedRow`, and the action constants). `Revision` and `Record` stay in `audit`. Writers say `rowchange.Change`. No aliases. `effects` imports `rowchange` and `catalogmodel`. It does not import `audit`.
    - **Lookup.** If the path's column is on the diff, use old and new. If it is absent, read the live row. Ghosts apply only when the row is already gone. This matches `scopeResolver.via` and `directSource`.
    - **Claim membership** is a filter on the declaration. `membersOf` is `across("identity_claims", "subject_id", "entity_id")` restricted to `accepted` and `provisional`.
    - **`onStatus` fires when either the old or the new status is `accepted`.** A diff that omits `status` does not run the inner path. There is no status-edit writer yet; a unit test covers both sides.
@@ -515,11 +516,14 @@ Each step is its own PR, measured against the one before. PRs that only repoint 
 
 **Writes**
 
-3. **The orchestrator** (logic). `writes.Run`, `database.Tx`, `Op`, `Result`, `AfterCommit`, commit listeners; `audit.Record` resolves scopes through the registry; `RecomputeTx` takes `*database.Tx`; search reprojection from `Effects.Search`; the migration assertion, covering handles and search documents. Property terms migrated as the pilot.
-   - *Open:* `Run`'s return type. Write functions return more than changes (the created entity, `BatchResult.Written`, claims and pins). Either `Run` is generic (`Run[T]`) or write functions return a result struct that carries the changes. Settle before the churn PRs, since every one follows it.
-   - *Open:* nested writes. A few write functions call others that open their own transaction today. Under `Run`, inner functions take the outer `*database.Tx`; find any that can't.
-   - *Open:* re-entry. A commit listener or an `AfterCommit` callback that calls `Run` deadlocks on the session lock. `Run` refuses re-entry. `autoreconciler.Rebuild` (a `CacheVersion` change on open) does not go through `Run`; this PR still grows the hook it will use to publish "drop everything" once a listener exists (PR 8).
-   - *Open:* a failed notify. If delivering the commit notice fails partway, every listener drops its state rather than applying half of it (a kind index updated, nodes not). Decide that as the listener contract here, before any listener is written.
+3. **The orchestrator** (done). `writes.Run`, `database.Tx`, `Op`, `Result`, `AfterCommit`, and commit listeners. Property-term create, update, and delete go through `Run`. Every other write still begins its own transaction.
+   - **`Run` is generic.** `Run[T any](c, op, fn func(tx *database.Tx) (T, []rowchange.Change, error)) (T, Result, error)`. A delete uses an empty struct as `T`. The closure's `T` is the written value (the term, or nothing). `Result` is the revision plus `effects.Set`.
+   - **The FFI handler calls `Run`.** `Create`, `Update`, and `Delete` take `*database.Tx` and return the changes. They do not begin, commit, or call `audit.Record`. `Upsert` stays the un-audited seed path. Tests that call those three call `Run` too.
+   - **Re-entry is refused.** A second `Run` on the same catalog, including from `AfterCommit` or a listener, returns `database.ErrWriteReentry`. `Run` does not take the catalog session lock; the handler already holds it.
+   - **A failed notify drops every listener.** Commit has already succeeded. Any `OnCommit` error calls `Drop` on every listener. There is no production listener yet. `autoreconciler.Rebuild` does not go through `Run` and is not wired to the hook. `Drop` is what PR 8 will use to publish "drop everything."
+   - **`RecomputeTx` keeps its `Querier` parameter.** `*database.Tx` embeds `*sql.Tx`, so `Run` passes the inner transaction. `Run` calls it only when the handle set is non-empty.
+   - **Nested writes are out of this PR.** Property terms do not call another write. Later migrations pass the outer `*database.Tx` into the inner function.
+   - **Stored scopes come from `effects.Sources`.** `Record` still rejects an entity type with no scope resolver. The old resolvers stay callable (`audit.LegacySourceIDs`) so the parity test can compare them until PR 7 deletes them. `searchindex.Reproject` dispatches `Effects.Search` to the existing source, source-type, metadata-field, and sources-for-type reprojectors. Property terms have no handles and no search documents. A label edit sets vocabulary and leaves structure unset.
 4. **Migrate Source-layer writes** (churn). Sources, notes, metadata, source types, metadata fields, artifacts (with `AfterCommit` for file removal), ingest, thumbnails.
    - *Open:* confirm thumbnail generation runs inside `catalogsession.Do`. If it doesn't, that's an existing serialization bug to fix here, not paper over.
 5. **Migrate Evidence-layer writes** (churn). Citations, observations, subjects, name values, connect, positions.

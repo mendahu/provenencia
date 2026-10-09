@@ -6,7 +6,7 @@ One `Effect` per table outside [`catalogmodel`](../catalogmodel)'s skip bucket. 
 
 Paths walk edges declared in `catalogmodel.FKs`: `up`, `across`, `inbound`, `from`, `field`, `self`, `chain`, `union`, `onField`, `onStatus`, and `sql` for a walk those cannot say. Package init panics when a path names a missing edge. A column on the diff contributes its old and new ids. A column absent from the diff is read from the live row. A delete's old fields are used only when the row is already gone.
 
-`Sources` and `Handles` take `[]rowchange.Change`. `audit.Record` still resolves source scopes itself. Handle recomputes are still placed by hand. This package does not import `audit` or [`deleteimpact`](../deleteimpact). The write orchestrator is what will call the registry.
+`Sources`, `Handles`, and `Resolve` take `[]rowchange.Change`. `audit.Record` stores source scopes from `Sources`. [`writes.Run`](../../writes) calls `Resolve`, then recomputes handles and reprojects search when those sets are non-empty. This package does not import `audit` or [`deleteimpact`](../deleteimpact).
 
 `registry_completeness_test.go` checks that every non-skip table has an entry and that a cascade into a table with effects is audited. `handle_paths_test.go` checks membership, trigger columns, claim status, and date values. Source parity runs beside `audit.TestSourceScopes`.
 

@@ -17,6 +17,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sourcecredibilitygrades"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
@@ -25,6 +26,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/writes"
 )
 
 const testLocator = `{"version":1,"selectors":[{"type":"page","artifact_page":1}]}`
@@ -134,10 +136,7 @@ func TestImpactGates(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		term, err := propertyterms.Create(c, userID, p.ID, "Land Grant", "")
-		if err != nil {
-			t.Fatal(err)
-		}
+		term := createTerm(t, c, userID, p.ID, "Land Grant")
 		got = mustImpact(t, c, catalogmodel.KindPropertyTerm, term.ID)
 		if !got.Allowed || got.Gate != deleteimpact.GateOK {
 			t.Fatalf("user term %+v", got)
@@ -152,9 +151,7 @@ func TestImpactGates(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if _, err := propertyterms.Create(c, userID, propID, "Grant", ""); err != nil {
-			t.Fatal(err)
-		}
+		createTerm(t, c, userID, propID, "Grant")
 		got := mustImpact(t, c, catalogmodel.KindProperty, propID)
 		if got.Allowed || got.Gate != deleteimpact.GateInbound {
 			t.Fatalf("%+v", got)
@@ -277,10 +274,7 @@ func TestImpactCitationAndSubject(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		term, err := propertyterms.Create(c, userID, eventTypeProp.ID, "Land Grant", "")
-		if err != nil {
-			t.Fatal(err)
-		}
+		term := createTerm(t, c, userID, eventTypeProp.ID, "Land Grant")
 		if _, err := citations.CreateWithObservations(c, userID, citations.CreateInput{
 			ArtifactID: art.ID, LocatorJSON: testLocator,
 		}, []observations.Input{{
@@ -288,7 +282,12 @@ func TestImpactCitationAndSubject(t *testing.T) {
 		}}); err != nil {
 			t.Fatal(err)
 		}
-		if err := propertyterms.Delete(c, userID, term.ID); !errors.Is(err, propertyterms.ErrInUse) {
+		_, _, err = writes.Run(c, writes.Op{Action: "delete_property_term", UserID: userID},
+			func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+				changes, err := propertyterms.Delete(tx, userID, term.ID)
+				return struct{}{}, changes, err
+			})
+		if !errors.Is(err, propertyterms.ErrInUse) {
 			t.Fatalf("delete %v", err)
 		}
 	})
@@ -836,6 +835,18 @@ func idString(id []byte) string {
 		return ""
 	}
 	return u.String()
+}
+
+func createTerm(t *testing.T, c *database.Catalog, userID, propertyID []byte, label string) propertyterms.Term {
+	t.Helper()
+	term, _, err := writes.Run(c, writes.Op{Action: "create_property_term", UserID: userID},
+		func(tx *database.Tx) (propertyterms.Term, []rowchange.Change, error) {
+			return propertyterms.Create(tx, userID, propertyID, label, "")
+		})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return term
 }
 
 func testCatalog(t *testing.T) (*database.Catalog, []byte) {

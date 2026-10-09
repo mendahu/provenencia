@@ -15,6 +15,22 @@ type SearchDoc struct {
 	Path Path
 }
 
+// SearchIDs is a resolved search reprojection: one document kind and its ids.
+type SearchIDs struct {
+	Kind string
+	IDs  [][]byte
+}
+
+// Set is what a batch of changes touches. Empty Handles or Search means that
+// job has nothing to do. Vocabulary and Structure are catalog-wide.
+type Set struct {
+	Handles    [][]byte
+	Sources    [][]byte
+	Search     []SearchIDs
+	Vocabulary bool
+	Structure  bool
+}
+
 // Effect is what a change to one table touches. An empty field means that job
 // is unaffected. None is an explicit empty entry for a table outside the skip
 // bucket that has no effects.

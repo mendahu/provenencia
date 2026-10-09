@@ -14,8 +14,9 @@ These are siblings under `core/database`. Each one is its own package so the imp
 | [`rowchange`](../rowchange) | One row's old and new fields | nothing in `core/database` |
 | [`deleteimpact`](../deleteimpact) | Whether a delete is allowed, and what it must release | `catalogmodel`, `rowchange` |
 | [`effects`](../effects) | What a written change touches | `catalogmodel`, `rowchange` |
-| `audit` | Stores the revision | `rowchange` |
+| `audit` | Stores the revision and its source scopes | `rowchange`, `effects` |
+| [`writes`](../../writes) | The transaction around a write that has moved onto it | `database`, `audit`, `effects` |
 
-`deleteimpact` and `effects` do not import each other. `effects` does not import `audit`. Writers (`sources`, `observations`, and the rest) speak `rowchange` and call `audit.Record`. Official deletes call `deleteimpact`. Nothing calls `effects` yet.
+`deleteimpact` and `effects` do not import each other. `effects` does not import `audit`. `audit.Record` stores source scopes from `effects.Sources`. [`writes.Run`](../../writes) records those changes, recomputes handles, and reprojects search. Property-term create, update, and delete are the writes on it. Every other writer still begins its own transaction and calls `audit.Record`. Official deletes call `deleteimpact`.
 
 A wrapping directory would group the folders in the tree and leave this direction unchanged. Nesting one of these packages inside another would cycle.

@@ -30,15 +30,70 @@ func Sources(tx *sql.Tx, changes []rowchange.Change) ([][]byte, error) {
 	return resolve(tx, changes, func(e Effect) Path { return e.Source })
 }
 
-// Handles resolves handle ids. Nothing in the write path calls this yet.
+// Handles resolves handle ids.
 func Handles(tx *sql.Tx, changes []rowchange.Change) ([][]byte, error) {
 	return resolve(tx, changes, func(e Effect) Path { return e.Handles })
 }
 
-func resolve(tx *sql.Tx, changes []rowchange.Change, pick func(Effect) Path) ([][]byte, error) {
+// Resolve is the whole effect of a batch: sources, handles, search documents,
+// and whether vocabulary labels or structure changed.
+func Resolve(tx *sql.Tx, changes []rowchange.Change) (Set, error) {
 	if tx == nil {
-		return nil, errf("effects: nil tx")
+		return Set{}, errf("effects: nil tx")
 	}
+	ghosts := ghostsFrom(changes)
+	var set Set
+	search := map[string][][]byte{}
+	var searchOrder []string
+	for _, ch := range changes {
+		table, ok := entityTable[ch.EntityType]
+		if !ok {
+			return Set{}, errf("effects: no entry for %s", ch.EntityType)
+		}
+		eff := registry[table]
+		if eff.Vocabulary {
+			set.Vocabulary = true
+		}
+		w := &walk{q: tx, ch: ch, ghosts: ghosts, table: table}
+		var err error
+		set.Sources, err = appendPath(w, table, eff.Source, set.Sources)
+		if err != nil {
+			return Set{}, err
+		}
+		set.Handles, err = appendPath(w, table, eff.Handles, set.Handles)
+		if err != nil {
+			return Set{}, err
+		}
+		if !eff.Structure.zero() {
+			ids, err := runPath(w, table, eff.Structure)
+			if err != nil {
+				return Set{}, err
+			}
+			if len(ids) > 0 {
+				set.Structure = true
+			}
+		}
+		for _, doc := range eff.Search {
+			ids, err := runPath(w, table, doc.Path)
+			if err != nil {
+				return Set{}, err
+			}
+			if len(ids) == 0 {
+				continue
+			}
+			if _, ok := search[doc.Kind]; !ok {
+				searchOrder = append(searchOrder, doc.Kind)
+			}
+			search[doc.Kind] = appendIDs(search[doc.Kind], ids)
+		}
+	}
+	for _, kind := range searchOrder {
+		set.Search = append(set.Search, SearchIDs{Kind: kind, IDs: search[kind]})
+	}
+	return set, nil
+}
+
+func ghostsFrom(changes []rowchange.Change) ghostMap {
 	ghosts := ghostMap{}
 	for _, ch := range changes {
 		if ch.Action != rowchange.ActionDelete {
@@ -50,6 +105,50 @@ func resolve(tx *sql.Tx, changes []rowchange.Change, pick func(Effect) Path) ([]
 		}
 		ghosts[ghostKey(ch.EntityType, ch.EntityID)] = old
 	}
+	return ghosts
+}
+
+func runPath(w *walk, table string, path Path) ([][]byte, error) {
+	if path.zero() {
+		return nil, nil
+	}
+	w.table = table
+	return path.run(w, nil, true)
+}
+
+func appendPath(w *walk, table string, path Path, out [][]byte) ([][]byte, error) {
+	ids, err := runPath(w, table, path)
+	if err != nil {
+		return nil, err
+	}
+	return appendIDs(out, ids), nil
+}
+
+func appendIDs(out, ids [][]byte) [][]byte {
+	seen := map[string]struct{}{}
+	for _, id := range out {
+		if len(id) == 16 {
+			seen[string(id)] = struct{}{}
+		}
+	}
+	for _, id := range ids {
+		if len(id) != 16 {
+			continue
+		}
+		if _, ok := seen[string(id)]; ok {
+			continue
+		}
+		seen[string(id)] = struct{}{}
+		out = append(out, append([]byte(nil), id...))
+	}
+	return out
+}
+
+func resolve(tx *sql.Tx, changes []rowchange.Change, pick func(Effect) Path) ([][]byte, error) {
+	if tx == nil {
+		return nil, errf("effects: nil tx")
+	}
+	ghosts := ghostsFrom(changes)
 	var out [][]byte
 	seen := map[string]struct{}{}
 	for _, ch := range changes {

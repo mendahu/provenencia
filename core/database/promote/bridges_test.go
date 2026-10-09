@@ -30,6 +30,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/writes"
 )
 
 const bridgeLocator = `{"version":1,"selectors":[{"type":"page","artifact_page":1}]}`
@@ -534,7 +535,10 @@ func TestBridgeFiling(t *testing.T) {
 func TestPlaceRelationshipTypeCreateRefused(t *testing.T) {
 	w := newBridgeWorld(t)
 	prop := w.prop("place_relationship_type")
-	_, err := propertyterms.Create(w.c, userID, prop.ID, "Adjacent", "")
+	_, _, err := writes.Run(w.c, writes.Op{Action: "create_property_term", UserID: userID},
+		func(tx *database.Tx) (propertyterms.Term, []rowchange.Change, error) {
+			return propertyterms.Create(tx, userID, prop.ID, "Adjacent", "")
+		})
 	if !errors.Is(err, propertyterms.ErrLocked) {
 		t.Fatalf("Create under place_relationship_type: %v", err)
 	}

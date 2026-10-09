@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/apperr"
+	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 )
 
@@ -31,8 +32,8 @@ type Revision struct {
 }
 
 // Record allocates the next revision and inserts the transaction + changes on tx,
-// plus the scopes the changes resolve to (see scopes.go). Every entity type must
-// have a resolver; an unknown type is invalid.
+// plus source scopes from effects.Sources. Every entity type must still have a
+// resolver in scopes.go; an unknown type is invalid.
 // The caller owns BEGIN/COMMIT; Record must run inside that transaction.
 // An empty Changes slice is invalid — callers must skip Record when nothing changed.
 func Record(tx *sql.Tx, rev Revision) (int64, error) {
@@ -104,9 +105,13 @@ func Record(tx *sql.Tx, rev Revision) (int64, error) {
 		}
 	}
 
-	scopes, err := resolveScopes(tx, rev.Changes)
+	sourceIDs, err := effects.Sources(tx, rev.Changes)
 	if err != nil {
 		return 0, err
+	}
+	scopes := make([]Scope, 0, len(sourceIDs))
+	for _, id := range sourceIDs {
+		scopes = append(scopes, Scope{Type: ScopeSource, ID: id})
 	}
 	for _, s := range scopes {
 		if _, err := tx.Exec(sqlInsertScope, txID[:], s.Type, s.ID); err != nil {

@@ -11,6 +11,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjects"
@@ -18,6 +19,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/writes"
 )
 
 const testLocator = `{"version":1,"selectors":[{"type":"page","artifact_page":1}]}`
@@ -130,7 +132,10 @@ func TestDelete(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				if _, err := propertyterms.Create(c, userID, id, "Lodger", ""); err != nil {
+				if _, _, err := writes.Run(c, writes.Op{Action: "create_property_term", UserID: userID},
+					func(tx *database.Tx) (propertyterms.Term, []rowchange.Change, error) {
+						return propertyterms.Create(tx, userID, id, "Lodger", "")
+					}); err != nil {
 					t.Fatal(err)
 				}
 				if err := properties.Delete(c, userID, id); !errors.Is(err, properties.ErrInUse) {

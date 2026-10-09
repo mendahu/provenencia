@@ -11,6 +11,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sourceeventtitles"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
@@ -21,6 +22,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/eventtitle"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/writes"
 )
 
 var userID = []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}
@@ -147,7 +149,11 @@ func TestForSource(t *testing.T) {
 	f.participation(mary, marriage, "subject")
 	birth := f.subject("event", "", f.eventType("birth"))
 	f.participation(nobody, birth, "subject")
-	fireTerm, err := propertyterms.Create(f.c, userID, f.prop("event_type"), "Fire", "")
+	eventTypeID := f.prop("event_type")
+	fireTerm, _, err := writes.Run(f.c, writes.Op{Action: "create_property_term", UserID: userID},
+		func(tx *database.Tx) (propertyterms.Term, []rowchange.Change, error) {
+			return propertyterms.Create(tx, userID, eventTypeID, "Fire", "")
+		})
 	must(t, err)
 	fire := f.subject("event", "", observations.Input{PropertyID: f.prop("event_type"), ValueTermID: fireTerm.ID})
 	f.location(fire, york)

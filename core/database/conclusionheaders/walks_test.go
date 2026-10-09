@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"testing"
 
+	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/conclusionheaders"
 	"github.com/mendahu/provenencia/core/database/connect"
@@ -11,9 +12,11 @@ import (
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/subjectpositions"
 	"github.com/mendahu/provenencia/core/database/subjects"
 	"github.com/mendahu/provenencia/core/eventtitle"
+	"github.com/mendahu/provenencia/core/writes"
 )
 
 func (f *fixture) bare(kind string) subjects.Subject {
@@ -119,7 +122,11 @@ func TestCanonicalWalks(t *testing.T) {
 	baptism := f.bare("event")
 	f.cite(baptism, observations.Input{PropertyID: f.prop("event_type").ID, ValueTermID: f.term("event_type", "baptism").ID})
 	f.at(baptism, 4, 8)
-	fireTerm, err := propertyterms.Create(f.c, userID, f.prop("event_type").ID, "Fire", "")
+	eventTypeID := f.prop("event_type").ID
+	fireTerm, _, err := writes.Run(f.c, writes.Op{Action: "create_property_term", UserID: userID},
+		func(tx *database.Tx) (propertyterms.Term, []rowchange.Change, error) {
+			return propertyterms.Create(tx, userID, eventTypeID, "Fire", "")
+		})
 	must(t, err)
 	fire := f.bare("event")
 	f.cite(fire, observations.Input{PropertyID: f.prop("event_type").ID, ValueTermID: fireTerm.ID})
