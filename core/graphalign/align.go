@@ -740,26 +740,29 @@ func (st *state) alikeNew(a, b *Subject) bool {
 // newPairFacts compares the layer neighbors of two subjects. A signature only
 // one of them has stays out. A signature both have disagrees when no neighbor
 // pair is the same subject or clears the accept bar on its own properties.
+// A directed signature groups by end as well: a man's son and another man's
+// father are not neighbors to compare.
 func (st *state) newPairFacts(a, b []byte) ([]EdgeFact, bool) {
 	gb := map[string][][]byte{}
 	for _, link := range st.layerAdj[string(b)] {
-		gb[link.sig.Key()] = append(gb[link.sig.Key()], link.neighbor)
+		k := pairGroup(link)
+		gb[k] = append(gb[k], link.neighbor)
 	}
 	seen := map[string]bool{}
 	var facts []EdgeFact
 	for _, linkA := range st.layerAdj[string(a)] {
-		key := linkA.sig.Key()
-		if seen[key] {
+		group := pairGroup(linkA)
+		if seen[group] {
 			continue
 		}
-		nb := gb[key]
+		nb := gb[group]
 		if len(nb) == 0 {
 			continue
 		}
-		seen[key] = true
+		seen[group] = true
 		var na [][]byte
 		for _, link := range st.layerAdj[string(a)] {
-			if link.sig.Key() == key {
+			if pairGroup(link) == group {
 				na = append(na, link.neighbor)
 			}
 		}
@@ -777,13 +780,25 @@ func (st *state) newPairFacts(a, b []byte) ([]EdgeFact, bool) {
 		if !ok {
 			return nil, true
 		}
-		fan, found := st.stats.FanOut[key]
+		fan, found := st.stats.FanOut[linkA.sig.Key()]
 		if !found {
 			fan = st.cfg.FanOutUnknown
 		}
 		facts = append(facts, EdgeFact{FanOut: fan, NeighborNode: best})
 	}
 	return facts, false
+}
+
+// pairGroup is the signature key, and for a directed signature the end the
+// row sits on, so two rows compare only neighbors in the same role.
+func pairGroup(l layerLink) string {
+	if !l.sig.Directed {
+		return l.sig.Key()
+	}
+	if l.fromEnd {
+		return l.sig.Key() + "|from"
+	}
+	return l.sig.Key() + "|to"
 }
 
 // neighborsMatch is the same subject, or two subjects whose properties clear
