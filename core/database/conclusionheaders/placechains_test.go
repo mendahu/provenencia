@@ -1,6 +1,7 @@
 package conclusionheaders_test
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database/citations"
@@ -419,5 +420,35 @@ func TestUndatedPlacesAlwaysHold(t *testing.T) {
 		if !sameSet(got, []string{"Parent"}) {
 			t.Fatalf("%d parents %v", y, got)
 		}
+	}
+}
+
+// A chain or a fold only looks up, so its graph holds the seed's ancestors
+// and never their other parts. A Place page also reads one hop of parts.
+func TestPlaceGraphReadsOnlyWhatTheCallerNeeds(t *testing.T) {
+	f := newFixture(t)
+	toronto := f.placeSubject("Toronto", nil, nil, 0, 0)
+	hamilton := f.placeSubject("Hamilton", nil, nil, 2, 0)
+	ontario := f.placeSubject("Ontario", nil, nil, 4, 0)
+	canada := f.placeSubject("Canada", nil, nil, 6, 0)
+	f.placeRel(toronto, ontario, propertyterms.KeyPartOf, nil, nil)
+	f.placeRel(hamilton, ontario, propertyterms.KeyPartOf, nil, nil)
+	f.placeRel(ontario, canada, propertyterms.KeyPartOf, nil, nil)
+	torontoID := f.promoteSubject(toronto)
+	f.promoteSubject(hamilton)
+	ontarioID := f.promoteSubject(ontario)
+	f.promoteSubject(canada)
+	db, err := f.c.DB()
+	must(t, err)
+
+	up, err := conclusionheaders.PlaceGraphRefsForTest(db, torontoID, false)
+	must(t, err)
+	if got := strings.Join(up, ","); got != "Canada,Ontario,Toronto" {
+		t.Fatalf("ancestor reach read %s, want Canada,Ontario,Toronto", got)
+	}
+	detail, err := conclusionheaders.PlaceGraphRefsForTest(db, ontarioID, true)
+	must(t, err)
+	if got := strings.Join(detail, ","); got != "Canada,Hamilton,Ontario,Toronto" {
+		t.Fatalf("detail reach read %s, want Canada,Hamilton,Ontario,Toronto", got)
 	}
 }

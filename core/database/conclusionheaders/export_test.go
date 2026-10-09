@@ -1,6 +1,9 @@
 package conclusionheaders
 
-import "database/sql"
+import (
+	"database/sql"
+	"sort"
+)
 
 type countingQuerier struct {
 	Querier
@@ -36,4 +39,23 @@ func ListPlacesQueryCount(q Querier) (int, error) {
 // SortPlaces applies the list order to Place rows.
 func SortPlaces(rows []PlaceHeader) {
 	sortByTitle(rows, placeTitle, func(h PlaceHeader) string { return h.Entity.Ref })
+}
+
+// PlaceGraphRefsForTest lists the titles of the Places a graph load reads:
+// ancestors only, or the detail reach.
+func PlaceGraphRefsForTest(q Querier, seed []byte, detail bool) ([]string, error) {
+	reach := reachAncestors
+	if detail {
+		reach = reachDetail
+	}
+	g, err := loadPlaceGraph(q, [][]byte{seed}, reach)
+	if err != nil {
+		return nil, err
+	}
+	var refs []string
+	for _, h := range g.byID {
+		refs = append(refs, placeTitle(h))
+	}
+	sort.Strings(refs)
+	return refs, nil
 }
