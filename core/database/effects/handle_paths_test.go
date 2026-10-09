@@ -11,7 +11,6 @@ import (
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/effects"
-	"github.com/mendahu/provenencia/core/database/evrun"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
@@ -81,9 +80,11 @@ func TestHandlePaths(t *testing.T) {
 	}
 	mk := func(typeID []byte, label string, x int64) subjects.Subject {
 		t.Helper()
-		s, err := evrun.CreateSubject(c, userID, subjects.CreateInput{
-			SourceID: src.ID, SubjectTypeID: typeID, Label: label,
-		}, &subjects.Placement{GridX: x, GridY: 0})
+		s, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
+			return subjects.Create(tx, userID, subjects.CreateInput{
+				SourceID: src.ID, SubjectTypeID: typeID, Label: label,
+			}, &subjects.Placement{GridX: x, GridY: 0})
+		})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -132,12 +133,14 @@ func TestHandlePaths(t *testing.T) {
 		t.Fatal(err)
 	}
 	year := 1842
-	created, err := evrun.CreateCitation(c, userID, citations.CreateInput{
-		ArtifactID: art.ID, LocatorJSON: locator,
-	}, []observations.Input{{
-		SubjectID: boston.ID, PropertyID: dateProp.ID,
-		Date: &datevalues.Value{Kind: datevalues.KindPoint, StartYear: &year},
-	}})
+	created, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
+		return citations.CreateWithObservations(tx, userID, citations.CreateInput{
+			ArtifactID: art.ID, LocatorJSON: locator,
+		}, []observations.Input{{
+			SubjectID: boston.ID, PropertyID: dateProp.ID,
+			Date: &datevalues.Value{Kind: datevalues.KindPoint, StartYear: &year},
+		}})
+	})
 	if err != nil {
 		t.Fatal(err)
 	}

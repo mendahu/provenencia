@@ -94,3 +94,9 @@ func Run[T any](c *database.Catalog, op Op, fn func(tx *database.Tx) (T, []rowch
 	}
 	return value, Result{Revision: rev, Effects: set}, nil
 }
+
+// Call is Run for a caller that does not need the revision. Tests use it.
+func Call[T any](c *database.Catalog, op Op, fn func(tx *database.Tx) (T, []rowchange.Change, error)) (T, error) {
+	value, _, err := Run(c, op, fn)
+	return value, err
+}

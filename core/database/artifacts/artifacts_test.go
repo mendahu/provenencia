@@ -13,7 +13,6 @@ import (
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/citations"
-	"github.com/mendahu/provenencia/core/database/evrun"
 	"github.com/mendahu/provenencia/core/database/files"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sources"
@@ -461,9 +460,11 @@ func TestArtifactDelete(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := evrun.CreateCitation(c, userID, citations.CreateInput{
-		ArtifactID: cited.ID, LocatorJSON: locator,
-	}, nil); err != nil {
+	if _, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
+		return citations.CreateWithObservations(tx, userID, citations.CreateInput{
+			ArtifactID: cited.ID, LocatorJSON: locator,
+		}, nil)
+	}); err != nil {
 		t.Fatal(err)
 	}
 	if err := runDelete(c, userID, cited.ID); !errors.Is(err, ErrInUse) {

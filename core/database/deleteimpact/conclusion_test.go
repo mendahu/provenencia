@@ -4,15 +4,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mendahu/provenencia/core/database/catalogmodel"
-
 	"github.com/mendahu/provenencia/core/database"
-
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
+	"github.com/mendahu/provenencia/core/database/catalogmodel"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/deleteimpact"
-	"github.com/mendahu/provenencia/core/database/evrun"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
@@ -51,9 +48,11 @@ func TestImpactConclusion(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	york, err := evrun.CreateSubject(c, userID, subjects.CreateInput{
-		SourceID: src.ID, SubjectTypeID: place.ID, Label: "York",
-	}, nil)
+	york, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
+		return subjects.Create(tx, userID, subjects.CreateInput{
+			SourceID: src.ID, SubjectTypeID: place.ID, Label: "York",
+		}, nil)
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -61,11 +60,13 @@ func TestImpactConclusion(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	res, err := evrun.CreateCitation(c, userID, citations.CreateInput{
-		ArtifactID: art.ID, LocatorJSON: testLocator, Transcription: "York",
-	}, []observations.Input{{
-		SubjectID: york.ID, PropertyID: toponym.ID, ValueText: "York", HasText: true,
-	}})
+	res, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
+		return citations.CreateWithObservations(tx, userID, citations.CreateInput{
+			ArtifactID: art.ID, LocatorJSON: testLocator, Transcription: "York",
+		}, []observations.Input{{
+			SubjectID: york.ID, PropertyID: toponym.ID, ValueText: "York", HasText: true,
+		}})
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -103,9 +104,11 @@ func TestImpactConclusion(t *testing.T) {
 	})
 
 	t.Run("allowed promoted subject still names the handle it leaves", func(t *testing.T) {
-		leeds, err := evrun.CreateSubject(c, userID, subjects.CreateInput{
-			SourceID: src.ID, SubjectTypeID: place.ID, Label: "Leeds",
-		}, nil)
+		leeds, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
+			return subjects.Create(tx, userID, subjects.CreateInput{
+				SourceID: src.ID, SubjectTypeID: place.ID, Label: "Leeds",
+			}, nil)
+		})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -149,7 +152,10 @@ func TestImpactConclusion(t *testing.T) {
 	})
 
 	t.Run("observation delete removes its pins explicitly and audits them", func(t *testing.T) {
-		if err := evrun.DeleteObservation(c, userID, obsID); err != nil {
+		if _, err := writes.Call(c, writes.Op{Action: "delete_observation", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+			changes, err := observations.Delete(tx, userID, obsID)
+			return struct{}{}, changes, err
+		}); err != nil {
 			t.Fatal(err)
 		}
 		action, types := lastRevision(t, c)
@@ -166,7 +172,10 @@ func TestImpactConclusion(t *testing.T) {
 	})
 
 	t.Run("subject delete removes its claim explicitly and audits it; handle stays", func(t *testing.T) {
-		if err := evrun.DeleteSubject(c, userID, york.ID); err != nil {
+		if _, err := writes.Call(c, writes.Op{Action: "delete_subject", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+			changes, err := subjects.Delete(tx, userID, york.ID)
+			return struct{}{}, changes, err
+		}); err != nil {
 			t.Fatal(err)
 		}
 		action, types := lastRevision(t, c)

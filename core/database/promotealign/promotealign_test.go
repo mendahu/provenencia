@@ -11,7 +11,6 @@ import (
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/connect"
 	"github.com/mendahu/provenencia/core/database/datevalues"
-	"github.com/mendahu/provenencia/core/database/evrun"
 	"github.com/mendahu/provenencia/core/database/namevalues/namevaluestest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
@@ -21,6 +20,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
+	"github.com/mendahu/provenencia/core/database/subjectpositions"
 	"github.com/mendahu/provenencia/core/database/subjects"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
@@ -101,9 +101,13 @@ func (f *fixture) bare(src sources.Source, kind string) subjects.Subject {
 	f.t.Helper()
 	st, err := subjecttypes.Lookup(f.c, kind, subjecttypes.OriginProvenencia)
 	must(f.t, err)
-	s, err := evrun.CreateSubject(f.c, userID, subjects.CreateInput{SourceID: src.ID, SubjectTypeID: st.ID}, nil)
+	s, err := writes.Call(f.c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
+		return subjects.Create(tx, userID, subjects.CreateInput{SourceID: src.ID, SubjectTypeID: st.ID}, nil)
+	})
 	must(f.t, err)
-	_, err = evrun.SetPosition(f.c, s.ID, 0, f.y)
+	_, err = writes.Call(f.c, writes.Op{}, func(tx *database.Tx) (subjectpositions.Position, []rowchange.Change, error) {
+		return subjectpositions.Set(tx, s.ID, 0, f.y)
+	})
 	must(f.t, err)
 	f.y += 2
 	return s
@@ -114,9 +118,11 @@ func (f *fixture) cite(art artifacts.Artifact, s subjects.Subject, in ...observa
 	for i := range in {
 		in[i].SubjectID = s.ID
 	}
-	_, err := evrun.CreateCitation(f.c, userID, citations.CreateInput{
-		ArtifactID: art.ID, LocatorJSON: locator,
-	}, in)
+	_, err := writes.Call(f.c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
+		return citations.CreateWithObservations(tx, userID, citations.CreateInput{
+			ArtifactID: art.ID, LocatorJSON: locator,
+		}, in)
+	})
 	must(f.t, err)
 }
 
@@ -149,28 +155,40 @@ func (f *fixture) place(src sources.Source, art artifacts.Artifact, name string)
 
 func (f *fixture) participation(src sources.Source, art artifacts.Artifact, person, event subjects.Subject, role string) {
 	f.t.Helper()
-	_, err := evrun.CreateBridge(f.c, userID, connect.CreateInput{
-		SourceID: src.ID, FromSubjectID: person.ID, ToSubjectID: event.ID, BridgeTypeKey: "participation",
-		Citation: citations.CreateInput{ArtifactID: art.ID, LocatorJSON: locator},
-		Observations: []observations.Input{
-			{PropertyID: f.prop("person").ID, ValueSubjectID: person.ID},
-			{PropertyID: f.prop("event").ID, ValueSubjectID: event.ID},
-			{PropertyID: f.prop("role").ID, ValueTermID: f.term("role", role).ID},
-		},
+	personProp := f.prop("person").ID
+	eventProp := f.prop("event").ID
+	roleProp := f.prop("role").ID
+	roleTerm := f.term("role", role).ID
+	_, err := writes.Call(f.c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (connect.Result, []rowchange.Change, error) {
+		return connect.CreateCitedBridge(tx, userID, connect.CreateInput{
+			SourceID: src.ID, FromSubjectID: person.ID, ToSubjectID: event.ID, BridgeTypeKey: "participation",
+			Citation: citations.CreateInput{ArtifactID: art.ID, LocatorJSON: locator},
+			Observations: []observations.Input{
+				{PropertyID: personProp, ValueSubjectID: person.ID},
+				{PropertyID: eventProp, ValueSubjectID: event.ID},
+				{PropertyID: roleProp, ValueTermID: roleTerm},
+			},
+		})
 	})
 	must(f.t, err)
 }
 
 func (f *fixture) placeRel(src sources.Source, art artifacts.Artifact, from, to subjects.Subject, kind string) {
 	f.t.Helper()
-	_, err := evrun.CreateBridge(f.c, userID, connect.CreateInput{
-		SourceID: src.ID, FromSubjectID: from.ID, ToSubjectID: to.ID, BridgeTypeKey: "place_relationship",
-		Citation: citations.CreateInput{ArtifactID: art.ID, LocatorJSON: locator},
-		Observations: []observations.Input{
-			{PropertyID: f.prop("from").ID, ValueSubjectID: from.ID},
-			{PropertyID: f.prop("to").ID, ValueSubjectID: to.ID},
-			{PropertyID: f.prop("place_relationship_type").ID, ValueTermID: f.term("place_relationship_type", kind).ID},
-		},
+	fromProp := f.prop("from").ID
+	toProp := f.prop("to").ID
+	typeProp := f.prop("place_relationship_type").ID
+	kindTerm := f.term("place_relationship_type", kind).ID
+	_, err := writes.Call(f.c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (connect.Result, []rowchange.Change, error) {
+		return connect.CreateCitedBridge(tx, userID, connect.CreateInput{
+			SourceID: src.ID, FromSubjectID: from.ID, ToSubjectID: to.ID, BridgeTypeKey: "place_relationship",
+			Citation: citations.CreateInput{ArtifactID: art.ID, LocatorJSON: locator},
+			Observations: []observations.Input{
+				{PropertyID: fromProp, ValueSubjectID: from.ID},
+				{PropertyID: toProp, ValueSubjectID: to.ID},
+				{PropertyID: typeProp, ValueTermID: kindTerm},
+			},
+		})
 	})
 	must(f.t, err)
 }
@@ -178,14 +196,20 @@ func (f *fixture) placeRel(src sources.Source, art artifacts.Artifact, from, to 
 // relationship cites "person is typ of related" on src.
 func (f *fixture) relationship(src sources.Source, art artifacts.Artifact, person, related subjects.Subject, typ string) {
 	f.t.Helper()
-	_, err := evrun.CreateBridge(f.c, userID, connect.CreateInput{
-		SourceID: src.ID, FromSubjectID: person.ID, ToSubjectID: related.ID, BridgeTypeKey: "relationship",
-		Citation: citations.CreateInput{ArtifactID: art.ID, LocatorJSON: locator},
-		Observations: []observations.Input{
-			{PropertyID: f.prop("person").ID, ValueSubjectID: person.ID},
-			{PropertyID: f.prop("related_to").ID, ValueSubjectID: related.ID},
-			{PropertyID: f.prop("relationship_type").ID, ValueTermID: f.term("relationship_type", typ).ID},
-		},
+	personProp := f.prop("person").ID
+	relatedProp := f.prop("related_to").ID
+	typeProp := f.prop("relationship_type").ID
+	typTerm := f.term("relationship_type", typ).ID
+	_, err := writes.Call(f.c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (connect.Result, []rowchange.Change, error) {
+		return connect.CreateCitedBridge(tx, userID, connect.CreateInput{
+			SourceID: src.ID, FromSubjectID: person.ID, ToSubjectID: related.ID, BridgeTypeKey: "relationship",
+			Citation: citations.CreateInput{ArtifactID: art.ID, LocatorJSON: locator},
+			Observations: []observations.Input{
+				{PropertyID: personProp, ValueSubjectID: person.ID},
+				{PropertyID: relatedProp, ValueSubjectID: related.ID},
+				{PropertyID: typeProp, ValueTermID: typTerm},
+			},
+		})
 	})
 	must(f.t, err)
 }

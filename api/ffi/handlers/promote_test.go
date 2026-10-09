@@ -9,16 +9,18 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/citations"
-	"github.com/mendahu/provenencia/core/database/evrun"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/namevalues/namevaluestest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/properties"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/subjects"
 	"google.golang.org/protobuf/proto"
+
+	// promotableSubject creates a person Subject and returns a promote request for it.
+	"github.com/mendahu/provenencia/core/writes"
 )
 
-// promotableSubject creates a person Subject and returns a promote request for it.
 func promotableSubject(t *testing.T) *engine.PromoteSubjectRequest {
 	t.Helper()
 	dir, userID, sourceID, typeID := subjectFixture(t)
@@ -209,7 +211,9 @@ func personBeside(t *testing.T, req *engine.PromoteSubjectRequest, forms ...stri
 		if err := db.QueryRow(`SELECT source_id, subject_type_id FROM subjects WHERE id = ?`, first[:]).Scan(&sourceID, &typeID); err != nil {
 			return err
 		}
-		s, err := evrun.CreateSubject(c, userID[:], subjects.CreateInput{SourceID: sourceID, SubjectTypeID: typeID}, nil)
+		s, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID[:]}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
+			return subjects.Create(tx, userID[:], subjects.CreateInput{SourceID: sourceID, SubjectTypeID: typeID}, nil)
+		})
 		if err != nil {
 			return err
 		}
@@ -229,9 +233,11 @@ func personBeside(t *testing.T, req *engine.PromoteSubjectRequest, forms ...stri
 		for _, form := range forms {
 			in = append(in, observations.Input{SubjectID: s.ID, PropertyID: name.ID, Name: namevaluestest.Western(form)})
 		}
-		_, err = evrun.CreateCitation(c, userID[:], citations.CreateInput{
-			ArtifactID: art.ID, LocatorJSON: `{"version":1,"selectors":[{"type":"page","artifact_page":1}]}`,
-		}, in)
+		_, err = writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID[:]}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
+			return citations.CreateWithObservations(tx, userID[:], citations.CreateInput{
+				ArtifactID: art.ID, LocatorJSON: `{"version":1,"selectors":[{"type":"page","artifact_page":1}]}`,
+			}, in)
+		})
 		return err
 	}); err != nil {
 		t.Fatal(err)

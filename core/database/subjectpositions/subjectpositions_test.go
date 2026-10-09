@@ -94,7 +94,9 @@ func TestSubjectPositions(t *testing.T) {
 				src := mustSource(t, c, "Deed")
 				sub := mustPerson(t, c, src.ID, "Alice")
 				before := auditCount(t, c)
-				p, err := runSet(c, sub, -3, 7)
+				p, err := writes.Call(c, writes.Op{}, func(tx *database.Tx) (Position, []rowchange.Change, error) {
+					return Set(tx, sub, -3, 7)
+				})
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -116,10 +118,14 @@ func TestSubjectPositions(t *testing.T) {
 				mustUser(t, c)
 				src := mustSource(t, c, "Deed")
 				sub := mustPerson(t, c, src.ID, "Alice")
-				if _, err := runSet(c, sub, 1, 1); err != nil {
+				if _, err := writes.Call(c, writes.Op{}, func(tx *database.Tx) (Position, []rowchange.Change, error) {
+					return Set(tx, sub, 1, 1)
+				}); err != nil {
 					t.Fatal(err)
 				}
-				if _, err := runSet(c, sub, 2, 3); err != nil {
+				if _, err := writes.Call(c, writes.Op{}, func(tx *database.Tx) (Position, []rowchange.Change, error) {
+					return Set(tx, sub, 2, 3)
+				}); err != nil {
 					t.Fatal(err)
 				}
 				got, err := Get(c, sub)
@@ -149,14 +155,22 @@ func TestSubjectPositions(t *testing.T) {
 				if !errors.Is(err, sql.ErrNoRows) {
 					t.Fatalf("got %v", err)
 				}
-				if _, err := runSet(c, sub, 0, 0); err != nil {
+				if _, err := writes.Call(c, writes.Op{}, func(tx *database.Tx) (Position, []rowchange.Change, error) {
+					return Set(tx, sub, 0, 0)
+				}); err != nil {
 					t.Fatal(err)
 				}
 				before := auditCount(t, c)
-				if err := runClear(c, sub); err != nil {
+				if _, err := writes.Call(c, writes.Op{}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+					changes, err := Clear(tx, sub)
+					return struct{}{}, changes, err
+				}); err != nil {
 					t.Fatal(err)
 				}
-				if err := runClear(c, sub); err != nil {
+				if _, err := writes.Call(c, writes.Op{}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+					changes, err := Clear(tx, sub)
+					return struct{}{}, changes, err
+				}); err != nil {
 					t.Fatal(err)
 				}
 				_, err = Get(c, sub)
@@ -177,13 +191,20 @@ func TestSubjectPositions(t *testing.T) {
 				a1 := mustPerson(t, c, srcA.ID, "A1")
 				a2 := mustPerson(t, c, srcA.ID, "A2")
 				b1 := mustPerson(t, c, srcB.ID, "B1")
-				if _, err := runSet(c, a1, 1, 0); err != nil {
+				if _, err := writes.Call(c, writes.Op{}, func(tx *database.Tx) (Position, []rowchange.Change, error) {
+					return Set(tx, a1, 1, 0)
+				}); err != nil {
 					t.Fatal(err)
 				}
-				if _, err := runSet(c, b1, 9, 9); err != nil {
+				if _, err := writes.Call(c, writes.Op{}, func(tx *database.Tx) (Position, []rowchange.
+
+					// a2 stays unplaced
+					Change, error) {
+					return Set(tx, b1, 9, 9)
+				}); err != nil {
 					t.Fatal(err)
 				}
-				// a2 stays unplaced
+
 				_ = a2
 				list, err := ListBySource(c, srcA.ID)
 				if err != nil || len(list) != 1 || string(list[0].SubjectID) != string(a1) {
@@ -196,10 +217,14 @@ func TestSubjectPositions(t *testing.T) {
 			run: func(t *testing.T, c *database.Catalog) {
 				missing := make([]byte, 16)
 				missing[0] = 1
-				if _, err := runSet(c, missing, 0, 0); !errors.Is(err, ErrInvalid) {
+				if _, err := writes.Call(c, writes.Op{}, func(tx *database.Tx) (Position, []rowchange.Change, error) {
+					return Set(tx, missing, 0, 0)
+				}); !errors.Is(err, ErrInvalid) {
 					t.Fatalf("got %v", err)
 				}
-				if _, err := runSet(c, []byte{1}, 0, 0); !errors.Is(err, ErrInvalid) {
+				if _, err := writes.Call(c, writes.Op{}, func(tx *database.Tx) (Position, []rowchange.Change, error) {
+					return Set(tx, []byte{1}, 0, 0)
+				}); !errors.Is(err, ErrInvalid) {
 					t.Fatalf("got %v", err)
 				}
 			},
@@ -210,7 +235,9 @@ func TestSubjectPositions(t *testing.T) {
 				mustUser(t, c)
 				src := mustSource(t, c, "Deed")
 				sub := mustPerson(t, c, src.ID, "Alice")
-				if _, err := runSet(c, sub, 4, -1); err != nil {
+				if _, err := writes.Call(c, writes.Op{}, func(tx *database.Tx) (Position, []rowchange.Change, error) {
+					return Set(tx, sub, 4, -1)
+				}); err != nil {
 					t.Fatal(err)
 				}
 				dir := c.Dir()

@@ -8,7 +8,6 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/citations"
-	"github.com/mendahu/provenencia/core/database/evrun"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
@@ -268,17 +267,21 @@ func insertObservationOn(t *testing.T, c *database.Catalog, userID, propertyID [
 	); err != nil {
 		t.Fatal(err)
 	}
-	place, err := evrun.CreateSubject(c, userID, subjects.CreateInput{
-		SourceID: src.ID, SubjectTypeID: placeType.ID, Label: "Leeds",
-	}, nil)
+	place, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
+		return subjects.Create(tx, userID, subjects.CreateInput{
+			SourceID: src.ID, SubjectTypeID: placeType.ID, Label: "Leeds",
+		}, nil)
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	res, err := evrun.CreateCitation(c, userID, citations.CreateInput{
-		ArtifactID: art.ID, LocatorJSON: testLocator, Transcription: "Leeds",
-	}, []observations.Input{{
-		SubjectID: place.ID, PropertyID: propertyID, ValueText: "Leeds", HasText: true,
-	}})
+	res, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
+		return citations.CreateWithObservations(tx, userID, citations.CreateInput{
+			ArtifactID: art.ID, LocatorJSON: testLocator, Transcription: "Leeds",
+		}, []observations.Input{{
+			SubjectID: place.ID, PropertyID: propertyID, ValueText: "Leeds", HasText: true,
+		}})
+	})
 	if err != nil {
 		t.Fatal(err)
 	}

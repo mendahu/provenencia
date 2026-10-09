@@ -6,7 +6,7 @@ The transaction around a catalog write that has moved onto it.
 
 A change list whose every row names a table with effect `None` commits with no revision, no effects, and no listeners, then runs `AfterCommit`. `subject_position` and `file_derivative` are those rows. Thumbnail inserts return the derivative link and leave the derived `files` row off the list, so the batch takes this path; the Source search refresh stays in `AfterCommit`. A mixed batch is audited. `audit.Record` rejects an entity with no scope resolver, so a position or a derivative written inside an audited transaction stays off that change list.
 
-`Run` is generic. The closure's value is the created or updated row (or nothing, for a delete). `Result` is the revision and the resolved effects.
+`Run` is generic. The closure's value is the created or updated row (or nothing, for a delete). `Result` is the revision and the resolved effects. `Call` is `Run` with the revision discarded, for a test that only needs the written value.
 
 A second `Run` on the same catalog, including from `AfterCommit` or a listener, returns `database.ErrWriteReentry`. `Run` does not take the catalog session lock.
 

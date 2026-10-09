@@ -10,7 +10,6 @@ import (
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/datevalues"
-	"github.com/mendahu/provenencia/core/database/evrun"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/properties"
@@ -91,9 +90,11 @@ func TestSourceScopes(t *testing.T) {
 			t.Fatal(err)
 		}
 		mkSubject := func(typeID []byte, label string, x int64) subjects.Subject {
-			s, err := evrun.CreateSubject(c, userID, subjects.CreateInput{
-				SourceID: a.ID, SubjectTypeID: typeID, Label: label,
-			}, &subjects.Placement{GridX: x, GridY: 0})
+			s, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
+				return subjects.Create(tx, userID, subjects.CreateInput{
+					SourceID: a.ID, SubjectTypeID: typeID, Label: label,
+				}, &subjects.Placement{GridX: x, GridY: 0})
+			})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -176,7 +177,9 @@ func TestSourceScopes(t *testing.T) {
 		t.Helper()
 		in.ArtifactID = s.artifact.ID
 		in.LocatorJSON = validLocator
-		res, err := evrun.CreateCitation(s.c, userID, in, obs)
+		res, err := writes.Call(s.c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
+			return citations.CreateWithObservations(tx, userID, in, obs)
+		})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -254,21 +257,29 @@ func TestSourceScopes(t *testing.T) {
 			run: func(t *testing.T, s seed) {
 				var subj subjects.Subject
 				bumpsA(t, s, func() {
-					got, err := evrun.CreateSubject(s.c, userID, subjects.CreateInput{
-						SourceID: s.a.ID, SubjectTypeID: s.personTy, Label: "Cy",
-					}, &subjects.Placement{GridX: 16, GridY: 0})
+					got, err := writes.Call(s.c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
+						return subjects.Create(tx, userID, subjects.CreateInput{
+							SourceID: s.a.ID, SubjectTypeID: s.personTy, Label: "Cy",
+						}, &subjects.Placement{GridX: 16, GridY: 0})
+					})
 					if err != nil {
 						t.Fatal(err)
 					}
 					subj = got
 				})
 				bumpsA(t, s, func() {
-					if err := evrun.UpdateSubject(s.c, userID, subj.ID, "Cyril", ""); err != nil {
+					if _, err := writes.Call(s.c, writes.Op{Action: "update_subject", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+						changes, err := subjects.Update(tx, userID, subj.ID, "Cyril", "")
+						return struct{}{}, changes, err
+					}); err != nil {
 						t.Fatal(err)
 					}
 				})
 				bumpsA(t, s, func() {
-					if err := evrun.DeleteSubject(s.c, userID, subj.ID); err != nil {
+					if _, err := writes.Call(s.c, writes.Op{Action: "delete_subject", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+						changes, err := subjects.Delete(tx, userID, subj.ID)
+						return struct{}{}, changes, err
+					}); err != nil {
 						t.Fatal(err)
 					}
 				})
@@ -284,25 +295,31 @@ func TestSourceScopes(t *testing.T) {
 					res = mustCitation(t, s, citations.CreateInput{Notes: []string{"p. 3"}}, in)
 				})
 				bumpsA(t, s, func() {
-					if _, err := evrun.UpdateCitation(s.c, userID, res.Citation.ID, citations.CitationFieldsInput{
-						LocatorJSON: validLocator, Transcription: "Bob Smith",
+					if _, err := writes.Call(s.c, writes.Op{Action: "update_citation", UserID: userID}, func(tx *database.Tx) (citations.Citation, []rowchange.Change, error) {
+						return citations.Update(tx, userID, res.Citation.ID, citations.CitationFieldsInput{
+							LocatorJSON: validLocator, Transcription: "Bob Smith",
+						})
 					}); err != nil {
 						t.Fatal(err)
 					}
 				})
 				var added []observations.Observation
 				bumpsA(t, s, func() {
-					got, err := evrun.AddObservations(s.c, userID, res.Citation.ID,
-						[]observations.Input{textObs(s, s.place2, "Salem")})
+					got, err := writes.Call(s.c, writes.Op{Action: "add_observations", UserID: userID}, func(tx *database.Tx) ([]observations.Observation, []rowchange.Change, error) {
+						return observations.AddToCitation(tx, userID, res.Citation.ID,
+							[]observations.Input{textObs(s, s.place2, "Salem")})
+					})
 					if err != nil {
 						t.Fatal(err)
 					}
 					added = got
 				})
 				bumpsA(t, s, func() {
-					if _, err := evrun.UpdateObservation(s.c, userID, observations.Input{
-						ID: added[0].ID, SubjectID: s.place2.ID, PropertyID: s.toponymProp.ID,
-						ValueText: "Salem Town", HasText: true,
+					if _, err := writes.Call(s.c, writes.Op{Action: "update_observation", UserID: userID}, func(tx *database.Tx) (observations.Listed, []rowchange.Change, error) {
+						return observations.Update(tx, userID, observations.Input{
+							ID: added[0].ID, SubjectID: s.place2.ID, PropertyID: s.toponymProp.ID,
+							ValueText: "Salem Town", HasText: true,
+						})
 					}); err != nil {
 						t.Fatal(err)
 					}
@@ -310,17 +327,26 @@ func TestSourceScopes(t *testing.T) {
 				// Deleting an observation releases its notes first; the
 				// note's change resolves through the deleted observation.
 				bumpsA(t, s, func() {
-					if err := evrun.DeleteObservation(s.c, userID, res.Observations[0].ID); err != nil {
+					if _, err := writes.Call(s.c, writes.Op{Action: "delete_observation", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+						changes, err := observations.Delete(tx, userID, res.Observations[0].ID)
+						return struct{}{}, changes, err
+					}); err != nil {
 						t.Fatal(err)
 					}
 				})
 				bumpsA(t, s, func() {
-					if err := evrun.DeleteObservation(s.c, userID, added[0].ID); err != nil {
+					if _, err := writes.Call(s.c, writes.Op{Action: "delete_observation", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+						changes, err := observations.Delete(tx, userID, added[0].ID)
+						return struct{}{}, changes, err
+					}); err != nil {
 						t.Fatal(err)
 					}
 				})
 				bumpsA(t, s, func() {
-					if err := evrun.DeleteCitation(s.c, userID, res.Citation.ID); err != nil {
+					if _, err := writes.Call(s.c, writes.Op{Action: "delete_citation", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+						changes, err := citations.Delete(tx, userID, res.Citation.ID)
+						return struct{}{}, changes, err
+					}); err != nil {
 						t.Fatal(err)
 					}
 				})
@@ -331,9 +357,11 @@ func TestSourceScopes(t *testing.T) {
 			run: func(t *testing.T, s seed) {
 				res := mustCitation(t, s, citations.CreateInput{}, textObs(s, s.place, "Boston"))
 				bumpsA(t, s, func() {
-					if _, err := evrun.UpdateObservation(s.c, userID, observations.Input{
-						ID: res.Observations[0].ID, SubjectID: s.place.ID, PropertyID: s.toponymProp.ID,
-						ValueText: "Boston", HasText: true, Polarity: observations.PolarityNegative,
+					if _, err := writes.Call(s.c, writes.Op{Action: "update_observation", UserID: userID}, func(tx *database.Tx) (observations.Listed, []rowchange.Change, error) {
+						return observations.Update(tx, userID, observations.Input{
+							ID: res.Observations[0].ID, SubjectID: s.place.ID, PropertyID: s.toponymProp.ID,
+							ValueText: "Boston", HasText: true, Polarity: observations.PolarityNegative,
+						})
 					}); err != nil {
 						t.Fatal(err)
 					}
@@ -350,9 +378,11 @@ func TestSourceScopes(t *testing.T) {
 				})
 				year2 := 1843
 				bumpsA(t, s, func() {
-					if _, err := evrun.UpdateObservation(s.c, userID, observations.Input{
-						ID: res.Observations[0].ID, SubjectID: s.event.ID, PropertyID: s.dateProp.ID,
-						Date: &datevalues.Value{Kind: datevalues.KindPoint, StartYear: &year2},
+					if _, err := writes.Call(s.c, writes.Op{Action: "update_observation", UserID: userID}, func(tx *database.Tx) (observations.Listed, []rowchange.Change, error) {
+						return observations.Update(tx, userID, observations.Input{
+							ID: res.Observations[0].ID, SubjectID: s.event.ID, PropertyID: s.dateProp.ID,
+							Date: &datevalues.Value{Kind: datevalues.KindPoint, StartYear: &year2},
+						})
 					}); err != nil {
 						t.Fatal(err)
 					}

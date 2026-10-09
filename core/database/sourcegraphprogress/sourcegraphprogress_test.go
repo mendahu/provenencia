@@ -8,7 +8,6 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/citations"
-	"github.com/mendahu/provenencia/core/database/evrun"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/rowchange"
@@ -87,21 +86,27 @@ func TestSourceGraphProgress(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		person, err := evrun.CreateSubject(c, userID, subjects.CreateInput{
-			SourceID: worked.ID, SubjectTypeID: personType.ID, Label: "Alice",
-		}, nil)
+		person, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
+			return subjects.Create(tx, userID, subjects.CreateInput{
+				SourceID: worked.ID, SubjectTypeID: personType.ID, Label: "Alice",
+			}, nil)
+		})
 		if err != nil {
 			t.Fatal(err)
 		}
-		place, err := evrun.CreateSubject(c, userID, subjects.CreateInput{
-			SourceID: worked.ID, SubjectTypeID: placeType.ID, Label: "Boston",
-		}, nil)
+		place, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
+			return subjects.Create(tx, userID, subjects.CreateInput{
+				SourceID: worked.ID, SubjectTypeID: placeType.ID, Label: "Boston",
+			}, nil)
+		})
 		if err != nil {
 			t.Fatal(err)
 		}
-		if _, err := evrun.CreateSubject(c, userID, subjects.CreateInput{
-			SourceID: worked.ID, SubjectTypeID: sourceType.ID, Label: "Reify",
-		}, nil); err != nil {
+		if _, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
+			return subjects.Create(tx, userID, subjects.CreateInput{
+				SourceID: worked.ID, SubjectTypeID: sourceType.ID, Label: "Reify",
+			}, nil)
+		}); err != nil {
 			t.Fatal(err)
 		}
 		art, err := runArtifactCreate(c, userID, artifacts.CreateInput{
@@ -114,12 +119,14 @@ func TestSourceGraphProgress(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if _, err := evrun.CreateCitation(c, userID, citations.CreateInput{
-			ArtifactID: art.ID, LocatorJSON: validLocator,
-		}, []observations.Input{{
-			SubjectID: place.ID, PropertyID: toponym.ID,
-			ValueText: "Boston", HasText: true,
-		}}); err != nil {
+		if _, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
+			return citations.CreateWithObservations(tx, userID, citations.CreateInput{
+				ArtifactID: art.ID, LocatorJSON: validLocator,
+			}, []observations.Input{{
+				SubjectID: place.ID, PropertyID: toponym.ID,
+				ValueText: "Boston", HasText: true,
+			}})
+		}); err != nil {
 			t.Fatal(err)
 		}
 		return seed{c: c, worked: worked, empty: empty, person: person, place: place, toponym: toponym}

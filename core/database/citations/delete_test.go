@@ -8,7 +8,6 @@ import (
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/connect"
-	"github.com/mendahu/provenencia/core/database/evrun"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
@@ -71,15 +70,19 @@ func TestCitationDeleteConnectionOnly(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	alice, err := evrun.CreateSubject(c, userID, subjects.CreateInput{
-		SourceID: src.ID, SubjectTypeID: personType.ID, Label: "Alice",
-	}, &subjects.Placement{GridX: 0, GridY: 0})
+	alice, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
+		return subjects.Create(tx, userID, subjects.CreateInput{
+			SourceID: src.ID, SubjectTypeID: personType.ID, Label: "Alice",
+		}, &subjects.Placement{GridX: 0, GridY: 0})
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	wedding, err := evrun.CreateSubject(c, userID, subjects.CreateInput{
-		SourceID: src.ID, SubjectTypeID: eventType.ID, Label: "Wedding",
-	}, &subjects.Placement{GridX: 4, GridY: 4})
+	wedding, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
+		return subjects.Create(tx, userID, subjects.CreateInput{
+			SourceID: src.ID, SubjectTypeID: eventType.ID, Label: "Wedding",
+		}, &subjects.Placement{GridX: 4, GridY: 4})
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -99,20 +102,25 @@ func TestCitationDeleteConnectionOnly(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	bridge, err := evrun.CreateBridge(c, userID, connect.CreateInput{
-		SourceID: src.ID, FromSubjectID: alice.ID, ToSubjectID: wedding.ID,
-		BridgeTypeKey: "participation",
-		Citation:      citations.CreateInput{ArtifactID: art.ID, LocatorJSON: testLocator},
-		Observations: []observations.Input{
-			{PropertyID: personProp.ID, ValueSubjectID: alice.ID},
-			{PropertyID: eventProp.ID, ValueSubjectID: wedding.ID},
-			{PropertyID: roleProp.ID, ValueTermID: roleTerm.ID},
-		},
+	bridge, err := writes.Call(c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (connect.Result, []rowchange.Change, error) {
+		return connect.CreateCitedBridge(tx, userID, connect.CreateInput{
+			SourceID: src.ID, FromSubjectID: alice.ID, ToSubjectID: wedding.ID,
+			BridgeTypeKey: "participation",
+			Citation:      citations.CreateInput{ArtifactID: art.ID, LocatorJSON: testLocator},
+			Observations: []observations.Input{
+				{PropertyID: personProp.ID, ValueSubjectID: alice.ID},
+				{PropertyID: eventProp.ID, ValueSubjectID: wedding.ID},
+				{PropertyID: roleProp.ID, ValueTermID: roleTerm.ID},
+			},
+		})
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := evrun.DeleteCitation(c, userID, bridge.Citation.ID); !errors.Is(err, citations.ErrInUse) {
+	if _, err := writes.Call(c, writes.Op{Action: "delete_citation", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+		changes, err := citations.Delete(tx, userID, bridge.Citation.ID)
+		return struct{}{}, changes, err
+	}); !errors.Is(err, citations.ErrInUse) {
 		t.Fatalf("got %v want ErrInUse", err)
 	}
 	if _, err := citations.Get(c, bridge.Citation.ID); err != nil {

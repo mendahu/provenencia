@@ -100,9 +100,11 @@ func TestCreateCitedBridge(t *testing.T) {
 		}
 		create := func(typeID []byte, label string, x, y int64) subjects.Subject {
 			t.Helper()
-			s, err := runCreateSubject(c, userID, subjects.CreateInput{
-				SourceID: src.ID, SubjectTypeID: typeID, Label: label,
-			}, &subjects.Placement{GridX: x, GridY: y})
+			s, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
+				return subjects.Create(tx, userID, subjects.CreateInput{
+					SourceID: src.ID, SubjectTypeID: typeID, Label: label,
+				}, &subjects.Placement{GridX: x, GridY: y})
+			})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -153,20 +155,22 @@ func TestCreateCitedBridge(t *testing.T) {
 
 	t.Run("person event participation", func(t *testing.T) {
 		s := mustSeed(t)
-		res, err := runCreateCitedBridge(s.c, userID, CreateInput{
-			SourceID:      s.source.ID,
-			FromSubjectID: s.person.ID,
-			ToSubjectID:   s.event.ID,
-			BridgeTypeKey: "participation",
-			Citation: citations.CreateInput{
-				ArtifactID:  s.artifact.ID,
-				LocatorJSON: validLocator,
-			},
-			Observations: []observations.Input{
-				{PropertyID: s.personProp.ID, ValueSubjectID: s.person.ID},
-				{PropertyID: s.eventProp.ID, ValueSubjectID: s.event.ID},
-				{PropertyID: s.roleProp.ID, ValueTermID: s.roleTerm.ID},
-			},
+		res, err := writes.Call(s.c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (Result, []rowchange.Change, error) {
+			return CreateCitedBridge(tx, userID, CreateInput{
+				SourceID:      s.source.ID,
+				FromSubjectID: s.person.ID,
+				ToSubjectID:   s.event.ID,
+				BridgeTypeKey: "participation",
+				Citation: citations.CreateInput{
+					ArtifactID:  s.artifact.ID,
+					LocatorJSON: validLocator,
+				},
+				Observations: []observations.Input{
+					{PropertyID: s.personProp.ID, ValueSubjectID: s.person.ID},
+					{PropertyID: s.eventProp.ID, ValueSubjectID: s.event.ID},
+					{PropertyID: s.roleProp.ID, ValueTermID: s.roleTerm.ID},
+				},
+			})
 		})
 		if err != nil {
 			t.Fatal(err)
@@ -210,20 +214,22 @@ func TestCreateCitedBridge(t *testing.T) {
 
 	t.Run("person person relationship", func(t *testing.T) {
 		s := mustSeed(t)
-		_, err := runCreateCitedBridge(s.c, userID, CreateInput{
-			SourceID:      s.source.ID,
-			FromSubjectID: s.person.ID,
-			ToSubjectID:   s.personB.ID,
-			BridgeTypeKey: "relationship",
-			Citation: citations.CreateInput{
-				ArtifactID:  s.artifact.ID,
-				LocatorJSON: validLocator,
-			},
-			Observations: []observations.Input{
-				{PropertyID: s.personProp.ID, ValueSubjectID: s.person.ID},
-				{PropertyID: s.related.ID, ValueSubjectID: s.personB.ID},
-				{PropertyID: s.relType.ID, ValueTermID: s.relTerm.ID},
-			},
+		_, err := writes.Call(s.c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (Result, []rowchange.Change, error) {
+			return CreateCitedBridge(tx, userID, CreateInput{
+				SourceID:      s.source.ID,
+				FromSubjectID: s.person.ID,
+				ToSubjectID:   s.personB.ID,
+				BridgeTypeKey: "relationship",
+				Citation: citations.CreateInput{
+					ArtifactID:  s.artifact.ID,
+					LocatorJSON: validLocator,
+				},
+				Observations: []observations.Input{
+					{PropertyID: s.personProp.ID, ValueSubjectID: s.person.ID},
+					{PropertyID: s.related.ID, ValueSubjectID: s.personB.ID},
+					{PropertyID: s.relType.ID, ValueTermID: s.relTerm.ID},
+				},
+			})
 		})
 		if err != nil {
 			t.Fatal(err)
@@ -232,19 +238,21 @@ func TestCreateCitedBridge(t *testing.T) {
 
 	t.Run("event place location", func(t *testing.T) {
 		s := mustSeed(t)
-		_, err := runCreateCitedBridge(s.c, userID, CreateInput{
-			SourceID:      s.source.ID,
-			FromSubjectID: s.event.ID,
-			ToSubjectID:   s.place.ID,
-			BridgeTypeKey: "location",
-			Citation: citations.CreateInput{
-				ArtifactID:  s.artifact.ID,
-				LocatorJSON: validLocator,
-			},
-			Observations: []observations.Input{
-				{PropertyID: s.eventProp.ID, ValueSubjectID: s.event.ID},
-				{PropertyID: s.placeProp.ID, ValueSubjectID: s.place.ID},
-			},
+		_, err := writes.Call(s.c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (Result, []rowchange.Change, error) {
+			return CreateCitedBridge(tx, userID, CreateInput{
+				SourceID:      s.source.ID,
+				FromSubjectID: s.event.ID,
+				ToSubjectID:   s.place.ID,
+				BridgeTypeKey: "location",
+				Citation: citations.CreateInput{
+					ArtifactID:  s.artifact.ID,
+					LocatorJSON: validLocator,
+				},
+				Observations: []observations.Input{
+					{PropertyID: s.eventProp.ID, ValueSubjectID: s.event.ID},
+					{PropertyID: s.placeProp.ID, ValueSubjectID: s.place.ID},
+				},
+			})
 		})
 		if err != nil {
 			t.Fatal(err)
@@ -254,19 +262,21 @@ func TestCreateCitedBridge(t *testing.T) {
 	t.Run("person place refused", func(t *testing.T) {
 		s := mustSeed(t)
 		before := countBridges(t, s.c, "location")
-		_, err := runCreateCitedBridge(s.c, userID, CreateInput{
-			SourceID:      s.source.ID,
-			FromSubjectID: s.person.ID,
-			ToSubjectID:   s.place.ID,
-			BridgeTypeKey: "location",
-			Citation: citations.CreateInput{
-				ArtifactID:  s.artifact.ID,
-				LocatorJSON: validLocator,
-			},
-			Observations: []observations.Input{
-				{PropertyID: s.personProp.ID, ValueSubjectID: s.person.ID},
-				{PropertyID: s.placeProp.ID, ValueSubjectID: s.place.ID},
-			},
+		_, err := writes.Call(s.c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (Result, []rowchange.Change, error) {
+			return CreateCitedBridge(tx, userID, CreateInput{
+				SourceID:      s.source.ID,
+				FromSubjectID: s.person.ID,
+				ToSubjectID:   s.place.ID,
+				BridgeTypeKey: "location",
+				Citation: citations.CreateInput{
+					ArtifactID:  s.artifact.ID,
+					LocatorJSON: validLocator,
+				},
+				Observations: []observations.Input{
+					{PropertyID: s.personProp.ID, ValueSubjectID: s.person.ID},
+					{PropertyID: s.placeProp.ID, ValueSubjectID: s.place.ID},
+				},
+			})
 		})
 		if !errors.Is(err, ErrRefused) {
 			t.Fatalf("got %v want refused", err)
@@ -279,20 +289,22 @@ func TestCreateCitedBridge(t *testing.T) {
 	t.Run("citation failure rolls back subject", func(t *testing.T) {
 		s := mustSeed(t)
 		before := countBridges(t, s.c, "participation")
-		_, err := runCreateCitedBridge(s.c, userID, CreateInput{
-			SourceID:      s.source.ID,
-			FromSubjectID: s.person.ID,
-			ToSubjectID:   s.event.ID,
-			BridgeTypeKey: "participation",
-			Citation: citations.CreateInput{
-				ArtifactID:  s.artifact.ID,
-				LocatorJSON: `{}`,
-			},
-			Observations: []observations.Input{
-				{PropertyID: s.personProp.ID, ValueSubjectID: s.person.ID},
-				{PropertyID: s.eventProp.ID, ValueSubjectID: s.event.ID},
-				{PropertyID: s.roleProp.ID, ValueTermID: s.roleTerm.ID},
-			},
+		_, err := writes.Call(s.c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (Result, []rowchange.Change, error) {
+			return CreateCitedBridge(tx, userID, CreateInput{
+				SourceID:      s.source.ID,
+				FromSubjectID: s.person.ID,
+				ToSubjectID:   s.event.ID,
+				BridgeTypeKey: "participation",
+				Citation: citations.CreateInput{
+					ArtifactID:  s.artifact.ID,
+					LocatorJSON: `{}`,
+				},
+				Observations: []observations.Input{
+					{PropertyID: s.personProp.ID, ValueSubjectID: s.person.ID},
+					{PropertyID: s.eventProp.ID, ValueSubjectID: s.event.ID},
+					{PropertyID: s.roleProp.ID, ValueTermID: s.roleTerm.ID},
+				},
+			})
 		})
 		if !errors.Is(err, locator.ErrInvalid) {
 			t.Fatalf("got %v want locator invalid", err)
@@ -304,20 +316,22 @@ func TestCreateCitedBridge(t *testing.T) {
 
 	t.Run("location extra term invalid", func(t *testing.T) {
 		s := mustSeed(t)
-		_, err := runCreateCitedBridge(s.c, userID, CreateInput{
-			SourceID:      s.source.ID,
-			FromSubjectID: s.event.ID,
-			ToSubjectID:   s.place.ID,
-			BridgeTypeKey: "location",
-			Citation: citations.CreateInput{
-				ArtifactID:  s.artifact.ID,
-				LocatorJSON: validLocator,
-			},
-			Observations: []observations.Input{
-				{PropertyID: s.eventProp.ID, ValueSubjectID: s.event.ID},
-				{PropertyID: s.placeProp.ID, ValueSubjectID: s.place.ID},
-				{PropertyID: s.roleProp.ID, ValueTermID: s.roleTerm.ID},
-			},
+		_, err := writes.Call(s.c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (Result, []rowchange.Change, error) {
+			return CreateCitedBridge(tx, userID, CreateInput{
+				SourceID:      s.source.ID,
+				FromSubjectID: s.event.ID,
+				ToSubjectID:   s.place.ID,
+				BridgeTypeKey: "location",
+				Citation: citations.CreateInput{
+					ArtifactID:  s.artifact.ID,
+					LocatorJSON: validLocator,
+				},
+				Observations: []observations.Input{
+					{PropertyID: s.eventProp.ID, ValueSubjectID: s.event.ID},
+					{PropertyID: s.placeProp.ID, ValueSubjectID: s.place.ID},
+					{PropertyID: s.roleProp.ID, ValueTermID: s.roleTerm.ID},
+				},
+			})
 		})
 		if !errors.Is(err, ErrInvalid) {
 			t.Fatalf("got %v want invalid", err)
@@ -326,23 +340,27 @@ func TestCreateCitedBridge(t *testing.T) {
 
 	t.Run("attach existing citation", func(t *testing.T) {
 		s := mustSeed(t)
-		cited, err := runCreateCitation(s.c, userID, citations.CreateInput{
-			ArtifactID:  s.artifact.ID,
-			LocatorJSON: validLocator,
-		}, nil)
+		cited, err := writes.Call(s.c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
+			return citations.CreateWithObservations(tx, userID, citations.CreateInput{
+				ArtifactID:  s.artifact.ID,
+				LocatorJSON: validLocator,
+			}, nil)
+		})
 		if err != nil {
 			t.Fatal(err)
 		}
-		res, err := runCreateCitedBridge(s.c, userID, CreateInput{
-			SourceID:      s.source.ID,
-			FromSubjectID: s.event.ID,
-			ToSubjectID:   s.place.ID,
-			BridgeTypeKey: "location",
-			CitationID:    cited.Citation.ID,
-			Observations: []observations.Input{
-				{PropertyID: s.eventProp.ID, ValueSubjectID: s.event.ID},
-				{PropertyID: s.placeProp.ID, ValueSubjectID: s.place.ID},
-			},
+		res, err := writes.Call(s.c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (Result, []rowchange.Change, error) {
+			return CreateCitedBridge(tx, userID, CreateInput{
+				SourceID:      s.source.ID,
+				FromSubjectID: s.event.ID,
+				ToSubjectID:   s.place.ID,
+				BridgeTypeKey: "location",
+				CitationID:    cited.Citation.ID,
+				Observations: []observations.Input{
+					{PropertyID: s.eventProp.ID, ValueSubjectID: s.event.ID},
+					{PropertyID: s.placeProp.ID, ValueSubjectID: s.place.ID},
+				},
+			})
 		})
 		if err != nil {
 			t.Fatal(err)
@@ -357,26 +375,30 @@ func TestCreateCitedBridge(t *testing.T) {
 
 	t.Run("attach with citation fields invalid", func(t *testing.T) {
 		s := mustSeed(t)
-		cited, err := runCreateCitation(s.c, userID, citations.CreateInput{
-			ArtifactID:  s.artifact.ID,
-			LocatorJSON: validLocator,
-		}, nil)
+		cited, err := writes.Call(s.c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
+			return citations.CreateWithObservations(tx, userID, citations.CreateInput{
+				ArtifactID:  s.artifact.ID,
+				LocatorJSON: validLocator,
+			}, nil)
+		})
 		if err != nil {
 			t.Fatal(err)
 		}
-		_, err = runCreateCitedBridge(s.c, userID, CreateInput{
-			SourceID:      s.source.ID,
-			FromSubjectID: s.event.ID,
-			ToSubjectID:   s.place.ID,
-			BridgeTypeKey: "location",
-			CitationID:    cited.Citation.ID,
-			Citation: citations.CreateInput{
-				Transcription: "nope",
-			},
-			Observations: []observations.Input{
-				{PropertyID: s.eventProp.ID, ValueSubjectID: s.event.ID},
-				{PropertyID: s.placeProp.ID, ValueSubjectID: s.place.ID},
-			},
+		_, err = writes.Call(s.c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (Result, []rowchange.Change, error) {
+			return CreateCitedBridge(tx, userID, CreateInput{
+				SourceID:      s.source.ID,
+				FromSubjectID: s.event.ID,
+				ToSubjectID:   s.place.ID,
+				BridgeTypeKey: "location",
+				CitationID:    cited.Citation.ID,
+				Citation: citations.CreateInput{
+					Transcription: "nope",
+				},
+				Observations: []observations.Input{
+					{PropertyID: s.eventProp.ID, ValueSubjectID: s.event.ID},
+					{PropertyID: s.placeProp.ID, ValueSubjectID: s.place.ID},
+				},
+			})
 		})
 		if !errors.Is(err, ErrInvalid) {
 			t.Fatalf("got %v want invalid", err)
@@ -385,22 +407,27 @@ func TestCreateCitedBridge(t *testing.T) {
 
 	t.Run("missing position invalid", func(t *testing.T) {
 		s := mustSeed(t)
-		if err := runClearPosition(s.c, s.place.ID); err != nil {
+		if _, err := writes.Call(s.c, writes.Op{}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+			changes, err := subjectpositions.Clear(tx, s.place.ID)
+			return struct{}{}, changes, err
+		}); err != nil {
 			t.Fatal(err)
 		}
-		_, err := runCreateCitedBridge(s.c, userID, CreateInput{
-			SourceID:      s.source.ID,
-			FromSubjectID: s.event.ID,
-			ToSubjectID:   s.place.ID,
-			BridgeTypeKey: "location",
-			Citation: citations.CreateInput{
-				ArtifactID:  s.artifact.ID,
-				LocatorJSON: validLocator,
-			},
-			Observations: []observations.Input{
-				{PropertyID: s.eventProp.ID, ValueSubjectID: s.event.ID},
-				{PropertyID: s.placeProp.ID, ValueSubjectID: s.place.ID},
-			},
+		_, err := writes.Call(s.c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (Result, []rowchange.Change, error) {
+			return CreateCitedBridge(tx, userID, CreateInput{
+				SourceID:      s.source.ID,
+				FromSubjectID: s.event.ID,
+				ToSubjectID:   s.place.ID,
+				BridgeTypeKey: "location",
+				Citation: citations.CreateInput{
+					ArtifactID:  s.artifact.ID,
+					LocatorJSON: validLocator,
+				},
+				Observations: []observations.Input{
+					{PropertyID: s.eventProp.ID, ValueSubjectID: s.event.ID},
+					{PropertyID: s.placeProp.ID, ValueSubjectID: s.place.ID},
+				},
+			})
 		})
 		if !errors.Is(err, ErrInvalid) {
 			t.Fatalf("got %v want invalid", err)

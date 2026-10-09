@@ -8,8 +8,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mendahu/provenencia/core/database/rowchange"
-
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/audit"
@@ -18,13 +16,13 @@ import (
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/connect"
 	"github.com/mendahu/provenencia/core/database/datevalues"
-	"github.com/mendahu/provenencia/core/database/evrun"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/project"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjects"
@@ -121,9 +119,11 @@ func (w *bridgeWorld) node(kind, label string, x, y int64) subjects.Subject {
 	if err != nil {
 		w.t.Fatal(err)
 	}
-	s, err := evrun.CreateSubject(w.c, userID, subjects.CreateInput{
-		SourceID: w.source.ID, SubjectTypeID: st.ID, Label: label,
-	}, &subjects.Placement{GridX: x, GridY: y})
+	s, err := writes.Call(w.c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
+		return subjects.Create(tx, userID, subjects.CreateInput{
+			SourceID: w.source.ID, SubjectTypeID: st.ID, Label: label,
+		}, &subjects.Placement{GridX: x, GridY: y})
+	})
 	if err != nil {
 		w.t.Fatal(err)
 	}
@@ -170,10 +170,12 @@ func (w *bridgeWorld) placeRelationship(from, to subjects.Subject, kind property
 
 func (w *bridgeWorld) bridge(kind string, from, to subjects.Subject, obs []observations.Input) connect.Result {
 	w.t.Helper()
-	res, err := evrun.CreateBridge(w.c, userID, connect.CreateInput{
-		SourceID: w.source.ID, FromSubjectID: from.ID, ToSubjectID: to.ID, BridgeTypeKey: kind,
-		Citation:     citations.CreateInput{ArtifactID: w.artifact.ID, LocatorJSON: bridgeLocator},
-		Observations: obs,
+	res, err := writes.Call(w.c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (connect.Result, []rowchange.Change, error) {
+		return connect.CreateCitedBridge(tx, userID, connect.CreateInput{
+			SourceID: w.source.ID, FromSubjectID: from.ID, ToSubjectID: to.ID, BridgeTypeKey: kind,
+			Citation:     citations.CreateInput{ArtifactID: w.artifact.ID, LocatorJSON: bridgeLocator},
+			Observations: obs,
+		})
 	})
 	if err != nil {
 		w.t.Fatal(err)
@@ -473,13 +475,15 @@ func TestBridgeFiling(t *testing.T) {
 		year := 1791
 		startProp := w.prop("start_date")
 		endProp := w.prop("end_date")
-		if _, err := evrun.AddObservations(w.c, userID, link.Citation.ID, []observations.Input{
-			{SubjectID: link.Subject.ID, PropertyID: startProp.ID, Date: &datevalues.Value{
-				Kind: datevalues.KindPoint, StartYear: &year,
-			}},
-			{SubjectID: link.Subject.ID, PropertyID: endProp.ID, Date: &datevalues.Value{
-				Kind: datevalues.KindPoint, StartYear: &year,
-			}},
+		if _, err := writes.Call(w.c, writes.Op{Action: "add_observations", UserID: userID}, func(tx *database.Tx) ([]observations.Observation, []rowchange.Change, error) {
+			return observations.AddToCitation(tx, userID, link.Citation.ID, []observations.Input{
+				{SubjectID: link.Subject.ID, PropertyID: startProp.ID, Date: &datevalues.Value{
+					Kind: datevalues.KindPoint, StartYear: &year,
+				}},
+				{SubjectID: link.Subject.ID, PropertyID: endProp.ID, Date: &datevalues.Value{
+					Kind: datevalues.KindPoint, StartYear: &year,
+				}},
+			})
 		}); err != nil {
 			t.Fatal(err)
 		}
@@ -586,7 +590,10 @@ func TestBridgeSubjectDeleteReleasesPins(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := evrun.DeleteSubject(w.c, userID, bridge.Subject.ID); err != nil {
+	if _, err := writes.Call(w.c, writes.Op{Action: "delete_subject", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+		changes, err := subjects.Delete(tx, userID, bridge.Subject.ID)
+		return struct{}{}, changes, err
+	}); err != nil {
 		t.Fatal(err)
 	}
 	var n int

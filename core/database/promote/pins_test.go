@@ -9,7 +9,6 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/citations"
-	"github.com/mendahu/provenencia/core/database/evrun"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/database/observations"
@@ -82,7 +81,9 @@ func (f *pinFixture) must(err error) {
 // prop, all on one Citation.
 func (f *pinFixture) record(st subjecttypes.Type, prop properties.Property, values ...string) (subjects.Subject, []observations.Observation) {
 	f.t.Helper()
-	s, err := evrun.CreateSubject(f.c, userID, subjects.CreateInput{SourceID: f.artifact.SourceID, SubjectTypeID: st.ID}, nil)
+	s, err := writes.Call(f.c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
+		return subjects.Create(tx, userID, subjects.CreateInput{SourceID: f.artifact.SourceID, SubjectTypeID: st.ID}, nil)
+	})
 	f.must(err)
 	var in []observations.Input
 	for _, v := range values {
@@ -94,7 +95,9 @@ func (f *pinFixture) record(st subjecttypes.Type, prop properties.Property, valu
 			in = append(in, observations.Input{SubjectID: s.ID, PropertyID: prop.ID, ValueText: v, HasText: true})
 		}
 	}
-	res, err := evrun.CreateCitation(f.c, userID, citations.CreateInput{ArtifactID: f.artifact.ID, LocatorJSON: pinLocator}, in)
+	res, err := writes.Call(f.c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
+		return citations.CreateWithObservations(tx, userID, citations.CreateInput{ArtifactID: f.artifact.ID, LocatorJSON: pinLocator}, in)
+	})
 	f.must(err)
 	return s, res.Observations
 }
@@ -276,7 +279,13 @@ func TestSavePins(t *testing.T) {
 			{IncomingObservationID: bObs[0].ID, MemberObservationID: aObs[1].ID},
 		}})
 		f.must(err)
-		f.must(evrun.DeleteObservation(f.c, userID, aObs[0].ID))
+		{
+			_, err := writes.Call(f.c, writes.Op{Action: "delete_observation", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+				changes, err := observations.Delete(tx, userID, aObs[0].ID)
+				return struct{}{}, changes, err
+			})
+			f.must(err)
+		}
 		for _, claimID := range [][]byte{res.Claim.ID, first.Claim.ID} {
 			if got, want := f.pinned(claimID), idsOf(aObs[1], bObs[0]); got != want {
 				t.Fatalf("pins after delete differ")

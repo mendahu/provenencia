@@ -15,7 +15,6 @@ import (
 	"github.com/mendahu/provenencia/core/database/autoreconciler"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/deleteimpact"
-	"github.com/mendahu/provenencia/core/database/evrun"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
@@ -66,18 +65,22 @@ func newPinnedHandle(t *testing.T) pinnedHandle {
 	must(err)
 	mk := func(label string) subjects.Subject {
 		t.Helper()
-		s, err := evrun.CreateSubject(c, userID, subjects.CreateInput{SourceID: src.ID, SubjectTypeID: place.ID, Label: label}, nil)
+		s, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
+			return subjects.Create(tx, userID, subjects.CreateInput{SourceID: src.ID, SubjectTypeID: place.ID, Label: label}, nil)
+		})
 		must(err)
 		return s
 	}
 	a, b := mk("York"), mk("York (U.C.)")
-	res, err := evrun.CreateCitation(c, userID, citations.CreateInput{
-		ArtifactID: art.ID, LocatorJSON: testLocator, Transcription: "York, otherwise Toronto",
-	}, []observations.Input{
-		{SubjectID: a.ID, PropertyID: toponym.ID, ValueText: "York", HasText: true},
-		{SubjectID: a.ID, PropertyID: toponym.ID, ValueText: "Toronto", HasText: true},
-		{SubjectID: b.ID, PropertyID: toponym.ID, ValueText: "York", HasText: true},
-		{SubjectID: b.ID, PropertyID: toponym.ID, ValueText: "Toronto", HasText: true},
+	res, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
+		return citations.CreateWithObservations(tx, userID, citations.CreateInput{
+			ArtifactID: art.ID, LocatorJSON: testLocator, Transcription: "York, otherwise Toronto",
+		}, []observations.Input{
+			{SubjectID: a.ID, PropertyID: toponym.ID, ValueText: "York", HasText: true},
+			{SubjectID: a.ID, PropertyID: toponym.ID, ValueText: "Toronto", HasText: true},
+			{SubjectID: b.ID, PropertyID: toponym.ID, ValueText: "York", HasText: true},
+			{SubjectID: b.ID, PropertyID: toponym.ID, ValueText: "Toronto", HasText: true},
+		})
 	})
 	must(err)
 	o := res.Observations
@@ -239,7 +242,10 @@ func TestPinnedObservationDeleteEndToEnd(t *testing.T) {
 	}
 
 	// The delete: both claims lose that Observation and keep every other pin.
-	if err := evrun.DeleteObservation(h.c, h.userID, h.aName); err != nil {
+	if _, err := writes.Call(h.c, writes.Op{Action: "delete_observation", UserID: h.userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+		changes, err := observations.Delete(tx, h.userID, h.aName)
+		return struct{}{}, changes, err
+	}); err != nil {
 		t.Fatal(err)
 	}
 	action, types := lastRevision(t, h.c)
@@ -280,7 +286,10 @@ func TestPinnedMemberDeleteEndToEnd(t *testing.T) {
 		if !report.Allowed || len(report.Cascades) != 1 || report.Cascades[0].Listed[0].Ref != h.entityRef {
 			t.Fatalf("%+v", report)
 		}
-		if err := evrun.DeleteObservation(h.c, h.userID, id); err != nil {
+		if _, err := writes.Call(h.c, writes.Op{Action: "delete_observation", UserID: h.userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+			changes, err := observations.Delete(tx, h.userID, id)
+			return struct{}{}, changes, err
+		}); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -295,7 +304,10 @@ func TestPinnedMemberDeleteEndToEnd(t *testing.T) {
 		t.Fatalf("%+v", report)
 	}
 	assertLeaves(t, report, h.entityRef)
-	if err := evrun.DeleteSubject(h.c, h.userID, h.b.ID); err != nil {
+	if _, err := writes.Call(h.c, writes.Op{Action: "delete_subject", UserID: h.userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+		changes, err := subjects.Delete(tx, h.userID, h.b.ID)
+		return struct{}{}, changes, err
+	}); err != nil {
 		t.Fatal(err)
 	}
 	if got := h.pinned(t, h.cb); got != "" {

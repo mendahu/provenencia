@@ -13,7 +13,6 @@ import (
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/conclusionheaders"
 	"github.com/mendahu/provenencia/core/database/datevalues"
-	"github.com/mendahu/provenencia/core/database/evrun"
 	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/database/namevalues/namevaluestest"
 	"github.com/mendahu/provenencia/core/database/observations"
@@ -57,13 +56,15 @@ func namedPerson(t *testing.T) (dir, handleRef string) {
 		if err != nil {
 			return err
 		}
-		_, err = evrun.CreateCitation(c, userID[:], citations.CreateInput{
-			ArtifactID: art.ID, LocatorJSON: `{"version":1,"selectors":[{"type":"page","artifact_page":1}]}`,
-		}, []observations.Input{
-			{SubjectID: subjectID[:], PropertyID: name.ID, Name: &namevalues.Value{Form: "James Robins", Parts: []namevalues.Part{
-				{Idx: 0, Value: "James", Type: namevalues.PartTypeGiven}, {Idx: 1, Value: "Robins", Type: namevalues.PartTypeSurname},
-			}}},
-			{SubjectID: subjectID[:], PropertyID: name.ID, Name: namevaluestest.Western("Jim Robins")},
+		_, err = writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID[:]}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
+			return citations.CreateWithObservations(tx, userID[:], citations.CreateInput{
+				ArtifactID: art.ID, LocatorJSON: `{"version":1,"selectors":[{"type":"page","artifact_page":1}]}`,
+			}, []observations.Input{
+				{SubjectID: subjectID[:], PropertyID: name.ID, Name: &namevalues.Value{Form: "James Robins", Parts: []namevalues.Part{
+					{Idx: 0, Value: "James", Type: namevalues.PartTypeGiven}, {Idx: 1, Value: "Robins", Type: namevalues.PartTypeSurname},
+				}}},
+				{SubjectID: subjectID[:], PropertyID: name.ID, Name: namevaluestest.Western("Jim Robins")},
+			})
 		})
 		return err
 	}); err != nil {
@@ -196,7 +197,9 @@ func citedEvent(t *testing.T) (dir, entityID string) {
 		if err != nil {
 			return err
 		}
-		s, err := evrun.CreateSubject(c, userID[:], subjects.CreateInput{SourceID: source[:], SubjectTypeID: st.ID}, nil)
+		s, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID[:]}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
+			return subjects.Create(tx, userID[:], subjects.CreateInput{SourceID: source[:], SubjectTypeID: st.ID}, nil)
+		})
 		if err != nil {
 			return err
 		}
@@ -222,12 +225,14 @@ func citedEvent(t *testing.T) (dir, entityID string) {
 			return err
 		}
 		year := 1849
-		_, err = evrun.CreateCitation(c, userID[:], citations.CreateInput{
-			ArtifactID: art.ID, LocatorJSON: `{"version":1,"selectors":[{"type":"page","artifact_page":1}]}`,
-		}, []observations.Input{
-			{SubjectID: s.ID, PropertyID: name.ID, ValueText: "The Great Fire", HasText: true},
-			{SubjectID: s.ID, PropertyID: eventType.ID, ValueTermID: term.ID},
-			{SubjectID: s.ID, PropertyID: dateProp.ID, Date: &datevalues.Value{Kind: datevalues.KindPoint, Calendar: "gregorian", StartYear: &year}},
+		_, err = writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID[:]}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
+			return citations.CreateWithObservations(tx, userID[:], citations.CreateInput{
+				ArtifactID: art.ID, LocatorJSON: `{"version":1,"selectors":[{"type":"page","artifact_page":1}]}`,
+			}, []observations.Input{
+				{SubjectID: s.ID, PropertyID: name.ID, ValueText: "The Great Fire", HasText: true},
+				{SubjectID: s.ID, PropertyID: eventType.ID, ValueTermID: term.ID},
+				{SubjectID: s.ID, PropertyID: dateProp.ID, Date: &datevalues.Value{Kind: datevalues.KindPoint, Calendar: "gregorian", StartYear: &year}},
+			})
 		})
 		if err != nil {
 			return err
@@ -295,7 +300,9 @@ func citedPlace(t *testing.T) (dir, entityID string) {
 		if err != nil {
 			return err
 		}
-		s, err := evrun.CreateSubject(c, userID[:], subjects.CreateInput{SourceID: source[:], SubjectTypeID: st.ID}, nil)
+		s, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID[:]}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
+			return subjects.Create(tx, userID[:], subjects.CreateInput{SourceID: source[:], SubjectTypeID: st.ID}, nil)
+		})
 		if err != nil {
 			return err
 		}
@@ -307,11 +314,13 @@ func citedPlace(t *testing.T) (dir, entityID string) {
 		if err != nil {
 			return err
 		}
-		_, err = evrun.CreateCitation(c, userID[:], citations.CreateInput{
-			ArtifactID: art.ID, LocatorJSON: `{"version":1,"selectors":[{"type":"page","artifact_page":1}]}`,
-		}, []observations.Input{
-			{SubjectID: s.ID, PropertyID: toponym.ID, ValueText: "York", HasText: true},
-			{SubjectID: s.ID, PropertyID: toponym.ID, ValueText: "Toronto", HasText: true},
+		_, err = writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID[:]}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
+			return citations.CreateWithObservations(tx, userID[:], citations.CreateInput{
+				ArtifactID: art.ID, LocatorJSON: `{"version":1,"selectors":[{"type":"page","artifact_page":1}]}`,
+			}, []observations.Input{
+				{SubjectID: s.ID, PropertyID: toponym.ID, ValueText: "York", HasText: true},
+				{SubjectID: s.ID, PropertyID: toponym.ID, ValueText: "Toronto", HasText: true},
+			})
 		})
 		if err != nil {
 			return err

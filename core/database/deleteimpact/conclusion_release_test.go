@@ -5,10 +5,8 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
-
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/citations"
-	"github.com/mendahu/provenencia/core/database/evrun"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
@@ -68,20 +66,24 @@ func newConclusionFixture(t *testing.T) conclusionFixture {
 	}
 	mkSubject := func(label string) subjects.Subject {
 		t.Helper()
-		s, err := evrun.CreateSubject(c, userID, subjects.CreateInput{
-			SourceID: src.ID, SubjectTypeID: place.ID, Label: label,
-		}, nil)
+		s, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
+			return subjects.Create(tx, userID, subjects.CreateInput{
+				SourceID: src.ID, SubjectTypeID: place.ID, Label: label,
+			}, nil)
+		})
 		if err != nil {
 			t.Fatal(err)
 		}
 		return s
 	}
 	a, b := mkSubject("York"), mkSubject("York (U.C.)")
-	res, err := evrun.CreateCitation(c, userID, citations.CreateInput{
-		ArtifactID: art.ID, LocatorJSON: testLocator, Transcription: "York",
-	}, []observations.Input{
-		{SubjectID: a.ID, PropertyID: toponym.ID, ValueText: "York", HasText: true},
-		{SubjectID: b.ID, PropertyID: toponym.ID, ValueText: "York", HasText: true},
+	res, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
+		return citations.CreateWithObservations(tx, userID, citations.CreateInput{
+			ArtifactID: art.ID, LocatorJSON: testLocator, Transcription: "York",
+		}, []observations.Input{
+			{SubjectID: a.ID, PropertyID: toponym.ID, ValueText: "York", HasText: true},
+			{SubjectID: b.ID, PropertyID: toponym.ID, ValueText: "York", HasText: true},
+		})
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -114,7 +116,10 @@ func TestSubjectDeleteReleasesOwnClaimPins(t *testing.T) {
 	}
 
 	// B's own Observation blocks deleting B, so it goes first, taking its pins off both claims.
-	if err := evrun.DeleteObservation(c, userID, obsB); err != nil {
+	if _, err := writes.Call(c, writes.Op{Action: "delete_observation", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+		changes, err := observations.Delete(tx, userID, obsB)
+		return struct{}{}, changes, err
+	}); err != nil {
 		t.Fatal(err)
 	}
 	if pins(ca, obsB)+pins(cb, obsB) != 0 {
@@ -125,7 +130,10 @@ func TestSubjectDeleteReleasesOwnClaimPins(t *testing.T) {
 	if pins(cb, obsA) != 1 {
 		t.Fatal("setup: CB should still pin obsA")
 	}
-	if err := evrun.DeleteSubject(c, userID, b.ID); err != nil {
+	if _, err := writes.Call(c, writes.Op{Action: "delete_subject", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+		changes, err := subjects.Delete(tx, userID, b.ID)
+		return struct{}{}, changes, err
+	}); err != nil {
 		t.Fatal(err)
 	}
 	action, types := lastRevision(t, c)

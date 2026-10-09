@@ -6,13 +6,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mendahu/provenencia/core/database/catalogmodel"
-
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
+	"github.com/mendahu/provenencia/core/database/catalogmodel"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/deleteimpact"
-	"github.com/mendahu/provenencia/core/database/evrun"
 	"github.com/mendahu/provenencia/core/database/metadatafields"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sourcecredibility"
@@ -127,13 +125,18 @@ func TestFacetReleaseAuditsSourceSide(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		res, err := evrun.CreateCitation(c, userID, citations.CreateInput{
-			ArtifactID: art.ID, LocatorJSON: testLocator, Notes: []string{"Faded ink", "Second hand"},
-		}, nil)
+		res, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
+			return citations.CreateWithObservations(tx, userID, citations.CreateInput{
+				ArtifactID: art.ID, LocatorJSON: testLocator, Notes: []string{"Faded ink", "Second hand"},
+			}, nil)
+		})
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err := evrun.DeleteCitation(c, userID, res.Citation.ID); err != nil {
+		if _, err := writes.Call(c, writes.Op{Action: "delete_citation", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+			changes, err := citations.Delete(tx, userID, res.Citation.ID)
+			return struct{}{}, changes, err
+		}); err != nil {
 			t.Fatal(err)
 		}
 		action, types := lastRevision(t, c)

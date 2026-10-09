@@ -98,11 +98,13 @@ func TestSubjects(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				_, err = runCreate(c, nil, CreateInput{
-					SourceID:      src.ID,
-					SubjectTypeID: person.ID,
-					Label:         "Alice",
-				}, nil)
+				_, err = writes.Call(c, writes.Op{Action: "create_subject", UserID: nil}, func(tx *database.Tx) (Subject, []rowchange.Change, error) {
+					return Create(tx, nil, CreateInput{
+						SourceID:      src.ID,
+						SubjectTypeID: person.ID,
+						Label:         "Alice",
+					}, nil)
+				})
 				if !errors.Is(err, ErrInvalid) {
 					t.Fatalf("got %v want ErrInvalid", err)
 				}
@@ -118,11 +120,13 @@ func TestSubjects(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				s, err := runCreate(c, userID, CreateInput{
-					SourceID:      src.ID,
-					SubjectTypeID: person.ID,
-					Label:         "Alice",
-				}, nil)
+				s, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (Subject, []rowchange.Change, error) {
+					return Create(tx, userID, CreateInput{
+						SourceID:      src.ID,
+						SubjectTypeID: person.ID,
+						Label:         "Alice",
+					}, nil)
+				})
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -181,11 +185,13 @@ func TestSubjects(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				s, err := runCreate(c, userID, CreateInput{
-					SourceID:      src.ID,
-					SubjectTypeID: person.ID,
-					Label:         "Placed",
-				}, &Placement{GridX: -2, GridY: 5})
+				s, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (Subject, []rowchange.Change, error) {
+					return Create(tx, userID, CreateInput{
+						SourceID:      src.ID,
+						SubjectTypeID: person.ID,
+						Label:         "Placed",
+					}, &Placement{GridX: -2, GridY: 5})
+				})
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -208,10 +214,12 @@ func TestSubjects(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				s, err := runCreate(c, userID, CreateInput{
-					SourceID:      src.ID,
-					SubjectTypeID: event.ID,
-				}, nil)
+				s, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (Subject, []rowchange.Change, error) {
+					return Create(tx, userID, CreateInput{
+						SourceID:      src.ID,
+						SubjectTypeID: event.ID,
+					}, nil)
+				})
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -230,13 +238,18 @@ func TestSubjects(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				s, err := runCreate(c, userID, CreateInput{
-					SourceID: src.ID, SubjectTypeID: person.ID, Label: "Alice",
-				}, nil)
+				s, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (Subject, []rowchange.Change, error) {
+					return Create(tx, userID, CreateInput{
+						SourceID: src.ID, SubjectTypeID: person.ID, Label: "Alice",
+					}, nil)
+				})
 				if err != nil {
 					t.Fatal(err)
 				}
-				if err := runUpdate(c, userID, s.ID, "Alicia", ""); err != nil {
+				if _, err := writes.Call(c, writes.Op{Action: "update_subject", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+					changes, err := Update(tx, userID, s.ID, "Alicia", "")
+					return struct{}{}, changes, err
+				}); err != nil {
 					t.Fatal(err)
 				}
 				if latestAction(t, c) != "update_subject" {
@@ -249,7 +262,10 @@ func TestSubjects(t *testing.T) {
 				if got.Label != "Alicia" || string(got.SubjectTypeID) != string(person.ID) {
 					t.Fatalf("%+v", got)
 				}
-				if err := runUpdate(c, userID, s.ID, "Alicia", ""); err != nil {
+				if _, err := writes.Call(c, writes.Op{Action: "update_subject", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+					changes, err := Update(tx, userID, s.ID, "Alicia", "")
+					return struct{}{}, changes, err
+				}); err != nil {
 					t.Fatal(err)
 				}
 			},
@@ -264,9 +280,11 @@ func TestSubjects(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				s, err := runCreate(c, userID, CreateInput{
-					SourceID: src.ID, SubjectTypeID: person.ID, Label: "Bob",
-				}, nil)
+				s, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (Subject, []rowchange.Change, error) {
+					return Create(tx, userID, CreateInput{
+						SourceID: src.ID, SubjectTypeID: person.ID, Label: "Bob",
+					}, nil)
+				})
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -280,7 +298,10 @@ func TestSubjects(t *testing.T) {
 				); err != nil {
 					t.Fatal(err)
 				}
-				if err := runDelete(c, userID, s.ID); err != nil {
+				if _, err := writes.Call(c, writes.Op{Action: "delete_subject", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+					changes, err := Delete(tx, userID, s.ID)
+					return struct{}{}, changes, err
+				}); err != nil {
 					t.Fatal(err)
 				}
 				if latestAction(t, c) != "delete_subject" {
@@ -323,10 +344,14 @@ func TestSubjects(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				if _, err := runCreate(c, userID, CreateInput{SourceID: srcA.ID, SubjectTypeID: person.ID, Label: "A"}, nil); err != nil {
+				if _, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (Subject, []rowchange.Change, error) {
+					return Create(tx, userID, CreateInput{SourceID: srcA.ID, SubjectTypeID: person.ID, Label: "A"}, nil)
+				}); err != nil {
 					t.Fatal(err)
 				}
-				if _, err := runCreate(c, userID, CreateInput{SourceID: srcB.ID, SubjectTypeID: person.ID, Label: "B"}, nil); err != nil {
+				if _, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (Subject, []rowchange.Change, error) {
+					return Create(tx, userID, CreateInput{SourceID: srcB.ID, SubjectTypeID: person.ID, Label: "B"}, nil)
+				}); err != nil {
 					t.Fatal(err)
 				}
 				list, err := ListBySource(c, srcA.ID)
@@ -338,7 +363,9 @@ func TestSubjects(t *testing.T) {
 		{
 			name: "reject invalid ids",
 			run: func(t *testing.T, c *database.Catalog) {
-				if _, err := runCreate(c, userID, CreateInput{}, nil); !errors.Is(err, ErrInvalid) {
+				if _, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (Subject, []rowchange.Change, error) {
+					return Create(tx, userID, CreateInput{}, nil)
+				}); !errors.Is(err, ErrInvalid) {
 					t.Fatalf("got %v", err)
 				}
 				if _, err := Get(c, []byte{1}); !errors.Is(err, ErrInvalid) {
