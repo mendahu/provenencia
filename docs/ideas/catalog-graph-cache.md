@@ -1,4 +1,4 @@
-# A catalog graph in memory, and one write path
+# One write path and a catalog graph in memory
 
 **Status:** idea, 2026-10-09. Direction agreed in review of the Promote cost fix (mendahu/provenencia#327, to be redone on this). Not scheduled.
 
@@ -25,7 +25,7 @@ Two tiers of the same data:
 - **Persistent tier:** ARV, as today. Survives restarts; SQL and the search index read it.
 - **Memory tier:** a graph of nodes held on the open catalog session, built from ARV (plus a few small lookups), shaped for walking: each node holds its values and its adjacency, and points at its neighbors.
 
-Every write goes through one orchestrator (`writes.Run`) that owns the transaction and its three duties: write the data, record audit, bring derived data up to date. An effects registry says what each kind of change touches. ARV is rewritten inside the transaction as today; the memory tier is told after commit.
+Every write goes through one orchestrator (`writes.Run`) that owns the transaction and its three duties: write the data, record audit, bring derived data up to date. An effects registry, built on the same declared schema `deleteimpact` uses, says what each kind of change touches. ARV is rewritten inside the transaction as today; the memory tier is told after commit.
 
 Two stores live in the memory tier:
 
@@ -121,7 +121,7 @@ The split:
 
 - **Write functions** write their rows and return what they changed, as `[]audit.Change`. No transaction handling, no audit call, no recompute.
 - **The orchestrator** (`writes.Run`) owns the transaction and the order of the duties.
-- **The effects registry** says, per entity type, what a change to it touches.
+- **The effects registry** says, per table, what a change to one of its rows touches. It's built on a declared schema model shared with `deleteimpact` and audit.
 
 The frontend doesn't change. It already names the operation it wants (`UpdateObservation`, `DeleteSubject`, …). It does not also declare what it's updating: that would be a second description of the write that could disagree with what the write did, which is what the Swift `CatalogMutation` map is today. What changed comes from the write function's own changes, with old and new values, the same data audit already records.
 
@@ -191,56 +191,128 @@ Derived data is brought up to date once, after the write function returns and be
 
 Write functions don't read derived data back. A write returns what it changed and the revision. If the app needs the new state, it reads it with a separate call, which the memory tier serves fresh because it was updated at commit. Writes and reads stay separate calls.
 
+### One schema model under every registry
+
+Three registries in the codebase answer questions about the same graph of tables:
+
+- **`deleteimpact/register.go`** declares every table (kind and bucket: resource, vocabulary, facet, owned, skip) and every foreign key (with its `ON DELETE`). An honesty test compares it against `PRAGMA foreign_key_list`, so it can't drift from the real schema.
+- **`audit/scopes.go`** resolves a change to its Source by hand-written walks up those same foreign keys: observation → citation → artifact → source; a note → its citation → …; a subject or artifact directly by `source_id`.
+- **The auto-reconciler's handle lookups** (`sqlHandlesForCitation`, `sqlHandlesForProperty`, `HandlesObservingSubject`, …) are hand-written walks too: observation → subject → `identity_claims` → handle, or inbound on `observations.value_subject_id` for "who points at John".
+
+Only the first is declared and checked against the schema. The other two are SQL strings that happen to follow its edges.
+
+So the table and foreign-key declarations move out of `deleteimpact` into a small `schema` package, with the PRAGMA honesty test. `deleteimpact` keeps its own logic (probes, refusals, releases) and reads the model from `schema`. The effects registry is built on the same model.
+
+```go
+// package schema: the declared catalog schema, checked against SQLite.
+
+type Table struct {
+	Name   string
+	PK     string
+	Kind   Kind
+	Bucket Bucket // resource, vocab, facet, owned, pool, infra, skip
+}
+
+type FK struct {
+	From, Column string // observations.citation_id
+	To           string // citations
+	OnDelete     string
+	Bucket       Bucket
+	Audited      bool // a cascade that official deletes release and audit first
+}
+
+var Tables []Table
+var FKs []FK
+```
+
 ### The effects registry
 
-Audit already has half of this: `audit/scopes.go` maps every audited entity type to the Sources a change belongs to, and `Record` rejects a type without a resolver. The effects registry extends each entry with the handles it touches and whether it's vocabulary, so one table keyed by entity type answers every "what does this affect" question. A new audited table has to decide all of its effects in one place.
+One entry per table, saying what a change to one of its rows touches:
+
+- **Source:** the Sources it belongs to (today's audit scopes).
+- **Handles:** the handles whose ARV rows must be rewritten.
+- **Vocabulary:** whether the label map drops.
+- **Unaudited:** no audit row and no effects; `Run` still owns the transaction.
+
+Where an effect follows the schema, it's written as a path over declared foreign keys. A path can only name edges the model has, so a renamed or missing column fails at startup, not in a user's catalog. Paths are a handful of combinators, not a query language:
 
 ```go
 // package effects
 
-type Effect struct {
-	Source     sourceResolver // today's audit scope resolver, moved here
-	Handles    handleResolver // handles whose ARV rows must be rewritten
-	Vocabulary bool           // drop the label map
-	Unaudited  bool           // no audit row; Run still owns the transaction
-}
-
-var registry = map[string]Effect{
-	"observation": {
-		Source:  viaCitation,
-		Handles: membersOf("subject_id"), // old and new subject_id from the change's fields
-	},
-	"citation": {
-		Source:  viaArtifact,
-		Handles: onField("certainty", handlesUnderCitation),
-	},
-	"source_credibility_assessment": {Source: direct, Handles: handlesInSource},
-	"identity_claim":          {Handles: claimEntityAndObservers},
-	"identity_claim_evidence": {Handles: claimEntity}, // released pins
-	"property":                {Vocabulary: true, Handles: onField("cardinality", handlesObservingProperty)},
-	"property_term":           {Vocabulary: true},
-	"subject_position":        {Unaudited: true}, // layout only
-	// … every audited type
-}
+up("citation_id", "artifact_id", "source_id")        // follow FKs toward the parent
+across("identity_claims", "subject_id", "entity_id") // a join table, one side to the other
+inbound("observations", "value_subject_id")          // rows that point at this one
+sql(`SELECT …`)                                      // anything a path can't say
 ```
 
-For an unaudited type, `Run` skips `audit.Record` and resolves no effects. It still owns the transaction, so every write goes through the same path: subject positions, type–property bindings and onboarding seeds included.
+Every path reads the change's fields, old and new. An update that moves an Observation from Subject A to B resolves both. A delete resolves from the old fields, because the row is already gone (audit's scope resolvers do this today with `ghostMap`).
 
-Header dependents aren't a registry concern. `RecomputeTx` already computes them from the handles it rewrites (`conclusionheaders.HeaderDependents`), and returns them for the memory tier.
+```go
+var registry = map[string]Effect{
+	"source":      {Source: self()},
+	"source_note": {Source: up("source_id")},
+	"citation": {
+		Source:  up("artifact_id", "source_id"),
+		Handles: onField("certainty", sql(handlesUnderCitation)),
+	},
+	"observation": {
+		Source:  up("citation_id", "artifact_id", "source_id"),
+		Handles: from("subject_id", membersOf), // old and new subject_id
+	},
+	"identity_claim": {
+		Handles: union(
+			field("entity_id"),
+			onStatus("accepted", from("subject_id", observers)), // handles whose members point at the Subject
+		),
+	},
+	"identity_claim_evidence": {Handles: up("identity_claim_id", "entity_id")}, // released pins
+	"source_credibility_assessment": {Source: up("source_id"), Handles: from("source_id", sql(handlesInSource))},
+	"property":         {Vocabulary: true, Handles: onField("cardinality", sql(handlesObservingProperty))},
+	"property_term":    {Vocabulary: true},
+	"subject_position": {Unaudited: true}, // layout only
+	// … every table outside the skip bucket
+}
 
-### Effects the changed rows don't name
+// membersOf: subject → its accepted and provisional handles.
+var membersOf = across("identity_claims", "subject_id", "entity_id")
+
+// observers: Subjects whose Observations have this Subject as their value,
+// then their handles.
+var observers = chain(inbound("observations", "value_subject_id"), field("subject_id"), membersOf)
+```
+
+Two kinds of effect stay hand-written, because they're about meaning, not the schema:
+
+- **Effects tied to one field.** A citation touches handles only when `certainty` changes; a property only on `cardinality` (`onField`).
+- **Status-dependent effects.** Only an accepted claim moves where subject-valued Observations resolve (`onStatus`).
+
+Header dependents aren't a registry concern either. They follow the canonical graph (a place → its events → their persons), not foreign keys, and `RecomputeTx` already computes them from the handles it rewrites (`conclusionheaders.HeaderDependents`).
+
+### Completeness, checked against the schema
+
+Audit today fails at runtime when an entity type has no resolver. With the shared model, completeness becomes tests:
+
+- Every table outside the skip bucket has an effect entry, possibly an explicit "none".
+- Every path names declared foreign keys.
+- Every `ON DELETE CASCADE` into a table whose rows have effects is `Audited`.
+
+A migration that adds a table without deciding its effects fails a test before any code runs.
+
+### Effects the changed rows don't name, and deletes
 
 Most effects come straight from a change's fields: an Observation change names its `subject_id`, so the handles that Subject belongs to are rewritten.
 
-Some don't. A Subject can be the *value* of other Subjects' Observations. A participation says "person: John"; a relationship says "related to: John". ARV stores those values resolved to John's handle. So when John's membership changes (promote, claim accepted, John deleted), every handle with a member whose Observation points at John must be rewritten too, because its value now resolves somewhere else. None of those handles appear in the changed rows. The rows name John and his own handle. This is `RecomputeTouchingTx` / `HandlesObservingSubject` today.
+Some don't. A Subject can be the *value* of other Subjects' Observations. A participation says "person: John"; a relationship says "related to: John". ARV stores those values resolved to John's handle. So when John's membership changes (promote, claim accepted, John deleted), every handle with a member whose Observation points at John must be rewritten too, because its value now resolves somewhere else. None of those handles appear in the changed rows: the rows name John and his own handle. That's the `observers` path above (`RecomputeTouchingTx` / `HandlesObservingSubject` today).
 
-The registry entry for `identity_claim` expresses it as a lookup: "Observations whose value is this Subject → their Subjects → those Subjects' handles". That's an ordinary SQL resolver, like the scope resolvers.
+Deletes are the case to get right. Effects are resolved after the write, so a resolver can't look up rows that are gone. The rule that makes it work is already enforced by `deleteimpact`:
 
-The hard case is deletes. Effects are resolved after the write, and by then a deleted Subject's inbound Observations may be gone too, so the lookup finds nothing. Subject delete handles this today by collecting `inbound` and `ends` before it deletes. With the registry, every row a delete removes must come back as an `audit.Change` with its old fields (the deleted Observation, with its old `subject_id` and value). The resolver then reads the old fields, as audit's scope resolvers already do for deleted rows (`ghostMap`). Rows removed by `ON DELETE CASCADE` without being reported would be invisible, so a delete reports what it cascades, or its effects are resolved from the change before the row goes.
+- Research rows reached by a cascade (notes, identity claims, claim evidence) sit behind `Audited` foreign keys. Official deletes release them explicitly and audit them first (`ReleaseFacets`), and the SQLite cascade is only a backstop. So they come back as changes with their old fields, and the registry resolves them like any other delete.
+- The silent cascades (layout, vocabulary joins, name value parts) touch nothing the registry cares about. The cascade test above keeps it that way.
+- `ReleaseFacets` returns `released.Handles` today because releasing a pin affects a handle. That's an effect computed in the wrong place; under the registry it falls out of the `identity_claim_evidence` entry, and `released.Handles` goes.
 
-This is the part to test hardest. The shadow check (below) catches a missed effect: ARV would disagree with a full recompute.
+Subject delete collects the Observations pointing at the Subject before it deletes (`inbound`, `ends`). Under the registry those are reported as changes too, and `observers` resolves from their old fields.
 
-During the migration, a second check helps: while a write still has its hand-placed recompute calls, a test-only assertion compares the handles it recomputed by hand with the handles the registry resolves for the same changes. A write migrates only when the registry covers everything it did by hand.
+This is the part to test hardest. The shadow check (below) catches a missed effect, because ARV would disagree with a full recompute. During the migration, a second check helps: while a write still has its hand-placed recompute calls, a test-only assertion compares the handles it recomputed by hand with the handles the registry resolves for the same changes. A write migrates only when the registry covers everything it did by hand.
 
 ### What the memory tier is told
 
@@ -362,21 +434,26 @@ If it's too much, `Values` can hold only kept rank-1 rows and the detail page re
 
 Each step is its own PR, measured against the one before. PRs that only repoint callers are kept apart from PRs that add behavior, so the churn reviews as churn.
 
+**Schema and effects**
+
+1. **Extract the schema model** (churn). Tables and foreign keys move from `deleteimpact/register.go` into `schema`, with the PRAGMA honesty test; `deleteimpact` reads them from there. No behavior change.
+2. **Paths and the effects registry** (logic). The path combinators; an entry for every table outside the skip bucket; audit's scope resolvers re-expressed as `Source` paths, with a test that they resolve the same Sources as the old resolvers on the existing fixtures; the completeness tests. Nothing calls the `Handles` side yet.
+
 **Writes**
 
-1. **The orchestrator and registry** (logic). `writes.Run`, `database.Tx`, `Op`, `Result`, commit listeners; the effects registry for every audited type, with audit's scope resolvers moved into it; `audit.Record` and `RecomputeTx` take `*database.Tx`; the migration assertion. One small write path (property terms) migrated as the pilot.
-2. **Migrate Source-layer writes** (churn). Sources, notes, metadata, source types, metadata fields, artifacts, ingest.
-3. **Migrate Evidence-layer writes** (churn). Citations, observations, subjects, name values, connect, positions.
-4. **Migrate conclusion-layer writes** (churn). Promote single and batch, identity claims, canonical entities, credibility, properties, subject definitions.
-5. **Close the old path** (small). Hand-placed recompute calls and the migration assertion go; old entry points become private; the `.Begin()` test.
+3. **The orchestrator** (logic). `writes.Run`, `database.Tx`, `Op`, `Result`, commit listeners; `audit.Record` resolves scopes through the registry; `RecomputeTx` takes `*database.Tx`; the migration assertion. Property terms migrated as the pilot.
+4. **Migrate Source-layer writes** (churn). Sources, notes, metadata, source types, metadata fields, artifacts, ingest.
+5. **Migrate Evidence-layer writes** (churn). Citations, observations, subjects, name values, connect, positions.
+6. **Migrate conclusion-layer writes** (churn). Promote single and batch, identity claims, canonical entities, credibility, properties, subject definitions.
+7. **Close the old path** (small). Hand-placed recompute calls, `released.Handles`, the old scope resolvers and the migration assertion go; old entry points become private; the `.Begin()` test.
 
 **The graph**
 
-6. **The graph and Promote.** `graphcache` on the catalog session, registered as a commit listener; nodes with structure; lazy fill; the revision safety net; `Verify` in CI. Promote reads through `CanonGraph`; stats and candidates move onto the graph; `canonSteps`, the 5-hop expansion and the #327 caps go. The #327 debounce and narrowed exhibits stay. Benchmark.
-7. **Display.** Header memos; lists and `…ByIDs` from the graph; the vocabulary map; "today" at read time.
-8. **Place chains** from links, replacing #328's per-request index.
-9. **Conclusion detail** from node values, with the "Why" outcomes dropped with the display memo.
-10. **The Source store**, fed by resolved Source scopes; Promote's layer, the Evidence graph and the Composer on it.
+8. **The graph and Promote.** `graphcache` on the catalog session, registered as a commit listener; nodes with structure; lazy fill; the revision safety net; `Verify` in CI. Promote reads through `CanonGraph`; stats and candidates move onto the graph; `canonSteps`, the 5-hop expansion and the #327 caps go. The #327 debounce and narrowed exhibits stay. Benchmark.
+9. **Display.** Header memos; lists and `…ByIDs` from the graph; the vocabulary map; "today" at read time.
+10. **Place chains** from links, replacing #328's per-request index.
+11. **Conclusion detail** from node values, with the "Why" outcomes dropped with the display memo.
+12. **The Source store**, fed by resolved Source scopes; Promote's layer, the Evidence graph and the Composer on it.
 
 Later, and separately: `Result.Effects` rides back to Swift on each write's response, and the client's session cache invalidates by handle and Source instead of the hand-kept `CatalogMutation` map.
 
@@ -384,7 +461,7 @@ Later, and separately: `Result.Effects` rides back to Swift on each write's resp
 
 1. **Where the graph hangs.** A field on `database.Catalog` (low in the import graph, so an opaque slot), or a map in `graphcache` keyed by `*database.Catalog`, set up in `catalogsession.openResearcher` and dropped on close.
 2. **Nested writes.** A few write functions call others that open their own transaction today. Under `writes.Run`, inner functions take the outer `*database.Tx`; find any that can't.
-3. **Cascaded deletes.** List every `ON DELETE CASCADE` that removes a row the registry needs to see (Observations under a deleted Subject or citation), and make the delete report it.
+3. **Where `schema` sits.** It must stay below `audit`, `deleteimpact`, `effects` and `writes` in the import graph; `database` is the likely parent.
 4. **Stats by counts or recompute.** Adjusting value-frequency and fan-out counts from each commit's effects is exact but fiddly. Recomputing from the graph per revision is simpler and may be fast enough in memory.
 5. **Detail "Why" outcomes.** Cache them per handle, or keep the SQL read; decide after measuring.
 6. **Concurrency.** `Do` serializes everything today. If reads ever run alongside writes, immutable nodes plus a lock around the maps is enough; nothing here should assume serialization beyond that.
