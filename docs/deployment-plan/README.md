@@ -8,9 +8,7 @@ Closed spikes under [`archive/`](archive/) keep **themes and decisions**. PR ord
 
 ## Current
 
-| Spike | Goal |
-| --- | --- |
-| [Spike 9](spike-9/) | **Canonical entities MVP.** Promote Subjects from the Evidence graph into Persons, Events, and Places via Identity Claims; list and detail pages composed from a auto-reconciler cache; omnibar search. No Reconciliation Claims. Plan: [`spike-9/deployment-plan.md`](spike-9/deployment-plan.md) (requirements, design track, PR sequence). |
+No open spike.
 
 Dogfood leftovers: [`docs/dogfood/ux.md`](../dogfood/ux.md). Ideas: [`ideas/`](../ideas/). Claude Design briefs: [`add-design-brief`](../../.cursor/skills/add-design-brief/SKILL.md).
 
@@ -18,6 +16,7 @@ Dogfood leftovers: [`docs/dogfood/ux.md`](../dogfood/ux.md). Ideas: [`ideas/`](.
 
 | Spike | What we decided |
 | --- | --- |
+| [Spike 9](archive/spike-9/) | Canonical entities via Identity Claims. One auto-reconciler cache. Promote is one page. |
 | [Spike 8](archive/spike-8/) | Pause-and-refine data entry. Citation is the document. Named delete via Impact. |
 | [Spike 7](archive/spike-7/) | Citation → Observation pipeline. Composer is a **place** (Option B). Subject types stay seeded. |
 | [Spike 6](archive/spike-6/) | Spatial Evidence graph is **Go**. Neutral `GraphCanvas`. Connect was provisional until Spike 7. |

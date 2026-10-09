@@ -1,6 +1,7 @@
 package deleteimpact
 
 import (
+	"database/sql"
 	"errors"
 	"strings"
 	"testing"
@@ -8,7 +9,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/filederivatives"
-	"github.com/mendahu/provenencia/core/database/files"
 )
 
 func TestCountFilePointersIfUnused(t *testing.T) {
@@ -20,20 +20,13 @@ func TestCountFilePointersIfUnused(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	fileA, err := files.NewID()
-	if err != nil {
-		t.Fatal(err)
-	}
+	fileA := newFileID(t)
 	const sum = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 	tx, err := db.Begin()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := files.Insert(tx, files.File{
-		ID: fileA, ChecksumSHA256: sum, OriginalFilename: "a.jpg", MediaType: "image/jpeg", ByteSize: 4,
-	}); err != nil {
-		t.Fatal(err)
-	}
+	insertFile(t, tx, fileA, sum, "a.jpg", 4)
 	if err := tx.Commit(); err != nil {
 		t.Fatal(err)
 	}
@@ -67,34 +60,17 @@ func TestCountFilePointersIfUnused(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	fileB, err := files.NewID()
-	if err != nil {
-		t.Fatal(err)
-	}
+	fileB := newFileID(t)
 	const sumB = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
-	deriv, err := files.NewID()
-	if err != nil {
-		t.Fatal(err)
-	}
+	deriv := newFileID(t)
 	const sumD = "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
-	linkID, err := files.NewID()
-	if err != nil {
-		t.Fatal(err)
-	}
+	linkID := newFileID(t)
 	tx, err = db.Begin()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := files.Insert(tx, files.File{
-		ID: fileB, ChecksumSHA256: sumB, OriginalFilename: "b.jpg", MediaType: "image/jpeg", ByteSize: 4,
-	}); err != nil {
-		t.Fatal(err)
-	}
-	if err := files.Insert(tx, files.File{
-		ID: deriv, ChecksumSHA256: sumD, OriginalFilename: "b-thumb.jpg", MediaType: "image/jpeg", ByteSize: 2,
-	}); err != nil {
-		t.Fatal(err)
-	}
+	insertFile(t, tx, fileB, sumB, "b.jpg", 4)
+	insertFile(t, tx, deriv, sumD, "b-thumb.jpg", 2)
 	if err := filederivatives.Insert(tx, filederivatives.Link{
 		ID: linkID, SourceFileID: fileB, DerivedFileID: deriv, DerivativeType: filederivatives.TypeThumbnail,
 	}); err != nil {
@@ -171,34 +147,17 @@ func TestCollectFileObjects(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	fileID, err := files.NewID()
-	if err != nil {
-		t.Fatal(err)
-	}
-	derivID, err := files.NewID()
-	if err != nil {
-		t.Fatal(err)
-	}
-	linkID, err := files.NewID()
-	if err != nil {
-		t.Fatal(err)
-	}
+	fileID := newFileID(t)
+	derivID := newFileID(t)
+	linkID := newFileID(t)
 	const sumPri = "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
 	const sumDer = "1111111111111111111111111111111111111111111111111111111111111111"
 	tx, err = db.Begin()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := files.Insert(tx, files.File{
-		ID: fileID, ChecksumSHA256: sumPri, OriginalFilename: "scan.jpg", MediaType: "image/jpeg", ByteSize: 8,
-	}); err != nil {
-		t.Fatal(err)
-	}
-	if err := files.Insert(tx, files.File{
-		ID: derivID, ChecksumSHA256: sumDer, OriginalFilename: "scan-thumb.jpg", MediaType: "image/jpeg", ByteSize: 2,
-	}); err != nil {
-		t.Fatal(err)
-	}
+	insertFile(t, tx, fileID, sumPri, "scan.jpg", 8)
+	insertFile(t, tx, derivID, sumDer, "scan-thumb.jpg", 2)
 	if err := filederivatives.Insert(tx, filederivatives.Link{
 		ID: linkID, SourceFileID: fileID, DerivedFileID: derivID, DerivativeType: filederivatives.TypeThumbnail,
 	}); err != nil {
@@ -312,6 +271,25 @@ func insertArtifact(t *testing.T, c *database.Catalog, sourceID, fileID []byte, 
 		t.Fatal(err)
 	}
 	return id[:]
+}
+
+func newFileID(t *testing.T) []byte {
+	t.Helper()
+	id, err := uuid.NewV7()
+	if err != nil {
+		t.Fatal(err)
+	}
+	return id[:]
+}
+
+func insertFile(t *testing.T, tx *sql.Tx, id []byte, checksum, name string, size int) {
+	t.Helper()
+	if _, err := tx.Exec(
+		`INSERT INTO files (id, checksum_sha256, original_filename, media_type, byte_size) VALUES (?, ?, ?, 'image/jpeg', ?)`,
+		id, checksum, name, size,
+	); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func testCatalogInternal(t *testing.T) *database.Catalog {
