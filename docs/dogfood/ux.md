@@ -26,9 +26,11 @@ Copy the stub. Surface + what got in the way is enough. A wanted fix is optional
 - **Annoyance:** Two problems:
   1. **Hard to scan:** with many Observations I lose my place. Rows aren't visually distinct from each other, and the fields inside a single row blend together.
   2. **Inconsistent add position:** a new bridge Observation is added at the top of the list, but a non-bridge one is added at the bottom. Adding feels different depending on the kind.
+  3. **Auto Transcribe misclicks:** when reaching for the Citation dropdown, I often hit the **Auto Transcribe** button by accident.
 - **Wanted:**
   1. Clearer visual separation between Observations, and a clearer layout within each row so the fields are easy to tell apart.
   2. Adding any Observation works the same way: the new one goes at the **top**, so you never scroll to the bottom to add.
+  3. Move Auto Transcribe away from the Citation dropdown, or space them out, so it's hard to hit by accident. Auto Transcribe already asks for confirmation before overwriting, but the misclick is still friction.
 - **Related:** *Add Observation should focus the property search* (focus would land at the top too) and *Citation composer slows down with many Observations* (same long lists).
 
 ### Adaptive choice field that picks its control by option count
