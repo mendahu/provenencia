@@ -395,26 +395,27 @@ func TestRebuildIndexesHandles(t *testing.T) {
 	}
 }
 
-func TestPrecedenceBreaksScoreTies(t *testing.T) {
-	better := []Hit{
-		{Kind: KindPerson, Title: "P", Score: 1},
+func TestKindPriorityIsATenthOfTheScore(t *testing.T) {
+	equal := []Hit{
+		{Kind: KindSourceType, Title: "T", Score: 10},
 		{Kind: KindSource, Title: "S", Score: 10},
-		{Kind: KindEvent, Title: "E", Score: 5},
+		{Kind: KindPlace, Title: "P", Score: 10},
+		{Kind: KindEvent, Title: "E", Score: 10},
+		{Kind: KindPerson, Title: "N", Score: 10},
 	}
-	sortHits(better)
-	if got := kindsOf(better); fmt.Sprint(got) != fmt.Sprint([]string{KindSource, KindEvent, KindPerson}) {
-		t.Fatalf("better match first, got %v", got)
+	for i := range equal {
+		equal[i].Score = applyScoreMix(equal[i].Score, equal[i].Kind)
+	}
+	sortHits(equal)
+	if got := kindsOf(equal); fmt.Sprint(got) != fmt.Sprint([]string{KindPerson, KindEvent, KindPlace, KindSource, KindSourceType}) {
+		t.Fatalf("equal text, got %v", got)
 	}
 
-	tied := []Hit{
-		{Kind: KindSource, Title: "S", Score: 10},
-		{Kind: KindPlace, Title: "B", Score: 10},
-		{Kind: KindEvent, Title: "A", Score: 10},
-		{Kind: KindPerson, Title: "P", Score: 10},
-	}
-	sortHits(tied)
-	if got := kindsOf(tied); fmt.Sprint(got) != fmt.Sprint([]string{KindPerson, KindEvent, KindPlace, KindSource}) {
-		t.Fatalf("tied scores, got %v", got)
+	// A text score more than the priority share ahead still wins.
+	strongerSource := applyScoreMix(12, KindSource)
+	person := applyScoreMix(10, KindPerson)
+	if strongerSource <= person {
+		t.Fatalf("source text 12 should beat person text 10, got %v vs %v", strongerSource, person)
 	}
 }
 
@@ -426,7 +427,7 @@ func kindsOf(hits []Hit) []string {
 	return out
 }
 
-func TestABetterSourceMatchOutranksAPerson(t *testing.T) {
+func TestSimilarTitlesRankThePersonAheadOfTheSource(t *testing.T) {
 	f := newHandleFixture(t)
 	person := f.promote(f.person("James Robins"), nil)
 	place := f.promote(f.subject("place", func(s subjects.Subject) []observations.Input {
@@ -439,10 +440,7 @@ func TestABetterSourceMatchOutranksAPerson(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	hits, err := DefaultEngine().Search(context.Background(), f.c, Query{
-		Text:     "Robins",
-		Location: WorkspaceLocation{Section: SectionSources},
-	})
+	hits, err := DefaultEngine().Search(context.Background(), f.c, Query{Text: "Robins"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -460,8 +458,8 @@ func TestABetterSourceMatchOutranksAPerson(t *testing.T) {
 			t.Fatalf("missing %s in %+v", id, hits)
 		}
 	}
-	if byID[sourceID].Score <= byID[personID].Score || index[sourceID] > index[personID] {
-		t.Fatalf("section-boosted source should outrank the person: %+v", hits)
+	if index[personID] > index[sourceID] {
+		t.Fatalf("similar titles should put the person ahead of the source: %+v", hits)
 	}
 	switch {
 	case byID[placeID].Score == byID[personID].Score && index[personID] > index[placeID]:

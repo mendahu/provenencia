@@ -129,7 +129,7 @@ struct SearchCatalogStoreTests {
         #expect(hits.first?.matchReason == "ref")
     }
 
-    @Test func kindPrecedenceBreaksTiesAndABetterMatchStillWins() async throws {
+    @Test func kindPriorityIsATenthAndSectionNudgeStillMatters() async throws {
         let store = FakeStore()
         store.subjectTypesByProject[projectDir] = [
             CatalogSubjectType(
@@ -161,8 +161,8 @@ struct SearchCatalogStoreTests {
         let boosted = try await store.searchCatalog(projectDir: projectDir, query: "Robins", location: .sectionRoot(.sources))
         #expect(boosted.map(\.kind) == ["source", "person"])
 
-        let tied = try await store.searchCatalog(projectDir: projectDir, query: "Robins", location: .sectionRoot(.persons))
-        #expect(tied.map(\.kind) == ["person", "source"])
+        let onPersons = try await store.searchCatalog(projectDir: projectDir, query: "Robins", location: .sectionRoot(.persons))
+        #expect(onPersons.map(\.kind) == ["person", "source"])
 
         let hits = try await store.searchCatalog(
             projectDir: projectDir, query: "Robins", location: .sectionRoot(.sources), kinds: ["person"]

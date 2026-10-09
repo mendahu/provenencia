@@ -54,14 +54,26 @@ var FuzzyWeights = struct {
 	ScoreScale:     0.55,
 }
 
+// ScoreMix splits a hit's rank into the text score and a kind priority.
+// Priority is normalized by the highest KindSpec.Priority in the registry.
+// A text match that is clearly stronger still outranks a higher kind.
+var ScoreMix = struct {
+	Text     float64
+	Priority float64
+}{
+	Text:     0.9,
+	Priority: 0.1,
+}
+
 // KindSpec is one searchable navigable root in the registry.
 type KindSpec struct {
 	Kind                string
 	DefaultInEverything bool
-	// Precedence breaks ties after score. A better match still ranks first.
-	// Higher numbers win when scores are equal. The searcher reads only this number.
-	Precedence int
-	// ContextSections that boost this kind when Query.Location.Section matches.
+	// Priority is this kind's share of ScoreMix.Priority. Higher is preferred.
+	// The searcher normalizes by the registry maximum and does not read the name.
+	Priority int
+	// ContextSections that nudge this kind when Query.Location.Section matches.
+	// ContextBoost stays near 1 so a tighter title still ranks first.
 	ContextSections []string
 	ContextBoost    float64
 	Fields          []FieldWeight
@@ -73,7 +85,8 @@ var Registry = []KindSpec{
 		Kind:                KindSource,
 		DefaultInEverything: true,
 		ContextSections:     []string{SectionSources},
-		ContextBoost:        2.0,
+		Priority:            1,
+		ContextBoost:        1.1,
 		Fields: []FieldWeight{
 			{Name: "title", Weight: 10},
 			{Name: "ref", Weight: 12},
@@ -87,7 +100,7 @@ var Registry = []KindSpec{
 		Kind:                KindSourceType,
 		DefaultInEverything: true,
 		ContextSections:     []string{SectionSourceTypes},
-		ContextBoost:        2.0,
+		ContextBoost:        1.1,
 		Fields: []FieldWeight{
 			{Name: "label", Weight: 10},
 			{Name: "key", Weight: 8},
@@ -98,7 +111,7 @@ var Registry = []KindSpec{
 		Kind:                KindMetadataField,
 		DefaultInEverything: true,
 		ContextSections:     []string{SectionMetadata},
-		ContextBoost:        2.0,
+		ContextBoost:        1.1,
 		Fields: []FieldWeight{
 			{Name: "label", Weight: 10},
 			{Name: "key", Weight: 8},
@@ -107,15 +120,15 @@ var Registry = []KindSpec{
 	},
 }
 
-// Handle kinds join the omnibar default (S9-35). When scores tie, persons
-// outrank other canonical handles, and those outrank catalog rows (sources,
-// types, and fields stay at 0). Documents are match text from the list headers.
+// Handle kinds join the omnibar default (S9-35). Priority, high to low:
+// persons, events, places, then sources (1, above). Types and fields stay at 0.
+// Documents are match text from the list headers.
 func init() {
-	handle := func(kind string, precedence int) {
+	handle := func(kind string, priority int) {
 		Registry = append(Registry, KindSpec{
 			Kind:                kind,
 			DefaultInEverything: true,
-			Precedence:          precedence,
+			Priority:            priority,
 			Fields: []FieldWeight{
 				{Name: "title", Weight: 10},
 				{Name: "ref", Weight: 12},
@@ -123,9 +136,9 @@ func init() {
 			},
 		})
 	}
-	handle(KindPerson, 2)
-	handle(KindEvent, 1)
-	handle(KindPlace, 1)
+	handle(KindPerson, 4)
+	handle(KindEvent, 3)
+	handle(KindPlace, 2)
 }
 
 // effectiveKinds is the kinds a query may return: q.Kinds that the registry

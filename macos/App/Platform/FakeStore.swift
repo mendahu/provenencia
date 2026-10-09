@@ -1019,28 +1019,31 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             let omnibar = try await omnibarSearchCatalog(projectDir: projectDir, query: query, location: location)
             scored += wanted.isEmpty ? omnibar : omnibar.filter { wanted.contains($0.hit.kind) }
         }
-        return Array(Self.orderedByScoreThenPrecedence(scored).prefix(50).map(\.hit))
+        return Array(Self.orderedByMixedScore(scored).prefix(50).map(\.hit))
     }
 
-    /// Tie-break mirrored from `KindSpec.Precedence`. Score decides first.
-    private static let searchPrecedence: [String: Int] = [
-        "person": 2,
-        "event": 1,
-        "place": 1,
+    /// Kind share mirrored from `KindSpec.Priority` and `ScoreMix` (90% text, 10% kind).
+    private static let searchPriority: [String: Double] = [
+        "person": 4,
+        "event": 3,
+        "place": 2,
+        "source": 1,
     ]
 
-    private static func orderedByScoreThenPrecedence(
+    private static func orderedByMixedScore(
         _ scored: [(hit: CatalogSearchHit, score: Double)]
     ) -> [(hit: CatalogSearchHit, score: Double)] {
-        scored.enumerated().sorted { a, b in
-            if a.element.score != b.element.score { return a.element.score > b.element.score }
-            let pa = searchPrecedence[a.element.hit.kind] ?? 0
-            let pb = searchPrecedence[b.element.hit.kind] ?? 0
-            if pa != pb { return pa > pb }
-            if a.element.hit.kind != b.element.hit.kind { return a.element.hit.kind < b.element.hit.kind }
-            if a.element.hit.title != b.element.hit.title { return a.element.hit.title < b.element.hit.title }
+        let maxPriority = 4.0
+        return scored.enumerated().map { item in
+            let fraction = (searchPriority[item.element.hit.kind] ?? 0) / maxPriority
+            let mixed = item.element.score * (0.9 + 0.1 * fraction)
+            return (offset: item.offset, hit: item.element.hit, score: mixed)
+        }.sorted { a, b in
+            if a.score != b.score { return a.score > b.score }
+            if a.hit.kind != b.hit.kind { return a.hit.kind < b.hit.kind }
+            if a.hit.title != b.hit.title { return a.hit.title < b.hit.title }
             return a.offset < b.offset
-        }.map(\.element)
+        }.map { (hit: $0.hit, score: $0.score) }
     }
 
     /// Call inside `withState`.
@@ -1160,7 +1163,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 } else {
                     guard score > 0 else { continue }
                 }
-                let boost = location.section == .sources ? 2.0 : 1.0
+                let boost = location.section == .sources ? 1.1 : 1.0
                 scored.append((
                     CatalogSearchHit(
                         kind: "source",
@@ -1195,7 +1198,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                         tokens: tokens
                     )
                     guard score > 0 else { continue }
-                    let boost = location.section == .sourceTypes ? 2.0 : 1.0
+                    let boost = location.section == .sourceTypes ? 1.1 : 1.0
                     scored.append((
                         CatalogSearchHit(
                             kind: "source_type",
@@ -1226,7 +1229,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                         tokens: tokens
                     )
                     guard score > 0 else { continue }
-                    let boost = location.section == .metadata ? 2.0 : 1.0
+                    let boost = location.section == .metadata ? 1.1 : 1.0
                     scored.append((
                         CatalogSearchHit(
                             kind: "metadata_field",

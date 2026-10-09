@@ -159,6 +159,7 @@ func (f *FTSSearcher) Search(ctx context.Context, c *database.Catalog, q Query) 
 		}
 		score *= contextMultiplier(spec, q.Location.Section)
 		score *= refBoostFor(d.refMatch)
+		score = applyScoreMix(score, d.kind)
 
 		hits = append(hits, Hit{
 			Kind:             d.kind,
@@ -185,14 +186,11 @@ func (f *FTSSearcher) Search(ctx context.Context, c *database.Catalog, q Query) 
 	return hits, nil
 }
 
-// sortHits orders by score, then KindSpec.Precedence, then kind name, then title.
+// sortHits orders by the mixed score, then kind name, then title.
 func sortHits(hits []Hit) {
 	sort.SliceStable(hits, func(i, j int) bool {
 		if hits[i].Score != hits[j].Score {
 			return hits[i].Score > hits[j].Score
-		}
-		if pi, pj := kindPrecedence(hits[i].Kind), kindPrecedence(hits[j].Kind); pi != pj {
-			return pi > pj
 		}
 		if hits[i].Kind != hits[j].Kind {
 			return hits[i].Kind < hits[j].Kind
@@ -201,12 +199,26 @@ func sortHits(hits []Hit) {
 	})
 }
 
-func kindPrecedence(kind string) int {
-	spec, ok := kindSpec(kind)
-	if !ok {
-		return 0
+// applyScoreMix keeps ScoreMix.Text of the text score and adds up to
+// ScoreMix.Priority for the kind's registry priority.
+func applyScoreMix(text float64, kind string) float64 {
+	fraction := 0.0
+	if spec, ok := kindSpec(kind); ok {
+		if max := maxKindPriority(); max > 0 {
+			fraction = float64(spec.Priority) / float64(max)
+		}
 	}
-	return spec.Precedence
+	return text * (ScoreMix.Text + ScoreMix.Priority*fraction)
+}
+
+func maxKindPriority() int {
+	max := 0
+	for _, spec := range Registry {
+		if spec.Priority > max {
+			max = spec.Priority
+		}
+	}
+	return max
 }
 
 func kindSQL(kinds []string) string {

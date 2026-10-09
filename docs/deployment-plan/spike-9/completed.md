@@ -1294,7 +1294,7 @@ Design brief for Conclusion hits in the shipped omnibar row. Board: mixed result
 
 ### S9-35 — Omnibar Conclusion hits
 
-Person, Event, and Place hits use `PVOmnibarHitRow`. Score orders the hits. When two scores tie, `KindSpec.Precedence` puts persons above events and places, and those above Sources.
+Person, Event, and Place hits use `PVOmnibarHitRow`. The text match is 90% of the score. The other 10% follows kind priority: persons, events, places, sources, then everything else.
 
 **What shipped**
 

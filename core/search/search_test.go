@@ -352,7 +352,7 @@ func TestPrefixRefPromotesSource(t *testing.T) {
 	}
 }
 
-func TestSourcesContextFloatsSourceAboveVocab(t *testing.T) {
+func TestSharedTokenFindsSourceAndVocab(t *testing.T) {
 	c, err := database.Create(t.TempDir(), "t.provenencia")
 	if err != nil {
 		t.Fatal(err)
@@ -374,8 +374,6 @@ func TestSourcesContextFloatsSourceAboveVocab(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_ = field
-
 	hits, err := DefaultEngine().Search(context.Background(), c, Query{
 		Text:     "SharedToken",
 		Location: WorkspaceLocation{Section: SectionSources},
@@ -386,20 +384,19 @@ func TestSourcesContextFloatsSourceAboveVocab(t *testing.T) {
 	if len(hits) < 3 {
 		t.Fatalf("want Source+type+field, got %+v", hits)
 	}
-	if hits[0].Kind != KindSource || hits[0].ID != uuidString(src.ID) {
-		t.Fatalf("want Source first under sources context, got %+v", hits[0])
-	}
-	var sawType, sawField bool
+	var sawSource, sawType, sawField bool
 	for _, h := range hits {
-		if h.Kind == KindSourceType {
+		switch {
+		case h.ID == uuidString(src.ID):
+			sawSource = true
+		case h.Kind == KindSourceType && h.ID == uuidString(ty.ID):
 			sawType = true
-		}
-		if h.Kind == KindMetadataField {
+		case h.Kind == KindMetadataField && h.ID == uuidString(field.ID):
 			sawField = true
 		}
 	}
-	if !sawType || !sawField {
-		t.Fatalf("vocab should still appear: %+v", hits)
+	if !sawSource || !sawType || !sawField {
+		t.Fatalf("want source, type, and field, got %+v", hits)
 	}
 }
 
