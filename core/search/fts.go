@@ -132,6 +132,9 @@ func (f *FTSSearcher) Search(ctx context.Context, c *database.Catalog, q Query) 
 			if score <= 0 {
 				score = 12 // ref field weight floor
 			}
+		} else if field, line := alternateMatch(d.secondary, scoreTokens); reason == "other" && field != "" {
+			reason = field
+			snippet = line
 		} else if score <= 0 && d.fromFuzzy && d.fuzzySim >= FuzzyWeights.JaroWinklerMin {
 			// Substring scorer missed (typo); keep JW-gated fuzzy hit below exact FTS.
 			score = d.fuzzySim * 12 * FuzzyWeights.ScoreScale
@@ -149,10 +152,14 @@ func (f *FTSSearcher) Search(ctx context.Context, c *database.Catalog, q Query) 
 			score *= FuzzyWeights.ScoreScale
 		}
 		if d.hasFTS {
-			score *= 1.0 / (1.0 + absFloat(d.ftsRank))
+			// bm25 is negative, and a more negative value is a stronger match.
+			// Scale the field score up by that strength. Dividing by it ranked
+			// the tightest hit last.
+			score *= 1 + absFloat(d.ftsRank)
 		}
 		score *= contextMultiplier(spec, q.Location.Section)
 		score *= refBoostFor(d.refMatch)
+		score = applyScoreMix(score, d.kind)
 
 		hits = append(hits, Hit{
 			Kind:             d.kind,
@@ -169,6 +176,18 @@ func (f *FTSSearcher) Search(ctx context.Context, c *database.Catalog, q Query) 
 		})
 	}
 
+	sortHits(hits)
+	if len(hits) > limit {
+		hits = hits[:limit]
+	}
+	if err := fillMemberCounts(ctx, db, hits); err != nil {
+		return nil, err
+	}
+	return hits, nil
+}
+
+// sortHits orders by the mixed score, then kind name, then title.
+func sortHits(hits []Hit) {
 	sort.SliceStable(hits, func(i, j int) bool {
 		if hits[i].Score != hits[j].Score {
 			return hits[i].Score > hits[j].Score
@@ -178,13 +197,28 @@ func (f *FTSSearcher) Search(ctx context.Context, c *database.Catalog, q Query) 
 		}
 		return hits[i].Title < hits[j].Title
 	})
-	if len(hits) > limit {
-		hits = hits[:limit]
+}
+
+// applyScoreMix keeps ScoreMix.Text of the text score and adds up to
+// ScoreMix.Priority for the kind's registry priority.
+func applyScoreMix(text float64, kind string) float64 {
+	fraction := 0.0
+	if spec, ok := kindSpec(kind); ok {
+		if max := maxKindPriority(); max > 0 {
+			fraction = float64(spec.Priority) / float64(max)
+		}
 	}
-	if err := fillMemberCounts(ctx, db, hits); err != nil {
-		return nil, err
+	return text * (ScoreMix.Text + ScoreMix.Priority*fraction)
+}
+
+func maxKindPriority() int {
+	max := 0
+	for _, spec := range Registry {
+		if spec.Priority > max {
+			max = spec.Priority
+		}
 	}
-	return hits, nil
+	return max
 }
 
 func kindSQL(kinds []string) string {

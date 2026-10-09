@@ -4,7 +4,7 @@
 
 Design, agreed 2026-10-05. This document is authoritative for how a canonical entity's **displayed values** are derived from its members' evidence: the auto-reconcilers, their shared pipeline, their output, and how a Reconciliation Claim overrides them. Schema for claims stays in [`conclusion-layer-data-model.md`](conclusion-layer-data-model.md); judgment vocabulary in [`research-judgment-model.md`](research-judgment-model.md).
 
-Implementation lags this design; see [§12](#12-implementation-status).
+What shipped is in [§12](#12-implementation-status). Reconciliation Claims, which override the cache, are not built yet.
 
 ---
 
@@ -265,16 +265,20 @@ The rebuild-equals-upkeep tests hold upkeep equal to a full rebuild. Every new t
 
 # 12. Implementation status
 
-| Piece | Where | State |
-| --- | --- | --- |
-| Auto-reconciler core: exact clusters, support then id, concluded input | `core/autoreconcile` (S9-05) | on `main` |
-| Auto-reconciler cache and upkeep | `core/database/autoreconciler` (S9-06) | on `main` |
-| `initial` part type retired (migration 000037); `against` column (000038) | S9-13a | on `main` |
-| Shared pipeline and simple modules; every value cached with its reason (migration 000039) | S9-13 | open PR #259 |
-| Name module: parts by type, subsumption, one name per Person, majority outvotes misspellings only, parts compared as words; cache version 8 | S9-13b | open PR #260, stacked on S9-13 |
-| Evidence loaded (Sources, provenance, negatives, provisional members); outcomes cached in `auto_reconciler_outcomes`; credibility and certainty upkeep; the "auto-reconciler" naming; cache version 9 | S9-14 | stacked on S9-13b |
-| Detail read: each field's state, values and outcomes with their evidence (`conclusiondetails`, `GetConclusionDetail`); Swift wording of states and outcomes; off-screen detail pages evicted | S9-15 | stacked on S9-14 |
-| An outvoted outcome keeps the vote that beat it (migration 000041, cache version 10); the Person page shows every field's state, values and Why | S9-16 | stacked on S9-15 |
-| Date module: containment fold, qualifiers and ranges fold into the narrowest closed value, disjoint points stay mixed; `date_lo` / `date_hi` and `sort_key`; cache version 11 | S9-21 | this PR |
+The auto-reconciler, its cache, the pages that read it, place chains, Promote, and header search documents have shipped. A full rebuild of the cache matches incremental upkeep.
 
-PRs #255 and #256 built names-first versions of S9-13b and S9-14 to the first plan and were closed. Their migrations landed unchanged in S9-13a; their name logic, provenance logic, fixtures and test tables (75+ cases) are lifted into S9-13, S9-13b and S9-14 (see the Spike 9 plan, slice 4).
+| Piece | Where |
+| --- | --- |
+| Shared pipeline and simple modules (text, integer, term); every value cached with its reason | `core/autoreconcile` |
+| Names: parts by type, subsumption, one name per Person, majority outvotes misspellings only | `core/autoreconcile` |
+| Dates: containment fold, qualifiers and ranges fold into the narrowest closed value, disjoint points stay mixed; `date_lo` / `date_hi` and `sort_key` | `core/autoreconcile` |
+| Per-Property cardinality on that same pipeline | `core/autoreconcile` |
+| Cache, evidence, outcomes, and upkeep (credibility and certainty included) | `core/database/autoreconciler` |
+| Detail read: each field's state, values, and outcomes with their evidence | `core/database/conclusiondetails` |
+| Subject-valued bridges filed by their ends | `core/database/identityclaims` |
+| Place chains at a date, folded from `part_of` | `core/database/conclusionheaders` |
+| Graph alignment and the proposal read | `core/graphalign`, `core/database/promotealign` |
+| Batch Promote: claims, one-hop pins, and bridges in one transaction | `core/database/promote` |
+| Search documents composed from the list headers | `core/database/searchindex`, `core/search` |
+
+Reconciliation Claims, which would override a cached value, are not built. An earlier names-first cut of the name and evidence work was closed; its migrations landed with the schema that shipped.

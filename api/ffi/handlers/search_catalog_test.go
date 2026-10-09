@@ -223,8 +223,8 @@ func TestSearchCatalogHandleKinds(t *testing.T) {
 		}
 		return &resp
 	}
-	if hits := search().GetHits(); len(hits) != 0 {
-		t.Fatalf("omnibar default returned handles: %+v", hits)
+	if hits := search().GetHits(); len(hits) != 1 || hits[0].GetKind() != "person" {
+		t.Fatalf("omnibar default: %+v", hits)
 	}
 	hits := search("person").GetHits()
 	if len(hits) != 1 {
@@ -233,6 +233,9 @@ func TestSearchCatalogHandleKinds(t *testing.T) {
 	h := hits[0]
 	if h.GetKind() != "person" || h.GetRef() != handleRef || h.GetMemberCount() != 1 {
 		t.Fatalf("hit %+v", h)
+	}
+	if h.GetPerson().GetName().GetForm() == "" {
+		t.Fatal("person hit has no header")
 	}
 	if loc := h.GetLocation(); loc.GetSection() != "persons" || loc.GetEntityId() != h.GetId() {
 		t.Fatalf("location %+v", loc)
