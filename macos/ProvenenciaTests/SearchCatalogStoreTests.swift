@@ -129,13 +129,16 @@ struct SearchCatalogStoreTests {
         #expect(hits.first?.matchReason == "ref")
     }
 
-    @Test func handleKindsSearchPersonsAndStayOutOfTheOmnibar() async throws {
+    @Test func personsRankAboveSourcesInTheDefaultOmnibar() async throws {
         let store = FakeStore()
         store.subjectTypesByProject[projectDir] = [
             CatalogSubjectType(
                 id: "type-person", key: "person", origin: "provenencia", label: "Person",
                 description: "", refPrefix: "PER", candidateRefPrefix: "CPR"
             ),
+        ]
+        store.sourcesByProject[projectDir] = [
+            CatalogSource(id: "src-1", ref: "SRC-1", sourceTypeID: "", title: "Robins register", description: ""),
         ]
         store.subjectsBySource["s1"] = [
             CatalogSubject(id: "sub-1", ref: "CPR-1", sourceID: "s1", subjectTypeID: "type-person", label: "", description: ""),
@@ -156,7 +159,7 @@ struct SearchCatalogStoreTests {
         )
 
         let omnibar = try await store.searchCatalog(projectDir: projectDir, query: "Robins", location: .sectionRoot(.sources))
-        #expect(omnibar.isEmpty)
+        #expect(omnibar.map(\.kind) == ["person", "source"])
 
         let hits = try await store.searchCatalog(
             projectDir: projectDir, query: "Robins", location: .sectionRoot(.sources), kinds: ["person"]

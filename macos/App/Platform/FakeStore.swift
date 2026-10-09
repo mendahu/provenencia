@@ -1007,18 +1007,36 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         let handleKinds: Set<String> = ["person", "event", "place"]
         let wanted = Set(kinds)
         var hits: [CatalogSearchHit] = []
-        if !wanted.isDisjoint(with: handleKinds) {
+        if wanted.isEmpty || !wanted.isDisjoint(with: handleKinds) {
+            let handleWanted = wanted.isEmpty ? handleKinds : wanted.intersection(handleKinds)
             hits += try withState {
                 if let searchCatalogError { throw searchCatalogError }
                 markCatalogSessionHeld(projectDir)
-                return handleSearchHits(query: query, kinds: wanted.intersection(handleKinds))
+                return handleSearchHits(query: query, kinds: handleWanted)
             }
         }
         if wanted.isEmpty || !wanted.isSubset(of: handleKinds) {
             let omnibar = try await omnibarSearchCatalog(projectDir: projectDir, query: query, location: location)
             hits += wanted.isEmpty ? omnibar : omnibar.filter { wanted.contains($0.kind) }
         }
-        return hits
+        return Self.orderedBySearchPrecedence(hits)
+    }
+
+    /// Rank bands mirrored from `KindSpec.Precedence`. Higher bands sort first.
+    /// Within a band the order already computed (score for catalog rows) is kept.
+    private static let searchPrecedence: [String: Int] = [
+        "person": 2,
+        "event": 1,
+        "place": 1,
+    ]
+
+    private static func orderedBySearchPrecedence(_ hits: [CatalogSearchHit]) -> [CatalogSearchHit] {
+        hits.enumerated().sorted { a, b in
+            let pa = searchPrecedence[a.element.kind] ?? 0
+            let pb = searchPrecedence[b.element.kind] ?? 0
+            if pa != pb { return pa > pb }
+            return a.offset < b.offset
+        }.map(\.element)
     }
 
     /// Call inside `withState`.

@@ -172,7 +172,22 @@ func (f *FTSSearcher) Search(ctx context.Context, c *database.Catalog, q Query) 
 		})
 	}
 
+	sortHits(hits)
+	if len(hits) > limit {
+		hits = hits[:limit]
+	}
+	if err := fillMemberCounts(ctx, db, hits); err != nil {
+		return nil, err
+	}
+	return hits, nil
+}
+
+// sortHits orders by KindSpec.Precedence, then score, then kind name, then title.
+func sortHits(hits []Hit) {
 	sort.SliceStable(hits, func(i, j int) bool {
+		if pi, pj := kindPrecedence(hits[i].Kind), kindPrecedence(hits[j].Kind); pi != pj {
+			return pi > pj
+		}
 		if hits[i].Score != hits[j].Score {
 			return hits[i].Score > hits[j].Score
 		}
@@ -181,13 +196,14 @@ func (f *FTSSearcher) Search(ctx context.Context, c *database.Catalog, q Query) 
 		}
 		return hits[i].Title < hits[j].Title
 	})
-	if len(hits) > limit {
-		hits = hits[:limit]
+}
+
+func kindPrecedence(kind string) int {
+	spec, ok := kindSpec(kind)
+	if !ok {
+		return 0
 	}
-	if err := fillMemberCounts(ctx, db, hits); err != nil {
-		return nil, err
-	}
-	return hits, nil
+	return spec.Precedence
 }
 
 func kindSQL(kinds []string) string {

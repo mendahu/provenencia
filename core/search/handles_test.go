@@ -395,6 +395,74 @@ func TestRebuildIndexesHandles(t *testing.T) {
 	}
 }
 
+func TestPrecedenceBandsOutrankScore(t *testing.T) {
+	hits := []Hit{
+		{Kind: KindSource, Title: "A", Score: 100},
+		{Kind: KindPlace, Title: "B", Score: 1},
+		{Kind: KindEvent, Title: "C", Score: 50},
+		{Kind: KindPerson, Title: "D", Score: 0.1},
+		{Kind: KindSourceType, Title: "E", Score: 80},
+	}
+	sortHits(hits)
+	got := make([]string, len(hits))
+	for i, h := range hits {
+		got[i] = h.Kind
+	}
+	want := []string{KindPerson, KindEvent, KindPlace, KindSource, KindSourceType}
+	if fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Fatalf("got %v", got)
+	}
+}
+
+func TestCanonicalHandlesFloatAboveAContextBoostedSource(t *testing.T) {
+	f := newHandleFixture(t)
+	person := f.promote(f.person("James Robins"), nil)
+	place := f.promote(f.subject("place", func(s subjects.Subject) []observations.Input {
+		return []observations.Input{{SubjectID: s.ID, PropertyID: f.prop("toponym").ID, ValueText: "Robins", HasText: true}}
+	}), nil)
+	src, err := sources.Create(f.c, f.user, sources.CreateInput{
+		SourceTypeID: seedType(t, f.c, "Census", ""),
+		Title:        "Robins parish",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	hits, err := DefaultEngine().Search(context.Background(), f.c, Query{
+		Text:     "Robins",
+		Location: WorkspaceLocation{Section: SectionSources},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var kinds []string
+	for _, h := range hits {
+		switch h.Kind {
+		case KindPerson, KindPlace, KindSource:
+			kinds = append(kinds, h.Kind+":"+h.ID)
+		}
+	}
+	want := []string{
+		KindPerson + ":" + uuidString(person.Entity.ID),
+		KindPlace + ":" + uuidString(place.Entity.ID),
+		KindSource + ":" + uuidString(src.ID),
+	}
+	if fmt.Sprint(kinds) != fmt.Sprint(want) {
+		t.Fatalf("got %v", kinds)
+	}
+	var personScore, sourceScore float64
+	for _, h := range hits {
+		switch h.Kind {
+		case KindPerson:
+			personScore = h.Score
+		case KindSource:
+			sourceScore = h.Score
+		}
+	}
+	if sourceScore <= personScore {
+		t.Fatalf("source score %v should beat person score %v; the band is what puts the person first", sourceScore, personScore)
+	}
+}
+
 func TestMergedHandleLeavesTheIndex(t *testing.T) {
 	f := newHandleFixture(t)
 	a := f.promote(f.person("James Robins"), nil)

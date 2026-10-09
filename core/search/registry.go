@@ -58,6 +58,10 @@ var FuzzyWeights = struct {
 type KindSpec struct {
 	Kind                string
 	DefaultInEverything bool
+	// Precedence is a rank band. Higher bands sort ahead of score, so a
+	// strong match in a lower band cannot outrank a weak match in a higher
+	// one. The searcher reads only this number.
+	Precedence int
 	// ContextSections that boost this kind when Query.Location.Section matches.
 	ContextSections []string
 	ContextBoost    float64
@@ -104,13 +108,15 @@ var Registry = []KindSpec{
 	},
 }
 
-// Handle kinds interleave with Sources in the omnibar default (S9-35).
-// Documents are match text from the list headers (searchindex/handles.go).
+// Handle kinds join the omnibar default (S9-35). Precedence puts persons
+// above other canonical handles, and those above catalog rows (sources,
+// types, fields stay at 0). Documents are match text from the list headers.
 func init() {
-	for _, k := range []string{KindPerson, KindEvent, KindPlace} {
+	handle := func(kind string, precedence int) {
 		Registry = append(Registry, KindSpec{
-			Kind:                k,
+			Kind:                kind,
 			DefaultInEverything: true,
+			Precedence:          precedence,
 			Fields: []FieldWeight{
 				{Name: "title", Weight: 10},
 				{Name: "ref", Weight: 12},
@@ -118,6 +124,9 @@ func init() {
 			},
 		})
 	}
+	handle(KindPerson, 2)
+	handle(KindEvent, 1)
+	handle(KindPlace, 1)
 }
 
 // effectiveKinds is the kinds a query may return: q.Kinds that the registry
