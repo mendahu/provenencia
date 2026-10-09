@@ -57,7 +57,7 @@ func TestCreateArtifactAndIngest(t *testing.T) {
 					t.Fatal(err)
 				}
 				if ingested.File.GetOriginalFilename() != "scan.png" || ingested.GetReused() {
-					t.Fatalf("%+v", ingested)
+					t.Fatalf("%+v", &ingested)
 				}
 				if ingested.Artifact.GetFileId() == "" {
 					t.Fatal("expected file_id")
