@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/datevalues"
 )
@@ -76,14 +75,14 @@ func ListPlaces(q Querier) ([]PlaceHeader, error) {
 }
 
 // PlacesByIDs returns the headers of the given unmerged Places in list
-// order, in one query. Unknown, merged, and non-Place ids are absent.
+// order, one query per database.InBatch ids. Unknown, merged, and non-Place
+// ids are absent.
 func PlacesByIDs(q Querier, ids [][]byte) ([]PlaceHeader, error) {
-	ids = database.UniqueBlobIDs(ids)
-	if len(ids) == 0 {
-		return nil, nil
+	out, err := placesWithoutChains(q, ids)
+	if err != nil || len(out) == 0 {
+		return nil, err
 	}
-	return queryPlaces(q, sqlPlacesSelect+` AND e.id IN (`+database.SQLInPlaceholders(len(ids))+`)`,
-		database.BlobArgs(ids)...)
+	return withChains(q, out)
 }
 
 func queryPlaces(q Querier, query string, args ...any) ([]PlaceHeader, error) {
@@ -103,6 +102,11 @@ func queryPlaces(q Querier, query string, args ...any) ([]PlaceHeader, error) {
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
+	return withChains(q, out)
+}
+
+// withChains attaches today's chains and applies the list order.
+func withChains(q Querier, out []PlaceHeader) ([]PlaceHeader, error) {
 	if err := attachPlaceChains(q, out, TodayDate()); err != nil {
 		return nil, err
 	}

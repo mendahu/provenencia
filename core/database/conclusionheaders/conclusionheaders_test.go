@@ -653,3 +653,32 @@ func TestListOrderIsByShownTitle(t *testing.T) {
 		})
 	}
 }
+
+// SQLite binds at most 32,766 values per statement. Each by-id read batches
+// its IN list, so a list longer than that still reads.
+func TestByIDReadsBatchPastTheBindLimit(t *testing.T) {
+	f := newFixture(t)
+	db, err := f.c.DB()
+	must(t, err)
+	ids := make([][]byte, 33000)
+	for i := range ids {
+		id := make([]byte, 16)
+		id[0], id[1], id[2] = 0xEE, byte(i>>8), byte(i)
+		ids[i] = id
+	}
+	if _, err := conclusionheaders.PersonsByIDs(db, ids); err != nil {
+		t.Fatalf("PersonsByIDs: %v", err)
+	}
+	if _, err := conclusionheaders.EventsByIDs(db, ids); err != nil {
+		t.Fatalf("EventsByIDs: %v", err)
+	}
+	if _, err := conclusionheaders.PlacesByIDs(db, ids); err != nil {
+		t.Fatalf("PlacesByIDs: %v", err)
+	}
+	if _, err := datevalues.LookupManyTx(db, ids); err != nil {
+		t.Fatalf("datevalues.LookupManyTx: %v", err)
+	}
+	if _, err := canonicalentities.GetManyTx(db, ids); err != nil {
+		t.Fatalf("canonicalentities.GetManyTx: %v", err)
+	}
+}
