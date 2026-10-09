@@ -339,7 +339,8 @@ final class PromoteModel {
                 mark: bridge.kind.markKey,
                 endA: bridge.endpointAID,
                 endB: bridge.endpointBID,
-                alreadyFiled: bridge.membership != nil
+                alreadyFiled: bridge.membership != nil,
+                declined: bridge.subject.filingDeclined
             )
         }
         return (subjects, bridges)

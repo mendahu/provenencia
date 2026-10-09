@@ -274,7 +274,7 @@ Promoting one Subject does not promote its neighbors. The page proposes them, an
 - **Relationship and place relationship** are keyed by their ends and type: spouse *and* cousin are two relationships; `part_of` *and* `succeeded_by` are two place relationships.
 - **Direction** is kept for directed types ("parent of", "part of"); symmetric types (spouse) ignore order.
 - **A bridge whose ends are one handle is refused.** A refused filing (that one, or a place-hierarchy cycle) leaves the bridge unfiled, with its reason, and never fails the claim that triggered it.
-- **On the Promote page, each bridge can be switched off** before Done, for a relationship the researcher doesn't accept from this Source.
+- **On the Promote page, each bridge can be switched off** before Done, for a relationship the researcher doesn't accept from this Source. The switch-off is kept on the bridge Subject (`subjects.filing_declined`): no later Done or claim files it, and the next Promote page opens with it off, until a Done switches it back on.
 - **A bridge with an unpromoted end** stays on the Evidence graph until that end is promoted.
 
 The role or relationship type stays an Observation on the bridge Subject; reconciliation shows it on the association.

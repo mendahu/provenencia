@@ -270,6 +270,29 @@ struct PromoteFlowTests {
         #expect(flow.connectionLines().first?.state == .off)
     }
 
+    @Test func aDeclinedBridgeStartsOffAndStaysDeclinedOnDone() {
+        var flow = PromoteFlow(entryID: "a")
+        flow.load(
+            entryID: "a",
+            proposal: proposal(rows: [row(id: "a")]),
+            subjects: [fact("a")],
+            bridges: [
+                PromoteFlow.BridgeFact(id: "kept-off", sentence: "rejected", endA: "a", endB: "b", declined: true),
+                PromoteFlow.BridgeFact(id: "filed", sentence: "filed", endA: "a", endB: "b", alreadyFiled: true, declined: true),
+            ]
+        )
+        #expect(flow.connectionLines().map(\.id) == ["kept-off"])
+        #expect(flow.connectionLines().first?.state == .off)
+        #expect(flow.skipBridgeIDs() == ["kept-off"])
+        #expect(flow.connectionChanges == 0)
+        #expect(!flow.manual)
+
+        // Switching it back on drops it from the declined set Done sends.
+        flow.toggleBridge("kept-off")
+        #expect(flow.skipBridgeIDs().isEmpty)
+        #expect(flow.connectionChanges == 1)
+    }
+
     @Test func promoteAllStartsExpandedAndHidesFiledBridges() {
         var flow = PromoteFlow(entryID: "a")
         flow.mappedRest = true

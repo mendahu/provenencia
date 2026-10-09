@@ -1871,7 +1871,8 @@ struct GoStore: GenealogyStore {
             sourceID: s.sourceID,
             subjectTypeID: s.subjectTypeID,
             label: s.label,
-            description: s.description_p
+            description: s.description_p,
+            filingDeclined: s.filingDeclined
         )
     }
 

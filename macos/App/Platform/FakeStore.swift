@@ -1502,8 +1502,27 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 }
                 written.append(CatalogPromoteBatchWritten(entity: entity, claim: claim, pins: row.pairs.count * 2))
             }
+            // Go's SetSourceDeclinesTx: the switched-off set is the page's whole
+            // answer for the Source's unfiled bridges.
+            let skipped = Set(skipBridgeIDs)
+            let primaryKeys: Set<String> = ["person", "event", "place"]
+            var declinesChanged = false
+            var sourceSubjects = subjectsBySource[sourceID] ?? []
+            for index in sourceSubjects.indices {
+                let subject = sourceSubjects[index]
+                guard membershipBySubject[subject.id] == nil,
+                      let type = subjectTypesByProject[projectDir]?.first(where: { $0.id == subject.subjectTypeID }),
+                      !primaryKeys.contains(type.key)
+                else { continue }
+                let declined = skipped.contains(subject.id)
+                if sourceSubjects[index].filingDeclined != declined {
+                    sourceSubjects[index].filingDeclined = declined
+                    declinesChanged = true
+                }
+            }
+            subjectsBySource[sourceID] = sourceSubjects
             let revision: Int64
-            if written.isEmpty {
+            if written.isEmpty && !declinesChanged {
                 revision = seenRevision
             } else {
                 revision = nextAuditRevision

@@ -437,3 +437,65 @@ func cacheLines(t *testing.T, q interface {
 	}
 	return out
 }
+
+func TestSaveBatchDeclineOutlastsTheDone(t *testing.T) {
+	f := newBatchFixture(t)
+	person := f.bare("person")
+	event := f.bare("event")
+	if _, err := promote.Save(f.c, userID, promote.Input{SubjectID: person.ID}); err != nil {
+		t.Fatal(err)
+	}
+	bridge := f.participation(person, event)
+	// The event is still unpromoted: the switched-off bridge waits, declined.
+	f.save(promote.Batch{
+		SourceID: f.source.ID, SeenRevision: f.revision(),
+		SkipBridgeIDs: [][]byte{bridge.ID},
+	})
+	if !f.declined(bridge.ID) {
+		t.Fatal("switched-off bridge not declined")
+	}
+	// Promoting the other end later does not file the declined bridge.
+	if _, err := promote.Save(f.c, userID, promote.Input{SubjectID: event.ID}); err != nil {
+		t.Fatal(err)
+	}
+	if n := f.bridgeClaims("participation"); n != 0 {
+		t.Fatalf("declined bridge filed %d claims on a later claim", n)
+	}
+	// Nor does a later Done that switches it off again.
+	f.save(promote.Batch{
+		SourceID: f.source.ID, SeenRevision: f.revision(),
+		SkipBridgeIDs: [][]byte{bridge.ID},
+	})
+	if n := f.bridgeClaims("participation"); n != 0 {
+		t.Fatalf("declined bridge filed %d claims on a later Done", n)
+	}
+	// A Done that leaves it on switches it back on and files it.
+	f.save(promote.Batch{SourceID: f.source.ID, SeenRevision: f.revision()})
+	if f.declined(bridge.ID) {
+		t.Fatal("bridge still declined after it was switched back on")
+	}
+	if n := f.bridgeClaims("participation"); n != 1 {
+		t.Fatalf("participation claims %d, want 1", n)
+	}
+}
+
+func TestSaveBatchRefusesASkipFromAnotherSource(t *testing.T) {
+	f := newBatchFixture(t)
+	person := f.bare("person")
+	_, err := promote.SaveBatch(f.c, userID, promote.Batch{
+		SourceID: f.source.ID, SeenRevision: f.revision(),
+		SkipBridgeIDs: [][]byte{person.ID}, // not a bridge
+	})
+	if !errors.Is(err, promote.ErrInvalid) {
+		t.Fatalf("err %v, want promote.ErrInvalid", err)
+	}
+}
+
+func (f *batchFixture) declined(subjectID []byte) bool {
+	f.t.Helper()
+	s, err := subjects.Get(f.c, subjectID)
+	if err != nil {
+		f.t.Fatal(err)
+	}
+	return s.FilingDeclined
+}

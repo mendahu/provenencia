@@ -191,6 +191,9 @@ struct PromoteFlow: Equatable, Sendable {
         /// Already an accepted association. Hidden from the will-file list;
         /// Done does not file it again.
         var alreadyFiled: Bool = false
+        /// Switched off on an earlier Done. Starts off; Done keeps it unfiled
+        /// unless the researcher switches it back on.
+        var declined: Bool = false
     }
 
     var entryID: String
@@ -198,6 +201,8 @@ struct PromoteFlow: Equatable, Sendable {
     var rows: [Row] = []
     var bridges: [BridgeFact] = []
     var bridgeOff: Set<String> = []
+    /// The declined bridges the page opened with.
+    var bridgeOffAtLoad: Set<String> = []
     var revision: Int64 = 0
     var saving = false
     var staleNote: String?
@@ -232,6 +237,9 @@ struct PromoteFlow: Equatable, Sendable {
     }
 
     var connectionCount: Int { filedBridges.filter(\.files).count }
+
+    /// Connections switched on or off since the page opened.
+    var connectionChanges: Int { bridgeOff.symmetricDifference(bridgeOffAtLoad).count }
 
     private var scope: [Row] { visibleRows }
 
@@ -280,6 +288,8 @@ struct PromoteFlow: Equatable, Sendable {
     ) {
         self.entryID = entryID
         self.bridges = bridges
+        bridgeOff = Set(bridges.filter { $0.declined && !$0.alreadyFiled }.map(\.id))
+        bridgeOffAtLoad = bridgeOff
         revision = proposal.revision
         let byID = Dictionary(uniqueKeysWithValues: subjects.map { ($0.id, $0) })
         rows = proposal.rows.compactMap { proposalRow in

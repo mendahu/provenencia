@@ -35,8 +35,9 @@ type BatchRow struct {
 }
 
 // Batch is one Done for a Source. SeenRevision is the audit revision the
-// proposal was read at. SkipBridgeIDs are Evidence bridges the researcher
-// switched off.
+// proposal was read at. SkipBridgeIDs are the Source's unfiled bridges the
+// researcher switched off: they stay declined for later filings, and every
+// other unfiled bridge of the Source is switched back on.
 type Batch struct {
 	SourceID      []byte
 	SeenRevision  int64
@@ -59,7 +60,8 @@ type BatchResult struct {
 }
 
 // SaveBatch files one Done in a single transaction: claims, one-hop pins,
-// bridges (except switched-off ones), one audit revision, and one recompute.
+// bridge declines, bridges (except declined ones), one audit revision, and
+// one recompute.
 // A catalog write since SeenRevision is ErrStale and writes nothing.
 func SaveBatch(c *database.Catalog, userID []byte, in Batch) (BatchResult, error) {
 	db, err := c.DB()
@@ -129,6 +131,17 @@ func SaveBatch(c *database.Catalog, userID []byte, in Batch) (BatchResult, error
 		written = append(written, *w)
 	}
 
+	// The switched-off set is the page's whole answer for this Source: it
+	// declines those bridges for every later filing and switches the rest
+	// back on, before filing what is left.
+	declines, err := identityclaims.SetSourceDeclinesTx(tx, in.SourceID, skip)
+	if errors.Is(err, identityclaims.ErrInvalid) {
+		return BatchResult{}, ErrInvalid
+	}
+	if err != nil {
+		return BatchResult{}, err
+	}
+	changes = append(changes, declines...)
 	assocs, filed, err := identityclaims.FileSourceBridgesTx(tx, in.SourceID, skip)
 	if err != nil {
 		return BatchResult{}, err

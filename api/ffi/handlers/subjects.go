@@ -236,12 +236,13 @@ func subjectTypeProto(t subjecttypes.Type) *engine.SubjectType {
 
 func subjectProto(s subjects.Subject) *engine.Subject {
 	return &engine.Subject{
-		Id:            uuidString(s.ID),
-		Ref:           s.Ref,
-		SourceId:      uuidString(s.SourceID),
-		SubjectTypeId: uuidString(s.SubjectTypeID),
-		Label:         s.Label,
-		Description:   s.Description,
+		Id:             uuidString(s.ID),
+		Ref:            s.Ref,
+		SourceId:       uuidString(s.SourceID),
+		SubjectTypeId:  uuidString(s.SubjectTypeID),
+		Label:          s.Label,
+		Description:    s.Description,
+		FilingDeclined: s.FilingDeclined,
 	}
 }
 
