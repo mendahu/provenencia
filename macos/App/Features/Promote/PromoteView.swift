@@ -755,12 +755,18 @@ private struct PromoteEvidenceSheet: View {
 
     private var sheetColumns: some View {
         HStack(spacing: PromoteLayout.columnGap) {
-            Text(L10n.Promote.sheetPin).frame(width: 22, alignment: .leading)
+            Text(L10n.Promote.sheetPin)
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
+                .frame(width: PromoteLayout.pinColumn, alignment: .leading)
             Text(L10n.Promote.sheetCompared).frame(width: 150, alignment: .leading)
             Text(L10n.Promote.sheetHere).frame(maxWidth: .infinity, alignment: .leading)
             Text(verbatim: targetColumn).frame(maxWidth: .infinity, alignment: .leading)
             Text(L10n.Promote.sheetResult).frame(width: 92, alignment: .leading)
-            Text(L10n.Promote.sheetWeight).frame(width: 48, alignment: .trailing)
+            Text(L10n.Promote.sheetWeight)
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
+                .frame(width: PromoteLayout.weightColumn, alignment: .trailing)
         }
         .pvMicroCaps()
         .foregroundStyle(PVColor.textMuted)
@@ -785,7 +791,7 @@ private struct PromoteEvidenceSheet: View {
                 )
             )
             .accessibilityIdentifier("promote.sheet.pin.\(line.id)")
-            .frame(width: 22)
+            .frame(width: PromoteLayout.pinColumn, alignment: .leading)
             Text(verbatim: compared(line))
                 .font(PVFont.body(size: PVTypeScale.caption, weight: PVFontWeight.medium))
                 .frame(width: 150, alignment: .leading)
@@ -808,7 +814,8 @@ private struct PromoteEvidenceSheet: View {
             Text(verbatim: weightText(line.weight))
                 .font(PVFont.mono(size: PVTypeScale.caption))
                 .foregroundStyle(PVColor.textSecondary)
-                .frame(width: 48, alignment: .trailing)
+                .lineLimit(1)
+                .frame(width: PromoteLayout.weightColumn, alignment: .trailing)
         }
         .padding(.horizontal, PVSpacing.space4)
         .padding(.vertical, PVSpacing.space3)
@@ -890,6 +897,9 @@ private enum PromoteLayout {
     static let kindTile: CGFloat = 28
     static let targetColumn: CGFloat = 330
     static let badgeColumn: CGFloat = 112
+    /// Micro-caps headers need more than the checkbox and the signed weight.
+    static let pinColumn: CGFloat = 36
+    static let weightColumn: CGFloat = 64
     /// Notes under a row start where its name does.
     static let noteIndent = kindTile + columnGap
 }

@@ -715,6 +715,239 @@ func TestEdgeSupportCountsTheSeedingNeighborOnce(t *testing.T) {
 	}
 }
 
+func TestExactNameCreditsTheNeighborOnce(t *testing.T) {
+	sig := partSig("subject", "event", "birth")
+	evSub, perSub, evH, perH := id("s-event"), id("s-person"), id("h-event"), id("h-person")
+	layer := graphalign.Layer{
+		Subjects: []graphalign.Subject{
+			{ID: evSub, Ref: "EVT-S", Kind: "event"},
+			{ID: perSub, Ref: "PER-S", Kind: "person", Values: nameVals("Ann", "Ames")},
+		},
+		Bridges: []graphalign.Bridge{{A: perSub, B: evSub, Signature: sig}},
+		Metas:   append(nameMetas(), eventMetas()...),
+	}
+	canon := graphalign.Canon{
+		Handles: []graphalign.Handle{
+			{ID: evH, Ref: "EVT-1", Kind: "event"},
+			{ID: perH, Ref: "PER-1", Kind: "person", Values: nameVals("Ann", "Ames")},
+		},
+		Edges: []graphalign.CanonEdge{{From: perH, To: evH, Signature: sig}},
+	}
+	stats := graphalign.Stats{FanOut: map[string]float64{sig.Key(): 1}}
+	fixed := []graphalign.Fixed{{SubjectID: perSub, HandleID: perH}}
+	row := rowBySubject(graphalign.Align(layer, canon, stats, fixed, nil), evSub)
+	cfg := graphalign.DefaultConfig()
+	name := cfg.PropertyScale[match.Property{Key: "name", Origin: "provenencia"}].Weight
+	want := cfg.EdgeSupportLow + cfg.NeighborCreditLow*name
+	if row.Target != graphalign.TargetHandle || !bytes.Equal(row.HandleID, evH) ||
+		math.Abs(row.Score-want) > 1e-9 || row.Assessment != graphalign.AssessWeak {
+		t.Fatalf("event %+v, want %s at %.2f", row, evH, want)
+	}
+}
+
+func TestHighFanOutNameCreditStaysUnderTheBar(t *testing.T) {
+	sig := partSig("subject", "event", "residence")
+	evSub, perSub, evH, perH := id("s-event"), id("s-person"), id("h-event"), id("h-person")
+	layer := graphalign.Layer{
+		Subjects: []graphalign.Subject{
+			{ID: evSub, Ref: "EVT-S", Kind: "event"},
+			{ID: perSub, Ref: "PER-S", Kind: "person", Values: nameVals("Ann", "Ames")},
+		},
+		Bridges: []graphalign.Bridge{{A: perSub, B: evSub, Signature: sig}},
+		Metas:   append(nameMetas(), eventMetas()...),
+	}
+	canon := graphalign.Canon{
+		Handles: []graphalign.Handle{
+			{ID: evH, Ref: "EVT-1", Kind: "event"},
+			{ID: perH, Ref: "PER-1", Kind: "person", Values: nameVals("Ann", "Ames")},
+		},
+		Edges: []graphalign.CanonEdge{{From: perH, To: evH, Signature: sig}},
+	}
+	stats := graphalign.Stats{FanOut: map[string]float64{sig.Key(): 3}}
+	fixed := []graphalign.Fixed{{SubjectID: perSub, HandleID: perH}}
+	row := rowBySubject(graphalign.Align(layer, canon, stats, fixed, nil), evSub)
+	cfg := graphalign.DefaultConfig()
+	name := cfg.PropertyScale[match.Property{Key: "name", Origin: "provenencia"}].Weight
+	want := cfg.EdgeSupportHigh + cfg.NeighborCreditHigh*name
+	if row.Target == graphalign.TargetHandle || math.Abs(row.Score-want) > 1e-9 || row.Score >= cfg.AcceptScore {
+		t.Fatalf("event %+v, want a suggestion at %.2f", row, want)
+	}
+}
+
+func TestConflictingNeighborLowersTheScore(t *testing.T) {
+	sig := partSig("subject", "event", "birth")
+	evSub, perSub, evH, perH := id("s-event"), id("s-person"), id("h-event"), id("h-person")
+	layer := graphalign.Layer{
+		Subjects: []graphalign.Subject{
+			{ID: evSub, Ref: "EVT-S", Kind: "event"},
+			{ID: perSub, Ref: "PER-S", Kind: "person", Values: nameVals("Mary", "Robins")},
+		},
+		Bridges: []graphalign.Bridge{{A: perSub, B: evSub, Signature: sig}},
+		Metas:   append(nameMetas(), eventMetas()...),
+	}
+	canon := graphalign.Canon{
+		Handles: []graphalign.Handle{
+			{ID: evH, Ref: "EVT-1", Kind: "event"},
+			{ID: perH, Ref: "PER-1", Kind: "person", Values: nameVals("James", "Robins")},
+		},
+		Edges: []graphalign.CanonEdge{{From: perH, To: evH, Signature: sig}},
+	}
+	stats := graphalign.Stats{FanOut: map[string]float64{sig.Key(): 1}}
+	fixed := []graphalign.Fixed{{SubjectID: perSub, HandleID: perH}}
+	row := rowBySubject(graphalign.Align(layer, canon, stats, fixed, nil), evSub)
+	cfg := graphalign.DefaultConfig()
+	penalty := cfg.PropertyScale[match.Property{Key: "name", Origin: "provenencia"}].Contradiction
+	want := cfg.EdgeSupportLow + cfg.NeighborCreditLow*(-penalty)
+	if row.Target == graphalign.TargetHandle || math.Abs(row.Score-want) > 1e-9 || row.Score >= cfg.EdgeSupportLow {
+		t.Fatalf("event %+v, want %.2f, under one edge's support", row, want)
+	}
+}
+
+func hasAlt(row graphalign.Row, handle []byte) bool {
+	for _, alt := range row.Alternatives {
+		if bytes.Equal(alt.HandleID, handle) {
+			return true
+		}
+	}
+	return false
+}
+
+func TestAcceptedPropertyMatchNominatesItsNeighbor(t *testing.T) {
+	// Two names clear the bar. The third subject does not: its only property
+	// is a shared term, under that kind's Rank minimum. Both accepted handles
+	// bridge to it, and both canon edges share that bridge's signature, so
+	// the walk nominates the neighbor. The score counts both edges and a
+	// fraction of each neighbor's name. A canon neighbor on a different
+	// signature is not a suggestion.
+	sig := partSig("subject", "event", "gathering")
+	other := partSig("subject", "event", "other")
+	a, b, mid := id("s-a"), id("s-b"), id("s-mid")
+	ha, hb, hMid, hWrong := id("h-a"), id("h-b"), id("h-mid"), id("h-wrong")
+	et, etv := termProp("event_type", "gathering")
+	layer := graphalign.Layer{
+		Subjects: []graphalign.Subject{
+			{ID: a, Ref: "PER-A", Kind: "person", Values: nameVals("Ann", "Ames")},
+			{ID: b, Ref: "PER-B", Kind: "person", Values: nameVals("Bob", "Ames")},
+			{ID: mid, Ref: "EVT-M", Kind: "event", Values: vals(et, etv)},
+		},
+		Bridges: []graphalign.Bridge{
+			{A: a, B: mid, Signature: sig},
+			{A: b, B: mid, Signature: sig},
+		},
+		Metas: append(nameMetas(), eventMetas()...),
+	}
+	canon := graphalign.Canon{
+		Handles: []graphalign.Handle{
+			{ID: ha, Ref: "PER-1", Kind: "person", Values: nameVals("Ann", "Ames")},
+			{ID: hb, Ref: "PER-2", Kind: "person", Values: nameVals("Bob", "Ames")},
+			{ID: hMid, Ref: "EVT-1", Kind: "event", Values: vals(et, etv)},
+			{ID: hWrong, Ref: "EVT-9", Kind: "event", Values: vals(et, etv)},
+		},
+		Edges: []graphalign.CanonEdge{
+			{From: ha, To: hMid, Signature: sig},
+			{From: hb, To: hMid, Signature: sig},
+			{From: ha, To: hWrong, Signature: other},
+			{From: hb, To: hWrong, Signature: other},
+		},
+	}
+	stats := graphalign.Stats{FanOut: map[string]float64{sig.Key(): 1, other.Key(): 1}}
+	row := rowBySubject(graphalign.Align(layer, canon, stats, nil, nil), mid)
+	cfg := graphalign.DefaultConfig()
+	term := math.Log(cfg.MPrior["term"] / cfg.UPrior)
+	name := cfg.PropertyScale[match.Property{Key: "name", Origin: "provenencia"}].Weight
+	want := term + 2*(cfg.EdgeSupportLow+cfg.NeighborCreditLow*name)
+	if row.Target != graphalign.TargetHandle || !bytes.Equal(row.HandleID, hMid) ||
+		math.Abs(row.Score-want) > 1e-9 || hasAlt(row, hWrong) {
+		t.Fatalf("nominated neighbor %+v, want %s at %.4f", row, hMid, want)
+	}
+}
+
+func TestRankLoserDoesNotNominate(t *testing.T) {
+	// The exact name wins the row. Anne still clears Rank, and only that
+	// handle bridges to the third subject. Walking the loser would nominate
+	// it; walking the winner must not.
+	sig := partSig("subject", "event", "gathering")
+	person, mid := id("s-person"), id("s-mid")
+	win, lose, hMid := id("h-win"), id("h-lose"), id("h-mid")
+	et, etv := termProp("event_type", "gathering")
+	lesser := nameVals("Ann", "Ames")
+	lesser[match.Property{Key: "name", Origin: "provenencia"}][0].Name.Parts[0].Value = "Anne"
+	layer := graphalign.Layer{
+		Subjects: []graphalign.Subject{
+			{ID: person, Ref: "PER-A", Kind: "person", Values: nameVals("Ann", "Ames")},
+			{ID: mid, Ref: "EVT-M", Kind: "event", Values: vals(et, etv)},
+		},
+		Bridges: []graphalign.Bridge{{A: person, B: mid, Signature: sig}},
+		Metas:   append(nameMetas(), eventMetas()...),
+	}
+	canon := graphalign.Canon{
+		Handles: []graphalign.Handle{
+			{ID: win, Ref: "PER-1", Kind: "person", Values: nameVals("Ann", "Ames")},
+			{ID: lose, Ref: "PER-9", Kind: "person", Values: lesser},
+			{ID: hMid, Ref: "EVT-1", Kind: "event", Values: vals(et, etv)},
+		},
+		Edges: []graphalign.CanonEdge{{From: lose, To: hMid, Signature: sig}},
+	}
+	p := graphalign.Align(layer, canon, graphalign.Stats{}, nil, nil)
+	personRow := rowBySubject(p, person)
+	if personRow.Target != graphalign.TargetHandle || !bytes.Equal(personRow.HandleID, win) || !hasAlt(personRow, lose) {
+		t.Fatalf("winner %+v, want %s with %s still suggested", personRow, win, lose)
+	}
+	row := rowBySubject(p, mid)
+	if row.Target == graphalign.TargetHandle || hasAlt(row, hMid) {
+		t.Fatalf("loser nominated a neighbor: %+v", row)
+	}
+}
+
+func TestNeighborCreditStopsAtOneHop(t *testing.T) {
+	// The accepted name nominates a neighbor with no comparable values.
+	// That neighbor's score includes the name, so it clears the bar and
+	// nominates the subject beyond it. The far subject gets only the
+	// structural bonus: the middle has no properties, and the name does
+	// not travel a second hop.
+	sig := relSig("kin")
+	person, mid, far := id("s-person"), id("s-mid"), id("s-far")
+	hp, hm, hf := id("h-person"), id("h-mid"), id("h-far")
+	layer := graphalign.Layer{
+		Subjects: []graphalign.Subject{
+			{ID: person, Ref: "PER-A", Kind: "person", Values: nameVals("Ann", "Ames")},
+			{ID: mid, Ref: "PER-M", Kind: "person"},
+			{ID: far, Ref: "PER-F", Kind: "person"},
+		},
+		Bridges: []graphalign.Bridge{
+			{A: person, B: mid, Signature: sig},
+			{A: mid, B: far, Signature: sig},
+		},
+		Metas: nameMetas(),
+	}
+	canon := graphalign.Canon{
+		Handles: []graphalign.Handle{
+			{ID: hp, Ref: "PER-1", Kind: "person", Values: nameVals("Ann", "Ames")},
+			{ID: hm, Ref: "PER-2", Kind: "person"},
+			{ID: hf, Ref: "PER-3", Kind: "person"},
+		},
+		Edges: []graphalign.CanonEdge{
+			{From: hp, To: hm, Signature: sig},
+			{From: hm, To: hf, Signature: sig},
+		},
+	}
+	stats := graphalign.Stats{FanOut: map[string]float64{sig.Key(): 1}}
+	p := graphalign.Align(layer, canon, stats, nil, nil)
+	cfg := graphalign.DefaultConfig()
+	name := cfg.PropertyScale[match.Property{Key: "name", Origin: "provenencia"}].Weight
+	midWant := cfg.EdgeSupportLow + cfg.NeighborCreditLow*name
+	midRow := rowBySubject(p, mid)
+	if midRow.Target != graphalign.TargetHandle || !bytes.Equal(midRow.HandleID, hm) ||
+		math.Abs(midRow.Score-midWant) > 1e-9 {
+		t.Fatalf("middle %+v, want %s at %.2f", midRow, hm, midWant)
+	}
+	farRow := rowBySubject(p, far)
+	if farRow.Target == graphalign.TargetHandle || !hasAlt(farRow, hf) ||
+		math.Abs(farRow.Score-cfg.EdgeSupportLow) > 1e-9 || farRow.Score >= cfg.AcceptScore {
+		t.Fatalf("far hop %+v, want %s suggested at %.2f", farRow, hf, cfg.EdgeSupportLow)
+	}
+}
+
 func TestHeldNewAndSkipDecisions(t *testing.T) {
 	sig := relSig("spouse")
 	tests := []struct {
@@ -856,6 +1089,75 @@ func TestPossibleDuplicates(t *testing.T) {
 				}
 				if r.Target == graphalign.TargetSkip && flagged && r.Reason != graphalign.ReasonTaken {
 					t.Fatalf("%s: reason %q, want taken", r.SubjectID, r.Reason)
+				}
+			}
+		})
+	}
+}
+
+func TestNewEventsDisagreeWhenTheirParticipantsDo(t *testing.T) {
+	part := partSig("subject", "person", "")
+	place := graphalign.EdgeSignature{BridgeType: "location", RoleOrType: "took_place_in", NeighborKind: "place"}
+	et, residence := termProp("event_type", "residence")
+	hatP, hatV := textProp("toponym", "Medicine Hat")
+	calP, calV := textProp("toponym", "Calgary")
+	base := []graphalign.Subject{
+		{ID: id("e-a"), Ref: "EVT-A", Kind: "event", Values: vals(et, residence)},
+		{ID: id("e-b"), Ref: "EVT-B", Kind: "event", Values: vals(et, residence)},
+		{ID: id("p-paty"), Ref: "PER-A", Kind: "person", Values: nameVals("Paty", "Robins")},
+		{ID: id("p-sandra"), Ref: "PER-B", Kind: "person", Values: nameVals("Sandra", "Robins")},
+	}
+	places := []graphalign.Subject{
+		{ID: id("l-hat"), Ref: "PLC-H", Kind: "place", Values: vals(hatP, hatV)},
+		{ID: id("l-calgary"), Ref: "PLC-C", Kind: "place", Values: vals(calP, calV)},
+	}
+	tests := []struct {
+		name     string
+		bridges  []graphalign.Bridge
+		subjects []graphalign.Subject
+		dup      bool
+	}{
+		{
+			name: "different participants",
+			bridges: []graphalign.Bridge{
+				{A: id("p-paty"), B: id("e-a"), Signature: part},
+				{A: id("p-sandra"), B: id("e-b"), Signature: part},
+			},
+			subjects: base,
+		},
+		{
+			name: "the same participant",
+			bridges: []graphalign.Bridge{
+				{A: id("p-paty"), B: id("e-a"), Signature: part},
+				{A: id("p-paty"), B: id("e-b"), Signature: part},
+			},
+			subjects: base,
+			dup:      true,
+		},
+		{name: "no participants", subjects: base, dup: true},
+		{
+			name: "the same participant and different places",
+			bridges: []graphalign.Bridge{
+				{A: id("p-paty"), B: id("e-a"), Signature: part},
+				{A: id("p-paty"), B: id("e-b"), Signature: part},
+				{A: id("e-a"), B: id("l-hat"), Signature: place},
+				{A: id("e-b"), B: id("l-calgary"), Signature: place},
+			},
+			subjects: append(append([]graphalign.Subject{}, base...), places...),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			layer := graphalign.Layer{
+				Subjects: tt.subjects,
+				Bridges:  tt.bridges,
+				Metas:    append(nameMetas(), append(eventMetas(), placeMetas()...)...),
+			}
+			p := graphalign.Align(layer, graphalign.Canon{}, graphalign.Stats{}, nil, nil)
+			for _, sub := range []string{"e-a", "e-b"} {
+				row := rowBySubject(p, id(sub))
+				if row.Flags.PossibleDuplicate != tt.dup {
+					t.Fatalf("%s duplicate %v, want %v (%+v)", sub, row.Flags.PossibleDuplicate, tt.dup, row.Flags)
 				}
 			}
 		})

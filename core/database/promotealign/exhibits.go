@@ -212,21 +212,33 @@ func pairExhibits(incoming []exhibitObs, neighbor []byte, memberObs []exhibitObs
 		}
 		used[key] = true
 		out = append(out, graphalign.Exhibit{
-			Property:              in.prop,
-			Outcome:               outcome,
-			ValueType:             in.valueType,
-			Pinned:                pinned,
+			Property:  in.prop,
+			Outcome:   outcome,
+			ValueType: in.valueType,
+			// Compatible prefers the pair. A conflict is shown and left
+			// unpinned; the sheet says a disagreement is not evidence.
+			Pinned:                pinned && outcome == match.OutcomeAgree,
 			Weight:                weight,
 			GroupSubjectID:        append([]byte(nil), neighbor...),
 			IncomingObservationID: append([]byte(nil), in.id...),
 			IncomingDisplay:       in.display,
 			IncomingSource:        in.source,
+			IncomingDate:          cloneDate(in.value.Date),
 			MemberObservationID:   append([]byte(nil), chosen.id...),
 			MemberDisplay:         chosen.display,
 			MemberSource:          chosen.source,
+			MemberDate:            cloneDate(chosen.value.Date),
 		})
 	}
 	return out
+}
+
+func cloneDate(d *datevalues.Value) *datevalues.Value {
+	if d == nil {
+		return nil
+	}
+	c := *d
+	return &c
 }
 
 func comparerSimilarity(cmp match.Comparer, a, b match.Value) (float64, bool) {
@@ -397,9 +409,7 @@ func loadExhibitObservations(q Querier, subjectIDs [][]byte) ([]exhibitObs, erro
 	for _, p := range all {
 		if d, ok := dates[string(p.dateID)]; ok {
 			p.o.value.Date = &d
-			if d.StartYear != nil {
-				p.o.display = strconv.Itoa(*d.StartYear)
-			}
+			p.o.display = datevalues.CompactDisplay(d)
 		}
 		if n, ok := names[string(p.nameID)]; ok {
 			p.o.value.Name = &n

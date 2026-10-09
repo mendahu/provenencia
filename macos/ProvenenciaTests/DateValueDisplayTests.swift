@@ -8,6 +8,19 @@ struct DateValueDisplayTests {
     private let enGB = Locale(identifier: "en_GB")
     private let frFR = Locale(identifier: "fr_FR")
 
+    @Test func aComparisonFormatsABoundInTheLocale() {
+        let date = CatalogDateValueInput(
+            kind: "point",
+            qualifier: "BEF",
+            startYear: 2001,
+            startMonth: 3,
+            startDay: 31
+        )
+        #expect(ComparisonValueDisplay.string(date: date, fallback: "Before 2001-03-31", locale: enUS) == "Before Mar 31, 2001")
+        #expect(ComparisonValueDisplay.string(date: date, fallback: "Before 2001-03-31", locale: enGB) == "Before 31 Mar 2001")
+        #expect(ComparisonValueDisplay.string(date: nil, fallback: "1901", locale: enUS) == "1901")
+    }
+
     @Test func invalidDraftIsEmpty() {
         #expect(DateValueDisplay.string(for: DateValueDraft.empty(), locale: enUS) == "")
     }

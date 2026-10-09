@@ -523,7 +523,7 @@ struct PromoteFlow: Equatable, Sendable {
     }
 
     private static func draftedPins(_ lines: [CatalogPromoteGraphAlignmentComparison]) -> Set<String> {
-        Set(lines.filter(\.pinned).map(\.id))
+        Set(lines.filter { $0.pinned && $0.outcome != "conflict" }.map(\.id))
     }
 
     /// The agreeing values, as a starting argument the researcher can edit.

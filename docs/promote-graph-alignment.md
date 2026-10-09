@@ -49,7 +49,7 @@ Promote is one workspace page; the choose-target screen and the separate claim s
 - **Assessment:** each row shows **strong**, **weak** or **no match**. Clicking it opens a **sheet** with every comparison that contributed: agree, conflict or unknown, with its weight. The agreeing comparisons are preselected as pins and can be toggled.
 - **Claim fields per row:** status, confidence and argument. The argument can be drafted from the assessment.
 - **Bridges aren't rows** (participation, relationship, location). A summary line reads "22 connections will be filed". It expands to a list where each bridge can be switched off, for a relationship the researcher doesn't accept from this Source. Filing rules: §9.1.
-- **Possible duplicates:** two rows landing on the same existing handle, or two New rows that score as near-identical, get a warning ("these may be the same person; combine them on the Evidence graph"). There is no row-to-row option.
+- **Possible duplicates:** two rows landing on the same existing handle, or two New rows whose properties clear the accept bar, get a warning ("these may be the same record; combine them on the Evidence graph"). A signature both rows have neighbors for suppresses the warning when none of those neighbors are the same subject or a match. There is no row-to-row option.
 - **Done** writes the whole batch in one transaction (§9).
 - **Leaving:** the leave guard covers accidental navigation. Drafts aren't persisted: re-opening re-proposes everything, and only manual changes are lost.
 
@@ -130,8 +130,8 @@ This is collective entity resolution: graph alignment by propagation (cf. PARIS,
 2. **Pop the best-scoring candidate.** Accept it if it clears the threshold and keeps the graph alignment **one-to-one**: within one layer, a handle takes at most one Subject.
 3. **Propagate.** The accepted pair becomes an anchor. Push its neighbors' candidates, and add **support** to queued candidates that are consistent with it. A candidate's score rises as more of its neighbors map consistently. That's the "the structure lines up" evidence.
 4. **Repeat** until the queue is empty.
-5. **Unreachable Subjects** (nothing reaches them from an anchor) fall back to property-only matching: `core/match` `Rank` picks their candidates, and each is scored by the same pairwise path the walk uses. They are assigned best-first across the layer, so a contest over one handle goes to the stronger match. Below the threshold, they default to Skip.
-6. **One-hop refinement.** With that mapping in hand, every recorded candidate is scored again. A layer neighbor adds edge support when its mapped handle is this candidate's canonical neighbor under the same signature. Unfixed rows are reassigned from those scores. The pass repeats until the mapping stops changing, and at most once per subject. Each pass reads neighbors' handles, not their edge bonuses, so a city does not inherit a country's toponym. The published band is this score: a toponym alone stays medium, and a corresponding low-fan-out `part_of` lifts it to strong. Decided rows are rescored afterward, so a neighbor that contradicts a decision can still raise a warning.
+5. **Unreachable Subjects** (nothing reaches them from an anchor) fall back to property-only matching: `core/match` `Rank` picks their candidates, and each is scored by the same pairwise path the walk uses. They are assigned best-first across the layer, so a contest over one handle goes to the stronger match. Below the threshold, they default to Skip. Each pair this pass accepts then seeds the same walk as a fixed anchor, so a neighbor that never cleared `Rank` can still be nominated. A candidate `Rank` recorded but did not accept is not an anchor. The walk records a nominated handle even when its score stays under the accept bar; only an accepted pair propagates further.
+6. **One-hop refinement.** With that mapping in hand, every recorded candidate is scored again. A layer neighbor adds edge support when its mapped handle is this candidate's canonical neighbor under the same signature: the fan-out bonus, plus a registry fraction of that neighbor's property score. Unfixed rows are reassigned from those scores. The pass repeats until the mapping stops changing, and at most once per subject. The fraction is of the neighbor's properties alone, so a city receives its parent's toponym points and does not receive the parent's credit from the country. The published band is this score: a toponym alone stays medium, and a corresponding low-fan-out `part_of` lifts it to strong. Decided rows are rescored afterward, so a neighbor that contradicts a decision can still raise a warning.
 
 The work is about (Subjects + bridges) × candidates × log: well under a millisecond at obituary scale.
 
@@ -176,6 +176,7 @@ The scale is looked up by property, then by value type. A property added later i
 - Each signature's **fan-out** (how many neighbors a handle typically has through it) is measured from the catalog:
   - **≈1** ("subject at a birth"): a single correspondence is strong support;
   - **high** ("parent of", "subject at a residence"): it only narrows the candidates, and node comparison picks among them.
+- A corresponding mapped neighbor contributes `Support(fan-out) + Credit(fan-out) × neighborPropertyScore`. Support is 1.5 when fan-out is low and 0.25 when it is high. Credit is 0.5 and 0.25 on that same split. `neighborPropertyScore` is the pairwise total for that pair. That pair's own link bonuses stay out, so credit stops at one hop. A negative total subtracts. A neighbor with nothing to compare adds only Support.
 
 ---
 
@@ -289,5 +290,5 @@ As built at the end of Spike 9 slice 9 (S9-41 – S9-44 and the review fixes sta
 - **Properties compared (§6):** only the Properties in each kind's `core/match` default profile (name and sex; event type and dates; toponym), not every Property both sides carry. Value frequencies (`u`) cover name, sex, event type, and toponym, and structured names have no frequency key yet, so names score on the cold-start prior.
 - **Provenance (§6):** not applied. Every Subject's provenance is 1; credibility, transcription certainty, and member claim confidence don't scale comparisons yet.
 - **Bridge kinds in the loaders:** the layer and canon loaders list their hops (participation, location, relationship, part of, succeeded by) in code. Pins and filing read bridge kinds from `connectrules`.
-- **Fallback islands:** a Subject matched by the property-only fallback doesn't seed a walk of its own neighbors.
-- **Exhibit values:** dates show their start year only.
+- **Fallback islands:** an accepted property match seeds the same walk as a fixed anchor. A `Rank` loser does not. One-hop refinement still does not add handles; it only rescores candidates the walk or `Rank` already recorded.
+- **Exhibit values:** a date travels as a structured value. The Mac client formats it with `DateValueDisplay` for the user's locale. The display string is the portable fallback (`Before 2001-03-31`).

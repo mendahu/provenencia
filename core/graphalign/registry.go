@@ -31,7 +31,10 @@ func DefaultConfig() Config {
 			"text":    {Floor: 0, Frequency: true},
 			"term":    {Floor: 1, Frequency: true},
 			"integer": {Floor: 1, Frequency: true},
-			"date":    {Floor: 1, Frequency: true},
+			// Any resemblance the date comparer reports is partial. A
+			// disagreement scores 0 and conflicts. Open bounds that overlap
+			// (before 2001, before 1985) resemble; they are not the same date.
+			"date":    {Floor: 0, Frequency: true},
 			"name":    {Floor: 1, Frequency: true},
 			"subject": {Floor: 1, Frequency: true},
 		},
@@ -46,11 +49,13 @@ func DefaultConfig() Config {
 				Floor: 1, Weight: 0.6, Contradiction: 1,
 			},
 		},
-		EdgeSupportLow:   1.5, // fan-out ≈1 correspondence
-		EdgeSupportHigh:  0.25,
-		FanOutLowMax:     1.5, // signatures with fan-out ≤ this get EdgeSupportLow
-		FanOutUnknown:    2.0, // a signature the catalog has no fan-out for yet
-		AlternativeLimit: 3,
+		EdgeSupportLow:     1.5, // fan-out ≈1 correspondence
+		EdgeSupportHigh:    0.25,
+		NeighborCreditLow:  0.5,  // fraction of the neighbor's property score
+		NeighborCreditHigh: 0.25, // a common link passes less of that score
+		FanOutLowMax:       1.5,  // signatures with fan-out ≤ this get the low pair
+		FanOutUnknown:      2.0,  // a signature the catalog has no fan-out for yet
+		AlternativeLimit:   3,
 		MPrior: map[string]float64{
 			"text":    0.9,
 			"term":    0.95,
@@ -74,14 +79,16 @@ type Config struct {
 	// PropertyScale replaces the value-type scale for that Property.
 	PropertyScale map[match.Property]Scale
 	// ValueTypeScale is the scale for a value type with no property entry.
-	ValueTypeScale   map[string]Scale
-	EdgeSupportLow   float64
-	EdgeSupportHigh  float64
-	FanOutLowMax     float64
-	FanOutUnknown    float64
-	AlternativeLimit int
-	MPrior           map[string]float64 // value type → m
-	UPrior           float64
+	ValueTypeScale     map[string]Scale
+	EdgeSupportLow     float64
+	EdgeSupportHigh    float64
+	NeighborCreditLow  float64 // times the neighbor's property score when fan-out is low
+	NeighborCreditHigh float64
+	FanOutLowMax       float64
+	FanOutUnknown      float64
+	AlternativeLimit   int
+	MPrior             map[string]float64 // value type → m
+	UPrior             float64
 }
 
 func (c Config) agreementWeight(p match.Property) float64 {

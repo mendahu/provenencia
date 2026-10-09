@@ -6,6 +6,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/conclusionheaders"
 	"github.com/mendahu/provenencia/core/database/promotealign"
 	"github.com/mendahu/provenencia/core/graphalign"
+	"github.com/mendahu/provenencia/core/valuecodec"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -128,7 +129,7 @@ func proposalProto(q conclusionheaders.Querier, prop graphalign.Proposal) (*engi
 		}
 		if len(r.Exhibits) > 0 {
 			for _, ex := range r.Exhibits {
-				row.Comparisons = append(row.Comparisons, &engine.PromoteGraphAlignmentComparison{
+				cmp := &engine.PromoteGraphAlignmentComparison{
 					PropertyKey:           ex.Property.Key,
 					PropertyOrigin:        ex.Property.Origin,
 					Outcome:               string(ex.Outcome),
@@ -142,7 +143,14 @@ func proposalProto(q conclusionheaders.Querier, prop graphalign.Proposal) (*engi
 					MemberObservationId:   uuidString(ex.MemberObservationID),
 					MemberDisplay:         ex.MemberDisplay,
 					MemberSource:          ex.MemberSource,
-				})
+				}
+				if ex.IncomingDate != nil {
+					cmp.IncomingDate = valuecodec.DateToProto(*ex.IncomingDate)
+				}
+				if ex.MemberDate != nil {
+					cmp.MemberDate = valuecodec.DateToProto(*ex.MemberDate)
+				}
+				row.Comparisons = append(row.Comparisons, cmp)
 			}
 		} else {
 			for _, c := range r.Comparisons {

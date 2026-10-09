@@ -18,7 +18,13 @@ func Align(layer Layer, canon Canon, stats Stats, fixed []Fixed, cfg *Config) Pr
 	st := newState(layer, canon, stats, fixed, c)
 	st.seed()
 	st.walk()
+	// Property matches that clear the bar seed the same walk. Candidates
+	// Rank only recorded are not anchors, and a pair this walk refuses
+	// does not propagate further.
+	anchored := st.assignedIDs()
 	st.fallbackUnreachable()
+	st.propagateNew(anchored)
+	st.walk()
 	st.refineOneHop()
 	st.scoreFixed()
 	return st.proposal()
@@ -248,7 +254,7 @@ func (st *state) recordBest(sk string, sc scoredCand) {
 func (st *state) scoreCandidate(subjectID []byte, h *Handle) scoredCand {
 	s := st.subjects[string(subjectID)]
 	ev := match.Evaluate(s.Values, h.Values, st.metas)
-	edge := st.edgeSupport(subjectID, h.ID)
+	edge := EdgePoints(st.edgeFacts(subjectID, h.ID), st.cfg)
 	sc := ScoreCandidate(ev, s.Values, edge, s.Provenance, st.cfg, st.stats)
 	return scoredCand{
 		handleID: append([]byte(nil), h.ID...),
@@ -259,22 +265,13 @@ func (st *state) scoreCandidate(subjectID []byte, h *Handle) scoredCand {
 	}
 }
 
-// edgeSupport sums one term per mapped layer neighbor whose handle the
+// edgeFacts lists one fact per mapped layer neighbor whose handle the
 // candidate reaches through a canon edge with the same signature. The edge
 // that seeded the candidate is one of those neighbors, so it counts once.
-func (st *state) edgeSupport(subjectID, handleID []byte) float64 {
-	var support float64
-	add := func(sig EdgeSignature) {
-		fan, ok := st.stats.FanOut[sig.Key()]
-		if !ok {
-			fan = st.cfg.FanOutUnknown
-		}
-		if fan <= st.cfg.FanOutLowMax {
-			support += st.cfg.EdgeSupportLow
-		} else {
-			support += st.cfg.EdgeSupportHigh
-		}
-	}
+// NeighborNode is that pair's properties only, so a later hop cannot
+// inherit this neighbor's own links.
+func (st *state) edgeFacts(subjectID, handleID []byte) []EdgeFact {
+	var facts []EdgeFact
 	sk := string(subjectID)
 	for _, link := range st.layerAdj[sk] {
 		nk := string(link.neighbor)
@@ -282,15 +279,30 @@ func (st *state) edgeSupport(subjectID, handleID []byte) float64 {
 		if !ok {
 			continue
 		}
-		// Does canon connect handleID to hid with the same signature?
 		for _, ce := range st.canonAdj[string(handleID)] {
 			if corresponds(link, ce) && bytes.Equal(ce.neighbor, hid) {
-				add(link.sig)
+				fan, ok := st.stats.FanOut[link.sig.Key()]
+				if !ok {
+					fan = st.cfg.FanOutUnknown
+				}
+				facts = append(facts, EdgeFact{FanOut: fan, NeighborNode: st.nodeScore(link.neighbor, hid)})
 				break
 			}
 		}
 	}
-	return support
+	return facts
+}
+
+// nodeScore is the pairwise total for an already mapped neighbor. It does
+// not call edgeFacts.
+func (st *state) nodeScore(subjectID, handleID []byte) float64 {
+	s := st.subjects[string(subjectID)]
+	h := st.handles[string(handleID)]
+	if s == nil || h == nil {
+		return 0
+	}
+	ev := match.Evaluate(s.Values, h.Values, st.metas)
+	return propertyPoints(&ev, s.Values, st.cfg, st.stats)
 }
 
 func (st *state) walk() {
@@ -328,8 +340,9 @@ func (st *state) accept(subjectID, handleID []byte, score float64) bool {
 // fallbackUnreachable handles Subjects no anchor reached. Property-only Rank
 // picks each one's candidates; each is scored by the same pairwise path the
 // walk uses. Assignment is best-first, so a contest over one handle goes to
-// the stronger match. refineOneHop then rescores this set from the mapping;
-// the band published for these rows is that later score.
+// the stronger match. propagateNew then walks from the pairs this pass
+// accepts. refineOneHop rescores the recorded set; the band published for
+// these rows is that later score.
 func (st *state) fallbackUnreachable() {
 	var queue candHeap
 	for _, s := range st.sortedSubjects() {
@@ -359,6 +372,33 @@ func (st *state) fallbackUnreachable() {
 	for queue.Len() > 0 {
 		item := heap.Pop(&queue).(queueItem)
 		st.accept(item.subjectID, item.handleID, item.score)
+	}
+}
+
+// assignedIDs is the subjects that already have a handle, so a later pass
+// can tell its own accepts from anchors the walk already propagated.
+func (st *state) assignedIDs() map[string]bool {
+	out := map[string]bool{}
+	for sk := range st.assigned {
+		out[sk] = true
+	}
+	return out
+}
+
+// propagateNew seeds the walk from accepts that were not already anchors.
+// pushFromAnchor nominates an unmapped neighbor only when a canon edge
+// carries the same signature as the layer bridge.
+func (st *state) propagateNew(already map[string]bool) {
+	for _, s := range st.sortedSubjects() {
+		sk := string(s.ID)
+		if already[sk] {
+			continue
+		}
+		hid, ok := st.assigned[sk]
+		if !ok {
+			continue
+		}
+		st.pushFromAnchor(s.ID, hid)
 	}
 }
 
@@ -619,9 +659,11 @@ func (st *state) flagSharedHandles(rows []Row) {
 	}
 }
 
-// flagAlikeNewRows marks two New rows of one kind whose values would clear
-// the accept bar against each other: filing both mints two handles for what
-// may be one entity. It only warns, so the bar is acceptance, not strong.
+// flagAlikeNewRows marks two New rows of one kind that would clear the accept
+// bar against each other: filing both mints two handles for what may be one
+// entity. A signature both rows have neighbors for suppresses the warning
+// when none of those neighbors are the same subject or a match. It only
+// warns, so the bar is acceptance, not strong.
 func (st *state) flagAlikeNewRows(rows []Row) {
 	for i := range rows {
 		if rows[i].Target != TargetNew || rows[i].Flags.PossibleDuplicate {
@@ -633,8 +675,7 @@ func (st *state) flagAlikeNewRows(rows []Row) {
 				continue
 			}
 			b := st.subjects[string(rows[j].SubjectID)]
-			ev := match.Evaluate(a.Values, b.Values, st.metas)
-			if ScoreCandidate(ev, a.Values, 0, 1, st.cfg, st.stats).Score < st.cfg.AcceptScore {
+			if !st.alikeNew(a, b) {
 				continue
 			}
 			rows[i].Flags.PossibleDuplicate = true
@@ -642,6 +683,92 @@ func (st *state) flagAlikeNewRows(rows []Row) {
 			break
 		}
 	}
+}
+
+// alikeNew reports whether two New subjects score as one entity. Properties
+// are scored as usual. Each signature both have neighbors for adds one link
+// when a neighbor matches, and rejects the pair when none do.
+func (st *state) alikeNew(a, b *Subject) bool {
+	facts, disagree := st.newPairFacts(a.ID, b.ID)
+	if disagree {
+		return false
+	}
+	ev := match.Evaluate(a.Values, b.Values, st.metas)
+	return ScoreCandidate(ev, a.Values, EdgePoints(facts, st.cfg), 1, st.cfg, st.stats).Score >= st.cfg.AcceptScore
+}
+
+// newPairFacts compares the layer neighbors of two subjects. A signature only
+// one of them has stays out. A signature both have disagrees when no neighbor
+// pair is the same subject or clears the accept bar on its own properties.
+func (st *state) newPairFacts(a, b []byte) ([]EdgeFact, bool) {
+	gb := map[string][][]byte{}
+	for _, link := range st.layerAdj[string(b)] {
+		gb[link.sig.Key()] = append(gb[link.sig.Key()], link.neighbor)
+	}
+	seen := map[string]bool{}
+	var facts []EdgeFact
+	for _, linkA := range st.layerAdj[string(a)] {
+		key := linkA.sig.Key()
+		if seen[key] {
+			continue
+		}
+		nb := gb[key]
+		if len(nb) == 0 {
+			continue
+		}
+		seen[key] = true
+		var na [][]byte
+		for _, link := range st.layerAdj[string(a)] {
+			if link.sig.Key() == key {
+				na = append(na, link.neighbor)
+			}
+		}
+		best, ok := 0.0, false
+		for _, naID := range na {
+			for _, nbID := range nb {
+				if !st.neighborsMatch(naID, nbID) {
+					continue
+				}
+				if node := st.pairNode(naID, nbID); !ok || node > best {
+					best, ok = node, true
+				}
+			}
+		}
+		if !ok {
+			return nil, true
+		}
+		fan, found := st.stats.FanOut[key]
+		if !found {
+			fan = st.cfg.FanOutUnknown
+		}
+		facts = append(facts, EdgeFact{FanOut: fan, NeighborNode: best})
+	}
+	return facts, false
+}
+
+// neighborsMatch is the same subject, or two subjects whose properties clear
+// the accept bar. It does not look at their links.
+func (st *state) neighborsMatch(a, b []byte) bool {
+	if bytes.Equal(a, b) {
+		return true
+	}
+	sa, sb := st.subjects[string(a)], st.subjects[string(b)]
+	if sa == nil || sb == nil || sa.Kind != sb.Kind {
+		return false
+	}
+	ev := match.Evaluate(sa.Values, sb.Values, st.metas)
+	return ScoreCandidate(ev, sa.Values, 0, 1, st.cfg, st.stats).Score >= st.cfg.AcceptScore
+}
+
+// pairNode is the property total for two subjects, one of them compared with
+// itself when they are the same subject.
+func (st *state) pairNode(a, b []byte) float64 {
+	sa, sb := st.subjects[string(a)], st.subjects[string(b)]
+	if sa == nil || sb == nil {
+		return 0
+	}
+	ev := match.Evaluate(sa.Values, sb.Values, st.metas)
+	return propertyPoints(&ev, sa.Values, st.cfg, st.stats)
 }
 
 // strongestAgreement is the agreeing or resembling Property that added the
