@@ -109,6 +109,7 @@ const (
 	CodeRefInvalid                    = "ref.invalid"
 	CodeRefReservedPrefix             = "ref.reserved_prefix"
 	CodeFileNotFound                  = "file.not_found"
+	CodeRequestInvalidID              = "request.invalid_id" // a malformed record id in an FFI request, any kind
 	CodeInternalUnknown               = "internal.unknown"
 	CodeInternalUnknownMethod         = "internal.unknown_method"
 	CodeInternalMigrations            = "internal.migrations"

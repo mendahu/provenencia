@@ -11,7 +11,9 @@ import (
 )
 
 var (
-	errInvalidID     = apperr.New(apperr.CodeSourcesInvalid, apperr.KindUser)
+	// errInvalidID is any malformed record id: a Subject's, a handle's, an
+	// Observation's, not only a Source's.
+	errInvalidID     = apperr.New(apperr.CodeRequestInvalidID, apperr.KindUser)
 	errInvalidUserID = apperr.New(apperr.CodeUsersInvalid, apperr.KindUser)
 )
 
