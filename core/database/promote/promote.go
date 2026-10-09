@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"database/sql"
 	"errors"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/connectrules"
@@ -112,7 +113,7 @@ func Save(c *database.Catalog, userID []byte, in Input) (Result, error) {
 
 	var (
 		entity  canonicalentities.Entity
-		changes []audit.Change
+		changes []rowchange.Change
 	)
 	if in.EntityID == nil {
 		minted, change, err := canonicalentities.InsertTx(tx, canonicalentities.CreateInput{
@@ -290,9 +291,9 @@ func pairClaim(tx *sql.Tx, claim identityclaims.Claim, p Pair, targets pinTarget
 // pinPairs pins both Observations of every pair on the new claim and on the
 // member's claim (backfill). Pins a claim already carries are skipped; it
 // returns how many the new claim carries and a change per new pin.
-func pinPairs(tx *sql.Tx, claim identityclaims.Claim, pairs []Pair, targets pinTargets) (int, []audit.Change, error) {
+func pinPairs(tx *sql.Tx, claim identityclaims.Claim, pairs []Pair, targets pinTargets) (int, []rowchange.Change, error) {
 	var (
-		changes []audit.Change
+		changes []rowchange.Change
 		pins    int
 	)
 	for _, p := range pairs {

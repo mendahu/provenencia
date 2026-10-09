@@ -127,7 +127,7 @@ func TestImpactGates(t *testing.T) {
 			t.Fatal(err)
 		}
 		got = mustImpact(t, c, catalogmodel.KindCredibilityGrade, grade.ID)
-		if !got.Allowed || got.Gate != deleteimpact.GateOK {
+		if got.Allowed || got.Gate != deleteimpact.GateOriginLocked {
 			t.Fatalf("grade %+v", got)
 		}
 		p, err := properties.Lookup(c, "event_type", properties.OriginProvenencia)

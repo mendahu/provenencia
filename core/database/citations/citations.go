@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"errors"
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"strings"
 
 	"github.com/google/uuid"
@@ -169,7 +170,7 @@ func InsertWithObservationsTx(
 	in CreateInput,
 	obsInputs []observations.Input,
 	opts observations.InsertOptions,
-) (CreateResult, []audit.Change, error) {
+) (CreateResult, []rowchange.Change, error) {
 	if err := normalizeCreateInput(&in); err != nil {
 		return CreateResult{}, nil, err
 	}
@@ -221,11 +222,11 @@ func InsertWithObservationsTx(
 		return CreateResult{}, nil, ErrInvalid
 	}
 
-	changes := []audit.Change{{
+	changes := []rowchange.Change{{
 		EntityType: "citation",
 		EntityID:   idBytes,
-		Action:     audit.ActionCreate,
-		Fields: audit.FullRow(map[string]any{
+		Action:     rowchange.ActionCreate,
+		Fields: rowchange.FullRow(map[string]any{
 			"id":                      id.String(),
 			"ref":                     citRef,
 			"artifact_id":             uuidJSON(in.ArtifactID),
@@ -249,11 +250,11 @@ func InsertWithObservationsTx(
 		if _, err := tx.Exec(sqlInsertNote, noteID[:], idBytes, body); err != nil {
 			return CreateResult{}, nil, err
 		}
-		changes = append(changes, audit.Change{
+		changes = append(changes, rowchange.Change{
 			EntityType: "citation_note",
 			EntityID:   noteID[:],
-			Action:     audit.ActionCreate,
-			Fields: audit.FullRow(map[string]any{
+			Action:     rowchange.ActionCreate,
+			Fields: rowchange.FullRow(map[string]any{
 				"id":          noteID.String(),
 				"citation_id": id.String(),
 				"body":        body,
@@ -263,7 +264,7 @@ func InsertWithObservationsTx(
 
 	var obsOut []observations.Observation
 	if len(obsInputs) > 0 {
-		var obsChanges []audit.Change
+		var obsChanges []rowchange.Change
 		obsOut, obsChanges, err = observations.InsertManyTx(tx, idBytes, obsInputs, opts)
 		if err != nil {
 			return CreateResult{}, nil, err
@@ -330,24 +331,24 @@ func Update(c *database.Catalog, userID, citationID []byte, in CitationFieldsInp
 		return Citation{}, err
 	}
 
-	fields := map[string]audit.FieldDiff{}
+	fields := map[string]rowchange.FieldDiff{}
 	if prev.LocatorJSON != in.LocatorJSON {
-		fields["locator_json"] = audit.FieldDiff{Old: prev.LocatorJSON, New: in.LocatorJSON}
+		fields["locator_json"] = rowchange.FieldDiff{Old: prev.LocatorJSON, New: in.LocatorJSON}
 	}
 	if prev.Transcription != in.Transcription {
-		fields["transcription"] = audit.FieldDiff{Old: emptyAsNil(prev.Transcription), New: emptyAsNil(in.Transcription)}
+		fields["transcription"] = rowchange.FieldDiff{Old: emptyAsNil(prev.Transcription), New: emptyAsNil(in.Transcription)}
 	}
 	if prev.Description != in.Description {
-		fields["description"] = audit.FieldDiff{Old: emptyAsNil(prev.Description), New: emptyAsNil(in.Description)}
+		fields["description"] = rowchange.FieldDiff{Old: emptyAsNil(prev.Description), New: emptyAsNil(in.Description)}
 	}
 	if prev.TranscriptionUncertain != in.TranscriptionUncertain {
-		fields["transcription_uncertain"] = audit.FieldDiff{
+		fields["transcription_uncertain"] = rowchange.FieldDiff{
 			Old: prev.TranscriptionUncertain,
 			New: in.TranscriptionUncertain,
 		}
 	}
 	if prev.TranscriptionNote != in.TranscriptionNote {
-		fields["transcription_note"] = audit.FieldDiff{
+		fields["transcription_note"] = rowchange.FieldDiff{
 			Old: emptyAsNil(prev.TranscriptionNote),
 			New: emptyAsNil(in.TranscriptionNote),
 		}
@@ -385,10 +386,10 @@ func Update(c *database.Catalog, userID, citationID []byte, in CitationFieldsInp
 		UserID:     userID,
 		ActionType: "update_citation",
 		CreatedAt:  project.NowUTC(),
-		Changes: []audit.Change{{
+		Changes: []rowchange.Change{{
 			EntityType: "citation",
 			EntityID:   citationID,
-			Action:     audit.ActionUpdate,
+			Action:     rowchange.ActionUpdate,
 			Fields:     fields,
 		}},
 	}); err != nil {
@@ -458,25 +459,25 @@ func Delete(c *database.Catalog, userID, id []byte) error {
 	if _, err := tx.Exec(sqlDelete, id); err != nil {
 		return err
 	}
-	fields := map[string]audit.FieldDiff{
+	fields := map[string]rowchange.FieldDiff{
 		"id":          {Old: uuidString(id), New: nil},
 		"ref":         {Old: prev.Ref, New: nil},
 		"artifact_id": {Old: uuidString(prev.ArtifactID), New: nil},
 	}
 	if prev.LocatorJSON != "" {
-		fields["locator_json"] = audit.FieldDiff{Old: prev.LocatorJSON, New: nil}
+		fields["locator_json"] = rowchange.FieldDiff{Old: prev.LocatorJSON, New: nil}
 	}
 	if prev.Transcription != "" {
-		fields["transcription"] = audit.FieldDiff{Old: prev.Transcription, New: nil}
+		fields["transcription"] = rowchange.FieldDiff{Old: prev.Transcription, New: nil}
 	}
 	if _, err := audit.Record(tx, audit.Revision{
 		UserID:     userID,
 		ActionType: "delete_citation",
 		CreatedAt:  project.NowUTC(),
-		Changes: append(released.Changes, audit.Change{
+		Changes: append(released.Changes, rowchange.Change{
 			EntityType: "citation",
 			EntityID:   id,
-			Action:     audit.ActionDelete,
+			Action:     rowchange.ActionDelete,
 			Fields:     fields,
 		}),
 	}); err != nil {

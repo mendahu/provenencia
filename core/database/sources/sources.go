@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"errors"
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"strings"
 
 	"github.com/google/uuid"
@@ -144,23 +145,23 @@ func Create(c *database.Catalog, userID []byte, in CreateInput) (Source, error) 
 		return Source{}, ErrInvalid
 	}
 
-	fields := map[string]audit.FieldDiff{
+	fields := map[string]rowchange.FieldDiff{
 		"id":             {Old: nil, New: id.String()},
 		"ref":            {Old: nil, New: sourceRef},
 		"source_type_id": {Old: nil, New: uuidString(in.SourceTypeID)},
 		"title":          {Old: nil, New: in.Title},
 	}
 	if in.Description != "" {
-		fields["description"] = audit.FieldDiff{Old: nil, New: in.Description}
+		fields["description"] = rowchange.FieldDiff{Old: nil, New: in.Description}
 	}
 	rev, err := audit.Record(tx, audit.Revision{
 		UserID:     userID,
 		ActionType: "create_source",
 		CreatedAt:  project.NowUTC(),
-		Changes: []audit.Change{{
+		Changes: []rowchange.Change{{
 			EntityType: "source",
 			EntityID:   idBytes,
-			Action:     audit.ActionCreate,
+			Action:     rowchange.ActionCreate,
 			Fields:     fields,
 		}},
 	})
@@ -242,11 +243,11 @@ func SetCover(c *database.Catalog, userID []byte, sourceID []byte, mode string, 
 		return Source{}, mapConstraint(err)
 	}
 
-	fields := map[string]audit.FieldDiff{
+	fields := map[string]rowchange.FieldDiff{
 		"cover_mode": {Old: prev.CoverMode, New: mode},
 	}
 	if !bytes.Equal(prev.PrimaryArtifactID, primaryArtifactID) {
-		fields["primary_artifact_id"] = audit.FieldDiff{
+		fields["primary_artifact_id"] = rowchange.FieldDiff{
 			Old: uuidJSON(prev.PrimaryArtifactID),
 			New: uuidJSON(primaryArtifactID),
 		}
@@ -255,10 +256,10 @@ func SetCover(c *database.Catalog, userID []byte, sourceID []byte, mode string, 
 		UserID:     userID,
 		ActionType: "set_source_cover",
 		CreatedAt:  project.NowUTC(),
-		Changes: []audit.Change{{
+		Changes: []rowchange.Change{{
 			EntityType: "source",
 			EntityID:   sourceID,
-			Action:     audit.ActionUpdate,
+			Action:     rowchange.ActionUpdate,
 			Fields:     fields,
 		}},
 	}); err != nil {
@@ -305,18 +306,18 @@ func Update(c *database.Catalog, userID []byte, s Source) error {
 		return err
 	}
 
-	fields := map[string]audit.FieldDiff{}
+	fields := map[string]rowchange.FieldDiff{}
 	if !bytes.Equal(prev.SourceTypeID, s.SourceTypeID) {
-		fields["source_type_id"] = audit.FieldDiff{
+		fields["source_type_id"] = rowchange.FieldDiff{
 			Old: uuidString(prev.SourceTypeID),
 			New: uuidString(s.SourceTypeID),
 		}
 	}
 	if prev.Title != s.Title {
-		fields["title"] = audit.FieldDiff{Old: prev.Title, New: s.Title}
+		fields["title"] = rowchange.FieldDiff{Old: prev.Title, New: s.Title}
 	}
 	if prev.Description != s.Description {
-		fields["description"] = audit.FieldDiff{Old: nullJSON(prev.Description), New: nullJSON(s.Description)}
+		fields["description"] = rowchange.FieldDiff{Old: nullJSON(prev.Description), New: nullJSON(s.Description)}
 	}
 	if len(fields) == 0 {
 		return tx.Commit()
@@ -329,10 +330,10 @@ func Update(c *database.Catalog, userID []byte, s Source) error {
 		UserID:     userID,
 		ActionType: "update_source",
 		CreatedAt:  project.NowUTC(),
-		Changes: []audit.Change{{
+		Changes: []rowchange.Change{{
 			EntityType: "source",
 			EntityID:   s.ID,
-			Action:     audit.ActionUpdate,
+			Action:     rowchange.ActionUpdate,
 			Fields:     fields,
 		}},
 	}); err != nil {
@@ -390,23 +391,23 @@ func Delete(c *database.Catalog, userID, id []byte) error {
 		return err
 	}
 
-	fields := map[string]audit.FieldDiff{
+	fields := map[string]rowchange.FieldDiff{
 		"id":             {Old: uuidString(id), New: nil},
 		"ref":            {Old: existing.Ref, New: nil},
 		"source_type_id": {Old: uuidString(existing.SourceTypeID), New: nil},
 		"title":          {Old: existing.Title, New: nil},
 	}
 	if existing.Description != "" {
-		fields["description"] = audit.FieldDiff{Old: existing.Description, New: nil}
+		fields["description"] = rowchange.FieldDiff{Old: existing.Description, New: nil}
 	}
 	if _, err := audit.Record(tx, audit.Revision{
 		UserID:     userID,
 		ActionType: "delete_source",
 		CreatedAt:  project.NowUTC(),
-		Changes: append(released.Changes, audit.Change{
+		Changes: append(released.Changes, rowchange.Change{
 			EntityType: "source",
 			EntityID:   id,
-			Action:     audit.ActionDelete,
+			Action:     rowchange.ActionDelete,
 			Fields:     fields,
 		}),
 	}); err != nil {

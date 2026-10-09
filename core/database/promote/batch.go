@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"database/sql"
 	"errors"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/audit"
@@ -102,7 +103,7 @@ func SaveBatch(c *database.Catalog, userID []byte, in Batch) (BatchResult, error
 	}
 
 	var (
-		changes  []audit.Change
+		changes  []rowchange.Change
 		touched  [][]byte
 		subjects [][]byte
 		written  []Written
@@ -171,7 +172,7 @@ func latestRevision(tx *sql.Tx) (int64, error) {
 }
 
 // applyRow files one claim. A nil Written is an anchor or a skip.
-func applyRow(tx *sql.Tx, sourceID []byte, row BatchRow, targets pinTargets) (*Written, []audit.Change, []byte, error) {
+func applyRow(tx *sql.Tx, sourceID []byte, row BatchRow, targets pinTargets) (*Written, []rowchange.Change, []byte, error) {
 	switch row.Target {
 	case TargetSkip:
 		if len(row.EntityID) != 0 || len(row.Pairs) != 0 || len(row.ConfidenceGradeID) != 0 || row.Argument != "" {
@@ -227,7 +228,7 @@ func applyRow(tx *sql.Tx, sourceID []byte, row BatchRow, targets pinTargets) (*W
 
 	var (
 		entity  canonicalentities.Entity
-		changes []audit.Change
+		changes []rowchange.Change
 	)
 	if row.Target == TargetNew {
 		minted, change, err := canonicalentities.InsertTx(tx, canonicalentities.CreateInput{

@@ -49,6 +49,10 @@ func TestSourceScopes(t *testing.T) {
 			t.Fatal(err)
 		}
 		t.Cleanup(func() { _ = c.Close() })
+		// Registered second so it runs first, while the catalog is still open.
+		// Writes that omit a foreign key are checked in bumpsA, before a later
+		// delete removes the live row those lookups need.
+		t.Cleanup(func() { checkNewEffects(t, c) })
 		ur, err := ref.Mint(ref.PrefixUser)
 		if err != nil {
 			t.Fatal(err)
@@ -111,10 +115,12 @@ func TestSourceScopes(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		return seed{
+		s := seed{
 			c: c, a: a, b: b, artifact: art, person: person, event: event, place: place, place2: place2,
 			toponymProp: toponymProp, dateProp: dateProp, personTy: personType.ID,
 		}
+		checkNewEffects(t, c)
+		return s
 	}
 
 	revisions := func(t *testing.T, s seed) (a, b int64) {
@@ -150,6 +156,7 @@ func TestSourceScopes(t *testing.T) {
 		t.Helper()
 		_, b0 := revisions(t, s)
 		act()
+		checkNewEffects(t, s.c)
 		a1, b1 := revisions(t, s)
 		if want := latest(t, s); a1 != want {
 			t.Fatalf("source A revision %d, want latest %d", a1, want)
@@ -305,6 +312,20 @@ func TestSourceScopes(t *testing.T) {
 			},
 		},
 		{
+			name: "polarity edit keeps the source",
+			run: func(t *testing.T, s seed) {
+				res := mustCitation(t, s, citations.CreateInput{}, textObs(s, s.place, "Boston"))
+				bumpsA(t, s, func() {
+					if _, err := observations.Update(s.c, userID, observations.Input{
+						ID: res.Observations[0].ID, SubjectID: s.place.ID, PropertyID: s.toponymProp.ID,
+						ValueText: "Boston", HasText: true, Polarity: observations.PolarityNegative,
+					}); err != nil {
+						t.Fatal(err)
+					}
+				})
+			},
+		},
+		{
 			name: "date value edited in place",
 			run: func(t *testing.T, s seed) {
 				year := 1842
@@ -332,6 +353,9 @@ func TestSourceScopes(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
+				// The file create has no artifact yet. Checking it after the
+				// artifacts exist would see sources the revision did not.
+				checkNewEffects(t, s.c)
 				for _, src := range []sources.Source{s.a, s.b} {
 					if _, err := artifacts.Create(s.c, userID, artifacts.CreateInput{
 						SourceID: src.ID, FileID: fres.File.ID, Label: "Scan",

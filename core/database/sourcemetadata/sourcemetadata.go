@@ -6,6 +6,7 @@ package sourcemetadata
 import (
 	"database/sql"
 	"errors"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"sort"
 	"strings"
 
@@ -132,7 +133,7 @@ func Set(c *database.Catalog, userID []byte, in Input) (Row, error) {
 
 	var row Row
 	var action string
-	fields := map[string]audit.FieldDiff{}
+	fields := map[string]rowchange.FieldDiff{}
 
 	if creating {
 		id, err := uuid.NewV7()
@@ -154,12 +155,12 @@ func Set(c *database.Catalog, userID []byte, in Input) (Row, error) {
 			FieldID:   append([]byte(nil), in.FieldID...),
 			ValueText: in.ValueText,
 		}
-		action = audit.ActionCreate
-		fields["id"] = audit.FieldDiff{Old: nil, New: id.String()}
-		fields["source_id"] = audit.FieldDiff{Old: nil, New: uuidString(in.SourceID)}
-		fields["field_id"] = audit.FieldDiff{Old: nil, New: uuidString(in.FieldID)}
+		action = rowchange.ActionCreate
+		fields["id"] = rowchange.FieldDiff{Old: nil, New: id.String()}
+		fields["source_id"] = rowchange.FieldDiff{Old: nil, New: uuidString(in.SourceID)}
+		fields["field_id"] = rowchange.FieldDiff{Old: nil, New: uuidString(in.FieldID)}
 		if in.ValueText != "" {
-			fields["value_text"] = audit.FieldDiff{Old: nil, New: in.ValueText}
+			fields["value_text"] = rowchange.FieldDiff{Old: nil, New: in.ValueText}
 		}
 	} else {
 		if prev.ValueText == in.ValueText {
@@ -175,15 +176,15 @@ func Set(c *database.Catalog, userID []byte, in Input) (Row, error) {
 			FieldID:   append([]byte(nil), in.FieldID...),
 			ValueText: in.ValueText,
 		}
-		action = audit.ActionUpdate
-		fields["value_text"] = audit.FieldDiff{Old: nullJSON(prev.ValueText), New: nullJSON(in.ValueText)}
+		action = rowchange.ActionUpdate
+		fields["value_text"] = rowchange.FieldDiff{Old: nullJSON(prev.ValueText), New: nullJSON(in.ValueText)}
 	}
 
 	if _, err := audit.Record(tx, audit.Revision{
 		UserID:     userID,
 		ActionType: "update_source_metadata",
 		CreatedAt:  project.NowUTC(),
-		Changes: []audit.Change{{
+		Changes: []rowchange.Change{{
 			EntityType: "source_metadata",
 			EntityID:   row.ID,
 			Action:     action,
@@ -231,22 +232,22 @@ func Clear(c *database.Catalog, userID, sourceID, fieldID []byte) error {
 	if _, err := tx.Exec(sqlDelete, sourceID, fieldID); err != nil {
 		return err
 	}
-	fields := map[string]audit.FieldDiff{
+	fields := map[string]rowchange.FieldDiff{
 		"id":        {Old: uuidString(prev.ID), New: nil},
 		"source_id": {Old: uuidString(prev.SourceID), New: nil},
 		"field_id":  {Old: uuidString(prev.FieldID), New: nil},
 	}
 	if prev.ValueText != "" {
-		fields["value_text"] = audit.FieldDiff{Old: prev.ValueText, New: nil}
+		fields["value_text"] = rowchange.FieldDiff{Old: prev.ValueText, New: nil}
 	}
 	if _, err := audit.Record(tx, audit.Revision{
 		UserID:     userID,
 		ActionType: "update_source_metadata",
 		CreatedAt:  project.NowUTC(),
-		Changes: []audit.Change{{
+		Changes: []rowchange.Change{{
 			EntityType: "source_metadata",
 			EntityID:   prev.ID,
-			Action:     audit.ActionDelete,
+			Action:     rowchange.ActionDelete,
 			Fields:     fields,
 		}},
 	}); err != nil {
@@ -311,21 +312,21 @@ func DismissSuggestion(c *database.Catalog, userID, sourceID, fieldID []byte) er
 	if _, err := tx.Exec(sqlLayoutDismiss, sourceID, fieldID, sourceID); err != nil {
 		return mapConstraint(err)
 	}
-	action := audit.ActionCreate
+	action := rowchange.ActionCreate
 	var oldDismissed any
 	if had {
-		action = audit.ActionUpdate
+		action = rowchange.ActionUpdate
 		oldDismissed = false
 	}
 	if _, err := audit.Record(tx, audit.Revision{
 		UserID:     userID,
 		ActionType: "dismiss_source_metadata_suggestion",
 		CreatedAt:  project.NowUTC(),
-		Changes: []audit.Change{{
+		Changes: []rowchange.Change{{
 			EntityType: "source_metadata_layout",
 			EntityID:   fieldID,
 			Action:     action,
-			Fields: map[string]audit.FieldDiff{
+			Fields: map[string]rowchange.FieldDiff{
 				"source_id": {Old: uuidString(sourceID), New: uuidString(sourceID)},
 				"field_id":  {Old: uuidString(fieldID), New: uuidString(fieldID)},
 				"dismissed": {Old: oldDismissed, New: true},
@@ -372,7 +373,7 @@ func Reorder(c *database.Catalog, userID, sourceID []byte, fieldIDs [][]byte) er
 		return err
 	}
 
-	var changes []audit.Change
+	var changes []rowchange.Change
 	for i, fieldID := range fieldIDs {
 		if _, err := getFieldTx(tx, fieldID); err != nil {
 			return err
@@ -390,17 +391,17 @@ func Reorder(c *database.Catalog, userID, sourceID []byte, fieldIDs [][]byte) er
 		if _, err := tx.Exec(sqlLayoutOrder, sourceID, fieldID, i); err != nil {
 			return mapConstraint(err)
 		}
-		action := audit.ActionCreate
+		action := rowchange.ActionCreate
 		var oldOrder any
 		if had {
-			action = audit.ActionUpdate
+			action = rowchange.ActionUpdate
 			oldOrder = prev.SortOrder
 		}
-		changes = append(changes, audit.Change{
+		changes = append(changes, rowchange.Change{
 			EntityType: "source_metadata_layout",
 			EntityID:   fieldID,
 			Action:     action,
-			Fields: map[string]audit.FieldDiff{
+			Fields: map[string]rowchange.FieldDiff{
 				"source_id":  {Old: uuidString(sourceID), New: uuidString(sourceID)},
 				"field_id":   {Old: uuidString(fieldID), New: uuidString(fieldID)},
 				"sort_order": {Old: oldOrder, New: i},

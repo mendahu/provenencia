@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"strings"
 
 	"github.com/google/uuid"
@@ -152,11 +153,11 @@ func Delete(c *database.Catalog, userID, id []byte) error {
 	if err := autoreconciler.RecomputeTx(tx, released.Handles); err != nil {
 		return err
 	}
-	changes = append(changes, audit.Change{
+	changes = append(changes, rowchange.Change{
 		EntityType: "observation",
 		EntityID:   id,
-		Action:     audit.ActionDelete,
-		Fields:     audit.DeletedRow(observationRowMap(prev)),
+		Action:     rowchange.ActionDelete,
+		Fields:     rowchange.DeletedRow(observationRowMap(prev)),
 	})
 	if _, err := audit.Record(tx, audit.Revision{
 		UserID:     userID,
@@ -240,21 +241,21 @@ func listNotesTx(tx *sql.Tx, observationID []byte) ([]observationNote, error) {
 	return out, rows.Err()
 }
 
-func replaceNotes(tx *sql.Tx, observationID []byte, notes []string) ([]audit.Change, error) {
+func replaceNotes(tx *sql.Tx, observationID []byte, notes []string) ([]rowchange.Change, error) {
 	prev, err := listNotesTx(tx, observationID)
 	if err != nil {
 		return nil, err
 	}
-	var changes []audit.Change
+	var changes []rowchange.Change
 	for _, note := range prev {
 		if _, err := tx.Exec(sqlDeleteNote, note.id); err != nil {
 			return nil, err
 		}
-		changes = append(changes, audit.Change{
+		changes = append(changes, rowchange.Change{
 			EntityType: "observation_note",
 			EntityID:   note.id,
-			Action:     audit.ActionDelete,
-			Fields: audit.DeletedRow(map[string]any{
+			Action:     rowchange.ActionDelete,
+			Fields: rowchange.DeletedRow(map[string]any{
 				"id":             uuidJSON(note.id),
 				"observation_id": uuidJSON(observationID),
 				"body":           note.body,
@@ -273,11 +274,11 @@ func replaceNotes(tx *sql.Tx, observationID []byte, notes []string) ([]audit.Cha
 		if _, err := tx.Exec(sqlInsertNote, noteID[:], observationID, body); err != nil {
 			return nil, err
 		}
-		changes = append(changes, audit.Change{
+		changes = append(changes, rowchange.Change{
 			EntityType: "observation_note",
 			EntityID:   noteID[:],
-			Action:     audit.ActionCreate,
-			Fields: audit.FullRow(map[string]any{
+			Action:     rowchange.ActionCreate,
+			Fields: rowchange.FullRow(map[string]any{
 				"id":             noteID.String(),
 				"observation_id": uuidJSON(observationID),
 				"body":           body,

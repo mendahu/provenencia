@@ -23,6 +23,7 @@ Update the model in the **same PR** as the migration that adds, changes, or drop
 3. One `FKs` row per live FK: `From`, `Column` (the leading column), `To`, `OnDelete`, `Bucket`. A composite key sets `FromCols` to the full column tuple in `PRAGMA` order and is keyed by seq 0 (`identity_claims` `subject_id` + `subject_type_id`). `Audited: true` only on a `CASCADE` whose rows official deletes release and audit. Empty and `RESTRICT` compare as `NO ACTION`.
 4. The leading column needs a covering index (explicit, `UNIQUE`, or primary key leftmost).
 5. A resource FK needs a list probe, an owned-outbound FK needs a release entry, and an audited `CASCADE` needs one facet release. Those stay in `deleteimpact`.
+6. A table outside the skip bucket also needs an `effects` entry in the same PR (`core/database/effects`). One `Effect` per table: `Source`, `Handles`, `Search`, `Vocabulary`, `Structure`. An empty field means that job is unaffected. `None: true` is the explicit empty entry. Skip tables stay out of the registry. A path step that names an edge has to be a real `catalogmodel.FKs` row; package init panics when it is not.
 
 ```go
 {Name: "citation_notes", Bucket: BucketFacet},
@@ -37,17 +38,19 @@ A renamed column or a new `ON DELETE` updates `Column`, `FromCols`, `To`, and `O
 
 ## Remove
 
-Drop the `Tables` row, its `FKs` rows, and the `Kind` constant when nothing names the table. Drop the kind from `deleteimpact`'s deletable set, and drop its inbound probes, owned releases, facet releases, and projectors, plus any call site that passed the kind. Do not leave a zero-count probe for a table that is not in the catalog yet.
+Drop the `Tables` row, its `FKs` rows, and the `Kind` constant when nothing names the table. Drop the kind from `deleteimpact`'s deletable set, and drop its inbound probes, owned releases, facet releases, and projectors, plus any call site that passed the kind. Drop the table's `effects` entry. Do not leave a zero-count probe for a table that is not in the catalog yet.
 
 ## Check
 
 ```
-CGO_ENABLED=1 go test -tags fts5 ./core/database/catalogmodel ./core/database/deleteimpact
+CGO_ENABLED=1 go test -tags fts5 ./core/database/catalogmodel ./core/database/deleteimpact ./core/database/effects
 ```
 
 `catalogmodel.TestPragmaHonesty`: every non-FTS catalog table is registered; every live FK matches `To`, `OnDelete`, and `FromCols`; no registered FK is missing; the leading column has a covering index.
 
 `deleteimpact` then checks that a resource FK has a list probe, an owned-outbound FK is on the release list, a deletable kind has a projector section, and each audited `CASCADE` has one facet release. Every deletable kind resolves to one table with a primary key.
+
+`effects` checks that every non-skip table has an entry, and that a `CASCADE` into a table with effects is `Audited`. Package init already panics when a path names a missing foreign key.
 
 ## Do not
 

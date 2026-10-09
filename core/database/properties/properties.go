@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"strings"
 
 	"github.com/google/uuid"
@@ -195,7 +196,7 @@ func Create(c *database.Catalog, userID []byte, label, valueType, description, c
 	if _, err := tx.Exec(sqlUpsert, id, key, OriginUser, label, desc, valueType, cardinality); err != nil {
 		return Property{}, err
 	}
-	fields := map[string]audit.FieldDiff{
+	fields := map[string]rowchange.FieldDiff{
 		"id":          {Old: nil, New: uid.String()},
 		"key":         {Old: nil, New: key},
 		"origin":      {Old: nil, New: OriginUser},
@@ -204,16 +205,16 @@ func Create(c *database.Catalog, userID []byte, label, valueType, description, c
 		"cardinality": {Old: nil, New: cardinality},
 	}
 	if description != "" {
-		fields["description"] = audit.FieldDiff{Old: nil, New: description}
+		fields["description"] = rowchange.FieldDiff{Old: nil, New: description}
 	}
 	if _, err := audit.Record(tx, audit.Revision{
 		UserID:     userID,
 		ActionType: "create_property",
 		CreatedAt:  project.NowUTC(),
-		Changes: []audit.Change{{
+		Changes: []rowchange.Change{{
 			EntityType: "property",
 			EntityID:   id,
-			Action:     audit.ActionCreate,
+			Action:     rowchange.ActionCreate,
 			Fields:     fields,
 		}},
 	}); err != nil {
@@ -272,15 +273,15 @@ func Update(c *database.Catalog, userID, id []byte, label, valueType, descriptio
 	}
 	defer func() { _ = tx.Rollback() }()
 
-	fields := map[string]audit.FieldDiff{}
+	fields := map[string]rowchange.FieldDiff{}
 	if existing.Label != label {
-		fields["label"] = audit.FieldDiff{Old: nullJSON(existing.Label), New: nullJSON(label)}
+		fields["label"] = rowchange.FieldDiff{Old: nullJSON(existing.Label), New: nullJSON(label)}
 	}
 	if existing.Description != description {
-		fields["description"] = audit.FieldDiff{Old: nullJSON(existing.Description), New: nullJSON(description)}
+		fields["description"] = rowchange.FieldDiff{Old: nullJSON(existing.Description), New: nullJSON(description)}
 	}
 	if cardinalityChanged {
-		fields["cardinality"] = audit.FieldDiff{Old: nullJSON(existing.Cardinality), New: nullJSON(cardinality)}
+		fields["cardinality"] = rowchange.FieldDiff{Old: nullJSON(existing.Cardinality), New: nullJSON(cardinality)}
 	}
 	if len(fields) == 0 {
 		_ = tx.Rollback()
@@ -305,10 +306,10 @@ func Update(c *database.Catalog, userID, id []byte, label, valueType, descriptio
 		UserID:     userID,
 		ActionType: "update_property",
 		CreatedAt:  project.NowUTC(),
-		Changes: []audit.Change{{
+		Changes: []rowchange.Change{{
 			EntityType: "property",
 			EntityID:   id,
-			Action:     audit.ActionUpdate,
+			Action:     rowchange.ActionUpdate,
 			Fields:     fields,
 		}},
 	}); err != nil {
@@ -478,7 +479,7 @@ func Delete(c *database.Catalog, userID, id []byte) error {
 	if _, err := tx.Exec(sqlDelete, id); err != nil {
 		return err
 	}
-	fields := map[string]audit.FieldDiff{
+	fields := map[string]rowchange.FieldDiff{
 		"id":         {Old: uuidString(id), New: nil},
 		"key":        {Old: prev.Key, New: nil},
 		"origin":     {Old: prev.Origin, New: nil},
@@ -486,16 +487,16 @@ func Delete(c *database.Catalog, userID, id []byte) error {
 		"value_type": {Old: prev.ValueType, New: nil},
 	}
 	if prev.Description != "" {
-		fields["description"] = audit.FieldDiff{Old: prev.Description, New: nil}
+		fields["description"] = rowchange.FieldDiff{Old: prev.Description, New: nil}
 	}
 	if _, err := audit.Record(tx, audit.Revision{
 		UserID:     userID,
 		ActionType: "delete_property",
 		CreatedAt:  project.NowUTC(),
-		Changes: []audit.Change{{
+		Changes: []rowchange.Change{{
 			EntityType: "property",
 			EntityID:   id,
-			Action:     audit.ActionDelete,
+			Action:     rowchange.ActionDelete,
 			Fields:     fields,
 		}},
 	}); err != nil {

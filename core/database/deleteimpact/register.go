@@ -69,7 +69,7 @@ var originRules = []originRule{
 	{Kind: catalogmodel.KindProperty, OriginSQL: `SELECT origin FROM properties WHERE id = ?`, PluginNever: true, SeededLocked: true},
 	{Kind: catalogmodel.KindPropertyTerm, OriginSQL: `SELECT origin FROM property_terms WHERE id = ?`, PluginNever: true, SeededLocked: true},
 	{Kind: catalogmodel.KindSubjectType, OriginSQL: `SELECT origin FROM subject_types WHERE id = ?`, PluginNever: true},
-	{Kind: catalogmodel.KindCredibilityGrade, OriginSQL: `SELECT origin FROM source_credibility_grades WHERE id = ?`, PluginNever: true},
+	{Kind: catalogmodel.KindCredibilityGrade, OriginSQL: `SELECT origin FROM source_credibility_grades WHERE id = ?`, PluginNever: true, SeededLocked: true},
 }
 
 var ownedReleases = []ownedRelease{

@@ -40,7 +40,7 @@ A new `EntityType` string passed to `audit.Record` (or a new `rowFacet` in
 - **Create / update** changes may carry only the changed fields. Resolvers fall back to the
   live row by `entity_id`.
 - **Delete** changes must carry the parent FK (`source_id`, `artifact_id`, `citation_id`,
-  `observation_id`, …) in `audit.DeletedRow(...)`. The row is gone by `Record` time, so the
+  `observation_id`, …) in `rowchange.DeletedRow(...)`. The row is gone by `Record` time, so the
   fields are the only link. Children released in the same revision (notes before their
   citation) reach a deleted parent through that parent's delete change (the ghost map).
 - A `rowFacet(...)` must list its FK column in `cols` for the same reason.

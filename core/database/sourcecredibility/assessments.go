@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"database/sql"
 	"errors"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"strings"
 
 	"github.com/google/uuid"
@@ -96,7 +97,7 @@ func Upsert(c *database.Catalog, userID []byte, in UpsertInput) (Assessment, err
 	var id []byte
 	var actionType string
 	var action string
-	fields := map[string]audit.FieldDiff{}
+	fields := map[string]rowchange.FieldDiff{}
 
 	if creating {
 		uid, err := uuid.NewV7()
@@ -108,12 +109,12 @@ func Upsert(c *database.Catalog, userID []byte, in UpsertInput) (Assessment, err
 			return Assessment{}, mapConstraint(err)
 		}
 		actionType = "create_source_credibility_assessment"
-		action = audit.ActionCreate
-		fields["id"] = audit.FieldDiff{Old: nil, New: uid.String()}
-		fields["source_id"] = audit.FieldDiff{Old: nil, New: uuidString(in.SourceID)}
-		fields["credibility_grade_id"] = audit.FieldDiff{Old: nil, New: uuidString(in.CredibilityGradeID)}
+		action = rowchange.ActionCreate
+		fields["id"] = rowchange.FieldDiff{Old: nil, New: uid.String()}
+		fields["source_id"] = rowchange.FieldDiff{Old: nil, New: uuidString(in.SourceID)}
+		fields["credibility_grade_id"] = rowchange.FieldDiff{Old: nil, New: uuidString(in.CredibilityGradeID)}
 		if in.Argument != "" {
-			fields["argument"] = audit.FieldDiff{Old: nil, New: in.Argument}
+			fields["argument"] = rowchange.FieldDiff{Old: nil, New: in.Argument}
 		}
 	} else {
 		id = prev.ID
@@ -131,15 +132,15 @@ func Upsert(c *database.Catalog, userID []byte, in UpsertInput) (Assessment, err
 			return Assessment{}, mapConstraint(err)
 		}
 		actionType = "update_source_credibility_assessment"
-		action = audit.ActionUpdate
+		action = rowchange.ActionUpdate
 		if gradeChanged {
-			fields["credibility_grade_id"] = audit.FieldDiff{
+			fields["credibility_grade_id"] = rowchange.FieldDiff{
 				Old: uuidString(prev.CredibilityGradeID),
 				New: uuidString(in.CredibilityGradeID),
 			}
 		}
 		if argChanged {
-			fields["argument"] = audit.FieldDiff{
+			fields["argument"] = rowchange.FieldDiff{
 				Old: nullJSON(prev.Argument),
 				New: nullJSON(in.Argument),
 			}
@@ -157,7 +158,7 @@ func Upsert(c *database.Catalog, userID []byte, in UpsertInput) (Assessment, err
 		UserID:     userID,
 		ActionType: actionType,
 		CreatedAt:  project.NowUTC(),
-		Changes: []audit.Change{{
+		Changes: []rowchange.Change{{
 			EntityType: "source_credibility_assessment",
 			EntityID:   id,
 			Action:     action,

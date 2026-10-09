@@ -124,7 +124,7 @@ Today each write function does all three by hand: about 45 transaction sites, 40
 
 The split:
 
-- **Write functions** write their rows and return what they changed, as `[]audit.Change`. No transaction handling, no audit call, no recompute.
+- **Write functions** write their rows and return what they changed, as `[]rowchange.Change`. No transaction handling, no audit call, no recompute.
 - **The orchestrator** (`writes.Run`) owns the transaction and the order of the duties.
 - **The effects registry** says, per table, what a change to one of its rows touches. It's built on `catalogmodel`, shared with `deleteimpact` and audit.
 
@@ -146,7 +146,7 @@ type Result struct {
 	Effects  effects.Set // handles, header dependents, Sources, vocabulary, search
 }
 
-func Run(c *database.Catalog, op Op, fn func(tx *database.Tx) ([]audit.Change, error)) (Result, error) {
+func Run(c *database.Catalog, op Op, fn func(tx *database.Tx) ([]rowchange.Change, error)) (Result, error) {
 	tx := begin(c)
 	changes, err := fn(tx)                       // 1. persistent data
 	// on error: rollback, nothing else happens
@@ -181,17 +181,17 @@ func DeleteObservation(c *database.Catalog, userID, id []byte) error {
 }
 
 // after: writes and reports
-func DeleteObservation(tx *database.Tx, id []byte) ([]audit.Change, error) {
+func DeleteObservation(tx *database.Tx, id []byte) ([]rowchange.Change, error) {
 	// … read prev, refuse, release facets, delete — as today …
-	return append(released.Changes, audit.Change{
-		EntityType: "observation", EntityID: id, Action: audit.ActionDelete,
-		Fields: audit.DeletedRow(observationRowMap(prev)),
+	return append(released.Changes, rowchange.Change{
+		EntityType: "observation", EntityID: id, Action: rowchange.ActionDelete,
+		Fields: rowchange.DeletedRow(observationRowMap(prev)),
 	}), nil
 }
 
 // the FFI handler
 res, err := writes.Run(c, writes.Op{Action: "delete_observation", UserID: user},
-	func(tx *database.Tx) ([]audit.Change, error) {
+	func(tx *database.Tx) ([]rowchange.Change, error) {
 		return observations.DeleteObservation(tx, id)
 	})
 ```
@@ -261,7 +261,7 @@ inbound("observations", "value_subject_id")          // rows that point at this 
 sql(`SELECT …`)                                      // anything a path can't say
 ```
 
-Every path reads the change's fields, old and new. An update that moves an Observation from Subject A to B resolves both. A delete resolves from the old fields, because the row is already gone (audit's scope resolvers do this today with `ghostMap`).
+If the path's column is on the diff, the walk uses old and new, so a move resolves both ids. If the column is absent, the walk reads the live row. Ghosts (the delete change's old fields) apply only when the row is already gone. A polarity edit is the same rule as any other sparse update: `polarity` is on the diff, `citation_id` is not, and the live row still names the citation.
 
 ```go
 var registry = map[string]Effect{
@@ -270,7 +270,7 @@ var registry = map[string]Effect{
 	"source_type": {Vocabulary: labels, Search: union(selfDoc, sourcesOfType)},
 	"citation": {
 		Source:  up("artifact_id", "source_id"),
-		Handles: onField("certainty", sql(handlesUnderCitation)),
+		Handles: onField("transcription_uncertain", sql(handlesUnderCitation)),
 	},
 	"observation": {
 		Source:  up("citation_id", "artifact_id", "source_id"),
@@ -283,7 +283,7 @@ var registry = map[string]Effect{
 		),
 	},
 	"identity_claim_evidence": {Handles: up("identity_claim_id", "entity_id")}, // released pins
-	"source_credibility_assessment": {Source: up("source_id"), Handles: from("source_id", sql(handlesInSource))},
+	"source_credibility_assessment": {Source: up("source_id"), Handles: onField("credibility_grade_id", from("source_id", sql(handlesInSource)))},
 	"property":         {Vocabulary: labels, Handles: onField("cardinality", sql(handlesObservingProperty))},
 	"property_term": {
 		Vocabulary: labels,
@@ -294,7 +294,8 @@ var registry = map[string]Effect{
 }
 
 // membersOf: subject → its accepted and provisional handles.
-var membersOf = across("identity_claims", "subject_id", "entity_id")
+// The status filter is part of this declaration, not a default inside across.
+var membersOf = across("identity_claims", "subject_id", "entity_id", "accepted", "provisional")
 
 // observers: Subjects whose Observations have this Subject as their value,
 // then their handles.
@@ -303,8 +304,8 @@ var observers = chain(inbound("observations", "value_subject_id"), field("subjec
 
 Two kinds of effect stay hand-written, because they're about meaning, not the schema:
 
-- **Effects tied to one field.** A citation touches handles only when `certainty` changes; a property only on `cardinality` (`onField`).
-- **Status-dependent effects.** Only an accepted claim moves where subject-valued Observations resolve (`onStatus`).
+- **Effects tied to one field.** A citation touches handles only when `transcription_uncertain` changes; a credibility assessment only when `credibility_grade_id` changes; a property only on `cardinality` (`onField`).
+- **Status-dependent effects.** `onStatus("accepted")` runs when either the old or the new status is `accepted`, so a new accepted claim and a later accepted→rejected edit both recompute observers. A diff that omits `status` did not change it.
 
 Header dependents aren't an effects concern. They follow the canonical graph, not foreign keys, and depend on vocabulary (which roles and relationship types a header reads), so they come from the header registry (see Vocabulary stays in registries). `RecomputeTx` computes them from the handles it rewrites, as it does today with `conclusionheaders.HeaderDependents`.
 
@@ -392,7 +393,7 @@ The rule: **the schema and the infrastructure never name a vocabulary key.** Sub
 | **Registries** | which keys mean what | all of it |
 | **Features** (Promote, the lists, the place page) | use registries by name | through registries |
 
-The effects registry is keyed by table and column, so it stays on the catalog-model side. `onField("certainty")` and `onField("cardinality")` are columns; `onStatus("accepted")` is a `CHECK` enum on `identity_claims.status`. None of its entries name a term, role or kind.
+The effects registry is keyed by table and column, so it stays on the catalog-model side. `onField("transcription_uncertain")` and `onField("cardinality")` are columns; `onStatus("accepted")` is a `CHECK` enum on `identity_claims.status`. None of its entries name a term, role or kind.
 
 ### The registries
 
@@ -502,14 +503,15 @@ Each step is its own PR, measured against the one before. PRs that only repoint 
 **Catalog model and effects**
 
 1. **Extract the catalog model** (done). Tables and foreign keys live in `core/database/catalogmodel` (`Tables`, `FKs`, `Kind`, `Bucket`), with the PRAGMA honesty test. `deleteimpact` reads them from there and keeps probes and releases. No behavior change.
-2. **Paths and the effects registry** (logic). The path combinators; an entry for every table outside the skip bucket, including search and vocabulary effects; audit's scope resolvers re-expressed as `Source` paths, with a test that they resolve the same Sources as the old resolvers on the existing fixtures; the completeness tests. Nothing calls the `Handles` side yet.
-   - *Open:* claim statuses in paths. The recompute SQL counts `accepted` and `provisional` claims as members; `across("identity_claims", …)` must filter the same way. Decide whether status filters are a path option or part of each declaration.
-   - *Open:* unchanged foreign keys. Update diffs record a column only when it changed: `observationUpdateChange` omits `subject_id` on a polarity edit, a term swap, or a `value_subject_id` move, and `from("subject_id", membersOf)` then resolves no handles. Today's `Update` still recomputes both subjects. `audit.via` already reads the live row when the parent id is absent from the diff, and uses ghosts only for deletes. Paths have to do both, or a `transcription_uncertain` edit that doesn't diff `artifact_id` fails the "same Sources as the old resolvers" test. Decide that lookup rule before any `Handles` entry is trusted.
-   - *Open:* which column actually triggers recompute. The sketch's `onField("certainty")` is not a column; the citation field is `transcription_uncertain`. A credibility assessment recomputes the Source's handles only when `credibility_grade_id` changes (an argument-only edit does not, in `sourcecredibility` today). Grade `sort_order` is a separate case: `sqlLoadCandidates` weighs evidence by `source_credibility_grades` and `claim_confidence_grades` sort order, so editing a grade changes handles whose assessment rows did not change. Decide whether those grade tables have a `Handles` fan-out, or grades are seed-stable and outside this registry.
-   - *Open:* status on both sides of a claim change. `onStatus("accepted")` checked against the new value matches `identityclaims.recomputeTx` for a create. A later accepted→rejected edit has to recompute observers too, or subject-valued ends keep resolving at the old handle. Fire when either the old or the new status is `accepted`. There is no status-edit path yet; the registry still has to state the rule.
-   - *Open:* name and date values. An in-place rewrite keeps `value_name_id` / `value_date_id` and is audited as `name_value` / `date_value` (`nameUpdateChange`, `dateUpdateChange`), not as an observation-column change. The handle path is inbound `observations`, then `membersOf`. A shared date value touches every observation that points at it. These tables are outside the skip bucket and missing from the sample registry.
-   - *Open:* one map or one registry per consumer. Source history, ARV handles, search documents, and vocabulary invalidation are different questions. `identity_claim` is `noScope` in `audit/scopes.go` and still changes canonical handles; a cache Source scope for the Source store (PR 12) is not an audit scope. Share the path combinators. Decide whether each consumer keeps its own registry or one `Effect` struct grows a field per consumer. Keep `sql()` for walks the combinators cannot say; citation and name-value walks should become `inbound` plus `membersOf` once unchanged keys are visible.
-   - *Open:* where `Change` lives. `effects` cannot take `[]audit.Change` if `audit.Record` calls back into `effects`. Move `Change` down next to `catalogmodel`, or have `writes.Run` resolve scopes and pass them into `Record`. Settle it in this PR; PR 3 wires the call.
+2. **Paths and the effects registry** (done). `core/database/effects` has the path combinators and one `Effect` per table outside the skip bucket. `audit.Record` and `RecomputeTx` do not call it yet.
+   - **One `Effect` per table**, with a field per job: `Source`, `Handles`, `Search`, `Vocabulary`, `Structure`. An empty field means that job is unaffected. `None: true` is an explicit empty entry (`users`, layout-only `subject_positions`, and the grade tables). An identity claim keeps an empty `Source` (today's `noScope`) and a `Handles` path. A later cache Source scope can be another field. It is not an audit scope.
+   - **`Change` lives in `core/database/rowchange`** (`Change`, `FieldDiff`, `FullRow`, `DeletedRow`, and the action constants). `Revision` and `Record` stay in `audit`. Writers say `rowchange.Change`. No aliases. `effects` imports `rowchange` and `catalogmodel`. It does not import `audit`. `audit` does not import `effects`.
+   - **Lookup.** If the path's column is on the diff, use old and new. If it is absent, read the live row. Ghosts apply only when the row is already gone. This matches `scopeResolver.via` and `directSource`.
+   - **Claim membership** is a filter on the declaration. `membersOf` is `across("identity_claims", "subject_id", "entity_id")` restricted to `accepted` and `provisional`.
+   - **`onStatus` fires when either the old or the new status is `accepted`.** A diff that omits `status` does not run the inner path. There is no status-edit writer yet; a unit test covers both sides.
+   - **Trigger columns.** Citation handles use `onField("transcription_uncertain")`. A credibility assessment recomputes that Source's handles only on `onField("credibility_grade_id")`.
+   - **Grades are seed-stable.** No `Handles` fan-out from `source_credibility_grades` or `claim_confidence_grades`. Source credibility grades are `SeededLocked`, same as properties, so a provenencia grade cannot be deleted. Claim confidence grades have no delete path.
+   - **Name and date values** have entries. Source walks inbound `observations` on `value_name_id` / `value_date_id`, then up to the source. Handles walk that same inbound, then `membersOf`. `observations.value_date_id` and `value_name_id` are unique, so one observation owns a value today; the path is still inbound and returns every row that points at it. `sql()` stays for a walk a combinator cannot say.
 
 **Writes**
 

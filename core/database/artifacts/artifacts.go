@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"errors"
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"os"
 	"path/filepath"
 	"strings"
@@ -127,26 +128,26 @@ func Create(c *database.Catalog, userID []byte, in CreateInput) (Artifact, error
 		return Artifact{}, ErrInvalid
 	}
 
-	fields := map[string]audit.FieldDiff{
+	fields := map[string]rowchange.FieldDiff{
 		"id":        {Old: nil, New: id.String()},
 		"ref":       {Old: nil, New: artRef},
 		"source_id": {Old: nil, New: uuidString(in.SourceID)},
 		"label":     {Old: nil, New: in.Label},
 	}
 	if len(in.FileID) == 16 {
-		fields["file_id"] = audit.FieldDiff{Old: nil, New: uuidString(in.FileID)}
+		fields["file_id"] = rowchange.FieldDiff{Old: nil, New: uuidString(in.FileID)}
 	}
 	if in.Description != "" {
-		fields["description"] = audit.FieldDiff{Old: nil, New: in.Description}
+		fields["description"] = rowchange.FieldDiff{Old: nil, New: in.Description}
 	}
 	if _, err := audit.Record(tx, audit.Revision{
 		UserID:     userID,
 		ActionType: "create_artifact",
 		CreatedAt:  project.NowUTC(),
-		Changes: []audit.Change{{
+		Changes: []rowchange.Change{{
 			EntityType: "artifact",
 			EntityID:   idBytes,
-			Action:     audit.ActionCreate,
+			Action:     rowchange.ActionCreate,
 			Fields:     fields,
 		}},
 	}); err != nil {
@@ -214,18 +215,18 @@ func Update(c *database.Catalog, userID []byte, a Artifact) error {
 		}
 	}
 
-	fields := map[string]audit.FieldDiff{}
+	fields := map[string]rowchange.FieldDiff{}
 	if !bytes.Equal(prev.FileID, a.FileID) {
-		fields["file_id"] = audit.FieldDiff{
+		fields["file_id"] = rowchange.FieldDiff{
 			Old: uuidJSON(prev.FileID),
 			New: uuidJSON(a.FileID),
 		}
 	}
 	if prev.Label != a.Label {
-		fields["label"] = audit.FieldDiff{Old: prev.Label, New: a.Label}
+		fields["label"] = rowchange.FieldDiff{Old: prev.Label, New: a.Label}
 	}
 	if prev.Description != a.Description {
-		fields["description"] = audit.FieldDiff{Old: nullJSON(prev.Description), New: nullJSON(a.Description)}
+		fields["description"] = rowchange.FieldDiff{Old: nullJSON(prev.Description), New: nullJSON(a.Description)}
 	}
 	if len(fields) == 0 {
 		return tx.Commit()
@@ -238,10 +239,10 @@ func Update(c *database.Catalog, userID []byte, a Artifact) error {
 		UserID:     userID,
 		ActionType: "update_artifact",
 		CreatedAt:  project.NowUTC(),
-		Changes: []audit.Change{{
+		Changes: []rowchange.Change{{
 			EntityType: "artifact",
 			EntityID:   a.ID,
-			Action:     audit.ActionUpdate,
+			Action:     rowchange.ActionUpdate,
 			Fields:     fields,
 		}},
 	}); err != nil {
@@ -306,26 +307,26 @@ func Delete(c *database.Catalog, userID, id []byte) error {
 		return err
 	}
 
-	fields := map[string]audit.FieldDiff{
+	fields := map[string]rowchange.FieldDiff{
 		"id":        {Old: uuidString(id), New: nil},
 		"ref":       {Old: existing.Ref, New: nil},
 		"source_id": {Old: uuidString(existing.SourceID), New: nil},
 		"label":     {Old: existing.Label, New: nil},
 	}
 	if len(existing.FileID) == 16 {
-		fields["file_id"] = audit.FieldDiff{Old: uuidString(existing.FileID), New: nil}
+		fields["file_id"] = rowchange.FieldDiff{Old: uuidString(existing.FileID), New: nil}
 	}
 	if existing.Description != "" {
-		fields["description"] = audit.FieldDiff{Old: existing.Description, New: nil}
+		fields["description"] = rowchange.FieldDiff{Old: existing.Description, New: nil}
 	}
 	if _, err := audit.Record(tx, audit.Revision{
 		UserID:     userID,
 		ActionType: "delete_artifact",
 		CreatedAt:  project.NowUTC(),
-		Changes: []audit.Change{{
+		Changes: []rowchange.Change{{
 			EntityType: "artifact",
 			EntityID:   id,
-			Action:     audit.ActionDelete,
+			Action:     rowchange.ActionDelete,
 			Fields:     fields,
 		}},
 	}); err != nil {

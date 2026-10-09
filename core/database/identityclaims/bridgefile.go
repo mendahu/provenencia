@@ -3,10 +3,10 @@ package identityclaims
 import (
 	"bytes"
 	"database/sql"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 
 	"github.com/mendahu/provenencia/core/connectrules"
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/audit"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
 )
@@ -23,7 +23,7 @@ import (
 //
 // Returned association ids are the handles whose cache the caller recomputes.
 // Changes belong on the caller's revision. Does not commit.
-func FileBridgesTx(tx *sql.Tx, subjectID []byte, skip map[string]struct{}) (assocIDs [][]byte, changes []audit.Change, err error) {
+func FileBridgesTx(tx *sql.Tx, subjectID []byte, skip map[string]struct{}) (assocIDs [][]byte, changes []rowchange.Change, err error) {
 	if len(subjectID) != 16 {
 		return nil, nil, nil
 	}
@@ -37,7 +37,7 @@ func FileBridgesTx(tx *sql.Tx, subjectID []byte, skip map[string]struct{}) (asso
 // FileSourceBridgesTx files every unfiled bridge homed to sourceID whose ends
 // are both handles, including a bridge whose ends were claimed before this
 // call. skip names bridge Subjects to leave unfiled. Does not commit.
-func FileSourceBridgesTx(tx *sql.Tx, sourceID []byte, skip map[string]struct{}) (assocIDs [][]byte, changes []audit.Change, err error) {
+func FileSourceBridgesTx(tx *sql.Tx, sourceID []byte, skip map[string]struct{}) (assocIDs [][]byte, changes []rowchange.Change, err error) {
 	if len(sourceID) != 16 {
 		return nil, nil, nil
 	}
@@ -76,7 +76,7 @@ func FileSourceBridgesTx(tx *sql.Tx, sourceID []byte, skip map[string]struct{}) 
 	return fileHeads(tx, heads, skip)
 }
 
-func fileHeads(tx *sql.Tx, bridges []bridgeHead, skip map[string]struct{}) (assocIDs [][]byte, changes []audit.Change, err error) {
+func fileHeads(tx *sql.Tx, bridges []bridgeHead, skip map[string]struct{}) (assocIDs [][]byte, changes []rowchange.Change, err error) {
 	seen := map[string]bool{}
 	for _, b := range bridges {
 		if _, off := skip[string(b.id)]; off {
@@ -151,7 +151,7 @@ type endpoint struct {
 // fileBridge claims one bridge onto its association. filed is false when the
 // bridge waits (an end is unpromoted, or it is already filed) or when a
 // self-link is refused.
-func fileBridge(tx *sql.Tx, b bridgeHead) (assocID []byte, changes []audit.Change, filed bool, err error) {
+func fileBridge(tx *sql.Tx, b bridgeHead) (assocID []byte, changes []rowchange.Change, filed bool, err error) {
 	rule, ok := connectrules.LookupBridge(b.typeKey)
 	if !ok || len(rule.Endpoints) == 0 {
 		return nil, nil, false, nil

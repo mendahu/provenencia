@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"database/sql"
 	"errors"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 
 	"github.com/google/uuid"
 )
@@ -36,12 +37,12 @@ func (g ghostMap) id(entityType string, id []byte, field string) []byte {
 // resolver maps one change to the scopes it belongs to. A parent that cannot
 // be found is no scope, never an error: another change in the same revision
 // normally covers it.
-type resolver func(r scopeResolver, ch Change) ([]Scope, error)
+type resolver func(r scopeResolver, ch rowchange.Change) ([]Scope, error)
 
 // resolvers covers every audited entity type. Record rejects a type missing
 // here, so a new audited table has to decide its scope.
 var resolvers = map[string]resolver{
-	"source": func(_ scopeResolver, ch Change) ([]Scope, error) {
+	"source": func(_ scopeResolver, ch rowchange.Change) ([]Scope, error) {
 		return sourceScopes(ch.EntityID), nil
 	},
 	"source_note":                   directSource("source_notes"),
@@ -50,24 +51,24 @@ var resolvers = map[string]resolver{
 	"subject":                       directSource("subjects"),
 	"artifact":                      directSource("artifacts"),
 	// Layout rows are audited under field_id; source_id is always in Fields.
-	"source_metadata_layout": func(_ scopeResolver, ch Change) ([]Scope, error) {
+	"source_metadata_layout": func(_ scopeResolver, ch rowchange.Change) ([]Scope, error) {
 		return sourceScopes(fieldIDs(ch, "source_id")...), nil
 	},
-	"citation": func(r scopeResolver, ch Change) ([]Scope, error) {
+	"citation": func(r scopeResolver, ch rowchange.Change) ([]Scope, error) {
 		return r.via(ch, "artifact_id", r.sourceOfArtifact, r.sourceOfCitation)
 	},
-	"citation_note": func(r scopeResolver, ch Change) ([]Scope, error) {
+	"citation_note": func(r scopeResolver, ch rowchange.Change) ([]Scope, error) {
 		return r.via(ch, "citation_id", r.sourceOfCitation, r.parentLookup(
 			"citation_note", `SELECT citation_id FROM citation_notes WHERE id = ?`, "citation_id", r.sourceOfCitation))
 	},
-	"observation": func(r scopeResolver, ch Change) ([]Scope, error) {
+	"observation": func(r scopeResolver, ch rowchange.Change) ([]Scope, error) {
 		return r.via(ch, "citation_id", r.sourceOfCitation, r.sourceOfObservation)
 	},
-	"observation_note": func(r scopeResolver, ch Change) ([]Scope, error) {
+	"observation_note": func(r scopeResolver, ch rowchange.Change) ([]Scope, error) {
 		return r.via(ch, "observation_id", r.sourceOfObservation, r.parentLookup(
 			"observation_note", `SELECT observation_id FROM observation_notes WHERE id = ?`, "observation_id", r.sourceOfObservation))
 	},
-	"date_value": func(r scopeResolver, ch Change) ([]Scope, error) {
+	"date_value": func(r scopeResolver, ch rowchange.Change) ([]Scope, error) {
 		return r.sources(
 			`SELECT a.source_id FROM observations o
 				JOIN citations c ON c.id = o.citation_id
@@ -75,7 +76,7 @@ var resolvers = map[string]resolver{
 				WHERE o.value_date_id = ?`,
 			ch.EntityID)
 	},
-	"name_value": func(r scopeResolver, ch Change) ([]Scope, error) {
+	"name_value": func(r scopeResolver, ch rowchange.Change) ([]Scope, error) {
 		return r.sources(
 			`SELECT a.source_id FROM observations o
 				JOIN citations c ON c.id = o.citation_id
@@ -85,7 +86,7 @@ var resolvers = map[string]resolver{
 	},
 	// A file belongs to every Source with an artifact on it (none at first
 	// ingest; the artifact create that attaches it carries the Source).
-	"file": func(r scopeResolver, ch Change) ([]Scope, error) {
+	"file": func(r scopeResolver, ch rowchange.Change) ([]Scope, error) {
 		return r.sources(`SELECT DISTINCT source_id FROM artifacts WHERE file_id = ?`, ch.EntityID)
 	},
 
@@ -99,11 +100,11 @@ var resolvers = map[string]resolver{
 	"canonical_entity":        noScope,
 }
 
-func noScope(scopeResolver, Change) ([]Scope, error) { return nil, nil }
+func noScope(scopeResolver, rowchange.Change) ([]Scope, error) { return nil, nil }
 
 // directSource resolves rows that carry source_id themselves.
 func directSource(table string) resolver {
-	return func(r scopeResolver, ch Change) ([]Scope, error) {
+	return func(r scopeResolver, ch rowchange.Change) ([]Scope, error) {
 		if ids := fieldIDs(ch, "source_id"); len(ids) > 0 {
 			return sourceScopes(ids...), nil
 		}
@@ -125,7 +126,7 @@ type scopeResolver struct {
 
 // via resolves a change through the parent named in its fields, or failing
 // that through the change's own id.
-func (r scopeResolver) via(ch Change, field string, parent, self func([]byte) ([]byte, error)) ([]Scope, error) {
+func (r scopeResolver) via(ch rowchange.Change, field string, parent, self func([]byte) ([]byte, error)) ([]Scope, error) {
 	ids := fieldIDs(ch, field)
 	if len(ids) == 0 {
 		id, err := self(ch.EntityID)
@@ -210,10 +211,10 @@ func (r scopeResolver) sources(query string, args ...any) ([]Scope, error) {
 }
 
 // resolveScopes derives the de-duplicated scopes of a revision's changes.
-func resolveScopes(tx *sql.Tx, changes []Change) ([]Scope, error) {
+func resolveScopes(tx *sql.Tx, changes []rowchange.Change) ([]Scope, error) {
 	ghosts := ghostMap{}
 	for _, ch := range changes {
-		if ch.Action != ActionDelete {
+		if ch.Action != rowchange.ActionDelete {
 			continue
 		}
 		old := make(map[string]any, len(ch.Fields))
@@ -263,7 +264,7 @@ func sourceScopes(ids ...[]byte) []Scope {
 
 // fieldIDs returns the distinct UUIDs in a field's new and old values, so a
 // row moved between parents scopes to both.
-func fieldIDs(ch Change, field string) [][]byte {
+func fieldIDs(ch rowchange.Change, field string) [][]byte {
 	diff, ok := ch.Fields[field]
 	if !ok {
 		return nil

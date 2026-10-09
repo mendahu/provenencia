@@ -4,6 +4,7 @@ package connect
 import (
 	"bytes"
 	"database/sql"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"strings"
 
 	"github.com/mendahu/provenencia/core/apperr"
@@ -164,10 +165,10 @@ func CreateCitedBridge(c *database.Catalog, userID []byte, in CreateInput) (Resu
 	var (
 		citation citations.Citation
 		written  []observations.Observation
-		changes  = []audit.Change{subjectChange}
+		changes  = []rowchange.Change{subjectChange}
 	)
 	if len(in.CitationID) != 0 {
-		var obsChanges []audit.Change
+		var obsChanges []rowchange.Change
 		written, obsChanges, err = observations.InsertManyTx(tx, in.CitationID, obs, observations.InsertOptions{AllowEdgeRows: true})
 		if err != nil {
 			return Result{}, err

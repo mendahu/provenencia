@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"strings"
 	"testing"
 
@@ -569,7 +570,7 @@ func TestBridgeSubjectDeleteReleasesPins(t *testing.T) {
 	}
 	if _, err := audit.Record(tx, audit.Revision{
 		UserID: userID, ActionType: "pin_edge", CreatedAt: project.NowUTC(),
-		Changes: []audit.Change{change},
+		Changes: []rowchange.Change{change},
 	}); err != nil {
 		t.Fatal(err)
 	}

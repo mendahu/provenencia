@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"strings"
 
 	"github.com/google/uuid"
@@ -100,7 +101,7 @@ func Create(c *database.Catalog, userID []byte, in CreateInput, placement *Place
 		UserID:     userID,
 		ActionType: "create_subject",
 		CreatedAt:  project.NowUTC(),
-		Changes:    []audit.Change{change},
+		Changes:    []rowchange.Change{change},
 	}); err != nil {
 		return Subject{}, err
 	}
@@ -111,23 +112,23 @@ func Create(c *database.Catalog, userID []byte, in CreateInput, placement *Place
 }
 
 // InsertTx inserts a Subject on an open transaction (no commit, no revision).
-func InsertTx(tx *sql.Tx, in CreateInput) (Subject, audit.Change, error) {
+func InsertTx(tx *sql.Tx, in CreateInput) (Subject, rowchange.Change, error) {
 	in.Label = strings.TrimSpace(in.Label)
 	in.Description = strings.TrimSpace(in.Description)
 	if len(in.SourceID) != 16 || len(in.SubjectTypeID) != 16 {
-		return Subject{}, audit.Change{}, ErrInvalid
+		return Subject{}, rowchange.Change{}, ErrInvalid
 	}
 	if err := requireSource(tx, in.SourceID); err != nil {
-		return Subject{}, audit.Change{}, err
+		return Subject{}, rowchange.Change{}, err
 	}
 	prefix, err := requireTypePrefix(tx, in.SubjectTypeID)
 	if err != nil {
-		return Subject{}, audit.Change{}, err
+		return Subject{}, rowchange.Change{}, err
 	}
 
 	id, err := uuid.NewV7()
 	if err != nil {
-		return Subject{}, audit.Change{}, err
+		return Subject{}, rowchange.Change{}, err
 	}
 	idBytes := id[:]
 
@@ -135,25 +136,25 @@ func InsertTx(tx *sql.Tx, in CreateInput) (Subject, audit.Change, error) {
 	for attempt := 0; attempt < maxRefRetries; attempt++ {
 		subjectRef, err = ref.Mint(prefix)
 		if err != nil {
-			return Subject{}, audit.Change{}, err
+			return Subject{}, rowchange.Change{}, err
 		}
 		_, err = tx.Exec(sqlInsert, idBytes, subjectRef, in.SourceID, in.SubjectTypeID, nullStr(in.Label), nullStr(in.Description))
 		if err == nil {
 			break
 		}
 		if !database.IsUniqueConflict(err) {
-			return Subject{}, audit.Change{}, mapConstraint(err)
+			return Subject{}, rowchange.Change{}, mapConstraint(err)
 		}
 	}
 	if err != nil {
-		return Subject{}, audit.Change{}, ErrInvalid
+		return Subject{}, rowchange.Change{}, ErrInvalid
 	}
 
-	change := audit.Change{
+	change := rowchange.Change{
 		EntityType: "subject",
 		EntityID:   idBytes,
-		Action:     audit.ActionCreate,
-		Fields: audit.FullRow(map[string]any{
+		Action:     rowchange.ActionCreate,
+		Fields: rowchange.FullRow(map[string]any{
 			"id":              id.String(),
 			"ref":             subjectRef,
 			"source_id":       uuidJSON(in.SourceID),
@@ -202,12 +203,12 @@ func Update(c *database.Catalog, userID, id []byte, label, description string) e
 		return err
 	}
 
-	fields := map[string]audit.FieldDiff{}
+	fields := map[string]rowchange.FieldDiff{}
 	if prev.Label != label {
-		fields["label"] = audit.FieldDiff{Old: nullJSON(prev.Label), New: nullJSON(label)}
+		fields["label"] = rowchange.FieldDiff{Old: nullJSON(prev.Label), New: nullJSON(label)}
 	}
 	if prev.Description != description {
-		fields["description"] = audit.FieldDiff{Old: nullJSON(prev.Description), New: nullJSON(description)}
+		fields["description"] = rowchange.FieldDiff{Old: nullJSON(prev.Description), New: nullJSON(description)}
 	}
 	if len(fields) == 0 {
 		return tx.Commit()
@@ -220,10 +221,10 @@ func Update(c *database.Catalog, userID, id []byte, label, description string) e
 		UserID:     userID,
 		ActionType: "update_subject",
 		CreatedAt:  project.NowUTC(),
-		Changes: []audit.Change{{
+		Changes: []rowchange.Change{{
 			EntityType: "subject",
 			EntityID:   id,
-			Action:     audit.ActionUpdate,
+			Action:     rowchange.ActionUpdate,
 			Fields:     fields,
 		}},
 	}); err != nil {
@@ -299,22 +300,22 @@ func Delete(c *database.Catalog, userID, id []byte) error {
 	if err := autoreconciler.RecomputeTx(tx, append(touched, deps...)); err != nil {
 		return err
 	}
-	fields := map[string]audit.FieldDiff{
+	fields := map[string]rowchange.FieldDiff{
 		"id":              {Old: uuidString(id), New: nil},
 		"ref":             {Old: prev.Ref, New: nil},
 		"source_id":       {Old: uuidString(prev.SourceID), New: nil},
 		"subject_type_id": {Old: uuidString(prev.SubjectTypeID), New: nil},
 	}
 	if prev.Label != "" {
-		fields["label"] = audit.FieldDiff{Old: prev.Label, New: nil}
+		fields["label"] = rowchange.FieldDiff{Old: prev.Label, New: nil}
 	}
 	if prev.Description != "" {
-		fields["description"] = audit.FieldDiff{Old: prev.Description, New: nil}
+		fields["description"] = rowchange.FieldDiff{Old: prev.Description, New: nil}
 	}
-	changes := append(released.Changes, audit.Change{
+	changes := append(released.Changes, rowchange.Change{
 		EntityType: "subject",
 		EntityID:   id,
-		Action:     audit.ActionDelete,
+		Action:     rowchange.ActionDelete,
 		Fields:     fields,
 	})
 	if _, err := audit.Record(tx, audit.Revision{

@@ -10,6 +10,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"io"
 	"net/http"
 	"os"
@@ -197,25 +198,25 @@ func File(c *database.Catalog, absPath string, userID []byte) (Result, error) {
 		}
 		return Result{}, err
 	}
-	fields := map[string]audit.FieldDiff{
+	fields := map[string]rowchange.FieldDiff{
 		"id":              {Old: nil, New: uid.String()},
 		"checksum_sha256": {Old: nil, New: checksum},
 		"byte_size":       {Old: nil, New: row.ByteSize},
 	}
 	if filename != "" {
-		fields["original_filename"] = audit.FieldDiff{Old: nil, New: filename}
+		fields["original_filename"] = rowchange.FieldDiff{Old: nil, New: filename}
 	}
 	if mediaType != "" {
-		fields["media_type"] = audit.FieldDiff{Old: nil, New: mediaType}
+		fields["media_type"] = rowchange.FieldDiff{Old: nil, New: mediaType}
 	}
 	if _, err := audit.Record(tx, audit.Revision{
 		UserID:     userID,
 		ActionType: "create_file",
 		CreatedAt:  project.NowUTC(),
-		Changes: []audit.Change{{
+		Changes: []rowchange.Change{{
 			EntityType: "file",
 			EntityID:   id,
-			Action:     audit.ActionCreate,
+			Action:     rowchange.ActionCreate,
 			Fields:     fields,
 		}},
 	}); err != nil {
@@ -267,11 +268,11 @@ func SetFilename(c *database.Catalog, fileID []byte, name string, userID []byte)
 		UserID:     userID,
 		ActionType: "update_file",
 		CreatedAt:  project.NowUTC(),
-		Changes: []audit.Change{{
+		Changes: []rowchange.Change{{
 			EntityType: "file",
 			EntityID:   fileID,
-			Action:     audit.ActionUpdate,
-			Fields: map[string]audit.FieldDiff{
+			Action:     rowchange.ActionUpdate,
+			Fields: map[string]rowchange.FieldDiff{
 				"original_filename": {Old: existing.OriginalFilename, New: name},
 			},
 		}},
@@ -296,11 +297,11 @@ func recordReuse(c *database.Catalog, existing files.File, relPath, filename str
 		UserID:     userID,
 		ActionType: "reuse_file",
 		CreatedAt:  project.NowUTC(),
-		Changes: []audit.Change{{
+		Changes: []rowchange.Change{{
 			EntityType: "file",
 			EntityID:   existing.ID,
-			Action:     audit.ActionUpdate,
-			Fields: map[string]audit.FieldDiff{
+			Action:     rowchange.ActionUpdate,
+			Fields: map[string]rowchange.FieldDiff{
 				"ingested_as": {Old: existing.OriginalFilename, New: filename},
 			},
 		}},

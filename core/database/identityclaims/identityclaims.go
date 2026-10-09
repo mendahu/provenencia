@@ -6,6 +6,7 @@ package identityclaims
 import (
 	"database/sql"
 	"errors"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"strings"
 
 	"github.com/google/uuid"
@@ -84,7 +85,7 @@ func Create(c *database.Catalog, userID []byte, in CreateInput) (Claim, error) {
 	if err != nil {
 		return Claim{}, err
 	}
-	changes := []audit.Change{change}
+	changes := []rowchange.Change{change}
 	var assocs [][]byte
 	if in.Status == StatusAccepted {
 		assocs, changes, err = AppendFiling(tx, cl.SubjectID, changes)
@@ -124,7 +125,7 @@ func recomputeTx(tx *sql.Tx, cl Claim, assocs [][]byte) error {
 
 // AppendFiling files bridges the new member completes and returns the
 // association handles plus the revision's changes.
-func AppendFiling(tx *sql.Tx, subjectID []byte, changes []audit.Change) ([][]byte, []audit.Change, error) {
+func AppendFiling(tx *sql.Tx, subjectID []byte, changes []rowchange.Change) ([][]byte, []rowchange.Change, error) {
 	assocs, filed, err := FileBridgesTx(tx, subjectID, nil)
 	if err != nil {
 		return nil, nil, err
@@ -136,46 +137,46 @@ func AppendFiling(tx *sql.Tx, subjectID []byte, changes []audit.Change) ([][]byt
 // The subject's type is copied onto the claim, so the composite FK rejects a
 // handle of another type (ErrTypeMismatch). A second accepted claim for one
 // subject is ErrAlreadyMember.
-func InsertTx(tx *sql.Tx, in CreateInput) (Claim, audit.Change, error) {
+func InsertTx(tx *sql.Tx, in CreateInput) (Claim, rowchange.Change, error) {
 	in.Status = strings.TrimSpace(in.Status)
 	in.Argument = strings.TrimSpace(in.Argument)
 	if len(in.SubjectID) != 16 || len(in.EntityID) != 16 || !statusOK(in.Status) {
-		return Claim{}, audit.Change{}, ErrInvalid
+		return Claim{}, rowchange.Change{}, ErrInvalid
 	}
 	if len(in.ConfidenceGradeID) != 0 && len(in.ConfidenceGradeID) != 16 {
-		return Claim{}, audit.Change{}, ErrInvalid
+		return Claim{}, rowchange.Change{}, ErrInvalid
 	}
 	var subjectTypeID []byte
 	err := tx.QueryRow(sqlSubjectType, in.SubjectID).Scan(&subjectTypeID)
 	if errors.Is(err, sql.ErrNoRows) {
-		return Claim{}, audit.Change{}, ErrInvalid
+		return Claim{}, rowchange.Change{}, ErrInvalid
 	}
 	if err != nil {
-		return Claim{}, audit.Change{}, err
+		return Claim{}, rowchange.Change{}, err
 	}
 	if in.Status == StatusAccepted {
 		if _, err := acceptedForSubject(tx, in.SubjectID); err == nil {
-			return Claim{}, audit.Change{}, ErrAlreadyMember
+			return Claim{}, rowchange.Change{}, ErrAlreadyMember
 		} else if !errors.Is(err, sql.ErrNoRows) {
-			return Claim{}, audit.Change{}, err
+			return Claim{}, rowchange.Change{}, err
 		}
 	}
 
 	id, err := uuid.NewV7()
 	if err != nil {
-		return Claim{}, audit.Change{}, err
+		return Claim{}, rowchange.Change{}, err
 	}
 	idBytes := id[:]
 	if _, err := tx.Exec(sqlInsert, idBytes, in.SubjectID, in.EntityID, subjectTypeID,
 		in.Status, nullBytes(in.ConfidenceGradeID), nullStr(in.Argument)); err != nil {
-		return Claim{}, audit.Change{}, mapInsert(tx, err, in.EntityID, subjectTypeID)
+		return Claim{}, rowchange.Change{}, mapInsert(tx, err, in.EntityID, subjectTypeID)
 	}
 
-	change := audit.Change{
+	change := rowchange.Change{
 		EntityType: "identity_claim",
 		EntityID:   idBytes,
-		Action:     audit.ActionCreate,
-		Fields: audit.FullRow(map[string]any{
+		Action:     rowchange.ActionCreate,
+		Fields: rowchange.FullRow(map[string]any{
 			"id":                  id.String(),
 			"subject_id":          uuidJSON(in.SubjectID),
 			"entity_id":           uuidJSON(in.EntityID),

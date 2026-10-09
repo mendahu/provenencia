@@ -5,6 +5,7 @@ package canonicalentities
 import (
 	"database/sql"
 	"errors"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"strings"
 
 	"github.com/google/uuid"
@@ -75,7 +76,7 @@ func Create(c *database.Catalog, userID []byte, in CreateInput) (Entity, error) 
 		UserID:     userID,
 		ActionType: "create_canonical_entity",
 		CreatedAt:  project.NowUTC(),
-		Changes:    []audit.Change{change},
+		Changes:    []rowchange.Change{change},
 	}); err != nil {
 		return Entity{}, err
 	}
@@ -87,20 +88,20 @@ func Create(c *database.Catalog, userID []byte, in CreateInput) (Entity, error) 
 
 // InsertTx inserts a handle on an open transaction (no commit, no revision).
 // The ref is minted from subject_types.ref_prefix (PER-…), never the candidate prefix.
-func InsertTx(tx *sql.Tx, in CreateInput) (Entity, audit.Change, error) {
+func InsertTx(tx *sql.Tx, in CreateInput) (Entity, rowchange.Change, error) {
 	in.Label = strings.TrimSpace(in.Label)
 	in.Argument = strings.TrimSpace(in.Argument)
 	if len(in.SubjectTypeID) != 16 {
-		return Entity{}, audit.Change{}, ErrInvalid
+		return Entity{}, rowchange.Change{}, ErrInvalid
 	}
 	prefix, err := requireTypePrefix(tx, in.SubjectTypeID)
 	if err != nil {
-		return Entity{}, audit.Change{}, err
+		return Entity{}, rowchange.Change{}, err
 	}
 
 	id, err := uuid.NewV7()
 	if err != nil {
-		return Entity{}, audit.Change{}, err
+		return Entity{}, rowchange.Change{}, err
 	}
 	idBytes := id[:]
 
@@ -108,25 +109,25 @@ func InsertTx(tx *sql.Tx, in CreateInput) (Entity, audit.Change, error) {
 	for attempt := 0; attempt < maxRefRetries; attempt++ {
 		entityRef, err = ref.Mint(prefix)
 		if err != nil {
-			return Entity{}, audit.Change{}, err
+			return Entity{}, rowchange.Change{}, err
 		}
 		_, err = tx.Exec(sqlInsert, idBytes, in.SubjectTypeID, entityRef, nullStr(in.Argument), nullStr(in.Label))
 		if err == nil {
 			break
 		}
 		if !database.IsUniqueConflict(err) {
-			return Entity{}, audit.Change{}, mapConstraint(err)
+			return Entity{}, rowchange.Change{}, mapConstraint(err)
 		}
 	}
 	if err != nil {
-		return Entity{}, audit.Change{}, ErrInvalid
+		return Entity{}, rowchange.Change{}, ErrInvalid
 	}
 
-	change := audit.Change{
+	change := rowchange.Change{
 		EntityType: "canonical_entity",
 		EntityID:   idBytes,
-		Action:     audit.ActionCreate,
-		Fields: audit.FullRow(map[string]any{
+		Action:     rowchange.ActionCreate,
+		Fields: rowchange.FullRow(map[string]any{
 			"id":              id.String(),
 			"subject_type_id": uuidJSON(in.SubjectTypeID),
 			"ref":             entityRef,

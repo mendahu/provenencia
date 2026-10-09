@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"strings"
 
 	"github.com/google/uuid"
@@ -344,7 +345,7 @@ func Delete(c *database.Catalog, userID, id []byte) error {
 	if _, err := tx.Exec(sqlDelete, id); err != nil {
 		return err
 	}
-	fields := map[string]audit.FieldDiff{
+	fields := map[string]rowchange.FieldDiff{
 		"id":        {Old: uuidString(id), New: nil},
 		"key":       {Old: prev.Key, New: nil},
 		"origin":    {Old: prev.Origin, New: nil},
@@ -352,16 +353,16 @@ func Delete(c *database.Catalog, userID, id []byte) error {
 		"data_type": {Old: prev.DataType, New: nil},
 	}
 	if prev.Description != "" {
-		fields["description"] = audit.FieldDiff{Old: prev.Description, New: nil}
+		fields["description"] = rowchange.FieldDiff{Old: prev.Description, New: nil}
 	}
 	if _, err := audit.Record(tx, audit.Revision{
 		UserID:     userID,
 		ActionType: "delete_metadata_field",
 		CreatedAt:  project.NowUTC(),
-		Changes: append(released.Changes, audit.Change{
+		Changes: append(released.Changes, rowchange.Change{
 			EntityType: "metadata_field",
 			EntityID:   id,
-			Action:     audit.ActionDelete,
+			Action:     rowchange.ActionDelete,
 			Fields:     fields,
 		}),
 	}); err != nil {

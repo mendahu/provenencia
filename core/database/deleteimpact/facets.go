@@ -5,9 +5,9 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 
 	"github.com/mendahu/provenencia/core/apperr"
-	"github.com/mendahu/provenencia/core/database/audit"
 )
 
 // Facet release: research rows an official Delete removes explicitly — and
@@ -25,7 +25,7 @@ var ErrReleaseIncomplete = apperr.New(apperr.CodeDeleteImpactReleaseIncomplete, 
 type Released struct {
 	// Changes are audit rows for every removed facet, ready to append ahead of
 	// the parent's own delete change in the same revision.
-	Changes []audit.Change
+	Changes []rowchange.Change
 	// Handles are canonical entities whose membership or evidence changed —
 	// the seam for auto-reconciler upkeep (S9-06) and search reprojection
 	// (S9-34). Deduplicated, in first-seen order.
@@ -234,11 +234,11 @@ func releaseSubjectClaims(tx *sql.Tx, subjectID []byte) (Released, error) {
 		if _, err := tx.Exec(`DELETE FROM identity_claims WHERE id = ?`, c.id); err != nil {
 			return Released{}, err
 		}
-		out.Changes = append(out.Changes, audit.Change{
+		out.Changes = append(out.Changes, rowchange.Change{
 			EntityType: "identity_claim",
 			EntityID:   c.id,
-			Action:     audit.ActionDelete,
-			Fields: audit.DeletedRow(map[string]any{
+			Action:     rowchange.ActionDelete,
+			Fields: rowchange.DeletedRow(map[string]any{
 				"id":                  uuidJSON(c.id),
 				"subject_id":          uuidJSON(c.subjectID),
 				"entity_id":           uuidJSON(c.entityID),
@@ -281,11 +281,11 @@ func pinRelease(q string) func(*sql.Tx, []byte) (Released, error) {
 				WHERE identity_claim_id = ? AND observation_id = ?`, p.claimID, p.observationID); err != nil {
 				return Released{}, err
 			}
-			out.Changes = append(out.Changes, audit.Change{
+			out.Changes = append(out.Changes, rowchange.Change{
 				EntityType: "identity_claim_evidence",
 				EntityID:   p.claimID,
-				Action:     audit.ActionDelete,
-				Fields: audit.DeletedRow(map[string]any{
+				Action:     rowchange.ActionDelete,
+				Fields: rowchange.DeletedRow(map[string]any{
 					"identity_claim_id": uuidJSON(p.claimID),
 					"observation_id":    uuidJSON(p.observationID),
 				}),
@@ -351,11 +351,11 @@ func eraseObservation(tx *sql.Tx, id []byte) (Released, error) {
 	if integer.Valid {
 		integerJSON = integer.Int64
 	}
-	out.Changes = append(out.Changes, audit.Change{
+	out.Changes = append(out.Changes, rowchange.Change{
 		EntityType: "observation",
 		EntityID:   obsID,
-		Action:     audit.ActionDelete,
-		Fields: audit.DeletedRow(map[string]any{
+		Action:     rowchange.ActionDelete,
+		Fields: rowchange.DeletedRow(map[string]any{
 			"id":               uuidJSON(obsID),
 			"ref":              ref,
 			"citation_id":      uuidJSON(citationID),
@@ -450,11 +450,11 @@ func rowFacet(parent catalogmodel.Kind, table, fkCol, entityType, entityIDCol st
 				if _, err := tx.Exec(deleteSQL, r.rowid); err != nil {
 					return Released{}, err
 				}
-				out.Changes = append(out.Changes, audit.Change{
+				out.Changes = append(out.Changes, rowchange.Change{
 					EntityType: entityType,
 					EntityID:   r.entityID,
-					Action:     audit.ActionDelete,
-					Fields:     audit.DeletedRow(r.fields),
+					Action:     rowchange.ActionDelete,
+					Fields:     rowchange.DeletedRow(r.fields),
 				})
 			}
 			return out, nil

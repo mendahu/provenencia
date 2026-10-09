@@ -3,6 +3,7 @@ package sources
 import (
 	"database/sql"
 	"errors"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"strings"
 
 	"github.com/google/uuid"
@@ -108,11 +109,11 @@ func AddNote(c *database.Catalog, userID, sourceID []byte, body string) (Note, e
 		UserID:     userID,
 		ActionType: "create_source_note",
 		CreatedAt:  createdAt,
-		Changes: []audit.Change{{
+		Changes: []rowchange.Change{{
 			EntityType: "source_note",
 			EntityID:   idBytes,
-			Action:     audit.ActionCreate,
-			Fields: map[string]audit.FieldDiff{
+			Action:     rowchange.ActionCreate,
+			Fields: map[string]rowchange.FieldDiff{
 				"id":        {Old: nil, New: id.String()},
 				"source_id": {Old: nil, New: uuidString(sourceID)},
 				"body":      {Old: nil, New: body},
@@ -177,11 +178,11 @@ func UpdateNote(c *database.Catalog, userID, noteID []byte, body string) error {
 		UserID:     userID,
 		ActionType: "update_source_note",
 		CreatedAt:  project.NowUTC(),
-		Changes: []audit.Change{{
+		Changes: []rowchange.Change{{
 			EntityType: "source_note",
 			EntityID:   noteID,
-			Action:     audit.ActionUpdate,
-			Fields: map[string]audit.FieldDiff{
+			Action:     rowchange.ActionUpdate,
+			Fields: map[string]rowchange.FieldDiff{
 				"body": {Old: prev.Body, New: body},
 			},
 		}},
@@ -227,11 +228,11 @@ func DeleteNote(c *database.Catalog, userID, noteID []byte) error {
 		UserID:     userID,
 		ActionType: "delete_source_note",
 		CreatedAt:  project.NowUTC(),
-		Changes: []audit.Change{{
+		Changes: []rowchange.Change{{
 			EntityType: "source_note",
 			EntityID:   noteID,
-			Action:     audit.ActionDelete,
-			Fields: map[string]audit.FieldDiff{
+			Action:     rowchange.ActionDelete,
+			Fields: map[string]rowchange.FieldDiff{
 				"id":        {Old: uuidString(noteID), New: nil},
 				"source_id": {Old: uuidString(prev.SourceID), New: nil},
 				"body":      {Old: prev.Body, New: nil},

@@ -3,6 +3,7 @@ package audit
 import (
 	"bytes"
 	"errors"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"go/ast"
 	"go/parser"
 	"go/token"
@@ -107,40 +108,40 @@ func TestResolveScopes(t *testing.T) {
 
 	tests := []struct {
 		name    string
-		changes []Change
+		changes []rowchange.Change
 		want    [][]byte
 	}{
 		{
 			name: "released note resolves through its deleted citation",
-			changes: []Change{
-				{EntityType: "citation_note", EntityID: note, Action: ActionDelete,
-					Fields: DeletedRow(map[string]any{"citation_id": uid(goneCitation)})},
-				{EntityType: "citation", EntityID: goneCitation, Action: ActionDelete,
-					Fields: DeletedRow(map[string]any{"artifact_id": uid(art)})},
+			changes: []rowchange.Change{
+				{EntityType: "citation_note", EntityID: note, Action: rowchange.ActionDelete,
+					Fields: rowchange.DeletedRow(map[string]any{"citation_id": uid(goneCitation)})},
+				{EntityType: "citation", EntityID: goneCitation, Action: rowchange.ActionDelete,
+					Fields: rowchange.DeletedRow(map[string]any{"artifact_id": uid(art)})},
 			},
 			want: [][]byte{srcA},
 		},
 		{
 			name: "row moved between sources scopes to both",
-			changes: []Change{{EntityType: "artifact", EntityID: art, Action: ActionUpdate,
-				Fields: map[string]FieldDiff{"source_id": {Old: uid(srcB), New: uid(srcA)}}}},
+			changes: []rowchange.Change{{EntityType: "artifact", EntityID: art, Action: rowchange.ActionUpdate,
+				Fields: map[string]rowchange.FieldDiff{"source_id": {Old: uid(srcB), New: uid(srcA)}}}},
 			want: [][]byte{srcA, srcB},
 		},
 		{
 			name: "duplicates collapse",
-			changes: []Change{
-				{EntityType: "source", EntityID: srcA, Action: ActionUpdate, Fields: map[string]FieldDiff{}},
-				{EntityType: "artifact", EntityID: art, Action: ActionUpdate, Fields: map[string]FieldDiff{}},
+			changes: []rowchange.Change{
+				{EntityType: "source", EntityID: srcA, Action: rowchange.ActionUpdate, Fields: map[string]rowchange.FieldDiff{}},
+				{EntityType: "artifact", EntityID: art, Action: rowchange.ActionUpdate, Fields: map[string]rowchange.FieldDiff{}},
 			},
 			want: [][]byte{srcA},
 		},
 		{
 			name:    "unresolvable parent is no scope",
-			changes: []Change{{EntityType: "citation", EntityID: goneCitation, Action: ActionUpdate, Fields: map[string]FieldDiff{}}},
+			changes: []rowchange.Change{{EntityType: "citation", EntityID: goneCitation, Action: rowchange.ActionUpdate, Fields: map[string]rowchange.FieldDiff{}}},
 		},
 		{
 			name:    "vocabulary has no scope",
-			changes: []Change{{EntityType: "source_type", EntityID: typeID, Action: ActionUpdate, Fields: map[string]FieldDiff{}}},
+			changes: []rowchange.Change{{EntityType: "source_type", EntityID: typeID, Action: rowchange.ActionUpdate, Fields: map[string]rowchange.FieldDiff{}}},
 		},
 	}
 	for _, tt := range tests {
@@ -174,8 +175,8 @@ func TestResolveScopes(t *testing.T) {
 		r := scopeResolver{tx: tx, ghosts: ghostMap{
 			ghostKey("citation", goneCitation): {"artifact_id": uid(art)},
 		}}
-		got, err := resolvers["citation_note"](r, Change{EntityType: "citation_note", EntityID: note,
-			Action: ActionDelete, Fields: DeletedRow(map[string]any{"citation_id": uid(goneCitation)})})
+		got, err := resolvers["citation_note"](r, rowchange.Change{EntityType: "citation_note", EntityID: note,
+			Action: rowchange.ActionDelete, Fields: rowchange.DeletedRow(map[string]any{"citation_id": uid(goneCitation)})})
 		if err != nil || len(got) != 1 || !bytes.Equal(got[0].ID, srcA) {
 			t.Fatalf("got %v %v", got, err)
 		}
@@ -187,8 +188,8 @@ func TestResolveScopes(t *testing.T) {
 			t.Fatal(err)
 		}
 		defer func() { _ = tx.Rollback() }()
-		_, err = Record(tx, Revision{ActionType: "x", CreatedAt: "2026-10-04T00:00:00Z", Changes: []Change{{
-			EntityType: "mystery", EntityID: id(9), Action: ActionCreate, Fields: map[string]FieldDiff{},
+		_, err = Record(tx, Revision{ActionType: "x", CreatedAt: "2026-10-04T00:00:00Z", Changes: []rowchange.Change{{
+			EntityType: "mystery", EntityID: id(9), Action: rowchange.ActionCreate, Fields: map[string]rowchange.FieldDiff{},
 		}}})
 		if !errors.Is(err, ErrInvalid) {
 			t.Fatalf("want ErrInvalid got %v", err)

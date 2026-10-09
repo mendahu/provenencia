@@ -3,10 +3,10 @@ package observations
 import (
 	"bytes"
 	"database/sql"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"strings"
 
 	"github.com/google/uuid"
-	"github.com/mendahu/provenencia/core/database/audit"
 	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/namevalues"
 )
@@ -27,7 +27,7 @@ const (
 	sqlDeleteNameValue = `DELETE FROM name_values WHERE id = ?`
 )
 
-func updateOne(tx *sql.Tx, citationID []byte, prev Observation, in Input) (Observation, []audit.Change, error) {
+func updateOne(tx *sql.Tx, citationID []byte, prev Observation, in Input) (Observation, []rowchange.Change, error) {
 	polarity := stringsTrimPolarity(in.Polarity)
 	if polarity != PolarityPositive && polarity != PolarityNegative {
 		return Observation{}, nil, ErrInvalid
@@ -75,7 +75,7 @@ func updateOne(tx *sql.Tx, citationID []byte, prev Observation, in Input) (Obser
 	); err != nil {
 		return Observation{}, nil, err
 	}
-	var extra []audit.Change
+	var extra []rowchange.Change
 	if in.Notes != nil {
 		noteChanges, err := replaceNotes(tx, prev.ID, in.Notes)
 		if err != nil {
@@ -86,21 +86,21 @@ func updateOne(tx *sql.Tx, citationID []byte, prev Observation, in Input) (Obser
 	if deleted, err := releaseDateValue(tx, prev.ValueDateID, resolved.DateID); err != nil {
 		return Observation{}, nil, err
 	} else if deleted != nil {
-		extra = append(extra, audit.Change{
+		extra = append(extra, rowchange.Change{
 			EntityType: "date_value",
 			EntityID:   append([]byte(nil), prev.ValueDateID...),
-			Action:     audit.ActionDelete,
-			Fields:     audit.DeletedRow(deleted),
+			Action:     rowchange.ActionDelete,
+			Fields:     rowchange.DeletedRow(deleted),
 		})
 	}
 	if deleted, err := releaseNameValue(tx, prev.ValueNameID, resolved.NameID); err != nil {
 		return Observation{}, nil, err
 	} else if deleted != nil {
-		extra = append(extra, audit.Change{
+		extra = append(extra, rowchange.Change{
 			EntityType: "name_value",
 			EntityID:   append([]byte(nil), prev.ValueNameID...),
-			Action:     audit.ActionDelete,
-			Fields:     audit.DeletedRow(deleted),
+			Action:     rowchange.ActionDelete,
+			Fields:     rowchange.DeletedRow(deleted),
 		})
 	}
 
@@ -132,24 +132,24 @@ func updateOne(tx *sql.Tx, citationID []byte, prev Observation, in Input) (Obser
 		changes = append(changes, *resolved.NameChange)
 	}
 	if ch := observationUpdateChange(prev, obs); ch != nil {
-		changes = append([]audit.Change{*ch}, changes...)
+		changes = append([]rowchange.Change{*ch}, changes...)
 	}
 	return obs, changes, nil
 }
 
-func observationUpdateChange(prev, next Observation) *audit.Change {
-	fields := map[string]audit.FieldDiff{}
+func observationUpdateChange(prev, next Observation) *rowchange.Change {
+	fields := map[string]rowchange.FieldDiff{}
 	if !bytes.Equal(prev.SubjectID, next.SubjectID) {
-		fields["subject_id"] = audit.FieldDiff{Old: uuidString(prev.SubjectID), New: uuidString(next.SubjectID)}
+		fields["subject_id"] = rowchange.FieldDiff{Old: uuidString(prev.SubjectID), New: uuidString(next.SubjectID)}
 	}
 	if !bytes.Equal(prev.PropertyID, next.PropertyID) {
-		fields["property_id"] = audit.FieldDiff{Old: uuidString(prev.PropertyID), New: uuidString(next.PropertyID)}
+		fields["property_id"] = rowchange.FieldDiff{Old: uuidString(prev.PropertyID), New: uuidString(next.PropertyID)}
 	}
 	if prev.Polarity != next.Polarity {
-		fields["polarity"] = audit.FieldDiff{Old: prev.Polarity, New: next.Polarity}
+		fields["polarity"] = rowchange.FieldDiff{Old: prev.Polarity, New: next.Polarity}
 	}
 	if prev.ValueText != next.ValueText {
-		fields["value_text"] = audit.FieldDiff{Old: emptyAsNil(prev.ValueText), New: emptyAsNil(next.ValueText)}
+		fields["value_text"] = rowchange.FieldDiff{Old: emptyAsNil(prev.ValueText), New: emptyAsNil(next.ValueText)}
 	}
 	if prev.HasInteger != next.HasInteger || (next.HasInteger && prev.ValueInteger != next.ValueInteger) {
 		var old, new any
@@ -159,27 +159,27 @@ func observationUpdateChange(prev, next Observation) *audit.Change {
 		if next.HasInteger {
 			new = next.ValueInteger
 		}
-		fields["value_integer"] = audit.FieldDiff{Old: old, New: new}
+		fields["value_integer"] = rowchange.FieldDiff{Old: old, New: new}
 	}
 	if !bytes.Equal(prev.ValueDateID, next.ValueDateID) {
-		fields["value_date_id"] = audit.FieldDiff{Old: uuidString(prev.ValueDateID), New: uuidString(next.ValueDateID)}
+		fields["value_date_id"] = rowchange.FieldDiff{Old: uuidString(prev.ValueDateID), New: uuidString(next.ValueDateID)}
 	}
 	if !bytes.Equal(prev.ValueNameID, next.ValueNameID) {
-		fields["value_name_id"] = audit.FieldDiff{Old: uuidString(prev.ValueNameID), New: uuidString(next.ValueNameID)}
+		fields["value_name_id"] = rowchange.FieldDiff{Old: uuidString(prev.ValueNameID), New: uuidString(next.ValueNameID)}
 	}
 	if !bytes.Equal(prev.ValueSubjectID, next.ValueSubjectID) {
-		fields["value_subject_id"] = audit.FieldDiff{Old: uuidString(prev.ValueSubjectID), New: uuidString(next.ValueSubjectID)}
+		fields["value_subject_id"] = rowchange.FieldDiff{Old: uuidString(prev.ValueSubjectID), New: uuidString(next.ValueSubjectID)}
 	}
 	if !bytes.Equal(prev.ValueTermID, next.ValueTermID) {
-		fields["value_term_id"] = audit.FieldDiff{Old: uuidString(prev.ValueTermID), New: uuidString(next.ValueTermID)}
+		fields["value_term_id"] = rowchange.FieldDiff{Old: uuidString(prev.ValueTermID), New: uuidString(next.ValueTermID)}
 	}
 	if len(fields) == 0 {
 		return nil
 	}
-	return &audit.Change{
+	return &rowchange.Change{
 		EntityType: "observation",
 		EntityID:   next.ID,
-		Action:     audit.ActionUpdate,
+		Action:     rowchange.ActionUpdate,
 		Fields:     fields,
 	}
 }

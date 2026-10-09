@@ -8,15 +8,12 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/apperr"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 )
 
 var ErrInvalid = apperr.New(apperr.CodeAuditInvalid, apperr.KindUser)
 
 const (
-	ActionCreate = "create"
-	ActionUpdate = "update"
-	ActionDelete = "delete"
-
 	sqlNextRevision = `SELECT COALESCE(MAX(revision), 0) + 1 FROM audit_transactions`
 	sqlInsertTx     = `INSERT INTO audit_transactions (id, revision, user_id, action_type, description, created_at)
 		VALUES (?, ?, ?, ?, ?, ?)`
@@ -24,47 +21,13 @@ const (
 		VALUES (?, ?, ?, ?, ?, ?)`
 )
 
-// FieldDiff is one field's previous and resulting value in changes_json.
-type FieldDiff struct {
-	Old any `json:"old"`
-	New any `json:"new"`
-}
-
-// Change is one row-level mutation under a revision.
-type Change struct {
-	EntityType string
-	EntityID   []byte
-	Action     string
-	Fields     map[string]FieldDiff
-}
-
 // Revision is one logical application action and its row-level changes.
 type Revision struct {
 	UserID      []byte // 16-byte users.id; nil or empty → SQL NULL
 	ActionType  string
 	Description string
 	CreatedAt   string // RFC3339 UTC
-	Changes     []Change
-}
-
-// FullRow is a create change: every key is present with old = nil and new = value.
-// Unset columns should be passed as nil so JSON encodes them as null.
-func FullRow(fields map[string]any) map[string]FieldDiff {
-	out := make(map[string]FieldDiff, len(fields))
-	for k, v := range fields {
-		out[k] = FieldDiff{Old: nil, New: v}
-	}
-	return out
-}
-
-// DeletedRow is a delete change: every key is present with old = value and new = nil.
-// Unset columns should be passed as nil so JSON encodes them as null.
-func DeletedRow(fields map[string]any) map[string]FieldDiff {
-	out := make(map[string]FieldDiff, len(fields))
-	for k, v := range fields {
-		out[k] = FieldDiff{Old: v, New: nil}
-	}
-	return out
+	Changes     []rowchange.Change
 }
 
 // Record allocates the next revision and inserts the transaction + changes on tx,
@@ -153,7 +116,7 @@ func Record(tx *sql.Tx, rev Revision) (int64, error) {
 	return revision, nil
 }
 
-func validateChange(ch Change) error {
+func validateChange(ch rowchange.Change) error {
 	if strings.TrimSpace(ch.EntityType) == "" || len(ch.EntityID) != 16 || ch.Fields == nil {
 		return ErrInvalid
 	}
@@ -161,7 +124,7 @@ func validateChange(ch Change) error {
 		return ErrInvalid
 	}
 	switch ch.Action {
-	case ActionCreate, ActionUpdate, ActionDelete:
+	case rowchange.ActionCreate, rowchange.ActionUpdate, rowchange.ActionDelete:
 	default:
 		return ErrInvalid
 	}
