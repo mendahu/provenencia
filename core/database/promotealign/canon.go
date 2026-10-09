@@ -32,6 +32,9 @@ var canonSteps = []canonStep{
 	{hopEventToPlace, "location", "", "place", false},
 	{canonicalgraph.EventsAtPlace, "location", "", "event", true},
 	{hopPersonRelated, "relationship", "", "person", false},
+	// A relationship is reached from either end: a handle on related_to
+	// (a child under "parent") walks back to the person end too.
+	{hopPersonRelated.Reverse(), "relationship", "", "person", true},
 	{hopPlaceParent, "place_relationship", "part_of", "place", false},
 	{canonicalgraph.PartsOfPlace, "place_relationship", "part_of", "place", true},
 	{hopPlaceSuccessor, "place_relationship", "succeeded_by", "place", false},
