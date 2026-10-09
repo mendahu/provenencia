@@ -1165,6 +1165,24 @@ enum L10n {
             comment: "Kind chip on an omnibar hit for a metadata field"
         )
 
+        static let omnibarKindPerson = LocalizedStringResource(
+            "workspace.omnibar.kind.person",
+            defaultValue: "Person",
+            comment: "Kind chip on an omnibar hit for a Person"
+        )
+
+        static let omnibarKindEvent = LocalizedStringResource(
+            "workspace.omnibar.kind.event",
+            defaultValue: "Event",
+            comment: "Kind chip on an omnibar hit for an Event"
+        )
+
+        static let omnibarKindPlace = LocalizedStringResource(
+            "workspace.omnibar.kind.place",
+            defaultValue: "Place",
+            comment: "Kind chip on an omnibar hit for a Place"
+        )
+
         static func omnibarNoMatchesTitle(query: String) -> String {
             return L10n.format(LocalizedStringResource(
                 "workspace.omnibar.noMatchesTitle",
@@ -1221,6 +1239,22 @@ enum L10n {
                 "workspace.omnibar.match.filename",
                 defaultValue: "Filename: %@",
                 comment: "Omnibar match context when the query hit a filename or artifact label; argument is a short snippet"
+            ), snippet)
+        }
+
+        static func omnibarMatchName(snippet: String) -> String {
+            return L10n.format(LocalizedStringResource(
+                "workspace.omnibar.match.name",
+                defaultValue: "Name: %@",
+                comment: "Omnibar match context when an alternate name matched; argument is that name"
+            ), snippet)
+        }
+
+        static func omnibarMatchPlace(snippet: String) -> String {
+            return L10n.format(LocalizedStringResource(
+                "workspace.omnibar.match.place",
+                defaultValue: "Place: %@",
+                comment: "Omnibar match context when an alternate place name matched; argument is that name"
             ), snippet)
         }
 

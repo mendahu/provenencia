@@ -153,6 +153,20 @@ struct OmnibarResultsModelTests {
             OmnibarHitPresentation.matchContextText(field: "description", snippet: "")
                 == L10n.string(L10n.Workspace.omnibarMatchDescription)
         )
+        #expect(
+            OmnibarHitPresentation.matchContextText(field: "name", snippet: "Jim Robins")
+                == L10n.Workspace.omnibarMatchName(snippet: "Jim Robins")
+        )
+        #expect(
+            OmnibarHitPresentation.matchContextText(field: "place", snippet: "Montreal")
+                == L10n.Workspace.omnibarMatchPlace(snippet: "Montreal")
+        )
+        #expect(L10n.string(OmnibarHitPresentation.kindLabel(for: "person")) == L10n.string(L10n.Workspace.omnibarKindPerson))
+        #expect(OmnibarHitPresentation.leadMark(for: "event") == .subjectEvent)
+        #expect(OmnibarHitPresentation.refAccent(for: CatalogSearchHit(
+            kind: "person", id: "p", ref: "PER-7KD45", title: "James Robins", subtitle: "",
+            matchReason: "ref", location: .sectionRoot(.persons)
+        )))
     }
 
     @Test func activateCommitsNavigationAndClearsResults() {
