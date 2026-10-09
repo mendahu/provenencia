@@ -47,6 +47,11 @@ Two kinds of data on one node.
 - Adjacency: one link per association, both directions, with its edge signature (bridge type, role or term, neighbor kind, directed). Links are indexed by signature, so following a named hop is a map lookup. The graph builds signatures from `connectrules` and treats them as opaque keys (see Vocabulary stays in registries).
 - Members: accepted and provisional member Subject ids (exhibits, memberships, the Source store's back-pointers).
 
+**Links are stored on both ends.** A participation is its own handle, but its link sits on the person node and the event node. When the participation changes, `RecomputeTx` names the association handle, not its endpoints, so the graph keeps the endpoints current itself:
+
+- A reverse index, `holders[association] → loaded nodes whose links came from it`, kept current on every node load and drop.
+- When a commit marks an association handle as changed, the graph drops the association's node, every node in `holders[association]` (the old endpoints), and the association's new endpoints, read from the now-committed ARV in one query. A moved endpoint can't keep a stale link, and a new endpoint can't miss one.
+
 **Display** (lists, headers, detail):
 
 - A memo built from the node and its neighbors the first time a header or detail is asked for, and dropped when the node or a neighbor it reads changes (see Writes). It is derived from structure, never filled independently, so it cannot drift from it.
@@ -138,7 +143,7 @@ type Op struct {
 
 type Result struct {
 	Revision int64
-	Effects  effects.Set // handles, header dependents, Sources, vocabulary
+	Effects  effects.Set // handles, header dependents, Sources, vocabulary, search
 }
 
 func Run(c *database.Catalog, op Op, fn func(tx *database.Tx) ([]audit.Change, error)) (Result, error) {
@@ -147,11 +152,19 @@ func Run(c *database.Catalog, op Op, fn func(tx *database.Tx) ([]audit.Change, e
 	// on error: rollback, nothing else happens
 	rev := audit.Record(tx, op, changes)         // 2. audit (skipped for unaudited types)
 	fx := effects.Resolve(tx, changes)           //    what the changes touch
-	autoreconciler.RecomputeTx(tx, fx.Handles)   // 3a. ARV + search, inside the transaction
+	autoreconciler.RecomputeTx(tx, fx.Handles)   // 3a. ARV + handle search documents
+	searchindex.Reproject(tx, fx.Search)         //     Source and vocabulary search documents
 	commit(tx)
+	tx.runAfterCommit()                          //     disk work the write deferred
 	c.notify(rev, fx)                            // 3b. memory tier, only after commit
 	return Result{Revision: rev, Effects: fx}, nil
 }
+```
+
+**Work after commit.** Some writes have side effects that must happen only once the commit has succeeded: deleting an artifact removes its file from disk afterwards (`artifacts.go:344`), so a rollback never deletes bytes that are still referenced. A write function registers that work on the transaction, and `Run` runs it after a successful commit and drops it on rollback:
+
+```go
+tx.AfterCommit(func() { _ = os.Remove(path) })
 ```
 
 A write function, before and after:
@@ -182,6 +195,8 @@ res, err := writes.Run(c, writes.Op{Action: "delete_observation", UserID: user},
 		return observations.DeleteObservation(tx, id)
 	})
 ```
+
+**Thumbnails.** `core/derivatives` writes `file_derivatives` in its own transactions (`ensure.go`). They go through `Run` like every other write, under an unaudited registry entry with no effects: derived bytes, no research data, nothing the graph reads.
 
 `database.Tx` embeds `*sql.Tx`, and only `writes.Run` creates one. Write functions take `*database.Tx`, so a write can't run outside the orchestrator. A test that fails on any `.Begin()` outside `core/database` and `core/writes` keeps it that way.
 
@@ -231,7 +246,8 @@ One entry per table, saying what a change to one of its rows touches:
 
 - **Source:** the Sources it belongs to (today's audit scopes).
 - **Handles:** the handles whose ARV rows must be rewritten.
-- **Vocabulary:** whether the label map drops.
+- **Vocabulary:** labels (the label map drops) or structure (a term's `directed` or `inverse_key` changed; the graph drops).
+- **Search:** the search documents to reproject (a Source's document, a source type's or metadata field's, the Sources of a type). Today 19 calls in write code (`ReprojectSource`, `ReprojectSourceType`, `ReprojectMetadataField`, `ReprojectSourcesForType`) do this by hand; handle documents stay with `RecomputeTx`.
 - **Unaudited:** no audit row and no effects; `Run` still owns the transaction.
 
 Where an effect follows the schema, it's written as a path over declared foreign keys. A path can only name edges the model has, so a renamed or missing column fails at startup, not in a user's catalog. Paths are a handful of combinators, not a query language:
@@ -249,8 +265,9 @@ Every path reads the change's fields, old and new. An update that moves an Obser
 
 ```go
 var registry = map[string]Effect{
-	"source":      {Source: self()},
-	"source_note": {Source: up("source_id")},
+	"source":      {Source: self(), Search: sourceDoc},
+	"source_note": {Source: up("source_id"), Search: sourceDoc},
+	"source_type": {Vocabulary: labels, Search: union(selfDoc, sourcesOfType)},
 	"citation": {
 		Source:  up("artifact_id", "source_id"),
 		Handles: onField("certainty", sql(handlesUnderCitation)),
@@ -267,8 +284,11 @@ var registry = map[string]Effect{
 	},
 	"identity_claim_evidence": {Handles: up("identity_claim_id", "entity_id")}, // released pins
 	"source_credibility_assessment": {Source: up("source_id"), Handles: from("source_id", sql(handlesInSource))},
-	"property":         {Vocabulary: true, Handles: onField("cardinality", sql(handlesObservingProperty))},
-	"property_term":    {Vocabulary: true},
+	"property":         {Vocabulary: labels, Handles: onField("cardinality", sql(handlesObservingProperty))},
+	"property_term": {
+		Vocabulary: labels,
+		Structure:  onField("directed", "inverse_key"), // relationship signatures change
+	},
 	"subject_position": {Unaudited: true}, // layout only
 	// … every table outside the skip bucket
 }
@@ -316,10 +336,11 @@ This is the part to test hardest. The shadow check (below) catches a missed effe
 
 ### What the memory tier is told
 
-- **Structure:** the handles `RecomputeTx` rewrote. Their nodes reload.
+- **Structure:** the handles `RecomputeTx` rewrote. Their nodes reload; for association handles, so do their old and new endpoints (see What a node holds).
 - **Display:** those plus `HeaderDependents`. Their display memos clear.
 - **Sources:** the resolved Source scopes. The Source store drops those Sources.
-- **Vocabulary:** drop the label map.
+- **Vocabulary labels:** drop the label map.
+- **Vocabulary structure:** a term's direction or inverse changed. Relationship link signatures include both, so every link using the term is wrong. The graph drops everything; it's rare, and simpler than finding the links.
 - **All:** `Rebuild` (open-time, on a `CacheVersion` change).
 
 Only after commit. A rollback drops it with the transaction, so the memory tier never sees uncommitted data and never misses a committed change. `catalogsession.Do` serializes every operation, so the next read can't start before the cache is updated, with no lock needed.
@@ -394,7 +415,9 @@ Places where infrastructure names keys now, to fix along the way:
 
 ### Enforcing it
 
-A test lists every seeded key (subject types, Properties and terms from `subjectvocab`; bridge kinds and disambiguation Properties from `connectrules`) and fails when one appears as a string literal in an infrastructure package. Registry files and tests are exempt. Short common words (`name`) need an allowlist entry with a reason, so the exceptions are visible.
+**Typed keys, so the compiler does most of it.** Registries export keys as distinct types (`subjectvocab.Kind`, `subjectvocab.PropertyKey`, `subjectvocab.TermKey`, `connectrules.BridgeKind`), and infrastructure APIs accept only those types: `g.Kind(k subjectvocab.Kind)`, signatures built from `TermKey`s. Infrastructure can carry and compare keys it was handed, but writing a key means converting a string literal, which stands out in review and is caught by a narrow test.
+
+**A narrow literal test.** A plain scan for seeded keys would be noisy: `person`, `event`, `place`, `subject` and `name` also appear in table names, column names and JSON. So the test only fails on conversions to the key types (`subjectvocab.TermKey("part_of")`) outside registry files and tests. Those are the only way to name a key, so the test has no common-word false positives.
 
 ## The Source store
 
@@ -470,36 +493,46 @@ If it's too much, `Values` can hold only kept rank-1 rows and the detail page re
 
 ## Plan
 
-Each step is its own PR, measured against the one before. PRs that only repoint callers are kept apart from PRs that add behavior, so the churn reviews as churn.
+Each step is its own PR, measured against the one before. PRs that only repoint callers are kept apart from PRs that add behavior, so the churn reviews as churn. Open questions sit under the PR that has to answer them.
+
+**Before starting**
+
+- **The paused stack.** [mendahu/provenencia#331](https://github.com/mendahu/provenencia/pull/331) to [mendahu/provenencia#334](https://github.com/mendahu/provenencia/pull/334) (rescoring, directed duplicates, neutral terms, graphalign cleanup) all edit `align.go`, which PR 8 restructures. Decide whether they land first or are redone after PR 8. [mendahu/provenencia#327](https://github.com/mendahu/provenencia/pull/327) is replaced by PR 8 (its debounce and narrowed exhibits carry over), and [mendahu/provenencia#328](https://github.com/mendahu/provenencia/pull/328) by PR 10. [mendahu/provenencia#330](https://github.com/mendahu/provenencia/pull/330) batches readers that PRs 8–11 replace; decide whether it's still worth landing.
 
 **Schema and effects**
 
 1. **Extract the schema model** (churn). Tables and foreign keys move from `deleteimpact/register.go` into `schema`, with the PRAGMA honesty test; `deleteimpact` reads them from there. No behavior change.
-2. **Paths and the effects registry** (logic). The path combinators; an entry for every table outside the skip bucket; audit's scope resolvers re-expressed as `Source` paths, with a test that they resolve the same Sources as the old resolvers on the existing fixtures; the completeness tests. Nothing calls the `Handles` side yet.
+   - *Open:* where `schema` sits. It must stay below `audit`, `deleteimpact`, `effects` and `writes` in the import graph; `database` is the likely parent.
+2. **Paths and the effects registry** (logic). The path combinators; an entry for every table outside the skip bucket, including search and vocabulary effects; audit's scope resolvers re-expressed as `Source` paths, with a test that they resolve the same Sources as the old resolvers on the existing fixtures; the completeness tests. Nothing calls the `Handles` side yet.
+   - *Open:* claim statuses in paths. The recompute SQL counts `accepted` and `provisional` claims as members; `across("identity_claims", …)` must filter the same way. Decide whether status filters are a path option or part of each declaration.
 
 **Writes**
 
-3. **The orchestrator** (logic). `writes.Run`, `database.Tx`, `Op`, `Result`, commit listeners; `audit.Record` resolves scopes through the registry; `RecomputeTx` takes `*database.Tx`; the migration assertion. Property terms migrated as the pilot.
-4. **Migrate Source-layer writes** (churn). Sources, notes, metadata, source types, metadata fields, artifacts, ingest.
+3. **The orchestrator** (logic). `writes.Run`, `database.Tx`, `Op`, `Result`, `AfterCommit`, commit listeners; `audit.Record` resolves scopes through the registry; `RecomputeTx` takes `*database.Tx`; search reprojection from `Effects.Search`; the migration assertion, covering handles and search documents. Property terms migrated as the pilot.
+   - *Open:* `Run`'s return type. Write functions return more than changes (the created entity, `BatchResult.Written`, claims and pins). Either `Run` is generic (`Run[T]`) or write functions return a result struct that carries the changes. Settle before the churn PRs, since every one follows it.
+   - *Open:* nested writes. A few write functions call others that open their own transaction today. Under `Run`, inner functions take the outer `*database.Tx`; find any that can't.
+4. **Migrate Source-layer writes** (churn). Sources, notes, metadata, source types, metadata fields, artifacts (with `AfterCommit` for file removal), ingest, thumbnails.
+   - *Open:* confirm thumbnail generation runs inside `catalogsession.Do`. If it doesn't, that's an existing serialization bug to fix here, not paper over.
 5. **Migrate Evidence-layer writes** (churn). Citations, observations, subjects, name values, connect, positions.
-6. **Migrate conclusion-layer writes** (churn). Promote single and batch, identity claims, canonical entities, credibility, properties, subject definitions.
-7. **Close the old path** (small). Hand-placed recompute calls, `released.Handles`, the old scope resolvers and the migration assertion go; old entry points become private; the `.Begin()` test; the vocabulary-literal test over `schema`, `effects` and `writes` (later PRs extend it to `graphcache`).
+6. **Migrate conclusion-layer writes** (churn). Promote single and batch, identity claims, canonical entities, credibility, properties, subject definitions. Includes the transactions in FFI handlers (`api/ffi/handlers/subject_defs.go`, `delete_impact.go`).
+7. **Close the old path** (small). Hand-placed recompute and reproject calls, `released.Handles`, the old scope resolvers and the migration assertion go; old entry points become private; the `.Begin()` test; the typed-key literal test over `schema`, `effects` and `writes` (later PRs extend it to `graphcache`).
 
 **The graph**
 
-8. **The graph and Promote.** `graphcache` on the catalog session, registered as a commit listener; nodes with structure; lazy fill; the revision safety net; `Verify` in CI. Promote reads through `CanonGraph`; stats (Properties from the `match` profiles) and candidates move onto the graph; `canonSteps`, the 5-hop expansion and the #327 caps go. The #327 debounce and narrowed exhibits stay. Benchmark.
+8. **The graph and Promote.** `graphcache`, registered as a commit listener; nodes with structure; the association reverse index; lazy fill; the revision safety net; `Verify` in CI. Promote reads through `CanonGraph`; stats (Properties from the `match` profiles) and candidates move onto the graph; `canonSteps`, the 5-hop expansion and the #327 caps go. The #327 debounce and narrowed exhibits carry over. Benchmark.
+   - *Open:* where the graph hangs. Leaning toward `database.Catalog` (a no-op when unused), because domain-package tests open catalogs directly: a graph on the session would leave `Verify` covering only FFI-level tests.
+   - *Open:* cold-cache cost. Align asks for one handle's neighbors at a time, so a cold walk through a hub is hundreds of queries while the session lock blocks every other call. Benchmark cold as well as warm; if cold is slow, give `CanonGraph` a prefetch hint ("load the neighbors of this frontier").
+   - *Open:* proposal changes. The lazy walk has no hop limit, `Seeds(kind)` must reproduce today's top-5 property-ranked seeds, and `Links` must keep today's order (association ref, then handle ref) or ties resolve differently. Record proposals on the fixtures and the synthetic catalog before switching, and review every difference.
+   - *Open:* memory. ARV holds every candidate value at every rank. Measure real rows per handle; if nodes are too big, keep only kept rank-1 values and let the detail page read the rest from SQL.
+   - *Open:* stats by counts or recompute. Adjusting value-frequency and fan-out counts from each commit's effects is exact but fiddly; recomputing from the graph per revision is simpler and may be fast enough in memory.
+   - *Open:* catalog-defined vocabulary. Researcher terms and plugin vocabulary live in `property_terms`, not the seed registry. The graph reads direction and inverses from the catalog; the literal test can only cover seeded keys.
+   - *Open:* concurrency. `Do` serializes everything today. If reads ever run alongside writes, immutable nodes plus a lock around the maps is enough; nothing should assume serialization beyond that.
 9. **Display.** The header registry, with header dependents derived from it (replacing `HeaderDependents`); header memos; lists and `…ByIDs` from the graph; the vocabulary map; "today" at read time.
+   - *Open:* handles with no members. No code deletes from `canonical_entities`; a handle that loses its last member just has no ARV rows. `Kind(kind)` must apply the lists' membership filter, and membership changes must add a handle to or remove it from the kind index.
+   - *Note:* this makes Go reads fast and correct, but Swift's own invalidation gaps (deleting an artifact leaves citations and the conclusion lists stale) stay until `Result.Effects` reaches Swift.
 10. **Place chains** from named hops on the graph, replacing #328's per-request index. Named hops move to their own registry file.
 11. **Conclusion detail** from node values, with the "Why" outcomes dropped with the display memo.
+    - *Open:* cache the per-Observation outcomes per handle, or keep the SQL read; decide after measuring.
 12. **The Source store**, fed by resolved Source scopes; Promote's layer, the Evidence graph and the Composer on it.
 
 Later, and separately: `Result.Effects` rides back to Swift on each write's response, and the client's session cache invalidates by handle and Source instead of the hand-kept `CatalogMutation` map.
-
-## Open questions
-
-1. **Where the graph hangs.** A field on `database.Catalog` (low in the import graph, so an opaque slot), or a map in `graphcache` keyed by `*database.Catalog`, set up in `catalogsession.openResearcher` and dropped on close.
-2. **Nested writes.** A few write functions call others that open their own transaction today. Under `writes.Run`, inner functions take the outer `*database.Tx`; find any that can't.
-3. **Where `schema` sits.** It must stay below `audit`, `deleteimpact`, `effects` and `writes` in the import graph; `database` is the likely parent.
-4. **Stats by counts or recompute.** Adjusting value-frequency and fan-out counts from each commit's effects is exact but fiddly. Recomputing from the graph per revision is simpler and may be fast enough in memory.
-5. **Detail "Why" outcomes.** Cache them per handle, or keep the SQL read; decide after measuring.
-6. **Concurrency.** `Do` serializes everything today. If reads ever run alongside writes, immutable nodes plus a lock around the maps is enough; nothing here should assume serialization beyond that.
