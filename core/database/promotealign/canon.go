@@ -15,6 +15,19 @@ const canonDiameter = 5
 // seedCandidateLimit is top-k property-only candidates per unpromoted Subject.
 const seedCandidateLimit = 5
 
+// The expansion is bounded by size as well as depth. A hub (a city with
+// thousands of events, an event with hundreds of witnesses) would otherwise
+// pull most of the catalog in within a few hops, and Promote proposes again
+// on every decision.
+var (
+	// maxEdgesPerStep is how many associations one handle follows on one
+	// step, in the walk's stable order (association ref, then handle ref).
+	maxEdgesPerStep = 50
+	// maxCanonHandles stops adding handles to the frontier once the canon
+	// holds this many. Edges between handles already loaded still count.
+	maxCanonHandles = 3000
+)
+
 // canonStep is one hop the expansion follows, and how its edges sign.
 // reversed hops walk from the bridge's second endpoint; their edges are
 // flipped so CanonEdge.From is always the first, as on the layer.
@@ -43,9 +56,10 @@ var canonSteps = []canonStep{
 
 // loadCanon gathers a bounded piece of the canonical graph around the layer:
 // the fixed handles and each unfixed Subject's top property-only candidates,
-// expanded breadth-first. Every read is batched — candidates once per kind,
-// one walk per step per hop, terms and handle values per hop — so the query
-// count follows the hop count, not the size of the layer or the catalog.
+// expanded breadth-first. Every read is batched — candidates once per kind
+// (cached per revision), one walk per step per hop, terms and handle values
+// per hop — so the query count follows the hop count, not the size of the
+// layer or the catalog. maxEdgesPerStep and maxCanonHandles bound the rows.
 func loadCanon(q Querier, layer graphalign.Layer, fixed []graphalign.Fixed) (graphalign.Canon, error) {
 	handles := map[string]graphalign.Handle{}
 	var seeds [][]byte
@@ -73,7 +87,7 @@ func loadCanon(q Querier, layer graphalign.Layer, fixed []graphalign.Fixed) (gra
 		cands, loaded := candidates[s.Kind]
 		if !loaded {
 			var err error
-			cands, err = matching.CandidatesOfType(q, s.Kind, "provenencia", profile)
+			cands, err = candidatesOfType(q, s.Kind, profile)
 			if err != nil {
 				return graphalign.Canon{}, err
 			}
@@ -132,8 +146,14 @@ func loadCanon(q Querier, layer graphalign.Layer, fixed []graphalign.Fixed) (gra
 		}
 
 		var next [][]byte
+		queued := map[string]bool{}
 		for _, w := range all {
+			followed := map[string]int{}
 			for _, e := range w.edges {
+				if followed[string(e.From)] >= maxEdgesPerStep {
+					continue
+				}
+				followed[string(e.From)]++
 				sig := canonEdgeSignature(e, w.step, roles, rels, eventTypes, kin.directed)
 				from, to := e.From, e.To
 				if w.step.reversed {
@@ -158,7 +178,8 @@ func loadCanon(q Querier, layer graphalign.Layer, fixed []graphalign.Fixed) (gra
 						Signature: sig,
 					})
 				}
-				if _, ok := handles[string(e.To)]; !ok {
+				if _, ok := handles[string(e.To)]; !ok && !queued[string(e.To)] && len(handles)+len(next) < maxCanonHandles {
+					queued[string(e.To)] = true
 					next = append(next, e.To)
 				}
 			}

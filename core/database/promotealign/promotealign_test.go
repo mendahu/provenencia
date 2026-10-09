@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"database/sql"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
@@ -842,5 +843,100 @@ func TestProposeRelationshipFromEitherEnd(t *testing.T) {
 					r.Target, bytes.Equal(r.HandleID, want), r.Reason)
 			}
 		})
+	}
+}
+
+// A hub handle follows at most maxEdgesPerStep associations per step, and
+// the frontier stops growing at maxCanonHandles.
+func TestCanonExpansionIsBoundedAtAHub(t *testing.T) {
+	f := newFixture(t)
+	hub := f.birth(f.source, f.artifact)
+	for i := 0; i < 5; i++ {
+		p := f.person(f.source, f.artifact, fmt.Sprintf("Twin %c", 'A'+i))
+		f.participation(f.source, f.artifact, p, hub, "subject")
+		f.promote(p)
+	}
+	hHub := f.promote(hub).Entity.ID
+
+	src2, art2 := f.newSource("Register")
+	ev := f.birth(src2, art2)
+	fixed := []graphalign.Fixed{{SubjectID: ev.ID, HandleID: hHub}}
+	db, err := f.c.DB()
+	must(t, err)
+	people := func() int {
+		canon, err := promotealign.CanonForTest(db, src2.ID, fixed)
+		must(t, err)
+		n := 0
+		for _, h := range canon.Handles {
+			if h.Kind == "person" {
+				n++
+			}
+		}
+		return n
+	}
+	if n := people(); n != 5 {
+		t.Fatalf("unbounded canon has %d people, want 5", n)
+	}
+	restore := promotealign.SetCanonLimitsForTest(2, 3000)
+	if n := people(); n != 2 {
+		t.Fatalf("per-step bound: %d people, want 2", n)
+	}
+	restore()
+	restore = promotealign.SetCanonLimitsForTest(50, 3)
+	defer restore()
+	if n := people(); n != 2 {
+		t.Fatalf("handle bound 3 (the hub and two people): %d people, want 2", n)
+	}
+}
+
+type recordingQuerier struct {
+	db      *sql.DB
+	queries []string
+}
+
+func (r *recordingQuerier) Query(query string, args ...any) (*sql.Rows, error) {
+	r.queries = append(r.queries, query)
+	return r.db.Query(query, args...)
+}
+
+func (r *recordingQuerier) QueryRow(query string, args ...any) *sql.Row {
+	r.queries = append(r.queries, query)
+	return r.db.QueryRow(query, args...)
+}
+
+func (r *recordingQuerier) candidateScans() int {
+	n := 0
+	for _, q := range r.queries {
+		if strings.HasPrefix(strings.TrimSpace(q), "SELECT id FROM subject_types WHERE key = ? AND origin = ?") {
+			n++
+		}
+	}
+	return n
+}
+
+// Proposing again without a write reuses the kind's candidate scan; a write
+// reads it again.
+func TestCandidateScanIsCachedPerRevision(t *testing.T) {
+	f := newFixture(t)
+	f.promote(f.person(f.source, f.artifact, "Ada Lovelace"))
+	src2, art2 := f.newSource("Census")
+	f.person(src2, art2, "Ada Lovelace")
+	db, err := f.c.DB()
+	must(t, err)
+	propose := func() int {
+		r := &recordingQuerier{db: db}
+		_, _, err := promotealign.Propose(r, src2.ID, nil)
+		must(t, err)
+		return r.candidateScans()
+	}
+	if n := propose(); n != 1 {
+		t.Fatalf("first proposal scanned candidates %d times, want 1", n)
+	}
+	if n := propose(); n != 0 {
+		t.Fatalf("second proposal at the same revision scanned %d times, want 0", n)
+	}
+	f.person(src2, art2, "Charles Babbage") // a write moves the revision
+	if n := propose(); n != 1 {
+		t.Fatalf("proposal after a write scanned %d times, want 1", n)
 	}
 }
