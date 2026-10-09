@@ -19,6 +19,13 @@ Copy the stub. Surface + what got in the way is enough. A wanted fix is optional
 
 <!-- add below this line -->
 
+### Create Source modal: Name first, then Type
+
+- **Date:** 2026-10-09
+- **Where:** Create Source modal
+- **Annoyance:** The fields are in the wrong order for how I fill them in.
+- **Wanted:** Make the Source's **name** the first field and its **type** the second.
+
 ### Evidence graph canvas is too small
 
 - **Date:** 2026-10-08
