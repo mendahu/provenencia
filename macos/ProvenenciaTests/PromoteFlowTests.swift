@@ -143,6 +143,29 @@ struct PromoteFlowTests {
         #expect(flow.targetsChosen)
     }
 
+    /// A row whose record another row took starts open, whatever its band,
+    /// so Done can't file two subjects on one handle without a choice.
+    @Test func aRowWhoseRecordWasTakenStartsUnset() {
+        let winner = row(id: "a", handleID: "e1", assessment: "weak")
+        for band in ["weak", "medium", "strong"] {
+            var loser = row(id: "b", target: "skip", handleID: "", assessment: band)
+            loser.reason = "taken"
+            loser.comparisons = []
+            loser.possibleDuplicate = true
+            loser.duplicateOfSubjectID = "a"
+            loser.alternatives = [
+                CatalogPromoteGraphAlignmentAlternative(handleID: "e1", handleRef: "PER-1", score: 2.5, assessment: band, reason: "agrees"),
+            ]
+            var flow = PromoteFlow(entryID: "a")
+            flow.mappedRest = true
+            flow.load(entryID: "a", proposal: proposal(rows: [winner, loser]), subjects: [fact("a"), fact("b")], bridges: [])
+            let bea = flow.rows.first { $0.subjectID == "b" }
+            #expect(bea?.target == .unset, "band \(band)")
+            #expect(bea?.duplicateNote == .sharesHandle(otherName: "a", ref: "PER-1"), "band \(band)")
+            #expect(flow.targetsChosen == false, "band \(band)")
+        }
+    }
+
     /// A score under the accept bar is still a named candidate. The menu
     /// opens on it; only a no-match stays empty.
     @Test func aWeakCandidateBelowTheBarStartsSelected() {
