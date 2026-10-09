@@ -24,6 +24,8 @@ Do **not** store a single subject- or fact-level “likelihood” pill. Product 
 
 Do **not** auto-multiply Source credibility × Citation certainty × Claim confidence into a stored rollup. The claim editor should **surface** Source assessments and Citation flags as context when the researcher sets Claim confidence.
 
+Cached auto-reconciler order and outcome labels (kept, folded, outvoted, and the rest) are the same kind of derived display. They are recomputed from member evidence and must not be written back as Claim confidence or any other stored judgment.
+
 ## 1.2 Three distinct questions
 
 | Question | Axis | Attachment |

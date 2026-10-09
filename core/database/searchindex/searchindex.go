@@ -26,7 +26,9 @@ const (
 // or document layout change so Open heals old indexes.
 //
 //	6: Person, Event and Place handles (S9-34a).
-const ProjectionVersion = 6
+//	7: those documents are composed from list headers, and a write reprojects
+//	   the handles whose headers read the one that changed (S9-34).
+const ProjectionVersion = 7
 
 // Tagged body line prefixes for Source rollups (parsed by core/search for
 // match field codes + snippets).
