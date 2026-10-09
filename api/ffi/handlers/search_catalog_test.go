@@ -223,8 +223,8 @@ func TestSearchCatalogHandleKinds(t *testing.T) {
 		}
 		return &resp
 	}
-	if hits := search().GetHits(); len(hits) != 0 {
-		t.Fatalf("omnibar default returned handles: %+v", hits)
+	if hits := search().GetHits(); len(hits) != 1 || hits[0].GetKind() != "person" {
+		t.Fatalf("omnibar default: %+v", hits)
 	}
 	hits := search("person").GetHits()
 	if len(hits) != 1 {

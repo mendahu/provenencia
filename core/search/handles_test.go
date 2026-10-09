@@ -126,8 +126,9 @@ func TestHandleSearch(t *testing.T) {
 	james := f.promote(f.person("James Robins", "Jim Robins"), nil)
 	f.promote(f.person("Mary Smith"), nil)
 
-	t.Run("the omnibar default leaves handles out", func(t *testing.T) {
-		if hits := f.search("Robins"); len(hits) != 0 {
+	t.Run("the omnibar default includes handles", func(t *testing.T) {
+		hits := f.search("Robins")
+		if refsOf(hits) != fmt.Sprint([]string{"person:" + james.Entity.Ref}) {
 			t.Fatalf("got %s", refsOf(hits))
 		}
 	})
@@ -315,6 +316,23 @@ func (f *handleFixture) fileBridges() {
 	}
 }
 
+func TestAlternateToponymIsMatchContext(t *testing.T) {
+	f := newHandleFixture(t)
+	place := f.promote(f.subject("place", func(s subjects.Subject) []observations.Input {
+		return []observations.Input{
+			{SubjectID: s.ID, PropertyID: f.prop("toponym").ID, ValueText: "Montréal", HasText: true},
+			{SubjectID: s.ID, PropertyID: f.prop("toponym").ID, ValueText: "Montreal", HasText: true},
+		}
+	}), nil)
+	hits := f.search("Montreal", KindPlace)
+	if len(hits) != 1 || hits[0].Ref != place.Entity.Ref || hits[0].Title != "Montréal" {
+		t.Fatalf("title %+v", hits)
+	}
+	if hits[0].MatchReason != "place" || hits[0].MatchSnippet != "Montreal" {
+		t.Fatalf("context %+v", hits[0])
+	}
+}
+
 func TestHandleSearchEventsAndPlaces(t *testing.T) {
 	f := newHandleFixture(t)
 	birth, err := propertyterms.Lookup(f.c, f.prop("event_type").ID, "birth", propertyterms.OriginProvenencia)
@@ -374,6 +392,80 @@ func TestRebuildIndexesHandles(t *testing.T) {
 	}
 	if hits := f.search("Robins", KindPerson); len(hits) != 1 || hits[0].Ref != james.Entity.Ref {
 		t.Fatalf("got %s", refsOf(hits))
+	}
+}
+
+func TestKindPriorityIsATenthOfTheScore(t *testing.T) {
+	equal := []Hit{
+		{Kind: KindSourceType, Title: "T", Score: 10},
+		{Kind: KindSource, Title: "S", Score: 10},
+		{Kind: KindPlace, Title: "P", Score: 10},
+		{Kind: KindEvent, Title: "E", Score: 10},
+		{Kind: KindPerson, Title: "N", Score: 10},
+	}
+	for i := range equal {
+		equal[i].Score = applyScoreMix(equal[i].Score, equal[i].Kind)
+	}
+	sortHits(equal)
+	if got := kindsOf(equal); fmt.Sprint(got) != fmt.Sprint([]string{KindPerson, KindEvent, KindPlace, KindSource, KindSourceType}) {
+		t.Fatalf("equal text, got %v", got)
+	}
+
+	// A text score more than the priority share ahead still wins.
+	strongerSource := applyScoreMix(12, KindSource)
+	person := applyScoreMix(10, KindPerson)
+	if strongerSource <= person {
+		t.Fatalf("source text 12 should beat person text 10, got %v vs %v", strongerSource, person)
+	}
+}
+
+func kindsOf(hits []Hit) []string {
+	out := make([]string, len(hits))
+	for i, h := range hits {
+		out[i] = h.Kind
+	}
+	return out
+}
+
+func TestSimilarTitlesRankThePersonAheadOfTheSource(t *testing.T) {
+	f := newHandleFixture(t)
+	person := f.promote(f.person("James Robins"), nil)
+	place := f.promote(f.subject("place", func(s subjects.Subject) []observations.Input {
+		return []observations.Input{{SubjectID: s.ID, PropertyID: f.prop("toponym").ID, ValueText: "Robins", HasText: true}}
+	}), nil)
+	src, err := sources.Create(f.c, f.user, sources.CreateInput{
+		SourceTypeID: seedType(t, f.c, "Census", ""),
+		Title:        "Robins parish",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	hits, err := DefaultEngine().Search(context.Background(), f.c, Query{Text: "Robins"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	index := map[string]int{}
+	byID := map[string]Hit{}
+	for i, h := range hits {
+		index[h.ID] = i
+		byID[h.ID] = h
+	}
+	personID := uuidString(person.Entity.ID)
+	placeID := uuidString(place.Entity.ID)
+	sourceID := uuidString(src.ID)
+	for _, id := range []string{personID, placeID, sourceID} {
+		if _, ok := index[id]; !ok {
+			t.Fatalf("missing %s in %+v", id, hits)
+		}
+	}
+	if index[personID] > index[sourceID] {
+		t.Fatalf("similar titles should put the person ahead of the source: %+v", hits)
+	}
+	switch {
+	case byID[placeID].Score == byID[personID].Score && index[personID] > index[placeID]:
+		t.Fatalf("tied person should precede the place: %+v", hits)
+	case byID[placeID].Score != byID[personID].Score && (byID[placeID].Score > byID[personID].Score) != (index[placeID] < index[personID]):
+		t.Fatalf("place and person should follow score: %+v", hits)
 	}
 }
 

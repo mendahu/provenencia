@@ -280,7 +280,7 @@ func matchText(h handleHead, v handleValues, headers handleHeaders) (string, []s
 			}
 			secondary = append(secondary, personLifeMatch(p)...)
 		}
-		secondary = append(secondary, extraValues(v, "name", title)...)
+		secondary = append(secondary, tagged(extraValues(v, "name", title), "name")...)
 	case KindEvent:
 		if e, ok := headers.events[h.id]; ok {
 			title = eventMatchTitle(e)
@@ -292,11 +292,11 @@ func matchText(h handleHead, v handleValues, headers handleHeaders) (string, []s
 				title = p.Names[0]
 			}
 			if len(p.Names) > 1 {
-				secondary = append(secondary, p.Names[1:]...)
+				secondary = append(secondary, tagged(p.Names[1:], "toponym")...)
 			}
 			secondary = append(secondary, p.Parents...)
 		}
-		secondary = append(secondary, extraValues(v, "toponym", title)...)
+		secondary = append(secondary, tagged(extraValues(v, "toponym", title), "toponym")...)
 	}
 	if h.label != "" {
 		if title == "" {
@@ -306,6 +306,17 @@ func matchText(h handleHead, v handleValues, headers handleHeaders) (string, []s
 		}
 	}
 	return title, secondary
+}
+
+func tagged(vals []string, tag string) []string {
+	if len(vals) == 0 {
+		return nil
+	}
+	out := make([]string, len(vals))
+	for i, v := range vals {
+		out[i] = tag + ":\t" + v
+	}
+	return out
 }
 
 func extraValues(v handleValues, key, title string) []string {

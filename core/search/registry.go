@@ -54,11 +54,26 @@ var FuzzyWeights = struct {
 	ScoreScale:     0.55,
 }
 
+// ScoreMix splits a hit's rank into the text score and a kind priority.
+// Priority is normalized by the highest KindSpec.Priority in the registry.
+// A text match that is clearly stronger still outranks a higher kind.
+var ScoreMix = struct {
+	Text     float64
+	Priority float64
+}{
+	Text:     0.9,
+	Priority: 0.1,
+}
+
 // KindSpec is one searchable navigable root in the registry.
 type KindSpec struct {
 	Kind                string
 	DefaultInEverything bool
-	// ContextSections that boost this kind when Query.Location.Section matches.
+	// Priority is this kind's share of ScoreMix.Priority. Higher is preferred.
+	// The searcher normalizes by the registry maximum and does not read the name.
+	Priority int
+	// ContextSections that nudge this kind when Query.Location.Section matches.
+	// ContextBoost stays near 1 so a tighter title still ranks first.
 	ContextSections []string
 	ContextBoost    float64
 	Fields          []FieldWeight
@@ -70,7 +85,8 @@ var Registry = []KindSpec{
 		Kind:                KindSource,
 		DefaultInEverything: true,
 		ContextSections:     []string{SectionSources},
-		ContextBoost:        2.0,
+		Priority:            1,
+		ContextBoost:        1.1,
 		Fields: []FieldWeight{
 			{Name: "title", Weight: 10},
 			{Name: "ref", Weight: 12},
@@ -84,7 +100,7 @@ var Registry = []KindSpec{
 		Kind:                KindSourceType,
 		DefaultInEverything: true,
 		ContextSections:     []string{SectionSourceTypes},
-		ContextBoost:        2.0,
+		ContextBoost:        1.1,
 		Fields: []FieldWeight{
 			{Name: "label", Weight: 10},
 			{Name: "key", Weight: 8},
@@ -95,7 +111,7 @@ var Registry = []KindSpec{
 		Kind:                KindMetadataField,
 		DefaultInEverything: true,
 		ContextSections:     []string{SectionMetadata},
-		ContextBoost:        2.0,
+		ContextBoost:        1.1,
 		Fields: []FieldWeight{
 			{Name: "label", Weight: 10},
 			{Name: "key", Weight: 8},
@@ -104,15 +120,15 @@ var Registry = []KindSpec{
 	},
 }
 
-// Handle kinds: searchable on request (Query.Kinds), not in the omnibar's
-// default set until S9-35 designs their rows. Documents come from the
-// auto-reconciler cache (searchindex/handles.go): title is the rank-1 name,
-// toponym or event type; "other" is every other cached value.
+// Handle kinds join the omnibar default (S9-35). Priority, high to low:
+// persons, events, places, then sources (1, above). Types and fields stay at 0.
+// Documents are match text from the list headers.
 func init() {
-	for _, k := range []string{KindPerson, KindEvent, KindPlace} {
+	handle := func(kind string, priority int) {
 		Registry = append(Registry, KindSpec{
-			Kind:                k,
-			DefaultInEverything: false,
+			Kind:                kind,
+			DefaultInEverything: true,
+			Priority:            priority,
 			Fields: []FieldWeight{
 				{Name: "title", Weight: 10},
 				{Name: "ref", Weight: 12},
@@ -120,6 +136,9 @@ func init() {
 			},
 		})
 	}
+	handle(KindPerson, 4)
+	handle(KindEvent, 3)
+	handle(KindPlace, 2)
 }
 
 // effectiveKinds is the kinds a query may return: q.Kinds that the registry
@@ -214,6 +233,31 @@ func scoreFields(spec KindSpec, values map[string]string, tokens []string) (scor
 		snippet = matchSnippetForField(bestField, values[bestField], tokens)
 	}
 	return score, field, snippet
+}
+
+// alternateMatch is the name or toponym line that matched when the title did not.
+// Those lines are tagged in the secondary field (name: / toponym:).
+func alternateMatch(secondary string, tokens []string) (field, snippet string) {
+	for _, line := range strings.Split(secondary, "\n") {
+		lower := strings.ToLower(line)
+		hit := false
+		for _, tok := range tokens {
+			if tok != "" && strings.Contains(lower, tok) {
+				hit = true
+				break
+			}
+		}
+		if !hit {
+			continue
+		}
+		switch {
+		case strings.HasPrefix(line, "name:\t"):
+			return "name", strings.TrimPrefix(line, "name:\t")
+		case strings.HasPrefix(line, "toponym:\t"):
+			return "place", strings.TrimPrefix(line, "toponym:\t")
+		}
+	}
+	return "", ""
 }
 
 func matchSnippetForField(field, value string, tokens []string) string {

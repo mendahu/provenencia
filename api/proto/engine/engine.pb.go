@@ -6874,8 +6874,8 @@ type SearchCatalogRequest struct {
 	ProjectDir string                 `protobuf:"bytes,1,opt,name=project_dir,json=projectDir,proto3" json:"project_dir,omitempty"`
 	Query      string                 `protobuf:"bytes,2,opt,name=query,proto3" json:"query,omitempty"`
 	Location   *WorkspaceLocation     `protobuf:"bytes,3,opt,name=location,proto3" json:"location,omitempty"` // current place; at least section for context boosts
-	// Restrict hits to these kinds. Empty = the omnibar's default set, which
-	// excludes person / event / place until S9-35.
+	// Restrict hits to these kinds. Empty = the omnibar's default set
+	// (sources, types, metadata fields, persons, events, and places).
 	Kinds         []string `protobuf:"bytes,4,rep,name=kinds,proto3" json:"kinds,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
