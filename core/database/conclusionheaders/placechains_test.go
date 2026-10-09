@@ -282,6 +282,51 @@ func TestBirthLocationsFoldWhenPartOf(t *testing.T) {
 	}
 }
 
+// Two places under one parent are two readings, even when a third record
+// names only that parent: Toronto and Hamilton stay competing beside Ontario.
+func TestSiblingBirthPlacesStayCompetingUnderASharedParent(t *testing.T) {
+	f := newFixture(t)
+	toronto := f.placeSubject("Toronto", nil, nil, 0, 0)
+	hamilton := f.placeSubject("Hamilton", nil, nil, 2, 0)
+	ontario := f.placeSubject("Ontario", nil, nil, 4, 0)
+	f.placeRel(toronto, ontario, propertyterms.KeyPartOf, nil, nil)
+	f.placeRel(hamilton, ontario, propertyterms.KeyPartOf, nil, nil)
+
+	person := f.bare("person")
+	f.named(person, "James")
+	f.at(person, 0, 4)
+	birth := f.bare("event")
+	f.at(birth, 4, 4)
+	f.cite(birth,
+		observations.Input{PropertyID: f.prop("event_type").ID, ValueTermID: f.term("event_type", "birth").ID},
+		observations.Input{PropertyID: f.prop("date").ID, Date: pointYear(1850)},
+	)
+	f.participation(person, birth, "subject")
+	f.location(birth, toronto)
+	f.location(birth, hamilton)
+	f.location(birth, ontario)
+	f.promoteSubject(person)
+	f.promoteSubject(birth)
+	f.promoteSubject(toronto)
+	f.promoteSubject(hamilton)
+	f.promoteSubject(ontario)
+
+	db, err := f.c.DB()
+	must(t, err)
+	persons, err := conclusionheaders.ListPersons(db)
+	must(t, err)
+	if len(persons) != 1 {
+		t.Fatalf("persons %d", len(persons))
+	}
+	var leaves []string
+	for _, p := range persons[0].Birth.Places {
+		leaves = append(leaves, p.Names...)
+	}
+	if !sameSet(leaves, []string{"Toronto", "Hamilton"}) {
+		t.Fatalf("birth places %v, want Toronto and Hamilton competing (Ontario folded into each)", leaves)
+	}
+}
+
 func TestPlaceHeaderParentsAndPeriod(t *testing.T) {
 	f := newFixture(t)
 	toronto := f.placeSubject("Toronto", year(1834), nil, 0, 0)
