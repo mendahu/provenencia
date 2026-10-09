@@ -19,6 +19,18 @@ Copy the stub. Surface + what got in the way is enough. A wanted fix is optional
 
 <!-- add below this line -->
 
+### Adaptive choice field that picks its control by option count
+
+- **Date:** 2026-10-09
+- **Where:** Design system / form fields (app-wide)
+- **Annoyance:** Vocabulary can be extended by the researcher, so the number of options in a field varies from project to project. One fixed control doesn't suit both a two-option field and a fifty-option one.
+- **Wanted:** One design system field that picks its control from how many options it has:
+  - **2 options** (binary) → radio buttons.
+  - **About 3–8 options** → a simple dropdown (`PVSelect`). The cutoff is up for debate.
+  - **More than that** → a searchable combo box (`PVComboBox`).
+  - Useful in many places. Would also cover *Name part type dropdown: shifting width and no type-to-cycle* if that list ends up as a combo box.
+- **Open question:** A field switches control when a researcher adds a term that crosses a cutoff (e.g. radio → dropdown). Is that acceptable, or should a field keep its control once it's been shown?
+
 ### Prefill sensible defaults for common Observation kinds
 
 - **Date:** 2026-10-09
