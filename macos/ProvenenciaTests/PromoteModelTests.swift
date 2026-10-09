@@ -68,6 +68,21 @@ struct PromoteModelTests {
         return model
     }
 
+    @Test func aPageWithoutItsGraphSaysSoInsteadOfLookingEmpty() async {
+        let store = store(subjects: [subject("a", ref: "CPR-A", label: "Ada")])
+        store.promoteProposals = [CatalogPromoteGraphAlignmentProposal(revision: 1, rows: [row("a", handleID: "e1")])]
+        let session = WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: store)
+        let entry = PromoteEntry(location: .promote(
+            sourceId: sourceID, subjectId: "a", kind: .person, ref: "CPR-A", title: "Ada", sourceTitle: "Census"
+        ))!
+        // The graph key was never warmed, so readyValue has nothing to give.
+        let model = PromoteModel(entry: entry, session: session, store: store, userID: "user-1", catalogCounts: nil)
+        await model.load()
+        #expect(model.loadError == L10n.string(L10n.Promote.graphUnavailable))
+        #expect(model.flow.rows.isEmpty)
+        #expect(model.canFinish == false)
+    }
+
     @Test func opensOnTheClickedSubjectThenMapsTheRest() async {
         let subjects = [subject("a", ref: "CPR-A", label: "Ada"), subject("b", ref: "CPR-B", label: "Bea")]
         let store = store(subjects: subjects)

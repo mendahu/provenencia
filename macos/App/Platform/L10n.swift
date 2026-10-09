@@ -1352,6 +1352,8 @@ enum L10n {
         static let done = LocalizedStringResource("promote.done.action", defaultValue: "Done", comment: "Files the Promote page")
         static let cancel = LocalizedStringResource("promote.cancel", defaultValue: "Cancel", comment: "Leaves the Promote page")
         static let staleTitle = LocalizedStringResource("promote.stale.title", defaultValue: "Nothing was filed — the catalog changed while this page was open", comment: "Callout title when Done loses the revision race")
+        static let graphUnavailable = LocalizedStringResource("promote.error.graphUnavailable", defaultValue: "Provenencia couldn't read this Source's Evidence graph, so it can't list the rows to promote. Go back to the graph and open Promote again.", comment: "Callout when the Promote page opens without the Source's graph; the page would otherwise look empty")
+        static let graphUnavailableRepropose = LocalizedStringResource("promote.error.graphUnavailableRepropose", defaultValue: "Provenencia couldn't read this Source's Evidence graph to propose the rows again. Your rows and decisions are kept.", comment: "Callout when proposing again after a decision can't read the Source's graph")
         static let stale = LocalizedStringResource("promote.stale.notice", defaultValue: "Provenencia proposed the rows again. Rows you decided are kept. Review the updated rows and press Done.", comment: "Callout body when Done loses the revision race")
         static func filedTitle(filed: Int, connections: Int) -> String {
             L10n.format(LocalizedStringResource("promote.toast.filedTitle", defaultValue: "Filed %1$lld subjects and %2$lld connections", comment: "Toast title after Done; 1 = subjects filed, 2 = connections filed"), filed, connections)
