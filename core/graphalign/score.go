@@ -16,16 +16,9 @@ type Scored struct {
 
 // ScoreCandidate combines a pairwise Evaluation with edge support into one
 // score. Align and any future caller share this path. provenance scales the
-// total (≤0 treated as 1). edge is precomputed support from corresponding
-// layer/canon bridges.
+// total (≤0 treated as 1). edge is EdgePoints over the corresponding links.
 func ScoreCandidate(ev match.Evaluation, probe match.Values, edge, provenance float64, cfg Config, stats Stats) Scored {
-	var total float64
-	for i := range ev.Comparisons {
-		pc := &ev.Comparisons[i]
-		outcome, points := ScoreSimilarity(pc.Similarity, pc.Comparable, pc.Cardinality, pc.Property, pc.ValueType, probe[pc.Property], cfg, stats)
-		pc.Outcome = outcome
-		total += points
-	}
+	total := propertyPoints(&ev, probe, cfg, stats)
 	if provenance <= 0 {
 		provenance = 1
 	}
@@ -34,6 +27,41 @@ func ScoreCandidate(ev match.Evaluation, probe match.Values, edge, provenance fl
 		Edge:  edge,
 		Eval:  ev,
 	}
+}
+
+// propertyPoints is the pairwise total. It writes each comparison's outcome.
+// Callers that credit a neighbor use this and leave that neighbor's links out.
+func propertyPoints(ev *match.Evaluation, probe match.Values, cfg Config, stats Stats) float64 {
+	var total float64
+	for i := range ev.Comparisons {
+		pc := &ev.Comparisons[i]
+		outcome, points := ScoreSimilarity(pc.Similarity, pc.Comparable, pc.Cardinality, pc.Property, pc.ValueType, probe[pc.Property], cfg, stats)
+		pc.Outcome = outcome
+		total += points
+	}
+	return total
+}
+
+// EdgeFact is one mapped neighbor the candidate reaches through a
+// corresponding link. NeighborNode is that pair's property total.
+type EdgeFact struct {
+	FanOut       float64
+	NeighborNode float64
+}
+
+// EdgePoints sums Support(fan-out) + Credit(fan-out) × NeighborNode.
+// A negative property total subtracts. Fan-out at or below FanOutLowMax
+// uses the low pair.
+func EdgePoints(facts []EdgeFact, cfg Config) float64 {
+	var total float64
+	for _, f := range facts {
+		if f.FanOut <= cfg.FanOutLowMax {
+			total += cfg.EdgeSupportLow + cfg.NeighborCreditLow*f.NeighborNode
+		} else {
+			total += cfg.EdgeSupportHigh + cfg.NeighborCreditHigh*f.NeighborNode
+		}
+	}
+	return total
 }
 
 // ScoreSimilarity looks up the scale for a property and applies it. The

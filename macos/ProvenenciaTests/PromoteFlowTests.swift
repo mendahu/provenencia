@@ -405,6 +405,26 @@ struct PromoteFlowTests {
         #expect(note("a") == .sharesHandle(otherName: "e", ref: "PER-2"))
     }
 
+    @Test func aConflictingComparisonIsNotDraftedAsAPin() {
+        var proposed = row(id: "a")
+        proposed.comparisons.append(CatalogPromoteGraphAlignmentComparison(
+            propertyKey: "start_date",
+            propertyOrigin: "provenencia",
+            outcome: "conflict",
+            valueType: "date",
+            pinned: true,
+            incomingObservationID: "obs-date",
+            incomingDisplay: "1990",
+            memberObservationID: "obs-date-there",
+            memberDisplay: "1985"
+        ))
+        var flow = PromoteFlow(entryID: "a")
+        flow.load(entryID: "a", proposal: proposal(rows: [proposed]), subjects: [fact("a")], bridges: [])
+        let conflict = proposed.comparisons[1].id
+        #expect(flow.rows[0].pins.contains(proposed.comparisons[0].id))
+        #expect(!flow.rows[0].pins.contains(conflict))
+    }
+
     @Test func aConflictNamesTheStrongerHandleNotTheDecidedOne() {
         var flow = PromoteFlow(entryID: "a")
         flow.load(entryID: "a", proposal: proposal(rows: [row(id: "a")]), subjects: [fact("a")], bridges: [])

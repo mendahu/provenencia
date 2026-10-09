@@ -1398,7 +1398,7 @@ enum L10n {
         static func duplicateNewTitle(name: String) -> String {
             L10n.format(LocalizedStringResource("promote.warning.duplicateNewTitle", defaultValue: "%@ is also filed New and looks the same", comment: "Warning title when two New rows on the page match each other; argument is the other subject's name"), name)
         }
-        static let duplicateBody = LocalizedStringResource("promote.warning.duplicateBody", defaultValue: "These may be the same person. Combine them on the Evidence graph, or pick another target for one row.", comment: "Warning body when two rows share a handle")
+        static let duplicateBody = LocalizedStringResource("promote.warning.duplicateBody", defaultValue: "These may be the same record. Combine them on the Evidence graph, or pick another target for one row.", comment: "Warning body when two rows may be the same record")
         static func conflictTitle(ref: String) -> String {
             L10n.format(LocalizedStringResource("promote.warning.conflictTitle", defaultValue: "A stronger match is %@", comment: "Warning title when a decided row disagrees with a new proposal; argument is the other handle ref"), ref)
         }
