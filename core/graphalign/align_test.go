@@ -1374,3 +1374,72 @@ func TestDirectedRelationshipsMatchFromTheSameEnd(t *testing.T) {
 		})
 	}
 }
+
+// A pair the walk accepted on a neighbor's edge loses that support when
+// refinement moves the neighbor to another handle: the score is rescored, not
+// kept at its old high, and the row no longer reads "via" that neighbor.
+func TestRefinementDropsSupportFromAMovedNeighbor(t *testing.T) {
+	merge := func(vs ...match.Values) match.Values {
+		out := match.Values{}
+		for _, v := range vs {
+			for k, x := range v {
+				out[k] = append(out[k], x...)
+			}
+		}
+		return out
+	}
+	sp, female := termProp("sex_at_birth", "female")
+	_, male := termProp("sex_at_birth", "male")
+	fem, mal := vals(sp, female), vals(sp, male)
+	metas := append(nameMetas(), personMetas()[1])
+	spouse, sibling := relSig("spouse"), relSig("sibling")
+
+	ann, husband, carl, dora := id("s-ann"), id("s-husband"), id("s-carl"), id("s-dora")
+	annA, annB, bob, hCarl, hDora := id("h-ann-a"), id("h-ann-b"), id("h-bob"), id("h-carl"), id("h-dora")
+	layer := graphalign.Layer{
+		Subjects: []graphalign.Subject{
+			{ID: ann, Ref: "S-ANN", Kind: "person", Values: merge(nameVals("Ann", "Lee"), fem)},
+			{ID: husband, Ref: "S-HUSBAND", Kind: "person", Values: mal}, // unnamed
+			{ID: carl, Ref: "S-CARL", Kind: "person", Values: nameVals("Carl", "Lee")},
+			{ID: dora, Ref: "S-DORA", Kind: "person", Values: nameVals("Dora", "Lee")},
+		},
+		Bridges: []graphalign.Bridge{
+			{A: ann, B: husband, Signature: spouse},
+			{A: ann, B: carl, Signature: sibling},
+			{A: ann, B: dora, Signature: sibling},
+		},
+		Metas: metas,
+	}
+	// Two Ann Lees: A is married to Bob; B has Carl and Dora for siblings,
+	// so the page's Ann is B once her siblings map.
+	canon := graphalign.Canon{
+		Handles: []graphalign.Handle{
+			{ID: annA, Ref: "A", Kind: "person", Values: merge(nameVals("Ann", "Lee"), fem)},
+			{ID: annB, Ref: "B", Kind: "person", Values: merge(nameVals("Ann", "Lee"), fem)},
+			{ID: bob, Ref: "C", Kind: "person", Values: merge(nameVals("Bob", "Ray"), mal)},
+			{ID: hCarl, Ref: "D", Kind: "person", Values: nameVals("Carl", "Lee")},
+			{ID: hDora, Ref: "E", Kind: "person", Values: nameVals("Dora", "Lee")},
+		},
+		Edges: []graphalign.CanonEdge{
+			{From: annA, To: bob, Signature: spouse},
+			{From: annB, To: hCarl, Signature: sibling},
+			{From: annB, To: hDora, Signature: sibling},
+		},
+	}
+	stats := graphalign.Stats{FanOut: map[string]float64{spouse.Key(): 1, sibling.Key(): 1}}
+	p := graphalign.Align(layer, canon, stats, nil, nil)
+
+	if r := rowBySubject(p, ann); !bytes.Equal(r.HandleID, annB) {
+		t.Fatalf("Ann on %s, want the Ann with Carl and Dora", r.HandleID)
+	}
+	r := rowBySubject(p, husband)
+	if bytes.Equal(r.HandleID, bob) || r.Reason == graphalign.ReasonVia {
+		t.Fatalf("husband: target=%s handle=%s score=%.2f reason=%s; Bob is the other Ann's spouse",
+			r.Target, r.HandleID, r.Score, r.Reason)
+	}
+	for _, alt := range r.Alternatives {
+		if bytes.Equal(alt.HandleID, bob) && (alt.Assessment != graphalign.AssessNone || alt.Reason == graphalign.ReasonVia) {
+			t.Fatalf("Bob still offered as %s via Ann (score %.2f)", alt.Assessment, alt.Score)
+		}
+	}
+}
