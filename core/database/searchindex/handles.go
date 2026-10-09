@@ -6,14 +6,16 @@ import (
 	"strings"
 
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/conclusionheaders"
+	"github.com/mendahu/provenencia/core/database/datevalues"
+	"github.com/mendahu/provenencia/core/eventtitle"
 	"github.com/mendahu/provenencia/core/valuecodec"
 )
 
-// Handle kinds (Conclusion layer). Their documents are built from the
-// auto-reconciler cache, so they stay current wherever the cache does:
-// autoreconciler.RecomputeTx reprojects the handles it rewrites, in the same
-// transaction. S9-34 replaces these documents with ones built from the
-// header composers once they exist (S9-31).
+// Handle kinds (Conclusion layer). Documents are match text from the header
+// composers: the title the list shows, plus the secondary line (a Person's
+// life, a Place's names and chain). autoreconciler.RecomputeTx reprojects
+// the handles it rewrites and their header dependents, in the same transaction.
 const (
 	KindPerson = "person"
 	KindEvent  = "event"
@@ -23,14 +25,11 @@ const (
 // handleBatch bounds the IN list per reprojection query.
 const handleBatch = 500
 
-// Which cached Property titles each kind, and which feed its secondary text.
-var handleText = map[string]struct {
-	title     string   // rank-1 value of this Property is the title
-	secondary []string // every value of these Properties (title Property's other ranks too)
-}{
-	KindPerson: {title: "name", secondary: []string{"name"}},
-	KindPlace:  {title: "toponym", secondary: []string{"toponym"}},
-	KindEvent:  {title: "event_type", secondary: []string{"event_type", "date", "start_date", "end_date"}},
+// handleKinds are the Conclusion kinds that have a search document.
+var handleKinds = map[string]bool{
+	KindPerson: true,
+	KindEvent:  true,
+	KindPlace:  true,
 }
 
 const (
@@ -97,7 +96,7 @@ func reprojectHandleBatch(q Querier, ids [][]byte) error {
 			_ = rows.Close()
 			return err
 		}
-		if _, ok := handleText[typeKey]; ok && typeOrigin == "provenencia" {
+		if handleKinds[typeKey] && typeOrigin == "provenencia" {
 			h.kind = typeKey
 		}
 		h.id = uuidString(id)
@@ -113,12 +112,16 @@ func reprojectHandleBatch(q Querier, ids [][]byte) error {
 	if err != nil {
 		return err
 	}
+	headers, err := loadHandleHeaders(q, heads)
+	if err != nil {
+		return err
+	}
 
 	for _, id := range ids {
 		h, ok := heads[string(id)]
 		if !ok {
 			// Gone: drop any document of any handle kind.
-			for kind := range handleText {
+			for kind := range handleKinds {
 				if err := Delete(q, kind, uuidString(id)); err != nil {
 					return err
 				}
@@ -134,7 +137,7 @@ func reprojectHandleBatch(q Querier, ids [][]byte) error {
 			}
 			continue
 		}
-		if err := Upsert(q, handleDocument(h, values[string(id)])); err != nil {
+		if err := Upsert(q, handleDocument(h, values[string(id)], headers)); err != nil {
 			return err
 		}
 	}
@@ -196,31 +199,61 @@ func loadHandleValues(q Querier, in string, args []any) (map[string]handleValues
 	return out, rows.Err()
 }
 
-// handleDocument: title is the kind's rank-1 value, else the working label,
-// else the ref; secondary holds every other value. Values are data (names,
-// toponyms, term labels, years), never composed sentences.
-func handleDocument(h handleHead, v handleValues) Document {
-	spec := handleText[h.kind]
-	title := ""
-	if vals := v[spec.title]; len(vals) > 0 {
-		title = vals[0]
-	}
-	var secondary []string
-	for _, key := range spec.secondary {
-		for i, val := range v[key] {
-			if key == spec.title && i == 0 {
-				continue
-			}
-			secondary = append(secondary, val)
+type handleHeaders struct {
+	persons map[string]conclusionheaders.PersonHeader
+	events  map[string]conclusionheaders.EventHeader
+	places  map[string]conclusionheaders.PlaceHeader
+}
+
+func loadHandleHeaders(q Querier, heads map[string]handleHead) (handleHeaders, error) {
+	var persons, events, places [][]byte
+	for key, h := range heads {
+		if h.merged || h.kind == "" {
+			continue
+		}
+		id := []byte(key)
+		switch h.kind {
+		case KindPerson:
+			persons = append(persons, id)
+		case KindEvent:
+			events = append(events, id)
+		case KindPlace:
+			places = append(places, id)
 		}
 	}
-	if h.label != "" {
-		if title == "" {
-			title = h.label
-		} else {
-			secondary = append(secondary, h.label)
-		}
+	out := handleHeaders{
+		persons: map[string]conclusionheaders.PersonHeader{},
+		events:  map[string]conclusionheaders.EventHeader{},
+		places:  map[string]conclusionheaders.PlaceHeader{},
 	}
+	ps, err := conclusionheaders.PersonsByIDs(q, persons)
+	if err != nil {
+		return handleHeaders{}, err
+	}
+	for _, h := range ps {
+		out.persons[uuidString(h.Entity.ID)] = h
+	}
+	es, err := conclusionheaders.EventsByIDs(q, events)
+	if err != nil {
+		return handleHeaders{}, err
+	}
+	for _, h := range es {
+		out.events[uuidString(h.Entity.ID)] = h
+	}
+	pl, err := conclusionheaders.PlacesByIDs(q, places)
+	if err != nil {
+		return handleHeaders{}, err
+	}
+	for _, h := range pl {
+		out.places[uuidString(h.Entity.ID)] = h
+	}
+	return out, nil
+}
+
+// handleDocument is match text from the header the lists use. Other cached
+// names and toponyms stay searchable when they are not the displayed title.
+func handleDocument(h handleHead, v handleValues, headers handleHeaders) Document {
+	title, secondary := matchText(h, v, headers)
 	display := title
 	if display == "" {
 		display = h.ref
@@ -233,5 +266,140 @@ func handleDocument(h handleHead, v handleValues) Document {
 		Title:        title,
 		Ref:          h.ref,
 		Secondary:    strings.Join(secondary, "\n"),
+	}
+}
+
+func matchText(h handleHead, v handleValues, headers handleHeaders) (string, []string) {
+	var title string
+	var secondary []string
+	switch h.kind {
+	case KindPerson:
+		if p, ok := headers.persons[h.id]; ok {
+			if p.Name != nil {
+				title = strings.TrimSpace(p.Name.Form)
+			}
+			secondary = append(secondary, personLifeMatch(p)...)
+		}
+		secondary = append(secondary, tagged(extraValues(v, "name", title), "name")...)
+	case KindEvent:
+		if e, ok := headers.events[h.id]; ok {
+			title = eventMatchTitle(e)
+			secondary = append(secondary, eventMatchSecondary(e)...)
+		}
+	case KindPlace:
+		if p, ok := headers.places[h.id]; ok {
+			if len(p.Names) > 0 {
+				title = p.Names[0]
+			}
+			if len(p.Names) > 1 {
+				secondary = append(secondary, tagged(p.Names[1:], "toponym")...)
+			}
+			secondary = append(secondary, p.Parents...)
+		}
+		secondary = append(secondary, tagged(extraValues(v, "toponym", title), "toponym")...)
+	}
+	if h.label != "" {
+		if title == "" {
+			title = h.label
+		} else if h.label != title {
+			secondary = append(secondary, h.label)
+		}
+	}
+	return title, secondary
+}
+
+func tagged(vals []string, tag string) []string {
+	if len(vals) == 0 {
+		return nil
+	}
+	out := make([]string, len(vals))
+	for i, v := range vals {
+		out[i] = tag + ":\t" + v
+	}
+	return out
+}
+
+func extraValues(v handleValues, key, title string) []string {
+	var out []string
+	for _, val := range v[key] {
+		if val == title {
+			continue
+		}
+		out = append(out, val)
+	}
+	return out
+}
+
+func personLifeMatch(h conclusionheaders.PersonHeader) []string {
+	var out []string
+	for _, life := range []conclusionheaders.LifeFacts{h.Birth, h.Death} {
+		if life.Date != nil {
+			if s := datevalues.CompactDisplay(*life.Date); s != "" {
+				out = append(out, s)
+			}
+		}
+		for _, p := range life.Places {
+			out = append(out, p.Names...)
+			out = append(out, p.Parents...)
+		}
+	}
+	return out
+}
+
+func eventMatchSecondary(h conclusionheaders.EventHeader) []string {
+	var out []string
+	for _, d := range []*datevalues.Value{h.Date, h.StartDate, h.EndDate} {
+		if d == nil {
+			continue
+		}
+		if s := datevalues.CompactDisplay(*d); s != "" {
+			out = append(out, s)
+		}
+	}
+	for _, p := range h.Places {
+		out = append(out, p.Names...)
+		out = append(out, p.Parents...)
+	}
+	return out
+}
+
+// eventMatchTitle is the English list title, so a query for the words the
+// row shows ("Birth of James Robins") finds the Event. The app still formats
+// the visible row from the structured header.
+func eventMatchTitle(h conclusionheaders.EventHeader) string {
+	p := h.Title
+	typeWord := strings.TrimSpace(p.Parts.TypeLabel)
+	if typeWord == "" {
+		typeWord = strings.TrimSpace(p.Parts.TypeKey)
+	}
+	if typeWord == "" {
+		typeWord = "Event"
+	}
+	subject := func(i int) string {
+		if i >= len(p.Parts.Subjects) || p.Parts.Subjects[i].Name == nil {
+			return "unnamed person"
+		}
+		if form := strings.TrimSpace(p.Parts.Subjects[i].Name.Form); form != "" {
+			return form
+		}
+		return "unnamed person"
+	}
+	switch p.Rule {
+	case eventtitle.RuleRecordedName:
+		return p.Parts.RecordedName
+	case eventtitle.RuleSubject:
+		return typeWord + " of " + subject(0)
+	case eventtitle.RuleCouple:
+		return "Marriage of " + subject(0) + " and " + subject(1)
+	case eventtitle.RuleSubjects:
+		return typeWord + " of " + subject(0) + " et al."
+	case eventtitle.RuleLabel:
+		return p.Parts.Label
+	case eventtitle.RuleTypeAtPlace:
+		return typeWord + " at " + p.Parts.Place
+	case eventtitle.RuleType:
+		return "Unspecified " + strings.ToLower(typeWord)
+	default:
+		return p.Parts.Ref
 	}
 }
