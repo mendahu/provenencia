@@ -93,6 +93,16 @@ Go genealogy core
 SQLite + files
 ```
 
+### Signing and entitlements
+
+The app is built with the hardened runtime and signed ad hoc (`CODE_SIGN_IDENTITY = "-"`, Debug and Release). Xcode embeds `libprovenencia.dylib` with *Code Sign On Copy*, so the dylib carries the app's signature. An ad hoc signature has no Team ID, and hardened-runtime library validation only loads a library signed by Apple or by the process's own team, so the app ships one entitlement exception: `com.apple.security.cs.disable-library-validation`. There is no App Sandbox, so no sandbox entitlements are listed; a `files.user-selected` key would have no effect, and the app writes inside the project folder, which a read-only key would forbid.
+
+Release prep, in order:
+
+1. Sign Release with a Developer ID (`DEVELOPMENT_TEAM`, `CODE_SIGN_IDENTITY = "Developer ID Application"`). Code Sign On Copy then signs the dylib with the same team.
+2. Give Release its own entitlements file without `disable-library-validation`, and confirm a notarized Release build opens a project (the dylib loads).
+3. Decide on the App Sandbox. Turning it on needs `files.user-selected.read-write` plus security-scoped bookmarks for reopening the active project and `identity.json`, which live outside the container.
+
 ## 4. Future Windows Client
 
 A commercial Windows client could be implemented using C# and WinUI 3. The Windows client would implement its own native presentation layer while calling the same Go core used by macOS.
@@ -712,7 +722,7 @@ These are known tensions. Several are already constrained by §12 and §29 (no l
 
 4. **Typed-graph validation vs convention** — Core validation should reject malformed rows (value column vs `value_type`, FK shape), not one-grain Places or empty Persons. Warnings and badges are UI.
 
-5. **cgo SQLite + Swift dylib** — **Retired (Spike 1).** Plan A: `mattn/go-sqlite3` in `libprovenencia.dylib` (`-buildmode=c-shared`, not an xcframework). Swift loads it; create/open writes a real `provenencia.sqlite` via protobuf FFI. Fallbacks unused: local Go process (B), pure-Go SQLite (C). Signing the dylib / dropping `disable-library-validation` is ship-prep, not this risk. On-disk project format did not change.
+5. **cgo SQLite + Swift dylib** — **Retired (Spike 1).** Plan A: `mattn/go-sqlite3` in `libprovenencia.dylib` (`-buildmode=c-shared`, not an xcframework). Swift loads it; create/open writes a real `provenencia.sqlite` via protobuf FFI. Fallbacks unused: local Go process (B), pure-Go SQLite (C). Signing the dylib / dropping `disable-library-validation` is ship-prep (§3, Signing and entitlements), not this risk. On-disk project format did not change.
 
 6. **Project wrapper vs source of truth** — The directory is the format. No parallel `metadata.json` catalog. Optional Mac package icon must not hide or encrypt contents.
 
