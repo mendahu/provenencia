@@ -174,7 +174,6 @@ func attachExhibits(q Querier, g *graphcache.Graph, layer graphalign.Layer, prop
 // one-hop group.
 func pairExhibits(incoming []exhibitObs, neighbor []byte, memberObs []exhibitObs, cfg graphalign.Config, stats graphalign.Stats) []graphalign.Exhibit {
 	var out []graphalign.Exhibit
-	used := map[string]bool{}
 	for _, in := range incoming {
 		if in.valueType == "" || in.valueType == "subject" {
 			continue
@@ -219,11 +218,6 @@ func pairExhibits(incoming []exhibitObs, neighbor []byte, memberObs []exhibitObs
 		if outcome == match.OutcomeUnknown {
 			continue
 		}
-		key := string(in.id) + "|" + string(chosen.id)
-		if used[key] {
-			continue
-		}
-		used[key] = true
 		out = append(out, graphalign.Exhibit{
 			Property:  in.prop,
 			Outcome:   outcome,
