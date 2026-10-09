@@ -152,7 +152,10 @@ func (f *FTSSearcher) Search(ctx context.Context, c *database.Catalog, q Query) 
 			score *= FuzzyWeights.ScoreScale
 		}
 		if d.hasFTS {
-			score *= 1.0 / (1.0 + absFloat(d.ftsRank))
+			// bm25 is negative, and a more negative value is a stronger match.
+			// Scale the field score up by that strength. Dividing by it ranked
+			// the tightest hit last.
+			score *= 1 + absFloat(d.ftsRank)
 		}
 		score *= contextMultiplier(spec, q.Location.Section)
 		score *= refBoostFor(d.refMatch)
