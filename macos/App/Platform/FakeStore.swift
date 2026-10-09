@@ -1006,50 +1006,118 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     ) async throws -> [CatalogSearchHit] {
         let handleKinds: Set<String> = ["person", "event", "place"]
         let wanted = Set(kinds)
-        var hits: [CatalogSearchHit] = []
-        if !wanted.isDisjoint(with: handleKinds) {
-            hits += try withState {
+        var scored: [(hit: CatalogSearchHit, score: Double)] = []
+        if wanted.isEmpty || !wanted.isDisjoint(with: handleKinds) {
+            let handleWanted = wanted.isEmpty ? handleKinds : wanted.intersection(handleKinds)
+            scored += try withState {
                 if let searchCatalogError { throw searchCatalogError }
                 markCatalogSessionHeld(projectDir)
-                return handleSearchHits(query: query, kinds: wanted.intersection(handleKinds))
+                return handleSearchHits(query: query, kinds: handleWanted)
             }
         }
         if wanted.isEmpty || !wanted.isSubset(of: handleKinds) {
             let omnibar = try await omnibarSearchCatalog(projectDir: projectDir, query: query, location: location)
-            hits += wanted.isEmpty ? omnibar : omnibar.filter { wanted.contains($0.kind) }
+            scored += wanted.isEmpty ? omnibar : omnibar.filter { wanted.contains($0.hit.kind) }
         }
-        return hits
+        return Array(Self.orderedByMixedScore(scored).prefix(50).map(\.hit))
+    }
+
+    /// Kind share mirrored from `KindSpec.Priority` and `ScoreMix` (90% text, 10% kind).
+    private static let searchPriority: [String: Double] = [
+        "person": 4,
+        "event": 3,
+        "place": 2,
+        "source": 1,
+    ]
+
+    private static func orderedByMixedScore(
+        _ scored: [(hit: CatalogSearchHit, score: Double)]
+    ) -> [(hit: CatalogSearchHit, score: Double)] {
+        let maxPriority = 4.0
+        return scored.enumerated().map { item in
+            let fraction = (searchPriority[item.element.hit.kind] ?? 0) / maxPriority
+            let mixed = item.element.score * (0.9 + 0.1 * fraction)
+            return (offset: item.offset, hit: item.element.hit, score: mixed)
+        }.sorted { a, b in
+            if a.score != b.score { return a.score > b.score }
+            if a.hit.kind != b.hit.kind { return a.hit.kind < b.hit.kind }
+            if a.hit.title != b.hit.title { return a.hit.title < b.hit.title }
+            return a.offset < b.offset
+        }.map { (hit: $0.hit, score: $0.score) }
     }
 
     /// Call inside `withState`.
-    private func handleSearchHits(query: String, kinds: Set<String>) -> [CatalogSearchHit] {
+    private func handleSearchHits(query: String, kinds: Set<String>) -> [(hit: CatalogSearchHit, score: Double)] {
         let needle = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         guard !needle.isEmpty else { return [] }
         let names = Dictionary(personHeaders().map { ($0.entity.id, $0.name?.form ?? "") }, uniquingKeysWith: { a, _ in a })
         var seen = Set<String>()
-        var out: [CatalogSearchHit] = []
+        var out: [(hit: CatalogSearchHit, score: Double)] = []
         for membership in membershipBySubject.values.sorted(by: { $0.entity.ref < $1.entity.ref })
         where kinds.contains(membership.kind) && seen.insert(membership.entity.id).inserted {
             let entity = membership.entity
+            let header = handleSearchHeader(kind: membership.kind, id: entity.id)
             let name = names[entity.id] ?? ""
             let title = !name.isEmpty ? name : (!entity.label.isEmpty ? entity.label : entity.ref)
-            guard [title, entity.ref, entity.label].contains(where: { $0.lowercased().contains(needle) }) else { continue }
+            let haystack = [title, entity.ref, entity.label, handleSearchMatchText(header)]
+            guard haystack.contains(where: { $0.lowercased().contains(needle) }) else { continue }
             let section: WorkspaceSection = membership.kind == "person" ? .persons : (membership.kind == "event" ? .events : .places)
-            out.append(CatalogSearchHit(
-                kind: membership.kind, id: entity.id, ref: entity.ref, title: title, subtitle: "",
-                matchReason: entity.ref.lowercased().contains(needle) ? "ref" : "title",
-                location: WorkspaceLocation(section: section, entityId: entity.id, ref: entity.ref, title: title),
-                memberCount: membershipBySubject.values.filter { $0.entity.id == entity.id }.count
+            let refMatch = entity.ref.lowercased().contains(needle)
+            out.append((
+                CatalogSearchHit(
+                    kind: membership.kind, id: entity.id, ref: entity.ref, title: title, subtitle: "",
+                    matchReason: refMatch ? "ref" : "title",
+                    location: WorkspaceLocation(section: section, entityId: entity.id, ref: entity.ref, title: title),
+                    memberCount: membershipBySubject.values.filter { $0.entity.id == entity.id }.count,
+                    header: header
+                ),
+                refMatch ? 12 : 10
             ))
         }
         return out
+    }
+
+    /// The list header for a handle hit, when the fake has one.
+    private func handleSearchHeader(kind: String, id: String) -> CatalogConclusionHeader? {
+        switch kind {
+        case "person":
+            if let header = personHeaders().first(where: { $0.entity.id == id }) {
+                return .person(header)
+            }
+        case "event":
+            if let header = seededEventHeaders.first(where: { $0.entity.id == id }) {
+                return .event(header)
+            }
+        case "place":
+            if let header = seededPlaceHeaders.first(where: { $0.entity.id == id }) {
+                return .place(header)
+            }
+        default:
+            break
+        }
+        return nil
+    }
+
+    /// Match text the lists would show, so a query for an event title or a
+    /// place chain finds the handle the way the index does.
+    private func handleSearchMatchText(_ header: CatalogConclusionHeader?) -> String {
+        switch header {
+        case .person(let header):
+            return PersonLifeDisplay.line(header).text
+        case .event(let header):
+            return EventTitleDisplay.title(header) + " " + EventSecondaryDisplay.line(header)
+        case .place(let header):
+            return (header.names + header.parents).joined(separator: " ")
+        case nil:
+            return ""
+        }
     }
 
     private func omnibarSearchCatalog(
         projectDir: String,
         query: String,
         location: WorkspaceLocation
-    ) async throws -> [CatalogSearchHit] {
+    ) async throws -> [(hit: CatalogSearchHit, score: Double)] {
         return try withState {
             markCatalogSessionHeld(projectDir)
             if let searchCatalogError { throw searchCatalogError }
@@ -1095,7 +1163,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 } else {
                     guard score > 0 else { continue }
                 }
-                let boost = location.section == .sources ? 2.0 : 1.0
+                let boost = location.section == .sources ? 1.1 : 1.0
                 scored.append((
                     CatalogSearchHit(
                         kind: "source",
@@ -1130,7 +1198,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                         tokens: tokens
                     )
                     guard score > 0 else { continue }
-                    let boost = location.section == .sourceTypes ? 2.0 : 1.0
+                    let boost = location.section == .sourceTypes ? 1.1 : 1.0
                     scored.append((
                         CatalogSearchHit(
                             kind: "source_type",
@@ -1161,7 +1229,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                         tokens: tokens
                     )
                     guard score > 0 else { continue }
-                    let boost = location.section == .metadata ? 2.0 : 1.0
+                    let boost = location.section == .metadata ? 1.1 : 1.0
                     scored.append((
                         CatalogSearchHit(
                             kind: "metadata_field",
@@ -1181,12 +1249,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 }
             }
 
-            scored.sort {
-                if $0.score != $1.score { return $0.score > $1.score }
-                if $0.hit.kind != $1.hit.kind { return $0.hit.kind < $1.hit.kind }
-                return $0.hit.title < $1.hit.title
-            }
-            return scored.prefix(50).map(\.hit)
+            return scored
         }
     }
 

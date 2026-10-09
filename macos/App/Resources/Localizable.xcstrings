@@ -9618,6 +9618,18 @@
         }
       }
     },
+    "workspace.omnibar.kind.event": {
+      "comment": "Kind chip on an omnibar hit for an Event",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Event"
+          }
+        }
+      }
+    },
     "workspace.omnibar.kind.metadataField": {
       "comment": "Kind chip on an omnibar hit for a metadata field",
       "extractionState": "manual",
@@ -9626,6 +9638,30 @@
           "stringUnit": {
             "state": "translated",
             "value": "Metadata field"
+          }
+        }
+      }
+    },
+    "workspace.omnibar.kind.person": {
+      "comment": "Kind chip on an omnibar hit for a Person",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Person"
+          }
+        }
+      }
+    },
+    "workspace.omnibar.kind.place": {
+      "comment": "Kind chip on an omnibar hit for a Place",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Place"
           }
         }
       }
@@ -9690,6 +9726,18 @@
         }
       }
     },
+    "workspace.omnibar.match.name": {
+      "comment": "Omnibar match context when an alternate name matched; argument is that name",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Name: %@"
+          }
+        }
+      }
+    },
     "workspace.omnibar.match.note": {
       "comment": "Omnibar match context when the query hit a Source note; argument is a short snippet",
       "extractionState": "manual",
@@ -9698,6 +9746,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Note: %@"
+          }
+        }
+      }
+    },
+    "workspace.omnibar.match.place": {
+      "comment": "Omnibar match context when an alternate place name matched; argument is that name",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Place: %@"
           }
         }
       }

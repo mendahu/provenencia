@@ -70,13 +70,13 @@ Grouped by layer; not all exist in the shipped catalog yet:
 | Files | Source | `original_filename`, `media_type` | no |
 | Citations | Interpretation | `ref`, transcription / quote / page label, description | `CIT-…` |
 | Observations | Interpretation | `ref`, property label + value text / name form / date | `OBS-…` |
-| Nodes (candidates) | Interpretation | `ref`, `label`, type, description | `{P}-C-…` |
-| Canonical entities | Conclusion | `ref`, working `label`, projected names | `{P}-…` |
+| Subjects (candidates) | Interpretation | `ref`, `label`, type, description | `CPR-…` and the other candidate prefixes — **not omnibar hits** |
+| Person, Event, Place | Conclusion | list-header title, `ref`, secondary line (an alternate name or toponym when that matched) | `PER-…`, `EVT-…`, `PLC-…` |
 | Relationships | Conclusion | mostly claims/views over entities — weak standalone identity today | usually none |
 
 Contributors (`USR-…` / display name) are optional later if “who added this” becomes a jump target.
 
-**Spike 3 first kinds:** Sources, source types, source fields (UI exists). Files / Artifacts as soon as project-wide listing or projection allows. Later layers register when their destinations ship — same pipeline.
+**Spike 3 first kinds:** Sources, source types, source fields (UI exists). Files / Artifacts as soon as project-wide listing or projection allows. Later layers register when their destinations ship — same pipeline. Person, Event, and Place shipped that way: one document per handle, match text taken from the list header, and the hit's location opens the detail page. Subjects are not hits.
 
 ## Search architecture (end state)
 
@@ -86,7 +86,7 @@ Swift omnibar (query + current WorkspaceLocation)
        → ref fast path (exact / prefix on ref column)
        → FTS5 over projected search documents
        → fuzzy pass on shortlist (trigram OR + Jaro–Winkler; never full scan)
-       → rank: retrieval score × field weights × context boosts × ref boosts
+       → rank: text score, then 90% text + 10% kind priority
        → Hit DTO[] (kind, id, ref?, title, subtitle?, match_reason?, location)
   → go(to: location)
 ```
@@ -112,7 +112,7 @@ FTS5 does **not** invent entities. It indexes **documents you project**. Provene
 
 | Role | Examples | In search index? | Omnibar hit? |
 | --- | --- | --- | --- |
-| **Navigable root** | Source, Source field, Source type, (later) Node, canonical Person | Yes — one document per root | **Yes** — `kind` + `location` open that root |
+| **Navigable root** | Source, Source field, Source type, Person, Event, Place | Yes — one document per root | **Yes** — `kind` + `location` open that root |
 | **Contributory / associated** | `source_notes`, `source_metadata` values, Artifact label/filename, File `original_filename` under a Source | Text **rolled into the parent Source document** (weighted lower than title/ref) | **No** separate hit for “the note” or “the metadata cell” — matching that text returns the **Source** |
 | **Optional first-class hit** | Artifact (when we want jump-to-artifact-on-Source-page) | Either roll into Source **or** own document whose `location` is still Source-scoped | Only if UX wants Artifact as its own row; still not a free-floating note entity |
 
@@ -143,9 +143,11 @@ Brute-force scan of live tables is **not** the end state. A temporary stub behin
 1. **Retrieve** candidates (ref path + FTS; fuzzy expands the set carefully).
 2. **Score** in Go (or SQL helpers), conceptually:
 
-   `score = retrieval_rank × field_weight × context_boost × ref_boost × term_coverage`
+   `score = text × (0.9 + 0.1 × kind_priority / max_priority)`
 
-3. **Context:** pass current `WorkspaceLocation` (at least `section`). Boost matching kinds — e.g. on Sources / Source page, prioritize Source hits; on Source fields, prioritize fields; still include other kinds at lower weight so the omnibar remains global.
+   `text` is the retrieval rank times field weight, a section nudge near 1, and the ref boost. Kind priority, high to low: persons, events, places, sources, then everything else. A clearly stronger text match still outranks a higher kind.
+
+3. **Context:** pass current `WorkspaceLocation` (at least `section`). A matching section nudges that kind (about 1.1×) so a tighter title still ranks first. The omnibar stays global unless the user facets.
 4. **Ref boost:** exact ref ≫ prefix ref ≫ FTS-only match.
 5. Return a bounded list (e.g. top 20–50) for the dropdown; UI may show fewer.
 
@@ -159,7 +161,7 @@ FTS5 tokenizes both the query and each document. `"John Smith's birth certificat
 | --- | --- |
 | Source titled “John Smith's birth certificate” | Many/all tokens in a **high-weight** field (title) → strong `retrieval_rank` + field weight |
 | Source type “Birth certificate” | Only `birth` + `certificate` → lower **term coverage**; still a valid hit if we don’t require every token |
-| Person Node “John Smith” (later) | Only `john` + `smith` → partial coverage; competing with Sources |
+| Person “John Smith” | Only `john` + `smith` → partial coverage; competing with Sources. Kind priority lifts it when the text match is similar |
 
 Default FTS `MATCH` is typically **AND** (all tokens must appear in that document). Strict AND alone would **drop** the type and the person for this query, leaving mainly the full Source title — often good, sometimes too harsh.
 
@@ -167,7 +169,7 @@ Default FTS `MATCH` is typically **AND** (all tokens must appear in that documen
 
 1. Prefer documents that match **more tokens** and match them in **higher-weight fields** (title/ref ≫ body).
 2. Allow **partial term coverage** (or a controlled OR / “best effort” rewrite) so useful narrower kinds still appear, but **rank them below** fuller matches.
-3. Apply **context boosts** on top: if the researcher is on Sources / a Source page, multiply Source hits; if on Source types, multiply type hits; later on People, multiply person hits. Context changes **order**, not “only this kind” (omnibar stays global unless the user facets).
+3. Apply the **section nudge** on top, and the **kind tenth** when the text match is similar. Context changes **order**, not “only this kind” (omnibar stays global unless the user facets).
 4. Phrase / nearness (e.g. `"birth certificate"` as a phrase, or tokens close together) can further boost the Source title over scattered token hits — tune in dogfood.
 
 Example ordering for `John Smith's birth certificate` while browsing **Sources**:
@@ -175,7 +177,7 @@ Example ordering for `John Smith's birth certificate` while browsing **Sources**
 1. Source “John Smith's birth certificate” (full coverage + title + context)  
 2. Other Sources that mention both name and “birth certificate” in notes/metadata (rolled into Source doc, lower field weight)  
 3. Source type “Birth certificate” (partial coverage; lower unless context is types)  
-4. Person “John Smith” when that kind exists (partial coverage; higher if context is People)
+4. Person “John Smith” (partial coverage; kind priority lifts a similar text match, and a clearly stronger source title still ranks first)
 
 ### Associated entities across the graph (later)
 
@@ -231,7 +233,10 @@ Local-first catalogs invite keyboard navigation. Short refs were designed to be 
 | Hit navigation? | **`go(to:)`** — same session history as sidebar / breadcrumbs. |
 | Engine? | **Go `SearchCatalog` + kind registry + FTS5 projection** in the catalog DB — not Swift-as-search-engine. |
 | Brute force forever? | **No.** FTS5 projection is the engine. |
-| Context-aware ranking? | **Yes** — boost by current workspace section / location. |
+| Context-aware ranking? | **Yes** — a small nudge for the current workspace section. |
+| Conclusion hits? | **Person, Event, Place.** Match text is the list header. Selecting the hit opens the detail page. Subjects are not hits. |
+| Kind vs text? | **90% text, 10% kind priority** (persons, events, places, sources, then everything else). A clearly stronger text match still wins. |
+| Canonical vs candidate refs? | **Separate prefixes** (`PER-…` vs `CPR-…`). No infix `PER-C-…`, and no shared list with a layer badge. |
 | Multi-word queries? | **Yes** — tokenize; prefer higher **term coverage** + high-weight fields; allow partial matches at lower rank; context reorders kinds. |
 | Cross-root “associated with”? | **Later** — denormalize related labels and/or second-stage joins; not implied by multi-word FTS alone. |
 | Field weights? | **Yes** — declared per kind in the registry. |
@@ -247,7 +252,6 @@ Parked after Spike 3 dogfood closeout (S3-12). Ship defaults today: blank omniba
 - Thumbnail cost: show Source/File thumbs in the palette, or icons only until selected?
 - Empty query: recent destinations / recent entities (from navigation history?), or blank until type? (**Current:** blank until `minQueryLength`.)
 - How aggressively to weight note bodies / metadata / (later) transcriptions by default?
-- Candidate `PER-C-…` vs canonical `PER-…` when Interpretation/Conclusion search lands — same list with a layer badge, or separate sections?
 - Sync vs async FTS rebuild when catalogs get large?
 
 ## Explicitly out of scope
