@@ -19,6 +19,15 @@ Copy the stub. Surface + what got in the way is enough. A wanted fix is optional
 
 <!-- add below this line -->
 
+### Prefill sensible defaults for common Observation kinds
+
+- **Date:** 2026-10-09
+- **Where:** Citation composer → Observations
+- **Annoyance:** Some Observation fields have the same answer nearly every time, but I still have to pick them by hand.
+- **Wanted:** Prefill fields with a default for specific kinds of Observation, leaving them editable.
+  - **First case:** when connecting a Person to an Event, prefill **role** with the seeded `subject` term ([seeded vocabulary §3.5](../seeded-vocabulary.md)). That covers about 90% of these connections.
+  - Add more defaults as dogfooding turns them up.
+
 ### Multi-line text areas need a scrollbar
 
 - **Date:** 2026-10-09
