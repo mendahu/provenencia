@@ -198,9 +198,9 @@ private struct OmnibarHitRowView: View {
     var body: some View {
         PVOmnibarHitRow(
             lead: { leadView },
-            title: hit.title,
+            title: OmnibarHitPresentation.title(for: hit),
             kindLabel: OmnibarHitPresentation.kindLabel(for: hit.kind),
-            secondary: hit.subtitle,
+            secondary: OmnibarHitPresentation.secondary(for: hit),
             ref: hit.ref,
             refAccent: OmnibarHitPresentation.refAccent(for: hit),
             matchContext: OmnibarHitPresentation.matchContextText(
@@ -222,6 +222,10 @@ private struct OmnibarHitRowView: View {
                 size: 40,
                 cornerRadius: PVRadius.sm
             )
+        case "person", "event", "place":
+            if let mark = OmnibarHitPresentation.leadMark(for: hit.kind) {
+                PVThumbnail(ConclusionListRow.thumbnail(mark: mark), size: 40)
+            }
         case "source_type":
             if hit.iconKey.isEmpty {
                 PVThumbnail(PVThumbnail.Content(icon: .library), size: 40)
