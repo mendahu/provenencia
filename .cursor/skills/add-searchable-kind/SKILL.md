@@ -24,6 +24,7 @@ Authoritative behavior: [`docs/deployment-plan/archive/spike-3/omnibar-search.md
 - [ ] Registry entry: fields + weights (title/ref/label ≫ description ≫ body)
 - [ ] Location mapper → WorkspaceLocation (section + deep id)
 - [ ] DefaultInEverything / ContextSections for ranking boosts
+- [ ] Priority share of the kind tenth (persons 4, events 3, places 2, sources 1, other 0)
 - [ ] FTS projector in core/database/searchindex (Upsert/Delete/Rebuild; unicode61 **and** trigram indexes)
 - [ ] Write-path reproject on domain mutators (same tx when practical)
 - [ ] Tagged Source body rollup when contributing child text (`note:` / `metadata:` / `filename:`)
@@ -43,6 +44,7 @@ Add a `KindSpec`:
 | `Fields` | Match targets + weights |
 | `ContextSections` | Sections that boost this kind (`sources`, `source-types`, …) |
 | `ContextBoost` | Multiplier when request location section matches |
+| `Priority` | Share of the kind tenth of the score (`ScoreMix`). Persons 4, events 3, places 2, sources 1, other 0. The searcher normalizes by the maximum and does not read the name. |
 | `DefaultInEverything` | Include when no facet filter (Spike 3: true for Sources/types/fields) |
 
 Kind constants live in `core/search/search.go`. Section strings must match
