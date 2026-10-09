@@ -1298,6 +1298,11 @@ message PromoteGraphAlignmentComparison {
   string member_observation_id = 11;
   string member_display = 12;
   string member_source = 13;
+  // Structured dates, when the comparison is a date. The client formats
+  // these for the user's locale. The display strings stay the portable
+  // fallback.
+  DateValueInput incoming_date = 15;
+  DateValueInput member_date = 16;
 }
 
 message PromoteGraphAlignmentAlternative {
