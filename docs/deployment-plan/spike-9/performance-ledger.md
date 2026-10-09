@@ -42,7 +42,7 @@ Computed live, a Person on ten Sources reads hundreds of Observations plus Citat
 | H5 | Swift invalidation | Bust-all on any write | Cheap while reloads read R3. Tier 3 if not. |
 | H6 | Catalog session | Cross-Source reads and full rebuilds on one serialized session | Measure rebuild on open. |
 | H7 | Promote | Target suggestions across all handles of a type; comparison rows (incoming × every member) | Suggestions via R3 `sort_key` + R8 index; comparison live for one handle. |
-| H8 | Search reprojection | FTS documents composed across handles; header dependents must be reprojected in the write transaction | Fixed reverse walk over R3's reverse index; covered by rebuild-equals-upkeep test. |
+| H8 | Search reprojection | FTS documents composed across handles; header dependents must be reprojected in the write transaction | `RecomputeTx` reprojects the handle and `HeaderDependents`. A bridge delete snapshots those dependents first. Covered by rebuild-equals-upkeep. |
 | H9 | R3 upkeep | Claim create / remove recomputes every Property of E plus inbound ends; credibility change touches every handle under a Source | Measure worst case (credibility change on a large Source). |
 
 ## Measurements

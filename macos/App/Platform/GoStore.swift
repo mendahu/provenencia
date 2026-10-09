@@ -1733,6 +1733,15 @@ struct GoStore: GenealogyStore {
         }
     }
 
+    private static func mapSearchHeader(_ h: Provenencia_Engine_V1_SearchHit) -> CatalogConclusionHeader? {
+        switch h.header {
+        case .person(let header): return .person(mapPersonHeader(header))
+        case .event(let header): return .event(mapEventHeader(header))
+        case .place(let header): return .place(mapPlaceHeader(header))
+        case nil: return nil
+        }
+    }
+
     private static func mapSearchHit(_ h: Provenencia_Engine_V1_SearchHit) -> CatalogSearchHit {
         CatalogSearchHit(
             kind: h.kind,
@@ -1745,7 +1754,8 @@ struct GoStore: GenealogyStore {
             location: Self.mapWorkspaceLocationFromProto(h.location),
             thumbnailRelPath: h.thumbnailRelPath,
             iconKey: h.iconKey,
-            memberCount: Int(h.memberCount)
+            memberCount: Int(h.memberCount),
+            header: Self.mapSearchHeader(h)
         )
     }
 

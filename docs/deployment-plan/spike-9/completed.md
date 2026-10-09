@@ -1271,3 +1271,19 @@ An app-health review of S9-41 – S9-44, fixed as a stack of eight PRs (#307 –
 **What stayed out**
 
 - The §12 differences: provenance scaling, comparing every shared Property, name frequencies, fallback islands seeding a walk, bridge kinds in the loaders' hop tables.
+
+### S9-34 — Search documents from headers + dependents
+
+Handle search documents are the text the lists show, and a write refreshes every handle whose header reads the one that changed.
+
+**What shipped**
+
+- Person title is the reconciled name. Secondary text is the life dates and places, plus any other cached name. Event title is the list title (`Birth of James Jim Robins`). Place secondary text is the other names and today's chain.
+- `RecomputeTx` reprojects those handles and `HeaderDependents` in the same transaction. Deleting a bridge snapshots the ends' dependents first, because the link is gone by the time the cache is rewritten. `ProjectionVersion` is 7.
+- `SearchHit` carries the person, event, or place header the lists use. FakeStore attaches the same header. Kinds stay out of the omnibar default.
+- A ref, *Jim Robins*, *James* on a birth, and a place name each find their handle. Editing the member's name retitles the event.
+
+**What stayed out**
+
+- Omnibar rows for these kinds (**S9-35**). `DefaultInEverything` stays off.
+- Migrations / product VERSION bump.
