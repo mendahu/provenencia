@@ -86,7 +86,7 @@ func loadCanon(q Querier, layer graphalign.Layer, fixed []graphalign.Fixed) (gra
 		return graphalign.Canon{}, err
 	}
 
-	directed, err := directedTerms(q)
+	kin, err := loadKinship(q)
 	if err != nil {
 		return graphalign.Canon{}, err
 	}
@@ -131,10 +131,20 @@ func loadCanon(q Querier, layer graphalign.Layer, fixed []graphalign.Fixed) (gra
 		var next [][]byte
 		for _, w := range all {
 			for _, e := range w.edges {
-				sig := canonEdgeSignature(e, w.step, roles, rels, eventTypes, directed)
+				sig := canonEdgeSignature(e, w.step, roles, rels, eventTypes, kin.directed)
 				from, to := e.From, e.To
 				if w.step.reversed {
 					from, to = to, from
+				}
+				if w.step.bridgeType == "relationship" {
+					// Same reading as the layer: a term and its inverse share
+					// one key, with the ends swapped.
+					rel, flip := kin.canonical(connectrules.DisambiguationRelationshipType, sig.RoleOrType)
+					if flip {
+						from, to = to, from
+						sig.RoleOrType = rel
+						sig.Directed = kin.directed[connectrules.DisambiguationRelationshipType+"|"+rel]
+					}
 				}
 				ek := string(from) + "|" + string(to) + "|" + sig.Key()
 				if !edgeSeen[ek] {
