@@ -2,6 +2,7 @@ package deleteimpact
 
 import (
 	"database/sql"
+	"fmt"
 	"sync"
 
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
@@ -36,23 +37,25 @@ type probeRow struct {
 	Ref string
 }
 
-// existsSQL is how Impact checks that a deletable row is present. Tables
-// without an entry have no official delete lookup.
-var existsSQL = map[string]string{
-	"sources":                   `SELECT 1 FROM sources WHERE id = ?`,
-	"artifacts":                 `SELECT 1 FROM artifacts WHERE id = ?`,
-	"citations":                 `SELECT 1 FROM citations WHERE id = ?`,
-	"observations":              `SELECT 1 FROM observations WHERE id = ?`,
-	"subjects":                  `SELECT 1 FROM subjects WHERE id = ?`,
-	"source_types":              `SELECT 1 FROM source_types WHERE id = ?`,
-	"source_metadata_fields":    `SELECT 1 FROM source_metadata_fields WHERE id = ?`,
-	"source_credibility_grades": `SELECT 1 FROM source_credibility_grades WHERE id = ?`,
-	"subject_types":             `SELECT 1 FROM subject_types WHERE id = ?`,
-	"properties":                `SELECT 1 FROM properties WHERE id = ?`,
-	"property_terms":            `SELECT 1 FROM property_terms WHERE id = ?`,
-	"files":                     `SELECT 1 FROM files WHERE id = ?`,
-	"users":                     `SELECT 1 FROM users WHERE id = ?`,
-	"project":                   `SELECT 1 FROM project WHERE id = ?`,
+// deletableKinds are the tables Impact looks up by primary key. The query is
+// built from the matching catalogmodel.Table, so the table name and key live
+// in one place. A kind with no table, or a table with no primary key, is not
+// a lookup.
+var deletableKinds = map[catalogmodel.Kind]bool{
+	catalogmodel.KindSource:           true,
+	catalogmodel.KindArtifact:         true,
+	catalogmodel.KindCitation:         true,
+	catalogmodel.KindObservation:      true,
+	catalogmodel.KindSubject:          true,
+	catalogmodel.KindSourceType:       true,
+	catalogmodel.KindMetadataField:    true,
+	catalogmodel.KindCredibilityGrade: true,
+	catalogmodel.KindSubjectType:      true,
+	catalogmodel.KindProperty:         true,
+	catalogmodel.KindPropertyTerm:     true,
+	catalogmodel.KindFile:             true,
+	catalogmodel.KindUser:             true,
+	catalogmodel.KindProject:          true,
 }
 
 type kindTable struct {
@@ -81,12 +84,23 @@ var ownedReleases = []ownedRelease{
 	},
 }
 
+func isDeletableTable(t catalogmodel.Table) bool {
+	spec, ok := tableByKind(t.Kind)
+	return ok && spec.Name == t.Name
+}
+
 func tableByKind(kind catalogmodel.Kind) (kindTable, bool) {
+	if !deletableKinds[kind] {
+		return kindTable{}, false
+	}
 	for _, t := range catalogmodel.Tables {
-		exists, ok := existsSQL[t.Name]
-		if t.Kind == kind && ok {
-			return kindTable{Table: t, Exists: exists}, true
+		if t.Kind != kind || t.Name == "" || t.PK == "" {
+			continue
 		}
+		return kindTable{
+			Table:  t,
+			Exists: fmt.Sprintf(`SELECT 1 FROM %s WHERE %s = ?`, t.Name, t.PK),
+		}, true
 	}
 	return kindTable{}, false
 }

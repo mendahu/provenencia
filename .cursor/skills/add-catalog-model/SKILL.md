@@ -12,14 +12,14 @@ description: >-
 
 `core/database/catalogmodel` is the hand-written list of catalog tables and foreign keys. `TestPragmaHonesty` checks it against SQLite (`sqlite_schema`, `PRAGMA foreign_key_list`). It is not the SQLite schema itself (`schemahash.go`, `catalog.schema_mismatch`).
 
-The package imports nothing above it. It does not import `deleteimpact`. Probes, `existsSQL`, releases, and `Impact` stay in `deleteimpact` — [`add-catalog-delete`](../add-catalog-delete/SKILL.md). DDL lives in a migration — [`add-catalog-migration`](../add-catalog-migration/SKILL.md). FK classification policy: [`docs/catalog-deletes.md`](../../../docs/catalog-deletes.md).
+The package imports nothing above it. It does not import `deleteimpact`. Probes, the deletable-kind set, releases, and `Impact` stay in `deleteimpact` — [`add-catalog-delete`](../add-catalog-delete/SKILL.md). DDL lives in a migration — [`add-catalog-migration`](../add-catalog-migration/SKILL.md). FK classification policy: [`docs/catalog-deletes.md`](../../../docs/catalog-deletes.md).
 
 Update the model in the **same PR** as the migration that adds, changes, or drops the table or FK.
 
 ## Add
 
 1. One `Tables` row: `Name`, `PK` when the table has one, `Bucket`. Skip `sqlite_%` and `catalog_search_fts%`.
-2. A `Kind` constant when delete policy or a probe names the table. The value is the stable machine key (`source`), not the table name (`sources`). Set `Table.Kind` to that constant. `tableByKind` returns the row only when `deleteimpact`'s `existsSQL` map also has the table — add that entry only for an official delete lookup. Facet, skip, and pool tables usually have a bucket and no kind.
+2. A `Kind` constant when delete policy or a probe names the table. The value is the stable machine key (`source`), not the table name (`sources`). Set `Table.Kind` to that constant, and set `PK` to the primary-key column. `tableByKind` returns the row only when that kind is in `deleteimpact`'s deletable set; add it there only for an official delete lookup. The existence query is `SELECT 1 FROM <name> WHERE <pk> = ?`, taken from the table row. Facet, skip, and pool tables usually have a bucket and no kind.
 3. One `FKs` row per live FK: `From`, `Column` (the leading column), `To`, `OnDelete`, `Bucket`. A composite key sets `FromCols` to the full column tuple in `PRAGMA` order and is keyed by seq 0 (`identity_claims` `subject_id` + `subject_type_id`). `Audited: true` only on a `CASCADE` whose rows official deletes release and audit. Empty and `RESTRICT` compare as `NO ACTION`.
 4. The leading column needs a covering index (explicit, `UNIQUE`, or primary key leftmost).
 5. A resource FK needs a list probe, an owned-outbound FK needs a release entry, and an audited `CASCADE` needs one facet release. Those stay in `deleteimpact`.
@@ -37,7 +37,7 @@ A renamed column or a new `ON DELETE` updates `Column`, `FromCols`, `To`, and `O
 
 ## Remove
 
-Drop the `Tables` row, its `FKs` rows, and the `Kind` constant when nothing names the table. Drop the matching `existsSQL` entry, inbound probes, owned releases, facet releases, and projectors in `deleteimpact`, and any call site that passed the kind. Do not leave a zero-count probe for a table that is not in the catalog yet.
+Drop the `Tables` row, its `FKs` rows, and the `Kind` constant when nothing names the table. Drop the kind from `deleteimpact`'s deletable set, and drop its inbound probes, owned releases, facet releases, and projectors, plus any call site that passed the kind. Do not leave a zero-count probe for a table that is not in the catalog yet.
 
 ## Check
 
@@ -47,7 +47,7 @@ CGO_ENABLED=1 go test -tags fts5 ./core/database/catalogmodel ./core/database/de
 
 `catalogmodel.TestPragmaHonesty`: every non-FTS catalog table is registered; every live FK matches `To`, `OnDelete`, and `FromCols`; no registered FK is missing; the leading column has a covering index.
 
-`deleteimpact` then checks that a resource FK has a list probe, an owned-outbound FK is on the release list, a kind with `existsSQL` has a projector section, and each audited `CASCADE` has one facet release.
+`deleteimpact` then checks that a resource FK has a list probe, an owned-outbound FK is on the release list, a deletable kind has a projector section, and each audited `CASCADE` has one facet release. Every deletable kind resolves to one table with a primary key.
 
 ## Do not
 

@@ -9,6 +9,19 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 )
 
+// TestPragmaHonesty keeps the hand-written catalog model in step with a
+// freshly created catalog. Tables and FKs are declared in this package; a
+// migration that adds, changes, or drops a table or foreign key fails here
+// until the model is updated in the same change.
+//
+// The check is four-way. Every catalog table except sqlite_% and FTS shadow
+// tables is in Tables. Every live foreign key, keyed by its leading column,
+// matches the registered To, OnDelete, and FromCols, and no registered FK is
+// missing from PRAGMA foreign_key_list. The leading column of each FK has a
+// covering index (explicit, UNIQUE, or primary key leftmost).
+//
+// Probes, releases, and projectors are checked in deleteimpact. This package
+// stays below that policy and does not import it.
 func TestPragmaHonesty(t *testing.T) {
 	c, err := database.Create(t.TempDir(), "t.provenencia")
 	if err != nil {

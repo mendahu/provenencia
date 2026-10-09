@@ -8,6 +8,34 @@ import (
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
 )
 
+// TestDeletableKindsResolve checks that every kind Impact looks up names
+// exactly one catalogmodel table with a primary key. The existence query is
+// built from that row, so a kind with no table fails here instead of at delete.
+func TestDeletableKindsResolve(t *testing.T) {
+	seen := map[catalogmodel.Kind]int{}
+	for _, spec := range catalogmodel.Tables {
+		if spec.Kind == "" || !deletableKinds[spec.Kind] {
+			continue
+		}
+		seen[spec.Kind]++
+		if spec.Name == "" || spec.PK == "" {
+			t.Errorf("%s is deletable but %q has no name or primary key", spec.Kind, spec.Name)
+		}
+	}
+	for kind := range deletableKinds {
+		if seen[kind] != 1 {
+			t.Errorf("%s is deletable on %d catalogmodel tables, want 1", kind, seen[kind])
+		}
+		if _, ok := tableByKind(kind); !ok {
+			t.Errorf("%s does not resolve to a lookup", kind)
+		}
+	}
+}
+
+// TestResourceAndOwnedHonesty checks delete policy against the catalog model.
+// A resource foreign key must have a list probe, and an owned-outbound
+// foreign key must be on its parent's release list. Whether the model matches
+// SQLite is catalogmodel.TestPragmaHonesty.
 func TestResourceAndOwnedHonesty(t *testing.T) {
 	resourceVias := resourceInboundVias()
 	owned := ownedColumns()
@@ -26,6 +54,10 @@ func TestResourceAndOwnedHonesty(t *testing.T) {
 	}
 }
 
+// TestPragmaHonestyProjectors requires a title and location projector, with a
+// Section, for every deletable kind outside the infra, skip, and pool buckets.
+// Impact names those rows in the confirm UI; a missing projector would leave
+// that place blank.
 func TestPragmaHonestyProjectors(t *testing.T) {
 	c, err := database.Create(t.TempDir(), "t.provenencia")
 	if err != nil {
@@ -45,7 +77,7 @@ func TestPragmaHonestyProjectors(t *testing.T) {
 	id := make([]byte, 16)
 	id[15] = 1
 	for _, spec := range catalogmodel.Tables {
-		if existsSQL[spec.Name] == "" {
+		if !isDeletableTable(spec) {
 			continue
 		}
 		switch spec.Bucket {
@@ -92,7 +124,7 @@ func TestFacetReleaseHonesty(t *testing.T) {
 		if spec.Kind != "" {
 			tableKind[spec.Name] = spec.Kind
 		}
-		deletable[spec.Name] = existsSQL[spec.Name] != ""
+		deletable[spec.Name] = isDeletableTable(spec)
 	}
 
 	for key, fk := range fks {

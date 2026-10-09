@@ -6,7 +6,7 @@ alwaysApply: false
 
 # Catalog model
 
-Follow `.cursor/skills/add-catalog-model/SKILL.md`. Tables and foreign keys live in `core/database/catalogmodel`. Probes, `existsSQL`, releases, and `Impact` stay in `deleteimpact`.
+Follow `.cursor/skills/add-catalog-model/SKILL.md`. Tables and foreign keys live in `core/database/catalogmodel`. Probes, the deletable-kind set, releases, and `Impact` stay in `deleteimpact`.
 
 - Same PR as the migration: add, change, or drop the `Tables` row and every live `FK`. `TestPragmaHonesty` fails on an unregistered table, a missing or extra FK, a wrong `To` / `OnDelete` / `FromCols`, or a leading column with no covering index.
 - `Kind` is a stable machine key (`source`), set on the table when delete policy or a probe names it. Call sites use `catalogmodel.KindSource`. Do not alias `Kind` or `Bucket` out of `deleteimpact`.
