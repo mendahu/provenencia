@@ -1480,3 +1480,33 @@ func TestNewDuplicateCheckComparesDirectedNeighborsByEnd(t *testing.T) {
 		t.Fatalf("Johns with different sons still flagged as one")
 	}
 }
+
+// A record that gives sex at birth as "unknown" says nothing about sex: an
+// exact name still matches a handle of either sex.
+func TestUnknownSexIsNoEvidence(t *testing.T) {
+	merge := func(a, b match.Values) match.Values {
+		for k, v := range b {
+			a[k] = append(a[k], v...)
+		}
+		return a
+	}
+	sp, unknown := termProp("sex_at_birth", "unknown")
+	_, male := termProp("sex_at_birth", "male")
+	s, h := id("s-john"), id("h-john")
+	layer := graphalign.Layer{
+		Subjects: []graphalign.Subject{{ID: s, Ref: "S-J", Kind: "person", Values: merge(nameVals("John", "Smith"), vals(sp, unknown))}},
+		Metas:    append(nameMetas(), personMetas()[1]),
+	}
+	canon := graphalign.Canon{Handles: []graphalign.Handle{
+		{ID: h, Ref: "PER-1", Kind: "person", Values: merge(nameVals("John", "Smith"), vals(sp, male))},
+	}}
+	r := rowBySubject(graphalign.Align(layer, canon, graphalign.Stats{}, nil, nil), s)
+	if r.Target != graphalign.TargetHandle || !bytes.Equal(r.HandleID, h) {
+		t.Fatalf("target=%s score=%.2f, want John's handle", r.Target, r.Score)
+	}
+	for _, c := range r.Comparisons {
+		if c.Property.Key == "sex_at_birth" && c.Outcome != match.OutcomeUnknown {
+			t.Fatalf("sex_at_birth outcome %s, want unknown", c.Outcome)
+		}
+	}
+}

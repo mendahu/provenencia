@@ -139,7 +139,14 @@ var DefaultIntegers = IntegerComparer{
 }
 
 // SexAtBirthNeutral are sex_at_birth terms that are no evidence either way.
-var SexAtBirthNeutral = map[string]bool{"unknown": true, "indeterminate": true}
+// They are the reconciler's neutral terms, so matching and reconciliation
+// agree on what "unknown" means.
+var SexAtBirthNeutral = autoreconcile.NeutralTermKeys
+
+// DefaultTerms compares terms for pairwise evaluation (ComparerFor): a
+// neutral term ("unknown", "indeterminate") is not comparable, as in Rank's
+// profiles and the reconciler.
+var DefaultTerms = TermComparer{Neutral: autoreconcile.NeutralTermKeys}
 
 // ---------------------------------------------------------------------------
 // Profiles and consumers
