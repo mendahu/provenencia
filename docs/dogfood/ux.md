@@ -19,6 +19,13 @@ Copy the stub. Surface + what got in the way is enough. A wanted fix is optional
 
 <!-- add below this line -->
 
+### Multi-line text areas need a scrollbar
+
+- **Date:** 2026-10-09
+- **Where:** Citation composer → Transcription (design system `PVTextArea`)
+- **Annoyance:** When the transcription runs past the visible lines, there's no scrollbar, so you can't tell there's more text or see where you are in it.
+- **Wanted:** Show a scrollbar when a multi-line text area overflows. Fix it in the design system component (`macos/App/DesignSystem/Components/TextArea/PVTextArea.swift`) rather than locally. The composer already uses `PVTextArea` directly for Transcription, Transcription note, and Description, so they all pick up the fix.
+
 ### Create Source modal: Name first, then Type
 
 - **Date:** 2026-10-09
