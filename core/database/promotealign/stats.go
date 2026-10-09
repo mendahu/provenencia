@@ -22,12 +22,22 @@ type statsStamp struct {
 	rev  int64
 }
 
-func loadStats(q Querier) (graphalign.Stats, error) {
+// catalogStamp names the catalog file and its latest audit revision: a
+// process-local cache keyed by it is fresh until any write.
+func catalogStamp(q Querier) (statsStamp, error) {
 	var stamp statsStamp
 	if err := q.QueryRow(`SELECT file FROM pragma_database_list WHERE name = 'main'`).Scan(&stamp.file); err != nil {
-		return graphalign.Stats{}, err
+		return statsStamp{}, err
 	}
 	if err := q.QueryRow(`SELECT COALESCE(MAX(revision), 0) FROM audit_transactions`).Scan(&stamp.rev); err != nil {
+		return statsStamp{}, err
+	}
+	return stamp, nil
+}
+
+func loadStats(q Querier) (graphalign.Stats, error) {
+	stamp, err := catalogStamp(q)
+	if err != nil {
 		return graphalign.Stats{}, err
 	}
 
@@ -46,11 +56,14 @@ func loadStats(q Querier) (graphalign.Stats, error) {
 	return cloneStats(st), nil
 }
 
-// ResetStatsCacheForTest clears the process-local cache (tests only).
+// ResetStatsCacheForTest clears the process-local caches (tests only).
 func ResetStatsCacheForTest() {
 	statsMu.Lock()
-	defer statsMu.Unlock()
 	statsKey, statsCached, statsValid = statsStamp{}, graphalign.Stats{}, false
+	statsMu.Unlock()
+	candMu.Lock()
+	candKey, candCached = statsStamp{}, nil
+	candMu.Unlock()
 }
 
 func computeStats(q Querier) (graphalign.Stats, error) {

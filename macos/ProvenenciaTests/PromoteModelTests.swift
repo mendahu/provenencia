@@ -159,6 +159,22 @@ struct PromoteModelTests {
         #expect(model.flow.rows.first { $0.subjectID == "b" }?.target.handleID == "e-new")
     }
 
+    @Test func quickDecisionsAskForOneProposal() async {
+        let subjects = [subject("a", ref: "CPR-A", label: "Ada"), subject("b", ref: "CPR-B", label: "Bea")]
+        let store = store(subjects: subjects)
+        store.promoteProposals = [CatalogPromoteGraphAlignmentProposal(revision: 1, rows: [row("a", handleID: "e1"), row("b", handleID: "e2")])]
+        let model = model(store: store, subjectID: "a")
+        await model.load()
+        model.mapRest()
+        model.setTarget(subjectID: "a", token: "new")
+        model.setTarget(subjectID: "b", token: "skip")
+        let settled = await waitUntil { !model.isProposing }
+        #expect(settled)
+        // One for the page, one for both decisions.
+        #expect(store.recordedCalls.filter { $0 == "proposePromoteGraphAlignment" }.count == 2)
+        #expect(store.lastPromoteFixed.count == 2)
+    }
+
     @Test func doneWaitsForAPendingProposal() async {
         let subjects = [subject("a", ref: "CPR-A", label: "Ada")]
         let store = store(subjects: subjects)
