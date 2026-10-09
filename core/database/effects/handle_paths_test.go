@@ -27,7 +27,16 @@ import (
 
 const locator = `{"version":1,"selectors":[{"type":"page","artifact_page":1}]}`
 
-func TestHandleRules(t *testing.T) {
+// TestHandlePaths resolves Handles against a catalog. No write calls Handles
+// yet; these checks are the rules the registry states.
+//
+// membersOf keeps accepted and provisional claims and drops rejected. A
+// citation edit recomputes handles only when transcription_uncertain is on
+// the diff. onStatus runs when the old or the new status is accepted, and a
+// status that is never accepted does not recompute observers. A date value
+// walks inbound to the observation that points at it. value_date_id is
+// unique, so that is one observation today.
+func TestHandlePaths(t *testing.T) {
 	userID := []byte{9, 8, 7, 6, 5, 4, 3, 2, 1, 9, 8, 7, 6, 5, 4, 3}
 	c, err := database.Create(t.TempDir(), "t.provenencia")
 	if err != nil {
@@ -181,7 +190,7 @@ func TestHandleRules(t *testing.T) {
 		}
 	})
 
-	t.Run("citation certainty", func(t *testing.T) {
+	t.Run("transcription_uncertain only", func(t *testing.T) {
 		note := rowchange.Change{
 			EntityType: "citation", EntityID: created.Citation.ID, Action: rowchange.ActionUpdate,
 			Fields: map[string]rowchange.FieldDiff{
@@ -201,7 +210,7 @@ func TestHandleRules(t *testing.T) {
 		}
 	})
 
-	t.Run("status on either side", func(t *testing.T) {
+	t.Run("accepted on old or new status", func(t *testing.T) {
 		base := rowchange.Change{
 			EntityType: "identity_claim", EntityID: aliceRes.Claim.ID, Action: rowchange.ActionUpdate,
 		}
@@ -233,10 +242,7 @@ func TestHandleRules(t *testing.T) {
 		}
 	})
 
-	// observations.value_date_id is unique, so one observation owns a date.
-	// The path is still inbound: it returns every observation that points at
-	// the value, which today is that one row.
-	t.Run("date value", func(t *testing.T) {
+	t.Run("date value reaches its observation", func(t *testing.T) {
 		ch := rowchange.Change{
 			EntityType: "date_value", EntityID: dateID, Action: rowchange.ActionUpdate,
 			Fields: map[string]rowchange.FieldDiff{"start_year": {Old: 1842, New: 1843}},
