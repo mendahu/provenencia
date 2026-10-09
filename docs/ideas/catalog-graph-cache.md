@@ -44,7 +44,7 @@ Two kinds of data on one node.
 
 - Identity: id, ref, kind, merged.
 - Values: every ARV row for the handle (all ranks, with reason), by property id. Matching reads kept rank-1; the detail page reads all of them.
-- Adjacency: one link per association, both directions, with its edge signature (bridge type, role or term, neighbor kind, directed). Links are indexed by signature, so "neighbors of h through `participation/subject`" is a map lookup.
+- Adjacency: one link per association, both directions, with its edge signature (bridge type, role or term, neighbor kind, directed). Links are indexed by signature, so following a named hop is a map lookup. The graph builds signatures from `connectrules` and treats them as opaque keys (see Vocabulary stays in registries).
 - Members: accepted and provisional member Subject ids (exhibits, memberships, the Source store's back-pointers).
 
 **Display** (lists, headers, detail):
@@ -286,7 +286,7 @@ Two kinds of effect stay hand-written, because they're about meaning, not the sc
 - **Effects tied to one field.** A citation touches handles only when `certainty` changes; a property only on `cardinality` (`onField`).
 - **Status-dependent effects.** Only an accepted claim moves where subject-valued Observations resolve (`onStatus`).
 
-Header dependents aren't a registry concern either. They follow the canonical graph (a place → its events → their persons), not foreign keys, and `RecomputeTx` already computes them from the handles it rewrites (`conclusionheaders.HeaderDependents`).
+Header dependents aren't an effects concern. They follow the canonical graph, not foreign keys, and depend on vocabulary (which roles and relationship types a header reads), so they come from the header registry (see Vocabulary stays in registries). `RecomputeTx` computes them from the handles it rewrites, as it does today with `conclusionheaders.HeaderDependents`.
 
 ### Completeness, checked against the schema
 
@@ -358,6 +358,44 @@ func (g *Graph) Verify(q Querier) error
 
 The existing suites exercise every write path, so turning the check on in CI covers them all. A debug build can run it in the app while dogfooding.
 
+## Vocabulary stays in registries
+
+The rule: **the schema and the infrastructure never name a vocabulary key.** Subjects, Observations, claims and handles are schema, and any layer can work with them. A specific subject type (`person`), role (`subject`), relationship type (`part_of`), event type (`birth`) or Property (`toponym`) is vocabulary, and only registries name it.
+
+### Layers
+
+| Layer | Holds | Vocabulary |
+| --- | --- | --- |
+| **Schema** (`schema`) | tables, columns, foreign keys, buckets, `CHECK` enums (claim `status`, ARV `reason`) | none |
+| **Infrastructure** (`effects`, `writes`, `graphcache`, `canonicalgraph.Walk`, `graphalign`'s walk and scoring) | mechanisms over the schema; kinds, property keys, terms and edge signatures as opaque values | none: it may carry keys, never compare against a literal |
+| **Registries** | which keys mean what | all of it |
+| **Features** (Promote, the lists, the place page) | use registries by name | through registries |
+
+The effects registry is keyed by table and column, so it stays on the schema side. `onField("certainty")` and `onField("cardinality")` are columns; `onStatus("accepted")` is a `CHECK` enum on `identity_claims.status`. None of its entries name a term, role or kind.
+
+### The registries
+
+Most already exist:
+
+- **`connectrules`:** the bridge kinds (participation, location, relationship, place relationship), which Properties form each association's endpoints, and which Property disambiguates it (role, relationship type, place relationship type). The graph reads this to turn an association handle into links with signatures. It never knows what a participation is.
+- **`subjectvocab`:** the seeded subject types, Properties and terms, including direction and inverses (kinship), which the graph uses to sign relationship links.
+- **`match` profiles and `graphalign/registry.go`:** which Properties a kind is compared on, and their weights and scales.
+- **Named hops** (today in `canonicalgraph`: `EventsOfSubject`, `PlacesOfEvent`, `ParentsOfPlace`, `SuccessorsOfPlace`, …): a vocabulary-bound path (bridge kind + endpoints + term filter), validated against `connectrules` when declared. The generic `Walk` stays in `canonicalgraph`; the declarations move to their own registry file. The graph follows a hop with the same generic call (`g.Follow(h, hops.ParentsOfPlace)`), and place chains name "containment" and "succession" only through it.
+- **A header registry** (new): what each kind's header reads. For example: a Person reads its subject-role events of the birth and death types; an Event reads its places through location and their containment chain; a Place reads its containment parents. Header composition reads it, and header dependents are derived from it by reversing each read. That replaces `HeaderDependents`, whose walks hard-code the same knowledge today, and means a new header field can't forget its dependents.
+
+### Leaks today
+
+Places where infrastructure names keys now, to fix along the way:
+
+- **Promote stats** (`promotealign/stats.go`) hard-codes `p.key IN ('name', 'sex_at_birth', 'event_type', 'toponym')`. It should read the Properties from the `match` profiles. Fixed when stats move onto the graph.
+- **`HeaderDependents`** hard-codes which hops a header reads. Replaced by the header registry.
+- **`canonSteps` and the layer hops** in `promotealign` list hops in code. `canonSteps` goes with the lazy walk; the layer's hops come from `connectrules`.
+- **Named hops** sit next to the generic `Walk` in `canonicalgraph.go`. They move to a registry file.
+
+### Enforcing it
+
+A test lists every seeded key (subject types, Properties and terms from `subjectvocab`; bridge kinds and disambiguation Properties from `connectrules`) and fails when one appears as a string literal in an infrastructure package. Registry files and tests are exempt. Short common words (`name`) need an allowlist entry with a reason, so the exceptions are visible.
+
 ## The Source store
 
 Same pattern. The effects registry resolves every write's Source scopes (the resolvers audit uses today), and the Source store drops those Sources when the write commits.
@@ -388,7 +426,7 @@ Subject positions (Evidence graph layout) don't bump the revision and aren't in 
 | Promote exhibits | members and one-hop bridge neighbors per proposal | node `Members` and `Links` |
 | Persons / Events / Places lists | `ListPersons` / `ListEvents` / `ListPlaces` | `Kind` + `Header` |
 | Headers by id | `PersonsByIDs` / `EventsByIDs` / `PlacesByIDs` (detail header, Promote rows and alternatives, search hits, membership badges) | `Header` |
-| Place chains and place detail | `placeGraph` per request; `ParentsAtDate`, `PartsAtDate`, `SuccessionNames`, `PlaceDetail` | following `part_of` and `succeeded_by` links; replaces #328's per-request index |
+| Place chains and place detail | `placeGraph` per request; `ParentsAtDate`, `PartsAtDate`, `SuccessionNames`, `PlaceDetail` | following the containment and succession hops from the hops registry; replaces #328's per-request index |
 | Conclusion detail (`conclusiondetails.ForEntity`) | ARV rows, outcomes and Observations per request | `Values` (all ranks) from the node; per-Observation outcomes stay a SQL read, or a second memo dropped with the display memo |
 | Future: pedigree, timelines, "what happened here" | — | walks over `Links` |
 
@@ -445,13 +483,13 @@ Each step is its own PR, measured against the one before. PRs that only repoint 
 4. **Migrate Source-layer writes** (churn). Sources, notes, metadata, source types, metadata fields, artifacts, ingest.
 5. **Migrate Evidence-layer writes** (churn). Citations, observations, subjects, name values, connect, positions.
 6. **Migrate conclusion-layer writes** (churn). Promote single and batch, identity claims, canonical entities, credibility, properties, subject definitions.
-7. **Close the old path** (small). Hand-placed recompute calls, `released.Handles`, the old scope resolvers and the migration assertion go; old entry points become private; the `.Begin()` test.
+7. **Close the old path** (small). Hand-placed recompute calls, `released.Handles`, the old scope resolvers and the migration assertion go; old entry points become private; the `.Begin()` test; the vocabulary-literal test over `schema`, `effects` and `writes` (later PRs extend it to `graphcache`).
 
 **The graph**
 
-8. **The graph and Promote.** `graphcache` on the catalog session, registered as a commit listener; nodes with structure; lazy fill; the revision safety net; `Verify` in CI. Promote reads through `CanonGraph`; stats and candidates move onto the graph; `canonSteps`, the 5-hop expansion and the #327 caps go. The #327 debounce and narrowed exhibits stay. Benchmark.
-9. **Display.** Header memos; lists and `…ByIDs` from the graph; the vocabulary map; "today" at read time.
-10. **Place chains** from links, replacing #328's per-request index.
+8. **The graph and Promote.** `graphcache` on the catalog session, registered as a commit listener; nodes with structure; lazy fill; the revision safety net; `Verify` in CI. Promote reads through `CanonGraph`; stats (Properties from the `match` profiles) and candidates move onto the graph; `canonSteps`, the 5-hop expansion and the #327 caps go. The #327 debounce and narrowed exhibits stay. Benchmark.
+9. **Display.** The header registry, with header dependents derived from it (replacing `HeaderDependents`); header memos; lists and `…ByIDs` from the graph; the vocabulary map; "today" at read time.
+10. **Place chains** from named hops on the graph, replacing #328's per-request index. Named hops move to their own registry file.
 11. **Conclusion detail** from node values, with the "Why" outcomes dropped with the display memo.
 12. **The Source store**, fed by resolved Source scopes; Promote's layer, the Evidence graph and the Composer on it.
 
