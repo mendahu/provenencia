@@ -1443,3 +1443,40 @@ func TestRefinementDropsSupportFromAMovedNeighbor(t *testing.T) {
 		}
 	}
 }
+
+// Two New rows with one name, where one record names his son and the other
+// his father: those neighbors play different roles, so they neither confirm
+// nor rule out the pair, and the duplicate warning stands on the names.
+func TestNewDuplicateCheckComparesDirectedNeighborsByEnd(t *testing.T) {
+	parent := relSig("parent")
+	parent.Directed = true
+	a, b, son, father := id("s-a"), id("s-b"), id("s-son"), id("s-father")
+	layer := graphalign.Layer{
+		Subjects: []graphalign.Subject{
+			{ID: a, Ref: "S-A", Kind: "person", Values: nameVals("John", "Smith")},
+			{ID: b, Ref: "S-B", Kind: "person", Values: nameVals("John", "Smith")},
+			{ID: son, Ref: "S-SON", Kind: "person", Values: nameVals("Robert", "Smith")},
+			{ID: father, Ref: "S-FATHER", Kind: "person", Values: nameVals("William", "Smith")},
+		},
+		Bridges: []graphalign.Bridge{
+			{A: a, B: son, Signature: parent},    // a is the son's parent
+			{A: father, B: b, Signature: parent}, // b is the father's child
+		},
+		Metas: nameMetas(),
+	}
+	p := graphalign.Align(layer, graphalign.Canon{}, graphalign.Stats{}, nil, nil)
+	for _, sid := range [][]byte{a, b} {
+		r := rowBySubject(p, sid)
+		if r.Target != graphalign.TargetNew || !r.Flags.PossibleDuplicate {
+			t.Fatalf("%s: target=%s duplicate=%v, want New and a possible duplicate", sid, r.Target, r.Flags.PossibleDuplicate)
+		}
+	}
+
+	// The same end still rules a pair out: two Johns whose sons differ.
+	layer.Subjects[3] = graphalign.Subject{ID: father, Ref: "S-OTHERSON", Kind: "person", Values: nameVals("William", "Smith")}
+	layer.Bridges[1] = graphalign.Bridge{A: b, B: father, Signature: parent} // b is William's parent
+	p = graphalign.Align(layer, graphalign.Canon{}, graphalign.Stats{}, nil, nil)
+	if r := rowBySubject(p, a); r.Flags.PossibleDuplicate {
+		t.Fatalf("Johns with different sons still flagged as one")
+	}
+}
