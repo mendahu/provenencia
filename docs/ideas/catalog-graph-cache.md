@@ -25,7 +25,7 @@ Two tiers of the same data:
 - **Persistent tier:** ARV, as today. Survives restarts; SQL and the search index read it.
 - **Memory tier:** a graph of nodes held on the open catalog session, built from ARV (plus a few small lookups), shaped for walking: each node holds its values and its adjacency, and points at its neighbors.
 
-`RecomputeTx` and `Rebuild` stay the only ways the canonical graph changes. They already rewrite ARV; they also tell the memory tier which entries are now stale. Nothing new is asked of write code.
+`RecomputeTx` and `Rebuild` stay the only ways the canonical graph changes. They already rewrite ARV; they also note which entries are now stale on the write's transaction, and the memory tier drops them when that transaction commits. Writes move onto one transaction wrapper so that commit is the moment the cache hears about them.
 
 Two stores live in the memory tier:
 
@@ -67,7 +67,7 @@ type Node struct {
 	Links   map[SigKey][]Link       // adjacency by edge signature, both directions
 	Members [][]byte                // accepted and provisional member Subjects
 
-	display *Display // memo; nil until asked, cleared by a display mark
+	display *Display // memo; nil until asked, cleared when a commit makes it stale
 }
 
 type Link struct {
@@ -85,27 +85,27 @@ Nodes are immutable once built. A reload replaces the node in the map, so a read
 Nothing is preloaded. A node is loaded the first time something asks for it, in batches:
 
 ```go
-type Graph struct { /* nodes, kinds, stats memo, marks cursor */ }
+type Graph struct { /* nodes, kinds, stats memo, last revision heard */ }
 
 // Nodes returns the nodes for ids, loading the missing or stale ones in one
-// batched read (InBatch), and drains pending marks first.
+// batched read (InBatch).
 func (g *Graph) Nodes(q Querier, ids [][]byte) ([]*Node, error)
 
 // Neighbors is h's links through sig, loading the neighbors it names.
 func (g *Graph) Neighbors(q Querier, h *Node, sig graphalign.EdgeSignature) ([]*Node, error)
 
 // Kind is every unmerged handle of a kind, loaded once (lists, candidates);
-// later marks refresh only the marked nodes.
+// later writes refresh only the nodes they touched.
 func (g *Graph) Kind(q Querier, kind string) ([]*Node, error)
 
 // Header is the node's display memo, built on first use.
 func (g *Graph) Header(q Querier, id []byte) (*Display, error)
 
-// Stats is value frequency and fan-out, kept as counts the marks adjust.
+// Stats is value frequency and fan-out, kept as counts that commits adjust.
 func (g *Graph) Stats(q Querier) (graphalign.Stats, error)
 ```
 
-Every read starts by draining marks (below), so a read after a write always sees committed data.
+Writes update the graph as they commit (see Invalidation), so a read never has to check for staleness first.
 
 ## Invalidation
 
@@ -126,52 +126,123 @@ Every write that changes the canonical graph ends in `autoreconciler.RecomputeTx
 
 So the question "I changed observation X, what is stale?" is already answered on every write, inside the write's transaction, and tests already depend on it: a write path that skipped it would leave ARV and search stale.
 
-### Two marks per write
+### Two kinds of stale per write
 
-- **Structure mark:** the handles `RecomputeTx` rewrote. Their nodes reload.
-- **Display mark:** those handles plus `HeaderDependents`. Their display memos clear.
+- **Structure:** the handles `RecomputeTx` rewrote. Their nodes reload.
+- **Display:** those handles plus `HeaderDependents`. Their display memos clear.
 
-`Rebuild` (open-time, on a `CacheVersion` change) marks everything.
+`Rebuild` (open-time, on a `CacheVersion` change) makes everything stale.
 
-### Marks are rows in the write's transaction
+### Writes go through one wrapper that knows how they ended
 
-`RecomputeTx` gets only a `Querier` (the write's `*sql.Tx`), not the session, so it can't reach the memory tier directly. It writes its marks into a small table in the same transaction:
+Today about 24 packages call `db.Begin()` themselves (some 45 call sites) and commit or roll back on their own. That's why `RecomputeTx` can't safely tell the memory tier anything: it only holds the write's `*sql.Tx`, and it can't know whether that transaction will commit.
 
-```sql
-CREATE TABLE graph_cache_marks (
-	seq       INTEGER PRIMARY KEY AUTOINCREMENT,
-	entity_id BLOB,          -- NULL: everything (Rebuild)
-	scope     TEXT NOT NULL  -- 'structure' or 'display'
-);
-```
+Instead, every write runs through one wrapper on the catalog. The wrapper owns the transaction, collects what the write changed, and tells the memory tier only after a successful commit:
 
 ```go
-// In RecomputeTx, after the ARV rows and before the search reprojection:
-if err := graphcache.MarkTx(q, ids, deps); err != nil {
-	return err
+// package database
+
+// Tx is a write transaction. It is a Querier, and it collects what the write
+// changed so listeners hear about it after commit, never before.
+type Tx struct {
+	*sql.Tx
+	changes Changes
 }
 
-// On every read, before serving:
-func (g *Graph) drain(q Querier) error {
-	// SELECT seq, entity_id, scope FROM graph_cache_marks WHERE seq > g.cursor
-	// structure → drop node; display → clear memo; NULL → drop all.
-	// g.cursor = max seq seen.
+// Changes is what one committed write touched. It lives for one write and is
+// never stored.
+type Changes struct {
+	Handles    [][]byte // structure: ARV rows rewritten (RecomputeTx)
+	Dependents [][]byte // display only: HeaderDependents
+	Sources    [][]byte // source scopes (audit.Record)
+	Vocabulary bool     // properties or property_terms written
+	All        bool     // Rebuild
 }
+
+// Write runs fn in a transaction. On success it commits, then hands the
+// collected Changes to every listener. On error or panic it rolls back and
+// the Changes are dropped.
+func (c *Catalog) Write(fn func(tx *Tx) error) error {
+	sqlTx, err := c.db.Begin()
+	if err != nil {
+		return err
+	}
+	tx := &Tx{Tx: sqlTx}
+	if err := fn(tx); err != nil {
+		_ = sqlTx.Rollback()
+		return err
+	}
+	if err := sqlTx.Commit(); err != nil {
+		return err
+	}
+	for _, l := range c.listeners {
+		l.Committed(tx.changes)
+	}
+	return nil
+}
+
+// OnCommit registers a listener. The graph cache registers itself when the
+// catalog session opens.
+func (c *Catalog) OnCommit(l CommitListener)
 ```
 
-This gets the transaction semantics for free:
+The functions that already know what changed note it on the `Tx`:
 
-- A rolled-back write leaves no marks, and a committed one always does. The memory tier never sees uncommitted data and never misses a committed change.
-- Write code doesn't change. The only new call is inside `RecomputeTx` and `Rebuild`.
-- It works for any writer that goes through `RecomputeTx`, including paths outside the FFI (onboarding, tests).
+```go
+// package autoreconciler: the signature takes *database.Tx, not a Querier,
+// so a write can't call it outside the wrapper.
+func RecomputeTx(tx *database.Tx, entityIDs [][]byte) error {
+	// … rewrite ARV rows, compute deps, reproject search, as today …
+	tx.Touched(ids, deps)
+	return nil
+}
 
-The table is pruned at open (the memory tier starts empty, so old marks mean nothing) and can be trimmed below the cursor at any time.
+// package audit: scopes are already resolved here.
+func Record(tx *database.Tx, rev Revision) (int64, error) {
+	// … as today …
+	tx.TouchedSources(sourceIDs)
+}
+
+// package propertyterms / properties: any write
+tx.TouchedVocabulary()
+```
+
+A write path reads the same as today, minus its own begin, commit and rollback:
+
+```go
+// before
+tx, err := db.Begin()
+if err != nil { return err }
+defer tx.Rollback()
+// … writes, audit.Record, autoreconciler.RecomputeSubjectsTx …
+return tx.Commit()
+
+// after
+return c.Write(func(tx *database.Tx) error {
+	// … writes, audit.Record, autoreconciler.RecomputeSubjectsTx …
+	return nil
+})
+```
+
+What this gets:
+
+- **Exact:** the memory tier hears about a write only once it has committed, and always hears about one that has. A rollback drops the `Changes` with the transaction.
+- **No new table, nothing stored.** `Changes` is the outcome of one transaction, held in memory until commit and then handed over. It isn't a feed or a log: audit stays the record of what changed, and ARV stays the record of what the graph is.
+- **Enforced by the compiler.** `RecomputeTx` and `audit.Record` take `*database.Tx`, which only `Catalog.Write` makes. A write that bypasses the wrapper doesn't compile against them. A small test that fails on any `.Begin()` outside `core/database` keeps it that way.
+- **One mechanism for both stores.** The Source store hears `Sources` from the same `Changes` instead of querying audit scopes.
+- **Vocabulary included.** Term and property writes set `Vocabulary`, so the label map drops on exactly those writes.
+- **Reads don't check anything** before serving. Everything was applied at commit.
+
+`catalogsession.Do` already serializes every operation, so listeners run before the next read can start, with no lock needed.
+
+The restructure is mechanical but wide: about 45 begin sites in 24 packages move to `Catalog.Write`, and functions that take a `*sql.Tx` today take a `*database.Tx` (it embeds `*sql.Tx`, so their bodies don't change). Paths that write outside a project catalog (onboarding before the session opens, `core/derivatives`) use the same wrapper; with no listeners registered they behave as today.
 
 Alternatives considered:
 
-- **Mark memory directly from `RecomputeTx`.** Needs the session reachable from a `*sql.Tx` (a wrapper `Querier` or a package-level "current graph"), and a rollback after the mark costs a reload but is otherwise harmless. More plumbing, less exact.
-- **Drop everything on any revision change.** Simple and correct, and fine for Promote, which makes no writes between decisions. Not fine once lists read the cache: one edit in the Citation Composer would reload every Person.
-- **A separate change feed.** Rejected: it would duplicate audit (what changed) and ARV (what the graph is now).
+- **A marks table** written by `RecomputeTx` in the same transaction, drained on read. Exact and needs no restructure, but adds a table and a query before every read.
+- **Mark memory directly from `RecomputeTx`.** Can't know whether the transaction commits; a rollback leaves memory marked for data that never landed.
+- **Drop everything on any revision change.** Simple and fine for Promote, which makes no writes between decisions. Not fine once lists read the cache: one edit in the Citation Composer would reload every Person.
+- **A persisted change feed.** Rejected: it would duplicate audit (what changed) and ARV (what the graph is now).
 
 ### What isn't in ARV
 
@@ -183,7 +254,7 @@ These change without `RecomputeTx`, so nodes don't copy them. They are resolved 
 
 ### Safety net
 
-The memory tier records the audit revision it last drained against. If a read finds a revision it didn't expect with no marks to explain it (a path that changes ARV without `RecomputeTx`), it drops everything and logs it. That log line is a bug report.
+The memory tier records the audit revision of the last commit it heard about. If a read finds a newer revision it never heard about (a write that slipped past the wrapper), it drops everything and logs it. That log line is a bug report. With the compiler and the `.Begin()` test in place it should never fire.
 
 ### Verifying it
 
@@ -199,7 +270,7 @@ The existing suites exercise every write path, so turning the check on in CI cov
 
 ## The Source store
 
-Same pattern, different source of marks. Audit already resolves every transaction to the Sources it touched (`audit_transaction_scopes`, `scope_type = 'source'`), so the Source store doesn't need its own marks table: it drains "Sources scoped by a revision above my cursor" and reloads those.
+Same pattern. `audit.Record` already resolves every transaction to the Sources it touched (the scopes in `audit_transaction_scopes`); it notes them on the `Tx`, and the Source store drops those Sources when the write commits.
 
 ```go
 type SourceGraph struct {
@@ -223,12 +294,12 @@ Subject positions (Evidence graph layout) don't bump the revision and aren't in 
 | --- | --- | --- |
 | Promote walk (`graphalign.Align`) | eager 5-hop canon (`loadCanon`, `canonSteps`), with caps in #327 | lazy: Align asks for a handle and its neighbors by signature; no expansion, no caps |
 | Promote candidates | kind scan per proposal (`matching.CandidatesOfType`) | `Kind(kind)` |
-| Promote stats | recomputed per revision (`computeStats`) | counts on the graph, adjusted by marks |
+| Promote stats | recomputed per revision (`computeStats`) | counts on the graph, adjusted at each commit |
 | Promote exhibits | members and one-hop bridge neighbors per proposal | node `Members` and `Links` |
 | Persons / Events / Places lists | `ListPersons` / `ListEvents` / `ListPlaces` | `Kind` + `Header` |
 | Headers by id | `PersonsByIDs` / `EventsByIDs` / `PlacesByIDs` (detail header, Promote rows and alternatives, search hits, membership badges) | `Header` |
 | Place chains and place detail | `placeGraph` per request; `ParentsAtDate`, `PartsAtDate`, `SuccessionNames`, `PlaceDetail` | following `part_of` and `succeeded_by` links; replaces #328's per-request index |
-| Conclusion detail (`conclusiondetails.ForEntity`) | ARV rows, outcomes and Observations per request | `Values` (all ranks) from the node; per-Observation outcomes stay a SQL read, or a second memo with the same display mark |
+| Conclusion detail (`conclusiondetails.ForEntity`) | ARV rows, outcomes and Observations per request | `Values` (all ranks) from the node; per-Observation outcomes stay a SQL read, or a second memo dropped with the display memo |
 | Future: pedigree, timelines, "what happened here" | — | walks over `Links` |
 
 ### Source store
@@ -265,7 +336,7 @@ Weighting, not hopping, is where per-signature judgment belongs: fan-out already
 
 ## Memory
 
-Unknown until measured. A node is an id, a ref, a few dozen values and a handful of links. The first PR adds a benchmark on a synthetic catalog (on the order of 20k persons, 30k events, a few hub places) that reports heap size and proposal time against today's eager canon.
+Unknown until measured. A node is an id, a ref, a few dozen values and a handful of links. The graph PR adds a benchmark on a synthetic catalog (on the order of 20k persons, 30k events, a few hub places) that reports heap size and proposal time against today's eager canon.
 
 If it's too much, `Values` can hold only kept rank-1 rows and the detail page reads the rest from SQL.
 
@@ -273,18 +344,19 @@ If it's too much, `Values` can hold only kept rank-1 rows and the detail page re
 
 Each step is its own PR, measured against the one before.
 
-1. **The graph and Promote.** `graphcache` on the catalog session; nodes with structure; lazy fill; `graph_cache_marks` written by `RecomputeTx` and `Rebuild`; the revision safety net; `Verify` in CI. Promote reads through `CanonGraph`; stats and candidates move onto the graph; `canonSteps`, the 5-hop expansion and the #327 caps go. The #327 debounce and narrowed exhibits stay. Benchmark.
-2. **Display.** Header memos; lists and `…ByIDs` from the graph; the vocabulary map; "today" at read time.
-3. **Place chains** from links, replacing #328's per-request index.
-4. **Conclusion detail** from node values, with the "Why" outcomes on the same display mark.
-5. **The Source store**, drained from audit scopes; Promote's layer, the Evidence graph and the Composer on it.
+1. **The write wrapper.** `Catalog.Write`, `database.Tx`, `Changes` and commit listeners; every begin site moved onto it; `RecomputeTx` and `audit.Record` take `*database.Tx`; the `.Begin()` test. No cache yet, so it lands and settles on its own.
+2. **The graph and Promote.** `graphcache` on the catalog session, registered as a commit listener; nodes with structure; lazy fill; the revision safety net; `Verify` in CI. Promote reads through `CanonGraph`; stats and candidates move onto the graph; `canonSteps`, the 5-hop expansion and the #327 caps go. The #327 debounce and narrowed exhibits stay. Benchmark.
+3. **Display.** Header memos; lists and `…ByIDs` from the graph; the vocabulary map; "today" at read time.
+4. **Place chains** from links, replacing #328's per-request index.
+5. **Conclusion detail** from node values, with the "Why" outcomes dropped with the display memo.
+6. **The Source store**, fed by `Changes.Sources`; Promote's layer, the Evidence graph and the Composer on it.
 
-Later, and separately: the same marks could ride back to Swift on each write's response ("these handles changed"), so the client's session cache invalidates by handle instead of the hand-kept `CatalogMutation` map. That reuses the marks; it is not another feed.
+Later, and separately: the same `Changes` could ride back to Swift on each write's response ("these handles and Sources changed"), so the client's session cache invalidates by handle instead of the hand-kept `CatalogMutation` map. That reuses the commit's `Changes`; it is not another feed.
 
 ## Open questions
 
 1. **Where the graph hangs.** A field on `database.Catalog` (low in the import graph, so an opaque slot), or a map in `graphcache` keyed by `*database.Catalog`, set up in `catalogsession.openResearcher` and dropped on close.
-2. **Marks table vs. marking memory directly** (see Invalidation). The table is the recommendation; confirm it in PR 1.
-3. **Stats by counts or recompute.** Adjusting value-frequency and fan-out counts from marks is exact but fiddly. Recomputing from the graph per revision is simpler and may be fast enough in memory.
+2. **Nested writes.** A few write functions call others that open their own transaction today. With the wrapper, inner functions should take the outer `*database.Tx`; find any that can't.
+3. **Stats by counts or recompute.** Adjusting value-frequency and fan-out counts from each commit's `Changes` is exact but fiddly. Recomputing from the graph per revision is simpler and may be fast enough in memory.
 4. **Detail "Why" outcomes.** Cache them per handle, or keep the SQL read; decide after measuring.
 5. **Concurrency.** `Do` serializes everything today. If reads ever run alongside writes, immutable nodes plus a lock around the maps is enough; nothing here should assume serialization beyond that.
