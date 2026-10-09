@@ -169,6 +169,31 @@ func (f *fixture) placeRel(src sources.Source, art artifacts.Artifact, from, to 
 	must(f.t, err)
 }
 
+// relationship cites "person is typ of related" on src.
+func (f *fixture) relationship(src sources.Source, art artifacts.Artifact, person, related subjects.Subject, typ string) {
+	f.t.Helper()
+	_, err := connect.CreateCitedBridge(f.c, userID, connect.CreateInput{
+		SourceID: src.ID, FromSubjectID: person.ID, ToSubjectID: related.ID, BridgeTypeKey: "relationship",
+		Citation: citations.CreateInput{ArtifactID: art.ID, LocatorJSON: locator},
+		Observations: []observations.Input{
+			{PropertyID: f.prop("person").ID, ValueSubjectID: person.ID},
+			{PropertyID: f.prop("related_to").ID, ValueSubjectID: related.ID},
+			{PropertyID: f.prop("relationship_type").ID, ValueTermID: f.term("relationship_type", typ).ID},
+		},
+	})
+	must(f.t, err)
+}
+
+// sexOnly is a person whose record gives no name, only a sex at birth.
+func (f *fixture) sexOnly(src sources.Source, art artifacts.Artifact, sex string) subjects.Subject {
+	f.t.Helper()
+	s := f.bare(src, "person")
+	f.cite(art, s, observations.Input{
+		PropertyID: f.prop("sex_at_birth").ID, ValueTermID: f.term("sex_at_birth", sex).ID,
+	})
+	return s
+}
+
 func (f *fixture) promote(s subjects.Subject) promote.Result {
 	f.t.Helper()
 	res, err := promote.Save(f.c, userID, promote.Input{SubjectID: s.ID})
@@ -745,5 +770,28 @@ func TestProposePartOfMatchesTheSameEnd(t *testing.T) {
 	row := rowFor(f.propose(srcB.ID, []graphalign.Fixed{{SubjectID: ontario.ID, HandleID: middleH.Entity.ID}}), york.ID)
 	if row.Reason != graphalign.ReasonVia || !bytes.Equal(row.HandleID, partH.Entity.ID) {
 		t.Fatalf("york row %+v, want the part %s via Ontario", row, partH.Entity.Ref)
+	}
+}
+
+// "Mary parent of John" on one Source and "John child of Mary" on another are
+// one relationship: the walk from Mary reaches John's handle either way.
+func TestProposeInverseKinshipTermsCorrespond(t *testing.T) {
+	f := newFixture(t)
+	mary := f.person(f.source, f.artifact, "Mary Smith")
+	john := f.person(f.source, f.artifact, "John Smith")
+	f.relationship(f.source, f.artifact, mary, john, "parent")
+	hMary := f.promote(mary).Entity.ID
+	hJohn := f.promote(john).Entity.ID
+
+	src2, art2 := f.newSource("Baptism")
+	son := f.sexOnly(src2, art2, "male")
+	mother := f.person(src2, art2, "Mary Smith")
+	f.relationship(src2, art2, son, mother, "child")
+
+	p := f.propose(src2.ID, []graphalign.Fixed{{SubjectID: mother.ID, HandleID: hMary}})
+	r := rowFor(p, son.ID)
+	if r.Target != graphalign.TargetHandle || !bytes.Equal(r.HandleID, hJohn) || r.Reason != graphalign.ReasonVia {
+		t.Fatalf("son: target=%s handle-is-John=%v reason=%s, want John's handle via his mother",
+			r.Target, bytes.Equal(r.HandleID, hJohn), r.Reason)
 	}
 }

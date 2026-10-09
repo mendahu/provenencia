@@ -18,25 +18,48 @@ func keptTerms(q Querier, entityIDs [][]byte, propertyKey string) (map[string]st
 		entityIDs, propertyKey)
 }
 
-// directedTerms is every directed term ("propertyKey|termKey"): a term whose
-// order is part of its meaning (parent of, part of), as the catalog marks it.
-func directedTerms(q Querier) (map[string]bool, error) {
-	rows, err := q.Query(`SELECT p.key, t.key FROM property_terms t
+// kinship is the directed and inverse marks of the catalog's terms, keyed
+// "propertyKey|termKey".
+type kinship struct {
+	directed map[string]bool
+	inverse  map[string]string
+}
+
+// loadKinship reads which terms keep direction and which name an inverse.
+func loadKinship(q Querier) (kinship, error) {
+	rows, err := q.Query(`SELECT p.key, t.key, t.directed, COALESCE(t.inverse_key, '') FROM property_terms t
 		JOIN properties p ON p.id = t.property_id
-		WHERE t.directed = 1`)
+		WHERE t.directed = 1 OR t.inverse_key IS NOT NULL`)
 	if err != nil {
-		return nil, err
+		return kinship{}, err
 	}
 	defer rows.Close()
-	out := map[string]bool{}
+	k := kinship{directed: map[string]bool{}, inverse: map[string]string{}}
 	for rows.Next() {
-		var prop, term string
-		if err := rows.Scan(&prop, &term); err != nil {
-			return nil, err
+		var prop, term, inverse string
+		var directed bool
+		if err := rows.Scan(&prop, &term, &directed, &inverse); err != nil {
+			return kinship{}, err
 		}
-		out[prop+"|"+term] = true
+		if directed {
+			k.directed[prop+"|"+term] = true
+		}
+		if inverse != "" {
+			k.inverse[prop+"|"+term] = inverse
+		}
 	}
-	return out, rows.Err()
+	return k, rows.Err()
+}
+
+// canonical is the key one relationship is matched under. A term and its
+// inverse read one relationship from opposite ends ("parent" from the
+// parent, "child" from the child), so the pair shares the key that sorts
+// first; flip is true when the ends must swap to read that way.
+func (k kinship) canonical(propertyKey, term string) (key string, flip bool) {
+	if inv, ok := k.inverse[propertyKey+"|"+term]; ok && inv < term {
+		return inv, true
+	}
+	return term, false
 }
 
 // observedTerms maps each Subject to the key of a positive Observation's

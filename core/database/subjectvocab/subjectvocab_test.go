@@ -290,3 +290,50 @@ func TestSubjectVocab(t *testing.T) {
 		})
 	}
 }
+
+// An inverse names a directed term of the same Property that names this one
+// back, so matching can read either end of one relationship.
+func TestSeedInversesPairUp(t *testing.T) {
+	byKey := map[string]seedTerm{}
+	for _, term := range seedTerms {
+		byKey[term.PropertyKey+"|"+term.Key] = term
+	}
+	pairs := 0
+	for _, term := range seedTerms {
+		if term.Inverse == "" {
+			continue
+		}
+		pairs++
+		other, ok := byKey[term.PropertyKey+"|"+term.Inverse]
+		if !ok {
+			t.Fatalf("%s: inverse %q is not a %s term", term.Key, term.Inverse, term.PropertyKey)
+		}
+		if other.Inverse != term.Key || !term.Directed || !other.Directed {
+			t.Fatalf("%s ↔ %s: inverses must be directed and name each other", term.Key, other.Key)
+		}
+	}
+	if pairs != 8 {
+		t.Fatalf("inverse terms %d, want 8 (four kinship pairs)", pairs)
+	}
+}
+
+func TestInstallStoresInverses(t *testing.T) {
+	c, err := database.Create(t.TempDir(), "t.provenencia")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = c.Close() })
+	if err := Install(c); err != nil {
+		t.Fatal(err)
+	}
+	rt, err := properties.Lookup(c, "relationship_type", properties.OriginProvenencia)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for key, want := range map[string]string{"parent": "child", "ward": "guardian", "spouse": ""} {
+		term, err := propertyterms.Lookup(c, rt.ID, key, propertyterms.OriginProvenencia)
+		if err != nil || term.InverseKey != want {
+			t.Fatalf("%s inverse %q (%v), want %q", key, term.InverseKey, err, want)
+		}
+	}
+}

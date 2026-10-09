@@ -38,13 +38,14 @@ const (
 	KeyPartOf      = "part_of"
 	KeySucceededBy = "succeeded_by"
 
-	sqlUpsert = `INSERT INTO property_terms (id, property_id, key, origin, label, description, directed)
-		VALUES (?, ?, ?, ?, ?, ?, ?)
+	sqlUpsert = `INSERT INTO property_terms (id, property_id, key, origin, label, description, directed, inverse_key)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT(property_id, key, origin) DO UPDATE SET
 			label = excluded.label,
 			description = excluded.description,
-			directed = excluded.directed`
-	sqlTermCols = `id, property_id, key, origin, label, COALESCE(description, ''), directed`
+			directed = excluded.directed,
+			inverse_key = excluded.inverse_key`
+	sqlTermCols = `id, property_id, key, origin, label, COALESCE(description, ''), directed, COALESCE(inverse_key, '')`
 	sqlLookup   = `SELECT ` + sqlTermCols + `
 		FROM property_terms WHERE property_id = ? AND key = ? AND origin = ?`
 	sqlGetByID = `SELECT ` + sqlTermCols + `
@@ -66,6 +67,9 @@ type Term struct {
 	Label       string
 	Description string
 	Directed    bool // kinship / place-relationship: order is part of the key
+	// InverseKey names the term (same Property and origin) that reads the
+	// same relationship from the other end: parent ↔ child. Empty when none.
+	InverseKey string
 }
 
 // Upsert inserts or updates by (property_id, key, origin). Mints a UUIDv7 id when ID is empty on insert.
@@ -105,7 +109,11 @@ func Upsert(c *database.Catalog, t Term) ([]byte, error) {
 	} else {
 		desc = t.Description
 	}
-	if _, err := db.Exec(sqlUpsert, id, t.PropertyID, t.Key, t.Origin, t.Label, desc, directedBit(t.Directed)); err != nil {
+	var inverse any
+	if k := strings.TrimSpace(t.InverseKey); k != "" {
+		inverse = k
+	}
+	if _, err := db.Exec(sqlUpsert, id, t.PropertyID, t.Key, t.Origin, t.Label, desc, directedBit(t.Directed), inverse); err != nil {
 		return nil, err
 	}
 	return append([]byte(nil), id...), nil
@@ -161,7 +169,7 @@ func Create(c *database.Catalog, userID, propertyID []byte, label, description s
 	} else {
 		desc = description
 	}
-	if _, err := tx.Exec(sqlUpsert, id, propertyID, key, OriginUser, label, desc, 0); err != nil {
+	if _, err := tx.Exec(sqlUpsert, id, propertyID, key, OriginUser, label, desc, 0, nil); err != nil {
 		return Term{}, err
 	}
 	fields := map[string]audit.FieldDiff{
@@ -372,7 +380,7 @@ func ListByProperty(c *database.Catalog, propertyID []byte) ([]Term, error) {
 func scanTerm(row *sql.Row) (Term, error) {
 	var t Term
 	var directed int
-	err := row.Scan(&t.ID, &t.PropertyID, &t.Key, &t.Origin, &t.Label, &t.Description, &directed)
+	err := row.Scan(&t.ID, &t.PropertyID, &t.Key, &t.Origin, &t.Label, &t.Description, &directed, &t.InverseKey)
 	if err != nil {
 		return Term{}, err
 	}
@@ -383,7 +391,7 @@ func scanTerm(row *sql.Row) (Term, error) {
 func scanTermRows(rows *sql.Rows) (Term, error) {
 	var t Term
 	var directed int
-	err := rows.Scan(&t.ID, &t.PropertyID, &t.Key, &t.Origin, &t.Label, &t.Description, &directed)
+	err := rows.Scan(&t.ID, &t.PropertyID, &t.Key, &t.Origin, &t.Label, &t.Description, &directed, &t.InverseKey)
 	if err != nil {
 		return Term{}, err
 	}
