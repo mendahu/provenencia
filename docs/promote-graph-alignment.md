@@ -287,7 +287,7 @@ As built at the end of Spike 9 slice 9 (S9-41 – S9-44 and the review fixes sta
 
 **Differs from the text above**
 
-- **Query count (§7):** every read is batched, so a proposal's cost doesn't grow with the layer or catalog. It is about 60 queries, not 10–15: the expansion runs one walk per bridge direction per hop (9 × up to 5 hops).
+- **Query count (§7):** every read is batched, so a proposal's cost doesn't grow with the layer or catalog. It is about 60 queries, not 10–15: the expansion runs one walk per bridge direction per hop (10 × up to 5 hops: both directions of every bridge).
 - **Properties compared (§6):** only the Properties in each kind's `core/match` default profile (name and sex; event type and dates; toponym), not every Property both sides carry. Value frequencies (`u`) cover name, sex, event type, and toponym, and structured names have no frequency key yet, so names score on the cold-start prior.
 - **Provenance (§6):** not applied. Every Subject's provenance is 1; credibility, transcription certainty, and member claim confidence don't scale comparisons yet.
 - **Bridge kinds in the loaders:** the layer and canon loaders list their hops (participation, location, relationship, part of, succeeded by) in code. Pins and filing read bridge kinds from `connectrules`.

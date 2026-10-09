@@ -795,3 +795,52 @@ func TestProposeInverseKinshipTermsCorrespond(t *testing.T) {
 			r.Target, bytes.Equal(r.HandleID, hJohn), r.Reason)
 	}
 }
+
+// A relationship is walked from either end: anchoring the child reaches the
+// parent as anchoring the parent reaches the child.
+func TestProposeRelationshipFromEitherEnd(t *testing.T) {
+	f := newFixture(t)
+	mary := f.person(f.source, f.artifact, "Mary Smith")
+	john := f.person(f.source, f.artifact, "John Smith")
+	f.relationship(f.source, f.artifact, mary, john, "parent")
+	hMary := f.promote(mary).Entity.ID
+	hJohn := f.promote(john).Entity.ID
+
+	tests := []struct {
+		name           string
+		anchorIsParent bool
+	}{
+		{name: "child anchored reaches the parent"},
+		{name: "parent anchored reaches the child", anchorIsParent: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			src, art := f.newSource(tt.name)
+			var parent, child subjects.Subject
+			var fixed graphalign.Fixed
+			var want []byte
+			if tt.anchorIsParent {
+				parent = f.person(src, art, "Mary Smith")
+				child = f.sexOnly(src, art, "male")
+				fixed = graphalign.Fixed{SubjectID: parent.ID, HandleID: hMary}
+				want = hJohn
+			} else {
+				parent = f.sexOnly(src, art, "female")
+				child = f.person(src, art, "John Smith")
+				fixed = graphalign.Fixed{SubjectID: child.ID, HandleID: hJohn}
+				want = hMary
+			}
+			f.relationship(src, art, parent, child, "parent")
+			p := f.propose(src.ID, []graphalign.Fixed{fixed})
+			other := child
+			if !tt.anchorIsParent {
+				other = parent
+			}
+			r := rowFor(p, other.ID)
+			if r.Target != graphalign.TargetHandle || !bytes.Equal(r.HandleID, want) || r.Reason != graphalign.ReasonVia {
+				t.Fatalf("target=%s right-handle=%v reason=%s, want the other end's handle via the anchor",
+					r.Target, bytes.Equal(r.HandleID, want), r.Reason)
+			}
+		})
+	}
+}
