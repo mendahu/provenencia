@@ -491,60 +491,38 @@ func (g *placeGraph) isAncestor(ancestor, descendant []byte, at *datevalues.Valu
 	return false
 }
 
-// FoldLocations collapses Places that share a part_of ancestry at at into
-// one HeaderPlace (the deepest leaf). Disconnected Places stay competing.
-// Succession never connects components.
+// FoldLocations collapses Places that lie on one part_of chain at at into
+// the deepest of them: "Ontario" and "Toronto, Ontario" are one reading,
+// shown as Toronto. A Place is dropped only when another listed Place is
+// below it. Places that are not on one chain stay competing, even when a
+// vaguer listed Place is above both: Toronto and Hamilton under Ontario are
+// two readings, not one. Succession never connects Places.
 func (g *placeGraph) FoldLocations(places []HeaderPlace, at *datevalues.Value) []HeaderPlace {
-	if len(places) <= 1 {
-		out := make([]HeaderPlace, len(places))
-		copy(out, places)
-		for i := range out {
-			out[i].Parents, out[i].ParentsAreCandidates = g.ParentChain(out[i].Entity.ID, at)
-		}
-		return out
-	}
-	n := len(places)
-	parent := make([]int, n)
-	for i := range parent {
-		parent[i] = i
-	}
-	var find func(int) int
-	find = func(i int) int {
-		if parent[i] != i {
-			parent[i] = find(parent[i])
-		}
-		return parent[i]
-	}
-	union := func(a, b int) {
-		ra, rb := find(a), find(b)
-		if ra != rb {
-			parent[ra] = rb
-		}
-	}
-	for i := 0; i < n; i++ {
-		for j := i + 1; j < n; j++ {
-			a, b := places[i].Entity.ID, places[j].Entity.ID
-			if g.isAncestor(a, b, at) || g.isAncestor(b, a, at) {
-				union(i, j)
-			}
-		}
-	}
-	groups := map[int][]int{}
-	for i := range places {
-		r := find(i)
-		groups[r] = append(groups[r], i)
-	}
 	var out []HeaderPlace
-	for _, idxs := range groups {
-		leaf := idxs[0]
-		for _, i := range idxs[1:] {
-			// Prefer the place that is a descendant of the current leaf.
-			if g.isAncestor(places[leaf].Entity.ID, places[i].Entity.ID, at) {
-				leaf = i
+	seen := map[string]bool{}
+	for i := range places {
+		id := places[i].Entity.ID
+		if seen[string(id)] {
+			continue
+		}
+		covered := false
+		for j := range places {
+			other := places[j].Entity.ID
+			if bytes.Equal(other, id) {
+				continue
+			}
+			// A link back up (a cycle at this date) is not "below".
+			if g.isAncestor(id, other, at) && !g.isAncestor(other, id, at) {
+				covered = true
+				break
 			}
 		}
-		h := places[leaf]
-		h.Parents, h.ParentsAreCandidates = g.ParentChain(h.Entity.ID, at)
+		if covered {
+			continue
+		}
+		seen[string(id)] = true
+		h := places[i]
+		h.Parents, h.ParentsAreCandidates = g.ParentChain(id, at)
 		out = append(out, h)
 	}
 	sort.SliceStable(out, func(i, j int) bool {
