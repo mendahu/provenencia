@@ -1385,6 +1385,12 @@ enum L10n {
         static func argumentHint(pinned: Int) -> String {
             L10n.format(LocalizedStringResource("promote.sheet.argument.hint", defaultValue: "Drafted from the %lld pinned comparisons · edit before filing", comment: "Hint under the claim argument; argument is how many comparisons are pinned"), pinned)
         }
+        static func sheetTitleHandle(name: String, ref: String, title: String) -> String {
+            L10n.format(LocalizedStringResource("promote.sheet.titleHandle", defaultValue: "%1$@ → %2$@ %3$@", comment: "Evidence sheet title for a row filed on an existing record; 1 = the row's name, 2 = the record's ref, 3 = the record's title"), name, ref, title)
+        }
+        static func sheetTitleNew(name: String, target: String) -> String {
+            L10n.format(LocalizedStringResource("promote.sheet.titleNew", defaultValue: "%1$@ → %2$@", comment: "Evidence sheet title for a row filed as a new record; 1 = the row's name, 2 = the New option, e.g. New person"), name, target)
+        }
         static func sheetSubtitle(assessment: String, reason: String) -> String {
             L10n.format(LocalizedStringResource("promote.sheet.subtitle", defaultValue: "%1$@ · %2$@. Agreeing comparisons are pinned as this claim’s evidence.", comment: "Evidence sheet subtitle; 1 = assessment, 2 = why this row matched"), assessment, reason)
         }
@@ -7198,6 +7204,24 @@ enum L10n {
                 comment: "Persons row with a birth and no death: the birth date and an open dash. Argument is the formatted date."
             )
             return L10n.format(resource, born)
+        }
+
+        static func lifeSpanDeathOnly(died: String) -> String {
+            let resource = LocalizedStringResource(
+                "conclusions.life.spanDeathOnly",
+                defaultValue: "– %@",
+                comment: "Persons row with a death and no birth: an open dash, then the death date, so it doesn't read as a birth. Argument is the formatted date."
+            )
+            return L10n.format(resource, died)
+        }
+
+        static func lifePlaceDeathOnly(died: String) -> String {
+            let resource = LocalizedStringResource(
+                "conclusions.life.placeDeathOnly",
+                defaultValue: "→ %@",
+                comment: "Persons row with a death place and no birth place: the arrow marks it as where they died. Argument is the place name."
+            )
+            return L10n.format(resource, died)
         }
 
         static func lifePlaces(born: String, died: String) -> String {

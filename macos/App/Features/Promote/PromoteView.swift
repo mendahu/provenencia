@@ -737,9 +737,9 @@ private struct PromoteEvidenceSheet: View {
     private var sheetTitle: String {
         switch row.target {
         case .handle(_, let ref, let title):
-            return "\(row.name) → \(ref) \(title)"
+            return L10n.Promote.sheetTitleHandle(name: row.name, ref: ref, title: title)
         case .newKind:
-            return "\(row.name) → \(L10n.string(L10n.Promote.newOption(row.kind)))"
+            return L10n.Promote.sheetTitleNew(name: row.name, target: L10n.string(L10n.Promote.newOption(row.kind)))
         case .skip, .unset:
             return row.name
         }
