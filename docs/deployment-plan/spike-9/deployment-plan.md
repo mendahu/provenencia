@@ -502,7 +502,7 @@ In order; each brief sits just above the PR it gates.
 - [x] S9-43 — Batch Promote write → [`completed.md`](completed.md)
 - [x] ✎ S9-D16 — Design: Promote page (rethink) → [`completed.md`](completed.md)
 - [x] S9-44 — Promote page → [`completed.md`](completed.md)
-- [ ] S9-33 — Deep fixture + timings
+- [x] S9-33 — Deep fixture + timings → [`completed.md`](completed.md)
 - [ ] S9-34 — Search documents from headers + dependents
 - [ ] ✎ S9-D13 — Design: omnibar hits
 - [ ] S9-35 — Omnibar Conclusion hits
@@ -950,10 +950,7 @@ Design: [`promote-graph-alignment.md`](../../promote-graph-alignment.md). Brief:
 
 #### S9-33 — Deep fixture + timings
 
-| | |
-| --- | --- |
-| **In** | Seeded project generator (a Person on ~10 Sources, multi-member events with Locations, relationships, a place hierarchy several levels deep; a few hundred handles). Benchmarks: rebuild, one-write upkeep, a Promote proposal and a batch Done (at obituary scale and on the deep fixture), list and detail composition, chain composition. Ledger rows. |
-| **Depends on** | S9-39, S9-44 |
+**Done.** See [`completed.md`](completed.md#s9-33--deep-fixture--timings). `deepfixture.Generate` builds the catalog; timings are in [`performance-ledger.md`](performance-ledger.md).
 
 #### S9-34 — Search documents from headers + dependents
 

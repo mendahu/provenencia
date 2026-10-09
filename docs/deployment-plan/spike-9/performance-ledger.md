@@ -36,14 +36,14 @@ Computed live, a Person on ten Sources reads hundreds of Observations plus Citat
 | # | Where | Cost driver | Status |
 | --- | --- | --- | --- |
 | H1 | Person detail | Fan-out: each Property × members; each derived value walks another handle's members | Absorbed by R3; detail composes from cached clusters. Observation drill-down stays live for one handle. |
-| H2 | Persons list | H1 per row, twice for places (birth, death) | Absorbed by R3 + set-based R4 composition. Measure list composition. |
-| H3 | Events list | Event name needs subject Person's name; event place walks Locations → Places | Composed from R3 lookups. Measure. |
+| H2 | Persons list | H1 per row, twice for places (birth, death) | Absorbed by R3 + set-based R4 composition. List of the deep fixture is inside the 9.4 ms three-list row. |
+| H3 | Events list | Event name needs subject Person's name; event place walks Locations → Places | Composed from R3 lookups. Same 9.4 ms row. |
 | H4 | Auto-reconciler evidence | Candidate provenance (Citation → Source → assessment, certainty, claim confidence) — extra joins per Observation | Joined into the candidate query (S9-14): query count per batch unchanged (`TestLoaderQueryCountIsConstant`). A credibility change recomputes every handle the Source backs (see H9); outcomes add one row per Observation to each handle's rewrite. |
 | H5 | Swift invalidation | Bust-all on any write | Cheap while reloads read R3. Tier 3 if not. |
-| H6 | Catalog session | Cross-Source reads and full rebuilds on one serialized session | Measure rebuild on open. |
-| H7 | Promote | Target suggestions across all handles of a type; comparison rows (incoming × every member) | Suggestions via R3 `sort_key` + R8 index; comparison live for one handle. |
+| H6 | Catalog session | Cross-Source reads and full rebuilds on one serialized session | Full rebuild of the deep fixture: 161 ms. |
+| H7 | Promote | Target suggestions across all handles of a type; comparison rows (incoming × every member) | Proposal 6.7–8.2 ms; batch Done 2.3–2.8 ms on the deep fixture. |
 | H8 | Search reprojection | FTS documents composed across handles; header dependents must be reprojected in the write transaction | Fixed reverse walk over R3's reverse index; covered by rebuild-equals-upkeep test. |
-| H9 | R3 upkeep | Claim create / remove recomputes every Property of E plus inbound ends; credibility change touches every handle under a Source | Measure worst case (credibility change on a large Source). |
+| H9 | R3 upkeep | Claim create / remove recomputes every Property of E plus inbound ends; credibility change touches every handle under a Source | One name rewrite on the deep fixture: 1.4 ms. A credibility change on a large Source is still unmeasured. |
 
 ## Measurements
 
@@ -51,5 +51,14 @@ Computed live, a Person on ten Sources reads hundreds of Observations plus Citat
 | --- | --- | --- | --- | --- | --- |
 | 2026-10-05 | `BenchmarkReconcileNames` (pure Go, dev Mac) | Reconcile one handle's names through the pipeline | 200 name candidates | ~0.58 ms | 7.7k allocs. Per-type units, folding and survivor grouping are quadratic in distinct values per type, not in candidates; fine at this size. |
 | 2026-10-05 | `BenchmarkReconcileNames` after one-name combining | Same | 200 name candidates | ~0.87 ms | 10k allocs. Spelling checks on majority losers and per-type combining add work; still well under a write's budget. |
+| 2026-10-08 | `deepfixture` (dev Mac, `-benchtime=1x`) | Full auto-reconciler rebuild | 475 handles | 161 ms | One Person on 10 Sources; multi-member birth, death, marriage with a Location; two relationships; a six-level place chain; 150 filler people each with a birth. |
+| 2026-10-08 | same | One Observation write's upkeep | 475 handles | 1.4 ms | Rewrite of the focal Person's name. |
+| 2026-10-08 | same, obituary Source (6 people, 4 events, unfiled) | Promote proposal | 475 handles in catalog | 8.2 ms | `promotealign.Propose` on the small Source. |
+| 2026-10-08 | same, a register already filed | Promote proposal | 475 handles | 6.7 ms | Proposal against the deep catalog. |
+| 2026-10-08 | obituary Source | Batch Done | 10 new handles | 2.8 ms | `SaveBatch` of every primary Subject as New. Proposal not included. |
+| 2026-10-08 | deep catalog, a fresh 10-Subject Source | Batch Done | 475 handles already filed | 2.3 ms | Same Done shape, catalog already at fixture scale. |
+| 2026-10-08 | same | List composition | persons + events + places | 9.4 ms | `ListPersons`, `ListEvents`, and `ListPlaces` together. |
+| 2026-10-08 | same | One detail | focal Person, 10 members | 0.41 ms | `conclusiondetails.ForEntity`. |
+| 2026-10-08 | same | Place-chain composition | 6-level chain | 2.1 ms | `ParentsAtDate` from the deepest Place. |
 
 **Fixture (required this spike):** a seeded project where a Person sits on ~10 Sources; birth, death, and marriage events each have several members; each has one or more Locations; a few relationships. Scale it to a few hundred handles. Time: full rebuild, one Observation write's upkeep, one Promote step, each list's composition, one detail's composition.

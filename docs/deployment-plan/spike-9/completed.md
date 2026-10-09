@@ -1271,3 +1271,19 @@ An app-health review of S9-41 – S9-44, fixed as a stack of eight PRs (#307 –
 **What stayed out**
 
 - The §12 differences: provenance scaling, comparing every shared Property, name frequencies, fallback islands seeding a walk, bridge kinds in the loaders' hop tables.
+
+### S9-33 — Deep fixture + timings
+
+A generator builds a temporary catalog the later search slices and the ledger can time.
+
+**What shipped**
+
+- `deepfixture.Generate`: one Person on ten Sources; birth, death, and marriage each with two members and a Location; spouse and parent relationships; a six-level place chain; 150 filler people each with a birth. Bridges whose ends are handles are filed. About 475 handles. An unfiled obituary Source (six people, four events) sits beside them for Promote timings.
+- Benchmarks: full auto-reconciler rebuild, one Observation write's upkeep, a Promote proposal and a batch Done at obituary scale and on the deep catalog, list composition, one detail, and place-chain composition.
+- Rows in [`performance-ledger.md`](performance-ledger.md). Nothing in the reserve tiers is indicated: a full rebuild is 161 ms, the three lists together are 9.4 ms, one detail is 0.41 ms.
+
+**What stayed out**
+
+- Search documents from headers (**S9-34**) and omnibar rows (**S9-35**).
+- A credibility-change upkeep timing (ledger H9).
+- Migrations / product VERSION bump.
