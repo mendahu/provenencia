@@ -1006,10 +1006,10 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     ) async throws -> [CatalogSearchHit] {
         let handleKinds: Set<String> = ["person", "event", "place"]
         let wanted = Set(kinds)
-        var hits: [CatalogSearchHit] = []
+        var scored: [(hit: CatalogSearchHit, score: Double)] = []
         if wanted.isEmpty || !wanted.isDisjoint(with: handleKinds) {
             let handleWanted = wanted.isEmpty ? handleKinds : wanted.intersection(handleKinds)
-            hits += try withState {
+            scored += try withState {
                 if let searchCatalogError { throw searchCatalogError }
                 markCatalogSessionHeld(projectDir)
                 return handleSearchHits(query: query, kinds: handleWanted)
@@ -1017,35 +1017,39 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         }
         if wanted.isEmpty || !wanted.isSubset(of: handleKinds) {
             let omnibar = try await omnibarSearchCatalog(projectDir: projectDir, query: query, location: location)
-            hits += wanted.isEmpty ? omnibar : omnibar.filter { wanted.contains($0.kind) }
+            scored += wanted.isEmpty ? omnibar : omnibar.filter { wanted.contains($0.hit.kind) }
         }
-        return Self.orderedBySearchPrecedence(hits)
+        return Array(Self.orderedByScoreThenPrecedence(scored).prefix(50).map(\.hit))
     }
 
-    /// Rank bands mirrored from `KindSpec.Precedence`. Higher bands sort first.
-    /// Within a band the order already computed (score for catalog rows) is kept.
+    /// Tie-break mirrored from `KindSpec.Precedence`. Score decides first.
     private static let searchPrecedence: [String: Int] = [
         "person": 2,
         "event": 1,
         "place": 1,
     ]
 
-    private static func orderedBySearchPrecedence(_ hits: [CatalogSearchHit]) -> [CatalogSearchHit] {
-        hits.enumerated().sorted { a, b in
-            let pa = searchPrecedence[a.element.kind] ?? 0
-            let pb = searchPrecedence[b.element.kind] ?? 0
+    private static func orderedByScoreThenPrecedence(
+        _ scored: [(hit: CatalogSearchHit, score: Double)]
+    ) -> [(hit: CatalogSearchHit, score: Double)] {
+        scored.enumerated().sorted { a, b in
+            if a.element.score != b.element.score { return a.element.score > b.element.score }
+            let pa = searchPrecedence[a.element.hit.kind] ?? 0
+            let pb = searchPrecedence[b.element.hit.kind] ?? 0
             if pa != pb { return pa > pb }
+            if a.element.hit.kind != b.element.hit.kind { return a.element.hit.kind < b.element.hit.kind }
+            if a.element.hit.title != b.element.hit.title { return a.element.hit.title < b.element.hit.title }
             return a.offset < b.offset
         }.map(\.element)
     }
 
     /// Call inside `withState`.
-    private func handleSearchHits(query: String, kinds: Set<String>) -> [CatalogSearchHit] {
+    private func handleSearchHits(query: String, kinds: Set<String>) -> [(hit: CatalogSearchHit, score: Double)] {
         let needle = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         guard !needle.isEmpty else { return [] }
         let names = Dictionary(personHeaders().map { ($0.entity.id, $0.name?.form ?? "") }, uniquingKeysWith: { a, _ in a })
         var seen = Set<String>()
-        var out: [CatalogSearchHit] = []
+        var out: [(hit: CatalogSearchHit, score: Double)] = []
         for membership in membershipBySubject.values.sorted(by: { $0.entity.ref < $1.entity.ref })
         where kinds.contains(membership.kind) && seen.insert(membership.entity.id).inserted {
             let entity = membership.entity
@@ -1055,12 +1059,16 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             let haystack = [title, entity.ref, entity.label, handleSearchMatchText(header)]
             guard haystack.contains(where: { $0.lowercased().contains(needle) }) else { continue }
             let section: WorkspaceSection = membership.kind == "person" ? .persons : (membership.kind == "event" ? .events : .places)
-            out.append(CatalogSearchHit(
-                kind: membership.kind, id: entity.id, ref: entity.ref, title: title, subtitle: "",
-                matchReason: entity.ref.lowercased().contains(needle) ? "ref" : "title",
-                location: WorkspaceLocation(section: section, entityId: entity.id, ref: entity.ref, title: title),
-                memberCount: membershipBySubject.values.filter { $0.entity.id == entity.id }.count,
-                header: header
+            let refMatch = entity.ref.lowercased().contains(needle)
+            out.append((
+                CatalogSearchHit(
+                    kind: membership.kind, id: entity.id, ref: entity.ref, title: title, subtitle: "",
+                    matchReason: refMatch ? "ref" : "title",
+                    location: WorkspaceLocation(section: section, entityId: entity.id, ref: entity.ref, title: title),
+                    memberCount: membershipBySubject.values.filter { $0.entity.id == entity.id }.count,
+                    header: header
+                ),
+                refMatch ? 12 : 10
             ))
         }
         return out
@@ -1106,7 +1114,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         projectDir: String,
         query: String,
         location: WorkspaceLocation
-    ) async throws -> [CatalogSearchHit] {
+    ) async throws -> [(hit: CatalogSearchHit, score: Double)] {
         return try withState {
             markCatalogSessionHeld(projectDir)
             if let searchCatalogError { throw searchCatalogError }
@@ -1238,12 +1246,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 }
             }
 
-            scored.sort {
-                if $0.score != $1.score { return $0.score > $1.score }
-                if $0.hit.kind != $1.hit.kind { return $0.hit.kind < $1.hit.kind }
-                return $0.hit.title < $1.hit.title
-            }
-            return scored.prefix(50).map(\.hit)
+            return scored
         }
     }
 

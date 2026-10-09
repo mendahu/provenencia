@@ -1294,7 +1294,7 @@ Design brief for Conclusion hits in the shipped omnibar row. Board: mixed result
 
 ### S9-35 — Omnibar Conclusion hits
 
-Person, Event, and Place hits use `PVOmnibarHitRow`. `KindSpec.Precedence` puts persons above events and places, and those above Sources; score only orders hits inside a band.
+Person, Event, and Place hits use `PVOmnibarHitRow`. Score orders the hits. When two scores tie, `KindSpec.Precedence` puts persons above events and places, and those above Sources.
 
 **What shipped**
 

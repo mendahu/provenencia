@@ -395,26 +395,38 @@ func TestRebuildIndexesHandles(t *testing.T) {
 	}
 }
 
-func TestPrecedenceBandsOutrankScore(t *testing.T) {
-	hits := []Hit{
-		{Kind: KindSource, Title: "A", Score: 100},
-		{Kind: KindPlace, Title: "B", Score: 1},
-		{Kind: KindEvent, Title: "C", Score: 50},
-		{Kind: KindPerson, Title: "D", Score: 0.1},
-		{Kind: KindSourceType, Title: "E", Score: 80},
+func TestPrecedenceBreaksScoreTies(t *testing.T) {
+	better := []Hit{
+		{Kind: KindPerson, Title: "P", Score: 1},
+		{Kind: KindSource, Title: "S", Score: 10},
+		{Kind: KindEvent, Title: "E", Score: 5},
 	}
-	sortHits(hits)
-	got := make([]string, len(hits))
-	for i, h := range hits {
-		got[i] = h.Kind
+	sortHits(better)
+	if got := kindsOf(better); fmt.Sprint(got) != fmt.Sprint([]string{KindSource, KindEvent, KindPerson}) {
+		t.Fatalf("better match first, got %v", got)
 	}
-	want := []string{KindPerson, KindEvent, KindPlace, KindSource, KindSourceType}
-	if fmt.Sprint(got) != fmt.Sprint(want) {
-		t.Fatalf("got %v", got)
+
+	tied := []Hit{
+		{Kind: KindSource, Title: "S", Score: 10},
+		{Kind: KindPlace, Title: "B", Score: 10},
+		{Kind: KindEvent, Title: "A", Score: 10},
+		{Kind: KindPerson, Title: "P", Score: 10},
+	}
+	sortHits(tied)
+	if got := kindsOf(tied); fmt.Sprint(got) != fmt.Sprint([]string{KindPerson, KindEvent, KindPlace, KindSource}) {
+		t.Fatalf("tied scores, got %v", got)
 	}
 }
 
-func TestCanonicalHandlesFloatAboveAContextBoostedSource(t *testing.T) {
+func kindsOf(hits []Hit) []string {
+	out := make([]string, len(hits))
+	for i, h := range hits {
+		out[i] = h.Kind
+	}
+	return out
+}
+
+func TestABetterSourceMatchOutranksAPerson(t *testing.T) {
 	f := newHandleFixture(t)
 	person := f.promote(f.person("James Robins"), nil)
 	place := f.promote(f.subject("place", func(s subjects.Subject) []observations.Input {
@@ -434,32 +446,28 @@ func TestCanonicalHandlesFloatAboveAContextBoostedSource(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var kinds []string
-	for _, h := range hits {
-		switch h.Kind {
-		case KindPerson, KindPlace, KindSource:
-			kinds = append(kinds, h.Kind+":"+h.ID)
+	index := map[string]int{}
+	byID := map[string]Hit{}
+	for i, h := range hits {
+		index[h.ID] = i
+		byID[h.ID] = h
+	}
+	personID := uuidString(person.Entity.ID)
+	placeID := uuidString(place.Entity.ID)
+	sourceID := uuidString(src.ID)
+	for _, id := range []string{personID, placeID, sourceID} {
+		if _, ok := index[id]; !ok {
+			t.Fatalf("missing %s in %+v", id, hits)
 		}
 	}
-	want := []string{
-		KindPerson + ":" + uuidString(person.Entity.ID),
-		KindPlace + ":" + uuidString(place.Entity.ID),
-		KindSource + ":" + uuidString(src.ID),
+	if byID[sourceID].Score <= byID[personID].Score || index[sourceID] > index[personID] {
+		t.Fatalf("section-boosted source should outrank the person: %+v", hits)
 	}
-	if fmt.Sprint(kinds) != fmt.Sprint(want) {
-		t.Fatalf("got %v", kinds)
-	}
-	var personScore, sourceScore float64
-	for _, h := range hits {
-		switch h.Kind {
-		case KindPerson:
-			personScore = h.Score
-		case KindSource:
-			sourceScore = h.Score
-		}
-	}
-	if sourceScore <= personScore {
-		t.Fatalf("source score %v should beat person score %v; the band is what puts the person first", sourceScore, personScore)
+	switch {
+	case byID[placeID].Score == byID[personID].Score && index[personID] > index[placeID]:
+		t.Fatalf("tied person should precede the place: %+v", hits)
+	case byID[placeID].Score != byID[personID].Score && (byID[placeID].Score > byID[personID].Score) != (index[placeID] < index[personID]):
+		t.Fatalf("place and person should follow score: %+v", hits)
 	}
 }
 

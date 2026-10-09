@@ -182,14 +182,14 @@ func (f *FTSSearcher) Search(ctx context.Context, c *database.Catalog, q Query) 
 	return hits, nil
 }
 
-// sortHits orders by KindSpec.Precedence, then score, then kind name, then title.
+// sortHits orders by score, then KindSpec.Precedence, then kind name, then title.
 func sortHits(hits []Hit) {
 	sort.SliceStable(hits, func(i, j int) bool {
-		if pi, pj := kindPrecedence(hits[i].Kind), kindPrecedence(hits[j].Kind); pi != pj {
-			return pi > pj
-		}
 		if hits[i].Score != hits[j].Score {
 			return hits[i].Score > hits[j].Score
+		}
+		if pi, pj := kindPrecedence(hits[i].Kind), kindPrecedence(hits[j].Kind); pi != pj {
+			return pi > pj
 		}
 		if hits[i].Kind != hits[j].Kind {
 			return hits[i].Kind < hits[j].Kind
