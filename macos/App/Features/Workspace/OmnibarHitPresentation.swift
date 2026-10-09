@@ -7,6 +7,9 @@ enum OmnibarHitPresentation {
         case "source": L10n.Workspace.omnibarKindSource
         case "source_type": L10n.Workspace.omnibarKindType
         case "metadata_field": L10n.Workspace.omnibarKindMetadataField
+        case "person": L10n.Workspace.omnibarKindPerson
+        case "event": L10n.Workspace.omnibarKindEvent
+        case "place": L10n.Workspace.omnibarKindPlace
         default: L10n.Workspace.omnibarKindSource
         }
     }
@@ -14,7 +17,7 @@ enum OmnibarHitPresentation {
     /// Whether the match-context slot should show for this stable field code.
     static func showsMatchContext(field: String) -> Bool {
         switch field.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
-        case "notes", "metadata", "filename", "description":
+        case "notes", "metadata", "filename", "description", "name", "place":
             return true
         default:
             return false
@@ -35,6 +38,10 @@ enum OmnibarHitPresentation {
             return L10n.Workspace.omnibarMatchFilename(snippet: trimmed)
         case "description":
             return L10n.string(L10n.Workspace.omnibarMatchDescription)
+        case "name":
+            return L10n.Workspace.omnibarMatchName(snippet: trimmed)
+        case "place":
+            return L10n.Workspace.omnibarMatchPlace(snippet: trimmed)
         default:
             return ""
         }
@@ -47,10 +54,10 @@ enum OmnibarHitPresentation {
     /// VoiceOver label for a result row — title, kind, subtitle, ref, match context.
     static func accessibilityLabel(for hit: CatalogSearchHit) -> String {
         var parts = [
-            hit.title,
+            title(for: hit),
             L10n.string(kindLabel(for: hit.kind)),
         ]
-        let subtitle = hit.subtitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        let subtitle = secondary(for: hit).trimmingCharacters(in: .whitespacesAndNewlines)
         if !subtitle.isEmpty {
             parts.append(subtitle)
         }
@@ -65,6 +72,38 @@ enum OmnibarHitPresentation {
         let formatter = ListFormatter()
         formatter.locale = .current
         return formatter.string(from: parts) ?? parts.joined(separator: ", ")
+    }
+
+    /// Title the list would show. Falls back to the indexed title when the hit
+    /// has no structured header.
+    static func title(for hit: CatalogSearchHit) -> String {
+        switch hit.header {
+        case .person(let header): return PersonHeaderDisplay.title(header)
+        case .event(let header): return EventTitleDisplay.title(header)
+        case .place(let header): return PlaceTitleDisplay.title(header)
+        case nil: return hit.title
+        }
+    }
+
+    /// Secondary line the list would show.
+    static func secondary(for hit: CatalogSearchHit) -> String {
+        switch hit.header {
+        case .person(let header): return PersonLifeDisplay.line(header).text
+        case .event(let header): return EventSecondaryDisplay.line(header)
+        case .place(let header):
+            return PlaceChainDisplay.line(parents: header.parents, candidates: header.parentsAreCandidates)
+        case nil: return hit.subtitle
+        }
+    }
+
+    /// The list's subject mark, for the lead thumbnail. Nil for other kinds.
+    static func leadMark(for kind: String) -> PVMarkKey? {
+        switch kind {
+        case "person": .subjectPerson
+        case "event": .subjectEvent
+        case "place": .subjectPlace
+        default: nil
+        }
     }
 
     static func leadSymbol(for kind: String) -> PVSymbol {

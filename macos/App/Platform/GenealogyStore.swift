@@ -137,6 +137,8 @@ struct CatalogSearchHit: Sendable, Equatable, Identifiable {
     var iconKey: String = ""
     /// Accepted members, for `person` / `event` / `place` hits.
     var memberCount: Int = 0
+    /// The list header for a person, event, or place hit. Title stays match text.
+    var header: CatalogConclusionHeader? = nil
 }
 
 struct CatalogSubjectType: Sendable, Equatable, Identifiable {
