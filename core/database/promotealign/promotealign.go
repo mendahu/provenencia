@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"database/sql"
 	"errors"
+	"sort"
 
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/graphalign"
@@ -149,13 +150,7 @@ func mergeFixed(q Querier, sourceID []byte, primary map[string]primarySubject, c
 		return nil, err
 	}
 
-	// Stable order: by subject id bytes.
-	for i := 0; i < len(out); i++ {
-		for j := i + 1; j < len(out); j++ {
-			if bytes.Compare(out[j].SubjectID, out[i].SubjectID) < 0 {
-				out[i], out[j] = out[j], out[i]
-			}
-		}
-	}
+	// Stable order: by subject id bytes (each Subject appears once).
+	sort.Slice(out, func(i, j int) bool { return bytes.Compare(out[i].SubjectID, out[j].SubjectID) < 0 })
 	return out, nil
 }

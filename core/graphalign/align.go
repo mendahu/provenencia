@@ -59,6 +59,8 @@ type state struct {
 
 	queue candHeap
 	seen  map[string]bool // subject|handle already accepted or rejected for queue
+
+	kindCands map[string][]match.Candidate // candidatesOfKind, per kind
 }
 
 // A link is one end's view of an edge; fromEnd is true at the edge's first
@@ -112,6 +114,7 @@ func newState(layer Layer, canon Canon, stats Stats, fixed []Fixed, cfg Config) 
 		lostTo:      map[string]string{},
 		best:        map[string][]scoredCand{},
 		seen:        map[string]bool{},
+		kindCands:   map[string][]match.Candidate{},
 	}
 	for i := range layer.Subjects {
 		s := &layer.Subjects[i]
@@ -582,8 +585,12 @@ func (st *state) scoreFixed() {
 	}
 }
 
-// candidatesOfKind lists the canon handles of one kind in a stable order.
+// candidatesOfKind lists the canon handles of one kind in a stable order,
+// built once per kind.
 func (st *state) candidatesOfKind(kind string) []match.Candidate {
+	if cands, ok := st.kindCands[kind]; ok {
+		return cands
+	}
 	var out []match.Candidate
 	for i := range st.canon.Handles {
 		h := &st.canon.Handles[i]
@@ -598,6 +605,7 @@ func (st *state) candidatesOfKind(kind string) []match.Candidate {
 		}
 		return bytes.Compare(out[i].EntityID, out[j].EntityID) < 0
 	})
+	st.kindCands[kind] = out
 	return out
 }
 
@@ -854,13 +862,18 @@ func comparisonsFrom(ev match.Evaluation, probe match.Values, cfg Config, stats 
 	return out
 }
 
+// pickScore is the recorded score for the row's handle. Every pass records
+// the handle it assigns, so a miss scores it now rather than inventing one.
 func (st *state) pickScore(sk string, hid []byte) scoredCand {
 	for _, sc := range st.best[sk] {
 		if bytes.Equal(sc.handleID, hid) {
 			return sc
 		}
 	}
-	return scoredCand{handleID: hid, score: st.cfg.StrongScore}
+	if h := st.handles[string(hid)]; h != nil {
+		return st.scoreCandidate([]byte(sk), h)
+	}
+	return scoredCand{handleID: append([]byte(nil), hid...)}
 }
 
 func (st *state) bestNonAssigned(sk string, except []byte) *scoredCand {
