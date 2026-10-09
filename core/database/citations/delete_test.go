@@ -11,6 +11,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjects"
@@ -18,6 +19,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/writes"
 )
 
 const testLocator = `{"version":1,"selectors":[{"type":"page","artifact_page":1}]}`
@@ -46,13 +48,15 @@ func TestCitationDeleteConnectionOnly(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	src, err := sources.Create(c, userID, sources.CreateInput{
-		SourceTypeID: typeID, Title: "Register",
+	src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+		return sources.Create(tx, userID, sources.CreateInput{
+			SourceTypeID: typeID, Title: "Register",
+		})
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	art, err := artifacts.Create(c, userID, artifacts.CreateInput{
+	art, err := runArtifactCreate(c, userID, artifacts.CreateInput{
 		SourceID: src.ID, Label: "Scan",
 	})
 	if err != nil {
@@ -113,4 +117,12 @@ func TestCitationDeleteConnectionOnly(t *testing.T) {
 	if _, err := citations.Get(c, bridge.Citation.ID); err != nil {
 		t.Fatalf("citation gone: %v", err)
 	}
+}
+
+func runArtifactCreate(c *database.Catalog, userID []byte, in artifacts.CreateInput) (artifacts.Artifact, error) {
+	a, _, err := writes.Run(c, writes.Op{Action: "create_artifact", UserID: userID},
+		func(tx *database.Tx) (artifacts.Artifact, []rowchange.Change, error) {
+			return artifacts.Create(tx, userID, in)
+		})
+	return a, err
 }

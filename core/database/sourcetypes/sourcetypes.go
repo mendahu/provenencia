@@ -1,19 +1,19 @@
 // Package sourcetypes accesses the source_types vocabulary table.
+// Create, Update, and Delete run inside writes.Run and return the row changes
+// that Run records. Upsert is the un-audited seed path.
 package sourcetypes
 
 import (
 	"database/sql"
 	"errors"
-	"github.com/mendahu/provenencia/core/database/catalogmodel"
-	"github.com/mendahu/provenencia/core/database/rowchange"
 	"strings"
 
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/audit"
+	"github.com/mendahu/provenencia/core/database/catalogmodel"
 	"github.com/mendahu/provenencia/core/database/deleteimpact"
-	"github.com/mendahu/provenencia/core/database/project"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/searchindex"
 	"github.com/mendahu/provenencia/core/slug"
 )
@@ -181,56 +181,111 @@ func List(c *database.Catalog) ([]Type, error) {
 }
 
 // Create mints a kebab-case key from label (see core/slug.Kebab) and
-// inserts a new user-origin type. Returns ErrInvalid if the label cannot
+// inserts a new user-origin type on tx. Returns ErrInvalid if the label cannot
 // form a key or icon_key is unknown, or ErrDuplicateKey (params: the
 // colliding key) if a user-origin type with that key already exists.
-func Create(c *database.Catalog, label, description, iconKey string) (Type, error) {
+// The caller records the returned changes.
+func Create(tx *database.Tx, label, description, iconKey string) (Type, []rowchange.Change, error) {
+	if tx == nil {
+		return Type{}, nil, ErrInvalid
+	}
 	key := slug.Kebab(label)
 	if key == "" {
-		return Type{}, ErrInvalid
+		return Type{}, nil, ErrInvalid
 	}
-	if _, err := Lookup(c, key, OriginUser); err == nil {
-		return Type{}, ErrDuplicateKey.WithParams(key)
+	if _, err := lookupTx(tx.Tx, key, OriginUser); err == nil {
+		return Type{}, nil, ErrDuplicateKey.WithParams(key)
 	} else if !errors.Is(err, sql.ErrNoRows) {
-		return Type{}, err
+		return Type{}, nil, err
 	}
-	if _, err := Upsert(c, Type{
-		Key: key, Origin: OriginUser, Label: label, Description: description, IconKey: iconKey,
-	}); err != nil {
-		return Type{}, err
+	label = strings.TrimSpace(label)
+	description = strings.TrimSpace(description)
+	iconKey, err := NormalizeIconKey(iconKey)
+	if err != nil {
+		return Type{}, nil, err
 	}
-	return Lookup(c, key, OriginUser)
+	if label == "" {
+		return Type{}, nil, ErrInvalid
+	}
+	uid, err := uuid.NewV7()
+	if err != nil {
+		return Type{}, nil, err
+	}
+	id := uid[:]
+	var desc any
+	if description == "" {
+		desc = nil
+	} else {
+		desc = description
+	}
+	if _, err := tx.Exec(sqlUpsert, id, key, OriginUser, label, desc, iconKey); err != nil {
+		return Type{}, nil, err
+	}
+	fields := map[string]rowchange.FieldDiff{
+		"id":       {Old: nil, New: uid.String()},
+		"key":      {Old: nil, New: key},
+		"origin":   {Old: nil, New: OriginUser},
+		"label":    {Old: nil, New: label},
+		"icon_key": {Old: nil, New: iconKey},
+	}
+	if description != "" {
+		fields["description"] = rowchange.FieldDiff{Old: nil, New: description}
+	}
+	got, err := getByIDTx(tx.Tx, id)
+	if err != nil {
+		return Type{}, nil, err
+	}
+	return got, []rowchange.Change{{
+		EntityType: "source_type",
+		EntityID:   append([]byte(nil), id...),
+		Action:     rowchange.ActionCreate,
+		Fields:     fields,
+	}}, nil
 }
 
 // Update patches label, description, and icon_key for a project type (user
 // or provenencia) by id. Key and origin are immutable after create, so a
 // rename keeps existing sources attached. Empty icon_key keeps the row's
-// current icon. Returns ErrLocked for plugin-origin types.
-func Update(c *database.Catalog, id []byte, label, description, iconKey string) (Type, error) {
-	db, err := c.DB()
-	if err != nil {
-		return Type{}, err
+// current icon. Returns ErrLocked for plugin-origin types. An unchanged
+// label, description, and icon returns the existing type and no changes.
+// The caller records the returned changes.
+func Update(tx *database.Tx, id []byte, label, description, iconKey string) (Type, []rowchange.Change, error) {
+	if tx == nil {
+		return Type{}, nil, ErrInvalid
 	}
 	label = strings.TrimSpace(label)
 	description = strings.TrimSpace(description)
 	if len(id) != 16 || label == "" {
-		return Type{}, ErrInvalid
+		return Type{}, nil, ErrInvalid
 	}
-	existing, err := GetByID(c, id)
+	existing, err := getByIDTx(tx.Tx, id)
 	if err != nil {
-		return Type{}, err
+		return Type{}, nil, err
 	}
 	if existing.Origin != OriginUser && existing.Origin != OriginProvenencia {
-		return Type{}, ErrLocked
+		return Type{}, nil, ErrLocked
 	}
 	normalizedIcon := existing.IconKey
 	if strings.TrimSpace(iconKey) != "" {
 		normalizedIcon, err = NormalizeIconKey(iconKey)
 		if err != nil {
-			return Type{}, err
+			return Type{}, nil, err
 		}
 	} else if normalizedIcon == "" {
 		normalizedIcon = DefaultIconKey
+	}
+	fields := map[string]rowchange.FieldDiff{}
+	if existing.Label != label {
+		fields["label"] = rowchange.FieldDiff{Old: nullJSON(existing.Label), New: nullJSON(label)}
+	}
+	if existing.Description != description {
+		fields["description"] = rowchange.FieldDiff{Old: nullJSON(existing.Description), New: nullJSON(description)}
+	}
+	if existing.IconKey != normalizedIcon {
+		fields["icon_key"] = rowchange.FieldDiff{Old: nullJSON(existing.IconKey), New: nullJSON(normalizedIcon)}
+	}
+	if len(fields) == 0 {
+		return existing, nil, nil
 	}
 	var desc any
 	if description == "" {
@@ -238,16 +293,19 @@ func Update(c *database.Catalog, id []byte, label, description, iconKey string) 
 	} else {
 		desc = description
 	}
-	if _, err := db.Exec(sqlUpdate, label, desc, normalizedIcon, id); err != nil {
-		return Type{}, err
+	if _, err := tx.Exec(sqlUpdate, label, desc, normalizedIcon, id); err != nil {
+		return Type{}, nil, err
 	}
-	if err := searchindex.ReprojectSourceType(db, id); err != nil {
-		return Type{}, err
+	got, err := getByIDTx(tx.Tx, id)
+	if err != nil {
+		return Type{}, nil, err
 	}
-	if err := searchindex.ReprojectSourcesForType(db, id); err != nil {
-		return Type{}, err
-	}
-	return GetByID(c, id)
+	return got, []rowchange.Change{{
+		EntityType: "source_type",
+		EntityID:   append([]byte(nil), id...),
+		Action:     rowchange.ActionUpdate,
+		Fields:     fields,
+	}}, nil
 }
 
 // GetByID returns the type with the given id, or sql.ErrNoRows.
@@ -318,43 +376,34 @@ func CountByOrigin(c *database.Catalog) (OriginCounts, error) {
 }
 
 // Delete erases a type when no sources reference it. Suggestion joins CASCADE.
-// Plugin-origin types are origin_locked even when unused.
-func Delete(c *database.Catalog, userID, id []byte) error {
+// Plugin-origin types are origin_locked even when unused. The caller records
+// the returned changes.
+func Delete(tx *database.Tx, userID, id []byte) ([]rowchange.Change, error) {
 	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
-		return err
+		return nil, err
 	}
-	if len(id) != 16 {
-		return ErrInvalid
+	if tx == nil || len(id) != 16 {
+		return nil, ErrInvalid
 	}
-	prev, err := GetByID(c, id)
+	prev, err := getByIDTx(tx.Tx, id)
 	if errors.Is(err, sql.ErrNoRows) {
-		return ErrInvalid
+		return nil, ErrInvalid
 	}
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	db, err := c.DB()
+	report, err := deleteimpact.Impact(tx.Tx, catalogmodel.KindSourceType, id)
 	if err != nil {
-		return err
-	}
-	tx, err := db.Begin()
-	if err != nil {
-		return err
-	}
-	defer func() { _ = tx.Rollback() }()
-
-	report, err := deleteimpact.Impact(tx, catalogmodel.KindSourceType, id)
-	if err != nil {
-		return err
+		return nil, err
 	}
 	if err := deleteimpact.Refuse(report, deleteimpact.Codes{
 		InUse: ErrInUse, OriginLocked: ErrOriginLocked, NotFound: ErrInvalid,
 	}); err != nil {
-		return err
+		return nil, err
 	}
 	if _, err := tx.Exec(sqlDelete, id); err != nil {
-		return err
+		return nil, err
 	}
 	fields := map[string]rowchange.FieldDiff{
 		"id":     {Old: uuidString(id), New: nil},
@@ -368,23 +417,12 @@ func Delete(c *database.Catalog, userID, id []byte) error {
 	if prev.IconKey != "" {
 		fields["icon_key"] = rowchange.FieldDiff{Old: prev.IconKey, New: nil}
 	}
-	if _, err := audit.Record(tx, audit.Revision{
-		UserID:     userID,
-		ActionType: "delete_source_type",
-		CreatedAt:  project.NowUTC(),
-		Changes: []rowchange.Change{{
-			EntityType: "source_type",
-			EntityID:   id,
-			Action:     rowchange.ActionDelete,
-			Fields:     fields,
-		}},
-	}); err != nil {
-		return err
-	}
-	if err := searchindex.Delete(tx, searchindex.KindSourceType, uuidString(id)); err != nil {
-		return err
-	}
-	return tx.Commit()
+	return []rowchange.Change{{
+		EntityType: "source_type",
+		EntityID:   append([]byte(nil), id...),
+		Action:     rowchange.ActionDelete,
+		Fields:     fields,
+	}}, nil
 }
 
 func originOK(origin string) bool {
@@ -394,6 +432,22 @@ func originOK(origin string) bool {
 	return strings.HasPrefix(origin, "plugin:") && len(origin) > len("plugin:")
 }
 
+func getByIDTx(tx *sql.Tx, id []byte) (Type, error) {
+	var t Type
+	err := tx.QueryRow(sqlGetByID, id).Scan(
+		&t.ID, &t.Key, &t.Origin, &t.Label, &t.Description, &t.IconKey,
+	)
+	return t, err
+}
+
+func lookupTx(tx *sql.Tx, key, origin string) (Type, error) {
+	var t Type
+	err := tx.QueryRow(sqlLookup, key, origin).Scan(
+		&t.ID, &t.Key, &t.Origin, &t.Label, &t.Description, &t.IconKey,
+	)
+	return t, err
+}
+
 func uuidString(id []byte) string {
 	if len(id) != 16 {
 		return ""
@@ -401,4 +455,11 @@ func uuidString(id []byte) string {
 	var u uuid.UUID
 	copy(u[:], id)
 	return u.String()
+}
+
+func nullJSON(s string) any {
+	if s == "" {
+		return nil
+	}
+	return s
 }

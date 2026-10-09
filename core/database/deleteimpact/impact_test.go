@@ -3,8 +3,9 @@ package deleteimpact_test
 import (
 	"errors"
 	"fmt"
-	"github.com/mendahu/provenencia/core/database/catalogmodel"
 	"testing"
+
+	"github.com/mendahu/provenencia/core/database/catalogmodel"
 
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/database"
@@ -197,11 +198,13 @@ func TestImpactCitationAndSubject(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	src, err := sources.Create(c, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Register"})
+	src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Register"})
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	art, err := artifacts.Create(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
+	art, err := runArtifactCreate(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -537,7 +540,9 @@ func TestSnapshotOwnedThenRelease(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	src, err := sources.Create(c, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Deed"})
+	src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Deed"})
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -564,13 +569,13 @@ func TestSnapshotOwnedThenRelease(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	art1, err := artifacts.Create(c, userID, artifacts.CreateInput{
+	art1, err := runArtifactCreate(c, userID, artifacts.CreateInput{
 		SourceID: src.ID, FileID: fileA, Label: "Share 1",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	art2, err := artifacts.Create(c, userID, artifacts.CreateInput{
+	art2, err := runArtifactCreate(c, userID, artifacts.CreateInput{
 		SourceID: src.ID, FileID: fileA, Label: "Share 2",
 	})
 	if err != nil {
@@ -638,7 +643,9 @@ func TestImpactSourceAndArtifact(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	src, err := sources.Create(c, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Register"})
+	src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Register"})
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -650,7 +657,7 @@ func TestImpactSourceAndArtifact(t *testing.T) {
 		}
 	})
 
-	art, err := artifacts.Create(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
+	art, err := runArtifactCreate(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -703,7 +710,9 @@ func TestImpactSourceAndArtifact(t *testing.T) {
 		}
 	})
 
-	empty, err := sources.Create(c, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Uncited"})
+	empty, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Uncited"})
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -740,7 +749,9 @@ func TestImpactAgreesWithSQLite(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	src, err := sources.Create(c, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Deed"})
+	src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Deed"})
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -755,7 +766,7 @@ func TestImpactAgreesWithSQLite(t *testing.T) {
 		}
 	})
 
-	if _, err := artifacts.Create(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"}); err != nil {
+	if _, err := runArtifactCreate(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"}); err != nil {
 		t.Fatal(err)
 	}
 

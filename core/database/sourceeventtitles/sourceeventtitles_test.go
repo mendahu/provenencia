@@ -55,9 +55,11 @@ func newFixture(t *testing.T) *fixture {
 	must(t, subjectvocab.Install(c))
 	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{Key: "book", Origin: sourcetypes.OriginProvenencia, Label: "Book"})
 	must(t, err)
-	src, err := sources.Create(c, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Register"})
+	src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Register"})
+	})
 	must(t, err)
-	art, err := artifacts.Create(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
+	art, err := runArtifactCreate(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
 	must(t, err)
 	return &fixture{t: t, c: c, src: src, art: art}
 }
@@ -288,4 +290,12 @@ func sameSet(got, want []string) bool {
 		seen[w]--
 	}
 	return true
+}
+
+func runArtifactCreate(c *database.Catalog, userID []byte, in artifacts.CreateInput) (artifacts.Artifact, error) {
+	a, _, err := writes.Run(c, writes.Op{Action: "create_artifact", UserID: userID},
+		func(tx *database.Tx) (artifacts.Artifact, []rowchange.Change, error) {
+			return artifacts.Create(tx, userID, in)
+		})
+	return a, err
 }

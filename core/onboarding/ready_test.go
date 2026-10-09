@@ -5,10 +5,13 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/claimconfidencegrades"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sourcecredibilitygrades"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
+	"github.com/mendahu/provenencia/core/writes"
 )
 
 func TestOpenCatalogDoesNotHealSourceVocab(t *testing.T) {
@@ -27,7 +30,7 @@ func TestOpenCatalogDoesNotHealSourceVocab(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := sourcetypes.Delete(c, created.Identity.UserID[:], cert.ID); err != nil {
+	if err := runSourceTypeDelete(c, created.Identity.UserID[:], cert.ID); err != nil {
 		t.Fatal(err)
 	}
 	c.Close()
@@ -191,4 +194,13 @@ func TestOpenCatalogDoesNotHealSubjectTypes(t *testing.T) {
 	if !errors.Is(err, sql.ErrNoRows) {
 		t.Fatalf("open healed subject type: %v", err)
 	}
+}
+
+func runSourceTypeDelete(c *database.Catalog, userID, id []byte) error {
+	_, _, err := writes.Run(c, writes.Op{Action: "delete_source_type", UserID: userID},
+		func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+			changes, err := sourcetypes.Delete(tx, userID, id)
+			return struct{}{}, changes, err
+		})
+	return err
 }

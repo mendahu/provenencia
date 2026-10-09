@@ -12,11 +12,13 @@ import (
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/properties"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjects"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
+	"github.com/mendahu/provenencia/core/writes"
 )
 
 // A Subject emptied of its own Observations can be deleted while its claim
@@ -45,11 +47,13 @@ func newConclusionFixture(t *testing.T) conclusionFixture {
 	if err != nil {
 		t.Fatal(err)
 	}
-	src, err := sources.Create(c, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Gazetteer"})
+	src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Gazetteer"})
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	art, err := artifacts.Create(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
+	art, err := runArtifactCreate(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -140,4 +144,12 @@ func TestSubjectDeleteReleasesOwnClaimPins(t *testing.T) {
 	if err != nil || len(members) != 1 || string(members[0].ID) != string(ca) {
 		t.Fatalf("%v %+v", err, members)
 	}
+}
+
+func runArtifactCreate(c *database.Catalog, userID []byte, in artifacts.CreateInput) (artifacts.Artifact, error) {
+	a, _, err := writes.Run(c, writes.Op{Action: "create_artifact", UserID: userID},
+		func(tx *database.Tx) (artifacts.Artifact, []rowchange.Change, error) {
+			return artifacts.Create(tx, userID, in)
+		})
+	return a, err
 }

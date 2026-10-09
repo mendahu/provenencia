@@ -99,7 +99,11 @@ var registry = map[string]Effect{
 		Source: field("source_id"),
 		Search: []SearchDoc{{Kind: DocSource, Path: field("source_id")}},
 	},
-	"artifacts": {Entity: "artifact", Source: field("source_id")},
+	"artifacts": {
+		Entity: "artifact",
+		Source: field("source_id"),
+		Search: []SearchDoc{{Kind: DocSource, Path: field("source_id")}},
+	},
 	"citations": {
 		Entity:  "citation",
 		Source:  up("artifact_id", "source_id"),

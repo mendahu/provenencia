@@ -17,6 +17,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjects"
@@ -25,6 +26,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/match"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/writes"
 )
 
 var userID = []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}
@@ -61,9 +63,11 @@ func newFixture(t *testing.T) *fixture {
 	must(t, subjectvocab.Install(c))
 	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{Key: "book", Origin: sourcetypes.OriginProvenencia, Label: "Book"})
 	must(t, err)
-	src, err := sources.Create(c, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Register"})
+	src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Register"})
+	})
 	must(t, err)
-	art, err := artifacts.Create(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
+	art, err := runArtifactCreate(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
 	must(t, err)
 	db, err := c.DB()
 	must(t, err)
@@ -310,4 +314,12 @@ func TestForSubjectQueryCountIsConstant(t *testing.T) {
 	if many != one {
 		t.Fatalf("queries: %d for 1 handle, %d for 51", one, many)
 	}
+}
+
+func runArtifactCreate(c *database.Catalog, userID []byte, in artifacts.CreateInput) (artifacts.Artifact, error) {
+	a, _, err := writes.Run(c, writes.Op{Action: "create_artifact", UserID: userID},
+		func(tx *database.Tx) (artifacts.Artifact, []rowchange.Change, error) {
+			return artifacts.Create(tx, userID, in)
+		})
+	return a, err
 }

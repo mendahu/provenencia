@@ -23,6 +23,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/writes"
 )
 
 const locator = `{"version":1,"selectors":[{"type":"page","artifact_page":1}]}`
@@ -59,11 +60,13 @@ func TestHandlePaths(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	src, err := sources.Create(c, userID, sources.CreateInput{SourceTypeID: typeID, Title: "A"})
+	src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "A"})
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	art, err := artifacts.Create(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
+	art, err := runArtifactCreate(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -297,4 +300,12 @@ func idSet(got [][]byte, want ...[]byte) bool {
 		}
 	}
 	return true
+}
+
+func runArtifactCreate(c *database.Catalog, userID []byte, in artifacts.CreateInput) (artifacts.Artifact, error) {
+	a, _, err := writes.Run(c, writes.Op{Action: "create_artifact", UserID: userID},
+		func(tx *database.Tx) (artifacts.Artifact, []rowchange.Change, error) {
+			return artifacts.Create(tx, userID, in)
+		})
+	return a, err
 }

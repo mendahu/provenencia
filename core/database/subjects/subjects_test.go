@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjectpositions"
@@ -15,6 +16,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/writes"
 )
 
 func TestSubjects(t *testing.T) {
@@ -38,9 +40,11 @@ func TestSubjects(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		src, err := sources.Create(c, userID, sources.CreateInput{
-			SourceTypeID: typeID,
-			Title:        "Deed",
+		src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+			return sources.Create(tx, userID, sources.CreateInput{
+				SourceTypeID: typeID,
+				Title:        "Deed",
+			})
 		})
 		if err != nil {
 			t.Fatal(err)
@@ -307,8 +311,10 @@ func TestSubjects(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				srcB, err := sources.Create(c, userID, sources.CreateInput{
-					SourceTypeID: typeID, Title: "Other",
+				srcB, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+					return sources.Create(tx, userID, sources.CreateInput{
+						SourceTypeID: typeID, Title: "Other",
+					})
 				})
 				if err != nil {
 					t.Fatal(err)

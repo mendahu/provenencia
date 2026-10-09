@@ -2,20 +2,24 @@ package deleteimpact_test
 
 import (
 	"bytes"
-	"github.com/mendahu/provenencia/core/database/catalogmodel"
 	"sort"
 	"strings"
 	"testing"
 
+	"github.com/mendahu/provenencia/core/database/catalogmodel"
+
+	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/deleteimpact"
 	"github.com/mendahu/provenencia/core/database/metadatafields"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sourcecredibility"
 	"github.com/mendahu/provenencia/core/database/sourcecredibilitygrades"
 	"github.com/mendahu/provenencia/core/database/sourcemetadata"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
+	"github.com/mendahu/provenencia/core/writes"
 )
 
 // Facets that were silently CASCADEd before facet release are now removed
@@ -49,17 +53,21 @@ func TestFacetReleaseAuditsSourceSide(t *testing.T) {
 	}
 
 	t.Run("source delete audits notes, metadata, credibility, layout", func(t *testing.T) {
-		src, err := sources.Create(c, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Deed"})
+		src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+			return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Deed"})
+		})
 		if err != nil {
 			t.Fatal(err)
 		}
-		if _, err := sources.AddNote(c, userID, src.ID, "Found in the attic"); err != nil {
+		if _, _, err := writes.Run(c, writes.Op{Action: "create_source_note", UserID: userID}, func(tx *database.Tx) (sources.Note, []rowchange.Change, error) {
+			return sources.AddNote(tx, userID, src.ID, "Found in the attic")
+		}); err != nil {
 			t.Fatal(err)
 		}
-		if _, err := sourcemetadata.Set(c, userID, sourcemetadata.Input{SourceID: src.ID, FieldID: fieldID, ValueText: "MS 12"}); err != nil {
+		if _, err := runMetadataSet(c, userID, sourcemetadata.Input{SourceID: src.ID, FieldID: fieldID, ValueText: "MS 12"}); err != nil {
 			t.Fatal(err)
 		}
-		if err := sourcemetadata.DismissSuggestion(c, userID, src.ID, other); err != nil {
+		if err := runDismissMetadata(c, userID, src.ID, other); err != nil {
 			t.Fatal(err)
 		}
 		if _, err := sourcecredibility.Upsert(c, userID, sourcecredibility.UpsertInput{
@@ -67,7 +75,10 @@ func TestFacetReleaseAuditsSourceSide(t *testing.T) {
 		}); err != nil {
 			t.Fatal(err)
 		}
-		if err := sources.Delete(c, userID, src.ID); err != nil {
+		if _, _, err := writes.Run(c, writes.Op{Action: "delete_source", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+			changes, err := sources.Delete(tx, userID, src.ID)
+			return struct{}{}, changes, err
+		}); err != nil {
 			t.Fatal(err)
 		}
 		action, types := lastRevision(t, c)
@@ -86,14 +97,16 @@ func TestFacetReleaseAuditsSourceSide(t *testing.T) {
 	})
 
 	t.Run("metadata field delete audits per-source layout rows", func(t *testing.T) {
-		src, err := sources.Create(c, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Will"})
+		src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+			return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Will"})
+		})
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err := sourcemetadata.DismissSuggestion(c, userID, src.ID, other); err != nil {
+		if err := runDismissMetadata(c, userID, src.ID, other); err != nil {
 			t.Fatal(err)
 		}
-		if err := metadatafields.Delete(c, userID, other); err != nil {
+		if err := runFieldDelete(c, userID, other); err != nil {
 			t.Fatal(err)
 		}
 		action, types := lastRevision(t, c)
@@ -103,11 +116,13 @@ func TestFacetReleaseAuditsSourceSide(t *testing.T) {
 	})
 
 	t.Run("citation delete audits its notes", func(t *testing.T) {
-		src, err := sources.Create(c, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Register"})
+		src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+			return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Register"})
+		})
 		if err != nil {
 			t.Fatal(err)
 		}
-		art, err := artifacts.Create(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
+		art, err := runArtifactCreate(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -155,4 +170,30 @@ func TestReleaseFacetsReportsHandles(t *testing.T) {
 	if strings.Join(types, ",") != "identity_claim_evidence,identity_claim_evidence" {
 		t.Fatalf("changes %v", types)
 	}
+}
+
+func runMetadataSet(c *database.Catalog, userID []byte, in sourcemetadata.Input) (sourcemetadata.Row, error) {
+	row, _, err := writes.Run(c, writes.Op{Action: "update_source_metadata", UserID: userID},
+		func(tx *database.Tx) (sourcemetadata.Row, []rowchange.Change, error) {
+			return sourcemetadata.Set(tx, userID, in)
+		})
+	return row, err
+}
+
+func runDismissMetadata(c *database.Catalog, userID, sourceID, fieldID []byte) error {
+	_, _, err := writes.Run(c, writes.Op{Action: "dismiss_source_metadata_suggestion", UserID: userID},
+		func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+			changes, err := sourcemetadata.DismissSuggestion(tx, userID, sourceID, fieldID)
+			return struct{}{}, changes, err
+		})
+	return err
+}
+
+func runFieldDelete(c *database.Catalog, userID, id []byte) error {
+	_, _, err := writes.Run(c, writes.Op{Action: "delete_metadata_field", UserID: userID},
+		func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+			changes, err := metadatafields.Delete(tx, userID, id)
+			return struct{}{}, changes, err
+		})
+	return err
 }

@@ -4,9 +4,10 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"github.com/mendahu/provenencia/core/database/catalogmodel"
 	"strings"
 	"testing"
+
+	"github.com/mendahu/provenencia/core/database/catalogmodel"
 
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/database"
@@ -18,11 +19,13 @@ import (
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/properties"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjects"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
+	"github.com/mendahu/provenencia/core/writes"
 )
 
 // pinnedHandle is one Place handle filed through Promote: A grounds it, B
@@ -50,9 +53,11 @@ func newPinnedHandle(t *testing.T) pinnedHandle {
 	must(subjectvocab.Install(c))
 	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{Key: "book", Origin: sourcetypes.OriginProvenencia, Label: "Book"})
 	must(err)
-	src, err := sources.Create(c, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Gazetteer"})
+	src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Gazetteer"})
+	})
 	must(err)
-	art, err := artifacts.Create(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
+	art, err := runArtifactCreate(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
 	must(err)
 	place, err := subjecttypes.Lookup(c, "place", subjecttypes.OriginProvenencia)
 	must(err)

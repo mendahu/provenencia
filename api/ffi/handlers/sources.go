@@ -7,8 +7,11 @@ import (
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/files"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sourcemetadata"
 	"github.com/mendahu/provenencia/core/database/sources"
+	"github.com/mendahu/provenencia/core/database/users"
+	"github.com/mendahu/provenencia/core/writes"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -110,14 +113,18 @@ func CreateSource(in []byte) ([]byte, error) {
 	}
 	var out *engine.CreateSourceResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		s, err := sources.Create(c, userID, sources.CreateInput{
-			SourceTypeID: typeID,
-			Title:        req.GetTitle(),
-			Description:  req.GetDescription(),
-		})
+		s, res, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID},
+			func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+				return sources.Create(tx, userID, sources.CreateInput{
+					SourceTypeID: typeID,
+					Title:        req.GetTitle(),
+					Description:  req.GetDescription(),
+				})
+			})
 		if err != nil {
 			return err
 		}
+		s.UpdatedRevision = res.Revision
 		sp, err := enrichSourceProto(c, s)
 		if err != nil {
 			return err
@@ -161,7 +168,11 @@ func UpdateSource(in []byte) ([]byte, error) {
 			Title:        req.GetTitle(),
 			Description:  req.GetDescription(),
 		}
-		if err := sources.Update(c, userID, s); err != nil {
+		if _, _, err := writes.Run(c, writes.Op{Action: "update_source", UserID: userID},
+			func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+				changes, err := sources.Update(tx, userID, s)
+				return struct{}{}, changes, err
+			}); err != nil {
 			return err
 		}
 		got, err := sources.Get(c, id)
@@ -196,7 +207,12 @@ func DeleteSource(in []byte) ([]byte, error) {
 	}
 	var out *engine.DeleteSourceResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		if err := sources.Delete(c, userID, sourceID); err != nil {
+		_, _, err := writes.Run(c, writes.Op{Action: "delete_source", UserID: userID},
+			func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+				changes, err := sources.Delete(tx, userID, sourceID)
+				return struct{}{}, changes, err
+			})
+		if err != nil {
 			return err
 		}
 		out = &engine.DeleteSourceResponse{}
@@ -230,7 +246,14 @@ func SetSourceCover(in []byte) ([]byte, error) {
 	}
 	var out *engine.SetSourceCoverResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		got, err := sources.SetCover(c, userID, sourceID, req.GetCoverMode(), primaryID)
+		mode, artID, err := sources.NormalizeCover(c, sourceID, req.GetCoverMode(), primaryID)
+		if err != nil {
+			return err
+		}
+		got, _, err := writes.Run(c, writes.Op{Action: "set_source_cover", UserID: userID},
+			func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+				return sources.SetCover(tx, userID, sourceID, mode, artID)
+			})
 		if err != nil {
 			return err
 		}
@@ -262,10 +285,18 @@ func AddSourceNote(in []byte) ([]byte, error) {
 	}
 	var out *engine.AddSourceNoteResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		n, err := sources.AddNote(c, userID, sourceID, req.GetBody())
+		n, _, err := writes.Run(c, writes.Op{Action: "create_source_note", UserID: userID},
+			func(tx *database.Tx) (sources.Note, []rowchange.Change, error) {
+				return sources.AddNote(tx, userID, sourceID, req.GetBody())
+			})
 		if err != nil {
 			return err
 		}
+		author, err := users.Lookup(c, userID)
+		if err != nil {
+			return err
+		}
+		n.AuthorDisplayName = author.DisplayName
 		out = &engine.AddSourceNoteResponse{Note: noteProto(n)}
 		return nil
 	})
@@ -290,7 +321,11 @@ func UpdateSourceNote(in []byte) ([]byte, error) {
 	}
 	var out *engine.UpdateSourceNoteResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		if err := sources.UpdateNote(c, userID, noteID, req.GetBody()); err != nil {
+		if _, _, err := writes.Run(c, writes.Op{Action: "update_source_note", UserID: userID},
+			func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+				changes, err := sources.UpdateNote(tx, userID, noteID, req.GetBody())
+				return struct{}{}, changes, err
+			}); err != nil {
 			return err
 		}
 		n, err := sources.GetNote(c, noteID)
@@ -321,7 +356,12 @@ func DeleteSourceNote(in []byte) ([]byte, error) {
 	}
 	var out *engine.DeleteSourceNoteResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		if err := sources.DeleteNote(c, userID, noteID); err != nil {
+		_, _, err := writes.Run(c, writes.Op{Action: "delete_source_note", UserID: userID},
+			func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+				changes, err := sources.DeleteNote(tx, userID, noteID)
+				return struct{}{}, changes, err
+			})
+		if err != nil {
 			return err
 		}
 		out = &engine.DeleteSourceNoteResponse{}
@@ -352,11 +392,14 @@ func SetSourceMetadata(in []byte) ([]byte, error) {
 	}
 	var out *engine.SetSourceMetadataResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		if _, err := sourcemetadata.Set(c, userID, sourcemetadata.Input{
-			SourceID:  sourceID,
-			FieldID:   fieldID,
-			ValueText: req.GetValueText(),
-		}); err != nil {
+		if _, _, err := writes.Run(c, writes.Op{Action: "update_source_metadata", UserID: userID},
+			func(tx *database.Tx) (sourcemetadata.Row, []rowchange.Change, error) {
+				return sourcemetadata.Set(tx, userID, sourcemetadata.Input{
+					SourceID:  sourceID,
+					FieldID:   fieldID,
+					ValueText: req.GetValueText(),
+				})
+			}); err != nil {
 			return err
 		}
 		entries, err := sourcemetadata.ListWorkspace(c, sourceID)
@@ -399,7 +442,11 @@ func ClearSourceMetadata(in []byte) ([]byte, error) {
 	}
 	var out *engine.ClearSourceMetadataResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		if err := sourcemetadata.Clear(c, userID, sourceID, fieldID); err != nil {
+		if _, _, err := writes.Run(c, writes.Op{Action: "update_source_metadata", UserID: userID},
+			func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+				changes, err := sourcemetadata.Clear(tx, userID, sourceID, fieldID)
+				return struct{}{}, changes, err
+			}); err != nil {
 			return err
 		}
 		out = &engine.ClearSourceMetadataResponse{}
@@ -430,7 +477,11 @@ func DismissSourceMetadataSuggestion(in []byte) ([]byte, error) {
 	}
 	var out *engine.DismissSourceMetadataSuggestionResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		if err := sourcemetadata.DismissSuggestion(c, userID, sourceID, fieldID); err != nil {
+		if _, _, err := writes.Run(c, writes.Op{Action: "dismiss_source_metadata_suggestion", UserID: userID},
+			func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+				changes, err := sourcemetadata.DismissSuggestion(tx, userID, sourceID, fieldID)
+				return struct{}{}, changes, err
+			}); err != nil {
 			return err
 		}
 		entries, err := sourcemetadata.ListWorkspace(c, sourceID)
@@ -472,7 +523,11 @@ func ReorderSourceMetadata(in []byte) ([]byte, error) {
 	}
 	var out *engine.ReorderSourceMetadataResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		if err := sourcemetadata.Reorder(c, userID, sourceID, fieldIDs); err != nil {
+		if _, _, err := writes.Run(c, writes.Op{Action: "reorder_source_metadata", UserID: userID},
+			func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+				changes, err := sourcemetadata.Reorder(tx, userID, sourceID, fieldIDs)
+				return struct{}{}, changes, err
+			}); err != nil {
 			return err
 		}
 		entries, err := sourcemetadata.ListWorkspace(c, sourceID)

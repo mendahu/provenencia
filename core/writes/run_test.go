@@ -62,6 +62,32 @@ func TestRunSkipsEmptyChanges(t *testing.T) {
 	}
 }
 
+func TestRunUnauditedCommits(t *testing.T) {
+	c := newCatalog(t)
+	id := mustID(t)
+	userRef := mustRef(t)
+	ran := false
+	_, res, err := writes.Run(c, writes.Op{Unaudited: true}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+		tx.AfterCommit(func() { ran = true })
+		if _, err := tx.Exec(`INSERT INTO users (id, display_name, ref) VALUES (?, ?, ?)`, id, "Ada", userRef); err != nil {
+			return struct{}{}, nil, err
+		}
+		return struct{}{}, nil, nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Revision != 0 || !ran {
+		t.Fatalf("rev %d after %v", res.Revision, ran)
+	}
+	if _, err := users.Lookup(c, id); err != nil {
+		t.Fatal(err)
+	}
+	if n := auditCount(t, c); n != 0 {
+		t.Fatalf("audit rows %d", n)
+	}
+}
+
 func TestRunAfterCommitAndReentry(t *testing.T) {
 	c := newCatalog(t)
 	var inner error

@@ -19,8 +19,10 @@ import (
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/subjects"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
+	"github.com/mendahu/provenencia/core/writes"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -50,7 +52,7 @@ func namedPerson(t *testing.T) (dir, handleRef string) {
 		if err := db.QueryRow(`SELECT source_id FROM subjects WHERE id = ?`, subjectID[:]).Scan(&sourceID); err != nil {
 			return err
 		}
-		art, err := artifacts.Create(c, userID[:], artifacts.CreateInput{SourceID: sourceID, Label: "Scan"})
+		art, err := runArtifactCreate(c, userID[:], artifacts.CreateInput{SourceID: sourceID, Label: "Scan"})
 		if err != nil {
 			return err
 		}
@@ -214,7 +216,7 @@ func citedEvent(t *testing.T) (dir, entityID string) {
 		if err != nil {
 			return err
 		}
-		art, err := artifacts.Create(c, userID[:], artifacts.CreateInput{SourceID: source[:], Label: "Scan"})
+		art, err := runArtifactCreate(c, userID[:], artifacts.CreateInput{SourceID: source[:], Label: "Scan"})
 		if err != nil {
 			return err
 		}
@@ -300,7 +302,7 @@ func citedPlace(t *testing.T) (dir, entityID string) {
 		if err != nil {
 			return err
 		}
-		art, err := artifacts.Create(c, userID[:], artifacts.CreateInput{SourceID: source[:], Label: "Scan"})
+		art, err := runArtifactCreate(c, userID[:], artifacts.CreateInput{SourceID: source[:], Label: "Scan"})
 		if err != nil {
 			return err
 		}
@@ -513,4 +515,12 @@ func TestEventTitlesUseOneRule(t *testing.T) {
 			},
 		},
 	})
+}
+
+func runArtifactCreate(c *database.Catalog, userID []byte, in artifacts.CreateInput) (artifacts.Artifact, error) {
+	a, _, err := writes.Run(c, writes.Op{Action: "create_artifact", UserID: userID},
+		func(tx *database.Tx) (artifacts.Artifact, []rowchange.Change, error) {
+			return artifacts.Create(tx, userID, in)
+		})
+	return a, err
 }

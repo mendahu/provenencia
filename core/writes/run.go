@@ -13,10 +13,14 @@ import (
 )
 
 // Op is the audit action for one Run.
+// Unaudited commits the transaction without a revision, effects, or listeners.
+// AfterCommit still runs. An empty change list rolls back only when Unaudited
+// is false.
 type Op struct {
 	Action      string
 	Description string
 	UserID      []byte
+	Unaudited   bool
 }
 
 // Result is the revision Run recorded and what the effects registry resolved.
@@ -29,7 +33,8 @@ type Result struct {
 // Run begins a transaction, runs fn, and on a non-empty change list records
 // audit, recomputes handles, reprojects search documents, commits, runs
 // AfterCommit, then notifies listeners. A closure error or an empty change
-// list rolls back and does not notify. A second Run on the same catalog,
+// list rolls back and does not notify. Op.Unaudited commits with no revision
+// and no notice, then runs AfterCommit. A second Run on the same catalog,
 // including from AfterCommit or a listener, returns database.ErrWriteReentry.
 // Run does not take the catalog session lock.
 func Run[T any](c *database.Catalog, op Op, fn func(tx *database.Tx) (T, []rowchange.Change, error)) (T, Result, error) {
@@ -45,7 +50,14 @@ func Run[T any](c *database.Catalog, op Op, fn func(tx *database.Tx) (T, []rowch
 	if err != nil {
 		return zero, Result{}, err
 	}
-	if len(changes) == 0 {
+	if len(changes) == 0 && !op.Unaudited {
+		return value, Result{}, nil
+	}
+	if op.Unaudited {
+		if err := tx.Commit(); err != nil {
+			return zero, Result{}, err
+		}
+		tx.RunAfterCommit()
 		return value, Result{}, nil
 	}
 

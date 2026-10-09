@@ -197,7 +197,7 @@ _, res, err := writes.Run(c, writes.Op{Action: "delete_observation", UserID: use
 	})
 ```
 
-**Thumbnails.** `core/derivatives` writes `file_derivatives` in its own transactions (`ensure.go`). They go through `Run` like every other write, under an unaudited registry entry with no effects: derived bytes, no research data, nothing the graph reads.
+**Thumbnails.** JPEG generation and the object write stay outside the transaction. The catalog insert goes through `Run` with `Op.Unaudited` and no changes. `file_derivatives` stays `{None: true}`: derived bytes, no research data, nothing the graph reads. `AfterCommit` refreshes the parent Source's search document. A unique checksum conflict ends that `Run`, then `Ensure` starts a second unaudited `Run` for the link only.
 
 `database.Tx` embeds `*sql.Tx`, and only `writes.Run` creates one. Write functions take `*database.Tx`, so a write can't run outside the orchestrator. A test that fails on any `.Begin()` outside `core/database` and `core/writes` keeps it that way.
 
@@ -516,16 +516,22 @@ Each step is its own PR, measured against the one before. PRs that only repoint 
 
 **Writes**
 
-3. **The orchestrator** (done). `writes.Run`, `database.Tx`, `Op`, `Result`, `AfterCommit`, and commit listeners. Property-term create, update, and delete go through `Run`. Every other write still begins its own transaction.
+3. **The orchestrator** (done). `writes.Run`, `database.Tx`, `Op`, `Result`, `AfterCommit`, and commit listeners. Property-term create, update, and delete go through `Run`. Source-layer writes follow in PR 4.
    - **`Run` is generic.** `Run[T any](c, op, fn func(tx *database.Tx) (T, []rowchange.Change, error)) (T, Result, error)`. A delete uses an empty struct as `T`. The closure's `T` is the written value (the term, or nothing). `Result` is the revision plus `effects.Set`.
    - **The FFI handler calls `Run`.** `Create`, `Update`, and `Delete` take `*database.Tx` and return the changes. They do not begin, commit, or call `audit.Record`. `Upsert` stays the un-audited seed path. Tests that call those three call `Run` too.
    - **Re-entry is refused.** A second `Run` on the same catalog, including from `AfterCommit` or a listener, returns `database.ErrWriteReentry`. `Run` does not take the catalog session lock; the handler already holds it.
    - **A failed notify drops every listener.** Commit has already succeeded. Any `OnCommit` error calls `Drop` on every listener. There is no production listener yet. `autoreconciler.Rebuild` does not go through `Run` and is not wired to the hook. `Drop` is what PR 8 will use to publish "drop everything."
    - **`RecomputeTx` keeps its `Querier` parameter.** `*database.Tx` embeds `*sql.Tx`, so `Run` passes the inner transaction. `Run` calls it only when the handle set is non-empty.
-   - **Nested writes are out of this PR.** Property terms do not call another write. Later migrations pass the outer `*database.Tx` into the inner function.
+   - **Nested writes are out of this PR.** Property terms do not call another write. Later migrations pass the outer `*database.Tx` into the inner function. Source-layer writes move in PR 4. Evidence and conclusion writes still begin their own transaction.
    - **Stored scopes come from `effects.Sources`.** `Record` still rejects an entity type with no scope resolver. The old resolvers stay callable (`audit.LegacySourceIDs`) so the parity test can compare them until PR 7 deletes them. `searchindex.Reproject` dispatches `Effects.Search` to the existing source, source-type, metadata-field, and sources-for-type reprojectors. Property terms have no handles and no search documents. A label edit sets vocabulary and leaves structure unset.
-4. **Migrate Source-layer writes** (churn). Sources, notes, metadata, source types, metadata fields, artifacts (with `AfterCommit` for file removal), ingest, thumbnails.
-   - *Open:* confirm thumbnail generation runs inside `catalogsession.Do`. If it doesn't, that's an existing serialization bug to fix here, not paper over.
+4. **Migrate Source-layer writes** (done). Sources, notes, metadata, source types, metadata fields, artifacts, ingest, and thumbnails go through `writes.Run`.
+   - **The FFI handler calls `Run`.** Domain functions take `*database.Tx` and return the changes. They do not begin, commit, audit, or reproject. `ingest.File` and `derivatives.Ensure` call `Run` themselves: the object write stays outside, and a checksum conflict starts a second `Run` after the first returns.
+   - **`Op.Unaudited` commits.** Thumbnail inserts pass `Unaudited: true` and no changes. `Run` skips audit, effects, and listeners, commits, then runs `AfterCommit` (the Source search refresh). An empty change list still rolls back when `Unaudited` is false. `file_derivatives` stays `{None: true}`.
+   - **Artifact search is in the registry.** `artifacts` has a Source search document via `field("source_id")`, so create, update, and delete refresh the parent Source. A deleted source still drops its document, because `ReprojectSource` deletes the doc when the row is gone.
+   - **Seed `Upsert` stays off `Run`.** Source-type and metadata-field `Create` and `Update` go through `Run` and gain a revision with a null user. `Upsert` remains the un-audited seed path and still reprojects by hand.
+   - **`SetCover` does not nest.** The raster check, including `EnsureThumbnail`, finishes before the cover `Run`.
+   - **File bytes move to `AfterCommit`.** `artifacts.Delete` unlinks released objects after commit, so a rollback leaves the files in place.
+   - **Thumbnails already run inside the session.** `EnsureFileThumbnail` uses `withProjectCatalog` (`catalogsession.Do`). `SetCover`'s handler holds the same session. Dismiss and reorder refresh the Source search document because their layout changes already name one.
 5. **Migrate Evidence-layer writes** (churn). Citations, observations, subjects, name values, connect, positions.
    - *Open:* assertion fixtures for diffs that omit the handle key. The migration assertion has to include an in-place name edit, an in-place date edit, a polarity-only observation edit, and a `value_subject_id` move. Those writes recompute today via unconditional `RecomputeSubjectsTx`; the handle does not appear as `subject_id` on the observation diff. The registry's handle set has to match or this PR does not migrate them.
 6. **Migrate conclusion-layer writes** (churn). Promote single and batch, identity claims, canonical entities, credibility, properties, subject definitions. Includes the transactions in FFI handlers (`api/ffi/handlers/subject_defs.go`, `delete_impact.go`).

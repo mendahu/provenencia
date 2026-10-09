@@ -14,12 +14,14 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/files"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/derivatives"
 	"github.com/mendahu/provenencia/core/ingest"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/writes"
 )
 
 func TestArtifacts(t *testing.T) {
@@ -43,9 +45,11 @@ func TestArtifacts(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		s, err := sources.Create(c, userID, sources.CreateInput{
-			SourceTypeID: typeID,
-			Title:        "Family Bible",
+		s, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+			return sources.Create(tx, userID, sources.CreateInput{
+				SourceTypeID: typeID,
+				Title:        "Family Bible",
+			})
 		})
 		if err != nil {
 			t.Fatal(err)
@@ -113,7 +117,7 @@ func TestArtifacts(t *testing.T) {
 			run: func(t *testing.T, c *database.Catalog) {
 				mustUser(t, c)
 				src := mustSource(t, c)
-				a, err := Create(c, userID, CreateInput{
+				a, err := runCreate(c, userID, CreateInput{
 					SourceID:    src.ID,
 					Label:       "Physical copy",
 					Description: "held by Mary",
@@ -152,7 +156,7 @@ func TestArtifacts(t *testing.T) {
 				mustUser(t, c)
 				src := mustSource(t, c)
 				f := mustFile(t, c, "scan.jpg", []byte("jpeg-bytes"))
-				a, err := Create(c, userID, CreateInput{SourceID: src.ID, FileID: f.ID, Label: "Scan"})
+				a, err := runCreate(c, userID, CreateInput{SourceID: src.ID, FileID: f.ID, Label: "Scan"})
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -170,15 +174,15 @@ func TestArtifacts(t *testing.T) {
 			run: func(t *testing.T, c *database.Catalog) {
 				mustUser(t, c)
 				src := mustSource(t, c)
-				if _, err := Create(c, userID, CreateInput{SourceID: src.ID, Label: "  "}); !errors.Is(err, ErrInvalid) {
+				if _, err := runCreate(c, userID, CreateInput{SourceID: src.ID, Label: "  "}); !errors.Is(err, ErrInvalid) {
 					t.Fatalf("got %v", err)
 				}
-				a, err := Create(c, userID, CreateInput{SourceID: src.ID, Label: "Keep"})
+				a, err := runCreate(c, userID, CreateInput{SourceID: src.ID, Label: "Keep"})
 				if err != nil {
 					t.Fatal(err)
 				}
 				a.Label = ""
-				if err := Update(c, userID, a); !errors.Is(err, ErrInvalid) {
+				if err := runUpdate(c, userID, a); !errors.Is(err, ErrInvalid) {
 					t.Fatalf("update empty label %v", err)
 				}
 			},
@@ -188,13 +192,13 @@ func TestArtifacts(t *testing.T) {
 			run: func(t *testing.T, c *database.Catalog) {
 				mustUser(t, c)
 				src := mustSource(t, c)
-				a, err := Create(c, userID, CreateInput{SourceID: src.ID, Label: "Photo", Description: "photo"})
+				a, err := runCreate(c, userID, CreateInput{SourceID: src.ID, Label: "Photo", Description: "photo"})
 				if err != nil {
 					t.Fatal(err)
 				}
 				f1 := mustFile(t, c, "a.bin", []byte("file-one"))
 				a.FileID = f1.ID
-				if err := Update(c, userID, a); err != nil {
+				if err := runUpdate(c, userID, a); err != nil {
 					t.Fatal(err)
 				}
 				if latestAction(t, c) != "update_artifact" {
@@ -213,7 +217,7 @@ func TestArtifacts(t *testing.T) {
 
 				f2 := mustFile(t, c, "b.bin", []byte("file-two"))
 				a.FileID = f2.ID
-				if err := Update(c, userID, a); !errors.Is(err, ErrFileAlreadyAttached) {
+				if err := runUpdate(c, userID, a); !errors.Is(err, ErrFileAlreadyAttached) {
 					t.Fatalf("got %v", err)
 				}
 				got, err := Get(c, a.ID)
@@ -234,12 +238,12 @@ func TestArtifacts(t *testing.T) {
 				mustUser(t, c)
 				src := mustSource(t, c)
 				f := mustFile(t, c, "x.bin", []byte("x"))
-				a, err := Create(c, userID, CreateInput{SourceID: src.ID, FileID: f.ID, Label: "X"})
+				a, err := runCreate(c, userID, CreateInput{SourceID: src.ID, FileID: f.ID, Label: "X"})
 				if err != nil {
 					t.Fatal(err)
 				}
 				a.FileID = nil
-				if err := Update(c, userID, a); !errors.Is(err, ErrInvalid) {
+				if err := runUpdate(c, userID, a); !errors.Is(err, ErrInvalid) {
 					t.Fatalf("got %v", err)
 				}
 			},
@@ -251,16 +255,16 @@ func TestArtifacts(t *testing.T) {
 				src := mustSource(t, c)
 				missing := make([]byte, 16)
 				missing[15] = 9
-				if _, err := Create(c, userID, CreateInput{SourceID: missing, Label: "X"}); !errors.Is(err, ErrInvalid) {
+				if _, err := runCreate(c, userID, CreateInput{SourceID: missing, Label: "X"}); !errors.Is(err, ErrInvalid) {
 					t.Fatalf("bad source %v", err)
 				}
-				if _, err := Create(c, userID, CreateInput{SourceID: src.ID, FileID: missing, Label: "X"}); !errors.Is(err, ErrInvalid) {
+				if _, err := runCreate(c, userID, CreateInput{SourceID: src.ID, FileID: missing, Label: "X"}); !errors.Is(err, ErrInvalid) {
 					t.Fatalf("bad file %v", err)
 				}
-				if _, err := Create(c, nil, CreateInput{SourceID: src.ID, Label: "X"}); !errors.Is(err, ErrInvalid) {
+				if _, err := runCreate(c, nil, CreateInput{SourceID: src.ID, Label: "X"}); !errors.Is(err, ErrInvalid) {
 					t.Fatalf("nil user %v", err)
 				}
-				if _, err := Create(c, []byte{1}, CreateInput{SourceID: src.ID, Label: "X"}); !errors.Is(err, ErrInvalid) {
+				if _, err := runCreate(c, []byte{1}, CreateInput{SourceID: src.ID, Label: "X"}); !errors.Is(err, ErrInvalid) {
 					t.Fatalf("short user %v", err)
 				}
 			},
@@ -275,21 +279,25 @@ func TestArtifacts(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				s1, err := sources.Create(c, userID, sources.CreateInput{SourceTypeID: typeID, Title: "One"})
+				s1, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+					return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "One"})
+				})
 				if err != nil {
 					t.Fatal(err)
 				}
-				s2, err := sources.Create(c, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Two"})
+				s2, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+					return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Two"})
+				})
 				if err != nil {
 					t.Fatal(err)
 				}
-				if _, err := Create(c, userID, CreateInput{SourceID: s1.ID, Label: "a", Description: "a"}); err != nil {
+				if _, err := runCreate(c, userID, CreateInput{SourceID: s1.ID, Label: "a", Description: "a"}); err != nil {
 					t.Fatal(err)
 				}
-				if _, err := Create(c, userID, CreateInput{SourceID: s1.ID, Label: "b", Description: "b"}); err != nil {
+				if _, err := runCreate(c, userID, CreateInput{SourceID: s1.ID, Label: "b", Description: "b"}); err != nil {
 					t.Fatal(err)
 				}
-				if _, err := Create(c, userID, CreateInput{SourceID: s2.ID, Label: "c", Description: "c"}); err != nil {
+				if _, err := runCreate(c, userID, CreateInput{SourceID: s2.ID, Label: "c", Description: "c"}); err != nil {
 					t.Fatal(err)
 				}
 				list, err := ListBySource(c, s1.ID)
@@ -309,7 +317,7 @@ func TestArtifacts(t *testing.T) {
 				mustUser(t, c)
 				src := mustSource(t, c)
 				f := mustFile(t, c, "keep.bin", []byte("keep"))
-				if _, err := Create(c, userID, CreateInput{SourceID: src.ID, FileID: f.ID, Label: "Keep"}); err != nil {
+				if _, err := runCreate(c, userID, CreateInput{SourceID: src.ID, FileID: f.ID, Label: "Keep"}); err != nil {
 					t.Fatal(err)
 				}
 				if artifactCount(t, c) != 1 {
@@ -336,7 +344,7 @@ func TestArtifacts(t *testing.T) {
 				mustUser(t, c)
 				src := mustSource(t, c)
 				f := mustFile(t, c, "scan.bin", []byte("scan"))
-				a, err := Create(c, userID, CreateInput{SourceID: src.ID, FileID: f.ID, Label: "Scan"})
+				a, err := runCreate(c, userID, CreateInput{SourceID: src.ID, FileID: f.ID, Label: "Scan"})
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -360,13 +368,13 @@ func TestArtifacts(t *testing.T) {
 			run: func(t *testing.T, c *database.Catalog) {
 				mustUser(t, c)
 				src := mustSource(t, c)
-				a, err := Create(c, userID, CreateInput{SourceID: src.ID, Label: "Old label", Description: "old"})
+				a, err := runCreate(c, userID, CreateInput{SourceID: src.ID, Label: "Old label", Description: "old"})
 				if err != nil {
 					t.Fatal(err)
 				}
 				a.Label = "New label"
 				a.Description = "new"
-				if err := Update(c, userID, a); err != nil {
+				if err := runUpdate(c, userID, a); err != nil {
 					t.Fatal(err)
 				}
 				got, err := Get(c, a.ID)
@@ -418,16 +426,18 @@ func TestArtifactDelete(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	src, err := sources.Create(c, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Family Bible"})
+	src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Family Bible"})
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	fileless, err := Create(c, userID, CreateInput{SourceID: src.ID, Label: "Physical"})
+	fileless, err := runCreate(c, userID, CreateInput{SourceID: src.ID, Label: "Physical"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := Delete(c, userID, fileless.ID); err != nil {
+	if err := runDelete(c, userID, fileless.ID); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := Get(c, fileless.ID); !errors.Is(err, sql.ErrNoRows) {
@@ -446,7 +456,7 @@ func TestArtifactDelete(t *testing.T) {
 	}
 
 	const locator = `{"version":1,"selectors":[{"type":"page","artifact_page":1}]}`
-	cited, err := Create(c, userID, CreateInput{SourceID: src.ID, Label: "Cited scan"})
+	cited, err := runCreate(c, userID, CreateInput{SourceID: src.ID, Label: "Cited scan"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -455,7 +465,7 @@ func TestArtifactDelete(t *testing.T) {
 	}, nil); err != nil {
 		t.Fatal(err)
 	}
-	if err := Delete(c, userID, cited.ID); !errors.Is(err, ErrInUse) {
+	if err := runDelete(c, userID, cited.ID); !errors.Is(err, ErrInUse) {
 		t.Fatalf("citation inbound %v", err)
 	}
 
@@ -476,21 +486,21 @@ func TestArtifactDelete(t *testing.T) {
 	if err := tx.Commit(); err != nil {
 		t.Fatal(err)
 	}
-	share1, err := Create(c, userID, CreateInput{SourceID: src.ID, FileID: fileID, Label: "Share 1"})
+	share1, err := runCreate(c, userID, CreateInput{SourceID: src.ID, FileID: fileID, Label: "Share 1"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	share2, err := Create(c, userID, CreateInput{SourceID: src.ID, FileID: fileID, Label: "Share 2"})
+	share2, err := runCreate(c, userID, CreateInput{SourceID: src.ID, FileID: fileID, Label: "Share 2"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := Delete(c, userID, share1.ID); err != nil {
+	if err := runDelete(c, userID, share1.ID); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := files.Lookup(c, fileID); err != nil {
 		t.Fatalf("shared file gone %v", err)
 	}
-	if err := Delete(c, userID, share2.ID); err != nil {
+	if err := runDelete(c, userID, share2.ID); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := files.Lookup(c, fileID); !errors.Is(err, sql.ErrNoRows) {
@@ -510,16 +520,22 @@ func TestArtifactDelete(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	coverArt, err := Create(c, userID, CreateInput{
+	coverArt, err := runCreate(c, userID, CreateInput{
 		SourceID: src.ID, FileID: ingested.File.ID, Label: "Cover scan",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := sources.SetCover(c, userID, src.ID, sources.CoverModeArtifact, coverArt.ID); err != nil {
+	coverMode, coverArtID, err := sources.NormalizeCover(c, src.ID, sources.CoverModeArtifact, coverArt.ID)
+	if err != nil {
 		t.Fatal(err)
 	}
-	if err := Delete(c, userID, coverArt.ID); err != nil {
+	if _, _, err := writes.Run(c, writes.Op{Action: "set_source_cover", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+		return sources.SetCover(tx, userID, src.ID, coverMode, coverArtID)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := runDelete(c, userID, coverArt.ID); err != nil {
 		t.Fatal(err)
 	}
 	gotSrc, err := sources.Get(c, src.ID)
@@ -530,7 +546,7 @@ func TestArtifactDelete(t *testing.T) {
 		t.Fatalf("cover after erase %+v", gotSrc)
 	}
 
-	if err := Delete(c, userID, make([]byte, 16)); !errors.Is(err, ErrInvalid) {
+	if err := runDelete(c, userID, make([]byte, 16)); !errors.Is(err, ErrInvalid) {
 		t.Fatalf("missing %v", err)
 	}
 }
@@ -555,7 +571,9 @@ func TestArtifactDeletePurgesDisk(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	src, err := sources.Create(c, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Family Bible"})
+	src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Family Bible"})
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -583,11 +601,11 @@ func TestArtifactDeletePurgesDisk(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		fileless, err := Create(c, userID, CreateInput{SourceID: src.ID, Label: "Physical"})
+		fileless, err := runCreate(c, userID, CreateInput{SourceID: src.ID, Label: "Physical"})
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err := Delete(c, userID, fileless.ID); err != nil {
+		if err := runDelete(c, userID, fileless.ID); err != nil {
 			t.Fatal(err)
 		}
 		if _, err := files.Lookup(c, kept.File.ID); err != nil {
@@ -613,19 +631,19 @@ func TestArtifactDeletePurgesDisk(t *testing.T) {
 			t.Fatal(err)
 		}
 		path := objectPath(t, ingested.File)
-		share1, err := Create(c, userID, CreateInput{
+		share1, err := runCreate(c, userID, CreateInput{
 			SourceID: src.ID, FileID: ingested.File.ID, Label: "Share 1",
 		})
 		if err != nil {
 			t.Fatal(err)
 		}
-		share2, err := Create(c, userID, CreateInput{
+		share2, err := runCreate(c, userID, CreateInput{
 			SourceID: src.ID, FileID: ingested.File.ID, Label: "Share 2",
 		})
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err := Delete(c, userID, share1.ID); err != nil {
+		if err := runDelete(c, userID, share1.ID); err != nil {
 			t.Fatal(err)
 		}
 		if _, err := files.LookupByChecksum(c, ingested.File.ChecksumSHA256); err != nil {
@@ -634,7 +652,7 @@ func TestArtifactDeletePurgesDisk(t *testing.T) {
 		if _, err := os.Stat(path); err != nil {
 			t.Fatalf("shared object %v", err)
 		}
-		if err := Delete(c, userID, share2.ID); err != nil {
+		if err := runDelete(c, userID, share2.ID); err != nil {
 			t.Fatal(err)
 		}
 		if _, err := files.LookupByChecksum(c, ingested.File.ChecksumSHA256); !errors.Is(err, sql.ErrNoRows) {
@@ -659,7 +677,7 @@ func TestArtifactDeletePurgesDisk(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		art, err := Create(c, userID, CreateInput{
+		art, err := runCreate(c, userID, CreateInput{
 			SourceID: src.ID, FileID: ingested.File.ID, Label: "Cover scan",
 		})
 		if err != nil {
@@ -681,7 +699,7 @@ func TestArtifactDeletePurgesDisk(t *testing.T) {
 		if _, err := os.Stat(thumbPath); err != nil {
 			t.Fatal(err)
 		}
-		if err := Delete(c, userID, art.ID); err != nil {
+		if err := runDelete(c, userID, art.ID); err != nil {
 			t.Fatal(err)
 		}
 		if _, err := files.LookupByChecksum(c, ingested.File.ChecksumSHA256); !errors.Is(err, sql.ErrNoRows) {
@@ -697,4 +715,30 @@ func TestArtifactDeletePurgesDisk(t *testing.T) {
 			t.Fatalf("derived object %v", err)
 		}
 	})
+}
+
+func runCreate(c *database.Catalog, userID []byte, in CreateInput) (Artifact, error) {
+	a, _, err := writes.Run(c, writes.Op{Action: "create_artifact", UserID: userID},
+		func(tx *database.Tx) (Artifact, []rowchange.Change, error) {
+			return Create(tx, userID, in)
+		})
+	return a, err
+}
+
+func runUpdate(c *database.Catalog, userID []byte, a Artifact) error {
+	_, _, err := writes.Run(c, writes.Op{Action: "update_artifact", UserID: userID},
+		func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+			changes, err := Update(tx, userID, a)
+			return struct{}{}, changes, err
+		})
+	return err
+}
+
+func runDelete(c *database.Catalog, userID, id []byte) error {
+	_, _, err := writes.Run(c, writes.Op{Action: "delete_artifact", UserID: userID},
+		func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+			changes, err := Delete(tx, c, userID, id)
+			return struct{}{}, changes, err
+		})
+	return err
 }

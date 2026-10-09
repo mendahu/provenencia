@@ -19,6 +19,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sourcecredibility"
 	"github.com/mendahu/provenencia/core/database/sourcecredibilitygrades"
 	"github.com/mendahu/provenencia/core/database/sources"
@@ -28,6 +29,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/writes"
 )
 
 var userID = []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}
@@ -60,9 +62,11 @@ func newFixture(t *testing.T) *fixture {
 	must(t, subjectvocab.Install(c))
 	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{Key: "book", Origin: sourcetypes.OriginProvenencia, Label: "Book"})
 	must(t, err)
-	src, err := sources.Create(c, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Register"})
+	src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Register"})
+	})
 	must(t, err)
-	art, err := artifacts.Create(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
+	art, err := runArtifactCreate(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
 	must(t, err)
 	name, err := properties.Lookup(c, "name", properties.OriginProvenencia)
 	must(t, err)
@@ -422,9 +426,11 @@ func TestEventsByIDs(t *testing.T) {
 
 func (f *fixture) book(title string) (sources.Source, artifacts.Artifact) {
 	f.t.Helper()
-	src, err := sources.Create(f.c, userID, sources.CreateInput{SourceTypeID: f.source.SourceTypeID, Title: title})
+	src, _, err := writes.Run(f.c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: f.source.SourceTypeID, Title: title})
+	})
 	must(f.t, err)
-	art, err := artifacts.Create(f.c, userID, artifacts.CreateInput{SourceID: src.ID, Label: title})
+	art, err := runArtifactCreate(f.c, userID, artifacts.CreateInput{SourceID: src.ID, Label: title})
 	must(f.t, err)
 	return src, art
 }
@@ -652,4 +658,12 @@ func TestListOrderIsByShownTitle(t *testing.T) {
 			}
 		})
 	}
+}
+
+func runArtifactCreate(c *database.Catalog, userID []byte, in artifacts.CreateInput) (artifacts.Artifact, error) {
+	a, _, err := writes.Run(c, writes.Op{Action: "create_artifact", UserID: userID},
+		func(tx *database.Tx) (artifacts.Artifact, []rowchange.Change, error) {
+			return artifacts.Create(tx, userID, in)
+		})
+	return a, err
 }

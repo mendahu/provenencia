@@ -13,6 +13,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/properties"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjects"
@@ -21,6 +22,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/ingest"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/writes"
 )
 
 // TestSourceScopes drives real write paths and checks each one moves the
@@ -69,11 +71,13 @@ func TestSourceScopes(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		a, err := sources.Create(c, userID, sources.CreateInput{SourceTypeID: typeID, Title: "A"})
+		a, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+			return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "A"})
+		})
 		if err != nil {
 			t.Fatal(err)
 		}
-		art, err := artifacts.Create(c, userID, artifacts.CreateInput{SourceID: a.ID, Label: "Scan"})
+		art, err := runArtifactCreate(c, userID, artifacts.CreateInput{SourceID: a.ID, Label: "Scan"})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -111,7 +115,9 @@ func TestSourceScopes(t *testing.T) {
 			t.Fatal(err)
 		}
 		// b is created last so it starts ahead of a on "Updated".
-		b, err := sources.Create(c, userID, sources.CreateInput{SourceTypeID: typeID, Title: "B"})
+		b, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+			return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "B"})
+		})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -197,19 +203,27 @@ func TestSourceScopes(t *testing.T) {
 			run: func(t *testing.T, s seed) {
 				var note sources.Note
 				bumpsA(t, s, func() {
-					n, err := sources.AddNote(s.c, userID, s.a.ID, "first")
+					n, _, err := writes.Run(s.c, writes.Op{Action: "create_source_note", UserID: userID}, func(tx *database.Tx) (sources.Note, []rowchange.Change, error) {
+						return sources.AddNote(tx, userID, s.a.ID, "first")
+					})
 					if err != nil {
 						t.Fatal(err)
 					}
 					note = n
 				})
 				bumpsA(t, s, func() {
-					if err := sources.UpdateNote(s.c, userID, note.ID, "second"); err != nil {
+					if _, _, err := writes.Run(s.c, writes.Op{Action: "update_source_note", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+						changes, err := sources.UpdateNote(tx, userID, note.ID, "second")
+						return struct{}{}, changes, err
+					}); err != nil {
 						t.Fatal(err)
 					}
 				})
 				bumpsA(t, s, func() {
-					if err := sources.DeleteNote(s.c, userID, note.ID); err != nil {
+					if _, _, err := writes.Run(s.c, writes.Op{Action: "delete_source_note", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+						changes, err := sources.DeleteNote(tx, userID, note.ID)
+						return struct{}{}, changes, err
+					}); err != nil {
 						t.Fatal(err)
 					}
 				})
@@ -220,7 +234,7 @@ func TestSourceScopes(t *testing.T) {
 			run: func(t *testing.T, s seed) {
 				var art artifacts.Artifact
 				bumpsA(t, s, func() {
-					a, err := artifacts.Create(s.c, userID, artifacts.CreateInput{SourceID: s.a.ID, Label: "Back"})
+					a, err := runArtifactCreate(s.c, userID, artifacts.CreateInput{SourceID: s.a.ID, Label: "Back"})
 					if err != nil {
 						t.Fatal(err)
 					}
@@ -228,7 +242,7 @@ func TestSourceScopes(t *testing.T) {
 				})
 				bumpsA(t, s, func() {
 					art.Label = "Reverse"
-					if err := artifacts.Update(s.c, userID, art); err != nil {
+					if err := runArtifactUpdate(s.c, userID, art); err != nil {
 						t.Fatal(err)
 					}
 				})
@@ -357,13 +371,13 @@ func TestSourceScopes(t *testing.T) {
 				// artifacts exist would see sources the revision did not.
 				checkNewEffects(t, s.c)
 				for _, src := range []sources.Source{s.a, s.b} {
-					if _, err := artifacts.Create(s.c, userID, artifacts.CreateInput{
+					if _, err := runArtifactCreate(s.c, userID, artifacts.CreateInput{
 						SourceID: src.ID, FileID: fres.File.ID, Label: "Scan",
 					}); err != nil {
 						t.Fatal(err)
 					}
 				}
-				if err := ingest.SetFilename(s.c, fres.File.ID, "renamed.txt", userID); err != nil {
+				if err := runSetFilename(s.c, fres.File.ID, "renamed.txt", userID); err != nil {
 					t.Fatal(err)
 				}
 				a, b := revisions(t, s)
@@ -402,4 +416,30 @@ func writeFile(t *testing.T, path, body string) {
 	if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
 		t.Fatal(err)
 	}
+}
+
+func runArtifactCreate(c *database.Catalog, userID []byte, in artifacts.CreateInput) (artifacts.Artifact, error) {
+	a, _, err := writes.Run(c, writes.Op{Action: "create_artifact", UserID: userID},
+		func(tx *database.Tx) (artifacts.Artifact, []rowchange.Change, error) {
+			return artifacts.Create(tx, userID, in)
+		})
+	return a, err
+}
+
+func runArtifactUpdate(c *database.Catalog, userID []byte, a artifacts.Artifact) error {
+	_, _, err := writes.Run(c, writes.Op{Action: "update_artifact", UserID: userID},
+		func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+			changes, err := artifacts.Update(tx, userID, a)
+			return struct{}{}, changes, err
+		})
+	return err
+}
+
+func runSetFilename(c *database.Catalog, fileID []byte, name string, userID []byte) error {
+	_, _, err := writes.Run(c, writes.Op{Action: "update_file", UserID: userID},
+		func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+			changes, err := ingest.SetFilename(tx, fileID, name, userID)
+			return struct{}{}, changes, err
+		})
+	return err
 }

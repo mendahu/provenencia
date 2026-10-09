@@ -10,6 +10,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjectpositions"
@@ -19,6 +20,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/locator"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/writes"
 )
 
 func TestCreateCitedBridge(t *testing.T) {
@@ -66,13 +68,15 @@ func TestCreateCitedBridge(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		src, err := sources.Create(c, userID, sources.CreateInput{
-			SourceTypeID: typeID, Title: "Register",
+		src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+			return sources.Create(tx, userID, sources.CreateInput{
+				SourceTypeID: typeID, Title: "Register",
+			})
 		})
 		if err != nil {
 			t.Fatal(err)
 		}
-		art, err := artifacts.Create(c, userID, artifacts.CreateInput{
+		art, err := runArtifactCreate(c, userID, artifacts.CreateInput{
 			SourceID: src.ID, Label: "Scan",
 		})
 		if err != nil {
@@ -426,4 +430,12 @@ func TestFloorDiv(t *testing.T) {
 	if floorDiv(-3+1+1, 2) != -1 {
 		t.Fatal("negative odd midpoint")
 	}
+}
+
+func runArtifactCreate(c *database.Catalog, userID []byte, in artifacts.CreateInput) (artifacts.Artifact, error) {
+	a, _, err := writes.Run(c, writes.Op{Action: "create_artifact", UserID: userID},
+		func(tx *database.Tx) (artifacts.Artifact, []rowchange.Change, error) {
+			return artifacts.Create(tx, userID, in)
+		})
+	return a, err
 }

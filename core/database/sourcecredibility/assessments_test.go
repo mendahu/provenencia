@@ -6,11 +6,13 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sourcecredibilitygrades"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/writes"
 )
 
 func TestAssessments(t *testing.T) {
@@ -34,9 +36,11 @@ func TestAssessments(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		s, err := sources.Create(c, userID, sources.CreateInput{
-			SourceTypeID: typeID,
-			Title:        "Family Bible",
+		s, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+			return sources.Create(tx, userID, sources.CreateInput{
+				SourceTypeID: typeID,
+				Title:        "Family Bible",
+			})
 		})
 		if err != nil {
 			t.Fatal(err)

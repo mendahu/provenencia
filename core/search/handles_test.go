@@ -16,12 +16,14 @@ import (
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/searchindex"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/subjectpositions"
 	"github.com/mendahu/provenencia/core/database/subjects"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
+	"github.com/mendahu/provenencia/core/writes"
 )
 
 const handleLocator = `{"version":1,"selectors":[{"type":"page","artifact_page":1}]}`
@@ -45,11 +47,14 @@ func newHandleFixture(t *testing.T) *handleFixture {
 	if err := subjectvocab.Install(c); err != nil {
 		t.Fatal(err)
 	}
-	src, err := sources.Create(c, user, sources.CreateInput{SourceTypeID: seedType(t, c, "Book", ""), Title: "Register"})
+	typeID := seedType(t, c, "Book", "")
+	src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: user}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+		return sources.Create(tx, user, sources.CreateInput{SourceTypeID: typeID, Title: "Register"})
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	art, err := artifacts.Create(c, user, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
+	art, err := runArtifactCreate(c, user, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -433,9 +438,12 @@ func TestSimilarTitlesRankThePersonAheadOfTheSource(t *testing.T) {
 	place := f.promote(f.subject("place", func(s subjects.Subject) []observations.Input {
 		return []observations.Input{{SubjectID: s.ID, PropertyID: f.prop("toponym").ID, ValueText: "Robins", HasText: true}}
 	}), nil)
-	src, err := sources.Create(f.c, f.user, sources.CreateInput{
-		SourceTypeID: seedType(t, f.c, "Census", ""),
-		Title:        "Robins parish",
+	typeID := seedType(t, f.c, "Census", "")
+	src, _, err := writes.Run(f.c, writes.Op{Action: "create_source", UserID: f.user}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+		return sources.Create(tx, f.user, sources.CreateInput{
+			SourceTypeID: typeID,
+			Title:        "Robins parish",
+		})
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -486,4 +494,12 @@ func TestMergedHandleLeavesTheIndex(t *testing.T) {
 	if hits := f.search("Robins", KindPerson); refsOf(hits) != fmt.Sprint([]string{"person:" + a.Entity.Ref}) {
 		t.Fatalf("got %s", refsOf(hits))
 	}
+}
+
+func runArtifactCreate(c *database.Catalog, userID []byte, in artifacts.CreateInput) (artifacts.Artifact, error) {
+	a, _, err := writes.Run(c, writes.Op{Action: "create_artifact", UserID: userID},
+		func(tx *database.Tx) (artifacts.Artifact, []rowchange.Change, error) {
+			return artifacts.Create(tx, userID, in)
+		})
+	return a, err
 }

@@ -220,7 +220,7 @@ func personBeside(t *testing.T, req *engine.PromoteSubjectRequest, forms ...stri
 		if err != nil {
 			return err
 		}
-		art, err := artifacts.Create(c, userID[:], artifacts.CreateInput{SourceID: sourceID, Label: "Scan"})
+		art, err := runArtifactCreate(c, userID[:], artifacts.CreateInput{SourceID: sourceID, Label: "Scan"})
 		if err != nil {
 			return err
 		}
