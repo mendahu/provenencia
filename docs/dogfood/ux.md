@@ -19,6 +19,26 @@ Copy the stub. Surface + what got in the way is enough. A wanted fix is optional
 
 <!-- add below this line -->
 
+### Dense Evidence graphs (census-scale)
+
+- **Date:** 2026-09-24
+- **Where:** Evidence graph
+- **Annoyance:** A real census page can put dozens of Subjects and hundreds of Observations on one canvas. Nothing is wrong with the model — it just gets hard to see the household you care about.
+- **Wanted:** Layers or filters when a Source actually hurts. Descoped from [Spike 10](../deployment-plan/spike-10/) on 2026-10-08. Canvas growth and box-select are in that spike; hiding part of a Source is not.
+
+### Automatic structure from the Artifact (beyond transcription)
+
+- **Date:** 2026-09-23
+- **Where:** Citation composer / Evidence graph
+- **Annoyance:** Even after transcription is filled, the researcher still retypes names, dates, and roles onto cards. Spike 8 only dumps text into **transcription**.
+- **Wanted:** Cheap field hints after there is a string (`NSDataDetector`, name/date patterns) and, later, guided extract. Not catalog writes.
+- **Still out:** PDF OCR / Vision on page rasters; Live Text / VisionKit; Foundation Models (`macOS 26+`, raise-the-floor). Pipeline if we ever did it: string → suggestions the researcher accepts → real Citation + Observations. Experiment: “obituary → draft cards,” not “obituary → catalog writes.”
+- **Spike 10 took the two cheap slices:** date prefill from the transcription, and splitting a full name line into parts. The rest stays here.
+
+## Pulled into Spike 10 (2026-10-08)
+
+Scheduled in [Spike 10](../deployment-plan/spike-10/). Not done until the PR lands.
+
 ### Rethink the Citation composer's Observation list
 
 - **Date:** 2026-10-09
@@ -243,21 +263,6 @@ Copy the stub. Surface + what got in the way is enough. A wanted fix is optional
 - **Where:** Omnibar search
 - **Annoyance:** Searched `marriage` expecting a marriage certificate and a newspaper marriage announcement. Both have "marriage" in the title. They landed at the bottom of the results, under obituaries and memorials for someone named **Marion Margaret**. Looks like the shared leading "Mar…" on both names stacked up and beat the real hits. That feels like a bug: I typed the whole word, so an exact word match in a title should win.
 - **Wanted:** A whole-word or exact title match always ranks above fuzzy or prefix matches. Partial matches on several tokens (Marion + Margaret) should not add up to more than one exact hit.
-
-### Dense Evidence graphs (census-scale)
-
-- **Date:** 2026-09-24
-- **Where:** Evidence graph
-- **Annoyance:** A real census page can put dozens of Subjects and hundreds of Observations on one canvas. Nothing is wrong with the model — it just gets hard to see the household you care about.
-- **Wanted:** Layers or filters when a Source actually hurts. Not scheduled. Parked here until dogfood proves we need it.
-
-### Automatic structure from the Artifact (beyond transcription)
-
-- **Date:** 2026-09-23
-- **Where:** Citation composer / Evidence graph
-- **Annoyance:** Even after transcription is filled, the researcher still retypes names, dates, and roles onto cards. Spike 8 only dumps text into **transcription**.
-- **Wanted:** Cheap field hints after there is a string (`NSDataDetector`, name/date patterns) and, later, guided extract. Not catalog writes.
-- **Still out:** PDF OCR / Vision on page rasters; Live Text / VisionKit; Foundation Models (`macOS 26+`, raise-the-floor). Pipeline if we ever did it: string → suggestions the researcher accepts → real Citation + Observations. Experiment: “obituary → draft cards,” not “obituary → catalog writes.”
 
 ## Done
 

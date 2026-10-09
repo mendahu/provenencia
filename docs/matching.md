@@ -125,8 +125,8 @@ Tests: [`core/match/names_test.go`](../core/match/names_test.go) has three layer
 When a seed finds a bug, shrink it into an exact-score case.
 
 Not yet handled:
-- **Accents, scripts, non-Western structures, nicknames:** see [`ideas/international-names.md`](ideas/international-names.md).
-- **Abbreviations (Jas., Wm.), name frequency, spaced particles ("O Brien"), sound-alikes, name changes:** see [`ideas/name-matching-enhancements.md`](ideas/name-matching-enhancements.md), with the engine-level items (support weighting, derived features, researcher decisions).
+- **Accents, Spanish dual surnames, patronymic, nicknames, Daitch–Mokotoff:** Spike 10, [`deployment-plan/spike-10/international-names.md`](deployment-plan/spike-10/international-names.md). Other patterns, transliteration, and calendars: [`ideas/international-names.md`](ideas/international-names.md).
+- **Abbreviations, project name frequency, spaced particles, support weighting, date windows, event and place affinity:** Spike 10, [`deployment-plan/spike-10/name-matching-enhancements.md`](deployment-plan/spike-10/name-matching-enhancements.md). Known-as, concluded values, calibration, and rejected-claim memory: [`ideas/name-matching-enhancements.md`](ideas/name-matching-enhancements.md).
 
 **Resolution uses the same parts.** The reconciler (`core/autoreconcile/names.go`) and `NameComparer` both ignore `form`. A name with no parts is no evidence there and not comparable here. The cache name `sort_key` (list order) is still the normalized form, and list and card text shows it. That sort key is not a match.
 

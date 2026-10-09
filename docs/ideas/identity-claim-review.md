@@ -1,6 +1,6 @@
 # Identity Claim review (weak-claim alert)
 
-**Status:** parked for claim management (Spike 10). Rules live in [`conclusion-layer-data-model.md`](../conclusion-layer-data-model.md) §5.2; this note is the UI shape.
+**Status:** parked. Claim management is not scheduled. Spike 10 is the dogfood UX cleanup. Rules live in [`conclusion-layer-data-model.md`](../conclusion-layer-data-model.md) §5.2; this note is the UI shape.
 
 ## Why
 
