@@ -288,7 +288,7 @@ func foldPlacesOf(q Querier, byEvent map[string][]HeaderPlace, atByEvent map[str
 			seeds = append(seeds, p.Entity.ID)
 		}
 	}
-	g, err := loadPlaceGraph(q, seeds)
+	g, err := loadPlaceGraph(q, seeds, reachAncestors)
 	if err != nil {
 		return nil, err
 	}

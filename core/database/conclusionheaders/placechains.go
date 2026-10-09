@@ -3,6 +3,7 @@ package conclusionheaders
 import (
 	"bytes"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/mendahu/provenencia/core/autoreconcile"
@@ -20,72 +21,122 @@ type placeLink struct {
 }
 
 // placeGraph is the part_of / succeeded_by neighborhood needed to compose
-// chains for a set of Places at a query date.
+// chains for a set of Places at a query date. Links are indexed by endpoint,
+// so a lookup reads one Place's links, not every link loaded.
 type placeGraph struct {
 	byID   map[string]PlaceHeader
 	partOf []placeLink // from = part → to = whole
 	succ   []placeLink // from = predecessor → to = successor
 	period map[string]autoreconcile.Window
+
+	partUp   map[string][]int // part id → its partOf links
+	partDown map[string][]int // whole id → its partOf links
+	succOut  map[string][]int // predecessor id → its succ links
+	succIn   map[string][]int // successor id → its succ links
+	linkSeen map[string]bool
+	chains   map[string]parentChainResult // ParentChain memo, by place and window
 }
 
-// loadPlaceGraph loads headers, periods, and relationship edges for seeds
-// and one hop of their part_of / succeeded_by neighbors (enough for fold
-// connectivity and immediate parents). Deeper parents are loaded as walks
-// climb.
-func loadPlaceGraph(q Querier, seeds [][]byte) (*placeGraph, error) {
-	seeds = database.UniqueBlobIDs(seeds)
-	g := &placeGraph{
-		byID:   map[string]PlaceHeader{},
-		period: map[string]autoreconcile.Window{},
+type parentChainResult struct {
+	names      []string
+	candidates bool
+}
+
+func newPlaceGraph() *placeGraph {
+	return &placeGraph{
+		byID:     map[string]PlaceHeader{},
+		period:   map[string]autoreconcile.Window{},
+		partUp:   map[string][]int{},
+		partDown: map[string][]int{},
+		succOut:  map[string][]int{},
+		succIn:   map[string][]int{},
+		linkSeen: map[string]bool{},
+		chains:   map[string]parentChainResult{},
 	}
+}
+
+// placeReach is how much of the hierarchy a caller needs.
+type placeReach int
+
+const (
+	// reachAncestors climbs part_of to the top: enough for chains and
+	// folding, which only ever look up.
+	reachAncestors placeReach = iota
+	// reachDetail is the ancestors plus one hop of parts and of succession
+	// both ways, for a Place page.
+	reachDetail
+)
+
+// maxClimb bounds the part_of climb; filing refuses cycles, so a real
+// hierarchy ends long before it.
+const maxClimb = 64
+
+// loadPlaceGraph loads headers, periods, and part_of links for seeds and
+// every ancestor (reachAncestors), plus one hop of parts and succession for
+// reachDetail. Each step is one batched walk over the new Places, never
+// their siblings or descendants.
+func loadPlaceGraph(q Querier, seeds [][]byte, reach placeReach) (*placeGraph, error) {
+	seeds = database.UniqueBlobIDs(seeds)
+	g := newPlaceGraph()
 	if len(seeds) == 0 {
 		return g, nil
 	}
-	frontier := append([][]byte(nil), seeds...)
+	if err := g.ensurePlaces(q, seeds); err != nil {
+		return nil, err
+	}
+	if reach == reachDetail {
+		partRev, err := canonicalgraph.Walk(q, canonicalgraph.PartsOfPlace, seeds)
+		if err != nil {
+			return nil, err
+		}
+		succEdges, err := canonicalgraph.Walk(q, canonicalgraph.SuccessorsOfPlace, seeds)
+		if err != nil {
+			return nil, err
+		}
+		predEdges, err := canonicalgraph.Walk(q, canonicalgraph.PredecessorsOfPlace, seeds)
+		if err != nil {
+			return nil, err
+		}
+		dates, err := loadAssociationDates(q, associationIDs(partRev, succEdges, predEdges))
+		if err != nil {
+			return nil, err
+		}
+		g.addLinks(false, reverseEdges(partRev), dates)
+		g.addLinks(true, succEdges, dates)
+		g.addLinks(true, reverseEdges(predEdges), dates)
+		var near [][]byte
+		for _, e := range append(append(partRev, succEdges...), predEdges...) {
+			near = append(near, e.To)
+		}
+		if err := g.ensurePlaces(q, database.UniqueBlobIDs(near)); err != nil {
+			return nil, err
+		}
+	}
+
 	seen := map[string]bool{}
 	for _, id := range seeds {
 		seen[string(id)] = true
 	}
-	// Expand along both relationship kinds so tests covering succession and
-	// deep parents stay set-based without N+1 climbs for the first layer.
-	for round := 0; round < 8 && len(frontier) > 0; round++ {
-		if err := g.ensurePlaces(q, frontier); err != nil {
-			return nil, err
-		}
-		partEdges, err := canonicalgraph.Walk(q, canonicalgraph.ParentsOfPlace, frontier)
+	frontier := seeds
+	for climb := 0; climb < maxClimb && len(frontier) > 0; climb++ {
+		edges, err := canonicalgraph.Walk(q, canonicalgraph.ParentsOfPlace, frontier)
 		if err != nil {
 			return nil, err
 		}
-		partRev, err := canonicalgraph.Walk(q, canonicalgraph.PartsOfPlace, frontier)
+		dates, err := loadAssociationDates(q, associationIDs(edges))
 		if err != nil {
 			return nil, err
 		}
-		succEdges, err := canonicalgraph.Walk(q, canonicalgraph.SuccessorsOfPlace, frontier)
-		if err != nil {
-			return nil, err
-		}
-		predEdges, err := canonicalgraph.Walk(q, canonicalgraph.PredecessorsOfPlace, frontier)
-		if err != nil {
-			return nil, err
-		}
-		assocIDs := associationIDs(partEdges, partRev, succEdges, predEdges)
-		dates, err := loadAssociationDates(q, assocIDs)
-		if err != nil {
-			return nil, err
-		}
-		g.addLinks(&g.partOf, partEdges, dates)
-		g.addLinks(&g.partOf, reverseEdges(partRev), dates)
-		g.addLinks(&g.succ, succEdges, dates)
-		g.addLinks(&g.succ, reverseEdges(predEdges), dates)
-
+		g.addLinks(false, edges, dates)
 		var next [][]byte
-		for _, e := range append(append(partEdges, partRev...), append(succEdges, predEdges...)...) {
-			for _, id := range [][]byte{e.From, e.To} {
-				if !seen[string(id)] {
-					seen[string(id)] = true
-					next = append(next, id)
-				}
+		for _, e := range edges {
+			if !seen[string(e.To)] {
+				seen[string(e.To)] = true
+				next = append(next, e.To)
 			}
+		}
+		if err := g.ensurePlaces(q, next); err != nil {
+			return nil, err
 		}
 		frontier = next
 	}
@@ -108,29 +159,46 @@ func (g *placeGraph) ensurePlaces(q Querier, ids [][]byte) error {
 		return err
 	}
 	for _, h := range headers {
-		g.byID[string(h.Entity.ID)] = h
-		g.period[string(h.Entity.ID)] = autoreconcile.PeriodWindow(h.StartDate, h.EndDate)
+		g.setPlace(h)
 	}
 	return nil
 }
 
-func (g *placeGraph) addLinks(dst *[]placeLink, edges []canonicalgraph.Edge, dates map[string]assocDates) {
-	seen := map[string]bool{}
-	for _, l := range *dst {
-		seen[string(l.from)+"\x00"+string(l.to)+"\x00"+string(l.association)] = true
-	}
+// setPlace records a Place's header and period.
+func (g *placeGraph) setPlace(h PlaceHeader) {
+	g.byID[string(h.Entity.ID)] = h
+	g.period[string(h.Entity.ID)] = autoreconcile.PeriodWindow(h.StartDate, h.EndDate)
+}
+
+// addLinks adds walked edges as succession (succession) or part_of links,
+// once each.
+func (g *placeGraph) addLinks(succession bool, edges []canonicalgraph.Edge, dates map[string]assocDates) {
 	for _, e := range edges {
 		key := string(e.From) + "\x00" + string(e.To) + "\x00" + string(e.Association)
-		if seen[key] {
+		if succession {
+			key = "s\x00" + key
+		}
+		if g.linkSeen[key] {
 			continue
 		}
-		seen[key] = true
+		g.linkSeen[key] = true
 		d := dates[string(e.Association)]
-		*dst = append(*dst, placeLink{
+		l := placeLink{
 			from: append([]byte(nil), e.From...), to: append([]byte(nil), e.To...),
 			association: append([]byte(nil), e.Association...),
 			start:       d.start, end: d.end,
-		})
+		}
+		if succession {
+			g.succ = append(g.succ, l)
+			i := len(g.succ) - 1
+			g.succOut[string(l.from)] = append(g.succOut[string(l.from)], i)
+			g.succIn[string(l.to)] = append(g.succIn[string(l.to)], i)
+			continue
+		}
+		g.partOf = append(g.partOf, l)
+		i := len(g.partOf) - 1
+		g.partUp[string(l.from)] = append(g.partUp[string(l.from)], i)
+		g.partDown[string(l.to)] = append(g.partDown[string(l.to)], i)
 	}
 }
 
@@ -262,68 +330,27 @@ func queryWindow(at *datevalues.Value) autoreconcile.Window {
 
 // ImmediateParents are the part_of wholes that hold (or are ambiguous) at at.
 func (g *placeGraph) ImmediateParents(placeID []byte, at *datevalues.Value) [][]byte {
-	q := queryWindow(at)
-	seen := map[string]bool{}
-	var out [][]byte
-	for _, l := range g.partOf {
-		if !bytes.Equal(l.from, placeID) || !g.linkHolds(q, l) {
-			continue
-		}
-		if seen[string(l.to)] {
-			continue
-		}
-		seen[string(l.to)] = true
-		out = append(out, l.to)
-	}
-	sort.SliceStable(out, func(i, j int) bool {
-		return g.displayName(out[i]) < g.displayName(out[j])
-	})
-	return out
+	return g.partNeighbors(g.partUp[string(placeID)], at, true)
 }
 
 // ImmediateParts are the part_of parts that hold at at.
 func (g *placeGraph) ImmediateParts(placeID []byte, at *datevalues.Value) [][]byte {
+	return g.partNeighbors(g.partDown[string(placeID)], at, false)
+}
+
+// partNeighbors is the other end of each holding link, once, by name.
+func (g *placeGraph) partNeighbors(links []int, at *datevalues.Value, up bool) [][]byte {
 	q := queryWindow(at)
 	seen := map[string]bool{}
 	var out [][]byte
-	for _, l := range g.partOf {
-		if !bytes.Equal(l.to, placeID) || !g.linkHolds(q, l) {
+	for _, i := range links {
+		l := g.partOf[i]
+		if !g.linkHolds(q, l) {
 			continue
 		}
-		if seen[string(l.from)] {
-			continue
-		}
-		seen[string(l.from)] = true
-		out = append(out, l.from)
-	}
-	sort.SliceStable(out, func(i, j int) bool {
-		return g.displayName(out[i]) < g.displayName(out[j])
-	})
-	return out
-}
-
-// Successors are succeeded_by targets (dates do not filter succession for
-// lineage reads; membership spans never build a display chain).
-func (g *placeGraph) Successors(placeID []byte) [][]byte {
-	return g.succNeighbors(placeID, true)
-}
-
-// Predecessors are succeeded_by sources.
-func (g *placeGraph) Predecessors(placeID []byte) [][]byte {
-	return g.succNeighbors(placeID, false)
-}
-
-func (g *placeGraph) succNeighbors(placeID []byte, forward bool) [][]byte {
-	seen := map[string]bool{}
-	var out [][]byte
-	for _, l := range g.succ {
-		var other []byte
-		if forward && bytes.Equal(l.from, placeID) {
+		other := l.from
+		if up {
 			other = l.to
-		} else if !forward && bytes.Equal(l.to, placeID) {
-			other = l.from
-		} else {
-			continue
 		}
 		if seen[string(other)] {
 			continue
@@ -331,10 +358,44 @@ func (g *placeGraph) succNeighbors(placeID []byte, forward bool) [][]byte {
 		seen[string(other)] = true
 		out = append(out, other)
 	}
-	sort.SliceStable(out, func(i, j int) bool {
-		return g.displayName(out[i]) < g.displayName(out[j])
-	})
+	g.sortByName(out)
 	return out
+}
+
+// Successors are succeeded_by targets (dates do not filter succession for
+// lineage reads; membership spans never build a display chain).
+func (g *placeGraph) Successors(placeID []byte) [][]byte {
+	return g.succNeighbors(g.succOut[string(placeID)], true)
+}
+
+// Predecessors are succeeded_by sources.
+func (g *placeGraph) Predecessors(placeID []byte) [][]byte {
+	return g.succNeighbors(g.succIn[string(placeID)], false)
+}
+
+func (g *placeGraph) succNeighbors(links []int, forward bool) [][]byte {
+	seen := map[string]bool{}
+	var out [][]byte
+	for _, i := range links {
+		l := g.succ[i]
+		other := l.from
+		if forward {
+			other = l.to
+		}
+		if seen[string(other)] {
+			continue
+		}
+		seen[string(other)] = true
+		out = append(out, other)
+	}
+	g.sortByName(out)
+	return out
+}
+
+func (g *placeGraph) sortByName(ids [][]byte) {
+	sort.SliceStable(ids, func(i, j int) bool {
+		return g.displayName(ids[i]) < g.displayName(ids[j])
+	})
 }
 
 func (g *placeGraph) displayName(id []byte) string {
@@ -350,9 +411,26 @@ func (g *placeGraph) displayName(id []byte) string {
 
 // ParentChain walks hierarchical parents at at. One unambiguous path is
 // nearest-first ancestors. Several parents at a level are every candidate
-// (candidates=true; no nature preference). Cycle-guarded.
+// (candidates=true; no nature preference). Cycle-guarded, and remembered per
+// Place and query window: a list asks for the same chain many times.
 func (g *placeGraph) ParentChain(placeID []byte, at *datevalues.Value) (names []string, candidates bool) {
-	return g.parentChain(placeID, at, map[string]bool{string(placeID): true})
+	key := string(placeID) + "\x00" + windowKey(queryWindow(at))
+	if r, ok := g.chains[key]; ok {
+		return append([]string(nil), r.names...), r.candidates
+	}
+	names, candidates = g.parentChain(placeID, at, map[string]bool{string(placeID): true})
+	g.chains[key] = parentChainResult{names: append([]string(nil), names...), candidates: candidates}
+	return names, candidates
+}
+
+func windowKey(w autoreconcile.Window) string {
+	bound := func(p *int) string {
+		if p == nil {
+			return "*"
+		}
+		return strconv.Itoa(*p)
+	}
+	return bound(w.Lo) + ".." + bound(w.Hi)
 }
 
 // ParentChainNames is ParentChain's names only.
@@ -501,18 +579,40 @@ func attachPlaceChains(q Querier, headers []PlaceHeader, today datevalues.Value)
 	for i := range headers {
 		ids[i] = headers[i].Entity.ID
 	}
-	g, err := loadPlaceGraph(q, ids)
+	g, err := loadPlaceGraph(q, ids, reachAncestors)
 	if err != nil {
 		return err
 	}
 	for i := range headers {
 		// Prefer the header we already scanned (has Names/period); merge into graph.
-		g.byID[string(headers[i].Entity.ID)] = headers[i]
-		g.period[string(headers[i].Entity.ID)] = autoreconcile.PeriodWindow(headers[i].StartDate, headers[i].EndDate)
+		g.setPlace(headers[i])
+	}
+	for i := range headers {
 		at := chainQueryDate(headers[i], today)
 		headers[i].Parents, headers[i].ParentsAreCandidates = g.ParentChain(headers[i].Entity.ID, &at)
 	}
 	return nil
+}
+
+// PlaceDetail is one Place's header for its page: today's (or last) chain,
+// and PartOf / Contains / Predecessors / Successors. One graph load serves
+// both. found is false for an unknown, merged, or non-Place id.
+func PlaceDetail(q Querier, id []byte) (h PlaceHeader, found bool, err error) {
+	headers, err := placesWithoutChains(q, [][]byte{id})
+	if err != nil || len(headers) != 1 {
+		return PlaceHeader{}, false, err
+	}
+	h = headers[0]
+	g, err := loadPlaceGraph(q, [][]byte{id}, reachDetail)
+	if err != nil {
+		return PlaceHeader{}, false, err
+	}
+	g.setPlace(h)
+	today := TodayDate()
+	at := chainQueryDate(h, today)
+	h.Parents, h.ParentsAreCandidates = g.ParentChain(id, &at)
+	g.attachRelationships(&h, today)
+	return h, true, nil
 }
 
 // AttachPlaceRelationships fills PartOf / Contains / Predecessors /
@@ -522,19 +622,20 @@ func AttachPlaceRelationships(q Querier, h *PlaceHeader) error {
 	if h == nil || len(h.Entity.ID) == 0 {
 		return nil
 	}
-	g, err := loadPlaceGraph(q, [][]byte{h.Entity.ID})
+	g, err := loadPlaceGraph(q, [][]byte{h.Entity.ID}, reachDetail)
 	if err != nil {
 		return err
 	}
-	g.byID[string(h.Entity.ID)] = *h
-	g.period[string(h.Entity.ID)] = autoreconcile.PeriodWindow(h.StartDate, h.EndDate)
-	today := TodayDate()
+	g.setPlace(*h)
+	g.attachRelationships(h, TodayDate())
+	return nil
+}
+
+func (g *placeGraph) attachRelationships(h *PlaceHeader, today datevalues.Value) {
 
 	seenPart := map[string]bool{}
-	for _, l := range g.partOf {
-		if !bytes.Equal(l.from, h.Entity.ID) {
-			continue
-		}
+	for _, i := range g.partUp[string(h.Entity.ID)] {
+		l := g.partOf[i]
 		if _, ok := autoreconcile.LinkMembership(l.start, l.end, g.periodOf(l.from), g.periodOf(l.to)); !ok {
 			continue
 		}
@@ -553,8 +654,8 @@ func AttachPlaceRelationships(q Querier, h *PlaceHeader) error {
 
 	for _, id := range g.ImmediateParts(h.Entity.ID, &today) {
 		rel := g.relationship(id, RelContains)
-		for _, l := range g.partOf {
-			if bytes.Equal(l.to, h.Entity.ID) && bytes.Equal(l.from, id) {
+		for _, i := range g.partDown[string(h.Entity.ID)] {
+			if l := g.partOf[i]; bytes.Equal(l.from, id) {
 				rel.StartDate, rel.EndDate = membershipDates(l, g.byID[string(l.from)], g.byID[string(l.to)])
 				break
 			}
@@ -576,7 +677,6 @@ func AttachPlaceRelationships(q Querier, h *PlaceHeader) error {
 		}
 		h.Successors = append(h.Successors, rel)
 	}
-	return nil
 }
 
 func (g *placeGraph) relationship(id []byte, kind string) PlaceRelationship {
@@ -647,7 +747,7 @@ func ChildPlaceIDs(q Querier, ids [][]byte) ([][]byte, error) {
 // ParentsAtDate is the hierarchical parent display names for placeID at at
 // (nearest first; several parents → every candidate).
 func ParentsAtDate(q Querier, placeID []byte, at datevalues.Value) ([]string, error) {
-	g, err := loadPlaceGraph(q, [][]byte{placeID})
+	g, err := loadPlaceGraph(q, [][]byte{placeID}, reachAncestors)
 	if err != nil {
 		return nil, err
 	}
@@ -656,7 +756,7 @@ func ParentsAtDate(q Querier, placeID []byte, at datevalues.Value) ([]string, er
 
 // PartsAtDate is the display names of Places that are part_of placeID at at.
 func PartsAtDate(q Querier, placeID []byte, at datevalues.Value) ([]string, error) {
-	g, err := loadPlaceGraph(q, [][]byte{placeID})
+	g, err := loadPlaceGraph(q, [][]byte{placeID}, reachDetail)
 	if err != nil {
 		return nil, err
 	}
@@ -673,7 +773,7 @@ func PartsAtDate(q Querier, placeID []byte, at datevalues.Value) ([]string, erro
 // SuccessionNames is predecessor and successor display names via
 // succeeded_by (dates do not filter; never used for display chains).
 func SuccessionNames(q Querier, placeID []byte) (predecessors, successors []string, err error) {
-	g, err := loadPlaceGraph(q, [][]byte{placeID})
+	g, err := loadPlaceGraph(q, [][]byte{placeID}, reachDetail)
 	if err != nil {
 		return nil, nil, err
 	}

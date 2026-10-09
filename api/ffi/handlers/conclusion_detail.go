@@ -130,14 +130,11 @@ func attachHeader(c *database.Catalog, db conclusionheaders.Querier, d conclusio
 		}
 		out.Header = &engine.ConclusionDetail_Event{Event: eventHeaderProto(h[0])}
 	case "place":
-		h, err := conclusionheaders.PlacesByIDs(db, ids)
-		if err != nil || len(h) != 1 {
+		h, found, err := conclusionheaders.PlaceDetail(db, d.Entity.ID)
+		if err != nil || !found {
 			return err
 		}
-		if err := conclusionheaders.AttachPlaceRelationships(db, &h[0]); err != nil {
-			return err
-		}
-		out.Header = &engine.ConclusionDetail_Place{Place: placeHeaderProto(h[0])}
+		out.Header = &engine.ConclusionDetail_Place{Place: placeHeaderProto(h)}
 	}
 	return nil
 }
