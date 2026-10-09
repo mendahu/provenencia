@@ -35,7 +35,7 @@ handles ┘                    └── Feature: Property · Comparer · Weight
 
 ## Scoring
 
-Scores are **additive points**, so the weights read directly: "a matching name is worth 10, a different sex at birth costs 8".
+Scores are **additive points**, so the weights read directly: "a matching name is worth 10, a different sex at birth costs 2".
 
 For each Feature in the Profile:
 
@@ -138,12 +138,12 @@ These live in [`core/match/registry.go`](../core/match/registry.go), with every 
 
 | Kind | Features (Weight / Contradiction) | MinScore |
 | --- | --- | --- |
-| person | name 10 / 0 · sex_at_birth 1 / 8 (unknown, indeterminate neutral) | 3 |
+| person | name 10 / 0 · sex_at_birth 1 / 2 (unknown, indeterminate neutral) | 3 |
 | event | event_type 4 / 6 · date 6 / 4 · start_date 3 / 2 · end_date 3 / 2 | 5 |
 | place | toponym 10 / 0 | 3 |
 
 Worked examples:
-- **Person:** "James Robins" against "Mary Robins" scores 10 × 0.6 = 6 with typed parts (10 × 0.4 = 4 by form alone), which is shown but below the same name. The same name with a different sex at birth scores 10 − 8 = 2, which is hidden.
+- **Person:** "James Robins" against "Mary Robins" scores 10 × 0.6 = 6 with typed parts (10 × 0.4 = 4 by form alone), which is shown but below the same name. The same name with a different sex at birth scores 10 − 2 = 8: the mismatch narrows the score and does not hide a name that cleared MinScore.
 - **Event:** the same event type alone (every birth) scores 4, which is hidden. The same type plus the same year scores 4 + 4.8.
 
 ## Configuring

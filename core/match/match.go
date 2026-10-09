@@ -7,7 +7,7 @@
 // that count: which Property, how its values are compared (a Comparer), how
 // much a resemblance adds (Weight), and how much a clear disagreement takes
 // away (Contradiction). Scores are additive, so the weights read as points:
-// "a matching name is worth 10, a different sex at birth costs 8". Default
+// "a matching name is worth 10, a different sex at birth costs 2". Default
 // profiles live in profiles.go; callers may pass their own.
 //
 // Pure: no catalog access. core/database/matching loads probes and
