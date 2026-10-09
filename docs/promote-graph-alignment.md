@@ -44,7 +44,7 @@ Promote is one workspace page; the choose-target screen and the separate claim s
 
 - **Entry:** the Promote button on any unpromoted Subject card, as today. The page opens with that Subject's row, preselected to its best match, plus **"Map the rest of this graph (N Subjects)"**. Promoting one Subject is the same page with one row.
 - **Rows:** one per primary Subject on the Evidence graph (person, event, place).
-  - **Already promoted:** shown read-only, with no controls. They are anchors for the graph alignment, and editing them is a separate workflow (Spike 10).
+  - **Already promoted:** shown read-only, with no controls. They are anchors for the graph alignment, and editing them is a separate workflow ([`ideas/identity-claim-review.md`](ideas/identity-claim-review.md)), not Spike 10.
   - **Unpromoted:** a target dropdown with the best match preselected, the next few alternatives, **New**, and **Skip**.
 - **Assessment:** each row shows **strong**, **weak** or **no match**. Clicking it opens a **sheet** with every comparison that contributed: agree, conflict or unknown, with its weight. The agreeing comparisons are preselected as pins and can be toggled.
 - **Claim fields per row:** status, confidence and argument. The argument can be drafted from the assessment.
