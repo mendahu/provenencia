@@ -114,9 +114,19 @@ func computeStats(q Querier) (graphalign.Stats, error) {
 		st.ValueFreq[c.prop][c.key] = c.n / den
 	}
 
+	kin, err := loadKinship(q)
+	if err != nil {
+		return graphalign.Stats{}, err
+	}
+	sums := map[string]fanOutSum{}
 	for _, b := range connectrules.Bridges() {
-		if err := addFanOut(q, b, st.FanOut); err != nil {
+		if err := addFanOut(q, b, kin, sums); err != nil {
 			return graphalign.Stats{}, err
+		}
+	}
+	for key, s := range sums {
+		if s.ends > 0 {
+			st.FanOut[key] = s.edges / s.ends
 		}
 	}
 	return st, nil
@@ -143,7 +153,13 @@ const sqlFanOut = `SELECT COALESCE(dt.key, ''), COALESCE(nt.key, ''),
 	WHERE assoc.merged_into_id IS NULL
 	GROUP BY dt.key, nt.key`
 
-func addFanOut(q Querier, b connectrules.Bridge, into map[string]float64) error {
+// fanOutSum is one signature's association count over its distinct
+// from-end handles.
+type fanOutSum struct{ edges, ends float64 }
+
+// addFanOut adds one bridge type's counts to sums. A relationship term and
+// its inverse share one signature key, so their counts add up under it.
+func addFanOut(q Querier, b connectrules.Bridge, kin kinship, sums map[string]fanOutSum) error {
 	if len(b.Endpoints) != 2 {
 		return nil
 	}
@@ -172,14 +188,21 @@ func addFanOut(q Querier, b connectrules.Bridge, into map[string]float64) error 
 		if ends <= 0 {
 			continue
 		}
+		if disamb != "" {
+			term, _ = kin.canonical(disamb, term)
+		}
 		sig := graphalign.EdgeSignature{
 			BridgeType: b.BridgeTypeKey, RoleOrType: term,
 			NeighborKind: to.TypeKey, NeighborTypeTerm: neighborType,
 		}
-		into[sig.Key()] = edges / ends
+		sum := sums[sig.Key()]
+		sum.edges += edges
+		sum.ends += ends
+		sums[sig.Key()] = sum
 	}
 	return rows.Err()
 }
+
 func cloneStats(s graphalign.Stats) graphalign.Stats {
 	out := graphalign.Stats{
 		ValueFreq: map[string]map[string]float64{},

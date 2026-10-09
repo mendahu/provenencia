@@ -161,7 +161,7 @@ func loadLayerBridges(q Querier, sourceID []byte, primary map[string]primarySubj
 			A: append([]byte(nil), a...), B: append([]byte(nil), b...), Signature: sig,
 		})
 	}
-	directed, err := directedTerms(q)
+	kin, err := loadKinship(q)
 	if err != nil {
 		return nil, err
 	}
@@ -222,10 +222,16 @@ func loadLayerBridges(q Querier, sourceID []byte, primary map[string]primarySubj
 		return nil, err
 	}
 	for _, e := range relationships {
-		rel := relTypes[string(e.Association)]
-		add(e.From, e.To, graphalign.EdgeSignature{
+		// "John child of Mary" reads as "Mary parent of John" (or the reverse)
+		// so one relationship has one signature whichever end recorded it.
+		rel, flip := kin.canonical(connectrules.DisambiguationRelationshipType, relTypes[string(e.Association)])
+		from, to := e.From, e.To
+		if flip {
+			from, to = to, from
+		}
+		add(from, to, graphalign.EdgeSignature{
 			BridgeType: "relationship", RoleOrType: rel, NeighborKind: "person",
-			Directed: directed[connectrules.DisambiguationRelationshipType+"|"+rel],
+			Directed: kin.directed[connectrules.DisambiguationRelationshipType+"|"+rel],
 		})
 	}
 
@@ -244,7 +250,7 @@ func loadLayerBridges(q Querier, sourceID []byte, primary map[string]primarySubj
 		for _, e := range edges {
 			add(e.From, e.To, graphalign.EdgeSignature{
 				BridgeType: "place_relationship", RoleOrType: step.term, NeighborKind: "place",
-				Directed: directed[connectrules.DisambiguationPlaceRelationshipType+"|"+step.term],
+				Directed: kin.directed[connectrules.DisambiguationPlaceRelationshipType+"|"+step.term],
 			})
 		}
 	}
