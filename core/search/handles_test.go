@@ -9,6 +9,7 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/citations"
+	"github.com/mendahu/provenencia/core/database/connect"
 	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/namevalues/namevaluestest"
 	"github.com/mendahu/provenencia/core/database/observations"
@@ -17,6 +18,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/propertyterms"
 	"github.com/mendahu/provenencia/core/database/searchindex"
 	"github.com/mendahu/provenencia/core/database/sources"
+	"github.com/mendahu/provenencia/core/database/subjectpositions"
 	"github.com/mendahu/provenencia/core/database/subjects"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
@@ -205,6 +207,114 @@ func TestHandleSearchFollowsEdits(t *testing.T) {
 	}
 }
 
+func TestHeaderSearchFindsTheListTitle(t *testing.T) {
+	f := newHandleFixture(t)
+	person := f.person("James Robins", "Jim Robins")
+	birth, err := propertyterms.Lookup(f.c, f.prop("event_type").ID, "birth", propertyterms.OriginProvenencia)
+	if err != nil {
+		t.Fatal(err)
+	}
+	y := 1817
+	event := f.subject("event", func(s subjects.Subject) []observations.Input {
+		return []observations.Input{
+			{SubjectID: s.ID, PropertyID: f.prop("event_type").ID, ValueTermID: birth.ID},
+			{SubjectID: s.ID, PropertyID: f.prop("date").ID, Date: &datevalues.Value{Kind: datevalues.KindPoint, Calendar: "gregorian", StartYear: &y}},
+		}
+	})
+	place := f.subject("place", func(s subjects.Subject) []observations.Input {
+		return []observations.Input{{SubjectID: s.ID, PropertyID: f.prop("toponym").ID, ValueText: "York", HasText: true}}
+	})
+	for i, s := range []subjects.Subject{person, event, place} {
+		if _, err := subjectpositions.Set(f.c, s.ID, int64(i), 0); err != nil {
+			t.Fatal(err)
+		}
+	}
+	role, err := propertyterms.Lookup(f.c, f.prop("role").ID, "subject", propertyterms.OriginProvenencia)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := connect.CreateCitedBridge(f.c, f.user, connect.CreateInput{
+		SourceID: f.source, FromSubjectID: person.ID, ToSubjectID: event.ID, BridgeTypeKey: "participation",
+		Citation: citations.CreateInput{ArtifactID: f.artifact, LocatorJSON: handleLocator},
+		Observations: []observations.Input{
+			{PropertyID: f.prop("person").ID, ValueSubjectID: person.ID},
+			{PropertyID: f.prop("event").ID, ValueSubjectID: event.ID},
+			{PropertyID: f.prop("role").ID, ValueTermID: role.ID},
+		},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := connect.CreateCitedBridge(f.c, f.user, connect.CreateInput{
+		SourceID: f.source, FromSubjectID: event.ID, ToSubjectID: place.ID, BridgeTypeKey: "location",
+		Citation: citations.CreateInput{ArtifactID: f.artifact, LocatorJSON: handleLocator},
+		Observations: []observations.Input{
+			{PropertyID: f.prop("event").ID, ValueSubjectID: event.ID},
+			{PropertyID: f.prop("place").ID, ValueSubjectID: place.ID},
+		},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	promoted := f.promote(person, nil)
+	f.promote(event, nil)
+	f.promote(place, nil)
+	f.fileBridges()
+
+	if hits := f.search("Jim Robins", KindPerson); len(hits) != 1 || hits[0].Ref != promoted.Entity.Ref {
+		t.Fatalf("alternate name: %s", refsOf(hits))
+	}
+	if hits := f.search(promoted.Entity.Ref, KindPerson); len(hits) != 1 || hits[0].MatchReason != "ref" {
+		t.Fatalf("ref: %+v", hits)
+	}
+	if hits := f.search("James", KindEvent); len(hits) != 1 || hits[0].Title != "Birth of James Jim Robins" {
+		t.Fatalf("event title: %+v", hits)
+	}
+	if hits := f.search("York", KindPlace); len(hits) != 1 {
+		t.Fatalf("place: %s", refsOf(hits))
+	}
+
+	obs, err := observations.ListBySubject(f.c, person.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var jamesObs observations.Listed
+	for _, o := range obs {
+		if o.ValueNameForm == "James Robins" || o.ValueText == "James Robins" {
+			jamesObs = o
+			break
+		}
+	}
+	if len(jamesObs.ID) != 16 {
+		t.Fatalf("james observation missing: %+v", obs)
+	}
+	if _, err := observations.Update(f.c, f.user, observations.Input{
+		ID: jamesObs.ID, SubjectID: person.ID, PropertyID: f.prop("name").ID,
+		Name: namevaluestest.Western("John Robins"),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if hits := f.search("John", KindEvent); len(hits) != 1 || hits[0].Title != "Birth of John Jim Robins" {
+		t.Fatalf("after edit: %+v", hits)
+	}
+	if hits := f.search("James", KindEvent); len(hits) != 0 {
+		t.Fatalf("old name still titles the event: %+v", hits)
+	}
+}
+
+func (f *handleFixture) fileBridges() {
+	f.t.Helper()
+	db, err := f.c.DB()
+	if err != nil {
+		f.t.Fatal(err)
+	}
+	var rev int64
+	if err := db.QueryRow(`SELECT COALESCE(MAX(revision), 0) FROM audit_transactions`).Scan(&rev); err != nil {
+		f.t.Fatal(err)
+	}
+	if _, err := promote.SaveBatch(f.c, f.user, promote.Batch{SourceID: f.source, SeenRevision: rev}); err != nil {
+		f.t.Fatal(err)
+	}
+}
+
 func TestHandleSearchEventsAndPlaces(t *testing.T) {
 	f := newHandleFixture(t)
 	birth, err := propertyterms.Lookup(f.c, f.prop("event_type").ID, "birth", propertyterms.OriginProvenencia)
@@ -223,7 +333,7 @@ func TestHandleSearchEventsAndPlaces(t *testing.T) {
 	}), nil)
 	f.promote(f.person("York Smith"), nil)
 
-	if hits := f.search("Birth", KindEvent); len(hits) != 1 || hits[0].Ref != event.Entity.Ref || hits[0].Title != "Birth" {
+	if hits := f.search("Birth", KindEvent); len(hits) != 1 || hits[0].Ref != event.Entity.Ref || hits[0].Title != "Unspecified birth" {
 		t.Fatalf("event by type: %+v", hits)
 	}
 	if hits := f.search("1817", KindEvent); len(hits) != 1 || hits[0].Location.Section != SectionEvents {

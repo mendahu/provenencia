@@ -503,7 +503,7 @@ In order; each brief sits just above the PR it gates.
 - [x] ✎ S9-D16 — Design: Promote page (rethink) → [`completed.md`](completed.md)
 - [x] S9-44 — Promote page → [`completed.md`](completed.md)
 - [ ] S9-33 — Deep fixture + timings
-- [ ] S9-34 — Search documents from headers + dependents
+- [x] S9-34 — Search documents from headers + dependents → [`completed.md`](completed.md)
 - [ ] ✎ S9-D13 — Design: omnibar hits
 - [ ] S9-35 — Omnibar Conclusion hits
 - [ ] S9-99 — Dogfood close / docs
@@ -957,12 +957,7 @@ Design: [`promote-graph-alignment.md`](../../promote-graph-alignment.md). Brief:
 
 #### S9-34 — Search documents from headers + dependents
 
-S9-34a shipped the kinds, cached-value documents, upkeep through `RecomputeTx`, the kinds filter and member counts. What remains here:
-
-| | |
-| --- | --- |
-| **In** | Documents from the header composers (match text only): "Birth of James Robins", a Person's life dates and places, a Place's names and today's chain. Reproject a handle's header dependents in the write transaction (deletes feed it `Released.Handles`). `SearchHit` carries the structured header. `ProjectionVersion` bump; FakeStore. Existing hit rows render a fallback until S9-35. |
-| **Depends on** | S9-31, S9-34a |
+**Done.** See [`completed.md`](completed.md#s9-34--search-documents-from-headers--dependents). Match text comes from the list headers. Kinds stay out of the omnibar default until S9-35.
 
 #### S9-35 — Omnibar Conclusion hits
 

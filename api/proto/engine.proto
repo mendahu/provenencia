@@ -826,6 +826,13 @@ message SearchHit {
   // Optional raw snippet for body/rollup matches (notes/metadata/filename). No English prefix.
   string match_snippet = 10;
   int32 member_count = 11; // accepted members, for person / event / place hits
+  // The list header for a person, event, or place hit. Title and subtitle
+  // stay match text; the app formats the row from this header (S9-35).
+  oneof header {
+    PersonHeader person = 12;
+    EventHeader event = 13;
+    PlaceHeader place = 14;
+  }
 }
 
 message SearchCatalogResponse {
