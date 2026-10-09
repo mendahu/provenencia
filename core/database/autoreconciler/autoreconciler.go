@@ -190,9 +190,9 @@ func RecomputeTouchingTx(q Querier, entityIDs [][]byte, subjectID []byte) error 
 	return RecomputeTx(q, append(entityIDs, extra...))
 }
 
-// RecomputeSubjectsTx recomputes the handles the given Subjects are accepted
-// members of. Unpromoted Subjects are ignored.
-func RecomputeSubjectsTx(q Querier, subjectIDs [][]byte) error {
+// HandlesForSubjects is the handle list RecomputeSubjectsTx recomputes.
+// Unpromoted Subjects are ignored.
+func HandlesForSubjects(q Querier, subjectIDs [][]byte) ([][]byte, error) {
 	ids := database.UniqueBlobIDs(subjectIDs)
 	var handles [][]byte
 	for start := 0; start < len(ids); start += batchSize {
@@ -200,9 +200,19 @@ func RecomputeSubjectsTx(q Querier, subjectIDs [][]byte) error {
 		batch := ids[start:end]
 		got, err := listIDs(q, sqlHandlesForSubjects+database.SQLInPlaceholders(len(batch))+`)`, database.BlobArgs(batch)...)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		handles = append(handles, got...)
+	}
+	return handles, nil
+}
+
+// RecomputeSubjectsTx recomputes the handles the given Subjects are accepted
+// members of. Unpromoted Subjects are ignored.
+func RecomputeSubjectsTx(q Querier, subjectIDs [][]byte) error {
+	handles, err := HandlesForSubjects(q, subjectIDs)
+	if err != nil {
+		return err
 	}
 	return RecomputeTx(q, handles)
 }
@@ -217,10 +227,15 @@ func RecomputeSourceTx(q Querier, sourceID []byte) error {
 	return RecomputeTx(q, ids)
 }
 
+// HandlesForCitation is the handle list RecomputeCitationTx recomputes.
+func HandlesForCitation(q Querier, citationID []byte) ([][]byte, error) {
+	return listIDs(q, sqlHandlesForCitation, citationID)
+}
+
 // RecomputeCitationTx recomputes the handles whose members have Observations
 // on the Citation: its transcription certainty is part of their evidence.
 func RecomputeCitationTx(q Querier, citationID []byte) error {
-	ids, err := listIDs(q, sqlHandlesForCitation, citationID)
+	ids, err := HandlesForCitation(q, citationID)
 	if err != nil {
 		return err
 	}

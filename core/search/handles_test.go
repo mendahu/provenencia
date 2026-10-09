@@ -11,6 +11,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/connect"
 	"github.com/mendahu/provenencia/core/database/datevalues"
+	"github.com/mendahu/provenencia/core/database/evrun"
 	"github.com/mendahu/provenencia/core/database/namevalues/namevaluestest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
@@ -19,7 +20,6 @@ import (
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/searchindex"
 	"github.com/mendahu/provenencia/core/database/sources"
-	"github.com/mendahu/provenencia/core/database/subjectpositions"
 	"github.com/mendahu/provenencia/core/database/subjects"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
@@ -77,12 +77,12 @@ func (f *handleFixture) subject(kind string, in func(s subjects.Subject) []obser
 	if err != nil {
 		f.t.Fatal(err)
 	}
-	s, err := subjects.Create(f.c, f.user, subjects.CreateInput{SourceID: f.source, SubjectTypeID: st.ID}, nil)
+	s, err := evrun.CreateSubject(f.c, f.user, subjects.CreateInput{SourceID: f.source, SubjectTypeID: st.ID}, nil)
 	if err != nil {
 		f.t.Fatal(err)
 	}
 	if in != nil {
-		if _, err := citations.CreateWithObservations(f.c, f.user, citations.CreateInput{ArtifactID: f.artifact, LocatorJSON: handleLocator}, in(s)); err != nil {
+		if _, err := evrun.CreateCitation(f.c, f.user, citations.CreateInput{ArtifactID: f.artifact, LocatorJSON: handleLocator}, in(s)); err != nil {
 			f.t.Fatal(err)
 		}
 	}
@@ -200,7 +200,7 @@ func TestHandleSearchFollowsEdits(t *testing.T) {
 	if err != nil || len(obs) != 1 {
 		t.Fatalf("%v %d", err, len(obs))
 	}
-	if _, err := observations.Update(f.c, f.user, observations.Input{
+	if _, err := evrun.UpdateObservation(f.c, f.user, observations.Input{
 		ID: obs[0].ID, SubjectID: s.ID, PropertyID: f.prop("name").ID, Name: namevaluestest.Western("Ada Lovelace"),
 	}); err != nil {
 		t.Fatal(err)
@@ -231,7 +231,7 @@ func TestHeaderSearchFindsTheListTitle(t *testing.T) {
 		return []observations.Input{{SubjectID: s.ID, PropertyID: f.prop("toponym").ID, ValueText: "York", HasText: true}}
 	})
 	for i, s := range []subjects.Subject{person, event, place} {
-		if _, err := subjectpositions.Set(f.c, s.ID, int64(i), 0); err != nil {
+		if _, err := evrun.SetPosition(f.c, s.ID, int64(i), 0); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -239,7 +239,7 @@ func TestHeaderSearchFindsTheListTitle(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := connect.CreateCitedBridge(f.c, f.user, connect.CreateInput{
+	if _, err := evrun.CreateBridge(f.c, f.user, connect.CreateInput{
 		SourceID: f.source, FromSubjectID: person.ID, ToSubjectID: event.ID, BridgeTypeKey: "participation",
 		Citation: citations.CreateInput{ArtifactID: f.artifact, LocatorJSON: handleLocator},
 		Observations: []observations.Input{
@@ -250,7 +250,7 @@ func TestHeaderSearchFindsTheListTitle(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := connect.CreateCitedBridge(f.c, f.user, connect.CreateInput{
+	if _, err := evrun.CreateBridge(f.c, f.user, connect.CreateInput{
 		SourceID: f.source, FromSubjectID: event.ID, ToSubjectID: place.ID, BridgeTypeKey: "location",
 		Citation: citations.CreateInput{ArtifactID: f.artifact, LocatorJSON: handleLocator},
 		Observations: []observations.Input{
@@ -292,7 +292,7 @@ func TestHeaderSearchFindsTheListTitle(t *testing.T) {
 	if len(jamesObs.ID) != 16 {
 		t.Fatalf("james observation missing: %+v", obs)
 	}
-	if _, err := observations.Update(f.c, f.user, observations.Input{
+	if _, err := evrun.UpdateObservation(f.c, f.user, observations.Input{
 		ID: jamesObs.ID, SubjectID: person.ID, PropertyID: f.prop("name").ID,
 		Name: namevaluestest.Western("John Robins"),
 	}); err != nil {

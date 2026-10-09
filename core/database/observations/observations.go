@@ -10,11 +10,8 @@ import (
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/connectrules"
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/audit"
-	"github.com/mendahu/provenencia/core/database/autoreconciler"
 	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/namevalues"
-	"github.com/mendahu/provenencia/core/database/project"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/ref"
 )
@@ -154,54 +151,28 @@ type Input struct {
 	Notes          []string
 }
 
-// AddToCitation appends ≥1 Observations to an existing Citation in one audited transaction.
-func AddToCitation(c *database.Catalog, userID, citationID []byte, inputs []Input) ([]Observation, error) {
-	db, err := c.DB()
-	if err != nil {
-		return nil, err
-	}
-	if len(citationID) != 16 || len(inputs) == 0 {
-		return nil, ErrInvalid
+// AddToCitation appends ≥1 Observations to an existing Citation on tx.
+// The caller records the returned changes.
+func AddToCitation(tx *database.Tx, userID, citationID []byte, inputs []Input) ([]Observation, []rowchange.Change, error) {
+	if tx == nil || len(citationID) != 16 || len(inputs) == 0 {
+		return nil, nil, ErrInvalid
 	}
 	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-
-	tx, err := db.Begin()
-	if err != nil {
-		return nil, err
-	}
-	defer func() { _ = tx.Rollback() }()
 
 	var one int
 	if err := tx.QueryRow(sqlCitationExists, citationID).Scan(&one); err != nil {
 		if err == sql.ErrNoRows {
-			return nil, ErrInvalid
+			return nil, nil, ErrInvalid
 		}
-		return nil, err
+		return nil, nil, err
 	}
-
-	out, changes, err := InsertManyTx(tx, citationID, inputs, InsertOptions{AllowEdgeRows: false})
-	if err != nil {
-		return nil, err
-	}
-	if _, err := audit.Record(tx, audit.Revision{
-		UserID:     userID,
-		ActionType: "add_observations",
-		CreatedAt:  project.NowUTC(),
-		Changes:    changes,
-	}); err != nil {
-		return nil, err
-	}
-	if err := tx.Commit(); err != nil {
-		return nil, err
-	}
-	return out, nil
+	return InsertManyTx(tx.Tx, citationID, inputs, InsertOptions{AllowEdgeRows: false})
 }
 
-// InsertManyTx inserts Observations for citationID inside an existing transaction
-// and recomputes the auto-reconciled values of any handle their Subjects belong to.
-// Returns rows and audit Changes (caller records the revision).
+// InsertManyTx inserts Observations for citationID inside an existing transaction.
+// Returns rows and changes. The caller records the revision and recomputes.
 func InsertManyTx(tx *sql.Tx, citationID []byte, inputs []Input, opts InsertOptions) ([]Observation, []rowchange.Change, error) {
 	if tx == nil || len(citationID) != 16 || len(inputs) == 0 {
 		return nil, nil, ErrInvalid
@@ -215,13 +186,6 @@ func InsertManyTx(tx *sql.Tx, citationID []byte, inputs []Input, opts InsertOpti
 		}
 		out = append(out, obs)
 		changes = append(changes, chs...)
-	}
-	subjectIDs := make([][]byte, len(out))
-	for i, o := range out {
-		subjectIDs[i] = o.SubjectID
-	}
-	if err := autoreconciler.RecomputeSubjectsTx(tx, subjectIDs); err != nil {
-		return nil, nil, err
 	}
 	return out, changes, nil
 }

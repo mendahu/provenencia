@@ -94,7 +94,7 @@ func TestSubjectPositions(t *testing.T) {
 				src := mustSource(t, c, "Deed")
 				sub := mustPerson(t, c, src.ID, "Alice")
 				before := auditCount(t, c)
-				p, err := Set(c, sub, -3, 7)
+				p, err := runSet(c, sub, -3, 7)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -116,10 +116,10 @@ func TestSubjectPositions(t *testing.T) {
 				mustUser(t, c)
 				src := mustSource(t, c, "Deed")
 				sub := mustPerson(t, c, src.ID, "Alice")
-				if _, err := Set(c, sub, 1, 1); err != nil {
+				if _, err := runSet(c, sub, 1, 1); err != nil {
 					t.Fatal(err)
 				}
-				if _, err := Set(c, sub, 2, 3); err != nil {
+				if _, err := runSet(c, sub, 2, 3); err != nil {
 					t.Fatal(err)
 				}
 				got, err := Get(c, sub)
@@ -149,14 +149,14 @@ func TestSubjectPositions(t *testing.T) {
 				if !errors.Is(err, sql.ErrNoRows) {
 					t.Fatalf("got %v", err)
 				}
-				if _, err := Set(c, sub, 0, 0); err != nil {
+				if _, err := runSet(c, sub, 0, 0); err != nil {
 					t.Fatal(err)
 				}
 				before := auditCount(t, c)
-				if err := Clear(c, sub); err != nil {
+				if err := runClear(c, sub); err != nil {
 					t.Fatal(err)
 				}
-				if err := Clear(c, sub); err != nil {
+				if err := runClear(c, sub); err != nil {
 					t.Fatal(err)
 				}
 				_, err = Get(c, sub)
@@ -177,10 +177,10 @@ func TestSubjectPositions(t *testing.T) {
 				a1 := mustPerson(t, c, srcA.ID, "A1")
 				a2 := mustPerson(t, c, srcA.ID, "A2")
 				b1 := mustPerson(t, c, srcB.ID, "B1")
-				if _, err := Set(c, a1, 1, 0); err != nil {
+				if _, err := runSet(c, a1, 1, 0); err != nil {
 					t.Fatal(err)
 				}
-				if _, err := Set(c, b1, 9, 9); err != nil {
+				if _, err := runSet(c, b1, 9, 9); err != nil {
 					t.Fatal(err)
 				}
 				// a2 stays unplaced
@@ -196,10 +196,10 @@ func TestSubjectPositions(t *testing.T) {
 			run: func(t *testing.T, c *database.Catalog) {
 				missing := make([]byte, 16)
 				missing[0] = 1
-				if _, err := Set(c, missing, 0, 0); !errors.Is(err, ErrInvalid) {
+				if _, err := runSet(c, missing, 0, 0); !errors.Is(err, ErrInvalid) {
 					t.Fatalf("got %v", err)
 				}
-				if _, err := Set(c, []byte{1}, 0, 0); !errors.Is(err, ErrInvalid) {
+				if _, err := runSet(c, []byte{1}, 0, 0); !errors.Is(err, ErrInvalid) {
 					t.Fatalf("got %v", err)
 				}
 			},
@@ -210,7 +210,7 @@ func TestSubjectPositions(t *testing.T) {
 				mustUser(t, c)
 				src := mustSource(t, c, "Deed")
 				sub := mustPerson(t, c, src.ID, "Alice")
-				if _, err := Set(c, sub, 4, -1); err != nil {
+				if _, err := runSet(c, sub, 4, -1); err != nil {
 					t.Fatal(err)
 				}
 				dir := c.Dir()

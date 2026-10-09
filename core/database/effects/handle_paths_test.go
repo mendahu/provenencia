@@ -11,6 +11,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/effects"
+	"github.com/mendahu/provenencia/core/database/evrun"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
@@ -80,7 +81,7 @@ func TestHandlePaths(t *testing.T) {
 	}
 	mk := func(typeID []byte, label string, x int64) subjects.Subject {
 		t.Helper()
-		s, err := subjects.Create(c, userID, subjects.CreateInput{
+		s, err := evrun.CreateSubject(c, userID, subjects.CreateInput{
 			SourceID: src.ID, SubjectTypeID: typeID, Label: label,
 		}, &subjects.Placement{GridX: x, GridY: 0})
 		if err != nil {
@@ -131,7 +132,7 @@ func TestHandlePaths(t *testing.T) {
 		t.Fatal(err)
 	}
 	year := 1842
-	created, err := citations.CreateWithObservations(c, userID, citations.CreateInput{
+	created, err := evrun.CreateCitation(c, userID, citations.CreateInput{
 		ArtifactID: art.ID, LocatorJSON: locator,
 	}, []observations.Input{{
 		SubjectID: boston.ID, PropertyID: dateProp.ID,

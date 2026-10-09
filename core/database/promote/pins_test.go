@@ -9,6 +9,7 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/citations"
+	"github.com/mendahu/provenencia/core/database/evrun"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/database/observations"
@@ -81,7 +82,7 @@ func (f *pinFixture) must(err error) {
 // prop, all on one Citation.
 func (f *pinFixture) record(st subjecttypes.Type, prop properties.Property, values ...string) (subjects.Subject, []observations.Observation) {
 	f.t.Helper()
-	s, err := subjects.Create(f.c, userID, subjects.CreateInput{SourceID: f.artifact.SourceID, SubjectTypeID: st.ID}, nil)
+	s, err := evrun.CreateSubject(f.c, userID, subjects.CreateInput{SourceID: f.artifact.SourceID, SubjectTypeID: st.ID}, nil)
 	f.must(err)
 	var in []observations.Input
 	for _, v := range values {
@@ -93,7 +94,7 @@ func (f *pinFixture) record(st subjecttypes.Type, prop properties.Property, valu
 			in = append(in, observations.Input{SubjectID: s.ID, PropertyID: prop.ID, ValueText: v, HasText: true})
 		}
 	}
-	res, err := citations.CreateWithObservations(f.c, userID, citations.CreateInput{ArtifactID: f.artifact.ID, LocatorJSON: pinLocator}, in)
+	res, err := evrun.CreateCitation(f.c, userID, citations.CreateInput{ArtifactID: f.artifact.ID, LocatorJSON: pinLocator}, in)
 	f.must(err)
 	return s, res.Observations
 }
@@ -275,7 +276,7 @@ func TestSavePins(t *testing.T) {
 			{IncomingObservationID: bObs[0].ID, MemberObservationID: aObs[1].ID},
 		}})
 		f.must(err)
-		f.must(observations.Delete(f.c, userID, aObs[0].ID))
+		f.must(evrun.DeleteObservation(f.c, userID, aObs[0].ID))
 		for _, claimID := range [][]byte{res.Claim.ID, first.Claim.ID} {
 			if got, want := f.pinned(claimID), idsOf(aObs[1], bObs[0]); got != want {
 				t.Fatalf("pins after delete differ")

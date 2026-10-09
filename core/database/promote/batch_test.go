@@ -13,6 +13,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/connect"
 	"github.com/mendahu/provenencia/core/database/datevalues"
+	"github.com/mendahu/provenencia/core/database/evrun"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
@@ -21,7 +22,6 @@ import (
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
-	"github.com/mendahu/provenencia/core/database/subjectpositions"
 	"github.com/mendahu/provenencia/core/database/subjects"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
@@ -98,11 +98,11 @@ func (f *batchFixture) bare(kind string) subjects.Subject {
 	if err != nil {
 		f.t.Fatal(err)
 	}
-	s, err := subjects.Create(f.c, userID, subjects.CreateInput{SourceID: f.source.ID, SubjectTypeID: st.ID}, nil)
+	s, err := evrun.CreateSubject(f.c, userID, subjects.CreateInput{SourceID: f.source.ID, SubjectTypeID: st.ID}, nil)
 	if err != nil {
 		f.t.Fatal(err)
 	}
-	if _, err := subjectpositions.Set(f.c, s.ID, 0, f.y); err != nil {
+	if _, err := evrun.SetPosition(f.c, s.ID, 0, f.y); err != nil {
 		f.t.Fatal(err)
 	}
 	f.y += 2
@@ -114,7 +114,7 @@ func (f *batchFixture) cite(s subjects.Subject, in ...observations.Input) []obse
 	for i := range in {
 		in[i].SubjectID = s.ID
 	}
-	res, err := citations.CreateWithObservations(f.c, userID, citations.CreateInput{
+	res, err := evrun.CreateCitation(f.c, userID, citations.CreateInput{
 		ArtifactID: f.artifact.ID, LocatorJSON: batchLocator,
 	}, in)
 	if err != nil {
@@ -125,7 +125,7 @@ func (f *batchFixture) cite(s subjects.Subject, in ...observations.Input) []obse
 
 func (f *batchFixture) participation(person, event subjects.Subject) subjects.Subject {
 	f.t.Helper()
-	res, err := connect.CreateCitedBridge(f.c, userID, connect.CreateInput{
+	res, err := evrun.CreateBridge(f.c, userID, connect.CreateInput{
 		SourceID: f.source.ID, FromSubjectID: person.ID, ToSubjectID: event.ID, BridgeTypeKey: "participation",
 		Citation: citations.CreateInput{ArtifactID: f.artifact.ID, LocatorJSON: batchLocator},
 		Observations: []observations.Input{

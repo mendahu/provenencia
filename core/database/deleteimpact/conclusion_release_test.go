@@ -8,6 +8,7 @@ import (
 
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/citations"
+	"github.com/mendahu/provenencia/core/database/evrun"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
@@ -67,7 +68,7 @@ func newConclusionFixture(t *testing.T) conclusionFixture {
 	}
 	mkSubject := func(label string) subjects.Subject {
 		t.Helper()
-		s, err := subjects.Create(c, userID, subjects.CreateInput{
+		s, err := evrun.CreateSubject(c, userID, subjects.CreateInput{
 			SourceID: src.ID, SubjectTypeID: place.ID, Label: label,
 		}, nil)
 		if err != nil {
@@ -76,7 +77,7 @@ func newConclusionFixture(t *testing.T) conclusionFixture {
 		return s
 	}
 	a, b := mkSubject("York"), mkSubject("York (U.C.)")
-	res, err := citations.CreateWithObservations(c, userID, citations.CreateInput{
+	res, err := evrun.CreateCitation(c, userID, citations.CreateInput{
 		ArtifactID: art.ID, LocatorJSON: testLocator, Transcription: "York",
 	}, []observations.Input{
 		{SubjectID: a.ID, PropertyID: toponym.ID, ValueText: "York", HasText: true},
@@ -113,7 +114,7 @@ func TestSubjectDeleteReleasesOwnClaimPins(t *testing.T) {
 	}
 
 	// B's own Observation blocks deleting B, so it goes first, taking its pins off both claims.
-	if err := observations.Delete(c, userID, obsB); err != nil {
+	if err := evrun.DeleteObservation(c, userID, obsB); err != nil {
 		t.Fatal(err)
 	}
 	if pins(ca, obsB)+pins(cb, obsB) != 0 {
@@ -124,7 +125,7 @@ func TestSubjectDeleteReleasesOwnClaimPins(t *testing.T) {
 	if pins(cb, obsA) != 1 {
 		t.Fatal("setup: CB should still pin obsA")
 	}
-	if err := subjects.Delete(c, userID, b.ID); err != nil {
+	if err := evrun.DeleteSubject(c, userID, b.ID); err != nil {
 		t.Fatal(err)
 	}
 	action, types := lastRevision(t, c)

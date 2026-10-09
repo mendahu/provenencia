@@ -15,12 +15,15 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/effects"
 )
 
 // TestResolversCoverEveryEntityType parses non-test Go under core/ for every
 // audited entity type (EntityType: "…" literals and deleteimpact rowFacet
 // arguments) and wants a resolver for each, so a new audited table decides
-// its scope instead of failing at runtime.
+// its scope instead of failing at runtime. An entity whose effect is None is
+// committed without a revision and is left out of an audited change list, so
+// it has no resolver.
 func TestResolversCoverEveryEntityType(t *testing.T) {
 	root := filepath.Join("..", "..")
 	found := map[string]string{}
@@ -62,6 +65,13 @@ func TestResolversCoverEveryEntityType(t *testing.T) {
 		t.Fatalf("found only %d entity types; parser walk broken? %v", len(found), found)
 	}
 	for et, path := range found {
+		none, err := effects.AllNone([]rowchange.Change{{EntityType: et}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if none {
+			continue
+		}
 		if _, ok := resolvers[et]; !ok {
 			t.Errorf("entity type %q (%s) has no scope resolver in audit/scopes.go", et, path)
 		}

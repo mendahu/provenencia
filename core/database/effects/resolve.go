@@ -35,6 +35,25 @@ func Handles(tx *sql.Tx, changes []rowchange.Change) ([][]byte, error) {
 	return resolve(tx, changes, func(e Effect) Path { return e.Handles })
 }
 
+// AllNone reports whether every change names a table whose effect is None.
+// An empty list is not None-only: Run rolls those back. An unknown entity
+// type is an error.
+func AllNone(changes []rowchange.Change) (bool, error) {
+	if len(changes) == 0 {
+		return false, nil
+	}
+	for _, ch := range changes {
+		table, ok := entityTable[ch.EntityType]
+		if !ok {
+			return false, errf("effects: no entry for %s", ch.EntityType)
+		}
+		if !registry[table].None {
+			return false, nil
+		}
+	}
+	return true, nil
+}
+
 // Resolve is the whole effect of a batch: sources, handles, search documents,
 // and whether vocabulary labels or structure changed.
 func Resolve(tx *sql.Tx, changes []rowchange.Change) (Set, error) {

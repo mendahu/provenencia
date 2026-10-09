@@ -9,6 +9,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/connect"
+	"github.com/mendahu/provenencia/core/database/evrun"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
@@ -73,13 +74,13 @@ func TestSubjectDelete(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		alice, err := subjects.Create(c, userID, subjects.CreateInput{
+		alice, err := evrun.CreateSubject(c, userID, subjects.CreateInput{
 			SourceID: src.ID, SubjectTypeID: personType.ID, Label: "Alice",
 		}, &subjects.Placement{GridX: 0, GridY: 0})
 		if err != nil {
 			t.Fatal(err)
 		}
-		wedding, err := subjects.Create(c, userID, subjects.CreateInput{
+		wedding, err := evrun.CreateSubject(c, userID, subjects.CreateInput{
 			SourceID: src.ID, SubjectTypeID: eventType.ID, Label: "Wedding",
 		}, &subjects.Placement{GridX: 4, GridY: 4})
 		if err != nil {
@@ -106,7 +107,7 @@ func TestSubjectDelete(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		bridge, err := connect.CreateCitedBridge(c, userID, connect.CreateInput{
+		bridge, err := evrun.CreateBridge(c, userID, connect.CreateInput{
 			SourceID: src.ID, FromSubjectID: alice.ID, ToSubjectID: wedding.ID,
 			BridgeTypeKey: "participation",
 			Citation:      citations.CreateInput{ArtifactID: art.ID, LocatorJSON: testLocator},
@@ -125,7 +126,7 @@ func TestSubjectDelete(t *testing.T) {
 	t.Run("G2 endpoint refuses", func(t *testing.T) {
 		c, src, art, alice, wedding := setup(t)
 		mustBridge(t, c, src, art, alice, wedding)
-		if err := subjects.Delete(c, userID, alice.ID); !errors.Is(err, subjects.ErrInUse) {
+		if err := evrun.DeleteSubject(c, userID, alice.ID); !errors.Is(err, subjects.ErrInUse) {
 			t.Fatalf("delete %v", err)
 		}
 		if _, err := subjects.Get(c, alice.ID); err != nil {
@@ -136,7 +137,7 @@ func TestSubjectDelete(t *testing.T) {
 	t.Run("G6 facets-only bridge erases", func(t *testing.T) {
 		c, src, art, alice, wedding := setup(t)
 		bridge := mustBridge(t, c, src, art, alice, wedding)
-		if err := subjects.Delete(c, userID, bridge.Subject.ID); err != nil {
+		if err := evrun.DeleteSubject(c, userID, bridge.Subject.ID); err != nil {
 			t.Fatal(err)
 		}
 		if _, err := subjects.Get(c, bridge.Subject.ID); !errors.Is(err, sql.ErrNoRows) {
@@ -183,12 +184,12 @@ func TestSubjectDelete(t *testing.T) {
 		if err := subjectvocab.AppendBinding(c, bridge.Subject.SubjectTypeID, toponym.ID); err != nil {
 			t.Fatal(err)
 		}
-		if _, err := observations.AddToCitation(c, userID, bridge.Citation.ID, []observations.Input{{
+		if _, err := evrun.AddObservations(c, userID, bridge.Citation.ID, []observations.Input{{
 			SubjectID: bridge.Subject.ID, PropertyID: toponym.ID, ValueText: "extra", HasText: true,
 		}}); err != nil {
 			t.Fatal(err)
 		}
-		if err := subjects.Delete(c, userID, bridge.Subject.ID); !errors.Is(err, subjects.ErrInUse) {
+		if err := evrun.DeleteSubject(c, userID, bridge.Subject.ID); !errors.Is(err, subjects.ErrInUse) {
 			t.Fatalf("delete %v", err)
 		}
 		if _, err := subjects.Get(c, bridge.Subject.ID); err != nil {
@@ -201,7 +202,7 @@ func TestSubjectDelete(t *testing.T) {
 		bridge := mustBridge(t, c, src, art, alice, wedding)
 		var edgeID []byte
 		for _, o := range bridge.Observations {
-			if err := observations.Delete(c, userID, o.ID); errors.Is(err, observations.ErrEdgeLocked) {
+			if err := evrun.DeleteObservation(c, userID, o.ID); errors.Is(err, observations.ErrEdgeLocked) {
 				edgeID = o.ID
 				break
 			}
@@ -226,7 +227,7 @@ func TestSubjectDelete(t *testing.T) {
 		c, _, _, _, _ := setup(t)
 		missing := make([]byte, 16)
 		missing[15] = 9
-		if err := subjects.Delete(c, userID, missing); !errors.Is(err, subjects.ErrInvalid) {
+		if err := evrun.DeleteSubject(c, userID, missing); !errors.Is(err, subjects.ErrInvalid) {
 			t.Fatalf("got %v", err)
 		}
 	})

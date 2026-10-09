@@ -8,6 +8,7 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/citations"
+	"github.com/mendahu/provenencia/core/database/evrun"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
@@ -267,13 +268,13 @@ func insertObservationOn(t *testing.T, c *database.Catalog, userID, propertyID [
 	); err != nil {
 		t.Fatal(err)
 	}
-	place, err := subjects.Create(c, userID, subjects.CreateInput{
+	place, err := evrun.CreateSubject(c, userID, subjects.CreateInput{
 		SourceID: src.ID, SubjectTypeID: placeType.ID, Label: "Leeds",
 	}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	res, err := citations.CreateWithObservations(c, userID, citations.CreateInput{
+	res, err := evrun.CreateCitation(c, userID, citations.CreateInput{
 		ArtifactID: art.ID, LocatorJSON: testLocator, Transcription: "Leeds",
 	}, []observations.Input{{
 		SubjectID: place.ID, PropertyID: propertyID, ValueText: "Leeds", HasText: true,

@@ -11,6 +11,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/connect"
 	"github.com/mendahu/provenencia/core/database/datevalues"
+	"github.com/mendahu/provenencia/core/database/evrun"
 	"github.com/mendahu/provenencia/core/database/namevalues/namevaluestest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
@@ -20,7 +21,6 @@ import (
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
-	"github.com/mendahu/provenencia/core/database/subjectpositions"
 	"github.com/mendahu/provenencia/core/database/subjects"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
@@ -101,9 +101,9 @@ func (f *fixture) bare(src sources.Source, kind string) subjects.Subject {
 	f.t.Helper()
 	st, err := subjecttypes.Lookup(f.c, kind, subjecttypes.OriginProvenencia)
 	must(f.t, err)
-	s, err := subjects.Create(f.c, userID, subjects.CreateInput{SourceID: src.ID, SubjectTypeID: st.ID}, nil)
+	s, err := evrun.CreateSubject(f.c, userID, subjects.CreateInput{SourceID: src.ID, SubjectTypeID: st.ID}, nil)
 	must(f.t, err)
-	_, err = subjectpositions.Set(f.c, s.ID, 0, f.y)
+	_, err = evrun.SetPosition(f.c, s.ID, 0, f.y)
 	must(f.t, err)
 	f.y += 2
 	return s
@@ -114,7 +114,7 @@ func (f *fixture) cite(art artifacts.Artifact, s subjects.Subject, in ...observa
 	for i := range in {
 		in[i].SubjectID = s.ID
 	}
-	_, err := citations.CreateWithObservations(f.c, userID, citations.CreateInput{
+	_, err := evrun.CreateCitation(f.c, userID, citations.CreateInput{
 		ArtifactID: art.ID, LocatorJSON: locator,
 	}, in)
 	must(f.t, err)
@@ -149,7 +149,7 @@ func (f *fixture) place(src sources.Source, art artifacts.Artifact, name string)
 
 func (f *fixture) participation(src sources.Source, art artifacts.Artifact, person, event subjects.Subject, role string) {
 	f.t.Helper()
-	_, err := connect.CreateCitedBridge(f.c, userID, connect.CreateInput{
+	_, err := evrun.CreateBridge(f.c, userID, connect.CreateInput{
 		SourceID: src.ID, FromSubjectID: person.ID, ToSubjectID: event.ID, BridgeTypeKey: "participation",
 		Citation: citations.CreateInput{ArtifactID: art.ID, LocatorJSON: locator},
 		Observations: []observations.Input{
@@ -163,7 +163,7 @@ func (f *fixture) participation(src sources.Source, art artifacts.Artifact, pers
 
 func (f *fixture) placeRel(src sources.Source, art artifacts.Artifact, from, to subjects.Subject, kind string) {
 	f.t.Helper()
-	_, err := connect.CreateCitedBridge(f.c, userID, connect.CreateInput{
+	_, err := evrun.CreateBridge(f.c, userID, connect.CreateInput{
 		SourceID: src.ID, FromSubjectID: from.ID, ToSubjectID: to.ID, BridgeTypeKey: "place_relationship",
 		Citation: citations.CreateInput{ArtifactID: art.ID, LocatorJSON: locator},
 		Observations: []observations.Input{
@@ -178,7 +178,7 @@ func (f *fixture) placeRel(src sources.Source, art artifacts.Artifact, from, to 
 // relationship cites "person is typ of related" on src.
 func (f *fixture) relationship(src sources.Source, art artifacts.Artifact, person, related subjects.Subject, typ string) {
 	f.t.Helper()
-	_, err := connect.CreateCitedBridge(f.c, userID, connect.CreateInput{
+	_, err := evrun.CreateBridge(f.c, userID, connect.CreateInput{
 		SourceID: src.ID, FromSubjectID: person.ID, ToSubjectID: related.ID, BridgeTypeKey: "relationship",
 		Citation: citations.CreateInput{ArtifactID: art.ID, LocatorJSON: locator},
 		Observations: []observations.Input{

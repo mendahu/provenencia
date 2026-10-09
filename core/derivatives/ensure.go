@@ -12,6 +12,7 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/filederivatives"
@@ -156,7 +157,7 @@ func Ensure(c *database.Catalog, sourceFileID []byte, spec Spec) (Result, error)
 	}
 
 	var afterErr error
-	link, _, err := writes.Run(c, writes.Op{Unaudited: true}, func(tx *database.Tx) (filederivatives.Link, []rowchange.Change, error) {
+	link, _, err := writes.Run(c, writes.Op{}, func(tx *database.Tx) (filederivatives.Link, []rowchange.Change, error) {
 		fileID := derivedID
 		if fileID == nil {
 			id, err := files.NewID()
@@ -177,11 +178,11 @@ func Ensure(c *database.Catalog, sourceFileID []byte, spec Spec) (Result, error)
 			}
 			fileID = append([]byte(nil), id...)
 		}
-		link, err := insertDerivativeLink(tx, c, sourceFileID, fileID, spec.Type, &afterErr)
+		link, changes, err := insertDerivativeLink(tx, c, sourceFileID, fileID, spec.Type, &afterErr)
 		if err != nil {
 			return filederivatives.Link{}, nil, err
 		}
-		return link, nil, nil
+		return link, changes, nil
 	})
 	if errors.Is(err, errDerivedFileExists) {
 		existing, lookupErr := files.LookupByChecksum(c, checksum)
@@ -257,12 +258,12 @@ func insertLinkOnly(c *database.Catalog, sourceFileID, derivedID []byte, derivat
 		return Result{}, err
 	}
 	var afterErr error
-	link, _, err := writes.Run(c, writes.Op{Unaudited: true}, func(tx *database.Tx) (filederivatives.Link, []rowchange.Change, error) {
-		link, err := insertDerivativeLink(tx, c, sourceFileID, derivedID, derivativeType, &afterErr)
+	link, _, err := writes.Run(c, writes.Op{}, func(tx *database.Tx) (filederivatives.Link, []rowchange.Change, error) {
+		link, changes, err := insertDerivativeLink(tx, c, sourceFileID, derivedID, derivativeType, &afterErr)
 		if err != nil {
 			return filederivatives.Link{}, nil, err
 		}
-		return link, nil, nil
+		return link, changes, nil
 	})
 	if errors.Is(err, errDerivativeLinkExists) {
 		existing, lookupErr := filederivatives.Lookup(c, sourceFileID, derivativeType)
@@ -282,10 +283,10 @@ func insertLinkOnly(c *database.Catalog, sourceFileID, derivedID []byte, derivat
 
 // insertDerivativeLink writes one file_derivatives row and registers search
 // reprojection for after commit. file_derivatives stays unaudited.
-func insertDerivativeLink(tx *database.Tx, c *database.Catalog, sourceFileID, derivedID []byte, derivativeType string, afterErr *error) (filederivatives.Link, error) {
+func insertDerivativeLink(tx *database.Tx, c *database.Catalog, sourceFileID, derivedID []byte, derivativeType string, afterErr *error) (filederivatives.Link, []rowchange.Change, error) {
 	linkID, err := filederivatives.NewID()
 	if err != nil {
-		return filederivatives.Link{}, err
+		return filederivatives.Link{}, nil, err
 	}
 	link := filederivatives.Link{
 		ID:             linkID,
@@ -295,14 +296,44 @@ func insertDerivativeLink(tx *database.Tx, c *database.Catalog, sourceFileID, de
 	}
 	if err := filederivatives.Insert(tx.Tx, link); err != nil {
 		if filederivatives.IsUniqueConflict(err) {
-			return filederivatives.Link{}, errDerivativeLinkExists
+			return filederivatives.Link{}, nil, errDerivativeLinkExists
 		}
-		return filederivatives.Link{}, err
+		return filederivatives.Link{}, nil, err
 	}
 	tx.AfterCommit(func() {
 		*afterErr = reprojectSourcesForNewThumbnail(c, sourceFileID, derivativeType)
 	})
-	return link, nil
+	ch, err := fileDerivativeChange(link)
+	if err != nil {
+		return filederivatives.Link{}, nil, err
+	}
+	return link, []rowchange.Change{ch}, nil
+}
+
+func fileDerivativeChange(link filederivatives.Link) (rowchange.Change, error) {
+	id, err := uuid.FromBytes(link.ID)
+	if err != nil {
+		return rowchange.Change{}, err
+	}
+	sourceID, err := uuid.FromBytes(link.SourceFileID)
+	if err != nil {
+		return rowchange.Change{}, err
+	}
+	derivedID, err := uuid.FromBytes(link.DerivedFileID)
+	if err != nil {
+		return rowchange.Change{}, err
+	}
+	return rowchange.Change{
+		EntityType: "file_derivative",
+		EntityID:   append([]byte(nil), link.ID...),
+		Action:     rowchange.ActionCreate,
+		Fields: map[string]rowchange.FieldDiff{
+			"id":              {Old: nil, New: id.String()},
+			"source_file_id":  {Old: nil, New: sourceID.String()},
+			"derived_file_id": {Old: nil, New: derivedID.String()},
+			"derivative_type": {Old: nil, New: link.DerivativeType},
+		},
+	}, nil
 }
 
 // reprojectSourcesForNewThumbnail refreshes Source search docs after a new

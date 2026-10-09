@@ -9,6 +9,7 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/citations"
+	"github.com/mendahu/provenencia/core/database/evrun"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/namevalues/namevaluestest"
 	"github.com/mendahu/provenencia/core/database/observations"
@@ -208,7 +209,7 @@ func personBeside(t *testing.T, req *engine.PromoteSubjectRequest, forms ...stri
 		if err := db.QueryRow(`SELECT source_id, subject_type_id FROM subjects WHERE id = ?`, first[:]).Scan(&sourceID, &typeID); err != nil {
 			return err
 		}
-		s, err := subjects.Create(c, userID[:], subjects.CreateInput{SourceID: sourceID, SubjectTypeID: typeID}, nil)
+		s, err := evrun.CreateSubject(c, userID[:], subjects.CreateInput{SourceID: sourceID, SubjectTypeID: typeID}, nil)
 		if err != nil {
 			return err
 		}
@@ -228,7 +229,7 @@ func personBeside(t *testing.T, req *engine.PromoteSubjectRequest, forms ...stri
 		for _, form := range forms {
 			in = append(in, observations.Input{SubjectID: s.ID, PropertyID: name.ID, Name: namevaluestest.Western(form)})
 		}
-		_, err = citations.CreateWithObservations(c, userID[:], citations.CreateInput{
+		_, err = evrun.CreateCitation(c, userID[:], citations.CreateInput{
 			ArtifactID: art.ID, LocatorJSON: `{"version":1,"selectors":[{"type":"page","artifact_page":1}]}`,
 		}, in)
 		return err

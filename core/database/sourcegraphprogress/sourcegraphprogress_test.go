@@ -8,6 +8,7 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/citations"
+	"github.com/mendahu/provenencia/core/database/evrun"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/rowchange"
@@ -86,19 +87,19 @@ func TestSourceGraphProgress(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		person, err := subjects.Create(c, userID, subjects.CreateInput{
+		person, err := evrun.CreateSubject(c, userID, subjects.CreateInput{
 			SourceID: worked.ID, SubjectTypeID: personType.ID, Label: "Alice",
 		}, nil)
 		if err != nil {
 			t.Fatal(err)
 		}
-		place, err := subjects.Create(c, userID, subjects.CreateInput{
+		place, err := evrun.CreateSubject(c, userID, subjects.CreateInput{
 			SourceID: worked.ID, SubjectTypeID: placeType.ID, Label: "Boston",
 		}, nil)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if _, err := subjects.Create(c, userID, subjects.CreateInput{
+		if _, err := evrun.CreateSubject(c, userID, subjects.CreateInput{
 			SourceID: worked.ID, SubjectTypeID: sourceType.ID, Label: "Reify",
 		}, nil); err != nil {
 			t.Fatal(err)
@@ -113,7 +114,7 @@ func TestSourceGraphProgress(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if _, err := citations.CreateWithObservations(c, userID, citations.CreateInput{
+		if _, err := evrun.CreateCitation(c, userID, citations.CreateInput{
 			ArtifactID: art.ID, LocatorJSON: validLocator,
 		}, []observations.Input{{
 			SubjectID: place.ID, PropertyID: toponym.ID,

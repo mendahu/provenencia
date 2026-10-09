@@ -385,7 +385,7 @@ func TestEnsureCustomSpecAlongsideThumbnail(t *testing.T) {
 	}
 }
 
-func TestEnsureThumbnailCommitsUnauditedAndRefreshesSearch(t *testing.T) {
+func TestEnsureThumbnailCommitsWithoutRevisionAndRefreshesSearch(t *testing.T) {
 	c, err := database.Create(t.TempDir(), "t.provenencia")
 	if err != nil {
 		t.Fatal(err)

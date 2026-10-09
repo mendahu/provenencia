@@ -12,6 +12,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/deleteimpact"
+	"github.com/mendahu/provenencia/core/database/evrun"
 	"github.com/mendahu/provenencia/core/database/metadatafields"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sourcecredibility"
@@ -126,13 +127,13 @@ func TestFacetReleaseAuditsSourceSide(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		res, err := citations.CreateWithObservations(c, userID, citations.CreateInput{
+		res, err := evrun.CreateCitation(c, userID, citations.CreateInput{
 			ArtifactID: art.ID, LocatorJSON: testLocator, Notes: []string{"Faded ink", "Second hand"},
 		}, nil)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err := citations.Delete(c, userID, res.Citation.ID); err != nil {
+		if err := evrun.DeleteCitation(c, userID, res.Citation.ID); err != nil {
 			t.Fatal(err)
 		}
 		action, types := lastRevision(t, c)

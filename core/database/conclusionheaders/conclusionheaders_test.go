@@ -13,6 +13,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/conclusiondetails"
 	"github.com/mendahu/provenencia/core/database/conclusionheaders"
 	"github.com/mendahu/provenencia/core/database/datevalues"
+	"github.com/mendahu/provenencia/core/database/evrun"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/namevalues/namevaluestest"
 	"github.com/mendahu/provenencia/core/database/observations"
@@ -82,7 +83,7 @@ func (f *fixture) typeID(key string) []byte {
 // person promotes a new person Subject named by forms (one Observation each).
 func (f *fixture) person(forms ...string) (subjects.Subject, []observations.Observation, []byte) {
 	f.t.Helper()
-	s, err := subjects.Create(f.c, userID, subjects.CreateInput{SourceID: f.source.ID, SubjectTypeID: f.typeID("person")}, nil)
+	s, err := evrun.CreateSubject(f.c, userID, subjects.CreateInput{SourceID: f.source.ID, SubjectTypeID: f.typeID("person")}, nil)
 	must(f.t, err)
 	var obs []observations.Observation
 	if len(forms) > 0 {
@@ -90,7 +91,7 @@ func (f *fixture) person(forms ...string) (subjects.Subject, []observations.Obse
 		for _, form := range forms {
 			in = append(in, observations.Input{SubjectID: s.ID, PropertyID: f.name.ID, Name: namevaluestest.Western(form)})
 		}
-		res, err := citations.CreateWithObservations(f.c, userID, citations.CreateInput{ArtifactID: f.artifact.ID, LocatorJSON: locator}, in)
+		res, err := evrun.CreateCitation(f.c, userID, citations.CreateInput{ArtifactID: f.artifact.ID, LocatorJSON: locator}, in)
 		must(f.t, err)
 		obs = res.Observations
 	}
@@ -146,7 +147,7 @@ func TestListPersons(t *testing.T) {
 
 	t.Run("a name edit reaches the header", func(t *testing.T) {
 		// Jim → James merges the two values.
-		_, err := observations.Update(f.c, userID, observations.Input{
+		_, err := evrun.UpdateObservation(f.c, userID, observations.Input{
 			ID: jamesObs[1].ID, SubjectID: jamesObs[1].SubjectID, PropertyID: f.name.ID,
 			Name: namevaluestest.Western("James Robins"),
 		})
@@ -297,13 +298,13 @@ func pointYear(year int) *datevalues.Value {
 // event promotes a new event Subject with the given Observations.
 func (f *fixture) event(in ...observations.Input) []byte {
 	f.t.Helper()
-	s, err := subjects.Create(f.c, userID, subjects.CreateInput{SourceID: f.source.ID, SubjectTypeID: f.typeID("event")}, nil)
+	s, err := evrun.CreateSubject(f.c, userID, subjects.CreateInput{SourceID: f.source.ID, SubjectTypeID: f.typeID("event")}, nil)
 	must(f.t, err)
 	if len(in) > 0 {
 		for i := range in {
 			in[i].SubjectID = s.ID
 		}
-		_, err = citations.CreateWithObservations(f.c, userID, citations.CreateInput{ArtifactID: f.artifact.ID, LocatorJSON: locator}, in)
+		_, err = evrun.CreateCitation(f.c, userID, citations.CreateInput{ArtifactID: f.artifact.ID, LocatorJSON: locator}, in)
 		must(f.t, err)
 	}
 	p, err := promote.Save(f.c, userID, promote.Input{SubjectID: s.ID})
@@ -448,7 +449,7 @@ func (f *fixture) lowTrust(src sources.Source) {
 // place promotes a new Place whose toponyms are cited, in order, on art.
 func (f *fixture) place(art artifacts.Artifact, names ...string) []byte {
 	f.t.Helper()
-	s, err := subjects.Create(f.c, userID, subjects.CreateInput{SourceID: art.SourceID, SubjectTypeID: f.typeID("place")}, nil)
+	s, err := evrun.CreateSubject(f.c, userID, subjects.CreateInput{SourceID: art.SourceID, SubjectTypeID: f.typeID("place")}, nil)
 	must(f.t, err)
 	f.citeToponyms(art, s.ID, names...)
 	p, err := promote.Save(f.c, userID, promote.Input{SubjectID: s.ID})
@@ -466,13 +467,13 @@ func (f *fixture) citeToponyms(art artifacts.Artifact, subjectID []byte, names .
 	for i, name := range names {
 		in[i] = observations.Input{SubjectID: subjectID, PropertyID: toponym.ID, ValueText: name, HasText: true}
 	}
-	_, err := citations.CreateWithObservations(f.c, userID, citations.CreateInput{ArtifactID: art.ID, LocatorJSON: locator}, in)
+	_, err := evrun.CreateCitation(f.c, userID, citations.CreateInput{ArtifactID: art.ID, LocatorJSON: locator}, in)
 	must(f.t, err)
 }
 
 func (f *fixture) joinPlace(art artifacts.Artifact, entityID []byte, names ...string) {
 	f.t.Helper()
-	s, err := subjects.Create(f.c, userID, subjects.CreateInput{SourceID: art.SourceID, SubjectTypeID: f.typeID("place")}, nil)
+	s, err := evrun.CreateSubject(f.c, userID, subjects.CreateInput{SourceID: art.SourceID, SubjectTypeID: f.typeID("place")}, nil)
 	must(f.t, err)
 	f.citeToponyms(art, s.ID, names...)
 	_, err = promote.Save(f.c, userID, promote.Input{SubjectID: s.ID, EntityID: entityID})

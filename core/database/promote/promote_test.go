@@ -8,6 +8,7 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/claimconfidencegrades"
+	"github.com/mendahu/provenencia/core/database/evrun"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/rowchange"
@@ -338,7 +339,7 @@ func newCatalog(t *testing.T) (*database.Catalog, func(key string) subjects.Subj
 		if err != nil {
 			t.Fatal(err)
 		}
-		s, err := subjects.Create(c, userID, subjects.CreateInput{SourceID: src.ID, SubjectTypeID: st.ID}, nil)
+		s, err := evrun.CreateSubject(c, userID, subjects.CreateInput{SourceID: src.ID, SubjectTypeID: st.ID}, nil)
 		if err != nil {
 			t.Fatal(err)
 		}

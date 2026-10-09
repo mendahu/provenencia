@@ -7,6 +7,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/conclusionheaders"
 	"github.com/mendahu/provenencia/core/database/connect"
 	"github.com/mendahu/provenencia/core/database/datevalues"
+	"github.com/mendahu/provenencia/core/database/evrun"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
 	"github.com/mendahu/provenencia/core/database/subjects"
@@ -36,7 +37,7 @@ func (f *fixture) placeSubject(name string, start, end *int, x, y int64) subject
 func (f *fixture) placeRel(from, to subjects.Subject, kind string, linkStart, linkEnd *int) {
 	f.t.Helper()
 	term := f.term("place_relationship_type", kind)
-	res, err := connect.CreateCitedBridge(f.c, userID, connect.CreateInput{
+	res, err := evrun.CreateBridge(f.c, userID, connect.CreateInput{
 		SourceID: f.source.ID, FromSubjectID: from.ID, ToSubjectID: to.ID, BridgeTypeKey: "place_relationship",
 		Citation: citations.CreateInput{ArtifactID: f.artifact.ID, LocatorJSON: locator},
 		Observations: []observations.Input{
@@ -58,7 +59,7 @@ func (f *fixture) placeRel(from, to subjects.Subject, kind string, linkStart, li
 				SubjectID: res.Subject.ID, PropertyID: f.prop("end_date").ID, Date: pointYear(*linkEnd),
 			})
 		}
-		_, err := observations.AddToCitation(f.c, userID, res.Citation.ID, extra)
+		_, err := evrun.AddObservations(f.c, userID, res.Citation.ID, extra)
 		must(f.t, err)
 	}
 }

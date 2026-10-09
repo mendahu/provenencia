@@ -8,6 +8,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/connect"
+	"github.com/mendahu/provenencia/core/database/evrun"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
@@ -70,13 +71,13 @@ func TestCitationDeleteConnectionOnly(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	alice, err := subjects.Create(c, userID, subjects.CreateInput{
+	alice, err := evrun.CreateSubject(c, userID, subjects.CreateInput{
 		SourceID: src.ID, SubjectTypeID: personType.ID, Label: "Alice",
 	}, &subjects.Placement{GridX: 0, GridY: 0})
 	if err != nil {
 		t.Fatal(err)
 	}
-	wedding, err := subjects.Create(c, userID, subjects.CreateInput{
+	wedding, err := evrun.CreateSubject(c, userID, subjects.CreateInput{
 		SourceID: src.ID, SubjectTypeID: eventType.ID, Label: "Wedding",
 	}, &subjects.Placement{GridX: 4, GridY: 4})
 	if err != nil {
@@ -98,7 +99,7 @@ func TestCitationDeleteConnectionOnly(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	bridge, err := connect.CreateCitedBridge(c, userID, connect.CreateInput{
+	bridge, err := evrun.CreateBridge(c, userID, connect.CreateInput{
 		SourceID: src.ID, FromSubjectID: alice.ID, ToSubjectID: wedding.ID,
 		BridgeTypeKey: "participation",
 		Citation:      citations.CreateInput{ArtifactID: art.ID, LocatorJSON: testLocator},
@@ -111,7 +112,7 @@ func TestCitationDeleteConnectionOnly(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := citations.Delete(c, userID, bridge.Citation.ID); !errors.Is(err, citations.ErrInUse) {
+	if err := evrun.DeleteCitation(c, userID, bridge.Citation.ID); !errors.Is(err, citations.ErrInUse) {
 		t.Fatalf("got %v want ErrInUse", err)
 	}
 	if _, err := citations.Get(c, bridge.Citation.ID); err != nil {

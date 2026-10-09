@@ -13,6 +13,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/connect"
 	"github.com/mendahu/provenencia/core/database/deleteimpact"
+	"github.com/mendahu/provenencia/core/database/evrun"
 	"github.com/mendahu/provenencia/core/database/files"
 	"github.com/mendahu/provenencia/core/database/metadatafields"
 	"github.com/mendahu/provenencia/core/database/observations"
@@ -220,19 +221,19 @@ func TestImpactCitationAndSubject(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	place, err := subjects.Create(c, userID, subjects.CreateInput{
+	place, err := evrun.CreateSubject(c, userID, subjects.CreateInput{
 		SourceID: src.ID, SubjectTypeID: placeType.ID, Label: "Leeds",
 	}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	alice, err := subjects.Create(c, userID, subjects.CreateInput{
+	alice, err := evrun.CreateSubject(c, userID, subjects.CreateInput{
 		SourceID: src.ID, SubjectTypeID: personType.ID, Label: "Alice",
 	}, &subjects.Placement{GridX: 0, GridY: 0})
 	if err != nil {
 		t.Fatal(err)
 	}
-	wedding, err := subjects.Create(c, userID, subjects.CreateInput{
+	wedding, err := evrun.CreateSubject(c, userID, subjects.CreateInput{
 		SourceID: src.ID, SubjectTypeID: eventType.ID, Label: "Wedding",
 	}, &subjects.Placement{GridX: 4, GridY: 4})
 	if err != nil {
@@ -244,7 +245,7 @@ func TestImpactCitationAndSubject(t *testing.T) {
 	}
 
 	t.Run("citation with observations", func(t *testing.T) {
-		res, err := citations.CreateWithObservations(c, userID, citations.CreateInput{
+		res, err := evrun.CreateCitation(c, userID, citations.CreateInput{
 			ArtifactID: art.ID, LocatorJSON: testLocator, Transcription: "Leeds",
 		}, []observations.Input{{
 			SubjectID: place.ID, PropertyID: toponym.ID, ValueText: "Leeds", HasText: true,
@@ -278,7 +279,7 @@ func TestImpactCitationAndSubject(t *testing.T) {
 			t.Fatal(err)
 		}
 		term := createTerm(t, c, userID, eventTypeProp.ID, "Land Grant")
-		if _, err := citations.CreateWithObservations(c, userID, citations.CreateInput{
+		if _, err := evrun.CreateCitation(c, userID, citations.CreateInput{
 			ArtifactID: art.ID, LocatorJSON: testLocator,
 		}, []observations.Input{{
 			SubjectID: wedding.ID, PropertyID: eventTypeProp.ID, ValueTermID: term.ID,
@@ -303,7 +304,7 @@ func TestImpactCitationAndSubject(t *testing.T) {
 				ValueText: fmt.Sprintf("name-%02d", i), HasText: true,
 			}
 		}
-		res, err := citations.CreateWithObservations(c, userID, citations.CreateInput{
+		res, err := evrun.CreateCitation(c, userID, citations.CreateInput{
 			ArtifactID: art.ID, LocatorJSON: testLocator,
 		}, inputs)
 		if err != nil {
@@ -341,7 +342,7 @@ func TestImpactCitationAndSubject(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		bridge, err := connect.CreateCitedBridge(c, userID, connect.CreateInput{
+		bridge, err := evrun.CreateBridge(c, userID, connect.CreateInput{
 			SourceID: src.ID, FromSubjectID: alice.ID, ToSubjectID: wedding.ID,
 			BridgeTypeKey: "participation",
 			Citation:      citations.CreateInput{ArtifactID: art.ID, LocatorJSON: testLocator},
@@ -394,7 +395,7 @@ func TestImpactCitationAndSubject(t *testing.T) {
 			if err := subjectvocab.AppendBinding(c, bridge.Subject.SubjectTypeID, toponym.ID); err != nil {
 				t.Fatal(err)
 			}
-			if _, err := observations.AddToCitation(c, userID, bridge.Citation.ID, []observations.Input{{
+			if _, err := evrun.AddObservations(c, userID, bridge.Citation.ID, []observations.Input{{
 				SubjectID: bridge.Subject.ID, PropertyID: toponym.ID, ValueText: "extra", HasText: true,
 			}}); err != nil {
 				t.Fatal(err)
@@ -428,7 +429,7 @@ func TestImpactCitationAndSubject(t *testing.T) {
 			if len(edgeID) == 0 {
 				t.Fatal("no edge observation")
 			}
-			if err := observations.Delete(c, userID, edgeID); !errors.Is(err, observations.ErrEdgeLocked) {
+			if err := evrun.DeleteObservation(c, userID, edgeID); !errors.Is(err, observations.ErrEdgeLocked) {
 				t.Fatalf("delete edge %v", err)
 			}
 		})
@@ -445,7 +446,7 @@ func TestImpactCitationAndSubject(t *testing.T) {
 		if err := subjectvocab.AppendBinding(c, personType.ID, userRole.ID); err != nil {
 			t.Fatal(err)
 		}
-		res, err := citations.CreateWithObservations(c, userID, citations.CreateInput{
+		res, err := evrun.CreateCitation(c, userID, citations.CreateInput{
 			ArtifactID: art.ID, LocatorJSON: testLocator,
 		}, []observations.Input{{
 			SubjectID: alice.ID, PropertyID: userRole.ID, ValueText: "witness", HasText: true,
@@ -469,7 +470,7 @@ func TestImpactCitationAndSubject(t *testing.T) {
 		if !found {
 			t.Fatalf("missing subject_id group %+v", got.Groups)
 		}
-		if err := subjects.Delete(c, userID, alice.ID); !errors.Is(err, subjects.ErrInUse) {
+		if err := evrun.DeleteSubject(c, userID, alice.ID); !errors.Is(err, subjects.ErrInUse) {
 			t.Fatalf("delete %v", err)
 		}
 		listed, err := observations.ListBySubject(c, alice.ID)
@@ -493,13 +494,13 @@ func TestImpactCitationAndSubject(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		bob, err := subjects.Create(c, userID, subjects.CreateInput{
+		bob, err := evrun.CreateSubject(c, userID, subjects.CreateInput{
 			SourceID: src.ID, SubjectTypeID: personType.ID, Label: "Bob",
 		}, &subjects.Placement{GridX: 8, GridY: 0})
 		if err != nil {
 			t.Fatal(err)
 		}
-		if _, err := citations.CreateWithObservations(c, userID, citations.CreateInput{
+		if _, err := evrun.CreateCitation(c, userID, citations.CreateInput{
 			ArtifactID: art.ID, LocatorJSON: testLocator,
 		}, []observations.Input{{
 			SubjectID: bob.ID, PropertyID: roleProp.ID, ValueTermID: roleTerm.ID,
@@ -519,7 +520,7 @@ func TestImpactCitationAndSubject(t *testing.T) {
 		if !found {
 			t.Fatalf("missing subject_id group %+v", got.Groups)
 		}
-		if err := subjects.Delete(c, userID, bob.ID); !errors.Is(err, subjects.ErrInUse) {
+		if err := evrun.DeleteSubject(c, userID, bob.ID); !errors.Is(err, subjects.ErrInUse) {
 			t.Fatalf("delete %v", err)
 		}
 		listed, err := observations.ListBySubject(c, bob.ID)
@@ -682,7 +683,7 @@ func TestImpactSourceAndArtifact(t *testing.T) {
 		}
 	})
 
-	cit, err := citations.CreateWithObservations(c, userID, citations.CreateInput{
+	cit, err := evrun.CreateCitation(c, userID, citations.CreateInput{
 		ArtifactID: art.ID, LocatorJSON: testLocator,
 		Transcription: "John Hartley, worsted weaver, of 14 Back Nile Street",
 	}, nil)
@@ -720,7 +721,7 @@ func TestImpactSourceAndArtifact(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	sub, err := subjects.Create(c, userID, subjects.CreateInput{
+	sub, err := evrun.CreateSubject(c, userID, subjects.CreateInput{
 		SourceID: empty.ID, SubjectTypeID: personType.ID, Label: "Alice",
 	}, nil)
 	if err != nil {

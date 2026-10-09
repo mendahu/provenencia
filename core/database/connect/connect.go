@@ -10,10 +10,8 @@ import (
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/connectrules"
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/audit"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/observations"
-	"github.com/mendahu/provenencia/core/database/project"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/subjectpositions"
 	"github.com/mendahu/provenencia/core/database/subjects"
@@ -46,114 +44,110 @@ type Result struct {
 }
 
 // CreateCitedBridge writes a bridge Subject, position, Citation, and Observations
-// in one SQLite transaction. Nothing persists if citation insert fails.
-func CreateCitedBridge(c *database.Catalog, userID []byte, in CreateInput) (Result, error) {
-	db, err := c.DB()
-	if err != nil {
-		return Result{}, err
+// on tx. Nothing persists if citation insert fails. The caller records the
+// returned changes. The position is not one of them.
+func CreateCitedBridge(tx *database.Tx, userID []byte, in CreateInput) (Result, []rowchange.Change, error) {
+	if tx == nil {
+		return Result{}, nil, ErrInvalid
 	}
 	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
-		return Result{}, err
+		return Result{}, nil, err
 	}
-	tx, err := db.Begin()
-	if err != nil {
-		return Result{}, err
-	}
-	defer func() { _ = tx.Rollback() }()
 
-	from, err := subjects.GetTx(tx, in.FromSubjectID)
+	q := tx.Tx
+	from, err := subjects.GetTx(q, in.FromSubjectID)
 	if err != nil {
-		return Result{}, ErrInvalid
+		return Result{}, nil, ErrInvalid
 	}
-	to, err := subjects.GetTx(tx, in.ToSubjectID)
+	to, err := subjects.GetTx(q, in.ToSubjectID)
 	if err != nil {
-		return Result{}, ErrInvalid
+		return Result{}, nil, ErrInvalid
 	}
 	if bytes.Equal(from.ID, to.ID) {
-		return Result{}, ErrInvalid
+		return Result{}, nil, ErrInvalid
 	}
 	if !bytes.Equal(from.SourceID, in.SourceID) || !bytes.Equal(to.SourceID, in.SourceID) {
-		return Result{}, ErrInvalid
+		return Result{}, nil, ErrInvalid
 	}
-	fromType, err := subjecttypes.GetByIDTx(tx, from.SubjectTypeID)
+	fromType, err := subjecttypes.GetByIDTx(q, from.SubjectTypeID)
 	if err != nil {
-		return Result{}, ErrInvalid
+		return Result{}, nil, ErrInvalid
 	}
-	toType, err := subjecttypes.GetByIDTx(tx, to.SubjectTypeID)
+	toType, err := subjecttypes.GetByIDTx(q, to.SubjectTypeID)
 	if err != nil {
-		return Result{}, ErrInvalid
+		return Result{}, nil, ErrInvalid
 	}
 	rule := subjectvocab.Connect(fromType.Key, toType.Key)
 	if rule.Refuse {
-		return Result{}, ErrRefused
+		return Result{}, nil, ErrRefused
 	}
 	if in.BridgeTypeKey != "" && in.BridgeTypeKey != rule.BridgeTypeKey {
-		return Result{}, ErrInvalid
+		return Result{}, nil, ErrInvalid
 	}
 	bound, err := bindEndpoints(rule, from, to, fromType.Key, toType.Key)
 	if err != nil {
-		return Result{}, err
+		return Result{}, nil, err
 	}
-	keyed, err := exactObservationInputs(tx, rule, in.Observations)
+	keyed, err := exactObservationInputs(q, rule, in.Observations)
 	if err != nil {
-		return Result{}, err
+		return Result{}, nil, err
 	}
 	for _, edge := range rule.Edges {
 		row := keyed[edge.PropertyKey]
 		if !bytes.Equal(row.ValueSubjectID, bound[edge.PropertyKey]) {
-			return Result{}, ErrInvalid
+			return Result{}, nil, ErrInvalid
 		}
 		polarity := strings.TrimSpace(row.Polarity)
 		if polarity != "" && polarity != observations.PolarityPositive {
-			return Result{}, ErrInvalid
+			return Result{}, nil, ErrInvalid
 		}
 	}
 	if needsDisambiguation(rule) {
 		if len(keyed[rule.Disambiguation].ValueTermID) != 16 {
-			return Result{}, ErrInvalid
+			return Result{}, nil, ErrInvalid
 		}
 	}
 
 	if len(in.CitationID) != 0 {
 		if !citationFieldsZero(in.Citation) {
-			return Result{}, ErrInvalid
+			return Result{}, nil, ErrInvalid
 		}
-		if _, err := citations.GetTx(tx, in.CitationID); err != nil {
-			return Result{}, ErrInvalid
+		if _, err := citations.GetTx(q, in.CitationID); err != nil {
+			return Result{}, nil, ErrInvalid
 		}
-		sourceID, err := citations.SourceIDTx(tx, in.CitationID)
+		sourceID, err := citations.SourceIDTx(q, in.CitationID)
 		if err != nil || !bytes.Equal(sourceID, in.SourceID) {
-			return Result{}, ErrInvalid
+			return Result{}, nil, ErrInvalid
 		}
 	} else if err := citations.NormalizeCreateInput(&in.Citation); err != nil {
-		return Result{}, err
+		return Result{}, nil, err
 	}
 
-	fromPos, err := subjectpositions.GetTx(tx, from.ID)
+	fromPos, err := subjectpositions.GetTx(q, from.ID)
 	if err != nil {
-		return Result{}, ErrInvalid
+		return Result{}, nil, ErrInvalid
 	}
-	toPos, err := subjectpositions.GetTx(tx, to.ID)
+	toPos, err := subjectpositions.GetTx(q, to.ID)
 	if err != nil {
-		return Result{}, ErrInvalid
+		return Result{}, nil, ErrInvalid
 	}
 
-	bridgeType, err := subjecttypes.LookupTx(tx, rule.BridgeTypeKey, subjecttypes.OriginProvenencia)
+	bridgeType, err := subjecttypes.LookupTx(q, rule.BridgeTypeKey, subjecttypes.OriginProvenencia)
 	if err != nil {
-		return Result{}, ErrInvalid
+		return Result{}, nil, ErrInvalid
 	}
-	bridge, subjectChange, err := subjects.InsertTx(tx, subjects.CreateInput{
+	bridge, subjectChange, err := subjects.InsertTx(q, subjects.CreateInput{
 		SourceID:      in.SourceID,
 		SubjectTypeID: bridgeType.ID,
 		Description:   in.Description,
 	})
 	if err != nil {
-		return Result{}, err
+		return Result{}, nil, err
 	}
 	gridX := floorDiv(fromPos.GridX+toPos.GridX+1, 2)
 	gridY := floorDiv(fromPos.GridY+toPos.GridY+1, 2)
-	if _, err := subjectpositions.SetTx(tx, bridge.ID, gridX, gridY); err != nil {
-		return Result{}, err
+	if _, err := subjectpositions.SetTx(q, bridge.ID, gridX, gridY); err != nil {
+		return Result{}, nil, err
 	}
 
 	obs := make([]observations.Input, len(in.Observations))
@@ -169,41 +163,30 @@ func CreateCitedBridge(c *database.Catalog, userID []byte, in CreateInput) (Resu
 	)
 	if len(in.CitationID) != 0 {
 		var obsChanges []rowchange.Change
-		written, obsChanges, err = observations.InsertManyTx(tx, in.CitationID, obs, observations.InsertOptions{AllowEdgeRows: true})
+		written, obsChanges, err = observations.InsertManyTx(q, in.CitationID, obs, observations.InsertOptions{AllowEdgeRows: true})
 		if err != nil {
-			return Result{}, err
+			return Result{}, nil, err
 		}
-		cit, err := citations.GetTx(tx, in.CitationID)
+		cit, err := citations.GetTx(q, in.CitationID)
 		if err != nil {
-			return Result{}, err
+			return Result{}, nil, err
 		}
 		citation = cit
 		changes = append(changes, obsChanges...)
 	} else {
-		cited, citChanges, err := citations.InsertWithObservationsTx(tx, in.Citation, obs, observations.InsertOptions{AllowEdgeRows: true})
+		cited, citChanges, err := citations.InsertWithObservationsTx(q, in.Citation, obs, observations.InsertOptions{AllowEdgeRows: true})
 		if err != nil {
-			return Result{}, err
+			return Result{}, nil, err
 		}
 		citation = cited.Citation
 		written = cited.Observations
 		changes = append(changes, citChanges...)
 	}
-	if _, err := audit.Record(tx, audit.Revision{
-		UserID:     userID,
-		ActionType: "create_cited_bridge",
-		CreatedAt:  project.NowUTC(),
-		Changes:    changes,
-	}); err != nil {
-		return Result{}, err
-	}
-	if err := tx.Commit(); err != nil {
-		return Result{}, err
-	}
 	return Result{
 		Subject:      bridge,
 		Citation:     citation,
 		Observations: written,
-	}, nil
+	}, changes, nil
 }
 
 func bindEndpoints(

@@ -11,6 +11,7 @@ import (
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
+	"github.com/mendahu/provenencia/core/database/evrun"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjects"
@@ -704,7 +705,7 @@ func TestSourceDelete(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := subjects.Create(c, userID, subjects.CreateInput{
+	if _, err := evrun.CreateSubject(c, userID, subjects.CreateInput{
 		SourceID: uncited.ID, SubjectTypeID: personType.ID, Label: "Alice",
 	}, nil); err != nil {
 		t.Fatal(err)

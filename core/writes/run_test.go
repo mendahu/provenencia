@@ -62,17 +62,39 @@ func TestRunSkipsEmptyChanges(t *testing.T) {
 	}
 }
 
-func TestRunUnauditedCommits(t *testing.T) {
+func TestRunNoneOnlyCommits(t *testing.T) {
 	c := newCatalog(t)
-	id := mustID(t)
-	userRef := mustRef(t)
+	sourceID := mustID(t)
+	derivedID := mustID(t)
+	linkID := mustID(t)
 	ran := false
-	_, res, err := writes.Run(c, writes.Op{Unaudited: true}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+	_, res, err := writes.Run(c, writes.Op{}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
 		tx.AfterCommit(func() { ran = true })
-		if _, err := tx.Exec(`INSERT INTO users (id, display_name, ref) VALUES (?, ?, ?)`, id, "Ada", userRef); err != nil {
+		if _, err := tx.Exec(
+			`INSERT INTO files (id, checksum_sha256, media_type, byte_size) VALUES (?, ?, 'image/png', 1), (?, ?, 'image/jpeg', 2)`,
+			sourceID, "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+			derivedID, "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+		); err != nil {
 			return struct{}{}, nil, err
 		}
-		return struct{}{}, nil, nil
+		if _, err := tx.Exec(
+			`INSERT INTO file_derivatives (id, source_file_id, derived_file_id, derivative_type) VALUES (?, ?, ?, 'thumbnail')`,
+			linkID, sourceID, derivedID,
+		); err != nil {
+			return struct{}{}, nil, err
+		}
+		uid, err := uuid.FromBytes(linkID)
+		if err != nil {
+			return struct{}{}, nil, err
+		}
+		return struct{}{}, []rowchange.Change{{
+			EntityType: "file_derivative",
+			EntityID:   linkID,
+			Action:     rowchange.ActionCreate,
+			Fields: map[string]rowchange.FieldDiff{
+				"id": {Old: nil, New: uid.String()},
+			},
+		}}, nil
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -80,8 +102,16 @@ func TestRunUnauditedCommits(t *testing.T) {
 	if res.Revision != 0 || !ran {
 		t.Fatalf("rev %d after %v", res.Revision, ran)
 	}
-	if _, err := users.Lookup(c, id); err != nil {
+	db, err := c.DB()
+	if err != nil {
 		t.Fatal(err)
+	}
+	var n int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM file_derivatives WHERE id = ?`, linkID).Scan(&n); err != nil {
+		t.Fatal(err)
+	}
+	if n != 1 {
+		t.Fatalf("links %d", n)
 	}
 	if n := auditCount(t, c); n != 0 {
 		t.Fatalf("audit rows %d", n)

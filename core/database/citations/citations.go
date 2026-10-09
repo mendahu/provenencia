@@ -12,11 +12,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/audit"
-	"github.com/mendahu/provenencia/core/database/autoreconciler"
 	"github.com/mendahu/provenencia/core/database/deleteimpact"
 	"github.com/mendahu/provenencia/core/database/observations"
-	"github.com/mendahu/provenencia/core/database/project"
 	"github.com/mendahu/provenencia/core/locator"
 	"github.com/mendahu/provenencia/core/ref"
 )
@@ -105,47 +102,25 @@ type CreateResult struct {
 	Observations []observations.Observation
 }
 
-// CreateWithObservations mints a Citation and any Observations atomically
-// (zero Observations is allowed — a transcription-first reading).
+// CreateWithObservations mints a Citation and any Observations on tx.
+// Zero Observations is allowed — a transcription-first reading. The caller
+// records the returned changes.
 func CreateWithObservations(
-	c *database.Catalog,
+	tx *database.Tx,
 	userID []byte,
 	in CreateInput,
 	obsInputs []observations.Input,
-) (CreateResult, error) {
-	db, err := c.DB()
-	if err != nil {
-		return CreateResult{}, err
+) (CreateResult, []rowchange.Change, error) {
+	if tx == nil {
+		return CreateResult{}, nil, ErrInvalid
 	}
 	if err := normalizeCreateInput(&in); err != nil {
-		return CreateResult{}, err
+		return CreateResult{}, nil, err
 	}
 	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
-		return CreateResult{}, err
+		return CreateResult{}, nil, err
 	}
-
-	tx, err := db.Begin()
-	if err != nil {
-		return CreateResult{}, err
-	}
-	defer func() { _ = tx.Rollback() }()
-
-	res, changes, err := InsertWithObservationsTx(tx, in, obsInputs, observations.InsertOptions{AllowEdgeRows: false})
-	if err != nil {
-		return CreateResult{}, err
-	}
-	if _, err := audit.Record(tx, audit.Revision{
-		UserID:     userID,
-		ActionType: "create_citation_with_observations",
-		CreatedAt:  project.NowUTC(),
-		Changes:    changes,
-	}); err != nil {
-		return CreateResult{}, err
-	}
-	if err := tx.Commit(); err != nil {
-		return CreateResult{}, err
-	}
-	return res, nil
+	return InsertWithObservationsTx(tx.Tx, in, obsInputs, observations.InsertOptions{AllowEdgeRows: false})
 }
 
 // NormalizeCreateInput trims citation fields and validates the locator.
@@ -296,39 +271,32 @@ type CitationFieldsInput struct {
 	TranscriptionNote      string
 }
 
-// Update changes citation columns only. Zero changes commits nothing and
-// returns the stored row. It never touches notes or observations.
-func Update(c *database.Catalog, userID, citationID []byte, in CitationFieldsInput) (Citation, error) {
-	db, err := c.DB()
-	if err != nil {
-		return Citation{}, err
+// Update changes citation columns only. An unchanged row returns no changes.
+// It never touches notes or observations. The caller records the returned changes.
+func Update(tx *database.Tx, userID, citationID []byte, in CitationFieldsInput) (Citation, []rowchange.Change, error) {
+	if tx == nil {
+		return Citation{}, nil, ErrInvalid
 	}
 	in.LocatorJSON = strings.TrimSpace(in.LocatorJSON)
 	in.Transcription = strings.TrimSpace(in.Transcription)
 	in.Description = strings.TrimSpace(in.Description)
 	in.TranscriptionNote = strings.TrimSpace(in.TranscriptionNote)
 	if len(citationID) != 16 {
-		return Citation{}, ErrInvalid
+		return Citation{}, nil, ErrInvalid
 	}
 	if err := locator.Validate(in.LocatorJSON); err != nil {
-		return Citation{}, err
+		return Citation{}, nil, err
 	}
 	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
-		return Citation{}, err
+		return Citation{}, nil, err
 	}
-
-	tx, err := db.Begin()
-	if err != nil {
-		return Citation{}, err
-	}
-	defer func() { _ = tx.Rollback() }()
 
 	prev, err := scanOne(tx.QueryRow(sqlGet, citationID))
 	if errors.Is(err, sql.ErrNoRows) {
-		return Citation{}, ErrInvalid
+		return Citation{}, nil, ErrInvalid
 	}
 	if err != nil {
-		return Citation{}, err
+		return Citation{}, nil, err
 	}
 
 	fields := map[string]rowchange.FieldDiff{}
@@ -354,10 +322,7 @@ func Update(c *database.Catalog, userID, citationID []byte, in CitationFieldsInp
 		}
 	}
 	if len(fields) == 0 {
-		if err := tx.Commit(); err != nil {
-			return Citation{}, err
-		}
-		return prev, nil
+		return prev, nil, nil
 	}
 
 	uncertain := 0
@@ -374,40 +339,23 @@ func Update(c *database.Catalog, userID, citationID []byte, in CitationFieldsInp
 		nullIfEmpty(in.TranscriptionNote),
 		citationID,
 	); err != nil {
-		return Citation{}, err
-	}
-	// Certainty is part of the evidence of every value this Citation backs.
-	if prev.TranscriptionUncertain != in.TranscriptionUncertain {
-		if err := autoreconciler.RecomputeCitationTx(tx, citationID); err != nil {
-			return Citation{}, err
-		}
-	}
-	if _, err := audit.Record(tx, audit.Revision{
-		UserID:     userID,
-		ActionType: "update_citation",
-		CreatedAt:  project.NowUTC(),
-		Changes: []rowchange.Change{{
-			EntityType: "citation",
-			EntityID:   citationID,
-			Action:     rowchange.ActionUpdate,
-			Fields:     fields,
-		}},
-	}); err != nil {
-		return Citation{}, err
-	}
-	if err := tx.Commit(); err != nil {
-		return Citation{}, err
+		return Citation{}, nil, err
 	}
 	return Citation{
-		ID:                     append([]byte(nil), citationID...),
-		Ref:                    prev.Ref,
-		ArtifactID:             append([]byte(nil), prev.ArtifactID...),
-		LocatorJSON:            in.LocatorJSON,
-		Transcription:          in.Transcription,
-		Description:            in.Description,
-		TranscriptionUncertain: in.TranscriptionUncertain,
-		TranscriptionNote:      in.TranscriptionNote,
-	}, nil
+			ID:                     append([]byte(nil), citationID...),
+			Ref:                    prev.Ref,
+			ArtifactID:             append([]byte(nil), prev.ArtifactID...),
+			LocatorJSON:            in.LocatorJSON,
+			Transcription:          in.Transcription,
+			Description:            in.Description,
+			TranscriptionUncertain: in.TranscriptionUncertain,
+			TranscriptionNote:      in.TranscriptionNote,
+		}, []rowchange.Change{{
+			EntityType: "citation",
+			EntityID:   append([]byte(nil), citationID...),
+			Action:     rowchange.ActionUpdate,
+			Fields:     fields,
+		}}, nil
 }
 
 func emptyAsNil(s string) any {
@@ -418,46 +366,37 @@ func emptyAsNil(s string) any {
 }
 
 // Delete erases a Citation when no Observation remains. Notes CASCADE.
-func Delete(c *database.Catalog, userID, id []byte) error {
+// The caller records the returned changes.
+func Delete(tx *database.Tx, userID, id []byte) ([]rowchange.Change, error) {
+	if tx == nil || len(id) != 16 {
+		return nil, ErrInvalid
+	}
 	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
-		return err
+		return nil, err
 	}
-	if len(id) != 16 {
-		return ErrInvalid
-	}
-	prev, err := Get(c, id)
+	prev, err := scanOne(tx.QueryRow(sqlGet, id))
 	if errors.Is(err, sql.ErrNoRows) {
-		return ErrInvalid
+		return nil, ErrInvalid
 	}
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	db, err := c.DB()
+	report, err := deleteimpact.Impact(tx.Tx, catalogmodel.KindCitation, id)
 	if err != nil {
-		return err
-	}
-	tx, err := db.Begin()
-	if err != nil {
-		return err
-	}
-	defer func() { _ = tx.Rollback() }()
-
-	report, err := deleteimpact.Impact(tx, catalogmodel.KindCitation, id)
-	if err != nil {
-		return err
+		return nil, err
 	}
 	if err := deleteimpact.Refuse(report, deleteimpact.Codes{
 		InUse: ErrInUse, NotFound: ErrInvalid,
 	}); err != nil {
-		return err
+		return nil, err
 	}
-	released, err := deleteimpact.ReleaseFacets(tx, catalogmodel.KindCitation, id)
+	released, err := deleteimpact.ReleaseFacets(tx.Tx, catalogmodel.KindCitation, id)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if _, err := tx.Exec(sqlDelete, id); err != nil {
-		return err
+		return nil, err
 	}
 	fields := map[string]rowchange.FieldDiff{
 		"id":          {Old: uuidString(id), New: nil},
@@ -470,20 +409,12 @@ func Delete(c *database.Catalog, userID, id []byte) error {
 	if prev.Transcription != "" {
 		fields["transcription"] = rowchange.FieldDiff{Old: prev.Transcription, New: nil}
 	}
-	if _, err := audit.Record(tx, audit.Revision{
-		UserID:     userID,
-		ActionType: "delete_citation",
-		CreatedAt:  project.NowUTC(),
-		Changes: append(released.Changes, rowchange.Change{
-			EntityType: "citation",
-			EntityID:   id,
-			Action:     rowchange.ActionDelete,
-			Fields:     fields,
-		}),
-	}); err != nil {
-		return err
-	}
-	return tx.Commit()
+	return append(released.Changes, rowchange.Change{
+		EntityType: "citation",
+		EntityID:   append([]byte(nil), id...),
+		Action:     rowchange.ActionDelete,
+		Fields:     fields,
+	}), nil
 }
 
 // ListNotes returns citation_notes bodies for a citation.

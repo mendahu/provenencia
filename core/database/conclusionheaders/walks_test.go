@@ -8,12 +8,12 @@ import (
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/conclusionheaders"
 	"github.com/mendahu/provenencia/core/database/connect"
+	"github.com/mendahu/provenencia/core/database/evrun"
 	"github.com/mendahu/provenencia/core/database/namevalues/namevaluestest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
 	"github.com/mendahu/provenencia/core/database/rowchange"
-	"github.com/mendahu/provenencia/core/database/subjectpositions"
 	"github.com/mendahu/provenencia/core/database/subjects"
 	"github.com/mendahu/provenencia/core/eventtitle"
 	"github.com/mendahu/provenencia/core/writes"
@@ -21,7 +21,7 @@ import (
 
 func (f *fixture) bare(kind string) subjects.Subject {
 	f.t.Helper()
-	s, err := subjects.Create(f.c, userID, subjects.CreateInput{
+	s, err := evrun.CreateSubject(f.c, userID, subjects.CreateInput{
 		SourceID: f.source.ID, SubjectTypeID: f.typeID(kind),
 	}, nil)
 	must(f.t, err)
@@ -33,7 +33,7 @@ func (f *fixture) cite(s subjects.Subject, in ...observations.Input) {
 	for i := range in {
 		in[i].SubjectID = s.ID
 	}
-	_, err := citations.CreateWithObservations(f.c, userID, citations.CreateInput{
+	_, err := evrun.CreateCitation(f.c, userID, citations.CreateInput{
 		ArtifactID: f.artifact.ID, LocatorJSON: locator,
 	}, in)
 	must(f.t, err)
@@ -41,7 +41,7 @@ func (f *fixture) cite(s subjects.Subject, in ...observations.Input) {
 
 func (f *fixture) at(s subjects.Subject, x, y int64) {
 	f.t.Helper()
-	_, err := subjectpositions.Set(f.c, s.ID, x, y)
+	_, err := evrun.SetPosition(f.c, s.ID, x, y)
 	must(f.t, err)
 }
 
@@ -71,7 +71,7 @@ func (f *fixture) location(event, place subjects.Subject) {
 
 func (f *fixture) bridge(kind string, from, to subjects.Subject, obs []observations.Input) {
 	f.t.Helper()
-	_, err := connect.CreateCitedBridge(f.c, userID, connect.CreateInput{
+	_, err := evrun.CreateBridge(f.c, userID, connect.CreateInput{
 		SourceID: f.source.ID, FromSubjectID: from.ID, ToSubjectID: to.ID, BridgeTypeKey: kind,
 		Citation:     citations.CreateInput{ArtifactID: f.artifact.ID, LocatorJSON: locator},
 		Observations: obs,

@@ -185,11 +185,11 @@ var registry = map[string]Effect{
 	"source_credibility_grades":   {None: true},
 	"claim_confidence_grades":     {None: true},
 	"users":                       {None: true},
-	"subject_positions":           {None: true},
+	"subject_positions":           {Entity: "subject_position", None: true},
 	"subject_type_properties":     {None: true},
 	"source_type_metadata_fields": {None: true},
 	"name_value_parts":            {None: true},
-	"file_derivatives":            {None: true},
+	"file_derivatives":            {Entity: "file_derivative", None: true},
 }
 
 // entityTable maps a catalog table to the entity type stored on a change.
@@ -230,7 +230,7 @@ func init() {
 
 func (e Effect) validate(table string) error {
 	if e.None {
-		if e.Entity != "" || !e.Source.zero() || !e.Handles.zero() || !e.Structure.zero() || len(e.Search) > 0 || e.Vocabulary {
+		if !e.Source.zero() || !e.Handles.zero() || !e.Structure.zero() || len(e.Search) > 0 || e.Vocabulary {
 			return errf("%s: None entry still has effects", table)
 		}
 		return nil

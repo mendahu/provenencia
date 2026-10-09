@@ -10,6 +10,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/datevalues"
+	"github.com/mendahu/provenencia/core/database/evrun"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/properties"
@@ -90,7 +91,7 @@ func TestSourceScopes(t *testing.T) {
 			t.Fatal(err)
 		}
 		mkSubject := func(typeID []byte, label string, x int64) subjects.Subject {
-			s, err := subjects.Create(c, userID, subjects.CreateInput{
+			s, err := evrun.CreateSubject(c, userID, subjects.CreateInput{
 				SourceID: a.ID, SubjectTypeID: typeID, Label: label,
 			}, &subjects.Placement{GridX: x, GridY: 0})
 			if err != nil {
@@ -175,7 +176,7 @@ func TestSourceScopes(t *testing.T) {
 		t.Helper()
 		in.ArtifactID = s.artifact.ID
 		in.LocatorJSON = validLocator
-		res, err := citations.CreateWithObservations(s.c, userID, in, obs)
+		res, err := evrun.CreateCitation(s.c, userID, in, obs)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -253,7 +254,7 @@ func TestSourceScopes(t *testing.T) {
 			run: func(t *testing.T, s seed) {
 				var subj subjects.Subject
 				bumpsA(t, s, func() {
-					got, err := subjects.Create(s.c, userID, subjects.CreateInput{
+					got, err := evrun.CreateSubject(s.c, userID, subjects.CreateInput{
 						SourceID: s.a.ID, SubjectTypeID: s.personTy, Label: "Cy",
 					}, &subjects.Placement{GridX: 16, GridY: 0})
 					if err != nil {
@@ -262,12 +263,12 @@ func TestSourceScopes(t *testing.T) {
 					subj = got
 				})
 				bumpsA(t, s, func() {
-					if err := subjects.Update(s.c, userID, subj.ID, "Cyril", ""); err != nil {
+					if err := evrun.UpdateSubject(s.c, userID, subj.ID, "Cyril", ""); err != nil {
 						t.Fatal(err)
 					}
 				})
 				bumpsA(t, s, func() {
-					if err := subjects.Delete(s.c, userID, subj.ID); err != nil {
+					if err := evrun.DeleteSubject(s.c, userID, subj.ID); err != nil {
 						t.Fatal(err)
 					}
 				})
@@ -283,7 +284,7 @@ func TestSourceScopes(t *testing.T) {
 					res = mustCitation(t, s, citations.CreateInput{Notes: []string{"p. 3"}}, in)
 				})
 				bumpsA(t, s, func() {
-					if _, err := citations.Update(s.c, userID, res.Citation.ID, citations.CitationFieldsInput{
+					if _, err := evrun.UpdateCitation(s.c, userID, res.Citation.ID, citations.CitationFieldsInput{
 						LocatorJSON: validLocator, Transcription: "Bob Smith",
 					}); err != nil {
 						t.Fatal(err)
@@ -291,7 +292,7 @@ func TestSourceScopes(t *testing.T) {
 				})
 				var added []observations.Observation
 				bumpsA(t, s, func() {
-					got, err := observations.AddToCitation(s.c, userID, res.Citation.ID,
+					got, err := evrun.AddObservations(s.c, userID, res.Citation.ID,
 						[]observations.Input{textObs(s, s.place2, "Salem")})
 					if err != nil {
 						t.Fatal(err)
@@ -299,7 +300,7 @@ func TestSourceScopes(t *testing.T) {
 					added = got
 				})
 				bumpsA(t, s, func() {
-					if _, err := observations.Update(s.c, userID, observations.Input{
+					if _, err := evrun.UpdateObservation(s.c, userID, observations.Input{
 						ID: added[0].ID, SubjectID: s.place2.ID, PropertyID: s.toponymProp.ID,
 						ValueText: "Salem Town", HasText: true,
 					}); err != nil {
@@ -309,17 +310,17 @@ func TestSourceScopes(t *testing.T) {
 				// Deleting an observation releases its notes first; the
 				// note's change resolves through the deleted observation.
 				bumpsA(t, s, func() {
-					if err := observations.Delete(s.c, userID, res.Observations[0].ID); err != nil {
+					if err := evrun.DeleteObservation(s.c, userID, res.Observations[0].ID); err != nil {
 						t.Fatal(err)
 					}
 				})
 				bumpsA(t, s, func() {
-					if err := observations.Delete(s.c, userID, added[0].ID); err != nil {
+					if err := evrun.DeleteObservation(s.c, userID, added[0].ID); err != nil {
 						t.Fatal(err)
 					}
 				})
 				bumpsA(t, s, func() {
-					if err := citations.Delete(s.c, userID, res.Citation.ID); err != nil {
+					if err := evrun.DeleteCitation(s.c, userID, res.Citation.ID); err != nil {
 						t.Fatal(err)
 					}
 				})
@@ -330,7 +331,7 @@ func TestSourceScopes(t *testing.T) {
 			run: func(t *testing.T, s seed) {
 				res := mustCitation(t, s, citations.CreateInput{}, textObs(s, s.place, "Boston"))
 				bumpsA(t, s, func() {
-					if _, err := observations.Update(s.c, userID, observations.Input{
+					if _, err := evrun.UpdateObservation(s.c, userID, observations.Input{
 						ID: res.Observations[0].ID, SubjectID: s.place.ID, PropertyID: s.toponymProp.ID,
 						ValueText: "Boston", HasText: true, Polarity: observations.PolarityNegative,
 					}); err != nil {
@@ -349,7 +350,7 @@ func TestSourceScopes(t *testing.T) {
 				})
 				year2 := 1843
 				bumpsA(t, s, func() {
-					if _, err := observations.Update(s.c, userID, observations.Input{
+					if _, err := evrun.UpdateObservation(s.c, userID, observations.Input{
 						ID: res.Observations[0].ID, SubjectID: s.event.ID, PropertyID: s.dateProp.ID,
 						Date: &datevalues.Value{Kind: datevalues.KindPoint, StartYear: &year2},
 					}); err != nil {

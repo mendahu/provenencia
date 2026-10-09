@@ -100,7 +100,7 @@ func TestCreateCitedBridge(t *testing.T) {
 		}
 		create := func(typeID []byte, label string, x, y int64) subjects.Subject {
 			t.Helper()
-			s, err := subjects.Create(c, userID, subjects.CreateInput{
+			s, err := runCreateSubject(c, userID, subjects.CreateInput{
 				SourceID: src.ID, SubjectTypeID: typeID, Label: label,
 			}, &subjects.Placement{GridX: x, GridY: y})
 			if err != nil {
@@ -153,7 +153,7 @@ func TestCreateCitedBridge(t *testing.T) {
 
 	t.Run("person event participation", func(t *testing.T) {
 		s := mustSeed(t)
-		res, err := CreateCitedBridge(s.c, userID, CreateInput{
+		res, err := runCreateCitedBridge(s.c, userID, CreateInput{
 			SourceID:      s.source.ID,
 			FromSubjectID: s.person.ID,
 			ToSubjectID:   s.event.ID,
@@ -210,7 +210,7 @@ func TestCreateCitedBridge(t *testing.T) {
 
 	t.Run("person person relationship", func(t *testing.T) {
 		s := mustSeed(t)
-		_, err := CreateCitedBridge(s.c, userID, CreateInput{
+		_, err := runCreateCitedBridge(s.c, userID, CreateInput{
 			SourceID:      s.source.ID,
 			FromSubjectID: s.person.ID,
 			ToSubjectID:   s.personB.ID,
@@ -232,7 +232,7 @@ func TestCreateCitedBridge(t *testing.T) {
 
 	t.Run("event place location", func(t *testing.T) {
 		s := mustSeed(t)
-		_, err := CreateCitedBridge(s.c, userID, CreateInput{
+		_, err := runCreateCitedBridge(s.c, userID, CreateInput{
 			SourceID:      s.source.ID,
 			FromSubjectID: s.event.ID,
 			ToSubjectID:   s.place.ID,
@@ -254,7 +254,7 @@ func TestCreateCitedBridge(t *testing.T) {
 	t.Run("person place refused", func(t *testing.T) {
 		s := mustSeed(t)
 		before := countBridges(t, s.c, "location")
-		_, err := CreateCitedBridge(s.c, userID, CreateInput{
+		_, err := runCreateCitedBridge(s.c, userID, CreateInput{
 			SourceID:      s.source.ID,
 			FromSubjectID: s.person.ID,
 			ToSubjectID:   s.place.ID,
@@ -279,7 +279,7 @@ func TestCreateCitedBridge(t *testing.T) {
 	t.Run("citation failure rolls back subject", func(t *testing.T) {
 		s := mustSeed(t)
 		before := countBridges(t, s.c, "participation")
-		_, err := CreateCitedBridge(s.c, userID, CreateInput{
+		_, err := runCreateCitedBridge(s.c, userID, CreateInput{
 			SourceID:      s.source.ID,
 			FromSubjectID: s.person.ID,
 			ToSubjectID:   s.event.ID,
@@ -304,7 +304,7 @@ func TestCreateCitedBridge(t *testing.T) {
 
 	t.Run("location extra term invalid", func(t *testing.T) {
 		s := mustSeed(t)
-		_, err := CreateCitedBridge(s.c, userID, CreateInput{
+		_, err := runCreateCitedBridge(s.c, userID, CreateInput{
 			SourceID:      s.source.ID,
 			FromSubjectID: s.event.ID,
 			ToSubjectID:   s.place.ID,
@@ -326,14 +326,14 @@ func TestCreateCitedBridge(t *testing.T) {
 
 	t.Run("attach existing citation", func(t *testing.T) {
 		s := mustSeed(t)
-		cited, err := citations.CreateWithObservations(s.c, userID, citations.CreateInput{
+		cited, err := runCreateCitation(s.c, userID, citations.CreateInput{
 			ArtifactID:  s.artifact.ID,
 			LocatorJSON: validLocator,
 		}, nil)
 		if err != nil {
 			t.Fatal(err)
 		}
-		res, err := CreateCitedBridge(s.c, userID, CreateInput{
+		res, err := runCreateCitedBridge(s.c, userID, CreateInput{
 			SourceID:      s.source.ID,
 			FromSubjectID: s.event.ID,
 			ToSubjectID:   s.place.ID,
@@ -357,14 +357,14 @@ func TestCreateCitedBridge(t *testing.T) {
 
 	t.Run("attach with citation fields invalid", func(t *testing.T) {
 		s := mustSeed(t)
-		cited, err := citations.CreateWithObservations(s.c, userID, citations.CreateInput{
+		cited, err := runCreateCitation(s.c, userID, citations.CreateInput{
 			ArtifactID:  s.artifact.ID,
 			LocatorJSON: validLocator,
 		}, nil)
 		if err != nil {
 			t.Fatal(err)
 		}
-		_, err = CreateCitedBridge(s.c, userID, CreateInput{
+		_, err = runCreateCitedBridge(s.c, userID, CreateInput{
 			SourceID:      s.source.ID,
 			FromSubjectID: s.event.ID,
 			ToSubjectID:   s.place.ID,
@@ -385,10 +385,10 @@ func TestCreateCitedBridge(t *testing.T) {
 
 	t.Run("missing position invalid", func(t *testing.T) {
 		s := mustSeed(t)
-		if err := subjectpositions.Clear(s.c, s.place.ID); err != nil {
+		if err := runClearPosition(s.c, s.place.ID); err != nil {
 			t.Fatal(err)
 		}
-		_, err := CreateCitedBridge(s.c, userID, CreateInput{
+		_, err := runCreateCitedBridge(s.c, userID, CreateInput{
 			SourceID:      s.source.ID,
 			FromSubjectID: s.event.ID,
 			ToSubjectID:   s.place.ID,

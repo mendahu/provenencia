@@ -10,164 +10,109 @@ import (
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/connectrules"
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/audit"
-	"github.com/mendahu/provenencia/core/database/autoreconciler"
 	"github.com/mendahu/provenencia/core/database/deleteimpact"
-	"github.com/mendahu/provenencia/core/database/project"
 )
 
 // Update rewrites one Observation. Edge rows are always locked, including no-ops.
-func Update(c *database.Catalog, userID []byte, in Input) (Listed, error) {
-	db, err := c.DB()
-	if err != nil {
-		return Listed{}, err
-	}
-	if len(in.ID) != 16 {
-		return Listed{}, ErrInvalid
+// An unchanged row returns no changes. The caller records the returned changes.
+func Update(tx *database.Tx, userID []byte, in Input) (Listed, []rowchange.Change, error) {
+	if tx == nil || len(in.ID) != 16 {
+		return Listed{}, nil, ErrInvalid
 	}
 	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
-		return Listed{}, err
+		return Listed{}, nil, err
 	}
 
-	tx, err := db.Begin()
-	if err != nil {
-		return Listed{}, err
-	}
-	defer func() { _ = tx.Rollback() }()
-
-	prev, err := getRowTx(tx, in.ID)
+	prev, err := getRowTx(tx.Tx, in.ID)
 	if errors.Is(err, sql.ErrNoRows) {
-		return Listed{}, ErrInvalid
+		return Listed{}, nil, ErrInvalid
 	}
 	if err != nil {
-		return Listed{}, err
+		return Listed{}, nil, err
 	}
-	storedEdge, err := isEdgeTx(tx, prev.SubjectID, prev.PropertyID)
+	storedEdge, err := isEdgeTx(tx.Tx, prev.SubjectID, prev.PropertyID)
 	if err != nil {
-		return Listed{}, err
+		return Listed{}, nil, err
 	}
 	if storedEdge {
-		return Listed{}, ErrEdgeLocked
+		return Listed{}, nil, ErrEdgeLocked
 	}
-	requestedEdge, err := isEdgeTx(tx, in.SubjectID, in.PropertyID)
+	requestedEdge, err := isEdgeTx(tx.Tx, in.SubjectID, in.PropertyID)
 	if err != nil {
-		return Listed{}, err
+		return Listed{}, nil, err
 	}
 	if requestedEdge {
-		return Listed{}, ErrEdgeLocked
+		return Listed{}, nil, ErrEdgeLocked
 	}
 
-	_, changes, err := updateOne(tx, prev.CitationID, prev, in)
+	_, changes, err := updateOne(tx.Tx, prev.CitationID, prev, in)
 	if err != nil {
-		return Listed{}, err
+		return Listed{}, nil, err
 	}
-	if err := autoreconciler.RecomputeSubjectsTx(tx, [][]byte{prev.SubjectID, in.SubjectID}); err != nil {
-		return Listed{}, err
-	}
-	if len(changes) > 0 {
-		if _, err := audit.Record(tx, audit.Revision{
-			UserID:     userID,
-			ActionType: "update_observation",
-			CreatedAt:  project.NowUTC(),
-			Changes:    changes,
-		}); err != nil {
-			return Listed{}, err
-		}
-	}
-	listed, err := getListedTx(tx, in.ID)
+	listed, err := getListedTx(tx.Tx, in.ID)
 	if err != nil {
-		return Listed{}, err
+		return Listed{}, nil, err
 	}
-	if err := tx.Commit(); err != nil {
-		return Listed{}, err
-	}
-	return listed, nil
+	return listed, changes, nil
 }
 
 // Delete removes one Observation. It never deletes the Citation. Edge rows are locked.
-func Delete(c *database.Catalog, userID, id []byte) error {
-	db, err := c.DB()
-	if err != nil {
-		return err
-	}
-	if len(id) != 16 {
-		return ErrInvalid
+// The caller records the returned changes.
+func Delete(tx *database.Tx, userID, id []byte) ([]rowchange.Change, error) {
+	if tx == nil || len(id) != 16 {
+		return nil, ErrInvalid
 	}
 	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
-		return err
+		return nil, err
 	}
 
-	tx, err := db.Begin()
-	if err != nil {
-		return err
-	}
-	defer func() { _ = tx.Rollback() }()
-
-	prev, err := getRowTx(tx, id)
+	prev, err := getRowTx(tx.Tx, id)
 	if errors.Is(err, sql.ErrNoRows) {
-		return ErrInvalid
+		return nil, ErrInvalid
 	}
 	if err != nil {
-		return err
+		return nil, err
 	}
-	edge, err := isEdgeTx(tx, prev.SubjectID, prev.PropertyID)
+	edge, err := isEdgeTx(tx.Tx, prev.SubjectID, prev.PropertyID)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if edge {
-		return ErrEdgeLocked
+		return nil, ErrEdgeLocked
 	}
 
-	report, err := deleteimpact.Impact(tx, catalogmodel.KindObservation, id)
+	report, err := deleteimpact.Impact(tx.Tx, catalogmodel.KindObservation, id)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if err := deleteimpact.Refuse(report, deleteimpact.Codes{
 		InUse: ErrInUse, EdgeLocked: ErrEdgeLocked, NotFound: ErrInvalid,
 	}); err != nil {
-		return err
+		return nil, err
 	}
 
-	// Notes and pins are released and audited first; claims that pinned this
-	// Observation stay, weaker (model §5.2).
-	released, err := deleteimpact.ReleaseFacets(tx, catalogmodel.KindObservation, id)
+	// Notes and pins are released first; claims that pinned this Observation
+	// stay, weaker (model §5.2). The caller records the returned changes.
+	released, err := deleteimpact.ReleaseFacets(tx.Tx, catalogmodel.KindObservation, id)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	changes := released.Changes
-	snap, err := deleteimpact.SnapshotOwned(tx, catalogmodel.KindObservation, id)
+	snap, err := deleteimpact.SnapshotOwned(tx.Tx, catalogmodel.KindObservation, id)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if _, err := tx.Exec(sqlDeleteObservationByID, id); err != nil {
-		return err
+		return nil, err
 	}
-	if err := deleteimpact.ReleaseSnapshot(tx, snap); err != nil {
-		return err
+	if err := deleteimpact.ReleaseSnapshot(tx.Tx, snap); err != nil {
+		return nil, err
 	}
-	// The Subject's own handle loses a candidate; handles whose claims pinned
-	// this Observation are not necessarily that handle.
-	if err := autoreconciler.RecomputeSubjectsTx(tx, [][]byte{prev.SubjectID}); err != nil {
-		return err
-	}
-	if err := autoreconciler.RecomputeTx(tx, released.Handles); err != nil {
-		return err
-	}
-	changes = append(changes, rowchange.Change{
+	return append(released.Changes, rowchange.Change{
 		EntityType: "observation",
-		EntityID:   id,
+		EntityID:   append([]byte(nil), id...),
 		Action:     rowchange.ActionDelete,
 		Fields:     rowchange.DeletedRow(observationRowMap(prev)),
-	})
-	if _, err := audit.Record(tx, audit.Revision{
-		UserID:     userID,
-		ActionType: "delete_observation",
-		CreatedAt:  project.NowUTC(),
-		Changes:    changes,
-	}); err != nil {
-		return err
-	}
-	return tx.Commit()
+	}), nil
 }
 
 func isEdgeTx(tx *sql.Tx, subjectID, propertyID []byte) (bool, error) {

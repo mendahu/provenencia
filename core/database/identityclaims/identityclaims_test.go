@@ -10,6 +10,7 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/claimconfidencegrades"
+	"github.com/mendahu/provenencia/core/database/evrun"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/database/properties"
@@ -216,7 +217,7 @@ func TestIdentityClaims(t *testing.T) {
 			name: "subject delete cascades its claim, handle stays",
 			run: func(t *testing.T, f fixture) {
 				cl := mustClaim(t, f, f.james, f.per1, identityclaims.StatusAccepted)
-				if err := subjects.Delete(f.c, userID, f.james.ID); err != nil {
+				if err := evrun.DeleteSubject(f.c, userID, f.james.ID); err != nil {
 					t.Fatal(err)
 				}
 				if _, err := identityclaims.Get(f.c, cl.ID); !errors.Is(err, sql.ErrNoRows) {
@@ -323,7 +324,7 @@ func lookupType(t *testing.T, c *database.Catalog, key string) subjecttypes.Type
 
 func mustSubject(t *testing.T, c *database.Catalog, sourceID, typeID []byte, label string) subjects.Subject {
 	t.Helper()
-	s, err := subjects.Create(c, userID, subjects.CreateInput{SourceID: sourceID, SubjectTypeID: typeID, Label: label}, nil)
+	s, err := evrun.CreateSubject(c, userID, subjects.CreateInput{SourceID: sourceID, SubjectTypeID: typeID, Label: label}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

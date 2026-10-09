@@ -12,6 +12,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/deleteimpact"
+	"github.com/mendahu/provenencia/core/database/evrun"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
@@ -50,7 +51,7 @@ func TestImpactConclusion(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	york, err := subjects.Create(c, userID, subjects.CreateInput{
+	york, err := evrun.CreateSubject(c, userID, subjects.CreateInput{
 		SourceID: src.ID, SubjectTypeID: place.ID, Label: "York",
 	}, nil)
 	if err != nil {
@@ -60,7 +61,7 @@ func TestImpactConclusion(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	res, err := citations.CreateWithObservations(c, userID, citations.CreateInput{
+	res, err := evrun.CreateCitation(c, userID, citations.CreateInput{
 		ArtifactID: art.ID, LocatorJSON: testLocator, Transcription: "York",
 	}, []observations.Input{{
 		SubjectID: york.ID, PropertyID: toponym.ID, ValueText: "York", HasText: true,
@@ -102,7 +103,7 @@ func TestImpactConclusion(t *testing.T) {
 	})
 
 	t.Run("allowed promoted subject still names the handle it leaves", func(t *testing.T) {
-		leeds, err := subjects.Create(c, userID, subjects.CreateInput{
+		leeds, err := evrun.CreateSubject(c, userID, subjects.CreateInput{
 			SourceID: src.ID, SubjectTypeID: place.ID, Label: "Leeds",
 		}, nil)
 		if err != nil {
@@ -148,7 +149,7 @@ func TestImpactConclusion(t *testing.T) {
 	})
 
 	t.Run("observation delete removes its pins explicitly and audits them", func(t *testing.T) {
-		if err := observations.Delete(c, userID, obsID); err != nil {
+		if err := evrun.DeleteObservation(c, userID, obsID); err != nil {
 			t.Fatal(err)
 		}
 		action, types := lastRevision(t, c)
@@ -165,7 +166,7 @@ func TestImpactConclusion(t *testing.T) {
 	})
 
 	t.Run("subject delete removes its claim explicitly and audits it; handle stays", func(t *testing.T) {
-		if err := subjects.Delete(c, userID, york.ID); err != nil {
+		if err := evrun.DeleteSubject(c, userID, york.ID); err != nil {
 			t.Fatal(err)
 		}
 		action, types := lastRevision(t, c)

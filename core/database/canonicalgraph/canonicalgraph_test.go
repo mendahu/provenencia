@@ -10,6 +10,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/canonicalgraph"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/connect"
+	"github.com/mendahu/provenencia/core/database/evrun"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/properties"
@@ -17,7 +18,6 @@ import (
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
-	"github.com/mendahu/provenencia/core/database/subjectpositions"
 	"github.com/mendahu/provenencia/core/database/subjects"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
@@ -99,9 +99,9 @@ func (f *fixture) subject(kind string) subjects.Subject {
 	f.t.Helper()
 	st, err := subjecttypes.Lookup(f.c, kind, subjecttypes.OriginProvenencia)
 	must(f.t, err)
-	s, err := subjects.Create(f.c, userID, subjects.CreateInput{SourceID: f.src.ID, SubjectTypeID: st.ID}, nil)
+	s, err := evrun.CreateSubject(f.c, userID, subjects.CreateInput{SourceID: f.src.ID, SubjectTypeID: st.ID}, nil)
 	must(f.t, err)
-	_, err = subjectpositions.Set(f.c, s.ID, 0, f.y)
+	_, err = evrun.SetPosition(f.c, s.ID, 0, f.y)
 	must(f.t, err)
 	f.y += 2
 	return s
@@ -116,7 +116,7 @@ func (f *fixture) prop(key string) []byte {
 
 func (f *fixture) bridge(kind string, from, to subjects.Subject, obs ...observations.Input) {
 	f.t.Helper()
-	_, err := connect.CreateCitedBridge(f.c, userID, connect.CreateInput{
+	_, err := evrun.CreateBridge(f.c, userID, connect.CreateInput{
 		SourceID: f.src.ID, FromSubjectID: from.ID, ToSubjectID: to.ID, BridgeTypeKey: kind,
 		Citation:     citations.CreateInput{ArtifactID: f.art.ID, LocatorJSON: locator},
 		Observations: obs,
