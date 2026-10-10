@@ -19,6 +19,13 @@ Copy the stub. Surface + what got in the way is enough. A wanted fix is optional
 
 <!-- add below this line -->
 
+### Seed an `interests` Property on Person
+
+- **Date:** 2026-10-10
+- **Where:** Seeded vocabulary (Person Properties)
+- **Annoyance:** There's no place to record what a person was interested in (hobbies, pastimes, causes) as structured evidence.
+- **Wanted:** Seed a Person Property with key `interests`, `value_type = text`, cardinality `multiple`, so one Person can carry several interests. `toponym` on Place is the existing precedent for a seeded `text` Property with cardinality `multiple`. Needs rows in [seeded vocabulary](../seeded-vocabulary.md) §3.2 (`properties`) and §3.3 (`subject_type_properties`, bound to `person`, unlocked).
+
 ### Combo box should rank prefix matches above mid-word matches
 
 - **Date:** 2026-10-10
