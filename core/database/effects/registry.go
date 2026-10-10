@@ -24,24 +24,26 @@ type SearchIDs struct {
 // Set is what a batch of changes touches. Empty Handles or Search means that
 // job has nothing to do. Vocabulary and Structure are catalog-wide.
 type Set struct {
-	Handles    [][]byte
-	Sources    [][]byte
-	Search     []SearchIDs
-	Vocabulary bool
-	Structure  bool
+	Handles      [][]byte
+	Sources      [][]byte
+	CacheSources [][]byte // Source graphs to drop; not an audit scope
+	Search       []SearchIDs
+	Vocabulary   bool
+	Structure    bool
 }
 
 // Effect is what a change to one table touches. An empty field means that job
 // is unaffected. None is an explicit empty entry for a table outside the skip
 // bucket that has no effects.
 type Effect struct {
-	Entity     string
-	Source     Path
-	Handles    Path
-	Search     []SearchDoc
-	Vocabulary bool
-	Structure  Path
-	None       bool
+	Entity      string
+	Source      Path
+	CacheSource Path // drops a loaded Source graph; audit still uses Source
+	Handles     Path
+	Search      []SearchDoc
+	Vocabulary  bool
+	Structure   Path
+	None        bool
 }
 
 // Handle queries mirror autoreconciler. They stay here so the registry can
@@ -175,15 +177,17 @@ var registry = map[string]Effect{
 	},
 	"canonical_entities": {Entity: "canonical_entity", Handles: self()},
 	"identity_claims": {
-		Entity: "identity_claim",
+		Entity:      "identity_claim",
+		CacheSource: from("subject_id", field("source_id")),
 		Handles: union(
 			field("entity_id"),
 			onStatus("accepted", from("subject_id", observers)),
 		),
 	},
 	"identity_claim_evidence": {
-		Entity:  "identity_claim_evidence",
-		Handles: up("identity_claim_id", "entity_id"),
+		Entity:      "identity_claim_evidence",
+		CacheSource: up("identity_claim_id", "subject_id", "source_id"),
+		Handles:     up("identity_claim_id", "entity_id"),
 	},
 
 	"source_credibility_grades":   {None: true},
@@ -234,12 +238,12 @@ func init() {
 
 func (e Effect) validate(table string) error {
 	if e.None {
-		if !e.Source.zero() || !e.Handles.zero() || !e.Structure.zero() || len(e.Search) > 0 || e.Vocabulary {
+		if !e.Source.zero() || !e.CacheSource.zero() || !e.Handles.zero() || !e.Structure.zero() || len(e.Search) > 0 || e.Vocabulary {
 			return errf("%s: None entry still has effects", table)
 		}
 		return nil
 	}
-	for _, p := range []Path{e.Source, e.Handles, e.Structure} {
+	for _, p := range []Path{e.Source, e.CacheSource, e.Handles, e.Structure} {
 		if p.zero() {
 			continue
 		}

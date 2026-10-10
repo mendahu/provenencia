@@ -97,6 +97,10 @@ func Resolve(tx *sql.Tx, changes []rowchange.Change) (Set, error) {
 		if err != nil {
 			return Set{}, err
 		}
+		set.CacheSources, err = appendPath(w, table, eff.CacheSource, set.CacheSources)
+		if err != nil {
+			return Set{}, err
+		}
 		set.Handles, err = appendPath(w, table, eff.Handles, set.Handles)
 		if err != nil {
 			return Set{}, err

@@ -14,9 +14,11 @@ import (
 	"strings"
 
 	"github.com/mendahu/provenencia/core/database/canonicalgraph"
+	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/eventtitle"
 	"github.com/mendahu/provenencia/core/hops"
+	"github.com/mendahu/provenencia/core/valuecodec"
 )
 
 // Querier is *sql.Tx or *sql.DB.
@@ -55,19 +57,20 @@ type naming struct {
 	termText string
 }
 
+type titledEvent struct {
+	id         []byte
+	ref, label string
+}
+
 // ForSource returns a title for every Event Subject on the Source, by ref.
 func ForSource(q Querier, sourceID []byte) ([]Title, error) {
-	type event struct {
-		id         []byte
-		ref, label string
-	}
-	var events []event
+	var events []titledEvent
 	rows, err := q.Query(sqlEvents, sourceID)
 	if err != nil {
 		return nil, err
 	}
 	for rows.Next() {
-		var e event
+		var e titledEvent
 		if err := rows.Scan(&e.id, &e.ref, &e.label); err != nil {
 			_ = rows.Close()
 			return nil, err
@@ -106,7 +109,64 @@ func ForSource(q Querier, sourceID []byte) ([]Title, error) {
 	if err != nil {
 		return nil, err
 	}
+	return assemble(events, first, people, places, names), nil
+}
 
+// FromStored chooses titles from a loaded Source. Term labels are applied
+// here; they are not stored on the Source.
+func FromStored(sg graphcache.SourceGraph, propKey map[string]string, terms map[string]struct{ Key, Label string }) []Title {
+	var events []titledEvent
+	for _, s := range sg.Subjects {
+		if s.TypeKey != "event" || s.TypeOrigin != "provenencia" {
+			continue
+		}
+		events = append(events, titledEvent{id: s.ID, ref: s.Ref, label: s.Label})
+	}
+	sort.Slice(events, func(i, j int) bool { return events[i].ref < events[j].ref })
+	first := map[string]naming{}
+	for _, o := range sg.Observations {
+		if o.Polarity != "positive" {
+			continue
+		}
+		keyName := propKey[string(o.PropertyID)]
+		switch keyName {
+		case "event_name", "event_type", "name", "toponym":
+		default:
+			continue
+		}
+		n := naming{text: strings.TrimSpace(o.Text), nameID: o.NameID}
+		if t, ok := terms[string(o.TermID)]; ok {
+			n.termKey, n.termText = t.Key, t.Label
+		}
+		usable := n.text != "" || len(n.nameID) > 0 || n.termKey != ""
+		k := key(o.SubjectID, keyName)
+		if _, done := first[k]; usable && !done {
+			first[k] = n
+		}
+	}
+	people := make([]canonicalgraph.Edge, len(sg.EventPeople))
+	for i, e := range sg.EventPeople {
+		people[i] = canonicalgraph.Edge{From: e.From, To: e.To, ToRef: e.ToRef}
+	}
+	places := make([]canonicalgraph.Edge, len(sg.EventPlaces))
+	for i, e := range sg.EventPlaces {
+		places[i] = canonicalgraph.Edge{From: e.From, To: e.To, ToRef: e.ToRef}
+	}
+	names := map[string]namevalues.Value{}
+	for _, o := range sg.Observations {
+		if len(o.Name) == 0 || len(o.NameID) == 0 {
+			continue
+		}
+		n, err := valuecodec.UnmarshalName(o.Name)
+		if err != nil {
+			continue
+		}
+		names[string(o.NameID)] = n
+	}
+	return assemble(events, first, people, places, names)
+}
+
+func assemble(events []titledEvent, first map[string]naming, people, places []canonicalgraph.Edge, names map[string]namevalues.Value) []Title {
 	peopleOf := map[string][]eventtitle.Subject{}
 	seen := map[string]bool{}
 	for _, e := range people {
@@ -156,7 +216,7 @@ func ForSource(q Querier, sourceID []byte) ([]Title, error) {
 		}
 		out = append(out, Title{SubjectID: e.id, Plan: eventtitle.Choose(parts)})
 	}
-	return out, nil
+	return out
 }
 
 func key(subjectID []byte, propertyKey string) string {

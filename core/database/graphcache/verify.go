@@ -69,6 +69,13 @@ func (g *Graph) Verify() error {
 			}
 		}
 	}
+	if sourceFn != nil {
+		for key, stored := range g.sources {
+			if err := sourceFn(g, []byte(key), stored); err != nil {
+				return err
+			}
+		}
+	}
 	return nil
 }
 
