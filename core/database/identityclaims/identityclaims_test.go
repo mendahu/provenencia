@@ -13,6 +13,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/database/properties"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjects"
@@ -21,6 +22,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/ref"
 	"github.com/mendahu/provenencia/core/valuecodec"
+	"github.com/mendahu/provenencia/core/writes"
 )
 
 var userID = []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}
@@ -40,8 +42,10 @@ func TestIdentityClaims(t *testing.T) {
 		{
 			name: "accepted claim copies subject type and makes a member",
 			run: func(t *testing.T, f fixture) {
-				cl, err := identityclaims.Create(f.c, userID, identityclaims.CreateInput{
-					SubjectID: f.james.ID, EntityID: f.per1.ID, Status: identityclaims.StatusAccepted,
+				cl, err := writes.Call(f.c, writes.Op{Action: "create_identity_claim", UserID: userID}, func(tx *database.Tx) (identityclaims.Claim, []rowchange.Change, error) {
+					return identityclaims.Create(tx, userID, identityclaims.CreateInput{
+						SubjectID: f.james.ID, EntityID: f.per1.ID, Status: identityclaims.StatusAccepted,
+					})
 				})
 				if err != nil {
 					t.Fatal(err)
@@ -74,8 +78,10 @@ func TestIdentityClaims(t *testing.T) {
 		{
 			name: "type mismatch rejected by composite FK",
 			run: func(t *testing.T, f fixture) {
-				_, err := identityclaims.Create(f.c, userID, identityclaims.CreateInput{
-					SubjectID: f.james.ID, EntityID: f.plc1.ID, Status: identityclaims.StatusAccepted,
+				_, err := writes.Call(f.c, writes.Op{Action: "create_identity_claim", UserID: userID}, func(tx *database.Tx) (identityclaims.Claim, []rowchange.Change, error) {
+					return identityclaims.Create(tx, userID, identityclaims.CreateInput{
+						SubjectID: f.james.ID, EntityID: f.plc1.ID, Status: identityclaims.StatusAccepted,
+					})
 				})
 				if !errors.Is(err, identityclaims.ErrTypeMismatch) {
 					t.Fatalf("got %v", err)
@@ -97,8 +103,10 @@ func TestIdentityClaims(t *testing.T) {
 			name: "second accepted claim for a subject rejected",
 			run: func(t *testing.T, f fixture) {
 				mustClaim(t, f, f.james, f.per1, identityclaims.StatusAccepted)
-				_, err := identityclaims.Create(f.c, userID, identityclaims.CreateInput{
-					SubjectID: f.james.ID, EntityID: f.per2.ID, Status: identityclaims.StatusAccepted,
+				_, err := writes.Call(f.c, writes.Op{Action: "create_identity_claim", UserID: userID}, func(tx *database.Tx) (identityclaims.Claim, []rowchange.Change, error) {
+					return identityclaims.Create(tx, userID, identityclaims.CreateInput{
+						SubjectID: f.james.ID, EntityID: f.per2.ID, Status: identityclaims.StatusAccepted,
+					})
 				})
 				if !errors.Is(err, identityclaims.ErrAlreadyMember) {
 					t.Fatalf("got %v", err)
@@ -131,8 +139,10 @@ func TestIdentityClaims(t *testing.T) {
 			name: "duplicate subject entity pair rejected",
 			run: func(t *testing.T, f fixture) {
 				mustClaim(t, f, f.james, f.per1, identityclaims.StatusProvisional)
-				_, err := identityclaims.Create(f.c, userID, identityclaims.CreateInput{
-					SubjectID: f.james.ID, EntityID: f.per1.ID, Status: identityclaims.StatusRejected,
+				_, err := writes.Call(f.c, writes.Op{Action: "create_identity_claim", UserID: userID}, func(tx *database.Tx) (identityclaims.Claim, []rowchange.Change, error) {
+					return identityclaims.Create(tx, userID, identityclaims.CreateInput{
+						SubjectID: f.james.ID, EntityID: f.per1.ID, Status: identityclaims.StatusRejected,
+					})
 				})
 				if !errors.Is(err, identityclaims.ErrInvalid) {
 					t.Fatalf("got %v", err)
@@ -142,8 +152,10 @@ func TestIdentityClaims(t *testing.T) {
 		{
 			name: "bad status rejected",
 			run: func(t *testing.T, f fixture) {
-				_, err := identityclaims.Create(f.c, userID, identityclaims.CreateInput{
-					SubjectID: f.james.ID, EntityID: f.per1.ID, Status: "maybe",
+				_, err := writes.Call(f.c, writes.Op{Action: "create_identity_claim", UserID: userID}, func(tx *database.Tx) (identityclaims.Claim, []rowchange.Change, error) {
+					return identityclaims.Create(tx, userID, identityclaims.CreateInput{
+						SubjectID: f.james.ID, EntityID: f.per1.ID, Status: "maybe",
+					})
 				})
 				if !errors.Is(err, identityclaims.ErrInvalid) {
 					t.Fatalf("got %v", err)
@@ -170,9 +182,11 @@ func TestIdentityClaims(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				cl, err := identityclaims.Create(f.c, userID, identityclaims.CreateInput{
-					SubjectID: f.james.ID, EntityID: f.per1.ID, Status: identityclaims.StatusAccepted,
-					ConfidenceGradeID: high.ID, Argument: " Same age and parish. ",
+				cl, err := writes.Call(f.c, writes.Op{Action: "create_identity_claim", UserID: userID}, func(tx *database.Tx) (identityclaims.Claim, []rowchange.Change, error) {
+					return identityclaims.Create(tx, userID, identityclaims.CreateInput{
+						SubjectID: f.james.ID, EntityID: f.per1.ID, Status: identityclaims.StatusAccepted,
+						ConfidenceGradeID: high.ID, Argument: " Same age and parish. ",
+					})
 				})
 				if err != nil {
 					t.Fatal(err)
@@ -181,10 +195,14 @@ func TestIdentityClaims(t *testing.T) {
 				if err != nil || string(got.ConfidenceGradeID) != string(high.ID) || got.Argument != "Same age and parish." {
 					t.Fatalf("%v %+v", err, got)
 				}
-				_, err = identityclaims.Create(f.c, userID, identityclaims.CreateInput{
+				p6a1 := identityclaims.CreateInput{
 					SubjectID: f.jim.ID, EntityID: f.per1.ID, Status: identityclaims.StatusAccepted,
 					ConfidenceGradeID: make([]byte, 16),
+				}
+				_, err = writes.Call(f.c, writes.Op{Action: "create_identity_claim", UserID: userID}, func(tx *database.Tx) (identityclaims.Claim, []rowchange.Change, error) {
+					return identityclaims.Create(tx, userID, p6a1)
 				})
+
 				if !errors.Is(err, identityclaims.ErrInvalid) {
 					t.Fatalf("unknown grade: %v", err)
 				}
@@ -214,7 +232,10 @@ func TestIdentityClaims(t *testing.T) {
 			name: "subject delete cascades its claim, handle stays",
 			run: func(t *testing.T, f fixture) {
 				cl := mustClaim(t, f, f.james, f.per1, identityclaims.StatusAccepted)
-				if err := subjects.Delete(f.c, userID, f.james.ID); err != nil {
+				if _, err := writes.Call(f.c, writes.Op{Action: "delete_subject", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+					changes, err := subjects.Delete(tx, userID, f.james.ID)
+					return struct{}{}, changes, err
+				}); err != nil {
 					t.Fatal(err)
 				}
 				if _, err := identityclaims.Get(f.c, cl.ID); !errors.Is(err, sql.ErrNoRows) {
@@ -260,8 +281,10 @@ func TestIdentityClaims(t *testing.T) {
 
 func mustClaim(t *testing.T, f fixture, s subjects.Subject, e canonicalentities.Entity, status string) identityclaims.Claim {
 	t.Helper()
-	cl, err := identityclaims.Create(f.c, userID, identityclaims.CreateInput{
-		SubjectID: s.ID, EntityID: e.ID, Status: status,
+	cl, err := writes.Call(f.c, writes.Op{Action: "create_identity_claim", UserID: userID}, func(tx *database.Tx) (identityclaims.Claim, []rowchange.Change, error) {
+		return identityclaims.Create(tx, userID, identityclaims.CreateInput{
+			SubjectID: s.ID, EntityID: e.ID, Status: status,
+		})
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -292,7 +315,9 @@ func newFixture(t *testing.T) fixture {
 	if err != nil {
 		t.Fatal(err)
 	}
-	src, err := sources.Create(c, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Census"})
+	src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Census"})
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -319,7 +344,9 @@ func lookupType(t *testing.T, c *database.Catalog, key string) subjecttypes.Type
 
 func mustSubject(t *testing.T, c *database.Catalog, sourceID, typeID []byte, label string) subjects.Subject {
 	t.Helper()
-	s, err := subjects.Create(c, userID, subjects.CreateInput{SourceID: sourceID, SubjectTypeID: typeID, Label: label}, nil)
+	s, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
+		return subjects.Create(tx, userID, subjects.CreateInput{SourceID: sourceID, SubjectTypeID: typeID, Label: label}, nil)
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -328,7 +355,9 @@ func mustSubject(t *testing.T, c *database.Catalog, sourceID, typeID []byte, lab
 
 func mustEntity(t *testing.T, c *database.Catalog, typeID []byte) canonicalentities.Entity {
 	t.Helper()
-	e, err := canonicalentities.Create(c, userID, canonicalentities.CreateInput{SubjectTypeID: typeID})
+	e, err := writes.Call(c, writes.Op{Action: "create_canonical_entity", UserID: userID}, func(tx *database.Tx) (canonicalentities.Entity, []rowchange.Change, error) {
+		return canonicalentities.Create(tx, userID, canonicalentities.CreateInput{SubjectTypeID: typeID})
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -418,7 +447,9 @@ func TestMembershipsBySource(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		other, err := sources.Create(f.c, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Other"})
+		other, _, err := writes.Run(f.c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+			return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Other"})
+		})
 		if err != nil {
 			t.Fatal(err)
 		}

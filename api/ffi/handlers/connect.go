@@ -8,6 +8,8 @@ import (
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/connect"
 	"github.com/mendahu/provenencia/core/database/observations"
+	"github.com/mendahu/provenencia/core/database/rowchange"
+	"github.com/mendahu/provenencia/core/writes"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -52,24 +54,27 @@ func CreateCitedBridge(in []byte) ([]byte, error) {
 	}
 	var out *engine.CreateCitedBridgeResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		res, err := connect.CreateCitedBridge(c, userID, connect.CreateInput{
-			SourceID:      sourceID,
-			FromSubjectID: fromID,
-			ToSubjectID:   toID,
-			BridgeTypeKey: req.GetBridgeTypeKey(),
-			Description:   req.GetDescription(),
-			CitationID:    citationID,
-			Citation: citations.CreateInput{
-				ArtifactID:             artifactID,
-				LocatorJSON:            req.GetLocatorJson(),
-				Transcription:          req.GetTranscription(),
-				Description:            req.GetCitationDescription(),
-				TranscriptionUncertain: req.GetTranscriptionUncertain(),
-				TranscriptionNote:      req.GetTranscriptionNote(),
-				Notes:                  req.GetCitationNotes(),
-			},
-			Observations: inputs,
-		})
+		res, _, err := writes.Run(c, writes.Op{Action: "create_cited_bridge", UserID: userID},
+			func(tx *database.Tx) (connect.Result, []rowchange.Change, error) {
+				return connect.CreateCitedBridge(tx, userID, connect.CreateInput{
+					SourceID:      sourceID,
+					FromSubjectID: fromID,
+					ToSubjectID:   toID,
+					BridgeTypeKey: req.GetBridgeTypeKey(),
+					Description:   req.GetDescription(),
+					CitationID:    citationID,
+					Citation: citations.CreateInput{
+						ArtifactID:             artifactID,
+						LocatorJSON:            req.GetLocatorJson(),
+						Transcription:          req.GetTranscription(),
+						Description:            req.GetCitationDescription(),
+						TranscriptionUncertain: req.GetTranscriptionUncertain(),
+						TranscriptionNote:      req.GetTranscriptionNote(),
+						Notes:                  req.GetCitationNotes(),
+					},
+					Observations: inputs,
+				})
+			})
 		if err != nil {
 			return err
 		}

@@ -14,6 +14,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjectpositions"
@@ -22,6 +23,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/writes"
 )
 
 var userID = []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}
@@ -84,9 +86,11 @@ func newFixture(t *testing.T) *fixture {
 	must(t, subjectvocab.Install(c))
 	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{Key: "book", Origin: sourcetypes.OriginProvenencia, Label: "Book"})
 	must(t, err)
-	src, err := sources.Create(c, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Register"})
+	src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Register"})
+	})
 	must(t, err)
-	art, err := artifacts.Create(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
+	art, err := runArtifactCreate(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
 	must(t, err)
 	return &fixture{t: t, c: c, src: src, art: art}
 }
@@ -95,9 +99,13 @@ func (f *fixture) subject(kind string) subjects.Subject {
 	f.t.Helper()
 	st, err := subjecttypes.Lookup(f.c, kind, subjecttypes.OriginProvenencia)
 	must(f.t, err)
-	s, err := subjects.Create(f.c, userID, subjects.CreateInput{SourceID: f.src.ID, SubjectTypeID: st.ID}, nil)
+	s, err := writes.Call(f.c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
+		return subjects.Create(tx, userID, subjects.CreateInput{SourceID: f.src.ID, SubjectTypeID: st.ID}, nil)
+	})
 	must(f.t, err)
-	_, err = subjectpositions.Set(f.c, s.ID, 0, f.y)
+	_, err = writes.Call(f.c, writes.Op{}, func(tx *database.Tx) (subjectpositions.Position, []rowchange.Change, error) {
+		return subjectpositions.Set(tx, s.ID, 0, f.y)
+	})
 	must(f.t, err)
 	f.y += 2
 	return s
@@ -112,10 +120,12 @@ func (f *fixture) prop(key string) []byte {
 
 func (f *fixture) bridge(kind string, from, to subjects.Subject, obs ...observations.Input) {
 	f.t.Helper()
-	_, err := connect.CreateCitedBridge(f.c, userID, connect.CreateInput{
-		SourceID: f.src.ID, FromSubjectID: from.ID, ToSubjectID: to.ID, BridgeTypeKey: kind,
-		Citation:     citations.CreateInput{ArtifactID: f.art.ID, LocatorJSON: locator},
-		Observations: obs,
+	_, err := writes.Call(f.c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (connect.Result, []rowchange.Change, error) {
+		return connect.CreateCitedBridge(tx, userID, connect.CreateInput{
+			SourceID: f.src.ID, FromSubjectID: from.ID, ToSubjectID: to.ID, BridgeTypeKey: kind,
+			Citation:     citations.CreateInput{ArtifactID: f.art.ID, LocatorJSON: locator},
+			Observations: obs,
+		})
 	})
 	must(f.t, err)
 }
@@ -133,7 +143,9 @@ func (f *fixture) participation(person, event subjects.Subject, role string) {
 
 func (f *fixture) promote(s subjects.Subject) []byte {
 	f.t.Helper()
-	res, err := promote.Save(f.c, userID, promote.Input{SubjectID: s.ID})
+	res, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+		return promote.Save(tx, userID, promote.Input{SubjectID: s.ID})
+	})
 	must(f.t, err)
 	return res.Entity.ID
 }
@@ -300,4 +312,12 @@ func TestWalkSource(t *testing.T) {
 		}
 		must(t, rows.Err())
 	})
+}
+
+func runArtifactCreate(c *database.Catalog, userID []byte, in artifacts.CreateInput) (artifacts.Artifact, error) {
+	a, _, err := writes.Run(c, writes.Op{Action: "create_artifact", UserID: userID},
+		func(tx *database.Tx) (artifacts.Artifact, []rowchange.Change, error) {
+			return artifacts.Create(tx, userID, in)
+		})
+	return a, err
 }

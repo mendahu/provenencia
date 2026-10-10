@@ -13,10 +13,13 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/filederivatives"
 	"github.com/mendahu/provenencia/core/database/files"
+	"github.com/mendahu/provenencia/core/database/searchindex"
 	"github.com/mendahu/provenencia/core/derivatives/raster"
+	"github.com/mendahu/provenencia/core/ref"
 )
 
 func installSourceFile(t *testing.T, c *database.Catalog, data []byte, mediaType, name string) []byte {
@@ -380,4 +383,92 @@ func TestEnsureCustomSpecAlongsideThumbnail(t *testing.T) {
 	if b.Dx() != 512 || b.Dy() != 256 {
 		t.Fatalf("want 512x256, got %dx%d", b.Dx(), b.Dy())
 	}
+}
+
+func TestEnsureThumbnailCommitsWithoutRevisionAndRefreshesSearch(t *testing.T) {
+	c, err := database.Create(t.TempDir(), "t.provenencia")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+
+	pngBytes, err := os.ReadFile("testdata/tiny.png")
+	if err != nil {
+		t.Fatal(err)
+	}
+	fileID := installSourceFile(t, c, pngBytes, "image/png", "tiny.png")
+
+	db, err := c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	typeID, sourceID, artID := newID(t), newID(t), newID(t)
+	sourceRef, err := ref.Mint(ref.PrefixSource)
+	if err != nil {
+		t.Fatal(err)
+	}
+	artRef, err := ref.Mint(ref.PrefixArtifact)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(
+		`INSERT INTO source_types (id, key, origin, label, icon_key) VALUES (?, 'letter', 'user', 'Letter', 'type_evidence')`,
+		typeID,
+	); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(
+		`INSERT INTO sources (id, ref, source_type_id, title) VALUES (?, ?, ?, 'Letter home')`,
+		sourceID, sourceRef, typeID,
+	); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(
+		`INSERT INTO artifacts (id, ref, source_id, file_id, label) VALUES (?, ?, ?, ?, 'Scan')`,
+		artID, artRef, sourceID, fileID,
+	); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(
+		`UPDATE sources SET cover_mode = 'artifact', primary_artifact_id = ? WHERE id = ?`,
+		artID, sourceID,
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	before := auditTotal(t, c)
+	got, err := EnsureThumbnail(c, fileID)
+	if err != nil || got.Skipped {
+		t.Fatalf("%+v %v", got, err)
+	}
+	if _, err := files.Lookup(c, got.Link.DerivedFileID); err != nil {
+		t.Fatal(err)
+	}
+	if auditTotal(t, c) != before {
+		t.Fatalf("unaudited thumbnail wrote audit: before=%d after=%d", before, auditTotal(t, c))
+	}
+
+	id, err := uuid.FromBytes(sourceID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var path string
+	if err := db.QueryRow(
+		`SELECT COALESCE(display_thumbnail_rel_path, '') FROM catalog_search_docs WHERE kind = ? AND entity_id = ?`,
+		searchindex.KindSource, id.String(),
+	).Scan(&path); err != nil {
+		t.Fatal(err)
+	}
+	if path == "" {
+		t.Fatal("thumbnail commit did not refresh the source search document")
+	}
+}
+
+func newID(t *testing.T) []byte {
+	t.Helper()
+	id, err := uuid.NewV7()
+	if err != nil {
+		t.Fatal(err)
+	}
+	return id[:]
 }

@@ -10,14 +10,13 @@ import (
 	"database/sql"
 	"errors"
 
+	"github.com/mendahu/provenencia/core/database/rowchange"
+
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/connectrules"
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/audit"
-	"github.com/mendahu/provenencia/core/database/autoreconciler"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
-	"github.com/mendahu/provenencia/core/database/project"
 	"github.com/mendahu/provenencia/core/database/subjects"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 )
@@ -69,66 +68,61 @@ type Result struct {
 // recorded as promote_subject: onto a newly minted handle of its type, or onto
 // in.EntityID. A join pins each confirmed pair's two Observations on the new
 // claim and on the member's claim; the member's argument is not touched.
-func Save(c *database.Catalog, userID []byte, in Input) (Result, error) {
-	db, err := c.DB()
-	if err != nil {
-		return Result{}, err
+// The caller records the returned changes.
+func Save(tx *database.Tx, userID []byte, in Input) (Result, []rowchange.Change, error) {
+	if tx == nil {
+		return Result{}, nil, ErrInvalid
 	}
 	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
-		return Result{}, err
+		return Result{}, nil, err
 	}
 	if len(in.SubjectID) != 16 || (in.EntityID != nil && len(in.EntityID) != 16) {
-		return Result{}, ErrInvalid
+		return Result{}, nil, ErrInvalid
 	}
 	if in.EntityID == nil && len(in.Pairs) > 0 {
-		return Result{}, ErrInvalid
+		return Result{}, nil, ErrInvalid
 	}
 
-	tx, err := db.Begin()
-	if err != nil {
-		return Result{}, err
-	}
-	defer func() { _ = tx.Rollback() }()
-
-	subject, err := subjects.GetTx(tx, in.SubjectID)
+	q := tx.Tx
+	subject, err := subjects.GetTx(q, in.SubjectID)
 	if errors.Is(err, sql.ErrNoRows) {
-		return Result{}, ErrInvalid
+		return Result{}, nil, ErrInvalid
 	}
 	if err != nil {
-		return Result{}, err
+		return Result{}, nil, err
 	}
-	st, err := subjecttypes.GetByIDTx(tx, subject.SubjectTypeID)
+	st, err := subjecttypes.GetByIDTx(q, subject.SubjectTypeID)
 	if err != nil {
-		return Result{}, err
+		return Result{}, nil, err
 	}
 	if !PrimaryKind(st.Key, st.Origin) {
-		return Result{}, ErrUnsupportedType
+		return Result{}, nil, ErrUnsupportedType
 	}
-	if _, err := identityclaims.AcceptedEntityForSubjectTx(tx, subject.ID); err == nil {
-		return Result{}, identityclaims.ErrAlreadyMember
+	if _, err := identityclaims.AcceptedEntityForSubjectTx(q, subject.ID); err == nil {
+		return Result{}, nil, identityclaims.ErrAlreadyMember
 	} else if !errors.Is(err, sql.ErrNoRows) {
-		return Result{}, err
+		return Result{}, nil, err
 	}
 
 	var (
 		entity  canonicalentities.Entity
-		changes []audit.Change
+		changes []rowchange.Change
 	)
 	if in.EntityID == nil {
-		minted, change, err := canonicalentities.InsertTx(tx, canonicalentities.CreateInput{
+		minted, change, err := canonicalentities.InsertTx(q, canonicalentities.CreateInput{
 			SubjectTypeID: subject.SubjectTypeID,
 		})
 		if err != nil {
-			return Result{}, err
+			return Result{}, nil, err
 		}
 		entity, changes = minted, append(changes, change)
 	} else {
-		entity, err = joinTarget(tx, in.EntityID, subject.SubjectTypeID)
+		entity, err = joinTarget(q, in.EntityID, subject.SubjectTypeID)
 		if err != nil {
-			return Result{}, err
+			return Result{}, nil, err
 		}
 	}
-	claim, claimChange, err := identityclaims.InsertTx(tx, identityclaims.CreateInput{
+	claim, claimChange, err := identityclaims.InsertTx(q, identityclaims.CreateInput{
 		SubjectID:         subject.ID,
 		EntityID:          entity.ID,
 		Status:            identityclaims.StatusAccepted,
@@ -136,33 +130,19 @@ func Save(c *database.Catalog, userID []byte, in Input) (Result, error) {
 		Argument:          in.Argument,
 	})
 	if err != nil {
-		return Result{}, err
+		return Result{}, nil, err
 	}
 	changes = append(changes, claimChange)
-	pins, pinChanges, err := pinPairs(tx, claim, in.Pairs, nil)
+	pins, pinChanges, err := pinPairs(q, claim, in.Pairs, nil)
 	if err != nil {
-		return Result{}, err
+		return Result{}, nil, err
 	}
 	changes = append(changes, pinChanges...)
-	assocs, changes, err := identityclaims.AppendFiling(tx, subject.ID, changes)
+	_, changes, err = identityclaims.AppendFiling(q, subject.ID, changes)
 	if err != nil {
-		return Result{}, err
+		return Result{}, nil, err
 	}
-	if _, err := audit.Record(tx, audit.Revision{
-		UserID:     userID,
-		ActionType: "promote_subject",
-		CreatedAt:  project.NowUTC(),
-		Changes:    changes,
-	}); err != nil {
-		return Result{}, err
-	}
-	if err := autoreconciler.RecomputeTouchingTx(tx, append([][]byte{entity.ID}, assocs...), subject.ID); err != nil {
-		return Result{}, err
-	}
-	if err := tx.Commit(); err != nil {
-		return Result{}, err
-	}
-	return Result{Entity: entity, Claim: claim, Pins: pins}, nil
+	return Result{Entity: entity, Claim: claim, Pins: pins}, changes, nil
 }
 
 // pinTargets is what each Subject in one write is being filed on: the handle
@@ -290,9 +270,9 @@ func pairClaim(tx *sql.Tx, claim identityclaims.Claim, p Pair, targets pinTarget
 // pinPairs pins both Observations of every pair on the new claim and on the
 // member's claim (backfill). Pins a claim already carries are skipped; it
 // returns how many the new claim carries and a change per new pin.
-func pinPairs(tx *sql.Tx, claim identityclaims.Claim, pairs []Pair, targets pinTargets) (int, []audit.Change, error) {
+func pinPairs(tx *sql.Tx, claim identityclaims.Claim, pairs []Pair, targets pinTargets) (int, []rowchange.Change, error) {
 	var (
-		changes []audit.Change
+		changes []rowchange.Change
 		pins    int
 	)
 	for _, p := range pairs {

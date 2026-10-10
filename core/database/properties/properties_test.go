@@ -1,4 +1,4 @@
-package properties
+package properties_test
 
 import (
 	"database/sql"
@@ -6,8 +6,11 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/properties"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/writes"
 )
 
 func TestProperties(t *testing.T) {
@@ -18,20 +21,20 @@ func TestProperties(t *testing.T) {
 		{
 			name: "upsert lookup list",
 			run: func(t *testing.T, c *database.Catalog, _ []byte) {
-				id, err := Upsert(c, Property{
-					Key: "occupation", Origin: OriginProvenencia, Label: "Occupation", ValueType: ValueTypeText,
+				id, err := properties.Upsert(c, properties.Property{
+					Key: "occupation", Origin: properties.OriginProvenencia, Label: "Occupation", ValueType: properties.ValueTypeText,
 				})
 				if err != nil {
 					t.Fatal(err)
 				}
-				got, err := Lookup(c, "occupation", OriginProvenencia)
+				got, err := properties.Lookup(c, "occupation", properties.OriginProvenencia)
 				if err != nil {
 					t.Fatal(err)
 				}
-				if string(got.ID) != string(id) || got.ValueType != ValueTypeText {
+				if string(got.ID) != string(id) || got.ValueType != properties.ValueTypeText {
 					t.Fatalf("got %+v", got)
 				}
-				list, err := List(c)
+				list, err := properties.List(c)
 				if err != nil || len(list) != 1 {
 					t.Fatalf("%v len=%d", err, len(list))
 				}
@@ -40,9 +43,9 @@ func TestProperties(t *testing.T) {
 		{
 			name: "rejects bad value type",
 			run: func(t *testing.T, c *database.Catalog, _ []byte) {
-				if _, err := Upsert(c, Property{
-					Key: "x", Origin: OriginUser, Label: "X", ValueType: "boolean",
-				}); !errors.Is(err, ErrInvalid) {
+				if _, err := properties.Upsert(c, properties.Property{
+					Key: "x", Origin: properties.OriginUser, Label: "X", ValueType: "boolean",
+				}); !errors.Is(err, properties.ErrInvalid) {
 					t.Fatalf("got %v", err)
 				}
 			},
@@ -50,24 +53,31 @@ func TestProperties(t *testing.T) {
 		{
 			name: "create update delete audited user property",
 			run: func(t *testing.T, c *database.Catalog, userID []byte) {
-				got, err := Create(c, userID, "Custom Fact", ValueTypeText, "note", "")
+				got, err := writes.Call(c, writes.Op{Action: "create_property", UserID: userID}, func(tx *database.Tx) (properties.Property, []rowchange.Change, error) {
+					return properties.Create(tx, userID, "Custom Fact", properties.ValueTypeText, "note", "")
+				})
 				if err != nil {
 					t.Fatal(err)
 				}
-				if got.Key != "custom-fact" || got.Origin != OriginUser || got.Cardinality != CardinalitySingle {
+				if got.Key != "custom-fact" || got.Origin != properties.OriginUser || got.Cardinality != properties.CardinalitySingle {
 					t.Fatalf("got %+v", got)
 				}
-				updated, err := Update(c, userID, got.ID, "Custom Fact 2", ValueTypeText, "", "", nil)
+				updated, err := writes.Call(c, writes.Op{Action: "update_property", UserID: userID}, func(tx *database.Tx) (properties.Property, []rowchange.Change, error) {
+					return properties.Update(tx, userID, got.ID, "Custom Fact 2", properties.ValueTypeText, "", "")
+				})
 				if err != nil {
 					t.Fatal(err)
 				}
-				if updated.Label != "Custom Fact 2" || updated.Cardinality != CardinalitySingle {
+				if updated.Label != "Custom Fact 2" || updated.Cardinality != properties.CardinalitySingle {
 					t.Fatalf("label %q", updated.Label)
 				}
-				if err := Delete(c, userID, got.ID); err != nil {
+				if _, err := writes.Call(c, writes.Op{Action: "delete_property", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+					changes, err := properties.Delete(tx, userID, got.ID)
+					return struct{}{}, changes, err
+				}); err != nil {
 					t.Fatal(err)
 				}
-				_, err = GetByID(c, got.ID)
+				_, err = properties.GetByID(c, got.ID)
 				if !errors.Is(err, sql.ErrNoRows) {
 					t.Fatalf("after delete %v", err)
 				}
@@ -76,11 +86,15 @@ func TestProperties(t *testing.T) {
 		{
 			name: "duplicate user key",
 			run: func(t *testing.T, c *database.Catalog, userID []byte) {
-				if _, err := Create(c, userID, "Dup", ValueTypeText, "", ""); err != nil {
+				if _, err := writes.Call(c, writes.Op{Action: "create_property", UserID: userID}, func(tx *database.Tx) (properties.Property, []rowchange.Change, error) {
+					return properties.Create(tx, userID, "Dup", properties.ValueTypeText, "", "")
+				}); err != nil {
 					t.Fatal(err)
 				}
-				_, err := Create(c, userID, "Dup", ValueTypeText, "", "")
-				if !errors.Is(err, ErrDuplicateKey) {
+				_, err := writes.Call(c, writes.Op{Action: "create_property", UserID: userID}, func(tx *database.Tx) (properties.Property, []rowchange.Change, error) {
+					return properties.Create(tx, userID, "Dup", properties.ValueTypeText, "", "")
+				})
+				if !errors.Is(err, properties.ErrDuplicateKey) {
 					t.Fatalf("got %v", err)
 				}
 			},
@@ -88,14 +102,18 @@ func TestProperties(t *testing.T) {
 		{
 			name: "create stores cardinality",
 			run: func(t *testing.T, c *database.Catalog, userID []byte) {
-				got, err := Create(c, userID, "Languages Spoken", ValueTypeText, "", CardinalityMultiple)
+				got, err := writes.Call(c, writes.Op{Action: "create_property", UserID: userID}, func(tx *database.Tx) (properties.Property, []rowchange.Change, error) {
+					return properties.Create(tx, userID, "Languages Spoken", properties.ValueTypeText, "", properties.CardinalityMultiple)
+				})
 				if err != nil {
 					t.Fatal(err)
 				}
-				if got.Cardinality != CardinalityMultiple {
+				if got.Cardinality != properties.CardinalityMultiple {
 					t.Fatalf("cardinality %q", got.Cardinality)
 				}
-				if _, err := Create(c, userID, "Bad Holds", ValueTypeText, "", "triple"); !errors.Is(err, ErrInvalid) {
+				if _, err := writes.Call(c, writes.Op{Action: "create_property", UserID: userID}, func(tx *database.Tx) (properties.Property, []rowchange.Change, error) {
+					return properties.Create(tx, userID, "Bad Holds", properties.ValueTypeText, "", "triple")
+				}); !errors.Is(err, properties.ErrInvalid) {
 					t.Fatalf("got %v", err)
 				}
 			},
@@ -103,8 +121,10 @@ func TestProperties(t *testing.T) {
 		{
 			name: "create refuses term value type",
 			run: func(t *testing.T, c *database.Catalog, userID []byte) {
-				_, err := Create(c, userID, "Event Kind", ValueTypeTerm, "", "")
-				if !errors.Is(err, ErrInvalid) {
+				_, err := writes.Call(c, writes.Op{Action: "create_property", UserID: userID}, func(tx *database.Tx) (properties.Property, []rowchange.Change, error) {
+					return properties.Create(tx, userID, "Event Kind", properties.ValueTypeTerm, "", "")
+				})
+				if !errors.Is(err, properties.ErrInvalid) {
 					t.Fatalf("got %v", err)
 				}
 			},
@@ -112,14 +132,14 @@ func TestProperties(t *testing.T) {
 		{
 			name: "upsert allows proveniencia term",
 			run: func(t *testing.T, c *database.Catalog, _ []byte) {
-				id, err := Upsert(c, Property{
-					Key: "event_type", Origin: OriginProvenencia, Label: "Event type", ValueType: ValueTypeTerm,
+				id, err := properties.Upsert(c, properties.Property{
+					Key: "event_type", Origin: properties.OriginProvenencia, Label: "Event type", ValueType: properties.ValueTypeTerm,
 				})
 				if err != nil {
 					t.Fatal(err)
 				}
-				got, err := Lookup(c, "event_type", OriginProvenencia)
-				if err != nil || got.ValueType != ValueTypeTerm || string(got.ID) != string(id) {
+				got, err := properties.Lookup(c, "event_type", properties.OriginProvenencia)
+				if err != nil || got.ValueType != properties.ValueTypeTerm || string(got.ID) != string(id) {
 					t.Fatalf("got %+v %v", got, err)
 				}
 			},

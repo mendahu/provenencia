@@ -7,11 +7,11 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/mendahu/provenencia/core/database/rowchange"
+
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/audit"
-	"github.com/mendahu/provenencia/core/database/project"
 	"github.com/mendahu/provenencia/core/ref"
 )
 
@@ -51,56 +51,39 @@ type CreateInput struct {
 	Argument      string
 }
 
-// Create inserts a handle, mints a ref from the type's ref_prefix, and records create_canonical_entity.
-func Create(c *database.Catalog, userID []byte, in CreateInput) (Entity, error) {
-	db, err := c.DB()
-	if err != nil {
-		return Entity{}, err
+// Create inserts a handle and mints a ref from the type's ref_prefix.
+// The caller records the returned change as create_canonical_entity.
+// A handle alone has no handles to recompute.
+func Create(tx *database.Tx, userID []byte, in CreateInput) (Entity, []rowchange.Change, error) {
+	if tx == nil {
+		return Entity{}, nil, ErrInvalid
 	}
 	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
-		return Entity{}, err
+		return Entity{}, nil, err
 	}
-
-	tx, err := db.Begin()
+	e, change, err := InsertTx(tx.Tx, in)
 	if err != nil {
-		return Entity{}, err
+		return Entity{}, nil, err
 	}
-	defer func() { _ = tx.Rollback() }()
-
-	e, change, err := InsertTx(tx, in)
-	if err != nil {
-		return Entity{}, err
-	}
-	if _, err := audit.Record(tx, audit.Revision{
-		UserID:     userID,
-		ActionType: "create_canonical_entity",
-		CreatedAt:  project.NowUTC(),
-		Changes:    []audit.Change{change},
-	}); err != nil {
-		return Entity{}, err
-	}
-	if err := tx.Commit(); err != nil {
-		return Entity{}, err
-	}
-	return e, nil
+	return e, []rowchange.Change{change}, nil
 }
 
 // InsertTx inserts a handle on an open transaction (no commit, no revision).
 // The ref is minted from subject_types.ref_prefix (PER-…), never the candidate prefix.
-func InsertTx(tx *sql.Tx, in CreateInput) (Entity, audit.Change, error) {
+func InsertTx(tx *sql.Tx, in CreateInput) (Entity, rowchange.Change, error) {
 	in.Label = strings.TrimSpace(in.Label)
 	in.Argument = strings.TrimSpace(in.Argument)
 	if len(in.SubjectTypeID) != 16 {
-		return Entity{}, audit.Change{}, ErrInvalid
+		return Entity{}, rowchange.Change{}, ErrInvalid
 	}
 	prefix, err := requireTypePrefix(tx, in.SubjectTypeID)
 	if err != nil {
-		return Entity{}, audit.Change{}, err
+		return Entity{}, rowchange.Change{}, err
 	}
 
 	id, err := uuid.NewV7()
 	if err != nil {
-		return Entity{}, audit.Change{}, err
+		return Entity{}, rowchange.Change{}, err
 	}
 	idBytes := id[:]
 
@@ -108,25 +91,25 @@ func InsertTx(tx *sql.Tx, in CreateInput) (Entity, audit.Change, error) {
 	for attempt := 0; attempt < maxRefRetries; attempt++ {
 		entityRef, err = ref.Mint(prefix)
 		if err != nil {
-			return Entity{}, audit.Change{}, err
+			return Entity{}, rowchange.Change{}, err
 		}
 		_, err = tx.Exec(sqlInsert, idBytes, in.SubjectTypeID, entityRef, nullStr(in.Argument), nullStr(in.Label))
 		if err == nil {
 			break
 		}
 		if !database.IsUniqueConflict(err) {
-			return Entity{}, audit.Change{}, mapConstraint(err)
+			return Entity{}, rowchange.Change{}, mapConstraint(err)
 		}
 	}
 	if err != nil {
-		return Entity{}, audit.Change{}, ErrInvalid
+		return Entity{}, rowchange.Change{}, ErrInvalid
 	}
 
-	change := audit.Change{
+	change := rowchange.Change{
 		EntityType: "canonical_entity",
 		EntityID:   idBytes,
-		Action:     audit.ActionCreate,
-		Fields: audit.FullRow(map[string]any{
+		Action:     rowchange.ActionCreate,
+		Fields: rowchange.FullRow(map[string]any{
 			"id":              id.String(),
 			"subject_type_id": uuidJSON(in.SubjectTypeID),
 			"ref":             entityRef,

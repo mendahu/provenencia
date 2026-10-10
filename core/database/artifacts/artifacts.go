@@ -1,4 +1,6 @@
-// Package artifacts accesses the artifacts catalog table with audited mutations.
+// Package artifacts accesses the artifacts catalog table.
+// Create, Update, and Delete run inside writes.Run and return the row changes
+// that Run records.
 package artifacts
 
 import (
@@ -12,11 +14,10 @@ import (
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/audit"
+	"github.com/mendahu/provenencia/core/database/catalogmodel"
 	"github.com/mendahu/provenencia/core/database/deleteimpact"
 	"github.com/mendahu/provenencia/core/database/files"
-	"github.com/mendahu/provenencia/core/database/project"
-	"github.com/mendahu/provenencia/core/database/searchindex"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/ref"
 )
 
@@ -69,42 +70,36 @@ type CreateInput struct {
 	Description string
 }
 
-// Create inserts an Artifact, mints ART-…, and records create_artifact.
-func Create(c *database.Catalog, userID []byte, in CreateInput) (Artifact, error) {
-	db, err := c.DB()
-	if err != nil {
-		return Artifact{}, err
+// Create inserts an Artifact and mints ART-…. The caller records the returned
+// changes. FileID empty is fileless.
+func Create(tx *database.Tx, userID []byte, in CreateInput) (Artifact, []rowchange.Change, error) {
+	if tx == nil {
+		return Artifact{}, nil, ErrInvalid
 	}
 	in.Label = strings.TrimSpace(in.Label)
 	in.Description = strings.TrimSpace(in.Description)
 	if len(in.SourceID) != 16 || in.Label == "" {
-		return Artifact{}, ErrInvalid
+		return Artifact{}, nil, ErrInvalid
 	}
 	if len(in.FileID) != 0 && len(in.FileID) != 16 {
-		return Artifact{}, ErrInvalid
+		return Artifact{}, nil, ErrInvalid
 	}
 	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
-		return Artifact{}, err
+		return Artifact{}, nil, err
 	}
 
-	tx, err := db.Begin()
-	if err != nil {
-		return Artifact{}, err
-	}
-	defer func() { _ = tx.Rollback() }()
-
-	if err := requireSource(tx, in.SourceID); err != nil {
-		return Artifact{}, err
+	if err := requireSource(tx.Tx, in.SourceID); err != nil {
+		return Artifact{}, nil, err
 	}
 	if len(in.FileID) == 16 {
-		if err := requireFile(tx, in.FileID); err != nil {
-			return Artifact{}, err
+		if err := requireFile(tx.Tx, in.FileID); err != nil {
+			return Artifact{}, nil, err
 		}
 	}
 
 	id, err := uuid.NewV7()
 	if err != nil {
-		return Artifact{}, err
+		return Artifact{}, nil, err
 	}
 	idBytes := id[:]
 
@@ -112,232 +107,177 @@ func Create(c *database.Catalog, userID []byte, in CreateInput) (Artifact, error
 	for attempt := 0; attempt < maxRefRetries; attempt++ {
 		artRef, err = ref.Mint(ref.PrefixArtifact)
 		if err != nil {
-			return Artifact{}, err
+			return Artifact{}, nil, err
 		}
 		_, err = tx.Exec(sqlInsert, idBytes, artRef, in.SourceID, nullBlob(in.FileID), in.Label, nullStr(in.Description))
 		if err == nil {
 			break
 		}
 		if !database.IsUniqueConflict(err) {
-			return Artifact{}, mapConstraint(err)
+			return Artifact{}, nil, mapConstraint(err)
 		}
 	}
 	if err != nil {
-		return Artifact{}, ErrInvalid
+		return Artifact{}, nil, ErrInvalid
 	}
 
-	fields := map[string]audit.FieldDiff{
+	fields := map[string]rowchange.FieldDiff{
 		"id":        {Old: nil, New: id.String()},
 		"ref":       {Old: nil, New: artRef},
 		"source_id": {Old: nil, New: uuidString(in.SourceID)},
 		"label":     {Old: nil, New: in.Label},
 	}
 	if len(in.FileID) == 16 {
-		fields["file_id"] = audit.FieldDiff{Old: nil, New: uuidString(in.FileID)}
+		fields["file_id"] = rowchange.FieldDiff{Old: nil, New: uuidString(in.FileID)}
 	}
 	if in.Description != "" {
-		fields["description"] = audit.FieldDiff{Old: nil, New: in.Description}
-	}
-	if _, err := audit.Record(tx, audit.Revision{
-		UserID:     userID,
-		ActionType: "create_artifact",
-		CreatedAt:  project.NowUTC(),
-		Changes: []audit.Change{{
-			EntityType: "artifact",
-			EntityID:   idBytes,
-			Action:     audit.ActionCreate,
-			Fields:     fields,
-		}},
-	}); err != nil {
-		return Artifact{}, err
-	}
-	if err := searchindex.ReprojectSource(tx, in.SourceID); err != nil {
-		return Artifact{}, err
-	}
-	if err := tx.Commit(); err != nil {
-		return Artifact{}, err
+		fields["description"] = rowchange.FieldDiff{Old: nil, New: in.Description}
 	}
 	return Artifact{
-		ID:          append([]byte(nil), idBytes...),
-		Ref:         artRef,
-		SourceID:    append([]byte(nil), in.SourceID...),
-		FileID:      copyBlob(in.FileID),
-		Label:       in.Label,
-		Description: in.Description,
-	}, nil
+			ID:          append([]byte(nil), idBytes...),
+			Ref:         artRef,
+			SourceID:    append([]byte(nil), in.SourceID...),
+			FileID:      copyBlob(in.FileID),
+			Label:       in.Label,
+			Description: in.Description,
+		}, []rowchange.Change{{
+			EntityType: "artifact",
+			EntityID:   append([]byte(nil), idBytes...),
+			Action:     rowchange.ActionCreate,
+			Fields:     fields,
+		}}, nil
 }
 
-// Update patches label, description, and/or first-attach file_id; records
-// update_artifact for changed fields. Clearing a set file_id back to null is
-// rejected. Replacing a set file_id with a different File is rejected
-// (first-attach only).
-func Update(c *database.Catalog, userID []byte, a Artifact) error {
-	db, err := c.DB()
-	if err != nil {
-		return err
+// Update patches label, description, and/or first-attach file_id. The caller
+// records the returned changes. An unchanged row returns no changes. Clearing
+// a set file_id back to null is rejected. Replacing a set file_id with a
+// different File is rejected (first-attach only).
+func Update(tx *database.Tx, userID []byte, a Artifact) ([]rowchange.Change, error) {
+	if tx == nil {
+		return nil, ErrInvalid
 	}
 	a.Label = strings.TrimSpace(a.Label)
 	a.Description = strings.TrimSpace(a.Description)
 	if len(a.ID) != 16 || a.Label == "" {
-		return ErrInvalid
+		return nil, ErrInvalid
 	}
 	if len(a.FileID) != 0 && len(a.FileID) != 16 {
-		return ErrInvalid
+		return nil, ErrInvalid
 	}
 	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
-		return err
+		return nil, err
 	}
 
-	tx, err := db.Begin()
-	if err != nil {
-		return err
-	}
-	defer func() { _ = tx.Rollback() }()
-
-	prev, err := getTx(tx, a.ID)
+	prev, err := getTx(tx.Tx, a.ID)
 	if errors.Is(err, sql.ErrNoRows) {
-		return ErrInvalid
+		return nil, ErrInvalid
 	}
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if len(prev.FileID) == 16 && len(a.FileID) == 0 {
-		return ErrInvalid
+		return nil, ErrInvalid
 	}
 	if len(prev.FileID) == 16 && len(a.FileID) == 16 && !bytes.Equal(prev.FileID, a.FileID) {
-		return ErrFileAlreadyAttached
+		return nil, ErrFileAlreadyAttached
 	}
 	if len(a.FileID) == 16 {
-		if err := requireFile(tx, a.FileID); err != nil {
-			return err
+		if err := requireFile(tx.Tx, a.FileID); err != nil {
+			return nil, err
 		}
 	}
 
-	fields := map[string]audit.FieldDiff{}
+	fields := map[string]rowchange.FieldDiff{}
 	if !bytes.Equal(prev.FileID, a.FileID) {
-		fields["file_id"] = audit.FieldDiff{
+		fields["file_id"] = rowchange.FieldDiff{
 			Old: uuidJSON(prev.FileID),
 			New: uuidJSON(a.FileID),
 		}
 	}
 	if prev.Label != a.Label {
-		fields["label"] = audit.FieldDiff{Old: prev.Label, New: a.Label}
+		fields["label"] = rowchange.FieldDiff{Old: prev.Label, New: a.Label}
 	}
 	if prev.Description != a.Description {
-		fields["description"] = audit.FieldDiff{Old: nullJSON(prev.Description), New: nullJSON(a.Description)}
+		fields["description"] = rowchange.FieldDiff{Old: nullJSON(prev.Description), New: nullJSON(a.Description)}
 	}
 	if len(fields) == 0 {
-		return tx.Commit()
+		return nil, nil
 	}
 
 	if _, err := tx.Exec(sqlUpdate, nullBlob(a.FileID), a.Label, nullStr(a.Description), a.ID); err != nil {
-		return mapConstraint(err)
+		return nil, mapConstraint(err)
 	}
-	if _, err := audit.Record(tx, audit.Revision{
-		UserID:     userID,
-		ActionType: "update_artifact",
-		CreatedAt:  project.NowUTC(),
-		Changes: []audit.Change{{
-			EntityType: "artifact",
-			EntityID:   a.ID,
-			Action:     audit.ActionUpdate,
-			Fields:     fields,
-		}},
-	}); err != nil {
-		return err
-	}
-	if err := searchindex.ReprojectSource(tx, prev.SourceID); err != nil {
-		return err
-	}
-	return tx.Commit()
+	return []rowchange.Change{{
+		EntityType: "artifact",
+		EntityID:   append([]byte(nil), a.ID...),
+		Action:     rowchange.ActionUpdate,
+		Fields:     fields,
+	}}, nil
 }
 
 // Delete erases an Artifact when no Citation points at it. File releases
-// ifUnused (snapshot file_id before DELETE). After COMMIT, orphan objects/
-// blobs are unlinked. Cover SET NULL is SQLite's job.
-func Delete(c *database.Catalog, userID, id []byte) error {
+// ifUnused (snapshot file_id before DELETE). Orphan object bytes are unlinked
+// from AfterCommit, after Run commits, so a rollback leaves the files in place.
+// Cover SET NULL is SQLite's job. The caller records the returned changes.
+func Delete(tx *database.Tx, c *database.Catalog, userID, id []byte) ([]rowchange.Change, error) {
+	if tx == nil || c == nil || len(id) != 16 {
+		return nil, ErrInvalid
+	}
 	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
-		return err
+		return nil, err
 	}
-	if len(id) != 16 {
-		return ErrInvalid
-	}
-	existing, err := Get(c, id)
+	existing, err := getTx(tx.Tx, id)
 	if errors.Is(err, sql.ErrNoRows) {
-		return ErrInvalid
+		return nil, ErrInvalid
 	}
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	db, err := c.DB()
+	report, err := deleteimpact.Impact(tx.Tx, catalogmodel.KindArtifact, id)
 	if err != nil {
-		return err
-	}
-	tx, err := db.Begin()
-	if err != nil {
-		return err
-	}
-	defer func() { _ = tx.Rollback() }()
-
-	report, err := deleteimpact.Impact(tx, deleteimpact.KindArtifact, id)
-	if err != nil {
-		return err
+		return nil, err
 	}
 	if err := deleteimpact.Refuse(report, deleteimpact.Codes{
 		InUse: ErrInUse, NotFound: ErrInvalid,
 	}); err != nil {
-		return err
+		return nil, err
 	}
 
-	snap, err := deleteimpact.SnapshotOwned(tx, deleteimpact.KindArtifact, id)
+	snap, err := deleteimpact.SnapshotOwned(tx.Tx, catalogmodel.KindArtifact, id)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	objects, err := deleteimpact.CollectFileObjects(tx, snap)
+	objects, err := deleteimpact.CollectFileObjects(tx.Tx, snap)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if _, err := tx.Exec(sqlDelete, id); err != nil {
-		return err
+		return nil, err
 	}
-	if err := deleteimpact.ReleaseSnapshot(tx, snap); err != nil {
-		return err
+	if err := deleteimpact.ReleaseSnapshot(tx.Tx, snap); err != nil {
+		return nil, err
 	}
 
-	fields := map[string]audit.FieldDiff{
+	fields := map[string]rowchange.FieldDiff{
 		"id":        {Old: uuidString(id), New: nil},
 		"ref":       {Old: existing.Ref, New: nil},
 		"source_id": {Old: uuidString(existing.SourceID), New: nil},
 		"label":     {Old: existing.Label, New: nil},
 	}
 	if len(existing.FileID) == 16 {
-		fields["file_id"] = audit.FieldDiff{Old: uuidString(existing.FileID), New: nil}
+		fields["file_id"] = rowchange.FieldDiff{Old: uuidString(existing.FileID), New: nil}
 	}
 	if existing.Description != "" {
-		fields["description"] = audit.FieldDiff{Old: existing.Description, New: nil}
+		fields["description"] = rowchange.FieldDiff{Old: existing.Description, New: nil}
 	}
-	if _, err := audit.Record(tx, audit.Revision{
-		UserID:     userID,
-		ActionType: "delete_artifact",
-		CreatedAt:  project.NowUTC(),
-		Changes: []audit.Change{{
-			EntityType: "artifact",
-			EntityID:   id,
-			Action:     audit.ActionDelete,
-			Fields:     fields,
-		}},
-	}); err != nil {
-		return err
-	}
-	if err := searchindex.ReprojectSource(tx, existing.SourceID); err != nil {
-		return err
-	}
-	if err := tx.Commit(); err != nil {
-		return err
-	}
-	purgeReleasedObjects(c, objects)
-	return nil
+	tx.AfterCommit(func() { purgeReleasedObjects(c, objects) })
+	return []rowchange.Change{{
+		EntityType: "artifact",
+		EntityID:   append([]byte(nil), id...),
+		Action:     rowchange.ActionDelete,
+		Fields:     fields,
+	}}, nil
 }
 
 // purgeReleasedObjects unlinks objects/ for collected files whose catalog row

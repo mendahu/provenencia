@@ -2262,6 +2262,18 @@
         }
       }
     },
+    "error.writes.reentry": {
+      "comment": "FFI error writes.reentry",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A save was already in progress."
+          }
+        }
+      }
+    },
     "error.catalog.already_exists": {
       "comment": "FFI error catalog.already_exists",
       "extractionState": "manual",

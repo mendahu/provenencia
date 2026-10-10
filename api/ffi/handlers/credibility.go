@@ -6,8 +6,10 @@ import (
 
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sourcecredibility"
 	"github.com/mendahu/provenencia/core/database/sourcecredibilitygrades"
+	"github.com/mendahu/provenencia/core/writes"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -53,10 +55,18 @@ func UpsertSourceCredibilityAssessment(in []byte) ([]byte, error) {
 		if err != nil {
 			return err
 		}
-		a, err := sourcecredibility.Upsert(c, userID, sourcecredibility.UpsertInput{
-			SourceID:           sourceID,
-			CredibilityGradeID: gradeID,
-			Argument:           req.GetArgument(),
+		action := "create_source_credibility_assessment"
+		if _, err := sourcecredibility.GetBySource(c, sourceID); err == nil {
+			action = "update_source_credibility_assessment"
+		} else if !errors.Is(err, sql.ErrNoRows) {
+			return err
+		}
+		a, _, err := writes.Run(c, writes.Op{Action: action, UserID: userID}, func(tx *database.Tx) (sourcecredibility.Assessment, []rowchange.Change, error) {
+			return sourcecredibility.Upsert(tx, userID, sourcecredibility.UpsertInput{
+				SourceID:           sourceID,
+				CredibilityGradeID: gradeID,
+				Argument:           req.GetArgument(),
+			})
 		})
 		if err != nil {
 			return err

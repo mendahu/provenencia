@@ -7,9 +7,11 @@ import (
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/metadatafields"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/writes"
 )
 
 func TestInstall(t *testing.T) {
@@ -95,7 +97,7 @@ func TestInstall(t *testing.T) {
 				if err := users.Upsert(c, userID, "Tester", userRef); err != nil {
 					t.Fatal(err)
 				}
-				if err := sourcetypes.Delete(c, userID, cert.ID); err != nil {
+				if err := runSourceTypeDelete(c, userID, cert.ID); err != nil {
 					t.Fatal(err)
 				}
 				_, err = sourcetypes.Lookup(c, "birth_certificate", sourcetypes.OriginProvenencia)
@@ -183,7 +185,7 @@ func TestAppendSuggestion(t *testing.T) {
 				}
 				var fieldIDs [][]byte
 				for _, label := range []string{"Author", "Publisher"} {
-					f, err := metadatafields.Create(c, label, metadatafields.DataTypeText, "")
+					f, err := runFieldCreate(c, label, metadatafields.DataTypeText, "")
 					if err != nil {
 						t.Fatal(err)
 					}
@@ -218,7 +220,7 @@ func TestAppendSuggestion(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				f, err := metadatafields.Create(c, "Author", metadatafields.DataTypeText, "")
+				f, err := runFieldCreate(c, "Author", metadatafields.DataTypeText, "")
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -256,4 +258,21 @@ func TestAppendSuggestion(t *testing.T) {
 			tt.run(t, c)
 		})
 	}
+}
+
+func runSourceTypeDelete(c *database.Catalog, userID, id []byte) error {
+	_, _, err := writes.Run(c, writes.Op{Action: "delete_source_type", UserID: userID},
+		func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+			changes, err := sourcetypes.Delete(tx, userID, id)
+			return struct{}{}, changes, err
+		})
+	return err
+}
+
+func runFieldCreate(c *database.Catalog, label, dataType, description string) (metadatafields.Field, error) {
+	got, _, err := writes.Run(c, writes.Op{Action: "create_metadata_field"},
+		func(tx *database.Tx) (metadatafields.Field, []rowchange.Change, error) {
+			return metadatafields.Create(tx, label, dataType, description)
+		})
+	return got, err
 }

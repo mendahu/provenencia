@@ -11,6 +11,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sourceeventtitles"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
@@ -21,6 +22,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/eventtitle"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/writes"
 )
 
 var userID = []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}
@@ -53,9 +55,11 @@ func newFixture(t *testing.T) *fixture {
 	must(t, subjectvocab.Install(c))
 	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{Key: "book", Origin: sourcetypes.OriginProvenencia, Label: "Book"})
 	must(t, err)
-	src, err := sources.Create(c, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Register"})
+	src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Register"})
+	})
 	must(t, err)
-	art, err := artifacts.Create(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
+	art, err := runArtifactCreate(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
 	must(t, err)
 	return &fixture{t: t, c: c, src: src, art: art}
 }
@@ -64,16 +68,22 @@ func (f *fixture) subject(kind, label string, in ...observations.Input) subjects
 	f.t.Helper()
 	st, err := subjecttypes.Lookup(f.c, kind, subjecttypes.OriginProvenencia)
 	must(f.t, err)
-	s, err := subjects.Create(f.c, userID, subjects.CreateInput{SourceID: f.src.ID, SubjectTypeID: st.ID, Label: label}, nil)
+	s, err := writes.Call(f.c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
+		return subjects.Create(tx, userID, subjects.CreateInput{SourceID: f.src.ID, SubjectTypeID: st.ID, Label: label}, nil)
+	})
 	must(f.t, err)
-	_, err = subjectpositions.Set(f.c, s.ID, 0, f.y)
+	_, err = writes.Call(f.c, writes.Op{}, func(tx *database.Tx) (subjectpositions.Position, []rowchange.Change, error) {
+		return subjectpositions.Set(tx, s.ID, 0, f.y)
+	})
 	must(f.t, err)
 	f.y += 2
 	if len(in) > 0 {
 		for i := range in {
 			in[i].SubjectID = s.ID
 		}
-		_, err = citations.CreateWithObservations(f.c, userID, citations.CreateInput{ArtifactID: f.art.ID, LocatorJSON: locator}, in)
+		_, err = writes.Call(f.c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
+			return citations.CreateWithObservations(tx, userID, citations.CreateInput{ArtifactID: f.art.ID, LocatorJSON: locator}, in)
+		})
 		must(f.t, err)
 	}
 	return s
@@ -99,10 +109,12 @@ func (f *fixture) eventType(key string) observations.Input {
 
 func (f *fixture) bridge(kind string, from, to subjects.Subject, obs ...observations.Input) {
 	f.t.Helper()
-	_, err := connect.CreateCitedBridge(f.c, userID, connect.CreateInput{
-		SourceID: f.src.ID, FromSubjectID: from.ID, ToSubjectID: to.ID, BridgeTypeKey: kind,
-		Citation:     citations.CreateInput{ArtifactID: f.art.ID, LocatorJSON: locator},
-		Observations: obs,
+	_, err := writes.Call(f.c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (connect.Result, []rowchange.Change, error) {
+		return connect.CreateCitedBridge(tx, userID, connect.CreateInput{
+			SourceID: f.src.ID, FromSubjectID: from.ID, ToSubjectID: to.ID, BridgeTypeKey: kind,
+			Citation:     citations.CreateInput{ArtifactID: f.art.ID, LocatorJSON: locator},
+			Observations: obs,
+		})
 	})
 	must(f.t, err)
 }
@@ -147,7 +159,11 @@ func TestForSource(t *testing.T) {
 	f.participation(mary, marriage, "subject")
 	birth := f.subject("event", "", f.eventType("birth"))
 	f.participation(nobody, birth, "subject")
-	fireTerm, err := propertyterms.Create(f.c, userID, f.prop("event_type"), "Fire", "")
+	eventTypeID := f.prop("event_type")
+	fireTerm, _, err := writes.Run(f.c, writes.Op{Action: "create_property_term", UserID: userID},
+		func(tx *database.Tx) (propertyterms.Term, []rowchange.Change, error) {
+			return propertyterms.Create(tx, userID, eventTypeID, "Fire", "")
+		})
 	must(t, err)
 	fire := f.subject("event", "", observations.Input{PropertyID: f.prop("event_type"), ValueTermID: fireTerm.ID})
 	f.location(fire, york)
@@ -282,4 +298,12 @@ func sameSet(got, want []string) bool {
 		seen[w]--
 	}
 	return true
+}
+
+func runArtifactCreate(c *database.Catalog, userID []byte, in artifacts.CreateInput) (artifacts.Artifact, error) {
+	a, _, err := writes.Run(c, writes.Op{Action: "create_artifact", UserID: userID},
+		func(tx *database.Tx) (artifacts.Artifact, []rowchange.Change, error) {
+			return artifacts.Create(tx, userID, in)
+		})
+	return a, err
 }

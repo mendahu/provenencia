@@ -5,20 +5,22 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
-
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
+	"github.com/mendahu/provenencia/core/database/catalogmodel"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/deleteimpact"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/properties"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjects"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
+	"github.com/mendahu/provenencia/core/writes"
 )
 
 func TestImpactConclusion(t *testing.T) {
@@ -32,11 +34,13 @@ func TestImpactConclusion(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	src, err := sources.Create(c, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Register"})
+	src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Register"})
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	art, err := artifacts.Create(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
+	art, err := runArtifactCreate(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -44,9 +48,11 @@ func TestImpactConclusion(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	york, err := subjects.Create(c, userID, subjects.CreateInput{
-		SourceID: src.ID, SubjectTypeID: place.ID, Label: "York",
-	}, nil)
+	york, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
+		return subjects.Create(tx, userID, subjects.CreateInput{
+			SourceID: src.ID, SubjectTypeID: place.ID, Label: "York",
+		}, nil)
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -54,33 +60,39 @@ func TestImpactConclusion(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	res, err := citations.CreateWithObservations(c, userID, citations.CreateInput{
-		ArtifactID: art.ID, LocatorJSON: testLocator, Transcription: "York",
-	}, []observations.Input{{
-		SubjectID: york.ID, PropertyID: toponym.ID, ValueText: "York", HasText: true,
-	}})
+	res, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
+		return citations.CreateWithObservations(tx, userID, citations.CreateInput{
+			ArtifactID: art.ID, LocatorJSON: testLocator, Transcription: "York",
+		}, []observations.Input{{
+			SubjectID: york.ID, PropertyID: toponym.ID, ValueText: "York", HasText: true,
+		}})
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	obsID := res.Observations[0].ID
-	plc, err := canonicalentities.Create(c, userID, canonicalentities.CreateInput{SubjectTypeID: place.ID})
+	plc, err := writes.Call(c, writes.Op{Action: "create_canonical_entity", UserID: userID}, func(tx *database.Tx) (canonicalentities.Entity, []rowchange.Change, error) {
+		return canonicalentities.Create(tx, userID, canonicalentities.CreateInput{SubjectTypeID: place.ID})
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	claim, err := identityclaims.Create(c, userID, identityclaims.CreateInput{
-		SubjectID: york.ID, EntityID: plc.ID, Status: identityclaims.StatusAccepted,
+	claim, err := writes.Call(c, writes.Op{Action: "create_identity_claim", UserID: userID}, func(tx *database.Tx) (identityclaims.Claim, []rowchange.Change, error) {
+		return identityclaims.Create(tx, userID, identityclaims.CreateInput{
+			SubjectID: york.ID, EntityID: plc.ID, Status: identityclaims.StatusAccepted,
+		})
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	t.Run("subject type in use names its handle", func(t *testing.T) {
-		got := mustImpact(t, c, deleteimpact.KindSubjectType, place.ID)
+		got := mustImpact(t, c, catalogmodel.KindSubjectType, place.ID)
 		if got.Allowed {
 			t.Fatalf("%+v", got)
 		}
 		g := findGroup(t, got, "canonical_entities.subject_type_id")
-		if g.Kind != deleteimpact.KindCanonicalEntity || g.Total != 1 || g.Listed[0].Ref != plc.Ref {
+		if g.Kind != catalogmodel.KindCanonicalEntity || g.Total != 1 || g.Listed[0].Ref != plc.Ref {
 			t.Fatalf("%+v", g)
 		}
 	})
@@ -88,7 +100,7 @@ func TestImpactConclusion(t *testing.T) {
 	var otherClaimID []byte // a second handle's claim, for cross-claim pins
 
 	t.Run("blocked promoted subject reports groups and the handle it leaves", func(t *testing.T) {
-		got := mustImpact(t, c, deleteimpact.KindSubject, york.ID)
+		got := mustImpact(t, c, catalogmodel.KindSubject, york.ID)
 		if got.Allowed || len(got.Groups) == 0 {
 			t.Fatalf("%+v", got)
 		}
@@ -96,21 +108,25 @@ func TestImpactConclusion(t *testing.T) {
 	})
 
 	t.Run("allowed promoted subject still names the handle it leaves", func(t *testing.T) {
-		leeds, err := subjects.Create(c, userID, subjects.CreateInput{
-			SourceID: src.ID, SubjectTypeID: place.ID, Label: "Leeds",
-		}, nil)
+		leeds, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
+			return subjects.Create(tx, userID, subjects.CreateInput{
+				SourceID: src.ID, SubjectTypeID: place.ID, Label: "Leeds",
+			}, nil)
+		})
 		if err != nil {
 			t.Fatal(err)
 		}
-		got := mustImpact(t, c, deleteimpact.KindSubject, leeds.ID)
+		got := mustImpact(t, c, catalogmodel.KindSubject, leeds.ID)
 		if !got.Allowed || len(got.Cascades) != 0 {
 			t.Fatalf("unpromoted %+v", got)
 		}
-		res, err := promote.Save(c, userID, promote.Input{SubjectID: leeds.ID})
+		res, err := writes.Call(c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+			return promote.Save(tx, userID, promote.Input{SubjectID: leeds.ID})
+		})
 		if err != nil {
 			t.Fatal(err)
 		}
-		got = mustImpact(t, c, deleteimpact.KindSubject, leeds.ID)
+		got = mustImpact(t, c, catalogmodel.KindSubject, leeds.ID)
 		if !got.Allowed || len(got.Groups) != 0 {
 			t.Fatalf("%+v", got)
 		}
@@ -130,19 +146,22 @@ func TestImpactConclusion(t *testing.T) {
 				t.Fatal(err)
 			}
 		}
-		got := mustImpact(t, c, deleteimpact.KindObservation, obsID)
+		got := mustImpact(t, c, catalogmodel.KindObservation, obsID)
 		if !got.Allowed || len(got.Groups) != 0 || len(got.Cascades) != 1 {
 			t.Fatalf("%+v", got)
 		}
 		g := got.Cascades[0]
-		if g.Via != "identity_claim_evidence.observation_id" || g.Kind != deleteimpact.KindCanonicalEntity ||
+		if g.Via != "identity_claim_evidence.observation_id" || g.Kind != catalogmodel.KindCanonicalEntity ||
 			g.Total != 2 || len(g.Listed) != 2 {
 			t.Fatalf("%+v", g)
 		}
 	})
 
 	t.Run("observation delete removes its pins explicitly and audits them", func(t *testing.T) {
-		if err := observations.Delete(c, userID, obsID); err != nil {
+		if _, err := writes.Call(c, writes.Op{Action: "delete_observation", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+			changes, err := observations.Delete(tx, userID, obsID)
+			return struct{}{}, changes, err
+		}); err != nil {
 			t.Fatal(err)
 		}
 		action, types := lastRevision(t, c)
@@ -159,7 +178,10 @@ func TestImpactConclusion(t *testing.T) {
 	})
 
 	t.Run("subject delete removes its claim explicitly and audits it; handle stays", func(t *testing.T) {
-		if err := subjects.Delete(c, userID, york.ID); err != nil {
+		if _, err := writes.Call(c, writes.Op{Action: "delete_subject", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+			changes, err := subjects.Delete(tx, userID, york.ID)
+			return struct{}{}, changes, err
+		}); err != nil {
 			t.Fatal(err)
 		}
 		action, types := lastRevision(t, c)
@@ -218,7 +240,7 @@ func assertLeaves(t *testing.T, r deleteimpact.Report, handleRef string) {
 		t.Fatalf("cascades %+v", r.Cascades)
 	}
 	g := r.Cascades[0]
-	if g.Via != "identity_claims.subject_id" || g.Kind != deleteimpact.KindCanonicalEntity ||
+	if g.Via != "identity_claims.subject_id" || g.Kind != catalogmodel.KindCanonicalEntity ||
 		g.Total != 1 || len(g.Listed) != 1 || g.Listed[0].Ref != handleRef {
 		t.Fatalf("%+v", g)
 	}

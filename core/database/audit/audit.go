@@ -8,15 +8,13 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/apperr"
+	"github.com/mendahu/provenencia/core/database/effects"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 )
 
 var ErrInvalid = apperr.New(apperr.CodeAuditInvalid, apperr.KindUser)
 
 const (
-	ActionCreate = "create"
-	ActionUpdate = "update"
-	ActionDelete = "delete"
-
 	sqlNextRevision = `SELECT COALESCE(MAX(revision), 0) + 1 FROM audit_transactions`
 	sqlInsertTx     = `INSERT INTO audit_transactions (id, revision, user_id, action_type, description, created_at)
 		VALUES (?, ?, ?, ?, ?, ?)`
@@ -24,52 +22,20 @@ const (
 		VALUES (?, ?, ?, ?, ?, ?)`
 )
 
-// FieldDiff is one field's previous and resulting value in changes_json.
-type FieldDiff struct {
-	Old any `json:"old"`
-	New any `json:"new"`
-}
-
-// Change is one row-level mutation under a revision.
-type Change struct {
-	EntityType string
-	EntityID   []byte
-	Action     string
-	Fields     map[string]FieldDiff
-}
-
 // Revision is one logical application action and its row-level changes.
 type Revision struct {
 	UserID      []byte // 16-byte users.id; nil or empty → SQL NULL
 	ActionType  string
 	Description string
 	CreatedAt   string // RFC3339 UTC
-	Changes     []Change
-}
-
-// FullRow is a create change: every key is present with old = nil and new = value.
-// Unset columns should be passed as nil so JSON encodes them as null.
-func FullRow(fields map[string]any) map[string]FieldDiff {
-	out := make(map[string]FieldDiff, len(fields))
-	for k, v := range fields {
-		out[k] = FieldDiff{Old: nil, New: v}
-	}
-	return out
-}
-
-// DeletedRow is a delete change: every key is present with old = value and new = nil.
-// Unset columns should be passed as nil so JSON encodes them as null.
-func DeletedRow(fields map[string]any) map[string]FieldDiff {
-	out := make(map[string]FieldDiff, len(fields))
-	for k, v := range fields {
-		out[k] = FieldDiff{Old: v, New: nil}
-	}
-	return out
+	Changes     []rowchange.Change
 }
 
 // Record allocates the next revision and inserts the transaction + changes on tx,
-// plus the scopes the changes resolve to (see scopes.go). Every entity type must
-// have a resolver; an unknown type is invalid.
+// plus source scopes from effects.Sources. Every entity type in the change list
+// must name a non-None effect; an unknown type or a None row is invalid. Run
+// drops None rows from a mixed list before Record, so they commit with the
+// revision and are not recorded.
 // The caller owns BEGIN/COMMIT; Record must run inside that transaction.
 // An empty Changes slice is invalid — callers must skip Record when nothing changed.
 func Record(tx *sql.Tx, rev Revision) (int64, error) {
@@ -141,9 +107,13 @@ func Record(tx *sql.Tx, rev Revision) (int64, error) {
 		}
 	}
 
-	scopes, err := resolveScopes(tx, rev.Changes)
+	sourceIDs, err := effects.Sources(tx, rev.Changes)
 	if err != nil {
 		return 0, err
+	}
+	scopes := make([]Scope, 0, len(sourceIDs))
+	for _, id := range sourceIDs {
+		scopes = append(scopes, Scope{Type: ScopeSource, ID: id})
 	}
 	for _, s := range scopes {
 		if _, err := tx.Exec(sqlInsertScope, txID[:], s.Type, s.ID); err != nil {
@@ -153,15 +123,16 @@ func Record(tx *sql.Tx, rev Revision) (int64, error) {
 	return revision, nil
 }
 
-func validateChange(ch Change) error {
+func validateChange(ch rowchange.Change) error {
 	if strings.TrimSpace(ch.EntityType) == "" || len(ch.EntityID) != 16 || ch.Fields == nil {
 		return ErrInvalid
 	}
-	if _, ok := resolvers[ch.EntityType]; !ok {
+	none, err := effects.AllNone([]rowchange.Change{{EntityType: ch.EntityType}})
+	if err != nil || none {
 		return ErrInvalid
 	}
 	switch ch.Action {
-	case ActionCreate, ActionUpdate, ActionDelete:
+	case rowchange.ActionCreate, rowchange.ActionUpdate, rowchange.ActionDelete:
 	default:
 		return ErrInvalid
 	}

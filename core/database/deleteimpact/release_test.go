@@ -3,6 +3,7 @@ package deleteimpact
 import (
 	"database/sql"
 	"errors"
+	"github.com/mendahu/provenencia/core/database/catalogmodel"
 	"strings"
 	"testing"
 
@@ -172,7 +173,7 @@ func TestCollectFileObjects(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	snap, err := SnapshotOwned(tx, KindArtifact, artID)
+	snap, err := SnapshotOwned(tx, catalogmodel.KindArtifact, artID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -208,10 +209,10 @@ func TestSnapshotOwnedRequiresParent(t *testing.T) {
 
 	missing := make([]byte, 16)
 	missing[15] = 1
-	if _, err := SnapshotOwned(tx, KindArtifact, missing); !errors.Is(err, ErrInvalid) {
+	if _, err := SnapshotOwned(tx, catalogmodel.KindArtifact, missing); !errors.Is(err, ErrInvalid) {
 		t.Fatalf("snapshot missing parent %v", err)
 	}
-	if err := ReleaseOwned(tx, KindArtifact, missing); !errors.Is(err, ErrInvalid) {
+	if err := ReleaseOwned(tx, catalogmodel.KindArtifact, missing); !errors.Is(err, ErrInvalid) {
 		t.Fatalf("release missing parent %v", err)
 	}
 }

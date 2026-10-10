@@ -4,6 +4,8 @@ import (
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/promote"
+	"github.com/mendahu/provenencia/core/database/rowchange"
+	"github.com/mendahu/provenencia/core/writes"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -69,14 +71,19 @@ func ApplyPromoteGraphAlignment(in []byte) ([]byte, error) {
 
 	var out *engine.ApplyPromoteGraphAlignmentResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		res, err := promote.SaveBatch(c, userID, promote.Batch{
-			SourceID:      sourceID,
-			SeenRevision:  req.GetSeenRevision(),
-			Rows:          rows,
-			SkipBridgeIDs: skip,
+		res, result, err := writes.Run(c, writes.Op{Action: "promote_batch", UserID: userID}, func(tx *database.Tx) (promote.BatchResult, []rowchange.Change, error) {
+			return promote.SaveBatch(tx, userID, promote.Batch{
+				SourceID:      sourceID,
+				SeenRevision:  req.GetSeenRevision(),
+				Rows:          rows,
+				SkipBridgeIDs: skip,
+			})
 		})
 		if err != nil {
 			return err
+		}
+		if result.Revision != 0 {
+			res.Revision = result.Revision
 		}
 		out = &engine.ApplyPromoteGraphAlignmentResponse{Revision: res.Revision}
 		for _, w := range res.Written {

@@ -1,12 +1,12 @@
 package deleteimpact
 
 import (
-	"bytes"
 	"database/sql"
 	"fmt"
+	"github.com/mendahu/provenencia/core/database/catalogmodel"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 
 	"github.com/mendahu/provenencia/core/apperr"
-	"github.com/mendahu/provenencia/core/database/audit"
 )
 
 // Facet release: research rows an official Delete removes explicitly — and
@@ -23,39 +23,25 @@ var ErrReleaseIncomplete = apperr.New(apperr.CodeDeleteImpactReleaseIncomplete, 
 // Released is what ReleaseFacets removed for one parent.
 type Released struct {
 	// Changes are audit rows for every removed facet, ready to append ahead of
-	// the parent's own delete change in the same revision.
-	Changes []audit.Change
-	// Handles are canonical entities whose membership or evidence changed —
-	// the seam for auto-reconciler upkeep (S9-06) and search reprojection
-	// (S9-34). Deduplicated, in first-seen order.
-	Handles [][]byte
+	// the parent's own delete change in the same revision. Handles come from
+	// effects.Handles on these changes, including through ghosts when a claim
+	// row is already gone.
+	Changes []rowchange.Change
 }
 
 func (r *Released) merge(o Released) {
 	r.Changes = append(r.Changes, o.Changes...)
-	for _, h := range o.Handles {
-		r.addHandle(h)
-	}
-}
-
-func (r *Released) addHandle(id []byte) {
-	for _, h := range r.Handles {
-		if bytes.Equal(h, id) {
-			return
-		}
-	}
-	r.Handles = append(r.Handles, append([]byte(nil), id...))
 }
 
 type facetRelease struct {
-	Parent Kind
+	Parent catalogmodel.Kind
 	// Via is the FK this release covers ("child_table.fk_col"). A CASCADE FK
 	// registered Audited must have exactly one release.
 	Via string
 	// Named facets appear in Report.Cascades: Child is the listed kind, and
 	// Count / List must select exactly what Release removes.
 	Named bool
-	Child Kind
+	Child catalogmodel.Kind
 	Count func(tx *sql.Tx, parentID []byte) (int, error)
 	List  func(tx *sql.Tx, parentID []byte, limit int) ([]probeRow, error)
 	// Remaining counts rows still pointing at the parent after Release; it
@@ -69,7 +55,7 @@ type facetRelease struct {
 // registry order. Call it inside the delete transaction, after Refuse and
 // before the parent DELETE. Releases compose: a facet row that is itself a
 // parent (a claim, a connection Observation) has its own facets released first.
-func ReleaseFacets(tx *sql.Tx, kind Kind, id []byte) (Released, error) {
+func ReleaseFacets(tx *sql.Tx, kind catalogmodel.Kind, id []byte) (Released, error) {
 	if tx == nil || len(id) != 16 {
 		return Released{}, ErrInvalid
 	}
@@ -94,7 +80,7 @@ func ReleaseFacets(tx *sql.Tx, kind Kind, id []byte) (Released, error) {
 	return out, nil
 }
 
-func facetReleasesFor(kind Kind) []facetRelease {
+func facetReleasesFor(kind catalogmodel.Kind) []facetRelease {
 	var out []facetRelease
 	for _, f := range facetReleases() {
 		if f.Parent == kind {
@@ -105,14 +91,14 @@ func facetReleasesFor(kind Kind) []facetRelease {
 }
 
 // cascadesFor is the Named facets of kind as non-blocking Impact edges.
-func cascadesFor(kind Kind) []inboundEdge {
+func cascadesFor(kind catalogmodel.Kind) []inboundEdge {
 	var out []inboundEdge
 	for _, f := range facetReleasesFor(kind) {
 		if !f.Named {
 			continue
 		}
 		out = append(out, inboundEdge{
-			Parent: f.Parent, Via: f.Via, Child: f.Child, Bucket: BucketFacet,
+			Parent: f.Parent, Via: f.Via, Child: f.Child, Bucket: catalogmodel.BucketFacet,
 			Count: f.Count, List: f.List,
 		})
 	}
@@ -133,8 +119,8 @@ func buildFacetReleases() []facetRelease {
 		// A Subject leaves every handle it has a claim on (any status); the
 		// handles stay. Claims' own pins go first.
 		{
-			Parent: KindSubject, Via: "identity_claims.subject_id",
-			Named: true, Child: KindCanonicalEntity,
+			Parent: catalogmodel.KindSubject, Via: "identity_claims.subject_id",
+			Named: true, Child: catalogmodel.KindCanonicalEntity,
 			Count: countSQLFn(`SELECT COUNT(DISTINCT entity_id) FROM identity_claims WHERE subject_id = ?`),
 			List: listSQLFn(`SELECT DISTINCT e.id, e.ref FROM identity_claims ic
 				JOIN canonical_entities e ON e.id = ic.entity_id
@@ -146,8 +132,8 @@ func buildFacetReleases() []facetRelease {
 		// A pinned Observation leaves the exhibit of every claim that pinned
 		// it; those claims stay, weaker (model §5.2 review).
 		{
-			Parent: KindObservation, Via: "identity_claim_evidence.observation_id",
-			Named: true, Child: KindCanonicalEntity,
+			Parent: catalogmodel.KindObservation, Via: "identity_claim_evidence.observation_id",
+			Named: true, Child: catalogmodel.KindCanonicalEntity,
 			Count: countSQLFn(`SELECT COUNT(DISTINCT ic.entity_id) FROM identity_claim_evidence ev
 				JOIN identity_claims ic ON ic.id = ev.identity_claim_id
 				WHERE ev.observation_id = ?`),
@@ -157,15 +143,15 @@ func buildFacetReleases() []facetRelease {
 				WHERE ev.observation_id = ?
 				ORDER BY e.ref COLLATE NOCASE LIMIT ?`),
 			Remaining: `SELECT COUNT(*) FROM identity_claim_evidence WHERE observation_id = ?`,
-			Release: pinRelease(`SELECT ev.identity_claim_id, ev.observation_id, ic.entity_id
+			Release: pinRelease(`SELECT ev.identity_claim_id, ev.observation_id
 				FROM identity_claim_evidence ev
 				JOIN identity_claims ic ON ic.id = ev.identity_claim_id
 				WHERE ev.observation_id = ? ORDER BY ev.identity_claim_id`),
 		},
 		{
-			Parent: KindIdentityClaim, Via: "identity_claim_evidence.identity_claim_id",
+			Parent: catalogmodel.KindIdentityClaim, Via: "identity_claim_evidence.identity_claim_id",
 			Remaining: `SELECT COUNT(*) FROM identity_claim_evidence WHERE identity_claim_id = ?`,
-			Release: pinRelease(`SELECT ev.identity_claim_id, ev.observation_id, ic.entity_id
+			Release: pinRelease(`SELECT ev.identity_claim_id, ev.observation_id
 				FROM identity_claim_evidence ev
 				JOIN identity_claims ic ON ic.id = ev.identity_claim_id
 				WHERE ev.identity_claim_id = ? ORDER BY ev.observation_id`),
@@ -175,25 +161,25 @@ func buildFacetReleases() []facetRelease {
 		// Edge + disambiguation Observations on a bridge Subject (not a CASCADE:
 		// Impact refuses any other Observation first). Each is erased whole.
 		{
-			Parent: KindSubject, Via: "observations.subject_id",
+			Parent: catalogmodel.KindSubject, Via: "observations.subject_id",
 			Release: releaseConnectionFacets,
 		},
-		rowFacet(KindObservation, "observation_notes", "observation_id", "observation_note", "id",
+		rowFacet(catalogmodel.KindObservation, "observation_notes", "observation_id", "observation_note", "id",
 			col{"id", colUUID}, col{"observation_id", colUUID}, col{"body", colText}),
-		rowFacet(KindCitation, "citation_notes", "citation_id", "citation_note", "id",
+		rowFacet(catalogmodel.KindCitation, "citation_notes", "citation_id", "citation_note", "id",
 			col{"id", colUUID}, col{"citation_id", colUUID}, col{"body", colText}),
 
 		// --- Source ---------------------------------------------------------
-		rowFacet(KindSource, "source_notes", "source_id", "source_note", "id",
+		rowFacet(catalogmodel.KindSource, "source_notes", "source_id", "source_note", "id",
 			col{"id", colUUID}, col{"source_id", colUUID}, col{"body", colText}),
-		rowFacet(KindSource, "source_metadata", "source_id", "source_metadata", "id",
+		rowFacet(catalogmodel.KindSource, "source_metadata", "source_id", "source_metadata", "id",
 			col{"id", colUUID}, col{"source_id", colUUID}, col{"field_id", colUUID}, col{"value_text", colText}),
-		rowFacet(KindSource, "source_credibility_assessments", "source_id", "source_credibility_assessment", "id",
+		rowFacet(catalogmodel.KindSource, "source_credibility_assessments", "source_id", "source_credibility_assessment", "id",
 			col{"id", colUUID}, col{"source_id", colUUID}, col{"credibility_grade_id", colUUID}, col{"argument", colText}),
 		// Layout rows are audited under field_id (sourcemetadata precedent).
-		rowFacet(KindSource, "source_metadata_layout", "source_id", "source_metadata_layout", "field_id",
+		rowFacet(catalogmodel.KindSource, "source_metadata_layout", "source_id", "source_metadata_layout", "field_id",
 			col{"source_id", colUUID}, col{"field_id", colUUID}, col{"sort_order", colInt}, col{"dismissed", colBool}),
-		rowFacet(KindMetadataField, "source_metadata_layout", "field_id", "source_metadata_layout", "field_id",
+		rowFacet(catalogmodel.KindMetadataField, "source_metadata_layout", "field_id", "source_metadata_layout", "field_id",
 			col{"source_id", colUUID}, col{"field_id", colUUID}, col{"sort_order", colInt}, col{"dismissed", colBool}),
 	}
 }
@@ -225,7 +211,7 @@ func releaseSubjectClaims(tx *sql.Tx, subjectID []byte) (Released, error) {
 	}
 	var out Released
 	for _, c := range claims {
-		pins, err := ReleaseFacets(tx, KindIdentityClaim, c.id)
+		pins, err := ReleaseFacets(tx, catalogmodel.KindIdentityClaim, c.id)
 		if err != nil {
 			return Released{}, err
 		}
@@ -233,11 +219,11 @@ func releaseSubjectClaims(tx *sql.Tx, subjectID []byte) (Released, error) {
 		if _, err := tx.Exec(`DELETE FROM identity_claims WHERE id = ?`, c.id); err != nil {
 			return Released{}, err
 		}
-		out.Changes = append(out.Changes, audit.Change{
+		out.Changes = append(out.Changes, rowchange.Change{
 			EntityType: "identity_claim",
 			EntityID:   c.id,
-			Action:     audit.ActionDelete,
-			Fields: audit.DeletedRow(map[string]any{
+			Action:     rowchange.ActionDelete,
+			Fields: rowchange.DeletedRow(map[string]any{
 				"id":                  uuidJSON(c.id),
 				"subject_id":          uuidJSON(c.subjectID),
 				"entity_id":           uuidJSON(c.entityID),
@@ -247,25 +233,26 @@ func releaseSubjectClaims(tx *sql.Tx, subjectID []byte) (Released, error) {
 				"argument":            nullStringJSON(c.argument),
 			}),
 		})
-		out.addHandle(c.entityID)
 	}
 	return out, nil
 }
 
-// pinRelease deletes the pins q selects (claim id, observation id, entity id)
-// and audits each under its claim's id, so replaying
-// (identity_claim_evidence, claim id) yields that claim's exhibit history.
+// pinRelease deletes the pins q selects (claim id, observation id) and audits
+// each under its claim's id, so replaying (identity_claim_evidence, claim id)
+// yields that claim's exhibit history. The claim join keeps a pin whose claim
+// is already gone out of this release; effects.Handles walks identity_claim_id
+// to the handle, including through that claim's delete when the row is gone.
 func pinRelease(q string) func(*sql.Tx, []byte) (Released, error) {
 	return func(tx *sql.Tx, parentID []byte) (Released, error) {
 		rows, err := tx.Query(q, parentID)
 		if err != nil {
 			return Released{}, err
 		}
-		type pin struct{ claimID, observationID, entityID []byte }
+		type pin struct{ claimID, observationID []byte }
 		var pins []pin
 		for rows.Next() {
 			var p pin
-			if err := rows.Scan(&p.claimID, &p.observationID, &p.entityID); err != nil {
+			if err := rows.Scan(&p.claimID, &p.observationID); err != nil {
 				rows.Close()
 				return Released{}, err
 			}
@@ -280,16 +267,15 @@ func pinRelease(q string) func(*sql.Tx, []byte) (Released, error) {
 				WHERE identity_claim_id = ? AND observation_id = ?`, p.claimID, p.observationID); err != nil {
 				return Released{}, err
 			}
-			out.Changes = append(out.Changes, audit.Change{
+			out.Changes = append(out.Changes, rowchange.Change{
 				EntityType: "identity_claim_evidence",
 				EntityID:   p.claimID,
-				Action:     audit.ActionDelete,
-				Fields: audit.DeletedRow(map[string]any{
+				Action:     rowchange.ActionDelete,
+				Fields: rowchange.DeletedRow(map[string]any{
 					"identity_claim_id": uuidJSON(p.claimID),
 					"observation_id":    uuidJSON(p.observationID),
 				}),
 			})
-			out.addHandle(p.entityID)
 		}
 		return out, nil
 	}
@@ -332,11 +318,11 @@ func eraseObservation(tx *sql.Tx, id []byte) (Released, error) {
 		&polarity, &text, &integer, &dateID, &nameID, &valueSubjectID, &termID); err != nil {
 		return Released{}, err
 	}
-	out, err := ReleaseFacets(tx, KindObservation, id)
+	out, err := ReleaseFacets(tx, catalogmodel.KindObservation, id)
 	if err != nil {
 		return Released{}, err
 	}
-	snap, err := SnapshotOwned(tx, KindObservation, id)
+	snap, err := SnapshotOwned(tx, catalogmodel.KindObservation, id)
 	if err != nil {
 		return Released{}, err
 	}
@@ -350,11 +336,11 @@ func eraseObservation(tx *sql.Tx, id []byte) (Released, error) {
 	if integer.Valid {
 		integerJSON = integer.Int64
 	}
-	out.Changes = append(out.Changes, audit.Change{
+	out.Changes = append(out.Changes, rowchange.Change{
 		EntityType: "observation",
 		EntityID:   obsID,
-		Action:     audit.ActionDelete,
-		Fields: audit.DeletedRow(map[string]any{
+		Action:     rowchange.ActionDelete,
+		Fields: rowchange.DeletedRow(map[string]any{
 			"id":               uuidJSON(obsID),
 			"ref":              ref,
 			"citation_id":      uuidJSON(citationID),
@@ -390,7 +376,7 @@ type col struct {
 
 // rowFacet is a facet table whose rows are audited whole as DeletedRow, keyed
 // by entityIDCol. Rows are removed in rowid order.
-func rowFacet(parent Kind, table, fkCol, entityType, entityIDCol string, cols ...col) facetRelease {
+func rowFacet(parent catalogmodel.Kind, table, fkCol, entityType, entityIDCol string, cols ...col) facetRelease {
 	names := ""
 	idIdx := -1
 	for i, c := range cols {
@@ -449,11 +435,11 @@ func rowFacet(parent Kind, table, fkCol, entityType, entityIDCol string, cols ..
 				if _, err := tx.Exec(deleteSQL, r.rowid); err != nil {
 					return Released{}, err
 				}
-				out.Changes = append(out.Changes, audit.Change{
+				out.Changes = append(out.Changes, rowchange.Change{
 					EntityType: entityType,
 					EntityID:   r.entityID,
-					Action:     audit.ActionDelete,
-					Fields:     audit.DeletedRow(r.fields),
+					Action:     rowchange.ActionDelete,
+					Fields:     rowchange.DeletedRow(r.fields),
 				})
 			}
 			return out, nil

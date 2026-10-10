@@ -2,8 +2,7 @@ package identityclaims
 
 import (
 	"database/sql"
-
-	"github.com/mendahu/provenencia/core/database/audit"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 )
 
 const (
@@ -18,23 +17,23 @@ const (
 // false and there is no change. A new pin's change is recorded under the
 // claim's id, the mirror of deleteimpact's audited release, so replaying
 // (identity_claim_evidence, claim id) yields that claim's exhibit history.
-func PinTx(tx *sql.Tx, claimID, observationID []byte) (change audit.Change, ok bool, err error) {
+func PinTx(tx *sql.Tx, claimID, observationID []byte) (change rowchange.Change, ok bool, err error) {
 	if len(claimID) != 16 || len(observationID) != 16 {
-		return audit.Change{}, false, ErrInvalid
+		return rowchange.Change{}, false, ErrInvalid
 	}
 	res, err := tx.Exec(sqlPin, claimID, observationID)
 	if err != nil {
-		return audit.Change{}, false, err
+		return rowchange.Change{}, false, err
 	}
 	n, err := res.RowsAffected()
 	if err != nil || n == 0 {
-		return audit.Change{}, false, err
+		return rowchange.Change{}, false, err
 	}
-	return audit.Change{
+	return rowchange.Change{
 		EntityType: "identity_claim_evidence",
 		EntityID:   append([]byte(nil), claimID...),
-		Action:     audit.ActionCreate,
-		Fields: audit.FullRow(map[string]any{
+		Action:     rowchange.ActionCreate,
+		Fields: rowchange.FullRow(map[string]any{
 			"identity_claim_id": uuidJSON(claimID),
 			"observation_id":    uuidJSON(observationID),
 		}),

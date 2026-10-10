@@ -12,13 +12,24 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/filederivatives"
 	"github.com/mendahu/provenencia/core/database/files"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/searchindex"
 	"github.com/mendahu/provenencia/core/derivatives/raster"
 	"github.com/mendahu/provenencia/core/objectstore"
+	"github.com/mendahu/provenencia/core/writes"
+)
+
+// errDerivedFileExists is returned from the insert closure when the derived
+// file checksum loses a race. Ensure starts a second Run after that returns.
+// errDerivativeLinkExists is the same for a file_derivatives unique conflict.
+var (
+	errDerivedFileExists    = errors.New("derivatives: derived file already stored")
+	errDerivativeLinkExists = errors.New("derivatives: derivative link already stored")
 )
 
 var ErrInvalid = apperr.New(apperr.CodeFileDerivativesInvalid, apperr.KindUser)
@@ -136,8 +147,8 @@ func Ensure(c *database.Catalog, sourceFileID []byte, spec Spec) (Result, error)
 		return Result{}, err
 	}
 
-	// Resolve derived File id before opening a write tx — LookupByChecksum uses
-	// another pool connection and would deadlock against SQLite while tx is open.
+	// LookupByChecksum uses another pool connection and deadlocks while a Run
+	// transaction is open. Resolve the derived File id before Run.
 	var derivedID []byte
 	if existing, err := files.LookupByChecksum(c, checksum); err == nil {
 		derivedID = append([]byte(nil), existing.ID...)
@@ -145,68 +156,53 @@ func Ensure(c *database.Catalog, sourceFileID []byte, spec Spec) (Result, error)
 		return Result{}, err
 	}
 
-	db, err := c.DB()
-	if err != nil {
-		return Result{}, err
-	}
-	tx, err := db.Begin()
-	if err != nil {
-		return Result{}, err
-	}
-	defer func() { _ = tx.Rollback() }()
-
-	if derivedID == nil {
-		id, err := files.NewID()
-		if err != nil {
-			return Result{}, err
-		}
-		row := files.File{
-			ID:             id,
-			ChecksumSHA256: checksum,
-			MediaType:      "image/jpeg",
-			ByteSize:       int64(len(derivedJPEG)),
-		}
-		if err := files.Insert(tx, row); err != nil {
-			if files.IsUniqueConflict(err) {
-				_ = tx.Rollback()
-				existing, lookupErr := files.LookupByChecksum(c, checksum)
-				if lookupErr != nil {
-					return Result{}, lookupErr
+	var afterErr error
+	link, _, err := writes.Run(c, writes.Op{}, func(tx *database.Tx) (filederivatives.Link, []rowchange.Change, error) {
+		fileID := derivedID
+		if fileID == nil {
+			id, err := files.NewID()
+			if err != nil {
+				return filederivatives.Link{}, nil, err
+			}
+			row := files.File{
+				ID:             id,
+				ChecksumSHA256: checksum,
+				MediaType:      "image/jpeg",
+				ByteSize:       int64(len(derivedJPEG)),
+			}
+			if err := files.Insert(tx.Tx, row); err != nil {
+				if files.IsUniqueConflict(err) {
+					return filederivatives.Link{}, nil, errDerivedFileExists
 				}
-				derivedID = append([]byte(nil), existing.ID...)
-				return insertLinkOnly(c, sourceFileID, derivedID, spec.Type)
+				return filederivatives.Link{}, nil, err
 			}
-			return Result{}, err
+			fileID = append([]byte(nil), id...)
 		}
-		derivedID = append([]byte(nil), id...)
+		link, changes, err := insertDerivativeLink(tx, c, sourceFileID, fileID, spec.Type, &afterErr)
+		if err != nil {
+			return filederivatives.Link{}, nil, err
+		}
+		return link, changes, nil
+	})
+	if errors.Is(err, errDerivedFileExists) {
+		existing, lookupErr := files.LookupByChecksum(c, checksum)
+		if lookupErr != nil {
+			return Result{}, lookupErr
+		}
+		return insertLinkOnly(c, sourceFileID, existing.ID, spec.Type)
 	}
-
-	linkID, err := filederivatives.NewID()
+	if errors.Is(err, errDerivativeLinkExists) {
+		existing, lookupErr := filederivatives.Lookup(c, sourceFileID, spec.Type)
+		if lookupErr != nil {
+			return Result{}, lookupErr
+		}
+		return Result{Link: existing}, nil
+	}
 	if err != nil {
 		return Result{}, err
 	}
-	link := filederivatives.Link{
-		ID:             linkID,
-		SourceFileID:   append([]byte(nil), sourceFileID...),
-		DerivedFileID:  derivedID,
-		DerivativeType: spec.Type,
-	}
-	if err := filederivatives.Insert(tx, link); err != nil {
-		if filederivatives.IsUniqueConflict(err) {
-			_ = tx.Rollback()
-			existing, lookupErr := filederivatives.Lookup(c, sourceFileID, spec.Type)
-			if lookupErr != nil {
-				return Result{}, lookupErr
-			}
-			return Result{Link: existing}, nil
-		}
-		return Result{}, err
-	}
-	if err := tx.Commit(); err != nil {
-		return Result{}, err
-	}
-	if err := reprojectSourcesForNewThumbnail(c, sourceFileID, spec.Type); err != nil {
-		return Result{}, err
+	if afterErr != nil {
+		return Result{}, afterErr
 	}
 	return Result{Link: link}, nil
 }
@@ -253,24 +249,44 @@ func readSourceObject(objPath, wantChecksum string) ([]byte, error) {
 	return raw, nil
 }
 
+// insertLinkOnly inserts the derivative link for a File that already exists.
+// Call it only after the previous Run has returned.
 func insertLinkOnly(c *database.Catalog, sourceFileID, derivedID []byte, derivativeType string) (Result, error) {
 	if existing, err := filederivatives.Lookup(c, sourceFileID, derivativeType); err == nil {
 		return Result{Link: existing}, nil
 	} else if !errors.Is(err, sql.ErrNoRows) {
 		return Result{}, err
 	}
-	db, err := c.DB()
+	var afterErr error
+	link, _, err := writes.Run(c, writes.Op{}, func(tx *database.Tx) (filederivatives.Link, []rowchange.Change, error) {
+		link, changes, err := insertDerivativeLink(tx, c, sourceFileID, derivedID, derivativeType, &afterErr)
+		if err != nil {
+			return filederivatives.Link{}, nil, err
+		}
+		return link, changes, nil
+	})
+	if errors.Is(err, errDerivativeLinkExists) {
+		existing, lookupErr := filederivatives.Lookup(c, sourceFileID, derivativeType)
+		if lookupErr != nil {
+			return Result{}, lookupErr
+		}
+		return Result{Link: existing}, nil
+	}
 	if err != nil {
 		return Result{}, err
 	}
-	tx, err := db.Begin()
-	if err != nil {
-		return Result{}, err
+	if afterErr != nil {
+		return Result{}, afterErr
 	}
-	defer func() { _ = tx.Rollback() }()
+	return Result{Link: link}, nil
+}
+
+// insertDerivativeLink writes one file_derivatives row and registers search
+// reprojection for after commit. file_derivatives stays unaudited.
+func insertDerivativeLink(tx *database.Tx, c *database.Catalog, sourceFileID, derivedID []byte, derivativeType string, afterErr *error) (filederivatives.Link, []rowchange.Change, error) {
 	linkID, err := filederivatives.NewID()
 	if err != nil {
-		return Result{}, err
+		return filederivatives.Link{}, nil, err
 	}
 	link := filederivatives.Link{
 		ID:             linkID,
@@ -278,24 +294,46 @@ func insertLinkOnly(c *database.Catalog, sourceFileID, derivedID []byte, derivat
 		DerivedFileID:  append([]byte(nil), derivedID...),
 		DerivativeType: derivativeType,
 	}
-	if err := filederivatives.Insert(tx, link); err != nil {
+	if err := filederivatives.Insert(tx.Tx, link); err != nil {
 		if filederivatives.IsUniqueConflict(err) {
-			_ = tx.Rollback()
-			existing, lookupErr := filederivatives.Lookup(c, sourceFileID, derivativeType)
-			if lookupErr != nil {
-				return Result{}, lookupErr
-			}
-			return Result{Link: existing}, nil
+			return filederivatives.Link{}, nil, errDerivativeLinkExists
 		}
-		return Result{}, err
+		return filederivatives.Link{}, nil, err
 	}
-	if err := tx.Commit(); err != nil {
-		return Result{}, err
+	tx.AfterCommit(func() {
+		*afterErr = reprojectSourcesForNewThumbnail(c, sourceFileID, derivativeType)
+	})
+	ch, err := fileDerivativeChange(link)
+	if err != nil {
+		return filederivatives.Link{}, nil, err
 	}
-	if err := reprojectSourcesForNewThumbnail(c, sourceFileID, derivativeType); err != nil {
-		return Result{}, err
+	return link, []rowchange.Change{ch}, nil
+}
+
+func fileDerivativeChange(link filederivatives.Link) (rowchange.Change, error) {
+	id, err := uuid.FromBytes(link.ID)
+	if err != nil {
+		return rowchange.Change{}, err
 	}
-	return Result{Link: link}, nil
+	sourceID, err := uuid.FromBytes(link.SourceFileID)
+	if err != nil {
+		return rowchange.Change{}, err
+	}
+	derivedID, err := uuid.FromBytes(link.DerivedFileID)
+	if err != nil {
+		return rowchange.Change{}, err
+	}
+	return rowchange.Change{
+		EntityType: "file_derivative",
+		EntityID:   append([]byte(nil), link.ID...),
+		Action:     rowchange.ActionCreate,
+		Fields: map[string]rowchange.FieldDiff{
+			"id":              {Old: nil, New: id.String()},
+			"source_file_id":  {Old: nil, New: sourceID.String()},
+			"derived_file_id": {Old: nil, New: derivedID.String()},
+			"derivative_type": {Old: nil, New: link.DerivativeType},
+		},
+	}, nil
 }
 
 // reprojectSourcesForNewThumbnail refreshes Source search docs after a new

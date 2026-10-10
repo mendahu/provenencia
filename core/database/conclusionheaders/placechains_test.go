@@ -3,6 +3,7 @@ package conclusionheaders_test
 import (
 	"testing"
 
+	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/conclusionheaders"
 	"github.com/mendahu/provenencia/core/database/connect"
@@ -10,12 +11,15 @@ import (
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
 	"github.com/mendahu/provenencia/core/database/subjects"
+
+	// placeSubject cites a Place (and optional period) but does not promote — call
+	// promoteSubject after placeRel so bridges file with the ends.
+	"github.com/mendahu/provenencia/core/database/rowchange"
+	"github.com/mendahu/provenencia/core/writes"
 )
 
 func year(y int) *int { return &y }
 
-// placeSubject cites a Place (and optional period) but does not promote — call
-// promoteSubject after placeRel so bridges file with the ends.
 func (f *fixture) placeSubject(name string, start, end *int, x, y int64) subjects.Subject {
 	f.t.Helper()
 	s := f.bare("place")
@@ -36,14 +40,19 @@ func (f *fixture) placeSubject(name string, start, end *int, x, y int64) subject
 func (f *fixture) placeRel(from, to subjects.Subject, kind string, linkStart, linkEnd *int) {
 	f.t.Helper()
 	term := f.term("place_relationship_type", kind)
-	res, err := connect.CreateCitedBridge(f.c, userID, connect.CreateInput{
-		SourceID: f.source.ID, FromSubjectID: from.ID, ToSubjectID: to.ID, BridgeTypeKey: "place_relationship",
-		Citation: citations.CreateInput{ArtifactID: f.artifact.ID, LocatorJSON: locator},
-		Observations: []observations.Input{
-			{PropertyID: f.prop("from").ID, ValueSubjectID: from.ID},
-			{PropertyID: f.prop("to").ID, ValueSubjectID: to.ID},
-			{PropertyID: f.prop("place_relationship_type").ID, ValueTermID: term.ID},
-		},
+	fromProp := f.prop("from").ID
+	toProp := f.prop("to").ID
+	typeProp := f.prop("place_relationship_type").ID
+	res, err := writes.Call(f.c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (connect.Result, []rowchange.Change, error) {
+		return connect.CreateCitedBridge(tx, userID, connect.CreateInput{
+			SourceID: f.source.ID, FromSubjectID: from.ID, ToSubjectID: to.ID, BridgeTypeKey: "place_relationship",
+			Citation: citations.CreateInput{ArtifactID: f.artifact.ID, LocatorJSON: locator},
+			Observations: []observations.Input{
+				{PropertyID: fromProp, ValueSubjectID: from.ID},
+				{PropertyID: toProp, ValueSubjectID: to.ID},
+				{PropertyID: typeProp, ValueTermID: term.ID},
+			},
+		})
 	})
 	must(f.t, err)
 	if linkStart != nil || linkEnd != nil {
@@ -58,7 +67,9 @@ func (f *fixture) placeRel(from, to subjects.Subject, kind string, linkStart, li
 				SubjectID: res.Subject.ID, PropertyID: f.prop("end_date").ID, Date: pointYear(*linkEnd),
 			})
 		}
-		_, err := observations.AddToCitation(f.c, userID, res.Citation.ID, extra)
+		_, err := writes.Call(f.c, writes.Op{Action: "add_observations", UserID: userID}, func(tx *database.Tx) ([]observations.Observation, []rowchange.Change, error) {
+			return observations.AddToCitation(tx, userID, res.Citation.ID, extra)
+		})
 		must(f.t, err)
 	}
 }

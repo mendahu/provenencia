@@ -6,7 +6,9 @@ import (
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/observations"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/valuecodec"
+	"github.com/mendahu/provenencia/core/writes"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -55,7 +57,10 @@ func UpdateObservation(in []byte) ([]byte, error) {
 	}
 	var out *engine.UpdateObservationResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		row, err := observations.Update(c, userID, input)
+		row, _, err := writes.Run(c, writes.Op{Action: "update_observation", UserID: userID},
+			func(tx *database.Tx) (observations.Listed, []rowchange.Change, error) {
+				return observations.Update(tx, userID, input)
+			})
 		if err != nil {
 			return err
 		}
@@ -83,7 +88,12 @@ func DeleteObservation(in []byte) ([]byte, error) {
 	}
 	var out *engine.DeleteObservationResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		if err := observations.Delete(c, userID, id); err != nil {
+		_, _, err := writes.Run(c, writes.Op{Action: "delete_observation", UserID: userID},
+			func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+				changes, err := observations.Delete(tx, userID, id)
+				return struct{}{}, changes, err
+			})
+		if err != nil {
 			return err
 		}
 		out = &engine.DeleteObservationResponse{}
@@ -114,7 +124,10 @@ func AddObservationsToCitation(in []byte) ([]byte, error) {
 	}
 	var out *engine.AddObservationsToCitationResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		rows, err := observations.AddToCitation(c, userID, citationID, inputs)
+		rows, _, err := writes.Run(c, writes.Op{Action: "add_observations", UserID: userID},
+			func(tx *database.Tx) ([]observations.Observation, []rowchange.Change, error) {
+				return observations.AddToCitation(tx, userID, citationID, inputs)
+			})
 		if err != nil {
 			return err
 		}

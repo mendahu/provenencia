@@ -1,4 +1,5 @@
-// Package subjects accesses the subjects catalog table with audited mutations.
+// Package subjects accesses the subjects catalog table. Mutations return
+// changes for the caller to record.
 package subjects
 
 import (
@@ -6,15 +7,16 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/mendahu/provenencia/core/database/catalogmodel"
+	"github.com/mendahu/provenencia/core/database/rowchange"
+
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/audit"
 	"github.com/mendahu/provenencia/core/database/autoreconciler"
 	"github.com/mendahu/provenencia/core/database/conclusionheaders"
 	"github.com/mendahu/provenencia/core/database/deleteimpact"
-	"github.com/mendahu/provenencia/core/database/project"
-	"github.com/mendahu/provenencia/core/database/searchindex"
+	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/subjectpositions"
 	"github.com/mendahu/provenencia/core/ref"
 )
@@ -65,68 +67,56 @@ type Placement struct {
 	GridY int64
 }
 
-// Create inserts a Subject, mints a ref from the type's candidate_ref_prefix, and records create_subject.
-func Create(c *database.Catalog, userID []byte, in CreateInput, placement *Placement) (Subject, error) {
-	db, err := c.DB()
-	if err != nil {
-		return Subject{}, err
+// Create inserts a Subject and mints a ref from the type's candidate_ref_prefix.
+// A placement is written on the same transaction and returned with the subject
+// change. The caller records the returned changes. Run stores the position and
+// does not record it.
+func Create(tx *database.Tx, userID []byte, in CreateInput, placement *Placement) (Subject, []rowchange.Change, error) {
+	if tx == nil {
+		return Subject{}, nil, ErrInvalid
 	}
 	in.Label = strings.TrimSpace(in.Label)
 	in.Description = strings.TrimSpace(in.Description)
 	if len(in.SourceID) != 16 || len(in.SubjectTypeID) != 16 {
-		return Subject{}, ErrInvalid
+		return Subject{}, nil, ErrInvalid
 	}
 	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
-		return Subject{}, err
+		return Subject{}, nil, err
 	}
 
-	tx, err := db.Begin()
+	s, change, err := InsertTx(tx.Tx, in)
 	if err != nil {
-		return Subject{}, err
+		return Subject{}, nil, err
 	}
-	defer func() { _ = tx.Rollback() }()
-
-	s, change, err := InsertTx(tx, in)
-	if err != nil {
-		return Subject{}, err
-	}
+	changes := []rowchange.Change{change}
 	if placement != nil {
-		if _, err := subjectpositions.SetTx(tx, s.ID, placement.GridX, placement.GridY); err != nil {
-			return Subject{}, err
+		_, pos, err := subjectpositions.Set(tx, s.ID, placement.GridX, placement.GridY)
+		if err != nil {
+			return Subject{}, nil, err
 		}
+		changes = append(changes, pos...)
 	}
-	if _, err := audit.Record(tx, audit.Revision{
-		UserID:     userID,
-		ActionType: "create_subject",
-		CreatedAt:  project.NowUTC(),
-		Changes:    []audit.Change{change},
-	}); err != nil {
-		return Subject{}, err
-	}
-	if err := tx.Commit(); err != nil {
-		return Subject{}, err
-	}
-	return s, nil
+	return s, changes, nil
 }
 
 // InsertTx inserts a Subject on an open transaction (no commit, no revision).
-func InsertTx(tx *sql.Tx, in CreateInput) (Subject, audit.Change, error) {
+func InsertTx(tx *sql.Tx, in CreateInput) (Subject, rowchange.Change, error) {
 	in.Label = strings.TrimSpace(in.Label)
 	in.Description = strings.TrimSpace(in.Description)
 	if len(in.SourceID) != 16 || len(in.SubjectTypeID) != 16 {
-		return Subject{}, audit.Change{}, ErrInvalid
+		return Subject{}, rowchange.Change{}, ErrInvalid
 	}
 	if err := requireSource(tx, in.SourceID); err != nil {
-		return Subject{}, audit.Change{}, err
+		return Subject{}, rowchange.Change{}, err
 	}
 	prefix, err := requireTypePrefix(tx, in.SubjectTypeID)
 	if err != nil {
-		return Subject{}, audit.Change{}, err
+		return Subject{}, rowchange.Change{}, err
 	}
 
 	id, err := uuid.NewV7()
 	if err != nil {
-		return Subject{}, audit.Change{}, err
+		return Subject{}, rowchange.Change{}, err
 	}
 	idBytes := id[:]
 
@@ -134,25 +124,25 @@ func InsertTx(tx *sql.Tx, in CreateInput) (Subject, audit.Change, error) {
 	for attempt := 0; attempt < maxRefRetries; attempt++ {
 		subjectRef, err = ref.Mint(prefix)
 		if err != nil {
-			return Subject{}, audit.Change{}, err
+			return Subject{}, rowchange.Change{}, err
 		}
 		_, err = tx.Exec(sqlInsert, idBytes, subjectRef, in.SourceID, in.SubjectTypeID, nullStr(in.Label), nullStr(in.Description))
 		if err == nil {
 			break
 		}
 		if !database.IsUniqueConflict(err) {
-			return Subject{}, audit.Change{}, mapConstraint(err)
+			return Subject{}, rowchange.Change{}, mapConstraint(err)
 		}
 	}
 	if err != nil {
-		return Subject{}, audit.Change{}, ErrInvalid
+		return Subject{}, rowchange.Change{}, ErrInvalid
 	}
 
-	change := audit.Change{
+	change := rowchange.Change{
 		EntityType: "subject",
 		EntityID:   idBytes,
-		Action:     audit.ActionCreate,
-		Fields: audit.FullRow(map[string]any{
+		Action:     rowchange.ActionCreate,
+		Fields: rowchange.FullRow(map[string]any{
 			"id":              id.String(),
 			"ref":             subjectRef,
 			"source_id":       uuidJSON(in.SourceID),
@@ -172,162 +162,127 @@ func InsertTx(tx *sql.Tx, in CreateInput) (Subject, audit.Change, error) {
 }
 
 // Update changes label and/or description only. subject_type_id is immutable.
-// No-op when nothing changed (commits without a revision).
-func Update(c *database.Catalog, userID, id []byte, label, description string) error {
-	db, err := c.DB()
-	if err != nil {
-		return err
+// An unchanged row returns no changes. The caller records the returned changes.
+func Update(tx *database.Tx, userID, id []byte, label, description string) ([]rowchange.Change, error) {
+	if tx == nil || len(id) != 16 {
+		return nil, ErrInvalid
 	}
 	label = strings.TrimSpace(label)
 	description = strings.TrimSpace(description)
-	if len(id) != 16 {
-		return ErrInvalid
-	}
 	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
-		return err
+		return nil, err
 	}
 
-	tx, err := db.Begin()
-	if err != nil {
-		return err
-	}
-	defer func() { _ = tx.Rollback() }()
-
-	prev, err := getTx(tx, id)
+	prev, err := getTx(tx.Tx, id)
 	if errors.Is(err, sql.ErrNoRows) {
-		return ErrInvalid
+		return nil, ErrInvalid
 	}
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	fields := map[string]audit.FieldDiff{}
+	fields := map[string]rowchange.FieldDiff{}
 	if prev.Label != label {
-		fields["label"] = audit.FieldDiff{Old: nullJSON(prev.Label), New: nullJSON(label)}
+		fields["label"] = rowchange.FieldDiff{Old: nullJSON(prev.Label), New: nullJSON(label)}
 	}
 	if prev.Description != description {
-		fields["description"] = audit.FieldDiff{Old: nullJSON(prev.Description), New: nullJSON(description)}
+		fields["description"] = rowchange.FieldDiff{Old: nullJSON(prev.Description), New: nullJSON(description)}
 	}
 	if len(fields) == 0 {
-		return tx.Commit()
+		return nil, nil
 	}
 
 	if _, err := tx.Exec(sqlUpdate, nullStr(label), nullStr(description), id); err != nil {
-		return mapConstraint(err)
+		return nil, mapConstraint(err)
 	}
-	if _, err := audit.Record(tx, audit.Revision{
-		UserID:     userID,
-		ActionType: "update_subject",
-		CreatedAt:  project.NowUTC(),
-		Changes: []audit.Change{{
-			EntityType: "subject",
-			EntityID:   id,
-			Action:     audit.ActionUpdate,
-			Fields:     fields,
-		}},
-	}); err != nil {
-		return err
-	}
-	return tx.Commit()
+	return []rowchange.Change{{
+		EntityType: "subject",
+		EntityID:   append([]byte(nil), id...),
+		Action:     rowchange.ActionUpdate,
+		Fields:     fields,
+	}}, nil
 }
 
 // Delete erases a Subject when Impact allows it. Connection facets (edge +
 // disambiguation rows on a bridge) are released first. Positions CASCADE.
-func Delete(c *database.Catalog, userID, id []byte) error {
+// Handles the released changes name, handles that observed this Subject, linked
+// handles, and their header dependents are recomputed here in one call.
+// Header documents are written at the end of that call, so they have to see
+// the released values already gone. Run recomputes the returned changes again.
+func Delete(tx *database.Tx, userID, id []byte) ([]rowchange.Change, error) {
+	if tx == nil || len(id) != 16 {
+		return nil, ErrInvalid
+	}
 	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
-		return err
+		return nil, err
 	}
-	if len(id) != 16 {
-		return ErrInvalid
-	}
-	prev, err := Get(c, id)
+	prev, err := getTx(tx.Tx, id)
 	if errors.Is(err, sql.ErrNoRows) {
-		return ErrInvalid
+		return nil, ErrInvalid
 	}
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	db, err := c.DB()
+	report, err := deleteimpact.Impact(tx.Tx, catalogmodel.KindSubject, id)
 	if err != nil {
-		return err
-	}
-	tx, err := db.Begin()
-	if err != nil {
-		return err
-	}
-	defer func() { _ = tx.Rollback() }()
-
-	report, err := deleteimpact.Impact(tx, deleteimpact.KindSubject, id)
-	if err != nil {
-		return err
+		return nil, err
 	}
 	if err := deleteimpact.Refuse(report, deleteimpact.Codes{
 		InUse: ErrInUse, NotFound: ErrInvalid,
 	}); err != nil {
-		return err
+		return nil, err
 	}
-	// Handles whose members cite this Subject, captured before its Observations
-	// go. The association it leaves is in released.Handles. Header dependents
-	// are snapshotted while the link still exists, so deleting a bridge
-	// reprojects the event it titled.
-	inbound, err := autoreconciler.HandlesObservingSubject(tx, id)
+	// Header dependents are snapshotted while the link still exists. The
+	// recompute itself runs after the rows are gone, and it includes the
+	// handles effects.Handles reads off the released changes: RecomputeTx
+	// writes header search documents after it clears values, so those
+	// documents have to be in the same call.
+	inbound, err := autoreconciler.HandlesObservingSubject(tx.Tx, id)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	ends, err := linkedHandles(tx, id)
+	ends, err := linkedHandles(tx.Tx, id)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	deps, err := conclusionheaders.HeaderDependents(tx, ends)
+	deps, err := conclusionheaders.HeaderDependents(tx.Tx, ends)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	// Claims (with their pins) and connection-facet Observations (with their
-	// notes, pins, and owned values) are released and audited first.
-	released, err := deleteimpact.ReleaseFacets(tx, deleteimpact.KindSubject, id)
+	released, err := deleteimpact.ReleaseFacets(tx.Tx, catalogmodel.KindSubject, id)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if _, err := tx.Exec(sqlDelete, id); err != nil {
-		return err
+		return nil, err
 	}
-	// Handles this Subject left, and handles whose members pointed at it,
-	// are recomputed without it.
-	touched := append(append(released.Handles, inbound...), ends...)
-	if err := autoreconciler.RecomputeTx(tx, append(touched, deps...)); err != nil {
-		return err
+	releasedHandles, err := effects.Handles(tx.Tx, released.Changes)
+	if err != nil {
+		return nil, err
 	}
-	fields := map[string]audit.FieldDiff{
+	touched := append(append(releasedHandles, inbound...), ends...)
+	if err := autoreconciler.RecomputeTx(tx.Tx, append(touched, deps...)); err != nil {
+		return nil, err
+	}
+	fields := map[string]rowchange.FieldDiff{
 		"id":              {Old: uuidString(id), New: nil},
 		"ref":             {Old: prev.Ref, New: nil},
 		"source_id":       {Old: uuidString(prev.SourceID), New: nil},
 		"subject_type_id": {Old: uuidString(prev.SubjectTypeID), New: nil},
 	}
 	if prev.Label != "" {
-		fields["label"] = audit.FieldDiff{Old: prev.Label, New: nil}
+		fields["label"] = rowchange.FieldDiff{Old: prev.Label, New: nil}
 	}
 	if prev.Description != "" {
-		fields["description"] = audit.FieldDiff{Old: prev.Description, New: nil}
+		fields["description"] = rowchange.FieldDiff{Old: prev.Description, New: nil}
 	}
-	changes := append(released.Changes, audit.Change{
+	return append(released.Changes, rowchange.Change{
 		EntityType: "subject",
-		EntityID:   id,
-		Action:     audit.ActionDelete,
+		EntityID:   append([]byte(nil), id...),
+		Action:     rowchange.ActionDelete,
 		Fields:     fields,
-	})
-	if _, err := audit.Record(tx, audit.Revision{
-		UserID:     userID,
-		ActionType: "delete_subject",
-		CreatedAt:  project.NowUTC(),
-		Changes:    changes,
-	}); err != nil {
-		return err
-	}
-	if err := searchindex.ReprojectSource(tx, prev.SourceID); err != nil {
-		return err
-	}
-	return tx.Commit()
+	}), nil
 }
 
 // Get returns a Subject by id, or sql.ErrNoRows.

@@ -9,7 +9,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/searchindex"
 	"github.com/mendahu/provenencia/core/objectpath"
 )
 
@@ -143,15 +142,6 @@ func UpdateOriginalFilename(tx *sql.Tx, id []byte, name string) error {
 	}
 	if n == 0 {
 		return sql.ErrNoRows
-	}
-	sourceIDs, err := searchindex.SourceIDsForFile(tx, id)
-	if err != nil {
-		return err
-	}
-	for _, sourceID := range sourceIDs {
-		if err := searchindex.ReprojectSource(tx, sourceID); err != nil {
-			return err
-		}
 	}
 	return nil
 }

@@ -3,9 +3,11 @@ package handlers
 import (
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/subjectpositions"
 	"github.com/mendahu/provenencia/core/database/subjects"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
+	"github.com/mendahu/provenencia/core/writes"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -55,12 +57,15 @@ func CreateSubject(in []byte) ([]byte, error) {
 	}
 	var out *engine.CreateSubjectResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		s, err := subjects.Create(c, userID, subjects.CreateInput{
-			SourceID:      sourceID,
-			SubjectTypeID: typeID,
-			Label:         req.GetLabel(),
-			Description:   req.GetDescription(),
-		}, placement)
+		s, _, err := writes.Run(c, writes.Op{Action: "create_subject", UserID: userID},
+			func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
+				return subjects.Create(tx, userID, subjects.CreateInput{
+					SourceID:      sourceID,
+					SubjectTypeID: typeID,
+					Label:         req.GetLabel(),
+					Description:   req.GetDescription(),
+				}, placement)
+			})
 		if err != nil {
 			return err
 		}
@@ -88,7 +93,11 @@ func UpdateSubject(in []byte) ([]byte, error) {
 	}
 	var out *engine.UpdateSubjectResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		if err := subjects.Update(c, userID, subjectID, req.GetLabel(), req.GetDescription()); err != nil {
+		if _, _, err := writes.Run(c, writes.Op{Action: "update_subject", UserID: userID},
+			func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+				changes, err := subjects.Update(tx, userID, subjectID, req.GetLabel(), req.GetDescription())
+				return struct{}{}, changes, err
+			}); err != nil {
 			return err
 		}
 		s, err := subjects.Get(c, subjectID)
@@ -118,7 +127,12 @@ func DeleteSubject(in []byte) ([]byte, error) {
 		return nil, err
 	}
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		return subjects.Delete(c, userID, subjectID)
+		_, _, err := writes.Run(c, writes.Op{Action: "delete_subject", UserID: userID},
+			func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+				changes, err := subjects.Delete(tx, userID, subjectID)
+				return struct{}{}, changes, err
+			})
+		return err
 	})
 	if err != nil {
 		return nil, err
@@ -164,7 +178,10 @@ func SetSubjectPosition(in []byte) ([]byte, error) {
 	}
 	var out *engine.SetSubjectPositionResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		p, err := subjectpositions.Set(c, subjectID, req.GetGridX(), req.GetGridY())
+		p, _, err := writes.Run(c, writes.Op{},
+			func(tx *database.Tx) (subjectpositions.Position, []rowchange.Change, error) {
+				return subjectpositions.Set(tx, subjectID, req.GetGridX(), req.GetGridY())
+			})
 		if err != nil {
 			return err
 		}
@@ -187,7 +204,12 @@ func ClearSubjectPosition(in []byte) ([]byte, error) {
 		return nil, err
 	}
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		return subjectpositions.Clear(c, subjectID)
+		_, _, err := writes.Run(c, writes.Op{},
+			func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+				changes, err := subjectpositions.Clear(tx, subjectID)
+				return struct{}{}, changes, err
+			})
+		return err
 	})
 	if err != nil {
 		return nil, err

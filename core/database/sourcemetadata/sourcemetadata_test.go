@@ -6,11 +6,13 @@ import (
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/metadatafields"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/sourcevocab"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/writes"
 )
 
 func TestSourceMetadata(t *testing.T) {
@@ -35,9 +37,11 @@ func TestSourceMetadata(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		s, err := sources.Create(c, userID, sources.CreateInput{
-			SourceTypeID: st.ID,
-			Title:        "Birth of Alice",
+		s, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+			return sources.Create(tx, userID, sources.CreateInput{
+				SourceTypeID: st.ID,
+				Title:        "Birth of Alice",
+			})
 		})
 		if err != nil {
 			t.Fatal(err)
@@ -148,7 +152,7 @@ func TestSourceMetadata(t *testing.T) {
 				mustUser(t, c)
 				src := mustSeededSource(t, c)
 				doc := mustField(t, c, "document_number")
-				row, err := Set(c, userID, Input{
+				row, err := runSet(c, userID, Input{
 					SourceID: src.ID, FieldID: doc.ID, ValueText: "12345",
 				})
 				if err != nil {
@@ -167,11 +171,11 @@ func TestSourceMetadata(t *testing.T) {
 			run: func(t *testing.T, c *database.Catalog) {
 				mustUser(t, c)
 				src := mustSeededSource(t, c)
-				field, err := metadatafields.Create(c, "Landing page", metadatafields.DataTypeURL, "")
+				field, err := runFieldCreate(c, "Landing page", metadatafields.DataTypeURL, "")
 				if err != nil {
 					t.Fatal(err)
 				}
-				row, err := Set(c, userID, Input{
+				row, err := runSet(c, userID, Input{
 					SourceID: src.ID, FieldID: field.ID, ValueText: "https://example.com/record",
 				})
 				if err != nil {
@@ -180,12 +184,12 @@ func TestSourceMetadata(t *testing.T) {
 				if row.ValueText != "https://example.com/record" {
 					t.Fatalf("%+v", row)
 				}
-				if _, err := Set(c, userID, Input{
+				if _, err := runSet(c, userID, Input{
 					SourceID: src.ID, FieldID: field.ID, ValueText: "www.url.com",
 				}); err != nil {
 					t.Fatal(err)
 				}
-				lowered, err := Set(c, userID, Input{
+				lowered, err := runSet(c, userID, Input{
 					SourceID: src.ID, FieldID: field.ID, ValueText: "HTTPS://Example.COM/Record",
 				})
 				if err != nil {
@@ -194,12 +198,12 @@ func TestSourceMetadata(t *testing.T) {
 				if lowered.ValueText != "https://example.com/record" {
 					t.Fatalf("canonical %q", lowered.ValueText)
 				}
-				if _, err := Set(c, userID, Input{
+				if _, err := runSet(c, userID, Input{
 					SourceID: src.ID, FieldID: field.ID, ValueText: "file:/tmp",
 				}); !errors.Is(err, ErrInvalid) {
 					t.Fatalf("file url %v", err)
 				}
-				if _, err := Set(c, userID, Input{
+				if _, err := runSet(c, userID, Input{
 					SourceID: src.ID, FieldID: field.ID, ValueText: "not a url",
 				}); !errors.Is(err, ErrInvalid) {
 					t.Fatalf("junk url %v", err)
@@ -215,7 +219,7 @@ func TestSourceMetadata(t *testing.T) {
 				if rec.DataType != metadatafields.DataTypeText {
 					t.Fatalf("record_date type %q", rec.DataType)
 				}
-				row, err := Set(c, userID, Input{
+				row, err := runSet(c, userID, Input{
 					SourceID: src.ID, FieldID: rec.ID, ValueText: "about the year 1890",
 				})
 				if err != nil {
@@ -224,7 +228,7 @@ func TestSourceMetadata(t *testing.T) {
 				if row.ValueText != "about the year 1890" {
 					t.Fatalf("%+v", row)
 				}
-				kept, err := Set(c, userID, Input{
+				kept, err := runSet(c, userID, Input{
 					SourceID: src.ID, FieldID: rec.ID,
 					ValueText: "circa 1890",
 				})
@@ -242,11 +246,11 @@ func TestSourceMetadata(t *testing.T) {
 				mustUser(t, c)
 				src := mustSeededSource(t, c)
 				doc := mustField(t, c, "document_number")
-				first, err := Set(c, userID, Input{SourceID: src.ID, FieldID: doc.ID, ValueText: "111"})
+				first, err := runSet(c, userID, Input{SourceID: src.ID, FieldID: doc.ID, ValueText: "111"})
 				if err != nil {
 					t.Fatal(err)
 				}
-				second, err := Set(c, userID, Input{SourceID: src.ID, FieldID: doc.ID, ValueText: "222"})
+				second, err := runSet(c, userID, Input{SourceID: src.ID, FieldID: doc.ID, ValueText: "222"})
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -257,7 +261,7 @@ func TestSourceMetadata(t *testing.T) {
 				if err != nil || len(list) != 1 {
 					t.Fatalf("%v len=%d", err, len(list))
 				}
-				if err := Clear(c, userID, src.ID, doc.ID); err != nil {
+				if err := runClear(c, userID, src.ID, doc.ID); err != nil {
 					t.Fatal(err)
 				}
 				if latestAction(t, c) != "update_source_metadata" {
@@ -267,7 +271,7 @@ func TestSourceMetadata(t *testing.T) {
 				if err != nil || len(list) != 0 {
 					t.Fatalf("after clear %v len=%d", err, len(list))
 				}
-				if err := Clear(c, userID, src.ID, doc.ID); err != nil {
+				if err := runClear(c, userID, src.ID, doc.ID); err != nil {
 					t.Fatal(err)
 				}
 			},
@@ -278,7 +282,7 @@ func TestSourceMetadata(t *testing.T) {
 				mustUser(t, c)
 				src := mustSeededSource(t, c)
 				doc := mustField(t, c, "document_number")
-				if _, err := Set(c, userID, Input{SourceID: src.ID, FieldID: doc.ID, ValueText: "12345"}); err != nil {
+				if _, err := runSet(c, userID, Input{SourceID: src.ID, FieldID: doc.ID, ValueText: "12345"}); err != nil {
 					t.Fatal(err)
 				}
 				extraID, err := metadatafields.Upsert(c, metadatafields.Field{
@@ -287,7 +291,7 @@ func TestSourceMetadata(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				if _, err := Set(c, userID, Input{SourceID: src.ID, FieldID: extraID, ValueText: "A-12"}); err != nil {
+				if _, err := runSet(c, userID, Input{SourceID: src.ID, FieldID: extraID, ValueText: "A-12"}); err != nil {
 					t.Fatal(err)
 				}
 				ws, err := ListWorkspace(c, src.ID)
@@ -324,7 +328,7 @@ func TestSourceMetadata(t *testing.T) {
 				mustUser(t, c)
 				src := mustSeededSource(t, c)
 				doc := mustField(t, c, "document_number")
-				if _, err := Set(c, userID, Input{SourceID: src.ID, FieldID: doc.ID, ValueText: "x"}); err != nil {
+				if _, err := runSet(c, userID, Input{SourceID: src.ID, FieldID: doc.ID, ValueText: "x"}); err != nil {
 					t.Fatal(err)
 				}
 				db, err := c.DB()
@@ -386,7 +390,7 @@ func TestSourceMetadata(t *testing.T) {
 				mustUser(t, c)
 				src := mustSeededSource(t, c)
 				issue := mustField(t, c, "issue_date")
-				if err := DismissSuggestion(c, userID, src.ID, issue.ID); err != nil {
+				if err := runDismissSuggestion(c, userID, src.ID, issue.ID); err != nil {
 					t.Fatal(err)
 				}
 				if latestAction(t, c) != "dismiss_source_metadata_suggestion" {
@@ -400,7 +404,7 @@ func TestSourceMetadata(t *testing.T) {
 					t.Fatalf("keys %v", keys)
 				}
 				// Dismissing twice must stay a no-op rather than error.
-				if err := DismissSuggestion(c, userID, src.ID, issue.ID); err != nil {
+				if err := runDismissSuggestion(c, userID, src.ID, issue.ID); err != nil {
 					t.Fatal(err)
 				}
 				if keys := workspaceKeys(t, c, src.ID); hasKey(keys, "issue_date") {
@@ -414,10 +418,10 @@ func TestSourceMetadata(t *testing.T) {
 				mustUser(t, c)
 				src := mustSeededSource(t, c)
 				doc := mustField(t, c, "document_number")
-				if _, err := Set(c, userID, Input{SourceID: src.ID, FieldID: doc.ID, ValueText: "12345"}); err != nil {
+				if _, err := runSet(c, userID, Input{SourceID: src.ID, FieldID: doc.ID, ValueText: "12345"}); err != nil {
 					t.Fatal(err)
 				}
-				if err := DismissSuggestion(c, userID, src.ID, doc.ID); err != nil {
+				if err := runDismissSuggestion(c, userID, src.ID, doc.ID); err != nil {
 					t.Fatal(err)
 				}
 				if latestAction(t, c) != "update_source_metadata" {
@@ -440,10 +444,10 @@ func TestSourceMetadata(t *testing.T) {
 				doc := mustField(t, c, "document_number")
 				rec := mustField(t, c, "record_date")
 				issue := mustField(t, c, "issue_date")
-				if err := DismissSuggestion(c, userID, src.ID, issue.ID); err != nil {
+				if err := runDismissSuggestion(c, userID, src.ID, issue.ID); err != nil {
 					t.Fatal(err)
 				}
-				if err := Reorder(c, userID, src.ID, [][]byte{rec.ID, doc.ID, issue.ID}); err != nil {
+				if err := runReorder(c, userID, src.ID, [][]byte{rec.ID, doc.ID, issue.ID}); err != nil {
 					t.Fatal(err)
 				}
 				if latestAction(t, c) != "reorder_source_metadata" {
@@ -469,21 +473,21 @@ func TestSourceMetadata(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				if _, err := Set(c, userID, Input{SourceID: src.ID, FieldID: extraID, ValueText: "A-12"}); err != nil {
+				if _, err := runSet(c, userID, Input{SourceID: src.ID, FieldID: extraID, ValueText: "A-12"}); err != nil {
 					t.Fatal(err)
 				}
 				if order, dismissed := layoutOf(t, c, src.ID, extraID); order != 0 || dismissed != 0 {
 					t.Fatalf("extra layout order=%d dismissed=%d", order, dismissed)
 				}
 				doc := mustField(t, c, "document_number")
-				if _, err := Set(c, userID, Input{SourceID: src.ID, FieldID: doc.ID, ValueText: "12345"}); err != nil {
+				if _, err := runSet(c, userID, Input{SourceID: src.ID, FieldID: doc.ID, ValueText: "12345"}); err != nil {
 					t.Fatal(err)
 				}
 				if order, _ := layoutOf(t, c, src.ID, doc.ID); order != 1 {
 					t.Fatalf("document_number order %d", order)
 				}
 				// Updating an existing value must not append a second slot.
-				if _, err := Set(c, userID, Input{SourceID: src.ID, FieldID: doc.ID, ValueText: "999"}); err != nil {
+				if _, err := runSet(c, userID, Input{SourceID: src.ID, FieldID: doc.ID, ValueText: "999"}); err != nil {
 					t.Fatal(err)
 				}
 				if order, _ := layoutOf(t, c, src.ID, doc.ID); order != 1 {
@@ -509,28 +513,28 @@ func TestSourceMetadata(t *testing.T) {
 				doc := mustField(t, c, "document_number")
 				missing := make([]byte, 16)
 				missing[15] = 9
-				if err := DismissSuggestion(c, userID, missing, doc.ID); !errors.Is(err, ErrInvalid) {
+				if err := runDismissSuggestion(c, userID, missing, doc.ID); !errors.Is(err, ErrInvalid) {
 					t.Fatalf("bad source %v", err)
 				}
-				if err := DismissSuggestion(c, userID, src.ID, missing); !errors.Is(err, ErrInvalid) {
+				if err := runDismissSuggestion(c, userID, src.ID, missing); !errors.Is(err, ErrInvalid) {
 					t.Fatalf("bad field %v", err)
 				}
-				if err := DismissSuggestion(c, nil, src.ID, doc.ID); !errors.Is(err, ErrInvalid) {
+				if err := runDismissSuggestion(c, nil, src.ID, doc.ID); !errors.Is(err, ErrInvalid) {
 					t.Fatalf("nil user %v", err)
 				}
-				if err := Reorder(c, userID, src.ID, nil); !errors.Is(err, ErrInvalid) {
+				if err := runReorder(c, userID, src.ID, nil); !errors.Is(err, ErrInvalid) {
 					t.Fatalf("empty list %v", err)
 				}
-				if err := Reorder(c, userID, src.ID, [][]byte{doc.ID, doc.ID}); !errors.Is(err, ErrInvalid) {
+				if err := runReorder(c, userID, src.ID, [][]byte{doc.ID, doc.ID}); !errors.Is(err, ErrInvalid) {
 					t.Fatalf("duplicate field %v", err)
 				}
-				if err := Reorder(c, userID, src.ID, [][]byte{missing}); !errors.Is(err, ErrInvalid) {
+				if err := runReorder(c, userID, src.ID, [][]byte{missing}); !errors.Is(err, ErrInvalid) {
 					t.Fatalf("missing field %v", err)
 				}
-				if err := Reorder(c, userID, missing, [][]byte{doc.ID}); !errors.Is(err, ErrInvalid) {
+				if err := runReorder(c, userID, missing, [][]byte{doc.ID}); !errors.Is(err, ErrInvalid) {
 					t.Fatalf("bad source %v", err)
 				}
-				if err := Reorder(c, userID, src.ID, [][]byte{{1, 2, 3}}); !errors.Is(err, ErrInvalid) {
+				if err := runReorder(c, userID, src.ID, [][]byte{{1, 2, 3}}); !errors.Is(err, ErrInvalid) {
 					t.Fatalf("short field id %v", err)
 				}
 			},
@@ -541,7 +545,7 @@ func TestSourceMetadata(t *testing.T) {
 				mustUser(t, c)
 				src := mustSeededSource(t, c)
 				doc := mustField(t, c, "document_number")
-				if _, err := Set(c, userID, Input{SourceID: src.ID, FieldID: doc.ID, ValueText: "x"}); err != nil {
+				if _, err := runSet(c, userID, Input{SourceID: src.ID, FieldID: doc.ID, ValueText: "x"}); err != nil {
 					t.Fatal(err)
 				}
 				db, err := c.DB()
@@ -568,16 +572,16 @@ func TestSourceMetadata(t *testing.T) {
 				doc := mustField(t, c, "document_number")
 				missing := make([]byte, 16)
 				missing[15] = 9
-				if _, err := Set(c, userID, Input{SourceID: missing, FieldID: doc.ID, ValueText: "x"}); !errors.Is(err, ErrInvalid) {
+				if _, err := runSet(c, userID, Input{SourceID: missing, FieldID: doc.ID, ValueText: "x"}); !errors.Is(err, ErrInvalid) {
 					t.Fatalf("bad source %v", err)
 				}
-				if _, err := Set(c, userID, Input{SourceID: src.ID, FieldID: missing, ValueText: "x"}); !errors.Is(err, ErrInvalid) {
+				if _, err := runSet(c, userID, Input{SourceID: src.ID, FieldID: missing, ValueText: "x"}); !errors.Is(err, ErrInvalid) {
 					t.Fatalf("bad field %v", err)
 				}
-				if _, err := Set(c, nil, Input{SourceID: src.ID, FieldID: doc.ID, ValueText: "x"}); !errors.Is(err, ErrInvalid) {
+				if _, err := runSet(c, nil, Input{SourceID: src.ID, FieldID: doc.ID, ValueText: "x"}); !errors.Is(err, ErrInvalid) {
 					t.Fatalf("nil user %v", err)
 				}
-				if _, err := Set(c, userID, Input{SourceID: src.ID, FieldID: doc.ID}); !errors.Is(err, ErrInvalid) {
+				if _, err := runSet(c, userID, Input{SourceID: src.ID, FieldID: doc.ID}); !errors.Is(err, ErrInvalid) {
 					t.Fatalf("empty text %v", err)
 				}
 			},
@@ -594,4 +598,47 @@ func TestSourceMetadata(t *testing.T) {
 			tt.run(t, c)
 		})
 	}
+}
+
+func runSet(c *database.Catalog, userID []byte, in Input) (Row, error) {
+	row, _, err := writes.Run(c, writes.Op{Action: "update_source_metadata", UserID: userID},
+		func(tx *database.Tx) (Row, []rowchange.Change, error) {
+			return Set(tx, userID, in)
+		})
+	return row, err
+}
+
+func runClear(c *database.Catalog, userID, sourceID, fieldID []byte) error {
+	_, _, err := writes.Run(c, writes.Op{Action: "update_source_metadata", UserID: userID},
+		func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+			changes, err := Clear(tx, userID, sourceID, fieldID)
+			return struct{}{}, changes, err
+		})
+	return err
+}
+
+func runDismissSuggestion(c *database.Catalog, userID, sourceID, fieldID []byte) error {
+	_, _, err := writes.Run(c, writes.Op{Action: "dismiss_source_metadata_suggestion", UserID: userID},
+		func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+			changes, err := DismissSuggestion(tx, userID, sourceID, fieldID)
+			return struct{}{}, changes, err
+		})
+	return err
+}
+
+func runReorder(c *database.Catalog, userID, sourceID []byte, fieldIDs [][]byte) error {
+	_, _, err := writes.Run(c, writes.Op{Action: "reorder_source_metadata", UserID: userID},
+		func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+			changes, err := Reorder(tx, userID, sourceID, fieldIDs)
+			return struct{}{}, changes, err
+		})
+	return err
+}
+
+func runFieldCreate(c *database.Catalog, label, dataType, description string) (metadatafields.Field, error) {
+	got, _, err := writes.Run(c, writes.Op{Action: "create_metadata_field"},
+		func(tx *database.Tx) (metadatafields.Field, []rowchange.Change, error) {
+			return metadatafields.Create(tx, label, dataType, description)
+		})
+	return got, err
 }

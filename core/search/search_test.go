@@ -10,11 +10,13 @@ import (
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/metadatafields"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/searchindex"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/writes"
 )
 
 func TestEmptyQueryReturnsNoHits(t *testing.T) {
@@ -40,9 +42,11 @@ func TestSearchRespectsCancelledContext(t *testing.T) {
 	defer c.Close()
 	userID := seedUser(t, c)
 	typeID := seedType(t, c, "Book", "a monograph")
-	if _, err := sources.Create(c, userID, sources.CreateInput{
-		SourceTypeID: typeID,
-		Title:        "Ilminster parish register",
+	if _, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+		return sources.Create(tx, userID, sources.CreateInput{
+			SourceTypeID: typeID,
+			Title:        "Ilminster parish register",
+		})
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -65,18 +69,22 @@ func TestSearchRanksTitleOverDescriptionAndMapsLocation(t *testing.T) {
 	userID := seedUser(t, c)
 	typeID := seedType(t, c, "Book", "a monograph")
 
-	titleHit, err := sources.Create(c, userID, sources.CreateInput{
-		SourceTypeID: typeID,
-		Title:        "Ilminster parish register",
-		Description:  "misc notes",
+	titleHit, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+		return sources.Create(tx, userID, sources.CreateInput{
+			SourceTypeID: typeID,
+			Title:        "Ilminster parish register",
+			Description:  "misc notes",
+		})
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	descHit, err := sources.Create(c, userID, sources.CreateInput{
-		SourceTypeID: typeID,
-		Title:        "Other deed",
-		Description:  "mentions the Ilminster area only here",
+	descHit, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+		return sources.Create(tx, userID, sources.CreateInput{
+			SourceTypeID: typeID,
+			Title:        "Other deed",
+			Description:  "mentions the Ilminster area only here",
+		})
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -118,16 +126,20 @@ func TestShorterTitleOutranksALongerTitle(t *testing.T) {
 	defer c.Close()
 	userID := seedUser(t, c)
 	typeID := seedType(t, c, "Book", "")
-	short, err := sources.Create(c, userID, sources.CreateInput{
-		SourceTypeID: typeID,
-		Title:        "Jake Robins",
+	short, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+		return sources.Create(tx, userID, sources.CreateInput{
+			SourceTypeID: typeID,
+			Title:        "Jake Robins",
+		})
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	long, err := sources.Create(c, userID, sources.CreateInput{
-		SourceTypeID: typeID,
-		Title:        "Engagement of Jake Robins and Amy Long",
+	long, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+		return sources.Create(tx, userID, sources.CreateInput{
+			SourceTypeID: typeID,
+			Title:        "Engagement of Jake Robins and Amy Long",
+		})
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -151,11 +163,11 @@ func TestSearchFindsTypesAndFields(t *testing.T) {
 	}
 	defer c.Close()
 	seedUser(t, c)
-	ty, err := sourcetypes.Create(c, "Birth certificate", "civil record", "")
+	ty, err := runSourceTypeCreate(c, "Birth certificate", "civil record", "")
 	if err != nil {
 		t.Fatal(err)
 	}
-	field, err := metadatafields.Create(c, "Publication date", "text", "when published")
+	field, err := runFieldCreate(c, "Publication date", "text", "when published")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -208,11 +220,11 @@ func TestContextBoostPrefersMatchingSection(t *testing.T) {
 	}
 	defer c.Close()
 	seedUser(t, c)
-	ty, err := sourcetypes.Create(c, "SharedToken Type", "x", "")
+	ty, err := runSourceTypeCreate(c, "SharedToken Type", "x", "")
 	if err != nil {
 		t.Fatal(err)
 	}
-	field, err := metadatafields.Create(c, "SharedToken Field", "text", "")
+	field, err := runFieldCreate(c, "SharedToken Field", "text", "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -253,14 +265,18 @@ func TestNoteBodyRollsIntoSourceHit(t *testing.T) {
 	defer c.Close()
 	userID := seedUser(t, c)
 	typeID := seedType(t, c, "Book", "")
-	src, err := sources.Create(c, userID, sources.CreateInput{
-		SourceTypeID: typeID,
-		Title:        "Quiet title",
+	src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+		return sources.Create(tx, userID, sources.CreateInput{
+			SourceTypeID: typeID,
+			Title:        "Quiet title",
+		})
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := sources.AddNote(c, userID, src.ID, "mentions Zemblanity only in the note"); err != nil {
+	if _, _, err := writes.Run(c, writes.Op{Action: "create_source_note", UserID: userID}, func(tx *database.Tx) (sources.Note, []rowchange.Change, error) {
+		return sources.AddNote(tx, userID, src.ID, "mentions Zemblanity only in the note")
+	}); err != nil {
 		t.Fatal(err)
 	}
 	hits, err := DefaultEngine().Search(context.Background(), c, Query{Text: "Zemblanity"})
@@ -283,16 +299,20 @@ func TestExactRefIsTopHit(t *testing.T) {
 	defer c.Close()
 	userID := seedUser(t, c)
 	typeID := seedType(t, c, "Book", "")
-	target, err := sources.Create(c, userID, sources.CreateInput{
-		SourceTypeID: typeID,
-		Title:        "Quiet title",
+	target, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+		return sources.Create(tx, userID, sources.CreateInput{
+			SourceTypeID: typeID,
+			Title:        "Quiet title",
+		})
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	noise, err := sources.Create(c, userID, sources.CreateInput{
-		SourceTypeID: typeID,
-		Title:        target.Ref + " mentioned in title only",
+	noise, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+		return sources.Create(tx, userID, sources.CreateInput{
+			SourceTypeID: typeID,
+			Title:        target.Ref + " mentioned in title only",
+		})
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -322,16 +342,20 @@ func TestPrefixRefPromotesSource(t *testing.T) {
 	defer c.Close()
 	userID := seedUser(t, c)
 	typeID := seedType(t, c, "Book", "")
-	target, err := sources.Create(c, userID, sources.CreateInput{
-		SourceTypeID: typeID,
-		Title:        "Prefix target",
+	target, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+		return sources.Create(tx, userID, sources.CreateInput{
+			SourceTypeID: typeID,
+			Title:        "Prefix target",
+		})
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = sources.Create(c, userID, sources.CreateInput{
-		SourceTypeID: typeID,
-		Title:        "Unrelated noise",
+	_, _, err = writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+		return sources.Create(tx, userID, sources.CreateInput{
+			SourceTypeID: typeID,
+			Title:        "Unrelated noise",
+		})
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -359,17 +383,19 @@ func TestSharedTokenFindsSourceAndVocab(t *testing.T) {
 	}
 	defer c.Close()
 	userID := seedUser(t, c)
-	ty, err := sourcetypes.Create(c, "SharedToken Type", "x", "")
+	ty, err := runSourceTypeCreate(c, "SharedToken Type", "x", "")
 	if err != nil {
 		t.Fatal(err)
 	}
-	field, err := metadatafields.Create(c, "SharedToken Field", "text", "")
+	field, err := runFieldCreate(c, "SharedToken Field", "text", "")
 	if err != nil {
 		t.Fatal(err)
 	}
-	src, err := sources.Create(c, userID, sources.CreateInput{
-		SourceTypeID: ty.ID,
-		Title:        "SharedToken Source",
+	src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+		return sources.Create(tx, userID, sources.CreateInput{
+			SourceTypeID: ty.ID,
+			Title:        "SharedToken Source",
+		})
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -407,13 +433,15 @@ func TestMultiTokenPartialCoverageStillRetrieves(t *testing.T) {
 	}
 	defer c.Close()
 	userID := seedUser(t, c)
-	ty, err := sourcetypes.Create(c, "Birth certificate", "civil record", "")
+	ty, err := runSourceTypeCreate(c, "Birth certificate", "civil record", "")
 	if err != nil {
 		t.Fatal(err)
 	}
-	src, err := sources.Create(c, userID, sources.CreateInput{
-		SourceTypeID: ty.ID,
-		Title:        "John Smith's birth certificate",
+	src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+		return sources.Create(tx, userID, sources.CreateInput{
+			SourceTypeID: ty.ID,
+			Title:        "John Smith's birth certificate",
+		})
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -453,14 +481,18 @@ func TestNoteMatchReasonUsesSnippet(t *testing.T) {
 	defer c.Close()
 	userID := seedUser(t, c)
 	typeID := seedType(t, c, "Book", "")
-	src, err := sources.Create(c, userID, sources.CreateInput{
-		SourceTypeID: typeID,
-		Title:        "Quiet title",
+	src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+		return sources.Create(tx, userID, sources.CreateInput{
+			SourceTypeID: typeID,
+			Title:        "Quiet title",
+		})
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := sources.AddNote(c, userID, src.ID, "mentions Zemblanity only in the note"); err != nil {
+	if _, _, err := writes.Run(c, writes.Op{Action: "create_source_note", UserID: userID}, func(tx *database.Tx) (sources.Note, []rowchange.Change, error) {
+		return sources.AddNote(tx, userID, src.ID, "mentions Zemblanity only in the note")
+	}); err != nil {
 		t.Fatal(err)
 	}
 	hits, err := DefaultEngine().Search(context.Background(), c, Query{Text: "Zemblanity"})
@@ -486,16 +518,20 @@ func TestSearchRecoversCommonTypo(t *testing.T) {
 	defer c.Close()
 	userID := seedUser(t, c)
 	typeID := seedType(t, c, "Book", "")
-	src, err := sources.Create(c, userID, sources.CreateInput{
-		SourceTypeID: typeID,
-		Title:        "Ilminster parish register",
+	src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+		return sources.Create(tx, userID, sources.CreateInput{
+			SourceTypeID: typeID,
+			Title:        "Ilminster parish register",
+		})
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = sources.Create(c, userID, sources.CreateInput{
-		SourceTypeID: typeID,
-		Title:        "Unrelated Somerset deed",
+	_, _, err = writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+		return sources.Create(tx, userID, sources.CreateInput{
+			SourceTypeID: typeID,
+			Title:        "Unrelated Somerset deed",
+		})
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -521,24 +557,30 @@ func TestTighterTitleOutranksALongerExactTitle(t *testing.T) {
 	defer c.Close()
 	userID := seedUser(t, c)
 	typeID := seedType(t, c, "Book", "")
-	exact, err := sources.Create(c, userID, sources.CreateInput{
-		SourceTypeID: typeID,
-		Title:        "Ilminster parish register",
+	exact, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+		return sources.Create(tx, userID, sources.CreateInput{
+			SourceTypeID: typeID,
+			Title:        "Ilminster parish register",
+		})
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	tighter, err := sources.Create(c, userID, sources.CreateInput{
-		SourceTypeID: typeID,
-		Title:        "Ilminsterish notes",
+	tighter, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+		return sources.Create(tx, userID, sources.CreateInput{
+			SourceTypeID: typeID,
+			Title:        "Ilminsterish notes",
+		})
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	for i := 0; i < 20; i++ {
-		if _, err := sources.Create(c, userID, sources.CreateInput{
-			SourceTypeID: typeID,
-			Title:        fmt.Sprintf("Unrelated deed %d", i),
+		if _, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+			return sources.Create(tx, userID, sources.CreateInput{
+				SourceTypeID: typeID,
+				Title:        fmt.Sprintf("Unrelated deed %d", i),
+			})
 		}); err != nil {
 			t.Fatal(err)
 		}
@@ -564,9 +606,11 @@ func TestSearchGarbageTypoDoesNotFlood(t *testing.T) {
 	defer c.Close()
 	userID := seedUser(t, c)
 	typeID := seedType(t, c, "Book", "")
-	_, err = sources.Create(c, userID, sources.CreateInput{
-		SourceTypeID: typeID,
-		Title:        "Ilminster parish register",
+	_, _, err = writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+		return sources.Create(tx, userID, sources.CreateInput{
+			SourceTypeID: typeID,
+			Title:        "Ilminster parish register",
+		})
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -589,9 +633,11 @@ func TestSearchAccentedPlaceTypo(t *testing.T) {
 	defer c.Close()
 	userID := seedUser(t, c)
 	typeID := seedType(t, c, "Book", "")
-	src, err := sources.Create(c, userID, sources.CreateInput{
-		SourceTypeID: typeID,
-		Title:        "München parish register",
+	src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+		return sources.Create(tx, userID, sources.CreateInput{
+			SourceTypeID: typeID,
+			Title:        "München parish register",
+		})
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -614,9 +660,11 @@ func TestEnsureCatalogRebuildsAfterWipe(t *testing.T) {
 	defer c.Close()
 	userID := seedUser(t, c)
 	typeID := seedType(t, c, "Book", "")
-	src, err := sources.Create(c, userID, sources.CreateInput{
-		SourceTypeID: typeID,
-		Title:        "RebuildMe Parish",
+	src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+		return sources.Create(tx, userID, sources.CreateInput{
+			SourceTypeID: typeID,
+			Title:        "RebuildMe Parish",
+		})
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -693,4 +741,20 @@ func uuidString(id []byte) string {
 	var u uuid.UUID
 	copy(u[:], id)
 	return u.String()
+}
+
+func runSourceTypeCreate(c *database.Catalog, label, description, iconKey string) (sourcetypes.Type, error) {
+	got, _, err := writes.Run(c, writes.Op{Action: "create_source_type"},
+		func(tx *database.Tx) (sourcetypes.Type, []rowchange.Change, error) {
+			return sourcetypes.Create(tx, label, description, iconKey)
+		})
+	return got, err
+}
+
+func runFieldCreate(c *database.Catalog, label, dataType, description string) (metadatafields.Field, error) {
+	got, _, err := writes.Run(c, writes.Op{Action: "create_metadata_field"},
+		func(tx *database.Tx) (metadatafields.Field, []rowchange.Change, error) {
+			return metadatafields.Create(tx, label, dataType, description)
+		})
+	return got, err
 }

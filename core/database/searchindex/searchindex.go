@@ -12,6 +12,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/objectpath"
 )
 
@@ -196,6 +197,33 @@ func NeedsRebuild(q Querier) (bool, error) {
 		return false, err
 	}
 	return docs != fts || docs != trigram, nil
+}
+
+// Reproject refreshes the documents effects.Resolve named. A source-type id
+// also refreshes every Source that uses that type.
+func Reproject(q Querier, docs []effects.SearchIDs) error {
+	for _, doc := range docs {
+		for _, id := range doc.IDs {
+			var err error
+			switch doc.Kind {
+			case effects.DocSource:
+				err = ReprojectSource(q, id)
+			case effects.DocSourceType:
+				err = ReprojectSourceType(q, id)
+				if err == nil {
+					err = ReprojectSourcesForType(q, id)
+				}
+			case effects.DocMetadataField:
+				err = ReprojectMetadataField(q, id)
+			default:
+				return fmt.Errorf("searchindex: unknown search document %q", doc.Kind)
+			}
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 // ReprojectSource builds the Source navigable document (own fields + rolled children).

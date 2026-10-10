@@ -18,6 +18,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/properties"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sourcecredibility"
 	"github.com/mendahu/provenencia/core/database/sourcecredibilitygrades"
 	"github.com/mendahu/provenencia/core/database/sources"
@@ -27,6 +28,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/writes"
 )
 
 var userID = []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}
@@ -75,9 +77,11 @@ func newFixture(t *testing.T) *fixture {
 
 func (f *fixture) source(title string) sources.Source {
 	f.t.Helper()
-	src, err := sources.Create(f.c, userID, sources.CreateInput{SourceTypeID: f.typeID, Title: title})
+	src, _, err := writes.Run(f.c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: f.typeID, Title: title})
+	})
 	must(f.t, err)
-	art, err := artifacts.Create(f.c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
+	art, err := runArtifactCreate(f.c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
 	must(f.t, err)
 	f.arts[string(src.ID)] = art
 	return src
@@ -85,7 +89,9 @@ func (f *fixture) source(title string) sources.Source {
 
 func (f *fixture) personOn(src sources.Source) subjects.Subject {
 	f.t.Helper()
-	s, err := subjects.Create(f.c, userID, subjects.CreateInput{SourceID: src.ID, SubjectTypeID: f.person.ID}, nil)
+	s, err := writes.Call(f.c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
+		return subjects.Create(tx, userID, subjects.CreateInput{SourceID: src.ID, SubjectTypeID: f.person.ID}, nil)
+	})
 	must(f.t, err)
 	return s
 }
@@ -93,7 +99,9 @@ func (f *fixture) personOn(src sources.Source) subjects.Subject {
 // name files a name Observation from "type=value|…" parts (or "form:…").
 func (f *fixture) cite(s subjects.Subject, in observations.Input) observations.Observation {
 	f.t.Helper()
-	res, err := citations.CreateWithObservations(f.c, userID, citations.CreateInput{ArtifactID: f.arts[string(s.SourceID)].ID, LocatorJSON: locator}, []observations.Input{in})
+	res, err := writes.Call(f.c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
+		return citations.CreateWithObservations(tx, userID, citations.CreateInput{ArtifactID: f.arts[string(s.SourceID)].ID, LocatorJSON: locator}, []observations.Input{in})
+	})
 	must(f.t, err)
 	return res.Observations[0]
 }
@@ -116,7 +124,9 @@ func (f *fixture) nameIn(s subjects.Subject, spec string) observations.Input {
 
 func (f *fixture) promote(s subjects.Subject, onto []byte) []byte {
 	f.t.Helper()
-	res, err := promote.Save(f.c, userID, promote.Input{SubjectID: s.ID, EntityID: onto})
+	res, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+		return promote.Save(tx, userID, promote.Input{SubjectID: s.ID, EntityID: onto})
+	})
 	must(f.t, err)
 	return res.Entity.ID
 }
@@ -224,11 +234,25 @@ func TestForEntityEvidence(t *testing.T) {
 	register, census, gazette := f.source("Register"), f.source("Census"), f.source("Gazette")
 	g, err := sourcecredibilitygrades.Lookup(f.c, "low_trust", sourcecredibilitygrades.OriginProvenencia)
 	must(t, err)
-	_, err = sourcecredibility.Upsert(f.c, userID, sourcecredibility.UpsertInput{SourceID: register.ID, CredibilityGradeID: g.ID})
+	p6in2 := sourcecredibility.UpsertInput{SourceID: register.ID, CredibilityGradeID: g.ID}
+	p6act1 := "create_source_credibility_assessment"
+	if _, p6look3 := sourcecredibility.GetBySource(f.c, p6in2.SourceID); p6look3 == nil {
+		p6act1 = "update_source_credibility_assessment"
+	}
+	_, err = writes.Call(f.c, writes.Op{Action: p6act1, UserID: userID}, func(tx *database.Tx) (sourcecredibility.Assessment, []rowchange.Change, error) {
+		return sourcecredibility.Upsert(tx, userID, p6in2)
+	})
 	must(t, err)
 	hg, err := sourcecredibilitygrades.Lookup(f.c, "high_trust", sourcecredibilitygrades.OriginProvenencia)
 	must(t, err)
-	_, err = sourcecredibility.Upsert(f.c, userID, sourcecredibility.UpsertInput{SourceID: gazette.ID, CredibilityGradeID: hg.ID})
+	p6in5 := sourcecredibility.UpsertInput{SourceID: gazette.ID, CredibilityGradeID: hg.ID}
+	p6act4 := "create_source_credibility_assessment"
+	if _, p6look6 := sourcecredibility.GetBySource(f.c, p6in5.SourceID); p6look6 == nil {
+		p6act4 = "update_source_credibility_assessment"
+	}
+	_, err = writes.Call(f.c, writes.Op{Action: p6act4, UserID: userID}, func(tx *database.Tx) (sourcecredibility.Assessment, []rowchange.Change, error) {
+		return sourcecredibility.Upsert(tx, userID, p6in5)
+	})
 	must(t, err)
 
 	a, b, c := f.personOn(register), f.personOn(census), f.personOn(gazette)
@@ -326,4 +350,12 @@ func termID(t *testing.T, f *fixture, key string) []byte {
 	var id []byte
 	must(t, db.QueryRow(`SELECT id FROM property_terms WHERE property_id = ? AND key = ?`, f.sex.ID, key).Scan(&id))
 	return id
+}
+
+func runArtifactCreate(c *database.Catalog, userID []byte, in artifacts.CreateInput) (artifacts.Artifact, error) {
+	a, _, err := writes.Run(c, writes.Op{Action: "create_artifact", UserID: userID},
+		func(tx *database.Tx) (artifacts.Artifact, []rowchange.Change, error) {
+			return artifacts.Create(tx, userID, in)
+		})
+	return a, err
 }

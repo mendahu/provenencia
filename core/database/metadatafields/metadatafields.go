@@ -1,4 +1,6 @@
 // Package metadatafields accesses the source_metadata_fields vocabulary table.
+// Create, Update, and Delete run inside writes.Run and return the row changes
+// that Run records. Upsert is the un-audited seed path.
 package metadatafields
 
 import (
@@ -9,9 +11,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/audit"
+	"github.com/mendahu/provenencia/core/database/catalogmodel"
 	"github.com/mendahu/provenencia/core/database/deleteimpact"
-	"github.com/mendahu/provenencia/core/database/project"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/searchindex"
 	"github.com/mendahu/provenencia/core/slug"
 )
@@ -127,51 +129,100 @@ func Upsert(c *database.Catalog, f Field) ([]byte, error) {
 }
 
 // Create mints a kebab-case key from label (see core/slug.Kebab) and
-// inserts a new user-origin field. Returns ErrInvalid if the label cannot
-// form a key, or ErrDuplicateKey (params: the colliding key) if a
-// user-origin field with that key already exists.
-func Create(c *database.Catalog, label, dataType, description string) (Field, error) {
+// inserts a new user-origin field on tx. Returns ErrInvalid if the label cannot
+// form a key or the data type is unknown, or ErrDuplicateKey (params: the
+// colliding key) if a user-origin field with that key already exists.
+// The caller records the returned changes.
+func Create(tx *database.Tx, label, dataType, description string) (Field, []rowchange.Change, error) {
+	if tx == nil {
+		return Field{}, nil, ErrInvalid
+	}
 	key := slug.Kebab(label)
 	if key == "" {
-		return Field{}, ErrInvalid
+		return Field{}, nil, ErrInvalid
 	}
-	if _, err := Lookup(c, key, OriginUser); err == nil {
-		return Field{}, ErrDuplicateKey.WithParams(key)
+	if _, err := lookupTx(tx.Tx, key, OriginUser); err == nil {
+		return Field{}, nil, ErrDuplicateKey.WithParams(key)
 	} else if !errors.Is(err, sql.ErrNoRows) {
-		return Field{}, err
+		return Field{}, nil, err
 	}
-	if _, err := Upsert(c, Field{
-		Key: key, Origin: OriginUser, Label: label, DataType: dataType, Description: description,
-	}); err != nil {
-		return Field{}, err
+	label = strings.TrimSpace(label)
+	dataType = strings.TrimSpace(dataType)
+	description = strings.TrimSpace(description)
+	if label == "" || !dataTypeOK(dataType) {
+		return Field{}, nil, ErrInvalid
 	}
-	return Lookup(c, key, OriginUser)
+	uid, err := uuid.NewV7()
+	if err != nil {
+		return Field{}, nil, err
+	}
+	id := uid[:]
+	var desc any
+	if description == "" {
+		desc = nil
+	} else {
+		desc = description
+	}
+	if _, err := tx.Exec(sqlUpsert, id, key, OriginUser, label, dataType, desc); err != nil {
+		return Field{}, nil, err
+	}
+	fields := map[string]rowchange.FieldDiff{
+		"id":        {Old: nil, New: uid.String()},
+		"key":       {Old: nil, New: key},
+		"origin":    {Old: nil, New: OriginUser},
+		"label":     {Old: nil, New: label},
+		"data_type": {Old: nil, New: dataType},
+	}
+	if description != "" {
+		fields["description"] = rowchange.FieldDiff{Old: nil, New: description}
+	}
+	got, err := getByIDTx(tx.Tx, id)
+	if err != nil {
+		return Field{}, nil, err
+	}
+	return got, []rowchange.Change{{
+		EntityType: "metadata_field",
+		EntityID:   append([]byte(nil), id...),
+		Action:     rowchange.ActionCreate,
+		Fields:     fields,
+	}}, nil
 }
 
 // Update patches label and description for a project field (user or
 // provenencia) by id. Key, origin, and data_type are immutable after create.
 // dataType must match the existing value (callers still pass it for clarity).
-// Returns ErrLocked for plugin-origin fields.
-func Update(c *database.Catalog, id []byte, label, dataType, description string) (Field, error) {
-	db, err := c.DB()
-	if err != nil {
-		return Field{}, err
+// Returns ErrLocked for plugin-origin fields. An unchanged label and
+// description returns the existing field and no changes. The caller records
+// the returned changes.
+func Update(tx *database.Tx, id []byte, label, dataType, description string) (Field, []rowchange.Change, error) {
+	if tx == nil {
+		return Field{}, nil, ErrInvalid
 	}
 	label = strings.TrimSpace(label)
 	dataType = strings.TrimSpace(dataType)
 	description = strings.TrimSpace(description)
 	if len(id) != 16 || label == "" || !dataTypeOK(dataType) {
-		return Field{}, ErrInvalid
+		return Field{}, nil, ErrInvalid
 	}
-	existing, err := GetByID(c, id)
+	existing, err := getByIDTx(tx.Tx, id)
 	if err != nil {
-		return Field{}, err
+		return Field{}, nil, err
 	}
 	if existing.Origin != OriginUser && existing.Origin != OriginProvenencia {
-		return Field{}, ErrLocked
+		return Field{}, nil, ErrLocked
 	}
 	if dataType != existing.DataType {
-		return Field{}, ErrInvalid
+		return Field{}, nil, ErrInvalid
+	}
+	fields := map[string]rowchange.FieldDiff{}
+	if existing.Label != label {
+		fields["label"] = rowchange.FieldDiff{Old: nullJSON(existing.Label), New: nullJSON(label)}
+	}
+	if existing.Description != description {
+		fields["description"] = rowchange.FieldDiff{Old: nullJSON(existing.Description), New: nullJSON(description)}
+	}
+	if len(fields) == 0 {
+		return existing, nil, nil
 	}
 	var desc any
 	if description == "" {
@@ -179,13 +230,19 @@ func Update(c *database.Catalog, id []byte, label, dataType, description string)
 	} else {
 		desc = description
 	}
-	if _, err := db.Exec(sqlUpdate, label, desc, id); err != nil {
-		return Field{}, err
+	if _, err := tx.Exec(sqlUpdate, label, desc, id); err != nil {
+		return Field{}, nil, err
 	}
-	if err := searchindex.ReprojectMetadataField(db, id); err != nil {
-		return Field{}, err
+	got, err := getByIDTx(tx.Tx, id)
+	if err != nil {
+		return Field{}, nil, err
 	}
-	return GetByID(c, id)
+	return got, []rowchange.Change{{
+		EntityType: "metadata_field",
+		EntityID:   append([]byte(nil), id...),
+		Action:     rowchange.ActionUpdate,
+		Fields:     fields,
+	}}, nil
 }
 
 // GetByID returns the field with the given id, or sql.ErrNoRows.
@@ -300,50 +357,41 @@ func CountByOrigin(c *database.Catalog) (OriginCounts, error) {
 
 // Delete erases a field when no sources store a value for it. Suggestion
 // and layout joins CASCADE. Plugin-origin fields are origin_locked even
-// when unused.
-func Delete(c *database.Catalog, userID, id []byte) error {
+// when unused. The caller records the returned changes, including layout
+// rows released before the field itself.
+func Delete(tx *database.Tx, userID, id []byte) ([]rowchange.Change, error) {
 	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
-		return err
+		return nil, err
 	}
-	if len(id) != 16 {
-		return ErrInvalid
+	if tx == nil || len(id) != 16 {
+		return nil, ErrInvalid
 	}
-	prev, err := GetByID(c, id)
+	prev, err := getByIDTx(tx.Tx, id)
 	if errors.Is(err, sql.ErrNoRows) {
-		return ErrInvalid
+		return nil, ErrInvalid
 	}
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	db, err := c.DB()
+	report, err := deleteimpact.Impact(tx.Tx, catalogmodel.KindMetadataField, id)
 	if err != nil {
-		return err
-	}
-	tx, err := db.Begin()
-	if err != nil {
-		return err
-	}
-	defer func() { _ = tx.Rollback() }()
-
-	report, err := deleteimpact.Impact(tx, deleteimpact.KindMetadataField, id)
-	if err != nil {
-		return err
+		return nil, err
 	}
 	if err := deleteimpact.Refuse(report, deleteimpact.Codes{
 		InUse: ErrInUse, OriginLocked: ErrOriginLocked, NotFound: ErrInvalid,
 	}); err != nil {
-		return err
+		return nil, err
 	}
 	// Per-Source layout rows (order, dismissed suggestions) are released and audited.
-	released, err := deleteimpact.ReleaseFacets(tx, deleteimpact.KindMetadataField, id)
+	released, err := deleteimpact.ReleaseFacets(tx.Tx, catalogmodel.KindMetadataField, id)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if _, err := tx.Exec(sqlDelete, id); err != nil {
-		return err
+		return nil, err
 	}
-	fields := map[string]audit.FieldDiff{
+	fields := map[string]rowchange.FieldDiff{
 		"id":        {Old: uuidString(id), New: nil},
 		"key":       {Old: prev.Key, New: nil},
 		"origin":    {Old: prev.Origin, New: nil},
@@ -351,25 +399,14 @@ func Delete(c *database.Catalog, userID, id []byte) error {
 		"data_type": {Old: prev.DataType, New: nil},
 	}
 	if prev.Description != "" {
-		fields["description"] = audit.FieldDiff{Old: prev.Description, New: nil}
+		fields["description"] = rowchange.FieldDiff{Old: prev.Description, New: nil}
 	}
-	if _, err := audit.Record(tx, audit.Revision{
-		UserID:     userID,
-		ActionType: "delete_metadata_field",
-		CreatedAt:  project.NowUTC(),
-		Changes: append(released.Changes, audit.Change{
-			EntityType: "metadata_field",
-			EntityID:   id,
-			Action:     audit.ActionDelete,
-			Fields:     fields,
-		}),
-	}); err != nil {
-		return err
-	}
-	if err := searchindex.Delete(tx, searchindex.KindMetadataField, uuidString(id)); err != nil {
-		return err
-	}
-	return tx.Commit()
+	return append(released.Changes, rowchange.Change{
+		EntityType: "metadata_field",
+		EntityID:   append([]byte(nil), id...),
+		Action:     rowchange.ActionDelete,
+		Fields:     fields,
+	}), nil
 }
 
 func originOK(origin string) bool {
@@ -383,6 +420,22 @@ func dataTypeOK(dt string) bool {
 	return dt == DataTypeText || dt == DataTypeURL
 }
 
+func getByIDTx(tx *sql.Tx, id []byte) (Field, error) {
+	var f Field
+	err := tx.QueryRow(sqlGetByID, id).Scan(
+		&f.ID, &f.Key, &f.Origin, &f.Label, &f.DataType, &f.Description,
+	)
+	return f, err
+}
+
+func lookupTx(tx *sql.Tx, key, origin string) (Field, error) {
+	var f Field
+	err := tx.QueryRow(sqlLookup, key, origin).Scan(
+		&f.ID, &f.Key, &f.Origin, &f.Label, &f.DataType, &f.Description,
+	)
+	return f, err
+}
+
 func uuidString(id []byte) string {
 	if len(id) != 16 {
 		return ""
@@ -390,4 +443,11 @@ func uuidString(id []byte) string {
 	var u uuid.UUID
 	copy(u[:], id)
 	return u.String()
+}
+
+func nullJSON(s string) any {
+	if s == "" {
+		return nil
+	}
+	return s
 }

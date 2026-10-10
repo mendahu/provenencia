@@ -7776,6 +7776,11 @@ enum L10n {
             defaultValue: "Invalid audit record.",
             comment: "FFI error audit.invalid"
         )
+        static let writesReentry = LocalizedStringResource(
+            "error.writes.reentry",
+            defaultValue: "A save was already in progress.",
+            comment: "FFI error writes.reentry"
+        )
         static let identityNotFound = LocalizedStringResource(
             "error.identity.not_found",
             defaultValue: "Identity file not found.",
@@ -8409,6 +8414,8 @@ enum L10n {
                 return L10n.string(usersInvalid)
             case "audit.invalid":
                 return L10n.string(auditInvalid)
+            case "writes.reentry":
+                return L10n.string(writesReentry)
             case "identity.not_found":
                 return L10n.string(identityNotFound)
             case "identity.invalid_name":

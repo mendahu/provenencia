@@ -22,6 +22,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjects"
@@ -29,6 +30,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/writes"
 )
 
 const bridgeLocator = `{"version":1,"selectors":[{"type":"page","artifact_page":1}]}`
@@ -66,11 +68,13 @@ func newBridgeWorld(t *testing.T) *bridgeWorld {
 	if err != nil {
 		t.Fatal(err)
 	}
-	src, err := sources.Create(c, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Register"})
+	src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Register"})
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	art, err := artifacts.Create(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
+	art, err := runArtifactCreate(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -115,9 +119,11 @@ func (w *bridgeWorld) node(kind, label string, x, y int64) subjects.Subject {
 	if err != nil {
 		w.t.Fatal(err)
 	}
-	s, err := subjects.Create(w.c, userID, subjects.CreateInput{
-		SourceID: w.source.ID, SubjectTypeID: st.ID, Label: label,
-	}, &subjects.Placement{GridX: x, GridY: y})
+	s, err := writes.Call(w.c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
+		return subjects.Create(tx, userID, subjects.CreateInput{
+			SourceID: w.source.ID, SubjectTypeID: st.ID, Label: label,
+		}, &subjects.Placement{GridX: x, GridY: y})
+	})
 	if err != nil {
 		w.t.Fatal(err)
 	}
@@ -164,10 +170,12 @@ func (w *bridgeWorld) placeRelationship(from, to subjects.Subject, kind property
 
 func (w *bridgeWorld) bridge(kind string, from, to subjects.Subject, obs []observations.Input) connect.Result {
 	w.t.Helper()
-	res, err := connect.CreateCitedBridge(w.c, userID, connect.CreateInput{
-		SourceID: w.source.ID, FromSubjectID: from.ID, ToSubjectID: to.ID, BridgeTypeKey: kind,
-		Citation:     citations.CreateInput{ArtifactID: w.artifact.ID, LocatorJSON: bridgeLocator},
-		Observations: obs,
+	res, err := writes.Call(w.c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (connect.Result, []rowchange.Change, error) {
+		return connect.CreateCitedBridge(tx, userID, connect.CreateInput{
+			SourceID: w.source.ID, FromSubjectID: from.ID, ToSubjectID: to.ID, BridgeTypeKey: kind,
+			Citation:     citations.CreateInput{ArtifactID: w.artifact.ID, LocatorJSON: bridgeLocator},
+			Observations: obs,
+		})
 	})
 	if err != nil {
 		w.t.Fatal(err)
@@ -177,7 +185,9 @@ func (w *bridgeWorld) bridge(kind string, from, to subjects.Subject, obs []obser
 
 func (w *bridgeWorld) promote(s subjects.Subject) promote.Result {
 	w.t.Helper()
-	res, err := promote.Save(w.c, userID, promote.Input{SubjectID: s.ID})
+	res, err := writes.Call(w.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+		return promote.Save(tx, userID, promote.Input{SubjectID: s.ID})
+	})
 	if err != nil {
 		w.t.Fatal(err)
 	}
@@ -186,7 +196,9 @@ func (w *bridgeWorld) promote(s subjects.Subject) promote.Result {
 
 func (w *bridgeWorld) join(s subjects.Subject, entityID []byte) {
 	w.t.Helper()
-	if _, err := promote.Save(w.c, userID, promote.Input{SubjectID: s.ID, EntityID: entityID}); err != nil {
+	if _, err := writes.Call(w.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+		return promote.Save(tx, userID, promote.Input{SubjectID: s.ID, EntityID: entityID})
+	}); err != nil {
 		w.t.Fatal(err)
 	}
 }
@@ -434,12 +446,16 @@ func TestBridgeFiling(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		entity, err := canonicalentities.Create(w.c, userID, canonicalentities.CreateInput{SubjectTypeID: eventType.ID})
+		entity, err := writes.Call(w.c, writes.Op{Action: "create_canonical_entity", UserID: userID}, func(tx *database.Tx) (canonicalentities.Entity, []rowchange.Change, error) {
+			return canonicalentities.Create(tx, userID, canonicalentities.CreateInput{SubjectTypeID: eventType.ID})
+		})
 		if err != nil {
 			t.Fatal(err)
 		}
-		if _, err := identityclaims.Create(w.c, userID, identityclaims.CreateInput{
-			SubjectID: birth.ID, EntityID: entity.ID, Status: identityclaims.StatusAccepted,
+		if _, err := writes.Call(w.c, writes.Op{Action: "create_identity_claim", UserID: userID}, func(tx *database.Tx) (identityclaims.Claim, []rowchange.Change, error) {
+			return identityclaims.Create(tx, userID, identityclaims.CreateInput{
+				SubjectID: birth.ID, EntityID: entity.ID, Status: identityclaims.StatusAccepted,
+			})
 		}); err != nil {
 			t.Fatal(err)
 		}
@@ -467,13 +483,15 @@ func TestBridgeFiling(t *testing.T) {
 		year := 1791
 		startProp := w.prop("start_date")
 		endProp := w.prop("end_date")
-		if _, err := observations.AddToCitation(w.c, userID, link.Citation.ID, []observations.Input{
-			{SubjectID: link.Subject.ID, PropertyID: startProp.ID, Date: &datevalues.Value{
-				Kind: datevalues.KindPoint, StartYear: &year,
-			}},
-			{SubjectID: link.Subject.ID, PropertyID: endProp.ID, Date: &datevalues.Value{
-				Kind: datevalues.KindPoint, StartYear: &year,
-			}},
+		if _, err := writes.Call(w.c, writes.Op{Action: "add_observations", UserID: userID}, func(tx *database.Tx) ([]observations.Observation, []rowchange.Change, error) {
+			return observations.AddToCitation(tx, userID, link.Citation.ID, []observations.Input{
+				{SubjectID: link.Subject.ID, PropertyID: startProp.ID, Date: &datevalues.Value{
+					Kind: datevalues.KindPoint, StartYear: &year,
+				}},
+				{SubjectID: link.Subject.ID, PropertyID: endProp.ID, Date: &datevalues.Value{
+					Kind: datevalues.KindPoint, StartYear: &year,
+				}},
+			})
 		}); err != nil {
 			t.Fatal(err)
 		}
@@ -533,7 +551,10 @@ func TestBridgeFiling(t *testing.T) {
 func TestPlaceRelationshipTypeCreateRefused(t *testing.T) {
 	w := newBridgeWorld(t)
 	prop := w.prop("place_relationship_type")
-	_, err := propertyterms.Create(w.c, userID, prop.ID, "Adjacent", "")
+	_, _, err := writes.Run(w.c, writes.Op{Action: "create_property_term", UserID: userID},
+		func(tx *database.Tx) (propertyterms.Term, []rowchange.Change, error) {
+			return propertyterms.Create(tx, userID, prop.ID, "Adjacent", "")
+		})
 	if !errors.Is(err, propertyterms.ErrLocked) {
 		t.Fatalf("Create under place_relationship_type: %v", err)
 	}
@@ -569,7 +590,7 @@ func TestBridgeSubjectDeleteReleasesPins(t *testing.T) {
 	}
 	if _, err := audit.Record(tx, audit.Revision{
 		UserID: userID, ActionType: "pin_edge", CreatedAt: project.NowUTC(),
-		Changes: []audit.Change{change},
+		Changes: []rowchange.Change{change},
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -577,7 +598,10 @@ func TestBridgeSubjectDeleteReleasesPins(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := subjects.Delete(w.c, userID, bridge.Subject.ID); err != nil {
+	if _, err := writes.Call(w.c, writes.Op{Action: "delete_subject", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+		changes, err := subjects.Delete(tx, userID, bridge.Subject.ID)
+		return struct{}{}, changes, err
+	}); err != nil {
 		t.Fatal(err)
 	}
 	var n int

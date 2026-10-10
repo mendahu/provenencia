@@ -1,6 +1,8 @@
-// Package sourcemetadata stores descriptive Source metadata values with audited
-// set/clear, plus the per-Source layout (dismissed suggestions and field order)
-// that the Source page metadata editor reads back through ListWorkspace.
+// Package sourcemetadata stores descriptive Source metadata values, plus the
+// per-Source layout (dismissed suggestions and field order) that the Source
+// page metadata editor reads back through ListWorkspace. Set, Clear,
+// DismissSuggestion, and Reorder run inside writes.Run and return the row
+// changes that Run records.
 package sourcemetadata
 
 import (
@@ -12,10 +14,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/audit"
 	"github.com/mendahu/provenencia/core/database/metadatafields"
-	"github.com/mendahu/provenencia/core/database/project"
-	"github.com/mendahu/provenencia/core/database/searchindex"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcevocab"
 	"github.com/mendahu/provenencia/core/urlshape"
@@ -90,63 +90,54 @@ type layout struct {
 	Dismissed bool
 }
 
-// Set upserts a metadata value for (source_id, field_id) and records update_source_metadata.
-func Set(c *database.Catalog, userID []byte, in Input) (Row, error) {
-	db, err := c.DB()
-	if err != nil {
-		return Row{}, err
-	}
+// Set upserts a metadata value for (source_id, field_id). The caller records
+// the returned changes. An unchanged value returns the existing row and no changes.
+func Set(tx *database.Tx, userID []byte, in Input) (Row, []rowchange.Change, error) {
 	in.ValueText = strings.TrimSpace(in.ValueText)
-	if len(in.SourceID) != 16 || len(in.FieldID) != 16 {
-		return Row{}, ErrInvalid
+	if tx == nil || len(in.SourceID) != 16 || len(in.FieldID) != 16 {
+		return Row{}, nil, ErrInvalid
 	}
 	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
-		return Row{}, err
+		return Row{}, nil, err
 	}
 
-	tx, err := db.Begin()
+	if err := requireSource(tx.Tx, in.SourceID); err != nil {
+		return Row{}, nil, err
+	}
+	field, err := getFieldTx(tx.Tx, in.FieldID)
 	if err != nil {
-		return Row{}, err
-	}
-	defer func() { _ = tx.Rollback() }()
-
-	if err := requireSource(tx, in.SourceID); err != nil {
-		return Row{}, err
-	}
-	field, err := getFieldTx(tx, in.FieldID)
-	if err != nil {
-		return Row{}, err
+		return Row{}, nil, err
 	}
 
-	prev, err := getPairTx(tx, in.SourceID, in.FieldID)
+	prev, err := getPairTx(tx.Tx, in.SourceID, in.FieldID)
 	creating := errors.Is(err, sql.ErrNoRows)
 	if err != nil && !creating {
-		return Row{}, err
+		return Row{}, nil, err
 	}
 
 	normalized, err := normalizeValue(field.DataType, in.ValueText)
 	if err != nil {
-		return Row{}, err
+		return Row{}, nil, err
 	}
 	in.ValueText = normalized
 
 	var row Row
 	var action string
-	fields := map[string]audit.FieldDiff{}
+	fields := map[string]rowchange.FieldDiff{}
 
 	if creating {
 		id, err := uuid.NewV7()
 		if err != nil {
-			return Row{}, err
+			return Row{}, nil, err
 		}
 		idBytes := id[:]
 		if _, err := tx.Exec(sqlInsert, idBytes, in.SourceID, in.FieldID, nullStr(in.ValueText)); err != nil {
-			return Row{}, mapConstraint(err)
+			return Row{}, nil, mapConstraint(err)
 		}
 		// A field the researcher just filled needs a place in the Source's
 		// order; appending keeps an existing hand-sorted layout intact.
 		if _, err := tx.Exec(sqlLayoutAppend, in.SourceID, in.FieldID, in.SourceID); err != nil {
-			return Row{}, mapConstraint(err)
+			return Row{}, nil, mapConstraint(err)
 		}
 		row = Row{
 			ID:        append([]byte(nil), idBytes...),
@@ -154,20 +145,19 @@ func Set(c *database.Catalog, userID []byte, in Input) (Row, error) {
 			FieldID:   append([]byte(nil), in.FieldID...),
 			ValueText: in.ValueText,
 		}
-		action = audit.ActionCreate
-		fields["id"] = audit.FieldDiff{Old: nil, New: id.String()}
-		fields["source_id"] = audit.FieldDiff{Old: nil, New: uuidString(in.SourceID)}
-		fields["field_id"] = audit.FieldDiff{Old: nil, New: uuidString(in.FieldID)}
+		action = rowchange.ActionCreate
+		fields["id"] = rowchange.FieldDiff{Old: nil, New: id.String()}
+		fields["source_id"] = rowchange.FieldDiff{Old: nil, New: uuidString(in.SourceID)}
+		fields["field_id"] = rowchange.FieldDiff{Old: nil, New: uuidString(in.FieldID)}
 		if in.ValueText != "" {
-			fields["value_text"] = audit.FieldDiff{Old: nil, New: in.ValueText}
+			fields["value_text"] = rowchange.FieldDiff{Old: nil, New: in.ValueText}
 		}
 	} else {
 		if prev.ValueText == in.ValueText {
-			_ = tx.Commit()
-			return prev, nil
+			return prev, nil, nil
 		}
 		if _, err := tx.Exec(sqlUpdate, nullStr(in.ValueText), prev.ID); err != nil {
-			return Row{}, mapConstraint(err)
+			return Row{}, nil, mapConstraint(err)
 		}
 		row = Row{
 			ID:        append([]byte(nil), prev.ID...),
@@ -175,250 +165,179 @@ func Set(c *database.Catalog, userID []byte, in Input) (Row, error) {
 			FieldID:   append([]byte(nil), in.FieldID...),
 			ValueText: in.ValueText,
 		}
-		action = audit.ActionUpdate
-		fields["value_text"] = audit.FieldDiff{Old: nullJSON(prev.ValueText), New: nullJSON(in.ValueText)}
+		action = rowchange.ActionUpdate
+		fields["value_text"] = rowchange.FieldDiff{Old: nullJSON(prev.ValueText), New: nullJSON(in.ValueText)}
 	}
 
-	if _, err := audit.Record(tx, audit.Revision{
-		UserID:     userID,
-		ActionType: "update_source_metadata",
-		CreatedAt:  project.NowUTC(),
-		Changes: []audit.Change{{
-			EntityType: "source_metadata",
-			EntityID:   row.ID,
-			Action:     action,
-			Fields:     fields,
-		}},
-	}); err != nil {
-		return Row{}, err
-	}
-	if err := searchindex.ReprojectSource(tx, in.SourceID); err != nil {
-		return Row{}, err
-	}
-	if err := tx.Commit(); err != nil {
-		return Row{}, err
-	}
-	return row, nil
+	return row, []rowchange.Change{{
+		EntityType: "source_metadata",
+		EntityID:   row.ID,
+		Action:     action,
+		Fields:     fields,
+	}}, nil
 }
 
-// Clear deletes the metadata row for (source_id, field_id) if present.
-func Clear(c *database.Catalog, userID, sourceID, fieldID []byte) error {
-	db, err := c.DB()
-	if err != nil {
-		return err
-	}
-	if len(sourceID) != 16 || len(fieldID) != 16 {
-		return ErrInvalid
+// Clear deletes the metadata row for (source_id, field_id) when one exists.
+// A missing row returns no changes. The caller records the returned changes.
+func Clear(tx *database.Tx, userID, sourceID, fieldID []byte) ([]rowchange.Change, error) {
+	if tx == nil || len(sourceID) != 16 || len(fieldID) != 16 {
+		return nil, ErrInvalid
 	}
 	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
-		return err
+		return nil, err
 	}
 
-	tx, err := db.Begin()
-	if err != nil {
-		return err
-	}
-	defer func() { _ = tx.Rollback() }()
-
-	prev, err := getPairTx(tx, sourceID, fieldID)
+	prev, err := getPairTx(tx.Tx, sourceID, fieldID)
 	if errors.Is(err, sql.ErrNoRows) {
-		return tx.Commit()
+		return nil, nil
 	}
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if _, err := tx.Exec(sqlDelete, sourceID, fieldID); err != nil {
-		return err
+		return nil, err
 	}
-	fields := map[string]audit.FieldDiff{
+	fields := map[string]rowchange.FieldDiff{
 		"id":        {Old: uuidString(prev.ID), New: nil},
 		"source_id": {Old: uuidString(prev.SourceID), New: nil},
 		"field_id":  {Old: uuidString(prev.FieldID), New: nil},
 	}
 	if prev.ValueText != "" {
-		fields["value_text"] = audit.FieldDiff{Old: prev.ValueText, New: nil}
+		fields["value_text"] = rowchange.FieldDiff{Old: prev.ValueText, New: nil}
 	}
-	if _, err := audit.Record(tx, audit.Revision{
-		UserID:     userID,
-		ActionType: "update_source_metadata",
-		CreatedAt:  project.NowUTC(),
-		Changes: []audit.Change{{
-			EntityType: "source_metadata",
-			EntityID:   prev.ID,
-			Action:     audit.ActionDelete,
-			Fields:     fields,
-		}},
-	}); err != nil {
-		return err
-	}
-	if err := searchindex.ReprojectSource(tx, sourceID); err != nil {
-		return err
-	}
-	return tx.Commit()
+	return []rowchange.Change{{
+		EntityType: "source_metadata",
+		EntityID:   prev.ID,
+		Action:     rowchange.ActionDelete,
+		Fields:     fields,
+	}}, nil
 }
 
 // DismissSuggestion hides one of the type's metadata suggestions for a single
-// Source and records dismiss_source_metadata_suggestion.
+// Source. The caller records the returned changes.
 //
 // Dismissing is only meaningful while the field is an empty suggestion. A field
 // that already holds a value stays visible, so the call is a no-op rather than
-// an error — the editor's X is offered on empty suggestion rows only.
-func DismissSuggestion(c *database.Catalog, userID, sourceID, fieldID []byte) error {
-	db, err := c.DB()
-	if err != nil {
-		return err
-	}
-	if len(sourceID) != 16 || len(fieldID) != 16 {
-		return ErrInvalid
+// an error — the editor's X is offered on empty suggestion rows only. An
+// already-dismissed suggestion is also a no-op. Both return no changes.
+func DismissSuggestion(tx *database.Tx, userID, sourceID, fieldID []byte) ([]rowchange.Change, error) {
+	if tx == nil || len(sourceID) != 16 || len(fieldID) != 16 {
+		return nil, ErrInvalid
 	}
 	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
-		return err
+		return nil, err
 	}
 
-	tx, err := db.Begin()
-	if err != nil {
-		return err
+	if err := requireSource(tx.Tx, sourceID); err != nil {
+		return nil, err
 	}
-	defer func() { _ = tx.Rollback() }()
-
-	if err := requireSource(tx, sourceID); err != nil {
-		return err
-	}
-	if _, err := getFieldTx(tx, fieldID); err != nil {
-		return err
+	if _, err := getFieldTx(tx.Tx, fieldID); err != nil {
+		return nil, err
 	}
 
-	_, err = getPairTx(tx, sourceID, fieldID)
+	_, err := getPairTx(tx.Tx, sourceID, fieldID)
 	switch {
 	case err == nil:
-		return tx.Commit()
+		return nil, nil
 	case !errors.Is(err, sql.ErrNoRows):
-		return err
+		return nil, err
 	}
 
-	prev, err := getLayoutTx(tx, sourceID, fieldID)
+	prev, err := getLayoutTx(tx.Tx, sourceID, fieldID)
 	had := true
 	if errors.Is(err, sql.ErrNoRows) {
 		had = false
 	} else if err != nil {
-		return err
+		return nil, err
 	}
 	if had && prev.Dismissed {
-		return tx.Commit()
+		return nil, nil
 	}
 
 	if _, err := tx.Exec(sqlLayoutDismiss, sourceID, fieldID, sourceID); err != nil {
-		return mapConstraint(err)
+		return nil, mapConstraint(err)
 	}
-	action := audit.ActionCreate
+	action := rowchange.ActionCreate
 	var oldDismissed any
 	if had {
-		action = audit.ActionUpdate
+		action = rowchange.ActionUpdate
 		oldDismissed = false
 	}
-	if _, err := audit.Record(tx, audit.Revision{
-		UserID:     userID,
-		ActionType: "dismiss_source_metadata_suggestion",
-		CreatedAt:  project.NowUTC(),
-		Changes: []audit.Change{{
-			EntityType: "source_metadata_layout",
-			EntityID:   fieldID,
-			Action:     action,
-			Fields: map[string]audit.FieldDiff{
-				"source_id": {Old: uuidString(sourceID), New: uuidString(sourceID)},
-				"field_id":  {Old: uuidString(fieldID), New: uuidString(fieldID)},
-				"dismissed": {Old: oldDismissed, New: true},
-			},
-		}},
-	}); err != nil {
-		return err
-	}
-	return tx.Commit()
+	return []rowchange.Change{{
+		EntityType: "source_metadata_layout",
+		EntityID:   fieldID,
+		Action:     action,
+		Fields: map[string]rowchange.FieldDiff{
+			"source_id": {Old: uuidString(sourceID), New: uuidString(sourceID)},
+			"field_id":  {Old: uuidString(fieldID), New: uuidString(fieldID)},
+			"dismissed": {Old: oldDismissed, New: true},
+		},
+	}}, nil
 }
 
-// Reorder rewrites the Source's field order as 0..n-1 over fieldIDs and records
-// reorder_source_metadata. Fields left out of the list keep their rows and sort
-// after the listed ones in ListWorkspace. Dismissed flags are preserved.
-func Reorder(c *database.Catalog, userID, sourceID []byte, fieldIDs [][]byte) error {
-	db, err := c.DB()
-	if err != nil {
-		return err
-	}
-	if len(sourceID) != 16 || len(fieldIDs) == 0 {
-		return ErrInvalid
+// Reorder rewrites the Source's field order as 0..n-1 over fieldIDs. The caller
+// records the returned changes. Fields left out of the list keep their rows and
+// sort after the listed ones in ListWorkspace. Dismissed flags are preserved.
+// An order that already matches returns no changes.
+func Reorder(tx *database.Tx, userID, sourceID []byte, fieldIDs [][]byte) ([]rowchange.Change, error) {
+	if tx == nil || len(sourceID) != 16 || len(fieldIDs) == 0 {
+		return nil, ErrInvalid
 	}
 	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
-		return err
+		return nil, err
 	}
 	seen := make(map[string]struct{}, len(fieldIDs))
 	for _, fieldID := range fieldIDs {
 		if len(fieldID) != 16 {
-			return ErrInvalid
+			return nil, ErrInvalid
 		}
 		if _, dup := seen[string(fieldID)]; dup {
-			return ErrInvalid
+			return nil, ErrInvalid
 		}
 		seen[string(fieldID)] = struct{}{}
 	}
 
-	tx, err := db.Begin()
-	if err != nil {
-		return err
-	}
-	defer func() { _ = tx.Rollback() }()
-
-	if err := requireSource(tx, sourceID); err != nil {
-		return err
+	if err := requireSource(tx.Tx, sourceID); err != nil {
+		return nil, err
 	}
 
-	var changes []audit.Change
+	var changes []rowchange.Change
 	for i, fieldID := range fieldIDs {
-		if _, err := getFieldTx(tx, fieldID); err != nil {
-			return err
+		if _, err := getFieldTx(tx.Tx, fieldID); err != nil {
+			return nil, err
 		}
-		prev, err := getLayoutTx(tx, sourceID, fieldID)
+		prev, err := getLayoutTx(tx.Tx, sourceID, fieldID)
 		had := true
 		if errors.Is(err, sql.ErrNoRows) {
 			had = false
 		} else if err != nil {
-			return err
+			return nil, err
 		}
 		if had && prev.SortOrder == i {
 			continue
 		}
 		if _, err := tx.Exec(sqlLayoutOrder, sourceID, fieldID, i); err != nil {
-			return mapConstraint(err)
+			return nil, mapConstraint(err)
 		}
-		action := audit.ActionCreate
+		action := rowchange.ActionCreate
 		var oldOrder any
 		if had {
-			action = audit.ActionUpdate
+			action = rowchange.ActionUpdate
 			oldOrder = prev.SortOrder
 		}
-		changes = append(changes, audit.Change{
+		changes = append(changes, rowchange.Change{
 			EntityType: "source_metadata_layout",
 			EntityID:   fieldID,
 			Action:     action,
-			Fields: map[string]audit.FieldDiff{
+			Fields: map[string]rowchange.FieldDiff{
 				"source_id":  {Old: uuidString(sourceID), New: uuidString(sourceID)},
 				"field_id":   {Old: uuidString(fieldID), New: uuidString(fieldID)},
 				"sort_order": {Old: oldOrder, New: i},
 			},
 		})
 	}
-	if len(changes) == 0 {
-		return tx.Commit()
-	}
-	if _, err := audit.Record(tx, audit.Revision{
-		UserID:     userID,
-		ActionType: "reorder_source_metadata",
-		CreatedAt:  project.NowUTC(),
-		Changes:    changes,
-	}); err != nil {
-		return err
-	}
-	return tx.Commit()
+	return changes, nil
 }
 
 // ListBySource returns all metadata rows for a Source.

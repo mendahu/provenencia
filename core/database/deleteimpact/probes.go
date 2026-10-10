@@ -3,9 +3,10 @@ package deleteimpact
 import (
 	"database/sql"
 	"fmt"
+	"github.com/mendahu/provenencia/core/database/catalogmodel"
 )
 
-func fkEdge(parent Kind, via string, child Kind, table, fkCol, refCol string) inboundEdge {
+func fkEdge(parent catalogmodel.Kind, via string, child catalogmodel.Kind, table, fkCol, refCol string) inboundEdge {
 	countSQL := fmt.Sprintf(`SELECT COUNT(*) FROM %s WHERE %s = ?`, table, fkCol)
 	listSQL := fmt.Sprintf(
 		`SELECT id, COALESCE(%s, '') FROM %s WHERE %s = ? ORDER BY %s COLLATE NOCASE LIMIT ?`,
@@ -15,18 +16,18 @@ func fkEdge(parent Kind, via string, child Kind, table, fkCol, refCol string) in
 		Parent: parent,
 		Via:    via,
 		Child:  child,
-		Bucket: BucketResource,
+		Bucket: catalogmodel.BucketResource,
 		Count:  countSQLFn(countSQL),
 		List:   listSQLFn(listSQL),
 	}
 }
 
-func joinEdge(parent Kind, via string, child Kind, countSQL, listSQL string) inboundEdge {
+func joinEdge(parent catalogmodel.Kind, via string, child catalogmodel.Kind, countSQL, listSQL string) inboundEdge {
 	return inboundEdge{
 		Parent: parent,
 		Via:    via,
 		Child:  child,
-		Bucket: BucketResource,
+		Bucket: catalogmodel.BucketResource,
 		Count:  countSQLFn(countSQL),
 		List:   listSQLFn(listSQL),
 	}
@@ -64,16 +65,5 @@ func listSQLFn(q string) func(*sql.Tx, []byte, int) ([]probeRow, error) {
 			out = append(out, r)
 		}
 		return out, rows.Err()
-	}
-}
-
-func reservedStub(parent Kind, via string, child Kind) inboundEdge {
-	return inboundEdge{
-		Parent: parent,
-		Via:    via,
-		Child:  child,
-		Bucket: BucketResource,
-		Count:  func(*sql.Tx, []byte) (int, error) { return 0, nil },
-		List:   func(*sql.Tx, []byte, int) ([]probeRow, error) { return nil, nil },
 	}
 }

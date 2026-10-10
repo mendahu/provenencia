@@ -19,11 +19,11 @@ import (
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/audit"
 	"github.com/mendahu/provenencia/core/database/files"
-	"github.com/mendahu/provenencia/core/database/project"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/ingest/mediatypes"
 	"github.com/mendahu/provenencia/core/objectstore"
+	"github.com/mendahu/provenencia/core/writes"
 )
 
 var (
@@ -46,6 +46,10 @@ const MaxBytes int64 = 512 << 20
 
 // maxBytes is overridden in tests.
 var maxBytes = MaxBytes
+
+// errChecksumTaken is returned from the create_file closure when the insert
+// loses a checksum race. File handles it after that Run returns.
+var errChecksumTaken = errors.New("ingest: file checksum already stored")
 
 // Result is an ingested or reused File plus its project-relative object path.
 type Result struct {
@@ -129,11 +133,13 @@ func File(c *database.Catalog, absPath string, userID []byte) (Result, error) {
 	}
 	objPath := filepath.Join(c.Dir(), filepath.FromSlash(relPath))
 
+	// LookupByChecksum uses another pool connection and deadlocks while a Run
+	// transaction is open. Reuse is decided here, before create_file's Run.
 	if existing, err := files.LookupByChecksum(c, checksum); err == nil {
 		if _, err := installObject(tmpPath, objPath, checksum); err != nil {
 			return Result{}, err
 		}
-		return recordReuse(c, existing, relPath, filename, userID)
+		return reuseFile(c, existing, relPath, filename, userID)
 	} else if !errors.Is(err, sql.ErrNoRows) {
 		_ = os.Remove(tmpPath)
 		return Result{}, err
@@ -159,158 +165,124 @@ func File(c *database.Catalog, absPath string, userID []byte) (Result, error) {
 		ByteSize:         byteSize,
 	}
 
-	db, err := c.DB()
-	if err != nil {
-		if wrote {
-			_ = os.Remove(objPath)
+	res, _, err := writes.Run(c, writes.Op{
+		Action: "create_file",
+		UserID: userID,
+	}, func(tx *database.Tx) (Result, []rowchange.Change, error) {
+		if err := files.Insert(tx.Tx, row); err != nil {
+			if files.IsUniqueConflict(err) {
+				return Result{}, nil, errChecksumTaken
+			}
+			return Result{}, nil, err
 		}
-		return Result{}, err
-	}
-	tx, err := db.Begin()
-	if err != nil {
-		if wrote {
-			_ = os.Remove(objPath)
+		uid, err := uuid.FromBytes(id)
+		if err != nil {
+			return Result{}, nil, err
 		}
-		return Result{}, err
-	}
-	defer func() { _ = tx.Rollback() }()
-
-	if err := files.Insert(tx, row); err != nil {
-		if files.IsUniqueConflict(err) {
-			_ = tx.Rollback()
+		fields := map[string]rowchange.FieldDiff{
+			"id":              {Old: nil, New: uid.String()},
+			"checksum_sha256": {Old: nil, New: checksum},
+			"byte_size":       {Old: nil, New: row.ByteSize},
+		}
+		if filename != "" {
+			fields["original_filename"] = rowchange.FieldDiff{Old: nil, New: filename}
+		}
+		if mediaType != "" {
+			fields["media_type"] = rowchange.FieldDiff{Old: nil, New: mediaType}
+		}
+		return Result{File: row, RelPath: relPath, Reused: false, IngestedAs: filename}, []rowchange.Change{{
+			EntityType: "file",
+			EntityID:   id,
+			Action:     rowchange.ActionCreate,
+			Fields:     fields,
+		}}, nil
+	})
+	if err != nil {
+		if errors.Is(err, errChecksumTaken) {
+			// LookupByChecksum uses another pool connection and deadlocks
+			// while a Run transaction is open. This lookup is after Run.
 			existing, lookupErr := files.LookupByChecksum(c, checksum)
 			if lookupErr != nil {
 				return Result{}, lookupErr
 			}
-			return recordReuse(c, existing, relPath, filename, userID)
+			return reuseFile(c, existing, relPath, filename, userID)
 		}
 		if wrote {
 			_ = os.Remove(objPath)
 		}
 		return Result{}, err
 	}
-
-	uid, err := uuid.FromBytes(id)
-	if err != nil {
-		if wrote {
-			_ = os.Remove(objPath)
-		}
-		return Result{}, err
-	}
-	fields := map[string]audit.FieldDiff{
-		"id":              {Old: nil, New: uid.String()},
-		"checksum_sha256": {Old: nil, New: checksum},
-		"byte_size":       {Old: nil, New: row.ByteSize},
-	}
-	if filename != "" {
-		fields["original_filename"] = audit.FieldDiff{Old: nil, New: filename}
-	}
-	if mediaType != "" {
-		fields["media_type"] = audit.FieldDiff{Old: nil, New: mediaType}
-	}
-	if _, err := audit.Record(tx, audit.Revision{
-		UserID:     userID,
-		ActionType: "create_file",
-		CreatedAt:  project.NowUTC(),
-		Changes: []audit.Change{{
-			EntityType: "file",
-			EntityID:   id,
-			Action:     audit.ActionCreate,
-			Fields:     fields,
-		}},
-	}); err != nil {
-		if wrote {
-			_ = os.Remove(objPath)
-		}
-		return Result{}, err
-	}
-	if err := tx.Commit(); err != nil {
-		if wrote {
-			_ = os.Remove(objPath)
-		}
-		return Result{}, err
-	}
-	return Result{File: row, RelPath: relPath, Reused: false, IngestedAs: filename}, nil
+	return res, nil
 }
 
-// SetFilename updates a File’s original_filename after a reuse keep/overwrite choice.
-func SetFilename(c *database.Catalog, fileID []byte, name string, userID []byte) error {
+// SetFilename updates a File’s original_filename after a reuse keep/overwrite
+// choice. The caller records the returned changes. An unchanged name returns
+// no changes.
+func SetFilename(tx *database.Tx, fileID []byte, name string, userID []byte) ([]rowchange.Change, error) {
 	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
-		return err
+		return nil, err
 	}
 	name = sanitizeFilename(name)
-	existing, err := files.Lookup(c, fileID)
+	existing, err := lookupFile(tx, fileID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return ErrInvalid
+			return nil, ErrInvalid
 		}
-		return err
+		return nil, err
 	}
 	if existing.OriginalFilename == name {
-		return nil
+		return nil, nil
 	}
-
-	db, err := c.DB()
-	if err != nil {
-		return err
+	if err := files.UpdateOriginalFilename(tx.Tx, fileID, name); err != nil {
+		return nil, err
 	}
-	tx, err := db.Begin()
-	if err != nil {
-		return err
-	}
-	defer func() { _ = tx.Rollback() }()
-
-	if err := files.UpdateOriginalFilename(tx, fileID, name); err != nil {
-		return err
-	}
-	if _, err := audit.Record(tx, audit.Revision{
-		UserID:     userID,
-		ActionType: "update_file",
-		CreatedAt:  project.NowUTC(),
-		Changes: []audit.Change{{
-			EntityType: "file",
-			EntityID:   fileID,
-			Action:     audit.ActionUpdate,
-			Fields: map[string]audit.FieldDiff{
-				"original_filename": {Old: existing.OriginalFilename, New: name},
-			},
-		}},
-	}); err != nil {
-		return err
-	}
-	return tx.Commit()
+	return []rowchange.Change{{
+		EntityType: "file",
+		EntityID:   append([]byte(nil), fileID...),
+		Action:     rowchange.ActionUpdate,
+		Fields: map[string]rowchange.FieldDiff{
+			"original_filename": {Old: existing.OriginalFilename, New: name},
+		},
+	}}, nil
 }
 
-func recordReuse(c *database.Catalog, existing files.File, relPath, filename string, userID []byte) (Result, error) {
-	db, err := c.DB()
-	if err != nil {
-		return Result{}, err
+func lookupFile(tx *database.Tx, id []byte) (files.File, error) {
+	if tx == nil || len(id) != 16 {
+		return files.File{}, ErrInvalid
 	}
-	tx, err := db.Begin()
-	if err != nil {
-		return Result{}, err
-	}
-	defer func() { _ = tx.Rollback() }()
+	var f files.File
+	err := tx.QueryRow(
+		`SELECT id, checksum_sha256, COALESCE(original_filename, ''), COALESCE(media_type, ''), byte_size
+		 FROM files WHERE id = ?`,
+		id,
+	).Scan(&f.ID, &f.ChecksumSHA256, &f.OriginalFilename, &f.MediaType, &f.ByteSize)
+	return f, err
+}
 
-	if _, err := audit.Record(tx, audit.Revision{
-		UserID:     userID,
-		ActionType: "reuse_file",
-		CreatedAt:  project.NowUTC(),
-		Changes: []audit.Change{{
-			EntityType: "file",
-			EntityID:   existing.ID,
-			Action:     audit.ActionUpdate,
-			Fields: map[string]audit.FieldDiff{
-				"ingested_as": {Old: existing.OriginalFilename, New: filename},
-			},
-		}},
-	}); err != nil {
-		return Result{}, err
+// reuseFile records reuse_file for an existing checksum. Call it only when no
+// Run is open: it starts its own.
+func reuseFile(c *database.Catalog, existing files.File, relPath, filename string, userID []byte) (Result, error) {
+	res, _, err := writes.Run(c, writes.Op{
+		Action: "reuse_file",
+		UserID: userID,
+	}, func(tx *database.Tx) (Result, []rowchange.Change, error) {
+		return recordReuse(tx, existing, relPath, filename)
+	})
+	return res, err
+}
+
+func recordReuse(tx *database.Tx, existing files.File, relPath, filename string) (Result, []rowchange.Change, error) {
+	if tx == nil {
+		return Result{}, nil, ErrInvalid
 	}
-	if err := tx.Commit(); err != nil {
-		return Result{}, err
-	}
-	return Result{File: existing, RelPath: relPath, Reused: true, IngestedAs: filename}, nil
+	return Result{File: existing, RelPath: relPath, Reused: true, IngestedAs: filename}, []rowchange.Change{{
+		EntityType: "file",
+		EntityID:   existing.ID,
+		Action:     rowchange.ActionUpdate,
+		Fields: map[string]rowchange.FieldDiff{
+			"ingested_as": {Old: existing.OriginalFilename, New: filename},
+		},
+	}}, nil
 }
 
 type sniffBuf struct {

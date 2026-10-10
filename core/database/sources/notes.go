@@ -5,12 +5,11 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/mendahu/provenencia/core/database/rowchange"
+
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/audit"
 	"github.com/mendahu/provenencia/core/database/project"
-	"github.com/mendahu/provenencia/core/database/searchindex"
-	"github.com/mendahu/provenencia/core/database/users"
 )
 
 const (
@@ -72,178 +71,104 @@ type Note struct {
 	CreatedAt         string // RFC3339 UTC from create audit transaction
 }
 
-// AddNote inserts a note and records create_source_note.
-func AddNote(c *database.Catalog, userID, sourceID []byte, body string) (Note, error) {
-	db, err := c.DB()
-	if err != nil {
-		return Note{}, err
-	}
+// AddNote inserts a note. The caller records the returned changes.
+// AuthorDisplayName stays empty; the caller fills it from the user after Run.
+func AddNote(tx *database.Tx, userID, sourceID []byte, body string) (Note, []rowchange.Change, error) {
 	body = strings.TrimSpace(body)
-	if len(sourceID) != 16 || body == "" {
-		return Note{}, ErrInvalid
+	if tx == nil || len(sourceID) != 16 || body == "" {
+		return Note{}, nil, ErrInvalid
 	}
 	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
-		return Note{}, err
+		return Note{}, nil, err
 	}
-
-	tx, err := db.Begin()
-	if err != nil {
-		return Note{}, err
-	}
-	defer func() { _ = tx.Rollback() }()
-
-	if err := requireSource(tx, sourceID); err != nil {
-		return Note{}, err
+	if err := requireSource(tx.Tx, sourceID); err != nil {
+		return Note{}, nil, err
 	}
 	id, err := uuid.NewV7()
 	if err != nil {
-		return Note{}, err
+		return Note{}, nil, err
 	}
 	idBytes := id[:]
-	createdAt := project.NowUTC()
 	if _, err := tx.Exec(sqlInsertNote, idBytes, sourceID, body); err != nil {
-		return Note{}, mapConstraint(err)
+		return Note{}, nil, mapConstraint(err)
 	}
-	if _, err := audit.Record(tx, audit.Revision{
-		UserID:     userID,
-		ActionType: "create_source_note",
-		CreatedAt:  createdAt,
-		Changes: []audit.Change{{
+	return Note{
+			ID:        append([]byte(nil), idBytes...),
+			SourceID:  append([]byte(nil), sourceID...),
+			Body:      body,
+			CreatedAt: project.NowUTC(),
+		}, []rowchange.Change{{
 			EntityType: "source_note",
-			EntityID:   idBytes,
-			Action:     audit.ActionCreate,
-			Fields: map[string]audit.FieldDiff{
+			EntityID:   append([]byte(nil), idBytes...),
+			Action:     rowchange.ActionCreate,
+			Fields: map[string]rowchange.FieldDiff{
 				"id":        {Old: nil, New: id.String()},
 				"source_id": {Old: nil, New: uuidString(sourceID)},
 				"body":      {Old: nil, New: body},
 			},
-		}},
-	}); err != nil {
-		return Note{}, err
-	}
-	if err := searchindex.ReprojectSource(tx, sourceID); err != nil {
-		return Note{}, err
-	}
-	if err := tx.Commit(); err != nil {
-		return Note{}, err
-	}
-	author := ""
-	if u, err := users.Lookup(c, userID); err == nil {
-		author = u.DisplayName
-	}
-	return Note{
-		ID:                append([]byte(nil), idBytes...),
-		SourceID:          append([]byte(nil), sourceID...),
-		Body:              body,
-		AuthorDisplayName: author,
-		CreatedAt:         createdAt,
-	}, nil
+		}}, nil
 }
 
-// UpdateNote changes body and records update_source_note.
-func UpdateNote(c *database.Catalog, userID, noteID []byte, body string) error {
-	db, err := c.DB()
-	if err != nil {
-		return err
-	}
+// UpdateNote changes body. An unchanged body returns no changes.
+func UpdateNote(tx *database.Tx, userID, noteID []byte, body string) ([]rowchange.Change, error) {
 	body = strings.TrimSpace(body)
-	if len(noteID) != 16 || body == "" {
-		return ErrInvalid
+	if tx == nil || len(noteID) != 16 || body == "" {
+		return nil, ErrInvalid
 	}
 	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
-		return err
+		return nil, err
 	}
-
-	tx, err := db.Begin()
-	if err != nil {
-		return err
-	}
-	defer func() { _ = tx.Rollback() }()
-
-	prev, err := getNoteTx(tx, noteID)
+	prev, err := getNoteTx(tx.Tx, noteID)
 	if errors.Is(err, sql.ErrNoRows) {
-		return ErrInvalid
+		return nil, ErrInvalid
 	}
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if prev.Body == body {
-		return tx.Commit()
+		return nil, nil
 	}
 	if _, err := tx.Exec(sqlUpdateNote, body, noteID); err != nil {
-		return err
+		return nil, err
 	}
-	if _, err := audit.Record(tx, audit.Revision{
-		UserID:     userID,
-		ActionType: "update_source_note",
-		CreatedAt:  project.NowUTC(),
-		Changes: []audit.Change{{
-			EntityType: "source_note",
-			EntityID:   noteID,
-			Action:     audit.ActionUpdate,
-			Fields: map[string]audit.FieldDiff{
-				"body": {Old: prev.Body, New: body},
-			},
-		}},
-	}); err != nil {
-		return err
-	}
-	if err := searchindex.ReprojectSource(tx, prev.SourceID); err != nil {
-		return err
-	}
-	return tx.Commit()
+	return []rowchange.Change{{
+		EntityType: "source_note",
+		EntityID:   append([]byte(nil), noteID...),
+		Action:     rowchange.ActionUpdate,
+		Fields: map[string]rowchange.FieldDiff{
+			"body": {Old: prev.Body, New: body},
+		},
+	}}, nil
 }
 
-// DeleteNote removes a note and records delete_source_note.
-func DeleteNote(c *database.Catalog, userID, noteID []byte) error {
-	db, err := c.DB()
-	if err != nil {
-		return err
-	}
-	if len(noteID) != 16 {
-		return ErrInvalid
+// DeleteNote removes a note. The caller records the returned changes.
+func DeleteNote(tx *database.Tx, userID, noteID []byte) ([]rowchange.Change, error) {
+	if tx == nil || len(noteID) != 16 {
+		return nil, ErrInvalid
 	}
 	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
-		return err
+		return nil, err
 	}
-
-	tx, err := db.Begin()
-	if err != nil {
-		return err
-	}
-	defer func() { _ = tx.Rollback() }()
-
-	prev, err := getNoteTx(tx, noteID)
+	prev, err := getNoteTx(tx.Tx, noteID)
 	if errors.Is(err, sql.ErrNoRows) {
-		return ErrInvalid
+		return nil, ErrInvalid
 	}
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if _, err := tx.Exec(sqlDeleteNote, noteID); err != nil {
-		return err
+		return nil, err
 	}
-	if _, err := audit.Record(tx, audit.Revision{
-		UserID:     userID,
-		ActionType: "delete_source_note",
-		CreatedAt:  project.NowUTC(),
-		Changes: []audit.Change{{
-			EntityType: "source_note",
-			EntityID:   noteID,
-			Action:     audit.ActionDelete,
-			Fields: map[string]audit.FieldDiff{
-				"id":        {Old: uuidString(noteID), New: nil},
-				"source_id": {Old: uuidString(prev.SourceID), New: nil},
-				"body":      {Old: prev.Body, New: nil},
-			},
-		}},
-	}); err != nil {
-		return err
-	}
-	if err := searchindex.ReprojectSource(tx, prev.SourceID); err != nil {
-		return err
-	}
-	return tx.Commit()
+	return []rowchange.Change{{
+		EntityType: "source_note",
+		EntityID:   append([]byte(nil), noteID...),
+		Action:     rowchange.ActionDelete,
+		Fields: map[string]rowchange.FieldDiff{
+			"id":        {Old: uuidString(noteID), New: nil},
+			"source_id": {Old: uuidString(prev.SourceID), New: nil},
+			"body":      {Old: prev.Body, New: nil},
+		},
+	}}, nil
 }
 
 // ListNotes returns notes for a Source with create attribution, ordered by id.

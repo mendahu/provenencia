@@ -1,0 +1,17 @@
+# writes
+
+The transaction around a catalog write that has moved onto it.
+
+`Run` begins one transaction. The catalog pool has one connection, and the transaction holds it, so the closure and everything it calls must use that transaction rather than `Catalog.DB`. The closure writes the rows and returns them as `[]rowchange.Change`. On a non-empty list, `Run` records the audit revision (source scopes from `effects.Sources`), asks `effects.Resolve` what those changes touch, recomputes handles and reprojects search documents when those sets are non-empty, commits, runs `AfterCommit`, then notifies listeners. A closure error rolls back and does not notify. An empty change list rolls back.
+
+A change list whose every row names a table with effect `None` commits with no revision, no effects, and no listeners, then runs `AfterCommit`. `subject_position` and `file_derivative` are those rows. Thumbnail inserts return the derivative link and leave the derived `files` row off the list, so the batch takes this path; the Source search refresh stays in `AfterCommit`. A mixed list drops every `None` row before audit and effects. Those rows are already written, so they commit with the revision and are not recorded. A position returned beside an audited row is stored that way. The derived `files` row stays off the list: a file change is not `None`, and including it would audit the batch.
+
+`Run` is generic. The closure's value is the created or updated row (or nothing, for a delete). `Result` is the revision and the resolved effects. `Call` is `Run` with the revision discarded, for a test that only needs the written value.
+
+A second `Run` on the same catalog, including from `AfterCommit` or a listener, returns `database.ErrWriteReentry`. `Run` does not take the catalog session lock.
+
+Commit listeners implement `OnCommit` and `Drop`. If any `OnCommit` fails, `Run` calls `Drop` on every listener. The write is already committed. Nothing registers a listener yet. `Drop` is the hook a later cache will use to discard everything.
+
+Property terms, the Source layer, the evidence layer, and the conclusion layer are the writes on `Run`: sources, notes, metadata, source types, metadata fields, artifacts, citations, observations, subjects, connect, positions, promote, identity claims, canonical entities, credibility assessments, and property create, update, and delete. The FFI handlers call `Run`. Those functions take `*database.Tx` and do not begin, commit, or record audit. `ingest.File` and `derivatives.Ensure` call `Run` themselves. A checksum conflict starts a second `Run` after the first returns. `artifacts.Delete` unlinks released objects from `AfterCommit`. A filename update returns a `file` change, and the registry refreshes the parent Source search document; a new file with no artifact resolves no Sources. Source-type and metadata-field `Upsert` stay the un-audited seed path and still reproject by hand, as do property, subject-type, and grade `Upsert` and subject-type property bindings. Name and date inserts stay on the observation's transaction. Subject delete still calls `RecomputeTx` once after the rows are gone, with `effects.Handles` on the released changes plus observers, linked handles, and header dependents snapshotted while the link exists. Header dependents are still outside the registry. `GetDeleteImpact` reads through `deleteimpact.Snapshot`. A test fails on `.Begin()` outside `core/database` and `core/writes`.
+
+The map of the schema packages is in [`catalogmodel`](../database/catalogmodel/README.md).

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"testing"
 
+	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/conclusionheaders"
 	"github.com/mendahu/provenencia/core/database/connect"
@@ -11,16 +12,21 @@ import (
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/subjectpositions"
 	"github.com/mendahu/provenencia/core/database/subjects"
 	"github.com/mendahu/provenencia/core/eventtitle"
+	"github.com/mendahu/provenencia/core/writes"
 )
 
 func (f *fixture) bare(kind string) subjects.Subject {
 	f.t.Helper()
-	s, err := subjects.Create(f.c, userID, subjects.CreateInput{
-		SourceID: f.source.ID, SubjectTypeID: f.typeID(kind),
-	}, nil)
+	typeID := f.typeID(kind)
+	s, err := writes.Call(f.c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
+		return subjects.Create(tx, userID, subjects.CreateInput{
+			SourceID: f.source.ID, SubjectTypeID: typeID,
+		}, nil)
+	})
 	must(f.t, err)
 	return s
 }
@@ -30,21 +36,27 @@ func (f *fixture) cite(s subjects.Subject, in ...observations.Input) {
 	for i := range in {
 		in[i].SubjectID = s.ID
 	}
-	_, err := citations.CreateWithObservations(f.c, userID, citations.CreateInput{
-		ArtifactID: f.artifact.ID, LocatorJSON: locator,
-	}, in)
+	_, err := writes.Call(f.c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
+		return citations.CreateWithObservations(tx, userID, citations.CreateInput{
+			ArtifactID: f.artifact.ID, LocatorJSON: locator,
+		}, in)
+	})
 	must(f.t, err)
 }
 
 func (f *fixture) at(s subjects.Subject, x, y int64) {
 	f.t.Helper()
-	_, err := subjectpositions.Set(f.c, s.ID, x, y)
+	_, err := writes.Call(f.c, writes.Op{}, func(tx *database.Tx) (subjectpositions.Position, []rowchange.Change, error) {
+		return subjectpositions.Set(tx, s.ID, x, y)
+	})
 	must(f.t, err)
 }
 
 func (f *fixture) promoteSubject(s subjects.Subject) []byte {
 	f.t.Helper()
-	res, err := promote.Save(f.c, userID, promote.Input{SubjectID: s.ID})
+	res, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+		return promote.Save(tx, userID, promote.Input{SubjectID: s.ID})
+	})
 	must(f.t, err)
 	return res.Entity.ID
 }
@@ -68,10 +80,12 @@ func (f *fixture) location(event, place subjects.Subject) {
 
 func (f *fixture) bridge(kind string, from, to subjects.Subject, obs []observations.Input) {
 	f.t.Helper()
-	_, err := connect.CreateCitedBridge(f.c, userID, connect.CreateInput{
-		SourceID: f.source.ID, FromSubjectID: from.ID, ToSubjectID: to.ID, BridgeTypeKey: kind,
-		Citation:     citations.CreateInput{ArtifactID: f.artifact.ID, LocatorJSON: locator},
-		Observations: obs,
+	_, err := writes.Call(f.c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (connect.Result, []rowchange.Change, error) {
+		return connect.CreateCitedBridge(tx, userID, connect.CreateInput{
+			SourceID: f.source.ID, FromSubjectID: from.ID, ToSubjectID: to.ID, BridgeTypeKey: kind,
+			Citation:     citations.CreateInput{ArtifactID: f.artifact.ID, LocatorJSON: locator},
+			Observations: obs,
+		})
 	})
 	must(f.t, err)
 }
@@ -119,7 +133,11 @@ func TestCanonicalWalks(t *testing.T) {
 	baptism := f.bare("event")
 	f.cite(baptism, observations.Input{PropertyID: f.prop("event_type").ID, ValueTermID: f.term("event_type", "baptism").ID})
 	f.at(baptism, 4, 8)
-	fireTerm, err := propertyterms.Create(f.c, userID, f.prop("event_type").ID, "Fire", "")
+	eventTypeID := f.prop("event_type").ID
+	fireTerm, _, err := writes.Run(f.c, writes.Op{Action: "create_property_term", UserID: userID},
+		func(tx *database.Tx) (propertyterms.Term, []rowchange.Change, error) {
+			return propertyterms.Create(tx, userID, eventTypeID, "Fire", "")
+		})
 	must(t, err)
 	fire := f.bare("event")
 	f.cite(fire, observations.Input{PropertyID: f.prop("event_type").ID, ValueTermID: fireTerm.ID})

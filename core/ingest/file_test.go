@@ -12,8 +12,10 @@ import (
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/files"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/writes"
 )
 
 func TestFile(t *testing.T) {
@@ -138,7 +140,7 @@ func TestFile(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err := SetFilename(c, res.File.ID, "grandpas_will.pdf", userID); err != nil {
+		if err := runSetFilename(c, res.File.ID, "grandpas_will.pdf", userID); err != nil {
 			t.Fatal(err)
 		}
 		got, err := files.Lookup(c, res.File.ID)
@@ -162,7 +164,7 @@ func TestFile(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err := SetFilename(c, res.File.ID, "keep.pdf", userID); err != nil {
+		if err := runSetFilename(c, res.File.ID, "keep.pdf", userID); err != nil {
 			t.Fatal(err)
 		}
 		if auditCount(t, c, "update_file") != 0 {
@@ -182,10 +184,10 @@ func TestFile(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err := SetFilename(c, res.File.ID, "y.pdf", nil); !errors.Is(err, ErrInvalid) {
+		if err := runSetFilename(c, res.File.ID, "y.pdf", nil); !errors.Is(err, ErrInvalid) {
 			t.Fatalf("got %v", err)
 		}
-		if err := SetFilename(c, res.File.ID, "y.pdf", []byte{1, 2, 3}); !errors.Is(err, ErrInvalid) {
+		if err := runSetFilename(c, res.File.ID, "y.pdf", []byte{1, 2, 3}); !errors.Is(err, ErrInvalid) {
 			t.Fatalf("got %v", err)
 		}
 	})
@@ -199,7 +201,7 @@ func TestFile(t *testing.T) {
 		mustUser(t, c)
 		missing := make([]byte, 16)
 		missing[15] = 1
-		if err := SetFilename(c, missing, "nope.pdf", userID); !errors.Is(err, ErrInvalid) {
+		if err := runSetFilename(c, missing, "nope.pdf", userID); !errors.Is(err, ErrInvalid) {
 			t.Fatalf("got %v", err)
 		}
 	})
@@ -216,7 +218,7 @@ func TestFile(t *testing.T) {
 			t.Fatal(err)
 		}
 		_ = c.Close()
-		if err := SetFilename(c, res.File.ID, "renamed.pdf", userID); !errors.Is(err, database.ErrClosed) {
+		if err := runSetFilename(c, res.File.ID, "renamed.pdf", userID); !errors.Is(err, database.ErrClosed) {
 			t.Fatalf("got %v", err)
 		}
 	})
@@ -443,6 +445,15 @@ func TestSanitizeFilename(t *testing.T) {
 			}
 		})
 	}
+}
+
+func runSetFilename(c *database.Catalog, fileID []byte, name string, userID []byte) error {
+	_, _, err := writes.Run(c, writes.Op{Action: "update_file", UserID: userID},
+		func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+			changes, err := SetFilename(tx, fileID, name, userID)
+			return struct{}{}, changes, err
+		})
+	return err
 }
 
 func TestMapOpenErr(t *testing.T) {

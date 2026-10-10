@@ -4,8 +4,10 @@ import (
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/metadatafields"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/sourcevocab"
+	"github.com/mendahu/provenencia/core/writes"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -42,7 +44,10 @@ func CreateSourceType(in []byte) ([]byte, error) {
 	}
 	var out *engine.CreateSourceTypeResponse
 	err := withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		got, err := sourcetypes.Create(c, req.GetLabel(), req.GetDescription(), req.GetIconKey())
+		got, _, err := writes.Run(c, writes.Op{Action: "create_source_type"},
+			func(tx *database.Tx) (sourcetypes.Type, []rowchange.Change, error) {
+				return sourcetypes.Create(tx, req.GetLabel(), req.GetDescription(), req.GetIconKey())
+			})
 		if err != nil {
 			return err
 		}
@@ -69,7 +74,10 @@ func UpdateSourceType(in []byte) ([]byte, error) {
 	}
 	var out *engine.UpdateSourceTypeResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		got, err := sourcetypes.Update(c, typeID, req.GetLabel(), req.GetDescription(), req.GetIconKey())
+		got, _, err := writes.Run(c, writes.Op{Action: "update_source_type"},
+			func(tx *database.Tx) (sourcetypes.Type, []rowchange.Change, error) {
+				return sourcetypes.Update(tx, typeID, req.GetLabel(), req.GetDescription(), req.GetIconKey())
+			})
 		if err != nil {
 			return err
 		}
@@ -231,7 +239,10 @@ func CreateMetadataField(in []byte) ([]byte, error) {
 	}
 	var out *engine.CreateMetadataFieldResponse
 	err := withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		got, err := metadatafields.Create(c, req.GetLabel(), req.GetDataType(), req.GetDescription())
+		got, _, err := writes.Run(c, writes.Op{Action: "create_metadata_field"},
+			func(tx *database.Tx) (metadatafields.Field, []rowchange.Change, error) {
+				return metadatafields.Create(tx, req.GetLabel(), req.GetDataType(), req.GetDescription())
+			})
 		if err != nil {
 			return err
 		}
@@ -258,7 +269,10 @@ func UpdateMetadataField(in []byte) ([]byte, error) {
 	}
 	var out *engine.UpdateMetadataFieldResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		got, err := metadatafields.Update(c, fieldID, req.GetLabel(), req.GetDataType(), req.GetDescription())
+		got, _, err := writes.Run(c, writes.Op{Action: "update_metadata_field"},
+			func(tx *database.Tx) (metadatafields.Field, []rowchange.Change, error) {
+				return metadatafields.Update(tx, fieldID, req.GetLabel(), req.GetDataType(), req.GetDescription())
+			})
 		if err != nil {
 			return err
 		}
@@ -289,7 +303,11 @@ func DeleteSourceType(in []byte) ([]byte, error) {
 	}
 	var out *engine.DeleteSourceTypeResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		if err := sourcetypes.Delete(c, userID, typeID); err != nil {
+		if _, _, err := writes.Run(c, writes.Op{Action: "delete_source_type", UserID: userID},
+			func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+				changes, err := sourcetypes.Delete(tx, userID, typeID)
+				return struct{}{}, changes, err
+			}); err != nil {
 			return err
 		}
 		out = &engine.DeleteSourceTypeResponse{}
@@ -316,7 +334,11 @@ func DeleteMetadataField(in []byte) ([]byte, error) {
 	}
 	var out *engine.DeleteMetadataFieldResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		if err := metadatafields.Delete(c, userID, fieldID); err != nil {
+		if _, _, err := writes.Run(c, writes.Op{Action: "delete_metadata_field", UserID: userID},
+			func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+				changes, err := metadatafields.Delete(tx, userID, fieldID)
+				return struct{}{}, changes, err
+			}); err != nil {
 			return err
 		}
 		out = &engine.DeleteMetadataFieldResponse{}

@@ -7,13 +7,13 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/mendahu/provenencia/core/database/catalogmodel"
+	"github.com/mendahu/provenencia/core/database/rowchange"
+
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/audit"
 	"github.com/mendahu/provenencia/core/database/deleteimpact"
-	"github.com/mendahu/provenencia/core/database/project"
-	"github.com/mendahu/provenencia/core/database/searchindex"
 	"github.com/mendahu/provenencia/core/derivatives"
 	"github.com/mendahu/provenencia/core/ref"
 )
@@ -94,34 +94,23 @@ type CreateInput struct {
 	Description  string
 }
 
-// Create inserts a Source, mints SRC-…, and records create_source.
-func Create(c *database.Catalog, userID []byte, in CreateInput) (Source, error) {
-	db, err := c.DB()
-	if err != nil {
-		return Source{}, err
-	}
+// Create inserts a Source and mints SRC-…. The caller records the returned changes.
+func Create(tx *database.Tx, userID []byte, in CreateInput) (Source, []rowchange.Change, error) {
 	in.Title = strings.TrimSpace(in.Title)
 	in.Description = strings.TrimSpace(in.Description)
-	if len(in.SourceTypeID) != 16 || in.Title == "" {
-		return Source{}, ErrInvalid
+	if tx == nil || len(in.SourceTypeID) != 16 || in.Title == "" {
+		return Source{}, nil, ErrInvalid
 	}
 	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
-		return Source{}, err
+		return Source{}, nil, err
 	}
-
-	tx, err := db.Begin()
-	if err != nil {
-		return Source{}, err
-	}
-	defer func() { _ = tx.Rollback() }()
-
-	if err := requireType(tx, in.SourceTypeID); err != nil {
-		return Source{}, err
+	if err := requireType(tx.Tx, in.SourceTypeID); err != nil {
+		return Source{}, nil, err
 	}
 
 	id, err := uuid.NewV7()
 	if err != nil {
-		return Source{}, err
+		return Source{}, nil, err
 	}
 	idBytes := id[:]
 
@@ -129,74 +118,76 @@ func Create(c *database.Catalog, userID []byte, in CreateInput) (Source, error) 
 	for attempt := 0; attempt < maxRefRetries; attempt++ {
 		sourceRef, err = ref.Mint(ref.PrefixSource)
 		if err != nil {
-			return Source{}, err
+			return Source{}, nil, err
 		}
 		_, err = tx.Exec(sqlInsert, idBytes, sourceRef, in.SourceTypeID, in.Title, nullStr(in.Description))
 		if err == nil {
 			break
 		}
 		if !isUniqueConflict(err) {
-			return Source{}, mapConstraint(err)
+			return Source{}, nil, mapConstraint(err)
 		}
 	}
 	if err != nil {
-		return Source{}, ErrInvalid
+		return Source{}, nil, ErrInvalid
 	}
 
-	fields := map[string]audit.FieldDiff{
+	fields := map[string]rowchange.FieldDiff{
 		"id":             {Old: nil, New: id.String()},
 		"ref":            {Old: nil, New: sourceRef},
 		"source_type_id": {Old: nil, New: uuidString(in.SourceTypeID)},
 		"title":          {Old: nil, New: in.Title},
 	}
 	if in.Description != "" {
-		fields["description"] = audit.FieldDiff{Old: nil, New: in.Description}
-	}
-	rev, err := audit.Record(tx, audit.Revision{
-		UserID:     userID,
-		ActionType: "create_source",
-		CreatedAt:  project.NowUTC(),
-		Changes: []audit.Change{{
-			EntityType: "source",
-			EntityID:   idBytes,
-			Action:     audit.ActionCreate,
-			Fields:     fields,
-		}},
-	})
-	if err != nil {
-		return Source{}, err
-	}
-	if err := searchindex.ReprojectSource(tx, idBytes); err != nil {
-		return Source{}, err
-	}
-	if err := tx.Commit(); err != nil {
-		return Source{}, err
+		fields["description"] = rowchange.FieldDiff{Old: nil, New: in.Description}
 	}
 	return Source{
-		ID:              append([]byte(nil), idBytes...),
-		Ref:             sourceRef,
-		SourceTypeID:    append([]byte(nil), in.SourceTypeID...),
-		Title:           in.Title,
-		Description:     in.Description,
-		CoverMode:       CoverModeTypeIcon,
-		UpdatedRevision: rev,
-	}, nil
+			ID:           append([]byte(nil), idBytes...),
+			Ref:          sourceRef,
+			SourceTypeID: append([]byte(nil), in.SourceTypeID...),
+			Title:        in.Title,
+			Description:  in.Description,
+			CoverMode:    CoverModeTypeIcon,
+		}, []rowchange.Change{{
+			EntityType: "source",
+			EntityID:   append([]byte(nil), idBytes...),
+			Action:     rowchange.ActionCreate,
+			Fields:     fields,
+		}}, nil
+}
+
+// NormalizeCover checks a cover choice. Artifact mode ensures a thumbnail,
+// which is its own write, so call this before SetCover's Run.
+func NormalizeCover(c *database.Catalog, sourceID []byte, mode string, primaryArtifactID []byte) (string, []byte, error) {
+	if c == nil || len(sourceID) != 16 {
+		return "", nil, ErrInvalid
+	}
+	mode = strings.TrimSpace(mode)
+	switch mode {
+	case CoverModeTypeIcon:
+		return mode, nil, nil
+	case CoverModeArtifact:
+		if len(primaryArtifactID) != 16 {
+			return "", nil, ErrInvalid
+		}
+		if err := requireRasterCoverArtifact(c, sourceID, primaryArtifactID); err != nil {
+			return "", nil, err
+		}
+		return mode, append([]byte(nil), primaryArtifactID...), nil
+	default:
+		return "", nil, ErrInvalid
+	}
 }
 
 // SetCover pins an Artifact as cover or reverts to the Source type icon.
-// mode must be CoverModeArtifact (with a rasterizable Artifact File under this
-// Source) or CoverModeTypeIcon (clears primary_artifact_id). PDF / other
-// non-image Files cannot be cover — Source identity stays a type icon or raster.
-func SetCover(c *database.Catalog, userID []byte, sourceID []byte, mode string, primaryArtifactID []byte) (Source, error) {
-	db, err := c.DB()
-	if err != nil {
-		return Source{}, err
-	}
-	if len(sourceID) != 16 {
-		return Source{}, ErrInvalid
+// Call NormalizeCover first when mode is CoverModeArtifact. An unchanged cover
+// returns the existing Source and no changes.
+func SetCover(tx *database.Tx, userID, sourceID []byte, mode string, primaryArtifactID []byte) (Source, []rowchange.Change, error) {
+	if tx == nil || len(sourceID) != 16 {
+		return Source{}, nil, ErrInvalid
 	}
 	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
-		return Source{}, err
+		return Source{}, nil, err
 	}
 	mode = strings.TrimSpace(mode)
 	switch mode {
@@ -204,217 +195,150 @@ func SetCover(c *database.Catalog, userID []byte, sourceID []byte, mode string, 
 		primaryArtifactID = nil
 	case CoverModeArtifact:
 		if len(primaryArtifactID) != 16 {
-			return Source{}, ErrInvalid
+			return Source{}, nil, ErrInvalid
 		}
 	default:
-		return Source{}, ErrInvalid
+		return Source{}, nil, ErrInvalid
 	}
 
-	if mode == CoverModeArtifact {
-		if err := requireRasterCoverArtifact(c, sourceID, primaryArtifactID); err != nil {
-			return Source{}, err
-		}
-	}
-
-	tx, err := db.Begin()
-	if err != nil {
-		return Source{}, err
-	}
-	defer func() { _ = tx.Rollback() }()
-
-	prev, err := getTx(tx, sourceID)
+	prev, err := getTx(tx.Tx, sourceID)
 	if errors.Is(err, sql.ErrNoRows) {
-		return Source{}, ErrInvalid
+		return Source{}, nil, ErrInvalid
 	}
 	if err != nil {
-		return Source{}, err
+		return Source{}, nil, err
 	}
-
 	if prev.CoverMode == mode && bytes.Equal(prev.PrimaryArtifactID, primaryArtifactID) {
-		if err := tx.Commit(); err != nil {
-			return Source{}, err
-		}
-		return prev, nil
+		return prev, nil, nil
 	}
-
 	if _, err := tx.Exec(sqlSetCover, mode, nullBlob(primaryArtifactID), sourceID); err != nil {
-		return Source{}, mapConstraint(err)
+		return Source{}, nil, mapConstraint(err)
 	}
-
-	fields := map[string]audit.FieldDiff{
+	fields := map[string]rowchange.FieldDiff{
 		"cover_mode": {Old: prev.CoverMode, New: mode},
 	}
 	if !bytes.Equal(prev.PrimaryArtifactID, primaryArtifactID) {
-		fields["primary_artifact_id"] = audit.FieldDiff{
+		fields["primary_artifact_id"] = rowchange.FieldDiff{
 			Old: uuidJSON(prev.PrimaryArtifactID),
 			New: uuidJSON(primaryArtifactID),
 		}
 	}
-	if _, err := audit.Record(tx, audit.Revision{
-		UserID:     userID,
-		ActionType: "set_source_cover",
-		CreatedAt:  project.NowUTC(),
-		Changes: []audit.Change{{
-			EntityType: "source",
-			EntityID:   sourceID,
-			Action:     audit.ActionUpdate,
-			Fields:     fields,
-		}},
-	}); err != nil {
-		return Source{}, err
+	prev.CoverMode = mode
+	if len(primaryArtifactID) == 16 {
+		prev.PrimaryArtifactID = append([]byte(nil), primaryArtifactID...)
+	} else {
+		prev.PrimaryArtifactID = nil
 	}
-	if err := searchindex.ReprojectSource(tx, sourceID); err != nil {
-		return Source{}, err
-	}
-	if err := tx.Commit(); err != nil {
-		return Source{}, err
-	}
-	return Get(c, sourceID)
+	return prev, []rowchange.Change{{
+		EntityType: "source",
+		EntityID:   append([]byte(nil), sourceID...),
+		Action:     rowchange.ActionUpdate,
+		Fields:     fields,
+	}}, nil
 }
 
-// Update patches title, description, and source_type_id; records update_source for changed fields.
-func Update(c *database.Catalog, userID []byte, s Source) error {
-	db, err := c.DB()
-	if err != nil {
-		return err
+// Update patches title, description, and source_type_id. An unchanged row
+// returns no changes.
+func Update(tx *database.Tx, userID []byte, s Source) ([]rowchange.Change, error) {
+	if tx == nil {
+		return nil, ErrInvalid
 	}
 	s.Title = strings.TrimSpace(s.Title)
 	s.Description = strings.TrimSpace(s.Description)
 	if len(s.ID) != 16 || len(s.SourceTypeID) != 16 || s.Title == "" {
-		return ErrInvalid
+		return nil, ErrInvalid
 	}
 	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
-		return err
+		return nil, err
 	}
-
-	tx, err := db.Begin()
-	if err != nil {
-		return err
-	}
-	defer func() { _ = tx.Rollback() }()
-
-	prev, err := getTx(tx, s.ID)
+	prev, err := getTx(tx.Tx, s.ID)
 	if errors.Is(err, sql.ErrNoRows) {
-		return ErrInvalid
+		return nil, ErrInvalid
 	}
 	if err != nil {
-		return err
+		return nil, err
 	}
-	if err := requireType(tx, s.SourceTypeID); err != nil {
-		return err
+	if err := requireType(tx.Tx, s.SourceTypeID); err != nil {
+		return nil, err
 	}
 
-	fields := map[string]audit.FieldDiff{}
+	fields := map[string]rowchange.FieldDiff{}
 	if !bytes.Equal(prev.SourceTypeID, s.SourceTypeID) {
-		fields["source_type_id"] = audit.FieldDiff{
+		fields["source_type_id"] = rowchange.FieldDiff{
 			Old: uuidString(prev.SourceTypeID),
 			New: uuidString(s.SourceTypeID),
 		}
 	}
 	if prev.Title != s.Title {
-		fields["title"] = audit.FieldDiff{Old: prev.Title, New: s.Title}
+		fields["title"] = rowchange.FieldDiff{Old: prev.Title, New: s.Title}
 	}
 	if prev.Description != s.Description {
-		fields["description"] = audit.FieldDiff{Old: nullJSON(prev.Description), New: nullJSON(s.Description)}
+		fields["description"] = rowchange.FieldDiff{Old: nullJSON(prev.Description), New: nullJSON(s.Description)}
 	}
 	if len(fields) == 0 {
-		return tx.Commit()
+		return nil, nil
 	}
-
 	if _, err := tx.Exec(sqlUpdate, s.SourceTypeID, s.Title, nullStr(s.Description), s.ID); err != nil {
-		return mapConstraint(err)
+		return nil, mapConstraint(err)
 	}
-	if _, err := audit.Record(tx, audit.Revision{
-		UserID:     userID,
-		ActionType: "update_source",
-		CreatedAt:  project.NowUTC(),
-		Changes: []audit.Change{{
-			EntityType: "source",
-			EntityID:   s.ID,
-			Action:     audit.ActionUpdate,
-			Fields:     fields,
-		}},
-	}); err != nil {
-		return err
-	}
-	if err := searchindex.ReprojectSource(tx, s.ID); err != nil {
-		return err
-	}
-	return tx.Commit()
+	return []rowchange.Change{{
+		EntityType: "source",
+		EntityID:   append([]byte(nil), s.ID...),
+		Action:     rowchange.ActionUpdate,
+		Fields:     fields,
+	}}, nil
 }
 
 // Delete erases a Source when inbound resources are empty. Notes, metadata,
 // credibility, and layout CASCADE. Artifacts or Subjects block with ErrInUse.
-func Delete(c *database.Catalog, userID, id []byte) error {
+// The returned changes include the released facet rows.
+func Delete(tx *database.Tx, userID, id []byte) ([]rowchange.Change, error) {
+	if tx == nil || len(id) != 16 {
+		return nil, ErrInvalid
+	}
 	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
-		return err
+		return nil, err
 	}
-	if len(id) != 16 {
-		return ErrInvalid
-	}
-	existing, err := Get(c, id)
+	existing, err := getTx(tx.Tx, id)
 	if errors.Is(err, sql.ErrNoRows) {
-		return ErrInvalid
+		return nil, ErrInvalid
 	}
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	db, err := c.DB()
+	report, err := deleteimpact.Impact(tx.Tx, catalogmodel.KindSource, id)
 	if err != nil {
-		return err
-	}
-	tx, err := db.Begin()
-	if err != nil {
-		return err
-	}
-	defer func() { _ = tx.Rollback() }()
-
-	report, err := deleteimpact.Impact(tx, deleteimpact.KindSource, id)
-	if err != nil {
-		return err
+		return nil, err
 	}
 	if err := deleteimpact.Refuse(report, deleteimpact.Codes{
 		InUse: ErrInUse, NotFound: ErrInvalid,
 	}); err != nil {
-		return err
+		return nil, err
 	}
-	// Notes, metadata, credibility, and layout are released and audited first.
-	released, err := deleteimpact.ReleaseFacets(tx, deleteimpact.KindSource, id)
+	released, err := deleteimpact.ReleaseFacets(tx.Tx, catalogmodel.KindSource, id)
 	if err != nil {
-		return err
+		return nil, err
 	}
-
 	if _, err := tx.Exec(sqlDelete, id); err != nil {
-		return err
+		return nil, err
 	}
 
-	fields := map[string]audit.FieldDiff{
+	fields := map[string]rowchange.FieldDiff{
 		"id":             {Old: uuidString(id), New: nil},
 		"ref":            {Old: existing.Ref, New: nil},
 		"source_type_id": {Old: uuidString(existing.SourceTypeID), New: nil},
 		"title":          {Old: existing.Title, New: nil},
 	}
 	if existing.Description != "" {
-		fields["description"] = audit.FieldDiff{Old: existing.Description, New: nil}
+		fields["description"] = rowchange.FieldDiff{Old: existing.Description, New: nil}
 	}
-	if _, err := audit.Record(tx, audit.Revision{
-		UserID:     userID,
-		ActionType: "delete_source",
-		CreatedAt:  project.NowUTC(),
-		Changes: append(released.Changes, audit.Change{
-			EntityType: "source",
-			EntityID:   id,
-			Action:     audit.ActionDelete,
-			Fields:     fields,
-		}),
-	}); err != nil {
-		return err
-	}
-	if err := searchindex.Delete(tx, searchindex.KindSource, uuidString(id)); err != nil {
-		return err
-	}
-	return tx.Commit()
+	return append(released.Changes, rowchange.Change{
+		EntityType: "source",
+		EntityID:   append([]byte(nil), id...),
+		Action:     rowchange.ActionDelete,
+		Fields:     fields,
+	}), nil
 }
 
 // Get returns a Source by id, or sql.ErrNoRows.

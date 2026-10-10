@@ -30,6 +30,7 @@ const (
 	CodeProjectMissingMetadata        = "project.missing_metadata"
 	CodeUsersInvalid                  = "users.invalid"
 	CodeAuditInvalid                  = "audit.invalid"
+	CodeWritesReentry                 = "writes.reentry"
 	CodeDateValuesInvalid             = "datevalues.invalid"
 	CodeNameValuesInvalid             = "namevalues.invalid"
 	CodeLocatorInvalid                = "locator.invalid"

@@ -18,6 +18,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjectpositions"
@@ -26,6 +27,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/writes"
 )
 
 const batchLocator = `{"version":1,"selectors":[{"type":"page","artifact_page":1}]}`
@@ -59,11 +61,13 @@ func newBatchFixture(t *testing.T) *batchFixture {
 	if err != nil {
 		t.Fatal(err)
 	}
-	src, err := sources.Create(c, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Register"})
+	src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Register"})
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	art, err := artifacts.Create(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
+	art, err := runArtifactCreate(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -94,11 +98,15 @@ func (f *batchFixture) bare(kind string) subjects.Subject {
 	if err != nil {
 		f.t.Fatal(err)
 	}
-	s, err := subjects.Create(f.c, userID, subjects.CreateInput{SourceID: f.source.ID, SubjectTypeID: st.ID}, nil)
+	s, err := writes.Call(f.c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
+		return subjects.Create(tx, userID, subjects.CreateInput{SourceID: f.source.ID, SubjectTypeID: st.ID}, nil)
+	})
 	if err != nil {
 		f.t.Fatal(err)
 	}
-	if _, err := subjectpositions.Set(f.c, s.ID, 0, f.y); err != nil {
+	if _, err := writes.Call(f.c, writes.Op{}, func(tx *database.Tx) (subjectpositions.Position, []rowchange.Change, error) {
+		return subjectpositions.Set(tx, s.ID, 0, f.y)
+	}); err != nil {
 		f.t.Fatal(err)
 	}
 	f.y += 2
@@ -110,9 +118,11 @@ func (f *batchFixture) cite(s subjects.Subject, in ...observations.Input) []obse
 	for i := range in {
 		in[i].SubjectID = s.ID
 	}
-	res, err := citations.CreateWithObservations(f.c, userID, citations.CreateInput{
-		ArtifactID: f.artifact.ID, LocatorJSON: batchLocator,
-	}, in)
+	res, err := writes.Call(f.c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
+		return citations.CreateWithObservations(tx, userID, citations.CreateInput{
+			ArtifactID: f.artifact.ID, LocatorJSON: batchLocator,
+		}, in)
+	})
 	if err != nil {
 		f.t.Fatal(err)
 	}
@@ -121,14 +131,20 @@ func (f *batchFixture) cite(s subjects.Subject, in ...observations.Input) []obse
 
 func (f *batchFixture) participation(person, event subjects.Subject) subjects.Subject {
 	f.t.Helper()
-	res, err := connect.CreateCitedBridge(f.c, userID, connect.CreateInput{
-		SourceID: f.source.ID, FromSubjectID: person.ID, ToSubjectID: event.ID, BridgeTypeKey: "participation",
-		Citation: citations.CreateInput{ArtifactID: f.artifact.ID, LocatorJSON: batchLocator},
-		Observations: []observations.Input{
-			{PropertyID: f.prop("person").ID, ValueSubjectID: person.ID},
-			{PropertyID: f.prop("event").ID, ValueSubjectID: event.ID},
-			{PropertyID: f.prop("role").ID, ValueTermID: f.term("role", "subject").ID},
-		},
+	personProp := f.prop("person").ID
+	eventProp := f.prop("event").ID
+	roleProp := f.prop("role").ID
+	role := f.term("role", "subject").ID
+	res, err := writes.Call(f.c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (connect.Result, []rowchange.Change, error) {
+		return connect.CreateCitedBridge(tx, userID, connect.CreateInput{
+			SourceID: f.source.ID, FromSubjectID: person.ID, ToSubjectID: event.ID, BridgeTypeKey: "participation",
+			Citation: citations.CreateInput{ArtifactID: f.artifact.ID, LocatorJSON: batchLocator},
+			Observations: []observations.Input{
+				{PropertyID: personProp, ValueSubjectID: person.ID},
+				{PropertyID: eventProp, ValueSubjectID: event.ID},
+				{PropertyID: roleProp, ValueTermID: role},
+			},
+		})
 	})
 	if err != nil {
 		f.t.Fatal(err)
@@ -151,7 +167,9 @@ func (f *batchFixture) revision() int64 {
 
 func (f *batchFixture) save(in promote.Batch) promote.BatchResult {
 	f.t.Helper()
-	res, err := promote.SaveBatch(f.c, userID, in)
+	res, err := writes.Call(f.c, writes.Op{Action: "promote_batch", UserID: userID}, func(tx *database.Tx) (promote.BatchResult, []rowchange.Change, error) {
+		return promote.SaveBatch(tx, userID, in)
+	})
 	if err != nil {
 		f.t.Fatal(err)
 	}
@@ -237,11 +255,15 @@ func TestSaveBatchFilesBridgeWhoseEndsWereAlreadyPromoted(t *testing.T) {
 	f := newBatchFixture(t)
 	person := f.bare("person")
 	event := f.bare("event")
-	per, err := promote.Save(f.c, userID, promote.Input{SubjectID: person.ID})
+	per, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+		return promote.Save(tx, userID, promote.Input{SubjectID: person.ID})
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	evt, err := promote.Save(f.c, userID, promote.Input{SubjectID: event.ID})
+	evt, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+		return promote.Save(tx, userID, promote.Input{SubjectID: event.ID})
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -271,10 +293,14 @@ func TestSaveBatchSkipsSwitchedOffBridge(t *testing.T) {
 	f := newBatchFixture(t)
 	person := f.bare("person")
 	event := f.bare("event")
-	if _, err := promote.Save(f.c, userID, promote.Input{SubjectID: person.ID}); err != nil {
+	if _, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+		return promote.Save(tx, userID, promote.Input{SubjectID: person.ID})
+	}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := promote.Save(f.c, userID, promote.Input{SubjectID: event.ID}); err != nil {
+	if _, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+		return promote.Save(tx, userID, promote.Input{SubjectID: event.ID})
+	}); err != nil {
 		t.Fatal(err)
 	}
 	bridge := f.participation(person, event)
@@ -292,9 +318,11 @@ func TestSaveBatchStaleWritesNothing(t *testing.T) {
 	person := f.bare("person")
 	seen := f.revision()
 	_ = f.bare("place") // a later write advances the revision
-	_, err := promote.SaveBatch(f.c, userID, promote.Batch{
-		SourceID: f.source.ID, SeenRevision: seen,
-		Rows: []promote.BatchRow{{SubjectID: person.ID, Target: promote.TargetNew}},
+	_, err := writes.Call(f.c, writes.Op{Action: "promote_batch", UserID: userID}, func(tx *database.Tx) (promote.BatchResult, []rowchange.Change, error) {
+		return promote.SaveBatch(tx, userID, promote.Batch{
+			SourceID: f.source.ID, SeenRevision: seen,
+			Rows: []promote.BatchRow{{SubjectID: person.ID, Target: promote.TargetNew}},
+		})
 	})
 	if !errors.Is(err, promote.ErrStale) {
 		t.Fatalf("err %v, want promote.ErrStale", err)
@@ -328,19 +356,26 @@ func TestSaveBatchOneHopPin(t *testing.T) {
 			deathDate := f.cite(death, observations.Input{PropertyID: f.prop("date").ID, Date: yearDate(1849)})
 			f.participation(person, birth)
 			f.participation(person, death)
-			per, err := promote.Save(f.c, userID, promote.Input{SubjectID: person.ID})
+			per, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+				return promote.Save(tx, userID, promote.Input{SubjectID: person.ID})
+			})
 			if err != nil {
 				t.Fatal(err)
 			}
-			birthH, err := promote.Save(f.c, userID, promote.Input{SubjectID: birth.ID})
+			birthH, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+				return promote.Save(tx, userID, promote.Input{SubjectID: birth.ID})
+			})
 			if err != nil {
 				t.Fatal(err)
 			}
-			if _, err := promote.Save(f.c, userID, promote.Input{SubjectID: death.ID}); err != nil {
+			if _, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+				return promote.Save(tx, userID, promote.Input{SubjectID: death.ID})
+			}); err != nil {
 				t.Fatal(err)
 			}
 
 			// A second layer: the birth date sits on the event, one hop from the person.
+
 			personB := f.bare("person")
 			eventB := f.bare("event")
 			incoming := f.cite(eventB, observations.Input{PropertyID: f.prop("date").ID, Date: yearDate(1849)})
@@ -354,13 +389,17 @@ func TestSaveBatchOneHopPin(t *testing.T) {
 			if tt.eventTarget == promote.TargetHandle {
 				eventRow.EntityID = birthH.Entity.ID
 			}
-			res, err := promote.SaveBatch(f.c, userID, promote.Batch{
+			p6a1 := promote.Batch{
 				SourceID: f.source.ID, SeenRevision: f.revision(),
 				Rows: []promote.BatchRow{{
 					SubjectID: personB.ID, Target: promote.TargetHandle, EntityID: per.Entity.ID,
 					Pairs: []promote.Pair{{IncomingObservationID: incoming[0].ID, MemberObservationID: member}},
 				}, eventRow},
+			}
+			res, err := writes.Call(f.c, writes.Op{Action: "promote_batch", UserID: userID}, func(tx *database.Tx) (promote.BatchResult, []rowchange.Change, error) {
+				return promote.SaveBatch(tx, userID, p6a1)
 			})
+
 			if tt.wantErr {
 				if !errors.Is(err, promote.ErrInvalid) {
 					t.Fatalf("err %v, want promote.ErrInvalid", err)
@@ -436,4 +475,12 @@ func cacheLines(t *testing.T, q interface {
 		t.Fatal(err)
 	}
 	return out
+}
+
+func runArtifactCreate(c *database.Catalog, userID []byte, in artifacts.CreateInput) (artifacts.Artifact, error) {
+	a, _, err := writes.Run(c, writes.Op{Action: "create_artifact", UserID: userID},
+		func(tx *database.Tx) (artifacts.Artifact, []rowchange.Change, error) {
+			return artifacts.Create(tx, userID, in)
+		})
+	return a, err
 }

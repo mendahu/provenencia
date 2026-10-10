@@ -1,7 +1,6 @@
 package audit
 
 import (
-	"bytes"
 	"errors"
 	"go/ast"
 	"go/parser"
@@ -12,14 +11,16 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/effects"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 )
 
 // TestResolversCoverEveryEntityType parses non-test Go under core/ for every
 // audited entity type (EntityType: "…" literals and deleteimpact rowFacet
-// arguments) and wants a resolver for each, so a new audited table decides
-// its scope instead of failing at runtime.
+// arguments) and wants a non-None effect for each, so a new audited table is
+// recorded instead of failing at runtime. An entity whose effect is None is
+// committed without a revision and is left out of an audited change list.
 func TestResolversCoverEveryEntityType(t *testing.T) {
 	root := filepath.Join("..", "..")
 	found := map[string]string{}
@@ -61,8 +62,13 @@ func TestResolversCoverEveryEntityType(t *testing.T) {
 		t.Fatalf("found only %d entity types; parser walk broken? %v", len(found), found)
 	}
 	for et, path := range found {
-		if _, ok := resolvers[et]; !ok {
-			t.Errorf("entity type %q (%s) has no scope resolver in audit/scopes.go", et, path)
+		none, err := effects.AllNone([]rowchange.Change{{EntityType: et}})
+		if err != nil {
+			t.Errorf("entity type %q (%s) is not a non-None effect: %v", et, path, err)
+			continue
+		}
+		if none {
+			continue
 		}
 	}
 }
@@ -76,12 +82,7 @@ func stringLit(e ast.Expr) (string, bool) {
 	return s, err == nil
 }
 
-func TestResolveScopes(t *testing.T) {
-	id := func(b byte) []byte { return bytes.Repeat([]byte{b}, 16) }
-	uid := func(b []byte) string { u, _ := uuid.FromBytes(b); return u.String() }
-	typeID, srcA, srcB, art := id(1), id(2), id(3), id(4)
-	goneCitation, note := id(5), id(6)
-
+func TestRecordRejectsUnknownEntity(t *testing.T) {
 	c, err := database.Create(t.TempDir(), "t.provenencia")
 	if err != nil {
 		t.Fatal(err)
@@ -91,107 +92,15 @@ func TestResolveScopes(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, stmt := range []struct {
-		q    string
-		args []any
-	}{
-		{`INSERT INTO source_types (id, key, origin, label) VALUES (?, 'book', 'test', 'Book')`, []any{typeID}},
-		{`INSERT INTO sources (id, ref, source_type_id, title) VALUES (?, 'SRC-A', ?, 'A')`, []any{srcA, typeID}},
-		{`INSERT INTO sources (id, ref, source_type_id, title) VALUES (?, 'SRC-B', ?, 'B')`, []any{srcB, typeID}},
-		{`INSERT INTO artifacts (id, ref, source_id) VALUES (?, 'ART-A', ?)`, []any{art, srcA}},
-	} {
-		if _, err := db.Exec(stmt.q, stmt.args...); err != nil {
-			t.Fatal(err)
-		}
+	tx, err := db.Begin()
+	if err != nil {
+		t.Fatal(err)
 	}
-
-	tests := []struct {
-		name    string
-		changes []Change
-		want    [][]byte
-	}{
-		{
-			name: "released note resolves through its deleted citation",
-			changes: []Change{
-				{EntityType: "citation_note", EntityID: note, Action: ActionDelete,
-					Fields: DeletedRow(map[string]any{"citation_id": uid(goneCitation)})},
-				{EntityType: "citation", EntityID: goneCitation, Action: ActionDelete,
-					Fields: DeletedRow(map[string]any{"artifact_id": uid(art)})},
-			},
-			want: [][]byte{srcA},
-		},
-		{
-			name: "row moved between sources scopes to both",
-			changes: []Change{{EntityType: "artifact", EntityID: art, Action: ActionUpdate,
-				Fields: map[string]FieldDiff{"source_id": {Old: uid(srcB), New: uid(srcA)}}}},
-			want: [][]byte{srcA, srcB},
-		},
-		{
-			name: "duplicates collapse",
-			changes: []Change{
-				{EntityType: "source", EntityID: srcA, Action: ActionUpdate, Fields: map[string]FieldDiff{}},
-				{EntityType: "artifact", EntityID: art, Action: ActionUpdate, Fields: map[string]FieldDiff{}},
-			},
-			want: [][]byte{srcA},
-		},
-		{
-			name:    "unresolvable parent is no scope",
-			changes: []Change{{EntityType: "citation", EntityID: goneCitation, Action: ActionUpdate, Fields: map[string]FieldDiff{}}},
-		},
-		{
-			name:    "vocabulary has no scope",
-			changes: []Change{{EntityType: "source_type", EntityID: typeID, Action: ActionUpdate, Fields: map[string]FieldDiff{}}},
-		},
+	defer func() { _ = tx.Rollback() }()
+	_, err = Record(tx, Revision{ActionType: "x", CreatedAt: "2026-10-04T00:00:00Z", Changes: []rowchange.Change{{
+		EntityType: "mystery", EntityID: []byte{9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9}, Action: rowchange.ActionCreate, Fields: map[string]rowchange.FieldDiff{},
+	}}})
+	if !errors.Is(err, ErrInvalid) {
+		t.Fatalf("want ErrInvalid got %v", err)
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tx, err := db.Begin()
-			if err != nil {
-				t.Fatal(err)
-			}
-			defer func() { _ = tx.Rollback() }()
-			got, err := resolveScopes(tx, tt.changes)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if len(got) != len(tt.want) {
-				t.Fatalf("got %d scopes %v want %d", len(got), got, len(tt.want))
-			}
-			for _, w := range tt.want {
-				if !containsScope(got, Scope{Type: ScopeSource, ID: w}) {
-					t.Fatalf("missing %x in %v", w, got)
-				}
-			}
-		})
-	}
-
-	t.Run("note resolver alone reaches the ghost", func(t *testing.T) {
-		tx, err := db.Begin()
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer func() { _ = tx.Rollback() }()
-		r := scopeResolver{tx: tx, ghosts: ghostMap{
-			ghostKey("citation", goneCitation): {"artifact_id": uid(art)},
-		}}
-		got, err := resolvers["citation_note"](r, Change{EntityType: "citation_note", EntityID: note,
-			Action: ActionDelete, Fields: DeletedRow(map[string]any{"citation_id": uid(goneCitation)})})
-		if err != nil || len(got) != 1 || !bytes.Equal(got[0].ID, srcA) {
-			t.Fatalf("got %v %v", got, err)
-		}
-	})
-
-	t.Run("unknown entity type rejected by Record", func(t *testing.T) {
-		tx, err := db.Begin()
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer func() { _ = tx.Rollback() }()
-		_, err = Record(tx, Revision{ActionType: "x", CreatedAt: "2026-10-04T00:00:00Z", Changes: []Change{{
-			EntityType: "mystery", EntityID: id(9), Action: ActionCreate, Fields: map[string]FieldDiff{},
-		}}})
-		if !errors.Is(err, ErrInvalid) {
-			t.Fatalf("want ErrInvalid got %v", err)
-		}
-	})
 }

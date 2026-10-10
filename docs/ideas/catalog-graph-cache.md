@@ -25,7 +25,7 @@ Two tiers of the same data:
 - **Persistent tier:** ARV, as today. Survives restarts; SQL and the search index read it.
 - **Memory tier:** a graph of nodes held on the open catalog session, built from ARV (plus a few small lookups), shaped for walking: each node holds its values and its adjacency, and points at its neighbors.
 
-Every write goes through one orchestrator (`writes.Run`) that owns the transaction and its three duties: write the data, record audit, bring derived data up to date. An effects registry, built on the same declared schema `deleteimpact` uses, says what each kind of change touches. ARV is rewritten inside the transaction as today; the memory tier is told after commit.
+Every write goes through one orchestrator (`writes.Run`) that owns the transaction and its three duties: write the data, record audit, bring derived data up to date. An effects registry, built on `catalogmodel` (the same declared model `deleteimpact` reads), says what each kind of change touches. ARV is rewritten inside the transaction as today; the memory tier is told after commit.
 
 Two stores live in the memory tier:
 
@@ -124,9 +124,9 @@ Today each write function does all three by hand: about 45 transaction sites, 40
 
 The split:
 
-- **Write functions** write their rows and return what they changed, as `[]audit.Change`. No transaction handling, no audit call, no recompute.
+- **Write functions** write their rows and return what they changed, as `[]rowchange.Change`. No transaction handling, no audit call, no recompute.
 - **The orchestrator** (`writes.Run`) owns the transaction and the order of the duties.
-- **The effects registry** says, per table, what a change to one of its rows touches. It's built on a declared schema model shared with `deleteimpact` and audit.
+- **The effects registry** says, per table, what a change to one of its rows touches. It's built on `catalogmodel`, shared with `deleteimpact` and audit.
 
 The frontend doesn't change. It already names the operation it wants (`UpdateObservation`, `DeleteSubject`, …). It does not also declare what it's updating: that would be a second description of the write that could disagree with what the write did, which is what the Swift `CatalogMutation` map is today. What changed comes from the write function's own changes, with old and new values, the same data audit already records.
 
@@ -146,9 +146,9 @@ type Result struct {
 	Effects  effects.Set // handles, header dependents, Sources, vocabulary, search
 }
 
-func Run(c *database.Catalog, op Op, fn func(tx *database.Tx) ([]audit.Change, error)) (Result, error) {
+func Run[T any](c *database.Catalog, op Op, fn func(tx *database.Tx) (T, []rowchange.Change, error)) (T, Result, error) {
 	tx := begin(c)
-	changes, err := fn(tx)                       // 1. persistent data
+	value, changes, err := fn(tx)                // 1. persistent data
 	// on error: rollback, nothing else happens
 	rev := audit.Record(tx, op, changes)         // 2. audit (skipped for unaudited types)
 	fx := effects.Resolve(tx, changes)           //    what the changes touch
@@ -157,7 +157,7 @@ func Run(c *database.Catalog, op Op, fn func(tx *database.Tx) ([]audit.Change, e
 	commit(tx)
 	tx.runAfterCommit()                          //     disk work the write deferred
 	c.notify(rev, fx)                            // 3b. memory tier, only after commit
-	return Result{Revision: rev, Effects: fx}, nil
+	return value, Result{Revision: rev, Effects: fx}, nil
 }
 ```
 
@@ -181,22 +181,23 @@ func DeleteObservation(c *database.Catalog, userID, id []byte) error {
 }
 
 // after: writes and reports
-func DeleteObservation(tx *database.Tx, id []byte) ([]audit.Change, error) {
+func DeleteObservation(tx *database.Tx, id []byte) ([]rowchange.Change, error) {
 	// … read prev, refuse, release facets, delete — as today …
-	return append(released.Changes, audit.Change{
-		EntityType: "observation", EntityID: id, Action: audit.ActionDelete,
-		Fields: audit.DeletedRow(observationRowMap(prev)),
+	return append(released.Changes, rowchange.Change{
+		EntityType: "observation", EntityID: id, Action: rowchange.ActionDelete,
+		Fields: rowchange.DeletedRow(observationRowMap(prev)),
 	}), nil
 }
 
 // the FFI handler
-res, err := writes.Run(c, writes.Op{Action: "delete_observation", UserID: user},
-	func(tx *database.Tx) ([]audit.Change, error) {
-		return observations.DeleteObservation(tx, id)
+_, res, err := writes.Run(c, writes.Op{Action: "delete_observation", UserID: user},
+	func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+		changes, err := observations.DeleteObservation(tx, id)
+		return struct{}{}, changes, err
 	})
 ```
 
-**Thumbnails.** `core/derivatives` writes `file_derivatives` in its own transactions (`ensure.go`). They go through `Run` like every other write, under an unaudited registry entry with no effects: derived bytes, no research data, nothing the graph reads.
+**Thumbnails.** JPEG generation and the object write stay outside the transaction. The catalog insert returns a `file_derivative` change and leaves the derived `files` row out of the list. `file_derivatives` is `{Entity: "file_derivative", None: true}`: derived bytes, no research data, nothing the graph reads. A change list whose every row is `None` commits with no revision. `AfterCommit` refreshes the parent Source's search document. A unique checksum conflict ends that `Run`, then `Ensure` starts a second `Run` for the link only.
 
 `database.Tx` embeds `*sql.Tx`, and only `writes.Run` creates one. Write functions take `*database.Tx`, so a write can't run outside the orchestrator. A test that fails on any `.Begin()` outside `core/database` and `core/writes` keeps it that way.
 
@@ -206,20 +207,20 @@ Derived data is brought up to date once, after the write function returns and be
 
 Write functions don't read derived data back. A write returns what it changed and the revision. If the app needs the new state, it reads it with a separate call, which the memory tier serves fresh because it was updated at commit. Writes and reads stay separate calls.
 
-### One schema model under every registry
+### One catalog model under every registry
 
 Three registries in the codebase answer questions about the same graph of tables:
 
-- **`deleteimpact/register.go`** declares every table (kind and bucket: resource, vocabulary, facet, owned, skip) and every foreign key (with its `ON DELETE`). An honesty test compares it against `PRAGMA foreign_key_list`, so it can't drift from the real schema.
+- **`core/database/catalogmodel`** declares every table (kind and bucket: resource, vocabulary, facet, owned, skip) and every foreign key (with its `ON DELETE`). An honesty test compares it against `PRAGMA foreign_key_list`, so it can't drift from the real schema.
 - **`audit/scopes.go`** resolves a change to its Source by hand-written walks up those same foreign keys: observation → citation → artifact → source; a note → its citation → …; a subject or artifact directly by `source_id`.
 - **The auto-reconciler's handle lookups** (`sqlHandlesForCitation`, `sqlHandlesForProperty`, `HandlesObservingSubject`, …) are hand-written walks too: observation → subject → `identity_claims` → handle, or inbound on `observations.value_subject_id` for "who points at John".
 
 Only the first is declared and checked against the schema. The other two are SQL strings that happen to follow its edges.
 
-So the table and foreign-key declarations move out of `deleteimpact` into a small `schema` package, with the PRAGMA honesty test. `deleteimpact` keeps its own logic (probes, refusals, releases) and reads the model from `schema`. The effects registry is built on the same model.
+Those declarations live in `catalogmodel`, with the PRAGMA honesty test. `deleteimpact` keeps probes, refusals, and releases, and reads the model from `catalogmodel`. The effects registry is built on the same model.
 
 ```go
-// package schema: the declared catalog schema, checked against SQLite.
+// package catalogmodel: the declared catalog model, checked against SQLite.
 
 type Table struct {
 	Name   string
@@ -248,7 +249,7 @@ One entry per table, saying what a change to one of its rows touches:
 - **Handles:** the handles whose ARV rows must be rewritten.
 - **Vocabulary:** labels (the label map drops) or structure (a term's `directed` or `inverse_key` changed; the graph drops).
 - **Search:** the search documents to reproject (a Source's document, a source type's or metadata field's, the Sources of a type). Today 19 calls in write code (`ReprojectSource`, `ReprojectSourceType`, `ReprojectMetadataField`, `ReprojectSourcesForType`) do this by hand; handle documents stay with `RecomputeTx`.
-- **Unaudited:** no audit row and no effects; `Run` still owns the transaction.
+- **None:** no audit row and no effects. A change list whose every row is `None` still commits, then runs `AfterCommit`. An empty list rolls back.
 
 Where an effect follows the schema, it's written as a path over declared foreign keys. A path can only name edges the model has, so a renamed or missing column fails at startup, not in a user's catalog. Paths are a handful of combinators, not a query language:
 
@@ -261,7 +262,7 @@ inbound("observations", "value_subject_id")          // rows that point at this 
 sql(`SELECT …`)                                      // anything a path can't say
 ```
 
-Every path reads the change's fields, old and new. An update that moves an Observation from Subject A to B resolves both. A delete resolves from the old fields, because the row is already gone (audit's scope resolvers do this today with `ghostMap`).
+If the path's column is on the diff, the walk uses old and new, so a move resolves both ids. If the column is absent, the walk reads the live row. Ghosts (the delete change's old fields) apply only when the row is already gone. A polarity edit is the same rule as any other sparse update: `polarity` is on the diff, `citation_id` is not, and the live row still names the citation.
 
 ```go
 var registry = map[string]Effect{
@@ -270,7 +271,7 @@ var registry = map[string]Effect{
 	"source_type": {Vocabulary: labels, Search: union(selfDoc, sourcesOfType)},
 	"citation": {
 		Source:  up("artifact_id", "source_id"),
-		Handles: onField("certainty", sql(handlesUnderCitation)),
+		Handles: onField("transcription_uncertain", sql(handlesUnderCitation)),
 	},
 	"observation": {
 		Source:  up("citation_id", "artifact_id", "source_id"),
@@ -283,18 +284,19 @@ var registry = map[string]Effect{
 		),
 	},
 	"identity_claim_evidence": {Handles: up("identity_claim_id", "entity_id")}, // released pins
-	"source_credibility_assessment": {Source: up("source_id"), Handles: from("source_id", sql(handlesInSource))},
+	"source_credibility_assessment": {Source: up("source_id"), Handles: onField("credibility_grade_id", from("source_id", sql(handlesInSource)))},
 	"property":         {Vocabulary: labels, Handles: onField("cardinality", sql(handlesObservingProperty))},
 	"property_term": {
 		Vocabulary: labels,
 		Structure:  onField("directed", "inverse_key"), // relationship signatures change
 	},
-	"subject_position": {Unaudited: true}, // layout only
+	"subject_position": {Entity: "subject_position", None: true}, // layout only
 	// … every table outside the skip bucket
 }
 
 // membersOf: subject → its accepted and provisional handles.
-var membersOf = across("identity_claims", "subject_id", "entity_id")
+// The status filter is part of this declaration, not a default inside across.
+var membersOf = across("identity_claims", "subject_id", "entity_id", "accepted", "provisional")
 
 // observers: Subjects whose Observations have this Subject as their value,
 // then their handles.
@@ -303,8 +305,8 @@ var observers = chain(inbound("observations", "value_subject_id"), field("subjec
 
 Two kinds of effect stay hand-written, because they're about meaning, not the schema:
 
-- **Effects tied to one field.** A citation touches handles only when `certainty` changes; a property only on `cardinality` (`onField`).
-- **Status-dependent effects.** Only an accepted claim moves where subject-valued Observations resolve (`onStatus`).
+- **Effects tied to one field.** A citation touches handles only when `transcription_uncertain` changes; a credibility assessment only when `credibility_grade_id` changes; a property only on `cardinality` (`onField`).
+- **Status-dependent effects.** `onStatus("accepted")` runs when either the old or the new status is `accepted`, so a new accepted claim and a later accepted→rejected edit both recompute observers. A diff that omits `status` did not change it.
 
 Header dependents aren't an effects concern. They follow the canonical graph, not foreign keys, and depend on vocabulary (which roles and relationship types a header reads), so they come from the header registry (see Vocabulary stays in registries). `RecomputeTx` computes them from the handles it rewrites, as it does today with `conclusionheaders.HeaderDependents`.
 
@@ -387,12 +389,12 @@ The rule: **the schema and the infrastructure never name a vocabulary key.** Sub
 
 | Layer | Holds | Vocabulary |
 | --- | --- | --- |
-| **Schema** (`schema`) | tables, columns, foreign keys, buckets, `CHECK` enums (claim `status`, ARV `reason`) | none |
+| **Catalog model** (`catalogmodel`) | tables, columns, foreign keys, buckets, `CHECK` enums (claim `status`, ARV `reason`) | none |
 | **Infrastructure** (`effects`, `writes`, `graphcache`, `canonicalgraph.Walk`, `graphalign`'s walk and scoring) | mechanisms over the schema; kinds, property keys, terms and edge signatures as opaque values | none: it may carry keys, never compare against a literal |
 | **Registries** | which keys mean what | all of it |
 | **Features** (Promote, the lists, the place page) | use registries by name | through registries |
 
-The effects registry is keyed by table and column, so it stays on the schema side. `onField("certainty")` and `onField("cardinality")` are columns; `onStatus("accepted")` is a `CHECK` enum on `identity_claims.status`. None of its entries name a term, role or kind.
+The effects registry is keyed by table and column, so it stays on the catalog-model side. `onField("transcription_uncertain")` and `onField("cardinality")` are columns; `onStatus("accepted")` is a `CHECK` enum on `identity_claims.status`. None of its entries name a term, role or kind.
 
 ### The registries
 
@@ -499,23 +501,51 @@ Each step is its own PR, measured against the one before. PRs that only repoint 
 
 - **The paused stack.** Decided: [mendahu/provenencia#327](https://github.com/mendahu/provenencia/pull/327) to [mendahu/provenencia#340](https://github.com/mendahu/provenencia/pull/340) stay paused until this plan has landed, then each is refactored and rebased onto it in turn. #327 is replaced by PR 8 (its debounce and narrowed exhibits carry over), #328 by PR 10, and #330 is re-judged against the graph-backed readers. #331 to #334 are rebuilt on the `CanonGraph` version of `align.go`.
 
-**Schema and effects**
+**Catalog model and effects**
 
-1. **Extract the schema model** (churn). Tables and foreign keys move from `deleteimpact/register.go` into `schema`, with the PRAGMA honesty test; `deleteimpact` reads them from there. No behavior change.
-   - *Open:* where `schema` sits. It must stay below `audit`, `deleteimpact`, `effects` and `writes` in the import graph; `database` is the likely parent.
-2. **Paths and the effects registry** (logic). The path combinators; an entry for every table outside the skip bucket, including search and vocabulary effects; audit's scope resolvers re-expressed as `Source` paths, with a test that they resolve the same Sources as the old resolvers on the existing fixtures; the completeness tests. Nothing calls the `Handles` side yet.
-   - *Open:* claim statuses in paths. The recompute SQL counts `accepted` and `provisional` claims as members; `across("identity_claims", …)` must filter the same way. Decide whether status filters are a path option or part of each declaration.
+1. **Extract the catalog model** (done). Tables and foreign keys live in `core/database/catalogmodel` (`Tables`, `FKs`, `Kind`, `Bucket`), with the PRAGMA honesty test. `deleteimpact` reads them from there and keeps probes and releases. No behavior change.
+2. **Paths and the effects registry** (done). `core/database/effects` has the path combinators and one `Effect` per table outside the skip bucket. `RecomputeTx` does not call it. `audit.Record` stores source scopes from `effects.Sources` (PR 3).
+   - **One `Effect` per table**, with a field per job: `Source`, `Handles`, `Search`, `Vocabulary`, `Structure`. An empty field means that job is unaffected. `None: true` is an explicit empty entry (`users`, layout-only `subject_positions`, and the grade tables). An identity claim keeps an empty `Source` (today's `noScope`) and a `Handles` path. A later cache Source scope can be another field. It is not an audit scope.
+   - **`Change` lives in `core/database/rowchange`** (`Change`, `FieldDiff`, `FullRow`, `DeletedRow`, and the action constants). `Revision` and `Record` stay in `audit`. Writers say `rowchange.Change`. No aliases. `effects` imports `rowchange` and `catalogmodel`. It does not import `audit`.
+   - **Lookup.** If the path's column is on the diff, use old and new. If it is absent, read the live row. Ghosts apply only when the row is already gone. This matches `scopeResolver.via` and `directSource`.
+   - **Claim membership** is a filter on the declaration. `membersOf` is `across("identity_claims", "subject_id", "entity_id")` restricted to `accepted` and `provisional`.
+   - **`onStatus` fires when either the old or the new status is `accepted`.** A diff that omits `status` does not run the inner path. There is no status-edit writer yet; a unit test covers both sides.
+   - **Trigger columns.** Citation handles use `onField("transcription_uncertain")`. A credibility assessment recomputes that Source's handles only on `onField("credibility_grade_id")`.
+   - **Grades are seed-stable.** No `Handles` fan-out from `source_credibility_grades` or `claim_confidence_grades`. Source credibility grades are `SeededLocked`, same as properties, so a provenencia grade cannot be deleted. Claim confidence grades have no delete path.
+   - **Name and date values** have entries. Source walks inbound `observations` on `value_name_id` / `value_date_id`, then up to the source. Handles walk that same inbound, then `membersOf`. `observations.value_date_id` and `value_name_id` are unique, so one observation owns a value today; the path is still inbound and returns every row that points at it. `sql()` stays for a walk a combinator cannot say.
 
 **Writes**
 
-3. **The orchestrator** (logic). `writes.Run`, `database.Tx`, `Op`, `Result`, `AfterCommit`, commit listeners; `audit.Record` resolves scopes through the registry; `RecomputeTx` takes `*database.Tx`; search reprojection from `Effects.Search`; the migration assertion, covering handles and search documents. Property terms migrated as the pilot.
-   - *Open:* `Run`'s return type. Write functions return more than changes (the created entity, `BatchResult.Written`, claims and pins). Either `Run` is generic (`Run[T]`) or write functions return a result struct that carries the changes. Settle before the churn PRs, since every one follows it.
-   - *Open:* nested writes. A few write functions call others that open their own transaction today. Under `Run`, inner functions take the outer `*database.Tx`; find any that can't.
-4. **Migrate Source-layer writes** (churn). Sources, notes, metadata, source types, metadata fields, artifacts (with `AfterCommit` for file removal), ingest, thumbnails.
-   - *Open:* confirm thumbnail generation runs inside `catalogsession.Do`. If it doesn't, that's an existing serialization bug to fix here, not paper over.
-5. **Migrate Evidence-layer writes** (churn). Citations, observations, subjects, name values, connect, positions.
-6. **Migrate conclusion-layer writes** (churn). Promote single and batch, identity claims, canonical entities, credibility, properties, subject definitions. Includes the transactions in FFI handlers (`api/ffi/handlers/subject_defs.go`, `delete_impact.go`).
-7. **Close the old path** (small). Hand-placed recompute and reproject calls, `released.Handles`, the old scope resolvers and the migration assertion go; old entry points become private; the `.Begin()` test; the typed-key literal test over `schema`, `effects` and `writes` (later PRs extend it to `graphcache`).
+3. **The orchestrator** (done). `writes.Run`, `database.Tx`, `Op`, `Result`, `AfterCommit`, and commit listeners. Property-term create, update, and delete go through `Run`. Source-layer writes follow in PR 4.
+   - **`Run` is generic.** `Run[T any](c, op, fn func(tx *database.Tx) (T, []rowchange.Change, error)) (T, Result, error)`. A delete uses an empty struct as `T`. The closure's `T` is the written value (the term, or nothing). `Result` is the revision plus `effects.Set`.
+   - **The FFI handler calls `Run`.** `Create`, `Update`, and `Delete` take `*database.Tx` and return the changes. They do not begin, commit, or call `audit.Record`. `Upsert` stays the un-audited seed path. Tests that call those three call `Run` too.
+   - **Re-entry is refused.** A second `Run` on the same catalog, including from `AfterCommit` or a listener, returns `database.ErrWriteReentry`. `Run` does not take the catalog session lock; the handler already holds it.
+   - **A failed notify drops every listener.** Commit has already succeeded. Any `OnCommit` error calls `Drop` on every listener. There is no production listener yet. `autoreconciler.Rebuild` does not go through `Run` and is not wired to the hook. `Drop` is what PR 8 will use to publish "drop everything."
+   - **`RecomputeTx` keeps its `Querier` parameter.** `*database.Tx` embeds `*sql.Tx`, so `Run` passes the inner transaction. `Run` calls it only when the handle set is non-empty.
+   - **Nested writes are out of this PR.** Property terms do not call another write. Later migrations pass the outer `*database.Tx` into the inner function. Source-layer writes move in PR 4. Evidence-layer writes move in PR 5. Conclusion writes still begin their own transaction.
+   - **Stored scopes come from `effects.Sources`.** `Record` still rejects an entity type with no scope resolver. The old resolvers stay callable (`audit.LegacySourceIDs`) so the parity test can compare them until PR 7 deletes them. `searchindex.Reproject` dispatches `Effects.Search` to the existing source, source-type, metadata-field, and sources-for-type reprojectors. Property terms have no handles and no search documents. A label edit sets vocabulary and leaves structure unset.
+4. **Migrate Source-layer writes** (done). Sources, notes, metadata, source types, metadata fields, artifacts, ingest, and thumbnails go through `writes.Run`.
+   - **The FFI handler calls `Run`.** Domain functions take `*database.Tx` and return the changes. They do not begin, commit, audit, or reproject. `ingest.File` and `derivatives.Ensure` call `Run` themselves: the object write stays outside, and a checksum conflict starts a second `Run` after the first returns.
+   - **Thumbnails commit without a revision.** The link is a `file_derivative` change and the derived `files` row stays off the list, so the batch is `None`-only: `Run` skips audit, effects, and listeners, commits, then runs `AfterCommit` (the Source search refresh). An empty change list still rolls back. PR 5 retired `Op.Unaudited`; the rule is the change list.
+   - **Artifact search is in the registry.** `artifacts` has a Source search document via `field("source_id")`, so create, update, and delete refresh the parent Source. A deleted source still drops its document, because `ReprojectSource` deletes the doc when the row is gone.
+   - **Seed `Upsert` stays off `Run`.** Source-type and metadata-field `Create` and `Update` go through `Run` and gain a revision with a null user. `Upsert` remains the un-audited seed path and still reprojects by hand.
+   - **`SetCover` does not nest.** The raster check, including `EnsureThumbnail`, finishes before the cover `Run`.
+   - **File bytes move to `AfterCommit`.** `artifacts.Delete` unlinks released objects after commit, so a rollback leaves the files in place.
+   - **Thumbnails already run inside the session.** `EnsureFileThumbnail` uses `withProjectCatalog` (`catalogsession.Do`). `SetCover`'s handler holds the same session. Dismiss and reorder refresh the Source search document because their layout changes already name one.
+5. **Migrate Evidence-layer writes** (done). Citations, observations, subjects, connect, and positions go through `writes.Run`. Name and date inserts stay on the observation's transaction.
+   - **The FFI handler calls `Run`.** Domain functions take `*database.Tx` and return the changes. They do not begin, commit, audit, recompute, or reproject. `InsertManyTx` no longer recomputes, so create, add, and connect recompute once, in `Run`. An unchanged citation, observation, or subject returns no changes and `Run` rolls it back.
+   - **Handle fixtures.** An in-place name edit, an in-place date edit, a polarity-only observation edit, and a `value_subject_id` move (`subject_id` omitted) resolve the same handles as `RecomputeSubjectsTx`. A citation update that flips `transcription_uncertain` resolves the citation's handles. A locator-only update resolves none. The registry already matched.
+   - **Subject delete.** `effects` cannot see the released facet rows, and it cannot import `conclusionheaders`. `Delete` snapshots linked handles and `HeaderDependents` while the link exists, then calls `RecomputeTx` once after the rows are gone. That call also includes the released handles and the handles that observed the subject: header search documents are written at the end of `RecomputeTx`, so they have to see those values already cleared. `Run` recomputes the returned changes again. A subject is not part of the Source search document, so delete does not reproject it.
+   - **None-only commits.** When every change names a `None` table, `Run` commits with no revision, skips audit, effects, recompute, and listeners, then runs `AfterCommit`. `subject_positions` and `file_derivatives` carry an entity name so they can appear in that list. `Set` and `Clear` return only a `subject_position` change. PR 6 returns the position from subject create and connect and drops it out of a mixed list before audit.
+6. **Migrate conclusion-layer writes** (done). Promote single and batch, identity claims, canonical entities, credibility assessments, and property create, update, and delete go through `writes.Run`.
+   - **The FFI handler calls `Run`.** Domain functions take `*database.Tx` and return the changes. They do not begin, commit, audit, recompute, or reproject. A no-op credibility assessment and an empty property diff return no changes, so `Run` rolls them back. `SaveBatch` returns `SeenRevision` on the value; the handler replaces it with `Result.Revision` when that is non-zero, so an all-skip batch still reports the revision the proposal was read at.
+   - **Handle fixtures.** An accepted mint, a join, filing the other end of a participation, and a batch that files both ends resolve a set that covers the claim's handle, the associations `AppendFiling` or `FileSourceBridgesTx` returned, and `HandlesObservingSubject`. Those cases were not a strict superset, so `observers` stayed. A provisional claim resolves only its own handle. A grade change resolves the same handles as `HandlesForSource`; an argument-only edit resolves none. A cardinality edit resolves `HandlesForProperty`; a label edit resolves none. The registry already matched, including `onField("credibility_grade_id")` and `onField("cardinality")`. An assessment write also refreshes the Source search document, which `Upsert` did not reproject before.
+   - **Mixed lists drop `None` rows.** After the empty-list rollback and the all-`None` commit, `Run` drops every `None` row before `audit.Record` and `effects.Resolve`. The rows are already written, so they commit with the revision and are not recorded. Subject create and connect return the `subject_position` change. Thumbnail links stay all-`None`. The derived `files` row stays off the list.
+   - **Left in place.** `GetDeleteImpact` still begins a read snapshot. Subject-type property bindings, and property, subject-type, and grade `Upsert` / `Install`, stay direct unaudited writes. Subject delete's hand `RecomputeTx`, and name and date inserts, stay as PR 5 left them.
+7. **Close the old path** (done). The pre-registry scope walks, `LegacySourceIDs`, the unused `Recompute*Tx` wrappers, `released.Handles`, and the filename hand reproject are gone. `Record` accepts an entity type when `effects` has a non-`None` entry. A test fails on `.Begin()` outside `core/database` and `core/writes`. `GetDeleteImpact`'s read snapshot lives in `deleteimpact.Snapshot`.
+   - **What still catches a missed effect.** The migration assertion is gone, and `Verify` does not exist until PR 8. Rebuild-equals-upkeep stays pointed at the registry-driven handle set. Stored source scopes stay compared with `effects.Sources`. `Verify` later compares a loaded node with the read that filled it, so a short recompute set (stale ARV on both sides) does not fail it.
+   - **The literal test waits for PR 8.** A `type Kind string` ban would freeze a check the graph's node shape has not decided. What that test forbids stays with PR 8's node shape: a scan for `TermKey("…")` misses `k == "person"` and SQL literals (`standard` and `moderate` in `sqlLoadCandidates`). Infrastructure holds ids; registries bind a product key to an id.
+   - **Left in place.** Subject delete still calls `RecomputeTx` once after the rows are gone (header dependents are PR 9). Seed `Upsert` on source types and metadata fields still reprojects by hand. Thumbnail `AfterCommit` stays. `EnsureCatalog` and `namevalues.Insert` still begin transactions inside `core/database`.
 
 **The graph**
 
@@ -524,15 +554,26 @@ Each step is its own PR, measured against the one before. PRs that only repoint 
    - *Open:* cold-cache cost. Align asks for one handle's neighbors at a time, so a cold walk through a hub is hundreds of queries while the session lock blocks every other call. Benchmark cold as well as warm; if cold is slow, give `CanonGraph` a prefetch hint ("load the neighbors of this frontier").
    - *Open:* proposal changes. The lazy walk has no hop limit, `Seeds(kind)` must reproduce today's top-5 property-ranked seeds, and `Links` must keep today's order (association ref, then handle ref) or ties resolve differently. Record proposals on the fixtures and the synthetic catalog before switching, and review every difference.
    - *Open:* memory. ARV holds every candidate value at every rank. Measure real rows per handle; if nodes are too big, keep only kept rank-1 values and let the detail page read the rest from SQL.
-   - *Open:* stats by counts or recompute. Adjusting value-frequency and fan-out counts from each commit's effects is exact but fiddly; recomputing from the graph per revision is simpler and may be fast enough in memory.
-   - *Open:* catalog-defined vocabulary. Researcher terms and plugin vocabulary live in `property_terms`, not the seed registry. The graph reads direction and inverses from the catalog; the literal test can only cover seeded keys.
-   - *Open:* concurrency. `Do` serializes everything today. If reads ever run alongside writes, immutable nodes plus a lock around the maps is enough; nothing should assume serialization beyond that.
+   - *Open:* stats by counts or recompute. The commit notice runs after `RecomputeTx` has replaced the ARV rows, so there is no pre-image unless this PR captures one inside the transaction or the node was already loaded. Unloaded handles have neither. Frequency and fan-out are catalog-wide, and summing a lazy graph undercounts. Incremental counts need that pre-image. Recomputing from loaded nodes is wrong while fill is lazy. Recomputing from SQL when the revision changes is what stats do today. Pick one; the graph-wide sum is not a candidate until the graph is complete.
+   - *Open:* ids in the node, keys in registries. Kind and link signatures store `subject_type_id`, endpoint property ids, the disambiguation property id, and the term id. Direction and `inverse_key` are read off the term row, so researcher and plugin terms work without a seed constant. Registries bind product keys (`part_of`, `birth`, the match-profile properties) to those ids at the feature edge. Ties to the literal-test question in PR 7: the graph never compares a key string, and `Kind(kind string)` in the sketch above does not survive.
+   - *Open:* concurrency. `Do` serializes everything today. If reads ever run alongside writes, immutable nodes plus a lock around the maps is enough; nothing should assume serialization beyond that. The display memo is not a field on the node (PR 9); filling one in place would be a write to a value a reader can hold.
+   - *Open:* kind-index maintenance. `Kind` is filled once and then kept. On commit, three outcomes: the `canonical_entities` row is gone (drop the node and the id from the index), the row is present (replace the node, and insert the id if that kind is already loaded), the merged flag flipped (the unmerged index gains or loses it). Empty ARV means no members, not a deleted handle. A handle Promote just created is an insert into a loaded index, not a refresh of a node the index already had. PR 9 adds the lists' membership filter on top of this.
+   - *Open:* what `Verify` compares. Rebuilding a loaded node from the same ARV read that filled it passes when the recompute set was too small. Compare against truth tables (a full recompute of the loaded ids) and, when a kind index is loaded, against every unmerged handle of that kind. Display memos and the Source store join this check in PR 9 and PR 12.
+   - *Open:* when a read checks the revision. Writes through `Run` update the graph at commit, so a read does not check staleness first. A `Begin` that bypassed `Run`, or a second process, is visible only by comparing with `audit_transactions`. Decide whether that query is on every read or only in `Verify` and debug builds. A `None`-only commit does not bump the revision; those rows change nothing the graph reads (`subject_position`, derivative bytes).
+   - *Open:* what `graphcache` owns. Nodes, the reverse index, the kind index, stats, and later the display memos, the label map, and the Source store have different lifetimes. Decide the split before the type hardens: a canonical store in this PR; stats as the SQL rebuild above or its own listener; display (PR 9) and the Source store (PR 12) as further listeners on the same notice. `writes.Run` stays the orchestrator and does not learn header hops. A listener error drops the whole store (the PR 3 contract).
 9. **Display.** The header registry, with header dependents derived from it (replacing `HeaderDependents`); header memos; lists and `…ByIDs` from the graph; the vocabulary map; "today" at read time.
-   - *Open:* handles with no members. No code deletes from `canonical_entities`; a handle that loses its last member just has no ARV rows. `Kind(kind)` must apply the lists' membership filter, and membership changes must add a handle to or remove it from the kind index.
+   - *Open:* handles with no members. No code deletes from `canonical_entities`; a handle that loses its last member just has no ARV rows. The kind index's insert and remove rules are PR 8. This PR decides the lists' membership filter on top of that index.
+   - *Open:* the invalidation closure. Dependents are taken on the handles whose structure was reloaded: the recompute set, plus the association's old endpoints (`holders`) and new endpoints (committed ARV). Replacing an endpoint node clears that node's memo and does not clear the person whose birth line embeds the event. A person header reads subject-role events, those events' places, and `ParentChain` to eight rounds (`loadLives`, `placechains.go`). The reverse is transitive to that depth, then continues through location and subject-role hops. `HeaderDependents` today is one `PartsOfPlace` hop (`ChildPlaceIDs`) plus `EventsAtPlace` on the changed ids only, and it does not walk association handles. Porting it leaves grandchild chains, events located in a child place, and life-fact lines stale, in search documents and in memos.
+   - *Open:* the header registry names hops. A person header is `EventsOfSubject`, then the birth and death terms, then `PlacesOfEvent`, then `ParentsOfPlace` to depth 8. Dependents fall out of reversing that declaration. A second description of the same hops will drift from `canonicalgraph`, and PR 10 would add a third. Chain and succession reads are added to this declaration, not a new walk.
+   - *Open:* where the memo lives. PR 8's nodes are immutable, replaced on reload. A `display` field filled on first read and cleared when a neighbor changes is a write to a node a caller may still hold. Keep memos in a side table keyed by id, dropped when the closure says so. `Verify` compares those memos to a fresh build, not only the node's ARV rows.
    - *Note:* this makes Go reads fast and correct, but Swift's own invalidation gaps (deleting an artifact leaves citations and the conclusion lists stale) stay until `Result.Effects` reaches Swift.
 10. **Place chains** from named hops on the graph, replacing #328's per-request index. Named hops move to their own registry file.
+    - *Open:* chains share the PR 9 declaration. Containment to depth 8 and succession both ways are header reads on that registry. Their dependents are the reverse of those reads, to the same depth. This PR does not add a separate dependent walk; a grandparent rename has to clear every descendant chain that displays it.
 11. **Conclusion detail** from node values, with the "Why" outcomes dropped with the display memo.
-    - *Open:* cache the per-Observation outcomes per handle, or keep the SQL read; decide after measuring.
+    - *Open:* cache the per-Observation outcomes per handle, or keep the SQL read; decide after measuring. A memo joins the PR 9 side table and clears under the same closure; `Verify` covers it either way.
 12. **The Source store**, fed by resolved Source scopes; Promote's layer, the Evidence graph and the Composer on it.
+    - *Open:* which scopes drop a Source. Audit's `noScope` on `identity_claim`, `identity_claim_evidence`, and `canonical_entity` is Source history, and it is the wrong drop signal. A promote reloads the canonical handle and leaves `Members` on the previous handle unless this store drops every Source the claim's subject belongs to. Use the cache Source scopes from PR 2, and keep audit's `noScope` as it is.
+    - *Open:* vocabulary-structure drops. A term's `directed` or `inverse_key` change drops the canonical graph, and it drops this store too. Evidence-graph bridge signatures use the same direction and inverse.
+    - *Open:* `Verify` for this store. Compare loaded `Members` and bridge signatures with a fresh read. A canonical-node check does not see a stale membership pointer.
 
 Later, and separately: `Result.Effects` rides back to Swift on each write's response, and the client's session cache invalidates by handle and Source instead of the hand-kept `CatalogMutation` map.

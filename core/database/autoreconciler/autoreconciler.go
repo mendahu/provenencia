@@ -12,12 +12,11 @@
 // (fixed-seed sequences plus named scenarios) hold them equal — an upkeep miss
 // is otherwise silent.
 //
-// Upkeep: RecomputeTx / RecomputeSubjectsTx for Observation, Promote and
-// Subject writes; RecomputeSourceTx for a Source credibility change;
-// RecomputeCitationTx for a Citation certainty change. A claim create of any
-// status recomputes the claim's handle (identityclaims.Create). Claim
-// confidence and status have no edit path yet; when one lands it recomputes
-// the claim's handle the same way.
+// Upkeep goes through writes.Run, which calls RecomputeTx with the handles
+// effects.Resolve named. Subject delete calls RecomputeTx once more after the
+// rows are gone, so header documents see the cleared values. HandlesFor* are
+// the sets the registry fixtures compare. Claim confidence and status have no
+// edit path yet.
 //
 // Recompute is per handle: all of a handle's Properties are rewritten together.
 // Narrowing to (handle, Property) waits for timings that need it.
@@ -153,8 +152,10 @@ const (
 // RecomputeTx rewrites the cached rows of the given handles from truth tables.
 // A handle with no members (or no cacheable values) ends with no rows. The
 // handles' search documents, and the documents of handles whose headers read
-// them, are reprojected in the same transaction. Deletes pass Released.Handles
-// through the same call, so a removed member updates the rows that named it.
+// them, are reprojected in the same transaction. Subject delete passes the
+// released handles, observers, linked handles, and header dependents through
+// this call after the rows are gone, so a removed member updates the rows
+// that named it.
 func RecomputeTx(q Querier, entityIDs [][]byte) error {
 	ids := database.UniqueBlobIDs(entityIDs)
 	for start := 0; start < len(ids); start += batchSize {
@@ -180,19 +181,9 @@ func HandlesObservingSubject(q Querier, subjectID []byte) ([][]byte, error) {
 	return listIDs(q, sqlHandlesObservingSubject, subjectID)
 }
 
-// RecomputeTouchingTx recomputes entityIDs plus every handle whose members'
-// Observations point at subjectID.
-func RecomputeTouchingTx(q Querier, entityIDs [][]byte, subjectID []byte) error {
-	extra, err := HandlesObservingSubject(q, subjectID)
-	if err != nil {
-		return err
-	}
-	return RecomputeTx(q, append(entityIDs, extra...))
-}
-
-// RecomputeSubjectsTx recomputes the handles the given Subjects are accepted
-// members of. Unpromoted Subjects are ignored.
-func RecomputeSubjectsTx(q Querier, subjectIDs [][]byte) error {
+// HandlesForSubjects is the handle list a subject-membership change recomputes.
+// Unpromoted Subjects are ignored.
+func HandlesForSubjects(q Querier, subjectIDs [][]byte) ([][]byte, error) {
 	ids := database.UniqueBlobIDs(subjectIDs)
 	var handles [][]byte
 	for start := 0; start < len(ids); start += batchSize {
@@ -200,41 +191,26 @@ func RecomputeSubjectsTx(q Querier, subjectIDs [][]byte) error {
 		batch := ids[start:end]
 		got, err := listIDs(q, sqlHandlesForSubjects+database.SQLInPlaceholders(len(batch))+`)`, database.BlobArgs(batch)...)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		handles = append(handles, got...)
 	}
-	return RecomputeTx(q, handles)
+	return handles, nil
 }
 
-// RecomputeSourceTx recomputes the handles whose members have Observations
-// citing the Source: its credibility is part of their evidence.
-func RecomputeSourceTx(q Querier, sourceID []byte) error {
-	ids, err := listIDs(q, sqlHandlesForSource, sourceID)
-	if err != nil {
-		return err
-	}
-	return RecomputeTx(q, ids)
+// HandlesForSource is the handle list a Source credibility change recomputes.
+func HandlesForSource(q Querier, sourceID []byte) ([][]byte, error) {
+	return listIDs(q, sqlHandlesForSource, sourceID)
 }
 
-// RecomputeCitationTx recomputes the handles whose members have Observations
-// on the Citation: its transcription certainty is part of their evidence.
-func RecomputeCitationTx(q Querier, citationID []byte) error {
-	ids, err := listIDs(q, sqlHandlesForCitation, citationID)
-	if err != nil {
-		return err
-	}
-	return RecomputeTx(q, ids)
+// HandlesForCitation is the handle list a Citation certainty change recomputes.
+func HandlesForCitation(q Querier, citationID []byte) ([][]byte, error) {
+	return listIDs(q, sqlHandlesForCitation, citationID)
 }
 
-// RecomputePropertyTx recomputes every handle that has an Observation on the
-// Property. A cardinality change resolves those handles differently.
-func RecomputePropertyTx(q Querier, propertyID []byte) error {
-	ids, err := listIDs(q, sqlHandlesForProperty, propertyID)
-	if err != nil {
-		return err
-	}
-	return RecomputeTx(q, ids)
+// HandlesForProperty is the handle list a Property cardinality change recomputes.
+func HandlesForProperty(q Querier, propertyID []byte) ([][]byte, error) {
+	return listIDs(q, sqlHandlesForProperty, propertyID)
 }
 
 // Rebuild clears the table, recomputes every handle, and stores CacheVersion.
