@@ -20,8 +20,8 @@ struct CitationComposerFormPane: View {
     }
 
     private var narrowBody: some View {
-        ScrollView {
-            LazyVStack(alignment: .leading, spacing: PVSpacing.space5) {
+        CitationComposerObservationScroll(rows: model.observations, row: observationRow) {
+            VStack(alignment: .leading, spacing: PVSpacing.space5) {
                 VStack(alignment: .leading, spacing: PVSpacing.space8) {
                     identityLine
                     citationFields
@@ -29,12 +29,9 @@ struct CitationComposerFormPane: View {
                 }
                 .padding(.bottom, PVSpacing.space3)
                 observationHeader
-                ForEach(model.observations) { row in
-                    observationRow(row)
-                }
-                addObservationButton
             }
-            .padding(PVSpacing.space7)
+        } footer: {
+            addObservationButton
         }
     }
 
@@ -49,17 +46,14 @@ struct CitationComposerFormPane: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             PVDivider(axis: .vertical, color: PVColor.borderDefault)
-            ScrollView {
-                LazyVStack(alignment: .leading, spacing: PVSpacing.space5) {
+            CitationComposerObservationScroll(rows: model.observations, row: observationRow) {
+                VStack(alignment: .leading, spacing: PVSpacing.space5) {
                     connectionsSection
                         .padding(.bottom, PVSpacing.space3)
                     observationHeader
-                    ForEach(model.observations) { row in
-                        observationRow(row)
-                    }
-                    addObservationButton
                 }
-                .padding(PVSpacing.space7)
+            } footer: {
+                addObservationButton
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         }
@@ -377,5 +371,259 @@ struct CitationComposerFormPane: View {
         }
         .padding(.horizontal, PVSpacing.space7)
         .padding(.vertical, PVSpacing.space6)
+    }
+}
+
+/// Which observation rows to build, plus the spacers that stand in for the rest.
+enum CitationComposerObservationWindowing {
+    struct Layout: Equatable {
+        var start: Int
+        var end: Int
+        var topSpacer: CGFloat
+        var bottomSpacer: CGFloat
+    }
+
+    static let estimatedRowHeight: CGFloat = 104
+    static let overscan: CGFloat = 480
+    /// A short list is one stack. Past this, only the rows near the viewport are built.
+    static let fullCount = 16
+
+    static func layout(
+        rowHeights: [CGFloat],
+        spacing: CGFloat,
+        blockMinY: CGFloat,
+        viewportHeight: CGFloat,
+        overscan: CGFloat
+    ) -> Layout {
+        let count = rowHeights.count
+        if count == 0 {
+            return Layout(start: 0, end: 0, topSpacer: 0, bottomSpacer: 0)
+        }
+        if count <= fullCount {
+            return Layout(start: 0, end: count, topSpacer: 0, bottomSpacer: 0)
+        }
+        if viewportHeight <= 0 {
+            let end = min(count, fullCount)
+            return Layout(
+                start: 0,
+                end: end,
+                topSpacer: 0,
+                bottomSpacer: stackHeight(Array(rowHeights[end...]), spacing: spacing)
+            )
+        }
+        let visibleTop = -blockMinY - overscan
+        let visibleBottom = -blockMinY + viewportHeight + overscan
+        var start: Int?
+        var end = count
+        var y: CGFloat = 0
+        for index in 0..<count {
+            let rowTop = y
+            let rowBottom = y + rowHeights[index]
+            let intersects = rowBottom > visibleTop && rowTop < visibleBottom
+            if intersects {
+                if start == nil { start = index }
+            } else if start != nil {
+                end = index
+                break
+            }
+            y = rowBottom + spacing
+        }
+        guard let start else {
+            let total = stackHeight(rowHeights, spacing: spacing)
+            if visibleBottom <= 0 {
+                return Layout(start: 0, end: 0, topSpacer: 0, bottomSpacer: total)
+            }
+            return Layout(start: count, end: count, topSpacer: total, bottomSpacer: 0)
+        }
+        return Layout(
+            start: start,
+            end: end,
+            topSpacer: stackHeight(Array(rowHeights[..<start]), spacing: spacing),
+            bottomSpacer: stackHeight(Array(rowHeights[end...]), spacing: spacing)
+        )
+    }
+
+    /// Height of rows with `spacing` between them and no trailing gap.
+    static func stackHeight(_ heights: [CGFloat], spacing: CGFloat) -> CGFloat {
+        guard !heights.isEmpty else { return 0 }
+        return heights.reduce(0, +) + spacing * CGFloat(heights.count - 1)
+    }
+}
+
+/// Scrolls the citation column and builds only the observation rows near the viewport.
+///
+/// A `LazyVStack` inserts those rows, and the text fields inside them, during the
+/// scroll view's constraint pass. AppKit then aborts: the window asks for more
+/// constraint passes than it has views. This stack is complete before that pass.
+private struct CitationComposerObservationScroll<Above: View, Row: View, Footer: View>: View {
+    private let rows: [ObservationRow]
+    private let above: Above
+    private let row: (ObservationRow) -> Row
+    private let footer: Footer
+    private let spacing = PVSpacing.space5
+
+    @State private var metrics = Metrics()
+    @State private var layout = CitationComposerObservationWindowing.Layout(
+        start: 0, end: 0, topSpacer: 0, bottomSpacer: 0
+    )
+    @State private var hasMetrics = false
+
+    init(
+        rows: [ObservationRow],
+        row: @escaping (ObservationRow) -> Row,
+        @ViewBuilder above: () -> Above,
+        @ViewBuilder footer: () -> Footer
+    ) {
+        self.rows = rows
+        self.row = row
+        self.above = above()
+        self.footer = footer()
+    }
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: spacing) {
+                above
+                observationRows
+                footer
+            }
+            .padding(PVSpacing.space7)
+        }
+        .coordinateSpace(name: citationComposerObservationSpace)
+        .background { viewportReader }
+        .onPreferenceChange(BlockMinYKey.self) { minY in
+            guard minY != metrics.blockMinY else { return }
+            metrics.blockMinY = minY
+            hasMetrics = true
+            publishLayout()
+        }
+        .onPreferenceChange(ViewportHeightKey.self) { height in
+            guard height != metrics.viewportHeight else { return }
+            metrics.viewportHeight = height
+            hasMetrics = true
+            publishLayout()
+        }
+        .onPreferenceChange(RowHeightKey.self) { reported in
+            var changed = false
+            for (id, height) in reported where abs((metrics.measured[id] ?? -1) - height) > 0.5 {
+                metrics.measured[id] = height
+                changed = true
+            }
+            if changed { publishLayout() }
+        }
+        .onChange(of: rows.map(\.id)) { _, _ in
+            publishLayout()
+        }
+    }
+
+    private var shown: CitationComposerObservationWindowing.Layout {
+        if hasMetrics { return layout }
+        return CitationComposerObservationWindowing.layout(
+            rowHeights: resolvedHeights,
+            spacing: spacing,
+            blockMinY: 0,
+            viewportHeight: 0,
+            overscan: CitationComposerObservationWindowing.overscan
+        )
+    }
+
+    @ViewBuilder
+    private var observationRows: some View {
+        let window = clamped(shown)
+        VStack(alignment: .leading, spacing: spacing) {
+            if window.topSpacer > 0 {
+                Color.clear
+                    .frame(height: window.topSpacer)
+                    .accessibilityHidden(true)
+            }
+            ForEach(rows[window.start..<window.end]) { item in
+                row(item)
+                    .background { heightReader(item.id) }
+            }
+            if window.bottomSpacer > 0 {
+                Color.clear
+                    .frame(height: window.bottomSpacer)
+                    .accessibilityHidden(true)
+            }
+        }
+        .background { blockOriginReader }
+    }
+
+    private func clamped(_ layout: CitationComposerObservationWindowing.Layout) -> CitationComposerObservationWindowing.Layout {
+        let start = min(max(layout.start, 0), rows.count)
+        let end = min(max(layout.end, start), rows.count)
+        return CitationComposerObservationWindowing.Layout(
+            start: start,
+            end: end,
+            topSpacer: layout.topSpacer,
+            bottomSpacer: layout.bottomSpacer
+        )
+    }
+
+    private var resolvedHeights: [CGFloat] {
+        rows.map { metrics.measured[$0.id] ?? CitationComposerObservationWindowing.estimatedRowHeight }
+    }
+
+    private func publishLayout() {
+        let next = CitationComposerObservationWindowing.layout(
+            rowHeights: resolvedHeights,
+            spacing: spacing,
+            blockMinY: metrics.blockMinY,
+            viewportHeight: metrics.viewportHeight,
+            overscan: CitationComposerObservationWindowing.overscan
+        )
+        if next != layout {
+            layout = next
+        }
+    }
+
+    private var blockOriginReader: some View {
+        GeometryReader { proxy in
+            Color.clear.preference(
+                key: BlockMinYKey.self,
+                value: proxy.frame(in: .named(citationComposerObservationSpace)).minY
+            )
+        }
+    }
+
+    private var viewportReader: some View {
+        GeometryReader { proxy in
+            Color.clear.preference(key: ViewportHeightKey.self, value: proxy.size.height)
+        }
+    }
+
+    private func heightReader(_ id: UUID) -> some View {
+        GeometryReader { proxy in
+            Color.clear.preference(key: RowHeightKey.self, value: [id: proxy.size.height])
+        }
+    }
+
+    private final class Metrics {
+        var blockMinY: CGFloat = 0
+        var viewportHeight: CGFloat = 0
+        var measured: [UUID: CGFloat] = [:]
+    }
+}
+
+private let citationComposerObservationSpace = "citationComposerObservations"
+
+private struct BlockMinYKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
+    }
+}
+
+private struct ViewportHeightKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
+    }
+}
+
+private struct RowHeightKey: PreferenceKey {
+    static var defaultValue: [UUID: CGFloat] = [:]
+    static func reduce(value: inout [UUID: CGFloat], nextValue: () -> [UUID: CGFloat]) {
+        value.merge(nextValue(), uniquingKeysWith: { _, new in new })
     }
 }
