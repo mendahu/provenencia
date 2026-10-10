@@ -1,6 +1,9 @@
 package handlers
 
 import (
+	"bytes"
+
+	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/graphcache"
@@ -66,7 +69,32 @@ func loadTermInfo(c *database.Catalog) (map[string]termInfo, error) {
 	return out, rows.Err()
 }
 
-func listedFromSource(o graphcache.SourceObservation, props map[string]propertyInfo) observations.Listed {
+// listedProtosFromSource projects stored observations. A citation id keeps
+// that citation's rows, in the Source's ref order. Nil keeps every row.
+func listedProtosFromSource(c *database.Catalog, sg graphcache.SourceGraph, citationID []byte) ([]*engine.Observation, error) {
+	props, err := loadPropertyInfo(c)
+	if err != nil {
+		return nil, err
+	}
+	terms, err := loadTermInfo(c)
+	if err != nil {
+		return nil, err
+	}
+	subjectLabels := map[string]string{}
+	for _, s := range sg.Subjects {
+		subjectLabels[string(s.ID)] = s.Label
+	}
+	var out []*engine.Observation
+	for _, o := range sg.Observations {
+		if citationID != nil && !bytes.Equal(o.CitationID, citationID) {
+			continue
+		}
+		out = append(out, listedObservationProto(listedFromSource(o, props, terms, subjectLabels)))
+	}
+	return out, nil
+}
+
+func listedFromSource(o graphcache.SourceObservation, props map[string]propertyInfo, terms map[string]termInfo, subjectLabels map[string]string) observations.Listed {
 	info := props[string(o.PropertyID)]
 	l := observations.Listed{
 		Observation: observations.Observation{
@@ -79,6 +107,12 @@ func listedFromSource(o graphcache.SourceObservation, props map[string]propertyI
 		},
 		PropertyKey: info.Key, PropertyLabel: info.Label, PropertyValueType: info.ValueType,
 	}
+	if term, ok := terms[string(o.TermID)]; ok {
+		l.ValueTermLabel = term.Label
+	}
+	if label, ok := subjectLabels[string(o.ValueSubjectID)]; ok {
+		l.ValueSubjectLabel = label
+	}
 	if len(o.Date) > 0 {
 		if d, err := valuecodec.UnmarshalDate(o.Date); err == nil {
 			l.Date = &d
@@ -90,6 +124,7 @@ func listedFromSource(o graphcache.SourceObservation, props map[string]propertyI
 			l.ValueNameForm = n.Form
 		}
 	}
+	observations.FillListedDisplayText(&l)
 	return l
 }
 
