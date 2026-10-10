@@ -1,57 +1,55 @@
 package promotealign
 
 import (
-	"sync"
-
 	"github.com/mendahu/provenencia/core/connectrules"
+	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/graphalign"
+	"github.com/mendahu/provenencia/core/match"
 )
 
-// Process-local stats cache keyed by the catalog file and its latest audit
-// revision (design §8). Any write bumps the revision and invalidates; a
-// different project never reads another's frequencies.
-var (
-	statsMu     sync.Mutex
-	statsKey    statsStamp
-	statsCached graphalign.Stats
-	statsValid  bool
-)
-
-type statsStamp struct {
-	file string
-	rev  int64
-}
-
-func loadStats(q Querier) (graphalign.Stats, error) {
-	var stamp statsStamp
-	if err := q.QueryRow(`SELECT file FROM pragma_database_list WHERE name = 'main'`).Scan(&stamp.file); err != nil {
-		return graphalign.Stats{}, err
-	}
-	if err := q.QueryRow(`SELECT COALESCE(MAX(revision), 0) FROM audit_transactions`).Scan(&stamp.rev); err != nil {
-		return graphalign.Stats{}, err
-	}
-
-	statsMu.Lock()
-	defer statsMu.Unlock()
-	// An in-memory catalog has no file, so it can't be told apart: never cache it.
-	if statsValid && stamp.file != "" && stamp == statsKey {
-		return cloneStats(statsCached), nil
-	}
-
-	st, err := computeStats(q)
+// loadStats returns this catalog's scan, recomputing when the audit revision
+// has moved. The property list is the match profiles, not a fixed key list.
+func loadStats(c *database.Catalog) (graphalign.Stats, error) {
+	db, err := c.DB()
 	if err != nil {
 		return graphalign.Stats{}, err
 	}
-	statsKey, statsCached, statsValid = stamp, st, true
+	var rev int64
+	if err := db.QueryRow(`SELECT COALESCE(MAX(revision), 0) FROM audit_transactions`).Scan(&rev); err != nil {
+		return graphalign.Stats{}, err
+	}
+	if cached, ok := c.Graph().Stats(rev); ok {
+		return cloneStats(cached.(graphalign.Stats)), nil
+	}
+	st, err := computeStats(db)
+	if err != nil {
+		return graphalign.Stats{}, err
+	}
+	c.Graph().SetStats(rev, st)
 	return cloneStats(st), nil
 }
 
-// ResetStatsCacheForTest clears the process-local cache (tests only).
-func ResetStatsCacheForTest() {
-	statsMu.Lock()
-	defer statsMu.Unlock()
-	statsKey, statsCached, statsValid = statsStamp{}, graphalign.Stats{}, false
+func cloneStats(s graphalign.Stats) graphalign.Stats {
+	out := graphalign.Stats{
+		ValueFreq: map[string]map[string]float64{},
+		FanOut:    map[string]float64{},
+	}
+	for k, m := range s.ValueFreq {
+		cp := map[string]float64{}
+		for vk, v := range m {
+			cp[vk] = v
+		}
+		out.ValueFreq[k] = cp
+	}
+	for k, v := range s.FanOut {
+		out.FanOut[k] = v
+	}
+	return out
 }
+
+// ResetStatsCacheForTest is a no-op. Stats live on the catalog's graph, so a
+// new catalog does not see another project's scan.
+func ResetStatsCacheForTest() {}
 
 func computeStats(q Querier) (graphalign.Stats, error) {
 	st := graphalign.Stats{
@@ -61,6 +59,11 @@ func computeStats(q Querier) (graphalign.Stats, error) {
 
 	// Value frequencies: fraction of unmerged handles carrying each text/term
 	// value for profile Properties. Approximates u among unrelated handles.
+	keys := profilePropertyKeys()
+	args := make([]any, len(keys))
+	for i, k := range keys {
+		args[i] = k
+	}
 	rows, err := q.Query(`SELECT p.key,
 			COALESCE(r.value_text, ''),
 			COALESCE(t.key, ''),
@@ -70,8 +73,8 @@ func computeStats(q Querier) (graphalign.Stats, error) {
 		JOIN canonical_entities e ON e.id = r.entity_id AND e.merged_into_id IS NULL
 		LEFT JOIN property_terms t ON t.id = r.value_term_id
 		WHERE r.rank = 1 AND r.reason = 'kept'
-			AND p.key IN ('name', 'sex_at_birth', 'event_type', 'toponym')
-		GROUP BY p.key, r.value_text, t.key`)
+			AND p.key IN (`+database.SQLInPlaceholders(len(keys))+`)
+		GROUP BY p.key, r.value_text, t.key`, args...)
 	if err != nil {
 		return graphalign.Stats{}, err
 	}
@@ -203,20 +206,21 @@ func addFanOut(q Querier, b connectrules.Bridge, kin kinship, sums map[string]fa
 	return rows.Err()
 }
 
-func cloneStats(s graphalign.Stats) graphalign.Stats {
-	out := graphalign.Stats{
-		ValueFreq: map[string]map[string]float64{},
-		FanOut:    map[string]float64{},
-	}
-	for k, m := range s.ValueFreq {
-		cp := map[string]float64{}
-		for vk, v := range m {
-			cp[vk] = v
+func profilePropertyKeys() []string {
+	seen := map[string]bool{}
+	var keys []string
+	for _, kind := range match.ProfiledKinds() {
+		profile, ok := match.DefaultProfile(kind)
+		if !ok {
+			continue
 		}
-		out.ValueFreq[k] = cp
+		for _, prop := range profile.Properties() {
+			if prop.Origin != connectrules.OriginProvenencia || seen[prop.Key] {
+				continue
+			}
+			seen[prop.Key] = true
+			keys = append(keys, prop.Key)
+		}
 	}
-	for k, v := range s.FanOut {
-		out.FanOut[k] = v
-	}
-	return out
+	return keys
 }

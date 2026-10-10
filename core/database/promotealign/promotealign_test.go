@@ -2,7 +2,6 @@ package promotealign_test
 
 import (
 	"bytes"
-	"database/sql"
 	"fmt"
 	"testing"
 
@@ -35,21 +34,21 @@ var userID = []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}
 const locator = `{"version":1,"selectors":[{"type":"page","artifact_page":1}]}`
 
 type fixture struct {
-	t        *testing.T
+	t        testing.TB
 	c        *database.Catalog
 	source   sources.Source
 	artifact artifacts.Artifact
 	y        int64
 }
 
-func must(t *testing.T, err error) {
+func must(t testing.TB, err error) {
 	t.Helper()
 	if err != nil {
 		t.Fatal(err)
 	}
 }
 
-func newFixture(t *testing.T) *fixture {
+func newFixture(t testing.TB) *fixture {
 	t.Helper()
 	promotealign.ResetStatsCacheForTest()
 	c, err := database.Create(t.TempDir(), "t.provenencia")
@@ -173,6 +172,23 @@ func (f *fixture) participation(src sources.Source, art artifacts.Artifact, pers
 	must(f.t, err)
 }
 
+func (f *fixture) locate(src sources.Source, art artifacts.Artifact, event, place subjects.Subject) {
+	f.t.Helper()
+	eventProp := f.prop("event").ID
+	placeProp := f.prop("place").ID
+	_, err := writes.Call(f.c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (connect.Result, []rowchange.Change, error) {
+		return connect.CreateCitedBridge(tx, userID, connect.CreateInput{
+			SourceID: src.ID, FromSubjectID: event.ID, ToSubjectID: place.ID, BridgeTypeKey: "location",
+			Citation: citations.CreateInput{ArtifactID: art.ID, LocatorJSON: locator},
+			Observations: []observations.Input{
+				{PropertyID: eventProp, ValueSubjectID: event.ID},
+				{PropertyID: placeProp, ValueSubjectID: place.ID},
+			},
+		})
+	})
+	must(f.t, err)
+}
+
 func (f *fixture) placeRel(src sources.Source, art artifacts.Artifact, from, to subjects.Subject, kind string) {
 	f.t.Helper()
 	fromProp := f.prop("from").ID
@@ -235,9 +251,7 @@ func (f *fixture) promote(s subjects.Subject) promote.Result {
 
 func (f *fixture) propose(sourceID []byte, fixed []graphalign.Fixed) graphalign.Proposal {
 	f.t.Helper()
-	db, err := f.c.DB()
-	must(f.t, err)
-	p, _, err := promotealign.Propose(db, sourceID, fixed)
+	p, _, err := promotealign.Propose(f.c, sourceID, fixed)
 	must(f.t, err)
 	return p
 }
@@ -418,9 +432,7 @@ func TestProposeOneHopDateExhibit(t *testing.T) {
 
 func TestProposeInvalidSource(t *testing.T) {
 	f := newFixture(t)
-	db, err := f.c.DB()
-	must(t, err)
-	_, _, err = promotealign.Propose(db, make([]byte, 16), nil)
+	_, _, err := promotealign.Propose(f.c, make([]byte, 16), nil)
 	if err != promote.ErrInvalid {
 		t.Fatalf("err %v, want promote.ErrInvalid", err)
 	}
@@ -428,11 +440,9 @@ func TestProposeInvalidSource(t *testing.T) {
 
 func TestStatsCacheInvalidatesOnWrite(t *testing.T) {
 	f := newFixture(t)
-	db, err := f.c.DB()
-	must(t, err)
 
 	// Prime cache.
-	_, _, err = promotealign.Propose(db, f.source.ID, nil)
+	_, _, err := promotealign.Propose(f.c, f.source.ID, nil)
 	must(t, err)
 
 	// A write bumps audit revision; next Propose must recompute (no panic / stale).
@@ -455,15 +465,13 @@ func TestStatsFanOut(t *testing.T) {
 		return rev
 	}
 	stats := func(f *fixture) graphalign.Stats {
-		db, err := f.c.DB()
-		must(f.t, err)
-		st, err := promotealign.LoadStatsForTest(db)
+		st, err := promotealign.LoadStatsForTest(f.c)
 		must(f.t, err)
 		return st
 	}
 	// Both catalogs hold a person, their birth, and a lone place. Filing
 	// person and birth files the participation; filing person and place doesn't.
-	build := func(t *testing.T, fileBirth bool) *fixture {
+	build := func(t testing.TB, fileBirth bool) *fixture {
 		f := &fixture{t: t}
 		c, err := database.Create(t.TempDir(), "t.provenencia")
 		must(t, err)
@@ -593,9 +601,7 @@ func TestProposeHoldsNewAndSkipDecisions(t *testing.T) {
 			again := f.person(srcB, artB, "Gracie")
 			fixed := tt.fixed(per.Entity.ID)
 			fixed.SubjectID = again.ID
-			db, err := f.c.DB()
-			must(t, err)
-			p, _, err := promotealign.Propose(db, srcB.ID, []graphalign.Fixed{fixed})
+			p, _, err := promotealign.Propose(f.c, srcB.ID, []graphalign.Fixed{fixed})
 			if tt.wantErr {
 				if err != promote.ErrInvalid {
 					t.Fatalf("err %v, want promote.ErrInvalid", err)
@@ -610,23 +616,8 @@ func TestProposeHoldsNewAndSkipDecisions(t *testing.T) {
 	}
 }
 
-type countingQuerier struct {
-	db *sql.DB
-	n  int
-}
-
-func (c *countingQuerier) Query(query string, args ...any) (*sql.Rows, error) {
-	c.n++
-	return c.db.Query(query, args...)
-}
-
-func (c *countingQuerier) QueryRow(query string, args ...any) *sql.Row {
-	c.n++
-	return c.db.QueryRow(query, args...)
-}
-
-// Every read in Propose is batched, so a bigger layer and catalog cost no
-// more queries than a small one of the same shape.
+// Every graph read in Propose is batched, so a bigger layer and catalog cost
+// no more queries than a small one of the same shape.
 func TestProposeQueryCountDoesNotGrowWithTheLayer(t *testing.T) {
 	queries := func(people int) int {
 		f := newFixture(t)
@@ -642,13 +633,11 @@ func TestProposeQueryCountDoesNotGrowWithTheLayer(t *testing.T) {
 			bb := f.birth(srcB, artB)
 			f.participation(srcB, artB, pb, bb, "subject")
 		}
-		db, err := f.c.DB()
+		n := 0
+		f.c.Graph().SetQueryCounterForTest(func() { n++ })
+		_, _, err := promotealign.Propose(f.c, srcB.ID, nil)
 		must(t, err)
-		promotealign.ResetStatsCacheForTest()
-		counter := &countingQuerier{db: db}
-		_, _, err = promotealign.Propose(counter, srcB.ID, nil)
-		must(t, err)
-		return counter.n
+		return n
 	}
 	small, large := queries(2), queries(6)
 	t.Logf("%d queries per proposal", small)
@@ -874,6 +863,39 @@ func TestProposeRelationshipFromEitherEnd(t *testing.T) {
 					r.Target, bytes.Equal(r.HandleID, want), r.Reason)
 			}
 		})
+	}
+}
+
+// A place with several events is a hub. The proposal still has one row per
+// layer subject, and the place lands on that hub.
+func TestHubPlaceProposalStaysOnTheLayer(t *testing.T) {
+	f := newFixture(t)
+	city := f.place(f.source, f.artifact, "Gumptiontown")
+	cityH := f.promote(city)
+	for i := 0; i < 3; i++ {
+		person := f.person(f.source, f.artifact, fmt.Sprintf("Neighbor %d", i))
+		birth := f.birth(f.source, f.artifact)
+		f.participation(f.source, f.artifact, person, birth, "subject")
+		f.locate(f.source, f.artifact, birth, city)
+		f.promote(person)
+		f.promote(birth)
+	}
+
+	srcB, artB := f.newSource("Gazetteer")
+	city2 := f.place(srcB, artB, "Gumptiontown")
+	birth2 := f.birth(srcB, artB)
+	f.locate(srcB, artB, birth2, city2)
+
+	got := f.propose(srcB.ID, nil)
+	if len(got.Rows) != 2 {
+		t.Fatalf("rows %d, want the layer's place and birth", len(got.Rows))
+	}
+	row := rowFor(got, city2.ID)
+	if row.Target != graphalign.TargetHandle || !bytes.Equal(row.HandleID, cityH.Entity.ID) {
+		t.Fatalf("place row %+v, want the hub", row.Target)
+	}
+	if err := f.c.Graph().Verify(); err != nil {
+		t.Fatal(err)
 	}
 }
 

@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+
+	"github.com/mendahu/provenencia/core/database/graphcache"
 )
 
 // ApplicationID is the SQLite application_id FourCC 'PROV' (0x50524F56).
@@ -25,8 +27,9 @@ const (
 
 // Catalog is an exclusive connection to one provenencia.sqlite file.
 type Catalog struct {
-	dir string
-	db  *sql.DB
+	dir   string
+	db    *sql.DB
+	graph *graphcache.Graph
 
 	mu        sync.Mutex
 	writing   bool
@@ -134,7 +137,7 @@ func Create(parent, folderName string) (*Catalog, error) {
 		_ = os.RemoveAll(dir)
 		return nil, err
 	}
-	return &Catalog{dir: dir, db: db}, nil
+	return attachGraph(&Catalog{dir: dir, db: db}), nil
 }
 
 // Open opens an existing project directory by catalog content, not folder suffix.
@@ -163,7 +166,21 @@ func Open(dir string) (*Catalog, error) {
 		db.Close()
 		return nil, err
 	}
-	return &Catalog{dir: dir, db: db}, nil
+	return attachGraph(&Catalog{dir: dir, db: db}), nil
+}
+
+func attachGraph(c *Catalog) *Catalog {
+	c.graph = graphcache.New(c.db)
+	c.Listen(c.graph)
+	return c
+}
+
+// Graph is the catalog's canonical graph. It is empty until a read fills it.
+func (c *Catalog) Graph() *graphcache.Graph {
+	if c == nil {
+		return nil
+	}
+	return c.graph
 }
 
 func locateCatalog(dir string) (string, error) {
