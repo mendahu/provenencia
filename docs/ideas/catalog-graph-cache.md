@@ -499,7 +499,7 @@ Each step is its own PR, measured against the one before. PRs that only repoint 
 
 **Before starting**
 
-- **The paused stack.** Decided: [mendahu/provenencia#327](https://github.com/mendahu/provenencia/pull/327) to [mendahu/provenencia#340](https://github.com/mendahu/provenencia/pull/340) stay paused until this plan has landed, then each is refactored and rebased onto it in turn. #327 is replaced by PR 8 (its debounce and narrowed exhibits carry over), #328 by PR 10, and #330 is re-judged against the graph-backed readers. #331 to #334 are rebuilt on the `CanonGraph` version of `align.go`.
+- **The paused stack.** Decided: [mendahu/provenencia#327](https://github.com/mendahu/provenencia/pull/327) to [mendahu/provenencia#340](https://github.com/mendahu/provenencia/pull/340) stay paused until this plan has landed, then each is refactored and rebased onto it in turn. #327 is replaced by PR 8 (its narrowed exhibits carry over; the debounce does not), #328 by PR 10, and #330 is re-judged against the graph-backed readers. #331 to #334 are rebuilt on the `CanonGraph` version of `align.go`.
 
 **Catalog model and effects**
 
@@ -552,7 +552,7 @@ Each step is its own PR, measured against the one before. PRs that only repoint 
 8. **The graph and Promote** (done). `graphcache` hangs on `Catalog` and listens for commits. A read fills a node (identity, every ARV rank, links, members) or a kind's unmerged ids. A commit replaces what is already loaded, inserts a new id into a loaded kind index, and, for an association, loads the new endpoints. `EnsureCatalog` drops the store after a rebuild. Promote walks that graph with no hop cap: top-5 seeds per unfixed kind, links ordered by association ref then neighbor ref. Stats stay a full SQL scan, rerun when `MAX(audit_transactions.revision)` changes, with the property list taken from the match profiles. The scan lives on the catalog's graph, not in a process-wide cache.
    - **No runtime drop.** A read does not query `audit_transactions` and does not discard the store when the log is ahead. The `.Begin()` test remains the check that a new write does not start its own transaction. `Verify` fails when a loaded node disagrees with a fresh reconcile of the observations, and with the kind index when one is loaded. It does not repair the store. `PROVENENCIA_GRAPH_VERIFY=1` makes `OnCommit` return that error. Production does not set it. A listener error still drops the store.
    - **Ids on the node.** A node stores `subject_type_id`, property ids, and term ids. Direction and `inverse_key` are copied off the term row while the node is loaded. `promotealign` builds `graphalign.EdgeSignature` at the edge. The typed-key literal test stays deferred.
-   - **Align stays pure.** The loader records a read error and `Propose` returns it without calling Align. Existing promote fixtures matched after the switch. The #327 caps are not ported. The 250ms debounce and the narrowed one-hop exhibits are.
+   - **Align stays pure.** The loader records a read error and `Propose` returns it without calling Align. Existing promote fixtures matched after the switch. The #327 caps and the 250ms debounce are not ported. The narrowed one-hop exhibits are.
    - **Ranks stay.** Nodes keep every ARV rank. The benchmark reports heap; this PR does not trim them. A separate prefetch is not added.
 
 9. **Display.** The header registry, with header dependents derived from it (replacing `HeaderDependents`); header memos; lists and `…ByIDs` from the graph; the vocabulary map; "today" at read time.

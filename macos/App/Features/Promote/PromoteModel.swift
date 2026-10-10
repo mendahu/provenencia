@@ -146,18 +146,11 @@ final class PromoteModel {
 
     func mapRest() { flow.mapRest() }
 
-    private var proposeTask: Task<Void, Never>?
-
     func setTarget(subjectID: String, token: String) {
         guard flow.setTarget(subjectID: subjectID, token: token) else { return }
         flow.staleNote = nil
         let generation = nextProposal()
-        proposeTask?.cancel()
-        proposeTask = Task {
-            try? await Task.sleep(for: .milliseconds(250))
-            guard !Task.isCancelled else { return }
-            await repropose(generation: generation)
-        }
+        Task { await repropose(generation: generation) }
     }
 
     func togglePin(subjectID: String, comparisonID: String) {
