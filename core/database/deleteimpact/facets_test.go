@@ -11,6 +11,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/deleteimpact"
+	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/metadatafields"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sourcecredibility"
@@ -153,7 +154,7 @@ func TestFacetReleaseAuditsSourceSide(t *testing.T) {
 	})
 }
 
-// Released.Handles is the seam cache upkeep and search reprojection will read.
+// effects.Handles on the released changes is the set subject delete recomputes.
 func TestReleaseFacetsReportsHandles(t *testing.T) {
 	f := newConclusionFixture(t)
 	db, err := f.c.DB()
@@ -170,8 +171,12 @@ func TestReleaseFacetsReportsHandles(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(got.Handles) != 1 || !bytes.Equal(got.Handles[0], f.entityID) {
-		t.Fatalf("handles %v", got.Handles)
+	handles, err := effects.Handles(tx, got.Changes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(handles) != 1 || !bytes.Equal(handles[0], f.entityID) {
+		t.Fatalf("handles %v", handles)
 	}
 	var types []string
 	for _, ch := range got.Changes {

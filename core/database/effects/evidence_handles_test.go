@@ -29,9 +29,8 @@ import (
 const evidenceLocator = `{"version":1,"selectors":[{"type":"page","artifact_page":1}]}`
 
 // TestEvidenceHandleSets builds the change an evidence write actually returns
-// and checks effects.Handles against the handle list RecomputeSubjectsTx and
-// RecomputeCitationTx use. A short set is a registry bug: Run would recompute
-// less than the hand call it replaces.
+// and checks effects.Handles against HandlesForSubjects and HandlesForCitation.
+// A short set is a registry bug: Run would recompute less than those sets.
 func TestEvidenceHandleSets(t *testing.T) {
 	userID := []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}
 	c, err := database.Create(t.TempDir(), "t.provenencia")

@@ -15,6 +15,20 @@ func ParseKind(s string) (catalogmodel.Kind, error) {
 	return k, nil
 }
 
+// Snapshot reports Impact inside a read transaction and rolls it back.
+// GetDeleteImpact is not a write, so it does not go through writes.Run.
+func Snapshot(db *sql.DB, kind catalogmodel.Kind, id []byte) (Report, error) {
+	if db == nil {
+		return Report{}, ErrInvalid
+	}
+	tx, err := db.Begin()
+	if err != nil {
+		return Report{}, err
+	}
+	defer func() { _ = tx.Rollback() }()
+	return Impact(tx, kind, id)
+}
+
 // Impact reports whether id of kind can be erased and, if not, the inbound list.
 func Impact(tx *sql.Tx, kind catalogmodel.Kind, id []byte) (Report, error) {
 	if tx == nil {

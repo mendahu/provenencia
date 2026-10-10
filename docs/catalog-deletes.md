@@ -35,14 +35,14 @@ Research rows that a delete takes with it are removed **explicitly** and audited
 | Field | Role |
 | --- | --- |
 | `Parent`, `Via` | The parent kind and the FK covered (`child_table.fk_col`). The honesty test checks it against the register. |
-| `Release` | Deletes the rows and returns their audit changes, plus any handles whose membership or evidence changed. |
+| `Release` | Deletes the rows and returns their audit changes. Handles come from `effects.Handles` on those changes. |
 | `Remaining` | A count of rows still pointing at the parent. It must be zero after `Release`, or the delete fails with `deleteimpact.release_incomplete`. So the `CASCADE` backstop can never fire silently. |
 | `Named` + `Count` / `List` / `Child` | Named releases also appear in `Report.Cascades`, from the same predicate `Release` deletes. |
 
 - **One call per delete.** Domain `Delete` calls `deleteimpact.ReleaseFacets(tx, kind, id)` once, after `Refuse` and before the parent `DELETE`. Then it prepends `Released.Changes` to its own audit change. It never hand-calls a per-table helper.
 - **Releases compose.** A released row that is itself a parent (a claim, a connection Observation) has its own facets released first, through the same function.
 - **The registry owns ordering.** Callers don't sequence anything.
-- **`Released.Handles` is the seam for derived data.** Auto-reconciler upkeep and search reprojection read it instead of re-querying. Since S9-06, Subject and Observation deletes pass it to `autoreconciler.RecomputeTx` after the parent `DELETE`; an Observation delete also recomputes its own Subject's handle, which `Released.Handles` (pins only) does not name.
+- **Handles come from the released changes.** `effects.Handles` reads them, including a pin's claim after that claim row is gone. Subject delete passes that set to `autoreconciler.RecomputeTx` after the parent `DELETE`, together with observers, linked handles, and header dependents snapshotted while the link exists. `Run` recomputes the returned changes again.
 
 | Audited (released) | Silent (`CASCADE` only) |
 | --- | --- |

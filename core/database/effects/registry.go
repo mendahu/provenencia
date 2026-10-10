@@ -117,7 +117,11 @@ var registry = map[string]Effect{
 	},
 	"observation_notes": {Entity: "observation_note", Source: up("observation_id", "citation_id", "artifact_id", "source_id")},
 	"subjects":          {Entity: "subject", Source: field("source_id")},
-	"files":             {Entity: "file", Source: chain(inbound("artifacts", "file_id"), field("source_id"))},
+	"files": {
+		Entity: "file",
+		Source: chain(inbound("artifacts", "file_id"), field("source_id")),
+		Search: []SearchDoc{{Kind: DocSource, Path: chain(inbound("artifacts", "file_id"), field("source_id"))}},
+	},
 	"date_values": {
 		Entity: "date_value",
 		Source: chain(

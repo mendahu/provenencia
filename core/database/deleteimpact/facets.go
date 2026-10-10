@@ -1,7 +1,6 @@
 package deleteimpact
 
 import (
-	"bytes"
 	"database/sql"
 	"fmt"
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
@@ -24,28 +23,14 @@ var ErrReleaseIncomplete = apperr.New(apperr.CodeDeleteImpactReleaseIncomplete, 
 // Released is what ReleaseFacets removed for one parent.
 type Released struct {
 	// Changes are audit rows for every removed facet, ready to append ahead of
-	// the parent's own delete change in the same revision.
+	// the parent's own delete change in the same revision. Handles come from
+	// effects.Handles on these changes, including through ghosts when a claim
+	// row is already gone.
 	Changes []rowchange.Change
-	// Handles are canonical entities whose membership or evidence changed —
-	// the seam for auto-reconciler upkeep (S9-06) and search reprojection
-	// (S9-34). Deduplicated, in first-seen order.
-	Handles [][]byte
 }
 
 func (r *Released) merge(o Released) {
 	r.Changes = append(r.Changes, o.Changes...)
-	for _, h := range o.Handles {
-		r.addHandle(h)
-	}
-}
-
-func (r *Released) addHandle(id []byte) {
-	for _, h := range r.Handles {
-		if bytes.Equal(h, id) {
-			return
-		}
-	}
-	r.Handles = append(r.Handles, append([]byte(nil), id...))
 }
 
 type facetRelease struct {
@@ -158,7 +143,7 @@ func buildFacetReleases() []facetRelease {
 				WHERE ev.observation_id = ?
 				ORDER BY e.ref COLLATE NOCASE LIMIT ?`),
 			Remaining: `SELECT COUNT(*) FROM identity_claim_evidence WHERE observation_id = ?`,
-			Release: pinRelease(`SELECT ev.identity_claim_id, ev.observation_id, ic.entity_id
+			Release: pinRelease(`SELECT ev.identity_claim_id, ev.observation_id
 				FROM identity_claim_evidence ev
 				JOIN identity_claims ic ON ic.id = ev.identity_claim_id
 				WHERE ev.observation_id = ? ORDER BY ev.identity_claim_id`),
@@ -166,7 +151,7 @@ func buildFacetReleases() []facetRelease {
 		{
 			Parent: catalogmodel.KindIdentityClaim, Via: "identity_claim_evidence.identity_claim_id",
 			Remaining: `SELECT COUNT(*) FROM identity_claim_evidence WHERE identity_claim_id = ?`,
-			Release: pinRelease(`SELECT ev.identity_claim_id, ev.observation_id, ic.entity_id
+			Release: pinRelease(`SELECT ev.identity_claim_id, ev.observation_id
 				FROM identity_claim_evidence ev
 				JOIN identity_claims ic ON ic.id = ev.identity_claim_id
 				WHERE ev.identity_claim_id = ? ORDER BY ev.observation_id`),
@@ -248,25 +233,26 @@ func releaseSubjectClaims(tx *sql.Tx, subjectID []byte) (Released, error) {
 				"argument":            nullStringJSON(c.argument),
 			}),
 		})
-		out.addHandle(c.entityID)
 	}
 	return out, nil
 }
 
-// pinRelease deletes the pins q selects (claim id, observation id, entity id)
-// and audits each under its claim's id, so replaying
-// (identity_claim_evidence, claim id) yields that claim's exhibit history.
+// pinRelease deletes the pins q selects (claim id, observation id) and audits
+// each under its claim's id, so replaying (identity_claim_evidence, claim id)
+// yields that claim's exhibit history. The claim join keeps a pin whose claim
+// is already gone out of this release; effects.Handles walks identity_claim_id
+// to the handle, including through that claim's delete when the row is gone.
 func pinRelease(q string) func(*sql.Tx, []byte) (Released, error) {
 	return func(tx *sql.Tx, parentID []byte) (Released, error) {
 		rows, err := tx.Query(q, parentID)
 		if err != nil {
 			return Released{}, err
 		}
-		type pin struct{ claimID, observationID, entityID []byte }
+		type pin struct{ claimID, observationID []byte }
 		var pins []pin
 		for rows.Next() {
 			var p pin
-			if err := rows.Scan(&p.claimID, &p.observationID, &p.entityID); err != nil {
+			if err := rows.Scan(&p.claimID, &p.observationID); err != nil {
 				rows.Close()
 				return Released{}, err
 			}
@@ -290,7 +276,6 @@ func pinRelease(q string) func(*sql.Tx, []byte) (Released, error) {
 					"observation_id":    uuidJSON(p.observationID),
 				}),
 			})
-			out.addHandle(p.entityID)
 		}
 		return out, nil
 	}

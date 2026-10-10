@@ -51,7 +51,7 @@ Every facet `CASCADE` FK is registered as `facet` and classified:
 - [ ] Bridge `subjects.Delete` releases connection facets (loop `connectrules.All()` endpoints + `Disambiguation` matching property origin; do not hard-code `role` / `relationship_type`) before the parent; other `observations.Delete` stays `edge_locked`
 - [ ] FFI: GetDeleteImpact returns the report; Delete* refuse is a generic in_use / extra-gate code (no report on Error, no apperr ref params)
 - [ ] Audit + searchindex stay in the domain package
-- [ ] Delete changes carry the parent FK in `DeletedRow`; any new entity type has an audit scope resolver ([`add-audit-scope`](../add-audit-scope/SKILL.md))
+- [ ] Delete changes carry the parent FK in `DeletedRow`; any new entity type has a non-`None` effect ([`add-audit-scope`](../add-audit-scope/SKILL.md))
 - [ ] FFI: GetDeleteImpact works for this kind (UI or not)
 - [ ] Swift (when the screen ships): `DeleteImpactFlow` + recipe; confirm uses `target.id`;
         `*.in_use` refetch; `.deletedSubject(sourceId:)` for subject erase
@@ -78,7 +78,7 @@ func Delete(c *database.Catalog, userID, id []byte) error {
     // DELETE parent
     // deleteimpact.ReleaseSnapshot(tx, snap)
     // audit.Record(Changes: append(released.Changes, parentChange)), searchindex.Delete / Reproject
-    // released.Handles → derived-data upkeep (resolved values, handle search docs) once those exist
+    // handles come from effects.Handles on released.Changes
 }
 ```
 

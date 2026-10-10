@@ -16,6 +16,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/autoreconciler"
 	"github.com/mendahu/provenencia/core/database/conclusionheaders"
 	"github.com/mendahu/provenencia/core/database/deleteimpact"
+	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/subjectpositions"
 	"github.com/mendahu/provenencia/core/ref"
 )
@@ -204,7 +205,7 @@ func Update(tx *database.Tx, userID, id []byte, label, description string) ([]ro
 
 // Delete erases a Subject when Impact allows it. Connection facets (edge +
 // disambiguation rows on a bridge) are released first. Positions CASCADE.
-// Handles the released rows named, handles that observed this Subject, linked
+// Handles the released changes name, handles that observed this Subject, linked
 // handles, and their header dependents are recomputed here in one call.
 // Header documents are written at the end of that call, so they have to see
 // the released values already gone. Run recomputes the returned changes again.
@@ -234,8 +235,9 @@ func Delete(tx *database.Tx, userID, id []byte) ([]rowchange.Change, error) {
 	}
 	// Header dependents are snapshotted while the link still exists. The
 	// recompute itself runs after the rows are gone, and it includes the
-	// released handles: RecomputeTx writes header search documents after it
-	// clears values, so those documents have to be in the same call.
+	// handles effects.Handles reads off the released changes: RecomputeTx
+	// writes header search documents after it clears values, so those
+	// documents have to be in the same call.
 	inbound, err := autoreconciler.HandlesObservingSubject(tx.Tx, id)
 	if err != nil {
 		return nil, err
@@ -255,7 +257,11 @@ func Delete(tx *database.Tx, userID, id []byte) ([]rowchange.Change, error) {
 	if _, err := tx.Exec(sqlDelete, id); err != nil {
 		return nil, err
 	}
-	touched := append(append(released.Handles, inbound...), ends...)
+	releasedHandles, err := effects.Handles(tx.Tx, released.Changes)
+	if err != nil {
+		return nil, err
+	}
+	touched := append(append(releasedHandles, inbound...), ends...)
 	if err := autoreconciler.RecomputeTx(tx.Tx, append(touched, deps...)); err != nil {
 		return nil, err
 	}
