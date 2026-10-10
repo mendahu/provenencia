@@ -1,7 +1,6 @@
 package conclusionheaders
 
 import (
-	"bytes"
 	"database/sql"
 	"sort"
 
@@ -299,49 +298,10 @@ func foldPlacesOf(q Querier, byEvent map[string][]HeaderPlace, atByEvent map[str
 	return out, nil
 }
 
-// HeaderDependents is the reverse of the header walks, for a later search
-// reprojection (S9-34): the handles whose header embeds one of ids. A Place
-// reaches its child Places (part_of), its events, and those events' subject
-// persons. An Event reaches its subject persons (their birth or death). A
-// Person reaches the events of their subject-role participations.
-// Association handles are not returned. This does not reproject.
+// HeaderDependents is Dependents. Callers that snapshotted the short walk
+// keep this name.
 func HeaderDependents(q Querier, ids [][]byte) ([][]byte, error) {
-	ids = database.UniqueBlobIDs(ids)
-	if len(ids) == 0 {
-		return nil, nil
-	}
-	children, err := ChildPlaceIDs(q, ids)
-	if err != nil {
-		return nil, err
-	}
-	placeEdges, err := canonicalgraph.Walk(q, canonicalgraph.EventsAtPlace, ids)
-	if err != nil {
-		return nil, err
-	}
-	events := canonicalgraph.Targets(placeEdges)
-	personEdges, err := canonicalgraph.Walk(q, canonicalgraph.SubjectsOfEvent, append(append([][]byte(nil), events...), ids...))
-	if err != nil {
-		return nil, err
-	}
-	eventEdges, err := canonicalgraph.Walk(q, canonicalgraph.EventsOfSubject, ids)
-	if err != nil {
-		return nil, err
-	}
-	var out [][]byte
-	seen := map[string]bool{}
-	for _, id := range ids {
-		seen[string(id)] = true
-	}
-	for _, group := range [][][]byte{children, events, canonicalgraph.Targets(personEdges), canonicalgraph.Targets(eventEdges)} {
-		for _, id := range group {
-			if !seen[string(id)] {
-				seen[string(id)] = true
-				out = append(out, id)
-			}
-		}
-	}
-	sort.Slice(out, func(i, j int) bool { return bytes.Compare(out[i], out[j]) < 0 })
-	return out, nil
+	return Dependents(q, ids)
 }
 
 // ownEntity copies an entity's byte fields off the driver's scan buffers.

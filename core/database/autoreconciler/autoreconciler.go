@@ -158,17 +158,26 @@ const (
 // that named it.
 func RecomputeTx(q Querier, entityIDs [][]byte) error {
 	ids := database.UniqueBlobIDs(entityIDs)
+	before, err := conclusionheaders.AssociationEndpoints(q, ids)
+	if err != nil {
+		return err
+	}
 	for start := 0; start < len(ids); start += batchSize {
 		end := min(start+batchSize, len(ids))
 		if err := recomputeBatch(q, ids[start:end]); err != nil {
 			return err
 		}
 	}
-	deps, err := conclusionheaders.HeaderDependents(q, ids)
+	after, err := conclusionheaders.AssociationEndpoints(q, ids)
 	if err != nil {
 		return err
 	}
-	return searchindex.ReprojectHandles(q, append(ids, deps...))
+	roots := database.UniqueBlobIDs(append(append(append([][]byte(nil), ids...), before...), after...))
+	deps, err := conclusionheaders.Dependents(q, roots)
+	if err != nil {
+		return err
+	}
+	return searchindex.ReprojectHandles(q, append(roots, deps...))
 }
 
 // HandlesObservingSubject returns handles whose members' Observations point

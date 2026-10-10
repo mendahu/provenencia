@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"strings"
 
-	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/namevalues"
@@ -89,22 +88,6 @@ const (
 	sqlEventsOrder = ` ORDER BY COALESCE(d.sort_key, sd.sort_key) IS NULL, COALESCE(d.sort_key, sd.sort_key), e.ref COLLATE NOCASE`
 	sqlListEvents  = sqlEventsSelect + sqlEventsOrder
 )
-
-// ListEvents returns every Event's header in list order, in one query.
-func ListEvents(q Querier) ([]EventHeader, error) {
-	return queryEvents(q, sqlListEvents)
-}
-
-// EventsByIDs returns the headers of the given unmerged Events in list
-// order, in one query. Unknown, merged, and non-Event ids are absent.
-func EventsByIDs(q Querier, ids [][]byte) ([]EventHeader, error) {
-	ids = database.UniqueBlobIDs(ids)
-	if len(ids) == 0 {
-		return nil, nil
-	}
-	return queryEvents(q, sqlEventsSelect+` AND e.id IN (`+database.SQLInPlaceholders(len(ids))+`)`+sqlEventsOrder,
-		database.BlobArgs(ids)...)
-}
 
 func queryEvents(q Querier, query string, args ...any) ([]EventHeader, error) {
 	rows, err := q.Query(query, args...)

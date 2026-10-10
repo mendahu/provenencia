@@ -1,36 +1,37 @@
 package conclusionheaders
 
-import "database/sql"
+import "github.com/mendahu/provenencia/core/database"
 
-type countingQuerier struct {
-	Querier
-	n int
+func countList(c *database.Catalog, list func(*database.Catalog) error) (int, error) {
+	n := 0
+	c.Graph().SetQueryCounterForTest(func() { n++ })
+	defer c.Graph().SetQueryCounterForTest(nil)
+	err := list(c)
+	return n, err
 }
 
-func (c *countingQuerier) Query(query string, args ...any) (*sql.Rows, error) {
-	c.n++
-	return c.Querier.Query(query, args...)
+// ListPersonsQueryCount lists Persons and reports how many graph queries it took.
+func ListPersonsQueryCount(c *database.Catalog) (int, error) {
+	return countList(c, func(c *database.Catalog) error {
+		_, err := ListPersons(c)
+		return err
+	})
 }
 
-// ListPersonsQueryCount lists Persons and reports how many queries it took.
-func ListPersonsQueryCount(q Querier) (int, error) {
-	cq := &countingQuerier{Querier: q}
-	_, err := ListPersons(cq)
-	return cq.n, err
+// ListEventsQueryCount lists Events and reports how many graph queries it took.
+func ListEventsQueryCount(c *database.Catalog) (int, error) {
+	return countList(c, func(c *database.Catalog) error {
+		_, err := ListEvents(c)
+		return err
+	})
 }
 
-// ListEventsQueryCount lists Events and reports how many queries it took.
-func ListEventsQueryCount(q Querier) (int, error) {
-	cq := &countingQuerier{Querier: q}
-	_, err := ListEvents(cq)
-	return cq.n, err
-}
-
-// ListPlacesQueryCount lists Places and reports how many queries it took.
-func ListPlacesQueryCount(q Querier) (int, error) {
-	cq := &countingQuerier{Querier: q}
-	_, err := ListPlaces(cq)
-	return cq.n, err
+// ListPlacesQueryCount lists Places and reports how many graph queries it took.
+func ListPlacesQueryCount(c *database.Catalog) (int, error) {
+	return countList(c, func(c *database.Catalog) error {
+		_, err := ListPlaces(c)
+		return err
+	})
 }
 
 // SortPlaces applies the list order to Place rows.

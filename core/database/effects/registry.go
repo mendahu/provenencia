@@ -173,7 +173,7 @@ var registry = map[string]Effect{
 			onField("inverse_key", self()),
 		),
 	},
-	"canonical_entities": {Entity: "canonical_entity"},
+	"canonical_entities": {Entity: "canonical_entity", Handles: self()},
 	"identity_claims": {
 		Entity: "identity_claim",
 		Handles: union(
