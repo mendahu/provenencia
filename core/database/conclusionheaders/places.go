@@ -1,9 +1,6 @@
 package conclusionheaders
 
 import (
-	"database/sql"
-	"encoding/json"
-	"strings"
 	"time"
 
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
@@ -46,87 +43,6 @@ type PlaceHeader struct {
 	Contains             []PlaceRelationship
 	Predecessors         []PlaceRelationship
 	Successors           []PlaceRelationship
-}
-
-// Unmerged Place handles. Order is sortByTitle's (R5), applied after the
-// scan. Period dates are kept rank-1 start_date / end_date.
-const (
-	sqlPlacesSelect = `SELECT e.id, e.subject_type_id, e.ref, COALESCE(e.argument, ''), COALESCE(e.label, ''),
-		(SELECT json_group_array(tn.value_text ORDER BY tn.rank)
-			FROM auto_reconciler_values tn
-			WHERE tn.entity_id = e.id AND tn.property_id = tp.id AND tn.reason = 'kept'),
-		sd.value_date,
-		ed.value_date
-	FROM canonical_entities e
-	JOIN subject_types st ON st.id = e.subject_type_id
-	LEFT JOIN properties tp ON tp.key = 'toponym' AND tp.origin = 'provenencia'
-	LEFT JOIN properties sp ON sp.key = 'start_date' AND sp.origin = 'provenencia'
-	LEFT JOIN auto_reconciler_values sd
-		ON sd.entity_id = e.id AND sd.property_id = sp.id AND sd.rank = 1 AND sd.reason = 'kept'
-	LEFT JOIN properties ep ON ep.key = 'end_date' AND ep.origin = 'provenencia'
-	LEFT JOIN auto_reconciler_values ed
-		ON ed.entity_id = e.id AND ed.property_id = ep.id AND ed.rank = 1 AND ed.reason = 'kept'
-	WHERE st.key = 'place' AND st.origin = 'provenencia' AND e.merged_into_id IS NULL`
-)
-
-func queryPlaces(q Querier, query string, args ...any) ([]PlaceHeader, error) {
-	rows, err := q.Query(query, args...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var out []PlaceHeader
-	for rows.Next() {
-		h, err := scanPlace(rows)
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, h)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	if err := attachPlaceChains(q, out, TodayDate()); err != nil {
-		return nil, err
-	}
-	sortByTitle(out, placeTitle, func(h PlaceHeader) string { return h.Entity.Ref })
-	return out, nil
-}
-
-func scanPlace(rows *sql.Rows) (PlaceHeader, error) {
-	var (
-		h                  PlaceHeader
-		namesJSON          sql.NullString
-		startBlob, endBlob []byte
-	)
-	e := &h.Entity
-	if err := rows.Scan(
-		&e.ID, &e.SubjectTypeID, &e.Ref, &e.Argument, &e.Label,
-		&namesJSON, &startBlob, &endBlob,
-	); err != nil {
-		return PlaceHeader{}, err
-	}
-	if namesJSON.Valid && namesJSON.String != "" && namesJSON.String != "null" {
-		if err := json.Unmarshal([]byte(namesJSON.String), &h.Names); err != nil {
-			return PlaceHeader{}, err
-		}
-		trimmed := h.Names[:0]
-		for _, name := range h.Names {
-			name = strings.TrimSpace(name)
-			if name != "" {
-				trimmed = append(trimmed, name)
-			}
-		}
-		h.Names = trimmed
-	}
-	var err error
-	if h.StartDate, err = unmarshalDate(startBlob); err != nil {
-		return PlaceHeader{}, err
-	}
-	if h.EndDate, err = unmarshalDate(endBlob); err != nil {
-		return PlaceHeader{}, err
-	}
-	return h, nil
 }
 
 // TodayDate is a Gregorian point for "today's chain" on Place rows.
