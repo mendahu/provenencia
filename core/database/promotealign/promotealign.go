@@ -44,7 +44,7 @@ func Propose(c *database.Catalog, sourceID []byte, fixed []graphalign.Fixed) (gr
 		return graphalign.Proposal{}, 0, err
 	}
 
-	layer, primary, err := loadLayer(q, sourceID)
+	layer, primary, err := loadLayer(c.Graph(), q, sourceID)
 	if err != nil {
 		return graphalign.Proposal{}, 0, err
 	}

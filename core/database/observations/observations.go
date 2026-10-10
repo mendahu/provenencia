@@ -633,7 +633,7 @@ func scanListed(rows *sql.Rows) ([]Listed, error) {
 			}
 			l.Date = &dv
 		}
-		fillListedDisplayText(&l)
+		FillListedDisplayText(&l)
 		out = append(out, l)
 	}
 	return out, rows.Err()
@@ -662,9 +662,10 @@ func hydrateNameValues(c *database.Catalog, listed []Listed) ([]Listed, error) {
 	return listed, nil
 }
 
-// fillListedDisplayText denormalizes structured value types into ValueText so
-// card rows that only read value_text work for term / name / date / subject.
-func fillListedDisplayText(l *Listed) {
+// FillListedDisplayText copies a term label, name form, subject label, or
+// compact date into ValueText when the row has no text of its own. Card rows
+// that only read value_text stay correct for every property value type.
+func FillListedDisplayText(l *Listed) {
 	if l.HasText {
 		return
 	}

@@ -2,9 +2,11 @@ package promotealign
 
 import (
 	"database/sql"
+	"sort"
 
 	"github.com/mendahu/provenencia/core/connectrules"
 	"github.com/mendahu/provenencia/core/database/canonicalgraph"
+	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/matching"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/graphalign"
@@ -18,49 +20,28 @@ type primarySubject struct {
 	kind string
 }
 
-// loadLayer builds the Evidence layer: primary Subjects, values, bridges.
-func loadLayer(q Querier, sourceID []byte) (graphalign.Layer, map[string]primarySubject, error) {
-	rows, err := q.Query(`SELECT s.id, s.ref, st.key, st.origin
-		FROM subjects s
-		JOIN subject_types st ON st.id = s.subject_type_id
-		WHERE s.source_id = ?
-		ORDER BY s.ref COLLATE NOCASE`, sourceID)
+// loadLayer builds the Evidence layer from a loaded Source. Property metas
+// stay a catalog read; they are not part of one Source.
+func loadLayer(g *graphcache.Graph, q Querier, sourceID []byte) (graphalign.Layer, map[string]primarySubject, error) {
+	if g == nil {
+		return graphalign.Layer{}, nil, promote.ErrInvalid
+	}
+	sg, err := g.Source(sourceID)
 	if err != nil {
 		return graphalign.Layer{}, nil, err
 	}
-	defer rows.Close()
-
-	// Collect ids first: Catalog uses MaxOpenConns(1), so we must not hold
-	// this rows cursor open while the value reads run.
-	type row struct {
-		id           []byte
-		ref, key, or string
-	}
-	var listed []row
-	for rows.Next() {
-		var r row
-		if err := rows.Scan(&r.id, &r.ref, &r.key, &r.or); err != nil {
-			return graphalign.Layer{}, nil, err
-		}
-		listed = append(listed, r)
-	}
-	if err := rows.Err(); err != nil {
-		return graphalign.Layer{}, nil, err
-	}
-	_ = rows.Close()
-
 	primary := map[string]primarySubject{}
 	var subjects []graphalign.Subject
 	byKind := map[string][][]byte{}
-	for _, r := range listed {
-		if !promote.PrimaryKind(r.key, r.or) {
+	for _, s := range sg.Subjects {
+		if !promote.PrimaryKind(s.TypeKey, s.TypeOrigin) {
 			continue
 		}
-		if _, ok := match.DefaultProfile(r.key); !ok {
+		if _, ok := match.DefaultProfile(s.TypeKey); !ok {
 			continue
 		}
-		primary[string(r.id)] = primarySubject{id: append([]byte(nil), r.id...), ref: r.ref, kind: r.key}
-		byKind[r.key] = append(byKind[r.key], append([]byte(nil), r.id...))
+		primary[string(s.ID)] = primarySubject{id: append([]byte(nil), s.ID...), ref: s.Ref, kind: s.TypeKey}
+		byKind[s.TypeKey] = append(byKind[s.TypeKey], append([]byte(nil), s.ID...))
 	}
 	values := map[string]match.Values{}
 	for kind, ids := range byKind {
@@ -73,12 +54,12 @@ func loadLayer(q Querier, sourceID []byte) (graphalign.Layer, map[string]primary
 			values[id] = v
 		}
 	}
-	for _, r := range listed {
-		ps, ok := primary[string(r.id)]
+	for _, s := range sg.Subjects {
+		ps, ok := primary[string(s.ID)]
 		if !ok {
 			continue
 		}
-		vals := values[string(r.id)]
+		vals := values[string(s.ID)]
 		if vals == nil {
 			vals = match.Values{}
 		}
@@ -86,17 +67,22 @@ func loadLayer(q Querier, sourceID []byte) (graphalign.Layer, map[string]primary
 			ID: ps.id, Ref: ps.ref, Kind: ps.kind, Values: vals, Provenance: 1,
 		})
 	}
+	sort.Slice(subjects, func(i, j int) bool { return subjects[i].Ref < subjects[j].Ref })
 
 	metas, err := loadMetas(q)
 	if err != nil {
 		return graphalign.Layer{}, nil, err
 	}
-
-	bridges, err := loadLayerBridges(q, sourceID, primary, byKind)
-	if err != nil {
-		return graphalign.Layer{}, nil, err
+	bridges := make([]graphalign.Bridge, 0, len(sg.Bridges))
+	for _, b := range sg.Bridges {
+		bridges = append(bridges, graphalign.Bridge{
+			A: append([]byte(nil), b.A...), B: append([]byte(nil), b.B...),
+			Signature: graphalign.EdgeSignature{
+				BridgeType: b.BridgeType, RoleOrType: b.Term, NeighborKind: b.NeighborKind,
+				NeighborTypeTerm: b.NeighborTypeTerm, Directed: b.Directed,
+			},
+		})
 	}
-
 	return graphalign.Layer{Subjects: subjects, Bridges: bridges, Metas: metas}, primary, nil
 }
 

@@ -23,6 +23,8 @@ func (g *Graph) OnCommit(rev int64, set effects.Set) error {
 		g.Drop()
 		return g.verifyIfSet()
 	}
+	g.dropSources(set.Sources)
+	g.dropSources(set.CacheSources)
 	ids := uniqueIDs(set.Handles)
 	if len(ids) == 0 {
 		return g.verifyIfSet()

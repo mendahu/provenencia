@@ -30,10 +30,12 @@ type Graph struct {
 
 	// displays are finished header rows keyed by handle id. details are the
 	// conclusion-detail value memos for the same ids; a drop clears both.
+	// sources are loaded Evidence graphs keyed by source id.
 	// labels is the vocabulary map the rows resolve at read time. alt, when
 	// set, is the querier a one-shot graph reads instead of db (a write transaction).
 	displays map[string]any
 	details  map[string]any
+	sources  map[string]SourceGraph
 	labels   any
 	labelsOK bool
 	alt      Querier
@@ -150,6 +152,7 @@ func (g *Graph) clear() {
 	g.statsRev = 0
 	g.displays = map[string]any{}
 	g.details = map[string]any{}
+	g.sources = map[string]SourceGraph{}
 	g.labelsOK = false
 	g.labels = nil
 }
