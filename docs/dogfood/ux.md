@@ -19,6 +19,13 @@ Copy the stub. Surface + what got in the way is enough. A wanted fix is optional
 
 <!-- add below this line -->
 
+### Combo box should rank prefix matches above mid-word matches
+
+- **Date:** 2026-10-10
+- **Where:** Design system combo box (`PVComboBox`), wherever it's used
+- **Annoyance:** When I type into a combo box, an option that merely contains my text ranks the same as one that starts with it. Typing `par` shows *grandparent* alongside *parent*, with no preference for *parent*.
+- **Wanted:** Weight a match at the **start** of an option above a match in the middle. Typing `par` should list *parent* above *grandparent*. Matches that start a word inside the option could sit between the two. Fix it in the shared component so every combo box gets it. Related: *Omnibar ranks fuzzy name matches above exact title words*, which is the same idea for the omnibar.
+
 ### Restore list scroll position on Back
 
 - **Date:** 2026-10-10
