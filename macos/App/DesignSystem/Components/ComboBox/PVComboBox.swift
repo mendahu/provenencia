@@ -260,6 +260,9 @@ struct PVComboBox<Row: View, Empty: View>: View {
     /// Natural height of `rowsStack`, reported by `measuringRows`. The popup
     /// window is sized from this rather than from anything inside it.
     @State private var measuredRowsHeight: CGFloat = 0
+    /// True once the open menu's rows have reported a height. The window
+    /// stays down until then, so it does not appear at zero and resize.
+    @State private var rowsMeasured = false
     @FocusState private var isFocused: Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -301,10 +304,14 @@ struct PVComboBox<Row: View, Empty: View>: View {
 
     var body: some View {
         field
-            .background(measuringRows)
+            .background {
+                if isOpen {
+                    measuringRows
+                }
+            }
             .background(
                 PVComboBoxPopupWindow(
-                    isPresented: isOpen,
+                    isPresented: isOpen && rowsMeasured,
                     maxHeight: maxListHeight,
                     // Only things that change the window's *size* are passed
                     // as metrics. `activeIndex` changes on every mouse move,
@@ -313,7 +320,7 @@ struct PVComboBox<Row: View, Empty: View>: View {
                     contentHeight: desiredPopupHeight,
                     optionCount: visibleOptions.count,
                     onDismiss: dismissAndBlur,
-                    content: list
+                    content: openList
                 )
             )
             .onChange(of: selectedLabel, initial: true) { _, newValue in
@@ -339,7 +346,10 @@ struct PVComboBox<Row: View, Empty: View>: View {
                 if !focused { closeAndRestore() }
             }
             .onChange(of: isOpen) { _, open in
-                if !open { activeIndex = -1 }
+                if open { return }
+                activeIndex = -1
+                measuredRowsHeight = 0
+                rowsMeasured = false
             }
             .onAppear {
                 guard activateOnAppear else { return }
@@ -403,6 +413,15 @@ struct PVComboBox<Row: View, Empty: View>: View {
     }
 
     // MARK: List
+
+    /// The popup's rows. Absent while the menu is closed, so a shut field
+    /// does not build an option view for every choice.
+    @ViewBuilder
+    private var openList: some View {
+        if isOpen {
+            list
+        }
+    }
 
     private var list: some View {
         scroller
@@ -472,15 +491,15 @@ struct PVComboBox<Row: View, Empty: View>: View {
     }
 
     /// A hidden, non-interactive copy of the rows, laid out behind the field
-    /// at the field's width purely to measure them.
+    /// at the field's width purely to measure them. Mounted only while the
+    /// menu is open.
     ///
     /// The popup window has to know how tall to be *before* it is shown, and
     /// a `ScrollView` inside that window cannot tell it — nor can
     /// `NSHostingView.fittingSize`, reliably. Laying the rows out once more
     /// here is the honest way to get the number: a background never
     /// influences its parent's size, so this costs a layout pass and nothing
-    /// else. The pool is a vocabulary and the rows are single-line, so that
-    /// pass is cheap.
+    /// else. The window waits for that height, then opens at it.
     private var measuringRows: some View {
         rowsStack
             .fixedSize(horizontal: false, vertical: true)
@@ -491,7 +510,9 @@ struct PVComboBox<Row: View, Empty: View>: View {
                 GeometryReader { proxy in
                     Color.clear
                         .onChange(of: proxy.size.height, initial: true) { _, height in
+                            guard isOpen, height > 0 else { return }
                             measuredRowsHeight = height
+                            rowsMeasured = true
                         }
                 }
             )
