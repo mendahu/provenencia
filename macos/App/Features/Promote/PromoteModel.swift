@@ -146,11 +146,18 @@ final class PromoteModel {
 
     func mapRest() { flow.mapRest() }
 
+    private var proposeTask: Task<Void, Never>?
+
     func setTarget(subjectID: String, token: String) {
         guard flow.setTarget(subjectID: subjectID, token: token) else { return }
         flow.staleNote = nil
         let generation = nextProposal()
-        Task { await repropose(generation: generation) }
+        proposeTask?.cancel()
+        proposeTask = Task {
+            try? await Task.sleep(for: .milliseconds(250))
+            guard !Task.isCancelled else { return }
+            await repropose(generation: generation)
+        }
     }
 
     func togglePin(subjectID: String, comparisonID: String) {
@@ -233,6 +240,11 @@ final class PromoteModel {
     }
 
     private func repropose(generation: Int) async {
+        defer {
+            if generation == proposeGeneration {
+                isProposing = false
+            }
+        }
         let fixed = flow.rows.compactMap { row -> CatalogPromoteGraphAlignmentFixed? in
             guard row.decided else { return nil }
             switch row.target {
@@ -260,7 +272,6 @@ final class PromoteModel {
             guard generation == proposeGeneration else { return }
             proposeError = L10n.Errors.message(for: error)
         }
-        isProposing = false
     }
 
     private func file() async {

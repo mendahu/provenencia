@@ -7,6 +7,7 @@ import (
 	"database/sql"
 	"errors"
 
+	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/graphalign"
 )
@@ -17,15 +18,20 @@ type Querier interface {
 	QueryRow(query string, args ...any) *sql.Row
 }
 
-// Propose loads the Evidence layer for sourceID, expands a bounded canon
-// neighborhood, merges caller fixed with already-promoted anchors, and runs
-// graphalign.Align. The int64 is MAX(audit_transactions.revision) at load
-// time, the stamp Done sends back. An unknown or empty sourceID is
-// promote.ErrInvalid.
-func Propose(q Querier, sourceID []byte, fixed []graphalign.Fixed) (graphalign.Proposal, int64, error) {
-	if len(sourceID) != 16 {
+// Propose loads the Evidence layer for sourceID, walks the catalog's canonical
+// graph from the fixed anchors and each unfixed kind's top property matches,
+// and runs graphalign.Align. The int64 is MAX(audit_transactions.revision) at
+// load time, the stamp Done sends back. An unknown or empty sourceID is
+// promote.ErrInvalid. A graph read error is returned instead of a proposal.
+func Propose(c *database.Catalog, sourceID []byte, fixed []graphalign.Fixed) (graphalign.Proposal, int64, error) {
+	if c == nil || len(sourceID) != 16 {
 		return graphalign.Proposal{}, 0, promote.ErrInvalid
 	}
+	db, err := c.DB()
+	if err != nil {
+		return graphalign.Proposal{}, 0, err
+	}
+	q := Querier(db)
 	var rev int64
 	if err := q.QueryRow(`SELECT COALESCE(MAX(revision), 0) FROM audit_transactions`).Scan(&rev); err != nil {
 		return graphalign.Proposal{}, 0, err
@@ -51,19 +57,19 @@ func Propose(q Querier, sourceID []byte, fixed []graphalign.Fixed) (graphalign.P
 		return graphalign.Proposal{}, 0, err
 	}
 
-	canon, err := loadCanon(q, layer, anchors)
+	canon, err := loadCanon(c.Graph(), q, layer, anchors)
 	if err != nil {
 		return graphalign.Proposal{}, 0, err
 	}
 
-	stats, err := loadStats(q)
+	stats, err := loadStats(c)
 	if err != nil {
 		return graphalign.Proposal{}, 0, err
 	}
 
 	cfg := graphalign.DefaultConfig()
 	prop := graphalign.Align(layer, canon, stats, anchors, &cfg)
-	if err := attachExhibits(q, layer, &prop, cfg, stats); err != nil {
+	if err := attachExhibits(q, c.Graph(), layer, &prop, cfg, stats); err != nil {
 		return graphalign.Proposal{}, 0, err
 	}
 	return prop, rev, nil

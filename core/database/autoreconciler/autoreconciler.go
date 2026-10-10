@@ -268,7 +268,11 @@ func EnsureCatalog(c *database.Catalog) error {
 	if err := Rebuild(tx); err != nil {
 		return err
 	}
-	return tx.Commit()
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	c.Graph().Drop()
+	return nil
 }
 
 func recomputeBatch(q Querier, ids [][]byte) error {
