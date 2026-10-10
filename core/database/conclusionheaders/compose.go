@@ -12,6 +12,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/database/properties"
+	"github.com/mendahu/provenencia/core/hops"
 	"github.com/mendahu/provenencia/core/valuecodec"
 )
 
@@ -113,21 +114,11 @@ func rank1(rows []graphcache.Value) (graphcache.Value, bool) {
 	return graphcache.Value{}, false
 }
 
-func follow(n *graphcache.Node, bridge, term string, fromEnd bool) []graphcache.Link {
-	if n == nil {
-		return nil
+func follow(g *graphcache.Graph, id []byte, hop hops.Hop) ([]graphcache.Link, error) {
+	if g == nil {
+		return nil, nil
 	}
-	var out []graphcache.Link
-	for _, l := range n.Links {
-		if l.BridgeTypeKey != bridge || l.FromEnd != fromEnd {
-			continue
-		}
-		if term != "" && l.TermKey != term {
-			continue
-		}
-		out = append(out, l)
-	}
-	return out
+	return g.Follow(id, hop)
 }
 
 func keptName(n *graphcache.Node, propID []byte) (*namevalues.Value, int, error) {
@@ -345,7 +336,11 @@ func composePersons(g *graphcache.Graph, v vocab, nodes []*graphcache.Node, stor
 			}
 		}
 		need = append(need, n.ID)
-		for _, l := range follow(n, "participation", "subject", true) {
+		links, err := follow(g, n.ID, hops.EventsOfSubject)
+		if err != nil {
+			return nil, err
+		}
+		for _, l := range links {
 			eventIDs = append(eventIDs, l.Neighbor)
 		}
 	}
@@ -358,7 +353,14 @@ func composePersons(g *graphcache.Graph, v vocab, nodes []*graphcache.Node, stor
 		if err != nil {
 			return nil, err
 		}
-		for _, l := range follow(n, "location", "", true) {
+		if n == nil {
+			continue
+		}
+		locations, err := follow(g, id, hops.PlacesOfEvent)
+		if err != nil {
+			return nil, err
+		}
+		for _, l := range locations {
 			placeIDs = append(placeIDs, l.Neighbor)
 		}
 	}
@@ -401,7 +403,11 @@ func onePerson(v vocab, n *graphcache.Node, g *graphcache.Graph, pg *placeGraph)
 	}
 	h.Name, h.NameValueCount = name, count
 	var births, deaths []lifePick
-	for _, l := range follow(n, "participation", "subject", true) {
+	lifeLinks, err := follow(g, n.ID, hops.EventsOfSubject)
+	if err != nil {
+		return PersonHeader{}, err
+	}
+	for _, l := range lifeLinks {
 		ev, err := g.Node(l.Neighbor)
 		if err != nil {
 			return PersonHeader{}, err
@@ -499,10 +505,18 @@ func composeEvents(g *graphcache.Graph, v vocab, nodes []*graphcache.Node, store
 			}
 		}
 		need = append(need, n)
-		for _, l := range follow(n, "participation", "subject", false) {
+		subjects, err := follow(g, n.ID, hops.SubjectsOfEvent)
+		if err != nil {
+			return nil, err
+		}
+		for _, l := range subjects {
 			personIDs = append(personIDs, l.Neighbor)
 		}
-		for _, l := range follow(n, "location", "", true) {
+		locations, err := follow(g, n.ID, hops.PlacesOfEvent)
+		if err != nil {
+			return nil, err
+		}
+		for _, l := range locations {
 			placeIDs = append(placeIDs, l.Neighbor)
 		}
 	}
@@ -558,7 +572,11 @@ func oneEvent(g *graphcache.Graph, v vocab, pg *placeGraph, n *graphcache.Node) 
 		return EventHeader{}, err
 	}
 	seen := map[string]bool{}
-	for _, l := range follow(n, "participation", "subject", false) {
+	subjectLinks, err := follow(g, n.ID, hops.SubjectsOfEvent)
+	if err != nil {
+		return EventHeader{}, err
+	}
+	for _, l := range subjectLinks {
 		if seen[string(l.Neighbor)] {
 			continue
 		}
@@ -632,7 +650,11 @@ func dateSort(v *datevalues.Value) (string, bool) {
 func eventPlaces(g *graphcache.Graph, v vocab, pg *placeGraph, ev *graphcache.Node) ([]HeaderPlace, error) {
 	var raw []HeaderPlace
 	seen := map[string]bool{}
-	for _, l := range follow(ev, "location", "", true) {
+	locations, err := follow(g, ev.ID, hops.PlacesOfEvent)
+	if err != nil {
+		return nil, err
+	}
+	for _, l := range locations {
 		if seen[string(l.Neighbor)] {
 			continue
 		}
@@ -750,10 +772,11 @@ func buildPlaceGraph(g *graphcache.Graph, v vocab, seeds [][]byte) (*placeGraph,
 			shell := placeShell(n, v)
 			pg.byID[string(id)] = shell
 			pg.period[string(id)] = autoreconcile.PeriodWindow(shell.StartDate, shell.EndDate)
-			for _, l := range n.Links {
-				if l.BridgeTypeKey != "place_relationship" || (l.TermKey != "part_of" && l.TermKey != "succeeded_by") {
-					continue
-				}
+			links, err := placeHops(g, id)
+			if err != nil {
+				return nil, err
+			}
+			for _, l := range links {
 				assoc = append(assoc, l.Association)
 				if !seen[string(l.Neighbor)] {
 					seen[string(l.Neighbor)] = true
@@ -772,10 +795,11 @@ func buildPlaceGraph(g *graphcache.Graph, v vocab, seeds [][]byte) (*placeGraph,
 			if n == nil {
 				continue
 			}
-			for _, l := range n.Links {
-				if l.BridgeTypeKey != "place_relationship" {
-					continue
-				}
+			links, err := placeHops(g, id)
+			if err != nil {
+				return nil, err
+			}
+			for _, l := range links {
 				from, to := id, l.Neighbor
 				if !l.FromEnd {
 					from, to = l.Neighbor, id
@@ -798,6 +822,18 @@ func buildPlaceGraph(g *graphcache.Graph, v vocab, seeds [][]byte) (*placeGraph,
 		frontier = next
 	}
 	return pg, nil
+}
+
+func placeHops(g *graphcache.Graph, id []byte) ([]graphcache.Link, error) {
+	var out []graphcache.Link
+	for _, hop := range []hops.Hop{hops.ParentsOfPlace, hops.PartsOfPlace, hops.SuccessorsOfPlace, hops.PredecessorsOfPlace} {
+		links, err := follow(g, id, hop)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, links...)
+	}
+	return out, nil
 }
 
 func mustNode(g *graphcache.Graph, id []byte) *graphcache.Node {

@@ -7,11 +7,15 @@ import (
 	"github.com/mendahu/provenencia/core/connectrules"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/canonicalgraph"
+	"github.com/mendahu/provenencia/core/hops"
 )
 
 // headerChainDepth is how far a place row's parent chain climbs, and how far
-// the reverse of that read walks back down. loadPlaceGraph uses the same bound.
+// the reverse of that read walks back down. The place neighborhood uses the same bound.
 const headerChainDepth = 8
+
+// walkBatch bounds an IN list. A list is still a fixed number of queries.
+const walkBatch = 500
 
 // Dependents is the reverse of the header reads. A place reaches its
 // descendants to headerChainDepth, the events located at those places, and
@@ -25,27 +29,27 @@ func Dependents(q Querier, ids [][]byte) ([][]byte, error) {
 	if len(ids) == 0 {
 		return nil, nil
 	}
-	places, err := walkDepth(q, canonicalgraph.PartsOfPlace, ids, headerChainDepth)
+	places, err := walkDepth(q, hops.PartsOfPlace, ids, headerChainDepth)
 	if err != nil {
 		return nil, err
 	}
-	parents, err := walkDepth(q, canonicalgraph.ParentsOfPlace, ids, 1)
+	parents, err := walkDepth(q, hops.ParentsOfPlace, ids, 1)
 	if err != nil {
 		return nil, err
 	}
-	succTo, err := walkDepth(q, canonicalgraph.SuccessorsOfPlace, ids, 1)
+	succTo, err := walkDepth(q, hops.SuccessorsOfPlace, ids, 1)
 	if err != nil {
 		return nil, err
 	}
-	succFrom, err := walkDepth(q, canonicalgraph.PredecessorsOfPlace, ids, 1)
+	succFrom, err := walkDepth(q, hops.PredecessorsOfPlace, ids, 1)
 	if err != nil {
 		return nil, err
 	}
-	located, err := walkDepth(q, canonicalgraph.EventsAtPlace, append(append(append([][]byte(nil), ids...), places...), parents...), 1)
+	located, err := walkDepth(q, hops.EventsAtPlace, append(append(append([][]byte(nil), ids...), places...), parents...), 1)
 	if err != nil {
 		return nil, err
 	}
-	shown, err := walkDepth(q, canonicalgraph.EventsOfSubject, ids, 1)
+	shown, err := walkDepth(q, hops.EventsOfSubject, ids, 1)
 	if err != nil {
 		return nil, err
 	}
@@ -53,7 +57,7 @@ func Dependents(q Querier, ids [][]byte) ([][]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	people, err := walkDepth(q, canonicalgraph.SubjectsOfEvent, life, 1)
+	people, err := walkDepth(q, hops.SubjectsOfEvent, life, 1)
 	if err != nil {
 		return nil, err
 	}
@@ -125,7 +129,7 @@ func AssociationEndpoints(q Querier, ids [][]byte) ([][]byte, error) {
 	return out, rows.Err()
 }
 
-func walkDepth(q Querier, hop canonicalgraph.Hop, roots [][]byte, depth int) ([][]byte, error) {
+func walkDepth(q Querier, hop hops.Hop, roots [][]byte, depth int) ([][]byte, error) {
 	roots = database.UniqueBlobIDs(roots)
 	if len(roots) == 0 || depth < 1 {
 		return nil, nil
@@ -186,4 +190,10 @@ func birthOrDeath(q Querier, ids [][]byte) ([][]byte, error) {
 		}
 	}
 	return out, nil
+}
+
+// HeaderDependents is Dependents. Callers that snapshotted the short walk
+// keep this name.
+func HeaderDependents(q Querier, ids [][]byte) ([][]byte, error) {
+	return Dependents(q, ids)
 }
