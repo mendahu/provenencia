@@ -23,13 +23,17 @@ func ListObservationsBySource(in []byte) ([]byte, error) {
 	}
 	var out *engine.ListObservationsBySourceResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		rows, err := observations.ListBySource(c, sourceID)
+		sg, err := c.Graph().Source(sourceID)
+		if err != nil {
+			return err
+		}
+		props, err := loadPropertyInfo(c)
 		if err != nil {
 			return err
 		}
 		out = &engine.ListObservationsBySourceResponse{}
-		for _, row := range rows {
-			out.Observations = append(out.Observations, listedObservationProto(row))
+		for _, o := range sg.Observations {
+			out.Observations = append(out.Observations, listedObservationProto(listedFromSource(o, props)))
 		}
 		return nil
 	})
