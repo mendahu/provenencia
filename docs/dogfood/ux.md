@@ -19,6 +19,13 @@ Copy the stub. Surface + what got in the way is enough. A wanted fix is optional
 
 <!-- add below this line -->
 
+### Promote flow: long entity titles break the target dropdown layout
+
+- **Date:** 2026-10-10
+- **Where:** Promote flow → target entity dropdowns
+- **Annoyance:** When an entity's title is very long, the dropdown for choosing the target entity grows to fit it and pushes the layout out of shape.
+- **Wanted:** Truncate long titles in the dropdown (ellipsis) so it keeps a fixed width, with the full title available on hover or in a tooltip. Probably belongs in the shared select component so every dropdown with long labels benefits. Related: *Name part type dropdown: shifting width and no type-to-cycle*, which is the same family of sizing problem.
+
 ### Seed an `interests` Property on Person
 
 - **Date:** 2026-10-10
