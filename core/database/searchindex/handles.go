@@ -226,21 +226,21 @@ func loadHandleHeaders(q Querier, heads map[string]handleHead) (handleHeaders, e
 		events:  map[string]conclusionheaders.EventHeader{},
 		places:  map[string]conclusionheaders.PlaceHeader{},
 	}
-	ps, err := conclusionheaders.PersonsByIDs(q, persons)
+	ps, err := conclusionheaders.PersonsFromQuerier(q, persons)
 	if err != nil {
 		return handleHeaders{}, err
 	}
 	for _, h := range ps {
 		out.persons[uuidString(h.Entity.ID)] = h
 	}
-	es, err := conclusionheaders.EventsByIDs(q, events)
+	es, err := conclusionheaders.EventsFromQuerier(q, events)
 	if err != nil {
 		return handleHeaders{}, err
 	}
 	for _, h := range es {
 		out.events[uuidString(h.Entity.ID)] = h
 	}
-	pl, err := conclusionheaders.PlacesByIDs(q, places)
+	pl, err := conclusionheaders.PlacesFromQuerier(q, places)
 	if err != nil {
 		return handleHeaders{}, err
 	}

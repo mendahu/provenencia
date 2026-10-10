@@ -212,7 +212,9 @@ func TestCommitReloadsASharedEndpointOnce(t *testing.T) {
 	}
 	// One entity-row read, two endpoint lookups, one chunk (entity, values,
 	// members, links, disambiguation). A reload per association is well above this.
-	if n > 10 {
+	// Eight queries reload the endpoints once. The rest is one dependent walk
+	// over the committed handles. A reload per association adds another chunk.
+	if n > 16 {
 		t.Fatalf("queries %d, want one reload of the shared endpoint", n)
 	}
 }

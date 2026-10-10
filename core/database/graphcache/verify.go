@@ -53,6 +53,14 @@ func (g *Graph) Verify() error {
 			return err
 		}
 	}
+	if displayFn == nil {
+		return nil
+	}
+	for key, stored := range g.displays {
+		if err := displayFn(g, []byte(key), stored); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

@@ -15,11 +15,7 @@ func ListPersonHeaders(in []byte) ([]byte, error) {
 	}
 	out := &engine.ListPersonHeadersResponse{}
 	err := withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		db, err := c.DB()
-		if err != nil {
-			return err
-		}
-		headers, err := conclusionheaders.ListPersons(db)
+		headers, err := conclusionheaders.ListPersons(c)
 		if err != nil {
 			return err
 		}
@@ -77,11 +73,7 @@ func ListEventHeaders(in []byte) ([]byte, error) {
 	}
 	out := &engine.ListEventHeadersResponse{}
 	err := withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		db, err := c.DB()
-		if err != nil {
-			return err
-		}
-		headers, err := conclusionheaders.ListEvents(db)
+		headers, err := conclusionheaders.ListEvents(c)
 		if err != nil {
 			return err
 		}
@@ -146,11 +138,7 @@ func ListPlaceHeaders(in []byte) ([]byte, error) {
 	}
 	out := &engine.ListPlaceHeadersResponse{}
 	err := withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		db, err := c.DB()
-		if err != nil {
-			return err
-		}
-		headers, err := conclusionheaders.ListPlaces(db)
+		headers, err := conclusionheaders.ListPlaces(c)
 		if err != nil {
 			return err
 		}

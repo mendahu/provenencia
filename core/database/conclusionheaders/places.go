@@ -6,17 +6,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/datevalues"
 )
 
 // PlaceRelationshipKind is how a related Place appears on a Place detail.
 const (
-	RelPartOf       = "part_of"
-	RelContains     = "contains"
-	RelPredecessor  = "predecessor"
-	RelSuccessor    = "successor"
+	RelPartOf      = "part_of"
+	RelContains    = "contains"
+	RelPredecessor = "predecessor"
+	RelSuccessor   = "successor"
 )
 
 // PlaceRelationship is one related Place for a detail section (S9-40).
@@ -69,22 +68,6 @@ const (
 		ON ed.entity_id = e.id AND ed.property_id = ep.id AND ed.rank = 1 AND ed.reason = 'kept'
 	WHERE st.key = 'place' AND st.origin = 'provenencia' AND e.merged_into_id IS NULL`
 )
-
-// ListPlaces returns every Place's header in list order, in one query.
-func ListPlaces(q Querier) ([]PlaceHeader, error) {
-	return queryPlaces(q, sqlPlacesSelect)
-}
-
-// PlacesByIDs returns the headers of the given unmerged Places in list
-// order, in one query. Unknown, merged, and non-Place ids are absent.
-func PlacesByIDs(q Querier, ids [][]byte) ([]PlaceHeader, error) {
-	ids = database.UniqueBlobIDs(ids)
-	if len(ids) == 0 {
-		return nil, nil
-	}
-	return queryPlaces(q, sqlPlacesSelect+` AND e.id IN (`+database.SQLInPlaceholders(len(ids))+`)`,
-		database.BlobArgs(ids)...)
-}
 
 func queryPlaces(q Querier, query string, args ...any) ([]PlaceHeader, error) {
 	rows, err := q.Query(query, args...)
