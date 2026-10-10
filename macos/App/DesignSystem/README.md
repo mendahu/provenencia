@@ -260,9 +260,10 @@ Two things the window costs us, both deliberate:
 
 - **Sizing is the caller's job.** The window has to know its height *before*
   it is shown, and neither a `ScrollView` inside it nor
-  `NSHostingView.fittingSize` can be trusted to say. `PVComboBox` lays a
-  hidden copy of the rows out behind the field purely to measure them, hands
-  that number to the window, and lets the scroller simply fill whatever it
+  `NSHostingView.fittingSize` can be trusted to say. While the menu is open,
+  `PVComboBox` lays a hidden copy of the rows out behind the field purely to
+  measure them, waits for that height, then hands it to the window. A closed
+  field does not build the list. The scroller simply fills whatever height it
   gets. An earlier version made one view both report an ideal height *and*
   lay out inside the resulting window; any disagreement between the two clips
   a row, and it did.
