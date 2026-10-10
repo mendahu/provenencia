@@ -19,6 +19,13 @@ Copy the stub. Surface + what got in the way is enough. A wanted fix is optional
 
 <!-- add below this line -->
 
+### Restore list scroll position on Back
+
+- **Date:** 2026-10-10
+- **Where:** Sources, People, Events, and Places lists
+- **Annoyance:** I scroll down a list, open an item (say a Source detail page), then press Back. The list is back at the top instead of where I left it.
+- **Wanted:** Back returns me to the same scroll position. If I was at the bottom of the list when I left, I'm at the bottom when I return. Related: *Sources list sort and filter don't persist*, since a restored position only makes sense if the sort and filter come back too.
+
 ### Rethink the Citation composer's Observation list
 
 - **Date:** 2026-10-09
