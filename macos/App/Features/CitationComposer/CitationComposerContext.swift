@@ -5,11 +5,13 @@ import Observation
 @MainActor
 @Observable
 final class CitationComposerContext {
-    private struct MemoKey: Equatable {
-        var fields: PropertiesSnapshot
-        var rows: SourceGraphRows
-        var rules: [CatalogConnectRule]
-        var terms: [String: [CatalogPropertyTerm]]
+    /// Revisions of the queries the memo was built from. Comparing these
+    /// avoids walking the source graph on every vocabulary read.
+    private struct MemoToken: Equatable {
+        var graph: Int
+        var fields: Int
+        var rules: Int
+        var terms: [String: Int]
     }
 
     let store: any GenealogyStore
@@ -22,7 +24,7 @@ final class CitationComposerContext {
     weak var fields: CitationFieldsDraft?
 
     @ObservationIgnored
-    private var memoKey: MemoKey?
+    private var memoToken: MemoToken?
     @ObservationIgnored
     private var memoSnapshot: SourceGraphSnapshot
     @ObservationIgnored
@@ -156,42 +158,77 @@ final class CitationComposerContext {
     }
 
     private func refreshMemo() {
-        let fields = fieldsSnapshot
+        let fieldsHandle: QueryHandle<PropertiesSnapshot>? = session.queryHandle(fieldsKey)
         let rowsHandle: QueryHandle<SourceGraphRows>? = session.queryHandle(graphKey)
-        let rows = rowsHandle?.value ?? SourceGraphRows(sourceId: sourceID)
         let rulesHandle: QueryHandle<[CatalogConnectRule]>? = session.queryHandle(connectRulesKey)
-        let rules = rulesHandle?.value ?? []
-        var terms: [String: [CatalogPropertyTerm]] = [:]
-        var termPropertyIDs = Set(
-            fields.properties
-                .filter { $0.valueType == PropertyValueType.term.rawValue }
-                .map(\.id)
-        )
-        for typeFields in fields.propertiesByTypeID.values {
-            for field in typeFields
-                where field.property.valueType == PropertyValueType.term.rawValue
-            {
-                termPropertyIDs.insert(field.property.id)
-            }
+        let graph = rowsHandle?.revision ?? 0
+        let fieldsRevision = fieldsHandle?.revision ?? 0
+        let rulesRevision = rulesHandle?.revision ?? 0
+        if let memoToken,
+            memoToken.graph == graph,
+            memoToken.fields == fieldsRevision,
+            memoToken.rules == rulesRevision,
+            termRevisionsMatch(memoToken.terms)
+        {
+            return
         }
-        for propertyID in termPropertyIDs {
+        let fields = fieldsHandle?.value ?? .empty
+        let terms = termRevisions(in: fields)
+        memoToken = MemoToken(
+            graph: graph,
+            fields: fieldsRevision,
+            rules: rulesRevision,
+            terms: terms
+        )
+        let rows = rowsHandle?.value ?? SourceGraphRows(sourceId: sourceID)
+        let rules = rulesHandle?.value ?? []
+        var termLists: [String: [CatalogPropertyTerm]] = [:]
+        for propertyID in terms.keys {
             let handle: QueryHandle<[CatalogPropertyTerm]>? = session.queryHandle(
                 termsKey(propertyID: propertyID)
             )
             if let value = handle?.value {
-                terms[propertyID] = value
+                termLists[propertyID] = value
             }
         }
-        let key = MemoKey(fields: fields, rows: rows, rules: rules, terms: terms)
-        if key == memoKey { return }
-        memoKey = key
         memoSnapshot = SourceGraphSnapshot.build(rows: rows, types: fields.types, rules: rules)
         memoVocabulary = CitationComposerVocabulary.make(
             fields: fields,
             snapshot: memoSnapshot,
             rules: rules,
-            termsByPropertyID: terms
+            termsByPropertyID: termLists
         )
+    }
+
+    private func termRevisionsMatch(_ stored: [String: Int]) -> Bool {
+        for (propertyID, revision) in stored {
+            let handle: QueryHandle<[CatalogPropertyTerm]>? = session.queryHandle(
+                termsKey(propertyID: propertyID)
+            )
+            if (handle?.revision ?? 0) != revision { return false }
+        }
+        return true
+    }
+
+    private func termRevisions(in fields: PropertiesSnapshot) -> [String: Int] {
+        var ids = Set(
+            fields.properties
+                .filter { $0.valueType == PropertyValueType.term.rawValue }
+                .map(\.id)
+        )
+        for typeFields in fields.propertiesByTypeID.values {
+            for field in typeFields where field.property.valueType == PropertyValueType.term.rawValue {
+                ids.insert(field.property.id)
+            }
+        }
+        var revisions: [String: Int] = [:]
+        for propertyID in ids {
+            let handle: QueryHandle<[CatalogPropertyTerm]>? = session.queryHandle(
+                termsKey(propertyID: propertyID)
+            )
+            revisions[propertyID] = handle?.revision ?? 0
+        }
+        return revisions
     }
 }
 

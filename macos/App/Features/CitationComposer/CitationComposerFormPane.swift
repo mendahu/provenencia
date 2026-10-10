@@ -21,11 +21,18 @@ struct CitationComposerFormPane: View {
 
     private var narrowBody: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: PVSpacing.space8) {
-                identityLine
-                citationFields
-                connectionsSection
-                observationsSection
+            LazyVStack(alignment: .leading, spacing: PVSpacing.space5) {
+                VStack(alignment: .leading, spacing: PVSpacing.space8) {
+                    identityLine
+                    citationFields
+                    connectionsSection
+                }
+                .padding(.bottom, PVSpacing.space3)
+                observationHeader
+                ForEach(model.observations) { row in
+                    observationRow(row)
+                }
+                addObservationButton
             }
             .padding(PVSpacing.space7)
         }
@@ -43,9 +50,14 @@ struct CitationComposerFormPane: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             PVDivider(axis: .vertical, color: PVColor.borderDefault)
             ScrollView {
-                VStack(alignment: .leading, spacing: PVSpacing.space8) {
+                LazyVStack(alignment: .leading, spacing: PVSpacing.space5) {
                     connectionsSection
-                    observationsSection
+                        .padding(.bottom, PVSpacing.space3)
+                    observationHeader
+                    ForEach(model.observations) { row in
+                        observationRow(row)
+                    }
+                    addObservationButton
                 }
                 .padding(PVSpacing.space7)
             }
@@ -310,40 +322,41 @@ struct CitationComposerFormPane: View {
         }
     }
 
-    private var observationsSection: some View {
-        VStack(alignment: .leading, spacing: PVSpacing.space5) {
-            PVSectionHeader(
-                title: L10n.CitationComposer.observationsSection,
-                meta: "\(model.observations.count)"
-            )
-            ForEach(model.observations) { row in
-                CitationComposerObservationRow(
-                    row: row,
-                    property: model.catalogProperty(id: row.propertyID),
-                    propertyOptions: model.propertyOptions(for: row.subjectID),
-                    subjectOptions: model.subjectOptions,
-                    termOptions: model.termOptions(for: row.propertyID),
-                    summary: model.observationSummary(for: row),
-                    isFocused: model.focusedObservationID == row.id,
-                    onSubject: { model.updateObservationSubject(id: row.id, subjectID: $0) },
-                    onProperty: { model.updateObservationProperty(id: row.id, propertyID: $0) },
-                    onText: { model.updateObservationText(id: row.id, text: $0) },
-                    onInteger: { model.updateObservationInteger(id: row.id, text: $0) },
-                    onTerm: { model.updateObservationTerm(id: row.id, termID: $0) },
-                    onEditValue: { model.beginEditObservation(row) },
-                    onTogglePolarity: { model.toggleObservationPolarity(id: row.id) },
-                    onSave: { Task { await model.observationRows.commit(rowID: row.id) } },
-                    onRevert: { model.observationRows.revert(rowID: row.id) },
-                    onRequestDelete: { Task { await model.askDeleteObservation(rowID: row.id) } },
-                    onAddCustomTerm: { model.beginAddCustomTerm(rowID: row.id) }
-                )
-            }
+    private var observationHeader: some View {
+        PVSectionHeader(
+            title: L10n.CitationComposer.observationsSection,
+            meta: "\(model.observations.count)"
+        )
+    }
 
-            PVButton(L10n.CitationComposer.addObservation, variant: .ghost, size: .sm, icon: .plus) {
-                model.beginAddObservation()
-            }
-            .accessibilityIdentifier("citationComposer.addObservation")
+    private func observationRow(_ row: ObservationRow) -> some View {
+        CitationComposerObservationRow(
+            row: row,
+            property: model.catalogProperty(id: row.propertyID),
+            propertyOptions: model.propertyOptions(for: row.subjectID),
+            subjectOptions: model.subjectOptions,
+            termOptions: model.termOptions(for: row.propertyID),
+            summary: model.observationSummary(for: row),
+            isFocused: model.focusedObservationID == row.id,
+            onSubject: { model.updateObservationSubject(id: row.id, subjectID: $0) },
+            onProperty: { model.updateObservationProperty(id: row.id, propertyID: $0) },
+            onText: { model.updateObservationText(id: row.id, text: $0) },
+            onInteger: { model.updateObservationInteger(id: row.id, text: $0) },
+            onTerm: { model.updateObservationTerm(id: row.id, termID: $0) },
+            onEditValue: { model.beginEditObservation(row) },
+            onTogglePolarity: { model.toggleObservationPolarity(id: row.id) },
+            onSave: { Task { await model.observationRows.commit(rowID: row.id) } },
+            onRevert: { model.observationRows.revert(rowID: row.id) },
+            onRequestDelete: { Task { await model.askDeleteObservation(rowID: row.id) } },
+            onAddCustomTerm: { model.beginAddCustomTerm(rowID: row.id) }
+        )
+    }
+
+    private var addObservationButton: some View {
+        PVButton(L10n.CitationComposer.addObservation, variant: .ghost, size: .sm, icon: .plus) {
+            model.beginAddObservation()
         }
+        .accessibilityIdentifier("citationComposer.addObservation")
     }
 
     private var footer: some View {
