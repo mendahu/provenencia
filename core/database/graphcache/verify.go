@@ -19,6 +19,8 @@ type TruthRow struct {
 	EntityID   []byte
 	Date       []byte
 	Name       []byte
+	Support    int
+	Against    int
 }
 
 // TruthFunc recomputes values from observations. autoreconciler registers it.
@@ -53,12 +55,18 @@ func (g *Graph) Verify() error {
 			return err
 		}
 	}
-	if displayFn == nil {
-		return nil
+	if displayFn != nil {
+		for key, stored := range g.displays {
+			if err := displayFn(g, []byte(key), stored); err != nil {
+				return err
+			}
+		}
 	}
-	for key, stored := range g.displays {
-		if err := displayFn(g, []byte(key), stored); err != nil {
-			return err
+	if detailFn != nil {
+		for key, stored := range g.details {
+			if err := detailFn(g, []byte(key), stored); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -178,7 +186,9 @@ func valueEqual(v Value, t TruthRow) bool {
 		bytes.Equal(v.TermID, t.TermID) &&
 		bytes.Equal(v.EntityID, t.EntityID) &&
 		bytes.Equal(v.Date, t.Date) &&
-		bytes.Equal(v.Name, t.Name)
+		bytes.Equal(v.Name, t.Name) &&
+		v.Support == t.Support &&
+		v.Against == t.Against
 }
 
 func sameMembers(got, want []Member) error {

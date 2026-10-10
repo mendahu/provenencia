@@ -2,7 +2,6 @@ package conclusiondetails_test
 
 import (
 	"bytes"
-	"database/sql"
 	"errors"
 	"fmt"
 	"strings"
@@ -133,9 +132,7 @@ func (f *fixture) promote(s subjects.Subject, onto []byte) []byte {
 
 func (f *fixture) detail(h []byte) conclusiondetails.Detail {
 	f.t.Helper()
-	db, err := f.c.DB()
-	must(f.t, err)
-	d, err := conclusiondetails.ForEntity(db, h)
+	d, err := conclusiondetails.ForEntity(f.c, h)
 	must(f.t, err)
 	return d
 }
@@ -289,32 +286,23 @@ func TestForEntityEvidence(t *testing.T) {
 
 func TestForEntityNotFound(t *testing.T) {
 	f := newFixture(t)
-	db, err := f.c.DB()
-	must(t, err)
 	for _, id := range [][]byte{nil, []byte("short"), bytes.Repeat([]byte{9}, 16)} {
-		if _, err := conclusiondetails.ForEntity(db, id); !errors.Is(err, conclusiondetails.ErrNotFound) {
+		if _, err := conclusiondetails.ForEntity(f.c, id); !errors.Is(err, conclusiondetails.ErrNotFound) {
 			t.Fatalf("%x: %v", id, err)
 		}
 	}
 	a := f.personOn(f.source("Register"))
 	h := f.promote(a, nil)
 	other := f.promote(f.personOn(f.source("Census")), nil)
+	db, err := f.c.DB()
+	must(t, err)
 	_, err = db.Exec(`UPDATE canonical_entities SET merged_into_id = ? WHERE id = ?`, other, h)
 	must(t, err)
-	if _, err := conclusiondetails.ForEntity(db, h); !errors.Is(err, conclusiondetails.ErrNotFound) {
+	// The update skipped the write path, so the open graph still has the old node.
+	f.c.Graph().Drop()
+	if _, err := conclusiondetails.ForEntity(f.c, h); !errors.Is(err, conclusiondetails.ErrNotFound) {
 		t.Fatalf("merged: %v", err)
 	}
-}
-
-// countingQuerier counts the statements the composer sends.
-type countingQuerier struct {
-	db *sql.DB
-	n  int
-}
-
-func (c *countingQuerier) Query(query string, args ...any) (*sql.Rows, error) {
-	c.n++
-	return c.db.Query(query, args...)
 }
 
 func TestForEntityQueryCountIsConstant(t *testing.T) {
@@ -330,16 +318,68 @@ func TestForEntityQueryCountIsConstant(t *testing.T) {
 	f.cite(big, observations.Input{SubjectID: big.ID, PropertyID: f.sex.ID, ValueTermID: termID(t, f, "male")})
 	hb := f.promote(big, nil)
 
-	db, err := f.c.DB()
+	g := f.c.Graph()
+	g.Drop()
+	var n int
+	g.SetQueryCounterForTest(func() { n++ })
+	_, err := conclusiondetails.ForEntity(f.c, hs)
 	must(t, err)
-	one := &countingQuerier{db: db}
-	_, err = conclusiondetails.ForEntity(one, hs)
+	smallN := n
+	n = 0
+	_, err = conclusiondetails.ForEntity(f.c, hb)
 	must(t, err)
-	many := &countingQuerier{db: db}
-	_, err = conclusiondetails.ForEntity(many, hb)
+	if smallN == 0 || smallN != n {
+		t.Fatalf("graph queries: %d for a small Person, %d for a big one", smallN, n)
+	}
+}
+
+func TestDetailReusesStoredValues(t *testing.T) {
+	f := newFixture(t)
+	a := f.personOn(f.source("Register"))
+	obs := f.cite(a, f.nameIn(a, "given=Ann|surname=Lee"))
+	h := f.promote(a, nil)
+	g := f.c.Graph()
+	g.Drop()
+	first := f.detail(h)
+	if len(field(first, "name").Outcomes) == 0 || !bytes.Equal(field(first, "name").Outcomes[0].ObservationID, obs.ID) {
+		t.Fatalf("why %+v", field(first, "name").Outcomes)
+	}
+	var n int
+	g.SetQueryCounterForTest(func() { n++ })
+	second := f.detail(h)
+	if n != 0 {
+		t.Fatalf("second open issued %d graph queries", n)
+	}
+	name := field(second, "name")
+	if len(name.Values) != 1 || name.Values[0].Value.Name == nil || name.Values[0].Value.Name.Form != "Ann Lee" {
+		t.Fatalf("values %+v", name.Values)
+	}
+	if len(name.Outcomes) == 0 || !bytes.Equal(name.Outcomes[0].ObservationID, obs.ID) || name.Outcomes[0].SourceTitle != "Register" {
+		t.Fatalf("why %+v", name.Outcomes)
+	}
+}
+
+func TestDetailValuesFollowAnEdit(t *testing.T) {
+	f := newFixture(t)
+	a := f.personOn(f.source("Register"))
+	obs := f.cite(a, f.nameIn(a, "given=Ann|surname=Lee"))
+	h := f.promote(a, nil)
+	before := field(f.detail(h), "name")
+	if len(before.Values) != 1 || before.Values[0].Value.Name == nil || before.Values[0].Value.Name.Form != "Ann Lee" {
+		t.Fatalf("before %+v", before.Values)
+	}
+	in := f.nameIn(a, "given=Anne|surname=Lee")
+	in.ID = obs.ID
+	_, err := writes.Call(f.c, writes.Op{Action: "update_observation", UserID: userID}, func(tx *database.Tx) (observations.Listed, []rowchange.Change, error) {
+		return observations.Update(tx, userID, in)
+	})
 	must(t, err)
-	if one.n != many.n {
-		t.Fatalf("queries: %d for a small Person, %d for a big one", one.n, many.n)
+	after := field(f.detail(h), "name")
+	if len(after.Values) != 1 || after.Values[0].Value.Name == nil || after.Values[0].Value.Name.Form != "Anne Lee" {
+		t.Fatalf("after %+v", after.Values)
+	}
+	if len(after.Outcomes) == 0 || after.Outcomes[0].Recorded.Name == nil || after.Outcomes[0].Recorded.Name.Form != "Anne Lee" {
+		t.Fatalf("why %+v", after.Outcomes)
 	}
 }
 
