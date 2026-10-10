@@ -1,15 +1,14 @@
-// Package conclusiondetails composes the detail of one canonical handle — a
-// Person now, Events and Places later — from the auto-reconciler cache
-// (Spike 9 R6). For every Property its members' records speak to, it returns
-// the state, every auto-reconciled value (displayed or not, with its reason),
-// and the auto-reconciler's outcome for each Observation it considered,
-// joined to the record's Source: the "Why" a detail page shows.
+// Package conclusiondetails composes the detail of one canonical handle from
+// the catalog graph. For every Property its members' records speak to, it
+// returns the state, every auto-reconciled value (displayed or not, with its
+// reason), and the auto-reconciler's outcome for each Observation it
+// considered, joined to the record's Source: the "Why" a detail page shows.
 //
-// Fields come from the handle's own cache rows, never from the Properties
-// its kind could have: a Property no record mentions isn't read or returned.
-// Which empty fields a page still shows (a Person's name and life rows) is
-// the page's choice. Composed at read time, never stored, in a fixed number
-// of queries whatever the number of Properties. Go returns structures; the app formats text.
+// Field values are remembered on the graph and dropped with the header rows.
+// The field list, term labels, and the Why are read when the page opens, in
+// a fixed number of queries whatever the number of Properties. A Property no
+// record mentions isn't returned. Which empty fields a page still shows is
+// the page's choice. Go returns structures; the app formats text.
 // Reconciliation Claims are never in these tables: when they ship, a
 // composer lays an accepted claim over the auto-reconciled value here.
 package conclusiondetails
@@ -20,8 +19,10 @@ import (
 
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/autoreconcile"
+	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/datevalues"
+	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/valuecodec"
@@ -92,8 +93,8 @@ type Field struct {
 	ValueType   string
 	State       autoreconcile.State // read off the displayed values
 	cardinality string
-	Values      []ReconciledValue   // rank order
-	Outcomes    []Outcome           // by value rank (none last), then Observation id
+	Values      []ReconciledValue // rank order
+	Outcomes    []Outcome         // by value rank (none last), then Observation id
 }
 
 // Detail is one handle's detail.
@@ -112,16 +113,6 @@ const (
 		LEFT JOIN subject_type_properties stp ON stp.property_id = p.id AND stp.subject_type_id = ?
 		WHERE p.value_type <> 'subject'
 		ORDER BY stp.sort_order IS NULL, stp.sort_order, p.key`
-
-	sqlValues = `SELECT v.property_id, v.rank, v.value_text, v.value_integer, v.value_term_id,
-			COALESCE(t.key, ''), COALESCE(t.label, ''), v.value_date, v.value_name,
-			v.support, v.against, v.reason
-		FROM auto_reconciler_values v
-		LEFT JOIN property_terms t ON t.id = v.value_term_id
-		WHERE v.entity_id = ?
-		ORDER BY v.property_id, v.rank`
-
-	sqlMemberCount = `SELECT COUNT(*) FROM identity_claims WHERE entity_id = ? AND status = 'accepted'`
 
 	sqlOutcomes = `SELECT ao.property_id, ao.observation_id, o.ref, ao.reason, ao.value_rank, ao.denied_by,
 			COALESCE(ao.vote_support, 0), COALESCE(ao.vote_total, 0),
@@ -149,31 +140,30 @@ const (
 )
 
 // ForEntity composes the detail of one unmerged handle.
-func ForEntity(q Querier, entityID []byte) (Detail, error) {
-	if len(entityID) != 16 {
+func ForEntity(c *database.Catalog, entityID []byte) (Detail, error) {
+	if c == nil || c.Graph() == nil || len(entityID) != 16 {
 		return Detail{}, ErrNotFound
 	}
-	entities, err := canonicalentities.GetManyTx(q, [][]byte{entityID})
+	n, err := c.Graph().Node(entityID)
 	if err != nil {
 		return Detail{}, err
 	}
-	e, ok := entities[string(entityID)]
-	if !ok || len(e.MergedIntoID) > 0 {
+	if n == nil || n.Merged {
 		return Detail{}, ErrNotFound
 	}
-	d := Detail{Entity: e}
-	if d.MemberCount, err = memberCount(q, entityID); err != nil {
-		return Detail{}, err
-	}
-
-	fields, byProp, err := loadProperties(q, entityID, e.SubjectTypeID)
+	db, err := c.DB()
 	if err != nil {
 		return Detail{}, err
 	}
-	if err := loadValues(q, entityID, byProp); err != nil {
+	d := Detail{Entity: entityOf(n), MemberCount: acceptedMembers(n)}
+	fields, byProp, err := loadProperties(db, entityID, n.SubjectTypeID)
+	if err != nil {
 		return Detail{}, err
 	}
-	if err := loadOutcomes(q, entityID, byProp); err != nil {
+	if err := attachValues(db, valueMemoOf(c.Graph(), n), byProp); err != nil {
+		return Detail{}, err
+	}
+	if err := loadOutcomes(db, entityID, byProp); err != nil {
 		return Detail{}, err
 	}
 	for _, f := range fields {
@@ -193,19 +183,24 @@ func ForEntity(q Querier, entityID []byte) (Detail, error) {
 	return d, nil
 }
 
-func memberCount(q Querier, entityID []byte) (int, error) {
-	rows, err := q.Query(sqlMemberCount, entityID)
-	if err != nil {
-		return 0, err
+func entityOf(n *graphcache.Node) canonicalentities.Entity {
+	return canonicalentities.Entity{
+		ID:            append([]byte(nil), n.ID...),
+		SubjectTypeID: append([]byte(nil), n.SubjectTypeID...),
+		Ref:           n.Ref,
+		Argument:      n.Argument,
+		Label:         n.Label,
 	}
-	defer rows.Close()
-	var n int
-	if rows.Next() {
-		if err := rows.Scan(&n); err != nil {
-			return 0, err
+}
+
+func acceptedMembers(n *graphcache.Node) int {
+	var nAccepted int
+	for _, m := range n.Members {
+		if m.Accepted {
+			nAccepted++
 		}
 	}
-	return n, rows.Err()
+	return nAccepted
 }
 
 // state reads a field's state off its displayed values, by the same rule as
@@ -252,47 +247,72 @@ func loadProperties(q Querier, entityID, subjectTypeID []byte) ([]*Field, map[st
 	return fields, byProp, rows.Err()
 }
 
-func loadValues(q Querier, entityID []byte, byProp map[string]*Field) error {
-	rows, err := q.Query(sqlValues, entityID)
+type termName struct {
+	key   string
+	label string
+}
+
+func attachValues(q Querier, memo valueMemo, byProp map[string]*Field) error {
+	labels, err := termNames(q, memo.termIDs())
 	if err != nil {
 		return err
 	}
+	for prop, ranks := range memo.ranks {
+		f, ok := byProp[prop]
+		if !ok {
+			continue // a subject-valued Property, or one the outcomes no longer name
+		}
+		for _, rank := range ranks {
+			v := ReconciledValue{
+				Rank: rank.Rank, Reason: rank.Reason,
+				Support: rank.Support, Against: rank.Against,
+			}
+			v.Value.Text, v.Value.HasText = rank.Text, rank.HasText
+			v.Value.Integer, v.Value.HasInteger = rank.Integer, rank.HasInteger
+			v.Value.TermID = append([]byte(nil), rank.TermID...)
+			if name, ok := labels[string(rank.TermID)]; ok {
+				v.Value.TermKey, v.Value.TermLabel = name.key, name.label
+			}
+			if len(rank.Date) > 0 {
+				d, err := valuecodec.UnmarshalDate(rank.Date)
+				if err != nil {
+					return err
+				}
+				v.Value.Date = &d
+			}
+			if len(rank.Name) > 0 {
+				decoded, err := valuecodec.UnmarshalName(rank.Name)
+				if err != nil {
+					return err
+				}
+				v.Value.Name = &decoded
+			}
+			f.Values = append(f.Values, v)
+		}
+	}
+	return nil
+}
+
+func termNames(q Querier, ids [][]byte) (map[string]termName, error) {
+	ids = database.UniqueBlobIDs(ids)
+	out := map[string]termName{}
+	if len(ids) == 0 {
+		return out, nil
+	}
+	rows, err := q.Query(`SELECT id, key, label FROM property_terms WHERE id IN (`+database.SQLInPlaceholders(len(ids))+`)`, database.BlobArgs(ids)...)
+	if err != nil {
+		return nil, err
+	}
 	defer rows.Close()
 	for rows.Next() {
-		var (
-			propertyID, termID, dateBlob, nameBlob []byte
-			text                                   sql.NullString
-			integer                                sql.NullInt64
-			v                                      ReconciledValue
-		)
-		if err := rows.Scan(&propertyID, &v.Rank, &text, &integer, &termID, &v.Value.TermKey, &v.Value.TermLabel,
-			&dateBlob, &nameBlob, &v.Support, &v.Against, &v.Reason); err != nil {
-			return err
+		var id []byte
+		var name termName
+		if err := rows.Scan(&id, &name.key, &name.label); err != nil {
+			return nil, err
 		}
-		f, ok := byProp[string(propertyID)]
-		if !ok {
-			continue // a Property no longer bound to the kind
-		}
-		v.Value.Text, v.Value.HasText = text.String, text.Valid
-		v.Value.Integer, v.Value.HasInteger = integer.Int64, integer.Valid
-		v.Value.TermID = termID
-		if len(dateBlob) > 0 {
-			d, err := valuecodec.UnmarshalDate(dateBlob)
-			if err != nil {
-				return err
-			}
-			v.Value.Date = &d
-		}
-		if len(nameBlob) > 0 {
-			n, err := valuecodec.UnmarshalName(nameBlob)
-			if err != nil {
-				return err
-			}
-			v.Value.Name = &n
-		}
-		f.Values = append(f.Values, v)
+		out[string(id)] = name
 	}
-	return rows.Err()
+	return out, rows.Err()
 }
 
 func loadOutcomes(q Querier, entityID []byte, byProp map[string]*Field) error {

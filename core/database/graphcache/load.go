@@ -127,7 +127,7 @@ func (g *Graph) loadValues(ids [][]byte) (map[string]map[string][]Value, error) 
 	out := map[string]map[string][]Value{}
 	q := `SELECT r.entity_id, r.property_id, r.rank, r.reason,
 			r.value_text, r.value_integer, r.value_term_id, COALESCE(t.key, ''),
-			r.value_entity_id, r.value_date, r.value_name
+			r.value_entity_id, r.value_date, r.value_name, r.support, r.against
 		FROM ` + g.valueTable + ` r
 		LEFT JOIN property_terms t ON t.id = r.value_term_id
 		WHERE r.entity_id IN (` + placeholders(len(ids)) + `)
@@ -149,8 +149,9 @@ func (g *Graph) loadValues(ids [][]byte) (map[string]map[string][]Value, error) 
 			entityVal        []byte
 			dateBlob         []byte
 			nameBlob         []byte
+			support, against int
 		)
-		if err := rows.Scan(&entityID, &propID, &rank, &reason, &text, &integer, &termID, &termKey, &entityVal, &dateBlob, &nameBlob); err != nil {
+		if err := rows.Scan(&entityID, &propID, &rank, &reason, &text, &integer, &termID, &termKey, &entityVal, &dateBlob, &nameBlob, &support, &against); err != nil {
 			return nil, err
 		}
 		ek, pk := string(entityID), string(propID)
@@ -165,6 +166,8 @@ func (g *Graph) loadValues(ids [][]byte) (map[string]map[string][]Value, error) 
 			EntityID: cloneID(entityVal),
 			Date:     append([]byte(nil), dateBlob...),
 			Name:     append([]byte(nil), nameBlob...),
+			Support:  support,
+			Against:  against,
 		})
 	}
 	return out, rows.Err()

@@ -28,10 +28,12 @@ type Graph struct {
 	statsRev int64
 	statsOK  bool
 
-	// displays are finished rows keyed by handle id. labels is the vocabulary
-	// map the rows resolve at read time. alt, when set, is the querier a
-	// one-shot graph reads instead of db (a write transaction).
+	// displays are finished header rows keyed by handle id. details are the
+	// conclusion-detail value memos for the same ids; a drop clears both.
+	// labels is the vocabulary map the rows resolve at read time. alt, when
+	// set, is the querier a one-shot graph reads instead of db (a write transaction).
 	displays map[string]any
+	details  map[string]any
 	labels   any
 	labelsOK bool
 	alt      Querier
@@ -72,6 +74,8 @@ type Value struct {
 	EntityID   []byte
 	Date       []byte
 	Name       []byte
+	Support    int
+	Against    int
 }
 
 // Member is one accepted or provisional identity claim.
@@ -145,6 +149,7 @@ func (g *Graph) clear() {
 	g.stats = nil
 	g.statsRev = 0
 	g.displays = map[string]any{}
+	g.details = map[string]any{}
 	g.labelsOK = false
 	g.labels = nil
 }

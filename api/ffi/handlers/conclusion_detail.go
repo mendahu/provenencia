@@ -21,11 +21,7 @@ func GetConclusionDetail(in []byte) ([]byte, error) {
 	}
 	out := &engine.ConclusionDetail{}
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		db, err := c.DB()
-		if err != nil {
-			return err
-		}
-		d, err := conclusiondetails.ForEntity(db, entityID)
+		d, err := conclusiondetails.ForEntity(c, entityID)
 		if err != nil {
 			return err
 		}
