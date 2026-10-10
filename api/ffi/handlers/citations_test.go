@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/api/proto/engine"
+	"github.com/mendahu/provenencia/core/catalogsession"
+	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/locator"
 	"google.golang.org/protobuf/proto"
@@ -266,6 +268,88 @@ func TestListObservationsBySource(t *testing.T) {
 				}
 			},
 		},
+		{
+			name: "term label is the displayed value",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, userID, sourceID, artifactID, _, _ := citationFixture(t)
+				typesOut, err := ListSubjectTypes(marshalProto(t, &engine.ListSubjectTypesRequest{ProjectDir: dir}))
+				if err != nil {
+					t.Fatal(err)
+				}
+				var types engine.ListSubjectTypesResponse
+				if err := proto.Unmarshal(typesOut, &types); err != nil {
+					t.Fatal(err)
+				}
+				eventTypeID := ""
+				for _, typ := range types.Types {
+					if typ.GetKey() == "event" {
+						eventTypeID = typ.GetId()
+						break
+					}
+				}
+				sout, err := CreateSubject(marshalProto(t, &engine.CreateSubjectRequest{
+					ProjectDir: dir, UserId: userID, SourceId: sourceID, SubjectTypeId: eventTypeID, Label: "Birth of Ada",
+				}))
+				if err != nil {
+					t.Fatal(err)
+				}
+				var event engine.CreateSubjectResponse
+				if err := proto.Unmarshal(sout, &event); err != nil {
+					t.Fatal(err)
+				}
+				propID := propertyIDByKey(t, dir, "event_type")
+				termsOut, err := ListPropertyTerms(marshalProto(t, &engine.ListPropertyTermsRequest{
+					ProjectDir: dir, PropertyId: propID,
+				}))
+				if err != nil {
+					t.Fatal(err)
+				}
+				var terms engine.ListPropertyTermsResponse
+				if err := proto.Unmarshal(termsOut, &terms); err != nil {
+					t.Fatal(err)
+				}
+				birthID := ""
+				for _, term := range terms.Terms {
+					if term.GetKey() == "birth" {
+						birthID = term.GetId()
+						break
+					}
+				}
+				if birthID == "" {
+					t.Fatal("birth term missing")
+				}
+				if _, err := CreateCitationWithObservations(marshalProto(t, &engine.CreateCitationWithObservationsRequest{
+					ProjectDir:  dir,
+					UserId:      userID,
+					ArtifactId:  artifactID,
+					LocatorJson: validLocatorJSON,
+					Observations: []*engine.ObservationDraft{{
+						SubjectId:   event.Subject.GetId(),
+						PropertyId:  propID,
+						ValueTermId: birthID,
+					}},
+				})); err != nil {
+					t.Fatal(err)
+				}
+				return &engine.ListObservationsBySourceRequest{ProjectDir: dir, SourceId: sourceID}
+			},
+			after: func(t *testing.T, out []byte, _ proto.Message) {
+				var list engine.ListObservationsBySourceResponse
+				if err := proto.Unmarshal(out, &list); err != nil {
+					t.Fatal(err)
+				}
+				var got *engine.Observation
+				for _, row := range list.Observations {
+					if row.GetPropertyKey() == "event_type" {
+						got = row
+						break
+					}
+				}
+				if got == nil || got.GetValueText() != "Birth" {
+					t.Fatalf("event type %+v", list.Observations)
+				}
+			},
+		},
 	})
 }
 
@@ -426,7 +510,173 @@ func TestGetCitation(t *testing.T) {
 				}
 			},
 		},
+		{
+			name: "term label comes from the loaded source",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, userID, sourceID, artifactID, _, _ := citationFixture(t)
+				typesOut, err := ListSubjectTypes(marshalProto(t, &engine.ListSubjectTypesRequest{ProjectDir: dir}))
+				if err != nil {
+					t.Fatal(err)
+				}
+				var types engine.ListSubjectTypesResponse
+				if err := proto.Unmarshal(typesOut, &types); err != nil {
+					t.Fatal(err)
+				}
+				eventTypeID := ""
+				for _, typ := range types.Types {
+					if typ.GetKey() == "event" {
+						eventTypeID = typ.GetId()
+						break
+					}
+				}
+				sout, err := CreateSubject(marshalProto(t, &engine.CreateSubjectRequest{
+					ProjectDir: dir, UserId: userID, SourceId: sourceID, SubjectTypeId: eventTypeID, Label: "Birth of Ada",
+				}))
+				if err != nil {
+					t.Fatal(err)
+				}
+				var event engine.CreateSubjectResponse
+				if err := proto.Unmarshal(sout, &event); err != nil {
+					t.Fatal(err)
+				}
+				propID := propertyIDByKey(t, dir, "event_type")
+				termsOut, err := ListPropertyTerms(marshalProto(t, &engine.ListPropertyTermsRequest{
+					ProjectDir: dir, PropertyId: propID,
+				}))
+				if err != nil {
+					t.Fatal(err)
+				}
+				var terms engine.ListPropertyTermsResponse
+				if err := proto.Unmarshal(termsOut, &terms); err != nil {
+					t.Fatal(err)
+				}
+				birthID := ""
+				for _, term := range terms.Terms {
+					if term.GetKey() == "birth" {
+						birthID = term.GetId()
+						break
+					}
+				}
+				if birthID == "" {
+					t.Fatal("birth term missing")
+				}
+				createOut, err := CreateCitationWithObservations(marshalProto(t, &engine.CreateCitationWithObservationsRequest{
+					ProjectDir:  dir,
+					UserId:      userID,
+					ArtifactId:  artifactID,
+					LocatorJson: validLocatorJSON,
+					Observations: []*engine.ObservationDraft{{
+						SubjectId:   event.Subject.GetId(),
+						PropertyId:  propID,
+						ValueTermId: birthID,
+					}},
+				}))
+				if err != nil {
+					t.Fatal(err)
+				}
+				var created engine.CreateCitationWithObservationsResponse
+				if err := proto.Unmarshal(createOut, &created); err != nil {
+					t.Fatal(err)
+				}
+				return &engine.GetCitationRequest{ProjectDir: dir, CitationId: created.Citation.GetId()}
+			},
+			after: func(t *testing.T, out []byte, _ proto.Message) {
+				var got engine.GetCitationResponse
+				if err := proto.Unmarshal(out, &got); err != nil {
+					t.Fatal(err)
+				}
+				if len(got.Observations) != 1 || got.Observations[0].GetPropertyKey() != "event_type" || got.Observations[0].GetValueText() != "Birth" {
+					t.Fatalf("observations %+v", got.Observations)
+				}
+			},
+		},
 	})
+}
+
+func TestGetCitationSecondReadUsesTheLoadedSource(t *testing.T) {
+	t.Cleanup(func() { _ = catalogsession.CloseAll() })
+	dir, userID, _, artifactID, placeID, propID := citationFixture(t)
+	createOut, err := CreateCitationWithObservations(marshalProto(t, &engine.CreateCitationWithObservationsRequest{
+		ProjectDir:  dir,
+		UserId:      userID,
+		ArtifactId:  artifactID,
+		LocatorJson: validLocatorJSON,
+		Observations: []*engine.ObservationDraft{
+			{SubjectId: placeID, PropertyId: propID, ValueText: "Boston"},
+			{SubjectId: placeID, PropertyId: propID, ValueText: "Cambridge"},
+		},
+	}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var created engine.CreateCitationWithObservationsResponse
+	if err := proto.Unmarshal(createOut, &created); err != nil {
+		t.Fatal(err)
+	}
+	otherOut, err := CreateCitationWithObservations(marshalProto(t, &engine.CreateCitationWithObservationsRequest{
+		ProjectDir:  dir,
+		UserId:      userID,
+		ArtifactId:  artifactID,
+		LocatorJson: validLocatorJSON,
+		Observations: []*engine.ObservationDraft{
+			{SubjectId: placeID, PropertyId: propID, ValueText: "Elsewhere"},
+		},
+	}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var other engine.CreateCitationWithObservationsResponse
+	if err := proto.Unmarshal(otherOut, &other); err != nil {
+		t.Fatal(err)
+	}
+	req := marshalProto(t, &engine.GetCitationRequest{ProjectDir: dir, CitationId: created.Citation.GetId()})
+	first, err := GetCitation(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got engine.GetCitationResponse
+	if err := proto.Unmarshal(first, &got); err != nil {
+		t.Fatal(err)
+	}
+	if len(got.Observations) != 2 {
+		t.Fatalf("observations %+v", got.Observations)
+	}
+	var n int
+	if err := catalogsession.Do(dir, func(c *database.Catalog) error {
+		c.Graph().SetQueryCounterForTest(func() { n++ })
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	second, err := GetCitation(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n != 0 {
+		t.Fatalf("second read issued %d graph queries", n)
+	}
+	if err := proto.Unmarshal(second, &got); err != nil {
+		t.Fatal(err)
+	}
+	texts := map[string]int{}
+	for _, row := range got.Observations {
+		texts[row.GetValueText()]++
+	}
+	if texts["Boston"] != 1 || texts["Cambridge"] != 1 {
+		t.Fatalf("observations %+v", got.Observations)
+	}
+	otherReq := marshalProto(t, &engine.GetCitationRequest{ProjectDir: dir, CitationId: other.Citation.GetId()})
+	otherGot, err := GetCitation(otherReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var listed engine.GetCitationResponse
+	if err := proto.Unmarshal(otherGot, &listed); err != nil {
+		t.Fatal(err)
+	}
+	if n != 0 || len(listed.Observations) != 1 || listed.Observations[0].GetValueText() != "Elsewhere" {
+		t.Fatalf("queries %d observations %+v", n, listed.Observations)
+	}
 }
 
 func TestUpdateCitation(t *testing.T) {

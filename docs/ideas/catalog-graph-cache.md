@@ -460,7 +460,7 @@ Subject positions (Evidence graph layout) don't bump the revision and aren't in 
 | Consumer | Today | With the graph |
 | --- | --- | --- |
 | Promote layer (`promotealign.loadLayer`) | rebuilt per proposal | `Source(id)` |
-| Evidence graph, Citation Composer | five FFI calls (`listSubjects`, `listObservationsBySource`, `listSubjectMemberships`, `listSourceEventTitles`, positions) | four from `Source(id)`; positions as today |
+| Evidence graph, Citation Composer | five FFI calls (`listSubjects`, `listObservationsBySource`, `listSubjectMemberships`, `listSourceEventTitles`, positions), plus `GetCitation`'s observation join | graph lists and a citation's observations from `Source(id)`; the citation row, its notes, and positions stay SQL |
 
 ### Stays on SQL
 
@@ -569,7 +569,7 @@ Each step is its own PR, measured against the one before. PRs that only repoint 
     - **Values.** Support and against are loaded on the node. The memo holds ranks, not labels, state, or outcomes. `Verify` rebuilds those ranks from the node.
     - **The field list.** Still the outcome properties, subject-valued properties excluded, in binding order. That order is applied at read. A property with only `no_evidence` outcomes and no value rows still appears.
     - **The Why.** Outcomes stay the SQL join. Source titles stay on that read.
-12. **The Source store** (done). A Source is loaded the first time Promote, the Evidence graph, or the Composer reads it. A save drops that Source when the audit scopes name it. An identity claim and claim evidence also name the subject's Source, through a cache scope that audit does not record. A handle edit leaves the Source in place. The membership list reads the handle's name and label from its node. Positions stay a SQL read. Term labels, property labels, and event titles are applied when the page is read.
+12. **The Source store** (done). A Source is loaded the first time Promote, the Evidence graph, or the Composer reads it. A save drops that Source when the audit scopes name it. An identity claim and claim evidence also name the subject's Source, through a cache scope that audit does not record. A handle edit leaves the Source in place. The membership list reads the handle's name and label from its node. `GetCitation` takes that citation's observations from the loaded Source. The citation row and its notes stay SQL. Positions stay a SQL read. Term labels, property labels, and event titles are applied when the page is read.
     - **Cache scopes.** `identity_claims` follows `subject_id` to `source_id`. `identity_claim_evidence` follows the claim to that same Source. `effects.Sources` still reads only the audit path, so a claim stays without a Source in the log.
     - **What is stored.** Subjects, observation payloads, accepted memberships (subject, claim, handle), and the bridges the align layer signs. Event-title hops are stored beside them so the existing title rule runs on the loaded Source.
     - **Verify.** A loaded Source's memberships and bridge signatures are read again and compared. A canonical-node check does not see a membership pointer.

@@ -4,7 +4,6 @@ import (
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/citations"
-	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/writes"
 	"google.golang.org/protobuf/proto"
@@ -107,16 +106,22 @@ func GetCitation(in []byte) ([]byte, error) {
 		if err != nil {
 			return err
 		}
-		listed, err := observations.ListByCitation(c, citationID)
+		sourceID, err := citations.SourceID(c, citationID)
+		if err != nil {
+			return err
+		}
+		sg, err := c.Graph().Source(sourceID)
+		if err != nil {
+			return err
+		}
+		rows, err := listedProtosFromSource(c, sg, citationID)
 		if err != nil {
 			return err
 		}
 		out = &engine.GetCitationResponse{
-			Citation: citationProto(cit),
-			Notes:    notes,
-		}
-		for _, row := range listed {
-			out.Observations = append(out.Observations, listedObservationProto(row))
+			Citation:     citationProto(cit),
+			Notes:        notes,
+			Observations: rows,
 		}
 		return nil
 	})

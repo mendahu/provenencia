@@ -27,14 +27,11 @@ func ListObservationsBySource(in []byte) ([]byte, error) {
 		if err != nil {
 			return err
 		}
-		props, err := loadPropertyInfo(c)
+		rows, err := listedProtosFromSource(c, sg, nil)
 		if err != nil {
 			return err
 		}
-		out = &engine.ListObservationsBySourceResponse{}
-		for _, o := range sg.Observations {
-			out.Observations = append(out.Observations, listedObservationProto(listedFromSource(o, props)))
-		}
+		out = &engine.ListObservationsBySourceResponse{Observations: rows}
 		return nil
 	})
 	if err != nil {
