@@ -73,6 +73,16 @@ func TestDisplayCacheFollowsAPlaceThreeStepsUp(t *testing.T) {
 	if !sameSet(after.Birth.Places[0].Parents, []string{"City", "Region", "Renamed"}) {
 		t.Fatalf("after rename %v", after.Birth.Places[0].Parents)
 	}
+
+	towns, err := conclusionheaders.PlacesByIDs(f.c, [][]byte{townID})
+	must(t, err)
+	if len(towns) != 1 || !sameSet(towns[0].Parents, []string{"City", "Region", "Renamed"}) {
+		t.Fatalf("town chain %v", towns)
+	}
+	must(t, conclusionheaders.AttachPlaceRelationships(f.c, &towns[0]))
+	if len(towns[0].PartOf) != 1 || towns[0].PartOf[0].Title != "City" {
+		t.Fatalf("town part of %+v", towns[0].PartOf)
+	}
 }
 
 func personHeader(t *testing.T, f *fixture, id []byte) conclusionheaders.PersonHeader {

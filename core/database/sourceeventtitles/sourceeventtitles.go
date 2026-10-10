@@ -16,6 +16,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/canonicalgraph"
 	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/eventtitle"
+	"github.com/mendahu/provenencia/core/hops"
 )
 
 // Querier is *sql.Tx or *sql.DB.
@@ -87,11 +88,11 @@ func ForSource(q Querier, sourceID []byte) ([]Title, error) {
 	for i, e := range events {
 		ids[i] = e.id
 	}
-	people, err := canonicalgraph.WalkSource(q, sourceID, canonicalgraph.SubjectsOfEvent, ids)
+	people, err := canonicalgraph.WalkSource(q, sourceID, hops.SubjectsOfEvent, ids)
 	if err != nil {
 		return nil, err
 	}
-	places, err := canonicalgraph.WalkSource(q, sourceID, canonicalgraph.PlacesOfEvent, ids)
+	places, err := canonicalgraph.WalkSource(q, sourceID, hops.PlacesOfEvent, ids)
 	if err != nil {
 		return nil, err
 	}
