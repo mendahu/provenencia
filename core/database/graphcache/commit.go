@@ -16,6 +16,9 @@ func (g *Graph) OnCommit(rev int64, set effects.Set) error {
 	if g == nil {
 		return nil
 	}
+	if set.Vocabulary {
+		g.DropLabels()
+	}
 	if set.Structure {
 		g.Drop()
 		return g.verifyIfSet()
@@ -29,12 +32,15 @@ func (g *Graph) OnCommit(rev int64, set effects.Set) error {
 		return err
 	}
 	var entities, assocs []entityRow
+	roots := append([][]byte(nil), ids...)
 	for _, id := range ids {
 		row, ok := rows[string(id)]
 		if !ok {
-			if err := g.onGone(id); err != nil {
+			ends, err := g.onGone(id)
+			if err != nil {
 				return err
 			}
+			roots = append(roots, ends...)
 			continue
 		}
 		if _, bridge := connectrules.LookupBridge(row.typeKey); bridge {
@@ -49,19 +55,24 @@ func (g *Graph) OnCommit(rev int64, set effects.Set) error {
 		}
 	}
 	for _, row := range assocs {
-		if err := g.onAssociation(row.id); err != nil {
+		ends, err := g.onAssociation(row.id)
+		if err != nil {
 			return err
 		}
+		roots = append(roots, ends...)
+	}
+	if err := g.forgetDisplays(uniqueIDs(roots)); err != nil {
+		return err
 	}
 	return g.verifyIfSet()
 }
 
-func (g *Graph) onGone(id []byte) error {
+func (g *Graph) onGone(id []byte) ([][]byte, error) {
 	if _, ok := g.holders[string(id)]; ok {
 		return g.onAssociation(id)
 	}
 	g.removeNode(id)
-	return nil
+	return nil, nil
 }
 
 func (g *Graph) onEntity(row entityRow) error {
@@ -72,7 +83,7 @@ func (g *Graph) onEntity(row entityRow) error {
 	return g.loadIDs([][]byte{row.id}, true)
 }
 
-func (g *Graph) onAssociation(id []byte) error {
+func (g *Graph) onAssociation(id []byte) ([][]byte, error) {
 	old := append([][]byte(nil), g.holders[string(id)]...)
 	delete(g.holders, string(id))
 	g.removeNode(id)
@@ -83,13 +94,18 @@ func (g *Graph) onAssociation(id []byte) error {
 		}
 	}
 	if err := g.loadIDs(reload, true); err != nil {
-		return err
+		return nil, err
 	}
 	fresh, err := g.endpointIDs(id)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return g.loadIDs(fresh, false)
+	// Replace endpoints that are already loaded. A later association would
+	// otherwise leave the first snapshot of their links in place.
+	if err := g.loadIDs(fresh, true); err != nil {
+		return nil, err
+	}
+	return append(old, fresh...), nil
 }
 
 func (g *Graph) verifyIfSet() error {

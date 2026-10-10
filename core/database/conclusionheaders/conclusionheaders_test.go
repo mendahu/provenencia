@@ -108,9 +108,7 @@ func (f *fixture) person(forms ...string) (subjects.Subject, []observations.Obse
 
 func (f *fixture) list() []conclusionheaders.PersonHeader {
 	f.t.Helper()
-	db, err := f.c.DB()
-	must(f.t, err)
-	h, err := conclusionheaders.ListPersons(db)
+	h, err := conclusionheaders.ListPersons(f.c)
 	must(f.t, err)
 	return h
 }
@@ -261,14 +259,14 @@ func TestHeadersShowKeptValuesOnly(t *testing.T) {
 func TestListPersonsQueryCountIsConstant(t *testing.T) {
 	f := newFixture(t)
 	f.person("Ada Lovelace")
-	db, err := f.c.DB()
-	must(t, err)
-	one, err := conclusionheaders.ListPersonsQueryCount(db)
+	f.c.Graph().Drop()
+	one, err := conclusionheaders.ListPersonsQueryCount(f.c)
 	must(t, err)
 	for i := 0; i < 50; i++ {
 		f.person(fmt.Sprintf("Person %d", i), fmt.Sprintf("Alias %d", i))
 	}
-	many, err := conclusionheaders.ListPersonsQueryCount(db)
+	f.c.Graph().Drop()
+	many, err := conclusionheaders.ListPersonsQueryCount(f.c)
 	must(t, err)
 	// The name row is one query; birth and death are one more, for the whole
 	// list. The count stays put as the list grows.
@@ -287,15 +285,13 @@ func TestPersonsByIDs(t *testing.T) {
 		return canonicalentities.Create(tx, userID, p6a9)
 	})
 	must(t, err)
-	db, err := f.c.DB()
-	must(t, err)
 
-	got, err := conclusionheaders.PersonsByIDs(db, [][]byte{mary, james, mary, place.ID, make([]byte, 16)})
+	got, err := conclusionheaders.PersonsByIDs(f.c, [][]byte{mary, james, mary, place.ID, make([]byte, 16)})
 	must(t, err)
 	if len(got) != 2 || got[0].Name.Form != "James Robins" || got[1].Name.Form != "Mary Smith" {
 		t.Fatalf("want James, Mary in list order: %+v", got)
 	}
-	if got, err := conclusionheaders.PersonsByIDs(db, nil); err != nil || got != nil {
+	if got, err := conclusionheaders.PersonsByIDs(f.c, nil); err != nil || got != nil {
 		t.Fatalf("no ids: %v %+v", err, got)
 	}
 }
@@ -346,9 +342,7 @@ func (f *fixture) event(in ...observations.Input) []byte {
 
 func (f *fixture) events() []conclusionheaders.EventHeader {
 	f.t.Helper()
-	db, err := f.c.DB()
-	must(f.t, err)
-	h, err := conclusionheaders.ListEvents(db)
+	h, err := conclusionheaders.ListEvents(f.c)
 	must(f.t, err)
 	return h
 }
@@ -417,15 +411,15 @@ func TestListEvents(t *testing.T) {
 func TestListEventsQueryCountIsConstant(t *testing.T) {
 	f := newFixture(t)
 	f.event()
-	db, err := f.c.DB()
-	must(t, err)
-	one, err := conclusionheaders.ListEventsQueryCount(db)
+	f.c.Graph().Drop()
+	one, err := conclusionheaders.ListEventsQueryCount(f.c)
 	must(t, err)
 	date := f.prop("date")
 	for i := 0; i < 50; i++ {
 		f.event(observations.Input{PropertyID: date.ID, Date: pointYear(1800 + i)})
 	}
-	many, err := conclusionheaders.ListEventsQueryCount(db)
+	f.c.Graph().Drop()
+	many, err := conclusionheaders.ListEventsQueryCount(f.c)
 	must(t, err)
 	// The event row is one query; subjects and places are one each, for the
 	// whole list. The count stays put as the list grows.
@@ -441,9 +435,7 @@ func TestEventsByIDs(t *testing.T) {
 	bare := f.event()
 	f.event(observations.Input{PropertyID: name.ID, ValueText: "Other", HasText: true})
 	_, _, person := f.person("Ada Lovelace")
-	db, err := f.c.DB()
-	must(t, err)
-	got, err := conclusionheaders.EventsByIDs(db, [][]byte{bare, fire, fire, person, make([]byte, 16)})
+	got, err := conclusionheaders.EventsByIDs(f.c, [][]byte{bare, fire, fire, person, make([]byte, 16)})
 	must(t, err)
 	if len(got) != 2 {
 		t.Fatalf("%+v", got)
@@ -452,7 +444,7 @@ func TestEventsByIDs(t *testing.T) {
 	if !names["Fire"] || !names[""] {
 		t.Fatalf("%+v", got)
 	}
-	if got, err := conclusionheaders.EventsByIDs(db, nil); err != nil || got != nil {
+	if got, err := conclusionheaders.EventsByIDs(f.c, nil); err != nil || got != nil {
 		t.Fatalf("no ids: %v %+v", err, got)
 	}
 }
@@ -535,9 +527,7 @@ func (f *fixture) joinPlace(art artifacts.Artifact, entityID []byte, names ...st
 
 func (f *fixture) places() []conclusionheaders.PlaceHeader {
 	f.t.Helper()
-	db, err := f.c.DB()
-	must(f.t, err)
-	h, err := conclusionheaders.ListPlaces(db)
+	h, err := conclusionheaders.ListPlaces(f.c)
 	must(f.t, err)
 	return h
 }
@@ -616,14 +606,14 @@ func TestPlaceSort(t *testing.T) {
 func TestListPlacesQueryCountIsConstant(t *testing.T) {
 	f := newFixture(t)
 	f.place(f.artifact, "York")
-	db, err := f.c.DB()
-	must(t, err)
-	one, err := conclusionheaders.ListPlacesQueryCount(db)
+	f.c.Graph().Drop()
+	one, err := conclusionheaders.ListPlacesQueryCount(f.c)
 	must(t, err)
 	for i := 0; i < 20; i++ {
 		f.place(f.artifact, fmt.Sprintf("Place %d", i))
 	}
-	many, err := conclusionheaders.ListPlacesQueryCount(db)
+	f.c.Graph().Drop()
+	many, err := conclusionheaders.ListPlacesQueryCount(f.c)
 	must(t, err)
 	// Place list is one header scan plus a fixed place-relationship graph
 	// walk for today's chains (S9-39), whatever the row count.
@@ -638,9 +628,7 @@ func TestPlacesByIDs(t *testing.T) {
 	bare := f.place(f.artifact)
 	f.place(f.artifact, "Toronto")
 	_, _, person := f.person("Ada Lovelace")
-	db, err := f.c.DB()
-	must(t, err)
-	got, err := conclusionheaders.PlacesByIDs(db, [][]byte{bare, york, york, person, make([]byte, 16)})
+	got, err := conclusionheaders.PlacesByIDs(f.c, [][]byte{bare, york, york, person, make([]byte, 16)})
 	must(t, err)
 	if len(got) != 2 {
 		t.Fatalf("%+v", got)
@@ -656,7 +644,7 @@ func TestPlacesByIDs(t *testing.T) {
 	if !names["York"] || !names[""] {
 		t.Fatalf("%+v", got)
 	}
-	if got, err := conclusionheaders.PlacesByIDs(db, nil); err != nil || got != nil {
+	if got, err := conclusionheaders.PlacesByIDs(f.c, nil); err != nil || got != nil {
 		t.Fatalf("no ids: %v %+v", err, got)
 	}
 }

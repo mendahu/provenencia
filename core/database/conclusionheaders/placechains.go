@@ -48,7 +48,7 @@ func loadPlaceGraph(q Querier, seeds [][]byte) (*placeGraph, error) {
 	}
 	// Expand along both relationship kinds so tests covering succession and
 	// deep parents stay set-based without N+1 climbs for the first layer.
-	for round := 0; round < 8 && len(frontier) > 0; round++ {
+	for round := 0; round < headerChainDepth && len(frontier) > 0; round++ {
 		if err := g.ensurePlaces(q, frontier); err != nil {
 			return nil, err
 		}

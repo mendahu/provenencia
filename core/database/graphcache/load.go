@@ -8,11 +8,13 @@ import (
 )
 
 type entityRow struct {
-	id      []byte
-	ref     string
-	typeID  []byte
-	merged  bool
-	typeKey string
+	id       []byte
+	ref      string
+	typeID   []byte
+	merged   bool
+	typeKey  string
+	argument string
+	label    string
 }
 
 // loadIDs loads ids that are not already cached. replace reloads ids that are.
@@ -73,6 +75,8 @@ func (g *Graph) loadChunk(ids [][]byte) error {
 			ID:            cloneID(row.id),
 			Ref:           row.ref,
 			SubjectTypeID: cloneID(row.typeID),
+			Argument:      row.argument,
+			Label:         row.label,
 			Merged:        row.merged,
 			Values:        values[string(id)],
 			Links:         links[string(id)],
@@ -91,7 +95,8 @@ func (g *Graph) entityRows(ids [][]byte) (map[string]entityRow, error) {
 	ids = uniqueIDs(ids)
 	for start := 0; start < len(ids); start += batch {
 		chunk := ids[start:min(start+batch, len(ids))]
-		q := `SELECT e.id, e.ref, e.subject_type_id, e.merged_into_id IS NOT NULL, st.key
+		q := `SELECT e.id, e.ref, e.subject_type_id, e.merged_into_id IS NOT NULL, st.key,
+				COALESCE(e.argument, ''), COALESCE(e.label, '')
 			FROM ` + g.entityTable + ` e
 			JOIN subject_types st ON st.id = e.subject_type_id
 			WHERE e.id IN (` + placeholders(len(chunk)) + `)`
@@ -101,7 +106,7 @@ func (g *Graph) entityRows(ids [][]byte) (map[string]entityRow, error) {
 		}
 		for rows.Next() {
 			var row entityRow
-			if err := rows.Scan(&row.id, &row.ref, &row.typeID, &row.merged, &row.typeKey); err != nil {
+			if err := rows.Scan(&row.id, &row.ref, &row.typeID, &row.merged, &row.typeKey, &row.argument, &row.label); err != nil {
 				_ = rows.Close()
 				return nil, err
 			}
@@ -403,6 +408,7 @@ func (g *Graph) install(n *Node) {
 		g.detach(old)
 	}
 	g.nodes[string(n.ID)] = n
+	g.dropDisplay(n.ID)
 	g.attach(n)
 	g.syncKind(n)
 }
@@ -435,6 +441,7 @@ func (g *Graph) detach(n *Node) {
 }
 
 func (g *Graph) removeNode(id []byte) {
+	g.dropDisplay(id)
 	if n, ok := g.nodes[string(id)]; ok {
 		g.detach(n)
 		delete(g.nodes, string(id))
