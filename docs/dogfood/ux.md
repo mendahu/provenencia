@@ -111,7 +111,7 @@ Copy the stub. Surface + what got in the way is enough. A wanted fix is optional
 - **Where:** Citation composer
 - **Annoyance:** Opening a Citation with a lot of Observations gets slow quickly. Real Citations with around 10–20 Observations are already noticeably sluggish.
 - **Wanted:** The composer stays responsive at 20+ Observations. Profile the load first to see whether the time goes to data fetching or to view rendering.
-- **Idea to try (unverified):** load the Source viewer (the image or PDF) in its own window, so it can't hold up loading the Citation and its Observations. Right now the composer may wait for everything to load and then show the whole view at once. This is a hunch, not a diagnosis. The viewer might not be the bottleneck, so measure first.
+- **Idea to try (unverified):** load the Source viewer (the image or PDF) independently, so it can't hold up the rest of the composer. Think React Suspense: the viewer suspends inside its own container and shows a placeholder while the Artifact loads, and the Citation form and Observations render right away. Right now the composer may wait for everything to load and then show the whole view at once. This is a hunch, not a diagnosis. The viewer might not be the bottleneck, so measure first.
 
 ### Drag and drop files into the Artifact section
 
