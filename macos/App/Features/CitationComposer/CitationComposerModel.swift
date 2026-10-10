@@ -109,7 +109,7 @@ final class CitationComposerModel {
         var typeKey: String
     }
 
-    static let newSubjectPrefix = "__new__."
+    nonisolated static let newSubjectPrefix = "__new__."
 
     let entry: CitationComposerEntry
     private let userID: String
