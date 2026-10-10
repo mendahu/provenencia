@@ -90,14 +90,18 @@ func newConclusionFixture(t *testing.T) conclusionFixture {
 	}
 	obsA, obsB := res.Observations[0].ID, res.Observations[1].ID
 
-	grounding, err := promote.Save(c, userID, promote.Input{SubjectID: a.ID})
+	grounding, err := writes.Call(c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+		return promote.Save(tx, userID, promote.Input{SubjectID: a.ID})
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	// A confirmed comparison: B joins with its toponym paired against A's, so
 	// Promote pins both Observations on both claims (backfill).
-	joined, err := promote.Save(c, userID, promote.Input{SubjectID: b.ID, EntityID: grounding.Entity.ID,
-		Pairs: []promote.Pair{{IncomingObservationID: obsB, MemberObservationID: obsA}}})
+	joined, err := writes.Call(c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+		return promote.Save(tx, userID, promote.Input{SubjectID: b.ID, EntityID: grounding.Entity.ID,
+			Pairs: []promote.Pair{{IncomingObservationID: obsB, MemberObservationID: obsA}}})
+	})
 	if err != nil {
 		t.Fatal(err)
 	}

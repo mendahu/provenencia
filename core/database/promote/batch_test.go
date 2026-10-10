@@ -167,7 +167,9 @@ func (f *batchFixture) revision() int64 {
 
 func (f *batchFixture) save(in promote.Batch) promote.BatchResult {
 	f.t.Helper()
-	res, err := promote.SaveBatch(f.c, userID, in)
+	res, err := writes.Call(f.c, writes.Op{Action: "promote_batch", UserID: userID}, func(tx *database.Tx) (promote.BatchResult, []rowchange.Change, error) {
+		return promote.SaveBatch(tx, userID, in)
+	})
 	if err != nil {
 		f.t.Fatal(err)
 	}
@@ -253,11 +255,15 @@ func TestSaveBatchFilesBridgeWhoseEndsWereAlreadyPromoted(t *testing.T) {
 	f := newBatchFixture(t)
 	person := f.bare("person")
 	event := f.bare("event")
-	per, err := promote.Save(f.c, userID, promote.Input{SubjectID: person.ID})
+	per, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+		return promote.Save(tx, userID, promote.Input{SubjectID: person.ID})
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	evt, err := promote.Save(f.c, userID, promote.Input{SubjectID: event.ID})
+	evt, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+		return promote.Save(tx, userID, promote.Input{SubjectID: event.ID})
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -287,10 +293,14 @@ func TestSaveBatchSkipsSwitchedOffBridge(t *testing.T) {
 	f := newBatchFixture(t)
 	person := f.bare("person")
 	event := f.bare("event")
-	if _, err := promote.Save(f.c, userID, promote.Input{SubjectID: person.ID}); err != nil {
+	if _, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+		return promote.Save(tx, userID, promote.Input{SubjectID: person.ID})
+	}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := promote.Save(f.c, userID, promote.Input{SubjectID: event.ID}); err != nil {
+	if _, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+		return promote.Save(tx, userID, promote.Input{SubjectID: event.ID})
+	}); err != nil {
 		t.Fatal(err)
 	}
 	bridge := f.participation(person, event)
@@ -308,9 +318,11 @@ func TestSaveBatchStaleWritesNothing(t *testing.T) {
 	person := f.bare("person")
 	seen := f.revision()
 	_ = f.bare("place") // a later write advances the revision
-	_, err := promote.SaveBatch(f.c, userID, promote.Batch{
-		SourceID: f.source.ID, SeenRevision: seen,
-		Rows: []promote.BatchRow{{SubjectID: person.ID, Target: promote.TargetNew}},
+	_, err := writes.Call(f.c, writes.Op{Action: "promote_batch", UserID: userID}, func(tx *database.Tx) (promote.BatchResult, []rowchange.Change, error) {
+		return promote.SaveBatch(tx, userID, promote.Batch{
+			SourceID: f.source.ID, SeenRevision: seen,
+			Rows: []promote.BatchRow{{SubjectID: person.ID, Target: promote.TargetNew}},
+		})
 	})
 	if !errors.Is(err, promote.ErrStale) {
 		t.Fatalf("err %v, want promote.ErrStale", err)
@@ -344,19 +356,26 @@ func TestSaveBatchOneHopPin(t *testing.T) {
 			deathDate := f.cite(death, observations.Input{PropertyID: f.prop("date").ID, Date: yearDate(1849)})
 			f.participation(person, birth)
 			f.participation(person, death)
-			per, err := promote.Save(f.c, userID, promote.Input{SubjectID: person.ID})
+			per, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+				return promote.Save(tx, userID, promote.Input{SubjectID: person.ID})
+			})
 			if err != nil {
 				t.Fatal(err)
 			}
-			birthH, err := promote.Save(f.c, userID, promote.Input{SubjectID: birth.ID})
+			birthH, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+				return promote.Save(tx, userID, promote.Input{SubjectID: birth.ID})
+			})
 			if err != nil {
 				t.Fatal(err)
 			}
-			if _, err := promote.Save(f.c, userID, promote.Input{SubjectID: death.ID}); err != nil {
+			if _, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+				return promote.Save(tx, userID, promote.Input{SubjectID: death.ID})
+			}); err != nil {
 				t.Fatal(err)
 			}
 
 			// A second layer: the birth date sits on the event, one hop from the person.
+
 			personB := f.bare("person")
 			eventB := f.bare("event")
 			incoming := f.cite(eventB, observations.Input{PropertyID: f.prop("date").ID, Date: yearDate(1849)})
@@ -370,13 +389,17 @@ func TestSaveBatchOneHopPin(t *testing.T) {
 			if tt.eventTarget == promote.TargetHandle {
 				eventRow.EntityID = birthH.Entity.ID
 			}
-			res, err := promote.SaveBatch(f.c, userID, promote.Batch{
+			p6a1 := promote.Batch{
 				SourceID: f.source.ID, SeenRevision: f.revision(),
 				Rows: []promote.BatchRow{{
 					SubjectID: personB.ID, Target: promote.TargetHandle, EntityID: per.Entity.ID,
 					Pairs: []promote.Pair{{IncomingObservationID: incoming[0].ID, MemberObservationID: member}},
 				}, eventRow},
+			}
+			res, err := writes.Call(f.c, writes.Op{Action: "promote_batch", UserID: userID}, func(tx *database.Tx) (promote.BatchResult, []rowchange.Change, error) {
+				return promote.SaveBatch(tx, userID, p6a1)
 			})
+
 			if tt.wantErr {
 				if !errors.Is(err, promote.ErrInvalid) {
 					t.Fatalf("err %v, want promote.ErrInvalid", err)

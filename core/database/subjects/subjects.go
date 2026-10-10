@@ -5,9 +5,10 @@ package subjects
 import (
 	"database/sql"
 	"errors"
+	"strings"
+
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
 	"github.com/mendahu/provenencia/core/database/rowchange"
-	"strings"
 
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/apperr"
@@ -66,8 +67,9 @@ type Placement struct {
 }
 
 // Create inserts a Subject and mints a ref from the type's candidate_ref_prefix.
-// A placement is written on the same transaction and is not part of the change
-// list. The caller records the returned changes.
+// A placement is written on the same transaction and returned with the subject
+// change. The caller records the returned changes. Run stores the position and
+// does not record it.
 func Create(tx *database.Tx, userID []byte, in CreateInput, placement *Placement) (Subject, []rowchange.Change, error) {
 	if tx == nil {
 		return Subject{}, nil, ErrInvalid
@@ -85,12 +87,15 @@ func Create(tx *database.Tx, userID []byte, in CreateInput, placement *Placement
 	if err != nil {
 		return Subject{}, nil, err
 	}
+	changes := []rowchange.Change{change}
 	if placement != nil {
-		if _, err := subjectpositions.SetTx(tx.Tx, s.ID, placement.GridX, placement.GridY); err != nil {
+		_, pos, err := subjectpositions.Set(tx, s.ID, placement.GridX, placement.GridY)
+		if err != nil {
 			return Subject{}, nil, err
 		}
+		changes = append(changes, pos...)
 	}
-	return s, []rowchange.Change{change}, nil
+	return s, changes, nil
 }
 
 // InsertTx inserts a Subject on an open transaction (no commit, no revision).

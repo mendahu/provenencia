@@ -213,7 +213,9 @@ func TestObservations(t *testing.T) {
 			name: "unbound property refused",
 			run: func(t *testing.T) {
 				c, s := mustSeed(t)
-				unbound, err := properties.Create(c, userID, "Nickname", properties.ValueTypeText, "", "")
+				unbound, err := writes.Call(c, writes.Op{Action: "create_property", UserID: userID}, func(tx *database.Tx) (properties.Property, []rowchange.Change, error) {
+					return properties.Create(tx, userID, "Nickname", properties.ValueTypeText, "", "")
+				})
 				if err != nil {
 					t.Fatal(err)
 				}

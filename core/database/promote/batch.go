@@ -4,14 +4,12 @@ import (
 	"bytes"
 	"database/sql"
 	"errors"
+
 	"github.com/mendahu/provenencia/core/database/rowchange"
 
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/audit"
-	"github.com/mendahu/provenencia/core/database/autoreconciler"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
-	"github.com/mendahu/provenencia/core/database/project"
 	"github.com/mendahu/provenencia/core/database/subjects"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 )
@@ -60,53 +58,48 @@ type BatchResult struct {
 }
 
 // SaveBatch files one Done in a single transaction: claims, one-hop pins,
-// bridges (except switched-off ones), one audit revision, and one recompute.
+// and bridges (except switched-off ones). The caller records the returned
+// changes as promote_batch. Revision on the result is SeenRevision; the
+// caller replaces it with the revision it recorded when that is non-zero,
+// so an all-skip batch still reports the revision the proposal was read at.
 // A catalog write since SeenRevision is ErrStale and writes nothing.
-func SaveBatch(c *database.Catalog, userID []byte, in Batch) (BatchResult, error) {
-	db, err := c.DB()
-	if err != nil {
-		return BatchResult{}, err
+func SaveBatch(tx *database.Tx, userID []byte, in Batch) (BatchResult, []rowchange.Change, error) {
+	if tx == nil {
+		return BatchResult{}, nil, ErrInvalid
 	}
 	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
-		return BatchResult{}, err
+		return BatchResult{}, nil, err
 	}
 	if len(in.SourceID) != 16 {
-		return BatchResult{}, ErrInvalid
+		return BatchResult{}, nil, ErrInvalid
 	}
 	skip := map[string]struct{}{}
 	for _, id := range in.SkipBridgeIDs {
 		if len(id) != 16 {
-			return BatchResult{}, ErrInvalid
+			return BatchResult{}, nil, ErrInvalid
 		}
 		skip[string(id)] = struct{}{}
 	}
 
-	tx, err := db.Begin()
-	if err != nil {
-		return BatchResult{}, err
-	}
-	defer func() { _ = tx.Rollback() }()
-
+	q := tx.Tx
 	var exists int
-	if err := tx.QueryRow(`SELECT 1 FROM sources WHERE id = ?`, in.SourceID).Scan(&exists); err != nil {
+	if err := q.QueryRow(`SELECT 1 FROM sources WHERE id = ?`, in.SourceID).Scan(&exists); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return BatchResult{}, ErrInvalid
+			return BatchResult{}, nil, ErrInvalid
 		}
-		return BatchResult{}, err
+		return BatchResult{}, nil, err
 	}
-	rev, err := latestRevision(tx)
+	rev, err := latestRevision(q)
 	if err != nil {
-		return BatchResult{}, err
+		return BatchResult{}, nil, err
 	}
 	if rev != in.SeenRevision {
-		return BatchResult{}, ErrStale
+		return BatchResult{}, nil, ErrStale
 	}
 
 	var (
-		changes  []rowchange.Change
-		touched  [][]byte
-		subjects [][]byte
-		written  []Written
+		changes []rowchange.Change
+		written []Written
 	)
 	targets := pinTargets{}
 	for _, row := range in.Rows {
@@ -117,52 +110,23 @@ func SaveBatch(c *database.Catalog, userID []byte, in Batch) (BatchResult, error
 		}
 	}
 	for _, row := range in.Rows {
-		w, rowChanges, entityID, err := applyRow(tx, in.SourceID, row, targets)
+		w, rowChanges, _, err := applyRow(q, in.SourceID, row, targets)
 		if err != nil {
-			return BatchResult{}, err
+			return BatchResult{}, nil, err
 		}
 		if w == nil {
 			continue
 		}
 		changes = append(changes, rowChanges...)
-		touched = append(touched, entityID)
-		subjects = append(subjects, row.SubjectID)
 		written = append(written, *w)
 	}
 
-	assocs, filed, err := identityclaims.FileSourceBridgesTx(tx, in.SourceID, skip)
+	_, filed, err := identityclaims.FileSourceBridgesTx(q, in.SourceID, skip)
 	if err != nil {
-		return BatchResult{}, err
+		return BatchResult{}, nil, err
 	}
 	changes = append(changes, filed...)
-	touched = append(touched, assocs...)
-
-	outRev := rev
-	if len(changes) > 0 {
-		outRev, err = audit.Record(tx, audit.Revision{
-			UserID:     userID,
-			ActionType: "promote_batch",
-			CreatedAt:  project.NowUTC(),
-			Changes:    changes,
-		})
-		if err != nil {
-			return BatchResult{}, err
-		}
-		for _, sid := range subjects {
-			extra, err := autoreconciler.HandlesObservingSubject(tx, sid)
-			if err != nil {
-				return BatchResult{}, err
-			}
-			touched = append(touched, extra...)
-		}
-		if err := autoreconciler.RecomputeTx(tx, touched); err != nil {
-			return BatchResult{}, err
-		}
-	}
-	if err := tx.Commit(); err != nil {
-		return BatchResult{}, err
-	}
-	return BatchResult{Revision: outRev, Written: written}, nil
+	return BatchResult{Revision: rev, Written: written}, changes, nil
 }
 
 func latestRevision(tx *sql.Tx) (int64, error) {

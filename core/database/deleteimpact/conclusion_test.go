@@ -71,12 +71,16 @@ func TestImpactConclusion(t *testing.T) {
 		t.Fatal(err)
 	}
 	obsID := res.Observations[0].ID
-	plc, err := canonicalentities.Create(c, userID, canonicalentities.CreateInput{SubjectTypeID: place.ID})
+	plc, err := writes.Call(c, writes.Op{Action: "create_canonical_entity", UserID: userID}, func(tx *database.Tx) (canonicalentities.Entity, []rowchange.Change, error) {
+		return canonicalentities.Create(tx, userID, canonicalentities.CreateInput{SubjectTypeID: place.ID})
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	claim, err := identityclaims.Create(c, userID, identityclaims.CreateInput{
-		SubjectID: york.ID, EntityID: plc.ID, Status: identityclaims.StatusAccepted,
+	claim, err := writes.Call(c, writes.Op{Action: "create_identity_claim", UserID: userID}, func(tx *database.Tx) (identityclaims.Claim, []rowchange.Change, error) {
+		return identityclaims.Create(tx, userID, identityclaims.CreateInput{
+			SubjectID: york.ID, EntityID: plc.ID, Status: identityclaims.StatusAccepted,
+		})
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -116,7 +120,9 @@ func TestImpactConclusion(t *testing.T) {
 		if !got.Allowed || len(got.Cascades) != 0 {
 			t.Fatalf("unpromoted %+v", got)
 		}
-		res, err := promote.Save(c, userID, promote.Input{SubjectID: leeds.ID})
+		res, err := writes.Call(c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+			return promote.Save(tx, userID, promote.Input{SubjectID: leeds.ID})
+		})
 		if err != nil {
 			t.Fatal(err)
 		}

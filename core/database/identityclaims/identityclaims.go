@@ -6,15 +6,13 @@ package identityclaims
 import (
 	"database/sql"
 	"errors"
-	"github.com/mendahu/provenencia/core/database/rowchange"
 	"strings"
+
+	"github.com/mendahu/provenencia/core/database/rowchange"
 
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/audit"
-	"github.com/mendahu/provenencia/core/database/autoreconciler"
-	"github.com/mendahu/provenencia/core/database/project"
 )
 
 var (
@@ -65,62 +63,28 @@ type CreateInput struct {
 	Argument          string
 }
 
-// Create inserts a claim and records create_identity_claim.
-func Create(c *database.Catalog, userID []byte, in CreateInput) (Claim, error) {
-	db, err := c.DB()
-	if err != nil {
-		return Claim{}, err
+// Create inserts a claim. The caller records the returned changes as
+// create_identity_claim. An accepted claim files the bridges it completes.
+func Create(tx *database.Tx, userID []byte, in CreateInput) (Claim, []rowchange.Change, error) {
+	if tx == nil {
+		return Claim{}, nil, ErrInvalid
 	}
 	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
-		return Claim{}, err
+		return Claim{}, nil, err
 	}
 
-	tx, err := db.Begin()
+	cl, change, err := InsertTx(tx.Tx, in)
 	if err != nil {
-		return Claim{}, err
-	}
-	defer func() { _ = tx.Rollback() }()
-
-	cl, change, err := InsertTx(tx, in)
-	if err != nil {
-		return Claim{}, err
+		return Claim{}, nil, err
 	}
 	changes := []rowchange.Change{change}
-	var assocs [][]byte
 	if in.Status == StatusAccepted {
-		assocs, changes, err = AppendFiling(tx, cl.SubjectID, changes)
+		_, changes, err = AppendFiling(tx.Tx, cl.SubjectID, changes)
 		if err != nil {
-			return Claim{}, err
+			return Claim{}, nil, err
 		}
 	}
-	if _, err := audit.Record(tx, audit.Revision{
-		UserID:     userID,
-		ActionType: "create_identity_claim",
-		CreatedAt:  project.NowUTC(),
-		Changes:    changes,
-	}); err != nil {
-		return Claim{}, err
-	}
-	if err := recomputeTx(tx, cl, assocs); err != nil {
-		return Claim{}, err
-	}
-	if err := tx.Commit(); err != nil {
-		return Claim{}, err
-	}
-	return cl, nil
-}
-
-// recomputeTx refreshes the auto-reconciler cache for a new claim. Every
-// status changes the handle's values: an accepted member's Observations are
-// evidence, a provisional one's are reasoning, a rejected one's are dropped.
-// Only an accepted claim moves where subject-valued ends resolve, so only it
-// recomputes the handles observing the subject and the filed associations.
-// A claim status edit, when one lands, recomputes through here too.
-func recomputeTx(tx *sql.Tx, cl Claim, assocs [][]byte) error {
-	if cl.Status == StatusAccepted {
-		return autoreconciler.RecomputeTouchingTx(tx, append([][]byte{cl.EntityID}, assocs...), cl.SubjectID)
-	}
-	return autoreconciler.RecomputeTx(tx, [][]byte{cl.EntityID})
+	return cl, changes, nil
 }
 
 // AppendFiling files bridges the new member completes and returns the

@@ -35,6 +35,24 @@ func Handles(tx *sql.Tx, changes []rowchange.Change) ([][]byte, error) {
 	return resolve(tx, changes, func(e Effect) Path { return e.Handles })
 }
 
+// WithoutNone drops changes whose effect is None. An unknown entity type is
+// an error. Run records and resolves the result, so a position written beside
+// an audited row is stored with that revision and is not recorded.
+func WithoutNone(changes []rowchange.Change) ([]rowchange.Change, error) {
+	out := make([]rowchange.Change, 0, len(changes))
+	for _, ch := range changes {
+		table, ok := entityTable[ch.EntityType]
+		if !ok {
+			return nil, errf("effects: no entry for %s", ch.EntityType)
+		}
+		if registry[table].None {
+			continue
+		}
+		out = append(out, ch)
+	}
+	return out, nil
+}
+
 // AllNone reports whether every change names a table whose effect is None.
 // An empty list is not None-only: Run rolls those back. An unknown entity
 // type is an error.

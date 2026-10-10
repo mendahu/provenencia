@@ -237,7 +237,9 @@ func citedEvent(t *testing.T) (dir, entityID string) {
 		if err != nil {
 			return err
 		}
-		p, err := promote.Save(c, userID[:], promote.Input{SubjectID: subjectID})
+		p, err := writes.Call(c, writes.Op{Action: "promote_subject", UserID: userID[:]}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+			return promote.Save(tx, userID[:], promote.Input{SubjectID: subjectID})
+		})
 		if err != nil {
 			return err
 		}
@@ -325,7 +327,9 @@ func citedPlace(t *testing.T) (dir, entityID string) {
 		if err != nil {
 			return err
 		}
-		p, err := promote.Save(c, userID[:], promote.Input{SubjectID: s.ID})
+		p, err := writes.Call(c, writes.Op{Action: "promote_subject", UserID: userID[:]}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+			return promote.Save(tx, userID[:], promote.Input{SubjectID: s.ID})
+		})
 		if err != nil {
 			return err
 		}
@@ -356,7 +360,9 @@ func TestWorkspaceNavCountsConclusionHandles(t *testing.T) {
 			if err != nil {
 				return err
 			}
-			if _, err := canonicalentities.Create(c, userID, canonicalentities.CreateInput{SubjectTypeID: st.ID}); err != nil {
+			if _, err := writes.Call(c, writes.Op{Action: "create_canonical_entity", UserID: userID}, func(tx *database.Tx) (canonicalentities.Entity, []rowchange.Change, error) {
+				return canonicalentities.Create(tx, userID, canonicalentities.CreateInput{SubjectTypeID: st.ID})
+			}); err != nil {
 				return err
 			}
 		}

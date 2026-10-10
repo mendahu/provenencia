@@ -99,7 +99,9 @@ func (f *fixture) person(forms ...string) (subjects.Subject, []observations.Obse
 		must(f.t, err)
 		obs = res.Observations
 	}
-	p, err := promote.Save(f.c, userID, promote.Input{SubjectID: s.ID})
+	p, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+		return promote.Save(tx, userID, promote.Input{SubjectID: s.ID})
+	})
 	must(f.t, err)
 	return s, obs, p.Entity.ID
 }
@@ -121,11 +123,20 @@ func TestListPersons(t *testing.T) {
 
 	f.person("Mary Smith")
 	_, jamesObs, _ := f.person("James Robins", "Jim Robins", "james robins")
-	labelled, err := canonicalentities.Create(f.c, userID, canonicalentities.CreateInput{SubjectTypeID: f.typeID("person"), Label: "Mother of James"})
+	p6a1 := canonicalentities.CreateInput{SubjectTypeID: f.typeID("person"), Label: "Mother of James"}
+	labelled, err := writes.Call(f.c, writes.Op{Action: "create_canonical_entity", UserID: userID}, func(tx *database.Tx) (canonicalentities.Entity, []rowchange.Change, error) {
+		return canonicalentities.Create(tx, userID, p6a1)
+	})
 	must(t, err)
-	bare, err := canonicalentities.Create(f.c, userID, canonicalentities.CreateInput{SubjectTypeID: f.typeID("person")})
+	p6a2 := canonicalentities.CreateInput{SubjectTypeID: f.typeID("person")}
+	bare, err := writes.Call(f.c, writes.Op{Action: "create_canonical_entity", UserID: userID}, func(tx *database.Tx) (canonicalentities.Entity, []rowchange.Change, error) {
+		return canonicalentities.Create(tx, userID, p6a2)
+	})
 	must(t, err)
-	_, err = canonicalentities.Create(f.c, userID, canonicalentities.CreateInput{SubjectTypeID: f.typeID("place"), Label: "York"})
+	p6a3 := canonicalentities.CreateInput{SubjectTypeID: f.typeID("place"), Label: "York"}
+	_, err = writes.Call(f.c, writes.Op{Action: "create_canonical_entity", UserID: userID}, func(tx *database.Tx) (canonicalentities.Entity, []rowchange.Change, error) {
+		return canonicalentities.Create(tx, userID, p6a3)
+	})
 	must(t, err)
 
 	got := f.list()
@@ -226,12 +237,17 @@ func TestHeadersShowKeptValuesOnly(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			f := newFixture(t)
-			handle, err := canonicalentities.Create(f.c, userID, canonicalentities.CreateInput{SubjectTypeID: f.typeID(tt.kind)})
+			p6a4 := canonicalentities.CreateInput{SubjectTypeID: f.typeID(tt.kind)}
+			handle, err := writes.Call(f.c, writes.Op{Action: "create_canonical_entity", UserID: userID}, func(tx *database.Tx) (canonicalentities.Entity, []rowchange.Change, error) {
+				return canonicalentities.Create(tx, userID, p6a4)
+			})
 			must(t, err)
 			s := f.bare(tt.kind)
 			f.cite(s, tt.cite(f)...)
-			_, err = identityclaims.Create(f.c, userID, identityclaims.CreateInput{
-				SubjectID: s.ID, EntityID: handle.ID, Status: identityclaims.StatusProvisional,
+			_, err = writes.Call(f.c, writes.Op{Action: "create_identity_claim", UserID: userID}, func(tx *database.Tx) (identityclaims.Claim, []rowchange.Change, error) {
+				return identityclaims.Create(tx, userID, identityclaims.CreateInput{
+					SubjectID: s.ID, EntityID: handle.ID, Status: identityclaims.StatusProvisional,
+				})
 			})
 			must(t, err)
 			db, err := f.c.DB()
@@ -266,7 +282,10 @@ func TestPersonsByIDs(t *testing.T) {
 	_, _, mary := f.person("Mary Smith")
 	_, _, james := f.person("James Robins")
 	f.person("Ada Lovelace")
-	place, err := canonicalentities.Create(f.c, userID, canonicalentities.CreateInput{SubjectTypeID: f.typeID("place")})
+	p6a9 := canonicalentities.CreateInput{SubjectTypeID: f.typeID("place")}
+	place, err := writes.Call(f.c, writes.Op{Action: "create_canonical_entity", UserID: userID}, func(tx *database.Tx) (canonicalentities.Entity, []rowchange.Change, error) {
+		return canonicalentities.Create(tx, userID, p6a9)
+	})
 	must(t, err)
 	db, err := f.c.DB()
 	must(t, err)
@@ -318,7 +337,9 @@ func (f *fixture) event(in ...observations.Input) []byte {
 		})
 		must(f.t, err)
 	}
-	p, err := promote.Save(f.c, userID, promote.Input{SubjectID: s.ID})
+	p, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+		return promote.Save(tx, userID, promote.Input{SubjectID: s.ID})
+	})
 	must(f.t, err)
 	return p.Entity.ID
 }
@@ -451,13 +472,22 @@ func (f *fixture) lowTrust(src sources.Source) {
 	f.t.Helper()
 	g, err := sourcecredibilitygrades.Lookup(f.c, "low_trust", sourcecredibilitygrades.OriginProvenencia)
 	must(f.t, err)
-	_, err = sourcecredibility.Upsert(f.c, userID, sourcecredibility.UpsertInput{
+	p6in11 := sourcecredibility.UpsertInput{
 		SourceID: src.ID, CredibilityGradeID: g.ID,
+	}
+	p6act10 := "create_source_credibility_assessment"
+
+	// place promotes a new Place whose toponyms are cited, in order, on art.
+	if _, p6look12 := sourcecredibility.GetBySource(f.c, p6in11.SourceID); p6look12 == nil {
+		p6act10 = "update_source_credibility_assessment"
+	}
+	_, err = writes.Call(f.c, writes.Op{Action: p6act10, UserID: userID}, func(tx *database.Tx) (sourcecredibility.Assessment, []rowchange.Change, error) {
+		return sourcecredibility.Upsert(tx, userID, p6in11)
 	})
+
 	must(f.t, err)
 }
 
-// place promotes a new Place whose toponyms are cited, in order, on art.
 func (f *fixture) place(art artifacts.Artifact, names ...string) []byte {
 	f.t.Helper()
 	placeType := f.typeID("place")
@@ -466,7 +496,9 @@ func (f *fixture) place(art artifacts.Artifact, names ...string) []byte {
 	})
 	must(f.t, err)
 	f.citeToponyms(art, s.ID, names...)
-	p, err := promote.Save(f.c, userID, promote.Input{SubjectID: s.ID})
+	p, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+		return promote.Save(tx, userID, promote.Input{SubjectID: s.ID})
+	})
 	must(f.t, err)
 	return p.Entity.ID
 }
@@ -495,7 +527,9 @@ func (f *fixture) joinPlace(art artifacts.Artifact, entityID []byte, names ...st
 	})
 	must(f.t, err)
 	f.citeToponyms(art, s.ID, names...)
-	_, err = promote.Save(f.c, userID, promote.Input{SubjectID: s.ID, EntityID: entityID})
+	_, err = writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+		return promote.Save(tx, userID, promote.Input{SubjectID: s.ID, EntityID: entityID})
+	})
 	must(f.t, err)
 }
 

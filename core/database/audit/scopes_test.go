@@ -422,7 +422,9 @@ func TestSourceScopes(t *testing.T) {
 			name: "promote does not move the source",
 			run: func(t *testing.T, s seed) {
 				a0, b0 := revisions(t, s)
-				if _, err := promote.Save(s.c, userID, promote.Input{SubjectID: s.person.ID}); err != nil {
+				if _, err := writes.Call(s.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+					return promote.Save(tx, userID, promote.Input{SubjectID: s.person.ID})
+				}); err != nil {
 					t.Fatal(err)
 				}
 				if latest(t, s) <= b0 {

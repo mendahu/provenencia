@@ -34,7 +34,8 @@ type Revision struct {
 // Record allocates the next revision and inserts the transaction + changes on tx,
 // plus source scopes from effects.Sources. Every entity type in the change list
 // must have a resolver in scopes.go; an unknown type is invalid. A None-effect
-// entity is not recorded.
+// entity is not recorded. Run drops those rows from a mixed list before Record,
+// so they commit with the revision and do not need a resolver.
 // The caller owns BEGIN/COMMIT; Record must run inside that transaction.
 // An empty Changes slice is invalid — callers must skip Record when nothing changed.
 func Record(tx *sql.Tx, rev Revision) (int64, error) {

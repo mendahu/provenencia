@@ -4,8 +4,9 @@ package connect
 import (
 	"bytes"
 	"database/sql"
-	"github.com/mendahu/provenencia/core/database/rowchange"
 	"strings"
+
+	"github.com/mendahu/provenencia/core/database/rowchange"
 
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/connectrules"
@@ -45,7 +46,8 @@ type Result struct {
 
 // CreateCitedBridge writes a bridge Subject, position, Citation, and Observations
 // on tx. Nothing persists if citation insert fails. The caller records the
-// returned changes. The position is not one of them.
+// returned changes. The position is one of them; Run stores it and does not
+// record it.
 func CreateCitedBridge(tx *database.Tx, userID []byte, in CreateInput) (Result, []rowchange.Change, error) {
 	if tx == nil {
 		return Result{}, nil, ErrInvalid
@@ -146,7 +148,8 @@ func CreateCitedBridge(tx *database.Tx, userID []byte, in CreateInput) (Result, 
 	}
 	gridX := floorDiv(fromPos.GridX+toPos.GridX+1, 2)
 	gridY := floorDiv(fromPos.GridY+toPos.GridY+1, 2)
-	if _, err := subjectpositions.SetTx(q, bridge.ID, gridX, gridY); err != nil {
+	_, posChanges, err := subjectpositions.Set(tx, bridge.ID, gridX, gridY)
+	if err != nil {
 		return Result{}, nil, err
 	}
 
@@ -159,7 +162,7 @@ func CreateCitedBridge(tx *database.Tx, userID []byte, in CreateInput) (Result, 
 	var (
 		citation citations.Citation
 		written  []observations.Observation
-		changes  = []rowchange.Change{subjectChange}
+		changes  = append([]rowchange.Change{subjectChange}, posChanges...)
 	)
 	if len(in.CitationID) != 0 {
 		var obsChanges []rowchange.Change

@@ -9,10 +9,12 @@ import (
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/writes"
 )
 
 var userID = []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}
@@ -26,8 +28,10 @@ func TestCanonicalEntities(t *testing.T) {
 			name: "create mints ref from ref_prefix, not candidate prefix",
 			run: func(t *testing.T, c *database.Catalog) {
 				person := lookupType(t, c, "person")
-				e, err := canonicalentities.Create(c, userID, canonicalentities.CreateInput{
-					SubjectTypeID: person.ID, Label: " Mother of James ",
+				e, err := writes.Call(c, writes.Op{Action: "create_canonical_entity", UserID: userID}, func(tx *database.Tx) (canonicalentities.Entity, []rowchange.Change, error) {
+					return canonicalentities.Create(tx, userID, canonicalentities.CreateInput{
+						SubjectTypeID: person.ID, Label: " Mother of James ",
+					})
 				})
 				if err != nil {
 					t.Fatal(err)
@@ -49,13 +53,17 @@ func TestCanonicalEntities(t *testing.T) {
 				person, place := lookupType(t, c, "person"), lookupType(t, c, "place")
 				var persons []canonicalentities.Entity
 				for i := 0; i < 3; i++ {
-					e, err := canonicalentities.Create(c, userID, canonicalentities.CreateInput{SubjectTypeID: person.ID})
+					e, err := writes.Call(c, writes.Op{Action: "create_canonical_entity", UserID: userID}, func(tx *database.Tx) (canonicalentities.Entity, []rowchange.Change, error) {
+						return canonicalentities.Create(tx, userID, canonicalentities.CreateInput{SubjectTypeID: person.ID})
+					})
 					if err != nil {
 						t.Fatal(err)
 					}
 					persons = append(persons, e)
 				}
-				if _, err := canonicalentities.Create(c, userID, canonicalentities.CreateInput{SubjectTypeID: place.ID}); err != nil {
+				if _, err := writes.Call(c, writes.Op{Action: "create_canonical_entity", UserID: userID}, func(tx *database.Tx) (canonicalentities.Entity, []rowchange.Change, error) {
+					return canonicalentities.Create(tx, userID, canonicalentities.CreateInput{SubjectTypeID: place.ID})
+				}); err != nil {
 					t.Fatal(err)
 				}
 				db, err := c.DB()
@@ -80,7 +88,9 @@ func TestCanonicalEntities(t *testing.T) {
 			name: "create records one audit change",
 			run: func(t *testing.T, c *database.Catalog) {
 				place := lookupType(t, c, "place")
-				e, err := canonicalentities.Create(c, userID, canonicalentities.CreateInput{SubjectTypeID: place.ID})
+				e, err := writes.Call(c, writes.Op{Action: "create_canonical_entity", UserID: userID}, func(tx *database.Tx) (canonicalentities.Entity, []rowchange.Change, error) {
+					return canonicalentities.Create(tx, userID, canonicalentities.CreateInput{SubjectTypeID: place.ID})
+				})
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -110,7 +120,10 @@ func TestCanonicalEntities(t *testing.T) {
 		{
 			name: "unknown subject type rejected",
 			run: func(t *testing.T, c *database.Catalog) {
-				_, err := canonicalentities.Create(c, userID, canonicalentities.CreateInput{SubjectTypeID: make([]byte, 16)})
+				p6a1 := canonicalentities.CreateInput{SubjectTypeID: make([]byte, 16)}
+				_, err := writes.Call(c, writes.Op{Action: "create_canonical_entity", UserID: userID}, func(tx *database.Tx) (canonicalentities.Entity, []rowchange.Change, error) {
+					return canonicalentities.Create(tx, userID, p6a1)
+				})
 				if !errors.Is(err, canonicalentities.ErrInvalid) {
 					t.Fatalf("got %v", err)
 				}
@@ -120,7 +133,9 @@ func TestCanonicalEntities(t *testing.T) {
 			name: "missing user rejected",
 			run: func(t *testing.T, c *database.Catalog) {
 				person := lookupType(t, c, "person")
-				_, err := canonicalentities.Create(c, nil, canonicalentities.CreateInput{SubjectTypeID: person.ID})
+				_, err := writes.Call(c, writes.Op{Action: "create_canonical_entity", UserID: nil}, func(tx *database.Tx) (canonicalentities.Entity, []rowchange.Change, error) {
+					return canonicalentities.Create(tx, nil, canonicalentities.CreateInput{SubjectTypeID: person.ID})
+				})
 				if !errors.Is(err, canonicalentities.ErrInvalid) {
 					t.Fatalf("got %v", err)
 				}
@@ -131,15 +146,21 @@ func TestCanonicalEntities(t *testing.T) {
 			run: func(t *testing.T, c *database.Catalog) {
 				person := lookupType(t, c, "person")
 				place := lookupType(t, c, "place")
-				a, err := canonicalentities.Create(c, userID, canonicalentities.CreateInput{SubjectTypeID: person.ID, Argument: "why"})
+				a, err := writes.Call(c, writes.Op{Action: "create_canonical_entity", UserID: userID}, func(tx *database.Tx) (canonicalentities.Entity, []rowchange.Change, error) {
+					return canonicalentities.Create(tx, userID, canonicalentities.CreateInput{SubjectTypeID: person.ID, Argument: "why"})
+				})
 				if err != nil {
 					t.Fatal(err)
 				}
-				b, err := canonicalentities.Create(c, userID, canonicalentities.CreateInput{SubjectTypeID: person.ID})
+				b, err := writes.Call(c, writes.Op{Action: "create_canonical_entity", UserID: userID}, func(tx *database.Tx) (canonicalentities.Entity, []rowchange.Change, error) {
+					return canonicalentities.Create(tx, userID, canonicalentities.CreateInput{SubjectTypeID: person.ID})
+				})
 				if err != nil {
 					t.Fatal(err)
 				}
-				if _, err := canonicalentities.Create(c, userID, canonicalentities.CreateInput{SubjectTypeID: place.ID}); err != nil {
+				if _, err := writes.Call(c, writes.Op{Action: "create_canonical_entity", UserID: userID}, func(tx *database.Tx) (canonicalentities.Entity, []rowchange.Change, error) {
+					return canonicalentities.Create(tx, userID, canonicalentities.CreateInput{SubjectTypeID: place.ID})
+				}); err != nil {
 					t.Fatal(err)
 				}
 				got, err := canonicalentities.Get(c, a.ID)

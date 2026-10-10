@@ -34,8 +34,9 @@ A new `EntityType` string passed to `audit.Record` (or a new `rowFacet` in
 
 `Record` rejects an entity type without a resolver (`ErrInvalid`), and
 `TestResolversCoverEveryEntityType` parses `core/` so a missing one fails CI before runtime.
-An entity whose effect is `None` (`subject_position`, `file_derivative`) is committed
-without a revision and is left out of an audited change list, so it has no resolver.
+An entity whose effect is `None` (`subject_position`, `file_derivative`) has no resolver.
+An all-`None` list commits without a revision. In a mixed list, `Run` drops the `None`
+rows before `Record`, so they are stored with the revision and are not recorded.
 
 ## Write changes so they resolve
 

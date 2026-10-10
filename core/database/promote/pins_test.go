@@ -134,11 +134,15 @@ func TestSavePins(t *testing.T) {
 	t.Run("a confirmed pair pins both Observations on both claims", func(t *testing.T) {
 		f := newPinFixture(t)
 		birth, birthObs := f.person1("James")
-		first, err := promote.Save(f.c, userID, promote.Input{SubjectID: birth.ID, Argument: "The birth record."})
+		first, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+			return promote.Save(tx, userID, promote.Input{SubjectID: birth.ID, Argument: "The birth record."})
+		})
 		f.must(err)
 		census, censusObs := f.person1("James")
-		res, err := promote.Save(f.c, userID, promote.Input{SubjectID: census.ID, EntityID: first.Entity.ID,
-			Pairs: []promote.Pair{{IncomingObservationID: censusObs[0].ID, MemberObservationID: birthObs[0].ID}}})
+		res, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+			return promote.Save(tx, userID, promote.Input{SubjectID: census.ID, EntityID: first.Entity.ID,
+				Pairs: []promote.Pair{{IncomingObservationID: censusObs[0].ID, MemberObservationID: birthObs[0].ID}}})
+		})
 		f.must(err)
 		want := idsOf(birthObs[0], censusObs[0])
 		if got := f.pinned(res.Claim.ID); got != want {
@@ -160,11 +164,15 @@ func TestSavePins(t *testing.T) {
 	t.Run("pins are audited per claim in the promote_subject revision", func(t *testing.T) {
 		f := newPinFixture(t)
 		birth, birthObs := f.person1("James")
-		first, err := promote.Save(f.c, userID, promote.Input{SubjectID: birth.ID})
+		first, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+			return promote.Save(tx, userID, promote.Input{SubjectID: birth.ID})
+		})
 		f.must(err)
 		census, censusObs := f.person1("James")
-		res, err := promote.Save(f.c, userID, promote.Input{SubjectID: census.ID, EntityID: first.Entity.ID,
-			Pairs: []promote.Pair{{IncomingObservationID: censusObs[0].ID, MemberObservationID: birthObs[0].ID}}})
+		res, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+			return promote.Save(tx, userID, promote.Input{SubjectID: census.ID, EntityID: first.Entity.ID,
+				Pairs: []promote.Pair{{IncomingObservationID: censusObs[0].ID, MemberObservationID: birthObs[0].ID}}})
+		})
 		f.must(err)
 		got := lastRevisionChanges(t, f.c)
 		want := "promote_subject:identity_claim,identity_claim_evidence,identity_claim_evidence,identity_claim_evidence,identity_claim_evidence"
@@ -181,17 +189,23 @@ func TestSavePins(t *testing.T) {
 	t.Run("pins already carried are not written or audited twice", func(t *testing.T) {
 		f := newPinFixture(t)
 		a, aObs := f.person1("James", "Jim")
-		first, err := promote.Save(f.c, userID, promote.Input{SubjectID: a.ID})
+		first, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+			return promote.Save(tx, userID, promote.Input{SubjectID: a.ID})
+		})
 		f.must(err)
 		b, bObs := f.person1("James")
 		pair := promote.Pair{IncomingObservationID: bObs[0].ID, MemberObservationID: aObs[0].ID}
-		_, err = promote.Save(f.c, userID, promote.Input{SubjectID: b.ID, EntityID: first.Entity.ID,
-			Pairs: []promote.Pair{pair, pair}})
+		_, err = writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+			return promote.Save(tx, userID, promote.Input{SubjectID: b.ID, EntityID: first.Entity.ID,
+				Pairs: []promote.Pair{pair, pair}})
+		})
 		f.must(err)
 		c, cObs := f.person1("James")
 		// The member's Observation is already pinned on its claim by b's join.
-		res, err := promote.Save(f.c, userID, promote.Input{SubjectID: c.ID, EntityID: first.Entity.ID,
-			Pairs: []promote.Pair{{IncomingObservationID: cObs[0].ID, MemberObservationID: aObs[0].ID}}})
+		res, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+			return promote.Save(tx, userID, promote.Input{SubjectID: c.ID, EntityID: first.Entity.ID,
+				Pairs: []promote.Pair{{IncomingObservationID: cObs[0].ID, MemberObservationID: aObs[0].ID}}})
+		})
 		f.must(err)
 		if got, want := f.pinned(first.Claim.ID), idsOf(aObs[0], bObs[0], cObs[0]); got != want {
 			t.Fatalf("member pins differ")
@@ -207,16 +221,22 @@ func TestSavePins(t *testing.T) {
 	t.Run("pairs against several members backfill each", func(t *testing.T) {
 		f := newPinFixture(t)
 		a, aObs := f.person1("James")
-		first, err := promote.Save(f.c, userID, promote.Input{SubjectID: a.ID})
+		first, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+			return promote.Save(tx, userID, promote.Input{SubjectID: a.ID})
+		})
 		f.must(err)
 		b, bObs := f.person1("James")
-		second, err := promote.Save(f.c, userID, promote.Input{SubjectID: b.ID, EntityID: first.Entity.ID})
+		second, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+			return promote.Save(tx, userID, promote.Input{SubjectID: b.ID, EntityID: first.Entity.ID})
+		})
 		f.must(err)
 		c, cObs := f.person1("James")
-		res, err := promote.Save(f.c, userID, promote.Input{SubjectID: c.ID, EntityID: first.Entity.ID, Pairs: []promote.Pair{
-			{IncomingObservationID: cObs[0].ID, MemberObservationID: aObs[0].ID},
-			{IncomingObservationID: cObs[0].ID, MemberObservationID: bObs[0].ID},
-		}})
+		res, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+			return promote.Save(tx, userID, promote.Input{SubjectID: c.ID, EntityID: first.Entity.ID, Pairs: []promote.Pair{
+				{IncomingObservationID: cObs[0].ID, MemberObservationID: aObs[0].ID},
+				{IncomingObservationID: cObs[0].ID, MemberObservationID: bObs[0].ID},
+			}})
+		})
 		f.must(err)
 		if got, want := f.pinned(res.Claim.ID), idsOf(aObs[0], bObs[0], cObs[0]); got != want {
 			t.Fatalf("new claim pins differ")
@@ -232,12 +252,16 @@ func TestSavePins(t *testing.T) {
 	t.Run("invalid pairs are refused and write nothing", func(t *testing.T) {
 		f := newPinFixture(t)
 		a, aObs := f.person1("James")
-		first, err := promote.Save(f.c, userID, promote.Input{SubjectID: a.ID})
+		first, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+			return promote.Save(tx, userID, promote.Input{SubjectID: a.ID})
+		})
 		f.must(err)
 		_, outsiderObs := f.person1("James")
 		provisional, provisionalObs := f.person1("James")
-		_, err = identityclaims.Create(f.c, userID, identityclaims.CreateInput{
-			SubjectID: provisional.ID, EntityID: first.Entity.ID, Status: identityclaims.StatusProvisional})
+		_, err = writes.Call(f.c, writes.Op{Action: "create_identity_claim", UserID: userID}, func(tx *database.Tx) (identityclaims.Claim, []rowchange.Change, error) {
+			return identityclaims.Create(tx, userID, identityclaims.CreateInput{
+				SubjectID: provisional.ID, EntityID: first.Entity.ID, Status: identityclaims.StatusProvisional})
+		})
 		f.must(err)
 		_, otherPropObs := f.record(f.place, f.toponym, "York")
 		in, inObs := f.person1("James")
@@ -256,7 +280,9 @@ func TestSavePins(t *testing.T) {
 				Pairs: []promote.Pair{{IncomingObservationID: inObs[0].ID[:4], MemberObservationID: aObs[0].ID}}},
 		}
 		for name, input := range cases {
-			if _, err := promote.Save(f.c, userID, input); !errors.Is(err, promote.ErrInvalid) {
+			if _, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+				return promote.Save(tx, userID, input)
+			}); !errors.Is(err, promote.ErrInvalid) {
 				t.Fatalf("%s: got %v", name, err)
 			}
 		}
@@ -271,13 +297,17 @@ func TestSavePins(t *testing.T) {
 	t.Run("deleting a pinned Observation releases it from both claims, audited", func(t *testing.T) {
 		f := newPinFixture(t)
 		a, aObs := f.person1("James", "Jim")
-		first, err := promote.Save(f.c, userID, promote.Input{SubjectID: a.ID})
+		first, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+			return promote.Save(tx, userID, promote.Input{SubjectID: a.ID})
+		})
 		f.must(err)
 		b, bObs := f.person1("James")
-		res, err := promote.Save(f.c, userID, promote.Input{SubjectID: b.ID, EntityID: first.Entity.ID, Pairs: []promote.Pair{
-			{IncomingObservationID: bObs[0].ID, MemberObservationID: aObs[0].ID},
-			{IncomingObservationID: bObs[0].ID, MemberObservationID: aObs[1].ID},
-		}})
+		res, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+			return promote.Save(tx, userID, promote.Input{SubjectID: b.ID, EntityID: first.Entity.ID, Pairs: []promote.Pair{
+				{IncomingObservationID: bObs[0].ID, MemberObservationID: aObs[0].ID},
+				{IncomingObservationID: bObs[0].ID, MemberObservationID: aObs[1].ID},
+			}})
+		})
 		f.must(err)
 		{
 			_, err := writes.Call(f.c, writes.Op{Action: "delete_observation", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {

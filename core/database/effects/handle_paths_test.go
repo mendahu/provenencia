@@ -97,29 +97,41 @@ func TestHandlePaths(t *testing.T) {
 	eve := mk(personType.ID, "Eve", 14)
 	boston := mk(placeType.ID, "Boston", 16)
 
-	aliceRes, err := promote.Save(c, userID, promote.Input{SubjectID: alice.ID})
+	aliceRes, err := writes.Call(c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+		return promote.Save(tx, userID, promote.Input{SubjectID: alice.ID})
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	bobRes, err := promote.Save(c, userID, promote.Input{SubjectID: bob.ID})
+	bobRes, err := writes.Call(c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+		return promote.Save(tx, userID, promote.Input{SubjectID: bob.ID})
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	eveRes, err := promote.Save(c, userID, promote.Input{SubjectID: eve.ID})
+	eveRes, err := writes.Call(c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+		return promote.Save(tx, userID, promote.Input{SubjectID: eve.ID})
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	bostonRes, err := promote.Save(c, userID, promote.Input{SubjectID: boston.ID})
+	bostonRes, err := writes.Call(c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+		return promote.Save(tx, userID, promote.Input{SubjectID: boston.ID})
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := identityclaims.Create(c, userID, identityclaims.CreateInput{
-		SubjectID: cara.ID, EntityID: aliceRes.Entity.ID, Status: identityclaims.StatusRejected,
+	if _, err := writes.Call(c, writes.Op{Action: "create_identity_claim", UserID: userID}, func(tx *database.Tx) (identityclaims.Claim, []rowchange.Change, error) {
+		return identityclaims.Create(tx, userID, identityclaims.CreateInput{
+			SubjectID: cara.ID, EntityID: aliceRes.Entity.ID, Status: identityclaims.StatusRejected,
+		})
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := identityclaims.Create(c, userID, identityclaims.CreateInput{
-		SubjectID: drew.ID, EntityID: aliceRes.Entity.ID, Status: identityclaims.StatusProvisional,
+	if _, err := writes.Call(c, writes.Op{Action: "create_identity_claim", UserID: userID}, func(tx *database.Tx) (identityclaims.Claim, []rowchange.Change, error) {
+		return identityclaims.Create(tx, userID, identityclaims.CreateInput{
+			SubjectID: drew.ID, EntityID: aliceRes.Entity.ID, Status: identityclaims.StatusProvisional,
+		})
 	}); err != nil {
 		t.Fatal(err)
 	}

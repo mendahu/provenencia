@@ -12,6 +12,11 @@ import (
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
 	"github.com/mendahu/provenencia/core/database/rowchange"
+	"github.com/mendahu/provenencia/core/database/sources"
+	"github.com/mendahu/provenencia/core/database/sourcetypes"
+	"github.com/mendahu/provenencia/core/database/subjectpositions"
+	"github.com/mendahu/provenencia/core/database/subjects"
+	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/ref"
@@ -115,6 +120,73 @@ func TestRunNoneOnlyCommits(t *testing.T) {
 	}
 	if n := auditCount(t, c); n != 0 {
 		t.Fatalf("audit rows %d", n)
+	}
+}
+
+func TestRunMixedOmitsNone(t *testing.T) {
+	c := newCatalog(t)
+	userID := mustID(t)
+	if err := users.Upsert(c, userID, "Ada", mustRef(t)); err != nil {
+		t.Fatal(err)
+	}
+	if err := subjectvocab.Install(c); err != nil {
+		t.Fatal(err)
+	}
+	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{
+		Key: "book", Origin: sourcetypes.OriginProvenencia, Label: "Book",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID},
+		func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+			return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "A"})
+		})
+	if err != nil {
+		t.Fatal(err)
+	}
+	person, err := subjecttypes.Lookup(c, "person", subjecttypes.OriginProvenencia)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sub, res, err := writes.Run(c, writes.Op{Action: "create_subject", UserID: userID},
+		func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
+			return subjects.Create(tx, userID, subjects.CreateInput{
+				SourceID: src.ID, SubjectTypeID: person.ID, Label: "Ada",
+			}, &subjects.Placement{GridX: 1, GridY: 2})
+		})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Revision == 0 {
+		t.Fatal("expected a revision")
+	}
+	db, err := c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var entity string
+	if err := db.QueryRow(`SELECT entity_type FROM audit_changes WHERE audit_transaction_id = (
+		SELECT id FROM audit_transactions WHERE revision = ?)`, res.Revision).Scan(&entity); err != nil {
+		t.Fatal(err)
+	}
+	if entity != "subject" {
+		t.Fatalf("audit entity %q", entity)
+	}
+	var n int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM audit_changes WHERE audit_transaction_id = (
+		SELECT id FROM audit_transactions WHERE revision = ?)`, res.Revision).Scan(&n); err != nil {
+		t.Fatal(err)
+	}
+	if n != 1 {
+		t.Fatalf("audit changes %d", n)
+	}
+	pos, err := subjectpositions.Get(c, sub.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if pos.GridX != 1 || pos.GridY != 2 {
+		t.Fatalf("position %+v", pos)
 	}
 }
 

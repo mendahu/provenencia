@@ -106,7 +106,9 @@ func (f *handleFixture) person(forms ...string) subjects.Subject {
 
 func (f *handleFixture) promote(s subjects.Subject, onto []byte) promote.Result {
 	f.t.Helper()
-	res, err := promote.Save(f.c, f.user, promote.Input{SubjectID: s.ID, EntityID: onto})
+	res, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: f.user}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+		return promote.Save(tx, f.user, promote.Input{SubjectID: s.ID, EntityID: onto})
+	})
 	if err != nil {
 		f.t.Fatal(err)
 	}
@@ -337,7 +339,9 @@ func (f *handleFixture) fileBridges() {
 	if err := db.QueryRow(`SELECT COALESCE(MAX(revision), 0) FROM audit_transactions`).Scan(&rev); err != nil {
 		f.t.Fatal(err)
 	}
-	if _, err := promote.SaveBatch(f.c, f.user, promote.Batch{SourceID: f.source, SeenRevision: rev}); err != nil {
+	if _, err := writes.Call(f.c, writes.Op{Action: "promote_batch", UserID: f.user}, func(tx *database.Tx) (promote.BatchResult, []rowchange.Change, error) {
+		return promote.SaveBatch(tx, f.user, promote.Batch{SourceID: f.source, SeenRevision: rev})
+	}); err != nil {
 		f.t.Fatal(err)
 	}
 }

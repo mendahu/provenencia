@@ -60,6 +60,10 @@ func Run[T any](c *database.Catalog, op Op, fn func(tx *database.Tx) (T, []rowch
 		tx.RunAfterCommit()
 		return value, Result{}, nil
 	}
+	changes, err = effects.WithoutNone(changes)
+	if err != nil {
+		return zero, Result{}, err
+	}
 
 	rev, err := audit.Record(tx.Tx, audit.Revision{
 		UserID:      op.UserID,

@@ -185,7 +185,9 @@ func (w *bridgeWorld) bridge(kind string, from, to subjects.Subject, obs []obser
 
 func (w *bridgeWorld) promote(s subjects.Subject) promote.Result {
 	w.t.Helper()
-	res, err := promote.Save(w.c, userID, promote.Input{SubjectID: s.ID})
+	res, err := writes.Call(w.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+		return promote.Save(tx, userID, promote.Input{SubjectID: s.ID})
+	})
 	if err != nil {
 		w.t.Fatal(err)
 	}
@@ -194,7 +196,9 @@ func (w *bridgeWorld) promote(s subjects.Subject) promote.Result {
 
 func (w *bridgeWorld) join(s subjects.Subject, entityID []byte) {
 	w.t.Helper()
-	if _, err := promote.Save(w.c, userID, promote.Input{SubjectID: s.ID, EntityID: entityID}); err != nil {
+	if _, err := writes.Call(w.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+		return promote.Save(tx, userID, promote.Input{SubjectID: s.ID, EntityID: entityID})
+	}); err != nil {
 		w.t.Fatal(err)
 	}
 }
@@ -442,12 +446,16 @@ func TestBridgeFiling(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		entity, err := canonicalentities.Create(w.c, userID, canonicalentities.CreateInput{SubjectTypeID: eventType.ID})
+		entity, err := writes.Call(w.c, writes.Op{Action: "create_canonical_entity", UserID: userID}, func(tx *database.Tx) (canonicalentities.Entity, []rowchange.Change, error) {
+			return canonicalentities.Create(tx, userID, canonicalentities.CreateInput{SubjectTypeID: eventType.ID})
+		})
 		if err != nil {
 			t.Fatal(err)
 		}
-		if _, err := identityclaims.Create(w.c, userID, identityclaims.CreateInput{
-			SubjectID: birth.ID, EntityID: entity.ID, Status: identityclaims.StatusAccepted,
+		if _, err := writes.Call(w.c, writes.Op{Action: "create_identity_claim", UserID: userID}, func(tx *database.Tx) (identityclaims.Claim, []rowchange.Change, error) {
+			return identityclaims.Create(tx, userID, identityclaims.CreateInput{
+				SubjectID: birth.ID, EntityID: entity.ID, Status: identityclaims.StatusAccepted,
+			})
 		}); err != nil {
 			t.Fatal(err)
 		}

@@ -217,10 +217,15 @@ func RecomputeSubjectsTx(q Querier, subjectIDs [][]byte) error {
 	return RecomputeTx(q, handles)
 }
 
+// HandlesForSource is the handle list RecomputeSourceTx recomputes.
+func HandlesForSource(q Querier, sourceID []byte) ([][]byte, error) {
+	return listIDs(q, sqlHandlesForSource, sourceID)
+}
+
 // RecomputeSourceTx recomputes the handles whose members have Observations
 // citing the Source: its credibility is part of their evidence.
 func RecomputeSourceTx(q Querier, sourceID []byte) error {
-	ids, err := listIDs(q, sqlHandlesForSource, sourceID)
+	ids, err := HandlesForSource(q, sourceID)
 	if err != nil {
 		return err
 	}
@@ -242,10 +247,15 @@ func RecomputeCitationTx(q Querier, citationID []byte) error {
 	return RecomputeTx(q, ids)
 }
 
+// HandlesForProperty is the handle list RecomputePropertyTx recomputes.
+func HandlesForProperty(q Querier, propertyID []byte) ([][]byte, error) {
+	return listIDs(q, sqlHandlesForProperty, propertyID)
+}
+
 // RecomputePropertyTx recomputes every handle that has an Observation on the
 // Property. A cardinality change resolves those handles differently.
 func RecomputePropertyTx(q Querier, propertyID []byte) error {
-	ids, err := listIDs(q, sqlHandlesForProperty, propertyID)
+	ids, err := HandlesForProperty(q, propertyID)
 	if err != nil {
 		return err
 	}

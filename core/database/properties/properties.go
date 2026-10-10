@@ -4,16 +4,15 @@ package properties
 import (
 	"database/sql"
 	"errors"
+	"strings"
+
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
 	"github.com/mendahu/provenencia/core/database/rowchange"
-	"strings"
 
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/audit"
 	"github.com/mendahu/provenencia/core/database/deleteimpact"
-	"github.com/mendahu/provenencia/core/database/project"
 	"github.com/mendahu/provenencia/core/slug"
 )
 
@@ -142,40 +141,34 @@ func Upsert(c *database.Catalog, p Property) ([]byte, error) {
 	return append([]byte(nil), id...), nil
 }
 
-// Create mints a kebab-case key from label and inserts a user-origin Property with audit.
+// Create mints a kebab-case key from label and inserts a user-origin Property.
+// The caller records the returned change as create_property.
 // value_type = term is registry/Install only — Create refuses it for researchers.
-// An empty cardinality is single. Create does not recompute: the Property has no Observations yet.
-func Create(c *database.Catalog, userID []byte, label, valueType, description, cardinality string) (Property, error) {
+// An empty cardinality is single.
+func Create(tx *database.Tx, userID []byte, label, valueType, description, cardinality string) (Property, []rowchange.Change, error) {
+	if tx == nil {
+		return Property{}, nil, ErrInvalid
+	}
 	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
-		return Property{}, err
+		return Property{}, nil, err
 	}
 	valueType = strings.TrimSpace(valueType)
 	if valueType == ValueTypeTerm {
-		return Property{}, ErrInvalid
+		return Property{}, nil, ErrInvalid
 	}
 	key := slug.Kebab(label)
 	if key == "" {
-		return Property{}, ErrInvalid
+		return Property{}, nil, ErrInvalid
 	}
-	if _, err := Lookup(c, key, OriginUser); err == nil {
-		return Property{}, ErrDuplicateKey.WithParams(key)
+	if _, err := LookupTx(tx.Tx, key, OriginUser); err == nil {
+		return Property{}, nil, ErrDuplicateKey.WithParams(key)
 	} else if !errors.Is(err, sql.ErrNoRows) {
-		return Property{}, err
+		return Property{}, nil, err
 	}
-
-	db, err := c.DB()
-	if err != nil {
-		return Property{}, err
-	}
-	tx, err := db.Begin()
-	if err != nil {
-		return Property{}, err
-	}
-	defer func() { _ = tx.Rollback() }()
 
 	uid, err := uuid.NewV7()
 	if err != nil {
-		return Property{}, err
+		return Property{}, nil, err
 	}
 	id := uid[:]
 	label = strings.TrimSpace(label)
@@ -185,7 +178,7 @@ func Create(c *database.Catalog, userID []byte, label, valueType, description, c
 		cardinality = CardinalitySingle
 	}
 	if label == "" || !valueTypeOK(valueType) || !cardinalityOK(cardinality) {
-		return Property{}, ErrInvalid
+		return Property{}, nil, ErrInvalid
 	}
 	var desc any
 	if description == "" {
@@ -194,7 +187,7 @@ func Create(c *database.Catalog, userID []byte, label, valueType, description, c
 		desc = description
 	}
 	if _, err := tx.Exec(sqlUpsert, id, key, OriginUser, label, desc, valueType, cardinality); err != nil {
-		return Property{}, err
+		return Property{}, nil, err
 	}
 	fields := map[string]rowchange.FieldDiff{
 		"id":          {Old: nil, New: uid.String()},
@@ -207,71 +200,61 @@ func Create(c *database.Catalog, userID []byte, label, valueType, description, c
 	if description != "" {
 		fields["description"] = rowchange.FieldDiff{Old: nil, New: description}
 	}
-	if _, err := audit.Record(tx, audit.Revision{
-		UserID:     userID,
-		ActionType: "create_property",
-		CreatedAt:  project.NowUTC(),
-		Changes: []rowchange.Change{{
-			EntityType: "property",
-			EntityID:   id,
-			Action:     rowchange.ActionCreate,
-			Fields:     fields,
-		}},
-	}); err != nil {
-		return Property{}, err
-	}
-	if err := tx.Commit(); err != nil {
-		return Property{}, err
-	}
-	return Lookup(c, key, OriginUser)
+	return Property{
+		ID:          append([]byte(nil), id...),
+		Key:         key,
+		Origin:      OriginUser,
+		Label:       label,
+		Description: description,
+		ValueType:   valueType,
+		Cardinality: cardinality,
+	}, []rowchange.Change{{
+		EntityType: "property",
+		EntityID:   append([]byte(nil), id...),
+		Action:     rowchange.ActionCreate,
+		Fields:     fields,
+	}}, nil
 }
 
 // Update patches label, description, and cardinality for a project Property
 // (user or provenencia). Key, origin, and value_type are immutable. An empty
 // cardinality leaves the stored one. Provenencia cardinality is fixed:
-// changing it returns ErrLocked, as does a plugin-origin Property. recompute
-// runs in the same transaction only when cardinality actually changes.
-func Update(c *database.Catalog, userID, id []byte, label, valueType, description, cardinality string, recompute func(tx *sql.Tx) error) (Property, error) {
-	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
-		return Property{}, err
+// changing it returns ErrLocked, as does a plugin-origin Property. An empty
+// diff returns no changes. The caller records update_property.
+func Update(tx *database.Tx, userID, id []byte, label, valueType, description, cardinality string) (Property, []rowchange.Change, error) {
+	if tx == nil {
+		return Property{}, nil, ErrInvalid
 	}
-	db, err := c.DB()
-	if err != nil {
-		return Property{}, err
+	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
+		return Property{}, nil, err
 	}
 	label = strings.TrimSpace(label)
 	valueType = strings.TrimSpace(valueType)
 	description = strings.TrimSpace(description)
 	cardinality = strings.TrimSpace(cardinality)
 	if len(id) != 16 || label == "" || !valueTypeOK(valueType) {
-		return Property{}, ErrInvalid
+		return Property{}, nil, ErrInvalid
 	}
-	existing, err := GetByID(c, id)
+	existing, err := GetByIDTx(tx.Tx, id)
 	if err != nil {
-		return Property{}, err
+		return Property{}, nil, err
 	}
 	if existing.Origin != OriginUser && existing.Origin != OriginProvenencia {
-		return Property{}, ErrLocked
+		return Property{}, nil, ErrLocked
 	}
 	if valueType != existing.ValueType {
-		return Property{}, ErrInvalid
+		return Property{}, nil, ErrInvalid
 	}
 	if cardinality == "" {
 		cardinality = existing.Cardinality
 	}
 	if !cardinalityOK(cardinality) {
-		return Property{}, ErrInvalid
+		return Property{}, nil, ErrInvalid
 	}
 	cardinalityChanged := cardinality != existing.Cardinality
 	if cardinalityChanged && existing.Origin != OriginUser {
-		return Property{}, ErrLocked
+		return Property{}, nil, ErrLocked
 	}
-
-	tx, err := db.Begin()
-	if err != nil {
-		return Property{}, err
-	}
-	defer func() { _ = tx.Rollback() }()
 
 	fields := map[string]rowchange.FieldDiff{}
 	if existing.Label != label {
@@ -283,10 +266,14 @@ func Update(c *database.Catalog, userID, id []byte, label, valueType, descriptio
 	if cardinalityChanged {
 		fields["cardinality"] = rowchange.FieldDiff{Old: nullJSON(existing.Cardinality), New: nullJSON(cardinality)}
 	}
+	existing.Label = label
+	existing.Description = description
+	existing.Cardinality = cardinality
+	if err := tx.QueryRow(sqlUsedBy, id).Scan(&existing.UsedBy); err != nil {
+		return Property{}, nil, err
+	}
 	if len(fields) == 0 {
-		_ = tx.Rollback()
-		existing.UsedBy, _ = UsedBy(c, id)
-		return existing, nil
+		return existing, nil, nil
 	}
 	var desc any
 	if description == "" {
@@ -295,35 +282,14 @@ func Update(c *database.Catalog, userID, id []byte, label, valueType, descriptio
 		desc = description
 	}
 	if _, err := tx.Exec(sqlUpdate, label, desc, cardinality, id); err != nil {
-		return Property{}, err
+		return Property{}, nil, err
 	}
-	if cardinalityChanged && recompute != nil {
-		if err := recompute(tx); err != nil {
-			return Property{}, err
-		}
-	}
-	if _, err := audit.Record(tx, audit.Revision{
-		UserID:     userID,
-		ActionType: "update_property",
-		CreatedAt:  project.NowUTC(),
-		Changes: []rowchange.Change{{
-			EntityType: "property",
-			EntityID:   id,
-			Action:     rowchange.ActionUpdate,
-			Fields:     fields,
-		}},
-	}); err != nil {
-		return Property{}, err
-	}
-	if err := tx.Commit(); err != nil {
-		return Property{}, err
-	}
-	got, err := GetByID(c, id)
-	if err != nil {
-		return Property{}, err
-	}
-	got.UsedBy, err = UsedBy(c, id)
-	return got, err
+	return existing, []rowchange.Change{{
+		EntityType: "property",
+		EntityID:   append([]byte(nil), id...),
+		Action:     rowchange.ActionUpdate,
+		Fields:     fields,
+	}}, nil
 }
 
 // GetByID returns the Property with the given id, or sql.ErrNoRows.
@@ -441,43 +407,36 @@ func CountByOrigin(c *database.Catalog) (OriginCounts, error) {
 
 // Delete erases a user-origin Property when no observations or terms
 // reference it. Type bindings CASCADE. Seeded and plugin-origin rows are
-// origin_locked even when unused.
-func Delete(c *database.Catalog, userID, id []byte) error {
+// origin_locked even when unused. The caller records delete_property.
+func Delete(tx *database.Tx, userID, id []byte) ([]rowchange.Change, error) {
+	if tx == nil {
+		return nil, ErrInvalid
+	}
 	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
-		return err
+		return nil, err
 	}
 	if len(id) != 16 {
-		return ErrInvalid
+		return nil, ErrInvalid
 	}
-	prev, err := GetByID(c, id)
+	prev, err := GetByIDTx(tx.Tx, id)
 	if errors.Is(err, sql.ErrNoRows) {
-		return ErrInvalid
+		return nil, ErrInvalid
 	}
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	db, err := c.DB()
+	report, err := deleteimpact.Impact(tx.Tx, catalogmodel.KindProperty, id)
 	if err != nil {
-		return err
-	}
-	tx, err := db.Begin()
-	if err != nil {
-		return err
-	}
-	defer func() { _ = tx.Rollback() }()
-
-	report, err := deleteimpact.Impact(tx, catalogmodel.KindProperty, id)
-	if err != nil {
-		return err
+		return nil, err
 	}
 	if err := deleteimpact.Refuse(report, deleteimpact.Codes{
 		InUse: ErrInUse, OriginLocked: ErrOriginLocked, NotFound: ErrInvalid,
 	}); err != nil {
-		return err
+		return nil, err
 	}
 	if _, err := tx.Exec(sqlDelete, id); err != nil {
-		return err
+		return nil, err
 	}
 	fields := map[string]rowchange.FieldDiff{
 		"id":         {Old: uuidString(id), New: nil},
@@ -489,20 +448,12 @@ func Delete(c *database.Catalog, userID, id []byte) error {
 	if prev.Description != "" {
 		fields["description"] = rowchange.FieldDiff{Old: prev.Description, New: nil}
 	}
-	if _, err := audit.Record(tx, audit.Revision{
-		UserID:     userID,
-		ActionType: "delete_property",
-		CreatedAt:  project.NowUTC(),
-		Changes: []rowchange.Change{{
-			EntityType: "property",
-			EntityID:   id,
-			Action:     rowchange.ActionDelete,
-			Fields:     fields,
-		}},
-	}); err != nil {
-		return err
-	}
-	return tx.Commit()
+	return []rowchange.Change{{
+		EntityType: "property",
+		EntityID:   append([]byte(nil), id...),
+		Action:     rowchange.ActionDelete,
+		Fields:     fields,
+	}}, nil
 }
 
 func originOK(origin string) bool {

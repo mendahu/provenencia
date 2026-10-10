@@ -149,7 +149,10 @@ func (f *fixture) subject(kind string, values ...value) subjects.Subject {
 // handle promotes a new Subject and returns the handle's ref and id.
 func (f *fixture) handle(kind string, values ...value) promote.Result {
 	f.t.Helper()
-	res, err := promote.Save(f.c, userID, promote.Input{SubjectID: f.subject(kind, values...).ID})
+	p6a1 := promote.Input{SubjectID: f.subject(kind, values...).ID}
+	res, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+		return promote.Save(tx, userID, p6a1)
+	})
 	must(f.t, err)
 	return res
 }
@@ -206,7 +209,9 @@ func TestForSubjectPersons(t *testing.T) {
 	})
 
 	t.Run("the Subject's own handle is excluded", func(t *testing.T) {
-		_, err := promote.Save(f.c, userID, promote.Input{SubjectID: james.ID, EntityID: exact.Entity.ID})
+		_, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+			return promote.Save(tx, userID, promote.Input{SubjectID: james.ID, EntityID: exact.Entity.ID})
+		})
 		must(t, err)
 		res, err := matching.ForSubject(f.db, james.ID, matching.Options{})
 		must(t, err)

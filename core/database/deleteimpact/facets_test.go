@@ -69,8 +69,15 @@ func TestFacetReleaseAuditsSourceSide(t *testing.T) {
 		if err := runDismissMetadata(c, userID, src.ID, other); err != nil {
 			t.Fatal(err)
 		}
-		if _, err := sourcecredibility.Upsert(c, userID, sourcecredibility.UpsertInput{
+		p6in2 := sourcecredibility.UpsertInput{
 			SourceID: src.ID, CredibilityGradeID: grade.ID,
+		}
+		p6act1 := "create_source_credibility_assessment"
+		if _, p6look3 := sourcecredibility.GetBySource(c, p6in2.SourceID); p6look3 == nil {
+			p6act1 = "update_source_credibility_assessment"
+		}
+		if _, err := writes.Call(c, writes.Op{Action: p6act1, UserID: userID}, func(tx *database.Tx) (sourcecredibility.Assessment, []rowchange.Change, error) {
+			return sourcecredibility.Upsert(tx, userID, p6in2)
 		}); err != nil {
 			t.Fatal(err)
 		}

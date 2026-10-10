@@ -78,7 +78,9 @@ func TestEvidenceHandleSets(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	seenWith, err := properties.Create(c, userID, "Seen with", properties.ValueTypeSubject, "", "")
+	seenWith, err := writes.Call(c, writes.Op{Action: "create_property", UserID: userID}, func(tx *database.Tx) (properties.Property, []rowchange.Change, error) {
+		return properties.Create(tx, userID, "Seen with", properties.ValueTypeSubject, "", "")
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -110,7 +112,9 @@ func TestEvidenceHandleSets(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, s := range []subjects.Subject{person, place} {
-		if _, err := promote.Save(c, userID, promote.Input{SubjectID: s.ID}); err != nil {
+		if _, err := writes.Call(c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+			return promote.Save(tx, userID, promote.Input{SubjectID: s.ID})
+		}); err != nil {
 			t.Fatal(err)
 		}
 	}

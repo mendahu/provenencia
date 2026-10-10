@@ -124,7 +124,9 @@ func (f *fixture) nameIn(s subjects.Subject, spec string) observations.Input {
 
 func (f *fixture) promote(s subjects.Subject, onto []byte) []byte {
 	f.t.Helper()
-	res, err := promote.Save(f.c, userID, promote.Input{SubjectID: s.ID, EntityID: onto})
+	res, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+		return promote.Save(tx, userID, promote.Input{SubjectID: s.ID, EntityID: onto})
+	})
 	must(f.t, err)
 	return res.Entity.ID
 }
@@ -232,11 +234,25 @@ func TestForEntityEvidence(t *testing.T) {
 	register, census, gazette := f.source("Register"), f.source("Census"), f.source("Gazette")
 	g, err := sourcecredibilitygrades.Lookup(f.c, "low_trust", sourcecredibilitygrades.OriginProvenencia)
 	must(t, err)
-	_, err = sourcecredibility.Upsert(f.c, userID, sourcecredibility.UpsertInput{SourceID: register.ID, CredibilityGradeID: g.ID})
+	p6in2 := sourcecredibility.UpsertInput{SourceID: register.ID, CredibilityGradeID: g.ID}
+	p6act1 := "create_source_credibility_assessment"
+	if _, p6look3 := sourcecredibility.GetBySource(f.c, p6in2.SourceID); p6look3 == nil {
+		p6act1 = "update_source_credibility_assessment"
+	}
+	_, err = writes.Call(f.c, writes.Op{Action: p6act1, UserID: userID}, func(tx *database.Tx) (sourcecredibility.Assessment, []rowchange.Change, error) {
+		return sourcecredibility.Upsert(tx, userID, p6in2)
+	})
 	must(t, err)
 	hg, err := sourcecredibilitygrades.Lookup(f.c, "high_trust", sourcecredibilitygrades.OriginProvenencia)
 	must(t, err)
-	_, err = sourcecredibility.Upsert(f.c, userID, sourcecredibility.UpsertInput{SourceID: gazette.ID, CredibilityGradeID: hg.ID})
+	p6in5 := sourcecredibility.UpsertInput{SourceID: gazette.ID, CredibilityGradeID: hg.ID}
+	p6act4 := "create_source_credibility_assessment"
+	if _, p6look6 := sourcecredibility.GetBySource(f.c, p6in5.SourceID); p6look6 == nil {
+		p6act4 = "update_source_credibility_assessment"
+	}
+	_, err = writes.Call(f.c, writes.Op{Action: p6act4, UserID: userID}, func(tx *database.Tx) (sourcecredibility.Assessment, []rowchange.Change, error) {
+		return sourcecredibility.Upsert(tx, userID, p6in5)
+	})
 	must(t, err)
 
 	a, b, c := f.personOn(register), f.personOn(census), f.personOn(gazette)

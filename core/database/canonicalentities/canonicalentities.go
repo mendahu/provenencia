@@ -5,14 +5,13 @@ package canonicalentities
 import (
 	"database/sql"
 	"errors"
-	"github.com/mendahu/provenencia/core/database/rowchange"
 	"strings"
+
+	"github.com/mendahu/provenencia/core/database/rowchange"
 
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/audit"
-	"github.com/mendahu/provenencia/core/database/project"
 	"github.com/mendahu/provenencia/core/ref"
 )
 
@@ -52,38 +51,21 @@ type CreateInput struct {
 	Argument      string
 }
 
-// Create inserts a handle, mints a ref from the type's ref_prefix, and records create_canonical_entity.
-func Create(c *database.Catalog, userID []byte, in CreateInput) (Entity, error) {
-	db, err := c.DB()
-	if err != nil {
-		return Entity{}, err
+// Create inserts a handle and mints a ref from the type's ref_prefix.
+// The caller records the returned change as create_canonical_entity.
+// A handle alone has no handles to recompute.
+func Create(tx *database.Tx, userID []byte, in CreateInput) (Entity, []rowchange.Change, error) {
+	if tx == nil {
+		return Entity{}, nil, ErrInvalid
 	}
 	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
-		return Entity{}, err
+		return Entity{}, nil, err
 	}
-
-	tx, err := db.Begin()
+	e, change, err := InsertTx(tx.Tx, in)
 	if err != nil {
-		return Entity{}, err
+		return Entity{}, nil, err
 	}
-	defer func() { _ = tx.Rollback() }()
-
-	e, change, err := InsertTx(tx, in)
-	if err != nil {
-		return Entity{}, err
-	}
-	if _, err := audit.Record(tx, audit.Revision{
-		UserID:     userID,
-		ActionType: "create_canonical_entity",
-		CreatedAt:  project.NowUTC(),
-		Changes:    []rowchange.Change{change},
-	}); err != nil {
-		return Entity{}, err
-	}
-	if err := tx.Commit(); err != nil {
-		return Entity{}, err
-	}
-	return e, nil
+	return e, []rowchange.Change{change}, nil
 }
 
 // InsertTx inserts a handle on an open transaction (no commit, no revision).

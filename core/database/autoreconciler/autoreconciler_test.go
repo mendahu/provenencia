@@ -2,7 +2,6 @@ package autoreconciler_test
 
 import (
 	"bytes"
-	"database/sql"
 	"errors"
 	"fmt"
 	"math/rand"
@@ -170,11 +169,19 @@ func (f *fixture) cite(in ...observations.Input) []observations.Observation {
 func (f *fixture) credibility(src sources.Source, key string) error {
 	g, err := sourcecredibilitygrades.Lookup(f.c, key, sourcecredibilitygrades.OriginProvenencia)
 	must(f.t, err)
-	_, err = sourcecredibility.Upsert(f.c, userID, sourcecredibility.UpsertInput{SourceID: src.ID, CredibilityGradeID: g.ID})
+	p6in2 := sourcecredibility.UpsertInput{SourceID: src.ID, CredibilityGradeID: g.ID}
+	p6act1 := "create_source_credibility_assessment"
+
+	// certainty sets a Citation's transcription certainty.
+	if _, p6look3 := sourcecredibility.GetBySource(f.c, p6in2.SourceID); p6look3 == nil {
+		p6act1 = "update_source_credibility_assessment"
+	}
+	_, err = writes.Call(f.c, writes.Op{Action: p6act1, UserID: userID}, func(tx *database.Tx) (sourcecredibility.Assessment, []rowchange.Change, error) {
+		return sourcecredibility.Upsert(tx, userID, p6in2)
+	})
 	return err
 }
 
-// certainty sets a Citation's transcription certainty.
 func (f *fixture) certainty(citationID []byte, uncertain bool) error {
 	_, err := writes.Call(f.c, writes.Op{Action: "update_citation", UserID: userID}, func(tx *database.Tx) (citations.Citation, []rowchange.Change, error) {
 		return citations.Update(tx, userID, citationID, citations.CitationFieldsInput{LocatorJSON: locator, TranscriptionUncertain: uncertain})
@@ -221,14 +228,18 @@ func associationOf(f *fixture, typeKey string) []byte {
 
 func (f *fixture) promote(s subjects.Subject) []byte {
 	f.t.Helper()
-	res, err := promote.Save(f.c, userID, promote.Input{SubjectID: s.ID})
+	res, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+		return promote.Save(tx, userID, promote.Input{SubjectID: s.ID})
+	})
 	must(f.t, err)
 	return res.Entity.ID
 }
 
 func (f *fixture) join(s subjects.Subject, entityID []byte) {
 	f.t.Helper()
-	_, err := promote.Save(f.c, userID, promote.Input{SubjectID: s.ID, EntityID: entityID})
+	_, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+		return promote.Save(tx, userID, promote.Input{SubjectID: s.ID, EntityID: entityID})
+	})
 	must(f.t, err)
 }
 
@@ -563,8 +574,10 @@ func TestCardinalityChangeRecomputes(t *testing.T) {
 	if len(rows) != 2 || rows[1].Reason != "outvoted" {
 		t.Fatalf("single %+v", rows)
 	}
-	_, err = properties.Update(f.c, userID, alias.ID, "Alias", properties.ValueTypeText, "", properties.CardinalityMultiple,
-		func(tx *sql.Tx) error { return autoreconciler.RecomputePropertyTx(tx, alias.ID) })
+	_, err = writes.Call(f.c, writes.Op{Action: "update_property", UserID: userID}, func(tx *database.Tx) (properties.Property, []rowchange.Change, error) {
+		return properties.Update(tx, userID, alias.ID, "Alias", properties.ValueTypeText, "", properties.CardinalityMultiple)
+	})
+
 	must(t, err)
 	rows = rowsFor(f.rows(), h, alias.ID)
 	if len(rows) != 2 || rows[0].Reason != "kept" || *rows[0].Text != "York" ||
@@ -574,7 +587,9 @@ func TestCardinalityChangeRecomputes(t *testing.T) {
 	f.assertUpkeepEqualsRebuild("TestCardinalityChangeRecomputes")
 
 	top := f.props["toponym"]
-	_, err = properties.Update(f.c, userID, top.ID, top.Label, top.ValueType, top.Description, properties.CardinalitySingle, nil)
+	_, err = writes.Call(f.c, writes.Op{Action: "update_property", UserID: userID}, func(tx *database.Tx) (properties.Property, []rowchange.Change, error) {
+		return properties.Update(tx, userID, top.ID, top.Label, top.ValueType, top.Description, properties.CardinalitySingle)
+	})
 	if !errors.Is(err, properties.ErrLocked) {
 		t.Fatalf("seeded cardinality: %v", err)
 	}
@@ -724,7 +739,10 @@ func TestReconciledEvidence(t *testing.T) {
 		a, b := f.subject("person"), f.subjectOn(f.other, "person")
 		f.cite(nameIn(a, f.props["name"], "given=Jake|surname=Robins"))
 		f.cite(nameIn(b, f.props["name"], "given=James|surname=Robins"))
-		res, err := promote.Save(f.c, userID, promote.Input{SubjectID: a.ID, ConfidenceGradeID: f.grade("low_confidence")})
+		p6a4 := promote.Input{SubjectID: a.ID, ConfidenceGradeID: f.grade("low_confidence")}
+		res, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+			return promote.Save(tx, userID, p6a4)
+		})
 		must(t, err)
 		f.join(b, res.Entity.ID)
 		names := rowsFor(f.rows(), res.Entity.ID, f.props["name"].ID)
@@ -781,7 +799,9 @@ func TestReconciledEvidence(t *testing.T) {
 			f.cite(textIn(a, f.props["toponym"], "York"))
 			claimed := f.cite(textIn(b, f.props["toponym"], "Toronto"))[0]
 			h := f.promote(a)
-			_, err := identityclaims.Create(f.c, userID, identityclaims.CreateInput{SubjectID: b.ID, EntityID: h, Status: tt.status})
+			_, err := writes.Call(f.c, writes.Op{Action: "create_identity_claim", UserID: userID}, func(tx *database.Tx) (identityclaims.Claim, []rowchange.Change, error) {
+				return identityclaims.Create(tx, userID, identityclaims.CreateInput{SubjectID: b.ID, EntityID: h, Status: tt.status})
+			})
 			must(t, err)
 			if got := texts(f, h); got != tt.wantTexts {
 				t.Fatalf("toponyms %q want %q", got, tt.wantTexts)
@@ -1210,7 +1230,9 @@ func TestRebuildEqualsUpkeep_SeededSequences(t *testing.T) {
 					if same := handles[kindOf(f, s)]; len(same) > 0 && rng.Intn(2) == 0 {
 						in.EntityID = same[rng.Intn(len(same))]
 					}
-					res, err := promote.Save(f.c, userID, in)
+					res, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+						return promote.Save(tx, userID, in)
+					})
 					tolerate(err)
 					switch {
 					case err == nil && in.EntityID == nil:

@@ -87,12 +87,16 @@ func newPinnedHandle(t *testing.T) pinnedHandle {
 	h := pinnedHandle{c: c, userID: userID, a: a, b: b,
 		aName: o[0].ID, aAlt: o[1].ID, bName: o[2].ID, bAlt: o[3].ID}
 
-	grounding, err := promote.Save(c, userID, promote.Input{SubjectID: a.ID, Argument: "The gazetteer entry."})
+	grounding, err := writes.Call(c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+		return promote.Save(tx, userID, promote.Input{SubjectID: a.ID, Argument: "The gazetteer entry."})
+	})
 	must(err)
-	joined, err := promote.Save(c, userID, promote.Input{SubjectID: b.ID, EntityID: grounding.Entity.ID, Pairs: []promote.Pair{
-		{IncomingObservationID: h.bName, MemberObservationID: h.aName},
-		{IncomingObservationID: h.bAlt, MemberObservationID: h.aAlt},
-	}})
+	joined, err := writes.Call(c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+		return promote.Save(tx, userID, promote.Input{SubjectID: b.ID, EntityID: grounding.Entity.ID, Pairs: []promote.Pair{
+			{IncomingObservationID: h.bName, MemberObservationID: h.aName},
+			{IncomingObservationID: h.bAlt, MemberObservationID: h.aAlt},
+		}})
+	})
 	must(err)
 	h.entityID, h.entityRef = string(grounding.Entity.ID), grounding.Entity.Ref
 	h.ca, h.cb = grounding.Claim.ID, joined.Claim.ID

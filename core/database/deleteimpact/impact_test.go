@@ -454,7 +454,9 @@ func TestImpactCitationAndSubject(t *testing.T) {
 	})
 
 	t.Run("user role property on person is inbound not a facet", func(t *testing.T) {
-		userRole, err := properties.Create(c, userID, "Role", properties.ValueTypeText, "", "")
+		userRole, err := writes.Call(c, writes.Op{Action: "create_property", UserID: userID}, func(tx *database.Tx) (properties.Property, []rowchange.Change, error) {
+			return properties.Create(tx, userID, "Role", properties.ValueTypeText, "", "")
+		})
 		if err != nil {
 			t.Fatal(err)
 		}
