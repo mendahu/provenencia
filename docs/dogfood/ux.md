@@ -19,6 +19,14 @@ Copy the stub. Surface + what got in the way is enough. A wanted fix is optional
 
 <!-- add below this line -->
 
+### Unpromote button on Subject cards
+
+- **Date:** 2026-10-11
+- **Where:** Evidence graph → promoted Subject cards
+- **Annoyance:** Once a Subject has been promoted there's no way to take it back from the Evidence graph. Only unpromoted cards have a Promote button.
+- **Wanted:** An **Unpromote** button on promoted Subject cards. It removes the Identity Claim for that Subject, including any bridge Subjects connected to it, returning the card to its unpromoted state.
+- **Open questions:** Should it ask for confirmation, since it removes more than just the one card's claim? Should it list the bridges that will go with it? Related: [promote graph alignment](../promote-graph-alignment.md), which describes how bridges behave when one end is unpromoted.
+
 ### Promote flow: long entity titles break the target dropdown layout
 
 - **Date:** 2026-10-10
