@@ -35,9 +35,6 @@ const (
 		FROM subjects WHERE id = ?`
 	sqlGetByRef = `SELECT id, ref, source_id, subject_type_id, COALESCE(label, ''), COALESCE(description, '')
 		FROM subjects WHERE ref = ?`
-	sqlListBySource = `SELECT id, ref, source_id, subject_type_id, COALESCE(label, ''), COALESCE(description, '')
-		FROM subjects WHERE source_id = ?
-		ORDER BY label COLLATE NOCASE, ref COLLATE NOCASE`
 	sqlSourceExists = `SELECT 1 FROM sources WHERE id = ?`
 	sqlTypePrefix   = `SELECT candidate_ref_prefix FROM subject_types WHERE id = ?`
 	maxRefRetries   = 8
@@ -308,31 +305,6 @@ func getByRef(c *database.Catalog, subjectRef string) (Subject, error) {
 		return Subject{}, ErrInvalid
 	}
 	return scanSubject(db.QueryRow(sqlGetByRef, subjectRef))
-}
-
-// ListBySource returns Subjects homed to sourceID.
-func ListBySource(c *database.Catalog, sourceID []byte) ([]Subject, error) {
-	db, err := c.DB()
-	if err != nil {
-		return nil, err
-	}
-	if len(sourceID) != 16 {
-		return nil, ErrInvalid
-	}
-	rows, err := db.Query(sqlListBySource, sourceID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var out []Subject
-	for rows.Next() {
-		s, err := scanSubject(rows)
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, s)
-	}
-	return out, rows.Err()
 }
 
 type rowScanner interface {

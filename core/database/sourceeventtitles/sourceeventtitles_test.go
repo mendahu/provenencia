@@ -7,12 +7,14 @@ import (
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/connect"
+	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/namevalues/namevaluestest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sourceeventtitles"
+	_ "github.com/mendahu/provenencia/core/database/sourcefill"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjectpositions"
@@ -171,10 +173,7 @@ func TestForSource(t *testing.T) {
 	labelled := f.subject("event", "Grandpa's house fire")
 	typed := f.subject("event", "", f.eventType("death"))
 
-	db, err := f.c.DB()
-	must(t, err)
-	titles, err := sourceeventtitles.ForSource(db, f.src.ID)
-	must(t, err)
+	titles := titlesFromStored(t, f)
 	byID := map[string]eventtitle.Plan{}
 	for _, title := range titles {
 		byID[string(title.SubjectID)] = title.Plan
@@ -233,6 +232,8 @@ func TestForSource(t *testing.T) {
 	// Subject order is by participation ref, so et al. always names the same
 	// person, read after read.
 	t.Run("subjects are in participation-ref order, every time", func(t *testing.T) {
+		db, err := f.c.DB()
+		must(t, err)
 		var refs []string
 		rows, err := db.Query(`SELECT s.ref FROM subjects s
 			JOIN observations o ON o.subject_id = s.id AND o.value_subject_id = ?
@@ -261,8 +262,7 @@ func TestForSource(t *testing.T) {
 			}
 		}
 		for i := 0; i < 3; i++ {
-			again, err := sourceeventtitles.ForSource(db, f.src.ID)
-			must(t, err)
+			again := titlesFromStored(t, f)
 			for _, title := range again {
 				if string(title.SubjectID) != string(marriage.ID) {
 					continue
@@ -275,12 +275,28 @@ func TestForSource(t *testing.T) {
 	})
 
 	t.Run("an empty Source has no titles", func(t *testing.T) {
-		got, err := sourceeventtitles.ForSource(db, make([]byte, 16))
-		must(t, err)
+		got := sourceeventtitles.FromStored(graphcache.SourceGraph{}, nil, nil)
 		if len(got) != 0 {
 			t.Fatalf("titled %d", len(got))
 		}
 	})
+}
+
+func titlesFromStored(t *testing.T, f *fixture) []sourceeventtitles.Title {
+	t.Helper()
+	sg, err := f.c.Graph().Source(f.src.ID)
+	must(t, err)
+	v, err := f.c.Graph().Vocabulary()
+	must(t, err)
+	propKey := map[string]string{}
+	for _, p := range v.Properties {
+		propKey[string(p.ID)] = p.Key
+	}
+	terms := map[string]struct{ Key, Label string }{}
+	for _, term := range v.Terms {
+		terms[string(term.ID)] = struct{ Key, Label string }{Key: term.Key, Label: term.Label}
+	}
+	return sourceeventtitles.FromStored(sg, propKey, terms)
 }
 
 func sameSet(got, want []string) bool {

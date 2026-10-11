@@ -9,17 +9,6 @@ import (
 // inBatch bounds an IN list; a batched read is still a fixed number of queries.
 const inBatch = 500
 
-// keptTerms maps each handle to the key of its kept rank-1 term on the
-// Property. With several, the first key in order wins, so a signature is the
-// same every run.
-func keptTerms(q Querier, entityIDs [][]byte, propertyKey string) (map[string]string, error) {
-	return termsBy(q, `SELECT r.entity_id, t.key FROM auto_reconciler_values r
-		JOIN properties p ON p.id = r.property_id AND p.key = ? AND p.origin = 'provenencia'
-		JOIN property_terms t ON t.id = r.value_term_id
-		WHERE r.rank = 1 AND r.reason = 'kept' AND r.entity_id IN (`, `) ORDER BY r.entity_id, t.key`,
-		entityIDs, propertyKey)
-}
-
 // kinship is the directed and inverse marks of the catalog's terms, keyed
 // "propertyKey|termKey".
 type kinship struct {
