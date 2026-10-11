@@ -19,6 +19,17 @@ Copy the stub. Surface + what got in the way is enough. A wanted fix is optional
 
 <!-- add below this line -->
 
+### Sources list needs filters and search to find Sources
+
+- **Date:** 2026-10-11
+- **Where:** Sources list
+- **Annoyance:** The list grows quickly, and there are no controls for narrowing it down to the Sources I want to work on.
+- **Wanted:**
+  - **Filter by evidence status:** for example Sources that still have unpromoted Subjects, Sources with no Evidence graph filled out yet, and Sources where every Subject is promoted.
+  - **Text search** that filters the list as you type.
+  - Related: *Sources list sort and filter don't persist* (these new filters should be remembered too) and *Last updated field on list views*.
+- **Open question:** The status filters need per-Source counts of promoted and unpromoted Subjects. Those would have to be cheap to compute for a long list.
+
 ### Unpromote button on Subject cards
 
 - **Date:** 2026-10-11
