@@ -98,7 +98,15 @@ func ListSubjectMemberships(in []byte) ([]byte, error) {
 	}
 	var out *engine.ListSubjectMembershipsResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		rows, err := identityclaims.MembershipsBySource(c, sourceID)
+		sg, err := c.Graph().Source(sourceID)
+		if err != nil {
+			return err
+		}
+		props, err := loadPropertyInfo(c)
+		if err != nil {
+			return err
+		}
+		rows, err := membershipsFromSource(c.Graph(), sg, namePropertyID(props))
 		if err != nil {
 			return err
 		}

@@ -45,10 +45,6 @@ func cloneStats(s graphalign.Stats) graphalign.Stats {
 	return out
 }
 
-// ResetStatsCacheForTest is a no-op. Stats live on the catalog's graph, so a
-// new catalog does not see another project's scan.
-func ResetStatsCacheForTest() {}
-
 func computeStats(g *graphcache.Graph, q Querier) (graphalign.Stats, error) {
 	st := graphalign.Stats{
 		ValueFreq: map[string]map[string]float64{},

@@ -238,7 +238,7 @@ func TestObservations(t *testing.T) {
 			name: "list by source",
 			run: func(t *testing.T) {
 				c, s := mustSeed(t)
-				mustCitation(t, c, s,
+				cit := mustCitation(t, c, s,
 					observations.Input{
 						SubjectID: s.person.ID, PropertyID: s.sexProp.ID,
 						ValueTermID: s.femaleTerm.ID,
@@ -248,7 +248,7 @@ func TestObservations(t *testing.T) {
 						ValueText: "Cambridge", HasText: true,
 					},
 				)
-				list, err := observations.ListBySource(c, s.source.ID)
+				list, err := observations.ListByCitation(c, cit.ID)
 				if err != nil || len(list) != 2 {
 					t.Fatalf("%v len=%d", err, len(list))
 				}
@@ -274,7 +274,7 @@ func TestObservations(t *testing.T) {
 			run: func(t *testing.T) {
 				c, s := mustSeed(t)
 				y, m := 1882, 4
-				mustCitation(t, c, s,
+				cit := mustCitation(t, c, s,
 					observations.Input{
 						SubjectID: s.person.ID, PropertyID: s.nameProp.ID,
 						Name: &namevalues.Value{
@@ -293,7 +293,7 @@ func TestObservations(t *testing.T) {
 						},
 					},
 				)
-				list, err := observations.ListBySource(c, s.source.ID)
+				list, err := observations.ListByCitation(c, cit.ID)
 				if err != nil || len(list) != 2 {
 					t.Fatalf("%v len=%d", err, len(list))
 				}

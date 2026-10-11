@@ -462,6 +462,22 @@ func GetTx(tx *sql.Tx, id []byte) (Citation, error) {
 	return scanOne(tx.QueryRow(sqlGet, id))
 }
 
+// SourceID returns the Artifact source_id for a Citation.
+func SourceID(c *database.Catalog, citationID []byte) ([]byte, error) {
+	db, err := c.DB()
+	if err != nil {
+		return nil, err
+	}
+	if len(citationID) != 16 {
+		return nil, ErrInvalid
+	}
+	var sourceID []byte
+	if err := db.QueryRow(sqlCitationSource, citationID).Scan(&sourceID); err != nil {
+		return nil, err
+	}
+	return append([]byte(nil), sourceID...), nil
+}
+
 // SourceIDTx returns the Artifact source_id for a Citation.
 func SourceIDTx(tx *sql.Tx, citationID []byte) ([]byte, error) {
 	if len(citationID) != 16 {

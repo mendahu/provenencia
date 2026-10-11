@@ -35,6 +35,9 @@ func updateOne(tx *sql.Tx, citationID []byte, prev Observation, in Input) (Obser
 	if len(in.SubjectID) != 16 || len(in.PropertyID) != 16 {
 		return Observation{}, nil, ErrInvalid
 	}
+	if err := requireSubjectSource(tx, citationID, in.SubjectID); err != nil {
+		return Observation{}, nil, err
+	}
 
 	var subjectTypeID []byte
 	if err := tx.QueryRow(sqlSubjectType, in.SubjectID).Scan(&subjectTypeID); err != nil {

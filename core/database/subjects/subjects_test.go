@@ -9,6 +9,7 @@ import (
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/rowchange"
+	_ "github.com/mendahu/provenencia/core/database/sourcefill"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjectpositions"
@@ -354,9 +355,9 @@ func TestSubjects(t *testing.T) {
 				}); err != nil {
 					t.Fatal(err)
 				}
-				list, err := ListBySource(c, srcA.ID)
-				if err != nil || len(list) != 1 || list[0].Label != "A" {
-					t.Fatalf("%v %+v", err, list)
+				sg, err := c.Graph().Source(srcA.ID)
+				if err != nil || len(sg.Subjects) != 1 || sg.Subjects[0].Label != "A" {
+					t.Fatalf("%v %+v", err, sg.Subjects)
 				}
 			},
 		},
@@ -369,9 +370,6 @@ func TestSubjects(t *testing.T) {
 					t.Fatalf("got %v", err)
 				}
 				if _, err := Get(c, []byte{1}); !errors.Is(err, ErrInvalid) {
-					t.Fatalf("got %v", err)
-				}
-				if _, err := ListBySource(c, nil); !errors.Is(err, ErrInvalid) {
 					t.Fatalf("got %v", err)
 				}
 			},

@@ -51,15 +51,27 @@ func ListSourceEventTitles(in []byte) ([]byte, error) {
 	}
 	out := &engine.ListSourceEventTitlesResponse{}
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		db, err := c.DB()
+		sg, err := c.Graph().Source(sourceID)
 		if err != nil {
 			return err
 		}
-		titles, err := sourceeventtitles.ForSource(db, sourceID)
+		props, err := loadPropertyInfo(c)
 		if err != nil {
 			return err
 		}
-		for _, t := range titles {
+		terms, err := loadTermInfo(c)
+		if err != nil {
+			return err
+		}
+		keys := map[string]string{}
+		for id, info := range props {
+			keys[id] = info.Key
+		}
+		termLookup := map[string]struct{ Key, Label string }{}
+		for id, info := range terms {
+			termLookup[id] = struct{ Key, Label string }{Key: info.Key, Label: info.Label}
+		}
+		for _, t := range sourceeventtitles.FromStored(sg, keys, termLookup) {
 			out.Titles = append(out.Titles, &engine.SourceEventTitle{
 				SubjectId: uuidString(t.SubjectID),
 				Title:     eventTitleProto(t.Plan),
