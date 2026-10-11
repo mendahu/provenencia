@@ -1,6 +1,7 @@
 package promotealign
 
 import (
+	"github.com/mendahu/provenencia/core/connectrules"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/graphcache"
 )
@@ -42,6 +43,21 @@ func loadKinship(g *graphcache.Graph) (kinship, error) {
 		}
 	}
 	return k, nil
+}
+
+// edgeStamp is the role, direction, and neighbor kind one bridge signs with.
+// A term and its inverse share the key that sorts first; flip says the ends swap.
+func edgeStamp(bridgeKey, role string, kin kinship) (roleOut string, directed bool, neighborKind string, flip bool) {
+	b, ok := connectrules.LookupBridge(bridgeKey)
+	if ok && len(b.Endpoints) == 2 {
+		neighborKind = b.Endpoints[1].TypeKey
+	}
+	roleOut = role
+	if ok && connectrules.HasDisambiguation(b.Disambiguation) {
+		roleOut, flip = kin.canonical(b.Disambiguation, role)
+		directed = kin.directed[b.Disambiguation+"|"+roleOut]
+	}
+	return roleOut, directed, neighborKind, flip
 }
 
 // canonical is the key one relationship is matched under. A term and its

@@ -198,23 +198,9 @@ func canonSignature(self []byte, selfKind string, n *graphcache.Node, l graphcac
 	} else {
 		from, to = l.Neighbor, self
 	}
-	b, _ := connectrules.LookupBridge(l.BridgeTypeKey)
-	neighborKind := ""
-	if len(b.Endpoints) == 2 {
-		neighborKind = b.Endpoints[1].TypeKey
-	}
-	role := l.TermKey
-	directed := false
-	switch l.BridgeTypeKey {
-	case "relationship":
-		rel, flip := kin.canonical(connectrules.DisambiguationRelationshipType, role)
-		if flip {
-			from, to = to, from
-			role = rel
-		}
-		directed = kin.directed[connectrules.DisambiguationRelationshipType+"|"+role]
-	case "place_relationship":
-		directed = kin.directed[connectrules.DisambiguationPlaceRelationshipType+"|"+role]
+	role, directed, neighborKind, flip := edgeStamp(l.BridgeTypeKey, l.TermKey, kin)
+	if flip {
+		from, to = to, from
 	}
 	var typeTerm string
 	if l.BridgeTypeKey == "participation" {

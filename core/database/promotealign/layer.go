@@ -199,9 +199,10 @@ func loadLayerBridges(g *graphcache.Graph, q Querier, sourceID []byte, primary m
 		return nil, err
 	}
 	for _, e := range participations {
+		role, _, neighborKind, _ := edgeStamp("participation", roles[string(e.Association)], kin)
 		add(e.From, e.To, graphalign.EdgeSignature{
-			BridgeType: "participation", RoleOrType: roles[string(e.Association)],
-			NeighborKind: "event", NeighborTypeTerm: eventTypes[string(e.To)],
+			BridgeType: "participation", RoleOrType: role,
+			NeighborKind: neighborKind, NeighborTypeTerm: eventTypes[string(e.To)],
 		})
 	}
 
@@ -211,7 +212,8 @@ func loadLayerBridges(g *graphcache.Graph, q Querier, sourceID []byte, primary m
 		return nil, err
 	}
 	for _, e := range locations {
-		add(e.From, e.To, graphalign.EdgeSignature{BridgeType: "location", NeighborKind: "place"})
+		_, _, neighborKind, _ := edgeStamp("location", "", kin)
+		add(e.From, e.To, graphalign.EdgeSignature{BridgeType: "location", NeighborKind: neighborKind})
 	}
 
 	// Person ↔ person (relationship).
@@ -226,14 +228,14 @@ func loadLayerBridges(g *graphcache.Graph, q Querier, sourceID []byte, primary m
 	for _, e := range relationships {
 		// "John child of Mary" reads as "Mary parent of John" (or the reverse)
 		// so one relationship has one signature whichever end recorded it.
-		rel, flip := kin.canonical(connectrules.DisambiguationRelationshipType, relTypes[string(e.Association)])
+		rel, directed, neighborKind, flip := edgeStamp("relationship", relTypes[string(e.Association)], kin)
 		from, to := e.From, e.To
 		if flip {
 			from, to = to, from
 		}
 		add(from, to, graphalign.EdgeSignature{
-			BridgeType: "relationship", RoleOrType: rel, NeighborKind: "person",
-			Directed: kin.directed[connectrules.DisambiguationRelationshipType+"|"+rel],
+			BridgeType: "relationship", RoleOrType: rel, NeighborKind: neighborKind,
+			Directed: directed,
 		})
 	}
 
@@ -250,9 +252,10 @@ func loadLayerBridges(g *graphcache.Graph, q Querier, sourceID []byte, primary m
 			return nil, err
 		}
 		for _, e := range edges {
+			role, directed, neighborKind, _ := edgeStamp("place_relationship", step.term, kin)
 			add(e.From, e.To, graphalign.EdgeSignature{
-				BridgeType: "place_relationship", RoleOrType: step.term, NeighborKind: "place",
-				Directed: kin.directed[connectrules.DisambiguationPlaceRelationshipType+"|"+step.term],
+				BridgeType: "place_relationship", RoleOrType: role, NeighborKind: neighborKind,
+				Directed: directed,
 			})
 		}
 	}
