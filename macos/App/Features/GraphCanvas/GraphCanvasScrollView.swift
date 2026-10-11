@@ -152,6 +152,17 @@ struct GraphCanvasScrollView<Content: View>: NSViewRepresentable {
 final class GraphCanvasNSScrollView: NSScrollView {
     weak var viewport: GraphCanvasViewportController?
 
+    override var magnification: CGFloat {
+        didSet {
+            guard abs(oldValue - magnification) > 0.000_1 else { return }
+            let value = magnification
+            let viewport = viewport
+            MainActor.assumeIsolated {
+                viewport?.magnification = value
+            }
+        }
+    }
+
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
         viewport?.observeWindow(window)
@@ -221,6 +232,8 @@ final class GraphCanvasNSScrollView: NSScrollView {
 @Observable
 final class GraphCanvasViewportController: NSObject {
     weak var scrollView: NSScrollView?
+    /// Live `NSScrollView` magnification. Grid fade and screen-space strokes read this.
+    var magnification: CGFloat = 1
     /// True while the window first responder is inside this canvas document.
     private(set) var documentContainsKeyboardFocus = false
     private var observedWindow: NSWindow?

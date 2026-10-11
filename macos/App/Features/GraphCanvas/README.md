@@ -20,7 +20,7 @@ catalog types so geometry stays extractable (design note §13).
 | `GraphCanvasPointerController` | Hit-test, select, drag, empty-canvas pan, place, connect |
 | `GraphCanvasHitTarget` / `GraphCanvasPointerHitTesting` | Document rects + pure helpers |
 | `GraphCanvasViewportController` | Pan deltas + live AppKit `convert` under cursor |
-| `GraphCanvasGridView` | Optional empty grid document content |
+| `GraphCanvasGridView` | Optional grid underlay: one repeated cell, not a document-sized bitmap |
 | `GraphCanvasEdgeGeometry` | Cubic edges + tuck-under endpoints |
 
 ## Reuse contract
@@ -102,6 +102,8 @@ Magnification range defaults are **zoom-out oriented** (`0.25` … `1.25`): over
 large graph, then back toward identity. Hosts may choose different clamps.
 Deliberate zoom-*in* past ~125% is capped in the default camera so layer-scaled
 SwiftUI content does not go soft.
+
+`GraphCanvasViewportController.magnification` is the live zoom. The grid fades as a whole when a cell would be under about a screen point; product strokes that should stay one screen point wide use `GraphCanvasCoordinates.screenPixelDocumentWidth`.
 
 Changing `contentID` resets magnification to `1` and re-centers the document.
 Paint `rootView` may update every representable pass — safe because AppKit owns gestures.

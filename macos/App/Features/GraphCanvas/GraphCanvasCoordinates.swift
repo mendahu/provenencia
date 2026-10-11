@@ -12,6 +12,25 @@ enum GraphCanvasCoordinates {
         min(max(value, GraphCanvasCamera.minMagnification), GraphCanvasCamera.maxMagnification)
     }
 
+    /// Document-space width of one screen point at `magnification`.
+    ///
+    /// `NSScrollView` scales the document, so a stroke of `1 / magnification`
+    /// stays one screen point at every zoom.
+    static func screenPixelDocumentWidth(magnification: CGFloat) -> CGFloat {
+        1 / max(magnification, 0.000_1)
+    }
+
+    /// Opacity for a repeated grid cell. The pattern stays fully visible while
+    /// a cell is clearly larger than a screen point, and fades out as a whole
+    /// once the cell itself is about one point — hairlines must not pile into
+    /// a solid field.
+    static func gridPatternOpacity(spacing: CGFloat, magnification: CGFloat) -> CGFloat {
+        let cell = spacing * max(magnification, 0)
+        if cell >= 2 { return 1 }
+        if cell <= 1 { return 0 }
+        return cell - 1
+    }
+
     /// Clamps a proposed content-view scroll origin so the visible rect stays
     /// inside the document. Shared by click-drag pan and mouse-wheel zoom.
     static func clampedContentOrigin(

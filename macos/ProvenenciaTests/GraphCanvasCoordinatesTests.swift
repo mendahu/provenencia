@@ -102,4 +102,19 @@ struct GraphCanvasCoordinatesTests {
             )
         )
     }
+
+    @Test func screenPixelWidthTracksMagnification() {
+        #expect(GraphCanvasCoordinates.screenPixelDocumentWidth(magnification: 1) == 1)
+        #expect(GraphCanvasCoordinates.screenPixelDocumentWidth(magnification: 0.25) == 4)
+        #expect(GraphCanvasCoordinates.screenPixelDocumentWidth(magnification: 0.5) == 2)
+    }
+
+    @Test func gridPatternFadesOnlyWhenACellIsAboutOnePixel() {
+        let spacing = GraphCanvasGridMapping.defaultSpacing
+        #expect(GraphCanvasCoordinates.gridPatternOpacity(spacing: spacing, magnification: 1) == 1)
+        #expect(GraphCanvasCoordinates.gridPatternOpacity(spacing: spacing, magnification: 0.25) == 1)
+        #expect(GraphCanvasCoordinates.gridPatternOpacity(spacing: 40, magnification: 1.5 / 40) == 0.5)
+        #expect(GraphCanvasCoordinates.gridPatternOpacity(spacing: 40, magnification: 1 / 40) == 0)
+        #expect(GraphCanvasCoordinates.gridPatternOpacity(spacing: 40, magnification: 0.01) == 0)
+    }
 }
