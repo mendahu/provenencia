@@ -95,13 +95,32 @@ SQLite + files
 
 ### Signing and entitlements
 
-The app is built with the hardened runtime and signed ad hoc (`CODE_SIGN_IDENTITY = "-"`, Debug and Release). Xcode embeds `libprovenencia.dylib` with *Code Sign On Copy*, so the dylib carries the app's signature. An ad hoc signature has no Team ID, and hardened-runtime library validation only loads a library signed by Apple or by the process's own team, so the app ships one entitlement exception: `com.apple.security.cs.disable-library-validation`. There is no App Sandbox, so no sandbox entitlements are listed; a `files.user-selected` key would have no effect, and the app writes inside the project folder, which a read-only key would forbid.
+**Today.** The app is built with the hardened runtime and signed ad hoc (`CODE_SIGN_IDENTITY = "-"`, Debug and Release). That runs on the machine that built it and nowhere else: Gatekeeper, notarization and the App Store all reject an ad hoc signature.
 
-Release prep, in order:
+The Go core is packaged the way either release path expects. `scripts/build-macos-core.sh` builds a universal (arm64 + x86_64) `libprovenencia.dylib` with install name `@rpath/libprovenencia.dylib` and the app's deployment target (Xcode's `MACOSX_DEPLOYMENT_TARGET`, passed to cgo). Xcode embeds it in `Contents/Frameworks` with *Code Sign On Copy*, so it carries the app's signature.
+
+An ad hoc signature has no Team ID, and hardened-runtime library validation only loads a library signed by Apple or by the process's own team. So the app ships one entitlement exception, `com.apple.security.cs.disable-library-validation`, and nothing else. There is no App Sandbox yet, so no sandbox keys are listed: a `files.user-selected` key would have no effect, and a read-only one would forbid the writes into the project folder once the sandbox is on.
+
+**Rules that keep both release paths open:**
+
+- The dylib stays inside the bundle, embedded and signed by the app's own identity (never signed separately, never `codesign --deep`). No code is loaded from outside the bundle or downloaded at runtime.
+- The hardened runtime gets no new exceptions. A `-buildmode=c-shared` Go library needs no JIT or unsigned-memory entitlements; `disable-library-validation` is the only one, and it goes once the app has a team.
+- App data is located through `FileManager` (`InstallPaths`), never a hard-coded `~/Library` path, so it resolves inside the sandbox container when there is one.
+- Debug and CI stay ad hoc. Real signing happens only in a release Archive, so certificates never reach everyday or pull-request builds.
+
+**Direct download (Developer ID).**
 
 1. Sign Release with a Developer ID (`DEVELOPMENT_TEAM`, `CODE_SIGN_IDENTITY = "Developer ID Application"`). Code Sign On Copy then signs the dylib with the same team.
 2. Give Release its own entitlements file without `disable-library-validation`, and confirm a notarized Release build opens a project (the dylib loads).
-3. Decide on the App Sandbox. Turning it on needs `files.user-selected.read-write` plus security-scoped bookmarks for reopening the active project and `identity.json`, which live outside the container.
+3. Archive with a secure timestamp, notarize (`xcrun notarytool submit --wait`), and staple (`xcrun stapler staple`). Check with `spctl -a -vv Provenencia.app` ("Notarized Developer ID") and `codesign -dv --verbose=4` on the dylib (same Team ID as the app).
+4. The App Sandbox is optional on this path.
+
+**Mac App Store.** Steps 1–2 with an Apple Distribution identity and a provisioning profile, uploaded through App Store Connect. The App Sandbox is mandatory, and these are what it changes:
+
+- **Entitlements:** `com.apple.security.app-sandbox` and `com.apple.security.files.user-selected.read-write`.
+- **Reopening the active project:** `active-project.json` stores a path, and a sandboxed app can't reopen a user-chosen folder by path on the next launch. Store a security-scoped bookmark for the project folder when it is created or opened, and resolve it (`startAccessingSecurityScopedResource`) on launch.
+- **Finding projects:** onboarding lists `.provenencia` folders by scanning Documents (`InstallPaths.provenenciaProjects`). The sandbox doesn't allow that scan. Use an open panel, or the bookmarks of projects already opened.
+- **App data:** `identity.json`, `active-project.json`, navigation history and evidence links already resolve through `FileManager`, so they land in the container without code changes. Existing installs need their `~/Library/Application Support/Provenencia` folder brought in, with a `container-migration.plist` in the bundle.
 
 ## 4. Future Windows Client
 
