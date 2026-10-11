@@ -36,15 +36,11 @@ func ProposePromoteGraphAlignment(in []byte) ([]byte, error) {
 
 	var out *engine.ProposePromoteGraphAlignmentResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		db, err := c.DB()
-		if err != nil {
-			return err
-		}
 		prop, rev, err := promotealign.Propose(c, sourceID, fixed)
 		if err != nil {
 			return err
 		}
-		out, err = proposalProto(db, prop)
+		out, err = proposalProto(c, prop)
 		if err != nil {
 			return err
 		}
@@ -57,7 +53,7 @@ func ProposePromoteGraphAlignment(in []byte) ([]byte, error) {
 	return proto.Marshal(out)
 }
 
-func proposalProto(q conclusionheaders.Querier, prop graphalign.Proposal) (*engine.ProposePromoteGraphAlignmentResponse, error) {
+func proposalProto(c *database.Catalog, prop graphalign.Proposal) (*engine.ProposePromoteGraphAlignmentResponse, error) {
 	out := &engine.ProposePromoteGraphAlignmentResponse{}
 	var personIDs, eventIDs, placeIDs [][]byte
 	addHeaderID := func(kind string, id []byte) {
@@ -81,15 +77,15 @@ func proposalProto(q conclusionheaders.Querier, prop graphalign.Proposal) (*engi
 			addHeaderID(r.Kind, a.HandleID)
 		}
 	}
-	persons, err := conclusionheaders.PersonsByIDs(q, personIDs)
+	persons, err := conclusionheaders.PersonsByIDs(c, personIDs)
 	if err != nil {
 		return nil, err
 	}
-	events, err := conclusionheaders.EventsByIDs(q, eventIDs)
+	events, err := conclusionheaders.EventsByIDs(c, eventIDs)
 	if err != nil {
 		return nil, err
 	}
-	places, err := conclusionheaders.PlacesByIDs(q, placeIDs)
+	places, err := conclusionheaders.PlacesByIDs(c, placeIDs)
 	if err != nil {
 		return nil, err
 	}

@@ -82,9 +82,12 @@ func Run[T any](c *database.Catalog, op Op, fn func(tx *database.Tx) (T, []rowch
 		return zero, Result{}, err
 	}
 	if len(set.Handles) > 0 {
-		if err := autoreconciler.RecomputeTx(tx.Tx, set.Handles); err != nil {
+		deps, err := autoreconciler.RecomputeReported(tx.Tx, set.Handles)
+		if err != nil {
 			return zero, Result{}, err
 		}
+		set.HeaderDeps = deps
+		set.HeaderDepsWalked = true
 	}
 	if len(set.Search) > 0 {
 		if err := searchindex.Reproject(tx.Tx, set.Search); err != nil {

@@ -8,6 +8,7 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/conclusionheaders"
 	"github.com/mendahu/provenencia/core/database/datevalues"
+	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/eventtitle"
 	"github.com/mendahu/provenencia/core/valuecodec"
 )
@@ -226,23 +227,18 @@ func loadHandleHeaders(q Querier, heads map[string]handleHead) (handleHeaders, e
 		events:  map[string]conclusionheaders.EventHeader{},
 		places:  map[string]conclusionheaders.PlaceHeader{},
 	}
-	ps, err := conclusionheaders.PersonsByIDs(q, persons)
+	if len(persons)+len(events)+len(places) == 0 {
+		return out, nil
+	}
+	ps, es, pl, err := conclusionheaders.RowsForSearch(graphcache.Over(q), persons, events, places)
 	if err != nil {
 		return handleHeaders{}, err
 	}
 	for _, h := range ps {
 		out.persons[uuidString(h.Entity.ID)] = h
 	}
-	es, err := conclusionheaders.EventsByIDs(q, events)
-	if err != nil {
-		return handleHeaders{}, err
-	}
 	for _, h := range es {
 		out.events[uuidString(h.Entity.ID)] = h
-	}
-	pl, err := conclusionheaders.PlacesByIDs(q, places)
-	if err != nil {
-		return handleHeaders{}, err
 	}
 	for _, h := range pl {
 		out.places[uuidString(h.Entity.ID)] = h

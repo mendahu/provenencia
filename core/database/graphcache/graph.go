@@ -30,6 +30,14 @@ type Graph struct {
 	vocab   Vocabulary
 	vocabOK bool
 
+	// displays are finished rows keyed by handle id. labels is the vocabulary
+	// map the rows resolve at read time. alt, when set, is the querier a
+	// one-shot graph reads instead of db (a write transaction).
+	displays map[string]any
+	labels   any
+	labelsOK bool
+	alt      Querier
+
 	entityTable string
 	claimTable  string
 	valueTable  string
@@ -139,6 +147,9 @@ func (g *Graph) clear() {
 	g.stats = nil
 	g.vocabOK = false
 	g.vocab = Vocabulary{}
+	g.displays = map[string]any{}
+	g.labelsOK = false
+	g.labels = nil
 }
 
 // Drop empties nodes, holders, kind indexes, and stats. The next read fills
@@ -264,12 +275,37 @@ func (g *Graph) note() {
 	}
 }
 
+// Over is a graph that reads q and stores nothing the caller keeps. A save
+// composes rows from its open transaction this way, because the catalog
+// graph is still on the previous commit and the catalog has one connection.
+func Over(q Querier) *Graph {
+	g := New(nil)
+	g.alt = q
+	return g
+}
+
+// Query runs SQL through this graph's connection, counting it when a test asked.
+func (g *Graph) Query(query string, args ...any) (*sql.Rows, error) {
+	return g.query(query, args...)
+}
+
+// QueryRow runs SQL through this graph's connection.
+func (g *Graph) QueryRow(query string, args ...any) *sql.Row {
+	return g.queryRow(query, args...)
+}
+
 func (g *Graph) query(query string, args ...any) (*sql.Rows, error) {
 	g.note()
+	if g.alt != nil {
+		return g.alt.Query(query, args...)
+	}
 	return g.db.Query(query, args...)
 }
 
 func (g *Graph) queryRow(query string, args ...any) *sql.Row {
 	g.note()
+	if g.alt != nil {
+		return g.alt.QueryRow(query, args...)
+	}
 	return g.db.QueryRow(query, args...)
 }

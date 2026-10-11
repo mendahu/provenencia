@@ -473,6 +473,7 @@ func (g *Graph) install(n *Node) {
 		g.detach(old)
 	}
 	g.nodes[string(n.ID)] = n
+	g.dropDisplay(n.ID)
 	g.attach(n)
 	g.syncKind(n)
 }
@@ -505,6 +506,7 @@ func (g *Graph) detach(n *Node) {
 }
 
 func (g *Graph) removeNode(id []byte) {
+	g.dropDisplay(id)
 	if n, ok := g.nodes[string(id)]; ok {
 		g.detach(n)
 		delete(g.nodes, string(id))

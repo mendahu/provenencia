@@ -244,9 +244,7 @@ func TestBirthLocationsFoldWhenPartOf(t *testing.T) {
 	f.promoteSubject(toronto)
 	f.promoteSubject(ontario)
 
-	db, err := f.c.DB()
-	must(t, err)
-	persons, err := conclusionheaders.ListPersons(db)
+	persons, err := conclusionheaders.ListPersons(f.c)
 	must(t, err)
 	if len(persons) != 1 {
 		t.Fatalf("persons %d", len(persons))
@@ -278,7 +276,7 @@ func TestBirthLocationsFoldWhenPartOf(t *testing.T) {
 	f.promoteSubject(person2)
 	f.promoteSubject(birth2)
 	f.promoteSubject(scotland)
-	persons, err = conclusionheaders.ListPersons(db)
+	persons, err = conclusionheaders.ListPersons(f.c)
 	must(t, err)
 	var mary *conclusionheaders.PersonHeader
 	for i := range persons {
@@ -330,7 +328,7 @@ func TestAttachPlaceRelationships(t *testing.T) {
 	yorkID := f.promoteSubject(york)
 	db, err := f.c.DB()
 	must(t, err)
-	headers, err := conclusionheaders.PlacesByIDs(db, [][]byte{torontoID})
+	headers, err := conclusionheaders.PlacesByIDs(f.c, [][]byte{torontoID})
 	must(t, err)
 	if len(headers) != 1 {
 		t.Fatalf("%d", len(headers))
@@ -357,7 +355,7 @@ func TestAttachPlaceRelationships(t *testing.T) {
 		t.Fatalf("successors %+v", h.Successors)
 	}
 	// York → Toronto succession both ways; successor shows Toronto's period.
-	yh, err := conclusionheaders.PlacesByIDs(db, [][]byte{yorkID})
+	yh, err := conclusionheaders.PlacesByIDs(f.c, [][]byte{yorkID})
 	must(t, err)
 	must(t, conclusionheaders.AttachPlaceRelationships(db, &yh[0]))
 	if len(yh[0].Successors) != 1 || yh[0].Successors[0].Title != "Toronto" {
@@ -378,7 +376,7 @@ func TestAttachPlaceRelationshipsIrelandMembershipSpan(t *testing.T) {
 	ukID := f.promoteSubject(uk)
 	db, err := f.c.DB()
 	must(t, err)
-	ih, err := conclusionheaders.PlacesByIDs(db, [][]byte{irelandID})
+	ih, err := conclusionheaders.PlacesByIDs(f.c, [][]byte{irelandID})
 	must(t, err)
 	must(t, conclusionheaders.AttachPlaceRelationships(db, &ih[0]))
 	if len(ih[0].PartOf) != 1 || ih[0].PartOf[0].Title != "United Kingdom" {
@@ -388,7 +386,7 @@ func TestAttachPlaceRelationshipsIrelandMembershipSpan(t *testing.T) {
 		*ih[0].PartOf[0].EndDate.StartYear != 1922 {
 		t.Fatalf("ireland membership end %+v", ih[0].PartOf[0])
 	}
-	uh, err := conclusionheaders.PlacesByIDs(db, [][]byte{ukID})
+	uh, err := conclusionheaders.PlacesByIDs(f.c, [][]byte{ukID})
 	must(t, err)
 	must(t, conclusionheaders.AttachPlaceRelationships(db, &uh[0]))
 	// Contains is "today"; a membership that ended in 1922 is not listed.

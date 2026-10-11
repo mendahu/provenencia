@@ -29,6 +29,12 @@ type Set struct {
 	Search     []SearchIDs
 	Vocabulary bool
 	Structure  bool
+	// HeaderDeps are handles whose stored rows read Handles. Run fills this
+	// from the walk RecomputeTx already did. HeaderDepsWalked says that walk
+	// happened, including when it found nobody, so a commit drops those rows
+	// and does not walk again.
+	HeaderDeps       [][]byte
+	HeaderDepsWalked bool
 }
 
 // Effect is what a change to one table touches. An empty field means that job
@@ -173,7 +179,7 @@ var registry = map[string]Effect{
 			onField("inverse_key", self()),
 		),
 	},
-	"canonical_entities": {Entity: "canonical_entity"},
+	"canonical_entities": {Entity: "canonical_entity", Handles: self()},
 	"identity_claims": {
 		Entity: "identity_claim",
 		Handles: union(

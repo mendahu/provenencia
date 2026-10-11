@@ -3,9 +3,9 @@
 // R4). One header composer per kind serves every surface that shows a handle
 // as a row: lists, Promote's target picker, omnibar hits, later tree nodes.
 //
-// Headers are composed at read time, never stored, and set-based: a whole
-// list is a fixed number of queries whatever its length. Go returns
-// structures, including which naming-matrix rule titles an Event
+// A finished header is stored on the catalog graph. A list read fills any
+// row that is missing, in a fixed number of queries whatever its length.
+// Go returns structures, including which naming-matrix rule titles an Event
 // (eventtitle); the app formats text.
 package conclusionheaders
 
@@ -22,6 +22,7 @@ import (
 // Querier is *sql.Tx or *sql.DB.
 type Querier interface {
 	Query(query string, args ...any) (*sql.Rows, error)
+	QueryRow(query string, args ...any) *sql.Row
 }
 
 // PersonHeader is one Person as a row.
@@ -79,23 +80,7 @@ const (
 	WHERE st.key = 'person' AND st.origin = 'provenencia' AND e.merged_into_id IS NULL`
 )
 
-// ListPersons returns every Person's header in list order.
-func ListPersons(q Querier) ([]PersonHeader, error) {
-	return queryPersons(q, sqlPersonsSelect)
-}
-
-// PersonsByIDs returns the headers of the given unmerged Persons in list
-// order, in one query. Unknown, merged, and non-Person ids are absent.
-func PersonsByIDs(q Querier, ids [][]byte) ([]PersonHeader, error) {
-	ids = database.UniqueBlobIDs(ids)
-	if len(ids) == 0 {
-		return nil, nil
-	}
-	return queryPersons(q, sqlPersonsSelect+` AND e.id IN (`+database.SQLInPlaceholders(len(ids))+`)`,
-		database.BlobArgs(ids)...)
-}
-
-// personRowsByIDs is PersonsByIDs without the birth and death walk, for an
+// personRowsByIDs is a person row without the birth and death walk, for an
 // Event's subjects.
 func personRowsByIDs(q Querier, ids [][]byte) ([]PersonHeader, error) {
 	ids = database.UniqueBlobIDs(ids)
