@@ -9,6 +9,29 @@ struct GraphCanvasCoordinatesTests {
         #expect(GraphCanvasCoordinates.clampMagnification(10) == GraphCanvasCamera.maxMagnification)
         #expect(GraphCanvasCoordinates.clampMagnification(1.5) == GraphCanvasCamera.maxMagnification)
         #expect(GraphCanvasCoordinates.clampMagnification(1.1) == 1.1)
+        #expect(GraphCanvasCoordinates.clampMagnification(0.3, minimum: 0.5) == 0.5)
+    }
+
+    @Test func magnificationFloorKeepsTheDocumentCoveringTheWindow() {
+        let document = CGSize(width: 4_000, height: 4_000)
+        #expect(
+            GraphCanvasCoordinates.magnificationThatFills(
+                documentSize: document,
+                viewportSize: CGSize(width: 2_000, height: 1_200)
+            ) == 0.5
+        )
+        #expect(
+            GraphCanvasCoordinates.magnificationThatFills(
+                documentSize: document,
+                viewportSize: CGSize(width: 800, height: 600)
+            ) == GraphCanvasCamera.minMagnification
+        )
+        #expect(
+            GraphCanvasCoordinates.magnificationThatFills(
+                documentSize: document,
+                viewportSize: CGSize(width: 6_000, height: 5_000)
+            ) == GraphCanvasCamera.maxMagnification
+        )
     }
 
     @Test func cameraInitClampsMagnification() {

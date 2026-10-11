@@ -99,7 +99,9 @@ gesture locations into the hosted document correctly (design note §7.2).
 | Click / drag on hit targets | Product callbacks (select, move, place, connect) |
 
 Magnification range defaults are **zoom-out oriented** (`0.25` … `1.25`): overview of a
-large graph, then back toward identity. Hosts may choose different clamps.
+large graph, then back toward identity. The zoom-out floor rises when `0.25` would
+make the document smaller than the window, so the area past the canvas edge stays
+out of view. Hosts may choose different clamps.
 Deliberate zoom-*in* past ~125% is capped in the default camera so layer-scaled
 SwiftUI content does not go soft.
 

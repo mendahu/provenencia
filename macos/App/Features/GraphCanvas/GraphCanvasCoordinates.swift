@@ -8,8 +8,29 @@ import CoreGraphics
 /// This enum stays the pure math seam for camera transforms, magnification clamp,
 /// and scroll-origin clamp shared by pan + zoom.
 enum GraphCanvasCoordinates {
-    static func clampMagnification(_ value: CGFloat) -> CGFloat {
-        min(max(value, GraphCanvasCamera.minMagnification), GraphCanvasCamera.maxMagnification)
+    static func clampMagnification(
+        _ value: CGFloat,
+        minimum: CGFloat = GraphCanvasCamera.minMagnification
+    ) -> CGFloat {
+        let floor = min(max(minimum, GraphCanvasCamera.minMagnification), GraphCanvasCamera.maxMagnification)
+        return min(max(value, floor), GraphCanvasCamera.maxMagnification)
+    }
+
+    /// Lowest magnification at which the document still covers the viewport.
+    ///
+    /// Below this the canvas is smaller than the window and the area past its
+    /// edge shows through. The result stays inside the camera's magnification range.
+    static func magnificationThatFills(documentSize: CGSize, viewportSize: CGSize) -> CGFloat {
+        guard documentSize.width > 1, documentSize.height > 1,
+              viewportSize.width > 1, viewportSize.height > 1
+        else {
+            return GraphCanvasCamera.minMagnification
+        }
+        let cover = max(
+            viewportSize.width / documentSize.width,
+            viewportSize.height / documentSize.height
+        )
+        return clampMagnification(cover)
     }
 
     /// Document-space width of one screen point at `magnification`.
