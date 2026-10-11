@@ -4,12 +4,12 @@ import (
 	"fmt"
 )
 
-// SourceLoader fills one Source. promotealign registers it. The graph does
+// SourceLoader fills one Source. sourcefill registers it. The graph does
 // not import that package.
 type SourceLoader func(q Querier, sourceID []byte) (SourceGraph, error)
 
-// SourceCheck reloads one stored Source and compares the membership pointers
-// and bridge signatures. promotealign registers it.
+// SourceCheck reloads one stored Source and compares the whole graph.
+// sourcefill registers it.
 type SourceCheck func(g *Graph, id []byte, stored SourceGraph) error
 
 var (

@@ -17,6 +17,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
 	"github.com/mendahu/provenencia/core/database/rowchange"
+	_ "github.com/mendahu/provenencia/core/database/sourcefill"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjectpositions"
@@ -50,7 +51,6 @@ func must(t testing.TB, err error) {
 
 func newFixture(t testing.TB) *fixture {
 	t.Helper()
-	promotealign.ResetStatsCacheForTest()
 	c, err := database.Create(t.TempDir(), "t.provenencia")
 	must(t, err)
 	t.Cleanup(func() { _ = c.Close() })
@@ -496,14 +496,12 @@ func TestStatsFanOut(t *testing.T) {
 	}
 
 	t.Run("keys match the walk's edge signature", func(t *testing.T) {
-		promotealign.ResetStatsCacheForTest()
 		f := build(t, true)
 		if got, ok := stats(f).FanOut[subjectAtBirth.Key()]; !ok || got != 1 {
 			t.Fatalf("fan-out %v (present %v), want 1 under %q", got, ok, subjectAtBirth.Key())
 		}
 	})
 	t.Run("another project at the same revision recomputes", func(t *testing.T) {
-		promotealign.ResetStatsCacheForTest()
 		filed, other := build(t, true), build(t, false)
 		if revision(filed) != revision(other) {
 			t.Fatalf("revisions %d and %d differ; the test needs them equal", revision(filed), revision(other))

@@ -72,15 +72,9 @@ func loadLayer(g *graphcache.Graph, q Querier, sourceID []byte) (graphalign.Laye
 	if err != nil {
 		return graphalign.Layer{}, nil, err
 	}
-	bridges := make([]graphalign.Bridge, 0, len(sg.Bridges))
-	for _, b := range sg.Bridges {
-		bridges = append(bridges, graphalign.Bridge{
-			A: append([]byte(nil), b.A...), B: append([]byte(nil), b.B...),
-			Signature: graphalign.EdgeSignature{
-				BridgeType: b.BridgeType, RoleOrType: b.Term, NeighborKind: b.NeighborKind,
-				NeighborTypeTerm: b.NeighborTypeTerm, Directed: b.Directed,
-			},
-		})
+	bridges, err := loadLayerBridges(g, q, sourceID, primary, byKind)
+	if err != nil {
+		return graphalign.Layer{}, nil, err
 	}
 	return graphalign.Layer{Subjects: subjects, Bridges: bridges, Metas: metas}, primary, nil
 }

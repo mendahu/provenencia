@@ -1,4 +1,7 @@
-package promotealign
+// Package sourcefill loads one Source onto the catalog graph: subjects,
+// observations, members, and the edges an event title reads. Promote builds
+// its own bridge signatures when it reads the layer.
+package sourcefill
 
 import (
 	"database/sql"
@@ -10,7 +13,6 @@ import (
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/hops"
-	"github.com/mendahu/provenencia/core/match"
 	"github.com/mendahu/provenencia/core/valuecodec"
 )
 
@@ -32,10 +34,6 @@ func loadSource(q graphcache.Querier, sourceID []byte) (graphcache.SourceGraph, 
 	if err != nil {
 		return graphcache.SourceGraph{}, err
 	}
-	bridges, err := loadSourceBridges(q, sourceID, subjects)
-	if err != nil {
-		return graphcache.SourceGraph{}, err
-	}
 	people, places, err := loadTitleEdges(q, sourceID, subjects)
 	if err != nil {
 		return graphcache.SourceGraph{}, err
@@ -44,7 +42,6 @@ func loadSource(q graphcache.Querier, sourceID []byte) (graphcache.SourceGraph, 
 		Subjects:     subjects,
 		Observations: observations,
 		Members:      members,
-		Bridges:      bridges,
 		EventPeople:  people,
 		EventPlaces:  places,
 	}, nil
@@ -174,39 +171,6 @@ func loadSourceMembers(q graphcache.Querier, sourceID []byte) ([]graphcache.Sour
 	return out, rows.Err()
 }
 
-func loadSourceBridges(q graphcache.Querier, sourceID []byte, subjects []graphcache.SourceSubject) ([]graphcache.SourceBridge, error) {
-	primary := map[string]primarySubject{}
-	byKind := map[string][][]byte{}
-	for _, s := range subjects {
-		if !promotePrimary(s.TypeKey, s.TypeOrigin) {
-			continue
-		}
-		if _, ok := match.DefaultProfile(s.TypeKey); !ok {
-			continue
-		}
-		primary[string(s.ID)] = primarySubject{id: s.ID, ref: s.Ref, kind: s.TypeKey}
-		byKind[s.TypeKey] = append(byKind[s.TypeKey], s.ID)
-	}
-	g, ok := q.(*graphcache.Graph)
-	if !ok {
-		return nil, fmt.Errorf("promotealign: source bridges need the catalog graph")
-	}
-	bridges, err := loadLayerBridges(g, q, sourceID, primary, byKind)
-	if err != nil {
-		return nil, err
-	}
-	out := make([]graphcache.SourceBridge, 0, len(bridges))
-	for _, b := range bridges {
-		out = append(out, graphcache.SourceBridge{
-			A: append([]byte(nil), b.A...), B: append([]byte(nil), b.B...),
-			BridgeType: b.Signature.BridgeType, Term: b.Signature.RoleOrType,
-			NeighborKind: b.Signature.NeighborKind, NeighborTypeTerm: b.Signature.NeighborTypeTerm,
-			Directed: b.Signature.Directed,
-		})
-	}
-	return out, nil
-}
-
 func loadTitleEdges(q graphcache.Querier, sourceID []byte, subjects []graphcache.SourceSubject) ([]graphcache.SourceEdge, []graphcache.SourceEdge, error) {
 	var events [][]byte
 	for _, s := range subjects {
@@ -243,8 +207,9 @@ func checkSource(g *graphcache.Graph, id []byte, stored graphcache.SourceGraph) 
 	if err != nil {
 		return err
 	}
-	if !reflect.DeepEqual(stored.Members, fresh.Members) || !reflect.DeepEqual(stored.Bridges, fresh.Bridges) {
-		return fmt.Errorf("promotealign: stored source %x members or bridges do not match a fresh read", id)
+	fresh.SourceID = append([]byte(nil), id...)
+	if !reflect.DeepEqual(stored, fresh) {
+		return fmt.Errorf("sourcefill: stored source %x does not match a fresh read", id)
 	}
 	return nil
 }
