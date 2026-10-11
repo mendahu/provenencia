@@ -280,6 +280,10 @@ private struct EvidenceGraphContent: View {
                 contentSize: contentSize,
                 contentOrigin: canvas.origin,
                 contentID: sourceID,
+                restoredCamera: model.session.graphCamera(for: sourceID),
+                onCameraChange: { camera in
+                    model.session.setGraphCamera(camera, for: sourceID)
+                },
                 accessibilityLabel: L10n.string(L10n.Workspace.evidenceGraphTitle)
             ) {
                 EvidenceGraphDocument(

@@ -26,9 +26,15 @@ struct GraphCanvasScrollView<Content: View>: NSViewRepresentable {
     /// Grid-space point the document's top-left stands on. Moving it shifts the
     /// scroll offset by the same delta so the viewport stays on the same content.
     var contentOrigin: CGPoint = .zero
-    /// Stable identity for the document (e.g. source id). Changing it resets
-    /// magnification; keeping it stable preserves zoom.
+    /// Stable identity for the document (e.g. source id). Changing it restores
+    /// `restoredCamera`, or centers at 1× when that is nil. Keeping it stable
+    /// preserves zoom, including when the document grows.
     var contentID: AnyHashable
+    /// Applied when `contentID` changes. Nil opens centered at 1×.
+    /// A content-size change does not apply this and does not recenter.
+    var restoredCamera: GraphCanvasCamera? = nil
+    /// Live pan and zoom. Hosts persist this; the scroll view does not.
+    var onCameraChange: (GraphCanvasCamera) -> Void = { _ in }
     /// VoiceOver name for the canvas group that holds the items and their rotors.
     var accessibilityLabel: String = ""
     @ViewBuilder var content: () -> Content
@@ -48,8 +54,12 @@ struct GraphCanvasScrollView<Content: View>: NSViewRepresentable {
         scrollView.magnification = 1
         scrollView.drawsBackground = false
         scrollView.borderType = .noBorder
+        scrollView.onCameraChange = { [weak coordinator = context.coordinator] camera in
+            coordinator?.onCameraChange(camera)
+        }
 
         let coordinator = context.coordinator
+        coordinator.onCameraChange = onCameraChange
         coordinator.viewport.scrollView = scrollView
         scrollView.viewport = coordinator.viewport
         coordinator.pointer.viewport = coordinator.viewport
@@ -66,14 +76,19 @@ struct GraphCanvasScrollView<Content: View>: NSViewRepresentable {
         coordinator.installedContentSize = contentSize
         coordinator.installedContentOrigin = contentOrigin
 
+        let restored = restoredCamera
         DispatchQueue.main.async {
-            Self.centerDocument(in: scrollView, contentSize: contentSize)
+            scrollView.applyOpeningCamera(restored, contentSize: contentSize)
         }
         return scrollView
     }
 
     func updateNSView(_ scrollView: GraphCanvasNSScrollView, context: Context) {
         let coordinator = context.coordinator
+        coordinator.onCameraChange = onCameraChange
+        scrollView.onCameraChange = { [weak coordinator] camera in
+            coordinator?.onCameraChange(camera)
+        }
         coordinator.viewport.scrollView = scrollView
         scrollView.viewport = coordinator.viewport
         coordinator.pointer.viewport = coordinator.viewport
@@ -98,15 +113,15 @@ struct GraphCanvasScrollView<Content: View>: NSViewRepresentable {
         if sizeChanged {
             coordinator.documentView?.resizeDocument(to: contentSize)
         }
+        // Identity change restores that document's camera. Growing the
+        // document must not recenter or reset zoom. Moving the origin keeps
+        // the same grid point in view.
         if originDelta != .zero, !idChanged {
             Self.shiftVisibleOrigin(in: scrollView, by: originDelta, contentSize: contentSize)
             coordinator.pointer.shiftActiveDocumentOrigin(by: originDelta)
         }
         if idChanged {
-            scrollView.magnification = 1
-            DispatchQueue.main.async {
-                Self.centerDocument(in: scrollView, contentSize: contentSize)
-            }
+            scrollView.applyOpeningCamera(restoredCamera, contentSize: contentSize)
         }
     }
 
@@ -127,20 +142,6 @@ struct GraphCanvasScrollView<Content: View>: NSViewRepresentable {
             magnification: scrollView.magnification,
             contentOffset: origin
         )
-    }
-
-    private static func centerDocument(in scrollView: NSScrollView, contentSize: CGSize) {
-        let visible = scrollView.contentView.bounds.size
-        let origin = GraphCanvasCoordinates.clampedContentOrigin(
-            proposed: CGPoint(
-                x: (contentSize.width - visible.width) / 2,
-                y: (contentSize.height - visible.height) / 2
-            ),
-            documentSize: contentSize,
-            visibleSize: visible
-        )
-        scrollView.contentView.scroll(to: origin)
-        scrollView.reflectScrolledClipView(scrollView.contentView)
     }
 
     /// Keeps the same grid point in view when the document's origin moves.
@@ -167,6 +168,7 @@ struct GraphCanvasScrollView<Content: View>: NSViewRepresentable {
         var installedContentID: AnyHashable?
         var installedContentSize: CGSize?
         var installedContentOrigin: CGPoint?
+        var onCameraChange: (GraphCanvasCamera) -> Void = { _ in }
         let viewport: GraphCanvasViewportController
         let pointer: GraphCanvasPointerController
 
@@ -185,6 +187,8 @@ struct GraphCanvasScrollView<Content: View>: NSViewRepresentable {
 /// trackpad two-finger scrolling as pan.
 final class GraphCanvasNSScrollView: NSScrollView {
     weak var viewport: GraphCanvasViewportController?
+    var onCameraChange: ((GraphCanvasCamera) -> Void)?
+    private var suppressCameraReport = false
     private var isUpdatingMagnificationFloor = false
 
     override var magnification: CGFloat {
@@ -195,7 +199,55 @@ final class GraphCanvasNSScrollView: NSScrollView {
             MainActor.assumeIsolated {
                 viewport?.magnification = value
             }
+            reportCamera()
         }
+    }
+
+    /// Restores `camera`, or centers at 1× when it is nil. Both stay at or above
+    /// the magnification that still covers the window.
+    func applyOpeningCamera(_ camera: GraphCanvasCamera?, contentSize: CGSize) {
+        suppressCameraReport = true
+        defer {
+            suppressCameraReport = false
+            reportCamera()
+        }
+        let floor = GraphCanvasCoordinates.magnificationThatFills(
+            documentSize: contentSize,
+            viewportSize: contentView.frame.size
+        )
+        minMagnification = floor
+        if let camera {
+            magnification = GraphCanvasCoordinates.clampMagnification(
+                camera.magnification,
+                minimum: floor
+            )
+            let visible = contentView.bounds.size
+            let origin = GraphCanvasCoordinates.clampedContentOrigin(
+                proposed: camera.contentOffset,
+                documentSize: contentSize,
+                visibleSize: visible
+            )
+            contentView.scroll(to: origin)
+            reflectScrolledClipView(contentView)
+        } else {
+            magnification = GraphCanvasCoordinates.clampMagnification(1, minimum: floor)
+            let visible = contentView.bounds.size
+            let origin = GraphCanvasCoordinates.clampedContentOrigin(
+                proposed: CGPoint(
+                    x: (contentSize.width - visible.width) / 2,
+                    y: (contentSize.height - visible.height) / 2
+                ),
+                documentSize: contentSize,
+                visibleSize: visible
+            )
+            contentView.scroll(to: origin)
+            reflectScrolledClipView(contentView)
+        }
+    }
+
+    override func reflectScrolledClipView(_ clipView: NSClipView) {
+        super.reflectScrolledClipView(clipView)
+        reportCamera()
     }
 
     override func layout() {
@@ -221,6 +273,16 @@ final class GraphCanvasNSScrollView: NSScrollView {
         let clip = contentView
         let center = clip.convert(CGPoint(x: clip.bounds.midX, y: clip.bounds.midY), to: nil)
         zoom(to: floor, windowLocation: center)
+    }
+
+    private func reportCamera() {
+        guard !suppressCameraReport, let onCameraChange else { return }
+        onCameraChange(
+            GraphCanvasCamera(
+                magnification: magnification,
+                contentOffset: documentVisibleRect.origin
+            )
+        )
     }
 
     override func viewDidMoveToWindow() {
