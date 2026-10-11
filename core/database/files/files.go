@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/sqlbatch"
 	"github.com/mendahu/provenencia/core/objectpath"
 )
 
@@ -72,20 +73,13 @@ func LookupMany(c *database.Catalog, ids [][]byte) (map[string]File, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = database.ForEachBatch(ids, func(batch [][]byte) error {
-		rows, err := db.Query(sqlLookupMany+database.SQLInPlaceholders(len(batch))+`)`, database.BlobArgs(batch)...)
+	err = sqlbatch.Query(db, sqlLookupMany, `)`, nil, ids, func(rows *sql.Rows) error {
+		f, err := scanFile(rows)
 		if err != nil {
 			return err
 		}
-		defer rows.Close()
-		for rows.Next() {
-			f, err := scanFile(rows)
-			if err != nil {
-				return err
-			}
-			out[string(f.ID)] = f
-		}
-		return rows.Err()
+		out[string(f.ID)] = f
+		return nil
 	})
 	if err != nil {
 		return nil, err

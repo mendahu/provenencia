@@ -29,6 +29,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/sqlbatch"
 )
 
 var ErrInvalid = apperr.New(apperr.CodeDateValuesInvalid, apperr.KindUser)
@@ -223,7 +224,7 @@ func Lookup(c *database.Catalog, id []byte) (Value, error) {
 }
 
 // LookupManyTx returns date_values rows for the given ids, one query per
-// database.InBatch ids, keyed by string(id). Missing ids are omitted.
+// sqlbatch.Size ids, keyed by string(id). Missing ids are omitted.
 func LookupManyTx(q interface {
 	Query(query string, args ...any) (*sql.Rows, error)
 }, ids [][]byte) (map[string]Value, error) {
@@ -232,22 +233,15 @@ func LookupManyTx(q interface {
 	if len(ids) == 0 {
 		return out, nil
 	}
-	err := database.ForEachBatch(ids, func(batch [][]byte) error {
-		rows, err := q.Query(sqlLookupMany+database.SQLInPlaceholders(len(batch))+`)`, database.BlobArgs(batch)...)
+	err := sqlbatch.Query(q, sqlLookupMany, `)`, nil, ids, func(rows *sql.Rows) error {
+		var id []byte
+		v, err := scanValue(rows, &id)
 		if err != nil {
 			return err
 		}
-		defer rows.Close()
-		for rows.Next() {
-			var id []byte
-			v, err := scanValue(rows, &id)
-			if err != nil {
-				return err
-			}
-			v.ID = append([]byte(nil), id...)
-			out[string(v.ID)] = v
-		}
-		return rows.Err()
+		v.ID = append([]byte(nil), id...)
+		out[string(v.ID)] = v
+		return nil
 	})
 	if err != nil {
 		return nil, err

@@ -2,20 +2,19 @@ package conclusionheaders
 
 import (
 	"bytes"
+	"database/sql"
 	"sort"
 
 	"github.com/mendahu/provenencia/core/connectrules"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/canonicalgraph"
+	"github.com/mendahu/provenencia/core/database/sqlbatch"
 	"github.com/mendahu/provenencia/core/hops"
 )
 
 // headerChainDepth is how far a place row's parent chain climbs, and how far
 // the reverse of that read walks back down. The place neighborhood uses the same bound.
 const headerChainDepth = 8
-
-// walkBatch bounds an IN list. A list is still a fixed number of queries.
-const walkBatch = 500
 
 // Dependents is the reverse of the header reads. A place reaches its
 // descendants to headerChainDepth, the events located at those places, and
@@ -119,21 +118,13 @@ func AssociationEndpoints(q Querier, ids [][]byte) ([][]byte, error) {
 			AND (` + where + `)
 			AND r.entity_id IN (`
 	var out [][]byte
-	err := database.ForEachBatch(ids, func(batch [][]byte) error {
-		rows, err := q.Query(query+database.SQLInPlaceholders(len(batch))+`)`,
-			append(append([]any(nil), args...), database.BlobArgs(batch)...)...)
-		if err != nil {
+	err := sqlbatch.Query(q, query, `)`, args, ids, func(rows *sql.Rows) error {
+		var id []byte
+		if err := rows.Scan(&id); err != nil {
 			return err
 		}
-		defer rows.Close()
-		for rows.Next() {
-			var id []byte
-			if err := rows.Scan(&id); err != nil {
-				return err
-			}
-			out = append(out, append([]byte(nil), id...))
-		}
-		return rows.Err()
+		out = append(out, append([]byte(nil), id...))
+		return nil
 	})
 	if err != nil {
 		return nil, err
@@ -181,25 +172,16 @@ WHERE ev.id IN (`
 func birthOrDeath(q Querier, ids [][]byte) ([][]byte, error) {
 	ids = database.UniqueBlobIDs(ids)
 	var out [][]byte
-	for start := 0; start < len(ids); start += walkBatch {
-		chunk := ids[start:min(start+walkBatch, len(ids))]
-		rows, err := q.Query(sqlBirthOrDeath+database.SQLInPlaceholders(len(chunk))+`)`, database.BlobArgs(chunk)...)
-		if err != nil {
-			return nil, err
+	err := sqlbatch.Query(q, sqlBirthOrDeath, `)`, nil, ids, func(rows *sql.Rows) error {
+		var id []byte
+		if err := rows.Scan(&id); err != nil {
+			return err
 		}
-		for rows.Next() {
-			var id []byte
-			if err := rows.Scan(&id); err != nil {
-				_ = rows.Close()
-				return nil, err
-			}
-			out = append(out, append([]byte(nil), id...))
-		}
-		err = rows.Err()
-		_ = rows.Close()
-		if err != nil {
-			return nil, err
-		}
+		out = append(out, append([]byte(nil), id...))
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
 	return out, nil
 }

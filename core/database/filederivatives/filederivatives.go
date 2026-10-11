@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/sqlbatch"
 )
 
 var ErrInvalid = apperr.New(apperr.CodeFileDerivativesInvalid, apperr.KindUser)
@@ -62,21 +63,13 @@ func LookupMany(c *database.Catalog, sourceFileIDs [][]byte, derivativeType stri
 	if err != nil {
 		return nil, err
 	}
-	err = database.ForEachBatch(ids, func(batch [][]byte) error {
-		args := append([]any{derivativeType}, database.BlobArgs(batch)...)
-		rows, err := db.Query(sqlLookupMany+database.SQLInPlaceholders(len(batch))+`)`, args...)
+	err = sqlbatch.Query(db, sqlLookupMany, `)`, []any{derivativeType}, ids, func(rows *sql.Rows) error {
+		link, err := scanLink(rows)
 		if err != nil {
 			return err
 		}
-		defer rows.Close()
-		for rows.Next() {
-			link, err := scanLink(rows)
-			if err != nil {
-				return err
-			}
-			out[string(link.SourceFileID)] = link
-		}
-		return rows.Err()
+		out[string(link.SourceFileID)] = link
+		return nil
 	})
 	if err != nil {
 		return nil, err

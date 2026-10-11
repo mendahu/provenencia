@@ -19,6 +19,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/sqlbatch"
 )
 
 var ErrInvalid = apperr.New(apperr.CodeNameValuesInvalid, apperr.KindUser)
@@ -243,7 +244,7 @@ func LookupMany(c *database.Catalog, ids [][]byte) (map[string]Value, error) {
 }
 
 // LookupManyTx is LookupMany on an existing connection or transaction: two
-// queries per database.InBatch ids.
+// queries per sqlbatch.Size ids.
 func LookupManyTx(db interface {
 	Query(query string, args ...any) (*sql.Rows, error)
 }, ids [][]byte) (map[string]Value, error) {
@@ -252,24 +253,17 @@ func LookupManyTx(db interface {
 	if len(ids) == 0 {
 		return out, nil
 	}
-	err := database.ForEachBatch(ids, func(batch [][]byte) error {
-		rows, err := db.Query(sqlLookupValueID+database.SQLInPlaceholders(len(batch))+`)`, database.BlobArgs(batch)...)
-		if err != nil {
+	err := sqlbatch.Query(db, sqlLookupValueID, `)`, nil, ids, func(rows *sql.Rows) error {
+		var (
+			v  Value
+			id []byte
+		)
+		if err := rows.Scan(&id, &v.Form); err != nil {
 			return err
 		}
-		defer rows.Close()
-		for rows.Next() {
-			var (
-				v  Value
-				id []byte
-			)
-			if err := rows.Scan(&id, &v.Form); err != nil {
-				return err
-			}
-			v.ID = append([]byte(nil), id...)
-			out[string(v.ID)] = v
-		}
-		return rows.Err()
+		v.ID = append([]byte(nil), id...)
+		out[string(v.ID)] = v
+		return nil
 	})
 	if err != nil {
 		return nil, err
@@ -279,31 +273,23 @@ func LookupManyTx(db interface {
 		parentIDs = append(parentIDs, v.ID)
 	}
 	// A parent's parts all come back in its batch, in idx order.
-	err = database.ForEachBatch(parentIDs, func(batch [][]byte) error {
-		pq := sqlLookupPartsByParents + database.SQLInPlaceholders(len(batch)) + `) ORDER BY name_value_id, idx`
-		prows, err := db.Query(pq, database.BlobArgs(batch)...)
-		if err != nil {
+	err = sqlbatch.Query(db, sqlLookupPartsByParents, `) ORDER BY name_value_id, idx`, nil, parentIDs, func(rows *sql.Rows) error {
+		var (
+			p        Part
+			parentID []byte
+			typ      sql.NullString
+			part     []byte
+		)
+		if err := rows.Scan(&part, &parentID, &p.Idx, &p.Value, &typ); err != nil {
 			return err
 		}
-		defer prows.Close()
-		for prows.Next() {
-			var (
-				p        Part
-				parentID []byte
-				typ      sql.NullString
-				part     []byte
-			)
-			if err := prows.Scan(&part, &parentID, &p.Idx, &p.Value, &typ); err != nil {
-				return err
-			}
-			p.ID = append([]byte(nil), part...)
-			p.Type = typ.String
-			k := string(parentID)
-			v := out[k]
-			v.Parts = append(v.Parts, p)
-			out[k] = v
-		}
-		return prows.Err()
+		p.ID = append([]byte(nil), part...)
+		p.Type = typ.String
+		k := string(parentID)
+		v := out[k]
+		v.Parts = append(v.Parts, p)
+		out[k] = v
+		return nil
 	})
 	if err != nil {
 		return nil, err
