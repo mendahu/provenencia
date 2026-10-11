@@ -156,6 +156,11 @@ const DefaultSuggestionLimit = 10
 // least MinScore; the same name alone clears it, a shared surname alone
 // clears it barely. A sex mismatch narrows the score; it does not hide
 // a name that otherwise cleared MinScore.
+// ProfiledKinds are the subject type keys DefaultProfile knows.
+func ProfiledKinds() []string {
+	return []string{"person", "event", "place"}
+}
+
 func DefaultProfile(kind string) (Profile, bool) {
 	switch kind {
 	case "person":

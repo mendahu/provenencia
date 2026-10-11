@@ -233,6 +233,11 @@ final class PromoteModel {
     }
 
     private func repropose(generation: Int) async {
+        defer {
+            if generation == proposeGeneration {
+                isProposing = false
+            }
+        }
         let fixed = flow.rows.compactMap { row -> CatalogPromoteGraphAlignmentFixed? in
             guard row.decided else { return nil }
             switch row.target {
@@ -260,7 +265,6 @@ final class PromoteModel {
             guard generation == proposeGeneration else { return }
             proposeError = L10n.Errors.message(for: error)
         }
-        isProposing = false
     }
 
     private func file() async {

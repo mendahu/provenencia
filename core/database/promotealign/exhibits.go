@@ -8,6 +8,7 @@ import (
 	"github.com/mendahu/provenencia/core/connectrules"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/datevalues"
+	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/graphalign"
@@ -31,7 +32,7 @@ type exhibitObs struct {
 // members one hop from the chosen handle's members: "her birth date matches"
 // compares this birth with that birth, never with some other event's date.
 // A neighbor Align didn't map (New, Skip, unreachable) contributes nothing.
-func attachExhibits(q Querier, layer graphalign.Layer, prop *graphalign.Proposal, cfg graphalign.Config, stats graphalign.Stats) error {
+func attachExhibits(q Querier, g *graphcache.Graph, layer graphalign.Layer, prop *graphalign.Proposal, cfg graphalign.Config, stats graphalign.Stats) error {
 	if prop == nil || len(prop.Rows) == 0 {
 		return nil
 	}
@@ -51,7 +52,7 @@ func attachExhibits(q Querier, layer graphalign.Layer, prop *graphalign.Proposal
 	for _, h := range mappedTo {
 		handleIDs = append(handleIDs, h)
 	}
-	members, err := acceptedMembers(q, handleIDs) // every row's handle, neighbors' included
+	members, err := acceptedMembers(g, handleIDs)
 	if err != nil {
 		return err
 	}
@@ -66,17 +67,28 @@ func attachExhibits(q Querier, layer graphalign.Layer, prop *graphalign.Proposal
 		neighbors []neighborPair
 	}
 	var plans []rowPlan
-	var memberIDs [][]byte
+	var fromMembers, towardMembers [][]byte
 	for i := range prop.Rows {
 		r := &prop.Rows[i]
 		if r.Target != graphalign.TargetHandle || len(r.HandleID) != 16 {
 			continue
 		}
 		own := members[string(r.HandleID)]
-		memberIDs = append(memberIDs, own...)
 		plans = append(plans, rowPlan{idx: i, own: own})
+		mapped := false
+		for _, n := range neighbors[string(r.SubjectID)] {
+			gID, ok := mappedTo[string(n)]
+			if !ok {
+				continue
+			}
+			mapped = true
+			towardMembers = append(towardMembers, members[string(gID)]...)
+		}
+		if mapped {
+			fromMembers = append(fromMembers, own...)
+		}
 	}
-	hops, err := bridgeNeighbors(q, memberIDs)
+	hops, err := bridgeNeighbors(q, fromMembers, towardMembers)
 	if err != nil {
 		return err
 	}
@@ -263,47 +275,49 @@ func exhibitAuto(v match.Value) autoreconcile.Value {
 	}
 }
 
-// acceptedMembers maps each handle to its accepted member Subjects.
-func acceptedMembers(q Querier, entityIDs [][]byte) (map[string][][]byte, error) {
+// acceptedMembers maps each handle to its accepted member Subjects, in claim
+// id order, from nodes the proposal already loaded.
+func acceptedMembers(g *graphcache.Graph, entityIDs [][]byte) (map[string][][]byte, error) {
 	out := map[string][][]byte{}
-	ids := database.UniqueBlobIDs(entityIDs)
-	for start := 0; start < len(ids); start += inBatch {
-		chunk := ids[start:min(start+inBatch, len(ids))]
-		rows, err := q.Query(`SELECT entity_id, subject_id FROM identity_claims
-			WHERE status = 'accepted' AND entity_id IN (`+database.SQLInPlaceholders(len(chunk))+`)
-			ORDER BY entity_id, subject_id`, database.BlobArgs(chunk)...)
+	if g == nil {
+		return out, nil
+	}
+	for _, id := range database.UniqueBlobIDs(entityIDs) {
+		n, err := g.Node(id)
 		if err != nil {
 			return nil, err
 		}
-		for rows.Next() {
-			var entity, subject []byte
-			if err := rows.Scan(&entity, &subject); err != nil {
-				_ = rows.Close()
-				return nil, err
+		if n == nil {
+			continue
+		}
+		for _, m := range n.Members {
+			if m.Accepted {
+				out[string(n.ID)] = append(out[string(n.ID)], m.SubjectID)
 			}
-			out[string(entity)] = append(out[string(entity)], subject)
-		}
-		err = rows.Err()
-		_ = rows.Close()
-		if err != nil {
-			return nil, err
 		}
 	}
 	return out, nil
 }
 
-// bridgeNeighbors maps each of subjectIDs to the Subjects one bridge away.
-func bridgeNeighbors(q Querier, subjectIDs [][]byte) (map[string][][]byte, error) {
+// bridgeNeighbors maps each subject in from to the subjects in toward that
+// sit one bridge away. toward limits the read to the neighbor handle's
+// members, so a hub's members do not pull every bridge.
+func bridgeNeighbors(q Querier, from, toward [][]byte) (map[string][][]byte, error) {
 	out := map[string][][]byte{}
 	keys := connectrules.BridgeTypeKeys()
-	if len(subjectIDs) == 0 || len(keys) == 0 {
+	from = database.UniqueBlobIDs(from)
+	toward = database.UniqueBlobIDs(toward)
+	if len(from) == 0 || len(toward) == 0 || len(keys) == 0 {
 		return out, nil
 	}
-	args := make([]any, 0, len(keys)+len(subjectIDs))
+	args := make([]any, 0, len(keys)+len(from)+len(toward))
 	for _, k := range keys {
 		args = append(args, k)
 	}
-	for _, id := range subjectIDs {
+	for _, id := range from {
+		args = append(args, id)
+	}
+	for _, id := range toward {
 		args = append(args, id)
 	}
 	rows, err := q.Query(`SELECT e1.value_subject_id, e2.value_subject_id
@@ -315,7 +329,8 @@ func bridgeNeighbors(q Querier, subjectIDs [][]byte) (map[string][][]byte, error
 			AND st.origin = 'provenencia'
 			AND st.key IN (`+database.SQLInPlaceholders(len(keys))+`)
 		WHERE e1.polarity = 'positive'
-			AND e1.value_subject_id IN (`+database.SQLInPlaceholders(len(subjectIDs))+`)`, args...)
+			AND e1.value_subject_id IN (`+database.SQLInPlaceholders(len(from))+`)
+			AND e2.value_subject_id IN (`+database.SQLInPlaceholders(len(toward))+`)`, args...)
 	if err != nil {
 		return nil, err
 	}

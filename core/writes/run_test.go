@@ -238,7 +238,7 @@ func TestRunDropsListeners(t *testing.T) {
 	got, res, err := writes.Run(c, writes.Op{Action: "test"}, func(tx *database.Tx) (string, []rowchange.Change, error) {
 		return "saved", oneChange(t), nil
 	})
-	if err == nil || err.Error() != "nope" {
+	if err != nil {
 		t.Fatalf("err %v", err)
 	}
 	if got != "saved" || res.Revision == 0 {

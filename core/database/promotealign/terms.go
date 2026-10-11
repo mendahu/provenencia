@@ -1,7 +1,9 @@
 package promotealign
 
 import (
+	"github.com/mendahu/provenencia/core/connectrules"
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/graphcache"
 )
 
 // inBatch bounds an IN list; a batched read is still a fixed number of queries.
@@ -26,29 +28,36 @@ type kinship struct {
 }
 
 // loadKinship reads which terms keep direction and which name an inverse.
-func loadKinship(q Querier) (kinship, error) {
-	rows, err := q.Query(`SELECT p.key, t.key, t.directed, COALESCE(t.inverse_key, '') FROM property_terms t
-		JOIN properties p ON p.id = t.property_id
-		WHERE t.directed = 1 OR t.inverse_key IS NOT NULL`)
+func loadKinship(g *graphcache.Graph) (kinship, error) {
+	v, err := g.Vocabulary()
 	if err != nil {
 		return kinship{}, err
 	}
-	defer rows.Close()
 	k := kinship{directed: map[string]bool{}, inverse: map[string]string{}}
-	for rows.Next() {
-		var prop, term, inverse string
-		var directed bool
-		if err := rows.Scan(&prop, &term, &directed, &inverse); err != nil {
-			return kinship{}, err
+	for _, t := range v.Terms {
+		if t.Directed {
+			k.directed[t.PropertyKey+"|"+t.Key] = true
 		}
-		if directed {
-			k.directed[prop+"|"+term] = true
-		}
-		if inverse != "" {
-			k.inverse[prop+"|"+term] = inverse
+		if t.InverseKey != "" {
+			k.inverse[t.PropertyKey+"|"+t.Key] = t.InverseKey
 		}
 	}
-	return k, rows.Err()
+	return k, nil
+}
+
+// edgeStamp is the role, direction, and neighbor kind one bridge signs with.
+// A term and its inverse share the key that sorts first; flip says the ends swap.
+func edgeStamp(bridgeKey, role string, kin kinship) (roleOut string, directed bool, neighborKind string, flip bool) {
+	b, ok := connectrules.LookupBridge(bridgeKey)
+	if ok && len(b.Endpoints) == 2 {
+		neighborKind = b.Endpoints[1].TypeKey
+	}
+	roleOut = role
+	if ok && connectrules.HasDisambiguation(b.Disambiguation) {
+		roleOut, flip = kin.canonical(b.Disambiguation, role)
+		directed = kin.directed[b.Disambiguation+"|"+roleOut]
+	}
+	return roleOut, directed, neighborKind, flip
 }
 
 // canonical is the key one relationship is matched under. A term and its

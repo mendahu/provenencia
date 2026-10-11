@@ -5,7 +5,7 @@ import "github.com/mendahu/provenencia/core/database/effects"
 // CommitListener hears a committed write. OnCommit applies the notice.
 // Drop discards the listener's state. writes.Run calls Drop on every
 // listener when any OnCommit fails, so a partial notice does not stick.
-// Nothing registers a listener until the graph cache does.
+// The canonical graph registers itself when a catalog opens.
 type CommitListener interface {
 	OnCommit(rev int64, set effects.Set) error
 	Drop()

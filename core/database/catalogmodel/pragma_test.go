@@ -1,4 +1,4 @@
-package catalogmodel
+package catalogmodel_test
 
 import (
 	"database/sql"
@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/catalogmodel"
 )
 
 // TestPragmaHonesty keeps the hand-written catalog model in step with a
@@ -33,12 +34,12 @@ func TestPragmaHonesty(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	registered := map[string]FK{}
-	for _, fk := range FKs {
+	registered := map[string]catalogmodel.FK{}
+	for _, fk := range catalogmodel.FKs {
 		registered[fk.From+"."+fk.Column] = fk
 	}
 	registeredTables := map[string]bool{}
-	for _, spec := range Tables {
+	for _, spec := range catalogmodel.Tables {
 		if spec.Name != "" {
 			registeredTables[spec.Name] = true
 		}
