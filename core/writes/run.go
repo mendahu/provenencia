@@ -3,6 +3,8 @@
 package writes
 
 import (
+	"log"
+
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/audit"
 	"github.com/mendahu/provenencia/core/database/autoreconciler"
@@ -94,7 +96,10 @@ func Run[T any](c *database.Catalog, op Op, fn func(tx *database.Tx) (T, []rowch
 	}
 	tx.RunAfterCommit()
 	if err := c.Notify(rev, set); err != nil {
-		return value, Result{Revision: rev, Effects: set}, err
+		// The commit has landed and Notify has already dropped every listener.
+		// Returning the error made the client retry a write that saved.
+		log.Printf("provenencia: listener after commit rev %d: %v", rev, err)
+		return value, Result{Revision: rev, Effects: set}, nil
 	}
 	return value, Result{Revision: rev, Effects: set}, nil
 }
