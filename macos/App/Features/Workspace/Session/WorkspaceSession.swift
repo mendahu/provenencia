@@ -19,6 +19,9 @@ final class WorkspaceSession {
     private(set) var visibleKeys: Set<CatalogQueryKey> = []
     /// Transient notice after leaving a place (composer save, etc.).
     var noticeToast: VocabularyToast?
+    /// Evidence-graph pan and zoom, keyed by Source id. Not catalog data; quit drops it.
+    @ObservationIgnored
+    private var graphCameras: [String: GraphCanvasCamera] = [:]
 
     init(
         projectKey: ProjectKey,
@@ -28,6 +31,15 @@ final class WorkspaceSession {
         self.projectKey = projectKey
         self.store = store
         self.registry = registry
+    }
+
+    func graphCamera(for sourceID: String) -> GraphCanvasCamera? {
+        graphCameras[sourceID]
+    }
+
+    func setGraphCamera(_ camera: GraphCanvasCamera, for sourceID: String) {
+        guard graphCameras[sourceID] != camera else { return }
+        graphCameras[sourceID] = camera
     }
 
     /// Returns an existing handle without starting a load.

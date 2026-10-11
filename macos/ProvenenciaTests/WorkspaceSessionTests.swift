@@ -710,6 +710,26 @@ struct WorkspaceSessionTests {
         #expect(listHandle.value == sourcesAtLoad)
         #expect(listHandle.isFetching == false)
     }
+
+    @Test func graphCameraIsPerSource() {
+        let session = makeSession()
+        let first = GraphCanvasCamera(
+            magnification: 0.5,
+            contentOffset: CGPoint(x: 120, y: 80)
+        )
+        session.setGraphCamera(first, for: "src-a")
+        #expect(session.graphCamera(for: "src-a") == first)
+        #expect(session.graphCamera(for: "src-b") == nil)
+
+        let second = GraphCanvasCamera(
+            magnification: 1.25,
+            contentOffset: CGPoint(x: 10, y: 20)
+        )
+        session.setGraphCamera(second, for: "src-b")
+        #expect(session.graphCamera(for: "src-a") == first)
+        #expect(session.graphCamera(for: "src-b") == second)
+        #expect(session.graphCamera(for: "src-a") != session.graphCamera(for: "src-b"))
+    }
 }
 
 /// One-shot gate so concurrent loaders block until tests observe stale data.
