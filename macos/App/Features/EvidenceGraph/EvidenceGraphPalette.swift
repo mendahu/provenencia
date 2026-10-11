@@ -63,6 +63,7 @@ struct EvidenceGraphPalette: View {
                 }
             }
             .pvFocusRing(focus.wrappedValue == .tool(kind), cornerRadius: 4)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .disabled(!model.canCite)
@@ -107,6 +108,7 @@ struct EvidenceGraphPalette: View {
                 }
             }
             .pvFocusRing(focus.wrappedValue == .toolConnect, cornerRadius: 4)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .disabled(!model.canCite)
