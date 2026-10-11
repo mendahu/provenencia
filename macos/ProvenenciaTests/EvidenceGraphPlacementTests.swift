@@ -58,45 +58,89 @@ struct EvidenceGraphPlacementTests {
         #expect(slot2.cell.gridY == slot1.cell.gridY + 4)
     }
 
-    @Test func fullColumnWraps() {
+    @Test func columnPastTheOldFloorGrowsDownward() {
         var subjects: [SourceGraphPlacedSubject] = [placedSubject(id: "origin", x: 0, y: 1)]
         let first = EvidenceGraphPlacement.composerSlot(
             in: snapshot(subjects: subjects, bridges: []),
             landingColumn: nil
         )
         var y = first.cell.gridY
+        var lastY = y
         while y <= EvidenceGraphPlacement.maxCell.gridY {
             subjects.append(placedSubject(id: "col-\(y)", x: first.landingColumn, y: y))
+            lastY = y
             y += EvidenceGraphPlacement.verticalStep
         }
-        let wrapped = EvidenceGraphPlacement.composerSlot(
-            in: snapshot(subjects: subjects, bridges: []),
+        let grown = snapshot(subjects: subjects, bridges: [])
+        let next = EvidenceGraphPlacement.composerSlot(
+            in: grown,
             landingColumn: first.landingColumn
         )
-        #expect(wrapped.cell.gridX == first.landingColumn + 8)
-        #expect(wrapped.cell.gridY == 1)
+        #expect(next.cell.gridX == first.landingColumn)
+        #expect(next.cell.gridY == lastY + EvidenceGraphPlacement.verticalStep)
+        #expect(next.cell.gridY > EvidenceGraphPlacement.maxCell.gridY)
+        let size = EvidenceGraphPlacement.contentSize(
+            fitting: EvidenceGraphPlacement.cardFrames(in: grown)
+        )
+        #expect(size.height == EvidenceGraphPlacement.contentSize.height + EvidenceGraphPlacement.growthStep)
+        #expect(size.width == EvidenceGraphPlacement.contentSize.width)
     }
 
-    @Test func rightmostColumnClampsYAndX() {
+    @Test func cardNearTheRightEdgeLandsPastTheOldMax() {
         let nearEdge = snapshot(
             subjects: [placedSubject(id: "edge", x: 90, y: 1)],
             bridges: []
         )
         let slot = EvidenceGraphPlacement.composerSlot(in: nearEdge, landingColumn: nil)
-        #expect(slot.cell.gridX == 96)
-
-        var subjects = [placedSubject(id: "edge", x: 96, y: 1)]
-        var y: Int64 = 1
-        while y <= EvidenceGraphPlacement.maxCell.gridY {
-            subjects.append(placedSubject(id: "full-\(y)", x: 96, y: y))
-            y += EvidenceGraphPlacement.verticalStep
-        }
-        let clamped = EvidenceGraphPlacement.composerSlot(
-            in: snapshot(subjects: subjects, bridges: []),
-            landingColumn: 96
+        #expect(slot.cell.gridX == 98)
+        let landing = EvidenceGraphPlacement.subjectFrame(gridX: slot.cell.gridX, gridY: slot.cell.gridY)
+        let size = EvidenceGraphPlacement.contentSize(
+            fitting: EvidenceGraphPlacement.cardFrames(in: nearEdge) + [landing]
         )
-        #expect(clamped.cell.gridX == 96)
-        #expect(clamped.cell.gridY == 98)
+        #expect(size.width == EvidenceGraphPlacement.contentSize.width + EvidenceGraphPlacement.growthStep)
+        let limit = EvidenceGraphPlacement.maxCell(fitting: size)
+        #expect(slot.cell.gridX <= limit.gridX)
+        #expect(limit.gridX > EvidenceGraphPlacement.maxCell.gridX)
+    }
+
+    @Test func furthestCardOpensOnALargerDocument() {
+        let packed = snapshot(
+            subjects: [placedSubject(id: "edge", x: 96, y: 98)],
+            bridges: []
+        )
+        let size = EvidenceGraphPlacement.contentSize(
+            fitting: EvidenceGraphPlacement.cardFrames(in: packed)
+        )
+        #expect(size.width == 4_800)
+        #expect(size.height == 4_800)
+        let limit = EvidenceGraphPlacement.maxCell(fitting: size)
+        #expect(limit.gridX > 96)
+        #expect(limit.gridY > 98)
+        #expect(EvidenceGraphPlacement.maxCell.gridX == 96)
+        #expect(EvidenceGraphPlacement.maxCell.gridY == 98)
+    }
+
+    @Test func smallGraphStaysOnTheBaseDocument() {
+        let snapshot = snapshot(subjects: [placedSubject(id: "p1", x: 4, y: 3)], bridges: [])
+        let size = EvidenceGraphPlacement.contentSize(
+            fitting: EvidenceGraphPlacement.cardFrames(in: snapshot)
+        )
+        #expect(size == EvidenceGraphPlacement.contentSize)
+    }
+
+    @Test func dragTowardTheEdgeGrowsBeforeTheDrop() {
+        let snapshot = snapshot(subjects: [placedSubject(id: "p1", x: 80, y: 4)], bridges: [])
+        let atRest = EvidenceGraphPlacement.contentSize(
+            fitting: EvidenceGraphPlacement.cardFrames(in: snapshot)
+        )
+        #expect(atRest == EvidenceGraphPlacement.contentSize)
+        let dragged = EvidenceGraphPlacement.contentSize(
+            fitting: EvidenceGraphPlacement.cardFrames(
+                in: snapshot,
+                dragOffsets: ["p1": CGSize(width: 700, height: 0)]
+            )
+        )
+        #expect(dragged.width == EvidenceGraphPlacement.contentSize.width + EvidenceGraphPlacement.growthStep)
     }
 
     @Test func resultStaysInsideMinMax() {

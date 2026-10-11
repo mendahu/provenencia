@@ -66,6 +66,9 @@ final class EvidenceGraphModel {
     var activatedSubjectID: String?
     /// Shown when drag / arrow persist fails after an optimistic patch.
     var toast: VocabularyToast?
+    /// Canvas size while a drag has carried a card past the resting document.
+    /// Cleared when the drop lands; the snapshot's own fit takes over.
+    var liveCanvasSize: CGSize?
 
     /// Seeded type ids keyed by primary or bridge kind rawValue.
     var typeIDByKind: [String: String] {

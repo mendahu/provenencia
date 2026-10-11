@@ -7,9 +7,6 @@ import SwiftUI
 /// reusable [`GraphCanvas`](../GraphCanvas/) shell with primary + bridge cards,
 /// palette place/create/connect, and drag persist (S6-02–S6-04).
 struct EvidenceGraphView: View {
-    /// Large enough to pan; Source-scoped graphs stay small (design note §7.1).
-    private static var contentSize: CGSize { EvidenceGraphPlacement.contentSize }
-
     let sourceID: String
     let session: WorkspaceSession
     let store: any GenealogyStore
@@ -58,7 +55,6 @@ struct EvidenceGraphView: View {
                     sourceID: sourceID,
                     sourceTitle: model.sourceTitle,
                     sourceRef: model.sourceRef,
-                    contentSize: Self.contentSize,
                     navigation: navigation
                 )
             } else {
@@ -102,7 +98,6 @@ private struct EvidenceGraphContent: View {
     let sourceID: String
     let sourceTitle: String
     let sourceRef: String?
-    let contentSize: CGSize
     let navigation: WorkspaceNavigation
     @FocusState private var focus: EvidenceGraphFocus?
 
@@ -116,6 +111,23 @@ private struct EvidenceGraphContent: View {
 
     private var bridges: [SourceGraphPlacedBridge] {
         snapshot.bridges
+    }
+
+    /// 4000×4000 until a card is within one card-width of an edge, then the
+    /// next 800-point step. A drag that has not landed yet can be larger.
+    private var contentSize: CGSize {
+        var frames = EvidenceGraphPlacement.cardFrames(in: snapshot)
+        if let ghost = model.ghostPlacedSubject() {
+            frames.append(
+                EvidenceGraphPlacement.subjectFrame(gridX: ghost.gridX, gridY: ghost.gridY)
+            )
+        }
+        let fitted = EvidenceGraphPlacement.contentSize(fitting: frames)
+        guard let live = model.liveCanvasSize else { return fitted }
+        return CGSize(
+            width: max(fitted.width, live.width),
+            height: max(fitted.height, live.height)
+        )
     }
 
     private var sheetPresented: Binding<Bool> {
@@ -462,6 +474,32 @@ private struct EvidenceGraphContent: View {
 
 // MARK: - Document (paint-only; AppKit owns pointer)
 
+/// Reads live drag offsets so the document can grow before the drop, without
+/// the card `ForEach` following every pointer event.
+private struct EvidenceGraphDragCanvasSize: View {
+    let snapshot: SourceGraphSnapshot
+    @Bindable var pointer: GraphCanvasPointerController
+    @Bindable var model: EvidenceGraphModel
+
+    var body: some View {
+        let size = EvidenceGraphPlacement.contentSize(
+            fitting: EvidenceGraphPlacement.cardFrames(in: snapshot, dragOffsets: pointer.offsets)
+        )
+        Color.clear
+            .frame(width: 0, height: 0)
+            .accessibilityHidden(true)
+            .onChange(of: size) { _, size in
+                guard pointer.draggingItemID != nil else { return }
+                model.liveCanvasSize = size
+            }
+            .onChange(of: pointer.draggingItemID) { _, id in
+                if id == nil {
+                    model.liveCanvasSize = nil
+                }
+            }
+    }
+}
+
 private struct EvidenceGraphDocument: View {
     @Bindable var graphHandle: QueryHandle<SourceGraphRows>
     @Bindable var fieldsHandle: QueryHandle<PropertiesSnapshot>
@@ -575,6 +613,8 @@ private struct EvidenceGraphDocumentBody: View {
             if subjects.isEmpty, bridges.isEmpty, graphHandle.status == .ready, inputMode == .idle {
                 emptyOverlay
             }
+
+            EvidenceGraphDragCanvasSize(snapshot: snapshot, pointer: pointer, model: model)
         }
         .frame(width: contentSize.width, height: contentSize.height)
         .coordinateSpace(name: EvidenceSubjectCard.documentCoordinateSpace)
