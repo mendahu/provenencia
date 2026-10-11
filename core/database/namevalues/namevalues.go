@@ -243,7 +243,7 @@ func LookupMany(c *database.Catalog, ids [][]byte) (map[string]Value, error) {
 }
 
 // LookupManyTx is LookupMany on an existing connection or transaction: two
-// queries whatever the number of ids.
+// queries per database.InBatch ids.
 func LookupManyTx(db interface {
 	Query(query string, args ...any) (*sql.Rows, error)
 }, ids [][]byte) (map[string]Value, error) {
@@ -252,59 +252,60 @@ func LookupManyTx(db interface {
 	if len(ids) == 0 {
 		return out, nil
 	}
-	q := sqlLookupValueID + database.SQLInPlaceholders(len(ids)) + `)`
-	rows, err := db.Query(q, database.BlobArgs(ids)...)
-	if err != nil {
-		return nil, err
-	}
-	for rows.Next() {
-		var (
-			v  Value
-			id []byte
-		)
-		if err := rows.Scan(&id, &v.Form); err != nil {
-			_ = rows.Close()
-			return nil, err
+	err := database.ForEachBatch(ids, func(batch [][]byte) error {
+		rows, err := db.Query(sqlLookupValueID+database.SQLInPlaceholders(len(batch))+`)`, database.BlobArgs(batch)...)
+		if err != nil {
+			return err
 		}
-		v.ID = append([]byte(nil), id...)
-		out[string(v.ID)] = v
-	}
-	err = rows.Err()
-	_ = rows.Close()
+		defer rows.Close()
+		for rows.Next() {
+			var (
+				v  Value
+				id []byte
+			)
+			if err := rows.Scan(&id, &v.Form); err != nil {
+				return err
+			}
+			v.ID = append([]byte(nil), id...)
+			out[string(v.ID)] = v
+		}
+		return rows.Err()
+	})
 	if err != nil {
 		return nil, err
-	}
-	if len(out) == 0 {
-		return out, nil
 	}
 	parentIDs := make([][]byte, 0, len(out))
 	for _, v := range out {
 		parentIDs = append(parentIDs, v.ID)
 	}
-	pq := sqlLookupPartsByParents + database.SQLInPlaceholders(len(parentIDs)) + `) ORDER BY name_value_id, idx`
-	prows, err := db.Query(pq, database.BlobArgs(parentIDs)...)
-	if err != nil {
-		return nil, err
-	}
-	defer prows.Close()
-	for prows.Next() {
-		var (
-			p        Part
-			parentID []byte
-			typ      sql.NullString
-			part     []byte
-		)
-		if err := prows.Scan(&part, &parentID, &p.Idx, &p.Value, &typ); err != nil {
-			return nil, err
+	// A parent's parts all come back in its batch, in idx order.
+	err = database.ForEachBatch(parentIDs, func(batch [][]byte) error {
+		pq := sqlLookupPartsByParents + database.SQLInPlaceholders(len(batch)) + `) ORDER BY name_value_id, idx`
+		prows, err := db.Query(pq, database.BlobArgs(batch)...)
+		if err != nil {
+			return err
 		}
-		p.ID = append([]byte(nil), part...)
-		p.Type = typ.String
-		k := string(parentID)
-		v := out[k]
-		v.Parts = append(v.Parts, p)
-		out[k] = v
-	}
-	if err := prows.Err(); err != nil {
+		defer prows.Close()
+		for prows.Next() {
+			var (
+				p        Part
+				parentID []byte
+				typ      sql.NullString
+				part     []byte
+			)
+			if err := prows.Scan(&part, &parentID, &p.Idx, &p.Value, &typ); err != nil {
+				return err
+			}
+			p.ID = append([]byte(nil), part...)
+			p.Type = typ.String
+			k := string(parentID)
+			v := out[k]
+			v.Parts = append(v.Parts, p)
+			out[k] = v
+		}
+		return prows.Err()
+	})
+	if err != nil {
 		return nil, err
 	}
 	return out, nil

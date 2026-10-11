@@ -99,7 +99,7 @@ func AssociationEndpoints(q Querier, ids [][]byte) ([][]byte, error) {
 		return nil, nil
 	}
 	var where string
-	args := make([]any, 0, len(bridges)*2+len(ids))
+	args := make([]any, 0, len(bridges)*2)
 	for i, b := range bridges {
 		if i > 0 {
 			where += " OR "
@@ -111,28 +111,34 @@ func AssociationEndpoints(q Querier, ids [][]byte) ([][]byte, error) {
 		where += "(st.origin = ? AND st.key = ?)"
 		args = append(args, origin, b.BridgeTypeKey)
 	}
-	args = append(args, database.BlobArgs(ids)...)
 	query := `SELECT DISTINCT r.value_entity_id
 		FROM auto_reconciler_values r
 		JOIN canonical_entities e ON e.id = r.entity_id
 		JOIN subject_types st ON st.id = e.subject_type_id
 		WHERE r.rank = 1 AND r.reason = 'kept' AND r.value_entity_id IS NOT NULL
 			AND (` + where + `)
-			AND r.entity_id IN (` + database.SQLInPlaceholders(len(ids)) + `)`
-	rows, err := q.Query(query, args...)
+			AND r.entity_id IN (`
+	var out [][]byte
+	err := database.ForEachBatch(ids, func(batch [][]byte) error {
+		rows, err := q.Query(query+database.SQLInPlaceholders(len(batch))+`)`,
+			append(append([]any(nil), args...), database.BlobArgs(batch)...)...)
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var id []byte
+			if err := rows.Scan(&id); err != nil {
+				return err
+			}
+			out = append(out, append([]byte(nil), id...))
+		}
+		return rows.Err()
+	})
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-	var out [][]byte
-	for rows.Next() {
-		var id []byte
-		if err := rows.Scan(&id); err != nil {
-			return nil, err
-		}
-		out = append(out, append([]byte(nil), id...))
-	}
-	return out, rows.Err()
+	return database.UniqueBlobIDs(out), nil
 }
 
 func walkDepth(q Querier, hop hops.Hop, roots [][]byte, depth int) ([][]byte, error) {

@@ -36,3 +36,19 @@ func BlobArgs(ids [][]byte) []any {
 	}
 	return args
 }
+
+// InBatch bounds one IN list. SQLite binds at most 32,766 values per
+// statement; a batch stays far under it, with room for a query's other
+// arguments, so a read of any size is a fixed number of queries per batch.
+const InBatch = 500
+
+// ForEachBatch calls fn with consecutive slices of ids, each at most
+// InBatch long. It stops at fn's first error.
+func ForEachBatch(ids [][]byte, fn func(batch [][]byte) error) error {
+	for start := 0; start < len(ids); start += InBatch {
+		if err := fn(ids[start:min(start+InBatch, len(ids))]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
