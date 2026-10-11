@@ -9,6 +9,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/conclusionheaders"
 	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/graphcache"
+	"github.com/mendahu/provenencia/core/database/sqlbatch"
 	"github.com/mendahu/provenencia/core/eventtitle"
 	"github.com/mendahu/provenencia/core/valuecodec"
 )
@@ -22,9 +23,6 @@ const (
 	KindEvent  = "event"
 	KindPlace  = "place"
 )
-
-// handleBatch bounds the IN list per reprojection query.
-const handleBatch = 500
 
 // handleKinds are the Conclusion kinds that have a search document.
 var handleKinds = map[string]bool{
@@ -52,13 +50,9 @@ const (
 // kinds without a document are removed.
 func ReprojectHandles(q Querier, entityIDs [][]byte) error {
 	ids := database.UniqueBlobIDs(entityIDs)
-	for start := 0; start < len(ids); start += handleBatch {
-		end := min(start+handleBatch, len(ids))
-		if err := reprojectHandleBatch(q, ids[start:end]); err != nil {
-			return err
-		}
-	}
-	return nil
+	return sqlbatch.Each(ids, func(batch [][]byte) error {
+		return reprojectHandleBatch(q, batch)
+	})
 }
 
 // reprojectAllHandles reprojects every handle (RebuildAll).

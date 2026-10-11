@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/mendahu/provenencia/core/connectrules"
+	"github.com/mendahu/provenencia/core/database/sqlbatch"
 )
 
 type entityRow struct {
@@ -33,13 +34,7 @@ func (g *Graph) loadIDs(ids [][]byte, replace bool) error {
 	if len(ids) == 0 {
 		return nil
 	}
-	for start := 0; start < len(ids); start += batch {
-		chunk := ids[start:min(start+batch, len(ids))]
-		if err := g.loadChunk(chunk); err != nil {
-			return err
-		}
-	}
-	return nil
+	return sqlbatch.Each(ids, g.loadChunk)
 }
 
 func (g *Graph) loadChunk(ids [][]byte) error {
@@ -94,32 +89,23 @@ func (g *Graph) loadChunk(ids [][]byte) error {
 func (g *Graph) entityRows(ids [][]byte) (map[string]entityRow, error) {
 	out := map[string]entityRow{}
 	ids = uniqueIDs(ids)
-	for start := 0; start < len(ids); start += batch {
-		chunk := ids[start:min(start+batch, len(ids))]
-		q := `SELECT e.id, e.ref, e.subject_type_id, e.merged_into_id IS NOT NULL, st.key,
-				COALESCE(e.argument, ''), COALESCE(e.label, '')
-			FROM ` + g.entityTable + ` e
-			JOIN subject_types st ON st.id = e.subject_type_id
-			WHERE e.id IN (` + placeholders(len(chunk)) + `)`
-		rows, err := g.query(q, blobArgs(chunk)...)
-		if err != nil {
-			return nil, err
+	head := `SELECT e.id, e.ref, e.subject_type_id, e.merged_into_id IS NOT NULL, st.key,
+			COALESCE(e.argument, ''), COALESCE(e.label, '')
+		FROM ` + g.entityTable + ` e
+		JOIN subject_types st ON st.id = e.subject_type_id
+		WHERE e.id IN (`
+	err := sqlbatch.Query(g, head, `)`, nil, ids, func(rows *sql.Rows) error {
+		var row entityRow
+		if err := rows.Scan(&row.id, &row.ref, &row.typeID, &row.merged, &row.typeKey, &row.argument, &row.label); err != nil {
+			return err
 		}
-		for rows.Next() {
-			var row entityRow
-			if err := rows.Scan(&row.id, &row.ref, &row.typeID, &row.merged, &row.typeKey, &row.argument, &row.label); err != nil {
-				_ = rows.Close()
-				return nil, err
-			}
-			row.id = cloneID(row.id)
-			row.typeID = cloneID(row.typeID)
-			out[string(row.id)] = row
-		}
-		err = rows.Err()
-		_ = rows.Close()
-		if err != nil {
-			return nil, err
-		}
+		row.id = cloneID(row.id)
+		row.typeID = cloneID(row.typeID)
+		out[string(row.id)] = row
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
 	return out, nil
 }
@@ -385,42 +371,33 @@ func (g *Graph) disambiguation(assocIDs [][]byte) (map[string]termMark, error) {
 	if len(assocIDs) == 0 {
 		return out, nil
 	}
-	for start := 0; start < len(assocIDs); start += batch {
-		chunk := assocIDs[start:min(start+batch, len(assocIDs))]
-		q := `SELECT r.entity_id, r.property_id, r.value_term_id, COALESCE(t.key, ''),
-				COALESCE(t.inverse_key, ''), COALESCE(t.directed, 0), p.key
-			FROM ` + g.valueTable + ` r
-			JOIN properties p ON p.id = r.property_id
-			LEFT JOIN property_terms t ON t.id = r.value_term_id
-			WHERE r.rank = 1 AND r.reason = 'kept' AND r.value_term_id IS NOT NULL
-				AND r.entity_id IN (` + placeholders(len(chunk)) + `)
-			ORDER BY r.entity_id, t.key`
-		rows, err := g.query(q, blobArgs(chunk)...)
-		if err != nil {
-			return nil, err
+	head := `SELECT r.entity_id, r.property_id, r.value_term_id, COALESCE(t.key, ''),
+			COALESCE(t.inverse_key, ''), COALESCE(t.directed, 0), p.key
+		FROM ` + g.valueTable + ` r
+		JOIN properties p ON p.id = r.property_id
+		LEFT JOIN property_terms t ON t.id = r.value_term_id
+		WHERE r.rank = 1 AND r.reason = 'kept' AND r.value_term_id IS NOT NULL
+			AND r.entity_id IN (`
+	err := sqlbatch.Query(g, head, `)
+		ORDER BY r.entity_id, t.key`, nil, assocIDs, func(rows *sql.Rows) error {
+		var entityID, propID, termID []byte
+		var key, inverse, propKey string
+		var directed int
+		if err := rows.Scan(&entityID, &propID, &termID, &key, &inverse, &directed, &propKey); err != nil {
+			return err
 		}
-		for rows.Next() {
-			var entityID, propID, termID []byte
-			var key, inverse, propKey string
-			var directed int
-			if err := rows.Scan(&entityID, &propID, &termID, &key, &inverse, &directed, &propKey); err != nil {
-				_ = rows.Close()
-				return nil, err
-			}
-			mk := string(entityID) + "|" + propKey
-			if _, taken := out[mk]; taken || !disambiguationProperty(propKey) {
-				continue
-			}
-			out[mk] = termMark{
-				propID: cloneID(propID), termID: cloneID(termID),
-				key: key, inverseKey: inverse, directed: directed != 0,
-			}
+		mk := string(entityID) + "|" + propKey
+		if _, taken := out[mk]; taken || !disambiguationProperty(propKey) {
+			return nil
 		}
-		err = rows.Err()
-		_ = rows.Close()
-		if err != nil {
-			return nil, err
+		out[mk] = termMark{
+			propID: cloneID(propID), termID: cloneID(termID),
+			key: key, inverseKey: inverse, directed: directed != 0,
 		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
 	return out, nil
 }

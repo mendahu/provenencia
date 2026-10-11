@@ -18,6 +18,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/deleteimpact"
 	"github.com/mendahu/provenencia/core/database/files"
 	"github.com/mendahu/provenencia/core/database/rowchange"
+	"github.com/mendahu/provenencia/core/database/sqlbatch"
 	"github.com/mendahu/provenencia/core/ref"
 )
 
@@ -321,20 +322,18 @@ func GetMany(c *database.Catalog, ids [][]byte) (map[string]Artifact, error) {
 	if err != nil {
 		return nil, err
 	}
-	q := sqlGetMany + database.SQLInPlaceholders(len(ids)) + `)`
-	rows, err := db.Query(q, database.BlobArgs(ids)...)
+	err = sqlbatch.Query(db, sqlGetMany, `)`, nil, ids, func(rows *sql.Rows) error {
+		a, err := scanArtifact(rows)
+		if err != nil {
+			return err
+		}
+		out[string(a.ID)] = a
+		return nil
+	})
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-	for rows.Next() {
-		a, err := scanArtifact(rows)
-		if err != nil {
-			return nil, err
-		}
-		out[string(a.ID)] = a
-	}
-	return out, rows.Err()
+	return out, nil
 }
 
 // getByRef returns an Artifact by ART-… ref, or sql.ErrNoRows.

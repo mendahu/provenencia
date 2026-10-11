@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/sqlbatch"
 	"github.com/mendahu/provenencia/core/objectpath"
 )
 
@@ -72,20 +73,18 @@ func LookupMany(c *database.Catalog, ids [][]byte) (map[string]File, error) {
 	if err != nil {
 		return nil, err
 	}
-	q := sqlLookupMany + database.SQLInPlaceholders(len(ids)) + `)`
-	rows, err := db.Query(q, database.BlobArgs(ids)...)
+	err = sqlbatch.Query(db, sqlLookupMany, `)`, nil, ids, func(rows *sql.Rows) error {
+		f, err := scanFile(rows)
+		if err != nil {
+			return err
+		}
+		out[string(f.ID)] = f
+		return nil
+	})
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-	for rows.Next() {
-		f, err := scanFile(rows)
-		if err != nil {
-			return nil, err
-		}
-		out[string(f.ID)] = f
-	}
-	return out, rows.Err()
+	return out, nil
 }
 
 // LookupByChecksum returns a File by SHA-256 hex, or sql.ErrNoRows.
