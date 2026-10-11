@@ -3,6 +3,7 @@ package promotealign
 import (
 	"github.com/mendahu/provenencia/core/connectrules"
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/graphalign"
 	"github.com/mendahu/provenencia/core/match"
 )
@@ -18,7 +19,7 @@ func loadStats(c *database.Catalog) (graphalign.Stats, error) {
 	if cached, ok := c.Graph().Stats(); ok {
 		return cloneStats(cached.(graphalign.Stats)), nil
 	}
-	st, err := computeStats(db)
+	st, err := computeStats(c.Graph(), db)
 	if err != nil {
 		return graphalign.Stats{}, err
 	}
@@ -48,7 +49,7 @@ func cloneStats(s graphalign.Stats) graphalign.Stats {
 // new catalog does not see another project's scan.
 func ResetStatsCacheForTest() {}
 
-func computeStats(q Querier) (graphalign.Stats, error) {
+func computeStats(g *graphcache.Graph, q Querier) (graphalign.Stats, error) {
 	st := graphalign.Stats{
 		ValueFreq: map[string]map[string]float64{},
 		FanOut:    map[string]float64{},
@@ -114,7 +115,7 @@ func computeStats(q Querier) (graphalign.Stats, error) {
 		st.ValueFreq[c.prop][c.key] = c.n / den
 	}
 
-	kin, err := loadKinship(q)
+	kin, err := loadKinship(g)
 	if err != nil {
 		return graphalign.Stats{}, err
 	}

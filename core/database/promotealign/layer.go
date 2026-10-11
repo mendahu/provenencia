@@ -1,10 +1,9 @@
 package promotealign
 
 import (
-	"database/sql"
-
 	"github.com/mendahu/provenencia/core/connectrules"
 	"github.com/mendahu/provenencia/core/database/canonicalgraph"
+	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/matching"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/graphalign"
@@ -18,7 +17,7 @@ type primarySubject struct {
 }
 
 // loadLayer builds the Evidence layer: primary Subjects, values, bridges.
-func loadLayer(q Querier, sourceID []byte) (graphalign.Layer, map[string]primarySubject, error) {
+func loadLayer(g *graphcache.Graph, q Querier, sourceID []byte) (graphalign.Layer, map[string]primarySubject, error) {
 	rows, err := q.Query(`SELECT s.id, s.ref, st.key, st.origin
 		FROM subjects s
 		JOIN subject_types st ON st.id = s.subject_type_id
@@ -86,12 +85,12 @@ func loadLayer(q Querier, sourceID []byte) (graphalign.Layer, map[string]primary
 		})
 	}
 
-	metas, err := loadMetas(q)
+	metas, err := loadMetas(g)
 	if err != nil {
 		return graphalign.Layer{}, nil, err
 	}
 
-	bridges, err := loadLayerBridges(q, sourceID, primary, byKind)
+	bridges, err := loadLayerBridges(g, q, sourceID, primary, byKind)
 	if err != nil {
 		return graphalign.Layer{}, nil, err
 	}
@@ -99,7 +98,15 @@ func loadLayer(q Querier, sourceID []byte) (graphalign.Layer, map[string]primary
 	return graphalign.Layer{Subjects: subjects, Bridges: bridges, Metas: metas}, primary, nil
 }
 
-func loadMetas(q Querier) ([]match.PropertyMeta, error) {
+func loadMetas(g *graphcache.Graph) ([]match.PropertyMeta, error) {
+	v, err := g.Vocabulary()
+	if err != nil {
+		return nil, err
+	}
+	byKey := map[string]graphcache.VocabProperty{}
+	for _, p := range v.Properties {
+		byKey[p.Origin+"\x00"+p.Key] = p
+	}
 	seen := map[match.Property]bool{}
 	var out []match.PropertyMeta
 	for _, kind := range []string{"person", "event", "place"} {
@@ -112,17 +119,12 @@ func loadMetas(q Querier) ([]match.PropertyMeta, error) {
 				continue
 			}
 			seen[prop] = true
-			var valueType, card string
-			err := q.QueryRow(`SELECT value_type, cardinality FROM properties WHERE key = ? AND origin = ?`,
-				prop.Key, prop.Origin).Scan(&valueType, &card)
-			if err == sql.ErrNoRows {
+			row, ok := byKey[prop.Origin+"\x00"+prop.Key]
+			if !ok {
 				continue
 			}
-			if err != nil {
-				return nil, err
-			}
 			out = append(out, match.PropertyMeta{
-				Property: prop, ValueType: valueType, Cardinality: card,
+				Property: prop, ValueType: row.ValueType, Cardinality: row.Cardinality,
 			})
 		}
 	}
@@ -142,7 +144,7 @@ var (
 	hopPlaceSuccessor = canonicalgraph.SuccessorsOfPlace
 )
 
-func loadLayerBridges(q Querier, sourceID []byte, primary map[string]primarySubject, byKind map[string][][]byte) ([]graphalign.Bridge, error) {
+func loadLayerBridges(g *graphcache.Graph, q Querier, sourceID []byte, primary map[string]primarySubject, byKind map[string][][]byte) ([]graphalign.Bridge, error) {
 	var out []graphalign.Bridge
 	seen := map[string]bool{}
 	add := func(a, b []byte, sig graphalign.EdgeSignature) {
@@ -161,7 +163,7 @@ func loadLayerBridges(q Querier, sourceID []byte, primary map[string]primarySubj
 			A: append([]byte(nil), a...), B: append([]byte(nil), b...), Signature: sig,
 		})
 	}
-	kin, err := loadKinship(q)
+	kin, err := loadKinship(g)
 	if err != nil {
 		return nil, err
 	}

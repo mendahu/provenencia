@@ -19,15 +19,15 @@ const seedCandidateLimit = 5
 // order is association ref, then the neighbor's ref, which is the order the
 // walk used to break ties.
 func loadCanon(g *graphcache.Graph, q Querier, layer graphalign.Layer, fixed []graphalign.Fixed) (graphalign.Canon, error) {
-	props, err := propertyByID(q)
+	props, err := propertyByID(g)
 	if err != nil {
 		return graphalign.Canon{}, err
 	}
-	types, err := typeByKey(q)
+	types, err := typeByKey(g)
 	if err != nil {
 		return graphalign.Canon{}, err
 	}
-	kin, err := loadKinship(q)
+	kin, err := loadKinship(g)
 	if err != nil {
 		return graphalign.Canon{}, err
 	}
@@ -289,40 +289,31 @@ func handleValues(props map[string]match.Property, n *graphcache.Node) (match.Va
 	return out, nil
 }
 
-func propertyByID(q Querier) (map[string]match.Property, error) {
-	rows, err := q.Query(`SELECT id, key, origin FROM properties`)
+func propertyByID(g *graphcache.Graph) (map[string]match.Property, error) {
+	v, err := g.Vocabulary()
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
 	out := map[string]match.Property{}
-	for rows.Next() {
-		var id []byte
-		var p match.Property
-		if err := rows.Scan(&id, &p.Key, &p.Origin); err != nil {
-			return nil, err
-		}
-		out[string(id)] = p
+	for _, p := range v.Properties {
+		out[string(p.ID)] = match.Property{Key: p.Key, Origin: p.Origin}
 	}
-	return out, rows.Err()
+	return out, nil
 }
 
-func typeByKey(q Querier) (map[string][]byte, error) {
-	rows, err := q.Query(`SELECT key, id FROM subject_types WHERE origin = 'provenencia'`)
+func typeByKey(g *graphcache.Graph) (map[string][]byte, error) {
+	v, err := g.Vocabulary()
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
 	out := map[string][]byte{}
-	for rows.Next() {
-		var key string
-		var id []byte
-		if err := rows.Scan(&key, &id); err != nil {
-			return nil, err
+	for _, t := range v.Types {
+		if t.Origin != connectrules.OriginProvenencia {
+			continue
 		}
-		out[key] = append([]byte(nil), id...)
+		out[t.Key] = append([]byte(nil), t.ID...)
 	}
-	return out, rows.Err()
+	return out, nil
 }
 
 func typeKey(types map[string][]byte, id []byte) string {

@@ -27,6 +27,9 @@ type Graph struct {
 	stats   any
 	statsOK bool
 
+	vocab   Vocabulary
+	vocabOK bool
+
 	entityTable string
 	claimTable  string
 	valueTable  string
@@ -134,6 +137,8 @@ func (g *Graph) clear() {
 	g.kindSet = map[string]map[string]bool{}
 	g.statsOK = false
 	g.stats = nil
+	g.vocabOK = false
+	g.vocab = Vocabulary{}
 }
 
 // Drop empties nodes, holders, kind indexes, and stats. The next read fills
