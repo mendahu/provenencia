@@ -37,4 +37,4 @@ Much of this content sits behind a login, so a pasted URL can't just be fetched.
 ## Related
 
 - [`source-structure.md`](source-structure.md): nested Sources. A registry record often belongs to a larger collection, which may be a parent Source.
-- [`source-provenance-date.md`](source-provenance-date.md): when a Source's provenance was recorded.
+- [`source-provenance-date.md`](source-provenance-date.md): first-class provenance dates on Sources.
