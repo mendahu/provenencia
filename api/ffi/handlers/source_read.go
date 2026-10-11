@@ -10,6 +10,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/database/observations"
+	_ "github.com/mendahu/provenencia/core/database/sourcefill"
 	"github.com/mendahu/provenencia/core/valuecodec"
 )
 
@@ -26,47 +27,33 @@ type termInfo struct {
 }
 
 func loadPropertyInfo(c *database.Catalog) (map[string]propertyInfo, error) {
-	db, err := c.DB()
+	if c == nil || c.Graph() == nil {
+		return map[string]propertyInfo{}, nil
+	}
+	v, err := c.Graph().Vocabulary()
 	if err != nil {
 		return nil, err
 	}
-	rows, err := db.Query(`SELECT id, key, label, value_type, origin FROM properties`)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
 	out := map[string]propertyInfo{}
-	for rows.Next() {
-		var id []byte
-		var info propertyInfo
-		if err := rows.Scan(&id, &info.Key, &info.Label, &info.ValueType, &info.Origin); err != nil {
-			return nil, err
-		}
-		out[string(id)] = info
+	for _, p := range v.Properties {
+		out[string(p.ID)] = propertyInfo{Key: p.Key, Label: p.Label, ValueType: p.ValueType, Origin: p.Origin}
 	}
-	return out, rows.Err()
+	return out, nil
 }
 
 func loadTermInfo(c *database.Catalog) (map[string]termInfo, error) {
-	db, err := c.DB()
+	if c == nil || c.Graph() == nil {
+		return map[string]termInfo{}, nil
+	}
+	v, err := c.Graph().Vocabulary()
 	if err != nil {
 		return nil, err
 	}
-	rows, err := db.Query(`SELECT id, key, label FROM property_terms`)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
 	out := map[string]termInfo{}
-	for rows.Next() {
-		var id []byte
-		var info termInfo
-		if err := rows.Scan(&id, &info.Key, &info.Label); err != nil {
-			return nil, err
-		}
-		out[string(id)] = info
+	for _, t := range v.Terms {
+		out[string(t.ID)] = termInfo{Key: t.Key, Label: t.Label}
 	}
-	return out, rows.Err()
+	return out, nil
 }
 
 // listedProtosFromSource projects stored observations. A citation id keeps
@@ -89,12 +76,16 @@ func listedProtosFromSource(c *database.Catalog, sg graphcache.SourceGraph, cita
 		if citationID != nil && !bytes.Equal(o.CitationID, citationID) {
 			continue
 		}
-		out = append(out, listedObservationProto(listedFromSource(o, props, terms, subjectLabels)))
+		listed, err := listedFromSource(o, props, terms, subjectLabels)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, listedObservationProto(listed))
 	}
 	return out, nil
 }
 
-func listedFromSource(o graphcache.SourceObservation, props map[string]propertyInfo, terms map[string]termInfo, subjectLabels map[string]string) observations.Listed {
+func listedFromSource(o graphcache.SourceObservation, props map[string]propertyInfo, terms map[string]termInfo, subjectLabels map[string]string) (observations.Listed, error) {
 	info := props[string(o.PropertyID)]
 	l := observations.Listed{
 		Observation: observations.Observation{
@@ -114,21 +105,32 @@ func listedFromSource(o graphcache.SourceObservation, props map[string]propertyI
 		l.ValueSubjectLabel = label
 	}
 	if len(o.Date) > 0 {
-		if d, err := valuecodec.UnmarshalDate(o.Date); err == nil {
-			l.Date = &d
+		d, err := valuecodec.UnmarshalDate(o.Date)
+		if err != nil {
+			return observations.Listed{}, err
 		}
+		l.Date = &d
 	}
 	if len(o.Name) > 0 {
-		if n, err := valuecodec.UnmarshalName(o.Name); err == nil {
-			l.Name = &n
-			l.ValueNameForm = n.Form
+		n, err := valuecodec.UnmarshalName(o.Name)
+		if err != nil {
+			return observations.Listed{}, err
 		}
+		l.Name = &n
+		l.ValueNameForm = n.Form
 	}
 	observations.FillListedDisplayText(&l)
-	return l
+	return l, nil
 }
 
 func membershipsFromSource(g *graphcache.Graph, sg graphcache.SourceGraph, nameProperty []byte) ([]identityclaims.Membership, error) {
+	ids := make([][]byte, 0, len(sg.Members))
+	for _, m := range sg.Members {
+		ids = append(ids, m.EntityID)
+	}
+	if err := g.Nodes(ids); err != nil {
+		return nil, err
+	}
 	var out []identityclaims.Membership
 	for _, m := range sg.Members {
 		n, err := g.Node(m.EntityID)
