@@ -22,19 +22,18 @@ Use this folder when something useful pops up mid-work and would otherwise get l
 - [`source-provenance-date.md`](source-provenance-date.md)
 - [`text-quote-locators.md`](text-quote-locators.md)
 - [`audio-video-sources.md`](audio-video-sources.md)
-- [`depictions-and-likenesses.md`](depictions-and-likenesses.md)
+- [`depictions-and-likenesses.md`](depictions-and-likenesses.md) — leftovers after Spike 10 (other keys, signature, transparent crop, Windows PDF draw)
+- [`international-names.md`](international-names.md) — leftovers after Spike 10 (other name patterns, transliteration, calendars)
+- [`name-matching-enhancements.md`](name-matching-enhancements.md) — leftovers after Spike 10 (known-as, concluded values, calibration, blocking)
 - [`share-packages.md`](share-packages.md)
 - [`artifact-pdf-thumbnails.md`](artifact-pdf-thumbnails.md)
 - [`identity-claim-review.md`](identity-claim-review.md)
-- [`international-names.md`](international-names.md)
-- [`name-matching-enhancements.md`](name-matching-enhancements.md)
 - [`evidence-graph-drag-performance.md`](evidence-graph-drag-performance.md)
 - [`place-gazetteer-service.md`](place-gazetteer-service.md)
 - [`possible-values.md`](possible-values.md)
 - [`promote-matching.md`](promote-matching.md) — what proves a join; the direction is now [`promote-graph-alignment.md`](../promote-graph-alignment.md)
 - [`promote-connection-subrows.md`](promote-connection-subrows.md) — connections as subrows of the subjects they join, with no switch-off
 - [`term-management.md`](term-management.md) — one place to manage terms, including relationship direction and inverses
-- [`catalog-graph-cache.md`](catalog-graph-cache.md) — one write orchestrator (data, audit, derived data) and the canonical graph in memory it keeps current
 
 ## Archived
 
@@ -43,5 +42,6 @@ Shipped ideas keep **decisions**, not PR order. Closed spikes: [`docs/deployment
 - [`archive/interpretation-graph-ui.md`](archive/interpretation-graph-ui.md) — Evidence graph decisions; leftovers re-homed
 - [`archive/page-navigation-performance.md`](archive/page-navigation-performance.md) — session cache / place registry
 - [`archive/catalog-access-serialization.md`](archive/catalog-access-serialization.md) — held catalog session
+- [`archive/catalog-graph-cache.md`](archive/catalog-graph-cache.md) — one write path and the in-memory catalog graph
 - [`archive/design-system-hardening.md`](archive/design-system-hardening.md) — graduated to [`docs/design-system-layers.md`](../design-system-layers.md)
 - Also archived: nav-count RPC, ingest MIME, thumbnails, image cache (same folder)

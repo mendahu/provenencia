@@ -64,7 +64,7 @@ What the picture makes clear:
 ## What any answer has to keep
 
 - **Membership stays per Subject.** One Identity Claim per Subject and handle, so a wrong match can be rejected alone. An obituary mixes people you file, people you skip, and people who belong to different handles.
-- **Create-only Promote** with a Done off-ramp. Editing claims is Spike 10.
+- **Create-only Promote** with a Done off-ramp. Editing claims is unscheduled ([`identity-claim-review.md`](identity-claim-review.md)). Spike 10 is the dogfood UX cleanup.
 - **A chain of evidence a later reader can follow.** "Why was this Subject filed here?" has to have a machine-readable answer, not just prose in `argument`.
 - **Stable history.** Evidence recorded at decision time must not quietly change when the reconciler is tuned or a value is concluded. Changes since then should be visible: that's the §5.2 review alert.
 - **No circularity.** A member's own records can't vouch for its membership. Agreement among members is what a wrong merge looks like too.

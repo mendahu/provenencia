@@ -8,9 +8,9 @@ Closed spikes under [`archive/`](archive/) keep **themes and decisions**. PR ord
 
 ## Current
 
-No open spike.
+[Spike 10 — Dogfood UX](spike-10/) is open. Plan: [`spike-10/deployment-plan.md`](spike-10/deployment-plan.md). Briefs are authored just before the PR they gate.
 
-Dogfood leftovers: [`docs/dogfood/ux.md`](../dogfood/ux.md). Ideas: [`ideas/`](../ideas/). Claude Design briefs: [`add-design-brief`](../../.cursor/skills/add-design-brief/SKILL.md).
+Ideas: [`ideas/`](../ideas/). Claude Design briefs: [`add-design-brief`](../../.cursor/skills/add-design-brief/SKILL.md).
 
 ## Completed
 
