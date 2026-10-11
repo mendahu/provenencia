@@ -1,6 +1,6 @@
 # One write path and a catalog graph in memory
 
-**Status:** idea, 2026-10-09. Direction agreed in review of the Promote cost fix (mendahu/provenencia#327, to be redone on this). Not scheduled.
+**Status:** in progress, 2026-10-11. The graph, display, place chains, conclusion detail, and Source store are on the stacked pull requests.
 
 Related: [`promote-graph-alignment.md`](../promote-graph-alignment.md) (the walk), [`conclusion-layer-data-model.md`](../conclusion-layer-data-model.md) (handles and the auto-reconciler), [`archive/catalog-access-serialization.md`](archive/catalog-access-serialization.md) (the held catalog session), [`archive/page-navigation-performance.md`](archive/page-navigation-performance.md) (the Swift session cache, which this does not replace).
 
@@ -367,15 +367,15 @@ These change without `RecomputeTx`, so nodes don't copy them. They are resolved 
 
 ### Safety net
 
-The memory tier records the audit revision of the last commit it heard about. If a read finds a newer revision it never heard about (a write that slipped past `writes.Run`), it drops everything and logs it. That log line is a bug report. With the compiler and the `.Begin()` test in place it should never fire.
+A read does not look at the audit log and does not drop the store when the log is ahead of the last commit the graph heard. Writes go through `writes.Run`, and the `.Begin()` test is what catches a write that starts its own transaction.
 
 ### Verifying it
 
 A shadow check makes a missed invalidation fail a test instead of showing stale data:
 
 ```go
-// Verify rebuilds every loaded node from SQL and compares. Tests run it after
-// each write when PROVENENCIA_GRAPH_VERIFY=1; CI sets it for the core suite.
+// Verify rebuilds every loaded node from a fresh read and compares.
+// Tests call it directly. CI does not set PROVENENCIA_GRAPH_VERIFY.
 func (g *Graph) Verify(q Querier) error
 ```
 
@@ -472,18 +472,7 @@ Subject positions (Evidence graph layout) don't bump the revision and aren't in 
 
 Align reads the canon in three ways after setup: a handle by id (`st.handles`), one handle's links (`st.canonAdj`), and handles of a kind for the unreachable fallback (`candidatesOfKind`). The walk only visits handles reachable from its anchors, and only crosses a link that corresponds to a bridge in the Source (`corresponds()`). So the scope of the walk is already set by the Source being promoted: no `canonSteps`, no diameter, no per-kind hop rules. A hub's 400 events are read only when a layer event points at that hub, and then all 400 are candidates.
 
-`Canon` becomes an interface over the graph:
-
-```go
-// CanonGraph is what Align reads of the canonical graph.
-type CanonGraph interface {
-	Handle(id []byte) (*Handle, bool)
-	Links(id []byte) []CanonLink
-	Seeds(kind string) []match.Candidate
-}
-```
-
-Align is pure and has no error path; the adapter records the first load error, returns empty results after it, and `Propose` returns that error once Align finishes. (Or Align grows error returns; decide in the PR.)
+There is no `CanonGraph` type. `loadCanon` walks the loaded links until the queue is empty: no hop cap, seeds limited to the top five per unfixed kind. Align stays pure. The loader records a read error and `Propose` returns it without calling Align.
 
 Weighting, not hopping, is where per-signature judgment belongs: fan-out already makes a connection with many neighbors count for less (`EdgeSupportHigh`, `NeighborCreditHigh` in `graphalign/registry.go`).
 
@@ -550,7 +539,7 @@ Each step is its own PR, measured against the one before. PRs that only repoint 
 **The graph**
 
 8. **The graph and Promote** (done). `graphcache` hangs on `Catalog` and listens for commits. A read fills a node (identity, every ARV rank, links, members) or a kind's unmerged ids. A commit replaces what is already loaded, inserts a new id into a loaded kind index, and, for an association, loads the new endpoints. `EnsureCatalog` drops the store after a rebuild. Promote walks that graph with no hop cap: top-5 seeds per unfixed kind, links ordered by association ref then neighbor ref. Stats stay a full SQL scan, rerun when `MAX(audit_transactions.revision)` changes, with the property list taken from the match profiles. The scan lives on the catalog's graph, not in a process-wide cache.
-   - **No runtime drop.** A read does not query `audit_transactions` and does not discard the store when the log is ahead. The `.Begin()` test remains the check that a new write does not start its own transaction. `Verify` fails when a loaded node disagrees with a fresh reconcile of the observations, and with the kind index when one is loaded. It does not repair the store. `PROVENENCIA_GRAPH_VERIFY=1` makes `OnCommit` return that error. Production does not set it. A listener error still drops the store.
+   - **No runtime drop.** A read does not query `audit_transactions` and does not discard the store when the log is ahead. The `.Begin()` test remains the check that a new write does not start its own transaction. `Verify` fails when a loaded node disagrees with a fresh read, and with the kind index when one is loaded. It does not repair the store. Tests call `Verify` directly. CI does not set `PROVENENCIA_GRAPH_VERIFY`. A listener error still drops the store, and `Run` logs it and returns the saved value.
    - **Ids on the node.** A node stores `subject_type_id`, property ids, and term ids. Direction and `inverse_key` are copied off the term row while the node is loaded. `promotealign` builds `graphalign.EdgeSignature` at the edge. The typed-key literal test stays deferred.
    - **Align stays pure.** The loader records a read error and `Propose` returns it without calling Align. Existing promote fixtures matched after the switch. The #327 caps and the 250ms debounce are not ported. The narrowed one-hop exhibits are.
    - **Ranks stay.** Nodes keep every ARV rank. The benchmark reports heap; this PR does not trim them. A separate prefetch is not added.
@@ -571,7 +560,7 @@ Each step is its own PR, measured against the one before. PRs that only repoint 
     - **The Why.** Outcomes stay the SQL join. Source titles stay on that read.
 12. **The Source store** (done). A Source is loaded the first time Promote, the Evidence graph, or the Composer reads it. A save drops that Source when the audit scopes name it. An identity claim and claim evidence also name the subject's Source, through a cache scope that audit does not record. A handle edit leaves the Source in place. The membership list reads the handle's name and label from its node. `GetCitation` takes that citation's observations from the loaded Source. The citation row and its notes stay SQL. Positions stay a SQL read. Term labels, property labels, and event titles are applied when the page is read.
     - **Cache scopes.** `identity_claims` follows `subject_id` to `source_id`. `identity_claim_evidence` follows the claim to that same Source. `effects.Sources` still reads only the audit path, so a claim stays without a Source in the log.
-    - **What is stored.** Subjects, observation payloads, accepted memberships (subject, claim, handle), and the bridges the align layer signs. Event-title hops are stored beside them so the existing title rule runs on the loaded Source.
-    - **Verify.** A loaded Source's memberships and bridge signatures are read again and compared. A canonical-node check does not see a membership pointer.
+    - **What is stored.** Subjects, observation payloads, accepted memberships (subject, claim, handle), and the edges an event title reads. Promote builds its bridge signatures the first time it reads the layer.
+    - **Verify.** The stored Source is compared with a fresh load of the same loader. A canonical-node check does not see a membership pointer.
 
 Later, and separately: `Result.Effects` rides back to Swift on each write's response, and the client's session cache invalidates by handle and Source instead of the hand-kept `CatalogMutation` map.
