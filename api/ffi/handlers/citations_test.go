@@ -112,6 +112,9 @@ func TestCreateCitationWithObservations(t *testing.T) {
 				if created.Citation.GetTranscription() != "transcribe first" {
 					t.Fatalf("transcription %q", created.Citation.GetTranscription())
 				}
+				if created.GetEffects() == nil || len(created.GetEffects().GetSources())+len(created.GetEffects().GetCacheSources()) == 0 {
+					t.Fatalf("effects %+v", created.GetEffects())
+				}
 				cr := req.(*engine.CreateCitationWithObservationsRequest)
 				assertLatestAuditAction(t, cr.ProjectDir, "create_citation_with_observations")
 			},

@@ -104,12 +104,34 @@ final class WorkspaceSession {
     /// reached. Keys the registry evicts when hidden are dropped instead
     /// unless on screen. Features only call `apply`; they do not query
     /// afterward or tell sibling views to refresh.
+    /// Drops the cached reads named by a write's effects: that Source's graph
+    /// and citation counts, and only the conclusion pages whose handles changed.
+    func apply(_ effects: CatalogWriteEffects) {
+        apply(
+            invalidations: registry.invalidations(for: effects, project: projectKey),
+            stale: effects.touchedSources.isEmpty
+                ? []
+                : [.key(.sourcesList(project: projectKey))]
+        )
+        for sourceID in effects.touchedSources {
+            refreshSourceGraphProgress(sourceId: sourceID)
+        }
+    }
+
     func apply(_ mutation: CatalogMutation) {
         if let source = mutation.patchedSource {
             patchUpdatedSource(source)
         }
+        apply(
+            invalidations: registry.invalidations(by: mutation, project: projectKey),
+            stale: registry.staleMarks(by: mutation, project: projectKey)
+        )
+        refreshSourceGraphProgress(for: mutation)
+    }
+
+    private func apply(invalidations: [CatalogQueryInvalidation], stale: [CatalogQueryInvalidation]) {
         var keys: [CatalogQueryKey] = []
-        for key in cachedKeys(for: registry.invalidations(by: mutation, project: projectKey)) {
+        for key in cachedKeys(for: invalidations) {
             if registry.evictsWhenHidden(key), !visibleKeys.contains(key) {
                 evict(key)
             } else {
@@ -124,12 +146,9 @@ final class WorkspaceSession {
         }
         // Stale-on-next-query only: the loaded value stays on screen and the
         // next `query` (e.g. the Sources list reappearing) reloads it.
-        for key in cachedKeys(for: registry.staleMarks(by: mutation, project: projectKey))
-            where handles[key] != nil && !keys.contains(key)
-        {
+        for key in cachedKeys(for: stale) where handles[key] != nil && !keys.contains(key) {
             invalidatedKeys.insert(key)
         }
-        refreshSourceGraphProgress(for: mutation)
     }
 
     private func cachedKeys(for invalidations: [CatalogQueryInvalidation]) -> [CatalogQueryKey] {
@@ -156,6 +175,10 @@ final class WorkspaceSession {
         default:
             return
         }
+        refreshSourceGraphProgress(sourceId: sourceId)
+    }
+
+    private func refreshSourceGraphProgress(sourceId: String) {
         let key = CatalogQueryKey.sourceGraphProgress(project: projectKey)
         let existing: QueryHandle<[String: SourceGraphProgress]>? = queryHandle(key)
         guard existing != nil else { return }

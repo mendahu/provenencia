@@ -619,7 +619,7 @@ private struct ThrowingStore: GenealogyStore {
         citationNotes _: [String],
         observations _: [CatalogObservationDraft],
         citationID _: String?
-    ) async throws -> (CatalogSubject, CatalogCitation, [CatalogObservation]) { throw StoreBoom.boom }
+    ) async throws -> (CatalogSubject, CatalogCitation, [CatalogObservation], CatalogWriteEffects) { throw StoreBoom.boom }
     func createCitationWithObservations(
         projectDir _: String,
         userID _: String,
@@ -631,7 +631,7 @@ private struct ThrowingStore: GenealogyStore {
         transcriptionNote _: String,
         citationNotes _: [String],
         observations _: [CatalogObservationDraft]
-    ) async throws -> (CatalogCitation, [CatalogObservation]) { throw StoreBoom.boom }
+    ) async throws -> (CatalogCitation, [CatalogObservation], CatalogWriteEffects) { throw StoreBoom.boom }
     func getCitation(
         projectDir _: String,
         citationID _: String
@@ -645,16 +645,16 @@ private struct ThrowingStore: GenealogyStore {
         description _: String,
         transcriptionUncertain _: Bool,
         transcriptionNote _: String
-    ) async throws -> CatalogCitation { throw StoreBoom.boom }
+    ) async throws -> (CatalogCitation, CatalogWriteEffects) { throw StoreBoom.boom }
     func updateObservation(
         projectDir _: String,
         userID _: String,
         observation _: CatalogObservation
-    ) async throws -> CatalogObservation { throw StoreBoom.boom }
-    func deleteObservation(projectDir _: String, userID _: String, observationID _: String) async throws {
+    ) async throws -> (CatalogObservation, CatalogWriteEffects) { throw StoreBoom.boom }
+    func deleteObservation(projectDir _: String, userID _: String, observationID _: String) async throws -> CatalogWriteEffects {
         throw StoreBoom.boom
     }
-    func deleteCitation(projectDir _: String, userID _: String, citationID _: String) async throws {
+    func deleteCitation(projectDir _: String, userID _: String, citationID _: String) async throws -> CatalogWriteEffects {
         throw StoreBoom.boom
     }
     func getPropertiesWorkspace(projectDir _: String) async throws -> PropertiesSnapshot {
@@ -665,7 +665,7 @@ private struct ThrowingStore: GenealogyStore {
         userID _: String,
         citationID _: String,
         observations _: [CatalogObservationDraft]
-    ) async throws -> [CatalogObservation] { throw StoreBoom.boom }
+    ) async throws -> ([CatalogObservation], CatalogWriteEffects) { throw StoreBoom.boom }
     func listObservationsBySource(projectDir _: String, sourceID _: String) async throws -> [CatalogObservation] {
         throw StoreBoom.boom
     }

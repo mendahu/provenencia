@@ -65,8 +65,8 @@ final class CitationComposerContext {
         return memoVocabulary
     }
 
-    func applySavedCitation() {
-        session.apply(.savedCitation(sourceId: sourceID))
+    func applyWrite(_ effects: CatalogWriteEffects) {
+        session.apply(effects)
     }
 
     /// One in-flight create so citation Save, Observation commit, and Connect
@@ -123,7 +123,7 @@ final class CitationComposerContext {
         )
         citationID = created.0.id
         captureCitationBaseline()
-        applySavedCitation()
+        applyWrite(created.2)
         await reloadListedCitations()
         return created.0.id
     }

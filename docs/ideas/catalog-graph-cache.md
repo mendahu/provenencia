@@ -563,4 +563,4 @@ Each step is its own PR, measured against the one before. PRs that only repoint 
     - **What is stored.** Subjects, observation payloads, accepted memberships (subject, claim, handle), and the edges an event title reads. Promote builds its bridge signatures the first time it reads the layer.
     - **Verify.** The stored Source is compared with a fresh load of the same loader. A canonical-node check does not see a membership pointer.
 
-Later, and separately: `Result.Effects` rides back to Swift on each write's response, and the client's session cache invalidates by handle and Source instead of the hand-kept `CatalogMutation` map.
+Citation, observation, and cited-bridge responses carry `WriteEffects`. The composer invalidates the named Sources and handles. Other writes still use `CatalogMutation` until their responses carry the same field.

@@ -28,7 +28,7 @@ func CreateCitationWithObservations(in []byte) ([]byte, error) {
 	}
 	var out *engine.CreateCitationWithObservationsResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		res, _, err := writes.Run(c, writes.Op{Action: "create_citation_with_observations", UserID: userID},
+		res, wrote, err := writes.Run(c, writes.Op{Action: "create_citation_with_observations", UserID: userID},
 			func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
 				return citations.CreateWithObservations(tx, userID, citations.CreateInput{
 					ArtifactID:             artifactID,
@@ -45,6 +45,7 @@ func CreateCitationWithObservations(in []byte) ([]byte, error) {
 		}
 		out = &engine.CreateCitationWithObservationsResponse{
 			Citation: citationProto(res.Citation),
+			Effects:  writeEffectsProto(wrote.Effects),
 		}
 		for _, o := range res.Observations {
 			out.Observations = append(out.Observations, observationProto(o))
@@ -146,7 +147,7 @@ func UpdateCitation(in []byte) ([]byte, error) {
 	}
 	var out *engine.UpdateCitationResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		cit, _, err := writes.Run(c, writes.Op{Action: "update_citation", UserID: userID},
+		cit, wrote, err := writes.Run(c, writes.Op{Action: "update_citation", UserID: userID},
 			func(tx *database.Tx) (citations.Citation, []rowchange.Change, error) {
 				return citations.Update(tx, userID, citationID, citations.CitationFieldsInput{
 					LocatorJSON:            req.GetLocatorJson(),
@@ -159,7 +160,10 @@ func UpdateCitation(in []byte) ([]byte, error) {
 		if err != nil {
 			return err
 		}
-		out = &engine.UpdateCitationResponse{Citation: citationProto(cit)}
+		out = &engine.UpdateCitationResponse{
+			Citation: citationProto(cit),
+			Effects:  writeEffectsProto(wrote.Effects),
+		}
 		return nil
 	})
 	if err != nil {
@@ -213,7 +217,7 @@ func DeleteCitation(in []byte) ([]byte, error) {
 	}
 	var out *engine.DeleteCitationResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		_, _, err := writes.Run(c, writes.Op{Action: "delete_citation", UserID: userID},
+		_, wrote, err := writes.Run(c, writes.Op{Action: "delete_citation", UserID: userID},
 			func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
 				changes, err := citations.Delete(tx, userID, citationID)
 				return struct{}{}, changes, err
@@ -221,7 +225,7 @@ func DeleteCitation(in []byte) ([]byte, error) {
 		if err != nil {
 			return err
 		}
-		out = &engine.DeleteCitationResponse{}
+		out = &engine.DeleteCitationResponse{Effects: writeEffectsProto(wrote.Effects)}
 		return nil
 	})
 	if err != nil {

@@ -57,6 +57,29 @@ enum CatalogMutation: Sendable, Equatable {
     case createdPropertyTerm(propertyId: String)
 }
 
+/// Handles and Sources a write reported. The session drops those cached
+/// reads. A citation save uses this instead of `savedCitation`.
+struct CatalogWriteEffects: Sendable, Equatable {
+    var handles: [String] = []
+    var sources: [String] = []
+    var cacheSources: [String] = []
+    var vocabulary = false
+    var structure = false
+    var headerHandles: [String] = []
+
+    static let empty = CatalogWriteEffects()
+
+    var touchedSources: [String] {
+        var seen = Set<String>()
+        return (sources + cacheSources).filter { seen.insert($0).inserted && !$0.isEmpty }
+    }
+
+    var touchedHandles: [String] {
+        var seen = Set<String>()
+        return (handles + headerHandles).filter { seen.insert($0).inserted && !$0.isEmpty }
+    }
+}
+
 /// Mutation kind for registry invalidation tags (no associated payload).
 enum CatalogMutationKind: Hashable, Sendable {
     case changedSourceType

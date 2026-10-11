@@ -58,14 +58,17 @@ func UpdateObservation(in []byte) ([]byte, error) {
 	}
 	var out *engine.UpdateObservationResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		row, _, err := writes.Run(c, writes.Op{Action: "update_observation", UserID: userID},
+		row, wrote, err := writes.Run(c, writes.Op{Action: "update_observation", UserID: userID},
 			func(tx *database.Tx) (observations.Listed, []rowchange.Change, error) {
 				return observations.Update(tx, userID, input)
 			})
 		if err != nil {
 			return err
 		}
-		out = &engine.UpdateObservationResponse{Observation: listedObservationProto(row)}
+		out = &engine.UpdateObservationResponse{
+			Observation: listedObservationProto(row),
+			Effects:     writeEffectsProto(wrote.Effects),
+		}
 		return nil
 	})
 	if err != nil {
@@ -89,7 +92,7 @@ func DeleteObservation(in []byte) ([]byte, error) {
 	}
 	var out *engine.DeleteObservationResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		_, _, err := writes.Run(c, writes.Op{Action: "delete_observation", UserID: userID},
+		_, wrote, err := writes.Run(c, writes.Op{Action: "delete_observation", UserID: userID},
 			func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
 				changes, err := observations.Delete(tx, userID, id)
 				return struct{}{}, changes, err
@@ -97,7 +100,7 @@ func DeleteObservation(in []byte) ([]byte, error) {
 		if err != nil {
 			return err
 		}
-		out = &engine.DeleteObservationResponse{}
+		out = &engine.DeleteObservationResponse{Effects: writeEffectsProto(wrote.Effects)}
 		return nil
 	})
 	if err != nil {
@@ -125,14 +128,14 @@ func AddObservationsToCitation(in []byte) ([]byte, error) {
 	}
 	var out *engine.AddObservationsToCitationResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		rows, _, err := writes.Run(c, writes.Op{Action: "add_observations", UserID: userID},
+		rows, wrote, err := writes.Run(c, writes.Op{Action: "add_observations", UserID: userID},
 			func(tx *database.Tx) ([]observations.Observation, []rowchange.Change, error) {
 				return observations.AddToCitation(tx, userID, citationID, inputs)
 			})
 		if err != nil {
 			return err
 		}
-		out = &engine.AddObservationsToCitationResponse{}
+		out = &engine.AddObservationsToCitationResponse{Effects: writeEffectsProto(wrote.Effects)}
 		for _, o := range rows {
 			out.Observations = append(out.Observations, observationProto(o))
 		}

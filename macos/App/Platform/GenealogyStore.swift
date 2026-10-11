@@ -1203,7 +1203,7 @@ protocol GenealogyStore: Sendable {
         citationNotes: [String],
         observations: [CatalogObservationDraft],
         citationID: String?
-    ) async throws -> (CatalogSubject, CatalogCitation, [CatalogObservation])
+    ) async throws -> (CatalogSubject, CatalogCitation, [CatalogObservation], CatalogWriteEffects)
 
     func createCitationWithObservations(
         projectDir: String,
@@ -1216,7 +1216,7 @@ protocol GenealogyStore: Sendable {
         transcriptionNote: String,
         citationNotes: [String],
         observations: [CatalogObservationDraft]
-    ) async throws -> (CatalogCitation, [CatalogObservation])
+    ) async throws -> (CatalogCitation, [CatalogObservation], CatalogWriteEffects)
 
     func getCitation(
         projectDir: String,
@@ -1232,16 +1232,16 @@ protocol GenealogyStore: Sendable {
         description: String,
         transcriptionUncertain: Bool,
         transcriptionNote: String
-    ) async throws -> CatalogCitation
+    ) async throws -> (CatalogCitation, CatalogWriteEffects)
 
     func updateObservation(
         projectDir: String,
         userID: String,
         observation: CatalogObservation
-    ) async throws -> CatalogObservation
+    ) async throws -> (CatalogObservation, CatalogWriteEffects)
 
-    func deleteObservation(projectDir: String, userID: String, observationID: String) async throws
-    func deleteCitation(projectDir: String, userID: String, citationID: String) async throws
+    func deleteObservation(projectDir: String, userID: String, observationID: String) async throws -> CatalogWriteEffects
+    func deleteCitation(projectDir: String, userID: String, citationID: String) async throws -> CatalogWriteEffects
 
     func getPropertiesWorkspace(projectDir: String) async throws -> PropertiesSnapshot
 
@@ -1250,7 +1250,7 @@ protocol GenealogyStore: Sendable {
         userID: String,
         citationID: String,
         observations: [CatalogObservationDraft]
-    ) async throws -> [CatalogObservation]
+    ) async throws -> ([CatalogObservation], CatalogWriteEffects)
 
     func listObservationsBySource(projectDir: String, sourceID: String) async throws -> [CatalogObservation]
 
