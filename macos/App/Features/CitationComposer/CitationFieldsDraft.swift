@@ -95,7 +95,7 @@ final class CitationFieldsDraft {
         error = nil
         do {
             if let citationID = context.citationID {
-                _ = try await context.store.updateCitation(
+                let updated = try await context.store.updateCitation(
                     projectDir: context.projectDir,
                     userID: context.userID,
                     citationID: citationID,
@@ -106,7 +106,7 @@ final class CitationFieldsDraft {
                     transcriptionNote: transcriptionNote
                 )
                 captureBaseline()
-                context.applySavedCitation()
+                context.applyWrite(updated.1)
             } else {
                 _ = try await context.ensureCitationID()
             }

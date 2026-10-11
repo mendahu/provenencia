@@ -570,7 +570,20 @@ message DeleteCitationRequest {
   string citation_id = 3;
 }
 
-message DeleteCitationResponse {}
+message DeleteCitationResponse {
+  WriteEffects effects = 1;
+}
+
+// WriteEffects is the catalog the write touched. Swift invalidates those
+// handles and Sources instead of a broad citation refetch.
+message WriteEffects {
+  repeated string handles = 1;
+  repeated string sources = 2;
+  repeated string cache_sources = 3;
+  bool vocabulary = 4;
+  bool structure = 5;
+  repeated string header_handles = 6;
+}
 
 message IngestArtifactFileRequest {
   string project_dir = 1;
@@ -1709,6 +1722,7 @@ message CreateCitationWithObservationsRequest {
 message CreateCitationWithObservationsResponse {
   Citation citation = 1;
   repeated Observation observations = 2;
+  WriteEffects effects = 3;
 }
 
 message AddObservationsToCitationRequest {
@@ -1720,6 +1734,7 @@ message AddObservationsToCitationRequest {
 
 message AddObservationsToCitationResponse {
   repeated Observation observations = 1;
+  WriteEffects effects = 2;
 }
 
 message ListObservationsBySourceRequest {
@@ -1795,6 +1810,7 @@ message CreateCitedBridgeResponse {
   Subject subject = 1;
   Citation citation = 2;
   repeated Observation observations = 3;
+  WriteEffects effects = 4;
 }
 
 message UpdateCitationRequest {
@@ -1807,21 +1823,29 @@ message UpdateCitationRequest {
   bool transcription_uncertain = 7;
   string transcription_note = 8;
 }
-message UpdateCitationResponse { Citation citation = 1; }
+message UpdateCitationResponse {
+  Citation citation = 1;
+  WriteEffects effects = 2;
+}
 
 message UpdateObservationRequest {
   string project_dir = 1;
   string user_id = 2;
   Observation observation = 3;
 }
-message UpdateObservationResponse { Observation observation = 1; }
+message UpdateObservationResponse {
+  Observation observation = 1;
+  WriteEffects effects = 2;
+}
 
 message DeleteObservationRequest {
   string project_dir = 1;
   string user_id = 2;
   string observation_id = 3;
 }
-message DeleteObservationResponse {}
+message DeleteObservationResponse {
+  WriteEffects effects = 1;
+}
 
 message GetPropertiesWorkspaceRequest { string project_dir = 1; }
 message SubjectTypePropertiesGroup {

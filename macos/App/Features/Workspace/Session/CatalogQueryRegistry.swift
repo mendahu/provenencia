@@ -264,6 +264,34 @@ struct CatalogQueryRegistry: Sendable {
         }
     }
 
+    /// Cache effects of one write's reported handles and Sources.
+    func invalidations(for effects: CatalogWriteEffects, project: ProjectKey) -> [CatalogQueryInvalidation] {
+        var out: [CatalogQueryInvalidation] = []
+        for sourceID in effects.touchedSources {
+            out.append(.key(.sourceGraph(project: project, sourceId: sourceID)))
+            out.append(.key(.citationCounts(project: project, sourceId: sourceID)))
+        }
+        if !effects.touchedSources.isEmpty {
+            out.append(.allCached(.citationsByArtifact))
+            out.append(.key(.propertiesWorkspace(project: project)))
+        }
+        if effects.vocabulary || effects.structure {
+            let workspace = CatalogQueryInvalidation.key(.propertiesWorkspace(project: project))
+            if !out.contains(workspace) {
+                out.append(workspace)
+            }
+        }
+        if !effects.touchedHandles.isEmpty {
+            out.append(.key(.personsList(project: project)))
+            out.append(.key(.eventsList(project: project)))
+            out.append(.key(.placesList(project: project)))
+            for entityID in effects.touchedHandles {
+                out.append(.key(.conclusionDetail(project: project, entityId: entityID)))
+            }
+        }
+        return out
+    }
+
     /// Resolves cache effects from registry `invalidateOn` tags + mutation payload.
     func invalidations(by mutation: CatalogMutation, project: ProjectKey) -> [CatalogQueryInvalidation] {
         guard let mutationKind = mutation.invalidationKind else { return [] }

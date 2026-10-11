@@ -583,12 +583,12 @@ final class CitationComposerModel {
     func confirmPendingImpact() async {
         _ = await deleteImpact.confirm { target in
             if target.kind == "citation" {
-                try await store.deleteCitation(
+                let effects = try await store.deleteCitation(
                     projectDir: session.projectKey.projectDir,
                     userID: userID,
                     citationID: target.id
                 )
-                context.applySavedCitation()
+                context.applyWrite(effects)
                 resetComposerIdentity(keepLocator: true)
                 await reloadListedCitations()
                 applyEntryFocus()

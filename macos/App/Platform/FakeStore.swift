@@ -2145,7 +2145,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         citationNotes: [String],
         observations drafts: [CatalogObservationDraft],
         citationID: String?
-    ) async throws -> (CatalogSubject, CatalogCitation, [CatalogObservation]) {
+    ) async throws -> (CatalogSubject, CatalogCitation, [CatalogObservation], CatalogWriteEffects) {
         // Validate and pick the bridge type under the lock; `createSubject` and
         // the citation write below take it themselves.
         let plan: (rule: CatalogConnectRule, typeID: String, cell: CatalogGridCell) = try withState {
@@ -2229,7 +2229,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 allowEdgeRows: true
             )
         } else {
-            (citation, observations) = try await createCitationWithObservations(
+            (citation, observations, _) = try await createCitationWithObservations(
                 projectDir: projectDir,
                 userID: userID,
                 artifactID: artifactID,
@@ -2251,7 +2251,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 }
             }
         }
-        return (subject, citation, observations)
+        return (subject, citation, observations, CatalogWriteEffects(cacheSources: [sourceID]))
     }
 
     private static func floorDiv(_ a: Int64, _ b: Int64) -> Int64 {
@@ -2292,7 +2292,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         transcriptionNote: String,
         citationNotes: [String],
         observations drafts: [CatalogObservationDraft]
-    ) async throws -> (CatalogCitation, [CatalogObservation]) {
+    ) async throws -> (CatalogCitation, [CatalogObservation], CatalogWriteEffects) {
         let delay: UInt64 = withState {
             recordedCalls.append("createCitationWithObservations observations=\(drafts.count)")
             return createCitationDelayNanoseconds
@@ -2319,8 +2319,9 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 citationID: citation.id,
                 drafts: drafts
             )
-            bumpSource(owningSource(ofCitation: citation.id))
-            return (citation, created)
+            let owner = owningSource(ofCitation: citation.id)
+            bumpSource(owner)
+            return (citation, created, CatalogWriteEffects(cacheSources: owner.map { [$0] } ?? []))
         }
     }
 
@@ -2344,14 +2345,15 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         userID: String,
         citationID: String,
         observations drafts: [CatalogObservationDraft]
-    ) async throws -> [CatalogObservation] {
-        try await addObservationsToCitation(
+    ) async throws -> ([CatalogObservation], CatalogWriteEffects) {
+        let written = try await addObservationsToCitation(
             projectDir: projectDir,
             userID: userID,
             citationID: citationID,
             observations: drafts,
             allowEdgeRows: false
         )
+        return (written, CatalogWriteEffects(cacheSources: withState { owningSource(ofCitation: citationID).map { [$0] } ?? [] }))
     }
 
     private func addObservationsToCitation(
@@ -2388,7 +2390,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         description: String,
         transcriptionUncertain: Bool,
         transcriptionNote: String
-    ) async throws -> CatalogCitation {
+    ) async throws -> (CatalogCitation, CatalogWriteEffects) {
         return try withState {
             recordedCalls.append("updateCitation citationID=\(citationID)")
             markCatalogSessionHeld(projectDir)
@@ -2399,8 +2401,9 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             citation.transcriptionUncertain = transcriptionUncertain
             citation.transcriptionNote = transcriptionNote
             citationsByID[citationID] = citation
-            bumpSource(owningSource(ofCitation: citationID))
-            return citation
+            let owner = owningSource(ofCitation: citationID)
+            bumpSource(owner)
+            return (citation, CatalogWriteEffects(cacheSources: owner.map { [$0] } ?? []))
         }
     }
 
@@ -2408,7 +2411,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         projectDir: String,
         userID _: String,
         observation: CatalogObservation
-    ) async throws -> CatalogObservation {
+    ) async throws -> (CatalogObservation, CatalogWriteEffects) {
         return try withState {
             recordedCalls.append("updateObservation id=\(observation.id)")
             markCatalogSessionHeld(projectDir)
@@ -2429,12 +2432,14 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 observationsBySource[sourceID] = list.map { $0.id == next.id ? next : $0 }
                 bumpSource(sourceID)
             }
-            return next
+            return (next, CatalogWriteEffects(cacheSources: observationsBySource.keys.filter { key in
+                observationsBySource[key]?.contains(where: { $0.id == next.id }) ?? false
+            }))
         }
     }
 
-    func deleteObservation(projectDir: String, userID _: String, observationID: String) async throws {
-        try withState {
+    func deleteObservation(projectDir: String, userID _: String, observationID: String) async throws -> CatalogWriteEffects {
+        return try withState {
             recordedCalls.append("deleteObservation id=\(observationID)")
             markCatalogSessionHeld(projectDir)
             let existing = observationsBySource.values.flatMap { $0 }.first(where: { $0.id == observationID })
@@ -2442,16 +2447,19 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             if isEdgeLocked(observation: existing, projectDir: projectDir) {
                 throw edgeLockedError()
             }
+            var owners: [String] = []
             for (sourceID, list) in observationsBySource where list.contains(where: { $0.id == observationID }) {
+                owners.append(sourceID)
                 observationsBySource[sourceID] = list.filter { $0.id != observationID }
                 bumpSource(sourceID)
             }
             pinsByObservation[observationID] = nil
+            return CatalogWriteEffects(cacheSources: owners)
         }
     }
 
-    func deleteCitation(projectDir: String, userID _: String, citationID: String) async throws {
-        try withState {
+    func deleteCitation(projectDir: String, userID _: String, citationID: String) async throws -> CatalogWriteEffects {
+        return try withState {
             recordedCalls.append("deleteCitation id=\(citationID)")
             markCatalogSessionHeld(projectDir)
             let report = citationDeleteImpact(projectDir: projectDir, id: citationID)
@@ -2470,6 +2478,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             citationsByID.removeValue(forKey: citationID)
             citationNotesByID.removeValue(forKey: citationID)
             bumpSource(owner)
+            return CatalogWriteEffects(cacheSources: owner.map { [$0] } ?? [])
         }
     }
 

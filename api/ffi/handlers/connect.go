@@ -54,7 +54,7 @@ func CreateCitedBridge(in []byte) ([]byte, error) {
 	}
 	var out *engine.CreateCitedBridgeResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		res, _, err := writes.Run(c, writes.Op{Action: "create_cited_bridge", UserID: userID},
+		res, wrote, err := writes.Run(c, writes.Op{Action: "create_cited_bridge", UserID: userID},
 			func(tx *database.Tx) (connect.Result, []rowchange.Change, error) {
 				return connect.CreateCitedBridge(tx, userID, connect.CreateInput{
 					SourceID:      sourceID,
@@ -89,6 +89,7 @@ func CreateCitedBridge(in []byte) ([]byte, error) {
 		out = &engine.CreateCitedBridgeResponse{
 			Subject:  subjectProto(res.Subject),
 			Citation: citationProto(res.Citation),
+			Effects:  writeEffectsProto(wrote.Effects),
 		}
 		for _, row := range listed {
 			if _, ok := keep[uuidString(row.ID)]; !ok {
