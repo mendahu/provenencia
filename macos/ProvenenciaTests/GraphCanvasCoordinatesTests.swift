@@ -4,6 +4,17 @@ import Testing
 
 @Suite
 struct GraphCanvasCoordinatesTests {
+    @Test func detailBandKeepsTheCurrentFaceBetweenCutoffs() {
+        let band = GraphCanvasDetailBand(overviewBelow: 0.65, readingAbove: 0.75)
+        #expect(band.next(.reading, magnification: 0.64) == .overview)
+        #expect(band.next(.reading, magnification: 0.70) == .reading)
+        #expect(band.next(.overview, magnification: 0.70) == .overview)
+        #expect(band.next(.overview, magnification: 0.76) == .reading)
+        #expect(band.next(.overview, magnification: 0.25) == .overview)
+        #expect(band.initial(magnification: 0.25) == .overview)
+        #expect(band.initial(magnification: 0.70) == .reading)
+    }
+
     @Test func clampMagnificationRespectsBounds() {
         #expect(GraphCanvasCoordinates.clampMagnification(0.1) == GraphCanvasCamera.minMagnification)
         #expect(GraphCanvasCoordinates.clampMagnification(10) == GraphCanvasCamera.maxMagnification)

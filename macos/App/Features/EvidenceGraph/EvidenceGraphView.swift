@@ -91,6 +91,11 @@ struct EvidenceGraphView: View {
 }
 // MARK: - Content
 
+/// Evidence-graph face cutoffs. A later tree host sets its own band and paints its own overview.
+private enum EvidenceGraphCardDetail {
+    static let band = GraphCanvasDetailBand(overviewBelow: 0.65, readingAbove: 0.75)
+}
+
 private struct EvidenceGraphContent: View {
     @Bindable var graphHandle: QueryHandle<SourceGraphRows>
     @Bindable var fieldsHandle: QueryHandle<PropertiesSnapshot>
@@ -284,7 +289,8 @@ private struct EvidenceGraphContent: View {
                 onCameraChange: { camera in
                     model.session.setGraphCamera(camera, for: sourceID)
                 },
-                accessibilityLabel: L10n.string(L10n.Workspace.evidenceGraphTitle)
+                accessibilityLabel: L10n.string(L10n.Workspace.evidenceGraphTitle),
+                detailBand: EvidenceGraphCardDetail.band
             ) {
                 EvidenceGraphDocument(
                     graphHandle: graphHandle,
@@ -556,6 +562,12 @@ private struct EvidenceGraphDocumentBody: View {
     let items: GraphCanvasItemLayer
     /// Painted card layouts; hit targets and edges follow these, not constants.
     @State private var cardLayouts = EvidenceCardLayoutStore()
+    @Environment(\.graphCanvasViewport) private var viewport
+
+    /// Face level. Reading `detail` (not magnification) keeps a pinch from rebuilding every card.
+    private var canvasDetail: GraphCanvasDetail {
+        viewport?.detail ?? .reading
+    }
 
     private var snapshot: SourceGraphSnapshot {
         model.displaySnapshot(rows: graphHandle.value, types: fieldsHandle.value?.types ?? [])
@@ -623,7 +635,8 @@ private struct EvidenceGraphDocumentBody: View {
                 let center = EvidenceSubjectCard.contentCenter(gridX: ghost.gridX, gridY: ghost.gridY)
                 EvidenceSubjectCard.ghost(
                     placed: ghost,
-                    presentation: model.presentation(for: ghost.kind.rawValue)
+                    presentation: model.presentation(for: ghost.kind.rawValue),
+                    detail: canvasDetail
                 )
                     .position(CGPoint(x: center.x - canvas.origin.x, y: center.y - canvas.origin.y))
             }
@@ -649,6 +662,7 @@ private struct EvidenceGraphDocumentBody: View {
         // Cards change only when what they draw does — never per drag frame.
         .onChange(of: cards, initial: true) { _, cards in
             pushItems(cards)
+            publishHitTargets()
         }
         .onChange(of: canvas.origin) { _, _ in
             pushItems(cards)
@@ -751,14 +765,16 @@ private struct EvidenceGraphDocumentBody: View {
                         )
                     ),
                     acceptsConnect: false,
-                    actions: EvidenceBridgeCard.actionTargets(
-                        for: placed,
-                        in: snapshot,
-                        canCite: model.canCite,
-                        layout: cardLayouts.layout(for: placed.id)
-                    ).map { action in
-                        GraphCanvasActionTarget(id: action.id, frame: inDocument(action.frame))
-                    }
+                    actions: canvasDetail == .overview
+                        ? []
+                        : EvidenceBridgeCard.actionTargets(
+                            for: placed,
+                            in: snapshot,
+                            canCite: model.canCite,
+                            layout: cardLayouts.layout(for: placed.id)
+                        ).map { action in
+                            GraphCanvasActionTarget(id: action.id, frame: inDocument(action.frame))
+                        }
                 )
             )
         }
@@ -773,13 +789,15 @@ private struct EvidenceGraphDocumentBody: View {
                         )
                     ),
                     acceptsConnect: true,
-                    actions: EvidenceSubjectCard.actionTargets(
-                        for: placed,
-                        canCite: model.canCite,
-                        layout: cardLayouts.layout(for: placed.id)
-                    ).map { action in
-                        GraphCanvasActionTarget(id: action.id, frame: inDocument(action.frame))
-                    }
+                    actions: canvasDetail == .overview
+                        ? []
+                        : EvidenceSubjectCard.actionTargets(
+                            for: placed,
+                            canCite: model.canCite,
+                            layout: cardLayouts.layout(for: placed.id)
+                        ).map { action in
+                            GraphCanvasActionTarget(id: action.id, frame: inDocument(action.frame))
+                        }
                 )
             )
         }
@@ -806,19 +824,26 @@ private struct EvidenceGraphDocumentBody: View {
             EvidenceCanvasCard(
                 placed: .bridge(placed),
                 text: text[bridge: placed, in: snapshot],
-                state: state(placed.id)
+                state: state(placed.id),
+                detail: canvasDetail
             )
         } + subjects.map { placed in
             EvidenceCanvasCard(
                 placed: .subject(placed, model.presentation(for: placed.kind.rawValue)),
                 text: text[subject: placed],
-                state: state(placed.id)
+                state: state(placed.id),
+                detail: canvasDetail
             )
         }
     }
 
     private func pushItems(_ cards: [EvidenceCanvasCard]) {
-        let content = EvidenceCanvasCardContent(model: model, navigation: navigation, layouts: cardLayouts)
+        let content = EvidenceCanvasCardContent(
+            model: model,
+            navigation: navigation,
+            layouts: cardLayouts,
+            snapshot: snapshot
+        )
         let subjectsRotor = L10n.string(L10n.EvidenceGraph.subjectsRotor)
         let linksRotor = L10n.string(L10n.EvidenceGraph.linksRotor)
         items.update(cards.map { card in

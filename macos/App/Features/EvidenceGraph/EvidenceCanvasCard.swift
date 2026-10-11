@@ -25,6 +25,8 @@ struct EvidenceCanvasCard: Equatable {
     var placed: Placed
     var text: EvidenceCardText
     var state: State
+    /// Canvas face. On the model so the item layer rebuilds only when it changes.
+    var detail: GraphCanvasDetail
 
     var id: String {
         switch placed {
@@ -60,6 +62,7 @@ struct EvidenceCanvasCardContent {
     let model: EvidenceGraphModel
     let navigation: WorkspaceNavigation
     let layouts: EvidenceCardLayoutStore
+    let snapshot: SourceGraphSnapshot
 
     func view(for card: EvidenceCanvasCard) -> AnyView {
         switch card.placed {
@@ -89,7 +92,10 @@ struct EvidenceCanvasCardContent {
             isDragging: card.state.isDragging,
             hoveredActionID: card.state.hoveredActionID,
             pressedActionID: card.state.pressedActionID,
-            onLayout: { layouts.record($0, for: placed.id) }
+            onLayout: { layouts.record($0, for: placed.id) },
+            detail: card.detail,
+            reservedSize: layouts.layout(for: placed.id)?.size
+                ?? CGSize(width: EvidenceSubjectCard.width, height: EvidenceSubjectCard.contentHeight(for: placed))
         )
         .accessibilityAction(named: Text(L10n.EvidenceGraph.editAccessibility)) {
             model.beginEdit(subjectID: placed.id)
@@ -134,7 +140,13 @@ struct EvidenceCanvasCardContent {
             isDragging: card.state.isDragging,
             hoveredActionID: card.state.hoveredActionID,
             canCite: card.state.canCite,
-            onLayout: { layouts.record($0, for: placed.id) }
+            onLayout: { layouts.record($0, for: placed.id) },
+            detail: card.detail,
+            reservedSize: layouts.layout(for: placed.id)?.size
+                ?? CGSize(
+                    width: EvidenceBridgeCard.width,
+                    height: EvidenceBridgeCard.contentHeight(for: placed, in: snapshot)
+                )
         )
         .accessibilityAction(named: Text(L10n.EvidenceGraph.editAccessibility)) {
             model.beginEdit(subjectID: placed.id)

@@ -273,20 +273,14 @@ struct EvidenceSubjectCard: View {
     var pressedActionID: String? = nil
     /// Receives the painted layout (card size + tagged hit regions) for hit targets and edges.
     var onLayout: ((EvidenceCardLayout) -> Void)? = nil
+    /// Reading paints the full card. Overview paints the icon and label in the same rectangle.
+    var detail: GraphCanvasDetail = .reading
+    /// Last measured card size, or the content-height fallback before the first measurement.
+    /// Overview frames itself to this and does not report a new layout.
+    var reservedSize: CGSize? = nil
 
     var body: some View {
-        EvidenceSubjectCardChrome(
-            placed: placed,
-            presentation: presentation,
-            isSelected: isSelected || isConnectingFrom,
-            isActivated: isActivated,
-            isDragging: isDragging,
-            isConnectingFrom: isConnectingFrom,
-            canCite: canCite,
-            hoveredActionID: hoveredActionID,
-            pressedActionID: pressedActionID
-        )
-        .reportsEvidenceCardLayout(onLayout)
+        face
         .opacity(ghostOpacity)
         .accessibilityElement(children: .contain)
         .accessibilityLabel(Text(verbatim: text.accessibilityLabel))
@@ -297,21 +291,60 @@ struct EvidenceSubjectCard: View {
     /// Non-interactive placement preview while a tool is armed.
     static func ghost(
         placed: SourceGraphPlacedSubject,
-        presentation: CatalogSubjectTypePresentation? = nil
+        presentation: CatalogSubjectTypePresentation? = nil,
+        detail: GraphCanvasDetail = .reading
     ) -> some View {
-        EvidenceSubjectCardChrome(
-            placed: placed,
-            presentation: presentation,
-            isSelected: false,
-            isActivated: false,
-            isDragging: false,
-            isConnectingFrom: false,
-            canCite: true,
-            hoveredActionID: nil,
-            pressedActionID: nil
-        )
+        Group {
+            if detail == .overview {
+                EvidenceGraphOverviewFace.subject(
+                    placed: placed,
+                    presentation: presentation,
+                    size: CGSize(width: width, height: contentHeight(for: placed)),
+                    showsSelection: false,
+                    isDragging: false
+                )
+            } else {
+                EvidenceSubjectCardChrome(
+                    placed: placed,
+                    presentation: presentation,
+                    isSelected: false,
+                    isActivated: false,
+                    isDragging: false,
+                    isConnectingFrom: false,
+                    canCite: true,
+                    hoveredActionID: nil,
+                    pressedActionID: nil
+                )
+            }
+        }
         .opacity(0.62)
         .accessibilityHidden(true)
+    }
+
+    @ViewBuilder
+    private var face: some View {
+        if detail == .overview {
+            EvidenceGraphOverviewFace.subject(
+                placed: placed,
+                presentation: presentation,
+                size: reservedSize ?? CGSize(width: Self.width, height: Self.contentHeight(for: placed)),
+                showsSelection: isSelected || isActivated || isDragging || isConnectingFrom,
+                isDragging: isDragging
+            )
+        } else {
+            EvidenceSubjectCardChrome(
+                placed: placed,
+                presentation: presentation,
+                isSelected: isSelected || isConnectingFrom,
+                isActivated: isActivated,
+                isDragging: isDragging,
+                isConnectingFrom: isConnectingFrom,
+                canCite: canCite,
+                hoveredActionID: hoveredActionID,
+                pressedActionID: pressedActionID
+            )
+            .reportsEvidenceCardLayout(onLayout)
+        }
     }
 
     /// Content-space center for a placed (or ghost) card.

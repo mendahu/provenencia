@@ -134,6 +134,8 @@
 		AA0000000000000000000451 /* SubjectStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000450 /* SubjectStoreTests.swift */; };
 		AA0000000000000000000461 /* SourceGraphSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000460 /* SourceGraphSnapshot.swift */; };
 		AA0000000000000000000471 /* GraphCanvasCamera.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000470 /* GraphCanvasCamera.swift */; };
+		AA00000000000000000004E1 /* GraphCanvasDetail.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000004E0 /* GraphCanvasDetail.swift */; };
+		AA00000000000000000004E3 /* EvidenceGraphOverviewFace.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000004E2 /* EvidenceGraphOverviewFace.swift */; };
 		AA0000000000000000000473 /* GraphCanvasCoordinates.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000472 /* GraphCanvasCoordinates.swift */; };
 		AA0000000000000000000475 /* GraphCanvasGridView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000474 /* GraphCanvasGridView.swift */; };
 		AA0000000000000000000477 /* GraphCanvasScrollView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000476 /* GraphCanvasScrollView.swift */; };
@@ -511,6 +513,8 @@
 		AA0000000000000000000450 /* SubjectStoreTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SubjectStoreTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000460 /* SourceGraphSnapshot.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SourceGraphSnapshot.swift; sourceTree = "<group>"; };
 		AA0000000000000000000470 /* GraphCanvasCamera.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GraphCanvasCamera.swift; sourceTree = "<group>"; };
+		AA00000000000000000004E0 /* GraphCanvasDetail.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GraphCanvasDetail.swift; sourceTree = "<group>"; };
+		AA00000000000000000004E2 /* EvidenceGraphOverviewFace.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EvidenceGraphOverviewFace.swift; sourceTree = "<group>"; };
 		AA0000000000000000000472 /* GraphCanvasCoordinates.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GraphCanvasCoordinates.swift; sourceTree = "<group>"; };
 		AA0000000000000000000474 /* GraphCanvasGridView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GraphCanvasGridView.swift; sourceTree = "<group>"; };
 		AA0000000000000000000476 /* GraphCanvasScrollView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GraphCanvasScrollView.swift; sourceTree = "<group>"; };
@@ -1040,6 +1044,7 @@
 			isa = PBXGroup;
 			children = (
 				AA0000000000000000000470 /* GraphCanvasCamera.swift */,
+				AA00000000000000000004E0 /* GraphCanvasDetail.swift */,
 				AA0000000000000000000472 /* GraphCanvasCoordinates.swift */,
 				AA0000000000000000000474 /* GraphCanvasGridView.swift */,
 				AA0000000000000000000476 /* GraphCanvasScrollView.swift */,
@@ -1059,6 +1064,7 @@
 				AA0000000000000000000478 /* EvidenceGraphView.swift */,
 				AA0000000000000000000496 /* EvidenceCanvasInputMode.swift */,
 				AA0000000000000000000480 /* EvidenceSubjectCard.swift */,
+				AA00000000000000000004E2 /* EvidenceGraphOverviewFace.swift */,
 				A80600000000000000000001 /* EvidenceCitedPropertyMarks.swift */,
 				A90400000000000000000001 /* EvidenceCardLayout.swift */,
 				AA0000000000000000000679 /* EvidenceCardText.swift */,
@@ -1931,6 +1937,8 @@
 				DA26E3BA97D438A7561ED96D /* WorkspaceContent.swift in Sources */,
 				AA0000000000000000000430 /* WorkspaceDestinationHost.swift in Sources */,
 				AA0000000000000000000471 /* GraphCanvasCamera.swift in Sources */,
+				AA00000000000000000004E1 /* GraphCanvasDetail.swift in Sources */,
+				AA00000000000000000004E3 /* EvidenceGraphOverviewFace.swift in Sources */,
 				AA0000000000000000000473 /* GraphCanvasCoordinates.swift in Sources */,
 				AA0000000000000000000475 /* GraphCanvasGridView.swift in Sources */,
 				AA0000000000000000000477 /* GraphCanvasScrollView.swift in Sources */,

@@ -37,6 +37,9 @@ struct GraphCanvasScrollView<Content: View>: NSViewRepresentable {
     var onCameraChange: (GraphCanvasCamera) -> Void = { _ in }
     /// VoiceOver name for the canvas group that holds the items and their rotors.
     var accessibilityLabel: String = ""
+    /// When the host swaps card faces. The canvas holds the level; the face
+    /// stays in the product folder.
+    var detailBand: GraphCanvasDetailBand = .readingOnly
     @ViewBuilder var content: () -> Content
 
     func makeCoordinator() -> Coordinator {
@@ -61,6 +64,7 @@ struct GraphCanvasScrollView<Content: View>: NSViewRepresentable {
         let coordinator = context.coordinator
         coordinator.onCameraChange = onCameraChange
         coordinator.viewport.scrollView = scrollView
+        coordinator.viewport.detailBand = detailBand
         scrollView.viewport = coordinator.viewport
         coordinator.pointer.viewport = coordinator.viewport
 
@@ -90,6 +94,7 @@ struct GraphCanvasScrollView<Content: View>: NSViewRepresentable {
             coordinator?.onCameraChange(camera)
         }
         coordinator.viewport.scrollView = scrollView
+        coordinator.viewport.detailBand = detailBand
         scrollView.viewport = coordinator.viewport
         coordinator.pointer.viewport = coordinator.viewport
 
@@ -361,7 +366,30 @@ final class GraphCanvasNSScrollView: NSScrollView {
 final class GraphCanvasViewportController: NSObject {
     weak var scrollView: NSScrollView?
     /// Live `NSScrollView` magnification. Grid fade and screen-space strokes read this.
-    var magnification: CGFloat = 1
+    /// Card faces read ``detail`` instead, so a pinch tick does not rebuild them.
+    var magnification: CGFloat = 1 {
+        didSet {
+            guard oldValue != magnification else { return }
+            let resolved = detailBand.next(detail, magnification: magnification)
+            if detail != resolved {
+                detail = resolved
+            }
+        }
+    }
+    /// Host cutoffs for ``detail``. Assigning a new band resolves the level
+    /// from the magnification already showing.
+    var detailBand: GraphCanvasDetailBand = .readingOnly {
+        didSet {
+            guard oldValue != detailBand else { return }
+            let resolved = detailBand.initial(magnification: magnification)
+            if detail != resolved {
+                detail = resolved
+            }
+        }
+    }
+    /// Reading or overview. Changes only when ``detailBand`` says the face
+    /// crossed a cutoff, not on every magnification tick.
+    private(set) var detail: GraphCanvasDetail = .reading
     /// True while the window first responder is inside this canvas document.
     private(set) var documentContainsKeyboardFocus = false
     private var observedWindow: NSWindow?

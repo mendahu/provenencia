@@ -39,21 +39,39 @@ struct EvidenceBridgeCard: View {
     var canCite: Bool = false
     /// Receives the painted layout (card size + tagged hit regions) for hit targets and edges.
     var onLayout: ((EvidenceCardLayout) -> Void)? = nil
+    /// Reading paints the full card. Overview paints the summary in the same rectangle.
+    var detail: GraphCanvasDetail = .reading
+    /// Last measured card size, or the content-height fallback before the first measurement.
+    var reservedSize: CGSize? = nil
 
     var body: some View {
-        EvidenceBridgeCardChrome(
-            placed: placed,
-            summary: text.summary ?? "",
-            isSelected: isSelected,
-            isActivated: isActivated,
-            isDragging: isDragging,
-            hoveredActionID: hoveredActionID,
-            canCite: canCite
-        )
-        .reportsEvidenceCardLayout(onLayout)
+        face
         .accessibilityElement(children: .contain)
         .accessibilityLabel(Text(verbatim: text.accessibilityLabel))
         .accessibilityIdentifier("evidenceGraph.bridge.\(placed.id)")
+    }
+
+    @ViewBuilder
+    private var face: some View {
+        if detail == .overview {
+            EvidenceGraphOverviewFace.bridge(
+                summary: text.summary ?? "",
+                size: reservedSize ?? CGSize(width: Self.width, height: Self.approximateHalfHeight * 2),
+                showsSelection: isSelected || isActivated || isDragging,
+                isDragging: isDragging
+            )
+        } else {
+            EvidenceBridgeCardChrome(
+                placed: placed,
+                summary: text.summary ?? "",
+                isSelected: isSelected,
+                isActivated: isActivated,
+                isDragging: isDragging,
+                hoveredActionID: hoveredActionID,
+                canCite: canCite
+            )
+            .reportsEvidenceCardLayout(onLayout)
+        }
     }
 
     static func contentCenter(gridX: Int64, gridY: Int64) -> CGPoint {

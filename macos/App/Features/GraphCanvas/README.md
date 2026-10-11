@@ -107,6 +107,8 @@ SwiftUI content does not go soft.
 
 `GraphCanvasViewportController.magnification` is the live zoom. The grid fades as a whole when a cell would be under about a screen point; product strokes that should stay one screen point wide use `GraphCanvasCoordinates.screenPixelDocumentWidth`.
 
+Hosts read `GraphCanvasViewportController.detail` to choose a card face; the face itself stays in the product folder.
+
 Changing `contentID` restores `restoredCamera`, or centers at 1× when the host has none. A content-size change leaves the camera where it is.
 `contentOrigin` is the grid-space point the document's top-left stands on. When a host moves it, the scroll offset shifts by the same delta so the viewport stays on the same content, including during a card drag.
 Paint `rootView` may update every representable pass — safe because AppKit owns gestures.
