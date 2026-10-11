@@ -1,6 +1,6 @@
 # Evidence graph drag performance: what's left
 
-**Status:** idea, not scheduled. Dragging is reasonable after the localization and card fixes (below); pick this up if graphs grow or drags feel choppy again. Architecture: [`macos/App/Features/GraphCanvas/README.md`](../../macos/App/Features/GraphCanvas/README.md).
+**Status:** idea, partly scheduled. Spike 10 takes the tiled grid ([S10-02](../deployment-plan/spike-10/deployment-plan.md)), a simplified card when the rows are too small to read ([S10-D14](../deployment-plan/spike-10/design/S10-D14-zoomed-out-cards.md), [S10-46](../deployment-plan/spike-10/deployment-plan.md)), and mounting hosting views only near the window ([S10-47](../deployment-plan/spike-10/deployment-plan.md)). Edges in Core Animation stay here. Architecture: [`macos/App/Features/GraphCanvas/README.md`](../../macos/App/Features/GraphCanvas/README.md).
 
 ## Where things stand
 
@@ -27,8 +27,8 @@ A standalone reproduction confirmed the mechanism: with the edge canvas watching
 ## The idea
 
 - **Edges in Core Animation, owned by GraphCanvas.** One `CAShapeLayer` per edge in a layer above the base view and below items. On drag, update only the paths of edges attached to the dragged item, straight from `GraphCanvasDocumentView.mouseDragged` — no SwiftUI. The host pushes edge descriptions (endpoint item ids, colors / gradient stops, selected state) the way it pushes items. Gradients: a `CAGradientLayer` masked by the shape, or a solid stroke plus a short gradient cap.
-- **Grid as a pattern layer.** Replace the 4000×4000 grid `Canvas` with a tiled or pattern-filled layer. Mostly a memory win (~64 MP at 2×), not a drag cost today.
-- **Viewport virtualization.** With items as views, install hosting views only for items near `documentVisibleRect`. Only worth it for graphs much larger than a Source's.
+- **Grid as a pattern layer.** Spike 10 [S10-02](../deployment-plan/spike-10/deployment-plan.md) takes this: one repeated cell instead of the 4000×4000 grid `Canvas`, so a grown document does not allocate a larger bitmap. It was a memory win (~64 MP at 2×), not the drag cost.
+- **Viewport virtualization.** Spike 10 [S10-47](../deployment-plan/spike-10/deployment-plan.md) takes this: the host still pushes every item, and hosting views are installed only near `documentVisibleRect`. That is the first paint of a graph at reading zoom. It does not shrink the set once every card is already in the window.
 
 ## Measuring
 
