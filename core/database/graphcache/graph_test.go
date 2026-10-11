@@ -157,6 +157,66 @@ func TestCommitOfAnAssociationLoadsEndpoints(t *testing.T) {
 	}
 }
 
+func TestCommitReloadsASharedEndpointOnce(t *testing.T) {
+	c := openCatalog(t)
+	db, err := c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	typeID := func(key string) []byte {
+		t.Helper()
+		var id []byte
+		if err := db.QueryRow(`SELECT id FROM subject_types WHERE key = ? AND origin = 'provenencia'`, key).Scan(&id); err != nil {
+			t.Fatal(err)
+		}
+		return append([]byte(nil), id...)
+	}
+	propID := func(key string) []byte {
+		t.Helper()
+		var id []byte
+		if err := db.QueryRow(`SELECT id FROM properties WHERE key = ? AND origin = 'provenencia'`, key).Scan(&id); err != nil {
+			t.Fatal(err)
+		}
+		return append([]byte(nil), id...)
+	}
+	personT, eventT, partT := typeID("person"), typeID("event"), typeID("participation")
+	person := []byte{4, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}
+	eventA := []byte{4, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2}
+	eventB := []byte{4, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3}
+	assocA := []byte{4, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4}
+	assocB := []byte{4, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5}
+	if _, err := db.Exec(`INSERT INTO canonical_entities (id, subject_type_id, ref) VALUES
+		(?, ?, 'PER-S'), (?, ?, 'EVT-A'), (?, ?, 'EVT-B'), (?, ?, 'BRG-A'), (?, ?, 'BRG-B')`,
+		person, personT, eventA, eventT, eventB, eventT, assocA, partT, assocB, partT); err != nil {
+		t.Fatal(err)
+	}
+	ins := `INSERT INTO auto_reconciler_values
+		(entity_id, property_id, rank, value_entity_id, support, against, reason)
+		VALUES (?, ?, 1, ?, 1, 0, 'kept')`
+	for _, row := range [][2][]byte{{assocA, eventA}, {assocB, eventB}} {
+		if _, err := db.Exec(ins, row[0], propID("event"), row[1]); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := db.Exec(ins, row[0], propID("person"), person); err != nil {
+			t.Fatal(err)
+		}
+	}
+	g := c.Graph()
+	var n int
+	g.SetQueryCounterForTest(func() { n++ })
+	if err := g.OnCommit(1, effects.Set{Handles: [][]byte{assocA, assocB}}); err != nil {
+		t.Fatal(err)
+	}
+	if !g.LoadedForTest(person) || !g.LoadedForTest(eventA) || !g.LoadedForTest(eventB) {
+		t.Fatal("shared endpoint was not loaded")
+	}
+	// One entity-row read, two endpoint lookups, one chunk (entity, values,
+	// members, links, disambiguation). A reload per association is well above this.
+	if n > 10 {
+		t.Fatalf("queries %d, want one reload of the shared endpoint", n)
+	}
+}
+
 func TestLoadLinksUsesTheEdgeIndex(t *testing.T) {
 	c := openCatalog(t)
 	db, err := c.DB()
