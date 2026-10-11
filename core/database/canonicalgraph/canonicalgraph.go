@@ -15,11 +15,9 @@ import (
 	"strings"
 
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/sqlbatch"
 	"github.com/mendahu/provenencia/core/hops"
 )
-
-// batch bounds an IN list. A walk is still a fixed number of queries.
-const batch = 500
 
 // Querier is *sql.Tx or *sql.DB.
 type Querier interface {
@@ -129,28 +127,19 @@ func WalkSource(q Querier, sourceID []byte, h hops.Hop, from [][]byte) ([]Edge, 
 func walk(q Querier, query string, args []any, from [][]byte) ([]Edge, error) {
 	from = database.UniqueBlobIDs(from)
 	var out []Edge
-	for start := 0; start < len(from); start += batch {
-		ids := from[start:min(start+batch, len(from))]
-		rows, err := q.Query(query+database.SQLInPlaceholders(len(ids))+`)`, append(args, database.BlobArgs(ids)...)...)
-		if err != nil {
-			return nil, err
+	err := sqlbatch.Query(q, query, `)`, args, from, func(rows *sql.Rows) error {
+		var e Edge
+		if err := rows.Scan(&e.From, &e.Association, &e.AssociationRef, &e.To, &e.ToRef); err != nil {
+			return err
 		}
-		for rows.Next() {
-			var e Edge
-			if err := rows.Scan(&e.From, &e.Association, &e.AssociationRef, &e.To, &e.ToRef); err != nil {
-				_ = rows.Close()
-				return nil, err
-			}
-			e.From = append([]byte(nil), e.From...)
-			e.Association = append([]byte(nil), e.Association...)
-			e.To = append([]byte(nil), e.To...)
-			out = append(out, e)
-		}
-		err = rows.Err()
-		_ = rows.Close()
-		if err != nil {
-			return nil, err
-		}
+		e.From = append([]byte(nil), e.From...)
+		e.Association = append([]byte(nil), e.Association...)
+		e.To = append([]byte(nil), e.To...)
+		out = append(out, e)
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
 	sort.SliceStable(out, func(i, j int) bool {
 		a, b := out[i], out[j]

@@ -19,6 +19,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/sqlbatch"
 )
 
 var ErrInvalid = apperr.New(apperr.CodeNameValuesInvalid, apperr.KindUser)
@@ -243,7 +244,7 @@ func LookupMany(c *database.Catalog, ids [][]byte) (map[string]Value, error) {
 }
 
 // LookupManyTx is LookupMany on an existing connection or transaction: two
-// queries whatever the number of ids.
+// queries per sqlbatch.Size ids.
 func LookupManyTx(db interface {
 	Query(query string, args ...any) (*sql.Rows, error)
 }, ids [][]byte) (map[string]Value, error) {
@@ -252,50 +253,35 @@ func LookupManyTx(db interface {
 	if len(ids) == 0 {
 		return out, nil
 	}
-	q := sqlLookupValueID + database.SQLInPlaceholders(len(ids)) + `)`
-	rows, err := db.Query(q, database.BlobArgs(ids)...)
-	if err != nil {
-		return nil, err
-	}
-	for rows.Next() {
+	err := sqlbatch.Query(db, sqlLookupValueID, `)`, nil, ids, func(rows *sql.Rows) error {
 		var (
 			v  Value
 			id []byte
 		)
 		if err := rows.Scan(&id, &v.Form); err != nil {
-			_ = rows.Close()
-			return nil, err
+			return err
 		}
 		v.ID = append([]byte(nil), id...)
 		out[string(v.ID)] = v
-	}
-	err = rows.Err()
-	_ = rows.Close()
+		return nil
+	})
 	if err != nil {
 		return nil, err
-	}
-	if len(out) == 0 {
-		return out, nil
 	}
 	parentIDs := make([][]byte, 0, len(out))
 	for _, v := range out {
 		parentIDs = append(parentIDs, v.ID)
 	}
-	pq := sqlLookupPartsByParents + database.SQLInPlaceholders(len(parentIDs)) + `) ORDER BY name_value_id, idx`
-	prows, err := db.Query(pq, database.BlobArgs(parentIDs)...)
-	if err != nil {
-		return nil, err
-	}
-	defer prows.Close()
-	for prows.Next() {
+	// A parent's parts all come back in its batch, in idx order.
+	err = sqlbatch.Query(db, sqlLookupPartsByParents, `) ORDER BY name_value_id, idx`, nil, parentIDs, func(rows *sql.Rows) error {
 		var (
 			p        Part
 			parentID []byte
 			typ      sql.NullString
 			part     []byte
 		)
-		if err := prows.Scan(&part, &parentID, &p.Idx, &p.Value, &typ); err != nil {
-			return nil, err
+		if err := rows.Scan(&part, &parentID, &p.Idx, &p.Value, &typ); err != nil {
+			return err
 		}
 		p.ID = append([]byte(nil), part...)
 		p.Type = typ.String
@@ -303,8 +289,9 @@ func LookupManyTx(db interface {
 		v := out[k]
 		v.Parts = append(v.Parts, p)
 		out[k] = v
-	}
-	if err := prows.Err(); err != nil {
+		return nil
+	})
+	if err != nil {
 		return nil, err
 	}
 	return out, nil

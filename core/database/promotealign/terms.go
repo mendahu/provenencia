@@ -1,13 +1,12 @@
 package promotealign
 
 import (
+	"database/sql"
 	"github.com/mendahu/provenencia/core/connectrules"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/graphcache"
+	"github.com/mendahu/provenencia/core/database/sqlbatch"
 )
-
-// inBatch bounds an IN list; a batched read is still a fixed number of queries.
-const inBatch = 500
 
 // kinship is the directed and inverse marks of the catalog's terms, keyed
 // "propertyKey|termKey".
@@ -76,29 +75,19 @@ func termsBy(q Querier, head, tail string, ids [][]byte, propertyKey string) (ma
 	if propertyKey == "" {
 		return out, nil
 	}
-	for start := 0; start < len(ids); start += inBatch {
-		chunk := ids[start:min(start+inBatch, len(ids))]
-		args := append([]any{propertyKey}, database.BlobArgs(chunk)...)
-		rows, err := q.Query(head+database.SQLInPlaceholders(len(chunk))+tail, args...)
-		if err != nil {
-			return nil, err
+	err := sqlbatch.Query(q, head, tail, []any{propertyKey}, ids, func(rows *sql.Rows) error {
+		var id []byte
+		var term string
+		if err := rows.Scan(&id, &term); err != nil {
+			return err
 		}
-		for rows.Next() {
-			var id []byte
-			var term string
-			if err := rows.Scan(&id, &term); err != nil {
-				_ = rows.Close()
-				return nil, err
-			}
-			if _, ok := out[string(id)]; !ok {
-				out[string(id)] = term
-			}
+		if _, ok := out[string(id)]; !ok {
+			out[string(id)] = term
 		}
-		err = rows.Err()
-		_ = rows.Close()
-		if err != nil {
-			return nil, err
-		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
 	return out, nil
 }

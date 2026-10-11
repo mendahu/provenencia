@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/sqlbatch"
 )
 
 var ErrInvalid = apperr.New(apperr.CodeFileDerivativesInvalid, apperr.KindUser)
@@ -62,21 +63,18 @@ func LookupMany(c *database.Catalog, sourceFileIDs [][]byte, derivativeType stri
 	if err != nil {
 		return nil, err
 	}
-	args := append([]any{derivativeType}, database.BlobArgs(ids)...)
-	q := sqlLookupMany + database.SQLInPlaceholders(len(ids)) + `)`
-	rows, err := db.Query(q, args...)
+	err = sqlbatch.Query(db, sqlLookupMany, `)`, []any{derivativeType}, ids, func(rows *sql.Rows) error {
+		link, err := scanLink(rows)
+		if err != nil {
+			return err
+		}
+		out[string(link.SourceFileID)] = link
+		return nil
+	})
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-	for rows.Next() {
-		link, err := scanLink(rows)
-		if err != nil {
-			return nil, err
-		}
-		out[string(link.SourceFileID)] = link
-	}
-	return out, rows.Err()
+	return out, nil
 }
 
 // Insert writes a new derivative link on tx.

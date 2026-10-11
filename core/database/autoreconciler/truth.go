@@ -6,6 +6,7 @@ import (
 	"github.com/mendahu/provenencia/core/autoreconcile"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/graphcache"
+	"github.com/mendahu/provenencia/core/database/sqlbatch"
 	"github.com/mendahu/provenencia/core/valuecodec"
 )
 
@@ -36,26 +37,29 @@ func truthRows(q graphcache.Querier, ids [][]byte) (map[string][]graphcache.Trut
 		return out, nil
 	}
 	rq := rowQuerier{q}
-	for start := 0; start < len(ids); start += batchSize {
-		chunk := ids[start:min(start+batchSize, len(ids))]
+	err := sqlbatch.Each(ids, func(chunk [][]byte) error {
 		groups, err := load(rq, chunk)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		for _, g := range groups {
 			res, err := autoreconcile.Reconcile(g.valueType, g.candidates, nil, g.cardinality)
 			if err != nil {
-				return nil, err
+				return err
 			}
 			key := string(g.entityID)
 			for i, cl := range res.Values {
 				row, err := truthRow(g, i+1, cl)
 				if err != nil {
-					return nil, err
+					return err
 				}
 				out[key] = append(out[key], row)
 			}
 		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
 	return out, nil
 }

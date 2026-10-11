@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/sqlbatch"
 	"github.com/mendahu/provenencia/core/ref"
 )
 
@@ -148,7 +149,8 @@ func GetTx(tx *sql.Tx, id []byte) (Entity, error) {
 }
 
 // GetManyTx returns the handles with the given ids, keyed by string(id), on
-// an existing connection or transaction: one query. Unknown ids are absent.
+// an existing connection or transaction: one query per sqlbatch.Size ids.
+// Unknown ids are absent.
 func GetManyTx(q interface {
 	Query(query string, args ...any) (*sql.Rows, error)
 }, ids [][]byte) (map[string]Entity, error) {
@@ -157,20 +159,18 @@ func GetManyTx(q interface {
 	if len(ids) == 0 {
 		return out, nil
 	}
-	rows, err := q.Query(`SELECT `+sqlColumns+` FROM canonical_entities WHERE id IN (`+
-		database.SQLInPlaceholders(len(ids))+`)`, database.BlobArgs(ids)...)
+	err := sqlbatch.Query(q, `SELECT `+sqlColumns+` FROM canonical_entities WHERE id IN (`, `)`, nil, ids, func(rows *sql.Rows) error {
+		e, err := scanEntity(rows)
+		if err != nil {
+			return err
+		}
+		out[string(e.ID)] = e
+		return nil
+	})
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-	for rows.Next() {
-		e, err := scanEntity(rows)
-		if err != nil {
-			return nil, err
-		}
-		out[string(e.ID)] = e
-	}
-	return out, rows.Err()
+	return out, nil
 }
 
 // GetByRef returns a handle by ref (PER-…), or sql.ErrNoRows.

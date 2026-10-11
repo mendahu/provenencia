@@ -2,20 +2,19 @@ package conclusionheaders
 
 import (
 	"bytes"
+	"database/sql"
 	"sort"
 
 	"github.com/mendahu/provenencia/core/connectrules"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/canonicalgraph"
+	"github.com/mendahu/provenencia/core/database/sqlbatch"
 	"github.com/mendahu/provenencia/core/hops"
 )
 
 // headerChainDepth is how far a place row's parent chain climbs, and how far
 // the reverse of that read walks back down. The place neighborhood uses the same bound.
 const headerChainDepth = 8
-
-// walkBatch bounds an IN list. A list is still a fixed number of queries.
-const walkBatch = 500
 
 // Dependents is the reverse of the header reads. A place reaches its
 // descendants to headerChainDepth, the events located at those places, and
@@ -99,7 +98,7 @@ func AssociationEndpoints(q Querier, ids [][]byte) ([][]byte, error) {
 		return nil, nil
 	}
 	var where string
-	args := make([]any, 0, len(bridges)*2+len(ids))
+	args := make([]any, 0, len(bridges)*2)
 	for i, b := range bridges {
 		if i > 0 {
 			where += " OR "
@@ -111,28 +110,26 @@ func AssociationEndpoints(q Querier, ids [][]byte) ([][]byte, error) {
 		where += "(st.origin = ? AND st.key = ?)"
 		args = append(args, origin, b.BridgeTypeKey)
 	}
-	args = append(args, database.BlobArgs(ids)...)
 	query := `SELECT DISTINCT r.value_entity_id
 		FROM auto_reconciler_values r
 		JOIN canonical_entities e ON e.id = r.entity_id
 		JOIN subject_types st ON st.id = e.subject_type_id
 		WHERE r.rank = 1 AND r.reason = 'kept' AND r.value_entity_id IS NOT NULL
 			AND (` + where + `)
-			AND r.entity_id IN (` + database.SQLInPlaceholders(len(ids)) + `)`
-	rows, err := q.Query(query, args...)
+			AND r.entity_id IN (`
+	var out [][]byte
+	err := sqlbatch.Query(q, query, `)`, args, ids, func(rows *sql.Rows) error {
+		var id []byte
+		if err := rows.Scan(&id); err != nil {
+			return err
+		}
+		out = append(out, append([]byte(nil), id...))
+		return nil
+	})
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-	var out [][]byte
-	for rows.Next() {
-		var id []byte
-		if err := rows.Scan(&id); err != nil {
-			return nil, err
-		}
-		out = append(out, append([]byte(nil), id...))
-	}
-	return out, rows.Err()
+	return database.UniqueBlobIDs(out), nil
 }
 
 func walkDepth(q Querier, hop hops.Hop, roots [][]byte, depth int) ([][]byte, error) {
@@ -175,25 +172,16 @@ WHERE ev.id IN (`
 func birthOrDeath(q Querier, ids [][]byte) ([][]byte, error) {
 	ids = database.UniqueBlobIDs(ids)
 	var out [][]byte
-	for start := 0; start < len(ids); start += walkBatch {
-		chunk := ids[start:min(start+walkBatch, len(ids))]
-		rows, err := q.Query(sqlBirthOrDeath+database.SQLInPlaceholders(len(chunk))+`)`, database.BlobArgs(chunk)...)
-		if err != nil {
-			return nil, err
+	err := sqlbatch.Query(q, sqlBirthOrDeath, `)`, nil, ids, func(rows *sql.Rows) error {
+		var id []byte
+		if err := rows.Scan(&id); err != nil {
+			return err
 		}
-		for rows.Next() {
-			var id []byte
-			if err := rows.Scan(&id); err != nil {
-				_ = rows.Close()
-				return nil, err
-			}
-			out = append(out, append([]byte(nil), id...))
-		}
-		err = rows.Err()
-		_ = rows.Close()
-		if err != nil {
-			return nil, err
-		}
+		out = append(out, append([]byte(nil), id...))
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
 	return out, nil
 }

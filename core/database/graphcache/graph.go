@@ -10,8 +10,6 @@ import (
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
 )
 
-const batch = 500
-
 // Graph is one catalog's canonical graph. Nodes are immutable: a commit
 // replaces the pointer in the map. catalogsession.Do serializes the process,
 // so Graph has no lock of its own.

@@ -45,6 +45,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/searchindex"
+	"github.com/mendahu/provenencia/core/database/sqlbatch"
 	"github.com/mendahu/provenencia/core/valuecodec"
 )
 
@@ -66,9 +67,6 @@ import (
 //	12: multiple cardinality keeps every distinct surviving value (S9-36).
 //	13: subject-valued Properties map to the accepted handle (S9-28).
 const CacheVersion = 13
-
-// batchSize bounds the handles per loader batch (and so the IN list length).
-const batchSize = 500
 
 // Querier is *sql.Tx or *sql.DB.
 type Querier interface {
@@ -169,11 +167,10 @@ func RecomputeReported(q Querier, entityIDs [][]byte) ([][]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	for start := 0; start < len(ids); start += batchSize {
-		end := min(start+batchSize, len(ids))
-		if err := recomputeBatch(q, ids[start:end]); err != nil {
-			return nil, err
-		}
+	if err := sqlbatch.Each(ids, func(batch [][]byte) error {
+		return recomputeBatch(q, batch)
+	}); err != nil {
+		return nil, err
 	}
 	after, err := conclusionheaders.AssociationEndpoints(q, ids)
 	if err != nil {
@@ -205,14 +202,16 @@ func HandlesObservingSubject(q Querier, subjectID []byte) ([][]byte, error) {
 func HandlesForSubjects(q Querier, subjectIDs [][]byte) ([][]byte, error) {
 	ids := database.UniqueBlobIDs(subjectIDs)
 	var handles [][]byte
-	for start := 0; start < len(ids); start += batchSize {
-		end := min(start+batchSize, len(ids))
-		batch := ids[start:end]
-		got, err := listIDs(q, sqlHandlesForSubjects+database.SQLInPlaceholders(len(batch))+`)`, database.BlobArgs(batch)...)
-		if err != nil {
-			return nil, err
+	err := sqlbatch.Query(q, sqlHandlesForSubjects, `)`, nil, ids, func(rows *sql.Rows) error {
+		var id []byte
+		if err := rows.Scan(&id); err != nil {
+			return err
 		}
-		handles = append(handles, got...)
+		handles = append(handles, append([]byte(nil), id...))
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
 	return handles, nil
 }
@@ -478,26 +477,16 @@ func hasValue(valueType string, v autoreconcile.Value) bool {
 func acceptedEntities(q Querier, ids [][]byte) (map[string][]byte, error) {
 	out := map[string][]byte{}
 	ids = database.UniqueBlobIDs(ids)
-	for start := 0; start < len(ids); start += batchSize {
-		end := min(start+batchSize, len(ids))
-		batch := ids[start:end]
-		rows, err := q.Query(sqlAcceptedEntities+database.SQLInPlaceholders(len(batch))+`)`, database.BlobArgs(batch)...)
-		if err != nil {
-			return nil, err
+	err := sqlbatch.Query(q, sqlAcceptedEntities, `)`, nil, ids, func(rows *sql.Rows) error {
+		var subjectID, entityID []byte
+		if err := rows.Scan(&subjectID, &entityID); err != nil {
+			return err
 		}
-		for rows.Next() {
-			var subjectID, entityID []byte
-			if err := rows.Scan(&subjectID, &entityID); err != nil {
-				_ = rows.Close()
-				return nil, err
-			}
-			out[string(subjectID)] = append([]byte(nil), entityID...)
-		}
-		if err := rows.Err(); err != nil {
-			_ = rows.Close()
-			return nil, err
-		}
-		_ = rows.Close()
+		out[string(subjectID)] = append([]byte(nil), entityID...)
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
 	return out, nil
 }

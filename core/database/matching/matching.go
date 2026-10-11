@@ -21,6 +21,7 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/namevalues"
+	"github.com/mendahu/provenencia/core/database/sqlbatch"
 	"github.com/mendahu/provenencia/core/match"
 	"github.com/mendahu/provenencia/core/valuecodec"
 )
@@ -176,9 +177,6 @@ func loadCandidates(q Querier, typeID []byte, profile match.Profile) ([]match.Ca
 	return scanEntityValues(rows, profile)
 }
 
-// inBatch bounds an IN list; a batched read is still a fixed number of queries.
-const inBatch = 500
-
 // CandidatesOfType reads every unmerged handle of the Subject type (key,
 // origin) with a cached value for a profile Property: the same one query
 // ForSubject ranks against, for callers that rank many probes at once.
@@ -199,20 +197,23 @@ func CandidatesOfType(q Querier, typeKey, origin string, profile match.Profile) 
 func EntitiesValues(q Querier, entityIDs [][]byte, profile match.Profile) (map[string]match.Values, error) {
 	out := map[string]match.Values{}
 	ids := database.UniqueBlobIDs(entityIDs)
-	for start := 0; start < len(ids); start += inBatch {
-		chunk := ids[start:min(start+inBatch, len(ids))]
-		rows, err := q.Query(sqlEntityValues+` AND e.id IN (`+database.SQLInPlaceholders(len(chunk))+`) ORDER BY r.entity_id`,
-			database.BlobArgs(chunk)...)
+	err := sqlbatch.Each(ids, func(batch [][]byte) error {
+		rows, err := q.Query(sqlEntityValues+` AND e.id IN (`+database.SQLInPlaceholders(len(batch))+`) ORDER BY r.entity_id`,
+			database.BlobArgs(batch)...)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		cands, err := scanEntityValues(rows, profile)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		for _, c := range cands {
 			out[string(c.EntityID)] = c.Values
 		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
 	return out, nil
 }
@@ -233,41 +234,32 @@ func SubjectsValues(q Querier, subjectIDs [][]byte, profile match.Profile) (map[
 		dateIDs, nameIDs [][]byte
 	)
 	ids := database.UniqueBlobIDs(subjectIDs)
-	for start := 0; start < len(ids); start += inBatch {
-		chunk := ids[start:min(start+inBatch, len(ids))]
-		rows, err := q.Query(sqlSubjectsValues+database.SQLInPlaceholders(len(chunk))+`)`, database.BlobArgs(chunk)...)
-		if err != nil {
-			return nil, err
+	err := sqlbatch.Query(q, sqlSubjectsValues, `)`, nil, ids, func(rows *sql.Rows) error {
+		var (
+			p             pending
+			subjectID     []byte
+			text, termKey sql.NullString
+			integer       sql.NullInt64
+		)
+		if err := rows.Scan(&subjectID, &p.prop.Key, &p.prop.Origin, &text, &integer, &p.dateID, &p.nameID, &termKey); err != nil {
+			return err
 		}
-		for rows.Next() {
-			var (
-				p             pending
-				subjectID     []byte
-				text, termKey sql.NullString
-				integer       sql.NullInt64
-			)
-			if err := rows.Scan(&subjectID, &p.prop.Key, &p.prop.Origin, &text, &integer, &p.dateID, &p.nameID, &termKey); err != nil {
-				_ = rows.Close()
-				return nil, err
-			}
-			if !wanted[p.prop] {
-				continue
-			}
-			p.subject = string(subjectID)
-			p.v = match.Value{Text: text.String, HasText: text.Valid, Integer: integer.Int64, HasInteger: integer.Valid, Term: termKey.String}
-			all = append(all, p)
-			if len(p.dateID) > 0 {
-				dateIDs = append(dateIDs, p.dateID)
-			}
-			if len(p.nameID) > 0 {
-				nameIDs = append(nameIDs, p.nameID)
-			}
+		if !wanted[p.prop] {
+			return nil
 		}
-		err = rows.Err()
-		_ = rows.Close()
-		if err != nil {
-			return nil, err
+		p.subject = string(subjectID)
+		p.v = match.Value{Text: text.String, HasText: text.Valid, Integer: integer.Int64, HasInteger: integer.Valid, Term: termKey.String}
+		all = append(all, p)
+		if len(p.dateID) > 0 {
+			dateIDs = append(dateIDs, p.dateID)
 		}
+		if len(p.nameID) > 0 {
+			nameIDs = append(nameIDs, p.nameID)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
 	dates, err := datevalues.LookupManyTx(q, dateIDs)
 	if err != nil {
