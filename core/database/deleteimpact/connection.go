@@ -2,6 +2,7 @@ package deleteimpact
 
 import (
 	"database/sql"
+	"github.com/mendahu/provenencia/core/database/catalogmodel"
 
 	"github.com/mendahu/provenencia/core/connectrules"
 )
@@ -24,10 +25,10 @@ type subjectObsRow struct {
 func subjectResourceInbound() inboundEdge {
 	memo := &subjectObsMemo{}
 	return inboundEdge{
-		Parent: KindSubject,
+		Parent: catalogmodel.KindSubject,
 		Via:    "observations.subject_id",
-		Child:  KindObservation,
-		Bucket: BucketResource,
+		Child:  catalogmodel.KindObservation,
+		Bucket: catalogmodel.BucketResource,
 		Count: func(tx *sql.Tx, parentID []byte) (int, error) {
 			rows, err := memo.list(tx, parentID)
 			if err != nil {

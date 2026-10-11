@@ -3,13 +3,14 @@ package deleteimpact
 import (
 	"database/sql"
 	"fmt"
+	"github.com/mendahu/provenencia/core/database/catalogmodel"
 )
 
 // OwnedSnapshot is owned-outbound child IDs captured while the parent still
 // exists. ReleaseSnapshot walks those IDs after DELETE (looking up
 // artifacts.file_id after erase is a no-op).
 type OwnedSnapshot struct {
-	kind Kind
+	kind catalogmodel.Kind
 	cols map[string][]byte
 }
 
@@ -37,7 +38,7 @@ func CollectFileObjects(tx *sql.Tx, snap OwnedSnapshot) ([]FileObject, error) {
 
 // SnapshotOwned reads owned-outbound columns on the live parent row.
 // Missing parent returns ErrInvalid — after DELETE use a snapshot taken first.
-func SnapshotOwned(tx *sql.Tx, kind Kind, id []byte) (OwnedSnapshot, error) {
+func SnapshotOwned(tx *sql.Tx, kind catalogmodel.Kind, id []byte) (OwnedSnapshot, error) {
 	if tx == nil || len(id) != 16 {
 		return OwnedSnapshot{}, ErrInvalid
 	}
@@ -84,7 +85,7 @@ func ReleaseSnapshot(tx *sql.Tx, snap OwnedSnapshot) error {
 
 // ReleaseOwned snapshots then releases. Call it only while the parent row
 // still exists; after DELETE use a SnapshotOwned taken beforehand.
-func ReleaseOwned(tx *sql.Tx, kind Kind, id []byte) error {
+func ReleaseOwned(tx *sql.Tx, kind catalogmodel.Kind, id []byte) error {
 	snap, err := SnapshotOwned(tx, kind, id)
 	if err != nil {
 		return err

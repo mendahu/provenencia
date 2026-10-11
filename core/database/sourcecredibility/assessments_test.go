@@ -6,11 +6,13 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sourcecredibilitygrades"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/writes"
 )
 
 func TestAssessments(t *testing.T) {
@@ -34,9 +36,11 @@ func TestAssessments(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		s, err := sources.Create(c, userID, sources.CreateInput{
-			SourceTypeID: typeID,
-			Title:        "Family Bible",
+		s, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+			return sources.Create(tx, userID, sources.CreateInput{
+				SourceTypeID: typeID,
+				Title:        "Family Bible",
+			})
 		})
 		if err != nil {
 			t.Fatal(err)
@@ -90,12 +94,19 @@ func TestAssessments(t *testing.T) {
 				grades := mustGrades(t, c)
 				low := grades[0]
 				high := grades[2]
-
-				a, err := Upsert(c, userID, UpsertInput{
+				p6in2 := UpsertInput{
 					SourceID:           src.ID,
 					CredibilityGradeID: low.ID,
 					Argument:           "hearsay copy",
+				}
+				p6act1 := "create_source_credibility_assessment"
+				if _, p6look3 := GetBySource(c, p6in2.SourceID); p6look3 == nil {
+					p6act1 = "update_source_credibility_assessment"
+				}
+				a, err := writes.Call(c, writes.Op{Action: p6act1, UserID: userID}, func(tx *database.Tx) (Assessment, []rowchange.Change, error) {
+					return Upsert(tx, userID, p6in2)
 				})
+
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -106,12 +117,19 @@ func TestAssessments(t *testing.T) {
 				if err != nil || string(got.ID) != string(a.ID) || got.Argument != "hearsay copy" {
 					t.Fatalf("%v %+v", err, got)
 				}
-
-				a2, err := Upsert(c, userID, UpsertInput{
+				p6in5 := UpsertInput{
 					SourceID:           src.ID,
 					CredibilityGradeID: high.ID,
 					Argument:           "original register",
+				}
+				p6act4 := "create_source_credibility_assessment"
+				if _, p6look6 := GetBySource(c, p6in5.SourceID); p6look6 == nil {
+					p6act4 = "update_source_credibility_assessment"
+				}
+				a2, err := writes.Call(c, writes.Op{Action: p6act4, UserID: userID}, func(tx *database.Tx) (Assessment, []rowchange.Change, error) {
+					return Upsert(tx, userID, p6in5)
 				})
+
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -135,10 +153,24 @@ func TestAssessments(t *testing.T) {
 				grades := mustGrades(t, c)
 				missing := make([]byte, 16)
 				missing[15] = 9
-				if _, err := Upsert(c, userID, UpsertInput{SourceID: missing, CredibilityGradeID: grades[0].ID}); !errors.Is(err, ErrInvalid) {
+				p6in8 := UpsertInput{SourceID: missing, CredibilityGradeID: grades[0].ID}
+				p6act7 := "create_source_credibility_assessment"
+				if _, p6look9 := GetBySource(c, p6in8.SourceID); p6look9 == nil {
+					p6act7 = "update_source_credibility_assessment"
+				}
+				if _, err := writes.Call(c, writes.Op{Action: p6act7, UserID: userID}, func(tx *database.Tx) (Assessment, []rowchange.Change, error) {
+					return Upsert(tx, userID, p6in8)
+				}); !errors.Is(err, ErrInvalid) {
 					t.Fatalf("bad source %v", err)
 				}
-				if _, err := Upsert(c, userID, UpsertInput{SourceID: src.ID, CredibilityGradeID: missing}); !errors.Is(err, ErrInvalid) {
+				p6in11 := UpsertInput{SourceID: src.ID, CredibilityGradeID: missing}
+				p6act10 := "create_source_credibility_assessment"
+				if _, p6look12 := GetBySource(c, p6in11.SourceID); p6look12 == nil {
+					p6act10 = "update_source_credibility_assessment"
+				}
+				if _, err := writes.Call(c, writes.Op{Action: p6act10, UserID: userID}, func(tx *database.Tx) (Assessment, []rowchange.Change, error) {
+					return Upsert(tx, userID, p6in11)
+				}); !errors.Is(err, ErrInvalid) {
 					t.Fatalf("bad grade %v", err)
 				}
 			},

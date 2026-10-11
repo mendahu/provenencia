@@ -6,7 +6,9 @@ import (
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/observations"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/valuecodec"
+	"github.com/mendahu/provenencia/core/writes"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -21,14 +23,15 @@ func ListObservationsBySource(in []byte) ([]byte, error) {
 	}
 	var out *engine.ListObservationsBySourceResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		rows, err := observations.ListBySource(c, sourceID)
+		sg, err := c.Graph().Source(sourceID)
 		if err != nil {
 			return err
 		}
-		out = &engine.ListObservationsBySourceResponse{}
-		for _, row := range rows {
-			out.Observations = append(out.Observations, listedObservationProto(row))
+		rows, err := listedProtosFromSource(c, sg, nil)
+		if err != nil {
+			return err
 		}
+		out = &engine.ListObservationsBySourceResponse{Observations: rows}
 		return nil
 	})
 	if err != nil {
@@ -55,11 +58,17 @@ func UpdateObservation(in []byte) ([]byte, error) {
 	}
 	var out *engine.UpdateObservationResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		row, err := observations.Update(c, userID, input)
+		row, wrote, err := writes.Run(c, writes.Op{Action: "update_observation", UserID: userID},
+			func(tx *database.Tx) (observations.Listed, []rowchange.Change, error) {
+				return observations.Update(tx, userID, input)
+			})
 		if err != nil {
 			return err
 		}
-		out = &engine.UpdateObservationResponse{Observation: listedObservationProto(row)}
+		out = &engine.UpdateObservationResponse{
+			Observation: listedObservationProto(row),
+			Effects:     writeEffectsProto(wrote.Effects),
+		}
 		return nil
 	})
 	if err != nil {
@@ -83,10 +92,15 @@ func DeleteObservation(in []byte) ([]byte, error) {
 	}
 	var out *engine.DeleteObservationResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		if err := observations.Delete(c, userID, id); err != nil {
+		_, wrote, err := writes.Run(c, writes.Op{Action: "delete_observation", UserID: userID},
+			func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+				changes, err := observations.Delete(tx, userID, id)
+				return struct{}{}, changes, err
+			})
+		if err != nil {
 			return err
 		}
-		out = &engine.DeleteObservationResponse{}
+		out = &engine.DeleteObservationResponse{Effects: writeEffectsProto(wrote.Effects)}
 		return nil
 	})
 	if err != nil {
@@ -114,11 +128,14 @@ func AddObservationsToCitation(in []byte) ([]byte, error) {
 	}
 	var out *engine.AddObservationsToCitationResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		rows, err := observations.AddToCitation(c, userID, citationID, inputs)
+		rows, wrote, err := writes.Run(c, writes.Op{Action: "add_observations", UserID: userID},
+			func(tx *database.Tx) ([]observations.Observation, []rowchange.Change, error) {
+				return observations.AddToCitation(tx, userID, citationID, inputs)
+			})
 		if err != nil {
 			return err
 		}
-		out = &engine.AddObservationsToCitationResponse{}
+		out = &engine.AddObservationsToCitationResponse{Effects: writeEffectsProto(wrote.Effects)}
 		for _, o := range rows {
 			out.Observations = append(out.Observations, observationProto(o))
 		}

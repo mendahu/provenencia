@@ -327,9 +327,9 @@ CREATE TABLE audit_transaction_scopes (
 ) STRICT;
 ```
 
-Scopes are derived inside `audit.Record`, not passed by callers: each entity type has a auto-reconciler (`core/database/audit/scopes.go`) that maps a change to its scopes using the change's own fields, the live row, or — for parents deleted in the same revision — the old values of that parent's delete change. Record rejects an entity type with no auto-reconciler, and a test fails if an audited type lacks one.
+Scopes are derived inside `audit.Record`, not passed by callers. `Record` stores source scopes from `effects.Sources`, which walks each change through its effect path using the change's own fields, the live row, or — for parents deleted in the same revision — the old values of that parent's delete change. `Record` rejects an entity type that is not a non-`None` effect, and a test fails if an audited type lacks one.
 
-Today the only scope type is `source`: a Source's row and everything under it (notes, metadata, layout, credibility, artifacts and their files, subjects, citations, observations, their notes and values). It drives the Sources list "Updated" sort. Vocabulary and conclusion-layer changes (identity claims, evidence pins, canonical entities) carry no Source scope. A new scope type is one auto-reconciler plus a backfill migration.
+Today the only scope type is `source`: a Source's row and everything under it (notes, metadata, layout, credibility, artifacts and their files, subjects, citations, observations, their notes and values). It drives the Sources list "Updated" sort. Vocabulary and conclusion-layer changes (identity claims, evidence pins, canonical entities) carry no Source scope. A new scope type is one effect path plus a backfill migration.
 
 ---
 

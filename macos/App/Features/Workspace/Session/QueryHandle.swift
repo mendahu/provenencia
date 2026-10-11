@@ -10,6 +10,9 @@ final class QueryHandle<Value> {
     private(set) var error: Error?
     /// True while refetching with prior `value` still visible (stale-while-revalidate).
     private(set) var isFetching = false
+    /// Bumps when `value` is replaced or cleared. Readers compare this instead
+    /// of the stored rows.
+    private(set) var revision = 0
 
     init() {}
 
@@ -26,6 +29,7 @@ final class QueryHandle<Value> {
         error = nil
         status = .ready
         isFetching = false
+        revision += 1
     }
 
     func applyFailure(_ error: Error, clearValue: Bool) {
@@ -34,6 +38,7 @@ final class QueryHandle<Value> {
         isFetching = false
         if clearValue {
             value = nil
+            revision += 1
         }
     }
 
@@ -42,6 +47,7 @@ final class QueryHandle<Value> {
         value = nil
         error = nil
         isFetching = false
+        revision += 1
     }
 }
 

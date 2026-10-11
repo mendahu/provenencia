@@ -11,7 +11,7 @@ description: >-
 
 Table SQL and functions live in **`core/database/<domain>/`**, not in the `database` package root. Root stays the exclusive catalog client (`Catalog`, `Create`/`Open`/`Close`, format errors, migrations).
 
-New **schema** is a separate step: follow `.cursor/skills/add-catalog-migration/SKILL.md` first if the table does not exist yet.
+New **schema** is a separate step: follow `.cursor/skills/add-catalog-migration/SKILL.md` first if the table does not exist yet, and register the table and its FKs in the same PR (`.cursor/skills/add-catalog-model/SKILL.md`).
 
 ## Layout
 
@@ -40,7 +40,7 @@ Official **resource / vocab `Delete`**: follow `.cursor/skills/add-catalog-delet
 - Domain validation sentinels stay in this package (`users.ErrInvalid`). Do **not** add them to `core/database/errors.go` (that file is lock/format/folder/closed only).
 - `database` must **not** import table packages (import cycle). Use-cases (`onboarding`, later FFI) import both.
 - `Delete` for a resource or vocab row calls `deleteimpact.Impact` in the same tx, then deletes the parent, then owned-outbound release. Facet/field deletes (notes, metadata clear) stay ordinary writes.
-- Research writes call `audit.Record` in the same tx. A new audited `EntityType` needs a scope resolver, and delete changes carry the parent FK — follow `.cursor/skills/add-audit-scope/SKILL.md`. "Last activity" reads (`updated_revision`) use `audit_transaction_scopes`.
+- Research writes call `audit.Record` in the same tx. A new audited `EntityType` needs a non-`None` effect, and delete changes carry the parent FK — follow `.cursor/skills/add-audit-scope/SKILL.md`. "Last activity" reads (`updated_revision`) use `audit_transaction_scopes`.
 
 ## Tests
 

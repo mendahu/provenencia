@@ -11,6 +11,7 @@ import (
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjects"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
@@ -18,7 +19,80 @@ import (
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/ingest"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/writes"
 )
+
+func runCreate(c *database.Catalog, userID []byte, in CreateInput) (Source, error) {
+	src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID},
+		func(tx *database.Tx) (Source, []rowchange.Change, error) {
+			return Create(tx, userID, in)
+		})
+	return src, err
+}
+
+func runUpdate(c *database.Catalog, userID []byte, s Source) error {
+	_, _, err := writes.Run(c, writes.Op{Action: "update_source", UserID: userID},
+		func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+			changes, err := Update(tx, userID, s)
+			return struct{}{}, changes, err
+		})
+	return err
+}
+
+func runDelete(c *database.Catalog, userID, id []byte) error {
+	_, _, err := writes.Run(c, writes.Op{Action: "delete_source", UserID: userID},
+		func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+			changes, err := Delete(tx, userID, id)
+			return struct{}{}, changes, err
+		})
+	return err
+}
+
+func runSetCover(c *database.Catalog, userID, sourceID []byte, mode string, primaryArtifactID []byte) (Source, error) {
+	mode, artID, err := NormalizeCover(c, sourceID, mode, primaryArtifactID)
+	if err != nil {
+		return Source{}, err
+	}
+	src, _, err := writes.Run(c, writes.Op{Action: "set_source_cover", UserID: userID},
+		func(tx *database.Tx) (Source, []rowchange.Change, error) {
+			return SetCover(tx, userID, sourceID, mode, artID)
+		})
+	return src, err
+}
+
+func runAddNote(c *database.Catalog, userID, sourceID []byte, body string) (Note, error) {
+	n, _, err := writes.Run(c, writes.Op{Action: "create_source_note", UserID: userID},
+		func(tx *database.Tx) (Note, []rowchange.Change, error) {
+			return AddNote(tx, userID, sourceID, body)
+		})
+	if err != nil {
+		return Note{}, err
+	}
+	author, err := users.Lookup(c, userID)
+	if err != nil {
+		return Note{}, err
+	}
+	n.AuthorDisplayName = author.DisplayName
+	return n, nil
+}
+
+func runUpdateNote(c *database.Catalog, userID, noteID []byte, body string) error {
+	_, _, err := writes.Run(c, writes.Op{Action: "update_source_note", UserID: userID},
+		func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+			changes, err := UpdateNote(tx, userID, noteID, body)
+			return struct{}{}, changes, err
+		})
+	return err
+}
+
+func runDeleteNote(c *database.Catalog, userID, noteID []byte) error {
+	_, _, err := writes.Run(c, writes.Op{Action: "delete_source_note", UserID: userID},
+		func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+			changes, err := DeleteNote(tx, userID, noteID)
+			return struct{}{}, changes, err
+		})
+	return err
+}
 
 func writeTinyPNG(t *testing.T, path string) {
 	t.Helper()
@@ -118,7 +192,7 @@ func TestSources(t *testing.T) {
 			name: "create rejects empty user id",
 			run: func(t *testing.T, c *database.Catalog) {
 				typeID := mustType(t, c)
-				_, err := Create(c, nil, CreateInput{SourceTypeID: typeID, Title: "No user"})
+				_, err := runCreate(c, nil, CreateInput{SourceTypeID: typeID, Title: "No user"})
 				if !errors.Is(err, ErrInvalid) {
 					t.Fatalf("got %v want ErrInvalid", err)
 				}
@@ -129,7 +203,7 @@ func TestSources(t *testing.T) {
 			run: func(t *testing.T, c *database.Catalog) {
 				mustUser(t, c)
 				typeID := mustType(t, c)
-				s, err := Create(c, userID, CreateInput{
+				s, err := runCreate(c, userID, CreateInput{
 					SourceTypeID: typeID,
 					Title:        "Family History",
 					Description:  "A monograph",
@@ -164,13 +238,13 @@ func TestSources(t *testing.T) {
 			run: func(t *testing.T, c *database.Catalog) {
 				mustUser(t, c)
 				typeID := mustType(t, c)
-				s, err := Create(c, userID, CreateInput{SourceTypeID: typeID, Title: "Old"})
+				s, err := runCreate(c, userID, CreateInput{SourceTypeID: typeID, Title: "Old"})
 				if err != nil {
 					t.Fatal(err)
 				}
 				s.Title = "New"
 				s.Description = "Desc"
-				if err := Update(c, userID, s); err != nil {
+				if err := runUpdate(c, userID, s); err != nil {
 					t.Fatal(err)
 				}
 				if latestAction(t, c) != "update_source" {
@@ -190,11 +264,11 @@ func TestSources(t *testing.T) {
 			run: func(t *testing.T, c *database.Catalog) {
 				mustUser(t, c)
 				typeID := mustType(t, c)
-				first, err := Create(c, userID, CreateInput{SourceTypeID: typeID, Title: "Older"})
+				first, err := runCreate(c, userID, CreateInput{SourceTypeID: typeID, Title: "Older"})
 				if err != nil {
 					t.Fatal(err)
 				}
-				second, err := Create(c, userID, CreateInput{SourceTypeID: typeID, Title: "Newer"})
+				second, err := runCreate(c, userID, CreateInput{SourceTypeID: typeID, Title: "Newer"})
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -211,7 +285,7 @@ func TestSources(t *testing.T) {
 				if all[0].UpdatedRevision <= all[1].UpdatedRevision {
 					t.Fatalf("newer create should have higher revision: %+v", all)
 				}
-				if err := Update(c, userID, Source{
+				if err := runUpdate(c, userID, Source{
 					ID: first.ID, Ref: first.Ref, SourceTypeID: typeID,
 					Title: "Older edited", Description: first.Description,
 				}); err != nil {
@@ -250,10 +324,10 @@ func TestSources(t *testing.T) {
 			run: func(t *testing.T, c *database.Catalog) {
 				mustUser(t, c)
 				typeID := mustType(t, c)
-				if _, err := Create(c, userID, CreateInput{SourceTypeID: typeID, Title: "B"}); err != nil {
+				if _, err := runCreate(c, userID, CreateInput{SourceTypeID: typeID, Title: "B"}); err != nil {
 					t.Fatal(err)
 				}
-				if _, err := Create(c, userID, CreateInput{SourceTypeID: typeID, Title: "A"}); err != nil {
+				if _, err := runCreate(c, userID, CreateInput{SourceTypeID: typeID, Title: "A"}); err != nil {
 					t.Fatal(err)
 				}
 				all, err := List(c)
@@ -270,11 +344,11 @@ func TestSources(t *testing.T) {
 			run: func(t *testing.T, c *database.Catalog) {
 				mustUser(t, c)
 				typeID := mustType(t, c)
-				s, err := Create(c, userID, CreateInput{SourceTypeID: typeID, Title: "Photo"})
+				s, err := runCreate(c, userID, CreateInput{SourceTypeID: typeID, Title: "Photo"})
 				if err != nil {
 					t.Fatal(err)
 				}
-				n, err := AddNote(c, userID, s.ID, "First thought")
+				n, err := runAddNote(c, userID, s.ID, "First thought")
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -284,7 +358,7 @@ func TestSources(t *testing.T) {
 				if latestAction(t, c) != "create_source_note" {
 					t.Fatalf("action %q", latestAction(t, c))
 				}
-				if err := UpdateNote(c, userID, n.ID, "Revised"); err != nil {
+				if err := runUpdateNote(c, userID, n.ID, "Revised"); err != nil {
 					t.Fatal(err)
 				}
 				if latestAction(t, c) != "update_source_note" {
@@ -301,7 +375,7 @@ func TestSources(t *testing.T) {
 				if err != nil || got.Body != "Revised" || got.AuthorDisplayName != "Jake" {
 					t.Fatalf("get %v %+v", err, got)
 				}
-				if err := DeleteNote(c, userID, n.ID); err != nil {
+				if err := runDeleteNote(c, userID, n.ID); err != nil {
 					t.Fatal(err)
 				}
 				if latestAction(t, c) != "delete_source_note" {
@@ -318,11 +392,11 @@ func TestSources(t *testing.T) {
 			run: func(t *testing.T, c *database.Catalog) {
 				mustUser(t, c)
 				typeID := mustType(t, c)
-				s, err := Create(c, userID, CreateInput{SourceTypeID: typeID, Title: "X"})
+				s, err := runCreate(c, userID, CreateInput{SourceTypeID: typeID, Title: "X"})
 				if err != nil {
 					t.Fatal(err)
 				}
-				if _, err := AddNote(c, userID, s.ID, "Keep"); err != nil {
+				if _, err := runAddNote(c, userID, s.ID, "Keep"); err != nil {
 					t.Fatal(err)
 				}
 				db, err := c.DB()
@@ -348,7 +422,7 @@ func TestSources(t *testing.T) {
 				mustUser(t, c)
 				typeID := mustType(t, c)
 				for _, title := range []string{"One", "Two", "Three"} {
-					if _, err := Create(c, userID, CreateInput{SourceTypeID: typeID, Title: title}); err != nil {
+					if _, err := runCreate(c, userID, CreateInput{SourceTypeID: typeID, Title: title}); err != nil {
 						t.Fatal(err)
 					}
 				}
@@ -364,25 +438,25 @@ func TestSources(t *testing.T) {
 				mustUser(t, c)
 				badType := make([]byte, 16)
 				badType[0] = 1
-				if _, err := Create(c, userID, CreateInput{SourceTypeID: badType, Title: "X"}); !errors.Is(err, ErrInvalid) {
+				if _, err := runCreate(c, userID, CreateInput{SourceTypeID: badType, Title: "X"}); !errors.Is(err, ErrInvalid) {
 					t.Fatalf("bad type %v", err)
 				}
 				typeID := mustType(t, c)
-				if _, err := Create(c, userID, CreateInput{SourceTypeID: typeID}); !errors.Is(err, ErrInvalid) {
+				if _, err := runCreate(c, userID, CreateInput{SourceTypeID: typeID}); !errors.Is(err, ErrInvalid) {
 					t.Fatalf("blank title %v", err)
 				}
-				if _, err := Create(c, userID, CreateInput{SourceTypeID: typeID, Title: "  "}); !errors.Is(err, ErrInvalid) {
+				if _, err := runCreate(c, userID, CreateInput{SourceTypeID: typeID, Title: "  "}); !errors.Is(err, ErrInvalid) {
 					t.Fatalf("whitespace title %v", err)
 				}
-				s, err := Create(c, userID, CreateInput{SourceTypeID: typeID, Title: "Photo"})
+				s, err := runCreate(c, userID, CreateInput{SourceTypeID: typeID, Title: "Photo"})
 				if err != nil {
 					t.Fatal(err)
 				}
 				s.Title = ""
-				if err := Update(c, userID, s); !errors.Is(err, ErrInvalid) {
+				if err := runUpdate(c, userID, s); !errors.Is(err, ErrInvalid) {
 					t.Fatalf("clear title %v", err)
 				}
-				if _, err := AddNote(c, userID, s.ID, "  "); !errors.Is(err, ErrInvalid) {
+				if _, err := runAddNote(c, userID, s.ID, "  "); !errors.Is(err, ErrInvalid) {
 					t.Fatalf("blank note %v", err)
 				}
 			},
@@ -420,7 +494,7 @@ func TestSources(t *testing.T) {
 			run: func(t *testing.T, c *database.Catalog) {
 				mustUser(t, c)
 				typeID := mustType(t, c)
-				s, err := Create(c, userID, CreateInput{SourceTypeID: typeID, Title: "Cover default"})
+				s, err := runCreate(c, userID, CreateInput{SourceTypeID: typeID, Title: "Cover default"})
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -444,7 +518,7 @@ func TestSources(t *testing.T) {
 			run: func(t *testing.T, c *database.Catalog) {
 				mustUser(t, c)
 				typeID := mustType(t, c)
-				s, err := Create(c, userID, CreateInput{SourceTypeID: typeID, Title: "Pin cover"})
+				s, err := runCreate(c, userID, CreateInput{SourceTypeID: typeID, Title: "Pin cover"})
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -454,13 +528,13 @@ func TestSources(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				a, err := artifacts.Create(c, userID, artifacts.CreateInput{
+				a, err := runArtifactCreate(c, userID, artifacts.CreateInput{
 					SourceID: s.ID, FileID: fres.File.ID, Label: "Scan",
 				})
 				if err != nil {
 					t.Fatal(err)
 				}
-				pinned, err := SetCover(c, userID, s.ID, CoverModeArtifact, a.ID)
+				pinned, err := runSetCover(c, userID, s.ID, CoverModeArtifact, a.ID)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -470,13 +544,13 @@ func TestSources(t *testing.T) {
 				if latestAction(t, c) != "set_source_cover" {
 					t.Fatalf("action %s", latestAction(t, c))
 				}
-				fileless, err := artifacts.Create(c, userID, artifacts.CreateInput{
+				fileless, err := runArtifactCreate(c, userID, artifacts.CreateInput{
 					SourceID: s.ID, Label: "Note only",
 				})
 				if err != nil {
 					t.Fatal(err)
 				}
-				if _, err := SetCover(c, userID, s.ID, CoverModeArtifact, fileless.ID); !errors.Is(err, ErrInvalid) {
+				if _, err := runSetCover(c, userID, s.ID, CoverModeArtifact, fileless.ID); !errors.Is(err, ErrInvalid) {
 					t.Fatalf("fileless pin %v", err)
 				}
 				pdfPath := t.TempDir() + "/deed.pdf"
@@ -487,16 +561,16 @@ func TestSources(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				pdfArt, err := artifacts.Create(c, userID, artifacts.CreateInput{
+				pdfArt, err := runArtifactCreate(c, userID, artifacts.CreateInput{
 					SourceID: s.ID, FileID: pdfFile.File.ID, Label: "PDF",
 				})
 				if err != nil {
 					t.Fatal(err)
 				}
-				if _, err := SetCover(c, userID, s.ID, CoverModeArtifact, pdfArt.ID); !errors.Is(err, ErrInvalid) {
+				if _, err := runSetCover(c, userID, s.ID, CoverModeArtifact, pdfArt.ID); !errors.Is(err, ErrInvalid) {
 					t.Fatalf("pdf pin %v", err)
 				}
-				reverted, err := SetCover(c, userID, s.ID, CoverModeTypeIcon, nil)
+				reverted, err := runSetCover(c, userID, s.ID, CoverModeTypeIcon, nil)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -510,7 +584,7 @@ func TestSources(t *testing.T) {
 			run: func(t *testing.T, c *database.Catalog) {
 				mustUser(t, c)
 				typeID := mustType(t, c)
-				s, err := Create(c, userID, CreateInput{SourceTypeID: typeID, Title: "No auto pin"})
+				s, err := runCreate(c, userID, CreateInput{SourceTypeID: typeID, Title: "No auto pin"})
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -520,7 +594,7 @@ func TestSources(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				if _, err := artifacts.Create(c, userID, artifacts.CreateInput{
+				if _, err := runArtifactCreate(c, userID, artifacts.CreateInput{
 					SourceID: s.ID, FileID: f1.File.ID, Label: "First",
 				}); err != nil {
 					t.Fatal(err)
@@ -569,15 +643,15 @@ func TestSourceDelete(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	empty, err := Create(c, userID, CreateInput{SourceTypeID: typeID, Title: "Notes only"})
+	empty, err := runCreate(c, userID, CreateInput{SourceTypeID: typeID, Title: "Notes only"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	note, err := AddNote(c, userID, empty.ID, "Film is faded")
+	note, err := runAddNote(c, userID, empty.ID, "Film is faded")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := Delete(c, userID, empty.ID); err != nil {
+	if err := runDelete(c, userID, empty.ID); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := Get(c, empty.ID); !errors.Is(err, sql.ErrNoRows) {
@@ -608,14 +682,14 @@ func TestSourceDelete(t *testing.T) {
 		t.Fatalf("search docs left=%d", docs)
 	}
 
-	blocked, err := Create(c, userID, CreateInput{SourceTypeID: typeID, Title: "Has artifact"})
+	blocked, err := runCreate(c, userID, CreateInput{SourceTypeID: typeID, Title: "Has artifact"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := artifacts.Create(c, userID, artifacts.CreateInput{SourceID: blocked.ID, Label: "Scan"}); err != nil {
+	if _, err := runArtifactCreate(c, userID, artifacts.CreateInput{SourceID: blocked.ID, Label: "Scan"}); err != nil {
 		t.Fatal(err)
 	}
-	if err := Delete(c, userID, blocked.ID); !errors.Is(err, ErrInUse) {
+	if err := runDelete(c, userID, blocked.ID); !errors.Is(err, ErrInUse) {
 		t.Fatalf("artifact inbound %v", err)
 	}
 
@@ -626,21 +700,31 @@ func TestSourceDelete(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	uncited, err := Create(c, userID, CreateInput{SourceTypeID: typeID, Title: "Has subject"})
+	uncited, err := runCreate(c, userID, CreateInput{SourceTypeID: typeID, Title: "Has subject"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := subjects.Create(c, userID, subjects.CreateInput{
-		SourceID: uncited.ID, SubjectTypeID: personType.ID, Label: "Alice",
-	}, nil); err != nil {
+	if _, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
+		return subjects.Create(tx, userID, subjects.CreateInput{
+			SourceID: uncited.ID, SubjectTypeID: personType.ID, Label: "Alice",
+		}, nil)
+	}); err != nil {
 		t.Fatal(err)
 	}
-	if err := Delete(c, userID, uncited.ID); !errors.Is(err, ErrInUse) {
+	if err := runDelete(c, userID, uncited.ID); !errors.Is(err, ErrInUse) {
 		t.Fatalf("subject inbound %v", err)
 	}
 
 	missing := make([]byte, 16)
-	if err := Delete(c, userID, missing); !errors.Is(err, ErrInvalid) {
+	if err := runDelete(c, userID, missing); !errors.Is(err, ErrInvalid) {
 		t.Fatalf("missing %v", err)
 	}
+}
+
+func runArtifactCreate(c *database.Catalog, userID []byte, in artifacts.CreateInput) (artifacts.Artifact, error) {
+	a, _, err := writes.Run(c, writes.Op{Action: "create_artifact", UserID: userID},
+		func(tx *database.Tx) (artifacts.Artifact, []rowchange.Change, error) {
+			return artifacts.Create(tx, userID, in)
+		})
+	return a, err
 }

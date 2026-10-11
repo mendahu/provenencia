@@ -8,12 +8,11 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/mendahu/provenencia/core/database/rowchange"
+
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/audit"
-	"github.com/mendahu/provenencia/core/database/autoreconciler"
-	"github.com/mendahu/provenencia/core/database/project"
 )
 
 var (
@@ -64,67 +63,33 @@ type CreateInput struct {
 	Argument          string
 }
 
-// Create inserts a claim and records create_identity_claim.
-func Create(c *database.Catalog, userID []byte, in CreateInput) (Claim, error) {
-	db, err := c.DB()
-	if err != nil {
-		return Claim{}, err
+// Create inserts a claim. The caller records the returned changes as
+// create_identity_claim. An accepted claim files the bridges it completes.
+func Create(tx *database.Tx, userID []byte, in CreateInput) (Claim, []rowchange.Change, error) {
+	if tx == nil {
+		return Claim{}, nil, ErrInvalid
 	}
 	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
-		return Claim{}, err
+		return Claim{}, nil, err
 	}
 
-	tx, err := db.Begin()
+	cl, change, err := InsertTx(tx.Tx, in)
 	if err != nil {
-		return Claim{}, err
+		return Claim{}, nil, err
 	}
-	defer func() { _ = tx.Rollback() }()
-
-	cl, change, err := InsertTx(tx, in)
-	if err != nil {
-		return Claim{}, err
-	}
-	changes := []audit.Change{change}
-	var assocs [][]byte
+	changes := []rowchange.Change{change}
 	if in.Status == StatusAccepted {
-		assocs, changes, err = AppendFiling(tx, cl.SubjectID, changes)
+		_, changes, err = AppendFiling(tx.Tx, cl.SubjectID, changes)
 		if err != nil {
-			return Claim{}, err
+			return Claim{}, nil, err
 		}
 	}
-	if _, err := audit.Record(tx, audit.Revision{
-		UserID:     userID,
-		ActionType: "create_identity_claim",
-		CreatedAt:  project.NowUTC(),
-		Changes:    changes,
-	}); err != nil {
-		return Claim{}, err
-	}
-	if err := recomputeTx(tx, cl, assocs); err != nil {
-		return Claim{}, err
-	}
-	if err := tx.Commit(); err != nil {
-		return Claim{}, err
-	}
-	return cl, nil
-}
-
-// recomputeTx refreshes the auto-reconciler cache for a new claim. Every
-// status changes the handle's values: an accepted member's Observations are
-// evidence, a provisional one's are reasoning, a rejected one's are dropped.
-// Only an accepted claim moves where subject-valued ends resolve, so only it
-// recomputes the handles observing the subject and the filed associations.
-// A claim status edit, when one lands, recomputes through here too.
-func recomputeTx(tx *sql.Tx, cl Claim, assocs [][]byte) error {
-	if cl.Status == StatusAccepted {
-		return autoreconciler.RecomputeTouchingTx(tx, append([][]byte{cl.EntityID}, assocs...), cl.SubjectID)
-	}
-	return autoreconciler.RecomputeTx(tx, [][]byte{cl.EntityID})
+	return cl, changes, nil
 }
 
 // AppendFiling files bridges the new member completes and returns the
 // association handles plus the revision's changes.
-func AppendFiling(tx *sql.Tx, subjectID []byte, changes []audit.Change) ([][]byte, []audit.Change, error) {
+func AppendFiling(tx *sql.Tx, subjectID []byte, changes []rowchange.Change) ([][]byte, []rowchange.Change, error) {
 	assocs, filed, err := FileBridgesTx(tx, subjectID, nil)
 	if err != nil {
 		return nil, nil, err
@@ -136,46 +101,46 @@ func AppendFiling(tx *sql.Tx, subjectID []byte, changes []audit.Change) ([][]byt
 // The subject's type is copied onto the claim, so the composite FK rejects a
 // handle of another type (ErrTypeMismatch). A second accepted claim for one
 // subject is ErrAlreadyMember.
-func InsertTx(tx *sql.Tx, in CreateInput) (Claim, audit.Change, error) {
+func InsertTx(tx *sql.Tx, in CreateInput) (Claim, rowchange.Change, error) {
 	in.Status = strings.TrimSpace(in.Status)
 	in.Argument = strings.TrimSpace(in.Argument)
 	if len(in.SubjectID) != 16 || len(in.EntityID) != 16 || !statusOK(in.Status) {
-		return Claim{}, audit.Change{}, ErrInvalid
+		return Claim{}, rowchange.Change{}, ErrInvalid
 	}
 	if len(in.ConfidenceGradeID) != 0 && len(in.ConfidenceGradeID) != 16 {
-		return Claim{}, audit.Change{}, ErrInvalid
+		return Claim{}, rowchange.Change{}, ErrInvalid
 	}
 	var subjectTypeID []byte
 	err := tx.QueryRow(sqlSubjectType, in.SubjectID).Scan(&subjectTypeID)
 	if errors.Is(err, sql.ErrNoRows) {
-		return Claim{}, audit.Change{}, ErrInvalid
+		return Claim{}, rowchange.Change{}, ErrInvalid
 	}
 	if err != nil {
-		return Claim{}, audit.Change{}, err
+		return Claim{}, rowchange.Change{}, err
 	}
 	if in.Status == StatusAccepted {
 		if _, err := acceptedForSubject(tx, in.SubjectID); err == nil {
-			return Claim{}, audit.Change{}, ErrAlreadyMember
+			return Claim{}, rowchange.Change{}, ErrAlreadyMember
 		} else if !errors.Is(err, sql.ErrNoRows) {
-			return Claim{}, audit.Change{}, err
+			return Claim{}, rowchange.Change{}, err
 		}
 	}
 
 	id, err := uuid.NewV7()
 	if err != nil {
-		return Claim{}, audit.Change{}, err
+		return Claim{}, rowchange.Change{}, err
 	}
 	idBytes := id[:]
 	if _, err := tx.Exec(sqlInsert, idBytes, in.SubjectID, in.EntityID, subjectTypeID,
 		in.Status, nullBytes(in.ConfidenceGradeID), nullStr(in.Argument)); err != nil {
-		return Claim{}, audit.Change{}, mapInsert(tx, err, in.EntityID, subjectTypeID)
+		return Claim{}, rowchange.Change{}, mapInsert(tx, err, in.EntityID, subjectTypeID)
 	}
 
-	change := audit.Change{
+	change := rowchange.Change{
 		EntityType: "identity_claim",
 		EntityID:   idBytes,
-		Action:     audit.ActionCreate,
-		Fields: audit.FullRow(map[string]any{
+		Action:     rowchange.ActionCreate,
+		Fields: rowchange.FullRow(map[string]any{
 			"id":                  id.String(),
 			"subject_id":          uuidJSON(in.SubjectID),
 			"entity_id":           uuidJSON(in.EntityID),

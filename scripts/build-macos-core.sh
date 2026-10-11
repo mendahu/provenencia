@@ -20,7 +20,9 @@ tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
 
 export CGO_ENABLED=1
-export MACOSX_DEPLOYMENT_TARGET=14.0
+# The app's deployment target. Xcode exports it to this build phase; the
+# fallback matches the project for builds run by hand.
+export MACOSX_DEPLOYMENT_TARGET="${MACOSX_DEPLOYMENT_TARGET:-14.0}"
 # fts5: catalog omnibar projection (go-sqlite3 amalgamation opt-in).
 GOARCH=arm64 go build -tags fts5 -buildmode=c-shared -o "$tmp/libprovenencia_arm64.dylib" ./api/libprovenencia
 GOARCH=amd64 go build -tags fts5 -buildmode=c-shared -o "$tmp/libprovenencia_amd64.dylib" ./api/libprovenencia

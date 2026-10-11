@@ -1,15 +1,14 @@
 package handlers
 
 import (
-	"database/sql"
-
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/autoreconciler"
 	"github.com/mendahu/provenencia/core/database/properties"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
+	"github.com/mendahu/provenencia/core/writes"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -47,7 +46,9 @@ func CreateProperty(in []byte) ([]byte, error) {
 	}
 	var out *engine.CreatePropertyResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		got, err := properties.Create(c, userID, req.GetLabel(), req.GetValueType(), req.GetDescription(), req.GetCardinality())
+		got, _, err := writes.Run(c, writes.Op{Action: "create_property", UserID: userID}, func(tx *database.Tx) (properties.Property, []rowchange.Change, error) {
+			return properties.Create(tx, userID, req.GetLabel(), req.GetValueType(), req.GetDescription(), req.GetCardinality())
+		})
 		if err != nil {
 			return err
 		}
@@ -75,8 +76,8 @@ func UpdateProperty(in []byte) ([]byte, error) {
 	}
 	var out *engine.UpdatePropertyResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		got, err := properties.Update(c, userID, propertyID, req.GetLabel(), req.GetValueType(), req.GetDescription(), req.GetCardinality(), func(tx *sql.Tx) error {
-			return autoreconciler.RecomputePropertyTx(tx, propertyID)
+		got, _, err := writes.Run(c, writes.Op{Action: "update_property", UserID: userID}, func(tx *database.Tx) (properties.Property, []rowchange.Change, error) {
+			return properties.Update(tx, userID, propertyID, req.GetLabel(), req.GetValueType(), req.GetDescription(), req.GetCardinality())
 		})
 		if err != nil {
 			return err
@@ -105,7 +106,10 @@ func DeleteProperty(in []byte) ([]byte, error) {
 	}
 	var out *engine.DeletePropertyResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		if err := properties.Delete(c, userID, propertyID); err != nil {
+		if _, _, err := writes.Run(c, writes.Op{Action: "delete_property", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+			changes, err := properties.Delete(tx, userID, propertyID)
+			return struct{}{}, changes, err
+		}); err != nil {
 			return err
 		}
 		out = &engine.DeletePropertyResponse{}

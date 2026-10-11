@@ -5,18 +5,19 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
-
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/properties"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjects"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
+	"github.com/mendahu/provenencia/core/writes"
 )
 
 // A Subject emptied of its own Observations can be deleted while its claim
@@ -45,11 +46,13 @@ func newConclusionFixture(t *testing.T) conclusionFixture {
 	if err != nil {
 		t.Fatal(err)
 	}
-	src, err := sources.Create(c, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Gazetteer"})
+	src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Gazetteer"})
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	art, err := artifacts.Create(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
+	art, err := runArtifactCreate(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -63,34 +66,42 @@ func newConclusionFixture(t *testing.T) conclusionFixture {
 	}
 	mkSubject := func(label string) subjects.Subject {
 		t.Helper()
-		s, err := subjects.Create(c, userID, subjects.CreateInput{
-			SourceID: src.ID, SubjectTypeID: place.ID, Label: label,
-		}, nil)
+		s, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
+			return subjects.Create(tx, userID, subjects.CreateInput{
+				SourceID: src.ID, SubjectTypeID: place.ID, Label: label,
+			}, nil)
+		})
 		if err != nil {
 			t.Fatal(err)
 		}
 		return s
 	}
 	a, b := mkSubject("York"), mkSubject("York (U.C.)")
-	res, err := citations.CreateWithObservations(c, userID, citations.CreateInput{
-		ArtifactID: art.ID, LocatorJSON: testLocator, Transcription: "York",
-	}, []observations.Input{
-		{SubjectID: a.ID, PropertyID: toponym.ID, ValueText: "York", HasText: true},
-		{SubjectID: b.ID, PropertyID: toponym.ID, ValueText: "York", HasText: true},
+	res, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
+		return citations.CreateWithObservations(tx, userID, citations.CreateInput{
+			ArtifactID: art.ID, LocatorJSON: testLocator, Transcription: "York",
+		}, []observations.Input{
+			{SubjectID: a.ID, PropertyID: toponym.ID, ValueText: "York", HasText: true},
+			{SubjectID: b.ID, PropertyID: toponym.ID, ValueText: "York", HasText: true},
+		})
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	obsA, obsB := res.Observations[0].ID, res.Observations[1].ID
 
-	grounding, err := promote.Save(c, userID, promote.Input{SubjectID: a.ID})
+	grounding, err := writes.Call(c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+		return promote.Save(tx, userID, promote.Input{SubjectID: a.ID})
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	// A confirmed comparison: B joins with its toponym paired against A's, so
 	// Promote pins both Observations on both claims (backfill).
-	joined, err := promote.Save(c, userID, promote.Input{SubjectID: b.ID, EntityID: grounding.Entity.ID,
-		Pairs: []promote.Pair{{IncomingObservationID: obsB, MemberObservationID: obsA}}})
+	joined, err := writes.Call(c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+		return promote.Save(tx, userID, promote.Input{SubjectID: b.ID, EntityID: grounding.Entity.ID,
+			Pairs: []promote.Pair{{IncomingObservationID: obsB, MemberObservationID: obsA}}})
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -109,7 +120,10 @@ func TestSubjectDeleteReleasesOwnClaimPins(t *testing.T) {
 	}
 
 	// B's own Observation blocks deleting B, so it goes first, taking its pins off both claims.
-	if err := observations.Delete(c, userID, obsB); err != nil {
+	if _, err := writes.Call(c, writes.Op{Action: "delete_observation", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+		changes, err := observations.Delete(tx, userID, obsB)
+		return struct{}{}, changes, err
+	}); err != nil {
 		t.Fatal(err)
 	}
 	if pins(ca, obsB)+pins(cb, obsB) != 0 {
@@ -120,7 +134,10 @@ func TestSubjectDeleteReleasesOwnClaimPins(t *testing.T) {
 	if pins(cb, obsA) != 1 {
 		t.Fatal("setup: CB should still pin obsA")
 	}
-	if err := subjects.Delete(c, userID, b.ID); err != nil {
+	if _, err := writes.Call(c, writes.Op{Action: "delete_subject", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+		changes, err := subjects.Delete(tx, userID, b.ID)
+		return struct{}{}, changes, err
+	}); err != nil {
 		t.Fatal(err)
 	}
 	action, types := lastRevision(t, c)
@@ -140,4 +157,12 @@ func TestSubjectDeleteReleasesOwnClaimPins(t *testing.T) {
 	if err != nil || len(members) != 1 || string(members[0].ID) != string(ca) {
 		t.Fatalf("%v %+v", err, members)
 	}
+}
+
+func runArtifactCreate(c *database.Catalog, userID []byte, in artifacts.CreateInput) (artifacts.Artifact, error) {
+	a, _, err := writes.Run(c, writes.Op{Action: "create_artifact", UserID: userID},
+		func(tx *database.Tx) (artifacts.Artifact, []rowchange.Change, error) {
+			return artifacts.Create(tx, userID, in)
+		})
+	return a, err
 }

@@ -2262,6 +2262,18 @@
         }
       }
     },
+    "error.writes.reentry": {
+      "comment": "FFI error writes.reentry",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A save was already in progress."
+          }
+        }
+      }
+    },
     "error.catalog.already_exists": {
       "comment": "FFI error catalog.already_exists",
       "extractionState": "manual",
@@ -2402,6 +2414,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "File not found."
+          }
+        }
+      }
+    },
+    "error.request.invalid_id": {
+      "comment": "FFI error request.invalid_id: a request named a record (any kind) by a malformed ID",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Provenencia couldn't read the ID of that record."
           }
         }
       }
@@ -15316,6 +15340,18 @@
         }
       }
     },
+    "conclusions.life.spanDeathOnly": {
+      "comment": "Persons row with a death and no birth: an open dash, then the death date, so it doesn't read as a birth. Argument is the formatted date.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "– %@"
+          }
+        }
+      }
+    },
     "conclusions.life.places": {
       "comment": "Persons row: birth place, then death place. Arguments are the two place names.",
       "extractionState": "manual",
@@ -15324,6 +15360,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "%1$@ → %2$@"
+          }
+        }
+      }
+    },
+    "conclusions.life.placeDeathOnly": {
+      "comment": "Persons row with a death place and no birth place: the arrow marks it as where they died. Argument is the place name.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "→ %@"
           }
         }
       }
@@ -16949,6 +16997,30 @@
         }
       }
     },
+    "promote.error.graphUnavailable": {
+      "comment": "Callout when the Promote page opens without the Source's graph; the page would otherwise look empty",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Provenencia couldn't read this Source's Evidence graph, so it can't list the rows to promote. Go back to the graph and open Promote again."
+          }
+        }
+      }
+    },
+    "promote.error.graphUnavailableRepropose": {
+      "comment": "Callout when proposing again after a decision can't read the Source's graph",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Provenencia couldn't read this Source's Evidence graph to propose the rows again. Your rows and decisions are kept."
+          }
+        }
+      }
+    },
     "promote.toast.filed": {
       "comment": "Toast after Done; skipped subjects are not a rejection",
       "extractionState": "manual",
@@ -17401,6 +17473,30 @@
           "stringUnit": {
             "state": "translated",
             "value": "%1$@ · %2$@. Agreeing comparisons are pinned as this claim’s evidence."
+          }
+        }
+      }
+    },
+    "promote.sheet.titleHandle": {
+      "comment": "Evidence sheet title for a row filed on an existing record; 1 = the row's name, 2 = the record's ref, 3 = the record's title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ → %2$@ %3$@"
+          }
+        }
+      }
+    },
+    "promote.sheet.titleNew": {
+      "comment": "Evidence sheet title for a row filed as a new record; 1 = the row's name, 2 = the New option, e.g. New person",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ → %2$@"
           }
         }
       }

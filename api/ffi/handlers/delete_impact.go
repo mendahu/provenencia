@@ -26,12 +26,7 @@ func GetDeleteImpact(in []byte) ([]byte, error) {
 		if err != nil {
 			return err
 		}
-		tx, err := db.Begin()
-		if err != nil {
-			return err
-		}
-		defer func() { _ = tx.Rollback() }()
-		report, err := deleteimpact.Impact(tx, kind, id)
+		report, err := deleteimpact.Snapshot(db, kind, id)
 		if err != nil {
 			return err
 		}

@@ -8,6 +8,8 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/conclusionheaders"
 	"github.com/mendahu/provenencia/core/database/datevalues"
+	"github.com/mendahu/provenencia/core/database/graphcache"
+	"github.com/mendahu/provenencia/core/database/sqlbatch"
 	"github.com/mendahu/provenencia/core/eventtitle"
 	"github.com/mendahu/provenencia/core/valuecodec"
 )
@@ -21,9 +23,6 @@ const (
 	KindEvent  = "event"
 	KindPlace  = "place"
 )
-
-// handleBatch bounds the IN list per reprojection query.
-const handleBatch = 500
 
 // handleKinds are the Conclusion kinds that have a search document.
 var handleKinds = map[string]bool{
@@ -51,13 +50,9 @@ const (
 // kinds without a document are removed.
 func ReprojectHandles(q Querier, entityIDs [][]byte) error {
 	ids := database.UniqueBlobIDs(entityIDs)
-	for start := 0; start < len(ids); start += handleBatch {
-		end := min(start+handleBatch, len(ids))
-		if err := reprojectHandleBatch(q, ids[start:end]); err != nil {
-			return err
-		}
-	}
-	return nil
+	return sqlbatch.Each(ids, func(batch [][]byte) error {
+		return reprojectHandleBatch(q, batch)
+	})
 }
 
 // reprojectAllHandles reprojects every handle (RebuildAll).
@@ -226,23 +221,18 @@ func loadHandleHeaders(q Querier, heads map[string]handleHead) (handleHeaders, e
 		events:  map[string]conclusionheaders.EventHeader{},
 		places:  map[string]conclusionheaders.PlaceHeader{},
 	}
-	ps, err := conclusionheaders.PersonsByIDs(q, persons)
+	if len(persons)+len(events)+len(places) == 0 {
+		return out, nil
+	}
+	ps, es, pl, err := conclusionheaders.RowsForSearch(graphcache.Over(q), persons, events, places)
 	if err != nil {
 		return handleHeaders{}, err
 	}
 	for _, h := range ps {
 		out.persons[uuidString(h.Entity.ID)] = h
 	}
-	es, err := conclusionheaders.EventsByIDs(q, events)
-	if err != nil {
-		return handleHeaders{}, err
-	}
 	for _, h := range es {
 		out.events[uuidString(h.Entity.ID)] = h
-	}
-	pl, err := conclusionheaders.PlacesByIDs(q, places)
-	if err != nil {
-		return handleHeaders{}, err
 	}
 	for _, h := range pl {
 		out.places[uuidString(h.Entity.ID)] = h

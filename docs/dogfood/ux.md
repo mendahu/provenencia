@@ -19,6 +19,53 @@ Copy the stub. Surface + what got in the way is enough. A wanted fix is optional
 
 <!-- add below this line -->
 
+### Sources list needs filters and search to find Sources
+
+- **Date:** 2026-10-11
+- **Where:** Sources list
+- **Annoyance:** The list grows quickly, and there are no controls for narrowing it down to the Sources I want to work on.
+- **Wanted:**
+  - **Filter by evidence status:** for example Sources that still have unpromoted Subjects, Sources with no Evidence graph filled out yet, and Sources where every Subject is promoted.
+  - **Text search** that filters the list as you type.
+  - Related: *Sources list sort and filter don't persist* (these new filters should be remembered too) and *Last updated field on list views*.
+- **Open question:** The status filters need per-Source counts of promoted and unpromoted Subjects. Those would have to be cheap to compute for a long list.
+
+### Unpromote button on Subject cards
+
+- **Date:** 2026-10-11
+- **Where:** Evidence graph → promoted Subject cards
+- **Annoyance:** Once a Subject has been promoted there's no way to take it back from the Evidence graph. Only unpromoted cards have a Promote button.
+- **Wanted:** An **Unpromote** button on promoted Subject cards. It removes the Identity Claim for that Subject, including any bridge Subjects connected to it, returning the card to its unpromoted state.
+- **Open questions:** Should it ask for confirmation, since it removes more than just the one card's claim? Should it list the bridges that will go with it? Related: [promote graph alignment](../promote-graph-alignment.md), which describes how bridges behave when one end is unpromoted.
+
+### Promote flow: long entity titles break the target dropdown layout
+
+- **Date:** 2026-10-10
+- **Where:** Promote flow → target entity dropdowns
+- **Annoyance:** When an entity's title is very long, the dropdown for choosing the target entity grows to fit it and pushes the layout out of shape.
+- **Wanted:** Truncate long titles in the dropdown (ellipsis) so it keeps a fixed width, with the full title available on hover or in a tooltip. Probably belongs in the shared select component so every dropdown with long labels benefits. Related: *Name part type dropdown: shifting width and no type-to-cycle*, which is the same family of sizing problem.
+
+### Seed an `interests` Property on Person
+
+- **Date:** 2026-10-10
+- **Where:** Seeded vocabulary (Person Properties)
+- **Annoyance:** There's no place to record what a person was interested in (hobbies, pastimes, causes) as structured evidence.
+- **Wanted:** Seed a Person Property with key `interests`, `value_type = text`, cardinality `multiple`, so one Person can carry several interests. `toponym` on Place is the existing precedent for a seeded `text` Property with cardinality `multiple`. Needs rows in [seeded vocabulary](../seeded-vocabulary.md) §3.2 (`properties`) and §3.3 (`subject_type_properties`, bound to `person`, unlocked).
+
+### Combo box should rank prefix matches above mid-word matches
+
+- **Date:** 2026-10-10
+- **Where:** Design system combo box (`PVComboBox`), wherever it's used
+- **Annoyance:** When I type into a combo box, an option that merely contains my text ranks the same as one that starts with it. Typing `par` shows *grandparent* alongside *parent*, with no preference for *parent*.
+- **Wanted:** Weight a match at the **start** of an option above a match in the middle. Typing `par` should list *parent* above *grandparent*. Matches that start a word inside the option could sit between the two. Fix it in the shared component so every combo box gets it. Related: *Omnibar ranks fuzzy name matches above exact title words*, which is the same idea for the omnibar.
+
+### Restore list scroll position on Back
+
+- **Date:** 2026-10-10
+- **Where:** Sources, People, Events, and Places lists
+- **Annoyance:** I scroll down a list, open an item (say a Source detail page), then press Back. The list is back at the top instead of where I left it.
+- **Wanted:** Back returns me to the same scroll position. If I was at the bottom of the list when I left, I'm at the bottom when I return. Related: *Sources list sort and filter don't persist*, since a restored position only makes sense if the sort and filter come back too.
+
 ### Dense Evidence graphs (census-scale)
 
 - **Date:** 2026-09-24
@@ -103,6 +150,7 @@ Scheduled in [Spike 10](../deployment-plan/spike-10/). Not done until the PR lan
 - **Where:** Citation composer
 - **Annoyance:** Opening a Citation with a lot of Observations gets slow quickly. Real Citations with around 10–20 Observations are already noticeably sluggish.
 - **Wanted:** The composer stays responsive at 20+ Observations. Profile the load first to see whether the time goes to data fetching or to view rendering.
+- **Idea to try (unverified):** load the Source viewer (the image or PDF) independently, so it can't hold up the rest of the composer. Think React Suspense: the viewer suspends inside its own container and shows a placeholder while the Artifact loads, and the Citation form and Observations render right away. Right now the composer may wait for everything to load and then show the whole view at once. This is a hunch, not a diagnosis. The viewer might not be the bottleneck, so measure first.
 
 ### Drag and drop files into the Artifact section
 

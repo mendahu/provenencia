@@ -29,6 +29,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/sqlbatch"
 )
 
 var ErrInvalid = apperr.New(apperr.CodeDateValuesInvalid, apperr.KindUser)
@@ -222,8 +223,8 @@ func Lookup(c *database.Catalog, id []byte) (Value, error) {
 	return LookupTx(db, id)
 }
 
-// LookupManyTx returns date_values rows for the given ids in one query, keyed
-// by string(id). Missing ids are omitted.
+// LookupManyTx returns date_values rows for the given ids, one query per
+// sqlbatch.Size ids, keyed by string(id). Missing ids are omitted.
 func LookupManyTx(q interface {
 	Query(query string, args ...any) (*sql.Rows, error)
 }, ids [][]byte) (map[string]Value, error) {
@@ -232,21 +233,20 @@ func LookupManyTx(q interface {
 	if len(ids) == 0 {
 		return out, nil
 	}
-	rows, err := q.Query(sqlLookupMany+database.SQLInPlaceholders(len(ids))+`)`, database.BlobArgs(ids)...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	for rows.Next() {
+	err := sqlbatch.Query(q, sqlLookupMany, `)`, nil, ids, func(rows *sql.Rows) error {
 		var id []byte
 		v, err := scanValue(rows, &id)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		v.ID = append([]byte(nil), id...)
 		out[string(v.ID)] = v
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
-	return out, rows.Err()
+	return out, nil
 }
 
 // LookupTx returns the date_values row for id on an existing connection or transaction.

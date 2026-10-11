@@ -3,17 +3,15 @@ package observations
 
 import (
 	"database/sql"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"strings"
 
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/connectrules"
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/audit"
-	"github.com/mendahu/provenencia/core/database/autoreconciler"
 	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/namevalues"
-	"github.com/mendahu/provenencia/core/database/project"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/ref"
 )
@@ -78,11 +76,6 @@ const (
 		LEFT JOIN name_values nv ON nv.id = o.value_name_id
 		LEFT JOIN subjects vs ON vs.id = o.value_subject_id
 		LEFT JOIN date_values dv ON dv.id = o.value_date_id`
-
-	sqlListBySource = sqlListSelect + `
-		JOIN subjects s ON s.id = o.subject_id
-		WHERE s.source_id = ?
-		ORDER BY o.ref COLLATE NOCASE`
 
 	sqlListBySubject = sqlListSelect + `
 		WHERE o.subject_id = ?
@@ -153,60 +146,34 @@ type Input struct {
 	Notes          []string
 }
 
-// AddToCitation appends ≥1 Observations to an existing Citation in one audited transaction.
-func AddToCitation(c *database.Catalog, userID, citationID []byte, inputs []Input) ([]Observation, error) {
-	db, err := c.DB()
-	if err != nil {
-		return nil, err
-	}
-	if len(citationID) != 16 || len(inputs) == 0 {
-		return nil, ErrInvalid
+// AddToCitation appends ≥1 Observations to an existing Citation on tx.
+// The caller records the returned changes.
+func AddToCitation(tx *database.Tx, userID, citationID []byte, inputs []Input) ([]Observation, []rowchange.Change, error) {
+	if tx == nil || len(citationID) != 16 || len(inputs) == 0 {
+		return nil, nil, ErrInvalid
 	}
 	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-
-	tx, err := db.Begin()
-	if err != nil {
-		return nil, err
-	}
-	defer func() { _ = tx.Rollback() }()
 
 	var one int
 	if err := tx.QueryRow(sqlCitationExists, citationID).Scan(&one); err != nil {
 		if err == sql.ErrNoRows {
-			return nil, ErrInvalid
+			return nil, nil, ErrInvalid
 		}
-		return nil, err
+		return nil, nil, err
 	}
-
-	out, changes, err := InsertManyTx(tx, citationID, inputs, InsertOptions{AllowEdgeRows: false})
-	if err != nil {
-		return nil, err
-	}
-	if _, err := audit.Record(tx, audit.Revision{
-		UserID:     userID,
-		ActionType: "add_observations",
-		CreatedAt:  project.NowUTC(),
-		Changes:    changes,
-	}); err != nil {
-		return nil, err
-	}
-	if err := tx.Commit(); err != nil {
-		return nil, err
-	}
-	return out, nil
+	return InsertManyTx(tx.Tx, citationID, inputs, InsertOptions{AllowEdgeRows: false})
 }
 
-// InsertManyTx inserts Observations for citationID inside an existing transaction
-// and recomputes the auto-reconciled values of any handle their Subjects belong to.
-// Returns rows and audit Changes (caller records the revision).
-func InsertManyTx(tx *sql.Tx, citationID []byte, inputs []Input, opts InsertOptions) ([]Observation, []audit.Change, error) {
+// InsertManyTx inserts Observations for citationID inside an existing transaction.
+// Returns rows and changes. The caller records the revision and recomputes.
+func InsertManyTx(tx *sql.Tx, citationID []byte, inputs []Input, opts InsertOptions) ([]Observation, []rowchange.Change, error) {
 	if tx == nil || len(citationID) != 16 || len(inputs) == 0 {
 		return nil, nil, ErrInvalid
 	}
 	out := make([]Observation, 0, len(inputs))
-	changes := make([]audit.Change, 0, len(inputs))
+	changes := make([]rowchange.Change, 0, len(inputs))
 	for _, in := range inputs {
 		obs, chs, err := insertOne(tx, citationID, in, opts)
 		if err != nil {
@@ -214,13 +181,6 @@ func InsertManyTx(tx *sql.Tx, citationID []byte, inputs []Input, opts InsertOpti
 		}
 		out = append(out, obs)
 		changes = append(changes, chs...)
-	}
-	subjectIDs := make([][]byte, len(out))
-	for i, o := range out {
-		subjectIDs[i] = o.SubjectID
-	}
-	if err := autoreconciler.RecomputeSubjectsTx(tx, subjectIDs); err != nil {
-		return nil, nil, err
 	}
 	return out, changes, nil
 }
@@ -230,10 +190,25 @@ type resolvedValue struct {
 	Integer                *int64
 	DateID, NameID         []byte
 	SubjectID, TermID      []byte
-	DateChange, NameChange *audit.Change
+	DateChange, NameChange *rowchange.Change
 }
 
-func insertOne(tx *sql.Tx, citationID []byte, in Input, opts InsertOptions) (Observation, []audit.Change, error) {
+// requireSubjectSource rejects an observation whose subject is homed to a
+// different Source than the citation's artifact. Value subjects are not checked.
+func requireSubjectSource(tx *sql.Tx, citationID, subjectID []byte) error {
+	var one int
+	err := tx.QueryRow(`SELECT 1
+		FROM subjects s
+		JOIN citations c ON c.id = ?
+		JOIN artifacts a ON a.id = c.artifact_id AND a.source_id = s.source_id
+		WHERE s.id = ?`, citationID, subjectID).Scan(&one)
+	if err == sql.ErrNoRows {
+		return ErrInvalid
+	}
+	return err
+}
+
+func insertOne(tx *sql.Tx, citationID []byte, in Input, opts InsertOptions) (Observation, []rowchange.Change, error) {
 	if len(in.ID) != 0 {
 		return Observation{}, nil, ErrInvalid
 	}
@@ -246,6 +221,9 @@ func insertOne(tx *sql.Tx, citationID []byte, in Input, opts InsertOptions) (Obs
 	}
 	if len(in.SubjectID) != 16 || len(in.PropertyID) != 16 {
 		return Observation{}, nil, ErrInvalid
+	}
+	if err := requireSubjectSource(tx, citationID, in.SubjectID); err != nil {
+		return Observation{}, nil, err
 	}
 
 	var subjectTypeID []byte
@@ -321,11 +299,11 @@ func insertOne(tx *sql.Tx, citationID []byte, in Input, opts InsertOptions) (Obs
 		return Observation{}, nil, ErrInvalid
 	}
 
-	changes := []audit.Change{{
+	changes := []rowchange.Change{{
 		EntityType: "observation",
 		EntityID:   idBytes,
-		Action:     audit.ActionCreate,
-		Fields: audit.FullRow(map[string]any{
+		Action:     rowchange.ActionCreate,
+		Fields: rowchange.FullRow(map[string]any{
 			"id":               id.String(),
 			"ref":              obsRef,
 			"citation_id":      uuidJSON(citationID),
@@ -359,11 +337,11 @@ func insertOne(tx *sql.Tx, citationID []byte, in Input, opts InsertOptions) (Obs
 		if _, err := tx.Exec(sqlInsertNote, noteID[:], idBytes, body); err != nil {
 			return Observation{}, nil, err
 		}
-		changes = append(changes, audit.Change{
+		changes = append(changes, rowchange.Change{
 			EntityType: "observation_note",
 			EntityID:   noteID[:],
-			Action:     audit.ActionCreate,
-			Fields: audit.FullRow(map[string]any{
+			Action:     rowchange.ActionCreate,
+			Fields: rowchange.FullRow(map[string]any{
 				"id":             noteID.String(),
 				"observation_id": id.String(),
 				"body":           body,
@@ -521,27 +499,6 @@ func hasOtherScalars(in Input, keep string) bool {
 	return false
 }
 
-// ListBySource returns Observations whose subject is home to sourceID.
-func ListBySource(c *database.Catalog, sourceID []byte) ([]Listed, error) {
-	db, err := c.DB()
-	if err != nil {
-		return nil, err
-	}
-	if len(sourceID) != 16 {
-		return nil, ErrInvalid
-	}
-	rows, err := db.Query(sqlListBySource, sourceID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	listed, err := scanListed(rows)
-	if err != nil {
-		return nil, err
-	}
-	return hydrateNameValues(c, listed)
-}
-
 // ListBySubject returns Observations for one subject.
 func ListBySubject(c *database.Catalog, subjectID []byte) ([]Listed, error) {
 	db, err := c.DB()
@@ -668,7 +625,7 @@ func scanListed(rows *sql.Rows) ([]Listed, error) {
 			}
 			l.Date = &dv
 		}
-		fillListedDisplayText(&l)
+		FillListedDisplayText(&l)
 		out = append(out, l)
 	}
 	return out, rows.Err()
@@ -697,9 +654,10 @@ func hydrateNameValues(c *database.Catalog, listed []Listed) ([]Listed, error) {
 	return listed, nil
 }
 
-// fillListedDisplayText denormalizes structured value types into ValueText so
-// card rows that only read value_text work for term / name / date / subject.
-func fillListedDisplayText(l *Listed) {
+// FillListedDisplayText copies a term label, name form, subject label, or
+// compact date into ValueText when the row has no text of its own. Card rows
+// that only read value_text stay correct for every property value type.
+func FillListedDisplayText(l *Listed) {
 	if l.HasText {
 		return
 	}
@@ -786,11 +744,11 @@ func mapConstraint(err error) error {
 	return err
 }
 
-func dateUpdateChange(prev, next datevalues.Value) *audit.Change {
-	fields := map[string]audit.FieldDiff{}
+func dateUpdateChange(prev, next datevalues.Value) *rowchange.Change {
+	fields := map[string]rowchange.FieldDiff{}
 	add := func(key string, old, new any) {
 		if old != new {
-			fields[key] = audit.FieldDiff{Old: old, New: new}
+			fields[key] = rowchange.FieldDiff{Old: old, New: new}
 		}
 	}
 	add("kind", emptyAsNil(prev.Kind), emptyAsNil(next.Kind))
@@ -816,21 +774,21 @@ func dateUpdateChange(prev, next datevalues.Value) *audit.Change {
 	if len(fields) == 0 {
 		return nil
 	}
-	return &audit.Change{
+	return &rowchange.Change{
 		EntityType: "date_value",
 		EntityID:   append([]byte(nil), prev.ID...),
-		Action:     audit.ActionUpdate,
+		Action:     rowchange.ActionUpdate,
 		Fields:     fields,
 	}
 }
 
-func nameUpdateChange(prev, next namevalues.Value) *audit.Change {
-	fields := map[string]audit.FieldDiff{}
+func nameUpdateChange(prev, next namevalues.Value) *rowchange.Change {
+	fields := map[string]rowchange.FieldDiff{}
 	if prev.Form != next.Form {
-		fields["form"] = audit.FieldDiff{Old: prev.Form, New: next.Form}
+		fields["form"] = rowchange.FieldDiff{Old: prev.Form, New: next.Form}
 	}
 	if !namePartsEqual(prev.Parts, next.Parts) {
-		fields["parts"] = audit.FieldDiff{Old: namePartsJSON(prev.Parts), New: namePartsJSON(next.Parts)}
+		fields["parts"] = rowchange.FieldDiff{Old: namePartsJSON(prev.Parts), New: namePartsJSON(next.Parts)}
 	}
 	if len(fields) == 0 {
 		return nil
@@ -839,10 +797,10 @@ func nameUpdateChange(prev, next namevalues.Value) *audit.Change {
 	if len(id) != 16 {
 		id = next.ID
 	}
-	return &audit.Change{
+	return &rowchange.Change{
 		EntityType: "name_value",
 		EntityID:   append([]byte(nil), id...),
-		Action:     audit.ActionUpdate,
+		Action:     rowchange.ActionUpdate,
 		Fields:     fields,
 	}
 }
@@ -905,12 +863,12 @@ func nameValueMap(id []byte, v namevalues.Value) map[string]any {
 	}
 }
 
-func dateCreateChange(id []byte, v datevalues.Value) audit.Change {
-	return audit.Change{
+func dateCreateChange(id []byte, v datevalues.Value) rowchange.Change {
+	return rowchange.Change{
 		EntityType: "date_value",
 		EntityID:   append([]byte(nil), id...),
-		Action:     audit.ActionCreate,
-		Fields: audit.FullRow(map[string]any{
+		Action:     rowchange.ActionCreate,
+		Fields: rowchange.FullRow(map[string]any{
 			"id":                uuidJSON(id),
 			"kind":              emptyAsNil(v.Kind),
 			"qualifier":         emptyAsNil(v.Qualifier),
@@ -936,7 +894,7 @@ func dateCreateChange(id []byte, v datevalues.Value) audit.Change {
 	}
 }
 
-func nameCreateChange(id []byte, v namevalues.Value) audit.Change {
+func nameCreateChange(id []byte, v namevalues.Value) rowchange.Change {
 	parts := make([]map[string]any, len(v.Parts))
 	for i, p := range v.Parts {
 		parts[i] = map[string]any{
@@ -945,11 +903,11 @@ func nameCreateChange(id []byte, v namevalues.Value) audit.Change {
 			"type":  emptyAsNil(p.Type),
 		}
 	}
-	return audit.Change{
+	return rowchange.Change{
 		EntityType: "name_value",
 		EntityID:   append([]byte(nil), id...),
-		Action:     audit.ActionCreate,
-		Fields: audit.FullRow(map[string]any{
+		Action:     rowchange.ActionCreate,
+		Fields: rowchange.FullRow(map[string]any{
 			"id":    uuidJSON(id),
 			"form":  v.Form,
 			"parts": parts,

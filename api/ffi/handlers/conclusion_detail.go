@@ -21,16 +21,12 @@ func GetConclusionDetail(in []byte) ([]byte, error) {
 	}
 	out := &engine.ConclusionDetail{}
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		db, err := c.DB()
-		if err != nil {
-			return err
-		}
-		d, err := conclusiondetails.ForEntity(db, entityID)
+		d, err := conclusiondetails.ForEntity(c, entityID)
 		if err != nil {
 			return err
 		}
 		out = conclusionDetailProto(d)
-		return attachHeader(c, db, d, out)
+		return attachHeader(c, d, out)
 	})
 	if err != nil {
 		return nil, err
@@ -107,7 +103,7 @@ func conclusionValueProto(v conclusiondetails.Value) *engine.ConclusionValue {
 }
 
 // attachHeader reads the handle's header for its kind beside the detail.
-func attachHeader(c *database.Catalog, db conclusionheaders.Querier, d conclusiondetails.Detail, out *engine.ConclusionDetail) error {
+func attachHeader(c *database.Catalog, d conclusiondetails.Detail, out *engine.ConclusionDetail) error {
 	st, err := subjecttypes.GetByID(c, d.Entity.SubjectTypeID)
 	if err != nil {
 		return err
@@ -118,23 +114,23 @@ func attachHeader(c *database.Catalog, db conclusionheaders.Querier, d conclusio
 	ids := [][]byte{d.Entity.ID}
 	switch st.Key {
 	case "person":
-		h, err := conclusionheaders.PersonsByIDs(db, ids)
+		h, err := conclusionheaders.PersonsByIDs(c, ids)
 		if err != nil || len(h) != 1 {
 			return err
 		}
 		out.Header = &engine.ConclusionDetail_Person{Person: personHeaderProto(h[0])}
 	case "event":
-		h, err := conclusionheaders.EventsByIDs(db, ids)
+		h, err := conclusionheaders.EventsByIDs(c, ids)
 		if err != nil || len(h) != 1 {
 			return err
 		}
 		out.Header = &engine.ConclusionDetail_Event{Event: eventHeaderProto(h[0])}
 	case "place":
-		h, err := conclusionheaders.PlacesByIDs(db, ids)
+		h, err := conclusionheaders.PlacesByIDs(c, ids)
 		if err != nil || len(h) != 1 {
 			return err
 		}
-		if err := conclusionheaders.AttachPlaceRelationships(db, &h[0]); err != nil {
+		if err := conclusionheaders.AttachPlaceRelationships(c, &h[0]); err != nil {
 			return err
 		}
 		out.Header = &engine.ConclusionDetail_Place{Place: placeHeaderProto(h[0])}

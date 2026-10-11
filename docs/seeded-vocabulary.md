@@ -455,6 +455,8 @@ unknown
 
 Use `intersex` when the source indicates intersex / DSD variation; `indeterminate` when sex was considered but could not be determined; `unknown` when the source is silent, illegible, or explicitly unknown. Researchers may add further `origin=user` terms for source-specific wording. Do not treat these as free-text Observation strings.
 
+`indeterminate` and `unknown` are seeded **neutral** (`property_terms.neutral`): they say nothing about which sex, so reconciliation never lets one win or outvote a recorded sex, and matching never compares one. Neutrality is a flag on the term, not a key the code knows, so any term can carry it.
+
 ## 3.8 Property terms: `place_relationship_type` (S9-38)
 
 How two Places relate. **Product-only:** the two seeded terms are locked; Create of a user term under this Property is refused; the composer does not offer *Add type…*. Filing and chains key off the term key (`part_of` = containment; `succeeded_by` = succession). Bound only to `place_relationship`. Both terms are directed.

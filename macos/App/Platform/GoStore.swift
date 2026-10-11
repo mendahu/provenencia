@@ -1373,7 +1373,7 @@ struct GoStore: GenealogyStore {
         citationNotes: [String],
         observations: [CatalogObservationDraft],
         citationID: String?
-    ) async throws -> (CatalogSubject, CatalogCitation, [CatalogObservation]) {
+    ) async throws -> (CatalogSubject, CatalogCitation, [CatalogObservation], CatalogWriteEffects) {
         var req = Provenencia_Engine_V1_CreateCitedBridgeRequest()
         req.projectDir = projectDir
         req.userID = userID
@@ -1398,7 +1398,8 @@ struct GoStore: GenealogyStore {
         return (
             Self.mapSubject(resp.subject),
             Self.mapCitation(resp.citation),
-            resp.observations.map(Self.mapObservation)
+            resp.observations.map(Self.mapObservation),
+            resp.hasEffects ? Self.mapWriteEffects(resp.effects) : .empty
         )
     }
 
@@ -1413,7 +1414,7 @@ struct GoStore: GenealogyStore {
         transcriptionNote: String,
         citationNotes: [String],
         observations: [CatalogObservationDraft]
-    ) async throws -> (CatalogCitation, [CatalogObservation]) {
+    ) async throws -> (CatalogCitation, [CatalogObservation], CatalogWriteEffects) {
         var req = Provenencia_Engine_V1_CreateCitationWithObservationsRequest()
         req.projectDir = projectDir
         req.userID = userID
@@ -1429,7 +1430,11 @@ struct GoStore: GenealogyStore {
             method: CoreMethod.createCitationWithObservations,
             request: req
         )
-        return (Self.mapCitation(resp.citation), resp.observations.map(Self.mapObservation))
+        return (
+            Self.mapCitation(resp.citation),
+            resp.observations.map(Self.mapObservation),
+            resp.hasEffects ? Self.mapWriteEffects(resp.effects) : .empty
+        )
     }
 
     func getCitation(
@@ -1455,7 +1460,7 @@ struct GoStore: GenealogyStore {
         userID: String,
         citationID: String,
         observations: [CatalogObservationDraft]
-    ) async throws -> [CatalogObservation] {
+    ) async throws -> ([CatalogObservation], CatalogWriteEffects) {
         var req = Provenencia_Engine_V1_AddObservationsToCitationRequest()
         req.projectDir = projectDir
         req.userID = userID
@@ -1465,7 +1470,10 @@ struct GoStore: GenealogyStore {
             method: CoreMethod.addObservationsToCitation,
             request: req
         )
-        return resp.observations.map(Self.mapObservation)
+        return (
+            resp.observations.map(Self.mapObservation),
+            resp.hasEffects ? Self.mapWriteEffects(resp.effects) : .empty
+        )
     }
 
     func listObservationsBySource(projectDir: String, sourceID: String) async throws -> [CatalogObservation] {
@@ -1568,7 +1576,7 @@ struct GoStore: GenealogyStore {
         description: String,
         transcriptionUncertain: Bool,
         transcriptionNote: String
-    ) async throws -> CatalogCitation {
+    ) async throws -> (CatalogCitation, CatalogWriteEffects) {
         var req = Provenencia_Engine_V1_UpdateCitationRequest()
         req.projectDir = projectDir
         req.userID = userID
@@ -1582,14 +1590,17 @@ struct GoStore: GenealogyStore {
             method: CoreMethod.updateCitation,
             request: req
         )
-        return Self.mapCitation(resp.citation)
+        return (
+            Self.mapCitation(resp.citation),
+            resp.hasEffects ? Self.mapWriteEffects(resp.effects) : .empty
+        )
     }
 
     func updateObservation(
         projectDir: String,
         userID: String,
         observation: CatalogObservation
-    ) async throws -> CatalogObservation {
+    ) async throws -> (CatalogObservation, CatalogWriteEffects) {
         var req = Provenencia_Engine_V1_UpdateObservationRequest()
         req.projectDir = projectDir
         req.userID = userID
@@ -1598,28 +1609,44 @@ struct GoStore: GenealogyStore {
             method: CoreMethod.updateObservation,
             request: req
         )
-        return Self.mapObservation(resp.observation)
+        return (
+            Self.mapObservation(resp.observation),
+            resp.hasEffects ? Self.mapWriteEffects(resp.effects) : .empty
+        )
     }
 
-    func deleteObservation(projectDir: String, userID: String, observationID: String) async throws {
+    func deleteObservation(projectDir: String, userID: String, observationID: String) async throws -> CatalogWriteEffects {
         var req = Provenencia_Engine_V1_DeleteObservationRequest()
         req.projectDir = projectDir
         req.userID = userID
         req.observationID = observationID
-        let _: Provenencia_Engine_V1_DeleteObservationResponse = try await provenenciaCall(
+        let resp: Provenencia_Engine_V1_DeleteObservationResponse = try await provenenciaCall(
             method: CoreMethod.deleteObservation,
             request: req
         )
+        return resp.hasEffects ? Self.mapWriteEffects(resp.effects) : .empty
     }
 
-    func deleteCitation(projectDir: String, userID: String, citationID: String) async throws {
+    func deleteCitation(projectDir: String, userID: String, citationID: String) async throws -> CatalogWriteEffects {
         var req = Provenencia_Engine_V1_DeleteCitationRequest()
         req.projectDir = projectDir
         req.userID = userID
         req.citationID = citationID
-        let _: Provenencia_Engine_V1_DeleteCitationResponse = try await provenenciaCall(
+        let resp: Provenencia_Engine_V1_DeleteCitationResponse = try await provenenciaCall(
             method: CoreMethod.deleteCitation,
             request: req
+        )
+        return resp.hasEffects ? Self.mapWriteEffects(resp.effects) : .empty
+    }
+
+    private static func mapWriteEffects(_ effects: Provenencia_Engine_V1_WriteEffects) -> CatalogWriteEffects {
+        CatalogWriteEffects(
+            handles: effects.handles,
+            sources: effects.sources,
+            cacheSources: effects.cacheSources,
+            vocabulary: effects.vocabulary,
+            structure: effects.structure,
+            headerHandles: effects.headerHandles
         )
     }
 

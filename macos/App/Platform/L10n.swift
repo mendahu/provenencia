@@ -1352,6 +1352,8 @@ enum L10n {
         static let done = LocalizedStringResource("promote.done.action", defaultValue: "Done", comment: "Files the Promote page")
         static let cancel = LocalizedStringResource("promote.cancel", defaultValue: "Cancel", comment: "Leaves the Promote page")
         static let staleTitle = LocalizedStringResource("promote.stale.title", defaultValue: "Nothing was filed — the catalog changed while this page was open", comment: "Callout title when Done loses the revision race")
+        static let graphUnavailable = LocalizedStringResource("promote.error.graphUnavailable", defaultValue: "Provenencia couldn't read this Source's Evidence graph, so it can't list the rows to promote. Go back to the graph and open Promote again.", comment: "Callout when the Promote page opens without the Source's graph; the page would otherwise look empty")
+        static let graphUnavailableRepropose = LocalizedStringResource("promote.error.graphUnavailableRepropose", defaultValue: "Provenencia couldn't read this Source's Evidence graph to propose the rows again. Your rows and decisions are kept.", comment: "Callout when proposing again after a decision can't read the Source's graph")
         static let stale = LocalizedStringResource("promote.stale.notice", defaultValue: "Provenencia proposed the rows again. Rows you decided are kept. Review the updated rows and press Done.", comment: "Callout body when Done loses the revision race")
         static func filedTitle(filed: Int, connections: Int) -> String {
             L10n.format(LocalizedStringResource("promote.toast.filedTitle", defaultValue: "Filed %1$lld subjects and %2$lld connections", comment: "Toast title after Done; 1 = subjects filed, 2 = connections filed"), filed, connections)
@@ -1416,6 +1418,12 @@ enum L10n {
         static let sheetStatusHint = LocalizedStringResource("promote.sheet.status.hint", defaultValue: "Provisional and rejected arrive in a later spike", comment: "Hint under claim status; only Accepted can be filed")
         static func argumentHint(pinned: Int) -> String {
             L10n.format(LocalizedStringResource("promote.sheet.argument.hint", defaultValue: "Drafted from the %lld pinned comparisons · edit before filing", comment: "Hint under the claim argument; argument is how many comparisons are pinned"), pinned)
+        }
+        static func sheetTitleHandle(name: String, ref: String, title: String) -> String {
+            L10n.format(LocalizedStringResource("promote.sheet.titleHandle", defaultValue: "%1$@ → %2$@ %3$@", comment: "Evidence sheet title for a row filed on an existing record; 1 = the row's name, 2 = the record's ref, 3 = the record's title"), name, ref, title)
+        }
+        static func sheetTitleNew(name: String, target: String) -> String {
+            L10n.format(LocalizedStringResource("promote.sheet.titleNew", defaultValue: "%1$@ → %2$@", comment: "Evidence sheet title for a row filed as a new record; 1 = the row's name, 2 = the New option, e.g. New person"), name, target)
         }
         static func sheetSubtitle(assessment: String, reason: String) -> String {
             L10n.format(LocalizedStringResource("promote.sheet.subtitle", defaultValue: "%1$@ · %2$@. Agreeing comparisons are pinned as this claim’s evidence.", comment: "Evidence sheet subtitle; 1 = assessment, 2 = why this row matched"), assessment, reason)
@@ -7232,6 +7240,24 @@ enum L10n {
             return L10n.format(resource, born)
         }
 
+        static func lifeSpanDeathOnly(died: String) -> String {
+            let resource = LocalizedStringResource(
+                "conclusions.life.spanDeathOnly",
+                defaultValue: "– %@",
+                comment: "Persons row with a death and no birth: an open dash, then the death date, so it doesn't read as a birth. Argument is the formatted date."
+            )
+            return L10n.format(resource, died)
+        }
+
+        static func lifePlaceDeathOnly(died: String) -> String {
+            let resource = LocalizedStringResource(
+                "conclusions.life.placeDeathOnly",
+                defaultValue: "→ %@",
+                comment: "Persons row with a death place and no birth place: the arrow marks it as where they died. Argument is the place name."
+            )
+            return L10n.format(resource, died)
+        }
+
         static func lifePlaces(born: String, died: String) -> String {
             let resource = LocalizedStringResource(
                 "conclusions.life.places",
@@ -7776,6 +7802,11 @@ enum L10n {
             defaultValue: "Invalid audit record.",
             comment: "FFI error audit.invalid"
         )
+        static let writesReentry = LocalizedStringResource(
+            "error.writes.reentry",
+            defaultValue: "A save was already in progress.",
+            comment: "FFI error writes.reentry"
+        )
         static let identityNotFound = LocalizedStringResource(
             "error.identity.not_found",
             defaultValue: "Identity file not found.",
@@ -7825,6 +7856,11 @@ enum L10n {
             "error.file.not_found",
             defaultValue: "File not found.",
             comment: "FFI error file.not_found"
+        )
+        static let requestInvalidID = LocalizedStringResource(
+            "error.request.invalid_id",
+            defaultValue: "Provenencia couldn't read the ID of that record.",
+            comment: "FFI error request.invalid_id: a request named a record (any kind) by a malformed ID"
         )
         static let sourcesInvalid = LocalizedStringResource(
             "error.sources.invalid",
@@ -8409,6 +8445,8 @@ enum L10n {
                 return L10n.string(usersInvalid)
             case "audit.invalid":
                 return L10n.string(auditInvalid)
+            case "writes.reentry":
+                return L10n.string(writesReentry)
             case "identity.not_found":
                 return L10n.string(identityNotFound)
             case "identity.invalid_name":
@@ -8429,6 +8467,8 @@ enum L10n {
                 return L10n.string(onboardingUnknownUser)
             case "file.not_found":
                 return L10n.string(fileNotFound)
+            case "request.invalid_id":
+                return L10n.string(requestInvalidID)
             case "sources.invalid":
                 return L10n.string(sourcesInvalid)
             case "sources.in_use":

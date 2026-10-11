@@ -1,13 +1,17 @@
-// Package subjectpositions accesses unaudited graph layout for subjects.
-// Arranging bubbles is UI state, not a research assertion — no audit.Record.
+// Package subjectpositions accesses graph layout for subjects.
+// Arranging bubbles is UI state, not a research assertion. Set and Clear
+// return a subject_position change and nothing else, so the caller commits
+// without a revision.
 package subjectpositions
 
 import (
 	"database/sql"
 	"errors"
 
+	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 )
 
 var ErrInvalid = apperr.New(apperr.CodeSubjectPositionsInvalid, apperr.KindUser)
@@ -34,31 +38,42 @@ type Position struct {
 	GridY     int64
 }
 
-// Set places or moves a subject on the grid. No audit.
-func Set(c *database.Catalog, subjectID []byte, gridX, gridY int64) (Position, error) {
-	db, err := c.DB()
+// Set places or moves a subject on the grid. An unchanged placement returns no
+// changes. The caller records the returned change.
+func Set(tx *database.Tx, subjectID []byte, gridX, gridY int64) (Position, []rowchange.Change, error) {
+	if tx == nil {
+		return Position{}, nil, ErrInvalid
+	}
+	prev, prevErr := GetTx(tx.Tx, subjectID)
+	if prevErr != nil && !errors.Is(prevErr, sql.ErrNoRows) {
+		return Position{}, nil, prevErr
+	}
+	pos, err := SetTx(tx.Tx, subjectID, gridX, gridY)
 	if err != nil {
-		return Position{}, err
+		return Position{}, nil, err
 	}
-	if len(subjectID) != 16 {
-		return Position{}, ErrInvalid
+	if prevErr == nil && prev.GridX == gridX && prev.GridY == gridY {
+		return pos, nil, nil
 	}
-	var one int
-	err = db.QueryRow(sqlSubjectExists, subjectID).Scan(&one)
-	if errors.Is(err, sql.ErrNoRows) {
-		return Position{}, ErrInvalid
+	action := rowchange.ActionCreate
+	fields := map[string]rowchange.FieldDiff{
+		"subject_id": {New: uuidString(subjectID)},
+		"grid_x":     {New: gridX},
+		"grid_y":     {New: gridY},
 	}
-	if err != nil {
-		return Position{}, err
+	if prevErr == nil {
+		action = rowchange.ActionUpdate
+		fields = map[string]rowchange.FieldDiff{
+			"grid_x": {Old: prev.GridX, New: gridX},
+			"grid_y": {Old: prev.GridY, New: gridY},
+		}
 	}
-	if _, err := db.Exec(sqlSet, subjectID, gridX, gridY); err != nil {
-		return Position{}, err
-	}
-	return Position{
-		SubjectID: append([]byte(nil), subjectID...),
-		GridX:     gridX,
-		GridY:     gridY,
-	}, nil
+	return pos, []rowchange.Change{{
+		EntityType: "subject_position",
+		EntityID:   append([]byte(nil), subjectID...),
+		Action:     action,
+		Fields:     fields,
+	}}, nil
 }
 
 // SetTx places or moves a subject on an open transaction (no commit).
@@ -130,17 +145,40 @@ func ListBySource(c *database.Catalog, sourceID []byte) ([]Position, error) {
 	return out, rows.Err()
 }
 
-// Clear removes a position (back to tray). Missing row is success.
-func Clear(c *database.Catalog, subjectID []byte) error {
-	db, err := c.DB()
+// Clear removes a position (back to tray). A missing row returns no changes.
+// The caller records the returned change.
+func Clear(tx *database.Tx, subjectID []byte) ([]rowchange.Change, error) {
+	if tx == nil || len(subjectID) != 16 {
+		return nil, ErrInvalid
+	}
+	prev, err := GetTx(tx.Tx, subjectID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
 	if err != nil {
-		return err
+		return nil, err
 	}
-	if len(subjectID) != 16 {
-		return ErrInvalid
+	if _, err := tx.Exec(sqlClear, subjectID); err != nil {
+		return nil, err
 	}
-	_, err = db.Exec(sqlClear, subjectID)
-	return err
+	return []rowchange.Change{{
+		EntityType: "subject_position",
+		EntityID:   append([]byte(nil), subjectID...),
+		Action:     rowchange.ActionDelete,
+		Fields: rowchange.DeletedRow(map[string]any{
+			"subject_id": uuidString(subjectID),
+			"grid_x":     prev.GridX,
+			"grid_y":     prev.GridY,
+		}),
+	}}, nil
+}
+
+func uuidString(id []byte) string {
+	parsed, err := uuid.FromBytes(id)
+	if err != nil {
+		return ""
+	}
+	return parsed.String()
 }
 
 type rowScanner interface {

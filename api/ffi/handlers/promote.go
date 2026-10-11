@@ -7,7 +7,9 @@ import (
 	"github.com/mendahu/provenencia/core/database/claimconfidencegrades"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/promote"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/valuecodec"
+	"github.com/mendahu/provenencia/core/writes"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -34,11 +36,13 @@ func PromoteSubject(in []byte) ([]byte, error) {
 	}
 	var out *engine.PromoteSubjectResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		res, err := promote.Save(c, userID, promote.Input{
-			SubjectID:         subjectID,
-			EntityID:          entityID,
-			ConfidenceGradeID: gradeID,
-			Argument:          req.GetArgument(),
+		res, _, err := writes.Run(c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+			return promote.Save(tx, userID, promote.Input{
+				SubjectID:         subjectID,
+				EntityID:          entityID,
+				ConfidenceGradeID: gradeID,
+				Argument:          req.GetArgument(),
+			})
 		})
 		if err != nil {
 			return err
@@ -94,7 +98,15 @@ func ListSubjectMemberships(in []byte) ([]byte, error) {
 	}
 	var out *engine.ListSubjectMembershipsResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		rows, err := identityclaims.MembershipsBySource(c, sourceID)
+		sg, err := c.Graph().Source(sourceID)
+		if err != nil {
+			return err
+		}
+		props, err := loadPropertyInfo(c)
+		if err != nil {
+			return err
+		}
+		rows, err := membershipsFromSource(c.Graph(), sg, namePropertyID(props))
 		if err != nil {
 			return err
 		}

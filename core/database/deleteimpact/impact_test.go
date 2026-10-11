@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/mendahu/provenencia/core/database/catalogmodel"
+
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
@@ -16,6 +18,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sourcecredibilitygrades"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
@@ -24,6 +27,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/writes"
 )
 
 const testLocator = `{"version":1,"selectors":[{"type":"page","artifact_page":1}]}`
@@ -41,18 +45,18 @@ func TestImpactGates(t *testing.T) {
 		if _, err := deleteimpact.ParseKind("nope"); !errors.Is(err, deleteimpact.ErrInvalid) {
 			t.Fatalf("parse %v", err)
 		}
-		mustImpactErr(t, c, deleteimpact.Kind("nope"), fakeID(t), deleteimpact.ErrInvalid)
+		mustImpactErr(t, c, catalogmodel.Kind("nope"), fakeID(t), deleteimpact.ErrInvalid)
 	})
 
 	t.Run("missing id", func(t *testing.T) {
-		got := mustImpact(t, c, deleteimpact.KindCitation, fakeID(t))
+		got := mustImpact(t, c, catalogmodel.KindCitation, fakeID(t))
 		if got.Allowed || got.Gate != deleteimpact.GateNotFound || len(got.Groups) != 0 {
 			t.Fatalf("%+v", got)
 		}
 	})
 
 	t.Run("infra kinds", func(t *testing.T) {
-		for _, kind := range []deleteimpact.Kind{deleteimpact.KindUser, deleteimpact.KindProject} {
+		for _, kind := range []catalogmodel.Kind{catalogmodel.KindUser, catalogmodel.KindProject} {
 			got := mustImpact(t, c, kind, fakeID(t))
 			if got.Allowed || got.Gate != deleteimpact.GateInfra {
 				t.Fatalf("%s %+v", kind, got)
@@ -67,7 +71,7 @@ func TestImpactGates(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		got := mustImpact(t, c, deleteimpact.KindSourceType, id)
+		got := mustImpact(t, c, catalogmodel.KindSourceType, id)
 		if got.Allowed || got.Gate != deleteimpact.GateOriginLocked {
 			t.Fatalf("%+v", got)
 		}
@@ -78,7 +82,7 @@ func TestImpactGates(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		got := mustImpact(t, c, deleteimpact.KindProperty, p.ID)
+		got := mustImpact(t, c, catalogmodel.KindProperty, p.ID)
 		if got.Allowed || got.Gate != deleteimpact.GateOriginLocked {
 			t.Fatalf("%+v", got)
 		}
@@ -93,7 +97,7 @@ func TestImpactGates(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		got := mustImpact(t, c, deleteimpact.KindPropertyTerm, term.ID)
+		got := mustImpact(t, c, catalogmodel.KindPropertyTerm, term.ID)
 		if got.Allowed || got.Gate != deleteimpact.GateOriginLocked {
 			t.Fatalf("%+v", got)
 		}
@@ -106,7 +110,7 @@ func TestImpactGates(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		got := mustImpact(t, c, deleteimpact.KindSourceType, id)
+		got := mustImpact(t, c, catalogmodel.KindSourceType, id)
 		if !got.Allowed || got.Gate != deleteimpact.GateOK {
 			t.Fatalf("%+v", got)
 		}
@@ -117,7 +121,7 @@ func TestImpactGates(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		got := mustImpact(t, c, deleteimpact.KindSubjectType, person.ID)
+		got := mustImpact(t, c, catalogmodel.KindSubjectType, person.ID)
 		if !got.Allowed || got.Gate != deleteimpact.GateOK {
 			t.Fatalf("person type %+v", got)
 		}
@@ -125,19 +129,16 @@ func TestImpactGates(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		got = mustImpact(t, c, deleteimpact.KindCredibilityGrade, grade.ID)
-		if !got.Allowed || got.Gate != deleteimpact.GateOK {
+		got = mustImpact(t, c, catalogmodel.KindCredibilityGrade, grade.ID)
+		if got.Allowed || got.Gate != deleteimpact.GateOriginLocked {
 			t.Fatalf("grade %+v", got)
 		}
 		p, err := properties.Lookup(c, "event_type", properties.OriginProvenencia)
 		if err != nil {
 			t.Fatal(err)
 		}
-		term, err := propertyterms.Create(c, userID, p.ID, "Land Grant", "")
-		if err != nil {
-			t.Fatal(err)
-		}
-		got = mustImpact(t, c, deleteimpact.KindPropertyTerm, term.ID)
+		term := createTerm(t, c, userID, p.ID, "Land Grant")
+		got = mustImpact(t, c, catalogmodel.KindPropertyTerm, term.ID)
 		if !got.Allowed || got.Gate != deleteimpact.GateOK {
 			t.Fatalf("user term %+v", got)
 		}
@@ -151,10 +152,8 @@ func TestImpactGates(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if _, err := propertyterms.Create(c, userID, propID, "Grant", ""); err != nil {
-			t.Fatal(err)
-		}
-		got := mustImpact(t, c, deleteimpact.KindProperty, propID)
+		createTerm(t, c, userID, propID, "Grant")
+		got := mustImpact(t, c, catalogmodel.KindProperty, propID)
 		if got.Allowed || got.Gate != deleteimpact.GateInbound {
 			t.Fatalf("%+v", got)
 		}
@@ -181,7 +180,7 @@ func TestImpactGates(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		got := mustImpact(t, c, deleteimpact.KindMetadataField, id)
+		got := mustImpact(t, c, catalogmodel.KindMetadataField, id)
 		if got.Allowed || got.Gate != deleteimpact.GateOriginLocked {
 			t.Fatalf("%+v", got)
 		}
@@ -199,11 +198,13 @@ func TestImpactCitationAndSubject(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	src, err := sources.Create(c, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Register"})
+	src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Register"})
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	art, err := artifacts.Create(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
+	art, err := runArtifactCreate(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -219,21 +220,27 @@ func TestImpactCitationAndSubject(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	place, err := subjects.Create(c, userID, subjects.CreateInput{
-		SourceID: src.ID, SubjectTypeID: placeType.ID, Label: "Leeds",
-	}, nil)
+	place, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
+		return subjects.Create(tx, userID, subjects.CreateInput{
+			SourceID: src.ID, SubjectTypeID: placeType.ID, Label: "Leeds",
+		}, nil)
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	alice, err := subjects.Create(c, userID, subjects.CreateInput{
-		SourceID: src.ID, SubjectTypeID: personType.ID, Label: "Alice",
-	}, &subjects.Placement{GridX: 0, GridY: 0})
+	alice, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
+		return subjects.Create(tx, userID, subjects.CreateInput{
+			SourceID: src.ID, SubjectTypeID: personType.ID, Label: "Alice",
+		}, &subjects.Placement{GridX: 0, GridY: 0})
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	wedding, err := subjects.Create(c, userID, subjects.CreateInput{
-		SourceID: src.ID, SubjectTypeID: eventType.ID, Label: "Wedding",
-	}, &subjects.Placement{GridX: 4, GridY: 4})
+	wedding, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
+		return subjects.Create(tx, userID, subjects.CreateInput{
+			SourceID: src.ID, SubjectTypeID: eventType.ID, Label: "Wedding",
+		}, &subjects.Placement{GridX: 4, GridY: 4})
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -243,20 +250,22 @@ func TestImpactCitationAndSubject(t *testing.T) {
 	}
 
 	t.Run("citation with observations", func(t *testing.T) {
-		res, err := citations.CreateWithObservations(c, userID, citations.CreateInput{
-			ArtifactID: art.ID, LocatorJSON: testLocator, Transcription: "Leeds",
-		}, []observations.Input{{
-			SubjectID: place.ID, PropertyID: toponym.ID, ValueText: "Leeds", HasText: true,
-		}})
+		res, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
+			return citations.CreateWithObservations(tx, userID, citations.CreateInput{
+				ArtifactID: art.ID, LocatorJSON: testLocator, Transcription: "Leeds",
+			}, []observations.Input{{
+				SubjectID: place.ID, PropertyID: toponym.ID, ValueText: "Leeds", HasText: true,
+			}})
+		})
 		if err != nil {
 			t.Fatal(err)
 		}
-		got := mustImpact(t, c, deleteimpact.KindCitation, res.Citation.ID)
+		got := mustImpact(t, c, catalogmodel.KindCitation, res.Citation.ID)
 		if got.Allowed || got.Gate != deleteimpact.GateInbound || len(got.Groups) != 1 {
 			t.Fatalf("%+v", got)
 		}
 		g := got.Groups[0]
-		if g.Via != "observations.citation_id" || g.Kind != deleteimpact.KindObservation || g.Total != 1 || len(g.Listed) != 1 {
+		if g.Via != "observations.citation_id" || g.Kind != catalogmodel.KindObservation || g.Total != 1 || len(g.Listed) != 1 {
 			t.Fatalf("%+v", g)
 		}
 		listed := g.Listed[0]
@@ -276,18 +285,22 @@ func TestImpactCitationAndSubject(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		term, err := propertyterms.Create(c, userID, eventTypeProp.ID, "Land Grant", "")
-		if err != nil {
+		term := createTerm(t, c, userID, eventTypeProp.ID, "Land Grant")
+		if _, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
+			return citations.CreateWithObservations(tx, userID, citations.CreateInput{
+				ArtifactID: art.ID, LocatorJSON: testLocator,
+			}, []observations.Input{{
+				SubjectID: wedding.ID, PropertyID: eventTypeProp.ID, ValueTermID: term.ID,
+			}})
+		}); err != nil {
 			t.Fatal(err)
 		}
-		if _, err := citations.CreateWithObservations(c, userID, citations.CreateInput{
-			ArtifactID: art.ID, LocatorJSON: testLocator,
-		}, []observations.Input{{
-			SubjectID: wedding.ID, PropertyID: eventTypeProp.ID, ValueTermID: term.ID,
-		}}); err != nil {
-			t.Fatal(err)
-		}
-		if err := propertyterms.Delete(c, userID, term.ID); !errors.Is(err, propertyterms.ErrInUse) {
+		_, _, err = writes.Run(c, writes.Op{Action: "delete_property_term", UserID: userID},
+			func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+				changes, err := propertyterms.Delete(tx, userID, term.ID)
+				return struct{}{}, changes, err
+			})
+		if !errors.Is(err, propertyterms.ErrInUse) {
 			t.Fatalf("delete %v", err)
 		}
 	})
@@ -300,13 +313,15 @@ func TestImpactCitationAndSubject(t *testing.T) {
 				ValueText: fmt.Sprintf("name-%02d", i), HasText: true,
 			}
 		}
-		res, err := citations.CreateWithObservations(c, userID, citations.CreateInput{
-			ArtifactID: art.ID, LocatorJSON: testLocator,
-		}, inputs)
+		res, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
+			return citations.CreateWithObservations(tx, userID, citations.CreateInput{
+				ArtifactID: art.ID, LocatorJSON: testLocator,
+			}, inputs)
+		})
 		if err != nil {
 			t.Fatal(err)
 		}
-		got := mustImpact(t, c, deleteimpact.KindCitation, res.Citation.ID)
+		got := mustImpact(t, c, catalogmodel.KindCitation, res.Citation.ID)
 		if got.Allowed || len(got.Groups) != 1 {
 			t.Fatalf("%+v", got)
 		}
@@ -338,17 +353,19 @@ func TestImpactCitationAndSubject(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		bridge, err := connect.CreateCitedBridge(c, userID, connect.CreateInput{
-			SourceID: src.ID, FromSubjectID: alice.ID, ToSubjectID: wedding.ID,
-			BridgeTypeKey: "participation",
-			Citation:      citations.CreateInput{ArtifactID: art.ID, LocatorJSON: testLocator},
-			Observations: []observations.Input{
-				{PropertyID: personProp.ID, ValueSubjectID: alice.ID},
-				{PropertyID: eventProp.ID, ValueSubjectID: wedding.ID},
-				{PropertyID: roleProp.ID, ValueTermID: roleTerm.ID},
-			},
+		bridge, err := writes.Call(c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (connect.Result, []rowchange.Change, error) {
+			return connect.CreateCitedBridge(tx, userID, connect.CreateInput{
+				SourceID: src.ID, FromSubjectID: alice.ID, ToSubjectID: wedding.ID,
+				BridgeTypeKey: "participation",
+				Citation:      citations.CreateInput{ArtifactID: art.ID, LocatorJSON: testLocator},
+				Observations: []observations.Input{
+					{PropertyID: personProp.ID, ValueSubjectID: alice.ID},
+					{PropertyID: eventProp.ID, ValueSubjectID: wedding.ID},
+					{PropertyID: roleProp.ID, ValueTermID: roleTerm.ID},
+				},
+			})
 		})
-		got := mustImpact(t, c, deleteimpact.KindSubject, alice.ID)
+		got := mustImpact(t, c, catalogmodel.KindSubject, alice.ID)
 		if got.Allowed || got.Gate != deleteimpact.GateInbound {
 			t.Fatalf("alice %+v", got)
 		}
@@ -363,7 +380,7 @@ func TestImpactCitationAndSubject(t *testing.T) {
 		}
 
 		t.Run("bridge only connection facets allowed", func(t *testing.T) {
-			got := mustImpact(t, c, deleteimpact.KindSubject, bridge.Subject.ID)
+			got := mustImpact(t, c, catalogmodel.KindSubject, bridge.Subject.ID)
 			if !got.Allowed || got.Gate != deleteimpact.GateOK {
 				t.Fatalf("bridge %+v", got)
 			}
@@ -379,7 +396,7 @@ func TestImpactCitationAndSubject(t *testing.T) {
 			if _, err := tx.Exec(`DELETE FROM subjects WHERE id = ?`, bridge.Subject.ID); err == nil {
 				t.Fatal("raw subject delete should fail while facets remain")
 			}
-			if _, err := deleteimpact.ReleaseFacets(tx, deleteimpact.KindSubject, bridge.Subject.ID); err != nil {
+			if _, err := deleteimpact.ReleaseFacets(tx, catalogmodel.KindSubject, bridge.Subject.ID); err != nil {
 				t.Fatal(err)
 			}
 			if _, err := tx.Exec(`DELETE FROM subjects WHERE id = ?`, bridge.Subject.ID); err != nil {
@@ -391,12 +408,14 @@ func TestImpactCitationAndSubject(t *testing.T) {
 			if err := subjectvocab.AppendBinding(c, bridge.Subject.SubjectTypeID, toponym.ID); err != nil {
 				t.Fatal(err)
 			}
-			if _, err := observations.AddToCitation(c, userID, bridge.Citation.ID, []observations.Input{{
-				SubjectID: bridge.Subject.ID, PropertyID: toponym.ID, ValueText: "extra", HasText: true,
-			}}); err != nil {
+			if _, err := writes.Call(c, writes.Op{Action: "add_observations", UserID: userID}, func(tx *database.Tx) ([]observations.Observation, []rowchange.Change, error) {
+				return observations.AddToCitation(tx, userID, bridge.Citation.ID, []observations.Input{{
+					SubjectID: bridge.Subject.ID, PropertyID: toponym.ID, ValueText: "extra", HasText: true,
+				}})
+			}); err != nil {
 				t.Fatal(err)
 			}
-			got := mustImpact(t, c, deleteimpact.KindSubject, bridge.Subject.ID)
+			got := mustImpact(t, c, catalogmodel.KindSubject, bridge.Subject.ID)
 			if got.Allowed || got.Gate != deleteimpact.GateInbound {
 				t.Fatalf("%+v", got)
 			}
@@ -414,7 +433,7 @@ func TestImpactCitationAndSubject(t *testing.T) {
 		t.Run("edge observation edge_locked", func(t *testing.T) {
 			var edgeID []byte
 			for _, o := range bridge.Observations {
-				if impact := mustImpact(t, c, deleteimpact.KindObservation, o.ID); impact.Gate == deleteimpact.GateEdgeLocked {
+				if impact := mustImpact(t, c, catalogmodel.KindObservation, o.ID); impact.Gate == deleteimpact.GateEdgeLocked {
 					edgeID = o.ID
 					if impact.Allowed {
 						t.Fatalf("allowed edge %+v", impact)
@@ -425,14 +444,19 @@ func TestImpactCitationAndSubject(t *testing.T) {
 			if len(edgeID) == 0 {
 				t.Fatal("no edge observation")
 			}
-			if err := observations.Delete(c, userID, edgeID); !errors.Is(err, observations.ErrEdgeLocked) {
+			if _, err := writes.Call(c, writes.Op{Action: "delete_observation", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+				changes, err := observations.Delete(tx, userID, edgeID)
+				return struct{}{}, changes, err
+			}); !errors.Is(err, observations.ErrEdgeLocked) {
 				t.Fatalf("delete edge %v", err)
 			}
 		})
 	})
 
 	t.Run("user role property on person is inbound not a facet", func(t *testing.T) {
-		userRole, err := properties.Create(c, userID, "Role", properties.ValueTypeText, "", "")
+		userRole, err := writes.Call(c, writes.Op{Action: "create_property", UserID: userID}, func(tx *database.Tx) (properties.Property, []rowchange.Change, error) {
+			return properties.Create(tx, userID, "Role", properties.ValueTypeText, "", "")
+		})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -442,15 +466,17 @@ func TestImpactCitationAndSubject(t *testing.T) {
 		if err := subjectvocab.AppendBinding(c, personType.ID, userRole.ID); err != nil {
 			t.Fatal(err)
 		}
-		res, err := citations.CreateWithObservations(c, userID, citations.CreateInput{
-			ArtifactID: art.ID, LocatorJSON: testLocator,
-		}, []observations.Input{{
-			SubjectID: alice.ID, PropertyID: userRole.ID, ValueText: "witness", HasText: true,
-		}})
+		res, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
+			return citations.CreateWithObservations(tx, userID, citations.CreateInput{
+				ArtifactID: art.ID, LocatorJSON: testLocator,
+			}, []observations.Input{{
+				SubjectID: alice.ID, PropertyID: userRole.ID, ValueText: "witness", HasText: true,
+			}})
+		})
 		if err != nil {
 			t.Fatal(err)
 		}
-		got := mustImpact(t, c, deleteimpact.KindSubject, alice.ID)
+		got := mustImpact(t, c, catalogmodel.KindSubject, alice.ID)
 		if got.Allowed || got.Gate != deleteimpact.GateInbound {
 			t.Fatalf("alice %+v", got)
 		}
@@ -466,7 +492,10 @@ func TestImpactCitationAndSubject(t *testing.T) {
 		if !found {
 			t.Fatalf("missing subject_id group %+v", got.Groups)
 		}
-		if err := subjects.Delete(c, userID, alice.ID); !errors.Is(err, subjects.ErrInUse) {
+		if _, err := writes.Call(c, writes.Op{Action: "delete_subject", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+			changes, err := subjects.Delete(tx, userID, alice.ID)
+			return struct{}{}, changes, err
+		}); !errors.Is(err, subjects.ErrInUse) {
 			t.Fatalf("delete %v", err)
 		}
 		listed, err := observations.ListBySubject(c, alice.ID)
@@ -490,20 +519,24 @@ func TestImpactCitationAndSubject(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		bob, err := subjects.Create(c, userID, subjects.CreateInput{
-			SourceID: src.ID, SubjectTypeID: personType.ID, Label: "Bob",
-		}, &subjects.Placement{GridX: 8, GridY: 0})
+		bob, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
+			return subjects.Create(tx, userID, subjects.CreateInput{
+				SourceID: src.ID, SubjectTypeID: personType.ID, Label: "Bob",
+			}, &subjects.Placement{GridX: 8, GridY: 0})
+		})
 		if err != nil {
 			t.Fatal(err)
 		}
-		if _, err := citations.CreateWithObservations(c, userID, citations.CreateInput{
-			ArtifactID: art.ID, LocatorJSON: testLocator,
-		}, []observations.Input{{
-			SubjectID: bob.ID, PropertyID: roleProp.ID, ValueTermID: roleTerm.ID,
-		}}); err != nil {
+		if _, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
+			return citations.CreateWithObservations(tx, userID, citations.CreateInput{
+				ArtifactID: art.ID, LocatorJSON: testLocator,
+			}, []observations.Input{{
+				SubjectID: bob.ID, PropertyID: roleProp.ID, ValueTermID: roleTerm.ID,
+			}})
+		}); err != nil {
 			t.Fatal(err)
 		}
-		got := mustImpact(t, c, deleteimpact.KindSubject, bob.ID)
+		got := mustImpact(t, c, catalogmodel.KindSubject, bob.ID)
 		if got.Allowed || got.Gate != deleteimpact.GateInbound {
 			t.Fatalf("bob %+v", got)
 		}
@@ -516,7 +549,10 @@ func TestImpactCitationAndSubject(t *testing.T) {
 		if !found {
 			t.Fatalf("missing subject_id group %+v", got.Groups)
 		}
-		if err := subjects.Delete(c, userID, bob.ID); !errors.Is(err, subjects.ErrInUse) {
+		if _, err := writes.Call(c, writes.Op{Action: "delete_subject", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+			changes, err := subjects.Delete(tx, userID, bob.ID)
+			return struct{}{}, changes, err
+		}); !errors.Is(err, subjects.ErrInUse) {
 			t.Fatalf("delete %v", err)
 		}
 		listed, err := observations.ListBySubject(c, bob.ID)
@@ -537,7 +573,9 @@ func TestSnapshotOwnedThenRelease(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	src, err := sources.Create(c, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Deed"})
+	src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Deed"})
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -564,13 +602,13 @@ func TestSnapshotOwnedThenRelease(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	art1, err := artifacts.Create(c, userID, artifacts.CreateInput{
+	art1, err := runArtifactCreate(c, userID, artifacts.CreateInput{
 		SourceID: src.ID, FileID: fileA, Label: "Share 1",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	art2, err := artifacts.Create(c, userID, artifacts.CreateInput{
+	art2, err := runArtifactCreate(c, userID, artifacts.CreateInput{
 		SourceID: src.ID, FileID: fileA, Label: "Share 2",
 	})
 	if err != nil {
@@ -581,7 +619,7 @@ func TestSnapshotOwnedThenRelease(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	snap1, err := deleteimpact.SnapshotOwned(tx, deleteimpact.KindArtifact, art1.ID)
+	snap1, err := deleteimpact.SnapshotOwned(tx, catalogmodel.KindArtifact, art1.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -606,7 +644,7 @@ func TestSnapshotOwnedThenRelease(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	snap2, err := deleteimpact.SnapshotOwned(tx, deleteimpact.KindArtifact, art2.ID)
+	snap2, err := deleteimpact.SnapshotOwned(tx, catalogmodel.KindArtifact, art2.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -638,25 +676,27 @@ func TestImpactSourceAndArtifact(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	src, err := sources.Create(c, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Register"})
+	src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Register"})
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	t.Run("empty source allowed", func(t *testing.T) {
-		got := mustImpact(t, c, deleteimpact.KindSource, src.ID)
+		got := mustImpact(t, c, catalogmodel.KindSource, src.ID)
 		if !got.Allowed || got.Gate != deleteimpact.GateOK || len(got.Groups) != 0 {
 			t.Fatalf("%+v", got)
 		}
 	})
 
-	art, err := artifacts.Create(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
+	art, err := runArtifactCreate(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	t.Run("source blocked by artifact", func(t *testing.T) {
-		got := mustImpact(t, c, deleteimpact.KindSource, src.ID)
+		got := mustImpact(t, c, catalogmodel.KindSource, src.ID)
 		if got.Allowed || got.Gate != deleteimpact.GateInbound {
 			t.Fatalf("%+v", got)
 		}
@@ -669,22 +709,24 @@ func TestImpactSourceAndArtifact(t *testing.T) {
 	})
 
 	t.Run("empty artifact allowed", func(t *testing.T) {
-		got := mustImpact(t, c, deleteimpact.KindArtifact, art.ID)
+		got := mustImpact(t, c, catalogmodel.KindArtifact, art.ID)
 		if !got.Allowed || got.Gate != deleteimpact.GateOK {
 			t.Fatalf("%+v", got)
 		}
 	})
 
-	cit, err := citations.CreateWithObservations(c, userID, citations.CreateInput{
-		ArtifactID: art.ID, LocatorJSON: testLocator,
-		Transcription: "John Hartley, worsted weaver, of 14 Back Nile Street",
-	}, nil)
+	cit, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
+		return citations.CreateWithObservations(tx, userID, citations.CreateInput{
+			ArtifactID: art.ID, LocatorJSON: testLocator,
+			Transcription: "John Hartley, worsted weaver, of 14 Back Nile Street",
+		}, nil)
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	t.Run("artifact blocked by citation", func(t *testing.T) {
-		got := mustImpact(t, c, deleteimpact.KindArtifact, art.ID)
+		got := mustImpact(t, c, catalogmodel.KindArtifact, art.ID)
 		if got.Allowed || got.Gate != deleteimpact.GateInbound {
 			t.Fatalf("%+v", got)
 		}
@@ -703,7 +745,9 @@ func TestImpactSourceAndArtifact(t *testing.T) {
 		}
 	})
 
-	empty, err := sources.Create(c, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Uncited"})
+	empty, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Uncited"})
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -711,15 +755,17 @@ func TestImpactSourceAndArtifact(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	sub, err := subjects.Create(c, userID, subjects.CreateInput{
-		SourceID: empty.ID, SubjectTypeID: personType.ID, Label: "Alice",
-	}, nil)
+	sub, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
+		return subjects.Create(tx, userID, subjects.CreateInput{
+			SourceID: empty.ID, SubjectTypeID: personType.ID, Label: "Alice",
+		}, nil)
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	t.Run("source blocked by subject", func(t *testing.T) {
-		got := mustImpact(t, c, deleteimpact.KindSource, empty.ID)
+		got := mustImpact(t, c, catalogmodel.KindSource, empty.ID)
 		if got.Allowed || got.Gate != deleteimpact.GateInbound {
 			t.Fatalf("%+v", got)
 		}
@@ -740,13 +786,15 @@ func TestImpactAgreesWithSQLite(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	src, err := sources.Create(c, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Deed"})
+	src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Deed"})
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	t.Run("empty source raw delete matches Impact", func(t *testing.T) {
-		got := mustImpact(t, c, deleteimpact.KindSource, src.ID)
+		got := mustImpact(t, c, catalogmodel.KindSource, src.ID)
 		if !got.Allowed {
 			t.Fatalf("%+v", got)
 		}
@@ -755,12 +803,12 @@ func TestImpactAgreesWithSQLite(t *testing.T) {
 		}
 	})
 
-	if _, err := artifacts.Create(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"}); err != nil {
+	if _, err := runArtifactCreate(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"}); err != nil {
 		t.Fatal(err)
 	}
 
 	t.Run("inbound source raw delete matches Impact", func(t *testing.T) {
-		got := mustImpact(t, c, deleteimpact.KindSource, src.ID)
+		got := mustImpact(t, c, catalogmodel.KindSource, src.ID)
 		if got.Allowed {
 			t.Fatalf("%+v", got)
 		}
@@ -785,7 +833,7 @@ func rawDeleteOK(t *testing.T, c *database.Catalog, table string, id []byte) boo
 	return err == nil
 }
 
-func mustImpact(t *testing.T, c *database.Catalog, kind deleteimpact.Kind, id []byte) deleteimpact.Report {
+func mustImpact(t *testing.T, c *database.Catalog, kind catalogmodel.Kind, id []byte) deleteimpact.Report {
 	t.Helper()
 	db, err := c.DB()
 	if err != nil {
@@ -803,7 +851,7 @@ func mustImpact(t *testing.T, c *database.Catalog, kind deleteimpact.Kind, id []
 	return got
 }
 
-func mustImpactErr(t *testing.T, c *database.Catalog, kind deleteimpact.Kind, id []byte, want error) {
+func mustImpactErr(t *testing.T, c *database.Catalog, kind catalogmodel.Kind, id []byte, want error) {
 	t.Helper()
 	db, err := c.DB()
 	if err != nil {
@@ -835,6 +883,18 @@ func idString(id []byte) string {
 		return ""
 	}
 	return u.String()
+}
+
+func createTerm(t *testing.T, c *database.Catalog, userID, propertyID []byte, label string) propertyterms.Term {
+	t.Helper()
+	term, _, err := writes.Run(c, writes.Op{Action: "create_property_term", UserID: userID},
+		func(tx *database.Tx) (propertyterms.Term, []rowchange.Change, error) {
+			return propertyterms.Create(tx, userID, propertyID, label, "")
+		})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return term
 }
 
 func testCatalog(t *testing.T) (*database.Catalog, []byte) {

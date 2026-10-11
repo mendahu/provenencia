@@ -3,9 +3,10 @@
 // and the candidate handles of the same Subject type (their auto-reconciled values
 // from the cache, every rank), then ranks them with the type's Profile.
 //
-// Promote graph alignment (promotealign) reads CandidatesOfType once per
-// kind and ranks every Subject in memory. ForSubject and ForEntity rank one
-// probe; ForEntity is the basis for merge hints.
+// Promote graph alignment (promotealign) ranks over the kind's handles from
+// the in-memory catalog graph instead, and reads layer values with
+// SubjectsValues. ForSubject and ForEntity rank one probe; ForEntity is the
+// basis for merge hints.
 //
 // Candidates are every unmerged handle of the type that has a cached value
 // for a profile Property, read in one query. When catalogs outgrow a scan,
@@ -21,6 +22,7 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/namevalues"
+	"github.com/mendahu/provenencia/core/database/sqlbatch"
 	"github.com/mendahu/provenencia/core/match"
 	"github.com/mendahu/provenencia/core/valuecodec"
 )
@@ -61,7 +63,7 @@ const (
 
 	// Positive Observations of many Subjects, terms by key; the caller closes the IN list.
 	sqlSubjectsValues = `SELECT o.subject_id, p.key, p.origin, o.value_text, o.value_integer,
-			o.value_date_id, o.value_name_id, t.key
+			o.value_date_id, o.value_name_id, t.key, COALESCE(t.neutral, 0)
 		FROM observations o
 		JOIN properties p ON p.id = o.property_id
 		LEFT JOIN property_terms t ON t.id = o.value_term_id
@@ -69,7 +71,7 @@ const (
 
 	// Cached auto-reconciled values (every rank) of unmerged handles, terms by key.
 	sqlEntityValues = `SELECT r.entity_id, e.ref, p.key, p.origin, r.value_text, r.value_integer,
-			r.value_date, r.value_name, t.key
+			r.value_date, r.value_name, t.key, COALESCE(t.neutral, 0)
 		FROM auto_reconciler_values r
 		JOIN canonical_entities e ON e.id = r.entity_id
 		JOIN properties p ON p.id = r.property_id
@@ -176,9 +178,6 @@ func loadCandidates(q Querier, typeID []byte, profile match.Profile) ([]match.Ca
 	return scanEntityValues(rows, profile)
 }
 
-// inBatch bounds an IN list; a batched read is still a fixed number of queries.
-const inBatch = 500
-
 // CandidatesOfType reads every unmerged handle of the Subject type (key,
 // origin) with a cached value for a profile Property: the same one query
 // ForSubject ranks against, for callers that rank many probes at once.
@@ -199,20 +198,23 @@ func CandidatesOfType(q Querier, typeKey, origin string, profile match.Profile) 
 func EntitiesValues(q Querier, entityIDs [][]byte, profile match.Profile) (map[string]match.Values, error) {
 	out := map[string]match.Values{}
 	ids := database.UniqueBlobIDs(entityIDs)
-	for start := 0; start < len(ids); start += inBatch {
-		chunk := ids[start:min(start+inBatch, len(ids))]
-		rows, err := q.Query(sqlEntityValues+` AND e.id IN (`+database.SQLInPlaceholders(len(chunk))+`) ORDER BY r.entity_id`,
-			database.BlobArgs(chunk)...)
+	err := sqlbatch.Each(ids, func(batch [][]byte) error {
+		rows, err := q.Query(sqlEntityValues+` AND e.id IN (`+database.SQLInPlaceholders(len(batch))+`) ORDER BY r.entity_id`,
+			database.BlobArgs(batch)...)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		cands, err := scanEntityValues(rows, profile)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		for _, c := range cands {
 			out[string(c.EntityID)] = c.Values
 		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
 	return out, nil
 }
@@ -233,41 +235,33 @@ func SubjectsValues(q Querier, subjectIDs [][]byte, profile match.Profile) (map[
 		dateIDs, nameIDs [][]byte
 	)
 	ids := database.UniqueBlobIDs(subjectIDs)
-	for start := 0; start < len(ids); start += inBatch {
-		chunk := ids[start:min(start+inBatch, len(ids))]
-		rows, err := q.Query(sqlSubjectsValues+database.SQLInPlaceholders(len(chunk))+`)`, database.BlobArgs(chunk)...)
-		if err != nil {
-			return nil, err
+	err := sqlbatch.Query(q, sqlSubjectsValues, `)`, nil, ids, func(rows *sql.Rows) error {
+		var (
+			p             pending
+			subjectID     []byte
+			text, termKey sql.NullString
+			integer       sql.NullInt64
+			neutral       bool
+		)
+		if err := rows.Scan(&subjectID, &p.prop.Key, &p.prop.Origin, &text, &integer, &p.dateID, &p.nameID, &termKey, &neutral); err != nil {
+			return err
 		}
-		for rows.Next() {
-			var (
-				p             pending
-				subjectID     []byte
-				text, termKey sql.NullString
-				integer       sql.NullInt64
-			)
-			if err := rows.Scan(&subjectID, &p.prop.Key, &p.prop.Origin, &text, &integer, &p.dateID, &p.nameID, &termKey); err != nil {
-				_ = rows.Close()
-				return nil, err
-			}
-			if !wanted[p.prop] {
-				continue
-			}
-			p.subject = string(subjectID)
-			p.v = match.Value{Text: text.String, HasText: text.Valid, Integer: integer.Int64, HasInteger: integer.Valid, Term: termKey.String}
-			all = append(all, p)
-			if len(p.dateID) > 0 {
-				dateIDs = append(dateIDs, p.dateID)
-			}
-			if len(p.nameID) > 0 {
-				nameIDs = append(nameIDs, p.nameID)
-			}
+		if !wanted[p.prop] {
+			return nil
 		}
-		err = rows.Err()
-		_ = rows.Close()
-		if err != nil {
-			return nil, err
+		p.subject = string(subjectID)
+		p.v = match.Value{Text: text.String, HasText: text.Valid, Integer: integer.Int64, HasInteger: integer.Valid, Term: termKey.String, Neutral: neutral}
+		all = append(all, p)
+		if len(p.dateID) > 0 {
+			dateIDs = append(dateIDs, p.dateID)
 		}
+		if len(p.nameID) > 0 {
+			nameIDs = append(nameIDs, p.nameID)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
 	dates, err := datevalues.LookupManyTx(q, dateIDs)
 	if err != nil {
@@ -317,14 +311,15 @@ func scanEntityValues(rows *sql.Rows, profile match.Profile) ([]match.Candidate,
 			text, termKey      sql.NullString
 			integer            sql.NullInt64
 			dateBlob, nameBlob []byte
+			neutral            bool
 		)
-		if err := rows.Scan(&entityID, &ref, &prop.Key, &prop.Origin, &text, &integer, &dateBlob, &nameBlob, &termKey); err != nil {
+		if err := rows.Scan(&entityID, &ref, &prop.Key, &prop.Origin, &text, &integer, &dateBlob, &nameBlob, &termKey, &neutral); err != nil {
 			return nil, err
 		}
 		if !wanted[prop] {
 			continue
 		}
-		v := match.Value{Text: text.String, HasText: text.Valid, Integer: integer.Int64, HasInteger: integer.Valid, Term: termKey.String}
+		v := match.Value{Text: text.String, HasText: text.Valid, Integer: integer.Int64, HasInteger: integer.Valid, Term: termKey.String, Neutral: neutral}
 		if dateBlob != nil {
 			d, err := valuecodec.UnmarshalDate(dateBlob)
 			if err != nil {

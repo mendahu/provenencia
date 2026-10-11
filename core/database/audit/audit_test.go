@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
@@ -66,11 +67,11 @@ func TestRecord(t *testing.T) {
 					UserID:     userID,
 					ActionType: "create_source",
 					CreatedAt:  fixedAt,
-					Changes: []Change{{
+					Changes: []rowchange.Change{{
 						EntityType: "source",
 						EntityID:   entityID,
-						Action:     ActionCreate,
-						Fields: map[string]FieldDiff{
+						Action:     rowchange.ActionCreate,
+						Fields: map[string]rowchange.FieldDiff{
 							"id":    {Old: nil, New: "aaaaaaaa-bbbb-7ccc-8ddd-eeeeeeeeeeee"},
 							"title": {Old: nil, New: "The Robins Family History"},
 						},
@@ -86,10 +87,10 @@ func TestRecord(t *testing.T) {
 					t.Fatal(err)
 				}
 				action, raw, _ := loadChangeJSON(t, c)
-				if action != ActionCreate {
+				if action != rowchange.ActionCreate {
 					t.Fatalf("action %q", action)
 				}
-				var fields map[string]FieldDiff
+				var fields map[string]rowchange.FieldDiff
 				if err := json.Unmarshal([]byte(raw), &fields); err != nil {
 					t.Fatal(err)
 				}
@@ -110,11 +111,11 @@ func TestRecord(t *testing.T) {
 					UserID:     userID,
 					ActionType: "update_source",
 					CreatedAt:  fixedAt,
-					Changes: []Change{{
+					Changes: []rowchange.Change{{
 						EntityType: "source",
 						EntityID:   entityID,
-						Action:     ActionUpdate,
-						Fields: map[string]FieldDiff{
+						Action:     rowchange.ActionUpdate,
+						Fields: map[string]rowchange.FieldDiff{
 							"title": {Old: "Robins Family History", New: "The Robins Family History"},
 						},
 					}},
@@ -125,7 +126,7 @@ func TestRecord(t *testing.T) {
 					t.Fatal(err)
 				}
 				_, raw, _ := loadChangeJSON(t, c)
-				var fields map[string]FieldDiff
+				var fields map[string]rowchange.FieldDiff
 				if err := json.Unmarshal([]byte(raw), &fields); err != nil {
 					t.Fatal(err)
 				}
@@ -146,11 +147,11 @@ func TestRecord(t *testing.T) {
 					UserID:     userID,
 					ActionType: "delete_source_note",
 					CreatedAt:  fixedAt,
-					Changes: []Change{{
+					Changes: []rowchange.Change{{
 						EntityType: "source_note",
 						EntityID:   entityID,
-						Action:     ActionDelete,
-						Fields: map[string]FieldDiff{
+						Action:     rowchange.ActionDelete,
+						Fields: map[string]rowchange.FieldDiff{
 							"id":   {Old: "aaaaaaaa-bbbb-7ccc-8ddd-eeeeeeeeeeee", New: nil},
 							"body": {Old: "Interview notes", New: nil},
 						},
@@ -162,10 +163,10 @@ func TestRecord(t *testing.T) {
 					t.Fatal(err)
 				}
 				action, raw, _ := loadChangeJSON(t, c)
-				if action != ActionDelete {
+				if action != rowchange.ActionDelete {
 					t.Fatalf("action %q", action)
 				}
-				var fields map[string]FieldDiff
+				var fields map[string]rowchange.FieldDiff
 				if err := json.Unmarshal([]byte(raw), &fields); err != nil {
 					t.Fatal(err)
 				}
@@ -185,18 +186,18 @@ func TestRecord(t *testing.T) {
 					UserID:     userID,
 					ActionType: "create_source",
 					CreatedAt:  fixedAt,
-					Changes: []Change{
+					Changes: []rowchange.Change{
 						{
 							EntityType: "source",
 							EntityID:   entityID,
-							Action:     ActionCreate,
-							Fields:     map[string]FieldDiff{"title": {Old: nil, New: "A"}},
+							Action:     rowchange.ActionCreate,
+							Fields:     map[string]rowchange.FieldDiff{"title": {Old: nil, New: "A"}},
 						},
 						{
 							EntityType: "source_metadata",
 							EntityID:   otherID,
-							Action:     ActionCreate,
-							Fields:     map[string]FieldDiff{"value_text": {Old: nil, New: "x"}},
+							Action:     rowchange.ActionCreate,
+							Fields:     map[string]rowchange.FieldDiff{"value_text": {Old: nil, New: "x"}},
 						},
 					},
 				})
@@ -215,11 +216,11 @@ func TestRecord(t *testing.T) {
 					UserID:     userID,
 					ActionType: "update_source",
 					CreatedAt:  fixedAt,
-					Changes: []Change{{
+					Changes: []rowchange.Change{{
 						EntityType: "source",
 						EntityID:   entityID,
-						Action:     ActionUpdate,
-						Fields:     map[string]FieldDiff{"title": {Old: "A", New: "B"}},
+						Action:     rowchange.ActionUpdate,
+						Fields:     map[string]rowchange.FieldDiff{"title": {Old: "A", New: "B"}},
 					}},
 				})
 				if err != nil {
@@ -279,11 +280,11 @@ func TestRecord(t *testing.T) {
 				if _, err := Record(tx, Revision{
 					ActionType: "system_seed",
 					CreatedAt:  fixedAt,
-					Changes: []Change{{
+					Changes: []rowchange.Change{{
 						EntityType: "source_type",
 						EntityID:   entityID,
-						Action:     ActionCreate,
-						Fields:     map[string]FieldDiff{"key": {Old: nil, New: "photograph"}},
+						Action:     rowchange.ActionCreate,
+						Fields:     map[string]rowchange.FieldDiff{"key": {Old: nil, New: "photograph"}},
 					}},
 				}); err != nil {
 					t.Fatal(err)
@@ -313,11 +314,11 @@ func TestRecord(t *testing.T) {
 					UserID:     userID,
 					ActionType: "create_source",
 					CreatedAt:  fixedAt,
-					Changes: []Change{{
+					Changes: []rowchange.Change{{
 						EntityType: "source",
 						EntityID:   entityID,
-						Action:     ActionCreate,
-						Fields:     map[string]FieldDiff{"title": {Old: nil, New: "A"}},
+						Action:     rowchange.ActionCreate,
+						Fields:     map[string]rowchange.FieldDiff{"title": {Old: nil, New: "A"}},
 					}},
 				}); err != nil {
 					t.Fatal(err)
@@ -347,11 +348,11 @@ func TestRecord(t *testing.T) {
 					UserID:     userID,
 					ActionType: "create_source",
 					CreatedAt:  fixedAt,
-					Changes: []Change{{
+					Changes: []rowchange.Change{{
 						EntityType: "source",
 						EntityID:   entityID,
-						Action:     ActionCreate,
-						Fields:     map[string]FieldDiff{"title": {Old: nil, New: "A"}},
+						Action:     rowchange.ActionCreate,
+						Fields:     map[string]rowchange.FieldDiff{"title": {Old: nil, New: "A"}},
 					}},
 				}); err != nil {
 					t.Fatal(err)
@@ -379,11 +380,11 @@ func TestRecord(t *testing.T) {
 				defer tx.Rollback()
 				_, err := Record(tx, Revision{
 					CreatedAt: fixedAt,
-					Changes: []Change{{
+					Changes: []rowchange.Change{{
 						EntityType: "source",
 						EntityID:   entityID,
 						Action:     "merge",
-						Fields:     map[string]FieldDiff{},
+						Fields:     map[string]rowchange.FieldDiff{},
 					}},
 				})
 				if !errors.Is(err, ErrInvalid) {
@@ -398,11 +399,11 @@ func TestRecord(t *testing.T) {
 				defer tx.Rollback()
 				_, err := Record(tx, Revision{
 					CreatedAt: fixedAt,
-					Changes: []Change{{
+					Changes: []rowchange.Change{{
 						EntityType: "source",
 						EntityID:   []byte{1},
-						Action:     ActionCreate,
-						Fields:     map[string]FieldDiff{},
+						Action:     rowchange.ActionCreate,
+						Fields:     map[string]rowchange.FieldDiff{},
 					}},
 				})
 				if !errors.Is(err, ErrInvalid) {
@@ -417,11 +418,11 @@ func TestRecord(t *testing.T) {
 				defer tx.Rollback()
 				_, err := Record(tx, Revision{
 					CreatedAt: fixedAt,
-					Changes: []Change{{
+					Changes: []rowchange.Change{{
 						EntityType: "  ",
 						EntityID:   entityID,
-						Action:     ActionCreate,
-						Fields:     map[string]FieldDiff{},
+						Action:     rowchange.ActionCreate,
+						Fields:     map[string]rowchange.FieldDiff{},
 					}},
 				})
 				if !errors.Is(err, ErrInvalid) {
@@ -436,10 +437,10 @@ func TestRecord(t *testing.T) {
 				defer tx.Rollback()
 				_, err := Record(tx, Revision{
 					CreatedAt: fixedAt,
-					Changes: []Change{{
+					Changes: []rowchange.Change{{
 						EntityType: "source",
 						EntityID:   entityID,
-						Action:     ActionCreate,
+						Action:     rowchange.ActionCreate,
 						Fields:     nil,
 					}},
 				})
@@ -462,7 +463,7 @@ func TestRecord(t *testing.T) {
 				}
 				_, err = Record(tx, Revision{
 					CreatedAt: fixedAt,
-					Changes:   []Change{},
+					Changes:   []rowchange.Change{},
 				})
 				if !errors.Is(err, ErrInvalid) {
 					t.Fatalf("got %v", err)
@@ -476,11 +477,11 @@ func TestRecord(t *testing.T) {
 				defer tx.Rollback()
 				_, err := Record(tx, Revision{
 					CreatedAt: "  ",
-					Changes: []Change{{
+					Changes: []rowchange.Change{{
 						EntityType: "source",
 						EntityID:   entityID,
-						Action:     ActionCreate,
-						Fields:     map[string]FieldDiff{"title": {Old: nil, New: "A"}},
+						Action:     rowchange.ActionCreate,
+						Fields:     map[string]rowchange.FieldDiff{"title": {Old: nil, New: "A"}},
 					}},
 				})
 				if !errors.Is(err, ErrInvalid) {
@@ -496,11 +497,11 @@ func TestRecord(t *testing.T) {
 				_, err := Record(tx, Revision{
 					UserID:    []byte{1, 2},
 					CreatedAt: fixedAt,
-					Changes: []Change{{
+					Changes: []rowchange.Change{{
 						EntityType: "source",
 						EntityID:   entityID,
-						Action:     ActionCreate,
-						Fields:     map[string]FieldDiff{"title": {Old: nil, New: "A"}},
+						Action:     rowchange.ActionCreate,
+						Fields:     map[string]rowchange.FieldDiff{"title": {Old: nil, New: "A"}},
 					}},
 				})
 				if !errors.Is(err, ErrInvalid) {
@@ -513,11 +514,11 @@ func TestRecord(t *testing.T) {
 			run: func(t *testing.T, c *database.Catalog) {
 				_, err := Record(nil, Revision{
 					CreatedAt: fixedAt,
-					Changes: []Change{{
+					Changes: []rowchange.Change{{
 						EntityType: "source",
 						EntityID:   entityID,
-						Action:     ActionCreate,
-						Fields:     map[string]FieldDiff{"title": {Old: nil, New: "A"}},
+						Action:     rowchange.ActionCreate,
+						Fields:     map[string]rowchange.FieldDiff{"title": {Old: nil, New: "A"}},
 					}},
 				})
 				if !errors.Is(err, ErrInvalid) {
@@ -542,17 +543,17 @@ func TestRecord(t *testing.T) {
 func TestFullRowDeletedRow(t *testing.T) {
 	tests := []struct {
 		name string
-		got  map[string]FieldDiff
-		want map[string]FieldDiff
+		got  map[string]rowchange.FieldDiff
+		want map[string]rowchange.FieldDiff
 	}{
 		{
 			name: "FullRow keeps null keys",
-			got: FullRow(map[string]any{
+			got: rowchange.FullRow(map[string]any{
 				"id":          "aaaaaaaa-bbbb-7ccc-8ddd-eeeeeeeeeeee",
 				"label":       "Mary",
 				"description": nil,
 			}),
-			want: map[string]FieldDiff{
+			want: map[string]rowchange.FieldDiff{
 				"id":          {Old: nil, New: "aaaaaaaa-bbbb-7ccc-8ddd-eeeeeeeeeeee"},
 				"label":       {Old: nil, New: "Mary"},
 				"description": {Old: nil, New: nil},
@@ -560,12 +561,12 @@ func TestFullRowDeletedRow(t *testing.T) {
 		},
 		{
 			name: "DeletedRow keeps null keys",
-			got: DeletedRow(map[string]any{
+			got: rowchange.DeletedRow(map[string]any{
 				"id":          "aaaaaaaa-bbbb-7ccc-8ddd-eeeeeeeeeeee",
 				"label":       "Mary",
 				"description": nil,
 			}),
-			want: map[string]FieldDiff{
+			want: map[string]rowchange.FieldDiff{
 				"id":          {Old: "aaaaaaaa-bbbb-7ccc-8ddd-eeeeeeeeeeee", New: nil},
 				"label":       {Old: "Mary", New: nil},
 				"description": {Old: nil, New: nil},
@@ -590,7 +591,7 @@ func TestFullRowDeletedRow(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			var decoded map[string]FieldDiff
+			var decoded map[string]rowchange.FieldDiff
 			if err := json.Unmarshal(raw, &decoded); err != nil {
 				t.Fatal(err)
 			}

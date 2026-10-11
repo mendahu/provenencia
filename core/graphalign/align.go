@@ -59,6 +59,8 @@ type state struct {
 
 	queue candHeap
 	seen  map[string]bool // subject|handle already accepted or rejected for queue
+
+	kindCands map[string][]match.Candidate // candidatesOfKind, per kind
 }
 
 // A link is one end's view of an edge; fromEnd is true at the edge's first
@@ -112,6 +114,7 @@ func newState(layer Layer, canon Canon, stats Stats, fixed []Fixed, cfg Config) 
 		lostTo:      map[string]string{},
 		best:        map[string][]scoredCand{},
 		seen:        map[string]bool{},
+		kindCands:   map[string][]match.Candidate{},
 	}
 	for i := range layer.Subjects {
 		s := &layer.Subjects[i]
@@ -218,6 +221,9 @@ func (st *state) enqueue(subjectID []byte, h *Handle, via EdgeSignature, viaNeig
 	})
 }
 
+// recordBest keeps the higher score for a handle already listed. During a
+// walk the mapping only grows, so a later score for the same pair is never
+// lower for a real reason; refinement replaces scores outright (rescoreBest).
 func (st *state) recordBest(sk string, sc scoredCand) {
 	list := st.best[sk]
 	replaced := false
@@ -239,6 +245,12 @@ func (st *state) recordBest(sk string, sc scoredCand) {
 	if !replaced {
 		list = append(list, sc)
 	}
+	sortCands(list)
+	st.best[sk] = list
+}
+
+// sortCands orders candidates best first: score, then ref, then handle id.
+func sortCands(list []scoredCand) {
 	sort.SliceStable(list, func(i, j int) bool {
 		if list[i].score != list[j].score {
 			return list[i].score > list[j].score
@@ -248,7 +260,26 @@ func (st *state) recordBest(sk string, sc scoredCand) {
 		}
 		return bytes.Compare(list[i].handleID, list[j].handleID) < 0
 	})
-	st.best[sk] = list
+}
+
+// supports reports whether neighbor, as mapped now, reaches handleID through
+// a canon edge that corresponds to its layer link with subjectID.
+func (st *state) supports(subjectID, handleID, neighbor []byte) bool {
+	g, ok := st.assigned[string(neighbor)]
+	if !ok {
+		return false
+	}
+	for _, link := range st.layerAdj[string(subjectID)] {
+		if !bytes.Equal(link.neighbor, neighbor) {
+			continue
+		}
+		for _, ce := range st.canonAdj[string(handleID)] {
+			if corresponds(link, ce) && bytes.Equal(ce.neighbor, g) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func (st *state) scoreCandidate(subjectID []byte, h *Handle) scoredCand {
@@ -405,7 +436,8 @@ func (st *state) propagateNew(already map[string]bool) {
 // refineOneHop rescores every candidate from the mapping the property pass
 // just published, then reassigns unfixed rows. A neighbor's handle counts;
 // that neighbor's own edge bonus does not, so support stays one hop.
-// Repeat until the mapping settles, and at most once per subject.
+// Repeat until the mapping settles, at most one round per subject; when the
+// rounds run out, score once more so every row reads the mapping it ends on.
 func (st *state) refineOneHop() {
 	rounds := len(st.subjects)
 	for range rounds {
@@ -414,10 +446,14 @@ func (st *state) refineOneHop() {
 			return
 		}
 	}
+	st.rescoreBest()
 }
 
 // rescoreBest scores the candidates Rank and the walk already recorded,
-// against the mapping as it stands. It does not add handles.
+// against the mapping as it stands, and replaces their earlier scores: a
+// score that leaned on a neighbor's old handle drops when that neighbor
+// moves. A candidate keeps the neighbor that nominated it only while that
+// neighbor still supports it. It does not add handles.
 func (st *state) rescoreBest() []queueItem {
 	var items []queueItem
 	for _, s := range st.sortedSubjects() {
@@ -428,14 +464,21 @@ func (st *state) rescoreBest() []queueItem {
 		if _, held := st.held[sk]; held {
 			continue
 		}
-		prev := append([]scoredCand(nil), st.best[sk]...)
-		for _, cand := range prev {
+		fresh := make([]scoredCand, 0, len(st.best[sk]))
+		for _, cand := range st.best[sk] {
 			h := st.handles[string(cand.handleID)]
 			if h == nil {
 				continue
 			}
-			st.recordBest(sk, st.scoreCandidate(s.ID, h))
+			sc := st.scoreCandidate(s.ID, h)
+			if len(cand.viaNeighbor) > 0 && st.supports(s.ID, h.ID, cand.viaNeighbor) {
+				sc.viaNeighbor = cand.viaNeighbor
+				sc.viaSig = cand.viaSig
+			}
+			fresh = append(fresh, sc)
 		}
+		sortCands(fresh)
+		st.best[sk] = fresh
 		for _, cand := range st.best[sk] {
 			items = append(items, queueItem{
 				subjectID: append([]byte(nil), s.ID...),
@@ -542,8 +585,12 @@ func (st *state) scoreFixed() {
 	}
 }
 
-// candidatesOfKind lists the canon handles of one kind in a stable order.
+// candidatesOfKind lists the canon handles of one kind in a stable order,
+// built once per kind.
 func (st *state) candidatesOfKind(kind string) []match.Candidate {
+	if cands, ok := st.kindCands[kind]; ok {
+		return cands
+	}
 	var out []match.Candidate
 	for i := range st.canon.Handles {
 		h := &st.canon.Handles[i]
@@ -558,6 +605,7 @@ func (st *state) candidatesOfKind(kind string) []match.Candidate {
 		}
 		return bytes.Compare(out[i].EntityID, out[j].EntityID) < 0
 	})
+	st.kindCands[kind] = out
 	return out
 }
 
@@ -700,26 +748,29 @@ func (st *state) alikeNew(a, b *Subject) bool {
 // newPairFacts compares the layer neighbors of two subjects. A signature only
 // one of them has stays out. A signature both have disagrees when no neighbor
 // pair is the same subject or clears the accept bar on its own properties.
+// A directed signature groups by end as well: a man's son and another man's
+// father are not neighbors to compare.
 func (st *state) newPairFacts(a, b []byte) ([]EdgeFact, bool) {
 	gb := map[string][][]byte{}
 	for _, link := range st.layerAdj[string(b)] {
-		gb[link.sig.Key()] = append(gb[link.sig.Key()], link.neighbor)
+		k := pairGroup(link)
+		gb[k] = append(gb[k], link.neighbor)
 	}
 	seen := map[string]bool{}
 	var facts []EdgeFact
 	for _, linkA := range st.layerAdj[string(a)] {
-		key := linkA.sig.Key()
-		if seen[key] {
+		group := pairGroup(linkA)
+		if seen[group] {
 			continue
 		}
-		nb := gb[key]
+		nb := gb[group]
 		if len(nb) == 0 {
 			continue
 		}
-		seen[key] = true
+		seen[group] = true
 		var na [][]byte
 		for _, link := range st.layerAdj[string(a)] {
-			if link.sig.Key() == key {
+			if pairGroup(link) == group {
 				na = append(na, link.neighbor)
 			}
 		}
@@ -737,13 +788,25 @@ func (st *state) newPairFacts(a, b []byte) ([]EdgeFact, bool) {
 		if !ok {
 			return nil, true
 		}
-		fan, found := st.stats.FanOut[key]
+		fan, found := st.stats.FanOut[linkA.sig.Key()]
 		if !found {
 			fan = st.cfg.FanOutUnknown
 		}
 		facts = append(facts, EdgeFact{FanOut: fan, NeighborNode: best})
 	}
 	return facts, false
+}
+
+// pairGroup is the signature key, and for a directed signature the end the
+// row sits on, so two rows compare only neighbors in the same role.
+func pairGroup(l layerLink) string {
+	if !l.sig.Directed {
+		return l.sig.Key()
+	}
+	if l.fromEnd {
+		return l.sig.Key() + "|from"
+	}
+	return l.sig.Key() + "|to"
 }
 
 // neighborsMatch is the same subject, or two subjects whose properties clear
@@ -799,13 +862,18 @@ func comparisonsFrom(ev match.Evaluation, probe match.Values, cfg Config, stats 
 	return out
 }
 
+// pickScore is the recorded score for the row's handle. Every pass records
+// the handle it assigns, so a miss scores it now rather than inventing one.
 func (st *state) pickScore(sk string, hid []byte) scoredCand {
 	for _, sc := range st.best[sk] {
 		if bytes.Equal(sc.handleID, hid) {
 			return sc
 		}
 	}
-	return scoredCand{handleID: hid, score: st.cfg.StrongScore}
+	if h := st.handles[string(hid)]; h != nil {
+		return st.scoreCandidate([]byte(sk), h)
+	}
+	return scoredCand{handleID: append([]byte(nil), hid...)}
 }
 
 func (st *state) bestNonAssigned(sk string, except []byte) *scoredCand {

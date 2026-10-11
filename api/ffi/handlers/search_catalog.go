@@ -32,11 +32,7 @@ func SearchCatalog(in []byte) ([]byte, error) {
 		for _, h := range hits {
 			out.Hits = append(out.Hits, hitToProto(h))
 		}
-		db, err := c.DB()
-		if err != nil {
-			return err
-		}
-		return fillHitHeaders(db, out.Hits)
+		return fillHitHeaders(c, out.Hits)
 	})
 	if err != nil {
 		return nil, err
@@ -94,7 +90,7 @@ func locationToProto(loc search.WorkspaceLocation) *engine.WorkspaceLocation {
 }
 
 // fillHitHeaders attaches the list header for each person, event, and place hit.
-func fillHitHeaders(db conclusionheaders.Querier, hits []*engine.SearchHit) error {
+func fillHitHeaders(c *database.Catalog, hits []*engine.SearchHit) error {
 	var persons, events, places [][]byte
 	for _, h := range hits {
 		id, err := parseID(h.GetId())
@@ -110,15 +106,15 @@ func fillHitHeaders(db conclusionheaders.Querier, hits []*engine.SearchHit) erro
 			places = append(places, id)
 		}
 	}
-	listedPersons, err := conclusionheaders.PersonsByIDs(db, persons)
+	listedPersons, err := conclusionheaders.PersonsByIDs(c, persons)
 	if err != nil {
 		return err
 	}
-	listedEvents, err := conclusionheaders.EventsByIDs(db, events)
+	listedEvents, err := conclusionheaders.EventsByIDs(c, events)
 	if err != nil {
 		return err
 	}
-	listedPlaces, err := conclusionheaders.PlacesByIDs(db, places)
+	listedPlaces, err := conclusionheaders.PlacesByIDs(c, places)
 	if err != nil {
 		return err
 	}

@@ -2,7 +2,6 @@ package promotealign_test
 
 import (
 	"bytes"
-	"database/sql"
 	"fmt"
 	"testing"
 
@@ -17,6 +16,8 @@ import (
 	"github.com/mendahu/provenencia/core/database/promotealign"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
+	"github.com/mendahu/provenencia/core/database/rowchange"
+	_ "github.com/mendahu/provenencia/core/database/sourcefill"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjectpositions"
@@ -25,7 +26,9 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/graphalign"
+	"github.com/mendahu/provenencia/core/match"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/writes"
 )
 
 var userID = []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}
@@ -33,23 +36,22 @@ var userID = []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}
 const locator = `{"version":1,"selectors":[{"type":"page","artifact_page":1}]}`
 
 type fixture struct {
-	t        *testing.T
+	t        testing.TB
 	c        *database.Catalog
 	source   sources.Source
 	artifact artifacts.Artifact
 	y        int64
 }
 
-func must(t *testing.T, err error) {
+func must(t testing.TB, err error) {
 	t.Helper()
 	if err != nil {
 		t.Fatal(err)
 	}
 }
 
-func newFixture(t *testing.T) *fixture {
+func newFixture(t testing.TB) *fixture {
 	t.Helper()
-	promotealign.ResetStatsCacheForTest()
 	c, err := database.Create(t.TempDir(), "t.provenencia")
 	must(t, err)
 	t.Cleanup(func() { _ = c.Close() })
@@ -59,9 +61,11 @@ func newFixture(t *testing.T) *fixture {
 	must(t, subjectvocab.Install(c))
 	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{Key: "book", Origin: sourcetypes.OriginProvenencia, Label: "Book"})
 	must(t, err)
-	src, err := sources.Create(c, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Register"})
+	src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Register"})
+	})
 	must(t, err)
-	art, err := artifacts.Create(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
+	art, err := runArtifactCreate(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
 	must(t, err)
 	return &fixture{t: t, c: c, source: src, artifact: art}
 }
@@ -70,9 +74,11 @@ func (f *fixture) newSource(title string) (sources.Source, artifacts.Artifact) {
 	f.t.Helper()
 	typeID, err := sourcetypes.Upsert(f.c, sourcetypes.Type{Key: "book", Origin: sourcetypes.OriginProvenencia, Label: "Book"})
 	must(f.t, err)
-	src, err := sources.Create(f.c, userID, sources.CreateInput{SourceTypeID: typeID, Title: title})
+	src, _, err := writes.Run(f.c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: title})
+	})
 	must(f.t, err)
-	art, err := artifacts.Create(f.c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
+	art, err := runArtifactCreate(f.c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
 	must(f.t, err)
 	return src, art
 }
@@ -95,9 +101,13 @@ func (f *fixture) bare(src sources.Source, kind string) subjects.Subject {
 	f.t.Helper()
 	st, err := subjecttypes.Lookup(f.c, kind, subjecttypes.OriginProvenencia)
 	must(f.t, err)
-	s, err := subjects.Create(f.c, userID, subjects.CreateInput{SourceID: src.ID, SubjectTypeID: st.ID}, nil)
+	s, err := writes.Call(f.c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
+		return subjects.Create(tx, userID, subjects.CreateInput{SourceID: src.ID, SubjectTypeID: st.ID}, nil)
+	})
 	must(f.t, err)
-	_, err = subjectpositions.Set(f.c, s.ID, 0, f.y)
+	_, err = writes.Call(f.c, writes.Op{}, func(tx *database.Tx) (subjectpositions.Position, []rowchange.Change, error) {
+		return subjectpositions.Set(tx, s.ID, 0, f.y)
+	})
 	must(f.t, err)
 	f.y += 2
 	return s
@@ -108,9 +118,11 @@ func (f *fixture) cite(art artifacts.Artifact, s subjects.Subject, in ...observa
 	for i := range in {
 		in[i].SubjectID = s.ID
 	}
-	_, err := citations.CreateWithObservations(f.c, userID, citations.CreateInput{
-		ArtifactID: art.ID, LocatorJSON: locator,
-	}, in)
+	_, err := writes.Call(f.c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
+		return citations.CreateWithObservations(tx, userID, citations.CreateInput{
+			ArtifactID: art.ID, LocatorJSON: locator,
+		}, in)
+	})
 	must(f.t, err)
 }
 
@@ -143,44 +155,104 @@ func (f *fixture) place(src sources.Source, art artifacts.Artifact, name string)
 
 func (f *fixture) participation(src sources.Source, art artifacts.Artifact, person, event subjects.Subject, role string) {
 	f.t.Helper()
-	_, err := connect.CreateCitedBridge(f.c, userID, connect.CreateInput{
-		SourceID: src.ID, FromSubjectID: person.ID, ToSubjectID: event.ID, BridgeTypeKey: "participation",
-		Citation: citations.CreateInput{ArtifactID: art.ID, LocatorJSON: locator},
-		Observations: []observations.Input{
-			{PropertyID: f.prop("person").ID, ValueSubjectID: person.ID},
-			{PropertyID: f.prop("event").ID, ValueSubjectID: event.ID},
-			{PropertyID: f.prop("role").ID, ValueTermID: f.term("role", role).ID},
-		},
+	personProp := f.prop("person").ID
+	eventProp := f.prop("event").ID
+	roleProp := f.prop("role").ID
+	roleTerm := f.term("role", role).ID
+	_, err := writes.Call(f.c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (connect.Result, []rowchange.Change, error) {
+		return connect.CreateCitedBridge(tx, userID, connect.CreateInput{
+			SourceID: src.ID, FromSubjectID: person.ID, ToSubjectID: event.ID, BridgeTypeKey: "participation",
+			Citation: citations.CreateInput{ArtifactID: art.ID, LocatorJSON: locator},
+			Observations: []observations.Input{
+				{PropertyID: personProp, ValueSubjectID: person.ID},
+				{PropertyID: eventProp, ValueSubjectID: event.ID},
+				{PropertyID: roleProp, ValueTermID: roleTerm},
+			},
+		})
+	})
+	must(f.t, err)
+}
+
+func (f *fixture) locate(src sources.Source, art artifacts.Artifact, event, place subjects.Subject) {
+	f.t.Helper()
+	eventProp := f.prop("event").ID
+	placeProp := f.prop("place").ID
+	_, err := writes.Call(f.c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (connect.Result, []rowchange.Change, error) {
+		return connect.CreateCitedBridge(tx, userID, connect.CreateInput{
+			SourceID: src.ID, FromSubjectID: event.ID, ToSubjectID: place.ID, BridgeTypeKey: "location",
+			Citation: citations.CreateInput{ArtifactID: art.ID, LocatorJSON: locator},
+			Observations: []observations.Input{
+				{PropertyID: eventProp, ValueSubjectID: event.ID},
+				{PropertyID: placeProp, ValueSubjectID: place.ID},
+			},
+		})
 	})
 	must(f.t, err)
 }
 
 func (f *fixture) placeRel(src sources.Source, art artifacts.Artifact, from, to subjects.Subject, kind string) {
 	f.t.Helper()
-	_, err := connect.CreateCitedBridge(f.c, userID, connect.CreateInput{
-		SourceID: src.ID, FromSubjectID: from.ID, ToSubjectID: to.ID, BridgeTypeKey: "place_relationship",
-		Citation: citations.CreateInput{ArtifactID: art.ID, LocatorJSON: locator},
-		Observations: []observations.Input{
-			{PropertyID: f.prop("from").ID, ValueSubjectID: from.ID},
-			{PropertyID: f.prop("to").ID, ValueSubjectID: to.ID},
-			{PropertyID: f.prop("place_relationship_type").ID, ValueTermID: f.term("place_relationship_type", kind).ID},
-		},
+	fromProp := f.prop("from").ID
+	toProp := f.prop("to").ID
+	typeProp := f.prop("place_relationship_type").ID
+	kindTerm := f.term("place_relationship_type", kind).ID
+	_, err := writes.Call(f.c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (connect.Result, []rowchange.Change, error) {
+		return connect.CreateCitedBridge(tx, userID, connect.CreateInput{
+			SourceID: src.ID, FromSubjectID: from.ID, ToSubjectID: to.ID, BridgeTypeKey: "place_relationship",
+			Citation: citations.CreateInput{ArtifactID: art.ID, LocatorJSON: locator},
+			Observations: []observations.Input{
+				{PropertyID: fromProp, ValueSubjectID: from.ID},
+				{PropertyID: toProp, ValueSubjectID: to.ID},
+				{PropertyID: typeProp, ValueTermID: kindTerm},
+			},
+		})
 	})
 	must(f.t, err)
 }
 
+// relationship cites "person is typ of related" on src.
+func (f *fixture) relationship(src sources.Source, art artifacts.Artifact, person, related subjects.Subject, typ string) {
+	f.t.Helper()
+	personProp := f.prop("person").ID
+	relatedProp := f.prop("related_to").ID
+	typeProp := f.prop("relationship_type").ID
+	typTerm := f.term("relationship_type", typ).ID
+	_, err := writes.Call(f.c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (connect.Result, []rowchange.Change, error) {
+		return connect.CreateCitedBridge(tx, userID, connect.CreateInput{
+			SourceID: src.ID, FromSubjectID: person.ID, ToSubjectID: related.ID, BridgeTypeKey: "relationship",
+			Citation: citations.CreateInput{ArtifactID: art.ID, LocatorJSON: locator},
+			Observations: []observations.Input{
+				{PropertyID: personProp, ValueSubjectID: person.ID},
+				{PropertyID: relatedProp, ValueSubjectID: related.ID},
+				{PropertyID: typeProp, ValueTermID: typTerm},
+			},
+		})
+	})
+	must(f.t, err)
+}
+
+// sexOnly is a person whose record gives no name, only a sex at birth.
+func (f *fixture) sexOnly(src sources.Source, art artifacts.Artifact, sex string) subjects.Subject {
+	f.t.Helper()
+	s := f.bare(src, "person")
+	f.cite(art, s, observations.Input{
+		PropertyID: f.prop("sex_at_birth").ID, ValueTermID: f.term("sex_at_birth", sex).ID,
+	})
+	return s
+}
+
 func (f *fixture) promote(s subjects.Subject) promote.Result {
 	f.t.Helper()
-	res, err := promote.Save(f.c, userID, promote.Input{SubjectID: s.ID})
+	res, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+		return promote.Save(tx, userID, promote.Input{SubjectID: s.ID})
+	})
 	must(f.t, err)
 	return res
 }
 
 func (f *fixture) propose(sourceID []byte, fixed []graphalign.Fixed) graphalign.Proposal {
 	f.t.Helper()
-	db, err := f.c.DB()
-	must(f.t, err)
-	p, _, err := promotealign.Propose(db, sourceID, fixed)
+	p, _, err := promotealign.Propose(f.c, sourceID, fixed)
 	must(f.t, err)
 	return p
 }
@@ -361,9 +433,7 @@ func TestProposeOneHopDateExhibit(t *testing.T) {
 
 func TestProposeInvalidSource(t *testing.T) {
 	f := newFixture(t)
-	db, err := f.c.DB()
-	must(t, err)
-	_, _, err = promotealign.Propose(db, make([]byte, 16), nil)
+	_, _, err := promotealign.Propose(f.c, make([]byte, 16), nil)
 	if err != promote.ErrInvalid {
 		t.Fatalf("err %v, want promote.ErrInvalid", err)
 	}
@@ -371,11 +441,9 @@ func TestProposeInvalidSource(t *testing.T) {
 
 func TestStatsCacheInvalidatesOnWrite(t *testing.T) {
 	f := newFixture(t)
-	db, err := f.c.DB()
-	must(t, err)
 
 	// Prime cache.
-	_, _, err = promotealign.Propose(db, f.source.ID, nil)
+	_, _, err := promotealign.Propose(f.c, f.source.ID, nil)
 	must(t, err)
 
 	// A write bumps audit revision; next Propose must recompute (no panic / stale).
@@ -398,15 +466,13 @@ func TestStatsFanOut(t *testing.T) {
 		return rev
 	}
 	stats := func(f *fixture) graphalign.Stats {
-		db, err := f.c.DB()
-		must(f.t, err)
-		st, err := promotealign.LoadStatsForTest(db)
+		st, err := promotealign.LoadStatsForTest(f.c)
 		must(f.t, err)
 		return st
 	}
 	// Both catalogs hold a person, their birth, and a lone place. Filing
 	// person and birth files the participation; filing person and place doesn't.
-	build := func(t *testing.T, fileBirth bool) *fixture {
+	build := func(t testing.TB, fileBirth bool) *fixture {
 		f := &fixture{t: t}
 		c, err := database.Create(t.TempDir(), "t.provenencia")
 		must(t, err)
@@ -431,14 +497,12 @@ func TestStatsFanOut(t *testing.T) {
 	}
 
 	t.Run("keys match the walk's edge signature", func(t *testing.T) {
-		promotealign.ResetStatsCacheForTest()
 		f := build(t, true)
 		if got, ok := stats(f).FanOut[subjectAtBirth.Key()]; !ok || got != 1 {
 			t.Fatalf("fan-out %v (present %v), want 1 under %q", got, ok, subjectAtBirth.Key())
 		}
 	})
 	t.Run("another project at the same revision recomputes", func(t *testing.T) {
-		promotealign.ResetStatsCacheForTest()
 		filed, other := build(t, true), build(t, false)
 		if revision(filed) != revision(other) {
 			t.Fatalf("revisions %d and %d differ; the test needs them equal", revision(filed), revision(other))
@@ -536,9 +600,7 @@ func TestProposeHoldsNewAndSkipDecisions(t *testing.T) {
 			again := f.person(srcB, artB, "Gracie")
 			fixed := tt.fixed(per.Entity.ID)
 			fixed.SubjectID = again.ID
-			db, err := f.c.DB()
-			must(t, err)
-			p, _, err := promotealign.Propose(db, srcB.ID, []graphalign.Fixed{fixed})
+			p, _, err := promotealign.Propose(f.c, srcB.ID, []graphalign.Fixed{fixed})
 			if tt.wantErr {
 				if err != promote.ErrInvalid {
 					t.Fatalf("err %v, want promote.ErrInvalid", err)
@@ -553,23 +615,8 @@ func TestProposeHoldsNewAndSkipDecisions(t *testing.T) {
 	}
 }
 
-type countingQuerier struct {
-	db *sql.DB
-	n  int
-}
-
-func (c *countingQuerier) Query(query string, args ...any) (*sql.Rows, error) {
-	c.n++
-	return c.db.Query(query, args...)
-}
-
-func (c *countingQuerier) QueryRow(query string, args ...any) *sql.Row {
-	c.n++
-	return c.db.QueryRow(query, args...)
-}
-
-// Every read in Propose is batched, so a bigger layer and catalog cost no
-// more queries than a small one of the same shape.
+// Every graph read in Propose is batched, so a bigger layer and catalog cost
+// no more queries than a small one of the same shape.
 func TestProposeQueryCountDoesNotGrowWithTheLayer(t *testing.T) {
 	queries := func(people int) int {
 		f := newFixture(t)
@@ -585,13 +632,11 @@ func TestProposeQueryCountDoesNotGrowWithTheLayer(t *testing.T) {
 			bb := f.birth(srcB, artB)
 			f.participation(srcB, artB, pb, bb, "subject")
 		}
-		db, err := f.c.DB()
+		n := 0
+		f.c.Graph().SetQueryCounterForTest(func() { n++ })
+		_, _, err := promotealign.Propose(f.c, srcB.ID, nil)
 		must(t, err)
-		promotealign.ResetStatsCacheForTest()
-		counter := &countingQuerier{db: db}
-		_, _, err = promotealign.Propose(counter, srcB.ID, nil)
-		must(t, err)
-		return counter.n
+		return n
 	}
 	small, large := queries(2), queries(6)
 	t.Logf("%d queries per proposal", small)
@@ -745,5 +790,151 @@ func TestProposePartOfMatchesTheSameEnd(t *testing.T) {
 	row := rowFor(f.propose(srcB.ID, []graphalign.Fixed{{SubjectID: ontario.ID, HandleID: middleH.Entity.ID}}), york.ID)
 	if row.Reason != graphalign.ReasonVia || !bytes.Equal(row.HandleID, partH.Entity.ID) {
 		t.Fatalf("york row %+v, want the part %s via Ontario", row, partH.Entity.Ref)
+	}
+}
+
+// "Mary parent of John" on one Source and "John child of Mary" on another are
+// one relationship: the walk from Mary reaches John's handle either way.
+func TestProposeInverseKinshipTermsCorrespond(t *testing.T) {
+	f := newFixture(t)
+	mary := f.person(f.source, f.artifact, "Mary Smith")
+	john := f.person(f.source, f.artifact, "John Smith")
+	f.relationship(f.source, f.artifact, mary, john, "parent")
+	hMary := f.promote(mary).Entity.ID
+	hJohn := f.promote(john).Entity.ID
+
+	src2, art2 := f.newSource("Baptism")
+	son := f.sexOnly(src2, art2, "male")
+	mother := f.person(src2, art2, "Mary Smith")
+	f.relationship(src2, art2, son, mother, "child")
+
+	p := f.propose(src2.ID, []graphalign.Fixed{{SubjectID: mother.ID, HandleID: hMary}})
+	r := rowFor(p, son.ID)
+	if r.Target != graphalign.TargetHandle || !bytes.Equal(r.HandleID, hJohn) || r.Reason != graphalign.ReasonVia {
+		t.Fatalf("son: target=%s handle-is-John=%v reason=%s, want John's handle via his mother",
+			r.Target, bytes.Equal(r.HandleID, hJohn), r.Reason)
+	}
+}
+
+// A relationship is walked from either end: anchoring the child reaches the
+// parent as anchoring the parent reaches the child.
+func TestProposeRelationshipFromEitherEnd(t *testing.T) {
+	f := newFixture(t)
+	mary := f.person(f.source, f.artifact, "Mary Smith")
+	john := f.person(f.source, f.artifact, "John Smith")
+	f.relationship(f.source, f.artifact, mary, john, "parent")
+	hMary := f.promote(mary).Entity.ID
+	hJohn := f.promote(john).Entity.ID
+
+	tests := []struct {
+		name           string
+		anchorIsParent bool
+	}{
+		{name: "child anchored reaches the parent"},
+		{name: "parent anchored reaches the child", anchorIsParent: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			src, art := f.newSource(tt.name)
+			var parent, child subjects.Subject
+			var fixed graphalign.Fixed
+			var want []byte
+			if tt.anchorIsParent {
+				parent = f.person(src, art, "Mary Smith")
+				child = f.sexOnly(src, art, "male")
+				fixed = graphalign.Fixed{SubjectID: parent.ID, HandleID: hMary}
+				want = hJohn
+			} else {
+				parent = f.sexOnly(src, art, "female")
+				child = f.person(src, art, "John Smith")
+				fixed = graphalign.Fixed{SubjectID: child.ID, HandleID: hJohn}
+				want = hMary
+			}
+			f.relationship(src, art, parent, child, "parent")
+			p := f.propose(src.ID, []graphalign.Fixed{fixed})
+			other := child
+			if !tt.anchorIsParent {
+				other = parent
+			}
+			r := rowFor(p, other.ID)
+			if r.Target != graphalign.TargetHandle || !bytes.Equal(r.HandleID, want) || r.Reason != graphalign.ReasonVia {
+				t.Fatalf("target=%s right-handle=%v reason=%s, want the other end's handle via the anchor",
+					r.Target, bytes.Equal(r.HandleID, want), r.Reason)
+			}
+		})
+	}
+}
+
+// A place with several events is a hub. The proposal still has one row per
+// layer subject, and the place lands on that hub.
+func TestHubPlaceProposalStaysOnTheLayer(t *testing.T) {
+	f := newFixture(t)
+	city := f.place(f.source, f.artifact, "Gumptiontown")
+	cityH := f.promote(city)
+	for i := 0; i < 3; i++ {
+		person := f.person(f.source, f.artifact, fmt.Sprintf("Neighbor %d", i))
+		birth := f.birth(f.source, f.artifact)
+		f.participation(f.source, f.artifact, person, birth, "subject")
+		f.locate(f.source, f.artifact, birth, city)
+		f.promote(person)
+		f.promote(birth)
+	}
+
+	srcB, artB := f.newSource("Gazetteer")
+	city2 := f.place(srcB, artB, "Gumptiontown")
+	birth2 := f.birth(srcB, artB)
+	f.locate(srcB, artB, birth2, city2)
+
+	got := f.propose(srcB.ID, nil)
+	if len(got.Rows) != 2 {
+		t.Fatalf("rows %d, want the layer's place and birth", len(got.Rows))
+	}
+	row := rowFor(got, city2.ID)
+	if row.Target != graphalign.TargetHandle || !bytes.Equal(row.HandleID, cityH.Entity.ID) {
+		t.Fatalf("place row %+v, want the hub", row.Target)
+	}
+	if err := f.c.Graph().Verify(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func runArtifactCreate(c *database.Catalog, userID []byte, in artifacts.CreateInput) (artifacts.Artifact, error) {
+	a, _, err := writes.Run(c, writes.Op{Action: "create_artifact", UserID: userID},
+		func(tx *database.Tx) (artifacts.Artifact, []rowchange.Change, error) {
+			return artifacts.Create(tx, userID, in)
+		})
+	return a, err
+}
+
+// A sex at birth the catalog flags neutral is not compared: an "unknown"
+// record of John Smith still lands on the male John Smith, while "female"
+// conflicts and keeps it under the bar.
+func TestProposeIgnoresANeutralSex(t *testing.T) {
+	f := newFixture(t)
+	named := func(src sources.Source, art artifacts.Artifact, sex string) subjects.Subject {
+		s := f.person(src, art, "John Smith")
+		f.cite(art, s, observations.Input{
+			PropertyID: f.prop("sex_at_birth").ID, ValueTermID: f.term("sex_at_birth", sex).ID,
+		})
+		return s
+	}
+	handle := f.promote(named(f.source, f.artifact, "male")).Entity.ID
+
+	src, art := f.newSource("Register")
+	unknown := named(src, art, "unknown")
+	r := rowFor(f.propose(src.ID, nil), unknown.ID)
+	if r.Target != graphalign.TargetHandle || !bytes.Equal(r.HandleID, handle) {
+		t.Fatalf("unknown sex: target %s score %.2f, want the male John Smith", r.Target, r.Score)
+	}
+	for _, c := range r.Comparisons {
+		if c.Property.Key == "sex_at_birth" && c.Outcome != match.OutcomeUnknown {
+			t.Fatalf("unknown sex compared as %s", c.Outcome)
+		}
+	}
+
+	src2, art2 := f.newSource("Census")
+	female := named(src2, art2, "female")
+	if r := rowFor(f.propose(src2.ID, nil), female.ID); r.Target == graphalign.TargetHandle && bytes.Equal(r.HandleID, handle) {
+		t.Fatalf("female John Smith landed on the male one (score %.2f)", r.Score)
 	}
 }

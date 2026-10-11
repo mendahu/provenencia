@@ -11,6 +11,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjects"
@@ -18,6 +19,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/writes"
 )
 
 const testLocator = `{"version":1,"selectors":[{"type":"page","artifact_page":1}]}`
@@ -32,11 +34,18 @@ func TestDelete(t *testing.T) {
 		{
 			name: "unused user property erases and audits",
 			run: func(t *testing.T, c *database.Catalog) {
-				got, err := properties.Create(c, userID, "Burial Ground", properties.ValueTypeText, "", "")
+				got, err := writes.Call(c, writes.Op{Action: "create_property", UserID: userID}, func(tx *database.Tx) (properties.Property, []rowchange.Change, error) {
+					return properties.Create(tx, userID, "Burial Ground", properties.ValueTypeText, "", "")
+				})
 				if err != nil {
 					t.Fatal(err)
 				}
-				if err := properties.Delete(c, userID, got.ID); err != nil {
+				if _, err := writes.Call(c, writes.Op{Action: "delete_property", UserID: userID}, func(tx *database.Tx) (struct {
+				}, []rowchange.Change, error) {
+					changes, err := properties.Delete(tx, userID, got.ID)
+					return struct {
+					}{}, changes, err
+				}); err != nil {
 					t.Fatal(err)
 				}
 				if latestAction(t, c) != "delete_property" {
@@ -50,7 +59,9 @@ func TestDelete(t *testing.T) {
 		{
 			name: "bound only to a type still erases",
 			run: func(t *testing.T, c *database.Catalog) {
-				got, err := properties.Create(c, userID, "Maiden Name", properties.ValueTypeText, "", "")
+				got, err := writes.Call(c, writes.Op{Action: "create_property", UserID: userID}, func(tx *database.Tx) (properties.Property, []rowchange.Change, error) {
+					return properties.Create(tx, userID, "Maiden Name", properties.ValueTypeText, "", "")
+				})
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -75,7 +86,12 @@ func TestDelete(t *testing.T) {
 				if err != nil || n != 0 {
 					t.Fatalf("usedBy want 0 got %d %v", n, err)
 				}
-				if err := properties.Delete(c, userID, got.ID); err != nil {
+				if _, err := writes.Call(c, writes.Op{Action: "delete_property", UserID: userID}, func(tx *database.Tx) (struct {
+				}, []rowchange.Change, error) {
+					changes, err := properties.Delete(tx, userID, got.ID)
+					return struct {
+					}{}, changes, err
+				}); err != nil {
 					t.Fatal(err)
 				}
 				if _, err := properties.GetByID(c, got.ID); !errors.Is(err, sql.ErrNoRows) {
@@ -95,7 +111,9 @@ func TestDelete(t *testing.T) {
 				if err := subjectvocab.Install(c); err != nil {
 					t.Fatal(err)
 				}
-				prop, err := properties.Create(c, userID, "Outcome", properties.ValueTypeText, "", "")
+				prop, err := writes.Call(c, writes.Op{Action: "create_property", UserID: userID}, func(tx *database.Tx) (properties.Property, []rowchange.Change, error) {
+					return properties.Create(tx, userID, "Outcome", properties.ValueTypeText, "", "")
+				})
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -104,7 +122,12 @@ func TestDelete(t *testing.T) {
 				if err != nil || n != 1 {
 					t.Fatalf("usedBy want 1 got %d %v", n, err)
 				}
-				if err := properties.Delete(c, userID, prop.ID); !errors.Is(err, properties.ErrInUse) {
+				if _, err := writes.Call(c, writes.Op{Action: "delete_property", UserID: userID}, func(tx *database.Tx) (struct {
+				}, []rowchange.Change, error) {
+					changes, err := properties.Delete(tx, userID, prop.ID)
+					return struct {
+					}{}, changes, err
+				}); !errors.Is(err, properties.ErrInUse) {
 					t.Fatalf("got %v", err)
 				}
 				if _, err := properties.GetByID(c, prop.ID); err != nil {
@@ -130,10 +153,18 @@ func TestDelete(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				if _, err := propertyterms.Create(c, userID, id, "Lodger", ""); err != nil {
+				if _, _, err := writes.Run(c, writes.Op{Action: "create_property_term", UserID: userID},
+					func(tx *database.Tx) (propertyterms.Term, []rowchange.Change, error) {
+						return propertyterms.Create(tx, userID, id, "Lodger", "")
+					}); err != nil {
 					t.Fatal(err)
 				}
-				if err := properties.Delete(c, userID, id); !errors.Is(err, properties.ErrInUse) {
+				if _, err := writes.Call(c, writes.Op{Action: "delete_property", UserID: userID}, func(tx *database.Tx) (struct {
+				}, []rowchange.Change, error) {
+					changes, err := properties.Delete(tx, userID, id)
+					return struct {
+					}{}, changes, err
+				}); !errors.Is(err, properties.ErrInUse) {
 					t.Fatalf("got %v", err)
 				}
 				if _, err := properties.GetByID(c, id); err != nil {
@@ -151,7 +182,12 @@ func TestDelete(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				if err := properties.Delete(c, userID, id); !errors.Is(err, properties.ErrOriginLocked) {
+				if _, err := writes.Call(c, writes.Op{Action: "delete_property", UserID: userID}, func(tx *database.Tx) (struct {
+				}, []rowchange.Change, error) {
+					changes, err := properties.Delete(tx, userID, id)
+					return struct {
+					}{}, changes, err
+				}); !errors.Is(err, properties.ErrOriginLocked) {
 					t.Fatalf("got %v", err)
 				}
 				if _, err := properties.GetByID(c, id); err != nil {
@@ -169,7 +205,12 @@ func TestDelete(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				if err := properties.Delete(c, userID, id); !errors.Is(err, properties.ErrOriginLocked) {
+				if _, err := writes.Call(c, writes.Op{Action: "delete_property", UserID: userID}, func(tx *database.Tx) (struct {
+				}, []rowchange.Change, error) {
+					changes, err := properties.Delete(tx, userID, id)
+					return struct {
+					}{}, changes, err
+				}); !errors.Is(err, properties.ErrOriginLocked) {
 					t.Fatalf("got %v", err)
 				}
 				if _, err := properties.GetByID(c, id); err != nil {
@@ -182,7 +223,12 @@ func TestDelete(t *testing.T) {
 			run: func(t *testing.T, c *database.Catalog) {
 				missing := make([]byte, 16)
 				missing[15] = 9
-				if err := properties.Delete(c, userID, missing); !errors.Is(err, properties.ErrInvalid) {
+				if _, err := writes.Call(c, writes.Op{Action: "delete_property", UserID: userID}, func(tx *database.Tx) (struct {
+				}, []rowchange.Change, error) {
+					changes, err := properties.Delete(tx, userID, missing)
+					return struct {
+					}{}, changes, err
+				}); !errors.Is(err, properties.ErrInvalid) {
 					t.Fatalf("got %v", err)
 				}
 			},
@@ -190,7 +236,12 @@ func TestDelete(t *testing.T) {
 		{
 			name: "bad id",
 			run: func(t *testing.T, c *database.Catalog) {
-				if err := properties.Delete(c, userID, []byte{1}); !errors.Is(err, properties.ErrInvalid) {
+				if _, err := writes.Call(c, writes.Op{Action: "delete_property", UserID: userID}, func(tx *database.Tx) (struct {
+				}, []rowchange.Change, error) {
+					changes, err := properties.Delete(tx, userID, []byte{1})
+					return struct {
+					}{}, changes, err
+				}); !errors.Is(err, properties.ErrInvalid) {
 					t.Fatalf("got %v", err)
 				}
 			},
@@ -238,11 +289,13 @@ func insertObservationOn(t *testing.T, c *database.Catalog, userID, propertyID [
 	if err != nil {
 		t.Fatal(err)
 	}
-	src, err := sources.Create(c, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Register"})
+	src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Register"})
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	art, err := artifacts.Create(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
+	art, err := runArtifactCreate(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -260,17 +313,21 @@ func insertObservationOn(t *testing.T, c *database.Catalog, userID, propertyID [
 	); err != nil {
 		t.Fatal(err)
 	}
-	place, err := subjects.Create(c, userID, subjects.CreateInput{
-		SourceID: src.ID, SubjectTypeID: placeType.ID, Label: "Leeds",
-	}, nil)
+	place, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
+		return subjects.Create(tx, userID, subjects.CreateInput{
+			SourceID: src.ID, SubjectTypeID: placeType.ID, Label: "Leeds",
+		}, nil)
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	res, err := citations.CreateWithObservations(c, userID, citations.CreateInput{
-		ArtifactID: art.ID, LocatorJSON: testLocator, Transcription: "Leeds",
-	}, []observations.Input{{
-		SubjectID: place.ID, PropertyID: propertyID, ValueText: "Leeds", HasText: true,
-	}})
+	res, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
+		return citations.CreateWithObservations(tx, userID, citations.CreateInput{
+			ArtifactID: art.ID, LocatorJSON: testLocator, Transcription: "Leeds",
+		}, []observations.Input{{
+			SubjectID: place.ID, PropertyID: propertyID, ValueText: "Leeds", HasText: true,
+		}})
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -294,7 +351,9 @@ func TestUsedByCountsObservationsNotBindings(t *testing.T) {
 	if err := users.Upsert(c, userID, "Tester", r); err != nil {
 		t.Fatal(err)
 	}
-	prop, err := properties.Create(c, userID, "Custom Fact", properties.ValueTypeText, "", "")
+	prop, err := writes.Call(c, writes.Op{Action: "create_property", UserID: userID}, func(tx *database.Tx) (properties.Property, []rowchange.Change, error) {
+		return properties.Create(tx, userID, "Custom Fact", properties.ValueTypeText, "", "")
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -350,7 +409,20 @@ func TestDeleteRejectsEmptyUserID(t *testing.T) {
 	defer c.Close()
 	id := make([]byte, 16)
 	id[0] = 1
-	if err := properties.Delete(c, nil, id); !errors.Is(err, properties.ErrInvalid) {
+	if _, err := writes.Call(c, writes.Op{Action: "delete_property", UserID: nil}, func(tx *database.Tx) (struct {
+	}, []rowchange.Change, error) {
+		changes, err := properties.Delete(tx, nil, id)
+		return struct {
+		}{}, changes, err
+	}); !errors.Is(err, properties.ErrInvalid) {
 		t.Fatalf("got %v", err)
 	}
+}
+
+func runArtifactCreate(c *database.Catalog, userID []byte, in artifacts.CreateInput) (artifacts.Artifact, error) {
+	a, _, err := writes.Run(c, writes.Op{Action: "create_artifact", UserID: userID},
+		func(tx *database.Tx) (artifacts.Artifact, []rowchange.Change, error) {
+			return artifacts.Create(tx, userID, in)
+		})
+	return a, err
 }

@@ -3,6 +3,7 @@ package datevalues
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
@@ -63,6 +64,32 @@ func TestInsertLookup(t *testing.T) {
 				}
 				if got.StartMonth != nil || got.StartDay != nil || got.StartHour != nil {
 					t.Fatalf("finer want nil")
+				}
+			},
+		},
+		{
+			// SQLite binds at most 32,766 values per statement.
+			name: "lookup many past the bind limit",
+			run: func(t *testing.T, c *database.Catalog) {
+				id, err := Insert(c, Value{Kind: KindPoint, StartYear: intVal(1850)})
+				if err != nil {
+					t.Fatal(err)
+				}
+				ids := make([][]byte, 0, 40000)
+				for i := 0; i < 39999; i++ {
+					ids = append(ids, []byte(fmt.Sprintf("%016d", i)))
+				}
+				ids = append(ids, id)
+				db, err := c.DB()
+				if err != nil {
+					t.Fatal(err)
+				}
+				got, err := LookupManyTx(db, ids)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if len(got) != 1 {
+					t.Fatalf("got %d values, want 1", len(got))
 				}
 			},
 		},

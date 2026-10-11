@@ -788,6 +788,21 @@ struct CatalogQueryRegistryTests {
                 .key(.sourcesList(project: project))
             )
         )
+        #expect(registry.invalidations(for: CatalogWriteEffects(
+            handles: ["e1"],
+            cacheSources: ["s1"],
+            headerHandles: ["e2"]
+        ), project: project) == [
+            .key(.sourceGraph(project: project, sourceId: "s1")),
+            .key(.citationCounts(project: project, sourceId: "s1")),
+            .allCached(.citationsByArtifact),
+            .key(.propertiesWorkspace(project: project)),
+            .key(.personsList(project: project)),
+            .key(.eventsList(project: project)),
+            .key(.placesList(project: project)),
+            .key(.conclusionDetail(project: project, entityId: "e1")),
+            .key(.conclusionDetail(project: project, entityId: "e2")),
+        ])
         #expect(registry.invalidations(by: .savedCitation(sourceId: "s1"), project: project) == [
             .key(.sourceGraph(project: project, sourceId: "s1")),
             .key(.citationCounts(project: project, sourceId: "s1")),

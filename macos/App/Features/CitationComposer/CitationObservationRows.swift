@@ -402,12 +402,12 @@ final class CitationObservationRows {
                     citationID: citationID,
                     observations: [draft]
                 )
-                if let written = written.first {
-                    markSaved(rowID: rowID, id: written.id, ref: written.ref)
+                if let saved = written.0.first {
+                    markSaved(rowID: rowID, id: saved.id, ref: saved.ref)
                 } else {
                     markError(rowID: rowID, message: L10n.string(L10n.CitationComposer.rowStateError))
                 }
-                context.applySavedCitation()
+                context.applyWrite(written.1)
             } else {
                 let (observationOrNil, updateError) = row.asCatalogObservation(property: property)
                 if let updateError {
@@ -421,8 +421,8 @@ final class CitationObservationRows {
                         userID: context.userID,
                         observation: observation
                     )
-                    markSaved(rowID: rowID, id: written.id, ref: written.ref)
-                    context.applySavedCitation()
+                    markSaved(rowID: rowID, id: written.0.id, ref: written.0.ref)
+                    context.applyWrite(written.1)
                 } else {
                     markError(rowID: rowID, message: L10n.string(L10n.CitationComposer.rowStateError))
                 }
@@ -439,13 +439,13 @@ final class CitationObservationRows {
               let persistedID = row.persistedID
         else { return }
         do {
-            try await context.store.deleteObservation(
+            let effects = try await context.store.deleteObservation(
                 projectDir: context.projectDir,
                 userID: context.userID,
                 observationID: persistedID
             )
             remove(rowID: rowID)
-            context.applySavedCitation()
+            context.applyWrite(effects)
         } catch {
             markError(rowID: rowID, message: L10n.Errors.message(for: error))
         }

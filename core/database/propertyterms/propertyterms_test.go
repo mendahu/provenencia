@@ -7,9 +7,36 @@ import (
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/properties"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/writes"
 )
+
+func runCreate(c *database.Catalog, userID, propID []byte, label, description string) (Term, error) {
+	term, _, err := writes.Run(c, writes.Op{Action: "create_property_term", UserID: userID},
+		func(tx *database.Tx) (Term, []rowchange.Change, error) {
+			return Create(tx, userID, propID, label, description)
+		})
+	return term, err
+}
+
+func runUpdate(c *database.Catalog, userID, id []byte, label, description string) (Term, error) {
+	term, _, err := writes.Run(c, writes.Op{Action: "update_property_term", UserID: userID},
+		func(tx *database.Tx) (Term, []rowchange.Change, error) {
+			return Update(tx, userID, id, label, description)
+		})
+	return term, err
+}
+
+func runDelete(c *database.Catalog, userID, id []byte) error {
+	_, _, err := writes.Run(c, writes.Op{Action: "delete_property_term", UserID: userID},
+		func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+			changes, err := Delete(tx, userID, id)
+			return struct{}{}, changes, err
+		})
+	return err
+}
 
 func TestPropertyTerms(t *testing.T) {
 	tests := []struct {
@@ -63,21 +90,21 @@ func TestPropertyTerms(t *testing.T) {
 		{
 			name: "create update delete user term",
 			run: func(t *testing.T, c *database.Catalog, userID, propID []byte) {
-				got, err := Create(c, userID, propID, "Land Grant", "custom")
+				got, err := runCreate(c, userID, propID, "Land Grant", "custom")
 				if err != nil {
 					t.Fatal(err)
 				}
 				if got.Key != "land-grant" || got.Origin != OriginUser {
 					t.Fatalf("got %+v", got)
 				}
-				updated, err := Update(c, userID, got.ID, "Land Grant 2", "")
+				updated, err := runUpdate(c, userID, got.ID, "Land Grant 2", "")
 				if err != nil {
 					t.Fatal(err)
 				}
 				if updated.Label != "Land Grant 2" {
 					t.Fatalf("label %q", updated.Label)
 				}
-				if err := Delete(c, userID, got.ID); err != nil {
+				if err := runDelete(c, userID, got.ID); err != nil {
 					t.Fatal(err)
 				}
 				_, err = GetByID(c, got.ID)
@@ -95,10 +122,10 @@ func TestPropertyTerms(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				if _, err := Update(c, userID, id, "X", ""); !errors.Is(err, ErrLocked) {
+				if _, err := runUpdate(c, userID, id, "X", ""); !errors.Is(err, ErrLocked) {
 					t.Fatalf("update %v", err)
 				}
-				if err := Delete(c, userID, id); !errors.Is(err, ErrLocked) {
+				if err := runDelete(c, userID, id); !errors.Is(err, ErrLocked) {
 					t.Fatalf("delete %v", err)
 				}
 			},
@@ -106,7 +133,7 @@ func TestPropertyTerms(t *testing.T) {
 		{
 			name: "property delete refused while term exists",
 			run: func(t *testing.T, c *database.Catalog, userID, propID []byte) {
-				if _, err := Create(c, userID, propID, "Land Grant", ""); err != nil {
+				if _, err := runCreate(c, userID, propID, "Land Grant", ""); err != nil {
 					t.Fatal(err)
 				}
 				db, err := c.DB()
@@ -129,10 +156,10 @@ func TestPropertyTerms(t *testing.T) {
 		{
 			name: "duplicate user key",
 			run: func(t *testing.T, c *database.Catalog, userID, propID []byte) {
-				if _, err := Create(c, userID, propID, "Dup", ""); err != nil {
+				if _, err := runCreate(c, userID, propID, "Dup", ""); err != nil {
 					t.Fatal(err)
 				}
-				_, err := Create(c, userID, propID, "Dup", "")
+				_, err := runCreate(c, userID, propID, "Dup", "")
 				if !errors.Is(err, ErrDuplicateKey) {
 					t.Fatalf("got %v", err)
 				}

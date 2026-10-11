@@ -4,7 +4,8 @@ import (
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/citations"
-	"github.com/mendahu/provenencia/core/database/observations"
+	"github.com/mendahu/provenencia/core/database/rowchange"
+	"github.com/mendahu/provenencia/core/writes"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -27,20 +28,24 @@ func CreateCitationWithObservations(in []byte) ([]byte, error) {
 	}
 	var out *engine.CreateCitationWithObservationsResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		res, err := citations.CreateWithObservations(c, userID, citations.CreateInput{
-			ArtifactID:             artifactID,
-			LocatorJSON:            req.GetLocatorJson(),
-			Transcription:          req.GetTranscription(),
-			Description:            req.GetDescription(),
-			TranscriptionUncertain: req.GetTranscriptionUncertain(),
-			TranscriptionNote:      req.GetTranscriptionNote(),
-			Notes:                  req.GetCitationNotes(),
-		}, inputs)
+		res, wrote, err := writes.Run(c, writes.Op{Action: "create_citation_with_observations", UserID: userID},
+			func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
+				return citations.CreateWithObservations(tx, userID, citations.CreateInput{
+					ArtifactID:             artifactID,
+					LocatorJSON:            req.GetLocatorJson(),
+					Transcription:          req.GetTranscription(),
+					Description:            req.GetDescription(),
+					TranscriptionUncertain: req.GetTranscriptionUncertain(),
+					TranscriptionNote:      req.GetTranscriptionNote(),
+					Notes:                  req.GetCitationNotes(),
+				}, inputs)
+			})
 		if err != nil {
 			return err
 		}
 		out = &engine.CreateCitationWithObservationsResponse{
 			Citation: citationProto(res.Citation),
+			Effects:  writeEffectsProto(wrote.Effects),
 		}
 		for _, o := range res.Observations {
 			out.Observations = append(out.Observations, observationProto(o))
@@ -102,16 +107,22 @@ func GetCitation(in []byte) ([]byte, error) {
 		if err != nil {
 			return err
 		}
-		listed, err := observations.ListByCitation(c, citationID)
+		sourceID, err := citations.SourceID(c, citationID)
+		if err != nil {
+			return err
+		}
+		sg, err := c.Graph().Source(sourceID)
+		if err != nil {
+			return err
+		}
+		rows, err := listedProtosFromSource(c, sg, citationID)
 		if err != nil {
 			return err
 		}
 		out = &engine.GetCitationResponse{
-			Citation: citationProto(cit),
-			Notes:    notes,
-		}
-		for _, row := range listed {
-			out.Observations = append(out.Observations, listedObservationProto(row))
+			Citation:     citationProto(cit),
+			Notes:        notes,
+			Observations: rows,
 		}
 		return nil
 	})
@@ -136,17 +147,23 @@ func UpdateCitation(in []byte) ([]byte, error) {
 	}
 	var out *engine.UpdateCitationResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		cit, err := citations.Update(c, userID, citationID, citations.CitationFieldsInput{
-			LocatorJSON:            req.GetLocatorJson(),
-			Transcription:          req.GetTranscription(),
-			Description:            req.GetDescription(),
-			TranscriptionUncertain: req.GetTranscriptionUncertain(),
-			TranscriptionNote:      req.GetTranscriptionNote(),
-		})
+		cit, wrote, err := writes.Run(c, writes.Op{Action: "update_citation", UserID: userID},
+			func(tx *database.Tx) (citations.Citation, []rowchange.Change, error) {
+				return citations.Update(tx, userID, citationID, citations.CitationFieldsInput{
+					LocatorJSON:            req.GetLocatorJson(),
+					Transcription:          req.GetTranscription(),
+					Description:            req.GetDescription(),
+					TranscriptionUncertain: req.GetTranscriptionUncertain(),
+					TranscriptionNote:      req.GetTranscriptionNote(),
+				})
+			})
 		if err != nil {
 			return err
 		}
-		out = &engine.UpdateCitationResponse{Citation: citationProto(cit)}
+		out = &engine.UpdateCitationResponse{
+			Citation: citationProto(cit),
+			Effects:  writeEffectsProto(wrote.Effects),
+		}
 		return nil
 	})
 	if err != nil {
@@ -200,10 +217,15 @@ func DeleteCitation(in []byte) ([]byte, error) {
 	}
 	var out *engine.DeleteCitationResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		if err := citations.Delete(c, userID, citationID); err != nil {
+		_, wrote, err := writes.Run(c, writes.Op{Action: "delete_citation", UserID: userID},
+			func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+				changes, err := citations.Delete(tx, userID, citationID)
+				return struct{}{}, changes, err
+			})
+		if err != nil {
 			return err
 		}
-		out = &engine.DeleteCitationResponse{}
+		out = &engine.DeleteCitationResponse{Effects: writeEffectsProto(wrote.Effects)}
 		return nil
 	})
 	if err != nil {

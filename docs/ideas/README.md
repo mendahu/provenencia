@@ -17,6 +17,8 @@ Use this folder when something useful pops up mid-work and would otherwise get l
 ## Current ideas
 
 - [`source-to-source-relationships.md`](source-to-source-relationships.md)
+- [`source-structure.md`](source-structure.md) — several Evidence graphs per Source, and nested Sources (publication → issue → item)
+- [`registry-source-import.md`](registry-source-import.md) — paste a record URL from Ancestry, FamilySearch and similar to create a Source; access (logins, OAuth) is unproven
 - [`source-provenance-date.md`](source-provenance-date.md)
 - [`text-quote-locators.md`](text-quote-locators.md)
 - [`audio-video-sources.md`](audio-video-sources.md)
@@ -30,6 +32,9 @@ Use this folder when something useful pops up mid-work and would otherwise get l
 - [`place-gazetteer-service.md`](place-gazetteer-service.md)
 - [`possible-values.md`](possible-values.md)
 - [`promote-matching.md`](promote-matching.md) — what proves a join; the direction is now [`promote-graph-alignment.md`](../promote-graph-alignment.md)
+- [`promote-connection-subrows.md`](promote-connection-subrows.md) — connections as subrows of the subjects they join, with no switch-off
+- [`term-management.md`](term-management.md) — one place to manage terms, including relationship direction and inverses
+- [`catalog-graph-cache.md`](catalog-graph-cache.md) — one write orchestrator (data, audit, derived data) and the canonical graph in memory it keeps current
 
 ## Archived
 

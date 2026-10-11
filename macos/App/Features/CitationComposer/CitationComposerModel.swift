@@ -109,7 +109,7 @@ final class CitationComposerModel {
         var typeKey: String
     }
 
-    static let newSubjectPrefix = "__new__."
+    nonisolated static let newSubjectPrefix = "__new__."
 
     let entry: CitationComposerEntry
     private let userID: String
@@ -375,19 +375,7 @@ final class CitationComposerModel {
         graphHandle?.status == .loading || (graphHandle?.isFetching ?? false)
     }
 
-    var subjectOptions: [PVComboBoxOption] {
-        let existing = vocabulary.graphSubjects.map {
-            PVComboBoxOption(value: $0.id, label: $0.label, subtext: $0.ref)
-        }
-        let news: [PVComboBoxOption] = fieldsSnapshot.typesInPaletteOrder.compactMap { type in
-            guard fieldsSnapshot.presentationsByKey[type.key]?.placeable == true else { return nil }
-            return PVComboBoxOption(
-                value: Self.newSubjectPrefix + type.key,
-                label: L10n.CitationComposer.newSubject(typeKey: type.key)
-            )
-        }
-        return existing + news
-    }
+    var subjectOptions: [PVComboBoxOption] { vocabulary.subjectComboOptions }
 
     var defaultObservationSubjectID: String {
         if !subjectID.isEmpty { return subjectID }
@@ -419,20 +407,11 @@ final class CitationComposerModel {
     func catalogProperty(id: String) -> CatalogProperty? { vocabulary.property(id: id) }
 
     func propertyOptions(for subjectID: String) -> [PVComboBoxOption] {
-        vocabulary.propertyOptions(forSubjectID: subjectID).map {
-            PVComboBoxOption(value: $0.id, label: $0.label, subtext: $0.key)
-        }
+        vocabulary.propertyComboOptions(forSubjectID: subjectID)
     }
 
     func termOptions(for propertyID: String) -> [PVComboBoxOption] {
-        let propertyKey = catalogProperty(id: propertyID)?.key ?? ""
-        return (vocabulary.termsByPropertyID[propertyID] ?? []).map { term in
-            PVComboBoxOption(
-                value: term.id,
-                label: PropertyTermDisplay.name(term: term, propertyKey: propertyKey),
-                subtext: term.key
-            )
-        }
+        vocabulary.termComboOptionsByPropertyID[propertyID] ?? []
     }
 
     func observationSummary(for row: ObservationRow) -> String {
@@ -583,12 +562,12 @@ final class CitationComposerModel {
     func confirmPendingImpact() async {
         _ = await deleteImpact.confirm { target in
             if target.kind == "citation" {
-                try await store.deleteCitation(
+                let effects = try await store.deleteCitation(
                     projectDir: session.projectKey.projectDir,
                     userID: userID,
                     citationID: target.id
                 )
-                context.applySavedCitation()
+                context.applyWrite(effects)
                 resetComposerIdentity(keepLocator: true)
                 await reloadListedCitations()
                 applyEntryFocus()

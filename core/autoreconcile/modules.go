@@ -44,10 +44,6 @@ type module interface {
 // wholeValue is the unit name of a module with one unit per value.
 const wholeValue = ""
 
-// NeutralTermKeys are term keys that are no evidence either way: an
-// "unknown" sex at birth never wins or outvotes a recorded one.
-var NeutralTermKeys = map[string]bool{"unknown": true, "indeterminate": true}
-
 func moduleFor(valueType string) module {
 	switch valueType {
 	case properties.ValueTypeText:
@@ -105,9 +101,10 @@ func textKey(v Value) (string, bool) {
 	return k, k != ""
 }
 
-// termKey: the same term. A neutral term is no evidence.
+// termKey: the same term. A neutral term is no evidence: an "unknown" sex at
+// birth never wins or outvotes a recorded one.
 func termKey(v Value) (string, bool) {
-	if NeutralTermKeys[v.TermKey] {
+	if v.Neutral {
 		return "", false
 	}
 	return string(v.TermID), true

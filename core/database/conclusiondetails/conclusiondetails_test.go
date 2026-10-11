@@ -2,7 +2,6 @@ package conclusiondetails_test
 
 import (
 	"bytes"
-	"database/sql"
 	"errors"
 	"fmt"
 	"strings"
@@ -18,6 +17,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/properties"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sourcecredibility"
 	"github.com/mendahu/provenencia/core/database/sourcecredibilitygrades"
 	"github.com/mendahu/provenencia/core/database/sources"
@@ -27,6 +27,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/writes"
 )
 
 var userID = []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}
@@ -75,9 +76,11 @@ func newFixture(t *testing.T) *fixture {
 
 func (f *fixture) source(title string) sources.Source {
 	f.t.Helper()
-	src, err := sources.Create(f.c, userID, sources.CreateInput{SourceTypeID: f.typeID, Title: title})
+	src, _, err := writes.Run(f.c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: f.typeID, Title: title})
+	})
 	must(f.t, err)
-	art, err := artifacts.Create(f.c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
+	art, err := runArtifactCreate(f.c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
 	must(f.t, err)
 	f.arts[string(src.ID)] = art
 	return src
@@ -85,7 +88,9 @@ func (f *fixture) source(title string) sources.Source {
 
 func (f *fixture) personOn(src sources.Source) subjects.Subject {
 	f.t.Helper()
-	s, err := subjects.Create(f.c, userID, subjects.CreateInput{SourceID: src.ID, SubjectTypeID: f.person.ID}, nil)
+	s, err := writes.Call(f.c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
+		return subjects.Create(tx, userID, subjects.CreateInput{SourceID: src.ID, SubjectTypeID: f.person.ID}, nil)
+	})
 	must(f.t, err)
 	return s
 }
@@ -93,7 +98,9 @@ func (f *fixture) personOn(src sources.Source) subjects.Subject {
 // name files a name Observation from "type=value|…" parts (or "form:…").
 func (f *fixture) cite(s subjects.Subject, in observations.Input) observations.Observation {
 	f.t.Helper()
-	res, err := citations.CreateWithObservations(f.c, userID, citations.CreateInput{ArtifactID: f.arts[string(s.SourceID)].ID, LocatorJSON: locator}, []observations.Input{in})
+	res, err := writes.Call(f.c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
+		return citations.CreateWithObservations(tx, userID, citations.CreateInput{ArtifactID: f.arts[string(s.SourceID)].ID, LocatorJSON: locator}, []observations.Input{in})
+	})
 	must(f.t, err)
 	return res.Observations[0]
 }
@@ -116,16 +123,16 @@ func (f *fixture) nameIn(s subjects.Subject, spec string) observations.Input {
 
 func (f *fixture) promote(s subjects.Subject, onto []byte) []byte {
 	f.t.Helper()
-	res, err := promote.Save(f.c, userID, promote.Input{SubjectID: s.ID, EntityID: onto})
+	res, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+		return promote.Save(tx, userID, promote.Input{SubjectID: s.ID, EntityID: onto})
+	})
 	must(f.t, err)
 	return res.Entity.ID
 }
 
 func (f *fixture) detail(h []byte) conclusiondetails.Detail {
 	f.t.Helper()
-	db, err := f.c.DB()
-	must(f.t, err)
-	d, err := conclusiondetails.ForEntity(db, h)
+	d, err := conclusiondetails.ForEntity(f.c, h)
 	must(f.t, err)
 	return d
 }
@@ -224,11 +231,25 @@ func TestForEntityEvidence(t *testing.T) {
 	register, census, gazette := f.source("Register"), f.source("Census"), f.source("Gazette")
 	g, err := sourcecredibilitygrades.Lookup(f.c, "low_trust", sourcecredibilitygrades.OriginProvenencia)
 	must(t, err)
-	_, err = sourcecredibility.Upsert(f.c, userID, sourcecredibility.UpsertInput{SourceID: register.ID, CredibilityGradeID: g.ID})
+	p6in2 := sourcecredibility.UpsertInput{SourceID: register.ID, CredibilityGradeID: g.ID}
+	p6act1 := "create_source_credibility_assessment"
+	if _, p6look3 := sourcecredibility.GetBySource(f.c, p6in2.SourceID); p6look3 == nil {
+		p6act1 = "update_source_credibility_assessment"
+	}
+	_, err = writes.Call(f.c, writes.Op{Action: p6act1, UserID: userID}, func(tx *database.Tx) (sourcecredibility.Assessment, []rowchange.Change, error) {
+		return sourcecredibility.Upsert(tx, userID, p6in2)
+	})
 	must(t, err)
 	hg, err := sourcecredibilitygrades.Lookup(f.c, "high_trust", sourcecredibilitygrades.OriginProvenencia)
 	must(t, err)
-	_, err = sourcecredibility.Upsert(f.c, userID, sourcecredibility.UpsertInput{SourceID: gazette.ID, CredibilityGradeID: hg.ID})
+	p6in5 := sourcecredibility.UpsertInput{SourceID: gazette.ID, CredibilityGradeID: hg.ID}
+	p6act4 := "create_source_credibility_assessment"
+	if _, p6look6 := sourcecredibility.GetBySource(f.c, p6in5.SourceID); p6look6 == nil {
+		p6act4 = "update_source_credibility_assessment"
+	}
+	_, err = writes.Call(f.c, writes.Op{Action: p6act4, UserID: userID}, func(tx *database.Tx) (sourcecredibility.Assessment, []rowchange.Change, error) {
+		return sourcecredibility.Upsert(tx, userID, p6in5)
+	})
 	must(t, err)
 
 	a, b, c := f.personOn(register), f.personOn(census), f.personOn(gazette)
@@ -265,32 +286,23 @@ func TestForEntityEvidence(t *testing.T) {
 
 func TestForEntityNotFound(t *testing.T) {
 	f := newFixture(t)
-	db, err := f.c.DB()
-	must(t, err)
 	for _, id := range [][]byte{nil, []byte("short"), bytes.Repeat([]byte{9}, 16)} {
-		if _, err := conclusiondetails.ForEntity(db, id); !errors.Is(err, conclusiondetails.ErrNotFound) {
+		if _, err := conclusiondetails.ForEntity(f.c, id); !errors.Is(err, conclusiondetails.ErrNotFound) {
 			t.Fatalf("%x: %v", id, err)
 		}
 	}
 	a := f.personOn(f.source("Register"))
 	h := f.promote(a, nil)
 	other := f.promote(f.personOn(f.source("Census")), nil)
+	db, err := f.c.DB()
+	must(t, err)
 	_, err = db.Exec(`UPDATE canonical_entities SET merged_into_id = ? WHERE id = ?`, other, h)
 	must(t, err)
-	if _, err := conclusiondetails.ForEntity(db, h); !errors.Is(err, conclusiondetails.ErrNotFound) {
+	// The update skipped the write path, so the open graph still has the old node.
+	f.c.Graph().Drop()
+	if _, err := conclusiondetails.ForEntity(f.c, h); !errors.Is(err, conclusiondetails.ErrNotFound) {
 		t.Fatalf("merged: %v", err)
 	}
-}
-
-// countingQuerier counts the statements the composer sends.
-type countingQuerier struct {
-	db *sql.DB
-	n  int
-}
-
-func (c *countingQuerier) Query(query string, args ...any) (*sql.Rows, error) {
-	c.n++
-	return c.db.Query(query, args...)
 }
 
 func TestForEntityQueryCountIsConstant(t *testing.T) {
@@ -306,16 +318,66 @@ func TestForEntityQueryCountIsConstant(t *testing.T) {
 	f.cite(big, observations.Input{SubjectID: big.ID, PropertyID: f.sex.ID, ValueTermID: termID(t, f, "male")})
 	hb := f.promote(big, nil)
 
-	db, err := f.c.DB()
+	g := f.c.Graph()
+	g.Drop()
+	if _, err := g.Vocabulary(); err != nil {
+		t.Fatal(err)
+	}
+	var n int
+	g.SetQueryCounterForTest(func() { n++ })
+	_, err := conclusiondetails.ForEntity(f.c, hs)
 	must(t, err)
-	one := &countingQuerier{db: db}
-	_, err = conclusiondetails.ForEntity(one, hs)
+	smallN := n
+	n = 0
+	_, err = conclusiondetails.ForEntity(f.c, hb)
 	must(t, err)
-	many := &countingQuerier{db: db}
-	_, err = conclusiondetails.ForEntity(many, hb)
+	if smallN == 0 || smallN != n {
+		t.Fatalf("graph queries: %d for a small Person, %d for a big one", smallN, n)
+	}
+}
+
+func TestDetailReusesStoredValues(t *testing.T) {
+	f := newFixture(t)
+	a := f.personOn(f.source("Register"))
+	obs := f.cite(a, f.nameIn(a, "given=Ann|surname=Lee"))
+	h := f.promote(a, nil)
+	g := f.c.Graph()
+	g.Drop()
+	first := f.detail(h)
+	if len(field(first, "name").Outcomes) == 0 || !bytes.Equal(field(first, "name").Outcomes[0].ObservationID, obs.ID) {
+		t.Fatalf("why %+v", field(first, "name").Outcomes)
+	}
+	second := f.detail(h)
+	name := field(second, "name")
+	if len(name.Values) != 1 || name.Values[0].Value.Name == nil || name.Values[0].Value.Name.Form != "Ann Lee" {
+		t.Fatalf("values %+v", name.Values)
+	}
+	if len(name.Outcomes) == 0 || !bytes.Equal(name.Outcomes[0].ObservationID, obs.ID) || name.Outcomes[0].SourceTitle != "Register" {
+		t.Fatalf("why %+v", name.Outcomes)
+	}
+}
+
+func TestDetailValuesFollowAnEdit(t *testing.T) {
+	f := newFixture(t)
+	a := f.personOn(f.source("Register"))
+	obs := f.cite(a, f.nameIn(a, "given=Ann|surname=Lee"))
+	h := f.promote(a, nil)
+	before := field(f.detail(h), "name")
+	if len(before.Values) != 1 || before.Values[0].Value.Name == nil || before.Values[0].Value.Name.Form != "Ann Lee" {
+		t.Fatalf("before %+v", before.Values)
+	}
+	in := f.nameIn(a, "given=Anne|surname=Lee")
+	in.ID = obs.ID
+	_, err := writes.Call(f.c, writes.Op{Action: "update_observation", UserID: userID}, func(tx *database.Tx) (observations.Listed, []rowchange.Change, error) {
+		return observations.Update(tx, userID, in)
+	})
 	must(t, err)
-	if one.n != many.n {
-		t.Fatalf("queries: %d for a small Person, %d for a big one", one.n, many.n)
+	after := field(f.detail(h), "name")
+	if len(after.Values) != 1 || after.Values[0].Value.Name == nil || after.Values[0].Value.Name.Form != "Anne Lee" {
+		t.Fatalf("after %+v", after.Values)
+	}
+	if len(after.Outcomes) == 0 || after.Outcomes[0].Recorded.Name == nil || after.Outcomes[0].Recorded.Name.Form != "Anne Lee" {
+		t.Fatalf("why %+v", after.Outcomes)
 	}
 }
 
@@ -326,4 +388,12 @@ func termID(t *testing.T, f *fixture, key string) []byte {
 	var id []byte
 	must(t, db.QueryRow(`SELECT id FROM property_terms WHERE property_id = ? AND key = ?`, f.sex.ID, key).Scan(&id))
 	return id
+}
+
+func runArtifactCreate(c *database.Catalog, userID []byte, in artifacts.CreateInput) (artifacts.Artifact, error) {
+	a, _, err := writes.Run(c, writes.Op{Action: "create_artifact", UserID: userID},
+		func(tx *database.Tx) (artifacts.Artifact, []rowchange.Change, error) {
+			return artifacts.Create(tx, userID, in)
+		})
+	return a, err
 }

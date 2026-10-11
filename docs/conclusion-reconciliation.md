@@ -133,12 +133,12 @@ Each module answers three questions:
 | --- | --- | --- | --- | --- |
 | **text** | equal after trimming whitespace, ignoring case (*York* = *york*) | none | the best-ranked member's text | empty |
 | **integer** | equal | none | the value | — |
-| **term** | same term | none | the term | terms the module marks neutral (*unknown*, *indeterminate*) |
+| **term** | same term | none | the term | terms flagged `property_terms.neutral` (seeded on *unknown*, *indeterminate*) |
 | **subject** | candidate Subjects map to the **same handle**; unpromoted Subjects drop out | none | the handle (an edge of the canonical graph) | unpromoted |
 | **date** | §7.1 | precision containment | §7.1 | empty |
 | **name** | §7.2 | subsumption per part type | §7.2 | no parts |
 
-The same *same value* test (`autoreconcile.Compatible`) is what Promote graph alignment counts as an agreement ([`promote-graph-alignment.md`](promote-graph-alignment.md) §6), and what matching should use for agreement, so a Promote comparison and a Person page can never disagree about whether two values match.
+The same *same value* test (`autoreconcile.Compatible`) decides which Promote comparisons are pinned ([`promote-graph-alignment.md`](promote-graph-alignment.md) §6), so a pin and a Person page never disagree about whether two values match. Scoring uses matching's comparers, so a partial resemblance can raise a match without being pinned.
 
 ## 7.1 Dates
 

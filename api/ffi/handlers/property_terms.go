@@ -4,6 +4,8 @@ import (
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
+	"github.com/mendahu/provenencia/core/database/rowchange"
+	"github.com/mendahu/provenencia/core/writes"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -49,7 +51,10 @@ func CreatePropertyTerm(in []byte) ([]byte, error) {
 	}
 	var out *engine.CreatePropertyTermResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		got, err := propertyterms.Create(c, userID, propertyID, req.GetLabel(), req.GetDescription())
+		got, _, err := writes.Run(c, writes.Op{Action: "create_property_term", UserID: userID},
+			func(tx *database.Tx) (propertyterms.Term, []rowchange.Change, error) {
+				return propertyterms.Create(tx, userID, propertyID, req.GetLabel(), req.GetDescription())
+			})
 		if err != nil {
 			return err
 		}
@@ -77,7 +82,10 @@ func UpdatePropertyTerm(in []byte) ([]byte, error) {
 	}
 	var out *engine.UpdatePropertyTermResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		got, err := propertyterms.Update(c, userID, termID, req.GetLabel(), req.GetDescription())
+		got, _, err := writes.Run(c, writes.Op{Action: "update_property_term", UserID: userID},
+			func(tx *database.Tx) (propertyterms.Term, []rowchange.Change, error) {
+				return propertyterms.Update(tx, userID, termID, req.GetLabel(), req.GetDescription())
+			})
 		if err != nil {
 			return err
 		}
@@ -105,7 +113,12 @@ func DeletePropertyTerm(in []byte) ([]byte, error) {
 	}
 	var out *engine.DeletePropertyTermResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		if err := propertyterms.Delete(c, userID, termID); err != nil {
+		_, _, err := writes.Run(c, writes.Op{Action: "delete_property_term", UserID: userID},
+			func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+				changes, err := propertyterms.Delete(tx, userID, termID)
+				return struct{}{}, changes, err
+			})
+		if err != nil {
 			return err
 		}
 		out = &engine.DeletePropertyTermResponse{}

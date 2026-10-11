@@ -2,7 +2,6 @@ package autoreconciler_test
 
 import (
 	"bytes"
-	"database/sql"
 	"errors"
 	"fmt"
 	"math/rand"
@@ -24,6 +23,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/searchindex"
 	"github.com/mendahu/provenencia/core/database/sourcecredibility"
 	"github.com/mendahu/provenencia/core/database/sourcecredibilitygrades"
@@ -36,6 +36,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/ref"
 	"github.com/mendahu/provenencia/core/valuecodec"
+	"github.com/mendahu/provenencia/core/writes"
 )
 
 var userID = []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}
@@ -118,9 +119,11 @@ func must(t *testing.T, err error) {
 // separate vote for the auto-reconciler's majority.
 func (f *fixture) newSource(title string) sources.Source {
 	f.t.Helper()
-	src, err := sources.Create(f.c, userID, sources.CreateInput{SourceTypeID: f.typeID, Title: title})
+	src, _, err := writes.Run(f.c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: f.typeID, Title: title})
+	})
 	must(f.t, err)
-	art, err := artifacts.Create(f.c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
+	art, err := runArtifactCreate(f.c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
 	must(f.t, err)
 	f.arts[string(src.ID)] = art
 	return src
@@ -138,7 +141,9 @@ func (f *fixture) subject(kind string) subjects.Subject { return f.subjectOn(f.s
 
 func (f *fixture) subjectOn(src sources.Source, kind string) subjects.Subject {
 	f.t.Helper()
-	s, err := subjects.Create(f.c, userID, subjects.CreateInput{SourceID: src.ID, SubjectTypeID: f.types[kind].ID}, nil)
+	s, err := writes.Call(f.c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
+		return subjects.Create(tx, userID, subjects.CreateInput{SourceID: src.ID, SubjectTypeID: f.types[kind].ID}, nil)
+	})
 	must(f.t, err)
 	return s
 }
@@ -153,7 +158,9 @@ func (f *fixture) cite(in ...observations.Input) []observations.Observation {
 		must(f.t, err)
 		art = f.arts[string(s.SourceID)]
 	}
-	res, err := citations.CreateWithObservations(f.c, userID, citations.CreateInput{ArtifactID: art.ID, LocatorJSON: locator}, in)
+	res, err := writes.Call(f.c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
+		return citations.CreateWithObservations(tx, userID, citations.CreateInput{ArtifactID: art.ID, LocatorJSON: locator}, in)
+	})
 	must(f.t, err)
 	return res.Observations
 }
@@ -162,13 +169,23 @@ func (f *fixture) cite(in ...observations.Input) []observations.Observation {
 func (f *fixture) credibility(src sources.Source, key string) error {
 	g, err := sourcecredibilitygrades.Lookup(f.c, key, sourcecredibilitygrades.OriginProvenencia)
 	must(f.t, err)
-	_, err = sourcecredibility.Upsert(f.c, userID, sourcecredibility.UpsertInput{SourceID: src.ID, CredibilityGradeID: g.ID})
+	p6in2 := sourcecredibility.UpsertInput{SourceID: src.ID, CredibilityGradeID: g.ID}
+	p6act1 := "create_source_credibility_assessment"
+
+	// certainty sets a Citation's transcription certainty.
+	if _, p6look3 := sourcecredibility.GetBySource(f.c, p6in2.SourceID); p6look3 == nil {
+		p6act1 = "update_source_credibility_assessment"
+	}
+	_, err = writes.Call(f.c, writes.Op{Action: p6act1, UserID: userID}, func(tx *database.Tx) (sourcecredibility.Assessment, []rowchange.Change, error) {
+		return sourcecredibility.Upsert(tx, userID, p6in2)
+	})
 	return err
 }
 
-// certainty sets a Citation's transcription certainty.
 func (f *fixture) certainty(citationID []byte, uncertain bool) error {
-	_, err := citations.Update(f.c, userID, citationID, citations.CitationFieldsInput{LocatorJSON: locator, TranscriptionUncertain: uncertain})
+	_, err := writes.Call(f.c, writes.Op{Action: "update_citation", UserID: userID}, func(tx *database.Tx) (citations.Citation, []rowchange.Change, error) {
+		return citations.Update(tx, userID, citationID, citations.CitationFieldsInput{LocatorJSON: locator, TranscriptionUncertain: uncertain})
+	})
 	return err
 }
 
@@ -185,7 +202,9 @@ func negative(in observations.Input) observations.Input {
 }
 
 func place(f *fixture, s subjects.Subject, x, y int64) error {
-	_, err := subjectpositions.Set(f.c, s.ID, x, y)
+	_, err := writes.Call(f.c, writes.Op{}, func(tx *database.Tx) (subjectpositions.Position, []rowchange.Change, error) {
+		return subjectpositions.Set(tx, s.ID, x, y)
+	})
 	return err
 }
 
@@ -209,14 +228,18 @@ func associationOf(f *fixture, typeKey string) []byte {
 
 func (f *fixture) promote(s subjects.Subject) []byte {
 	f.t.Helper()
-	res, err := promote.Save(f.c, userID, promote.Input{SubjectID: s.ID})
+	res, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+		return promote.Save(tx, userID, promote.Input{SubjectID: s.ID})
+	})
 	must(f.t, err)
 	return res.Entity.ID
 }
 
 func (f *fixture) join(s subjects.Subject, entityID []byte) {
 	f.t.Helper()
-	_, err := promote.Save(f.c, userID, promote.Input{SubjectID: s.ID, EntityID: entityID})
+	_, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+		return promote.Save(tx, userID, promote.Input{SubjectID: s.ID, EntityID: entityID})
+	})
 	must(f.t, err)
 }
 
@@ -391,8 +414,10 @@ func TestReconciledValues(t *testing.T) {
 	}
 
 	t.Run("observation update", func(t *testing.T) {
-		_, err := observations.Update(f.c, userID, observations.Input{
-			ID: jim.ID, SubjectID: person.ID, PropertyID: f.props["name"].ID, Name: nameValue("given=James|surname=Robins"),
+		_, err := writes.Call(f.c, writes.Op{Action: "update_observation", UserID: userID}, func(tx *database.Tx) (observations.Listed, []rowchange.Change, error) {
+			return observations.Update(tx, userID, observations.Input{
+				ID: jim.ID, SubjectID: person.ID, PropertyID: f.props["name"].ID, Name: nameValue("given=James|surname=Robins"),
+			})
 		})
 		must(t, err)
 		names := rowsFor(f.rows(), per, f.props["name"].ID)
@@ -401,13 +426,21 @@ func TestReconciledValues(t *testing.T) {
 		}
 	})
 	t.Run("observation add", func(t *testing.T) {
-		obs, err := observations.AddToCitation(f.c, userID, jim.CitationID, []observations.Input{intIn(person, f.props["age"], 35)})
+		obs, err := writes.Call(f.c, writes.Op{Action: "add_observations", UserID: userID}, func(tx *database.Tx) ([]observations.Observation, []rowchange.Change, error) {
+			return observations.AddToCitation(tx, userID, jim.CitationID, []observations.Input{intIn(person, f.props["age"], 35)})
+		})
 		must(t, err)
 		age := rowsFor(f.rows(), per, f.props["age"].ID)
 		if len(age) != 2 || *age[1].Integer != 35 {
 			t.Fatalf("after add %+v", age)
 		}
-		must(t, observations.Delete(f.c, userID, obs[0].ID))
+		{
+			_, err := writes.Call(f.c, writes.Op{Action: "delete_observation", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+				changes, err := observations.Delete(tx, userID, obs[0].ID)
+				return struct{}{}, changes, err
+			})
+			must(t, err)
+		}
 		if age := rowsFor(f.rows(), per, f.props["age"].ID); len(age) != 1 {
 			t.Fatalf("after delete %+v", age)
 		}
@@ -443,8 +476,20 @@ func TestReconciledValues(t *testing.T) {
 		if len(rowsFor(f.rows(), h, f.props["name"].ID)) != 1 {
 			t.Fatal("promoted name not cached")
 		}
-		must(t, observations.Delete(f.c, userID, obs[0].ID))
-		must(t, subjects.Delete(f.c, userID, lone.ID))
+		{
+			_, err := writes.Call(f.c, writes.Op{Action: "delete_observation", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+				changes, err := observations.Delete(tx, userID, obs[0].ID)
+				return struct{}{}, changes, err
+			})
+			must(t, err)
+		}
+		{
+			_, err := writes.Call(f.c, writes.Op{Action: "delete_subject", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+				changes, err := subjects.Delete(tx, userID, lone.ID)
+				return struct{}{}, changes, err
+			})
+			must(t, err)
+		}
 		for _, r := range f.rows() {
 			if bytes.Equal(r.EntityID, h) {
 				t.Fatalf("emptied handle kept %+v", r)
@@ -529,8 +574,10 @@ func TestCardinalityChangeRecomputes(t *testing.T) {
 	if len(rows) != 2 || rows[1].Reason != "outvoted" {
 		t.Fatalf("single %+v", rows)
 	}
-	_, err = properties.Update(f.c, userID, alias.ID, "Alias", properties.ValueTypeText, "", properties.CardinalityMultiple,
-		func(tx *sql.Tx) error { return autoreconciler.RecomputePropertyTx(tx, alias.ID) })
+	_, err = writes.Call(f.c, writes.Op{Action: "update_property", UserID: userID}, func(tx *database.Tx) (properties.Property, []rowchange.Change, error) {
+		return properties.Update(tx, userID, alias.ID, "Alias", properties.ValueTypeText, "", properties.CardinalityMultiple)
+	})
+
 	must(t, err)
 	rows = rowsFor(f.rows(), h, alias.ID)
 	if len(rows) != 2 || rows[0].Reason != "kept" || *rows[0].Text != "York" ||
@@ -540,7 +587,9 @@ func TestCardinalityChangeRecomputes(t *testing.T) {
 	f.assertUpkeepEqualsRebuild("TestCardinalityChangeRecomputes")
 
 	top := f.props["toponym"]
-	_, err = properties.Update(f.c, userID, top.ID, top.Label, top.ValueType, top.Description, properties.CardinalitySingle, nil)
+	_, err = writes.Call(f.c, writes.Op{Action: "update_property", UserID: userID}, func(tx *database.Tx) (properties.Property, []rowchange.Change, error) {
+		return properties.Update(tx, userID, top.ID, top.Label, top.ValueType, top.Description, properties.CardinalitySingle)
+	})
 	if !errors.Is(err, properties.ErrLocked) {
 		t.Fatalf("seeded cardinality: %v", err)
 	}
@@ -630,9 +679,11 @@ func TestReconciledEvidence(t *testing.T) {
 	t.Run("an uncertain transcription is weak", func(t *testing.T) {
 		f := newFixture(t)
 		a, b := f.subject("place"), f.subjectOn(f.other, "place")
-		res, err := citations.CreateWithObservations(f.c, userID, citations.CreateInput{
-			ArtifactID: f.artifact.ID, LocatorJSON: locator, TranscriptionUncertain: true,
-		}, []observations.Input{textIn(a, f.props["toponym"], "Yorke")})
+		res, err := writes.Call(f.c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
+			return citations.CreateWithObservations(tx, userID, citations.CreateInput{
+				ArtifactID: f.artifact.ID, LocatorJSON: locator, TranscriptionUncertain: true,
+			}, []observations.Input{textIn(a, f.props["toponym"], "Yorke")})
+		})
 		must(t, err)
 		_ = res
 		f.cite(textIn(b, f.props["toponym"], "York"))
@@ -688,7 +739,10 @@ func TestReconciledEvidence(t *testing.T) {
 		a, b := f.subject("person"), f.subjectOn(f.other, "person")
 		f.cite(nameIn(a, f.props["name"], "given=Jake|surname=Robins"))
 		f.cite(nameIn(b, f.props["name"], "given=James|surname=Robins"))
-		res, err := promote.Save(f.c, userID, promote.Input{SubjectID: a.ID, ConfidenceGradeID: f.grade("low_confidence")})
+		p6a4 := promote.Input{SubjectID: a.ID, ConfidenceGradeID: f.grade("low_confidence")}
+		res, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+			return promote.Save(tx, userID, p6a4)
+		})
 		must(t, err)
 		f.join(b, res.Entity.ID)
 		names := rowsFor(f.rows(), res.Entity.ID, f.props["name"].ID)
@@ -745,7 +799,9 @@ func TestReconciledEvidence(t *testing.T) {
 			f.cite(textIn(a, f.props["toponym"], "York"))
 			claimed := f.cite(textIn(b, f.props["toponym"], "Toronto"))[0]
 			h := f.promote(a)
-			_, err := identityclaims.Create(f.c, userID, identityclaims.CreateInput{SubjectID: b.ID, EntityID: h, Status: tt.status})
+			_, err := writes.Call(f.c, writes.Op{Action: "create_identity_claim", UserID: userID}, func(tx *database.Tx) (identityclaims.Claim, []rowchange.Change, error) {
+				return identityclaims.Create(tx, userID, identityclaims.CreateInput{SubjectID: b.ID, EntityID: h, Status: tt.status})
+			})
 			must(t, err)
 			if got := texts(f, h); got != tt.wantTexts {
 				t.Fatalf("toponyms %q want %q", got, tt.wantTexts)
@@ -919,12 +975,20 @@ func TestRebuildEqualsUpkeep_Scenarios(t *testing.T) {
 			p := f.subject("person")
 			obs := f.cite(nameIn(p, f.props["name"], "given=James|surname=Robins"), nameIn(p, f.props["name"], "given=Jim|surname=Robins"))
 			f.promote(p)
-			_, err := observations.Update(f.c, userID, observations.Input{
-				ID: obs[1].ID, SubjectID: p.ID, PropertyID: f.props["name"].ID, Name: nameValue("given=james|surname=robins"),
+			_, err := writes.Call(f.c, writes.Op{Action: "update_observation", UserID: userID}, func(tx *database.Tx) (observations.Listed, []rowchange.Change, error) {
+				return observations.Update(tx, userID, observations.Input{
+					ID: obs[1].ID, SubjectID: p.ID, PropertyID: f.props["name"].ID, Name: nameValue("given=james|surname=robins"),
+				})
 			})
 			must(f.t, err)
 			f.assertUpkeepEqualsRebuild("after update")
-			must(f.t, observations.Delete(f.c, userID, obs[0].ID))
+			{
+				_, err := writes.Call(f.c, writes.Op{Action: "delete_observation", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+					changes, err := observations.Delete(tx, userID, obs[0].ID)
+					return struct{}{}, changes, err
+				})
+				must(f.t, err)
+			}
 		}},
 		{"observations added before and after promote on two members", func(f *fixture) {
 			a, b := f.subject("place"), f.subject("place")
@@ -964,7 +1028,13 @@ func TestRebuildEqualsUpkeep_Scenarios(t *testing.T) {
 			h := f.promote(a)
 			f.join(b, h)
 			f.assertUpkeepEqualsRebuild("after join")
-			must(f.t, observations.Delete(f.c, userID, obs[1].ID))
+			{
+				_, err := writes.Call(f.c, writes.Op{Action: "delete_observation", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+					changes, err := observations.Delete(tx, userID, obs[1].ID)
+					return struct{}{}, changes, err
+				})
+				must(f.t, err)
+			}
 			names := rowsFor(f.rows(), h, f.props["name"].ID)
 			if len(names) != 1 || names[0].Support != 1 {
 				f.t.Fatalf("names %+v", names)
@@ -998,7 +1068,13 @@ func TestRebuildEqualsUpkeep_Scenarios(t *testing.T) {
 			f.join(c, h)
 			denial := f.cite(negative(textIn(b, f.props["toponym"], "York")))
 			f.assertUpkeepEqualsRebuild("denied")
-			must(f.t, observations.Delete(f.c, userID, denial[0].ID))
+			{
+				_, err := writes.Call(f.c, writes.Op{Action: "delete_observation", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+					changes, err := observations.Delete(tx, userID, denial[0].ID)
+					return struct{}{}, changes, err
+				})
+				must(f.t, err)
+			}
 			f.assertUpkeepEqualsRebuild("restored")
 			for _, r := range rowsFor(f.rows(), h, f.props["toponym"].ID) {
 				if r.Reason != "kept" || r.Against != 0 {
@@ -1028,14 +1104,16 @@ func TestRebuildEqualsUpkeep_Scenarios(t *testing.T) {
 			roleProp := mustProp(f, "role")
 			role, err := propertyterms.Lookup(f.c, roleProp.ID, "subject", propertyterms.OriginProvenencia)
 			must(f.t, err)
-			bridge, err := connect.CreateCitedBridge(f.c, userID, connect.CreateInput{
-				SourceID: f.source.ID, FromSubjectID: person.ID, ToSubjectID: event.ID, BridgeTypeKey: "participation",
-				Citation: citations.CreateInput{ArtifactID: f.artifact.ID, LocatorJSON: locator},
-				Observations: []observations.Input{
-					{PropertyID: personProp.ID, ValueSubjectID: person.ID},
-					{PropertyID: eventProp.ID, ValueSubjectID: event.ID},
-					{PropertyID: roleProp.ID, ValueTermID: role.ID},
-				},
+			bridge, err := writes.Call(f.c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (connect.Result, []rowchange.Change, error) {
+				return connect.CreateCitedBridge(tx, userID, connect.CreateInput{
+					SourceID: f.source.ID, FromSubjectID: person.ID, ToSubjectID: event.ID, BridgeTypeKey: "participation",
+					Citation: citations.CreateInput{ArtifactID: f.artifact.ID, LocatorJSON: locator},
+					Observations: []observations.Input{
+						{PropertyID: personProp.ID, ValueSubjectID: person.ID},
+						{PropertyID: eventProp.ID, ValueSubjectID: event.ID},
+						{PropertyID: roleProp.ID, ValueTermID: role.ID},
+					},
+				})
 			})
 			must(f.t, err)
 			personHandle := f.promote(person)
@@ -1045,14 +1123,32 @@ func TestRebuildEqualsUpkeep_Scenarios(t *testing.T) {
 			if len(rows) != 1 || !bytes.Equal(rows[0].ValueEntityID, personHandle) {
 				f.t.Fatalf("person edge %+v", rows)
 			}
-			must(f.t, subjects.Delete(f.c, userID, bridge.Subject.ID))
+			{
+				_, err := writes.Call(f.c, writes.Op{Action: "delete_subject", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+					changes, err := subjects.Delete(tx, userID, bridge.Subject.ID)
+					return struct{}{}, changes, err
+				})
+				must(f.t, err)
+			}
 		}},
 		{"emptied member subject deleted", func(f *fixture) {
 			p := f.subject("event")
 			obs := f.cite(dateIn(p, f.props["date"], 1985, ip(5), nil))
 			f.promote(p)
-			must(f.t, observations.Delete(f.c, userID, obs[0].ID))
-			must(f.t, subjects.Delete(f.c, userID, p.ID))
+			{
+				_, err := writes.Call(f.c, writes.Op{Action: "delete_observation", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+					changes, err := observations.Delete(tx, userID, obs[0].ID)
+					return struct{}{}, changes, err
+				})
+				must(f.t, err)
+			}
+			{
+				_, err := writes.Call(f.c, writes.Op{Action: "delete_subject", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+					changes, err := subjects.Delete(tx, userID, p.ID)
+					return struct{}{}, changes, err
+				})
+				must(f.t, err)
+			}
 		}},
 	}
 	for _, sc := range scenarios {
@@ -1134,7 +1230,9 @@ func TestRebuildEqualsUpkeep_SeededSequences(t *testing.T) {
 					if same := handles[kindOf(f, s)]; len(same) > 0 && rng.Intn(2) == 0 {
 						in.EntityID = same[rng.Intn(len(same))]
 					}
-					res, err := promote.Save(f.c, userID, in)
+					res, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+						return promote.Save(tx, userID, in)
+					})
 					tolerate(err)
 					switch {
 					case err == nil && in.EntityID == nil:
@@ -1147,11 +1245,16 @@ func TestRebuildEqualsUpkeep_SeededSequences(t *testing.T) {
 					s := subjectByID(subs, obs[i].SubjectID)
 					in := value(s)
 					in.ID = obs[i].ID
-					_, err := observations.Update(f.c, userID, in)
+					_, err := writes.Call(f.c, writes.Op{Action: "update_observation", UserID: userID}, func(tx *database.Tx) (observations.Listed, []rowchange.Change, error) {
+						return observations.Update(tx, userID, in)
+					})
 					tolerate(err)
 				case op < 9 && len(obs) > 0:
 					i := rng.Intn(len(obs))
-					err := observations.Delete(f.c, userID, obs[i].ID)
+					_, err := writes.Call(f.c, writes.Op{Action: "delete_observation", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+						changes, err := observations.Delete(tx, userID, obs[i].ID)
+						return struct{}{}, changes, err
+					})
 					tolerate(err)
 					if err == nil {
 						obs = append(obs[:i], obs[i+1:]...)
@@ -1180,7 +1283,10 @@ func TestRebuildEqualsUpkeep_SeededSequences(t *testing.T) {
 					obs = append(obs, f.cite(negative(value(s)))...)
 				default:
 					i := rng.Intn(len(subs))
-					err := subjects.Delete(f.c, userID, subs[i].ID)
+					_, err := writes.Call(f.c, writes.Op{Action: "delete_subject", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+						changes, err := subjects.Delete(tx, userID, subs[i].ID)
+						return struct{}{}, changes, err
+					})
 					tolerate(err)
 					if err == nil {
 						subs = append(subs[:i], subs[i+1:]...)
@@ -1221,4 +1327,12 @@ func subjectByID(subs []subjects.Subject, id []byte) subjects.Subject {
 		}
 	}
 	panic("observation on an unknown subject")
+}
+
+func runArtifactCreate(c *database.Catalog, userID []byte, in artifacts.CreateInput) (artifacts.Artifact, error) {
+	a, _, err := writes.Run(c, writes.Op{Action: "create_artifact", UserID: userID},
+		func(tx *database.Tx) (artifacts.Artifact, []rowchange.Change, error) {
+			return artifacts.Create(tx, userID, in)
+		})
+	return a, err
 }

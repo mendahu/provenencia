@@ -134,7 +134,12 @@ final class PromoteModel {
                 sourceID: entry.sourceID,
                 fixed: []
             )
-            let facts = await facts()
+            // Rows are built from the graph's Subjects. Without them every row
+            // would drop and the page would read as empty: say so instead.
+            guard let facts = await facts() else {
+                loadError = L10n.string(L10n.Promote.graphUnavailable)
+                return
+            }
             grades = await session.readyValue(confidenceKey) ?? []
             await attachSource()
             flow.load(entryID: entry.subjectID, proposal: proposal, subjects: facts.subjects, bridges: facts.bridges)
@@ -233,6 +238,11 @@ final class PromoteModel {
     }
 
     private func repropose(generation: Int) async {
+        defer {
+            if generation == proposeGeneration {
+                isProposing = false
+            }
+        }
         let fixed = flow.rows.compactMap { row -> CatalogPromoteGraphAlignmentFixed? in
             guard row.decided else { return nil }
             switch row.target {
@@ -254,13 +264,18 @@ final class PromoteModel {
             )
             let facts = await facts()
             guard generation == proposeGeneration else { return }
-            flow.merge(proposal, subjects: facts.subjects)
-            proposeError = nil
+            if let facts {
+                flow.merge(proposal, subjects: facts.subjects)
+                proposeError = nil
+            } else {
+                // Merging without the graph would drop every row and its
+                // decisions. Keep the rows as they are.
+                proposeError = L10n.string(L10n.Promote.graphUnavailableRepropose)
+            }
         } catch {
             guard generation == proposeGeneration else { return }
             proposeError = L10n.Errors.message(for: error)
         }
-        isProposing = false
     }
 
     private func file() async {
@@ -296,7 +311,9 @@ final class PromoteModel {
         }
     }
 
-    private func facts() async -> (subjects: [PromoteFlow.SubjectFact], bridges: [PromoteFlow.BridgeFact]) {
+    /// The graph's Subjects and bridges as rows read them. Nil when the
+    /// graph read isn't ready (never loaded, or failed with nothing cached).
+    private func facts() async -> (subjects: [PromoteFlow.SubjectFact], bridges: [PromoteFlow.BridgeFact])? {
         let rows: SourceGraphRows? = await session.readyValue(graphKey)
         let properties: PropertiesSnapshot? = await session.readyValue(propertiesKey)
         let rules: [CatalogConnectRule]? = await session.readyValue(rulesKey)
@@ -306,7 +323,7 @@ final class PromoteModel {
                 uniquingKeysWith: { first, _ in first }
             )
         }
-        guard let rows else { return ([], []) }
+        guard let rows else { return nil }
         let snapshot = SourceGraphSnapshot.build(
             rows: rows,
             types: properties?.types ?? [],

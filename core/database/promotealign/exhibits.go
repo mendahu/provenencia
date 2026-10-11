@@ -8,8 +8,10 @@ import (
 	"github.com/mendahu/provenencia/core/connectrules"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/datevalues"
+	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/database/properties"
+	"github.com/mendahu/provenencia/core/database/sqlbatch"
 	"github.com/mendahu/provenencia/core/graphalign"
 	"github.com/mendahu/provenencia/core/match"
 )
@@ -31,7 +33,7 @@ type exhibitObs struct {
 // members one hop from the chosen handle's members: "her birth date matches"
 // compares this birth with that birth, never with some other event's date.
 // A neighbor Align didn't map (New, Skip, unreachable) contributes nothing.
-func attachExhibits(q Querier, layer graphalign.Layer, prop *graphalign.Proposal, cfg graphalign.Config, stats graphalign.Stats) error {
+func attachExhibits(q Querier, g *graphcache.Graph, layer graphalign.Layer, prop *graphalign.Proposal, cfg graphalign.Config, stats graphalign.Stats) error {
 	if prop == nil || len(prop.Rows) == 0 {
 		return nil
 	}
@@ -51,7 +53,7 @@ func attachExhibits(q Querier, layer graphalign.Layer, prop *graphalign.Proposal
 	for _, h := range mappedTo {
 		handleIDs = append(handleIDs, h)
 	}
-	members, err := acceptedMembers(q, handleIDs) // every row's handle, neighbors' included
+	members, err := acceptedMembers(g, handleIDs)
 	if err != nil {
 		return err
 	}
@@ -66,17 +68,28 @@ func attachExhibits(q Querier, layer graphalign.Layer, prop *graphalign.Proposal
 		neighbors []neighborPair
 	}
 	var plans []rowPlan
-	var memberIDs [][]byte
+	var fromMembers, towardMembers [][]byte
 	for i := range prop.Rows {
 		r := &prop.Rows[i]
 		if r.Target != graphalign.TargetHandle || len(r.HandleID) != 16 {
 			continue
 		}
 		own := members[string(r.HandleID)]
-		memberIDs = append(memberIDs, own...)
 		plans = append(plans, rowPlan{idx: i, own: own})
+		mapped := false
+		for _, n := range neighbors[string(r.SubjectID)] {
+			gID, ok := mappedTo[string(n)]
+			if !ok {
+				continue
+			}
+			mapped = true
+			towardMembers = append(towardMembers, members[string(gID)]...)
+		}
+		if mapped {
+			fromMembers = append(fromMembers, own...)
+		}
 	}
-	hops, err := bridgeNeighbors(q, memberIDs)
+	hops, err := bridgeNeighbors(q, fromMembers, towardMembers)
 	if err != nil {
 		return err
 	}
@@ -161,7 +174,6 @@ func attachExhibits(q Querier, layer graphalign.Layer, prop *graphalign.Proposal
 // one-hop group.
 func pairExhibits(incoming []exhibitObs, neighbor []byte, memberObs []exhibitObs, cfg graphalign.Config, stats graphalign.Stats) []graphalign.Exhibit {
 	var out []graphalign.Exhibit
-	used := map[string]bool{}
 	for _, in := range incoming {
 		if in.valueType == "" || in.valueType == "subject" {
 			continue
@@ -206,11 +218,6 @@ func pairExhibits(incoming []exhibitObs, neighbor []byte, memberObs []exhibitObs
 		if outcome == match.OutcomeUnknown {
 			continue
 		}
-		key := string(in.id) + "|" + string(chosen.id)
-		if used[key] {
-			continue
-		}
-		used[key] = true
 		out = append(out, graphalign.Exhibit{
 			Property:  in.prop,
 			Outcome:   outcome,
@@ -259,104 +266,97 @@ func exhibitAuto(v match.Value) autoreconcile.Value {
 	}
 	return autoreconcile.Value{
 		Text: v.Text, HasText: v.HasText, Integer: v.Integer, HasInteger: v.HasInteger,
-		TermKey: v.Term, TermID: termID, Date: v.Date, Name: v.Name,
+		TermKey: v.Term, TermID: termID, Neutral: v.Neutral, Date: v.Date, Name: v.Name,
 	}
 }
 
-// acceptedMembers maps each handle to its accepted member Subjects.
-func acceptedMembers(q Querier, entityIDs [][]byte) (map[string][][]byte, error) {
+// acceptedMembers maps each handle to its accepted member Subjects, in claim
+// id order, from nodes the proposal already loaded.
+func acceptedMembers(g *graphcache.Graph, entityIDs [][]byte) (map[string][][]byte, error) {
 	out := map[string][][]byte{}
-	ids := database.UniqueBlobIDs(entityIDs)
-	for start := 0; start < len(ids); start += inBatch {
-		chunk := ids[start:min(start+inBatch, len(ids))]
-		rows, err := q.Query(`SELECT entity_id, subject_id FROM identity_claims
-			WHERE status = 'accepted' AND entity_id IN (`+database.SQLInPlaceholders(len(chunk))+`)
-			ORDER BY entity_id, subject_id`, database.BlobArgs(chunk)...)
+	if g == nil {
+		return out, nil
+	}
+	for _, id := range database.UniqueBlobIDs(entityIDs) {
+		n, err := g.Node(id)
 		if err != nil {
 			return nil, err
 		}
-		for rows.Next() {
-			var entity, subject []byte
-			if err := rows.Scan(&entity, &subject); err != nil {
-				_ = rows.Close()
-				return nil, err
+		if n == nil {
+			continue
+		}
+		for _, m := range n.Members {
+			if m.Accepted {
+				out[string(n.ID)] = append(out[string(n.ID)], m.SubjectID)
 			}
-			out[string(entity)] = append(out[string(entity)], subject)
-		}
-		err = rows.Err()
-		_ = rows.Close()
-		if err != nil {
-			return nil, err
 		}
 	}
 	return out, nil
 }
 
-// bridgeNeighbors maps each of subjectIDs to the Subjects one bridge away.
-func bridgeNeighbors(q Querier, subjectIDs [][]byte) (map[string][][]byte, error) {
+// bridgeNeighbors maps each subject in from to the subjects in toward that
+// sit one bridge away. toward limits the read to the neighbor handle's
+// members, so a hub's members do not pull every bridge.
+func bridgeNeighbors(q Querier, from, toward [][]byte) (map[string][][]byte, error) {
 	out := map[string][][]byte{}
 	keys := connectrules.BridgeTypeKeys()
-	if len(subjectIDs) == 0 || len(keys) == 0 {
+	from = database.UniqueBlobIDs(from)
+	toward = database.UniqueBlobIDs(toward)
+	if len(from) == 0 || len(toward) == 0 || len(keys) == 0 {
 		return out, nil
 	}
-	args := make([]any, 0, len(keys)+len(subjectIDs))
-	for _, k := range keys {
-		args = append(args, k)
-	}
-	for _, id := range subjectIDs {
-		args = append(args, id)
-	}
-	rows, err := q.Query(`SELECT e1.value_subject_id, e2.value_subject_id
-		FROM observations e1
-		JOIN observations e2 ON e2.subject_id = e1.subject_id AND e2.id != e1.id
-			AND e2.polarity = 'positive' AND e2.value_subject_id IS NOT NULL
-		JOIN subjects bs ON bs.id = e1.subject_id
-		JOIN subject_types st ON st.id = bs.subject_type_id
-			AND st.origin = 'provenencia'
-			AND st.key IN (`+database.SQLInPlaceholders(len(keys))+`)
-		WHERE e1.polarity = 'positive'
-			AND e1.value_subject_id IN (`+database.SQLInPlaceholders(len(subjectIDs))+`)`, args...)
+	seen := map[string]bool{}
+	// Both lists can be long, so each pair of batches is one query.
+	err := sqlbatch.Each(from, func(fromBatch [][]byte) error {
+		args := make([]any, 0, len(keys)+len(fromBatch))
+		for _, k := range keys {
+			args = append(args, k)
+		}
+		args = append(args, database.BlobArgs(fromBatch)...)
+		head := `SELECT e1.value_subject_id, e2.value_subject_id
+			FROM observations e1
+			JOIN observations e2 ON e2.subject_id = e1.subject_id AND e2.id != e1.id
+				AND e2.polarity = 'positive' AND e2.value_subject_id IS NOT NULL
+			JOIN subjects bs ON bs.id = e1.subject_id
+			JOIN subject_types st ON st.id = bs.subject_type_id
+				AND st.origin = 'provenencia'
+				AND st.key IN (` + database.SQLInPlaceholders(len(keys)) + `)
+			WHERE e1.polarity = 'positive'
+				AND e1.value_subject_id IN (` + database.SQLInPlaceholders(len(fromBatch)) + `)
+				AND e2.value_subject_id IN (`
+		return sqlbatch.Query(q, head, `)`, args, toward, func(rows *sql.Rows) error {
+			var a, b []byte
+			if err := rows.Scan(&a, &b); err != nil {
+				return err
+			}
+			if len(a) != 16 || len(b) != 16 || string(a) == string(b) {
+				return nil
+			}
+			key := string(a) + "|" + string(b)
+			if seen[key] {
+				return nil
+			}
+			seen[key] = true
+			out[string(a)] = append(out[string(a)], append([]byte(nil), b...))
+			return nil
+		})
+	})
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-	seen := map[string]bool{}
-	for rows.Next() {
-		var a, b []byte
-		if err := rows.Scan(&a, &b); err != nil {
-			return nil, err
-		}
-		if len(a) != 16 || len(b) != 16 || string(a) == string(b) {
-			continue
-		}
-		key := string(a) + "|" + string(b)
-		if seen[key] {
-			continue
-		}
-		seen[key] = true
-		out[string(a)] = append(out[string(a)], append([]byte(nil), b...))
-	}
-	return out, rows.Err()
+	return out, nil
 }
 
 func loadExhibitObservations(q Querier, subjectIDs [][]byte) ([]exhibitObs, error) {
 	query := `SELECT o.id, o.subject_id, p.key, p.origin, p.value_type, p.cardinality,
-			o.value_text, o.value_integer, o.value_date_id, o.value_name_id, t.key, t.label, src.title
+			o.value_text, o.value_integer, o.value_date_id, o.value_name_id, t.key, t.label, COALESCE(t.neutral, 0), src.title
 		FROM observations o
 		JOIN properties p ON p.id = o.property_id
 		JOIN citations c ON c.id = o.citation_id
 		JOIN artifacts a ON a.id = c.artifact_id
 		JOIN sources src ON src.id = a.source_id
 		LEFT JOIN property_terms t ON t.id = o.value_term_id
-		WHERE o.polarity = 'positive' AND o.subject_id IN (` + database.SQLInPlaceholders(len(subjectIDs)) + `)`
-	args := make([]any, len(subjectIDs))
-	for i, id := range subjectIDs {
-		args[i] = id
-	}
-	rows, err := q.Query(query, args...)
-	if err != nil {
-		return nil, err
-	}
+		WHERE o.polarity = 'positive' AND o.subject_id IN (`
 	type pending struct {
 		o              exhibitObs
 		dateID, nameID []byte
@@ -364,7 +364,7 @@ func loadExhibitObservations(q Querier, subjectIDs [][]byte) ([]exhibitObs, erro
 	}
 	var all []pending
 	var dateIDs, nameIDs [][]byte
-	for rows.Next() {
+	err := sqlbatch.Query(q, query, `)`, nil, subjectIDs, func(rows *sql.Rows) error {
 		var (
 			p                     pending
 			valueType             string
@@ -372,15 +372,14 @@ func loadExhibitObservations(q Querier, subjectIDs [][]byte) ([]exhibitObs, erro
 			integer               sql.NullInt64
 		)
 		if err := rows.Scan(&p.o.id, &p.o.subjectID, &p.o.prop.Key, &p.o.prop.Origin, &valueType, &p.o.cardinality,
-			&text, &integer, &p.dateID, &p.nameID, &term, &termLabel, &p.o.source); err != nil {
-			_ = rows.Close()
-			return nil, err
+			&text, &integer, &p.dateID, &p.nameID, &term, &termLabel, &p.o.value.Neutral, &p.o.source); err != nil {
+			return err
 		}
 		p.o.valueType = valueType
 		p.o.value = match.Value{
 			Text: text.String, HasText: text.Valid,
 			Integer: integer.Int64, HasInteger: integer.Valid,
-			Term: term.String,
+			Term: term.String, Neutral: p.o.value.Neutral,
 		}
 		p.termLabel = termLabel.String
 		all = append(all, p)
@@ -390,12 +389,11 @@ func loadExhibitObservations(q Querier, subjectIDs [][]byte) ([]exhibitObs, erro
 		if len(p.nameID) > 0 {
 			nameIDs = append(nameIDs, p.nameID)
 		}
-	}
-	if err := rows.Err(); err != nil {
-		_ = rows.Close()
+		return nil
+	})
+	if err != nil {
 		return nil, err
 	}
-	_ = rows.Close()
 
 	dates, err := datevalues.LookupManyTx(q, dateIDs)
 	if err != nil {

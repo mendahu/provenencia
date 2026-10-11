@@ -62,13 +62,11 @@ func (c TextComparer) Compare(a, b Value) (float64, bool) {
 }
 
 // TermComparer compares vocabulary terms by key: the same term is 1, any
-// other 0. Neutral terms ("unknown") are not evidence either way.
-type TermComparer struct {
-	Neutral map[string]bool
-}
+// other 0. A neutral term (Value.Neutral) is not evidence either way.
+type TermComparer struct{}
 
 func (c TermComparer) Compare(a, b Value) (float64, bool) {
-	if a.Term == "" || b.Term == "" || c.Neutral[a.Term] || c.Neutral[b.Term] {
+	if a.Term == "" || b.Term == "" || a.Neutral || b.Neutral {
 		return 0, false
 	}
 	if a.Term == b.Term {

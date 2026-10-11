@@ -17,6 +17,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjects"
@@ -25,6 +26,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/match"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/writes"
 )
 
 var userID = []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}
@@ -61,9 +63,11 @@ func newFixture(t *testing.T) *fixture {
 	must(t, subjectvocab.Install(c))
 	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{Key: "book", Origin: sourcetypes.OriginProvenencia, Label: "Book"})
 	must(t, err)
-	src, err := sources.Create(c, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Register"})
+	src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Register"})
+	})
 	must(t, err)
-	art, err := artifacts.Create(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
+	art, err := runArtifactCreate(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
 	must(t, err)
 	db, err := c.DB()
 	must(t, err)
@@ -125,14 +129,18 @@ func toponym(s string) value {
 
 func (f *fixture) subject(kind string, values ...value) subjects.Subject {
 	f.t.Helper()
-	s, err := subjects.Create(f.c, userID, subjects.CreateInput{SourceID: f.source.ID, SubjectTypeID: f.types[kind].ID}, nil)
+	s, err := writes.Call(f.c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
+		return subjects.Create(tx, userID, subjects.CreateInput{SourceID: f.source.ID, SubjectTypeID: f.types[kind].ID}, nil)
+	})
 	must(f.t, err)
 	if len(values) > 0 {
 		var in []observations.Input
 		for _, v := range values {
 			in = append(in, v(f, s))
 		}
-		_, err := citations.CreateWithObservations(f.c, userID, citations.CreateInput{ArtifactID: f.artifact.ID, LocatorJSON: locator}, in)
+		_, err := writes.Call(f.c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
+			return citations.CreateWithObservations(tx, userID, citations.CreateInput{ArtifactID: f.artifact.ID, LocatorJSON: locator}, in)
+		})
 		must(f.t, err)
 	}
 	return s
@@ -141,7 +149,10 @@ func (f *fixture) subject(kind string, values ...value) subjects.Subject {
 // handle promotes a new Subject and returns the handle's ref and id.
 func (f *fixture) handle(kind string, values ...value) promote.Result {
 	f.t.Helper()
-	res, err := promote.Save(f.c, userID, promote.Input{SubjectID: f.subject(kind, values...).ID})
+	p6a1 := promote.Input{SubjectID: f.subject(kind, values...).ID}
+	res, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+		return promote.Save(tx, userID, p6a1)
+	})
 	must(f.t, err)
 	return res
 }
@@ -198,7 +209,9 @@ func TestForSubjectPersons(t *testing.T) {
 	})
 
 	t.Run("the Subject's own handle is excluded", func(t *testing.T) {
-		_, err := promote.Save(f.c, userID, promote.Input{SubjectID: james.ID, EntityID: exact.Entity.ID})
+		_, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+			return promote.Save(tx, userID, promote.Input{SubjectID: james.ID, EntityID: exact.Entity.ID})
+		})
 		must(t, err)
 		res, err := matching.ForSubject(f.db, james.ID, matching.Options{})
 		must(t, err)
@@ -310,4 +323,12 @@ func TestForSubjectQueryCountIsConstant(t *testing.T) {
 	if many != one {
 		t.Fatalf("queries: %d for 1 handle, %d for 51", one, many)
 	}
+}
+
+func runArtifactCreate(c *database.Catalog, userID []byte, in artifacts.CreateInput) (artifacts.Artifact, error) {
+	a, _, err := writes.Run(c, writes.Op{Action: "create_artifact", UserID: userID},
+		func(tx *database.Tx) (artifacts.Artifact, []rowchange.Change, error) {
+			return artifacts.Create(tx, userID, in)
+		})
+	return a, err
 }

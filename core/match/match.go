@@ -7,7 +7,7 @@
 // that count: which Property, how its values are compared (a Comparer), how
 // much a resemblance adds (Weight), and how much a clear disagreement takes
 // away (Contradiction). Scores are additive, so the weights read as points:
-// "a matching name is worth 10, a different sex at birth costs 8". Default
+// "a matching name is worth 10, a different sex at birth costs 2". Default
 // profiles live in profiles.go; callers may pass their own.
 //
 // Pure: no catalog access. core/database/matching loads probes and
@@ -36,11 +36,15 @@ type Value struct {
 	Integer    int64
 	HasInteger bool
 	Term       string
-	// TermID is the catalog term id when known. Pairwise evaluation
-	// (Compatible) prefers it; if empty, Evaluate falls back to Term bytes.
-	TermID     []byte
-	Date       *datevalues.Value
-	Name       *namevalues.Value
+	// TermID is the catalog term id when known. Comparers compare terms by
+	// key; Promote's exhibits pass the id to autoreconcile.Compatible, which
+	// falls back to the key when it is empty.
+	TermID []byte
+	// Neutral is the term's catalog flag: no evidence either way, so a
+	// comparison with it is not comparable. Loaders copy it from the term.
+	Neutral bool
+	Date    *datevalues.Value
+	Name    *namevalues.Value
 	// NamePattern is the name pattern key for Name (its Person's name
 	// format, once loaders supply it); empty uses the comparer's pattern.
 	NamePattern string

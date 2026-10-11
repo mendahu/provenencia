@@ -1,0 +1,193 @@
+package conclusionheaders
+
+import (
+	"bytes"
+	"database/sql"
+	"sort"
+
+	"github.com/mendahu/provenencia/core/connectrules"
+	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/canonicalgraph"
+	"github.com/mendahu/provenencia/core/database/sqlbatch"
+	"github.com/mendahu/provenencia/core/hops"
+)
+
+// headerChainDepth is how far a place row's parent chain climbs, and how far
+// the reverse of that read walks back down. The place neighborhood uses the same bound.
+const headerChainDepth = 8
+
+// Dependents is the reverse of the header reads. A place reaches its
+// descendants to headerChainDepth, the events located at those places, and
+// the people whose birth or death that event is. A person reaches the events
+// that list them as a subject. An event that changed reaches its subject
+// people whatever type it is now, so a birth that became a marriage still
+// drops the person row. Birth or death is required only for an event reached
+// because a place changed. Succession, one hop both ways, is included so a
+// later place detail is covered. Association handles are not returned. ids
+// themselves are not returned; the caller already rewrites those.
+func Dependents(q Querier, ids [][]byte) ([][]byte, error) {
+	ids = database.UniqueBlobIDs(ids)
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	places, err := walkDepth(q, hops.PartsOfPlace, ids, headerChainDepth)
+	if err != nil {
+		return nil, err
+	}
+	parents, err := walkDepth(q, hops.ParentsOfPlace, ids, 1)
+	if err != nil {
+		return nil, err
+	}
+	succTo, err := walkDepth(q, hops.SuccessorsOfPlace, ids, 1)
+	if err != nil {
+		return nil, err
+	}
+	succFrom, err := walkDepth(q, hops.PredecessorsOfPlace, ids, 1)
+	if err != nil {
+		return nil, err
+	}
+	located, err := walkDepth(q, hops.EventsAtPlace, append(append(append([][]byte(nil), ids...), places...), parents...), 1)
+	if err != nil {
+		return nil, err
+	}
+	shown, err := walkDepth(q, hops.EventsOfSubject, ids, 1)
+	if err != nil {
+		return nil, err
+	}
+	changedPeople, err := walkDepth(q, hops.SubjectsOfEvent, ids, 1)
+	if err != nil {
+		return nil, err
+	}
+	life, err := birthOrDeath(q, located)
+	if err != nil {
+		return nil, err
+	}
+	placePeople, err := walkDepth(q, hops.SubjectsOfEvent, life, 1)
+	if err != nil {
+		return nil, err
+	}
+	seen := map[string]bool{}
+	for _, id := range ids {
+		seen[string(id)] = true
+	}
+	var out [][]byte
+	for _, group := range [][][]byte{places, parents, succTo, succFrom, located, shown, changedPeople, placePeople} {
+		for _, id := range group {
+			if seen[string(id)] {
+				continue
+			}
+			seen[string(id)] = true
+			out = append(out, id)
+		}
+	}
+	sort.Slice(out, func(i, j int) bool { return bytes.Compare(out[i], out[j]) < 0 })
+	return out, nil
+}
+
+// AssociationEndpoints reads the kept entity values of the association handles
+// in ids. A save calls it before rewriting those rows and again after, and
+// both sets are roots of Dependents. The cache's link index is empty until
+// something has loaded the association, so the rows are the source.
+func AssociationEndpoints(q Querier, ids [][]byte) ([][]byte, error) {
+	ids = database.UniqueBlobIDs(ids)
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	bridges := connectrules.Bridges()
+	if len(bridges) == 0 {
+		return nil, nil
+	}
+	var where string
+	args := make([]any, 0, len(bridges)*2)
+	for i, b := range bridges {
+		if i > 0 {
+			where += " OR "
+		}
+		origin := b.Origin
+		if origin == "" {
+			origin = connectrules.OriginProvenencia
+		}
+		where += "(st.origin = ? AND st.key = ?)"
+		args = append(args, origin, b.BridgeTypeKey)
+	}
+	query := `SELECT DISTINCT r.value_entity_id
+		FROM auto_reconciler_values r
+		JOIN canonical_entities e ON e.id = r.entity_id
+		JOIN subject_types st ON st.id = e.subject_type_id
+		WHERE r.rank = 1 AND r.reason = 'kept' AND r.value_entity_id IS NOT NULL
+			AND (` + where + `)
+			AND r.entity_id IN (`
+	var out [][]byte
+	err := sqlbatch.Query(q, query, `)`, args, ids, func(rows *sql.Rows) error {
+		var id []byte
+		if err := rows.Scan(&id); err != nil {
+			return err
+		}
+		out = append(out, append([]byte(nil), id...))
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return database.UniqueBlobIDs(out), nil
+}
+
+func walkDepth(q Querier, hop hops.Hop, roots [][]byte, depth int) ([][]byte, error) {
+	roots = database.UniqueBlobIDs(roots)
+	if len(roots) == 0 || depth < 1 {
+		return nil, nil
+	}
+	seen := map[string]bool{}
+	for _, id := range roots {
+		seen[string(id)] = true
+	}
+	frontier := roots
+	var out [][]byte
+	for round := 0; round < depth && len(frontier) > 0; round++ {
+		edges, err := canonicalgraph.Walk(q, hop, frontier)
+		if err != nil {
+			return nil, err
+		}
+		frontier = nil
+		for _, id := range canonicalgraph.Targets(edges) {
+			if seen[string(id)] {
+				continue
+			}
+			seen[string(id)] = true
+			cp := append([]byte(nil), id...)
+			out = append(out, cp)
+			frontier = append(frontier, cp)
+		}
+	}
+	return out, nil
+}
+
+const sqlBirthOrDeath = `SELECT ev.id
+FROM canonical_entities ev
+JOIN auto_reconciler_values et ON et.entity_id = ev.id AND et.rank = 1 AND et.reason = 'kept'
+JOIN properties etp ON etp.id = et.property_id AND etp.key = 'event_type' AND etp.origin = 'provenencia'
+JOIN property_terms tt ON tt.id = et.value_term_id AND tt.key IN ('birth', 'death')
+WHERE ev.id IN (`
+
+func birthOrDeath(q Querier, ids [][]byte) ([][]byte, error) {
+	ids = database.UniqueBlobIDs(ids)
+	var out [][]byte
+	err := sqlbatch.Query(q, sqlBirthOrDeath, `)`, nil, ids, func(rows *sql.Rows) error {
+		var id []byte
+		if err := rows.Scan(&id); err != nil {
+			return err
+		}
+		out = append(out, append([]byte(nil), id...))
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// HeaderDependents is Dependents. Callers that snapshotted the short walk
+// keep this name.
+func HeaderDependents(q Querier, ids [][]byte) ([][]byte, error) {
+	return Dependents(q, ids)
+}

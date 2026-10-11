@@ -1374,3 +1374,140 @@ func TestDirectedRelationshipsMatchFromTheSameEnd(t *testing.T) {
 		})
 	}
 }
+
+// A pair the walk accepted on a neighbor's edge loses that support when
+// refinement moves the neighbor to another handle: the score is rescored, not
+// kept at its old high, and the row no longer reads "via" that neighbor.
+func TestRefinementDropsSupportFromAMovedNeighbor(t *testing.T) {
+	merge := func(vs ...match.Values) match.Values {
+		out := match.Values{}
+		for _, v := range vs {
+			for k, x := range v {
+				out[k] = append(out[k], x...)
+			}
+		}
+		return out
+	}
+	sp, female := termProp("sex_at_birth", "female")
+	_, male := termProp("sex_at_birth", "male")
+	fem, mal := vals(sp, female), vals(sp, male)
+	metas := append(nameMetas(), personMetas()[1])
+	spouse, sibling := relSig("spouse"), relSig("sibling")
+
+	ann, husband, carl, dora := id("s-ann"), id("s-husband"), id("s-carl"), id("s-dora")
+	annA, annB, bob, hCarl, hDora := id("h-ann-a"), id("h-ann-b"), id("h-bob"), id("h-carl"), id("h-dora")
+	layer := graphalign.Layer{
+		Subjects: []graphalign.Subject{
+			{ID: ann, Ref: "S-ANN", Kind: "person", Values: merge(nameVals("Ann", "Lee"), fem)},
+			{ID: husband, Ref: "S-HUSBAND", Kind: "person", Values: mal}, // unnamed
+			{ID: carl, Ref: "S-CARL", Kind: "person", Values: nameVals("Carl", "Lee")},
+			{ID: dora, Ref: "S-DORA", Kind: "person", Values: nameVals("Dora", "Lee")},
+		},
+		Bridges: []graphalign.Bridge{
+			{A: ann, B: husband, Signature: spouse},
+			{A: ann, B: carl, Signature: sibling},
+			{A: ann, B: dora, Signature: sibling},
+		},
+		Metas: metas,
+	}
+	// Two Ann Lees: A is married to Bob; B has Carl and Dora for siblings,
+	// so the page's Ann is B once her siblings map.
+	canon := graphalign.Canon{
+		Handles: []graphalign.Handle{
+			{ID: annA, Ref: "A", Kind: "person", Values: merge(nameVals("Ann", "Lee"), fem)},
+			{ID: annB, Ref: "B", Kind: "person", Values: merge(nameVals("Ann", "Lee"), fem)},
+			{ID: bob, Ref: "C", Kind: "person", Values: merge(nameVals("Bob", "Ray"), mal)},
+			{ID: hCarl, Ref: "D", Kind: "person", Values: nameVals("Carl", "Lee")},
+			{ID: hDora, Ref: "E", Kind: "person", Values: nameVals("Dora", "Lee")},
+		},
+		Edges: []graphalign.CanonEdge{
+			{From: annA, To: bob, Signature: spouse},
+			{From: annB, To: hCarl, Signature: sibling},
+			{From: annB, To: hDora, Signature: sibling},
+		},
+	}
+	stats := graphalign.Stats{FanOut: map[string]float64{spouse.Key(): 1, sibling.Key(): 1}}
+	p := graphalign.Align(layer, canon, stats, nil, nil)
+
+	if r := rowBySubject(p, ann); !bytes.Equal(r.HandleID, annB) {
+		t.Fatalf("Ann on %s, want the Ann with Carl and Dora", r.HandleID)
+	}
+	r := rowBySubject(p, husband)
+	if bytes.Equal(r.HandleID, bob) || r.Reason == graphalign.ReasonVia {
+		t.Fatalf("husband: target=%s handle=%s score=%.2f reason=%s; Bob is the other Ann's spouse",
+			r.Target, r.HandleID, r.Score, r.Reason)
+	}
+	for _, alt := range r.Alternatives {
+		if bytes.Equal(alt.HandleID, bob) && (alt.Assessment != graphalign.AssessNone || alt.Reason == graphalign.ReasonVia) {
+			t.Fatalf("Bob still offered as %s via Ann (score %.2f)", alt.Assessment, alt.Score)
+		}
+	}
+}
+
+// Two New rows with one name, where one record names his son and the other
+// his father: those neighbors play different roles, so they neither confirm
+// nor rule out the pair, and the duplicate warning stands on the names.
+func TestNewDuplicateCheckComparesDirectedNeighborsByEnd(t *testing.T) {
+	parent := relSig("parent")
+	parent.Directed = true
+	a, b, son, father := id("s-a"), id("s-b"), id("s-son"), id("s-father")
+	layer := graphalign.Layer{
+		Subjects: []graphalign.Subject{
+			{ID: a, Ref: "S-A", Kind: "person", Values: nameVals("John", "Smith")},
+			{ID: b, Ref: "S-B", Kind: "person", Values: nameVals("John", "Smith")},
+			{ID: son, Ref: "S-SON", Kind: "person", Values: nameVals("Robert", "Smith")},
+			{ID: father, Ref: "S-FATHER", Kind: "person", Values: nameVals("William", "Smith")},
+		},
+		Bridges: []graphalign.Bridge{
+			{A: a, B: son, Signature: parent},    // a is the son's parent
+			{A: father, B: b, Signature: parent}, // b is the father's child
+		},
+		Metas: nameMetas(),
+	}
+	p := graphalign.Align(layer, graphalign.Canon{}, graphalign.Stats{}, nil, nil)
+	for _, sid := range [][]byte{a, b} {
+		r := rowBySubject(p, sid)
+		if r.Target != graphalign.TargetNew || !r.Flags.PossibleDuplicate {
+			t.Fatalf("%s: target=%s duplicate=%v, want New and a possible duplicate", sid, r.Target, r.Flags.PossibleDuplicate)
+		}
+	}
+
+	// The same end still rules a pair out: two Johns whose sons differ.
+	layer.Subjects[3] = graphalign.Subject{ID: father, Ref: "S-OTHERSON", Kind: "person", Values: nameVals("William", "Smith")}
+	layer.Bridges[1] = graphalign.Bridge{A: b, B: father, Signature: parent} // b is William's parent
+	p = graphalign.Align(layer, graphalign.Canon{}, graphalign.Stats{}, nil, nil)
+	if r := rowBySubject(p, a); r.Flags.PossibleDuplicate {
+		t.Fatalf("Johns with different sons still flagged as one")
+	}
+}
+
+// A record that gives sex at birth as "unknown" says nothing about sex: an
+// exact name still matches a handle of either sex.
+func TestUnknownSexIsNoEvidence(t *testing.T) {
+	merge := func(a, b match.Values) match.Values {
+		for k, v := range b {
+			a[k] = append(a[k], v...)
+		}
+		return a
+	}
+	sp, unknown := termProp("sex_at_birth", "unknown")
+	unknown.Neutral = true // the seeded flag
+	_, male := termProp("sex_at_birth", "male")
+	s, h := id("s-john"), id("h-john")
+	layer := graphalign.Layer{
+		Subjects: []graphalign.Subject{{ID: s, Ref: "S-J", Kind: "person", Values: merge(nameVals("John", "Smith"), vals(sp, unknown))}},
+		Metas:    append(nameMetas(), personMetas()[1]),
+	}
+	canon := graphalign.Canon{Handles: []graphalign.Handle{
+		{ID: h, Ref: "PER-1", Kind: "person", Values: merge(nameVals("John", "Smith"), vals(sp, male))},
+	}}
+	r := rowBySubject(graphalign.Align(layer, canon, graphalign.Stats{}, nil, nil), s)
+	if r.Target != graphalign.TargetHandle || !bytes.Equal(r.HandleID, h) {
+		t.Fatalf("target=%s score=%.2f, want John's handle", r.Target, r.Score)
+	}
+	for _, c := range r.Comparisons {
+		if c.Property.Key == "sex_at_birth" && c.Outcome != match.OutcomeUnknown {
+			t.Fatalf("sex_at_birth outcome %s, want unknown", c.Outcome)
+		}
+	}
+}

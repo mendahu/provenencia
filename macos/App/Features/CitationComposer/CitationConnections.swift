@@ -345,7 +345,7 @@ final class CitationConnections {
                 observations: drafts,
                 citationID: citationID
             )
-            context.applySavedCitation()
+            context.applyWrite(created.3)
             await context.waitForGraph()
             await context.reloadListedCitations()
             let role = created.2.first { obs in
@@ -391,6 +391,7 @@ final class CitationConnections {
               let bridgeID = row.bridgeID
         else { return }
         do {
+            let effects: CatalogWriteEffects
             if let roleID = row.rolePersistedID {
                 let observation = CatalogObservation(
                     id: roleID,
@@ -416,10 +417,11 @@ final class CitationConnections {
                 )
                 updateRole(
                     connectionID: connectionID,
-                    persistedID: written.id,
-                    persistedRef: written.ref,
-                    termID: written.valueTermID
+                    persistedID: written.0.id,
+                    persistedRef: written.0.ref,
+                    termID: written.0.valueTermID
                 )
+                effects = written.1
             } else {
                 let written = try await context.store.addObservationsToCitation(
                     projectDir: context.projectDir,
@@ -434,12 +436,12 @@ final class CitationConnections {
                         ),
                     ]
                 )
-                if let written = written.first {
+                if let saved = written.0.first {
                     updateRole(
                         connectionID: connectionID,
-                        persistedID: written.id,
-                        persistedRef: written.ref,
-                        termID: written.valueTermID
+                        persistedID: saved.id,
+                        persistedRef: saved.ref,
+                        termID: saved.valueTermID
                     )
                 } else {
                     markError(
@@ -447,8 +449,9 @@ final class CitationConnections {
                         message: L10n.string(L10n.CitationComposer.rowStateError)
                     )
                 }
+                effects = written.1
             }
-            context.applySavedCitation()
+            context.applyWrite(effects)
         } catch {
             markError(connectionID: connectionID, message: L10n.Errors.message(for: error))
         }

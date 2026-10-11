@@ -55,6 +55,10 @@ type seedBinding struct {
 type seedTerm struct {
 	PropertyKey, Key, Label, Description string
 	Directed                             bool
+	// Inverse is the term that reads this relationship from the other end.
+	Inverse string
+	// Neutral terms are no evidence either way (an "unknown" sex at birth).
+	Neutral bool
 }
 
 var seedTypes = []seedType{
@@ -201,8 +205,8 @@ var seedTerms = []seedTerm{
 	{PropertyKey: "sex_at_birth", Key: "female", Label: "Female"},
 	{PropertyKey: "sex_at_birth", Key: "male", Label: "Male"},
 	{PropertyKey: "sex_at_birth", Key: "intersex", Label: "Intersex"},
-	{PropertyKey: "sex_at_birth", Key: "indeterminate", Label: "Indeterminate"},
-	{PropertyKey: "sex_at_birth", Key: "unknown", Label: "Unknown"},
+	{PropertyKey: "sex_at_birth", Key: "indeterminate", Label: "Indeterminate", Neutral: true},
+	{PropertyKey: "sex_at_birth", Key: "unknown", Label: "Unknown", Neutral: true},
 
 	{PropertyKey: "event_type", Key: "birth", Label: "Birth"},
 	{PropertyKey: "event_type", Key: "death", Label: "Death"},
@@ -224,14 +228,14 @@ var seedTerms = []seedTerm{
 	{PropertyKey: "relationship_type", Key: "spouse", Label: "Spouse"},
 	{PropertyKey: "relationship_type", Key: "sibling", Label: "Sibling"},
 	{PropertyKey: "relationship_type", Key: "cousin", Label: "Cousin"},
-	{PropertyKey: "relationship_type", Key: "parent", Label: "Parent", Directed: true},
-	{PropertyKey: "relationship_type", Key: "child", Label: "Child", Directed: true},
-	{PropertyKey: "relationship_type", Key: "grandparent", Label: "Grandparent", Directed: true},
-	{PropertyKey: "relationship_type", Key: "grandchild", Label: "Grandchild", Directed: true},
-	{PropertyKey: "relationship_type", Key: "pibling", Label: "Aunt / uncle", Directed: true},
-	{PropertyKey: "relationship_type", Key: "nibling", Label: "Niece / nephew", Directed: true},
-	{PropertyKey: "relationship_type", Key: "guardian", Label: "Guardian", Directed: true},
-	{PropertyKey: "relationship_type", Key: "ward", Label: "Ward", Directed: true},
+	{PropertyKey: "relationship_type", Key: "parent", Label: "Parent", Directed: true, Inverse: "child"},
+	{PropertyKey: "relationship_type", Key: "child", Label: "Child", Directed: true, Inverse: "parent"},
+	{PropertyKey: "relationship_type", Key: "grandparent", Label: "Grandparent", Directed: true, Inverse: "grandchild"},
+	{PropertyKey: "relationship_type", Key: "grandchild", Label: "Grandchild", Directed: true, Inverse: "grandparent"},
+	{PropertyKey: "relationship_type", Key: "pibling", Label: "Aunt / uncle", Directed: true, Inverse: "nibling"},
+	{PropertyKey: "relationship_type", Key: "nibling", Label: "Niece / nephew", Directed: true, Inverse: "pibling"},
+	{PropertyKey: "relationship_type", Key: "guardian", Label: "Guardian", Directed: true, Inverse: "ward"},
+	{PropertyKey: "relationship_type", Key: "ward", Label: "Ward", Directed: true, Inverse: "guardian"},
 
 	{PropertyKey: "place_relationship_type", Key: "part_of", Label: "Part of",
 		Description: "From is part of to. Builds display chains.", Directed: true},

@@ -5,36 +5,7 @@ package deleteimpact
 import (
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/apperr"
-)
-
-// Kind identifiers for Impact / GetDeleteImpact (stable machine keys).
-const (
-	KindSource           Kind = "source"
-	KindArtifact         Kind = "artifact"
-	KindCitation         Kind = "citation"
-	KindObservation      Kind = "observation"
-	KindSubject          Kind = "subject"
-	KindSourceType       Kind = "source_type"
-	KindMetadataField    Kind = "metadata_field"
-	KindCredibilityGrade Kind = "source_credibility_grade"
-	KindSubjectType      Kind = "subject_type"
-	KindProperty         Kind = "property"
-	KindPropertyTerm     Kind = "property_term"
-	KindFile             Kind = "file"
-	KindUser             Kind = "user"
-	KindProject          Kind = "project"
-
-	// Conclusion kinds: registered for inbound probes; no delete path or
-	// projector section until their pages ship.
-	KindCanonicalEntity      Kind = "canonical_entity"
-	KindClaimConfidenceGrade Kind = "claim_confidence_grade"
-	// KindIdentityClaim parents facet releases (its pins) only; claims have no
-	// ref and no delete of their own yet.
-	KindIdentityClaim Kind = "identity_claim"
-
-	// Reserved child kinds for stub inbound probes (tables not in the catalog yet).
-	KindReconciliationClaim Kind = "reconciliation_claim"
-	KindNarrative           Kind = "narrative"
+	"github.com/mendahu/provenencia/core/database/catalogmodel"
 )
 
 // Gate is the Impact extra-gate / inbound outcome.
@@ -45,19 +16,6 @@ const (
 	GateEdgeLocked   Gate = "edge_locked"
 	GateInfra        Gate = "infra"
 	GateOriginLocked Gate = "origin_locked"
-)
-
-// Bucket tags one live FK or a logical predicate on an FK.
-const (
-	BucketResource        Bucket = "resource"
-	BucketVocab           Bucket = "vocab"
-	BucketFacet           Bucket = "facet"
-	BucketOwnedOutbound   Bucket = "ownedOutbound"
-	BucketPool            Bucket = "pool"
-	BucketInfra           Bucket = "infra"
-	BucketSkip            Bucket = "skip"
-	BucketOptional        Bucket = "optional"
-	BucketConnectionFacet Bucket = "connectionFacet"
 )
 
 const (
@@ -77,14 +35,8 @@ const (
 	originPluginPref  = "plugin:"
 )
 
-// Kind is one registered catalog delete kind.
-type Kind string
-
 // Gate is one Impact outcome.
 type Gate string
-
-// Bucket is one FK / table classification.
-type Bucket string
 
 // ErrInvalid is returned for an unknown kind or malformed id.
 var ErrInvalid = apperr.New(apperr.CodeDeleteImpactInvalid, apperr.KindUser)
@@ -125,7 +77,7 @@ type Report struct {
 // Group is one inbound resource edge.
 type Group struct {
 	Via    string
-	Kind   Kind
+	Kind   catalogmodel.Kind
 	Total  int
 	Listed []Listed
 }

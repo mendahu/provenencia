@@ -1,13 +1,15 @@
 package promotealign
 
 import (
-	"database/sql"
+	"sort"
 
 	"github.com/mendahu/provenencia/core/connectrules"
 	"github.com/mendahu/provenencia/core/database/canonicalgraph"
+	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/matching"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/graphalign"
+	"github.com/mendahu/provenencia/core/hops"
 	"github.com/mendahu/provenencia/core/match"
 )
 
@@ -17,49 +19,28 @@ type primarySubject struct {
 	kind string
 }
 
-// loadLayer builds the Evidence layer: primary Subjects, values, bridges.
-func loadLayer(q Querier, sourceID []byte) (graphalign.Layer, map[string]primarySubject, error) {
-	rows, err := q.Query(`SELECT s.id, s.ref, st.key, st.origin
-		FROM subjects s
-		JOIN subject_types st ON st.id = s.subject_type_id
-		WHERE s.source_id = ?
-		ORDER BY s.ref COLLATE NOCASE`, sourceID)
+// loadLayer builds the Evidence layer from a loaded Source. Property metas
+// stay a catalog read; they are not part of one Source.
+func loadLayer(g *graphcache.Graph, q Querier, sourceID []byte) (graphalign.Layer, map[string]primarySubject, error) {
+	if g == nil {
+		return graphalign.Layer{}, nil, promote.ErrInvalid
+	}
+	sg, err := g.Source(sourceID)
 	if err != nil {
 		return graphalign.Layer{}, nil, err
 	}
-	defer rows.Close()
-
-	// Collect ids first: Catalog uses MaxOpenConns(1), so we must not hold
-	// this rows cursor open while the value reads run.
-	type row struct {
-		id           []byte
-		ref, key, or string
-	}
-	var listed []row
-	for rows.Next() {
-		var r row
-		if err := rows.Scan(&r.id, &r.ref, &r.key, &r.or); err != nil {
-			return graphalign.Layer{}, nil, err
-		}
-		listed = append(listed, r)
-	}
-	if err := rows.Err(); err != nil {
-		return graphalign.Layer{}, nil, err
-	}
-	_ = rows.Close()
-
 	primary := map[string]primarySubject{}
 	var subjects []graphalign.Subject
 	byKind := map[string][][]byte{}
-	for _, r := range listed {
-		if !promote.PrimaryKind(r.key, r.or) {
+	for _, s := range sg.Subjects {
+		if !promote.PrimaryKind(s.TypeKey, s.TypeOrigin) {
 			continue
 		}
-		if _, ok := match.DefaultProfile(r.key); !ok {
+		if _, ok := match.DefaultProfile(s.TypeKey); !ok {
 			continue
 		}
-		primary[string(r.id)] = primarySubject{id: append([]byte(nil), r.id...), ref: r.ref, kind: r.key}
-		byKind[r.key] = append(byKind[r.key], append([]byte(nil), r.id...))
+		primary[string(s.ID)] = primarySubject{id: append([]byte(nil), s.ID...), ref: s.Ref, kind: s.TypeKey}
+		byKind[s.TypeKey] = append(byKind[s.TypeKey], append([]byte(nil), s.ID...))
 	}
 	values := map[string]match.Values{}
 	for kind, ids := range byKind {
@@ -72,12 +53,12 @@ func loadLayer(q Querier, sourceID []byte) (graphalign.Layer, map[string]primary
 			values[id] = v
 		}
 	}
-	for _, r := range listed {
-		ps, ok := primary[string(r.id)]
+	for _, s := range sg.Subjects {
+		ps, ok := primary[string(s.ID)]
 		if !ok {
 			continue
 		}
-		vals := values[string(r.id)]
+		vals := values[string(s.ID)]
 		if vals == nil {
 			vals = match.Values{}
 		}
@@ -85,21 +66,28 @@ func loadLayer(q Querier, sourceID []byte) (graphalign.Layer, map[string]primary
 			ID: ps.id, Ref: ps.ref, Kind: ps.kind, Values: vals, Provenance: 1,
 		})
 	}
+	sort.Slice(subjects, func(i, j int) bool { return subjects[i].Ref < subjects[j].Ref })
 
-	metas, err := loadMetas(q)
+	metas, err := loadMetas(g)
 	if err != nil {
 		return graphalign.Layer{}, nil, err
 	}
-
-	bridges, err := loadLayerBridges(q, sourceID, primary, byKind)
+	bridges, err := loadLayerBridges(g, q, sourceID, primary, byKind)
 	if err != nil {
 		return graphalign.Layer{}, nil, err
 	}
-
 	return graphalign.Layer{Subjects: subjects, Bridges: bridges, Metas: metas}, primary, nil
 }
 
-func loadMetas(q Querier) ([]match.PropertyMeta, error) {
+func loadMetas(g *graphcache.Graph) ([]match.PropertyMeta, error) {
+	v, err := g.Vocabulary()
+	if err != nil {
+		return nil, err
+	}
+	byKey := map[string]graphcache.VocabProperty{}
+	for _, p := range v.Properties {
+		byKey[p.Origin+"\x00"+p.Key] = p
+	}
 	seen := map[match.Property]bool{}
 	var out []match.PropertyMeta
 	for _, kind := range []string{"person", "event", "place"} {
@@ -112,17 +100,12 @@ func loadMetas(q Querier) ([]match.PropertyMeta, error) {
 				continue
 			}
 			seen[prop] = true
-			var valueType, card string
-			err := q.QueryRow(`SELECT value_type, cardinality FROM properties WHERE key = ? AND origin = ?`,
-				prop.Key, prop.Origin).Scan(&valueType, &card)
-			if err == sql.ErrNoRows {
+			row, ok := byKey[prop.Origin+"\x00"+prop.Key]
+			if !ok {
 				continue
 			}
-			if err != nil {
-				return nil, err
-			}
 			out = append(out, match.PropertyMeta{
-				Property: prop, ValueType: valueType, Cardinality: card,
+				Property: prop, ValueType: row.ValueType, Cardinality: row.Cardinality,
 			})
 		}
 	}
@@ -135,14 +118,14 @@ var neighborTypeProperty = map[string]string{"event": "event_type"}
 
 // Product hops used to discover undirected bridges on the layer.
 var (
-	hopPersonToEvent  = canonicalgraph.MustHop("participation", "person", "event", nil)
-	hopEventToPlace   = canonicalgraph.PlacesOfEvent
-	hopPersonRelated  = canonicalgraph.MustHop("relationship", "person", "related_to", nil)
-	hopPlaceParent    = canonicalgraph.ParentsOfPlace
-	hopPlaceSuccessor = canonicalgraph.SuccessorsOfPlace
+	hopPersonToEvent  = hops.MustHop("participation", "person", "event", nil)
+	hopEventToPlace   = hops.PlacesOfEvent
+	hopPersonRelated  = hops.MustHop("relationship", "person", "related_to", nil)
+	hopPlaceParent    = hops.ParentsOfPlace
+	hopPlaceSuccessor = hops.SuccessorsOfPlace
 )
 
-func loadLayerBridges(q Querier, sourceID []byte, primary map[string]primarySubject, byKind map[string][][]byte) ([]graphalign.Bridge, error) {
+func loadLayerBridges(g *graphcache.Graph, q Querier, sourceID []byte, primary map[string]primarySubject, byKind map[string][][]byte) ([]graphalign.Bridge, error) {
 	var out []graphalign.Bridge
 	seen := map[string]bool{}
 	add := func(a, b []byte, sig graphalign.EdgeSignature) {
@@ -161,11 +144,11 @@ func loadLayerBridges(q Querier, sourceID []byte, primary map[string]primarySubj
 			A: append([]byte(nil), a...), B: append([]byte(nil), b...), Signature: sig,
 		})
 	}
-	directed, err := directedTerms(q)
+	kin, err := loadKinship(g)
 	if err != nil {
 		return nil, err
 	}
-	walk := func(kind string, hop canonicalgraph.Hop) ([]canonicalgraph.Edge, error) {
+	walk := func(kind string, hop hops.Hop) ([]canonicalgraph.Edge, error) {
 		if len(byKind[kind]) == 0 {
 			return nil, nil
 		}
@@ -197,9 +180,10 @@ func loadLayerBridges(q Querier, sourceID []byte, primary map[string]primarySubj
 		return nil, err
 	}
 	for _, e := range participations {
+		role, _, neighborKind, _ := edgeStamp("participation", roles[string(e.Association)], kin)
 		add(e.From, e.To, graphalign.EdgeSignature{
-			BridgeType: "participation", RoleOrType: roles[string(e.Association)],
-			NeighborKind: "event", NeighborTypeTerm: eventTypes[string(e.To)],
+			BridgeType: "participation", RoleOrType: role,
+			NeighborKind: neighborKind, NeighborTypeTerm: eventTypes[string(e.To)],
 		})
 	}
 
@@ -209,7 +193,8 @@ func loadLayerBridges(q Querier, sourceID []byte, primary map[string]primarySubj
 		return nil, err
 	}
 	for _, e := range locations {
-		add(e.From, e.To, graphalign.EdgeSignature{BridgeType: "location", NeighborKind: "place"})
+		_, _, neighborKind, _ := edgeStamp("location", "", kin)
+		add(e.From, e.To, graphalign.EdgeSignature{BridgeType: "location", NeighborKind: neighborKind})
 	}
 
 	// Person ↔ person (relationship).
@@ -222,16 +207,22 @@ func loadLayerBridges(q Querier, sourceID []byte, primary map[string]primarySubj
 		return nil, err
 	}
 	for _, e := range relationships {
-		rel := relTypes[string(e.Association)]
-		add(e.From, e.To, graphalign.EdgeSignature{
-			BridgeType: "relationship", RoleOrType: rel, NeighborKind: "person",
-			Directed: directed[connectrules.DisambiguationRelationshipType+"|"+rel],
+		// "John child of Mary" reads as "Mary parent of John" (or the reverse)
+		// so one relationship has one signature whichever end recorded it.
+		rel, directed, neighborKind, flip := edgeStamp("relationship", relTypes[string(e.Association)], kin)
+		from, to := e.From, e.To
+		if flip {
+			from, to = to, from
+		}
+		add(from, to, graphalign.EdgeSignature{
+			BridgeType: "relationship", RoleOrType: rel, NeighborKind: neighborKind,
+			Directed: directed,
 		})
 	}
 
 	// Place ↔ place (part_of / succeeded_by).
 	for _, step := range []struct {
-		hop  canonicalgraph.Hop
+		hop  hops.Hop
 		term string
 	}{
 		{hopPlaceParent, "part_of"},
@@ -242,9 +233,10 @@ func loadLayerBridges(q Querier, sourceID []byte, primary map[string]primarySubj
 			return nil, err
 		}
 		for _, e := range edges {
+			role, directed, neighborKind, _ := edgeStamp("place_relationship", step.term, kin)
 			add(e.From, e.To, graphalign.EdgeSignature{
-				BridgeType: "place_relationship", RoleOrType: step.term, NeighborKind: "place",
-				Directed: directed[connectrules.DisambiguationPlaceRelationshipType+"|"+step.term],
+				BridgeType: "place_relationship", RoleOrType: role, NeighborKind: neighborKind,
+				Directed: directed,
 			})
 		}
 	}

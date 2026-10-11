@@ -1,0 +1,23 @@
+---
+description: Catalog tables and foreign keys are declared in catalogmodel and checked against SQLite
+globs: core/database/catalogmodel/**/*.go
+alwaysApply: false
+---
+
+# Catalog model
+
+Follow `.cursor/skills/add-catalog-model/SKILL.md`. Tables and foreign keys live in `core/database/catalogmodel`. Probes, the deletable-kind set, releases, and `Impact` stay in `deleteimpact`.
+
+- Same PR as the migration: add, change, or drop the `Tables` row and every live `FK`. `TestPragmaHonesty` fails on an unregistered table, a missing or extra FK, a wrong `To` / `OnDelete` / `FromCols`, or a leading column with no covering index.
+- `Kind` is a stable machine key (`source`), set on the table when delete policy or a probe names it. Call sites use `catalogmodel.KindSource`. Do not alias `Kind` or `Bucket` out of `deleteimpact`.
+- A composite FK is one row, keyed by the leading column, with the full tuple in `FromCols`.
+- Do not register `sqlite_%`, `catalog_search_fts%`, or a kind for a table that is not in the catalog yet. Do not put probes or `Exists` SQL on the model.
+
+```go
+// ❌ BAD — a kind for a table that does not exist, or Exists SQL on the model
+KindNarrative Kind = "narrative"
+
+// ✅ GOOD — table row plus the live FK
+{Name: "citation_notes", Bucket: BucketFacet},
+{From: "citation_notes", Column: "citation_id", To: "citations", OnDelete: "CASCADE", Bucket: BucketFacet, Audited: true},
+```
