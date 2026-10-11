@@ -1017,3 +1017,67 @@ struct CitationComposerModelTests {
         }
     }
 }
+
+@Suite
+struct CitationComposerObservationWindowingTests {
+    @Test func shortListBuildsEveryRow() {
+        let layout = CitationComposerObservationWindowing.layout(
+            rowHeights: [10, 10, 10],
+            spacing: 2,
+            blockMinY: -400,
+            viewportHeight: 800,
+            overscan: 100
+        )
+        #expect(layout == .init(start: 0, end: 3, topSpacer: 0, bottomSpacer: 0))
+    }
+
+    @Test func unknownViewportBuildsTheFirstPage() {
+        let heights = Array(repeating: CGFloat(10), count: 20)
+        let layout = CitationComposerObservationWindowing.layout(
+            rowHeights: heights,
+            spacing: 2,
+            blockMinY: 0,
+            viewportHeight: 0,
+            overscan: 100
+        )
+        #expect(layout.start == 0)
+        #expect(layout.end == CitationComposerObservationWindowing.fullCount)
+        #expect(layout.topSpacer == 0)
+        #expect(layout.bottomSpacer == CitationComposerObservationWindowing.stackHeight(
+            Array(heights[layout.end...]),
+            spacing: 2
+        ))
+    }
+
+    @Test func scrolledWindowKeepsTheSkippedRowsInSpacers() {
+        let layout = CitationComposerObservationWindowing.layout(
+            rowHeights: Array(repeating: 10, count: 20),
+            spacing: 2,
+            blockMinY: -12,
+            viewportHeight: 10,
+            overscan: 0
+        )
+        #expect(layout.start == 1)
+        #expect(layout.end == 2)
+        #expect(layout.topSpacer == 10)
+        #expect(layout.bottomSpacer == CitationComposerObservationWindowing.stackHeight(
+            Array(repeating: 10, count: 18),
+            spacing: 2
+        ))
+    }
+
+    @Test func blockBelowTheViewportBuildsNoRows() {
+        let heights = Array(repeating: CGFloat(10), count: 20)
+        let layout = CitationComposerObservationWindowing.layout(
+            rowHeights: heights,
+            spacing: 2,
+            blockMinY: 2_000,
+            viewportHeight: 800,
+            overscan: 100
+        )
+        #expect(layout.start == 0)
+        #expect(layout.end == 0)
+        #expect(layout.topSpacer == 0)
+        #expect(layout.bottomSpacer == CitationComposerObservationWindowing.stackHeight(heights, spacing: 2))
+    }
+}
