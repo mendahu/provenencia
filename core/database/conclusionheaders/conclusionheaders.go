@@ -3,9 +3,9 @@
 // R4). One header composer per kind serves every surface that shows a handle
 // as a row: lists, Promote's target picker, omnibar hits, later tree nodes.
 //
-// Headers are composed at read time, never stored, and set-based: a whole
-// list is a fixed number of queries whatever its length. Go returns
-// structures, including which naming-matrix rule titles an Event
+// A finished header is stored on the catalog graph. A list read fills any
+// row that is missing, in a fixed number of queries whatever its length.
+// Go returns structures, including which naming-matrix rule titles an Event
 // (eventtitle); the app formats text.
 package conclusionheaders
 

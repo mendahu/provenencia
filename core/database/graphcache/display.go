@@ -1,7 +1,7 @@
 package graphcache
 
-// DepsFunc lists handles whose finished row reads one of ids. The header
-// registry registers it. The graph does not import that package.
+// DepsFunc lists handles whose finished row reads one of ids.
+// conclusionheaders registers it. The graph does not import that package.
 type DepsFunc func(q Querier, ids [][]byte) ([][]byte, error)
 
 // DisplayCheck rebuilds one stored row and compares. conclusionheaders registers it.
