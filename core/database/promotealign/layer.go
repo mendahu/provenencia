@@ -7,6 +7,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/matching"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/graphalign"
+	"github.com/mendahu/provenencia/core/hops"
 	"github.com/mendahu/provenencia/core/match"
 )
 
@@ -137,11 +138,11 @@ var neighborTypeProperty = map[string]string{"event": "event_type"}
 
 // Product hops used to discover undirected bridges on the layer.
 var (
-	hopPersonToEvent  = canonicalgraph.MustHop("participation", "person", "event", nil)
-	hopEventToPlace   = canonicalgraph.PlacesOfEvent
-	hopPersonRelated  = canonicalgraph.MustHop("relationship", "person", "related_to", nil)
-	hopPlaceParent    = canonicalgraph.ParentsOfPlace
-	hopPlaceSuccessor = canonicalgraph.SuccessorsOfPlace
+	hopPersonToEvent  = hops.MustHop("participation", "person", "event", nil)
+	hopEventToPlace   = hops.PlacesOfEvent
+	hopPersonRelated  = hops.MustHop("relationship", "person", "related_to", nil)
+	hopPlaceParent    = hops.ParentsOfPlace
+	hopPlaceSuccessor = hops.SuccessorsOfPlace
 )
 
 func loadLayerBridges(g *graphcache.Graph, q Querier, sourceID []byte, primary map[string]primarySubject, byKind map[string][][]byte) ([]graphalign.Bridge, error) {
@@ -167,7 +168,7 @@ func loadLayerBridges(g *graphcache.Graph, q Querier, sourceID []byte, primary m
 	if err != nil {
 		return nil, err
 	}
-	walk := func(kind string, hop canonicalgraph.Hop) ([]canonicalgraph.Edge, error) {
+	walk := func(kind string, hop hops.Hop) ([]canonicalgraph.Edge, error) {
 		if len(byKind[kind]) == 0 {
 			return nil, nil
 		}
@@ -241,7 +242,7 @@ func loadLayerBridges(g *graphcache.Graph, q Querier, sourceID []byte, primary m
 
 	// Place ↔ place (part_of / succeeded_by).
 	for _, step := range []struct {
-		hop  canonicalgraph.Hop
+		hop  hops.Hop
 		term string
 	}{
 		{hopPlaceParent, "part_of"},

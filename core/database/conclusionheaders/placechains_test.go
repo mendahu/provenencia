@@ -89,12 +89,10 @@ func TestPlaceParentsAtDateFromPeriods(t *testing.T) {
 	f.promoteSubject(uc)
 	f.promoteSubject(pc)
 	f.promoteSubject(ontario)
-	db, err := f.c.DB()
-	must(t, err)
 
 	parents := func(y int) []string {
 		t.Helper()
-		got, err := conclusionheaders.ParentsAtDate(db, torontoID, *pointYear(y))
+		got, err := conclusionheaders.ParentsAtDate(f.c, torontoID, *pointYear(y))
 		must(t, err)
 		return got
 	}
@@ -110,7 +108,7 @@ func TestPlaceParentsAtDateFromPeriods(t *testing.T) {
 	// About 1841 → both UC and PC candidates.
 	abt := *pointYear(1841)
 	abt.Qualifier = datevalues.QualifierABT
-	got, err := conclusionheaders.ParentsAtDate(db, torontoID, abt)
+	got, err := conclusionheaders.ParentsAtDate(f.c, torontoID, abt)
 	must(t, err)
 	if !sameSet(got, []string{"Upper Canada", "Province of Canada"}) {
 		t.Fatalf("about 1841 parents %v", got)
@@ -127,9 +125,7 @@ func TestPlaceSeveralParentsAreAllCandidates(t *testing.T) {
 	farmID := f.promoteSubject(farm)
 	f.promoteSubject(township)
 	f.promoteSubject(county)
-	db, err := f.c.DB()
-	must(t, err)
-	got, err := conclusionheaders.ParentsAtDate(db, farmID, conclusionheaders.TodayDate())
+	got, err := conclusionheaders.ParentsAtDate(f.c, farmID, conclusionheaders.TodayDate())
 	must(t, err)
 	if !sameSet(got, []string{"York Township", "York County"}) {
 		t.Fatalf("parents %v", got)
@@ -143,26 +139,24 @@ func TestIrelandUKDatedMembershipDropsAfter1922(t *testing.T) {
 	f.placeRel(ireland, uk, propertyterms.KeyPartOf, nil, year(1922))
 	irelandID := f.promoteSubject(ireland)
 	ukID := f.promoteSubject(uk)
-	db, err := f.c.DB()
-	must(t, err)
-	before, err := conclusionheaders.ParentsAtDate(db, irelandID, *pointYear(1900))
+	before, err := conclusionheaders.ParentsAtDate(f.c, irelandID, *pointYear(1900))
 	must(t, err)
 	if !sameSet(before, []string{"United Kingdom"}) {
 		t.Fatalf("1900 %v", before)
 	}
-	after, err := conclusionheaders.ParentsAtDate(db, irelandID, *pointYear(1923))
+	after, err := conclusionheaders.ParentsAtDate(f.c, irelandID, *pointYear(1923))
 	must(t, err)
 	if len(after) != 0 {
 		t.Fatalf("1923 still has parents %v", after)
 	}
 	// Both places continue: UK still lists Ireland as a former part only via
 	// the dated link — PartsAtDate at 1923 is empty.
-	parts, err := conclusionheaders.PartsAtDate(db, ukID, *pointYear(1923))
+	parts, err := conclusionheaders.PartsAtDate(f.c, ukID, *pointYear(1923))
 	must(t, err)
 	if len(parts) != 0 {
 		t.Fatalf("UK parts in 1923 %v", parts)
 	}
-	parts1900, err := conclusionheaders.PartsAtDate(db, ukID, *pointYear(1900))
+	parts1900, err := conclusionheaders.PartsAtDate(f.c, ukID, *pointYear(1900))
 	must(t, err)
 	if !sameSet(parts1900, []string{"Ireland"}) {
 		t.Fatalf("UK parts in 1900 %v", parts1900)
@@ -176,19 +170,17 @@ func TestSuccessionNeverBuildsChain(t *testing.T) {
 	f.placeRel(york, toronto, propertyterms.KeySucceededBy, nil, nil)
 	yorkID := f.promoteSubject(york)
 	torontoID := f.promoteSubject(toronto)
-	db, err := f.c.DB()
-	must(t, err)
-	parents, err := conclusionheaders.ParentsAtDate(db, yorkID, *pointYear(1834))
+	parents, err := conclusionheaders.ParentsAtDate(f.c, yorkID, *pointYear(1834))
 	must(t, err)
 	if len(parents) != 0 {
 		t.Fatalf("succession leaked into chain %v", parents)
 	}
-	pred, succ, err := conclusionheaders.SuccessionNames(db, yorkID)
+	pred, succ, err := conclusionheaders.SuccessionNames(f.c, yorkID)
 	must(t, err)
 	if len(pred) != 0 || !sameSet(succ, []string{"Toronto"}) {
 		t.Fatalf("york succession pred=%v succ=%v", pred, succ)
 	}
-	pred, succ, err = conclusionheaders.SuccessionNames(db, torontoID)
+	pred, succ, err = conclusionheaders.SuccessionNames(f.c, torontoID)
 	must(t, err)
 	if !sameSet(pred, []string{"York"}) || len(succ) != 0 {
 		t.Fatalf("toronto succession pred=%v succ=%v", pred, succ)
@@ -211,9 +203,7 @@ func TestSuccessionSplitAndAmalgamation(t *testing.T) {
 	newID := f.promoteSubject(newOne)
 	f.promoteSubject(left)
 	f.promoteSubject(right)
-	db, err := f.c.DB()
-	must(t, err)
-	pred, succ, err := conclusionheaders.SuccessionNames(db, newID)
+	pred, succ, err := conclusionheaders.SuccessionNames(f.c, newID)
 	must(t, err)
 	if !sameSet(pred, []string{"Old A", "Old B"}) || !sameSet(succ, []string{"Left", "Right"}) {
 		t.Fatalf("amalgamation/split pred=%v succ=%v", pred, succ)
@@ -326,15 +316,13 @@ func TestAttachPlaceRelationships(t *testing.T) {
 	f.promoteSubject(uc)
 	f.promoteSubject(ontario)
 	yorkID := f.promoteSubject(york)
-	db, err := f.c.DB()
-	must(t, err)
 	headers, err := conclusionheaders.PlacesByIDs(f.c, [][]byte{torontoID})
 	must(t, err)
 	if len(headers) != 1 {
 		t.Fatalf("%d", len(headers))
 	}
 	h := headers[0]
-	must(t, conclusionheaders.AttachPlaceRelationships(db, &h))
+	must(t, conclusionheaders.AttachPlaceRelationships(f.c, &h))
 	if len(h.PartOf) != 2 {
 		t.Fatalf("part_of %+v", h.PartOf)
 	}
@@ -357,7 +345,7 @@ func TestAttachPlaceRelationships(t *testing.T) {
 	// York → Toronto succession both ways; successor shows Toronto's period.
 	yh, err := conclusionheaders.PlacesByIDs(f.c, [][]byte{yorkID})
 	must(t, err)
-	must(t, conclusionheaders.AttachPlaceRelationships(db, &yh[0]))
+	must(t, conclusionheaders.AttachPlaceRelationships(f.c, &yh[0]))
 	if len(yh[0].Successors) != 1 || yh[0].Successors[0].Title != "Toronto" {
 		t.Fatalf("york successors %+v", yh[0].Successors)
 	}
@@ -374,11 +362,9 @@ func TestAttachPlaceRelationshipsIrelandMembershipSpan(t *testing.T) {
 	f.placeRel(ireland, uk, propertyterms.KeyPartOf, nil, year(1922))
 	irelandID := f.promoteSubject(ireland)
 	ukID := f.promoteSubject(uk)
-	db, err := f.c.DB()
-	must(t, err)
 	ih, err := conclusionheaders.PlacesByIDs(f.c, [][]byte{irelandID})
 	must(t, err)
-	must(t, conclusionheaders.AttachPlaceRelationships(db, &ih[0]))
+	must(t, conclusionheaders.AttachPlaceRelationships(f.c, &ih[0]))
 	if len(ih[0].PartOf) != 1 || ih[0].PartOf[0].Title != "United Kingdom" {
 		t.Fatalf("ireland part_of %+v", ih[0].PartOf)
 	}
@@ -388,7 +374,7 @@ func TestAttachPlaceRelationshipsIrelandMembershipSpan(t *testing.T) {
 	}
 	uh, err := conclusionheaders.PlacesByIDs(f.c, [][]byte{ukID})
 	must(t, err)
-	must(t, conclusionheaders.AttachPlaceRelationships(db, &uh[0]))
+	must(t, conclusionheaders.AttachPlaceRelationships(f.c, &uh[0]))
 	// Contains is "today"; a membership that ended in 1922 is not listed.
 	for _, c := range uh[0].Contains {
 		if c.Title == "Ireland" {
@@ -420,10 +406,8 @@ func TestUndatedPlacesAlwaysHold(t *testing.T) {
 	f.placeRel(child, parent, propertyterms.KeyPartOf, nil, nil)
 	childID := f.promoteSubject(child)
 	f.promoteSubject(parent)
-	db, err := f.c.DB()
-	must(t, err)
 	for _, y := range []int{1, 1000, 2020} {
-		got, err := conclusionheaders.ParentsAtDate(db, childID, *pointYear(y))
+		got, err := conclusionheaders.ParentsAtDate(f.c, childID, *pointYear(y))
 		must(t, err)
 		if !sameSet(got, []string{"Parent"}) {
 			t.Fatalf("%d parents %v", y, got)

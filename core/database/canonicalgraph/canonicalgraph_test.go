@@ -22,6 +22,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
+	"github.com/mendahu/provenencia/core/hops"
 	"github.com/mendahu/provenencia/core/ref"
 	"github.com/mendahu/provenencia/core/writes"
 )
@@ -30,7 +31,7 @@ var userID = []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}
 
 const locator = `{"version":1,"selectors":[{"type":"page","artifact_page":1}]}`
 
-var subjectRole = &canonicalgraph.TermFilter{PropertyKey: "role", TermKey: "subject"}
+var subjectRole = &hops.TermFilter{PropertyKey: "role", TermKey: "subject"}
 
 func must(t *testing.T, err error) {
 	t.Helper()
@@ -44,7 +45,7 @@ func TestNewHop(t *testing.T) {
 		name     string
 		bridge   string
 		from, to string
-		filter   *canonicalgraph.TermFilter
+		filter   *hops.TermFilter
 		wantErr  bool
 	}{
 		{name: "participation person to event", bridge: "participation", from: "person", to: "event"},
@@ -55,11 +56,11 @@ func TestNewHop(t *testing.T) {
 		{name: "not an endpoint of the bridge", bridge: "location", from: "person", to: "place", wantErr: true},
 		{name: "an endpoint to itself", bridge: "location", from: "place", to: "place", wantErr: true},
 		{name: "filter on a property that does not disambiguate", bridge: "location", from: "event", to: "place", filter: subjectRole, wantErr: true},
-		{name: "filter with no term", bridge: "participation", from: "person", to: "event", filter: &canonicalgraph.TermFilter{PropertyKey: "role"}, wantErr: true},
+		{name: "filter with no term", bridge: "participation", from: "person", to: "event", filter: &hops.TermFilter{PropertyKey: "role"}, wantErr: true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := canonicalgraph.NewHop(tt.bridge, tt.from, tt.to, tt.filter)
+			_, err := hops.NewHop(tt.bridge, tt.from, tt.to, tt.filter)
 			if (err != nil) != tt.wantErr {
 				t.Fatalf("err %v, wantErr %v", err, tt.wantErr)
 			}
@@ -161,13 +162,13 @@ func TestWalk(t *testing.T) {
 	)
 	jamesID, birthID, weddingID, yorkID := f.promote(james), f.promote(birth), f.promote(wedding), f.promote(york)
 
-	participates := canonicalgraph.MustHop("participation", "person", "event", nil)
-	asSubject := canonicalgraph.MustHop("participation", "person", "event", subjectRole)
-	located := canonicalgraph.MustHop("location", "event", "place", nil)
+	participates := hops.MustHop("participation", "person", "event", nil)
+	asSubject := hops.MustHop("participation", "person", "event", subjectRole)
+	located := hops.MustHop("location", "event", "place", nil)
 
 	tests := []struct {
 		name string
-		hop  canonicalgraph.Hop
+		hop  hops.Hop
 		from [][]byte
 		want [][]byte
 	}{
@@ -209,7 +210,7 @@ func TestWalk(t *testing.T) {
 	})
 
 	t.Run("the walk reads indexes, not whole tables", func(t *testing.T) {
-		for _, hop := range []canonicalgraph.Hop{participates, asSubject, located.Reverse()} {
+		for _, hop := range []hops.Hop{participates, asSubject, located.Reverse()} {
 			query, args := canonicalgraph.WalkSQL(hop, [][]byte{jamesID, birthID})
 			rows, err := db.Query(`EXPLAIN QUERY PLAN `+query, args...)
 			must(t, err)
@@ -255,20 +256,20 @@ func TestWalkSource(t *testing.T) {
 		observations.Input{PropertyID: f.prop("event"), ValueSubjectID: birth.ID},
 		observations.Input{PropertyID: f.prop("place"), ValueSubjectID: york.ID},
 	)
-	participates := canonicalgraph.MustHop("participation", "person", "event", nil)
+	participates := hops.MustHop("participation", "person", "event", nil)
 
 	tests := []struct {
 		name string
-		hop  canonicalgraph.Hop
+		hop  hops.Hop
 		from []subjects.Subject
 		want []subjects.Subject
 	}{
 		{name: "every participation", hop: participates, from: []subjects.Subject{james}, want: []subjects.Subject{birth, wedding}},
-		{name: "subject role only", hop: canonicalgraph.EventsOfSubject, from: []subjects.Subject{james}, want: []subjects.Subject{birth}},
-		{name: "an event's subjects", hop: canonicalgraph.SubjectsOfEvent, from: []subjects.Subject{birth, wedding}, want: []subjects.Subject{james}},
-		{name: "a location", hop: canonicalgraph.PlacesOfEvent, from: []subjects.Subject{birth}, want: []subjects.Subject{york}},
-		{name: "an event with no location", hop: canonicalgraph.PlacesOfEvent, from: []subjects.Subject{wedding}},
-		{name: "a place's events", hop: canonicalgraph.EventsAtPlace, from: []subjects.Subject{york}, want: []subjects.Subject{birth}},
+		{name: "subject role only", hop: hops.EventsOfSubject, from: []subjects.Subject{james}, want: []subjects.Subject{birth}},
+		{name: "an event's subjects", hop: hops.SubjectsOfEvent, from: []subjects.Subject{birth, wedding}, want: []subjects.Subject{james}},
+		{name: "a location", hop: hops.PlacesOfEvent, from: []subjects.Subject{birth}, want: []subjects.Subject{york}},
+		{name: "an event with no location", hop: hops.PlacesOfEvent, from: []subjects.Subject{wedding}},
+		{name: "a place's events", hop: hops.EventsAtPlace, from: []subjects.Subject{york}, want: []subjects.Subject{birth}},
 	}
 	db, err := f.c.DB()
 	must(t, err)
@@ -290,7 +291,7 @@ func TestWalkSource(t *testing.T) {
 	}
 
 	t.Run("another Source's graph is not walked", func(t *testing.T) {
-		edges, err := canonicalgraph.WalkSource(db, make([]byte, 16), canonicalgraph.EventsOfSubject, [][]byte{james.ID})
+		edges, err := canonicalgraph.WalkSource(db, make([]byte, 16), hops.EventsOfSubject, [][]byte{james.ID})
 		must(t, err)
 		if len(edges) != 0 {
 			t.Fatalf("walked %d edges", len(edges))
@@ -298,7 +299,7 @@ func TestWalkSource(t *testing.T) {
 	})
 
 	t.Run("the walk reads indexes, not whole tables", func(t *testing.T) {
-		query, args := canonicalgraph.WalkSourceSQL(canonicalgraph.EventsOfSubject, f.src.ID, [][]byte{james.ID})
+		query, args := canonicalgraph.WalkSourceSQL(hops.EventsOfSubject, f.src.ID, [][]byte{james.ID})
 		rows, err := db.Query(`EXPLAIN QUERY PLAN `+query, args...)
 		must(t, err)
 		defer rows.Close()
