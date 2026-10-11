@@ -13,6 +13,7 @@ type Vocabulary struct {
 type VocabProperty struct {
 	ID          []byte
 	Key         string
+	Label       string
 	Origin      string
 	ValueType   string
 	Cardinality string
@@ -20,8 +21,10 @@ type VocabProperty struct {
 
 // VocabTerm is one property term, with the property key it belongs to.
 type VocabTerm struct {
+	ID          []byte
 	PropertyKey string
 	Key         string
+	Label       string
 	Directed    bool
 	InverseKey  string
 }
@@ -52,13 +55,13 @@ func (g *Graph) Vocabulary() (Vocabulary, error) {
 
 func (g *Graph) loadVocabulary() (Vocabulary, error) {
 	var v Vocabulary
-	props, err := g.query(`SELECT id, key, origin, value_type, cardinality FROM properties`)
+	props, err := g.query(`SELECT id, key, label, origin, value_type, cardinality FROM properties`)
 	if err != nil {
 		return Vocabulary{}, err
 	}
 	for props.Next() {
 		var p VocabProperty
-		if err := props.Scan(&p.ID, &p.Key, &p.Origin, &p.ValueType, &p.Cardinality); err != nil {
+		if err := props.Scan(&p.ID, &p.Key, &p.Label, &p.Origin, &p.ValueType, &p.Cardinality); err != nil {
 			_ = props.Close()
 			return Vocabulary{}, err
 		}
@@ -90,7 +93,7 @@ func (g *Graph) loadVocabulary() (Vocabulary, error) {
 	}
 	_ = types.Close()
 
-	terms, err := g.query(`SELECT p.key, t.key, t.directed, COALESCE(t.inverse_key, '')
+	terms, err := g.query(`SELECT t.id, p.key, t.key, t.label, t.directed, COALESCE(t.inverse_key, '')
 		FROM property_terms t
 		JOIN properties p ON p.id = t.property_id`)
 	if err != nil {
@@ -99,11 +102,12 @@ func (g *Graph) loadVocabulary() (Vocabulary, error) {
 	for terms.Next() {
 		var t VocabTerm
 		var directed int
-		if err := terms.Scan(&t.PropertyKey, &t.Key, &directed, &t.InverseKey); err != nil {
+		if err := terms.Scan(&t.ID, &t.PropertyKey, &t.Key, &t.Label, &directed, &t.InverseKey); err != nil {
 			_ = terms.Close()
 			return Vocabulary{}, err
 		}
 		t.Directed = directed != 0
+		t.ID = cloneID(t.ID)
 		v.Terms = append(v.Terms, t)
 	}
 	if err := terms.Err(); err != nil {

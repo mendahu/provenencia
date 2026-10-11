@@ -551,9 +551,7 @@ func TestPlaceKeepsEveryDistinctToponym(t *testing.T) {
 		t.Fatalf("no period or parents without evidence: %+v", got[0])
 	}
 
-	db, err := f.c.DB()
-	must(t, err)
-	detail, err := conclusiondetails.ForEntity(db, york)
+	detail, err := conclusiondetails.ForEntity(f.c, york)
 	must(t, err)
 	var weak string
 	for _, field := range detail.Fields {

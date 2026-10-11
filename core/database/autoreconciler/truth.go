@@ -72,6 +72,8 @@ func truthRow(g *group, rank int, cl autoreconcile.ReconciledValue) (graphcache.
 		HasInteger: v.HasInteger,
 		TermID:     append([]byte(nil), v.TermID...),
 		EntityID:   append([]byte(nil), v.EntityID...),
+		Support:    cl.Support,
+		Against:    cl.Against,
 	}
 	if v.Date != nil {
 		b, err := valuecodec.MarshalDate(*v.Date)
