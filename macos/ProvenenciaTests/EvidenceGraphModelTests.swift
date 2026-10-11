@@ -219,9 +219,11 @@ struct EvidenceGraphModelTests {
 
         model.toggleArm(.person)
         model.beginCreate(at: CGPoint(x: 100, y: 140))
+        let gridX = 2 + EvidenceGraphPlacement.originReserveCells
+        let gridY = 3 + EvidenceGraphPlacement.originReserveCells
         #expect(model.isCreating)
-        #expect(model.pendingGridX == 2)
-        #expect(model.pendingGridY == 3)
+        #expect(model.pendingGridX == gridX)
+        #expect(model.pendingGridY == gridY)
         model.draft.label = "Alice"
         store.recordedCalls = []
 
@@ -229,15 +231,17 @@ struct EvidenceGraphModelTests {
         #expect(id != nil)
         #expect(model.armedKind == nil)
         #expect(model.isCreating == false)
-        #expect(store.recordedCalls.contains { $0.hasPrefix("createSubject") && $0.contains("placement=2,3") })
+        #expect(store.recordedCalls.contains {
+            $0.hasPrefix("createSubject") && $0.contains("placement=\(gridX),\(gridY)")
+        })
         #expect(store.recordedCalls.contains { $0.hasPrefix("setSubjectPosition") } == false)
 
         let subjects = try await store.listSubjects(projectDir: projectDir, sourceID: sourceID)
         #expect(subjects.count == 1)
         #expect(subjects.first?.label == "Alice")
         let positions = try await store.listSubjectPositions(projectDir: projectDir, sourceID: sourceID)
-        #expect(positions.first?.gridX == 2)
-        #expect(positions.first?.gridY == 3)
+        #expect(positions.first?.gridX == gridX)
+        #expect(positions.first?.gridY == gridY)
 
         // Session must re-query so the canvas leaves the stale empty snapshot.
         let handle: QueryHandle<SourceGraphRows>? = model.session.queryHandle(
