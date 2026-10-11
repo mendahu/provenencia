@@ -76,10 +76,24 @@ func (g *Graph) OnCommit(rev int64, set effects.Set) error {
 	if err := g.loadIDs(reload, true); err != nil {
 		return err
 	}
-	if err := g.forgetDisplays(uniqueIDs(roots)); err != nil {
+	if err := g.dropCommittedDisplays(uniqueIDs(roots), set); err != nil {
 		return err
 	}
 	return g.verifyIfSet()
+}
+
+// dropCommittedDisplays forgets stored rows for roots. When the write already
+// walked dependents, those ids are dropped too and the walk is not repeated.
+// An empty display map has nothing to forget.
+func (g *Graph) dropCommittedDisplays(roots [][]byte, set effects.Set) error {
+	if len(g.displays) == 0 {
+		return nil
+	}
+	if set.HeaderDepsWalked {
+		g.dropDisplays(uniqueIDs(append(append([][]byte(nil), roots...), set.HeaderDeps...)))
+		return nil
+	}
+	return g.forgetDisplays(roots)
 }
 
 func (g *Graph) entityNeedsReload(row entityRow) bool {

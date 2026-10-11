@@ -157,27 +157,37 @@ const (
 // this call after the rows are gone, so a removed member updates the rows
 // that named it.
 func RecomputeTx(q Querier, entityIDs [][]byte) error {
+	_, err := RecomputeReported(q, entityIDs)
+	return err
+}
+
+// RecomputeReported is RecomputeTx plus the header dependents that walk found.
+// The commit drops stored rows for those ids and does not walk again.
+func RecomputeReported(q Querier, entityIDs [][]byte) ([][]byte, error) {
 	ids := database.UniqueBlobIDs(entityIDs)
 	before, err := conclusionheaders.AssociationEndpoints(q, ids)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	for start := 0; start < len(ids); start += batchSize {
 		end := min(start+batchSize, len(ids))
 		if err := recomputeBatch(q, ids[start:end]); err != nil {
-			return err
+			return nil, err
 		}
 	}
 	after, err := conclusionheaders.AssociationEndpoints(q, ids)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	roots := database.UniqueBlobIDs(append(append(append([][]byte(nil), ids...), before...), after...))
 	deps, err := conclusionheaders.Dependents(q, roots)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return searchindex.ReprojectHandles(q, append(roots, deps...))
+	if err := searchindex.ReprojectHandles(q, append(roots, deps...)); err != nil {
+		return nil, err
+	}
+	return deps, nil
 }
 
 // HandlesObservingSubject returns handles whose members' Observations point
