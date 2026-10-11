@@ -23,6 +23,9 @@ import SwiftUI
 /// - Click-drag on empty document: pan (via ``GraphCanvasPointerController``)
 struct GraphCanvasScrollView<Content: View>: NSViewRepresentable {
     var contentSize: CGSize
+    /// Grid-space point the document's top-left stands on. Moving it shifts the
+    /// scroll offset by the same delta so the viewport stays on the same content.
+    var contentOrigin: CGPoint = .zero
     /// Stable identity for the document (e.g. source id). Changing it resets
     /// magnification; keeping it stable preserves zoom.
     var contentID: AnyHashable
@@ -61,6 +64,7 @@ struct GraphCanvasScrollView<Content: View>: NSViewRepresentable {
         coordinator.documentView = document
         coordinator.installedContentID = contentID
         coordinator.installedContentSize = contentSize
+        coordinator.installedContentOrigin = contentOrigin
 
         DispatchQueue.main.async {
             Self.centerDocument(in: scrollView, contentSize: contentSize)
@@ -76,8 +80,14 @@ struct GraphCanvasScrollView<Content: View>: NSViewRepresentable {
 
         let idChanged = coordinator.installedContentID != contentID
         let sizeChanged = coordinator.installedContentSize != contentSize
+        let previousOrigin = coordinator.installedContentOrigin ?? contentOrigin
+        let originDelta = CGSize(
+            width: previousOrigin.x - contentOrigin.x,
+            height: previousOrigin.y - contentOrigin.y
+        )
         coordinator.installedContentID = contentID
         coordinator.installedContentSize = contentSize
+        coordinator.installedContentOrigin = contentOrigin
 
         // Paint updates every representable pass — safe now that AppKit owns gestures.
         if let document = coordinator.documentView {
@@ -87,6 +97,10 @@ struct GraphCanvasScrollView<Content: View>: NSViewRepresentable {
 
         if sizeChanged {
             coordinator.documentView?.resizeDocument(to: contentSize)
+        }
+        if originDelta != .zero, !idChanged {
+            Self.shiftVisibleOrigin(in: scrollView, by: originDelta, contentSize: contentSize)
+            coordinator.pointer.shiftActiveDocumentOrigin(by: originDelta)
         }
         if idChanged {
             scrollView.magnification = 1
@@ -129,10 +143,30 @@ struct GraphCanvasScrollView<Content: View>: NSViewRepresentable {
         scrollView.reflectScrolledClipView(scrollView.contentView)
     }
 
+    /// Keeps the same grid point in view when the document's origin moves.
+    private static func shiftVisibleOrigin(
+        in scrollView: NSScrollView,
+        by delta: CGSize,
+        contentSize: CGSize
+    ) {
+        let clip = scrollView.contentView
+        let origin = GraphCanvasCoordinates.clampedContentOrigin(
+            proposed: CGPoint(
+                x: clip.bounds.origin.x + delta.width,
+                y: clip.bounds.origin.y + delta.height
+            ),
+            documentSize: contentSize,
+            visibleSize: clip.bounds.size
+        )
+        clip.scroll(to: origin)
+        scrollView.reflectScrolledClipView(clip)
+    }
+
     final class Coordinator {
         var documentView: GraphCanvasDocumentView?
         var installedContentID: AnyHashable?
         var installedContentSize: CGSize?
+        var installedContentOrigin: CGPoint?
         let viewport: GraphCanvasViewportController
         let pointer: GraphCanvasPointerController
 

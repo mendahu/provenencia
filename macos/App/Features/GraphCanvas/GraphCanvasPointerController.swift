@@ -64,6 +64,24 @@ final class GraphCanvasPointerController {
         offsets = [:]
     }
 
+    /// The document's coordinate origin moved by `delta` (old origin minus new).
+    /// Gesture anchors are document points, so they move with it and a drag
+    /// already in progress does not jump.
+    func shiftActiveDocumentOrigin(by delta: CGSize) {
+        switch gesture {
+        case .draggingCard(let id, let start):
+            gesture = .draggingCard(id: id, start: shifted(start, by: delta))
+        case .pendingClick(let start, let targetID):
+            gesture = .pendingClick(start: shifted(start, by: delta), targetID: targetID)
+        case .backgroundPanning, .none:
+            break
+        }
+    }
+
+    private func shifted(_ point: CGPoint, by delta: CGSize) -> CGPoint {
+        CGPoint(x: point.x + delta.width, y: point.y + delta.height)
+    }
+
     func setPointerInside(_ inside: Bool) {
         pointerInside = inside
         if !inside {

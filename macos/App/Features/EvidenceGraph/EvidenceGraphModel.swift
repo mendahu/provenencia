@@ -66,6 +66,14 @@ final class EvidenceGraphModel {
     var activatedSubjectID: String?
     /// Shown when drag / arrow persist fails after an optimistic patch.
     var toast: VocabularyToast?
+    /// Canvas while a drag has carried a card past the resting document.
+    /// Cleared when the drop lands; the snapshot's own fit takes over.
+    var liveCanvas: EvidenceGraphCanvas?
+    /// Grid-space point the scroll document's top-left stands on.
+    var canvasOrigin: CGPoint = CGPoint(
+        x: EvidenceGraphPlacement.originReserve,
+        y: EvidenceGraphPlacement.originReserve
+    )
 
     /// Seeded type ids keyed by primary or bridge kind rawValue.
     var typeIDByKind: [String: String] {
@@ -401,7 +409,7 @@ final class EvidenceGraphModel {
 
     func updateHover(contentPoint: CGPoint) {
         guard armedKind != nil, !isCreating else { return }
-        let cell = GraphCanvasGridMapping.gridCell(contentPoint: contentPoint)
+        let cell = gridCell(atDocument: contentPoint)
         hoverGridX = cell.gridX
         hoverGridY = cell.gridY
     }
@@ -420,10 +428,17 @@ final class EvidenceGraphModel {
         connectHoverPoint = nil
     }
 
+    /// Document points are `grid point − canvasOrigin`.
+    private func gridCell(atDocument point: CGPoint) -> (gridX: Int64, gridY: Int64) {
+        GraphCanvasGridMapping.gridCell(
+            contentPoint: CGPoint(x: point.x + canvasOrigin.x, y: point.y + canvasOrigin.y)
+        )
+    }
+
     /// Opens the create dialog at the snapped cell (tool must be armed).
     func beginCreate(at contentPoint: CGPoint) {
         guard canCite, let kind = armedKind, !isCreating, !isSaving, editingSubjectID == nil else { return }
-        let cell = GraphCanvasGridMapping.gridCell(contentPoint: contentPoint)
+        let cell = gridCell(atDocument: contentPoint)
         pendingGridX = cell.gridX
         pendingGridY = cell.gridY
         draft = CreateDraft(
