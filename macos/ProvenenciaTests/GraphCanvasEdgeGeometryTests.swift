@@ -258,7 +258,10 @@ struct GraphCanvasEdgeGeometryTests {
         let citation = try #require(actions.first { $0.id == EvidenceBridgeCard.editCitationActionID })
         #expect(actions.contains(where: { $0.id == EvidenceBridgeCard.deleteActionID }))
 
-        #expect(abs(citation.frame.midX - edit.frame.midX) < 0.5)
+        let iconTrailing = frame.maxX - EvidenceBridgeCard.shellPaddingX
+        let citationMidX = iconTrailing - EvidenceCardHeaderActionHits.iconSize / 2
+        #expect(abs(citation.frame.midX - citationMidX) < 0.5)
+        #expect(citation.frame.midX > edit.frame.midX)
         #expect(citation.frame.minY > edit.frame.maxY)
     }
 

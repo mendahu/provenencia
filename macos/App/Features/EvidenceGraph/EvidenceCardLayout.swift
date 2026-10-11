@@ -27,6 +27,22 @@ struct EvidenceCardLayout: Equatable, Sendable {
         return CGRect(x: origin.x, y: origin.y + rect.minY, width: size.width, height: rect.height)
     }
 
+    /// Document-space hit centered on a tagged control. Grows to `minSize` on
+    /// each axis when the painted piece is smaller than the hit. `nil` when
+    /// the region is not painted.
+    func centeredHit(_ id: String, origin: CGPoint, minSize: CGFloat) -> CGRect? {
+        guard let rect = regions[id] else { return nil }
+        let translated = rect.offsetBy(dx: origin.x, dy: origin.y)
+        let width = max(translated.width, minSize)
+        let height = max(translated.height, minSize)
+        return CGRect(
+            x: translated.midX - width / 2,
+            y: translated.midY - height / 2,
+            width: width,
+            height: height
+        )
+    }
+
     /// Ids of tagged regions whose id starts with `prefix` (e.g. property rows).
     func regionIDs(withPrefix prefix: String) -> [String] {
         regions.keys.filter { $0.hasPrefix(prefix) }.sorted()

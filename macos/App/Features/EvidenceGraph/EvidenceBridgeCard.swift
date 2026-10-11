@@ -174,18 +174,14 @@ struct EvidenceBridgeCard: View {
             GraphCanvasActionTarget(id: editActionID, frame: headerHits.edit),
         ]
         if let layout {
-            // Measured: the edit-citation pencil column spans the painted body;
-            // rows and Add property are their painted bands.
-            if canCite, let body = layout.band(editCitationActionID, origin: frame.origin) {
-                actions.append(GraphCanvasActionTarget(
-                    id: editCitationActionID,
-                    frame: CGRect(
-                        x: headerHits.edit.minX,
-                        y: body.minY,
-                        width: headerHits.edit.width,
-                        height: max(body.height, bodyActionHitHeight)
-                    )
-                ))
+            // Measured: the citation pencil is the tagged icon, not the header
+            // pencil. Rows and Add property are their painted bands.
+            if canCite, let pencil = layout.centeredHit(
+                editCitationActionID,
+                origin: frame.origin,
+                minSize: EvidenceCardHeaderActionHits.hitSize
+            ) {
+                actions.append(GraphCanvasActionTarget(id: editCitationActionID, frame: pencil))
             }
             if placed.isCited {
                 for observation in extraObservations(for: placed) {
@@ -209,12 +205,7 @@ struct EvidenceBridgeCard: View {
             actions.append(
                 GraphCanvasActionTarget(
                     id: editCitationActionID,
-                    frame: CGRect(
-                        x: headerHits.edit.minX,
-                        y: bodyTop,
-                        width: headerHits.edit.width,
-                        height: bodyActionHitHeight
-                    )
+                    frame: citationHitFrame(cardFrame: frame, bodyTop: bodyTop, uncited: !placed.isCited)
                 )
             )
         }
@@ -271,6 +262,24 @@ struct EvidenceBridgeCard: View {
             actions.append(GraphCanvasActionTarget(id: deleteActionID, frame: deleteFrame))
         }
         return actions
+    }
+
+    /// Fallback before the card reports a layout. The body pencil sits in the
+    /// trailing icon column (flush when cited; one spacer left of the edge
+    /// when uncited), not under the header edit icon.
+    private static func citationHitFrame(cardFrame: CGRect, bodyTop: CGFloat, uncited: Bool) -> CGRect {
+        var iconTrailingX = cardFrame.maxX - shellPaddingX
+        if uncited {
+            iconTrailingX -= EvidenceCardHeaderActionHits.iconSize + EvidenceCardHeaderActionHits.iconSpacing
+        }
+        let iconMidX = iconTrailingX - EvidenceCardHeaderActionHits.iconSize / 2
+        let hit = EvidenceCardHeaderActionHits.hitSize
+        return CGRect(
+            x: iconMidX - hit / 2,
+            y: bodyTop,
+            width: hit,
+            height: bodyActionHitHeight
+        )
     }
 
     static func accessibilityLabel(
@@ -419,13 +428,20 @@ private struct EvidenceBridgeCardChrome: View {
                                 : PVColor.textMuted
                         )
                         .padding(.top, 2)
+                        .background {
+                            Color.clear
+                                .frame(
+                                    width: EvidenceCardHeaderActionHits.hitSize,
+                                    height: EvidenceCardHeaderActionHits.hitSize
+                                )
+                                .evidenceCardHitRegion(EvidenceBridgeCard.editCitationActionID)
+                        }
                 }
                 if !placed.isCited {
                     Color.clear.frame(width: 12, height: 12)
                 }
             }
         }
-        .evidenceCardHitRegion(EvidenceBridgeCard.editCitationActionID)
     }
 
     private var extraPropertyStack: some View {
