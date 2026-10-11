@@ -18,6 +18,7 @@ Use this folder when something useful pops up mid-work and would otherwise get l
 
 - [`source-to-source-relationships.md`](source-to-source-relationships.md)
 - [`source-structure.md`](source-structure.md) — several Evidence graphs per Source, and nested Sources (publication → issue → item)
+- [`registry-source-import.md`](registry-source-import.md) — paste a record URL from Ancestry, FamilySearch and similar to create a Source; access (logins, OAuth) is unproven
 - [`source-provenance-date.md`](source-provenance-date.md)
 - [`text-quote-locators.md`](text-quote-locators.md)
 - [`audio-video-sources.md`](audio-video-sources.md)
