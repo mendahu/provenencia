@@ -77,11 +77,6 @@ const (
 		LEFT JOIN subjects vs ON vs.id = o.value_subject_id
 		LEFT JOIN date_values dv ON dv.id = o.value_date_id`
 
-	sqlListBySource = sqlListSelect + `
-		JOIN subjects s ON s.id = o.subject_id
-		WHERE s.source_id = ?
-		ORDER BY o.ref COLLATE NOCASE`
-
 	sqlListBySubject = sqlListSelect + `
 		WHERE o.subject_id = ?
 		ORDER BY o.ref COLLATE NOCASE`
@@ -198,6 +193,21 @@ type resolvedValue struct {
 	DateChange, NameChange *rowchange.Change
 }
 
+// requireSubjectSource rejects an observation whose subject is homed to a
+// different Source than the citation's artifact. Value subjects are not checked.
+func requireSubjectSource(tx *sql.Tx, citationID, subjectID []byte) error {
+	var one int
+	err := tx.QueryRow(`SELECT 1
+		FROM subjects s
+		JOIN citations c ON c.id = ?
+		JOIN artifacts a ON a.id = c.artifact_id AND a.source_id = s.source_id
+		WHERE s.id = ?`, citationID, subjectID).Scan(&one)
+	if err == sql.ErrNoRows {
+		return ErrInvalid
+	}
+	return err
+}
+
 func insertOne(tx *sql.Tx, citationID []byte, in Input, opts InsertOptions) (Observation, []rowchange.Change, error) {
 	if len(in.ID) != 0 {
 		return Observation{}, nil, ErrInvalid
@@ -211,6 +221,9 @@ func insertOne(tx *sql.Tx, citationID []byte, in Input, opts InsertOptions) (Obs
 	}
 	if len(in.SubjectID) != 16 || len(in.PropertyID) != 16 {
 		return Observation{}, nil, ErrInvalid
+	}
+	if err := requireSubjectSource(tx, citationID, in.SubjectID); err != nil {
+		return Observation{}, nil, err
 	}
 
 	var subjectTypeID []byte
@@ -484,27 +497,6 @@ func hasOtherScalars(in Input, keep string) bool {
 		return true
 	}
 	return false
-}
-
-// ListBySource returns Observations whose subject is home to sourceID.
-func ListBySource(c *database.Catalog, sourceID []byte) ([]Listed, error) {
-	db, err := c.DB()
-	if err != nil {
-		return nil, err
-	}
-	if len(sourceID) != 16 {
-		return nil, ErrInvalid
-	}
-	rows, err := db.Query(sqlListBySource, sourceID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	listed, err := scanListed(rows)
-	if err != nil {
-		return nil, err
-	}
-	return hydrateNameValues(c, listed)
 }
 
 // ListBySubject returns Observations for one subject.
