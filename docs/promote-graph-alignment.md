@@ -30,7 +30,7 @@ A vertical link's strongest evidence is the horizontal structure around it linin
 2. **Decisions are fixed.** A choice the researcher made is never overridden by a re-run. Everything not yet decided follows the decisions.
 3. **One claim per Subject.** A batch is many independent claims, and any one can be rejected later on its own.
 4. **No hard-coded lists of Properties or relationships.** What counts as evidence, and how much, comes from metadata (value types, cardinality, bridge types and roles) and from the catalog's own data. A Property or bridge kind added later takes part with no code change.
-5. **Precision over recall.** A false merge is the costliest mistake. Weak and unreachable matches default to **Skip**, not to New.
+5. **Precision over recall.** A false merge is the costliest mistake. The core never proposes a merge below the accept bar: such a row comes back **Skip** (New only when it has no candidate at all). The page starts a row with no match **unset**, so Done waits for the researcher's Skip or New, and drafts a weak one on its best match for review.
 6. **Explainable, deterministic, local.**
    - Every suggestion carries its reasons.
    - The same inputs give the same proposal.
@@ -46,10 +46,10 @@ Promote is one workspace page; the choose-target screen and the separate claim s
 - **Rows:** one per primary Subject on the Evidence graph (person, event, place).
   - **Already promoted:** shown read-only, with no controls. They are anchors for the graph alignment, and editing them is a separate workflow (Spike 10).
   - **Unpromoted:** a target dropdown with the best match preselected, the next few alternatives, **New**, and **Skip**.
-- **Assessment:** each row shows **strong**, **weak** or **no match**. Clicking it opens a **sheet** with every comparison that contributed: agree, conflict or unknown, with its weight. The agreeing comparisons are preselected as pins and can be toggled.
+- **Assessment:** each row shows **strong**, **medium**, **weak** or **no match**. Clicking it opens a **sheet** with every comparison that contributed: agree, conflict or unknown, with its weight. The agreeing comparisons are preselected as pins and can be toggled.
 - **Claim fields per row:** status, confidence and argument. The argument can be drafted from the assessment.
 - **Bridges aren't rows** (participation, relationship, location). A summary line reads "22 connections will be filed". It expands to a list where each bridge can be switched off, for a relationship the researcher doesn't accept from this Source. Filing rules: §9.1.
-- **Possible duplicates:** two rows landing on the same existing handle, or two New rows whose properties clear the accept bar, get a warning ("these may be the same record; combine them on the Evidence graph"). A signature both rows have neighbors for suppresses the warning when none of those neighbors are the same subject or a match. There is no row-to-row option.
+- **Possible duplicates:** two rows landing on the same existing handle, or two New rows whose properties clear the accept bar, get a warning ("these may be the same record; combine them on the Evidence graph"). A signature both rows have neighbors for suppresses the warning when none of those neighbors are the same subject or a match; a directed signature compares only neighbors on the same end (a son with a son, not with a father). A row whose best record another row took starts with no target and the warning, whatever its band, so Done can't file both on one handle without a choice. There is no row-to-row option.
 - **Done** writes the whole batch in one transaction (§9).
 - **Leaving:** the leave guard covers accidental navigation. Drafts aren't persisted: re-opening re-proposes everything, and only manual changes are lost.
 
@@ -57,7 +57,7 @@ Promote is one workspace page; the choose-target screen and the separate claim s
 
 Every row is **suggested** (the machine filled it) or **decided**: the researcher changed its dropdown or toggled anything in its sheet.
 
-- **On open,** the only fixed points are the clicked Subject's row and the already-promoted rows.
+- **On open,** the only fixed points are the already-promoted rows; the clicked Subject's row is proposed like the rest.
 - **On any change,** that row becomes decided, and graph alignment re-runs over the whole page with every decided row held fixed. Suggested rows and their sheets are recomputed; decided rows are never touched. A row decided New or Skip is held too: it takes no handle and the walk doesn't pass through it.
 - **Rows whose suggestion changed** get a brief "updated" mark with the reason ("because Gracie → PER-Z").
 - **A decided row that the new context contradicts** keeps its choice and gets a warning. The researcher resolves it.
@@ -71,13 +71,13 @@ One pure function, called on open and after every decision:
 ```go
 // Align proposes a handle, New or Skip for every primary Subject on one
 // Evidence layer (graph alignment), holding the fixed pairs as given.
-func Align(layer Layer, canon Canon, stats Stats, fixed []Fixed) Proposal
+func Align(layer Layer, canon Canon, stats Stats, fixed []Fixed, cfg *Config) Proposal // nil cfg: DefaultConfig()
 ```
 
 | Input | Holds |
 | --- | --- |
 | `layer` | One Evidence graph: Subjects, bridges, Observations with values and provenance |
-| `canon` | A bounded piece of the canonical graph: handles, their adjacency, their members' Observations |
+| `canon` | The part of the canonical graph reachable from the seed handles: handles, their links, and their auto-reconciled values (every rank) |
 | `stats` | Catalog statistics for weighting: value frequencies, edge fan-outs (§6) |
 | `fixed` | Decided rows, plus every already-promoted Subject on the layer, whose existing claim is a free anchor |
 
@@ -111,7 +111,6 @@ Alignment **orchestrates**; matching / pairwise evaluation **judges a pair**. Al
 - accept / strong / weak / Skip score bands and the conflict penalty;
 - cold-start priors for `m` (and fallbacks when `u` or fan-out is missing);
 - propagation knobs (queue behaviour, how neighbor support accumulates, one-to-one refusal margins);
-- expansion depth cap if the layer diameter is not enough on its own;
 - any other weights that decide “is this the best candidate to promote?”
 
 Pairwise / matching tunables stay in matching’s registry; alignment’s registry holds walk and band knobs. Do not scatter magic numbers through the walk.
@@ -126,12 +125,12 @@ Defaults ship for the obituary golden and table tests. Real tuning is **empirica
 
 This is collective entity resolution: graph alignment by propagation (cf. PARIS, similarity flooding). The walk is **best-first, not recursive**. A depth-first walk commits to whatever it reaches first; a priority queue lets the strongest matches settle first, so the weaker ones are decided with the most context.
 
-1. **Seed.** For each fixed pair (s, H): look at each bridge between `s` and an unmapped neighbor `t` on the layer (**both directions** — the walk treats the Evidence graph as undirected; directedness matters only when filing, §9.1). For each corresponding edge from H to a handle G in `canon`, push the candidate (t, G).
+1. **Seed.** For each fixed pair (s, H): look at each bridge between `s` and an unmapped neighbor `t` on the layer, from whichever end `s` is on. An undirected signature (spouse) corresponds either way; a directed one (parent of, part of) corresponds only from the same end, so a parent maps to a parent (§ Direction). For each corresponding edge from H to a handle G in `canon`, push the candidate (t, G).
 2. **Pop the best-scoring candidate.** Accept it if it clears the threshold and keeps the graph alignment **one-to-one**: within one layer, a handle takes at most one Subject.
 3. **Propagate.** The accepted pair becomes an anchor. Push its neighbors' candidates, and add **support** to queued candidates that are consistent with it. A candidate's score rises as more of its neighbors map consistently. That's the "the structure lines up" evidence.
 4. **Repeat** until the queue is empty.
-5. **Unreachable Subjects** (nothing reaches them from an anchor) fall back to property-only matching: `core/match` `Rank` picks their candidates, and each is scored by the same pairwise path the walk uses. They are assigned best-first across the layer, so a contest over one handle goes to the stronger match. Below the threshold, they default to Skip. Each pair this pass accepts then seeds the same walk as a fixed anchor, so a neighbor that never cleared `Rank` can still be nominated. A candidate `Rank` recorded but did not accept is not an anchor. The walk records a nominated handle even when its score stays under the accept bar; only an accepted pair propagates further.
-6. **One-hop refinement.** With that mapping in hand, every recorded candidate is scored again. A layer neighbor adds edge support when its mapped handle is this candidate's canonical neighbor under the same signature: the fan-out bonus, plus a registry fraction of that neighbor's property score. Unfixed rows are reassigned from those scores. The pass repeats until the mapping stops changing, and at most once per subject. The fraction is of the neighbor's properties alone, so a city receives its parent's toponym points and does not receive the parent's credit from the country. The published band is this score: a toponym alone stays medium, and a corresponding low-fan-out `part_of` lifts it to strong. Decided rows are rescored afterward, so a neighbor that contradicts a decision can still raise a warning.
+5. **Unreachable Subjects** (nothing reaches them from an anchor) fall back to property-only matching: `core/match` `Rank` picks their candidates, and each is scored by the same pairwise path the walk uses. They are assigned best-first across the layer, so a contest over one handle goes to the stronger match. Below the threshold, the core proposes Skip (New when there is no candidate at all), and the page starts the row unset. Each pair this pass accepts then seeds the same walk as a fixed anchor, so a neighbor that never cleared `Rank` can still be nominated. A candidate `Rank` recorded but did not accept is not an anchor. The walk records a nominated handle even when its score stays under the accept bar; only an accepted pair propagates further.
+6. **One-hop refinement.** With that mapping in hand, every recorded candidate is scored again. A layer neighbor adds edge support when its mapped handle is this candidate's canonical neighbor under the same signature: the fan-out bonus, plus a registry fraction of that neighbor's property score. Unfixed rows are reassigned from those scores. Each pass replaces the scores it read, so support from a neighbor that moved to another handle is dropped rather than kept at its old high, and a "via" reason stays only while that neighbor still supports the candidate. The pass repeats until the mapping stops changing, at most one round per subject, and scores once more if the rounds run out. The fraction is of the neighbor's properties alone, so a city receives its parent's toponym points and does not receive the parent's credit from the country. The published band is this score: a toponym alone stays medium, and a corresponding low-fan-out `part_of` lifts it to strong. Decided rows are rescored afterward, so a neighbor that contradicts a decision can still raise a warning.
 
 The work is about (Subjects + bridges) × candidates × log: well under a millisecond at obituary scale.
 
@@ -148,7 +147,7 @@ A layer is **one Source’s Subjects**, not one connected component. *Map the re
 | Unpromoted | Promoted | Same mechanism, other direction (e.g. open Promote on a new person whose event neighbor was filed earlier). |
 | Promoted | Promoted | Not an identity proposal for those rows. It is a **missing / unfiled relationship**: the Evidence bridge exists and both ends are handles, so §9.1 files the canonical association (shown on the page as a connection that will be filed; the researcher can switch it off). |
 
-**Orphans and disconnected islands** are expected. A primary Subject with no bridges, or a cluster that shares no path with any fixed/promoted anchor, is **unreachable** (§5 step 5): property-only matching only; weak or no match defaults to Skip, not New. Structure-backed scoring never assumes a path from the entry card to every row.
+**Orphans and disconnected islands** are expected. A primary Subject with no bridges, or a cluster that shares no path with any fixed/promoted anchor, is **unreachable** (§5 step 5): property-only matching only; a match below the bar comes back Skip, never New, and a row with no match starts unset on the page. Structure-backed scoring never assumes a path from the entry card to every row.
 
 ---
 
@@ -164,8 +163,8 @@ Nothing names a Property or a relationship. Every weight comes from metadata or 
 
 The scale is looked up by property, then by value type. A property added later is another entry.
 
-- **Frequency scales** (text, terms, dates, integers, unless a property replaces them) derive the weight from catalog frequency: `u` is how often unrelated handles share the value, `m` is the prior that the same entity's records agree. A lone exact agreement is lifted to the weak bar, and any agreement bonus is kept. A toponym's bonus makes an exact toponym medium and leaves it short of strong until an edge adds support. A partial is that lifted weight times the similarity, so a one-letter toponym typo is weak.
-- **Fixed scales** are not lifted. Name: floor 0.8, weight 2.5, contradiction 3. An exact surname plus a shared given name (James / James Kenneth, Lee / Lee-Ellen) is weak. An identical name is 2.5, still under medium. A shared surname with a different given name (about 0.55) conflicts. Sex at birth: floor 1, weight 0.6, contradiction 1. Agreement is a small nudge. A mismatch subtracts 1 and does not erase a name that cleared its floor.
+- **Frequency scales** (text, terms, dates, integers, unless a property replaces them) derive the weight from catalog frequency: `u` is how often unrelated handles share the value, `m` is the prior that the same entity's records agree. A lone exact agreement is lifted to the accept bar (2, also the weak bar), and any agreement bonus is kept. A toponym's bonus makes an exact toponym medium and leaves it short of strong until an edge adds support. A partial is that lifted weight times the similarity, so a one-letter toponym typo is weak.
+- **Fixed scales** are not lifted. Name: floor 0.8, weight 2.5, contradiction 3. An exact surname plus a shared given name (James / James Kenneth, Lee / Lee-Ellen) is weak. An identical name is 2.5, still under medium. A shared surname with a different given name (about 0.6) conflicts. Sex at birth: floor 1, weight 0.6, contradiction 1. Agreement is a small nudge. A mismatch subtracts 1 and does not erase a name that cleared its floor. A neutral term (`property_terms.neutral`, seeded on unknown and indeterminate) is not comparable, so it neither agrees nor conflicts; matching, Rank and the reconciler read the same flag.
 
 `autoreconcile.Compatible` is sameness for reconciliation and for pins. A partial name can make the row weak without being pinned. A line is pinned only when the values are the same.
 
@@ -182,17 +181,17 @@ The scale is looked up by property, then by value type. A property added later i
 
 # 7. Loading: prefetch, then walk in memory
 
-There are no database calls during the walk. Everything loads in a fixed number of batched queries:
+There are no database calls during the walk. Everything it reads is loaded first:
 
-1. **The layer:** one Source's Subjects, bridges, Observations and provenance, from the existing source-graph and comparison loaders.
+1. **The layer:** one Source's Subjects, bridges, Observations and provenance, held on the catalog's in-memory graph (`graphcache`, `g.Source`).
 2. **Seed handles:**
    - the fixed pairs;
    - the handles of already-promoted Subjects;
-   - the top-k property-only candidates of each unpromoted Subject.
-3. **Expand the canonical graph** breadth-first, with **one batched query per hop** (`WHERE entity_id IN (…)`), out to the layer's diameter (the obituary's is about 5). Each reached handle's member Observations load in batch, as `autoreconciler.load` does.
-4. **`stats`:** value frequencies and signature fan-outs, computed lazily.
+   - the top 5 (`seedCandidateLimit`) property-only candidates of each unpromoted Subject, ranked over the kind's handles from the graph (`g.Kind`).
+3. **Walk the in-memory catalog graph** from the seeds through every link to a person, event or place, with no hop limit. A node not yet in memory loads in one batched read per wave of the walk; a warm one costs nothing. Handles carry their cached auto-reconciled values.
+4. **`stats`:** value frequencies and signature fan-outs, computed once and kept on the graph (§8).
 
-That's roughly 10–15 queries per proposal, whatever the graph size.
+Every read is batched (`sqlbatch`, 500 ids per IN list), so the query count follows the waves of the walk, not the size of the layer or the catalog.
 
 **Canonical adjacency without S9-28.** It can be derived through members: H's member m → bridge → neighbor n → n's accepted claim → G. That's a join, and it loads in batch. S9-28 caches it as canonical edges and adds bridge filing, so a prototype of graph alignment (`Align`) doesn't need to wait for it.
 
@@ -201,9 +200,8 @@ That's roughly 10–15 queries per proposal, whatever the graph size.
 # 8. Caching and decisions
 
 - **Decisions live in the page's draft:** the Swift row list (suggested or decided, target, sheet toggles, claim fields). They're sent as `fixed` on every call and never stored.
-- **Stateless first:** every call loads and aligns from scratch. Tens of milliseconds is fine for an interactive page. The S9-33 deep-fixture timings will say if it isn't.
-- **If it's slow,** keep the loaded snapshot in Go memory, keyed by (Source id, latest audit revision). The highest audit revision is a natural change stamp: any write invalidates the snapshot, and re-runs after decisions skip loading.
-- **`stats`** is cached against the same stamp.
+- **Loads read the catalog's in-memory graph** (`graphcache`), which keeps handles, Source graphs and stats between calls, so re-runs after decisions skip loading. Each commit drops what it touched (its effects), not a whole revision.
+- **`stats`** is dropped by any commit that names a handle; a vocabulary-only write keeps it.
 
 ---
 
@@ -263,7 +261,7 @@ Spike 9 was replanned around this on 2026-10-06. The close note is [`deployment-
 
 # 11. Open questions
 
-- **Thresholds and bands / cold-start priors / expansion depth:** all live in the graph-alignment config registry (§4.1). Initial values from the obituary golden; refine by dogfooding whole Sources, not by guessing in isolation.
+- **Thresholds and bands / cold-start priors:** all live in the graph-alignment config registry (§4.1). The walk has no depth limit; the only size knob is the seed count (`seedCandidateLimit` in promotealign). Initial values from the obituary golden; refine by dogfooding whole Sources, not by guessing in isolation.
 - ~~**Places at several grains:**~~ **Decided 2026-10-07:** fold Locations that share a `part_of` graph into one chain; unrealted Places stay competing values and reconcile ([`conclusion-reconciliation.md`](conclusion-reconciliation.md) §11.1). No place-nature Property this spike.
 - **Typed name parts:** a name entered as one form ("Gracie Gray Gates (Frickleton)") weakens name comparison. Is that a composer nudge, or a parsing step?
 - **Naming:** what is the "map the rest of this graph" action called?
@@ -280,16 +278,16 @@ As built at the end of Spike 9 slice 9 (S9-41 – S9-44 and the review fixes sta
 - One pure `core/graphalign.Align` over `core/match.Evaluate`, with every walk and band tunable in `core/graphalign/registry.go`. Deterministic: subjects, the queue, and candidate lists all break ties by ref, then id.
 - Best-first walk, one-to-one, propagation: an accepted anchor re-scores the candidates it reaches, so support accumulates as neighbors map. Edge support counts each corresponding neighbor once.
 - Directed terms (parent, part of, …) correspond only from the same end. Whether a term is directed is the catalog's `property_terms.directed`, not a list in code.
-- Fan-out is measured per bridge from `connectrules`, keyed exactly like the edge signatures. Stats are cached per catalog file and audit revision.
-- Decided rows (handle, New, Skip) are held. Warnings: a held handle its neighbors contradict (`ConflictWithFixed`); a row that lost a handle to another row; two New rows that match each other.
+- Fan-out is measured per bridge from `connectrules`, keyed exactly like the edge signatures. Stats are cached on the catalog's graph and dropped by any commit that names a handle.
+- Decided rows (handle, New, Skip) are held. Warnings: a held handle its neighbors contradict (`ConflictWithFixed`); a row that lost a handle to another row; two held rows on one handle; two New rows that match each other.
 - Rows carry reason codes (`via`, `decided`, `agrees`, `weak`, `taken`, `no_match`, `empty`); the page words them.
 - Done is one transaction with the stale check, one-hop pins (§9), and bridge filing with switch-offs (§9.1).
 
 **Differs from the text above**
 
-- **Query count (§7):** every read is batched, so a proposal's cost doesn't grow with the layer or catalog. It is about 60 queries, not 10–15: the expansion runs one walk per bridge direction per hop (10 × up to 5 hops: both directions of every bridge).
-- **Properties compared (§6):** only the Properties in each kind's `core/match` default profile (name and sex; event type and dates; toponym), not every Property both sides carry. Value frequencies (`u`) cover name, sex, event type, and toponym, and structured names have no frequency key yet, so names score on the cold-start prior.
+- **Query count (§7):** every read is batched (`sqlbatch`), and the canon comes from the in-memory graph, so a warm proposal reads only the layer, the fixed rows, stats if a commit dropped them, and exhibits. Cold, the graph loads one batch per wave of the walk.
+- **Properties compared (§6):** only the Properties in each kind's `core/match` default profile (name and sex; event type and dates; toponym), not every Property both sides carry. Value frequencies (`u`) are read for every profile Property, but only text and term values have a key, so `u` is used for event type and toponym; name and sex use fixed scales.
 - **Provenance (§6):** not applied. Every Subject's provenance is 1; credibility, transcription certainty, and member claim confidence don't scale comparisons yet.
-- **Bridge kinds in the loaders:** the layer and canon loaders list their hops (participation, location, relationship, part of, succeeded by) in code. Pins and filing read bridge kinds from `connectrules`.
+- **Bridge kinds in the loaders:** the layer loader lists its hops (participation, location, relationship, part of, succeeded by) in code. The canon follows every link the graph holds for a `connectrules` bridge, as pins and filing do.
 - **Fallback islands:** an accepted property match seeds the same walk as a fixed anchor. A `Rank` loser does not. One-hop refinement still does not add handles; it only rescores candidates the walk or `Rank` already recorded.
 - **Exhibit values:** a date travels as a structured value. The Mac client formats it with `DateValueDisplay` for the user's locale. The display string is the portable fallback (`Before 2001-03-31`).

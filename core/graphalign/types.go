@@ -64,7 +64,7 @@ type Layer struct {
 	Metas    []match.PropertyMeta
 }
 
-// Canon is a bounded piece of the canonical graph.
+// Canon is the part of the canonical graph reachable from the seed handles.
 type Canon struct {
 	Handles []Handle
 	Edges   []CanonEdge

@@ -2,15 +2,16 @@
 
 How Provenencia scores how much one thing resembles each canonical handle (a Person, Event or Place), from the thing's own Properties. Promote's target suggestions (Spike 9 R7, **S9-10**) were the first consumer; the one-page Promote (S9-44) replaced them with graph alignment. In Promote graph alignment ([`promote-graph-alignment.md`](promote-graph-alignment.md) §4.1) matching is the **smaller, composable unit**: pairwise evaluation (and `Rank` over many handles) judges sameness from Properties; graph alignment **walks** the Evidence graph and calls that judgment per candidate, adding edge/structure. Matching is also the **property-only fallback** for Subjects no anchor reaches. Merge hints are another consumer: `ForEntity` already exists, but no UI uses it yet.
 
-Code: [`core/match`](../core/match) (the algorithm) and [`core/database/matching`](../core/database/matching) (catalog adapter). Consumer: [`core/database/promotealign`](../core/database/promotealign), which reads `CandidatesOfType` once per kind and runs `Rank` in memory to pick each Subject's candidates.
+Code: [`core/match`](../core/match) (the algorithm) and [`core/database/matching`](../core/database/matching) (catalog adapter). Consumer: [`core/database/promotealign`](../core/database/promotealign), which reads each kind's handles from the in-memory catalog graph (`graphcache`) once and runs `Rank` over them to pick each Subject's candidates, and reads layer values with `SubjectsValues`.
 
-`core/match` has one file per concern, each with its own test file:
+`core/match` has one file per concern:
 
 | File | Holds |
 | --- | --- |
 | `match.go` | Values, candidates, `Score`, `Rank` |
 | `registry.go` | **Every tunable number, the built-in name patterns, and the default profiles.** The one place to configure. |
 | `profiles.go` | The `Feature` and `Profile` types |
+| `pair.go` | Pairwise evaluation: `Evaluate`, outcomes, `PropertyMeta` (graph alignment's per-pair unit) |
 | `compare.go` | The `Comparer` interface, `ComparerFor`, `Set`, and the simple comparers (text, term, integer) |
 | `names.go` | `NameComparer`, roles, `NamePattern` and the `NamePatterns` source. No culture-specific logic. |
 | `dates.go` | `DateComparer`: spans, precision, tolerance |
@@ -35,7 +36,7 @@ handles ┘                    └── Feature: Property · Comparer · Weight
 
 ## Scoring
 
-Scores are **additive points**, so the weights read directly: "a matching name is worth 10, a different sex at birth costs 8".
+Scores are **additive points**, so the weights read directly: "a matching name is worth 10, a different sex at birth costs 2".
 
 For each Feature in the Profile:
 
@@ -138,12 +139,12 @@ These live in [`core/match/registry.go`](../core/match/registry.go), with every 
 
 | Kind | Features (Weight / Contradiction) | MinScore |
 | --- | --- | --- |
-| person | name 10 / 0 · sex_at_birth 1 / 8 (neutral terms not compared) | 3 |
+| person | name 10 / 0 · sex_at_birth 1 / 2 (neutral terms not compared) | 3 |
 | event | event_type 4 / 6 · date 6 / 4 · start_date 3 / 2 · end_date 3 / 2 | 5 |
 | place | toponym 10 / 0 | 3 |
 
 Worked examples:
-- **Person:** "James Robins" against "Mary Robins" scores 10 × 0.6 = 6 with typed parts (10 × 0.4 = 4 by form alone), which is shown but below the same name. The same name with a different sex at birth scores 10 − 8 = 2, which is hidden.
+- **Person:** "James Robins" against "Mary Robins" scores 10 × 0.6 = 6, which is shown but below the same name. The same name with a different sex at birth scores 10 − 2 = 8: the mismatch narrows the score and does not hide a name that cleared MinScore.
 - **Event:** the same event type alone (every birth) scores 4, which is hidden. The same type plus the same year scores 4 + 4.8.
 
 ## Configuring
@@ -156,7 +157,6 @@ Worked examples:
   - date scores and span scoring (`DefaultDates`)
   - text and integer settings
   - default profiles
-  - the suggestion limit
 
   Comparers fall back to these values, so a bare `NameComparer{}` scores exactly like `DefaultNames`, and no number is written twice.
 - **Neutral terms** are not in the registry: a term flagged `property_terms.neutral` (seeded on *unknown* and *indeterminate* sex at birth, [`seeded-vocabulary.md`](seeded-vocabulary.md) §3.7) reaches the comparer as `Value.Neutral`, and `TermComparer` treats it as not comparable.
@@ -167,18 +167,18 @@ Worked examples:
   - The Western pattern must give every product part type a role.
 - **Comparer settings** are pointers set with `match.Set`. Nil takes the registry value, and zero is a real value: `NameComparer{CrossRole: match.Set(0.0)}` makes types strict, and `DateComparer{Tolerance: match.Set(0)}` requires the same year.
 - **Not yet:** researcher-facing tuning, profiles persisted per project, and data-driven name patterns.
-  - **Stored profiles** replace `DefaultProfile` in `matching.start`.
+  - **Stored profiles** replace `DefaultProfile` in `matching.start`, and in promotealign and graphalign, which read it directly.
   - **A stored-pattern source** replaces `BuiltinNamePatterns` as `NameComparer.Patterns`.
 
   Both use the same shapes, so scoring code doesn't change.
 
 ## Extending
 
-- **A new kind** needs a `DefaultProfile` case. Its consumer then needs a header for the kind (Promote suggestions carry `PersonHeader` for Persons, and the handle alone for Events and Places until S9-22 / S9-25).
+- **A new kind** needs a `DefaultProfile` case. Its consumer then needs a header for the kind (Promote rows and alternatives carry the Person, Event or Place header).
 - **A new signal on the thing itself** (a researcher-added Property, say) needs:
   - a Comparer, if no existing one fits;
   - a Feature in the profile;
   - the adapter putting those values into the probe and the candidates.
   Signals reached through edges (a Person's birth year through its birth event, its family) are **not** matching Features: Promote graph alignment compares neighbors directly, over the canonical graph (S9-28), with its own weights (S9-41).
-- **Blocking:** candidates are currently every handle of the type with a cached profile value, read in one query (constant query count, but linear rows). When catalogs outgrow that, narrow candidates in `loadCandidates` using the handle search index (S9-34a: `catalog_search_docs` kinds `person` / `event` / `place`, kept current by the cache's upkeep). Scoring does not change.
+- **Blocking:** candidates are currently every handle of the type with a cached profile value, read in one query (constant query count, but linear rows). When catalogs outgrow that, narrow candidates in `loadCandidates` (and in promotealign's `loadCanon`, which reads the same set from the graph with `g.Kind`) using the handle search index (S9-34a: `catalog_search_docs` kinds `person` / `event` / `place`, kept current by the cache's upkeep). Scoring does not change.
 - **Merge hints:** `matching.ForEntity(handle)` ranks the other handles of the same type. A merge-hint surface needs only to shape that result.
