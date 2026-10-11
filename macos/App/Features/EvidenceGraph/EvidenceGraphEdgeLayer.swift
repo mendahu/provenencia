@@ -14,6 +14,8 @@ struct EvidenceGraphEdgeLayer: View {
     var dragOffsets: [String: CGSize] = [:]
     /// Measured card layouts, so edges attach to the painted cards.
     var layouts: [String: EvidenceCardLayout] = [:]
+    /// Grid-space point the document's top-left stands on. Frames are drawn at `grid − origin`.
+    var documentOrigin: CGPoint = .zero
     @Environment(\.graphCanvasViewport) private var viewport
 
     var body: some View {
@@ -111,10 +113,12 @@ struct EvidenceGraphEdgeLayer: View {
 
     private func primaryFrame(_ placed: SourceGraphPlacedSubject, offset: CGSize) -> CGRect {
         EvidenceSubjectCard.edgeFrame(for: placed, dragOffset: offset, layout: layouts[placed.id])
+            .offsetBy(dx: -documentOrigin.x, dy: -documentOrigin.y)
     }
 
     private func bridgeFrame(_ placed: SourceGraphPlacedBridge, offset: CGSize) -> CGRect {
         EvidenceBridgeCard.contentFrame(for: placed, in: snapshot, dragOffset: offset, layout: layouts[placed.id])
+            .offsetBy(dx: -documentOrigin.x, dy: -documentOrigin.y)
     }
 }
 
@@ -124,13 +128,15 @@ struct EvidenceGraphEdgesHost: View {
     let snapshot: SourceGraphSnapshot
     var selectedBridgeID: String?
     var layouts: [String: EvidenceCardLayout] = [:]
+    var documentOrigin: CGPoint = .zero
 
     var body: some View {
         EvidenceGraphEdgeLayer(
             snapshot: snapshot,
             selectedBridgeID: selectedBridgeID,
             dragOffsets: pointer.offsets,
-            layouts: layouts
+            layouts: layouts,
+            documentOrigin: documentOrigin
         )
     }
 }
@@ -140,10 +146,12 @@ struct EvidenceGraphConnectRubberBand: View {
     let origin: SourceGraphPlacedSubject
     let cursor: CGPoint
     var layout: EvidenceCardLayout?
+    var documentOrigin: CGPoint = .zero
 
     var body: some View {
         Canvas { context, _ in
             let fromRect = EvidenceSubjectCard.edgeFrame(for: origin, layout: layout)
+                .offsetBy(dx: -documentOrigin.x, dy: -documentOrigin.y)
             let edgeStart = GraphCanvasEdgeGeometry.attachmentPoint(fromRect: fromRect, toward: cursor)
             let start = GraphCanvasEdgeGeometry.tuckInside(edgeStart, rect: fromRect)
             let path = GraphCanvasEdgeGeometry.cubicPath(from: start, to: cursor)

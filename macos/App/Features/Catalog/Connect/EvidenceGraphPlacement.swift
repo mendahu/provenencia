@@ -1,12 +1,35 @@
 import CoreGraphics
 import Foundation
 
+/// The scroll document for one evidence graph: a grid-space origin and a size.
+///
+/// Coordinates below ``origin`` are the unrendered reserve. The document's
+/// top-left is `origin`, so a card at grid point `p` is drawn at `p - origin`.
+struct EvidenceGraphCanvas: Equatable, Sendable {
+    var origin: CGPoint
+    var size: CGSize
+
+    var maxX: CGFloat { origin.x + size.width }
+    var maxY: CGFloat { origin.y + size.height }
+
+    static let downtown = EvidenceGraphCanvas(
+        origin: CGPoint(
+            x: EvidenceGraphPlacement.originReserve,
+            y: EvidenceGraphPlacement.originReserve
+        ),
+        size: EvidenceGraphPlacement.contentSize
+    )
+}
+
 /// Pure grid placement for composer-created subjects. No store or session access.
 enum EvidenceGraphPlacement {
-    /// Resting document. A graph grows past this only when a card approaches an edge.
+    /// Resting downtown document. A graph grows past this when a card approaches an edge.
     static let contentSize = CGSize(width: 4_000, height: 4_000)
     /// One growth step: 20 grid cells.
     static let growthStep: CGFloat = 800
+    /// One resting screen, held back from grid zero so the document can grow left and up.
+    /// Stored positions are shifted by ``originReserveCells`` to match.
+    static let originReserve: CGFloat = 4_000
 
     static var spacing: CGFloat { GraphCanvasGridMapping.defaultSpacing }
 
@@ -24,42 +47,85 @@ enum EvidenceGraphPlacement {
         Int64(ceil((2 * subjectCardHalfHeight + 2 * spacing) / spacing))
     }
 
+    /// Grid cells in ``originReserve`` (40-point spacing).
+    static var originReserveCells: Int64 {
+        Int64(originReserve / spacing)
+    }
+
+    /// New cards are born downtown, one reserve in from grid zero.
     static var minCell: CatalogGridCell {
-        CatalogGridCell(gridX: minGridX, gridY: minGridY)
-    }
-
-    static var maxCell: CatalogGridCell {
-        maxCell(fitting: contentSize)
-    }
-
-    /// Largest cell whose card still sits inside `size`.
-    static func maxCell(fitting size: CGSize) -> CatalogGridCell {
         CatalogGridCell(
-            gridX: maxGridX(documentWidth: size.width),
-            gridY: maxGridY(documentHeight: size.height)
+            gridX: minGridX + originReserveCells,
+            gridY: minGridY + originReserveCells
         )
     }
 
-    /// Document that keeps every frame at least one card-width inside the edge.
-    /// Starts at ``contentSize`` and extends an edge by ``growthStep`` until
-    /// that card is clear. A frame already inside the margin does not grow it.
-    static func contentSize(fitting frames: [CGRect]) -> CGSize {
-        var width = contentSize.width
-        var height = contentSize.height
+    /// Largest cell on the resting downtown board.
+    static var maxCell: CatalogGridCell {
+        maxCell(on: .downtown)
+    }
+
+    /// Largest cell whose card still sits inside `canvas`.
+    static func maxCell(on canvas: EvidenceGraphCanvas) -> CatalogGridCell {
+        CatalogGridCell(
+            gridX: maxGridX(documentEdge: canvas.maxX),
+            gridY: maxGridY(documentEdge: canvas.maxY)
+        )
+    }
+
+    /// Downtown board, grown by ``growthStep`` on any edge a frame approaches.
+    /// Left and top move toward grid zero and stop there. Right and bottom do not.
+    static func canvas(fitting frames: [CGRect]) -> EvidenceGraphCanvas {
+        var originX = originReserve
+        var originY = originReserve
+        var maxX = originReserve + contentSize.width
+        var maxY = originReserve + contentSize.height
         let margin = subjectCardWidth
+        let downtownRight = originReserve + contentSize.width
+        let downtownBottom = originReserve + contentSize.height
         for frame in frames {
-            if width - frame.maxX < margin {
-                let needed = frame.maxX + margin
-                let steps = ceil((needed - contentSize.width) / growthStep)
-                width = max(width, contentSize.width + steps * growthStep)
+            if frame.minX - originX < margin {
+                let needed = frame.minX - margin
+                let steps = ceil((originReserve - needed) / growthStep)
+                originX = min(originX, max(0, originReserve - steps * growthStep))
             }
-            if height - frame.maxY < margin {
+            if frame.minY - originY < margin {
+                let needed = frame.minY - margin
+                let steps = ceil((originReserve - needed) / growthStep)
+                originY = min(originY, max(0, originReserve - steps * growthStep))
+            }
+            if maxX - frame.maxX < margin {
+                let needed = frame.maxX + margin
+                let steps = ceil((needed - downtownRight) / growthStep)
+                maxX = max(maxX, downtownRight + steps * growthStep)
+            }
+            if maxY - frame.maxY < margin {
                 let needed = frame.maxY + margin
-                let steps = ceil((needed - contentSize.height) / growthStep)
-                height = max(height, contentSize.height + steps * growthStep)
+                let steps = ceil((needed - downtownBottom) / growthStep)
+                maxY = max(maxY, downtownBottom + steps * growthStep)
             }
         }
-        return CGSize(width: width, height: height)
+        return EvidenceGraphCanvas(
+            origin: CGPoint(x: originX, y: originY),
+            size: CGSize(width: maxX - originX, height: maxY - originY)
+        )
+    }
+
+    /// Document size for `frames`. See ``canvas(fitting:)``.
+    static func contentSize(fitting frames: [CGRect]) -> CGSize {
+        canvas(fitting: frames).size
+    }
+
+    /// The smaller origin and the further far edge, so a live drag can extend a fitted board.
+    static func union(_ a: EvidenceGraphCanvas, _ b: EvidenceGraphCanvas) -> EvidenceGraphCanvas {
+        let minX = min(a.origin.x, b.origin.x)
+        let minY = min(a.origin.y, b.origin.y)
+        let maxX = max(a.maxX, b.maxX)
+        let maxY = max(a.maxY, b.maxY)
+        return EvidenceGraphCanvas(
+            origin: CGPoint(x: minX, y: minY),
+            size: CGSize(width: maxX - minX, height: maxY - minY)
+        )
     }
 
     static func subjectFrame(gridX: Int64, gridY: Int64, dragOffset: CGSize = .zero) -> CGRect {
@@ -108,8 +174,8 @@ enum EvidenceGraphPlacement {
         var column = landingColumn ?? placed.map(\.gridX).max()! + horizontalStep
         var row = rowInColumn(column, placed: placed)
         let landing = subjectFrame(gridX: column, gridY: row)
-        let size = contentSize(fitting: cardFrames(in: snapshot) + [landing])
-        let limit = maxCell(fitting: size)
+        let board = canvas(fitting: cardFrames(in: snapshot) + [landing])
+        let limit = maxCell(on: board)
         if row > limit.gridY, column < limit.gridX {
             column = min(column + horizontalStep, limit.gridX)
             row = rowInColumn(column, placed: placed)
@@ -148,17 +214,17 @@ enum EvidenceGraphPlacement {
         return Int64(ceil(raw - 1e-9))
     }
 
-    /// Largest x such that the card's right edge stays inside `documentWidth`.
-    private static func maxGridX(documentWidth: CGFloat) -> Int64 {
+    /// Largest x such that the card's right edge stays inside `documentEdge` (grid space).
+    private static func maxGridX(documentEdge: CGFloat) -> Int64 {
         let width = EvidenceSubjectCard.width
-        let raw = (documentWidth - width / 2) / spacing - 0.5
+        let raw = (documentEdge - width / 2) / spacing - 0.5
         return Int64(floor(raw + 1e-9))
     }
 
-    /// Largest y such that the card's bottom stays inside `documentHeight`.
-    private static func maxGridY(documentHeight: CGFloat) -> Int64 {
+    /// Largest y such that the card's bottom stays inside `documentEdge` (grid space).
+    private static func maxGridY(documentEdge: CGFloat) -> Int64 {
         let half = EvidenceSubjectCard.approximateHalfHeight
-        let raw = (documentHeight - half) / spacing - 0.5
+        let raw = (documentEdge - half) / spacing - 0.5
         return Int64(floor(raw + 1e-9))
     }
 

@@ -7,48 +7,48 @@ struct EvidenceGraphPlacementTests {
     @Test func constantsMatchFormulas() {
         #expect(EvidenceGraphPlacement.horizontalStep == 8)
         #expect(EvidenceGraphPlacement.verticalStep == 4)
-        #expect(EvidenceGraphPlacement.minCell.gridX == 4)
-        #expect(EvidenceGraphPlacement.minCell.gridY == 1)
-        #expect(EvidenceGraphPlacement.maxCell.gridX == 96)
-        #expect(EvidenceGraphPlacement.maxCell.gridY == 98)
+        #expect(EvidenceGraphPlacement.minCell.gridX == 104)
+        #expect(EvidenceGraphPlacement.minCell.gridY == 101)
+        #expect(EvidenceGraphPlacement.maxCell.gridX == 196)
+        #expect(EvidenceGraphPlacement.maxCell.gridY == 198)
     }
 
     @Test func emptyGraphLandsAtFourThree() {
         let snapshot = SourceGraphSnapshot(sourceId: "src")
         let slot = EvidenceGraphPlacement.composerSlot(in: snapshot, landingColumn: nil)
-        #expect(slot.cell.gridX == 4)
-        #expect(slot.cell.gridY == 3)
-        #expect(slot.landingColumn == 4)
+        #expect(slot.cell.gridX == 104)
+        #expect(slot.cell.gridY == 103)
+        #expect(slot.landingColumn == 104)
     }
 
     @Test func firstCreateIsRightOfRightmostAndLevelWithTop() {
         let snapshot = snapshot(
-            subjects: [placedSubject(id: "p1", x: 0, y: 2)],
-            bridges: [placedBridge(id: "b1", x: 8, y: 6)]
+            subjects: [placedSubject(id: "p1", x: downtown(0), y: downtown(2))],
+            bridges: [placedBridge(id: "b1", x: downtown(8), y: downtown(6))]
         )
         let slot = EvidenceGraphPlacement.composerSlot(in: snapshot, landingColumn: nil)
-        #expect(slot.cell.gridX == 16)
-        #expect(slot.cell.gridY == 2)
-        #expect(slot.landingColumn == 16)
+        #expect(slot.cell.gridX == 116)
+        #expect(slot.cell.gridY == 102)
+        #expect(slot.landingColumn == 116)
         #expect(framesIntersect(slot.cell, existing: snapshot) == false)
     }
 
     @Test func newCardDoesNotIntersectSubjectOrBridge() {
-        let subjectRight = snapshot(subjects: [placedSubject(id: "p1", x: 10, y: 4)], bridges: [])
+        let subjectRight = snapshot(subjects: [placedSubject(id: "p1", x: downtown(10), y: downtown(4))], bridges: [])
         let subjectSlot = EvidenceGraphPlacement.composerSlot(in: subjectRight, landingColumn: nil)
         #expect(framesIntersect(subjectSlot.cell, existing: subjectRight) == false)
 
-        let bridgeRight = snapshot(subjects: [], bridges: [placedBridge(id: "b1", x: 12, y: 5)])
+        let bridgeRight = snapshot(subjects: [], bridges: [placedBridge(id: "b1", x: downtown(12), y: downtown(5))])
         let bridgeSlot = EvidenceGraphPlacement.composerSlot(in: bridgeRight, landingColumn: nil)
         #expect(framesIntersect(bridgeSlot.cell, existing: bridgeRight) == false)
     }
 
     @Test func secondCreateStacksInLandingColumn() {
-        let first = snapshot(subjects: [placedSubject(id: "p1", x: 0, y: 1)], bridges: [])
+        let first = snapshot(subjects: [placedSubject(id: "p1", x: downtown(0), y: downtown(1))], bridges: [])
         let slot1 = EvidenceGraphPlacement.composerSlot(in: first, landingColumn: nil)
         let second = snapshot(
             subjects: [
-                placedSubject(id: "p1", x: 0, y: 1),
+                placedSubject(id: "p1", x: downtown(0), y: downtown(1)),
                 placedSubject(id: "p2", x: slot1.cell.gridX, y: slot1.cell.gridY),
             ],
             bridges: []
@@ -59,7 +59,7 @@ struct EvidenceGraphPlacementTests {
     }
 
     @Test func columnPastTheOldFloorGrowsDownward() {
-        var subjects: [SourceGraphPlacedSubject] = [placedSubject(id: "origin", x: 0, y: 1)]
+        var subjects: [SourceGraphPlacedSubject] = [placedSubject(id: "origin", x: downtown(40), y: downtown(50))]
         let first = EvidenceGraphPlacement.composerSlot(
             in: snapshot(subjects: subjects, bridges: []),
             landingColumn: nil
@@ -88,48 +88,50 @@ struct EvidenceGraphPlacementTests {
 
     @Test func cardNearTheRightEdgeLandsPastTheOldMax() {
         let nearEdge = snapshot(
-            subjects: [placedSubject(id: "edge", x: 90, y: 1)],
+            subjects: [placedSubject(id: "edge", x: downtown(90), y: downtown(50))],
             bridges: []
         )
         let slot = EvidenceGraphPlacement.composerSlot(in: nearEdge, landingColumn: nil)
-        #expect(slot.cell.gridX == 98)
+        #expect(slot.cell.gridX == 198)
         let landing = EvidenceGraphPlacement.subjectFrame(gridX: slot.cell.gridX, gridY: slot.cell.gridY)
-        let size = EvidenceGraphPlacement.contentSize(
+        let board = EvidenceGraphPlacement.canvas(
             fitting: EvidenceGraphPlacement.cardFrames(in: nearEdge) + [landing]
         )
-        #expect(size.width == EvidenceGraphPlacement.contentSize.width + EvidenceGraphPlacement.growthStep)
-        let limit = EvidenceGraphPlacement.maxCell(fitting: size)
+        #expect(board.size.width == EvidenceGraphPlacement.contentSize.width + EvidenceGraphPlacement.growthStep)
+        #expect(board.origin.x == EvidenceGraphPlacement.originReserve)
+        let limit = EvidenceGraphPlacement.maxCell(on: board)
         #expect(slot.cell.gridX <= limit.gridX)
         #expect(limit.gridX > EvidenceGraphPlacement.maxCell.gridX)
     }
 
     @Test func furthestCardOpensOnALargerDocument() {
         let packed = snapshot(
-            subjects: [placedSubject(id: "edge", x: 96, y: 98)],
+            subjects: [placedSubject(id: "edge", x: downtown(96), y: downtown(98))],
             bridges: []
         )
-        let size = EvidenceGraphPlacement.contentSize(
+        let board = EvidenceGraphPlacement.canvas(
             fitting: EvidenceGraphPlacement.cardFrames(in: packed)
         )
-        #expect(size.width == 4_800)
-        #expect(size.height == 4_800)
-        let limit = EvidenceGraphPlacement.maxCell(fitting: size)
-        #expect(limit.gridX > 96)
-        #expect(limit.gridY > 98)
-        #expect(EvidenceGraphPlacement.maxCell.gridX == 96)
-        #expect(EvidenceGraphPlacement.maxCell.gridY == 98)
+        #expect(board.size.width == 4_800)
+        #expect(board.size.height == 4_800)
+        #expect(board.origin == EvidenceGraphCanvas.downtown.origin)
+        let limit = EvidenceGraphPlacement.maxCell(on: board)
+        #expect(limit.gridX > 196)
+        #expect(limit.gridY > 198)
+        #expect(EvidenceGraphPlacement.maxCell.gridX == 196)
+        #expect(EvidenceGraphPlacement.maxCell.gridY == 198)
     }
 
     @Test func smallGraphStaysOnTheBaseDocument() {
-        let snapshot = snapshot(subjects: [placedSubject(id: "p1", x: 4, y: 3)], bridges: [])
-        let size = EvidenceGraphPlacement.contentSize(
+        let snapshot = snapshot(subjects: [placedSubject(id: "p1", x: downtown(50), y: downtown(50))], bridges: [])
+        let board = EvidenceGraphPlacement.canvas(
             fitting: EvidenceGraphPlacement.cardFrames(in: snapshot)
         )
-        #expect(size == EvidenceGraphPlacement.contentSize)
+        #expect(board == EvidenceGraphCanvas.downtown)
     }
 
     @Test func dragTowardTheEdgeGrowsBeforeTheDrop() {
-        let snapshot = snapshot(subjects: [placedSubject(id: "p1", x: 80, y: 4)], bridges: [])
+        let snapshot = snapshot(subjects: [placedSubject(id: "p1", x: downtown(80), y: downtown(50))], bridges: [])
         let atRest = EvidenceGraphPlacement.contentSize(
             fitting: EvidenceGraphPlacement.cardFrames(in: snapshot)
         )
@@ -143,11 +145,66 @@ struct EvidenceGraphPlacementTests {
         #expect(dragged.width == EvidenceGraphPlacement.contentSize.width + EvidenceGraphPlacement.growthStep)
     }
 
+    @Test func cardAtTheDowntownMinimumOpensOneStepIntoTheReserve() {
+        let snapshot = snapshot(subjects: [placedSubject(id: "edge", x: downtown(4), y: downtown(50))], bridges: [])
+        let board = EvidenceGraphPlacement.canvas(
+            fitting: EvidenceGraphPlacement.cardFrames(in: snapshot)
+        )
+        #expect(board.origin.x == EvidenceGraphPlacement.originReserve - EvidenceGraphPlacement.growthStep)
+        #expect(board.origin.y == EvidenceGraphPlacement.originReserve)
+        #expect(board.size.width == EvidenceGraphPlacement.contentSize.width + EvidenceGraphPlacement.growthStep)
+        #expect(board.maxX == EvidenceGraphPlacement.originReserve + EvidenceGraphPlacement.contentSize.width)
+    }
+
+    @Test func cardNearTheTopEdgePullsTheOriginUp() {
+        let snapshot = snapshot(subjects: [placedSubject(id: "edge", x: downtown(50), y: downtown(1))], bridges: [])
+        let board = EvidenceGraphPlacement.canvas(
+            fitting: EvidenceGraphPlacement.cardFrames(in: snapshot)
+        )
+        #expect(board.origin.y == EvidenceGraphPlacement.originReserve - EvidenceGraphPlacement.growthStep)
+        #expect(board.origin.x == EvidenceGraphPlacement.originReserve)
+        #expect(board.size.height == EvidenceGraphPlacement.contentSize.height + EvidenceGraphPlacement.growthStep)
+        #expect(board.maxY == EvidenceGraphPlacement.originReserve + EvidenceGraphPlacement.contentSize.height)
+    }
+
+    @Test func dragTowardTheLeftEdgeGrowsBeforeTheDrop() {
+        let snapshot = snapshot(subjects: [placedSubject(id: "p1", x: downtown(12), y: downtown(50))], bridges: [])
+        let atRest = EvidenceGraphPlacement.canvas(
+            fitting: EvidenceGraphPlacement.cardFrames(in: snapshot)
+        )
+        #expect(atRest.origin.x == EvidenceGraphPlacement.originReserve)
+        let dragged = EvidenceGraphPlacement.canvas(
+            fitting: EvidenceGraphPlacement.cardFrames(
+                in: snapshot,
+                dragOffsets: ["p1": CGSize(width: -200, height: 0)]
+            )
+        )
+        #expect(dragged.origin.x == EvidenceGraphPlacement.originReserve - EvidenceGraphPlacement.growthStep)
+        #expect(dragged.size.width == EvidenceGraphPlacement.contentSize.width + EvidenceGraphPlacement.growthStep)
+    }
+
+    @Test func originStopsAtZero() {
+        let snapshot = snapshot(subjects: [placedSubject(id: "far", x: downtown(-100), y: downtown(50))], bridges: [])
+        let board = EvidenceGraphPlacement.canvas(
+            fitting: EvidenceGraphPlacement.cardFrames(in: snapshot)
+        )
+        #expect(board.origin.x == 0)
+        #expect(board.origin.y == EvidenceGraphPlacement.originReserve)
+        #expect(board.maxX == EvidenceGraphPlacement.originReserve + EvidenceGraphPlacement.contentSize.width)
+    }
+
     @Test func resultStaysInsideMinMax() {
-        let snapshot = snapshot(subjects: [placedSubject(id: "p1", x: 4, y: 1)], bridges: [])
+        let snapshot = snapshot(subjects: [placedSubject(id: "p1", x: downtown(4), y: downtown(1))], bridges: [])
         let slot = EvidenceGraphPlacement.composerSlot(in: snapshot, landingColumn: nil)
-        #expect(slot.cell.gridX >= 4 && slot.cell.gridX <= 96)
-        #expect(slot.cell.gridY >= 1 && slot.cell.gridY <= 98)
+        #expect(slot.cell.gridX >= EvidenceGraphPlacement.minCell.gridX)
+        #expect(slot.cell.gridX <= EvidenceGraphPlacement.maxCell.gridX)
+        #expect(slot.cell.gridY >= EvidenceGraphPlacement.minCell.gridY)
+        #expect(slot.cell.gridY <= EvidenceGraphPlacement.maxCell.gridY)
+    }
+
+    /// Hand-written cells are the pre-reserve layout. Composer results are already absolute.
+    private func downtown(_ cell: Int64) -> Int64 {
+        cell + EvidenceGraphPlacement.originReserveCells
     }
 
     private func snapshot(
