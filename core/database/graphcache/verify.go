@@ -82,7 +82,8 @@ func (g *Graph) verifyIDs(ids [][]byte) error {
 		if !ok {
 			return fmt.Errorf("graphcache: %x is loaded but has no entity row", id)
 		}
-		if n.Ref != row.ref || !sameID(n.SubjectTypeID, row.typeID) || n.Merged != row.merged {
+		if n.Ref != row.ref || n.Argument != row.argument || n.Label != row.label ||
+			!sameID(n.SubjectTypeID, row.typeID) || n.Merged != row.merged {
 			return fmt.Errorf("graphcache: %x identity does not match the catalog", id)
 		}
 		if err := sameValues(n.Values, truth[string(id)]); err != nil {
@@ -93,6 +94,19 @@ func (g *Graph) verifyIDs(ids [][]byte) error {
 		}
 		for _, l := range n.Links {
 			assocIDs = append(assocIDs, l.Association)
+		}
+	}
+	fresh, err := g.loadLinks(ids)
+	if err != nil {
+		return err
+	}
+	for _, id := range ids {
+		n := g.nodes[string(id)]
+		if n == nil {
+			continue
+		}
+		if err := sameLinks(n.Links, fresh[string(id)]); err != nil {
+			return fmt.Errorf("graphcache: %x links: %w", id, err)
 		}
 	}
 	if len(assocIDs) == 0 {
@@ -114,6 +128,33 @@ func (g *Graph) verifyIDs(ids [][]byte) error {
 		}
 	}
 	return nil
+}
+
+func sameLinks(got, want []Link) error {
+	gk, wk := linkKeys(got), linkKeys(want)
+	sort.Strings(gk)
+	sort.Strings(wk)
+	if len(gk) != len(wk) {
+		return fmt.Errorf("count %d, catalog %d", len(gk), len(wk))
+	}
+	for i := range gk {
+		if gk[i] != wk[i] {
+			return fmt.Errorf("link %d differs", i)
+		}
+	}
+	return nil
+}
+
+func linkKeys(links []Link) []string {
+	out := make([]string, len(links))
+	for i, l := range links {
+		from := "0"
+		if l.FromEnd {
+			from = "1"
+		}
+		out[i] = string(l.Association) + "|" + string(l.Neighbor) + "|" + from + "|" + l.BridgeTypeKey + "|" + l.TermKey
+	}
+	return out
 }
 
 func (g *Graph) verifyKind(typeID []byte) error {

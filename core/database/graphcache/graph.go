@@ -37,11 +37,14 @@ type Graph struct {
 
 // Node is one canonical entity. Kind is not stored: callers look the type
 // id up. Values keeps every auto-reconciler rank. Members are accepted and
-// provisional subjects in claim id order.
+// provisional subjects in claim id order. Argument and Label are the
+// entity row's own text; a header uses them when it has no reconciled name.
 type Node struct {
 	ID            []byte
 	Ref           string
 	SubjectTypeID []byte
+	Argument      string
+	Label         string
 	Merged        bool
 	Values        map[string][]Value // property id -> ranks
 	Links         []Link
