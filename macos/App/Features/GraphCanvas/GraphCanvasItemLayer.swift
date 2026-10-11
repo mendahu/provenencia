@@ -49,6 +49,19 @@ final class GraphCanvasItemLayer {
     /// Item ids in the host's order (bottom to top before raising).
     private(set) var order: [String] = []
     private var rotorEntries: [String: GraphCanvasRotorEntry] = [:]
+    private var raisedIDs: Set<String> = []
+    /// Bumped to drop a face swap that a newer update has replaced.
+    private var contentGeneration = 0
+    /// Models a deferred swap is building toward. Empty when nothing is in flight.
+    private var inFlightTargets: [String: any Equatable] = [:]
+    /// New hosting views, not yet on screen. The views in ``views`` keep drawing
+    /// until every one of these is ready.
+    private var prepared: [String: NSHostingView<AnyView>] = [:]
+
+    /// One card can swap immediately. A whole-graph face change is built in
+    /// slices so a zoom gesture is not stuck on the breakpoint while they lay out.
+    private static let synchronousContentLimit = 1
+    private static let contentChunkSize = 2
 
     init(container: NSView) {
         self.container = container
@@ -56,6 +69,12 @@ final class GraphCanvasItemLayer {
 
     /// Replaces the item set: adds, removes, repositions, and rebuilds the
     /// content of items whose model changed.
+    ///
+    /// A single card swaps immediately. When many cards change together (the
+    /// zoomed-out face), the views already on screen stay up and the new ones
+    /// are laid out a couple at a time. The scroll view can keep zooming
+    /// between those slices. The new views replace the old ones together,
+    /// once every card in the batch is ready.
     func update(_ items: [GraphCanvasItem]) {
         guard let container else { return }
         let ids = Set(items.map(\.id))
@@ -66,31 +85,122 @@ final class GraphCanvasItemLayer {
             origins[id] = nil
             dragOffsets[id] = nil
             rotorEntries[id] = nil
+            prepared[id] = nil
         }
 
+        var replacements: [GraphCanvasItem] = []
         for item in items {
-            let view: NSHostingView<AnyView>
-            if let existing = views[item.id] {
-                view = existing
-                if let previous = models[item.id], !item.model.isEqual(to: previous) {
-                    view.rootView = Self.padded(item.content())
-                    view.frame.size = view.fittingSize
-                }
-            } else {
-                view = NSHostingView(rootView: Self.padded(item.content()))
-                view.frame.size = view.fittingSize
-                container.addSubview(view, positioned: .above, relativeTo: nil)
-                views[item.id] = view
-            }
-            models[item.id] = item.model
             origins[item.id] = item.origin
             rotorEntries[item.id] = item.rotor
-            place(item.id)
+            if views[item.id] != nil {
+                place(item.id)
+                if let previous = models[item.id], !item.model.isEqual(to: previous) {
+                    replacements.append(item)
+                }
+            } else {
+                let view = makeView(for: item)
+                container.addSubview(view, positioned: .above, relativeTo: nil)
+                views[item.id] = view
+                models[item.id] = item.model
+                place(item.id)
+            }
         }
         order = items.map(\.id)
+        raisedIDs = Set(items.filter(\.isRaised).map(\.id))
+        raiseRaisedViews()
 
-        for item in items where item.isRaised {
-            guard let view = views[item.id], container.subviews.last !== view else { continue }
+        if replacements.isEmpty {
+            cancelContentPrepare()
+            return
+        }
+        if replacements.count <= Self.synchronousContentLimit {
+            cancelContentPrepare()
+            for item in replacements {
+                guard let view = views[item.id] else { continue }
+                install(item, on: view)
+                place(item.id)
+            }
+            raiseRaisedViews()
+            return
+        }
+        if inFlightMatches(replacements) {
+            return
+        }
+        beginContentPrepare(replacements)
+    }
+
+    private func inFlightMatches(_ items: [GraphCanvasItem]) -> Bool {
+        guard inFlightTargets.count == items.count else { return false }
+        return items.allSatisfy { item in
+            guard let target = inFlightTargets[item.id] else { return false }
+            return item.model.isEqual(to: target)
+        }
+    }
+
+    private func beginContentPrepare(_ items: [GraphCanvasItem]) {
+        cancelContentPrepare()
+        inFlightTargets = Dictionary(uniqueKeysWithValues: items.map { ($0.id, $0.model) })
+        let generation = contentGeneration
+        pumpContent(items, index: 0, generation: generation)
+    }
+
+    private func cancelContentPrepare() {
+        contentGeneration += 1
+        inFlightTargets = [:]
+        prepared = [:]
+    }
+
+    private func pumpContent(_ items: [GraphCanvasItem], index: Int, generation: Int) {
+        DispatchQueue.main.async { [weak self] in
+            self?.prepareSlice(items, index: index, generation: generation)
+        }
+    }
+
+    private func prepareSlice(_ items: [GraphCanvasItem], index: Int, generation: Int) {
+        guard generation == contentGeneration else { return }
+        let end = min(index + Self.contentChunkSize, items.count)
+        for item in items[index..<end] {
+            guard views[item.id] != nil else { continue }
+            prepared[item.id] = makeView(for: item)
+        }
+        if end < items.count {
+            pumpContent(items, index: end, generation: generation)
+            return
+        }
+        commitPrepared(items, generation: generation)
+    }
+
+    private func commitPrepared(_ items: [GraphCanvasItem], generation: Int) {
+        guard generation == contentGeneration, let container else { return }
+        for item in items {
+            guard let newView = prepared[item.id], views[item.id] != nil else { continue }
+            views[item.id]?.removeFromSuperview()
+            container.addSubview(newView, positioned: .above, relativeTo: nil)
+            views[item.id] = newView
+            models[item.id] = item.model
+            place(item.id)
+        }
+        prepared = [:]
+        inFlightTargets = [:]
+        raiseRaisedViews()
+    }
+
+    private func makeView(for item: GraphCanvasItem) -> NSHostingView<AnyView> {
+        let view = NSHostingView(rootView: Self.padded(item.content()))
+        view.frame.size = view.fittingSize
+        return view
+    }
+
+    private func install(_ item: GraphCanvasItem, on view: NSHostingView<AnyView>) {
+        view.rootView = Self.padded(item.content())
+        view.frame.size = view.fittingSize
+        models[item.id] = item.model
+    }
+
+    private func raiseRaisedViews() {
+        guard let container else { return }
+        for id in order where raisedIDs.contains(id) {
+            guard let view = views[id], container.subviews.last !== view else { continue }
             container.addSubview(view, positioned: .above, relativeTo: nil)
         }
     }

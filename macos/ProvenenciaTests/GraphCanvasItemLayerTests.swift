@@ -128,4 +128,30 @@ struct GraphCanvasItemLayerTests {
         #expect(search.result(for: next) == nil)
         #expect(selected == ["s1", "s2"])
     }
+
+    @Test func largeContentSwapKeepsTheOldViewsUntilTheNewOnesAreReady() async {
+        let container = flippedContainer()
+        let layer = GraphCanvasItemLayer(container: container)
+        let counter = BuildCounter()
+        let ids = (0..<6).map { "c\($0)" }
+        layer.update(ids.map { item($0, at: .zero, model: "old", counter: counter) })
+        let oldViews = ids.map { layer.view(for: $0) }
+        #expect(counter.counts.values.reduce(0, +) == 6)
+
+        layer.update(ids.map { item($0, at: CGPoint(x: 10, y: 0), model: "new", counter: counter) })
+        #expect(counter.counts.values.reduce(0, +) == 6)
+        #expect(layer.view(for: "c0") === oldViews[0])
+        let outset = GraphCanvasItemLayer.paintOutset
+        #expect(layer.view(for: "c0")?.frame.origin.x == 10 - outset)
+
+        for _ in 0..<6 {
+            await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+                DispatchQueue.main.async { continuation.resume() }
+            }
+        }
+        #expect(counter.counts.values.reduce(0, +) == 12)
+        #expect(layer.view(for: "c0") !== oldViews[0])
+        #expect(oldViews[0]?.superview == nil)
+        #expect(layer.view(for: "c0")?.superview === container)
+    }
 }

@@ -5,14 +5,17 @@ import Testing
 @Suite
 struct GraphCanvasCoordinatesTests {
     @Test func detailBandKeepsTheCurrentFaceBetweenCutoffs() {
-        let band = GraphCanvasDetailBand(overviewBelow: 0.65, readingAbove: 0.75)
-        #expect(band.next(.reading, magnification: 0.64) == .overview)
-        #expect(band.next(.reading, magnification: 0.70) == .reading)
-        #expect(band.next(.overview, magnification: 0.70) == .overview)
-        #expect(band.next(.overview, magnification: 0.76) == .reading)
-        #expect(band.next(.overview, magnification: 0.25) == .overview)
-        #expect(band.initial(magnification: 0.25) == .overview)
-        #expect(band.initial(magnification: 0.70) == .reading)
+        let band = GraphCanvasDetailBand(cut: EvidenceGraphCardDetail.cut)
+        #expect(abs(band.overviewBelow - 0.675) < 0.000_001)
+        #expect(abs(band.readingAbove - 0.725) < 0.000_001)
+        let inside = EvidenceGraphCardDetail.cut
+        #expect(band.next(.reading, magnification: band.overviewBelow - 0.01) == .overview)
+        #expect(band.next(.reading, magnification: inside) == .reading)
+        #expect(band.next(.overview, magnification: inside) == .overview)
+        #expect(band.next(.overview, magnification: band.readingAbove + 0.01) == .reading)
+        #expect(band.next(.overview, magnification: GraphCanvasCamera.minMagnification) == .overview)
+        #expect(band.initial(magnification: GraphCanvasCamera.minMagnification) == .overview)
+        #expect(band.initial(magnification: inside) == .reading)
     }
 
     @Test func clampMagnificationRespectsBounds() {

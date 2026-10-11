@@ -11,19 +11,33 @@ enum GraphCanvasDetail: Equatable, Sendable {
     case overview
 }
 
-/// Host cutoffs for ``GraphCanvasDetail``.
+/// Host cut for ``GraphCanvasDetail``.
 ///
-/// Between the two values the current level stays put, so a pinch that hovers
-/// on the boundary does not flicker the face.
+/// The caller names the break point. The band opens ``margin`` (2.5%) on
+/// either side, and the level stays put inside that gap so a pinch on the
+/// boundary does not flicker the face.
 struct GraphCanvasDetailBand: Equatable, Sendable {
+    /// Half-width of the gap around the cut, as a fraction of magnification.
+    static let margin: CGFloat = 2.5 / 100
+
     /// Magnification strictly below this is overview.
     var overviewBelow: CGFloat
     /// Magnification strictly above this is reading.
     var readingAbove: CGFloat
 
+    /// Overview below `cut - margin`, reading above `cut + margin`.
+    init(cut: CGFloat) {
+        self.init(overviewBelow: cut - Self.margin, readingAbove: cut + Self.margin)
+    }
+
     /// Stays at reading for every positive magnification. A host that never
     /// sets a band does not swap faces.
     static let readingOnly = GraphCanvasDetailBand(overviewBelow: 0, readingAbove: 0)
+
+    private init(overviewBelow: CGFloat, readingAbove: CGFloat) {
+        self.overviewBelow = overviewBelow
+        self.readingAbove = readingAbove
+    }
 
     /// Level for a magnification that has no previous face. Overview only when
     /// already below `overviewBelow`.

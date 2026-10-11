@@ -15,6 +15,8 @@ struct EvidenceGraphOverviewFace: View {
     /// Kind wash laid over `fill` for an uncited primary. Bridges pass nil.
     var wash: Color?
     var borderColor: Color
+    /// Document-point width of the card stroke. Selection keeps its own width.
+    var borderLineWidth: CGFloat = 1
     var chip: Chip?
     var showsSelection: Bool
     var isDragging: Bool
@@ -62,7 +64,7 @@ struct EvidenceGraphOverviewFace: View {
         }
         .overlay {
             RoundedRectangle(cornerRadius: PVRadius.md, style: .continuous)
-                .strokeBorder(borderColor, lineWidth: showsSelection ? 1.5 : 1)
+                .strokeBorder(borderColor, lineWidth: showsSelection ? 1.5 : borderLineWidth)
         }
         .clipShape(RoundedRectangle(cornerRadius: PVRadius.md, style: .continuous))
         .shadow(
@@ -131,12 +133,16 @@ struct EvidenceGraphOverviewFace: View {
             columnSpacing: 12,
             fill: PVColor.surfaceCard,
             wash: nil,
-            borderColor: showsSelection ? PVColor.accent : PVColor.borderSubtle,
+            borderColor: showsSelection ? PVColor.accent : PVColor.borderStrong,
+            borderLineWidth: bridgeBorderWidth,
             chip: nil,
             showsSelection: showsSelection,
             isDragging: isDragging
         )
     }
+
+    /// Document points. At 0.25× this is still about a point on screen.
+    private static let bridgeBorderWidth: CGFloat = 3
 
     private static func subjectLabel(_ placed: SourceGraphPlacedSubject) -> String {
         let trimmed = placed.subject.label.trimmingCharacters(in: .whitespacesAndNewlines)

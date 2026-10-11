@@ -91,9 +91,10 @@ struct EvidenceGraphView: View {
 }
 // MARK: - Content
 
-/// Evidence-graph face cutoffs. A later tree host sets its own band and paints its own overview.
-private enum EvidenceGraphCardDetail {
-    static let band = GraphCanvasDetailBand(overviewBelow: 0.65, readingAbove: 0.75)
+/// Evidence-graph face cut. The canvas opens a margin on either side; a later tree host sets its own cut.
+enum EvidenceGraphCardDetail {
+    /// Magnification where the face changes.
+    static let cut: CGFloat = 0.70
 }
 
 private struct EvidenceGraphContent: View {
@@ -290,7 +291,7 @@ private struct EvidenceGraphContent: View {
                     model.session.setGraphCamera(camera, for: sourceID)
                 },
                 accessibilityLabel: L10n.string(L10n.Workspace.evidenceGraphTitle),
-                detailBand: EvidenceGraphCardDetail.band
+                detailBand: GraphCanvasDetailBand(cut: EvidenceGraphCardDetail.cut)
             ) {
                 EvidenceGraphDocument(
                     graphHandle: graphHandle,
@@ -608,14 +609,18 @@ private struct EvidenceGraphDocumentBody: View {
             GraphCanvasGridView(contentSize: contentSize)
                 .accessibilityHidden(true)
 
-            EvidenceGraphEdgesHost(
-                pointer: pointer,
-                snapshot: snapshot,
-                selectedBridgeID: selectedBridgeID,
-                layouts: cardLayouts.layouts,
-                documentOrigin: canvas.origin
-            )
-            .frame(width: contentSize.width, height: contentSize.height)
+            // Bridge spokes are an evidence-graph choice. The zoomed-out face
+            // leaves them out; the canvas itself does not.
+            if canvasDetail == .reading {
+                EvidenceGraphEdgesHost(
+                    pointer: pointer,
+                    snapshot: snapshot,
+                    selectedBridgeID: selectedBridgeID,
+                    layouts: cardLayouts.layouts,
+                    documentOrigin: canvas.origin
+                )
+                .frame(width: contentSize.width, height: contentSize.height)
+            }
 
             if case .connecting = inputMode,
                let originID = model.connectOriginID,
