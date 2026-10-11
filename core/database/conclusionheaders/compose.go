@@ -795,7 +795,7 @@ func finishPlaces(g *graphcache.Graph, v vocab, headers []PlaceHeader) ([]PlaceH
 }
 
 func buildPlaceGraph(g *graphcache.Graph, v vocab, seeds [][]byte) (*placeGraph, error) {
-	pg := &placeGraph{byID: map[string]PlaceHeader{}, period: map[string]autoreconcile.Window{}}
+	pg := newPlaceGraph()
 	seeds = database.UniqueBlobIDs(seeds)
 	if len(seeds) == 0 {
 		return pg, nil
@@ -825,7 +825,7 @@ func buildPlaceGraph(g *graphcache.Graph, v vocab, seeds [][]byte) (*placeGraph,
 			}
 			pg.byID[string(id)] = shell
 			pg.period[string(id)] = autoreconcile.PeriodWindow(shell.StartDate, shell.EndDate)
-			links, err := placeHops(g, id)
+			links, err := follow(g, id, hops.ParentsOfPlace)
 			if err != nil {
 				return nil, err
 			}
@@ -848,37 +848,13 @@ func buildPlaceGraph(g *graphcache.Graph, v vocab, seeds [][]byte) (*placeGraph,
 			if n == nil {
 				continue
 			}
-			links, err := placeHops(g, id)
+			links, err := follow(g, id, hops.ParentsOfPlace)
 			if err != nil {
 				return nil, err
 			}
 			for _, l := range links {
-				from, to := id, l.Neighbor
-				if !l.FromEnd {
-					from, to = l.Neighbor, id
-				}
-				key := string(from) + "\x00" + string(to) + "\x00" + string(l.Association)
-				if linked[key] {
-					continue
-				}
-				linked[key] = true
-				assoc, err := g.Node(l.Association)
-				if err != nil {
+				if err := rememberPlaceLink(pg, g, v, id, l, true, linked); err != nil {
 					return nil, err
-				}
-				if assoc == nil {
-					return nil, fmt.Errorf("conclusionheaders: association %x is missing", l.Association)
-				}
-				d, err := assocDatesOf(v, assoc)
-				if err != nil {
-					return nil, err
-				}
-				link := placeLink{from: append([]byte(nil), from...), to: append([]byte(nil), to...), association: append([]byte(nil), l.Association...), start: d.start, end: d.end}
-				switch l.TermKey {
-				case "part_of":
-					pg.partOf = append(pg.partOf, link)
-				case "succeeded_by":
-					pg.succ = append(pg.succ, link)
 				}
 			}
 		}
@@ -887,16 +863,111 @@ func buildPlaceGraph(g *graphcache.Graph, v vocab, seeds [][]byte) (*placeGraph,
 	return pg, nil
 }
 
-func placeHops(g *graphcache.Graph, id []byte) ([]graphcache.Link, error) {
-	var out []graphcache.Link
-	for _, hop := range []hops.Hop{hops.ParentsOfPlace, hops.PartsOfPlace, hops.SuccessorsOfPlace, hops.PredecessorsOfPlace} {
+// placeStep follows each hop once from id and keeps those edges. A parent
+// chain climbs; a parts or succession question does not.
+func placeStep(c *database.Catalog, id []byte, hopList ...hops.Hop) (*placeGraph, error) {
+	pg := newPlaceGraph()
+	if c == nil || c.Graph() == nil || len(id) != 16 {
+		return pg, nil
+	}
+	g := c.Graph()
+	v, err := vocabulary(g)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := g.Node(id); err != nil {
+		return nil, err
+	}
+	if err := rememberShell(pg, g, v, id); err != nil {
+		return nil, err
+	}
+	linked := map[string]bool{}
+	var neighbors, assocs [][]byte
+	type pending struct {
+		id   []byte
+		l    graphcache.Link
+		part bool
+	}
+	var wait []pending
+	for _, hop := range hopList {
 		links, err := follow(g, id, hop)
 		if err != nil {
 			return nil, err
 		}
-		out = append(out, links...)
+		_, term, filtered := hop.Filter()
+		part := filtered && term == "part_of"
+		for _, l := range links {
+			neighbors = append(neighbors, l.Neighbor)
+			assocs = append(assocs, l.Association)
+			wait = append(wait, pending{id: id, l: l, part: part})
+		}
 	}
-	return out, nil
+	if err := g.Nodes(append(neighbors, assocs...)); err != nil {
+		return nil, err
+	}
+	for _, n := range neighbors {
+		if err := rememberShell(pg, g, v, n); err != nil {
+			return nil, err
+		}
+	}
+	for _, p := range wait {
+		if err := rememberPlaceLink(pg, g, v, p.id, p.l, p.part, linked); err != nil {
+			return nil, err
+		}
+	}
+	return pg, nil
+}
+
+func rememberShell(pg *placeGraph, g *graphcache.Graph, v vocab, id []byte) error {
+	n, err := g.Node(id)
+	if err != nil {
+		return err
+	}
+	if n == nil {
+		return nil
+	}
+	shell, err := placeShell(n, v)
+	if err != nil {
+		return err
+	}
+	pg.byID[string(id)] = shell
+	pg.period[string(id)] = autoreconcile.PeriodWindow(shell.StartDate, shell.EndDate)
+	return nil
+}
+
+func rememberPlaceLink(pg *placeGraph, g *graphcache.Graph, v vocab, id []byte, l graphcache.Link, part bool, linked map[string]bool) error {
+	from, to := id, l.Neighbor
+	if !l.FromEnd {
+		from, to = l.Neighbor, id
+	}
+	key := string(from) + "\x00" + string(to) + "\x00" + string(l.Association)
+	if linked[key] {
+		return nil
+	}
+	linked[key] = true
+	assoc, err := g.Node(l.Association)
+	if err != nil {
+		return err
+	}
+	if assoc == nil {
+		return fmt.Errorf("conclusionheaders: association %x is missing", l.Association)
+	}
+	d, err := assocDatesOf(v, assoc)
+	if err != nil {
+		return err
+	}
+	link := placeLink{
+		from: append([]byte(nil), from...), to: append([]byte(nil), to...),
+		association: append([]byte(nil), l.Association...), start: d.start, end: d.end,
+	}
+	if part {
+		pg.partFrom[string(from)] = append(pg.partFrom[string(from)], link)
+		pg.partTo[string(to)] = append(pg.partTo[string(to)], link)
+		return nil
+	}
+	pg.succFrom[string(from)] = append(pg.succFrom[string(from)], link)
+	pg.succTo[string(to)] = append(pg.succTo[string(to)], link)
+	return nil
 }
 
 func assocDatesOf(v vocab, n *graphcache.Node) (assocDates, error) {

@@ -9,6 +9,7 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/datevalues"
+	"github.com/mendahu/provenencia/core/hops"
 )
 
 // placeLink is one filed place_relationship edge with its membership dates.
@@ -19,12 +20,26 @@ type placeLink struct {
 }
 
 // placeGraph is the part_of / succeeded_by neighborhood needed to compose
-// chains for a set of Places at a query date.
+// chains for a set of Places at a query date. Links are indexed by endpoint
+// so a parent question does not scan every other place's edges.
 type placeGraph struct {
-	byID   map[string]PlaceHeader
-	partOf []placeLink // from = part → to = whole
-	succ   []placeLink // from = predecessor → to = successor
-	period map[string]autoreconcile.Window
+	byID     map[string]PlaceHeader
+	partFrom map[string][]placeLink // part id → wholes
+	partTo   map[string][]placeLink // whole id → parts
+	succFrom map[string][]placeLink // predecessor id → successors
+	succTo   map[string][]placeLink // successor id → predecessors
+	period   map[string]autoreconcile.Window
+}
+
+func newPlaceGraph() *placeGraph {
+	return &placeGraph{
+		byID:     map[string]PlaceHeader{},
+		partFrom: map[string][]placeLink{},
+		partTo:   map[string][]placeLink{},
+		succFrom: map[string][]placeLink{},
+		succTo:   map[string][]placeLink{},
+		period:   map[string]autoreconcile.Window{},
+	}
 }
 
 type assocDates struct {
@@ -61,8 +76,8 @@ func (g *placeGraph) ImmediateParents(placeID []byte, at *datevalues.Value) [][]
 	q := queryWindow(at)
 	seen := map[string]bool{}
 	var out [][]byte
-	for _, l := range g.partOf {
-		if !bytes.Equal(l.from, placeID) || !g.linkHolds(q, l) {
+	for _, l := range g.partFrom[string(placeID)] {
+		if !g.linkHolds(q, l) {
 			continue
 		}
 		if seen[string(l.to)] {
@@ -82,8 +97,8 @@ func (g *placeGraph) ImmediateParts(placeID []byte, at *datevalues.Value) [][]by
 	q := queryWindow(at)
 	seen := map[string]bool{}
 	var out [][]byte
-	for _, l := range g.partOf {
-		if !bytes.Equal(l.to, placeID) || !g.linkHolds(q, l) {
+	for _, l := range g.partTo[string(placeID)] {
+		if !g.linkHolds(q, l) {
 			continue
 		}
 		if seen[string(l.from)] {
@@ -112,14 +127,14 @@ func (g *placeGraph) Predecessors(placeID []byte) [][]byte {
 func (g *placeGraph) succNeighbors(placeID []byte, forward bool) [][]byte {
 	seen := map[string]bool{}
 	var out [][]byte
-	for _, l := range g.succ {
-		var other []byte
-		if forward && bytes.Equal(l.from, placeID) {
+	links := g.succTo[string(placeID)]
+	if forward {
+		links = g.succFrom[string(placeID)]
+	}
+	for _, l := range links {
+		other := l.from
+		if forward {
 			other = l.to
-		} else if !forward && bytes.Equal(l.to, placeID) {
-			other = l.from
-		} else {
-			continue
 		}
 		if seen[string(other)] {
 			continue
@@ -292,7 +307,7 @@ func chainQueryDate(h PlaceHeader, today datevalues.Value) datevalues.Value {
 // read from the open catalog's graph.
 func placeNeighborhood(c *database.Catalog, ids [][]byte) (*placeGraph, error) {
 	if c == nil || c.Graph() == nil {
-		return &placeGraph{byID: map[string]PlaceHeader{}, period: map[string]autoreconcile.Window{}}, nil
+		return newPlaceGraph(), nil
 	}
 	g := c.Graph()
 	v, err := vocabulary(g)
@@ -309,7 +324,7 @@ func AttachPlaceRelationships(c *database.Catalog, h *PlaceHeader) error {
 	if h == nil || len(h.Entity.ID) == 0 {
 		return nil
 	}
-	g, err := placeNeighborhood(c, [][]byte{h.Entity.ID})
+	g, err := placeStep(c, h.Entity.ID, hops.ParentsOfPlace, hops.PartsOfPlace, hops.PredecessorsOfPlace, hops.SuccessorsOfPlace)
 	if err != nil {
 		return err
 	}
@@ -318,10 +333,7 @@ func AttachPlaceRelationships(c *database.Catalog, h *PlaceHeader) error {
 	today := TodayDate()
 
 	seenPart := map[string]bool{}
-	for _, l := range g.partOf {
-		if !bytes.Equal(l.from, h.Entity.ID) {
-			continue
-		}
+	for _, l := range g.partFrom[string(h.Entity.ID)] {
 		if _, ok := autoreconcile.LinkMembership(l.start, l.end, g.periodOf(l.from), g.periodOf(l.to)); !ok {
 			continue
 		}
@@ -340,8 +352,8 @@ func AttachPlaceRelationships(c *database.Catalog, h *PlaceHeader) error {
 
 	for _, id := range g.ImmediateParts(h.Entity.ID, &today) {
 		rel := g.relationship(id, RelContains)
-		for _, l := range g.partOf {
-			if bytes.Equal(l.to, h.Entity.ID) && bytes.Equal(l.from, id) {
+		for _, l := range g.partTo[string(h.Entity.ID)] {
+			if bytes.Equal(l.from, id) {
 				rel.StartDate, rel.EndDate = membershipDates(l, g.byID[string(l.from)], g.byID[string(l.to)])
 				break
 			}
@@ -433,7 +445,7 @@ func ParentsAtDate(c *database.Catalog, placeID []byte, at datevalues.Value) ([]
 
 // PartsAtDate is the display names of Places that are part_of placeID at at.
 func PartsAtDate(c *database.Catalog, placeID []byte, at datevalues.Value) ([]string, error) {
-	g, err := placeNeighborhood(c, [][]byte{placeID})
+	g, err := placeStep(c, placeID, hops.PartsOfPlace)
 	if err != nil {
 		return nil, err
 	}
@@ -450,7 +462,7 @@ func PartsAtDate(c *database.Catalog, placeID []byte, at datevalues.Value) ([]st
 // SuccessionNames is predecessor and successor display names via
 // succeeded_by (dates do not filter; never used for display chains).
 func SuccessionNames(c *database.Catalog, placeID []byte) (predecessors, successors []string, err error) {
-	g, err := placeNeighborhood(c, [][]byte{placeID})
+	g, err := placeStep(c, placeID, hops.PredecessorsOfPlace, hops.SuccessorsOfPlace)
 	if err != nil {
 		return nil, nil, err
 	}
