@@ -24,9 +24,8 @@ type Graph struct {
 	kindOn  map[string]bool
 	kindSet map[string]map[string]bool
 
-	stats    any
-	statsRev int64
-	statsOK  bool
+	stats   any
+	statsOK bool
 
 	entityTable string
 	claimTable  string
@@ -135,7 +134,6 @@ func (g *Graph) clear() {
 	g.kindSet = map[string]map[string]bool{}
 	g.statsOK = false
 	g.stats = nil
-	g.statsRev = 0
 }
 
 // Drop empties nodes, holders, kind indexes, and stats. The next read fills
@@ -201,23 +199,21 @@ func (g *Graph) Kind(typeID []byte) ([]*Node, error) {
 	return out, nil
 }
 
-// Stats returns the cached scan when rev is the revision it was built at.
-// The value is the graphalign.Stats the caller stored. The graph does not
-// import that package.
-func (g *Graph) Stats(rev int64) (any, bool) {
-	if g == nil || !g.statsOK || g.statsRev != rev {
+// Stats returns the cached scan. A commit that names handles, and a structure
+// drop, clear it. A vocabulary-only write does not.
+func (g *Graph) Stats() (any, bool) {
+	if g == nil || !g.statsOK {
 		return nil, false
 	}
 	return g.stats, true
 }
 
-// SetStats stores a scan for rev.
-func (g *Graph) SetStats(rev int64, stats any) {
+// SetStats stores a scan until the next handle commit or drop.
+func (g *Graph) SetStats(stats any) {
 	if g == nil {
 		return
 	}
 	g.stats = stats
-	g.statsRev = rev
 	g.statsOK = true
 }
 

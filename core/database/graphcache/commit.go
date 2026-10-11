@@ -24,6 +24,8 @@ func (g *Graph) OnCommit(rev int64, set effects.Set) error {
 	if len(ids) == 0 {
 		return g.verifyIfSet()
 	}
+	g.statsOK = false
+	g.stats = nil
 	rows, err := g.entityRows(ids)
 	if err != nil {
 		return err

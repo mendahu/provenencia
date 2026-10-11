@@ -7,25 +7,22 @@ import (
 	"github.com/mendahu/provenencia/core/match"
 )
 
-// loadStats returns this catalog's scan, recomputing when the audit revision
-// has moved. The property list is the match profiles, not a fixed key list.
+// loadStats returns this catalog's scan. A commit that names handles drops it.
+// A vocabulary-only write does not. The property list is the match profiles,
+// not a fixed key list.
 func loadStats(c *database.Catalog) (graphalign.Stats, error) {
 	db, err := c.DB()
 	if err != nil {
 		return graphalign.Stats{}, err
 	}
-	var rev int64
-	if err := db.QueryRow(`SELECT COALESCE(MAX(revision), 0) FROM audit_transactions`).Scan(&rev); err != nil {
-		return graphalign.Stats{}, err
-	}
-	if cached, ok := c.Graph().Stats(rev); ok {
+	if cached, ok := c.Graph().Stats(); ok {
 		return cloneStats(cached.(graphalign.Stats)), nil
 	}
 	st, err := computeStats(db)
 	if err != nil {
 		return graphalign.Stats{}, err
 	}
-	c.Graph().SetStats(rev, st)
+	c.Graph().SetStats(st)
 	return cloneStats(st), nil
 }
 
