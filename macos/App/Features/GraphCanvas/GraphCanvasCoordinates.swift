@@ -8,8 +8,48 @@ import CoreGraphics
 /// This enum stays the pure math seam for camera transforms, magnification clamp,
 /// and scroll-origin clamp shared by pan + zoom.
 enum GraphCanvasCoordinates {
-    static func clampMagnification(_ value: CGFloat) -> CGFloat {
-        min(max(value, GraphCanvasCamera.minMagnification), GraphCanvasCamera.maxMagnification)
+    static func clampMagnification(
+        _ value: CGFloat,
+        minimum: CGFloat = GraphCanvasCamera.minMagnification
+    ) -> CGFloat {
+        let floor = min(max(minimum, GraphCanvasCamera.minMagnification), GraphCanvasCamera.maxMagnification)
+        return min(max(value, floor), GraphCanvasCamera.maxMagnification)
+    }
+
+    /// Lowest magnification at which the document still covers the viewport.
+    ///
+    /// Below this the canvas is smaller than the window and the area past its
+    /// edge shows through. The result stays inside the camera's magnification range.
+    static func magnificationThatFills(documentSize: CGSize, viewportSize: CGSize) -> CGFloat {
+        guard documentSize.width > 1, documentSize.height > 1,
+              viewportSize.width > 1, viewportSize.height > 1
+        else {
+            return GraphCanvasCamera.minMagnification
+        }
+        let cover = max(
+            viewportSize.width / documentSize.width,
+            viewportSize.height / documentSize.height
+        )
+        return clampMagnification(cover)
+    }
+
+    /// Document-space width of one screen point at `magnification`.
+    ///
+    /// `NSScrollView` scales the document, so a stroke of `1 / magnification`
+    /// stays one screen point at every zoom.
+    static func screenPixelDocumentWidth(magnification: CGFloat) -> CGFloat {
+        1 / max(magnification, 0.000_1)
+    }
+
+    /// Opacity for a repeated grid cell. The pattern stays fully visible while
+    /// a cell is clearly larger than a screen point, and fades out as a whole
+    /// once the cell itself is about one point — hairlines must not pile into
+    /// a solid field.
+    static func gridPatternOpacity(spacing: CGFloat, magnification: CGFloat) -> CGFloat {
+        let cell = spacing * max(magnification, 0)
+        if cell >= 2 { return 1 }
+        if cell <= 1 { return 0 }
+        return cell - 1
     }
 
     /// Clamps a proposed content-view scroll origin so the visible rect stays

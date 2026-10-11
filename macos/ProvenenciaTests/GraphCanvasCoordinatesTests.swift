@@ -9,6 +9,29 @@ struct GraphCanvasCoordinatesTests {
         #expect(GraphCanvasCoordinates.clampMagnification(10) == GraphCanvasCamera.maxMagnification)
         #expect(GraphCanvasCoordinates.clampMagnification(1.5) == GraphCanvasCamera.maxMagnification)
         #expect(GraphCanvasCoordinates.clampMagnification(1.1) == 1.1)
+        #expect(GraphCanvasCoordinates.clampMagnification(0.3, minimum: 0.5) == 0.5)
+    }
+
+    @Test func magnificationFloorKeepsTheDocumentCoveringTheWindow() {
+        let document = CGSize(width: 4_000, height: 4_000)
+        #expect(
+            GraphCanvasCoordinates.magnificationThatFills(
+                documentSize: document,
+                viewportSize: CGSize(width: 2_000, height: 1_200)
+            ) == 0.5
+        )
+        #expect(
+            GraphCanvasCoordinates.magnificationThatFills(
+                documentSize: document,
+                viewportSize: CGSize(width: 800, height: 600)
+            ) == GraphCanvasCamera.minMagnification
+        )
+        #expect(
+            GraphCanvasCoordinates.magnificationThatFills(
+                documentSize: document,
+                viewportSize: CGSize(width: 6_000, height: 5_000)
+            ) == GraphCanvasCamera.maxMagnification
+        )
     }
 
     @Test func cameraInitClampsMagnification() {
@@ -101,5 +124,20 @@ struct GraphCanvasCoordinatesTests {
                 hasMomentumPhase: false
             )
         )
+    }
+
+    @Test func screenPixelWidthTracksMagnification() {
+        #expect(GraphCanvasCoordinates.screenPixelDocumentWidth(magnification: 1) == 1)
+        #expect(GraphCanvasCoordinates.screenPixelDocumentWidth(magnification: 0.25) == 4)
+        #expect(GraphCanvasCoordinates.screenPixelDocumentWidth(magnification: 0.5) == 2)
+    }
+
+    @Test func gridPatternFadesOnlyWhenACellIsAboutOnePixel() {
+        let spacing = GraphCanvasGridMapping.defaultSpacing
+        #expect(GraphCanvasCoordinates.gridPatternOpacity(spacing: spacing, magnification: 1) == 1)
+        #expect(GraphCanvasCoordinates.gridPatternOpacity(spacing: spacing, magnification: 0.25) == 1)
+        #expect(GraphCanvasCoordinates.gridPatternOpacity(spacing: 40, magnification: 1.5 / 40) == 0.5)
+        #expect(GraphCanvasCoordinates.gridPatternOpacity(spacing: 40, magnification: 1 / 40) == 0)
+        #expect(GraphCanvasCoordinates.gridPatternOpacity(spacing: 40, magnification: 0.01) == 0)
     }
 }

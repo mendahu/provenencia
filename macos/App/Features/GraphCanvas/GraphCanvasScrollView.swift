@@ -151,6 +151,43 @@ struct GraphCanvasScrollView<Content: View>: NSViewRepresentable {
 /// trackpad two-finger scrolling as pan.
 final class GraphCanvasNSScrollView: NSScrollView {
     weak var viewport: GraphCanvasViewportController?
+    private var isUpdatingMagnificationFloor = false
+
+    override var magnification: CGFloat {
+        didSet {
+            guard abs(oldValue - magnification) > 0.000_1 else { return }
+            let value = magnification
+            let viewport = viewport
+            MainActor.assumeIsolated {
+                viewport?.magnification = value
+            }
+        }
+    }
+
+    override func layout() {
+        super.layout()
+        updateMagnificationFloor()
+    }
+
+    /// Raises the zoom-out floor so the document keeps covering the clip.
+    /// A larger document lowers the floor again without changing the current zoom.
+    private func updateMagnificationFloor() {
+        guard !isUpdatingMagnificationFloor, let document = documentView else { return }
+        isUpdatingMagnificationFloor = true
+        defer { isUpdatingMagnificationFloor = false }
+
+        let floor = GraphCanvasCoordinates.magnificationThatFills(
+            documentSize: document.frame.size,
+            viewportSize: contentView.frame.size
+        )
+        if abs(minMagnification - floor) > 0.000_1 {
+            minMagnification = floor
+        }
+        guard magnification + 0.000_1 < floor else { return }
+        let clip = contentView
+        let center = clip.convert(CGPoint(x: clip.bounds.midX, y: clip.bounds.midY), to: nil)
+        zoom(to: floor, windowLocation: center)
+    }
 
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
@@ -168,7 +205,10 @@ final class GraphCanvasNSScrollView: NSScrollView {
         }
         let sensitivity: CGFloat = 0.08
         let factor = exp(event.scrollingDeltaY * sensitivity)
-        let target = GraphCanvasCoordinates.clampMagnification(magnification * factor)
+        let target = GraphCanvasCoordinates.clampMagnification(
+            magnification * factor,
+            minimum: minMagnification
+        )
         guard abs(target - magnification) > 0.000_1 else { return }
         zoom(to: target, windowLocation: event.locationInWindow)
     }
@@ -180,7 +220,10 @@ final class GraphCanvasNSScrollView: NSScrollView {
             return
         }
         let oldMag = magnification
-        let newMag = GraphCanvasCoordinates.clampMagnification(newMagnification)
+        let newMag = GraphCanvasCoordinates.clampMagnification(
+            newMagnification,
+            minimum: minMagnification
+        )
         guard abs(newMag - oldMag) > 0.000_1 else { return }
 
         let clip = contentView
@@ -221,6 +264,8 @@ final class GraphCanvasNSScrollView: NSScrollView {
 @Observable
 final class GraphCanvasViewportController: NSObject {
     weak var scrollView: NSScrollView?
+    /// Live `NSScrollView` magnification. Grid fade and screen-space strokes read this.
+    var magnification: CGFloat = 1
     /// True while the window first responder is inside this canvas document.
     private(set) var documentContainsKeyboardFocus = false
     private var observedWindow: NSWindow?

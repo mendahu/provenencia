@@ -14,8 +14,12 @@ struct EvidenceGraphEdgeLayer: View {
     var dragOffsets: [String: CGSize] = [:]
     /// Measured card layouts, so edges attach to the painted cards.
     var layouts: [String: EvidenceCardLayout] = [:]
+    @Environment(\.graphCanvasViewport) private var viewport
 
     var body: some View {
+        let pixel = GraphCanvasCoordinates.screenPixelDocumentWidth(
+            magnification: viewport?.magnification ?? 1
+        )
         Canvas { context, _ in
             for bridge in snapshot.bridges {
                 guard let aID = bridge.endpointAID,
@@ -25,7 +29,7 @@ struct EvidenceGraphEdgeLayer: View {
                 else { continue }
 
                 let selected = selectedBridgeID == bridge.id
-                let lineWidth: CGFloat = selected ? 2 : 1.5
+                let lineWidth: CGFloat = (selected ? 2 : 1.5) * pixel
 
                 let aRect = primaryFrame(a, offset: dragOffsets[a.id] ?? .zero)
                 let bridgeRect = bridgeFrame(bridge, offset: dragOffsets[bridge.id] ?? .zero)
@@ -38,7 +42,8 @@ struct EvidenceGraphEdgeLayer: View {
                     primaryRect: aRect,
                     bridgeRect: bridgeRect,
                     selected: selected,
-                    lineWidth: lineWidth
+                    lineWidth: lineWidth,
+                    pixel: pixel
                 )
                 strokePrimaryToBridge(
                     context: context,
@@ -46,7 +51,8 @@ struct EvidenceGraphEdgeLayer: View {
                     primaryRect: bRect,
                     bridgeRect: bridgeRect,
                     selected: selected,
-                    lineWidth: lineWidth
+                    lineWidth: lineWidth,
+                    pixel: pixel
                 )
             }
         }
@@ -62,7 +68,8 @@ struct EvidenceGraphEdgeLayer: View {
         primaryRect: CGRect,
         bridgeRect: CGRect,
         selected: Bool,
-        lineWidth: CGFloat
+        lineWidth: CGFloat,
+        pixel: CGFloat
     ) {
         let seg = GraphCanvasEdgeGeometry.segment(fromRect: primaryRect, toRect: bridgeRect)
         let style = EvidenceSubjectKindStyle.forKind(primary.kind)
@@ -92,7 +99,7 @@ struct EvidenceGraphEdgeLayer: View {
                     startPoint: seg.start,
                     endPoint: seg.end
                 ),
-                style: StrokeStyle(lineWidth: lineWidth + 2.5, lineCap: .round)
+                style: StrokeStyle(lineWidth: lineWidth + 2.5 * pixel, lineCap: .round)
             )
         }
         context.stroke(
