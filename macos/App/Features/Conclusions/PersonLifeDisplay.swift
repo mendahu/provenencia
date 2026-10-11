@@ -1,7 +1,8 @@
 import Foundation
 
 /// A Person's birth and death as one secondary line: dates, then places.
-/// A missing half is left out. A birth with no death keeps the dash.
+/// A birth with no death keeps the dash after it; a death with no birth gets
+/// the dash (or the arrow) before it, so it never reads as a birth.
 enum PersonLifeDisplay {
     struct Line: Equatable {
         var text: String
@@ -46,7 +47,7 @@ enum PersonLifeDisplay {
         case (false, true):
             return L10n.Conclusions.lifeSpanOpen(born: born)
         case (true, false):
-            return died
+            return L10n.Conclusions.lifeSpanDeathOnly(died: died)
         case (false, false):
             return L10n.Conclusions.lifeSpan(born: born, died: died)
         }
@@ -61,7 +62,7 @@ enum PersonLifeDisplay {
         case (false, true):
             return born
         case (true, false):
-            return died
+            return L10n.Conclusions.lifePlaceDeathOnly(died: died)
         case (false, false):
             return L10n.Conclusions.lifePlaces(born: born, died: died)
         }
