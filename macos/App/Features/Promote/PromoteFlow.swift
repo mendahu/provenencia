@@ -555,6 +555,9 @@ struct PromoteFlow: Equatable, Sendable {
         if assessment == .weak, let match = menu.first {
             return .handle(id: match.id, ref: match.ref, title: match.title)
         }
+        if assessment == .strong, proposal.target == "new" {
+            return .newKind
+        }
         return .skip
     }
 
