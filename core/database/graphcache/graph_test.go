@@ -1,10 +1,12 @@
 package graphcache_test
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/effects"
+	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/ref"
@@ -152,6 +154,39 @@ func TestCommitOfAnAssociationLoadsEndpoints(t *testing.T) {
 	}
 	if len(n.Links) != 1 || string(n.Links[0].Neighbor) != string(event) || !n.Links[0].FromEnd {
 		t.Fatalf("links %+v", n.Links)
+	}
+}
+
+func TestLoadLinksUsesTheEdgeIndex(t *testing.T) {
+	c := openCatalog(t)
+	db, err := c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	q, args := graphcache.LinkLoadSQL([][]byte{make([]byte, 16)})
+	rows, err := db.Query(`EXPLAIN QUERY PLAN `+q, args...)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+	var plans []string
+	for rows.Next() {
+		var id, parent, notUsed int
+		var detail string
+		if err := rows.Scan(&id, &parent, &notUsed, &detail); err != nil {
+			t.Fatal(err)
+		}
+		plans = append(plans, detail)
+		if strings.HasPrefix(detail, "SCAN ") && !strings.Contains(detail, "CONSTANT") {
+			t.Fatalf("full scan: %s", detail)
+		}
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatal(err)
+	}
+	joined := strings.Join(plans, "\n")
+	if !strings.Contains(joined, "auto_reconciler_values_edge_idx") {
+		t.Fatalf("edge index unused:\n%s", joined)
 	}
 }
 

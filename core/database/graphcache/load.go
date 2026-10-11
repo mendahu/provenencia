@@ -3,6 +3,7 @@ package graphcache
 import (
 	"database/sql"
 	"sort"
+	"strings"
 
 	"github.com/mendahu/provenencia/core/connectrules"
 )
@@ -198,20 +199,8 @@ type linkRaw struct {
 }
 
 func (g *Graph) loadLinks(ids [][]byte) (map[string][]Link, error) {
-	q := `SELECT a.value_entity_id, a.entity_id, assoc.ref, ast.key, a.property_id, ap.key, bp.key,
-			b.value_entity_id, n.ref, n.subject_type_id, nt.key
-		FROM ` + g.valueTable + ` a
-		JOIN ` + g.entityTable + ` assoc ON assoc.id = a.entity_id AND assoc.merged_into_id IS NULL
-		JOIN subject_types ast ON ast.id = assoc.subject_type_id AND ast.origin = 'provenencia'
-		JOIN properties ap ON ap.id = a.property_id
-		JOIN ` + g.valueTable + ` b ON b.entity_id = a.entity_id AND b.rank = 1 AND b.reason = 'kept'
-			AND b.value_entity_id IS NOT NULL AND b.property_id != a.property_id
-		JOIN properties bp ON bp.id = b.property_id
-		JOIN ` + g.entityTable + ` n ON n.id = b.value_entity_id AND n.merged_into_id IS NULL
-		JOIN subject_types nt ON nt.id = n.subject_type_id
-		WHERE a.rank = 1 AND a.reason = 'kept' AND a.value_entity_id IS NOT NULL
-			AND a.value_entity_id IN (` + placeholders(len(ids)) + `)`
-	rows, err := g.query(q, blobArgs(ids)...)
+	q, args := linkLoadSQL(g.valueTable, g.entityTable, ids)
+	rows, err := g.query(q, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -242,6 +231,82 @@ func (g *Graph) loadLinks(ids [][]byte) (map[string][]Link, error) {
 	}
 	_ = rows.Close()
 	return g.finishLinks(raws, assocIDs)
+}
+
+// LinkLoadSQL is the association-edge query loadLinks runs.
+func LinkLoadSQL(ids [][]byte) (string, []any) {
+	g := New(nil)
+	return linkLoadSQL(g.valueTable, g.entityTable, ids)
+}
+
+// linkLoadSQL constrains the association type and endpoint property to the
+// registered bridges, each at its own origin. CROSS JOIN and INDEXED BY keep
+// SQLite on auto_reconciler_values_edge_idx (property_id, value_entity_id)
+// instead of starting at every unmerged entity.
+func linkLoadSQL(valueTable, entityTable string, ids [][]byte) (string, []any) {
+	types, props := bridgePredicates()
+	q := `SELECT a.value_entity_id, a.entity_id, assoc.ref, ast.key, a.property_id, ap.key, bp.key,
+			b.value_entity_id, n.ref, n.subject_type_id, nt.key
+		FROM ` + valueTable + ` a INDEXED BY auto_reconciler_values_edge_idx
+		CROSS JOIN ` + entityTable + ` assoc ON assoc.id = a.entity_id AND assoc.merged_into_id IS NULL
+		CROSS JOIN subject_types ast ON ast.id = assoc.subject_type_id AND ` + pairIn("ast.key", "ast.origin", len(types)) + `
+		CROSS JOIN properties ap ON ap.id = a.property_id
+		CROSS JOIN ` + valueTable + ` b ON b.entity_id = a.entity_id AND b.rank = 1 AND b.reason = 'kept'
+			AND b.value_entity_id IS NOT NULL AND b.property_id != a.property_id
+		CROSS JOIN properties bp ON bp.id = b.property_id
+		CROSS JOIN ` + entityTable + ` n ON n.id = b.value_entity_id AND n.merged_into_id IS NULL
+		CROSS JOIN subject_types nt ON nt.id = n.subject_type_id
+		WHERE a.rank = 1 AND a.reason = 'kept' AND a.value_entity_id IS NOT NULL
+			AND a.value_entity_id IN (` + placeholders(len(ids)) + `)
+			AND a.property_id IN (SELECT id FROM properties WHERE ` + pairIn("key", "origin", len(props)) + `)`
+	args := make([]any, 0, len(types)*2+len(ids)+len(props)*2)
+	args = append(args, pairArgs(types)...)
+	args = append(args, blobArgs(ids)...)
+	args = append(args, pairArgs(props)...)
+	return q, args
+}
+
+func bridgePredicates() (types, props [][2]string) {
+	seenT := map[string]bool{}
+	seenP := map[string]bool{}
+	for _, b := range connectrules.Bridges() {
+		tk := b.BridgeTypeKey + "\x00" + b.Origin
+		if !seenT[tk] {
+			seenT[tk] = true
+			types = append(types, [2]string{b.BridgeTypeKey, b.Origin})
+		}
+		for _, e := range b.Endpoints {
+			pk := e.PropertyKey + "\x00" + b.Origin
+			if seenP[pk] {
+				continue
+			}
+			seenP[pk] = true
+			props = append(props, [2]string{e.PropertyKey, b.Origin})
+		}
+	}
+	if len(types) == 0 {
+		types = [][2]string{{"", ""}}
+	}
+	if len(props) == 0 {
+		props = [][2]string{{"", ""}}
+	}
+	return types, props
+}
+
+func pairIn(a, b string, n int) string {
+	parts := make([]string, n)
+	for i := range parts {
+		parts[i] = "(?, ?)"
+	}
+	return "(" + a + ", " + b + ") IN (" + strings.Join(parts, ", ") + ")"
+}
+
+func pairArgs(pairs [][2]string) []any {
+	args := make([]any, 0, len(pairs)*2)
+	for _, p := range pairs {
+		args = append(args, p[0], p[1])
+	}
+	return args
 }
 
 func bridgeEndpoints(b connectrules.Bridge, selfKey, otherKey string) bool {
