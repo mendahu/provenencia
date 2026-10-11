@@ -17,11 +17,14 @@ Usability fixes from [`docs/dogfood/ux.md`](../../dogfood/ux.md) after Spike 9, 
 1. **Composer stays usable at 20 Observations.** Rows are easy to scan, a new Observation appears at the top and is focused, and Auto Transcribe is not sitting on the Citation menu.
 2. **The Evidence graph holds a real Source.** The canvas grows before cards hit the edge. Pan and zoom survive a trip to the composer. Zoomed-out grid and edges stay legible. Button hits match the buttons. A hotkey or toolbar control box-selects cards and moves them together.
 3. **Files.** A transcription that overflows shows a scrollbar. A file dropped on the Artifact section uploads. The file opens from the collapsed row and from the Evidence graph.
-4. **Lists.** Sources, People, Events, and Places show when the row last changed. The Sources list remembers sort and filter.
+4. **Lists.** Sources, People, Events, and Places show when the row last changed. Leaving a list and coming back lands at the same scroll position. The Sources list remembers sort, type filter, evidence-status filter, and text search.
 5. **Entry defaults.** Person→Event role prefills `subject`. Place→Place relationship prefills `part_of`. A date modal opens on Year and, when the transcription has a date, that date is already filled. A full name line can be split into parts. The name-part type control does not jump width and cycles same-letter matches.
 6. **Small chrome.** Create Source asks for the name first. Enter saves a Property title. Clicking outside a sheet closes it, and asks first when the sheet is dirty. Opening an existing project selects the oldest user, not "create a new user." Searching `marriage` ranks title-word hits above fuzzy name prefixes. People, Places, and Events use one mark each, and the Event mark is not an hourglass. A Person page shows sex or gender, with gender winning when both exist.
 7. **Names match the way records are written.** José matches Jose in suggestions and stays a separate grouping on the Person page. Jas. matches James. O Brien matches O'Brien. A rare surname outweighs Smith. A patronymic is a part type. Spanish dual surnames weigh the first surname above the second. A negative observation counts as a contradiction.
 8. **A face is evidence.** A polygon on a photo is a depiction Observation. The Person page shows those crops, and one can be marked to lead that page and the People list. Promote compares two likenesses as pictures. Empty transcription is valid.
+9. **A filing can be taken back.** Unpromote on a promoted card deletes that Subject's Identity Claim and the bridge claims on this Source that used it, after a confirm that names those bridges. The card shows Promote again. The handle stays. Other members' claims are not rejected.
+10. **Long titles stay in their column.** The Promote target menu keeps its width when a title is long. The full title is available when the label is cut off. Typing `par` in a combo box lists *parent* above *grandparent*.
+11. **Interests are a Person property.** A new catalog has an unlocked, multiple, text `interests` Property on Person. An existing catalog is unchanged.
 
 ## Where the notes went
 
@@ -65,6 +68,12 @@ Usability fixes from [`docs/dogfood/ux.md`](../../dogfood/ux.md) after Spike 9, 
 | Promote compares two crops | S10-36 | S10-D13 |
 | Project collation locale (no picker) | S10-37 | — |
 | Seed event type `engagement`; couple title like marriage | S10-38 | — |
+| Restore list scroll position on Back | S10-40 | — |
+| Sources list filters and text search | S10-41 | S10-D8 (same board as S10-22) |
+| Promote target menu truncates a long title | S10-42 | — |
+| Combo box ranks a prefix above a mid-word match | S10-43 | — |
+| Unpromote on a promoted Subject card | S10-44 | S10-D6 (same board as S10-18) |
+| Seed Person property `interests` | S10-45 | — |
 
 **Left in the dogfood log**
 
@@ -98,7 +107,13 @@ These are the calls for this spike. The questions at the bottom are answered; no
 - **Last updated** is an audit scope, not a timestamp column. Sources already store `UpdatedRevision` (`scope_type = source`) and can show it once the row is designed. People, Events, and Places have no scope today (`canonical_entity` is `noScope` in `core/database/audit/scopes.go`). S10-21 adds a `canonical_entity` scope: Identity Claim writes, and Observation writes on a Subject that is a member, so editing evidence moves the handle's revision. Display is relative or absolute in the briefs; the value is the revision's time.
 - **One Event mark.** Sidebar People / Events / Places use SF Symbols (`person`, `calendar`, `mapPin` on `WorkspaceSection`). Cards, lists, omnibar hits, Promote, and Properties use `PVMark` (`subject_person`, `subject_event`, `subject_place`). The Event asset is the hourglass. S10-D7 draws the new Event mark and switches the sidebar (and the toolbar, which reads `WorkspaceSection.icon`) to the subject marks. Every existing `PVMark` call site picks up the new asset with no extra brief. List empty states that still use `PVSymbol` for these three kinds switch in the same PR.
 - **Sex / gender styling** uses a seeded `gender` Property when the Person has one, otherwise `sex_at_birth`. The seed is `man`, `woman`, `non_binary` (labels Man, Woman, Non-binary). Researchers add further terms (`origin=user`), the same way they extend `role`. It is not product-locked, and there is no product `other` term. The page treatment recognizes the three seeded keys. A researcher-added term still counts as gender and wins over sex at birth; the brief draws that term without inventing a new color per key. Unknown, empty, and mixed (the reconciler already has a mixed state) stay neutral. `sex_at_birth` already appears as an ordinary field row when a record speaks to it (`PersonDetailContent`); this PR adds the page treatment and leaves that row in place.
-- **Composer performance** is profiled before the row rethink. S10-11 fixes fetch or render cost without a new layout. S10-16 must still be comfortable at 20 Observations. If the profile says the row view *is* the cost, S10-11 only removes work that a redesign would not redo (duplicate loads, per-row queries), and the layout fix waits for S10-16.
+- **Composer performance** is profiled before the row rethink. S10-11 fixes fetch or render cost without a new layout. S10-16 must still be comfortable at 20 Observations. If the profile says the row view *is* the cost, S10-11 only removes work that a redesign would not redo (duplicate loads, per-row queries), and the layout fix waits for S10-16. If the profile says the Artifact viewer is what holds the form back, that viewer loads on its own: the Citation and Observations appear while the image or PDF is still loading. If the viewer is not the cost, do not build that split. The note is a hunch.
+- **List scroll is session state, like the graph camera.** Sources, People, Events, and Places remember content offset on the workspace session and restore it when that list place appears again (Back, Forward, breadcrumbs). It is not a navigation-history field ([`navigation-history.md`](../archive/spike-3/navigation-history.md) still omits scroll from the entry) and it does not survive relaunch. Restore Sources only after S10-09 has put sort and type filter back. A changed sort or filter resets the offset to the top.
+- **Sources evidence filters count primaries in one read.** A primary is a person, event, or place. Empty: no primaries. In progress: at least one primary has no accepted Identity Claim. Filed: at least one primary, and every primary has an accepted claim. Bridges are not a filter axis. The counts are one grouped query beside `sourcegraphprogress`, not a query per row. Text search filters the list already loaded, by title and ref, as you type. It is not the omnibar and not FTS. Status and query persist in the same per-project, per-user store as S10-09's sort and type filter.
+- **Unpromote deletes the filing. It does not reject it.** The button is on a promoted primary card. Confirm always. The confirm names each bridge Subject on this Source (participation, relationship, location, place relationship) that has this Subject as an end and an accepted claim. One transaction deletes those claims and this Subject's claim, audited, through the write path. The Evidence cards stay; their footers show Promote again. The handle stays, even if it has no members left. Other members' claims are not rejected and not stripped. That review stays [`ideas/identity-claim-review.md`](../../ideas/identity-claim-review.md). A rejection ("not this entity") is that review's action, not this button.
+- **A long select label truncates inside the width it was given.** `PVSelect`'s closed label ellipsizes rather than growing the control. The Promote target column (`PromoteLayout.targetColumn`) stays put; `PromoteTargetMenuRow` already limits the menu title to one line. When the closed label is cut, help shows the full string. S10-17 still gives the name-part type control a stable width sized to its longest label. Those labels are short, so truncation does not replace that fix.
+- **Combo box rank is three bands, then the original order.** In `PVComboBoxMatch`, a label that starts with the query ranks above a later word that starts with it (split on spaces and hyphens), which ranks above any other contains match, including a match only in the subtext. `par` lists *parent* above *grandparent*. This is the kit filter, not `core/search` (S10-06).
+- **`interests` is prose, not a matcher feature.** Key `interests`, label Interests, `value_type = text`, cardinality `multiple`, bound to `person`, unlocked (the Properties page may unbind it). Same install rule as `engagement`: new catalogs only, no migration. It is not in a match profile and not on the Person header.
 - **Artifact drop already exists inside the Add dialogs** (`IngestFileDropRow` on create and attach). It does not exist on the Artifact section of the Source page. S10-18 adds the section target. Open File today is only in the expanded detail (`SourcePageArtifactsView.artifactPrimaryFileColumn`). The Evidence graph header has no open-file control.
 - **Adaptive field adoption** in this spike is the composer, where term lists grow. Other screens keep their current control until a later PR. A view that must grow to fit a radio row gets its own brief at that time; none of those are in this spike except the composer.
 - **Name part types stay a select.** `patronymic` joins the compiled registry (S10-29), so the list can pass eight. It is still a fixed-width `PVSelect`. The adaptive field is for vocabulary that grows without a bound. User-minted part types stay out. The Western split rules in S10-17 do not become profile-aware.
@@ -126,16 +141,16 @@ These are the calls for this spike. The questions at the bottom are answered; no
 | **S10-D3** | Citation composer | **S10-16** | S10-34 depiction row |
 | **S10-D4** | Name parts modal | **S10-17** | Design after S10-29, so the type list includes `patronymic` |
 | **S10-D5** | Source page — Artifacts | **S10-18** | — |
-| **S10-D6** | Evidence graph | **S10-18** header open | S10-20 box-select |
+| **S10-D6** | Evidence graph | **S10-18** header open | S10-20 box-select. S10-44 Unpromote on the promoted card |
 | **S10-D7** | Sidebar | **S10-19** | Toolbar section icon ships in the same PR |
-| **S10-D8** | Sources list | **S10-22** | — |
+| **S10-D8** | Sources list | **S10-22** | S10-41 evidence-status filter and text search |
 | **S10-D9** | Persons list | **S10-22** | S10-35 fills the thumb with a likeness. S10-39 makes that thumb the preferred portrait |
 | **S10-D10** | Events list | **S10-22** | — |
 | **S10-D11** | Places list | **S10-22** | — |
 | **S10-D12** | Person detail | **S10-23** | S10-35 gallery and S10-39 preferred portrait. Design both with the gender treatment, before S10-23 |
 | **S10-D13** | Promote page | **S10-36** | Evidence sheet shows two crops |
 
-S10-D6 is one board for the graph's new chrome (open file, box-select). S10-01…S10-04 do not wait on it. S10-D8…D11 are four briefs because they are four places; Events and Places should specify the same last-updated cell as Persons so the shared `ConclusionListPage` does not grow three treatments. Only the Persons list thumb becomes a likeness. S10-D1 is a kit board: the control is the design, and stamping it into an unchanged form is not a new view. S10-D3, S10-D9, and S10-D12 each cover a later PR on that same view, so those briefs are written with the later frame in them. D12 includes the preferred-portrait control S10-39 fills, and D9 includes that crop as the list thumb.
+S10-D6 is one board for the graph's new chrome (open file, box-select, Unpromote). S10-01…S10-04 do not wait on it. S10-D8…D11 are four briefs because they are four places; Events and Places should specify the same last-updated cell as Persons so the shared `ConclusionListPage` does not grow three treatments. Only the Sources list gains evidence-status filters and text search; D8 draws that chrome, and D9…D11 do not. Only the Persons list thumb becomes a likeness. S10-D1 is a kit board: the control is the design, and stamping it into an unchanged form is not a new view. S10-D3, S10-D6, S10-D8, S10-D9, and S10-D12 each cover a later PR on that same view, so those briefs are written with the later frame in them. D12 includes the preferred-portrait control S10-39 fills, and D9 includes that crop as the list thumb.
 
 ## PR sequence
 
@@ -160,14 +175,17 @@ SLICE 2 — Behavior, no new chrome
   S10-11  Composer stays responsive; profile first
   S10-12  Outside click closes a sheet; dirty asks
   S10-13  Date modal: focus Year, prefill the first transcription match
+  S10-42  Promote target menu truncates a long title
   Check: `marriage` hits the certificate before Marion Margaret. A long
          transcription scrolls. A new Person→Event row already says subject.
+         A long Promote title stays inside the target column.
 
 SLICE 3 — Choice field
+  S10-43  Combo box: a prefix outranks a mid-word match
   ✎ S10-D1 ──▶ S10-14  Adaptive choice field in the kit
   Check: a 2-option field is radios, a 5-option field is a select, a long
-         term list is a combo box. Preview or a kit host is enough; the
-         composer adopts it in S10-16.
+         term list is a combo box. Typing `par` lists parent above grandparent.
+         Preview or a kit host is enough; the composer adopts it in S10-16.
 
 SLICE 4 — Composer and the dialogs it opens
   ✎ S10-D2 ──▶ S10-15  Create Source: name, then type
@@ -191,12 +209,17 @@ SLICE 5 — Artifacts and multi-select
          matches the card.
 
 SLICE 6 — Lists and the Person page
+  S10-40  List scroll restored when the list place appears (after S10-09)
   S10-21  canonical_entity audit scope + list revision reads
-  ✎ S10-D8…D11 ──▶ S10-22  Last updated on four lists
+  ✎ S10-D8…D11 ──▶ S10-22  Last updated on four lists.
+                       D8 also draws the Sources filters S10-41 fills.
+  S10-41  Sources: evidence-status filter and text search (after S10-09, S10-22)
   ✎ S10-D12 ──▶ S10-23  Person page sex / gender. The board also draws the gallery S10-35 fills and the preferred portrait S10-39 fills.
-  Check: edit a Source, leave, come back — the row's time moved. Edit a member's
-         Observation — the Person row's time moved. A Person with gender shows
-         gender; one with only sex at birth shows that; unknown is neutral.
+  Check: edit a Source, leave, come back — the row's time moved, and the list
+         is scrolled where you left it. Edit a member's Observation — the Person
+         row's time moved. Filter to graphs that still have an unpromoted person:
+         a filed Source drops out. A Person with gender shows gender; one with
+         only sex at birth shows that; unknown is neutral.
 
 SLICE 7 — How names compare (no new chrome)
   S10-24  Accent fold (0.95) and spaced particles
@@ -224,15 +247,21 @@ SLICE 8 — Likeness
          the other faces stay. Promote shows the two pictures. Clearing the
          cache does not lose the Citation.
 
-SLICE 9 — Event vocabulary
+SLICE 9 — Seeded vocabulary
   S10-38  Seed engagement; two subjects title "Engagement of A and B"
-  Check: a new catalog lists Engagement. Two people title as a couple.
-         An existing catalog is unchanged.
+  S10-45  Seed Person property interests (text, multiple, unlocked)
+  Check: a new catalog lists Engagement and Interests. Two people title as a
+         couple. An existing catalog gains neither.
+
+SLICE 10 — Take a filing back
+  ✎ (S10-D6 already done) ──▶ S10-44  Unpromote on the promoted card
+  Check: confirm names the bridges. The card shows Promote again. The other
+         person on that relationship stays promoted. The handle is still there.
 
 S10-99 — Dogfood close / docs
 ```
 
-S10-05…S10-13, S10-15, and S10-19 have no dependency on the graph slice. S10-24, S10-29, S10-30, S10-31, S10-32, and S10-38 have no dependency on the dogfood slices. They are ordered here so review stays one stream. Parallel PRs are fine when **Depends on** allows it. S10-29 is numbered with the name work and listed in slice 4 because the name-parts brief cannot be drawn until `patronymic` exists.
+S10-05…S10-13, S10-15, S10-19, S10-42, and S10-43 have no dependency on the graph slice. S10-24, S10-29, S10-30, S10-31, S10-32, S10-38, and S10-45 have no dependency on the dogfood slices. They are ordered here so review stays one stream. Parallel PRs are fine when **Depends on** allows it. S10-29 is numbered with the name work and listed in slice 4 because the name-parts brief cannot be drawn until `patronymic` exists.
 
 ### Dependencies at a glance
 
@@ -248,7 +277,10 @@ S10-14 choice ───┘         ▲
    ▲                       │
 S10-D1                     S10-D3
 
+S10-09 persist ──▶ S10-40 list scroll
+             └──▶ S10-41 sources filters (after S10-22; D8 draws the chrome)
 S10-21 scope ──▶ S10-22 last updated (D8…D11)
+S10-D6 ──▶ S10-44 unpromote (button drawn with the open-file / box-select board)
 S10-D12 (gender + gallery + preferred portrait) ──▶ S10-23
 S10-29 patterns ──▶ S10-D4 ──▶ S10-17 name parts
                  └──▶ S10-37 collation
@@ -346,7 +378,7 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 | | |
 | --- | --- |
 | **In** | Remember `SourcesModel.sort` and `typeFilterID` per project and user. Restore when the Sources place is shown again, including after leaving to a Source page and after relaunch. |
-| **Out** | Sort or filter on People, Events, or Places. New menu items. |
+| **Out** | Sort or filter on People, Events, or Places. Evidence-status filters and text search (S10-41 extends this same store). |
 | **Testable** | Choose Updated and a type, open a Source, come back: both are still set. Relaunch: still set. |
 | **Depends on** | — |
 
@@ -363,8 +395,8 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 
 | | |
 | --- | --- |
-| **In** | Profile opening a Citation with about 20 Observations. Fix the time that is data fetching or redundant work. Leave the row layout to S10-16. Record the before/after in the PR (a numbers note is enough; no new ledger file). |
-| **Out** | A virtualized list designed from scratch (that is the rethink, if the profile says paint is the cost). |
+| **In** | Profile opening a Citation with about 20 Observations. Fix the time that is data fetching or redundant work. Leave the row layout to S10-16. If the Artifact viewer is what blocks the form, load it on its own so the Citation and Observations render while the image or PDF is still loading (working rules). If it is not the cost, do not build that split. Record the before/after in the PR (a numbers note is enough; no new ledger file). |
+| **Out** | A virtualized list designed from scratch (that is the rethink, if the profile says paint is the cost). A viewer split the profile did not justify. |
 | **Testable** | A Citation with 20 Observations opens without a visible hitch on the machine we dogfood on. A Citation with a handful is unchanged. |
 | **Depends on** | — |
 
@@ -386,7 +418,25 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 | **Testable** | Transcription `14 May 1817`: the modal opens on Year with 1817, month May, day 14. Two dates in one transcription: the first wins. No date: Year focused, fields empty. |
 | **Depends on** | — |
 
+#### S10-42 — Long titles in a select
+
+| | |
+| --- | --- |
+| **In** | `PVSelect`'s closed label truncates with an ellipsis inside the width the caller gave it (`fillsWidth`, or an explicit frame such as `PromoteLayout.targetColumn`). It does not expand the row. When the label is cut, help shows the full string. The Promote target menu uses that control; `PromoteTargetMenuRow` already line-limits the open menu. Every other select with a long label gets the same truncation. |
+| **Out** | A new menu. The name-part type control's stable width (S10-17 sizes that field to its longest label). Letter cycling (S10-17). |
+| **Testable** | A Promote row whose best match has a very long title keeps the target column width, and the rest of the row stays put. Hover or help shows the full title. A short label is unchanged. |
+| **Depends on** | — |
+
 ### Slice 3 — Choice field
+
+#### S10-43 — Combo box prefix rank
+
+| | |
+| --- | --- |
+| **In** | `PVComboBoxMatch.filter` keeps a contains match and orders it in three bands (working rules): label prefix, then a later word that starts with the query, then any other contains match. Order inside a band stays the order the caller passed. Every combo box picks it up, including the one S10-14 and S10-16 use. |
+| **Out** | Omnibar ranking (S10-06). A new scoring number. Hiding mid-word matches. |
+| **Testable** | Options *parent* and *grandparent*, query `par`: *parent* is first. A hyphenated word that starts with the query sits between a label prefix and a mid-word contains. An empty query keeps the caller's order. |
+| **Depends on** | — |
 
 #### S10-14 — Adaptive choice field
 
@@ -471,6 +521,15 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 
 ### Slice 6 — Lists and the Person page
 
+#### S10-40 — List scroll position
+
+| | |
+| --- | --- |
+| **In** | Remember the scroll offset of the Sources, People, Events, and Places lists on the workspace session. Restore it when that list place appears again, including Back and Forward. Sources restores after sort and type filter (S10-09). Changing sort or filter on that visit resets the offset to the top. People, Events, and Places share `ConclusionListPage`; each list keeps its own offset. |
+| **Out** | A navigation-history field. Restoring across relaunch. Remembering the Sources text query (S10-41 stores that with the other Sources settings). |
+| **Testable** | Scroll to the bottom of Sources, open a Source, press Back: the list is at the bottom, and the sort and type filter from S10-09 are still set. Quit and relaunch: the offset starts at the top. The same round-trip on People, Events, and Places. |
+| **Depends on** | S10-09 |
+
 #### S10-21 — Handle last-activity scope
 
 | | |
@@ -487,9 +546,20 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 | | |
 | --- | --- |
 | **In** | Each list row shows when it last changed, from the revision S10-21 (Sources: the existing `UpdatedRevision`). Empty or never-audited reads as the brief's empty. Sorting Sources by Updated already exists; this PR does not add sort to the other lists. |
-| **Out** | A new list layout beyond the cell the briefs add. Sort/filter persistence (S10-09, already landed). |
+| **Out** | A new list layout beyond the cell the briefs add. Sort/filter persistence (S10-09). Evidence-status filters and text search (S10-41 fills the chrome D8 already drew). |
 | **Testable** | All four lists show a time. Edit a Source note: Sources row moves. Edit a member Observation: the Person row moves and the Source row moves. Events and Places match the Persons cell. |
 | **Depends on** | S10-21, S10-D8, S10-D9, S10-D10, S10-D11 |
+
+#### S10-41 — Sources filters and search
+
+**Brief:** S10-D8, already designed before S10-22. This PR fills the filter and search chrome. It does not add a cell to Events, Places, or Persons.
+
+| | |
+| --- | --- |
+| **In** | Per the working rules and S10-D8: filter the Sources list to empty, in progress, or filed, from one grouped count of primary subjects and their accepted claims, next to `sourcegraphprogress`. A text field filters the loaded rows by title and ref as you type. Status and query persist in the S10-09 store, per project and user, and restore with sort and type filter. |
+| **Out** | The same filters on People, Events, or Places. Omnibar search. A per-row count query. Hiding bridge subjects as their own status. |
+| **Testable** | A Source with no people, events, or places matches Empty and not the other two. A Source with one unpromoted person matches In progress. After that person is promoted, it matches Filed. Typing part of a title hides the other rows. Leave and come back: status, query, sort, and type filter are all still set. A long list does not issue one count query per row. |
+| **Depends on** | S10-09, S10-22, S10-D8 |
 
 #### S10-23 — Sex / gender on the Person page
 
@@ -649,7 +719,7 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 | **Testable** | Two people with a likeness: the sheet shows both crops. Pinning writes the same kind of pin a name pin writes. |
 | **Depends on** | S10-33, S10-D13 |
 
-### Slice 9 — Event vocabulary
+### Slice 9 — Seeded vocabulary
 
 #### S10-38 — Seed event type `engagement`
 
@@ -660,13 +730,35 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 | **Testable** | A catalog created after this PR offers Engagement. Two subjects title *Engagement of A and B* on the list, the page, and in search. A marriage of two still titles *Marriage of A and B*. Three subjects of an engagement title *Engagement of A et al.* Opening an older catalog does not add the term. |
 | **Depends on** | — |
 
+#### S10-45 — Seed `interests` on Person
+
+| | |
+| --- | --- |
+| **In** | Add `interests` / Interests to the person property seed: `value_type = text`, cardinality `multiple`, bound to `person`, unlocked ([`add-seeded-vocabulary`](../../../.cursor/skills/add-seeded-vocabulary/SKILL.md)). Install on catalog create only. [`docs/seeded-vocabulary.md`](../../seeded-vocabulary.md) §3.2 and §3.3 list the key. No new chrome, so no brief. The composer and the Person page show it the way they show any other text property. |
+| **Out** | A migration that inserts the property into existing catalogs. A match feature. A header line. A term list. Locking the binding. |
+| **Testable** | A catalog created after this PR offers Interests on a Person, accepts more than one value, and lets the Properties page unbind it. Opening an older catalog does not add the property. |
+| **Depends on** | — |
+
+### Slice 10 — Take a filing back
+
+#### S10-44 — Unpromote
+
+**Brief:** S10-D6, already designed before S10-18. This PR fills the button that board drew on the promoted card.
+
+| | |
+| --- | --- |
+| **In** | Per the working rules and S10-D6: a promoted primary card offers Unpromote beside the control that opens the handle. Confirm always, with the existing confirm. The body names each bridge Subject on this Source whose accepted claim has this Subject as an end. Confirm deletes this Subject's Identity Claim and those bridge claims in one `writes.Run` transaction, audited. Cards stay on the graph and show Promote. The handle is not deleted. Other members' claims are left for the parked review. |
+| **Out** | Rejecting the claim ("not this entity"). The weak-claim queue, re-pin, and accept-as-is ([`ideas/identity-claim-review.md`](../../ideas/identity-claim-review.md)). Deleting the Evidence cards. Deleting the handle. Unpromote from the Person, Event, or Place page. |
+| **Testable** | Unpromote a person who is in a filed relationship: the confirm names that relationship, both cards show Promote, the other person stays on their handle, and that handle still exists. Unpromote a person with no filed bridges: the confirm does not invent a bridge, and the card shows Promote. Cancel leaves the claim. |
+| **Depends on** | S10-D6 |
+
 ### S10-99 — Dogfood close / docs
 
 | | |
 | --- | --- |
 | **In** | Move shipped notes to Done in [`docs/dogfood/ux.md`](../../dogfood/ux.md). Distill this spike with [`archive-docs`](../../../.cursor/skills/archive-docs/SKILL.md) when the bar above is true. The three idea notes live in this folder; the close distill keeps their decisions and drops the PR sequence. |
 | **Out** | Pulling the parked density, extract, transliteration, or Reconciliation-Claim items in at the close. |
-| **Depends on** | S10-01…S10-39 |
+| **Depends on** | S10-01…S10-45 |
 
 ## Scope boundary
 
@@ -682,8 +774,10 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 | Session camera | A saved camera table |
 | `part_of` as the place default (already seeded) | A new place-relationship term |
 | `gender` seeded as `man`, `woman`, `non_binary`, plus researcher terms | Treating `sex_at_birth` as gender. A locked term list. |
-| `engagement` on new catalogs | A migration that inserts it into catalogs that already exist |
-| Claim editing, weak-claim review | Still [`ideas/identity-claim-review.md`](../../ideas/identity-claim-review.md) |
+| `engagement` and `interests` on new catalogs | A migration that inserts either into catalogs that already exist |
+| Unpromote: delete this claim and the bridge claims on this Source | Rejecting a claim, the weak-claim queue, re-pin, accept-as-is — still [`ideas/identity-claim-review.md`](../../ideas/identity-claim-review.md) |
+| Sources evidence-status filter and text search; list scroll for the session | The same filters on People, Events, and Places. Scroll stored in navigation history or across relaunch |
+| Select truncation and combo-box prefix rank | Omnibar ranking (that is S10-06). Sizing every select to its longest label |
 
 ## Gotchas
 
@@ -704,7 +798,11 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 - **Depiction is not a file.** Delete and Impact stay on the Citation and the Artifact. The crop cache is disposable. A polygon edit must not leave the old crop as if it were the current face.
 - **Gallery and gender share a page.** S10-23 ships the gender treatment inside frames that already reserve the gallery and the preferred-portrait control. S10-35 fills the gallery. S10-39 fills the control. Designing the gender page without those frames means a second Person-detail brief, which this plan does not allow.
 - **Frequency on a tiny project.** Inverse frequency with one of each name is a flat weight. The scorer needs a floor so the first Smith is not treated as rare forever, and so an empty project still matches.
-- **Do not backfill `engagement`.** Seeded terms are Install data. A migration `INSERT` would put the term in catalogs the researcher already has, and this spike does not do that. Add it on those projects by hand.
+- **Do not backfill `engagement` or `interests`.** Seeded terms and properties are Install data. A migration `INSERT` would put them in catalogs the researcher already has, and this spike does not do that. Add them on those projects by hand.
+- **Scroll is not a history entry.** Spike 3 omits scroll from `WorkspaceLocation`. S10-40 keeps it that way and stores the offset on the session, the way S10-04 stores the camera. Restoring it before S10-09 has put the Sources sort back lands the researcher at the bottom of a differently ordered list.
+- **Status counts are primaries.** `sourcegraphprogress` counts every canvas subject, including bridges. The filter must not treat an unfiled bridge as "in progress" when every person, event, and place is filed. One extra grouped read, not a loop.
+- **Unpromote is a delete of claims, not of subjects.** The bridge cards stay on the Evidence graph. Deleting the handle because it has no members left is a different product, and this spike does not have a handle delete. A rejected claim is not "unpromoted": the footer looks for an accepted claim, but a rejection means "not this entity" and stays parked with the review.
+- **Truncation and the name-part width are different fixes.** S10-42 stops a long label from growing `PVSelect`. S10-17 stops the name-part control from changing width when the selection changes. Doing the second for every select makes short menus as wide as their longest option, which the earlier gotcha already forbids.
 
 ## Questions
 
@@ -712,6 +810,13 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 | --- | --- | --- |
 | Q1 | **Gender terms.** Seed `man`, `woman`, `non_binary`. Researchers extend the vocabulary. Answered 2026-10-08. | — |
 | Q2 | **Dense Evidence graphs.** Descoped 2026-10-08. Stays in the dogfood log. Extract beyond date prefill and name split stays there too. | — |
+| Q3 | **Sources status filters.** Empty / in progress / filed, counted on primary subjects in one grouped read. Text search filters the loaded list by title and ref. Both persist with sort and type filter. Answered 2026-10-11. | — |
+| Q4 | **Unpromote.** Always confirm, and name the bridge claims on this Source that will be deleted with it. Delete the claims. Do not reject them, and do not delete the handle or the cards. Other members stay for the parked review. Answered 2026-10-11. | — |
+| Q5 | **Long titles.** Truncate inside the select's given width. Help shows the full string. The name-part width fix stays S10-17. Answered 2026-10-11. | — |
+| Q6 | **Combo rank.** Label prefix, then a later word, then any other contains match. Answered 2026-10-11. | — |
+| Q7 | **List scroll.** Session offset, restored when the list place appears. Not a history field. Not across relaunch. Answered 2026-10-11. | — |
+| Q8 | **`interests`.** Unlocked text, cardinality multiple, person only, new catalogs only. Answered 2026-10-11. | — |
+| Q9 | **Composer viewer.** S10-11 splits that load only when the profile shows it blocks the form. Answered 2026-10-11. | — |
 
 Everything else in **Working rules** is decided for planning. Correct any of them before the PR that implements it.
 
@@ -724,8 +829,11 @@ Everything else in **Working rules** is decided for planning. Correct any of the
 | S10-23 | [`docs/seeded-vocabulary.md`](../../seeded-vocabulary.md) new gender section. Do not rewrite §3.7. |
 | S10-25, S10-29, S10-32 | Seeded vocabulary: abbreviation and nickname tables, `patronymic` and the Spanish profile, `likeness` / `depiction`. [`docs/matching.md`](../../matching.md) and [`docs/structured-name-model.md`](../../structured-name-model.md) follow the code. |
 | S10-38 | [`docs/seeded-vocabulary.md`](../../seeded-vocabulary.md) §3.4: `engagement`. Couple rule covers `engagement`. No migration. |
+| S10-40 | [`navigation-history.md`](../archive/spike-3/navigation-history.md): list scroll is session state restored when the list place appears. It is still not a history field. |
+| S10-44 | [`conclusion-layer-data-model.md`](../../conclusion-layer-data-model.md) §5.2 already allows deleting a claim. Note that Unpromote also deletes the bridge claims on that Source. Do not specify the review queue. |
+| S10-45 | [`docs/seeded-vocabulary.md`](../../seeded-vocabulary.md) §3.2 and §3.3: `interests`. No migration. |
 | S10-99 | Dogfood log Done. Archive this folder, including the three idea notes, as decisions. |
 
 ## Definition of done
 
-The dogfood bar at the top is true in the app, including the name and likeness lines. A person can mark one likeness to lead the page and the People list. A new catalog's event types include Engagement, and two people on one title as *Engagement of A and B*. Each gated PR matches its brief. Parked notes and the ideas-folder leftovers are still parked. Claim editing is still an idea, not a half-finished extra. Existing catalogs were not given `engagement` by a migration.
+The dogfood bar at the top is true in the app, including the name and likeness lines. A person can mark one likeness to lead the page and the People list. A new catalog's event types include Engagement, and two people on one title as *Engagement of A and B*. A new catalog's Person properties include Interests. Each gated PR matches its brief. Parked notes and the ideas-folder leftovers are still parked. The weak-claim review is still an idea. Unpromote deletes a filing; it does not become that review. Existing catalogs were not given `engagement` or `interests` by a migration.

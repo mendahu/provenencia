@@ -17,6 +17,6 @@ These are siblings under `core/database`. Each one is its own package so the imp
 | `audit` | Stores the revision and its source scopes | `rowchange`, `effects` |
 | [`writes`](../../writes) | The transaction around a write that has moved onto it | `database`, `audit`, `effects` |
 
-`deleteimpact` and `effects` do not import each other. `effects` does not import `audit`. `audit.Record` stores source scopes from `effects.Sources`. [`writes.Run`](../../writes) records those changes, recomputes handles, and reprojects search. Property-term create, update, and delete are the writes on it. Every other writer still begins its own transaction and calls `audit.Record`. Official deletes call `deleteimpact`.
+`deleteimpact` and `effects` do not import each other. `effects` does not import `audit`. `audit.Record` stores source scopes from `effects.Sources`. [`writes.Run`](../../writes) records those changes, recomputes handles, and reprojects search. Which writes call it is in that package's [README](../../writes/README.md). Official deletes call `deleteimpact`.
 
 A wrapping directory would group the folders in the tree and leave this direction unchanged. Nesting one of these packages inside another would cycle.

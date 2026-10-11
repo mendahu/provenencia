@@ -19,6 +19,26 @@ Copy the stub. Surface + what got in the way is enough. A wanted fix is optional
 
 <!-- add below this line -->
 
+### Dense Evidence graphs (census-scale)
+
+- **Date:** 2026-09-24
+- **Where:** Evidence graph
+- **Annoyance:** A real census page can put dozens of Subjects and hundreds of Observations on one canvas. Nothing is wrong with the model — it just gets hard to see the household you care about.
+- **Wanted:** Layers or filters when a Source actually hurts. Descoped from [Spike 10](../deployment-plan/spike-10/) on 2026-10-08. Canvas growth and box-select are in that spike; hiding part of a Source is not.
+
+### Automatic structure from the Artifact (beyond transcription)
+
+- **Date:** 2026-09-23
+- **Where:** Citation composer / Evidence graph
+- **Annoyance:** Even after transcription is filled, the researcher still retypes names, dates, and roles onto cards. Spike 8 only dumps text into **transcription**.
+- **Wanted:** Cheap field hints after there is a string (`NSDataDetector`, name/date patterns) and, later, guided extract. Not catalog writes.
+- **Still out:** PDF OCR / Vision on page rasters; Live Text / VisionKit; Foundation Models (`macOS 26+`, raise-the-floor). Pipeline if we ever did it: string → suggestions the researcher accepts → real Citation + Observations. Experiment: “obituary → draft cards,” not “obituary → catalog writes.”
+- **Spike 10 took the two cheap slices:** date prefill from the transcription, and splitting a full name line into parts. The rest stays here.
+
+## Pulled into Spike 10 (2026-10-08)
+
+Scheduled in [Spike 10](../deployment-plan/spike-10/). Not done until the PR lands. Notes added 2026-10-11 are scheduled the same way.
+
 ### Sources list needs filters and search to find Sources
 
 - **Date:** 2026-10-11
@@ -65,26 +85,6 @@ Copy the stub. Surface + what got in the way is enough. A wanted fix is optional
 - **Where:** Sources, People, Events, and Places lists
 - **Annoyance:** I scroll down a list, open an item (say a Source detail page), then press Back. The list is back at the top instead of where I left it.
 - **Wanted:** Back returns me to the same scroll position. If I was at the bottom of the list when I left, I'm at the bottom when I return. Related: *Sources list sort and filter don't persist*, since a restored position only makes sense if the sort and filter come back too.
-
-### Dense Evidence graphs (census-scale)
-
-- **Date:** 2026-09-24
-- **Where:** Evidence graph
-- **Annoyance:** A real census page can put dozens of Subjects and hundreds of Observations on one canvas. Nothing is wrong with the model — it just gets hard to see the household you care about.
-- **Wanted:** Layers or filters when a Source actually hurts. Descoped from [Spike 10](../deployment-plan/spike-10/) on 2026-10-08. Canvas growth and box-select are in that spike; hiding part of a Source is not.
-
-### Automatic structure from the Artifact (beyond transcription)
-
-- **Date:** 2026-09-23
-- **Where:** Citation composer / Evidence graph
-- **Annoyance:** Even after transcription is filled, the researcher still retypes names, dates, and roles onto cards. Spike 8 only dumps text into **transcription**.
-- **Wanted:** Cheap field hints after there is a string (`NSDataDetector`, name/date patterns) and, later, guided extract. Not catalog writes.
-- **Still out:** PDF OCR / Vision on page rasters; Live Text / VisionKit; Foundation Models (`macOS 26+`, raise-the-floor). Pipeline if we ever did it: string → suggestions the researcher accepts → real Citation + Observations. Experiment: “obituary → draft cards,” not “obituary → catalog writes.”
-- **Spike 10 took the two cheap slices:** date prefill from the transcription, and splitting a full name line into parts. The rest stays here.
-
-## Pulled into Spike 10 (2026-10-08)
-
-Scheduled in [Spike 10](../deployment-plan/spike-10/). Not done until the PR lands.
 
 ### Rethink the Citation composer's Observation list
 

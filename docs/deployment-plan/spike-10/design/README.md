@@ -15,9 +15,9 @@ Brief files are written **just before** the PR they gate, not up front. This ind
 | S10-D3 | Citation composer | **S10-16** | Observation rows, add-at-top, focus, Auto Transcribe. Also draws the depiction row **S10-34** fills |
 | S10-D4 | Name parts modal | **S10-17** | Split, fixed-width type control. Design after **S10-29** so `patronymic` is in the list |
 | S10-D5 | Source page — Artifacts | **S10-18** | Drop target and open-on-collapsed-row |
-| S10-D6 | Evidence graph | **S10-18** (header open) | Also specifies box-select, which ships in **S10-20**. Hit boxes, zoom, canvas growth, and camera restore are not this board |
+| S10-D6 | Evidence graph | **S10-18** (header open) | Also specifies box-select, which ships in **S10-20**, and Unpromote on the promoted card, which ships in **S10-44**. Hit boxes, zoom, canvas growth, and camera restore are not this board |
 | S10-D7 | Sidebar | **S10-19** | Subject marks for People, Events, Places, including the new Event mark. The toolbar section icon is the same slot and ships in S10-19 |
-| S10-D8 | Sources list | **S10-22** | Last updated on the row |
+| S10-D8 | Sources list | **S10-22** | Last updated on the row. Also draws the evidence-status filter and text search **S10-41** fills. Persons, Events, and Places do not get those controls |
 | S10-D9 | Persons list | **S10-22** | Last updated, same cell as Events and Places. The existing thumb becomes a likeness crop in **S10-35**, then the preferred portrait in **S10-39** |
 | S10-D10 | Events list | **S10-22** | |
 | S10-D11 | Places list | **S10-22** | |

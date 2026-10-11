@@ -34,7 +34,6 @@ Use this folder when something useful pops up mid-work and would otherwise get l
 - [`promote-matching.md`](promote-matching.md) — what proves a join; the direction is now [`promote-graph-alignment.md`](../promote-graph-alignment.md)
 - [`promote-connection-subrows.md`](promote-connection-subrows.md) — connections as subrows of the subjects they join, with no switch-off
 - [`term-management.md`](term-management.md) — one place to manage terms, including relationship direction and inverses
-- [`catalog-graph-cache.md`](catalog-graph-cache.md) — one write orchestrator (data, audit, derived data) and the canonical graph in memory it keeps current
 
 ## Archived
 
@@ -43,5 +42,6 @@ Shipped ideas keep **decisions**, not PR order. Closed spikes: [`docs/deployment
 - [`archive/interpretation-graph-ui.md`](archive/interpretation-graph-ui.md) — Evidence graph decisions; leftovers re-homed
 - [`archive/page-navigation-performance.md`](archive/page-navigation-performance.md) — session cache / place registry
 - [`archive/catalog-access-serialization.md`](archive/catalog-access-serialization.md) — held catalog session
+- [`archive/catalog-graph-cache.md`](archive/catalog-graph-cache.md) — one write path and the in-memory catalog graph
 - [`archive/design-system-hardening.md`](archive/design-system-hardening.md) — graduated to [`docs/design-system-layers.md`](../design-system-layers.md)
 - Also archived: nav-count RPC, ingest MIME, thumbnails, image cache (same folder)
