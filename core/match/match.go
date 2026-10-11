@@ -36,8 +36,9 @@ type Value struct {
 	Integer    int64
 	HasInteger bool
 	Term       string
-	// TermID is the catalog term id when known. Pairwise evaluation
-	// (Compatible) prefers it; if empty, Evaluate falls back to Term bytes.
+	// TermID is the catalog term id when known. Comparers compare terms by
+	// key; Promote's exhibits pass the id to autoreconcile.Compatible, which
+	// falls back to the key when it is empty.
 	TermID []byte
 	// Neutral is the term's catalog flag: no evidence either way, so a
 	// comparison with it is not comparable. Loaders copy it from the term.

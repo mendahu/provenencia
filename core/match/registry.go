@@ -167,8 +167,8 @@ func DefaultProfile(kind string) (Profile, bool) {
 				{Property: product("name"), Comparer: DefaultNames, Weight: 10},
 				{Property: product("sex_at_birth"), Comparer: TermComparer{}, Weight: 1, Contradiction: 2},
 			},
-			// "Mary Robins" ~ "James Robins" is 10 × 0.55 = 5.5 typed (5 as
-			// forms): shown, low. "James Smith" is 10 × 0.2 = 2: hidden.
+			// "Mary Robins" ~ "James Robins" is 10 × 0.6 = 6: shown, low.
+			// "James Smith" is 10 × 0.2 = 2: hidden.
 			MinScore: 3,
 		}, true
 	case "event":
