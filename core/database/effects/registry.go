@@ -68,6 +68,9 @@ const (
 	sqlHandlesForProperty = `SELECT DISTINCT ic.entity_id FROM identity_claims ic
 		JOIN observations o ON o.subject_id = ic.subject_id
 		WHERE ic.status IN ('accepted', 'provisional') AND o.property_id = ?`
+	sqlHandlesForTerm = `SELECT DISTINCT ic.entity_id FROM identity_claims ic
+		JOIN observations o ON o.subject_id = ic.subject_id
+		WHERE ic.status IN ('accepted', 'provisional') AND o.value_term_id = ?`
 )
 
 // membersOf is a subject to its accepted and provisional handles.
@@ -176,9 +179,13 @@ var registry = map[string]Effect{
 	"property_terms": {
 		Entity:     "property_term",
 		Vocabulary: true,
+		// A neutral term reconciles differently, so the handles that observe
+		// it are recomputed.
+		Handles: onField("neutral", sqlPath(sqlHandlesForTerm)),
 		Structure: union(
 			onField("directed", self()),
 			onField("inverse_key", self()),
+			onField("neutral", self()),
 		),
 	},
 	"canonical_entities": {Entity: "canonical_entity", Handles: self()},

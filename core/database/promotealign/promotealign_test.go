@@ -26,6 +26,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/graphalign"
+	"github.com/mendahu/provenencia/core/match"
 	"github.com/mendahu/provenencia/core/ref"
 	"github.com/mendahu/provenencia/core/writes"
 )
@@ -903,4 +904,37 @@ func runArtifactCreate(c *database.Catalog, userID []byte, in artifacts.CreateIn
 			return artifacts.Create(tx, userID, in)
 		})
 	return a, err
+}
+
+// A sex at birth the catalog flags neutral is not compared: an "unknown"
+// record of John Smith still lands on the male John Smith, while "female"
+// conflicts and keeps it under the bar.
+func TestProposeIgnoresANeutralSex(t *testing.T) {
+	f := newFixture(t)
+	named := func(src sources.Source, art artifacts.Artifact, sex string) subjects.Subject {
+		s := f.person(src, art, "John Smith")
+		f.cite(art, s, observations.Input{
+			PropertyID: f.prop("sex_at_birth").ID, ValueTermID: f.term("sex_at_birth", sex).ID,
+		})
+		return s
+	}
+	handle := f.promote(named(f.source, f.artifact, "male")).Entity.ID
+
+	src, art := f.newSource("Register")
+	unknown := named(src, art, "unknown")
+	r := rowFor(f.propose(src.ID, nil), unknown.ID)
+	if r.Target != graphalign.TargetHandle || !bytes.Equal(r.HandleID, handle) {
+		t.Fatalf("unknown sex: target %s score %.2f, want the male John Smith", r.Target, r.Score)
+	}
+	for _, c := range r.Comparisons {
+		if c.Property.Key == "sex_at_birth" && c.Outcome != match.OutcomeUnknown {
+			t.Fatalf("unknown sex compared as %s", c.Outcome)
+		}
+	}
+
+	src2, art2 := f.newSource("Census")
+	female := named(src2, art2, "female")
+	if r := rowFor(f.propose(src2.ID, nil), female.ID); r.Target == graphalign.TargetHandle && bytes.Equal(r.HandleID, handle) {
+		t.Fatalf("female John Smith landed on the male one (score %.2f)", r.Score)
+	}
 }

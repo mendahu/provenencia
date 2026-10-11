@@ -23,10 +23,11 @@ func name(form string) Value {
 	}
 	return Value{Name: n}
 }
-func text(s string) Value   { return Value{Text: s, HasText: true} }
-func term(k string) Value   { return Value{Term: k} }
-func integer(n int64) Value { return Value{Integer: n, HasInteger: true} }
-func ip(n int) *int         { return &n }
+func text(s string) Value    { return Value{Text: s, HasText: true} }
+func term(k string) Value    { return Value{Term: k} }
+func neutral(k string) Value { return Value{Term: k, Neutral: true} } // flagged neutral in the catalog
+func integer(n int64) Value  { return Value{Integer: n, HasInteger: true} }
+func ip(n int) *int          { return &n }
 func approx(near float64) func(float64) bool {
 	return func(got float64) bool { return math.Abs(got-near) < 1e-9 }
 }
@@ -49,7 +50,8 @@ func TestComparers(t *testing.T) {
 
 		{"term: same", TermComparer{}, term("male"), term("male"), 1, true},
 		{"term: different", TermComparer{}, term("male"), term("female"), 0, true},
-		{"term: neutral", TermComparer{Neutral: map[string]bool{"unknown": true}}, term("unknown"), term("male"), 0, false},
+		{"term: neutral", TermComparer{}, neutral("unknown"), term("male"), 0, false},
+		{"term: the key alone is not neutral", TermComparer{}, term("unknown"), term("male"), 0, true},
 
 		{"integer: equal", IntegerComparer{}, integer(40), integer(40), 1, true},
 		{"integer: off by one", IntegerComparer{}, integer(40), integer(41), 0, true},
@@ -84,7 +86,11 @@ func person(ref string, forms []string, sex string) Candidate {
 	for _, f := range forms {
 		v[product("name")] = append(v[product("name")], name(f))
 	}
-	if sex != "" {
+	switch sex {
+	case "":
+	case "unknown", "indeterminate": // seeded neutral
+		v[product("sex_at_birth")] = []Value{neutral(sex)}
+	default:
 		v[product("sex_at_birth")] = []Value{term(sex)}
 	}
 	return Candidate{EntityID: []byte(ref), Ref: ref, Values: v}
@@ -192,5 +198,23 @@ func TestRankEventsAndPlaces(t *testing.T) {
 
 	if _, ok := DefaultProfile("participation"); ok {
 		t.Fatal("bridge kinds have no profile")
+	}
+}
+
+// Pairwise evaluation treats a term the catalog flags neutral as nothing to
+// compare, as Rank's person profile and the reconciler do: "unknown" neither
+// conflicts with "male" nor agrees with another "unknown".
+func TestEvaluateNeutralTermIsNotComparable(t *testing.T) {
+	sex := Property{Key: "sex_at_birth", Origin: "provenencia"}
+	metas := []PropertyMeta{{Property: sex, ValueType: "term"}}
+	for _, other := range []Value{term("male"), neutral("unknown"), neutral("indeterminate")} {
+		ev := Evaluate(Values{sex: {neutral("unknown")}}, Values{sex: {other}}, metas)
+		if c := ev.Comparisons[0]; c.Comparable || c.Outcome != OutcomeUnknown {
+			t.Fatalf("unknown vs %s: comparable=%v outcome=%s, want not comparable", other.Term, c.Comparable, c.Outcome)
+		}
+	}
+	ev := Evaluate(Values{sex: {{Term: "female"}}}, Values{sex: {{Term: "male"}}}, metas)
+	if c := ev.Comparisons[0]; !c.Comparable || c.Outcome != OutcomeConflict {
+		t.Fatalf("female vs male: comparable=%v outcome=%s, want a conflict", c.Comparable, c.Outcome)
 	}
 }

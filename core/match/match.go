@@ -38,9 +38,12 @@ type Value struct {
 	Term       string
 	// TermID is the catalog term id when known. Pairwise evaluation
 	// (Compatible) prefers it; if empty, Evaluate falls back to Term bytes.
-	TermID     []byte
-	Date       *datevalues.Value
-	Name       *namevalues.Value
+	TermID []byte
+	// Neutral is the term's catalog flag: no evidence either way, so a
+	// comparison with it is not comparable. Loaders copy it from the term.
+	Neutral bool
+	Date    *datevalues.Value
+	Name    *namevalues.Value
 	// NamePattern is the name pattern key for Name (its Person's name
 	// format, once loaders supply it); empty uses the comparer's pattern.
 	NamePattern string

@@ -62,7 +62,7 @@ const (
 
 	// Positive Observations of many Subjects, terms by key; the caller closes the IN list.
 	sqlSubjectsValues = `SELECT o.subject_id, p.key, p.origin, o.value_text, o.value_integer,
-			o.value_date_id, o.value_name_id, t.key
+			o.value_date_id, o.value_name_id, t.key, COALESCE(t.neutral, 0)
 		FROM observations o
 		JOIN properties p ON p.id = o.property_id
 		LEFT JOIN property_terms t ON t.id = o.value_term_id
@@ -70,7 +70,7 @@ const (
 
 	// Cached auto-reconciled values (every rank) of unmerged handles, terms by key.
 	sqlEntityValues = `SELECT r.entity_id, e.ref, p.key, p.origin, r.value_text, r.value_integer,
-			r.value_date, r.value_name, t.key
+			r.value_date, r.value_name, t.key, COALESCE(t.neutral, 0)
 		FROM auto_reconciler_values r
 		JOIN canonical_entities e ON e.id = r.entity_id
 		JOIN properties p ON p.id = r.property_id
@@ -240,15 +240,16 @@ func SubjectsValues(q Querier, subjectIDs [][]byte, profile match.Profile) (map[
 			subjectID     []byte
 			text, termKey sql.NullString
 			integer       sql.NullInt64
+			neutral       bool
 		)
-		if err := rows.Scan(&subjectID, &p.prop.Key, &p.prop.Origin, &text, &integer, &p.dateID, &p.nameID, &termKey); err != nil {
+		if err := rows.Scan(&subjectID, &p.prop.Key, &p.prop.Origin, &text, &integer, &p.dateID, &p.nameID, &termKey, &neutral); err != nil {
 			return err
 		}
 		if !wanted[p.prop] {
 			return nil
 		}
 		p.subject = string(subjectID)
-		p.v = match.Value{Text: text.String, HasText: text.Valid, Integer: integer.Int64, HasInteger: integer.Valid, Term: termKey.String}
+		p.v = match.Value{Text: text.String, HasText: text.Valid, Integer: integer.Int64, HasInteger: integer.Valid, Term: termKey.String, Neutral: neutral}
 		all = append(all, p)
 		if len(p.dateID) > 0 {
 			dateIDs = append(dateIDs, p.dateID)
@@ -309,14 +310,15 @@ func scanEntityValues(rows *sql.Rows, profile match.Profile) ([]match.Candidate,
 			text, termKey      sql.NullString
 			integer            sql.NullInt64
 			dateBlob, nameBlob []byte
+			neutral            bool
 		)
-		if err := rows.Scan(&entityID, &ref, &prop.Key, &prop.Origin, &text, &integer, &dateBlob, &nameBlob, &termKey); err != nil {
+		if err := rows.Scan(&entityID, &ref, &prop.Key, &prop.Origin, &text, &integer, &dateBlob, &nameBlob, &termKey, &neutral); err != nil {
 			return nil, err
 		}
 		if !wanted[prop] {
 			continue
 		}
-		v := match.Value{Text: text.String, HasText: text.Valid, Integer: integer.Int64, HasInteger: integer.Valid, Term: termKey.String}
+		v := match.Value{Text: text.String, HasText: text.Valid, Integer: integer.Int64, HasInteger: integer.Valid, Term: termKey.String, Neutral: neutral}
 		if dateBlob != nil {
 			d, err := valuecodec.UnmarshalDate(dateBlob)
 			if err != nil {

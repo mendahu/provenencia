@@ -608,21 +608,21 @@ private struct CitationComposerObservationScroll<Above: View, Row: View, Footer:
 private let citationComposerObservationSpace = "citationComposerObservations"
 
 private struct BlockMinYKey: PreferenceKey {
-    static var defaultValue: CGFloat = 0
+    static let defaultValue: CGFloat = 0
     static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
         value = nextValue()
     }
 }
 
 private struct ViewportHeightKey: PreferenceKey {
-    static var defaultValue: CGFloat = 0
+    static let defaultValue: CGFloat = 0
     static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
         value = nextValue()
     }
 }
 
 private struct RowHeightKey: PreferenceKey {
-    static var defaultValue: [UUID: CGFloat] = [:]
+    static let defaultValue: [UUID: CGFloat] = [:]
     static func reduce(value: inout [UUID: CGFloat], nextValue: () -> [UUID: CGFloat]) {
         value.merge(nextValue(), uniquingKeysWith: { _, new in new })
     }

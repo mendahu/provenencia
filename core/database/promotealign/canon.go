@@ -23,6 +23,10 @@ func loadCanon(g *graphcache.Graph, q Querier, layer graphalign.Layer, fixed []g
 	if err != nil {
 		return graphalign.Canon{}, err
 	}
+	neutral, err := neutralTerms(g)
+	if err != nil {
+		return graphalign.Canon{}, err
+	}
 	types, err := typeByKey(g)
 	if err != nil {
 		return graphalign.Canon{}, err
@@ -50,7 +54,7 @@ func loadCanon(g *graphcache.Graph, q Querier, layer graphalign.Layer, fixed []g
 		if !promotePrimary(kind, "provenencia") {
 			return nil
 		}
-		vals, err := handleValues(props, n)
+		vals, err := handleValues(props, neutral, n)
 		if err != nil {
 			return err
 		}
@@ -92,7 +96,7 @@ func loadCanon(g *graphcache.Graph, q Querier, layer graphalign.Layer, fixed []g
 				return graphalign.Canon{}, err
 			}
 			for _, n := range nodes {
-				vals, err := handleValues(props, n)
+				vals, err := handleValues(props, neutral, n)
 				if err != nil {
 					return graphalign.Canon{}, err
 				}
@@ -168,7 +172,7 @@ func loadCanon(g *graphcache.Graph, q Querier, layer graphalign.Layer, fixed []g
 					})
 				}
 				if _, ok := handles[string(neighbor.ID)]; !ok {
-					vals, err := handleValues(props, neighbor)
+					vals, err := handleValues(props, neutral, neighbor)
 					if err != nil {
 						return graphalign.Canon{}, err
 					}
@@ -237,7 +241,7 @@ func keptTerm(n *graphcache.Node, props map[string]match.Property, key string) s
 	return ""
 }
 
-func handleValues(props map[string]match.Property, n *graphcache.Node) (match.Values, error) {
+func handleValues(props map[string]match.Property, neutral map[string]bool, n *graphcache.Node) (match.Values, error) {
 	out := match.Values{}
 	if n == nil {
 		return out, nil
@@ -253,6 +257,7 @@ func handleValues(props map[string]match.Property, n *graphcache.Node) (match.Va
 				Text: row.Text, HasText: row.HasText,
 				Integer: row.Integer, HasInteger: row.HasInteger,
 				Term: row.TermKey, TermID: append([]byte(nil), row.TermID...),
+				Neutral: neutral[string(row.TermID)],
 			}
 			if len(row.Date) > 0 {
 				d, err := valuecodec.UnmarshalDate(row.Date)
@@ -271,6 +276,21 @@ func handleValues(props map[string]match.Property, n *graphcache.Node) (match.Va
 			vals = append(vals, v)
 		}
 		out[prop] = vals
+	}
+	return out, nil
+}
+
+// neutralTerms is the ids of the terms flagged neutral.
+func neutralTerms(g *graphcache.Graph) (map[string]bool, error) {
+	v, err := g.Vocabulary()
+	if err != nil {
+		return nil, err
+	}
+	out := map[string]bool{}
+	for _, t := range v.Terms {
+		if t.Neutral {
+			out[string(t.ID)] = true
+		}
 	}
 	return out, nil
 }

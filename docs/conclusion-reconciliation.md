@@ -133,7 +133,7 @@ Each module answers three questions:
 | --- | --- | --- | --- | --- |
 | **text** | equal after trimming whitespace, ignoring case (*York* = *york*) | none | the best-ranked member's text | empty |
 | **integer** | equal | none | the value | — |
-| **term** | same term | none | the term | terms the module marks neutral (*unknown*, *indeterminate*) |
+| **term** | same term | none | the term | terms flagged `property_terms.neutral` (seeded on *unknown*, *indeterminate*) |
 | **subject** | candidate Subjects map to the **same handle**; unpromoted Subjects drop out | none | the handle (an edge of the canonical graph) | unpromoted |
 | **date** | §7.1 | precision containment | §7.1 | empty |
 | **name** | §7.2 | subsumption per part type | §7.2 | no parts |

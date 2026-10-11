@@ -27,6 +27,7 @@ type VocabTerm struct {
 	Label       string
 	Directed    bool
 	InverseKey  string
+	Neutral     bool // no evidence either way (property_terms.neutral)
 }
 
 // VocabType is one subject type.
@@ -93,7 +94,7 @@ func (g *Graph) loadVocabulary() (Vocabulary, error) {
 	}
 	_ = types.Close()
 
-	terms, err := g.query(`SELECT t.id, p.key, t.key, t.label, t.directed, COALESCE(t.inverse_key, '')
+	terms, err := g.query(`SELECT t.id, p.key, t.key, t.label, t.directed, COALESCE(t.inverse_key, ''), t.neutral
 		FROM property_terms t
 		JOIN properties p ON p.id = t.property_id`)
 	if err != nil {
@@ -101,12 +102,13 @@ func (g *Graph) loadVocabulary() (Vocabulary, error) {
 	}
 	for terms.Next() {
 		var t VocabTerm
-		var directed int
-		if err := terms.Scan(&t.ID, &t.PropertyKey, &t.Key, &t.Label, &directed, &t.InverseKey); err != nil {
+		var directed, neutral int
+		if err := terms.Scan(&t.ID, &t.PropertyKey, &t.Key, &t.Label, &directed, &t.InverseKey, &neutral); err != nil {
 			_ = terms.Close()
 			return Vocabulary{}, err
 		}
 		t.Directed = directed != 0
+		t.Neutral = neutral != 0
 		t.ID = cloneID(t.ID)
 		v.Terms = append(v.Terms, t)
 	}

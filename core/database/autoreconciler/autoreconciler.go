@@ -66,7 +66,9 @@ import (
 //	   are stored (S9-21).
 //	12: multiple cardinality keeps every distinct surviving value (S9-36).
 //	13: subject-valued Properties map to the accepted handle (S9-28).
-const CacheVersion = 13
+//	14: a term is neutral by its catalog flag (property_terms.neutral), not
+//	    by key.
+const CacheVersion = 14
 
 // Querier is *sql.Tx or *sql.DB.
 type Querier interface {
@@ -96,7 +98,7 @@ const (
 	// grade, or no vocabulary reads as 0.
 	sqlLoadCandidates = `SELECT ic.entity_id, o.id, o.property_id, p.value_type, p.cardinality,
 			o.value_text, o.value_integer, o.value_date_id, o.value_name_id, o.value_term_id,
-			COALESCE(t.key, ''), o.value_subject_id,
+			COALESCE(t.key, ''), COALESCE(t.neutral, 0), o.value_subject_id,
 			ic.status = 'provisional', o.polarity = 'negative', a.source_id,
 			COALESCE(sg.sort_order - (SELECT sort_order FROM source_credibility_grades
 				WHERE key = 'standard' AND origin = 'provenencia'), 0),
@@ -372,12 +374,13 @@ func load(q Querier, ids [][]byte) ([]*group, error) {
 			integer                           sql.NullInt64
 			dateID, nameID, termID, subjectID []byte
 			termKey                           string
+			neutral                           bool
 			provisional, negative             bool
 			sourceID                          []byte
 			credibility, confidence           int
 			uncertain                         bool
 		)
-		if err := rows.Scan(&entityID, &obsID, &propertyID, &valueType, &cardinality, &text, &integer, &dateID, &nameID, &termID, &termKey, &subjectID,
+		if err := rows.Scan(&entityID, &obsID, &propertyID, &valueType, &cardinality, &text, &integer, &dateID, &nameID, &termID, &termKey, &neutral, &subjectID,
 			&provisional, &negative, &sourceID, &credibility, &uncertain, &confidence); err != nil {
 			_ = rows.Close()
 			return nil, err
@@ -392,7 +395,7 @@ func load(q Querier, ids [][]byte) ([]*group, error) {
 		c := autoreconcile.Candidate{ObservationID: obsID, Value: autoreconcile.Value{
 			Text: text.String, HasText: text.Valid,
 			Integer: integer.Int64, HasInteger: integer.Valid,
-			TermID: termID, TermKey: termKey, SubjectID: subjectID,
+			TermID: termID, TermKey: termKey, Neutral: neutral, SubjectID: subjectID,
 		}, SourceID: sourceID, Negative: negative, Provisional: provisional,
 			Provenance: autoreconcile.Provenance{Credibility: credibility, Uncertain: uncertain, ClaimConfidence: confidence}}
 		all = append(all, pending{g: g, c: c, dateID: dateID, nameID: nameID})
