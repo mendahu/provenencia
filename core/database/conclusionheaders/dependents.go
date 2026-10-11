@@ -16,9 +16,11 @@ const headerChainDepth = 8
 // Dependents is the reverse of the header reads. A place reaches its
 // descendants to headerChainDepth, the events located at those places, and
 // the people whose birth or death that event is. A person reaches the events
-// that list them as a subject. An event that is a birth or a death reaches
-// its subject people. Succession, one hop both ways, is included so a later
-// place detail is covered. Association handles are not returned. ids
+// that list them as a subject. An event that changed reaches its subject
+// people whatever type it is now, so a birth that became a marriage still
+// drops the person row. Birth or death is required only for an event reached
+// because a place changed. Succession, one hop both ways, is included so a
+// later place detail is covered. Association handles are not returned. ids
 // themselves are not returned; the caller already rewrites those.
 func Dependents(q Querier, ids [][]byte) ([][]byte, error) {
 	ids = database.UniqueBlobIDs(ids)
@@ -49,11 +51,15 @@ func Dependents(q Querier, ids [][]byte) ([][]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	life, err := birthOrDeath(q, append(append([][]byte(nil), ids...), located...))
+	changedPeople, err := walkDepth(q, canonicalgraph.SubjectsOfEvent, ids, 1)
 	if err != nil {
 		return nil, err
 	}
-	people, err := walkDepth(q, canonicalgraph.SubjectsOfEvent, life, 1)
+	life, err := birthOrDeath(q, located)
+	if err != nil {
+		return nil, err
+	}
+	placePeople, err := walkDepth(q, canonicalgraph.SubjectsOfEvent, life, 1)
 	if err != nil {
 		return nil, err
 	}
@@ -62,7 +68,7 @@ func Dependents(q Querier, ids [][]byte) ([][]byte, error) {
 		seen[string(id)] = true
 	}
 	var out [][]byte
-	for _, group := range [][][]byte{places, parents, succTo, succFrom, located, shown, people} {
+	for _, group := range [][][]byte{places, parents, succTo, succFrom, located, shown, changedPeople, placePeople} {
 		for _, id := range group {
 			if seen[string(id)] {
 				continue
