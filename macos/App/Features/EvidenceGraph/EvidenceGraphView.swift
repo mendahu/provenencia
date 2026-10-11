@@ -858,6 +858,8 @@ private struct EvidenceGraphDocumentBody: View {
                     x: card.origin.x - canvas.origin.x,
                     y: card.origin.y - canvas.origin.y
                 ),
+                size: itemSize(for: card),
+                staysMounted: card.state.isSelected || card.state.isDragging,
                 isRaised: card.state.isDragging || card.state.isActivated,
                 rotor: GraphCanvasRotorEntry(
                     rotor: card.isBridge ? linksRotor : subjectsRotor,
@@ -867,6 +869,29 @@ private struct EvidenceGraphDocumentBody: View {
                 content: { content.view(for: card) }
             )
         })
+    }
+
+    /// Document size the item layer culls with. Measured once the card has
+    /// reported a layout; the content-height estimate until then.
+    private func itemSize(for card: EvidenceCanvasCard) -> CGSize {
+        switch card.placed {
+        case .subject(let placed, _):
+            if let layout = cardLayouts.layout(for: placed.id) {
+                return layout.size
+            }
+            return CGSize(
+                width: EvidenceSubjectCard.width,
+                height: EvidenceSubjectCard.contentHeight(for: placed)
+            )
+        case .bridge(let placed):
+            if let layout = cardLayouts.layout(for: placed.id) {
+                return layout.size
+            }
+            return CGSize(
+                width: EvidenceBridgeCard.width,
+                height: EvidenceBridgeCard.contentHeight(for: placed, in: snapshot)
+            )
+        }
     }
 
     private var emptyOverlay: some View {

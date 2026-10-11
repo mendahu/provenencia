@@ -204,6 +204,7 @@ final class GraphCanvasNSScrollView: NSScrollView {
             MainActor.assumeIsolated {
                 viewport?.magnification = value
             }
+            reconcileMountedItems()
             reportCamera()
         }
     }
@@ -252,12 +253,14 @@ final class GraphCanvasNSScrollView: NSScrollView {
 
     override func reflectScrolledClipView(_ clipView: NSClipView) {
         super.reflectScrolledClipView(clipView)
+        reconcileMountedItems()
         reportCamera()
     }
 
     override func layout() {
         super.layout()
         updateMagnificationFloor()
+        reconcileMountedItems()
     }
 
     /// Raises the zoom-out floor so the document keeps covering the clip.
@@ -288,6 +291,17 @@ final class GraphCanvasNSScrollView: NSScrollView {
                 contentOffset: documentVisibleRect.origin
             )
         )
+    }
+
+    /// Tells the item layer which document rect is on screen, so it can mount
+    /// cards near the window and drop the ones that have left.
+    private func reconcileMountedItems() {
+        guard let document = documentView as? GraphCanvasDocumentView else { return }
+        let rect = documentVisibleRect
+        let magnification = magnification
+        MainActor.assumeIsolated {
+            document.items.setVisibleDocumentRect(rect, magnification: magnification)
+        }
     }
 
     override func viewDidMoveToWindow() {
