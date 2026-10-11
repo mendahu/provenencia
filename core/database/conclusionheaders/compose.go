@@ -2,6 +2,7 @@ package conclusionheaders
 
 import (
 	"bytes"
+	"fmt"
 	"sort"
 	"strings"
 
@@ -250,6 +251,24 @@ func EventsFromQuerier(q Querier, ids [][]byte) ([]EventHeader, error) {
 	return events(graphcache.Over(q), ids, false, false)
 }
 
+// RowsForSearch composes the three header kinds on one graph. Search
+// reprojection calls this so a mixed batch does not open three graphs.
+func RowsForSearch(g *graphcache.Graph, personIDs, eventIDs, placeIDs [][]byte) ([]PersonHeader, []EventHeader, []PlaceHeader, error) {
+	ps, err := persons(g, personIDs, false, false)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	es, err := events(g, eventIDs, false, false)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	pl, err := places(g, placeIDs, false, false)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	return ps, es, pl, nil
+}
+
 func events(g *graphcache.Graph, ids [][]byte, all, store bool) ([]EventHeader, error) {
 	if g == nil {
 		return nil, nil
@@ -266,7 +285,7 @@ func events(g *graphcache.Graph, ids [][]byte, all, store bool) ([]EventHeader, 
 	if err != nil {
 		return nil, err
 	}
-	sort.SliceStable(out, func(i, j int) bool { return eventLess(out[i], out[j]) })
+	sortEvents(out)
 	return out, nil
 }
 
@@ -601,15 +620,31 @@ type eventKey struct {
 	ref string
 }
 
-func eventLess(a, b EventHeader) bool {
-	ak, bk := eventKeyOf(a), eventKeyOf(b)
-	if ak.ok != bk.ok {
-		return ak.ok
+func sortEvents(rows []EventHeader) {
+	type keyed struct {
+		h EventHeader
+		k eventKey
 	}
-	if ak.key != bk.key {
-		return ak.key < bk.key
+	keyedRows := make([]keyed, len(rows))
+	for i := range rows {
+		keyedRows[i] = keyed{h: rows[i], k: eventKeyOf(rows[i])}
 	}
-	return ak.ref < bk.ref
+	sort.SliceStable(keyedRows, func(i, j int) bool {
+		return eventKeyLess(keyedRows[i].k, keyedRows[j].k)
+	})
+	for i := range rows {
+		rows[i] = keyedRows[i].h
+	}
+}
+
+func eventKeyLess(a, b eventKey) bool {
+	if a.ok != b.ok {
+		return a.ok
+	}
+	if a.key != b.key {
+		return a.key < b.key
+	}
+	return a.ref < b.ref
 }
 
 func eventKeyOf(h EventHeader) eventKey {
@@ -649,16 +684,23 @@ func eventPlaces(g *graphcache.Graph, v vocab, pg *placeGraph, ev *graphcache.No
 	if len(raw) == 0 {
 		return nil, nil
 	}
-	at := eventWhen(v, ev)
+	at, err := eventWhen(v, ev)
+	if err != nil {
+		return nil, err
+	}
 	return pg.FoldLocations(raw, at), nil
 }
 
-func eventWhen(v vocab, ev *graphcache.Node) *datevalues.Value {
-	if date, _, _, _, err := keptDateAt(ev, v.prop("date")); err == nil && date != nil {
-		return date
+func eventWhen(v vocab, ev *graphcache.Node) (*datevalues.Value, error) {
+	date, _, _, _, err := keptDateAt(ev, v.prop("date"))
+	if err != nil {
+		return nil, err
 	}
-	date, _, _, _, _ := keptDateAt(ev, v.prop("start_date"))
-	return date
+	if date != nil {
+		return date, nil
+	}
+	date, _, _, _, err = keptDateAt(ev, v.prop("start_date"))
+	return date, err
 }
 
 func composePlaces(g *graphcache.Graph, v vocab, nodes []*graphcache.Node, store bool) ([]PlaceHeader, error) {
@@ -675,7 +717,10 @@ func composePlaces(g *graphcache.Graph, v vocab, nodes []*graphcache.Node, store
 	}
 	fresh := map[string]PlaceHeader{}
 	for _, n := range need {
-		h := placeShell(n, v)
+		h, err := placeShell(n, v)
+		if err != nil {
+			return nil, err
+		}
 		fresh[string(n.ID)] = h
 		if store {
 			g.SetDisplay(n.ID, h)
@@ -693,11 +738,16 @@ func composePlaces(g *graphcache.Graph, v vocab, nodes []*graphcache.Node, store
 	return finishPlaces(g, v, out)
 }
 
-func placeShell(n *graphcache.Node, v vocab) PlaceHeader {
+func placeShell(n *graphcache.Node, v vocab) (PlaceHeader, error) {
 	h := PlaceHeader{Entity: entityOf(n), Names: toponyms(n, v.prop("toponym"))}
-	h.StartDate, _, _, _, _ = keptDateAt(n, v.prop("start_date"))
-	h.EndDate, _, _, _, _ = keptDateAt(n, v.prop("end_date"))
-	return h
+	var err error
+	if h.StartDate, _, _, _, err = keptDateAt(n, v.prop("start_date")); err != nil {
+		return PlaceHeader{}, err
+	}
+	if h.EndDate, _, _, _, err = keptDateAt(n, v.prop("end_date")); err != nil {
+		return PlaceHeader{}, err
+	}
+	return h, nil
 }
 
 func finishPlaces(g *graphcache.Graph, v vocab, headers []PlaceHeader) ([]PlaceHeader, error) {
@@ -747,7 +797,10 @@ func buildPlaceGraph(g *graphcache.Graph, v vocab, seeds [][]byte) (*placeGraph,
 			if n == nil {
 				continue
 			}
-			shell := placeShell(n, v)
+			shell, err := placeShell(n, v)
+			if err != nil {
+				return nil, err
+			}
 			pg.byID[string(id)] = shell
 			pg.period[string(id)] = autoreconcile.PeriodWindow(shell.StartDate, shell.EndDate)
 			for _, l := range n.Links {
@@ -785,7 +838,17 @@ func buildPlaceGraph(g *graphcache.Graph, v vocab, seeds [][]byte) (*placeGraph,
 					continue
 				}
 				linked[key] = true
-				d := assocDatesOf(v, mustNode(g, l.Association))
+				assoc, err := g.Node(l.Association)
+				if err != nil {
+					return nil, err
+				}
+				if assoc == nil {
+					return nil, fmt.Errorf("conclusionheaders: association %x is missing", l.Association)
+				}
+				d, err := assocDatesOf(v, assoc)
+				if err != nil {
+					return nil, err
+				}
 				link := placeLink{from: append([]byte(nil), from...), to: append([]byte(nil), to...), association: append([]byte(nil), l.Association...), start: d.start, end: d.end}
 				switch l.TermKey {
 				case "part_of":
@@ -800,19 +863,14 @@ func buildPlaceGraph(g *graphcache.Graph, v vocab, seeds [][]byte) (*placeGraph,
 	return pg, nil
 }
 
-func mustNode(g *graphcache.Graph, id []byte) *graphcache.Node {
-	n, err := g.Node(id)
+func assocDatesOf(v vocab, n *graphcache.Node) (assocDates, error) {
+	start, _, _, _, err := keptDateAt(n, v.prop("start_date"))
 	if err != nil {
-		return nil
+		return assocDates{}, err
 	}
-	return n
-}
-
-func assocDatesOf(v vocab, n *graphcache.Node) assocDates {
-	if n == nil {
-		return assocDates{}
+	end, _, _, _, err := keptDateAt(n, v.prop("end_date"))
+	if err != nil {
+		return assocDates{}, err
 	}
-	start, _, _, _, _ := keptDateAt(n, v.prop("start_date"))
-	end, _, _, _, _ := keptDateAt(n, v.prop("end_date"))
-	return assocDates{start: start, end: end}
+	return assocDates{start: start, end: end}, nil
 }
