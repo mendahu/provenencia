@@ -13,4 +13,5 @@ Follow the project skill `.cursor/skills/add-catalog-query/SKILL.md`.
 - DDL still goes through catalog migrations, not query packages. The same PR registers the table and its FKs in `catalogmodel` — `.cursor/skills/add-catalog-model/SKILL.md`.
 - Official resource / vocab `Delete` goes through `deleteimpact` — see `.cursor/skills/add-catalog-delete/SKILL.md` and `.cursor/rules/catalog-deletes.mdc`.
 - Researcher callers obtain `*database.Catalog` from `catalogsession.Do` / FFI `withProjectCatalog`, not open-per-call. See `.cursor/skills/use-catalog-session/SKILL.md`.
-- Walking the canonical graph (person → participation → event, event → location → place, and later hierarchy or relationship walks) goes through `core/database/canonicalgraph`: declare a `Hop` over a `connectrules` bridge and `Walk` it. Do not hand-write the association join chain in SQL; the bridge shape lives in the registry, and `Walk` is index-checked by its tests.
+- An open-catalog read of the canonical graph follows a `hops.Hop` with `graphcache.Graph.Follow`. Do not hand-write the association join in SQL; the bridge shape lives in the connectrules registry.
+- `canonicalgraph.Walk` stays for dependent discovery and for any walk that must see rows the cache has not loaded, including inside a write. `WalkSource` stays for one Source.
