@@ -1,7 +1,8 @@
 // Package nameformats stores name format profiles: display order, matching
-// roles, and role weights. A name value does not point at a profile. Install
-// runs once when a catalog is created. Load reads the project default, or
-// the built-in Western pattern when that row is missing.
+// roles, and role weights. A name value does not point at a profile. The
+// create-time rows live in registry.go. Install writes that list once when
+// a catalog is created. Load reads the project default, or the built-in
+// Western pattern when that row is missing.
 package nameformats
 
 import (
@@ -10,8 +11,6 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/google/uuid"
-	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/match"
 )
@@ -269,105 +268,4 @@ func LoadID(q Querier, id []byte) (Profile, error) {
 
 func builtinLoaded() Loaded {
 	return Loaded{Key: match.WesternPattern, Builtin: true}
-}
-
-type partSeed struct {
-	style, partType, trail string
-}
-
-// westernParts is seeded-vocabulary §4.3. The comma is the surname row's
-// trailing separator in the sorted style.
-var westernParts = []partSeed{
-	{StyleNatural, namevalues.PartTypePrefix, ""},
-	{StyleNatural, namevalues.PartTypeGiven, ""},
-	{StyleNatural, namevalues.PartTypeNick, ""},
-	{StyleNatural, namevalues.PartTypeSurnamePrefix, ""},
-	{StyleNatural, namevalues.PartTypeSurname, ""},
-	{StyleNatural, namevalues.PartTypeSuffix, ""},
-	{StyleSorted, namevalues.PartTypeSurnamePrefix, ""},
-	{StyleSorted, namevalues.PartTypeSurname, ", "},
-	{StyleSorted, namevalues.PartTypePrefix, ""},
-	{StyleSorted, namevalues.PartTypeGiven, ""},
-	{StyleSorted, namevalues.PartTypeNick, ""},
-	{StyleSorted, namevalues.PartTypeSuffix, ""},
-}
-
-// Install writes the western profile and points the project default at it.
-// Call only from catalog create. A second call inserts nothing new for the
-// same key and leaves the existing default in place when one is already set.
-func Install(c *database.Catalog) error {
-	db, err := c.DB()
-	if err != nil {
-		return err
-	}
-	tx, err := db.Begin()
-	if err != nil {
-		return err
-	}
-	defer func() { _ = tx.Rollback() }()
-
-	id, err := uuid.NewV7()
-	if err != nil {
-		return err
-	}
-	_, err = tx.Exec(`INSERT INTO name_format_profiles (id, key, origin, label, description)
-		VALUES (?, ?, ?, ?, ?)
-		ON CONFLICT(key, origin) DO NOTHING`,
-		id[:], match.WesternPattern, OriginProvenencia, "Western", "GEDCOM-aligned spoken/display order")
-	if err != nil {
-		return err
-	}
-	var stored []byte
-	if err := tx.QueryRow(`SELECT id FROM name_format_profiles WHERE key = ? AND origin = ?`,
-		match.WesternPattern, OriginProvenencia).Scan(&stored); err != nil {
-		return err
-	}
-	idx := map[string]int{}
-	for _, row := range westernParts {
-		i := idx[row.style]
-		idx[row.style] = i + 1
-		if _, err := tx.Exec(`INSERT INTO name_format_profile_parts
-			(profile_id, style, idx, part_type, trailing_separator)
-			VALUES (?, ?, ?, ?, ?)
-			ON CONFLICT(profile_id, style, idx) DO NOTHING`,
-			stored, row.style, i, row.partType, row.trail); err != nil {
-			return err
-		}
-	}
-	for _, pt := range namevalues.PartTypes() {
-		role, ok := match.WesternNamePattern.PartRoles[pt.Key]
-		if !ok {
-			return errors.New("nameformats: " + pt.Key + " has no western role")
-		}
-		if _, err := tx.Exec(`INSERT INTO name_format_profile_roles (profile_id, part_type, role)
-			VALUES (?, ?, ?)
-			ON CONFLICT(profile_id, part_type) DO NOTHING`,
-			stored, pt.Key, string(role)); err != nil {
-			return err
-		}
-	}
-	weights := match.WesternNamePattern.Weights
-	for _, slot := range []struct {
-		name   string
-		weight float64
-	}{
-		{"family", weights.Family},
-		{"first_given", weights.FirstGiven},
-		{"other_given", weights.OtherGiven},
-		{"nick", weights.Nick},
-		{"untyped", weights.Untyped},
-	} {
-		if _, err := tx.Exec(`INSERT INTO name_format_profile_weights (profile_id, slot, weight)
-			VALUES (?, ?, ?)
-			ON CONFLICT(profile_id, slot) DO NOTHING`,
-			stored, slot.name, slot.weight); err != nil {
-			return err
-		}
-	}
-	if _, err := tx.Exec(`INSERT INTO project_settings (key, value_text) VALUES (?, ?)
-		ON CONFLICT(key) DO NOTHING`,
-		settingDefaultNameFormatID, hex.EncodeToString(stored)); err != nil {
-		return err
-	}
-	return tx.Commit()
 }
