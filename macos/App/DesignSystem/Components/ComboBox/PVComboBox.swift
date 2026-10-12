@@ -40,10 +40,30 @@ enum PVComboBoxMatch {
             || normalize(option.subtext).contains(normalizedQuery)
     }
 
+    /// Contains matches, in three bands, then the caller's order inside a band:
+    /// the label starts with the query, a later word starts with it (spaces
+    /// and hyphens), then any other contains match including subtext only.
     static func filter(_ options: [PVComboBoxOption], query: String) -> [PVComboBoxOption] {
         let q = normalize(query.trimmingCharacters(in: .whitespacesAndNewlines))
         guard !q.isEmpty else { return options }
-        return options.filter { matches($0, normalizedQuery: q) }
+        return options.enumerated().compactMap { index, option -> (band: Int, index: Int, option: PVComboBoxOption)? in
+            guard matches(option, normalizedQuery: q) else { return nil }
+            return (band(for: option, normalizedQuery: q), index, option)
+        }
+        .sorted { lhs, rhs in
+            if lhs.band != rhs.band { return lhs.band < rhs.band }
+            return lhs.index < rhs.index
+        }
+        .map(\.option)
+    }
+
+    /// 0 label prefix, 1 a later word prefix, 2 any other contains match.
+    private static func band(for option: PVComboBoxOption, normalizedQuery: String) -> Int {
+        let label = normalize(option.label)
+        if label.hasPrefix(normalizedQuery) { return 0 }
+        let words = label.split { $0 == " " || $0 == "-" }
+        if words.dropFirst().contains(where: { $0.hasPrefix(normalizedQuery) }) { return 1 }
+        return 2
     }
 
     /// Index of the first row that can be committed, or -1 when every row is
