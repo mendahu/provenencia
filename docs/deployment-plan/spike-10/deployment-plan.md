@@ -6,7 +6,7 @@ Usability fixes from [`docs/dogfood/ux.md`](../../dogfood/ux.md) after Spike 9, 
 
 ## Status
 
-**Open.** Slice 1 is done (2026-10-11). S10-01…S10-04 landed in [#361](https://github.com/mendahu/provenencia/pull/361)–[#364](https://github.com/mendahu/provenencia/pull/364). S10-05, S10-07, and S10-08 landed in [#368](https://github.com/mendahu/provenencia/pull/368), [#369](https://github.com/mendahu/provenencia/pull/369), and [#370](https://github.com/mendahu/provenencia/pull/370) (2026-10-12). S10-46, S10-47, and S10-48 were descoped in [#367](https://github.com/mendahu/provenencia/pull/367). S10-06 was descoped in [#368](https://github.com/mendahu/provenencia/pull/368): searching `marriage` already lists a title that contains the word ahead of a fuzzy name. Later landings go in [`completed.md`](completed.md).
+**Open.** Slice 1 is done (2026-10-11). S10-01…S10-04 landed in [#361](https://github.com/mendahu/provenencia/pull/361)–[#364](https://github.com/mendahu/provenencia/pull/364). S10-05, S10-07, and S10-08 landed in [#368](https://github.com/mendahu/provenencia/pull/368), [#369](https://github.com/mendahu/provenencia/pull/369), and [#370](https://github.com/mendahu/provenencia/pull/370) (2026-10-12). S10-46, S10-47, and S10-48 were descoped in [#367](https://github.com/mendahu/provenencia/pull/367). S10-06 was descoped in [#368](https://github.com/mendahu/provenencia/pull/368): searching `marriage` already lists a title that contains the word ahead of a fuzzy name. S10-10 was descoped in [#370](https://github.com/mendahu/provenencia/pull/370): a common cluster belongs in [`ideas/evidence-graph-structure-shortcuts.md`](../../ideas/evidence-graph-structure-shortcuts.md), which covers more than a default role. Later landings go in [`completed.md`](completed.md).
 
 > **Goal of this spike:** the annoyances logged while entering real research are gone, and the app still behaves the way Spike 8 and Spike 9 decided.
 
@@ -18,7 +18,7 @@ Usability fixes from [`docs/dogfood/ux.md`](../../dogfood/ux.md) after Spike 9, 
 2. **The Evidence graph holds a real Source.** The canvas grows before cards hit the edge. Pan and zoom survive a trip to the composer. The grid is a tile, so a zoomed-out or grown document does not turn the background into one giant bitmap. Zoomed-out edges stay legible. The card stays the full card at every zoom. Button hits match the buttons. A hotkey or toolbar control box-selects cards and moves them together.
 3. **Files.** A transcription that overflows shows a scrollbar. A file dropped on the Artifact section uploads. The file opens from the collapsed row and from the Evidence graph.
 4. **Lists.** Sources, People, Events, and Places show when the row last changed. Leaving a list and coming back lands at the same scroll position. The Sources list remembers sort, type filter, evidence-status filter, and text search.
-5. **Entry defaults.** Person→Event role prefills `subject`. Place→Place relationship prefills `part_of`. A date modal opens on Year and, when the transcription has a date, that date is already filled. A full name line can be split into parts. The name-part type control does not jump width and cycles same-letter matches.
+5. **Entry defaults.** A date modal opens on Year and, when the transcription has a date, that date is already filled. A full name line can be split into parts. The name-part type control does not jump width and cycles same-letter matches.
 6. **Small chrome.** Create Source asks for the name first. Enter saves a Property title. Clicking outside a sheet closes it, and asks first when the sheet is dirty. Opening an existing project selects the oldest user, not "create a new user." Searching `marriage` ranks title-word hits above fuzzy name prefixes. People, Places, and Events use one mark each, and the Event mark is not an hourglass. A Person page shows sex or gender, with gender winning when both exist.
 7. **Names match the way records are written.** José matches Jose in suggestions and stays a separate grouping on the Person page. Jas. matches James. O Brien matches O'Brien. A rare surname outweighs Smith. A patronymic is a part type. Spanish dual surnames weigh the first surname above the second. A negative observation counts as a contradiction.
 8. **A face is evidence.** A polygon on a photo is a depiction Observation. The Person page shows those crops, and one can be marked to lead that page and the People list. Promote compares two likenesses as pictures. Empty transcription is valid.
@@ -39,7 +39,7 @@ Usability fixes from [`docs/dogfood/ux.md`](../../dogfood/ux.md) after Spike 9, 
 | Onboarding defaults to a new user | S10-07 | — |
 | Enter should save a Property title edit | S10-08 | — |
 | Sources list sort and filter don't persist | S10-09, folded into S10-41 | S10-D8 |
-| Prefill sensible defaults for common Observation kinds | S10-10 | — |
+| Prefill sensible defaults for common Observation kinds | S10-10, descoped 2026-10-12 | — |
 | Citation composer slows down with many Observations | S10-11 | — |
 | Click outside a modal sheet to close it | S10-12 | — |
 | Prefill the structured date modal + open focused on Year | S10-13 | — |
@@ -85,6 +85,7 @@ Usability fixes from [`docs/dogfood/ux.md`](../../dogfood/ux.md) after Spike 9, 
 - [Depictions leftovers](../../ideas/depictions-and-likenesses.md) — other keys, signature, transparent polygon, Windows PDF draw.
 - [International-name leftovers](../../ideas/international-names.md) — other name patterns, transliteration, Beider–Morse, calendars and double dating, per-person `name_format`, a collation picker.
 - [Name-matching leftovers](../../ideas/name-matching-enhancements.md) — population frequency, known-as, concluded values, calibration, researcher-defined weights, age-to-birth-year, rejected-claim memory, blocking.
+- [Evidence graph structure shortcuts](../../ideas/evidence-graph-structure-shortcuts.md) — place a wedding, birth, or residence in one action, or paste a cluster already on the canvas. Replaces S10-10.
 
 ## Working rules
 
@@ -93,7 +94,7 @@ These are the calls for this spike. The questions at the bottom are answered; no
 - **Add lands at the top for every Observation**, bridge or not. Today `CitationConnections` inserts a bridge at index 0 and `CitationObservationRows.addDraft` appends. Focus follows the new row's property search (the composer already stores `focusedID`; Add does not move keyboard focus into that combo box).
 - **Auto Transcribe moves off the Citation menu's corner.** In the composer form, the Citation `PVSelect` and the Auto Transcribe button both sit on the trailing edge of the left column (`CitationComposerFormPane`), which is why the misclick happens. The confirm-before-overwrite stays.
 - **Choice field cutoffs:** 2 options → `PVRadio`. 3–8 → `PVSelect`. 9 or more → `PVComboBox`. Count the options the field would show, including an empty/untyped row when that row is real. Vocabulary edits happen on other screens, so the control will not swap mid-edit. Name part types are 8 (`NamePartType` plus untyped), so they stay a select. This field does not replace that dropdown.
-- **Observation defaults** write into the existing controls and stay editable. Person→Event role: seeded `subject` ([`seeded-vocabulary.md`](../../seeded-vocabulary.md) §3.5). Place→Place: seeded `part_of` (§3.8). That term already exists; the dogfood note could not find it. No new place-relationship term.
+- **A default role does not cover a repeated cluster.** S10-10 is descoped (2026-10-12). Prefilling `subject` or `part_of` on a generic new connection stays out. Placing a wedding, birth, or residence in one action, and pasting a cluster already on the canvas, are [`ideas/evidence-graph-structure-shortcuts.md`](../../ideas/evidence-graph-structure-shortcuts.md).
 - **Date prefill is silent.** First match in the transcription, current locale, Gregorian patterns a genealogist actually types (day month year, month day year, year alone, ISO). 80–90% is the bar. No "suggested" chrome, so the date modal does not need a brief. Year is focused even when the prefill is empty.
 - **Name split does not clobber edits.** Blur of the full-form line fills parts only when the part list is empty. The Split button refills from the line; if any part was edited by hand, confirm before replacing. Guessing rules are the ones in the dogfood note (comma → surname first; otherwise last word is surname; leftovers are given).
 - **Outside click closes a sheet.** If the sheet is dirty, use the existing confirm (discard or keep editing) — the same idea as leaving the composer with unsaved work. A clean sheet closes. Read-only sheets close. This is behavior on the shared sheet presentation, not a new dialog style.
@@ -179,14 +180,13 @@ SLICE 2 — Behavior, no new chrome
   S10-06  Omnibar whole-word rank — descoped. A title word already beats a fuzzy name.
   S10-07  Existing project selects the oldest user — done, #369
   S10-08  Enter saves a Property title — done, #370
-  S10-10  Observation defaults: role subject, place part_of
+  S10-10  Observation defaults — descoped. A repeated cluster is an idea, not a default role.
   S10-11  Composer stays responsive; profile first
   S10-12  Outside click closes a sheet; dirty asks
   S10-13  Date modal: focus Year, prefill the first transcription match
   S10-42  Promote target menu truncates a long title
-  Check: `marriage` hits the certificate before Marion Margaret. A long
-         transcription scrolls. A new Person→Event row already says subject.
-         A long Promote title stays inside the target column.
+  Check: a long transcription scrolls. A long Promote title stays inside
+         the target column.
 
 SLICE 3 — Choice field
   S10-43  Combo box: a prefix outranks a mid-word match
@@ -197,12 +197,12 @@ SLICE 3 — Choice field
 
 SLICE 4 — Composer and the dialogs it opens
   ✎ S10-D2 ──▶ S10-15  Create Source: name, then type
-  ✎ S10-D3 ──▶ S10-16  Observation list rethink (after S10-10, S10-11, S10-14).
+  ✎ S10-D3 ──▶ S10-16  Observation list rethink (after S10-11, S10-14).
                        The board also draws the depiction row S10-34 fills.
   S10-29  Name patterns (patronymic, western + Spanish profiles) — before D4
   ✎ S10-D4 ──▶ S10-17  Name parts: split, fixed width, letter cycle
-  Check: add an Observation — it is at the top, focused, and a role is already
-         subject. Auto Transcribe is not beside the Citation menu. "Smith, John"
+  Check: add an Observation — it is at the top and focused. Auto Transcribe
+         is not beside the Citation menu. "Smith, John"
          splits to Surname, Given. Patronymic is in the type list. Pressing S
          twice reaches Surname.
 
@@ -281,10 +281,10 @@ S10-02 zoom, tiled grid (done) ─┤
 S10-03 canvas grow (done) ──────┼──▶ S10-20 box-select
 S10-04 camera (done)            │         ▲
                                 │         │
-S10-10 defaults ─┐              │    S10-D6 (also gates S10-18)
-S10-11 perf ─────┼──▶ S10-16 composer rethink
-S10-14 choice ───┘         ▲
-   ▲                       │
+S10-10 defaults — descoped      │    S10-D6 (also gates S10-18)
+S10-11 perf ─────┐
+S10-14 choice ───┼──▶ S10-16 composer rethink
+   ▲             ┘         ▲
 S10-D1                     S10-D3
 
 S10-46 simplified cards — descoped 2026-10-11
@@ -365,12 +365,7 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 
 #### S10-10 — Observation defaults
 
-| | |
-| --- | --- |
-| **In** | A new Person→Event connection prefills role with the seeded `subject` term. A new Place→Place connection prefills `place_relationship_type` with seeded `part_of`. Both stay editable. Apply on the draft row before the first save. More defaults wait for another dogfood note. |
-| **Out** | New vocabulary. Changing `part_of` / `succeeded_by` (they stay product-locked). Overwriting a role the researcher already picked. |
-| **Testable** | Connect a person to an event: role is subject, and choosing another role sticks. Connect two places: relationship is part of. |
-| **Depends on** | — |
+**Descoped 2026-10-12**, in [#370](https://github.com/mendahu/provenencia/pull/370). Prefilling `subject` on a new person–event, or `part_of` on a new place–place, fills one field on a connection the researcher is still building by hand. A wedding, a birth, or a residence is the whole cluster, and an obituary's six grandsons are a paste of a cluster already on the canvas. Both are [`ideas/evidence-graph-structure-shortcuts.md`](../../ideas/evidence-graph-structure-shortcuts.md). The generic connection stays as it is.
 
 #### S10-11 — Composer performance
 
@@ -452,7 +447,7 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 | **In** | Per S10-D3: Observations are visually separate, and the fields inside a row are easy to tell apart. Add (bridge or not) inserts at the top and moves keyboard focus to that row's property search. Auto Transcribe (and the PDF paste control, which sits in the same slot) moves off the Citation menu's corner. Term-valued fields on the row use the adaptive choice field. Still comfortable at 20 Observations (S10-11's bar). |
 | **Out** | Name parts modal (S10-17). Date modal (S10-13). The depiction row itself (S10-34 fills the frame this brief already draws). |
 | **Testable** | Twenty rows: you can see where one ends. Add a bridge and a plain Observation: both appear at the top, search focused. Reaching for the Citation menu does not start Auto Transcribe. A two-term property shows radios; a long term list shows a combo box. |
-| **Depends on** | S10-10, S10-11, S10-14, S10-D3 |
+| **Depends on** | S10-11, S10-14, S10-D3 |
 
 #### S10-17 — Name parts split and type control
 
@@ -753,7 +748,7 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 | Date windows in the comparer, birth~baptism, place chains | Calendars and double dating |
 | `depiction` + `likeness` gallery, bounding-box crop, one preferred portrait | Place/event keys, transparent polygon, Go PDF |
 | Session camera | A saved camera table |
-| `part_of` as the place default (already seeded) | A new place-relationship term |
+| Seeded `part_of` stays as it is | A new place-relationship term. Prefilling `subject` or `part_of` on a generic new connection (S10-10, descoped) |
 | `gender` seeded as `man`, `woman`, `non_binary`, plus researcher terms | Treating `sex_at_birth` as gender. A locked term list. |
 | `engagement` and `interests` on new catalogs | A migration that inserts either into catalogs that already exist |
 | Unpromote: delete this claim and the bridge claims on this Source | Rejecting a claim, the weak-claim queue, re-pin, accept-as-is — still [`ideas/identity-claim-review.md`](../../ideas/identity-claim-review.md) |
@@ -773,7 +768,6 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 - **Last updated is not create time.** UUIDv7 id is create order. The Sources "Updated" sort already uses the scope. The new cell must use that revision, not the id.
 - **Gender and sex at birth are different Properties.** Seeding gender does not relabel sex at birth. The page treatment is a reading of reconciled values, not a new truth write.
 - **Outside click and macOS sheets.** AppKit sheets do not dismiss on an outside click. This is a product behavior on our presenters. Do not bolt a scrim onto `PVConfirm` (design-system rule: no dimming scrim; the window owns chrome).
-- **Defaults must not fight Add focus.** S10-10 fills role on the new row. S10-16 focuses the property search, not the role control.
 - **Folding is not reconciliation.** A test that José and Jose become one auto-reconciled name is a bug. Matching suggestions may still rank them together.
 - **`name_format_profiles` is not in the catalog yet.** S10-29 creates it. Do not point `NamePatterns` at a table that only exists in [`structured-name-model.md`](../../structured-name-model.md) §4.
 - **Depiction is not a file.** Delete and Impact stay on the Citation and the Artifact. The crop cache is disposable. A polygon edit must not leave the old crop as if it were the current face.
@@ -805,7 +799,6 @@ Everything else in **Working rules** is decided for planning. Correct any of the
 
 | When | Doc |
 | --- | --- |
-| S10-10 | Nothing in seeded vocabulary (terms already exist). Mention the default in the composer only if a domain doc states entry defaults — none does today. |
 | S10-21 | [`docs/audit-revision-history.md`](../../audit-revision-history.md) §4.1: `canonical_entity` is a scope. The catalog-audit rule's "conclusion layer carries no Source scope" stays true; the handle scope is additional. |
 | S10-23 | [`docs/seeded-vocabulary.md`](../../seeded-vocabulary.md) new gender section. Do not rewrite §3.7. |
 | S10-25, S10-29, S10-32 | Seeded vocabulary: abbreviation and nickname tables, `patronymic` and the Spanish profile, `likeness` / `depiction`. [`docs/matching.md`](../../matching.md) and [`docs/structured-name-model.md`](../../structured-name-model.md) follow the code. |
