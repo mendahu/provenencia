@@ -339,6 +339,8 @@ struct PVSelect<Row: View>: View {
             Spacer(minLength: 0)
             PVIcon(.chevronDown, size: 14)
                 .foregroundStyle(PVColor.textFaint)
+                .fixedSize()
+                .layoutPriority(1)
         }
         .font(size.font)
         .padding(.horizontal, PVSpacing.space3 + PVSpacing.space1)
@@ -375,6 +377,8 @@ struct PVSelect<Row: View>: View {
                 triggerLabel
             }
             PVIcon(.chevronDown, size: iconOnly ? 9 : 11)
+                .fixedSize()
+                .layoutPriority(1)
         }
         .font(PVFont.body(size: PVTypeScale.caption, weight: PVFontWeight.medium))
         .foregroundStyle(PVColor.textPrimary)
@@ -391,9 +395,7 @@ struct PVSelect<Row: View>: View {
 
     @ViewBuilder
     private var triggerLabel: some View {
-        Text(verbatim: triggerText)
-            .foregroundStyle(showsPlaceholder ? PVColor.textFaint : PVColor.textPrimary)
-            .lineLimit(1)
+        PVSelectClosedLabel(text: triggerText, showsPlaceholder: showsPlaceholder)
     }
 
     private var anchorReader: some View {
@@ -580,6 +582,68 @@ private extension View {
         } else {
             self
         }
+    }
+}
+
+/// Closed label that stays inside the width the caller gave the select.
+/// When the string is cut, help shows the full text.
+private struct PVSelectClosedLabel: View {
+    let text: String
+    let showsPlaceholder: Bool
+
+    @State private var idealWidth: CGFloat = 0
+    @State private var visibleWidth: CGFloat = 0
+
+    private var isTruncated: Bool {
+        visibleWidth > 0 && idealWidth > visibleWidth + 1
+    }
+
+    var body: some View {
+        Text(verbatim: text)
+            .foregroundStyle(showsPlaceholder ? PVColor.textFaint : PVColor.textPrimary)
+            .lineLimit(1)
+            .truncationMode(.tail)
+            .frame(minWidth: 0, alignment: .leading)
+            .layoutPriority(-1)
+            .background {
+                Text(verbatim: text)
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
+                    .hidden()
+                    .overlay {
+                        GeometryReader { proxy in
+                            Color.clear.preference(
+                                key: PVSelectIdealWidthKey.self,
+                                value: proxy.size.width
+                            )
+                        }
+                    }
+            }
+            .background {
+                GeometryReader { proxy in
+                    Color.clear.preference(
+                        key: PVSelectVisibleWidthKey.self,
+                        value: proxy.size.width
+                    )
+                }
+            }
+            .onPreferenceChange(PVSelectIdealWidthKey.self) { idealWidth = $0 }
+            .onPreferenceChange(PVSelectVisibleWidthKey.self) { visibleWidth = $0 }
+            .help(isTruncated ? text : "")
+    }
+}
+
+private struct PVSelectIdealWidthKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
+    }
+}
+
+private struct PVSelectVisibleWidthKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
     }
 }
 

@@ -152,6 +152,24 @@ struct PVSelectPlacementTests {
             proposedWidth: nil, fitting: chrome, stretchesHorizontally: true
         )
         #expect(unspecified.width == chrome.width)
+
+        let tighterThanTheLabel = PVSelectPlacement.triggerSize(
+            proposedWidth: 80, fitting: chrome, stretchesHorizontally: true
+        )
+        #expect(tighterThanTheLabel.width == 80)
+    }
+
+    @Test func aTightFrameTruncatesInsteadOfGrowing() {
+        let longLabel = CGSize(width: 800, height: 28)
+        let framed = PVSelectPlacement.triggerSize(
+            proposedWidth: 330, fitting: longLabel, stretchesHorizontally: false
+        )
+        #expect(framed.width == 330)
+
+        let roomToSpare = PVSelectPlacement.triggerSize(
+            proposedWidth: 400, fitting: chrome, stretchesHorizontally: false
+        )
+        #expect(roomToSpare.width == chrome.width)
     }
 
     @Test func chipIgnoresTheProposedWidth() {

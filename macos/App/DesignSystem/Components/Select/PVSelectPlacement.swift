@@ -47,18 +47,21 @@ enum PVSelectPlacement {
     }
 
     /// Layout size of the trigger for a SwiftUI proposal. The trigger is a
-    /// control, not a container: it always takes its own chrome height, and
-    /// only a full-width field follows the proposed width (like
-    /// `.frame(maxWidth: .infinity)`). Accepting the proposal outright made
-    /// stacks hand the select all remaining space (#181).
+    /// control, not a container: it always takes its own chrome height.
+    /// A full-width field takes the proposed width. A fixed field keeps its
+    /// chrome width unless the caller offered less, in which case the label
+    /// truncates inside that width. Growing to the label's ideal width made
+    /// a long closed title push the chevron and the rest of the row.
     static func triggerSize(
         proposedWidth: CGFloat?,
         fitting: CGSize,
         stretchesHorizontally: Bool
     ) -> CGSize {
         var width = fitting.width
-        if stretchesHorizontally, let proposedWidth {
-            width = max(proposedWidth, fitting.width)
+        if let proposedWidth, proposedWidth > 0 {
+            if stretchesHorizontally || proposedWidth < fitting.width {
+                width = proposedWidth
+            }
         }
         return CGSize(width: max(width, 1), height: max(fitting.height, 1))
     }
