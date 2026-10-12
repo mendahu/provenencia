@@ -62,7 +62,7 @@ Usability fixes from [`docs/dogfood/ux.md`](../../dogfood/ux.md) after Spike 9, 
 | Related event types + place chains | S10-31 | — |
 | Depiction value type + `likeness` | S10-32 | — |
 | Crop cache | S10-33 | — |
-| Composer depiction row | S10-34 | S10-D3 (same board as S10-16) |
+| Composer depiction row | S10-34 | S10-D15 |
 | Person gallery + list thumb | S10-35 | S10-D12, S10-D9 |
 | Preferred portrait | S10-39 | S10-D12, S10-D9 (same boards as S10-35) |
 | Promote compares two crops | S10-36 | S10-D13 |
@@ -140,7 +140,7 @@ These are the calls for this spike. The questions at the bottom are answered; no
 | Brief | View | Gates | Later on the same view |
 | --- | --- | --- | --- |
 | **S10-D1** | Adaptive choice field (kit board) | **S10-14**, descoped 2026-10-12 | — |
-| **S10-D3** | Citation composer | **S10-16** | S10-34 depiction row |
+| **S10-D3** | Citation composer | **S10-16** | — |
 | **S10-D4** | Name parts modal | **S10-17** | Design after S10-29, so the type list includes `patronymic` |
 | **S10-D5** | Source page — Artifacts | **S10-18** | — |
 | **S10-D6** | Evidence graph | **S10-18** header open | S10-20 box-select. S10-44 Unpromote on the promoted card |
@@ -152,8 +152,9 @@ These are the calls for this spike. The questions at the bottom are answered; no
 | **S10-D12** | Person detail | **S10-23** | S10-35 gallery and S10-39 preferred portrait. Design both with the gender treatment, before S10-23 |
 | **S10-D13** | Promote page | **S10-36** | Evidence sheet shows two crops |
 | **S10-D14** | Evidence graph — zoomed-out card | **S10-46**, descoped 2026-10-11 | — |
+| **S10-D15** | Citation composer — depiction row | **S10-34** | — |
 
-S10-D6 is one board for the graph's new controls (open file, box-select, Unpromote). S10-01…S10-04 do not wait on it. S10-D14, the zoomed-out face, is descoped with S10-46 and is not drawn. S10-D1, the adaptive choice field, is descoped with S10-14 and is not drawn. Term fields keep the control they have. S10-D2 is not drawn: name-then-type on Create Source is a field swap, so S10-15 stands on its own. S10-D9…D11 are three briefs for the shared conclusion lists. Events and Places specify the same last-updated cell as Persons so `ConclusionListPage` does not grow three treatments. S10-D8 is the Sources list, a different page, and it gates S10-41. That board draws the same last-updated cell, the evidence-status filter, and text search. Sort, type, status, query, and session scroll ship from that one board. D9…D11 do not draw those controls, and S10-22 does not change the Sources list. Only the Persons list thumb becomes a likeness. S10-D3, S10-D6, S10-D9, and S10-D12 each cover a later PR on that same view, so those briefs are written with the later frame in them. D12 includes the preferred-portrait control S10-39 fills, and D9 includes that crop as the list thumb. Whichever of D8 and D9 is designed first draws the last-updated cell; the other copies it.
+S10-D6 is one board for the graph's new controls (open file, box-select, Unpromote). S10-01…S10-04 do not wait on it. S10-D14, the zoomed-out face, is descoped with S10-46 and is not drawn. S10-D1, the adaptive choice field, is descoped with S10-14 and is not drawn. Term fields keep the control they have. S10-D2 is not drawn: name-then-type on Create Source is a field swap, so S10-15 stands on its own. S10-D9…D11 are three briefs for the shared conclusion lists. Events and Places specify the same last-updated cell as Persons so `ConclusionListPage` does not grow three treatments. S10-D8 is the Sources list, a different page, and it gates S10-41. That board draws the same last-updated cell, the evidence-status filter, and text search. Sort, type, status, query, and session scroll ship from that one board. D9…D11 do not draw those controls, and S10-22 does not change the Sources list. Only the Persons list thumb becomes a likeness. S10-D6, S10-D9, and S10-D12 each cover a later PR on that same view, so those briefs are written with the later frame in them. The depiction row is its own brief, S10-D15, written just before S10-34. S10-D3 does not draw it. D12 includes the preferred-portrait control S10-39 fills, and D9 includes that crop as the list thumb. Whichever of D8 and D9 is designed first draws the last-updated cell; the other copies it.
 
 ## PR sequence
 
@@ -194,7 +195,6 @@ SLICE 3 — Combo box
 SLICE 4 — Composer and the dialogs it opens
   S10-15  Create Source: name, then type — done, #375
   ✎ S10-D3 ──▶ S10-16  Observation list rethink.
-                       The board also draws the depiction row S10-34 fills.
   S10-29  Name patterns (patronymic, western + Spanish profiles) — before D4
   ✎ S10-D4 ──▶ S10-17  Name parts: split, fixed width, letter cycle
   Check: add an Observation — it is at the top and focused. Auto Transcribe
@@ -244,7 +244,7 @@ SLICE 7 — How names compare (no new chrome)
 SLICE 8 — Likeness
   S10-32  depiction value type + likeness on person
   S10-33  Crop cache (File + locator), minted on save
-  S10-34  Composer depiction row (S10-D3 already designed)
+  ✎ S10-D15 ──▶ S10-34  Composer depiction row (after S10-16)
   ✎ S10-D13 ──▶ S10-36  Promote evidence sheet shows the two crops
   S10-35  Person gallery + Persons list thumb (S10-D12 and S10-D9 already designed)
   S10-39  Preferred portrait leads the page and the list (same boards)
@@ -297,7 +297,7 @@ S10-29 patterns ──▶ S10-D4 ──▶ S10-17 name parts
 S10-24 fold ──▶ S10-25 tables ──▶ S10-26 phonetic
 S10-28 support + negatives (after S10-24, so fixtures settle once)
 
-S10-32 depiction type ──▶ S10-33 crop cache ──▶ S10-34 composer row (after S10-16)
+S10-32 depiction type ──▶ S10-33 crop cache ──▶ S10-34 composer row (after S10-16; ✎ S10-D15)
                       └──▶ S10-36 Promote crops
 S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) ──▶ S10-39 preferred
 ```
@@ -401,7 +401,7 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 | | |
 | --- | --- |
 | **In** | Per S10-D3: Observations are visually separate, and the fields inside a row are easy to tell apart. Add (bridge or not) inserts at the top and moves keyboard focus to that row's property search. Auto Transcribe (and the PDF paste control, which sits in the same slot) moves off the Citation menu's corner. Term fields keep the control they have (S10-14 is descoped). Still comfortable at 20 Observations (S10-11's bar). |
-| **Out** | Name parts modal (S10-17). Date modal (S10-13). The depiction row itself (S10-34 fills the frame this brief already draws). An adaptive choice field. |
+| **Out** | Name parts modal (S10-17). Date modal (S10-13). The depiction row (S10-34, brief S10-D15). An adaptive choice field. |
 | **Testable** | Twenty rows: you can see where one ends. Add a bridge and a plain Observation: both appear at the top, search focused. Reaching for the Citation menu does not start Auto Transcribe. |
 | **Depends on** | S10-D3 |
 
@@ -609,14 +609,14 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 
 #### S10-34 — Composer depiction row
 
-**Brief:** S10-D3, already designed for S10-16.
+**Brief:** S10-D15, written just before this PR. Not drawn on S10-D3.
 
 | | |
 | --- | --- |
-| **In** | The depiction row the board drew: pick the region, leave transcription empty, save a likeness (or another depiction property, if the board shows only likeness). The row uses the same add-at-top and focus rules as S10-16. |
-| **Out** | A new composer layout. Gallery (S10-35). |
+| **In** | Per S10-D15: pick the region, leave transcription empty, save a likeness (or another depiction property, if the board shows only likeness). The row uses the same add-at-top and focus rules as S10-16. |
+| **Out** | The observation-list rethink (S10-16). Gallery (S10-35). |
 | **Testable** | Draw a face on a group photo, add a likeness, save. The row shows the crop. Transcription can be empty. |
-| **Depends on** | S10-16, S10-33, S10-D3 |
+| **Depends on** | S10-16, S10-33, S10-D15 |
 
 #### S10-35 — Person gallery and list thumb
 
