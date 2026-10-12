@@ -14,7 +14,7 @@ Usability fixes from [`docs/dogfood/ux.md`](../../dogfood/ux.md) after Spike 9, 
 
 **By spike close**, each of these is true on a real project:
 
-1. **Composer stays usable at 20 Observations.** Saved rows scan. Adding an Observation is the same for a bridge and a plain Observation, and you are already looking at it, ready to type. Choosing a Citation does not start Auto Transcribe.
+1. **Composer stays usable at 20 Observations.** Saved rows scan. Adding an Observation is the same for a bridge and a plain Observation, and you are already looking at it, ready to type. A bridge between two subjects on this Source can be started here, and another after it, without a trip back to the Evidence graph. A saved row can be duplicated into a new unsaved form. Choosing a Citation does not start Auto Transcribe.
 2. **The Evidence graph holds a real Source.** The canvas grows before cards hit the edge. Pan and zoom survive a trip to the composer. The grid is a tile, so a zoomed-out or grown document does not turn the background into one giant bitmap. Zoomed-out edges stay legible. The card stays the full card at every zoom. Button hits match the buttons. A hotkey or toolbar control box-selects cards and moves them together.
 3. **Files.** A transcription that overflows shows a scrollbar. A file dropped on the Artifact section uploads. The file opens from the collapsed row and from the Evidence graph.
 4. **Lists.** Sources, People, Events, and Places show when the row last changed. Leaving a list and coming back lands at the same scroll position. The Sources list remembers sort, type filter, evidence-status filter, and text search.
@@ -91,7 +91,7 @@ Usability fixes from [`docs/dogfood/ux.md`](../../dogfood/ux.md) after Spike 9, 
 
 These are the calls for this spike. The questions at the bottom are answered; nothing in them still blocks a PR.
 
-- **The observation list is S10-D3.** Outcomes, not a layout: at 20 observations the rows scan; a bridge and a plain observation are added the same way, and the new one is where you are looking; keyboard focus enters the first field; choosing a citation does not start Auto Transcribe or Paste. Today `CitationConnections` inserts a bridge at index 0 and `CitationObservationRows.addDraft` appends, and `focusedID` does not move keyboard focus. The Citation `PVSelect` and the Auto Transcribe / Paste button share the trailing edge of the form column. Confirm-before-overwrite stays. The brief owns the layout, including its seeds. Insert-at-top is not required.
+- **The observation list is S10-D3.** The board reconsiders the whole citation composer against the requirements. It is not a list of features added to the current form. Outcomes, not a layout: at 20 observations the rows scan; a bridge and a plain observation are added the same way, and the new one is where you are looking; keyboard focus enters the first field; choosing a citation does not start Auto Transcribe or Paste. A bridge between two subjects on this Source can be started in the composer, saved, and followed by another, without returning to the Evidence graph. The pair of kinds picks the bridge type. The role or type starts empty. If the saved list is grouped by subject, a bridge is shown under each end and both lines are that one bridge. A saved row can be duplicated into the new-observation form with the same values; that copy is not saved until the researcher saves it. Connect on the graph still opens the composer with the ends filled, and the server still places the card at the midpoint. Today `CitationConnections` inserts a bridge at index 0 and `CitationObservationRows.addDraft` appends, and `focusedID` does not move keyboard focus. The Citation `PVSelect` and the Auto Transcribe / Paste button share the trailing edge of the form column. Confirm-before-overwrite stays. The brief owns the layout, including its seeds and the two whole-composer directions. Insert-at-top is not required.
 - **An adaptive choice field is not in this spike.** S10-14 and S10-D1 are descoped (2026-10-12). Term fields keep the control they have. The composer rethink does not swap a short list to radios or a long list to a combo box.
 - **A default role does not cover a repeated cluster.** S10-10 is descoped (2026-10-12). Prefilling `subject` or `part_of` on a generic new connection stays out. Placing a wedding, birth, or residence in one action, and pasting a cluster already on the canvas, are [`ideas/evidence-graph-structure-shortcuts.md`](../../ideas/evidence-graph-structure-shortcuts.md).
 - **Date prefill is silent.** First match in the transcription, current locale, Gregorian patterns a genealogist actually types (day month year, month day year, year alone, ISO). 80–90% is the bar. No "suggested" chrome, so the date modal does not need a brief. Year is focused even when the prefill is empty. Landed in S10-13.
@@ -198,7 +198,9 @@ SLICE 4 — Composer and the dialogs it opens
   ✎ S10-D4 ──▶ S10-17  Name parts: split, fixed width, letter cycle
   Check: twenty observations scan. Add a bridge and a plain Observation —
          both land where the board put authoring, and you can type.
-         Choosing a citation does not start Auto Transcribe. "Smith, John"
+         Start a relationship between two people without leaving, then
+         another. Duplicate a saved row, change one value, save: the
+         original is still there. Choosing a citation does not start Auto Transcribe. "Smith, John"
          splits to Surname, Given. Patronymic is in the type list. Pressing S
          twice reaches Surname.
 
@@ -400,9 +402,9 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 
 | | |
 | --- | --- |
-| **In** | Per S10-D3. Saved observations scan at 20. Adding a bridge and a plain observation is one behavior, and the new one is where you are looking, with keyboard focus in the first field. Choosing a citation does not start Auto Transcribe or Paste. A citation with no transcription is still distinguishable. Term fields keep their control (S10-14 is descoped). The layout stays comfortable at 20 observations (S10-11's bar). |
-| **Out** | Name parts modal (S10-17). Date modal (S10-13). The depiction row (S10-34, brief S10-D15). An adaptive choice field. |
-| **Testable** | Twenty rows: you can read each one and see where it ends. Add a bridge and a plain observation: both land in the place the board chose, and you can type without clicking first. Choosing a citation does not start Auto Transcribe. A citation with an empty transcription is distinguishable from the others. |
+| **In** | Per S10-D3. Saved observations scan at 20. Adding a bridge and a plain observation is one behavior, and the new one is where you are looking, with keyboard focus in the first field. A bridge between two subjects on this Source can be started here, saved, and followed by another, without returning to the Evidence graph. A saved row can be duplicated into that form with the same values, unsaved until the researcher saves. Choosing a citation does not start Auto Transcribe or Paste. A citation with no transcription is still distinguishable. Term fields keep their control (S10-14 is descoped). The layout stays comfortable at 20 observations (S10-11's bar). |
+| **Out** | Name parts modal (S10-17). Date modal (S10-13). The depiction row (S10-34, brief S10-D15). An adaptive choice field. A new bridge kind. Prefilling a role. Replacing Connect on the graph. |
+| **Testable** | Twenty rows: you can read each one and see where it ends. Add a bridge and a plain observation: both land in the place the board chose, and you can type without clicking first. Start a relationship between two people on this Source, save it, and start another without leaving. Back on the graph, the card is between them. If the list is grouped by subject, that relationship is under each person, and editing one line changes the other. Duplicate a saved participation, change the person, and save: the original is unchanged and the new row has the other person. A person and a place do not make a bridge. Choosing a citation does not start Auto Transcribe. A citation with an empty transcription is distinguishable from the others. |
 | **Depends on** | S10-D3 |
 
 #### S10-17 — Name parts split and type control
