@@ -44,7 +44,7 @@ Usability fixes from [`docs/dogfood/ux.md`](../../dogfood/ux.md) after Spike 9, 
 | Click outside a modal sheet to close it | S10-12 | — |
 | Prefill the structured date modal + open focused on Year | S10-13 | — |
 | Adaptive choice field | S10-14, descoped 2026-10-12 | S10-D1, descoped |
-| Create Source modal: Name first, then Type | S10-15 | S10-D2 |
+| Create Source modal: Name first, then Type | S10-15 | — |
 | Rethink the Observation list + Add Observation focuses search | S10-16 | S10-D3 |
 | Auto-fill name parts + name part type dropdown | S10-17 | S10-D4 |
 | Drag files onto Artifacts + open the file without expanding | S10-18 | S10-D5, S10-D6 |
@@ -140,7 +140,6 @@ These are the calls for this spike. The questions at the bottom are answered; no
 | Brief | View | Gates | Later on the same view |
 | --- | --- | --- | --- |
 | **S10-D1** | Adaptive choice field (kit board) | **S10-14**, descoped 2026-10-12 | — |
-| **S10-D2** | Create Source dialog | **S10-15** | — |
 | **S10-D3** | Citation composer | **S10-16** | S10-34 depiction row |
 | **S10-D4** | Name parts modal | **S10-17** | Design after S10-29, so the type list includes `patronymic` |
 | **S10-D5** | Source page — Artifacts | **S10-18** | — |
@@ -154,7 +153,7 @@ These are the calls for this spike. The questions at the bottom are answered; no
 | **S10-D13** | Promote page | **S10-36** | Evidence sheet shows two crops |
 | **S10-D14** | Evidence graph — zoomed-out card | **S10-46**, descoped 2026-10-11 | — |
 
-S10-D6 is one board for the graph's new controls (open file, box-select, Unpromote). S10-01…S10-04 do not wait on it. S10-D14, the zoomed-out face, is descoped with S10-46 and is not drawn. S10-D1, the adaptive choice field, is descoped with S10-14 and is not drawn. Term fields keep the control they have. S10-D9…D11 are three briefs for the shared conclusion lists. Events and Places specify the same last-updated cell as Persons so `ConclusionListPage` does not grow three treatments. S10-D8 is the Sources list, a different page, and it gates S10-41. That board draws the same last-updated cell, the evidence-status filter, and text search. Sort, type, status, query, and session scroll ship from that one board. D9…D11 do not draw those controls, and S10-22 does not change the Sources list. Only the Persons list thumb becomes a likeness. S10-D3, S10-D6, S10-D9, and S10-D12 each cover a later PR on that same view, so those briefs are written with the later frame in them. D12 includes the preferred-portrait control S10-39 fills, and D9 includes that crop as the list thumb. Whichever of D8 and D9 is designed first draws the last-updated cell; the other copies it.
+S10-D6 is one board for the graph's new controls (open file, box-select, Unpromote). S10-01…S10-04 do not wait on it. S10-D14, the zoomed-out face, is descoped with S10-46 and is not drawn. S10-D1, the adaptive choice field, is descoped with S10-14 and is not drawn. Term fields keep the control they have. S10-D2 is not drawn: name-then-type on Create Source is a field swap, so S10-15 stands on its own. S10-D9…D11 are three briefs for the shared conclusion lists. Events and Places specify the same last-updated cell as Persons so `ConclusionListPage` does not grow three treatments. S10-D8 is the Sources list, a different page, and it gates S10-41. That board draws the same last-updated cell, the evidence-status filter, and text search. Sort, type, status, query, and session scroll ship from that one board. D9…D11 do not draw those controls, and S10-22 does not change the Sources list. Only the Persons list thumb becomes a likeness. S10-D3, S10-D6, S10-D9, and S10-D12 each cover a later PR on that same view, so those briefs are written with the later frame in them. D12 includes the preferred-portrait control S10-39 fills, and D9 includes that crop as the list thumb. Whichever of D8 and D9 is designed first draws the last-updated cell; the other copies it.
 
 ## PR sequence
 
@@ -193,7 +192,7 @@ SLICE 3 — Combo box
   Check: typing `par` lists parent above grandparent.
 
 SLICE 4 — Composer and the dialogs it opens
-  ✎ S10-D2 ──▶ S10-15  Create Source: name, then type
+  S10-15  Create Source: name, then type
   ✎ S10-D3 ──▶ S10-16  Observation list rethink.
                        The board also draws the depiction row S10-34 fills.
   S10-29  Name patterns (patronymic, western + Spanish profiles) — before D4
@@ -413,14 +412,12 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 
 #### S10-15 — Create Source field order
 
-**Brief:** S10-D2.
-
 | | |
 | --- | --- |
 | **In** | In the Create Source dialog, name (`draft.title`) is the first field and type is the second. Description stays third. Validation and the type combo row are unchanged. |
-| **Out** | New fields. The Source page identity editor. |
+| **Out** | New fields. The Source page identity editor. No design brief. |
 | **Testable** | Open Create Source: focus and tab order are name, type, description. Create still requires both name and type. |
-| **Depends on** | S10-D2 |
+| **Depends on** | — |
 
 #### S10-16 — Observation list rethink
 

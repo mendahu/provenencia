@@ -10,7 +10,6 @@ Brief files are written **just before** the PR they gate, not up front. This ind
 
 | Step | View | Gates | Notes |
 | --- | --- | --- | --- |
-| S10-D2 | Create Source dialog | **S10-15** | Field order only |
 | S10-D3 | Citation composer | **S10-16** | Observation rows, add-at-top, focus, Auto Transcribe. Also draws the depiction row **S10-34** fills. Term fields keep their current control |
 | S10-D4 | Name parts modal | **S10-17** | Split, fixed-width type control. Design after **S10-29** so `patronymic` is in the list |
 | S10-D5 | Source page — Artifacts | **S10-18** | Drop target and open-on-collapsed-row |
@@ -26,6 +25,8 @@ Brief files are written **just before** the PR they gate, not up front. This ind
 ## Descoped
 
 S10-D1, the adaptive choice field, was descoped 2026-10-12 with S10-14. Term fields keep the control they have. The brief is not kept.
+
+S10-D2, the Create Source dialog, is not drawn. Name, then type, is a field swap, so S10-15 stands on its own.
 
 S10-D14, the zoomed-out card, was descoped 2026-10-11 with S10-46. The full card stays at every zoom. The brief is not kept.
 
