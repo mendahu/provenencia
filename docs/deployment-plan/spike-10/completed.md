@@ -52,6 +52,10 @@
 
 **Descoped 2026-10-12** in [#370](https://github.com/mendahu/provenencia/pull/370). A kit field that swaps radio, select, and combo box by option count is not a priority for this spike. S10-D1 is not drawn. Term fields keep the control they have.
 
+## S10-42 — Long titles in a select
+
+**Landed 2026-10-12** in [#373](https://github.com/mendahu/provenencia/pull/373). A select's closed label ellipsizes inside the width the caller gave it. The chevron stays put. When the label is cut, help shows the full string. A short label is unchanged.
+
 ## S10-46 — Simplified cards when zoomed out
 
 **Descoped 2026-10-11** in [#367](https://github.com/mendahu/provenencia/pull/367). Drawing the card in AppKit made a zoomed-out graph fast enough. The full card stays at every zoom. S10-D14 is not drawn.
