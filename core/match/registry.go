@@ -22,6 +22,12 @@ import (
 // ---------------------------------------------------------------------------
 // Words (names and free text)
 
+// SpacedParticles are words that rejoin with the next word before scoring.
+// Add a word here; comparison reads this list. A period initial ("O.") never
+// rejoins. Entries are comparison tokens (lowercase, punctuation already
+// dropped). van and de are not here: a typed surname prefix is a part role.
+var SpacedParticles = []string{"o", "mc", "mac", "st", "d", "fitz"}
+
 // DefaultWordRules: how two words compare.
 var DefaultWordRules = WordRules{
 	// Least edit-distance ratio (1 − edits / longer length) for a spelling
@@ -33,6 +39,7 @@ var DefaultWordRules = WordRules{
 	// Words at least this long may differ by one added or dropped letter
 	// below FuzzyFloor (Ann ~ Anne, Jon ~ John).
 	ShortVariantMinLength: Set(autoreconcile.SpellingShortMin),
+	Particles:             &SpacedParticles,
 }
 
 // MaxExactPairing bounds the exact best-pairing search (2^n states over the

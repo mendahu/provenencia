@@ -137,11 +137,11 @@ type nameWord struct {
 // nameWords splits a name into weighted, role-tagged words under its
 // pattern. Only parts are read. Generation words come back separately. A
 // name whose parts yield no comparable word is not comparable.
-func nameWords(n *namevalues.Value, p NamePattern) (words []nameWord, generation []string) {
+func nameWords(n *namevalues.Value, p NamePattern, particles map[string]bool) (words []nameWord, generation []string) {
 	firstGiven := true
 	for _, part := range n.Parts {
 		role := p.role(part.Type)
-		for _, w := range splitWords(part.Value) {
+		for _, w := range splitWords(part.Value, particles) {
 			switch role {
 			case RoleIgnored:
 			case RoleGeneration:
@@ -188,8 +188,8 @@ func (c NameComparer) affinity(a, b NameRole) float64 {
 //     is scaled by SuffixConflict: likely father and son.
 func (c NameComparer) compareNames(a *namevalues.Value, pa NamePattern, b *namevalues.Value, pb NamePattern) (float64, bool) {
 	r := c.Words.resolve(true)
-	wa, ga := nameWords(a, pa)
-	wb, gb := nameWords(b, pb)
+	wa, ga := nameWords(a, pa, r.particles)
+	wb, gb := nameWords(b, pb, r.particles)
 	if len(wa) == 0 || len(wb) == 0 {
 		return 0, false
 	}

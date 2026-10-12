@@ -217,6 +217,20 @@ func TestPeriodInitialDoesNotRejoin(t *testing.T) {
 	}
 }
 
+func TestSpacedParticlesComeFromTheList(t *testing.T) {
+	none := NameComparer{Words: WordRules{Particles: Set([]string{})}}
+	got, ok := none.Compare(nv("s=O Brien"), nv("s=O'Brien"))
+	if !ok || math.Abs(got-1) < 1e-9 {
+		t.Fatalf("empty list still rejoined: %.4f %v", got, ok)
+	}
+	list := append(append([]string{}, SpacedParticles...), "zz")
+	extra := NameComparer{Words: WordRules{Particles: &list}}
+	got, ok = extra.Compare(nv("s=Zz Brien"), nv("s=ZzBrien"))
+	if !ok || math.Abs(got-1) > 1e-9 {
+		t.Fatalf("added particle did not rejoin: %.4f %v", got, ok)
+	}
+}
+
 func TestNameComparerNotComparable(t *testing.T) {
 	for name, pair := range map[string][2]Value{
 		"no name":          {Value{}, nv("g=James")},
@@ -373,7 +387,7 @@ func TestNameComparerInvariants(t *testing.T) {
 // partWords reports whether a name's parts yield comparable words (so its
 // form is not read).
 func partWords(v Value) bool {
-	words, _ := nameWords(withForm(v, "").Name, WesternNamePattern)
+	words, _ := nameWords(withForm(v, "").Name, WesternNamePattern, nil)
 	return len(words) > 0
 }
 

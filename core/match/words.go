@@ -14,12 +14,6 @@ import (
 // An exact word still scores 1.
 const foldOnly = 0.95
 
-// spacedParticles rejoin with the following word. A typed surname_prefix
-// such as van or de is not in this list.
-var spacedParticles = map[string]bool{
-	"o": true, "mc": true, "mac": true, "st": true, "d": true, "fitz": true,
-}
-
 // Word-level comparison shared by NameComparer and TextComparer: splitting,
 // word similarity (initials, spelling variants), and best one-to-one pairing.
 
@@ -33,6 +27,9 @@ type WordRules struct {
 	// ShortVariantMinLength: words at least this long may differ by one
 	// added or dropped letter below FuzzyFloor (Ann ~ Anne).
 	ShortVariantMinLength *int
+	// Particles rejoin with the following word. Nil uses SpacedParticles.
+	// An empty list rejoins nothing. A period initial never rejoins.
+	Particles *[]string
 }
 
 // wordRules are WordRules resolved against the registry.
@@ -40,22 +37,29 @@ type wordRules struct {
 	floor, initialCredit float64
 	shortMin             int
 	initials             bool // whether lone letters match as initials
+	particles            map[string]bool
 }
 
 func (r WordRules) resolve(initials bool) wordRules {
+	list := setting(r.Particles, *DefaultWordRules.Particles)
+	particles := make(map[string]bool, len(list))
+	for _, w := range list {
+		particles[w] = true
+	}
 	return wordRules{
 		floor:         setting(r.FuzzyFloor, *DefaultWordRules.FuzzyFloor),
 		initialCredit: setting(r.InitialCredit, *DefaultWordRules.InitialCredit),
 		shortMin:      setting(r.ShortVariantMinLength, *DefaultWordRules.ShortVariantMinLength),
 		initials:      initials,
+		particles:     particles,
 	}
 }
 
-func splitWords(s string) []string {
+func splitWords(s string, particles map[string]bool) []string {
 	raw := rawTokens(s)
 	var out []string
 	for i := 0; i < len(raw); i++ {
-		if i+1 < len(raw) && spacedParticle(raw[i]) {
+		if i+1 < len(raw) && spacedParticle(raw[i], particles) {
 			if n := autoreconcile.NormalizeForm(raw[i] + raw[i+1]); n != "" {
 				out = append(out, n)
 			}
@@ -93,11 +97,11 @@ func rawTokens(s string) []string {
 	return out
 }
 
-func spacedParticle(raw string) bool {
+func spacedParticle(raw string, particles map[string]bool) bool {
 	if periodInitial(raw) {
 		return false
 	}
-	return spacedParticles[autoreconcile.NormalizeForm(raw)]
+	return particles[autoreconcile.NormalizeForm(raw)]
 }
 
 // periodInitial is a lone cased letter written with a period ("O.").
@@ -164,7 +168,7 @@ func TextResemblance(a, b string) float64 {
 // of words the two forms have in common (wordDice). Empty forms are not
 // comparable.
 func compareForms(a, b string, partial float64, r wordRules) (float64, bool) {
-	wa, wb := splitWords(a), splitWords(b)
+	wa, wb := splitWords(a, r.particles), splitWords(b, r.particles)
 	if len(wa) == 0 || len(wb) == 0 {
 		return 0, false
 	}

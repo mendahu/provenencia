@@ -90,7 +90,7 @@ A candidate is returned when its total reaches `MinScore`. Results are sorted by
   - Folding is NFD, drop combining marks, then `ß→ss`, `æ→ae`, `œ→oe`, `ø→o`, `ł→l`, `đ→d`, `þ→th`, `ı→i`. `José` vs `Jose` is 0.95. `José` vs `José` stays 1. Display, `NormalizeForm`, and `sort_key` do not fold, so the Person page still keeps both spellings.
   - A swap of two adjacent letters counts as one edit (Robnis ~ Robins).
   - Words of three or more letters may also differ by one added or dropped letter (Ann ~ Anne, Jon ~ John: 0.75). A substituted letter in a short word is a different name (Mary ≠ Mark).
-- **Normalization:** dashes and slashes separate words (Smith-Jones ~ Smith Jones). Apostrophes join (O'Brien ~ OBrien). A spaced particle `o`, `mc`, `mac`, `st`, `d`, or `fitz` rejoins with the next word (`O Brien` ~ `O'Brien`). A lone initial with a period (`O.`) does not rejoin. `van` and `de` stay a typed surname prefix, not this list.
+- **Normalization:** dashes and slashes separate words (Smith-Jones ~ Smith Jones). Apostrophes join (O'Brien ~ OBrien). A word in `SpacedParticles` (`core/match/registry.go`) rejoins with the next word (`O Brien` ~ `O'Brien`). A lone initial with a period (`O.`) does not rejoin. Adding a word to that list extends comparison; the splitter does not name the words.
 - **Surname conflict:** an initial doesn't count as resembling a surname, so "S." doesn't hide a Smith/Robins conflict.
   - An initial is a lone cased letter ("J").
   - A lone character in an uncased script (蒋, 王) is a whole word.
