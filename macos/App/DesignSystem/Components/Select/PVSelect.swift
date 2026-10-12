@@ -133,12 +133,10 @@ struct PVSelect<Row: View>: View {
     }
 
     var body: some View {
-        PVSelectTriggerSurface(
-            isEnabled: !isDisabled,
-            stretchesHorizontally: icon == nil && fillsWidth,
-            chrome: trigger,
-            onClick: toggleMenu
-        )
+        trigger
+            .overlay {
+                PVSelectClickCatcher(isEnabled: !isDisabled, onClick: toggleMenu)
+            }
             .opacity(isDisabled ? 0.45 : 1)
             .focusable(!isDisabled)
             .focused($isFocused)
@@ -320,10 +318,6 @@ struct PVSelect<Row: View>: View {
         }
     }
 
-    private var triggerHeight: CGFloat {
-        icon == nil ? size.height : PVSpacing.controlHeightMedium
-    }
-
     @ViewBuilder
     private var trigger: some View {
         if icon != nil {
@@ -334,25 +328,58 @@ struct PVSelect<Row: View>: View {
     }
 
     private var fieldTrigger: some View {
-        HStack(spacing: PVSpacing.space3) {
-            triggerLabel
-            Spacer(minLength: 0)
-            PVIcon(.chevronDown, size: 14)
-                .foregroundStyle(PVColor.textFaint)
+        closedLabel
+            .frame(minWidth: 0, maxWidth: fillsWidth ? .infinity : nil, alignment: .leading)
+            .modifier(PVInputChrome(
+                size: size,
+                isFocused: isFocused,
+                isInvalid: isInvalid,
+                trailingSuffixWidth: PVSelectFieldChrome.chevronSize
+            ))
+            .overlay(alignment: .trailing) {
+                PVIcon(.chevronDown, size: PVSelectFieldChrome.chevronSize)
+                    .foregroundStyle(PVColor.textFaint)
+                    .padding(.trailing, PVInputChrome.horizontalInset)
+                    .allowsHitTesting(false)
+            }
+    }
+
+    private var chipTrigger: some View {
+        HStack(spacing: iconOnly ? PVSpacing.space1 : PVSpacing.space3) {
+            if let icon {
+                PVIcon(icon, size: iconOnly ? 13 : 12)
+            }
+            if !iconOnly {
+                closedLabel
+            }
+            PVIcon(.chevronDown, size: iconOnly ? 9 : 11)
                 .fixedSize()
                 .layoutPriority(1)
         }
-        .font(size.font)
-        .padding(.horizontal, PVSpacing.space3 + PVSpacing.space1)
-        .frame(height: size.height)
-        .frame(maxWidth: fillsWidth ? .infinity : nil)
+        .font(PVFont.body(size: PVTypeScale.caption, weight: PVFontWeight.medium))
+        .foregroundStyle(PVColor.textPrimary)
+        .padding(.horizontal, iconOnly ? PVSpacing.space3 : PVSpacing.space4)
+        .frame(height: PVSpacing.controlHeightMedium)
+        .frame(
+            minWidth: iconOnly ? PVSpacing.controlHeightMedium : 0,
+            maxWidth: fillsWidth ? .infinity : nil,
+            alignment: .leading
+        )
         .background(
             RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous)
                 .fill(PVColor.surfaceRaised)
         )
         .overlay(triggerBorder)
-        .pvInsetShadow(cornerRadius: PVRadius.sm, visible: !isFocused)
         .pvFocusRing(isFocused, cornerRadius: PVRadius.sm)
+    }
+
+    private var closedLabel: some View {
+        Text(verbatim: triggerText)
+            .foregroundStyle(showsPlaceholder ? PVColor.textFaint : PVColor.textPrimary)
+            .lineLimit(1)
+            .truncationMode(.tail)
+            .frame(minWidth: 0, alignment: .leading)
+            .help(Text(verbatim: triggerText))
     }
 
     private var triggerBorder: some View {
@@ -366,36 +393,6 @@ struct PVSelect<Row: View>: View {
     private var triggerBorderColor: Color {
         if isInvalid { return PVColor.danger }
         return isFocused ? PVColor.borderFocus : PVColor.borderDefault
-    }
-
-    private var chipTrigger: some View {
-        HStack(spacing: iconOnly ? PVSpacing.space1 : PVSpacing.space3) {
-            if let icon {
-                PVIcon(icon, size: iconOnly ? 13 : 12)
-            }
-            if !iconOnly {
-                triggerLabel
-            }
-            PVIcon(.chevronDown, size: iconOnly ? 9 : 11)
-                .fixedSize()
-                .layoutPriority(1)
-        }
-        .font(PVFont.body(size: PVTypeScale.caption, weight: PVFontWeight.medium))
-        .foregroundStyle(PVColor.textPrimary)
-        .padding(.horizontal, iconOnly ? PVSpacing.space3 : PVSpacing.space4)
-        .frame(height: PVSpacing.controlHeightMedium)
-        .frame(minWidth: iconOnly ? PVSpacing.controlHeightMedium : nil)
-        .background(
-            RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous)
-                .fill(PVColor.surfaceRaised)
-        )
-        .overlay(triggerBorder)
-        .pvFocusRing(isFocused, cornerRadius: PVRadius.sm)
-    }
-
-    @ViewBuilder
-    private var triggerLabel: some View {
-        PVSelectClosedLabel(text: triggerText, showsPlaceholder: showsPlaceholder)
     }
 
     private var anchorReader: some View {
@@ -450,6 +447,10 @@ extension PVSelect where Row == PVSelectPlainRow {
     }
 }
 
+private enum PVSelectFieldChrome {
+    static let chevronSize: CGFloat = 14
+}
+
 private struct PVSelectPositionContent: ViewModifier {
     var position: (current: Int, count: Int)?
 
@@ -468,61 +469,43 @@ private struct PVSelectPositionContent: ViewModifier {
     }
 }
 
-/// AppKit owns the field click. SwiftUI paints the chrome and keeps keys
-/// (same split as the Evidence graph cards). Sizing comes from the hosted
-/// chrome (`PVSelectPlacement.triggerSize`), never from the proposal alone.
-private struct PVSelectTriggerSurface<Chrome: View>: NSViewRepresentable {
+/// Catches the field click, including when the window is not yet key.
+/// It has no chrome: SwiftUI owns the trigger's size.
+private struct PVSelectClickCatcher: NSViewRepresentable {
     var isEnabled: Bool
-    var stretchesHorizontally: Bool
-    var chrome: Chrome
     var onClick: () -> Void
 
-    func makeNSView(context: Context) -> PVSelectTriggerSurfaceView {
-        let view = PVSelectTriggerSurfaceView()
-        apply(to: view)
+    func makeNSView(context: Context) -> PVSelectClickCatcherView {
+        let view = PVSelectClickCatcherView()
+        view.isEnabled = isEnabled
+        view.onClick = onClick
         return view
     }
 
-    func updateNSView(_ view: PVSelectTriggerSurfaceView, context: Context) {
-        apply(to: view)
+    func updateNSView(_ view: PVSelectClickCatcherView, context: Context) {
+        view.isEnabled = isEnabled
+        view.onClick = onClick
     }
 
     func sizeThatFits(
         _ proposal: ProposedViewSize,
-        nsView: PVSelectTriggerSurfaceView,
+        nsView: PVSelectClickCatcherView,
         context: Context
     ) -> CGSize? {
-        nsView.measuredSize(proposal: proposal)
-    }
-
-    private func apply(to view: PVSelectTriggerSurfaceView) {
-        view.isEnabled = isEnabled
-        view.stretchesHorizontally = stretchesHorizontally
-        view.onClick = onClick
-        view.setChrome(chrome)
+        CGSize(
+            width: proposal.width?.isFinite == true ? proposal.width ?? 0 : 0,
+            height: proposal.height?.isFinite == true ? proposal.height ?? 0 : 0
+        )
     }
 }
 
-private final class PVSelectTriggerSurfaceView: NSView {
+private final class PVSelectClickCatcherView: NSView {
     var isEnabled = true
-    var stretchesHorizontally = true
     var onClick: (() -> Void)?
-    private let hosting = NSHostingView(rootView: AnyView(EmptyView()))
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
-        hosting.translatesAutoresizingMaskIntoConstraints = false
-        // The label may be wider than the caller’s frame. Let it compress
-        // instead of growing the field.
-        hosting.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
-        addSubview(hosting)
-        NSLayoutConstraint.activate([
-            hosting.leadingAnchor.constraint(equalTo: leadingAnchor),
-            hosting.trailingAnchor.constraint(equalTo: trailingAnchor),
-            hosting.topAnchor.constraint(equalTo: topAnchor),
-            hosting.bottomAnchor.constraint(equalTo: bottomAnchor),
-        ])
-        clipsToBounds = true
+        setAccessibilityElement(false)
     }
 
     @available(*, unavailable)
@@ -530,30 +513,10 @@ private final class PVSelectTriggerSurfaceView: NSView {
         fatalError("init(coder:) is not used")
     }
 
-    func setChrome(_ chrome: some View) {
-        hosting.rootView = AnyView(chrome)
-        invalidateIntrinsicContentSize()
-    }
-
-    func measuredSize(proposal: ProposedViewSize) -> CGSize {
-        PVSelectPlacement.triggerSize(
-            proposedWidth: proposal.width,
-            fitting: hosting.fittingSize,
-            stretchesHorizontally: stretchesHorizontally
-        )
-    }
-
-    /// Height is the chrome’s real height. Width comes from `sizeThatFits`,
-    /// so a long label cannot push the row and a short one stays readable.
-    override var intrinsicContentSize: NSSize {
-        NSSize(width: NSView.noIntrinsicMetric, height: max(hosting.fittingSize.height, 1))
-    }
-
     override var acceptsFirstResponder: Bool { false }
 
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
-    /// Do not let the hosted chrome take the click. This view is the target.
     override func hitTest(_ point: NSPoint) -> NSView? {
         guard isEnabled, bounds.contains(point) else { return nil }
         return self
@@ -590,69 +553,6 @@ private extension View {
         } else {
             self
         }
-    }
-}
-
-/// Closed label that stays inside the width the caller gave the select.
-/// When the string is cut, help shows the full text.
-private struct PVSelectClosedLabel: View {
-    let text: String
-    let showsPlaceholder: Bool
-
-    @State private var idealWidth: CGFloat = 0
-    @State private var visibleWidth: CGFloat = 0
-
-    private var isTruncated: Bool {
-        visibleWidth > 0 && idealWidth > visibleWidth + 1
-    }
-
-    var body: some View {
-        Text(verbatim: text)
-            .foregroundStyle(showsPlaceholder ? PVColor.textFaint : PVColor.textPrimary)
-            .lineLimit(1)
-            .truncationMode(.tail)
-            .frame(minWidth: 0, alignment: .leading)
-            .layoutPriority(-1)
-            .background {
-                Text(verbatim: text)
-                    .lineLimit(1)
-                    .fixedSize(horizontal: true, vertical: false)
-                    .hidden()
-                    .accessibilityHidden(true)
-                    .overlay {
-                        GeometryReader { proxy in
-                            Color.clear.preference(
-                                key: PVSelectIdealWidthKey.self,
-                                value: proxy.size.width
-                            )
-                        }
-                    }
-            }
-            .background {
-                GeometryReader { proxy in
-                    Color.clear.preference(
-                        key: PVSelectVisibleWidthKey.self,
-                        value: proxy.size.width
-                    )
-                }
-            }
-            .onPreferenceChange(PVSelectIdealWidthKey.self) { idealWidth = $0 }
-            .onPreferenceChange(PVSelectVisibleWidthKey.self) { visibleWidth = $0 }
-            .help(isTruncated ? text : "")
-    }
-}
-
-private struct PVSelectIdealWidthKey: PreferenceKey {
-    static let defaultValue: CGFloat = 0
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-        value = max(value, nextValue())
-    }
-}
-
-private struct PVSelectVisibleWidthKey: PreferenceKey {
-    static let defaultValue: CGFloat = 0
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-        value = max(value, nextValue())
     }
 }
 

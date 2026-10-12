@@ -335,10 +335,10 @@ must not look equally selected.
 **Placement.** Width is `max(trigger, menuWidth)` then clamped to the
 screen. Gap 4 pt, left-aligned. Prefer below; flip above when the
 preferred height does not fit; scroll when neither side fits
-(`maxVisibleRows` × row height, default 10). The trigger itself sizes
-from its chrome (`PVSelectPlacement.triggerSize`): fixed control height,
-and only a full-width field follows the proposed width. It must never
-take the stack's leftover space.
+(`maxVisibleRows` × row height, default 10). The closed field is
+`PVInputChrome`. A full-width field takes the width it is offered. A
+fixed field hugs its label, and truncates when that offer is tighter.
+Help shows the full string.
 
 **Empty / disabled.** Empty options cannot open. Disabled is opacity 0.45
 and ignores keys and pointer.
