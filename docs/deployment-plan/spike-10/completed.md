@@ -18,7 +18,7 @@
 
 ## S10-06 — Omnibar whole-word rank
 
-**Descoped 2026-10-11.** A title that contains `marriage` already ranks above obituaries for Marion Margaret. No change to `core/search`.
+**Descoped 2026-10-11** in [#368](https://github.com/mendahu/provenencia/pull/368). A title that contains `marriage` already ranks above obituaries for Marion Margaret. No change to `core/search`.
 
 ## S10-46 — Simplified cards when zoomed out
 

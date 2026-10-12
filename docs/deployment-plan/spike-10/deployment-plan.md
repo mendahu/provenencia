@@ -6,7 +6,7 @@ Usability fixes from [`docs/dogfood/ux.md`](../../dogfood/ux.md) after Spike 9, 
 
 ## Status
 
-**Open.** Slice 1 is done (2026-10-11). S10-01…S10-04 landed in [#361](https://github.com/mendahu/provenencia/pull/361)–[#364](https://github.com/mendahu/provenencia/pull/364). S10-46, S10-47, and S10-48 were descoped in [#367](https://github.com/mendahu/provenencia/pull/367). S10-06 was descoped 2026-10-11: searching `marriage` already lists a title that contains the word ahead of a fuzzy name. Later landings go in [`completed.md`](completed.md).
+**Open.** Slice 1 is done (2026-10-11). S10-01…S10-04 landed in [#361](https://github.com/mendahu/provenencia/pull/361)–[#364](https://github.com/mendahu/provenencia/pull/364). S10-46, S10-47, and S10-48 were descoped in [#367](https://github.com/mendahu/provenencia/pull/367). S10-06 was descoped in [#368](https://github.com/mendahu/provenencia/pull/368): searching `marriage` already lists a title that contains the word ahead of a fuzzy name. Later landings go in [`completed.md`](completed.md).
 
 > **Goal of this spike:** the annoyances logged while entering real research are gone, and the app still behaves the way Spike 8 and Spike 9 decided.
 
@@ -353,7 +353,7 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 
 #### S10-06 — Omnibar whole-word rank
 
-**Descoped 2026-10-11.** Searching `marriage` already lists a marriage certificate and a newspaper announcement ahead of obituaries for Marion Margaret. A fuzzy name prefix does not outrank a whole word in a title, so the scorer stays as it is. A shorter prefix title (`Ilminsterish notes`) still ranks above a longer whole-word title (`Ilminster parish register`); that is the existing test, not this note.
+**Descoped 2026-10-11**, in [#368](https://github.com/mendahu/provenencia/pull/368). Searching `marriage` already lists a marriage certificate and a newspaper announcement ahead of obituaries for Marion Margaret. A fuzzy name prefix does not outrank a whole word in a title, so the scorer stays as it is. A shorter prefix title (`Ilminsterish notes`) still ranks above a longer whole-word title (`Ilminster parish register`); that is the existing test, not this note.
 
 #### S10-07 — Oldest user on an existing project
 
