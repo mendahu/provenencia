@@ -199,7 +199,7 @@ func (c NameComparer) compareNames(a *namevalues.Value, pa NamePattern, b *namev
 		sim[i] = make([]float64, len(wb))
 		earned[i] = make([]float64, len(wb))
 		for j, y := range wb {
-			sim[i][j] = wordSimilarity(x.text, y.text, r)
+			sim[i][j] = wordSimilarity(x.text, y.text, x.role, y.role, r)
 			earned[i][j] = sim[i][j] * c.affinity(x.role, y.role) * (x.weight + y.weight)
 		}
 	}
@@ -227,7 +227,7 @@ func familyConflict(wa, wb []nameWord, r wordRules) bool {
 	r.initials = false
 	resembles := func(f nameWord, others []nameWord) bool {
 		for _, o := range others {
-			if wordSimilarity(f.text, o.text, r) > 0 {
+			if wordSimilarity(f.text, o.text, f.role, o.role, r) > 0 {
 				return true
 			}
 		}

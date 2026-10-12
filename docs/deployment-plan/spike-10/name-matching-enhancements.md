@@ -12,7 +12,7 @@ What this spike builds is below. Accents are in [`international-names.md`](inter
 
 ## Names
 
-- **Abbreviations.** Jas., Wm., Chas., Thos., Geo., Eliz. and similar are everywhere in historical records, and they score as different names today ("Jas." vs "James" gives the given name 0). This needs a seeded abbreviation table (extensible per project, like the nickname tables) that maps an abbreviation to its full name, scored just below an exact match. Edit distance can't learn these.
+- **Abbreviations.** S10-25. `Jas.` vs `James` scores 0.98 from the abbreviation table, above the 0.95 fold. Nicknames are the same tier (`Jim` vs `James`). Edit distance is not how these are learned. Every installed table is consulted. Origin records whether the app, a user, or a plugin contributed it. There is no editor UI.
 - **Name frequency.** "John Smith" vs "John Smith" scores 1.0, the same as a rare name, and that's the main source of false suggestions in genealogy. Weight words by how common they are in the project (inverse frequency across all name words), so a shared rare surname counts for more than a shared "Smith". A seeded population table is later ([`ideas/name-matching-enhancements.md`](../../ideas/name-matching-enhancements.md)).
 - **Spaced particles.** S10-24 rejoins `o`, `mc`, `mac`, `st`, `d`, and `fitz` with the next word, so `O Brien` matches `O'Brien`. A lone initial with a period (`O.`) does not rejoin.
 - **Sound-alikes.** Daitch–Mokotoff below the near-spelling tier. It matters for English records too (Smyth/Smith already works by edit distance; Leigh/Lee does not). Beider–Morse is later.
@@ -42,5 +42,5 @@ What this spike builds is below. Accents are in [`international-names.md`](inter
 ## Decided for this spike
 
 - Name frequency is this project's counts, not a population table.
-- Abbreviation and nickname tables are seeded vocabulary a project can extend.
+- Abbreviation and nickname tables are seeded vocabulary a project can extend. S10-25 installed them. Origin is `provenencia`, `user`, or `plugin:<id>`. Every table is consulted. No editor UI.
 - Support weighting uses share of support, not rank and not claim confidence.

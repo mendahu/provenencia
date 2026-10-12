@@ -40,6 +40,12 @@ type Graph struct {
 	labelsOK bool
 	alt      Querier
 
+	// aliases are abbreviation and nickname tables for this open catalog.
+	// They are not graph nodes: Drop leaves them. Closing the catalog drops
+	// them with this graph. namealiases owns the concrete slice.
+	aliases   any
+	aliasesOK bool
+
 	entityTable string
 	claimTable  string
 	valueTable  string
@@ -156,6 +162,7 @@ func (g *Graph) clear() {
 	g.sources = map[string]SourceGraph{}
 	g.labelsOK = false
 	g.labels = nil
+	// Alias tables stay. They follow the catalog connection, not a rebuild.
 }
 
 // Drop empties nodes, holders, kind indexes, and stats. The next read fills
@@ -228,6 +235,26 @@ func (g *Graph) Stats() (any, bool) {
 		return nil, false
 	}
 	return g.stats, true
+}
+
+// AliasTables returns the abbreviation and nickname tables warmed for this
+// open catalog. The bool is false until namealiases.Warm stores them,
+// including when the stored slice is empty.
+func (g *Graph) AliasTables() (any, bool) {
+	if g == nil || !g.aliasesOK {
+		return nil, false
+	}
+	return g.aliases, true
+}
+
+// SetAliasTables stores abbreviation and nickname tables until the catalog
+// closes. A nil slice is a warm catalog with no rows. Drop does not clear this.
+func (g *Graph) SetAliasTables(tables any) {
+	if g == nil {
+		return
+	}
+	g.aliases = tables
+	g.aliasesOK = true
 }
 
 // SetStats stores a scan until the next handle commit or drop.

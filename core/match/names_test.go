@@ -100,6 +100,9 @@ var nameCases = []nameCase{
 	{"identity", "accented letters match themselves", NameComparer{}, nv("g=José|s=Núñez"), nv("g=josé|s=NÚÑEZ"), 1},
 	{"fold", "accent only", NameComparer{}, nv("g=José"), nv("g=Jose"), foldOnly},
 	{"fold", "eszett", NameComparer{}, nv("s=Groß"), nv("s=Gross"), foldOnly},
+	{"alias", "abbreviation", withAliasSeed(), nv("g=Jas."), nv("g=James"), AliasCredit},
+	{"alias", "nickname", withAliasSeed(), nv("g=Jim"), nv("g=James"), AliasCredit},
+	{"alias", "same word stays exact", NameComparer{}, nv("g=James"), nv("g=James"), 1},
 	{"particle", "spaced O rejoins", NameComparer{}, nv("s=O Brien"), nv("s=O'Brien"), 1},
 
 	// Family words.
@@ -139,12 +142,12 @@ var nameCases = []nameCase{
 	{"given", "short name, one dropped letter", NameComparer{}, nv("g=John|s=Robins"), nv("g=Jon|s=Robins"), (anne*2*G1 + 2*F) / (2 * (G1 + F))},
 	{"given", "short name, one substituted letter", NameComparer{}, nv("g=Jane|s=Robins"), nv("g=June|s=Robins"), 2 * F / (2 * (G1 + F))},
 	{"given", "two-letter name, one added letter", NameComparer{}, nv("g=Al|s=Robins"), nv("g=Ali|s=Robins"), 2 * F / (2 * (G1 + F))},
-	{"given", "abbreviation is not yet a match", NameComparer{}, nv("g=Jas.|s=Robins"), nv("g=James|s=Robins"), 2 * F / (2 * (G1 + F))},
+	{"given", "abbreviation", withAliasSeed(), nv("g=Jas.|s=Robins"), nv("g=James|s=Robins"), (AliasCredit*2*G1 + 2*F) / (2 * (G1 + F))},
 	{"given", "missing on one side", NameComparer{}, nv("s=Robins"), nv("g=James|s=Robins"), 2 * F / (F + G1 + F)},
 	{"given", "given only, initial", NameComparer{}, nv("g=J."), nv("g=James"), 0.5},
 	{"given", "single character is a word, not an initial", NameComparer{}, nv("s=蒋|g=浩"), nv("s=蒋|g=浩然"), 2 * F / (2 * (G1 + F))},
-	{"given", "nickname matches a given name", NameComparer{}, nv("g=James|n=Jim|s=Robins"), nv("g=Jim|s=Robins"), (0.9*(N+G1) + 2*F) / (G1 + N + F + G1 + F)},
-	{"given", "nicknames on both sides", NameComparer{}, nv("g=James|n=Jim|s=Robins"), nv("g=Jacob|n=Jim|s=Robins"), (2*N + 2*F) / (2 * (G1 + N + F))},
+	{"given", "nickname matches a given name", withAliasSeed(), nv("g=James|n=Jim|s=Robins"), nv("g=Jim|s=Robins"), (AliasCredit*2*G1 + 2*F) / (G1 + N + F + G1 + F)},
+	{"given", "nicknames on both sides", withAliasSeed(), nv("g=James|n=Jim|s=Robins"), nv("g=Jacob|n=Jim|s=Robins"), (AliasCredit*0.9*(G1+N) + 2*F) / (2 * (G1 + N + F))},
 	{"given", "nickname does not fit", NameComparer{}, nv("g=James|n=Jim|s=Robins"), nv("g=Mary|s=Robins"), 2 * F / (G1 + N + F + G1 + F)},
 	{"given", "nickname alone", NameComparer{}, nv("n=Jim"), nv("g=Jim|s=Robins"), 0.9 * (N + G1) / (N + G1 + F)},
 
@@ -235,6 +238,71 @@ func TestLetterFoldsComeFromTheMap(t *testing.T) {
 	got, ok = with.Compare(nv("s=Ðal"), nv("s=Dal"))
 	if !ok || math.Abs(got-foldOnly) > 1e-9 {
 		t.Fatalf("added letter did not fold: %.4f %v", got, ok)
+	}
+}
+
+// withAliasSeed scores against the product seed. Catalog loads pass the
+// same rows; a bare comparer has none.
+func withAliasSeed() NameComparer {
+	tables := append([]AliasTable(nil), productAliasTables...)
+	return NameComparer{Words: WordRules{Aliases: &tables}}
+}
+
+func TestAliasTablesComeFromTheList(t *testing.T) {
+	none := NameComparer{Words: WordRules{Aliases: Set([]AliasTable{})}}
+	got, ok := none.Compare(nv("g=Jas."), nv("g=James"))
+	if !ok || math.Abs(got-AliasCredit) < 1e-9 {
+		t.Fatalf("empty list still aliased: %.4f %v", got, ok)
+	}
+	list := []AliasTable{{
+		Kind: AliasNickname, Roles: aliasPartRoles(),
+		Sets: [][]string{{"zz", "zzzz"}},
+	}}
+	extra := NameComparer{Words: WordRules{Aliases: &list}}
+	got, ok = extra.Compare(nv("g=Zz"), nv("g=Zzzz"))
+	if !ok || math.Abs(got-AliasCredit) > 1e-9 {
+		t.Fatalf("added set did not score: %.4f %v", got, ok)
+	}
+}
+
+func TestSurnamesDoNotUseGivenAliases(t *testing.T) {
+	got, ok := withAliasSeed().Compare(nv("s=Bill"), nv("s=William"))
+	if !ok {
+		t.Fatal("not comparable")
+	}
+	if math.Abs(got-AliasCredit) < 1e-9 {
+		t.Fatalf("surnames scored as an alias: %.4f", got)
+	}
+}
+
+func TestUnknownTokenFallsThrough(t *testing.T) {
+	got, ok := withAliasSeed().Compare(nv("g=Kit"), nv("g=Christopher"))
+	if !ok {
+		t.Fatal("not comparable")
+	}
+	if math.Abs(got-AliasCredit) < 1e-9 || math.Abs(got-1) < 1e-9 {
+		t.Fatalf("unknown pair scored as an alias or exact: %.4f", got)
+	}
+}
+
+func TestRegisterAddsAnAliasTable(t *testing.T) {
+	t.Cleanup(ResetAliasTablesForTest)
+	Register(AliasTable{
+		Key: "zz", Origin: "plugin:example", Kind: AliasNickname,
+		Roles: aliasPartRoles(), Sets: [][]string{{"zz", "zzzz"}},
+	})
+	var found bool
+	for _, table := range AliasTables() {
+		if table.Key == "zz" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("register did not append to the seed")
+	}
+	got, ok := (NameComparer{}).Compare(nv("g=Zz"), nv("g=Zzzz"))
+	if !ok || math.Abs(got-AliasCredit) < 1e-9 {
+		t.Fatalf("bare comparer used the seed: %.4f %v", got, ok)
 	}
 }
 

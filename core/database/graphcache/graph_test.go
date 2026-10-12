@@ -252,6 +252,20 @@ func TestLoadLinksUsesTheEdgeIndex(t *testing.T) {
 	}
 }
 
+func TestDropLeavesAliasTables(t *testing.T) {
+	g := graphcache.New(nil)
+	g.SetAliasTables([]string{"jas"})
+	g.Drop()
+	raw, ok := g.AliasTables()
+	if !ok {
+		t.Fatal("drop cleared alias tables")
+	}
+	tables, ok := raw.([]string)
+	if !ok || len(tables) != 1 || tables[0] != "jas" {
+		t.Fatalf("%#v", raw)
+	}
+}
+
 func openCatalog(t *testing.T) *database.Catalog {
 	t.Helper()
 	c, err := database.Create(t.TempDir(), "t.provenencia")

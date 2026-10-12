@@ -91,6 +91,9 @@ var Tables = []Table{
 	{Name: "name_format_profile_parts", Bucket: BucketFacet},
 	{Name: "name_format_profile_roles", Bucket: BucketFacet},
 	{Name: "name_format_profile_weights", Bucket: BucketFacet},
+	{Name: "name_alias_tables", PK: "id", Bucket: BucketVocab},
+	{Name: "name_alias_members", Bucket: BucketFacet},
+	{Name: "name_alias_roles", Bucket: BucketFacet},
 	{Name: "project_settings", PK: "key", Bucket: BucketVocab},
 	{Name: "files", PK: "id", Kind: KindFile, Bucket: BucketPool},
 	{Name: "users", PK: "id", Kind: KindUser, Bucket: BucketInfra},
@@ -169,6 +172,8 @@ var FKs = []FK{
 	{From: "name_format_profile_parts", Column: "profile_id", To: "name_format_profiles", OnDelete: "CASCADE", Bucket: BucketFacet},
 	{From: "name_format_profile_roles", Column: "profile_id", To: "name_format_profiles", OnDelete: "CASCADE", Bucket: BucketFacet},
 	{From: "name_format_profile_weights", Column: "profile_id", To: "name_format_profiles", OnDelete: "CASCADE", Bucket: BucketFacet},
+	{From: "name_alias_members", Column: "table_id", To: "name_alias_tables", OnDelete: "CASCADE", Bucket: BucketFacet},
+	{From: "name_alias_roles", Column: "table_id", To: "name_alias_tables", OnDelete: "CASCADE", Bucket: BucketFacet},
 
 	{From: "canonical_entities", Column: "subject_type_id", To: "subject_types", OnDelete: "NO ACTION", Bucket: BucketResource},
 	{From: "canonical_entities", Column: "merged_into_id", To: "canonical_entities", OnDelete: "NO ACTION", Bucket: BucketResource},

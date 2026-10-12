@@ -39,7 +39,7 @@ What's in place:
 ## Part 3: sound-alikes and nicknames
 
 - **Sound-alikes:** Daitch–Mokotoff as a `wordSimilarity` tier below near-spelling. Beider–Morse and cross-script transliteration are later ([`ideas/international-names.md`](../../ideas/international-names.md)).
-- **Nicknames:** a short seeded table projects can extend (Jim ↔ James, and the set S10-25 names). One table, shared with abbreviations.
+- **Nicknames:** S10-25 scores a table hit at 0.98, above the fold. The product seed is `productAliasTables` in `core/match/registry.go`, written at catalog create. Scoring reads the catalog only. Opening a project loads those rows once onto the catalog graph and keeps them until the project closes; `namealiases.Invalidate` reloads them. A project can add a `user` or `plugin:<id>` table. Every installed table is consulted. No editor UI.
 
 ## Order of work (rough)
 

@@ -33,6 +33,9 @@ type WordRules struct {
 	// Folds replaces letters that do not decompose. Nil uses LetterFolds.
 	// An empty map strips accents and substitutes nothing.
 	Folds *map[rune]string
+	// Aliases are abbreviation and nickname tables loaded from the catalog.
+	// Nil and empty both hit nothing. Every table in the slice is consulted.
+	Aliases *[]AliasTable
 }
 
 // wordRules are WordRules resolved against the registry.
@@ -42,6 +45,13 @@ type wordRules struct {
 	initials             bool // whether lone letters match as initials
 	particles            map[string]bool
 	folds                map[rune]string
+	aliases              []aliasSet
+}
+
+// aliasSet is one equivalence set and the roles that may use it.
+type aliasSet struct {
+	tokens map[string]bool
+	roles  map[NameRole]bool
 }
 
 func (r WordRules) resolve(initials bool) wordRules {
@@ -57,7 +67,40 @@ func (r WordRules) resolve(initials bool) wordRules {
 		initials:      initials,
 		particles:     particles,
 		folds:         setting(r.Folds, *DefaultWordRules.Folds),
+		aliases:       indexAliases(aliasTablesOf(r.Aliases)),
 	}
+}
+
+func indexAliases(tables []AliasTable) []aliasSet {
+	var sets []aliasSet
+	for _, table := range tables {
+		roles := make(map[NameRole]bool, len(table.Roles))
+		for _, role := range table.Roles {
+			roles[role] = true
+		}
+		for _, raw := range table.Sets {
+			tokens := make(map[string]bool, len(raw))
+			for _, token := range raw {
+				if token != "" {
+					tokens[token] = true
+				}
+			}
+			if len(tokens) == 0 {
+				continue
+			}
+			sets = append(sets, aliasSet{tokens: tokens, roles: roles})
+		}
+	}
+	return sets
+}
+
+func aliasHit(x, y string, roleX, roleY NameRole, sets []aliasSet) bool {
+	for _, set := range sets {
+		if set.tokens[x] && set.tokens[y] && set.roles[roleX] && set.roles[roleY] {
+			return true
+		}
+	}
+	return false
 }
 
 func splitWords(s string, particles map[string]bool) []string {
@@ -168,20 +211,22 @@ func compareForms(a, b string, partial float64, r wordRules) (float64, bool) {
 	// A one-word spelling variant is the edit-distance ratio. Capping it
 	// would leave a one-letter typo under the promote weak bar.
 	if len(wa) == 1 && len(wb) == 1 {
-		return wordSimilarity(wa[0], wb[0], r), true
+		return wordSimilarity(wa[0], wb[0], "", "", r), true
 	}
 	return partial * wordDice(wa, wb, r), true
 }
 
 // wordSimilarity: 1 for the same word, InitialCredit for an initial and a
-// word it begins (when initials count), else the spelling-variant ratio
+// word it begins (when initials count), AliasCredit when both tokens share
+// an alias set and both roles are allowed, else the spelling-variant ratio
 // (1 − edits / longer length, an adjacent swap being one edit) when it
 // reaches FuzzyFloor — or, for words of ShortVariantMinLength or more, when
 // they differ by one added or dropped letter (Ann ~ Anne, Jon ~ John: 0.75),
 // since one edit is a larger share of a short word. A one-letter substitution in a short word is a
 // different name (Mary ~ Mark). An initial is a lone cased letter ("J"); a
-// lone character in an uncased script (蒋, 王) is a whole word.
-func wordSimilarity(x, y string, r wordRules) float64 {
+// lone character in an uncased script (蒋, 王) is a whole word. Empty roles
+// skip the alias tables, so free text does not consult them.
+func wordSimilarity(x, y string, roleX, roleY NameRole, r wordRules) float64 {
 	if x == y {
 		return 1
 	}
@@ -190,6 +235,9 @@ func wordSimilarity(x, y string, r wordRules) float64 {
 			return r.initialCredit
 		}
 		return 0
+	}
+	if aliasHit(x, y, roleX, roleY, r.aliases) {
+		return AliasCredit
 	}
 	fx, fy := foldWord(x, r.folds), foldWord(y, r.folds)
 	if fx == fy {
@@ -208,7 +256,7 @@ func wordDice(wa, wb []string, r wordRules) float64 {
 	for i, x := range wa {
 		score[i] = make([]float64, len(wb))
 		for j, y := range wb {
-			score[i][j] = wordSimilarity(x, y, r)
+			score[i][j] = wordSimilarity(x, y, "", "", r)
 		}
 	}
 	return 2 * bestPairing(score) / float64(len(wa)+len(wb))
