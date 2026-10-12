@@ -6,6 +6,8 @@ struct DateValueEditorForm: View {
     /// Prefix for control identifiers (default matches the Source page date dialog).
     var accessibilityIdentifierPrefix: String = "sources.page.date"
 
+    @FocusState private var yearFocused: Bool
+
     var body: some View {
         VStack(alignment: .leading, spacing: PVSpacing.space7) {
             kindSection
@@ -24,6 +26,7 @@ struct DateValueEditorForm: View {
                 advancedSection
             }
         }
+        .onAppear { yearFocused = true }
     }
 
     private var kindSection: some View {
@@ -121,7 +124,8 @@ struct DateValueEditorForm: View {
                     width: 92,
                     mono: true,
                     isInvalid: draft.isFieldInvalid(.year, start: start),
-                    accessibilityIdentifier: "\(accessibilityIdentifierPrefix).\(start ? "start" : "end").year"
+                    accessibilityIdentifier: "\(accessibilityIdentifierPrefix).\(start ? "start" : "end").year",
+                    focused: start ? $yearFocused : nil
                 )
                 monthSelect(start: start)
                 cascadeField(
@@ -269,13 +273,14 @@ struct DateValueEditorForm: View {
         mono: Bool,
         disabled: Bool = false,
         isInvalid: Bool = false,
-        accessibilityIdentifier: String? = nil
+        accessibilityIdentifier: String? = nil,
+        focused: FocusState<Bool>.Binding? = nil
     ) -> some View {
         VStack(alignment: .leading, spacing: PVSpacing.space2) {
             Text(label)
                 .font(PVFont.body(size: PVTypeScale.micro))
                 .foregroundStyle(isInvalid ? PVColor.danger : PVColor.textSecondary)
-            PVInput(text: text, size: .sm, mono: mono, isInvalid: isInvalid)
+            PVInput(text: text, size: .sm, mono: mono, isInvalid: isInvalid, focused: focused)
                 .frame(width: width)
                 .disabled(disabled)
                 .opacity(disabled ? 0.42 : 1)
