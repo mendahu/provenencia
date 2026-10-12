@@ -745,6 +745,7 @@ private struct PropertiesCreateHost: View {
                     cancel: L10n.Properties.createCancel
                 ),
                 isRunning: model.isSaving,
+                isDirty: draft != model.draft,
                 confirmDisabled: !model.canSubmitCreate(draft),
                 accessibilityIdentifierPrefix: "properties.create",
                 onConfirm: {

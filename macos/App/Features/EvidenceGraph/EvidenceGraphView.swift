@@ -163,6 +163,7 @@ private struct EvidenceGraphContent: View {
                 cancel: L10n.EvidenceGraph.createCancel
             ),
             isRunning: model.isSaving,
+            isDirty: model.formSheetIsDirty,
             confirmDisabled: model.isEditingBridge
                 ? false
                 : model.draft.label.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,

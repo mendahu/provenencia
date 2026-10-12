@@ -97,6 +97,27 @@ enum L10n {
             comment: "Marks a required PVField as required, shown beside its label"
         )
 
+        static let formDialogDiscardTitle = LocalizedStringResource(
+            "designSystem.formDialog.discardTitle",
+            defaultValue: "Discard changes?",
+            comment: "Title when an outside click would close a form sheet that has edits"
+        )
+        static let formDialogDiscardMessage = LocalizedStringResource(
+            "designSystem.formDialog.discardMessage",
+            defaultValue: "Your changes will be lost.",
+            comment: "Body when an outside click would close a form sheet that has edits"
+        )
+        static let formDialogDiscardConfirm = LocalizedStringResource(
+            "designSystem.formDialog.discardConfirm",
+            defaultValue: "Discard",
+            comment: "Confirms discarding a form sheet's edits after an outside click"
+        )
+        static let formDialogDiscardKeep = LocalizedStringResource(
+            "designSystem.formDialog.discardKeep",
+            defaultValue: "Keep editing",
+            comment: "Returns to the form sheet after an outside click"
+        )
+
         static let toastDismiss = LocalizedStringResource(
             "designSystem.toast.dismiss",
             defaultValue: "Dismiss",

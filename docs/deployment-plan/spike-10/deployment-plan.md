@@ -6,7 +6,7 @@ Usability fixes from [`docs/dogfood/ux.md`](../../dogfood/ux.md) after Spike 9, 
 
 ## Status
 
-**Open.** Slice 1 is done (2026-10-11). S10-01…S10-04 landed in [#361](https://github.com/mendahu/provenencia/pull/361)–[#364](https://github.com/mendahu/provenencia/pull/364). S10-05, S10-07, and S10-08 landed in [#368](https://github.com/mendahu/provenencia/pull/368), [#369](https://github.com/mendahu/provenencia/pull/369), and [#370](https://github.com/mendahu/provenencia/pull/370) (2026-10-12). S10-46, S10-47, and S10-48 were descoped in [#367](https://github.com/mendahu/provenencia/pull/367). S10-06 was descoped in [#368](https://github.com/mendahu/provenencia/pull/368): searching `marriage` already lists a title that contains the word ahead of a fuzzy name. S10-10 was descoped in [#370](https://github.com/mendahu/provenencia/pull/370): a common cluster belongs in [`ideas/evidence-graph-structure-shortcuts.md`](../../ideas/evidence-graph-structure-shortcuts.md), which covers more than a default role. S10-11 was already done in [#356](https://github.com/mendahu/provenencia/pull/356): a citation with 70 Observations opens quickly. S10-14 and S10-D1 were descoped in [#370](https://github.com/mendahu/provenencia/pull/370): an adaptive choice field is not a priority for this spike. Later landings go in [`completed.md`](completed.md).
+**Open.** Slice 1 is done (2026-10-11). S10-01…S10-04 landed in [#361](https://github.com/mendahu/provenencia/pull/361)–[#364](https://github.com/mendahu/provenencia/pull/364). S10-05, S10-07, S10-08, and S10-12 landed in [#368](https://github.com/mendahu/provenencia/pull/368), [#369](https://github.com/mendahu/provenencia/pull/369), [#370](https://github.com/mendahu/provenencia/pull/370), and [#371](https://github.com/mendahu/provenencia/pull/371) (2026-10-12). S10-46, S10-47, and S10-48 were descoped in [#367](https://github.com/mendahu/provenencia/pull/367). S10-06 was descoped in [#368](https://github.com/mendahu/provenencia/pull/368): searching `marriage` already lists a title that contains the word ahead of a fuzzy name. S10-10 was descoped in [#370](https://github.com/mendahu/provenencia/pull/370): a common cluster belongs in [`ideas/evidence-graph-structure-shortcuts.md`](../../ideas/evidence-graph-structure-shortcuts.md), which covers more than a default role. S10-11 was already done in [#356](https://github.com/mendahu/provenencia/pull/356): a citation with 70 Observations opens quickly. S10-14 and S10-D1 were descoped in [#370](https://github.com/mendahu/provenencia/pull/370): an adaptive choice field is not a priority for this spike. Later landings go in [`completed.md`](completed.md).
 
 > **Goal of this spike:** the annoyances logged while entering real research are gone, and the app still behaves the way Spike 8 and Spike 9 decided.
 
@@ -97,7 +97,7 @@ These are the calls for this spike. The questions at the bottom are answered; no
 - **A default role does not cover a repeated cluster.** S10-10 is descoped (2026-10-12). Prefilling `subject` or `part_of` on a generic new connection stays out. Placing a wedding, birth, or residence in one action, and pasting a cluster already on the canvas, are [`ideas/evidence-graph-structure-shortcuts.md`](../../ideas/evidence-graph-structure-shortcuts.md).
 - **Date prefill is silent.** First match in the transcription, current locale, Gregorian patterns a genealogist actually types (day month year, month day year, year alone, ISO). 80–90% is the bar. No "suggested" chrome, so the date modal does not need a brief. Year is focused even when the prefill is empty.
 - **Name split does not clobber edits.** Blur of the full-form line fills parts only when the part list is empty. The Split button refills from the line; if any part was edited by hand, confirm before replacing. Guessing rules are the ones in the dogfood note (comma → surname first; otherwise last word is surname; leftovers are given).
-- **Outside click closes a sheet.** If the sheet is dirty, use the existing confirm (discard or keep editing) — the same idea as leaving the composer with unsaved work. A clean sheet closes. Read-only sheets close. This is behavior on the shared sheet presentation, not a new dialog style.
+- **Outside click closes a sheet.** If the sheet is dirty, use the existing confirm (discard or keep editing) — the same idea as leaving the composer with unsaved work. A clean sheet closes. Read-only sheets close. This is behavior on the shared sheet presentation, not a new dialog style. Landed in S10-12.
 - **Graph camera is session state, not catalog state.** `GraphCanvasCamera` is explicitly not research data. Coming back from the composer, Back, or breadcrumbs restores magnification and content offset for that Source for the rest of the session. A persisted per-user table is out.
 - **Canvas grows.** `EvidenceGraphPlacement.contentSize` is a fixed 4000×4000 and placement clamps to `maxCell`. When a card's frame nears the document edge, grow the document (and the clamp) by a step. The grid is a tile, so growth does not allocate a larger bitmap. No new chrome.
 - **Zoomed-out grid and edges are a restore, not a new look.** Floor is `GraphCanvasCamera.minMagnification` (0.25). The grid is one repeated cell and must not turn solid black; it may fade out as a whole. Edges must fade or hold together, not disappear one at a time. No brief.
@@ -180,7 +180,7 @@ SLICE 2 — Behavior, no new chrome
   S10-08  Enter saves a Property title — done, #370
   S10-10  Observation defaults — descoped. A repeated cluster is an idea, not a default role.
   S10-11  Composer stays responsive — done, #356. 70 Observations already open quickly.
-  S10-12  Outside click closes a sheet; dirty asks
+  S10-12  Outside click closes a sheet; dirty asks — done, #371
   S10-13  Date modal: focus Year, prefill the first transcription match
   S10-42  Promote target menu truncates a long title
   Check: a long transcription scrolls. A long Promote title stays inside
@@ -368,12 +368,7 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 
 #### S10-12 — Outside click closes a sheet
 
-| | |
-| --- | --- |
-| **In** | Clicking outside a modal sheet closes it. Dirty → the existing confirm (discard or keep editing). Clean or read-only → close. Apply it on the shared sheet path (`PVFormDialog` and the other `.sheet` presenters), and teach a sheet to say it is dirty when it has edits. |
-| **Out** | A new confirm style. Click-outside on menus and popovers (those already dismiss). |
-| **Testable** | Open Create Source, type a title, click outside: confirm. Open it and click outside with nothing typed: it closes. A delete confirm is unchanged. |
-| **Depends on** | — |
+**Landed 2026-10-12** in [#371](https://github.com/mendahu/provenencia/pull/371). See [`completed.md`](completed.md).
 
 #### S10-13 — Date modal focus and transcription prefill
 

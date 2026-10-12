@@ -124,6 +124,7 @@ private struct SourcePageContent: View {
                 cancel: L10n.Sources.cancelAction
             ),
             isRunning: model.artifacts.isSavingDraft,
+            isDirty: model.artifacts.addSheetIsDirty,
             confirmDisabled: !model.artifacts.canSubmitDraft,
             accessibilityIdentifierPrefix: "sources.page.addArtifact",
             onConfirm: { Task { await model.artifacts.create() } }
@@ -139,6 +140,7 @@ private struct SourcePageContent: View {
                 cancel: L10n.Sources.cancelAction
             ),
             isRunning: model.artifacts.isSavingAttach,
+            isDirty: model.artifacts.attachSheetIsDirty,
             confirmDisabled: !model.artifacts.canSubmitAttach,
             accessibilityIdentifierPrefix: "sources.page.addFile",
             onConfirm: { Task { await model.artifacts.confirmAttach() } }
@@ -154,6 +156,7 @@ private struct SourcePageContent: View {
                 cancel: L10n.Sources.cancelAction
             ),
             isRunning: model.metadata.isSavingAdd,
+            isDirty: model.metadata.addSheetIsDirty,
             confirmDisabled: !model.metadata.canSubmitAdd,
             accessibilityIdentifierPrefix: "sources.page.addMetadata",
             onConfirm: { Task { await model.metadata.createFromAdd() } }

@@ -192,6 +192,16 @@ final class SourcesModel {
             && !draft.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
+    /// The sole auto-selected type is a seed, not an edit. A typed name,
+    /// description, or a type the researcher picked counts.
+    var addSheetIsDirty: Bool {
+        let title = draft.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        let description = draft.description.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !title.isEmpty || !description.isEmpty { return true }
+        if types.count == 1 { return false }
+        return !draft.sourceTypeID.isEmpty
+    }
+
     // MARK: Actions
 
     /// Ensures the type pool query is warm for the Add Source dialog.

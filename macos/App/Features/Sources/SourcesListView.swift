@@ -91,6 +91,7 @@ private struct SourcesListContent: View {
                 cancel: L10n.Sources.cancelAction
             ),
             isRunning: model.isSaving,
+            isDirty: model.addSheetIsDirty,
             accessibilityIdentifierPrefix: "sources.add",
             onConfirm: {
                 Task {

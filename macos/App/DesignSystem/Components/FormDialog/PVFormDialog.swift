@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 /// Form dialog sheet — the macOS answer to `components/feedback/Dialog.jsx`
@@ -25,6 +26,20 @@ struct PVFormDialogCopy {
         self.subtitle = subtitle
         self.confirm = confirm
         self.cancel = cancel
+    }
+}
+
+/// What an outside click does. Running work is left alone. A dirty sheet
+/// asks before it closes. A clean or read-only sheet closes.
+enum PVFormDialogDismiss: Equatable {
+    case ignore
+    case close
+    case confirmDiscard
+
+    static func action(isRunning: Bool, isDirty: Bool) -> PVFormDialogDismiss {
+        if isRunning { return .ignore }
+        if isDirty { return .confirmDiscard }
+        return .close
     }
 }
 
@@ -144,17 +159,86 @@ extension View {
     /// Sheet-based form dialog. Dismissal is left to the caller's binding so
     /// an async Create can stay on screen while it runs and keep field errors
     /// visible if validation or the store fails.
+    ///
+    /// A click outside the sheet closes it. When `isDirty` is true, that click
+    /// asks to discard or keep editing. The Cancel button still closes
+    /// immediately. Menus and popovers are not this path.
     func pvFormDialog<Form: View>(
         isPresented: Binding<Bool>,
         copy: PVFormDialogCopy,
         width: CGFloat = 480,
         isRunning: Bool = false,
+        isDirty: Bool = false,
         confirmDisabled: Bool = false,
         accessibilityIdentifierPrefix: String? = nil,
         onConfirm: @escaping () -> Void,
         @ViewBuilder form: @escaping () -> Form
     ) -> some View {
-        sheet(isPresented: isPresented) {
+        modifier(PVFormDialogModifier(
+            isPresented: isPresented,
+            copy: copy,
+            width: width,
+            isRunning: isRunning,
+            isDirty: isDirty,
+            confirmDisabled: confirmDisabled,
+            accessibilityIdentifierPrefix: accessibilityIdentifierPrefix,
+            onConfirm: onConfirm,
+            form: form
+        ))
+    }
+}
+
+private struct PVFormDialogModifier<Form: View>: ViewModifier {
+    @Binding var isPresented: Bool
+    let copy: PVFormDialogCopy
+    let width: CGFloat
+    let isRunning: Bool
+    let isDirty: Bool
+    let confirmDisabled: Bool
+    let accessibilityIdentifierPrefix: String?
+    let onConfirm: () -> Void
+    @ViewBuilder let form: () -> Form
+
+    @State private var confirmingDiscard = false
+
+    func body(content: Content) -> some View {
+        content.sheet(isPresented: $isPresented, onDismiss: { confirmingDiscard = false }) {
+            sheetBody
+                .background {
+                    PVFormDialogOutsideClick(isEnabled: !confirmingDiscard) {
+                        switch PVFormDialogDismiss.action(isRunning: isRunning, isDirty: isDirty) {
+                        case .ignore:
+                            break
+                        case .close:
+                            isPresented = false
+                        case .confirmDiscard:
+                            confirmingDiscard = true
+                        }
+                    }
+                }
+        }
+    }
+
+    @ViewBuilder
+    private var sheetBody: some View {
+        if confirmingDiscard {
+            PVConfirmContent(
+                copy: PVConfirmCopy(
+                    title: L10n.string(L10n.DesignSystem.formDialogDiscardTitle),
+                    message: L10n.string(L10n.DesignSystem.formDialogDiscardMessage),
+                    confirm: L10n.DesignSystem.formDialogDiscardConfirm,
+                    cancel: L10n.DesignSystem.formDialogDiscardKeep
+                ),
+                tone: .danger,
+                accessibilityIdentifierPrefix: PVFormDialogAccessibility.identifier(
+                    prefix: accessibilityIdentifierPrefix,
+                    suffix: "discard"
+                ),
+                onConfirm: { isPresented = false },
+                onCancel: { confirmingDiscard = false },
+                detail: { EmptyView() }
+            )
+        } else {
             PVFormDialogContent(
                 copy: copy,
                 width: width,
@@ -162,10 +246,90 @@ extension View {
                 confirmDisabled: confirmDisabled,
                 accessibilityIdentifierPrefix: accessibilityIdentifierPrefix,
                 onConfirm: onConfirm,
-                onCancel: { isPresented.wrappedValue = false },
+                onCancel: { isPresented = false },
                 form: form
             )
         }
+    }
+}
+
+/// Sees a mouse-down that lands outside this sheet. A macOS sheet does not
+/// deliver that click to the parent window, so the presenter watches the
+/// event stream instead of adding a scrim.
+private struct PVFormDialogOutsideClick: NSViewRepresentable {
+    var isEnabled: Bool
+    var onOutsideClick: () -> Void
+
+    func makeNSView(context: Context) -> PVFormDialogOutsideClickView {
+        let view = PVFormDialogOutsideClickView()
+        view.isEnabled = isEnabled
+        view.onOutsideClick = onOutsideClick
+        return view
+    }
+
+    func updateNSView(_ nsView: PVFormDialogOutsideClickView, context: Context) {
+        nsView.isEnabled = isEnabled
+        nsView.onOutsideClick = onOutsideClick
+    }
+}
+
+private final class PVFormDialogOutsideClickView: NSView {
+    var isEnabled = true
+    var onOutsideClick: () -> Void = {}
+    /// Touched from `deinit`, which is not isolated to the main actor.
+    nonisolated(unsafe) private var monitor: Any?
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        if window == nil {
+            removeMonitor()
+        } else {
+            installMonitor()
+        }
+    }
+
+    deinit {
+        if let monitor {
+            NSEvent.removeMonitor(monitor)
+        }
+    }
+
+    private func installMonitor() {
+        guard monitor == nil else { return }
+        monitor = NSEvent.addLocalMonitorForEvents(
+            matching: [.leftMouseDown, .rightMouseDown]
+        ) { [weak self] event in
+            MainActor.assumeIsolated {
+                self?.handle(event)
+            }
+            return event
+        }
+    }
+
+    private func removeMonitor() {
+        if let monitor {
+            NSEvent.removeMonitor(monitor)
+        }
+        monitor = nil
+    }
+
+    private func handle(_ event: NSEvent) {
+        guard isEnabled, let sheet = window else { return }
+        if Self.eventIsInsideSheet(event, sheet: sheet) { return }
+        onOutsideClick()
+    }
+
+    /// The sheet itself, a child popup (combo box, select menu), or a menu-level
+    /// window. Those clicks belong to the field, not to "outside."
+    static func eventIsInsideSheet(_ event: NSEvent, sheet: NSWindow) -> Bool {
+        guard let eventWindow = event.window else { return false }
+        if eventWindow.level.rawValue >= NSWindow.Level.popUpMenu.rawValue { return true }
+        var current: NSWindow? = eventWindow
+        while let window = current {
+            if window === sheet { return true }
+            current = window.parent
+        }
+        return false
     }
 }
 

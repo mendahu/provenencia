@@ -82,6 +82,7 @@ struct CitationComposerView: View {
             ),
             width: observationDialogWidth,
             isRunning: false,
+            isDirty: model.observationDialogIsDirty,
             confirmDisabled: !model.canConfirmObservation,
             accessibilityIdentifierPrefix: "citationComposer.observation",
             onConfirm: { model.confirmObservationDialog() }
@@ -96,6 +97,7 @@ struct CitationComposerView: View {
                 cancel: L10n.CitationComposer.cancel
             ),
             isRunning: model.customTermDraft?.isSaving == true,
+            isDirty: model.customTermDialogIsDirty,
             confirmDisabled: model.customTermDraft?.label.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                 ?? true,
             accessibilityIdentifierPrefix: "citationComposer.term",
@@ -114,6 +116,7 @@ struct CitationComposerView: View {
                 cancel: L10n.CitationComposer.cancel
             ),
             isRunning: model.newSubjectDraft?.isSaving == true,
+            isDirty: model.newSubjectDialogIsDirty,
             confirmDisabled: (model.newSubjectDraft?.label.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                 ?? true)
                 || model.isGraphReloading,

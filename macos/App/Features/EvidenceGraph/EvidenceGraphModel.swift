@@ -54,6 +54,12 @@ final class EvidenceGraphModel {
     var pendingGridX: Int64 = 0
     var pendingGridY: Int64 = 0
     var draft = CreateDraft()
+
+    /// Differs from the seed: the default create label, or the subject as it
+    /// was when Edit opened. An untouched sheet is clean.
+    var formSheetIsDirty: Bool {
+        draft != formSheetBaseline
+    }
     var isSaving = false
     var labelError: String?
     var createError: String?
@@ -1035,6 +1041,28 @@ final class EvidenceGraphModel {
             return L10n.EvidenceGraph.armedHintConnectPickB
         }
         return L10n.EvidenceGraph.armedHintConnect
+    }
+
+    private var formSheetBaseline: CreateDraft {
+        if let id = editingSubjectID {
+            let snapshot = currentSnapshot()
+            if let primary = primary(in: snapshot, id: id) {
+                return CreateDraft(
+                    label: primary.subject.label,
+                    description: primary.subject.description
+                )
+            }
+            if let bridge = snapshot?.bridges.first(where: { $0.id == id }) {
+                return CreateDraft(
+                    label: bridge.subject.label,
+                    description: bridge.subject.description
+                )
+            }
+        }
+        if isCreating, let kind = armedKind {
+            return CreateDraft(label: defaultLabel(for: kind), description: "")
+        }
+        return CreateDraft()
     }
 
     private func defaultLabel(for kind: EvidencePrimaryKind) -> String {
