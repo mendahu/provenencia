@@ -1,15 +1,16 @@
 import Foundation
 
 /// The first Gregorian date found in a citation transcription.
-/// Patterns live here, keyed by locale, not in the catalog.
+/// Patterns live here, keyed by the locale the caller passes, not in the catalog.
 struct DateValueTranscriptionMatch: Equatable, Sendable {
     var year: Int32
     var month: Int32?
     var day: Int32?
 
-    /// Earliest match in `text`. A longer match that starts at the same
-    /// place wins over a shorter one, so a full date beats the year inside it.
-    static func first(in text: String, locale: Locale = .current) -> DateValueTranscriptionMatch? {
+    /// Earliest match in `text` for `locale`. The caller chooses that locale
+    /// so a source language can replace the user's. A longer match that starts
+    /// at the same place wins over a shorter one, so a full date beats the year inside it.
+    static func first(in text: String, locale: Locale) -> DateValueTranscriptionMatch? {
         DateValueTranscriptionScanner(locale: locale).first(in: text)
     }
 }

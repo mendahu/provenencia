@@ -628,6 +628,7 @@ final class CitationComposerModel {
 
     func beginEditObservation(_ row: ObservationRow) {
         var state = ObservationDialogState.editing(row)
+        // The user's locale until a source carries its own language.
         if catalogProperty(id: row.propertyID)?.valueType == PropertyValueType.date.rawValue,
            state.dateDraft.isBlank,
            let match = DateValueTranscriptionMatch.first(in: fields.transcription, locale: .current) {
