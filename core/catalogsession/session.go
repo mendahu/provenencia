@@ -81,7 +81,6 @@ func closeSession(s *session) error {
 	if s.cat == nil {
 		return nil
 	}
-	namealiases.Forget(s.cat)
 	err := s.cat.Close()
 	s.cat = nil
 	return err

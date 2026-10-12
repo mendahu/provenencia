@@ -64,7 +64,7 @@ func Propose(c *database.Catalog, sourceID []byte, fixed []graphalign.Fixed) (gr
 	if err != nil {
 		return graphalign.Proposal{}, 0, err
 	}
-	names, err := namealiases.Comparer(q, loaded.Comparer())
+	names, err := namealiases.Comparer(c.Graph(), q, loaded.Comparer())
 	if err != nil {
 		return graphalign.Proposal{}, 0, err
 	}

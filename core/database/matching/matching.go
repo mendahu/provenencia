@@ -174,7 +174,8 @@ func rank(q Querier, res Result, typeID []byte, probe match.Values, profile matc
 	if err != nil {
 		return Result{}, err
 	}
-	names, err := namealiases.Comparer(q, loaded.Comparer())
+	// rank has no catalog graph, so this read is not the open project's cache.
+	names, err := namealiases.Comparer(nil, q, loaded.Comparer())
 	if err != nil {
 		return Result{}, err
 	}

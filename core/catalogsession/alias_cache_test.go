@@ -29,7 +29,7 @@ func TestDoKeepsAliasTablesForTheOpenProject(t *testing.T) {
 		if _, err := db.Exec(`DELETE FROM name_alias_members WHERE token = 'jas'`); err != nil {
 			return err
 		}
-		cmp, err := namealiases.Comparer(db, match.DefaultNames)
+		cmp, err := namealiases.Comparer(c.Graph(), db, match.DefaultNames)
 		if err != nil {
 			return err
 		}
@@ -51,7 +51,7 @@ func TestDoKeepsAliasTablesForTheOpenProject(t *testing.T) {
 		if err != nil {
 			return err
 		}
-		cmp, err := namealiases.Comparer(db, match.DefaultNames)
+		cmp, err := namealiases.Comparer(c.Graph(), db, match.DefaultNames)
 		if err != nil {
 			return err
 		}

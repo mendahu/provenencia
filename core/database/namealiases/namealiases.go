@@ -1,14 +1,16 @@
 // Package namealiases stores abbreviation and nickname tables. The product
 // lists live in core/match. Install writes them once when a catalog is
 // created. Scoring reads these rows and no other list. An open project keeps
-// that read in memory until the project closes; Invalidate reloads it.
+// that read on the catalog graph until the project closes; Invalidate reloads it.
 package namealiases
 
 import (
 	"database/sql"
+	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/match"
 )
 
@@ -169,14 +171,42 @@ func Load(q Querier) ([]match.AliasTable, error) {
 	return tables, nil
 }
 
-// Comparer is the name comparer catalog scoring uses. A warmed connection
-// supplies its cached rows, including none. Anything else is read from q.
-// The rows replace whatever list the base comparer had.
-func Comparer(q Querier, base match.NameComparer) (match.NameComparer, error) {
-	if db, ok := q.(*sql.DB); ok {
-		if tables, hit := recall(db); hit {
-			return withAliases(base, tables), nil
+// Warm loads every alias table onto the catalog graph. catalogsession calls
+// this when a project opens. A later Warm replaces the tables. Closing the
+// catalog drops them with the graph.
+func Warm(c *database.Catalog) error {
+	db, err := c.DB()
+	if err != nil {
+		return err
+	}
+	tables, err := Load(db)
+	if err != nil {
+		return err
+	}
+	g := c.Graph()
+	if g == nil {
+		return database.ErrClosed
+	}
+	g.SetAliasTables(append([]match.AliasTable(nil), tables...))
+	return nil
+}
+
+// Invalidate reloads the catalog's alias tables. A future editor calls this
+// after inserting, changing, or deleting a table.
+func Invalidate(c *database.Catalog) error {
+	return Warm(c)
+}
+
+// Comparer is the name comparer catalog scoring uses. A warmed graph supplies
+// its tables, including none. A nil or cold graph is read from q. The rows
+// replace whatever list the base comparer had.
+func Comparer(g *graphcache.Graph, q Querier, base match.NameComparer) (match.NameComparer, error) {
+	if raw, ok := g.AliasTables(); ok {
+		tables, ok := raw.([]match.AliasTable)
+		if !ok {
+			return match.NameComparer{}, fmt.Errorf("namealiases: alias cache has %T", raw)
 		}
+		return withAliases(base, tables), nil
 	}
 	tables, err := Load(q)
 	if err != nil {

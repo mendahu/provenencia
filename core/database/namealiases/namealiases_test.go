@@ -56,7 +56,6 @@ func TestWarmHoldsAliasTablesUntilInvalidated(t *testing.T) {
 	if err := Install(c); err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { Forget(c) })
 	if err := Warm(c); err != nil {
 		t.Fatal(err)
 	}
@@ -64,7 +63,7 @@ func TestWarmHoldsAliasTablesUntilInvalidated(t *testing.T) {
 	if _, err := db.Exec(`DELETE FROM name_alias_members WHERE token = 'jas'`); err != nil {
 		t.Fatal(err)
 	}
-	cmp, err := Comparer(db, match.DefaultNames)
+	cmp, err := Comparer(c.Graph(), db, match.DefaultNames)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -73,7 +72,7 @@ func TestWarmHoldsAliasTablesUntilInvalidated(t *testing.T) {
 	if err := Invalidate(c); err != nil {
 		t.Fatal(err)
 	}
-	cmp, err = Comparer(db, match.DefaultNames)
+	cmp, err = Comparer(c.Graph(), db, match.DefaultNames)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -83,17 +82,19 @@ func TestWarmHoldsAliasTablesUntilInvalidated(t *testing.T) {
 	}
 
 	insertTable(t, db, "zachary", "user", "nickname", [][]string{{"zachary", "zach"}})
-	cmp, err = Comparer(db, match.DefaultNames)
+	cmp, err = Comparer(c.Graph(), db, match.DefaultNames)
 	if err != nil {
 		t.Fatal(err)
 	}
 	got, ok = cmp.Compare(given("Zach"), given("Zachary"))
 	if ok && math.Abs(got-match.AliasCredit) < 1e-9 {
-		t.Fatal("a new table scored before the cache was dropped")
+		t.Fatal("a new table scored before invalidate")
 	}
 
-	Forget(c)
-	cmp, err = Comparer(db, match.DefaultNames)
+	if err := Invalidate(c); err != nil {
+		t.Fatal(err)
+	}
+	cmp, err = Comparer(c.Graph(), db, match.DefaultNames)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -110,7 +111,7 @@ func TestEmptyCatalogScoresNoAliases(t *testing.T) {
 	if len(tables) != 0 {
 		t.Fatalf("empty catalog loaded %d tables", len(tables))
 	}
-	cmp, err := Comparer(db, match.DefaultNames)
+	cmp, err := Comparer(c.Graph(), db, match.DefaultNames)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -128,7 +129,7 @@ func TestUserAndPluginRowsScore(t *testing.T) {
 	db := mustDB(t, c)
 	insertTable(t, db, "zachary", "user", "nickname", [][]string{{"zachary", "zach"}})
 	insertTable(t, db, "pepe", "plugin:example", "nickname", [][]string{{"josé", "pepe"}})
-	cmp, err := Comparer(db, match.DefaultNames)
+	cmp, err := Comparer(c.Graph(), db, match.DefaultNames)
 	if err != nil {
 		t.Fatal(err)
 	}
