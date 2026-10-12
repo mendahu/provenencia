@@ -13,6 +13,54 @@
         }
       }
     },
+    "designSystem.formDialog.discardConfirm": {
+      "comment": "Confirms discarding a form sheet's edits after an outside click",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Discard"
+          }
+        }
+      }
+    },
+    "designSystem.formDialog.discardKeep": {
+      "comment": "Returns to the form sheet after an outside click",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keep editing"
+          }
+        }
+      }
+    },
+    "designSystem.formDialog.discardMessage": {
+      "comment": "Body when an outside click would close a form sheet that has edits",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your changes will be lost."
+          }
+        }
+      }
+    },
+    "designSystem.formDialog.discardTitle": {
+      "comment": "Title when an outside click would close a form sheet that has edits",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Discard changes?"
+          }
+        }
+      }
+    },
     "designSystem.mark.fileAudio": {
       "comment": "Accessibility name for the file_audio evidence glyph",
       "extractionState": "manual",

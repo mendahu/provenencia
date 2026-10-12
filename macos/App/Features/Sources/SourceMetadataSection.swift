@@ -58,6 +58,11 @@ final class SourceMetadataSection {
             .map { PVComboBoxOption(value: $0.id, label: $0.label, subtext: $0.key) }
     }
 
+    var addSheetIsDirty: Bool {
+        !addFieldID.isEmpty
+            || !addValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
     var canSubmitAdd: Bool {
         !isSavingAdd
             && !addFieldID.isEmpty

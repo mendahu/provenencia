@@ -65,6 +65,17 @@ final class SourceArtifactsSection {
             && attachDraft.reject == nil
     }
 
+    var addSheetIsDirty: Bool {
+        let label = draft.label.trimmingCharacters(in: .whitespacesAndNewlines)
+        let description = draft.description.trimmingCharacters(in: .whitespacesAndNewlines)
+        return !label.isEmpty || !description.isEmpty || draft.filePath != nil
+    }
+
+    /// The artifact the file will attach to is a seed. A chosen file is an edit.
+    var attachSheetIsDirty: Bool {
+        attachDraft.filePath != nil
+    }
+
     /// Seeds edit buffers for artifacts that do not have one yet.
     func seedDrafts() {
         for art in items {

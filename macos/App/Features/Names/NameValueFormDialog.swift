@@ -15,22 +15,47 @@ extension View {
         accessibilityIdentifierPrefix: String = "nameValue",
         onConfirm: @escaping () -> Void
     ) -> some View {
-        pvFormDialog(
+        modifier(NameValueFormDialogModifier(
             isPresented: isPresented,
-            copy: PVFormDialogCopy(
-                title: mode == .add ? L10n.NameValue.titleAdd : L10n.NameValue.titleEdit,
-                confirm: mode == .add ? L10n.NameValue.confirmAdd : L10n.NameValue.confirmSave,
-                cancel: L10n.NameValue.cancel
-            ),
-            width: 560,
-            confirmDisabled: !draft.wrappedValue.isValid,
+            draft: draft,
+            mode: mode,
             accessibilityIdentifierPrefix: accessibilityIdentifierPrefix,
             onConfirm: onConfirm
-        ) {
-            NameValueEditorForm(
-                draft: draft,
-                accessibilityIdentifierPrefix: accessibilityIdentifierPrefix
-            )
-        }
+        ))
+    }
+}
+
+private struct NameValueFormDialogModifier: ViewModifier {
+    @Binding var isPresented: Bool
+    @Binding var draft: NameValueDraft
+    let mode: NameValueFormDialogMode
+    let accessibilityIdentifierPrefix: String
+    let onConfirm: () -> Void
+
+    @State private var baseline: NameValueDraft?
+
+    func body(content: Content) -> some View {
+        content
+            .pvFormDialog(
+                isPresented: $isPresented,
+                copy: PVFormDialogCopy(
+                    title: mode == .add ? L10n.NameValue.titleAdd : L10n.NameValue.titleEdit,
+                    confirm: mode == .add ? L10n.NameValue.confirmAdd : L10n.NameValue.confirmSave,
+                    cancel: L10n.NameValue.cancel
+                ),
+                width: 560,
+                isDirty: baseline.map { draft != $0 } ?? false,
+                confirmDisabled: !draft.isValid,
+                accessibilityIdentifierPrefix: accessibilityIdentifierPrefix,
+                onConfirm: onConfirm
+            ) {
+                NameValueEditorForm(
+                    draft: $draft,
+                    accessibilityIdentifierPrefix: accessibilityIdentifierPrefix
+                )
+            }
+            .onChange(of: isPresented, initial: true) { _, presented in
+                if presented { baseline = draft }
+            }
     }
 }

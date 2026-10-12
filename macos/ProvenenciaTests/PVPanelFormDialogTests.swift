@@ -85,6 +85,22 @@ struct PVFormDialogControlsTests {
 }
 
 @Suite
+struct PVFormDialogDismissTests {
+    @Test func runningWorkIgnoresAnOutsideClick() {
+        #expect(PVFormDialogDismiss.action(isRunning: true, isDirty: false) == .ignore)
+        #expect(PVFormDialogDismiss.action(isRunning: true, isDirty: true) == .ignore)
+    }
+
+    @Test func aDirtySheetConfirmsBeforeClosing() {
+        #expect(PVFormDialogDismiss.action(isRunning: false, isDirty: true) == .confirmDiscard)
+    }
+
+    @Test func aCleanSheetCloses() {
+        #expect(PVFormDialogDismiss.action(isRunning: false, isDirty: false) == .close)
+    }
+}
+
+@Suite
 struct PVFormDialogAccessibilityTests {
     @Test func mintsPrefixedIdentifiers() {
         #expect(

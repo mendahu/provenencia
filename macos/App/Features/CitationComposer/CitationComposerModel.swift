@@ -629,6 +629,30 @@ final class CitationComposerModel {
         observationDialog = .editing(row)
     }
 
+    var observationDialogIsDirty: Bool {
+        guard let dialog = observationDialog,
+              let id = dialog.editingID,
+              let row = observationRows.rows.first(where: { $0.id == id })
+        else { return false }
+        var current = dialog
+        var baseline = ObservationDialogState.editing(row)
+        current.showValidation = false
+        baseline.showValidation = false
+        return current != baseline
+    }
+
+    var customTermDialogIsDirty: Bool {
+        let label = customTermDraft?.label.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return !label.isEmpty
+    }
+
+    var newSubjectDialogIsDirty: Bool {
+        guard let draft = newSubjectDraft else { return false }
+        let label = draft.label.trimmingCharacters(in: .whitespacesAndNewlines)
+        let description = draft.description.trimmingCharacters(in: .whitespacesAndNewlines)
+        return !label.isEmpty || !description.isEmpty
+    }
+
     func cancelObservationDialog() {
         observationDialog = nil
     }

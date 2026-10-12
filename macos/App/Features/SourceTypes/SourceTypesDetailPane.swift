@@ -26,6 +26,7 @@ struct SourceTypesDetailPane: View {
                 cancel: L10n.SourceTypes.iconPickerCancel
             ),
             width: 660,
+            isDirty: pendingIconKey != (model.draft?.iconKey ?? pendingIconKey),
             accessibilityIdentifierPrefix: "sourceTypes.iconPicker",
             onConfirm: {
                 commitPendingIconKey()
