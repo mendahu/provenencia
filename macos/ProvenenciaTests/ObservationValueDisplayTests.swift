@@ -39,6 +39,39 @@ struct ObservationValueDisplayTests {
         #expect(ObservationValueDisplay.string(for: obs, locale: enUS) == "Ada Lovelace")
     }
 
+    @Test func namePartsWinOverTheDenormalizedForm() {
+        var obs = base(valueText: "Jeremiah Arthurt Gumtree", propertyValueType: "name")
+        obs.nameForm = "Jeremiah Arthurt Gumtree"
+        obs.nameParts = [
+            CatalogNameValuePart(value: "Jeremiah", type: "given"),
+            CatalogNameValuePart(value: "Arthur", type: "given"),
+            CatalogNameValuePart(value: "Gumtree", type: "surname"),
+        ]
+        #expect(ObservationValueDisplay.string(for: obs, locale: enUS) == "Jeremiah Arthur Gumtree")
+    }
+
+    @Test func nameUsesTheNaturalOrder() {
+        var obs = base(valueText: "unused", propertyValueType: "name")
+        obs.nameForm = "unused"
+        obs.nameParts = [
+            CatalogNameValuePart(value: "Vincent", type: "given"),
+            CatalogNameValuePart(value: "van", type: "surname_prefix"),
+            CatalogNameValuePart(value: "Gogh", type: "surname"),
+        ]
+        let orders = NameFormatOrders(
+            natural: [
+                NameFormatPart(partType: "given", trailingSeparator: ""),
+                NameFormatPart(partType: "surname_prefix", trailingSeparator: ""),
+                NameFormatPart(partType: "surname", trailingSeparator: ""),
+            ],
+            sorted: [
+                NameFormatPart(partType: "surname", trailingSeparator: ", "),
+                NameFormatPart(partType: "given", trailingSeparator: ""),
+            ]
+        )
+        #expect(ObservationValueDisplay.string(for: obs, locale: enUS, orders: orders) == "Vincent van Gogh")
+    }
+
     @Test func emptyIsEmptyString() {
         let obs = base(propertyValueType: "date")
         #expect(ObservationValueDisplay.string(for: obs, locale: enUS) == "")

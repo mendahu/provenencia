@@ -288,7 +288,7 @@ private extension EvidenceAppKitCard {
             y += EvidenceSubjectCard.headerToBodyGap + EvidenceSubjectCard.stackHairline
             let valueFont = PVFont.nsBody(size: 13)
             for observation in placed.observations {
-                let rowHeight = propertyRowHeight(observation, valueWidth: subjectValueWidth, valueFont: valueFont)
+                let rowHeight = propertyRowHeight(observation, valueWidth: subjectValueWidth, valueFont: valueFont, orders: card.nameOrders)
                 let rect = CGRect(x: 0, y: y, width: width, height: rowHeight)
                 rowRects.append((observation, rect))
                 regions[EvidenceSubjectCard.editPropertyActionID(observationID: observation.id)] = rect
@@ -336,7 +336,7 @@ private extension EvidenceAppKitCard {
                 style.line
             )
         }
-        paintRows(rowRects, tint: style.tint, chip: style.chip, ink: style.ink, hovered: state.hoveredActionID, width: width, valueWidth: subjectValueWidth, leading: EvidenceCitedPropertyMarks.leadingInset(shell: EvidenceSubjectCard.shellPaddingX), trailing: EvidenceSubjectCard.shellPaddingX, painter: painter)
+        paintRows(rowRects, tint: style.tint, chip: style.chip, ink: style.ink, hovered: state.hoveredActionID, width: width, valueWidth: subjectValueWidth, leading: EvidenceCitedPropertyMarks.leadingInset(shell: EvidenceSubjectCard.shellPaddingX), trailing: EvidenceSubjectCard.shellPaddingX, orders: card.nameOrders, painter: painter)
         paintAdd(addRect, quiet: !placed.isCited, canCite: state.canCite, hovered: state.hoveredActionID == EvidenceSubjectCard.addPropertyActionID, tint: style.tint, chip: style.chip, ink: style.ink, paddingX: EvidenceSubjectCard.shellPaddingX, painter: painter)
         if !placed.isCited {
             painter?.fill(
@@ -384,7 +384,7 @@ private extension EvidenceAppKitCard {
             y += EvidenceSubjectCard.stackHairline
             let valueFont = PVFont.nsBody(size: 13)
             for observation in EvidenceBridgeCard.extraObservations(for: placed) {
-                let rowHeight = propertyRowHeight(observation, valueWidth: bridgeValueWidth, valueFont: valueFont)
+                let rowHeight = propertyRowHeight(observation, valueWidth: bridgeValueWidth, valueFont: valueFont, orders: card.nameOrders)
                 let rect = CGRect(x: 0, y: y, width: width, height: rowHeight)
                 rowRects.append((observation, rect))
                 regions[EvidenceSubjectCard.editPropertyActionID(observationID: observation.id)] = rect
@@ -438,7 +438,7 @@ private extension EvidenceAppKitCard {
         if let first = rowRects.first, let last = rowRects.last {
             painter?.fill(CGRect(x: 0, y: first.1.minY - 1, width: width, height: last.1.maxY - first.1.minY + 1), PVColor.borderSubtle)
         }
-        paintRows(rowRects, tint: PVColor.surfaceCard, chip: PVColor.surfaceHover, ink: PVColor.textMuted, hovered: state.hoveredActionID, width: width, valueWidth: bridgeValueWidth, leading: EvidenceCitedPropertyMarks.leadingInset(shell: EvidenceBridgeCard.shellPaddingX), trailing: EvidenceBridgeCard.shellPaddingX, painter: painter)
+        paintRows(rowRects, tint: PVColor.surfaceCard, chip: PVColor.surfaceHover, ink: PVColor.textMuted, hovered: state.hoveredActionID, width: width, valueWidth: bridgeValueWidth, leading: EvidenceCitedPropertyMarks.leadingInset(shell: EvidenceBridgeCard.shellPaddingX), trailing: EvidenceBridgeCard.shellPaddingX, orders: card.nameOrders, painter: painter)
         paintAdd(addRect, quiet: !placed.isCited, canCite: state.canCite, hovered: state.hoveredActionID == EvidenceSubjectCard.addPropertyActionID, tint: PVColor.surfaceCard, chip: PVColor.surfaceHover, ink: PVColor.textMuted, paddingX: EvidenceBridgeCard.shellPaddingX, painter: painter)
         strokeCard(
             rect,
@@ -564,6 +564,7 @@ private extension EvidenceAppKitCard {
         valueWidth: CGFloat,
         leading: CGFloat,
         trailing: CGFloat,
+        orders: NameFormatOrders = NameFormatOrders(),
         painter: Painter?
     ) {
         guard let painter else { return }
@@ -590,7 +591,7 @@ private extension EvidenceAppKitCard {
                 valueX += 30
             }
             painter.text(
-                ObservationValueDisplay.string(for: observation),
+                ObservationValueDisplay.string(for: observation, orders: orders),
                 in: CGRect(x: valueX, y: rect.minY + 22, width: max(valueWidth - (valueX - leading), 20), height: rect.height - 30),
                 font: PVFont.nsBody(size: 13, italic: negated),
                 color: negated ? PVColor.danger : PVColor.textPrimary, lines: 2
@@ -716,8 +717,18 @@ private extension EvidenceAppKitCard {
         let title = label.isEmpty ? placed.typeLabel : label
         return wrappedHeight(title, width: bridgeBodyWidth, font: PVFont.nsDisplay(size: 14, weight: PVFontWeight.medium), maxLines: 2) + 1 + lineHeight(mono(9.5))
     }
-    static func propertyRowHeight(_ observation: CatalogObservation, valueWidth: CGFloat, valueFont: NSFont) -> CGFloat {
-        let valueHeight = wrappedHeight(ObservationValueDisplay.string(for: observation), width: valueWidth, font: valueFont, maxLines: 2)
+    static func propertyRowHeight(
+        _ observation: CatalogObservation,
+        valueWidth: CGFloat,
+        valueFont: NSFont,
+        orders: NameFormatOrders = NameFormatOrders()
+    ) -> CGFloat {
+        let valueHeight = wrappedHeight(
+            ObservationValueDisplay.string(for: observation, orders: orders),
+            width: valueWidth,
+            font: valueFont,
+            maxLines: 2
+        )
         return max(EvidenceSubjectCard.propertyRowHeight, lineHeight(mono(9)) + 3 + valueHeight + 16)
     }
     static func mono(_ size: CGFloat) -> NSFont {

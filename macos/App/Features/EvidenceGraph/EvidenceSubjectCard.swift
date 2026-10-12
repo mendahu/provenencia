@@ -479,7 +479,8 @@ private struct EvidenceSubjectCardChrome: View {
         EvidenceCitedPropertyStack(
             observations: placed.observations,
             style: style,
-            hoveredActionID: hoveredActionID
+            hoveredActionID: hoveredActionID,
+            nameOrders: nameOrders
         ) {
             // The footer is the stack's last row, one hairline below Add property.
             VStack(spacing: EvidenceSubjectCard.stackHairline) {

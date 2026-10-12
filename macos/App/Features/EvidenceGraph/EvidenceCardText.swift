@@ -33,8 +33,12 @@ struct EvidenceCardText: Equatable, Sendable {
     }
 
     @MainActor
-    init(bridge placed: SourceGraphPlacedBridge, in snapshot: SourceGraphSnapshot) {
-        let sentence = EvidenceBridgeEdgeSummary.sentence(for: placed, in: snapshot)
+    init(
+        bridge placed: SourceGraphPlacedBridge,
+        in snapshot: SourceGraphSnapshot,
+        orders: NameFormatOrders = NameFormatOrders()
+    ) {
+        let sentence = EvidenceBridgeEdgeSummary.sentence(for: placed, in: snapshot, orders: orders)
         accessibilityLabel = EvidenceBridgeCard.accessibilityLabel(for: placed, in: snapshot)
         deleteActionName = L10n.EvidenceGraph.deleteAccessibility(
             kind: placed.kind.rawValue,
@@ -49,6 +53,7 @@ struct EvidenceCardText: Equatable, Sendable {
 /// ``EvidenceCardText`` for every card in one graph snapshot, keyed by card id.
 struct EvidenceGraphText: Equatable, Sendable {
     private var cards: [String: EvidenceCardText]
+    private var orders: NameFormatOrders
 
     @MainActor
     init(snapshot: SourceGraphSnapshot, orders: NameFormatOrders = NameFormatOrders()) {
@@ -58,20 +63,21 @@ struct EvidenceGraphText: Equatable, Sendable {
             cards[placed.id] = EvidenceCardText(subject: placed, orders: orders)
         }
         for placed in snapshot.bridges {
-            cards[placed.id] = EvidenceCardText(bridge: placed, in: snapshot)
+            cards[placed.id] = EvidenceCardText(bridge: placed, in: snapshot, orders: orders)
         }
         self.cards = cards
+        self.orders = orders
     }
 
     /// Text for a placed subject; built on the spot only if the snapshot lacked it.
     @MainActor
     subscript(subject placed: SourceGraphPlacedSubject) -> EvidenceCardText {
-        cards[placed.id] ?? EvidenceCardText(subject: placed, orders: NameFormatOrders())
+        cards[placed.id] ?? EvidenceCardText(subject: placed, orders: orders)
     }
 
     /// Text for a placed bridge; built on the spot only if the snapshot lacked it.
     @MainActor
     subscript(bridge placed: SourceGraphPlacedBridge, in snapshot: SourceGraphSnapshot) -> EvidenceCardText {
-        cards[placed.id] ?? EvidenceCardText(bridge: placed, in: snapshot)
+        cards[placed.id] ?? EvidenceCardText(bridge: placed, in: snapshot, orders: orders)
     }
 }
