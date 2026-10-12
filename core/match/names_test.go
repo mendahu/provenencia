@@ -98,6 +98,9 @@ var nameCases = []nameCase{
 	{"identity", "initial with and without period", NameComparer{}, nv("g=J.|s=Robins"), nv("g=J|s=Robins"), 1},
 	{"identity", "non-Latin script", NameComparer{}, nv("s=蒋|g=浩"), nv("g=浩|s=蒋"), 1},
 	{"identity", "accented letters match themselves", NameComparer{}, nv("g=José|s=Núñez"), nv("g=josé|s=NÚÑEZ"), 1},
+	{"fold", "accent only", NameComparer{}, nv("g=José"), nv("g=Jose"), foldOnly},
+	{"fold", "eszett", NameComparer{}, nv("s=Groß"), nv("s=Gross"), foldOnly},
+	{"particle", "spaced O rejoins", NameComparer{}, nv("s=O Brien"), nv("s=O'Brien"), 1},
 
 	// Family words.
 	{"surname", "spelling variant", NameComparer{}, nv("g=James|s=Robbins"), nv("g=James|s=Robins"), (2*G1 + robbins*2*F) / (2 * (G1 + F))},
@@ -201,6 +204,16 @@ func TestNameComparerScores(t *testing.T) {
 				t.Fatalf("not symmetric: %.4f then %.4f", got, back)
 			}
 		})
+	}
+}
+
+func TestPeriodInitialDoesNotRejoin(t *testing.T) {
+	got, ok := (NameComparer{}).Compare(nv("s=O. Brien"), nv("s=O'Brien"))
+	if !ok {
+		t.Fatal("not comparable")
+	}
+	if math.Abs(got-1) < 1e-9 {
+		t.Fatalf("O. Brien joined into O'Brien: %.4f", got)
 	}
 }
 

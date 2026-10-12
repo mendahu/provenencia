@@ -6,7 +6,7 @@
 
 Names are compared, clustered, sorted and displayed with assumptions that hold mainly for Western, Latin-script names:
 
-- **Accents break matches.** "José" vs "Jose" and "Müller" vs "Muller" don't match. `autoreconcile.NormalizeForm` keeps diacritics, and short words fall below the near-spelling floor. Records disagree on accents all the time: clerks, transcribers and OCR drop or add them.
+- **Accents.** S10-24 scores a fold-only pair at 0.95 in `wordSimilarity`. `autoreconcile.NormalizeForm` still keeps diacritics, so José and Jose stay separate groupings on a Person page.
 - **Only Western roles exist.** `core/match` compares names word by word with part types as data (S9-10). Mismatched types discount, they don't block. Culture-specific rules live in a `NamePattern` fetched through a `NamePatterns` source, but the only pattern so far is `western`, built in. That's right for "James K. Robins" and incomplete for many others (below).
 - **The catalog holds one profile.** S10-29 installs `western` and matching reads those rows. Further cultures are unscheduled.
 
@@ -19,7 +19,7 @@ Fold for **comparison**, never for **display**, and don't use one fold for **sor
   - A small table for letters that don't decompose: ß→ss, æ→ae, œ→oe, ø→o, ł→l, đ→d, þ→th, ı→i.
   - Needs `golang.org/x/text` (`unicode/norm`) or a hand-written table.
 - **Where (decided): matching only.** "José" and "Jose" match in suggestions but stay separate groupings on a Person's page. The auto-reconciler may grow an accent rule later, but merging them is left to manual reconciliation. Folding therefore lives in `core/match`'s word comparison, not in `autoreconcile.NormalizeForm`: the auto-reconciler and the cache `sort_key` don't change, and no cache bump is needed.
-- **Exact still beats folded.** "José" vs "José" should outrank "José" vs "Jose". One option: a folded-only match scores 0.95 in `wordSimilarity`, so an accent difference is a near-match, not identity.
+- **Exact still beats folded.** S10-24 scores a folded-only match at 0.95 in `wordSimilarity`. "José" vs "José" stays 1.
 - **Sorting is a different problem.** Folding for sort order is wrong in some languages: Swedish files å, ä, ö after z, and Spanish once filed ch and ll as letters. List order wants locale collation (CLDR, via `x/text/collate`), not the comparison fold. **Decided:** the project picks the collation locale (a project setting).
 - **Display never folds.** `form` and part values stay exactly as recorded.
 
@@ -43,7 +43,7 @@ What's in place:
 
 ## Order of work (rough)
 
-1. Accent folding in matching's word comparison, with the 0.95 folded-match tier. This is small, has the highest payoff, and needs no cache change.
+1. Accent folding in matching's word comparison, with the 0.95 folded-match tier. S10-24 did this. It needs no cache change.
 2. Name format profiles carry role maps and weights. S10-29 did this for `western`. Further profiles are unscheduled.
 3. Locale collation for sorted lists. The locale is a project setting, default `en`, with no picker. A picker is later.
 4. Nickname tables, then Daitch–Mokotoff. Transliteration is later.

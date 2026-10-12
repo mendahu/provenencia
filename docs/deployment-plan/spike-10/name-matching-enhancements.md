@@ -14,7 +14,7 @@ What this spike builds is below. Accents are in [`international-names.md`](inter
 
 - **Abbreviations.** Jas., Wm., Chas., Thos., Geo., Eliz. and similar are everywhere in historical records, and they score as different names today ("Jas." vs "James" gives the given name 0). This needs a seeded abbreviation table (extensible per project, like the nickname tables) that maps an abbreviation to its full name, scored just below an exact match. Edit distance can't learn these.
 - **Name frequency.** "John Smith" vs "John Smith" scores 1.0, the same as a rare name, and that's the main source of false suggestions in genealogy. Weight words by how common they are in the project (inverse frequency across all name words), so a shared rare surname counts for more than a shared "Smith". A seeded population table is later ([`ideas/name-matching-enhancements.md`](../../ideas/name-matching-enhancements.md)).
-- **Spaced particles.** "O Brien" vs "O'Brien": the apostrophe joins, so "OBrien" matches but the spaced form is only a partial. A rule that rejoins a lone O, Mc, Mac, St, D, Fitz… with the next word would fix it. It needs care, because the same rule would wrongly join a real initial "O.".
+- **Spaced particles.** S10-24 rejoins `o`, `mc`, `mac`, `st`, `d`, and `fitz` with the next word, so `O Brien` matches `O'Brien`. A lone initial with a period (`O.`) does not rejoin.
 - **Sound-alikes.** Daitch–Mokotoff below the near-spelling tier. It matters for English records too (Smyth/Smith already works by edit distance; Leigh/Lee does not). Beider–Morse is later.
 
 ## The scoring model

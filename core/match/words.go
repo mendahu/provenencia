@@ -4,9 +4,21 @@ import (
 	"math"
 	"sort"
 	"strings"
+	"unicode"
 
 	"github.com/mendahu/provenencia/core/autoreconcile"
+	"golang.org/x/text/unicode/norm"
 )
+
+// foldOnly is a match that exists only after accent and letter folding.
+// An exact word still scores 1.
+const foldOnly = 0.95
+
+// spacedParticles rejoin with the following word. A typed surname_prefix
+// such as van or de is not in this list.
+var spacedParticles = map[string]bool{
+	"o": true, "mc": true, "mac": true, "st": true, "d": true, "fitz": true,
+}
 
 // Word-level comparison shared by NameComparer and TextComparer: splitting,
 // word similarity (initials, spelling variants), and best one-to-one pairing.
@@ -40,11 +52,98 @@ func (r WordRules) resolve(initials bool) wordRules {
 }
 
 func splitWords(s string) []string {
-	n := autoreconcile.NormalizeForm(s)
-	if n == "" {
-		return nil
+	raw := rawTokens(s)
+	var out []string
+	for i := 0; i < len(raw); i++ {
+		if i+1 < len(raw) && spacedParticle(raw[i]) {
+			if n := autoreconcile.NormalizeForm(raw[i] + raw[i+1]); n != "" {
+				out = append(out, n)
+			}
+			i++
+			continue
+		}
+		if n := autoreconcile.NormalizeForm(raw[i]); n != "" {
+			out = append(out, n)
+		}
 	}
-	return strings.Split(n, " ")
+	return out
+}
+
+// rawTokens splits on whitespace and on the dash and slash breaks
+// NormalizeForm uses, and keeps other punctuation so a period initial
+// can be told from a particle.
+func rawTokens(s string) []string {
+	var b strings.Builder
+	var out []string
+	flush := func() {
+		if b.Len() == 0 {
+			return
+		}
+		out = append(out, b.String())
+		b.Reset()
+	}
+	for _, r := range s {
+		if unicode.Is(unicode.Pd, r) || r == '/' || unicode.IsSpace(r) {
+			flush()
+			continue
+		}
+		b.WriteRune(r)
+	}
+	flush()
+	return out
+}
+
+func spacedParticle(raw string) bool {
+	if periodInitial(raw) {
+		return false
+	}
+	return spacedParticles[autoreconcile.NormalizeForm(raw)]
+}
+
+// periodInitial is a lone cased letter written with a period ("O.").
+func periodInitial(raw string) bool {
+	if !strings.ContainsRune(raw, '.') {
+		return false
+	}
+	var letters []rune
+	for _, r := range raw {
+		if unicode.IsLetter(r) {
+			letters = append(letters, r)
+		}
+	}
+	return len(letters) == 1 && unicode.ToUpper(letters[0]) != unicode.ToLower(letters[0])
+}
+
+// foldWord drops accents and maps letters that do not decompose. The word
+// is already the normalized comparison token.
+func foldWord(s string) string {
+	var b strings.Builder
+	for _, r := range norm.NFD.String(s) {
+		if unicode.Is(unicode.Mn, r) {
+			continue
+		}
+		switch r {
+		case 'ß':
+			b.WriteString("ss")
+		case 'æ':
+			b.WriteString("ae")
+		case 'œ':
+			b.WriteString("oe")
+		case 'ø':
+			b.WriteString("o")
+		case 'ł':
+			b.WriteString("l")
+		case 'đ':
+			b.WriteString("d")
+		case 'þ':
+			b.WriteString("th")
+		case 'ı':
+			b.WriteString("i")
+		default:
+			b.WriteRune(r)
+		}
+	}
+	return b.String()
 }
 
 // TextResemblance is how close two free-text strings are for scoring when
@@ -98,7 +197,11 @@ func wordSimilarity(x, y string, r wordRules) float64 {
 		}
 		return 0
 	}
-	return autoreconcile.SpellingSimilarity(x, y, r.floor, r.shortMin)
+	fx, fy := foldWord(x), foldWord(y)
+	if fx == fy {
+		return foldOnly
+	}
+	return autoreconcile.SpellingSimilarity(fx, fy, r.floor, r.shortMin)
 }
 
 // wordDice is the Dice overlap of two unweighted word lists under their best
