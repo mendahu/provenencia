@@ -2144,11 +2144,13 @@ enum L10n {
             case ("event_type", "birth"): return eventTypeBirth
             case ("event_type", "death"): return eventTypeDeath
             case ("event_type", "marriage"): return eventTypeMarriage
+            case ("event_type", "engagement"): return eventTypeEngagement
             case ("event_type", "baptism"): return eventTypeBaptism
             case ("event_type", "burial"): return eventTypeBurial
             case ("event_type", "census"): return eventTypeCensus
             case ("event_type", "residence"): return eventTypeResidence
             case ("event_type", "migration"): return eventTypeMigration
+            case ("event_type", "travel"): return eventTypeTravel
             case ("role", "subject"): return roleSubject
             case ("role", "father"): return roleFather
             case ("role", "mother"): return roleMother
@@ -2188,6 +2190,11 @@ enum L10n {
             defaultValue: "Marriage",
             comment: "Product event_type term: marriage"
         )
+        static let eventTypeEngagement = LocalizedStringResource(
+            "propertyTerm.event_type.engagement",
+            defaultValue: "Engagement",
+            comment: "Product event_type term: engagement"
+        )
         static let eventTypeBaptism = LocalizedStringResource(
             "propertyTerm.event_type.baptism",
             defaultValue: "Baptism",
@@ -2212,6 +2219,11 @@ enum L10n {
             "propertyTerm.event_type.migration",
             defaultValue: "Migration",
             comment: "Product event_type term: migration"
+        )
+        static let eventTypeTravel = LocalizedStringResource(
+            "propertyTerm.event_type.travel",
+            defaultValue: "Travel",
+            comment: "Product event_type term: travel"
         )
         static let roleSubject = LocalizedStringResource(
             "propertyTerm.role.subject",
@@ -7041,20 +7053,20 @@ enum L10n {
             return L10n.format(resource, locale: locale, type, subject)
         }
 
-        static func marriage(a: String, b: String, locale: Locale = .autoupdatingCurrent) -> String {
+        static func couple(type: String, a: String, b: String, locale: Locale = .autoupdatingCurrent) -> String {
             let resource = LocalizedStringResource(
-                "eventTitle.marriage",
-                defaultValue: "Marriage of %1$@ and %2$@",
-                comment: "Event title for a marriage with two subjects. Arguments are the two people."
+                "eventTitle.couple",
+                defaultValue: "%1$@ of %2$@ and %3$@",
+                comment: "Event title for a marriage or an engagement with two subjects. Arguments are the type word, then the two people."
             )
-            return L10n.format(resource, locale: locale, a, b)
+            return L10n.format(resource, locale: locale, type, a, b)
         }
 
         static func etAl(type: String, first: String, locale: Locale = .autoupdatingCurrent) -> String {
             let resource = LocalizedStringResource(
                 "eventTitle.etAl",
                 defaultValue: "%1$@ of %2$@ et al.",
-                comment: "Event title for several subjects, or three or more on a marriage. Arguments are the type word, then the first subject."
+                comment: "Event title for several subjects, or three or more on a marriage or an engagement. Arguments are the type word, then the first subject."
             )
             return L10n.format(resource, locale: locale, type, first)
         }

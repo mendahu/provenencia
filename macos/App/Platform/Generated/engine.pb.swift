@@ -436,7 +436,7 @@ public nonisolated enum Provenencia_Engine_V1_EventTitleRule: SwiftProtobuf.Enum
   /// {Type} of {subject}
   case subject // = 2
 
-  /// Marriage of {a} and {b}
+  /// {Type} of {a} and {b}
   case couple // = 3
 
   /// {Type} of {first} et al.

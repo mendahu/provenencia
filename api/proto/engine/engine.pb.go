@@ -353,7 +353,7 @@ const (
 	EventTitleRule_EVENT_TITLE_RULE_UNSPECIFIED   EventTitleRule = 0
 	EventTitleRule_EVENT_TITLE_RULE_RECORDED_NAME EventTitleRule = 1 // event_name
 	EventTitleRule_EVENT_TITLE_RULE_SUBJECT       EventTitleRule = 2 // {Type} of {subject}
-	EventTitleRule_EVENT_TITLE_RULE_COUPLE        EventTitleRule = 3 // Marriage of {a} and {b}
+	EventTitleRule_EVENT_TITLE_RULE_COUPLE        EventTitleRule = 3 // {Type} of {a} and {b}
 	EventTitleRule_EVENT_TITLE_RULE_SUBJECTS      EventTitleRule = 4 // {Type} of {first} et al.
 	EventTitleRule_EVENT_TITLE_RULE_LABEL         EventTitleRule = 5 // working label
 	EventTitleRule_EVENT_TITLE_RULE_TYPE_AT_PLACE EventTitleRule = 6 // {Type} at {place}

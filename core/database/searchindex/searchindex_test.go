@@ -4,6 +4,9 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/conclusionheaders"
+	"github.com/mendahu/provenencia/core/database/namevalues"
+	"github.com/mendahu/provenencia/core/eventtitle"
 	"github.com/mendahu/provenencia/core/objectpath"
 )
 
@@ -91,5 +94,35 @@ func TestObjectsRelPathAgreesWithObjectpath(t *testing.T) {
 		if got != want {
 			t.Fatalf("%s: searchindex %q != objectpath %q", mt, got, want)
 		}
+	}
+}
+
+func TestEventMatchTitleCoupleUsesTypeWord(t *testing.T) {
+	tests := []struct {
+		name  string
+		label string
+		want  string
+	}{
+		{name: "marriage", label: "Marriage", want: "Marriage of James and Mary"},
+		{name: "engagement", label: "Engagement", want: "Engagement of James and Mary"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := eventMatchTitle(conclusionheaders.EventHeader{
+				Title: eventtitle.Plan{
+					Rule: eventtitle.RuleCouple,
+					Parts: eventtitle.Parts{
+						TypeLabel: tt.label,
+						Subjects: []eventtitle.Subject{
+							{Name: &namevalues.Value{Form: "James"}},
+							{Name: &namevalues.Value{Form: "Mary"}},
+						},
+					},
+				},
+			})
+			if got != tt.want {
+				t.Fatalf("got %q want %q", got, tt.want)
+			}
+		})
 	}
 }

@@ -12794,6 +12794,18 @@
         }
       }
     },
+    "propertyTerm.event_type.engagement": {
+      "comment": "Product event_type term: engagement",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Engagement"
+          }
+        }
+      }
+    },
     "propertyTerm.event_type.baptism": {
       "comment": "Product event_type term: baptism",
       "extractionState": "manual",
@@ -12850,6 +12862,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Migration"
+          }
+        }
+      }
+    },
+    "propertyTerm.event_type.travel": {
+      "comment": "Product event_type term: travel",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Travel"
           }
         }
       }
@@ -15005,7 +15029,7 @@
       }
     },
     "eventTitle.etAl": {
-      "comment": "Event title for several subjects, or three or more on a marriage. Arguments are the type word, then the first subject.",
+      "comment": "Event title for several subjects, or three or more on a marriage or an engagement. Arguments are the type word, then the first subject.",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -15028,14 +15052,14 @@
         }
       }
     },
-    "eventTitle.marriage": {
-      "comment": "Event title for a marriage with two subjects. Arguments are the two people.",
+    "eventTitle.couple": {
+      "comment": "Event title for a marriage or an engagement with two subjects. Arguments are the type word, then the two people.",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Marriage of %1$@ and %2$@"
+            "value": "%1$@ of %2$@ and %3$@"
           }
         }
       }

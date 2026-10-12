@@ -44,7 +44,16 @@ struct EventTitleDisplayTests {
     @Test func couple() {
         #expect(
             EventTitleDisplay.title(title(.couple, typeKey: "marriage", typeLabel: "Marriage", subjects: ["James Robins", "Mary Smith"]), locale: en)
-                == L10n.EventTitle.marriage(a: "James Robins", b: "Mary Smith", locale: en)
+                == L10n.EventTitle.couple(type: "Marriage", a: "James Robins", b: "Mary Smith", locale: en)
+        )
+        #expect(
+            EventTitleDisplay.title(title(.couple, typeKey: "engagement", subjects: ["James Robins", "Mary Smith"]), locale: en)
+                == L10n.EventTitle.couple(
+                    type: L10n.string(L10n.PropertyTerm.eventTypeEngagement),
+                    a: "James Robins",
+                    b: "Mary Smith",
+                    locale: en
+                )
         )
     }
 

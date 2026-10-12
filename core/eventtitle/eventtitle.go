@@ -23,7 +23,7 @@ const (
 	RuleRecordedName Rule = "recorded_name"
 	// RuleSubject: {Type} of {subject}.
 	RuleSubject Rule = "subject"
-	// RuleCouple: Marriage of {a} and {b}, for two subjects of a marriage.
+	// RuleCouple: {Type} of {a} and {b}, for two subjects of a marriage or an engagement.
 	RuleCouple Rule = "couple"
 	// RuleSubjects: {Type} of {first} et al.
 	RuleSubjects Rule = "subjects"
@@ -37,8 +37,15 @@ const (
 	RuleRef Rule = "ref"
 )
 
-// MarriageTypeKey is the event_type whose two subjects are a couple.
-const MarriageTypeKey = "marriage"
+// coupleEvent is an event_type whose two subjects title as a couple.
+func coupleEvent(typeKey string) bool {
+	switch typeKey {
+	case "marriage", "engagement":
+		return true
+	default:
+		return false
+	}
+}
 
 // Subject is one subject-role person, in stable order. A nil Name reads as
 // "unnamed person".
@@ -79,7 +86,7 @@ func Choose(p Parts) Plan {
 		return Plan{Rule: RuleRecordedName, Parts: p}
 	case len(p.Subjects) == 1:
 		return Plan{Rule: RuleSubject, Parts: p}
-	case len(p.Subjects) == 2 && p.TypeKey == MarriageTypeKey:
+	case len(p.Subjects) == 2 && coupleEvent(p.TypeKey):
 		return Plan{Rule: RuleCouple, Parts: p}
 	case len(p.Subjects) > 1:
 		return Plan{Rule: RuleSubjects, Parts: p}

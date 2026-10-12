@@ -7,7 +7,11 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
+	"github.com/mendahu/provenencia/core/database/users"
+	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/writes"
 )
 
 func TestSubjectVocab(t *testing.T) {
@@ -356,5 +360,90 @@ func TestInstallFlagsNeutralTerms(t *testing.T) {
 		if err != nil || term.Neutral != want {
 			t.Fatalf("%s neutral %v (%v), want %v", key, term.Neutral, err, want)
 		}
+	}
+}
+
+func TestInstallSeedsEngagementTravelInterestsAndGender(t *testing.T) {
+	c, err := database.Create(t.TempDir(), "t.provenencia")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = c.Close() })
+	if err := Install(c); err != nil {
+		t.Fatal(err)
+	}
+
+	eventType, err := properties.Lookup(c, "event_type", properties.OriginProvenencia)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for key, label := range map[string]string{"engagement": "Engagement", "travel": "Travel"} {
+		term, err := propertyterms.Lookup(c, eventType.ID, key, propertyterms.OriginProvenencia)
+		if err != nil || term.Label != label {
+			t.Fatalf("%s %+v %v", key, term, err)
+		}
+	}
+
+	interests, err := properties.Lookup(c, "interests", properties.OriginProvenencia)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if interests.ValueType != properties.ValueTypeText || interests.Cardinality != properties.CardinalityMultiple {
+		t.Fatalf("interests %+v", interests)
+	}
+	if LockedBinding("person", "interests") {
+		t.Fatal("interests binding is locked")
+	}
+
+	gender, err := properties.Lookup(c, "gender", properties.OriginProvenencia)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if gender.ValueType != properties.ValueTypeTerm || gender.Cardinality != properties.CardinalitySingle {
+		t.Fatalf("gender %+v", gender)
+	}
+	if LockedBinding("person", "gender") {
+		t.Fatal("gender binding is locked")
+	}
+	for _, key := range []string{"man", "woman", "non_binary"} {
+		term, err := propertyterms.Lookup(c, gender.ID, key, propertyterms.OriginProvenencia)
+		if err != nil || term.Neutral {
+			t.Fatalf("%s %+v %v", key, term, err)
+		}
+	}
+
+	person, err := subjecttypes.Lookup(c, "person", subjecttypes.OriginProvenencia)
+	if err != nil {
+		t.Fatal(err)
+	}
+	bindings, err := ListBindings(c, person.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sortByKey := map[string]int{}
+	for _, b := range bindings {
+		sortByKey[b.Property.Key] = b.SortOrder
+		if (b.Property.Key == "gender" || b.Property.Key == "interests") && b.Locked {
+			t.Fatalf("%s binding locked", b.Property.Key)
+		}
+	}
+	if sortByKey["gender"] != 2 || sortByKey["interests"] != 3 {
+		t.Fatalf("person sort orders %v", sortByKey)
+	}
+
+	userID := []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}
+	userRef, err := ref.Mint(ref.PrefixUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := users.Upsert(c, userID, "Tester", userRef); err != nil {
+		t.Fatal(err)
+	}
+	created, _, err := writes.Run(c, writes.Op{Action: "create_property_term", UserID: userID},
+		func(tx *database.Tx) (propertyterms.Term, []rowchange.Change, error) {
+			return propertyterms.Create(tx, userID, gender.ID, "Agender", "")
+		})
+	if err != nil || created.Key != "agender" || created.Origin != propertyterms.OriginUser {
+		t.Fatalf("create gender term %+v %v", created, err)
 	}
 }

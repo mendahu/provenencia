@@ -996,7 +996,7 @@ enum EventTitleRule {
   EVENT_TITLE_RULE_UNSPECIFIED = 0;
   EVENT_TITLE_RULE_RECORDED_NAME = 1; // event_name
   EVENT_TITLE_RULE_SUBJECT = 2;       // {Type} of {subject}
-  EVENT_TITLE_RULE_COUPLE = 3;        // Marriage of {a} and {b}
+  EVENT_TITLE_RULE_COUPLE = 3;        // {Type} of {a} and {b}
   EVENT_TITLE_RULE_SUBJECTS = 4;      // {Type} of {first} et al.
   EVENT_TITLE_RULE_LABEL = 5;         // working label
   EVENT_TITLE_RULE_TYPE_AT_PLACE = 6; // {Type} at {place}

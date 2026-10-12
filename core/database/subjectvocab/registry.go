@@ -155,6 +155,7 @@ var seedTypes = []seedType{
 var seedProperties = []seedProperty{
 	{Key: "name", Label: "Name", ValueType: properties.ValueTypeName},
 	{Key: "sex_at_birth", Label: "Sex at birth", Description: "Sex recorded or assigned at birth. Product term vocabulary.", ValueType: properties.ValueTypeTerm},
+	{Key: "gender", Label: "Gender", Description: "Gender identity. Separate from sex recorded or assigned at birth. Product term vocabulary.", ValueType: properties.ValueTypeTerm},
 	{Key: "event_type", Label: "Event type", Description: "Kind of event (birth, census, …). Product term vocabulary.", ValueType: properties.ValueTypeTerm},
 	{Key: "event_name", Label: "Event name", Description: "Recorded name of a historical event. Not a personal NameValue.", ValueType: properties.ValueTypeText},
 	{Key: "date", Label: "Date", Description: "Point-in-time when the event occurred (or the best single date when a span is unknown). Prefer this for births, deaths, and other one-day facts. Use start/end date instead when the event clearly lasts across a range.", ValueType: properties.ValueTypeDate},
@@ -172,6 +173,7 @@ var seedProperties = []seedProperty{
 	{Key: "mentions", Label: "Mentions", Description: "Target hint: source", ValueType: properties.ValueTypeSubject},
 	{Key: "remark", Label: "Remark", Description: "Free-text commentary about a source subject", ValueType: properties.ValueTypeText},
 	{Key: "toponym", Label: "Toponym", Description: "Place name as interpreted from a Source", ValueType: properties.ValueTypeText, Cardinality: properties.CardinalityMultiple},
+	{Key: "interests", Label: "Interests", Description: "Free-text interests. More than one value is allowed.", ValueType: properties.ValueTypeText, Cardinality: properties.CardinalityMultiple},
 }
 
 // Non-bridge bindings from docs/seeded-vocabulary.md §3.3.
@@ -181,6 +183,8 @@ var seedProperties = []seedProperty{
 var seedBindings = []seedBinding{
 	{TypeKey: "person", PropertyKey: "name", SortOrder: 0, Locked: true},
 	{TypeKey: "person", PropertyKey: "sex_at_birth", SortOrder: 1},
+	{TypeKey: "person", PropertyKey: "gender", SortOrder: 2},
+	{TypeKey: "person", PropertyKey: "interests", SortOrder: 3},
 
 	{TypeKey: "event", PropertyKey: "event_type", SortOrder: 0, Locked: true},
 	{TypeKey: "event", PropertyKey: "event_name", SortOrder: 1},
@@ -200,7 +204,7 @@ var seedBindings = []seedBinding{
 	{TypeKey: "source", PropertyKey: "remark", SortOrder: 1},
 }
 
-// Property terms from docs/seeded-vocabulary.md §3.4–3.7.
+// Property terms from docs/seeded-vocabulary.md §3.4–3.9.
 var seedTerms = []seedTerm{
 	{PropertyKey: "sex_at_birth", Key: "female", Label: "Female"},
 	{PropertyKey: "sex_at_birth", Key: "male", Label: "Male"},
@@ -208,14 +212,20 @@ var seedTerms = []seedTerm{
 	{PropertyKey: "sex_at_birth", Key: "indeterminate", Label: "Indeterminate", Neutral: true},
 	{PropertyKey: "sex_at_birth", Key: "unknown", Label: "Unknown", Neutral: true},
 
+	{PropertyKey: "gender", Key: "man", Label: "Man"},
+	{PropertyKey: "gender", Key: "woman", Label: "Woman"},
+	{PropertyKey: "gender", Key: "non_binary", Label: "Non-binary"},
+
 	{PropertyKey: "event_type", Key: "birth", Label: "Birth"},
 	{PropertyKey: "event_type", Key: "death", Label: "Death"},
 	{PropertyKey: "event_type", Key: "marriage", Label: "Marriage"},
+	{PropertyKey: "event_type", Key: "engagement", Label: "Engagement"},
 	{PropertyKey: "event_type", Key: "baptism", Label: "Baptism"},
 	{PropertyKey: "event_type", Key: "burial", Label: "Burial"},
 	{PropertyKey: "event_type", Key: "census", Label: "Census Enumeration"},
 	{PropertyKey: "event_type", Key: "residence", Label: "Residence"},
 	{PropertyKey: "event_type", Key: "migration", Label: "Migration"},
+	{PropertyKey: "event_type", Key: "travel", Label: "Travel"},
 
 	{PropertyKey: "role", Key: "subject", Label: "Subject"},
 	{PropertyKey: "role", Key: "father", Label: "Father"},
