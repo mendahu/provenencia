@@ -1,7 +1,6 @@
 package match
 
 import (
-	"math"
 	"sort"
 	"strings"
 	"unicode"
@@ -263,43 +262,100 @@ func wordDice(wa, wb []string, r wordRules) float64 {
 }
 
 // bestPairing is the largest total over one-to-one pairings of rows with
-// columns. Exact, so it does not depend on which side is the row.
+// columns. Exact, so it does not depend on which side is the row. A pair
+// scores only when it is positive, so a word with nothing in common stays
+// unpaired.
 func bestPairing(score [][]float64) float64 {
-	if len(score) == 0 || len(score[0]) == 0 {
-		return 0
+	total, _, _ := bestAssignment(score)
+	return total
+}
+
+// bestAssignment is bestPairing plus which cells took part. usedRow and
+// usedCol are in the score matrix's own orientation.
+func bestAssignment(score [][]float64) (total float64, usedRow, usedCol []bool) {
+	rows := len(score)
+	if rows == 0 || len(score[0]) == 0 {
+		return 0, make([]bool, rows), nil
 	}
-	rows, cols := len(score), len(score[0])
+	cols := len(score[0])
+	usedRow = make([]bool, rows)
+	usedCol = make([]bool, cols)
+	transposed := false
 	at := func(i, j int) float64 { return score[i][j] }
 	if rows < cols {
+		transposed = true
 		rows, cols = cols, rows
 		at = func(i, j int) float64 { return score[j][i] }
 	}
+	rowUsed := make([]bool, rows)
+	colUsed := make([]bool, cols)
 	if cols > MaxExactPairing {
-		return greedyPairing(rows, cols, at)
+		total = greedyAssign(rows, cols, at, rowUsed, colUsed)
+	} else {
+		total = exactAssign(rows, cols, at, rowUsed, colUsed)
 	}
-	// best[mask] = best total with the shorter side's words in mask used.
+	if transposed {
+		for i := range usedRow {
+			usedRow[i] = colUsed[i]
+		}
+		for j := range usedCol {
+			usedCol[j] = rowUsed[j]
+		}
+		return total, usedRow, usedCol
+	}
+	return total, rowUsed, colUsed
+}
+
+func exactAssign(rows, cols int, at func(i, j int) float64, rowUsed, colUsed []bool) float64 {
+	type step struct {
+		col  int
+		mask int
+	}
 	best := make([]float64, 1<<cols)
+	steps := make([][]step, rows)
 	for i := 0; i < rows; i++ {
 		next := append([]float64(nil), best...)
+		ch := make([]step, 1<<cols)
+		for mask := range ch {
+			ch[mask] = step{col: -1, mask: mask}
+		}
 		for mask, v := range best {
 			for j := 0; j < cols; j++ {
-				if s := at(i, j); mask&(1<<j) == 0 && s > 0 {
-					if t := v + s; t > next[mask|1<<j] {
-						next[mask|1<<j] = t
-					}
+				s := at(i, j)
+				if mask&(1<<j) != 0 || s <= 0 {
+					continue
+				}
+				nm := mask | (1 << j)
+				if t := v + s; t > next[nm] {
+					next[nm] = t
+					ch[nm] = step{col: j, mask: mask}
 				}
 			}
 		}
 		best = next
+		steps[i] = ch
 	}
+	topMask := 0
 	var top float64
-	for _, v := range best {
-		top = math.Max(top, v)
+	for mask, v := range best {
+		if v > top {
+			top = v
+			topMask = mask
+		}
+	}
+	mask := topMask
+	for i := rows - 1; i >= 0; i-- {
+		ch := steps[i][mask]
+		if ch.col >= 0 {
+			rowUsed[i] = true
+			colUsed[ch.col] = true
+		}
+		mask = ch.mask
 	}
 	return top
 }
 
-func greedyPairing(rows, cols int, at func(i, j int) float64) float64 {
+func greedyAssign(rows, cols int, at func(i, j int) float64, rowUsed, colUsed []bool) float64 {
 	type pair struct {
 		i, j int
 		s    float64
@@ -313,11 +369,10 @@ func greedyPairing(rows, cols int, at func(i, j int) float64) float64 {
 		}
 	}
 	sort.SliceStable(pairs, func(a, b int) bool { return pairs[a].s > pairs[b].s })
-	usedI, usedJ := map[int]bool{}, map[int]bool{}
 	var total float64
 	for _, p := range pairs {
-		if !usedI[p.i] && !usedJ[p.j] {
-			usedI[p.i], usedJ[p.j] = true, true
+		if !rowUsed[p.i] && !colUsed[p.j] {
+			rowUsed[p.i], colUsed[p.j] = true, true
 			total += p.s
 		}
 	}

@@ -245,7 +245,7 @@ const DefaultSuggestionLimit = 10
 //
 // The weights are points. As a guide: a candidate worth showing scores at
 // least MinScore; the same name alone clears it, a shared surname alone
-// clears it barely. A sex mismatch narrows the score; it does not hide
+// clears it barely. A sex or gender mismatch narrows the score; it does not hide
 // a name that otherwise cleared MinScore.
 // ProfiledKinds are the subject type keys DefaultProfile knows.
 func ProfiledKinds() []string {
@@ -260,6 +260,7 @@ func DefaultProfile(kind string) (Profile, bool) {
 			Features: []Feature{
 				{Property: product("name"), Comparer: DefaultNames, Weight: 10},
 				{Property: product("sex_at_birth"), Comparer: TermComparer{}, Weight: 1, Contradiction: 2},
+				{Property: product("gender"), Comparer: TermComparer{}, Weight: 1, Contradiction: 2},
 			},
 			// "Mary Robins" ~ "James Robins" is 10 × 0.6 = 6: shown, low.
 			// "James Smith" is 10 × 0.2 = 2: hidden.

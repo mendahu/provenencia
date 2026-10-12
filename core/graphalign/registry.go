@@ -38,14 +38,21 @@ func DefaultConfig() Config {
 			"name":    {Floor: 1, Frequency: true},
 			"subject": {Floor: 1, Frequency: true},
 		},
-		// Name: a resemblance of 0.8 is exactly the weak bar (2.5 × 0.8).
-		// Sex: half the population, so agreement is a small nudge and a
-		// mismatch subtracts 1 rather than the global penalty.
+		// Name: a different given name is about 0.6 and conflicts. A word
+		// that exists only on one side does not lower the score, so Jake
+		// Robins against James Kenneth Jake Robins agrees. An initial
+		// (J. ~ James, 0.8) is 2.5 × 0.8, exactly the weak bar. The floor
+		// sits above the given-name clash.
+		// Sex and gender: agreement is a small nudge and a mismatch subtracts
+		// 1 rather than the global penalty.
 		PropertyScale: map[match.Property]Scale{
 			{Key: "name", Origin: "provenencia"}: {
-				Floor: 0.8, Weight: 2.5, Contradiction: 3,
+				Floor: 0.75, Weight: 2.5, Contradiction: 3,
 			},
 			{Key: "sex_at_birth", Origin: "provenencia"}: {
+				Floor: 1, Weight: 0.6, Contradiction: 1,
+			},
+			{Key: "gender", Origin: "provenencia"}: {
 				Floor: 1, Weight: 0.6, Contradiction: 1,
 			},
 		},

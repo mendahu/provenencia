@@ -154,7 +154,7 @@ func TestRankPersons(t *testing.T) {
 	t.Run("tuned profile", func(t *testing.T) {
 		lenient := p.With(Feature{Property: product("sex_at_birth"), Comparer: TermComparer{}, Weight: 1})
 		lenient.MinScore = 1
-		if len(lenient.Features) != 2 || len(p.Features) != 2 || p.Features[1].Contradiction != 2 {
+		if len(lenient.Features) != 3 || len(p.Features) != 3 || p.Features[1].Contradiction != 2 {
 			t.Fatal("With must replace in a copy")
 		}
 		got := Rank(lenient, probe, candidates, 0)
