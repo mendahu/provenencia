@@ -44,6 +44,10 @@
 
 **Landed 2026-10-12** in [#371](https://github.com/mendahu/provenencia/pull/371). A click outside a form sheet closes it. A sheet with edits asks to discard or keep editing. A clean or read-only sheet closes. Delete confirms are unchanged.
 
+## S10-13 — Date modal focus and transcription prefill
+
+**Landed 2026-10-12** in [#372](https://github.com/mendahu/provenencia/pull/372). The structured date modal opens with focus on Year. When the draft is empty and the transcription contains a date, the first match fills year, month, and day. A date already on the Observation stays. `14 May 1817` opens as 1817, May, 14.
+
 ## S10-14 — Adaptive choice field
 
 **Descoped 2026-10-12** in [#370](https://github.com/mendahu/provenencia/pull/370). A kit field that swaps radio, select, and combo box by option count is not a priority for this spike. S10-D1 is not drawn. Term fields keep the control they have.
