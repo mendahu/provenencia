@@ -6,7 +6,7 @@ Usability fixes from [`docs/dogfood/ux.md`](../../dogfood/ux.md) after Spike 9, 
 
 ## Status
 
-**Open.** Slice 1 is done (2026-10-11). S10-01…S10-04 landed in [#361](https://github.com/mendahu/provenencia/pull/361)–[#364](https://github.com/mendahu/provenencia/pull/364). S10-46, S10-47, and S10-48 were descoped in [#367](https://github.com/mendahu/provenencia/pull/367). Later landings go in [`completed.md`](completed.md).
+**Open.** Slice 1 is done (2026-10-11). S10-01…S10-04 landed in [#361](https://github.com/mendahu/provenencia/pull/361)–[#364](https://github.com/mendahu/provenencia/pull/364). S10-46, S10-47, and S10-48 were descoped in [#367](https://github.com/mendahu/provenencia/pull/367). S10-06 was descoped 2026-10-11: searching `marriage` already lists a title that contains the word ahead of a fuzzy name. Later landings go in [`completed.md`](completed.md).
 
 > **Goal of this spike:** the annoyances logged while entering real research are gone, and the app still behaves the way Spike 8 and Spike 9 decided.
 
@@ -35,7 +35,7 @@ Usability fixes from [`docs/dogfood/ux.md`](../../dogfood/ux.md) after Spike 9, 
 | Evidence graph canvas is too small | S10-03 | — |
 | Evidence graph viewport resets after the composer | S10-04 | — |
 | Multi-line text areas need a scrollbar | S10-05 | — |
-| Omnibar ranks fuzzy name matches above exact title words | S10-06 | — |
+| Omnibar ranks fuzzy name matches above exact title words | S10-06, descoped 2026-10-11 | — |
 | Onboarding defaults to a new user | S10-07 | — |
 | Enter should save a Property title edit | S10-08 | — |
 | Sources list sort and filter don't persist | S10-09 | — |
@@ -176,7 +176,7 @@ SLICE 1 — Evidence graph  (done 2026-10-11)
 
 SLICE 2 — Behavior, no new chrome
   S10-05  PVTextArea shows a scrollbar when the text overflows
-  S10-06  Omnibar: a whole word in a title beats stacked fuzzy prefixes
+  S10-06  Omnibar whole-word rank — descoped. A title word already beats a fuzzy name.
   S10-07  Existing project selects the oldest user
   S10-08  Enter saves a Property title
   S10-09  Sources sort and filter persist
@@ -353,12 +353,7 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 
 #### S10-06 — Omnibar whole-word rank
 
-| | |
-| --- | --- |
-| **In** | In `core/search`, a whole-token match in a title outranks fuzzy and prefix matches. Several partial tokens (Marion + Margaret for the query `marriage`) must not sum past one exact title hit. Kind mix (`ScoreMix`) stays as Spike 9 left it: it may break ties, not overturn a clearly stronger text match. |
-| **Out** | New hit chrome (S9-D13 already shipped). A different kind order. |
-| **Testable** | Fixture: a marriage certificate and a newspaper announcement whose titles contain `marriage`, plus obituaries for Marion Margaret. Query `marriage` lists the title hits first. Existing rank tests still hold (shorter exact title, exact ref). |
-| **Depends on** | — |
+**Descoped 2026-10-11.** Searching `marriage` already lists a marriage certificate and a newspaper announcement ahead of obituaries for Marion Margaret. A fuzzy name prefix does not outrank a whole word in a title, so the scorer stays as it is. A shorter prefix title (`Ilminsterish notes`) still ranks above a longer whole-word title (`Ilminster parish register`); that is the existing test, not this note.
 
 #### S10-07 — Oldest user on an existing project
 
