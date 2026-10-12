@@ -55,6 +55,71 @@ var DefaultWordRules = WordRules{
 	ShortVariantMinLength: Set(autoreconcile.SpellingShortMin),
 	Particles:             &SpacedParticles,
 	Folds:                 &LetterFolds,
+	Aliases:               &aliasTables,
+}
+
+// AliasCredit is an abbreviation or nickname table hit. Exact is 1. A
+// fold-only pair is lower (foldOnly).
+const AliasCredit = 0.98
+
+// OriginProvenencia is the app's vocabulary origin.
+const OriginProvenencia = "provenencia"
+
+// AliasKind is abbreviation or nickname. Both score AliasCredit.
+type AliasKind string
+
+const (
+	AliasAbbreviation AliasKind = "abbreviation"
+	AliasNickname     AliasKind = "nickname"
+)
+
+// AliasTable is one contributed list. Origin records who contributed it
+// (provenencia, user, or plugin:<id>) and does not turn the table off.
+// A set is one equivalence group. Roles are the part roles that may use it.
+type AliasTable struct {
+	Key, Origin, Label string
+	Kind               AliasKind
+	Roles              []NameRole
+	Sets               [][]string
+}
+
+func aliasPartRoles() []NameRole {
+	return []NameRole{RoleGiven, RoleNick, RoleUntyped}
+}
+
+// productAliasTables is the app seed. Install writes this list. Comparison
+// with no catalog reads it too. Tokens are normalized comparison forms.
+var productAliasTables = []AliasTable{
+	{
+		Key: "abbreviations", Origin: OriginProvenencia, Label: "Abbreviations",
+		Kind: AliasAbbreviation, Roles: aliasPartRoles(),
+		Sets: [][]string{
+			{"james", "jas"},
+			{"william", "wm"},
+			{"charles", "chas"},
+			{"thomas", "thos"},
+			{"george", "geo"},
+			{"elizabeth", "eliz"},
+			{"john", "jno"},
+			{"robert", "robt"},
+		},
+	},
+	{
+		Key: "nicknames", Origin: OriginProvenencia, Label: "Nicknames",
+		Kind: AliasNickname, Roles: aliasPartRoles(),
+		Sets: [][]string{
+			{"james", "jim", "jimmy"},
+			{"william", "bill", "will", "billy"},
+			{"robert", "bob", "rob"},
+			{"john", "jack"},
+			{"thomas", "tom"},
+			{"charles", "chuck", "charlie"},
+			{"richard", "dick", "rick"},
+			{"edward", "ted", "ed"},
+			{"elizabeth", "liz", "beth", "betty"},
+			{"margaret", "peggy", "meg"},
+		},
+	},
 }
 
 // MaxExactPairing bounds the exact best-pairing search (2^n states over the

@@ -4,6 +4,7 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/autoreconciler"
 	"github.com/mendahu/provenencia/core/database/claimconfidencegrades"
+	"github.com/mendahu/provenencia/core/database/namealiases"
 	"github.com/mendahu/provenencia/core/database/nameformats"
 	"github.com/mendahu/provenencia/core/database/project"
 	"github.com/mendahu/provenencia/core/database/searchindex"
@@ -18,8 +19,8 @@ import (
 // paths use core/catalogsession (held session + serial queue). database.Create/Open
 // stay migrate-only. User refs and project.uuid are reconciled on create and open;
 // Source vocabulary, credibility grades, Interpretation subject vocabulary
-// (types + Properties + bindings), and the Western name format are installed
-// once at create only (never healed on open).
+// (types + Properties + bindings), the Western name format, and abbreviation
+// and nickname tables are installed once at create only (never healed on open).
 func createCatalog(parent, folder string) (*database.Catalog, error) {
 	c, err := database.Create(parent, folder)
 	if err != nil {
@@ -53,6 +54,10 @@ func createCatalog(parent, folder string) (*database.Catalog, error) {
 		_ = c.Close()
 		return nil, err
 	}
+	if err := namealiases.Install(c); err != nil {
+		_ = c.Close()
+		return nil, err
+	}
 	// The cache first: the search index's handle documents read it.
 	if err := autoreconciler.EnsureCatalog(c); err != nil {
 		_ = c.Close()
@@ -67,7 +72,7 @@ func createCatalog(parent, folder string) (*database.Catalog, error) {
 
 // OpenCatalog opens a project once (migrate + ensure user refs + project.uuid).
 // Prefer catalogsession.Do for researcher paths so opens are amortized and serialized.
-// Does not re-install or heal Source vocabulary, credibility or claim confidence grades, Interpretation subject vocabulary, or name formats.
+// Does not re-install or heal Source vocabulary, credibility or claim confidence grades, Interpretation subject vocabulary, name formats, or alias tables.
 func OpenCatalog(projectDir string) (*database.Catalog, error) {
 	c, err := database.Open(projectDir)
 	if err != nil {

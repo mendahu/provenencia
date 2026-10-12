@@ -21,6 +21,7 @@ import (
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/datevalues"
+	"github.com/mendahu/provenencia/core/database/namealiases"
 	"github.com/mendahu/provenencia/core/database/nameformats"
 	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/database/sqlbatch"
@@ -173,7 +174,11 @@ func rank(q Querier, res Result, typeID []byte, probe match.Values, profile matc
 	if err != nil {
 		return Result{}, err
 	}
-	profile = profile.WithNameComparer(loaded.Comparer())
+	names, err := namealiases.Comparer(q, loaded.Comparer())
+	if err != nil {
+		return Result{}, err
+	}
+	profile = profile.WithNameComparer(names)
 	res.Matches = match.Rank(profile, probe, kept, opts.Limit)
 	return res, nil
 }

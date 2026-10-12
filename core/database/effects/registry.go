@@ -214,6 +214,9 @@ var registry = map[string]Effect{
 	"name_format_profile_parts":   {None: true},
 	"name_format_profile_roles":   {None: true},
 	"name_format_profile_weights": {None: true},
+	"name_alias_tables":           {None: true},
+	"name_alias_members":          {None: true},
+	"name_alias_roles":            {None: true},
 	"project_settings":            {None: true},
 	"file_derivatives":            {Entity: "file_derivative", None: true},
 }

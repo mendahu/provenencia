@@ -196,6 +196,71 @@ func TestOpenCatalogDoesNotHealSubjectTypes(t *testing.T) {
 	}
 }
 
+func TestOpenCatalogDoesNotSeedAliasTables(t *testing.T) {
+	c, err := database.Create(t.TempDir(), "t.provenencia")
+	if err != nil {
+		t.Fatal(err)
+	}
+	dir := c.Dir()
+	if err := c.Close(); err != nil {
+		t.Fatal(err)
+	}
+	c, err = OpenCatalog(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	db, err := c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var n int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM name_alias_tables`).Scan(&n); err != nil {
+		t.Fatal(err)
+	}
+	if n != 0 {
+		t.Fatalf("open seeded %d alias tables", n)
+	}
+}
+
+func TestOpenCatalogDoesNotHealAliasTables(t *testing.T) {
+	ident := t.TempDir()
+	parent := t.TempDir()
+	created, err := Complete(ident, parent, "Jake", "Alias Heal")
+	if err != nil {
+		t.Fatal(err)
+	}
+	c, err := OpenCatalog(created.ProjectDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	db, err := c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`DELETE FROM name_alias_tables WHERE key = 'abbreviations' AND origin = 'provenencia'`); err != nil {
+		t.Fatal(err)
+	}
+	c.Close()
+
+	c, err = OpenCatalog(created.ProjectDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	db, err = c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var n int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM name_alias_tables WHERE key = 'abbreviations'`).Scan(&n); err != nil {
+		t.Fatal(err)
+	}
+	if n != 0 {
+		t.Fatalf("open restored abbreviations: %d", n)
+	}
+}
+
 func runSourceTypeDelete(c *database.Catalog, userID, id []byte) error {
 	_, _, err := writes.Run(c, writes.Op{Action: "delete_source_type", UserID: userID},
 		func(tx *database.Tx) (struct{}, []rowchange.Change, error) {

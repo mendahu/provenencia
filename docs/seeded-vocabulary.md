@@ -533,6 +533,42 @@ default_name_format_id = <uuid of western profile>
 
 New catalogs install this profile at create. The rows are the `seedProfiles` list in `core/database/nameformats/registry.go` (`nameformats.Install`), including the role and weight rows in [`structured-name-model.md`](structured-name-model.md) §4. Adding a profile is another entry in that list. Existing catalogs get the empty tables and no seed rows. Additional cultural profiles are **TBD**.
 
+## 4.5 Abbreviation and nickname tables
+
+Schema: `name_alias_tables`, `name_alias_members`, `name_alias_roles`. Rows are create-time Install, not SQL seeds. The product lists are `productAliasTables` in `core/match/registry.go` (`namealiases.Install`).
+
+Origin is the only attribution: `provenencia`, `user`, or `plugin:<id>`, unique on `(key, origin)`. Every installed table is consulted. Origin does not turn a table off. There is no editor UI.
+
+`kind` is `abbreviation` or `nickname`. Both score 0.98 in matching, above a fold-only pair. A set is every `name_alias_members` row that shares `set_idx`. Tokens are normalized comparison forms (`Jas.` is `jas`). `name_alias_roles` lists the part roles that may use the table. The product lists allow `given`, `nick`, and `untyped`.
+
+Product sets:
+
+```text
+abbreviations
+  james jas
+  william wm
+  charles chas
+  thomas thos
+  george geo
+  elizabeth eliz
+  john jno
+  robert robt
+
+nicknames
+  james jim jimmy
+  william bill will billy
+  robert bob rob
+  john jack
+  thomas tom
+  charles chuck charlie
+  richard dick rick
+  edward ted ed
+  elizabeth liz beth betty
+  margaret peggy meg
+```
+
+`Register` appends a table for a future plugin. Install writes whatever is registered at catalog create. Open does not heal. An empty catalog keeps the in-code list. Once any row exists, scoring uses the catalog rows.
+
 ---
 
 # 5. Conclusion layer

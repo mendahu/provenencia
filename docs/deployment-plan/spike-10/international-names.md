@@ -39,7 +39,7 @@ What's in place:
 ## Part 3: sound-alikes and nicknames
 
 - **Sound-alikes:** Daitch–Mokotoff as a `wordSimilarity` tier below near-spelling. Beider–Morse and cross-script transliteration are later ([`ideas/international-names.md`](../../ideas/international-names.md)).
-- **Nicknames:** a short seeded table projects can extend (Jim ↔ James, and the set S10-25 names). One table, shared with abbreviations.
+- **Nicknames:** S10-25 scores a table hit at 0.98, above the fold. Product nickname and abbreviation sets are `AliasTables` in `core/match/registry.go`. A project can add a `user` or `plugin:<id>` table. Every table is consulted. No editor UI.
 
 ## Order of work (rough)
 
