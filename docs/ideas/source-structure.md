@@ -54,5 +54,5 @@ The two problems may connect: the Evidence graph might belong to the child Sourc
 ## Related
 
 - [`source-to-source-relationships.md`](source-to-source-relationships.md): how one Source talks about another, via `mentions` / `remark`. That is commentary, not containment; this note is about containment.
-- [`evidence-graph-drag-performance.md`](evidence-graph-drag-performance.md): large graphs are also a performance problem.
+- [`archive/evidence-graph-drag-performance.md`](archive/evidence-graph-drag-performance.md): drag and first paint of a large graph.
 - Dogfood notes: *Evidence graph canvas is too small* and *Box-select and move multiple Subject cards* in [`../dogfood/ux.md`](../dogfood/ux.md).
