@@ -194,7 +194,7 @@ SLICE 3 — Combo box
 SLICE 4 — Composer and the dialogs it opens
   S10-15  Create Source: name, then type — done, #375
   ✎ S10-D3 ──▶ S10-16  Observation list rethink.
-  S10-29  Name patterns (schema, Western seed, loaders)
+  S10-29  Name patterns (schema, Western seed, loaders) — done, #377
   ✎ S10-D4 ──▶ S10-17  Name parts: split, fixed width, letter cycle
   Check: twenty observations scan. Add a bridge and a plain Observation —
          both land where the board put authoring, and you can type.
@@ -554,12 +554,7 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 
 #### S10-29 — Name patterns from the catalog
 
-| | |
-| --- | --- |
-| **In** | Migration for `name_format_profiles`, parts (natural and sorted, with a trailing separator), roles, weights, and `project_settings`. Seed `western` only. Matching and display read those rows. Loaders set `Value.NamePattern` from the project default. A catalog with no default still compares as `western`. |
-| **Out** | A per-person `name_format` Reconciliation Claim. A Spanish profile. A `patronymic` part type. `maternal_surname`. Profile-driven split in the name modal (S10-17 keeps the Western rules). |
-| **Testable** | Two names with no stored pattern still use western, and the scores match the built-in pattern. Install then Load round-trips the default to `western`. Sorted format of Vincent van Gogh is `van Gogh, Vincent`. A profile inserted only as rows formats from those rows. Every product part type has a role. |
-| **Depends on** | — |
+**Landed 2026-10-12** in [#377](https://github.com/mendahu/provenencia/pull/377). See [`completed.md`](completed.md).
 
 #### S10-30 — Date windows in matching
 
