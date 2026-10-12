@@ -56,6 +56,10 @@
 
 **Landed 2026-10-12** in [#375](https://github.com/mendahu/provenencia/pull/375). Create Source asks for the name, then the type, then the description. Focus and tab follow that order. Create still requires a name and a type.
 
+## S10-24 — Accent fold and spaced particles
+
+**Landed 2026-10-12** in [#378](https://github.com/mendahu/provenencia/pull/378). A fold-only word match scores 0.95. `José` vs `Jose` is that score; `José` vs `José` stays 1. Display, `NormalizeForm`, and `sort_key` do not fold, so the Person page still keeps both spellings. Spaced `o`, `mc`, `mac`, `st`, `d`, and `fitz` rejoin with the next word. `O Brien` matches `O'Brien`. `O.` does not.
+
 ## S10-29 — Name patterns from the catalog
 
 **Landed 2026-10-12** in [#377](https://github.com/mendahu/provenencia/pull/377). New catalogs install a Western name-format profile: part order, roles, weights, and the project default. Matching and display read those rows. A catalog with no default still compares as the built-in Western pattern. Sorted order of Vincent van Gogh is `van Gogh, Vincent`. Spanish dual surnames and a patronymic part stay unscheduled.

@@ -98,6 +98,9 @@ var nameCases = []nameCase{
 	{"identity", "initial with and without period", NameComparer{}, nv("g=J.|s=Robins"), nv("g=J|s=Robins"), 1},
 	{"identity", "non-Latin script", NameComparer{}, nv("s=蒋|g=浩"), nv("g=浩|s=蒋"), 1},
 	{"identity", "accented letters match themselves", NameComparer{}, nv("g=José|s=Núñez"), nv("g=josé|s=NÚÑEZ"), 1},
+	{"fold", "accent only", NameComparer{}, nv("g=José"), nv("g=Jose"), foldOnly},
+	{"fold", "eszett", NameComparer{}, nv("s=Groß"), nv("s=Gross"), foldOnly},
+	{"particle", "spaced O rejoins", NameComparer{}, nv("s=O Brien"), nv("s=O'Brien"), 1},
 
 	// Family words.
 	{"surname", "spelling variant", NameComparer{}, nv("g=James|s=Robbins"), nv("g=James|s=Robins"), (2*G1 + robbins*2*F) / (2 * (G1 + F))},
@@ -201,6 +204,51 @@ func TestNameComparerScores(t *testing.T) {
 				t.Fatalf("not symmetric: %.4f then %.4f", got, back)
 			}
 		})
+	}
+}
+
+func TestPeriodInitialDoesNotRejoin(t *testing.T) {
+	got, ok := (NameComparer{}).Compare(nv("s=O. Brien"), nv("s=O'Brien"))
+	if !ok {
+		t.Fatal("not comparable")
+	}
+	if math.Abs(got-1) < 1e-9 {
+		t.Fatalf("O. Brien joined into O'Brien: %.4f", got)
+	}
+}
+
+func TestLetterFoldsComeFromTheMap(t *testing.T) {
+	none := NameComparer{Words: WordRules{Folds: Set(map[rune]string{})}}
+	got, ok := none.Compare(nv("g=José"), nv("g=Jose"))
+	if !ok || math.Abs(got-foldOnly) > 1e-9 {
+		t.Fatalf("empty map dropped the accent fold: %.4f %v", got, ok)
+	}
+	got, ok = none.Compare(nv("s=Groß"), nv("s=Gross"))
+	if !ok || math.Abs(got-foldOnly) < 1e-9 {
+		t.Fatalf("empty map still folded eszett: %.4f %v", got, ok)
+	}
+	extra := map[rune]string{'ð': "d"}
+	for k, v := range LetterFolds {
+		extra[k] = v
+	}
+	with := NameComparer{Words: WordRules{Folds: &extra}}
+	got, ok = with.Compare(nv("s=Ðal"), nv("s=Dal"))
+	if !ok || math.Abs(got-foldOnly) > 1e-9 {
+		t.Fatalf("added letter did not fold: %.4f %v", got, ok)
+	}
+}
+
+func TestSpacedParticlesComeFromTheList(t *testing.T) {
+	none := NameComparer{Words: WordRules{Particles: Set([]string{})}}
+	got, ok := none.Compare(nv("s=O Brien"), nv("s=O'Brien"))
+	if !ok || math.Abs(got-1) < 1e-9 {
+		t.Fatalf("empty list still rejoined: %.4f %v", got, ok)
+	}
+	list := append(append([]string{}, SpacedParticles...), "zz")
+	extra := NameComparer{Words: WordRules{Particles: &list}}
+	got, ok = extra.Compare(nv("s=Zz Brien"), nv("s=ZzBrien"))
+	if !ok || math.Abs(got-1) > 1e-9 {
+		t.Fatalf("added particle did not rejoin: %.4f %v", got, ok)
 	}
 }
 
@@ -360,7 +408,7 @@ func TestNameComparerInvariants(t *testing.T) {
 // partWords reports whether a name's parts yield comparable words (so its
 // form is not read).
 func partWords(v Value) bool {
-	words, _ := nameWords(withForm(v, "").Name, WesternNamePattern)
+	words, _ := nameWords(withForm(v, "").Name, WesternNamePattern, nil)
 	return len(words) > 0
 }
 

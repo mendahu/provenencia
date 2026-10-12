@@ -86,10 +86,11 @@ A candidate is returned when its total reaches `MinScore`. Results are sorted by
   **Names entered in different formats still connect,** just lower. Types never block a pairing.
 - **Surnames that share nothing:** when both names have family words and none resembles any word of the other name, the score is scaled by `GivenOnlyFactor` (0.5). A surname can change at marriage, but a shared "James" alone is weak. Swapped types are not a conflict.
 - **Generations:** when both names carry suffixes and share none (Jr. vs Sr.), the score is scaled by `SuffixConflict` (0.3).
-- **Words** match when equal (1), as an initial and the word it begins (0.5), or as a near spelling at or above `FuzzyFloor` (0.8, edit-distance ratio).
+- **Words** match when equal (1), as a fold-only pair (0.95), as an initial and the word it begins (0.5), or as a near spelling at or above `FuzzyFloor` (0.8, edit-distance ratio). Near spelling compares the folded words, so an accent plus a typo does not pay for the accent twice.
+  - Folding is NFD, drop combining marks, then the replacements in `LetterFolds` (`core/match/registry.go`). Adding a letter extends comparison; the fold does not name the letters. An empty map still drops combining marks, so `José` vs `Jose` is 0.95. `José` vs `José` stays 1. Display, `NormalizeForm`, and `sort_key` do not fold, so the Person page still keeps both spellings.
   - A swap of two adjacent letters counts as one edit (Robnis ~ Robins).
   - Words of three or more letters may also differ by one added or dropped letter (Ann ~ Anne, Jon ~ John: 0.75). A substituted letter in a short word is a different name (Mary ≠ Mark).
-- **Normalization:** dashes and slashes separate words (Smith-Jones ~ Smith Jones). Apostrophes join (O'Brien ~ OBrien).
+- **Normalization:** dashes and slashes separate words (Smith-Jones ~ Smith Jones). Apostrophes join (O'Brien ~ OBrien). A word in `SpacedParticles` (`core/match/registry.go`) rejoins with the next word (`O Brien` ~ `O'Brien`). A lone initial with a period (`O.`) does not rejoin. Adding a word to that list extends comparison; the splitter does not name the words.
 - **Surname conflict:** an initial doesn't count as resembling a surname, so "S." doesn't hide a Smith/Robins conflict.
   - An initial is a lone cased letter ("J").
   - A lone character in an uncased script (蒋, 王) is a whole word.
@@ -126,8 +127,8 @@ Tests: [`core/match/names_test.go`](../core/match/names_test.go) has three layer
 When a seed finds a bug, shrink it into an exact-score case.
 
 Not yet handled:
-- **Accents, nicknames, Daitch–Mokotoff:** Spike 10, [`deployment-plan/spike-10/international-names.md`](deployment-plan/spike-10/international-names.md). Spanish dual surnames, a patronymic part, other patterns, transliteration, and calendars: [`ideas/international-names.md`](ideas/international-names.md).
-- **Abbreviations, project name frequency, spaced particles, support weighting, date windows, event and place affinity:** Spike 10, [`deployment-plan/spike-10/name-matching-enhancements.md`](deployment-plan/spike-10/name-matching-enhancements.md). Known-as, concluded values, calibration, and rejected-claim memory: [`ideas/name-matching-enhancements.md`](ideas/name-matching-enhancements.md).
+- **Nicknames, Daitch–Mokotoff:** Spike 10, [`deployment-plan/spike-10/international-names.md`](deployment-plan/spike-10/international-names.md). Spanish dual surnames, a patronymic part, other patterns, transliteration, and calendars: [`ideas/international-names.md`](ideas/international-names.md).
+- **Abbreviations, project name frequency, support weighting, date windows, event and place affinity:** Spike 10, [`deployment-plan/spike-10/name-matching-enhancements.md`](deployment-plan/spike-10/name-matching-enhancements.md). Known-as, concluded values, calibration, and rejected-claim memory: [`ideas/name-matching-enhancements.md`](ideas/name-matching-enhancements.md).
 
 **Resolution uses the same parts.** The reconciler (`core/autoreconcile/names.go`) and `NameComparer` both ignore `form`. A name with no parts is no evidence there and not comparable here. The People list also ignores `form`: it orders by the profile's sorted part order. The cache name `sort_key` is still the normalized form. That column is not a match and not the list order.
 

@@ -4,9 +4,15 @@ import (
 	"math"
 	"sort"
 	"strings"
+	"unicode"
 
 	"github.com/mendahu/provenencia/core/autoreconcile"
+	"golang.org/x/text/unicode/norm"
 )
+
+// foldOnly is a match that exists only after accent and letter folding.
+// An exact word still scores 1.
+const foldOnly = 0.95
 
 // Word-level comparison shared by NameComparer and TextComparer: splitting,
 // word similarity (initials, spelling variants), and best one-to-one pairing.
@@ -21,6 +27,12 @@ type WordRules struct {
 	// ShortVariantMinLength: words at least this long may differ by one
 	// added or dropped letter below FuzzyFloor (Ann ~ Anne).
 	ShortVariantMinLength *int
+	// Particles rejoin with the following word. Nil uses SpacedParticles.
+	// An empty list rejoins nothing. A period initial never rejoins.
+	Particles *[]string
+	// Folds replaces letters that do not decompose. Nil uses LetterFolds.
+	// An empty map strips accents and substitutes nothing.
+	Folds *map[rune]string
 }
 
 // wordRules are WordRules resolved against the registry.
@@ -28,23 +40,104 @@ type wordRules struct {
 	floor, initialCredit float64
 	shortMin             int
 	initials             bool // whether lone letters match as initials
+	particles            map[string]bool
+	folds                map[rune]string
 }
 
 func (r WordRules) resolve(initials bool) wordRules {
+	list := setting(r.Particles, *DefaultWordRules.Particles)
+	particles := make(map[string]bool, len(list))
+	for _, w := range list {
+		particles[w] = true
+	}
 	return wordRules{
 		floor:         setting(r.FuzzyFloor, *DefaultWordRules.FuzzyFloor),
 		initialCredit: setting(r.InitialCredit, *DefaultWordRules.InitialCredit),
 		shortMin:      setting(r.ShortVariantMinLength, *DefaultWordRules.ShortVariantMinLength),
 		initials:      initials,
+		particles:     particles,
+		folds:         setting(r.Folds, *DefaultWordRules.Folds),
 	}
 }
 
-func splitWords(s string) []string {
-	n := autoreconcile.NormalizeForm(s)
-	if n == "" {
-		return nil
+func splitWords(s string, particles map[string]bool) []string {
+	raw := rawTokens(s)
+	var out []string
+	for i := 0; i < len(raw); i++ {
+		if i+1 < len(raw) && spacedParticle(raw[i], particles) {
+			if n := autoreconcile.NormalizeForm(raw[i] + raw[i+1]); n != "" {
+				out = append(out, n)
+			}
+			i++
+			continue
+		}
+		if n := autoreconcile.NormalizeForm(raw[i]); n != "" {
+			out = append(out, n)
+		}
 	}
-	return strings.Split(n, " ")
+	return out
+}
+
+// rawTokens splits on whitespace and on the dash and slash breaks
+// NormalizeForm uses, and keeps other punctuation so a period initial
+// can be told from a particle.
+func rawTokens(s string) []string {
+	var b strings.Builder
+	var out []string
+	flush := func() {
+		if b.Len() == 0 {
+			return
+		}
+		out = append(out, b.String())
+		b.Reset()
+	}
+	for _, r := range s {
+		if unicode.Is(unicode.Pd, r) || r == '/' || unicode.IsSpace(r) {
+			flush()
+			continue
+		}
+		b.WriteRune(r)
+	}
+	flush()
+	return out
+}
+
+func spacedParticle(raw string, particles map[string]bool) bool {
+	if periodInitial(raw) {
+		return false
+	}
+	return particles[autoreconcile.NormalizeForm(raw)]
+}
+
+// periodInitial is a lone cased letter written with a period ("O.").
+func periodInitial(raw string) bool {
+	if !strings.ContainsRune(raw, '.') {
+		return false
+	}
+	var letters []rune
+	for _, r := range raw {
+		if unicode.IsLetter(r) {
+			letters = append(letters, r)
+		}
+	}
+	return len(letters) == 1 && unicode.ToUpper(letters[0]) != unicode.ToLower(letters[0])
+}
+
+// foldWord drops accents, then applies folds. The word is already the
+// normalized comparison token. A nil or empty map still strips accents.
+func foldWord(s string, folds map[rune]string) string {
+	var b strings.Builder
+	for _, r := range norm.NFD.String(s) {
+		if unicode.Is(unicode.Mn, r) {
+			continue
+		}
+		if repl, ok := folds[r]; ok {
+			b.WriteString(repl)
+			continue
+		}
+		b.WriteRune(r)
+	}
+	return b.String()
 }
 
 // TextResemblance is how close two free-text strings are for scoring when
@@ -65,7 +158,7 @@ func TextResemblance(a, b string) float64 {
 // of words the two forms have in common (wordDice). Empty forms are not
 // comparable.
 func compareForms(a, b string, partial float64, r wordRules) (float64, bool) {
-	wa, wb := splitWords(a), splitWords(b)
+	wa, wb := splitWords(a, r.particles), splitWords(b, r.particles)
 	if len(wa) == 0 || len(wb) == 0 {
 		return 0, false
 	}
@@ -98,7 +191,11 @@ func wordSimilarity(x, y string, r wordRules) float64 {
 		}
 		return 0
 	}
-	return autoreconcile.SpellingSimilarity(x, y, r.floor, r.shortMin)
+	fx, fy := foldWord(x, r.folds), foldWord(y, r.folds)
+	if fx == fy {
+		return foldOnly
+	}
+	return autoreconcile.SpellingSimilarity(fx, fy, r.floor, r.shortMin)
 }
 
 // wordDice is the Dice overlap of two unweighted word lists under their best
