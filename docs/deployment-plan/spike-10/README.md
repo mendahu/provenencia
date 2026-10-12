@@ -15,7 +15,7 @@ Spike 9 shipped Promote and the Conclusion pages. This spike makes that app easi
 | [**International names**](international-names.md) | Design for accent folding, profiles, and what stays later |
 | [**Name-matching enhancements**](name-matching-enhancements.md) | Design for the matcher. Overlaps with international names are one PR in the plan |
 | [**Completed**](completed.md) | Finished steps |
-| [Design briefs](design/) | Claude Design — S10-D1…D14, written just before the PR |
+| [Design briefs](design/) | Claude Design — S10-D1…D13, written just before the PR. S10-D14 is descoped |
 
 ## Not this spike
 

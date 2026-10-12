@@ -1,10 +1,10 @@
 # S10-D14 — Evidence graph: zoomed-out card
 
 **Kind:** Claude Design board  
-**Status:** Open — draw this board just before **S10-46**  
+**Status:** Descoped 2026-10-11 with **S10-46**. Do not draw this board. The full card stays at every zoom.  
 **Spike:** Provenencia Spike 10 (dogfood UX)  
 **View:** Evidence graph, zoomed out (`EvidenceGraphView`)  
-**Implements later as:** PR **S10-46**  
+**Implements later as:** nothing. **S10-46** is descoped.  
 **Depends on:** Shipped subject and bridge cards ([`EvidenceSubjectCard`](../../../../macos/App/Features/EvidenceGraph/EvidenceSubjectCard.swift), [`EvidenceBridgeCard`](../../../../macos/App/Features/EvidenceGraph/EvidenceBridgeCard.swift)); kind color ([`EvidenceSubjectKindStyle`](../../../../macos/App/Features/EvidenceGraph/EvidenceSubjectKindStyle.swift))  
 **Related:** S10-02 (tiled grid and edges — not this board); S10-D6 (open file, box-select, Unpromote — a different board on this same view)  
 **Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)  
