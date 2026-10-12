@@ -511,13 +511,17 @@ private final class PVSelectTriggerSurfaceView: NSView {
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
-        // A long label's ideal width must not become an Auto Layout
-        // constraint. Pinning the hosting view with constraints let that
-        // ideal width grow the field past the caller's frame.
-        hosting.translatesAutoresizingMaskIntoConstraints = true
-        hosting.autoresizingMask = [.width, .height]
-        hosting.sizingOptions = [.minSize]
+        hosting.translatesAutoresizingMaskIntoConstraints = false
+        // The label may be wider than the caller’s frame. Let it compress
+        // instead of growing the field.
+        hosting.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         addSubview(hosting)
+        NSLayoutConstraint.activate([
+            hosting.leadingAnchor.constraint(equalTo: leadingAnchor),
+            hosting.trailingAnchor.constraint(equalTo: trailingAnchor),
+            hosting.topAnchor.constraint(equalTo: topAnchor),
+            hosting.bottomAnchor.constraint(equalTo: bottomAnchor),
+        ])
         clipsToBounds = true
     }
 
@@ -539,13 +543,8 @@ private final class PVSelectTriggerSurfaceView: NSView {
         )
     }
 
-    override func layout() {
-        super.layout()
-        hosting.frame = bounds
-    }
-
-    /// Width comes from `sizeThatFits` (the caller's frame). Reporting the
-    /// unwrapped label here made a long Promote title push the rest of the row.
+    /// Height is the chrome’s real height. Width comes from `sizeThatFits`,
+    /// so a long label cannot push the row and a short one stays readable.
     override var intrinsicContentSize: NSSize {
         NSSize(width: NSView.noIntrinsicMetric, height: max(hosting.fittingSize.height, 1))
     }
@@ -615,12 +614,12 @@ private struct PVSelectClosedLabel: View {
             .frame(minWidth: 0, alignment: .leading)
             .layoutPriority(-1)
             .background {
-                // Zero frame so the ideal-width probe cannot grow the field.
                 Text(verbatim: text)
                     .lineLimit(1)
                     .fixedSize(horizontal: true, vertical: false)
                     .hidden()
-                    .background {
+                    .accessibilityHidden(true)
+                    .overlay {
                         GeometryReader { proxy in
                             Color.clear.preference(
                                 key: PVSelectIdealWidthKey.self,
@@ -628,8 +627,6 @@ private struct PVSelectClosedLabel: View {
                             )
                         }
                     }
-                    .frame(width: 0, height: 0, alignment: .leading)
-                    .accessibilityHidden(true)
             }
             .background {
                 GeometryReader { proxy in

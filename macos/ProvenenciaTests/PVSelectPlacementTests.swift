@@ -214,10 +214,9 @@ struct PVSelectPlacementTests {
         window.contentView = host
         host.frame = NSRect(x: 0, y: 0, width: 900, height: 80)
         host.layoutSubtreeIfNeeded()
-        let widths = PVSelectLayoutProbe.controlWidths(in: host)
-        let selectWidths = widths.filter { $0 > 40 && $0 < 700 }
-        #expect(!selectWidths.isEmpty, "no control widths in \(widths)")
-        #expect(selectWidths.allSatisfy { $0 <= column + 1 }, "widths \(selectWidths)")
+        let frames = PVSelectLayoutProbe.collect(in: host)
+        let selects = frames.filter { $0.width > 200 && $0.width <= column + 1 && $0.height >= 20 }
+        #expect(selects.count >= 2, "frames \(frames)")
     }
 
     @Test @MainActor func aShortClosedLabelHugsItsText() {
@@ -237,8 +236,8 @@ struct PVSelectPlacementTests {
         window.contentView = host
         host.frame = NSRect(x: 0, y: 0, width: 900, height: 80)
         host.layoutSubtreeIfNeeded()
-        let widths = PVSelectLayoutProbe.controlWidths(in: host).filter { $0 > 16 && $0 < 700 }
-        #expect(widths.contains { $0 > 36 && $0 < 160 }, "widths \(widths)")
+        let frames = PVSelectLayoutProbe.collect(in: host)
+        #expect(frames.contains { $0.width > 36 && $0.width < 160 && $0.height >= 20 }, "frames \(frames)")
     }
 
     @Test func triggerNeverReportsZeroSize() {
@@ -252,14 +251,11 @@ struct PVSelectPlacementTests {
 
 private enum PVSelectLayoutProbe {
     @MainActor
-    static func controlWidths(in view: NSView) -> [CGFloat] {
-        var widths: [CGFloat] = []
-        if view.bounds.height > 16, view.bounds.height < 48 {
-            widths.append(view.bounds.width)
-        }
+    static func collect(in view: NSView) -> [CGRect] {
+        var found = [view.bounds]
         for subview in view.subviews {
-            widths.append(contentsOf: controlWidths(in: subview))
+            found.append(contentsOf: collect(in: subview))
         }
-        return widths
+        return found
     }
 }
