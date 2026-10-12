@@ -230,7 +230,7 @@ SLICE 6 — Lists and the Person page
 
 SLICE 7 — How names compare (no new chrome)
   S10-24  Accent fold (0.95) and spaced particles — done, #378
-  S10-25  Abbreviation and nickname tables
+  S10-25  Abbreviation and nickname tables — done, #379
   S10-26  Daitch–Mokotoff below near-spelling
   S10-27  Project name-frequency weights
   S10-28  Support-weighted scores, negative evidence, reasons name the pair
@@ -513,12 +513,7 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 
 #### S10-25 — Abbreviations and nicknames
 
-| | |
-| --- | --- |
-| **In** | Seeded, project-extensible tables for historical abbreviations (Jas., Wm., Chas., Thos., Geo., Eliz., and the rest of a short product set) and nicknames (Jim/James, and a short product set). A table hit scores just under an exact match, above the 0.95 fold. Edit distance is not how these are learned. |
-| **Out** | A UI for editing the tables beyond the vocabulary pattern the other term lists already use. Phonetics. |
-| **Testable** | Jas. vs James scores just under exact. Jim vs James does too. A researcher-added nickname participates. An unknown token still falls through to fold and edit distance. |
-| **Depends on** | S10-24 |
+**Landed 2026-10-12** in [#379](https://github.com/mendahu/provenencia/pull/379). See [`completed.md`](completed.md).
 
 #### S10-26 — Phonetic tier
 
