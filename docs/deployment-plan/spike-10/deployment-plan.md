@@ -102,7 +102,7 @@ These are the calls for this spike. The questions at the bottom are answered; no
 - **Zoomed-out grid and edges are a restore, not a new look.** Floor is `GraphCanvasCamera.minMagnification` (0.25). The grid is one repeated cell and must not turn solid black; it may fade out as a whole. Edges must fade or hold together, not disappear one at a time. No brief.
 - **Zoomed-out cards are a simpler face.** The camera stays `0.25`…`1.25`. Below about `0.65` the card paints the face from [S10-D14](design/S10-D14-zoomed-out-cards.md): the kind icon and the label, larger than on the full card, and nothing else. The full card returns only above about `0.75`, so a pinch on the boundary does not flicker. The card stays in the same place on the document. The larger type is in document points, so it scales with zoom: just under the cutoff the name is readable again; at `0.25` the card is too small for that size to hold. This is the fix for a graph that is fine up close and sluggish when every card is on screen.
 - **Only cards near the window get a hosting view.** The host still pushes every item. `GraphCanvasItemLayer` mounts an `NSHostingView` only when that card's rectangle is inside the visible document rect, plus a margin so a pan does not show an empty slot. A card that is selected or being dragged stays mounted. Positions, hit targets, and the VoiceOver rotors still cover every card; choosing a rotor entry scrolls it into view, which mounts it. Opening a graph builds the cards in the window, not the whole Source. When the zoom shows every card, they all mount — the simplified face (S10-46) is what makes that overview cheap. No brief.
-- **The canvas is covered until those cards have drawn.** The first time the graph is shown, the existing `ProgressView` sits over the canvas until the hosting views for the cards in the window have finished their first layout. Panning another card into view later does not bring the cover back. No new loading chrome, and no brief.
+- **No canvas cover.** S10-48 is descoped (2026-10-11). Drawing the card in AppKit made the first layout fast enough that a `ProgressView` over the graph is not needed, on open or while panning.
 - **Hit boxes are the painted controls.** Toolbar place/connect buttons and the bridge card's open-citation control. The card icon hit helper (`EvidenceCardLayout`) is the pattern: hits centered on what is drawn.
 - **Oldest user** means the earliest UUIDv7 `users.id`, not the first row of `ORDER BY display_name`. If the signed-in install identity is already in the project, keep selecting that person. If the project has no users, stay on create-new.
 - **Enter saves a single-line inline edit.** `PVInlineEdit` on the Property title. Do not steal Enter from a multiline description.
@@ -168,12 +168,12 @@ SLICE 1 — Evidence graph
   S10-04  Camera restored after the composer / Back / Forward
   ✎ S10-D14 ──▶ S10-46  Simplified cards when zoomed out (after S10-02)
   S10-47  Mount hosting views only for cards near the window
-  S10-48  Cover the canvas until those cards have drawn (after S10-47)
+  S10-48  Canvas cover — descoped 2026-10-11. AppKit cards draw fast enough; no spinner.
   Check: pan, zoom, open the composer, come back — same view. A toolbar click
          lands on the padding, not only the icon. Zoomed out, the grid is a
          tile and not black, and cards show the simplified face. Opening a
-         large graph at reading zoom shows a cover, then the cards in the
-         window, and does not build the rest.
+         large graph at reading zoom shows the cards in the window with no
+         loading cover, and does not build the rest.
 
 SLICE 2 — Behavior, no new chrome
   S10-05  PVTextArea shows a scrollbar when the text overflows
@@ -290,7 +290,8 @@ S10-D1                     S10-D3
 S10-02 ─┐
 S10-D14 ┴──▶ S10-46 simplified cards
 
-S10-47 mount cards near the window (no brief) ──▶ S10-48 canvas cover
+S10-47 mount cards near the window (no brief)
+S10-48 canvas cover — descoped 2026-10-11
 
 S10-09 persist ──▶ S10-40 list scroll
              └──▶ S10-41 sources filters (after S10-22; D8 draws the chrome)
@@ -372,12 +373,7 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 
 #### S10-48 — Cover the canvas until the visible cards have drawn
 
-| | |
-| --- | --- |
-| **In** | When the graph is shown, lay the existing `ProgressView` over the canvas until the hosting views for the cards in the window (S10-47) have finished their first layout. The header stays visible. The cover then goes away. Panning a card into view later does not show it again. |
-| **Out** | A new loading component. A cover while the query handles are still missing (that `ProgressView` already replaces the destination). A cover on every pan or zoom. |
-| **Testable** | Open a Source of about a hundred subjects: the canvas is covered, then the cards in the window appear and the cover is gone. Pan to a card that was off screen: no cover. A small graph does not leave the cover up. |
-| **Depends on** | S10-47 |
+**Descoped 2026-10-11**, in [#367](https://github.com/mendahu/provenencia/pull/367). Drawing subject and bridge cards in AppKit made the first layout fast enough. The graph does not lay a `ProgressView` over the canvas on open, and panning or zooming does not show one either. The cover that already replaces a destination while its query handles are missing stays as it is.
 
 ### Slice 2 — Behavior, no new chrome
 
