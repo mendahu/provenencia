@@ -14,7 +14,7 @@ Usability fixes from [`docs/dogfood/ux.md`](../../dogfood/ux.md) after Spike 9, 
 
 **By spike close**, each of these is true on a real project:
 
-1. **Composer stays usable at 20 Observations.** Rows are easy to scan, a new Observation appears at the top and is focused, and Auto Transcribe is not sitting on the Citation menu.
+1. **Composer stays usable at 20 Observations.** Saved rows scan. Adding an Observation is the same for a bridge and a plain Observation, and you are already looking at it, ready to type. A bridge between two subjects on this Source can be started here, and another after it, without a trip back to the Evidence graph. A saved row can be duplicated into a new unsaved form. Choosing a Citation does not start Auto Transcribe.
 2. **The Evidence graph holds a real Source.** The canvas grows before cards hit the edge. Pan and zoom survive a trip to the composer. The grid is a tile, so a zoomed-out or grown document does not turn the background into one giant bitmap. Zoomed-out edges stay legible. The card stays the full card at every zoom. Button hits match the buttons. A hotkey or toolbar control box-selects cards and moves them together.
 3. **Files.** A transcription that overflows shows a scrollbar. A file dropped on the Artifact section uploads. The file opens from the collapsed row and from the Evidence graph.
 4. **Lists.** Sources, People, Events, and Places show when the row last changed. Leaving a list and coming back lands at the same scroll position. The Sources list remembers sort, type filter, evidence-status filter, and text search.
@@ -62,7 +62,7 @@ Usability fixes from [`docs/dogfood/ux.md`](../../dogfood/ux.md) after Spike 9, 
 | Related event types + place chains | S10-31 | — |
 | Depiction value type + `likeness` | S10-32 | — |
 | Crop cache | S10-33 | — |
-| Composer depiction row | S10-34 | S10-D3 (same board as S10-16) |
+| Composer depiction row | S10-34 | S10-D15 |
 | Person gallery + list thumb | S10-35 | S10-D12, S10-D9 |
 | Preferred portrait | S10-39 | S10-D12, S10-D9 (same boards as S10-35) |
 | Promote compares two crops | S10-36 | S10-D13 |
@@ -91,8 +91,7 @@ Usability fixes from [`docs/dogfood/ux.md`](../../dogfood/ux.md) after Spike 9, 
 
 These are the calls for this spike. The questions at the bottom are answered; nothing in them still blocks a PR.
 
-- **Add lands at the top for every Observation**, bridge or not. Today `CitationConnections` inserts a bridge at index 0 and `CitationObservationRows.addDraft` appends. Focus follows the new row's property search (the composer already stores `focusedID`; Add does not move keyboard focus into that combo box).
-- **Auto Transcribe moves off the Citation menu's corner.** In the composer form, the Citation `PVSelect` and the Auto Transcribe button both sit on the trailing edge of the left column (`CitationComposerFormPane`), which is why the misclick happens. The confirm-before-overwrite stays.
+- **The observation list is S10-D3.** The board reconsiders the whole citation composer against the requirements. It is not a list of features added to the current form. Outcomes, not a layout: at 20 observations the rows scan; a bridge and a plain observation are added the same way, and the new one is where you are looking; keyboard focus enters the first field; choosing a citation does not start Auto Transcribe or Paste. A bridge between two subjects on this Source can be started in the composer, saved, and followed by another, without returning to the Evidence graph. The pair of kinds picks the bridge type. The role or type starts empty. If the saved list is grouped by subject, a bridge is shown under each end and both lines are that one bridge. A saved row can be duplicated into the new-observation form with the same values; that copy is not saved until the researcher saves it. Connect on the graph still opens the composer with the ends filled, and the server still places the card at the midpoint. Today `CitationConnections` inserts a bridge at index 0 and `CitationObservationRows.addDraft` appends, and `focusedID` does not move keyboard focus. The Citation `PVSelect` and the Auto Transcribe / Paste button share the trailing edge of the form column. Confirm-before-overwrite stays. The brief owns the layout, including its seeds and the two whole-composer directions. Insert-at-top is not required.
 - **An adaptive choice field is not in this spike.** S10-14 and S10-D1 are descoped (2026-10-12). Term fields keep the control they have. The composer rethink does not swap a short list to radios or a long list to a combo box.
 - **A default role does not cover a repeated cluster.** S10-10 is descoped (2026-10-12). Prefilling `subject` or `part_of` on a generic new connection stays out. Placing a wedding, birth, or residence in one action, and pasting a cluster already on the canvas, are [`ideas/evidence-graph-structure-shortcuts.md`](../../ideas/evidence-graph-structure-shortcuts.md).
 - **Date prefill is silent.** First match in the transcription, current locale, Gregorian patterns a genealogist actually types (day month year, month day year, year alone, ISO). 80–90% is the bar. No "suggested" chrome, so the date modal does not need a brief. Year is focused even when the prefill is empty. Landed in S10-13.
@@ -140,7 +139,7 @@ These are the calls for this spike. The questions at the bottom are answered; no
 | Brief | View | Gates | Later on the same view |
 | --- | --- | --- | --- |
 | **S10-D1** | Adaptive choice field (kit board) | **S10-14**, descoped 2026-10-12 | — |
-| **S10-D3** | Citation composer | **S10-16** | S10-34 depiction row |
+| **S10-D3** | Citation composer | **S10-16** | — |
 | **S10-D4** | Name parts modal | **S10-17** | Design after S10-29, so the type list includes `patronymic` |
 | **S10-D5** | Source page — Artifacts | **S10-18** | — |
 | **S10-D6** | Evidence graph | **S10-18** header open | S10-20 box-select. S10-44 Unpromote on the promoted card |
@@ -152,8 +151,9 @@ These are the calls for this spike. The questions at the bottom are answered; no
 | **S10-D12** | Person detail | **S10-23** | S10-35 gallery and S10-39 preferred portrait. Design both with the gender treatment, before S10-23 |
 | **S10-D13** | Promote page | **S10-36** | Evidence sheet shows two crops |
 | **S10-D14** | Evidence graph — zoomed-out card | **S10-46**, descoped 2026-10-11 | — |
+| **S10-D15** | Citation composer — depiction row | **S10-34** | — |
 
-S10-D6 is one board for the graph's new controls (open file, box-select, Unpromote). S10-01…S10-04 do not wait on it. S10-D14, the zoomed-out face, is descoped with S10-46 and is not drawn. S10-D1, the adaptive choice field, is descoped with S10-14 and is not drawn. Term fields keep the control they have. S10-D2 is not drawn: name-then-type on Create Source is a field swap, so S10-15 stands on its own. S10-D9…D11 are three briefs for the shared conclusion lists. Events and Places specify the same last-updated cell as Persons so `ConclusionListPage` does not grow three treatments. S10-D8 is the Sources list, a different page, and it gates S10-41. That board draws the same last-updated cell, the evidence-status filter, and text search. Sort, type, status, query, and session scroll ship from that one board. D9…D11 do not draw those controls, and S10-22 does not change the Sources list. Only the Persons list thumb becomes a likeness. S10-D3, S10-D6, S10-D9, and S10-D12 each cover a later PR on that same view, so those briefs are written with the later frame in them. D12 includes the preferred-portrait control S10-39 fills, and D9 includes that crop as the list thumb. Whichever of D8 and D9 is designed first draws the last-updated cell; the other copies it.
+S10-D6 is one board for the graph's new controls (open file, box-select, Unpromote). S10-01…S10-04 do not wait on it. S10-D14, the zoomed-out face, is descoped with S10-46 and is not drawn. S10-D1, the adaptive choice field, is descoped with S10-14 and is not drawn. Term fields keep the control they have. S10-D2 is not drawn: name-then-type on Create Source is a field swap, so S10-15 stands on its own. S10-D9…D11 are three briefs for the shared conclusion lists. Events and Places specify the same last-updated cell as Persons so `ConclusionListPage` does not grow three treatments. S10-D8 is the Sources list, a different page, and it gates S10-41. That board draws the same last-updated cell, the evidence-status filter, and text search. Sort, type, status, query, and session scroll ship from that one board. D9…D11 do not draw those controls, and S10-22 does not change the Sources list. Only the Persons list thumb becomes a likeness. S10-D6, S10-D9, and S10-D12 each cover a later PR on that same view, so those briefs are written with the later frame in them. The depiction row is its own brief, S10-D15, written just before S10-34. S10-D3 does not draw it. D12 includes the preferred-portrait control S10-39 fills, and D9 includes that crop as the list thumb. Whichever of D8 and D9 is designed first draws the last-updated cell; the other copies it.
 
 ## PR sequence
 
@@ -194,11 +194,13 @@ SLICE 3 — Combo box
 SLICE 4 — Composer and the dialogs it opens
   S10-15  Create Source: name, then type — done, #375
   ✎ S10-D3 ──▶ S10-16  Observation list rethink.
-                       The board also draws the depiction row S10-34 fills.
   S10-29  Name patterns (patronymic, western + Spanish profiles) — before D4
   ✎ S10-D4 ──▶ S10-17  Name parts: split, fixed width, letter cycle
-  Check: add an Observation — it is at the top and focused. Auto Transcribe
-         is not beside the Citation menu. "Smith, John"
+  Check: twenty observations scan. Add a bridge and a plain Observation —
+         both land where the board put authoring, and you can type.
+         Start a relationship between two people without leaving, then
+         another. Duplicate a saved row, change one value, save: the
+         original is still there. Choosing a citation does not start Auto Transcribe. "Smith, John"
          splits to Surname, Given. Patronymic is in the type list. Pressing S
          twice reaches Surname.
 
@@ -244,7 +246,7 @@ SLICE 7 — How names compare (no new chrome)
 SLICE 8 — Likeness
   S10-32  depiction value type + likeness on person
   S10-33  Crop cache (File + locator), minted on save
-  S10-34  Composer depiction row (S10-D3 already designed)
+  ✎ S10-D15 ──▶ S10-34  Composer depiction row (after S10-16)
   ✎ S10-D13 ──▶ S10-36  Promote evidence sheet shows the two crops
   S10-35  Person gallery + Persons list thumb (S10-D12 and S10-D9 already designed)
   S10-39  Preferred portrait leads the page and the list (same boards)
@@ -297,7 +299,7 @@ S10-29 patterns ──▶ S10-D4 ──▶ S10-17 name parts
 S10-24 fold ──▶ S10-25 tables ──▶ S10-26 phonetic
 S10-28 support + negatives (after S10-24, so fixtures settle once)
 
-S10-32 depiction type ──▶ S10-33 crop cache ──▶ S10-34 composer row (after S10-16)
+S10-32 depiction type ──▶ S10-33 crop cache ──▶ S10-34 composer row (after S10-16; ✎ S10-D15)
                       └──▶ S10-36 Promote crops
 S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) ──▶ S10-39 preferred
 ```
@@ -396,13 +398,13 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 
 #### S10-16 — Observation list rethink
 
-**Brief:** S10-D3.
+**Brief:** [S10-D3](design/S10-D3-citation-composer.md).
 
 | | |
 | --- | --- |
-| **In** | Per S10-D3: Observations are visually separate, and the fields inside a row are easy to tell apart. Add (bridge or not) inserts at the top and moves keyboard focus to that row's property search. Auto Transcribe (and the PDF paste control, which sits in the same slot) moves off the Citation menu's corner. Term fields keep the control they have (S10-14 is descoped). Still comfortable at 20 Observations (S10-11's bar). |
-| **Out** | Name parts modal (S10-17). Date modal (S10-13). The depiction row itself (S10-34 fills the frame this brief already draws). An adaptive choice field. |
-| **Testable** | Twenty rows: you can see where one ends. Add a bridge and a plain Observation: both appear at the top, search focused. Reaching for the Citation menu does not start Auto Transcribe. |
+| **In** | Per S10-D3. Saved observations scan at 20. Adding a bridge and a plain observation is one behavior, and the new one is where you are looking, with keyboard focus in the first field. A bridge between two subjects on this Source can be started here, saved, and followed by another, without returning to the Evidence graph. A saved row can be duplicated into that form with the same values, unsaved until the researcher saves. Choosing a citation does not start Auto Transcribe or Paste. A citation with no transcription is still distinguishable. Term fields keep their control (S10-14 is descoped). The layout stays comfortable at 20 observations (S10-11's bar). |
+| **Out** | Name parts modal (S10-17). Date modal (S10-13). The depiction row (S10-34, brief S10-D15). An adaptive choice field. A new bridge kind. Prefilling a role. Replacing Connect on the graph. |
+| **Testable** | Twenty rows: you can read each one and see where it ends. Add a bridge and a plain observation: both land in the place the board chose, and you can type without clicking first. Start a relationship between two people on this Source, save it, and start another without leaving. Back on the graph, the card is between them. If the list is grouped by subject, that relationship is under each person, and editing one line changes the other. Duplicate a saved participation, change the person, and save: the original is unchanged and the new row has the other person. A person and a place do not make a bridge. Choosing a citation does not start Auto Transcribe. A citation with an empty transcription is distinguishable from the others. |
 | **Depends on** | S10-D3 |
 
 #### S10-17 — Name parts split and type control
@@ -609,14 +611,14 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 
 #### S10-34 — Composer depiction row
 
-**Brief:** S10-D3, already designed for S10-16.
+**Brief:** S10-D15, written just before this PR. Not drawn on S10-D3.
 
 | | |
 | --- | --- |
-| **In** | The depiction row the board drew: pick the region, leave transcription empty, save a likeness (or another depiction property, if the board shows only likeness). The row uses the same add-at-top and focus rules as S10-16. |
-| **Out** | A new composer layout. Gallery (S10-35). |
+| **In** | Per S10-D15: pick the region, leave transcription empty, save a likeness (or another depiction property, if the board shows only likeness). The row uses the authoring place and focus rules from S10-16. |
+| **Out** | The observation-list rethink (S10-16). Gallery (S10-35). |
 | **Testable** | Draw a face on a group photo, add a likeness, save. The row shows the crop. Transcription can be empty. |
-| **Depends on** | S10-16, S10-33, S10-D3 |
+| **Depends on** | S10-16, S10-33, S10-D15 |
 
 #### S10-35 — Person gallery and list thumb
 
@@ -713,8 +715,8 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 
 ## Gotchas
 
-- **Bridge rows and plain rows are different types.** Add-at-top has to stay true after reload, not only on the draft. Connections are grouped by bridge in `CitationConnections`; plain rows append in `CitationObservationRows`. One insert rule, both lists, and the saved order the composer shows has to match.
-- **Focus and the new row.** `focusedID` is set on add today and does not move keyboard focus into the property combo box. The rethink wants both: row at top, field focused.
+- **Bridge rows and plain rows are different types.** The order S10-D3 chooses has to stay true after reload, not only on the draft. Connections are grouped by bridge in `CitationConnections`; plain rows append in `CitationObservationRows`. One rule for both lists, and the saved order the composer shows has to match.
+- **Focus is keyboard focus.** `focusedID` is set on add today and does not move keyboard focus into the property combo box. S10-D3 requires the first field you type to actually take focus.
 - **`PVSelect` letter jump is one step.** `handleTriggerKey` sends `.character` once. Cycling is a session change for every select, not a name-modal special case. Width is the opposite: do not make every select as wide as its longest option.
 - **Growing the canvas moves clamps.** Landed in S10-03. A small graph still opens on 4000×4000, and `maxCell` for that board stays 96×98. A card near the edge extends the document. Stored card coordinates stay valid.
 - **Camera vs document size.** Landed in S10-04. Restoring an offset after the document grows clamps, and growth itself does not jump the view back to 1×.

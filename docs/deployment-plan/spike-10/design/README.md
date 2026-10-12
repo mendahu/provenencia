@@ -10,7 +10,7 @@ Brief files are written **just before** the PR they gate, not up front. This ind
 
 | Step | View | Gates | Notes |
 | --- | --- | --- | --- |
-| S10-D3 | Citation composer | **S10-16** | Observation rows, add-at-top, focus, Auto Transcribe. Also draws the depiction row **S10-34** fills. Term fields keep their current control |
+| S10-D3 | Citation composer | **S10-16** | Written: [S10-D3-citation-composer.md](S10-D3-citation-composer.md). Whole composer, drawn again against the requirements. Two directions. No depiction row |
 | S10-D4 | Name parts modal | **S10-17** | Split, fixed-width type control. Design after **S10-29** so `patronymic` is in the list |
 | S10-D5 | Source page — Artifacts | **S10-18** | Drop target and open-on-collapsed-row |
 | S10-D6 | Evidence graph | **S10-18** (header open) | Also specifies box-select, which ships in **S10-20**, and Unpromote on the promoted card, which ships in **S10-44**. Hit boxes, the tiled grid, canvas growth, and camera restore are not this board |
@@ -21,6 +21,7 @@ Brief files are written **just before** the PR they gate, not up front. This ind
 | S10-D11 | Places list | **S10-22** | |
 | S10-D12 | Person detail | **S10-23** | Sex / gender (`man`, `woman`, `non_binary`, extensible), the likeness gallery **S10-35** fills, and the preferred-portrait control **S10-39** fills. Design all of that before S10-23 |
 | S10-D13 | Promote page | **S10-36** | Evidence sheet shows two crops |
+| S10-D15 | Citation composer — depiction row | **S10-34** | Own board, written just before S10-34. After the observation-list rethink |
 
 ## Descoped
 
