@@ -350,7 +350,7 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 
 #### S10-46 — Simplified cards when zoomed out
 
-**Descoped 2026-10-11**, in [#367](https://github.com/mendahu/provenencia/pull/367). Drawing the card in AppKit made the zoomed-out graph fast enough. The full card stays at every magnification in `0.25`…`1.25`. [S10-D14](design/S10-D14-zoomed-out-cards.md) is not drawn.
+**Descoped 2026-10-11**, in [#367](https://github.com/mendahu/provenencia/pull/367). Drawing the card in AppKit made the zoomed-out graph fast enough. The full card stays at every magnification in `0.25`…`1.25`. S10-D14 is not drawn.
 
 #### S10-47 — Mount hosting views only for cards near the window
 

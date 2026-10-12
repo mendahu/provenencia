@@ -26,9 +26,7 @@ Brief files are written **just before** the PR they gate, not up front. This ind
 
 ## Descoped
 
-| Step | View | Was | Notes |
-| --- | --- | --- | --- |
-| S10-D14 | Evidence graph — zoomed-out card | **S10-46** | Descoped 2026-10-11 with S10-46. The full card stays at every zoom. Do not draw this board |
+S10-D14, the zoomed-out card, was descoped 2026-10-11 with S10-46. The full card stays at every zoom. The brief is not kept.
 
 ## Done
 
