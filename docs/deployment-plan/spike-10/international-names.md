@@ -38,7 +38,7 @@ What's in place:
 
 ## Part 3: sound-alikes and nicknames
 
-- **Sound-alikes:** Daitch–Mokotoff as a `wordSimilarity` tier below near-spelling. Beider–Morse and cross-script transliteration are later ([`ideas/international-names.md`](../../ideas/international-names.md)).
+- **Sound-alikes:** Daitch–Mokotoff was descoped with S10-26. The design is [`ideas/daitch-mokotoff.md`](../../ideas/daitch-mokotoff.md). Beider–Morse and cross-script transliteration stay later ([`ideas/international-names.md`](../../ideas/international-names.md)).
 - **Nicknames:** S10-25 scores a table hit at 0.98, above the fold. The product seed is `productAliasTables` in `core/match/registry.go`, written at catalog create. Scoring reads the catalog only. Opening a project loads those rows once onto the catalog graph and keeps them until the project closes; `namealiases.Invalidate` reloads them. A project can add a `user` or `plugin:<id>` table. Every installed table is consulted. No editor UI.
 
 ## Order of work (rough)
@@ -46,7 +46,7 @@ What's in place:
 1. Accent folding in matching's word comparison, with the 0.95 folded-match tier. S10-24 did this. It needs no cache change.
 2. Name format profiles carry role maps and weights. S10-29 did this for `western`. Further profiles are unscheduled.
 3. Locale collation for sorted lists. The locale is a project setting, default `en`, with no picker. A picker is later.
-4. Nickname tables, then Daitch–Mokotoff. Transliteration is later.
+4. Nickname tables. Daitch–Mokotoff was descoped (S10-26). Transliteration is later.
 
 ## Decisions
 

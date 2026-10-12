@@ -56,6 +56,10 @@
 
 **Landed 2026-10-12** in [#375](https://github.com/mendahu/provenencia/pull/375). Create Source asks for the name, then the type, then the description. Focus and tab follow that order. Create still requires a name and a type.
 
+## S10-26 — Phonetic tier
+
+**Descoped 2026-10-12.** Daitch–Mokotoff under near-spelling is [`ideas/daitch-mokotoff.md`](../../ideas/daitch-mokotoff.md). Lee is `800000` and Leigh is `850000`, so they do not meet. Smyth/Smith stays on edit distance.
+
 ## S10-25 — Abbreviations and nicknames
 
 **Landed 2026-10-12** in [#379](https://github.com/mendahu/provenencia/pull/379). An abbreviation or nickname table hit scores 0.98. `Jas.` vs `James` and `Jim` vs `James` are that score. `José` vs `Jose` stays 0.95. Every installed table is consulted. Origin records whether the app, a user, or a plugin contributed it. Product tables apply to given names, nicknames, and untyped words. New catalogs install the product lists. Open does not heal them. There is no editor UI.

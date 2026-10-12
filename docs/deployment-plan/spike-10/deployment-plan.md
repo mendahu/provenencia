@@ -6,7 +6,7 @@ Usability fixes from [`docs/dogfood/ux.md`](../../dogfood/ux.md) after Spike 9, 
 
 ## Status
 
-**Open.** Slice 1 is done (2026-10-11). S10-01…S10-04 landed in [#361](https://github.com/mendahu/provenencia/pull/361)–[#364](https://github.com/mendahu/provenencia/pull/364). S10-05, S10-07, S10-08, S10-12, S10-13, S10-15, S10-42, and S10-43 landed in [#368](https://github.com/mendahu/provenencia/pull/368), [#369](https://github.com/mendahu/provenencia/pull/369), [#370](https://github.com/mendahu/provenencia/pull/370), [#371](https://github.com/mendahu/provenencia/pull/371), [#372](https://github.com/mendahu/provenencia/pull/372), [#375](https://github.com/mendahu/provenencia/pull/375), [#373](https://github.com/mendahu/provenencia/pull/373), and [#374](https://github.com/mendahu/provenencia/pull/374) (2026-10-12). S10-46, S10-47, and S10-48 were descoped in [#367](https://github.com/mendahu/provenencia/pull/367). S10-06 was descoped in [#368](https://github.com/mendahu/provenencia/pull/368): searching `marriage` already lists a title that contains the word ahead of a fuzzy name. S10-10 was descoped in [#370](https://github.com/mendahu/provenencia/pull/370): a common cluster belongs in [`ideas/evidence-graph-structure-shortcuts.md`](../../ideas/evidence-graph-structure-shortcuts.md), which covers more than a default role. S10-11 was already done in [#356](https://github.com/mendahu/provenencia/pull/356): a citation with 70 Observations opens quickly. S10-14 and S10-D1 were descoped in [#370](https://github.com/mendahu/provenencia/pull/370): an adaptive choice field is not a priority for this spike. Later landings go in [`completed.md`](completed.md).
+**Open.** Slice 1 is done (2026-10-11). S10-01…S10-04 landed in [#361](https://github.com/mendahu/provenencia/pull/361)–[#364](https://github.com/mendahu/provenencia/pull/364). S10-05, S10-07, S10-08, S10-12, S10-13, S10-15, S10-42, and S10-43 landed in [#368](https://github.com/mendahu/provenencia/pull/368), [#369](https://github.com/mendahu/provenencia/pull/369), [#370](https://github.com/mendahu/provenencia/pull/370), [#371](https://github.com/mendahu/provenencia/pull/371), [#372](https://github.com/mendahu/provenencia/pull/372), [#375](https://github.com/mendahu/provenencia/pull/375), [#373](https://github.com/mendahu/provenencia/pull/373), and [#374](https://github.com/mendahu/provenencia/pull/374) (2026-10-12). S10-46, S10-47, and S10-48 were descoped in [#367](https://github.com/mendahu/provenencia/pull/367). S10-06 was descoped in [#368](https://github.com/mendahu/provenencia/pull/368): searching `marriage` already lists a title that contains the word ahead of a fuzzy name. S10-10 was descoped in [#370](https://github.com/mendahu/provenencia/pull/370): a common cluster belongs in [`ideas/evidence-graph-structure-shortcuts.md`](../../ideas/evidence-graph-structure-shortcuts.md), which covers more than a default role. S10-11 was already done in [#356](https://github.com/mendahu/provenencia/pull/356): a citation with 70 Observations opens quickly. S10-14 and S10-D1 were descoped in [#370](https://github.com/mendahu/provenencia/pull/370): an adaptive choice field is not a priority for this spike. S10-26 was descoped 2026-10-12: Daitch–Mokotoff is [`ideas/daitch-mokotoff.md`](../../ideas/daitch-mokotoff.md). Later landings go in [`completed.md`](completed.md).
 
 > **Goal of this spike:** the annoyances logged while entering real research are gone, and the app still behaves the way Spike 8 and Spike 9 decided.
 
@@ -54,7 +54,7 @@ Usability fixes from [`docs/dogfood/ux.md`](../../dogfood/ux.md) after Spike 9, 
 | Show sex / gender on the Person detail page | S10-23 | S10-D12 |
 | Accent folding + spaced particles | S10-24 | — |
 | Abbreviations + nicknames | S10-25 | — |
-| Phonetic tier (Daitch–Mokotoff) | S10-26 | — |
+| Phonetic tier (Daitch–Mokotoff) | S10-26, descoped 2026-10-12 | — |
 | Name frequency in this project | S10-27 | — |
 | Support weighting + negative evidence | S10-28 | — |
 | Name patterns: schema, Western seed, loaders | S10-29 | — |
@@ -84,6 +84,7 @@ Usability fixes from [`docs/dogfood/ux.md`](../../dogfood/ux.md) after Spike 9, 
 
 - [Depictions leftovers](../../ideas/depictions-and-likenesses.md) — other keys, signature, transparent polygon, Windows PDF draw.
 - [International-name leftovers](../../ideas/international-names.md) — other name patterns, transliteration, Beider–Morse, calendars and double dating, per-person `name_format`, a collation picker.
+- [Daitch–Mokotoff](../../ideas/daitch-mokotoff.md) — phonetic tier under near-spelling. Replaces S10-26. Lee and Leigh do not share a code.
 - [Name-matching leftovers](../../ideas/name-matching-enhancements.md) — population frequency, known-as, concluded values, calibration, researcher-defined weights, age-to-birth-year, rejected-claim memory, blocking.
 - [Evidence graph structure shortcuts](../../ideas/evidence-graph-structure-shortcuts.md) — place a wedding, birth, or residence in one action, or paste a cluster already on the canvas. Replaces S10-10.
 
@@ -120,7 +121,7 @@ These are the calls for this spike. The questions at the bottom are answered; no
 - **Artifact drop already exists inside the Add dialogs** (`IngestFileDropRow` on create and attach). It does not exist on the Artifact section of the Source page. S10-18 adds the section target. Open File today is only in the expanded detail (`SourcePageArtifactsView.artifactPrimaryFileColumn`). The Evidence graph header has no open-file control.
 - **Name part types stay a select.** The compiled list is unchanged by S10-29. It is still a fixed-width `PVSelect`. User-minted part types stay out. The Western split rules in S10-17 do not become profile-aware.
 - **Accent fold is matching only.** `wordSimilarity` scores a fold-only match at 0.95. `autoreconcile.NormalizeForm` and `sort_key` stay as they are, so José and Jose remain separate groupings on the Person page. Display never folds.
-- **Word tiers, top to bottom:** exact, abbreviation or nickname (just under exact), accent fold (0.95), the existing near-spelling score, then Daitch–Mokotoff. Spaced particles (`O`, `Mc`, `Mac`, `St`, `D`, `Fitz`, and the rest of that short list) rejoin with the next word before scoring. A lone initial (`O.`) does not rejoin.
+- **Word tiers, top to bottom:** exact, abbreviation or nickname (just under exact), accent fold (0.95), then the existing near-spelling score. Daitch–Mokotoff, which would sit under near-spelling, is descoped ([`ideas/daitch-mokotoff.md`](../../ideas/daitch-mokotoff.md)). Spaced particles (`O`, `Mc`, `Mac`, `St`, `D`, `Fitz`, and the rest of that short list) rejoin with the next word before scoring. A lone initial (`O.`) does not rejoin.
 - **Abbreviation and nickname tables are seeded vocabulary** a project can extend, same as `role`. Not a compiled-only list, and not a population file.
 - **Name frequency is this project's inverse frequency** over name words. No seeded census of names.
 - **Support weighting and negatives land together.** A value counts in proportion to its support, and a negative Observation is a contradiction. Reasons name the two values that scored. A concluded value does not get a special weight: Reconciliation Claims are not in this spike.
@@ -231,7 +232,7 @@ SLICE 6 — Lists and the Person page
 SLICE 7 — How names compare (no new chrome)
   S10-24  Accent fold (0.95) and spaced particles — done, #378
   S10-25  Abbreviation and nickname tables — done, #379
-  S10-26  Daitch–Mokotoff below near-spelling
+  S10-26  Daitch–Mokotoff below near-spelling — descoped. See ideas/daitch-mokotoff.md.
   S10-27  Project name-frequency weights
   S10-28  Support-weighted scores, negative evidence, reasons name the pair
   S10-30  Date windows, ABT-on-spans, date vs start/end
@@ -295,7 +296,8 @@ S10-D12 (gender + gallery + preferred portrait) ──▶ S10-23
 S10-D4 ──▶ S10-17 name parts
                  └──▶ S10-37 collation
 
-S10-24 fold ──▶ S10-25 tables ──▶ S10-26 phonetic
+S10-24 fold ──▶ S10-25 tables
+S10-26 phonetic — descoped 2026-10-12. See ideas/daitch-mokotoff.md.
 S10-28 support + negatives (after S10-24, so fixtures settle once)
 
 S10-32 depiction type ──▶ S10-33 crop cache ──▶ S10-34 composer row (after S10-16; ✎ S10-D15)
@@ -517,12 +519,7 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 
 #### S10-26 — Phonetic tier
 
-| | |
-| --- | --- |
-| **In** | Daitch–Mokotoff as a `wordSimilarity` tier below near-spelling. Leigh/Lee can meet there. Smyth/Smith still meets by edit distance and does not need this tier to score. |
-| **Out** | Beider–Morse. Transliteration across scripts. |
-| **Testable** | A phonetic-only pair scores above 0 and below a one-edit near-spelling. An exact match still outranks it. |
-| **Depends on** | S10-25 |
+**Descoped 2026-10-12.** Daitch–Mokotoff as a tier under near-spelling is [`ideas/daitch-mokotoff.md`](../../ideas/daitch-mokotoff.md). Lee codes as `800000` and Leigh as `850000`, so the pair this slice named does not share a code. Beider–Morse stays later ([`ideas/international-names.md`](../../ideas/international-names.md)). Smyth/Smith still meets by edit distance.
 
 #### S10-27 — Name frequency
 
@@ -684,7 +681,7 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 | --- | --- |
 | The dogfood notes in the table above | Census-scale layers / filters |
 | Date prefill and name split as the cheap extract | Detector suggestions, guided extract, catalog writes from a parse |
-| Accent fold, abbreviations, nicknames, Daitch–Mokotoff, project name frequency | Transliteration, Beider–Morse, a population name table |
+| Accent fold, abbreviations, nicknames, project name frequency | Daitch–Mokotoff (S10-26, descoped), transliteration, Beider–Morse, a population name table |
 | Support weighting and negative evidence | Concluded-value priority, memory of a rejected claim |
 | Western profile, project-default pattern, catalog roles and weights | Per-person `name_format` claim, Spanish dual surnames, `patronymic`, `maternal_surname` |
 | Date windows in the comparer, birth~baptism, place chains | Calendars and double dating |

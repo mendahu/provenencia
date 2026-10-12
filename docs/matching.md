@@ -128,7 +128,7 @@ Tests: [`core/match/names_test.go`](../core/match/names_test.go) has three layer
 When a seed finds a bug, shrink it into an exact-score case.
 
 Not yet handled:
-- **Nicknames, Daitch–Mokotoff:** Spike 10, [`deployment-plan/spike-10/international-names.md`](deployment-plan/spike-10/international-names.md). Spanish dual surnames, a patronymic part, other patterns, transliteration, and calendars: [`ideas/international-names.md`](ideas/international-names.md).
+- **Daitch–Mokotoff:** [`ideas/daitch-mokotoff.md`](ideas/daitch-mokotoff.md). Descoped from Spike 10 (S10-26). Spanish dual surnames, a patronymic part, other patterns, transliteration, Beider–Morse, and calendars: [`ideas/international-names.md`](ideas/international-names.md).
 - **Abbreviations, project name frequency, support weighting, date windows, event and place affinity:** Spike 10, [`deployment-plan/spike-10/name-matching-enhancements.md`](deployment-plan/spike-10/name-matching-enhancements.md). Known-as, concluded values, calibration, and rejected-claim memory: [`ideas/name-matching-enhancements.md`](ideas/name-matching-enhancements.md).
 
 **Resolution uses the same parts.** The reconciler (`core/autoreconcile/names.go`) and `NameComparer` both ignore `form`. A name with no parts is no evidence there and not comparable here. The People list also ignores `form`: it orders by the profile's sorted part order. The cache name `sort_key` is still the normalized form. That column is not a match and not the list order.

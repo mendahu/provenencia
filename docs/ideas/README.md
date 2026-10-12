@@ -25,6 +25,7 @@ Use this folder when something useful pops up mid-work and would otherwise get l
 - [`audio-video-sources.md`](audio-video-sources.md)
 - [`depictions-and-likenesses.md`](depictions-and-likenesses.md) — leftovers after Spike 10 (other keys, signature, transparent crop, Windows PDF draw)
 - [`international-names.md`](international-names.md) — leftovers after Spike 10 (other name patterns, transliteration, calendars)
+- [`daitch-mokotoff.md`](daitch-mokotoff.md) — phonetic tier descoped from Spike 10 (S10-26)
 - [`name-matching-enhancements.md`](name-matching-enhancements.md) — leftovers after Spike 10 (known-as, concluded values, calibration, blocking)
 - [`share-packages.md`](share-packages.md)
 - [`artifact-pdf-thumbnails.md`](artifact-pdf-thumbnails.md)
