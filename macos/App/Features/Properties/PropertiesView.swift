@@ -676,6 +676,9 @@ private struct PropertiesIdentityEditor: View {
                             activateOnAppear: true
                         )
                         .accessibilityIdentifier("properties.identity.label")
+                        .onSubmit {
+                            Task { _ = await model.submitEdit(label: labelDraft, description: descriptionDraft) }
+                        }
                         Text(verbatim: property.key)
                             .font(PVFont.mono(size: PVTypeScale.caption))
                             .foregroundStyle(PVColor.textMuted)
