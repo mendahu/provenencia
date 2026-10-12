@@ -76,6 +76,17 @@ struct DateValueDraft: Equatable, Sendable {
     var canSetEndSecond: Bool { endMinute != nil }
     var canSetEndMillisecond: Bool { endSecond != nil }
 
+    /// No civil fields and no phrase. A transcription prefill may fill this.
+    var isBlank: Bool {
+        startYear == nil && startMonth == nil && startDay == nil
+            && startHour == nil && startMinute == nil && startSecond == nil
+            && startMillisecond == nil
+            && endYear == nil && endMonth == nil && endDay == nil
+            && endHour == nil && endMinute == nil && endSecond == nil
+            && endMillisecond == nil
+            && phrase.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
     var isPoint: Bool { kind == "point" }
     var isRange: Bool { kind == "range" }
 

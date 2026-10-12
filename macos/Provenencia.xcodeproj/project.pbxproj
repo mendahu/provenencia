@@ -68,6 +68,8 @@
 		A70900000000000000000002 /* DateValueDisplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70900000000000000000001 /* DateValueDisplay.swift */; };
 		A70900000000000000000004 /* DateValueDisplayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70900000000000000000003 /* DateValueDisplayTests.swift */; };
 		AA0000000000000000000335 /* DateValueEditorForm.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000336 /* DateValueEditorForm.swift */; };
+		AA00000000000000000004F1 /* DateValueTranscriptionMatch.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000004F0 /* DateValueTranscriptionMatch.swift */; };
+		AA00000000000000000004F3 /* DateValueTranscriptionMatchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000004F2 /* DateValueTranscriptionMatchTests.swift */; };
 		A70800000000000000000002 /* CitationComposerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70800000000000000000001 /* CitationComposerView.swift */; };
 
 		A70B00000000000000000002 /* ArtifactViewerKind.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70B00000000000000000001 /* ArtifactViewerKind.swift */; };
@@ -430,6 +432,8 @@
 		A70900000000000000000001 /* DateValueDisplay.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DateValueDisplay.swift; sourceTree = "<group>"; };
 		A70900000000000000000003 /* DateValueDisplayTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DateValueDisplayTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000336 /* DateValueEditorForm.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DateValueEditorForm.swift; sourceTree = "<group>"; };
+		AA00000000000000000004F0 /* DateValueTranscriptionMatch.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DateValueTranscriptionMatch.swift; sourceTree = "<group>"; };
+		AA00000000000000000004F2 /* DateValueTranscriptionMatchTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DateValueTranscriptionMatchTests.swift; sourceTree = "<group>"; };
 		A70800000000000000000001 /* CitationComposerView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CitationComposerView.swift; sourceTree = "<group>"; };
 
 		A70B00000000000000000001 /* ArtifactViewerKind.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ArtifactViewerKind.swift; sourceTree = "<group>"; };
@@ -1083,6 +1087,7 @@
 				AA0000000000000000000330 /* DateValueDraft.swift */,
 				A70900000000000000000001 /* DateValueDisplay.swift */,
 				AA0000000000000000000336 /* DateValueEditorForm.swift */,
+				AA00000000000000000004F0 /* DateValueTranscriptionMatch.swift */,
 				B052AEDEE88EFC9ED8413469 /* DateRowDisplay.swift */,
 			);
 			path = Dates;
@@ -1265,6 +1270,7 @@
 				AA0000000000000000000394 /* ThumbnailCacheTests.swift */,
 				AA00000000000000000003B2 /* PVFileTypeGlyphTests.swift */,
 				AA0000000000000000000332 /* DateValueDraftTests.swift */,
+				AA00000000000000000004F2 /* DateValueTranscriptionMatchTests.swift */,
 				A70D0000000000000000000D /* NameValueDraftTests.swift */,
 				A90900000000000000000015 /* PersonsListTests.swift */,
 				A91600000000000000000003 /* PVDisclosureButtonTests.swift */,
@@ -2023,6 +2029,7 @@
 				AA0000000000000000000331 /* DateValueDraft.swift in Sources */,
 				A70900000000000000000002 /* DateValueDisplay.swift in Sources */,
 				AA0000000000000000000335 /* DateValueEditorForm.swift in Sources */,
+				AA00000000000000000004F1 /* DateValueTranscriptionMatch.swift in Sources */,
 				A70D00000000000000000002 /* NameValueDraft.swift in Sources */,
 				A70D00000000000000000004 /* NamePartType.swift in Sources */,
 				A70D00000000000000000006 /* NameValueEditorForm.swift in Sources */,
@@ -2141,6 +2148,7 @@
 				AA0000000000000000000395 /* ThumbnailCacheTests.swift in Sources */,
 				AA00000000000000000003B3 /* PVFileTypeGlyphTests.swift in Sources */,
 				AA0000000000000000000333 /* DateValueDraftTests.swift in Sources */,
+				AA00000000000000000004F3 /* DateValueTranscriptionMatchTests.swift in Sources */,
 				A70D0000000000000000000E /* NameValueDraftTests.swift in Sources */,
 				A90900000000000000000016 /* PersonsListTests.swift in Sources */,
 				A91E00000000000000000002 /* PlacesListTests.swift in Sources */,

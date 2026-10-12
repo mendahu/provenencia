@@ -177,6 +177,7 @@ final class CitationComposerModel {
             if let newValue {
                 present(.observation(newValue))
             } else if case .observation = modal {
+                observationDialogBaseline = nil
                 present(nil)
             }
         }
@@ -626,19 +627,39 @@ final class CitationComposerModel {
     }
 
     func beginEditObservation(_ row: ObservationRow) {
-        observationDialog = .editing(row)
+        var state = ObservationDialogState.editing(row)
+        // The user's locale until a source carries its own language.
+        if catalogProperty(id: row.propertyID)?.valueType == PropertyValueType.date.rawValue,
+           state.dateDraft.isBlank,
+           let match = DateValueTranscriptionMatch.first(in: fields.transcription, locale: .current) {
+            state.dateDraft.startYear = match.year
+            state.dateDraft.startMonth = match.month
+            state.dateDraft.startDay = match.day
+        }
+        observationDialogBaseline = state
+        observationDialog = state
     }
 
+    /// Seed the dialog opened with, including a transcription prefill. Edits
+    /// after that count; the prefill itself does not.
+    private var observationDialogBaseline: ObservationDialogState?
+
     var observationDialogIsDirty: Bool {
-        guard let dialog = observationDialog,
-              let id = dialog.editingID,
-              let row = observationRows.rows.first(where: { $0.id == id })
-        else { return false }
+        guard let dialog = observationDialog else { return false }
+        let baseline: ObservationDialogState
+        if let observationDialogBaseline {
+            baseline = observationDialogBaseline
+        } else if let id = dialog.editingID,
+                  let row = observationRows.rows.first(where: { $0.id == id }) {
+            baseline = ObservationDialogState.editing(row)
+        } else {
+            return false
+        }
         var current = dialog
-        var baseline = ObservationDialogState.editing(row)
+        var opened = baseline
         current.showValidation = false
-        baseline.showValidation = false
-        return current != baseline
+        opened.showValidation = false
+        return current != opened
     }
 
     var customTermDialogIsDirty: Bool {
