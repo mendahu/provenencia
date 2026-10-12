@@ -16,9 +16,33 @@
 
 **Landed 2026-10-11** in [#364](https://github.com/mendahu/provenencia/pull/364). The workspace session stores magnification and content offset per Source. The composer, Back, and Forward restore it. Growing the document does not reset it. Quit drops it. A Source with no stored camera opens centered at 1×.
 
+## S10-05 — Text area scrollbar
+
+**Landed 2026-10-12** in [#368](https://github.com/mendahu/provenencia/pull/368). `PVTextArea` inserts a newline at the caret when Return is pressed. Overflow shows a scrollbar that tracks the caret. A short note does not show an empty track.
+
 ## S10-06 — Omnibar whole-word rank
 
 **Descoped 2026-10-11** in [#368](https://github.com/mendahu/provenencia/pull/368). A title that contains `marriage` already ranks above obituaries for Marion Margaret. No change to `core/search`.
+
+## S10-07 — Oldest user on an existing project
+
+**Landed 2026-10-12** in [#369](https://github.com/mendahu/provenencia/pull/369). Opening a project you do not belong to selects the user with the smallest UUIDv7 id. If you are already a contributor, you stay selected. An empty user list still offers create-new. The list stays alphabetical.
+
+## S10-08 — Enter saves a Property title
+
+**Landed 2026-10-12** in [#370](https://github.com/mendahu/provenencia/pull/370). Enter in a single-line inline edit saves when Save is enabled. When Save is disabled, Enter leaves the edit the same way Cancel does. Escape cancels. A multiline field still takes Enter as a newline.
+
+## S10-10 — Observation defaults
+
+**Descoped 2026-10-12** in [#370](https://github.com/mendahu/provenencia/pull/370). A repeated cluster is [`ideas/evidence-graph-structure-shortcuts.md`](../../ideas/evidence-graph-structure-shortcuts.md): place a wedding, birth, or residence in one action, or paste a cluster already on the canvas. No default role on a generic new connection.
+
+## S10-11 — Composer performance
+
+**Done** in [#356](https://github.com/mendahu/provenencia/pull/356). A combo box builds its option list only while the menu is open, so a form of closed pickers does not lay out every choice. Checked 2026-10-12: a citation with 70 Observations opens quickly. No further profile pass, and the form still appears after the file viewer loads.
+
+## S10-14 — Adaptive choice field
+
+**Descoped 2026-10-12** in [#370](https://github.com/mendahu/provenencia/pull/370). A kit field that swaps radio, select, and combo box by option count is not a priority for this spike. S10-D1 is not drawn. Term fields keep the control they have.
 
 ## S10-46 — Simplified cards when zoomed out
 

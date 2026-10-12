@@ -15,10 +15,10 @@ Spike 9 shipped Promote and the Conclusion pages. This spike makes that app easi
 | [**International names**](international-names.md) | Design for accent folding, profiles, and what stays later |
 | [**Name-matching enhancements**](name-matching-enhancements.md) | Design for the matcher. Overlaps with international names are one PR in the plan |
 | [**Completed**](completed.md) | Finished steps |
-| [Design briefs](design/) | Claude Design — S10-D1…D13, written just before the PR. S10-D14 is descoped |
+| [Design briefs](design/) | Claude Design — S10-D3…D13, written just before the PR. S10-D1 and S10-D14 are descoped. S10-D2 is not drawn; S10-15 is a field swap |
 
 ## Not this spike
 
 Unpromote on an Evidence card is in this spike: it deletes that Subject's claim and the bridge claims on the same Source. Editing a claim, removing a member from the Person page, and the weak-claim review stay parked in [`ideas/identity-claim-review.md`](../../ideas/identity-claim-review.md). Earlier docs called that whole area "Spike 10"; those pointers now say the review is unscheduled.
 
-Census-scale graph layers were descoped (2026-10-08) and stay in [`docs/dogfood/ux.md`](../../dogfood/ux.md). Guided extract from an Artifact stays there too. The cheap slices of extract (date prefill, name split) are in this spike.
+Census-scale graph layers were descoped (2026-10-08) and stay in [`docs/dogfood/ux.md`](../../dogfood/ux.md). Guided extract from an Artifact stays there too. The cheap slices of extract (date prefill, name split) are in this spike. Prefilling a role on a new connection was descoped (2026-10-12); common clusters are [`ideas/evidence-graph-structure-shortcuts.md`](../../ideas/evidence-graph-structure-shortcuts.md).
