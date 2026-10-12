@@ -329,6 +329,18 @@ private struct SourcesListContent: View {
                 .accessibilityIdentifier("sources.add.loadError")
             }
             PVField(
+                label: L10n.Sources.formTitle,
+                error: model.titleError,
+                required: true
+            ) {
+                PVInput(
+                    text: $model.draft.title,
+                    isInvalid: model.titleError != nil,
+                    activateOnAppear: true
+                )
+                .accessibilityIdentifier("sources.add.title")
+            }
+            PVField(
                 label: L10n.Sources.formType,
                 error: model.typeError,
                 required: true
@@ -349,14 +361,6 @@ private struct SourcesListContent: View {
                 .onChange(of: model.draft.sourceTypeID) { _, newValue in
                     if !newValue.isEmpty { model.typeError = nil }
                 }
-            }
-            PVField(
-                label: L10n.Sources.formTitle,
-                error: model.titleError,
-                required: true
-            ) {
-                PVInput(text: $model.draft.title, isInvalid: model.titleError != nil)
-                    .accessibilityIdentifier("sources.add.title")
             }
             PVField(
                 label: L10n.Sources.formDescription,
