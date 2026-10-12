@@ -38,6 +38,26 @@ final class EvidenceAppKitCard: NSView {
     override var isFlipped: Bool { true }
     override var isOpaque: Bool { false }
 
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        syncBackingScale()
+    }
+
+    override func viewDidChangeBackingProperties() {
+        super.viewDidChangeBackingProperties()
+        syncBackingScale()
+    }
+
+    /// The first display can cache the card at 1x, before the window's scale
+    /// is known. Selecting rebuilt the view and hid that; match the window
+    /// scale as soon as the card is on screen.
+    private func syncBackingScale() {
+        guard let scale = window?.backingScaleFactor, scale > 0, let layer else { return }
+        guard layer.contentsScale != scale else { return }
+        layer.contentsScale = scale
+        needsDisplay = true
+    }
+
     override var intrinsicContentSize: NSSize {
         NSSize(
             width: layout.size.width + GraphCanvasItemLayer.paintOutset * 2,
@@ -152,24 +172,28 @@ private final class Painter {
         drawTinted(image, in: place(rect), color: ns(color))
     }
 
-    /// Recolors a template image. `draw(in:)` leaves SF Symbols black and asset
-    /// marks in the accent blue; filling the drawn alpha with the ink applies
-    /// the color the card actually asked for, in the current appearance.
+    /// Recolors a template image in the view's current context.
+    ///
+    /// An intermediate `NSImage` rasterizes the SVG mark at one pixel per
+    /// point. Panning and zooming then scale that bitmap, so the mark stays
+    /// soft until some later redraw. A transparency layer tints the vector
+    /// at the same scale as the rest of the card.
     private func drawTinted(_ image: NSImage, in rect: CGRect, color: NSColor) {
-        let tinted = NSImage(size: rect.size, flipped: true) { bounds in
-            image.draw(
-                in: bounds,
-                from: NSRect(origin: .zero, size: image.size),
-                operation: .sourceOver,
-                fraction: 1,
-                respectFlipped: true,
-                hints: nil
-            )
-            color.setFill()
-            bounds.fill(using: .sourceAtop)
-            return true
-        }
-        tinted.draw(in: rect, from: .zero, operation: .sourceOver, fraction: 1, respectFlipped: true, hints: nil)
+        guard let context = NSGraphicsContext.current else { return }
+        context.saveGraphicsState()
+        context.cgContext.beginTransparencyLayer(in: rect, auxiliaryInfo: nil)
+        image.draw(
+            in: rect,
+            from: .zero,
+            operation: .sourceOver,
+            fraction: 1,
+            respectFlipped: true,
+            hints: [.interpolation: NSImageInterpolation.high]
+        )
+        color.setFill()
+        rect.fill(using: .sourceAtop)
+        context.cgContext.endTransparencyLayer()
+        context.restoreGraphicsState()
     }
 
     func bracket(_ rect: CGRect) {
@@ -313,7 +337,7 @@ private extension EvidenceAppKitCard {
             )
         }
         paintRows(rowRects, tint: style.tint, chip: style.chip, ink: style.ink, hovered: state.hoveredActionID, width: width, valueWidth: subjectValueWidth, leading: EvidenceCitedPropertyMarks.leadingInset(shell: EvidenceSubjectCard.shellPaddingX), trailing: EvidenceSubjectCard.shellPaddingX, painter: painter)
-        paintAdd(addRect, quiet: !placed.isCited, canCite: state.canCite, hovered: state.hoveredActionID == EvidenceSubjectCard.addPropertyActionID, tint: style.tint, chip: style.chip, paddingX: EvidenceSubjectCard.shellPaddingX, painter: painter)
+        paintAdd(addRect, quiet: !placed.isCited, canCite: state.canCite, hovered: state.hoveredActionID == EvidenceSubjectCard.addPropertyActionID, tint: style.tint, chip: style.chip, ink: style.ink, paddingX: EvidenceSubjectCard.shellPaddingX, painter: painter)
         if !placed.isCited {
             painter?.fill(
                 CGRect(x: 0, y: footerRect.minY - EvidenceSubjectCard.uncitedFooterRule, width: width, height: EvidenceSubjectCard.uncitedFooterRule),
@@ -377,7 +401,10 @@ private extension EvidenceAppKitCard {
 
         let rect = CGRect(x: 0, y: 0, width: width, height: y)
         if selected { painter?.fillRound(rect.insetBy(dx: -3, dy: -3), radius: PVRadius.md + 2, PVColor.graphRing) }
-        painter?.fillRound(rect, radius: PVRadius.md, PVColor.surfaceCard, shadow: (state.isDragging ? 10 : 4, state.isDragging ? 4 : 1, selected || placed.isCited ? 0.08 : 0.06))
+        painter?.fillRound(
+            rect, radius: PVRadius.md, PVColor.surfaceCard,
+            shadow: cardShadow(selected: selected, dragging: state.isDragging, restingAlpha: placed.isCited ? 0.08 : 0.06, restingBlur: 4, restingY: 1)
+        )
         painter?.beginClip(rect, radius: PVRadius.md)
 
         let label = placed.subject.label.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -412,7 +439,7 @@ private extension EvidenceAppKitCard {
             painter?.fill(CGRect(x: 0, y: first.1.minY - 1, width: width, height: last.1.maxY - first.1.minY + 1), PVColor.borderSubtle)
         }
         paintRows(rowRects, tint: PVColor.surfaceCard, chip: PVColor.surfaceHover, ink: PVColor.textMuted, hovered: state.hoveredActionID, width: width, valueWidth: bridgeValueWidth, leading: EvidenceCitedPropertyMarks.leadingInset(shell: EvidenceBridgeCard.shellPaddingX), trailing: EvidenceBridgeCard.shellPaddingX, painter: painter)
-        paintAdd(addRect, quiet: !placed.isCited, canCite: state.canCite, hovered: state.hoveredActionID == EvidenceSubjectCard.addPropertyActionID, tint: PVColor.surfaceCard, chip: PVColor.surfaceHover, paddingX: EvidenceBridgeCard.shellPaddingX, painter: painter)
+        paintAdd(addRect, quiet: !placed.isCited, canCite: state.canCite, hovered: state.hoveredActionID == EvidenceSubjectCard.addPropertyActionID, tint: PVColor.surfaceCard, chip: PVColor.surfaceHover, ink: PVColor.textMuted, paddingX: EvidenceBridgeCard.shellPaddingX, painter: painter)
         strokeCard(
             rect,
             color: selected ? PVColor.accent : PVColor.borderSubtle,
@@ -435,12 +462,25 @@ private extension EvidenceAppKitCard {
         if selected {
             painter?.fillRound(rect.insetBy(dx: -3, dy: -3), radius: PVRadius.md + 2, PVColor.graphRing)
         }
-        let shadowAlpha: CGFloat = selected ? 0.1 : (placed.isCited ? 0.06 : 0)
         painter?.fillRound(
             rect, radius: PVRadius.md, placed.isCited ? style.tint : PVColor.surfaceCard,
-            shadow: shadowAlpha > 0 ? (dragging ? 10 : 6, dragging ? 4 : 2, shadowAlpha) : nil
+            shadow: cardShadow(selected: selected, dragging: dragging, restingAlpha: placed.isCited ? 0.06 : 0, restingBlur: 6, restingY: 2)
         )
         if !placed.isCited { painter?.fillRound(rect, radius: PVRadius.md, style.tint.opacity(0.38)) }
+    }
+
+    /// The selection halo is the selected card's edge. A drop shadow on top of
+    /// it draws a dark ring, which on a light grid reads as a black outline.
+    static func cardShadow(
+        selected: Bool,
+        dragging: Bool,
+        restingAlpha: CGFloat,
+        restingBlur: CGFloat,
+        restingY: CGFloat
+    ) -> (CGFloat, CGFloat, CGFloat)? {
+        if dragging { return (10, 4, 0.1) }
+        if selected || restingAlpha <= 0 { return nil }
+        return (restingBlur, restingY, restingAlpha)
     }
 
     /// Inside stroke, drawn after the body so rows and the footer do not cover
@@ -573,11 +613,14 @@ private extension EvidenceAppKitCard {
         hovered: Bool,
         tint: Color,
         chip: Color,
+        ink: Color,
         paddingX: CGFloat,
         painter: Painter?
     ) {
         guard let painter else { return }
-        if !quiet { painter.fill(rect, hovered && canCite ? chip : tint) }
+        let hot = hovered && canCite
+        if !quiet { painter.fill(rect, hot ? chip : tint) }
+        if hot { painter.fill(CGRect(x: 0, y: rect.minY, width: 2, height: rect.height), ink) }
         let color: Color = canCite ? (hovered ? PVColor.textPrimary : PVColor.textMuted) : PVColor.textFaint
         let y = quiet ? rect.minY + 4 : rect.minY + 9
         painter.symbol(PVSymbol.plus.rawValue, in: CGRect(x: paddingX, y: y, width: 12, height: 12), color)
@@ -613,11 +656,25 @@ private extension EvidenceAppKitCard {
             painter.symbol(PVSymbol.chevronForward.rawValue, in: CGRect(x: rect.maxX - 27, y: rect.midY - 7, width: 14, height: 14), style.ink)
         } else {
             let hot = hovered == EvidenceSubjectCard.promoteActionID
-            _ = pressed
-            let label = CGRect(x: EvidenceSubjectCard.promoteInset + 10, y: rect.midY - 11, width: 120, height: 22)
-            if hot { painter.fillRound(label, radius: PVRadius.sm, PVColor.surfaceHover) }
-            painter.symbol(PVSymbol.arrowUpRight.rawValue, in: CGRect(x: label.minX + 2, y: rect.midY - 6, width: 13, height: 13), PVColor.textSecondary)
-            painter.text(L10n.string(L10n.EvidenceGraph.promote), in: CGRect(x: label.minX + 18, y: rect.midY - 8, width: 90, height: 16), font: PVFont.nsBody(size: 13, weight: PVFontWeight.medium), color: PVColor.textSecondary, lines: 1)
+                || pressed == EvidenceSubjectCard.promoteActionID
+            if hot {
+                painter.fill(rect, style.chip)
+                painter.fill(CGRect(x: 0, y: rect.minY, width: 2, height: rect.height), style.ink)
+            }
+            let font = PVFont.nsBody(size: 13, weight: PVFontWeight.medium)
+            let line = lineHeight(font)
+            let icon: CGFloat = 13
+            let x = EvidenceSubjectCard.shellPaddingX
+            painter.symbol(
+                PVSymbol.arrowUpRight.rawValue,
+                in: CGRect(x: x, y: rect.midY - icon / 2, width: icon, height: icon),
+                PVColor.textSecondary
+            )
+            painter.text(
+                L10n.string(L10n.EvidenceGraph.promote),
+                in: CGRect(x: x + icon + 6, y: rect.midY - line / 2, width: rect.width - x - icon - 20, height: line),
+                font: font, color: PVColor.textSecondary, lines: 1
+            )
         }
     }
 }
