@@ -565,6 +565,8 @@ nicknames
   edward ted ed
   elizabeth liz beth betty
   margaret peggy meg
+  benjamin ben
+  douglas doug
 ```
 
 `Register` appends a table for a future plugin. Install writes whatever is registered at catalog create. Open does not heal. Scoring reads these rows and no in-code list. Opening a project loads them once onto the catalog graph and keeps them until the project closes. A future editor calls `namealiases.Invalidate` after a change. An empty catalog makes no abbreviation or nickname hits.
