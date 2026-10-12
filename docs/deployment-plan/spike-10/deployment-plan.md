@@ -6,7 +6,7 @@ Usability fixes from [`docs/dogfood/ux.md`](../../dogfood/ux.md) after Spike 9, 
 
 ## Status
 
-**Open.** Slice 1 is done (2026-10-11). S10-01…S10-04 landed in [#361](https://github.com/mendahu/provenencia/pull/361)–[#364](https://github.com/mendahu/provenencia/pull/364). S10-05, S10-07, and S10-08 landed in [#368](https://github.com/mendahu/provenencia/pull/368), [#369](https://github.com/mendahu/provenencia/pull/369), and [#370](https://github.com/mendahu/provenencia/pull/370) (2026-10-12). S10-46, S10-47, and S10-48 were descoped in [#367](https://github.com/mendahu/provenencia/pull/367). S10-06 was descoped in [#368](https://github.com/mendahu/provenencia/pull/368): searching `marriage` already lists a title that contains the word ahead of a fuzzy name. S10-10 was descoped in [#370](https://github.com/mendahu/provenencia/pull/370): a common cluster belongs in [`ideas/evidence-graph-structure-shortcuts.md`](../../ideas/evidence-graph-structure-shortcuts.md), which covers more than a default role. Later landings go in [`completed.md`](completed.md).
+**Open.** Slice 1 is done (2026-10-11). S10-01…S10-04 landed in [#361](https://github.com/mendahu/provenencia/pull/361)–[#364](https://github.com/mendahu/provenencia/pull/364). S10-05, S10-07, and S10-08 landed in [#368](https://github.com/mendahu/provenencia/pull/368), [#369](https://github.com/mendahu/provenencia/pull/369), and [#370](https://github.com/mendahu/provenencia/pull/370) (2026-10-12). S10-46, S10-47, and S10-48 were descoped in [#367](https://github.com/mendahu/provenencia/pull/367). S10-06 was descoped in [#368](https://github.com/mendahu/provenencia/pull/368): searching `marriage` already lists a title that contains the word ahead of a fuzzy name. S10-10 was descoped in [#370](https://github.com/mendahu/provenencia/pull/370): a common cluster belongs in [`ideas/evidence-graph-structure-shortcuts.md`](../../ideas/evidence-graph-structure-shortcuts.md), which covers more than a default role. S10-11 was already done in [#356](https://github.com/mendahu/provenencia/pull/356): a citation with 70 Observations opens quickly. Later landings go in [`completed.md`](completed.md).
 
 > **Goal of this spike:** the annoyances logged while entering real research are gone, and the app still behaves the way Spike 8 and Spike 9 decided.
 
@@ -40,7 +40,7 @@ Usability fixes from [`docs/dogfood/ux.md`](../../dogfood/ux.md) after Spike 9, 
 | Enter should save a Property title edit | S10-08 | — |
 | Sources list sort and filter don't persist | S10-09, folded into S10-41 | S10-D8 |
 | Prefill sensible defaults for common Observation kinds | S10-10, descoped 2026-10-12 | — |
-| Citation composer slows down with many Observations | S10-11 | — |
+| Citation composer slows down with many Observations | S10-11, done in #356 | — |
 | Click outside a modal sheet to close it | S10-12 | — |
 | Prefill the structured date modal + open focused on Year | S10-13 | — |
 | Adaptive choice field | S10-14, used by S10-16 | S10-D1, S10-D3 |
@@ -111,7 +111,7 @@ These are the calls for this spike. The questions at the bottom are answered; no
 - **Last updated** is an audit scope, not a timestamp column. Sources already store `UpdatedRevision` (`scope_type = source`) and can show it once the row is designed. People, Events, and Places have no scope today (`canonical_entity` is `noScope` in `core/database/audit/scopes.go`). S10-21 adds a `canonical_entity` scope: Identity Claim writes, and Observation writes on a Subject that is a member, so editing evidence moves the handle's revision. Display is relative or absolute in the briefs; the value is the revision's time.
 - **One Event mark.** Sidebar People / Events / Places use SF Symbols (`person`, `calendar`, `mapPin` on `WorkspaceSection`). Cards, lists, omnibar hits, Promote, and Properties use `PVMark` (`subject_person`, `subject_event`, `subject_place`). The Event asset is the hourglass. S10-D7 draws the new Event mark and switches the sidebar (and the toolbar, which reads `WorkspaceSection.icon`) to the subject marks. Every existing `PVMark` call site picks up the new asset with no extra brief. List empty states that still use `PVSymbol` for these three kinds switch in the same PR.
 - **Sex / gender styling** uses a seeded `gender` Property when the Person has one, otherwise `sex_at_birth`. The seed is `man`, `woman`, `non_binary` (labels Man, Woman, Non-binary). Researchers add further terms (`origin=user`), the same way they extend `role`. It is not product-locked, and there is no product `other` term. The page treatment recognizes the three seeded keys. A researcher-added term still counts as gender and wins over sex at birth; the brief draws that term without inventing a new color per key. Unknown, empty, and mixed (the reconciler already has a mixed state) stay neutral. `sex_at_birth` already appears as an ordinary field row when a record speaks to it (`PersonDetailContent`); this PR adds the page treatment and leaves that row in place.
-- **Composer performance** is profiled before the row rethink. S10-11 fixes fetch or render cost without a new layout. S10-16 must still be comfortable at 20 Observations. If the profile says the row view *is* the cost, S10-11 only removes work that a redesign would not redo (duplicate loads, per-row queries), and the layout fix waits for S10-16. If the profile says the Artifact viewer is what holds the form back, that viewer loads on its own: the Citation and Observations appear while the image or PDF is still loading. If the viewer is not the cost, do not build that split. The note is a hunch.
+- **Composer performance** is already done. [#356](https://github.com/mendahu/provenencia/pull/356) builds a combo box's option list only while its menu is open, so a form of closed pickers does not lay out every choice. Checked 2026-10-12: a citation with 70 Observations opens quickly. No separate profile pass, and no split that shows the form while the file is still loading. S10-16 still has to stay comfortable at 20 Observations; that bar is the layout.
 - **List scroll is session state, like the graph camera.** Sources, People, Events, and Places remember content offset on the workspace session and restore it when that list place appears again (Back, Forward, breadcrumbs). It is not a navigation-history field ([`navigation-history.md`](../archive/spike-3/navigation-history.md) still omits scroll from the entry) and it does not survive relaunch. Sources scroll is restored in S10-41 after that PR has applied the persisted sort and filters, so the list is not put back on a differently ordered page. Changing sort or filter on that visit resets the offset to the top. People, Events, and Places have no sort; their scroll is S10-40.
 - **Sources evidence filters count primaries in one read.** A primary is a person, event, or place. Empty: no primaries. In progress: at least one primary has no accepted Identity Claim. Filed: at least one primary, and every primary has an accepted claim. Bridges are not a filter axis. The counts are one grouped query beside `sourcegraphprogress`, not a query per row. Text search filters the list already loaded, by title and ref, as you type. It is not the omnibar and not FTS. Status and query persist in the same per-project, per-user store as sort and type filter.
 - **Unpromote deletes the filing. It does not reject it.** The button is on a promoted primary card. Confirm always. The confirm names each bridge Subject on this Source (participation, relationship, location, place relationship) that has this Subject as an end and an accepted claim. One transaction deletes those claims and this Subject's claim, audited, through the write path. The Evidence cards stay; their footers show Promote again. The handle stays, even if it has no members left. Other members' claims are not rejected and not stripped. That review stays [`ideas/identity-claim-review.md`](../../ideas/identity-claim-review.md). A rejection ("not this entity") is that review's action, not this button.
@@ -181,7 +181,7 @@ SLICE 2 — Behavior, no new chrome
   S10-07  Existing project selects the oldest user — done, #369
   S10-08  Enter saves a Property title — done, #370
   S10-10  Observation defaults — descoped. A repeated cluster is an idea, not a default role.
-  S10-11  Composer stays responsive; profile first
+  S10-11  Composer stays responsive — done, #356. 70 Observations already open quickly.
   S10-12  Outside click closes a sheet; dirty asks
   S10-13  Date modal: focus Year, prefill the first transcription match
   S10-42  Promote target menu truncates a long title
@@ -197,7 +197,7 @@ SLICE 3 — Choice field
 
 SLICE 4 — Composer and the dialogs it opens
   ✎ S10-D2 ──▶ S10-15  Create Source: name, then type
-  ✎ S10-D3 ──▶ S10-16  Observation list rethink (after S10-11, S10-14).
+  ✎ S10-D3 ──▶ S10-16  Observation list rethink (after S10-14).
                        The board also draws the depiction row S10-34 fills.
   S10-29  Name patterns (patronymic, western + Spanish profiles) — before D4
   ✎ S10-D4 ──▶ S10-17  Name parts: split, fixed width, letter cycle
@@ -282,9 +282,9 @@ S10-03 canvas grow (done) ──────┼──▶ S10-20 box-select
 S10-04 camera (done)            │         ▲
                                 │         │
 S10-10 defaults — descoped      │    S10-D6 (also gates S10-18)
-S10-11 perf ─────┐
-S10-14 choice ───┼──▶ S10-16 composer rethink
-   ▲             ┘         ▲
+S10-11 perf — done, #356
+S10-14 choice ──────▶ S10-16 composer rethink
+   ▲                       ▲
 S10-D1                     S10-D3
 
 S10-46 simplified cards — descoped 2026-10-11
@@ -369,12 +369,7 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 
 #### S10-11 — Composer performance
 
-| | |
-| --- | --- |
-| **In** | Profile opening a Citation with about 20 Observations. Fix the time that is data fetching or redundant work. Leave the row layout to S10-16. If the Artifact viewer is what blocks the form, load it on its own so the Citation and Observations render while the image or PDF is still loading (working rules). If it is not the cost, do not build that split. Record the before/after in the PR (a numbers note is enough; no new ledger file). |
-| **Out** | A virtualized list designed from scratch (that is the rethink, if the profile says paint is the cost). A viewer split the profile did not justify. |
-| **Testable** | A Citation with 20 Observations opens without a visible hitch on the machine we dogfood on. A Citation with a handful is unchanged. |
-| **Depends on** | — |
+**Done** in [#356](https://github.com/mendahu/provenencia/pull/356). See [`completed.md`](completed.md).
 
 #### S10-12 — Outside click closes a sheet
 
@@ -447,7 +442,7 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 | **In** | Per S10-D3: Observations are visually separate, and the fields inside a row are easy to tell apart. Add (bridge or not) inserts at the top and moves keyboard focus to that row's property search. Auto Transcribe (and the PDF paste control, which sits in the same slot) moves off the Citation menu's corner. Term-valued fields on the row use the adaptive choice field. Still comfortable at 20 Observations (S10-11's bar). |
 | **Out** | Name parts modal (S10-17). Date modal (S10-13). The depiction row itself (S10-34 fills the frame this brief already draws). |
 | **Testable** | Twenty rows: you can see where one ends. Add a bridge and a plain Observation: both appear at the top, search focused. Reaching for the Citation menu does not start Auto Transcribe. A two-term property shows radios; a long term list shows a combo box. |
-| **Depends on** | S10-11, S10-14, S10-D3 |
+| **Depends on** | S10-14, S10-D3 |
 
 #### S10-17 — Name parts split and type control
 
@@ -791,7 +786,7 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 | Q6 | **Combo rank.** Label prefix, then a later word, then any other contains match. Answered 2026-10-11. | — |
 | Q7 | **List scroll.** Session offset, restored when the list place appears. Not a history field. Not across relaunch. Sources scroll ships with the Sources list (S10-41). People, Events, and Places are S10-40. Answered 2026-10-11. | — |
 | Q8 | **`interests`.** Unlocked text, cardinality multiple, person only, new catalogs only. Answered 2026-10-11. | — |
-| Q9 | **Composer viewer.** S10-11 splits that load only when the profile shows it blocks the form. Answered 2026-10-11. | — |
+| Q9 | **Composer viewer.** No split. [#356](https://github.com/mendahu/provenencia/pull/356) already keeps a closed combo box from laying out every choice. A citation with 70 Observations opens quickly (2026-10-12). | — |
 
 Everything else in **Working rules** is decided for planning. Correct any of them before the PR that implements it.
 

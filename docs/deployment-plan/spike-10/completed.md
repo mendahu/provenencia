@@ -36,6 +36,10 @@
 
 **Descoped 2026-10-12** in [#370](https://github.com/mendahu/provenencia/pull/370). A repeated cluster is [`ideas/evidence-graph-structure-shortcuts.md`](../../ideas/evidence-graph-structure-shortcuts.md): place a wedding, birth, or residence in one action, or paste a cluster already on the canvas. No default role on a generic new connection.
 
+## S10-11 — Composer performance
+
+**Done** in [#356](https://github.com/mendahu/provenencia/pull/356). A combo box builds its option list only while the menu is open, so a form of closed pickers does not lay out every choice. Checked 2026-10-12: a citation with 70 Observations opens quickly. No further profile pass, and the form still appears after the file viewer loads.
+
 ## S10-46 — Simplified cards when zoomed out
 
 **Descoped 2026-10-11** in [#367](https://github.com/mendahu/provenencia/pull/367). Drawing the card in AppKit made a zoomed-out graph fast enough. The full card stays at every zoom. S10-D14 is not drawn.
