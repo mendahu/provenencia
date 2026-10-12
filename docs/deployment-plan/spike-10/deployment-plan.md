@@ -6,7 +6,7 @@ Usability fixes from [`docs/dogfood/ux.md`](../../dogfood/ux.md) after Spike 9, 
 
 ## Status
 
-**Open.** Slice 1 is done (2026-10-11). S10-01…S10-04 landed in [#361](https://github.com/mendahu/provenencia/pull/361)–[#364](https://github.com/mendahu/provenencia/pull/364). S10-46, S10-47, and S10-48 were descoped in [#367](https://github.com/mendahu/provenencia/pull/367). S10-06 was descoped in [#368](https://github.com/mendahu/provenencia/pull/368): searching `marriage` already lists a title that contains the word ahead of a fuzzy name. Later landings go in [`completed.md`](completed.md).
+**Open.** Slice 1 is done (2026-10-11). S10-01…S10-04 landed in [#361](https://github.com/mendahu/provenencia/pull/361)–[#364](https://github.com/mendahu/provenencia/pull/364). S10-05, S10-07, and S10-08 landed in [#368](https://github.com/mendahu/provenencia/pull/368), [#369](https://github.com/mendahu/provenencia/pull/369), and [#370](https://github.com/mendahu/provenencia/pull/370) (2026-10-12). S10-46, S10-47, and S10-48 were descoped in [#367](https://github.com/mendahu/provenencia/pull/367). S10-06 was descoped in [#368](https://github.com/mendahu/provenencia/pull/368): searching `marriage` already lists a title that contains the word ahead of a fuzzy name. Later landings go in [`completed.md`](completed.md).
 
 > **Goal of this spike:** the annoyances logged while entering real research are gone, and the app still behaves the way Spike 8 and Spike 9 decided.
 
@@ -105,7 +105,7 @@ These are the calls for this spike. The questions at the bottom are answered; no
 - **No canvas cover.** S10-48 is descoped (2026-10-11). Drawing the card in AppKit made the first layout fast enough that a `ProgressView` over the graph is not needed, on open or while panning.
 - **Hit boxes are the painted controls.** Toolbar place/connect buttons and the bridge card's open-citation control. The card icon hit helper (`EvidenceCardLayout`) is the pattern: hits centered on what is drawn.
 - **Oldest user** means the earliest UUIDv7 `users.id`, not the first row of `ORDER BY display_name`. If the signed-in install identity is already in the project, keep selecting that person. If the project has no users, stay on create-new.
-- **Enter saves a single-line inline edit.** `PVInlineEdit` on the Property title. Do not steal Enter from a multiline description.
+- **Enter follows the buttons on a single-line inline edit.** Save when that control is enabled. When it is not, Enter leaves the edit, the same as Cancel. Escape cancels. A multiline field still takes Enter as a newline. Landed in S10-08.
 - **The Sources list is one page.** Sort, type filter, evidence status, and text search persist per project and user and restore together when that place is opened again, including after relaunch. People, Events, and Places have none of those controls. Last updated on a Sources row uses the revision Sources already store. That cell, the filters, the search field, the persisted settings, and the session scroll are S10-41, from S10-D8. They are not a persistence PR ahead of the brief.
 - **Last updated** is an audit scope, not a timestamp column. Sources already store `UpdatedRevision` (`scope_type = source`) and can show it once the row is designed. People, Events, and Places have no scope today (`canonical_entity` is `noScope` in `core/database/audit/scopes.go`). S10-21 adds a `canonical_entity` scope: Identity Claim writes, and Observation writes on a Subject that is a member, so editing evidence moves the handle's revision. Display is relative or absolute in the briefs; the value is the revision's time.
 - **One Event mark.** Sidebar People / Events / Places use SF Symbols (`person`, `calendar`, `mapPin` on `WorkspaceSection`). Cards, lists, omnibar hits, Promote, and Properties use `PVMark` (`subject_person`, `subject_event`, `subject_place`). The Event asset is the hourglass. S10-D7 draws the new Event mark and switches the sidebar (and the toolbar, which reads `WorkspaceSection.icon`) to the subject marks. Every existing `PVMark` call site picks up the new asset with no extra brief. List empty states that still use `PVSymbol` for these three kinds switch in the same PR.
@@ -175,10 +175,10 @@ SLICE 1 — Evidence graph  (done 2026-10-11)
          large graph shows every card, with no loading cover.
 
 SLICE 2 — Behavior, no new chrome
-  S10-05  PVTextArea shows a scrollbar when the text overflows
+  S10-05  PVTextArea shows a scrollbar when the text overflows — done, #368
   S10-06  Omnibar whole-word rank — descoped. A title word already beats a fuzzy name.
-  S10-07  Existing project selects the oldest user
-  S10-08  Enter saves a Property title
+  S10-07  Existing project selects the oldest user — done, #369
+  S10-08  Enter saves a Property title — done, #370
   S10-10  Observation defaults: role subject, place part_of
   S10-11  Composer stays responsive; profile first
   S10-12  Outside click closes a sheet; dirty asks
@@ -345,12 +345,7 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 
 #### S10-05 — Text area scrollbar
 
-| | |
-| --- | --- |
-| **In** | `PVTextArea` shows a scrollbar when the text overflows its `lineLimit`. Transcription, transcription note, description, and every other caller pick it up. SwiftUI `TextField` axis vertical does not show one today; an `NSTextView` (or equivalent) inside the existing chrome is in bounds. |
-| **Out** | A per-screen scrollbar. A new text style. |
-| **Testable** | Paste a long transcription: a scrollbar appears and tracks the caret. A short note does not show an empty track. |
-| **Depends on** | — |
+**Landed 2026-10-12** in [#368](https://github.com/mendahu/provenencia/pull/368). See [`completed.md`](completed.md).
 
 #### S10-06 — Omnibar whole-word rank
 
@@ -358,21 +353,11 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 
 #### S10-07 — Oldest user on an existing project
 
-| | |
-| --- | --- |
-| **In** | After choosing an existing project, if the install identity is not in `catalogUsers`, select the user with the smallest UUIDv7 id. Keep the current selection when that identity is already a contributor. Empty user list still offers create-new. `users` has no `created_at`; id order is the clock. The list query stays alphabetical for display. |
-| **Out** | A new onboarding layout. |
-| **Testable** | Open a project whose users are not you: the oldest user is selected, not "New user". Open a project you already belong to: you stay selected. |
-| **Depends on** | — |
+**Landed 2026-10-12** in [#369](https://github.com/mendahu/provenencia/pull/369). See [`completed.md`](completed.md).
 
 #### S10-08 — Enter saves a Property title
 
-| | |
-| --- | --- |
-| **In** | Enter in the Property title `PVInlineEdit` saves, same as the save control. Multiline description does not save on Enter. |
-| **Out** | A new editor. |
-| **Testable** | Edit a title, press Enter: it saves. Edit the description, press Enter: a newline, not a save. |
-| **Depends on** | — |
+**Landed 2026-10-12** in [#370](https://github.com/mendahu/provenencia/pull/370). See [`completed.md`](completed.md).
 
 #### S10-09 — Sources sort and filter persist
 
