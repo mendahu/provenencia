@@ -319,6 +319,7 @@ Do not reuse the reserved catalog prefixes `USR`, `SRC`, `ART`, `CIT`, `OBS`. Bo
 key                 value_type    notes
 name                name
 sex_at_birth        term          recorded/assigned sex at birth; terms §3.7
+gender              term          gender identity, separate from sex at birth; terms §3.9
 event_type          term          kind identity; terms §3.4
 event_name          text          recorded historical name; not a personal NameValue; unlocked on event
 date                date          point-in-time (or best single date); locked on event
@@ -336,13 +337,14 @@ related_to          subject       app target hint: person (relationship other en
 mentions            subject       app target hint: source
 remark              text          free-text commentary about a source subject
 toponym             text          place name as interpreted from a Source (not a personal NameValue); cardinality `multiple`
+interests           text          free-text interests; cardinality `multiple`; unlocked on person
 ```
 
 Target Subject type hints are application-only (not SQL allow-lists). See the Interpretation doc.
 
 `name_format` (Conclusion naming profiles) is not an Interpretation Property in the create-time seed. `integer` remains a valid value_type with no seed row yet.
 
-Create-time Install seeds the full §3.2 matrix, including kind/edge and person term Properties as `value_type = term` with `property_terms` (§3.4–3.7).
+Create-time Install seeds the full §3.2 matrix, including kind/edge and person term Properties as `value_type = term` with `property_terms` (§3.4–3.7 and §3.9).
 
 Event date Properties (`date`, `start_date`, `end_date`) are locked on `event`: Conclusion ordering and timelines may key into them; the Properties page must not unbind them. `event_type` on `event`, `role` on `participation`, and `relationship_type` on `relationship` are locked for the same reason: birth and death walks, the subject principal, and relationship identity read those slots. `name` on `person` and `toponym` on `place` are locked because the Person and Place rows, search, and composed titles read them. Place `start_date` / `end_date` (period) are locked on `place`; `place_relationship_type` / `from` / `to` / the link's dates are locked on `place_relationship`. **Coexistence:** use `date` for a single point (birth, death, marriage day); use `start_date` / `end_date` when the event spans time (residence, service, voyage). Instantaneous events leave start/end empty; spanned events may leave `date` empty when only the range is known. On a Place, the same `start_date` / `end_date` keys mean its period, not an event span.
 
@@ -354,6 +356,8 @@ Additional Properties may be seeded as workflows need them (shared DNA, predicte
 subject_type    property
 person          name                # locked
 person          sex_at_birth        # term
+person          gender              # term; unlocked
+person          interests           # text; multiple; unlocked
 
 event           event_type          # term; locked
 event           event_name          # text; unlocked
@@ -396,12 +400,16 @@ Product-seeded **term keys** (horizon list; Install grows with use). Researchers
 birth
 death
 marriage
+engagement
 baptism
 burial
 census
 residence
 migration
+travel
 ```
+
+A title with subjects follows the count, for every event type. One subject is *{Type} of {A}*. Two subjects are *{Type} of {A} and {B}*. Three or more are *{Type} of {A} et al.*
 
 Exact GEDCOM alignment and additional vital/event kinds are **TBD**. Researchers add long-tail kinds as `origin=user` terms — there is no product `other` escape hatch. First-class facets (e.g. birthday) will attach to recognized keys such as `birth` in the subject registry when that behavior lands — not part of the create-time term seed itself.
 
@@ -467,6 +475,18 @@ succeeded_by   -- from was succeeded by to (lineage; never a chain)
 ```
 
 A place-nature vocabulary (administrative / informal / …) is **deferred**; several Locations on an Event fold into chains via `part_of` instead ([`conclusion-reconciliation.md`](conclusion-reconciliation.md) §11.1).
+
+## 3.9 Property terms: `gender`
+
+Product-seeded **term keys** for gender identity. This is not sex recorded or assigned at birth (§3.7).
+
+```text
+man            Man
+woman          Woman
+non_binary     Non-binary
+```
+
+Researchers may add further `origin=user` terms. Create is allowed. There is no product `other` term, and the list is not product-locked.
 
 ---
 

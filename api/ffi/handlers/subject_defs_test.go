@@ -21,10 +21,10 @@ func TestListProperties(t *testing.T) {
 				if err := proto.Unmarshal(out, &resp); err != nil {
 					t.Fatal(err)
 				}
-				if len(resp.Properties) != 19 {
-					t.Fatalf("len=%d want 19", len(resp.Properties))
+				if len(resp.Properties) != 21 {
+					t.Fatalf("len=%d want 21", len(resp.Properties))
 				}
-				foundName, foundToponym := false, false
+				foundName, foundToponym, foundGender, foundInterests := false, false, false, false
 				for _, p := range resp.Properties {
 					if p.GetKey() == "name" && p.GetValueType() == "name" && p.GetCardinality() == "single" {
 						foundName = true
@@ -32,9 +32,15 @@ func TestListProperties(t *testing.T) {
 					if p.GetKey() == "toponym" && p.GetCardinality() == "multiple" {
 						foundToponym = true
 					}
+					if p.GetKey() == "gender" && p.GetValueType() == "term" && p.GetCardinality() == "single" {
+						foundGender = true
+					}
+					if p.GetKey() == "interests" && p.GetValueType() == "text" && p.GetCardinality() == "multiple" {
+						foundInterests = true
+					}
 				}
-				if !foundName || !foundToponym {
-					t.Fatalf("name=%v toponym=%v", foundName, foundToponym)
+				if !foundName || !foundToponym || !foundGender || !foundInterests {
+					t.Fatalf("name=%v toponym=%v gender=%v interests=%v", foundName, foundToponym, foundGender, foundInterests)
 				}
 			},
 		},

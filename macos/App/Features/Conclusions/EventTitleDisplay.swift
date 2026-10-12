@@ -37,8 +37,11 @@ enum EventTitleDisplay {
         case .subject:
             return .name(L10n.EventTitle.ofOne(type: type, subject: subjectName(title, at: 0, orders: orders), locale: locale))
         case .couple:
-            return .name(L10n.EventTitle.marriage(
-                a: subjectName(title, at: 0, orders: orders), b: subjectName(title, at: 1, orders: orders), locale: locale
+            return .name(L10n.EventTitle.couple(
+                type: type,
+                a: subjectName(title, at: 0, orders: orders),
+                b: subjectName(title, at: 1, orders: orders),
+                locale: locale
             ))
         case .subjects:
             return .name(L10n.EventTitle.etAl(type: type, first: subjectName(title, at: 0, orders: orders), locale: locale))

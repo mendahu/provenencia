@@ -380,7 +380,7 @@ func eventMatchTitle(h conclusionheaders.EventHeader) string {
 	case eventtitle.RuleSubject:
 		return typeWord + " of " + subject(0)
 	case eventtitle.RuleCouple:
-		return "Marriage of " + subject(0) + " and " + subject(1)
+		return typeWord + " of " + subject(0) + " and " + subject(1)
 	case eventtitle.RuleSubjects:
 		return typeWord + " of " + subject(0) + " et al."
 	case eventtitle.RuleLabel:
