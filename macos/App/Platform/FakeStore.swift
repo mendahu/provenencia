@@ -996,7 +996,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     }
 
     func nameFormat(projectDir: String) async throws -> NameFormatOrders {
-        try withState {
+        withState {
             markCatalogSessionHeld(projectDir)
             return NameFormatOrders()
         }

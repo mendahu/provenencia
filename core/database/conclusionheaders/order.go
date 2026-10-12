@@ -4,6 +4,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/mendahu/provenencia/core/database/nameformats"
 	"golang.org/x/text/collate"
 	"golang.org/x/text/language"
 )
@@ -33,11 +34,17 @@ func sortByTitle[T any](rows []T, title func(T) string, ref func(T) string) {
 	})
 }
 
-func personTitle(h PersonHeader) string {
-	if h.Name != nil && strings.TrimSpace(h.Name.Form) != "" {
-		return h.Name.Form
+// personSortKey is the People list order. A name with parts sorts by the
+// profile's sorted order (the same string the row shows). A catalog with no
+// default profile joins those parts in stored order. form is the transcription
+// and is not a sort input: a name with no parts sorts by its working label.
+func personSortKey(h PersonHeader, order []nameformats.PartOrder) string {
+	if h.Name != nil && len(h.Name.Parts) > 0 {
+		if key := strings.TrimSpace(nameformats.Format(*h.Name, order)); key != "" {
+			return key
+		}
 	}
-	return h.Entity.Label
+	return strings.TrimSpace(h.Entity.Label)
 }
 
 func placeTitle(h PlaceHeader) string {

@@ -207,12 +207,12 @@ Every profile therefore defines **both** styles:
 Requirements for the implementation:
 
 1. **One name display entry point** with a style parameter (`natural` / `sorted`). Call sites choose the style; they never assemble parts themselves.
-2. **The sort key comes from the sorted style** (normalized), so a list's order and its rows' text can never disagree. The auto-reconciler cache `sort_key` for `name` (Spike 9 R3) is that key; changing it is a cache version bump.
-3. **Untyped names fall back to `form`** in both styles, and sort by normalized `form`.
+2. **The People list orders by the sorted style.** The key is that part order (the same string the row shows when the name has parts). The auto-reconciler cache `sort_key` is still the normalized form; it is not the list order. Changing that column is a cache version bump.
+3. **A name with no parts does not sort by `form`.** `form` is the transcription. The list uses the working label, then the ref. Display may still show `form` when there are no parts.
 4. **`form` is never rewritten.** Styles are presentation over typed parts; the recorded full form stays authoritative.
 5. Each profile stores its sorted order and the separator (for Western, `", "` after the surname group). Open details for that work: where `prefix` / `suffix` sit in the sorted Western order (*Robins, Rev. James, Jr.*), and whether `surname_prefix` leads the sort (*van Gogh* under V or G varies by culture — a per-profile rule).
 
-**Until then (Spike 9 behaviour):** names display as `form` (parts joined in stored order when `form` is blank), with no reordering or commas, and lists sort by the normalized `form` — so *James Robins* files under **J**. No style parameter exists yet; when it lands, list rows switch to `sorted` and detail pages use `natural`.
+The People list files by the project's sorted part order, so *James Robins* files under **R**. A catalog with no default profile joins parts in stored order. Detail pages use the natural order. A form-only name still displays as `form` and sorts by its label or ref.
 
 ---
 

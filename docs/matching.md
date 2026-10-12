@@ -129,7 +129,7 @@ Not yet handled:
 - **Accents, nicknames, Daitch–Mokotoff:** Spike 10, [`deployment-plan/spike-10/international-names.md`](deployment-plan/spike-10/international-names.md). Spanish dual surnames, a patronymic part, other patterns, transliteration, and calendars: [`ideas/international-names.md`](ideas/international-names.md).
 - **Abbreviations, project name frequency, spaced particles, support weighting, date windows, event and place affinity:** Spike 10, [`deployment-plan/spike-10/name-matching-enhancements.md`](deployment-plan/spike-10/name-matching-enhancements.md). Known-as, concluded values, calibration, and rejected-claim memory: [`ideas/name-matching-enhancements.md`](ideas/name-matching-enhancements.md).
 
-**Resolution uses the same parts.** The reconciler (`core/autoreconcile/names.go`) and `NameComparer` both ignore `form`. A name with no parts is no evidence there and not comparable here. The cache name `sort_key` (list order) is still the normalized form, and list and card text shows it. That sort key is not a match.
+**Resolution uses the same parts.** The reconciler (`core/autoreconcile/names.go`) and `NameComparer` both ignore `form`. A name with no parts is no evidence there and not comparable here. The People list also ignores `form`: it orders by the profile's sorted part order. The cache name `sort_key` is still the normalized form. That column is not a match and not the list order.
 
 `match.ComparerFor(valueType)` gives the default comparer for any Property, so a profile can also weigh researcher-defined Properties.
 
