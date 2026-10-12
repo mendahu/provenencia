@@ -41,6 +41,26 @@ struct PVComboBoxTests {
         #expect(PVComboBoxMatch.filter(pool, query: "nomatch").isEmpty)
     }
 
+    @Test func prefixOutranksALaterWordWhichOutranksAMidWordMatch() {
+        let rows = [
+            option("g", "grandparent"),
+            option("p", "parent"),
+            option("s", "step-parent"),
+            option("k", "kinship", subtext: "parental"),
+        ]
+        #expect(PVComboBoxMatch.filter(rows, query: "par").map(\.value) == ["p", "s", "g", "k"])
+    }
+
+    @Test func orderInsideABandStaysTheCallerOrder() {
+        let rows = [
+            option("a", "parentage"),
+            option("b", "parent"),
+            option("c", "step parent"),
+            option("d", "foster-parent"),
+        ]
+        #expect(PVComboBoxMatch.filter(rows, query: "par").map(\.value) == ["a", "b", "c", "d"])
+    }
+
     // MARK: Spotlight rule
 
     @Test func firstEnabledIndexSkipsDisabledLeadingRows() {
