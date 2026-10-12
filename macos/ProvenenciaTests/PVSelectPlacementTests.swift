@@ -1,4 +1,6 @@
+import AppKit
 import CoreGraphics
+import SwiftUI
 import Testing
 @testable import Provenencia
 
@@ -182,11 +184,82 @@ struct PVSelectPlacementTests {
         }
     }
 
+    @Test @MainActor func aLongClosedLabelStaysInsideTheCallerWidth() {
+        let column: CGFloat = 330
+        let label = "EVT-RSKRW Residence of James Kenneth Jim Robins"
+        let host = NSHostingView(rootView:
+            HStack(spacing: 8) {
+                PVSelect(
+                    selection: .constant("short"),
+                    options: [PVSelectOption(value: "short", label: "New Event")],
+                    fillsWidth: true
+                )
+                .frame(width: column)
+                PVSelect(
+                    selection: .constant("long"),
+                    options: [PVSelectOption(value: "long", label: label)],
+                    fillsWidth: true
+                )
+                .frame(width: column)
+                Text(verbatim: "STRONG")
+            }
+            .frame(width: 780, alignment: .leading)
+        )
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 900, height: 200),
+            styleMask: [.borderless],
+            backing: .buffered,
+            defer: false
+        )
+        window.contentView = host
+        host.frame = NSRect(x: 0, y: 0, width: 900, height: 80)
+        host.layoutSubtreeIfNeeded()
+        let widths = PVSelectLayoutProbe.controlWidths(in: host)
+        let selectWidths = widths.filter { $0 > 40 && $0 < 700 }
+        #expect(!selectWidths.isEmpty, "no control widths in \(widths)")
+        #expect(selectWidths.allSatisfy { $0 <= column + 1 }, "widths \(selectWidths)")
+    }
+
+    @Test @MainActor func aShortClosedLabelHugsItsText() {
+        let host = NSHostingView(rootView:
+            PVSelect(
+                selection: .constant("a"),
+                options: [PVSelectOption(value: "a", label: "May")],
+                fillsWidth: false
+            )
+        )
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 900, height: 200),
+            styleMask: [.borderless],
+            backing: .buffered,
+            defer: false
+        )
+        window.contentView = host
+        host.frame = NSRect(x: 0, y: 0, width: 900, height: 80)
+        host.layoutSubtreeIfNeeded()
+        let widths = PVSelectLayoutProbe.controlWidths(in: host).filter { $0 > 16 && $0 < 700 }
+        #expect(widths.contains { $0 > 36 && $0 < 160 }, "widths \(widths)")
+    }
+
     @Test func triggerNeverReportsZeroSize() {
         let size = PVSelectPlacement.triggerSize(
             proposedWidth: nil, fitting: .zero, stretchesHorizontally: true
         )
         #expect(size.width >= 1)
         #expect(size.height >= 1)
+    }
+}
+
+private enum PVSelectLayoutProbe {
+    @MainActor
+    static func controlWidths(in view: NSView) -> [CGFloat] {
+        var widths: [CGFloat] = []
+        if view.bounds.height > 16, view.bounds.height < 48 {
+            widths.append(view.bounds.width)
+        }
+        for subview in view.subviews {
+            widths.append(contentsOf: controlWidths(in: subview))
+        }
+        return widths
     }
 }
