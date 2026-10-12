@@ -201,7 +201,7 @@ struct OnboardingModelTests {
         await model.choose(project)
         await model.submit()
         #expect(model.phase == .identify)
-        #expect(model.selectedContributorID == OnboardingModel.newContributorID)
+        #expect(model.selectedContributorID == jane.userID)
         model.selectedContributorID = jane.userID
         await model.submit()
         #expect(model.phase.isHome)
@@ -223,11 +223,51 @@ struct OnboardingModelTests {
         #expect(model.selectedContributorID == jane.userID)
     }
 
-    @Test func goToIdentifyDefaultsToNewContributorWhenIdentityNotInCatalog() async throws {
+    @Test func goToIdentifySelectsOldestUserWhenIdentityNotInCatalog() async throws {
         let folders = try makeFolders()
         let project = folders.documentsDirectory.appendingPathComponent("Shared.provenencia", isDirectory: true)
         try FileManager.default.createDirectory(at: project, withIntermediateDirectories: true)
         let store = FakeStore(identity: jane, catalogUsers: [jake])
+        let model = OnboardingModel(store: store, folders: folders)
+        await model.load()
+        await model.choose(project)
+        await model.submit()
+        #expect(model.selectedContributorID == jake.userID)
+    }
+
+    @Test func goToIdentifySelectsSmallestIDWhenNameOrderDiffers() async throws {
+        let folders = try makeFolders()
+        let project = folders.documentsDirectory.appendingPathComponent("Shared.provenencia", isDirectory: true)
+        try FileManager.default.createDirectory(at: project, withIntermediateDirectories: true)
+        let ann = InstallIdentity(
+            userID: "00000000-0000-7000-8000-000000000002",
+            displayName: "Ann",
+            ref: "USR-ANN01"
+        )
+        let zoe = InstallIdentity(
+            userID: "00000000-0000-7000-8000-000000000001",
+            displayName: "Zoe",
+            ref: "USR-ZOE01"
+        )
+        let outsider = InstallIdentity(
+            userID: "00000000-0000-7000-8000-000000000099",
+            displayName: "Pat",
+            ref: "USR-PAT01"
+        )
+        let store = FakeStore(identity: outsider, catalogUsers: [ann, zoe])
+        let model = OnboardingModel(store: store, folders: folders)
+        await model.load()
+        await model.choose(project)
+        await model.submit()
+        #expect(model.catalogUsers.map(\.displayName) == ["Ann", "Zoe"])
+        #expect(model.selectedContributorID == zoe.userID)
+    }
+
+    @Test func goToIdentifyStaysOnNewUserWhenCatalogHasNoUsers() async throws {
+        let folders = try makeFolders()
+        let project = folders.documentsDirectory.appendingPathComponent("Shared.provenencia", isDirectory: true)
+        try FileManager.default.createDirectory(at: project, withIntermediateDirectories: true)
+        let store = FakeStore(identity: jane, catalogUsers: [])
         let model = OnboardingModel(store: store, folders: folders)
         await model.load()
         await model.choose(project)
