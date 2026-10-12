@@ -14,9 +14,14 @@ struct ReconciliationRecord: Equatable, Identifiable {
     var mark: PVSymbol
     var location: WorkspaceLocation
 
-    init(outcome: CatalogReconcilerOutcome, in field: CatalogConclusionField, locale: Locale = .autoupdatingCurrent) {
+    init(
+        outcome: CatalogReconcilerOutcome,
+        in field: CatalogConclusionField,
+        locale: Locale = .autoupdatingCurrent,
+        orders: NameFormatOrders = NameFormatOrders()
+    ) {
         id = outcome.observationID
-        readAs = ReconciledValueDisplay.readAs(outcome, locale: locale)
+        readAs = ReconciledValueDisplay.readAs(outcome, locale: locale, orders: orders)
         readAsIsPhrase = ReconciledValueDisplay.readAsIsPhrase(outcome)
         counted = ReconciledValueDisplay.counted(outcome, in: field)
         sourceTitle = outcome.sourceTitle.isEmpty ? outcome.observationRef : outcome.sourceTitle

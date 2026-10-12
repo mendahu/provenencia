@@ -20,7 +20,7 @@ Usability fixes from [`docs/dogfood/ux.md`](../../dogfood/ux.md) after Spike 9, 
 4. **Lists.** Sources, People, Events, and Places show when the row last changed. Leaving a list and coming back lands at the same scroll position. The Sources list remembers sort, type filter, evidence-status filter, and text search.
 5. **Entry defaults.** A date modal opens on Year and, when the transcription has a date, that date is already filled. A full name line can be split into parts. The name-part type control does not jump width and cycles same-letter matches.
 6. **Small chrome.** Create Source asks for the name first. Enter saves a Property title. Clicking outside a sheet closes it, and asks first when the sheet is dirty. Opening an existing project selects the oldest user, not "create a new user." Searching `marriage` ranks title-word hits above fuzzy name prefixes. People, Places, and Events use one mark each, and the Event mark is not an hourglass. A Person page shows sex or gender, with gender winning when both exist.
-7. **Names match the way records are written.** José matches Jose in suggestions and stays a separate grouping on the Person page. Jas. matches James. O Brien matches O'Brien. A rare surname outweighs Smith. A patronymic is a part type. Spanish dual surnames weigh the first surname above the second. A negative observation counts as a contradiction.
+7. **Names match the way records are written.** José matches Jose in suggestions and stays a separate grouping on the Person page. Jas. matches James. O Brien matches O'Brien. A rare surname outweighs Smith. Name format profiles live in the catalog; the Western profile is the one this spike seeds. A negative observation counts as a contradiction.
 8. **A face is evidence.** A polygon on a photo is a depiction Observation. The Person page shows those crops, and one can be marked to lead that page and the People list. Promote compares two likenesses as pictures. Empty transcription is valid.
 9. **A filing can be taken back.** Unpromote on a promoted card deletes that Subject's Identity Claim and the bridge claims on this Source that used it, after a confirm that names those bridges. The card shows Promote again. The handle stays. Other members' claims are not rejected.
 10. **Long titles stay in their column.** The Promote target menu keeps its width when a title is long. The full title is available when the label is cut off. Typing `par` in a combo box lists *parent* above *grandparent*.
@@ -57,7 +57,7 @@ Usability fixes from [`docs/dogfood/ux.md`](../../dogfood/ux.md) after Spike 9, 
 | Phonetic tier (Daitch–Mokotoff) | S10-26 | — |
 | Name frequency in this project | S10-27 | — |
 | Support weighting + negative evidence | S10-28 | — |
-| Name patterns: patronymic, profiles, Spanish | S10-29 | S10-D4 (part list, before S10-17) |
+| Name patterns: schema, Western seed, loaders | S10-29 | — |
 | Date windows in matching | S10-30 | — |
 | Related event types + place chains | S10-31 | — |
 | Depiction value type + `likeness` | S10-32 | — |
@@ -118,13 +118,13 @@ These are the calls for this spike. The questions at the bottom are answered; no
 - **Combo box rank is three bands, then the original order.** In `PVComboBoxMatch`, a label that starts with the query ranks above a later word that starts with it (split on spaces and hyphens), which ranks above any other contains match, including a match only in the subtext. `par` lists *parent* above *grandparent*. This is the kit filter, not `core/search` (S10-06). Landed in S10-43.
 - **`interests` is prose, not a matcher feature.** Key `interests`, label Interests, `value_type = text`, cardinality `multiple`, bound to `person`, unlocked (the Properties page may unbind it). Same install rule as `engagement`: new catalogs only, no migration. It is not in a match profile and not on the Person header.
 - **Artifact drop already exists inside the Add dialogs** (`IngestFileDropRow` on create and attach). It does not exist on the Artifact section of the Source page. S10-18 adds the section target. Open File today is only in the expanded detail (`SourcePageArtifactsView.artifactPrimaryFileColumn`). The Evidence graph header has no open-file control.
-- **Name part types stay a select.** `patronymic` joins the compiled registry (S10-29), so the list can pass eight. It is still a fixed-width `PVSelect`. User-minted part types stay out. The Western split rules in S10-17 do not become profile-aware.
+- **Name part types stay a select.** The compiled list is unchanged by S10-29. It is still a fixed-width `PVSelect`. User-minted part types stay out. The Western split rules in S10-17 do not become profile-aware.
 - **Accent fold is matching only.** `wordSimilarity` scores a fold-only match at 0.95. `autoreconcile.NormalizeForm` and `sort_key` stay as they are, so José and Jose remain separate groupings on the Person page. Display never folds.
 - **Word tiers, top to bottom:** exact, abbreviation or nickname (just under exact), accent fold (0.95), the existing near-spelling score, then Daitch–Mokotoff. Spaced particles (`O`, `Mc`, `Mac`, `St`, `D`, `Fitz`, and the rest of that short list) rejoin with the next word before scoring. A lone initial (`O.`) does not rejoin.
 - **Abbreviation and nickname tables are seeded vocabulary** a project can extend, same as `role`. Not a compiled-only list, and not a population file.
 - **Name frequency is this project's inverse frequency** over name words. No seeded census of names.
 - **Support weighting and negatives land together.** A value counts in proportion to its support, and a negative Observation is a contradiction. Reasons name the two values that scored. A concluded value does not get a special weight: Reconciliation Claims are not in this spike.
-- **Patterns come from the catalog.** `name_format_profiles` is real (it is design-only today). Seed `western` and a Spanish dual-surname profile. `NamePatterns` reads those rows. Every name uses the project default profile until a per-person `name_format` claim exists. Spanish: both surnames are `surname`; the first weighs more than the second. No `maternal_surname` part type. `patronymic` is a part type and a role, compared as its own word, not walked to a father.
+- **Patterns come from the catalog.** `name_format_profiles` is real. Seed `western` only. Matching and display read those rows. Every name uses the project default until a per-person `name_format` claim exists. Spanish dual surnames and a `patronymic` part are unscheduled ([`ideas/international-names.md`](../../ideas/international-names.md)). No `maternal_surname` part type.
 - **Collation is a project setting with no picker.** Default locale `en`. Name ordering uses `golang.org/x/text/collate`. Changing the locale in the UI waits for a settings place.
 - **Dates in matching use the windows S9-21 already stores.** Spans and gaps are days. ABT doubles tolerance only when both dates are points. An event `date` can overlap `start_date` / `end_date`. Calendars and double dating stay out.
 - **Birth and baptism partly match, and so do death and burial.** A small term-affinity table, same shape as name-role affinity. Place comparison walks `part_of` (already shipped) so York and Toronto can relate. Flat toponym text stays the strong match.
@@ -140,7 +140,7 @@ These are the calls for this spike. The questions at the bottom are answered; no
 | --- | --- | --- | --- |
 | **S10-D1** | Adaptive choice field (kit board) | **S10-14**, descoped 2026-10-12 | — |
 | **S10-D3** | Citation composer | **S10-16** | — |
-| **S10-D4** | Name parts modal | **S10-17** | Design after S10-29, so the type list includes `patronymic` |
+| **S10-D4** | Name parts modal | **S10-17** | Split, fixed-width type control. Does not wait on S10-29 |
 | **S10-D5** | Source page — Artifacts | **S10-18** | — |
 | **S10-D6** | Evidence graph | **S10-18** header open | S10-20 box-select. S10-44 Unpromote on the promoted card |
 | **S10-D7** | Sidebar | **S10-19** | Toolbar section icon ships in the same PR |
@@ -194,15 +194,14 @@ SLICE 3 — Combo box
 SLICE 4 — Composer and the dialogs it opens
   S10-15  Create Source: name, then type — done, #375
   ✎ S10-D3 ──▶ S10-16  Observation list rethink.
-  S10-29  Name patterns (patronymic, western + Spanish profiles) — before D4
+  S10-29  Name patterns (schema, Western seed, loaders)
   ✎ S10-D4 ──▶ S10-17  Name parts: split, fixed width, letter cycle
   Check: twenty observations scan. Add a bridge and a plain Observation —
          both land where the board put authoring, and you can type.
          Start a relationship between two people without leaving, then
          another. Duplicate a saved row, change one value, save: the
          original is still there. Choosing a citation does not start Auto Transcribe. "Smith, John"
-         splits to Surname, Given. Patronymic is in the type list. Pressing S
-         twice reaches Surname.
+         splits to Surname, Given. Pressing S twice reaches Surname.
 
 SLICE 5 — Artifacts and multi-select
   ✎ S10-D5 ──▶
@@ -269,7 +268,7 @@ SLICE 10 — Take a filing back
 S10-99 — Dogfood close / docs
 ```
 
-S10-05…S10-13, S10-15, S10-19, S10-42, and S10-43 have no dependency on the graph slice. S10-24, S10-29, S10-30, S10-31, S10-32, S10-38, and S10-45 have no dependency on the dogfood slices. They are ordered here so review stays one stream. Parallel PRs are fine when **Depends on** allows it. S10-29 is numbered with the name work and listed in slice 4 because the name-parts brief cannot be drawn until `patronymic` exists.
+S10-05…S10-13, S10-15, S10-19, S10-42, and S10-43 have no dependency on the graph slice. S10-24, S10-29, S10-30, S10-31, S10-32, S10-38, and S10-45 have no dependency on the dogfood slices. They are ordered here so review stays one stream. Parallel PRs are fine when **Depends on** allows it. S10-D4 does not wait on S10-29.
 
 ### Dependencies at a glance
 
@@ -293,7 +292,7 @@ S10-21 scope ──▶ S10-22 last updated (D9…D11)
 S10-D8 ──▶ S10-41 Sources list (last updated, filters, persist, scroll)
 S10-D6 ──▶ S10-44 unpromote (button drawn with the open-file / box-select board)
 S10-D12 (gender + gallery + preferred portrait) ──▶ S10-23
-S10-29 patterns ──▶ S10-D4 ──▶ S10-17 name parts
+S10-D4 ──▶ S10-17 name parts
                  └──▶ S10-37 collation
 
 S10-24 fold ──▶ S10-25 tables ──▶ S10-26 phonetic
@@ -409,14 +408,14 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 
 #### S10-17 — Name parts split and type control
 
-**Brief:** S10-D4, designed after S10-29 so the type list includes `patronymic`.
+**Brief:** S10-D4.
 
 | | |
 | --- | --- |
 | **In** | Per S10-D4 and the working rules: blur splits an empty part list; Split refills, confirming when a part was hand-edited. Type control has a stable width (sized for the longest label, not the selection) and stays a `PVSelect`. Same-letter keypress cycles matches. That cycle is fixed in `PVSelect` (`handleTriggerKey` / session), so every select gains it; the width fix stays on this field. Split rules stay the Western ones. |
 | **Out** | Profile-aware splitting. A combo box for part type. User-minted part types. |
-| **Testable** | `Smith, John Henry` → Surname, Given, Given. `John Henry Smith` → Given, Given, Surname. Patronymic is a choice and does not resize the control. Blur with existing hand-edited parts does nothing. Split then asks. Pressing S moves from Surname prefix to Surname. |
-| **Depends on** | S10-29, S10-D4 |
+| **Testable** | `Smith, John Henry` → Surname, Given, Given. `John Henry Smith` → Given, Given, Surname. The type control does not resize. Blur with existing hand-edited parts does nothing. Split then asks. Pressing S moves from Surname prefix to Surname. |
+| **Depends on** | S10-D4 |
 
 ### Slice 5 — Artifacts, marks, multi-select
 
@@ -557,9 +556,9 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 
 | | |
 | --- | --- |
-| **In** | `patronymic` in the compiled part-type registry ([`add-name-value`](../../../.cursor/skills/add-name-value/SKILL.md)). Migration for `name_format_profiles`, `name_format_profile_parts` (natural and sorted), and `project_settings` if that table is not already there. Seed `western` and a Spanish dual-surname profile (first surname weighs more than the second; both are `surname`). `NamePatterns` reads the catalog. Loaders set `Value.NamePattern` from the project default. Role for `patronymic` is its own, not family. |
-| **Out** | A per-person `name_format` Reconciliation Claim. `maternal_surname`. Walking a patronymic to the father's handle. Profile-driven split in the name modal (S10-17 keeps the Western rules). |
-| **Testable** | García Márquez vs García weighs the shared first surname above a maternal mismatch. A patronymic pairs with a patronymic. Two names with no stored pattern still use western. The registry test that every product part type has a role includes `patronymic`. |
+| **In** | Migration for `name_format_profiles`, parts (natural and sorted, with a trailing separator), roles, weights, and `project_settings`. Seed `western` only. Matching and display read those rows. Loaders set `Value.NamePattern` from the project default. A catalog with no default still compares as `western`. |
+| **Out** | A per-person `name_format` Reconciliation Claim. A Spanish profile. A `patronymic` part type. `maternal_surname`. Profile-driven split in the name modal (S10-17 keeps the Western rules). |
+| **Testable** | Two names with no stored pattern still use western, and the scores match the built-in pattern. Install then Load round-trips the default to `western`. Sorted format of Vincent van Gogh is `van Gogh, Vincent`. A profile inserted only as rows formats from those rows. Every product part type has a role. |
 | **Depends on** | — |
 
 #### S10-30 — Date windows in matching
@@ -702,7 +701,7 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 | Date prefill and name split as the cheap extract | Detector suggestions, guided extract, catalog writes from a parse |
 | Accent fold, abbreviations, nicknames, Daitch–Mokotoff, project name frequency | Transliteration, Beider–Morse, a population name table |
 | Support weighting and negative evidence | Concluded-value priority, memory of a rejected claim |
-| `patronymic`, western + Spanish profiles, project-default pattern | Per-person `name_format` claim, `maternal_surname` |
+| Western profile, project-default pattern, catalog roles and weights | Per-person `name_format` claim, Spanish dual surnames, `patronymic`, `maternal_surname` |
 | Date windows in the comparer, birth~baptism, place chains | Calendars and double dating |
 | `depiction` + `likeness` gallery, bounding-box crop, one preferred portrait | Place/event keys, transparent polygon, Go PDF |
 | Session camera | A saved camera table |
@@ -727,7 +726,7 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 - **Gender and sex at birth are different Properties.** Seeding gender does not relabel sex at birth. The page treatment is a reading of reconciled values, not a new truth write.
 - **Outside click and macOS sheets.** AppKit sheets do not dismiss on an outside click. This is a product behavior on our presenters. Do not bolt a scrim onto `PVConfirm` (design-system rule: no dimming scrim; the window owns chrome).
 - **Folding is not reconciliation.** A test that José and Jose become one auto-reconciled name is a bug. Matching suggestions may still rank them together.
-- **`name_format_profiles` is not in the catalog yet.** S10-29 creates it. Do not point `NamePatterns` at a table that only exists in [`structured-name-model.md`](../../structured-name-model.md) §4.
+- **`name_format_profiles` is in the catalog** (S10-29). Matching and display read the default profile's rows. A catalog with no default still uses the built-in Western pattern.
 - **Depiction is not a file.** Delete and Impact stay on the Citation and the Artifact. The crop cache is disposable. A polygon edit must not leave the old crop as if it were the current face.
 - **Gallery and gender share a page.** S10-23 ships the gender treatment inside frames that already reserve the gallery and the preferred-portrait control. S10-35 fills the gallery. S10-39 fills the control. Designing the gender page without those frames means a second Person-detail brief, which this plan does not allow.
 - **Frequency on a tiny project.** Inverse frequency with one of each name is a flat weight. The scorer needs a floor so the first Smith is not treated as rare forever, and so an empty project still matches.
@@ -759,7 +758,8 @@ Everything else in **Working rules** is decided for planning. Correct any of the
 | --- | --- |
 | S10-21 | [`docs/audit-revision-history.md`](../../audit-revision-history.md) §4.1: `canonical_entity` is a scope. The catalog-audit rule's "conclusion layer carries no Source scope" stays true; the handle scope is additional. |
 | S10-23 | [`docs/seeded-vocabulary.md`](../../seeded-vocabulary.md) new gender section. Do not rewrite §3.7. |
-| S10-25, S10-29, S10-32 | Seeded vocabulary: abbreviation and nickname tables, `patronymic` and the Spanish profile, `likeness` / `depiction`. [`docs/matching.md`](../../matching.md) and [`docs/structured-name-model.md`](../../structured-name-model.md) follow the code. |
+| S10-25, S10-32 | Seeded vocabulary: abbreviation and nickname tables, `likeness` / `depiction`. |
+| S10-29 | [`docs/matching.md`](../../matching.md) and [`docs/structured-name-model.md`](../../structured-name-model.md): the Western profile is installed; roles and weights are catalog rows. |
 | S10-38 | [`docs/seeded-vocabulary.md`](../../seeded-vocabulary.md) §3.4: `engagement`. Couple rule covers `engagement`. No migration. |
 | S10-40, S10-41 | [`navigation-history.md`](../archive/spike-3/navigation-history.md): list scroll is session state restored when the list place appears. It is still not a history field. |
 | S10-44 | [`conclusion-layer-data-model.md`](../../conclusion-layer-data-model.md) §5.2 already allows deleting a claim. Note that Unpromote also deletes the bridge claims on that Source. Do not specify the review queue. |

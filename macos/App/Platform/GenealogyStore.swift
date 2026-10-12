@@ -1070,6 +1070,9 @@ protocol GenealogyStore: Sendable {
     /// One catalog open: sidebar / vocabulary-header totals for sources,
     /// types, and fields.
     func workspaceNavCounts(projectDir: String) async throws -> WorkspaceNavCounts
+    /// The project's default name-format orders. Empty lists mean the catalog
+    /// has no stored profile, so display keeps stored part order.
+    func nameFormat(projectDir: String) async throws -> NameFormatOrders
     /// Catalog search (S3-07+). Empty / whitespace query → empty hits. `kinds`
     /// restricts hits to those kinds; empty is the omnibar's default set, which
     /// leaves out `person` / `event` / `place` until S9-35.

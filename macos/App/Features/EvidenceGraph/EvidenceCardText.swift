@@ -21,14 +21,14 @@ struct EvidenceCardText: Equatable, Sendable {
     var summary: String?
 
     @MainActor
-    init(subject placed: SourceGraphPlacedSubject) {
+    init(subject placed: SourceGraphPlacedSubject, orders: NameFormatOrders = NameFormatOrders()) {
         accessibilityLabel = EvidenceSubjectCard.accessibilityLabel(for: placed)
         deleteActionName = L10n.EvidenceGraph.deleteAccessibility(
             kind: placed.kind.rawValue,
             label: placed.subject.label.isEmpty ? placed.subject.ref : placed.subject.label,
             ref: placed.subject.ref
         )
-        footerActionName = EvidenceSubjectCard.footerAccessibilityActionName(for: placed)
+        footerActionName = EvidenceSubjectCard.footerAccessibilityActionName(for: placed, orders: orders)
         summary = nil
     }
 
@@ -51,11 +51,11 @@ struct EvidenceGraphText: Equatable, Sendable {
     private var cards: [String: EvidenceCardText]
 
     @MainActor
-    init(snapshot: SourceGraphSnapshot) {
+    init(snapshot: SourceGraphSnapshot, orders: NameFormatOrders = NameFormatOrders()) {
         var cards: [String: EvidenceCardText] = [:]
         cards.reserveCapacity(snapshot.subjects.count + snapshot.bridges.count)
         for placed in snapshot.subjects {
-            cards[placed.id] = EvidenceCardText(subject: placed)
+            cards[placed.id] = EvidenceCardText(subject: placed, orders: orders)
         }
         for placed in snapshot.bridges {
             cards[placed.id] = EvidenceCardText(bridge: placed, in: snapshot)
@@ -66,7 +66,7 @@ struct EvidenceGraphText: Equatable, Sendable {
     /// Text for a placed subject; built on the spot only if the snapshot lacked it.
     @MainActor
     subscript(subject placed: SourceGraphPlacedSubject) -> EvidenceCardText {
-        cards[placed.id] ?? EvidenceCardText(subject: placed)
+        cards[placed.id] ?? EvidenceCardText(subject: placed, orders: NameFormatOrders())
     }
 
     /// Text for a placed bridge; built on the spot only if the snapshot lacked it.

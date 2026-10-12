@@ -21,6 +21,7 @@ import (
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/datevalues"
+	"github.com/mendahu/provenencia/core/database/nameformats"
 	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/database/sqlbatch"
 	"github.com/mendahu/provenencia/core/match"
@@ -111,11 +112,15 @@ func ForEntity(q Querier, entityID []byte, opts Options) (Result, error) {
 	if err != nil || !res.Profiled {
 		return res, err
 	}
+	loaded, err := nameformats.Load(q)
+	if err != nil {
+		return Result{}, err
+	}
 	rows, err := q.Query(sqlEntityValuesOfOne, entityID)
 	if err != nil {
 		return Result{}, err
 	}
-	probes, err := scanEntityValues(rows, profile)
+	probes, err := scanEntityValues(rows, profile, loaded.Key)
 	if err != nil {
 		return Result{}, err
 	}
@@ -164,6 +169,11 @@ func rank(q Querier, res Result, typeID []byte, probe match.Values, profile matc
 			kept = append(kept, c)
 		}
 	}
+	loaded, err := nameformats.Load(q)
+	if err != nil {
+		return Result{}, err
+	}
+	profile = profile.WithNameComparer(loaded.Comparer())
 	res.Matches = match.Rank(profile, probe, kept, opts.Limit)
 	return res, nil
 }
@@ -171,11 +181,15 @@ func rank(q Querier, res Result, typeID []byte, probe match.Values, profile matc
 // loadCandidates reads every unmerged handle of the type with a cached value
 // for a profile Property: one query. The blocking seam — narrow it here.
 func loadCandidates(q Querier, typeID []byte, profile match.Profile) ([]match.Candidate, error) {
+	loaded, err := nameformats.Load(q)
+	if err != nil {
+		return nil, err
+	}
 	rows, err := q.Query(sqlEntityValuesOfType, typeID)
 	if err != nil {
 		return nil, err
 	}
-	return scanEntityValues(rows, profile)
+	return scanEntityValues(rows, profile, loaded.Key)
 }
 
 // CandidatesOfType reads every unmerged handle of the Subject type (key,
@@ -198,13 +212,17 @@ func CandidatesOfType(q Querier, typeKey, origin string, profile match.Profile) 
 func EntitiesValues(q Querier, entityIDs [][]byte, profile match.Profile) (map[string]match.Values, error) {
 	out := map[string]match.Values{}
 	ids := database.UniqueBlobIDs(entityIDs)
-	err := sqlbatch.Each(ids, func(batch [][]byte) error {
+	loaded, err := nameformats.Load(q)
+	if err != nil {
+		return nil, err
+	}
+	err = sqlbatch.Each(ids, func(batch [][]byte) error {
 		rows, err := q.Query(sqlEntityValues+` AND e.id IN (`+database.SQLInPlaceholders(len(batch))+`) ORDER BY r.entity_id`,
 			database.BlobArgs(batch)...)
 		if err != nil {
 			return err
 		}
-		cands, err := scanEntityValues(rows, profile)
+		cands, err := scanEntityValues(rows, profile, loaded.Key)
 		if err != nil {
 			return err
 		}
@@ -271,6 +289,10 @@ func SubjectsValues(q Querier, subjectIDs [][]byte, profile match.Profile) (map[
 	if err != nil {
 		return nil, err
 	}
+	loaded, err := nameformats.Load(q)
+	if err != nil {
+		return nil, err
+	}
 	out := map[string]match.Values{}
 	for _, p := range all {
 		if d, ok := dates[string(p.dateID)]; ok {
@@ -278,6 +300,7 @@ func SubjectsValues(q Querier, subjectIDs [][]byte, profile match.Profile) (map[
 		}
 		if n, ok := names[string(p.nameID)]; ok {
 			p.v.Name = &n
+			p.v.NamePattern = loaded.Key
 		}
 		if out[p.subject] == nil {
 			out[p.subject] = match.Values{}
@@ -299,7 +322,7 @@ func loadSubjectValues(q Querier, subjectID []byte, profile match.Profile) (matc
 
 // scanEntityValues groups cache rows into one Candidate per handle, in row
 // order, keeping only the profile's Properties. It closes rows.
-func scanEntityValues(rows *sql.Rows, profile match.Profile) ([]match.Candidate, error) {
+func scanEntityValues(rows *sql.Rows, profile match.Profile, namePattern string) ([]match.Candidate, error) {
 	defer rows.Close()
 	wanted := propertySet(profile)
 	var out []match.Candidate
@@ -333,6 +356,7 @@ func scanEntityValues(rows *sql.Rows, profile match.Profile) ([]match.Candidate,
 				return nil, err
 			}
 			v.Name = &n
+			v.NamePattern = namePattern
 		}
 		if len(out) == 0 || !bytes.Equal(out[len(out)-1].EntityID, entityID) {
 			out = append(out, match.Candidate{EntityID: entityID, Ref: ref, Values: match.Values{}})

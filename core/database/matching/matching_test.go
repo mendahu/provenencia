@@ -11,6 +11,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/matching"
+	"github.com/mendahu/provenencia/core/database/nameformats"
 	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/database/namevalues/namevaluestest"
 	"github.com/mendahu/provenencia/core/database/observations"
@@ -306,6 +307,33 @@ func TestUnprofiledAndUnknown(t *testing.T) {
 		if _, err := matching.ForEntity(f.db, id, matching.Options{}); !errors.Is(err, sql.ErrNoRows) {
 			t.Fatalf("%s entity: %v", name, err)
 		}
+	}
+}
+
+func TestNoStoredDefaultStampsWestern(t *testing.T) {
+	f := newFixture(t)
+	probe := f.subject("person", namedParts("Vincent van Gogh", "Vincent", "Gogh"))
+	handle := f.handle("person", namedParts("Vincent van Gogh", "Vincent", "Gogh"))
+	profile, _ := match.DefaultProfile("person")
+	prop := match.Property{Key: "name", Origin: "provenencia"}
+	vals, err := matching.SubjectsValues(f.db, [][]byte{probe.ID}, profile)
+	must(t, err)
+	cands, err := matching.CandidatesOfType(f.db, "person", "provenencia", profile)
+	must(t, err)
+	var candidate match.Value
+	for _, c := range cands {
+		if c.Ref == handle.Entity.Ref {
+			candidate = c.Values[prop][0]
+		}
+	}
+	subject := vals[string(probe.ID)][prop][0]
+	if subject.NamePattern != match.WesternPattern || candidate.NamePattern != match.WesternPattern {
+		t.Fatalf("patterns %q %q", subject.NamePattern, candidate.NamePattern)
+	}
+	got, ok := nameformats.Loaded{Key: match.WesternPattern, Builtin: true}.Comparer().Compare(subject, candidate)
+	want, wantOK := match.DefaultNames.Compare(subject, candidate)
+	if ok != wantOK || got != want {
+		t.Fatalf("score %v %v, built-in %v %v", got, ok, want, wantOK)
 	}
 }
 

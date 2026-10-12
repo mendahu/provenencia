@@ -62,8 +62,8 @@ A candidate is returned when its total reaches `MinScore`. Results are sorted by
 `form` is the name as written, closer to a transcription. Typed parts are what can be computed on ([`structured-name-model.md`](structured-name-model.md)). `NameComparer` compares names **word by word**, and uses each word's part type as data:
 
 - **Roles come from a name pattern.** A `NamePattern` holds everything culture-specific: which part type plays which role, and each role's word weight. The comparer holds none of it.
-  - Each name takes its pattern from `Value.NamePattern` (its Person's name format, once loaders supply it); otherwise it uses the comparer's pattern.
-  - Patterns come through a `NamePatterns` source. Today that's `BuiltinNamePatterns` in the registry, with only `western`; later it becomes a read of `name_format_profiles`.
+  - Each name takes its pattern from `Value.NamePattern`. Loaders copy the project default's key onto it. An empty key uses the comparer's pattern.
+  - Patterns come through a `NamePatterns` source. A catalog with a default profile supplies that profile (`nameformats.Load`): its role rows and weight rows, and that key. A catalog with no default, and `ComparerFor` for a caller with no catalog, stay on `BuiltinNamePatterns` (`western`).
   - Because each name uses its own pattern, names under different patterns still compare.
 
   | Role | Default part types | Word weight |
@@ -126,7 +126,7 @@ Tests: [`core/match/names_test.go`](../core/match/names_test.go) has three layer
 When a seed finds a bug, shrink it into an exact-score case.
 
 Not yet handled:
-- **Accents, Spanish dual surnames, patronymic, nicknames, Daitch–Mokotoff:** Spike 10, [`deployment-plan/spike-10/international-names.md`](deployment-plan/spike-10/international-names.md). Other patterns, transliteration, and calendars: [`ideas/international-names.md`](ideas/international-names.md).
+- **Accents, nicknames, Daitch–Mokotoff:** Spike 10, [`deployment-plan/spike-10/international-names.md`](deployment-plan/spike-10/international-names.md). Spanish dual surnames, a patronymic part, other patterns, transliteration, and calendars: [`ideas/international-names.md`](ideas/international-names.md).
 - **Abbreviations, project name frequency, spaced particles, support weighting, date windows, event and place affinity:** Spike 10, [`deployment-plan/spike-10/name-matching-enhancements.md`](deployment-plan/spike-10/name-matching-enhancements.md). Known-as, concluded values, calibration, and rejected-claim memory: [`ideas/name-matching-enhancements.md`](ideas/name-matching-enhancements.md).
 
 **Resolution uses the same parts.** The reconciler (`core/autoreconcile/names.go`) and `NameComparer` both ignore `form`. A name with no parts is no evidence there and not comparable here. The cache name `sort_key` (list order) is still the normalized form, and list and card text shows it. That sort key is not a match.

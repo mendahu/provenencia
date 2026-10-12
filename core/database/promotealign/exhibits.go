@@ -9,6 +9,7 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/graphcache"
+	"github.com/mendahu/provenencia/core/database/nameformats"
 	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/sqlbatch"
@@ -179,6 +180,9 @@ func pairExhibits(incoming []exhibitObs, neighbor []byte, memberObs []exhibitObs
 			continue
 		}
 		cmp := match.ComparerFor(in.valueType)
+		if in.valueType == properties.ValueTypeName && cfg.Names != nil {
+			cmp = *cfg.Names
+		}
 		var chosen *exhibitObs
 		var sim float64
 		var comparable bool
@@ -403,6 +407,10 @@ func loadExhibitObservations(q Querier, subjectIDs [][]byte) ([]exhibitObs, erro
 	if err != nil {
 		return nil, err
 	}
+	loaded, err := nameformats.Load(q)
+	if err != nil {
+		return nil, err
+	}
 	out := make([]exhibitObs, 0, len(all))
 	for _, p := range all {
 		if d, ok := dates[string(p.dateID)]; ok {
@@ -411,6 +419,7 @@ func loadExhibitObservations(q Querier, subjectIDs [][]byte) ([]exhibitObs, erro
 		}
 		if n, ok := names[string(p.nameID)]; ok {
 			p.o.value.Name = &n
+			p.o.value.NamePattern = loaded.Key
 			p.o.display = n.Form
 		}
 		if p.o.display == "" && p.o.value.HasText {

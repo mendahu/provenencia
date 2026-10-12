@@ -344,7 +344,7 @@ private extension EvidenceAppKitCard {
                 style.line
             )
         }
-        paintFooter(footerRect, placed: placed, style: style, hovered: state.hoveredActionID, pressed: state.pressedActionID, painter: painter)
+        paintFooter(footerRect, placed: placed, style: style, hovered: state.hoveredActionID, pressed: state.pressedActionID, orders: card.nameOrders, painter: painter)
         strokeCard(
             cardRect,
             color: selected ? PVColor.accent : (placed.isCited ? style.line : PVColor.borderDefault),
@@ -637,6 +637,7 @@ private extension EvidenceAppKitCard {
         style: EvidenceSubjectKindStyle,
         hovered: String?,
         pressed: String?,
+        orders: NameFormatOrders = NameFormatOrders(),
         painter: Painter?
     ) {
         guard let painter else { return }
@@ -646,7 +647,7 @@ private extension EvidenceAppKitCard {
             let hot = hovered == EvidenceSubjectCard.openHandleActionID
             if hot || down { painter.fill(rect, style.ink.opacity(down ? 0.18 : 0.10)) }
             painter.text(membership.entity.ref, in: CGRect(x: EvidenceSubjectCard.shellPaddingX, y: rect.midY - 7, width: 72, height: 14), font: mono(10), color: style.ink, lines: 1)
-            let stored = EvidenceSubjectCard.membershipName(membership)
+            let stored = EvidenceSubjectCard.membershipName(membership, orders: orders)
             let name = stored ?? L10n.string(L10n.EvidenceGraph.openHandlePage(kind: placed.kind))
             painter.text(
                 name,

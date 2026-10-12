@@ -8,7 +8,7 @@
 - explicit zero settings;
 - initials not hiding a surname conflict.
 
-What this spike builds is below. Accents, the Spanish profile, and `patronymic` are in [`international-names.md`](international-names.md).
+What this spike builds is below. Accents are in [`international-names.md`](international-names.md). Spanish dual surnames and a patronymic part are unscheduled ([`ideas/international-names.md`](../../ideas/international-names.md)).
 
 ## Names
 

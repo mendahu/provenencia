@@ -19,12 +19,20 @@ enum EventsList: ConclusionListKind {
     static func ref(_ header: CatalogEventHeader) -> String { header.entity.ref }
 
     static func titleSource(_ header: CatalogEventHeader) -> ConclusionTitleSource {
-        EventTitleDisplay.titleSource(header)
+        titleSource(header, orders: NameFormatOrders())
+    }
+
+    static func titleSource(_ header: CatalogEventHeader, orders: NameFormatOrders) -> ConclusionTitleSource {
+        EventTitleDisplay.titleSource(header, orders: orders)
     }
 
     static func accessibilityLabel(_ header: CatalogEventHeader) -> String {
+        accessibilityLabel(header, orders: NameFormatOrders())
+    }
+
+    static func accessibilityLabel(_ header: CatalogEventHeader, orders: NameFormatOrders) -> String {
         let line = EventSecondaryDisplay.content(header)
-        var label = L10n.Workspace.eventRowAccessibility(title: titleSource(header).text, date: line.date, ref: header.entity.ref)
+        var label = L10n.Workspace.eventRowAccessibility(title: titleSource(header, orders: orders).text, date: line.date, ref: header.entity.ref)
         if !line.place.isEmpty {
             label = L10n.Conclusions.a11yList(label, rest: line.place)
         }
@@ -35,7 +43,15 @@ enum EventsList: ConclusionListKind {
     }
 
     static func location(_ header: CatalogEventHeader) -> WorkspaceLocation {
-        .eventDetail(entityId: header.entity.id, ref: header.entity.ref, title: EventTitleDisplay.title(header))
+        location(header, orders: NameFormatOrders())
+    }
+
+    static func location(_ header: CatalogEventHeader, orders: NameFormatOrders) -> WorkspaceLocation {
+        .eventDetail(
+            entityId: header.entity.id,
+            ref: header.entity.ref,
+            title: EventTitleDisplay.title(header, orders: orders)
+        )
     }
 
     @MainActor

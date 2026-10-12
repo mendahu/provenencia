@@ -15,9 +15,9 @@ import (
 // match.Set(0.0)}) or pass a whole Profile (matching.Options.Profile).
 // registry_test.go fails if a setting is added without a registry value.
 //
-// Later, per-project profiles and data-driven name patterns replace these
-// values through the same shapes: a stored Profile, and a NamePatterns
-// source backed by name_format_profiles instead of BuiltinNamePatterns.
+// A catalog with a default name format replaces Patterns and Pattern at
+// score time (nameformats.Load). These values stay the fallback when that
+// row is missing, and for callers with no catalog.
 
 // ---------------------------------------------------------------------------
 // Words (names and free text)

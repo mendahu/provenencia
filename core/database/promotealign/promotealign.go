@@ -9,6 +9,7 @@ import (
 	"sort"
 
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/nameformats"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/graphalign"
 )
@@ -58,7 +59,12 @@ func Propose(c *database.Catalog, sourceID []byte, fixed []graphalign.Fixed) (gr
 		return graphalign.Proposal{}, 0, err
 	}
 
-	canon, err := loadCanon(c.Graph(), q, layer, anchors)
+	loaded, err := nameformats.Load(q)
+	if err != nil {
+		return graphalign.Proposal{}, 0, err
+	}
+	names := loaded.Comparer()
+	canon, err := loadCanon(c.Graph(), q, layer, anchors, names, loaded.Key)
 	if err != nil {
 		return graphalign.Proposal{}, 0, err
 	}
@@ -69,6 +75,7 @@ func Propose(c *database.Catalog, sourceID []byte, fixed []graphalign.Fixed) (gr
 	}
 
 	cfg := graphalign.DefaultConfig()
+	cfg.Names = &names
 	prop := graphalign.Align(layer, canon, stats, anchors, &cfg)
 	if err := attachExhibits(q, c.Graph(), layer, &prop, cfg, stats); err != nil {
 		return graphalign.Proposal{}, 0, err

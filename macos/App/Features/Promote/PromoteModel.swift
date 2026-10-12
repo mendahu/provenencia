@@ -123,6 +123,7 @@ final class PromoteModel {
         self.userID = userID
         self.catalogCounts = catalogCounts
         var flow = PromoteFlow(entryID: entry.subjectID)
+        flow.nameOrders = session.nameFormat
         flow.mappedRest = entry.mapAll
         self.flow = flow
     }
@@ -142,6 +143,7 @@ final class PromoteModel {
             }
             grades = await session.readyValue(confidenceKey) ?? []
             await attachSource()
+            flow.nameOrders = session.nameFormat
             flow.load(entryID: entry.subjectID, proposal: proposal, subjects: facts.subjects, bridges: facts.bridges)
             loadError = nil
         } catch {

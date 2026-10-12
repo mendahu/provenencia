@@ -15,7 +15,7 @@ struct PersonDetailView: View {
             thumbnailLabel: L10n.Conclusions.personNoLikeness,
             pageIdentifier: "persons.detail",
             errorIdentifier: "persons.detail.error",
-            make: { PersonDetailContent(detail: $0) },
+            make: { PersonDetailContent(detail: $0, orders: session.nameFormat) },
             summary: { PersonDetailVitals(vitals: $0.vitals) }
         )
     }

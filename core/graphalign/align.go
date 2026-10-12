@@ -282,9 +282,13 @@ func (st *state) supports(subjectID, handleID, neighbor []byte) bool {
 	return false
 }
 
+func (st *state) evaluate(a, b match.Values) match.Evaluation {
+	return match.EvaluateWithNames(a, b, st.metas, st.cfg.Names)
+}
+
 func (st *state) scoreCandidate(subjectID []byte, h *Handle) scoredCand {
 	s := st.subjects[string(subjectID)]
-	ev := match.Evaluate(s.Values, h.Values, st.metas)
+	ev := st.evaluate(s.Values, h.Values)
 	edge := EdgePoints(st.edgeFacts(subjectID, h.ID), st.cfg)
 	sc := ScoreCandidate(ev, s.Values, edge, s.Provenance, st.cfg, st.stats)
 	return scoredCand{
@@ -332,7 +336,7 @@ func (st *state) nodeScore(subjectID, handleID []byte) float64 {
 	if s == nil || h == nil {
 		return 0
 	}
-	ev := match.Evaluate(s.Values, h.Values, st.metas)
+	ev := st.evaluate(s.Values, h.Values)
 	return propertyPoints(&ev, s.Values, st.cfg, st.stats)
 }
 
@@ -387,6 +391,9 @@ func (st *state) fallbackUnreachable() {
 		profile, ok := match.DefaultProfile(s.Kind)
 		if !ok {
 			continue
+		}
+		if st.cfg.Names != nil {
+			profile = profile.WithNameComparer(*st.cfg.Names)
 		}
 		for _, m := range match.Rank(profile, s.Values, st.candidatesOfKind(s.Kind), st.cfg.AlternativeLimit) {
 			h := st.handles[string(m.EntityID)]
@@ -622,7 +629,7 @@ func (st *state) proposal() Proposal {
 			if h != nil {
 				row.HandleRef = h.Ref
 				if len(sc.eval.Comparisons) == 0 {
-					sc.eval = match.Evaluate(s.Values, h.Values, st.metas)
+					sc.eval = st.evaluate(s.Values, h.Values)
 				}
 			}
 			row.Score = sc.score
@@ -741,7 +748,7 @@ func (st *state) alikeNew(a, b *Subject) bool {
 	if disagree {
 		return false
 	}
-	ev := match.Evaluate(a.Values, b.Values, st.metas)
+	ev := st.evaluate(a.Values, b.Values)
 	return ScoreCandidate(ev, a.Values, EdgePoints(facts, st.cfg), 1, st.cfg, st.stats).Score >= st.cfg.AcceptScore
 }
 
@@ -819,7 +826,7 @@ func (st *state) neighborsMatch(a, b []byte) bool {
 	if sa == nil || sb == nil || sa.Kind != sb.Kind {
 		return false
 	}
-	ev := match.Evaluate(sa.Values, sb.Values, st.metas)
+	ev := st.evaluate(sa.Values, sb.Values)
 	return ScoreCandidate(ev, sa.Values, 0, 1, st.cfg, st.stats).Score >= st.cfg.AcceptScore
 }
 
@@ -830,7 +837,7 @@ func (st *state) pairNode(a, b []byte) float64 {
 	if sa == nil || sb == nil {
 		return 0
 	}
-	ev := match.Evaluate(sa.Values, sb.Values, st.metas)
+	ev := st.evaluate(sa.Values, sb.Values)
 	return propertyPoints(&ev, sa.Values, st.cfg, st.stats)
 }
 

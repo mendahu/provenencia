@@ -18,7 +18,7 @@ const seedCandidateLimit = 5
 // matches for each unfixed kind, then every link those handles have. Link
 // order is association ref, then the neighbor's ref, which is the order the
 // walk used to break ties.
-func loadCanon(g *graphcache.Graph, q Querier, layer graphalign.Layer, fixed []graphalign.Fixed) (graphalign.Canon, error) {
+func loadCanon(g *graphcache.Graph, q Querier, layer graphalign.Layer, fixed []graphalign.Fixed, names match.NameComparer, namePattern string) (graphalign.Canon, error) {
 	props, err := propertyByID(g)
 	if err != nil {
 		return graphalign.Canon{}, err
@@ -54,7 +54,7 @@ func loadCanon(g *graphcache.Graph, q Querier, layer graphalign.Layer, fixed []g
 		if !promotePrimary(kind, "provenencia") {
 			return nil
 		}
-		vals, err := handleValues(props, neutral, n)
+		vals, err := handleValues(props, neutral, n, namePattern)
 		if err != nil {
 			return err
 		}
@@ -84,6 +84,7 @@ func loadCanon(g *graphcache.Graph, q Querier, layer graphalign.Layer, fixed []g
 		if !ok {
 			continue
 		}
+		profile = profile.WithNameComparer(names)
 		cands, ok := ranked[s.Kind]
 		if !ok {
 			typeID := types[s.Kind]
@@ -96,7 +97,7 @@ func loadCanon(g *graphcache.Graph, q Querier, layer graphalign.Layer, fixed []g
 				return graphalign.Canon{}, err
 			}
 			for _, n := range nodes {
-				vals, err := handleValues(props, neutral, n)
+				vals, err := handleValues(props, neutral, n, namePattern)
 				if err != nil {
 					return graphalign.Canon{}, err
 				}
@@ -172,7 +173,7 @@ func loadCanon(g *graphcache.Graph, q Querier, layer graphalign.Layer, fixed []g
 					})
 				}
 				if _, ok := handles[string(neighbor.ID)]; !ok {
-					vals, err := handleValues(props, neutral, neighbor)
+					vals, err := handleValues(props, neutral, neighbor, namePattern)
 					if err != nil {
 						return graphalign.Canon{}, err
 					}
@@ -241,7 +242,7 @@ func keptTerm(n *graphcache.Node, props map[string]match.Property, key string) s
 	return ""
 }
 
-func handleValues(props map[string]match.Property, neutral map[string]bool, n *graphcache.Node) (match.Values, error) {
+func handleValues(props map[string]match.Property, neutral map[string]bool, n *graphcache.Node, namePattern string) (match.Values, error) {
 	out := match.Values{}
 	if n == nil {
 		return out, nil
@@ -272,6 +273,7 @@ func handleValues(props map[string]match.Property, neutral map[string]bool, n *g
 					return nil, err
 				}
 				v.Name = &name
+				v.NamePattern = namePattern
 			}
 			vals = append(vals, v)
 		}

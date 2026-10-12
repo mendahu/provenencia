@@ -194,11 +194,12 @@ private struct OmnibarHitRowView: View {
     let hit: CatalogSearchHit
     let projectDir: String
     var selected: Bool
+    @Environment(WorkspaceSession.self) private var session
 
     var body: some View {
         PVOmnibarHitRow(
             lead: { leadView },
-            title: OmnibarHitPresentation.title(for: hit),
+            title: OmnibarHitPresentation.title(for: hit, orders: session.nameFormat),
             kindLabel: OmnibarHitPresentation.kindLabel(for: hit.kind),
             secondary: OmnibarHitPresentation.secondary(for: hit),
             ref: hit.ref,

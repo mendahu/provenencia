@@ -76,10 +76,10 @@ enum OmnibarHitPresentation {
 
     /// Title the list would show. Falls back to the indexed title when the hit
     /// has no structured header.
-    static func title(for hit: CatalogSearchHit) -> String {
+    static func title(for hit: CatalogSearchHit, orders: NameFormatOrders = NameFormatOrders()) -> String {
         switch hit.header {
-        case .person(let header): return PersonHeaderDisplay.title(header)
-        case .event(let header): return EventTitleDisplay.title(header)
+        case .person(let header): return PersonHeaderDisplay.title(header, style: .sorted, orders: orders)
+        case .event(let header): return EventTitleDisplay.title(header, orders: orders)
         case .place(let header): return PlaceTitleDisplay.title(header)
         case nil: return hit.title
         }

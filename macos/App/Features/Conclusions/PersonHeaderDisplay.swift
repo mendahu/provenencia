@@ -7,20 +7,33 @@ import Foundation
 enum PersonHeaderDisplay {
     typealias TitleSource = ConclusionTitleSource
 
-    static func titleSource(name: CatalogNameValue?, entity: CatalogCanonicalEntity) -> TitleSource {
+    static func titleSource(
+        name: CatalogNameValue?,
+        entity: CatalogCanonicalEntity,
+        style: NameDisplayStyle = .natural,
+        orders: NameFormatOrders = NameFormatOrders()
+    ) -> TitleSource {
         if let name {
-            let text = NameValueDisplay.string(for: name)
+            let text = NameValueDisplay.string(for: name, style: style, orders: orders)
             if !text.isEmpty { return .name(text) }
         }
         let label = entity.label.trimmingCharacters(in: .whitespacesAndNewlines)
         return label.isEmpty ? .ref(entity.ref) : .label(label)
     }
 
-    static func titleSource(_ header: CatalogPersonHeader) -> TitleSource {
-        titleSource(name: header.name, entity: header.entity)
+    static func titleSource(
+        _ header: CatalogPersonHeader,
+        style: NameDisplayStyle = .natural,
+        orders: NameFormatOrders = NameFormatOrders()
+    ) -> TitleSource {
+        titleSource(name: header.name, entity: header.entity, style: style, orders: orders)
     }
 
-    static func title(_ header: CatalogPersonHeader) -> String {
-        titleSource(header).text
+    static func title(
+        _ header: CatalogPersonHeader,
+        style: NameDisplayStyle = .natural,
+        orders: NameFormatOrders = NameFormatOrders()
+    ) -> String {
+        titleSource(header, style: style, orders: orders).text
     }
 }

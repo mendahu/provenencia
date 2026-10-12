@@ -52,15 +52,30 @@ protocol ConclusionListKind {
 
     static func ref(_ row: Row) -> String
     static func titleSource(_ row: Row) -> ConclusionTitleSource
+    static func titleSource(_ row: Row, orders: NameFormatOrders) -> ConclusionTitleSource
     /// Names beyond the one shown. Zero omits the +N badge.
     static func extraCount(_ row: Row) -> Int
     static func accessibilityLabel(_ row: Row) -> String
+    static func accessibilityLabel(_ row: Row, orders: NameFormatOrders) -> String
     static func location(_ row: Row) -> WorkspaceLocation
+    static func location(_ row: Row, orders: NameFormatOrders) -> WorkspaceLocation
     @MainActor static func secondary(_ row: Row) -> Secondary
 }
 
 extension ConclusionListKind {
     static func extraCount(_: Row) -> Int { 0 }
+
+    static func titleSource(_ row: Row, orders: NameFormatOrders) -> ConclusionTitleSource {
+        titleSource(row)
+    }
+
+    static func accessibilityLabel(_ row: Row, orders: NameFormatOrders) -> String {
+        accessibilityLabel(row)
+    }
+
+    static func location(_ row: Row, orders: NameFormatOrders) -> WorkspaceLocation {
+        location(row)
+    }
 }
 
 /// The shared Conclude list page for one kind. This view does not choose a
@@ -105,6 +120,7 @@ struct ConclusionListPage<Kind: ConclusionListKind>: View {
 private struct ConclusionListBody<Kind: ConclusionListKind>: View {
     @Bindable var handle: QueryHandle<[Kind.Row]>
     @Environment(WorkspaceNavigation.self) private var navigation
+    @Environment(WorkspaceSession.self) private var session
 
     private var presentation: ConclusionListPresentation<Kind.Row> {
         ConclusionListPresentation(
@@ -140,10 +156,10 @@ private struct ConclusionListBody<Kind: ConclusionListKind>: View {
                     thumbnail: { _ in ConclusionListRow.thumbnail(mark: Kind.mark) },
                     meta: { Kind.ref($0) },
                     label: Kind.title,
-                    itemAccessibilityLabel: { Kind.accessibilityLabel($0) },
+                    itemAccessibilityLabel: { Kind.accessibilityLabel($0, orders: session.nameFormat) },
                     itemAccessibilityIdentifier: { "\(Kind.identifierRoot).row.\(Kind.ref($0))" },
-                    onActivate: { navigation.go(to: Kind.location($0)) },
-                    primary: { ConclusionListRow.title(Kind.titleSource($0), extraCount: Kind.extraCount($0)) },
+                    onActivate: { navigation.go(to: Kind.location($0, orders: session.nameFormat)) },
+                    primary: { ConclusionListRow.title(Kind.titleSource($0, orders: session.nameFormat), extraCount: Kind.extraCount($0)) },
                     secondary: { Kind.secondary($0) }
                 )
             }

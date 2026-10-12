@@ -70,6 +70,7 @@ struct WorkspaceView: View {
             identifier: "workspace.notice.toast"
         )
         .task {
+            await session.loadNameFormat()
             await catalogCounts.refreshAll()
             if let message = catalogCounts.lastRefreshError {
                 countsToast = VocabularyToast(

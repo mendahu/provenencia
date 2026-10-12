@@ -36,6 +36,29 @@ struct PersonHeaderDisplayTests {
         #expect(PersonHeaderDisplay.title(header(name: name, clusters: 1)) == "James Robins")
     }
 
+    @Test func sortedOrderUsesTheCatalogSeparator() {
+        let name = CatalogNameValue(form: "unused", parts: [
+            CatalogNameValuePart(value: "Vincent", type: "given"),
+            CatalogNameValuePart(value: "van", type: "surname_prefix"),
+            CatalogNameValuePart(value: "Gogh", type: "surname"),
+        ])
+        let orders = NameFormatOrders(
+            natural: [
+                NameFormatPart(partType: "given", trailingSeparator: ""),
+                NameFormatPart(partType: "surname_prefix", trailingSeparator: ""),
+                NameFormatPart(partType: "surname", trailingSeparator: ""),
+            ],
+            sorted: [
+                NameFormatPart(partType: "surname_prefix", trailingSeparator: ""),
+                NameFormatPart(partType: "surname", trailingSeparator: ", "),
+                NameFormatPart(partType: "given", trailingSeparator: ""),
+            ]
+        )
+        #expect(NameValueDisplay.string(for: name, style: .sorted, orders: orders) == "van Gogh, Vincent")
+        #expect(PersonHeaderDisplay.title(header(name: name), style: .sorted, orders: orders) == "van Gogh, Vincent")
+        #expect(NameValueDisplay.string(for: name, style: .natural, orders: orders) == "Vincent van Gogh")
+    }
+
     @Test func emptyNameFallsBackToLabelThenRef() {
         let empty = CatalogNameValue(form: "", parts: [])
         #expect(PersonHeaderDisplay.title(header(name: empty, label: "Mother of James")) == "Mother of James")

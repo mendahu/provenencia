@@ -89,6 +89,8 @@ type Config struct {
 	AlternativeLimit   int
 	MPrior             map[string]float64 // value type → m
 	UPrior             float64
+	// Names scores name values when set. Nil keeps match.ComparerFor.
+	Names *match.NameComparer
 }
 
 func (c Config) agreementWeight(p match.Property) float64 {
