@@ -102,6 +102,8 @@ var nameCases = []nameCase{
 	{"fold", "eszett", NameComparer{}, nv("s=Groß"), nv("s=Gross"), foldOnly},
 	{"alias", "abbreviation", withAliasSeed(), nv("g=Jas."), nv("g=James"), AliasCredit},
 	{"alias", "nickname", withAliasSeed(), nv("g=Jim"), nv("g=James"), AliasCredit},
+	{"alias", "benjamin", withAliasSeed(), nv("g=Ben"), nv("g=Benjamin"), AliasCredit},
+	{"alias", "douglas", withAliasSeed(), nv("g=Doug"), nv("g=Douglas"), AliasCredit},
 	{"alias", "same word stays exact", NameComparer{}, nv("g=James"), nv("g=James"), 1},
 	{"particle", "spaced O rejoins", NameComparer{}, nv("s=O Brien"), nv("s=O'Brien"), 1},
 

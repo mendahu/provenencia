@@ -1,6 +1,6 @@
 # Name matching — later
 
-**Status:** idea, not scheduled. Spike 10 takes abbreviations, project-only name frequency, spaced particles, Daitch–Mokotoff, support-weighted scores, negative observations as contradictions, reasons that name the two values, date windows in the comparer, and birth~baptism / death~burial plus place chains. Design: [`spike-10/name-matching-enhancements.md`](../deployment-plan/spike-10/name-matching-enhancements.md).
+**Status:** idea, not scheduled. Spike 10 takes abbreviations, project-only name frequency, spaced particles, support-weighted scores, negative observations as contradictions, reasons that name the two values, date windows in the comparer, and birth~baptism / death~burial plus place chains. Daitch–Mokotoff was descoped (S10-26); the design is [`daitch-mokotoff.md`](daitch-mokotoff.md). Design: [`spike-10/name-matching-enhancements.md`](../deployment-plan/spike-10/name-matching-enhancements.md).
 
 The small S9-10 fixes already shipped: hyphens as word breaks, adjacent-letter swaps, short-name insertions, date spans and before/after bounds, explicit zero settings, initials not hiding a surname conflict.
 

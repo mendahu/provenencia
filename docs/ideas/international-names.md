@@ -1,11 +1,11 @@
 # International names — later
 
-**Status:** idea, not scheduled. Spike 10 takes accent folding in matching (not display, not the auto-reconciler), spaced particles, a short nickname table, Daitch–Mokotoff, and collation with a default locale and no picker. S10-29 installed the Western name-format profile and reads it from the catalog. Spanish dual surnames and a `patronymic` part are unscheduled again, below. Design: [`spike-10/international-names.md`](../deployment-plan/spike-10/international-names.md). Abbreviations, project name frequency, and the rest of the matcher are in [`name-matching-enhancements.md`](name-matching-enhancements.md) for the leftovers, and in that same spike for what it builds.
+**Status:** idea, not scheduled. Spike 10 takes accent folding in matching (not display, not the auto-reconciler), spaced particles, a short nickname table, and collation with a default locale and no picker. Daitch–Mokotoff was descoped (S10-26); the design is [`daitch-mokotoff.md`](daitch-mokotoff.md). S10-29 installed the Western name-format profile and reads it from the catalog. Spanish dual surnames and a `patronymic` part are unscheduled again, below. Design: [`spike-10/international-names.md`](../deployment-plan/spike-10/international-names.md). Abbreviations, project name frequency, and the rest of the matcher are in [`name-matching-enhancements.md`](name-matching-enhancements.md) for the leftovers, and in that same spike for what it builds.
 
 ## Scripts and sound
 
 - **Across scripts.** Cyrillic vs Latin (*Иванов* / *Ivanov*), Hebrew or Yiddish vs Latin, and romanization of CJK names (Wade-Giles vs Pinyin). Needs transliteration tables or a library. Hold it until a researcher has mixed-script evidence.
-- **Beider–Morse.** Language-aware phonetics. Spike 10 stops at Daitch–Mokotoff, under the near-spelling tier.
+- **Beider–Morse.** Language-aware phonetics. More precise than Daitch–Mokotoff, and a larger rule set. Still later. The Daitch–Mokotoff design, descoped from S10-26, is [`daitch-mokotoff.md`](daitch-mokotoff.md).
 - **Calendars and double dating.** Julian vs Gregorian (the 1752 switch in Britain and its colonies, at different times elsewhere) and "1717/18" double dating. Matching ignores both today. They vary by place and church.
 
 ## Names this product does not pattern yet

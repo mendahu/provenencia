@@ -123,6 +123,8 @@ var productAliasTables = []AliasTable{
 			{"edward", "ted", "ed"},
 			{"elizabeth", "liz", "beth", "betty"},
 			{"margaret", "peggy", "meg"},
+			{"benjamin", "ben"},
+			{"douglas", "doug"},
 		},
 	},
 }
