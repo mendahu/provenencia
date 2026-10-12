@@ -96,6 +96,14 @@ struct PVInlineEdit<Display: View, Editor: View, RestingTrailing: View, EditingT
 
     @ViewBuilder
     private var editingBody: some View {
+        editingStack
+            // Return submits a single-line field. A multiline editor inserts a
+            // newline and does not submit, so description and notes keep Enter.
+            .onSubmit(submitFromKeyboard)
+    }
+
+    @ViewBuilder
+    private var editingStack: some View {
         switch axis {
         case .horizontal:
             HStack(alignment: .top, spacing: PVSpacing.space3) {
@@ -117,6 +125,18 @@ struct PVInlineEdit<Display: View, Editor: View, RestingTrailing: View, EditingT
                     editingTrailing()
                 }
             }
+        }
+    }
+
+    /// Enter follows the buttons. Save when that control is enabled. When it
+    /// is not — nothing changed, or the value is not allowed — leave the edit,
+    /// same as Cancel. A disabled Save that ignores Return feels stuck.
+    private func submitFromKeyboard() {
+        guard !isSaving else { return }
+        if saveDisabled {
+            onCancel()
+        } else {
+            onSave()
         }
     }
 
@@ -261,6 +281,7 @@ struct PVInlineEditActions: View {
             if showsCancel {
                 PVButton(cancelLabel, variant: .ghost, size: .sm, action: onCancel)
                     .disabled(isSaving)
+                    .keyboardShortcut(.cancelAction)
                     .accessibilityIdentifier(prefixed("cancel"))
             }
         }
@@ -282,6 +303,7 @@ struct PVInlineEditActions: View {
             if showsCancel {
                 PVIconButton(.dismiss, label: cancelLabel, size: .sm, action: onCancel)
                     .disabled(isSaving)
+                    .keyboardShortcut(.cancelAction)
                     .accessibilityIdentifier(prefixed("cancel"))
             }
         }
@@ -303,6 +325,7 @@ struct PVInlineEditActions: View {
             if showsCancel {
                 PVIconButton(.dismiss, label: cancelLabel, size: .sm, action: onCancel)
                     .disabled(isSaving)
+                    .keyboardShortcut(.cancelAction)
                     .accessibilityIdentifier(prefixed("cancel"))
             }
         }
