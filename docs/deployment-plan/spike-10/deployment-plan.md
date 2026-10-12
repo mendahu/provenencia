@@ -38,7 +38,7 @@ Usability fixes from [`docs/dogfood/ux.md`](../../dogfood/ux.md) after Spike 9, 
 | Omnibar ranks fuzzy name matches above exact title words | S10-06, descoped 2026-10-11 | — |
 | Onboarding defaults to a new user | S10-07 | — |
 | Enter should save a Property title edit | S10-08 | — |
-| Sources list sort and filter don't persist | S10-09 | — |
+| Sources list sort and filter don't persist | S10-09, folded into S10-41 | S10-D8 |
 | Prefill sensible defaults for common Observation kinds | S10-10 | — |
 | Citation composer slows down with many Observations | S10-11 | — |
 | Click outside a modal sheet to close it | S10-12 | — |
@@ -50,7 +50,7 @@ Usability fixes from [`docs/dogfood/ux.md`](../../dogfood/ux.md) after Spike 9, 
 | Drag files onto Artifacts + open the file without expanding | S10-18 | S10-D5, S10-D6 |
 | Rethink the Event icon + sidebar icons match Subject cards | S10-19 | S10-D7 |
 | Box-select and move multiple Subject cards | S10-20 | S10-D6 (already designed for S10-18) |
-| Last updated on list views | S10-21, S10-22 | S10-D8…D11 |
+| Last updated on list views | S10-21, S10-22, S10-41 | S10-D8…D11 |
 | Show sex / gender on the Person detail page | S10-23 | S10-D12 |
 | Accent folding + spaced particles | S10-24 | — |
 | Abbreviations + nicknames | S10-25 | — |
@@ -68,8 +68,8 @@ Usability fixes from [`docs/dogfood/ux.md`](../../dogfood/ux.md) after Spike 9, 
 | Promote compares two crops | S10-36 | S10-D13 |
 | Project collation locale (no picker) | S10-37 | — |
 | Seed event type `engagement`; couple title like marriage | S10-38 | — |
-| Restore list scroll position on Back | S10-40 | — |
-| Sources list filters and text search | S10-41 | S10-D8 (same board as S10-22) |
+| Restore list scroll position on Back | S10-40, S10-41 | — |
+| Sources list filters and text search | S10-41 | S10-D8 |
 | Promote target menu truncates a long title | S10-42 | — |
 | Combo box ranks a prefix above a mid-word match | S10-43 | — |
 | Unpromote on a promoted Subject card | S10-44 | S10-D6 (same board as S10-18) |
@@ -106,13 +106,13 @@ These are the calls for this spike. The questions at the bottom are answered; no
 - **Hit boxes are the painted controls.** Toolbar place/connect buttons and the bridge card's open-citation control. The card icon hit helper (`EvidenceCardLayout`) is the pattern: hits centered on what is drawn.
 - **Oldest user** means the earliest UUIDv7 `users.id`, not the first row of `ORDER BY display_name`. If the signed-in install identity is already in the project, keep selecting that person. If the project has no users, stay on create-new.
 - **Enter saves a single-line inline edit.** `PVInlineEdit` on the Property title. Do not steal Enter from a multiline description.
-- **Sources sort and filter** persist per project and user and restore when the Sources place is opened again. People, Events, and Places lists have no sort or filter control; they are out of this PR.
+- **The Sources list is one page.** Sort, type filter, evidence status, and text search persist per project and user and restore together when that place is opened again, including after relaunch. People, Events, and Places have none of those controls. Last updated on a Sources row uses the revision Sources already store. That cell, the filters, the search field, the persisted settings, and the session scroll are S10-41, from S10-D8. They are not a persistence PR ahead of the brief.
 - **Last updated** is an audit scope, not a timestamp column. Sources already store `UpdatedRevision` (`scope_type = source`) and can show it once the row is designed. People, Events, and Places have no scope today (`canonical_entity` is `noScope` in `core/database/audit/scopes.go`). S10-21 adds a `canonical_entity` scope: Identity Claim writes, and Observation writes on a Subject that is a member, so editing evidence moves the handle's revision. Display is relative or absolute in the briefs; the value is the revision's time.
 - **One Event mark.** Sidebar People / Events / Places use SF Symbols (`person`, `calendar`, `mapPin` on `WorkspaceSection`). Cards, lists, omnibar hits, Promote, and Properties use `PVMark` (`subject_person`, `subject_event`, `subject_place`). The Event asset is the hourglass. S10-D7 draws the new Event mark and switches the sidebar (and the toolbar, which reads `WorkspaceSection.icon`) to the subject marks. Every existing `PVMark` call site picks up the new asset with no extra brief. List empty states that still use `PVSymbol` for these three kinds switch in the same PR.
 - **Sex / gender styling** uses a seeded `gender` Property when the Person has one, otherwise `sex_at_birth`. The seed is `man`, `woman`, `non_binary` (labels Man, Woman, Non-binary). Researchers add further terms (`origin=user`), the same way they extend `role`. It is not product-locked, and there is no product `other` term. The page treatment recognizes the three seeded keys. A researcher-added term still counts as gender and wins over sex at birth; the brief draws that term without inventing a new color per key. Unknown, empty, and mixed (the reconciler already has a mixed state) stay neutral. `sex_at_birth` already appears as an ordinary field row when a record speaks to it (`PersonDetailContent`); this PR adds the page treatment and leaves that row in place.
 - **Composer performance** is profiled before the row rethink. S10-11 fixes fetch or render cost without a new layout. S10-16 must still be comfortable at 20 Observations. If the profile says the row view *is* the cost, S10-11 only removes work that a redesign would not redo (duplicate loads, per-row queries), and the layout fix waits for S10-16. If the profile says the Artifact viewer is what holds the form back, that viewer loads on its own: the Citation and Observations appear while the image or PDF is still loading. If the viewer is not the cost, do not build that split. The note is a hunch.
-- **List scroll is session state, like the graph camera.** Sources, People, Events, and Places remember content offset on the workspace session and restore it when that list place appears again (Back, Forward, breadcrumbs). It is not a navigation-history field ([`navigation-history.md`](../archive/spike-3/navigation-history.md) still omits scroll from the entry) and it does not survive relaunch. Restore Sources only after S10-09 has put sort and type filter back. A changed sort or filter resets the offset to the top.
-- **Sources evidence filters count primaries in one read.** A primary is a person, event, or place. Empty: no primaries. In progress: at least one primary has no accepted Identity Claim. Filed: at least one primary, and every primary has an accepted claim. Bridges are not a filter axis. The counts are one grouped query beside `sourcegraphprogress`, not a query per row. Text search filters the list already loaded, by title and ref, as you type. It is not the omnibar and not FTS. Status and query persist in the same per-project, per-user store as S10-09's sort and type filter.
+- **List scroll is session state, like the graph camera.** Sources, People, Events, and Places remember content offset on the workspace session and restore it when that list place appears again (Back, Forward, breadcrumbs). It is not a navigation-history field ([`navigation-history.md`](../archive/spike-3/navigation-history.md) still omits scroll from the entry) and it does not survive relaunch. Sources scroll is restored in S10-41 after that PR has applied the persisted sort and filters, so the list is not put back on a differently ordered page. Changing sort or filter on that visit resets the offset to the top. People, Events, and Places have no sort; their scroll is S10-40.
+- **Sources evidence filters count primaries in one read.** A primary is a person, event, or place. Empty: no primaries. In progress: at least one primary has no accepted Identity Claim. Filed: at least one primary, and every primary has an accepted claim. Bridges are not a filter axis. The counts are one grouped query beside `sourcegraphprogress`, not a query per row. Text search filters the list already loaded, by title and ref, as you type. It is not the omnibar and not FTS. Status and query persist in the same per-project, per-user store as sort and type filter.
 - **Unpromote deletes the filing. It does not reject it.** The button is on a promoted primary card. Confirm always. The confirm names each bridge Subject on this Source (participation, relationship, location, place relationship) that has this Subject as an end and an accepted claim. One transaction deletes those claims and this Subject's claim, audited, through the write path. The Evidence cards stay; their footers show Promote again. The handle stays, even if it has no members left. Other members' claims are not rejected and not stripped. That review stays [`ideas/identity-claim-review.md`](../../ideas/identity-claim-review.md). A rejection ("not this entity") is that review's action, not this button.
 - **A long select label truncates inside the width it was given.** `PVSelect`'s closed label ellipsizes rather than growing the control. The Promote target column (`PromoteLayout.targetColumn`) stays put; `PromoteTargetMenuRow` already limits the menu title to one line. When the closed label is cut, help shows the full string. S10-17 still gives the name-part type control a stable width sized to its longest label. Those labels are short, so truncation does not replace that fix.
 - **Combo box rank is three bands, then the original order.** In `PVComboBoxMatch`, a label that starts with the query ranks above a later word that starts with it (split on spaces and hyphens), which ranks above any other contains match, including a match only in the subtext. `par` lists *parent* above *grandparent*. This is the kit filter, not `core/search` (S10-06).
@@ -146,7 +146,7 @@ These are the calls for this spike. The questions at the bottom are answered; no
 | **S10-D5** | Source page — Artifacts | **S10-18** | — |
 | **S10-D6** | Evidence graph | **S10-18** header open | S10-20 box-select. S10-44 Unpromote on the promoted card |
 | **S10-D7** | Sidebar | **S10-19** | Toolbar section icon ships in the same PR |
-| **S10-D8** | Sources list | **S10-22** | S10-41 evidence-status filter and text search |
+| **S10-D8** | Sources list | **S10-41** | Last updated, evidence-status filter, text search, persisted sort and filters, session scroll |
 | **S10-D9** | Persons list | **S10-22** | S10-35 fills the thumb with a likeness. S10-39 makes that thumb the preferred portrait |
 | **S10-D10** | Events list | **S10-22** | — |
 | **S10-D11** | Places list | **S10-22** | — |
@@ -154,7 +154,7 @@ These are the calls for this spike. The questions at the bottom are answered; no
 | **S10-D13** | Promote page | **S10-36** | Evidence sheet shows two crops |
 | **S10-D14** | Evidence graph — zoomed-out card | **S10-46**, descoped 2026-10-11 | — |
 
-S10-D6 is one board for the graph's new controls (open file, box-select, Unpromote). S10-01…S10-04 do not wait on it. S10-D14, the zoomed-out face, is descoped with S10-46 and is not drawn. S10-D8…D11 are four briefs because they are four places; Events and Places should specify the same last-updated cell as Persons so the shared `ConclusionListPage` does not grow three treatments. Only the Sources list gains evidence-status filters and text search; D8 draws that chrome, and D9…D11 do not. Only the Persons list thumb becomes a likeness. S10-D1 is a kit board: the control is the design, and stamping it into an unchanged form is not a new view. S10-D3, S10-D6, S10-D8, S10-D9, and S10-D12 each cover a later PR on that same view, so those briefs are written with the later frame in them. D12 includes the preferred-portrait control S10-39 fills, and D9 includes that crop as the list thumb.
+S10-D6 is one board for the graph's new controls (open file, box-select, Unpromote). S10-01…S10-04 do not wait on it. S10-D14, the zoomed-out face, is descoped with S10-46 and is not drawn. S10-D9…D11 are three briefs for the shared conclusion lists. Events and Places specify the same last-updated cell as Persons so `ConclusionListPage` does not grow three treatments. S10-D8 is the Sources list, a different page, and it gates S10-41. That board draws the same last-updated cell, the evidence-status filter, and text search. Sort, type, status, query, and session scroll ship from that one board. D9…D11 do not draw those controls, and S10-22 does not change the Sources list. Only the Persons list thumb becomes a likeness. S10-D1 is a kit board: the control is the design, and stamping it into an unchanged form is not a new view. S10-D3, S10-D6, S10-D9, and S10-D12 each cover a later PR on that same view, so those briefs are written with the later frame in them. D12 includes the preferred-portrait control S10-39 fills, and D9 includes that crop as the list thumb. Whichever of D8 and D9 is designed first draws the last-updated cell; the other copies it.
 
 ## PR sequence
 
@@ -179,7 +179,6 @@ SLICE 2 — Behavior, no new chrome
   S10-06  Omnibar whole-word rank — descoped. A title word already beats a fuzzy name.
   S10-07  Existing project selects the oldest user
   S10-08  Enter saves a Property title
-  S10-09  Sources sort and filter persist
   S10-10  Observation defaults: role subject, place part_of
   S10-11  Composer stays responsive; profile first
   S10-12  Outside click closes a sheet; dirty asks
@@ -218,14 +217,16 @@ SLICE 5 — Artifacts and multi-select
          matches the card.
 
 SLICE 6 — Lists and the Person page
-  S10-40  List scroll restored when the list place appears (after S10-09)
+  S10-40  People, Events, and Places scroll restored when the list place appears
   S10-21  canonical_entity audit scope + list revision reads
-  ✎ S10-D8…D11 ──▶ S10-22  Last updated on four lists.
-                       D8 also draws the Sources filters S10-41 fills.
-  S10-41  Sources: evidence-status filter and text search (after S10-09, S10-22)
+  ✎ S10-D9…D11 ──▶ S10-22  Last updated on People, Events, and Places
+  ✎ S10-D8 ──▶ S10-41  Sources list: last updated, filters, search,
+                       persisted sort and filters, session scroll
   ✎ S10-D12 ──▶ S10-23  Person page sex / gender. The board also draws the gallery S10-35 fills and the preferred portrait S10-39 fills.
-  Check: edit a Source, leave, come back — the row's time moved, and the list
-         is scrolled where you left it. Edit a member's Observation — the Person
+  Check: edit a Source, leave, come back — the row's time moved, the list is
+         scrolled where you left it, and sort, type, status, and search are
+         still set. Quit and relaunch: Sources scroll starts at the top, and
+         those settings are still set. Edit a member's Observation — the Person
          row's time moved. Filter to graphs that still have an unpromoted person:
          a filed Source drops out. A Person with gender shows gender; one with
          only sex at birth shows that; unknown is neutral.
@@ -290,9 +291,9 @@ S10-46 simplified cards — descoped 2026-10-11
 S10-47 mount cards near the window — descoped 2026-10-11
 S10-48 canvas cover — descoped 2026-10-11
 
-S10-09 persist ──▶ S10-40 list scroll
-             └──▶ S10-41 sources filters (after S10-22; D8 draws the chrome)
-S10-21 scope ──▶ S10-22 last updated (D8…D11)
+S10-40 list scroll — People, Events, and Places. Sources scroll is S10-41.
+S10-21 scope ──▶ S10-22 last updated (D9…D11)
+S10-D8 ──▶ S10-41 Sources list (last updated, filters, persist, scroll)
 S10-D6 ──▶ S10-44 unpromote (button drawn with the open-file / box-select board)
 S10-D12 (gender + gallery + preferred portrait) ──▶ S10-23
 S10-29 patterns ──▶ S10-D4 ──▶ S10-17 name parts
@@ -375,12 +376,7 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 
 #### S10-09 — Sources sort and filter persist
 
-| | |
-| --- | --- |
-| **In** | Remember `SourcesModel.sort` and `typeFilterID` per project and user. Restore when the Sources place is shown again, including after leaving to a Source page and after relaunch. |
-| **Out** | Sort or filter on People, Events, or Places. Evidence-status filters and text search (S10-41 extends this same store). |
-| **Testable** | Choose Updated and a type, open a Source, come back: both are still set. Relaunch: still set. |
-| **Depends on** | — |
+**Folded into S10-41** (2026-10-12). Sort, type filter, evidence status, and text search are one Sources list, designed once on S10-D8. Persisting today's sort and type filter before that board exists would store chrome the filters PR then replaces. The testable behavior moves with S10-41.
 
 #### S10-10 — Observation defaults
 
@@ -525,10 +521,10 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 
 | | |
 | --- | --- |
-| **In** | Remember the scroll offset of the Sources, People, Events, and Places lists on the workspace session. Restore it when that list place appears again, including Back and Forward. Sources restores after sort and type filter (S10-09). Changing sort or filter on that visit resets the offset to the top. People, Events, and Places share `ConclusionListPage`; each list keeps its own offset. |
-| **Out** | A navigation-history field. Restoring across relaunch. Remembering the Sources text query (S10-41 stores that with the other Sources settings). |
-| **Testable** | Scroll to the bottom of Sources, open a Source, press Back: the list is at the bottom, and the sort and type filter from S10-09 are still set. Quit and relaunch: the offset starts at the top. The same round-trip on People, Events, and Places. |
-| **Depends on** | S10-09 |
+| **In** | Remember the scroll offset of the People, Events, and Places lists on the workspace session. Restore it when that list place appears again, including Back and Forward. They share `ConclusionListPage`; each list keeps its own offset. |
+| **Out** | The Sources list (S10-41 restores that offset after sort and filters). A navigation-history field. Restoring across relaunch. |
+| **Testable** | Scroll to the bottom of People, open a Person, press Back: the list is at the bottom. Quit and relaunch: the offset starts at the top. The same round-trip on Events and Places. |
+| **Depends on** | — |
 
 #### S10-21 — Handle last-activity scope
 
@@ -539,27 +535,27 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 | **Testable** | Promote a Person: the handle has a revision. Edit a member Observation: that handle's revision moves, and the Source's revision still moves. A handle with no claims does not appear. Rebuild-style check: scope rows match the writes, including a delete of a member. |
 | **Depends on** | — |
 
-#### S10-22 — Last updated on four lists
+#### S10-22 — Last updated on People, Events, and Places
 
-**Briefs:** S10-D8 Sources, S10-D9 Persons, S10-D10 Events, S10-D11 Places. Design the four before the PR. Events and Places copy the Persons cell.
-
-| | |
-| --- | --- |
-| **In** | Each list row shows when it last changed, from the revision S10-21 (Sources: the existing `UpdatedRevision`). Empty or never-audited reads as the brief's empty. Sorting Sources by Updated already exists; this PR does not add sort to the other lists. |
-| **Out** | A new list layout beyond the cell the briefs add. Sort/filter persistence (S10-09). Evidence-status filters and text search (S10-41 fills the chrome D8 already drew). |
-| **Testable** | All four lists show a time. Edit a Source note: Sources row moves. Edit a member Observation: the Person row moves and the Source row moves. Events and Places match the Persons cell. |
-| **Depends on** | S10-21, S10-D8, S10-D9, S10-D10, S10-D11 |
-
-#### S10-41 — Sources filters and search
-
-**Brief:** S10-D8, already designed before S10-22. This PR fills the filter and search chrome. It does not add a cell to Events, Places, or Persons.
+**Briefs:** S10-D9 Persons, S10-D10 Events, S10-D11 Places. Design the three before the PR. Events and Places copy the Persons cell. The Sources list is a different page; its last-updated cell ships in S10-41 from S10-D8, using the same treatment.
 
 | | |
 | --- | --- |
-| **In** | Per the working rules and S10-D8: filter the Sources list to empty, in progress, or filed, from one grouped count of primary subjects and their accepted claims, next to `sourcegraphprogress`. A text field filters the loaded rows by title and ref as you type. Status and query persist in the S10-09 store, per project and user, and restore with sort and type filter. |
-| **Out** | The same filters on People, Events, or Places. Omnibar search. A per-row count query. Hiding bridge subjects as their own status. |
-| **Testable** | A Source with no people, events, or places matches Empty and not the other two. A Source with one unpromoted person matches In progress. After that person is promoted, it matches Filed. Typing part of a title hides the other rows. Leave and come back: status, query, sort, and type filter are all still set. A long list does not issue one count query per row. |
-| **Depends on** | S10-09, S10-22, S10-D8 |
+| **In** | Each of these three list rows shows when it last changed, from the revision S10-21 returns. Empty or never-audited reads as the brief's empty. This PR does not add sort to these lists. |
+| **Out** | The Sources list (S10-41). A new list layout beyond the cell the briefs add. |
+| **Testable** | People, Events, and Places show a time. Edit a member Observation: the Person row moves. Events and Places match the Persons cell. |
+| **Depends on** | S10-21, S10-D9, S10-D10, S10-D11 |
+
+#### S10-41 — Sources list
+
+**Brief:** S10-D8, just before this PR. One board for the page. It does not add a cell, a filter, or a search field to Events, Places, or Persons.
+
+| | |
+| --- | --- |
+| **In** | Per the working rules and S10-D8. The row shows when the Source last changed, from the existing `UpdatedRevision`. Filter the list to empty, in progress, or filed, from one grouped count of primary subjects and their accepted claims, next to `sourcegraphprogress`. A text field filters the loaded rows by title and ref as you type. Sort, type filter, status, and query persist per project and user, and restore when the Sources place is shown again, including after relaunch (this is S10-09). Remember the list's scroll offset on the workspace session and restore it on the next appearance, after those settings are applied, including Back and Forward. Changing sort or filter on that visit resets the offset to the top. Scroll does not survive relaunch and is not a navigation-history field. |
+| **Out** | The same filters, search, or last-updated work on People, Events, or Places (scroll there is S10-40; last updated there is S10-22). Omnibar search. A per-row count query. Hiding bridge subjects as their own status. |
+| **Testable** | A Source with no people, events, or places matches Empty and not the other two. A Source with one unpromoted person matches In progress. After that person is promoted, it matches Filed. Typing part of a title hides the other rows. Leave and come back: status, query, sort, and type filter are still set, the list is scrolled where you left it, and the row's time moved if the Source changed. Relaunch: those four settings are still set, and the offset starts at the top. A long list does not issue one count query per row. |
+| **Depends on** | S10-D8 |
 
 #### S10-23 — Sex / gender on the Person page
 
@@ -799,7 +795,7 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 - **Gallery and gender share a page.** S10-23 ships the gender treatment inside frames that already reserve the gallery and the preferred-portrait control. S10-35 fills the gallery. S10-39 fills the control. Designing the gender page without those frames means a second Person-detail brief, which this plan does not allow.
 - **Frequency on a tiny project.** Inverse frequency with one of each name is a flat weight. The scorer needs a floor so the first Smith is not treated as rare forever, and so an empty project still matches.
 - **Do not backfill `engagement` or `interests`.** Seeded terms and properties are Install data. A migration `INSERT` would put them in catalogs the researcher already has, and this spike does not do that. Add them on those projects by hand.
-- **Scroll is not a history entry.** Spike 3 omits scroll from `WorkspaceLocation`. S10-40 keeps it that way and stores the offset on the session, the way S10-04 stores the camera. Restoring it before S10-09 has put the Sources sort back lands the researcher at the bottom of a differently ordered list.
+- **Scroll is not a history entry.** Spike 3 omits scroll from `WorkspaceLocation`. S10-40 and S10-41 keep it that way and store the offset on the session, the way S10-04 stores the camera. Sources scroll is restored in the same PR that restores sort and filters, so the list is not put back at the bottom of a differently ordered list.
 - **Status counts are primaries.** `sourcegraphprogress` counts every canvas subject, including bridges. The filter must not treat an unfiled bridge as "in progress" when every person, event, and place is filed. One extra grouped read, not a loop.
 - **Unpromote is a delete of claims, not of subjects.** The bridge cards stay on the Evidence graph. Deleting the handle because it has no members left is a different product, and this spike does not have a handle delete. A rejected claim is not "unpromoted": the footer looks for an accepted claim, but a rejection means "not this entity" and stays parked with the review.
 - **Truncation and the name-part width are different fixes.** S10-42 stops a long label from growing `PVSelect`. S10-17 stops the name-part control from changing width when the selection changes. Doing the second for every select makes short menus as wide as their longest option, which the earlier gotcha already forbids.
@@ -810,11 +806,11 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 | --- | --- | --- |
 | Q1 | **Gender terms.** Seed `man`, `woman`, `non_binary`. Researchers extend the vocabulary. Answered 2026-10-08. | — |
 | Q2 | **Dense Evidence graphs.** Descoped 2026-10-08. Stays in the dogfood log. Extract beyond date prefill and name split stays there too. | — |
-| Q3 | **Sources status filters.** Empty / in progress / filed, counted on primary subjects in one grouped read. Text search filters the loaded list by title and ref. Both persist with sort and type filter. Answered 2026-10-11. | — |
+| Q3 | **Sources status filters.** Empty / in progress / filed, counted on primary subjects in one grouped read. Text search filters the loaded list by title and ref. Sort, type, status, and query persist together on the Sources list (S10-41), with that list's scroll. Answered 2026-10-11. Folded with S10-09 on 2026-10-12. | — |
 | Q4 | **Unpromote.** Always confirm, and name the bridge claims on this Source that will be deleted with it. Delete the claims. Do not reject them, and do not delete the handle or the cards. Other members stay for the parked review. Answered 2026-10-11. | — |
 | Q5 | **Long titles.** Truncate inside the select's given width. Help shows the full string. The name-part width fix stays S10-17. Answered 2026-10-11. | — |
 | Q6 | **Combo rank.** Label prefix, then a later word, then any other contains match. Answered 2026-10-11. | — |
-| Q7 | **List scroll.** Session offset, restored when the list place appears. Not a history field. Not across relaunch. Answered 2026-10-11. | — |
+| Q7 | **List scroll.** Session offset, restored when the list place appears. Not a history field. Not across relaunch. Sources scroll ships with the Sources list (S10-41). People, Events, and Places are S10-40. Answered 2026-10-11. | — |
 | Q8 | **`interests`.** Unlocked text, cardinality multiple, person only, new catalogs only. Answered 2026-10-11. | — |
 | Q9 | **Composer viewer.** S10-11 splits that load only when the profile shows it blocks the form. Answered 2026-10-11. | — |
 
@@ -829,7 +825,7 @@ Everything else in **Working rules** is decided for planning. Correct any of the
 | S10-23 | [`docs/seeded-vocabulary.md`](../../seeded-vocabulary.md) new gender section. Do not rewrite §3.7. |
 | S10-25, S10-29, S10-32 | Seeded vocabulary: abbreviation and nickname tables, `patronymic` and the Spanish profile, `likeness` / `depiction`. [`docs/matching.md`](../../matching.md) and [`docs/structured-name-model.md`](../../structured-name-model.md) follow the code. |
 | S10-38 | [`docs/seeded-vocabulary.md`](../../seeded-vocabulary.md) §3.4: `engagement`. Couple rule covers `engagement`. No migration. |
-| S10-40 | [`navigation-history.md`](../archive/spike-3/navigation-history.md): list scroll is session state restored when the list place appears. It is still not a history field. |
+| S10-40, S10-41 | [`navigation-history.md`](../archive/spike-3/navigation-history.md): list scroll is session state restored when the list place appears. It is still not a history field. |
 | S10-44 | [`conclusion-layer-data-model.md`](../../conclusion-layer-data-model.md) §5.2 already allows deleting a claim. Note that Unpromote also deletes the bridge claims on that Source. Do not specify the review queue. |
 | S10-45 | [`docs/seeded-vocabulary.md`](../../seeded-vocabulary.md) §3.2 and §3.3: `interests`. No migration. |
 | S10-99 | Pulled notes already left the dogfood log. Archive this folder, including the three idea notes, as decisions. |
