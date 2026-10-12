@@ -1,7 +1,7 @@
 // Package namealiases stores abbreviation and nickname tables. The product
 // lists live in core/match. Install writes them once when a catalog is
-// created. Load reads every row. An empty catalog leaves comparison on the
-// in-code list.
+// created. Scoring reads these rows and no other list. An open project keeps
+// that read in memory until the project closes; Invalidate reloads it.
 package namealiases
 
 import (
@@ -75,8 +75,7 @@ func Install(c *database.Catalog) error {
 	return tx.Commit()
 }
 
-// Load reads every alias table. No rows returns a nil slice so comparison
-// keeps the in-code list.
+// Load reads every alias table. No rows returns a nil slice.
 func Load(q Querier) ([]match.AliasTable, error) {
 	rows, err := q.Query(`SELECT id, key, origin, label, kind FROM name_alias_tables ORDER BY key, origin`)
 	if err != nil {
@@ -170,16 +169,24 @@ func Load(q Querier) ([]match.AliasTable, error) {
 	return tables, nil
 }
 
-// Comparer is the name comparer catalog scoring uses. No rows leaves
-// Aliases nil, so the in-code list applies. Any row replaces that list.
+// Comparer is the name comparer catalog scoring uses. A warmed connection
+// supplies its cached rows, including none. Anything else is read from q.
+// The rows replace whatever list the base comparer had.
 func Comparer(q Querier, base match.NameComparer) (match.NameComparer, error) {
+	if db, ok := q.(*sql.DB); ok {
+		if tables, hit := recall(db); hit {
+			return withAliases(base, tables), nil
+		}
+	}
 	tables, err := Load(q)
 	if err != nil {
 		return match.NameComparer{}, err
 	}
-	if len(tables) == 0 {
-		return base, nil
-	}
-	base.Words.Aliases = &tables
-	return base, nil
+	return withAliases(base, tables), nil
+}
+
+func withAliases(base match.NameComparer, tables []match.AliasTable) match.NameComparer {
+	copied := append([]match.AliasTable(nil), tables...)
+	base.Words.Aliases = &copied
+	return base
 }

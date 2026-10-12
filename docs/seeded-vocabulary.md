@@ -567,7 +567,7 @@ nicknames
   margaret peggy meg
 ```
 
-`Register` appends a table for a future plugin. Install writes whatever is registered at catalog create. Open does not heal. An empty catalog keeps the in-code list. Once any row exists, scoring uses the catalog rows.
+`Register` appends a table for a future plugin. Install writes whatever is registered at catalog create. Open does not heal. Scoring reads these rows and no in-code list. Opening a project loads them once and keeps them until the project closes. A future editor calls `namealiases.Invalidate` after a change. An empty catalog makes no abbreviation or nickname hits.
 
 ---
 

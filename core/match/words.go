@@ -33,8 +33,8 @@ type WordRules struct {
 	// Folds replaces letters that do not decompose. Nil uses LetterFolds.
 	// An empty map strips accents and substitutes nothing.
 	Folds *map[rune]string
-	// Aliases are abbreviation and nickname tables. Nil uses AliasTables.
-	// An empty slice hits nothing. Every table in the slice is consulted.
+	// Aliases are abbreviation and nickname tables loaded from the catalog.
+	// Nil and empty both hit nothing. Every table in the slice is consulted.
 	Aliases *[]AliasTable
 }
 

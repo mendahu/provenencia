@@ -51,7 +51,56 @@ func TestInstallAndLoad(t *testing.T) {
 	}
 }
 
-func TestEmptyCatalogUsesTheRegistry(t *testing.T) {
+func TestWarmHoldsAliasTablesUntilInvalidated(t *testing.T) {
+	c := newCatalog(t)
+	if err := Install(c); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { Forget(c) })
+	if err := Warm(c); err != nil {
+		t.Fatal(err)
+	}
+	db := mustDB(t, c)
+	if _, err := db.Exec(`DELETE FROM name_alias_members WHERE token = 'jas'`); err != nil {
+		t.Fatal(err)
+	}
+	cmp, err := Comparer(db, match.DefaultNames)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertScore(t, cmp, "Jas.", "James", match.AliasCredit)
+
+	if err := Invalidate(c); err != nil {
+		t.Fatal(err)
+	}
+	cmp, err = Comparer(db, match.DefaultNames)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, ok := cmp.Compare(given("Jas."), given("James"))
+	if ok && math.Abs(got-match.AliasCredit) < 1e-9 {
+		t.Fatal("invalidate left the deleted token in the cache")
+	}
+
+	insertTable(t, db, "zachary", "user", "nickname", [][]string{{"zachary", "zach"}})
+	cmp, err = Comparer(db, match.DefaultNames)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, ok = cmp.Compare(given("Zach"), given("Zachary"))
+	if ok && math.Abs(got-match.AliasCredit) < 1e-9 {
+		t.Fatal("a new table scored before the cache was dropped")
+	}
+
+	Forget(c)
+	cmp, err = Comparer(db, match.DefaultNames)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertScore(t, cmp, "Zach", "Zachary", match.AliasCredit)
+}
+
+func TestEmptyCatalogScoresNoAliases(t *testing.T) {
 	c := newCatalog(t)
 	db := mustDB(t, c)
 	tables, err := Load(db)
@@ -61,14 +110,14 @@ func TestEmptyCatalogUsesTheRegistry(t *testing.T) {
 	if len(tables) != 0 {
 		t.Fatalf("empty catalog loaded %d tables", len(tables))
 	}
-	cmp, err := Comparer(db, match.NameComparer{})
+	cmp, err := Comparer(db, match.DefaultNames)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cmp.Words.Aliases != nil {
-		t.Fatal("empty catalog replaced the registry list")
+	got, ok := cmp.Compare(given("Jas."), given("James"))
+	if !ok || math.Abs(got-match.AliasCredit) < 1e-9 {
+		t.Fatalf("empty catalog still aliased: %.4f %v", got, ok)
 	}
-	assertScore(t, cmp, "Jas.", "James", match.AliasCredit)
 }
 
 func TestUserAndPluginRowsScore(t *testing.T) {

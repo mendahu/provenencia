@@ -55,7 +55,8 @@ var DefaultWordRules = WordRules{
 	ShortVariantMinLength: Set(autoreconcile.SpellingShortMin),
 	Particles:             &SpacedParticles,
 	Folds:                 &LetterFolds,
-	Aliases:               &aliasTables,
+	// No alias tables. Scoring reads the catalog; this seed is not a fallback.
+	Aliases: &noAliasTables,
 }
 
 // AliasCredit is an abbreviation or nickname table hit. Exact is 1. A
@@ -87,8 +88,12 @@ func aliasPartRoles() []NameRole {
 	return []NameRole{RoleGiven, RoleNick, RoleUntyped}
 }
 
-// productAliasTables is the app seed. Install writes this list. Comparison
-// with no catalog reads it too. Tokens are normalized comparison forms.
+// noAliasTables is the comparer default: no abbreviation or nickname hits
+// until a catalog load supplies rows.
+var noAliasTables []AliasTable
+
+// productAliasTables is the create-time seed. Install writes this list.
+// Scoring does not read it. Tokens are normalized comparison forms.
 var productAliasTables = []AliasTable{
 	{
 		Key: "abbreviations", Origin: OriginProvenencia, Label: "Abbreviations",

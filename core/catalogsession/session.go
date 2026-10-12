@@ -14,6 +14,7 @@ import (
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/autoreconciler"
+	"github.com/mendahu/provenencia/core/database/namealiases"
 	"github.com/mendahu/provenencia/core/database/project"
 	"github.com/mendahu/provenencia/core/database/searchindex"
 	"github.com/mendahu/provenencia/core/database/users"
@@ -62,6 +63,11 @@ func openResearcher(projectDir string) (*database.Catalog, error) {
 		_ = c.Close()
 		return nil, err
 	}
+	// Alias tables stay warm for the life of this project. Close drops them.
+	if err := namealiases.Warm(c); err != nil {
+		_ = c.Close()
+		return nil, err
+	}
 	return c, nil
 }
 
@@ -75,6 +81,7 @@ func closeSession(s *session) error {
 	if s.cat == nil {
 		return nil
 	}
+	namealiases.Forget(s.cat)
 	err := s.cat.Close()
 	s.cat = nil
 	return err

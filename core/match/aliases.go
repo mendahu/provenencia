@@ -3,7 +3,7 @@ package match
 import "sync"
 
 // aliasTables is the product seed plus anything Register appended.
-// DefaultWordRules.Aliases points here, so a nil setting reads this list.
+// Install writes it. Scoring does not read it.
 var (
 	aliasMu     sync.Mutex
 	aliasTables []AliasTable
@@ -17,8 +17,7 @@ func resetAliasTables() {
 	aliasTables = append([]AliasTable(nil), productAliasTables...)
 }
 
-// AliasTables returns the tables comparison uses when the caller does not
-// pass its own list. The catalog replaces this when it has any row.
+// AliasTables returns the seed Install writes. Scoring does not read this.
 func AliasTables() []AliasTable {
 	aliasMu.Lock()
 	defer aliasMu.Unlock()
@@ -42,13 +41,12 @@ func ResetAliasTablesForTest() {
 	resetAliasTables()
 }
 
-// aliasTablesOf resolves a comparer setting. Nil, and the registry pointer,
-// read AliasTables. An empty slice hits nothing.
+// aliasTablesOf is the list on the comparer. Nil and empty both hit nothing.
 func aliasTablesOf(p *[]AliasTable) []AliasTable {
-	if p != nil && p != &aliasTables {
-		out := make([]AliasTable, len(*p))
-		copy(out, *p)
-		return out
+	if p == nil {
+		return nil
 	}
-	return AliasTables()
+	out := make([]AliasTable, len(*p))
+	copy(out, *p)
+	return out
 }
