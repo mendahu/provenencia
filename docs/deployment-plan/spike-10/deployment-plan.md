@@ -229,7 +229,7 @@ SLICE 6 — Lists and the Person page
          only sex at birth shows that; unknown is neutral.
 
 SLICE 7 — How names compare (no new chrome)
-  S10-24  Accent fold (0.95) and spaced particles
+  S10-24  Accent fold (0.95) and spaced particles — done, #378
   S10-25  Abbreviation and nickname tables
   S10-26  Daitch–Mokotoff below near-spelling
   S10-27  Project name-frequency weights
@@ -509,12 +509,7 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 
 #### S10-24 — Accent fold and spaced particles
 
-| | |
-| --- | --- |
-| **In** | In `core/match` word comparison: NFD, drop combining marks, plus the small table (ß, æ, œ, ø, ł, đ, þ, ı). A fold-only match scores 0.95, under an exact match. Rejoin a spaced particle in the working-rules list with the following word. An initial with a period does not rejoin. Display, `NormalizeForm`, and `sort_key` stay unchanged. |
-| **Out** | Auto-reconciler merging of accent variants. Phonetics (S10-26). Tables (S10-25). |
-| **Testable** | José vs Jose scores 0.95 and José vs José scores 1. The Person page still shows them as separate groupings. `O Brien` matches `O'Brien`. `O.` does not swallow the next word. |
-| **Depends on** | — |
+**Landed 2026-10-12** in [#378](https://github.com/mendahu/provenencia/pull/378). See [`completed.md`](completed.md).
 
 #### S10-25 — Abbreviations and nicknames
 
