@@ -834,7 +834,8 @@ private struct EvidenceGraphDocumentBody: View {
                     label: card.text.accessibilityLabel
                 ),
                 model: card,
-                content: { content.view(for: card) }
+                content: { content.view(for: card) },
+                appKitView: { content.appKitView(for: card) }
             )
         })
     }

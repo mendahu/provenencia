@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 /// Everything one graph card draws, as a value.
@@ -60,6 +61,15 @@ struct EvidenceCanvasCardContent {
     let model: EvidenceGraphModel
     let navigation: WorkspaceNavigation
     let layouts: EvidenceCardLayoutStore
+
+    /// AppKit-drawn subject or bridge card. Records the measured hit layout
+    /// before the canvas sizes the view, so edges and pointer targets exist
+    /// for the opening batch.
+    func appKitView(for card: EvidenceCanvasCard) -> NSView {
+        let view = EvidenceAppKitCard(card: card, actions: accessibilityActions(for: card))
+        layouts.record(view.layout, for: card.id)
+        return view
+    }
 
     func view(for card: EvidenceCanvasCard) -> AnyView {
         switch card.placed {
@@ -151,6 +161,58 @@ struct EvidenceCanvasCardContent {
         }
         .accessibilityAction(named: Text(verbatim: card.text.deleteActionName)) {
             Task { await model.beginDelete(subjectID: placed.id) }
+        }
+    }
+
+    private func accessibilityActions(for card: EvidenceCanvasCard) -> [NSAccessibilityCustomAction] {
+        let model = model
+        let navigation = navigation
+        func go(_ location: WorkspaceLocation?) {
+            if let location { navigation.go(to: location) }
+        }
+        var named: [(String, () -> Void)] = []
+        switch card.placed {
+        case .subject(let placed, _):
+            named.append((L10n.string(L10n.EvidenceGraph.editAccessibility), {
+                model.beginEdit(subjectID: placed.id)
+            }))
+            named.append((L10n.string(Self.addPropertyActionName(canCite: card.state.canCite)), {
+                go(model.composerLocation(for: placed.id))
+            }))
+            if let name = card.text.footerActionName {
+                named.append((name, {
+                    go(placed.membership == nil
+                        ? model.promoteLocation(for: placed.id)
+                        : model.openHandle(subjectID: placed.id))
+                }))
+            }
+            named.append((card.text.deleteActionName, {
+                Task { await model.beginDelete(subjectID: placed.id) }
+            }))
+            named.append((L10n.string(L10n.EvidenceGraph.editPropertyAccessibility), {
+                if let observation = placed.observations.first {
+                    go(model.composerLocation(forObservationID: observation.id, subjectID: placed.id))
+                }
+            }))
+        case .bridge(let placed):
+            named.append((L10n.string(L10n.EvidenceGraph.editAccessibility), {
+                model.beginEdit(subjectID: placed.id)
+            }))
+            named.append((L10n.string(L10n.EvidenceGraph.editCitationAccessibility), {
+                go(model.composerLocationForBridgeCitation(subjectID: placed.id))
+            }))
+            named.append((L10n.string(Self.addPropertyActionName(canCite: card.state.canCite)), {
+                go(model.composerLocation(for: placed.id))
+            }))
+            named.append((card.text.deleteActionName, {
+                Task { await model.beginDelete(subjectID: placed.id) }
+            }))
+        }
+        return named.map { name, run in
+            NSAccessibilityCustomAction(name: name) {
+                run()
+                return true
+            }
         }
     }
 

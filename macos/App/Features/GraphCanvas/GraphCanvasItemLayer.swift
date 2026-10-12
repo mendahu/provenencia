@@ -28,9 +28,12 @@ struct GraphCanvasItem {
     /// Everything the content draws. The hosted view is rebuilt only when this
     /// changes, so a host can push every item on any state change.
     var model: any Equatable
-    /// Builds the content for ``model``. Content is paint plus accessibility;
-    /// pointer input stays with ``GraphCanvasPointerController``.
+    /// Builds the SwiftUI content for ``model``. Content is paint plus
+    /// accessibility; pointer input stays with ``GraphCanvasPointerController``.
     var content: @MainActor () -> AnyView
+    /// When set, the canvas hosts this AppKit view instead of a SwiftUI
+    /// hosting view. The Evidence graph uses it for subject and bridge cards.
+    var appKitView: (@MainActor () -> NSView)? = nil
 }
 
 /// An item's entry in a document-level VoiceOver rotor.
@@ -52,7 +55,7 @@ final class GraphCanvasItemLayer {
     var onRotorSelect: ((String) -> Void)?
 
     private weak var container: NSView?
-    private var views: [String: NSHostingView<AnyView>] = [:]
+    private var views: [String: NSView] = [:]
     private var models: [String: any Equatable] = [:]
     private var origins: [String: CGPoint] = [:]
     private var dragOffsets: [String: CGSize] = [:]
@@ -91,24 +94,31 @@ final class GraphCanvasItemLayer {
         }
 
         for item in items {
-            let view: NSHostingView<AnyView>
+            let view: NSView
             if let existing = views[item.id] {
-                view = existing
                 if let previous = models[item.id], !item.model.isEqual(to: previous) {
-                    renderOne(item.id) {
-                        view.rootView = Self.padded(item.content())
-                        view.frame.size = view.fittingSize
+                    view = renderOne(item.id) {
+                        if let host = existing as? NSHostingView<AnyView>, item.appKitView == nil {
+                            host.rootView = Self.padded(item.content())
+                            host.frame.size = host.fittingSize
+                            return host
+                        }
+                        existing.removeFromSuperview()
+                        let created = makeView(item)
+                        container.addSubview(created, positioned: .above, relativeTo: nil)
+                        return created
                     }
+                } else {
+                    view = existing
                 }
             } else {
                 view = renderOne(item.id) {
-                    let view = NSHostingView(rootView: Self.padded(item.content()))
-                    view.frame.size = view.fittingSize
-                    container.addSubview(view, positioned: .above, relativeTo: nil)
-                    return view
+                    let created = makeView(item)
+                    container.addSubview(created, positioned: .above, relativeTo: nil)
+                    return created
                 }
-                views[item.id] = view
             }
+            views[item.id] = view
             models[item.id] = item.model
             origins[item.id] = item.origin
             rotorEntries[item.id] = item.rotor
@@ -170,6 +180,19 @@ final class GraphCanvasItemLayer {
     private func needsRender(_ item: GraphCanvasItem) -> Bool {
         guard let previous = models[item.id], views[item.id] != nil else { return true }
         return !item.model.isEqual(to: previous)
+    }
+
+    /// Creates the item's view and sizes it. AppKit cards supply their own
+    /// view; every other host still gets a SwiftUI hosting view.
+    private func makeView(_ item: GraphCanvasItem) -> NSView {
+        if let makeAppKit = item.appKitView {
+            let view = makeAppKit()
+            view.frame.size = view.fittingSize
+            return view
+        }
+        let view = NSHostingView(rootView: Self.padded(item.content()))
+        view.frame.size = view.fittingSize
+        return view
     }
 
     private func place(_ id: String) {
