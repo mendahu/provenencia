@@ -781,7 +781,7 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 
 | | |
 | --- | --- |
-| **In** | Move shipped notes to Done in [`docs/dogfood/ux.md`](../../dogfood/ux.md). Distill this spike with [`archive-docs`](../../../.cursor/skills/archive-docs/SKILL.md) when the bar above is true. The three idea notes live in this folder; the close distill keeps their decisions and drops the PR sequence. |
+| **In** | Pulled notes already left [`docs/dogfood/ux.md`](../../dogfood/ux.md). Do not copy them back. Distill this spike with [`archive-docs`](../../../.cursor/skills/archive-docs/SKILL.md) when the bar above is true. The three idea notes live in this folder; the close distill keeps their decisions and drops the PR sequence. |
 | **Out** | Pulling the parked density, extract, transliteration, or Reconciliation-Claim items in at the close. |
 | **Depends on** | S10-01…S10-45 |
 

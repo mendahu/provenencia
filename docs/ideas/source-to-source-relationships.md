@@ -65,7 +65,7 @@ The graph slices therefore query `source_id = ?` and omit `source`-type subjects
 
 - Spike 8 **S8-D4** / **S8-07** (Open Evidence graph on the Source page — navigation only)
 - Putting `source` bubbles back on the Evidence graph
-- Composer rethink / pinning ([`docs/dogfood/ux.md`](../dogfood/ux.md))
+- Composer rethink / pinning ([Spike 8](../deployment-plan/archive/spike-8/))
 - Schema work unless a future spike deliberately reopens §4.6
 
 ## Related docs
