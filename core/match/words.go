@@ -30,6 +30,9 @@ type WordRules struct {
 	// Particles rejoin with the following word. Nil uses SpacedParticles.
 	// An empty list rejoins nothing. A period initial never rejoins.
 	Particles *[]string
+	// Folds replaces letters that do not decompose. Nil uses LetterFolds.
+	// An empty map strips accents and substitutes nothing.
+	Folds *map[rune]string
 }
 
 // wordRules are WordRules resolved against the registry.
@@ -38,6 +41,7 @@ type wordRules struct {
 	shortMin             int
 	initials             bool // whether lone letters match as initials
 	particles            map[string]bool
+	folds                map[rune]string
 }
 
 func (r WordRules) resolve(initials bool) wordRules {
@@ -52,6 +56,7 @@ func (r WordRules) resolve(initials bool) wordRules {
 		shortMin:      setting(r.ShortVariantMinLength, *DefaultWordRules.ShortVariantMinLength),
 		initials:      initials,
 		particles:     particles,
+		folds:         setting(r.Folds, *DefaultWordRules.Folds),
 	}
 }
 
@@ -118,34 +123,19 @@ func periodInitial(raw string) bool {
 	return len(letters) == 1 && unicode.ToUpper(letters[0]) != unicode.ToLower(letters[0])
 }
 
-// foldWord drops accents and maps letters that do not decompose. The word
-// is already the normalized comparison token.
-func foldWord(s string) string {
+// foldWord drops accents, then applies folds. The word is already the
+// normalized comparison token. A nil or empty map still strips accents.
+func foldWord(s string, folds map[rune]string) string {
 	var b strings.Builder
 	for _, r := range norm.NFD.String(s) {
 		if unicode.Is(unicode.Mn, r) {
 			continue
 		}
-		switch r {
-		case 'ß':
-			b.WriteString("ss")
-		case 'æ':
-			b.WriteString("ae")
-		case 'œ':
-			b.WriteString("oe")
-		case 'ø':
-			b.WriteString("o")
-		case 'ł':
-			b.WriteString("l")
-		case 'đ':
-			b.WriteString("d")
-		case 'þ':
-			b.WriteString("th")
-		case 'ı':
-			b.WriteString("i")
-		default:
-			b.WriteRune(r)
+		if repl, ok := folds[r]; ok {
+			b.WriteString(repl)
+			continue
 		}
+		b.WriteRune(r)
 	}
 	return b.String()
 }
@@ -201,7 +191,7 @@ func wordSimilarity(x, y string, r wordRules) float64 {
 		}
 		return 0
 	}
-	fx, fy := foldWord(x), foldWord(y)
+	fx, fy := foldWord(x, r.folds), foldWord(y, r.folds)
 	if fx == fy {
 		return foldOnly
 	}

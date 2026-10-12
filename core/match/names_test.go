@@ -217,6 +217,27 @@ func TestPeriodInitialDoesNotRejoin(t *testing.T) {
 	}
 }
 
+func TestLetterFoldsComeFromTheMap(t *testing.T) {
+	none := NameComparer{Words: WordRules{Folds: Set(map[rune]string{})}}
+	got, ok := none.Compare(nv("g=José"), nv("g=Jose"))
+	if !ok || math.Abs(got-foldOnly) > 1e-9 {
+		t.Fatalf("empty map dropped the accent fold: %.4f %v", got, ok)
+	}
+	got, ok = none.Compare(nv("s=Groß"), nv("s=Gross"))
+	if !ok || math.Abs(got-foldOnly) < 1e-9 {
+		t.Fatalf("empty map still folded eszett: %.4f %v", got, ok)
+	}
+	extra := map[rune]string{'ð': "d"}
+	for k, v := range LetterFolds {
+		extra[k] = v
+	}
+	with := NameComparer{Words: WordRules{Folds: &extra}}
+	got, ok = with.Compare(nv("s=Ðal"), nv("s=Dal"))
+	if !ok || math.Abs(got-foldOnly) > 1e-9 {
+		t.Fatalf("added letter did not fold: %.4f %v", got, ok)
+	}
+}
+
 func TestSpacedParticlesComeFromTheList(t *testing.T) {
 	none := NameComparer{Words: WordRules{Particles: Set([]string{})}}
 	got, ok := none.Compare(nv("s=O Brien"), nv("s=O'Brien"))

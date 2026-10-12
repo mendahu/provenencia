@@ -16,7 +16,7 @@ Fold for **comparison**, never for **display**, and don't use one fold for **sor
 
 - **What to fold:**
   - Decompose text (Unicode NFD) and drop combining marks: é→e, ü→u, ñ→n, å→a.
-  - A small table for letters that don't decompose: ß→ss, æ→ae, œ→oe, ø→o, ł→l, đ→d, þ→th, ı→i.
+  - `LetterFolds` in `core/match/registry.go` for letters that don't decompose: ß→ss, æ→ae, œ→oe, ø→o, ł→l, đ→d, þ→th, ı→i. Adding a letter extends comparison.
   - Needs `golang.org/x/text` (`unicode/norm`) or a hand-written table.
 - **Where (decided): matching only.** "José" and "Jose" match in suggestions but stay separate groupings on a Person's page. The auto-reconciler may grow an accent rule later, but merging them is left to manual reconciliation. Folding therefore lives in `core/match`'s word comparison, not in `autoreconcile.NormalizeForm`: the auto-reconciler and the cache `sort_key` don't change, and no cache bump is needed.
 - **Exact still beats folded.** S10-24 scores a folded-only match at 0.95 in `wordSimilarity`. "José" vs "José" stays 1.

@@ -28,6 +28,20 @@ import (
 // dropped). van and de are not here: a typed surname prefix is a part role.
 var SpacedParticles = []string{"o", "mc", "mac", "st", "d", "fitz"}
 
+// LetterFolds replaces letters that survive accent stripping. Add a letter
+// here; comparison reads this map. Keys are comparison tokens (lowercase).
+// An empty map still drops combining marks, so José and Jose stay a fold.
+var LetterFolds = map[rune]string{
+	'ß': "ss",
+	'æ': "ae",
+	'œ': "oe",
+	'ø': "o",
+	'ł': "l",
+	'đ': "d",
+	'þ': "th",
+	'ı': "i",
+}
+
 // DefaultWordRules: how two words compare.
 var DefaultWordRules = WordRules{
 	// Least edit-distance ratio (1 − edits / longer length) for a spelling
@@ -40,6 +54,7 @@ var DefaultWordRules = WordRules{
 	// below FuzzyFloor (Ann ~ Anne, Jon ~ John).
 	ShortVariantMinLength: Set(autoreconcile.SpellingShortMin),
 	Particles:             &SpacedParticles,
+	Folds:                 &LetterFolds,
 }
 
 // MaxExactPairing bounds the exact best-pairing search (2^n states over the
