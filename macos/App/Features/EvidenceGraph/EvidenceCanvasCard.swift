@@ -26,6 +26,8 @@ struct EvidenceCanvasCard: Equatable {
     var placed: Placed
     var text: EvidenceCardText
     var state: State
+    /// Default profile orders. Empty keeps stored part order.
+    var nameOrders: NameFormatOrders = NameFormatOrders()
 
     var id: String {
         switch placed {
@@ -99,6 +101,7 @@ struct EvidenceCanvasCardContent {
             isDragging: card.state.isDragging,
             hoveredActionID: card.state.hoveredActionID,
             pressedActionID: card.state.pressedActionID,
+            nameOrders: card.nameOrders,
             onLayout: { layouts.record($0, for: placed.id) }
         )
         .accessibilityAction(named: Text(L10n.EvidenceGraph.editAccessibility)) {

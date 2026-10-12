@@ -1,6 +1,6 @@
 # International names — later
 
-**Status:** idea, not scheduled. Spike 10 takes accent folding in matching (not display, not the auto-reconciler), spaced particles, a short nickname table, Daitch–Mokotoff, `patronymic` as a part type, a Spanish dual-surname profile, catalog-backed name patterns from the project default, and collation with a default locale and no picker. Design: [`spike-10/international-names.md`](../deployment-plan/spike-10/international-names.md). Abbreviations, project name frequency, and the rest of the matcher are in [`name-matching-enhancements.md`](name-matching-enhancements.md) for the leftovers, and in that same spike for what it builds.
+**Status:** idea, not scheduled. Spike 10 takes accent folding in matching (not display, not the auto-reconciler), spaced particles, a short nickname table, Daitch–Mokotoff, and collation with a default locale and no picker. S10-29 installed the Western name-format profile and reads it from the catalog. Spanish dual surnames and a `patronymic` part are unscheduled again, below. Design: [`spike-10/international-names.md`](../deployment-plan/spike-10/international-names.md). Abbreviations, project name frequency, and the rest of the matcher are in [`name-matching-enhancements.md`](name-matching-enhancements.md) for the leftovers, and in that same spike for what it builds.
 
 ## Scripts and sound
 
@@ -8,14 +8,15 @@
 - **Beider–Morse.** Language-aware phonetics. Spike 10 stops at Daitch–Mokotoff, under the near-spelling tier.
 - **Calendars and double dating.** Julian vs Gregorian (the 1752 switch in Britain and its colonies, at different times elsewhere) and "1717/18" double dating. Matching ignores both today. They vary by place and church.
 
-## Names Spike 10 does not pattern
+## Names this product does not pattern yet
 
-Matching still has only the Western pattern plus one Spanish profile (first surname weighs more than the second; both stay `surname`). Still wanted:
+S10-29 seeds `western` only. Both surname words keep the single family weight. Still wanted:
 
 | Pattern | Example | What matching needs |
 | --- | --- | --- |
+| Spanish dual surnames | *García Márquez* (paternal then maternal) | Both parts stay `surname`. The first weighs more than the second. A new weight slot, then a profile row. |
 | Portuguese dual surnames | Maternal name first | The opposite weight order from the Spanish profile. |
-| Patronymic as a family link | Icelandic *Jónsdóttir*; Russian *Ivanovich* | Spike 10 compares the part to another patronymic. Linking it to the father's given name needs the father's handle. |
+| Patronymic | Icelandic *Jónsdóttir*; Russian *Ivanovich* | A `patronymic` part type and role, compared to another patronymic. Linking it to the father's given name needs the father's handle. |
 | Farm and locational names | Norwegian *Haugen*, which changed when the family moved | A surname that is evidence of place, not lineage. Weak as a family role. |
 | Surname-first order | Chinese, Japanese, Korean, Hungarian, Vietnamese | Order is display if parts are typed. Profiles should drive entry, not only display, or data entry will type by position. |
 | Name chains | Arabic *ibn* / *bint*; Hebrew *ben* / *bat* | Several generations in one name. Compare the chain in order. Particles are joiners, not words. |

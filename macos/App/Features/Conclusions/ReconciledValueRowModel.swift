@@ -47,11 +47,15 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
     /// otherwise.
     var opens: Opens?
 
-    init(field: CatalogConclusionField, locale: Locale = .autoupdatingCurrent) {
+    init(
+        field: CatalogConclusionField,
+        locale: Locale = .autoupdatingCurrent,
+        orders: NameFormatOrders = NameFormatOrders()
+    ) {
         let lead = field.displayedValues.first
-            .map { ReconciledValueDisplay.string(for: $0.value, locale: locale) }
+            .map { ReconciledValueDisplay.string(for: $0.value, locale: locale, orders: orders) }
             .flatMap { $0.isEmpty ? nil : $0 }
-        let listed = Self.listedValues(of: field, locale: locale)
+        let listed = Self.listedValues(of: field, locale: locale, orders: orders)
         let spokenLead = listed.count > 1 ? listed.map(\.text).joined(separator: "; ") : lead
         id = field.propertyID
         label = field.label
@@ -65,7 +69,7 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
         otherValues = ReconciledValueDisplay.otherValues(field).map {
             OtherValue(
                 rank: $0.rank,
-                text: ReconciledValueDisplay.string(for: $0.value, locale: locale),
+                text: ReconciledValueDisplay.string(for: $0.value, locale: locale, orders: orders),
                 support: L10n.Conclusions.sourceCount($0.support)
             )
         }
@@ -73,16 +77,20 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
         whyTitle = listed.count > 1
             ? L10n.Conclusions.whyThese(listed.count, label: field.label)
             : L10n.Conclusions.whyTitle(lead ?? field.label)
-        records = field.outcomes.map { ReconciliationRecord(outcome: $0, in: field, locale: locale) }
+        records = field.outcomes.map { ReconciliationRecord(outcome: $0, in: field, locale: locale, orders: orders) }
         accessibilityLabel = ReconciledValueDisplay.accessibilityLabel(label: field.label, lead: spokenLead, field: field)
     }
 
     /// Every kept value of a multi-valued field, lead included. A weak
     /// spelling is not displayed, so it stays out of this list.
-    private static func listedValues(of field: CatalogConclusionField, locale: Locale) -> [OtherValue] {
+    private static func listedValues(
+        of field: CatalogConclusionField,
+        locale: Locale,
+        orders: NameFormatOrders
+    ) -> [OtherValue] {
         guard field.state == .multiple else { return [] }
         return field.displayedValues.compactMap { value in
-            let text = ReconciledValueDisplay.string(for: value.value, locale: locale)
+            let text = ReconciledValueDisplay.string(for: value.value, locale: locale, orders: orders)
             guard !text.isEmpty else { return nil }
             return OtherValue(
                 rank: value.rank,

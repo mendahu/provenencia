@@ -632,6 +632,19 @@ struct GoStore: GenealogyStore {
         )
     }
 
+    func nameFormat(projectDir: String) async throws -> NameFormatOrders {
+        var req = Provenencia_Engine_V1_GetNameFormatRequest()
+        req.projectDir = projectDir
+        let resp: Provenencia_Engine_V1_GetNameFormatResponse = try await provenenciaCall(
+            method: CoreMethod.getNameFormat,
+            request: req
+        )
+        func parts(_ rows: [Provenencia_Engine_V1_NameFormatPart]) -> [NameFormatPart] {
+            rows.map { NameFormatPart(partType: $0.partType, trailingSeparator: $0.trailingSeparator) }
+        }
+        return NameFormatOrders(natural: parts(resp.natural), sorted: parts(resp.sorted))
+    }
+
     func searchCatalog(
         projectDir: String,
         query: String,

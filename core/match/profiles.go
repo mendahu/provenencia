@@ -22,6 +22,19 @@ type Profile struct {
 	MinScore float64
 }
 
+// WithNameComparer returns a copy of p whose name features use c. Other
+// features stay as they are.
+func (p Profile) WithNameComparer(c NameComparer) Profile {
+	out := p
+	out.Features = append([]Feature(nil), p.Features...)
+	for i := range out.Features {
+		if _, ok := out.Features[i].Comparer.(NameComparer); ok {
+			out.Features[i].Comparer = c
+		}
+	}
+	return out
+}
+
 // With returns a copy of p with f replacing the Feature for the same
 // Property, or added after the others. Use it to tune a default profile.
 func (p Profile) With(f Feature) Profile {

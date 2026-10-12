@@ -210,6 +210,11 @@ var registry = map[string]Effect{
 	"subject_type_properties":     {None: true},
 	"source_type_metadata_fields": {None: true},
 	"name_value_parts":            {None: true},
+	"name_format_profiles":        {None: true},
+	"name_format_profile_parts":   {None: true},
+	"name_format_profile_roles":   {None: true},
+	"name_format_profile_weights": {None: true},
+	"project_settings":            {None: true},
 	"file_derivatives":            {Entity: "file_derivative", None: true},
 }
 

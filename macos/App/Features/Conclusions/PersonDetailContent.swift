@@ -21,19 +21,23 @@ struct PersonDetailContent: ConclusionDetailBody {
     var vitals: [Vital]
     var rows: [ReconciledValueRowModel]
 
-    init(detail: CatalogConclusionDetail, locale: Locale = .autoupdatingCurrent) {
+    init(
+        detail: CatalogConclusionDetail,
+        locale: Locale = .autoupdatingCurrent,
+        orders: NameFormatOrders = NameFormatOrders()
+    ) {
         let header = detail.personHeader
         let nameField = detail.fields.first { $0.propertyKey == SeededPropertyKey.name }
         var leadName: CatalogNameValue?
         if case .name(let name)? = nameField?.displayedValues.first?.value { leadName = name }
-        title = PersonHeaderDisplay.titleSource(name: leadName, entity: detail.entity)
+        title = PersonHeaderDisplay.titleSource(name: leadName, entity: detail.entity, style: .natural, orders: orders)
         ref = detail.entity.ref
         members = L10n.Conclusions.memberCount(detail.memberCount)
         vitals = [
             Self.vital(L10n.Conclusions.personBornAbbr, spoken: L10n.Conclusions.a11yBorn, facts: header?.birth, locale: locale),
             Self.vital(L10n.Conclusions.personDiedAbbr, spoken: L10n.Conclusions.a11yDied, facts: header?.death, locale: locale),
         ]
-        rows = Self.rows(detail.fields, header: header, locale: locale)
+        rows = Self.rows(detail.fields, header: header, locale: locale, orders: orders)
     }
 
     /// A Person always shows its name and four life rows, stated empty when
@@ -44,11 +48,12 @@ struct PersonDetailContent: ConclusionDetailBody {
     static func rows(
         _ fields: [CatalogConclusionField],
         header: CatalogPersonHeader? = nil,
-        locale: Locale
+        locale: Locale,
+        orders: NameFormatOrders = NameFormatOrders()
     ) -> [ReconciledValueRowModel] {
         var rows: [ReconciledValueRowModel] = []
         if let name = fields.first(where: { $0.propertyKey == SeededPropertyKey.name }) {
-            rows.append(ReconciledValueRowModel(field: name, locale: locale))
+            rows.append(ReconciledValueRowModel(field: name, locale: locale, orders: orders))
         } else {
             rows.append(.empty(
                 id: "name", label: L10n.string(L10n.Conclusions.personName), style: .text,
@@ -84,7 +89,7 @@ struct PersonDetailContent: ConclusionDetailBody {
             ))
         }
         for field in fields where field.propertyKey != SeededPropertyKey.name && !field.outcomes.isEmpty {
-            rows.append(ReconciledValueRowModel(field: field, locale: locale))
+            rows.append(ReconciledValueRowModel(field: field, locale: locale, orders: orders))
         }
         return rows
     }

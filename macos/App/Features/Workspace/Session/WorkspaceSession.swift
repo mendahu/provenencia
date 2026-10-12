@@ -9,6 +9,9 @@ final class WorkspaceSession {
     let projectKey: ProjectKey
     let store: any GenealogyStore
     let registry: CatalogQueryRegistry
+    /// Default name-format orders. Empty until the catalog read finishes,
+    /// which keeps stored part order.
+    var nameFormat = NameFormatOrders()
 
     private var handles: [CatalogQueryKey: AnyObject] = [:]
     private var valueTypes: [CatalogQueryKey: ObjectIdentifier] = [:]
@@ -31,6 +34,14 @@ final class WorkspaceSession {
         self.projectKey = projectKey
         self.store = store
         self.registry = registry
+    }
+
+    func loadNameFormat() async {
+        do {
+            nameFormat = try await store.nameFormat(projectDir: projectKey.projectDir)
+        } catch {
+            nameFormat = NameFormatOrders()
+        }
     }
 
     func graphCamera(for sourceID: String) -> GraphCanvasCamera? {

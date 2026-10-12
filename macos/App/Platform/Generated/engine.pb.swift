@@ -117,6 +117,7 @@ public nonisolated enum Provenencia_Engine_V1_Method: SwiftProtobuf.Enum, Swift.
   case listSourceEventTitles // = 96
   case proposePromoteGraphAlignment // = 97
   case applyPromoteGraphAlignment // = 98
+  case getNameFormat // = 99
   case UNRECOGNIZED(Int)
 
   public init() {
@@ -218,6 +219,7 @@ public nonisolated enum Provenencia_Engine_V1_Method: SwiftProtobuf.Enum, Swift.
     case 96: self = .listSourceEventTitles
     case 97: self = .proposePromoteGraphAlignment
     case 98: self = .applyPromoteGraphAlignment
+    case 99: self = .getNameFormat
     default: self = .UNRECOGNIZED(rawValue)
     }
   }
@@ -317,6 +319,7 @@ public nonisolated enum Provenencia_Engine_V1_Method: SwiftProtobuf.Enum, Swift.
     case .listSourceEventTitles: return 96
     case .proposePromoteGraphAlignment: return 97
     case .applyPromoteGraphAlignment: return 98
+    case .getNameFormat: return 99
     case .UNRECOGNIZED(let i): return i
     }
   }
@@ -416,6 +419,7 @@ public nonisolated enum Provenencia_Engine_V1_Method: SwiftProtobuf.Enum, Swift.
     .listSourceEventTitles,
     .proposePromoteGraphAlignment,
     .applyPromoteGraphAlignment,
+    .getNameFormat,
   ]
 
 }
@@ -6404,6 +6408,46 @@ public nonisolated struct Provenencia_Engine_V1_DeleteImpactListed: Sendable {
   fileprivate var _location: Provenencia_Engine_V1_WorkspaceLocation? = nil
 }
 
+public nonisolated struct Provenencia_Engine_V1_GetNameFormatRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var projectDir: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Provenencia_Engine_V1_NameFormatPart: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var partType: String = String()
+
+  public var trailingSeparator: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Provenencia_Engine_V1_GetNameFormatResponse: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var natural: [Provenencia_Engine_V1_NameFormatPart] = []
+
+  public var sorted: [Provenencia_Engine_V1_NameFormatPart] = []
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
 /// Error is the protobuf payload on provenencia_call status 1 (failure).
 /// Success payloads remain method-specific response messages.
 public nonisolated struct Provenencia_Engine_V1_Error: Sendable {
@@ -6429,7 +6473,7 @@ public nonisolated struct Provenencia_Engine_V1_Error: Sendable {
 fileprivate nonisolated let _protobuf_package = "provenencia.engine.v1"
 
 nonisolated extension Provenencia_Engine_V1_Method: SwiftProtobuf._ProtoNameProviding {
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0METHOD_UNSPECIFIED\0\u{1}METHOD_PING\0\u{1}METHOD_GET_VERSION\0\u{1}METHOD_GET_INSTALL_IDENTITY\0\u{1}METHOD_COMPLETE_ONBOARDING\0\u{1}METHOD_REMOVE_INSTALL_IDENTITY\0\u{1}METHOD_GET_ACTIVE_PROJECT\0\u{1}METHOD_OPEN_PROJECT\0\u{1}METHOD_REMOVE_ACTIVE_PROJECT\0\u{1}METHOD_LIST_PROJECT_USERS\0\u{1}METHOD_SIGN_OUT\0\u{1}METHOD_GET_PROJECT_INFO\0\u{1}METHOD_LIST_SOURCES\0\u{1}METHOD_GET_SOURCE_WORKSPACE\0\u{1}METHOD_CREATE_SOURCE\0\u{1}METHOD_UPDATE_SOURCE\0\u{1}METHOD_ADD_SOURCE_NOTE\0\u{1}METHOD_UPDATE_SOURCE_NOTE\0\u{1}METHOD_DELETE_SOURCE_NOTE\0\u{1}METHOD_SET_SOURCE_METADATA\0\u{1}METHOD_CLEAR_SOURCE_METADATA\0\u{1}METHOD_CREATE_ARTIFACT\0\u{1}METHOD_INGEST_ARTIFACT_FILE\0\u{1}METHOD_LIST_SOURCE_TYPES\0\u{1}METHOD_CREATE_SOURCE_TYPE\0\u{1}METHOD_LIST_METADATA_FIELDS\0\u{1}METHOD_CREATE_METADATA_FIELD\0\u{2}\u{2}METHOD_UPDATE_METADATA_FIELD\0\u{1}METHOD_DELETE_SOURCE_TYPE\0\u{1}METHOD_DELETE_METADATA_FIELD\0\u{1}METHOD_UPDATE_SOURCE_TYPE\0\u{1}METHOD_LIST_TYPE_SUGGESTIONS\0\u{1}METHOD_ASSIGN_TYPE_FIELD\0\u{1}METHOD_REMOVE_TYPE_FIELD\0\u{1}METHOD_GET_WORKSPACE_NAV_COUNTS\0\u{1}METHOD_UPDATE_ARTIFACT\0\u{1}METHOD_LIST_SOURCE_CREDIBILITY_GRADES\0\u{1}METHOD_UPSERT_SOURCE_CREDIBILITY_ASSESSMENT\0\u{1}METHOD_DISMISS_SOURCE_METADATA_SUGGESTION\0\u{1}METHOD_REORDER_SOURCE_METADATA\0\u{1}METHOD_ENSURE_FILE_THUMBNAIL\0\u{1}METHOD_CLOSE_CATALOG_SESSION\0\u{1}METHOD_SET_SOURCE_COVER\0\u{1}METHOD_SEARCH_CATALOG\0\u{1}METHOD_LIST_SUBJECT_TYPES\0\u{1}METHOD_CREATE_SUBJECT\0\u{1}METHOD_UPDATE_SUBJECT\0\u{1}METHOD_DELETE_SUBJECT\0\u{1}METHOD_LIST_SUBJECTS\0\u{1}METHOD_SET_SUBJECT_POSITION\0\u{1}METHOD_CLEAR_SUBJECT_POSITION\0\u{1}METHOD_LIST_SUBJECT_POSITIONS\0\u{1}METHOD_LIST_PROPERTIES\0\u{1}METHOD_CREATE_PROPERTY\0\u{1}METHOD_UPDATE_PROPERTY\0\u{1}METHOD_DELETE_PROPERTY\0\u{1}METHOD_LIST_SUBJECT_TYPE_PROPERTIES\0\u{1}METHOD_ASSIGN_SUBJECT_TYPE_PROPERTY\0\u{1}METHOD_REMOVE_SUBJECT_TYPE_PROPERTY\0\u{1}METHOD_LIST_PLACEABLE_SUBJECT_TYPES\0\u{1}METHOD_GET_SUBJECT_TYPE_PRESENTATION\0\u{1}METHOD_LIST_CONNECT_RULES\0\u{1}METHOD_LIST_PROPERTY_TERMS\0\u{1}METHOD_CREATE_PROPERTY_TERM\0\u{1}METHOD_UPDATE_PROPERTY_TERM\0\u{1}METHOD_DELETE_PROPERTY_TERM\0\u{1}METHOD_CREATE_CITATION_WITH_OBSERVATIONS\0\u{1}METHOD_ADD_OBSERVATIONS_TO_CITATION\0\u{1}METHOD_LIST_OBSERVATIONS_BY_SOURCE\0\u{1}METHOD_GET_CITATION\0\u{2}\u{2}METHOD_CREATE_CITED_BRIDGE\0\u{1}METHOD_CITATION_COUNTS_BY_SOURCE\0\u{1}METHOD_LIST_CITATIONS_BY_ARTIFACT\0\u{1}METHOD_UPDATE_CITATION\0\u{1}METHOD_UPDATE_OBSERVATION\0\u{1}METHOD_DELETE_OBSERVATION\0\u{1}METHOD_GET_PROPERTIES_WORKSPACE\0\u{1}METHOD_LIST_SOURCE_GRAPH_PROGRESS\0\u{1}METHOD_GET_SOURCE_GRAPH_PROGRESS\0\u{1}METHOD_GET_DELETE_IMPACT\0\u{1}METHOD_DELETE_SOURCE\0\u{1}METHOD_DELETE_ARTIFACT\0\u{1}METHOD_DELETE_CITATION\0\u{1}METHOD_PROMOTE_SUBJECT\0\u{1}METHOD_LIST_SUBJECT_MEMBERSHIPS\0\u{1}METHOD_LIST_PERSON_HEADERS\0\u{2}\u{2}METHOD_LIST_CLAIM_CONFIDENCE_GRADES\0\u{1}METHOD_GET_CONCLUSION_DETAIL\0\u{1}METHOD_LIST_EVENT_HEADERS\0\u{2}\u{2}METHOD_LIST_PLACE_HEADERS\0\u{2}\u{3}METHOD_LIST_SOURCE_EVENT_TITLES\0\u{1}METHOD_PROPOSE_PROMOTE_GRAPH_ALIGNMENT\0\u{1}METHOD_APPLY_PROMOTE_GRAPH_ALIGNMENT\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0METHOD_UNSPECIFIED\0\u{1}METHOD_PING\0\u{1}METHOD_GET_VERSION\0\u{1}METHOD_GET_INSTALL_IDENTITY\0\u{1}METHOD_COMPLETE_ONBOARDING\0\u{1}METHOD_REMOVE_INSTALL_IDENTITY\0\u{1}METHOD_GET_ACTIVE_PROJECT\0\u{1}METHOD_OPEN_PROJECT\0\u{1}METHOD_REMOVE_ACTIVE_PROJECT\0\u{1}METHOD_LIST_PROJECT_USERS\0\u{1}METHOD_SIGN_OUT\0\u{1}METHOD_GET_PROJECT_INFO\0\u{1}METHOD_LIST_SOURCES\0\u{1}METHOD_GET_SOURCE_WORKSPACE\0\u{1}METHOD_CREATE_SOURCE\0\u{1}METHOD_UPDATE_SOURCE\0\u{1}METHOD_ADD_SOURCE_NOTE\0\u{1}METHOD_UPDATE_SOURCE_NOTE\0\u{1}METHOD_DELETE_SOURCE_NOTE\0\u{1}METHOD_SET_SOURCE_METADATA\0\u{1}METHOD_CLEAR_SOURCE_METADATA\0\u{1}METHOD_CREATE_ARTIFACT\0\u{1}METHOD_INGEST_ARTIFACT_FILE\0\u{1}METHOD_LIST_SOURCE_TYPES\0\u{1}METHOD_CREATE_SOURCE_TYPE\0\u{1}METHOD_LIST_METADATA_FIELDS\0\u{1}METHOD_CREATE_METADATA_FIELD\0\u{2}\u{2}METHOD_UPDATE_METADATA_FIELD\0\u{1}METHOD_DELETE_SOURCE_TYPE\0\u{1}METHOD_DELETE_METADATA_FIELD\0\u{1}METHOD_UPDATE_SOURCE_TYPE\0\u{1}METHOD_LIST_TYPE_SUGGESTIONS\0\u{1}METHOD_ASSIGN_TYPE_FIELD\0\u{1}METHOD_REMOVE_TYPE_FIELD\0\u{1}METHOD_GET_WORKSPACE_NAV_COUNTS\0\u{1}METHOD_UPDATE_ARTIFACT\0\u{1}METHOD_LIST_SOURCE_CREDIBILITY_GRADES\0\u{1}METHOD_UPSERT_SOURCE_CREDIBILITY_ASSESSMENT\0\u{1}METHOD_DISMISS_SOURCE_METADATA_SUGGESTION\0\u{1}METHOD_REORDER_SOURCE_METADATA\0\u{1}METHOD_ENSURE_FILE_THUMBNAIL\0\u{1}METHOD_CLOSE_CATALOG_SESSION\0\u{1}METHOD_SET_SOURCE_COVER\0\u{1}METHOD_SEARCH_CATALOG\0\u{1}METHOD_LIST_SUBJECT_TYPES\0\u{1}METHOD_CREATE_SUBJECT\0\u{1}METHOD_UPDATE_SUBJECT\0\u{1}METHOD_DELETE_SUBJECT\0\u{1}METHOD_LIST_SUBJECTS\0\u{1}METHOD_SET_SUBJECT_POSITION\0\u{1}METHOD_CLEAR_SUBJECT_POSITION\0\u{1}METHOD_LIST_SUBJECT_POSITIONS\0\u{1}METHOD_LIST_PROPERTIES\0\u{1}METHOD_CREATE_PROPERTY\0\u{1}METHOD_UPDATE_PROPERTY\0\u{1}METHOD_DELETE_PROPERTY\0\u{1}METHOD_LIST_SUBJECT_TYPE_PROPERTIES\0\u{1}METHOD_ASSIGN_SUBJECT_TYPE_PROPERTY\0\u{1}METHOD_REMOVE_SUBJECT_TYPE_PROPERTY\0\u{1}METHOD_LIST_PLACEABLE_SUBJECT_TYPES\0\u{1}METHOD_GET_SUBJECT_TYPE_PRESENTATION\0\u{1}METHOD_LIST_CONNECT_RULES\0\u{1}METHOD_LIST_PROPERTY_TERMS\0\u{1}METHOD_CREATE_PROPERTY_TERM\0\u{1}METHOD_UPDATE_PROPERTY_TERM\0\u{1}METHOD_DELETE_PROPERTY_TERM\0\u{1}METHOD_CREATE_CITATION_WITH_OBSERVATIONS\0\u{1}METHOD_ADD_OBSERVATIONS_TO_CITATION\0\u{1}METHOD_LIST_OBSERVATIONS_BY_SOURCE\0\u{1}METHOD_GET_CITATION\0\u{2}\u{2}METHOD_CREATE_CITED_BRIDGE\0\u{1}METHOD_CITATION_COUNTS_BY_SOURCE\0\u{1}METHOD_LIST_CITATIONS_BY_ARTIFACT\0\u{1}METHOD_UPDATE_CITATION\0\u{1}METHOD_UPDATE_OBSERVATION\0\u{1}METHOD_DELETE_OBSERVATION\0\u{1}METHOD_GET_PROPERTIES_WORKSPACE\0\u{1}METHOD_LIST_SOURCE_GRAPH_PROGRESS\0\u{1}METHOD_GET_SOURCE_GRAPH_PROGRESS\0\u{1}METHOD_GET_DELETE_IMPACT\0\u{1}METHOD_DELETE_SOURCE\0\u{1}METHOD_DELETE_ARTIFACT\0\u{1}METHOD_DELETE_CITATION\0\u{1}METHOD_PROMOTE_SUBJECT\0\u{1}METHOD_LIST_SUBJECT_MEMBERSHIPS\0\u{1}METHOD_LIST_PERSON_HEADERS\0\u{2}\u{2}METHOD_LIST_CLAIM_CONFIDENCE_GRADES\0\u{1}METHOD_GET_CONCLUSION_DETAIL\0\u{1}METHOD_LIST_EVENT_HEADERS\0\u{2}\u{2}METHOD_LIST_PLACE_HEADERS\0\u{2}\u{3}METHOD_LIST_SOURCE_EVENT_TITLES\0\u{1}METHOD_PROPOSE_PROMOTE_GRAPH_ALIGNMENT\0\u{1}METHOD_APPLY_PROMOTE_GRAPH_ALIGNMENT\0\u{1}METHOD_GET_NAME_FORMAT\0")
 }
 
 nonisolated extension Provenencia_Engine_V1_EventTitleRule: SwiftProtobuf._ProtoNameProviding {
@@ -17976,6 +18020,106 @@ nonisolated extension Provenencia_Engine_V1_DeleteImpactListed: SwiftProtobuf.Me
     if lhs.ref != rhs.ref {return false}
     if lhs.title != rhs.title {return false}
     if lhs._location != rhs._location {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Provenencia_Engine_V1_GetNameFormatRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".GetNameFormatRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_dir\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.projectDir) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.projectDir.isEmpty {
+      try visitor.visitSingularStringField(value: self.projectDir, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Provenencia_Engine_V1_GetNameFormatRequest, rhs: Provenencia_Engine_V1_GetNameFormatRequest) -> Bool {
+    if lhs.projectDir != rhs.projectDir {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Provenencia_Engine_V1_NameFormatPart: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".NameFormatPart"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}part_type\0\u{3}trailing_separator\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.partType) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.trailingSeparator) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.partType.isEmpty {
+      try visitor.visitSingularStringField(value: self.partType, fieldNumber: 1)
+    }
+    if !self.trailingSeparator.isEmpty {
+      try visitor.visitSingularStringField(value: self.trailingSeparator, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Provenencia_Engine_V1_NameFormatPart, rhs: Provenencia_Engine_V1_NameFormatPart) -> Bool {
+    if lhs.partType != rhs.partType {return false}
+    if lhs.trailingSeparator != rhs.trailingSeparator {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Provenencia_Engine_V1_GetNameFormatResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".GetNameFormatResponse"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}natural\0\u{1}sorted\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeRepeatedMessageField(value: &self.natural) }()
+      case 2: try { try decoder.decodeRepeatedMessageField(value: &self.sorted) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.natural.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.natural, fieldNumber: 1)
+    }
+    if !self.sorted.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.sorted, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Provenencia_Engine_V1_GetNameFormatResponse, rhs: Provenencia_Engine_V1_GetNameFormatResponse) -> Bool {
+    if lhs.natural != rhs.natural {return false}
+    if lhs.sorted != rhs.sorted {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

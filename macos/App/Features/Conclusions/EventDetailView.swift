@@ -16,7 +16,7 @@ struct EventDetailView: View {
             thumbnailLabel: L10n.Conclusions.eventNoImage,
             pageIdentifier: "events.detail",
             errorIdentifier: "events.detail.error",
-            make: { EventDetailContent(detail: $0) },
+            make: { EventDetailContent(detail: $0, orders: session.nameFormat) },
             summary: { EventDetailSummary(date: $0.summaryDate, place: $0.summaryPlace) }
         )
     }

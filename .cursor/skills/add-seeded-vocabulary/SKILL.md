@@ -28,6 +28,7 @@ new Install into **`onboarding.createCatalog` only**.
 | `core/database/claimconfidencegrades/` | `registry.go` (`seedGrades`) | Claim confidence grades (`low_confidence` / `moderate` / `high_confidence`) for Identity (later Reconciliation) Claims |
 | `core/connectrules/` | `productBridges` / `productRefusals` (`Bridge.Endpoints` + `Disambiguation` + `Pairs`); `All()` / `Register` | Product connect matrix: which Properties on which bridge types are endpoints or disambiguation. Impact, edge-lock, Connect, and Install bridge bindings loop `All()` / `BridgeBindings()`. Future plugins append via `Register`. |
 | `core/database/subjectvocab/` | `registry.go` (`seedTypes` / `seedProperties` / `seedBindings` / `seedTerms`) | Interpretation Subject types, Properties, non-bridge `subject_type_properties`, **`property_terms`** (S7-01b), plus compiled presentation. Bridge bindings are derived from `connectrules.BridgeBindings()` (product origin only at create). |
+| `core/database/nameformats/` | `registry.go` (`seedProfiles`) | Name format profiles: part order, roles, weights, and which profile is the project default. Install writes the list. Load and Format do not branch on the profile key. |
 
 ### Source vocabulary (`sourcevocab`)
 
@@ -77,7 +78,7 @@ Uniqueness is **`UNIQUE (key, origin)`**. Lookup is always `(key, origin)`, neve
 - Each domain’s `Install` upserts its registry into a new catalog.
 - Call **only** from `onboarding.createCatalog` (after `database.Create` +
   `users.EnsureRefs` / `project.EnsureUUID`). Today that is:
-  `sourcevocab.Install` → `sourcecredibilitygrades.Install` → `claimconfidencegrades.Install` → `subjectvocab.Install`
+  `sourcevocab.Install` → `sourcecredibilitygrades.Install` → `claimconfidencegrades.Install` → `subjectvocab.Install` → `nameformats.Install`
   (then `searchindex.EnsureCatalog`).
 - **Do not** call `Install` from `OpenCatalog`, `catalogsession.Do`, or on every open.
 - **Do not** heal deleted `provenencia` rows or restored suggestion joins on open.
@@ -94,7 +95,8 @@ core/onboarding/ready.go
   createCatalog → database.Create + users.EnsureRefs + project.EnsureUUID
                   + sourcevocab.Install + sourcecredibilitygrades.Install
                   + claimconfidencegrades.Install
-                  + subjectvocab.Install + searchindex.EnsureCatalog
+                  + subjectvocab.Install + nameformats.Install
+                  + searchindex.EnsureCatalog
   OpenCatalog   → database.Open + users.EnsureRefs   # one-shot / tests
 
 core/catalogsession

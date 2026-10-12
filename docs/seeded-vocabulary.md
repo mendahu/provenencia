@@ -531,7 +531,7 @@ idx   part_type
 default_name_format_id = <uuid of western profile>
 ```
 
-Additional cultural profiles (for example dual-surname ordering) are **TBD**.
+New catalogs install this profile at create. The rows are the `seedProfiles` list in `core/database/nameformats/registry.go` (`nameformats.Install`), including the role and weight rows in [`structured-name-model.md`](structured-name-model.md) §4. Adding a profile is another entry in that list. Existing catalogs get the empty tables and no seed rows. Additional cultural profiles are **TBD**.
 
 ---
 

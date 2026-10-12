@@ -18,11 +18,19 @@ enum PersonsList: ConclusionListKind {
     static func ref(_ header: CatalogPersonHeader) -> String { header.entity.ref }
 
     static func titleSource(_ header: CatalogPersonHeader) -> ConclusionTitleSource {
-        PersonHeaderDisplay.titleSource(header)
+        titleSource(header, orders: NameFormatOrders())
+    }
+
+    static func titleSource(_ header: CatalogPersonHeader, orders: NameFormatOrders) -> ConclusionTitleSource {
+        PersonHeaderDisplay.titleSource(header, style: .sorted, orders: orders)
     }
 
     static func accessibilityLabel(_ header: CatalogPersonHeader) -> String {
-        let title = ConclusionListRow.accessibilityLabel(titleSource(header), ref: header.entity.ref)
+        accessibilityLabel(header, orders: NameFormatOrders())
+    }
+
+    static func accessibilityLabel(_ header: CatalogPersonHeader, orders: NameFormatOrders) -> String {
+        let title = ConclusionListRow.accessibilityLabel(titleSource(header, orders: orders), ref: header.entity.ref)
         let line = PersonLifeDisplay.line(header)
         guard !line.text.isEmpty else { return title }
         let label = L10n.Conclusions.a11yList(title, rest: line.text)
@@ -31,7 +39,15 @@ enum PersonsList: ConclusionListKind {
     }
 
     static func location(_ header: CatalogPersonHeader) -> WorkspaceLocation {
-        .personDetail(entityId: header.entity.id, ref: header.entity.ref, title: PersonHeaderDisplay.title(header))
+        location(header, orders: NameFormatOrders())
+    }
+
+    static func location(_ header: CatalogPersonHeader, orders: NameFormatOrders) -> WorkspaceLocation {
+        .personDetail(
+            entityId: header.entity.id,
+            ref: header.entity.ref,
+            title: PersonHeaderDisplay.title(header, style: .sorted, orders: orders)
+        )
     }
 
     @MainActor

@@ -8,7 +8,7 @@ Names are compared, clustered, sorted and displayed with assumptions that hold m
 
 - **Accents break matches.** "José" vs "Jose" and "Müller" vs "Muller" don't match. `autoreconcile.NormalizeForm` keeps diacritics, and short words fall below the near-spelling floor. Records disagree on accents all the time: clerks, transcribers and OCR drop or add them.
 - **Only Western roles exist.** `core/match` compares names word by word with part types as data (S9-10). Mismatched types discount, they don't block. Culture-specific rules live in a `NamePattern` fetched through a `NamePatterns` source, but the only pattern so far is `western`, built in. That's right for "James K. Robins" and incomplete for many others (below).
-- **Only one profile exists.** Name format profiles are designed to carry culture, but only `western` is seeded, and nothing reads a profile yet.
+- **The catalog holds one profile.** S10-29 installs `western` and matching reads those rows. Further cultures are unscheduled.
 
 ## Part 1: accent and character folding
 
@@ -25,26 +25,16 @@ Fold for **comparison**, never for **display**, and don't use one fold for **sor
 
 ## Part 2: non-Western name structures
 
-Matching should take its roles from the Person's **name format profile**, not from fixed part types. This spike covers two of those patterns. The rest are in [`ideas/international-names.md`](../../ideas/international-names.md).
-
-| Pattern | Example | What this spike does |
-| --- | --- | --- |
-| Spanish dual surnames | *García Márquez* (paternal then maternal) | Both parts stay `surname`. The first weighs more than the second. Records that give only one still match on that one. Portuguese maternal-first is later. |
-| Patronymics | Icelandic *Jónsdóttir*; Russian *Ivanovich* | A `patronymic` part type and role, compared to another patronymic. Linking it to the father's given name is later. | |
+Matching takes its roles from the project's **name format profile**. S10-29 seeds `western` only. Spanish dual surnames and a patronymic part are unscheduled, with the rest, in [`ideas/international-names.md`](../../ideas/international-names.md).
 
 **Decided: types are data, not locks.** Comparison must work across name formats. A surname in one name that matches a given name in another still connects, just scored lower because the types differ. S9-10 already compares this way (see [`matching.md`](../../matching.md)):
 - part types map to roles;
 - any word can pair with any word;
 - role affinity discounts mismatched types.
 
-What's left here:
-- **Profiles supply the pattern.** Each name format profile becomes a `NamePattern`: part type → role (family, given, lineage, generation, ignored), plus role weights, for example a maternal surname weighing less. What's ready:
-  - the seam: a `NamePatterns` source on `NameComparer`, today `BuiltinNamePatterns` in `core/match/registry.go`;
-  - `Value.NamePattern`, which picks each name's pattern.
-
-  This spike: a source that reads `name_format_profiles`, and loaders that set each name's pattern from the **project default**. A per-person `name_format` claim is later.
-- **Which profile applies** when the two names have different formats: each name's words take roles from its own profile, so no single profile has to win. With only the project default, both names share that pattern until per-person format exists.
-- **`patronymic`** goes through the compiled `namevalues` registry and [`seeded-vocabulary.md`](../../seeded-vocabulary.md) §4.1. No `maternal_surname` part type. GEDCOM export mapping is later.
+What's in place:
+- **Profiles supply the pattern.** S10-29 reads `name_format_profiles` (roles and weights) and sets each name's `Value.NamePattern` from the project default. A catalog with no default still uses the built-in Western pattern. A per-person `name_format` claim is later.
+- **Which profile applies** when the two names have different formats: each name's words take roles from its own profile. With only the project default, both names share that pattern until per-person format exists. No `maternal_surname` part type.
 
 ## Part 3: sound-alikes and nicknames
 
@@ -54,7 +44,7 @@ What's left here:
 ## Order of work (rough)
 
 1. Accent folding in matching's word comparison, with the 0.95 folded-match tier. This is small, has the highest payoff, and needs no cache change.
-2. Name format profiles carry role maps (and weights); `NameComparer` reads each name's own profile; a `patronymic` part type; a second seeded profile (Spanish dual surname, or Icelandic).
+2. Name format profiles carry role maps and weights. S10-29 did this for `western`. Further profiles are unscheduled.
 3. Locale collation for sorted lists. The locale is a project setting, default `en`, with no picker. A picker is later.
 4. Nickname tables, then Daitch–Mokotoff. Transliteration is later.
 
@@ -64,4 +54,4 @@ What's left here:
 - **Types are data.** Names in different formats compare word by word, and mismatched types discount rather than block. This shipped in S9-10.
 - **The project picks the sorting locale.** This spike stores it and does not offer a control.
 
-The father's-handle patronymic, a collation picker, and a viewer's own locale are in [`ideas/international-names.md`](../../ideas/international-names.md).
+Spanish dual surnames, a patronymic part, the father's-handle link, a collation picker, and a viewer's own locale are in [`ideas/international-names.md`](../../ideas/international-names.md).

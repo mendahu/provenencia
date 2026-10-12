@@ -271,6 +271,8 @@ struct EvidenceSubjectCard: View {
     var hoveredActionID: String? = nil
     /// Nested action id held down by the pointer, if any (pressed paint).
     var pressedActionID: String? = nil
+    /// Default profile orders. Empty keeps stored part order on the membership name.
+    var nameOrders: NameFormatOrders = NameFormatOrders()
     /// Receives the painted layout (card size + tagged hit regions) for hit targets and edges.
     var onLayout: ((EvidenceCardLayout) -> Void)? = nil
 
@@ -284,7 +286,8 @@ struct EvidenceSubjectCard: View {
             isConnectingFrom: isConnectingFrom,
             canCite: canCite,
             hoveredActionID: hoveredActionID,
-            pressedActionID: pressedActionID
+            pressedActionID: pressedActionID,
+            nameOrders: nameOrders
         )
         .reportsEvidenceCardLayout(onLayout)
         .opacity(ghostOpacity)
@@ -343,9 +346,12 @@ struct EvidenceSubjectCard: View {
     }
 
     /// VoiceOver name for the footer action: "Promote James Robins, CPR-…" or "Open person PER-…".
-    static func footerAccessibilityActionName(for placed: SourceGraphPlacedSubject) -> String {
+    static func footerAccessibilityActionName(
+        for placed: SourceGraphPlacedSubject,
+        orders: NameFormatOrders = NameFormatOrders()
+    ) -> String {
         if let membership = placed.membership {
-            let target = membershipName(membership).map { "\($0), \(membership.entity.ref)" } ?? membership.entity.ref
+            let target = membershipName(membership, orders: orders).map { "\($0), \(membership.entity.ref)" } ?? membership.entity.ref
             return L10n.EvidenceGraph.openHandleAccessibility(kind: placed.kind, ref: target)
         }
         let label = placed.subject.label.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -358,8 +364,15 @@ struct EvidenceSubjectCard: View {
     /// The handle's auto-reconciled name for the membership row (S9-09), or nil when
     /// it has none — the row then keeps its *Open … page* copy.
     static func membershipName(_ membership: CatalogSubjectMembership) -> String? {
+        membershipName(membership, orders: NameFormatOrders())
+    }
+
+    static func membershipName(
+        _ membership: CatalogSubjectMembership,
+        orders: NameFormatOrders
+    ) -> String? {
         guard let name = membership.name else { return nil }
-        let text = NameValueDisplay.string(for: name)
+        let text = NameValueDisplay.string(for: name, style: .natural, orders: orders)
         return text.isEmpty ? nil : text
     }
 
@@ -380,6 +393,7 @@ private struct EvidenceSubjectCardChrome: View {
     var canCite: Bool
     var hoveredActionID: String?
     var pressedActionID: String?
+    var nameOrders: NameFormatOrders = NameFormatOrders()
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -587,7 +601,7 @@ private struct EvidenceSubjectCardChrome: View {
             // The handle's auto-reconciled name (S9-09) in the slot the link copy holds
             // until a name exists — same slot, so promoting never relayouts.
             Group {
-                if let name = EvidenceSubjectCard.membershipName(membership) {
+                if let name = EvidenceSubjectCard.membershipName(membership, orders: nameOrders) {
                     Text(verbatim: name)
                 } else {
                     Text(L10n.EvidenceGraph.openHandlePage(kind: placed.kind)).italic()

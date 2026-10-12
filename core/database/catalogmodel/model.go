@@ -87,6 +87,11 @@ var Tables = []Table{
 	{Name: "property_terms", PK: "id", Kind: KindPropertyTerm, Bucket: BucketVocab},
 	{Name: "canonical_entities", Kind: KindCanonicalEntity, Bucket: BucketResource},
 	{Name: "claim_confidence_grades", Bucket: BucketVocab},
+	{Name: "name_format_profiles", PK: "id", Bucket: BucketVocab},
+	{Name: "name_format_profile_parts", Bucket: BucketFacet},
+	{Name: "name_format_profile_roles", Bucket: BucketFacet},
+	{Name: "name_format_profile_weights", Bucket: BucketFacet},
+	{Name: "project_settings", PK: "key", Bucket: BucketVocab},
 	{Name: "files", PK: "id", Kind: KindFile, Bucket: BucketPool},
 	{Name: "users", PK: "id", Kind: KindUser, Bucket: BucketInfra},
 	{Name: "project", PK: "id", Kind: KindProject, Bucket: BucketSkip},
@@ -161,6 +166,9 @@ var FKs = []FK{
 
 	{From: "property_terms", Column: "property_id", To: "properties", OnDelete: "NO ACTION", Bucket: BucketResource},
 	{From: "name_value_parts", Column: "name_value_id", To: "name_values", OnDelete: "CASCADE", Bucket: BucketFacet},
+	{From: "name_format_profile_parts", Column: "profile_id", To: "name_format_profiles", OnDelete: "CASCADE", Bucket: BucketFacet},
+	{From: "name_format_profile_roles", Column: "profile_id", To: "name_format_profiles", OnDelete: "CASCADE", Bucket: BucketFacet},
+	{From: "name_format_profile_weights", Column: "profile_id", To: "name_format_profiles", OnDelete: "CASCADE", Bucket: BucketFacet},
 
 	{From: "canonical_entities", Column: "subject_type_id", To: "subject_types", OnDelete: "NO ACTION", Bucket: BucketResource},
 	{From: "canonical_entities", Column: "merged_into_id", To: "canonical_entities", OnDelete: "NO ACTION", Bucket: BucketResource},

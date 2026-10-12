@@ -813,7 +813,8 @@ private struct EvidenceGraphDocumentBody: View {
             EvidenceCanvasCard(
                 placed: .subject(placed, model.presentation(for: placed.kind.rawValue)),
                 text: text[subject: placed],
-                state: state(placed.id)
+                state: state(placed.id),
+                nameOrders: model.session.nameFormat
             )
         }
     }

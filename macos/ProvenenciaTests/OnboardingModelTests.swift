@@ -511,6 +511,9 @@ private struct ThrowingStore: GenealogyStore {
     func workspaceNavCounts(projectDir _: String) async throws -> WorkspaceNavCounts {
         throw StoreBoom.boom
     }
+    func nameFormat(projectDir _: String) async throws -> NameFormatOrders {
+        throw StoreBoom.boom
+    }
     func searchCatalog(
         projectDir _: String,
         query _: String,

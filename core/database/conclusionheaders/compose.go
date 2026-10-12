@@ -11,6 +11,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/graphcache"
+	"github.com/mendahu/provenencia/core/database/nameformats"
 	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/hops"
@@ -217,7 +218,12 @@ func persons(g *graphcache.Graph, ids [][]byte, all, store bool) ([]PersonHeader
 	if err != nil {
 		return nil, err
 	}
-	sortByTitle(out, personTitle, func(h PersonHeader) string { return h.Entity.Ref })
+	loaded, err := nameformats.Load(g)
+	if err != nil {
+		return nil, err
+	}
+	order := loaded.Profile.Sorted
+	sortByTitle(out, func(h PersonHeader) string { return personSortKey(h, order) }, func(h PersonHeader) string { return h.Entity.Ref })
 	return out, nil
 }
 

@@ -14,9 +14,13 @@ struct EventDetailContent: ConclusionDetailBody {
     var summaryPlace: String?
     var rows: [ReconciledValueRowModel]
 
-    init(detail: CatalogConclusionDetail, locale: Locale = .autoupdatingCurrent) {
+    init(
+        detail: CatalogConclusionDetail,
+        locale: Locale = .autoupdatingCurrent,
+        orders: NameFormatOrders = NameFormatOrders()
+    ) {
         let header = detail.eventHeader
-        title = header.map { EventTitleDisplay.titleSource($0, locale: locale) }
+        title = header.map { EventTitleDisplay.titleSource($0, locale: locale, orders: orders) }
             ?? EventTitleDisplay.untitled(detail.entity)
         ref = detail.entity.ref
         members = L10n.Conclusions.memberCount(detail.memberCount)

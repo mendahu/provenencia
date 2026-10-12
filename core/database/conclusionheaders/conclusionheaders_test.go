@@ -14,6 +14,8 @@ import (
 	"github.com/mendahu/provenencia/core/database/conclusionheaders"
 	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
+	"github.com/mendahu/provenencia/core/database/nameformats"
+	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/database/namevalues/namevaluestest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
@@ -141,10 +143,10 @@ func TestListPersons(t *testing.T) {
 	if len(got) != 4 {
 		t.Fatalf("listed %d Persons, want 4 (no Place)", len(got))
 	}
-	// By the title the row shows (james < mary < "Mother of James"), then
-	// the ref-only row. James, Jim and james reconcile into one name
-	// (S9-13b): Jim is a different given name, so it joins rather than
-	// being outvoted.
+	// No profile is installed, so parts stay in stored order (given, then
+	// surname): James before Mary, then the label, then the ref-only row.
+	// James, Jim and james reconcile into one name (S9-13b): Jim is a
+	// different given name, so it joins rather than being outvoted.
 	if got[0].Name == nil || got[0].Name.Form != "James Jim Robins" || got[0].NameValueCount != 1 {
 		t.Fatalf("first %+v", got[0])
 	}
@@ -171,6 +173,46 @@ func TestListPersons(t *testing.T) {
 			t.Fatalf("after edit %+v", h)
 		}
 	})
+}
+
+// The People list files by the sorted part order. Zachary Adams precedes
+// Aaron Zimmerman because Adams precedes Zimmerman. A form with no parts is
+// not a name the list files, so that person sorts last.
+func TestListPersonsSortsBySortedPartsNotForm(t *testing.T) {
+	f := newFixture(t)
+	must(t, nameformats.Install(f.c))
+	f.person("Aaron Zimmerman")
+	f.person("Zachary Adams")
+	formOnly := &namevalues.Value{Form: "Aaron Aardvark"}
+	personType := f.typeID("person")
+	s, err := writes.Call(f.c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
+		return subjects.Create(tx, userID, subjects.CreateInput{SourceID: f.source.ID, SubjectTypeID: personType}, nil)
+	})
+	must(t, err)
+	_, err = writes.Call(f.c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
+		return citations.CreateWithObservations(tx, userID, citations.CreateInput{ArtifactID: f.artifact.ID, LocatorJSON: locator}, []observations.Input{{
+			SubjectID: s.ID, PropertyID: f.name.ID, Name: formOnly,
+		}})
+	})
+	must(t, err)
+	_, err = writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+		return promote.Save(tx, userID, promote.Input{SubjectID: s.ID})
+	})
+	must(t, err)
+
+	got := f.list()
+	if len(got) != 3 {
+		t.Fatalf("listed %d", len(got))
+	}
+	if got[0].Name == nil || got[0].Name.Form != "Zachary Adams" {
+		t.Fatalf("first %+v", got[0].Name)
+	}
+	if got[1].Name == nil || got[1].Name.Form != "Aaron Zimmerman" {
+		t.Fatalf("second %+v", got[1].Name)
+	}
+	if got[2].Name != nil {
+		t.Fatalf("form-only name was filed %+v", got[2].Name)
+	}
 }
 
 // +N counts displayed name values only. Names are one structure (S9-13b), so

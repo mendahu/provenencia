@@ -49,6 +49,16 @@ type Evaluation struct {
 // when the property holds several values). Promote applies its own scale
 // on top of Similarity and Comparable, which can raise that floor.
 func Evaluate(probe, candidate Values, metas []PropertyMeta) Evaluation {
+	return evaluate(probe, candidate, metas, nil)
+}
+
+// EvaluateWithNames is Evaluate, scoring name values with names when it is
+// set. A nil names comparer keeps ComparerFor, the built-in Western pattern.
+func EvaluateWithNames(probe, candidate Values, metas []PropertyMeta, names *NameComparer) Evaluation {
+	return evaluate(probe, candidate, metas, names)
+}
+
+func evaluate(probe, candidate Values, metas []PropertyMeta, names *NameComparer) Evaluation {
 	var out Evaluation
 	for _, m := range metas {
 		if m.ValueType == "" {
@@ -58,7 +68,7 @@ func Evaluate(probe, candidate Values, metas []PropertyMeta) Evaluation {
 		if card == "" {
 			card = properties.CardinalitySingle
 		}
-		sim, ok := compareProperty(m.ValueType, probe[m.Property], candidate[m.Property])
+		sim, ok := compareProperty(m.ValueType, probe[m.Property], candidate[m.Property], names)
 		pc := PropertyComparison{
 			Property:    m.Property,
 			ValueType:   m.ValueType,
@@ -72,8 +82,13 @@ func Evaluate(probe, candidate Values, metas []PropertyMeta) Evaluation {
 	return out
 }
 
-func compareProperty(valueType string, a, b []Value) (float64, bool) {
-	cmp := ComparerFor(valueType)
+func compareProperty(valueType string, a, b []Value, names *NameComparer) (float64, bool) {
+	var cmp Comparer
+	if valueType == properties.ValueTypeName && names != nil {
+		cmp = *names
+	} else {
+		cmp = ComparerFor(valueType)
+	}
 	if cmp == nil {
 		return 0, false
 	}

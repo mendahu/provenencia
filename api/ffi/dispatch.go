@@ -97,6 +97,7 @@ const (
 	MethodListPersonHeaders                 = int32(engine.Method_METHOD_LIST_PERSON_HEADERS)
 	MethodProposePromoteGraphAlignment      = int32(engine.Method_METHOD_PROPOSE_PROMOTE_GRAPH_ALIGNMENT)
 	MethodApplyPromoteGraphAlignment        = int32(engine.Method_METHOD_APPLY_PROMOTE_GRAPH_ALIGNMENT)
+	MethodGetNameFormat                     = int32(engine.Method_METHOD_GET_NAME_FORMAT)
 	MethodListClaimConfidenceGrades         = int32(engine.Method_METHOD_LIST_CLAIM_CONFIDENCE_GRADES)
 	MethodGetConclusionDetail               = int32(engine.Method_METHOD_GET_CONCLUSION_DETAIL)
 	MethodListEventHeaders                  = int32(engine.Method_METHOD_LIST_EVENT_HEADERS)
@@ -281,6 +282,8 @@ func Call(method int32, in []byte) ([]byte, error) {
 		return handlers.ProposePromoteGraphAlignment(in)
 	case MethodApplyPromoteGraphAlignment:
 		return handlers.ApplyPromoteGraphAlignment(in)
+	case MethodGetNameFormat:
+		return handlers.GetNameFormat(in)
 	case MethodListClaimConfidenceGrades:
 		return handlers.ListClaimConfidenceGrades(in)
 	case MethodGetConclusionDetail:

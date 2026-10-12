@@ -3,6 +3,9 @@ import Foundation
 /// One page of Promote (S9-44): a row list, not a step machine. Decisions
 /// live here. The model loads the proposal and files Done.
 struct PromoteFlow: Equatable, Sendable {
+    /// Default profile orders for row titles. Empty keeps stored part order.
+    var nameOrders = NameFormatOrders()
+
     enum Target: Equatable, Sendable {
         /// No choice yet. A no-match row starts here so Skip and New are explicit.
         case unset
@@ -284,7 +287,7 @@ struct PromoteFlow: Equatable, Sendable {
         let byID = Dictionary(uniqueKeysWithValues: subjects.map { ($0.id, $0) })
         rows = proposal.rows.compactMap { proposalRow in
             guard let fact = byID[proposalRow.subjectID] else { return nil }
-            return Self.makeRow(proposalRow, fact: fact, previous: nil)
+            return Self.makeRow(proposalRow, fact: fact, previous: nil, orders: nameOrders)
         }
         noteDuplicates()
     }
@@ -351,7 +354,7 @@ struct PromoteFlow: Equatable, Sendable {
         let previous = Dictionary(uniqueKeysWithValues: rows.map { ($0.subjectID, $0) })
         rows = proposal.rows.compactMap { proposalRow in
             guard let fact = byID[proposalRow.subjectID] else { return nil }
-            return Self.makeRow(proposalRow, fact: fact, previous: previous[proposalRow.subjectID])
+            return Self.makeRow(proposalRow, fact: fact, previous: previous[proposalRow.subjectID], orders: nameOrders)
         }
         noteDuplicates()
     }
@@ -459,7 +462,8 @@ struct PromoteFlow: Equatable, Sendable {
     private static func makeRow(
         _ proposal: CatalogPromoteGraphAlignmentRow,
         fact: SubjectFact,
-        previous: Row?
+        previous: Row?,
+        orders: NameFormatOrders
     ) -> Row {
         if let anchor = fact.anchor {
             return Row(
@@ -470,7 +474,7 @@ struct PromoteFlow: Equatable, Sendable {
                 decided: false, updated: false, conflictNote: nil, proposedDuplicateOf: nil, duplicateNote: nil
             )
         }
-        let menu = menu(for: proposal, kind: fact.kind)
+        let menu = menu(for: proposal, kind: fact.kind, orders: orders)
         let drafted = draftTarget(proposal, menu: menu)
         if let previous, previous.decided {
             var kept = previous
@@ -561,19 +565,19 @@ struct PromoteFlow: Equatable, Sendable {
         return .skip
     }
 
-    private static func menu(for proposal: CatalogPromoteGraphAlignmentRow, kind: EvidencePrimaryKind) -> [Alternative] {
+    private static func menu(for proposal: CatalogPromoteGraphAlignmentRow, kind: EvidencePrimaryKind, orders: NameFormatOrders) -> [Alternative] {
         var out: [Alternative] = []
         if proposal.target == "handle", !proposal.handleID.isEmpty {
             out.append(Alternative(
                 id: proposal.handleID, ref: proposal.handleRef,
-                title: headerTitle(proposal), subtitle: headerSubtitle(proposal),
+                title: headerTitle(proposal, orders: orders), subtitle: headerSubtitle(proposal),
                 assessment: Assessment(wire: proposal.assessment), reason: Reason(proposal)
             ))
         }
         for alt in proposal.alternatives where alt.handleID != proposal.handleID {
             out.append(Alternative(
                 id: alt.handleID, ref: alt.handleRef,
-                title: headerTitle(alt, kind: kind), subtitle: headerSubtitle(alt, kind: kind),
+                title: headerTitle(alt, kind: kind, orders: orders), subtitle: headerSubtitle(alt, kind: kind),
                 assessment: Assessment(wire: alt.assessment), reason: Reason(alt)
             ))
         }
@@ -591,19 +595,21 @@ struct PromoteFlow: Equatable, Sendable {
         conclusionSubtitle(kind: kind, person: alt.person, event: alt.event, place: alt.place)
     }
 
-    private static func headerTitle(_ row: CatalogPromoteGraphAlignmentRow) -> String {
+    private static func headerTitle(_ row: CatalogPromoteGraphAlignmentRow, orders: NameFormatOrders) -> String {
         conclusionTitle(
             kind: EvidencePrimaryKind(rawValue: row.kind),
             person: row.person, event: row.event, place: row.place,
-            fallback: row.handleRef
+            fallback: row.handleRef,
+            orders: orders
         )
     }
 
-    private static func headerTitle(_ alt: CatalogPromoteGraphAlignmentAlternative, kind: EvidencePrimaryKind) -> String {
+    private static func headerTitle(_ alt: CatalogPromoteGraphAlignmentAlternative, kind: EvidencePrimaryKind, orders: NameFormatOrders) -> String {
         conclusionTitle(
             kind: kind,
             person: alt.person, event: alt.event, place: alt.place,
-            fallback: alt.handleRef
+            fallback: alt.handleRef,
+            orders: orders
         )
     }
 
@@ -612,13 +618,14 @@ struct PromoteFlow: Equatable, Sendable {
         person: CatalogPersonHeader?,
         event: CatalogEventHeader?,
         place: CatalogPlaceHeader?,
-        fallback: String
+        fallback: String,
+        orders: NameFormatOrders
     ) -> String {
         switch kind {
         case .person:
-            if let person { return PersonHeaderDisplay.title(person) }
+            if let person { return PersonHeaderDisplay.title(person, style: .sorted, orders: orders) }
         case .event:
-            if let event { return EventTitleDisplay.title(event) }
+            if let event { return EventTitleDisplay.title(event, orders: orders) }
         case .place:
             if let place { return PlaceTitleDisplay.title(place) }
         case nil:

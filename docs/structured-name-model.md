@@ -104,28 +104,50 @@ A profile is a named cultural/display convention such as Western / GEDCOM-style 
 
 ```sql
 CREATE TABLE name_format_profile_parts (
-    profile_id      BLOB NOT NULL REFERENCES name_format_profiles(id) ON DELETE CASCADE,
-    idx             INTEGER NOT NULL,
-    part_type       TEXT NOT NULL,
+    profile_id         BLOB NOT NULL REFERENCES name_format_profiles(id) ON DELETE CASCADE,
+    style              TEXT NOT NULL,             -- natural | sorted
+    idx                INTEGER NOT NULL,
+    part_type          TEXT NOT NULL,
+    trailing_separator TEXT NOT NULL DEFAULT '',
 
-    PRIMARY KEY (profile_id, idx),
-    CHECK (idx >= 0)
+    PRIMARY KEY (profile_id, style, idx),
+    UNIQUE (profile_id, style, part_type),
+    CHECK (idx >= 0),
+    CHECK (style IN ('natural', 'sorted'))
 ) STRICT;
 ```
 
-`idx` is the preferred assembly / entry order for parts of the given `part_type`. Types not listed in a profile may still appear on a NameValue; the profile guides UI and display assembly when parts are present.
+`idx` is the preferred assembly order for that `part_type` in that style. An empty `trailing_separator` is a normal space before the next group. A surname that ends a sort group stores `", "`. Types not listed in a style still appear, in stored order, after the listed ones.
 
-Every profile defines **two** orders — *natural* and *sorted* (§4.5) — so this table carries a style column alongside `idx` (sketch; final DDL lands with the feature):
+## 4.2a `name_format_profile_roles`
 
 ```sql
-    style           TEXT NOT NULL,             -- natural | sorted
-    PRIMARY KEY (profile_id, style, idx),
-    CHECK (style IN ('natural', 'sorted'))
+CREATE TABLE name_format_profile_roles (
+    profile_id BLOB NOT NULL REFERENCES name_format_profiles(id) ON DELETE CASCADE,
+    part_type  TEXT NOT NULL,
+    role       TEXT NOT NULL,
+    PRIMARY KEY (profile_id, part_type)
+) STRICT;
 ```
+
+One role per part type. Matching reads these rows. A type with no row is untyped. The Western seed maps `surname` → `family`, `given` → `given`, `nick` → `nick`, `suffix` → `generation`, `prefix` and `surname_prefix` → `ignored`, `undetermined` → `untyped`.
+
+## 4.2b `name_format_profile_weights`
+
+```sql
+CREATE TABLE name_format_profile_weights (
+    profile_id BLOB NOT NULL REFERENCES name_format_profiles(id) ON DELETE CASCADE,
+    slot       TEXT NOT NULL,
+    weight     REAL NOT NULL,
+    PRIMARY KEY (profile_id, slot)
+) STRICT;
+```
+
+The slot is text. The Western seed stores the slots `NameWeights` already scores: `family` 1.5, `first_given` 1, `other_given` 0.5, `nick` 0.3, `untyped` 1. A later profile can store different numbers for those slots. A new slot name needs a comparer change before it affects a score.
 
 ### Seeded Western profile
 
-New projects should include at least the `western` profile (`origin = 'provenencia'`). The authoritative profile key, labels, and part order are in [`seeded-vocabulary.md`](seeded-vocabulary.md).
+New catalogs install the `western` profile (`origin = 'provenencia'`) at create. The authoritative profile key, labels, and part order are in [`seeded-vocabulary.md`](seeded-vocabulary.md). Existing catalogs get the empty tables and no seed rows. A catalog with no default still compares as `western`.
 
 This is a display/entry convention, not a claim that every Person uses every part type.
 
@@ -185,12 +207,12 @@ Every profile therefore defines **both** styles:
 Requirements for the implementation:
 
 1. **One name display entry point** with a style parameter (`natural` / `sorted`). Call sites choose the style; they never assemble parts themselves.
-2. **The sort key comes from the sorted style** (normalized), so a list's order and its rows' text can never disagree. The auto-reconciler cache `sort_key` for `name` (Spike 9 R3) is that key; changing it is a cache version bump.
-3. **Untyped names fall back to `form`** in both styles, and sort by normalized `form`.
+2. **The People list orders by the sorted style.** The key is that part order (the same string the row shows when the name has parts). The auto-reconciler cache `sort_key` is still the normalized form; it is not the list order. Changing that column is a cache version bump.
+3. **A name with no parts does not sort by `form`.** `form` is the transcription. The list uses the working label, then the ref. Display may still show `form` when there are no parts.
 4. **`form` is never rewritten.** Styles are presentation over typed parts; the recorded full form stays authoritative.
 5. Each profile stores its sorted order and the separator (for Western, `", "` after the surname group). Open details for that work: where `prefix` / `suffix` sit in the sorted Western order (*Robins, Rev. James, Jr.*), and whether `surname_prefix` leads the sort (*van Gogh* under V or G varies by culture — a per-profile rule).
 
-**Until then (Spike 9 behaviour):** names display as `form` (parts joined in stored order when `form` is blank), with no reordering or commas, and lists sort by the normalized `form` — so *James Robins* files under **J**. No style parameter exists yet; when it lands, list rows switch to `sorted` and detail pages use `natural`.
+The People list files by the project's sorted part order, so *James Robins* files under **R**. A catalog with no default profile joins parts in stored order. Detail pages use the natural order. A form-only name still displays as `form` and sorts by its label or ref.
 
 ---
 

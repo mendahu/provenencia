@@ -6,30 +6,42 @@ import Foundation
 enum EventTitleDisplay {
     /// The header's event type fills a title plan that omitted it. List,
     /// detail, and promote all title through this, so they can't disagree.
-    static func titleSource(_ header: CatalogEventHeader, locale: Locale = .autoupdatingCurrent) -> ConclusionTitleSource {
+    static func titleSource(
+        _ header: CatalogEventHeader,
+        locale: Locale = .autoupdatingCurrent,
+        orders: NameFormatOrders = NameFormatOrders()
+    ) -> ConclusionTitleSource {
         var title = header.title
         if title.typeKey.isEmpty { title.typeKey = header.eventTypeKey }
         if title.typeLabel.isEmpty { title.typeLabel = header.eventTypeLabel }
-        return titleSource(title, locale: locale)
+        return titleSource(title, locale: locale, orders: orders)
     }
 
-    static func title(_ header: CatalogEventHeader, locale: Locale = .autoupdatingCurrent) -> String {
-        titleSource(header, locale: locale).text
+    static func title(
+        _ header: CatalogEventHeader,
+        locale: Locale = .autoupdatingCurrent,
+        orders: NameFormatOrders = NameFormatOrders()
+    ) -> String {
+        titleSource(header, locale: locale, orders: orders).text
     }
 
-    static func titleSource(_ title: CatalogEventTitle, locale: Locale = .autoupdatingCurrent) -> ConclusionTitleSource {
+    static func titleSource(
+        _ title: CatalogEventTitle,
+        locale: Locale = .autoupdatingCurrent,
+        orders: NameFormatOrders = NameFormatOrders()
+    ) -> ConclusionTitleSource {
         let type = typeWord(title)
         switch title.rule {
         case .recordedName:
             return .name(title.recordedName)
         case .subject:
-            return .name(L10n.EventTitle.ofOne(type: type, subject: subjectName(title, at: 0), locale: locale))
+            return .name(L10n.EventTitle.ofOne(type: type, subject: subjectName(title, at: 0, orders: orders), locale: locale))
         case .couple:
             return .name(L10n.EventTitle.marriage(
-                a: subjectName(title, at: 0), b: subjectName(title, at: 1), locale: locale
+                a: subjectName(title, at: 0, orders: orders), b: subjectName(title, at: 1, orders: orders), locale: locale
             ))
         case .subjects:
-            return .name(L10n.EventTitle.etAl(type: type, first: subjectName(title, at: 0), locale: locale))
+            return .name(L10n.EventTitle.etAl(type: type, first: subjectName(title, at: 0, orders: orders), locale: locale))
         case .label:
             return .label(title.label)
         case .typeAtPlace:
@@ -41,8 +53,12 @@ enum EventTitleDisplay {
         }
     }
 
-    static func title(_ title: CatalogEventTitle, locale: Locale = .autoupdatingCurrent) -> String {
-        titleSource(title, locale: locale).text
+    static func title(
+        _ title: CatalogEventTitle,
+        locale: Locale = .autoupdatingCurrent,
+        orders: NameFormatOrders = NameFormatOrders()
+    ) -> String {
+        titleSource(title, locale: locale, orders: orders).text
     }
 
     /// An Event whose header has not loaded: its label, else its ref.
@@ -52,11 +68,12 @@ enum EventTitleDisplay {
     }
 
     /// A subject's displayed name, or "unnamed person".
-    private static func subjectName(_ title: CatalogEventTitle, at index: Int) -> String {
+    private static func subjectName(_ title: CatalogEventTitle, at index: Int, orders: NameFormatOrders) -> String {
         guard title.subjects.indices.contains(index), let name = title.subjects[index] else {
             return L10n.string(L10n.EventTitle.unnamedPerson)
         }
-        let text = NameValueDisplay.string(for: name).trimmingCharacters(in: .whitespacesAndNewlines)
+        let text = NameValueDisplay.string(for: name, style: .natural, orders: orders)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
         return text.isEmpty ? L10n.string(L10n.EventTitle.unnamedPerson) : text
     }
 

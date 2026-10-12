@@ -56,6 +56,10 @@
 
 **Landed 2026-10-12** in [#375](https://github.com/mendahu/provenencia/pull/375). Create Source asks for the name, then the type, then the description. Focus and tab follow that order. Create still requires a name and a type.
 
+## S10-29 — Name patterns from the catalog
+
+**Landed 2026-10-12** in [#377](https://github.com/mendahu/provenencia/pull/377). New catalogs install a Western name-format profile: part order, roles, weights, and the project default. Matching and display read those rows. A catalog with no default still compares as the built-in Western pattern. Sorted order of Vincent van Gogh is `van Gogh, Vincent`. Spanish dual surnames and a patronymic part stay unscheduled.
+
 ## S10-42 — Long titles in a select
 
 **Landed 2026-10-12** in [#373](https://github.com/mendahu/provenencia/pull/373). A select's closed label ellipsizes inside the width the caller gave it. The chevron stays put. When the label is cut, help shows the full string. A short label is unchanged.

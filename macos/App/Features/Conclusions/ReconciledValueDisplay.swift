@@ -75,7 +75,11 @@ enum ReconciledValueDisplay {
 
     /// One value as text: names and dates through their own displays, terms
     /// by label (else key). Empty for no value.
-    static func string(for value: CatalogConclusionValue, locale: Locale = .autoupdatingCurrent) -> String {
+    static func string(
+        for value: CatalogConclusionValue,
+        locale: Locale = .autoupdatingCurrent,
+        orders: NameFormatOrders = NameFormatOrders()
+    ) -> String {
         switch value {
         case .none:
             return ""
@@ -88,7 +92,7 @@ enum ReconciledValueDisplay {
         case .date(let date):
             return DateRowDisplay.line(date: date, locale: locale)
         case .name(let name):
-            return NameValueDisplay.string(for: name)
+            return NameValueDisplay.string(for: name, style: .natural, orders: orders)
         }
     }
 
@@ -98,8 +102,12 @@ enum ReconciledValueDisplay {
     }
 
     /// What the record said: its value, "not …" for a negative, or "—".
-    static func readAs(_ outcome: CatalogReconcilerOutcome, locale: Locale = .autoupdatingCurrent) -> String {
-        let value = string(for: outcome.recorded, locale: locale)
+    static func readAs(
+        _ outcome: CatalogReconcilerOutcome,
+        locale: Locale = .autoupdatingCurrent,
+        orders: NameFormatOrders = NameFormatOrders()
+    ) -> String {
+        let value = string(for: outcome.recorded, locale: locale, orders: orders)
         if value.isEmpty { return L10n.string(L10n.Conclusions.readAsNone) }
         return isNegative(outcome) ? L10n.Conclusions.readAsNot(value) : value
     }

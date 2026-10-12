@@ -119,6 +119,7 @@ const (
 	Method_METHOD_LIST_SOURCE_EVENT_TITLES             Method = 96
 	Method_METHOD_PROPOSE_PROMOTE_GRAPH_ALIGNMENT      Method = 97
 	Method_METHOD_APPLY_PROMOTE_GRAPH_ALIGNMENT        Method = 98
+	Method_METHOD_GET_NAME_FORMAT                      Method = 99
 )
 
 // Enum value maps for Method.
@@ -217,6 +218,7 @@ var (
 		96: "METHOD_LIST_SOURCE_EVENT_TITLES",
 		97: "METHOD_PROPOSE_PROMOTE_GRAPH_ALIGNMENT",
 		98: "METHOD_APPLY_PROMOTE_GRAPH_ALIGNMENT",
+		99: "METHOD_GET_NAME_FORMAT",
 	}
 	Method_value = map[string]int32{
 		"METHOD_UNSPECIFIED":                          0,
@@ -312,6 +314,7 @@ var (
 		"METHOD_LIST_SOURCE_EVENT_TITLES":             96,
 		"METHOD_PROPOSE_PROMOTE_GRAPH_ALIGNMENT":      97,
 		"METHOD_APPLY_PROMOTE_GRAPH_ALIGNMENT":        98,
+		"METHOD_GET_NAME_FORMAT":                      99,
 	}
 )
 
@@ -16613,6 +16616,154 @@ func (x *DeleteImpactListed) GetLocation() *WorkspaceLocation {
 	return nil
 }
 
+type GetNameFormatRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ProjectDir    string                 `protobuf:"bytes,1,opt,name=project_dir,json=projectDir,proto3" json:"project_dir,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetNameFormatRequest) Reset() {
+	*x = GetNameFormatRequest{}
+	mi := &file_engine_proto_msgTypes[247]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetNameFormatRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetNameFormatRequest) ProtoMessage() {}
+
+func (x *GetNameFormatRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[247]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetNameFormatRequest.ProtoReflect.Descriptor instead.
+func (*GetNameFormatRequest) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{247}
+}
+
+func (x *GetNameFormatRequest) GetProjectDir() string {
+	if x != nil {
+		return x.ProjectDir
+	}
+	return ""
+}
+
+type NameFormatPart struct {
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	PartType          string                 `protobuf:"bytes,1,opt,name=part_type,json=partType,proto3" json:"part_type,omitempty"`
+	TrailingSeparator string                 `protobuf:"bytes,2,opt,name=trailing_separator,json=trailingSeparator,proto3" json:"trailing_separator,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *NameFormatPart) Reset() {
+	*x = NameFormatPart{}
+	mi := &file_engine_proto_msgTypes[248]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *NameFormatPart) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*NameFormatPart) ProtoMessage() {}
+
+func (x *NameFormatPart) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[248]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use NameFormatPart.ProtoReflect.Descriptor instead.
+func (*NameFormatPart) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{248}
+}
+
+func (x *NameFormatPart) GetPartType() string {
+	if x != nil {
+		return x.PartType
+	}
+	return ""
+}
+
+func (x *NameFormatPart) GetTrailingSeparator() string {
+	if x != nil {
+		return x.TrailingSeparator
+	}
+	return ""
+}
+
+type GetNameFormatResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Natural       []*NameFormatPart      `protobuf:"bytes,1,rep,name=natural,proto3" json:"natural,omitempty"`
+	Sorted        []*NameFormatPart      `protobuf:"bytes,2,rep,name=sorted,proto3" json:"sorted,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetNameFormatResponse) Reset() {
+	*x = GetNameFormatResponse{}
+	mi := &file_engine_proto_msgTypes[249]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetNameFormatResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetNameFormatResponse) ProtoMessage() {}
+
+func (x *GetNameFormatResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_engine_proto_msgTypes[249]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetNameFormatResponse.ProtoReflect.Descriptor instead.
+func (*GetNameFormatResponse) Descriptor() ([]byte, []int) {
+	return file_engine_proto_rawDescGZIP(), []int{249}
+}
+
+func (x *GetNameFormatResponse) GetNatural() []*NameFormatPart {
+	if x != nil {
+		return x.Natural
+	}
+	return nil
+}
+
+func (x *GetNameFormatResponse) GetSorted() []*NameFormatPart {
+	if x != nil {
+		return x.Sorted
+	}
+	return nil
+}
+
 // Error is the protobuf payload on provenencia_call status 1 (failure).
 // Success payloads remain method-specific response messages.
 type Error struct {
@@ -16626,7 +16777,7 @@ type Error struct {
 
 func (x *Error) Reset() {
 	*x = Error{}
-	mi := &file_engine_proto_msgTypes[247]
+	mi := &file_engine_proto_msgTypes[250]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -16638,7 +16789,7 @@ func (x *Error) String() string {
 func (*Error) ProtoMessage() {}
 
 func (x *Error) ProtoReflect() protoreflect.Message {
-	mi := &file_engine_proto_msgTypes[247]
+	mi := &file_engine_proto_msgTypes[250]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -16651,7 +16802,7 @@ func (x *Error) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Error.ProtoReflect.Descriptor instead.
 func (*Error) Descriptor() ([]byte, []int) {
-	return file_engine_proto_rawDescGZIP(), []int{247}
+	return file_engine_proto_rawDescGZIP(), []int{250}
 }
 
 func (x *Error) GetCode() string {
@@ -18017,11 +18168,20 @@ const file_engine_proto_rawDesc = "" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x10\n" +
 	"\x03ref\x18\x02 \x01(\tR\x03ref\x12\x14\n" +
 	"\x05title\x18\x03 \x01(\tR\x05title\x12D\n" +
-	"\blocation\x18\x04 \x01(\v2(.provenencia.engine.v1.WorkspaceLocationR\blocation\"i\n" +
+	"\blocation\x18\x04 \x01(\v2(.provenencia.engine.v1.WorkspaceLocationR\blocation\"7\n" +
+	"\x14GetNameFormatRequest\x12\x1f\n" +
+	"\vproject_dir\x18\x01 \x01(\tR\n" +
+	"projectDir\"\\\n" +
+	"\x0eNameFormatPart\x12\x1b\n" +
+	"\tpart_type\x18\x01 \x01(\tR\bpartType\x12-\n" +
+	"\x12trailing_separator\x18\x02 \x01(\tR\x11trailingSeparator\"\x97\x01\n" +
+	"\x15GetNameFormatResponse\x12?\n" +
+	"\anatural\x18\x01 \x03(\v2%.provenencia.engine.v1.NameFormatPartR\anatural\x12=\n" +
+	"\x06sorted\x18\x02 \x03(\v2%.provenencia.engine.v1.NameFormatPartR\x06sorted\"i\n" +
 	"\x05Error\x12\x12\n" +
 	"\x04code\x18\x01 \x01(\tR\x04code\x124\n" +
 	"\x04kind\x18\x02 \x01(\x0e2 .provenencia.engine.v1.ErrorKindR\x04kind\x12\x16\n" +
-	"\x06params\x18\x03 \x03(\tR\x06params*\xb9\x19\n" +
+	"\x06params\x18\x03 \x03(\tR\x06params*\xd5\x19\n" +
 	"\x06Method\x12\x16\n" +
 	"\x12METHOD_UNSPECIFIED\x10\x00\x12\x0f\n" +
 	"\vMETHOD_PING\x10\x01\x12\x16\n" +
@@ -18116,7 +18276,8 @@ const file_engine_proto_rawDesc = "" +
 	"\x19METHOD_LIST_PLACE_HEADERS\x10]\x12#\n" +
 	"\x1fMETHOD_LIST_SOURCE_EVENT_TITLES\x10`\x12*\n" +
 	"&METHOD_PROPOSE_PROMOTE_GRAPH_ALIGNMENT\x10a\x12(\n" +
-	"$METHOD_APPLY_PROMOTE_GRAPH_ALIGNMENT\x10b\"\x04\b\x1b\x10\x1b\"\x04\bG\x10G\"\x04\bX\x10X\"\x04\b\\\x10\\\"\x04\b^\x10^\"\x04\b_\x10_*\x12METHOD_COUNT_FILES*(METHOD_UPDATE_CITATION_WITH_OBSERVATIONS*&METHOD_LIST_PROMOTE_TARGET_SUGGESTIONS*\x17METHOD_GET_EVENT_HEADER*\x17METHOD_GET_PLACE_HEADER*\x18METHOD_GET_PERSON_HEADER*\xa5\x02\n" +
+	"$METHOD_APPLY_PROMOTE_GRAPH_ALIGNMENT\x10b\x12\x1a\n" +
+	"\x16METHOD_GET_NAME_FORMAT\x10c\"\x04\b\x1b\x10\x1b\"\x04\bG\x10G\"\x04\bX\x10X\"\x04\b\\\x10\\\"\x04\b^\x10^\"\x04\b_\x10_*\x12METHOD_COUNT_FILES*(METHOD_UPDATE_CITATION_WITH_OBSERVATIONS*&METHOD_LIST_PROMOTE_TARGET_SUGGESTIONS*\x17METHOD_GET_EVENT_HEADER*\x17METHOD_GET_PLACE_HEADER*\x18METHOD_GET_PERSON_HEADER*\xa5\x02\n" +
 	"\x0eEventTitleRule\x12 \n" +
 	"\x1cEVENT_TITLE_RULE_UNSPECIFIED\x10\x00\x12\"\n" +
 	"\x1eEVENT_TITLE_RULE_RECORDED_NAME\x10\x01\x12\x1c\n" +
@@ -18155,7 +18316,7 @@ func file_engine_proto_rawDescGZIP() []byte {
 }
 
 var file_engine_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
-var file_engine_proto_msgTypes = make([]protoimpl.MessageInfo, 248)
+var file_engine_proto_msgTypes = make([]protoimpl.MessageInfo, 251)
 var file_engine_proto_goTypes = []any{
 	(Method)(0),                                       // 0: provenencia.engine.v1.Method
 	(EventTitleRule)(0),                               // 1: provenencia.engine.v1.EventTitleRule
@@ -18408,7 +18569,10 @@ var file_engine_proto_goTypes = []any{
 	(*GetDeleteImpactResponse)(nil),                   // 248: provenencia.engine.v1.GetDeleteImpactResponse
 	(*DeleteImpactGroup)(nil),                         // 249: provenencia.engine.v1.DeleteImpactGroup
 	(*DeleteImpactListed)(nil),                        // 250: provenencia.engine.v1.DeleteImpactListed
-	(*Error)(nil),                                     // 251: provenencia.engine.v1.Error
+	(*GetNameFormatRequest)(nil),                      // 251: provenencia.engine.v1.GetNameFormatRequest
+	(*NameFormatPart)(nil),                            // 252: provenencia.engine.v1.NameFormatPart
+	(*GetNameFormatResponse)(nil),                     // 253: provenencia.engine.v1.GetNameFormatResponse
+	(*Error)(nil),                                     // 254: provenencia.engine.v1.Error
 }
 var file_engine_proto_depIdxs = []int32{
 	26,  // 0: provenencia.engine.v1.CompleteOnboardingResponse.project:type_name -> provenencia.engine.v1.ProjectInfo
@@ -18586,12 +18750,14 @@ var file_engine_proto_depIdxs = []int32{
 	249, // 172: provenencia.engine.v1.GetDeleteImpactResponse.cascades:type_name -> provenencia.engine.v1.DeleteImpactGroup
 	250, // 173: provenencia.engine.v1.DeleteImpactGroup.listed:type_name -> provenencia.engine.v1.DeleteImpactListed
 	109, // 174: provenencia.engine.v1.DeleteImpactListed.location:type_name -> provenencia.engine.v1.WorkspaceLocation
-	3,   // 175: provenencia.engine.v1.Error.kind:type_name -> provenencia.engine.v1.ErrorKind
-	176, // [176:176] is the sub-list for method output_type
-	176, // [176:176] is the sub-list for method input_type
-	176, // [176:176] is the sub-list for extension type_name
-	176, // [176:176] is the sub-list for extension extendee
-	0,   // [0:176] is the sub-list for field type_name
+	252, // 175: provenencia.engine.v1.GetNameFormatResponse.natural:type_name -> provenencia.engine.v1.NameFormatPart
+	252, // 176: provenencia.engine.v1.GetNameFormatResponse.sorted:type_name -> provenencia.engine.v1.NameFormatPart
+	3,   // 177: provenencia.engine.v1.Error.kind:type_name -> provenencia.engine.v1.ErrorKind
+	178, // [178:178] is the sub-list for method output_type
+	178, // [178:178] is the sub-list for method input_type
+	178, // [178:178] is the sub-list for extension type_name
+	178, // [178:178] is the sub-list for extension extendee
+	0,   // [0:178] is the sub-list for field type_name
 }
 
 func init() { file_engine_proto_init() }
@@ -18635,7 +18801,7 @@ func file_engine_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_engine_proto_rawDesc), len(file_engine_proto_rawDesc)),
 			NumEnums:      4,
-			NumMessages:   248,
+			NumMessages:   251,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

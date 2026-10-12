@@ -108,6 +108,7 @@ enum Method {
   METHOD_LIST_SOURCE_EVENT_TITLES = 96;
   METHOD_PROPOSE_PROMOTE_GRAPH_ALIGNMENT = 97;
   METHOD_APPLY_PROMOTE_GRAPH_ALIGNMENT = 98;
+  METHOD_GET_NAME_FORMAT = 99;
 }
 
 message PingRequest {
@@ -1920,6 +1921,20 @@ message DeleteImpactListed {
   string ref = 2;
   string title = 3;
   WorkspaceLocation location = 4;
+}
+
+message GetNameFormatRequest {
+  string project_dir = 1;
+}
+
+message NameFormatPart {
+  string part_type = 1;
+  string trailing_separator = 2;
+}
+
+message GetNameFormatResponse {
+  repeated NameFormatPart natural = 1;
+  repeated NameFormatPart sorted = 2;
 }
 
 // ErrorKind classifies a failure for client UX (tone, retry hints). Copy still

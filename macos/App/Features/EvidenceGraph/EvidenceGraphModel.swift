@@ -40,6 +40,7 @@ final class EvidenceGraphModel {
         rows: SourceGraphRows,
         types: [CatalogSubjectType],
         rules: [CatalogConnectRule],
+        orders: NameFormatOrders,
         value: SourceGraphSnapshot,
         text: EvidenceGraphText
     )?
@@ -178,7 +179,8 @@ final class EvidenceGraphModel {
         if let snapshotMemo,
            snapshotMemo.rows == normalized,
            snapshotMemo.types == types,
-           snapshotMemo.rules == rules
+           snapshotMemo.rules == rules,
+           snapshotMemo.orders == session.nameFormat
         {
             return snapshotMemo.value
         }
@@ -187,7 +189,7 @@ final class EvidenceGraphModel {
             types: types,
             rules: rules
         )
-        snapshotMemo = (normalized, types, rules, value, EvidenceGraphText(snapshot: value))
+        snapshotMemo = (normalized, types, rules, session.nameFormat, value, EvidenceGraphText(snapshot: value, orders: session.nameFormat))
         return value
     }
 
@@ -195,7 +197,7 @@ final class EvidenceGraphModel {
     /// formatted once when that snapshot is built.
     func displayText(rows: SourceGraphRows?, types: [CatalogSubjectType]) -> EvidenceGraphText {
         _ = displaySnapshot(rows: rows, types: types)
-        return snapshotMemo?.text ?? EvidenceGraphText(snapshot: displaySnapshot(rows: rows, types: types))
+        return snapshotMemo?.text ?? EvidenceGraphText(snapshot: displaySnapshot(rows: rows, types: types), orders: session.nameFormat)
     }
 
     func prepare() async {
@@ -750,7 +752,7 @@ final class EvidenceGraphModel {
             return .personDetail(
                 entityId: membership.entity.id,
                 ref: membership.entity.ref,
-                title: EvidenceSubjectCard.membershipName(membership)
+                title: EvidenceSubjectCard.membershipName(membership, orders: session.nameFormat)
             )
         case "event":
             return .eventDetail(

@@ -995,6 +995,13 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         }
     }
 
+    func nameFormat(projectDir: String) async throws -> NameFormatOrders {
+        withState {
+            markCatalogSessionHeld(projectDir)
+            return NameFormatOrders()
+        }
+    }
+
     /// Handle kinds: Persons by auto-reconciled name or ref, Events and Places by ref or
     /// label (FakeStore has no event / place values). Other kinds: the omnibar
     /// fake below, filtered to the requested kinds.
