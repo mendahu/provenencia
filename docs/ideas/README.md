@@ -28,7 +28,6 @@ Use this folder when something useful pops up mid-work and would otherwise get l
 - [`share-packages.md`](share-packages.md)
 - [`artifact-pdf-thumbnails.md`](artifact-pdf-thumbnails.md)
 - [`identity-claim-review.md`](identity-claim-review.md)
-- [`evidence-graph-drag-performance.md`](evidence-graph-drag-performance.md)
 - [`place-gazetteer-service.md`](place-gazetteer-service.md)
 - [`possible-values.md`](possible-values.md)
 - [`promote-matching.md`](promote-matching.md) — what proves a join; the direction is now [`promote-graph-alignment.md`](../promote-graph-alignment.md)
@@ -40,6 +39,7 @@ Use this folder when something useful pops up mid-work and would otherwise get l
 Shipped ideas keep **decisions**, not PR order. Closed spikes: [`docs/deployment-plan/archive/`](../deployment-plan/archive/).
 
 - [`archive/interpretation-graph-ui.md`](archive/interpretation-graph-ui.md) — Evidence graph decisions; leftovers re-homed
+- [`archive/evidence-graph-drag-performance.md`](archive/evidence-graph-drag-performance.md) — AppKit cards; a drag moves the view
 - [`archive/page-navigation-performance.md`](archive/page-navigation-performance.md) — session cache / place registry
 - [`archive/catalog-access-serialization.md`](archive/catalog-access-serialization.md) — held catalog session
 - [`archive/catalog-graph-cache.md`](archive/catalog-graph-cache.md) — one write path and the in-memory catalog graph

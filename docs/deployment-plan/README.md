@@ -2,7 +2,7 @@
 
 Working notes for implementation milestones. These are stopping points, not a full product roadmap.
 
-Authoritative domain and stack decisions remain in the sibling docs under [`docs/`](../). Unscheduled product ideas live in [`ideas/`](../ideas/) — a parking lot, not a spike queue. UX friction from dogfooding lives in [`docs/dogfood/ux.md`](../dogfood/ux.md) until something is pulled into a spike.
+Authoritative domain and stack decisions remain in the sibling docs under [`docs/`](../). Unscheduled product ideas live in [`ideas/`](../ideas/) — a parking lot, not a spike queue. UX friction from dogfooding lives in [`docs/dogfood/ux.md`](../dogfood/ux.md) until something is pulled into a spike, and then it leaves that log.
 
 Closed spikes under [`archive/`](archive/) keep **themes and decisions**. PR order, checklists, and Claude Design briefs are git history — not duplicated here.
 

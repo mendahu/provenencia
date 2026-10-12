@@ -6,7 +6,7 @@ Usability fixes from [`docs/dogfood/ux.md`](../../dogfood/ux.md) after Spike 9, 
 
 ## Status
 
-**Open.** Nothing landed. Landings go in [`completed.md`](completed.md).
+**Open.** Slice 1 is done (2026-10-11). S10-01…S10-04 landed in [#361](https://github.com/mendahu/provenencia/pull/361)–[#364](https://github.com/mendahu/provenencia/pull/364). S10-46, S10-47, and S10-48 were descoped in [#367](https://github.com/mendahu/provenencia/pull/367). Later landings go in [`completed.md`](completed.md).
 
 > **Goal of this spike:** the annoyances logged while entering real research are gone, and the app still behaves the way Spike 8 and Spike 9 decided.
 
@@ -15,7 +15,7 @@ Usability fixes from [`docs/dogfood/ux.md`](../../dogfood/ux.md) after Spike 9, 
 **By spike close**, each of these is true on a real project:
 
 1. **Composer stays usable at 20 Observations.** Rows are easy to scan, a new Observation appears at the top and is focused, and Auto Transcribe is not sitting on the Citation menu.
-2. **The Evidence graph holds a real Source.** The canvas grows before cards hit the edge. Pan and zoom survive a trip to the composer. The grid is a tile, so a zoomed-out or grown document does not turn the background into one giant bitmap. Zoomed-out edges stay legible. Cards that are too small to read draw as the simplified face. Button hits match the buttons. A hotkey or toolbar control box-selects cards and moves them together.
+2. **The Evidence graph holds a real Source.** The canvas grows before cards hit the edge. Pan and zoom survive a trip to the composer. The grid is a tile, so a zoomed-out or grown document does not turn the background into one giant bitmap. Zoomed-out edges stay legible. The card stays the full card at every zoom. Button hits match the buttons. A hotkey or toolbar control box-selects cards and moves them together.
 3. **Files.** A transcription that overflows shows a scrollbar. A file dropped on the Artifact section uploads. The file opens from the collapsed row and from the Evidence graph.
 4. **Lists.** Sources, People, Events, and Places show when the row last changed. Leaving a list and coming back lands at the same scroll position. The Sources list remembers sort, type filter, evidence-status filter, and text search.
 5. **Entry defaults.** Person→Event role prefills `subject`. Place→Place relationship prefills `part_of`. A date modal opens on Year and, when the transcription has a date, that date is already filled. A full name line can be split into parts. The name-part type control does not jump width and cycles same-letter matches.
@@ -77,7 +77,7 @@ Usability fixes from [`docs/dogfood/ux.md`](../../dogfood/ux.md) after Spike 9, 
 
 **Left in the dogfood log**
 
-- **Dense Evidence graphs (census-scale).** Descoped 2026-10-08. Layers and filters stay in the dogfood log. Canvas growth (S10-03) and box-select (S10-20) still land; they do not add a way to hide part of a Source.
+- **Dense Evidence graphs (census-scale).** Descoped 2026-10-08. Layers and filters stay in the dogfood log. Canvas growth landed (S10-03). Box-select is still S10-20. Neither hides part of a Source.
 - **Automatic structure from the Artifact**, beyond the two slices in S10-13 and S10-17. No catalog writes from a detector. No OCR-on-PDF, Live Text, or Foundation Models.
 
 **Back in the ideas folder** (not PRs)
@@ -100,9 +100,9 @@ These are the calls for this spike. The questions at the bottom are answered; no
 - **Graph camera is session state, not catalog state.** `GraphCanvasCamera` is explicitly not research data. Coming back from the composer, Back, or breadcrumbs restores magnification and content offset for that Source for the rest of the session. A persisted per-user table is out.
 - **Canvas grows.** `EvidenceGraphPlacement.contentSize` is a fixed 4000×4000 and placement clamps to `maxCell`. When a card's frame nears the document edge, grow the document (and the clamp) by a step. The grid is a tile, so growth does not allocate a larger bitmap. No new chrome.
 - **Zoomed-out grid and edges are a restore, not a new look.** Floor is `GraphCanvasCamera.minMagnification` (0.25). The grid is one repeated cell and must not turn solid black; it may fade out as a whole. Edges must fade or hold together, not disappear one at a time. No brief.
-- **Zoomed-out cards are a simpler face.** The camera stays `0.25`…`1.25`. Below about `0.65` the card paints the face from [S10-D14](design/S10-D14-zoomed-out-cards.md): the kind icon and the label, larger than on the full card, and nothing else. The full card returns only above about `0.75`, so a pinch on the boundary does not flicker. The card stays in the same place on the document. The larger type is in document points, so it scales with zoom: just under the cutoff the name is readable again; at `0.25` the card is too small for that size to hold. This is the fix for a graph that is fine up close and sluggish when every card is on screen.
-- **Only cards near the window get a hosting view.** The host still pushes every item. `GraphCanvasItemLayer` mounts an `NSHostingView` only when that card's rectangle is inside the visible document rect, plus a margin so a pan does not show an empty slot. A card that is selected or being dragged stays mounted. Positions, hit targets, and the VoiceOver rotors still cover every card; choosing a rotor entry scrolls it into view, which mounts it. Opening a graph builds the cards in the window, not the whole Source. When the zoom shows every card, they all mount — the simplified face (S10-46) is what makes that overview cheap. No brief.
-- **The canvas is covered until those cards have drawn.** The first time the graph is shown, the existing `ProgressView` sits over the canvas until the hosting views for the cards in the window have finished their first layout. Panning another card into view later does not bring the cover back. No new loading chrome, and no brief.
+- **The full card stays at every zoom.** S10-46 and S10-D14 are descoped (2026-10-11). The camera stays `0.25`…`1.25`. Drawing the card in AppKit made a zoomed-out graph cheap enough that it does not switch to an icon-and-label face.
+- **Every card is mounted.** S10-47 is descoped (2026-10-11). Opening a graph builds a view for each card on the Source. Positions, hit targets, and the VoiceOver rotors still cover every card. Culling views to the window is not the path.
+- **No canvas cover.** S10-48 is descoped (2026-10-11). Drawing the card in AppKit made the first layout fast enough that a `ProgressView` over the graph is not needed, on open or while panning.
 - **Hit boxes are the painted controls.** Toolbar place/connect buttons and the bridge card's open-citation control. The card icon hit helper (`EvidenceCardLayout`) is the pattern: hits centered on what is drawn.
 - **Oldest user** means the earliest UUIDv7 `users.id`, not the first row of `ORDER BY display_name`. If the signed-in install identity is already in the project, keep selecting that person. If the project has no users, stay on create-new.
 - **Enter saves a single-line inline edit.** `PVInlineEdit` on the Property title. Do not steal Enter from a multiline description.
@@ -152,28 +152,27 @@ These are the calls for this spike. The questions at the bottom are answered; no
 | **S10-D11** | Places list | **S10-22** | — |
 | **S10-D12** | Person detail | **S10-23** | S10-35 gallery and S10-39 preferred portrait. Design both with the gender treatment, before S10-23 |
 | **S10-D13** | Promote page | **S10-36** | Evidence sheet shows two crops |
-| **S10-D14** | Evidence graph — zoomed-out card | **S10-46** | — |
+| **S10-D14** | Evidence graph — zoomed-out card | **S10-46**, descoped 2026-10-11 | — |
 
-S10-D6 is one board for the graph's new controls (open file, box-select, Unpromote). S10-01…S10-04 do not wait on it. S10-D14 is a second board on the same view, for the simplified card only; it does not draw those controls, and S10-D6 does not draw the zoomed-out face. S10-D8…D11 are four briefs because they are four places; Events and Places should specify the same last-updated cell as Persons so the shared `ConclusionListPage` does not grow three treatments. Only the Sources list gains evidence-status filters and text search; D8 draws that chrome, and D9…D11 do not. Only the Persons list thumb becomes a likeness. S10-D1 is a kit board: the control is the design, and stamping it into an unchanged form is not a new view. S10-D3, S10-D6, S10-D8, S10-D9, and S10-D12 each cover a later PR on that same view, so those briefs are written with the later frame in them. D12 includes the preferred-portrait control S10-39 fills, and D9 includes that crop as the list thumb.
+S10-D6 is one board for the graph's new controls (open file, box-select, Unpromote). S10-01…S10-04 do not wait on it. S10-D14, the zoomed-out face, is descoped with S10-46 and is not drawn. S10-D8…D11 are four briefs because they are four places; Events and Places should specify the same last-updated cell as Persons so the shared `ConclusionListPage` does not grow three treatments. Only the Sources list gains evidence-status filters and text search; D8 draws that chrome, and D9…D11 do not. Only the Persons list thumb becomes a likeness. S10-D1 is a kit board: the control is the design, and stamping it into an unchanged form is not a new view. S10-D3, S10-D6, S10-D8, S10-D9, and S10-D12 each cover a later PR on that same view, so those briefs are written with the later frame in them. D12 includes the preferred-portrait control S10-39 fills, and D9 includes that crop as the list thumb.
 
 ## PR sequence
 
 **✎ = design brief**, just before the PR it points at. **Check** = what you can verify in the app when the slice lands.
 
 ```text
-SLICE 1 — Evidence graph
-  S10-01  Button hit boxes match the buttons
-  S10-02  Tiled grid; edges share one zoom rule
-  S10-03  Canvas grows before a card hits the edge
-  S10-04  Camera restored after the composer / Back / Forward
-  ✎ S10-D14 ──▶ S10-46  Simplified cards when zoomed out (after S10-02)
-  S10-47  Mount hosting views only for cards near the window
-  S10-48  Cover the canvas until those cards have drawn (after S10-47)
+SLICE 1 — Evidence graph  (done 2026-10-11)
+  S10-01  Button hit boxes — done, #361
+  S10-02  Tiled grid; edges share one zoom rule — done, #362
+  S10-03  Canvas grows before a card hits the edge — done, #363
+  S10-04  Camera restored after the composer / Back / Forward — done, #364
+  S10-46  Simplified cards — descoped. The full card stays at every zoom.
+  S10-47  Mount near the window — descoped. Every card on the Source is drawn.
+  S10-48  Canvas cover — descoped. AppKit cards draw fast enough; no spinner.
   Check: pan, zoom, open the composer, come back — same view. A toolbar click
          lands on the padding, not only the icon. Zoomed out, the grid is a
-         tile and not black, and cards show the simplified face. Opening a
-         large graph at reading zoom shows a cover, then the cards in the
-         window, and does not build the rest.
+         tile and not black, and the full card is what you see. Opening a
+         large graph shows every card, with no loading cover.
 
 SLICE 2 — Behavior, no new chrome
   S10-05  PVTextArea shows a scrollbar when the text overflows
@@ -276,10 +275,10 @@ S10-05…S10-13, S10-15, S10-19, S10-42, and S10-43 have no dependency on the gr
 ### Dependencies at a glance
 
 ```text
-S10-01 hit boxes ───────────────┐
-S10-02 zoom (tiled grid) ───────┤
-S10-03 canvas grow ─────────────┼──▶ S10-20 box-select
-S10-04 camera (after 02, 03)    │         ▲
+S10-01 hit boxes (done) ────────┐
+S10-02 zoom, tiled grid (done) ─┤
+S10-03 canvas grow (done) ──────┼──▶ S10-20 box-select
+S10-04 camera (done)            │         ▲
                                 │         │
 S10-10 defaults ─┐              │    S10-D6 (also gates S10-18)
 S10-11 perf ─────┼──▶ S10-16 composer rethink
@@ -287,10 +286,9 @@ S10-14 choice ───┘         ▲
    ▲                       │
 S10-D1                     S10-D3
 
-S10-02 ─┐
-S10-D14 ┴──▶ S10-46 simplified cards
-
-S10-47 mount cards near the window (no brief) ──▶ S10-48 canvas cover
+S10-46 simplified cards — descoped 2026-10-11
+S10-47 mount cards near the window — descoped 2026-10-11
+S10-48 canvas cover — descoped 2026-10-11
 
 S10-09 persist ──▶ S10-40 list scroll
              └──▶ S10-41 sources filters (after S10-22; D8 draws the chrome)
@@ -316,68 +314,31 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 
 #### S10-01 — Button hit boxes
 
-| | |
-| --- | --- |
-| **In** | Toolbar controls (add place, add person, add event, connect) take a click on the whole button. The bridge card control that opens the citation is hit where it is drawn, not one button-width to the left. Follow the card icon hit helper: document-space frames centered on the painted control. |
-| **Out** | New buttons. Box-select (S10-20). |
-| **Testable** | Click the padding of a toolbar button and it arms. Click the bridge citation button and the composer opens; the empty space beside it does not. |
-| **Depends on** | — |
+**Landed 2026-10-11** in [#361](https://github.com/mendahu/provenencia/pull/361). See [`completed.md`](completed.md).
 
 #### S10-02 — Zoomed-out grid and edges
 
-| | |
-| --- | --- |
-| **In** | The background grid is one repeated tile, not a canvas the size of the document. At `minMagnification` (0.25) that grid does not turn solid black; it may fade out as a whole. Connector lines do not vanish unevenly; they share one rule at every zoom. Growing the document (S10-03) does not allocate a larger grid bitmap. |
-| **Out** | A new zoom range. Minimap. The simplified card face (S10-46). |
-| **Testable** | Zoom to the floor on a graph with several edges: grid is intact or evenly faded; every edge is still there or every edge has faded the same way. A grown document uses the same tile. |
-| **Depends on** | — |
+**Landed 2026-10-11** in [#362](https://github.com/mendahu/provenencia/pull/362). See [`completed.md`](completed.md).
 
 #### S10-03 — Canvas grows
 
-| | |
-| --- | --- |
-| **In** | The document and `maxCell` grow by a step when a card's frame approaches the edge, so placement and dragging are not clamped at 4000×4000. Existing graphs open as they do today until something nears the edge. The grid tile is unchanged when the document grows. |
-| **Out** | A visible boundary, minimap, or user-set canvas size. A larger grid bitmap. |
-| **Testable** | Drag a card to the current edge: the canvas extends and the card is not stuck. A small graph does not open on a huge empty document. |
-| **Depends on** | S10-02 (grid drawing has to survive a larger document) |
+**Landed 2026-10-11** in [#363](https://github.com/mendahu/provenencia/pull/363). See [`completed.md`](completed.md).
 
 #### S10-04 — Camera survives leaving the graph
 
-| | |
-| --- | --- |
-| **In** | Store `GraphCanvasCamera` (magnification + content offset) for the Source on the workspace session. Restore it when the graph place appears again, including composer round-trip, Back, and Forward. |
-| **Out** | Persisting the camera across relaunch. A catalog table. |
-| **Testable** | Pan and zoom, open the composer, go back: same center and zoom. Quit and relaunch may reset. |
-| **Depends on** | S10-02, S10-03 |
+**Landed 2026-10-11** in [#364](https://github.com/mendahu/provenencia/pull/364). See [`completed.md`](completed.md).
 
 #### S10-46 — Simplified cards when zoomed out
 
-**Brief:** [S10-D14](design/S10-D14-zoomed-out-cards.md).
-
-| | |
-| --- | --- |
-| **In** | Per S10-D14: below about `0.65` magnification, paint the simplified face instead of the full hosting view. The face is the kind icon and the label, set larger than on the full card, and nothing else. The full card returns only above about `0.75`. Person, event, place, and bridge each keep their own icon. Selection still reads. The card's document rectangle does not change, so edges and a zoom back in land in the same place. The camera range stays `0.25`…`1.25`. |
-| **Out** | A new zoom range. Moving or resizing cards to fit the overview. Filters that hide part of a Source. The grid tile (S10-02). |
-| **Testable** | Below about 0.65× a card shows its icon and a larger label, and panning a graph of about a hundred subjects stays responsive. Above about 0.75× the full card is back, in the same place. At 0.25× the same face is still what you see, scaled down with the card. |
-| **Depends on** | S10-02, S10-D14 |
+**Descoped 2026-10-11**, in [#367](https://github.com/mendahu/provenencia/pull/367). Drawing the card in AppKit made the zoomed-out graph fast enough. The full card stays at every magnification in `0.25`…`1.25`. S10-D14 is not drawn.
 
 #### S10-47 — Mount hosting views only for cards near the window
 
-| | |
-| --- | --- |
-| **In** | The host still pushes every card. `GraphCanvasItemLayer` creates an `NSHostingView` only for cards inside the visible document rect plus a margin, and removes a view that has left that margin. The selected card and the card being dragged stay mounted. Hit targets and both VoiceOver rotors still include every card; activating a rotor entry scrolls that card into view and mounts it. The first paint of a graph builds the cards in the window. Update the GraphCanvas reuse note that left virtualization product-owned: culling views lives in the item layer, because that is where the views are created. |
-| **Out** | A new look. The simplified face (S10-46). The canvas cover (S10-48). Hiding cards from the rotor or from hit testing. Mounting nothing when the zoom already shows every card. |
-| **Testable** | Open a Source of about a hundred subjects at reading zoom: the graph appears without a hitch, and cards outside the window are not hosting views. Pan until one of those cards enters: it is there, already drawn. Zoom out until every card is in view: they all mount. A rotor entry for a card off screen scrolls to it. |
-| **Depends on** | — |
+**Descoped 2026-10-11**, in [#367](https://github.com/mendahu/provenencia/pull/367). The same AppKit draw builds a view for every card on the Source. Cards outside the window stay mounted. Hit targets and both VoiceOver rotors still include every card.
 
 #### S10-48 — Cover the canvas until the visible cards have drawn
 
-| | |
-| --- | --- |
-| **In** | When the graph is shown, lay the existing `ProgressView` over the canvas until the hosting views for the cards in the window (S10-47) have finished their first layout. The header stays visible. The cover then goes away. Panning a card into view later does not show it again. |
-| **Out** | A new loading component. A cover while the query handles are still missing (that `ProgressView` already replaces the destination). A cover on every pan or zoom. |
-| **Testable** | Open a Source of about a hundred subjects: the canvas is covered, then the cards in the window appear and the cover is gone. Pan to a card that was off screen: no cover. A small graph does not leave the cover up. |
-| **Depends on** | S10-47 |
+**Descoped 2026-10-11**, in [#367](https://github.com/mendahu/provenencia/pull/367). Drawing subject and bridge cards in AppKit made the first layout fast enough. The graph does not lay a `ProgressView` over the canvas on open, and panning or zooming does not show one either. The cover that already replaces a destination while its query handles are missing stays as it is.
 
 ### Slice 2 — Behavior, no new chrome
 
@@ -800,7 +761,7 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 
 | | |
 | --- | --- |
-| **In** | Move shipped notes to Done in [`docs/dogfood/ux.md`](../../dogfood/ux.md). Distill this spike with [`archive-docs`](../../../.cursor/skills/archive-docs/SKILL.md) when the bar above is true. The three idea notes live in this folder; the close distill keeps their decisions and drops the PR sequence. |
+| **In** | Pulled notes already left [`docs/dogfood/ux.md`](../../dogfood/ux.md). Do not copy them back. Distill this spike with [`archive-docs`](../../../.cursor/skills/archive-docs/SKILL.md) when the bar above is true. The three idea notes live in this folder; the close distill keeps their decisions and drops the PR sequence. |
 | **Out** | Pulling the parked density, extract, transliteration, or Reconciliation-Claim items in at the close. |
 | **Depends on** | S10-01…S10-45 |
 
@@ -828,8 +789,8 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 - **Bridge rows and plain rows are different types.** Add-at-top has to stay true after reload, not only on the draft. Connections are grouped by bridge in `CitationConnections`; plain rows append in `CitationObservationRows`. One insert rule, both lists, and the saved order the composer shows has to match.
 - **Focus and the new row.** `focusedID` is set on add today and does not move keyboard focus into the property combo box. The rethink wants both: row at top, field focused.
 - **`PVSelect` letter jump is one step.** `handleTriggerKey` sends `.character` once. Cycling is a session change for every select, not a name-modal special case. Width is the opposite: do not make every select as wide as its longest option.
-- **Growing the canvas moves clamps.** `EvidenceGraphPlacement` tests lock `maxCell` at grid 96×98. Growing is a behavior change those tests will need to follow. Card coordinates already stored stay valid.
-- **Camera vs document size.** Restoring an offset from a smaller document after S10-03 grows it should clamp, not scroll into emptiness. `clampedContentOrigin` already exists.
+- **Growing the canvas moves clamps.** Landed in S10-03. A small graph still opens on 4000×4000, and `maxCell` for that board stays 96×98. A card near the edge extends the document. Stored card coordinates stay valid.
+- **Camera vs document size.** Landed in S10-04. Restoring an offset after the document grows clamps, and growth itself does not jump the view back to 1×.
 - **Drop on the section vs drop in the dialog.** The dialog row already highlights and ingests. The section target should call that ingest, not a parallel copy, including the reject callout for a bad type.
 - **Open file on the graph.** A Source can have several Artifacts. The brief picks which file the header opens (cover if set, otherwise the single file, otherwise no button or a menu — D6 decides; do not invent a menu in the PR if the brief says one file).
 - **Audit scope fan-out.** An Observation on a shared member can touch one Source and one or more handles. Delete changes still need the parent FKs. Backfill is `INSERT OR IGNORE` in the migration, pattern `000036.sql`. `TestResolversCoverEveryEntityType` must stay green.
@@ -876,7 +837,7 @@ Everything else in **Working rules** is decided for planning. Correct any of the
 | S10-40 | [`navigation-history.md`](../archive/spike-3/navigation-history.md): list scroll is session state restored when the list place appears. It is still not a history field. |
 | S10-44 | [`conclusion-layer-data-model.md`](../../conclusion-layer-data-model.md) §5.2 already allows deleting a claim. Note that Unpromote also deletes the bridge claims on that Source. Do not specify the review queue. |
 | S10-45 | [`docs/seeded-vocabulary.md`](../../seeded-vocabulary.md) §3.2 and §3.3: `interests`. No migration. |
-| S10-99 | Dogfood log Done. Archive this folder, including the three idea notes, as decisions. |
+| S10-99 | Pulled notes already left the dogfood log. Archive this folder, including the three idea notes, as decisions. |
 
 ## Definition of done
 
