@@ -56,6 +56,10 @@
 
 **Landed 2026-10-12** in [#373](https://github.com/mendahu/provenencia/pull/373). A select's closed label ellipsizes inside the width the caller gave it. The chevron stays put. When the label is cut, help shows the full string. A short label is unchanged.
 
+## S10-43 — Combo box prefix rank
+
+**Landed 2026-10-12** in [#374](https://github.com/mendahu/provenencia/pull/374). A combo box keeps every contains match and orders it in three bands: the label starts with the query, a later word starts with it, then any other contains match. Order inside a band stays the caller's order. `par` lists parent above grandparent.
+
 ## S10-46 — Simplified cards when zoomed out
 
 **Descoped 2026-10-11** in [#367](https://github.com/mendahu/provenencia/pull/367). Drawing the card in AppKit made a zoomed-out graph fast enough. The full card stays at every zoom. S10-D14 is not drawn.
