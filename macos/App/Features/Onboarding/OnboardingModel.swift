@@ -236,6 +236,12 @@ final class OnboardingModel {
             catalogUsers = try await store.listProjectUsers(projectDir: selectedProject.path)
             if let userID = session?.userID, catalogUsers.contains(where: { $0.userID == userID }) {
                 selectedContributorID = userID
+            } else if let oldest = catalogUsers.min(by: {
+                $0.userID.lowercased() < $1.userID.lowercased()
+            }) {
+                // users.id is a UUIDv7, so the smallest canonical string is the earliest.
+                // The list stays alphabetical for display.
+                selectedContributorID = oldest.userID
             } else {
                 selectedContributorID = Self.newContributorID
             }
