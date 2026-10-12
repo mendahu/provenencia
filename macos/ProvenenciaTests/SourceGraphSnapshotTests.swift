@@ -449,6 +449,14 @@ struct SourceGraphSnapshotTests {
 
     @Test func displayNameUsesEachKindsNamingProperty() {
         #expect(placed(.person, label: "James", [observation("name", nameForm: "James Robins")]).displayName == "James Robins")
+        var structured = observation("name", text: "Jeremiah Arthurt Gumtree", nameForm: "Jeremiah Arthurt Gumtree")
+        structured.propertyValueType = PropertyValueType.name.rawValue
+        structured.nameParts = [
+            CatalogNameValuePart(value: "Jeremiah", type: "given"),
+            CatalogNameValuePart(value: "Arthur", type: "given"),
+            CatalogNameValuePart(value: "Gumtree", type: "surname"),
+        ]
+        #expect(placed(.person, label: "Jerry", [structured]).displayName == "Jeremiah Arthur Gumtree")
         #expect(placed(.place, label: "the town", [observation("toponym", text: "York")]).displayName == "York")
         // A toponym doesn't name a Person, nor a name a Place.
         #expect(placed(.person, label: "James", [observation("toponym", text: "York")]).displayName == "James")

@@ -36,14 +36,18 @@ struct SourceGraphPlacedSubject: Identifiable, Sendable, Equatable {
     var eventTitle: CatalogEventTitle?
 
     /// What the subject is called where it is promoted: its first asserted
-    /// naming Observation (a Person's `name` form, a Place's `toponym`), else
+    /// naming Observation (a Person's structured name, a Place's `toponym`), else
     /// its working label, else its ref. An Event uses its Go-chosen title.
     /// The date is not part of the title.
     var displayName: String {
+        displayName(orders: NameFormatOrders())
+    }
+
+    func displayName(orders: NameFormatOrders) -> String {
         if kind == .event, let eventTitle {
-            return EventTitleDisplay.title(eventTitle)
+            return EventTitleDisplay.title(eventTitle, orders: orders)
         }
-        if let named = observations.lazy.compactMap(Self.namingValue(for: kind)).first {
+        if let named = observations.lazy.compactMap(Self.namingValue(for: kind, orders: orders)).first {
             return named
         }
         let label = subject.label.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -51,12 +55,16 @@ struct SourceGraphPlacedSubject: Identifiable, Sendable, Equatable {
     }
 
     /// The value of an asserted Observation that names a subject of this kind.
-    private static func namingValue(for kind: EvidencePrimaryKind) -> (CatalogObservation) -> String? {
+    private static func namingValue(
+        for kind: EvidencePrimaryKind,
+        orders: NameFormatOrders
+    ) -> (CatalogObservation) -> String? {
         { observation in
             guard observation.polarity != "negative" else { return nil }
             let value: String
             switch (kind, observation.propertyKey) {
-            case (.person, "name"): value = observation.nameForm
+            case (.person, "name"):
+                value = ObservationValueDisplay.string(for: observation, orders: orders)
             case (.place, "toponym"): value = observation.valueText
             default: return nil
             }

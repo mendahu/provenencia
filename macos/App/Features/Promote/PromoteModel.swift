@@ -342,7 +342,7 @@ final class PromoteModel {
             return PromoteFlow.SubjectFact(
                 id: placed.subject.id,
                 kind: placed.kind,
-                name: placed.displayName,
+                name: placed.displayName(orders: flow.nameOrders),
                 ref: placed.subject.ref,
                 anchor: anchor
             )

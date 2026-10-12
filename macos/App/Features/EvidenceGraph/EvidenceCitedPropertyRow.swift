@@ -42,6 +42,7 @@ struct EvidenceCitedPropertyRow: View {
     let style: EvidenceCitedPropertyRowStyle
     var conflictCount: Int? = nil
     var isHovered: Bool = false
+    var nameOrders: NameFormatOrders = NameFormatOrders()
 
     var body: some View {
         HStack(alignment: .center, spacing: 8) {
@@ -99,7 +100,7 @@ struct EvidenceCitedPropertyRow: View {
     }
 
     private var valueSummary: String {
-        let rendered = ObservationValueDisplay.string(for: observation)
+        let rendered = ObservationValueDisplay.string(for: observation, orders: nameOrders)
         if rendered.isEmpty {
             return L10n.string(L10n.EvidenceGraph.citedValueUnavailable)
         }
@@ -132,6 +133,7 @@ struct EvidenceCitedPropertyStack<Footer: View>: View {
     let observations: [CatalogObservation]
     let style: EvidenceSubjectKindStyle?
     let hoveredActionID: String?
+    var nameOrders: NameFormatOrders = NameFormatOrders()
     @ViewBuilder var footer: () -> Footer
 
     private var counts: [String: Int] {
@@ -154,7 +156,8 @@ struct EvidenceCitedPropertyStack<Footer: View>: View {
                         style: rowStyle,
                         conflictCount: conflictCount(for: observation),
                         isHovered: hoveredActionID
-                            == EvidenceSubjectCard.editPropertyActionID(observationID: observation.id)
+                            == EvidenceSubjectCard.editPropertyActionID(observationID: observation.id),
+                        nameOrders: nameOrders
                     )
                     .evidenceCardHitRegion(EvidenceSubjectCard.editPropertyActionID(observationID: observation.id))
                 }

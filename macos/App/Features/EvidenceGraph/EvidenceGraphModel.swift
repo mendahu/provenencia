@@ -620,7 +620,7 @@ final class EvidenceGraphModel {
             title = primary.subject.label
             ref = primary.subject.ref
         } else if let snapshot, let bridge = snapshot.bridges.first(where: { $0.id == subjectID }) {
-            title = EvidenceBridgeEdgeSummary.sentence(for: bridge, in: snapshot)
+            title = EvidenceBridgeEdgeSummary.sentence(for: bridge, in: snapshot, orders: session.nameFormat)
             ref = bridge.subject.ref
         } else {
             title = nil
@@ -687,7 +687,7 @@ final class EvidenceGraphModel {
             title = primary.subject.label.isEmpty ? primary.subject.ref : primary.subject.label
             ref = primary.subject.ref
         } else if let snapshot, let bridge = snapshot.bridges.first(where: { $0.id == subjectID }) {
-            title = EvidenceBridgeEdgeSummary.sentence(for: bridge, in: snapshot)
+            title = EvidenceBridgeEdgeSummary.sentence(for: bridge, in: snapshot, orders: session.nameFormat)
             ref = bridge.subject.ref
         } else {
             return
@@ -715,7 +715,7 @@ final class EvidenceGraphModel {
             subjectId: placed.id,
             kind: placed.kind,
             ref: placed.subject.ref,
-            title: placed.displayName,
+            title: placed.displayName(orders: session.nameFormat),
             sourceTitle: resolvedSourceTitle()
         )
     }
@@ -735,7 +735,7 @@ final class EvidenceGraphModel {
             subjectId: placed.id,
             kind: placed.kind,
             ref: placed.subject.ref,
-            title: placed.displayName,
+            title: placed.displayName(orders: session.nameFormat),
             sourceTitle: resolvedSourceTitle(),
             mapAll: true
         )
@@ -758,13 +758,13 @@ final class EvidenceGraphModel {
             return .eventDetail(
                 entityId: membership.entity.id,
                 ref: membership.entity.ref,
-                title: placed.displayName
+                title: placed.displayName(orders: session.nameFormat)
             )
         case "place":
             return .placeDetail(
                 entityId: membership.entity.id,
                 ref: membership.entity.ref,
-                title: placed.displayName
+                title: placed.displayName(orders: session.nameFormat)
             )
         default:
             return nil

@@ -10,15 +10,21 @@ enum EvidenceBridgeEdgeSummary {
 
     /// Snapshot-aware sentence. Nouns come from cited endpoints; unreadable
     /// edges fall back to the stored label or kind phrase · ref. Never empty.
-    static func sentence(for bridge: SourceGraphPlacedBridge, in snapshot: SourceGraphSnapshot) -> String {
+    static func sentence(
+        for bridge: SourceGraphPlacedBridge,
+        in snapshot: SourceGraphSnapshot,
+        orders: NameFormatOrders = NameFormatOrders()
+    ) -> String {
         let resolved = snapshot.bridges.first(where: { $0.id == bridge.id }) ?? bridge
         let endpointA = noun(
             subjectID: bridge.endpointAID ?? resolved.endpointAID,
-            snapshot: snapshot
+            snapshot: snapshot,
+            orders: orders
         )
         let endpointB = noun(
             subjectID: bridge.endpointBID ?? resolved.endpointBID,
-            snapshot: snapshot
+            snapshot: snapshot,
+            orders: orders
         )
         let term = termDisplay(kind: bridge.kind, in: bridge.observations)
         if endpointA == nil || endpointB == nil {
@@ -136,11 +142,15 @@ enum EvidenceBridgeEdgeSummary {
         }
     }
 
-    private static func noun(subjectID: String?, snapshot: SourceGraphSnapshot) -> String? {
+    private static func noun(
+        subjectID: String?,
+        snapshot: SourceGraphSnapshot,
+        orders: NameFormatOrders
+    ) -> String? {
         guard let subjectID,
               let placed = snapshot.subjects.first(where: { $0.id == subjectID })
         else { return nil }
-        if let identity = identityNoun(on: placed) {
+        if let identity = identityNoun(on: placed, orders: orders) {
             return identity
         }
         let label = placed.subject.label.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -153,12 +163,15 @@ enum EvidenceBridgeEdgeSummary {
     }
 
     /// First positive identity Observation, else first, else nil (GV-17).
-    private static func identityNoun(on placed: SourceGraphPlacedSubject) -> String? {
+    private static func identityNoun(
+        on placed: SourceGraphPlacedSubject,
+        orders: NameFormatOrders
+    ) -> String? {
         let key = identityPropertyKey(for: placed.kind)
         let matches = placed.observations.filter { $0.propertyKey == key }
         let chosen = matches.first(where: isPositive) ?? matches.first
         guard let chosen else { return nil }
-        let display = ObservationValueDisplay.string(for: chosen)
+        let display = ObservationValueDisplay.string(for: chosen, orders: orders)
             .trimmingCharacters(in: .whitespacesAndNewlines)
         return display.isEmpty ? nil : display
     }
