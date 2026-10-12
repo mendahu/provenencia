@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 /// Shared chrome for multiline text areas (focus ring, inset rest shadow).
@@ -110,25 +111,45 @@ struct PVTextArea: View {
     }
 
     @FocusState private var isFocused: Bool
+    @State private var lineHeight: CGFloat = 0
+    @State private var contentHeight: CGFloat = 0
+
+    /// Field body height: at least `lineLimit`'s lower bound, growing with the
+    /// text until the upper bound, then the editor scrolls.
+    private var editorHeight: CGFloat {
+        let line = lineHeight > 0 ? lineHeight : 18
+        let minHeight = line * CGFloat(lineLimit.lowerBound)
+        let maxHeight = line * CGFloat(lineLimit.upperBound)
+        let content = text.isEmpty ? minHeight : max(contentHeight, line)
+        return min(max(content, minHeight), maxHeight)
+    }
 
     var body: some View {
-        TextField(
-            text: $text,
-            prompt: prompt.map { Text($0) },
-            axis: .vertical
-        ) {
-            EmptyView()
-        }
-        .textFieldStyle(.plain)
-        .lineLimit(lineLimit)
-        .focused($isFocused)
-        .modifier(
-            PVTextAreaChrome(
-                typography: typography,
-                isFocused: isFocused,
-                isInvalid: isInvalid
+        TextEditor(text: $text)
+            .scrollContentBackground(.hidden)
+            .focusEffectDisabled()
+            .focused($isFocused)
+            .frame(height: editorHeight)
+            .background(alignment: .topLeading) {
+                if text.isEmpty, let prompt {
+                    Text(prompt)
+                        .font(typography.font)
+                        .foregroundStyle(PVColor.textMuted)
+                        .allowsHitTesting(false)
+                        .accessibilityHidden(true)
+                }
+                PVTextAreaMeasure(text: text, font: typography.font)
+                PVTextEditorInsetClearer()
+            }
+            .modifier(
+                PVTextAreaChrome(
+                    typography: typography,
+                    isFocused: isFocused,
+                    isInvalid: isInvalid
+                )
             )
-        )
+            .onPreferenceChange(PVTextAreaLineHeightKey.self) { lineHeight = $0 }
+            .onPreferenceChange(PVTextAreaContentHeightKey.self) { contentHeight = $0 }
         .onAppear {
             guard activateOnAppear else { return }
             // Defer past the resting→editing view swap; same-cycle focus is dropped.
@@ -136,6 +157,126 @@ struct PVTextArea: View {
                 isFocused = true
             }
         }
+    }
+}
+
+/// Measures one line and the full string in the editor's font so the field
+/// can grow up to `lineLimit` without leaving every area at its max height.
+private struct PVTextAreaMeasure: View {
+    var text: String
+    var font: Font
+
+    var body: some View {
+        GeometryReader { geo in
+            ZStack(alignment: .topLeading) {
+                Text(verbatim: "Ag")
+                    .font(font)
+                    .fixedSize()
+                    .hidden()
+                    .background {
+                        GeometryReader { lineGeo in
+                            Color.clear.preference(
+                                key: PVTextAreaLineHeightKey.self,
+                                value: lineGeo.size.height
+                            )
+                        }
+                    }
+                Text(verbatim: text.isEmpty ? " " : text)
+                    .font(font)
+                    .frame(width: geo.size.width, alignment: .leading)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .hidden()
+                    .background {
+                        GeometryReader { contentGeo in
+                            Color.clear.preference(
+                                key: PVTextAreaContentHeightKey.self,
+                                value: contentGeo.size.height
+                            )
+                        }
+                    }
+            }
+        }
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+}
+
+private struct PVTextAreaLineHeightKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
+    }
+}
+
+private struct PVTextAreaContentHeightKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
+    }
+}
+
+/// `TextEditor` insets its glyphs past the chrome padding, so a Source title
+/// would jump between resting text and edit mode. SwiftUI has no inset
+/// modifier for that padding; this clears the text container only.
+private struct PVTextEditorInsetClearer: NSViewRepresentable {
+    func makeNSView(context: Context) -> PVTextEditorInsetView {
+        PVTextEditorInsetView()
+    }
+
+    func updateNSView(_ nsView: PVTextEditorInsetView, context: Context) {
+        nsView.clearInsets()
+    }
+}
+
+private final class PVTextEditorInsetView: NSView {
+    override func viewDidMoveToSuperview() {
+        super.viewDidMoveToSuperview()
+        clearInsets()
+    }
+
+    override func layout() {
+        super.layout()
+        clearInsets()
+    }
+
+    func clearInsets() {
+        guard let textView = nearestTextView() else { return }
+        textView.textContainerInset = .zero
+        textView.textContainer?.lineFragmentPadding = 0
+        textView.drawsBackground = false
+        textView.backgroundColor = .clear
+        if let scroll = textView.enclosingScrollView {
+            scroll.drawsBackground = false
+            scroll.backgroundColor = .clear
+            scroll.scrollerStyle = .overlay
+            scroll.autohidesScrollers = true
+        }
+    }
+
+    /// The clearer is a background of this editor, so the text view is a
+    /// nearby sibling. Stop after a few ancestors so a second area on the
+    /// same screen is left alone.
+    private func nearestTextView() -> NSTextView? {
+        var node: NSView? = superview
+        var hops = 0
+        while let current = node, hops < 4 {
+            if let found = current.firstDescendantTextView() {
+                return found
+            }
+            node = current.superview
+            hops += 1
+        }
+        return nil
+    }
+}
+
+private extension NSView {
+    func firstDescendantTextView() -> NSTextView? {
+        if let textView = self as? NSTextView { return textView }
+        for subview in subviews {
+            if let found = subview.firstDescendantTextView() { return found }
+        }
+        return nil
     }
 }
 
