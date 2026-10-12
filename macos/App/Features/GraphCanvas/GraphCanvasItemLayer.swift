@@ -1,5 +1,15 @@
 @preconcurrency import AppKit
+import os
 import SwiftUI
+
+/// Intervals for card hosting views. Instruments shows them under Points of
+/// Interest. `CardRender` is one batch, with the number of cards created or
+/// rebuilt. `OneCard` is each of those cards, with its id, so a batch can be
+/// averaged. A push that only repositions existing views emits nothing.
+private let cardRenderSignposter = OSSignposter(
+    subsystem: "app.provenencia",
+    category: "CardRender"
+)
 
 /// One host-drawn item the canvas positions in AppKit — a graph card.
 ///
@@ -68,18 +78,35 @@ final class GraphCanvasItemLayer {
             rotorEntries[id] = nil
         }
 
+        let renderCount = items.reduce(into: 0) { count, item in
+            if needsRender(item) { count += 1 }
+        }
+        let renderInterval = renderCount > 0
+            ? cardRenderSignposter.beginInterval("CardRender", "\(renderCount) cards")
+            : nil
+        defer {
+            if let renderInterval {
+                cardRenderSignposter.endInterval("CardRender", renderInterval)
+            }
+        }
+
         for item in items {
             let view: NSHostingView<AnyView>
             if let existing = views[item.id] {
                 view = existing
                 if let previous = models[item.id], !item.model.isEqual(to: previous) {
-                    view.rootView = Self.padded(item.content())
-                    view.frame.size = view.fittingSize
+                    renderOne(item.id) {
+                        view.rootView = Self.padded(item.content())
+                        view.frame.size = view.fittingSize
+                    }
                 }
             } else {
-                view = NSHostingView(rootView: Self.padded(item.content()))
-                view.frame.size = view.fittingSize
-                container.addSubview(view, positioned: .above, relativeTo: nil)
+                view = renderOne(item.id) {
+                    let view = NSHostingView(rootView: Self.padded(item.content()))
+                    view.frame.size = view.fittingSize
+                    container.addSubview(view, positioned: .above, relativeTo: nil)
+                    return view
+                }
                 views[item.id] = view
             }
             models[item.id] = item.model
@@ -127,6 +154,22 @@ final class GraphCanvasItemLayer {
             guard let entry = rotorEntries[id], entry.rotor == rotor else { return nil }
             return (id, entry.label)
         }
+    }
+
+    /// Times one card's hosting-view build and layout. `id` is the signpost
+    /// message, so the slow card in a batch can be picked out of the average.
+    private func renderOne<Result>(_ id: String, _ body: () -> Result) -> Result {
+        let interval = cardRenderSignposter.beginInterval("OneCard", "\(id)")
+        let result = body()
+        cardRenderSignposter.endInterval("OneCard", interval)
+        return result
+    }
+
+    /// A card whose hosting view is missing, or whose model no longer matches
+    /// the view on screen. Positioning an unchanged card is not a render.
+    private func needsRender(_ item: GraphCanvasItem) -> Bool {
+        guard let previous = models[item.id], views[item.id] != nil else { return true }
+        return !item.model.isEqual(to: previous)
     }
 
     private func place(_ id: String) {
