@@ -1,4 +1,6 @@
+import AppKit
 import CoreGraphics
+import SwiftUI
 import Testing
 @testable import Provenencia
 
@@ -117,58 +119,70 @@ struct PVSelectPlacementTests {
         #expect(restored.height == frame.height)
     }
 
-    // MARK: Trigger sizing (#181)
+    @Test @MainActor func aLongClosedLabelStaysInsideTheCallerWidth() {
+        let column: CGFloat = 330
+        let label = "EVT-RSKRW Residence of James Kenneth Jim Robins"
+        let host = NSHostingView(rootView:
+            HStack(spacing: 8) {
+                PVSelect(
+                    selection: .constant("short"),
+                    options: [PVSelectOption(value: "short", label: "New Event")],
+                    fillsWidth: true
+                )
+                .frame(width: column)
+                PVSelect(
+                    selection: .constant("long"),
+                    options: [PVSelectOption(value: "long", label: label)],
+                    fillsWidth: true
+                )
+                .frame(width: column)
+                Text(verbatim: "STRONG")
+            }
+            .frame(width: 780, alignment: .leading)
+        )
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 900, height: 200),
+            styleMask: [.borderless],
+            backing: .buffered,
+            defer: false
+        )
+        window.contentView = host
+        host.frame = NSRect(x: 0, y: 0, width: 900, height: 80)
+        host.layoutSubtreeIfNeeded()
+        let frames = PVSelectLayoutProbe.collect(in: host)
+        let selects = frames.filter { $0.width > 200 && $0.width <= column + 1 && $0.height >= 20 }
+        #expect(selects.count >= 2, "frames \(frames)")
+    }
 
-    private let chrome = CGSize(width: 136, height: 28)
-
-    @Test func triggerKeepsChromeHeightWhateverTheStackProposes() {
-        for stretches in [true, false] {
-            let size = PVSelectPlacement.triggerSize(
-                proposedWidth: 400,
-                fitting: chrome,
-                stretchesHorizontally: stretches
+    @Test @MainActor func aShortClosedLabelHugsItsText() {
+        let host = NSHostingView(rootView:
+            PVSelect(
+                selection: .constant("a"),
+                options: [PVSelectOption(value: "a", label: "May")],
+                fillsWidth: false
             )
-            #expect(size.height == chrome.height)
+        )
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 900, height: 200),
+            styleMask: [.borderless],
+            backing: .buffered,
+            defer: false
+        )
+        window.contentView = host
+        host.frame = NSRect(x: 0, y: 0, width: 900, height: 80)
+        host.layoutSubtreeIfNeeded()
+        let frames = PVSelectLayoutProbe.collect(in: host)
+        #expect(frames.contains { $0.width > 36 && $0.width < 160 && $0.height >= 20 }, "frames \(frames)")
+    }
+}
+
+private enum PVSelectLayoutProbe {
+    @MainActor
+    static func collect(in view: NSView) -> [CGRect] {
+        var found = [view.bounds]
+        for subview in view.subviews {
+            found.append(contentsOf: collect(in: subview))
         }
-    }
-
-    @Test func fullWidthFieldFollowsTheProposedWidth() {
-        let wide = PVSelectPlacement.triggerSize(
-            proposedWidth: 400, fitting: chrome, stretchesHorizontally: true
-        )
-        #expect(wide.width == 400)
-
-        let infinite = PVSelectPlacement.triggerSize(
-            proposedWidth: .infinity, fitting: chrome, stretchesHorizontally: true
-        )
-        #expect(infinite.width == .infinity)
-
-        let narrow = PVSelectPlacement.triggerSize(
-            proposedWidth: 0, fitting: chrome, stretchesHorizontally: true
-        )
-        #expect(narrow.width == chrome.width)
-
-        let unspecified = PVSelectPlacement.triggerSize(
-            proposedWidth: nil, fitting: chrome, stretchesHorizontally: true
-        )
-        #expect(unspecified.width == chrome.width)
-    }
-
-    @Test func chipIgnoresTheProposedWidth() {
-        for proposed in [CGFloat?.none, 0, 400, .infinity] {
-            let size = PVSelectPlacement.triggerSize(
-                proposedWidth: proposed, fitting: chrome, stretchesHorizontally: false
-            )
-            #expect(size.width == chrome.width)
-            #expect(size.height == chrome.height)
-        }
-    }
-
-    @Test func triggerNeverReportsZeroSize() {
-        let size = PVSelectPlacement.triggerSize(
-            proposedWidth: nil, fitting: .zero, stretchesHorizontally: true
-        )
-        #expect(size.width >= 1)
-        #expect(size.height >= 1)
+        return found
     }
 }
