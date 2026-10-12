@@ -6,7 +6,7 @@ Usability fixes from [`docs/dogfood/ux.md`](../../dogfood/ux.md) after Spike 9, 
 
 ## Status
 
-**Open.** Slice 1 is done (2026-10-11). S10-01…S10-04 landed in [#361](https://github.com/mendahu/provenencia/pull/361)–[#364](https://github.com/mendahu/provenencia/pull/364). S10-05, S10-07, and S10-08 landed in [#368](https://github.com/mendahu/provenencia/pull/368), [#369](https://github.com/mendahu/provenencia/pull/369), and [#370](https://github.com/mendahu/provenencia/pull/370) (2026-10-12). S10-46, S10-47, and S10-48 were descoped in [#367](https://github.com/mendahu/provenencia/pull/367). S10-06 was descoped in [#368](https://github.com/mendahu/provenencia/pull/368): searching `marriage` already lists a title that contains the word ahead of a fuzzy name. S10-10 was descoped in [#370](https://github.com/mendahu/provenencia/pull/370): a common cluster belongs in [`ideas/evidence-graph-structure-shortcuts.md`](../../ideas/evidence-graph-structure-shortcuts.md), which covers more than a default role. S10-11 was already done in [#356](https://github.com/mendahu/provenencia/pull/356): a citation with 70 Observations opens quickly. Later landings go in [`completed.md`](completed.md).
+**Open.** Slice 1 is done (2026-10-11). S10-01…S10-04 landed in [#361](https://github.com/mendahu/provenencia/pull/361)–[#364](https://github.com/mendahu/provenencia/pull/364). S10-05, S10-07, and S10-08 landed in [#368](https://github.com/mendahu/provenencia/pull/368), [#369](https://github.com/mendahu/provenencia/pull/369), and [#370](https://github.com/mendahu/provenencia/pull/370) (2026-10-12). S10-46, S10-47, and S10-48 were descoped in [#367](https://github.com/mendahu/provenencia/pull/367). S10-06 was descoped in [#368](https://github.com/mendahu/provenencia/pull/368): searching `marriage` already lists a title that contains the word ahead of a fuzzy name. S10-10 was descoped in [#370](https://github.com/mendahu/provenencia/pull/370): a common cluster belongs in [`ideas/evidence-graph-structure-shortcuts.md`](../../ideas/evidence-graph-structure-shortcuts.md), which covers more than a default role. S10-11 was already done in [#356](https://github.com/mendahu/provenencia/pull/356): a citation with 70 Observations opens quickly. S10-14 and S10-D1 were descoped in [#370](https://github.com/mendahu/provenencia/pull/370): an adaptive choice field is not a priority for this spike. Later landings go in [`completed.md`](completed.md).
 
 > **Goal of this spike:** the annoyances logged while entering real research are gone, and the app still behaves the way Spike 8 and Spike 9 decided.
 
@@ -43,7 +43,7 @@ Usability fixes from [`docs/dogfood/ux.md`](../../dogfood/ux.md) after Spike 9, 
 | Citation composer slows down with many Observations | S10-11, done in #356 | — |
 | Click outside a modal sheet to close it | S10-12 | — |
 | Prefill the structured date modal + open focused on Year | S10-13 | — |
-| Adaptive choice field | S10-14, used by S10-16 | S10-D1, S10-D3 |
+| Adaptive choice field | S10-14, descoped 2026-10-12 | S10-D1, descoped |
 | Create Source modal: Name first, then Type | S10-15 | S10-D2 |
 | Rethink the Observation list + Add Observation focuses search | S10-16 | S10-D3 |
 | Auto-fill name parts + name part type dropdown | S10-17 | S10-D4 |
@@ -93,7 +93,7 @@ These are the calls for this spike. The questions at the bottom are answered; no
 
 - **Add lands at the top for every Observation**, bridge or not. Today `CitationConnections` inserts a bridge at index 0 and `CitationObservationRows.addDraft` appends. Focus follows the new row's property search (the composer already stores `focusedID`; Add does not move keyboard focus into that combo box).
 - **Auto Transcribe moves off the Citation menu's corner.** In the composer form, the Citation `PVSelect` and the Auto Transcribe button both sit on the trailing edge of the left column (`CitationComposerFormPane`), which is why the misclick happens. The confirm-before-overwrite stays.
-- **Choice field cutoffs:** 2 options → `PVRadio`. 3–8 → `PVSelect`. 9 or more → `PVComboBox`. Count the options the field would show, including an empty/untyped row when that row is real. Vocabulary edits happen on other screens, so the control will not swap mid-edit. Name part types are 8 (`NamePartType` plus untyped), so they stay a select. This field does not replace that dropdown.
+- **An adaptive choice field is not in this spike.** S10-14 and S10-D1 are descoped (2026-10-12). Term fields keep the control they have. The composer rethink does not swap a short list to radios or a long list to a combo box.
 - **A default role does not cover a repeated cluster.** S10-10 is descoped (2026-10-12). Prefilling `subject` or `part_of` on a generic new connection stays out. Placing a wedding, birth, or residence in one action, and pasting a cluster already on the canvas, are [`ideas/evidence-graph-structure-shortcuts.md`](../../ideas/evidence-graph-structure-shortcuts.md).
 - **Date prefill is silent.** First match in the transcription, current locale, Gregorian patterns a genealogist actually types (day month year, month day year, year alone, ISO). 80–90% is the bar. No "suggested" chrome, so the date modal does not need a brief. Year is focused even when the prefill is empty.
 - **Name split does not clobber edits.** Blur of the full-form line fills parts only when the part list is empty. The Split button refills from the line; if any part was edited by hand, confirm before replacing. Guessing rules are the ones in the dogfood note (comma → surname first; otherwise last word is surname; leftovers are given).
@@ -119,8 +119,7 @@ These are the calls for this spike. The questions at the bottom are answered; no
 - **Combo box rank is three bands, then the original order.** In `PVComboBoxMatch`, a label that starts with the query ranks above a later word that starts with it (split on spaces and hyphens), which ranks above any other contains match, including a match only in the subtext. `par` lists *parent* above *grandparent*. This is the kit filter, not `core/search` (S10-06).
 - **`interests` is prose, not a matcher feature.** Key `interests`, label Interests, `value_type = text`, cardinality `multiple`, bound to `person`, unlocked (the Properties page may unbind it). Same install rule as `engagement`: new catalogs only, no migration. It is not in a match profile and not on the Person header.
 - **Artifact drop already exists inside the Add dialogs** (`IngestFileDropRow` on create and attach). It does not exist on the Artifact section of the Source page. S10-18 adds the section target. Open File today is only in the expanded detail (`SourcePageArtifactsView.artifactPrimaryFileColumn`). The Evidence graph header has no open-file control.
-- **Adaptive field adoption** in this spike is the composer, where term lists grow. Other screens keep their current control until a later PR. A view that must grow to fit a radio row gets its own brief at that time; none of those are in this spike except the composer.
-- **Name part types stay a select.** `patronymic` joins the compiled registry (S10-29), so the list can pass eight. It is still a fixed-width `PVSelect`. The adaptive field is for vocabulary that grows without a bound. User-minted part types stay out. The Western split rules in S10-17 do not become profile-aware.
+- **Name part types stay a select.** `patronymic` joins the compiled registry (S10-29), so the list can pass eight. It is still a fixed-width `PVSelect`. User-minted part types stay out. The Western split rules in S10-17 do not become profile-aware.
 - **Accent fold is matching only.** `wordSimilarity` scores a fold-only match at 0.95. `autoreconcile.NormalizeForm` and `sort_key` stay as they are, so José and Jose remain separate groupings on the Person page. Display never folds.
 - **Word tiers, top to bottom:** exact, abbreviation or nickname (just under exact), accent fold (0.95), the existing near-spelling score, then Daitch–Mokotoff. Spaced particles (`O`, `Mc`, `Mac`, `St`, `D`, `Fitz`, and the rest of that short list) rejoin with the next word before scoring. A lone initial (`O.`) does not rejoin.
 - **Abbreviation and nickname tables are seeded vocabulary** a project can extend, same as `role`. Not a compiled-only list, and not a population file.
@@ -140,7 +139,7 @@ These are the calls for this spike. The questions at the bottom are answered; no
 
 | Brief | View | Gates | Later on the same view |
 | --- | --- | --- | --- |
-| **S10-D1** | Adaptive choice field (kit board) | **S10-14** | S10-16 instances it |
+| **S10-D1** | Adaptive choice field (kit board) | **S10-14**, descoped 2026-10-12 | — |
 | **S10-D2** | Create Source dialog | **S10-15** | — |
 | **S10-D3** | Citation composer | **S10-16** | S10-34 depiction row |
 | **S10-D4** | Name parts modal | **S10-17** | Design after S10-29, so the type list includes `patronymic` |
@@ -155,7 +154,7 @@ These are the calls for this spike. The questions at the bottom are answered; no
 | **S10-D13** | Promote page | **S10-36** | Evidence sheet shows two crops |
 | **S10-D14** | Evidence graph — zoomed-out card | **S10-46**, descoped 2026-10-11 | — |
 
-S10-D6 is one board for the graph's new controls (open file, box-select, Unpromote). S10-01…S10-04 do not wait on it. S10-D14, the zoomed-out face, is descoped with S10-46 and is not drawn. S10-D9…D11 are three briefs for the shared conclusion lists. Events and Places specify the same last-updated cell as Persons so `ConclusionListPage` does not grow three treatments. S10-D8 is the Sources list, a different page, and it gates S10-41. That board draws the same last-updated cell, the evidence-status filter, and text search. Sort, type, status, query, and session scroll ship from that one board. D9…D11 do not draw those controls, and S10-22 does not change the Sources list. Only the Persons list thumb becomes a likeness. S10-D1 is a kit board: the control is the design, and stamping it into an unchanged form is not a new view. S10-D3, S10-D6, S10-D9, and S10-D12 each cover a later PR on that same view, so those briefs are written with the later frame in them. D12 includes the preferred-portrait control S10-39 fills, and D9 includes that crop as the list thumb. Whichever of D8 and D9 is designed first draws the last-updated cell; the other copies it.
+S10-D6 is one board for the graph's new controls (open file, box-select, Unpromote). S10-01…S10-04 do not wait on it. S10-D14, the zoomed-out face, is descoped with S10-46 and is not drawn. S10-D1, the adaptive choice field, is descoped with S10-14 and is not drawn. Term fields keep the control they have. S10-D9…D11 are three briefs for the shared conclusion lists. Events and Places specify the same last-updated cell as Persons so `ConclusionListPage` does not grow three treatments. S10-D8 is the Sources list, a different page, and it gates S10-41. That board draws the same last-updated cell, the evidence-status filter, and text search. Sort, type, status, query, and session scroll ship from that one board. D9…D11 do not draw those controls, and S10-22 does not change the Sources list. Only the Persons list thumb becomes a likeness. S10-D3, S10-D6, S10-D9, and S10-D12 each cover a later PR on that same view, so those briefs are written with the later frame in them. D12 includes the preferred-portrait control S10-39 fills, and D9 includes that crop as the list thumb. Whichever of D8 and D9 is designed first draws the last-updated cell; the other copies it.
 
 ## PR sequence
 
@@ -188,16 +187,14 @@ SLICE 2 — Behavior, no new chrome
   Check: a long transcription scrolls. A long Promote title stays inside
          the target column.
 
-SLICE 3 — Choice field
+SLICE 3 — Combo box
   S10-43  Combo box: a prefix outranks a mid-word match
-  ✎ S10-D1 ──▶ S10-14  Adaptive choice field in the kit
-  Check: a 2-option field is radios, a 5-option field is a select, a long
-         term list is a combo box. Typing `par` lists parent above grandparent.
-         Preview or a kit host is enough; the composer adopts it in S10-16.
+  S10-14  Adaptive choice field — descoped. S10-D1 is not drawn.
+  Check: typing `par` lists parent above grandparent.
 
 SLICE 4 — Composer and the dialogs it opens
   ✎ S10-D2 ──▶ S10-15  Create Source: name, then type
-  ✎ S10-D3 ──▶ S10-16  Observation list rethink (after S10-14).
+  ✎ S10-D3 ──▶ S10-16  Observation list rethink.
                        The board also draws the depiction row S10-34 fills.
   S10-29  Name patterns (patronymic, western + Spanish profiles) — before D4
   ✎ S10-D4 ──▶ S10-17  Name parts: split, fixed width, letter cycle
@@ -283,9 +280,8 @@ S10-04 camera (done)            │         ▲
                                 │         │
 S10-10 defaults — descoped      │    S10-D6 (also gates S10-18)
 S10-11 perf — done, #356
-S10-14 choice ──────▶ S10-16 composer rethink
-   ▲                       ▲
-S10-D1                     S10-D3
+S10-14 choice — descoped. S10-D1 is not drawn.
+S10-D3 ──▶ S10-16 composer rethink
 
 S10-46 simplified cards — descoped 2026-10-11
 S10-47 mount cards near the window — descoped 2026-10-11
@@ -404,21 +400,14 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 
 | | |
 | --- | --- |
-| **In** | `PVComboBoxMatch.filter` keeps a contains match and orders it in three bands (working rules): label prefix, then a later word that starts with the query, then any other contains match. Order inside a band stays the order the caller passed. Every combo box picks it up, including the one S10-14 and S10-16 use. |
+| **In** | `PVComboBoxMatch.filter` keeps a contains match and orders it in three bands (working rules): label prefix, then a later word that starts with the query, then any other contains match. Order inside a band stays the order the caller passed. Every combo box picks it up, including the composer's property search. |
 | **Out** | Omnibar ranking (S10-06). A new scoring number. Hiding mid-word matches. |
 | **Testable** | Options *parent* and *grandparent*, query `par`: *parent* is first. A hyphenated word that starts with the query sits between a label prefix and a mid-word contains. An empty query keeps the caller's order. |
 | **Depends on** | — |
 
 #### S10-14 — Adaptive choice field
 
-**Brief:** S10-D1, just before this PR.
-
-| | |
-| --- | --- |
-| **In** | One kit field that picks `PVRadio`, `PVSelect`, or `PVComboBox` from the option count (working rules). Hosts pass options; they do not pick the control. Ship it with a preview or host that shows all three bands. Do not restyle every form in this PR. |
-| **Out** | Composer adoption (S10-16). A new menu primitive. Switching control while the field is on screen. |
-| **Testable** | 2, 5, and 20 options render radio, select, and combo. Keyboard and accessibility labels match the control that appeared. |
-| **Depends on** | S10-D1 |
+**Descoped 2026-10-12**, in [#370](https://github.com/mendahu/provenencia/pull/370). A kit field that swaps `PVRadio`, `PVSelect`, and `PVComboBox` by option count is not a priority for this spike. S10-D1 is not drawn. Term fields keep the control they have. The composer rethink (S10-16) does not wait on it.
 
 ### Slice 4 — Composer and the dialogs it opens
 
@@ -435,14 +424,14 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 
 #### S10-16 — Observation list rethink
 
-**Brief:** S10-D3. The board instances the S10-14 field for term values; design it after that field is in the kit.
+**Brief:** S10-D3.
 
 | | |
 | --- | --- |
-| **In** | Per S10-D3: Observations are visually separate, and the fields inside a row are easy to tell apart. Add (bridge or not) inserts at the top and moves keyboard focus to that row's property search. Auto Transcribe (and the PDF paste control, which sits in the same slot) moves off the Citation menu's corner. Term-valued fields on the row use the adaptive choice field. Still comfortable at 20 Observations (S10-11's bar). |
-| **Out** | Name parts modal (S10-17). Date modal (S10-13). The depiction row itself (S10-34 fills the frame this brief already draws). |
-| **Testable** | Twenty rows: you can see where one ends. Add a bridge and a plain Observation: both appear at the top, search focused. Reaching for the Citation menu does not start Auto Transcribe. A two-term property shows radios; a long term list shows a combo box. |
-| **Depends on** | S10-14, S10-D3 |
+| **In** | Per S10-D3: Observations are visually separate, and the fields inside a row are easy to tell apart. Add (bridge or not) inserts at the top and moves keyboard focus to that row's property search. Auto Transcribe (and the PDF paste control, which sits in the same slot) moves off the Citation menu's corner. Term fields keep the control they have (S10-14 is descoped). Still comfortable at 20 Observations (S10-11's bar). |
+| **Out** | Name parts modal (S10-17). Date modal (S10-13). The depiction row itself (S10-34 fills the frame this brief already draws). An adaptive choice field. |
+| **Testable** | Twenty rows: you can see where one ends. Add a bridge and a plain Observation: both appear at the top, search focused. Reaching for the Citation menu does not start Auto Transcribe. |
+| **Depends on** | S10-D3 |
 
 #### S10-17 — Name parts split and type control
 
