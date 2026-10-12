@@ -561,7 +561,7 @@ Origin is the only attribution: `provenencia`, `user`, or `plugin:<id>`, unique 
 
 `kind` is `abbreviation` or `nickname`. Both score 0.98 in matching, above a fold-only pair. A set is every `name_alias_members` row that shares `set_idx`. Tokens are normalized comparison forms (`Jas.` is `jas`). `name_alias_roles` lists the part roles that may use the table. The product lists allow `given`, `nick`, and `untyped`.
 
-Product sets:
+Abbreviation sets:
 
 ```text
 abbreviations
@@ -573,21 +573,9 @@ abbreviations
   elizabeth eliz
   john jno
   robert robt
-
-nicknames
-  james jim jimmy
-  william bill will billy
-  robert bob rob
-  john jack
-  thomas tom
-  charles chuck charlie
-  richard dick rick
-  edward ted ed
-  elizabeth liz beth betty
-  margaret peggy meg
-  benjamin ben
-  douglas doug
 ```
+
+The nickname table is `nicknameSets` in [`core/match/nicknames_seed.go`](../core/match/nicknames_seed.go). Each set is one canonical name and the nicknames listed for it. A nickname that belongs to two canonical names does not join those sets, so Chris connects Christine and also Christopher, and Tina does not connect Christopher. The list is names.csv from [carltonnorthern/nicknames](https://github.com/carltonnorthern/nicknames), Apache License 2.0. The license and the upstream credit are in [`core/match/third_party/nicknames/`](../core/match/third_party/nicknames/).
 
 `Register` appends a table for a future plugin. Install writes whatever is registered at catalog create. Open does not heal. Scoring reads these rows and no in-code list. Opening a project loads them once onto the catalog graph and keeps them until the project closes. A future editor calls `namealiases.Invalidate` after a change. An empty catalog makes no abbreviation or nickname hits.
 

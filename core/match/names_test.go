@@ -250,6 +250,18 @@ func withAliasSeed() NameComparer {
 	return NameComparer{Words: WordRules{Aliases: &tables}}
 }
 
+func TestSharedNicknameDoesNotMergeCanonicalNames(t *testing.T) {
+	c := withAliasSeed()
+	got, ok := c.Compare(nv("g=Chris"), nv("g=Christine"))
+	if !ok || math.Abs(got-AliasCredit) > 1e-9 {
+		t.Fatalf("Chris / Christine: %.4f ok=%v", got, ok)
+	}
+	got, ok = c.Compare(nv("g=Tina"), nv("g=Christopher"))
+	if ok && (got == AliasCredit || got > 0) {
+		t.Fatalf("Tina / Christopher scored %.4f", got)
+	}
+}
+
 func TestAliasTablesComeFromTheList(t *testing.T) {
 	none := NameComparer{Words: WordRules{Aliases: Set([]AliasTable{})}}
 	got, ok := none.Compare(nv("g=Jas."), nv("g=James"))
@@ -278,7 +290,7 @@ func TestSurnamesDoNotUseGivenAliases(t *testing.T) {
 }
 
 func TestUnknownTokenFallsThrough(t *testing.T) {
-	got, ok := withAliasSeed().Compare(nv("g=Kit"), nv("g=Christopher"))
+	got, ok := withAliasSeed().Compare(nv("g=Xyzzy"), nv("g=Plugh"))
 	if !ok {
 		t.Fatal("not comparable")
 	}

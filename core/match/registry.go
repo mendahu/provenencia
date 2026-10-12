@@ -112,20 +112,11 @@ var productAliasTables = []AliasTable{
 	{
 		Key: "nicknames", Origin: OriginProvenencia, Label: "Nicknames",
 		Kind: AliasNickname, Roles: aliasPartRoles(),
-		Sets: [][]string{
-			{"james", "jim", "jimmy"},
-			{"william", "bill", "will", "billy"},
-			{"robert", "bob", "rob"},
-			{"john", "jack"},
-			{"thomas", "tom"},
-			{"charles", "chuck", "charlie"},
-			{"richard", "dick", "rick"},
-			{"edward", "ted", "ed"},
-			{"elizabeth", "liz", "beth", "betty"},
-			{"margaret", "peggy", "meg"},
-			{"benjamin", "ben"},
-			{"douglas", "doug"},
-		},
+		// Each set is one canonical name and its direct nicknames, from
+		// carltonnorthern/nicknames. A nickname shared by two canonical
+		// names does not join those sets. License and credit:
+		// third_party/nicknames/.
+		Sets: nicknameSets,
 	},
 }
 
