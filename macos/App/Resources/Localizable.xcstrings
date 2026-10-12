@@ -15029,7 +15029,7 @@
       }
     },
     "eventTitle.etAl": {
-      "comment": "Event title for several subjects, or three or more on a marriage or an engagement. Arguments are the type word, then the first subject.",
+      "comment": "Event title for three or more subjects. Arguments are the type word, then the first subject.",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -15053,7 +15053,7 @@
       }
     },
     "eventTitle.couple": {
-      "comment": "Event title for a marriage or an engagement with two subjects. Arguments are the type word, then the two people.",
+      "comment": "Event title for exactly two subjects. Arguments are the type word, then the two people.",
       "extractionState": "manual",
       "localizations": {
         "en": {

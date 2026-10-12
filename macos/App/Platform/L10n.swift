@@ -7057,7 +7057,7 @@ enum L10n {
             let resource = LocalizedStringResource(
                 "eventTitle.couple",
                 defaultValue: "%1$@ of %2$@ and %3$@",
-                comment: "Event title for a marriage or an engagement with two subjects. Arguments are the type word, then the two people."
+                comment: "Event title for exactly two subjects. Arguments are the type word, then the two people."
             )
             return L10n.format(resource, locale: locale, type, a, b)
         }
@@ -7066,7 +7066,7 @@ enum L10n {
             let resource = LocalizedStringResource(
                 "eventTitle.etAl",
                 defaultValue: "%1$@ of %2$@ et al.",
-                comment: "Event title for several subjects, or three or more on a marriage or an engagement. Arguments are the type word, then the first subject."
+                comment: "Event title for three or more subjects. Arguments are the type word, then the first subject."
             )
             return L10n.format(resource, locale: locale, type, first)
         }

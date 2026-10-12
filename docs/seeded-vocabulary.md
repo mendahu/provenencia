@@ -409,7 +409,7 @@ migration
 travel
 ```
 
-Two subjects of `marriage` or `engagement` use the couple title: *{Type} of {A} and {B}*. `travel` does not. Two or more subjects of `travel` use the *et al.* title, the same as `census`.
+A title with subjects follows the count, for every event type. One subject is *{Type} of {A}*. Two subjects are *{Type} of {A} and {B}*. Three or more are *{Type} of {A} et al.*
 
 Exact GEDCOM alignment and additional vital/event kinds are **TBD**. Researchers add long-tail kinds as `origin=user` terms — there is no product `other` escape hatch. First-class facets (e.g. birthday) will attach to recognized keys such as `birth` in the subject registry when that behavior lands — not part of the create-time term seed itself.
 
