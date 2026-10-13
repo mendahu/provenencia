@@ -250,6 +250,30 @@ enum PVComboCommitVia: Equatable {
 /// **Not ported** (add here on demand, the way `PVSidebarNav` was): the
 /// multi-select token field, the "use what you typed" create row, and async
 /// `loading`. No call site needs them yet.
+///
+/// Optional host focus. The text field applies `.focused($binding, equals:)`
+/// itself, so a write to that `FocusState` lands in the field. Without this,
+/// the box keeps its own focus.
+struct PVComboFocus {
+    fileprivate let isActive: () -> Bool
+    fileprivate let resign: () -> Void
+    fileprivate let install: (Binding<String>, Text?) -> AnyView
+
+    init<Value: Hashable>(_ binding: FocusState<Value?>.Binding, equals value: Value) {
+        isActive = { binding.wrappedValue == value }
+        resign = {
+            if binding.wrappedValue == value { binding.wrappedValue = nil }
+        }
+        install = { text, prompt in
+            AnyView(
+                TextField(text: text, prompt: prompt) { EmptyView() }
+                    .textFieldStyle(.plain)
+                    .focused(binding, equals: value)
+            )
+        }
+    }
+}
+
 struct PVComboBox<Row: View, Empty: View>: View {
     /// The committed option's `value`; empty means nothing is chosen.
     @Binding var selection: String
@@ -262,28 +286,12 @@ struct PVComboBox<Row: View, Empty: View>: View {
     /// invent their own (`docs/macos-client-patterns.md` §5).
     let label: any PVCopy
     var accessibilityIdentifierPrefix: String?
-    /// When true, move keyboard focus into the field once it appears. The
-    /// list stays closed: a sheet that lands on this field (Add observation)
-    /// should not pop the menu. Focus waits one turn so it is not dropped
-    /// while the field is inserted. Default stays false.
-    var activateOnAppear: Bool = false
-    /// Bumps when a caller wants this field to take keyboard focus and open
-    /// its list. `activateOnAppear` only runs when the control appears; a
-    /// field that is already on screen needs this.
-    var focusNonce: Int = 0
-    /// Host-owned focus. When this becomes true, the field takes focus on the
-    /// next turn. The list opens only when `opensListOnFocus` is set.
-    var hostedFocus: Bool = false
-    var opensListOnFocus: Bool = false
-    /// A click or Return committed a row. The form decides which field is next.
-    var onCommit: ((String) -> Void)? = nil
-    /// Click, Return, and Tab. Return true from Tab to keep focus in the form
-    /// when the commit inserts the next field. Nil keeps `onCommit`.
-    var onCommitVia: ((String, PVComboCommitVia) -> Bool)? = nil
-    /// Asked before a forward Tab commits, while the current fields are still
-    /// on screen. Return true when this choice inserts the next field, so Tab
-    /// does not leave for a button that is only next until that field renders.
-    var onTabCommit: ((String) -> Bool)? = nil
+    /// Runs after the selection is written. Return true from a forward Tab
+    /// when this choice inserts the next field, so Tab does not leave for a
+    /// button that is only next until that field renders.
+    var onCommit: ((String, PVComboCommitVia) -> Bool)? = nil
+    /// When set, the text field is bound to the host's `FocusState`.
+    var focus: PVComboFocus? = nil
     /// Remote results: called with each typed query; the caller filters and
     /// passes the results as `options`. Nil filters locally.
     var onQueryChange: ((String) -> Void)?
@@ -374,11 +382,11 @@ struct PVComboBox<Row: View, Empty: View>: View {
                 // does that after acting on the choice (assigning the field
                 // removes it from the pool), and the field must not go on
                 // showing a label that no longer names anything.
-                guard !isFocused || selectedOption == nil else { return }
+                guard !fieldIsFocused || selectedOption == nil else { return }
                 query = newValue
                 isDirty = false
             }
-            .onChange(of: isFocused) { _, focused in
+            .onChange(of: fieldIsFocused) { _, focused in
                 // Losing focus closes the list and restores the field. Gaining
                 // focus alone does **not** open — a sheet that lands first
                 // responder on this field (Add Source) would otherwise pop the
@@ -395,33 +403,22 @@ struct PVComboBox<Row: View, Empty: View>: View {
                 measuredRowsHeight = 0
                 rowsMeasured = false
             }
-            .onAppear {
-                guard hostedFocus || activateOnAppear else { return }
-                DispatchQueue.main.async { applyHostedFocus() }
-            }
-            .onChange(of: hostedFocus) { _, active in
-                guard active else { return }
-                DispatchQueue.main.async { applyHostedFocus() }
-            }
-            .onChange(of: focusNonce) { _, nonce in
-                guard nonce > 0 else { return }
-                isFocused = true
-                open()
-            }
+    }
+
+    /// Host focus when the form bound one; otherwise the field's own.
+    private var fieldIsFocused: Bool {
+        if focus != nil { return focus?.isActive() ?? false }
+        return isFocused
     }
 
     // MARK: Field
 
     private var field: some View {
-        TextField(text: typedText, prompt: placeholder?.pvText) {
-            EmptyView()
-        }
-            .textFieldStyle(.plain)
-            .focused($isFocused)
+        fieldText
             .onKeyPress(action: handleKey)
             .modifier(PVInputChrome(
                 size: size,
-                isFocused: isFocused,
+                isFocused: fieldIsFocused,
                 isInvalid: isInvalid,
                 leadingIconInset: true
             ))
@@ -440,6 +437,17 @@ struct PVComboBox<Row: View, Empty: View>: View {
             })
             .accessibilityLabel(label.pvText)
             .accessibilityIdentifier(accessibilityIdentifierPrefix ?? "")
+    }
+
+    @ViewBuilder
+    private var fieldText: some View {
+        if let focus {
+            focus.install(typedText, placeholder?.pvText)
+        } else {
+            TextField(text: typedText, prompt: placeholder?.pvText) { EmptyView() }
+                .textFieldStyle(.plain)
+                .focused($isFocused)
+        }
     }
 
     /// The text binding the field edits. Only the *setter* marks the text as
@@ -606,11 +614,6 @@ struct PVComboBox<Row: View, Empty: View>: View {
 
     // MARK: Behaviour
 
-    private func applyHostedFocus() {
-        isFocused = true
-        if opensListOnFocus { open() }
-    }
-
     private func open() {
         isOpen = true
         resetActiveRow()
@@ -622,28 +625,16 @@ struct PVComboBox<Row: View, Empty: View>: View {
         activeIndex = hasTypedQuery ? PVComboBoxMatch.firstEnabledIndex(in: visibleOptions) : -1
     }
 
+    /// Writes the row, then tells the form. Tab claims the key only when the
+    /// form says this commit inserts the next field.
     private func commit(_ option: PVComboBoxOption, via: PVComboCommitVia) -> Bool {
         guard !option.isDisabled else { return false }
-        if via == .tab, let onCommitVia {
-            let claim = onCommitVia(option.value, .tab)
-            selection = option.value
-            query = option.label
-            isDirty = false
-            isOpen = false
-            return claim
-        }
         selection = option.value
         query = option.label
         isDirty = false
         isOpen = false
-        if let onCommitVia {
-            _ = onCommitVia(option.value, via)
-        } else if via != .click {
-            onCommit?(option.value)
-        } else {
-            onCommit?(option.value)
-        }
-        return false
+        let claim = onCommit?(option.value, via) ?? false
+        return via == .tab && claim
     }
 
     /// Dismissing abandons whatever was typed and puts the committed label
@@ -660,7 +651,11 @@ struct PVComboBox<Row: View, Empty: View>: View {
     /// that read as a bug.
     private func dismissAndBlur() {
         closeAndRestore()
-        isFocused = false
+        if let focus {
+            focus.resign()
+        } else {
+            isFocused = false
+        }
     }
 
     private func handleKey(_ press: KeyPress) -> KeyPress.Result {
@@ -705,21 +700,8 @@ struct PVComboBox<Row: View, Empty: View>: View {
             // field is not a key view yet, so Tab would land on Discard.
             if isOpen, visibleOptions.indices.contains(activeIndex) {
                 let option = visibleOptions[activeIndex]
-                if onCommitVia != nil {
-                    let claim = !press.modifiers.contains(.shift) && commit(option, via: .tab)
-                    if claim { return .handled }
-                } else {
-                    let claim = !press.modifiers.contains(.shift) && (onTabCommit?(option.value) ?? false)
-                    guard !option.isDisabled else { return .ignored }
-                    selection = option.value
-                    query = option.label
-                    isDirty = false
-                    isOpen = false
-                    if claim {
-                        onCommit?(option.value)
-                        return .handled
-                    }
-                }
+                let claim = !press.modifiers.contains(.shift) && commit(option, via: .tab)
+                if claim { return .handled }
             }
             isOpen = false
             return .ignored
@@ -750,13 +732,8 @@ extension PVComboBox where Empty == Text {
         maxListHeight: CGFloat = 288,
         label: any PVCopy,
         accessibilityIdentifierPrefix: String? = nil,
-        activateOnAppear: Bool = false,
-        focusNonce: Int = 0,
-        hostedFocus: Bool = false,
-        opensListOnFocus: Bool = false,
-        onCommit: ((String) -> Void)? = nil,
-        onCommitVia: ((String, PVComboCommitVia) -> Bool)? = nil,
-        onTabCommit: ((String) -> Bool)? = nil,
+        focus: PVComboFocus? = nil,
+        onCommit: ((String, PVComboCommitVia) -> Bool)? = nil,
         onQueryChange: ((String) -> Void)? = nil,
         @ViewBuilder row: @escaping (PVComboBoxOption, String) -> Row
     ) {
@@ -769,13 +746,8 @@ extension PVComboBox where Empty == Text {
             maxListHeight: maxListHeight,
             label: label,
             accessibilityIdentifierPrefix: accessibilityIdentifierPrefix,
-            activateOnAppear: activateOnAppear,
-            focusNonce: focusNonce,
-            hostedFocus: hostedFocus,
-            opensListOnFocus: opensListOnFocus,
             onCommit: onCommit,
-            onCommitVia: onCommitVia,
-            onTabCommit: onTabCommit,
+            focus: focus,
             onQueryChange: onQueryChange,
             row: row,
             empty: { _ in Text(emptyLabel) }
@@ -796,13 +768,8 @@ extension PVComboBox where Row == PVComboBoxPlainRow, Empty == Text {
         maxListHeight: CGFloat = 288,
         label: any PVCopy,
         accessibilityIdentifierPrefix: String? = nil,
-        activateOnAppear: Bool = false,
-        focusNonce: Int = 0,
-        hostedFocus: Bool = false,
-        opensListOnFocus: Bool = false,
-        onCommit: ((String) -> Void)? = nil,
-        onCommitVia: ((String, PVComboCommitVia) -> Bool)? = nil,
-        onTabCommit: ((String) -> Bool)? = nil
+        focus: PVComboFocus? = nil,
+        onCommit: ((String, PVComboCommitVia) -> Bool)? = nil
     ) {
         self.init(
             selection: selection,
@@ -814,13 +781,8 @@ extension PVComboBox where Row == PVComboBoxPlainRow, Empty == Text {
             maxListHeight: maxListHeight,
             label: label,
             accessibilityIdentifierPrefix: accessibilityIdentifierPrefix,
-            activateOnAppear: activateOnAppear,
-            focusNonce: focusNonce,
-            hostedFocus: hostedFocus,
-            opensListOnFocus: opensListOnFocus,
-            onCommit: onCommit,
-            onCommitVia: onCommitVia,
-            onTabCommit: onTabCommit
+            focus: focus,
+            onCommit: onCommit
         ) { option, query in
             PVComboBoxPlainRow(option: option, query: query)
         }

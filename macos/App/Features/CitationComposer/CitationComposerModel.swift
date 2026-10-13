@@ -26,9 +26,6 @@ final class CitationComposerModel {
 
     struct PendingLeave: Identifiable, Equatable {
         var id = UUID()
-        var citationDirty: Bool
-        var observationCount: Int
-        var connectionTouched: Bool
         /// A citation switch under an open draft. Discard replaces the citation
         /// text and leaves the draft in place.
         var keepDraft = false
@@ -59,14 +56,16 @@ final class CitationComposerModel {
     }
 
     /// The one dialog on screen. A child remembers the dialog underneath it.
+    /// Leave, transcription, and delete restore the exact dialog they replaced,
+    /// including a custom-term or new-subject draft.
     enum ComposerPresented: Equatable {
         case authoring
         case edit
         case customTerm(CustomTermDraft, over: ComposerBase)
         case newSubject(NewSubjectDraft, over: ComposerBase)
-        case leave(PendingLeave, returnTo: ComposerBase?)
-        case transcription(PendingTranscriptionConfirm, returnTo: ComposerBase?)
-        case deleteImpact(returnTo: ComposerBase?)
+        indirect case leave(PendingLeave, returnTo: ComposerPresented?)
+        indirect case transcription(PendingTranscriptionConfirm, returnTo: ComposerPresented?)
+        indirect case deleteImpact(returnTo: ComposerPresented?)
     }
 
     enum CatalogWarmError: Error {
@@ -90,10 +89,6 @@ final class CitationComposerModel {
     let context: CitationComposerContext
     @ObservationIgnored
     weak var navigation: WorkspaceNavigation?
-    var modal: ComposerPresented? {
-        get { presented }
-        set { show(newValue) }
-    }
 
     var pendingLeave: PendingLeave? {
         get {
@@ -102,10 +97,9 @@ final class CitationComposerModel {
         }
         set {
             if let newValue {
-                let base = dialogBase()
-                show(.leave(newValue, returnTo: base == .none ? nil : base))
+                show(.leave(newValue, returnTo: suspendedDialog()))
             } else if case .leave(_, let returnTo) = presented {
-                restore(returnTo ?? .none)
+                restorePresented(returnTo)
             }
         }
     }
@@ -123,7 +117,7 @@ final class CitationComposerModel {
     var freshLineKey: String?
     var bridgeToast: (title: String, message: String)?
     var editSession: CitationEditSession?
-    var presented: ComposerPresented?
+    private(set) var presented: ComposerPresented?
     var stepContinuation: (() -> Void)?
     private var didApplyEntry = false
     private var switchGeneration = 0
@@ -139,11 +133,7 @@ final class CitationComposerModel {
     private(set) var subjectTypeKey: String = ""
     private(set) var subjectTypeID: String = ""
     var sourceTitle: String { workspace?.source.title ?? "" }
-    var sourceTypeIconKey: String {
-        sourceTypes.first { $0.id == workspace?.source.sourceTypeID }?.iconKey ?? ""
-    }
     var artifacts: [CatalogArtifact] { workspace?.artifacts ?? [] }
-    var artifactIDs: [String] { artifacts.map(\.id) }
     var listedCitations: [CatalogListedCitation] {
         guard let artifactID = selectedArtifactID else { return [] }
         let handle: QueryHandle<[CatalogListedCitation]>? = session.queryHandle(
@@ -199,10 +189,9 @@ final class CitationComposerModel {
         }
         set {
             if let newValue {
-                let base = dialogBase()
-                show(.transcription(newValue, returnTo: base == .none ? nil : base))
+                show(.transcription(newValue, returnTo: suspendedDialog()))
             } else if case .transcription(_, let returnTo) = presented {
-                restore(returnTo ?? .none)
+                restorePresented(returnTo)
             }
         }
     }
@@ -285,24 +274,13 @@ final class CitationComposerModel {
         get { context.citationID }
         set { context.citationID = newValue }
     }
-    var isEditingExisting: Bool { activeCitationID != nil }
-    var showsArtifactSwitcher: Bool { artifacts.count > 1 }
     var hasNoArtifacts: Bool { phase == .compose && artifacts.isEmpty }
     var selectedArtifact: CatalogArtifact? {
         artifacts.first { $0.id == selectedArtifactID }
     }
-    var selectedArtifactIndex: Int? {
-        guard let id = selectedArtifactID else { return nil }
-        return artifacts.firstIndex { $0.id == id }
-    }
     var isPDFArtifact: Bool { artifactViewer.kind == .pdf }
     var isImageArtifact: Bool { artifactViewer.kind == .image }
-    var hasLocator: Bool { selectedArtifactID != nil }
     var isLocatorArtifactOnly: Bool { locator.isArtifactOnly }
-    var isLocatorPageSetOnViewer: Bool {
-        guard let page = locator.page else { return false }
-        return page == artifactViewer.page
-    }
     var locatorPage: Int? { locator.page }
     var activeCitationRef: String {
         if let id = activeCitationID,
@@ -321,8 +299,6 @@ final class CitationComposerModel {
     func listedCount(for artifactID: String) -> Int {
         citationCountsByArtifact[artifactID, default: 0]
     }
-
-    var identityMenusDisabled: Bool { hasUnsavedDocumentWork || isTranscribing }
 
     var hasUnsavedDocumentWork: Bool {
         fields.isDirty || authoring.holdsLeave || (editSession?.isDirty ?? false)
@@ -418,11 +394,6 @@ final class CitationComposerModel {
         return handle?.value
     }
 
-    private var sourceTypes: [CatalogSourceType] {
-        let handle: QueryHandle<[CatalogSourceType]>? = session.queryHandle(sourceTypesKey)
-        return handle?.value ?? []
-    }
-
     private var fieldsSnapshot: PropertiesSnapshot { context.fieldsSnapshot }
 
     var graphSnapshot: SourceGraphSnapshot { context.graphSnapshot }
@@ -516,12 +487,7 @@ final class CitationComposerModel {
                 guard !isTranscribing else { return }
                 let target = id
                 stepContinuation = { self.switchOpenCitation(to: target) }
-                pendingLeave = PendingLeave(
-                    citationDirty: true,
-                    observationCount: authoring.holdsLeave ? 1 : 0,
-                    connectionTouched: false,
-                    keepDraft: true
-                )
+                pendingLeave = PendingLeave(keepDraft: true)
                 return
             }
             switchOpenCitation(to: id)
@@ -538,34 +504,11 @@ final class CitationComposerModel {
         requestStep { await self.selectCitationAndLoad(nil) }
     }
 
-    func stepArtifact(by delta: Int) {
-        let ids = artifactIDs
-        guard let current = selectedArtifactID, let index = ids.firstIndex(of: current) else { return }
-        let next = index + delta
-        guard ids.indices.contains(next) else { return }
-        let id = ids[next]
-        requestStep { await self.selectArtifactAndLoad(id) }
-    }
-
-    var canStepArtifactBackward: Bool {
-        guard let current = selectedArtifactID, let index = artifactIDs.firstIndex(of: current) else { return false }
-        return index > 0
-    }
-
-    var canStepArtifactForward: Bool {
-        guard let current = selectedArtifactID, let index = artifactIDs.firstIndex(of: current) else { return false }
-        return index + 1 < artifactIDs.count
-    }
-
     func requestStep(_ work: @escaping @MainActor () async -> Void) {
         guard !isTranscribing else { return }
         if hasUnsavedDocumentWork {
             stepContinuation = { self.startIdentitySwitch(work) }
-            pendingLeave = PendingLeave(
-                citationDirty: fields.isDirty,
-                observationCount: (authoring.holdsLeave || (editSession?.isDirty ?? false)) ? 1 : 0,
-                connectionTouched: false
-            )
+            pendingLeave = PendingLeave()
             return
         }
         startIdentitySwitch(work)
@@ -636,7 +579,7 @@ final class CitationComposerModel {
             fields.error = message
         }
         if deleteImpact.request == nil, case .deleteImpact(let returnTo) = presented {
-            restore(returnTo ?? .none)
+            restorePresented(returnTo)
         }
     }
 
@@ -867,11 +810,22 @@ final class CitationComposerModel {
         connections.clearSavedKeepingPending()
         authoring = .rest
         editSession = nil
-        presented = nil
+        show(nil)
     }
 
-    /// The dialog a child should return to. A child already on screen keeps its own base.
+    /// The sheet underneath a custom-term or new-subject dialog.
     func dialogBase() -> ComposerBase {
+        switch presented {
+        case nil:
+            if editSession != nil { return .edit }
+            if case .rest = authoring { return .none }
+            return .authoring
+        default:
+            return base(of: presented)
+        }
+    }
+
+    private func base(of presented: ComposerPresented?) -> ComposerBase {
         switch presented {
         case .authoring:
             return .authoring
@@ -880,11 +834,22 @@ final class CitationComposerModel {
         case .customTerm(_, let over), .newSubject(_, let over):
             return over
         case .leave(_, let returnTo), .transcription(_, let returnTo), .deleteImpact(let returnTo):
-            return returnTo ?? .none
+            return base(of: returnTo)
         case nil:
-            if editSession != nil { return .edit }
-            if case .rest = authoring { return .none }
-            return .authoring
+            return .none
+        }
+    }
+
+    /// The dialog a leave, transcription, or delete prompt should come back to,
+    /// including a child draft that was on screen.
+    func suspendedDialog() -> ComposerPresented? {
+        switch presented {
+        case .authoring, .edit, .customTerm, .newSubject:
+            return presented
+        case .leave(_, let returnTo), .transcription(_, let returnTo), .deleteImpact(let returnTo):
+            return returnTo
+        case nil:
+            return nil
         }
     }
 
@@ -896,6 +861,19 @@ final class CitationComposerModel {
             if case .rest = authoring { show(nil) } else { show(.authoring) }
         case .edit:
             show(editSession == nil ? nil : .edit)
+        }
+    }
+
+    func restorePresented(_ next: ComposerPresented?) {
+        switch next {
+        case .authoring:
+            restore(.authoring)
+        case .edit:
+            restore(.edit)
+        case .customTerm, .newSubject:
+            show(next)
+        case .leave, .transcription, .deleteImpact, nil:
+            show(nil)
         }
     }
 
@@ -927,17 +905,16 @@ final class CitationComposerModel {
         deleteImpact.applyRequest(value)
         if value == nil {
             if case .deleteImpact(let returnTo) = presented {
-                restore(returnTo ?? .none)
+                restorePresented(returnTo)
             }
         } else {
-            let base = dialogBase()
-            show(.deleteImpact(returnTo: base == .none ? nil : base))
+            show(.deleteImpact(returnTo: suspendedDialog()))
         }
     }
 
     func presentImpact(kind: String, id: String, ref: String, title: String) async {
         fields.error = nil
-        let returnTo = dialogBase()
+        let returnTo = suspendedDialog()
         await deleteImpact.ask(kind: kind, id: id, ref: ref, title: title) {
             try await self.store.getDeleteImpact(
                 projectDir: self.session.projectKey.projectDir,
@@ -946,7 +923,7 @@ final class CitationComposerModel {
             )
         }
         if deleteImpact.request != nil {
-            show(.deleteImpact(returnTo: returnTo == .none ? nil : returnTo))
+            show(.deleteImpact(returnTo: returnTo))
         } else if let message = deleteImpact.error {
             fields.error = message
         }
@@ -970,7 +947,7 @@ final class CitationComposerModel {
         if Task.isCancelled { return }
         authoring = .rest
         editSession = nil
-        presented = nil
+        show(nil)
         activeCitationID = nil
         fields.resetBlank()
         observationRows.replace([])
@@ -1246,24 +1223,22 @@ extension CitationComposerModel: WorkspaceLeaveGuard {
     func shouldHoldNavigation(_ pending: PendingNavigation) -> Bool {
         _ = pending
         guard shouldHoldLeave else { return false }
-        pendingLeave = PendingLeave(
-            citationDirty: fields.isDirty,
-            observationCount: (authoring.holdsLeave || (editSession?.isDirty ?? false)) ? 1 : 0,
-            connectionTouched: false
-        )
+        pendingLeave = PendingLeave()
         return true
     }
 
     func discardLeaveChanges() {
         let keepDraft = pendingLeave?.keepDraft == true
-        if !keepDraft {
+        let next = stepContinuation
+        stepContinuation = nil
+        if keepDraft {
+            pendingLeave = nil
+        } else {
             fields.revert()
             authoring = .rest
             editSession = nil
+            show(nil)
         }
-        let next = stepContinuation
-        stepContinuation = nil
-        pendingLeave = nil
         if let next {
             next()
             return

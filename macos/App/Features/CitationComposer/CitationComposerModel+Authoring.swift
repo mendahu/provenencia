@@ -147,11 +147,7 @@ extension CitationComposerModel {
     func openAuthoring(_ work: @escaping @MainActor () -> Void) {
         if authoring.holdsLeave || (editSession?.isDirty ?? false) {
             stepContinuation = work
-            pendingLeave = PendingLeave(
-                citationDirty: fields.isDirty,
-                observationCount: 1,
-                connectionTouched: false
-            )
+            pendingLeave = PendingLeave()
             return
         }
         work()
@@ -192,10 +188,6 @@ extension CitationComposerModel {
             )
         )
         showAuthoringDialog()
-    }
-
-    func beginAddBridge() {
-        openAuthoring { self.beginBridgeDraft(endA: "", endB: "", termID: "", origin: .blank) }
     }
 
     func beginAddObservation(for subjectID: String) {
@@ -265,7 +257,28 @@ extension CitationComposerModel {
     }
 
     func assignCreatedSubject(_ subjectID: String, field: CitationSubjectField) {
+        if case .newSubject(_, let over) = presented, over == .edit {
+            mutateEdit { session in
+                guard case .property(var values, let persistedID, let persistedRef) = session.kind else { return }
+                self.applyObservationSubject(subjectID, field: field, values: &values)
+                session.kind = .property(
+                    values: values,
+                    persistedID: persistedID,
+                    persistedRef: persistedRef
+                )
+            }
+            return
+        }
         selectAuthoringSubject(subjectID, field: field)
+    }
+
+    /// Creates the citation when the composer does not have one yet, and only
+    /// then treats the current field values as the saved baseline.
+    func ensuredCitationID() async throws -> String {
+        let creating = context.citationID?.isEmpty != false
+        let id = try await context.ensureCitationID(fields.values)
+        if creating { fields.captureBaseline() }
+        return id
     }
 
     func saveAuthoring() async {
@@ -400,7 +413,11 @@ extension CitationComposerModel {
                 return
             }
             observationRows.replaceValues(rowID: row.id, values: values)
-            await observationRows.commit(rowID: row.id)
+            let creating = context.citationID?.isEmpty != false
+            await observationRows.commit(rowID: row.id, citation: fields.values)
+            if creating, context.citationID?.isEmpty == false {
+                fields.captureBaseline()
+            }
             if let saved = observationRows.rows.first(where: { $0.id == row.id }),
                case .error(let message) = saved.state
             {
@@ -451,13 +468,6 @@ extension CitationComposerModel {
         }
     }
 
-    func showOnGraph(bridgeID: String) {
-        requestStep {
-            self.session.setPendingGraphSelection(subjectID: bridgeID, sourceID: self.sourceID)
-            self.navigation?.go(to: self.graphLocation())
-        }
-    }
-
     func swapBridgeEnds() {
         mutateBridge { draft in
             let endA = draft.endA
@@ -493,7 +503,7 @@ extension CitationComposerModel {
         authoring = .property(draft)
         let subjectID = draft.values.subjectID
         do {
-            let citationID = try await context.ensureCitationID(context.citationValues())
+            let citationID = try await ensuredCitationID()
             let written = try await context.store.addObservationsToCitation(
                 projectDir: context.projectDir,
                 userID: context.userID,
@@ -564,7 +574,7 @@ extension CitationComposerModel {
         let endALabel = vocabulary.subjectsByID[endA]?.label ?? ""
         let endBLabel = vocabulary.subjectsByID[draft.endB]?.label ?? ""
         do {
-            let citationID = try await context.ensureCitationID(context.citationValues())
+            let citationID = try await ensuredCitationID()
             let created = try await context.store.createCitedBridge(
                 projectDir: context.projectDir,
                 userID: context.userID,

@@ -2998,24 +2998,6 @@ enum L10n {
             comment: "Footer button that returns to the Evidence graph through the leave guard"
         )
 
-        static let citationStatusNew = LocalizedStringResource(
-            "citationComposer.citationStatusNew",
-            defaultValue: "First save creates the citation. It can stay empty",
-            comment: "Status under citation fields when the Citation does not exist yet"
-        )
-
-        static let citationStatusDirty = LocalizedStringResource(
-            "citationComposer.citationStatusDirty",
-            defaultValue: "Citation has unsaved changes",
-            comment: "Status under citation fields when the Citation row is dirty"
-        )
-
-        static let citationStatusSaved = LocalizedStringResource(
-            "citationComposer.citationStatusSaved",
-            defaultValue: "Citation saved",
-            comment: "Status under citation fields when the Citation row matches the catalog"
-        )
-
         static let rowStateNew = LocalizedStringResource(
             "citationComposer.rowStateNew",
             defaultValue: "New",

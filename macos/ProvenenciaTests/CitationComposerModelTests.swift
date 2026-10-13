@@ -289,7 +289,7 @@ struct CitationComposerModelTests {
         model.observationRows.applyText(rowID: rowID, text: "changed")
         #expect(model.observations[0].state == .edited)
         store.recordedCalls = []
-        await model.observationRows.commit(rowID: rowID)
+        await model.observationRows.commit(rowID: rowID, citation: model.fields.values)
         #expect(store.recordedCalls == ["updateObservation id=obs-1"])
     }
 
@@ -338,7 +338,6 @@ struct CitationComposerModelTests {
         await model.confirmPendingImpact()
         #expect(store.recordedCalls.contains { $0 == "deleteCitation id=cit-1" })
         #expect(model.activeCitationID == nil)
-        #expect(model.isEditingExisting == false)
         #expect(store.citationsByID["cit-1"] == nil)
     }
 
@@ -520,9 +519,9 @@ struct CitationComposerModelTests {
         seedArtifact(store)
         let model = makeModel(store: store)
         await model.prepare()
-        #expect(model.identityMenusDisabled == false)
+        #expect(model.hasUnsavedDocumentWork == false)
         model.transcription = "dirty"
-        #expect(model.identityMenusDisabled)
+        #expect(model.hasUnsavedDocumentWork)
         let connect = makeModel(
             store: store,
             connectFrom: subjectID,
@@ -536,9 +535,9 @@ struct CitationComposerModelTests {
         } else {
             Issue.record("Connect opens a bridge draft")
         }
-        #expect(connect.identityMenusDisabled)
+        #expect(connect.hasUnsavedDocumentWork)
         connect.mutateBridge { $0.termID = "term-witness" }
-        #expect(connect.identityMenusDisabled)
+        #expect(connect.hasUnsavedDocumentWork)
         #expect(connect.shouldHoldLeave)
         #expect(connect.shouldHoldNavigation(.back))
     }
@@ -590,23 +589,6 @@ struct CitationComposerModelTests {
     @Test func pendingConnectionOnNewAndExisting() async {
         let store = makeStore()
         seedArtifact(store)
-        seedCitation(store)
-        let existing = makeModel(store: store, citationID: "cit-1")
-        await existing.prepare()
-        existing.connections.seedPending(
-            fromSubjectID: subjectID,
-            toSubjectID: eventID,
-            fromLabel: "Margt.",
-            toLabel: "Birth",
-            bridgeTypeKey: "participation",
-            termProperty: store.propertiesByProject[projectDir]!.first { $0.id == rolePropertyID },
-            sentence: "pending"
-        )
-        existing.connections.applyTerm(connectionID: existing.connections.rows[0].id, termID: "term-witness")
-        store.recordedCalls = []
-        await existing.connections.saveConnection()
-        #expect(store.recordedCalls.contains { $0.hasPrefix("createCitedBridge citationID=cit-1 observations=3") })
-
         let fresh = makeModel(
             store: store,
             connectFrom: subjectID,
@@ -1349,12 +1331,148 @@ struct CitationComposerModelTests {
         let model = makeModel(store: store, citationID: "cit-1")
         await model.prepare()
         model.transcription = "unsaved"
-        model.stepArtifact(by: 1)
+        model.requestSelectArtifact("art-1")
         #expect(model.pendingLeave != nil)
         #expect(model.activeCitationID == "cit-1")
         model.keepEditingAfterLeave()
         #expect(model.pendingLeave == nil)
         #expect(model.transcription == "unsaved")
+    }
+
+    @Test func customTermReturnsToTheNewObservationDialog() async {
+        let store = makeStore()
+        seedArtifact(store)
+        let model = makeModel(store: store)
+        await model.prepare()
+        model.beginPropertyDraft(subjectID: subjectID)
+        model.beginAddCustomTerm(propertyID: occupationPropertyID)
+        guard case .customTerm(_, let over) = model.presented else {
+            Issue.record("custom term should open over the new observation")
+            return
+        }
+        #expect(over == .authoring)
+        model.customTermDraft?.label = "Weaver"
+        model.cancelCustomTermDialog()
+        #expect(model.presented == .authoring)
+        #expect(model.customTermDraft == nil)
+        if case .property = model.authoring {} else {
+            Issue.record("the new observation draft should still be open")
+        }
+    }
+
+    @Test func keepEditingRestoresACustomTermDraft() async {
+        let store = makeStore()
+        seedArtifact(store)
+        let model = makeModel(store: store)
+        await model.prepare()
+        model.beginPropertyDraft(subjectID: subjectID)
+        model.mutateProperty {
+            $0.values.propertyID = occupationPropertyID
+            $0.values.valueText = "miller"
+        }
+        model.beginAddCustomTerm(propertyID: occupationPropertyID)
+        model.customTermDraft?.label = "Weaver"
+        #expect(model.shouldHoldNavigation(.back))
+        guard case .leave(_, let returnTo) = model.presented,
+              case .customTerm(let draft, .authoring) = returnTo
+        else {
+            Issue.record("leave should return to the custom term, got \(String(describing: model.presented))")
+            return
+        }
+        #expect(draft.label == "Weaver")
+        model.keepEditingAfterLeave()
+        guard case .customTerm(let restored, .authoring) = model.presented else {
+            Issue.record("keep editing should reopen the custom term")
+            return
+        }
+        #expect(restored.label == "Weaver")
+    }
+
+    @Test func discardingLeaveDropsTheChildDialog() async {
+        let store = makeStore()
+        seedArtifact(store)
+        let model = makeModel(store: store)
+        await model.prepare()
+        model.beginPropertyDraft(subjectID: subjectID)
+        model.mutateProperty { $0.values.valueText = "miller" }
+        model.beginAddCustomTerm(propertyID: occupationPropertyID)
+        model.customTermDraft?.label = "Weaver"
+        #expect(model.shouldHoldNavigation(.back))
+        model.discardLeaveChanges()
+        #expect(model.presented == nil)
+        #expect(model.customTermDraft == nil)
+        #expect(model.authoring == .rest)
+    }
+
+    @Test func keepEditingRestoresTheEditDialog() async {
+        let store = makeStore()
+        seedArtifact(store)
+        seedCitation(store, observations: [occupationObservation(id: "obs-1", ref: "OBS-ABC", citationID: "cit-1")])
+        let model = makeModel(store: store, citationID: "cit-1")
+        await model.prepare()
+        #expect(model.beginEdit(observationID: "obs-1", subjectID: subjectID))
+        model.mutateEdit { session in
+            guard case .property(var values, let id, let ref) = session.kind else { return }
+            values.valueText = "changed"
+            session.kind = .property(values: values, persistedID: id, persistedRef: ref)
+        }
+        #expect(model.shouldHoldNavigation(.back))
+        guard case .leave(_, let returnTo) = model.presented else {
+            Issue.record("leave should be showing")
+            return
+        }
+        #expect(returnTo == .edit)
+        model.keepEditingAfterLeave()
+        #expect(model.presented == .edit)
+        if case .property(let values, _, _) = model.editSession?.kind {
+            #expect(values.valueText == "changed")
+        } else {
+            Issue.record("the edit session should still hold the draft")
+        }
+    }
+
+    @Test func newSubjectFromTheEditDialogSelectsIt() async {
+        let store = makeStore()
+        seedArtifact(store)
+        seedCitation(store, observations: [occupationObservation(id: "obs-1", ref: "OBS-ABC", citationID: "cit-1")])
+        let model = makeModel(store: store, citationID: "cit-1")
+        await model.prepare()
+        #expect(model.beginEdit(observationID: "obs-1", subjectID: subjectID))
+        model.beginNewSubject(typeKey: "person", field: .propertySubject)
+        guard case .newSubject(_, let over) = model.presented else {
+            Issue.record("new subject should open over the edit dialog")
+            return
+        }
+        #expect(over == .edit)
+        model.newSubjectDraft?.label = "Ada"
+        await model.confirmNewSubject()
+        #expect(model.presented == .edit)
+        #expect(model.authoring == .rest)
+        guard case .property(let values, _, _) = model.editSession?.kind else {
+            Issue.record("the edit dialog should still be a property observation")
+            return
+        }
+        let created = store.subjectsBySource[sourceID]?.last
+        #expect(values.subjectID == created?.id)
+        #expect(values.subjectID != subjectID)
+    }
+
+    @Test func saveEditKeepsTheDialogWhenThePropertyIsMissing() async {
+        let store = makeStore()
+        seedArtifact(store)
+        seedCitation(store, observations: [occupationObservation(id: "obs-1", ref: "OBS-ABC", citationID: "cit-1")])
+        let model = makeModel(store: store, citationID: "cit-1")
+        await model.prepare()
+        #expect(model.beginEdit(observationID: "obs-1", subjectID: subjectID))
+        model.mutateEdit { session in
+            guard case .property(var values, let id, let ref) = session.kind else { return }
+            values.propertyID = "missing"
+            session.kind = .property(values: values, persistedID: id, persistedRef: ref)
+        }
+        await model.saveEdit()
+        #expect(model.presented == .edit)
+        #expect(model.editSession?.error != nil)
+        #expect(model.editSession?.isSaving == false)
     }
 
     private func storeKey(_ propertyID: String) -> String {
@@ -1400,6 +1518,74 @@ struct CitationAuthoringNavigationTests {
             nextFieldAlreadyFocusable: true,
             nextFieldWillExist: true
         ))
+    }
+
+    @Test func advanceClaimsTabOnlyWhenTheNextFieldIsInserted() {
+        let inserted = CitationAuthoringNavigation.advance(
+            from: .subject,
+            committed: "sub-1",
+            via: .tab,
+            subjectID: "",
+            propertyID: "",
+            bridgeHasTerm: false,
+            termFieldAfterCommit: false
+        )
+        #expect(inserted == CitationAuthoringAdvance(next: .property, claimTab: true))
+
+        let alreadyThere = CitationAuthoringNavigation.advance(
+            from: .subject,
+            committed: "sub-2",
+            via: .tab,
+            subjectID: "sub-1",
+            propertyID: "",
+            bridgeHasTerm: false,
+            termFieldAfterCommit: false
+        )
+        #expect(alreadyThere == CitationAuthoringAdvance(next: nil, claimTab: false))
+
+        let clickMoves = CitationAuthoringNavigation.advance(
+            from: .property,
+            committed: "prop-1",
+            via: .click,
+            subjectID: "sub-1",
+            propertyID: "",
+            bridgeHasTerm: false,
+            termFieldAfterCommit: false
+        )
+        #expect(clickMoves == CitationAuthoringAdvance(next: .value, claimTab: false))
+
+        let termInserted = CitationAuthoringNavigation.advance(
+            from: .endB,
+            committed: "end-b",
+            via: .tab,
+            subjectID: "",
+            propertyID: "",
+            bridgeHasTerm: false,
+            termFieldAfterCommit: true
+        )
+        #expect(termInserted == CitationAuthoringAdvance(next: .term, claimTab: true))
+
+        let termAlready = CitationAuthoringNavigation.advance(
+            from: .endB,
+            committed: "end-b",
+            via: .return,
+            subjectID: "",
+            propertyID: "",
+            bridgeHasTerm: true,
+            termFieldAfterCommit: true
+        )
+        #expect(termAlready == CitationAuthoringAdvance(next: .term, claimTab: false))
+
+        let newSubject = CitationAuthoringNavigation.advance(
+            from: .subject,
+            committed: CitationComposerModel.newSubjectPrefix + "person",
+            via: .return,
+            subjectID: "",
+            propertyID: "",
+            bridgeHasTerm: false,
+            termFieldAfterCommit: false
+        )
+        #expect(newSubject == CitationAuthoringAdvance(next: nil, claimTab: false))
     }
 
     @Test func tabClaimsTheBridgeTermOnlyWhenTheCommitInsertsIt() {

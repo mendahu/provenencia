@@ -21,7 +21,6 @@ final class CitationComposerContext {
 
     var citationID: String?
     var artifactID: String?
-    weak var fields: CitationFieldsDraft?
 
     @ObservationIgnored
     private var memoToken: MemoToken?
@@ -122,7 +121,6 @@ final class CitationComposerContext {
             observations: []
         )
         citationID = created.0.id
-        captureCitationBaseline()
         applyWrite(created.2)
         await reloadListedCitations()
         return created.0.id
@@ -141,14 +139,6 @@ final class CitationComposerContext {
     func waitForGraph() async {
         let _: QueryHandle<SourceGraphRows> = session.query(graphKey)
         _ = await session.readyValue(graphKey) as SourceGraphRows?
-    }
-
-    func citationValues() -> CitationFieldsDraft.Values {
-        fields?.values ?? CitationFieldsDraft.Values()
-    }
-
-    func captureCitationBaseline() {
-        fields?.captureBaseline()
     }
 
     private func termsKey(propertyID: String) -> CatalogQueryKey {

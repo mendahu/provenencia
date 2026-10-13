@@ -9,6 +9,8 @@ struct SourcePageIdentityHeader: View {
     @State private var titleDraft = ""
     @State private var coverMenu = PVContextMenuState()
     @State private var coverKeyboard = PVContextMenuKeyboard.inactive
+    private enum TypeField: Hashable { case combo }
+    @FocusState private var typeFieldFocused: TypeField?
 
     private var coverMenuItemCount: Int {
         model.source?.coverMode == "type_icon" ? 0 : 1
@@ -234,7 +236,7 @@ struct SourcePageIdentityHeader: View {
                             emptyLabel: L10n.Sources.typeNoMatch,
                             label: L10n.Sources.pageFormType,
                             accessibilityIdentifierPrefix: "sources.page.type",
-                            activateOnAppear: true
+                            focus: PVComboFocus($typeFieldFocused, equals: .combo)
                         ) { option, query in
                             HStack(spacing: PVSpacing.space3) {
                                 if let type = model.identity.types.first(where: { $0.id == option.value }) {
@@ -249,6 +251,7 @@ struct SourcePageIdentityHeader: View {
                         }
                         .frame(width: 210)
                         .disabled(model.identity.isSaving)
+                        .onAppear { DispatchQueue.main.async { typeFieldFocused = .combo } }
                         .onChange(of: model.identity.typeDraftID) { _, newValue in
                             guard !newValue.isEmpty, newValue != model.identity.sourceTypeID else { return }
                             Task { await model.identity.saveType() }

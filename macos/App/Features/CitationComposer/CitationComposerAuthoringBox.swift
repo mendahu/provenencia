@@ -4,7 +4,6 @@ import SwiftUI
 struct CitationComposerAuthoringBox: View {
     @Bindable var model: CitationComposerModel
     @FocusState private var focus: CitationAuthoringFocus?
-    @State private var opensList = false
 
     var body: some View {
         switch model.authoring {
@@ -67,23 +66,16 @@ struct CitationComposerAuthoringBox: View {
             subjectField: .propertySubject,
             error: draft.error,
             identifierPrefix: "citationComposer.draft",
-            subjectFocused: focus == .subject,
-            propertyFocused: focus == .property,
-            valueFocused: focus == .value,
-            opensList: opensList,
-            applyTermToEdit: false,
-            onCommit: { field, value, via in
-                claimOrAdvance(from: field, committed: value, via: via, bridgeHasTerm: false)
-            }
+            focus: $focus,
+            applyTermToEdit: false
         )
         .onAppear {
-            opensList = false
-            focus = CitationAuthoringNavigation.initialPropertyFocus(subjectID: draft.values.subjectID)
+            let initial = CitationAuthoringNavigation.initialPropertyFocus(subjectID: draft.values.subjectID)
+            DispatchQueue.main.async { focus = initial }
         }
         .onChange(of: draft.isSaving) { wasSaving, saving in
             guard wasSaving, !saving, draft.error == nil else { return }
-            opensList = true
-            focus = .property
+            DispatchQueue.main.async { focus = .property }
         }
     }
 
@@ -101,14 +93,14 @@ struct CitationComposerAuthoringBox: View {
                     label: L10n.CitationComposer.endA,
                     prefix: "citationComposer.draft.endA",
                     field: .endA,
-                    focused: focus == .endA
+                    draft: draft
                 )
                 endCombo(
                     selection: endBBinding,
                     label: L10n.CitationComposer.endB,
                     prefix: "citationComposer.draft.endB",
                     field: .endB,
-                    focused: focus == .endB
+                    draft: draft
                 )
             }
             bridgeStatus(pair, draft: draft)
@@ -118,82 +110,30 @@ struct CitationComposerAuthoringBox: View {
         }
         .accessibilityIdentifier("citationComposer.authoring.bridge")
         .onAppear {
-            opensList = false
             let hasTerm = bridgeHasTerm(draft)
-            focus = CitationAuthoringNavigation.initialBridgeFocus(
+            let initial = CitationAuthoringNavigation.initialBridgeFocus(
                 endA: draft.endA,
                 endB: draft.endB,
                 hasTermField: hasTerm,
                 termID: draft.termID
             )
+            DispatchQueue.main.async { focus = initial }
         }
         .onChange(of: draft.isSaving) { wasSaving, saving in
             guard wasSaving, !saving, draft.error == nil else { return }
-            opensList = true
-            focus = .endB
-        }
-    }
-
-    private func claimOrAdvance(
-        from field: CitationAuthoringFocus,
-        committed: String,
-        via: PVComboCommitVia,
-        bridgeHasTerm: Bool
-    ) -> Bool {
-        guard CitationAuthoringNavigation.shouldAdvance(committed) else { return false }
-        let claim = via == .tab && CitationAuthoringNavigation.claimsForwardTab(
-            nextFieldAlreadyFocusable: nextFieldAlreadyFocusable(field),
-            nextFieldWillExist: nextFieldWillExist(field, committed: committed, bridgeHasTerm: bridgeHasTerm)
-        )
-        if via != .tab || claim {
-            if let next = CitationAuthoringNavigation.next(after: field, bridgeHasTerm: bridgeHasTerm || field == .endB && nextFieldWillExist(field, committed: committed, bridgeHasTerm: bridgeHasTerm)) {
-                opensList = true
-                focus = next
-            }
-        }
-        return claim
-    }
-
-    private func nextFieldAlreadyFocusable(_ field: CitationAuthoringFocus) -> Bool {
-        switch field {
-        case .subject:
-            if case .property(let draft) = model.authoring { return !draft.values.subjectID.isEmpty }
-            return false
-        case .property:
-            if case .property(let draft) = model.authoring { return !draft.values.propertyID.isEmpty }
-            return false
-        case .endB:
-            if case .bridge(let draft) = model.authoring { return bridgeHasTerm(draft) }
-            return false
-        default:
-            return true
-        }
-    }
-
-    private func nextFieldWillExist(
-        _ field: CitationAuthoringFocus,
-        committed: String,
-        bridgeHasTerm: Bool
-    ) -> Bool {
-        switch field {
-        case .subject, .endA:
-            return true
-        case .property:
-            return !committed.isEmpty
-        case .endB:
-            guard case .bridge(var draft) = model.authoring else { return bridgeHasTerm }
-            draft.endB = committed
-            return self.bridgeHasTerm(draft)
-        default:
-            return false
+            DispatchQueue.main.async { focus = .endB }
         }
     }
 
     private func bridgeHasTerm(_ draft: CitationBridgeDraft) -> Bool {
+        bridgeHasTerm(endA: draft.endA, endB: draft.endB, termID: draft.termID)
+    }
+
+    private func bridgeHasTerm(endA: String, endB: String, termID: String) -> Bool {
         let pair = CitationComposerAuthoring.resolvePair(
-            endA: draft.endA,
-            endB: draft.endB,
-            termID: draft.termID,
+            endA: endA,
+            endB: endB,
+            termID: termID,
             vocabulary: model.vocabulary
         )
         if case .ready(let ready) = pair, ready.termProperty != nil { return true }
@@ -205,9 +145,12 @@ struct CitationComposerAuthoringBox: View {
         label: LocalizedStringResource,
         prefix: String,
         field: CitationAuthoringFocus,
-        focused: Bool
+        draft: CitationBridgeDraft
     ) -> some View {
-        PVField(label: label) {
+        let hasTerm = bridgeHasTerm(draft)
+        let endA = draft.endA
+        let termID = draft.termID
+        return PVField(label: label) {
             PVComboBox(
                 selection: selection,
                 options: model.subjectOptions,
@@ -216,18 +159,22 @@ struct CitationComposerAuthoringBox: View {
                 emptyLabel: L10n.CitationComposer.subjectPlaceholder,
                 label: label,
                 accessibilityIdentifierPrefix: prefix,
-                hostedFocus: focused,
-                opensListOnFocus: focused && opensList,
-                onCommitVia: { value, via in
-                    claimOrAdvance(
+                focus: PVComboFocus($focus, equals: field),
+                onCommit: { value, via in
+                    let after = field == .endB
+                        ? self.bridgeHasTerm(endA: endA, endB: value, termID: termID)
+                        : hasTerm
+                    let decision = CitationAuthoringNavigation.advance(
                         from: field,
                         committed: value,
                         via: via,
-                        bridgeHasTerm: {
-                            if case .bridge(let draft) = model.authoring { return bridgeHasTerm(draft) }
-                            return false
-                        }()
+                        subjectID: "",
+                        propertyID: "",
+                        bridgeHasTerm: hasTerm,
+                        termFieldAfterCommit: after
                     )
+                    if let next = decision.next { focus = next }
+                    return decision.claimTab
                 }
             )
         }
@@ -261,8 +208,7 @@ struct CitationComposerAuthoringBox: View {
                         model.beginAddCustomTerm(propertyID: property.id)
                     }
                 },
-                focusTerm: focus == .term,
-                opensList: opensList && focus == .term
+                termFocus: PVComboFocus($focus, equals: .term)
             )
         }
     }
@@ -330,15 +276,13 @@ struct CitationPropertyFields: View {
     var subjectField: CitationSubjectField
     var error: String?
     var identifierPrefix: String
-    var subjectFocused: Bool
-    var propertyFocused: Bool
-    var valueFocused: Bool
-    var opensList: Bool
+    var focus: FocusState<CitationAuthoringFocus?>.Binding
     var applyTermToEdit: Bool
-    var onCommit: (CitationAuthoringFocus, String, PVComboCommitVia) -> Bool
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        let subjectID = values.subjectID
+        let propertyID = values.propertyID
+        return VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .top, spacing: PVSpacing.space5) {
                 PVField(label: L10n.CitationComposer.subjectLabel) {
                     PVComboBox(
@@ -349,9 +293,10 @@ struct CitationPropertyFields: View {
                         emptyLabel: L10n.CitationComposer.subjectPlaceholder,
                         label: L10n.CitationComposer.subjectLabel,
                         accessibilityIdentifierPrefix: "\(identifierPrefix).subject",
-                        hostedFocus: subjectFocused,
-                        opensListOnFocus: subjectFocused && opensList,
-                        onCommitVia: { onCommit(.subject, $0, $1) }
+                        focus: PVComboFocus(focus, equals: .subject),
+                        onCommit: { value, via in
+                            self.applyAdvance(from: .subject, committed: value, via: via, subjectID: subjectID, propertyID: propertyID)
+                        }
                     )
                 }
                 .frame(maxWidth: .infinity)
@@ -364,9 +309,10 @@ struct CitationPropertyFields: View {
                         emptyLabel: L10n.CitationComposer.propertyPlaceholder,
                         label: L10n.CitationComposer.propertyLabel,
                         accessibilityIdentifierPrefix: "\(identifierPrefix).property",
-                        hostedFocus: propertyFocused,
-                        opensListOnFocus: propertyFocused && opensList,
-                        onCommitVia: { onCommit(.property, $0, $1) }
+                        focus: PVComboFocus(focus, equals: .property),
+                        onCommit: { value, via in
+                            self.applyAdvance(from: .property, committed: value, via: via, subjectID: subjectID, propertyID: propertyID)
+                        }
                     )
                     .disabled(values.subjectID.isEmpty)
                 }
@@ -395,7 +341,7 @@ struct CitationPropertyFields: View {
                     text: textBinding,
                     size: .sm,
                     prompt: L10n.CitationComposer.valueAsWritten,
-                    activateOnAppear: valueFocused
+                    focus: PVInputFocus(focus, equals: .value)
                 )
                 .accessibilityIdentifier("\(identifierPrefix).text")
             case PropertyValueType.integer.rawValue:
@@ -404,7 +350,7 @@ struct CitationPropertyFields: View {
                     size: .sm,
                     mono: true,
                     suffix: property?.key == "age" ? L10n.string(L10n.CitationComposer.yearsSuffix) : nil,
-                    activateOnAppear: valueFocused
+                    focus: PVInputFocus(focus, equals: .value)
                 )
             case PropertyValueType.term.rawValue:
                 HStack(spacing: PVSpacing.space4) {
@@ -416,8 +362,7 @@ struct CitationPropertyFields: View {
                         emptyLabel: L10n.CitationComposer.termEmpty,
                         label: L10n.CitationComposer.valueLabel,
                         accessibilityIdentifierPrefix: "\(identifierPrefix).valueTerm",
-                        hostedFocus: valueFocused,
-                        opensListOnFocus: valueFocused && opensList
+                        focus: PVComboFocus(focus, equals: .value)
                     )
                     PVButton(L10n.CitationComposer.addCustomTerm, variant: .ghost, size: .sm, icon: .plus) {
                         model.beginAddCustomTerm(
@@ -431,7 +376,7 @@ struct CitationPropertyFields: View {
                     NameValueEditorForm(
                         draft: nameBinding,
                         accessibilityIdentifierPrefix: "\(identifierPrefix).name",
-                        requestsFocus: valueFocused
+                        requestsFocus: focus.wrappedValue == .value
                     )
                 }
             case PropertyValueType.date.rawValue:
@@ -439,7 +384,7 @@ struct CitationPropertyFields: View {
                     DateValueEditorForm(
                         draft: dateBinding,
                         accessibilityIdentifierPrefix: "\(identifierPrefix).date",
-                        requestsYearFocus: valueFocused
+                        requestsYearFocus: focus.wrappedValue == .value
                     )
                 }
             default:
@@ -465,6 +410,28 @@ struct CitationPropertyFields: View {
                 RoundedRectangle(cornerRadius: PVRadius.md, style: .continuous)
                     .stroke(PVColor.borderSubtle, lineWidth: 1)
             )
+    }
+
+    private func applyAdvance(
+        from field: CitationAuthoringFocus,
+        committed: String,
+        via: PVComboCommitVia,
+        subjectID: String,
+        propertyID: String
+    ) -> Bool {
+        let decision = CitationAuthoringNavigation.advance(
+            from: field,
+            committed: committed,
+            via: via,
+            subjectID: subjectID,
+            propertyID: propertyID,
+            bridgeHasTerm: false,
+            termFieldAfterCommit: false
+        )
+        if let next = decision.next {
+            focus.wrappedValue = next
+        }
+        return decision.claimTab
     }
 
     private var propertyOptions: [PVComboBoxOption] {
@@ -663,8 +630,7 @@ struct CitationBridgeSentence: View {
     var canSwap: Bool
     var onSwap: () -> Void
     var onAddTerm: () -> Void
-    var focusTerm: Bool = false
-    var opensList: Bool = false
+    var termFocus: PVComboFocus? = nil
     var termIdentifierPrefix: String = "citationComposer.draft.term"
 
     var body: some View {
@@ -723,8 +689,7 @@ struct CitationBridgeSentence: View {
                 emptyLabel: L10n.CitationComposer.termEmpty,
                 label: termPlaceholder,
                 accessibilityIdentifierPrefix: termIdentifierPrefix,
-                hostedFocus: focusTerm,
-                opensListOnFocus: focusTerm && opensList
+                focus: termFocus
             )
             .frame(width: 190)
         }

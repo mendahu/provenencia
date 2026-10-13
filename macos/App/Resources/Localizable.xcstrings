@@ -13140,42 +13140,6 @@
         }
       }
     },
-    "citationComposer.citationStatusNew": {
-      "comment": "Status under citation fields when the Citation does not exist yet",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "First save creates the citation. It can stay empty"
-          }
-        }
-      }
-    },
-    "citationComposer.citationStatusDirty": {
-      "comment": "Status under citation fields when the Citation row is dirty",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Citation has unsaved changes"
-          }
-        }
-      }
-    },
-    "citationComposer.citationStatusSaved": {
-      "comment": "Status under citation fields when the Citation row matches the catalog",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Citation saved"
-          }
-        }
-      }
-    },
     "citationComposer.rowStateNew": {
       "comment": "Badge on a draft Observation or pending connection row",
       "extractionState": "manual",

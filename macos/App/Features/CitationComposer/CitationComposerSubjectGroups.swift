@@ -5,7 +5,13 @@ struct CitationComposerObservationsColumn: View {
     @Bindable var model: CitationComposerModel
     var onDone: () -> Void
     @State private var hoveredLineID: String?
-    @FocusState private var focusedLineID: String?
+    @FocusState private var lineFocus: LineControl?
+
+    /// The row and its Edit, Duplicate, and Delete buttons share one focus
+    /// value so the buttons stay on screen while keyboard focus is inside the row.
+    private enum LineControl: Hashable {
+        case row(String), edit(String), duplicate(String), delete(String)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -125,7 +131,7 @@ struct CitationComposerObservationsColumn: View {
     }
 
     private func lineRow(_ line: CitationSavedLine, rule: Bool) -> some View {
-        let revealed = hoveredLineID == line.id || focusedLineID == line.id
+        let revealed = hoveredLineID == line.id || lineOwnsFocus(line.id)
         let twin = line.bridgeID.map { bridgeID in
             hoveredLineID?.contains("bridge:\(bridgeID):") == true && hoveredLineID != line.id
         } ?? false
@@ -177,8 +183,18 @@ struct CitationComposerObservationsColumn: View {
         }
         .contentShape(Rectangle())
         .focusable()
-        .focused($focusedLineID, equals: line.id)
+        .focused($lineFocus, equals: .row(line.id))
         .onTapGesture { model.beginEdit(line: line) }
+        .onKeyPress(.return) {
+            guard lineFocus == .row(line.id) else { return .ignored }
+            model.beginEdit(line: line)
+            return .handled
+        }
+        .onKeyPress(.space) {
+            guard lineFocus == .row(line.id) else { return .ignored }
+            model.beginEdit(line: line)
+            return .handled
+        }
         .onHover { hovering in
             hoveredLineID = hovering ? line.id : (hoveredLineID == line.id ? nil : hoveredLineID)
         }
@@ -216,6 +232,7 @@ struct CitationComposerObservationsColumn: View {
                 ) {
                     model.beginEdit(line: line)
                 }
+                .focused($lineFocus, equals: .edit(line.id))
                 PVIconButton(
                     .duplicate,
                     label: line.bridgeID == nil
@@ -225,6 +242,7 @@ struct CitationComposerObservationsColumn: View {
                 ) {
                     model.duplicate(line: line)
                 }
+                .focused($lineFocus, equals: .duplicate(line.id))
                 PVIconButton(
                     .trash,
                     label: line.bridgeID == nil
@@ -234,11 +252,21 @@ struct CitationComposerObservationsColumn: View {
                 ) {
                     Task { await model.askDeleteLine(line) }
                 }
+                .focused($lineFocus, equals: .delete(line.id))
             } else if fresh {
                 PVBadge(L10n.CitationComposer.savedBadge, tone: .success, icon: .check, subtle: true)
             }
         }
         .frame(width: 88, alignment: .trailing)
+    }
+
+    private func lineOwnsFocus(_ id: String) -> Bool {
+        switch lineFocus {
+        case .row(let lineID), .edit(let lineID), .duplicate(let lineID), .delete(let lineID):
+            lineID == id
+        case nil:
+            false
+        }
     }
 
     private func isFresh(_ line: CitationSavedLine) -> Bool {
@@ -260,7 +288,6 @@ struct CitationComposerObservationsColumn: View {
 struct CitationComposerEditSheet: View {
     @Bindable var model: CitationComposerModel
     @FocusState private var focus: CitationAuthoringFocus?
-    @State private var opensList = false
 
     var body: some View {
         if let session = model.editSession {
@@ -290,35 +317,13 @@ struct CitationComposerEditSheet: View {
                 subjectField: .propertySubject,
                 error: error,
                 identifierPrefix: "citationComposer.edit",
-                subjectFocused: focus == .subject,
-                propertyFocused: focus == .property,
-                valueFocused: focus == .value,
-                opensList: opensList,
-                applyTermToEdit: true,
-                onCommit: { field, value, via in
-                    guard CitationAuthoringNavigation.shouldAdvance(value) else { return false }
-                    let already: Bool
-                    switch field {
-                    case .subject: already = !values.subjectID.isEmpty
-                    case .property: already = !values.propertyID.isEmpty
-                    default: already = true
-                    }
-                    let willExist = field != .property || !value.isEmpty
-                    let claim = via == .tab && CitationAuthoringNavigation.claimsForwardTab(
-                        nextFieldAlreadyFocusable: already,
-                        nextFieldWillExist: willExist
-                    )
-                    if via != .tab || claim, let next = CitationAuthoringNavigation.next(after: field, bridgeHasTerm: false) {
-                        opensList = true
-                        focus = next
-                    }
-                    return claim
-                }
+                focus: $focus,
+                applyTermToEdit: true
             )
         }
         .onAppear {
-            opensList = false
-            focus = CitationAuthoringNavigation.initialPropertyFocus(subjectID: values.subjectID)
+            let initial = CitationAuthoringNavigation.initialPropertyFocus(subjectID: values.subjectID)
+            DispatchQueue.main.async { focus = initial }
         }
     }
     private func bridgeForm(endA: String, endB: String, error: String?) -> some View {
@@ -366,8 +371,7 @@ struct CitationComposerEditSheet: View {
                             model.beginAddCustomTerm(propertyID: property.id, applyToEdit: true)
                         }
                     },
-                    focusTerm: focus == .term,
-                    opensList: opensList && focus == .term,
+                    termFocus: PVComboFocus($focus, equals: .term),
                     termIdentifierPrefix: "citationComposer.edit.bridgeTerm"
                 )
             }
@@ -380,11 +384,10 @@ struct CitationComposerEditSheet: View {
             }
         }
         .onAppear {
-            opensList = false
             if case .ready(let ready) = pair, ready.termProperty != nil,
                editBridgeTermBinding.wrappedValue.isEmpty
             {
-                focus = .term
+                DispatchQueue.main.async { focus = .term }
             }
         }
     }
