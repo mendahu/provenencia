@@ -28,17 +28,6 @@ enum CitationObservationValue {
         )
     }
 
-    static func fields(from draft: CitationComposerModel.ObservationDialogState) -> Fields {
-        Fields(
-            valueText: draft.valueText,
-            valueIntegerText: draft.valueIntegerText,
-            valueTermID: draft.valueTermID,
-            valueSubjectID: "",
-            dateDraft: draft.dateDraft,
-            nameDraft: draft.nameDraft
-        )
-    }
-
     static func summary(
         valueType: String,
         fields: Fields,

@@ -102,23 +102,6 @@ struct CitationComposerView: View {
             CitationComposerAuthoringBox(model: model)
         }
         .pvFormDialog(
-            isPresented: observationDialogBinding,
-            copy: PVFormDialogCopy(
-                title: valueEditorTitle,
-                subtitle: L10n.CitationComposer.valueDialogSubtitle,
-                confirm: valueEditorConfirm,
-                cancel: L10n.CitationComposer.cancel
-            ),
-            width: observationDialogWidth,
-            isRunning: false,
-            isDirty: model.observationDialogIsDirty,
-            confirmDisabled: !model.canConfirmObservation,
-            accessibilityIdentifierPrefix: "citationComposer.observation",
-            onConfirm: { model.confirmObservationDialog() }
-        ) {
-            CitationComposerObservationDialogForm(model: model)
-        }
-        .pvFormDialog(
             isPresented: customTermDialogBinding,
             copy: PVFormDialogCopy(
                 title: L10n.CitationComposer.addTermTitle,
@@ -385,9 +368,8 @@ struct CitationComposerView: View {
     private var authoringSheetBinding: Binding<Bool> {
         Binding(
             get: {
-                if model.editSheetSuspended || model.editSession != nil { return false }
-                if case .rest = model.authoring { return false }
-                return true
+                if case .authoring = model.presented { return true }
+                return false
             },
             set: { if !$0 { model.discardAuthoring() } }
         )
@@ -410,7 +392,8 @@ struct CitationComposerView: View {
     private var editSheetBinding: Binding<Bool> {
         Binding(
             get: {
-                model.editSession != nil && !model.editSheetSuspended && model.observationDialog == nil
+                if case .edit = model.presented { return true }
+                return false
             },
             set: { if !$0 { model.discardEdit() } }
         )
@@ -451,34 +434,6 @@ struct CitationComposerView: View {
         }
     }
 
-    private var valueEditorTitle: LocalizedStringResource {
-        switch valueEditorType {
-        case PropertyValueType.date.rawValue: L10n.CitationComposer.editDate
-        case PropertyValueType.name.rawValue: L10n.CitationComposer.editNameTitle
-        default: L10n.CitationComposer.editValueTitle
-        }
-    }
-
-    private var valueEditorConfirm: LocalizedStringResource {
-        switch valueEditorType {
-        case PropertyValueType.date.rawValue: L10n.CitationComposer.saveDate
-        case PropertyValueType.name.rawValue: L10n.CitationComposer.saveName
-        default: L10n.CitationComposer.applyValue
-        }
-    }
-
-    private var valueEditorType: String {
-        let propertyID = model.observationDialog?.propertyID ?? ""
-        return model.vocabulary.property(id: propertyID)?.valueType ?? ""
-    }
-
-    private var observationDialogBinding: Binding<Bool> {
-        Binding(
-            get: { model.observationDialog != nil },
-            set: { if !$0 { model.cancelObservationDialog() } }
-        )
-    }
-
     private var customTermDialogBinding: Binding<Bool> {
         Binding(
             get: { model.customTermDraft != nil },
@@ -512,10 +467,5 @@ struct CitationComposerView: View {
             get: { model.newSubjectDraft?.description ?? "" },
             set: { model.newSubjectDraft?.description = $0 }
         )
-    }
-
-    private var observationDialogWidth: CGFloat {
-        let type = model.observationDialog.flatMap { model.catalogProperty(id: $0.propertyID)?.valueType }
-        return type == PropertyValueType.name.rawValue ? 560 : 480
     }
 }

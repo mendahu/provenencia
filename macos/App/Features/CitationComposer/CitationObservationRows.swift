@@ -327,17 +327,6 @@ final class CitationObservationRows {
         }
     }
 
-    func applyDialogValues(rowID: UUID, draft: CitationComposerModel.ObservationDialogState) {
-        mutate(rowID) { row in
-            row.valueText = draft.valueText
-            row.valueIntegerText = draft.valueIntegerText
-            row.valueTermID = draft.valueTermID
-            row.dateDraft = draft.dateDraft
-            row.nameDraft = draft.nameDraft
-            row.deriveState()
-        }
-    }
-
     func replaceValues(rowID: UUID, values: ObservationRowValues) {
         mutate(rowID) { row in
             row.values = values
@@ -401,7 +390,7 @@ final class CitationObservationRows {
         }
         guard let draft = draftOrNil else { return }
         do {
-            let citationID = try await context.ensureCitationID()
+            let citationID = try await context.ensureCitationID(context.citationValues())
             if row.persistedID == nil {
                 let written = try await context.store.addObservationsToCitation(
                     projectDir: context.projectDir,

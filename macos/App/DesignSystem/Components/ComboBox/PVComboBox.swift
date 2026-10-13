@@ -190,6 +190,13 @@ struct PVComboBoxPlainRow: View {
     }
 }
 
+/// How a combo box committed its selection. The form chooses the next field.
+enum PVComboCommitVia: Equatable {
+    case click
+    case `return`
+    case tab
+}
+
 // MARK: - ComboBox
 
 /// A searchable single-select field — the design system's
@@ -264,8 +271,15 @@ struct PVComboBox<Row: View, Empty: View>: View {
     /// its list. `activateOnAppear` only runs when the control appears; a
     /// field that is already on screen needs this.
     var focusNonce: Int = 0
+    /// Host-owned focus. When this becomes true, the field takes focus on the
+    /// next turn. The list opens only when `opensListOnFocus` is set.
+    var hostedFocus: Bool = false
+    var opensListOnFocus: Bool = false
     /// A click or Return committed a row. The form decides which field is next.
     var onCommit: ((String) -> Void)? = nil
+    /// Click, Return, and Tab. Return true from Tab to keep focus in the form
+    /// when the commit inserts the next field. Nil keeps `onCommit`.
+    var onCommitVia: ((String, PVComboCommitVia) -> Bool)? = nil
     /// Asked before a forward Tab commits, while the current fields are still
     /// on screen. Return true when this choice inserts the next field, so Tab
     /// does not leave for a button that is only next until that field renders.
@@ -382,12 +396,12 @@ struct PVComboBox<Row: View, Empty: View>: View {
                 rowsMeasured = false
             }
             .onAppear {
-                guard activateOnAppear else { return }
-                // Same-cycle focus is dropped while the field is inserted
-                // into a sheet.
-                DispatchQueue.main.async {
-                    isFocused = true
-                }
+                guard hostedFocus || activateOnAppear else { return }
+                DispatchQueue.main.async { applyHostedFocus() }
+            }
+            .onChange(of: hostedFocus) { _, active in
+                guard active else { return }
+                DispatchQueue.main.async { applyHostedFocus() }
             }
             .onChange(of: focusNonce) { _, nonce in
                 guard nonce > 0 else { return }
@@ -584,13 +598,18 @@ struct PVComboBox<Row: View, Empty: View>: View {
         // key, but mouse events are still delivered to the window under the
         // pointer, so the gesture fires; the mouse monitor passes panel
         // clicks through untouched.
-        .onTapGesture { commit(option, notify: true) }
-        .accessibilityAction(.default) { commit(option, notify: true) }
+        .onTapGesture { commit(option, via: .click) }
+        .accessibilityAction(.default) { commit(option, via: .click) }
         .accessibilityAddTraits(option.value == selection ? [.isSelected] : [])
         .accessibilityIdentifier(identifier("option.\(option.value)") ?? "")
     }
 
     // MARK: Behaviour
+
+    private func applyHostedFocus() {
+        isFocused = true
+        if opensListOnFocus { open() }
+    }
 
     private func open() {
         isOpen = true
@@ -603,13 +622,28 @@ struct PVComboBox<Row: View, Empty: View>: View {
         activeIndex = hasTypedQuery ? PVComboBoxMatch.firstEnabledIndex(in: visibleOptions) : -1
     }
 
-    private func commit(_ option: PVComboBoxOption, notify: Bool = false) {
-        guard !option.isDisabled else { return }
+    private func commit(_ option: PVComboBoxOption, via: PVComboCommitVia) -> Bool {
+        guard !option.isDisabled else { return false }
+        if via == .tab, let onCommitVia {
+            let claim = onCommitVia(option.value, .tab)
+            selection = option.value
+            query = option.label
+            isDirty = false
+            isOpen = false
+            return claim
+        }
         selection = option.value
         query = option.label
         isDirty = false
         isOpen = false
-        if notify { onCommit?(option.value) }
+        if let onCommitVia {
+            _ = onCommitVia(option.value, via)
+        } else if via != .click {
+            onCommit?(option.value)
+        } else {
+            onCommit?(option.value)
+        }
+        return false
     }
 
     /// Dismissing abandons whatever was typed and puts the committed label
@@ -649,7 +683,7 @@ struct PVComboBox<Row: View, Empty: View>: View {
             return .handled
         case .return:
             guard visibleOptions.indices.contains(activeIndex) else { return .ignored }
-            commit(visibleOptions[activeIndex], notify: true)
+            _ = commit(visibleOptions[activeIndex], via: .return)
             return .handled
         case .escape:
             // Two-stage: close the list first, then abandon the typed text.
@@ -671,9 +705,21 @@ struct PVComboBox<Row: View, Empty: View>: View {
             // field is not a key view yet, so Tab would land on Discard.
             if isOpen, visibleOptions.indices.contains(activeIndex) {
                 let option = visibleOptions[activeIndex]
-                let claim = !press.modifiers.contains(.shift) && (onTabCommit?(option.value) ?? false)
-                commit(option, notify: claim)
-                if claim { return .handled }
+                if onCommitVia != nil {
+                    let claim = !press.modifiers.contains(.shift) && commit(option, via: .tab)
+                    if claim { return .handled }
+                } else {
+                    let claim = !press.modifiers.contains(.shift) && (onTabCommit?(option.value) ?? false)
+                    guard !option.isDisabled else { return .ignored }
+                    selection = option.value
+                    query = option.label
+                    isDirty = false
+                    isOpen = false
+                    if claim {
+                        onCommit?(option.value)
+                        return .handled
+                    }
+                }
             }
             isOpen = false
             return .ignored
@@ -706,7 +752,10 @@ extension PVComboBox where Empty == Text {
         accessibilityIdentifierPrefix: String? = nil,
         activateOnAppear: Bool = false,
         focusNonce: Int = 0,
+        hostedFocus: Bool = false,
+        opensListOnFocus: Bool = false,
         onCommit: ((String) -> Void)? = nil,
+        onCommitVia: ((String, PVComboCommitVia) -> Bool)? = nil,
         onTabCommit: ((String) -> Bool)? = nil,
         onQueryChange: ((String) -> Void)? = nil,
         @ViewBuilder row: @escaping (PVComboBoxOption, String) -> Row
@@ -722,7 +771,10 @@ extension PVComboBox where Empty == Text {
             accessibilityIdentifierPrefix: accessibilityIdentifierPrefix,
             activateOnAppear: activateOnAppear,
             focusNonce: focusNonce,
+            hostedFocus: hostedFocus,
+            opensListOnFocus: opensListOnFocus,
             onCommit: onCommit,
+            onCommitVia: onCommitVia,
             onTabCommit: onTabCommit,
             onQueryChange: onQueryChange,
             row: row,
@@ -746,7 +798,10 @@ extension PVComboBox where Row == PVComboBoxPlainRow, Empty == Text {
         accessibilityIdentifierPrefix: String? = nil,
         activateOnAppear: Bool = false,
         focusNonce: Int = 0,
+        hostedFocus: Bool = false,
+        opensListOnFocus: Bool = false,
         onCommit: ((String) -> Void)? = nil,
+        onCommitVia: ((String, PVComboCommitVia) -> Bool)? = nil,
         onTabCommit: ((String) -> Bool)? = nil
     ) {
         self.init(
@@ -761,7 +816,10 @@ extension PVComboBox where Row == PVComboBoxPlainRow, Empty == Text {
             accessibilityIdentifierPrefix: accessibilityIdentifierPrefix,
             activateOnAppear: activateOnAppear,
             focusNonce: focusNonce,
+            hostedFocus: hostedFocus,
+            opensListOnFocus: opensListOnFocus,
             onCommit: onCommit,
+            onCommitVia: onCommitVia,
             onTabCommit: onTabCommit
         ) { option, query in
             PVComboBoxPlainRow(option: option, query: query)

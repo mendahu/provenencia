@@ -317,9 +317,9 @@ struct CitationComposerEvidenceColumn: View {
                 icon: .scanText,
                 loading: model.isTranscribing
             ) {
-                Task { await model.runAutoTranscribe() }
+                model.requestAutoTranscribe()
             }
-            .disabled(model.isTranscribing)
+            .disabled(!model.canAutoTranscribe || model.isTranscribing)
         }
     }
 

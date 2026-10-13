@@ -53,6 +53,17 @@ enum CitationAuthoringNavigation {
     static func claimsForwardTab(nextFieldAlreadyFocusable: Bool, nextFieldWillExist: Bool) -> Bool {
         nextFieldWillExist && !nextFieldAlreadyFocusable
     }
+
+    static func initialPropertyFocus(subjectID: String) -> CitationAuthoringFocus {
+        subjectID.isEmpty ? .subject : .property
+    }
+
+    static func initialBridgeFocus(endA: String, endB: String, hasTermField: Bool, termID: String) -> CitationAuthoringFocus {
+        if hasTermField, termID.isEmpty { return .term }
+        if endA.isEmpty { return .endA }
+        if endB.isEmpty { return .endB }
+        return hasTermField ? .term : .endB
+    }
 }
 
 enum CitationBridgeOrigin: Equatable {
@@ -66,13 +77,10 @@ enum CitationSubjectField: Equatable {
 struct CitationPropertyDraft: Equatable {
     var values = ObservationRowValues()
     var baseline = ObservationRowValues()
-    var focus: CitationAuthoringFocus = .subject
     var isSaving = false
     var error: String?
     var note: String?
     var isDuplicate = false
-    /// Nil follows the citation open in the composer. Empty mints a new citation.
-    var citationID: String? = nil
 
     var holdsLeave: Bool { isDuplicate || values != baseline }
 }
@@ -84,13 +92,10 @@ struct CitationBridgeDraft: Equatable {
     var baselineEndA = ""
     var baselineEndB = ""
     var baselineTermID = ""
-    var focus: CitationAuthoringFocus = .endA
     var isSaving = false
     var error: String?
     var note: String?
     var origin: CitationBridgeOrigin = .blank
-    /// Nil follows the citation open in the composer. Empty mints a new citation.
-    var citationID: String? = nil
 
     var holdsLeave: Bool {
         origin != .blank
@@ -114,8 +119,6 @@ struct CitationEditSession: Equatable {
     }
 
     var kind: Kind
-    /// Set when a combo commit moves the cursor. Nil leaves the sheet's own first field alone.
-    var focus: CitationAuthoringFocus? = nil
     var isSaving = false
     var error: String?
 
@@ -472,7 +475,11 @@ enum CitationComposerAuthoring {
                 "subject_place_relationship"
             )
         default:
-            return (rule.bridgeTypeKey, "", "subject_\(rule.bridgeTypeKey)")
+            return (
+                L10n.string(L10n.CitationComposer.bridgeKindOther),
+                "",
+                "subject_\(rule.bridgeTypeKey)"
+            )
         }
     }
 

@@ -113,7 +113,7 @@ final class CitationFieldsDraft {
                 captureBaseline()
                 context.applyWrite(updated.1)
             } else {
-                _ = try await context.ensureCitationID()
+                _ = try await context.ensureCitationID(values)
             }
         } catch is CitationComposerNeedArtifact {
             error = L10n.string(L10n.CitationComposer.needArtifact)

@@ -5,12 +5,12 @@ struct DateValueEditorForm: View {
     @Binding var draft: DateValueDraft
     /// Prefix for control identifiers (default matches the Source page date dialog).
     var accessibilityIdentifierPrefix: String = "sources.page.date"
-    /// Bumps to put the caret in the year field when the form is already on screen.
-    var focusNonce: Int = 0
+    /// The host asks for the year field. The form does not take focus on its own.
+    var requestsYearFocus: Bool = false
 
     @FocusState private var yearFocused: Bool
-    /// Set when Add time reveals a block, so that block's hour field takes focus.
-    @State private var timeFocus: TimeFocusSide?
+    @FocusState private var startHourFocused: Bool
+    @FocusState private var endHourFocused: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: PVSpacing.space7) {
@@ -30,10 +30,11 @@ struct DateValueEditorForm: View {
                 advancedSection
             }
         }
-        .onAppear { yearFocused = true }
-        .onChange(of: focusNonce) { _, nonce in
-            guard nonce > 0 else { return }
-            DispatchQueue.main.async { yearFocused = true }
+        .onAppear {
+            if requestsYearFocus { yearFocused = true }
+        }
+        .onChange(of: requestsYearFocus) { _, focused in
+            if focused { yearFocused = true }
         }
     }
 
@@ -161,10 +162,14 @@ struct DateValueEditorForm: View {
             Button {
                 if start {
                     draft.showStartTime.toggle()
-                    timeFocus = draft.showStartTime ? .start : nil
+                    if draft.showStartTime {
+                        DispatchQueue.main.async { startHourFocused = true }
+                    }
                 } else {
                     draft.showEndTime.toggle()
-                    timeFocus = draft.showEndTime ? .end : nil
+                    if draft.showEndTime {
+                        DispatchQueue.main.async { endHourFocused = true }
+                    }
                 }
             } label: {
                 Text(start
@@ -190,7 +195,7 @@ struct DateValueEditorForm: View {
                     mono: true,
                     isInvalid: draft.isFieldInvalid(.hour, start: start),
                     accessibilityIdentifier: "\(accessibilityIdentifierPrefix).\(side).hour",
-                    activateOnAppear: timeFocus == (start ? .start : .end)
+                    focused: start ? $startHourFocused : $endHourFocused
                 )
                 cascadeField(
                     L10n.Sources.dateMinute,
@@ -486,11 +491,6 @@ enum DateValueSelectOptions {
             ("12", L10n.Sources.dateMonthDecember),
         ].map { PVSelectOption(value: $0.0, label: L10n.string($0.1)) }
     }
-}
-
-private enum TimeFocusSide {
-    case start
-    case end
 }
 
 private struct DateOptionalAccessibilityIdentifier: ViewModifier {

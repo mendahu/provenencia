@@ -94,7 +94,6 @@
 		A71E00000000000000000006 /* CitationComposerEvidenceColumn.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71E00000000000000000005 /* CitationComposerEvidenceColumn.swift */; };
 		A71E00000000000000000008 /* CitationComposerAuthoringBox.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71E00000000000000000007 /* CitationComposerAuthoringBox.swift */; };
 		A71E0000000000000000000A /* CitationComposerSubjectGroups.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71E00000000000000000009 /* CitationComposerSubjectGroups.swift */; };
-		A70A0000000000000000000A /* CitationComposerObservationDialogForm.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70A00000000000000000009 /* CitationComposerObservationDialogForm.swift */; };
 		A70800000000000000000006 /* CitationComposerModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70800000000000000000005 /* CitationComposerModelTests.swift */; };
 		AA000000000000000000031B /* ProjectFiles.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000031C /* ProjectFiles.swift */; };
 		AA00000000000000000003D1 /* IngestMediaPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000003D0 /* IngestMediaPolicy.swift */; };
@@ -459,7 +458,6 @@
 		A71E00000000000000000005 /* CitationComposerEvidenceColumn.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CitationComposerEvidenceColumn.swift; sourceTree = "<group>"; };
 		A71E00000000000000000007 /* CitationComposerAuthoringBox.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CitationComposerAuthoringBox.swift; sourceTree = "<group>"; };
 		A71E00000000000000000009 /* CitationComposerSubjectGroups.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CitationComposerSubjectGroups.swift; sourceTree = "<group>"; };
-		A70A00000000000000000009 /* CitationComposerObservationDialogForm.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CitationComposerObservationDialogForm.swift; sourceTree = "<group>"; };
 		A70800000000000000000005 /* CitationComposerModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CitationComposerModelTests.swift; sourceTree = "<group>"; };
 		AA000000000000000000031C /* ProjectFiles.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ProjectFiles.swift; sourceTree = "<group>"; };
 		AA00000000000000000003D0 /* IngestMediaPolicy.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = IngestMediaPolicy.swift; sourceTree = "<group>"; };
@@ -1177,7 +1175,6 @@
 				A71E00000000000000000005 /* CitationComposerEvidenceColumn.swift */,
 				A71E00000000000000000007 /* CitationComposerAuthoringBox.swift */,
 				A71E00000000000000000009 /* CitationComposerSubjectGroups.swift */,
-				A70A00000000000000000009 /* CitationComposerObservationDialogForm.swift */,
 			);
 			path = CitationComposer;
 			sourceTree = "<group>";
@@ -2061,7 +2058,6 @@
 				A71E00000000000000000006 /* CitationComposerEvidenceColumn.swift in Sources */,
 				A71E00000000000000000008 /* CitationComposerAuthoringBox.swift in Sources */,
 				A71E0000000000000000000A /* CitationComposerSubjectGroups.swift in Sources */,
-				A70A0000000000000000000A /* CitationComposerObservationDialogForm.swift in Sources */,
 				AA000000000000000000031B /* ProjectFiles.swift in Sources */,
 				AA00000000000000000003D1 /* IngestMediaPolicy.swift in Sources */,
 				AA00000000000000000003D3 /* IngestFileDropRow.swift in Sources */,

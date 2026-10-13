@@ -4559,6 +4559,12 @@ enum L10n {
             comment: "Kind label between two places"
         )
 
+        static let bridgeKindOther = LocalizedStringResource(
+            "citationComposer.bridgeKindOther",
+            defaultValue: "Connection",
+            comment: "Kind label when a bridge type has no specific name"
+        )
+
         static let pairPersonPerson = LocalizedStringResource(
             "citationComposer.pairPersonPerson",
             defaultValue: "Person and person",
@@ -4936,6 +4942,14 @@ enum L10n {
                 defaultValue: "Place relationship with %1$@",
                 comment: "Place-relationship line before a type is chosen"
             ), name)
+        }
+
+        static func bridgeEndsReading(endA: String, endB: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "citationComposer.bridgeEndsReading",
+                defaultValue: "%1$@, %2$@",
+                comment: "Fallback bridge sentence when the pair has no reading; arguments are the two subject names"
+            ), endA, endB)
         }
 
         static func bridgeSavedBody(reading: String, ref: String) -> String {

@@ -340,7 +340,7 @@ final class CitationConnections {
               let drafts = edgeDrafts(for: pending, vocabulary: context.vocabulary)
         else { return }
         do {
-            let citationID = try await context.ensureCitationID()
+            let citationID = try await context.ensureCitationID(context.citationValues())
             let created = try await context.store.createCitedBridge(
                 projectDir: context.projectDir,
                 userID: context.userID,

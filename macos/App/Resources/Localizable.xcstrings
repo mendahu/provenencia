@@ -18497,6 +18497,30 @@
         }
       }
     },
+    "citationComposer.bridgeKindOther": {
+      "comment": "Kind label when a bridge type has no specific name",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connection"
+          }
+        }
+      }
+    },
+    "citationComposer.bridgeEndsReading": {
+      "comment": "Fallback bridge sentence when the pair has no reading; arguments are the two subject names",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@, %2$@"
+          }
+        }
+      }
+    },
     "citationComposer.bridgeKindRelationship": {
       "comment": "Kind label between the ends of a person-to-person bridge",
       "extractionState": "manual",

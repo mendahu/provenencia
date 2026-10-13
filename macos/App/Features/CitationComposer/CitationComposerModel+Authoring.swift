@@ -25,6 +25,7 @@ extension CitationComposerModel {
     }
 
     var authoringCanConfirm: Bool {
+        guard !isSwitchingCitation else { return false }
         switch authoring {
         case .rest:
             return false
@@ -42,7 +43,7 @@ extension CitationComposerModel {
     }
 
     var editCanConfirm: Bool {
-        guard let session = editSession, !session.isSaving else { return false }
+        guard !isSwitchingCitation, let session = editSession, !session.isSaving else { return false }
         switch session.kind {
         case .property(let values, _, _):
             return Self.propertyValuesComplete(values, vocabulary: vocabulary)
@@ -86,11 +87,9 @@ extension CitationComposerModel {
 
     func showPropertyAuthoring() {
         guard case .bridge(let bridge) = authoring else { return }
-        let citationID = bridge.citationID
         let note = bridge.note
         beginPropertyDraft(subjectID: bridge.endA)
         mutateProperty { draft in
-            draft.citationID = citationID
             draft.note = note
             draft.isDuplicate = bridge.origin == .duplicate
         }
@@ -98,7 +97,6 @@ extension CitationComposerModel {
 
     func showBridgeAuthoring() {
         guard case .property(let property) = authoring else { return }
-        let citationID = property.citationID
         let note = property.note
         let origin: CitationBridgeOrigin = property.isDuplicate ? .duplicate : .blank
         beginBridgeDraft(
@@ -107,9 +105,8 @@ extension CitationComposerModel {
             termID: "",
             origin: origin
         )
-        mutateBridge { draft in
-            draft.citationID = citationID
-            if let note { draft.note = note }
+        if let note {
+            mutateBridge { $0.note = note }
         }
     }
 
@@ -161,16 +158,15 @@ extension CitationComposerModel {
     }
 
     func beginPropertyDraft(subjectID: String) {
-        authoringFocusNonce += 1
         var values = ObservationRowValues()
         values.subjectID = subjectID
         authoring = .property(
             CitationPropertyDraft(
                 values: values,
-                baseline: values,
-                focus: subjectID.isEmpty ? .subject : .property
+                baseline: values
             )
         )
+        showAuthoringDialog()
     }
 
     func beginBridgeDraft(
@@ -179,23 +175,6 @@ extension CitationComposerModel {
         termID: String,
         origin: CitationBridgeOrigin
     ) {
-        authoringFocusNonce += 1
-        let pair = CitationComposerAuthoring.resolvePair(
-            endA: endA,
-            endB: endB,
-            termID: termID,
-            vocabulary: vocabulary
-        )
-        let focus: CitationAuthoringFocus
-        if case .ready(let ready) = pair, ready.termProperty != nil, termID.isEmpty {
-            focus = .term
-        } else if endA.isEmpty {
-            focus = .endA
-        } else if endB.isEmpty {
-            focus = .endB
-        } else {
-            focus = .term
-        }
         let note: String?
         switch origin {
         case .graph: note = L10n.string(L10n.CitationComposer.fromGraph)
@@ -207,11 +186,12 @@ extension CitationComposerModel {
                 endA: endA,
                 endB: endB,
                 termID: termID,
-                focus: focus,
+                baselineEndA: endA,
                 note: note,
                 origin: origin
             )
         )
+        showAuthoringDialog()
     }
 
     func beginAddBridge() {
@@ -222,91 +202,64 @@ extension CitationComposerModel {
         openAuthoring { self.beginPropertyDraft(subjectID: subjectID) }
     }
 
-    func advanceAuthoringFocus(from field: CitationAuthoringFocus, committed: String) {
-        guard CitationAuthoringNavigation.shouldAdvance(committed) else { return }
-        switch authoring {
-        case .rest:
-            return
-        case .property(var draft):
-            guard let next = CitationAuthoringNavigation.next(after: field, bridgeHasTerm: false) else { return }
-            authoringFocusNonce += 1
-            draft.focus = next
-            authoring = .property(draft)
-        case .bridge(var draft):
-            guard let next = CitationAuthoringNavigation.next(after: field, bridgeHasTerm: bridgeHasTerm(draft)) else { return }
-            authoringFocusNonce += 1
-            draft.focus = next
-            authoring = .bridge(draft)
-        }
-    }
-
-    /// Forward Tab from the second subject inserts the bridge sentence. That
-    /// field is not a key view yet, so Tab must stay and land there instead
-    /// of on Discard.
-    func shouldClaimAuthoringTab(from field: CitationAuthoringFocus, committed: String) -> Bool {
-        guard CitationAuthoringNavigation.shouldAdvance(committed) else { return false }
-        guard field == .endB, case .bridge(let draft) = authoring else { return false }
-        var next = draft
-        next.endB = committed
-        return CitationAuthoringNavigation.claimsForwardTab(
-            nextFieldAlreadyFocusable: bridgeHasTerm(draft),
-            nextFieldWillExist: bridgeHasTerm(next)
-        )
-    }
-
-    func advanceEditFocus(from field: CitationAuthoringFocus, committed: String) {
-        guard CitationAuthoringNavigation.shouldAdvance(committed) else { return }
-        guard var session = editSession else { return }
-        switch session.kind {
-        case .property:
-            guard let next = CitationAuthoringNavigation.next(after: field, bridgeHasTerm: false) else { return }
-            authoringFocusNonce += 1
-            session.focus = next
-            editSession = session
-        case .bridge:
-            return
-        }
-    }
-
-    private func bridgeHasTerm(_ draft: CitationBridgeDraft) -> Bool {
-        let pair = CitationComposerAuthoring.resolvePair(
-            endA: draft.endA,
-            endB: draft.endB,
-            termID: draft.termID,
-            vocabulary: vocabulary
-        )
-        if case .ready(let ready) = pair, ready.termProperty != nil { return true }
-        return false
-    }
-
     func discardAuthoring() {
         authoring = .rest
+        if case .authoring = presented { show(nil) }
     }
 
-    func selectAuthoringSubject(_ raw: String, field: CitationSubjectField) {
+    /// Subject, property, and value writes for both observation dialogs.
+    /// A new-subject row opens that dialog and leaves the values unchanged.
+    func applyObservationSubject(
+        _ raw: String,
+        field: CitationSubjectField,
+        values: inout ObservationRowValues
+    ) {
         if raw.hasPrefix(Self.newSubjectPrefix) {
             let key = String(raw.dropFirst(Self.newSubjectPrefix.count))
             beginNewSubject(typeKey: key, field: field)
             return
         }
+        let previous = vocabulary.subjectsByID[values.subjectID]?.typeKey
+        let nextType = vocabulary.subjectsByID[raw]?.typeKey
+        values.subjectID = raw
+        if previous != nextType {
+            values.propertyID = ""
+            clearObservationValue(&values)
+        }
+    }
+
+    func applyObservationProperty(_ propertyID: String, values: inout ObservationRowValues) {
+        values.propertyID = propertyID
+        clearObservationValue(&values)
+    }
+
+    private func clearObservationValue(_ values: inout ObservationRowValues) {
+        values.valueText = ""
+        values.valueIntegerText = ""
+        values.valueTermID = ""
+        values.dateDraft = .empty()
+        values.nameDraft = .empty()
+    }
+
+    func selectAuthoringSubject(_ raw: String, field: CitationSubjectField) {
         switch field {
         case .propertySubject:
             mutateProperty { draft in
-                let previous = self.vocabulary.subjectsByID[draft.values.subjectID]?.typeKey
-                let next = self.vocabulary.subjectsByID[raw]?.typeKey
-                draft.values.subjectID = raw
-                if previous != next {
-                    draft.values.propertyID = ""
-                    draft.values.valueText = ""
-                    draft.values.valueIntegerText = ""
-                    draft.values.valueTermID = ""
-                    draft.values.dateDraft = .empty()
-                    draft.values.nameDraft = .empty()
-                }
+                self.applyObservationSubject(raw, field: field, values: &draft.values)
             }
         case .bridgeEndA:
+            if raw.hasPrefix(Self.newSubjectPrefix) {
+                let key = String(raw.dropFirst(Self.newSubjectPrefix.count))
+                beginNewSubject(typeKey: key, field: field)
+                return
+            }
             mutateBridge { $0.endA = raw }
         case .bridgeEndB:
+            if raw.hasPrefix(Self.newSubjectPrefix) {
+                let key = String(raw.dropFirst(Self.newSubjectPrefix.count))
+                beginNewSubject(typeKey: key, field: field)
+                return
+            }
             mutateBridge { $0.endB = raw }
         }
     }
@@ -316,6 +269,7 @@ extension CitationComposerModel {
     }
 
     func saveAuthoring() async {
+        await awaitIdentitySwitch()
         switch authoring {
         case .rest: return
         case .property(var draft):
@@ -330,16 +284,15 @@ extension CitationComposerModel {
             if let observationID = line.observationID,
                let row = self.observationRows.rows.first(where: { $0.persistedID == observationID })
             {
-                self.authoringFocusNonce += 1
                 self.authoring = .property(
                     CitationPropertyDraft(
                         values: row.values,
                         baseline: ObservationRowValues(),
-                        focus: .property,
                         note: self.duplicateOrigin(subjectID: line.subjectID, phrase: line.phrase),
                         isDuplicate: true
                     )
                 )
+                self.showAuthoringDialog()
                 return
             }
             if let bridgeID = line.bridgeID,
@@ -379,6 +332,7 @@ extension CitationComposerModel {
                 ),
                 openedFromSubjectID: line.subjectID
             )
+            showEditDialog()
         }
     }
 
@@ -397,6 +351,7 @@ extension CitationComposerModel {
                 propertyBaseline: row.values,
                 openedFromSubjectID: subjectID
             )
+            showEditDialog()
             return true
         }
         if let connection = connections.rows.first(where: { $0.rolePersistedID == observationID }),
@@ -413,6 +368,7 @@ extension CitationComposerModel {
                 ),
                 openedFromSubjectID: subjectID
             )
+            showEditDialog()
             return true
         }
         return false
@@ -426,10 +382,13 @@ extension CitationComposerModel {
 
     func discardEdit() {
         editSession = nil
-        editSheetSuspended = false
+        if case .edit = presented {
+            if case .rest = authoring { show(nil) } else { show(.authoring) }
+        }
     }
 
     func saveEdit() async {
+        await awaitIdentitySwitch()
         guard var session = editSession, !session.isSaving else { return }
         session.isSaving = true
         session.error = nil
@@ -452,7 +411,7 @@ extension CitationComposerModel {
             }
             freshLineKey = "obs:\(persistedID)"
             editSession = nil
-            await refreshOpenCitation()
+            await refreshCitationLines()
         case .bridge(_, _, let termID, let bridgeID, _, _):
             guard let connection = connections.rows.first(where: { $0.bridgeID == bridgeID }) else {
                 editSession = nil
@@ -473,15 +432,8 @@ extension CitationComposerModel {
             }
             freshLineKey = "bridge:\(bridgeID)"
             editSession = nil
-            await refreshOpenCitation()
+            await refreshCitationLines()
         }
-    }
-
-    func negate(observationID: String) async {
-        guard let row = observationRows.rows.first(where: { $0.persistedID == observationID }) else { return }
-        observationRows.togglePolarity(rowID: row.id)
-        await observationRows.commit(rowID: row.id)
-        freshLineKey = "obs:\(observationID)"
     }
 
     func askDeleteLine(_ line: CitationSavedLine) async {
@@ -504,42 +456,6 @@ extension CitationComposerModel {
             self.session.setPendingGraphSelection(subjectID: bridgeID, sourceID: self.sourceID)
             self.navigation?.go(to: self.graphLocation())
         }
-    }
-
-    func beginValueEditor(applyToEdit: Bool) {
-        let values: ObservationRowValues
-        let propertyID: String
-        if applyToEdit, let session = editSession, case .property(let current, _, _) = session.kind {
-            values = current
-            propertyID = current.propertyID
-            editSheetSuspended = true
-        } else if case .property(let draft) = authoring {
-            values = draft.values
-            propertyID = draft.values.propertyID
-        } else {
-            return
-        }
-        var state = ObservationDialogState(
-            editingID: nil,
-            propertyID: propertyID,
-            polarity: values.polarity,
-            valueText: values.valueText,
-            valueIntegerText: values.valueIntegerText,
-            valueTermID: values.valueTermID,
-            dateDraft: values.dateDraft,
-            nameDraft: values.nameDraft,
-            showValidation: false
-        )
-        if catalogProperty(id: propertyID)?.valueType == PropertyValueType.date.rawValue,
-           state.dateDraft.isBlank,
-           let match = DateValueTranscriptionMatch.first(in: fields.transcription, locale: .current)
-        {
-            state.dateDraft.startYear = match.year
-            state.dateDraft.startMonth = match.month
-            state.dateDraft.startDay = match.day
-        }
-        observationDialogBaseline = state
-        observationDialog = state
     }
 
     func swapBridgeEnds() {
@@ -577,7 +493,7 @@ extension CitationComposerModel {
         authoring = .property(draft)
         let subjectID = draft.values.subjectID
         do {
-            let citationID = try await context.resolveCitationID(target: draft.citationID)
+            let citationID = try await context.ensureCitationID(context.citationValues())
             let written = try await context.store.addObservationsToCitation(
                 projectDir: context.projectDir,
                 userID: context.userID,
@@ -586,13 +502,11 @@ extension CitationComposerModel {
             )
             context.applyWrite(written.1)
             let savedID = written.0.first?.id
-            await refreshOpenCitation()
-            authoringFocusNonce += 1
+            await refreshCitationLines()
             var kept = ObservationRowValues()
             kept.subjectID = subjectID
-            authoring = .property(
-                CitationPropertyDraft(values: kept, baseline: kept, focus: .property)
-            )
+            authoring = .property(CitationPropertyDraft(values: kept, baseline: kept))
+            showAuthoringDialog()
             if let savedID {
                 freshLineKey = "obs:\(savedID)"
             }
@@ -650,7 +564,7 @@ extension CitationComposerModel {
         let endALabel = vocabulary.subjectsByID[endA]?.label ?? ""
         let endBLabel = vocabulary.subjectsByID[draft.endB]?.label ?? ""
         do {
-            let citationID = try await context.resolveCitationID(target: draft.citationID)
+            let citationID = try await context.ensureCitationID(context.citationValues())
             let created = try await context.store.createCitedBridge(
                 projectDir: context.projectDir,
                 userID: context.userID,
@@ -670,17 +584,19 @@ extension CitationComposerModel {
                 citationID: citationID
             )
             context.applyWrite(created.3)
-            await refreshOpenCitation()
-            authoringFocusNonce += 1
+            await refreshCitationLines()
             authoring = .bridge(
                 CitationBridgeDraft(
                     endA: endA,
-                    baselineEndA: endA,
-                    focus: .endB
+                    baselineEndA: endA
                 )
             )
+            showAuthoringDialog()
             freshLineKey = "bridge:\(created.0.id)"
-            let sentence = ready.reading ?? "\(endALabel), \(endBLabel)"
+            let sentence = ready.reading ?? L10n.CitationComposer.bridgeEndsReading(
+                endA: endALabel,
+                endB: endBLabel
+            )
             let ref = created.0.ref
             let message = draft.origin == .duplicate
                 ? L10n.CitationComposer.duplicateSavedBody(reading: sentence, ref: ref)

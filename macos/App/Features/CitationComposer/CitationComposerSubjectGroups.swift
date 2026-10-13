@@ -5,6 +5,7 @@ struct CitationComposerObservationsColumn: View {
     @Bindable var model: CitationComposerModel
     var onDone: () -> Void
     @State private var hoveredLineID: String?
+    @FocusState private var focusedLineID: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -124,7 +125,7 @@ struct CitationComposerObservationsColumn: View {
     }
 
     private func lineRow(_ line: CitationSavedLine, rule: Bool) -> some View {
-        let revealed = hoveredLineID == line.id
+        let revealed = hoveredLineID == line.id || focusedLineID == line.id
         let twin = line.bridgeID.map { bridgeID in
             hoveredLineID?.contains("bridge:\(bridgeID):") == true && hoveredLineID != line.id
         } ?? false
@@ -175,11 +176,30 @@ struct CitationComposerObservationsColumn: View {
             }
         }
         .contentShape(Rectangle())
+        .focusable()
+        .focused($focusedLineID, equals: line.id)
         .onTapGesture { model.beginEdit(line: line) }
         .onHover { hovering in
             hoveredLineID = hovering ? line.id : (hoveredLineID == line.id ? nil : hoveredLineID)
         }
         .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityAction(.default) { model.beginEdit(line: line) }
+        .accessibilityAction(named: Text(line.bridgeID == nil
+            ? L10n.CitationComposer.editObservation
+            : L10n.CitationComposer.editBridgeTitle)) {
+            model.beginEdit(line: line)
+        }
+        .accessibilityAction(named: Text(line.bridgeID == nil
+            ? L10n.CitationComposer.duplicateObservation
+            : L10n.CitationComposer.duplicateBridge)) {
+            model.duplicate(line: line)
+        }
+        .accessibilityAction(named: Text(line.bridgeID == nil
+            ? L10n.CitationComposer.deleteObservation
+            : L10n.CitationComposer.deleteBridge)) {
+            Task { await model.askDeleteLine(line) }
+        }
         .accessibilityIdentifier("citationComposer.line.\(line.id)")
     }
 
@@ -239,6 +259,8 @@ struct CitationComposerObservationsColumn: View {
 /// Edit sheet for one saved property observation or one bridge.
 struct CitationComposerEditSheet: View {
     @Bindable var model: CitationComposerModel
+    @FocusState private var focus: CitationAuthoringFocus?
+    @State private var opensList = false
 
     var body: some View {
         if let session = model.editSession {
@@ -262,123 +284,43 @@ struct CitationComposerEditSheet: View {
                 onProperty: {},
                 onBridge: {}
             )
-            HStack(alignment: .top, spacing: PVSpacing.space5) {
-                PVField(label: L10n.CitationComposer.subjectLabel) {
-                    PVComboBox(
-                        selection: editSubjectBinding,
-                        options: model.subjectOptions,
-                        size: .sm,
-                        placeholder: L10n.CitationComposer.subjectPlaceholder,
-                        emptyLabel: L10n.CitationComposer.subjectPlaceholder,
-                        label: L10n.CitationComposer.subjectLabel,
-                        accessibilityIdentifierPrefix: "citationComposer.edit.subject",
-                        activateOnAppear: model.editSession?.focus == .subject,
-                        focusNonce: model.editSession?.focus == .subject ? model.authoringFocusNonce : 0,
-                        onCommit: { model.advanceEditFocus(from: .subject, committed: $0) }
+            CitationPropertyFields(
+                model: model,
+                values: editValuesBinding,
+                subjectField: .propertySubject,
+                error: error,
+                identifierPrefix: "citationComposer.edit",
+                subjectFocused: focus == .subject,
+                propertyFocused: focus == .property,
+                valueFocused: focus == .value,
+                opensList: opensList,
+                applyTermToEdit: true,
+                onCommit: { field, value, via in
+                    guard CitationAuthoringNavigation.shouldAdvance(value) else { return false }
+                    let already: Bool
+                    switch field {
+                    case .subject: already = !values.subjectID.isEmpty
+                    case .property: already = !values.propertyID.isEmpty
+                    default: already = true
+                    }
+                    let willExist = field != .property || !value.isEmpty
+                    let claim = via == .tab && CitationAuthoringNavigation.claimsForwardTab(
+                        nextFieldAlreadyFocusable: already,
+                        nextFieldWillExist: willExist
                     )
+                    if via != .tab || claim, let next = CitationAuthoringNavigation.next(after: field, bridgeHasTerm: false) {
+                        opensList = true
+                        focus = next
+                    }
+                    return claim
                 }
-                .frame(maxWidth: .infinity)
-                PVField(label: L10n.CitationComposer.propertyLabel) {
-                    PVComboBox(
-                        selection: editPropertyBinding,
-                        options: model.vocabulary.propertyOptions(forSubjectID: values.subjectID).map {
-                            PVComboBoxOption(value: $0.id, label: $0.label, subtext: $0.key)
-                        },
-                        size: .sm,
-                        placeholder: L10n.CitationComposer.propertyPlaceholder,
-                        emptyLabel: L10n.CitationComposer.propertyPlaceholder,
-                        label: L10n.CitationComposer.propertyLabel,
-                        accessibilityIdentifierPrefix: "citationComposer.edit.property",
-                        activateOnAppear: model.editSession?.focus == .property,
-                        focusNonce: model.editSession?.focus == .property ? model.authoringFocusNonce : 0,
-                        onCommit: { model.advanceEditFocus(from: .property, committed: $0) }
-                    )
-                }
-                .frame(maxWidth: .infinity)
-            }
-            editValue(values, focusValue: model.editSession?.focus == .value)
-            PVCheckbox(
-                L10n.CitationComposer.negativeLabel,
-                description: L10n.CitationComposer.negativeDescription,
-                isChecked: editNegativeBinding
             )
-            if let error {
-                PVCallout(tone: .danger, message: error)
-            }
+        }
+        .onAppear {
+            opensList = false
+            focus = CitationAuthoringNavigation.initialPropertyFocus(subjectID: values.subjectID)
         }
     }
-
-    @ViewBuilder
-    private func editValue(_ values: ObservationRowValues, focusValue: Bool) -> some View {
-        let property = model.vocabulary.property(id: values.propertyID)
-        let nonce = focusValue ? model.authoringFocusNonce : 0
-        switch property?.valueType {
-        case PropertyValueType.text.rawValue:
-            PVInput(
-                text: editTextBinding,
-                size: .sm,
-                activateOnAppear: focusValue,
-                focusNonce: nonce
-            )
-        case PropertyValueType.integer.rawValue:
-            PVInput(
-                text: editIntegerBinding,
-                size: .sm,
-                mono: true,
-                activateOnAppear: focusValue,
-                focusNonce: nonce
-            )
-        case PropertyValueType.term.rawValue:
-            HStack(spacing: PVSpacing.space3) {
-                PVComboBox(
-                    selection: editTermBinding,
-                    options: model.vocabulary.termComboOptionsByPropertyID[values.propertyID] ?? [],
-                    size: .sm,
-                    placeholder: L10n.CitationComposer.termPlaceholder,
-                    emptyLabel: L10n.CitationComposer.termEmpty,
-                    label: L10n.CitationComposer.termLabel,
-                    accessibilityIdentifierPrefix: "citationComposer.edit.term",
-                    activateOnAppear: focusValue,
-                    focusNonce: nonce
-                )
-                PVButton(L10n.CitationComposer.addCustomTerm, variant: .ghost, size: .sm) {
-                    model.beginAddCustomTerm(propertyID: values.propertyID, applyToEdit: true)
-                }
-            }
-        case PropertyValueType.name.rawValue:
-            editInlineValue {
-                NameValueEditorForm(
-                    draft: editNameBinding,
-                    accessibilityIdentifierPrefix: "citationComposer.edit.name",
-                    focusNonce: nonce
-                )
-            }
-        case PropertyValueType.date.rawValue:
-            editInlineValue {
-                DateValueEditorForm(
-                    draft: editDateBinding,
-                    accessibilityIdentifierPrefix: "citationComposer.edit.date",
-                    focusNonce: nonce
-                )
-            }
-        default:
-            EmptyView()
-        }
-    }
-
-    private func editInlineValue<Content: View>(@ViewBuilder content: () -> Content) -> some View {
-        content()
-            .padding(.horizontal, 14)
-            .padding(.vertical, PVSpacing.space5)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(PVColor.surfaceSunken)
-            .clipShape(RoundedRectangle(cornerRadius: PVRadius.md, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: PVRadius.md, style: .continuous)
-                    .stroke(PVColor.borderSubtle, lineWidth: 1)
-            )
-    }
-
     private func bridgeForm(endA: String, endB: String, error: String?) -> some View {
         let pair = CitationComposerAuthoring.resolvePair(
             endA: endA,
@@ -424,6 +366,8 @@ struct CitationComposerEditSheet: View {
                             model.beginAddCustomTerm(propertyID: property.id, applyToEdit: true)
                         }
                     },
+                    focusTerm: focus == .term,
+                    opensList: opensList && focus == .term,
                     termIdentifierPrefix: "citationComposer.edit.bridgeTerm"
                 )
             }
@@ -433,6 +377,14 @@ struct CitationComposerEditSheet: View {
                 .fixedSize(horizontal: false, vertical: true)
             if let error {
                 PVCallout(tone: .danger, message: error)
+            }
+        }
+        .onAppear {
+            opensList = false
+            if case .ready(let ready) = pair, ready.termProperty != nil,
+               editBridgeTermBinding.wrappedValue.isEmpty
+            {
+                focus = .term
             }
         }
     }
@@ -467,133 +419,16 @@ struct CitationComposerEditSheet: View {
         )
     }
 
-    private var editDateBinding: Binding<DateValueDraft> {
+    private var editValuesBinding: Binding<ObservationRowValues> {
         Binding(
             get: {
-                if case .property(let values, _, _) = model.editSession?.kind { return values.dateDraft }
-                return .empty()
+                if case .property(let values, _, _) = model.editSession?.kind { return values }
+                return ObservationRowValues()
             },
             set: { newValue in
                 model.mutateEdit { session in
-                    guard case .property(var values, let id, let ref) = session.kind else { return }
-                    values.dateDraft = newValue
-                    session.kind = .property(values: values, persistedID: id, persistedRef: ref)
-                }
-            }
-        )
-    }
-
-    private var editNameBinding: Binding<NameValueDraft> {
-        Binding(
-            get: {
-                if case .property(let values, _, _) = model.editSession?.kind { return values.nameDraft }
-                return .empty()
-            },
-            set: { newValue in
-                model.mutateEdit { session in
-                    guard case .property(var values, let id, let ref) = session.kind else { return }
-                    values.nameDraft = newValue
-                    session.kind = .property(values: values, persistedID: id, persistedRef: ref)
-                }
-            }
-        )
-    }
-
-    private var editSubjectBinding: Binding<String> {
-        Binding(
-            get: {
-                if case .property(let values, _, _) = model.editSession?.kind { return values.subjectID }
-                return ""
-            },
-            set: { newValue in
-                model.mutateEdit { session in
-                    guard case .property(var values, let id, let ref) = session.kind else { return }
-                    values.subjectID = newValue
-                    session.kind = .property(values: values, persistedID: id, persistedRef: ref)
-                }
-            }
-        )
-    }
-
-    private var editPropertyBinding: Binding<String> {
-        Binding(
-            get: {
-                if case .property(let values, _, _) = model.editSession?.kind { return values.propertyID }
-                return ""
-            },
-            set: { newValue in
-                model.mutateEdit { session in
-                    guard case .property(var values, let id, let ref) = session.kind else { return }
-                    values.propertyID = newValue
-                    session.kind = .property(values: values, persistedID: id, persistedRef: ref)
-                }
-            }
-        )
-    }
-
-    private var editTextBinding: Binding<String> {
-        Binding(
-            get: {
-                if case .property(let values, _, _) = model.editSession?.kind { return values.valueText }
-                return ""
-            },
-            set: { newValue in
-                model.mutateEdit { session in
-                    guard case .property(var values, let id, let ref) = session.kind else { return }
-                    values.valueText = newValue
-                    session.kind = .property(values: values, persistedID: id, persistedRef: ref)
-                }
-            }
-        )
-    }
-
-    private var editIntegerBinding: Binding<String> {
-        Binding(
-            get: {
-                if case .property(let values, _, _) = model.editSession?.kind { return values.valueIntegerText }
-                return ""
-            },
-            set: { newValue in
-                model.mutateEdit { session in
-                    guard case .property(var values, let id, let ref) = session.kind else { return }
-                    values.valueIntegerText = newValue
-                    session.kind = .property(values: values, persistedID: id, persistedRef: ref)
-                }
-            }
-        )
-    }
-
-    private var editTermBinding: Binding<String> {
-        Binding(
-            get: {
-                if case .property(let values, _, _) = model.editSession?.kind { return values.valueTermID }
-                return ""
-            },
-            set: { newValue in
-                model.mutateEdit { session in
-                    guard case .property(var values, let id, let ref) = session.kind else { return }
-                    values.valueTermID = newValue
-                    session.kind = .property(values: values, persistedID: id, persistedRef: ref)
-                }
-            }
-        )
-    }
-
-    private var editNegativeBinding: Binding<Bool> {
-        Binding(
-            get: {
-                if case .property(let values, _, _) = model.editSession?.kind {
-                    return values.polarity == ObservationPolarity.negative.rawValue
-                }
-                return false
-            },
-            set: { checked in
-                model.mutateEdit { session in
-                    guard case .property(var values, let id, let ref) = session.kind else { return }
-                    values.polarity = checked
-                        ? ObservationPolarity.negative.rawValue
-                        : ObservationPolarity.positive.rawValue
-                    session.kind = .property(values: values, persistedID: id, persistedRef: ref)
+                    guard case .property(_, let id, let ref) = session.kind else { return }
+                    session.kind = .property(values: newValue, persistedID: id, persistedRef: ref)
                 }
             }
         )
