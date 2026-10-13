@@ -71,7 +71,8 @@ struct CitationComposerView: View {
             isPresented: editSheetBinding,
             copy: PVFormDialogCopy(
                 title: editSheetTitle,
-                confirm: L10n.CitationComposer.save,
+                verbatimSubtitle: editSheetSubtitle,
+                confirm: editSheetConfirm,
                 cancel: L10n.CitationComposer.cancel
             ),
             width: 520,
@@ -86,9 +87,9 @@ struct CitationComposerView: View {
         .pvFormDialog(
             isPresented: observationDialogBinding,
             copy: PVFormDialogCopy(
-                title: L10n.CitationComposer.editValueTitle,
+                title: valueEditorTitle,
                 subtitle: L10n.CitationComposer.valueDialogSubtitle,
-                confirm: L10n.CitationComposer.applyValue,
+                confirm: valueEditorConfirm,
                 cancel: L10n.CitationComposer.cancel
             ),
             width: observationDialogWidth,
@@ -324,7 +325,7 @@ struct CitationComposerView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .accessibilityElement(children: .contain)
                     .accessibilityLabel(Text(L10n.CitationComposer.viewerGroup))
-                PVDivider(axis: .vertical, color: PVColor.borderDefault)
+                PVDivider(axis: .vertical, color: PVColor.borderSubtle)
                 CitationComposerObservationsColumn(model: model) {
                     navigation.go(to: model.graphLocation())
                 }
@@ -348,6 +349,55 @@ struct CitationComposerView: View {
             return L10n.CitationComposer.editBridgeTitle
         }
         return L10n.CitationComposer.editObservation
+    }
+
+    private var editSheetConfirm: LocalizedStringResource {
+        if case .bridge = model.editSession?.kind {
+            return L10n.CitationComposer.saveBridge
+        }
+        return L10n.CitationComposer.saveObservation
+    }
+
+    private var editSheetSubtitle: String {
+        guard let session = model.editSession else { return "" }
+        switch session.kind {
+        case .property(_, let id, let ref):
+            let shown = ref.isEmpty ? id : ref
+            return L10n.CitationComposer.editObservationSubtitle(ref: shown)
+        case .bridge(let endA, let endB, _, _, let bridgeRef, _):
+            let opened = model.vocabulary.subjectsByID[session.openedFromSubjectID]?.label
+                ?? model.vocabulary.subjectsByID[endA]?.label
+                ?? ""
+            let nameA = model.vocabulary.subjectsByID[endA]?.label ?? ""
+            let nameB = model.vocabulary.subjectsByID[endB]?.label ?? ""
+            return L10n.CitationComposer.editBridgeSubtitle(
+                ref: bridgeRef,
+                openedFrom: opened,
+                endA: nameA,
+                endB: nameB
+            )
+        }
+    }
+
+    private var valueEditorTitle: LocalizedStringResource {
+        switch valueEditorType {
+        case PropertyValueType.date.rawValue: L10n.CitationComposer.editDate
+        case PropertyValueType.name.rawValue: L10n.CitationComposer.editNameTitle
+        default: L10n.CitationComposer.editValueTitle
+        }
+    }
+
+    private var valueEditorConfirm: LocalizedStringResource {
+        switch valueEditorType {
+        case PropertyValueType.date.rawValue: L10n.CitationComposer.saveDate
+        case PropertyValueType.name.rawValue: L10n.CitationComposer.saveName
+        default: L10n.CitationComposer.applyValue
+        }
+    }
+
+    private var valueEditorType: String {
+        let propertyID = model.observationDialog?.propertyID ?? ""
+        return model.vocabulary.property(id: propertyID)?.valueType ?? ""
     }
 
     private var observationDialogBinding: Binding<Bool> {

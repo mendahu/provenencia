@@ -372,11 +372,37 @@ final class CitationComposerModel {
     var needsWholePageWarning: Bool { transcriptions.needsWholePageWarning }
 
     var unsavedSummary: String {
-        L10n.CitationComposer.unsavedSummary(
+        if authoring.holdsLeave {
+            let detail = leaveDraftDetail
+            let ref = activeCitationRef.isEmpty
+                ? L10n.string(L10n.CitationComposer.newCitation)
+                : activeCitationRef
+            return L10n.CitationComposer.leaveDraft(detail: detail, ref: ref)
+        }
+        return L10n.CitationComposer.unsavedSummary(
             citationDirty: fields.isDirty,
-            observationCount: (authoring.holdsLeave || (editSession?.isDirty ?? false)) ? 1 : 0,
+            observationCount: (editSession?.isDirty ?? false) ? 1 : 0,
             connectionTouched: false
         )
+    }
+
+    private var leaveDraftDetail: String {
+        switch authoring {
+        case .bridge(let draft):
+            if case .ready(let ready) = CitationComposerAuthoring.resolvePair(
+                endA: draft.endA,
+                endB: draft.endB,
+                termID: draft.termID,
+                vocabulary: vocabulary
+            ), let reading = ready.reading {
+                return reading
+            }
+            return L10n.string(L10n.CitationComposer.newBridgeTitle)
+        case .property:
+            return L10n.string(L10n.CitationComposer.newObservationTitle)
+        case .rest:
+            return L10n.string(L10n.CitationComposer.unsavedDraft)
+        }
     }
 
     var graphHandle: QueryHandle<SourceGraphRows>? {

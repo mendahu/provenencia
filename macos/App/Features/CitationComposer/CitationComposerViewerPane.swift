@@ -215,35 +215,68 @@ struct CitationComposerViewerPane: View {
 
     private var locatorStrip: some View {
         HStack(spacing: PVSpacing.space3) {
-            locatorChip(
-                icon: .file,
-                title: L10n.string(L10n.CitationComposer.locatorEntireArtifact),
-                accessibilityIdentifier: "citationComposer.locator.artifact"
-            )
+            Text(L10n.CitationComposer.locatorEyebrow)
+                .pvMicroCaps()
+                .foregroundStyle(PVColor.textMuted)
+                .padding(.trailing, PVSpacing.space2)
+            locatorFloor
             if model.locatorCapabilities.supportsPageLocator, let page = model.locator.page {
+                locatorChevron
                 locatorChip(
-                    icon: .bookmark,
+                    icon: .file,
                     title: L10n.CitationComposer.locatorPage(page),
+                    detail: model.artifactViewer.pageCount > 0
+                        ? L10n.CitationComposer.pageOfCount(model.artifactViewer.pageCount)
+                        : nil,
+                    monoDetail: false,
                     accessibilityIdentifier: "citationComposer.locator.page",
                     onRemove: { model.removePage() }
                 )
             }
             if model.locatorCapabilities.supportsRegionLocator, let region = model.locator.region {
+                locatorChevron
                 locatorChip(
                     icon: regionSymbol(region.kind),
                     title: regionNoun(region.kind),
+                    detail: L10n.CitationComposer.locatorPoints(region.points.count),
+                    monoDetail: true,
                     accessibilityIdentifier: "citationComposer.locator.region",
                     onRemove: { model.removeRegion() }
                 )
             }
-            Spacer(minLength: 0)
+            Spacer(minLength: PVSpacing.space4)
+            Text(L10n.CitationComposer.locatorDrawHint)
+                .font(PVFont.body(size: PVTypeScale.caption, italic: true))
+                .foregroundStyle(PVColor.textMuted)
+                .lineLimit(1)
+                .layoutPriority(-1)
         }
-        .lineLimit(1)
-        .padding(.horizontal, PVSpacing.space6)
-        .padding(.vertical, PVSpacing.space2)
+        .frame(height: 36)
+        .padding(.leading, PVSpacing.space6)
+        .padding(.trailing, PVSpacing.space5)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(PVColor.surfaceCard)
+        .overlay(alignment: .bottom) {
+            PVDivider(axis: .horizontal, color: PVColor.borderSubtle)
+        }
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("citationComposer.locatorList")
+    }
+
+    private var locatorFloor: some View {
+        HStack(spacing: PVSpacing.space2) {
+            PVIcon(.scrollText, size: 14)
+            Text(L10n.CitationComposer.locatorEntireArtifact)
+                .font(PVFont.body(size: PVTypeScale.caption))
+                .lineLimit(1)
+        }
+        .foregroundStyle(PVColor.textMuted)
+        .accessibilityIdentifier("citationComposer.locator.artifact")
+    }
+
+    private var locatorChevron: some View {
+        PVIcon(.chevronForward, size: 12)
+            .foregroundStyle(PVColor.textFaint)
     }
 
     private func regionNoun(_ kind: ArtifactRegionKind) -> String {
@@ -274,8 +307,10 @@ struct CitationComposerViewerPane: View {
     private func locatorChip(
         icon: PVSymbol,
         title: String,
+        detail: String?,
+        monoDetail: Bool,
         accessibilityIdentifier: String,
-        onRemove: (() -> Void)? = nil
+        onRemove: @escaping () -> Void
     ) -> some View {
         HStack(spacing: PVSpacing.space2) {
             PVIcon(icon, size: 12)
@@ -284,11 +319,24 @@ struct CitationComposerViewerPane: View {
                 .font(PVFont.body(size: PVTypeScale.caption))
                 .foregroundStyle(PVColor.textPrimary)
                 .lineLimit(1)
-            if let onRemove {
-                PVIconButton(.dismiss, label: L10n.CitationComposer.removeLocatorLayer, size: .sm, action: onRemove)
-                    .accessibilityIdentifier("\(accessibilityIdentifier).remove")
+            if let detail {
+                Text(verbatim: detail)
+                    .font(monoDetail ? PVFont.mono(size: PVTypeScale.micro) : PVFont.body(size: PVTypeScale.caption))
+                    .foregroundStyle(PVColor.textMuted)
+                    .lineLimit(1)
             }
+            PVIconButton(.dismiss, label: L10n.CitationComposer.removeLocatorLayer, size: .sm, action: onRemove)
+                .accessibilityIdentifier("\(accessibilityIdentifier).remove")
         }
+        .padding(.leading, PVSpacing.space4)
+        .padding(.trailing, PVSpacing.space1)
+        .frame(height: PVSpacing.controlHeightSmall)
+        .background(PVColor.surfaceSunken)
+        .clipShape(RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous)
+                .stroke(PVColor.borderSubtle, lineWidth: 1)
+        )
         .accessibilityIdentifier(accessibilityIdentifier)
     }
 }

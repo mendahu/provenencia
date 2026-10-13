@@ -13,17 +13,21 @@ import SwiftUI
 struct PVFormDialogCopy {
     let title: LocalizedStringResource
     let subtitle: LocalizedStringResource?
+    /// Already-localized subtitle, for copy that includes a ref or a name.
+    let verbatimSubtitle: String?
     let confirm: LocalizedStringResource
     let cancel: LocalizedStringResource
 
     init(
         title: LocalizedStringResource,
         subtitle: LocalizedStringResource? = nil,
+        verbatimSubtitle: String? = nil,
         confirm: LocalizedStringResource,
         cancel: LocalizedStringResource
     ) {
         self.title = title
         self.subtitle = subtitle
+        self.verbatimSubtitle = verbatimSubtitle
         self.confirm = confirm
         self.cancel = cancel
     }
@@ -101,7 +105,7 @@ struct PVFormDialogContent<Form: View>: View {
     var body: some View {
         PVPanel(
             title: Text(copy.title),
-            subtitle: copy.subtitle.map { Text($0) },
+            subtitle: formDialogSubtitle(copy),
             width: width,
             footerChrome: .sunken
         ) {
@@ -139,6 +143,13 @@ struct PVFormDialogContent<Form: View>: View {
             }
         }
     }
+}
+
+private func formDialogSubtitle(_ copy: PVFormDialogCopy) -> Text? {
+    if let verbatim = copy.verbatimSubtitle, !verbatim.isEmpty {
+        return Text(verbatim: verbatim)
+    }
+    return copy.subtitle.map { Text($0) }
 }
 
 /// Applies `{prefix}.{suffix}` only when a prefix is provided.

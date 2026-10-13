@@ -20,13 +20,10 @@ extension CitationComposerModel {
     }
 
     var observationsMeta: String {
-        let ref = activeCitationRef
-        if savedLineCount == 0 {
-            return ref.isEmpty
-                ? L10n.string(L10n.CitationComposer.noneYet)
-                : L10n.CitationComposer.noneOnCitation(ref: ref)
+        guard activeCitationID != nil else {
+            return L10n.string(L10n.CitationComposer.noneYet)
         }
-        return L10n.CitationComposer.observationsOnCitation(count: savedLineCount, ref: ref)
+        return L10n.CitationComposer.observationsOnCitation(count: savedLineCount, ref: activeCitationRef)
     }
 
     func openAuthoring(_ work: @escaping @MainActor () -> Void) {
@@ -116,7 +113,19 @@ extension CitationComposerModel {
         }
         switch field {
         case .propertySubject:
-            mutateProperty { $0.values.subjectID = raw }
+            mutateProperty { draft in
+                let previous = self.vocabulary.subjectsByID[draft.values.subjectID]?.typeKey
+                let next = self.vocabulary.subjectsByID[raw]?.typeKey
+                draft.values.subjectID = raw
+                if previous != next {
+                    draft.values.propertyID = ""
+                    draft.values.valueText = ""
+                    draft.values.valueIntegerText = ""
+                    draft.values.valueTermID = ""
+                    draft.values.dateDraft = .empty()
+                    draft.values.nameDraft = .empty()
+                }
+            }
         case .bridgeEndA:
             mutateBridge { $0.endA = raw }
         case .bridgeEndB:
@@ -149,7 +158,7 @@ extension CitationComposerModel {
                         values: row.values,
                         baseline: ObservationRowValues(),
                         focus: .property,
-                        note: L10n.string(L10n.CitationComposer.duplicatedNote),
+                        note: self.duplicateOrigin(subjectID: line.subjectID, phrase: line.phrase),
                         isDuplicate: true
                     )
                 )
@@ -164,6 +173,10 @@ extension CitationComposerModel {
                     termID: connection.roleTermID,
                     origin: .duplicate
                 )
+                if case .bridge(var draft) = self.authoring {
+                    draft.note = self.duplicateOrigin(subjectID: line.subjectID, phrase: line.phrase)
+                    self.authoring = .bridge(draft)
+                }
             }
         }
     }
@@ -178,7 +191,8 @@ extension CitationComposerModel {
                     persistedID: observationID,
                     persistedRef: row.persistedRef ?? observationID
                 ),
-                propertyBaseline: row.values
+                propertyBaseline: row.values,
+                openedFromSubjectID: line.subjectID
             )
             return
         }
@@ -193,7 +207,8 @@ extension CitationComposerModel {
                     bridgeID: bridgeID,
                     bridgeRef: connection.bridgeRef ?? bridgeID,
                     baselineTermID: connection.roleTermID
-                )
+                ),
+                openedFromSubjectID: line.subjectID
             )
         }
     }
@@ -460,9 +475,14 @@ extension CitationComposerModel {
                 )
             )
             freshLineKey = "bridge:\(created.0.id)"
+            let sentence = ready.reading ?? "\(endALabel), \(endBLabel)"
+            let ref = created.0.ref
+            let message = draft.origin == .duplicate
+                ? L10n.CitationComposer.duplicateSavedBody(reading: sentence, ref: ref)
+                : L10n.CitationComposer.bridgeSavedBody(reading: sentence, ref: ref)
             bridgeToast = (
                 title: L10n.string(L10n.CitationComposer.bridgeSavedTitle),
-                message: L10n.CitationComposer.bridgeSavedBody(endA: endALabel, endB: endBLabel)
+                message: message
             )
         } catch is CitationComposerNeedArtifact {
             draft.isSaving = false
@@ -479,6 +499,16 @@ extension CitationComposerModel {
         guard case .property(var draft) = authoring else { return }
         body(&draft)
         authoring = .property(draft)
+    }
+
+    func duplicateOrigin(subjectID: String, phrase: String) -> String {
+        let name = vocabulary.subjectsByID[subjectID]?.label
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let phrase = phrase.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty, !phrase.isEmpty else {
+            return L10n.string(L10n.CitationComposer.duplicatedNote)
+        }
+        return L10n.CitationComposer.duplicatedFrom(name, phrase)
     }
 
     func mutateBridge(_ body: (inout CitationBridgeDraft) -> Void) {

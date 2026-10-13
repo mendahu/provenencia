@@ -24,7 +24,7 @@ struct CitationComposerObservationsColumn: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
-        .background(PVColor.surfaceCard)
+        .background(PVColor.surfacePage)
         .overlay(alignment: .bottom) {
             if let toast = model.bridgeToast {
                 PVToast(tone: .success, title: toast.title, message: toast.message) {
@@ -45,8 +45,12 @@ struct CitationComposerObservationsColumn: View {
             title: L10n.CitationComposer.observationsSection,
             meta: model.observationsMeta,
             aside: {
-                if model.authoring.holdsLeave {
-                    Text(L10n.CitationComposer.unsavedDraft)
+                if case .bridge(let draft) = model.authoring, draft.holdsLeave {
+                    Text(L10n.CitationComposer.unsavedDraftBridge)
+                        .font(PVFont.body(size: PVTypeScale.caption, italic: true))
+                        .foregroundStyle(PVColor.textMuted)
+                } else if case .property(let draft) = model.authoring, draft.holdsLeave {
+                    Text(L10n.CitationComposer.unsavedDraftObservation)
                         .font(PVFont.body(size: PVTypeScale.caption, italic: true))
                         .foregroundStyle(PVColor.textMuted)
                 }
@@ -64,9 +68,10 @@ struct CitationComposerObservationsColumn: View {
     private var groups: some View {
         if model.subjectGroups.isEmpty {
             PVEmptyState(
-                icon: .bookmark,
+                icon: .listPlus,
                 title: L10n.CitationComposer.noObservations,
-                message: L10n.string(L10n.CitationComposer.emptyObservationsMessage)
+                message: L10n.string(L10n.CitationComposer.emptyObservationsMessage),
+                compact: true
             ) {
                 EmptyView()
             }
@@ -81,77 +86,132 @@ struct CitationComposerObservationsColumn: View {
     }
 
     private func subjectCard(_ group: CitationSubjectGroup) -> some View {
-        PVCard(padding: PVSpacing.space4) {
-            VStack(alignment: .leading, spacing: PVSpacing.space3) {
-                HStack(spacing: PVSpacing.space3) {
+        PVCard(padding: 0) {
+            VStack(alignment: .leading, spacing: 0) {
+                HStack(spacing: PVSpacing.space4) {
                     PVMark(PVMarkKey(catalogKey: "subject_\(group.typeKey)"), size: 16, decorative: true)
                     Text(verbatim: group.name)
-                        .font(PVFont.display(size: PVTypeScale.h4, weight: PVFontWeight.semibold))
-                        .foregroundStyle(PVColor.textDisplay)
+                        .font(PVFont.body(size: PVTypeScale.bodySmall, weight: PVFontWeight.semibold))
+                        .foregroundStyle(PVColor.textPrimary)
                         .lineLimit(1)
+                    if !group.ref.isEmpty {
+                        Text(verbatim: group.ref)
+                            .font(PVFont.mono(size: PVTypeScale.micro))
+                            .foregroundStyle(PVColor.textMuted)
+                            .lineLimit(1)
+                    }
                     Spacer(minLength: 0)
+                    Text(verbatim: "\(group.lines.count)")
+                        .font(PVFont.mono(size: PVTypeScale.micro))
+                        .foregroundStyle(PVColor.textMuted)
                     PVIconButton(
                         .plus,
-                        label: L10n.CitationComposer.addForSubject,
+                        label: L10n.CitationComposer.addForNamedSubject(group.name),
                         size: .sm
                     ) {
                         model.beginAddObservation(for: group.subjectID)
                     }
                     .accessibilityIdentifier("citationComposer.group.add.\(group.subjectID)")
                 }
-                ForEach(group.lines) { line in
-                    lineRow(line)
+                .padding(.leading, PVSpacing.space5)
+                .padding(.trailing, PVSpacing.space3)
+                .frame(height: 38)
+                .overlay(alignment: .bottom) {
+                    PVDivider(axis: .horizontal, color: PVColor.borderSubtle)
+                }
+                ForEach(Array(group.lines.enumerated()), id: \.element.id) { index, line in
+                    lineRow(line, rule: index > 0)
                 }
             }
         }
     }
 
-    private func lineRow(_ line: CitationSavedLine) -> some View {
-        let revealed = hoveredLineID == line.id
-        return HStack(alignment: .firstTextBaseline, spacing: PVSpacing.space3) {
-            if let markKey = line.markKey {
-                PVMark(PVMarkKey(catalogKey: markKey), size: 14, decorative: true)
+    private func lineRow(_ line: CitationSavedLine, rule: Bool) -> some View {
+        let revealed = hoveredLineID == line.id || menuLine?.id == line.id && lineMenu.isPresented
+        let twin = line.bridgeID.map { bridgeID in
+            hoveredLineID?.contains("bridge:\(bridgeID):") == true && hoveredLineID != line.id
+        } ?? false
+        let fresh = isFresh(line)
+        return HStack(alignment: .center, spacing: PVSpacing.space4) {
+            Group {
+                if let markKey = line.markKey {
+                    PVMark(PVMarkKey(catalogKey: markKey), size: 14, decorative: true)
+                } else {
+                    Color.clear
+                }
             }
-            Button {
-                model.beginEdit(line: line)
-            } label: {
-                HStack(spacing: PVSpacing.space2) {
-                    if line.negative {
-                        Text(L10n.CitationComposer.notWord)
-                            .italic()
-                            .foregroundStyle(PVColor.textMuted)
-                    }
-                    Text(verbatim: line.body.isEmpty ? "—" : line.body)
-                        .foregroundStyle(PVColor.textPrimary)
-                        .multilineTextAlignment(.leading)
-                    if line.negative {
-                        PVBadge(L10n.CitationComposer.negatedBadge, tone: .danger)
-                    }
-                    if model.freshLineKey == line.id || model.freshLineKey == line.sortKey
-                        || (line.bridgeID != nil && model.freshLineKey == "bridge:\(line.bridgeID ?? "")")
-                    {
-                        PVBadge(L10n.CitationComposer.savedBadge, tone: .success)
-                    }
+            .frame(width: 16, height: 16)
+            Text(verbatim: line.label)
+                .font(PVFont.body(size: 12))
+                .foregroundStyle(PVColor.textSecondary)
+                .lineLimit(2)
+                .frame(minWidth: 92, maxWidth: 124, alignment: .leading)
+            HStack(alignment: .firstTextBaseline, spacing: PVSpacing.space2) {
+                if line.negative {
+                    Text(L10n.CitationComposer.notWord)
+                        .italic()
+                        .foregroundStyle(PVColor.textMuted)
                 }
-                .font(PVFont.body(size: PVTypeScale.bodySmall))
-                .frame(maxWidth: .infinity, alignment: .leading)
+                Text(verbatim: line.valueText.isEmpty ? "—" : line.valueText)
+                    .font(line.mono ? PVFont.mono(size: PVTypeScale.caption) : PVFont.body(size: PVTypeScale.bodySmall))
+                    .foregroundStyle(PVColor.textPrimary)
             }
-            .buttonStyle(.plain)
-            .accessibilityIdentifier("citationComposer.line.\(line.id)")
-            if revealed {
-                PVIconButton(.duplicate, label: L10n.CitationComposer.duplicate, size: .sm) {
-                    model.duplicate(line: line)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            if line.negative {
+                PVBadge(L10n.CitationComposer.negativeLabel, tone: .neutral, icon: .circleMinus, subtle: true)
+            }
+            if fresh {
+                PVBadge(L10n.CitationComposer.savedBadge, tone: .success, icon: .check, subtle: true)
+            }
+            HStack(spacing: PVSpacing.space1) {
+                if revealed {
+                    PVIconButton(
+                        .duplicate,
+                        label: line.bridgeID == nil
+                            ? L10n.CitationComposer.duplicateObservation
+                            : L10n.CitationComposer.duplicateBridge,
+                        size: .sm
+                    ) {
+                        model.duplicate(line: line)
+                    }
+                    PVIconButton(.ellipsis, label: L10n.CitationComposer.moreActions, size: .sm) {
+                        menuLine = line
+                        lineMenu.present(at: CGPoint(x: 0, y: PVSpacing.controlHeightSmall))
+                    }
                 }
-                PVIconButton(.ellipsis, label: L10n.CitationComposer.moreActions, size: .sm) {
-                    menuLine = line
-                    lineMenu.present(at: CGPoint(x: 0, y: PVSpacing.controlHeightSmall))
-                }
+            }
+            .frame(width: 58, alignment: .trailing)
+        }
+        .padding(.vertical, PVSpacing.space1)
+        .padding(.leading, PVSpacing.space5)
+        .padding(.trailing, PVSpacing.space3)
+        .frame(minHeight: 32)
+        .background(lineBackground(fresh: fresh, revealed: revealed, twin: twin))
+        .overlay(alignment: .top) {
+            if rule {
+                PVDivider(axis: .horizontal, color: PVColor.borderSubtle)
             }
         }
-        .padding(.vertical, PVSpacing.space2)
+        .contentShape(Rectangle())
+        .onTapGesture { model.beginEdit(line: line) }
         .onHover { hovering in
             hoveredLineID = hovering ? line.id : (hoveredLineID == line.id ? nil : hoveredLineID)
         }
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("citationComposer.line.\(line.id)")
+    }
+
+    private func isFresh(_ line: CitationSavedLine) -> Bool {
+        if model.freshLineKey == line.id || model.freshLineKey == line.sortKey { return true }
+        if let bridgeID = line.bridgeID, model.freshLineKey == "bridge:\(bridgeID)" { return true }
+        if let observationID = line.observationID, model.freshLineKey == "obs:\(observationID)" { return true }
+        return false
+    }
+
+    private func lineBackground(fresh: Bool, revealed: Bool, twin: Bool) -> Color {
+        if fresh { return PVColor.successSoft }
+        if revealed || twin { return PVColor.surfaceActive }
+        return .clear
     }
 
     private var lineMenuBinding: Binding<PVContextMenuState> {
@@ -161,7 +221,10 @@ struct CitationComposerObservationsColumn: View {
     @ViewBuilder
     private var lineMenuContent: some View {
         if let line = menuLine {
-            PVContextMenuItem(L10n.CitationComposer.editObservation, index: 0) {
+            PVContextMenuItem(
+                line.bridgeID == nil ? L10n.CitationComposer.editObservationMenu : L10n.CitationComposer.editBridgeMenu,
+                index: 0
+            ) {
                 model.beginEdit(line: line)
             }
             PVContextMenuItem(L10n.CitationComposer.duplicate, index: 1) {
@@ -209,27 +272,35 @@ struct CitationComposerEditSheet: View {
     }
 
     private func propertyForm(_ values: ObservationRowValues, error: String?) -> some View {
-        VStack(alignment: .leading, spacing: PVSpacing.space4) {
-            PVComboBox(
-                selection: editSubjectBinding,
-                options: model.subjectOptions,
-                size: .sm,
-                placeholder: L10n.CitationComposer.subjectPlaceholder,
-                emptyLabel: L10n.CitationComposer.subjectPlaceholder,
-                label: L10n.CitationComposer.subjectLabel,
-                accessibilityIdentifierPrefix: "citationComposer.edit.subject"
-            )
-            PVComboBox(
-                selection: editPropertyBinding,
-                options: model.vocabulary.propertyOptions(forSubjectID: values.subjectID).map {
-                    PVComboBoxOption(value: $0.id, label: $0.label, subtext: $0.key)
-                },
-                size: .sm,
-                placeholder: L10n.CitationComposer.propertyPlaceholder,
-                emptyLabel: L10n.CitationComposer.propertyPlaceholder,
-                label: L10n.CitationComposer.propertyLabel,
-                accessibilityIdentifierPrefix: "citationComposer.edit.property"
-            )
+        VStack(alignment: .leading, spacing: PVSpacing.space5) {
+            HStack(alignment: .top, spacing: PVSpacing.space5) {
+                PVField(label: L10n.CitationComposer.subjectLabel) {
+                    PVComboBox(
+                        selection: editSubjectBinding,
+                        options: model.subjectOptions,
+                        size: .sm,
+                        placeholder: L10n.CitationComposer.subjectPlaceholder,
+                        emptyLabel: L10n.CitationComposer.subjectPlaceholder,
+                        label: L10n.CitationComposer.subjectLabel,
+                        accessibilityIdentifierPrefix: "citationComposer.edit.subject"
+                    )
+                }
+                .frame(maxWidth: .infinity)
+                PVField(label: L10n.CitationComposer.propertyLabel) {
+                    PVComboBox(
+                        selection: editPropertyBinding,
+                        options: model.vocabulary.propertyOptions(forSubjectID: values.subjectID).map {
+                            PVComboBoxOption(value: $0.id, label: $0.label, subtext: $0.key)
+                        },
+                        size: .sm,
+                        placeholder: L10n.CitationComposer.propertyPlaceholder,
+                        emptyLabel: L10n.CitationComposer.propertyPlaceholder,
+                        label: L10n.CitationComposer.propertyLabel,
+                        accessibilityIdentifierPrefix: "citationComposer.edit.property"
+                    )
+                }
+                .frame(maxWidth: .infinity)
+            }
             editValue(values)
             PVCheckbox(
                 L10n.CitationComposer.negativeLabel,
@@ -265,42 +336,107 @@ struct CitationComposerEditSheet: View {
                     model.beginAddCustomTerm(propertyID: values.propertyID, applyToEdit: true)
                 }
             }
-        case PropertyValueType.name.rawValue, PropertyValueType.date.rawValue:
-            Button {
-                model.beginValueEditor(applyToEdit: true)
-            } label: {
-                Text(L10n.CitationComposer.editObservation)
-            }
-            .buttonStyle(.pv(.secondary, size: .sm))
+        case PropertyValueType.name.rawValue:
+            editStructuredValue(values, date: false)
+        case PropertyValueType.date.rawValue:
+            editStructuredValue(values, date: true)
         default:
             EmptyView()
         }
     }
 
+    private func editStructuredValue(_ values: ObservationRowValues, date: Bool) -> some View {
+        let property = model.vocabulary.property(id: values.propertyID)
+        let summary = CitationObservationValue.summary(
+            valueType: property?.valueType ?? "",
+            fields: CitationObservationValue.Fields(
+                valueText: values.valueText,
+                valueIntegerText: values.valueIntegerText,
+                valueTermID: values.valueTermID,
+                valueSubjectID: values.valueSubjectID,
+                dateDraft: values.dateDraft,
+                nameDraft: values.nameDraft
+            ),
+            termLabel: nil
+        )
+        let empty = summary.isEmpty
+        return HStack(spacing: PVSpacing.space5) {
+            Text(verbatim: empty ? L10n.string(L10n.CitationComposer.notEnteredYet) : summary)
+                .font(date ? PVFont.mono(size: PVTypeScale.caption) : PVFont.body(size: PVTypeScale.caption))
+                .foregroundStyle(empty ? PVColor.textFaint : PVColor.textPrimary)
+                .lineLimit(1)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            PVButton(
+                empty
+                    ? (date ? L10n.CitationComposer.enterDate : L10n.CitationComposer.enterName)
+                    : (date ? L10n.CitationComposer.editDateButton : L10n.CitationComposer.editName),
+                variant: .secondary,
+                size: .sm,
+                icon: date ? .calendar : .signature
+            ) {
+                model.beginValueEditor(applyToEdit: true)
+            }
+        }
+    }
+
     private func bridgeForm(endA: String, endB: String, error: String?) -> some View {
-        let endAName = model.vocabulary.subjectsByID[endA]?.label ?? endA
-        let endBName = model.vocabulary.subjectsByID[endB]?.label ?? endB
-        let property = bridgeTermProperty()
+        let pair = CitationComposerAuthoring.resolvePair(
+            endA: endA,
+            endB: endB,
+            termID: editBridgeTermBinding.wrappedValue,
+            vocabulary: model.vocabulary
+        )
         return VStack(alignment: .leading, spacing: PVSpacing.space4) {
+            lockedEnd(id: endA, title: endTitle(pair, first: true))
+            if case .ready(let ready) = pair {
+                HStack(spacing: PVSpacing.space4) {
+                    PVMark(PVMarkKey(catalogKey: ready.markKey), size: 16, decorative: true)
+                    Text(verbatim: ready.kindLabel)
+                        .font(PVFont.body(size: PVTypeScale.caption, weight: PVFontWeight.semibold))
+                    Text(verbatim: ready.pairHint)
+                        .font(PVFont.body(size: PVTypeScale.caption, italic: true))
+                        .foregroundStyle(PVColor.textMuted)
+                }
+            }
+            lockedEnd(id: endB, title: endTitle(pair, first: false))
             Text(L10n.CitationComposer.lockEndsNote)
                 .font(PVFont.body(size: PVTypeScale.caption, italic: true))
                 .foregroundStyle(PVColor.textMuted)
-            labeledReadOnly(L10n.CitationComposer.endA, value: endAName)
-            labeledReadOnly(L10n.CitationComposer.endB, value: endBName)
-            if let property {
-                HStack(spacing: PVSpacing.space3) {
+            if case .ready(let ready) = pair, let property = ready.termProperty {
+                VStack(alignment: .leading, spacing: PVSpacing.space3) {
+                Text(verbatim: ConnectionTermCopy.label(disambiguationKey: property.key))
+                    .font(PVFont.body(size: PVTypeScale.caption, weight: PVFontWeight.medium))
+                    .foregroundStyle(PVColor.textSecondary)
+                HStack(spacing: PVSpacing.space4) {
                     PVComboBox(
                         selection: editBridgeTermBinding,
                         options: model.vocabulary.termComboOptionsByPropertyID[property.id] ?? [],
                         size: .sm,
-                        placeholder: L10n.CitationComposer.termPlaceholder,
+                        placeholder: property.key == "role"
+                            ? L10n.CitationComposer.searchRoles
+                            : L10n.CitationComposer.searchTypes,
                         emptyLabel: L10n.CitationComposer.termEmpty,
                         label: ConnectionTermCopy.label(disambiguationKey: property.key),
                         accessibilityIdentifierPrefix: "citationComposer.edit.bridgeTerm"
                     )
-                    PVButton(L10n.CitationComposer.addCustomTerm, variant: .ghost, size: .sm) {
+                    PVButton(L10n.CitationComposer.addCustomTerm, variant: .ghost, size: .sm, icon: .plus) {
                         model.beginAddCustomTerm(propertyID: property.id, applyToEdit: true)
                     }
+                }
+                if let reading = ready.reading {
+                    HStack(alignment: .firstTextBaseline, spacing: PVSpacing.space4) {
+                        Text(L10n.CitationComposer.readsEyebrow)
+                            .pvMicroCaps()
+                            .foregroundStyle(PVColor.textMuted)
+                        Text(verbatim: reading)
+                            .font(PVFont.body(size: PVTypeScale.caption))
+                    }
+                    .padding(.horizontal, PVSpacing.space5)
+                    .padding(.vertical, PVSpacing.space3)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(PVColor.surfaceSunken)
+                    .clipShape(RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous))
+                }
                 }
             }
             if let error {
@@ -309,23 +445,34 @@ struct CitationComposerEditSheet: View {
         }
     }
 
-    private func labeledReadOnly(_ label: LocalizedStringResource, value: String) -> some View {
-        VStack(alignment: .leading, spacing: PVSpacing.space1) {
-            Text(label)
+    private func lockedEnd(id: String, title: String) -> some View {
+        let subject = model.vocabulary.subjectsByID[id]
+        return VStack(alignment: .leading, spacing: PVSpacing.space2) {
+            Text(verbatim: title)
                 .font(PVFont.body(size: PVTypeScale.caption))
                 .foregroundStyle(PVColor.textMuted)
-            Text(verbatim: value)
-                .font(PVFont.body(size: PVTypeScale.bodySmall))
-                .foregroundStyle(PVColor.textPrimary)
+            HStack(spacing: PVSpacing.space4) {
+                if let typeKey = subject?.typeKey {
+                    PVMark(PVMarkKey(catalogKey: "subject_\(typeKey)"), size: 14, decorative: true)
+                }
+                Text(verbatim: subject?.label ?? id)
+                    .font(PVFont.body(size: PVTypeScale.bodySmall))
+                    .foregroundStyle(PVColor.textPrimary)
+                if let ref = subject?.ref, !ref.isEmpty {
+                    Text(verbatim: ref)
+                        .font(PVFont.mono(size: PVTypeScale.micro))
+                        .foregroundStyle(PVColor.textMuted)
+                }
+            }
+            .frame(minHeight: PVSpacing.controlHeightSmall, alignment: .leading)
         }
     }
 
-    private func bridgeTermProperty() -> CatalogProperty? {
-        guard let session = model.editSession,
-              case .bridge(_, _, _, let bridgeID, _, _) = session.kind,
-              let connection = model.connections.rows.first(where: { $0.bridgeID == bridgeID })
-        else { return nil }
-        return connection.termProperty
+    private func endTitle(_ pair: CitationPair, first: Bool) -> String {
+        if case .ready(let ready) = pair {
+            return first ? ready.endATitle : ready.endBTitle
+        }
+        return L10n.string(first ? L10n.CitationComposer.endA : L10n.CitationComposer.endB)
     }
 
     private var editSubjectBinding: Binding<String> {

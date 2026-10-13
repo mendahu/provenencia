@@ -38,6 +38,14 @@ enum PVSymbol: String {
     case scrollText = "doc.text"
     /// Lucide `file` — locator floor (entire artifact).
     case file = "doc"
+    /// Lucide `quote` — citation menu in the composer header.
+    case quote = "quote.opening"
+    /// Lucide `crop` — region summary in the locator chip.
+    case crop = "crop"
+    /// Lucide `list-plus` — empty observation list.
+    case listPlus = "list.bullet.badge.plus"
+    /// Lucide `signature` — opens the name editor.
+    case signature = "signature"
     /// Lucide `bookmark` — locator page row.
     case bookmark = "bookmark"
     case sort = "arrow.up.arrow.down"

@@ -87,6 +87,8 @@ struct CitationEditSession: Equatable {
     var error: String?
 
     var propertyBaseline = ObservationRowValues()
+    /// Subject whose line opened the sheet, so the subtitle can name that end.
+    var openedFromSubjectID = ""
 
     var isDirty: Bool {
         switch kind {
@@ -111,6 +113,9 @@ struct CitationReadyBridge: Equatable {
     var endBTitle: String
     var canSwap: Bool
     var reading: String?
+    var kindLabel: String
+    var pairHint: String
+    var markKey: String
 }
 
 enum CitationPreview: Equatable {
@@ -124,14 +129,29 @@ struct CitationSavedLine: Identifiable, Equatable {
     var subjectID: String
     var observationID: String?
     var bridgeID: String?
+    /// Property name, or the short phrase read from this subject ("Parent of", "Son in", "At").
+    var label: String
+    /// The value, or the other subject's name.
+    var valueText: String
+    /// Whole numbers and dates use the mono face.
+    var mono: Bool
     var body: String
     var negative: Bool
     var markKey: String?
+
+    /// Label and value as one phrase, the way a duplicate note names the copied line.
+    var phrase: String {
+        [label, valueText]
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+            .joined(separator: " ")
+    }
 }
 
 struct CitationSubjectGroup: Identifiable, Equatable {
     var subjectID: String
     var name: String
+    var ref: String
     var typeKey: String
     var lines: [CitationSavedLine]
     var id: String { subjectID }
@@ -155,6 +175,44 @@ enum CitationComposerAuthoring {
         let description = collapsed(description)
         if !description.isEmpty { return .text(description) }
         return .empty
+    }
+
+    static func headNote(
+        authoring: CitationAuthoring,
+        vocabulary: CitationComposerVocabulary,
+        citationRef: String
+    ) -> String {
+        let target = citationRef.isEmpty
+            ? L10n.string(L10n.CitationComposer.newCitation)
+            : citationRef
+        switch authoring {
+        case .rest:
+            return ""
+        case .property(let draft):
+            guard let name = vocabulary.subjectsByID[draft.values.subjectID]?.label, !name.isEmpty else {
+                return target
+            }
+            return L10n.CitationComposer.landsUnder(name)
+        case .bridge(let draft):
+            guard case .ready(let ready) = resolvePair(
+                endA: draft.endA,
+                endB: draft.endB,
+                termID: draft.termID,
+                vocabulary: vocabulary
+            ) else { return target }
+            if ready.rule.bridgeTypeKey == EvidenceBridgeKind.relationship.rawValue {
+                let first = givenName(vocabulary.subjectsByID[draft.endA]?.label ?? "")
+                let second = givenName(vocabulary.subjectsByID[draft.endB]?.label ?? "")
+                return L10n.CitationComposer.landsUnderBoth(first, second)
+            }
+            return L10n.string(L10n.CitationComposer.landsUnderBothEnds)
+        }
+    }
+
+    static func givenName(_ label: String) -> String {
+        let trimmed = label.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let space = trimmed.firstIndex(of: " ") else { return trimmed }
+        return String(trimmed[..<space])
     }
 
     static func subjectNameSummary(_ names: [String]) -> String? {
@@ -215,23 +273,14 @@ enum CitationComposerAuthoring {
             return refusedCopy(rule: rule, subjectA: subjectA, subjectB: subjectB)
         }
         let termProperty = termProperty(for: rule, vocabulary: vocabulary)
-        let reading = bridgeReading(
-            from: subjectA,
-            to: subjectB,
-            rule: rule,
-            termID: termID,
-            termProperty: termProperty,
-            vocabulary: vocabulary,
-            viewing: subjectA.id
-        )
         return .ready(
-            CitationReadyBridge(
+            readyBridge(
+                subjectA: subjectA,
+                subjectB: subjectB,
                 rule: rule,
+                termID: termID,
                 termProperty: termProperty,
-                endATitle: endTitle(typeKey: subjectA.typeKey, first: true, peer: subjectB.typeKey),
-                endBTitle: endTitle(typeKey: subjectB.typeKey, first: false, peer: subjectA.typeKey),
-                canSwap: true,
-                reading: reading
+                vocabulary: vocabulary
             )
         )
     }
@@ -246,11 +295,14 @@ enum CitationComposerAuthoring {
             guard let persistedID = row.persistedID, !row.subjectID.isEmpty else { continue }
             let property = vocabulary.property(id: row.propertyID)
             let termLabel = vocabulary.termLabel(termID: row.valueTermID, propertyID: row.propertyID)
-            let body = CitationObservationValue.summary(
+            let valueText = CitationObservationValue.summary(
                 valueType: property?.valueType ?? "",
                 fields: row.valueFields(),
                 termLabel: termLabel
             )
+            let label = property?.label ?? ""
+            let mono = property?.valueType == PropertyValueType.integer.rawValue
+                || property?.valueType == PropertyValueType.date.rawValue
             lines.append(
                 CitationSavedLine(
                     id: "obs:\(persistedID)",
@@ -258,7 +310,10 @@ enum CitationComposerAuthoring {
                     subjectID: row.subjectID,
                     observationID: persistedID,
                     bridgeID: nil,
-                    body: body,
+                    label: label,
+                    valueText: valueText,
+                    mono: mono,
+                    body: [label, valueText].filter { !$0.isEmpty }.joined(separator: " "),
                     negative: row.isNegated,
                     markKey: nil
                 )
@@ -276,9 +331,9 @@ enum CitationComposerAuthoring {
                 guard let other = vocabulary.subjectsByID[otherID] else { continue }
                 let from = vocabulary.subjectsByID[connection.fromSubjectID]
                 let to = vocabulary.subjectsByID[connection.toSubjectID]
-                let body: String
+                let phrase: (label: String, value: String)
                 if let rule, let from, let to {
-                    body = bridgeReading(
+                    phrase = listedLine(
                         from: from,
                         to: to,
                         rule: rule,
@@ -286,9 +341,9 @@ enum CitationComposerAuthoring {
                         termProperty: termProperty,
                         vocabulary: vocabulary,
                         viewing: viewer.id
-                    ) ?? other.label
+                    )
                 } else {
-                    body = other.label
+                    phrase = (L10n.string(L10n.CitationComposer.bridgeKindRelationship), other.label)
                 }
                 lines.append(
                     CitationSavedLine(
@@ -297,7 +352,10 @@ enum CitationComposerAuthoring {
                         subjectID: subjectID,
                         observationID: nil,
                         bridgeID: bridgeID,
-                        body: body,
+                        label: phrase.label,
+                        valueText: phrase.value,
+                        mono: false,
+                        body: [phrase.label, phrase.value].filter { !$0.isEmpty }.joined(separator: " "),
                         negative: false,
                         markKey: "subject_\(connection.bridgeTypeKey)"
                     )
@@ -318,6 +376,7 @@ enum CitationComposerAuthoring {
                 CitationSubjectGroup(
                     subjectID: subjectID,
                     name: subject.label,
+                    ref: subject.ref,
                     typeKey: subject.typeKey,
                     lines: subjectLines
                 )
@@ -366,22 +425,230 @@ enum CitationComposerAuthoring {
         return vocabulary.property(key: rule.disambiguation)
     }
 
-    private static func endTitle(typeKey: String, first: Bool, peer: String) -> String {
-        if typeKey == peer {
-            switch typeKey {
-            case "person":
-                return L10n.string(first ? L10n.CitationComposer.firstPerson : L10n.CitationComposer.secondPerson)
-            case "place":
-                return L10n.string(first ? L10n.CitationComposer.firstPlace : L10n.CitationComposer.secondPlace)
-            default:
-                break
-            }
+    private static func readyBridge(
+        subjectA: CitationComposerModel.GraphSubjectOption,
+        subjectB: CitationComposerModel.GraphSubjectOption,
+        rule: CatalogConnectRule,
+        termID: String,
+        termProperty: CatalogProperty?,
+        vocabulary: CitationComposerVocabulary
+    ) -> CitationReadyBridge {
+        let term = storedTerm(termID: termID, property: termProperty, vocabulary: vocabulary)
+        let ends = endTitles(
+            subjectA: subjectA,
+            subjectB: subjectB,
+            rule: rule,
+            term: term,
+            vocabulary: vocabulary,
+            property: termProperty
+        )
+        let chrome = kindChrome(rule)
+        return CitationReadyBridge(
+            rule: rule,
+            termProperty: termProperty,
+            endATitle: ends.a,
+            endBTitle: ends.b,
+            canSwap: ends.canSwap,
+            reading: readingSentence(
+                from: subjectA,
+                to: subjectB,
+                rule: rule,
+                term: term
+            ),
+            kindLabel: chrome.label,
+            pairHint: chrome.hint,
+            markKey: chrome.mark
+        )
+    }
+
+    private static func kindChrome(_ rule: CatalogConnectRule) -> (label: String, hint: String, mark: String) {
+        switch rule.bridgeTypeKey {
+        case EvidenceBridgeKind.relationship.rawValue:
+            return (
+                L10n.string(L10n.CitationComposer.bridgeKindRelationship),
+                L10n.string(L10n.CitationComposer.pairPersonPerson),
+                "subject_relationship"
+            )
+        case EvidenceBridgeKind.participation.rawValue:
+            return (
+                L10n.string(L10n.CitationComposer.bridgeKindParticipation),
+                L10n.string(L10n.CitationComposer.pairPersonEvent),
+                "subject_participation"
+            )
+        case EvidenceBridgeKind.location.rawValue:
+            return (
+                L10n.string(L10n.CitationComposer.bridgeKindLocation),
+                L10n.string(L10n.CitationComposer.pairEventPlace),
+                "subject_location"
+            )
+        case EvidenceBridgeKind.placeRelationship.rawValue:
+            return (
+                L10n.string(L10n.CitationComposer.bridgeKindPlace),
+                L10n.string(L10n.CitationComposer.pairPlacePlace),
+                "subject_place_relationship"
+            )
+        default:
+            return (rule.bridgeTypeKey, "", "subject_\(rule.bridgeTypeKey)")
         }
-        switch typeKey {
-        case "person": return L10n.string(L10n.CitationComposer.participantEnd)
-        case "event": return L10n.string(L10n.CitationComposer.eventEnd)
-        case "place": return L10n.string(L10n.CitationComposer.placeEnd)
-        default: return L10n.string(first ? L10n.CitationComposer.endA : L10n.CitationComposer.endB)
+    }
+
+    private static func endTitles(
+        subjectA: CitationComposerModel.GraphSubjectOption,
+        subjectB: CitationComposerModel.GraphSubjectOption,
+        rule: CatalogConnectRule,
+        term: CatalogPropertyTerm?,
+        vocabulary: CitationComposerVocabulary,
+        property: CatalogProperty?
+    ) -> (a: String, b: String, canSwap: Bool) {
+        switch rule.bridgeTypeKey {
+        case EvidenceBridgeKind.relationship.rawValue:
+            if let term {
+                let inverse = inverseTerm(of: term, property: property, vocabulary: vocabulary)
+                return (term.label, inverse?.label ?? term.label, true)
+            }
+            return (
+                L10n.string(L10n.CitationComposer.firstPerson),
+                L10n.string(L10n.CitationComposer.secondPerson),
+                true
+            )
+        case EvidenceBridgeKind.placeRelationship.rawValue:
+            switch term?.key {
+            case "part_of":
+                return (
+                    L10n.string(L10n.CitationComposer.partEnd),
+                    L10n.string(L10n.CitationComposer.wholeEnd),
+                    true
+                )
+            case "succeeded_by":
+                return (
+                    L10n.string(L10n.CitationComposer.earlierPlace),
+                    L10n.string(L10n.CitationComposer.laterPlace),
+                    true
+                )
+            case .some:
+                return (term?.label ?? "", term?.label ?? "", true)
+            case nil:
+                return (
+                    L10n.string(L10n.CitationComposer.firstPlace),
+                    L10n.string(L10n.CitationComposer.secondPlace),
+                    true
+                )
+            }
+        case EvidenceBridgeKind.participation.rawValue:
+            if subjectA.typeKey == "person" {
+                return (
+                    L10n.string(L10n.CitationComposer.participantEnd),
+                    L10n.string(L10n.CitationComposer.eventEnd),
+                    false
+                )
+            }
+            return (
+                L10n.string(L10n.CitationComposer.eventEnd),
+                L10n.string(L10n.CitationComposer.participantEnd),
+                false
+            )
+        case EvidenceBridgeKind.location.rawValue:
+            if subjectA.typeKey == "event" {
+                return (
+                    L10n.string(L10n.CitationComposer.eventEnd),
+                    L10n.string(L10n.CitationComposer.placeEnd),
+                    false
+                )
+            }
+            return (
+                L10n.string(L10n.CitationComposer.placeEnd),
+                L10n.string(L10n.CitationComposer.eventEnd),
+                false
+            )
+        default:
+            _ = subjectB
+            return (
+                L10n.string(L10n.CitationComposer.endA),
+                L10n.string(L10n.CitationComposer.endB),
+                false
+            )
+        }
+    }
+
+    private static func listedLine(
+        from: CitationComposerModel.GraphSubjectOption,
+        to: CitationComposerModel.GraphSubjectOption,
+        rule: CatalogConnectRule,
+        termID: String,
+        termProperty: CatalogProperty?,
+        vocabulary: CitationComposerVocabulary,
+        viewing: String
+    ) -> (label: String, value: String) {
+        let other = viewing == from.id ? to : from
+        let term = storedTerm(termID: termID, property: termProperty, vocabulary: vocabulary)
+        switch rule.bridgeTypeKey {
+        case EvidenceBridgeKind.relationship.rawValue:
+            let spoken = viewing == to.id
+                ? inverseTerm(of: term, property: termProperty, vocabulary: vocabulary) ?? term
+                : term
+            let label = spoken.map { L10n.CitationComposer.termOf($0.label) }
+                ?? L10n.string(L10n.CitationComposer.bridgeKindRelationship)
+            return (label, other.label)
+        case EvidenceBridgeKind.participation.rawValue:
+            let person = from.typeKey == "person" ? from : to
+            let event = from.typeKey == "event" ? from : to
+            if viewing == person.id {
+                let label = term.map { L10n.CitationComposer.roleIn($0.label) }
+                    ?? L10n.string(L10n.CitationComposer.takesPart)
+                return (label, event.label)
+            }
+            return (term?.label ?? L10n.string(L10n.CitationComposer.takesPart), person.label)
+        case EvidenceBridgeKind.location.rawValue:
+            let event = from.typeKey == "event" ? from : to
+            let place = from.typeKey == "place" ? from : to
+            if viewing == event.id {
+                return (L10n.string(L10n.CitationComposer.atWord), place.label)
+            }
+            return (L10n.string(L10n.CitationComposer.siteOfWord), event.label)
+        case EvidenceBridgeKind.placeRelationship.rawValue:
+            let label = term?.label ?? L10n.string(L10n.CitationComposer.bridgeKindPlace)
+            return (label, other.label)
+        default:
+            return ("", other.label)
+        }
+    }
+
+    private static func readingSentence(
+        from: CitationComposerModel.GraphSubjectOption,
+        to: CitationComposerModel.GraphSubjectOption,
+        rule: CatalogConnectRule,
+        term: CatalogPropertyTerm?
+    ) -> String? {
+        switch rule.bridgeTypeKey {
+        case EvidenceBridgeKind.relationship.rawValue:
+            guard let term else { return nil }
+            if term.key == "spouse" {
+                return L10n.CitationComposer.areSpouses(from.label, to.label)
+            }
+            if term.key == "sibling" {
+                return L10n.CitationComposer.areSiblings(from.label, to.label)
+            }
+            return L10n.CitationComposer.isATermOf(from.label, term.label.lowercased(), to.label)
+        case EvidenceBridgeKind.participation.rawValue:
+            guard let term else { return nil }
+            let person = from.typeKey == "person" ? from : to
+            let event = from.typeKey == "event" ? from : to
+            return L10n.CitationComposer.roleInTheEvent(person.label, term.label, event.label)
+        case EvidenceBridgeKind.location.rawValue:
+            let event = from.typeKey == "event" ? from : to
+            let place = from.typeKey == "place" ? from : to
+            return L10n.CitationComposer.tookPlaceAt(event.label, place.label)
+        case EvidenceBridgeKind.placeRelationship.rawValue:
+            guard let term else { return nil }
+            if term.key == "part_of" {
+                return L10n.CitationComposer.isPartOf(from.label, to.label)
+            }
+            if term.key == "succeeded_by" {
+                return L10n.CitationComposer.wasSucceededBy(from.label, to.label)
+            }
+            return nil
+        default:
+            return nil
         }
     }
 
@@ -413,75 +680,21 @@ enum CitationComposerAuthoring {
         )
     }
 
-    private static func bridgeReading(
-        from: CitationComposerModel.GraphSubjectOption,
-        to: CitationComposerModel.GraphSubjectOption,
-        rule: CatalogConnectRule,
-        termID: String,
-        termProperty: CatalogProperty?,
-        vocabulary: CitationComposerVocabulary,
-        viewing: String
-    ) -> String? {
-        let other = viewing == from.id ? to : from
-        let term = termLabel(termID: termID, property: termProperty, vocabulary: vocabulary)
-        switch rule.bridgeTypeKey {
-        case EvidenceBridgeKind.relationship.rawValue:
-            let spoken = viewing == to.id
-                ? inverseLabel(termID: termID, property: termProperty, vocabulary: vocabulary) ?? term
-                : term
-            if let spoken, !spoken.isEmpty {
-                return L10n.CitationComposer.termOfName(term: spoken, name: other.label)
-            }
-            return L10n.CitationComposer.relationshipWith(name: other.label)
-        case EvidenceBridgeKind.participation.rawValue:
-            let person = from.typeKey == "person" ? from : to
-            let event = from.typeKey == "event" ? from : to
-            if viewing == person.id {
-                if let term, !term.isEmpty {
-                    return L10n.CitationComposer.roleInEvent(role: term, event: event.label)
-                }
-                return L10n.CitationComposer.takesPartIn(event: event.label)
-            }
-            if let term, !term.isEmpty {
-                return L10n.CitationComposer.roleOnPerson(role: term, person: person.label)
-            }
-            return L10n.CitationComposer.personTakesPart(person: person.label)
-        case EvidenceBridgeKind.location.rawValue:
-            let event = from.typeKey == "event" ? from : to
-            let place = from.typeKey == "place" ? from : to
-            if viewing == event.id {
-                return L10n.CitationComposer.atPlace(place: place.label)
-            }
-            return L10n.CitationComposer.siteOf(event: event.label)
-        case EvidenceBridgeKind.placeRelationship.rawValue:
-            if let term, !term.isEmpty {
-                return L10n.CitationComposer.termOfName(term: term, name: other.label)
-            }
-            return L10n.CitationComposer.placeRelationshipWith(name: other.label)
-        default:
-            return other.label
-        }
-    }
-
-    private static func termLabel(
+    private static func storedTerm(
         termID: String,
         property: CatalogProperty?,
         vocabulary: CitationComposerVocabulary
-    ) -> String? {
+    ) -> CatalogPropertyTerm? {
         guard let property, !termID.isEmpty else { return nil }
-        return vocabulary.termLabel(termID: termID, propertyID: property.id)
+        return vocabulary.termsByPropertyID[property.id]?.first { $0.id == termID }
     }
 
-    private static func inverseLabel(
-        termID: String,
+    private static func inverseTerm(
+        of term: CatalogPropertyTerm?,
         property: CatalogProperty?,
         vocabulary: CitationComposerVocabulary
-    ) -> String? {
-        guard let property, !termID.isEmpty,
-              let term = vocabulary.termsByPropertyID[property.id]?.first(where: { $0.id == termID }),
-              let inverseKey = inverseTermKey[term.key],
-              let inverse = vocabulary.termsByPropertyID[property.id]?.first(where: { $0.key == inverseKey })
-        else { return nil }
-        return vocabulary.termLabel(termID: inverse.id, propertyID: property.id)
+    ) -> CatalogPropertyTerm? {
+        guard let term, let property, let inverseKey = inverseTermKey[term.key] else { return nil }
+        return vocabulary.termsByPropertyID[property.id]?.first { $0.key == inverseKey }
     }
 }
