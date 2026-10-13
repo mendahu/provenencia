@@ -57,6 +57,12 @@ struct OCRImageTests {
         #expect(!OCRImage.isOversized(.zero))
     }
 
+    @Test func flowingTranscriptionReplacesLineBreaksWithSpaces() {
+        #expect(OCRTranscription.flowing(["Ada", "Lovelace"]) == "Ada Lovelace")
+        #expect(OCRTranscription.flowing(["Ada\n", "", "Lovelace"]) == "Ada Lovelace")
+        #expect(OCRTranscription.flowing(["Wm.\r\nRobins"]) == "Wm. Robins")
+    }
+
     private func pixelExactImage(width: Int, height: Int, topRed: Bool) -> NSImage? {
         guard let cgImage = makeRGBImage(width: width, height: height, topRed: topRed) else { return nil }
         return NSImage(cgImage: cgImage, size: NSSize(width: width, height: height))

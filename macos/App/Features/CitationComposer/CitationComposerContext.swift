@@ -71,6 +71,18 @@ final class CitationComposerContext {
         session.apply(effects)
     }
 
+    /// `nil` follows the citation open in the composer. `""` mints another citation
+    /// on this artifact without switching the one on screen.
+    func resolveCitationID(target: String?) async throws -> String {
+        if let target {
+            if !target.isEmpty { return target }
+            if let citationID, !citationID.isEmpty {
+                return try await createAdditionalCitation()
+            }
+        }
+        return try await ensureCitationID()
+    }
+
     /// One in-flight create so citation Save, Observation commit, and Connect
     /// cannot mint two citations from a blank document.
     func ensureCitationID() async throws -> String {
@@ -125,6 +137,28 @@ final class CitationComposerContext {
         )
         citationID = created.0.id
         captureCitationBaseline()
+        applyWrite(created.2)
+        await reloadListedCitations()
+        return created.0.id
+    }
+
+    private func createAdditionalCitation() async throws -> String {
+        guard let artifactID, !artifactID.isEmpty else {
+            throw CitationComposerNeedArtifact()
+        }
+        let values = citationValues()
+        let created = try await store.createCitationWithObservations(
+            projectDir: projectDir,
+            userID: userID,
+            artifactID: artifactID,
+            locatorJSON: values.locator.encodeJSON(),
+            transcription: values.transcription,
+            description: values.description,
+            transcriptionUncertain: values.transcriptionUncertain,
+            transcriptionNote: values.transcriptionNote,
+            citationNotes: [],
+            observations: []
+        )
         applyWrite(created.2)
         await reloadListedCitations()
         return created.0.id

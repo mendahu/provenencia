@@ -44,6 +44,8 @@ struct CitationPropertyDraft: Equatable {
     var error: String?
     var note: String?
     var isDuplicate = false
+    /// Nil follows the citation open in the composer. Empty mints a new citation.
+    var citationID: String? = nil
 
     var holdsLeave: Bool { isDuplicate || values != baseline }
 }
@@ -60,6 +62,8 @@ struct CitationBridgeDraft: Equatable {
     var error: String?
     var note: String?
     var origin: CitationBridgeOrigin = .blank
+    /// Nil follows the citation open in the composer. Empty mints a new citation.
+    var citationID: String? = nil
 
     var holdsLeave: Bool {
         origin != .blank
@@ -177,57 +181,6 @@ enum CitationComposerAuthoring {
         return .empty
     }
 
-    static func headNote(
-        authoring: CitationAuthoring,
-        vocabulary: CitationComposerVocabulary,
-        citationRef: String
-    ) -> String {
-        let target = citationRef.isEmpty
-            ? L10n.string(L10n.CitationComposer.newCitation)
-            : citationRef
-        switch authoring {
-        case .rest:
-            return ""
-        case .property(let draft):
-            guard let name = vocabulary.subjectsByID[draft.values.subjectID]?.label, !name.isEmpty else {
-                return target
-            }
-            return L10n.CitationComposer.landsUnder(name)
-        case .bridge(let draft):
-            guard case .ready(let ready) = resolvePair(
-                endA: draft.endA,
-                endB: draft.endB,
-                termID: draft.termID,
-                vocabulary: vocabulary
-            ) else { return target }
-            if ready.rule.bridgeTypeKey == EvidenceBridgeKind.relationship.rawValue {
-                let first = givenName(vocabulary.subjectsByID[draft.endA]?.label ?? "")
-                let second = givenName(vocabulary.subjectsByID[draft.endB]?.label ?? "")
-                return L10n.CitationComposer.landsUnderBoth(first, second)
-            }
-            return L10n.string(L10n.CitationComposer.landsUnderBothEnds)
-        }
-    }
-
-    static func givenName(_ label: String) -> String {
-        let trimmed = label.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard let space = trimmed.firstIndex(of: " ") else { return trimmed }
-        return String(trimmed[..<space])
-    }
-
-    static func subjectNameSummary(_ names: [String]) -> String? {
-        let names = names.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
-        switch names.count {
-        case 0: return nil
-        case 1: return names[0]
-        case 2:
-            return L10n.CitationComposer.joinedNames(names[0], names[1])
-        default:
-            let head = names.dropLast().joined(separator: ", ")
-            return L10n.CitationComposer.joinedNames(head, names[names.count - 1])
-        }
-    }
-
     static func stepperOrder(_ listed: [CatalogListedCitation]) -> [CatalogListedCitation] {
         listed.sorted { lhs, rhs in
             let a = position(of: lhs.citation)
@@ -288,7 +241,8 @@ enum CitationComposerAuthoring {
     static func groups(
         observations: [ObservationRow],
         connections: [ConnectionRow],
-        vocabulary: CitationComposerVocabulary
+        vocabulary: CitationComposerVocabulary,
+        nameOrders: NameFormatOrders = NameFormatOrders()
     ) -> [CitationSubjectGroup] {
         var lines: [CitationSavedLine] = []
         for row in observations where row.persistedID != nil {
@@ -298,7 +252,8 @@ enum CitationComposerAuthoring {
             let valueText = CitationObservationValue.summary(
                 valueType: property?.valueType ?? "",
                 fields: row.valueFields(),
-                termLabel: termLabel
+                termLabel: termLabel,
+                orders: nameOrders
             )
             let label = property?.label ?? ""
             let mono = property?.valueType == PropertyValueType.integer.rawValue

@@ -5,21 +5,18 @@ struct CitationComposerObservationsColumn: View {
     @Bindable var model: CitationComposerModel
     var onDone: () -> Void
     @State private var hoveredLineID: String?
-    @State private var openMenuLineID: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             header
-                .padding(.horizontal, PVSpacing.space6)
-                .padding(.top, PVSpacing.space6)
-                .padding(.bottom, PVSpacing.space4)
-            CitationComposerAuthoringBox(model: model)
-                .padding(.horizontal, PVSpacing.space6)
+                .padding(.horizontal, PVSpacing.space7)
+                .padding(.top, 14)
                 .padding(.bottom, PVSpacing.space4)
             ScrollView {
                 groups
-                    .padding(.horizontal, PVSpacing.space6)
-                    .padding(.bottom, PVSpacing.space6)
+                    .padding(.horizontal, PVSpacing.space7)
+                    .padding(.top, PVSpacing.space1)
+                    .padding(.bottom, PVSpacing.space8)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
@@ -40,22 +37,26 @@ struct CitationComposerObservationsColumn: View {
         PVSectionHeader(
             title: L10n.CitationComposer.observationsSection,
             meta: model.observationsMeta,
-            aside: {
-                if case .bridge(let draft) = model.authoring, draft.holdsLeave {
-                    Text(L10n.CitationComposer.unsavedDraftBridge)
-                        .font(PVFont.body(size: PVTypeScale.caption, italic: true))
-                        .foregroundStyle(PVColor.textMuted)
-                } else if case .property(let draft) = model.authoring, draft.holdsLeave {
-                    Text(L10n.CitationComposer.unsavedDraftObservation)
-                        .font(PVFont.body(size: PVTypeScale.caption, italic: true))
-                        .foregroundStyle(PVColor.textMuted)
-                }
-            },
             actions: {
-                PVButton(L10n.CitationComposer.done, variant: .primary, size: .sm) {
-                    onDone()
+                HStack(spacing: PVSpacing.space4) {
+                    if case .bridge(let draft) = model.authoring, draft.holdsLeave {
+                        Text(L10n.CitationComposer.unsavedDraftBridge)
+                            .font(PVFont.body(size: 12, italic: true))
+                            .foregroundStyle(PVColor.textMuted)
+                    } else if case .property(let draft) = model.authoring, draft.holdsLeave {
+                        Text(L10n.CitationComposer.unsavedDraftObservation)
+                            .font(PVFont.body(size: 12, italic: true))
+                            .foregroundStyle(PVColor.textMuted)
+                    }
+                    PVButton(L10n.CitationComposer.addObservation, variant: .secondary, size: .sm, icon: .plus) {
+                        model.beginAddObservation()
+                    }
+                    .accessibilityIdentifier("citationComposer.addObservation")
+                    PVButton(L10n.CitationComposer.done, variant: .primary, size: .sm) {
+                        onDone()
+                    }
+                    .accessibilityIdentifier("citationComposer.done")
                 }
-                .accessibilityIdentifier("citationComposer.done")
             }
         )
     }
@@ -123,12 +124,12 @@ struct CitationComposerObservationsColumn: View {
     }
 
     private func lineRow(_ line: CitationSavedLine, rule: Bool) -> some View {
-        let revealed = hoveredLineID == line.id || openMenuLineID == line.id
+        let revealed = hoveredLineID == line.id
         let twin = line.bridgeID.map { bridgeID in
             hoveredLineID?.contains("bridge:\(bridgeID):") == true && hoveredLineID != line.id
         } ?? false
         let fresh = isFresh(line)
-        return HStack(alignment: .center, spacing: PVSpacing.space4) {
+        return HStack(alignment: .firstTextBaseline, spacing: PVSpacing.space4) {
             Group {
                 if let markKey = line.markKey {
                     PVMark(PVMarkKey(catalogKey: markKey), size: 14, decorative: true)
@@ -141,16 +142,21 @@ struct CitationComposerObservationsColumn: View {
                 .font(PVFont.body(size: 12))
                 .foregroundStyle(PVColor.textSecondary)
                 .lineLimit(2)
+                .multilineTextAlignment(.leading)
+                .fixedSize(horizontal: false, vertical: true)
                 .frame(minWidth: 92, maxWidth: 124, alignment: .leading)
             HStack(alignment: .firstTextBaseline, spacing: PVSpacing.space2) {
                 if line.negative {
                     Text(L10n.CitationComposer.notWord)
                         .italic()
                         .foregroundStyle(PVColor.textMuted)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
                 Text(verbatim: line.valueText.isEmpty ? "—" : line.valueText)
                     .font(line.mono ? PVFont.mono(size: PVTypeScale.caption) : PVFont.body(size: PVTypeScale.bodySmall))
                     .foregroundStyle(PVColor.textPrimary)
+                    .multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             if line.negative {
@@ -159,18 +165,12 @@ struct CitationComposerObservationsColumn: View {
             if fresh {
                 PVBadge(L10n.CitationComposer.savedBadge, tone: .success, icon: .check, subtle: true)
             }
-            ObservationLineMenu(model: model, line: line, revealed: revealed) { presented in
-                if presented {
-                    openMenuLineID = line.id
-                } else if openMenuLineID == line.id {
-                    openMenuLineID = nil
-                }
-            }
+            lineActions(line, revealed: revealed)
         }
-        .padding(.vertical, PVSpacing.space1)
+        .padding(.vertical, PVSpacing.space3)
         .padding(.leading, PVSpacing.space5)
         .padding(.trailing, PVSpacing.space3)
-        .frame(minHeight: 32)
+        .frame(minHeight: 32, alignment: .top)
         .background(lineBackground(fresh: fresh, revealed: revealed, twin: twin))
         .overlay(alignment: .top) {
             if rule {
@@ -186,6 +186,42 @@ struct CitationComposerObservationsColumn: View {
         .accessibilityIdentifier("citationComposer.line.\(line.id)")
     }
 
+    @ViewBuilder
+    private func lineActions(_ line: CitationSavedLine, revealed: Bool) -> some View {
+        HStack(spacing: PVSpacing.space2) {
+            if revealed {
+                PVIconButton(
+                    .penLine,
+                    label: line.bridgeID == nil
+                        ? L10n.CitationComposer.editObservation
+                        : L10n.CitationComposer.editBridgeTitle,
+                    size: .sm
+                ) {
+                    model.beginEdit(line: line)
+                }
+                PVIconButton(
+                    .duplicate,
+                    label: line.bridgeID == nil
+                        ? L10n.CitationComposer.duplicateObservation
+                        : L10n.CitationComposer.duplicateBridge,
+                    size: .sm
+                ) {
+                    model.duplicate(line: line)
+                }
+                PVIconButton(
+                    .trash,
+                    label: line.bridgeID == nil
+                        ? L10n.CitationComposer.deleteObservation
+                        : L10n.CitationComposer.deleteBridge,
+                    size: .sm
+                ) {
+                    Task { await model.askDeleteLine(line) }
+                }
+            }
+        }
+        .frame(width: 88, alignment: .trailing)
+    }
+
     private func isFresh(_ line: CitationSavedLine) -> Bool {
         if model.freshLineKey == line.id || model.freshLineKey == line.sortKey { return true }
         if let bridgeID = line.bridgeID, model.freshLineKey == "bridge:\(bridgeID)" { return true }
@@ -199,102 +235,6 @@ struct CitationComposerObservationsColumn: View {
         return .clear
     }
 
-}
-
-/// More-actions menu for one saved line. The panel supplies the opaque card;
-/// the menu window itself is clear.
-private struct ObservationLineMenu: View {
-    @Bindable var model: CitationComposerModel
-    let line: CitationSavedLine
-    var revealed: Bool
-    var onPresented: (Bool) -> Void
-    @State private var menu = PVContextMenuState()
-    @State private var keyboard = PVContextMenuKeyboard.inactive
-
-    var body: some View {
-        HStack(spacing: PVSpacing.space1) {
-            if revealed || menu.isPresented {
-                PVIconButton(
-                    .duplicate,
-                    label: line.bridgeID == nil
-                        ? L10n.CitationComposer.duplicateObservation
-                        : L10n.CitationComposer.duplicateBridge,
-                    size: .sm
-                ) {
-                    model.duplicate(line: line)
-                }
-                PVIconButton(.ellipsis, label: L10n.CitationComposer.moreActions, size: .sm) {
-                    toggle()
-                }
-                .accessibilityIdentifier("citationComposer.line.more.\(line.id)")
-                .pvContextMenu($menu, keyboard: $keyboard, dismissOnClickAway: true) {
-                    PVContextMenuPanel(width: 220, accessibilityIdentifier: "citationComposer.lineMenu") {
-                        menuItems
-                    }
-                }
-            }
-        }
-        .frame(width: 58, alignment: .trailing)
-        .onChange(of: menu.isPresented) { _, presented in
-            onPresented(presented)
-        }
-    }
-
-    private func toggle() {
-        if menu.isPresented {
-            menu.dismiss()
-            return
-        }
-        let titles = menuTitles.map { L10n.string($0) }
-        keyboard = PVContextMenuKeyboard(itemCount: titles.count, activeIndex: -1, itemTitles: titles)
-        menu.present(at: CGPoint(x: 0, y: PVSpacing.controlHeightSmall))
-    }
-
-    private var menuTitles: [LocalizedStringResource] {
-        if line.bridgeID == nil {
-            return [
-                L10n.CitationComposer.editObservationMenu,
-                L10n.CitationComposer.duplicate,
-                line.negative ? L10n.CitationComposer.affirmObservation : L10n.CitationComposer.negateObservation,
-                L10n.CitationComposer.deleteObservation,
-            ]
-        }
-        return [
-            L10n.CitationComposer.editBridgeMenu,
-            L10n.CitationComposer.duplicate,
-            L10n.CitationComposer.showOnGraph,
-            L10n.CitationComposer.deleteBridge,
-        ]
-    }
-
-    @ViewBuilder
-    private var menuItems: some View {
-        PVContextMenuItem(menuTitles[0], index: 0) {
-            model.beginEdit(line: line)
-        }
-        PVContextMenuItem(menuTitles[1], index: 1) {
-            model.duplicate(line: line)
-        }
-        if line.bridgeID == nil {
-            PVContextMenuItem(menuTitles[2], index: 2) {
-                if let observationID = line.observationID {
-                    Task { await model.negate(observationID: observationID) }
-                }
-            }
-            PVContextMenuItem(menuTitles[3], index: 3) {
-                Task { await model.askDeleteLine(line) }
-            }
-        } else {
-            PVContextMenuItem(menuTitles[2], index: 2) {
-                if let bridgeID = line.bridgeID {
-                    model.showOnGraph(bridgeID: bridgeID)
-                }
-            }
-            PVContextMenuItem(menuTitles[3], index: 3) {
-                Task { await model.askDeleteLine(line) }
-            }
-        }
-    }
 }
 
 /// Edit sheet for one saved property observation or one bridge.
@@ -314,6 +254,15 @@ struct CitationComposerEditSheet: View {
 
     private func propertyForm(_ values: ObservationRowValues, error: String?) -> some View {
         VStack(alignment: .leading, spacing: PVSpacing.space5) {
+            CitationComposerModalLead(
+                model: model,
+                isProperty: true,
+                lockKind: true,
+                citationSelection: editCitationBinding,
+                citationEnabled: false,
+                onProperty: {},
+                onBridge: {}
+            )
             HStack(alignment: .top, spacing: PVSpacing.space5) {
                 PVField(label: L10n.CitationComposer.subjectLabel) {
                     PVComboBox(
@@ -378,46 +327,35 @@ struct CitationComposerEditSheet: View {
                 }
             }
         case PropertyValueType.name.rawValue:
-            editStructuredValue(values, date: false)
+            editInlineValue {
+                NameValueEditorForm(
+                    draft: editNameBinding,
+                    accessibilityIdentifierPrefix: "citationComposer.edit.name"
+                )
+            }
         case PropertyValueType.date.rawValue:
-            editStructuredValue(values, date: true)
+            editInlineValue {
+                DateValueEditorForm(
+                    draft: editDateBinding,
+                    accessibilityIdentifierPrefix: "citationComposer.edit.date"
+                )
+            }
         default:
             EmptyView()
         }
     }
 
-    private func editStructuredValue(_ values: ObservationRowValues, date: Bool) -> some View {
-        let property = model.vocabulary.property(id: values.propertyID)
-        let summary = CitationObservationValue.summary(
-            valueType: property?.valueType ?? "",
-            fields: CitationObservationValue.Fields(
-                valueText: values.valueText,
-                valueIntegerText: values.valueIntegerText,
-                valueTermID: values.valueTermID,
-                valueSubjectID: values.valueSubjectID,
-                dateDraft: values.dateDraft,
-                nameDraft: values.nameDraft
-            ),
-            termLabel: nil
-        )
-        let empty = summary.isEmpty
-        return HStack(spacing: PVSpacing.space5) {
-            Text(verbatim: empty ? L10n.string(L10n.CitationComposer.notEnteredYet) : summary)
-                .font(date ? PVFont.mono(size: PVTypeScale.caption) : PVFont.body(size: PVTypeScale.caption))
-                .foregroundStyle(empty ? PVColor.textFaint : PVColor.textPrimary)
-                .lineLimit(1)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            PVButton(
-                empty
-                    ? (date ? L10n.CitationComposer.enterDate : L10n.CitationComposer.enterName)
-                    : (date ? L10n.CitationComposer.editDateButton : L10n.CitationComposer.editName),
-                variant: .secondary,
-                size: .sm,
-                icon: date ? .calendar : .signature
-            ) {
-                model.beginValueEditor(applyToEdit: true)
-            }
-        }
+    private func editInlineValue<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+        content()
+            .padding(.horizontal, 14)
+            .padding(.vertical, PVSpacing.space5)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(PVColor.surfaceSunken)
+            .clipShape(RoundedRectangle(cornerRadius: PVRadius.md, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: PVRadius.md, style: .continuous)
+                    .stroke(PVColor.borderSubtle, lineWidth: 1)
+            )
     }
 
     private func bridgeForm(endA: String, endB: String, error: String?) -> some View {
@@ -427,59 +365,51 @@ struct CitationComposerEditSheet: View {
             termID: editBridgeTermBinding.wrappedValue,
             vocabulary: model.vocabulary
         )
-        return VStack(alignment: .leading, spacing: PVSpacing.space4) {
-            lockedEnd(id: endA, title: endTitle(pair, first: true))
-            if case .ready(let ready) = pair {
-                HStack(spacing: PVSpacing.space4) {
-                    PVMark(PVMarkKey(catalogKey: ready.markKey), size: 16, decorative: true)
-                    Text(verbatim: ready.kindLabel)
-                        .font(PVFont.body(size: PVTypeScale.caption, weight: PVFontWeight.semibold))
-                    Text(verbatim: ready.pairHint)
-                        .font(PVFont.body(size: PVTypeScale.caption, italic: true))
-                        .foregroundStyle(PVColor.textMuted)
-                }
+        return VStack(alignment: .leading, spacing: PVSpacing.space5) {
+            CitationComposerModalLead(
+                model: model,
+                isProperty: false,
+                lockKind: true,
+                citationSelection: editCitationBinding,
+                citationEnabled: false,
+                onProperty: {},
+                onBridge: {}
+            )
+            HStack(alignment: .top, spacing: PVSpacing.space5) {
+                lockedEnd(id: endA, title: L10n.string(L10n.CitationComposer.endA))
+                lockedEnd(id: endB, title: L10n.string(L10n.CitationComposer.endB))
             }
-            lockedEnd(id: endB, title: endTitle(pair, first: false))
+            switch pair {
+            case .incomplete(let hint):
+                Text(verbatim: hint)
+                    .font(PVFont.body(size: 12, italic: true))
+                    .foregroundStyle(PVColor.textMuted)
+            case .refused(let title, let message):
+                Text(L10n.CitationComposer.noBridgeJoins)
+                    .font(PVFont.body(size: 12, italic: true))
+                    .foregroundStyle(PVColor.textMuted)
+                PVCallout(tone: .warning, title: title, message: message)
+            case .ready(let ready):
+                CitationBridgeSentence(
+                    ready: ready,
+                    subjectA: model.vocabulary.subjectsByID[endA],
+                    subjectB: model.vocabulary.subjectsByID[endB],
+                    terms: model.vocabulary.termsByPropertyID[ready.termProperty?.id ?? ""] ?? [],
+                    termID: editBridgeTermBinding,
+                    canSwap: false,
+                    onSwap: {},
+                    onAddTerm: {
+                        if let property = ready.termProperty {
+                            model.beginAddCustomTerm(propertyID: property.id, applyToEdit: true)
+                        }
+                    },
+                    termIdentifierPrefix: "citationComposer.edit.bridgeTerm"
+                )
+            }
             Text(L10n.CitationComposer.lockEndsNote)
-                .font(PVFont.body(size: PVTypeScale.caption, italic: true))
+                .font(PVFont.body(size: 12, italic: true))
                 .foregroundStyle(PVColor.textMuted)
-            if case .ready(let ready) = pair, let property = ready.termProperty {
-                VStack(alignment: .leading, spacing: PVSpacing.space3) {
-                Text(verbatim: ConnectionTermCopy.label(disambiguationKey: property.key))
-                    .font(PVFont.body(size: PVTypeScale.caption, weight: PVFontWeight.medium))
-                    .foregroundStyle(PVColor.textSecondary)
-                HStack(spacing: PVSpacing.space4) {
-                    PVComboBox(
-                        selection: editBridgeTermBinding,
-                        options: model.vocabulary.termComboOptionsByPropertyID[property.id] ?? [],
-                        size: .sm,
-                        placeholder: property.key == "role"
-                            ? L10n.CitationComposer.searchRoles
-                            : L10n.CitationComposer.searchTypes,
-                        emptyLabel: L10n.CitationComposer.termEmpty,
-                        label: ConnectionTermCopy.label(disambiguationKey: property.key),
-                        accessibilityIdentifierPrefix: "citationComposer.edit.bridgeTerm"
-                    )
-                    PVButton(L10n.CitationComposer.addCustomTerm, variant: .ghost, size: .sm, icon: .plus) {
-                        model.beginAddCustomTerm(propertyID: property.id, applyToEdit: true)
-                    }
-                }
-                if let reading = ready.reading {
-                    HStack(alignment: .firstTextBaseline, spacing: PVSpacing.space4) {
-                        Text(L10n.CitationComposer.readsEyebrow)
-                            .pvMicroCaps()
-                            .foregroundStyle(PVColor.textMuted)
-                        Text(verbatim: reading)
-                            .font(PVFont.body(size: PVTypeScale.caption))
-                    }
-                    .padding(.horizontal, PVSpacing.space5)
-                    .padding(.vertical, PVSpacing.space3)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(PVColor.surfaceSunken)
-                    .clipShape(RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous))
-                }
-                }
-            }
+                .fixedSize(horizontal: false, vertical: true)
             if let error {
                 PVCallout(tone: .danger, message: error)
             }
@@ -509,11 +439,43 @@ struct CitationComposerEditSheet: View {
         }
     }
 
-    private func endTitle(_ pair: CitationPair, first: Bool) -> String {
-        if case .ready(let ready) = pair {
-            return first ? ready.endATitle : ready.endBTitle
-        }
-        return L10n.string(first ? L10n.CitationComposer.endA : L10n.CitationComposer.endB)
+    private var editCitationBinding: Binding<String> {
+        Binding(
+            get: { model.activeCitationID ?? "" },
+            set: { _ in }
+        )
+    }
+
+    private var editDateBinding: Binding<DateValueDraft> {
+        Binding(
+            get: {
+                if case .property(let values, _, _) = model.editSession?.kind { return values.dateDraft }
+                return .empty()
+            },
+            set: { newValue in
+                model.mutateEdit { session in
+                    guard case .property(var values, let id, let ref) = session.kind else { return }
+                    values.dateDraft = newValue
+                    session.kind = .property(values: values, persistedID: id, persistedRef: ref)
+                }
+            }
+        )
+    }
+
+    private var editNameBinding: Binding<NameValueDraft> {
+        Binding(
+            get: {
+                if case .property(let values, _, _) = model.editSession?.kind { return values.nameDraft }
+                return .empty()
+            },
+            set: { newValue in
+                model.mutateEdit { session in
+                    guard case .property(var values, let id, let ref) = session.kind else { return }
+                    values.nameDraft = newValue
+                    session.kind = .property(values: values, persistedID: id, persistedRef: ref)
+                }
+            }
+        )
     }
 
     private var editSubjectBinding: Binding<String> {

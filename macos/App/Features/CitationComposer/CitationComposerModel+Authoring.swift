@@ -9,7 +9,8 @@ extension CitationComposerModel {
         CitationComposerAuthoring.groups(
             observations: observationRows.rows,
             connections: connections.rows,
-            vocabulary: vocabulary
+            vocabulary: vocabulary,
+            nameOrders: session.nameFormat
         )
     }
 
@@ -20,10 +21,143 @@ extension CitationComposerModel {
     }
 
     var observationsMeta: String {
-        guard activeCitationID != nil else {
-            return L10n.string(L10n.CitationComposer.noneYet)
+        "\(savedLineCount)"
+    }
+
+    var authoringCanConfirm: Bool {
+        switch authoring {
+        case .rest:
+            return false
+        case .property(let draft):
+            return !draft.isSaving && Self.propertyValuesComplete(draft.values, vocabulary: vocabulary)
+        case .bridge(let draft):
+            let pair = CitationComposerAuthoring.resolvePair(
+                endA: draft.endA,
+                endB: draft.endB,
+                termID: draft.termID,
+                vocabulary: vocabulary
+            )
+            return !draft.isSaving && Self.bridgeReady(pair, termID: draft.termID)
         }
-        return L10n.CitationComposer.observationsOnCitation(count: savedLineCount, ref: activeCitationRef)
+    }
+
+    var editCanConfirm: Bool {
+        guard let session = editSession, !session.isSaving else { return false }
+        switch session.kind {
+        case .property(let values, _, _):
+            return Self.propertyValuesComplete(values, vocabulary: vocabulary)
+        case .bridge(let endA, let endB, let termID, _, _, _):
+            let pair = CitationComposerAuthoring.resolvePair(
+                endA: endA,
+                endB: endB,
+                termID: termID,
+                vocabulary: vocabulary
+            )
+            return Self.bridgeReady(pair, termID: termID)
+        }
+    }
+
+    func citationStepLabel(for id: String?) -> String {
+        guard let id, !id.isEmpty,
+              let listed = orderedCitations.first(where: { $0.citation.id == id })
+        else {
+            return L10n.CitationComposer.citationClosed(
+                L10n.string(L10n.CitationComposer.newCitation),
+                L10n.string(L10n.CitationComposer.notSavedYet)
+            )
+        }
+        let citation = listed.citation
+        let label = citation.description.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !label.isEmpty {
+            return L10n.CitationComposer.citationClosed(citation.ref, label)
+        }
+        let firstLine = citation.transcription
+            .split(whereSeparator: \.isNewline)
+            .map { String($0).trimmingCharacters(in: .whitespaces) }
+            .first { !$0.isEmpty } ?? ""
+        if !firstLine.isEmpty {
+            return L10n.CitationComposer.citationClosed(citation.ref, firstLine)
+        }
+        return L10n.CitationComposer.citationClosed(
+            citation.ref,
+            L10n.string(L10n.CitationComposer.noTranscriptionLine)
+        )
+    }
+
+    func showPropertyAuthoring() {
+        guard case .bridge(let bridge) = authoring else { return }
+        let citationID = bridge.citationID
+        let note = bridge.note
+        beginPropertyDraft(subjectID: bridge.endA)
+        mutateProperty { draft in
+            draft.citationID = citationID
+            draft.note = note
+            draft.isDuplicate = bridge.origin == .duplicate
+        }
+    }
+
+    func showBridgeAuthoring() {
+        guard case .property(let property) = authoring else { return }
+        let citationID = property.citationID
+        let note = property.note
+        let origin: CitationBridgeOrigin = property.isDuplicate ? .duplicate : .blank
+        beginBridgeDraft(
+            endA: property.values.subjectID,
+            endB: "",
+            termID: "",
+            origin: origin
+        )
+        mutateBridge { draft in
+            draft.citationID = citationID
+            if let note { draft.note = note }
+        }
+    }
+
+    func setAuthoringCitation(_ id: String) {
+        switch authoring {
+        case .property:
+            mutateProperty { $0.citationID = id }
+        case .bridge:
+            mutateBridge { $0.citationID = id }
+        case .rest:
+            break
+        }
+    }
+
+    var authoringCitationID: String {
+        switch authoring {
+        case .property(let draft):
+            return draft.citationID ?? activeCitationID ?? ""
+        case .bridge(let draft):
+            return draft.citationID ?? activeCitationID ?? ""
+        case .rest:
+            return activeCitationID ?? ""
+        }
+    }
+
+    private static func propertyValuesComplete(
+        _ values: ObservationRowValues,
+        vocabulary: CitationComposerVocabulary
+    ) -> Bool {
+        guard !values.subjectID.isEmpty, !values.propertyID.isEmpty else { return false }
+        guard let property = vocabulary.property(id: values.propertyID) else { return false }
+        return CitationObservationValue.isDialogValid(
+            valueType: property.valueType,
+            fields: CitationObservationValue.Fields(
+                valueText: values.valueText,
+                valueIntegerText: values.valueIntegerText,
+                valueTermID: values.valueTermID,
+                valueSubjectID: values.valueSubjectID,
+                dateDraft: values.dateDraft,
+                nameDraft: values.nameDraft
+            )
+        )
+    }
+
+    private static func bridgeReady(_ pair: CitationPair, termID: String) -> Bool {
+        guard case .ready(let ready) = pair else { return false }
+        if ready.termProperty != nil { return !termID.isEmpty }
+        return true
     }
 
     func openAuthoring(_ work: @escaping @MainActor () -> Void) {
@@ -372,7 +506,7 @@ extension CitationComposerModel {
         authoring = .property(draft)
         let subjectID = draft.values.subjectID
         do {
-            let citationID = try await context.ensureCitationID()
+            let citationID = try await context.resolveCitationID(target: draft.citationID)
             let written = try await context.store.addObservationsToCitation(
                 projectDir: context.projectDir,
                 userID: context.userID,
@@ -445,7 +579,7 @@ extension CitationComposerModel {
         let endALabel = vocabulary.subjectsByID[endA]?.label ?? ""
         let endBLabel = vocabulary.subjectsByID[draft.endB]?.label ?? ""
         do {
-            let citationID = try await context.ensureCitationID()
+            let citationID = try await context.resolveCitationID(target: draft.citationID)
             let created = try await context.store.createCitedBridge(
                 projectDir: context.projectDir,
                 userID: context.userID,

@@ -745,6 +745,37 @@ struct CitationComposerModelTests {
         #expect(model.observations[0].state == .edited)
     }
 
+    @Test func nameRowUsesDisplayOrderNotTheStoredForm() {
+        let fields = CitationObservationValue.Fields(
+            nameDraft: NameValueDraft(
+                form: "Gumtree, Jeremiah Arthurt",
+                parts: [
+                    CatalogNameValuePart(value: "Jeremiah", type: "given"),
+                    CatalogNameValuePart(value: "Arthur", type: "given"),
+                    CatalogNameValuePart(value: "Gumtree", type: "surname"),
+                ]
+            )
+        )
+        let orders = NameFormatOrders(
+            natural: [
+                NameFormatPart(partType: "given", trailingSeparator: ""),
+                NameFormatPart(partType: "surname", trailingSeparator: ""),
+            ],
+            sorted: [
+                NameFormatPart(partType: "surname", trailingSeparator: ", "),
+                NameFormatPart(partType: "given", trailingSeparator: ""),
+            ]
+        )
+        #expect(
+            CitationObservationValue.summary(
+                valueType: PropertyValueType.name.rawValue,
+                fields: fields,
+                termLabel: nil,
+                orders: orders
+            ) == "Jeremiah Arthur Gumtree"
+        )
+    }
+
     @Test func loadingBridgeEdgesYieldsOneConnectionAndKeepsExtraRole() async {
         let store = makeStore()
         seedArtifact(store)

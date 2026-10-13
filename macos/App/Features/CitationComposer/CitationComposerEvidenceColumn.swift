@@ -1,41 +1,118 @@
 import SwiftUI
 
-/// Evidence column: citation and artifact menus, the reading, then the file.
+enum CitationComposerColumnLayout {
+    /// Citation form in its own column beside the file.
+    case side
+    /// Citation form stacked above the file.
+    case panel
+}
+
+/// Citation column: artifact and citation menus, then the reading.
 struct CitationComposerEvidenceColumn: View {
     @Bindable var model: CitationComposerModel
+    var layout: CitationComposerColumnLayout
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            VStack(alignment: .leading, spacing: PVSpacing.space5) {
-                picker
-                reading
+        switch layout {
+        case .side:
+            VStack(alignment: .leading, spacing: 0) {
+                PVSectionHeader(
+                    title: L10n.CitationComposer.citationEyebrow,
+                    meta: "\(model.orderedCitations.count)"
+                )
+                .padding(.horizontal, PVSpacing.space7)
+                .padding(.top, 14)
+                .padding(.bottom, PVSpacing.space4)
+                ScrollView {
+                    sideForm
+                        .padding(.horizontal, PVSpacing.space7)
+                        .padding(.top, PVSpacing.space2)
+                        .padding(.bottom, PVSpacing.space7)
+                }
             }
-            .padding(.horizontal, PVSpacing.space6)
-            .padding(.top, PVSpacing.space5)
-            .padding(.bottom, 14)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(maxHeight: .infinity, alignment: .topLeading)
+            .background(PVColor.surfaceCard)
+        case .panel:
+            ScrollView {
+                panelForm
+                    .padding(.horizontal, PVSpacing.space6)
+                    .padding(.top, PVSpacing.space5)
+                    .padding(.bottom, 14)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .background(PVColor.surfaceCard)
             .overlay(alignment: .bottom) {
                 PVDivider(axis: .horizontal, color: PVColor.borderSubtle)
             }
-            CitationComposerViewerPane(model: model)
         }
-        .background(PVColor.surfaceSunken)
     }
 
-    /// Panel picker: citation menu, artifact menu, then the locator summary.
-    private var picker: some View {
-        HStack(alignment: .center, spacing: PVSpacing.space4) {
-            citationSelect
-            Text(L10n.CitationComposer.pickerIn)
-                .font(PVFont.body(size: 12))
-                .foregroundStyle(PVColor.textMuted)
+    private var sideForm: some View {
+        VStack(alignment: .leading, spacing: PVSpacing.space7) {
+            VStack(alignment: .leading, spacing: PVSpacing.space5) {
+                artifactStepper
+                citationStepper
+            }
+            PVDivider(axis: .horizontal, color: PVColor.borderSubtle)
+            labelField
+            transcriptionColumn(rows: 8...40)
+            footer
+        }
+    }
+
+    private var panelForm: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .bottom, spacing: PVSpacing.space5) {
+                artifactStepper
+                    .frame(maxWidth: 300)
+                citationStepper
+                    .frame(maxWidth: .infinity)
+            }
+            WeightedColumns(weights: [1.5, 1], spacing: PVSpacing.space6) {
+                VStack(alignment: .leading, spacing: 10) {
+                    transcriptionColumn(rows: 6...40)
+                    footer
+                }
+                labelField
+            }
+        }
+    }
+
+    private var artifactStepper: some View {
+        stepper(
+            eyebrow: L10n.CitationComposer.artifactEyebrow,
+            position: artifactPosition
+        ) {
             artifactSelect
-            Text(L10n.CitationComposer.pickerAt)
-                .font(PVFont.body(size: 12))
-                .foregroundStyle(PVColor.textMuted)
-            locatorSummary
-            Spacer(minLength: 0)
+        }
+    }
+
+    private var citationStepper: some View {
+        stepper(
+            eyebrow: L10n.CitationComposer.citationEyebrow,
+            position: citationPosition
+        ) {
+            citationSelect
+        }
+    }
+
+    private func stepper<Control: View>(
+        eyebrow: LocalizedStringResource,
+        position: String,
+        @ViewBuilder control: () -> Control
+    ) -> some View {
+        VStack(alignment: .leading, spacing: PVSpacing.space2) {
+            HStack(spacing: PVSpacing.space4) {
+                Text(eyebrow)
+                    .pvMicroCaps()
+                    .foregroundStyle(PVColor.textSecondary)
+                Spacer(minLength: 0)
+                Text(verbatim: position)
+                    .font(PVFont.mono(size: 11))
+                    .foregroundStyle(PVColor.textMuted)
+            }
+            .frame(height: 20)
+            control()
         }
     }
 
@@ -43,19 +120,24 @@ struct CitationComposerEvidenceColumn: View {
         PVSelect(
             selection: citationSelection,
             options: citationOptions,
-            size: .sm,
-            icon: .quote,
-            displayLabel: citationClosedLabel,
-            menuWidth: 460,
-            fillsWidth: false,
-            rowHeight: 76,
+            size: .md,
+            displayLabel: model.citationStepLabel(for: model.activeCitationID),
+            menuWidth: 480,
+            maxVisibleRows: 6,
+            rowHeight: 84,
             isDisabled: model.isTranscribing,
             accessibilityLabel: L10n.CitationComposer.citationEyebrow,
             accessibilityIdentifier: "citationComposer.citationSelect"
         ) { option in
             if option.id.isEmpty {
-                Text(L10n.CitationComposer.newCitation)
-                    .font(PVFont.body(size: PVTypeScale.caption))
+                HStack(spacing: PVSpacing.space4) {
+                    PVIcon(.plus, size: 14)
+                    Text(L10n.CitationComposer.newCitation)
+                        .font(PVFont.body(size: PVTypeScale.caption))
+                    Text(L10n.CitationComposer.onThisArtifact)
+                        .font(PVFont.body(size: 12, italic: true))
+                        .foregroundStyle(PVColor.textMuted)
+                }
             } else if let listed = model.orderedCitations.first(where: { $0.citation.id == option.id }) {
                 citationMenuRow(listed)
             } else {
@@ -68,10 +150,9 @@ struct CitationComposerEvidenceColumn: View {
         PVSelect(
             selection: artifactSelection,
             options: artifactOptions,
-            size: .sm,
-            icon: .file,
+            size: .md,
             menuWidth: 360,
-            fillsWidth: false,
+            maxVisibleRows: 6,
             rowHeight: 64,
             isDisabled: model.isTranscribing || model.artifacts.isEmpty,
             accessibilityLabel: L10n.CitationComposer.artifactEyebrow,
@@ -122,70 +203,28 @@ struct CitationComposerEvidenceColumn: View {
         }
     }
 
-    private var citationClosedLabel: String {
-        guard let listed = currentListed else {
-            return L10n.string(L10n.CitationComposer.newCitation)
+    private var citationPosition: String {
+        guard let id = model.activeCitationID,
+              let index = model.orderedCitations.firstIndex(where: { $0.citation.id == id })
+        else {
+            return L10n.string(L10n.CitationComposer.newPosition)
         }
-        let detail = CitationComposerAuthoring.subjectNameSummary(listed.subjectNames)
-            ?? collapsedDetail(listed.citation.description)
-            ?? L10n.string(L10n.CitationComposer.closedNoTranscription)
-        return L10n.CitationComposer.citationClosed(listed.citation.ref, detail)
+        return L10n.DesignSystem.selectOptionPosition(
+            current: index + 1,
+            count: model.orderedCitations.count
+        )
+    }
+
+    private var artifactPosition: String {
+        guard let id = model.selectedArtifactID,
+              let index = model.artifacts.firstIndex(where: { $0.id == id }),
+              !model.artifacts.isEmpty
+        else { return "" }
+        return L10n.DesignSystem.selectOptionPosition(current: index + 1, count: model.artifacts.count)
     }
 
     private func citationMenuRow(_ listed: CatalogListedCitation) -> some View {
-        let citation = listed.citation
-        let names = CitationComposerAuthoring.subjectNameSummary(listed.subjectNames)
-        let preview = CitationComposerAuthoring.preview(
-            transcription: citation.transcription,
-            description: citation.description
-        )
-        let locator = menuLocator(citation)
-        return HStack(alignment: .center, spacing: 10) {
-            PVThumbnail(PVThumbnail.Content(icon: .scrollText), size: 52)
-            VStack(alignment: .leading, spacing: 1) {
-                HStack(alignment: .firstTextBaseline, spacing: PVSpacing.space4) {
-                    Text(verbatim: citation.ref)
-                        .font(PVFont.mono(size: 12, weight: PVFontWeight.semibold))
-                        .foregroundStyle(PVColor.textPrimary)
-                        .lineLimit(1)
-                    Text(verbatim: L10n.CitationComposer.citationStepperCount(count: listed.observationCount))
-                        .font(PVFont.mono(size: PVTypeScale.micro))
-                        .foregroundStyle(PVColor.textMuted)
-                        .lineLimit(1)
-                    Spacer(minLength: PVSpacing.space4)
-                    if !locator.isEmpty {
-                        Text(verbatim: locator)
-                            .font(PVFont.mono(size: PVTypeScale.micro))
-                            .foregroundStyle(PVColor.textFaint)
-                            .lineLimit(1)
-                    }
-                }
-                if let names {
-                    Text(verbatim: names)
-                        .font(PVFont.body(size: 12))
-                        .foregroundStyle(PVColor.textPrimary)
-                        .lineLimit(1)
-                } else {
-                    Text(L10n.CitationComposer.noSubjectsYet)
-                        .font(PVFont.body(size: 12, italic: true))
-                        .foregroundStyle(PVColor.textMuted)
-                        .lineLimit(1)
-                }
-                switch preview {
-                case .text(let text):
-                    Text(verbatim: text)
-                        .font(PVFont.body(size: 12))
-                        .foregroundStyle(PVColor.textSecondary)
-                        .lineLimit(1)
-                case .empty:
-                    Text(L10n.CitationComposer.noTranscriptionYet)
-                        .font(PVFont.body(size: 12, italic: true))
-                        .foregroundStyle(PVColor.textMuted)
-                        .lineLimit(1)
-                }
-            }
-        }
-        .padding(.vertical, PVSpacing.space2)
+        CitationStepMenuRow(listed: listed, locator: menuLocator(listed.citation))
     }
 
     private func artifactMenuRow(_ artifact: CatalogArtifact) -> some View {
@@ -219,152 +258,102 @@ struct CitationComposerEvidenceColumn: View {
         } else {
             content = PVThumbnail.Content(mark: artifactMark(artifact))
         }
-        return PVThumbnail(content, size: 40)
+        return PVThumbnail(content, size: 48)
     }
 
-    /// One sunken chip: page, then region. Drawing on the file changes it.
-    private var locatorSummary: some View {
-        let page = model.locatorCapabilities.supportsPageLocator ? model.locator.page : nil
-        let region = model.locatorCapabilities.supportsRegionLocator ? model.locator.region : nil
-        return HStack(spacing: PVSpacing.space3) {
-            if let page {
-                PVIcon(.file, size: 13)
-                Text(verbatim: L10n.CitationComposer.locatorPage(page))
-                    .lineLimit(1)
-            } else if region == nil {
-                PVIcon(.scrollText, size: 13)
-                Text(L10n.CitationComposer.locatorEntireArtifact)
-                    .lineLimit(1)
-            }
-            if let region {
-                if page != nil {
-                    PVIcon(.chevronForward, size: 12)
-                        .foregroundStyle(PVColor.textFaint)
-                }
-                PVIcon(.crop, size: 13)
-                Text(verbatim: regionNoun(region.kind))
-                    .lineLimit(1)
-            }
+    private var labelField: some View {
+        PVField(label: L10n.CitationComposer.descriptionLabel) {
+            PVInput(
+                text: $model.citationDescription,
+                size: .sm,
+                prompt: L10n.CitationComposer.descriptionPrompt
+            )
+            .accessibilityIdentifier("citationComposer.label")
+            .accessibilityLabel(Text(L10n.CitationComposer.descriptionLabel))
         }
-        .font(PVFont.body(size: 12))
-        .foregroundStyle(PVColor.textSecondary)
-        .padding(.horizontal, 10)
-        .frame(height: PVSpacing.controlHeightSmall)
-        .background(PVColor.surfaceSunken)
-        .clipShape(RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous)
-                .stroke(PVColor.borderSubtle, lineWidth: 1)
-        )
-        .help(L10n.string(L10n.CitationComposer.locatorChipHint))
-        .accessibilityElement(children: .combine)
-        .accessibilityIdentifier("citationComposer.locatorSummary")
     }
 
-    private var reading: some View {
-        VStack(alignment: .leading, spacing: PVSpacing.space5) {
-            ReadingColumns(spacing: PVSpacing.space6) {
-                VStack(alignment: .leading, spacing: PVSpacing.space5) {
-                    PVField(label: L10n.CitationComposer.transcriptionLabel, error: model.fields.error) {
-                        PVTextArea(
-                            text: $model.transcription,
-                            lineLimit: 4...4,
-                            prompt: L10n.CitationComposer.transcriptionPrompt
-                        )
-                        .accessibilityIdentifier("citationComposer.transcription")
-                    }
-                    HStack(spacing: PVSpacing.space6) {
-                        if model.canAutoTranscribe {
-                            PVButton(
-                                L10n.CitationComposer.autoTranscribe,
-                                variant: .secondary,
-                                size: .sm,
-                                icon: .scanText,
-                                loading: model.isTranscribing
-                            ) {
-                                Task { await model.runAutoTranscribe() }
-                            }
-                            .disabled(model.isTranscribing)
-                        } else if model.canPasteTranscription {
-                            PVButton(
-                                L10n.CitationComposer.pasteTranscription,
-                                variant: .secondary,
-                                size: .sm,
-                                icon: .clipboardPaste
-                            ) {
-                                model.requestPasteTranscription()
-                            }
-                            .disabled(model.isTranscribing)
-                        }
-                        PVCheckbox(
-                            L10n.CitationComposer.uncertainLabel,
-                            isChecked: $model.transcriptionUncertain
-                        )
-                        Spacer(minLength: 0)
-                    }
-                }
-                VStack(alignment: .leading, spacing: PVSpacing.space5) {
-                    PVField(label: L10n.CitationComposer.descriptionLabel) {
-                        PVTextArea(
-                            text: $model.citationDescription,
-                            lineLimit: 4...4,
-                            prompt: L10n.CitationComposer.descriptionPrompt
-                        )
-                        .accessibilityIdentifier("citationComposer.description")
-                    }
-                    HStack(spacing: PVSpacing.space4) {
-                        Spacer(minLength: 0)
-                        if model.activeCitationID != nil {
-                            PVIconButton(
-                                .trash,
-                                label: L10n.CitationComposer.deleteCitationAccessibility(ref: model.activeCitationRef),
-                                size: .sm
-                            ) {
-                                Task { await model.askDeleteCitation() }
-                            }
-                            .disabled(model.isTranscribing)
-                        }
-                        PVButton(
-                            L10n.CitationComposer.save,
-                            variant: .secondary,
-                            size: .sm,
-                            loading: model.fields.isSaving
-                        ) {
-                            Task { await model.fields.saveCitation() }
-                        }
-                        .disabled(!canSaveCitation)
-                        .accessibilityIdentifier("citationComposer.saveCitation")
-                    }
-                }
+    private func transcriptionColumn(rows: ClosedRange<Int>) -> some View {
+        VStack(alignment: .leading, spacing: PVSpacing.space4) {
+            PVField(label: L10n.CitationComposer.transcriptionLabel, error: model.fields.error) {
+                PVTextArea(
+                    text: $model.transcription,
+                    lineLimit: rows,
+                    prompt: L10n.CitationComposer.transcriptionPrompt
+                )
+                .accessibilityIdentifier("citationComposer.transcription")
             }
-            if model.transcriptionUncertain {
-                PVField(label: L10n.CitationComposer.uncertainNoteLabel) {
-                    PVTextArea(text: $model.transcriptionNote, lineLimit: 2...3)
-                        .accessibilityIdentifier("citationComposer.transcriptionNote")
-                }
+            .overlay(alignment: .topTrailing) {
+                readingAction
+                    .offset(y: -5)
             }
+            PVCheckbox(
+                L10n.CitationComposer.uncertainLabel,
+                isChecked: $model.transcriptionUncertain
+            )
             if let message = model.transcriptionOCRMessage, !message.isEmpty {
                 PVCallout(tone: .warning, message: message)
             }
         }
     }
 
+    @ViewBuilder
+    private var readingAction: some View {
+        if model.artifactViewer.kind == .pdf {
+            PVButton(
+                L10n.CitationComposer.pasteTranscription,
+                variant: .ghost,
+                size: .sm,
+                icon: .clipboardPaste
+            ) {
+                model.requestPasteTranscription()
+            }
+            .disabled(!model.canPasteTranscription || model.isTranscribing)
+        } else if model.artifactViewer.kind == .image {
+            PVButton(
+                L10n.CitationComposer.autoTranscribe,
+                variant: .ghost,
+                size: .sm,
+                icon: .scanText,
+                loading: model.isTranscribing
+            ) {
+                Task { await model.runAutoTranscribe() }
+            }
+            .disabled(model.isTranscribing)
+        }
+    }
+
+    private var footer: some View {
+        HStack(spacing: PVSpacing.space4) {
+            Spacer(minLength: 0)
+            if model.activeCitationID != nil {
+                PVButton(
+                    L10n.CitationComposer.deleteReading,
+                    variant: .ghost,
+                    size: .sm,
+                    icon: .trash
+                ) {
+                    Task { await model.askDeleteCitation() }
+                }
+                .disabled(model.isTranscribing)
+                .accessibilityLabel(Text(verbatim: L10n.CitationComposer.deleteCitationAccessibility(ref: model.activeCitationRef)))
+            }
+            PVButton(
+                L10n.CitationComposer.save,
+                variant: .secondary,
+                size: .sm,
+                loading: model.fields.isSaving
+            ) {
+                Task { await model.fields.saveCitation() }
+            }
+            .disabled(!canSaveCitation)
+            .accessibilityIdentifier("citationComposer.saveCitation")
+        }
+    }
+
     private var canSaveCitation: Bool {
         !model.fields.isSaving && !model.isTranscribing
             && (model.fields.isDirty || model.activeCitationID == nil)
-    }
-
-    private var currentListed: CatalogListedCitation? {
-        model.orderedCitations.first { $0.citation.id == model.activeCitationID }
-    }
-
-    private func collapsedDetail(_ text: String) -> String? {
-        let collapsed = text
-            .components(separatedBy: .newlines)
-            .map { $0.trimmingCharacters(in: .whitespaces) }
-            .filter { !$0.isEmpty }
-            .joined(separator: " — ")
-        return collapsed.isEmpty ? nil : collapsed
     }
 
     private func menuLocator(_ citation: CatalogCitation) -> String {
@@ -435,28 +424,71 @@ struct CitationComposerEvidenceColumn: View {
         )
     }
 
-    private func regionNoun(_ kind: ArtifactRegionKind) -> String {
-        switch kind {
-        case .rectangle:
-            L10n.string(L10n.CitationComposer.locatorRectangle)
-        case .lOpenTopRight, .lOpenTopLeft, .lOpenBottomRight, .lOpenBottomLeft:
-            L10n.string(L10n.CitationComposer.locatorLShape)
-        case .circle:
-            L10n.string(L10n.CitationComposer.locatorCircle)
-        case .freeform:
-            L10n.string(L10n.CitationComposer.locatorPolygon)
+}
+
+/// Citation menu row for the step picker and the observation dialog.
+struct CitationStepMenuRow: View {
+    let listed: CatalogListedCitation
+    var locator: String
+
+    var body: some View {
+        let citation = listed.citation
+        let label = citation.description.trimmingCharacters(in: .whitespacesAndNewlines)
+        let transcription = citation.transcription
+            .components(separatedBy: .newlines)
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+            .joined(separator: " — ")
+        return VStack(alignment: .leading, spacing: 2) {
+            HStack(alignment: .firstTextBaseline, spacing: PVSpacing.space4) {
+                Text(verbatim: citation.ref)
+                    .font(PVFont.mono(size: 12, weight: PVFontWeight.semibold))
+                    .foregroundStyle(PVColor.textPrimary)
+                    .lineLimit(1)
+                Text(verbatim: L10n.CitationComposer.citationStepperCount(count: listed.observationCount))
+                    .font(PVFont.mono(size: 11))
+                    .foregroundStyle(PVColor.textMuted)
+                    .lineLimit(1)
+                Spacer(minLength: PVSpacing.space4)
+                if !locator.isEmpty {
+                    Text(verbatim: locator)
+                        .font(PVFont.mono(size: 11))
+                        .foregroundStyle(PVColor.textFaint)
+                        .lineLimit(1)
+                }
+            }
+            if !label.isEmpty {
+                Text(verbatim: label)
+                    .font(PVFont.body(size: 13))
+                    .foregroundStyle(PVColor.textPrimary)
+                    .lineLimit(1)
+            }
+            if transcription.isEmpty {
+                Text(L10n.CitationComposer.noTranscriptionLine)
+                    .font(PVFont.body(size: 12, italic: true))
+                    .foregroundStyle(PVColor.textMuted)
+                    .lineLimit(2)
+            } else {
+                Text(verbatim: transcription)
+                    .font(PVFont.body(size: 12))
+                    .foregroundStyle(PVColor.textSecondary)
+                    .lineLimit(2)
+            }
         }
+        .padding(.vertical, PVSpacing.space3)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
-/// Transcription takes 1.6 of the reading row; description takes 1.
-private struct ReadingColumns: Layout {
-    var spacing: CGFloat = 16
+/// Places children in weighted columns. Height follows the tallest child.
+private struct WeightedColumns: Layout {
+    var weights: [CGFloat]
+    var spacing: CGFloat
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
         let widths = columnWidths(total: proposal.width ?? 0, count: subviews.count)
         let height = zip(subviews, widths).map { view, width in
-            view.sizeThatFits(ProposedViewSize(width: width, height: proposal.height)).height
+            view.sizeThatFits(ProposedViewSize(width: width, height: nil)).height
         }.max() ?? 0
         return CGSize(width: proposal.width ?? 0, height: height)
     }
@@ -475,12 +507,15 @@ private struct ReadingColumns: Layout {
     }
 
     private func columnWidths(total: CGFloat, count: Int) -> [CGFloat] {
-        guard count == 2 else {
-            let each = count == 0 ? 0 : max(0, (total - spacing * CGFloat(max(count - 1, 0))) / CGFloat(max(count, 1)))
+        let weightCount = min(count, weights.count)
+        guard weightCount > 0 else { return [] }
+        let used = Array(weights.prefix(weightCount))
+        let sum = used.reduce(0, +)
+        let available = max(0, total - spacing * CGFloat(max(count - 1, 0)))
+        guard sum > 0 else {
+            let each = count == 0 ? 0 : available / CGFloat(count)
             return Array(repeating: each, count: count)
         }
-        let available = max(0, total - spacing)
-        let leading = available * 1.6 / 2.6
-        return [leading, available - leading]
+        return used.map { available * $0 / sum }
     }
 }

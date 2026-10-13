@@ -457,7 +457,8 @@ final class CitationComposerModel {
         return CitationObservationValue.summary(
             valueType: property.valueType,
             fields: row.valueFields(),
-            termLabel: vocabulary.termLabel(termID: row.valueTermID, propertyID: property.id)
+            termLabel: vocabulary.termLabel(termID: row.valueTermID, propertyID: property.id),
+            orders: session.nameFormat
         )
     }
 
@@ -859,11 +860,13 @@ final class CitationComposerModel {
     }
 
     func beginAddCustomTerm(propertyID: String, applyToEdit: Bool = false) {
+        editSheetSuspended = true
         present(.customTerm(CustomTermDraft(propertyID: propertyID, applyToEdit: applyToEdit)))
     }
 
     func cancelCustomTermDialog() {
         if case .customTerm = modal { present(nil) }
+        editSheetSuspended = false
     }
 
     func confirmCustomTerm() async {
@@ -911,6 +914,7 @@ final class CitationComposerModel {
                 bridge.termID = term.id
                 authoring = .bridge(bridge)
             }
+            editSheetSuspended = false
             present(nil)
         } catch {
             draft.error = L10n.Errors.message(for: error)
@@ -1018,10 +1022,14 @@ final class CitationComposerModel {
         guard !isGraphReloading,
               let type = fieldsSnapshot.types.first(where: { $0.key == typeKey })
         else { return }
+        editSheetSuspended = true
         newSubjectDraft = NewSubjectDraft(typeKey: typeKey, typeID: type.id, field: field)
     }
 
-    func cancelNewSubject() { newSubjectDraft = nil }
+    func cancelNewSubject() {
+        newSubjectDraft = nil
+        editSheetSuspended = false
+    }
 
     func confirmNewSubject() async {
         guard var draft = newSubjectDraft, !draft.isSaving else { return }
@@ -1043,6 +1051,7 @@ final class CitationComposerModel {
             await context.waitForGraph()
             assignCreatedSubject(created.id, field: draft.field)
             newSubjectDraft = nil
+            editSheetSuspended = false
         } catch {
             draft.error = L10n.Errors.message(for: error)
             draft.isSaving = false

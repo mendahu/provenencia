@@ -78,11 +78,28 @@ struct CitationComposerView: View {
             width: 520,
             isRunning: model.editSession?.isSaving == true,
             isDirty: model.editSession?.isDirty == true,
-            confirmDisabled: model.editSession?.isSaving == true,
+            confirmDisabled: !model.editCanConfirm,
             accessibilityIdentifierPrefix: "citationComposer.edit",
             onConfirm: { Task { await model.saveEdit() } }
         ) {
             CitationComposerEditSheet(model: model)
+        }
+        .pvFormDialog(
+            isPresented: authoringSheetBinding,
+            copy: PVFormDialogCopy(
+                title: L10n.CitationComposer.newObservationTitle,
+                subtitle: authoringSubtitle,
+                confirm: authoringConfirm,
+                cancel: L10n.CitationComposer.discardDraft
+            ),
+            width: 520,
+            isRunning: model.authoring.isSaving,
+            isDirty: model.authoring.holdsLeave,
+            confirmDisabled: !model.authoringCanConfirm,
+            accessibilityIdentifierPrefix: "citationComposer.authoring",
+            onConfirm: { Task { await model.saveAuthoring() } }
+        ) {
+            CitationComposerAuthoringBox(model: model)
         }
         .pvFormDialog(
             isPresented: observationDialogBinding,
@@ -319,20 +336,75 @@ struct CitationComposerView: View {
 
     private var composeSplit: some View {
         GeometryReader { geo in
-            let observationsWidth: CGFloat = geo.size.width >= 1400 ? 600 : 520
+            let threeUp = geo.size.width >= 1400
             HStack(alignment: .top, spacing: 0) {
-                CitationComposerEvidenceColumn(model: model)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .accessibilityElement(children: .contain)
-                    .accessibilityLabel(Text(L10n.CitationComposer.viewerGroup))
-                PVDivider(axis: .vertical, color: PVColor.borderSubtle)
+                evidence(threeUp: threeUp, height: geo.size.height)
                 CitationComposerObservationsColumn(model: model) {
                     navigation.go(to: model.graphLocation())
                 }
-                .frame(width: observationsWidth)
+                .frame(width: 520)
                 .frame(maxHeight: .infinity)
             }
         }
+    }
+
+    @ViewBuilder
+    private func evidence(threeUp: Bool, height: CGFloat) -> some View {
+        if threeUp {
+            HStack(alignment: .top, spacing: 0) {
+                CitationComposerViewerPane(model: model)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .accessibilityElement(children: .contain)
+                    .accessibilityLabel(Text(L10n.CitationComposer.viewerGroup))
+                    .overlay(alignment: .trailing) {
+                        PVDivider(axis: .vertical, color: PVColor.borderSubtle)
+                    }
+                CitationComposerEvidenceColumn(model: model, layout: .side)
+                    .frame(width: 440, alignment: .topLeading)
+                    .overlay(alignment: .trailing) {
+                        PVDivider(axis: .vertical, color: PVColor.borderSubtle)
+                    }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else {
+            VStack(spacing: 0) {
+                CitationComposerEvidenceColumn(model: model, layout: .panel)
+                    .frame(maxHeight: height * 0.55, alignment: .top)
+                CitationComposerViewerPane(model: model)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel(Text(L10n.CitationComposer.viewerGroup))
+            .overlay(alignment: .trailing) {
+                PVDivider(axis: .vertical, color: PVColor.borderSubtle)
+            }
+        }
+    }
+
+    private var authoringSheetBinding: Binding<Bool> {
+        Binding(
+            get: {
+                if model.editSheetSuspended || model.editSession != nil { return false }
+                if case .rest = model.authoring { return false }
+                return true
+            },
+            set: { if !$0 { model.discardAuthoring() } }
+        )
+    }
+
+    private var authoringSubtitle: LocalizedStringResource {
+        if case .bridge = model.authoring {
+            return L10n.CitationComposer.newBridgeSubtitle
+        }
+        return L10n.CitationComposer.newObservationSubtitle
+    }
+
+    private var authoringConfirm: LocalizedStringResource {
+        if case .bridge = model.authoring {
+            return L10n.CitationComposer.saveBridge
+        }
+        return L10n.CitationComposer.saveObservation
     }
 
     private var editSheetBinding: Binding<Bool> {
