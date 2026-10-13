@@ -414,7 +414,7 @@ extension CitationComposerModel {
             authoring = .bridge(draft)
             return
         }
-        if let termProperty = ready.termProperty, draft.termID.isEmpty {
+        if ready.termProperty != nil, draft.termID.isEmpty {
             draft.error = L10n.string(L10n.CitationComposer.connectionTermNotChosen)
             authoring = .bridge(draft)
             return

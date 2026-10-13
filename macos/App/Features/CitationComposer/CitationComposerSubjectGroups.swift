@@ -4,9 +4,8 @@ import SwiftUI
 struct CitationComposerObservationsColumn: View {
     @Bindable var model: CitationComposerModel
     var onDone: () -> Void
-    @State private var lineMenu = PVContextMenuState()
-    @State private var menuLine: CitationSavedLine?
     @State private var hoveredLineID: String?
+    @State private var openMenuLineID: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -32,9 +31,6 @@ struct CitationComposerObservationsColumn: View {
                 }
                 .padding(PVSpacing.space5)
             }
-        }
-        .pvContextMenu(lineMenuBinding) {
-            lineMenuContent
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel(Text(L10n.CitationComposer.observationsSection))
@@ -127,7 +123,7 @@ struct CitationComposerObservationsColumn: View {
     }
 
     private func lineRow(_ line: CitationSavedLine, rule: Bool) -> some View {
-        let revealed = hoveredLineID == line.id || menuLine?.id == line.id && lineMenu.isPresented
+        let revealed = hoveredLineID == line.id || openMenuLineID == line.id
         let twin = line.bridgeID.map { bridgeID in
             hoveredLineID?.contains("bridge:\(bridgeID):") == true && hoveredLineID != line.id
         } ?? false
@@ -163,24 +159,13 @@ struct CitationComposerObservationsColumn: View {
             if fresh {
                 PVBadge(L10n.CitationComposer.savedBadge, tone: .success, icon: .check, subtle: true)
             }
-            HStack(spacing: PVSpacing.space1) {
-                if revealed {
-                    PVIconButton(
-                        .duplicate,
-                        label: line.bridgeID == nil
-                            ? L10n.CitationComposer.duplicateObservation
-                            : L10n.CitationComposer.duplicateBridge,
-                        size: .sm
-                    ) {
-                        model.duplicate(line: line)
-                    }
-                    PVIconButton(.ellipsis, label: L10n.CitationComposer.moreActions, size: .sm) {
-                        menuLine = line
-                        lineMenu.present(at: CGPoint(x: 0, y: PVSpacing.controlHeightSmall))
-                    }
+            ObservationLineMenu(model: model, line: line, revealed: revealed) { presented in
+                if presented {
+                    openMenuLineID = line.id
+                } else if openMenuLineID == line.id {
+                    openMenuLineID = nil
                 }
             }
-            .frame(width: 58, alignment: .trailing)
         }
         .padding(.vertical, PVSpacing.space1)
         .padding(.leading, PVSpacing.space5)
@@ -214,43 +199,99 @@ struct CitationComposerObservationsColumn: View {
         return .clear
     }
 
-    private var lineMenuBinding: Binding<PVContextMenuState> {
-        $lineMenu
+}
+
+/// More-actions menu for one saved line. The panel supplies the opaque card;
+/// the menu window itself is clear.
+private struct ObservationLineMenu: View {
+    @Bindable var model: CitationComposerModel
+    let line: CitationSavedLine
+    var revealed: Bool
+    var onPresented: (Bool) -> Void
+    @State private var menu = PVContextMenuState()
+    @State private var keyboard = PVContextMenuKeyboard.inactive
+
+    var body: some View {
+        HStack(spacing: PVSpacing.space1) {
+            if revealed || menu.isPresented {
+                PVIconButton(
+                    .duplicate,
+                    label: line.bridgeID == nil
+                        ? L10n.CitationComposer.duplicateObservation
+                        : L10n.CitationComposer.duplicateBridge,
+                    size: .sm
+                ) {
+                    model.duplicate(line: line)
+                }
+                PVIconButton(.ellipsis, label: L10n.CitationComposer.moreActions, size: .sm) {
+                    toggle()
+                }
+                .accessibilityIdentifier("citationComposer.line.more.\(line.id)")
+                .pvContextMenu($menu, keyboard: $keyboard, dismissOnClickAway: true) {
+                    PVContextMenuPanel(width: 220, accessibilityIdentifier: "citationComposer.lineMenu") {
+                        menuItems
+                    }
+                }
+            }
+        }
+        .frame(width: 58, alignment: .trailing)
+        .onChange(of: menu.isPresented) { _, presented in
+            onPresented(presented)
+        }
+    }
+
+    private func toggle() {
+        if menu.isPresented {
+            menu.dismiss()
+            return
+        }
+        let titles = menuTitles.map { L10n.string($0) }
+        keyboard = PVContextMenuKeyboard(itemCount: titles.count, activeIndex: -1, itemTitles: titles)
+        menu.present(at: CGPoint(x: 0, y: PVSpacing.controlHeightSmall))
+    }
+
+    private var menuTitles: [LocalizedStringResource] {
+        if line.bridgeID == nil {
+            return [
+                L10n.CitationComposer.editObservationMenu,
+                L10n.CitationComposer.duplicate,
+                line.negative ? L10n.CitationComposer.affirmObservation : L10n.CitationComposer.negateObservation,
+                L10n.CitationComposer.deleteObservation,
+            ]
+        }
+        return [
+            L10n.CitationComposer.editBridgeMenu,
+            L10n.CitationComposer.duplicate,
+            L10n.CitationComposer.showOnGraph,
+            L10n.CitationComposer.deleteBridge,
+        ]
     }
 
     @ViewBuilder
-    private var lineMenuContent: some View {
-        if let line = menuLine {
-            PVContextMenuItem(
-                line.bridgeID == nil ? L10n.CitationComposer.editObservationMenu : L10n.CitationComposer.editBridgeMenu,
-                index: 0
-            ) {
-                model.beginEdit(line: line)
+    private var menuItems: some View {
+        PVContextMenuItem(menuTitles[0], index: 0) {
+            model.beginEdit(line: line)
+        }
+        PVContextMenuItem(menuTitles[1], index: 1) {
+            model.duplicate(line: line)
+        }
+        if line.bridgeID == nil {
+            PVContextMenuItem(menuTitles[2], index: 2) {
+                if let observationID = line.observationID {
+                    Task { await model.negate(observationID: observationID) }
+                }
             }
-            PVContextMenuItem(L10n.CitationComposer.duplicate, index: 1) {
-                model.duplicate(line: line)
+            PVContextMenuItem(menuTitles[3], index: 3) {
+                Task { await model.askDeleteLine(line) }
             }
-            if line.bridgeID == nil {
-                PVContextMenuItem(
-                    line.negative ? L10n.CitationComposer.affirmObservation : L10n.CitationComposer.negateObservation,
-                    index: 2
-                ) {
-                    if let observationID = line.observationID {
-                        Task { await model.negate(observationID: observationID) }
-                    }
+        } else {
+            PVContextMenuItem(menuTitles[2], index: 2) {
+                if let bridgeID = line.bridgeID {
+                    model.showOnGraph(bridgeID: bridgeID)
                 }
-                PVContextMenuItem(L10n.CitationComposer.deleteObservation, index: 3) {
-                    Task { await model.askDeleteLine(line) }
-                }
-            } else {
-                PVContextMenuItem(L10n.CitationComposer.showOnGraph, index: 2) {
-                    if let bridgeID = line.bridgeID {
-                        model.showOnGraph(bridgeID: bridgeID)
-                    }
-                }
-                PVContextMenuItem(L10n.CitationComposer.deleteBridge, index: 3) {
-                    Task { await model.askDeleteLine(line) }
-                }
+            }
+            PVContextMenuItem(menuTitles[3], index: 3) {
+                Task { await model.askDeleteLine(line) }
             }
         }
     }
