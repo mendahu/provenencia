@@ -166,6 +166,7 @@
 		AA00000000000000000000F9 /* EvidenceCardLayoutTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000000F8 /* EvidenceCardLayoutTests.swift */; };
 		AA0000000000000000000673 /* L10nResolutionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000672 /* L10nResolutionTests.swift */; };
 		AA0000000000000000000680 /* GraphCanvasItemLayerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000067F /* GraphCanvasItemLayerTests.swift */; };
+		AA0000000000000000000682 /* PVTextAreaTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000681 /* PVTextAreaTests.swift */; };
 		AA0000000000000000000678 /* L10nPluralTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000677 /* L10nPluralTests.swift */; };
 		A71900000000000000000002 /* CitationComposerContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71900000000000000000001 /* CitationComposerContext.swift */; };
 		A71D00000000000000000002 /* OCREngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71D00000000000000000001 /* OCREngine.swift */; };
@@ -546,6 +547,7 @@
 		AA00000000000000000000F6 /* EvidenceSubjectCardFooterTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EvidenceSubjectCardFooterTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000672 /* L10nResolutionTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = L10nResolutionTests.swift; sourceTree = "<group>"; };
 		AA000000000000000000067F /* GraphCanvasItemLayerTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GraphCanvasItemLayerTests.swift; sourceTree = "<group>"; };
+		AA0000000000000000000681 /* PVTextAreaTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVTextAreaTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000677 /* L10nPluralTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = L10nPluralTests.swift; sourceTree = "<group>"; };
 		AA00000000000000000000F8 /* EvidenceCardLayoutTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EvidenceCardLayoutTests.swift; sourceTree = "<group>"; };
 		A71900000000000000000001 /* CitationComposerContext.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CitationComposerContext.swift; sourceTree = "<group>"; };
@@ -1291,6 +1293,7 @@
 				A80600000000000000000005 /* EvidenceCitedPropertyMarksTests.swift */,
 				A71000000000000000000005 /* PropertyTermDisplayTests.swift */,
 				AA0000000000000000000232 /* PVComboBoxTests.swift */,
+				AA0000000000000000000681 /* PVTextAreaTests.swift */,
 				B9110000000000000000000B /* PromoteModelTests.swift */,
 				B9110000000000000000000F /* PromoteFlowTests.swift */,
 				B0D89A265AAED569EA0CA31E /* DateRowDisplayTests.swift */,
@@ -2136,6 +2139,7 @@
 				AA00000000000000000000F9 /* EvidenceCardLayoutTests.swift in Sources */,
 				AA0000000000000000000673 /* L10nResolutionTests.swift in Sources */,
 				AA0000000000000000000680 /* GraphCanvasItemLayerTests.swift in Sources */,
+				AA0000000000000000000682 /* PVTextAreaTests.swift in Sources */,
 				AA0000000000000000000678 /* L10nPluralTests.swift in Sources */,
 				A71B00000000000000000002 /* ConnectEndpointBindingTests.swift in Sources */,
 				A70B0000000000000000000C /* ArtifactViewerModelTests.swift in Sources */,

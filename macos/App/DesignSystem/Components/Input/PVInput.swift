@@ -69,10 +69,12 @@ struct PVInputChrome: ViewModifier {
 /// The text field applies `.focused($binding, equals:)` itself.
 struct PVInputFocus {
     fileprivate let isActive: () -> Bool
+    fileprivate let focus: () -> Void
     fileprivate let install: (Binding<String>, Text?) -> AnyView
 
     init<Value: Hashable>(_ binding: FocusState<Value?>.Binding, equals value: Value) {
         isActive = { binding.wrappedValue == value }
+        focus = { binding.wrappedValue = value }
         install = { text, prompt in
             AnyView(
                 TextField(text: text, prompt: prompt) { EmptyView() }
@@ -182,7 +184,9 @@ struct PVInput: View {
     /// into the new value.
     private func focusField() {
         DispatchQueue.main.async {
-            if let externalFocus {
+            if let equalsFocus {
+                equalsFocus.focus()
+            } else if let externalFocus {
                 externalFocus.wrappedValue = true
             } else {
                 ownedFocus = true

@@ -4,16 +4,23 @@ import SwiftUI
 struct CitationComposerAuthoringBox: View {
     @Bindable var model: CitationComposerModel
     @FocusState private var focus: CitationAuthoringFocus?
-    /// Captured when the dialog opens. A Property / Bridge switch must not
-    /// move focus back into the form.
-    @State private var openingFocus: CitationAuthoringFocus?
+    /// The dialog's first field, placed once. Putting it in `.defaultFocus`
+    /// reapplies it whenever a value editor or name part is inserted, which
+    /// sends Tab back to Subject.
+    @State private var didPlaceOpeningFocus = false
 
     var body: some View {
         dialog
-            .defaultFocus($focus, openingFocus ?? liveOpeningFocus)
-            .onAppear {
-                if openingFocus == nil { openingFocus = liveOpeningFocus }
-            }
+            .onAppear { placeOpeningFocusIfNeeded() }
+    }
+
+    /// Once, when the sheet appears. A Property / Bridge switch and a newly
+    /// inserted value editor must leave focus where the user just put it.
+    private func placeOpeningFocusIfNeeded() {
+        guard !didPlaceOpeningFocus else { return }
+        didPlaceOpeningFocus = true
+        let initial = liveOpeningFocus
+        DispatchQueue.main.async { focus = initial }
     }
 
     @ViewBuilder
@@ -274,10 +281,16 @@ struct CitationComposerAuthoringBox: View {
             via: via,
             draftAfterCommit: CitationAuthoringDraftAfterCommit(bridgeHasTerm: bridgeHasTerm)
         ) else { return false }
-        // The next field may be inserted by this same commit. The write has to
-        // land on the following turn, once that field is in the hierarchy.
+        // The next field may be inserted by this same commit. A name or date
+        // editor is not in the hierarchy until the following turn, and a deep
+        // form can miss the first write.
         let nextField = next
-        DispatchQueue.main.async { focus = nextField }
+        DispatchQueue.main.async {
+            focus = nextField
+            DispatchQueue.main.async {
+                if focus != nextField { focus = nextField }
+            }
+        }
         return true
     }
 
@@ -445,11 +458,17 @@ struct CitationPropertyFields: View {
             via: via,
             draftAfterCommit: CitationAuthoringDraftAfterCommit()
         ) else { return false }
-        // The next field may be inserted by this same commit. The write has to
-        // land on the following turn, once that field is in the hierarchy.
+        // The next field may be inserted by this same commit. A name or date
+        // editor is not in the hierarchy until the following turn, and a deep
+        // form can miss the first write.
         let binding = focus
         let nextField = next
-        DispatchQueue.main.async { binding.wrappedValue = nextField }
+        DispatchQueue.main.async {
+            binding.wrappedValue = nextField
+            DispatchQueue.main.async {
+                if binding.wrappedValue != nextField { binding.wrappedValue = nextField }
+            }
+        }
         return true
     }
 

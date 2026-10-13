@@ -43,6 +43,10 @@ struct PVTextAreaChrome: ViewModifier {
 /// Multiline sibling of `PVInput`. Replaces hand-rolled styled `TextField`s
 /// (title / description / metadata / artifact description / notes).
 ///
+/// These are form fields, so Tab and Shift-Tab move to the next control.
+/// Option-Tab still inserts a tab character. The text view underneath
+/// would otherwise take Tab as a character.
+///
 /// Not a direct port of a web-kit component — extracted from Provenencia
 /// Source-page chrome during structural cleanup. Call sites own
 /// `.accessibilityIdentifier` (`docs/macos-client-patterns.md` §5).
@@ -229,6 +233,8 @@ private struct PVTextEditorInsetClearer: NSViewRepresentable {
 }
 
 private final class PVTextEditorInsetView: NSView {
+    private let tabRouter = PVTextAreaTabRouter()
+
     override func viewDidMoveToSuperview() {
         super.viewDidMoveToSuperview()
         clearInsets()
@@ -251,7 +257,22 @@ private final class PVTextEditorInsetView: NSView {
             scroll.scrollerStyle = .overlay
             scroll.autohidesScrollers = true
         }
+        let alreadyRouting = textView.delegate === tabRouter
+        tabRouter.attach(to: textView)
+        if !alreadyRouting { scheduleTabRouterRecheck() }
     }
+
+    /// SwiftUI may install its own delegate after this layout pass. Look
+    /// again on the next turn, and stop after a couple of tries.
+    private func scheduleTabRouterRecheck() {
+        guard tabRouterRechecks < 2 else { return }
+        tabRouterRechecks += 1
+        DispatchQueue.main.async { [weak self] in
+            self?.clearInsets()
+        }
+    }
+
+    private var tabRouterRechecks = 0
 
     /// The clearer is a background of this editor, so the text view is a
     /// nearby sibling. Stop after a few ancestors so a second area on the
@@ -267,6 +288,49 @@ private final class PVTextEditorInsetView: NSView {
             hops += 1
         }
         return nil
+    }
+}
+
+/// Tab and Shift-Tab leave a form text area. Option-Tab uses a different
+/// command and still inserts a tab character.
+enum PVTextAreaTabRouting {
+    static func movesFocus(_ selector: Selector) -> Bool {
+        selector == #selector(NSResponder.insertTab(_:))
+            || selector == #selector(NSResponder.insertBacktab(_:))
+    }
+}
+
+/// Sits in front of the text view's existing delegate so SwiftUI still hears
+/// edits. Tab moves through the key loop; every other command is passed on.
+final class PVTextAreaTabRouter: NSObject, NSTextViewDelegate {
+    private weak var wrapped: NSTextViewDelegate?
+
+    func attach(to textView: NSTextView) {
+        if textView.delegate === self { return }
+        wrapped = textView.delegate
+        textView.delegate = self
+    }
+
+    func textView(_ textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
+        guard PVTextAreaTabRouting.movesFocus(commandSelector) else {
+            return wrapped?.textView?(textView, doCommandBy: commandSelector) ?? false
+        }
+        if commandSelector == #selector(NSResponder.insertBacktab(_:)) {
+            textView.window?.selectPreviousKeyView(nil)
+        } else {
+            textView.window?.selectNextKeyView(nil)
+        }
+        return true
+    }
+
+    override func responds(to aSelector: Selector!) -> Bool {
+        if super.responds(to: aSelector) { return true }
+        return wrapped?.responds(to: aSelector) ?? false
+    }
+
+    override func forwardingTarget(for aSelector: Selector!) -> Any? {
+        if let wrapped, wrapped.responds(to: aSelector) { return wrapped }
+        return super.forwardingTarget(for: aSelector)
     }
 }
 

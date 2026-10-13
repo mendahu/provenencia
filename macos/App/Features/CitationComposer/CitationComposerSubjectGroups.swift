@@ -288,14 +288,19 @@ struct CitationComposerObservationsColumn: View {
 struct CitationComposerEditSheet: View {
     @Bindable var model: CitationComposerModel
     @FocusState private var focus: CitationAuthoringFocus?
-    @State private var frozenOpening: CitationAuthoringFocus?
+    /// Placed once. `.defaultFocus` would reapply this when the value editor changes.
+    @State private var didPlaceOpeningFocus = false
 
     var body: some View {
         editBody
-            .defaultFocus($focus, frozenOpening ?? openingFocus)
-            .onAppear {
-                if frozenOpening == nil { frozenOpening = openingFocus }
-            }
+            .onAppear { placeOpeningFocusIfNeeded() }
+    }
+
+    private func placeOpeningFocusIfNeeded() {
+        guard !didPlaceOpeningFocus else { return }
+        didPlaceOpeningFocus = true
+        let initial = openingFocus
+        DispatchQueue.main.async { focus = initial }
     }
 
     @ViewBuilder
