@@ -361,17 +361,8 @@ extension CitationComposerModel {
 
     func beginEdit(line: CitationSavedLine) {
         if let observationID = line.observationID,
-           let row = observationRows.rows.first(where: { $0.persistedID == observationID })
+           beginEdit(observationID: observationID, subjectID: line.subjectID)
         {
-            editSession = CitationEditSession(
-                kind: .property(
-                    values: row.values,
-                    persistedID: observationID,
-                    persistedRef: row.persistedRef ?? observationID
-                ),
-                propertyBaseline: row.values,
-                openedFromSubjectID: line.subjectID
-            )
             return
         }
         if let bridgeID = line.bridgeID,
@@ -389,6 +380,42 @@ extension CitationComposerModel {
                 openedFromSubjectID: line.subjectID
             )
         }
+    }
+
+    /// Opens the edit dialog for one saved observation. A property row edits in
+    /// place. A bridge role edits that bridge. Returns false when this citation
+    /// has no such observation.
+    @discardableResult
+    func beginEdit(observationID: String, subjectID: String) -> Bool {
+        if let row = observationRows.rows.first(where: { $0.persistedID == observationID }) {
+            editSession = CitationEditSession(
+                kind: .property(
+                    values: row.values,
+                    persistedID: observationID,
+                    persistedRef: row.persistedRef ?? observationID
+                ),
+                propertyBaseline: row.values,
+                openedFromSubjectID: subjectID
+            )
+            return true
+        }
+        if let connection = connections.rows.first(where: { $0.rolePersistedID == observationID }),
+           let bridgeID = connection.bridgeID
+        {
+            editSession = CitationEditSession(
+                kind: .bridge(
+                    endA: connection.fromSubjectID,
+                    endB: connection.toSubjectID,
+                    termID: connection.roleTermID,
+                    bridgeID: bridgeID,
+                    bridgeRef: connection.bridgeRef ?? bridgeID,
+                    baselineTermID: connection.roleTermID
+                ),
+                openedFromSubjectID: subjectID
+            )
+            return true
+        }
+        return false
     }
 
     func mutateEdit(_ body: (inout CitationEditSession) -> Void) {

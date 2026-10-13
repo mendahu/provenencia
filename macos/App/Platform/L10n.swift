@@ -2147,6 +2147,7 @@ enum L10n {
             case ("event_type", "engagement"): return eventTypeEngagement
             case ("event_type", "baptism"): return eventTypeBaptism
             case ("event_type", "burial"): return eventTypeBurial
+            case ("event_type", "funeral"): return eventTypeFuneral
             case ("event_type", "census"): return eventTypeCensus
             case ("event_type", "residence"): return eventTypeResidence
             case ("event_type", "migration"): return eventTypeMigration
@@ -2158,6 +2159,7 @@ enum L10n {
             case ("role", "child"): return roleChild
             case ("role", "witness"): return roleWitness
             case ("role", "informant"): return roleInformant
+            case ("role", "pallbearer"): return rolePallbearer
             case ("relationship_type", "spouse"): return relationshipSpouse
             case ("relationship_type", "sibling"): return relationshipSibling
             case ("relationship_type", "cousin"): return relationshipCousin
@@ -2204,6 +2206,11 @@ enum L10n {
             "propertyTerm.event_type.burial",
             defaultValue: "Burial",
             comment: "Product event_type term: burial"
+        )
+        static let eventTypeFuneral = LocalizedStringResource(
+            "propertyTerm.event_type.funeral",
+            defaultValue: "Funeral",
+            comment: "Product event_type term: funeral"
         )
         static let eventTypeCensus = LocalizedStringResource(
             "propertyTerm.event_type.census",
@@ -2259,6 +2266,11 @@ enum L10n {
             "propertyTerm.role.informant",
             defaultValue: "Informant",
             comment: "Product role term: informant"
+        )
+        static let rolePallbearer = LocalizedStringResource(
+            "propertyTerm.role.pallbearer",
+            defaultValue: "Pallbearer",
+            comment: "Product role term: pallbearer"
         )
         static let relationshipSpouse = LocalizedStringResource(
             "propertyTerm.relationship_type.spouse",

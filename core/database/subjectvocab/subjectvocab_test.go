@@ -447,3 +447,32 @@ func TestInstallSeedsEngagementTravelInterestsAndGender(t *testing.T) {
 		t.Fatalf("create gender term %+v %v", created, err)
 	}
 }
+
+func TestInstallSeedsFuneralAndPallbearer(t *testing.T) {
+	c, err := database.Create(t.TempDir(), "t.provenencia")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = c.Close() })
+	if err := Install(c); err != nil {
+		t.Fatal(err)
+	}
+
+	eventType, err := properties.Lookup(c, "event_type", properties.OriginProvenencia)
+	if err != nil {
+		t.Fatal(err)
+	}
+	funeral, err := propertyterms.Lookup(c, eventType.ID, "funeral", propertyterms.OriginProvenencia)
+	if err != nil || funeral.Label != "Funeral" {
+		t.Fatalf("funeral %+v %v", funeral, err)
+	}
+
+	role, err := properties.Lookup(c, "role", properties.OriginProvenencia)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pallbearer, err := propertyterms.Lookup(c, role.ID, "pallbearer", propertyterms.OriginProvenencia)
+	if err != nil || pallbearer.Label != "Pallbearer" {
+		t.Fatalf("pallbearer %+v %v", pallbearer, err)
+	}
+}

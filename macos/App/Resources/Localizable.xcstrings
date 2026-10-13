@@ -12830,6 +12830,18 @@
         }
       }
     },
+    "propertyTerm.event_type.funeral": {
+      "comment": "Product event_type term: funeral",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Funeral"
+          }
+        }
+      }
+    },
     "propertyTerm.event_type.census": {
       "comment": "Product event_type term: census",
       "extractionState": "manual",
@@ -12958,6 +12970,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Informant"
+          }
+        }
+      }
+    },
+    "propertyTerm.role.pallbearer": {
+      "comment": "Product role term: pallbearer",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pallbearer"
           }
         }
       }

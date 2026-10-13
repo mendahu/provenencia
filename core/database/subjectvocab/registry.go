@@ -222,6 +222,7 @@ var seedTerms = []seedTerm{
 	{PropertyKey: "event_type", Key: "engagement", Label: "Engagement"},
 	{PropertyKey: "event_type", Key: "baptism", Label: "Baptism"},
 	{PropertyKey: "event_type", Key: "burial", Label: "Burial"},
+	{PropertyKey: "event_type", Key: "funeral", Label: "Funeral"},
 	{PropertyKey: "event_type", Key: "census", Label: "Census Enumeration"},
 	{PropertyKey: "event_type", Key: "residence", Label: "Residence"},
 	{PropertyKey: "event_type", Key: "migration", Label: "Migration"},
@@ -234,6 +235,7 @@ var seedTerms = []seedTerm{
 	{PropertyKey: "role", Key: "child", Label: "Child"},
 	{PropertyKey: "role", Key: "witness", Label: "Witness"},
 	{PropertyKey: "role", Key: "informant", Label: "Informant"},
+	{PropertyKey: "role", Key: "pallbearer", Label: "Pallbearer"},
 
 	{PropertyKey: "relationship_type", Key: "spouse", Label: "Spouse"},
 	{PropertyKey: "relationship_type", Key: "sibling", Label: "Sibling"},

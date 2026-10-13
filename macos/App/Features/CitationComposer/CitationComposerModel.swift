@@ -1318,8 +1318,9 @@ final class CitationComposerModel {
             beginPropertyDraft(subjectID: subjectID)
         case .connect(_, let fromID, let toID, _):
             beginBridgeDraft(endA: fromID, endB: toID, termID: "", origin: .graph)
-        case .edit:
-            break
+        case .edit(_, let subjectID, _, _, let observationID):
+            guard let observationID, !observationID.isEmpty else { break }
+            beginEdit(observationID: observationID, subjectID: subjectID)
         }
     }
 

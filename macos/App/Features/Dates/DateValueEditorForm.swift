@@ -9,6 +9,8 @@ struct DateValueEditorForm: View {
     var focusNonce: Int = 0
 
     @FocusState private var yearFocused: Bool
+    /// Set when Add time reveals a block, so that block's hour field takes focus.
+    @State private var timeFocus: TimeFocusSide?
 
     var body: some View {
         VStack(alignment: .leading, spacing: PVSpacing.space7) {
@@ -159,8 +161,10 @@ struct DateValueEditorForm: View {
             Button {
                 if start {
                     draft.showStartTime.toggle()
+                    timeFocus = draft.showStartTime ? .start : nil
                 } else {
                     draft.showEndTime.toggle()
+                    timeFocus = draft.showEndTime ? .end : nil
                 }
             } label: {
                 Text(start
@@ -185,7 +189,8 @@ struct DateValueEditorForm: View {
                     width: 62,
                     mono: true,
                     isInvalid: draft.isFieldInvalid(.hour, start: start),
-                    accessibilityIdentifier: "\(accessibilityIdentifierPrefix).\(side).hour"
+                    accessibilityIdentifier: "\(accessibilityIdentifierPrefix).\(side).hour",
+                    activateOnAppear: timeFocus == (start ? .start : .end)
                 )
                 cascadeField(
                     L10n.Sources.dateMinute,
@@ -280,13 +285,21 @@ struct DateValueEditorForm: View {
         disabled: Bool = false,
         isInvalid: Bool = false,
         accessibilityIdentifier: String? = nil,
-        focused: FocusState<Bool>.Binding? = nil
+        focused: FocusState<Bool>.Binding? = nil,
+        activateOnAppear: Bool = false
     ) -> some View {
         VStack(alignment: .leading, spacing: PVSpacing.space2) {
             Text(label)
                 .font(PVFont.body(size: PVTypeScale.micro))
                 .foregroundStyle(isInvalid ? PVColor.danger : PVColor.textSecondary)
-            PVInput(text: text, size: .sm, mono: mono, isInvalid: isInvalid, focused: focused)
+            PVInput(
+                text: text,
+                size: .sm,
+                mono: mono,
+                isInvalid: isInvalid,
+                focused: focused,
+                activateOnAppear: activateOnAppear
+            )
                 .frame(width: width)
                 .disabled(disabled)
                 .opacity(disabled ? 0.42 : 1)
@@ -473,6 +486,11 @@ enum DateValueSelectOptions {
             ("12", L10n.Sources.dateMonthDecember),
         ].map { PVSelectOption(value: $0.0, label: L10n.string($0.1)) }
     }
+}
+
+private enum TimeFocusSide {
+    case start
+    case end
 }
 
 private struct DateOptionalAccessibilityIdentifier: ViewModifier {

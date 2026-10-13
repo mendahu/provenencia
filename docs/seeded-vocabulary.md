@@ -403,6 +403,7 @@ marriage
 engagement
 baptism
 burial
+funeral
 census
 residence
 migration
@@ -425,6 +426,7 @@ spouse
 child
 witness
 informant
+pallbearer
 ```
 
 Long-tail participation roles are `origin=user` terms — there is no product `other` escape hatch. Tree / connect behavior will attach to recognized keys (e.g. `father`, `mother`, `subject`) in the registry when that behavior lands — not part of the create-time term seed itself.

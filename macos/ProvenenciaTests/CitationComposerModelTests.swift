@@ -160,6 +160,7 @@ struct CitationComposerModelTests {
         store: FakeStore,
         subjectID: String? = nil,
         citationID: String? = nil,
+        observationID: String? = nil,
         connectFrom: String? = nil,
         connectTo: String? = nil,
         bridge: String? = nil
@@ -178,7 +179,7 @@ struct CitationComposerModelTests {
                 subjectID: subjectID ?? self.subjectID,
                 citationID: citationID,
                 artifactID: "art-0",
-                observationID: nil
+                observationID: observationID
             )
         } else {
             entry = .addProperty(
@@ -207,6 +208,24 @@ struct CitationComposerModelTests {
         #expect(draft.values.subjectID == subjectID)
         #expect(draft.focus == .property)
         #expect(model.subjectLabel == "Margt.")
+    }
+
+    @Test func editPropertyEntryOpensThatObservation() async {
+        let store = makeStore()
+        seedArtifact(store)
+        seedCitation(store, observations: [occupationObservation(id: "obs-1", ref: "OBS-ABC", citationID: "cit-1")])
+        let model = makeModel(store: store, citationID: "cit-1", observationID: "obs-1")
+        await model.prepare()
+        guard case .property(let values, let persistedID, _) = model.editSession?.kind else {
+            Issue.record("expected the edit dialog")
+            return
+        }
+        #expect(persistedID == "obs-1")
+        #expect(values.subjectID == subjectID)
+        #expect(values.propertyID == occupationPropertyID)
+        #expect(values.valueText == "miller")
+        #expect(model.activeCitationID == "cit-1")
+        #expect(model.editSession?.isDirty == false)
     }
 
     @Test func firstRowSaveOnNewCreatesCitationAndExposesRef() async {
