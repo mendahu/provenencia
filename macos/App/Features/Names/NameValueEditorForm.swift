@@ -7,6 +7,8 @@ struct NameValueEditorForm: View {
     @Binding var draft: NameValueDraft
     var accessibilityIdentifierPrefix: String = "nameValue"
     var showStoredAs: Bool = true
+    /// Host focus for the form field. The editor does not take focus on its own.
+    var formFocus: PVInputFocus? = nil
     @State private var partValueToFocus: UUID?
 
     private var typeOptions: [PVSelectOption] {
@@ -38,7 +40,8 @@ struct NameValueEditorForm: View {
                 text: formBinding,
                 size: .md,
                 prompt: L10n.NameValue.formPlaceholder,
-                isInvalid: draft.formError != nil
+                isInvalid: draft.formError != nil,
+                focus: formFocus
             )
             .accessibilityIdentifier("\(accessibilityIdentifierPrefix).form")
             .accessibilityHint(draft.formError.map { Text(verbatim: $0) } ?? Text(L10n.NameValue.formHint))

@@ -94,50 +94,14 @@ final class CitationConnections {
     var rows: [ConnectionRow] = []
 
     private weak var context: CitationComposerContext?
-    private var pendingSeed: ConnectionRow?
 
     func attach(_ context: CitationComposerContext) {
         self.context = context
     }
 
-    func seedPending(
-        fromSubjectID: String,
-        toSubjectID: String,
-        fromLabel: String,
-        toLabel: String,
-        bridgeTypeKey: String,
-        termProperty: CatalogProperty?,
-        sentence: String
-    ) {
-        let pending = ConnectionRow(
-            id: UUID(),
-            isPending: true,
-            fromSubjectID: fromSubjectID,
-            toSubjectID: toSubjectID,
-            fromLabel: fromLabel,
-            toLabel: toLabel,
-            bridgeTypeKey: bridgeTypeKey,
-            bridgeID: nil,
-            bridgeRef: nil,
-            sentence: sentence,
-            termProperty: termProperty,
-            rolePersistedID: nil,
-            rolePersistedRef: nil,
-            roleTermID: "",
-            roleBaselineTermID: nil,
-            termTouched: false,
-            isSaving: false,
-            error: nil
-        )
-        pendingSeed = pending
-        if !rows.contains(where: \.isPending) {
-            rows.insert(pending, at: 0)
-        }
-    }
-
     /// Rebuild saved rows from the Citation. Keeps the pending row if present.
     func replaceSaved(_ saved: [ConnectionRow]) {
-        let pending = rows.first(where: \.isPending) ?? pendingSeed
+        let pending = rows.first(where: \.isPending)
         rows = saved
         if let pending {
             rows.insert(pending, at: 0)
@@ -156,12 +120,12 @@ final class CitationConnections {
         rows[index].error = nil
     }
 
-    func saveConnection() async {
+    func saveConnection(citation: CitationFieldsDraft.Values) async {
         guard let context, let index = rows.firstIndex(where: \.isPending) else { return }
         if rows[index].isSaving || !rows[index].canSave { return }
         rows[index].isSaving = true
         rows[index].error = nil
-        await performSave(context: context)
+        await performSave(context: context, citation: citation)
         if let current = rows.firstIndex(where: \.isPending) {
             rows[current].isSaving = false
         }
@@ -169,7 +133,6 @@ final class CitationConnections {
 
     func discard() {
         rows.removeAll(where: \.isPending)
-        pendingSeed = nil
     }
 
     func commitRole(connectionID: UUID) async {
@@ -196,7 +159,6 @@ final class CitationConnections {
         } else {
             rows.insert(saved, at: 0)
         }
-        pendingSeed = nil
     }
 
     func markError(connectionID: UUID, message: String) {
@@ -255,12 +217,26 @@ final class CitationConnections {
                     used.insert(first.id)
                 }
             }
+            var fromSubjectID = bridge.flatMap(\.endpointAID) ?? ""
+            var toSubjectID = bridge.flatMap(\.endpointBID) ?? ""
+            if let rule, fromSubjectID.isEmpty || toSubjectID.isEmpty {
+                for edge in rule.edges {
+                    guard let observation = group.first(where: {
+                        vocabulary.property(id: $0.propertyID)?.key == edge.propertyKey
+                    }), !observation.valueSubjectID.isEmpty else { continue }
+                    if edge.endpointTypeKey == rule.fromTypeKey, fromSubjectID.isEmpty {
+                        fromSubjectID = observation.valueSubjectID
+                    } else if edge.endpointTypeKey == rule.toTypeKey, toSubjectID.isEmpty {
+                        toSubjectID = observation.valueSubjectID
+                    }
+                }
+            }
             connections.append(
                 ConnectionRow(
                     id: UUID(),
                     isPending: false,
-                    fromSubjectID: "",
-                    toSubjectID: "",
+                    fromSubjectID: fromSubjectID,
+                    toSubjectID: toSubjectID,
                     fromLabel: "",
                     toLabel: "",
                     bridgeTypeKey: typeKey,
@@ -321,12 +297,12 @@ final class CitationConnections {
         return drafts
     }
 
-    private func performSave(context: CitationComposerContext) async {
+    private func performSave(context: CitationComposerContext, citation: CitationFieldsDraft.Values) async {
         guard let pending = rows.first(where: \.isPending),
               let drafts = edgeDrafts(for: pending, vocabulary: context.vocabulary)
         else { return }
         do {
-            let citationID = try await context.ensureCitationID()
+            let citationID = try await context.ensureCitationID(citation)
             let created = try await context.store.createCitedBridge(
                 projectDir: context.projectDir,
                 userID: context.userID,

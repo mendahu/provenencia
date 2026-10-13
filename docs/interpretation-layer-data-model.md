@@ -107,7 +107,7 @@ CREATE TABLE citations (
     artifact_id               BLOB NOT NULL REFERENCES artifacts(id),
     locator_json              TEXT NOT NULL,
     transcription             TEXT,
-    description               TEXT,
+    label                     TEXT,
     transcription_uncertain   INTEGER NOT NULL DEFAULT 0,
     transcription_note        TEXT,
 
@@ -119,7 +119,7 @@ CREATE TABLE citations (
 `artifact_id` is `NO ACTION`: deleting an Artifact while Citations remain fails. Citation notes still CASCADE with the Citation.
 `transcription` preserves the researcher's reading of textual or spoken content within the cited evidence. It is intended to remain faithful to the evidence, including uncertainty where appropriate, rather than silently normalizing abbreviations, names, places, or other values. For example, `Wm Robins` may be transcribed as written and normalized to `William Robins` later through an Observation.
 
-`description` records what the researcher observes in the cited evidence. It is media-neutral and may describe visual, textual, audio, or other characteristics. It is not specifically an accessibility `alt_text` field.
+`label` is a short name the researcher gives this Citation. It is not the transcription and not researcher commentary (`citation_notes`).
 
 `transcription_uncertain` is a media-agnostic boolean: when set, the transcription (or equivalent representation of spoken/visual content) may not faithfully represent the cited Artifact portion — faint ink, damaged scan, garbled audio, muddy video, and similar. Optional `transcription_note` records why (for example `garbled audio ~1:02` or `surname damaged`). In-line marks such as `[?]` in `transcription` remain valid and complementary. This is not Claim confidence and not Source credibility; see [`research-judgment-model.md`](research-judgment-model.md).
 
@@ -134,8 +134,8 @@ Artifact
 Citation.transcription
     what I read/hear
 
-Citation.description
-    what I observe
+Citation.label
+    a short name for this reading
 
 citation_notes
     researcher commentary about this Citation
@@ -498,7 +498,7 @@ For locator version 1:
 9. Region polygons contain at least three distinct points, are non-self-intersecting, and have non-zero area.
 10. For paginated digital Artifacts, the Artifact page position is authoritative for navigation.
 11. Printed or marked source pagination is supplementary descriptive data and does not replace the Artifact page position.
-12. Locator JSON identifies where the evidence is; transcription, description, and interpretation remain separate concerns.
+12. Locator JSON identifies where the evidence is; transcription, label, and interpretation remain separate concerns.
 13. An `artifact` selector, when present, is the first (outermost) selector and may stand alone or be followed by narrowing selectors (`page`, `region`, …).
 14. On paginated Artifacts, `region` must follow `page` (a polygon is always relative to a chosen Artifact page).
 
@@ -890,7 +890,7 @@ DateValue and NameValue rows are exclusive to one Observation (`000030`). Do **n
 
 **Read-side tolerance:** if a row is malformed, readers should prefer the column that matches the Property's `value_type` and ignore any other non-null value columns. A row with *no* usable value for that `value_type` is invalid and should be surfaced as an error or omitted rather than guessed. Reconciliation Claims use the same sparse-column idea, except `value_type = 'subject'` is stored as `value_entity_id` (a canonical handle) rather than `value_subject_id`. See [`conclusion-layer-data-model.md`](conclusion-layer-data-model.md).
 
-Reading uncertainty belongs in Citation `transcription` / `transcription_uncertain` / `transcription_note` (and description when needed). Alternative or competing interpretations are modeled as separate Observations rather than a numeric confidence score on a single Observation row. Researcher commentary about a particular Observation belongs in `observation_notes`. Epistemic confidence about a *conclusion* belongs on Claims; see [`research-judgment-model.md`](research-judgment-model.md).
+Reading uncertainty belongs in Citation `transcription` / `transcription_uncertain` / `transcription_note` (and `label` when needed). Alternative or competing interpretations are modeled as separate Observations rather than a numeric confidence score on a single Observation row. Researcher commentary about a particular Observation belongs in `observation_notes`. Epistemic confidence about a *conclusion* belongs on Claims; see [`research-judgment-model.md`](research-judgment-model.md).
 
 ```sql
 CREATE TABLE observation_notes (
@@ -938,7 +938,7 @@ The current design aims to preserve these invariants:
 15. A Property used on a subject must be allowed for that subject's Subject type.
 16. A Subject-valued Observation forms a graph edge and its object subject must exist.
 17. Application logic may constrain the target Subject type of subject-valued Properties for seeded vocabulary; that is not enforced as SQL allow-lists in this draft.
-18. Citation text/description preserves the evidence representation; Observations contain normalized interpretation.
+18. Citation transcription preserves the evidence representation and `label` names the Citation; Observations contain normalized interpretation.
 19. Derived genealogical semantics are not duplicated into the Interpretation graph merely for convenience.
 20. Unknown/custom Subject types, Properties, and Property terms (including `origin=user` terms) remain preservable and generically usable without first-class application support; capabilities attach only to recognized `(key, origin)` pairs.
 21. First-class application behavior may recognize seeded `(key, origin = 'provenencia')` pairs and open values; it must not require the schema to close those vocabularies or encode every genealogical edge case.

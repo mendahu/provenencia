@@ -38,6 +38,14 @@ enum PVSymbol: String {
     case scrollText = "doc.text"
     /// Lucide `file` — locator floor (entire artifact).
     case file = "doc"
+    /// Lucide `quote` — citation menu in the composer header.
+    case quote = "quote.opening"
+    /// Lucide `crop` — region summary in the locator chip.
+    case crop = "crop"
+    /// Lucide `list-plus` — empty observation list.
+    case listPlus = "list.bullet.badge.plus"
+    /// Lucide `signature` — opens the name editor.
+    case signature = "signature"
     /// Lucide `bookmark` — locator page row.
     case bookmark = "bookmark"
     case sort = "arrow.up.arrow.down"
@@ -101,6 +109,12 @@ enum PVSymbol: String {
     case scanText = "doc.text.viewfinder"
     /// Lucide `clipboard-paste` — paste PDF selection into transcription.
     case clipboardPaste = "document.on.clipboard"
+    /// Lucide `link-2` — start a bridge.
+    case link = "link"
+    /// Lucide `copy-plus` — duplicate a saved line into the authoring box.
+    case duplicate = "plus.square.on.square"
+    /// Lucide `arrow-left-right` — swap the two ends of a bridge.
+    case swap = "arrow.left.arrow.right"
 
     fileprivate var regionLOpen: PVLOpenCorner? {
         switch self {

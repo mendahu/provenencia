@@ -96,6 +96,7 @@ struct PVChip: View {
                 .background(background(colors: colors))
                 .overlay(border(colors: colors))
                 .clipShape(RoundedRectangle(cornerRadius: chipRadius, style: .continuous))
+                .contentShape(Rectangle())
                 .pvShadow(selectionLift && isSelected ? PVElevation.sm : [])
         }
         .buttonStyle(.plain)

@@ -65,6 +65,26 @@ struct PVInputChrome: ViewModifier {
     }
 }
 
+/// Host focus for a field that shares a `FocusState` with its siblings.
+/// The text field applies `.focused($binding, equals:)` itself.
+struct PVInputFocus {
+    fileprivate let isActive: () -> Bool
+    fileprivate let focus: () -> Void
+    fileprivate let install: (Binding<String>, Text?) -> AnyView
+
+    init<Value: Hashable>(_ binding: FocusState<Value?>.Binding, equals value: Value) {
+        isActive = { binding.wrappedValue == value }
+        focus = { binding.wrappedValue = value }
+        install = { text, prompt in
+            AnyView(
+                TextField(text: text, prompt: prompt) { EmptyView() }
+                    .textFieldStyle(.plain)
+                    .focused(binding, equals: value)
+            )
+        }
+    }
+}
+
 /// Convenience field with optional leading icon, trailing suffix, read-only
 /// rendering, and owned or externally driven focus state. `activateOnAppear`
 /// focuses the field on the next turn so an inserting action (and its Space
@@ -80,6 +100,7 @@ struct PVInput: View {
     private let isInvalid: Bool
     private let activateOnAppear: Bool
     private let externalFocus: FocusState<Bool>.Binding?
+    private let equalsFocus: PVInputFocus?
 
     @FocusState private var ownedFocus: Bool
 
@@ -93,6 +114,7 @@ struct PVInput: View {
         suffix: String? = nil,
         isInvalid: Bool = false,
         focused: FocusState<Bool>.Binding? = nil,
+        focus: PVInputFocus? = nil,
         activateOnAppear: Bool = false
     ) {
         self._text = text
@@ -105,6 +127,7 @@ struct PVInput: View {
         self.isInvalid = isInvalid
         self.activateOnAppear = activateOnAppear
         self.externalFocus = focused
+        self.equalsFocus = focus
     }
 
     var body: some View {
@@ -113,6 +136,9 @@ struct PVInput: View {
                 Text(text)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .modifier(chrome(isFocused: false))
+            } else if let equalsFocus {
+                equalsFocus.install($text, prompt.map { Text($0) })
+                    .modifier(chrome(isFocused: equalsFocus.isActive()))
             } else if let externalFocus {
                 TextField(text: $text, prompt: prompt.map { Text($0) }) {
                     EmptyView()
@@ -149,15 +175,21 @@ struct PVInput: View {
         }
         .onAppear {
             guard activateOnAppear, !isReadOnly else { return }
-            // Same-cycle focus is dropped while the field is inserted; the
-            // next turn also lets a Space-activated control finish so the
-            // key is not typed into the new value.
-            DispatchQueue.main.async {
-                if let externalFocus {
-                    externalFocus.wrappedValue = true
-                } else {
-                    ownedFocus = true
-                }
+            focusField()
+        }
+    }
+
+    /// Same-cycle focus is dropped while the field is inserted; the next turn
+    /// also lets a Space-activated control finish so the key is not typed
+    /// into the new value.
+    private func focusField() {
+        DispatchQueue.main.async {
+            if let equalsFocus {
+                equalsFocus.focus()
+            } else if let externalFocus {
+                externalFocus.wrappedValue = true
+            } else {
+                ownedFocus = true
             }
         }
     }

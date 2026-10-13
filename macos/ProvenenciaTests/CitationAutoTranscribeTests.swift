@@ -183,7 +183,7 @@ struct CitationAutoTranscribeTests {
         #expect(model.transcription == "Alderwick")
         #expect(model.fields.isDirty)
         #expect(model.shouldHoldLeave)
-        #expect(model.identityMenusDisabled)
+        #expect(model.hasUnsavedDocumentWork)
         #expect(model.transcriptionOCRMessage == nil)
         #expect(!model.transcriptionUncertain)
         #expect(engine.recognizeCount == 1)
@@ -314,7 +314,7 @@ struct CitationAutoTranscribeTests {
         let task = Task { await model.runAutoTranscribe() }
         #expect(await waitUntil { model.isTranscribing })
         #expect(!model.canAutoTranscribe)
-        #expect(model.identityMenusDisabled)
+        #expect(model.isTranscribing)
         #expect(model.shouldHoldLeave)
         let points = ArtifactRegionGeometry.rectanglePoints(
             from: CGPoint(x: 0.1, y: 0.1),

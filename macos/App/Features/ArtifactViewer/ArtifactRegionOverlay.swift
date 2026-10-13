@@ -115,7 +115,9 @@ final class ArtifactRegionOverlayView: NSView {
     }
 
     override func draw(_ dirtyRect: NSRect) {
-        super.draw(dirtyRect)
+        // The veil is translucent, so a new citation's region would otherwise
+        // paint over the previous one and leave that polygon on screen.
+        dirtyRect.fill(using: .clear)
         let media = imageRect
         guard media.width > 0, media.height > 0 else { return }
 

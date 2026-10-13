@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Citation composer place (S8-10): viewer | form, Layout A + 1500pt two-column.
+/// Citation composer: evidence column and a fixed observations column.
 struct CitationComposerView: View {
     let entry: CitationComposerEntry
     let session: WorkspaceSession
@@ -9,11 +9,6 @@ struct CitationComposerView: View {
 
     @Environment(WorkspaceNavigation.self) private var navigation
     @State private var model: CitationComposerModel
-
-    private static let wideBreakpoint: CGFloat = 1500
-    private static let formWidthNarrow: CGFloat = 520
-    private static let formWidthWideMin: CGFloat = 760
-    private static let formWidthWideMax: CGFloat = 880
 
     init(
         entry: CitationComposerEntry,
@@ -73,21 +68,38 @@ struct CitationComposerView: View {
             await model.prepare()
         }
         .pvFormDialog(
-            isPresented: observationDialogBinding,
+            isPresented: editSheetBinding,
             copy: PVFormDialogCopy(
-                title: L10n.CitationComposer.editValueTitle,
-                subtitle: L10n.CitationComposer.valueDialogSubtitle,
-                confirm: L10n.CitationComposer.applyValue,
+                title: editSheetTitle,
+                verbatimSubtitle: editSheetSubtitle,
+                confirm: editSheetConfirm,
                 cancel: L10n.CitationComposer.cancel
             ),
-            width: observationDialogWidth,
-            isRunning: false,
-            isDirty: model.observationDialogIsDirty,
-            confirmDisabled: !model.canConfirmObservation,
-            accessibilityIdentifierPrefix: "citationComposer.observation",
-            onConfirm: { model.confirmObservationDialog() }
+            width: 520,
+            isRunning: model.editSession?.isSaving == true,
+            isDirty: model.editSession?.isDirty == true,
+            confirmDisabled: !model.editCanConfirm,
+            accessibilityIdentifierPrefix: "citationComposer.edit",
+            onConfirm: { Task { await model.saveEdit() } }
         ) {
-            CitationComposerObservationDialogForm(model: model)
+            CitationComposerEditSheet(model: model)
+        }
+        .pvFormDialog(
+            isPresented: authoringSheetBinding,
+            copy: PVFormDialogCopy(
+                title: L10n.CitationComposer.newObservationTitle,
+                subtitle: authoringSubtitle,
+                confirm: authoringConfirm,
+                cancel: L10n.CitationComposer.discardDraft
+            ),
+            width: 520,
+            isRunning: model.authoring.isSaving,
+            isDirty: model.authoring.holdsLeave,
+            confirmDisabled: !model.authoringCanConfirm,
+            accessibilityIdentifierPrefix: "citationComposer.authoring",
+            onConfirm: { Task { await model.saveAuthoring() } }
+        ) {
+            CitationComposerAuthoringBox(model: model)
         }
         .pvFormDialog(
             isPresented: customTermDialogBinding,
@@ -307,35 +319,119 @@ struct CitationComposerView: View {
 
     private var composeSplit: some View {
         GeometryReader { geo in
-            let wide = geo.size.width >= Self.wideBreakpoint
-            let formWidth = wide
-                ? min(Self.formWidthWideMax, max(Self.formWidthWideMin, geo.size.width * 0.45))
-                : Self.formWidthNarrow
+            let threeUp = geo.size.width >= 1400
             HStack(alignment: .top, spacing: 0) {
-                CitationComposerViewerPane(model: model)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(PVColor.surfaceSunken)
-                    .accessibilityElement(children: .contain)
-                    .accessibilityLabel(Text(L10n.CitationComposer.viewerGroup))
-                PVDivider(axis: .vertical, color: PVColor.borderDefault)
-                CitationComposerFormPane(
-                    model: model,
-                    wide: wide
-                )
-                .frame(width: formWidth)
+                evidence(threeUp: threeUp, height: geo.size.height)
+                CitationComposerObservationsColumn(model: model) {
+                    navigation.go(to: model.graphLocation())
+                }
+                .frame(width: 520)
                 .frame(maxHeight: .infinity)
-                .background(PVColor.surfaceCard)
-                .accessibilityElement(children: .contain)
-                .accessibilityLabel(Text(L10n.CitationComposer.formGroup))
             }
         }
     }
 
-    private var observationDialogBinding: Binding<Bool> {
+    @ViewBuilder
+    private func evidence(threeUp: Bool, height: CGFloat) -> some View {
+        if threeUp {
+            HStack(alignment: .top, spacing: 0) {
+                CitationComposerViewerPane(model: model)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .accessibilityElement(children: .contain)
+                    .accessibilityLabel(Text(L10n.CitationComposer.viewerGroup))
+                    .overlay(alignment: .trailing) {
+                        PVDivider(axis: .vertical, color: PVColor.borderSubtle)
+                    }
+                CitationComposerEvidenceColumn(model: model, layout: .side)
+                    .frame(width: 440, alignment: .topLeading)
+                    .overlay(alignment: .trailing) {
+                        PVDivider(axis: .vertical, color: PVColor.borderSubtle)
+                    }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else {
+            VStack(spacing: 0) {
+                CitationComposerEvidenceColumn(model: model, layout: .panel)
+                    .frame(maxHeight: height * 0.55, alignment: .top)
+                CitationComposerViewerPane(model: model)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel(Text(L10n.CitationComposer.viewerGroup))
+            .overlay(alignment: .trailing) {
+                PVDivider(axis: .vertical, color: PVColor.borderSubtle)
+            }
+        }
+    }
+
+    private var authoringSheetBinding: Binding<Bool> {
         Binding(
-            get: { model.observationDialog != nil },
-            set: { if !$0 { model.cancelObservationDialog() } }
+            get: {
+                if case .authoring = model.presented { return true }
+                return false
+            },
+            set: { if !$0 { model.discardAuthoring() } }
         )
+    }
+
+    private var authoringSubtitle: LocalizedStringResource {
+        if case .bridge = model.authoring {
+            return L10n.CitationComposer.newBridgeSubtitle
+        }
+        return L10n.CitationComposer.newObservationSubtitle
+    }
+
+    private var authoringConfirm: LocalizedStringResource {
+        if case .bridge = model.authoring {
+            return L10n.CitationComposer.saveBridge
+        }
+        return L10n.CitationComposer.saveObservation
+    }
+
+    private var editSheetBinding: Binding<Bool> {
+        Binding(
+            get: {
+                if case .edit = model.presented { return true }
+                return false
+            },
+            set: { if !$0 { model.discardEdit() } }
+        )
+    }
+
+    private var editSheetTitle: LocalizedStringResource {
+        if case .bridge = model.editSession?.kind {
+            return L10n.CitationComposer.editBridgeTitle
+        }
+        return L10n.CitationComposer.editObservation
+    }
+
+    private var editSheetConfirm: LocalizedStringResource {
+        if case .bridge = model.editSession?.kind {
+            return L10n.CitationComposer.saveBridge
+        }
+        return L10n.CitationComposer.saveObservation
+    }
+
+    private var editSheetSubtitle: String {
+        guard let session = model.editSession else { return "" }
+        switch session.kind {
+        case .property(_, let id, let ref):
+            let shown = ref.isEmpty ? id : ref
+            return L10n.CitationComposer.editObservationSubtitle(ref: shown)
+        case .bridge(let endA, let endB, _, _, let bridgeRef, _):
+            let opened = model.vocabulary.subjectsByID[session.openedFromSubjectID]?.label
+                ?? model.vocabulary.subjectsByID[endA]?.label
+                ?? ""
+            let nameA = model.vocabulary.subjectsByID[endA]?.label ?? ""
+            let nameB = model.vocabulary.subjectsByID[endB]?.label ?? ""
+            return L10n.CitationComposer.editBridgeSubtitle(
+                ref: bridgeRef,
+                openedFrom: opened,
+                endA: nameA,
+                endB: nameB
+            )
+        }
     }
 
     private var customTermDialogBinding: Binding<Bool> {
@@ -371,10 +467,5 @@ struct CitationComposerView: View {
             get: { model.newSubjectDraft?.description ?? "" },
             set: { model.newSubjectDraft?.description = $0 }
         )
-    }
-
-    private var observationDialogWidth: CGFloat {
-        let type = model.observationDialog.flatMap { model.catalogProperty(id: $0.propertyID)?.valueType }
-        return type == PropertyValueType.name.rawValue ? 560 : 480
     }
 }

@@ -174,7 +174,7 @@ func TestCitations(t *testing.T) {
 						ArtifactID:    s.artifact.ID,
 						LocatorJSON:   validLocator,
 						Transcription: "Alice, female, of Boston",
-						Description:   "entry on page 10",
+						Label:         "entry on page 10",
 					}, []observations.Input{
 						{
 							SubjectID: s.place.ID, PropertyID: s.toponymProp.ID,
@@ -284,13 +284,13 @@ func TestCitations(t *testing.T) {
 				}
 				for _, key := range []string{
 					"id", "ref", "artifact_id", "locator_json",
-					"transcription", "description", "transcription_uncertain", "transcription_note",
+					"transcription", "label", "transcription_uncertain", "transcription_note",
 				} {
 					if _, ok := got[0].fields[key]; !ok {
 						t.Fatalf("citation missing %q in %+v", key, got[0].fields)
 					}
 				}
-				for _, key := range []string{"transcription", "description", "transcription_note"} {
+				for _, key := range []string{"transcription", "label", "transcription_note"} {
 					diff, _ := got[0].fields[key].(map[string]any)
 					if diff["new"] != nil {
 						t.Fatalf("empty citation %s should be null: %+v", key, got[0].fields)
@@ -441,6 +441,9 @@ func TestCitations(t *testing.T) {
 				}
 				if list[0].ObservationCount != 1 {
 					t.Fatalf("obs count %d", list[0].ObservationCount)
+				}
+				if len(list[0].SubjectNames) != 1 || list[0].SubjectNames[0] != "Alice" {
+					t.Fatalf("names %v", list[0].SubjectNames)
 				}
 			},
 		},

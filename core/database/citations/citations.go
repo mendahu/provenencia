@@ -25,19 +25,19 @@ var (
 
 const (
 	sqlInsert = `INSERT INTO citations (
-		id, ref, artifact_id, locator_json, transcription, description,
+		id, ref, artifact_id, locator_json, transcription, label,
 		transcription_uncertain, transcription_note
 	) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
 
 	sqlInsertNote = `INSERT INTO citation_notes (id, citation_id, body) VALUES (?, ?, ?)`
 
 	sqlGet = `SELECT id, ref, artifact_id, locator_json,
-		COALESCE(transcription, ''), COALESCE(description, ''),
+		COALESCE(transcription, ''), COALESCE(label, ''),
 		transcription_uncertain, COALESCE(transcription_note, '')
 		FROM citations WHERE id = ?`
 
 	sqlUpdate = `UPDATE citations SET
-		artifact_id = ?, locator_json = ?, transcription = ?, description = ?,
+		artifact_id = ?, locator_json = ?, transcription = ?, label = ?,
 		transcription_uncertain = ?, transcription_note = ?
 		WHERE id = ?`
 
@@ -46,11 +46,35 @@ const (
 	sqlDelete = `DELETE FROM citations WHERE id = ?`
 
 	sqlListByArtifact = `SELECT id, ref, artifact_id, locator_json,
-		COALESCE(transcription, ''), COALESCE(description, ''),
+		COALESCE(transcription, ''), COALESCE(label, ''),
 		transcription_uncertain, COALESCE(transcription_note, ''),
 		(SELECT COUNT(*) FROM observations WHERE citation_id = citations.id)
 		FROM citations WHERE artifact_id = ?
 		ORDER BY ref COLLATE NOCASE`
+
+	// People a Citation names: the Observation's subject, or the subject an
+	// edge points at. Earliest Observation id wins. The caller caps the list.
+	sqlPersonNamesByArtifact = `
+WITH named AS (
+	SELECT o.citation_id AS cid, s.id AS sid, s.label AS label, o.id AS oid
+	FROM observations o
+	INNER JOIN citations c ON c.id = o.citation_id
+	INNER JOIN subjects s ON s.id = o.subject_id
+	INNER JOIN subject_types t ON t.id = s.subject_type_id
+	WHERE c.artifact_id = ? AND t.key = 'person'
+		AND TRIM(COALESCE(s.label, '')) <> ''
+	UNION ALL
+	SELECT o.citation_id, s.id, s.label, o.id
+	FROM observations o
+	INNER JOIN citations c ON c.id = o.citation_id
+	INNER JOIN subjects s ON s.id = o.value_subject_id
+	INNER JOIN subject_types t ON t.id = s.subject_type_id
+	WHERE c.artifact_id = ? AND t.key = 'person'
+		AND TRIM(COALESCE(s.label, '')) <> ''
+)
+SELECT cid, sid, label FROM named
+GROUP BY cid, sid
+ORDER BY cid, MIN(oid)`
 
 	sqlCountBySource = `SELECT c.artifact_id, COUNT(*)
 		FROM citations c
@@ -74,23 +98,28 @@ type Citation struct {
 	ArtifactID             []byte
 	LocatorJSON            string
 	Transcription          string
-	Description            string
+	Label                  string
 	TranscriptionUncertain bool
 	TranscriptionNote      string
 }
 
-// ListedCitation is a Citation plus its Observation count (list-by-artifact).
+// ListedCitation is a Citation plus its Observation count and the people it names.
 type ListedCitation struct {
 	Citation
 	ObservationCount int32
+	// Person labels, earliest Observation first, capped. Empty when the
+	// Citation names nobody.
+	SubjectNames []string
 }
+
+const subjectNameCap = 6
 
 // CreateInput is the Citation side of first-submit create.
 type CreateInput struct {
 	ArtifactID             []byte
 	LocatorJSON            string
 	Transcription          string
-	Description            string
+	Label                  string
 	TranscriptionUncertain bool
 	TranscriptionNote      string
 	Notes                  []string
@@ -131,7 +160,7 @@ func NormalizeCreateInput(in *CreateInput) error {
 func normalizeCreateInput(in *CreateInput) error {
 	in.LocatorJSON = strings.TrimSpace(in.LocatorJSON)
 	in.Transcription = strings.TrimSpace(in.Transcription)
-	in.Description = strings.TrimSpace(in.Description)
+	in.Label = strings.TrimSpace(in.Label)
 	in.TranscriptionNote = strings.TrimSpace(in.TranscriptionNote)
 	if len(in.ArtifactID) != 16 {
 		return ErrInvalid
@@ -182,7 +211,7 @@ func InsertWithObservationsTx(
 			in.ArtifactID,
 			in.LocatorJSON,
 			nullIfEmpty(in.Transcription),
-			nullIfEmpty(in.Description),
+			nullIfEmpty(in.Label),
 			uncertain,
 			nullIfEmpty(in.TranscriptionNote),
 		)
@@ -207,7 +236,7 @@ func InsertWithObservationsTx(
 			"artifact_id":             uuidJSON(in.ArtifactID),
 			"locator_json":            in.LocatorJSON,
 			"transcription":           nullIfEmpty(in.Transcription),
-			"description":             nullIfEmpty(in.Description),
+			"label":                   nullIfEmpty(in.Label),
 			"transcription_uncertain": in.TranscriptionUncertain,
 			"transcription_note":      nullIfEmpty(in.TranscriptionNote),
 		}),
@@ -254,7 +283,7 @@ func InsertWithObservationsTx(
 			ArtifactID:             append([]byte(nil), in.ArtifactID...),
 			LocatorJSON:            in.LocatorJSON,
 			Transcription:          in.Transcription,
-			Description:            in.Description,
+			Label:                  in.Label,
 			TranscriptionUncertain: in.TranscriptionUncertain,
 			TranscriptionNote:      in.TranscriptionNote,
 		},
@@ -266,7 +295,7 @@ func InsertWithObservationsTx(
 type CitationFieldsInput struct {
 	LocatorJSON            string
 	Transcription          string
-	Description            string
+	Label                  string
 	TranscriptionUncertain bool
 	TranscriptionNote      string
 }
@@ -279,7 +308,7 @@ func Update(tx *database.Tx, userID, citationID []byte, in CitationFieldsInput) 
 	}
 	in.LocatorJSON = strings.TrimSpace(in.LocatorJSON)
 	in.Transcription = strings.TrimSpace(in.Transcription)
-	in.Description = strings.TrimSpace(in.Description)
+	in.Label = strings.TrimSpace(in.Label)
 	in.TranscriptionNote = strings.TrimSpace(in.TranscriptionNote)
 	if len(citationID) != 16 {
 		return Citation{}, nil, ErrInvalid
@@ -306,8 +335,8 @@ func Update(tx *database.Tx, userID, citationID []byte, in CitationFieldsInput) 
 	if prev.Transcription != in.Transcription {
 		fields["transcription"] = rowchange.FieldDiff{Old: emptyAsNil(prev.Transcription), New: emptyAsNil(in.Transcription)}
 	}
-	if prev.Description != in.Description {
-		fields["description"] = rowchange.FieldDiff{Old: emptyAsNil(prev.Description), New: emptyAsNil(in.Description)}
+	if prev.Label != in.Label {
+		fields["label"] = rowchange.FieldDiff{Old: emptyAsNil(prev.Label), New: emptyAsNil(in.Label)}
 	}
 	if prev.TranscriptionUncertain != in.TranscriptionUncertain {
 		fields["transcription_uncertain"] = rowchange.FieldDiff{
@@ -334,7 +363,7 @@ func Update(tx *database.Tx, userID, citationID []byte, in CitationFieldsInput) 
 		prev.ArtifactID,
 		in.LocatorJSON,
 		nullIfEmpty(in.Transcription),
-		nullIfEmpty(in.Description),
+		nullIfEmpty(in.Label),
 		uncertain,
 		nullIfEmpty(in.TranscriptionNote),
 		citationID,
@@ -347,7 +376,7 @@ func Update(tx *database.Tx, userID, citationID []byte, in CitationFieldsInput) 
 			ArtifactID:             append([]byte(nil), prev.ArtifactID...),
 			LocatorJSON:            in.LocatorJSON,
 			Transcription:          in.Transcription,
-			Description:            in.Description,
+			Label:                  in.Label,
 			TranscriptionUncertain: in.TranscriptionUncertain,
 			TranscriptionNote:      in.TranscriptionNote,
 		}, []rowchange.Change{{
@@ -512,7 +541,42 @@ func ListByArtifact(c *database.Catalog, artifactID []byte) ([]ListedCitation, e
 		}
 		out = append(out, listed)
 	}
-	return out, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	if err := attachPersonNames(db, artifactID, out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func attachPersonNames(db *sql.DB, artifactID []byte, list []ListedCitation) error {
+	rows, err := db.Query(sqlPersonNamesByArtifact, artifactID, artifactID)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	byCitation := map[string][]string{}
+	for rows.Next() {
+		var citationID, subjectID []byte
+		var label string
+		if err := rows.Scan(&citationID, &subjectID, &label); err != nil {
+			return err
+		}
+		_ = subjectID
+		key := string(citationID)
+		if len(byCitation[key]) >= subjectNameCap {
+			continue
+		}
+		byCitation[key] = append(byCitation[key], strings.TrimSpace(label))
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	for i := range list {
+		list[i].SubjectNames = byCitation[string(list[i].ID)]
+	}
+	return nil
 }
 
 // CountBySource returns citation counts keyed by artifact UUID string.
@@ -564,7 +628,7 @@ func scanRow(row rowScanner) (Citation, error) {
 	)
 	err := row.Scan(
 		&c.ID, &c.Ref, &c.ArtifactID, &c.LocatorJSON,
-		&c.Transcription, &c.Description, &uncertain, &c.TranscriptionNote,
+		&c.Transcription, &c.Label, &uncertain, &c.TranscriptionNote,
 	)
 	if err != nil {
 		return Citation{}, err
@@ -580,7 +644,7 @@ func scanListedRow(row rowScanner) (ListedCitation, error) {
 	)
 	err := row.Scan(
 		&listed.ID, &listed.Ref, &listed.ArtifactID, &listed.LocatorJSON,
-		&listed.Transcription, &listed.Description, &uncertain, &listed.TranscriptionNote,
+		&listed.Transcription, &listed.Label, &uncertain, &listed.TranscriptionNote,
 		&listed.ObservationCount,
 	)
 	if err != nil {

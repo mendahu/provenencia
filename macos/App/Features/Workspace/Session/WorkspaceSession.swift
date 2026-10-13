@@ -25,6 +25,8 @@ final class WorkspaceSession {
     /// Evidence-graph pan and zoom, keyed by Source id. Not catalog data; quit drops it.
     @ObservationIgnored
     private var graphCameras: [String: GraphCanvasCamera] = [:]
+    /// Bridge to select the next time that Source's graph appears. Consumed once.
+    private var pendingGraphSelections: [String: String] = [:]
 
     init(
         projectKey: ProjectKey,
@@ -51,6 +53,16 @@ final class WorkspaceSession {
     func setGraphCamera(_ camera: GraphCanvasCamera, for sourceID: String) {
         guard graphCameras[sourceID] != camera else { return }
         graphCameras[sourceID] = camera
+    }
+
+    func setPendingGraphSelection(subjectID: String, sourceID: String) {
+        pendingGraphSelections[sourceID] = subjectID
+    }
+
+    func consumePendingGraphSelection(sourceID: String) -> String? {
+        let id = pendingGraphSelections[sourceID]
+        pendingGraphSelections[sourceID] = nil
+        return id
     }
 
     /// Returns an existing handle without starting a load.

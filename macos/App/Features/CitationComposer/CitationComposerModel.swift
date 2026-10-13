@@ -13,62 +13,22 @@ final class CitationComposerModel {
         case loadFailed
     }
 
-    struct ObservationDialogState: Equatable {
-        var editingID: UUID?
-        var propertyID: String
-        var polarity: String
-        var valueText: String
-        var valueIntegerText: String
-        var valueTermID: String
-        var dateDraft: DateValueDraft
-        var nameDraft: NameValueDraft = .empty()
-        var showValidation: Bool
-
-        static func fresh() -> ObservationDialogState {
-            ObservationDialogState(
-                editingID: nil,
-                propertyID: "",
-                polarity: ObservationPolarity.positive.rawValue,
-                valueText: "",
-                valueIntegerText: "",
-                valueTermID: "",
-                dateDraft: .empty(),
-                nameDraft: .empty(),
-                showValidation: false
-            )
-        }
-
-        static func editing(_ row: ObservationRow) -> ObservationDialogState {
-            ObservationDialogState(
-                editingID: row.id,
-                propertyID: row.propertyID,
-                polarity: row.polarity,
-                valueText: row.valueText,
-                valueIntegerText: row.valueIntegerText,
-                valueTermID: row.valueTermID,
-                dateDraft: row.dateDraft,
-                nameDraft: row.nameDraft,
-                showValidation: false
-            )
-        }
-    }
-
     struct NewSubjectDraft: Identifiable, Equatable {
         var id = UUID()
         var typeKey: String
         var typeID: String
         var label: String = ""
         var description: String = ""
-        var rowID: UUID
+        var field: CitationSubjectField
         var error: String?
         var isSaving = false
     }
 
     struct PendingLeave: Identifiable, Equatable {
         var id = UUID()
-        var citationDirty: Bool
-        var observationCount: Int
-        var connectionTouched: Bool
+        /// A citation switch under an open draft. Discard replaces the citation
+        /// text and leaves the draft in place.
+        var keepDraft = false
     }
 
     struct PendingTranscriptionConfirm: Identifiable, Equatable {
@@ -82,19 +42,30 @@ final class CitationComposerModel {
     }
 
     struct CustomTermDraft: Equatable {
-        var rowID: UUID
+        var propertyID: String
         var label: String = ""
         var error: String?
         var isSaving = false
+        var applyToEdit = false
     }
 
-    enum ComposerModal: Equatable {
-        case observation(ObservationDialogState)
-        case customTerm(CustomTermDraft)
-        case newSubject(NewSubjectDraft)
-        case deleteImpact
-        case leave(PendingLeave)
-        case transcription(PendingTranscriptionConfirm)
+    enum ComposerBase: Equatable {
+        case none
+        case authoring
+        case edit
+    }
+
+    /// The one dialog on screen. A child remembers the dialog underneath it.
+    /// Leave, transcription, and delete restore the exact dialog they replaced,
+    /// including a custom-term or new-subject draft.
+    enum ComposerPresented: Equatable {
+        case authoring
+        case edit
+        case customTerm(CustomTermDraft, over: ComposerBase)
+        case newSubject(NewSubjectDraft, over: ComposerBase)
+        indirect case leave(PendingLeave, returnTo: ComposerPresented?)
+        indirect case transcription(PendingTranscriptionConfirm, returnTo: ComposerPresented?)
+        indirect case deleteImpact(returnTo: ComposerPresented?)
     }
 
     enum CatalogWarmError: Error {
@@ -112,23 +83,23 @@ final class CitationComposerModel {
     nonisolated static let newSubjectPrefix = "__new__."
 
     let entry: CitationComposerEntry
-    private let userID: String
-    private let store: any GenealogyStore
+    let userID: String
+    let store: any GenealogyStore
     let session: WorkspaceSession
     let context: CitationComposerContext
     @ObservationIgnored
     weak var navigation: WorkspaceNavigation?
-    var modal: ComposerModal?
+
     var pendingLeave: PendingLeave? {
         get {
-            if case .leave(let value) = modal { return value }
+            if case .leave(let value, _) = presented { return value }
             return nil
         }
         set {
             if let newValue {
-                present(.leave(newValue))
-            } else if case .leave = modal {
-                present(nil)
+                show(.leave(newValue, returnTo: suspendedDialog()))
+            } else if case .leave(_, let returnTo) = presented {
+                restorePresented(returnTo)
             }
         }
     }
@@ -137,12 +108,20 @@ final class CitationComposerModel {
         get { deleteImpact.request }
         set { applyDeleteImpactRequest(newValue) }
     }
-    var isDeletingResource: Bool { deleteImpact.isRunning }
     private var loadedCitationRef = ""
 
     let fields = CitationFieldsDraft()
     let observationRows = CitationObservationRows()
     let connections = CitationConnections()
+    var authoring = CitationAuthoring.rest
+    var freshLineKey: String?
+    var bridgeToast: (title: String, message: String)?
+    var editSession: CitationEditSession?
+    private(set) var presented: ComposerPresented?
+    var stepContinuation: (() -> Void)?
+    private var didApplyEntry = false
+    private var switchGeneration = 0
+    var isSwitchingCitation = false
     let transcriptions: CitationTranscriptionModel
     var vocabulary: CitationComposerVocabulary { context.vocabulary }
 
@@ -154,9 +133,6 @@ final class CitationComposerModel {
     private(set) var subjectTypeKey: String = ""
     private(set) var subjectTypeID: String = ""
     var sourceTitle: String { workspace?.source.title ?? "" }
-    var sourceTypeIconKey: String {
-        sourceTypes.first { $0.id == workspace?.source.sourceTypeID }?.iconKey ?? ""
-    }
     var artifacts: [CatalogArtifact] { workspace?.artifacts ?? [] }
     var listedCitations: [CatalogListedCitation] {
         guard let artifactID = selectedArtifactID else { return [] }
@@ -168,56 +144,54 @@ final class CitationComposerModel {
 
     private(set) var identityAnnouncement: String = ""
     var landingColumn: Int64?
-    var observationDialog: ObservationDialogState? {
-        get {
-            if case .observation(let value) = modal { return value }
-            return nil
-        }
-        set {
-            if let newValue {
-                present(.observation(newValue))
-            } else if case .observation = modal {
-                observationDialogBaseline = nil
-                present(nil)
-            }
-        }
-    }
     var newSubjectDraft: NewSubjectDraft? {
         get {
-            if case .newSubject(let value) = modal { return value }
+            if case .newSubject(let value, _) = presented { return value }
             return nil
         }
         set {
             if let newValue {
-                present(.newSubject(newValue))
-            } else if case .newSubject = modal {
-                present(nil)
+                let over: ComposerBase
+                if case .newSubject(_, let existing) = presented {
+                    over = existing
+                } else {
+                    over = dialogBase()
+                }
+                show(.newSubject(newValue, over: over))
+            } else if case .newSubject(_, let over) = presented {
+                restore(over)
             }
         }
     }
     var customTermDraft: CustomTermDraft? {
         get {
-            if case .customTerm(let value) = modal { return value }
+            if case .customTerm(let value, _) = presented { return value }
             return nil
         }
         set {
             if let newValue {
-                present(.customTerm(newValue))
-            } else if case .customTerm = modal {
-                present(nil)
+                let over: ComposerBase
+                if case .customTerm(_, let existing) = presented {
+                    over = existing
+                } else {
+                    over = dialogBase()
+                }
+                show(.customTerm(newValue, over: over))
+            } else if case .customTerm(_, let over) = presented {
+                restore(over)
             }
         }
     }
     var pendingTranscriptionConfirm: PendingTranscriptionConfirm? {
         get {
-            if case .transcription(let value) = modal { return value }
+            if case .transcription(let value, _) = presented { return value }
             return nil
         }
         set {
             if let newValue {
-                present(.transcription(newValue))
-            } else if case .transcription = modal {
-                present(nil)
+                show(.transcription(newValue, returnTo: suspendedDialog()))
+            } else if case .transcription(_, let returnTo) = presented {
+                restorePresented(returnTo)
             }
         }
     }
@@ -273,7 +247,6 @@ final class CitationComposerModel {
 
     var graphSubjects: [GraphSubjectOption] { vocabulary.graphSubjects }
     var observations: [ObservationRow] { observationRows.rows }
-    var focusedObservationID: UUID? { observationRows.focusedID }
     var locator: CitationLocatorDraft {
         get { fields.locator }
         set { fields.locator = newValue }
@@ -301,24 +274,13 @@ final class CitationComposerModel {
         get { context.citationID }
         set { context.citationID = newValue }
     }
-    var isEditingExisting: Bool { activeCitationID != nil }
-    var showsArtifactSwitcher: Bool { artifacts.count > 1 }
     var hasNoArtifacts: Bool { phase == .compose && artifacts.isEmpty }
     var selectedArtifact: CatalogArtifact? {
         artifacts.first { $0.id == selectedArtifactID }
     }
-    var selectedArtifactIndex: Int? {
-        guard let id = selectedArtifactID else { return nil }
-        return artifacts.firstIndex { $0.id == id }
-    }
     var isPDFArtifact: Bool { artifactViewer.kind == .pdf }
     var isImageArtifact: Bool { artifactViewer.kind == .image }
-    var hasLocator: Bool { selectedArtifactID != nil }
     var isLocatorArtifactOnly: Bool { locator.isArtifactOnly }
-    var isLocatorPageSetOnViewer: Bool {
-        guard let page = locator.page else { return false }
-        return page == artifactViewer.page
-    }
     var locatorPage: Int? { locator.page }
     var activeCitationRef: String {
         if let id = activeCitationID,
@@ -338,14 +300,12 @@ final class CitationComposerModel {
         citationCountsByArtifact[artifactID, default: 0]
     }
 
-    var identityMenusDisabled: Bool { hasUnsavedDocumentWork || isTranscribing }
-
     var hasUnsavedDocumentWork: Bool {
-        fields.isDirty || observationRows.hasEditedOrSaving
+        fields.isDirty || authoring.holdsLeave || (editSession?.isDirty ?? false)
     }
 
     var shouldHoldLeave: Bool {
-        hasUnsavedDocumentWork || connections.hasTouchedWork || isTranscribing
+        hasUnsavedDocumentWork || isTranscribing
     }
 
     var imageRaster: NSImage? { transcriptions.imageRaster }
@@ -361,11 +321,37 @@ final class CitationComposerModel {
     var needsWholePageWarning: Bool { transcriptions.needsWholePageWarning }
 
     var unsavedSummary: String {
-        L10n.CitationComposer.unsavedSummary(
+        if authoring.holdsLeave {
+            let detail = leaveDraftDetail
+            let ref = activeCitationRef.isEmpty
+                ? L10n.string(L10n.CitationComposer.newCitation)
+                : activeCitationRef
+            return L10n.CitationComposer.leaveDraft(detail: detail, ref: ref)
+        }
+        return L10n.CitationComposer.unsavedSummary(
             citationDirty: fields.isDirty,
-            observationCount: observationRows.unsavedObservationCount,
-            connectionTouched: connections.hasTouchedWork
+            observationCount: (editSession?.isDirty ?? false) ? 1 : 0,
+            connectionTouched: false
         )
+    }
+
+    private var leaveDraftDetail: String {
+        switch authoring {
+        case .bridge(let draft):
+            if case .ready(let ready) = CitationComposerAuthoring.resolvePair(
+                endA: draft.endA,
+                endB: draft.endB,
+                termID: draft.termID,
+                vocabulary: vocabulary
+            ), let reading = ready.reading {
+                return reading
+            }
+            return L10n.string(L10n.CitationComposer.newBridgeTitle)
+        case .property:
+            return L10n.string(L10n.CitationComposer.newObservationTitle)
+        case .rest:
+            return L10n.string(L10n.CitationComposer.unsavedDraft)
+        }
     }
 
     var graphHandle: QueryHandle<SourceGraphRows>? {
@@ -378,33 +364,6 @@ final class CitationComposerModel {
 
     var subjectOptions: [PVComboBoxOption] { vocabulary.subjectComboOptions }
 
-    var defaultObservationSubjectID: String {
-        if !subjectID.isEmpty { return subjectID }
-        return vocabulary.graphSubjects.first?.id ?? ""
-    }
-
-    var canConfirmObservation: Bool {
-        guard let draft = observationDialog else { return false }
-        guard let property = catalogProperty(id: draft.propertyID) else { return false }
-        return CitationObservationValue.isDialogValid(
-            valueType: property.valueType,
-            fields: CitationObservationValue.fields(from: draft)
-        )
-    }
-
-    var dialogPropertyError: String? {
-        guard let draft = observationDialog, draft.showValidation else { return nil }
-        return draft.propertyID.isEmpty
-            ? L10n.string(L10n.CitationComposer.dialogPropertyRequired)
-            : nil
-    }
-
-    var dialogValueError: String? {
-        guard let draft = observationDialog, draft.showValidation, dialogPropertyError == nil
-        else { return nil }
-        return canConfirmObservation ? nil : L10n.string(L10n.CitationComposer.dialogValueRequired)
-    }
-
     func catalogProperty(id: String) -> CatalogProperty? { vocabulary.property(id: id) }
 
     func propertyOptions(for subjectID: String) -> [PVComboBoxOption] {
@@ -413,15 +372,6 @@ final class CitationComposerModel {
 
     func termOptions(for propertyID: String) -> [PVComboBoxOption] {
         vocabulary.termComboOptionsByPropertyID[propertyID] ?? []
-    }
-
-    func observationSummary(for row: ObservationRow) -> String {
-        guard let property = catalogProperty(id: row.propertyID) else { return "" }
-        return CitationObservationValue.summary(
-            valueType: property.valueType,
-            fields: row.valueFields(),
-            termLabel: vocabulary.termLabel(termID: row.valueTermID, propertyID: property.id)
-        )
     }
 
     var graphKey: CatalogQueryKey { .sourceGraph(project: session.projectKey, sourceId: sourceID) }
@@ -442,11 +392,6 @@ final class CitationComposerModel {
     private var workspace: CatalogSourceWorkspace? {
         let handle: QueryHandle<CatalogSourceWorkspace>? = session.queryHandle(workspaceKey)
         return handle?.value
-    }
-
-    private var sourceTypes: [CatalogSourceType] {
-        let handle: QueryHandle<[CatalogSourceType]>? = session.queryHandle(sourceTypesKey)
-        return handle?.value ?? []
     }
 
     private var fieldsSnapshot: PropertiesSnapshot { context.fieldsSnapshot }
@@ -482,7 +427,6 @@ final class CitationComposerModel {
                 subjectTypeID = type.id
             }
             await warmTermHandles()
-            seedPendingConnectionIfNeeded()
             if let citationID = entry.citationID {
                 do {
                     try await loadCitation(citationID)
@@ -534,11 +478,51 @@ final class CitationComposerModel {
     }
 
     func requestSelectArtifact(_ id: String) {
-        startIdentitySwitch { await self.selectArtifactAndLoad(id) }
+        requestStep { await self.selectArtifactAndLoad(id) }
     }
 
     func selectCitation(_ id: String?) {
-        startIdentitySwitch { await self.selectCitationAndLoad(id) }
+        if preservesAuthoringOnCitationChange {
+            if fields.isDirty {
+                guard !isTranscribing else { return }
+                let target = id
+                stepContinuation = { self.switchOpenCitation(to: target) }
+                pendingLeave = PendingLeave(keepDraft: true)
+                return
+            }
+            switchOpenCitation(to: id)
+            return
+        }
+        if id == nil || id?.isEmpty == true {
+            beginNewCitation()
+            return
+        }
+        requestStep { await self.selectCitationAndLoad(id) }
+    }
+
+    func beginNewCitation() {
+        requestStep { await self.selectCitationAndLoad(nil) }
+    }
+
+    func requestStep(_ work: @escaping @MainActor () async -> Void) {
+        guard !isTranscribing else { return }
+        if hasUnsavedDocumentWork {
+            stepContinuation = { self.startIdentitySwitch(work) }
+            pendingLeave = PendingLeave()
+            return
+        }
+        startIdentitySwitch(work)
+    }
+
+    /// Reloads observations and the citation list for the open citation.
+    /// Citation text, label, and the file viewer stay as they are.
+    func refreshCitationLines() async {
+        guard let id = activeCitationID else { return }
+        if let loaded = try? await fetchOpenCitation(id) {
+            if Task.isCancelled { return }
+            applyGroupedLines(loaded.observations)
+        }
+        await reloadListedCitations()
     }
 
     func askDeleteCitation() async {
@@ -571,21 +555,31 @@ final class CitationComposerModel {
                 context.applyWrite(effects)
                 resetComposerIdentity(keepLocator: true)
                 await reloadListedCitations()
-                applyEntryFocus()
                 await presentAfterIdentityChange()
+                return
+            }
+            if target.kind == "subject" {
+                try await store.deleteSubject(
+                    projectDir: session.projectKey.projectDir,
+                    userID: userID,
+                    subjectID: target.id
+                )
+                session.apply(.deletedSubject(sourceId: sourceID))
+                await refreshCitationLines()
                 return
             }
             if target.kind == "observation",
                let rowID = observationRows.rows.first(where: { $0.persistedID == target.id })?.id
             {
                 await observationRows.deletePersisted(rowID: rowID)
+                await refreshCitationLines()
             }
         }
         if let message = deleteImpact.error {
             fields.error = message
         }
-        if deleteImpact.request == nil, case .deleteImpact = modal {
-            modal = nil
+        if deleteImpact.request == nil, case .deleteImpact(let returnTo) = presented {
+            restorePresented(returnTo)
         }
     }
 
@@ -594,72 +588,7 @@ final class CitationComposerModel {
     }
 
     func beginAddObservation() {
-        observationRows.addDraft(subjectID: defaultObservationSubjectID)
-    }
-
-    func updateObservationSubject(id: UUID, subjectID: String) {
-        if subjectID.hasPrefix(Self.newSubjectPrefix) {
-            let key = String(subjectID.dropFirst(Self.newSubjectPrefix.count))
-            beginNewSubject(typeKey: key, rowID: id)
-            return
-        }
-        observationRows.applySubject(rowID: id, subjectID: subjectID, vocabulary: vocabulary)
-    }
-
-    func updateObservationProperty(id: UUID, propertyID: String) {
-        observationRows.applyProperty(rowID: id, propertyID: propertyID)
-    }
-
-    func updateObservationText(id: UUID, text: String) {
-        observationRows.applyText(rowID: id, text: text)
-    }
-
-    func updateObservationInteger(id: UUID, text: String) {
-        observationRows.applyInteger(rowID: id, text: text)
-    }
-
-    func updateObservationTerm(id: UUID, termID: String) {
-        observationRows.applyTerm(rowID: id, termID: termID)
-    }
-
-    func toggleObservationPolarity(id: UUID) {
-        observationRows.togglePolarity(rowID: id)
-    }
-
-    func beginEditObservation(_ row: ObservationRow) {
-        var state = ObservationDialogState.editing(row)
-        // The user's locale until a source carries its own language.
-        if catalogProperty(id: row.propertyID)?.valueType == PropertyValueType.date.rawValue,
-           state.dateDraft.isBlank,
-           let match = DateValueTranscriptionMatch.first(in: fields.transcription, locale: .current) {
-            state.dateDraft.startYear = match.year
-            state.dateDraft.startMonth = match.month
-            state.dateDraft.startDay = match.day
-        }
-        observationDialogBaseline = state
-        observationDialog = state
-    }
-
-    /// Seed the dialog opened with, including a transcription prefill. Edits
-    /// after that count; the prefill itself does not.
-    private var observationDialogBaseline: ObservationDialogState?
-
-    var observationDialogIsDirty: Bool {
-        guard let dialog = observationDialog else { return false }
-        let baseline: ObservationDialogState
-        if let observationDialogBaseline {
-            baseline = observationDialogBaseline
-        } else if let id = dialog.editingID,
-                  let row = observationRows.rows.first(where: { $0.id == id }) {
-            baseline = ObservationDialogState.editing(row)
-        } else {
-            return false
-        }
-        var current = dialog
-        var opened = baseline
-        current.showValidation = false
-        opened.showValidation = false
-        return current != opened
+        openAuthoring { self.beginPropertyDraft(subjectID: "") }
     }
 
     var customTermDialogIsDirty: Bool {
@@ -674,55 +603,70 @@ final class CitationComposerModel {
         return !label.isEmpty || !description.isEmpty
     }
 
-    func cancelObservationDialog() {
-        observationDialog = nil
-    }
-
-    func confirmObservationDialog() {
-        guard let draft = observationDialog, let rowID = draft.editingID else { return }
-        observationRows.applyDialogValues(rowID: rowID, draft: draft)
-        observationDialog = nil
-    }
-
-    func updateObservationDialog(_ draft: ObservationDialogState) {
-        observationDialog = draft
-    }
-
-    func beginAddCustomTerm(rowID: UUID) {
-        present(.customTerm(CustomTermDraft(rowID: rowID)))
+    func beginAddCustomTerm(propertyID: String, applyToEdit: Bool = false) {
+        let over = dialogBase()
+        show(.customTerm(
+            CustomTermDraft(propertyID: propertyID, applyToEdit: applyToEdit),
+            over: over
+        ))
     }
 
     func cancelCustomTermDialog() {
-        if case .customTerm = modal { present(nil) }
+        if case .customTerm(_, let over) = presented {
+            restore(over)
+        }
     }
 
     func confirmCustomTerm() async {
-        guard case .customTerm(var draft) = modal else { return }
-        guard let row = observationRows.rows.first(where: { $0.id == draft.rowID }) else {
-            present(nil)
+        guard case .customTerm(var draft, let over) = presented else { return }
+        let propertyID = draft.propertyID
+        guard !propertyID.isEmpty else {
+            restore(over)
             return
         }
         let trimmed = draft.label.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         draft.isSaving = true
         draft.error = nil
-        present(.customTerm(draft))
+        show(.customTerm(draft, over: over))
         do {
             let term = try await store.createPropertyTerm(
                 projectDir: session.projectKey.projectDir,
                 userID: userID,
-                propertyID: row.propertyID,
+                propertyID: propertyID,
                 label: trimmed,
                 description: ""
             )
-            session.apply(.createdPropertyTerm(propertyId: row.propertyID))
-            await warmTerms(for: row.propertyID)
-            updateObservationTerm(id: draft.rowID, termID: term.id)
-            present(nil)
+            session.apply(.createdPropertyTerm(propertyId: propertyID))
+            await warmTerms(for: propertyID)
+            if draft.applyToEdit, var session = editSession {
+                switch session.kind {
+                case .property(var values, let persistedID, let persistedRef):
+                    values.valueTermID = term.id
+                    session.kind = .property(values: values, persistedID: persistedID, persistedRef: persistedRef)
+                case .bridge(let endA, let endB, _, let bridgeID, let bridgeRef, let baseline):
+                    session.kind = .bridge(
+                        endA: endA,
+                        endB: endB,
+                        termID: term.id,
+                        bridgeID: bridgeID,
+                        bridgeRef: bridgeRef,
+                        baselineTermID: baseline
+                    )
+                }
+                editSession = session
+            } else if case .property(var property) = authoring {
+                property.values.valueTermID = term.id
+                authoring = .property(property)
+            } else if case .bridge(var bridge) = authoring {
+                bridge.termID = term.id
+                authoring = .bridge(bridge)
+            }
+            restore(over)
         } catch {
             draft.error = L10n.Errors.message(for: error)
             draft.isSaving = false
-            present(.customTerm(draft))
+            show(.customTerm(draft, over: over))
         }
     }
 
@@ -771,37 +715,36 @@ final class CitationComposerModel {
         locator.clearRegion()
     }
     func disarmRegionTool() { armedRegionTool = nil }
-    func clearLocator() { resetToEntireArtifact() }
 
     func requestAutoTranscribe() {
         guard canAutoTranscribe else { return }
         if let pending = transcriptions.autoTranscribeConfirmIfNeeded() {
-            present(.transcription(pending))
+            pendingTranscriptionConfirm = pending
             return
         }
         Task { await transcriptions.runAutoTranscribe() }
     }
 
     func confirmAutoTranscribe() {
-        present(nil)
+        pendingTranscriptionConfirm = nil
         Task { await transcriptions.runAutoTranscribe() }
     }
 
     func cancelAutoTranscribeConfirm() {
-        if case .transcription = modal { present(nil) }
+        if case .transcription = presented { pendingTranscriptionConfirm = nil }
     }
 
     func requestPasteTranscription() {
         guard canPasteTranscription else { return }
         if let pending = transcriptions.pasteConfirmIfNeeded() {
-            present(.transcription(pending))
+            pendingTranscriptionConfirm = pending
             return
         }
         transcriptions.applyPasteTranscription()
     }
 
     func confirmPasteTranscription() {
-        present(nil)
+        pendingTranscriptionConfirm = nil
         transcriptions.applyPasteTranscription()
     }
 
@@ -821,14 +764,16 @@ final class CitationComposerModel {
         WorkspaceLocation(section: .sources, sourceId: sourceID, sourceSurface: .page)
     }
 
-    func beginNewSubject(typeKey: String, rowID: UUID) {
+    func beginNewSubject(typeKey: String, field: CitationSubjectField) {
         guard !isGraphReloading,
               let type = fieldsSnapshot.types.first(where: { $0.key == typeKey })
         else { return }
-        newSubjectDraft = NewSubjectDraft(typeKey: typeKey, typeID: type.id, rowID: rowID)
+        newSubjectDraft = NewSubjectDraft(typeKey: typeKey, typeID: type.id, field: field)
     }
 
-    func cancelNewSubject() { newSubjectDraft = nil }
+    func cancelNewSubject() {
+        newSubjectDraft = nil
+    }
 
     func confirmNewSubject() async {
         guard var draft = newSubjectDraft, !draft.isSaving else { return }
@@ -848,7 +793,7 @@ final class CitationComposerModel {
             landingColumn = slot.landingColumn
             session.apply(.mutatedSourceGraph(sourceId: sourceID))
             await context.waitForGraph()
-            observationRows.applySubject(rowID: draft.rowID, subjectID: created.id, vocabulary: vocabulary)
+            assignCreatedSubject(created.id, field: draft.field)
             newSubjectDraft = nil
         } catch {
             draft.error = L10n.Errors.message(for: error)
@@ -863,11 +808,88 @@ final class CitationComposerModel {
         fields.resetBlank(keepLocator: keepLocator)
         observationRows.replace([])
         connections.clearSavedKeepingPending()
+        authoring = .rest
+        editSession = nil
+        show(nil)
     }
 
-    private func present(_ next: ComposerModal?) {
+    /// The sheet underneath a custom-term or new-subject dialog.
+    func dialogBase() -> ComposerBase {
+        switch presented {
+        case nil:
+            if editSession != nil { return .edit }
+            if case .rest = authoring { return .none }
+            return .authoring
+        default:
+            return base(of: presented)
+        }
+    }
+
+    private func base(of presented: ComposerPresented?) -> ComposerBase {
+        switch presented {
+        case .authoring:
+            return .authoring
+        case .edit:
+            return .edit
+        case .customTerm(_, let over), .newSubject(_, let over):
+            return over
+        case .leave(_, let returnTo), .transcription(_, let returnTo), .deleteImpact(let returnTo):
+            return base(of: returnTo)
+        case nil:
+            return .none
+        }
+    }
+
+    /// The dialog a leave, transcription, or delete prompt should come back to,
+    /// including a child draft that was on screen.
+    func suspendedDialog() -> ComposerPresented? {
+        switch presented {
+        case .authoring, .edit, .customTerm, .newSubject:
+            return presented
+        case .leave(_, let returnTo), .transcription(_, let returnTo), .deleteImpact(let returnTo):
+            return returnTo
+        case nil:
+            return nil
+        }
+    }
+
+    func restore(_ base: ComposerBase) {
+        switch base {
+        case .none:
+            show(nil)
+        case .authoring:
+            if case .rest = authoring { show(nil) } else { show(.authoring) }
+        case .edit:
+            show(editSession == nil ? nil : .edit)
+        }
+    }
+
+    func restorePresented(_ next: ComposerPresented?) {
+        switch next {
+        case .authoring:
+            restore(.authoring)
+        case .edit:
+            restore(.edit)
+        case .customTerm, .newSubject:
+            show(next)
+        case .leave, .transcription, .deleteImpact, nil:
+            show(nil)
+        }
+    }
+
+    func showAuthoringDialog() {
+        if case .rest = authoring { return }
+        show(.authoring)
+    }
+
+    func showEditDialog() {
+        guard editSession != nil else { return }
+        show(.edit)
+    }
+
+    func show(_ next: ComposerPresented?) {
         let leavingDelete: Bool
-        if case .deleteImpact = modal { leavingDelete = true } else { leavingDelete = false }
+        if case .deleteImpact = presented { leavingDelete = true } else { leavingDelete = false }
         let enteringDelete: Bool
         if case .deleteImpact = next { enteringDelete = true } else { enteringDelete = false }
         if leavingDelete && !enteringDelete {
@@ -876,21 +898,23 @@ final class CitationComposerModel {
         if next != nil && !enteringDelete {
             deleteImpact.cancel()
         }
-        modal = next
+        presented = next
     }
 
     func applyDeleteImpactRequest(_ value: PVDeleteImpactRequest?) {
         deleteImpact.applyRequest(value)
         if value == nil {
-            if case .deleteImpact = modal { modal = nil }
+            if case .deleteImpact(let returnTo) = presented {
+                restorePresented(returnTo)
+            }
         } else {
-            modal = .deleteImpact
+            show(.deleteImpact(returnTo: suspendedDialog()))
         }
     }
 
-    private func presentImpact(kind: String, id: String, ref: String, title: String) async {
+    func presentImpact(kind: String, id: String, ref: String, title: String) async {
         fields.error = nil
-        present(nil)
+        let returnTo = suspendedDialog()
         await deleteImpact.ask(kind: kind, id: id, ref: ref, title: title) {
             try await self.store.getDeleteImpact(
                 projectDir: self.session.projectKey.projectDir,
@@ -899,22 +923,31 @@ final class CitationComposerModel {
             )
         }
         if deleteImpact.request != nil {
-            modal = .deleteImpact
+            show(.deleteImpact(returnTo: returnTo))
         } else if let message = deleteImpact.error {
             fields.error = message
         }
     }
 
     private func startIdentitySwitch(_ work: @escaping @MainActor () async -> Void) {
+        switchGeneration += 1
+        let generation = switchGeneration
+        isSwitchingCitation = true
         identityTask?.cancel()
         identityTask = Task { @MainActor in
             await work()
+            if generation == self.switchGeneration {
+                self.isSwitchingCitation = false
+            }
         }
     }
 
     private func selectArtifactAndLoad(_ id: String) async {
         guard artifacts.contains(where: { $0.id == id }), id != selectedArtifactID else { return }
         if Task.isCancelled { return }
+        authoring = .rest
+        editSession = nil
+        show(nil)
         activeCitationID = nil
         fields.resetBlank()
         observationRows.replace([])
@@ -922,25 +955,68 @@ final class CitationComposerModel {
         if Task.isCancelled { return }
         await applySelectedArtifact(id)
         if Task.isCancelled { return }
+        await reloadListedCitations()
+        let ordered = CitationComposerAuthoring.stepperOrder(listedCitations)
+        if let first = ordered.first {
+            try? await loadCitation(first.citation.id)
+        }
+        if Task.isCancelled { return }
         await presentAfterIdentityChange()
     }
 
-    private func selectCitationAndLoad(_ id: String?) async {
+    /// The add-observation dialog stays open while the citation underneath it changes.
+    private var preservesAuthoringOnCitationChange: Bool {
+        if editSession != nil { return false }
+        if case .rest = authoring { return false }
+        return true
+    }
+
+    private func switchOpenCitation(to id: String?) {
+        let target = (id?.isEmpty == false) ? id : nil
+        guard target != activeCitationID else { return }
+        startIdentitySwitch { await self.loadCitationPreservingAuthoring(target) }
+    }
+
+    private func loadCitationPreservingAuthoring(_ id: String?) async {
         if id == nil || id?.isEmpty == true {
-            activeCitationID = nil
-            fields.resetBlank(keepLocator: true)
-            observationRows.replace([])
-            connections.clearSavedKeepingPending()
+            openBlankCitation()
+        } else if let id {
+            do {
+                try await loadCitation(id)
+            } catch {
+                if Task.isCancelled { return }
+                fields.error = L10n.Errors.message(for: error)
+                return
+            }
+        }
+        if Task.isCancelled { return }
+        let blank = id == nil || id?.isEmpty == true
+        await presentAfterIdentityChange(keepReadingPage: blank)
+    }
+
+    /// Drops the open citation. The new one is the whole artifact; it does not
+    /// inherit the previous page or region.
+    private func openBlankCitation() {
+        activeCitationID = nil
+        loadedCitationRef = ""
+        fields.resetBlank()
+        observationRows.replace([])
+        connections.clearSavedKeepingPending()
+    }
+
+    private func selectCitationAndLoad(_ id: String?) async {
+        authoring = .rest
+        editSession = nil
+        if id == nil || id?.isEmpty == true {
+            openBlankCitation()
             if Task.isCancelled { return }
-            applyEntryFocus()
-            await presentAfterIdentityChange()
+            await presentAfterIdentityChange(keepReadingPage: true)
             return
         }
         guard let id else { return }
         do {
             try await loadCitation(id)
             if Task.isCancelled { return }
-            applyEntryFocus()
             await presentAfterIdentityChange()
         } catch {
             if Task.isCancelled { return }
@@ -948,87 +1024,84 @@ final class CitationComposerModel {
         }
     }
 
-    private func loadCitation(_ citationID: String) async throws {
-        let (citation, _, listed) = try await store.getCitation(
+    private struct FetchedCitation {
+        var citation: CatalogCitation
+        var observations: [CatalogObservation]
+    }
+
+    /// Nil when this task was cancelled before the citation was read.
+    private func fetchOpenCitation(_ citationID: String) async throws -> FetchedCitation? {
+        await context.waitForGraph()
+        if Task.isCancelled { return nil }
+        if let cached = await cachedCitation(id: citationID),
+           let graphHandle: QueryHandle<SourceGraphRows> = session.queryHandle(graphKey),
+           let graphRows = graphHandle.value
+        {
+            return FetchedCitation(
+                citation: cached,
+                observations: graphRows.observations.filter { $0.citationID == cached.id }
+            )
+        }
+        // Not on a file this source still has. One direct read; prepare
+        // then drops a citation whose artifact is gone.
+        let (fetched, _, listed) = try await store.getCitation(
             projectDir: session.projectKey.projectDir,
             citationID: citationID
         )
-        if Task.isCancelled { return }
-        await context.waitForGraph()
-        if Task.isCancelled { return }
+        if Task.isCancelled { return nil }
+        return FetchedCitation(citation: fetched, observations: listed)
+    }
+
+    private func applyGroupedLines(_ observations: [CatalogObservation]) {
         let grouped = CitationConnections.groupSaved(
-            observations: listed,
+            observations: observations,
             vocabulary: vocabulary,
             snapshot: graphSnapshot
         )
-        activeCitationID = citation.id
-        loadedCitationRef = citation.ref
-        selectedArtifactID = citation.artifactID
-        fields.replace(from: citation)
         connections.replaceSaved(grouped.connections)
         observationRows.replace(grouped.leftover.map(ObservationRow.loaded(from:)))
     }
 
-    private func seedPendingConnectionIfNeeded() {
-        guard case let .connect(_, fromID, toID, bridgeKey) = entry,
-              connections.rows.first(where: \.isPending) == nil
-        else { return }
-        let from = vocabulary.graphSubjects.first { $0.id == fromID }
-        let to = vocabulary.graphSubjects.first { $0.id == toID }
-        let rule = vocabulary.connectRule(bridgeTypeKey: bridgeKey)
-        let termProperty: CatalogProperty?
-        if let rule, rule.disambiguation != "none", !rule.disambiguation.isEmpty {
-            termProperty = vocabulary.property(key: rule.disambiguation)
-        } else {
-            termProperty = nil
+    private func loadCitation(_ citationID: String) async throws {
+        guard let loaded = try await fetchOpenCitation(citationID) else { return }
+        activeCitationID = loaded.citation.id
+        loadedCitationRef = loaded.citation.ref
+        selectedArtifactID = loaded.citation.artifactID
+        fields.replace(from: loaded.citation)
+        applyGroupedLines(loaded.observations)
+    }
+
+    /// Citation text lives on the artifact list. Observations live on the source graph.
+    private func cachedCitation(id: String) async -> CatalogCitation? {
+        var artifactIDs: [String] = []
+        if let selectedArtifactID, !selectedArtifactID.isEmpty {
+            artifactIDs.append(selectedArtifactID)
         }
-        let sentence: String
-        if let rule {
-            sentence = ConnectEndpointBinding.pendingSentence(
-                rule: rule,
-                fromID: fromID,
-                fromTypeKey: from?.typeKey ?? "",
-                fromLabel: from?.label ?? fromID,
-                toID: toID,
-                toTypeKey: to?.typeKey ?? "",
-                toLabel: to?.label ?? toID
-            )
-        } else {
-            sentence = ""
+        for artifact in artifacts where !artifactIDs.contains(artifact.id) {
+            artifactIDs.append(artifact.id)
         }
-        connections.seedPending(
-            fromSubjectID: fromID,
-            toSubjectID: toID,
-            fromLabel: from?.label ?? fromID,
-            toLabel: to?.label ?? toID,
-            bridgeTypeKey: bridgeKey,
-            termProperty: termProperty,
-            sentence: sentence
-        )
+        for artifactID in artifactIDs {
+            let key = citationsKey(artifactID: artifactID)
+            let _: QueryHandle<[CatalogListedCitation]> = session.query(key)
+            let rows = await session.readyValue(key) as [CatalogListedCitation]?
+            if let match = rows?.first(where: { $0.citation.id == id }) {
+                return match.citation
+            }
+        }
+        return nil
     }
 
     private func applyEntryFocus() {
+        guard !didApplyEntry else { return }
+        didApplyEntry = true
         switch entry {
-        case .edit(_, let subjectID, _, _, let observationID):
-            if let observationID,
-               let match = observationRows.rows.first(where: { $0.persistedID == observationID })
-            {
-                observationRows.focusedID = match.id
-            } else {
-                observationRows.focusedID = observationRows.rows.first { $0.subjectID == subjectID }?.id
-                    ?? observationRows.rows.first?.id
-            }
         case .addProperty(_, let subjectID, _):
-            if activeCitationID != nil,
-               !observationRows.rows.contains(where: { $0.subjectID == subjectID })
-            {
-                observationRows.addDraft(subjectID: subjectID)
-            } else {
-                observationRows.focusedID = observationRows.rows.first { $0.subjectID == subjectID }?.id
-                    ?? observationRows.rows.first?.id
-            }
-        case .connect:
-            break
+            beginPropertyDraft(subjectID: subjectID)
+        case .connect(_, let fromID, let toID, _):
+            beginBridgeDraft(endA: fromID, endB: toID, termID: "", origin: .graph)
+        case .edit(_, let subjectID, _, _, let observationID):
+            guard let observationID, !observationID.isEmpty else { break }
+            beginEdit(observationID: observationID, subjectID: subjectID)
         }
     }
 
@@ -1038,15 +1111,23 @@ final class CitationComposerModel {
         await reloadArtifactViewer(preferredPage: nil)
     }
 
-    private func presentAfterIdentityChange() async {
+    private func presentAfterIdentityChange(keepReadingPage: Bool = false) async {
         if artifacts.isEmpty {
             selectedArtifactID = nil
             artifactViewer.unload()
         } else {
-            await reloadArtifactViewer(preferredPage: fields.locator.page)
+            let page = fields.locator.page ?? (keepReadingPage ? currentReadingPage : nil)
+            await reloadArtifactViewer(preferredPage: page)
             await reloadListedCitations()
         }
         announceIdentityChange()
+    }
+
+    /// Page to leave the viewer on when a new citation has no page of its own.
+    private var currentReadingPage: Int? {
+        guard artifactViewer.supportsPages else { return nil }
+        let page = artifactViewer.page
+        return page >= 1 ? page : nil
     }
 
     private func reloadArtifactViewer(preferredPage: Int?) async {
@@ -1154,21 +1235,35 @@ extension CitationComposerModel: WorkspaceLeaveGuard {
     func shouldHoldNavigation(_ pending: PendingNavigation) -> Bool {
         _ = pending
         guard shouldHoldLeave else { return false }
-        pendingLeave = PendingLeave(
-            citationDirty: fields.isDirty,
-            observationCount: observationRows.unsavedObservationCount,
-            connectionTouched: connections.hasTouchedWork
-        )
+        pendingLeave = PendingLeave()
         return true
     }
 
     func discardLeaveChanges() {
-        pendingLeave = nil
+        let keepDraft = pendingLeave?.keepDraft == true
+        let next = stepContinuation
+        stepContinuation = nil
+        if keepDraft {
+            pendingLeave = nil
+        } else {
+            fields.revert()
+            authoring = .rest
+            editSession = nil
+            show(nil)
+        }
+        if let next {
+            next()
+            return
+        }
         navigation?.resumeHeldNavigation()
     }
 
     func keepEditingAfterLeave() {
+        let stepping = stepContinuation != nil
+        stepContinuation = nil
         pendingLeave = nil
-        navigation?.cancelHeldNavigation()
+        if !stepping {
+            navigation?.cancelHeldNavigation()
+        }
     }
 }

@@ -403,6 +403,7 @@ marriage
 engagement
 baptism
 burial
+funeral
 census
 residence
 migration
@@ -425,6 +426,7 @@ spouse
 child
 witness
 informant
+pallbearer
 ```
 
 Long-tail participation roles are `origin=user` terms — there is no product `other` escape hatch. Tree / connect behavior will attach to recognized keys (e.g. `father`, `mother`, `subject`) in the registry when that behavior lands — not part of the create-time term seed itself.
@@ -577,7 +579,7 @@ abbreviations
 
 The nickname table is `nicknameSets` in [`core/match/nicknames_seed.go`](../core/match/nicknames_seed.go). Each set is one canonical name and the nicknames listed for it. A nickname that belongs to two canonical names does not join those sets, so Chris connects Christine and also Christopher, and Tina does not connect Christopher. The list is names.csv from [carltonnorthern/nicknames](https://github.com/carltonnorthern/nicknames), Apache License 2.0. The license and the upstream credit are in [`core/match/third_party/nicknames/`](../core/match/third_party/nicknames/).
 
-`Register` appends a table for a future plugin. Install writes whatever is registered at catalog create. Open does not heal. Scoring reads these rows and no in-code list. Opening a project loads them once onto the catalog graph and keeps them until the project closes. A future editor calls `namealiases.Invalidate` after a change. An empty catalog makes no abbreviation or nickname hits.
+`Register` appends a table for a future plugin. Install writes whatever is registered at catalog create. Open does not heal. Scoring reads these rows and no in-code list. Opening a project loads them once onto the catalog graph and keeps them until the project closes. A future editor calls `namealiases.Invalidate` after a change. An empty catalog makes no abbreviation or nickname hits. `namealiases.AddProductNicknames` copies the product nickname list into a catalog created before that list grew. A set already stored in full is left as it is. Call `namealiases.Invalidate` if that catalog stays open.
 
 ---
 

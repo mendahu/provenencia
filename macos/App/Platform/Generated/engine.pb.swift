@@ -5523,7 +5523,7 @@ public nonisolated struct Provenencia_Engine_V1_Citation: Sendable {
 
   public var transcription: String = String()
 
-  public var description_p: String = String()
+  public var label: String = String()
 
   public var transcriptionUncertain: Bool = false
 
@@ -5720,7 +5720,7 @@ public nonisolated struct Provenencia_Engine_V1_CreateCitationWithObservationsRe
 
   public var transcription: String = String()
 
-  public var description_p: String = String()
+  public var label: String = String()
 
   public var transcriptionUncertain: Bool = false
 
@@ -5891,6 +5891,9 @@ public nonisolated struct Provenencia_Engine_V1_ListedCitation: Sendable {
 
   public var observationCount: Int32 = 0
 
+  /// Person labels this Citation names, earliest Observation first, capped.
+  public var subjectNames: [String] = []
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -5988,7 +5991,7 @@ public nonisolated struct Provenencia_Engine_V1_CreateCitedBridgeRequest: Sendab
 
   public var transcription: String = String()
 
-  public var citationDescription: String = String()
+  public var citationLabel: String = String()
 
   public var transcriptionUncertain: Bool = false
 
@@ -6064,7 +6067,7 @@ public nonisolated struct Provenencia_Engine_V1_UpdateCitationRequest: Sendable 
 
   public var transcription: String = String()
 
-  public var description_p: String = String()
+  public var label: String = String()
 
   public var transcriptionUncertain: Bool = false
 
@@ -16221,7 +16224,7 @@ nonisolated extension Provenencia_Engine_V1_NameValueInput: SwiftProtobuf.Messag
 
 nonisolated extension Provenencia_Engine_V1_Citation: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".Citation"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}ref\0\u{3}artifact_id\0\u{3}locator_json\0\u{1}transcription\0\u{1}description\0\u{3}transcription_uncertain\0\u{3}transcription_note\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}ref\0\u{3}artifact_id\0\u{3}locator_json\0\u{1}transcription\0\u{1}label\0\u{3}transcription_uncertain\0\u{3}transcription_note\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -16234,7 +16237,7 @@ nonisolated extension Provenencia_Engine_V1_Citation: SwiftProtobuf.Message, Swi
       case 3: try { try decoder.decodeSingularStringField(value: &self.artifactID) }()
       case 4: try { try decoder.decodeSingularStringField(value: &self.locatorJson) }()
       case 5: try { try decoder.decodeSingularStringField(value: &self.transcription) }()
-      case 6: try { try decoder.decodeSingularStringField(value: &self.description_p) }()
+      case 6: try { try decoder.decodeSingularStringField(value: &self.label) }()
       case 7: try { try decoder.decodeSingularBoolField(value: &self.transcriptionUncertain) }()
       case 8: try { try decoder.decodeSingularStringField(value: &self.transcriptionNote) }()
       default: break
@@ -16258,8 +16261,8 @@ nonisolated extension Provenencia_Engine_V1_Citation: SwiftProtobuf.Message, Swi
     if !self.transcription.isEmpty {
       try visitor.visitSingularStringField(value: self.transcription, fieldNumber: 5)
     }
-    if !self.description_p.isEmpty {
-      try visitor.visitSingularStringField(value: self.description_p, fieldNumber: 6)
+    if !self.label.isEmpty {
+      try visitor.visitSingularStringField(value: self.label, fieldNumber: 6)
     }
     if self.transcriptionUncertain != false {
       try visitor.visitSingularBoolField(value: self.transcriptionUncertain, fieldNumber: 7)
@@ -16276,7 +16279,7 @@ nonisolated extension Provenencia_Engine_V1_Citation: SwiftProtobuf.Message, Swi
     if lhs.artifactID != rhs.artifactID {return false}
     if lhs.locatorJson != rhs.locatorJson {return false}
     if lhs.transcription != rhs.transcription {return false}
-    if lhs.description_p != rhs.description_p {return false}
+    if lhs.label != rhs.label {return false}
     if lhs.transcriptionUncertain != rhs.transcriptionUncertain {return false}
     if lhs.transcriptionNote != rhs.transcriptionNote {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
@@ -16557,7 +16560,7 @@ nonisolated extension Provenencia_Engine_V1_ObservationDraft: SwiftProtobuf.Mess
 
 nonisolated extension Provenencia_Engine_V1_CreateCitationWithObservationsRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".CreateCitationWithObservationsRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_dir\0\u{3}user_id\0\u{3}artifact_id\0\u{3}locator_json\0\u{1}transcription\0\u{1}description\0\u{3}transcription_uncertain\0\u{3}transcription_note\0\u{3}citation_notes\0\u{1}observations\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_dir\0\u{3}user_id\0\u{3}artifact_id\0\u{3}locator_json\0\u{1}transcription\0\u{1}label\0\u{3}transcription_uncertain\0\u{3}transcription_note\0\u{3}citation_notes\0\u{1}observations\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -16570,7 +16573,7 @@ nonisolated extension Provenencia_Engine_V1_CreateCitationWithObservationsReques
       case 3: try { try decoder.decodeSingularStringField(value: &self.artifactID) }()
       case 4: try { try decoder.decodeSingularStringField(value: &self.locatorJson) }()
       case 5: try { try decoder.decodeSingularStringField(value: &self.transcription) }()
-      case 6: try { try decoder.decodeSingularStringField(value: &self.description_p) }()
+      case 6: try { try decoder.decodeSingularStringField(value: &self.label) }()
       case 7: try { try decoder.decodeSingularBoolField(value: &self.transcriptionUncertain) }()
       case 8: try { try decoder.decodeSingularStringField(value: &self.transcriptionNote) }()
       case 9: try { try decoder.decodeRepeatedStringField(value: &self.citationNotes) }()
@@ -16596,8 +16599,8 @@ nonisolated extension Provenencia_Engine_V1_CreateCitationWithObservationsReques
     if !self.transcription.isEmpty {
       try visitor.visitSingularStringField(value: self.transcription, fieldNumber: 5)
     }
-    if !self.description_p.isEmpty {
-      try visitor.visitSingularStringField(value: self.description_p, fieldNumber: 6)
+    if !self.label.isEmpty {
+      try visitor.visitSingularStringField(value: self.label, fieldNumber: 6)
     }
     if self.transcriptionUncertain != false {
       try visitor.visitSingularBoolField(value: self.transcriptionUncertain, fieldNumber: 7)
@@ -16620,7 +16623,7 @@ nonisolated extension Provenencia_Engine_V1_CreateCitationWithObservationsReques
     if lhs.artifactID != rhs.artifactID {return false}
     if lhs.locatorJson != rhs.locatorJson {return false}
     if lhs.transcription != rhs.transcription {return false}
-    if lhs.description_p != rhs.description_p {return false}
+    if lhs.label != rhs.label {return false}
     if lhs.transcriptionUncertain != rhs.transcriptionUncertain {return false}
     if lhs.transcriptionNote != rhs.transcriptionNote {return false}
     if lhs.citationNotes != rhs.citationNotes {return false}
@@ -16925,7 +16928,7 @@ nonisolated extension Provenencia_Engine_V1_CitationCountsBySourceResponse: Swif
 
 nonisolated extension Provenencia_Engine_V1_ListedCitation: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ListedCitation"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}citation\0\u{3}observation_count\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}citation\0\u{3}observation_count\0\u{3}subject_names\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -16935,6 +16938,7 @@ nonisolated extension Provenencia_Engine_V1_ListedCitation: SwiftProtobuf.Messag
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularMessageField(value: &self._citation) }()
       case 2: try { try decoder.decodeSingularInt32Field(value: &self.observationCount) }()
+      case 3: try { try decoder.decodeRepeatedStringField(value: &self.subjectNames) }()
       default: break
       }
     }
@@ -16951,12 +16955,16 @@ nonisolated extension Provenencia_Engine_V1_ListedCitation: SwiftProtobuf.Messag
     if self.observationCount != 0 {
       try visitor.visitSingularInt32Field(value: self.observationCount, fieldNumber: 2)
     }
+    if !self.subjectNames.isEmpty {
+      try visitor.visitRepeatedStringField(value: self.subjectNames, fieldNumber: 3)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Provenencia_Engine_V1_ListedCitation, rhs: Provenencia_Engine_V1_ListedCitation) -> Bool {
     if lhs._citation != rhs._citation {return false}
     if lhs.observationCount != rhs.observationCount {return false}
+    if lhs.subjectNames != rhs.subjectNames {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -17108,7 +17116,7 @@ nonisolated extension Provenencia_Engine_V1_GetCitationResponse: SwiftProtobuf.M
 
 nonisolated extension Provenencia_Engine_V1_CreateCitedBridgeRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".CreateCitedBridgeRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_dir\0\u{3}user_id\0\u{3}source_id\0\u{3}from_subject_id\0\u{3}to_subject_id\0\u{3}bridge_type_key\0\u{2}\u{2}description\0\u{4}\u{3}artifact_id\0\u{3}locator_json\0\u{1}transcription\0\u{3}citation_description\0\u{3}transcription_uncertain\0\u{3}transcription_note\0\u{3}citation_notes\0\u{1}observations\0\u{3}citation_id\0\u{b}label\0\u{b}grid_x\0\u{b}grid_y\0\u{c}\u{7}\u{1}\u{c}\u{9}\u{1}\u{c}\u{a}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_dir\0\u{3}user_id\0\u{3}source_id\0\u{3}from_subject_id\0\u{3}to_subject_id\0\u{3}bridge_type_key\0\u{2}\u{2}description\0\u{4}\u{3}artifact_id\0\u{3}locator_json\0\u{1}transcription\0\u{3}citation_label\0\u{3}transcription_uncertain\0\u{3}transcription_note\0\u{3}citation_notes\0\u{1}observations\0\u{3}citation_id\0\u{b}label\0\u{b}grid_x\0\u{b}grid_y\0\u{c}\u{7}\u{1}\u{c}\u{9}\u{1}\u{c}\u{a}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -17126,7 +17134,7 @@ nonisolated extension Provenencia_Engine_V1_CreateCitedBridgeRequest: SwiftProto
       case 11: try { try decoder.decodeSingularStringField(value: &self.artifactID) }()
       case 12: try { try decoder.decodeSingularStringField(value: &self.locatorJson) }()
       case 13: try { try decoder.decodeSingularStringField(value: &self.transcription) }()
-      case 14: try { try decoder.decodeSingularStringField(value: &self.citationDescription) }()
+      case 14: try { try decoder.decodeSingularStringField(value: &self.citationLabel) }()
       case 15: try { try decoder.decodeSingularBoolField(value: &self.transcriptionUncertain) }()
       case 16: try { try decoder.decodeSingularStringField(value: &self.transcriptionNote) }()
       case 17: try { try decoder.decodeRepeatedStringField(value: &self.citationNotes) }()
@@ -17168,8 +17176,8 @@ nonisolated extension Provenencia_Engine_V1_CreateCitedBridgeRequest: SwiftProto
     if !self.transcription.isEmpty {
       try visitor.visitSingularStringField(value: self.transcription, fieldNumber: 13)
     }
-    if !self.citationDescription.isEmpty {
-      try visitor.visitSingularStringField(value: self.citationDescription, fieldNumber: 14)
+    if !self.citationLabel.isEmpty {
+      try visitor.visitSingularStringField(value: self.citationLabel, fieldNumber: 14)
     }
     if self.transcriptionUncertain != false {
       try visitor.visitSingularBoolField(value: self.transcriptionUncertain, fieldNumber: 15)
@@ -17200,7 +17208,7 @@ nonisolated extension Provenencia_Engine_V1_CreateCitedBridgeRequest: SwiftProto
     if lhs.artifactID != rhs.artifactID {return false}
     if lhs.locatorJson != rhs.locatorJson {return false}
     if lhs.transcription != rhs.transcription {return false}
-    if lhs.citationDescription != rhs.citationDescription {return false}
+    if lhs.citationLabel != rhs.citationLabel {return false}
     if lhs.transcriptionUncertain != rhs.transcriptionUncertain {return false}
     if lhs.transcriptionNote != rhs.transcriptionNote {return false}
     if lhs.citationNotes != rhs.citationNotes {return false}
@@ -17304,7 +17312,7 @@ nonisolated extension Provenencia_Engine_V1_CreateCitedBridgeResponse: SwiftProt
 
 nonisolated extension Provenencia_Engine_V1_UpdateCitationRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".UpdateCitationRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_dir\0\u{3}user_id\0\u{3}citation_id\0\u{3}locator_json\0\u{1}transcription\0\u{1}description\0\u{3}transcription_uncertain\0\u{3}transcription_note\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_dir\0\u{3}user_id\0\u{3}citation_id\0\u{3}locator_json\0\u{1}transcription\0\u{1}label\0\u{3}transcription_uncertain\0\u{3}transcription_note\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -17317,7 +17325,7 @@ nonisolated extension Provenencia_Engine_V1_UpdateCitationRequest: SwiftProtobuf
       case 3: try { try decoder.decodeSingularStringField(value: &self.citationID) }()
       case 4: try { try decoder.decodeSingularStringField(value: &self.locatorJson) }()
       case 5: try { try decoder.decodeSingularStringField(value: &self.transcription) }()
-      case 6: try { try decoder.decodeSingularStringField(value: &self.description_p) }()
+      case 6: try { try decoder.decodeSingularStringField(value: &self.label) }()
       case 7: try { try decoder.decodeSingularBoolField(value: &self.transcriptionUncertain) }()
       case 8: try { try decoder.decodeSingularStringField(value: &self.transcriptionNote) }()
       default: break
@@ -17341,8 +17349,8 @@ nonisolated extension Provenencia_Engine_V1_UpdateCitationRequest: SwiftProtobuf
     if !self.transcription.isEmpty {
       try visitor.visitSingularStringField(value: self.transcription, fieldNumber: 5)
     }
-    if !self.description_p.isEmpty {
-      try visitor.visitSingularStringField(value: self.description_p, fieldNumber: 6)
+    if !self.label.isEmpty {
+      try visitor.visitSingularStringField(value: self.label, fieldNumber: 6)
     }
     if self.transcriptionUncertain != false {
       try visitor.visitSingularBoolField(value: self.transcriptionUncertain, fieldNumber: 7)
@@ -17359,7 +17367,7 @@ nonisolated extension Provenencia_Engine_V1_UpdateCitationRequest: SwiftProtobuf
     if lhs.citationID != rhs.citationID {return false}
     if lhs.locatorJson != rhs.locatorJson {return false}
     if lhs.transcription != rhs.transcription {return false}
-    if lhs.description_p != rhs.description_p {return false}
+    if lhs.label != rhs.label {return false}
     if lhs.transcriptionUncertain != rhs.transcriptionUncertain {return false}
     if lhs.transcriptionNote != rhs.transcriptionNote {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}

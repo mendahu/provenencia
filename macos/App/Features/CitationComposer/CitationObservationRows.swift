@@ -256,12 +256,12 @@ final class CitationObservationRows {
         focusedID = row.id
     }
 
-    func commit(rowID: UUID) async {
+    func commit(rowID: UUID, citation: CitationFieldsDraft.Values) async {
         guard let context, let index = rows.firstIndex(where: { $0.id == rowID }) else { return }
         if case .saving = rows[index].state { return }
         guard rows[index].canSave else { return }
         rows[index].state = .saving
-        await performCommit(rowID: rowID, context: context)
+        await performCommit(rowID: rowID, context: context, citation: citation)
     }
 
     func revert(rowID: UUID) {
@@ -327,13 +327,9 @@ final class CitationObservationRows {
         }
     }
 
-    func applyDialogValues(rowID: UUID, draft: CitationComposerModel.ObservationDialogState) {
+    func replaceValues(rowID: UUID, values: ObservationRowValues) {
         mutate(rowID) { row in
-            row.valueText = draft.valueText
-            row.valueIntegerText = draft.valueIntegerText
-            row.valueTermID = draft.valueTermID
-            row.dateDraft = draft.dateDraft
-            row.nameDraft = draft.nameDraft
+            row.values = values
             row.deriveState()
         }
     }
@@ -380,7 +376,11 @@ final class CitationObservationRows {
         }.count
     }
 
-    private func performCommit(rowID: UUID, context: CitationComposerContext) async {
+    private func performCommit(
+        rowID: UUID,
+        context: CitationComposerContext,
+        citation: CitationFieldsDraft.Values
+    ) async {
         guard let index = rows.firstIndex(where: { $0.id == rowID }) else { return }
         let row = rows[index]
         guard let property = context.vocabulary.property(id: row.propertyID) else {
@@ -394,7 +394,7 @@ final class CitationObservationRows {
         }
         guard let draft = draftOrNil else { return }
         do {
-            let citationID = try await context.ensureCitationID()
+            let citationID = try await context.ensureCitationID(citation)
             if row.persistedID == nil {
                 let written = try await context.store.addObservationsToCitation(
                     projectDir: context.projectDir,

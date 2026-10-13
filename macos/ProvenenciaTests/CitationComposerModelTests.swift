@@ -24,6 +24,9 @@ struct CitationComposerModelTests {
     private let relatedToPropertyID = "prop-related-to"
     private let rolePropertyID = "prop-role"
     private let relationshipTypePropertyID = "prop-relationship-type"
+    private let regionLocatorJSON = """
+    {"version":1,"selectors":[{"type":"artifact"},{"type":"region","unit":"normalized","points":[{"x":0.1,"y":0.1},{"x":0.4,"y":0.1},{"x":0.4,"y":0.4},{"x":0.1,"y":0.4}]}]}
+    """
 
     private func makeStore() -> FakeStore {
         let store = FakeStore()
@@ -160,6 +163,7 @@ struct CitationComposerModelTests {
         store: FakeStore,
         subjectID: String? = nil,
         citationID: String? = nil,
+        observationID: String? = nil,
         connectFrom: String? = nil,
         connectTo: String? = nil,
         bridge: String? = nil
@@ -178,7 +182,7 @@ struct CitationComposerModelTests {
                 subjectID: subjectID ?? self.subjectID,
                 citationID: citationID,
                 artifactID: "art-0",
-                observationID: nil
+                observationID: observationID
             )
         } else {
             entry = .addProperty(
@@ -195,21 +199,54 @@ struct CitationComposerModelTests {
         )
     }
 
+    @Test func addPropertyEntryOpensTheObservationWithThatSubject() async {
+        let store = makeStore()
+        seedArtifact(store)
+        let model = makeModel(store: store)
+        await model.prepare()
+        guard case .property(let draft) = model.authoring else {
+            Issue.record("expected the observation dialog")
+            return
+        }
+        #expect(draft.values.subjectID == subjectID)
+        #expect(CitationAuthoringNavigation.initialPropertyFocus(subjectID: draft.values.subjectID) == .property)
+        #expect(model.presented == .authoring)
+        #expect(model.subjectLabel == "Margt.")
+    }
+
+    @Test func editPropertyEntryOpensThatObservation() async {
+        let store = makeStore()
+        seedArtifact(store)
+        seedCitation(store, observations: [occupationObservation(id: "obs-1", ref: "OBS-ABC", citationID: "cit-1")])
+        let model = makeModel(store: store, citationID: "cit-1", observationID: "obs-1")
+        await model.prepare()
+        guard case .property(let values, let persistedID, _) = model.editSession?.kind else {
+            Issue.record("expected the edit dialog")
+            return
+        }
+        #expect(persistedID == "obs-1")
+        #expect(values.subjectID == subjectID)
+        #expect(values.propertyID == occupationPropertyID)
+        #expect(values.valueText == "miller")
+        #expect(model.activeCitationID == "cit-1")
+        #expect(model.editSession?.isDirty == false)
+    }
+
     @Test func firstRowSaveOnNewCreatesCitationAndExposesRef() async {
         let store = makeStore()
         seedArtifact(store)
         let model = makeModel(store: store)
         await model.prepare()
-        model.beginAddObservation()
-        let rowID = model.observations[0].id
-        model.updateObservationProperty(id: rowID, propertyID: occupationPropertyID)
-        model.updateObservationText(id: rowID, text: "miller")
-        await model.observationRows.commit(rowID: rowID)
+        model.beginPropertyDraft(subjectID: subjectID)
+        model.mutateProperty {
+            $0.values.propertyID = occupationPropertyID
+            $0.values.valueText = "miller"
+        }
+        await model.saveAuthoring()
         #expect(store.recordedCalls.contains { $0.hasPrefix("createCitationWithObservations observations=0") })
         #expect(store.recordedCalls.contains { $0.hasPrefix("addObservationsToCitation") })
         #expect(model.activeCitationID != nil)
-        #expect(model.observations[0].persistedRef == "OBS-FAKE1")
-        #expect(model.observations[0].state == .saved)
+        #expect(model.observations.contains { $0.persistedRef == "OBS-FAKE1" && $0.state == .saved })
     }
 
     @Test func draftHasNoRefLoadedHasStoredRef() async {
@@ -219,8 +256,13 @@ struct CitationComposerModelTests {
         let model = makeModel(store: store, citationID: "cit-1")
         await model.prepare()
         #expect(model.observations[0].persistedRef == "OBS-ABC")
-        model.beginAddObservation()
-        #expect(model.observations.last?.persistedRef == nil)
+        model.beginPropertyDraft(subjectID: subjectID)
+        #expect(model.observations.count == 1)
+        if case .property(let draft) = model.authoring {
+            #expect(draft.values.propertyID.isEmpty)
+        } else {
+            Issue.record("expected a property draft")
+        }
     }
 
     @Test func secondRowSaveCallsAdd() async {
@@ -229,12 +271,13 @@ struct CitationComposerModelTests {
         seedCitation(store, observations: [occupationObservation(id: "obs-1", ref: "OBS-ABC", citationID: "cit-1")])
         let model = makeModel(store: store, citationID: "cit-1")
         await model.prepare()
-        model.beginAddObservation()
-        let rowID = model.observations.last!.id
-        model.updateObservationProperty(id: rowID, propertyID: occupationPropertyID)
-        model.updateObservationText(id: rowID, text: "weaver")
+        model.beginPropertyDraft(subjectID: subjectID)
+        model.mutateProperty {
+            $0.values.propertyID = occupationPropertyID
+            $0.values.valueText = "weaver"
+        }
         store.recordedCalls = []
-        await model.observationRows.commit(rowID: rowID)
+        await model.saveAuthoring()
         #expect(store.recordedCalls.contains { $0.hasPrefix("addObservationsToCitation") })
         #expect(store.recordedCalls.contains { $0.hasPrefix("createCitationWithObservations") } == false)
     }
@@ -246,10 +289,10 @@ struct CitationComposerModelTests {
         let model = makeModel(store: store, citationID: "cit-1")
         await model.prepare()
         let rowID = model.observations[0].id
-        model.updateObservationText(id: rowID, text: "changed")
+        model.observationRows.applyText(rowID: rowID, text: "changed")
         #expect(model.observations[0].state == .edited)
         store.recordedCalls = []
-        await model.observationRows.commit(rowID: rowID)
+        await model.observationRows.commit(rowID: rowID, citation: model.fields.values)
         #expect(store.recordedCalls == ["updateObservation id=obs-1"])
     }
 
@@ -259,12 +302,11 @@ struct CitationComposerModelTests {
         seedCitation(store, observations: [occupationObservation(id: "obs-1", ref: "OBS-ABC", citationID: "cit-1")])
         let model = makeModel(store: store, citationID: "cit-1")
         await model.prepare()
-        model.beginAddObservation()
-        let draftID = model.observations.last!.id
-        model.observationRows.revert(rowID: draftID)
+        model.beginPropertyDraft(subjectID: subjectID)
+        model.discardAuthoring()
         #expect(model.observations.count == 1)
         let rowID = model.observations[0].id
-        model.updateObservationText(id: rowID, text: "changed")
+        model.observationRows.applyText(rowID: rowID, text: "changed")
         model.observationRows.revert(rowID: rowID)
         #expect(model.observations[0].valueText == "miller")
         #expect(model.observations[0].state == .saved)
@@ -299,7 +341,6 @@ struct CitationComposerModelTests {
         await model.confirmPendingImpact()
         #expect(store.recordedCalls.contains { $0 == "deleteCitation id=cit-1" })
         #expect(model.activeCitationID == nil)
-        #expect(model.isEditingExisting == false)
         #expect(store.citationsByID["cit-1"] == nil)
     }
 
@@ -417,11 +458,20 @@ struct CitationComposerModelTests {
         let model = makeModel(store: store, citationID: "cit-1")
         await model.prepare()
         store.recordedCalls = []
-        model.updateObservationSubject(id: model.observations[0].id, subjectID: eventID)
-        #expect(store.recordedCalls.isEmpty)
-        #expect(model.observations[0].propertyID.isEmpty)
-        #expect(model.observations[0].canSave == false)
-        #expect(model.observations[0].propertyError != nil)
+        model.beginPropertyDraft(subjectID: subjectID)
+        model.mutateProperty {
+            $0.values.propertyID = occupationPropertyID
+            $0.values.valueText = "miller"
+        }
+        model.selectAuthoringSubject(eventID, field: .propertySubject)
+        guard case .property(let draft) = model.authoring else {
+            Issue.record("expected a property draft")
+            return
+        }
+        #expect(draft.values.subjectID == eventID)
+        #expect(draft.values.propertyID.isEmpty)
+        #expect(draft.values.valueText.isEmpty)
+        #expect(model.authoringCanConfirm == false)
     }
 
     @Test func saveCitationOnNewAndSaved() async {
@@ -447,26 +497,24 @@ struct CitationComposerModelTests {
         seedArtifact(store)
         let model = makeModel(store: store)
         await model.prepare()
-        model.beginAddObservation()
-        model.beginAddObservation()
-        let firstID = model.observations[0].id
-        let secondID = model.observations[1].id
-        model.updateObservationProperty(id: firstID, propertyID: occupationPropertyID)
-        model.updateObservationText(id: firstID, text: "miller")
-        model.updateObservationProperty(id: secondID, propertyID: occupationPropertyID)
-        model.updateObservationText(id: secondID, text: "weaver")
-        async let first: Void = model.observationRows.commit(rowID: firstID)
-        async let second: Void = model.observationRows.commit(rowID: secondID)
-        _ = await (first, second)
+        model.beginPropertyDraft(subjectID: subjectID)
+        model.mutateProperty {
+            $0.values.propertyID = occupationPropertyID
+            $0.values.valueText = "miller"
+        }
+        await model.saveAuthoring()
+        model.mutateProperty {
+            $0.values.propertyID = occupationPropertyID
+            $0.values.valueText = "weaver"
+        }
+        await model.saveAuthoring()
         let creates = store.recordedCalls.filter { $0.hasPrefix("createCitationWithObservations") }
         #expect(creates.count == 1)
         #expect(creates.first == "createCitationWithObservations observations=0")
         let adds = store.recordedCalls.filter { $0.hasPrefix("addObservationsToCitation") }
         #expect(adds.count == 2)
         #expect(model.activeCitationID != nil)
-        #expect(model.observations[0].state == .saved)
-        #expect(model.observations[1].state == .saved)
-        #expect(Set(model.observations.compactMap(\.persistedID)).count == 2)
+        #expect(model.observations.filter { $0.state == .saved }.count == 2)
     }
 
     @Test func menusDisabledWithUnsavedWorkEnabledWithPendingConnection() async {
@@ -474,9 +522,9 @@ struct CitationComposerModelTests {
         seedArtifact(store)
         let model = makeModel(store: store)
         await model.prepare()
-        #expect(model.identityMenusDisabled == false)
+        #expect(model.hasUnsavedDocumentWork == false)
         model.transcription = "dirty"
-        #expect(model.identityMenusDisabled)
+        #expect(model.hasUnsavedDocumentWork)
         let connect = makeModel(
             store: store,
             connectFrom: subjectID,
@@ -484,13 +532,15 @@ struct CitationComposerModelTests {
             bridge: "participation"
         )
         await connect.prepare()
-        #expect(connect.connections.rows.first?.isPending == true)
-        #expect(connect.identityMenusDisabled == false)
-        connect.connections.applyTerm(
-            connectionID: connect.connections.rows[0].id,
-            termID: "term-witness"
-        )
-        #expect(connect.identityMenusDisabled == false)
+        if case .bridge(let draft) = connect.authoring {
+            #expect(draft.termID.isEmpty)
+            #expect(draft.holdsLeave)
+        } else {
+            Issue.record("Connect opens a bridge draft")
+        }
+        #expect(connect.hasUnsavedDocumentWork)
+        connect.mutateBridge { $0.termID = "term-witness" }
+        #expect(connect.hasUnsavedDocumentWork)
         #expect(connect.shouldHoldLeave)
         #expect(connect.shouldHoldNavigation(.back))
     }
@@ -514,12 +564,9 @@ struct CitationComposerModelTests {
             bridge: "participation"
         )
         await connect.prepare()
-        #expect(connect.shouldHoldNavigation(.back) == false)
-        connect.connections.applyTerm(
-            connectionID: connect.connections.rows[0].id,
-            termID: "term-witness"
-        )
         #expect(connect.shouldHoldNavigation(.back))
+        connect.discardAuthoring()
+        #expect(connect.shouldHoldNavigation(.back) == false)
     }
 
     @Test func editPrepareKeepsRegionLocatorAndIsNotDirty() async {
@@ -542,26 +589,40 @@ struct CitationComposerModelTests {
         #expect(model.shouldHoldNavigation(.back) == false)
     }
 
+    @Test func newCitationClearsThePreviousLocator() async {
+        let store = makeStore()
+        seedArtifact(store)
+        seedCitation(store, locatorJSON: regionLocatorJSON)
+        let model = makeModel(store: store, citationID: "cit-1")
+        await model.prepare()
+        #expect(model.fields.locator.hasRegion)
+        model.selectCitation(nil)
+        await model.awaitIdentitySwitch()
+        #expect(model.activeCitationID == nil)
+        #expect(model.fields.locator.isArtifactOnly)
+        #expect(model.fields.isDirty == false)
+    }
+
+    @Test func newCitationFromTheObservationDialogClearsTheLocator() async {
+        let store = makeStore()
+        seedArtifact(store)
+        seedCitation(store, locatorJSON: regionLocatorJSON)
+        let model = makeModel(store: store, citationID: "cit-1")
+        await model.prepare()
+        model.beginPropertyDraft(subjectID: subjectID)
+        model.selectCitation(nil)
+        await model.awaitIdentitySwitch()
+        #expect(model.activeCitationID == nil)
+        #expect(model.fields.locator.isArtifactOnly)
+        guard case .property = model.authoring else {
+            Issue.record("the observation dialog stays open")
+            return
+        }
+    }
+
     @Test func pendingConnectionOnNewAndExisting() async {
         let store = makeStore()
         seedArtifact(store)
-        seedCitation(store)
-        let existing = makeModel(store: store, citationID: "cit-1")
-        await existing.prepare()
-        existing.connections.seedPending(
-            fromSubjectID: subjectID,
-            toSubjectID: eventID,
-            fromLabel: "Margt.",
-            toLabel: "Birth",
-            bridgeTypeKey: "participation",
-            termProperty: store.propertiesByProject[projectDir]!.first { $0.id == rolePropertyID },
-            sentence: "pending"
-        )
-        existing.connections.applyTerm(connectionID: existing.connections.rows[0].id, termID: "term-witness")
-        store.recordedCalls = []
-        await existing.connections.saveConnection()
-        #expect(store.recordedCalls.contains { $0.hasPrefix("createCitedBridge citationID=cit-1 observations=3") })
-
         let fresh = makeModel(
             store: store,
             connectFrom: subjectID,
@@ -569,9 +630,9 @@ struct CitationComposerModelTests {
             bridge: "participation"
         )
         await fresh.prepare()
-        fresh.connections.applyTerm(connectionID: fresh.connections.rows[0].id, termID: "term-witness")
+        fresh.mutateBridge { $0.termID = "term-witness" }
         store.recordedCalls = []
-        await fresh.connections.saveConnection()
+        await fresh.saveAuthoring()
         #expect(store.recordedCalls.contains { $0.hasPrefix("createCitationWithObservations observations=0") })
         #expect(store.recordedCalls.contains { call in
             call.hasPrefix("createCitedBridge citationID=") && call.contains("observations=3")
@@ -591,11 +652,19 @@ struct CitationComposerModelTests {
             bridge: "participation"
         )
         await model.prepare()
-        #expect(model.connections.rows.contains { $0.isPending })
+        if case .bridge = model.authoring {} else {
+            Issue.record("Connect opens one bridge draft")
+        }
         model.selectCitation("cit-1")
         await model.awaitIdentitySwitch()
-        #expect(model.connections.rows.contains { $0.isPending })
+        #expect(model.pendingLeave == nil)
         #expect(model.activeCitationID == "cit-1")
+        guard case .bridge(let draft) = model.authoring else {
+            Issue.record("the bridge draft stays open")
+            return
+        }
+        #expect(draft.endA == subjectID)
+        #expect(draft.endB == eventID)
     }
 
     @Test func pendingLocationCanSaveWithoutTermAndIsNeverTouched() async {
@@ -608,15 +677,23 @@ struct CitationComposerModelTests {
             bridge: "location"
         )
         await model.prepare()
-        let pending = model.connections.rows[0]
-        #expect(pending.canSave)
-        #expect(pending.isTouched == false)
-        #expect(pending.termProperty == nil)
-        #expect(model.shouldHoldNavigation(.back) == false)
+        guard case .bridge(let draft) = model.authoring else {
+            Issue.record("location connect opens a bridge draft")
+            return
+        }
+        let pair = CitationComposerAuthoring.resolvePair(
+            endA: draft.endA, endB: draft.endB, termID: "", vocabulary: model.vocabulary
+        )
+        guard case .ready(let ready) = pair else {
+            Issue.record("event and place should be ready")
+            return
+        }
+        #expect(ready.termProperty == nil)
+        #expect(model.shouldHoldNavigation(.back))
         model.transcription = "dirty"
         #expect(model.shouldHoldNavigation(.back))
         store.recordedCalls = []
-        await model.connections.saveConnection()
+        await model.saveAuthoring()
         #expect(store.recordedCalls.contains { $0.hasPrefix("createCitationWithObservations observations=0") })
         #expect(store.recordedCalls.contains { call in
             call.hasPrefix("createCitedBridge citationID=") && call.contains("observations=2")
@@ -689,42 +766,35 @@ struct CitationComposerModelTests {
         #expect(row.polarityMenuTitle == L10n.string(L10n.CitationComposer.affirmObservation))
     }
 
-    @Test func nameDialogApplyOnlyUpdatesRow() async {
-        let store = makeStore()
-        seedArtifact(store)
-        seedCitation(
-            store,
-            observations: [
-                CatalogObservation(
-                    id: "obs-name",
-                    ref: "OBS-N",
-                    citationID: "cit-1",
-                    subjectID: subjectID,
-                    propertyID: namePropertyID,
-                    polarity: ObservationPolarity.positive.rawValue,
-                    valueText: "Ada",
-                    valueInteger: nil,
-                    valueDateID: "",
-                    valueNameID: "",
-                    nameForm: "Ada",
-                    valueSubjectID: "",
-                    valueTermID: "",
-                    propertyKey: "name",
-                    propertyLabel: "Name",
-                    propertyValueType: "name"
-                ),
+    @Test func nameRowUsesDisplayOrderNotTheStoredForm() {
+        let fields = CitationObservationValue.Fields(
+            nameDraft: NameValueDraft(
+                form: "Gumtree, Jeremiah Arthurt",
+                parts: [
+                    CatalogNameValuePart(value: "Jeremiah", type: "given"),
+                    CatalogNameValuePart(value: "Arthur", type: "given"),
+                    CatalogNameValuePart(value: "Gumtree", type: "surname"),
+                ]
+            )
+        )
+        let orders = NameFormatOrders(
+            natural: [
+                NameFormatPart(partType: "given", trailingSeparator: ""),
+                NameFormatPart(partType: "surname", trailingSeparator: ""),
+            ],
+            sorted: [
+                NameFormatPart(partType: "surname", trailingSeparator: ", "),
+                NameFormatPart(partType: "given", trailingSeparator: ""),
             ]
         )
-        let model = makeModel(store: store, citationID: "cit-1")
-        await model.prepare()
-        model.beginEditObservation(model.observations[0])
-        var draft = model.observationDialog!
-        draft.nameDraft = NameValueDraft(form: "Ada Lovelace", parts: [], formTouched: true)
-        model.updateObservationDialog(draft)
-        store.recordedCalls = []
-        model.confirmObservationDialog()
-        #expect(store.recordedCalls.isEmpty)
-        #expect(model.observations[0].state == .edited)
+        #expect(
+            CitationObservationValue.summary(
+                valueType: PropertyValueType.name.rawValue,
+                fields: fields,
+                termLabel: nil,
+                orders: orders
+            ) == "Jeremiah Arthur Gumtree"
+        )
     }
 
     @Test func loadingBridgeEdgesYieldsOneConnectionAndKeepsExtraRole() async {
@@ -763,10 +833,10 @@ struct CitationComposerModelTests {
             bridge: "participation"
         )
         await model.prepare()
-        model.connections.applyTerm(connectionID: model.connections.rows[0].id, termID: "term-witness")
+        model.mutateBridge { $0.termID = "term-witness" }
         let before = model.observations.count
-        await model.connections.saveConnection()
-        #expect(model.connections.rows[0].isPending == false)
+        await model.saveAuthoring()
+        #expect(model.observations.filter { $0.persistedID != nil }.count >= before)
         #expect(model.observations.count == before)
         #expect(model.vocabulary.graphSubjects.contains { $0.typeKey == "participation" })
     }
@@ -819,18 +889,16 @@ struct CitationComposerModelTests {
         seedArtifact(store)
         let model = makeModel(store: store)
         await model.prepare()
-        model.beginAddObservation()
-        let rowID = model.observations[0].id
-        model.beginNewSubject(typeKey: "person", rowID: rowID)
+        model.beginPropertyDraft(subjectID: "")
+        model.beginNewSubject(typeKey: "person", field: .propertySubject)
         model.newSubjectDraft?.label = "Ada"
         store.recordedCalls = []
         await model.confirmNewSubject()
         #expect(model.landingColumn != nil)
         #expect(store.recordedCalls.contains { $0.hasPrefix("createSubject") && $0.contains("placement=") })
         let firstColumn = model.landingColumn
-        model.beginAddObservation()
-        let secondID = model.observations.last!.id
-        model.beginNewSubject(typeKey: "person", rowID: secondID)
+        model.beginPropertyDraft(subjectID: "")
+        model.beginNewSubject(typeKey: "person", field: .propertySubject)
         model.newSubjectDraft?.label = "Ben"
         await model.confirmNewSubject()
         #expect(model.landingColumn == firstColumn)
@@ -844,7 +912,7 @@ struct CitationComposerModelTests {
         model.session.apply(.mutatedSourceGraph(sourceId: sourceID))
         #expect(model.isGraphReloading)
         model.beginAddObservation()
-        model.beginNewSubject(typeKey: "person", rowID: model.observations[0].id)
+        model.beginNewSubject(typeKey: "person", field: .propertySubject)
         #expect(model.newSubjectDraft == nil)
     }
 
@@ -868,6 +936,108 @@ struct CitationComposerModelTests {
         await model.awaitIdentitySwitch()
         #expect(model.activeCitationID == "cit-b")
         #expect(model.transcription == "B")
+    }
+
+    @Test func modalCitationSwitchUpdatesTheOpenCitationAndKeepsTheDraft() async {
+        let store = makeStore()
+        seedArtifact(store)
+        store.citationsByID["cit-a"] = CatalogCitation(
+            id: "cit-a", ref: "CIT-A", artifactID: "art-0",
+            locatorJSON: #"{"version":1,"selectors":[{"type":"artifact"}]}"#,
+            transcription: "A", description: "", transcriptionUncertain: false, transcriptionNote: ""
+        )
+        store.citationsByID["cit-b"] = CatalogCitation(
+            id: "cit-b", ref: "CIT-B", artifactID: "art-0",
+            locatorJSON: #"{"version":1,"selectors":[{"type":"artifact"}]}"#,
+            transcription: "B", description: "Schedule B", transcriptionUncertain: false, transcriptionNote: ""
+        )
+        let model = makeModel(store: store)
+        await model.prepare()
+        model.mutateProperty { $0.values.propertyID = occupationPropertyID }
+        model.setAuthoringCitation("cit-b")
+        await model.awaitIdentitySwitch()
+        #expect(model.activeCitationID == "cit-b")
+        #expect(model.authoringCitationID == "cit-b")
+        #expect(model.transcription == "B")
+        #expect(model.citationDescription == "Schedule B")
+        guard case .property(let draft) = model.authoring else {
+            Issue.record("the observation dialog stays open")
+            return
+        }
+        #expect(draft.values.subjectID == subjectID)
+        #expect(draft.values.propertyID == occupationPropertyID)
+        model.selectCitation("cit-a")
+        await model.awaitIdentitySwitch()
+        #expect(model.activeCitationID == "cit-a")
+        #expect(model.authoringCitationID == "cit-a")
+        #expect(model.transcription == "A")
+        guard case .property(let still) = model.authoring else {
+            Issue.record("the page citation menu keeps the dialog open")
+            return
+        }
+        #expect(still.values.subjectID == subjectID)
+        #expect(store.recordedCalls.contains { $0.hasPrefix("getCitation") } == false)
+    }
+
+    @Test func dirtyCitationSwitchAsksAndKeepsTheDraft() async {
+        let store = makeStore()
+        seedArtifact(store)
+        store.citationsByID["cit-a"] = CatalogCitation(
+            id: "cit-a", ref: "CIT-A", artifactID: "art-0",
+            locatorJSON: #"{"version":1,"selectors":[{"type":"artifact"}]}"#,
+            transcription: "A", description: "", transcriptionUncertain: false, transcriptionNote: ""
+        )
+        store.citationsByID["cit-b"] = CatalogCitation(
+            id: "cit-b", ref: "CIT-B", artifactID: "art-0",
+            locatorJSON: #"{"version":1,"selectors":[{"type":"artifact"}]}"#,
+            transcription: "B", description: "", transcriptionUncertain: false, transcriptionNote: ""
+        )
+        let model = makeModel(store: store)
+        await model.prepare()
+        model.beginPropertyDraft(subjectID: subjectID)
+        model.mutateProperty { $0.values.propertyID = occupationPropertyID }
+        model.selectCitation("cit-b")
+        await model.awaitIdentitySwitch()
+        model.transcription = "unsaved note"
+        model.selectCitation("cit-a")
+        #expect(model.pendingLeave?.keepDraft == true)
+        #expect(model.activeCitationID == "cit-b")
+        #expect(model.transcription == "unsaved note")
+        model.keepEditingAfterLeave()
+        #expect(model.pendingLeave == nil)
+        #expect(model.activeCitationID == "cit-b")
+        #expect(model.transcription == "unsaved note")
+        model.selectCitation("cit-a")
+        model.discardLeaveChanges()
+        await model.awaitIdentitySwitch()
+        #expect(model.activeCitationID == "cit-a")
+        #expect(model.transcription == "A")
+        #expect(model.fields.isDirty == false)
+        guard case .property(let draft) = model.authoring else {
+            Issue.record("discarding the citation edit keeps the observation draft")
+            return
+        }
+        #expect(draft.values.subjectID == subjectID)
+        #expect(draft.values.propertyID == occupationPropertyID)
+    }
+
+    @Test func savePropertyKeepsDirtyTranscription() async {
+        let store = makeStore()
+        seedArtifact(store)
+        seedCitation(store)
+        let model = makeModel(store: store, citationID: "cit-1", observationID: "")
+        await model.prepare()
+        #expect(model.editSession == nil)
+        model.transcription = "edited before save"
+        model.beginPropertyDraft(subjectID: subjectID)
+        model.mutateProperty {
+            $0.values.propertyID = occupationPropertyID
+            $0.values.valueText = "miller"
+        }
+        await model.saveAuthoring()
+        #expect(model.transcription == "edited before save")
+        #expect(model.fields.isDirty)
+        #expect(model.citationDescription == "")
     }
 
     @Test func connectEntryIgnoresLegacyTermAndGrid() throws {
@@ -930,29 +1100,18 @@ struct CitationComposerModelTests {
         seedArtifact(store)
         let model = makeModel(store: store)
         await model.prepare()
-        model.beginAddObservation()
-        let rowID = model.observations[0].id
-        model.updateObservationProperty(id: rowID, propertyID: occupationPropertyID)
-        model.beginAddCustomTerm(rowID: rowID)
+        model.beginPropertyDraft(subjectID: subjectID)
+        model.mutateProperty { $0.values.propertyID = occupationPropertyID }
+        model.beginAddCustomTerm(propertyID: occupationPropertyID)
         model.customTermDraft?.label = "Weaver"
         await model.confirmCustomTerm()
         #expect(model.customTermDraft == nil)
-        #expect(model.observations[0].valueTermID.isEmpty == false)
+        if case .property(let draft) = model.authoring {
+            #expect(draft.values.valueTermID.isEmpty == false)
+        } else {
+            Issue.record("the term should land on the draft")
+        }
         #expect(store.propertyTermsByProperty[occupationPropertyID]?.contains { $0.label == "Weaver" } == true)
-    }
-
-    @Test func presentingObservationClearsCustomTermModal() async {
-        let store = makeStore()
-        seedArtifact(store)
-        let model = makeModel(store: store)
-        await model.prepare()
-        model.beginAddObservation()
-        let rowID = model.observations[0].id
-        model.beginAddCustomTerm(rowID: rowID)
-        #expect(model.customTermDraft != nil)
-        model.beginEditObservation(model.observations[0])
-        #expect(model.customTermDraft == nil)
-        #expect(model.observationDialog != nil)
     }
 
     private func type(id: String, key: String, label: String, prefix: String) -> CatalogSubjectType {
@@ -1008,6 +1167,367 @@ struct CitationComposerModelTests {
         )
     }
 
+    @Test func propertyAndBridgeShareTheAuthoringBox() async {
+        let store = makeStore()
+        seedArtifact(store)
+        seedCitation(store)
+        let model = makeModel(store: store, citationID: "cit-1")
+        await model.prepare()
+        model.beginPropertyDraft(subjectID: subjectID)
+        if case .property = model.authoring {} else {
+            Issue.record("expected a property draft")
+        }
+        model.beginBridgeDraft(endA: subjectID, endB: eventID, termID: "", origin: .blank)
+        if case .bridge(let draft) = model.authoring {
+            #expect(draft.endA == subjectID)
+            #expect(draft.termID.isEmpty)
+        } else {
+            Issue.record("expected a bridge draft")
+        }
+        if case .property = model.authoring {
+            Issue.record("property draft should have been replaced")
+        }
+    }
+
+    @Test func savedBridgeIsListedUnderBothEnds() async {
+        let store = makeStore()
+        seedArtifact(store)
+        seedCitation(store)
+        let model = makeModel(store: store, citationID: "cit-1")
+        await model.prepare()
+        let bridgeID = "018f0000-0000-7000-8000-000000000001"
+        model.connections.replaceSaved([
+            ConnectionRow(
+                id: UUID(),
+                isPending: false,
+                fromSubjectID: subjectID,
+                toSubjectID: eventID,
+                fromLabel: "Margt.",
+                toLabel: "Birth",
+                bridgeTypeKey: "participation",
+                bridgeID: bridgeID,
+                bridgeRef: "CPT-1",
+                sentence: "",
+                termProperty: store.propertiesByProject[projectDir]!.first { $0.id == rolePropertyID },
+                rolePersistedID: "obs-role",
+                rolePersistedRef: "OBS-R",
+                roleTermID: "term-witness",
+                roleBaselineTermID: "term-witness",
+                termTouched: false,
+                isSaving: false
+            ),
+        ])
+        let groups = model.subjectGroups
+        let person = groups.first { $0.subjectID == subjectID }
+        let event = groups.first { $0.subjectID == eventID }
+        #expect(person?.lines.contains { $0.bridgeID == bridgeID } == true)
+        #expect(event?.lines.contains { $0.bridgeID == bridgeID } == true)
+        #expect(person?.lines.first?.body.contains("Birth") == true)
+        model.beginEdit(line: person!.lines[0])
+        if case .bridge(_, _, let termID, let editedID, _, _) = model.editSession?.kind {
+            #expect(editedID == bridgeID)
+            #expect(termID == "term-witness")
+        } else {
+            Issue.record("edit should open the one bridge")
+        }
+    }
+
+    @Test func duplicateDoesNotWriteAndConfirmsADirtyDraft() async {
+        let store = makeStore()
+        seedArtifact(store)
+        seedCitation(
+            store,
+            observations: [occupationObservation(id: "obs-1", ref: "OBS-ABC", citationID: "cit-1")]
+        )
+        let model = makeModel(store: store, citationID: "cit-1")
+        await model.prepare()
+        let line = model.subjectGroups.flatMap(\.lines).first { $0.observationID == "obs-1" }
+        #expect(line != nil)
+        store.recordedCalls = []
+        model.duplicate(line: line!)
+        #expect(store.recordedCalls.isEmpty)
+        if case .property(let draft) = model.authoring {
+            #expect(draft.isDuplicate)
+            #expect(draft.values.valueText == "miller")
+        } else {
+            Issue.record("duplicate should open a property draft")
+        }
+        model.mutateProperty { $0.values.valueText = "changed" }
+        model.duplicate(line: line!)
+        #expect(model.pendingLeave != nil)
+        if case .property(let draft) = model.authoring {
+            #expect(draft.values.valueText == "changed")
+        }
+        model.discardLeaveChanges()
+        if case .property(let draft) = model.authoring {
+            #expect(draft.values.valueText == "miller")
+        } else {
+            Issue.record("confirm should replace the dirty draft")
+        }
+    }
+
+    @Test func connectSeedsAnEmptyRole() async {
+        let store = makeStore()
+        seedArtifact(store)
+        seedCitation(store)
+        let model = makeModel(
+            store: store,
+            citationID: "cit-1",
+            connectFrom: subjectID,
+            connectTo: eventID,
+            bridge: "participation"
+        )
+        await model.prepare()
+        if case .bridge(let draft) = model.authoring {
+            #expect(draft.endA == subjectID)
+            #expect(draft.endB == eventID)
+            #expect(draft.termID.isEmpty)
+            #expect(draft.origin == .graph)
+            #expect(
+                CitationAuthoringNavigation.initialBridgeFocus(
+                    endA: draft.endA,
+                    endB: draft.endB,
+                    hasTermField: true,
+                    termID: draft.termID
+                ) == .term
+            )
+        } else {
+            Issue.record("Connect should open a bridge draft")
+        }
+    }
+
+    @Test func personAndPlaceCannotSave() async {
+        let store = makeStore()
+        seedArtifact(store)
+        let model = makeModel(store: store)
+        await model.prepare()
+        let pair = CitationComposerAuthoring.resolvePair(
+            endA: subjectID,
+            endB: placeID,
+            termID: "",
+            vocabulary: model.vocabulary
+        )
+        guard case .refused = pair else {
+            Issue.record("person and place should be refused, got \(pair)")
+            return
+        }
+    }
+
+    @Test func saveKeepsTheSubject() async {
+        let store = makeStore()
+        seedArtifact(store)
+        seedCitation(store)
+        let model = makeModel(store: store, citationID: "cit-1")
+        await model.prepare()
+        model.beginPropertyDraft(subjectID: subjectID)
+        model.mutateProperty {
+            $0.values.propertyID = occupationPropertyID
+            $0.values.valueText = "miller"
+        }
+        await model.saveAuthoring()
+        if case .property(let draft) = model.authoring {
+            #expect(draft.values.subjectID == subjectID)
+            #expect(draft.values.propertyID.isEmpty)
+            #expect(draft.values.valueText.isEmpty)
+            #expect(draft.holdsLeave == false)
+        } else {
+            Issue.record("the box should stay open on the subject")
+        }
+    }
+
+    @Test func citationPreviewFallsBack() {
+        #expect(CitationComposerAuthoring.preview(transcription: "line", description: "desc") == .text("line"))
+        #expect(CitationComposerAuthoring.preview(transcription: "", description: "desc") == .text("desc"))
+        #expect(CitationComposerAuthoring.preview(transcription: "  ", description: "") == .empty)
+    }
+
+    @Test func steppingWithDirtyCitationFieldsAsks() async {
+        let store = makeStore()
+        seedArtifact(store)
+        store.artifactsBySource[sourceID]?.append(
+            CatalogArtifact(
+                id: "art-1",
+                ref: "ART-1",
+                sourceID: sourceID,
+                fileID: "file-1",
+                label: "Scan 2",
+                description: "",
+                file: CatalogFileRef(
+                    id: "file-1",
+                    relPath: "objects/file-1.pdf",
+                    originalFilename: "scan-2.pdf",
+                    mediaType: "application/pdf",
+                    byteSize: 10
+                )
+            )
+        )
+        seedCitation(store)
+        let model = makeModel(store: store, citationID: "cit-1")
+        await model.prepare()
+        model.transcription = "unsaved"
+        model.requestSelectArtifact("art-1")
+        #expect(model.pendingLeave != nil)
+        #expect(model.activeCitationID == "cit-1")
+        model.keepEditingAfterLeave()
+        #expect(model.pendingLeave == nil)
+        #expect(model.transcription == "unsaved")
+    }
+
+    @Test func customTermReturnsToTheNewObservationDialog() async {
+        let store = makeStore()
+        seedArtifact(store)
+        let model = makeModel(store: store)
+        await model.prepare()
+        model.beginPropertyDraft(subjectID: subjectID)
+        model.beginAddCustomTerm(propertyID: occupationPropertyID)
+        guard case .customTerm(_, let over) = model.presented else {
+            Issue.record("custom term should open over the new observation")
+            return
+        }
+        #expect(over == .authoring)
+        model.customTermDraft?.label = "Weaver"
+        model.cancelCustomTermDialog()
+        #expect(model.presented == .authoring)
+        #expect(model.customTermDraft == nil)
+        if case .property = model.authoring {} else {
+            Issue.record("the new observation draft should still be open")
+        }
+    }
+
+    @Test func keepEditingRestoresACustomTermDraft() async {
+        let store = makeStore()
+        seedArtifact(store)
+        let model = makeModel(store: store)
+        await model.prepare()
+        model.beginPropertyDraft(subjectID: subjectID)
+        model.mutateProperty {
+            $0.values.propertyID = occupationPropertyID
+            $0.values.valueText = "miller"
+        }
+        model.beginAddCustomTerm(propertyID: occupationPropertyID)
+        model.customTermDraft?.label = "Weaver"
+        #expect(model.shouldHoldNavigation(.back))
+        guard case .leave(_, let returnTo) = model.presented,
+              case .customTerm(let draft, .authoring) = returnTo
+        else {
+            Issue.record("leave should return to the custom term, got \(String(describing: model.presented))")
+            return
+        }
+        #expect(draft.label == "Weaver")
+        model.keepEditingAfterLeave()
+        guard case .customTerm(let restored, .authoring) = model.presented else {
+            Issue.record("keep editing should reopen the custom term")
+            return
+        }
+        #expect(restored.label == "Weaver")
+    }
+
+    @Test func discardingLeaveDropsTheChildDialog() async {
+        let store = makeStore()
+        seedArtifact(store)
+        let model = makeModel(store: store)
+        await model.prepare()
+        model.beginPropertyDraft(subjectID: subjectID)
+        model.mutateProperty { $0.values.valueText = "miller" }
+        model.beginAddCustomTerm(propertyID: occupationPropertyID)
+        model.customTermDraft?.label = "Weaver"
+        #expect(model.shouldHoldNavigation(.back))
+        model.discardLeaveChanges()
+        #expect(model.presented == nil)
+        #expect(model.customTermDraft == nil)
+        #expect(model.authoring == .rest)
+    }
+
+    @Test func keepEditingRestoresTheEditDialog() async {
+        let store = makeStore()
+        seedArtifact(store)
+        seedCitation(store, observations: [occupationObservation(id: "obs-1", ref: "OBS-ABC", citationID: "cit-1")])
+        let model = makeModel(store: store, citationID: "cit-1")
+        await model.prepare()
+        #expect(model.beginEdit(observationID: "obs-1", subjectID: subjectID))
+        model.mutateEdit { session in
+            guard case .property(var values, let id, let ref) = session.kind else { return }
+            values.valueText = "changed"
+            session.kind = .property(values: values, persistedID: id, persistedRef: ref)
+        }
+        #expect(model.shouldHoldNavigation(.back))
+        guard case .leave(_, let returnTo) = model.presented else {
+            Issue.record("leave should be showing")
+            return
+        }
+        #expect(returnTo == .edit)
+        model.keepEditingAfterLeave()
+        #expect(model.presented == .edit)
+        if case .property(let values, _, _) = model.editSession?.kind {
+            #expect(values.valueText == "changed")
+        } else {
+            Issue.record("the edit session should still hold the draft")
+        }
+    }
+
+    @Test func newSubjectFromTheEditDialogSelectsIt() async {
+        let store = makeStore()
+        seedArtifact(store)
+        seedCitation(store, observations: [occupationObservation(id: "obs-1", ref: "OBS-ABC", citationID: "cit-1")])
+        let model = makeModel(store: store, citationID: "cit-1")
+        await model.prepare()
+        #expect(model.beginEdit(observationID: "obs-1", subjectID: subjectID))
+        model.beginNewSubject(typeKey: "person", field: .propertySubject)
+        guard case .newSubject(_, let over) = model.presented else {
+            Issue.record("new subject should open over the edit dialog")
+            return
+        }
+        #expect(over == .edit)
+        model.newSubjectDraft?.label = "Ada"
+        await model.confirmNewSubject()
+        #expect(model.presented == .edit)
+        #expect(model.authoring == .rest)
+        guard case .property(let values, _, _) = model.editSession?.kind else {
+            Issue.record("the edit dialog should still be a property observation")
+            return
+        }
+        let created = store.subjectsBySource[sourceID]?.last
+        #expect(values.subjectID == created?.id)
+        #expect(values.subjectID != subjectID)
+    }
+
+    @Test func saveEditClosesTheDialog() async {
+        let store = makeStore()
+        seedArtifact(store)
+        seedCitation(store, observations: [occupationObservation(id: "obs-1", ref: "OBS-ABC", citationID: "cit-1")])
+        let model = makeModel(store: store, citationID: "cit-1")
+        await model.prepare()
+        #expect(model.beginEdit(observationID: "obs-1", subjectID: subjectID))
+        model.mutateEdit { session in
+            guard case .property(var values, let id, let ref) = session.kind else { return }
+            values.valueText = "changed"
+            session.kind = .property(values: values, persistedID: id, persistedRef: ref)
+        }
+        store.recordedCalls = []
+        await model.saveEdit()
+        #expect(model.presented == nil)
+        #expect(model.editSession == nil)
+        #expect(store.recordedCalls.contains("updateObservation id=obs-1"))
+    }
+
+    @Test func saveEditKeepsTheDialogWhenThePropertyIsMissing() async {
+        let store = makeStore()
+        seedArtifact(store)
+        seedCitation(store, observations: [occupationObservation(id: "obs-1", ref: "OBS-ABC", citationID: "cit-1")])
+        let model = makeModel(store: store, citationID: "cit-1")
+        await model.prepare()
+        #expect(model.beginEdit(observationID: "obs-1", subjectID: subjectID))
+        model.mutateEdit { session in
+            guard case .property(var values, let id, let ref) = session.kind else { return }
+            values.propertyID = "missing"
+            session.kind = .property(values: values, persistedID: id, persistedRef: ref)
+        }
+        await model.saveEdit()
+        #expect(model.presented == .edit)
+        #expect(model.editSession?.error != nil)
+        #expect(model.editSession?.isSaving == false)
+    }
+
     private func storeKey(_ propertyID: String) -> String {
         switch propertyID {
         case personEdgePropertyID: return "person"
@@ -1019,65 +1539,64 @@ struct CitationComposerModelTests {
 }
 
 @Suite
-struct CitationComposerObservationWindowingTests {
-    @Test func shortListBuildsEveryRow() {
-        let layout = CitationComposerObservationWindowing.layout(
-            rowHeights: [10, 10, 10],
-            spacing: 2,
-            blockMinY: -400,
-            viewportHeight: 800,
-            overscan: 100
-        )
-        #expect(layout == .init(start: 0, end: 3, topSpacer: 0, bottomSpacer: 0))
+struct CitationAuthoringNavigationTests {
+    @Test func propertyDraftWalksSubjectThenPropertyThenValue() {
+        #expect(CitationAuthoringNavigation.next(after: .subject) == .property)
+        #expect(CitationAuthoringNavigation.next(after: .property) == .value)
+        #expect(CitationAuthoringNavigation.next(after: .value) == nil)
     }
 
-    @Test func unknownViewportBuildsTheFirstPage() {
-        let heights = Array(repeating: CGFloat(10), count: 20)
-        let layout = CitationComposerObservationWindowing.layout(
-            rowHeights: heights,
-            spacing: 2,
-            blockMinY: 0,
-            viewportHeight: 0,
-            overscan: 100
-        )
-        #expect(layout.start == 0)
-        #expect(layout.end == CitationComposerObservationWindowing.fullCount)
-        #expect(layout.topSpacer == 0)
-        #expect(layout.bottomSpacer == CitationComposerObservationWindowing.stackHeight(
-            Array(heights[layout.end...]),
-            spacing: 2
-        ))
+    @Test func bridgeDraftWalksTheEndsAndStopsWhenThereIsNoTerm() {
+        #expect(CitationAuthoringNavigation.next(after: .endA) == .endB)
+        #expect(CitationAuthoringNavigation.next(after: .endB) == nil)
+        #expect(CitationAuthoringNavigation.next(
+            after: .endB,
+            draftAfterCommit: CitationAuthoringDraftAfterCommit(bridgeHasTerm: true)
+        ) == .term)
+        #expect(CitationAuthoringNavigation.next(
+            after: .term,
+            draftAfterCommit: CitationAuthoringDraftAfterCommit(bridgeHasTerm: true)
+        ) == nil)
     }
 
-    @Test func scrolledWindowKeepsTheSkippedRowsInSpacers() {
-        let layout = CitationComposerObservationWindowing.layout(
-            rowHeights: Array(repeating: 10, count: 20),
-            spacing: 2,
-            blockMinY: -12,
-            viewportHeight: 10,
-            overscan: 0
-        )
-        #expect(layout.start == 1)
-        #expect(layout.end == 2)
-        #expect(layout.topSpacer == 10)
-        #expect(layout.bottomSpacer == CitationComposerObservationWindowing.stackHeight(
-            Array(repeating: 10, count: 18),
-            spacing: 2
-        ))
+    @Test func creatingASubjectDoesNotAdvance() {
+        #expect(CitationAuthoringNavigation.shouldAdvance("sub-1"))
+        #expect(!CitationAuthoringNavigation.shouldAdvance(""))
+        #expect(!CitationAuthoringNavigation.shouldAdvance("  "))
+        #expect(!CitationAuthoringNavigation.shouldAdvance(CitationComposerModel.newSubjectPrefix + "person"))
     }
 
-    @Test func blockBelowTheViewportBuildsNoRows() {
-        let heights = Array(repeating: CGFloat(10), count: 20)
-        let layout = CitationComposerObservationWindowing.layout(
-            rowHeights: heights,
-            spacing: 2,
-            blockMinY: 2_000,
-            viewportHeight: 800,
-            overscan: 100
-        )
-        #expect(layout.start == 0)
-        #expect(layout.end == 0)
-        #expect(layout.topSpacer == 0)
-        #expect(layout.bottomSpacer == CitationComposerObservationWindowing.stackHeight(heights, spacing: 2))
+    @Test func tabAlwaysMovesToTheFieldAfterTheCommit() {
+        let withTerm = CitationAuthoringDraftAfterCommit(bridgeHasTerm: true)
+        #expect(CitationAuthoringNavigation.tabDestination(
+            from: .subject, committed: "sub-1", via: .tab, draftAfterCommit: CitationAuthoringDraftAfterCommit()
+        ) == .property)
+        #expect(CitationAuthoringNavigation.tabDestination(
+            from: .subject, committed: "sub-2", via: .tab, draftAfterCommit: CitationAuthoringDraftAfterCommit()
+        ) == .property)
+        #expect(CitationAuthoringNavigation.tabDestination(
+            from: .property, committed: "prop-1", via: .tab, draftAfterCommit: CitationAuthoringDraftAfterCommit()
+        ) == .value)
+        #expect(CitationAuthoringNavigation.tabDestination(
+            from: .property, committed: "prop-1", via: .click, draftAfterCommit: CitationAuthoringDraftAfterCommit()
+        ) == nil)
+        #expect(CitationAuthoringNavigation.tabDestination(
+            from: .property, committed: "prop-1", via: .return, draftAfterCommit: CitationAuthoringDraftAfterCommit()
+        ) == nil)
+        #expect(CitationAuthoringNavigation.tabDestination(
+            from: .endB, committed: "end-b", via: .tab, draftAfterCommit: withTerm
+        ) == .term)
+        #expect(CitationAuthoringNavigation.tabDestination(
+            from: .endB, committed: "end-b", via: .tab, draftAfterCommit: CitationAuthoringDraftAfterCommit()
+        ) == nil)
+        #expect(CitationAuthoringNavigation.tabDestination(
+            from: .value, committed: "kept", via: .tab, draftAfterCommit: CitationAuthoringDraftAfterCommit()
+        ) == nil)
+        #expect(CitationAuthoringNavigation.tabDestination(
+            from: .subject,
+            committed: CitationComposerModel.newSubjectPrefix + "person",
+            via: .tab,
+            draftAfterCommit: CitationAuthoringDraftAfterCommit()
+        ) == nil)
     }
 }

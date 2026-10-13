@@ -1664,7 +1664,7 @@ message Citation {
   string artifact_id = 3;
   string locator_json = 4;
   string transcription = 5;
-  string description = 6;
+  string label = 6;
   bool transcription_uncertain = 7;
   string transcription_note = 8;
 }
@@ -1713,7 +1713,7 @@ message CreateCitationWithObservationsRequest {
   string artifact_id = 3;
   string locator_json = 4;
   string transcription = 5;
-  string description = 6;
+  string label = 6;
   bool transcription_uncertain = 7;
   string transcription_note = 8;
   repeated string citation_notes = 9;
@@ -1764,6 +1764,8 @@ message CitationCountsBySourceResponse {
 message ListedCitation {
   Citation citation = 1;
   int32 observation_count = 2;
+  // Person labels this Citation names, earliest Observation first, capped.
+  repeated string subject_names = 3;
 }
 
 message ListCitationsByArtifactRequest {
@@ -1799,7 +1801,7 @@ message CreateCitedBridgeRequest {
   string artifact_id = 11;
   string locator_json = 12;
   string transcription = 13;
-  string citation_description = 14;
+  string citation_label = 14;
   bool transcription_uncertain = 15;
   string transcription_note = 16;
   repeated string citation_notes = 17;
@@ -1820,7 +1822,7 @@ message UpdateCitationRequest {
   string citation_id = 3;
   string locator_json = 4;
   string transcription = 5;
-  string description = 6;
+  string label = 6;
   bool transcription_uncertain = 7;
   string transcription_note = 8;
 }

@@ -28,18 +28,12 @@ enum CitationObservationValue {
         )
     }
 
-    static func fields(from draft: CitationComposerModel.ObservationDialogState) -> Fields {
-        Fields(
-            valueText: draft.valueText,
-            valueIntegerText: draft.valueIntegerText,
-            valueTermID: draft.valueTermID,
-            valueSubjectID: "",
-            dateDraft: draft.dateDraft,
-            nameDraft: draft.nameDraft
-        )
-    }
-
-    static func summary(valueType: String, fields: Fields, termLabel: String?) -> String {
+    static func summary(
+        valueType: String,
+        fields: Fields,
+        termLabel: String?,
+        orders: NameFormatOrders = NameFormatOrders()
+    ) -> String {
         switch valueType {
         case PropertyValueType.text.rawValue:
             return fields.valueText
@@ -50,7 +44,7 @@ enum CitationObservationValue {
         case PropertyValueType.date.rawValue:
             return dateSummary(fields.dateDraft)
         case PropertyValueType.name.rawValue:
-            return NameValueDisplay.string(for: fields.nameDraft)
+            return nameSummary(fields.nameDraft, orders: orders)
         case PropertyValueType.subject.rawValue:
             let trimmed = fields.valueText.trimmingCharacters(in: .whitespacesAndNewlines)
             return trimmed.isEmpty ? fields.valueSubjectID : trimmed
@@ -117,6 +111,18 @@ enum CitationObservationValue {
         case .unsupported:
             return L10n.string(L10n.CitationComposer.unsupportedValueTypeError)
         }
+    }
+
+    /// Natural display order. Parts win over the stored form; no parts falls back to the form.
+    private static func nameSummary(_ draft: NameValueDraft, orders: NameFormatOrders) -> String {
+        NameValueDisplay.string(
+            for: CatalogNameValue(
+                form: draft.form,
+                parts: draft.parts.map { CatalogNameValuePart(value: $0.value, type: $0.type) }
+            ),
+            style: .natural,
+            orders: orders
+        )
     }
 
     private static func dateSummary(_ draft: DateValueDraft) -> String {

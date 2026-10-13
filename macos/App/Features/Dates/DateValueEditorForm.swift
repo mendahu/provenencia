@@ -5,8 +5,11 @@ struct DateValueEditorForm: View {
     @Binding var draft: DateValueDraft
     /// Prefix for control identifiers (default matches the Source page date dialog).
     var accessibilityIdentifierPrefix: String = "sources.page.date"
+    /// Host focus for the year field. The form does not take focus on its own.
+    var yearFocus: PVInputFocus? = nil
 
-    @FocusState private var yearFocused: Bool
+    @FocusState private var startHourFocused: Bool
+    @FocusState private var endHourFocused: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: PVSpacing.space7) {
@@ -26,7 +29,6 @@ struct DateValueEditorForm: View {
                 advancedSection
             }
         }
-        .onAppear { yearFocused = true }
     }
 
     private var kindSection: some View {
@@ -125,7 +127,7 @@ struct DateValueEditorForm: View {
                     mono: true,
                     isInvalid: draft.isFieldInvalid(.year, start: start),
                     accessibilityIdentifier: "\(accessibilityIdentifierPrefix).\(start ? "start" : "end").year",
-                    focused: start ? $yearFocused : nil
+                    equalsFocus: start ? yearFocus : nil
                 )
                 monthSelect(start: start)
                 cascadeField(
@@ -153,8 +155,14 @@ struct DateValueEditorForm: View {
             Button {
                 if start {
                     draft.showStartTime.toggle()
+                    if draft.showStartTime {
+                        DispatchQueue.main.async { startHourFocused = true }
+                    }
                 } else {
                     draft.showEndTime.toggle()
+                    if draft.showEndTime {
+                        DispatchQueue.main.async { endHourFocused = true }
+                    }
                 }
             } label: {
                 Text(start
@@ -179,7 +187,8 @@ struct DateValueEditorForm: View {
                     width: 62,
                     mono: true,
                     isInvalid: draft.isFieldInvalid(.hour, start: start),
-                    accessibilityIdentifier: "\(accessibilityIdentifierPrefix).\(side).hour"
+                    accessibilityIdentifier: "\(accessibilityIdentifierPrefix).\(side).hour",
+                    focused: start ? $startHourFocused : $endHourFocused
                 )
                 cascadeField(
                     L10n.Sources.dateMinute,
@@ -274,13 +283,23 @@ struct DateValueEditorForm: View {
         disabled: Bool = false,
         isInvalid: Bool = false,
         accessibilityIdentifier: String? = nil,
-        focused: FocusState<Bool>.Binding? = nil
+        focused: FocusState<Bool>.Binding? = nil,
+        equalsFocus: PVInputFocus? = nil,
+        activateOnAppear: Bool = false
     ) -> some View {
         VStack(alignment: .leading, spacing: PVSpacing.space2) {
             Text(label)
                 .font(PVFont.body(size: PVTypeScale.micro))
                 .foregroundStyle(isInvalid ? PVColor.danger : PVColor.textSecondary)
-            PVInput(text: text, size: .sm, mono: mono, isInvalid: isInvalid, focused: focused)
+            PVInput(
+                text: text,
+                size: .sm,
+                mono: mono,
+                isInvalid: isInvalid,
+                focused: focused,
+                focus: equalsFocus,
+                activateOnAppear: activateOnAppear
+            )
                 .frame(width: width)
                 .disabled(disabled)
                 .opacity(disabled ? 0.42 : 1)

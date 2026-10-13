@@ -21,7 +21,6 @@ final class CitationComposerContext {
 
     var citationID: String?
     var artifactID: String?
-    weak var fields: CitationFieldsDraft?
 
     @ObservationIgnored
     private var memoToken: MemoToken?
@@ -71,9 +70,8 @@ final class CitationComposerContext {
         session.apply(effects)
     }
 
-    /// One in-flight create so citation Save, Observation commit, and Connect
-    /// cannot mint two citations from a blank document.
-    func ensureCitationID() async throws -> String {
+    /// `nil` follows the citation open in the composer.
+    func ensureCitationID(_ values: CitationFieldsDraft.Values) async throws -> String {
         if let citationID, !citationID.isEmpty {
             return citationID
         }
@@ -84,7 +82,7 @@ final class CitationComposerContext {
         }
         isCreatingCitation = true
         do {
-            let id = try await createCitationIfNeeded()
+            let id = try await createCitationIfNeeded(values)
             isCreatingCitation = false
             let waiters = citationCreateWaiters
             citationCreateWaiters = []
@@ -103,14 +101,13 @@ final class CitationComposerContext {
         }
     }
 
-    private func createCitationIfNeeded() async throws -> String {
+    private func createCitationIfNeeded(_ values: CitationFieldsDraft.Values) async throws -> String {
         if let citationID, !citationID.isEmpty {
             return citationID
         }
         guard let artifactID, !artifactID.isEmpty else {
             throw CitationComposerNeedArtifact()
         }
-        let values = citationValues()
         let created = try await store.createCitationWithObservations(
             projectDir: projectDir,
             userID: userID,
@@ -124,7 +121,6 @@ final class CitationComposerContext {
             observations: []
         )
         citationID = created.0.id
-        captureCitationBaseline()
         applyWrite(created.2)
         await reloadListedCitations()
         return created.0.id
@@ -143,14 +139,6 @@ final class CitationComposerContext {
     func waitForGraph() async {
         let _: QueryHandle<SourceGraphRows> = session.query(graphKey)
         _ = await session.readyValue(graphKey) as SourceGraphRows?
-    }
-
-    func citationValues() -> CitationFieldsDraft.Values {
-        fields?.values ?? CitationFieldsDraft.Values()
-    }
-
-    func captureCitationBaseline() {
-        fields?.captureBaseline()
     }
 
     private func termsKey(propertyID: String) -> CatalogQueryKey {

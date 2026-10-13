@@ -45,23 +45,12 @@ final class CitationFieldsDraft {
 
     var isDirty: Bool { values != baseline }
 
-    var statusText: String {
-        if citationID == nil {
-            return L10n.string(L10n.CitationComposer.citationStatusNew)
-        }
-        if isDirty {
-            return L10n.string(L10n.CitationComposer.citationStatusDirty)
-        }
-        return L10n.string(L10n.CitationComposer.citationStatusSaved)
-    }
-
     private weak var context: CitationComposerContext?
 
     var citationID: String? { context?.citationID }
 
     func attach(_ context: CitationComposerContext) {
         self.context = context
-        context.fields = self
     }
 
     func replace(from citation: CatalogCitation) {
@@ -88,6 +77,11 @@ final class CitationFieldsDraft {
         error = nil
     }
 
+    func revert() {
+        values = baseline
+        error = nil
+    }
+
     func saveCitation() async {
         guard !isSaving, let context else { return }
         isSaving = true
@@ -108,7 +102,9 @@ final class CitationFieldsDraft {
                 captureBaseline()
                 context.applyWrite(updated.1)
             } else {
-                _ = try await context.ensureCitationID()
+                let creating = context.citationID?.isEmpty != false
+                _ = try await context.ensureCitationID(values)
+                if creating { captureBaseline() }
             }
         } catch is CitationComposerNeedArtifact {
             error = L10n.string(L10n.CitationComposer.needArtifact)

@@ -14143,7 +14143,7 @@ type Citation struct {
 	ArtifactId             string                 `protobuf:"bytes,3,opt,name=artifact_id,json=artifactId,proto3" json:"artifact_id,omitempty"`
 	LocatorJson            string                 `protobuf:"bytes,4,opt,name=locator_json,json=locatorJson,proto3" json:"locator_json,omitempty"`
 	Transcription          string                 `protobuf:"bytes,5,opt,name=transcription,proto3" json:"transcription,omitempty"`
-	Description            string                 `protobuf:"bytes,6,opt,name=description,proto3" json:"description,omitempty"`
+	Label                  string                 `protobuf:"bytes,6,opt,name=label,proto3" json:"label,omitempty"`
 	TranscriptionUncertain bool                   `protobuf:"varint,7,opt,name=transcription_uncertain,json=transcriptionUncertain,proto3" json:"transcription_uncertain,omitempty"`
 	TranscriptionNote      string                 `protobuf:"bytes,8,opt,name=transcription_note,json=transcriptionNote,proto3" json:"transcription_note,omitempty"`
 	unknownFields          protoimpl.UnknownFields
@@ -14215,9 +14215,9 @@ func (x *Citation) GetTranscription() string {
 	return ""
 }
 
-func (x *Citation) GetDescription() string {
+func (x *Citation) GetLabel() string {
 	if x != nil {
-		return x.Description
+		return x.Label
 	}
 	return ""
 }
@@ -14550,7 +14550,7 @@ type CreateCitationWithObservationsRequest struct {
 	ArtifactId             string                 `protobuf:"bytes,3,opt,name=artifact_id,json=artifactId,proto3" json:"artifact_id,omitempty"`
 	LocatorJson            string                 `protobuf:"bytes,4,opt,name=locator_json,json=locatorJson,proto3" json:"locator_json,omitempty"`
 	Transcription          string                 `protobuf:"bytes,5,opt,name=transcription,proto3" json:"transcription,omitempty"`
-	Description            string                 `protobuf:"bytes,6,opt,name=description,proto3" json:"description,omitempty"`
+	Label                  string                 `protobuf:"bytes,6,opt,name=label,proto3" json:"label,omitempty"`
 	TranscriptionUncertain bool                   `protobuf:"varint,7,opt,name=transcription_uncertain,json=transcriptionUncertain,proto3" json:"transcription_uncertain,omitempty"`
 	TranscriptionNote      string                 `protobuf:"bytes,8,opt,name=transcription_note,json=transcriptionNote,proto3" json:"transcription_note,omitempty"`
 	CitationNotes          []string               `protobuf:"bytes,9,rep,name=citation_notes,json=citationNotes,proto3" json:"citation_notes,omitempty"`
@@ -14624,9 +14624,9 @@ func (x *CreateCitationWithObservationsRequest) GetTranscription() string {
 	return ""
 }
 
-func (x *CreateCitationWithObservationsRequest) GetDescription() string {
+func (x *CreateCitationWithObservationsRequest) GetLabel() string {
 	if x != nil {
-		return x.Description
+		return x.Label
 	}
 	return ""
 }
@@ -15087,8 +15087,10 @@ type ListedCitation struct {
 	state            protoimpl.MessageState `protogen:"open.v1"`
 	Citation         *Citation              `protobuf:"bytes,1,opt,name=citation,proto3" json:"citation,omitempty"`
 	ObservationCount int32                  `protobuf:"varint,2,opt,name=observation_count,json=observationCount,proto3" json:"observation_count,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	// Person labels this Citation names, earliest Observation first, capped.
+	SubjectNames  []string `protobuf:"bytes,3,rep,name=subject_names,json=subjectNames,proto3" json:"subject_names,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ListedCitation) Reset() {
@@ -15133,6 +15135,13 @@ func (x *ListedCitation) GetObservationCount() int32 {
 		return x.ObservationCount
 	}
 	return 0
+}
+
+func (x *ListedCitation) GetSubjectNames() []string {
+	if x != nil {
+		return x.SubjectNames
+	}
+	return nil
 }
 
 type ListCitationsByArtifactRequest struct {
@@ -15355,7 +15364,7 @@ type CreateCitedBridgeRequest struct {
 	ArtifactId             string                 `protobuf:"bytes,11,opt,name=artifact_id,json=artifactId,proto3" json:"artifact_id,omitempty"`
 	LocatorJson            string                 `protobuf:"bytes,12,opt,name=locator_json,json=locatorJson,proto3" json:"locator_json,omitempty"`
 	Transcription          string                 `protobuf:"bytes,13,opt,name=transcription,proto3" json:"transcription,omitempty"`
-	CitationDescription    string                 `protobuf:"bytes,14,opt,name=citation_description,json=citationDescription,proto3" json:"citation_description,omitempty"`
+	CitationLabel          string                 `protobuf:"bytes,14,opt,name=citation_label,json=citationLabel,proto3" json:"citation_label,omitempty"`
 	TranscriptionUncertain bool                   `protobuf:"varint,15,opt,name=transcription_uncertain,json=transcriptionUncertain,proto3" json:"transcription_uncertain,omitempty"`
 	TranscriptionNote      string                 `protobuf:"bytes,16,opt,name=transcription_note,json=transcriptionNote,proto3" json:"transcription_note,omitempty"`
 	CitationNotes          []string               `protobuf:"bytes,17,rep,name=citation_notes,json=citationNotes,proto3" json:"citation_notes,omitempty"`
@@ -15465,9 +15474,9 @@ func (x *CreateCitedBridgeRequest) GetTranscription() string {
 	return ""
 }
 
-func (x *CreateCitedBridgeRequest) GetCitationDescription() string {
+func (x *CreateCitedBridgeRequest) GetCitationLabel() string {
 	if x != nil {
-		return x.CitationDescription
+		return x.CitationLabel
 	}
 	return ""
 }
@@ -15582,7 +15591,7 @@ type UpdateCitationRequest struct {
 	CitationId             string                 `protobuf:"bytes,3,opt,name=citation_id,json=citationId,proto3" json:"citation_id,omitempty"`
 	LocatorJson            string                 `protobuf:"bytes,4,opt,name=locator_json,json=locatorJson,proto3" json:"locator_json,omitempty"`
 	Transcription          string                 `protobuf:"bytes,5,opt,name=transcription,proto3" json:"transcription,omitempty"`
-	Description            string                 `protobuf:"bytes,6,opt,name=description,proto3" json:"description,omitempty"`
+	Label                  string                 `protobuf:"bytes,6,opt,name=label,proto3" json:"label,omitempty"`
 	TranscriptionUncertain bool                   `protobuf:"varint,7,opt,name=transcription_uncertain,json=transcriptionUncertain,proto3" json:"transcription_uncertain,omitempty"`
 	TranscriptionNote      string                 `protobuf:"bytes,8,opt,name=transcription_note,json=transcriptionNote,proto3" json:"transcription_note,omitempty"`
 	unknownFields          protoimpl.UnknownFields
@@ -15654,9 +15663,9 @@ func (x *UpdateCitationRequest) GetTranscription() string {
 	return ""
 }
 
-func (x *UpdateCitationRequest) GetDescription() string {
+func (x *UpdateCitationRequest) GetLabel() string {
 	if x != nil {
-		return x.Description
+		return x.Label
 	}
 	return ""
 }
@@ -17947,15 +17956,15 @@ const file_engine_proto_rawDesc = "" +
 	"\x04type\x18\x02 \x01(\tR\x04type\"e\n" +
 	"\x0eNameValueInput\x12\x12\n" +
 	"\x04form\x18\x01 \x01(\tR\x04form\x12?\n" +
-	"\x05parts\x18\x02 \x03(\v2).provenencia.engine.v1.NameValuePartInputR\x05parts\"\xa0\x02\n" +
+	"\x05parts\x18\x02 \x03(\v2).provenencia.engine.v1.NameValuePartInputR\x05parts\"\x94\x02\n" +
 	"\bCitation\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x10\n" +
 	"\x03ref\x18\x02 \x01(\tR\x03ref\x12\x1f\n" +
 	"\vartifact_id\x18\x03 \x01(\tR\n" +
 	"artifactId\x12!\n" +
 	"\flocator_json\x18\x04 \x01(\tR\vlocatorJson\x12$\n" +
-	"\rtranscription\x18\x05 \x01(\tR\rtranscription\x12 \n" +
-	"\vdescription\x18\x06 \x01(\tR\vdescription\x127\n" +
+	"\rtranscription\x18\x05 \x01(\tR\rtranscription\x12\x14\n" +
+	"\x05label\x18\x06 \x01(\tR\x05label\x127\n" +
 	"\x17transcription_uncertain\x18\a \x01(\bR\x16transcriptionUncertain\x12-\n" +
 	"\x12transcription_note\x18\b \x01(\tR\x11transcriptionNote\"\x8d\x05\n" +
 	"\vObservation\x12\x0e\n" +
@@ -17999,7 +18008,7 @@ const file_engine_proto_rawDesc = "" +
 	" \x01(\tR\x0evalueSubjectId\x12\"\n" +
 	"\rvalue_term_id\x18\v \x01(\tR\vvalueTermId\x12\x14\n" +
 	"\x05notes\x18\f \x03(\tR\x05notesB\x10\n" +
-	"\x0e_value_integer\"\xc9\x03\n" +
+	"\x0e_value_integer\"\xbd\x03\n" +
 	"%CreateCitationWithObservationsRequest\x12\x1f\n" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
 	"projectDir\x12\x17\n" +
@@ -18007,8 +18016,8 @@ const file_engine_proto_rawDesc = "" +
 	"\vartifact_id\x18\x03 \x01(\tR\n" +
 	"artifactId\x12!\n" +
 	"\flocator_json\x18\x04 \x01(\tR\vlocatorJson\x12$\n" +
-	"\rtranscription\x18\x05 \x01(\tR\rtranscription\x12 \n" +
-	"\vdescription\x18\x06 \x01(\tR\vdescription\x127\n" +
+	"\rtranscription\x18\x05 \x01(\tR\rtranscription\x12\x14\n" +
+	"\x05label\x18\x06 \x01(\tR\x05label\x127\n" +
 	"\x17transcription_uncertain\x18\a \x01(\bR\x16transcriptionUncertain\x12-\n" +
 	"\x12transcription_note\x18\b \x01(\tR\x11transcriptionNote\x12%\n" +
 	"\x0ecitation_notes\x18\t \x03(\tR\rcitationNotes\x12K\n" +
@@ -18043,10 +18052,11 @@ const file_engine_proto_rawDesc = "" +
 	"artifactId\x12\x14\n" +
 	"\x05count\x18\x02 \x01(\x05R\x05count\"f\n" +
 	"\x1eCitationCountsBySourceResponse\x12D\n" +
-	"\x06counts\x18\x01 \x03(\v2,.provenencia.engine.v1.ArtifactCitationCountR\x06counts\"z\n" +
+	"\x06counts\x18\x01 \x03(\v2,.provenencia.engine.v1.ArtifactCitationCountR\x06counts\"\x9f\x01\n" +
 	"\x0eListedCitation\x12;\n" +
 	"\bcitation\x18\x01 \x01(\v2\x1f.provenencia.engine.v1.CitationR\bcitation\x12+\n" +
-	"\x11observation_count\x18\x02 \x01(\x05R\x10observationCount\"b\n" +
+	"\x11observation_count\x18\x02 \x01(\x05R\x10observationCount\x12#\n" +
+	"\rsubject_names\x18\x03 \x03(\tR\fsubjectNames\"b\n" +
 	"\x1eListCitationsByArtifactRequest\x12\x1f\n" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
 	"projectDir\x12\x1f\n" +
@@ -18062,7 +18072,7 @@ const file_engine_proto_rawDesc = "" +
 	"\x13GetCitationResponse\x12;\n" +
 	"\bcitation\x18\x01 \x01(\v2\x1f.provenencia.engine.v1.CitationR\bcitation\x12\x14\n" +
 	"\x05notes\x18\x02 \x03(\tR\x05notes\x12F\n" +
-	"\fobservations\x18\x03 \x03(\v2\".provenencia.engine.v1.ObservationR\fobservations\"\xca\x05\n" +
+	"\fobservations\x18\x03 \x03(\v2\".provenencia.engine.v1.ObservationR\fobservations\"\xbe\x05\n" +
 	"\x18CreateCitedBridgeRequest\x12\x1f\n" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
 	"projectDir\x12\x17\n" +
@@ -18075,8 +18085,8 @@ const file_engine_proto_rawDesc = "" +
 	"\vartifact_id\x18\v \x01(\tR\n" +
 	"artifactId\x12!\n" +
 	"\flocator_json\x18\f \x01(\tR\vlocatorJson\x12$\n" +
-	"\rtranscription\x18\r \x01(\tR\rtranscription\x121\n" +
-	"\x14citation_description\x18\x0e \x01(\tR\x13citationDescription\x127\n" +
+	"\rtranscription\x18\r \x01(\tR\rtranscription\x12%\n" +
+	"\x0ecitation_label\x18\x0e \x01(\tR\rcitationLabel\x127\n" +
 	"\x17transcription_uncertain\x18\x0f \x01(\bR\x16transcriptionUncertain\x12-\n" +
 	"\x12transcription_note\x18\x10 \x01(\tR\x11transcriptionNote\x12%\n" +
 	"\x0ecitation_notes\x18\x11 \x03(\tR\rcitationNotes\x12K\n" +
@@ -18089,7 +18099,7 @@ const file_engine_proto_rawDesc = "" +
 	"\asubject\x18\x01 \x01(\v2\x1e.provenencia.engine.v1.SubjectR\asubject\x12;\n" +
 	"\bcitation\x18\x02 \x01(\v2\x1f.provenencia.engine.v1.CitationR\bcitation\x12F\n" +
 	"\fobservations\x18\x03 \x03(\v2\".provenencia.engine.v1.ObservationR\fobservations\x12=\n" +
-	"\aeffects\x18\x04 \x01(\v2#.provenencia.engine.v1.WriteEffectsR\aeffects\"\xc5\x02\n" +
+	"\aeffects\x18\x04 \x01(\v2#.provenencia.engine.v1.WriteEffectsR\aeffects\"\xb9\x02\n" +
 	"\x15UpdateCitationRequest\x12\x1f\n" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
 	"projectDir\x12\x17\n" +
@@ -18097,8 +18107,8 @@ const file_engine_proto_rawDesc = "" +
 	"\vcitation_id\x18\x03 \x01(\tR\n" +
 	"citationId\x12!\n" +
 	"\flocator_json\x18\x04 \x01(\tR\vlocatorJson\x12$\n" +
-	"\rtranscription\x18\x05 \x01(\tR\rtranscription\x12 \n" +
-	"\vdescription\x18\x06 \x01(\tR\vdescription\x127\n" +
+	"\rtranscription\x18\x05 \x01(\tR\rtranscription\x12\x14\n" +
+	"\x05label\x18\x06 \x01(\tR\x05label\x127\n" +
 	"\x17transcription_uncertain\x18\a \x01(\bR\x16transcriptionUncertain\x12-\n" +
 	"\x12transcription_note\x18\b \x01(\tR\x11transcriptionNote\"\x94\x01\n" +
 	"\x16UpdateCitationResponse\x12;\n" +
