@@ -1,7 +1,9 @@
 // Package namealiases stores abbreviation and nickname tables. The product
 // lists live in core/match. Install writes them once when a catalog is
-// created. Scoring reads these rows and no other list. An open project keeps
-// that read on the catalog graph until the project closes; Invalidate reloads it.
+// created. AddProductNicknames copies the current product nickname sets into
+// a catalog that already exists. Scoring reads these rows and no other list.
+// An open project keeps that read on the catalog graph until the project
+// closes; Invalidate reloads it.
 package namealiases
 
 import (

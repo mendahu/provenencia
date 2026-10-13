@@ -220,6 +220,96 @@ func assertScore(t *testing.T, cmp match.NameComparer, a, b string, want float64
 	}
 }
 
+func TestAddProductNicknamesFillsAnEmptyCatalog(t *testing.T) {
+	c := newCatalog(t)
+	added, err := AddProductNicknames(c)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if added.Sets < 1000 || added.Tokens < added.Sets {
+		t.Fatalf("added %+v", added)
+	}
+	again, err := AddProductNicknames(c)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if again.Sets != 0 || again.Tokens != 0 {
+		t.Fatalf("second add %+v", again)
+	}
+	tables, err := Load(mustDB(t, c))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(tables) != 1 || tables[0].Key != "nicknames" || tables[0].Origin != match.OriginProvenencia {
+		t.Fatalf("tables %+v", tables)
+	}
+	if !hasSet(tables[0], "chris", "christine") || hasSet(tables[0], "tina", "christopher") {
+		t.Fatal("christine and christopher were joined or chris was missed")
+	}
+}
+
+func TestAddProductNicknamesGrowsTheShortList(t *testing.T) {
+	c := newCatalog(t)
+	db := mustDB(t, c)
+	insertTable(t, db, "nicknames", match.OriginProvenencia, "nickname", [][]string{{"james", "jim", "jimmy"}})
+	insertTable(t, db, "nicknames", "user", "nickname", [][]string{{"xyzzy", "plugh"}})
+
+	added, err := AddProductNicknames(c)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if added.Tokens == 0 {
+		t.Fatal("short list gained nothing")
+	}
+	tables, err := Load(db)
+	if err != nil {
+		t.Fatal(err)
+	}
+	product := tableByKey(t, tables, "nicknames")
+	// Load orders by key, origin. Both tables share the key. Take provenencia.
+	for _, table := range tables {
+		if table.Key == "nicknames" && table.Origin == match.OriginProvenencia {
+			product = table
+		}
+	}
+	if setsWithAll(product, "james", "jim", "jimmy") != 1 || !hasSet(product, "james", "jamie") {
+		t.Fatalf("james set was duplicated or not grown")
+	}
+	if !hasSet(product, "chris", "christine") || hasSet(product, "tina", "christopher") {
+		t.Fatal("shared nickname joined two formal names")
+	}
+	user := match.AliasTable{}
+	for _, table := range tables {
+		if table.Origin == "user" {
+			user = table
+		}
+	}
+	if len(user.Sets) != 1 || !hasSet(user, "xyzzy", "plugh") {
+		t.Fatalf("user table changed: %+v", user.Sets)
+	}
+}
+
+func setsWithAll(table match.AliasTable, tokens ...string) int {
+	n := 0
+	for _, set := range table.Sets {
+		have := map[string]bool{}
+		for _, tok := range set {
+			have[tok] = true
+		}
+		ok := true
+		for _, token := range tokens {
+			if !have[token] {
+				ok = false
+				break
+			}
+		}
+		if ok {
+			n++
+		}
+	}
+	return n
+}
+
 func given(text string) match.Value {
 	return match.Value{Name: &namevalues.Value{Parts: []namevalues.Part{{
 		Value: text, Type: namevalues.PartTypeGiven,

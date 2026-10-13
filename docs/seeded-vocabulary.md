@@ -589,7 +589,7 @@ nicknames
   douglas doug
 ```
 
-`Register` appends a table for a future plugin. Install writes whatever is registered at catalog create. Open does not heal. Scoring reads these rows and no in-code list. Opening a project loads them once onto the catalog graph and keeps them until the project closes. A future editor calls `namealiases.Invalidate` after a change. An empty catalog makes no abbreviation or nickname hits.
+`Register` appends a table for a future plugin. Install writes whatever is registered at catalog create. Open does not heal. Scoring reads these rows and no in-code list. Opening a project loads them once onto the catalog graph and keeps them until the project closes. A future editor calls `namealiases.Invalidate` after a change. An empty catalog makes no abbreviation or nickname hits. `namealiases.AddProductNicknames` copies the product nickname list into a catalog created before that list grew. A set already stored in full is left as it is. Call `namealiases.Invalidate` if that catalog stays open.
 
 ---
 
