@@ -88,6 +88,11 @@ final class CitationFieldsDraft {
         error = nil
     }
 
+    func revert() {
+        values = baseline
+        error = nil
+    }
+
     func saveCitation() async {
         guard !isSaving, let context else { return }
         isSaving = true

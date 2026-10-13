@@ -15087,8 +15087,10 @@ type ListedCitation struct {
 	state            protoimpl.MessageState `protogen:"open.v1"`
 	Citation         *Citation              `protobuf:"bytes,1,opt,name=citation,proto3" json:"citation,omitempty"`
 	ObservationCount int32                  `protobuf:"varint,2,opt,name=observation_count,json=observationCount,proto3" json:"observation_count,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	// Person labels this Citation names, earliest Observation first, capped.
+	SubjectNames  []string `protobuf:"bytes,3,rep,name=subject_names,json=subjectNames,proto3" json:"subject_names,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ListedCitation) Reset() {
@@ -15133,6 +15135,13 @@ func (x *ListedCitation) GetObservationCount() int32 {
 		return x.ObservationCount
 	}
 	return 0
+}
+
+func (x *ListedCitation) GetSubjectNames() []string {
+	if x != nil {
+		return x.SubjectNames
+	}
+	return nil
 }
 
 type ListCitationsByArtifactRequest struct {
@@ -18043,10 +18052,11 @@ const file_engine_proto_rawDesc = "" +
 	"artifactId\x12\x14\n" +
 	"\x05count\x18\x02 \x01(\x05R\x05count\"f\n" +
 	"\x1eCitationCountsBySourceResponse\x12D\n" +
-	"\x06counts\x18\x01 \x03(\v2,.provenencia.engine.v1.ArtifactCitationCountR\x06counts\"z\n" +
+	"\x06counts\x18\x01 \x03(\v2,.provenencia.engine.v1.ArtifactCitationCountR\x06counts\"\x9f\x01\n" +
 	"\x0eListedCitation\x12;\n" +
 	"\bcitation\x18\x01 \x01(\v2\x1f.provenencia.engine.v1.CitationR\bcitation\x12+\n" +
-	"\x11observation_count\x18\x02 \x01(\x05R\x10observationCount\"b\n" +
+	"\x11observation_count\x18\x02 \x01(\x05R\x10observationCount\x12#\n" +
+	"\rsubject_names\x18\x03 \x03(\tR\fsubjectNames\"b\n" +
 	"\x1eListCitationsByArtifactRequest\x12\x1f\n" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
 	"projectDir\x12\x1f\n" +

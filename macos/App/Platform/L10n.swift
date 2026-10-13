@@ -3467,6 +3467,324 @@ enum L10n {
             comment: "Section header for the Observations list"
         )
 
+        static let addBridge = LocalizedStringResource(
+            "citationComposer.addBridge",
+            defaultValue: "Add bridge",
+            comment: "Opens a bridge draft in the authoring box"
+        )
+
+        static let authoringRestHint = LocalizedStringResource(
+            "citationComposer.authoringRestHint",
+            defaultValue: "A saved row lands under its subject. A bridge lands under both ends.",
+            comment: "Resting hint under Add observation and Add bridge"
+        )
+
+        static let draftBadge = LocalizedStringResource(
+            "citationComposer.draftBadge",
+            defaultValue: "Draft",
+            comment: "Badge on the open authoring card"
+        )
+
+        static let savedBadge = LocalizedStringResource(
+            "citationComposer.savedBadge",
+            defaultValue: "Saved",
+            comment: "Badge on the line just written"
+        )
+
+        static let newObservationTitle = LocalizedStringResource(
+            "citationComposer.newObservationTitle",
+            defaultValue: "New observation",
+            comment: "Title of the property draft"
+        )
+
+        static let newBridgeTitle = LocalizedStringResource(
+            "citationComposer.newBridgeTitle",
+            defaultValue: "New bridge",
+            comment: "Title of the bridge draft"
+        )
+
+        static let saveBridge = LocalizedStringResource(
+            "citationComposer.saveBridge",
+            defaultValue: "Save bridge",
+            comment: "Writes the bridge draft"
+        )
+
+        static let discardDraft = LocalizedStringResource(
+            "citationComposer.discardDraft",
+            defaultValue: "Discard",
+            comment: "Closes the authoring draft without writing"
+        )
+
+        static let swapEnds = LocalizedStringResource(
+            "citationComposer.swapEnds",
+            defaultValue: "Swap ends",
+            comment: "Swaps the two subjects of a bridge draft"
+        )
+
+        static let negativeLabel = LocalizedStringResource(
+            "citationComposer.negativeLabel",
+            defaultValue: "Negative",
+            comment: "Checkbox that records the observation as not so"
+        )
+
+        static let negativeDescription = LocalizedStringResource(
+            "citationComposer.negativeDescription",
+            defaultValue: "The record says this is not so",
+            comment: "Description under the Negative checkbox"
+        )
+
+        static let notWord = LocalizedStringResource(
+            "citationComposer.notWord",
+            defaultValue: "not",
+            comment: "Italic word before a negative observation value"
+        )
+
+        static let noObservations = LocalizedStringResource(
+            "citationComposer.noObservations",
+            defaultValue: "No observations yet",
+            comment: "Empty state title in the observations column"
+        )
+
+        static let emptyObservationsMessage = LocalizedStringResource(
+            "citationComposer.emptyObservationsMessage",
+            defaultValue: "An empty citation can still be saved. The first observation starts in the authoring box.",
+            comment: "Empty state body in the observations column"
+        )
+
+        static let duplicate = LocalizedStringResource(
+            "citationComposer.duplicate",
+            defaultValue: "Duplicate",
+            comment: "Copies a saved line into the authoring box without writing"
+        )
+
+        static let moreActions = LocalizedStringResource(
+            "citationComposer.moreActions",
+            defaultValue: "More actions",
+            comment: "Opens the menu on a saved observation line"
+        )
+
+        static let showOnGraph = LocalizedStringResource(
+            "citationComposer.showOnGraph",
+            defaultValue: "Show on evidence graph",
+            comment: "Leaves for the evidence graph and selects this bridge"
+        )
+
+        static let deleteBridge = LocalizedStringResource(
+            "citationComposer.deleteBridge",
+            defaultValue: "Delete bridge",
+            comment: "Deletes the bridge subject, which removes both lines"
+        )
+
+        static let deleteObservation = LocalizedStringResource(
+            "citationComposer.deleteObservation",
+            defaultValue: "Delete observation",
+            comment: "Menu item that deletes one property observation"
+        )
+
+        static let previousArtifact = LocalizedStringResource(
+            "citationComposer.previousArtifact",
+            defaultValue: "Previous artifact",
+            comment: "Steps to the previous file on this source"
+        )
+
+        static let nextArtifact = LocalizedStringResource(
+            "citationComposer.nextArtifact",
+            defaultValue: "Next artifact",
+            comment: "Steps to the next file on this source"
+        )
+
+        static let previousCitation = LocalizedStringResource(
+            "citationComposer.previousCitation",
+            defaultValue: "Previous citation",
+            comment: "Steps to the previous citation on this artifact"
+        )
+
+        static let nextCitation = LocalizedStringResource(
+            "citationComposer.nextCitation",
+            defaultValue: "Next citation",
+            comment: "Steps to the next citation on this artifact"
+        )
+
+        static let noSubjectsYet = LocalizedStringResource(
+            "citationComposer.noSubjectsYet",
+            defaultValue: "No subjects yet",
+            comment: "Citation card when the citation names nobody"
+        )
+
+        static let noTranscriptionYet = LocalizedStringResource(
+            "citationComposer.noTranscriptionYet",
+            defaultValue: "No transcription or description yet.",
+            comment: "Citation card preview when both reading fields are empty"
+        )
+
+        static let unsavedDraft = LocalizedStringResource(
+            "citationComposer.unsavedDraft",
+            defaultValue: "Unsaved draft",
+            comment: "Italic hint in the observations header while a draft is open"
+        )
+
+        static let lockEndsNote = LocalizedStringResource(
+            "citationComposer.lockEndsNote",
+            defaultValue: "A saved bridge keeps its ends. Delete it, or duplicate it and save the copy, to change an end.",
+            comment: "Note in the bridge edit sheet"
+        )
+
+        static let editBridgeTitle = LocalizedStringResource(
+            "citationComposer.editBridgeTitle",
+            defaultValue: "Edit bridge",
+            comment: "Title of the bridge edit sheet"
+        )
+
+        static let addForSubject = LocalizedStringResource(
+            "citationComposer.addForSubject",
+            defaultValue: "Add observation for this subject",
+            comment: "Plus button on a subject group"
+        )
+
+        static let choosePropertyFirst = LocalizedStringResource(
+            "citationComposer.choosePropertyFirst",
+            defaultValue: "Choose a property first",
+            comment: "Value slot before a property is chosen"
+        )
+
+        static let termStartsEmpty = LocalizedStringResource(
+            "citationComposer.termStartsEmpty",
+            defaultValue: "Starts empty. Choose what the record says.",
+            comment: "Hint under a bridge role or type that is not prefilled"
+        )
+
+        static let fromGraph = LocalizedStringResource(
+            "citationComposer.fromGraph",
+            defaultValue: "From Connect on the evidence graph. The ends are filled; the type is yours to choose.",
+            comment: "Note on a bridge draft opened from Connect"
+        )
+
+        static let duplicatedNote = LocalizedStringResource(
+            "citationComposer.duplicatedNote",
+            defaultValue: "Duplicated. Nothing is saved yet.",
+            comment: "Note on a draft copied from a saved line"
+        )
+
+        static let noneYet = LocalizedStringResource(
+            "citationComposer.noneYet",
+            defaultValue: "none yet",
+            comment: "Observations header when this citation has no saved lines"
+        )
+
+        static let pairPickBoth = LocalizedStringResource(
+            "citationComposer.pairPickBoth",
+            defaultValue: "Pick two subjects on this source. The pair decides the bridge.",
+            comment: "Bridge draft before either end is chosen"
+        )
+
+        static let pairPickSecond = LocalizedStringResource(
+            "citationComposer.pairPickSecond",
+            defaultValue: "Pick the second subject. The pair decides the bridge.",
+            comment: "Bridge draft with one end chosen"
+        )
+
+        static let sameSubjectTitle = LocalizedStringResource(
+            "citationComposer.sameSubjectTitle",
+            defaultValue: "Pick two different subjects",
+            comment: "Callout title when both bridge ends are the same subject"
+        )
+
+        static let sameSubjectBody = LocalizedStringResource(
+            "citationComposer.sameSubjectBody",
+            defaultValue: "A bridge joins two cards on the graph.",
+            comment: "Callout body when both bridge ends are the same subject"
+        )
+
+        static let refusedPairTitle = LocalizedStringResource(
+            "citationComposer.refusedPairTitle",
+            defaultValue: "No bridge joins this pair",
+            comment: "Callout title when the product matrix refuses the pair"
+        )
+
+        static let refusedPairBody = LocalizedStringResource(
+            "citationComposer.refusedPairBody",
+            defaultValue: "Choose a pair the evidence graph can draw.",
+            comment: "Callout body when the product matrix refuses the pair"
+        )
+
+        static let personPlaceTitle = LocalizedStringResource(
+            "citationComposer.personPlaceTitle",
+            defaultValue: "A person and a place have no bridge",
+            comment: "Callout title for a person and place pair"
+        )
+
+        static let twoEventsTitle = LocalizedStringResource(
+            "citationComposer.twoEventsTitle",
+            defaultValue: "Two events have no bridge",
+            comment: "Callout title for two events"
+        )
+
+        static let twoEventsBody = LocalizedStringResource(
+            "citationComposer.twoEventsBody",
+            defaultValue: "Bridge each event to a person or a place.",
+            comment: "Callout body for two events"
+        )
+
+        static let firstPerson = LocalizedStringResource(
+            "citationComposer.firstPerson",
+            defaultValue: "First person",
+            comment: "Label for the first end of a person-to-person bridge"
+        )
+
+        static let secondPerson = LocalizedStringResource(
+            "citationComposer.secondPerson",
+            defaultValue: "Second person",
+            comment: "Label for the second end of a person-to-person bridge"
+        )
+
+        static let firstPlace = LocalizedStringResource(
+            "citationComposer.firstPlace",
+            defaultValue: "First place",
+            comment: "Label for the first end of a place-to-place bridge"
+        )
+
+        static let secondPlace = LocalizedStringResource(
+            "citationComposer.secondPlace",
+            defaultValue: "Second place",
+            comment: "Label for the second end of a place-to-place bridge"
+        )
+
+        static let participantEnd = LocalizedStringResource(
+            "citationComposer.participantEnd",
+            defaultValue: "Participant",
+            comment: "Label for the person end of a participation"
+        )
+
+        static let eventEnd = LocalizedStringResource(
+            "citationComposer.eventEnd",
+            defaultValue: "Event",
+            comment: "Label for the event end of a bridge"
+        )
+
+        static let placeEnd = LocalizedStringResource(
+            "citationComposer.placeEnd",
+            defaultValue: "Place",
+            comment: "Label for the place end of a bridge"
+        )
+
+        static let endA = LocalizedStringResource(
+            "citationComposer.endA",
+            defaultValue: "First subject",
+            comment: "Fallback label for the first bridge end"
+        )
+
+        static let endB = LocalizedStringResource(
+            "citationComposer.endB",
+            defaultValue: "Second subject",
+            comment: "Fallback label for the second bridge end"
+        )
+
+        static let bridgeSavedTitle = LocalizedStringResource(
+            "citationComposer.bridgeSavedTitle",
+            defaultValue: "Bridge saved",
+            comment: "Toast title after a bridge is written"
+        )
+
         static let addObservation = LocalizedStringResource(
             "citationComposer.addObservation",
             defaultValue: "Add observation",
@@ -3941,6 +4259,142 @@ enum L10n {
                 defaultValue: "%1$@ · %2$lld citations",
                 comment: "Artifact menu row meta; arguments are media kind and citation count"
             ), kind, count)
+        }
+
+        static func joinedNames(_ a: String, _ b: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "citationComposer.joinedNames",
+                defaultValue: "%1$@ and %2$@",
+                comment: "Two names on a citation card; arguments are the names"
+            ), a, b)
+        }
+
+        static func personPlaceBody(person: String, place: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "citationComposer.personPlaceBody",
+                defaultValue: "Record where %1$@ was born or lived as an observation on %1$@, or bridge %1$@ to an event held at %2$@.",
+                comment: "Callout body for a person and a place; arguments are the person and the place"
+            ), person, place)
+        }
+
+        static func termOfName(term: String, name: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "citationComposer.termOfName",
+                defaultValue: "%1$@ of %2$@",
+                comment: "Bridge line; arguments are the term and the other subject's name"
+            ), term, name)
+        }
+
+        static func relationshipWith(name: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "citationComposer.relationshipWith",
+                defaultValue: "Relationship with %1$@",
+                comment: "Relationship line before a type is chosen; argument is the other person"
+            ), name)
+        }
+
+        static func roleInEvent(role: String, event: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "citationComposer.roleInEvent",
+                defaultValue: "%1$@ in %2$@",
+                comment: "Participation line on the person; arguments are the role and the event"
+            ), role, event)
+        }
+
+        static func takesPartIn(event: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "citationComposer.takesPartIn",
+                defaultValue: "Takes part in %1$@",
+                comment: "Participation line on the person before a role is chosen"
+            ), event)
+        }
+
+        static func roleOnPerson(role: String, person: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "citationComposer.roleOnPerson",
+                defaultValue: "%1$@ · %2$@",
+                comment: "Participation line on the event; arguments are the role and the person"
+            ), role, person)
+        }
+
+        static func personTakesPart(person: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "citationComposer.personTakesPart",
+                defaultValue: "%1$@ takes part",
+                comment: "Participation line on the event before a role is chosen"
+            ), person)
+        }
+
+        static func atPlace(place: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "citationComposer.atPlace",
+                defaultValue: "At %1$@",
+                comment: "Location line on the event; argument is the place"
+            ), place)
+        }
+
+        static func siteOf(event: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "citationComposer.siteOf",
+                defaultValue: "Site of %1$@",
+                comment: "Location line on the place; argument is the event"
+            ), event)
+        }
+
+        static func placeRelationshipWith(name: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "citationComposer.placeRelationshipWith",
+                defaultValue: "Place relationship with %1$@",
+                comment: "Place-relationship line before a type is chosen"
+            ), name)
+        }
+
+        static func noneOnCitation(ref: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "citationComposer.noneOnCitation",
+                defaultValue: "none yet on %1$@",
+                comment: "Observations header when the citation has no saved lines; argument is the citation ref"
+            ), ref)
+        }
+
+        static func observationsOnCitation(count: Int, ref: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "citationComposer.observationsOnCitation",
+                defaultValue: "%1$lld on %2$@",
+                comment: "Observations header; arguments are the count and the citation ref"
+            ), count, ref)
+        }
+
+        static func bridgeSavedBody(endA: String, endB: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "citationComposer.bridgeSavedBody",
+                defaultValue: "%1$@ · %2$@. Its card is on the evidence graph, halfway between the two.",
+                comment: "Toast after a bridge save; arguments are the two subject names"
+            ), endA, endB)
+        }
+
+        static func stepperPosition(index: Int, total: Int) -> String {
+            L10n.format(LocalizedStringResource(
+                "citationComposer.stepperPosition",
+                defaultValue: "%1$lld of %2$lld",
+                comment: "Stepper position; arguments are the current index and the total"
+            ), index, total)
+        }
+
+        static func pageCount(count: Int) -> String {
+            L10n.format(LocalizedStringResource(
+                "citationComposer.pageCount",
+                defaultValue: "%lld pages",
+                comment: "Page count on an artifact stepper card"
+            ), count)
+        }
+
+        static func artifactStepperMeta(kind: String, detail: String, count: Int) -> String {
+            L10n.format(LocalizedStringResource(
+                "citationComposer.artifactStepperMeta",
+                defaultValue: "%1$@ · %2$@ · %3$lld citations",
+                comment: "Artifact stepper meta; arguments are kind, size or page count, and citation count"
+            ), kind, detail, count)
         }
 
         static func citationMenuCount(count: Int) -> String {

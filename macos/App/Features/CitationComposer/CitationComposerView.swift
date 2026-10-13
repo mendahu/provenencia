@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Citation composer place (S8-10): viewer | form, Layout A + 1500pt two-column.
+/// Citation composer: evidence column and a fixed observations column.
 struct CitationComposerView: View {
     let entry: CitationComposerEntry
     let session: WorkspaceSession
@@ -9,11 +9,6 @@ struct CitationComposerView: View {
 
     @Environment(WorkspaceNavigation.self) private var navigation
     @State private var model: CitationComposerModel
-
-    private static let wideBreakpoint: CGFloat = 1500
-    private static let formWidthNarrow: CGFloat = 520
-    private static let formWidthWideMin: CGFloat = 760
-    private static let formWidthWideMax: CGFloat = 880
 
     init(
         entry: CitationComposerEntry,
@@ -71,6 +66,22 @@ struct CitationComposerView: View {
         .accessibilityHint(Text(verbatim: model.identityAnnouncement))
         .task(id: entry.identityKey) {
             await model.prepare()
+        }
+        .pvFormDialog(
+            isPresented: editSheetBinding,
+            copy: PVFormDialogCopy(
+                title: editSheetTitle,
+                confirm: L10n.CitationComposer.save,
+                cancel: L10n.CitationComposer.cancel
+            ),
+            width: 520,
+            isRunning: model.editSession?.isSaving == true,
+            isDirty: model.editSession?.isDirty == true,
+            confirmDisabled: model.editSession?.isSaving == true,
+            accessibilityIdentifierPrefix: "citationComposer.edit",
+            onConfirm: { Task { await model.saveEdit() } }
+        ) {
+            CitationComposerEditSheet(model: model)
         }
         .pvFormDialog(
             isPresented: observationDialogBinding,
@@ -307,28 +318,36 @@ struct CitationComposerView: View {
 
     private var composeSplit: some View {
         GeometryReader { geo in
-            let wide = geo.size.width >= Self.wideBreakpoint
-            let formWidth = wide
-                ? min(Self.formWidthWideMax, max(Self.formWidthWideMin, geo.size.width * 0.45))
-                : Self.formWidthNarrow
+            let observationsWidth: CGFloat = geo.size.width >= 1400 ? 600 : 520
             HStack(alignment: .top, spacing: 0) {
-                CitationComposerViewerPane(model: model)
+                CitationComposerEvidenceColumn(model: model)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(PVColor.surfaceSunken)
                     .accessibilityElement(children: .contain)
                     .accessibilityLabel(Text(L10n.CitationComposer.viewerGroup))
                 PVDivider(axis: .vertical, color: PVColor.borderDefault)
-                CitationComposerFormPane(
-                    model: model,
-                    wide: wide
-                )
-                .frame(width: formWidth)
+                CitationComposerObservationsColumn(model: model) {
+                    navigation.go(to: model.graphLocation())
+                }
+                .frame(width: observationsWidth)
                 .frame(maxHeight: .infinity)
-                .background(PVColor.surfaceCard)
-                .accessibilityElement(children: .contain)
-                .accessibilityLabel(Text(L10n.CitationComposer.formGroup))
             }
         }
+    }
+
+    private var editSheetBinding: Binding<Bool> {
+        Binding(
+            get: {
+                model.editSession != nil && !model.editSheetSuspended && model.observationDialog == nil
+            },
+            set: { if !$0 { model.discardEdit() } }
+        )
+    }
+
+    private var editSheetTitle: LocalizedStringResource {
+        if case .bridge = model.editSession?.kind {
+            return L10n.CitationComposer.editBridgeTitle
+        }
+        return L10n.CitationComposer.editObservation
     }
 
     private var observationDialogBinding: Binding<Bool> {

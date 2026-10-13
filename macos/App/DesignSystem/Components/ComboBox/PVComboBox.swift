@@ -260,6 +260,10 @@ struct PVComboBox<Row: View, Empty: View>: View {
     /// Default stays false so sheet first-responder (e.g. Add Source) does not
     /// pop the list on open.
     var activateOnAppear: Bool = false
+    /// Bumps when a caller wants this field to take keyboard focus and open
+    /// its list. `activateOnAppear` only runs when the control appears; a
+    /// field that is already on screen needs this.
+    var focusNonce: Int = 0
     /// Remote results: called with each typed query; the caller filters and
     /// passes the results as `options`. Nil filters locally.
     var onQueryChange: ((String) -> Void)?
@@ -373,6 +377,11 @@ struct PVComboBox<Row: View, Empty: View>: View {
             }
             .onAppear {
                 guard activateOnAppear else { return }
+                isFocused = true
+                open()
+            }
+            .onChange(of: focusNonce) { _, nonce in
+                guard nonce > 0 else { return }
                 isFocused = true
                 open()
             }
@@ -681,6 +690,7 @@ extension PVComboBox where Empty == Text {
         label: any PVCopy,
         accessibilityIdentifierPrefix: String? = nil,
         activateOnAppear: Bool = false,
+        focusNonce: Int = 0,
         onQueryChange: ((String) -> Void)? = nil,
         @ViewBuilder row: @escaping (PVComboBoxOption, String) -> Row
     ) {
@@ -694,6 +704,7 @@ extension PVComboBox where Empty == Text {
             label: label,
             accessibilityIdentifierPrefix: accessibilityIdentifierPrefix,
             activateOnAppear: activateOnAppear,
+            focusNonce: focusNonce,
             onQueryChange: onQueryChange,
             row: row,
             empty: { _ in Text(emptyLabel) }
@@ -714,7 +725,8 @@ extension PVComboBox where Row == PVComboBoxPlainRow, Empty == Text {
         maxListHeight: CGFloat = 288,
         label: any PVCopy,
         accessibilityIdentifierPrefix: String? = nil,
-        activateOnAppear: Bool = false
+        activateOnAppear: Bool = false,
+        focusNonce: Int = 0
     ) {
         self.init(
             selection: selection,
@@ -726,7 +738,8 @@ extension PVComboBox where Row == PVComboBoxPlainRow, Empty == Text {
             maxListHeight: maxListHeight,
             label: label,
             accessibilityIdentifierPrefix: accessibilityIdentifierPrefix,
-            activateOnAppear: activateOnAppear
+            activateOnAppear: activateOnAppear,
+            focusNonce: focusNonce
         ) { option, query in
             PVComboBoxPlainRow(option: option, query: query)
         }

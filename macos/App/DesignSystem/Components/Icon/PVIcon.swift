@@ -101,6 +101,12 @@ enum PVSymbol: String {
     case scanText = "doc.text.viewfinder"
     /// Lucide `clipboard-paste` — paste PDF selection into transcription.
     case clipboardPaste = "document.on.clipboard"
+    /// Lucide `link-2` — start a bridge.
+    case link = "link"
+    /// Lucide `copy-plus` — duplicate a saved line into the authoring box.
+    case duplicate = "plus.square.on.square"
+    /// Lucide `arrow-left-right` — swap the two ends of a bridge.
+    case swap = "arrow.left.arrow.right"
 
     fileprivate var regionLOpen: PVLOpenCorner? {
         switch self {

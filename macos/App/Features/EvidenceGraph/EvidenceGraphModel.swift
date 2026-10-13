@@ -219,6 +219,9 @@ final class EvidenceGraphModel {
         if !canCite {
             disarm()
         }
+        if let id = session.consumePendingGraphSelection(sourceID: sourceID) {
+            selectedSubjectID = id
+        }
     }
 
     func refreshCanCite() async {

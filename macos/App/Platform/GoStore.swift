@@ -1698,7 +1698,8 @@ struct GoStore: GenealogyStore {
         return resp.citations.map { row in
             CatalogListedCitation(
                 citation: Self.mapCitation(row.citation),
-                observationCount: Int(row.observationCount)
+                observationCount: Int(row.observationCount),
+                subjectNames: row.subjectNames
             )
         }
     }

@@ -52,6 +52,30 @@ const (
 		FROM citations WHERE artifact_id = ?
 		ORDER BY ref COLLATE NOCASE`
 
+	// People a Citation names: the Observation's subject, or the subject an
+	// edge points at. Earliest Observation id wins. The caller caps the list.
+	sqlPersonNamesByArtifact = `
+WITH named AS (
+	SELECT o.citation_id AS cid, s.id AS sid, s.label AS label, o.id AS oid
+	FROM observations o
+	INNER JOIN citations c ON c.id = o.citation_id
+	INNER JOIN subjects s ON s.id = o.subject_id
+	INNER JOIN subject_types t ON t.id = s.subject_type_id
+	WHERE c.artifact_id = ? AND t.key = 'person'
+		AND TRIM(COALESCE(s.label, '')) <> ''
+	UNION ALL
+	SELECT o.citation_id, s.id, s.label, o.id
+	FROM observations o
+	INNER JOIN citations c ON c.id = o.citation_id
+	INNER JOIN subjects s ON s.id = o.value_subject_id
+	INNER JOIN subject_types t ON t.id = s.subject_type_id
+	WHERE c.artifact_id = ? AND t.key = 'person'
+		AND TRIM(COALESCE(s.label, '')) <> ''
+)
+SELECT cid, sid, label FROM named
+GROUP BY cid, sid
+ORDER BY cid, MIN(oid)`
+
 	sqlCountBySource = `SELECT c.artifact_id, COUNT(*)
 		FROM citations c
 		INNER JOIN artifacts a ON a.id = c.artifact_id
@@ -79,11 +103,16 @@ type Citation struct {
 	TranscriptionNote      string
 }
 
-// ListedCitation is a Citation plus its Observation count (list-by-artifact).
+// ListedCitation is a Citation plus its Observation count and the people it names.
 type ListedCitation struct {
 	Citation
 	ObservationCount int32
+	// Person labels, earliest Observation first, capped. Empty when the
+	// Citation names nobody.
+	SubjectNames []string
 }
+
+const subjectNameCap = 6
 
 // CreateInput is the Citation side of first-submit create.
 type CreateInput struct {
@@ -512,7 +541,42 @@ func ListByArtifact(c *database.Catalog, artifactID []byte) ([]ListedCitation, e
 		}
 		out = append(out, listed)
 	}
-	return out, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	if err := attachPersonNames(db, artifactID, out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func attachPersonNames(db *sql.DB, artifactID []byte, list []ListedCitation) error {
+	rows, err := db.Query(sqlPersonNamesByArtifact, artifactID, artifactID)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	byCitation := map[string][]string{}
+	for rows.Next() {
+		var citationID, subjectID []byte
+		var label string
+		if err := rows.Scan(&citationID, &subjectID, &label); err != nil {
+			return err
+		}
+		_ = subjectID
+		key := string(citationID)
+		if len(byCitation[key]) >= subjectNameCap {
+			continue
+		}
+		byCitation[key] = append(byCitation[key], strings.TrimSpace(label))
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	for i := range list {
+		list[i].SubjectNames = byCitation[string(list[i].ID)]
+	}
+	return nil
 }
 
 // CountBySource returns citation counts keyed by artifact UUID string.

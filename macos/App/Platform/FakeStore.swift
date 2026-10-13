@@ -2983,6 +2983,40 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         )
     }
 
+    private func personNames(for citationID: String, projectDir: String) -> [String] {
+        let personTypeIDs = Set(
+            (subjectTypesByProject[projectDir] ?? []).filter { $0.key == "person" }.map(\.id)
+        )
+        let subjects = subjectsBySource.values.flatMap { $0 }
+        func label(_ id: String) -> String? {
+            guard let subject = subjects.first(where: { $0.id == id }),
+                  personTypeIDs.contains(subject.subjectTypeID)
+            else { return nil }
+            let trimmed = subject.label.trimmingCharacters(in: .whitespacesAndNewlines)
+            return trimmed.isEmpty ? nil : trimmed
+        }
+        var firstID: [String: String] = [:]
+        var labels: [String: String] = [:]
+        let observations = observationsBySource.values
+            .flatMap { $0 }
+            .filter { $0.citationID == citationID }
+            .sorted { $0.id < $1.id }
+        for observation in observations {
+            if let name = label(observation.subjectID), firstID[observation.subjectID] == nil {
+                firstID[observation.subjectID] = observation.id
+                labels[observation.subjectID] = name
+            }
+            if let name = label(observation.valueSubjectID), firstID[observation.valueSubjectID] == nil {
+                firstID[observation.valueSubjectID] = observation.id
+                labels[observation.valueSubjectID] = name
+            }
+        }
+        return firstID
+            .sorted { $0.value < $1.value }
+            .prefix(6)
+            .compactMap { labels[$0.key] }
+    }
+
     func listCitationsByArtifact(projectDir: String, artifactID: String) async throws -> [CatalogListedCitation] {
         return withState {
             markCatalogSessionHeld(projectDir)
@@ -2994,7 +3028,11 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                     .flatMap { $0 }
                     .filter { $0.citationID == citation.id }
                     .count
-                return CatalogListedCitation(citation: citation, observationCount: count)
+                return CatalogListedCitation(
+                    citation: citation,
+                    observationCount: count,
+                    subjectNames: personNames(for: citation.id, projectDir: projectDir)
+                )
             }
         }
     }

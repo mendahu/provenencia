@@ -1764,6 +1764,8 @@ message CitationCountsBySourceResponse {
 message ListedCitation {
   Citation citation = 1;
   int32 observation_count = 2;
+  // Person labels this Citation names, earliest Observation first, capped.
+  repeated string subject_names = 3;
 }
 
 message ListCitationsByArtifactRequest {

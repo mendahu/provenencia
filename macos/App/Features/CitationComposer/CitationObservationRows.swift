@@ -338,6 +338,13 @@ final class CitationObservationRows {
         }
     }
 
+    func replaceValues(rowID: UUID, values: ObservationRowValues) {
+        mutate(rowID) { row in
+            row.values = values
+            row.deriveState()
+        }
+    }
+
     func togglePolarity(rowID: UUID) {
         mutate(rowID) { row in
             row.polarity = row.polarity == ObservationPolarity.negative.rawValue

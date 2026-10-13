@@ -5891,6 +5891,9 @@ public nonisolated struct Provenencia_Engine_V1_ListedCitation: Sendable {
 
   public var observationCount: Int32 = 0
 
+  /// Person labels this Citation names, earliest Observation first, capped.
+  public var subjectNames: [String] = []
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -16925,7 +16928,7 @@ nonisolated extension Provenencia_Engine_V1_CitationCountsBySourceResponse: Swif
 
 nonisolated extension Provenencia_Engine_V1_ListedCitation: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ListedCitation"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}citation\0\u{3}observation_count\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}citation\0\u{3}observation_count\0\u{3}subject_names\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -16935,6 +16938,7 @@ nonisolated extension Provenencia_Engine_V1_ListedCitation: SwiftProtobuf.Messag
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularMessageField(value: &self._citation) }()
       case 2: try { try decoder.decodeSingularInt32Field(value: &self.observationCount) }()
+      case 3: try { try decoder.decodeRepeatedStringField(value: &self.subjectNames) }()
       default: break
       }
     }
@@ -16951,12 +16955,16 @@ nonisolated extension Provenencia_Engine_V1_ListedCitation: SwiftProtobuf.Messag
     if self.observationCount != 0 {
       try visitor.visitSingularInt32Field(value: self.observationCount, fieldNumber: 2)
     }
+    if !self.subjectNames.isEmpty {
+      try visitor.visitRepeatedStringField(value: self.subjectNames, fieldNumber: 3)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Provenencia_Engine_V1_ListedCitation, rhs: Provenencia_Engine_V1_ListedCitation) -> Bool {
     if lhs._citation != rhs._citation {return false}
     if lhs.observationCount != rhs.observationCount {return false}
+    if lhs.subjectNames != rhs.subjectNames {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

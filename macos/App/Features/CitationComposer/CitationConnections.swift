@@ -255,12 +255,26 @@ final class CitationConnections {
                     used.insert(first.id)
                 }
             }
+            var fromSubjectID = bridge.flatMap(\.endpointAID) ?? ""
+            var toSubjectID = bridge.flatMap(\.endpointBID) ?? ""
+            if let rule, fromSubjectID.isEmpty || toSubjectID.isEmpty {
+                for edge in rule.edges {
+                    guard let observation = group.first(where: {
+                        vocabulary.property(id: $0.propertyID)?.key == edge.propertyKey
+                    }), !observation.valueSubjectID.isEmpty else { continue }
+                    if edge.endpointTypeKey == rule.fromTypeKey, fromSubjectID.isEmpty {
+                        fromSubjectID = observation.valueSubjectID
+                    } else if edge.endpointTypeKey == rule.toTypeKey, toSubjectID.isEmpty {
+                        toSubjectID = observation.valueSubjectID
+                    }
+                }
+            }
             connections.append(
                 ConnectionRow(
                     id: UUID(),
                     isPending: false,
-                    fromSubjectID: "",
-                    toSubjectID: "",
+                    fromSubjectID: fromSubjectID,
+                    toSubjectID: toSubjectID,
                     fromLabel: "",
                     toLabel: "",
                     bridgeTypeKey: typeKey,

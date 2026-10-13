@@ -442,6 +442,9 @@ func TestCitations(t *testing.T) {
 				if list[0].ObservationCount != 1 {
 					t.Fatalf("obs count %d", list[0].ObservationCount)
 				}
+				if len(list[0].SubjectNames) != 1 || list[0].SubjectNames[0] != "Alice" {
+					t.Fatalf("names %v", list[0].SubjectNames)
+				}
 			},
 		},
 		{

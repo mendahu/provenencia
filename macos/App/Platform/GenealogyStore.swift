@@ -342,6 +342,8 @@ struct CatalogCitation: Sendable, Equatable, Identifiable {
 struct CatalogListedCitation: Sendable, Equatable, Identifiable {
     var citation: CatalogCitation
     var observationCount: Int
+    /// Person labels this citation names, earliest observation first.
+    var subjectNames: [String] = []
     var id: String { citation.id }
 }
 

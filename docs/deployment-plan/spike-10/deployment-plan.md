@@ -140,7 +140,7 @@ These are the calls for this spike. The questions at the bottom are answered; no
 | Brief | View | Gates | Later on the same view |
 | --- | --- | --- | --- |
 | **S10-D1** | Adaptive choice field (kit board) | **S10-14**, descoped 2026-10-12 | — |
-| **S10-D3** | Citation composer | **S10-16** | — |
+| **S10-D3** | Citation composer | **S10-16**, done 2026-10-12 | — |
 | **S10-D4** | Name parts modal | **S10-17** | Split, fixed-width type control. Does not wait on S10-29 |
 | **S10-D5** | Source page — Artifacts | **S10-18** | — |
 | **S10-D6** | Evidence graph | **S10-18** header open | S10-20 box-select. S10-44 Unpromote on the promoted card |
@@ -399,7 +399,9 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 
 #### S10-16 — Observation list rethink
 
-**Brief:** [S10-D3](design/S10-D3-citation-composer.md).
+**Landed 2026-10-12.** See [`completed.md`](completed.md).
+
+**Brief:** [S10-D3](design/archive/S10-D3-citation-composer.md).
 
 | | |
 | --- | --- |

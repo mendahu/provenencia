@@ -192,6 +192,7 @@ func ListCitationsByArtifact(in []byte) ([]byte, error) {
 			out.Citations = append(out.Citations, &engine.ListedCitation{
 				Citation:         citationProto(row.Citation),
 				ObservationCount: row.ObservationCount,
+				SubjectNames:     row.SubjectNames,
 			})
 		}
 		return nil
