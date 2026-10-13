@@ -598,8 +598,8 @@ struct PVComboBox<Row: View, Empty: View>: View {
         // key, but mouse events are still delivered to the window under the
         // pointer, so the gesture fires; the mouse monitor passes panel
         // clicks through untouched.
-        .onTapGesture { commit(option, via: .click) }
-        .accessibilityAction(.default) { commit(option, via: .click) }
+        .onTapGesture { _ = commit(option, via: .click) }
+        .accessibilityAction(.default) { _ = commit(option, via: .click) }
         .accessibilityAddTraits(option.value == selection ? [.isSelected] : [])
         .accessibilityIdentifier(identifier("option.\(option.value)") ?? "")
     }
