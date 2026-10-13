@@ -399,7 +399,7 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 
 #### S10-16 — Observation list rethink
 
-**Landed 2026-10-12.** See [`completed.md`](completed.md).
+**Landed 2026-10-12** in [#384](https://github.com/mendahu/provenencia/pull/384). See [`completed.md`](completed.md).
 
 **Brief:** [S10-D3](design/archive/S10-D3-citation-composer.md).
 

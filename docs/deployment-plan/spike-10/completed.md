@@ -2,7 +2,7 @@
 
 ## S10-16 — Observation list rethink
 
-**Landed 2026-10-12.** The citation composer is two columns: stepped artifact and citation over the file, and one authoring box over subject groups. A bridge is one write and is listed under both ends. Connect still opens that box with the ends filled and an empty role or type.
+**Landed 2026-10-12** in [#384](https://github.com/mendahu/provenencia/pull/384). The citation composer is two columns: stepped artifact and citation over the file, and one authoring box over subject groups. A bridge is one write and is listed under both ends. Connect still opens that box with the ends filled and an empty role or type.
 
 ## S10-01 — Button hit boxes
 
