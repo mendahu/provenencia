@@ -195,6 +195,20 @@ struct CitationComposerModelTests {
         )
     }
 
+    @Test func addPropertyEntryOpensTheObservationWithThatSubject() async {
+        let store = makeStore()
+        seedArtifact(store)
+        let model = makeModel(store: store)
+        await model.prepare()
+        guard case .property(let draft) = model.authoring else {
+            Issue.record("expected the observation dialog")
+            return
+        }
+        #expect(draft.values.subjectID == subjectID)
+        #expect(draft.focus == .property)
+        #expect(model.subjectLabel == "Margt.")
+    }
+
     @Test func firstRowSaveOnNewCreatesCitationAndExposesRef() async {
         let store = makeStore()
         seedArtifact(store)
@@ -598,14 +612,14 @@ struct CitationComposerModelTests {
         }
         model.selectCitation("cit-1")
         await model.awaitIdentitySwitch()
-        #expect(model.pendingLeave != nil)
-        #expect(model.activeCitationID == nil)
-        model.discardLeaveChanges()
-        await model.awaitIdentitySwitch()
+        #expect(model.pendingLeave == nil)
         #expect(model.activeCitationID == "cit-1")
-        if case .rest = model.authoring {} else {
-            Issue.record("switching clears the draft")
+        guard case .bridge(let draft) = model.authoring else {
+            Issue.record("the bridge draft stays open")
+            return
         }
+        #expect(draft.endA == subjectID)
+        #expect(draft.endB == eventID)
     }
 
     @Test func pendingLocationCanSaveWithoutTermAndIsNeverTouched() async {
@@ -915,6 +929,47 @@ struct CitationComposerModelTests {
         await model.awaitIdentitySwitch()
         #expect(model.activeCitationID == "cit-b")
         #expect(model.transcription == "B")
+    }
+
+    @Test func modalCitationSwitchUpdatesTheOpenCitationAndKeepsTheDraft() async {
+        let store = makeStore()
+        seedArtifact(store)
+        store.citationsByID["cit-a"] = CatalogCitation(
+            id: "cit-a", ref: "CIT-A", artifactID: "art-0",
+            locatorJSON: #"{"version":1,"selectors":[{"type":"artifact"}]}"#,
+            transcription: "A", description: "", transcriptionUncertain: false, transcriptionNote: ""
+        )
+        store.citationsByID["cit-b"] = CatalogCitation(
+            id: "cit-b", ref: "CIT-B", artifactID: "art-0",
+            locatorJSON: #"{"version":1,"selectors":[{"type":"artifact"}]}"#,
+            transcription: "B", description: "Schedule B", transcriptionUncertain: false, transcriptionNote: ""
+        )
+        let model = makeModel(store: store)
+        await model.prepare()
+        model.mutateProperty { $0.values.propertyID = occupationPropertyID }
+        model.setAuthoringCitation("cit-b")
+        await model.awaitIdentitySwitch()
+        #expect(model.activeCitationID == "cit-b")
+        #expect(model.authoringCitationID == "cit-b")
+        #expect(model.transcription == "B")
+        #expect(model.citationDescription == "Schedule B")
+        guard case .property(let draft) = model.authoring else {
+            Issue.record("the observation dialog stays open")
+            return
+        }
+        #expect(draft.values.subjectID == subjectID)
+        #expect(draft.values.propertyID == occupationPropertyID)
+        model.selectCitation("cit-a")
+        await model.awaitIdentitySwitch()
+        #expect(model.activeCitationID == "cit-a")
+        #expect(model.authoringCitationID == "cit-a")
+        #expect(model.transcription == "A")
+        guard case .property(let still) = model.authoring else {
+            Issue.record("the page citation menu keeps the dialog open")
+            return
+        }
+        #expect(still.values.subjectID == subjectID)
+        #expect(store.recordedCalls.contains { $0.hasPrefix("getCitation") } == false)
     }
 
     @Test func connectEntryIgnoresLegacyTermAndGrid() throws {
@@ -1262,5 +1317,43 @@ struct CitationComposerModelTests {
         case placeEdgePropertyID: return "place"
         default: return ""
         }
+    }
+}
+
+@Suite
+struct CitationAuthoringNavigationTests {
+    @Test func propertyDraftWalksSubjectThenPropertyThenValue() {
+        #expect(CitationAuthoringNavigation.next(after: .subject, bridgeHasTerm: false) == .property)
+        #expect(CitationAuthoringNavigation.next(after: .property, bridgeHasTerm: false) == .value)
+        #expect(CitationAuthoringNavigation.next(after: .value, bridgeHasTerm: false) == nil)
+    }
+
+    @Test func bridgeDraftWalksTheEndsAndStopsWhenThereIsNoTerm() {
+        #expect(CitationAuthoringNavigation.next(after: .endA, bridgeHasTerm: false) == .endB)
+        #expect(CitationAuthoringNavigation.next(after: .endB, bridgeHasTerm: false) == nil)
+        #expect(CitationAuthoringNavigation.next(after: .endB, bridgeHasTerm: true) == .term)
+        #expect(CitationAuthoringNavigation.next(after: .term, bridgeHasTerm: true) == nil)
+    }
+
+    @Test func creatingASubjectDoesNotAdvance() {
+        #expect(CitationAuthoringNavigation.shouldAdvance("sub-1"))
+        #expect(!CitationAuthoringNavigation.shouldAdvance(""))
+        #expect(!CitationAuthoringNavigation.shouldAdvance("  "))
+        #expect(!CitationAuthoringNavigation.shouldAdvance(CitationComposerModel.newSubjectPrefix + "person"))
+    }
+
+    @Test func tabClaimsTheBridgeTermOnlyWhenTheCommitInsertsIt() {
+        #expect(CitationAuthoringNavigation.claimsForwardTab(
+            nextFieldAlreadyFocusable: false,
+            nextFieldWillExist: true
+        ))
+        #expect(!CitationAuthoringNavigation.claimsForwardTab(
+            nextFieldAlreadyFocusable: true,
+            nextFieldWillExist: true
+        ))
+        #expect(!CitationAuthoringNavigation.claimsForwardTab(
+            nextFieldAlreadyFocusable: false,
+            nextFieldWillExist: false
+        ))
     }
 }

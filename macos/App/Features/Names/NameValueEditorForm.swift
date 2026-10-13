@@ -7,6 +7,8 @@ struct NameValueEditorForm: View {
     @Binding var draft: NameValueDraft
     var accessibilityIdentifierPrefix: String = "nameValue"
     var showStoredAs: Bool = true
+    /// Bumps to put the caret in the form field, including the first time the editor appears.
+    var focusNonce: Int = 0
     @State private var partValueToFocus: UUID?
 
     private var typeOptions: [PVSelectOption] {
@@ -38,7 +40,9 @@ struct NameValueEditorForm: View {
                 text: formBinding,
                 size: .md,
                 prompt: L10n.NameValue.formPlaceholder,
-                isInvalid: draft.formError != nil
+                isInvalid: draft.formError != nil,
+                activateOnAppear: focusNonce > 0,
+                focusNonce: focusNonce
             )
             .accessibilityIdentifier("\(accessibilityIdentifierPrefix).form")
             .accessibilityHint(draft.formError.map { Text(verbatim: $0) } ?? Text(L10n.NameValue.formHint))

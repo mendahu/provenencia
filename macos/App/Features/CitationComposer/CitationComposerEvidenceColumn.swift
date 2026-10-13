@@ -312,7 +312,7 @@ struct CitationComposerEvidenceColumn: View {
         } else if model.artifactViewer.kind == .image {
             PVButton(
                 L10n.CitationComposer.autoTranscribe,
-                variant: .ghost,
+                variant: .primary,
                 size: .sm,
                 icon: .scanText,
                 loading: model.isTranscribing

@@ -79,6 +79,7 @@ struct PVInput: View {
     private let suffix: String?
     private let isInvalid: Bool
     private let activateOnAppear: Bool
+    private let focusNonce: Int
     private let externalFocus: FocusState<Bool>.Binding?
 
     @FocusState private var ownedFocus: Bool
@@ -93,7 +94,8 @@ struct PVInput: View {
         suffix: String? = nil,
         isInvalid: Bool = false,
         focused: FocusState<Bool>.Binding? = nil,
-        activateOnAppear: Bool = false
+        activateOnAppear: Bool = false,
+        focusNonce: Int = 0
     ) {
         self._text = text
         self.size = size
@@ -104,6 +106,7 @@ struct PVInput: View {
         self.suffix = Self.nilIfEmpty(suffix)
         self.isInvalid = isInvalid
         self.activateOnAppear = activateOnAppear
+        self.focusNonce = focusNonce
         self.externalFocus = focused
     }
 
@@ -149,15 +152,23 @@ struct PVInput: View {
         }
         .onAppear {
             guard activateOnAppear, !isReadOnly else { return }
-            // Same-cycle focus is dropped while the field is inserted; the
-            // next turn also lets a Space-activated control finish so the
-            // key is not typed into the new value.
-            DispatchQueue.main.async {
-                if let externalFocus {
-                    externalFocus.wrappedValue = true
-                } else {
-                    ownedFocus = true
-                }
+            focusField()
+        }
+        .onChange(of: focusNonce) { _, nonce in
+            guard nonce > 0, !isReadOnly else { return }
+            focusField()
+        }
+    }
+
+    /// Same-cycle focus is dropped while the field is inserted; the next turn
+    /// also lets a Space-activated control finish so the key is not typed
+    /// into the new value.
+    private func focusField() {
+        DispatchQueue.main.async {
+            if let externalFocus {
+                externalFocus.wrappedValue = true
+            } else {
+                ownedFocus = true
             }
         }
     }

@@ -70,7 +70,9 @@ struct CitationComposerAuthoringBox: View {
                         emptyLabel: L10n.CitationComposer.subjectPlaceholder,
                         label: L10n.CitationComposer.subjectLabel,
                         accessibilityIdentifierPrefix: "citationComposer.draft.subject",
-                        focusNonce: draft.focus == .subject ? model.authoringFocusNonce : 0
+                        activateOnAppear: draft.focus == .subject,
+                        focusNonce: draft.focus == .subject ? model.authoringFocusNonce : 0,
+                        onCommit: { model.advanceAuthoringFocus(from: .subject, committed: $0) }
                     )
                 }
                 .frame(maxWidth: .infinity)
@@ -83,7 +85,9 @@ struct CitationComposerAuthoringBox: View {
                         emptyLabel: L10n.CitationComposer.propertyPlaceholder,
                         label: L10n.CitationComposer.propertyLabel,
                         accessibilityIdentifierPrefix: "citationComposer.draft.property",
-                        focusNonce: draft.focus == .property ? model.authoringFocusNonce : 0
+                        activateOnAppear: draft.focus == .property,
+                        focusNonce: draft.focus == .property ? model.authoringFocusNonce : 0,
+                        onCommit: { model.advanceAuthoringFocus(from: .property, committed: $0) }
                     )
                     .disabled(draft.values.subjectID.isEmpty)
                 }
@@ -115,12 +119,14 @@ struct CitationComposerAuthoringBox: View {
                     selection: endABinding,
                     label: L10n.CitationComposer.endA,
                     prefix: "citationComposer.draft.endA",
+                    field: .endA,
                     focused: draft.focus == .endA
                 )
                 endCombo(
                     selection: endBBinding,
                     label: L10n.CitationComposer.endB,
                     prefix: "citationComposer.draft.endB",
+                    field: .endB,
                     focused: draft.focus == .endB
                 )
             }
@@ -136,6 +142,7 @@ struct CitationComposerAuthoringBox: View {
         selection: Binding<String>,
         label: LocalizedStringResource,
         prefix: String,
+        field: CitationAuthoringFocus,
         focused: Bool
     ) -> some View {
         PVField(label: label) {
@@ -147,7 +154,10 @@ struct CitationComposerAuthoringBox: View {
                 emptyLabel: L10n.CitationComposer.subjectPlaceholder,
                 label: label,
                 accessibilityIdentifierPrefix: prefix,
-                focusNonce: focused ? model.authoringFocusNonce : 0
+                activateOnAppear: focused,
+                focusNonce: focused ? model.authoringFocusNonce : 0,
+                onCommit: { model.advanceAuthoringFocus(from: field, committed: $0) },
+                onTabCommit: { model.shouldClaimAuthoringTab(from: field, committed: $0) }
             )
         }
         .frame(maxWidth: .infinity)
@@ -191,14 +201,22 @@ struct CitationComposerAuthoringBox: View {
         PVField(label: L10n.CitationComposer.valueLabel) {
             switch property?.valueType {
             case PropertyValueType.text.rawValue:
-                PVInput(text: textBinding, size: .sm, prompt: L10n.CitationComposer.valueAsWritten)
-                    .accessibilityIdentifier("citationComposer.draft.text")
+                PVInput(
+                    text: textBinding,
+                    size: .sm,
+                    prompt: L10n.CitationComposer.valueAsWritten,
+                    activateOnAppear: focusValue,
+                    focusNonce: focusValue ? model.authoringFocusNonce : 0
+                )
+                .accessibilityIdentifier("citationComposer.draft.text")
             case PropertyValueType.integer.rawValue:
                 PVInput(
                     text: integerBinding,
                     size: .sm,
                     mono: true,
-                    suffix: property?.key == "age" ? L10n.string(L10n.CitationComposer.yearsSuffix) : nil
+                    suffix: property?.key == "age" ? L10n.string(L10n.CitationComposer.yearsSuffix) : nil,
+                    activateOnAppear: focusValue,
+                    focusNonce: focusValue ? model.authoringFocusNonce : 0
                 )
             case PropertyValueType.term.rawValue:
                 HStack(spacing: PVSpacing.space4) {
@@ -210,6 +228,7 @@ struct CitationComposerAuthoringBox: View {
                         emptyLabel: L10n.CitationComposer.termEmpty,
                         label: L10n.CitationComposer.valueLabel,
                         accessibilityIdentifierPrefix: "citationComposer.draft.valueTerm",
+                        activateOnAppear: focusValue,
                         focusNonce: focusValue ? model.authoringFocusNonce : 0
                     )
                     PVButton(L10n.CitationComposer.addCustomTerm, variant: .ghost, size: .sm, icon: .plus) {
@@ -220,14 +239,16 @@ struct CitationComposerAuthoringBox: View {
                 inlineValue {
                     NameValueEditorForm(
                         draft: nameDraftBinding,
-                        accessibilityIdentifierPrefix: "citationComposer.draft.name"
+                        accessibilityIdentifierPrefix: "citationComposer.draft.name",
+                        focusNonce: focusValue ? model.authoringFocusNonce : 0
                     )
                 }
             case PropertyValueType.date.rawValue:
                 inlineValue {
                     DateValueEditorForm(
                         draft: dateDraftBinding,
-                        accessibilityIdentifierPrefix: "citationComposer.draft.date"
+                        accessibilityIdentifierPrefix: "citationComposer.draft.date",
+                        focusNonce: focusValue ? model.authoringFocusNonce : 0
                     )
                 }
             default:
@@ -414,32 +435,35 @@ struct CitationComposerModalLead: View {
     var body: some View {
         VStack(alignment: .leading, spacing: PVSpacing.space5) {
             PVField(label: L10n.CitationComposer.citationEyebrow) {
-                PVSelect(
-                    selection: citationSelection,
-                    options: citationOptions,
-                    size: .sm,
-                    displayLabel: model.citationStepLabel(for: citationSelection.wrappedValue),
-                    menuWidth: 460,
-                    maxVisibleRows: 5,
-                    rowHeight: 72,
-                    isDisabled: !citationEnabled,
-                    accessibilityLabel: L10n.CitationComposer.citationEyebrow,
-                    accessibilityIdentifier: "citationComposer.modal.citation"
-                ) { option in
-                    if option.id.isEmpty {
-                        HStack(spacing: PVSpacing.space4) {
-                            PVIcon(.plus, size: 14)
-                            Text(L10n.CitationComposer.newCitation)
-                                .font(PVFont.body(size: PVTypeScale.caption))
-                            Text(L10n.CitationComposer.onThisArtifact)
-                                .font(PVFont.body(size: 12, italic: true))
-                                .foregroundStyle(PVColor.textMuted)
+                VStack(alignment: .leading, spacing: PVSpacing.space3) {
+                    PVSelect(
+                        selection: citationSelection,
+                        options: citationOptions,
+                        size: .sm,
+                        displayLabel: model.citationStepLabel(for: citationSelection.wrappedValue),
+                        menuWidth: 460,
+                        maxVisibleRows: 5,
+                        rowHeight: 72,
+                        isDisabled: !citationEnabled,
+                        accessibilityLabel: L10n.CitationComposer.citationEyebrow,
+                        accessibilityIdentifier: "citationComposer.modal.citation"
+                    ) { option in
+                        if option.id.isEmpty {
+                            HStack(spacing: PVSpacing.space4) {
+                                PVIcon(.plus, size: 14)
+                                Text(L10n.CitationComposer.newCitation)
+                                    .font(PVFont.body(size: PVTypeScale.caption))
+                                Text(L10n.CitationComposer.onThisArtifact)
+                                    .font(PVFont.body(size: 12, italic: true))
+                                    .foregroundStyle(PVColor.textMuted)
+                            }
+                        } else if let listed = model.orderedCitations.first(where: { $0.citation.id == option.id }) {
+                            CitationStepMenuRow(listed: listed, locator: menuLocator(listed.citation))
+                        } else {
+                            Text(verbatim: option.label)
                         }
-                    } else if let listed = model.orderedCitations.first(where: { $0.citation.id == option.id }) {
-                        CitationStepMenuRow(listed: listed, locator: menuLocator(listed.citation))
-                    } else {
-                        Text(verbatim: option.label)
                     }
+                    citationReading
                 }
             }
             VStack(alignment: .leading, spacing: PVSpacing.space3) {
@@ -472,6 +496,36 @@ struct CitationComposerModalLead: View {
             }
             PVDivider(axis: .horizontal, color: PVColor.borderSubtle)
         }
+    }
+
+    /// The open citation's transcription, under the menu, so the reading is
+    /// in view while the observation is filled in.
+    private var citationReading: some View {
+        let text = model.transcription.trimmingCharacters(in: .whitespacesAndNewlines)
+        return Group {
+            if text.isEmpty {
+                Text(L10n.CitationComposer.noTranscriptionLine)
+                    .font(PVFont.body(size: 13, italic: true))
+                    .foregroundStyle(PVColor.textMuted)
+            } else {
+                Text(verbatim: text)
+                    .font(PVFont.body(size: 13))
+                    .foregroundStyle(PVColor.textSecondary)
+            }
+        }
+        .lineLimit(8)
+        .multilineTextAlignment(.leading)
+        .fixedSize(horizontal: false, vertical: true)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, PVSpacing.space5)
+        .padding(.vertical, PVSpacing.space4)
+        .background(PVColor.surfaceSunken)
+        .clipShape(RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous)
+                .stroke(PVColor.borderDefault, lineWidth: 1)
+        )
+        .accessibilityIdentifier("citationComposer.modal.citationReading")
     }
 
     private var citationOptions: [PVSelectOption] {
@@ -563,6 +617,7 @@ struct CitationBridgeSentence: View {
                 emptyLabel: L10n.CitationComposer.termEmpty,
                 label: termPlaceholder,
                 accessibilityIdentifierPrefix: termIdentifierPrefix,
+                activateOnAppear: focusNonce > 0,
                 focusNonce: focusNonce
             )
             .frame(width: 190)

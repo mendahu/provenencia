@@ -162,10 +162,7 @@ struct CitationComposerObservationsColumn: View {
             if line.negative {
                 PVBadge(L10n.CitationComposer.negativeLabel, tone: .neutral, icon: .circleMinus, subtle: true)
             }
-            if fresh {
-                PVBadge(L10n.CitationComposer.savedBadge, tone: .success, icon: .check, subtle: true)
-            }
-            lineActions(line, revealed: revealed)
+            lineActions(line, revealed: revealed, fresh: fresh)
         }
         .padding(.vertical, PVSpacing.space3)
         .padding(.leading, PVSpacing.space5)
@@ -187,7 +184,7 @@ struct CitationComposerObservationsColumn: View {
     }
 
     @ViewBuilder
-    private func lineActions(_ line: CitationSavedLine, revealed: Bool) -> some View {
+    private func lineActions(_ line: CitationSavedLine, revealed: Bool, fresh: Bool) -> some View {
         HStack(spacing: PVSpacing.space2) {
             if revealed {
                 PVIconButton(
@@ -217,6 +214,8 @@ struct CitationComposerObservationsColumn: View {
                 ) {
                     Task { await model.askDeleteLine(line) }
                 }
+            } else if fresh {
+                PVBadge(L10n.CitationComposer.savedBadge, tone: .success, icon: .check, subtle: true)
             }
         }
         .frame(width: 88, alignment: .trailing)
@@ -272,7 +271,10 @@ struct CitationComposerEditSheet: View {
                         placeholder: L10n.CitationComposer.subjectPlaceholder,
                         emptyLabel: L10n.CitationComposer.subjectPlaceholder,
                         label: L10n.CitationComposer.subjectLabel,
-                        accessibilityIdentifierPrefix: "citationComposer.edit.subject"
+                        accessibilityIdentifierPrefix: "citationComposer.edit.subject",
+                        activateOnAppear: model.editSession?.focus == .subject,
+                        focusNonce: model.editSession?.focus == .subject ? model.authoringFocusNonce : 0,
+                        onCommit: { model.advanceEditFocus(from: .subject, committed: $0) }
                     )
                 }
                 .frame(maxWidth: .infinity)
@@ -286,12 +288,15 @@ struct CitationComposerEditSheet: View {
                         placeholder: L10n.CitationComposer.propertyPlaceholder,
                         emptyLabel: L10n.CitationComposer.propertyPlaceholder,
                         label: L10n.CitationComposer.propertyLabel,
-                        accessibilityIdentifierPrefix: "citationComposer.edit.property"
+                        accessibilityIdentifierPrefix: "citationComposer.edit.property",
+                        activateOnAppear: model.editSession?.focus == .property,
+                        focusNonce: model.editSession?.focus == .property ? model.authoringFocusNonce : 0,
+                        onCommit: { model.advanceEditFocus(from: .property, committed: $0) }
                     )
                 }
                 .frame(maxWidth: .infinity)
             }
-            editValue(values)
+            editValue(values, focusValue: model.editSession?.focus == .value)
             PVCheckbox(
                 L10n.CitationComposer.negativeLabel,
                 description: L10n.CitationComposer.negativeDescription,
@@ -304,13 +309,25 @@ struct CitationComposerEditSheet: View {
     }
 
     @ViewBuilder
-    private func editValue(_ values: ObservationRowValues) -> some View {
+    private func editValue(_ values: ObservationRowValues, focusValue: Bool) -> some View {
         let property = model.vocabulary.property(id: values.propertyID)
+        let nonce = focusValue ? model.authoringFocusNonce : 0
         switch property?.valueType {
         case PropertyValueType.text.rawValue:
-            PVInput(text: editTextBinding, size: .sm)
+            PVInput(
+                text: editTextBinding,
+                size: .sm,
+                activateOnAppear: focusValue,
+                focusNonce: nonce
+            )
         case PropertyValueType.integer.rawValue:
-            PVInput(text: editIntegerBinding, size: .sm, mono: true)
+            PVInput(
+                text: editIntegerBinding,
+                size: .sm,
+                mono: true,
+                activateOnAppear: focusValue,
+                focusNonce: nonce
+            )
         case PropertyValueType.term.rawValue:
             HStack(spacing: PVSpacing.space3) {
                 PVComboBox(
@@ -320,7 +337,9 @@ struct CitationComposerEditSheet: View {
                     placeholder: L10n.CitationComposer.termPlaceholder,
                     emptyLabel: L10n.CitationComposer.termEmpty,
                     label: L10n.CitationComposer.termLabel,
-                    accessibilityIdentifierPrefix: "citationComposer.edit.term"
+                    accessibilityIdentifierPrefix: "citationComposer.edit.term",
+                    activateOnAppear: focusValue,
+                    focusNonce: nonce
                 )
                 PVButton(L10n.CitationComposer.addCustomTerm, variant: .ghost, size: .sm) {
                     model.beginAddCustomTerm(propertyID: values.propertyID, applyToEdit: true)
@@ -330,14 +349,16 @@ struct CitationComposerEditSheet: View {
             editInlineValue {
                 NameValueEditorForm(
                     draft: editNameBinding,
-                    accessibilityIdentifierPrefix: "citationComposer.edit.name"
+                    accessibilityIdentifierPrefix: "citationComposer.edit.name",
+                    focusNonce: nonce
                 )
             }
         case PropertyValueType.date.rawValue:
             editInlineValue {
                 DateValueEditorForm(
                     draft: editDateBinding,
-                    accessibilityIdentifierPrefix: "citationComposer.edit.date"
+                    accessibilityIdentifierPrefix: "citationComposer.edit.date",
+                    focusNonce: nonce
                 )
             }
         default:

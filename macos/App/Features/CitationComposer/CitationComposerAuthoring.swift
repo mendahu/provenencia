@@ -28,6 +28,33 @@ enum CitationAuthoringFocus: Equatable {
     case subject, property, value, endA, endB, term
 }
 
+/// Where Enter or a click in an observation-dialog combo box should land next.
+/// The box itself only reports the commit; the form owns the field order.
+enum CitationAuthoringNavigation {
+    /// A real choice. The "create a subject" row opens another dialog instead.
+    static func shouldAdvance(_ committed: String) -> Bool {
+        let trimmed = committed.trimmingCharacters(in: .whitespacesAndNewlines)
+        return !trimmed.isEmpty && !trimmed.hasPrefix(CitationComposerModel.newSubjectPrefix)
+    }
+
+    /// Nil is the last stop: the value is filled in place, or the bridge has no term.
+    static func next(after field: CitationAuthoringFocus, bridgeHasTerm: Bool) -> CitationAuthoringFocus? {
+        switch field {
+        case .subject: .property
+        case .property: .value
+        case .endA: .endB
+        case .endB: bridgeHasTerm ? .term : nil
+        case .value, .term: nil
+        }
+    }
+
+    /// Forward Tab should not leave for Discard when this commit is what
+    /// inserts the next field. A field already on screen can take the Tab itself.
+    static func claimsForwardTab(nextFieldAlreadyFocusable: Bool, nextFieldWillExist: Bool) -> Bool {
+        nextFieldWillExist && !nextFieldAlreadyFocusable
+    }
+}
+
 enum CitationBridgeOrigin: Equatable {
     case blank, graph, duplicate
 }
@@ -87,6 +114,8 @@ struct CitationEditSession: Equatable {
     }
 
     var kind: Kind
+    /// Set when a combo commit moves the cursor. Nil leaves the sheet's own first field alone.
+    var focus: CitationAuthoringFocus? = nil
     var isSaving = false
     var error: String?
 

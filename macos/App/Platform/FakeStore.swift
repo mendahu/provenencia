@@ -2338,6 +2338,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     ) async throws -> (CatalogCitation, [String], [CatalogObservation]) {
         return try withState {
             markCatalogSessionHeld(projectDir)
+            recordedCalls.append("getCitation \(citationID)")
             guard let citation = citationsByID[citationID] else { throw StoreBoom.boom }
             let notes = citationNotesByID[citationID] ?? []
             let observations = observationsBySource.values

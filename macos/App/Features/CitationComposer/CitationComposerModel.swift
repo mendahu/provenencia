@@ -575,6 +575,10 @@ final class CitationComposerModel {
     }
 
     func selectCitation(_ id: String?) {
+        if preservesAuthoringOnCitationChange {
+            switchOpenCitation(to: id)
+            return
+        }
         if id == nil || id?.isEmpty == true {
             beginNewCitation()
             return
@@ -1138,6 +1142,58 @@ final class CitationComposerModel {
         await presentAfterIdentityChange()
     }
 
+    /// The add-observation dialog stays open while the citation underneath it changes.
+    private var preservesAuthoringOnCitationChange: Bool {
+        if editSession != nil { return false }
+        if case .rest = authoring { return false }
+        return true
+    }
+
+    private func switchOpenCitation(to id: String?) {
+        let target = (id?.isEmpty == false) ? id : nil
+        if target == nil, activeCitationID != nil {
+            let ordered = CitationComposerAuthoring.stepperOrder(listedCitations)
+            newCitationReturnIndex = ordered.firstIndex { $0.citation.id == activeCitationID }
+        }
+        guard target != activeCitationID else {
+            clearAuthoringCitationTarget()
+            return
+        }
+        startIdentitySwitch { await self.loadCitationPreservingAuthoring(target) }
+    }
+
+    private func loadCitationPreservingAuthoring(_ id: String?) async {
+        if id == nil || id?.isEmpty == true {
+            activeCitationID = nil
+            loadedCitationRef = ""
+            fields.resetBlank(keepLocator: true)
+            observationRows.replace([])
+            connections.clearSavedKeepingPending()
+        } else if let id {
+            do {
+                try await loadCitation(id)
+            } catch {
+                if Task.isCancelled { return }
+                fields.error = L10n.Errors.message(for: error)
+                return
+            }
+        }
+        if Task.isCancelled { return }
+        clearAuthoringCitationTarget()
+        await presentAfterIdentityChange()
+    }
+
+    private func clearAuthoringCitationTarget() {
+        switch authoring {
+        case .property:
+            mutateProperty { $0.citationID = nil }
+        case .bridge:
+            mutateBridge { $0.citationID = nil }
+        case .rest:
+            break
+        }
+    }
+
     private func selectCitationAndLoad(_ id: String?) async {
         authoring = .rest
         editSession = nil
@@ -1162,15 +1218,29 @@ final class CitationComposerModel {
     }
 
     private func loadCitation(_ citationID: String) async throws {
-        let (citation, _, listed) = try await store.getCitation(
-            projectDir: session.projectKey.projectDir,
-            citationID: citationID
-        )
-        if Task.isCancelled { return }
         await context.waitForGraph()
         if Task.isCancelled { return }
+        let citation: CatalogCitation
+        let observations: [CatalogObservation]
+        if let cached = await cachedCitation(id: citationID),
+           let graphHandle: QueryHandle<SourceGraphRows> = session.queryHandle(graphKey),
+           let graphRows = graphHandle.value
+        {
+            citation = cached
+            observations = graphRows.observations.filter { $0.citationID == cached.id }
+        } else {
+            // Not on a file this source still has. One direct read; prepare
+            // then drops a citation whose artifact is gone.
+            let (fetched, _, listed) = try await store.getCitation(
+                projectDir: session.projectKey.projectDir,
+                citationID: citationID
+            )
+            citation = fetched
+            observations = listed
+        }
+        if Task.isCancelled { return }
         let grouped = CitationConnections.groupSaved(
-            observations: listed,
+            observations: observations,
             vocabulary: vocabulary,
             snapshot: graphSnapshot
         )
@@ -1180,6 +1250,26 @@ final class CitationComposerModel {
         fields.replace(from: citation)
         connections.replaceSaved(grouped.connections)
         observationRows.replace(grouped.leftover.map(ObservationRow.loaded(from:)))
+    }
+
+    /// Citation text lives on the artifact list. Observations live on the source graph.
+    private func cachedCitation(id: String) async -> CatalogCitation? {
+        var artifactIDs: [String] = []
+        if let selectedArtifactID, !selectedArtifactID.isEmpty {
+            artifactIDs.append(selectedArtifactID)
+        }
+        for artifact in artifacts where !artifactIDs.contains(artifact.id) {
+            artifactIDs.append(artifact.id)
+        }
+        for artifactID in artifactIDs {
+            let key = citationsKey(artifactID: artifactID)
+            let _: QueryHandle<[CatalogListedCitation]> = session.query(key)
+            let rows = await session.readyValue(key) as [CatalogListedCitation]?
+            if let match = rows?.first(where: { $0.citation.id == id }) {
+                return match.citation
+            }
+        }
+        return nil
     }
 
     private func seedPendingConnectionIfNeeded() {
@@ -1225,7 +1315,6 @@ final class CitationComposerModel {
         didApplyEntry = true
         switch entry {
         case .addProperty(_, let subjectID, _):
-            guard activeCitationID != nil else { return }
             beginPropertyDraft(subjectID: subjectID)
         case .connect(_, let fromID, let toID, _):
             beginBridgeDraft(endA: fromID, endB: toID, termID: "", origin: .graph)

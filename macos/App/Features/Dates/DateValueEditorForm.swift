@@ -5,6 +5,8 @@ struct DateValueEditorForm: View {
     @Binding var draft: DateValueDraft
     /// Prefix for control identifiers (default matches the Source page date dialog).
     var accessibilityIdentifierPrefix: String = "sources.page.date"
+    /// Bumps to put the caret in the year field when the form is already on screen.
+    var focusNonce: Int = 0
 
     @FocusState private var yearFocused: Bool
 
@@ -27,6 +29,10 @@ struct DateValueEditorForm: View {
             }
         }
         .onAppear { yearFocused = true }
+        .onChange(of: focusNonce) { _, nonce in
+            guard nonce > 0 else { return }
+            DispatchQueue.main.async { yearFocused = true }
+        }
     }
 
     private var kindSection: some View {

@@ -114,25 +114,12 @@ extension CitationComposerModel {
     }
 
     func setAuthoringCitation(_ id: String) {
-        switch authoring {
-        case .property:
-            mutateProperty { $0.citationID = id }
-        case .bridge:
-            mutateBridge { $0.citationID = id }
-        case .rest:
-            break
-        }
+        selectCitation(id.isEmpty ? nil : id)
     }
 
+    /// Both citation menus show the citation open in the composer.
     var authoringCitationID: String {
-        switch authoring {
-        case .property(let draft):
-            return draft.citationID ?? activeCitationID ?? ""
-        case .bridge(let draft):
-            return draft.citationID ?? activeCitationID ?? ""
-        case .rest:
-            return activeCitationID ?? ""
-        }
+        activeCitationID ?? ""
     }
 
     private static func propertyValuesComplete(
@@ -233,6 +220,63 @@ extension CitationComposerModel {
 
     func beginAddObservation(for subjectID: String) {
         openAuthoring { self.beginPropertyDraft(subjectID: subjectID) }
+    }
+
+    func advanceAuthoringFocus(from field: CitationAuthoringFocus, committed: String) {
+        guard CitationAuthoringNavigation.shouldAdvance(committed) else { return }
+        switch authoring {
+        case .rest:
+            return
+        case .property(var draft):
+            guard let next = CitationAuthoringNavigation.next(after: field, bridgeHasTerm: false) else { return }
+            authoringFocusNonce += 1
+            draft.focus = next
+            authoring = .property(draft)
+        case .bridge(var draft):
+            guard let next = CitationAuthoringNavigation.next(after: field, bridgeHasTerm: bridgeHasTerm(draft)) else { return }
+            authoringFocusNonce += 1
+            draft.focus = next
+            authoring = .bridge(draft)
+        }
+    }
+
+    /// Forward Tab from the second subject inserts the bridge sentence. That
+    /// field is not a key view yet, so Tab must stay and land there instead
+    /// of on Discard.
+    func shouldClaimAuthoringTab(from field: CitationAuthoringFocus, committed: String) -> Bool {
+        guard CitationAuthoringNavigation.shouldAdvance(committed) else { return false }
+        guard field == .endB, case .bridge(let draft) = authoring else { return false }
+        var next = draft
+        next.endB = committed
+        return CitationAuthoringNavigation.claimsForwardTab(
+            nextFieldAlreadyFocusable: bridgeHasTerm(draft),
+            nextFieldWillExist: bridgeHasTerm(next)
+        )
+    }
+
+    func advanceEditFocus(from field: CitationAuthoringFocus, committed: String) {
+        guard CitationAuthoringNavigation.shouldAdvance(committed) else { return }
+        guard var session = editSession else { return }
+        switch session.kind {
+        case .property:
+            guard let next = CitationAuthoringNavigation.next(after: field, bridgeHasTerm: false) else { return }
+            authoringFocusNonce += 1
+            session.focus = next
+            editSession = session
+        case .bridge:
+            return
+        }
+    }
+
+    private func bridgeHasTerm(_ draft: CitationBridgeDraft) -> Bool {
+        let pair = CitationComposerAuthoring.resolvePair(
+            endA: draft.endA,
+            endB: draft.endB,
+            termID: draft.termID,
+            vocabulary: vocabulary
+        )
+        if case .ready(let ready) = pair, ready.termProperty != nil { return true }
+        return false
     }
 
     func discardAuthoring() {
