@@ -175,10 +175,10 @@ func (c NameComparer) affinity(a, b NameRole) float64 {
 //
 // Every word may pair with any word of the other name (one-to-one, the best
 // pairing). A pair earns word similarity × role affinity × the two words'
-// weights, and the score is the earned share of both names' total weight. So
-// the same words in the same roles score 1; the same words typed differently
-// (a surname against a given name, a typed part against a form word) still
-// connect, discounted; and an unmatched word costs its weight.
+// weights. The score is that earned total over the weight of the words that
+// bear on it. A word left over when the other name is fully paired exists
+// only on one side: it adds nothing and takes nothing away. Words left over
+// on both sides did not meet, and that disagreement costs their weight.
 //
 // Two rules sit on top:
 //   - When both names have family words and none of them resembles any word
@@ -193,24 +193,20 @@ func (c NameComparer) compareNames(a *namevalues.Value, pa NamePattern, b *namev
 	if len(wa) == 0 || len(wb) == 0 {
 		return 0, false
 	}
-	sim := make([][]float64, len(wa))
 	earned := make([][]float64, len(wa))
 	for i, x := range wa {
-		sim[i] = make([]float64, len(wb))
 		earned[i] = make([]float64, len(wb))
 		for j, y := range wb {
-			sim[i][j] = wordSimilarity(x.text, y.text, x.role, y.role, r)
-			earned[i][j] = sim[i][j] * c.affinity(x.role, y.role) * (x.weight + y.weight)
+			s := wordSimilarity(x.text, y.text, x.role, y.role, r)
+			earned[i][j] = s * c.affinity(x.role, y.role) * (x.weight + y.weight)
 		}
 	}
-	var total float64
-	for _, w := range wa {
-		total += w.weight
+	totalEarned, usedA, usedB := bestAssignment(earned)
+	total := countedWeight(wa, usedA, usedB) + countedWeight(wb, usedB, usedA)
+	if total == 0 {
+		return 0, false
 	}
-	for _, w := range wb {
-		total += w.weight
-	}
-	s := bestPairing(earned) / total
+	s := totalEarned / total
 	if familyConflict(wa, wb, r) {
 		s *= setting(c.GivenOnlyFactor, *DefaultNames.GivenOnlyFactor)
 	}
@@ -218,6 +214,28 @@ func (c NameComparer) compareNames(a *namevalues.Value, pa NamePattern, b *namev
 		s *= setting(c.SuffixConflict, *DefaultNames.SuffixConflict)
 	}
 	return math.Min(s, 1), true
+}
+
+// countedWeight is the weight of words that bear on the score. Paired words
+// always count. A leftover counts only when the other name also has a
+// leftover: those two failed to meet. A leftover on a name whose other side
+// is fully paired exists only on one side, so it is neutral.
+func countedWeight(words []nameWord, used []bool, otherUsed []bool) float64 {
+	otherLeft := false
+	for _, u := range otherUsed {
+		if !u {
+			otherLeft = true
+			break
+		}
+	}
+	var sum float64
+	for i, w := range words {
+		paired := i < len(used) && used[i]
+		if paired || otherLeft {
+			sum += w.weight
+		}
+	}
+	return sum
 }
 
 // familyConflict: both names have family words, and no family word on

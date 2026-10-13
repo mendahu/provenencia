@@ -76,7 +76,7 @@ A candidate is returned when its total reaches `MinScore`. Results are sorted by
   | ignored | `prefix` (titles), `surname_prefix` ("van") | — |
 
 - **Any word can pair with any word** of the other name, one-to-one, using the exact best pairing (so scores are symmetric).
-- **A pair earns** word similarity × role affinity × the two words' weights. The score is the earned share of both names' total weight, so an unmatched word costs its weight.
+- **A pair earns** word similarity × role affinity × the two words' weights. The score is that earned total over the weight of the words that bear on it. A word left over when the other name is fully paired exists only on one side: it adds nothing and takes nothing away. Words left over on both sides did not meet, and that disagreement costs their weight.
 - **Role affinity:**
   - the same role: 1;
   - a nickname against a given name: 0.9;
@@ -87,7 +87,7 @@ A candidate is returned when its total reaches `MinScore`. Results are sorted by
 - **Surnames that share nothing:** when both names have family words and none resembles any word of the other name, the score is scaled by `GivenOnlyFactor` (0.5). A surname can change at marriage, but a shared "James" alone is weak. Swapped types are not a conflict.
 - **Generations:** when both names carry suffixes and share none (Jr. vs Sr.), the score is scaled by `SuffixConflict` (0.3).
 - **Words** match when equal (1), as an abbreviation or nickname (0.98), as a fold-only pair (0.95), as an initial and the word it begins (0.5), or as a near spelling at or above `FuzzyFloor` (0.8, edit-distance ratio). Near spelling compares the folded words, so an accent plus a typo does not pay for the accent twice.
-  - Abbreviation and nickname tables are catalog rows. Install writes the seed from `productAliasTables` in `core/match/registry.go`. Scoring reads the catalog and no other list. Opening a project loads those rows once onto the catalog graph and keeps them until the project closes. `namealiases.Invalidate` reloads them after a table changes. An empty catalog makes no abbreviation or nickname hits. Every installed table is consulted. Origin (`provenencia`, `user`, `plugin:<id>`) records who contributed the table and does not turn it off. A pair hits when both tokens share one set and both words' roles are allowed. Product tables allow given, nick, and untyped, so two surnames do not. Free text does not use these tables. `Jas.` vs `James` and `Jim` vs `James` are 0.98. `Jas.` vs `Jim` is not one set, so it falls through to fold and edit distance. Adding a set extends comparison; the scorer does not name the words.
+  - Abbreviation and nickname tables are catalog rows. Install writes the seed from `productAliasTables` in `core/match/registry.go`. Scoring reads the catalog and no other list. Opening a project loads those rows once onto the catalog graph and keeps them until the project closes. `namealiases.Invalidate` reloads them after a table changes. An empty catalog makes no abbreviation or nickname hits. Every installed table is consulted. Origin (`provenencia`, `user`, `plugin:<id>`) records who contributed the table and does not turn it off. A pair hits when both tokens share one set and both words' roles are allowed. Product tables allow given, nick, and untyped, so two surnames do not. Free text does not use these tables. `Jas.` vs `James` and `Jim` vs `James` are 0.98. `Jas.` vs `Jim` is not one set, so it falls through to fold and edit distance. Adding a set extends comparison; the scorer does not name the words. The nickname sets are one canonical name and its direct nicknames, from [carltonnorthern/nicknames](https://github.com/carltonnorthern/nicknames) (Apache 2.0; license and credit in `core/match/third_party/nicknames/`). A shared nickname does not merge two canonical names: Chris matches Christine, and Chris matches Christopher, and Tina does not match Christopher.
   - Folding is NFD, drop combining marks, then the replacements in `LetterFolds` (`core/match/registry.go`). Adding a letter extends comparison; the fold does not name the letters. An empty map still drops combining marks, so `José` vs `Jose` is 0.95. `José` vs `José` stays 1. Display, `NormalizeForm`, and `sort_key` do not fold, so the Person page still keeps both spellings.
   - A swap of two adjacent letters counts as one edit (Robnis ~ Robins).
   - Words of three or more letters may also differ by one added or dropped letter (Ann ~ Anne, Jon ~ John: 0.75). A substituted letter in a short word is a different name (Mary ≠ Mark).
@@ -105,8 +105,8 @@ Worked examples:
 | --- | --- |
 | James Robins vs James Robins (forms "ROBINS, Jas." and "James Robins") | 1 |
 | J. Robins vs James Robins | 0.8 |
-| James Robins vs James Kenneth Robins (parts; the forms can disagree) | 0.91 |
-| Robins (surname only) vs James Robins | 0.75 |
+| James Robins vs James Kenneth Robins (the middle name is only on one side) | 1 |
+| Robins (surname only) vs James Robins | 1 |
 | Mary Robins vs James Robins | 0.6 |
 | surname "James", given "Robins" (types swapped) vs James Robins | 0.5 |
 | James Robins Jr. vs James Robins Sr. | 0.3 |
@@ -141,7 +141,7 @@ These live in [`core/match/registry.go`](../core/match/registry.go), with every 
 
 | Kind | Features (Weight / Contradiction) | MinScore |
 | --- | --- | --- |
-| person | name 10 / 0 · sex_at_birth 1 / 2 (neutral terms not compared) | 3 |
+| person | name 10 / 0 · sex_at_birth 1 / 2 · gender 1 / 2 (neutral terms not compared) | 3 |
 | event | event_type 4 / 6 · date 6 / 4 · start_date 3 / 2 · end_date 3 / 2 | 5 |
 | place | toponym 10 / 0 | 3 |
 

@@ -938,3 +938,38 @@ func TestProposeIgnoresANeutralSex(t *testing.T) {
 		t.Fatalf("female John Smith landed on the male one (score %.2f)", r.Score)
 	}
 }
+
+// Jake Robins agrees with James Kenneth Jake Robins: Jake and Robins match,
+// and James and Kenneth exist only on the conclusion, so they are neutral.
+// Gender agrees as well. Together that is a medium match.
+func TestProposeExtraGivenNamesAreNeutral(t *testing.T) {
+	f := newFixture(t)
+	withGender := func(src sources.Source, art artifacts.Artifact, name string) subjects.Subject {
+		s := f.person(src, art, name)
+		f.cite(art, s, observations.Input{
+			PropertyID: f.prop("gender").ID, ValueTermID: f.term("gender", "man").ID,
+		})
+		return s
+	}
+	james := withGender(f.source, f.artifact, "James Kenneth Robins")
+	handle := f.promote(james).Entity.ID
+	birthSrc, birthArt := f.newSource("Birth Announcement")
+	f.join(withGender(birthSrc, birthArt, "Jake Robins"), handle)
+
+	noteSrc, noteArt := f.newSource("Note")
+	probe := withGender(noteSrc, noteArt, "Jake Robins")
+	row := rowFor(f.propose(noteSrc.ID, nil), probe.ID)
+	cfg := graphalign.DefaultConfig()
+	if row.Target != graphalign.TargetHandle || !bytes.Equal(row.HandleID, handle) ||
+		row.Assessment != graphalign.AssessMedium || row.Score < cfg.MediumScore || row.Score >= cfg.StrongScore {
+		t.Fatalf("Jake Robins: target %s assessment %s score %.2f", row.Target, row.Assessment, row.Score)
+	}
+}
+
+func (f *fixture) join(s subjects.Subject, entityID []byte) {
+	f.t.Helper()
+	_, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+		return promote.Save(tx, userID, promote.Input{SubjectID: s.ID, EntityID: entityID})
+	})
+	must(f.t, err)
+}

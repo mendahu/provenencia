@@ -620,6 +620,41 @@ func TestPartialNamesAreWeak(t *testing.T) {
 	}
 }
 
+func TestMissingGivenOrPrefixIsNotANameConflict(t *testing.T) {
+	name := match.Property{Key: "name", Origin: "provenencia"}
+	parts := func(ps ...namevalues.Part) match.Values {
+		return match.Values{name: {{Name: &namevalues.Value{Parts: ps}}}}
+	}
+	mrs := parts(
+		namevalues.Part{Idx: 0, Type: namevalues.PartTypePrefix, Value: "Mrs."},
+		namevalues.Part{Idx: 1, Type: namevalues.PartTypeSurname, Value: "Robins"},
+	)
+	marion := parts(
+		namevalues.Part{Idx: 0, Type: namevalues.PartTypeGiven, Value: "Marion"},
+		namevalues.Part{Idx: 1, Type: namevalues.PartTypeSurname, Value: "Robins"},
+	)
+	cfg := graphalign.DefaultConfig()
+	ev := match.Evaluate(mrs, marion, nameMetas())
+	sc := graphalign.ScoreCandidate(ev, mrs, 0, 1, cfg, graphalign.Stats{})
+	c := sc.Eval.Comparisons[0]
+	// The title is ignored. Marion exists only on one side, so it is neutral.
+	// The surnames agree, and that is the whole comparison.
+	if c.Outcome != match.OutcomeAgree || math.Abs(c.Similarity-1) > 1e-9 {
+		t.Fatalf("Mrs. Robins / Marion Robins: outcome %s similarity %.4f", c.Outcome, c.Similarity)
+	}
+	if math.Abs(sc.Score-cfg.PropertyScale[name].Weight) > 1e-9 || sc.Score >= cfg.MediumScore {
+		t.Fatalf("surname with a one-sided given name scored %.4f, want the name weight under medium", sc.Score)
+	}
+
+	differ := graphalign.ScoreCandidate(
+		match.Evaluate(nameVals("Mary", "Robins"), nameVals("James", "Robins"), nameMetas()),
+		nameVals("Mary", "Robins"), 0, 1, cfg, graphalign.Stats{},
+	)
+	if differ.Eval.Comparisons[0].Outcome != match.OutcomeConflict || differ.Score >= 0 {
+		t.Fatalf("different given names: outcome %s score %.3f", differ.Eval.Comparisons[0].Outcome, differ.Score)
+	}
+}
+
 func TestSexAgreementAloneStaysUnderWeak(t *testing.T) {
 	sex := match.Property{Key: "sex_at_birth", Origin: "provenencia"}
 	meta := []match.PropertyMeta{{Property: sex, ValueType: properties.ValueTypeTerm}}
