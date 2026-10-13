@@ -11006,18 +11006,6 @@
         }
       }
     },
-    "citationComposer.uncertainNoteLabel": {
-      "comment": "Note field shown when transcription uncertain is checked",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Why the transcription is uncertain"
-          }
-        }
-      }
-    },
     "citationComposer.descriptionLabel": {
       "comment": "Short name for this citation",
       "extractionState": "manual",
@@ -11078,18 +11066,6 @@
         }
       }
     },
-    "citationComposer.removeObservation": {
-      "comment": "Icon button that deletes one Observation row",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Remove observation"
-          }
-        }
-      }
-    },
     "citationComposer.propertyLabel": {
       "comment": "ComboBox label for choosing which Property an Observation asserts",
       "extractionState": "manual",
@@ -11110,18 +11086,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Search properties"
-          }
-        }
-      }
-    },
-    "citationComposer.propertyEmpty": {
-      "comment": "Empty state when Property search has no hits",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No matching properties"
           }
         }
       }
@@ -11218,18 +11182,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Value — whole number"
-          }
-        }
-      }
-    },
-    "citationComposer.termLabel": {
-      "comment": "ComboBox label for a term Observation value",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Term"
           }
         }
       }
@@ -11486,18 +11438,6 @@
         }
       }
     },
-    "citationComposer.artifactIndexOf": {
-      "comment": "Viewer header index; arguments are 1-based index, total, and media kind",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Artifact %1$lld of %2$lld · %3$@"
-          }
-        }
-      }
-    },
     "citationComposer.artifactKindPDF": {
       "comment": "Media kind label for a PDF Artifact",
       "extractionState": "manual",
@@ -11686,18 +11626,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Pick the Property this observation is about."
-          }
-        }
-      }
-    },
-    "citationComposer.dialogValueRequired": {
-      "comment": "Inline error under Value in the Add observation dialog",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "A value is required."
           }
         }
       }
@@ -12086,30 +12014,6 @@
         }
       }
     },
-    "citationComposer.locatorSection": {
-      "comment": "Header above the layered locator summary list",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Locator"
-          }
-        }
-      }
-    },
-    "citationComposer.locatorOuterToInner": {
-      "comment": "Caption explaining locator list order",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Outer to inner"
-          }
-        }
-      }
-    },
     "citationComposer.locatorEntireArtifact": {
       "comment": "Floor locator row — always present, not removable",
       "extractionState": "manual",
@@ -12118,18 +12022,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Entire artifact"
-          }
-        }
-      }
-    },
-    "citationComposer.locatorAlwaysIncluded": {
-      "comment": "Trailing lock label on the Entire artifact locator row",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Always included"
           }
         }
       }
@@ -12202,30 +12094,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Polygon"
-          }
-        }
-      }
-    },
-    "citationComposer.removePage": {
-      "comment": "Accessibility name to remove a page locator; argument is page number",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Remove page %lld"
-          }
-        }
-      }
-    },
-    "citationComposer.removeRegion": {
-      "comment": "Accessibility name to remove the region locator layer",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Remove region"
           }
         }
       }
@@ -13178,54 +13046,6 @@
         }
       }
     },
-    "citationComposer.subjectEmpty": {
-      "comment": "Empty state when subject search has no hits",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No matching subjects"
-          }
-        }
-      }
-    },
-    "citationComposer.observationActions": {
-      "comment": "VoiceOver name for the Observation row overflow menu",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Observation actions"
-          }
-        }
-      }
-    },
-    "citationComposer.editValueTitle": {
-      "comment": "Title of the name or date Observation editor dialog",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Edit value"
-          }
-        }
-      }
-    },
-    "citationComposer.editValuePlaceholder": {
-      "comment": "Placeholder on the name/date button before a value is set",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Set value"
-          }
-        }
-      }
-    },
     "citationComposer.viewerGroup": {
       "comment": "VoiceOver group name for the composer viewer pane",
       "extractionState": "manual",
@@ -13234,30 +13054,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Artifact viewer"
-          }
-        }
-      }
-    },
-    "citationComposer.formGroup": {
-      "comment": "VoiceOver group name for the composer form pane",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Citation form"
-          }
-        }
-      }
-    },
-    "citationComposer.citationMenuNew": {
-      "comment": "VoiceOver name for the Citation identity control when New is selected",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Citation, new"
           }
         }
       }
@@ -13282,98 +13078,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Now composing a new citation"
-          }
-        }
-      }
-    },
-    "citationComposer.artifactMenuLabel": {
-      "comment": "VoiceOver name for the Artifact identity control; argument is Artifact title",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Artifact, %@"
-          }
-        }
-      }
-    },
-    "citationComposer.artifactMenuMeta": {
-      "comment": "Artifact menu row meta; arguments are media kind and citation count",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ · %#@citations@"
-          },
-          "substitutions": {
-            "citations": {
-              "argNum": 2,
-              "formatSpecifier": "lld",
-              "variations": {
-                "plural": {
-                  "one": {
-                    "stringUnit": {
-                      "state": "translated",
-                      "value": "%arg citation"
-                    }
-                  },
-                  "other": {
-                    "stringUnit": {
-                      "state": "translated",
-                      "value": "%arg citations"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "citationComposer.citationMenuCount": {
-      "comment": "Observation count on a Citation menu row; argument is count",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld obs"
-          }
-        }
-      }
-    },
-    "citationComposer.citationMenuRef": {
-      "comment": "VoiceOver name for the Citation identity control; arguments are ref and count",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Citation, %1$@, %#@observations@"
-          },
-          "substitutions": {
-            "observations": {
-              "argNum": 2,
-              "formatSpecifier": "lld",
-              "variations": {
-                "plural": {
-                  "one": {
-                    "stringUnit": {
-                      "state": "translated",
-                      "value": "%arg observation"
-                    }
-                  },
-                  "other": {
-                    "stringUnit": {
-                      "state": "translated",
-                      "value": "%arg observations"
-                    }
-                  }
-                }
-              }
-            }
           }
         }
       }
@@ -13472,18 +13176,6 @@
         }
       }
     },
-    "citationComposer.identityMenusDisabledHint": {
-      "comment": "Hint under Artifact / Citation menus when unsaved document work disables them",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Save or discard changes to switch citation"
-          }
-        }
-      }
-    },
     "citationComposer.rowStateNew": {
       "comment": "Badge on a draft Observation or pending connection row",
       "extractionState": "manual",
@@ -13504,18 +13196,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Edited"
-          }
-        }
-      }
-    },
-    "citationComposer.rowStateSaving": {
-      "comment": "Badge while a row-level Save is in flight",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Saving"
           }
         }
       }
@@ -13544,18 +13224,6 @@
         }
       }
     },
-    "citationComposer.observation.negatedBadge": {
-      "comment": "Danger badge left of a negated Observation value; PVBadge uppercases it",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Not"
-          }
-        }
-      }
-    },
     "citationComposer.negateObservation": {
       "comment": "Row menu item that flips a positive Observation to negative",
       "extractionState": "manual",
@@ -13576,30 +13244,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Remove negation"
-          }
-        }
-      }
-    },
-    "citationComposer.applyValue": {
-      "comment": "Confirm on the name / date dialog; writes into the row only",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Apply"
-          }
-        }
-      }
-    },
-    "citationComposer.valueDialogSubtitle": {
-      "comment": "Subtitle on the name / date dialog",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Updates the row only. The row's Save commits it to CIT-…"
           }
         }
       }
@@ -13660,78 +13304,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "not chosen"
-          }
-        }
-      }
-    },
-    "citationComposer.saveRow": {
-      "comment": "Row-level Save on an Observation",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Save"
-          }
-        }
-      }
-    },
-    "citationComposer.revertRow": {
-      "comment": "Row-level Revert on an Observation",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Revert"
-          }
-        }
-      }
-    },
-    "citationComposer.saveConnection": {
-      "comment": "Writes a pending Connect row as a cited bridge",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Save connection"
-          }
-        }
-      }
-    },
-    "citationComposer.discardConnection": {
-      "comment": "Removes a pending connection without writing",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Discard"
-          }
-        }
-      }
-    },
-    "citationComposer.saveRole": {
-      "comment": "Commits an edited role or type on a saved connection",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Save role"
-          }
-        }
-      }
-    },
-    "citationComposer.revertRole": {
-      "comment": "Restores a saved connection role to its baseline",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Revert"
           }
         }
       }
@@ -14012,30 +13584,6 @@
         }
       }
     },
-    "citationComposer.autoTranscribeReading": {
-      "comment": "Busy label on Auto transcribe while OCR is running",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Reading text…"
-          }
-        }
-      }
-    },
-    "citationComposer.autoTranscribeDrawnRegion": {
-      "comment": "VoiceOver name when Auto transcribe will read the locator region",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Auto transcribe, drawn region"
-          }
-        }
-      }
-    },
     "citationComposer.autoTranscribeHintWholeImage": {
       "comment": "Hint under transcription when OCR will read the full image",
       "extractionState": "manual",
@@ -14138,18 +13686,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Pasted from page %lld. Check it against the page, then Save citation"
-          }
-        }
-      }
-    },
-    "citationComposer.pasteUnavailable": {
-      "comment": "VoiceOver when Paste is disabled; argument is the current field hint",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Paste transcription from selection, unavailable. %@"
           }
         }
       }
@@ -14352,18 +13888,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Nothing was found in this image. The transcription is unchanged."
-          }
-        }
-      }
-    },
-    "citationComposer.autoTranscribeDismiss": {
-      "comment": "Action that clears the Auto transcribe failure callout",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dismiss"
           }
         }
       }
@@ -17693,18 +17217,6 @@
         }
       }
     },
-    "citationComposer.swapEnds": {
-      "comment": "Swaps the two subjects of a bridge draft",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Swap ends"
-          }
-        }
-      }
-    },
     "citationComposer.negativeLabel": {
       "comment": "Checkbox that records the observation as not so",
       "extractionState": "manual",
@@ -17765,42 +17277,6 @@
         }
       }
     },
-    "citationComposer.duplicate": {
-      "comment": "Copies a saved line into the authoring box without writing",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Duplicate"
-          }
-        }
-      }
-    },
-    "citationComposer.moreActions": {
-      "comment": "Opens the menu on a saved observation line",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "More actions"
-          }
-        }
-      }
-    },
-    "citationComposer.showOnGraph": {
-      "comment": "Leaves for the evidence graph and selects this bridge",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Show on evidence graph"
-          }
-        }
-      }
-    },
     "citationComposer.deleteBridge": {
       "comment": "Deletes the bridge subject, which removes both lines",
       "extractionState": "manual",
@@ -17821,54 +17297,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Delete observation…"
-          }
-        }
-      }
-    },
-    "citationComposer.previousArtifact": {
-      "comment": "Steps to the previous file on this source",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Previous artifact"
-          }
-        }
-      }
-    },
-    "citationComposer.nextArtifact": {
-      "comment": "Steps to the next file on this source",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Next artifact"
-          }
-        }
-      }
-    },
-    "citationComposer.previousCitation": {
-      "comment": "Steps to the previous citation on this artifact",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Previous citation"
-          }
-        }
-      }
-    },
-    "citationComposer.nextCitation": {
-      "comment": "Steps to the next citation on this artifact",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Next citation"
           }
         }
       }
@@ -17909,18 +17337,6 @@
         }
       }
     },
-    "citationComposer.addForSubject": {
-      "comment": "Plus button on a subject group",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Add observation for this subject"
-          }
-        }
-      }
-    },
     "citationComposer.choosePropertyFirst": {
       "comment": "Value slot before a property is chosen",
       "extractionState": "manual",
@@ -17929,18 +17345,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Choose a property first"
-          }
-        }
-      }
-    },
-    "citationComposer.termStartsEmpty": {
-      "comment": "Hint under a bridge role or type that is not prefilled",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Starts empty. Choose what the record says"
           }
         }
       }
@@ -18209,126 +17613,6 @@
         }
       }
     },
-    "citationComposer.termOfName": {
-      "comment": "Bridge line; arguments are the term and the other subject's name",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ of %2$@"
-          }
-        }
-      }
-    },
-    "citationComposer.relationshipWith": {
-      "comment": "Relationship line before a type is chosen; argument is the other person",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Relationship with %1$@"
-          }
-        }
-      }
-    },
-    "citationComposer.roleInEvent": {
-      "comment": "Participation line on the person; arguments are the role and the event",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ in %2$@"
-          }
-        }
-      }
-    },
-    "citationComposer.takesPartIn": {
-      "comment": "Participation line on the person before a role is chosen",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Takes part in %1$@"
-          }
-        }
-      }
-    },
-    "citationComposer.roleOnPerson": {
-      "comment": "Participation line on the event; arguments are the role and the person",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ Â· %2$@"
-          }
-        }
-      }
-    },
-    "citationComposer.personTakesPart": {
-      "comment": "Participation line on the event before a role is chosen",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ takes part"
-          }
-        }
-      }
-    },
-    "citationComposer.atPlace": {
-      "comment": "Location line on the event; argument is the place",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "At %1$@"
-          }
-        }
-      }
-    },
-    "citationComposer.siteOf": {
-      "comment": "Location line on the place; argument is the event",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Site of %1$@"
-          }
-        }
-      }
-    },
-    "citationComposer.placeRelationshipWith": {
-      "comment": "Place-relationship line before a type is chosen",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Place relationship with %1$@"
-          }
-        }
-      }
-    },
-    "citationComposer.noneOnCitation": {
-      "comment": "Observations header when the citation has no saved lines; argument is the citation ref",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "none yet on %1$@"
-          }
-        }
-      }
-    },
     "citationComposer.bridgeSavedBody": {
       "comment": "Toast after a bridge save; arguments are the two subject names",
       "extractionState": "manual",
@@ -18341,18 +17625,6 @@
         }
       }
     },
-    "citationComposer.stepperPosition": {
-      "comment": "Stepper position; arguments are the current index and the total",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$lld of %2$lld"
-          }
-        }
-      }
-    },
     "citationComposer.pageCount": {
       "comment": "Page count on an artifact stepper card",
       "extractionState": "manual",
@@ -18361,18 +17633,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "%lld pages"
-          }
-        }
-      }
-    },
-    "citationComposer.artifactStepperMeta": {
-      "comment": "Artifact stepper meta; arguments are kind, size or page count, and citation count",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ Â· %2$@ Â· %3$lld citations"
           }
         }
       }
@@ -18553,18 +17813,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "%lld observations"
-          }
-        }
-      }
-    },
-    "citationComposer.dateEditorHint": {
-      "comment": "Hint under a date value",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Opens the date editor"
           }
         }
       }
@@ -18905,18 +18153,6 @@
         }
       }
     },
-    "citationComposer.editBridgeMenu": {
-      "comment": "Menu item that opens the bridge edit sheet",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Edit bridge…"
-          }
-        }
-      }
-    },
     "citationComposer.editBridgeSubtitle": {
       "comment": "Bridge edit sheet subtitle; arguments are the bridge ref, the subject whose line opened it, and the two ends",
       "extractionState": "manual",
@@ -18929,54 +18165,6 @@
         }
       }
     },
-    "citationComposer.editDate": {
-      "comment": "Title of the date editor, and the button that reopens it",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Edit date"
-          }
-        }
-      }
-    },
-    "citationComposer.editName": {
-      "comment": "Reopens the name editor for an observation that already has a name",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Edit name…"
-          }
-        }
-      }
-    },
-    "citationComposer.editNameTitle": {
-      "comment": "Title of the name editor",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Edit name"
-          }
-        }
-      }
-    },
-    "citationComposer.editObservationMenu": {
-      "comment": "Menu item that opens the observation edit sheet",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Edit observation…"
-          }
-        }
-      }
-    },
     "citationComposer.editObservationSubtitle": {
       "comment": "Observation edit sheet subtitle; argument is the observation ref",
       "extractionState": "manual",
@@ -18985,30 +18173,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "%1$@ · saves on its own. The citation is not resaved"
-          }
-        }
-      }
-    },
-    "citationComposer.enterDate": {
-      "comment": "Opens the date editor when the observation has no date yet",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Enter date…"
-          }
-        }
-      }
-    },
-    "citationComposer.enterName": {
-      "comment": "Opens the name editor when the observation has no name yet",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Enter name…"
           }
         }
       }
@@ -19085,18 +18249,6 @@
         }
       }
     },
-    "citationComposer.nameEditorHint": {
-      "comment": "Hint under a name value",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Opens the name editor"
-          }
-        }
-      }
-    },
     "citationComposer.newPosition": {
       "comment": "Citation stepper position while composing a citation that is not saved",
       "extractionState": "manual",
@@ -19141,18 +18293,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "No observations"
-          }
-        }
-      }
-    },
-    "citationComposer.notEnteredYet": {
-      "comment": "Name or date value before the editor has been used",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Not entered yet"
           }
         }
       }
@@ -19229,18 +18369,6 @@
         }
       }
     },
-    "citationComposer.readsEyebrow": {
-      "comment": "Eyebrow on the sentence a bridge will read as",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Reads"
-          }
-        }
-      }
-    },
     "citationComposer.roleIn": {
       "comment": "Participation line label on the person; argument is the role",
       "extractionState": "manual",
@@ -19265,30 +18393,6 @@
         }
       }
     },
-    "citationComposer.saveDate": {
-      "comment": "Confirm on the date editor",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Save date"
-          }
-        }
-      }
-    },
-    "citationComposer.saveName": {
-      "comment": "Confirm on the name editor",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Save name"
-          }
-        }
-      }
-    },
     "citationComposer.saveObservation": {
       "comment": "Writes the property draft, and confirms the observation edit sheet",
       "extractionState": "manual",
@@ -19297,30 +18401,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Save observation"
-          }
-        }
-      }
-    },
-    "citationComposer.searchRoles": {
-      "comment": "Placeholder for a participation role",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Search roles"
-          }
-        }
-      }
-    },
-    "citationComposer.searchTypes": {
-      "comment": "Placeholder for a relationship or place-relationship type",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Search types"
           }
         }
       }
@@ -19481,18 +18561,6 @@
         }
       }
     },
-    "citationComposer.editDateButton": {
-      "comment": "Reopens the date editor for an observation that already has a date",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Edit date…"
-          }
-        }
-      }
-    },
     "citationComposer.imagePixels": {
       "comment": "Image size on an artifact menu row; arguments are width and height in pixels",
       "extractionState": "manual",
@@ -19501,18 +18569,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "%1$lld × %2$lld px"
-          }
-        }
-      }
-    },
-    "citationComposer.locatorChipHint": {
-      "comment": "Tooltip on the locator summary next to the artifact menu",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Locator, outer to inner. Draw on the file to change it"
           }
         }
       }
