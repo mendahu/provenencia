@@ -81,12 +81,12 @@ func TestWarmHoldsAliasTablesUntilInvalidated(t *testing.T) {
 		t.Fatal("invalidate left the deleted token in the cache")
 	}
 
-	insertTable(t, db, "zachary", "user", "nickname", [][]string{{"zachary", "zach"}})
+	insertTable(t, db, "xyzzy", "user", "nickname", [][]string{{"xyzzy", "plugh"}})
 	cmp, err = Comparer(c.Graph(), db, match.DefaultNames)
 	if err != nil {
 		t.Fatal(err)
 	}
-	got, ok = cmp.Compare(given("Zach"), given("Zachary"))
+	got, ok = cmp.Compare(given("Plugh"), given("Xyzzy"))
 	if ok && math.Abs(got-match.AliasCredit) < 1e-9 {
 		t.Fatal("a new table scored before invalidate")
 	}
@@ -98,7 +98,7 @@ func TestWarmHoldsAliasTablesUntilInvalidated(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	assertScore(t, cmp, "Zach", "Zachary", match.AliasCredit)
+	assertScore(t, cmp, "Plugh", "Xyzzy", match.AliasCredit)
 }
 
 func TestEmptyCatalogScoresNoAliases(t *testing.T) {
@@ -127,13 +127,13 @@ func TestUserAndPluginRowsScore(t *testing.T) {
 		t.Fatal(err)
 	}
 	db := mustDB(t, c)
-	insertTable(t, db, "zachary", "user", "nickname", [][]string{{"zachary", "zach"}})
+	insertTable(t, db, "xyzzy", "user", "nickname", [][]string{{"xyzzy", "plugh"}})
 	insertTable(t, db, "pepe", "plugin:example", "nickname", [][]string{{"josé", "pepe"}})
 	cmp, err := Comparer(c.Graph(), db, match.DefaultNames)
 	if err != nil {
 		t.Fatal(err)
 	}
-	assertScore(t, cmp, "Zach", "Zachary", match.AliasCredit)
+	assertScore(t, cmp, "Plugh", "Xyzzy", match.AliasCredit)
 	assertScore(t, cmp, "Pepe", "José", match.AliasCredit)
 	assertScore(t, cmp, "Jas.", "James", match.AliasCredit)
 	assertScore(t, cmp, "Jim", "James", match.AliasCredit)
