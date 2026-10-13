@@ -132,7 +132,7 @@ CHECK (transcription_uncertain IN (0, 1))
 
 `transcription_note` is optional free text (“garbled audio ~1:02”; “surname damaged”).
 
-Existing `transcription` and `description` remain. In-line marks such as `[?]` in transcription remain valid and complementary.
+Existing `transcription` and `label` remain. In-line marks such as `[?]` in transcription remain valid and complementary.
 
 Do **not** put a rich ordinal confidence ladder on Citations. A boolean (plus note) is enough; epistemic weight belongs on the Claim.
 

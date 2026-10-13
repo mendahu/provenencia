@@ -67,7 +67,7 @@ func CreateCitedBridge(in []byte) ([]byte, error) {
 						ArtifactID:             artifactID,
 						LocatorJSON:            req.GetLocatorJson(),
 						Transcription:          req.GetTranscription(),
-						Description:            req.GetCitationDescription(),
+						Label:                  req.GetCitationLabel(),
 						TranscriptionUncertain: req.GetTranscriptionUncertain(),
 						TranscriptionNote:      req.GetTranscriptionNote(),
 						Notes:                  req.GetCitationNotes(),

@@ -269,7 +269,7 @@ func citationFieldsZero(in citations.CreateInput) bool {
 	return len(in.ArtifactID) == 0 &&
 		in.LocatorJSON == "" &&
 		in.Transcription == "" &&
-		in.Description == "" &&
+		in.Label == "" &&
 		in.TranscriptionNote == "" &&
 		!in.TranscriptionUncertain &&
 		len(in.Notes) == 0

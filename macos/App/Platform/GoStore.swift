@@ -1398,7 +1398,7 @@ struct GoStore: GenealogyStore {
         req.artifactID = artifactID
         req.locatorJson = locatorJSON
         req.transcription = transcription
-        req.citationDescription = citationDescription
+        req.citationLabel = citationDescription
         req.transcriptionUncertain = transcriptionUncertain
         req.transcriptionNote = transcriptionNote
         req.citationNotes = citationNotes
@@ -1434,7 +1434,7 @@ struct GoStore: GenealogyStore {
         req.artifactID = artifactID
         req.locatorJson = locatorJSON
         req.transcription = transcription
-        req.description_p = description
+        req.label = description
         req.transcriptionUncertain = transcriptionUncertain
         req.transcriptionNote = transcriptionNote
         req.citationNotes = citationNotes
@@ -1596,7 +1596,7 @@ struct GoStore: GenealogyStore {
         req.citationID = citationID
         req.locatorJson = locatorJSON
         req.transcription = transcription
-        req.description_p = description
+        req.label = description
         req.transcriptionUncertain = transcriptionUncertain
         req.transcriptionNote = transcriptionNote
         let resp: Provenencia_Engine_V1_UpdateCitationResponse = try await provenenciaCall(
@@ -2002,7 +2002,7 @@ struct GoStore: GenealogyStore {
             artifactID: c.artifactID,
             locatorJSON: c.locatorJson,
             transcription: c.transcription,
-            description: c.description_p,
+            description: c.label,
             transcriptionUncertain: c.transcriptionUncertain,
             transcriptionNote: c.transcriptionNote
         )

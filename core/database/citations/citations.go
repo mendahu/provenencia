@@ -25,19 +25,19 @@ var (
 
 const (
 	sqlInsert = `INSERT INTO citations (
-		id, ref, artifact_id, locator_json, transcription, description,
+		id, ref, artifact_id, locator_json, transcription, label,
 		transcription_uncertain, transcription_note
 	) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
 
 	sqlInsertNote = `INSERT INTO citation_notes (id, citation_id, body) VALUES (?, ?, ?)`
 
 	sqlGet = `SELECT id, ref, artifact_id, locator_json,
-		COALESCE(transcription, ''), COALESCE(description, ''),
+		COALESCE(transcription, ''), COALESCE(label, ''),
 		transcription_uncertain, COALESCE(transcription_note, '')
 		FROM citations WHERE id = ?`
 
 	sqlUpdate = `UPDATE citations SET
-		artifact_id = ?, locator_json = ?, transcription = ?, description = ?,
+		artifact_id = ?, locator_json = ?, transcription = ?, label = ?,
 		transcription_uncertain = ?, transcription_note = ?
 		WHERE id = ?`
 
@@ -46,7 +46,7 @@ const (
 	sqlDelete = `DELETE FROM citations WHERE id = ?`
 
 	sqlListByArtifact = `SELECT id, ref, artifact_id, locator_json,
-		COALESCE(transcription, ''), COALESCE(description, ''),
+		COALESCE(transcription, ''), COALESCE(label, ''),
 		transcription_uncertain, COALESCE(transcription_note, ''),
 		(SELECT COUNT(*) FROM observations WHERE citation_id = citations.id)
 		FROM citations WHERE artifact_id = ?
@@ -98,7 +98,7 @@ type Citation struct {
 	ArtifactID             []byte
 	LocatorJSON            string
 	Transcription          string
-	Description            string
+	Label                  string
 	TranscriptionUncertain bool
 	TranscriptionNote      string
 }
@@ -119,7 +119,7 @@ type CreateInput struct {
 	ArtifactID             []byte
 	LocatorJSON            string
 	Transcription          string
-	Description            string
+	Label                  string
 	TranscriptionUncertain bool
 	TranscriptionNote      string
 	Notes                  []string
@@ -160,7 +160,7 @@ func NormalizeCreateInput(in *CreateInput) error {
 func normalizeCreateInput(in *CreateInput) error {
 	in.LocatorJSON = strings.TrimSpace(in.LocatorJSON)
 	in.Transcription = strings.TrimSpace(in.Transcription)
-	in.Description = strings.TrimSpace(in.Description)
+	in.Label = strings.TrimSpace(in.Label)
 	in.TranscriptionNote = strings.TrimSpace(in.TranscriptionNote)
 	if len(in.ArtifactID) != 16 {
 		return ErrInvalid
@@ -211,7 +211,7 @@ func InsertWithObservationsTx(
 			in.ArtifactID,
 			in.LocatorJSON,
 			nullIfEmpty(in.Transcription),
-			nullIfEmpty(in.Description),
+			nullIfEmpty(in.Label),
 			uncertain,
 			nullIfEmpty(in.TranscriptionNote),
 		)
@@ -236,7 +236,7 @@ func InsertWithObservationsTx(
 			"artifact_id":             uuidJSON(in.ArtifactID),
 			"locator_json":            in.LocatorJSON,
 			"transcription":           nullIfEmpty(in.Transcription),
-			"description":             nullIfEmpty(in.Description),
+			"label":                   nullIfEmpty(in.Label),
 			"transcription_uncertain": in.TranscriptionUncertain,
 			"transcription_note":      nullIfEmpty(in.TranscriptionNote),
 		}),
@@ -283,7 +283,7 @@ func InsertWithObservationsTx(
 			ArtifactID:             append([]byte(nil), in.ArtifactID...),
 			LocatorJSON:            in.LocatorJSON,
 			Transcription:          in.Transcription,
-			Description:            in.Description,
+			Label:                  in.Label,
 			TranscriptionUncertain: in.TranscriptionUncertain,
 			TranscriptionNote:      in.TranscriptionNote,
 		},
@@ -295,7 +295,7 @@ func InsertWithObservationsTx(
 type CitationFieldsInput struct {
 	LocatorJSON            string
 	Transcription          string
-	Description            string
+	Label                  string
 	TranscriptionUncertain bool
 	TranscriptionNote      string
 }
@@ -308,7 +308,7 @@ func Update(tx *database.Tx, userID, citationID []byte, in CitationFieldsInput) 
 	}
 	in.LocatorJSON = strings.TrimSpace(in.LocatorJSON)
 	in.Transcription = strings.TrimSpace(in.Transcription)
-	in.Description = strings.TrimSpace(in.Description)
+	in.Label = strings.TrimSpace(in.Label)
 	in.TranscriptionNote = strings.TrimSpace(in.TranscriptionNote)
 	if len(citationID) != 16 {
 		return Citation{}, nil, ErrInvalid
@@ -335,8 +335,8 @@ func Update(tx *database.Tx, userID, citationID []byte, in CitationFieldsInput) 
 	if prev.Transcription != in.Transcription {
 		fields["transcription"] = rowchange.FieldDiff{Old: emptyAsNil(prev.Transcription), New: emptyAsNil(in.Transcription)}
 	}
-	if prev.Description != in.Description {
-		fields["description"] = rowchange.FieldDiff{Old: emptyAsNil(prev.Description), New: emptyAsNil(in.Description)}
+	if prev.Label != in.Label {
+		fields["label"] = rowchange.FieldDiff{Old: emptyAsNil(prev.Label), New: emptyAsNil(in.Label)}
 	}
 	if prev.TranscriptionUncertain != in.TranscriptionUncertain {
 		fields["transcription_uncertain"] = rowchange.FieldDiff{
@@ -363,7 +363,7 @@ func Update(tx *database.Tx, userID, citationID []byte, in CitationFieldsInput) 
 		prev.ArtifactID,
 		in.LocatorJSON,
 		nullIfEmpty(in.Transcription),
-		nullIfEmpty(in.Description),
+		nullIfEmpty(in.Label),
 		uncertain,
 		nullIfEmpty(in.TranscriptionNote),
 		citationID,
@@ -376,7 +376,7 @@ func Update(tx *database.Tx, userID, citationID []byte, in CitationFieldsInput) 
 			ArtifactID:             append([]byte(nil), prev.ArtifactID...),
 			LocatorJSON:            in.LocatorJSON,
 			Transcription:          in.Transcription,
-			Description:            in.Description,
+			Label:                  in.Label,
 			TranscriptionUncertain: in.TranscriptionUncertain,
 			TranscriptionNote:      in.TranscriptionNote,
 		}, []rowchange.Change{{
@@ -628,7 +628,7 @@ func scanRow(row rowScanner) (Citation, error) {
 	)
 	err := row.Scan(
 		&c.ID, &c.Ref, &c.ArtifactID, &c.LocatorJSON,
-		&c.Transcription, &c.Description, &uncertain, &c.TranscriptionNote,
+		&c.Transcription, &c.Label, &uncertain, &c.TranscriptionNote,
 	)
 	if err != nil {
 		return Citation{}, err
@@ -644,7 +644,7 @@ func scanListedRow(row rowScanner) (ListedCitation, error) {
 	)
 	err := row.Scan(
 		&listed.ID, &listed.Ref, &listed.ArtifactID, &listed.LocatorJSON,
-		&listed.Transcription, &listed.Description, &uncertain, &listed.TranscriptionNote,
+		&listed.Transcription, &listed.Label, &uncertain, &listed.TranscriptionNote,
 		&listed.ObservationCount,
 	)
 	if err != nil {

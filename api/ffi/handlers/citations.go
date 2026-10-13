@@ -34,7 +34,7 @@ func CreateCitationWithObservations(in []byte) ([]byte, error) {
 					ArtifactID:             artifactID,
 					LocatorJSON:            req.GetLocatorJson(),
 					Transcription:          req.GetTranscription(),
-					Description:            req.GetDescription(),
+					Label:                  req.GetLabel(),
 					TranscriptionUncertain: req.GetTranscriptionUncertain(),
 					TranscriptionNote:      req.GetTranscriptionNote(),
 					Notes:                  req.GetCitationNotes(),
@@ -152,7 +152,7 @@ func UpdateCitation(in []byte) ([]byte, error) {
 				return citations.Update(tx, userID, citationID, citations.CitationFieldsInput{
 					LocatorJSON:            req.GetLocatorJson(),
 					Transcription:          req.GetTranscription(),
-					Description:            req.GetDescription(),
+					Label:                  req.GetLabel(),
 					TranscriptionUncertain: req.GetTranscriptionUncertain(),
 					TranscriptionNote:      req.GetTranscriptionNote(),
 				})
@@ -242,7 +242,7 @@ func citationProto(c citations.Citation) *engine.Citation {
 		ArtifactId:             uuidString(c.ArtifactID),
 		LocatorJson:            c.LocatorJSON,
 		Transcription:          c.Transcription,
-		Description:            c.Description,
+		Label:                  c.Label,
 		TranscriptionUncertain: c.TranscriptionUncertain,
 		TranscriptionNote:      c.TranscriptionNote,
 	}

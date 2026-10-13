@@ -174,7 +174,7 @@ func TestCitations(t *testing.T) {
 						ArtifactID:    s.artifact.ID,
 						LocatorJSON:   validLocator,
 						Transcription: "Alice, female, of Boston",
-						Description:   "entry on page 10",
+						Label:         "entry on page 10",
 					}, []observations.Input{
 						{
 							SubjectID: s.place.ID, PropertyID: s.toponymProp.ID,
@@ -284,13 +284,13 @@ func TestCitations(t *testing.T) {
 				}
 				for _, key := range []string{
 					"id", "ref", "artifact_id", "locator_json",
-					"transcription", "description", "transcription_uncertain", "transcription_note",
+					"transcription", "label", "transcription_uncertain", "transcription_note",
 				} {
 					if _, ok := got[0].fields[key]; !ok {
 						t.Fatalf("citation missing %q in %+v", key, got[0].fields)
 					}
 				}
-				for _, key := range []string{"transcription", "description", "transcription_note"} {
+				for _, key := range []string{"transcription", "label", "transcription_note"} {
 					diff, _ := got[0].fields[key].(map[string]any)
 					if diff["new"] != nil {
 						t.Fatalf("empty citation %s should be null: %+v", key, got[0].fields)
