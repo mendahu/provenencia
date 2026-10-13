@@ -3459,6 +3459,12 @@ enum L10n {
             comment: "Value slot before a property is chosen"
         )
 
+        static let chooseSubjectFirst = LocalizedStringResource(
+            "citationComposer.chooseSubjectFirst",
+            defaultValue: "Choose a subject first",
+            comment: "Property list line while no subject is chosen"
+        )
+
         static let fromGraph = LocalizedStringResource(
             "citationComposer.fromGraph",
             defaultValue: "From Connect on the evidence graph. The ends are filled; the type is yours to choose",

@@ -5,10 +5,9 @@ struct DateValueEditorForm: View {
     @Binding var draft: DateValueDraft
     /// Prefix for control identifiers (default matches the Source page date dialog).
     var accessibilityIdentifierPrefix: String = "sources.page.date"
-    /// The host asks for the year field. The form does not take focus on its own.
-    var requestsYearFocus: Bool = false
+    /// Host focus for the year field. The form does not take focus on its own.
+    var yearFocus: PVInputFocus? = nil
 
-    @FocusState private var yearFocused: Bool
     @FocusState private var startHourFocused: Bool
     @FocusState private var endHourFocused: Bool
 
@@ -29,12 +28,6 @@ struct DateValueEditorForm: View {
             if draft.showAdvanced {
                 advancedSection
             }
-        }
-        .onAppear {
-            if requestsYearFocus { yearFocused = true }
-        }
-        .onChange(of: requestsYearFocus) { _, focused in
-            if focused { yearFocused = true }
         }
     }
 
@@ -134,7 +127,7 @@ struct DateValueEditorForm: View {
                     mono: true,
                     isInvalid: draft.isFieldInvalid(.year, start: start),
                     accessibilityIdentifier: "\(accessibilityIdentifierPrefix).\(start ? "start" : "end").year",
-                    focused: start ? $yearFocused : nil
+                    equalsFocus: start ? yearFocus : nil
                 )
                 monthSelect(start: start)
                 cascadeField(
@@ -291,6 +284,7 @@ struct DateValueEditorForm: View {
         isInvalid: Bool = false,
         accessibilityIdentifier: String? = nil,
         focused: FocusState<Bool>.Binding? = nil,
+        equalsFocus: PVInputFocus? = nil,
         activateOnAppear: Bool = false
     ) -> some View {
         VStack(alignment: .leading, spacing: PVSpacing.space2) {
@@ -303,6 +297,7 @@ struct DateValueEditorForm: View {
                 mono: mono,
                 isInvalid: isInvalid,
                 focused: focused,
+                focus: equalsFocus,
                 activateOnAppear: activateOnAppear
             )
                 .frame(width: width)

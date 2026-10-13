@@ -17313,6 +17313,18 @@
         }
       }
     },
+    "citationComposer.chooseSubjectFirst": {
+      "comment": "Property list line while no subject is chosen",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose a subject first"
+          }
+        }
+      }
+    },
     "citationComposer.fromGraph": {
       "comment": "Note on a bridge draft opened from Connect",
       "extractionState": "manual",

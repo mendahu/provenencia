@@ -979,11 +979,7 @@ final class CitationComposerModel {
 
     private func loadCitationPreservingAuthoring(_ id: String?) async {
         if id == nil || id?.isEmpty == true {
-            activeCitationID = nil
-            loadedCitationRef = ""
-            fields.resetBlank(keepLocator: true)
-            observationRows.replace([])
-            connections.clearSavedKeepingPending()
+            openBlankCitation()
         } else if let id {
             do {
                 try await loadCitation(id)
@@ -994,19 +990,27 @@ final class CitationComposerModel {
             }
         }
         if Task.isCancelled { return }
-        await presentAfterIdentityChange()
+        let blank = id == nil || id?.isEmpty == true
+        await presentAfterIdentityChange(keepReadingPage: blank)
+    }
+
+    /// Drops the open citation. The new one is the whole artifact; it does not
+    /// inherit the previous page or region.
+    private func openBlankCitation() {
+        activeCitationID = nil
+        loadedCitationRef = ""
+        fields.resetBlank()
+        observationRows.replace([])
+        connections.clearSavedKeepingPending()
     }
 
     private func selectCitationAndLoad(_ id: String?) async {
         authoring = .rest
         editSession = nil
         if id == nil || id?.isEmpty == true {
-            activeCitationID = nil
-            fields.resetBlank(keepLocator: true)
-            observationRows.replace([])
-            connections.clearSavedKeepingPending()
+            openBlankCitation()
             if Task.isCancelled { return }
-            await presentAfterIdentityChange()
+            await presentAfterIdentityChange(keepReadingPage: true)
             return
         }
         guard let id else { return }
@@ -1107,15 +1111,23 @@ final class CitationComposerModel {
         await reloadArtifactViewer(preferredPage: nil)
     }
 
-    private func presentAfterIdentityChange() async {
+    private func presentAfterIdentityChange(keepReadingPage: Bool = false) async {
         if artifacts.isEmpty {
             selectedArtifactID = nil
             artifactViewer.unload()
         } else {
-            await reloadArtifactViewer(preferredPage: fields.locator.page)
+            let page = fields.locator.page ?? (keepReadingPage ? currentReadingPage : nil)
+            await reloadArtifactViewer(preferredPage: page)
             await reloadListedCitations()
         }
         announceIdentityChange()
+    }
+
+    /// Page to leave the viewer on when a new citation has no page of its own.
+    private var currentReadingPage: Int? {
+        guard artifactViewer.supportsPages else { return nil }
+        let page = artifactViewer.page
+        return page >= 1 ? page : nil
     }
 
     private func reloadArtifactViewer(preferredPage: Int?) async {

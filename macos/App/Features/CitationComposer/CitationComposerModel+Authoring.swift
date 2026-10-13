@@ -394,6 +394,12 @@ extension CitationComposerModel {
     }
 
     func discardEdit() {
+        closeEditDialog()
+    }
+
+    /// Drops the edit draft and the sheet together. Clearing only the draft
+    /// leaves the sheet presented with a title and buttons and no fields.
+    private func closeEditDialog() {
         editSession = nil
         if case .edit = presented {
             if case .rest = authoring { show(nil) } else { show(.authoring) }
@@ -409,7 +415,7 @@ extension CitationComposerModel {
         switch session.kind {
         case .property(let values, let persistedID, _):
             guard let row = observationRows.rows.first(where: { $0.persistedID == persistedID }) else {
-                editSession = nil
+                closeEditDialog()
                 return
             }
             observationRows.replaceValues(rowID: row.id, values: values)
@@ -427,11 +433,11 @@ extension CitationComposerModel {
                 return
             }
             freshLineKey = "obs:\(persistedID)"
-            editSession = nil
+            closeEditDialog()
             await refreshCitationLines()
         case .bridge(_, _, let termID, let bridgeID, _, _):
             guard let connection = connections.rows.first(where: { $0.bridgeID == bridgeID }) else {
-                editSession = nil
+                closeEditDialog()
                 return
             }
             if let index = connections.rows.firstIndex(where: { $0.id == connection.id }) {
@@ -448,7 +454,7 @@ extension CitationComposerModel {
                 return
             }
             freshLineKey = "bridge:\(bridgeID)"
-            editSession = nil
+            closeEditDialog()
             await refreshCitationLines()
         }
     }

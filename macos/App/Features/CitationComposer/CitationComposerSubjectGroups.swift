@@ -288,8 +288,18 @@ struct CitationComposerObservationsColumn: View {
 struct CitationComposerEditSheet: View {
     @Bindable var model: CitationComposerModel
     @FocusState private var focus: CitationAuthoringFocus?
+    @State private var frozenOpening: CitationAuthoringFocus?
 
     var body: some View {
+        editBody
+            .defaultFocus($focus, frozenOpening ?? openingFocus)
+            .onAppear {
+                if frozenOpening == nil { frozenOpening = openingFocus }
+            }
+    }
+
+    @ViewBuilder
+    private var editBody: some View {
         if let session = model.editSession {
             switch session.kind {
             case .property(let values, _, _):
@@ -297,6 +307,28 @@ struct CitationComposerEditSheet: View {
             case .bridge(let endA, let endB, _, _, _, _):
                 bridgeForm(endA: endA, endB: endB, error: session.error)
             }
+        }
+    }
+
+    private var openingFocus: CitationAuthoringFocus {
+        guard let session = model.editSession else { return .subject }
+        switch session.kind {
+        case .property(let values, _, _):
+            return CitationAuthoringNavigation.initialPropertyFocus(subjectID: values.subjectID)
+        case .bridge(let endA, let endB, let termID, _, _, _):
+            let pair = CitationComposerAuthoring.resolvePair(
+                endA: endA,
+                endB: endB,
+                termID: termID,
+                vocabulary: model.vocabulary
+            )
+            let hasTerm = if case .ready(let ready) = pair { ready.termProperty != nil } else { false }
+            return CitationAuthoringNavigation.initialBridgeFocus(
+                endA: endA,
+                endB: endB,
+                hasTermField: hasTerm,
+                termID: termID
+            )
         }
     }
 
@@ -320,10 +352,6 @@ struct CitationComposerEditSheet: View {
                 focus: $focus,
                 applyTermToEdit: true
             )
-        }
-        .onAppear {
-            let initial = CitationAuthoringNavigation.initialPropertyFocus(subjectID: values.subjectID)
-            DispatchQueue.main.async { focus = initial }
         }
     }
     private func bridgeForm(endA: String, endB: String, error: String?) -> some View {
@@ -381,13 +409,6 @@ struct CitationComposerEditSheet: View {
                 .fixedSize(horizontal: false, vertical: true)
             if let error {
                 PVCallout(tone: .danger, message: error)
-            }
-        }
-        .onAppear {
-            if case .ready(let ready) = pair, ready.termProperty != nil,
-               editBridgeTermBinding.wrappedValue.isEmpty
-            {
-                DispatchQueue.main.async { focus = .term }
             }
         }
     }

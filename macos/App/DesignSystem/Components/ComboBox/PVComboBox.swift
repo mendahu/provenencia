@@ -286,9 +286,8 @@ struct PVComboBox<Row: View, Empty: View>: View {
     /// invent their own (`docs/macos-client-patterns.md` §5).
     let label: any PVCopy
     var accessibilityIdentifierPrefix: String?
-    /// Runs after the selection is written. Return true from a forward Tab
-    /// when this choice inserts the next field, so Tab does not leave for a
-    /// button that is only next until that field renders.
+    /// Runs after the selection is written. A forward Tab asks the form
+    /// whether to take the key. Return true to move focus inside the form.
     var onCommit: ((String, PVComboCommitVia) -> Bool)? = nil
     /// When set, the text field is bound to the host's `FocusState`.
     var focus: PVComboFocus? = nil
@@ -625,8 +624,8 @@ struct PVComboBox<Row: View, Empty: View>: View {
         activeIndex = hasTypedQuery ? PVComboBoxMatch.firstEnabledIndex(in: visibleOptions) : -1
     }
 
-    /// Writes the row, then tells the form. Tab claims the key only when the
-    /// form says this commit inserts the next field.
+    /// Writes the row, then asks the form. A forward Tab is taken when the
+    /// form returns true.
     private func commit(_ option: PVComboBoxOption, via: PVComboCommitVia) -> Bool {
         guard !option.isDisabled else { return false }
         selection = option.value
@@ -695,9 +694,8 @@ struct PVComboBox<Row: View, Empty: View>: View {
             }
             return .ignored
         case .tab:
-            // macOS accepts the highlight on tab-out, then lets focus leave.
-            // A commit that inserts the next field is the exception: that
-            // field is not a key view yet, so Tab would land on Discard.
+            // Forward Tab commits the highlight and asks the form. The form
+            // takes the key whenever another field follows this one.
             if isOpen, visibleOptions.indices.contains(activeIndex) {
                 let option = visibleOptions[activeIndex]
                 let claim = !press.modifiers.contains(.shift) && commit(option, via: .tab)

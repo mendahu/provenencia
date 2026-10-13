@@ -24,19 +24,18 @@ enum CitationAuthoring: Equatable {
     }
 }
 
-enum CitationAuthoringFocus: Equatable {
+enum CitationAuthoringFocus: Hashable {
     case subject, property, value, endA, endB, term
 }
 
-/// The next field after a combo commit, and whether a forward Tab must be
-/// swallowed because that field is not a key view yet.
-struct CitationAuthoringAdvance: Equatable {
-    var next: CitationAuthoringFocus?
-    var claimTab: Bool
+/// The draft after a combo has written its choice. Field order reads this,
+/// not a guess about what was on screen before the keystroke.
+struct CitationAuthoringDraftAfterCommit: Equatable {
+    var bridgeHasTerm = false
 }
 
-/// Where Enter or a click in an observation-dialog combo box should land next.
-/// The box itself only reports the commit; the form owns the field order.
+/// Field order for the observation dialogs. The combo reports the commit;
+/// a forward Tab always moves to `next` when there is one.
 enum CitationAuthoringNavigation {
     /// A real choice. The "create a subject" row opens another dialog instead.
     static func shouldAdvance(_ committed: String) -> Bool {
@@ -45,64 +44,30 @@ enum CitationAuthoringNavigation {
     }
 
     /// Nil is the last stop: the value is filled in place, or the bridge has no term.
-    static func next(after field: CitationAuthoringFocus, bridgeHasTerm: Bool) -> CitationAuthoringFocus? {
+    /// `draftAfterCommit` is the draft once this choice is written.
+    static func next(
+        after field: CitationAuthoringFocus,
+        draftAfterCommit: CitationAuthoringDraftAfterCommit = CitationAuthoringDraftAfterCommit()
+    ) -> CitationAuthoringFocus? {
         switch field {
         case .subject: .property
         case .property: .value
         case .endA: .endB
-        case .endB: bridgeHasTerm ? .term : nil
+        case .endB: draftAfterCommit.bridgeHasTerm ? .term : nil
         case .value, .term: nil
         }
     }
 
-    /// Forward Tab should not leave for Discard when this commit is what
-    /// inserts the next field. A field already on screen can take the Tab itself.
-    static func claimsForwardTab(nextFieldAlreadyFocusable: Bool, nextFieldWillExist: Bool) -> Bool {
-        nextFieldWillExist && !nextFieldAlreadyFocusable
-    }
-
-    /// `subjectID`, `propertyID`, and `bridgeHasTerm` are the draft *before*
-    /// this commit. `termFieldAfterCommit` is whether End B's term field
-    /// exists once `committed` is the new end. Click and Return move to
-    /// `next`; Tab claims the key only when that field is being inserted.
-    static func advance(
+    /// Where a forward Tab goes after the choice is written. Click and Return
+    /// stay on the field that committed. Nil lets Tab continue to the footer.
+    static func tabDestination(
         from field: CitationAuthoringFocus,
         committed: String,
         via: PVComboCommitVia,
-        subjectID: String,
-        propertyID: String,
-        bridgeHasTerm: Bool,
-        termFieldAfterCommit: Bool
-    ) -> CitationAuthoringAdvance {
-        guard shouldAdvance(committed) else {
-            return CitationAuthoringAdvance(next: nil, claimTab: false)
-        }
-        let alreadyFocusable: Bool
-        let willExist: Bool
-        switch field {
-        case .subject:
-            alreadyFocusable = !subjectID.isEmpty
-            willExist = true
-        case .property:
-            alreadyFocusable = !propertyID.isEmpty
-            willExist = !committed.isEmpty
-        case .endA:
-            alreadyFocusable = true
-            willExist = true
-        case .endB:
-            alreadyFocusable = bridgeHasTerm
-            willExist = termFieldAfterCommit
-        case .value, .term:
-            alreadyFocusable = true
-            willExist = false
-        }
-        let claimTab = via == .tab && claimsForwardTab(
-            nextFieldAlreadyFocusable: alreadyFocusable,
-            nextFieldWillExist: willExist
-        )
-        let nextHasTerm = field == .endB ? termFieldAfterCommit : bridgeHasTerm
-        let next = (via != .tab || claimTab) ? next(after: field, bridgeHasTerm: nextHasTerm) : nil
-        return CitationAuthoringAdvance(next: next, claimTab: claimTab)
+        draftAfterCommit: CitationAuthoringDraftAfterCommit
+    ) -> CitationAuthoringFocus? {
+        guard via == .tab, shouldAdvance(committed) else { return nil }
+        return next(after: field, draftAfterCommit: draftAfterCommit)
     }
 
     static func initialPropertyFocus(subjectID: String) -> CitationAuthoringFocus {

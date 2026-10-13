@@ -4,8 +4,20 @@ import SwiftUI
 struct CitationComposerAuthoringBox: View {
     @Bindable var model: CitationComposerModel
     @FocusState private var focus: CitationAuthoringFocus?
+    /// Captured when the dialog opens. A Property / Bridge switch must not
+    /// move focus back into the form.
+    @State private var openingFocus: CitationAuthoringFocus?
 
     var body: some View {
+        dialog
+            .defaultFocus($focus, openingFocus ?? liveOpeningFocus)
+            .onAppear {
+                if openingFocus == nil { openingFocus = liveOpeningFocus }
+            }
+    }
+
+    @ViewBuilder
+    private var dialog: some View {
         switch model.authoring {
         case .rest:
             EmptyView()
@@ -17,6 +29,22 @@ struct CitationComposerAuthoringBox: View {
             form(origin: draft.note, originIcon: originIcon(draft.origin)) {
                 bridgeFields(draft)
             }
+        }
+    }
+
+    private var liveOpeningFocus: CitationAuthoringFocus {
+        switch model.authoring {
+        case .rest:
+            .subject
+        case .property(let draft):
+            CitationAuthoringNavigation.initialPropertyFocus(subjectID: draft.values.subjectID)
+        case .bridge(let draft):
+            CitationAuthoringNavigation.initialBridgeFocus(
+                endA: draft.endA,
+                endB: draft.endB,
+                hasTermField: bridgeHasTerm(draft),
+                termID: draft.termID
+            )
         }
     }
 
@@ -69,10 +97,6 @@ struct CitationComposerAuthoringBox: View {
             focus: $focus,
             applyTermToEdit: false
         )
-        .onAppear {
-            let initial = CitationAuthoringNavigation.initialPropertyFocus(subjectID: draft.values.subjectID)
-            DispatchQueue.main.async { focus = initial }
-        }
         .onChange(of: draft.isSaving) { wasSaving, saving in
             guard wasSaving, !saving, draft.error == nil else { return }
             DispatchQueue.main.async { focus = .property }
@@ -109,16 +133,6 @@ struct CitationComposerAuthoringBox: View {
             }
         }
         .accessibilityIdentifier("citationComposer.authoring.bridge")
-        .onAppear {
-            let hasTerm = bridgeHasTerm(draft)
-            let initial = CitationAuthoringNavigation.initialBridgeFocus(
-                endA: draft.endA,
-                endB: draft.endB,
-                hasTermField: hasTerm,
-                termID: draft.termID
-            )
-            DispatchQueue.main.async { focus = initial }
-        }
         .onChange(of: draft.isSaving) { wasSaving, saving in
             guard wasSaving, !saving, draft.error == nil else { return }
             DispatchQueue.main.async { focus = .endB }
@@ -147,8 +161,8 @@ struct CitationComposerAuthoringBox: View {
         field: CitationAuthoringFocus,
         draft: CitationBridgeDraft
     ) -> some View {
-        let hasTerm = bridgeHasTerm(draft)
         let endA = draft.endA
+        let endB = draft.endB
         let termID = draft.termID
         return PVField(label: label) {
             PVComboBox(
@@ -161,20 +175,10 @@ struct CitationComposerAuthoringBox: View {
                 accessibilityIdentifierPrefix: prefix,
                 focus: PVComboFocus($focus, equals: field),
                 onCommit: { value, via in
-                    let after = field == .endB
+                    let hasTerm = field == .endB
                         ? self.bridgeHasTerm(endA: endA, endB: value, termID: termID)
-                        : hasTerm
-                    let decision = CitationAuthoringNavigation.advance(
-                        from: field,
-                        committed: value,
-                        via: via,
-                        subjectID: "",
-                        propertyID: "",
-                        bridgeHasTerm: hasTerm,
-                        termFieldAfterCommit: after
-                    )
-                    if let next = decision.next { focus = next }
-                    return decision.claimTab
+                        : self.bridgeHasTerm(endA: value, endB: endB, termID: termID)
+                    return self.claimTab(from: field, committed: value, via: via, bridgeHasTerm: hasTerm)
                 }
             )
         }
@@ -258,6 +262,25 @@ struct CitationComposerAuthoringBox: View {
         )
     }
 
+    private func claimTab(
+        from field: CitationAuthoringFocus,
+        committed: String,
+        via: PVComboCommitVia,
+        bridgeHasTerm: Bool
+    ) -> Bool {
+        guard let next = CitationAuthoringNavigation.tabDestination(
+            from: field,
+            committed: committed,
+            via: via,
+            draftAfterCommit: CitationAuthoringDraftAfterCommit(bridgeHasTerm: bridgeHasTerm)
+        ) else { return false }
+        // The next field may be inserted by this same commit. The write has to
+        // land on the following turn, once that field is in the hierarchy.
+        let nextField = next
+        DispatchQueue.main.async { focus = nextField }
+        return true
+    }
+
     private var termBinding: Binding<String> {
         Binding(
             get: {
@@ -280,9 +303,7 @@ struct CitationPropertyFields: View {
     var applyTermToEdit: Bool
 
     var body: some View {
-        let subjectID = values.subjectID
-        let propertyID = values.propertyID
-        return VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .top, spacing: PVSpacing.space5) {
                 PVField(label: L10n.CitationComposer.subjectLabel) {
                     PVComboBox(
@@ -295,7 +316,7 @@ struct CitationPropertyFields: View {
                         accessibilityIdentifierPrefix: "\(identifierPrefix).subject",
                         focus: PVComboFocus(focus, equals: .subject),
                         onCommit: { value, via in
-                            self.applyAdvance(from: .subject, committed: value, via: via, subjectID: subjectID, propertyID: propertyID)
+                            self.claimTab(from: .subject, committed: value, via: via)
                         }
                     )
                 }
@@ -306,15 +327,16 @@ struct CitationPropertyFields: View {
                         options: propertyOptions,
                         size: .sm,
                         placeholder: L10n.CitationComposer.propertyPlaceholder,
-                        emptyLabel: L10n.CitationComposer.propertyPlaceholder,
+                        emptyLabel: values.subjectID.isEmpty
+                            ? L10n.CitationComposer.chooseSubjectFirst
+                            : L10n.CitationComposer.propertyPlaceholder,
                         label: L10n.CitationComposer.propertyLabel,
                         accessibilityIdentifierPrefix: "\(identifierPrefix).property",
                         focus: PVComboFocus(focus, equals: .property),
                         onCommit: { value, via in
-                            self.applyAdvance(from: .property, committed: value, via: via, subjectID: subjectID, propertyID: propertyID)
+                            self.claimTab(from: .property, committed: value, via: via)
                         }
                     )
-                    .disabled(values.subjectID.isEmpty)
                 }
                 .frame(maxWidth: .infinity)
             }
@@ -376,7 +398,7 @@ struct CitationPropertyFields: View {
                     NameValueEditorForm(
                         draft: nameBinding,
                         accessibilityIdentifierPrefix: "\(identifierPrefix).name",
-                        requestsFocus: focus.wrappedValue == .value
+                        formFocus: PVInputFocus(focus, equals: .value)
                     )
                 }
             case PropertyValueType.date.rawValue:
@@ -384,7 +406,7 @@ struct CitationPropertyFields: View {
                     DateValueEditorForm(
                         draft: dateBinding,
                         accessibilityIdentifierPrefix: "\(identifierPrefix).date",
-                        requestsYearFocus: focus.wrappedValue == .value
+                        yearFocus: PVInputFocus(focus, equals: .value)
                     )
                 }
             default:
@@ -412,26 +434,23 @@ struct CitationPropertyFields: View {
             )
     }
 
-    private func applyAdvance(
+    private func claimTab(
         from field: CitationAuthoringFocus,
         committed: String,
-        via: PVComboCommitVia,
-        subjectID: String,
-        propertyID: String
+        via: PVComboCommitVia
     ) -> Bool {
-        let decision = CitationAuthoringNavigation.advance(
+        guard let next = CitationAuthoringNavigation.tabDestination(
             from: field,
             committed: committed,
             via: via,
-            subjectID: subjectID,
-            propertyID: propertyID,
-            bridgeHasTerm: false,
-            termFieldAfterCommit: false
-        )
-        if let next = decision.next {
-            focus.wrappedValue = next
-        }
-        return decision.claimTab
+            draftAfterCommit: CitationAuthoringDraftAfterCommit()
+        ) else { return false }
+        // The next field may be inserted by this same commit. The write has to
+        // land on the following turn, once that field is in the hierarchy.
+        let binding = focus
+        let nextField = next
+        DispatchQueue.main.async { binding.wrappedValue = nextField }
+        return true
     }
 
     private var propertyOptions: [PVComboBoxOption] {
@@ -648,7 +667,7 @@ struct CitationBridgeSentence: View {
                 }
             }
             FlowLayout(spacing: PVSpacing.space4, lineSpacing: PVSpacing.space3) {
-                ForEach(Array(pieces.enumerated()), id: \.offset) { _, piece in
+                ForEach(pieces) { piece in
                     pieceView(piece)
                 }
             }
@@ -676,7 +695,7 @@ struct CitationBridgeSentence: View {
     @ViewBuilder
     private func pieceView(_ piece: Piece) -> some View {
         switch piece {
-        case .word(let text, let strong):
+        case .word(let text, let strong, _):
             Text(verbatim: text)
                 .font(PVFont.body(size: 15, weight: strong ? PVFontWeight.semibold : PVFontWeight.regular))
                 .foregroundStyle(PVColor.textPrimary)
@@ -692,6 +711,7 @@ struct CitationBridgeSentence: View {
                 focus: termFocus
             )
             .frame(width: 190)
+            .id("term")
         }
     }
 
@@ -718,40 +738,54 @@ struct CitationBridgeSentence: View {
         let typeA = subjectA?.typeKey ?? ""
         switch ready.rule.bridgeTypeKey {
         case EvidenceBridgeKind.relationship.rawValue:
-            return [
-                .word(nameA, strong: true),
-                .word(L10n.string(L10n.CitationComposer.bridgeIsA), strong: false),
+            return sentence([
+                .word(text: nameA, strong: true, slot: 0),
+                .word(text: L10n.string(L10n.CitationComposer.bridgeIsA), strong: false, slot: 0),
                 .term,
-                .word(L10n.string(L10n.CitationComposer.bridgeOf), strong: false),
-                .word(nameB, strong: true),
-            ]
+                .word(text: L10n.string(L10n.CitationComposer.bridgeOf), strong: false, slot: 0),
+                .word(text: nameB, strong: true, slot: 0),
+            ])
         case EvidenceBridgeKind.placeRelationship.rawValue:
-            return [
-                .word(nameA, strong: true),
+            return sentence([
+                .word(text: nameA, strong: true, slot: 0),
                 .term,
-                .word(nameB, strong: true),
-            ]
+                .word(text: nameB, strong: true, slot: 0),
+            ])
         case EvidenceBridgeKind.participation.rawValue:
             let person = typeA == "person" ? nameA : nameB
             let event = typeA == "event" ? nameA : nameB
-            return [
-                .word(person, strong: true),
-                .word(L10n.string(L10n.CitationComposer.bridgeTookPartIn), strong: false),
-                .word(L10n.CitationComposer.bridgeTheEvent(event), strong: true),
-                .word(L10n.string(L10n.CitationComposer.bridgeAs), strong: false),
+            return sentence([
+                .word(text: person, strong: true, slot: 0),
+                .word(text: L10n.string(L10n.CitationComposer.bridgeTookPartIn), strong: false, slot: 0),
+                .word(text: L10n.CitationComposer.bridgeTheEvent(event), strong: true, slot: 0),
+                .word(text: L10n.string(L10n.CitationComposer.bridgeAs), strong: false, slot: 0),
                 .term,
-            ]
+            ])
         case EvidenceBridgeKind.location.rawValue:
             let event = typeA == "event" ? nameA : nameB
             let place = typeA == "place" ? nameA : nameB
-            return [
-                .word(L10n.string(L10n.CitationComposer.bridgeTheWord), strong: false),
-                .word(event, strong: true),
-                .word(L10n.string(L10n.CitationComposer.bridgeTookPlaceAtWords), strong: false),
-                .word(place, strong: true),
-            ]
+            return sentence([
+                .word(text: L10n.string(L10n.CitationComposer.bridgeTheWord), strong: false, slot: 0),
+                .word(text: event, strong: true, slot: 0),
+                .word(text: L10n.string(L10n.CitationComposer.bridgeTookPlaceAtWords), strong: false, slot: 0),
+                .word(text: place, strong: true, slot: 0),
+            ])
         default:
-            return [.word(nameA, strong: true), .word(nameB, strong: true)]
+            return sentence([
+                .word(text: nameA, strong: true, slot: 0),
+                .word(text: nameB, strong: true, slot: 0),
+            ])
+        }
+    }
+
+    /// Word slots follow the sentence so two words never share an identity.
+    /// The term keeps id "term" wherever the bridge kind places it.
+    private func sentence(_ parts: [Piece]) -> [Piece] {
+        parts.enumerated().map { index, piece in
+            if case .word(let text, let strong, _) = piece {
+                return .word(text: text, strong: strong, slot: index)
+            }
+            return piece
         }
     }
 
@@ -766,9 +800,16 @@ struct CitationBridgeSentence: View {
         }
     }
 
-    private enum Piece {
-        case word(String, strong: Bool)
+    private enum Piece: Identifiable {
+        case word(text: String, strong: Bool, slot: Int)
         case term
+
+        var id: String {
+            switch self {
+            case .word(_, _, let slot): "word-\(slot)"
+            case .term: "term"
+            }
+        }
     }
 }
 

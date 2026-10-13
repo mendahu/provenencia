@@ -24,6 +24,9 @@ struct CitationComposerModelTests {
     private let relatedToPropertyID = "prop-related-to"
     private let rolePropertyID = "prop-role"
     private let relationshipTypePropertyID = "prop-relationship-type"
+    private let regionLocatorJSON = """
+    {"version":1,"selectors":[{"type":"artifact"},{"type":"region","unit":"normalized","points":[{"x":0.1,"y":0.1},{"x":0.4,"y":0.1},{"x":0.4,"y":0.4},{"x":0.1,"y":0.4}]}]}
+    """
 
     private func makeStore() -> FakeStore {
         let store = FakeStore()
@@ -584,6 +587,37 @@ struct CitationComposerModelTests {
         #expect(model.fields.isDirty == false)
         #expect(model.hasUnsavedDocumentWork == false)
         #expect(model.shouldHoldNavigation(.back) == false)
+    }
+
+    @Test func newCitationClearsThePreviousLocator() async {
+        let store = makeStore()
+        seedArtifact(store)
+        seedCitation(store, locatorJSON: regionLocatorJSON)
+        let model = makeModel(store: store, citationID: "cit-1")
+        await model.prepare()
+        #expect(model.fields.locator.hasRegion)
+        model.selectCitation(nil)
+        await model.awaitIdentitySwitch()
+        #expect(model.activeCitationID == nil)
+        #expect(model.fields.locator.isArtifactOnly)
+        #expect(model.fields.isDirty == false)
+    }
+
+    @Test func newCitationFromTheObservationDialogClearsTheLocator() async {
+        let store = makeStore()
+        seedArtifact(store)
+        seedCitation(store, locatorJSON: regionLocatorJSON)
+        let model = makeModel(store: store, citationID: "cit-1")
+        await model.prepare()
+        model.beginPropertyDraft(subjectID: subjectID)
+        model.selectCitation(nil)
+        await model.awaitIdentitySwitch()
+        #expect(model.activeCitationID == nil)
+        #expect(model.fields.locator.isArtifactOnly)
+        guard case .property = model.authoring else {
+            Issue.record("the observation dialog stays open")
+            return
+        }
     }
 
     @Test func pendingConnectionOnNewAndExisting() async {
@@ -1457,6 +1491,25 @@ struct CitationComposerModelTests {
         #expect(values.subjectID != subjectID)
     }
 
+    @Test func saveEditClosesTheDialog() async {
+        let store = makeStore()
+        seedArtifact(store)
+        seedCitation(store, observations: [occupationObservation(id: "obs-1", ref: "OBS-ABC", citationID: "cit-1")])
+        let model = makeModel(store: store, citationID: "cit-1")
+        await model.prepare()
+        #expect(model.beginEdit(observationID: "obs-1", subjectID: subjectID))
+        model.mutateEdit { session in
+            guard case .property(var values, let id, let ref) = session.kind else { return }
+            values.valueText = "changed"
+            session.kind = .property(values: values, persistedID: id, persistedRef: ref)
+        }
+        store.recordedCalls = []
+        await model.saveEdit()
+        #expect(model.presented == nil)
+        #expect(model.editSession == nil)
+        #expect(store.recordedCalls.contains("updateObservation id=obs-1"))
+    }
+
     @Test func saveEditKeepsTheDialogWhenThePropertyIsMissing() async {
         let store = makeStore()
         seedArtifact(store)
@@ -1488,16 +1541,22 @@ struct CitationComposerModelTests {
 @Suite
 struct CitationAuthoringNavigationTests {
     @Test func propertyDraftWalksSubjectThenPropertyThenValue() {
-        #expect(CitationAuthoringNavigation.next(after: .subject, bridgeHasTerm: false) == .property)
-        #expect(CitationAuthoringNavigation.next(after: .property, bridgeHasTerm: false) == .value)
-        #expect(CitationAuthoringNavigation.next(after: .value, bridgeHasTerm: false) == nil)
+        #expect(CitationAuthoringNavigation.next(after: .subject) == .property)
+        #expect(CitationAuthoringNavigation.next(after: .property) == .value)
+        #expect(CitationAuthoringNavigation.next(after: .value) == nil)
     }
 
     @Test func bridgeDraftWalksTheEndsAndStopsWhenThereIsNoTerm() {
-        #expect(CitationAuthoringNavigation.next(after: .endA, bridgeHasTerm: false) == .endB)
-        #expect(CitationAuthoringNavigation.next(after: .endB, bridgeHasTerm: false) == nil)
-        #expect(CitationAuthoringNavigation.next(after: .endB, bridgeHasTerm: true) == .term)
-        #expect(CitationAuthoringNavigation.next(after: .term, bridgeHasTerm: true) == nil)
+        #expect(CitationAuthoringNavigation.next(after: .endA) == .endB)
+        #expect(CitationAuthoringNavigation.next(after: .endB) == nil)
+        #expect(CitationAuthoringNavigation.next(
+            after: .endB,
+            draftAfterCommit: CitationAuthoringDraftAfterCommit(bridgeHasTerm: true)
+        ) == .term)
+        #expect(CitationAuthoringNavigation.next(
+            after: .term,
+            draftAfterCommit: CitationAuthoringDraftAfterCommit(bridgeHasTerm: true)
+        ) == nil)
     }
 
     @Test func creatingASubjectDoesNotAdvance() {
@@ -1507,99 +1566,37 @@ struct CitationAuthoringNavigationTests {
         #expect(!CitationAuthoringNavigation.shouldAdvance(CitationComposerModel.newSubjectPrefix + "person"))
     }
 
-    @Test func insertedPropertyFieldsClaimTabUntilTheyAreOnScreen() {
-        #expect(CitationAuthoringNavigation.next(after: .subject, bridgeHasTerm: false) == .property)
-        #expect(CitationAuthoringNavigation.next(after: .property, bridgeHasTerm: false) == .value)
-        #expect(CitationAuthoringNavigation.claimsForwardTab(
-            nextFieldAlreadyFocusable: false,
-            nextFieldWillExist: true
-        ))
-        #expect(!CitationAuthoringNavigation.claimsForwardTab(
-            nextFieldAlreadyFocusable: true,
-            nextFieldWillExist: true
-        ))
-    }
-
-    @Test func advanceClaimsTabOnlyWhenTheNextFieldIsInserted() {
-        let inserted = CitationAuthoringNavigation.advance(
-            from: .subject,
-            committed: "sub-1",
-            via: .tab,
-            subjectID: "",
-            propertyID: "",
-            bridgeHasTerm: false,
-            termFieldAfterCommit: false
-        )
-        #expect(inserted == CitationAuthoringAdvance(next: .property, claimTab: true))
-
-        let alreadyThere = CitationAuthoringNavigation.advance(
-            from: .subject,
-            committed: "sub-2",
-            via: .tab,
-            subjectID: "sub-1",
-            propertyID: "",
-            bridgeHasTerm: false,
-            termFieldAfterCommit: false
-        )
-        #expect(alreadyThere == CitationAuthoringAdvance(next: nil, claimTab: false))
-
-        let clickMoves = CitationAuthoringNavigation.advance(
-            from: .property,
-            committed: "prop-1",
-            via: .click,
-            subjectID: "sub-1",
-            propertyID: "",
-            bridgeHasTerm: false,
-            termFieldAfterCommit: false
-        )
-        #expect(clickMoves == CitationAuthoringAdvance(next: .value, claimTab: false))
-
-        let termInserted = CitationAuthoringNavigation.advance(
-            from: .endB,
-            committed: "end-b",
-            via: .tab,
-            subjectID: "",
-            propertyID: "",
-            bridgeHasTerm: false,
-            termFieldAfterCommit: true
-        )
-        #expect(termInserted == CitationAuthoringAdvance(next: .term, claimTab: true))
-
-        let termAlready = CitationAuthoringNavigation.advance(
-            from: .endB,
-            committed: "end-b",
-            via: .return,
-            subjectID: "",
-            propertyID: "",
-            bridgeHasTerm: true,
-            termFieldAfterCommit: true
-        )
-        #expect(termAlready == CitationAuthoringAdvance(next: .term, claimTab: false))
-
-        let newSubject = CitationAuthoringNavigation.advance(
+    @Test func tabAlwaysMovesToTheFieldAfterTheCommit() {
+        let withTerm = CitationAuthoringDraftAfterCommit(bridgeHasTerm: true)
+        #expect(CitationAuthoringNavigation.tabDestination(
+            from: .subject, committed: "sub-1", via: .tab, draftAfterCommit: CitationAuthoringDraftAfterCommit()
+        ) == .property)
+        #expect(CitationAuthoringNavigation.tabDestination(
+            from: .subject, committed: "sub-2", via: .tab, draftAfterCommit: CitationAuthoringDraftAfterCommit()
+        ) == .property)
+        #expect(CitationAuthoringNavigation.tabDestination(
+            from: .property, committed: "prop-1", via: .tab, draftAfterCommit: CitationAuthoringDraftAfterCommit()
+        ) == .value)
+        #expect(CitationAuthoringNavigation.tabDestination(
+            from: .property, committed: "prop-1", via: .click, draftAfterCommit: CitationAuthoringDraftAfterCommit()
+        ) == nil)
+        #expect(CitationAuthoringNavigation.tabDestination(
+            from: .property, committed: "prop-1", via: .return, draftAfterCommit: CitationAuthoringDraftAfterCommit()
+        ) == nil)
+        #expect(CitationAuthoringNavigation.tabDestination(
+            from: .endB, committed: "end-b", via: .tab, draftAfterCommit: withTerm
+        ) == .term)
+        #expect(CitationAuthoringNavigation.tabDestination(
+            from: .endB, committed: "end-b", via: .tab, draftAfterCommit: CitationAuthoringDraftAfterCommit()
+        ) == nil)
+        #expect(CitationAuthoringNavigation.tabDestination(
+            from: .value, committed: "kept", via: .tab, draftAfterCommit: CitationAuthoringDraftAfterCommit()
+        ) == nil)
+        #expect(CitationAuthoringNavigation.tabDestination(
             from: .subject,
             committed: CitationComposerModel.newSubjectPrefix + "person",
-            via: .return,
-            subjectID: "",
-            propertyID: "",
-            bridgeHasTerm: false,
-            termFieldAfterCommit: false
-        )
-        #expect(newSubject == CitationAuthoringAdvance(next: nil, claimTab: false))
-    }
-
-    @Test func tabClaimsTheBridgeTermOnlyWhenTheCommitInsertsIt() {
-        #expect(CitationAuthoringNavigation.claimsForwardTab(
-            nextFieldAlreadyFocusable: false,
-            nextFieldWillExist: true
-        ))
-        #expect(!CitationAuthoringNavigation.claimsForwardTab(
-            nextFieldAlreadyFocusable: true,
-            nextFieldWillExist: true
-        ))
-        #expect(!CitationAuthoringNavigation.claimsForwardTab(
-            nextFieldAlreadyFocusable: false,
-            nextFieldWillExist: false
-        ))
+            via: .tab,
+            draftAfterCommit: CitationAuthoringDraftAfterCommit()
+        ) == nil)
     }
 }
