@@ -320,6 +320,7 @@ final class EvidenceGraphModel {
         } else {
             clearConnectState()
             armedSelect = false
+            fileOpenError = nil
             armedKind = kind
             hoverGridX = nil
             hoverGridY = nil
@@ -341,6 +342,7 @@ final class EvidenceGraphModel {
         } else {
             armedKind = nil
             armedSelect = false
+            fileOpenError = nil
             hoverGridX = nil
             hoverGridY = nil
             armedConnect = true
@@ -356,6 +358,7 @@ final class EvidenceGraphModel {
             armedSelect = false
         } else {
             disarmCiteTools()
+            fileOpenError = nil
             armedSelect = true
         }
     }

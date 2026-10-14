@@ -1726,6 +1726,78 @@ struct EvidenceGraphModelTests {
         #expect(model.citationCount(for: "b") == 0)
     }
 
+    /// A model whose Source has the given file-bearing Artifacts. The project folder does
+    /// not exist, so every object is missing from disk.
+    private func fileModel(artifactIDs: [String]) async -> EvidenceGraphModel {
+        let store = makeStore()
+        let model = makeModel(store: store)
+        await model.prepare()
+        let source = CatalogSource(
+            id: sourceID,
+            ref: "SRC-1",
+            sourceTypeID: "type-book",
+            title: "Census",
+            description: "",
+            coverMode: "artifact",
+            primaryArtifactID: artifactIDs.first ?? "",
+            hasArtifact: true
+        )
+        model.session.setQueryValue(
+            CatalogQueryKey.sourcesList(project: model.session.projectKey),
+            value: [source]
+        )
+        model.session.setQueryValue(
+            CatalogQueryKey.sourceWorkspace(project: model.session.projectKey, sourceId: sourceID),
+            value: CatalogSourceWorkspace(
+                source: source,
+                notes: [],
+                metadata: [],
+                artifacts: artifactIDs.map { artifact($0, label: "Page \($0)") },
+                credibility: nil
+            )
+        )
+        return model
+    }
+
+    @Test func openSelectedFileReportsAMissingFileAndKeepsTheSelection() async {
+        let model = await fileModel(artifactIDs: ["a", "b"])
+        model.selectFile("b")
+        model.openSelectedFile()
+        #expect(
+            model.fileOpenError
+                == L10n.EvidenceGraph.fileNotFoundMessage(name: "Page b", filename: "b.jpg")
+        )
+        #expect(model.selectedFileArtifactID == "b")
+        #expect(model.resolvedFileArtifactID == "b")
+
+        model.selectFile("a")
+        #expect(model.fileOpenError == nil)
+        #expect(model.selectedFileArtifactID == "a")
+    }
+
+    @Test func armingAToolClearsTheMissingFileError() async {
+        let model = await fileModel(artifactIDs: ["a"])
+        func missingFileError() -> String? {
+            model.openSelectedFile()
+            return model.fileOpenError
+        }
+
+        #expect(missingFileError() != nil)
+        model.toggleArm(.person)
+        #expect(model.armedKind == .person)
+        #expect(model.fileOpenError == nil)
+
+        #expect(missingFileError() != nil)
+        model.toggleConnect()
+        #expect(model.armedConnect)
+        #expect(model.fileOpenError == nil)
+
+        #expect(missingFileError() != nil)
+        model.toggleSelect()
+        #expect(model.armedSelect)
+        #expect(model.fileOpenError == nil)
+    }
+
     // MARK: Box select and group move (S10-20)
 
     /// Persons `p1` (2, 3), `p2` (4, 3), `p3` (8, 3) and a participation bridge `b1` between them.
