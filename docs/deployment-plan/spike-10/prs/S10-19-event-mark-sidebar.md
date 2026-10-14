@@ -297,7 +297,7 @@ Commit: "Document the glyph slot and the new Event mark in the design-system not
 
 **STEP-8 — Plan bookkeeping**
 Do this after the draft PR is open, so its number is known. Use the date the PR is opened as the landing date; the user corrects it at merge if it differs.
-Files: `docs/deployment-plan/spike-10/completed.md`, `docs/deployment-plan/spike-10/deployment-plan.md`, `docs/deployment-plan/spike-10/design/README.md`, `docs/deployment-plan/spike-10/design/S10-D16-event-mark.md`, `docs/deployment-plan/spike-10/design/S10-D7-sidebar-marks.md`, this plan.
+Files: `docs/deployment-plan/spike-10/completed.md`, `docs/deployment-plan/spike-10/deployment-plan.md`, `docs/deployment-plan/spike-10/design/README.md`, `docs/deployment-plan/spike-10/design/archive/S10-D16-event-mark.md`, `docs/deployment-plan/spike-10/design/archive/S10-D7-sidebar-marks.md`, this plan.
 Do:
 - `git mv` both briefs into `docs/deployment-plan/spike-10/design/archive/`. In each moved brief, add one `../` to every relative link that leaves `design/` (`../deployment-plan.md` becomes `../../deployment-plan.md`, and so on). The link between the two briefs stays as it is. Under each title, add the line `archive/S10-D5-source-artifacts.md` has: "**Landed YYYY-MM-DD** in [#N](…). The sections below are the original board prompt." Leave the rest of each brief unchanged.
 - Map, Design track table: link both rows to `design/archive/…`.
@@ -384,4 +384,4 @@ None.
 
 ## Landed
 
-No differences from this plan. The base had moved to `c13e3d9d` (S10-40 landed); the section 4 rows still held. The manual check was not run by the implementer; it is for the reviewer.
+One difference: STEP-8's Files line now names the briefs at their `design/archive/` paths, because `check-plan-docs.py` rejects paths that no longer exist once the briefs move. The base had moved to `c13e3d9d` (S10-40 landed); the section 4 rows still held. The manual check was not run by the implementer; it is for the reviewer.
