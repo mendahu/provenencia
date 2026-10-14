@@ -12,7 +12,7 @@ import SwiftUI
 struct PVSidebarNavItem: Identifiable, Equatable {
     let id: String
     let label: LocalizedStringResource
-    let icon: PVSymbol
+    let glyph: PVGlyph
     let accessibilityIdentifier: String
     /// Trailing entity count (e.g. how many Sources exist). `nil` hides
     /// the badge entirely — used for a destination with no backing count
@@ -163,7 +163,7 @@ private struct PVSidebarNavButton: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: isChild ? PVSpacing.space4 : PVSpacing.space5) {
-                PVIcon(item.icon, size: iconSize)
+                PVGlyphView(item.glyph, size: iconSize)
                 if !collapsed {
                     Text(item.label)
                         .lineLimit(1)
@@ -287,35 +287,35 @@ private extension View {
     // list of top-level rows. Children remain supported but unused.
     let source = [
         PVSidebarNavItem(
-            id: "sources", label: L10n.Workspace.sourcesTitle, icon: .library,
+            id: "sources", label: L10n.Workspace.sourcesTitle, glyph: .symbol(.library),
             accessibilityIdentifier: "preview.nav.sources", count: 12
         ),
     ]
     let conclude = [
         PVSidebarNavItem(
-            id: "persons", label: L10n.Workspace.personsTitle, icon: .person,
+            id: "persons", label: L10n.Workspace.personsTitle, glyph: .mark(.subjectPerson),
             accessibilityIdentifier: "preview.nav.persons", count: 42
         ),
         PVSidebarNavItem(
-            id: "events", label: L10n.Workspace.eventsTitle, icon: .calendar,
+            id: "events", label: L10n.Workspace.eventsTitle, glyph: .mark(.subjectEvent),
             accessibilityIdentifier: "preview.nav.events", count: 0
         ),
         PVSidebarNavItem(
-            id: "places", label: L10n.Workspace.placesTitle, icon: .mapPin,
+            id: "places", label: L10n.Workspace.placesTitle, glyph: .mark(.subjectPlace),
             accessibilityIdentifier: "preview.nav.places", count: 19
         ),
     ]
     let configure = [
         PVSidebarNavItem(
-            id: "source-types", label: L10n.Workspace.sourceTypesTitle, icon: .tag,
+            id: "source-types", label: L10n.Workspace.sourceTypesTitle, glyph: .symbol(.tag),
             accessibilityIdentifier: "preview.nav.sourceTypes"
         ),
         PVSidebarNavItem(
-            id: "metadata", label: L10n.Workspace.metadataTitle, icon: .list,
+            id: "metadata", label: L10n.Workspace.metadataTitle, glyph: .symbol(.list),
             accessibilityIdentifier: "preview.nav.metadata"
         ),
         PVSidebarNavItem(
-            id: "properties", label: L10n.Workspace.propertiesTitle, icon: .listTree,
+            id: "properties", label: L10n.Workspace.propertiesTitle, glyph: .symbol(.listTree),
             accessibilityIdentifier: "preview.nav.properties"
         ),
     ]

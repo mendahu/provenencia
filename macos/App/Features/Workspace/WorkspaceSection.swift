@@ -56,15 +56,17 @@ enum WorkspaceSection: String, Sendable, CaseIterable, Codable {
         }
     }
 
-    var icon: PVSymbol {
+    /// The sidebar row's and history row's icon: a symbol for Source and
+    /// Configure, the list kind's mark for Conclude (S10-19).
+    var glyph: PVGlyph {
         switch self {
-        case .sources: .library
-        case .sourceTypes: .tag
-        case .metadata: .list
-        case .properties: .listTree
-        case .persons: .person
-        case .events: .calendar
-        case .places: .mapPin
+        case .sources: .symbol(.library)
+        case .sourceTypes: .symbol(.tag)
+        case .metadata: .symbol(.list)
+        case .properties: .symbol(.listTree)
+        case .persons: .mark(PersonsList.mark)
+        case .events: .mark(EventsList.mark)
+        case .places: .mark(PlacesList.mark)
         }
     }
 }

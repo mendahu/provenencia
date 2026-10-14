@@ -67,4 +67,34 @@ struct WorkspaceSidebarSectionsTests {
         let sections = WorkspaceSidebarSections.make(counts: counts())
         #expect(sections.flatMap(\.items).allSatisfy { $0.count == nil })
     }
+
+    @Test func sidebarRowsCarryTheSectionGlyph() {
+        let items = WorkspaceSidebarSections.make(counts: counts()).flatMap(\.items)
+        let byID = Dictionary(uniqueKeysWithValues: items.map { ($0.id, $0.glyph) })
+        #expect(byID["persons"] == .mark(.subjectPerson))
+        #expect(byID["events"] == .mark(.subjectEvent))
+        #expect(byID["places"] == .mark(.subjectPlace))
+        #expect(byID["sources"] == .symbol(.library))
+        #expect(byID["source-types"] == .symbol(.tag))
+        #expect(byID["metadata"] == .symbol(.list))
+        #expect(byID["properties"] == .symbol(.listTree))
+    }
+
+    @Test func sectionGlyphsMatchTheBoard() {
+        for section in WorkspaceSection.allCases {
+            let expected: PVGlyph = switch section {
+            case .sources: .symbol(.library)
+            case .sourceTypes: .symbol(.tag)
+            case .metadata: .symbol(.list)
+            case .properties: .symbol(.listTree)
+            case .persons: .mark(PersonsList.mark)
+            case .events: .mark(EventsList.mark)
+            case .places: .mark(PlacesList.mark)
+            }
+            #expect(section.glyph == expected)
+        }
+        #expect(WorkspaceSection.persons.glyph == .mark(.subjectPerson))
+        #expect(WorkspaceSection.events.glyph == .mark(.subjectEvent))
+        #expect(WorkspaceSection.places.glyph == .mark(.subjectPlace))
+    }
 }

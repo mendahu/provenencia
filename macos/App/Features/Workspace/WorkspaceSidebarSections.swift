@@ -51,7 +51,7 @@ enum WorkspaceSidebarSections {
         PVSidebarNavItem(
             id: section.rawValue,
             label: section.label,
-            icon: section.icon,
+            glyph: section.glyph,
             accessibilityIdentifier: "workspace.nav.\(section.rawValue)",
             count: count
         )

@@ -375,6 +375,35 @@ enum PVFileTypeGlyph {
     }
 }
 
+/// An SF Symbol or a curated mark, for an icon slot that takes either (the
+/// sidebar row, the history menu, the empty state). Unrelated to
+/// `PVFileTypeGlyph`, which maps a file to a mark key.
+enum PVGlyph: Equatable {
+    case symbol(PVSymbol)
+    case mark(PVMarkKey)
+}
+
+/// Draws a `PVGlyph` at one size, tinted by the ambient foreground. Always
+/// decorative, as `PVIcon` is: a label beside it names the thing.
+struct PVGlyphView: View {
+    private let glyph: PVGlyph
+    private let size: CGFloat
+
+    init(_ glyph: PVGlyph, size: CGFloat) {
+        self.glyph = glyph
+        self.size = size
+    }
+
+    var body: some View {
+        switch glyph {
+        case .symbol(let symbol):
+            PVIcon(symbol, size: size)
+        case .mark(let key):
+            PVMark(key, size: size, decorative: true)
+        }
+    }
+}
+
 #Preview("Marks") {
     ScrollView {
         VStack(alignment: .leading, spacing: PVSpacing.space7) {
