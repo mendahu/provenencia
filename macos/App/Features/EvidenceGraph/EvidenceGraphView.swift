@@ -948,7 +948,7 @@ private struct EvidenceGraphFileMenuRow: View {
         HStack(alignment: .center, spacing: 10) {
             CachedThumbnail(
                 projectDir: projectDir,
-                relPath: row.thumbnailRelPath.isEmpty ? row.relPath : row.thumbnailRelPath,
+                relPath: row.thumbnailRelPath,
                 mediaType: row.mediaType,
                 originalFilename: row.filename,
                 size: 48,
