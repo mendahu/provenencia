@@ -1,7 +1,7 @@
 # Ship log — S10-49 Glyph consolidation
 
 **Plan:** [`S10-49-glyph-consolidation.md`](S10-49-glyph-consolidation.md) · **Branch:** `s10-49-glyph-consolidation` · **PR:** #394
-**State:** fixing 1 (user-requested follow-ups)
+**State:** fixing 2
 
 ## Before start
 
@@ -79,3 +79,21 @@ Do:
 Check: `python3 scripts/check-plan-docs.py docs/deployment-plan/spike-10/prs/S10-49-glyph-consolidation.md` reports no errors.
 
 Gate: `scripts/check-pr.sh` PASS.
+
+## Fix round 1 — result
+Head `5b8dd376`. Gate PASS, run by the orchestrator. F-1 through F-5 are done. Deviation: the F-3 palette-order test was never seen failing on its own, because removing `sortIndex` stopped the target compiling first.
+
+## Round 2 — review (scope `72f5ebed...5b8dd376`; CON, MNT, UX)
+
+| ID | Lens | Severity | Title | Decision | Evidence / reason |
+| --- | --- | --- | --- | --- | --- |
+| CON-3 + UX-1 | CON, UX | blocker | The Properties strip and bound-type chips lose board order on real projects | Fix now → F-6 | Verified. `rg PaletteSort core` shows the registry sets it only for person, event, and place (`registry.go` lines 69, 80, 91). The other five default to 0 and tie, so the key tie-break puts Location first. `FakeStore` hides this because it gives them 3–7. |
+| MNT (r2) | MNT | — | Clean. The literal `"bridge"` and the ink fallback with no presentation were noted below the bar. | Logged | `ink` with no presentation only arises for primary kinds (`EvidenceSubjectKindStyle.forKind`) |
+
+### Fix plan 2
+
+**F-6 — The registry carries the full palette order** (from CON-3, UX-1)
+Files: `core/database/subjectvocab/registry.go`, `core/database/subjectvocab/subjectvocab_test.go`, `macos/ProvenenciaTests/PropertiesModelTests.swift`. Rule: `.cursor/rules/go-tests.mdc`.
+Failing test first: `TestAllTypesPaletteSortFollowsBoardOrder` *(new, table-driven)* in `subjectvocab_test.go`. Sorting `AllTypes()` by `PaletteSort` gives `person, event, place, relationship, participation, location, place_relationship, source`, and no two types share a `PaletteSort`. Run it red: today six types tie at 0.
+Do: in `registry.go`, set `PaletteSort: 3` on relationship, `4` on participation, `5` on location, `6` on place_relationship, and `7` on source. This matches the deleted `sortIndex` and `FakeStore.syntheticPresentation`. No migration: `PaletteSort` comes from the compiled seed, not a column. `PlaceableTypes()` keeps only roots, so it is unaffected. In `PropertiesModelTests`, add a case that ties two non-root types at the same `paletteSort` and expects the key tie-break, so the Swift sort's behaviour on ties is pinned.
+Check: `CGO_ENABLED=1 go test -tags fts5 ./core/database/subjectvocab/... ./api/ffi/...` passes. `PropertiesModelTests` pass. `scripts/check-pr.sh` PASS.
