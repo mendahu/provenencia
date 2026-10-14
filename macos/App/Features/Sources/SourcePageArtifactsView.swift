@@ -2,7 +2,12 @@ import SwiftUI
 
 /// Artifact cards: wrapping rows, on-card edit, and the Add dialog form.
 struct SourcePageArtifactsView: View {
+    /// Board hover on the card wrapper (`transform: scale(1.02)`).
+    private static let cardHoverScale: CGFloat = 1.02
+
     @Bindable var model: SourcePageModel
+    @FocusState private var focusedPreviewID: String?
+    @State private var hoveredCardID: String?
 
     private var cardColumns: [GridItem] {
         [GridItem(.adaptive(minimum: 300), spacing: PVSpacing.space7, alignment: .top)]
@@ -40,7 +45,7 @@ struct SourcePageArtifactsView: View {
                 LazyVGrid(columns: cardColumns, spacing: PVSpacing.space7) {
                     ForEach(model.artifacts.items, id: \.id) { art in
                         artifactCard(art)
-                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                            .frame(maxWidth: .infinity, alignment: .top)
                     }
                 }
                 .accessibilityIdentifier("sources.page.artifacts.list")
@@ -125,7 +130,8 @@ struct SourcePageArtifactsView: View {
 
     private func artifactCard(_ art: CatalogArtifact) -> some View {
         let editing = model.artifacts.editingArtifactID == art.id
-        return PVCard(elevated: true, padding: 0) {
+        let hovering = hoveredCardID == art.id
+        return PVCard(elevated: false, padding: 0) {
             VStack(alignment: .leading, spacing: 0) {
                 previewWell(art)
                 VStack(alignment: .leading, spacing: PVSpacing.space4) {
@@ -138,33 +144,65 @@ struct SourcePageArtifactsView: View {
                 }
                 .padding(.horizontal, PVSpacing.space6)
                 .padding(.top, PVSpacing.space6)
-                .padding(.bottom, PVSpacing.space7)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-
-                footer(art, editing: editing)
+                .padding(.bottom, PVSpacing.space5)
+                .frame(maxWidth: .infinity, alignment: .topLeading)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .frame(maxWidth: .infinity, alignment: .top)
         }
+        .pvShadow(hovering ? PVElevation.md : PVElevation.sm)
+        .offset(y: hovering ? PVMotion.liftHover : 0)
+        .scaleEffect(hovering ? Self.cardHoverScale : 1)
+        .zIndex(hovering ? 1 : 0)
+        .onHover { inside in
+            if inside {
+                hoveredCardID = art.id
+            } else if hoveredCardID == art.id {
+                hoveredCardID = nil
+            }
+        }
+        .pvAnimation(PVMotion.easeStandard, value: hovering)
         .accessibilityIdentifier("sources.page.artifact.\(art.id)")
     }
 
+    /// 1:1 well sized from the card width. Extra card height never reaches it.
     private func previewWell(_ art: CatalogArtifact) -> some View {
-        CachedThumbnail(
-            projectDir: model.pageProjectDir,
-            relPath: art.thumbnailRelPath,
-            mediaType: art.file?.mediaType ?? "",
-            originalFilename: art.file?.originalFilename ?? "",
-            typeIconKey: artifactTypeIconKey(for: art),
-            layout: .well
-        )
-        .frame(maxWidth: .infinity)
-        .aspectRatio(4.0 / 3.0, contentMode: .fit)
+        ArtifactSquarePreview {
+            CachedThumbnail(
+                projectDir: model.pageProjectDir,
+                relPath: art.thumbnailRelPath,
+                mediaType: art.file?.mediaType ?? "",
+                originalFilename: art.file?.originalFilename ?? "",
+                typeIconKey: artifactTypeIconKey(for: art),
+                layout: .well
+            )
+        }
+        .fixedSize(horizontal: false, vertical: true)
         .background(PVColor.surfaceInset)
         .clipped()
         .overlay(alignment: .bottom) {
             Rectangle()
                 .fill(PVColor.borderSubtle)
                 .frame(height: 1)
+                .allowsHitTesting(false)
+        }
+        .overlay {
+            Button {
+                activatePreview(art)
+            } label: {
+                Color.clear
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .focused($focusedPreviewID, equals: art.id)
+            .pvFocusRing(focusedPreviewID == art.id, cornerRadius: 0)
+            .help(Text(hasFile(art) ? L10n.Sources.artifactOpenFileTip : L10n.Sources.artifactAddFileTip))
+            .accessibilityLabel(previewLabel(art))
+            .accessibilityIdentifier(
+                hasFile(art)
+                    ? "sources.page.artifact.\(art.id).open"
+                    : "sources.page.artifact.\(art.id).addFile"
+            )
         }
     }
 
@@ -177,16 +215,33 @@ struct SourcePageArtifactsView: View {
                 PVBadge(L10n.Sources.coverBadge, tone: .accent, icon: .photo)
                     .accessibilityIdentifier("sources.page.artifact.\(art.id).coverBadge")
             }
+            if !editing, model.artifacts.canUseAsThumbnail(art) {
+                PVButton(L10n.Sources.useAsThumbnail, variant: .ghost, size: .sm, icon: .imageUp) {
+                    Task { await model.artifacts.useAsThumbnail(art) }
+                }
+                .accessibilityIdentifier("sources.page.artifact.\(art.id).useAsThumbnail")
+            }
             Spacer(minLength: 0)
             if !editing {
-                PVIconButton(
-                    .penLine,
-                    label: L10n.Sources.editArtifactLabel(ref: art.ref),
-                    size: .sm
-                ) {
-                    model.artifacts.beginEdit(art.id)
+                HStack(spacing: PVSpacing.space2) {
+                    PVIconButton(
+                        .penLine,
+                        label: L10n.Sources.editArtifactLabel(ref: art.ref),
+                        size: .sm
+                    ) {
+                        model.artifacts.beginEdit(art.id)
+                    }
+                    .accessibilityIdentifier("sources.page.artifact.\(art.id).edit")
+                    PVIconButton(
+                        .trash,
+                        label: L10n.Sources.deleteArtifact,
+                        size: .sm,
+                        tone: .danger
+                    ) {
+                        Task { await model.askDeleteArtifact(id: art.id) }
+                    }
+                    .accessibilityIdentifier("sources.page.artifact.\(art.id).delete")
                 }
-                .accessibilityIdentifier("sources.page.artifact.\(art.id).edit")
             }
         }
         .frame(minHeight: 28)
@@ -246,23 +301,7 @@ struct SourcePageArtifactsView: View {
                 )
                 .accessibilityIdentifier("sources.page.artifact.\(art.id).description")
             }
-        }
-        .onExitCommand { model.artifacts.cancelFields(id: art.id) }
-        .background {
-            Button {
-                commitEdit(art)
-            } label: {
-                EmptyView()
-            }
-            .keyboardShortcut(.return, modifiers: .command)
-            .disabled(!model.artifacts.canSaveFields(art.id))
-            .accessibilityHidden(true)
-        }
-    }
-
-    private func footer(_ art: CatalogArtifact, editing: Bool) -> some View {
-        HStack(spacing: PVSpacing.space3) {
-            if editing {
+            HStack(spacing: PVSpacing.space3) {
                 PVButton(
                     L10n.Sources.saveArtifact,
                     variant: .primary,
@@ -277,44 +316,18 @@ struct SourcePageArtifactsView: View {
                     model.artifacts.cancelFields(id: art.id)
                 }
                 .accessibilityIdentifier("sources.page.artifact.\(art.id).cancel")
-            } else {
-                if hasFile(art) {
-                    PVButton(L10n.Sources.openFile, variant: .secondary, size: .sm, icon: .externalLink) {
-                        model.artifacts.open(art)
-                    }
-                    .accessibilityIdentifier("sources.page.artifact.\(art.id).open")
-                } else {
-                    PVButton(L10n.Sources.addFile, variant: .secondary, size: .sm, icon: .fileUp) {
-                        model.artifacts.openAttach(to: art.id)
-                    }
-                    .accessibilityIdentifier("sources.page.artifact.\(art.id).addFile")
-                }
-                if model.artifacts.canUseAsThumbnail(art) {
-                    PVButton(L10n.Sources.useAsThumbnail, variant: .ghost, size: .sm, icon: .imageUp) {
-                        Task { await model.artifacts.useAsThumbnail(art) }
-                    }
-                    .accessibilityIdentifier("sources.page.artifact.\(art.id).useAsThumbnail")
-                }
-                Spacer(minLength: 0)
-                PVIconButton(
-                    .trash,
-                    label: L10n.Sources.deleteArtifact,
-                    size: .sm,
-                    tone: .danger
-                ) {
-                    Task { await model.askDeleteArtifact(id: art.id) }
-                }
-                .accessibilityIdentifier("sources.page.artifact.\(art.id).delete")
             }
         }
-        .padding(.horizontal, PVSpacing.space5)
-        .padding(.vertical, PVSpacing.space4)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(PVColor.surfaceSunken)
-        .overlay(alignment: .top) {
-            Rectangle()
-                .fill(PVColor.borderSubtle)
-                .frame(height: 1)
+        .onExitCommand { model.artifacts.cancelFields(id: art.id) }
+        .background {
+            Button {
+                commitEdit(art)
+            } label: {
+                EmptyView()
+            }
+            .keyboardShortcut(.return, modifiers: .command)
+            .disabled(!model.artifacts.canSaveFields(art.id))
+            .accessibilityHidden(true)
         }
     }
 
@@ -337,6 +350,22 @@ struct SourcePageArtifactsView: View {
         Task { await model.artifacts.saveFields(id: art.id) }
     }
 
+    private func activatePreview(_ art: CatalogArtifact) {
+        if hasFile(art) {
+            model.artifacts.open(art)
+        } else {
+            model.artifacts.openAttach(to: art.id)
+        }
+    }
+
+    private func previewLabel(_ art: CatalogArtifact) -> String {
+        if hasFile(art) {
+            let name = art.file?.originalFilename ?? ""
+            return L10n.Sources.openArtifactFile(name: name.isEmpty ? art.ref : name)
+        }
+        return L10n.Sources.addFileToArtifact(ref: art.ref)
+    }
+
     private func hasFile(_ art: CatalogArtifact) -> Bool {
         art.file != nil && !art.fileID.isEmpty
     }
@@ -346,5 +375,30 @@ struct SourcePageArtifactsView: View {
         return model.identity.types
             .first { $0.id == model.source?.sourceTypeID }?
             .iconKey
+    }
+}
+
+/// Thumbnail frame whose height is always its width. A taller card does not stretch it.
+private struct ArtifactSquarePreview<Content: View>: View {
+    @ViewBuilder var content: () -> Content
+
+    var body: some View {
+        SquareLayout { content() }
+    }
+
+    private struct SquareLayout: Layout {
+        func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+            let proposed = proposal.width ?? 0
+            let width = proposed.isFinite ? proposed : 0
+            return CGSize(width: width, height: width)
+        }
+
+        func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+            let side = bounds.width
+            let child = ProposedViewSize(width: side, height: side)
+            for subview in subviews {
+                subview.place(at: bounds.origin, anchor: .topLeading, proposal: child)
+            }
+        }
     }
 }

@@ -6774,18 +6774,6 @@
         }
       }
     },
-    "sources.page.addFile": {
-      "comment": "Button to attach a first file to a fileless Artifact",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Add file…"
-          }
-        }
-      }
-    },
     "sources.page.addFileConfirm": {
       "comment": "Confirm button on the Add File dialog",
       "extractionState": "manual",
@@ -6830,6 +6818,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "First attach only. Once this artifact has a file it keeps it — a better scan becomes a new artifact."
+          }
+        }
+      }
+    },
+    "sources.page.addFileToArtifact": {
+      "comment": "VoiceOver label for a fileless artifact preview; argument is the ART- ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add a file to %@"
           }
         }
       }
@@ -6890,6 +6890,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "Add note"
+          }
+        }
+      }
+    },
+    "sources.page.artifactAddFileTip": {
+      "comment": "Tooltip on a fileless artifact preview that opens Add File",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add file"
           }
         }
       }
@@ -6974,6 +6986,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "No description"
+          }
+        }
+      }
+    },
+    "sources.page.artifactOpenFileTip": {
+      "comment": "Tooltip on an artifact preview that opens the file in its default app",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open file"
           }
         }
       }
@@ -8382,14 +8406,14 @@
         }
       }
     },
-    "sources.page.openFile": {
-      "comment": "Button to open an Artifact's primary File in an external app",
+    "sources.page.openArtifactFile": {
+      "comment": "VoiceOver label for an artifact preview; argument is the file name",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Open"
+            "value": "Open %@ in its default app"
           }
         }
       }

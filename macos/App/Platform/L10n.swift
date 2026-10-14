@@ -5611,6 +5611,18 @@ enum L10n {
             comment: "Placeholder on an artifact card when the description is empty"
         )
 
+        static let artifactOpenFileTip = LocalizedStringResource(
+            "sources.page.artifactOpenFileTip",
+            defaultValue: "Open file",
+            comment: "Tooltip on an artifact preview that opens the file in its default app"
+        )
+
+        static let artifactAddFileTip = LocalizedStringResource(
+            "sources.page.artifactAddFileTip",
+            defaultValue: "Add file",
+            comment: "Tooltip on a fileless artifact preview that opens Add File"
+        )
+
         static let pageDropHint = LocalizedStringResource(
             "sources.page.dropHint",
             defaultValue: "Release to add an artifact with this file",
@@ -5632,17 +5644,23 @@ enum L10n {
             comment: "Button to save edited Artifact label and description"
         )
 
-        static let openFile = LocalizedStringResource(
-            "sources.page.openFile",
-            defaultValue: "Open",
-            comment: "Button to open an Artifact's primary File in an external app"
-        )
+        /// VoiceOver label for an artifact preview that has a file. Argument is the file name.
+        static func openArtifactFile(name: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "sources.page.openArtifactFile",
+                defaultValue: "Open %@ in its default app",
+                comment: "VoiceOver label for an artifact preview; argument is the file name"
+            ), name)
+        }
 
-        static let addFile = LocalizedStringResource(
-            "sources.page.addFile",
-            defaultValue: "Add file…",
-            comment: "Button to attach a first file to a fileless Artifact"
-        )
+        /// VoiceOver label for a fileless artifact preview. Argument is the ART- ref.
+        static func addFileToArtifact(ref: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "sources.page.addFileToArtifact",
+                defaultValue: "Add a file to %@",
+                comment: "VoiceOver label for a fileless artifact preview; argument is the ART- ref"
+            ), ref)
+        }
 
         static let notesHeading = LocalizedStringResource(
             "sources.page.notesHeading",
