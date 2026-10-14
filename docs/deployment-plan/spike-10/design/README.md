@@ -10,7 +10,7 @@ Brief files are written **just before** the PR they gate, not up front. This ind
 
 | Step | View | Gates | Notes |
 | --- | --- | --- | --- |
-| [S10-D6](S10-D6-evidence-graph.md) | Evidence graph | **S10-20** | File select and Open (system app), plus box-select. Also specifies Unpromote on the promoted card, which ships in **S10-44**. Hit boxes, the tiled grid, canvas growth, and camera restore are not this board |
+| [S10-D6](S10-D6-evidence-graph.md) | Evidence graph | **S10-20** | File select and Open (system app), plus box-select. Board agreed 2026-10-14. Also specifies Unpromote on the promoted card, which ships in **S10-44**. Hit boxes, the tiled grid, canvas growth, and camera restore are not this board |
 | S10-D8 | Sources list | **S10-41** | The page: last updated, evidence-status filter, text search, persisted sort and filters. Session scroll ships in the same PR and has no chrome of its own. Persons, Events, and Places do not get those controls |
 | S10-D9 | Persons list | **S10-22** | Last updated, same cell as Events and Places. The existing thumb becomes a likeness crop in **S10-35**, then the preferred portrait in **S10-39** |
 | S10-D10 | Events list | **S10-22** | |
