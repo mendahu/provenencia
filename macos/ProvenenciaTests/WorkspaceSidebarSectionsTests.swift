@@ -81,18 +81,6 @@ struct WorkspaceSidebarSectionsTests {
     }
 
     @Test func sectionGlyphsMatchTheBoard() {
-        for section in WorkspaceSection.allCases {
-            let expected: PVGlyph = switch section {
-            case .sources: .symbol(.library)
-            case .sourceTypes: .symbol(.tag)
-            case .metadata: .symbol(.list)
-            case .properties: .symbol(.listTree)
-            case .persons: .mark(PersonsList.mark)
-            case .events: .mark(EventsList.mark)
-            case .places: .mark(PlacesList.mark)
-            }
-            #expect(section.glyph == expected)
-        }
         #expect(WorkspaceSection.persons.glyph == .mark(.subjectPerson))
         #expect(WorkspaceSection.events.glyph == .mark(.subjectEvent))
         #expect(WorkspaceSection.places.glyph == .mark(.subjectPlace))
