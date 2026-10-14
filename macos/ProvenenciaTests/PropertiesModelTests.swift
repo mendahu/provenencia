@@ -111,6 +111,25 @@ struct PropertiesModelTests {
         #expect(snapshot.typesInPaletteOrder.map(\.key) == ["event", "person"])
     }
 
+    @Test func typesInPaletteOrderBreaksTiesByKey() {
+        let participation = CatalogSubjectType(
+            id: "type-participation", key: "participation", origin: "provenencia",
+            label: "Participation", description: "", refPrefix: "PTN", candidateRefPrefix: "CPA"
+        )
+        let relationship = CatalogSubjectType(
+            id: "type-relationship", key: "relationship", origin: "provenencia",
+            label: "Relationship", description: "", refPrefix: "REL", candidateRefPrefix: "CRL"
+        )
+        let snapshot = PropertiesSnapshot(
+            properties: [], types: [relationship, participation], propertiesByTypeID: [:],
+            presentationsByKey: [
+                "relationship": presentation("relationship", role: "bridge", sort: 3),
+                "participation": presentation("participation", role: "bridge", sort: 3),
+            ]
+        )
+        #expect(snapshot.typesInPaletteOrder.map(\.key) == ["participation", "relationship"])
+    }
+
     @Test func bridgeLabelFollowsPresentationRole() {
         #expect(PropertiesTypeChrome.showsBridgeLabel(presentation: presentation("relationship", role: "bridge", sort: 3)))
         #expect(!PropertiesTypeChrome.showsBridgeLabel(presentation: presentation("source", role: "reification", sort: 7)))
