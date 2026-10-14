@@ -578,6 +578,25 @@ private struct EvidenceGraphDragCanvasSize: View {
     }
 }
 
+/// The selection rectangle, in document space so it scales with zoom. This is
+/// the only reader of ``GraphCanvasPointerController/marqueeRect``: the document
+/// body must not follow a property that changes every pointer event.
+private struct EvidenceGraphMarquee: View {
+    @Bindable var pointer: GraphCanvasPointerController
+
+    var body: some View {
+        if let rect = pointer.marqueeRect {
+            Rectangle()
+                .fill(PVColor.accent.opacity(0.09))
+                .overlay(Rectangle().stroke(PVColor.accent, lineWidth: 1.5))
+                .frame(width: rect.width, height: rect.height)
+                .offset(x: rect.minX, y: rect.minY)
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
+        }
+    }
+}
+
 private struct EvidenceGraphDocument: View {
     @Bindable var graphHandle: QueryHandle<SourceGraphRows>
     @Bindable var fieldsHandle: QueryHandle<PropertiesSnapshot>
@@ -701,6 +720,8 @@ private struct EvidenceGraphDocumentBody: View {
             if subjects.isEmpty, bridges.isEmpty, graphHandle.status == .ready, inputMode == .idle {
                 emptyOverlay
             }
+
+            EvidenceGraphMarquee(pointer: pointer)
 
             EvidenceGraphDragCanvasSize(snapshot: snapshot, pointer: pointer, model: model)
         }

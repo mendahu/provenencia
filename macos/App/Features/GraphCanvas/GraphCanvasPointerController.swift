@@ -1,7 +1,8 @@
 @preconcurrency import AppKit
 import Observation
 
-/// Owns canvas pointer policy: hit-test, select, drag, empty-canvas pan, place, connect.
+/// Owns canvas pointer policy: hit-test, select, drag, empty-canvas pan,
+/// selection rectangle, place, connect.
 ///
 /// Product hosts publish ``hitTargets`` and tool ``mode``, and wire the callbacks.
 /// Live drag offsets live here; ``GraphCanvasDocumentView`` applies them to item
@@ -28,12 +29,17 @@ final class GraphCanvasPointerController {
     /// Idle press held on a nested card action, for pressed paint. Cleared on
     /// release and when the press becomes a card drag.
     private(set) var pressedCardAction: (cardID: String, actionID: String)?
+    /// The selection rectangle being drawn, normalized, in document space.
+    /// Nil unless the gesture is a marquee.
+    private(set) var marqueeRect: CGRect?
 
     weak var viewport: GraphCanvasViewportController?
 
     var onSelect: ((String) -> Void)?
     var onDeselect: (() -> Void)?
     var onDragEnded: ((String, CGSize) -> Void)?
+    /// An empty-canvas rectangle was released: ids of the hit targets it overlaps.
+    var onMarqueeEnded: ((Set<String>) -> Void)?
     var onPlace: ((CGPoint) -> Void)?
     var onConnectPick: ((String) -> Void)?
     /// Idle click on a nested card action (edit / Add property); `(targetID, actionID)`.
@@ -43,8 +49,10 @@ final class GraphCanvasPointerController {
 
     private enum Gesture {
         case none
-        case pendingClick(start: CGPoint, targetID: String?)
+        case pendingClick(start: CGPoint, targetID: String?, shiftDown: Bool)
         case draggingCard(id: String, start: CGPoint)
+        /// Empty-canvas selection rectangle between two document points.
+        case marquee(origin: CGPoint, current: CGPoint)
         /// Empty-canvas pan (idle only); `lastWindow` for incremental deltas.
         case backgroundPanning(lastWindow: CGPoint)
     }
@@ -71,8 +79,16 @@ final class GraphCanvasPointerController {
         switch gesture {
         case .draggingCard(let id, let start):
             gesture = .draggingCard(id: id, start: shifted(start, by: delta))
-        case .pendingClick(let start, let targetID):
-            gesture = .pendingClick(start: shifted(start, by: delta), targetID: targetID)
+        case .pendingClick(let start, let targetID, let shiftDown):
+            gesture = .pendingClick(
+                start: shifted(start, by: delta),
+                targetID: targetID,
+                shiftDown: shiftDown
+            )
+        case .marquee(let origin, let current):
+            let next = (shifted(origin, by: delta), shifted(current, by: delta))
+            gesture = .marquee(origin: next.0, current: next.1)
+            marqueeRect = Self.normalizedRect(from: next.0, to: next.1)
         case .backgroundPanning, .none:
             break
         }
@@ -80,6 +96,15 @@ final class GraphCanvasPointerController {
 
     private func shifted(_ point: CGPoint, by delta: CGSize) -> CGPoint {
         CGPoint(x: point.x + delta.width, y: point.y + delta.height)
+    }
+
+    private static func normalizedRect(from a: CGPoint, to b: CGPoint) -> CGRect {
+        CGRect(
+            x: min(a.x, b.x),
+            y: min(a.y, b.y),
+            width: abs(a.x - b.x),
+            height: abs(a.y - b.y)
+        )
     }
 
     func setPointerInside(_ inside: Bool) {
@@ -92,23 +117,23 @@ final class GraphCanvasPointerController {
 
     // MARK: - Mouse (document view)
 
-    func mouseDown(documentPoint: CGPoint, windowPoint: CGPoint) {
+    func mouseDown(documentPoint: CGPoint, windowPoint: CGPoint, shiftDown: Bool = false) {
         _ = windowPoint
         switch mode {
         case .placing:
             // Card under cursor blocks place (click is ignored).
             let hit = GraphCanvasPointerHitTesting.topmostTarget(at: documentPoint, in: hitTargets)
-            gesture = .pendingClick(start: documentPoint, targetID: hit?.id)
+            gesture = .pendingClick(start: documentPoint, targetID: hit?.id, shiftDown: shiftDown)
         case .connecting:
             let hit = GraphCanvasPointerHitTesting.topmostTarget(at: documentPoint, in: hitTargets)
             if let hit, hit.acceptsConnect {
-                gesture = .pendingClick(start: documentPoint, targetID: hit.id)
+                gesture = .pendingClick(start: documentPoint, targetID: hit.id, shiftDown: shiftDown)
             } else {
-                gesture = .pendingClick(start: documentPoint, targetID: nil)
+                gesture = .pendingClick(start: documentPoint, targetID: nil, shiftDown: shiftDown)
             }
-        case .idle:
+        case .idle, .selecting:
             let hit = GraphCanvasPointerHitTesting.topmostTarget(at: documentPoint, in: hitTargets)
-            gesture = .pendingClick(start: documentPoint, targetID: hit?.id)
+            gesture = .pendingClick(start: documentPoint, targetID: hit?.id, shiftDown: shiftDown)
             if let hit, let action = GraphCanvasPointerHitTesting.action(at: documentPoint, in: hit) {
                 pressedCardAction = (hit.id, action.id)
             }
@@ -125,9 +150,14 @@ final class GraphCanvasPointerController {
             viewport?.panByViewDelta(viewDelta)
             gesture = .backgroundPanning(lastWindow: windowPoint)
 
-        case .pendingClick(let start, let targetID):
+        case .marquee(let origin, _):
+            gesture = .marquee(origin: origin, current: documentPoint)
+            marqueeRect = Self.normalizedRect(from: origin, to: documentPoint)
+
+        case .pendingClick(let start, let targetID, let shiftDown):
             guard GraphCanvasPointerHitTesting.isDrag(from: start, to: documentPoint) else { return }
-            if mode == .idle, let targetID {
+            let pointsAtCards = mode == .idle || mode == .selecting
+            if pointsAtCards, let targetID {
                 pressedCardAction = nil
                 gesture = .draggingCard(id: targetID, start: start)
                 draggingItemID = targetID
@@ -137,10 +167,16 @@ final class GraphCanvasPointerController {
                 )
                 setOffset(targetID, offset: offset)
                 onSelect?(targetID)
-            } else if mode == .idle, targetID == nil {
-                // Empty canvas → click-drag pan.
-                gesture = .backgroundPanning(lastWindow: windowPoint)
-                pushPanCursor()
+            } else if pointsAtCards, targetID == nil {
+                if mode == .selecting || shiftDown {
+                    // Select armed, or Shift held: draw a rectangle.
+                    gesture = .marquee(origin: start, current: documentPoint)
+                    marqueeRect = Self.normalizedRect(from: start, to: documentPoint)
+                } else {
+                    // Empty canvas → click-drag pan.
+                    gesture = .backgroundPanning(lastWindow: windowPoint)
+                    pushPanCursor()
+                }
             } else {
                 // Past threshold with no card drag (place/connect): cancel click.
                 gesture = .none
@@ -166,7 +202,17 @@ final class GraphCanvasPointerController {
             popPanCursor()
             gesture = .none
 
-        case .pendingClick(_, let targetID):
+        case .marquee:
+            let rect = marqueeRect
+            marqueeRect = nil
+            gesture = .none
+            if let rect {
+                onMarqueeEnded?(
+                    GraphCanvasPointerHitTesting.idsIntersecting(rect, in: hitTargets)
+                )
+            }
+
+        case .pendingClick(_, let targetID, _):
             defer { gesture = .none }
             switch mode {
             case .placing:
@@ -177,7 +223,7 @@ final class GraphCanvasPointerController {
                 if let targetID {
                     onConnectPick?(targetID)
                 }
-            case .idle:
+            case .idle, .selecting:
                 if let targetID {
                     let target = hitTargets.first(where: { $0.id == targetID })
                     if let target,
@@ -216,7 +262,7 @@ final class GraphCanvasPointerController {
         case .placing, .connecting:
             hoveredCardAction = nil
             onHover?(documentPoint)
-        case .idle:
+        case .idle, .selecting:
             updateHoveredAction(at: documentPoint)
         }
     }
