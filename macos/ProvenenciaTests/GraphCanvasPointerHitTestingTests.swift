@@ -135,18 +135,26 @@ struct GraphCanvasPointerPressTests {
     }
 
     @Test func shiftDragOnEmptyCanvasMarquees() {
+        var selectionChanges = 0
         let pointer = marqueeController()
+        pointer.onSelect = { _ in selectionChanges += 1 }
+        pointer.onDeselect = { selectionChanges += 1 }
         pointer.mouseDown(documentPoint: CGPoint(x: 10, y: 10), windowPoint: .zero, shiftDown: true)
         pointer.mouseDragged(documentPoint: CGPoint(x: 80, y: 90), windowPoint: .zero)
         #expect(pointer.marqueeRect == CGRect(x: 10, y: 10, width: 70, height: 80))
         #expect(pointer.draggingItemID == nil)
+        pointer.mouseUp(documentPoint: CGPoint(x: 80, y: 90), windowPoint: .zero)
+        #expect(selectionChanges == 0)
 
-        // Without Shift the same drag pans.
+        // Without Shift the same drag pans, and the selection stays.
         let panning = marqueeController()
+        panning.onSelect = { _ in selectionChanges += 1 }
+        panning.onDeselect = { selectionChanges += 1 }
         panning.mouseDown(documentPoint: CGPoint(x: 10, y: 10), windowPoint: .zero, shiftDown: false)
         panning.mouseDragged(documentPoint: CGPoint(x: 80, y: 90), windowPoint: .zero)
         #expect(panning.marqueeRect == nil)
         panning.mouseUp(documentPoint: CGPoint(x: 80, y: 90), windowPoint: .zero)
+        #expect(selectionChanges == 0)
 
         // A Shift press that starts on a card is a card drag.
         let onCard = marqueeController()
