@@ -207,6 +207,9 @@ func TestSubjectVocab(t *testing.T) {
 					if info.Presentation.L10nKey == "" || info.Presentation.IconSymbol == "" {
 						t.Fatalf("missing presentation %+v", info)
 					}
+					if info.Presentation.IconSymbol != "subject_"+info.Key {
+						t.Fatalf("%s IconSymbol %q, want subject_%s (Swift maps marks by this rule)", info.Key, info.Presentation.IconSymbol, info.Key)
+					}
 				}
 				if !LockedBinding("participation", "person") {
 					t.Fatal("expected locked")

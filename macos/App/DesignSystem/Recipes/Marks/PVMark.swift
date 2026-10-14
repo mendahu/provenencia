@@ -74,6 +74,15 @@ enum PVMarkKey: String, CaseIterable, Sendable {
         self = PVMarkKey(rawValue: catalogKey ?? "") ?? .fallback
     }
 
+    /// The `subject_*` mark for a subject-type key (`person` → `subject_person`).
+    /// Nil when no such mark exists. Mirrors the Go registry's `IconSymbol` rule.
+    init?(subjectTypeKey: String) {
+        guard let key = PVMarkKey(rawValue: "subject_" + subjectTypeKey), key.family == .subject else {
+            return nil
+        }
+        self = key
+    }
+
     var family: PVMarkFamily {
         if rawValue.hasPrefix("file_") { return .file }
         if rawValue.hasPrefix("subject_") { return .subject }
