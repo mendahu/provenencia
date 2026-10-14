@@ -1,5 +1,9 @@
 # Spike 10 — completed
 
+## S10-20 — Open file and box-select
+
+**Landed 2026-10-14** in [#396](https://github.com/mendahu/provenencia/pull/396). The Evidence graph header has a 208pt select of the Source's files and an Open button that sends the chosen one to the system app. The cover is chosen first when it has a file, and a missing file shows a "File not found" callout. A Source with no file shows neither control. Hold Shift and drag on empty canvas, or arm Select on the palette (help: Hold Shift to select), to draw a rectangle. The person, event, and place cards it touches are selected and the relationship cards are not. Dragging one selected card, or pressing an arrow key, moves the whole group. Empty-canvas drag still pans with Select disarmed and Shift up.
+
 ## S10-49 — Glyph consolidation
 
 **Landed 2026-10-14** in [#394](https://github.com/mendahu/provenencia/pull/394). One `PVMarkKey(subjectTypeKey:)` rule maps a subject type to its mark, and Go and Swift tests pin it to the registry's `IconSymbol`. Thumbnails, the omnibar lead, and the Properties type cards take one `PVGlyph` instead of a mark and a symbol. An empty Source types list now shows the tag symbol and an empty Metadata list the list symbol, matching their sidebar rows. Every other thumbnail looks as before. Omnibar Source-type and Metadata leads match their sidebar icons, and Properties palette order and bridge labels read the registry presentation.
