@@ -210,7 +210,7 @@ SLICE 5 — Artifacts and multi-select
   ✎ S10-D5 ──▶ S10-18  Page drop opens Add Artifact; artifact cards
   ✎ S10-D16 ──▶
   ✎ S10-D7 ──▶ S10-19  Event mark, then sidebar and toolbar. Does not wait on S10-18 — done, #393
-  S10-49  Glyph consolidation: one subject-mark rule, PVGlyph in thumbnails, omnibar, Properties (after S10-19)
+  S10-49  Glyph consolidation: one subject-mark rule, PVGlyph in thumbnails, omnibar, Properties (after S10-19) — done, #394
   ✎ S10-D6 ──▶ S10-20  File select, Open, and box-select (after S10-01 and S10-03)
   Check: drop a file on the page and Add Artifact opens with that file
          chosen. Name it and confirm: the card is there. Cancel: it is not.
@@ -462,7 +462,7 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 
 #### S10-49 — Glyph consolidation
 
-**Plan:** [`prs/S10-49-glyph-consolidation.md`](prs/S10-49-glyph-consolidation.md) — Planned. The S10-19 review follow-ups, in one PR (user, 2026-10-14).
+**Landed 2026-10-14** in [#394](https://github.com/mendahu/provenencia/pull/394). See [`completed.md`](completed.md).
 
 | | |
 | --- | --- |

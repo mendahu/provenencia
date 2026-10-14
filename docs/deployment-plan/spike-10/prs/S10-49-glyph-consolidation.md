@@ -1,6 +1,6 @@
 # S10-49 — Glyph consolidation
 
-**Status:** Planned
+**Status:** Landed in [#394](https://github.com/mendahu/provenencia/pull/394) (2026-10-14)
 **Spike / slice:** Spike 10 · Slice 5 — Artifacts and multi-select (follow-up to S10-19)
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#s10-49--glyph-consolidation)
 **Brief:** — (no new chrome: the PR moves existing icons onto one value; the only visible changes are two empty-state icons that now match their sidebar rows, which the user chose on 2026-10-14)
@@ -328,3 +328,7 @@ None.
 
 **Title:** S10-49 — Glyph consolidation
 **Body:** objective in one sentence; what shipped against US-1 to US-4; AC evidence (T-1 to T-7 and the manual check lines, each run or "not run — for the reviewer"); deviations from the plan; `Plan: docs/deployment-plan/spike-10/prs/S10-49-glyph-consolidation.md`.
+
+## Landed
+
+Differences from this plan: AC-2.4's `rg` still prints the four `case subject... = "subject_..."` lines of the `PVMarkKey` enum, which define the raw values. `ConclusionDetailPage.swift` built its thumbnail with `.init(mark:label:)`, a caller section 4 did not list, and moved to `.init(glyph: .mark(mark), label:)`. `PVGlyphTests.swift` uses pbxproj IDs `AA...09E0` and `AA...09E1` because `03C0` and `03C1` were taken. STEP-9's `rg "ideas/glyph-consolidation" docs` still matches this plan and the two review logs, which name the old path as history. The manual check was not run by the implementer; it is for the reviewer.

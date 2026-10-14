@@ -1,5 +1,9 @@
 # Spike 10 — completed
 
+## S10-49 — Glyph consolidation
+
+**Landed 2026-10-14** in [#394](https://github.com/mendahu/provenencia/pull/394). One `PVMarkKey(subjectTypeKey:)` rule maps a subject type to its mark, and Go and Swift tests pin it to the registry's `IconSymbol`. Thumbnails, the omnibar lead, and the Properties type cards take one `PVGlyph` instead of a mark and a symbol. An empty Source types list now shows the tag symbol and an empty Metadata list the list symbol, matching their sidebar rows. Every other thumbnail looks as before.
+
 ## S10-19 — Event mark and sidebar icons
 
 **Landed 2026-10-14** in [#393](https://github.com/mendahu/provenencia/pull/393). The Event mark is a calendar, not an hourglass, on cards, omnibar hits, Promote, and Properties. The sidebar rows for Persons, Events, and Places draw the same marks as the cards, at 15pt and 16pt in the collapsed rail, in the row's ink. The Back and Forward history rows show the same marks beside their section, and an empty Persons, Events, or Places list shows its kind's mark. One `PVGlyph` value names a symbol or a mark, and the sidebar item, the history row, and the empty state carry it.
