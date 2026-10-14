@@ -61,8 +61,6 @@ enum PVSymbol: String {
     /// Properties — properties hanging off a subject kind (S5-D3 `list-tree`).
     case listTree = "list.bullet.indent"
     case account = "person.crop.circle"
-    case person = "person"
-    case mapPin = "mappin"
     /// Lucide `pin` — confirmed matches pinned to a claim (Promote summary).
     case pin = "pin"
     case sidebarToggle = "sidebar.left"
