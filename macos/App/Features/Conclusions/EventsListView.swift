@@ -9,7 +9,6 @@ enum EventsList: ConclusionListKind {
     static func key(project: ProjectKey) -> CatalogQueryKey { .eventsList(project: project) }
     static var title: LocalizedStringResource { L10n.Workspace.eventsTitle }
     static var identifierRoot: String { "events" }
-    static var emptyIcon: PVSymbol { .calendar }
     static var emptyTitle: LocalizedStringResource { L10n.Workspace.eventsEmptyTitle }
     static var emptyMessage: LocalizedStringResource { L10n.Workspace.eventsEmptyMessage }
     static func countMeta(_ count: Int) -> String { L10n.Workspace.eventCount(count) }

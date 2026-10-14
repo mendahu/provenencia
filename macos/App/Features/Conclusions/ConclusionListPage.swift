@@ -43,7 +43,6 @@ protocol ConclusionListKind {
     static var title: LocalizedStringResource { get }
     /// Stable identifier root: `<root>.list`, `<root>.empty`, `<root>.row.<ref>`.
     static var identifierRoot: String { get }
-    static var emptyIcon: PVSymbol { get }
     static var emptyTitle: LocalizedStringResource { get }
     static var emptyMessage: LocalizedStringResource { get }
     static func countMeta(_ count: Int) -> String
@@ -142,7 +141,7 @@ private struct ConclusionListBody<Kind: ConclusionListKind>: View {
                 PVListSkeleton()
             case .empty:
                 PVEmptyState(
-                    icon: Kind.emptyIcon,
+                    glyph: .mark(Kind.mark),
                     title: Kind.emptyTitle,
                     message: L10n.string(Kind.emptyMessage)
                 )

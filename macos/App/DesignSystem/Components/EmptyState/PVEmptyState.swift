@@ -2,11 +2,11 @@ import SwiftUI
 
 /// A "nothing here yet" placeholder — mirrors `components/feedback/EmptyState.jsx`
 /// (dashed border, faint icon, display-font title, muted prose body, optional
-/// `action` slot). `message` is a plain `String` (like `PVToast`'s) since
+/// `action` slot). The icon slot takes a symbol or a mark (`PVGlyph`). `message` is a plain `String` (like `PVToast`'s) since
 /// callers often interpolate dynamic content (e.g. a search query) into it;
 /// pass `L10n.string(…)` for fixed copy.
 struct PVEmptyState<Action: View>: View {
-    private let icon: PVSymbol
+    private let glyph: PVGlyph
     private let title: Text?
     private let message: String?
     private let compact: Bool
@@ -19,7 +19,22 @@ struct PVEmptyState<Action: View>: View {
         compact: Bool = false,
         @ViewBuilder action: () -> Action
     ) {
-        self.icon = icon
+        self.glyph = .symbol(icon)
+        self.title = title.map { Text($0) }
+        self.message = message
+        self.compact = compact
+        self.action = action()
+    }
+
+    /// The icon slot holds a symbol or a mark, e.g. a list kind's mark.
+    init(
+        glyph: PVGlyph,
+        title: LocalizedStringResource? = nil,
+        message: String? = nil,
+        compact: Bool = false,
+        @ViewBuilder action: () -> Action
+    ) {
+        self.glyph = glyph
         self.title = title.map { Text($0) }
         self.message = message
         self.compact = compact
@@ -35,7 +50,7 @@ struct PVEmptyState<Action: View>: View {
         compact: Bool = false,
         @ViewBuilder action: () -> Action
     ) {
-        self.icon = icon
+        self.glyph = .symbol(icon)
         self.title = Text(verbatim: verbatimTitle)
         self.message = message
         self.compact = compact
@@ -44,7 +59,7 @@ struct PVEmptyState<Action: View>: View {
 
     var body: some View {
         VStack(spacing: PVSpacing.space5) {
-            PVIcon(icon, size: compact ? 20 : 26)
+            PVGlyphView(glyph, size: compact ? 20 : 26)
                 .foregroundStyle(PVColor.textFaint)
             if let title {
                 title
@@ -87,6 +102,17 @@ extension PVEmptyState where Action == EmptyView {
         }
     }
 
+    init(
+        glyph: PVGlyph,
+        title: LocalizedStringResource? = nil,
+        message: String? = nil,
+        compact: Bool = false
+    ) {
+        self.init(glyph: glyph, title: title, message: message, compact: compact) {
+            EmptyView()
+        }
+    }
+
     init(icon: PVSymbol, verbatimTitle: String, message: String? = nil, compact: Bool = false) {
         self.init(icon: icon, verbatimTitle: verbatimTitle, message: message, compact: compact) {
             EmptyView()
@@ -110,6 +136,7 @@ extension PVEmptyState where Action == EmptyView {
             PVButton("Add artifact", variant: .primary, size: .sm, icon: .plus) {}
         }
         PVEmptyState(icon: .searchEmpty, title: "No field selected", compact: true)
+        PVEmptyState(glyph: .mark(.subjectEvent), title: "No events yet", compact: true)
     }
     .padding(PVSpacing.space9)
     .background(PVColor.surfacePage)

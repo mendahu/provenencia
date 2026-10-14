@@ -8,7 +8,6 @@ enum PersonsList: ConclusionListKind {
     static func key(project: ProjectKey) -> CatalogQueryKey { .personsList(project: project) }
     static var title: LocalizedStringResource { L10n.Workspace.personsTitle }
     static var identifierRoot: String { "persons" }
-    static var emptyIcon: PVSymbol { .person }
     static var emptyTitle: LocalizedStringResource { L10n.Workspace.personsEmptyTitle }
     static var emptyMessage: LocalizedStringResource { L10n.Workspace.personsEmptyMessage }
     static func countMeta(_ count: Int) -> String { L10n.Workspace.personCount(count) }
