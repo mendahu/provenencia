@@ -2,15 +2,14 @@ import SwiftUI
 
 /// Artifact cards: wrapping rows, on-card edit, and the Add dialog form.
 struct SourcePageArtifactsView: View {
-    /// Board hover on the card wrapper (`transform: scale(1.02)`).
-    private static let cardHoverScale: CGFloat = 1.02
+    /// Narrowest card. At `PVSpacing.widthContentMax` this is four across.
+    private static let cardMinWidth: CGFloat = 264
 
     @Bindable var model: SourcePageModel
     @FocusState private var focusedPreviewID: String?
-    @State private var hoveredCardID: String?
 
     private var cardColumns: [GridItem] {
-        [GridItem(.adaptive(minimum: 300), spacing: PVSpacing.space7, alignment: .top)]
+        [GridItem(.adaptive(minimum: Self.cardMinWidth), spacing: PVSpacing.space6, alignment: .top)]
     }
 
     var body: some View {
@@ -42,7 +41,7 @@ struct SourcePageArtifactsView: View {
                 }
                 .accessibilityIdentifier("sources.page.artifacts.empty")
             } else {
-                LazyVGrid(columns: cardColumns, spacing: PVSpacing.space7) {
+                LazyVGrid(columns: cardColumns, spacing: PVSpacing.space6) {
                     ForEach(model.artifacts.items, id: \.id) { art in
                         artifactCard(art)
                             .frame(maxWidth: .infinity, alignment: .top)
@@ -130,7 +129,6 @@ struct SourcePageArtifactsView: View {
 
     private func artifactCard(_ art: CatalogArtifact) -> some View {
         let editing = model.artifacts.editingArtifactID == art.id
-        let hovering = hoveredCardID == art.id
         return PVCard(elevated: false, padding: 0) {
             VStack(alignment: .leading, spacing: 0) {
                 previewWell(art)
@@ -149,18 +147,7 @@ struct SourcePageArtifactsView: View {
             }
             .frame(maxWidth: .infinity, alignment: .top)
         }
-        .pvShadow(hovering ? PVElevation.md : PVElevation.sm)
-        .offset(y: hovering ? PVMotion.liftHover : 0)
-        .scaleEffect(hovering ? Self.cardHoverScale : 1)
-        .zIndex(hovering ? 1 : 0)
-        .onHover { inside in
-            if inside {
-                hoveredCardID = art.id
-            } else if hoveredCardID == art.id {
-                hoveredCardID = nil
-            }
-        }
-        .pvAnimation(PVMotion.easeStandard, value: hovering)
+        .modifier(ArtifactCardHover())
         .accessibilityIdentifier("sources.page.artifact.\(art.id)")
     }
 
@@ -211,6 +198,7 @@ struct SourcePageArtifactsView: View {
             Text(verbatim: art.ref)
                 .font(PVFont.mono(size: PVTypeScale.caption))
                 .foregroundStyle(PVColor.textMuted)
+                .fixedSize(horizontal: true, vertical: false)
             if model.artifacts.isCover(art) {
                 PVBadge(L10n.Sources.coverBadge, tone: .accent, icon: .photo)
                     .accessibilityIdentifier("sources.page.artifact.\(art.id).coverBadge")
@@ -219,6 +207,8 @@ struct SourcePageArtifactsView: View {
                 PVButton(L10n.Sources.useAsThumbnail, variant: .ghost, size: .sm, icon: .imageUp) {
                     Task { await model.artifacts.useAsThumbnail(art) }
                 }
+                .fixedSize(horizontal: true, vertical: false)
+                .layoutPriority(1)
                 .accessibilityIdentifier("sources.page.artifact.\(art.id).useAsThumbnail")
             }
             Spacer(minLength: 0)
@@ -242,6 +232,7 @@ struct SourcePageArtifactsView: View {
                     }
                     .accessibilityIdentifier("sources.page.artifact.\(art.id).delete")
                 }
+                .fixedSize(horizontal: true, vertical: false)
             }
         }
         .frame(minHeight: 28)
@@ -375,6 +366,52 @@ struct SourcePageArtifactsView: View {
         return model.identity.types
             .first { $0.id == model.source?.sourceTypeID }?
             .iconKey
+    }
+}
+
+/// Grows the card to the board's 1.02 scale. Hover state stays on this card.
+/// The hit shape is always the grown size, so the shrinking edge never
+/// crosses the pointer and retriggers the hover. The card is one layer
+/// before it scales, so the glyphs are not redrawn on every frame.
+private struct ArtifactCardHover: ViewModifier {
+    private static let hoverScale: CGFloat = 1.02
+
+    @State private var isHovering = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    func body(content: Content) -> some View {
+        let resting = PVElevation.sm[0]
+        let lifted = PVElevation.md[1]
+        let grow = isHovering && !reduceMotion
+        content
+            .compositingGroup()
+            .shadow(color: resting.color, radius: resting.radius, x: resting.x, y: resting.y)
+            .shadow(
+                color: lifted.color.opacity(isHovering ? 1 : 0),
+                radius: lifted.radius,
+                x: lifted.x,
+                y: lifted.y
+            )
+            .scaleEffect(grow ? Self.hoverScale : 1, anchor: .center)
+            .animation(reduceMotion ? nil : .easeOut(duration: PVMotion.durationFast), value: isHovering)
+            .contentShape(GrownHitShape(scale: Self.hoverScale))
+            .onHover { hovering in
+                guard hovering != isHovering else { return }
+                isHovering = hovering
+            }
+            .zIndex(isHovering ? 1 : 0)
+    }
+}
+
+/// Layout frame expanded to the hovered scale. It does not change with the
+/// animation, so pointer exit happens once.
+private struct GrownHitShape: Shape {
+    var scale: CGFloat
+
+    func path(in rect: CGRect) -> Path {
+        let dx = rect.width * (scale - 1) / 2
+        let dy = rect.height * (scale - 1) / 2
+        return Path(rect.insetBy(dx: -dx, dy: -dy))
     }
 }
 

@@ -95,7 +95,9 @@ enum PVSymbol: String {
     case arrowUpRight = "arrow.up.right"
     case fileUp = "doc.badge.plus"
     case penLine = "pencil.line"
-    case imageUp = "square.and.arrow.up"
+    /// Lucide `image-up` — a picture with an upward arrow. Stroked in
+    /// ``PVIcon``; `square.and.arrow.up` is the share glyph, a different mark.
+    case imageUp = "pv.image.up"
     case circleDashed = "circle.dashed"
     case regionRectangle = "rectangle"
     /// Custom six-sided L glyphs — not SF Symbols (see ``PVIcon``).
@@ -146,6 +148,13 @@ struct PVIcon: View {
             if let open = symbol.regionLOpen {
                 PVRegionLShape(open: open)
                     .stroke(style: StrokeStyle(lineWidth: max(1.15, size * 0.09), lineJoin: .miter))
+            } else if symbol == .imageUp {
+                PVImageUpShape()
+                    .stroke(style: StrokeStyle(
+                        lineWidth: max(1, size * 2 / 24),
+                        lineCap: .round,
+                        lineJoin: .round
+                    ))
             } else {
                 Image(systemName: symbol.rawValue)
                     .resizable()
@@ -215,9 +224,31 @@ private struct PVRegionLShape: Shape {
     }
 }
 
+/// Lucide `image-up` in a 24-unit box: a picture frame and an arrow pointing up.
+private struct PVImageUpShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        let side = min(rect.width, rect.height)
+        let origin = CGPoint(x: rect.midX - side / 2, y: rect.midY - side / 2)
+        func pt(_ x: CGFloat, _ y: CGFloat) -> CGPoint {
+            CGPoint(x: origin.x + side * x / 24, y: origin.y + side * y / 24)
+        }
+
+        var path = Path()
+        let frame = CGRect(x: pt(2, 4).x, y: pt(2, 4).y, width: side * 13 / 24, height: side * 16 / 24)
+        path.addPath(RoundedRectangle(cornerRadius: side * 2 / 24, style: .continuous).path(in: frame))
+        path.move(to: pt(18.5, 20))
+        path.addLine(to: pt(18.5, 6))
+        path.move(to: pt(15, 9.5))
+        path.addLine(to: pt(18.5, 6))
+        path.addLine(to: pt(22, 9.5))
+        return path
+    }
+}
+
 #Preview {
     HStack(spacing: PVSpacing.space6) {
         PVIcon(.folderPlus)
+        PVIcon(.imageUp)
         PVIcon(.regionRectangle)
         PVIcon(.regionLTopRight)
         PVIcon(.regionLTopLeft)

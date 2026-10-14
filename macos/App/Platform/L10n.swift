@@ -5875,7 +5875,7 @@ enum L10n {
 
         static let useAsThumbnail = LocalizedStringResource(
             "sources.page.useAsThumbnail",
-            defaultValue: "Use as thumbnail",
+            defaultValue: "Set cover",
             comment: "Button to pin an Artifact as the Source list/identity cover"
         )
 
