@@ -2,7 +2,7 @@
 
 ## S10-17 — Name parts split
 
-Split into parts sits beside the full form. Leaving that field fills parts only when the list is empty. Split refills, and asks before it replaces a hand edit. A comma makes the text before it one surname. Otherwise a compiled title list peels prefixes and suffixes when another word remains: one leftover word is a given name, and the last of two or more is the surname. The part-type column stays the width of Surname prefix.
+**Landed 2026-10-13** in [#385](https://github.com/mendahu/provenencia/pull/385). Split into parts sits beside the full form. Leaving that field fills parts only when the list is empty. Split refills, and asks before it replaces a hand edit. A comma makes the text before it one surname. Otherwise a compiled title list peels prefixes and suffixes when another word remains: one leftover word is a given name, and the last of two or more is the surname. The part-type column stays the width of Surname prefix.
 
 ## S10-16 — Observation list rethink
 

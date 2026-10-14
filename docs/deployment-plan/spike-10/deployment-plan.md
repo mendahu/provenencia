@@ -412,6 +412,8 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 
 #### S10-17 — Name parts split and type control
 
+**Landed 2026-10-13** in [#385](https://github.com/mendahu/provenencia/pull/385). See [`completed.md`](completed.md).
+
 **Brief:** [S10-D4](design/archive/S10-D4-name-parts-modal.md).
 
 | | |
