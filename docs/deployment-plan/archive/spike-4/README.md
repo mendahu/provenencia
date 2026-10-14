@@ -1,6 +1,6 @@
 # Spike 4 — Workspace session and place registry
 
-**Done.** Replaced per-view load-on-appear with a project-scoped catalog query cache and a declarative place registry. Skill: [`add-workspace-place`](../../../../.cursor/skills/add-workspace-place/SKILL.md). Rationale: [`page-navigation-performance.md`](../../../ideas/archive/page-navigation-performance.md).
+**Done.** Replaced per-view load-on-appear with a project-scoped catalog query cache and a declarative place registry. Skill: [`add-workspace-place`](../../../../.agents/skills/add-workspace-place/SKILL.md). Rationale: [`page-navigation-performance.md`](../../../ideas/archive/page-navigation-performance.md).
 
 ## Decisions
 

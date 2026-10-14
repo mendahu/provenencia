@@ -6,7 +6,7 @@ alwaysApply: false
 
 # Name values
 
-Follow the project skill `.cursor/skills/add-name-value/SKILL.md`. Design notes: `docs/structured-name-model.md`.
+Follow the project skill `.agents/skills/add-name-value/SKILL.md`. Design notes: `docs/structured-name-model.md`.
 
 - Use `namevalues.Insert` / `Lookup`; required `form`; optional ordered parts.
 - Part `type` empty or a product registry key (`PartTypes` / `KnownPartType`); Insert rejects unknown keys. No free-text types in UI.

@@ -9,7 +9,7 @@
 **Depends on:** —
 **Related:** [`../../deployment-plan.md`](../../deployment-plan.md) (S10-18). The Evidence graph is **[S10-D6](../S10-D6-evidence-graph.md)** and ships in S10-20. Box-select, Unpromote, and the graph’s file select and Open button are that board.
 **Design system layers:** [`docs/design-system-layers.md`](../../../../design-system-layers.md)
-**Skill:** [`add-design-brief`](../../../../../.cursor/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../../.cursor/skills/add-ui-component/SKILL.md)
+**Skill:** [`add-design-brief`](../../../../../.agents/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../../.agents/skills/add-ui-component/SKILL.md)
 
 Paste this entire document into Claude Design as the requirements for one board. This file is the whole prompt.
 

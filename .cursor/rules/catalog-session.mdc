@@ -6,7 +6,7 @@ alwaysApply: false
 
 # Catalog session
 
-Follow the project skill `.cursor/skills/use-catalog-session/SKILL.md`.
+Follow the project skill `.agents/skills/use-catalog-session/SKILL.md`.
 
 - FFI catalog RPCs: `withProjectCatalog` → `catalogsession.Do`. Never `database.Open` / `OpenCatalog` + `defer Close` in handlers.
 - Onboarding list / project info / open: `catalogsession.Do`; leave the session held after a successful `Open`.

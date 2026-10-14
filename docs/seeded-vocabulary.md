@@ -83,7 +83,7 @@ edge-lock. Catalog row Install for types/properties/terms stays in
 
 Product-seeded Source types/fields/suggestions live in a **code registry** (`core/database/sourcevocab/registry.go`) and are installed once by `sourcevocab.Install` at catalog **create** via `onboarding.createCatalog` (see `core/onboarding/ready.go`). Opens (`OpenCatalog`) do **not** re-install or heal deleted seed rows. Do not put seed rows in SQL migrations. The current create-time starter is a single `birth_certificate` type plus a few suggested fields — the §2 lists below remain a horizon catalog of suggested keys, not a ship commitment.
 
-When extending or adding another vocabulary domain’s seed, follow the project skill [`.cursor/skills/add-seeded-vocabulary/SKILL.md`](../.cursor/skills/add-seeded-vocabulary/SKILL.md).
+When extending or adding another vocabulary domain’s seed, follow the project skill [`.agents/skills/add-seeded-vocabulary/SKILL.md`](../.agents/skills/add-seeded-vocabulary/SKILL.md).
 
 ---
 

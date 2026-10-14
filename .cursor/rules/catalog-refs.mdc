@@ -6,7 +6,7 @@ alwaysApply: false
 
 # Catalog refs
 
-Follow the project skill `.cursor/skills/add-catalog-ref/SKILL.md`. Product notes: `docs/catalog-refs.md`.
+Follow the project skill `.agents/skills/add-catalog-ref/SKILL.md`. Product notes: `docs/catalog-refs.md`.
 
 - Mint/validate only through `core/ref` (`Mint`, `Validate`). Do not hand-roll tokens or mint in SQL.
 - Machine id stays UUIDv7; `ref` is display/search only — never a foreign key; never recycle.

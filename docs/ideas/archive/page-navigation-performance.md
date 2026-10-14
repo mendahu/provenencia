@@ -1,6 +1,6 @@
 # Page navigation performance (archived)
 
-**Done** — Spike 4. Skill: [`add-workspace-place`](../../../.cursor/skills/add-workspace-place/SKILL.md). Patterns: [`macos-client-patterns.md`](../../macos-client-patterns.md) § workspace session. Spike note: [`archive/spike-4`](../../deployment-plan/archive/spike-4/).
+**Done** — Spike 4. Skill: [`add-workspace-place`](../../../.agents/skills/add-workspace-place/SKILL.md). Patterns: [`macos-client-patterns.md`](../../macos-client-patterns.md) § workspace session. Spike note: [`archive/spike-4`](../../deployment-plan/archive/spike-4/).
 
 ## Problem
 

@@ -2,6 +2,10 @@
 
 Local-first genealogy software. Native macOS client over a shared Go core. Domain and stack notes live in [`docs/`](docs/). Mac UI patterns: [`docs/macos-client-patterns.md`](docs/macos-client-patterns.md). Product versioning: [`docs/versioning.md`](docs/versioning.md). Implementation milestones: [`docs/deployment-plan/`](docs/deployment-plan/). FFI protobuf: [`api/proto/README.md`](api/proto/README.md).
 
+Agent skills live in [`.agents/skills/`](.agents/skills/), one folder per skill with a `SKILL.md`. Cursor reads that folder directly. `.claude/skills` is a symlink to it for Claude Code. Add new skills under `.agents/skills/` only. Claude Code subagents for the PR loop ([`ship-pr`](.agents/skills/ship-pr/SKILL.md)) are in [`.claude/agents/`](.claude/agents/). Cursor rules stay in [`.cursor/rules/`](.cursor/rules/).
+
+Before a PR leaves draft, `scripts/check-pr.sh` must print `check-pr: PASS`. It runs gofmt on changed Go files, go vet, go test, the Xcode unit tests (macOS only), and the catalog and plan-doc checks.
+
 **Requires macOS 14 (Sonoma) or later** and **Go 1.27** or later (the Xcode project builds `libprovenencia.dylib` on compile).
 
 ## Run the Mac app

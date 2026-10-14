@@ -6,7 +6,7 @@ alwaysApply: false
 
 # Catalog audit scopes
 
-Follow the project skill `.cursor/skills/add-audit-scope/SKILL.md` and `docs/audit-revision-history.md` § 4.1.
+Follow the project skill `.agents/skills/add-audit-scope/SKILL.md` and `docs/audit-revision-history.md` § 4.1.
 
 - Research writes call `audit.Record` inside their own tx. `Record` derives scopes; callers never pass them.
 - A new `EntityType` (or `rowFacet` entity type) needs a resolver in `core/database/audit/scopes.go` — `directSource`, a parent chain, or a deliberate `noScope`. `Record` rejects a missing one; `TestResolversCoverEveryEntityType` fails CI.

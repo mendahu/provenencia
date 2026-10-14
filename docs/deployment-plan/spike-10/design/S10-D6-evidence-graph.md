@@ -7,7 +7,7 @@
 **Depends on:** —
 **Related:** [`../deployment-plan.md`](../deployment-plan.md) (S10-20, S10-44). Dropping a file on the Source page is **[S10-D5](archive/S10-D5-source-artifacts.md)** and ships in S10-18. Hit boxes, the tiled grid, canvas growth, and the camera already shipped (S10-01…S10-04) and are not this board.
 **Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)
-**Skill:** [`add-design-brief`](../../../../.cursor/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.cursor/skills/add-ui-component/SKILL.md)
+**Skill:** [`add-design-brief`](../../../../.agents/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md)
 
 Paste this entire document into Claude Design as the requirements for one board. This file is the whole prompt.
 

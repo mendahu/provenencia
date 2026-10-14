@@ -1,6 +1,6 @@
 # Omnibar search
 
-**Status:** live behavior contract (shipped in Spike 3). Spike note: [`README.md`](README.md). Skill: [`add-searchable-kind`](../../../../.cursor/skills/add-searchable-kind/SKILL.md).
+**Status:** live behavior contract (shipped in Spike 3). Spike note: [`README.md`](README.md). Skill: [`add-searchable-kind`](../../../../.agents/skills/add-searchable-kind/SKILL.md).
 
 ## Problem
 
@@ -266,4 +266,4 @@ Parked after Spike 3 dogfood closeout (S3-12). Ship defaults today: blank omniba
 - [`navigation-history.md`](navigation-history.md)
 - [`macos-client-patterns.md`](../../../macos-client-patterns.md)
 - [`catalog-refs.md`](../../../catalog-refs.md)
-- [`add-searchable-kind`](../../../../.cursor/skills/add-searchable-kind/SKILL.md)
+- [`add-searchable-kind`](../../../../.agents/skills/add-searchable-kind/SKILL.md)

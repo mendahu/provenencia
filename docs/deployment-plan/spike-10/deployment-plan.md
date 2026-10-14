@@ -2,7 +2,7 @@
 
 Usability fixes from [`docs/dogfood/ux.md`](../../dogfood/ux.md) after Spike 9, plus three ideas pulled in from the parking lot: [depictions and likenesses](depictions-and-likenesses.md), [international names](international-names.md), and [name-matching enhancements](name-matching-enhancements.md). Each dogfood note or idea slice is one PR, unless two of them edit the same part of a view or the same comparer — those are combined below.
 
-**A brief covers one view.** A view may have more than one brief. A PR that changes two views waits on a brief for each. Briefs are written just before the PR they gate ([`add-design-brief`](../../../.cursor/skills/add-design-brief/SKILL.md)), indexed in [`design/README.md`](design/README.md). A bugfix or a behavior change with no new chrome is not gated.
+**A brief covers one view.** A view may have more than one brief. A PR that changes two views waits on a brief for each. Briefs are written just before the PR they gate ([`add-design-brief`](../../../.agents/skills/add-design-brief/SKILL.md)), indexed in [`design/README.md`](design/README.md). A bugfix or a behavior change with no new chrome is not gated.
 
 ## Status
 
@@ -136,7 +136,7 @@ These are the calls for this spike. The questions at the bottom are answered; no
 
 ## Design track
 
-**Every UI PR is gated by Claude Design briefs. A brief covers one view; a view may have more than one.** A PR that touches two views waits on a brief for each. Briefs follow [`add-design-brief`](../../../.cursor/skills/add-design-brief/SKILL.md) and live in [`design/`](design/). **Each brief is designed alongside its feature**, just before the PR it points at.
+**Every UI PR is gated by Claude Design briefs. A brief covers one view; a view may have more than one.** A PR that touches two views waits on a brief for each. Briefs follow [`add-design-brief`](../../../.agents/skills/add-design-brief/SKILL.md) and live in [`design/`](design/). **Each brief is designed alongside its feature**, just before the PR it points at.
 
 | Brief | View | Gates | Later on the same view |
 | --- | --- | --- | --- |
@@ -481,7 +481,7 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 
 | | |
 | --- | --- |
-| **In** | New audit scope `canonical_entity` ([`add-audit-scope`](../../../.cursor/skills/add-audit-scope/SKILL.md)). Identity Claim writes scope to the handle. An Observation write on a member Subject also scopes to that handle, and still scopes to the Source. List reads for Persons, Events, and Places return the latest revision time the way Sources already return `UpdatedRevision`. Backfill existing history in the next migration. Resolver tests; no migration test. |
+| **In** | New audit scope `canonical_entity` ([`add-audit-scope`](../../../.agents/skills/add-audit-scope/SKILL.md)). Identity Claim writes scope to the handle. An Observation write on a member Subject also scopes to that handle, and still scopes to the Source. List reads for Persons, Events, and Places return the latest revision time the way Sources already return `UpdatedRevision`. Backfill existing history in the next migration. Resolver tests; no migration test. |
 | **Out** | The row UI (S10-22). A `updated_at` column on `canonical_entities`. |
 | **Testable** | Promote a Person: the handle has a revision. Edit a member Observation: that handle's revision moves, and the Source's revision still moves. A handle with no claims does not appear. Rebuild-style check: scope rows match the writes, including a delete of a member. |
 | **Depends on** | — |
@@ -514,7 +514,7 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 
 | | |
 | --- | --- |
-| **In** | Seed a `gender` Property on `person`, separate from `sex_at_birth` ([`add-seeded-vocabulary`](../../../.cursor/skills/add-seeded-vocabulary/SKILL.md), new § in `seeded-vocabulary.md`). Product terms: `man`, `woman`, `non_binary`. Researchers may add `origin=user` terms; Create is allowed (not the `place_relationship_type` lock). Per S10-D12: the page treatment follows gender when present, else sex at birth. The three seeded keys are the ones the treatment recognizes. Any other gender term still wins over sex at birth and uses the brief's extra-term treatment. Unknown, empty, and mixed are the neutral treatment. The existing field row for sex at birth stays. |
+| **In** | Seed a `gender` Property on `person`, separate from `sex_at_birth` ([`add-seeded-vocabulary`](../../../.agents/skills/add-seeded-vocabulary/SKILL.md), new § in `seeded-vocabulary.md`). Product terms: `man`, `woman`, `non_binary`. Researchers may add `origin=user` terms; Create is allowed (not the `place_relationship_type` lock). Per S10-D12: the page treatment follows gender when present, else sex at birth. The three seeded keys are the ones the treatment recognizes. Any other gender term still wins over sex at birth and uses the brief's extra-term treatment. Unknown, empty, and mixed are the neutral treatment. The existing field row for sex at birth stays. |
 | **Out** | The gallery (S10-35) and the preferred portrait (S10-39). This brief already draws both frames. A gender field on Event or Place. Editing claims. Using sex at birth as gender identity. |
 | **Testable** | Person with only sex at birth: that treatment. Person with gender: gender wins even if sex at birth disagrees. Mixed gender: neutral, not a blend of two colors. A Person with neither: unchanged page. |
 | **Depends on** | S10-D12 |
@@ -588,7 +588,7 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 
 | | |
 | --- | --- |
-| **In** | `value_type = depiction`. The value is the Observation's own Citation (artifact, page, region). No image column. Seed `likeness` on `person`, cardinality many. Empty transcription stays valid. Install path only ([`add-seeded-vocabulary`](../../../.cursor/skills/add-seeded-vocabulary/SKILL.md)). |
+| **In** | `value_type = depiction`. The value is the Observation's own Citation (artifact, page, region). No image column. Seed `likeness` on `person`, cardinality many. Empty transcription stays valid. Install path only ([`add-seeded-vocabulary`](../../../.agents/skills/add-seeded-vocabulary/SKILL.md)). |
 | **Out** | Place, event, and signature keys. The preferred-portrait pointer (S10-39). The crop bytes (S10-33). |
 | **Testable** | A likeness Observation stores no raster. Two likenesses on one person both remain (they do not collapse the way two birth dates can). A Citation with an empty transcription and a region saves. |
 | **Depends on** | — |
@@ -652,7 +652,7 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 
 | | |
 | --- | --- |
-| **In** | Add `engagement` / Engagement to `subjectvocab` `seedTerms` for `event_type`, beside `marriage`. Install on catalog create only ([`add-seeded-vocabulary`](../../../.cursor/skills/add-seeded-vocabulary/SKILL.md)). [`docs/seeded-vocabulary.md`](../../seeded-vocabulary.md) §3.4 lists the key. `eventtitle.Choose` titles every event type from the subject count: one subject is *{Type} of {A}*, two are *{Type} of {A} and {B}*, and three or more are *{Type} of {A} et al.* The two-subject template is that shape in `EventTitleDisplay` and in the search-index title, so a marriage still reads *Marriage of A and B* and an engagement reads *Engagement of A and B*. Follow [`add-localized-string`](../../../.cursor/skills/add-localized-string/SKILL.md) for the template. No new chrome, so no brief. |
+| **In** | Add `engagement` / Engagement to `subjectvocab` `seedTerms` for `event_type`, beside `marriage`. Install on catalog create only ([`add-seeded-vocabulary`](../../../.agents/skills/add-seeded-vocabulary/SKILL.md)). [`docs/seeded-vocabulary.md`](../../seeded-vocabulary.md) §3.4 lists the key. `eventtitle.Choose` titles every event type from the subject count: one subject is *{Type} of {A}*, two are *{Type} of {A} and {B}*, and three or more are *{Type} of {A} et al.* The two-subject template is that shape in `EventTitleDisplay` and in the search-index title, so a marriage still reads *Marriage of A and B* and an engagement reads *Engagement of A and B*. Follow [`add-localized-string`](../../../.agents/skills/add-localized-string/SKILL.md) for the template. No new chrome, so no brief. |
 | **Out** | A migration that inserts the term into existing catalogs. Those projects get the term by hand. Matching affinity with marriage. A new role. Three or more subjects (still *et al.*). |
 | **Testable** | A catalog created after this PR offers Engagement. Two subjects title *Engagement of A and B* on the list, the page, and in search. A marriage of two still titles *Marriage of A and B*. Three subjects of an engagement title *Engagement of A et al.* Opening an older catalog does not add the term. |
 | **Depends on** | — |
@@ -661,7 +661,7 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 
 | | |
 | --- | --- |
-| **In** | Add `interests` / Interests to the person property seed: `value_type = text`, cardinality `multiple`, bound to `person`, unlocked ([`add-seeded-vocabulary`](../../../.cursor/skills/add-seeded-vocabulary/SKILL.md)). Install on catalog create only. [`docs/seeded-vocabulary.md`](../../seeded-vocabulary.md) §3.2 and §3.3 list the key. No new chrome, so no brief. The composer and the Person page show it the way they show any other text property. |
+| **In** | Add `interests` / Interests to the person property seed: `value_type = text`, cardinality `multiple`, bound to `person`, unlocked ([`add-seeded-vocabulary`](../../../.agents/skills/add-seeded-vocabulary/SKILL.md)). Install on catalog create only. [`docs/seeded-vocabulary.md`](../../seeded-vocabulary.md) §3.2 and §3.3 list the key. No new chrome, so no brief. The composer and the Person page show it the way they show any other text property. |
 | **Out** | A migration that inserts the property into existing catalogs. A match feature. A header line. A term list. Locking the binding. |
 | **Testable** | A catalog created after this PR offers Interests on a Person, accepts more than one value, and lets the Properties page unbind it. Opening an older catalog does not add the property. |
 | **Depends on** | — |
@@ -683,7 +683,7 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 
 | | |
 | --- | --- |
-| **In** | Pulled notes already left [`docs/dogfood/ux.md`](../../dogfood/ux.md). Do not copy them back. Distill this spike with [`archive-docs`](../../../.cursor/skills/archive-docs/SKILL.md) when the bar above is true. The three idea notes live in this folder; the close distill keeps their decisions and drops the PR sequence. |
+| **In** | Pulled notes already left [`docs/dogfood/ux.md`](../../dogfood/ux.md). Do not copy them back. Distill this spike with [`archive-docs`](../../../.agents/skills/archive-docs/SKILL.md) when the bar above is true. The three idea notes live in this folder; the close distill keeps their decisions and drops the PR sequence. |
 | **Out** | Pulling the parked density, extract, transliteration, or Reconciliation-Claim items in at the close. |
 | **Depends on** | S10-01…S10-45 |
 

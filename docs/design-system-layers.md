@@ -1,6 +1,6 @@
 # Design system layers (macOS)
 
-Authoritative composition model for Provenencia UI. Agents: [`.cursor/rules/design-system-layers.mdc`](../.cursor/rules/design-system-layers.mdc), [`.cursor/skills/add-ui-component`](../.cursor/skills/add-ui-component/SKILL.md), [`.cursor/skills/evaluate-ui-component`](../.cursor/skills/evaluate-ui-component/SKILL.md). Kit conventions (tokens, `PV*` file shape): [`macos/App/DesignSystem/README.md`](../macos/App/DesignSystem/README.md). Client folder layout: [`macos-client-patterns.md`](macos-client-patterns.md).
+Authoritative composition model for Provenencia UI. Agents: [`.cursor/rules/design-system-layers.mdc`](../.cursor/rules/design-system-layers.mdc), [`.agents/skills/add-ui-component`](../.agents/skills/add-ui-component/SKILL.md), [`.agents/skills/evaluate-ui-component`](../.agents/skills/evaluate-ui-component/SKILL.md). Kit conventions (tokens, `PV*` file shape): [`macos/App/DesignSystem/README.md`](../macos/App/DesignSystem/README.md). Client folder layout: [`macos-client-patterns.md`](macos-client-patterns.md).
 
 We follow Brad Frost’s **[components / recipes / snowflakes](https://bradfrost.com/blog/post/design-system-components-recipes-and-snowflakes/)** split — three layers of increasing product coupling, not a stack you must climb on every screen.
 
@@ -178,6 +178,6 @@ Not every delete flow needs all three layers:
 
 Typical Source-fields delete: **component confirm at the view** (`.pvConfirm` + `PVConfirmCopy` + optional `PVConfirmKeyChip`). That is fine. No recipe required unless the same wiring repeats.
 
-`PVFormDialog` and `PVConfirm` both compose ``PVPanel``. Feature sheets that reimplement header/footer by hand should compose the kit instead. Chip away with [`evaluate-ui-component`](../.cursor/skills/evaluate-ui-component/SKILL.md) rather than one mega-refactor.
+`PVFormDialog` and `PVConfirm` both compose ``PVPanel``. Feature sheets that reimplement header/footer by hand should compose the kit instead. Chip away with [`evaluate-ui-component`](../.agents/skills/evaluate-ui-component/SKILL.md) rather than one mega-refactor.
 
 Sheet presentation details (no scrim, sunken footer as content): DesignSystem README “Confirmations are system chrome” and `PVConfirm.swift` / `PVFormDialog.swift`.

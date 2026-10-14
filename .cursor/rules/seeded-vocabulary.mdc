@@ -6,7 +6,7 @@ alwaysApply: false
 
 # Seeded vocabulary
 
-Follow the project skill `.cursor/skills/add-seeded-vocabulary/SKILL.md`. Origin rules: `docs/seeded-vocabulary.md` §1.1.
+Follow the project skill `.agents/skills/add-seeded-vocabulary/SKILL.md`. Origin rules: `docs/seeded-vocabulary.md` §1.1.
 
 - Edit each domain’s `registry.go` (Source: `sourcevocab/`; Subject types: `subjecttypes/`; credibility grades: `sourcecredibilitygrades/`); no SQL seed INSERTs.
 - Install only in `onboarding.createCatalog`. `OpenCatalog` / `catalogsession.Do` ensure user refs only — no vocab heal.

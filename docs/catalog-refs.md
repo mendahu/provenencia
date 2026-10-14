@@ -124,4 +124,4 @@ Install-local identity mirrors the contributor ref in `identity.json` (`ref` fie
 
 ## 7. Agent skill
 
-When adding `ref` to a new catalog entity, follow [`.cursor/skills/add-catalog-ref/SKILL.md`](../.cursor/skills/add-catalog-ref/SKILL.md).
+When adding `ref` to a new catalog entity, follow [`.agents/skills/add-catalog-ref/SKILL.md`](../.agents/skills/add-catalog-ref/SKILL.md).

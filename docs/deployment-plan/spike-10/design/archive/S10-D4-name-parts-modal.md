@@ -9,7 +9,7 @@
 **Depends on:** —
 **Related:** [`../../deployment-plan.md`](../../deployment-plan.md) (S10-17). The citation composer is **S10-D3** and already shipped. The date modal already shipped (S10-13). Name-format profiles already shipped (S10-29) and do not change this split.
 **Design system layers:** [`docs/design-system-layers.md`](../../../../design-system-layers.md)
-**Skill:** [`add-design-brief`](../../../../../.cursor/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../../.cursor/skills/add-ui-component/SKILL.md)
+**Skill:** [`add-design-brief`](../../../../../.agents/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../../.agents/skills/add-ui-component/SKILL.md)
 
 Paste this entire document into Claude Design as the requirements for one board. This file is the whole prompt.
 

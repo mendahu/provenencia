@@ -2,7 +2,7 @@
 
 Authoritative contract for official **resource** and **vocab** deletes. Tables and foreign keys live in [`core/database/catalogmodel`](../core/database/catalogmodel). Probes, releases, and `Impact` stay in [`core/database/deleteimpact`](../core/database/deleteimpact). Spike 8 shipped the first screens: [`archive/spike-8`](deployment-plan/archive/spike-8/).
 
-Skills: [`add-catalog-model`](../.cursor/skills/add-catalog-model/SKILL.md), [`add-catalog-delete`](../.cursor/skills/add-catalog-delete/SKILL.md), [`add-catalog-migration`](../.cursor/skills/add-catalog-migration/SKILL.md).
+Skills: [`add-catalog-model`](../.agents/skills/add-catalog-model/SKILL.md), [`add-catalog-delete`](../.agents/skills/add-catalog-delete/SKILL.md), [`add-catalog-migration`](../.agents/skills/add-catalog-migration/SKILL.md).
 
 ## Policy
 
@@ -89,7 +89,7 @@ Impact
 ## New table (same PR)
 
 1. Classify every new FK (migration skill).
-2. Register the table and its FKs in `core/database/catalogmodel` ([`add-catalog-model`](../.cursor/skills/add-catalog-model/SKILL.md)). Register probes and owned-outbound / connection-facet release in `core/database/deleteimpact`.
+2. Register the table and its FKs in `core/database/catalogmodel` ([`add-catalog-model`](../.agents/skills/add-catalog-model/SKILL.md)). Register probes and owned-outbound / connection-facet release in `core/database/deleteimpact`.
 3. Register title + location projectors.
 4. Add proto `kind` / `via` values. Recipe L10n gets a heading; unknown keys must still render.
 5. Classify each new `CASCADE` FK as audited or silent. An audited one needs a `facetRelease` entry: use `rowFacet` for plain rows, or a custom `Release` when the row has facets of its own.
