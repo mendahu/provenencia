@@ -219,7 +219,7 @@ SLICE 5 — Artifacts and multi-select
          Event matches the card.
 
 SLICE 6 — Lists and the Person page
-  S10-40  People, Events, Places, and Sources store the list's top row on the history entry
+  S10-40  People, Events, Places, and Sources store the list's top row on the history entry — done, #392
   S10-21  canonical_entity audit scope + list revision reads
   ✎ S10-D9…D11 ──▶ S10-22  Last updated on People, Events, and Places
   ✎ S10-D8 ──▶ S10-41  Sources list: last updated, filters, search,
@@ -293,7 +293,7 @@ S10-46 simplified cards — descoped 2026-10-11
 S10-47 mount cards near the window — descoped 2026-10-11
 S10-48 canvas cover — descoped 2026-10-11
 
-S10-40 list scroll — People, Events, Places, and Sources, on the history entry.
+S10-40 list scroll — done, #392. People, Events, Places, and Sources, on the history entry.
 S10-21 scope ──▶ S10-22 last updated (D9…D11)
 S10-D8 ──▶ S10-41 Sources list (last updated, filters, persist)
 S10-D5 ──▶ S10-18 source page drop and artifact cards
@@ -473,6 +473,8 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 
 #### S10-40 — List scroll position
 
+**Landed 2026-10-14** in [#392](https://github.com/mendahu/provenencia/pull/392). See [`completed.md`](completed.md).
+
 | | |
 | --- | --- |
 | **In** | People, Events, Places, and Sources store the id of the top row on the history entry. Showing that entry scrolls to the row, including Back, Forward, a jump, and relaunch. A visit that does not pass an anchor starts at the top. Changing Sources sort or type filter on this visit clears the anchor. A missing row stays at the top. |
@@ -506,7 +508,7 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 
 | | |
 | --- | --- |
-| **In** | Per the working rules and S10-D8. The row shows when the Source last changed, from the existing `UpdatedRevision`. Filter the list to empty, in progress, or filed, from one grouped count of primary subjects and their accepted claims, next to `sourcegraphprogress`. A text field filters the loaded rows by title and ref as you type. Sort, type filter, status, and query persist per project and user, and restore when the Sources place is shown again, including after relaunch (this is S10-09). Scroll is the history-entry anchor from S10-40. This PR does not restore scroll. Changing status or search on that visit clears that anchor and scrolls to the top, the way sort and type already do. |
+| **In** | Per the working rules and S10-D8. The row shows when the Source last changed, from the existing `UpdatedRevision`. Filter the list to empty, in progress, or filed, from one grouped count of primary subjects and their accepted claims, next to `sourcegraphprogress`. A text field filters the loaded rows by title and ref as you type. Sort, type filter, status, and query persist per project and user, and restore when the Sources place is shown again, including after relaunch (this is S10-09). Scroll is the history-entry anchor from S10-40 ([#392](https://github.com/mendahu/provenencia/pull/392)). This PR does not restore scroll. Changing status or search on that visit clears that anchor and scrolls to the top, the way sort and type already do. |
 | **Out** | The same filters, search, or last-updated work on People, Events, or Places (scroll there is S10-40; last updated there is S10-22). Omnibar search. A per-row count query. Hiding bridge subjects as their own status. |
 | **Testable** | A Source with no people, events, or places matches Empty and not the other two. A Source with one unpromoted person matches In progress. After that person is promoted, it matches Filed. Typing part of a title hides the other rows. Leave and come back: status, query, sort, and type filter are still set, and the row's time moved if the Source changed. Relaunch: those four settings are still set. A long list does not issue one count query per row. Scroll follows the history entry (S10-40). |
 | **Depends on** | S10-D8 |
