@@ -181,6 +181,7 @@
 		A71000000000000000000006 /* PropertyTermDisplayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A71000000000000000000005 /* PropertyTermDisplayTests.swift */; };
 		AA0000000000000000000491 /* EvidenceGraphModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000490 /* EvidenceGraphModel.swift */; };
 		AA0000000000000000000493 /* EvidenceGraphPalette.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000492 /* EvidenceGraphPalette.swift */; };
+		AA00000000000000000FE002 /* EvidenceGraphFiles.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000FE001 /* EvidenceGraphFiles.swift */; };
 		AA0000000000000000000495 /* EvidenceGraphModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000494 /* EvidenceGraphModelTests.swift */; };
 		AA0000000000000000000497 /* EvidenceCanvasInputMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000496 /* EvidenceCanvasInputMode.swift */; };
 		AA00000000000000000004A3 /* EvidenceBridgeCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000004A2 /* EvidenceBridgeCard.swift */; };
@@ -565,6 +566,7 @@
 		A71000000000000000000005 /* PropertyTermDisplayTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PropertyTermDisplayTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000490 /* EvidenceGraphModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EvidenceGraphModel.swift; sourceTree = "<group>"; };
 		AA0000000000000000000492 /* EvidenceGraphPalette.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EvidenceGraphPalette.swift; sourceTree = "<group>"; };
+		AA00000000000000000FE001 /* EvidenceGraphFiles.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EvidenceGraphFiles.swift; sourceTree = "<group>"; };
 		AA0000000000000000000494 /* EvidenceGraphModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EvidenceGraphModelTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000496 /* EvidenceCanvasInputMode.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EvidenceCanvasInputMode.swift; sourceTree = "<group>"; };
 		AA00000000000000000004A2 /* EvidenceBridgeCard.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EvidenceBridgeCard.swift; sourceTree = "<group>"; };
@@ -1082,6 +1084,7 @@
 				AA00000000000000000004A4 /* EvidenceGraphEdgeLayer.swift */,
 				AA0000000000000000000490 /* EvidenceGraphModel.swift */,
 				AA0000000000000000000492 /* EvidenceGraphPalette.swift */,
+				AA00000000000000000FE001 /* EvidenceGraphFiles.swift */,
 				AA0000000000000000000482 /* EvidenceSubjectKindStyle.swift */,
 			);
 			path = EvidenceGraph;
@@ -1972,6 +1975,7 @@
 				A70900000000000000000006 /* ObservationValueDisplay.swift in Sources */,
 				AA0000000000000000000491 /* EvidenceGraphModel.swift in Sources */,
 				AA0000000000000000000493 /* EvidenceGraphPalette.swift in Sources */,
+				AA00000000000000000FE002 /* EvidenceGraphFiles.swift in Sources */,
 				AA0000000000000000000483 /* EvidenceSubjectKindStyle.swift in Sources */,
 				14A19539FB0D86BB050EC437 /* WorkspaceView.swift in Sources */,
 				13208FE0B57739DECCA156C7 /* WorkspaceChrome.swift in Sources */,

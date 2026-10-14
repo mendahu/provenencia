@@ -71,6 +71,11 @@ final class EvidenceGraphModel {
     var selectedSubjectID: String?
     /// Space/Return opened this card for inner controls (cleared on Esc / other select).
     var activatedSubjectID: String?
+    /// The Artifact file the header select shows. May name a file that is gone;
+    /// read ``resolvedFileArtifactID``.
+    var selectedFileArtifactID = ""
+    /// Set when Open could not find the selected file. Cleared by choosing a file.
+    var fileOpenError: String?
     /// Shown when drag / arrow persist fails after an optimistic patch.
     var toast: VocabularyToast?
     /// Canvas while a drag has carried a card past the resting document.
@@ -143,6 +148,14 @@ final class EvidenceGraphModel {
         CatalogQueryKey.connectRules(project: session.projectKey)
     }
 
+    private var workspaceKey: CatalogQueryKey {
+        CatalogQueryKey.sourceWorkspace(project: session.projectKey, sourceId: sourceID)
+    }
+
+    private var citationCountsKey: CatalogQueryKey {
+        CatalogQueryKey.citationCounts(project: session.projectKey, sourceId: sourceID)
+    }
+
     private var fieldsSnapshot: PropertiesSnapshot? {
         let handle: QueryHandle<PropertiesSnapshot>? = session.queryHandle(fieldsKey)
         return handle?.value
@@ -205,10 +218,14 @@ final class EvidenceGraphModel {
         let rules: QueryHandle<[CatalogConnectRule]> = session.query(connectRulesKey)
         let _: QueryHandle<PropertiesSnapshot> = session.query(fieldsKey)
         let _: QueryHandle<[CatalogSource]> = session.query(sourcesListKey)
+        let _: QueryHandle<CatalogSourceWorkspace> = session.query(workspaceKey)
+        let _: QueryHandle<[String: Int]> = session.query(citationCountsKey)
         _ = await session.readyValue(graphKey) as SourceGraphRows?
         _ = await session.readyValue(fieldsKey) as PropertiesSnapshot?
         _ = await session.readyValue(connectRulesKey) as [CatalogConnectRule]?
         _ = await session.readyValue(sourcesListKey) as [CatalogSource]?
+        _ = await session.readyValue(workspaceKey) as CatalogSourceWorkspace?
+        _ = await session.readyValue(citationCountsKey) as [String: Int]?
         if rules.status == .error, let message = connectRulesError {
             toast = VocabularyToast(
                 title: L10n.string(L10n.EvidenceGraph.connectRulesUnavailableTitle),
@@ -229,6 +246,54 @@ final class EvidenceGraphModel {
         _ = await session.readyValue(sourcesListKey) as [CatalogSource]?
         if !canCite {
             disarm()
+        }
+    }
+
+    // MARK: Files (S10-20)
+
+    /// This Source's Artifacts that have a file, in page order. Empty until the
+    /// workspace loads and when it fails to.
+    var fileRows: [EvidenceGraphFiles.Row] {
+        guard let handle: QueryHandle<CatalogSourceWorkspace> = session.queryHandle(workspaceKey),
+              handle.status == .ready,
+              let workspace = handle.value
+        else { return [] }
+        return EvidenceGraphFiles.fileBearing(
+            workspace.artifacts,
+            coverArtifactID: sourceRow?.coverArtifactID
+        )
+    }
+
+    /// The selected file when it is still listed, otherwise the cover or the first file.
+    var resolvedFileArtifactID: String {
+        let rows = fileRows
+        if rows.contains(where: { $0.id == selectedFileArtifactID }) {
+            return selectedFileArtifactID
+        }
+        return EvidenceGraphFiles.initialID(in: rows, coverArtifactID: sourceRow?.coverArtifactID) ?? ""
+    }
+
+    func citationCount(for artifactID: String) -> Int {
+        let handle: QueryHandle<[String: Int]>? = session.queryHandle(citationCountsKey)
+        return handle?.value?[artifactID] ?? 0
+    }
+
+    func selectFile(_ id: String) {
+        selectedFileArtifactID = id
+        fileOpenError = nil
+    }
+
+    /// Opens the selected file in its own app. Leaves the card selection and camera alone.
+    func openSelectedFile() {
+        let id = resolvedFileArtifactID
+        guard let row = fileRows.first(where: { $0.id == id }) else { return }
+        selectedFileArtifactID = id
+        fileOpenError = nil
+        if !ProjectFiles.openObject(projectDir: session.projectKey.projectDir, relPath: row.relPath) {
+            fileOpenError = L10n.EvidenceGraph.fileNotFoundMessage(
+                name: row.title,
+                filename: row.displayFilename
+            )
         }
     }
 

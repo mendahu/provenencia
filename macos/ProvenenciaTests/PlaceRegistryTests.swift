@@ -76,6 +76,8 @@ struct PlaceRegistryTests {
             .propertiesWorkspace(project: project),
             .sourcesList(project: project),
             .connectRules(project: project),
+            .sourceWorkspace(project: project, sourceId: "src-1"),
+            .citationCounts(project: project, sourceId: "src-1"),
         ])
     }
 
@@ -157,6 +159,8 @@ struct PlaceRegistryTests {
                     .propertiesWorkspace(project: project),
                     .sourcesList(project: project),
                     .connectRules(project: project),
+                    .sourceWorkspace(project: project, sourceId: "s1"),
+                    .citationCounts(project: project, sourceId: "s1"),
                 ]
             ),
             (

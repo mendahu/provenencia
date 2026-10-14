@@ -10586,6 +10586,114 @@
         }
       }
     },
+    "evidenceGraph.header.artifactFile": {
+      "comment": "VoiceOver label of the header select that picks which Artifact file Open opens",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Artifact file"
+          }
+        }
+      }
+    },
+    "evidenceGraph.header.openFile": {
+      "comment": "Secondary header button that opens the selected Artifact file in its own app",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open"
+          }
+        }
+      }
+    },
+    "evidenceGraph.header.openFileHelp": {
+      "comment": "Tooltip on the header Open button",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open in its app"
+          }
+        }
+      }
+    },
+    "evidenceGraph.header.openFileAccessibility": {
+      "comment": "VoiceOver for the header Open button; argument is the file name",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open %@ in its app"
+          }
+        }
+      }
+    },
+    "evidenceGraph.header.fileMeta": {
+      "comment": "Meta line of a file row in the header select; arguments are the file name, the kind, and the size",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · %2$@ · %3$@"
+          }
+        }
+      }
+    },
+    "evidenceGraph.fileNotFound.title": {
+      "comment": "Title of the danger callout when Open cannot find the Artifact file",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "File not found"
+          }
+        }
+      }
+    },
+    "evidenceGraph.fileNotFound.message": {
+      "comment": "Body of the missing-file callout; arguments are the Artifact name and the file name",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ points at %2$@, which is no longer where Provenencia stored it."
+          }
+        }
+      }
+    },
+    "evidenceGraph.palette.select": {
+      "comment": "Evidence graph palette tool that draws a rectangle to select subject cards",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select"
+          }
+        }
+      }
+    },
+    "evidenceGraph.palette.selectHelp": {
+      "comment": "Tooltip on the palette Select tool; Shift-drag on empty canvas draws the same rectangle",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hold Shift to select"
+          }
+        }
+      }
+    },
     "evidenceGraph.row.negatedPrefix": {
       "comment": "Micro-caps prefix before a negative Observation value on a cited graph row",
       "extractionState": "manual",

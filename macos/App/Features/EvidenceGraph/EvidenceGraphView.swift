@@ -222,6 +222,7 @@ private struct EvidenceGraphContent: View {
             subjectCountLabel
             Spacer(minLength: 0)
             HStack(spacing: PVSpacing.space3) {
+                fileControls
                 promoteAllButton
                 jumpToSourcePageButton
             }
@@ -238,6 +239,63 @@ private struct EvidenceGraphContent: View {
         }
         .font(PVFont.mono(size: PVTypeScale.caption))
         .foregroundStyle(PVColor.textFaint)
+    }
+
+    /// The Source's files: pick one, open it in its own app. Absent until the
+    /// workspace loads, and when no Artifact has a file.
+    @ViewBuilder
+    private var fileControls: some View {
+        let rows = model.fileRows
+        if !rows.isEmpty {
+            fileSelect(rows)
+            openFileButton(rows)
+        }
+    }
+
+    private func fileSelect(_ rows: [EvidenceGraphFiles.Row]) -> some View {
+        let resolved = model.resolvedFileArtifactID
+        let projectDir = model.session.projectKey.projectDir
+        return PVSelect(
+            selection: Binding(
+                get: { model.resolvedFileArtifactID },
+                set: { model.selectFile($0) }
+            ),
+            options: rows.map { PVSelectOption(value: $0.id, label: $0.title) },
+            size: .sm,
+            menuWidth: 360,
+            maxVisibleRows: 6,
+            rowHeight: 64,
+            accessibilityLabel: L10n.EvidenceGraph.artifactFile,
+            accessibilityIdentifier: "evidenceGraph.header.fileSelect",
+            closedHelp: rows.first(where: { $0.id == resolved })?.displayFilename
+        ) { option in
+            if let row = rows.first(where: { $0.id == option.id }) {
+                EvidenceGraphFileMenuRow(
+                    row: row,
+                    projectDir: projectDir,
+                    citationCount: model.citationCount(for: row.id)
+                )
+            } else {
+                Text(verbatim: option.label)
+            }
+        }
+        .frame(width: 208)
+    }
+
+    private func openFileButton(_ rows: [EvidenceGraphFiles.Row]) -> some View {
+        let resolved = model.resolvedFileArtifactID
+        let filename = rows.first(where: { $0.id == resolved })?.displayFilename ?? ""
+        return PVButton(
+            L10n.EvidenceGraph.openFile,
+            variant: .secondary,
+            size: .sm,
+            icon: .externalLink
+        ) {
+            model.openSelectedFile()
+        }
+        .help(Text(L10n.EvidenceGraph.openFileHelp))
+        .accessibilityLabel(Text(verbatim: L10n.EvidenceGraph.openFileAccessibility(filename: filename)))
+        .accessibilityIdentifier("evidenceGraph.header.openFile")
     }
 
     private var promoteAllButton: some View {
@@ -302,6 +360,17 @@ private struct EvidenceGraphContent: View {
                 if model.pendingImpact == nil, let deleteError = model.deleteError {
                     PVCallout(tone: .danger, message: deleteError)
                         .frame(width: 360, alignment: .trailing)
+                } else if model.pendingImpact == nil, model.deleteError == nil,
+                          let fileOpenError = model.fileOpenError,
+                          model.resolvedFileArtifactID == model.selectedFileArtifactID
+                {
+                    PVCallout(
+                        tone: .danger,
+                        title: L10n.EvidenceGraph.fileNotFoundTitle,
+                        message: fileOpenError
+                    )
+                    .frame(width: 360, alignment: .trailing)
+                    .accessibilityIdentifier("evidenceGraph.fileOpen.callout")
                 } else if !model.canCite {
                     noArtifactCallout
                         .frame(width: 360, alignment: .trailing)
@@ -850,6 +919,57 @@ private struct EvidenceGraphDocumentBody: View {
         )
         .frame(width: 420)
         .position(x: contentSize.width / 2, y: contentSize.height / 2)
+    }
+}
+
+/// One file in the header select's menu: thumbnail, title, Cover, then
+/// `filename · KIND · size` and the citation count.
+private struct EvidenceGraphFileMenuRow: View {
+    let row: EvidenceGraphFiles.Row
+    let projectDir: String
+    let citationCount: Int
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 10) {
+            CachedThumbnail(
+                projectDir: projectDir,
+                relPath: row.thumbnailRelPath.isEmpty ? row.relPath : row.thumbnailRelPath,
+                mediaType: row.mediaType,
+                originalFilename: row.filename,
+                size: 48,
+                layout: .tile
+            )
+            VStack(alignment: .leading, spacing: 1) {
+                HStack(spacing: PVSpacing.space3) {
+                    Text(verbatim: row.title)
+                        .font(
+                            row.titleIsRef
+                                ? PVFont.mono(size: PVTypeScale.caption)
+                                : PVFont.body(size: PVTypeScale.caption)
+                        )
+                        .foregroundStyle(PVColor.textPrimary)
+                        .lineLimit(1)
+                    if row.isCover {
+                        Text(L10n.Sources.coverBadge)
+                            .pvMicroCaps()
+                            .foregroundStyle(PVColor.textMuted)
+                    }
+                }
+                Text(verbatim: L10n.EvidenceGraph.fileMeta(
+                    filename: row.displayFilename,
+                    kind: EvidenceGraphFiles.kindToken(mediaType: row.mediaType),
+                    size: IngestMediaPolicy.formatByteSize(row.byteSize)
+                ))
+                    .font(PVFont.mono(size: PVTypeScale.micro))
+                    .foregroundStyle(PVColor.textMuted)
+                    .lineLimit(1)
+                Text(verbatim: L10n.CitationComposer.artifactCitationCount(count: citationCount))
+                    .font(PVFont.mono(size: PVTypeScale.micro))
+                    .foregroundStyle(PVColor.textMuted)
+                    .lineLimit(1)
+            }
+        }
+        .padding(.vertical, PVSpacing.space2)
     }
 }
 

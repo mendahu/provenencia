@@ -1619,4 +1619,109 @@ struct EvidenceGraphModelTests {
         let (_, model) = await promotableModel()
         #expect(model.performCardAction(subjectID: "s-james", actionID: EvidenceSubjectCard.openHandleActionID) == nil)
     }
+
+    // MARK: Open a file (S10-20)
+
+    private func artifact(
+        _ id: String,
+        label: String,
+        ref: String = "",
+        fileID: String? = nil,
+        relPath: String? = nil,
+        mediaType: String = "image/jpeg",
+        withFile: Bool = true
+    ) -> CatalogArtifact {
+        CatalogArtifact(
+            id: id,
+            ref: ref.isEmpty ? "ART-\(id.uppercased())" : ref,
+            sourceID: sourceID,
+            fileID: fileID ?? "file-\(id)",
+            label: label,
+            description: "",
+            file: withFile
+                ? CatalogFileRef(
+                    id: fileID ?? "file-\(id)",
+                    relPath: relPath ?? "objects/\(id).jpg",
+                    originalFilename: "\(id).jpg",
+                    mediaType: mediaType,
+                    byteSize: 4_200_000
+                )
+                : nil
+        )
+    }
+
+    @Test func fileBearingListKeepsCoverAndDropsFileless() {
+        let artifacts = [
+            artifact("a", label: "Page 1", ref: "ART-AAAA"),
+            artifact("b", label: "Page 2"),
+            artifact("c", label: "Loose note", withFile: false),
+            artifact("d", label: "", ref: "ART-7Q2KD"),
+            artifact("e", label: "No file id", fileID: ""),
+            artifact("f", label: "Blank path", relPath: "   "),
+        ]
+        let rows = EvidenceGraphFiles.fileBearing(artifacts, coverArtifactID: "a")
+        #expect(rows.map(\.id) == ["a", "b", "d"])
+        #expect(rows.last?.title == "ART-7Q2KD")
+        #expect(rows.map(\.titleIsRef) == [false, false, true])
+        #expect(rows.map(\.isCover) == [true, false, false])
+        #expect(EvidenceGraphFiles.initialID(in: rows, coverArtifactID: "a") == "a")
+        // A cover with no file falls back to the first row with one.
+        #expect(EvidenceGraphFiles.initialID(in: rows, coverArtifactID: "c") == "a")
+        #expect(EvidenceGraphFiles.initialID(in: [], coverArtifactID: nil) == nil)
+    }
+
+    @Test func fileKindTokenAndMissingCopy() {
+        #expect(EvidenceGraphFiles.kindToken(mediaType: "image/jpeg") == "JPEG")
+        #expect(EvidenceGraphFiles.kindToken(mediaType: "application/pdf")
+            == L10n.string(L10n.CitationComposer.artifactKindPDF))
+        #expect(EvidenceGraphFiles.kindToken(mediaType: "text/plain")
+            == L10n.string(L10n.CitationComposer.artifactKindUnknown))
+        #expect(
+            L10n.EvidenceGraph.fileNotFoundMessage(name: "Page 7", filename: "1881-peel-n-p7.jpg")
+                == "Page 7 points at 1881-peel-n-p7.jpg, which is no longer where Provenencia stored it."
+        )
+    }
+
+    @Test func resolvedFileFallsBackAndSelectFileClearsTheError() async {
+        let store = makeStore()
+        let model = makeModel(store: store)
+        await model.prepare()
+        let source = CatalogSource(
+            id: sourceID,
+            ref: "SRC-1",
+            sourceTypeID: "type-book",
+            title: "Census",
+            description: "",
+            coverMode: "artifact",
+            primaryArtifactID: "a",
+            hasArtifact: true
+        )
+        model.session.setQueryValue(
+            CatalogQueryKey.sourcesList(project: model.session.projectKey),
+            value: [source]
+        )
+        model.session.setQueryValue(
+            CatalogQueryKey.sourceWorkspace(project: model.session.projectKey, sourceId: sourceID),
+            value: CatalogSourceWorkspace(
+                source: source,
+                notes: [],
+                metadata: [],
+                artifacts: [
+                    artifact("b", label: "Page 2"),
+                    artifact("a", label: "Page 1"),
+                    artifact("c", label: "Loose note", withFile: false),
+                ],
+                credibility: nil
+            )
+        )
+        #expect(model.fileRows.map(\.id) == ["b", "a"])
+        #expect(model.resolvedFileArtifactID == "a")
+        model.selectedFileArtifactID = "missing"
+        #expect(model.resolvedFileArtifactID == "a")
+        model.fileOpenError = "File not found"
+        model.selectFile("b")
+        #expect(model.fileOpenError == nil)
+        #expect(model.resolvedFileArtifactID == "b")
+        #expect(model.citationCount(for: "b") == 0)
+    }
 }

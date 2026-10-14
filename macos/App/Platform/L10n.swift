@@ -1786,6 +1786,54 @@ enum L10n {
             ), title)
         }
 
+        static let artifactFile = LocalizedStringResource(
+            "evidenceGraph.header.artifactFile",
+            defaultValue: "Artifact file",
+            comment: "VoiceOver label of the header select that picks which Artifact file Open opens"
+        )
+
+        static let openFile = LocalizedStringResource(
+            "evidenceGraph.header.openFile",
+            defaultValue: "Open",
+            comment: "Secondary header button that opens the selected Artifact file in its own app"
+        )
+
+        static let openFileHelp = LocalizedStringResource(
+            "evidenceGraph.header.openFileHelp",
+            defaultValue: "Open in its app",
+            comment: "Tooltip on the header Open button"
+        )
+
+        static func openFileAccessibility(filename: String) -> String {
+            return L10n.format(LocalizedStringResource(
+                "evidenceGraph.header.openFileAccessibility",
+                defaultValue: "Open %@ in its app",
+                comment: "VoiceOver for the header Open button; argument is the file name"
+            ), filename)
+        }
+
+        static func fileMeta(filename: String, kind: String, size: String) -> String {
+            return L10n.format(LocalizedStringResource(
+                "evidenceGraph.header.fileMeta",
+                defaultValue: "%1$@ · %2$@ · %3$@",
+                comment: "Meta line of a file row in the header select; arguments are the file name, the kind, and the size"
+            ), filename, kind, size)
+        }
+
+        static let fileNotFoundTitle = LocalizedStringResource(
+            "evidenceGraph.fileNotFound.title",
+            defaultValue: "File not found",
+            comment: "Title of the danger callout when Open cannot find the Artifact file"
+        )
+
+        static func fileNotFoundMessage(name: String, filename: String) -> String {
+            return L10n.format(LocalizedStringResource(
+                "evidenceGraph.fileNotFound.message",
+                defaultValue: "%1$@ points at %2$@, which is no longer where Provenencia stored it.",
+                comment: "Body of the missing-file callout; arguments are the Artifact name and the file name"
+            ), name, filename)
+        }
+
         static let negatedPrefix = LocalizedStringResource(
             "evidenceGraph.row.negatedPrefix",
             defaultValue: "Not",
@@ -1900,6 +1948,18 @@ enum L10n {
             "evidenceGraph.palette.connect",
             defaultValue: "Connect",
             comment: "Evidence graph palette tool to link two primary subjects with a bridge"
+        )
+
+        static let toolSelect = LocalizedStringResource(
+            "evidenceGraph.palette.select",
+            defaultValue: "Select",
+            comment: "Evidence graph palette tool that draws a rectangle to select subject cards"
+        )
+
+        static let toolSelectHelp = LocalizedStringResource(
+            "evidenceGraph.palette.selectHelp",
+            defaultValue: "Hold Shift to select",
+            comment: "Tooltip on the palette Select tool; Shift-drag on empty canvas draws the same rectangle"
         )
 
         static let armedHintConnect = LocalizedStringResource(
