@@ -10,7 +10,6 @@ Brief files are written **just before** the PR they gate, not up front. This ind
 
 | Step | View | Gates | Notes |
 | --- | --- | --- | --- |
-| [S10-D5](S10-D5-source-artifacts.md) | Source page — Artifacts | **S10-18** | Page drop opens Add Artifact with the file chosen. Accordion becomes a card grid |
 | [S10-D6](S10-D6-evidence-graph.md) | Evidence graph | **S10-20** | File select and Open (system app), plus box-select. Also specifies Unpromote on the promoted card, which ships in **S10-44**. Hit boxes, the tiled grid, canvas growth, and camera restore are not this board |
 | [S10-D16](S10-D16-event-mark.md) | Design system — Event mark | **S10-19** | Replaces the `subject_event` hourglass. Design this before S10-D7. Cards, omnibar, Promote, and Properties pick up the asset with no board of their own |
 | [S10-D7](S10-D7-sidebar-marks.md) | Workspace shell | **S10-19** | Sidebar People, Events, and Places, and the toolbar section icon, instance the subject marks. Depends on S10-D16. The three list empty states use the same marks |
@@ -36,3 +35,4 @@ S10-D14, the zoomed-out card, was descoped 2026-10-11 with S10-46. The full card
 | --- | --- | --- | --- |
 | S10-D3 | Citation composer | **S10-16** | Done 2026-10-12. [S10-D3-citation-composer.md](archive/S10-D3-citation-composer.md) |
 | S10-D4 | Name parts modal | **S10-17** | Done 2026-10-13. [S10-D4-name-parts-modal.md](archive/S10-D4-name-parts-modal.md) |
+| S10-D5 | Source page — Artifacts | **S10-18** | Done 2026-10-14. [S10-D5-source-artifacts.md](archive/S10-D5-source-artifacts.md) |

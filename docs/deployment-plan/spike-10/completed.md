@@ -1,5 +1,9 @@
 # Spike 10 — completed
 
+## S10-18 — Artifact drop and cards
+
+**Landed 2026-10-14** in [#387](https://github.com/mendahu/provenencia/pull/387). Dropping a file on the Source page content pane opens Add Artifact with that file staged and the label empty. A rejected drop opens the same dialog on the existing callout and stores nothing. Artifacts are wrapping cards: a large preview, the ref, Cover when it applies, and Open or Add file, Use as thumbnail, and Delete. The pencil edits the label and description on the card.
+
 ## S10-17 — Name parts split
 
 **Landed 2026-10-13** in [#385](https://github.com/mendahu/provenencia/pull/385). Split into parts sits beside the full form. Leaving that field fills parts only when the list is empty. Split refills, and asks before it replaces a hand edit. A comma makes the text before it one surname, and a later comma is not kept on the following word. Otherwise a compiled title list peels prefixes and suffixes when another word remains: one leftover word is a given name, and the last of two or more is the surname. The part-type column stays the width of Surname prefix. Up and down move a part; the row has no drag grip.

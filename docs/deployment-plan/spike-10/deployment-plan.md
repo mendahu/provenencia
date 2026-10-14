@@ -143,7 +143,7 @@ These are the calls for this spike. The questions at the bottom are answered; no
 | **S10-D1** | Adaptive choice field (kit board) | **S10-14**, descoped 2026-10-12 | — |
 | **S10-D3** | Citation composer | **S10-16**, done 2026-10-12 | — |
 | **[S10-D4](design/archive/S10-D4-name-parts-modal.md)** | Name parts modal | **S10-17** | Split, fixed-width type control. Does not wait on S10-29 |
-| **[S10-D5](design/S10-D5-source-artifacts.md)** | Source page — Artifacts | **S10-18** | Page drop opens Add Artifact. The list becomes cards |
+| **[S10-D5](design/archive/S10-D5-source-artifacts.md)** | Source page — Artifacts | **S10-18** | Page drop opens Add Artifact. The list becomes cards |
 | **[S10-D6](design/S10-D6-evidence-graph.md)** | Evidence graph | **S10-20** file select, Open, and box-select | S10-44 Unpromote on the promoted card |
 | **[S10-D16](design/S10-D16-event-mark.md)** | Design system — Event mark | **S10-19** | The `subject_event` glyph. Sidebar placement is S10-D7 |
 | **[S10-D7](design/S10-D7-sidebar-marks.md)** | Workspace shell | **S10-19** | Sidebar and toolbar. Depends on S10-D16. Empty states use the same marks |
@@ -433,7 +433,9 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 
 #### S10-18 — Artifact drop and cards
 
-**Brief:** [S10-D5](design/S10-D5-source-artifacts.md).
+**Landed 2026-10-14** in [#387](https://github.com/mendahu/provenencia/pull/387). See [`completed.md`](completed.md).
+
+**Brief:** [S10-D5](design/archive/S10-D5-source-artifacts.md).
 
 | | |
 | --- | --- |
