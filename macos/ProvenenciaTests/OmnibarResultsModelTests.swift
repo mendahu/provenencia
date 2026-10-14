@@ -167,8 +167,8 @@ struct OmnibarResultsModelTests {
         let typeLead = OmnibarHitPresentation.leadThumbnail(for: leadHit(kind: "source_type", iconKey: "type_book"))
         #expect(typeLead.glyph == .mark(.typeBook))
         #expect(typeLead.label != nil)
-        #expect(OmnibarHitPresentation.leadThumbnail(for: leadHit(kind: "source_type")).glyph == .symbol(.library))
-        #expect(OmnibarHitPresentation.leadThumbnail(for: leadHit(kind: "metadata_field")).glyph == .symbol(.tag))
+        #expect(OmnibarHitPresentation.leadThumbnail(for: leadHit(kind: "source_type")).glyph == .symbol(.tag))
+        #expect(OmnibarHitPresentation.leadThumbnail(for: leadHit(kind: "metadata_field")).glyph == .symbol(.list))
         #expect(OmnibarHitPresentation.leadThumbnail(for: leadHit(kind: "widget")).glyph == .symbol(.search))
         #expect(OmnibarHitPresentation.refAccent(for: CatalogSearchHit(
             kind: "person", id: "p", ref: "PER-7KD45", title: "James Robins", subtitle: "",

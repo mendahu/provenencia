@@ -103,13 +103,13 @@ enum OmnibarHitPresentation {
         case "person", "event", "place":
             return ConclusionListRow.thumbnail(mark: PVMarkKey(subjectTypeKey: hit.kind) ?? .fallback)
         case "source_type":
-            if hit.iconKey.isEmpty { return PVThumbnail.Content(glyph: .symbol(.library)) }
+            if hit.iconKey.isEmpty { return PVThumbnail.Content(glyph: WorkspaceSection.sourceTypes.glyph) }
             return PVThumbnail.Content(
                 glyph: .mark(PVMarkKey(catalogKey: hit.iconKey)),
                 label: kindLabel(for: hit.kind)
             )
         case "metadata_field":
-            return PVThumbnail.Content(glyph: .symbol(.tag))
+            return PVThumbnail.Content(glyph: WorkspaceSection.metadata.glyph)
         default:
             return PVThumbnail.Content(glyph: .symbol(.search))
         }
