@@ -5,9 +5,9 @@
 **View:** Citation composer, the whole place
 **Implements later as:** PR **S10-16**
 **Depends on:** —
-**Related:** [`../deployment-plan.md`](../deployment-plan.md) (S10-16). Depiction rows are **S10-D15**, a later board. Name parts are **S10-D4**. The date modal already shipped (S10-13).
-**Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)
-**Skill:** [`add-design-brief`](../../../../.agents/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md)
+**Related:** [`../deployment-plan.md`](../../deployment-plan.md) (S10-16). Depiction rows are **S10-D15**, a later board. Name parts are **S10-D4**. The date modal already shipped (S10-13).
+**Design system layers:** [`docs/design-system-layers.md`](../../../../design-system-layers.md)
+**Skill:** [`add-design-brief`](../../../../../.agents/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../../.agents/skills/add-ui-component/SKILL.md)
 
 Paste this entire document into Claude Design as the requirements for one board. This file is the whole prompt.
 
@@ -201,5 +201,5 @@ This table is **binding**. Instance the Ship kit rows. Paths from `macos/App/` u
 ## 8. Handoff
 
 1. Archive this brief under `design/archive/` when the board is agreed.
-2. Record it in [`../completed.md`](../completed.md).
+2. Record it in [`../completed.md`](../../completed.md).
 3. Implement **S10-16** against the board and this inventory.

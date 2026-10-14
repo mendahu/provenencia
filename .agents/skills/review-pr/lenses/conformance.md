@@ -1,0 +1,101 @@
+# Conformance and regression lens
+
+The question: **does the change do what the plan says — every acceptance
+criterion, nothing outside scope — and does everything that worked before
+still work?** This lens always runs. It catches more than any other.
+
+## Read first
+
+- The plan (`prs/S#-NN-<slug>.md`): **User stories** and their ACs, **Scope**
+  (In and Out), **Decisions**, **Tests**, **Definition of done**.
+- The fix plan for this round in the ship log (`S#-NN-<slug>.ship.md`), if any.
+- The diff against its base: `git diff <base>...HEAD`, and `git log <base>..HEAD`
+  for what each commit claims.
+- The domain doc the plan's **Context** links, for the rules the behavior must keep.
+
+## How to work
+
+1. Build a table for yourself: each AC → the code that makes it true → the test
+   that proves it. Any AC without code or without a test is a finding.
+2. Walk the diff file by file. Each hunk must trace to an In line, a Step, or a
+   Decision. A hunk that traces to nothing is scope creep; one that implements
+   an Out line is a blocker.
+3. For each changed function, type, query, or view: find its **other callers**
+   (`rg` the symbol). Does the change hold for them? This is where regressions
+   live.
+4. Read the new and changed tests: do they prove the AC, or only that the code
+   runs?
+5. You may run targeted Go tests (`CGO_ENABLED=1 go test -tags fts5 ./core/<pkg>/...`).
+   Do not run `xcodebuild`; the gate already did, and parallel builds collide.
+   Do not edit files.
+
+## Look for
+
+### Plan conformance
+
+- An AC that is not met, or met only for the example in the plan and not the rule.
+- A Decision the code ignores or swaps for a different design.
+- An Out line implemented "while I was there".
+- A Step's files untouched, or files changed that no Step names, without a reason
+  in the commit.
+- A Definition of done line left undone: `completed.md`, map status, plan
+  **Landed** note, brief archived, domain doc, version bump as the header says.
+
+### Functional regression
+
+- A shared function, query, or component whose contract changed (arguments,
+  ordering, nil/empty handling, error codes) with callers that assume the old one.
+- A changed default that every existing call site now inherits.
+- Ordering and identity: a list now sorted differently, an id that changes on
+  save, a key that is no longer stable for `ForEach` or a cache.
+- Edge cases the old code handled: empty, one, many, very long text, missing
+  file, deleted referent, a catalog created before this PR (no migration, no
+  seed), a project opened by another user.
+- Persistence: does a value written by the old code still read back? Does a
+  value written by the new code break an older reader in the same release?
+- Audit and delete: a new write without its audit effect, a new reference a
+  delete probe does not see ([`add-audit-scope`](../../add-audit-scope/SKILL.md),
+  [`add-catalog-delete`](../../add-catalog-delete/SKILL.md)).
+- FFI: a proto field renumbered or reused, a method whose Swift and Go sides
+  disagree, an error code with no Swift mapping.
+
+### Tests
+
+- Domain changes in `core/` without Go tests; new store APIs without
+  `FakeStore` and model tests; handlers without `runRPC` coverage of the happy
+  path and the important errors.
+- Go tests that are not table-driven (`.cursor/rules/go-tests.mdc`).
+- Tests that assert raw English instead of `L10n` lookups; Mac unit tests that
+  reach the dylib or real SQLite.
+- A test that would still pass if the feature were deleted.
+- A migration tested directly (the repo forbids it — [`add-catalog-migration`](../../add-catalog-migration/SKILL.md));
+  the behavior it enables must be tested instead.
+- Do not demand line coverage. Demand coverage on boundaries and rules that
+  edits tend to break.
+
+## Evidence: write the failing test
+
+For every functional or regression finding, include the **test that fails
+today**: file, test name, and the code, small enough to paste. The fix round
+adds it first and confirms it fails before the fix. If it passes before the
+fix, the finding was wrong and is dropped. A regression finding without a
+failing test is at most **minor**, unless the path is a UI interaction no unit
+test can reach; then give exact manual steps.
+
+## Severity in this lens
+
+| Severity | Use when |
+| --- | --- |
+| **blocker** | An AC not met; an Out line implemented; a regression in an existing flow; data written wrong or lost; a Decision ignored |
+| **major** | A missing test for an AC or a boundary; an edge case the old code handled; a DoD docs line skipped |
+| **minor** | A weak test; scope noise with no behavior change |
+| **nit** | Test naming, commit wording |
+
+## Good finding shape
+
+The shape to copy. Names in the example are illustrative.
+
+"AC-2.1 says a filed Source drops out of the In-progress filter. The query in
+`core/database/sourcegraphprogress` counts a primary as filed when *any* claim
+is accepted, not when every primary has one. Failing test:
+`TestEvidenceStatus/one_of_two_primaries_filed` → want In progress, got Filed."

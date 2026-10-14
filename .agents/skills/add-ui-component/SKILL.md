@@ -145,5 +145,5 @@ enum VocabularyDeleteDialog { static func sheet(…) }  // only Metadata uses it
 - [`add-design-brief`](../add-design-brief/SKILL.md) — Claude Design brief + kit inventory before a UI PR
 - [`evaluate-ui-component`](../evaluate-ui-component/SKILL.md) — point at an existing type; cousins + compose-down + small PR plan (no drive-by mega-refactor)
 - [`add-localized-string`](../add-localized-string/SKILL.md) — all user-facing copy
-- [`review-app-health`](../review-app-health/SKILL.md) — dimension 12 audits this layering across the app
+- [`review-pr`](../review-pr/SKILL.md) — the maintainability lens (Q5) checks this layering on every PR; its area audit checks it across the app
 - Dialog/token details: DesignSystem README; [`docs/design-system-layers.md`](../../../docs/design-system-layers.md)

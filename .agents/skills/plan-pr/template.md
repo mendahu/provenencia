@@ -172,15 +172,14 @@ Commits: one per behavior. The subject is one full imperative sentence that says
 | T-1 | Go | `core/…/x_test.go` `TestX` *(new)* | … → … | AC-1.1 |
 | T-2 | Swift | `macos/ProvenenciaTests/…Tests.swift` *(new)* | … → … | AC-1.2, D-2 |
 
-Must stay green: `CGO_ENABLED=1 go test -tags fts5 ./api/... ./core/...`, `xcodebuild test -project macos/Provenencia.xcodeproj -scheme Provenencia -destination 'platform=macOS'`, and ….
+Must stay green: everything `scripts/check-pr.sh` runs. Name any suite this PR is most likely to break: ….
 
 ## 9. Definition of done
 
 ```
 - [ ] Every AC in §2 is true: test name or manual check line for each
 - [ ] Every T-# in §8 exists and passes
-- [ ] go vet -tags fts5 ./api/... ./core/... and go test -tags fts5 ./api/... ./core/... pass (CGO_ENABLED=1)
-- [ ] xcodebuild build and test pass (if macos/ changed)
+- [ ] scripts/check-pr.sh prints check-pr: PASS (gofmt, go vet, go test, Xcode tests, catalog and plan-doc checks)
 - [ ] No Out line was implemented; no code outside §4 / §6 was refactored
 - [ ] New user-facing copy is in L10n + Localizable.xcstrings; no stale strings left
 - [ ] UI matches the brief inventory; no new kit primitive unless the brief marks it New

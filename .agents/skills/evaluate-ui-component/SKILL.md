@@ -7,7 +7,7 @@ description: >-
   the user points at a component (PV*, sheet, dialog, badge, chip, panel, row,
   menu) and asks to evaluate, audit, harden, refactor for composability, drill
   down, compose upward, find duplicates, or chip away at design-system debt—
-  not for whole-app health (review-app-health) or for adding a brand-new control
+  not for a whole-app audit (review-pr area audit) or for adding a brand-new control
   from scratch (add-ui-component).
 ---
 
@@ -15,7 +15,7 @@ description: >-
 
 Point-at-one-component review. Goal: **classify → find cousins → compose down →
 plan small PRs**. Do **not** implement unless the user asks. Do **not** expand
-into a whole-app cleanup (use [`review-app-health`](../review-app-health/SKILL.md)
+into a whole-app cleanup (use the area audit in [`review-pr`](../review-pr/SKILL.md)
 for that). Prefer chipping away: one focused plan the user can approve slice by
 slice.
 
@@ -149,7 +149,7 @@ Which items should I implement?
 
 ## Anti-scope
 
-- Whole-app sampling → `review-app-health`
+- Whole-app sampling → `review-pr` area audit
 - Brand-new control with no subject to evaluate → `add-ui-component`
 - Rewriting DesignSystem README / tokens unless the plan explicitly needs it
 - Implementing “while we’re here” cousins without user approval

@@ -51,7 +51,7 @@ Template: [`template.md`](template.md). Copy it; keep every heading.
 - [ ] 5. Decide: every choice the implementer would face is a Decision; product calls asked
 - [ ] 6. Write prs/S#-NN-<slug>.md from template.md, every heading kept
 - [ ] 7. Self-review gate (below) passes, including the cold read and check-plan-docs.py
-- [ ] 8. Review: review-plan loop; review log linked; no open blocking finding
+- [ ] 8. Review: review-plan loop; review log linked; no open blocker
 - [ ] 9. Wire: map row Plan link + status; scope entry matches; design/README if a brief
 - [ ] 10. Report to the user: status, verdict, decisions you made, To user items, map changes
 ```
@@ -117,7 +117,7 @@ This is most of the work. A plan built from the docs alone is a guess.
   will add (file, type, function, table, FFI method, component, L10n namespace,
   test helper), search for what already does that job, by behavior as well as
   by name. Reuse beats extend; extend beats new. Ask the questions in
-  [`review-plan/maintainability.md`](../review-plan/maintainability.md) yourself
+  [`review-pr/lenses/maintainability.md`](../review-pr/lenses/maintainability.md) yourself
   now: the registry that owns it, the layer that owns it, what it makes dead,
   which later PR in the map touches it next. The answers fill **Codebase fit**.
   The reviewer will ask the same questions; answer them first.
@@ -242,7 +242,7 @@ rounds. Answer every finding in the review log (`S#-NN-<slug>.review.md`) as
 Fixed, Declined with evidence, or To user. Link the log on the plan's
 **Review:** line.
 
-The plan is `Planned` only when no blocking finding is open and every To user
+The plan is `Planned` only when no blocker is open and every To user
 item is answered. A **Reshape** verdict goes to the user before you rewrite the
 plan; it may change the map.
 
