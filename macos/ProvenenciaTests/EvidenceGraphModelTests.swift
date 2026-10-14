@@ -1836,10 +1836,10 @@ struct EvidenceGraphModelTests {
         return (store, model)
     }
 
-    @Test func primarySelectionDropsBridges() {
+    @Test func rectangleSelectionKeepsBridges() {
         let (_, model) = groupModel()
         model.replacePrimarySelection(["p1", "b1"])
-        #expect(model.selectedSubjectIDs == ["p1"])
+        #expect(model.selectedSubjectIDs == ["p1", "b1"])
         model.selectSubject(id: "b1")
         #expect(model.selectedSubjectID == "b1")
         model.replacePrimarySelection(["p1", "p2"])
@@ -1856,6 +1856,10 @@ struct EvidenceGraphModelTests {
         #expect(model.beginGroupDrag(anchor: "p1") == ["p1", "p2"])
         #expect(model.groupDragIDs == ["p1", "p2"])
         #expect(model.selectedSubjectIDs == ["p1", "p2"])
+        model.replacePrimarySelection(["p1", "b1"])
+        #expect(model.beginGroupDrag(anchor: "b1") == ["b1", "p1"])
+        #expect(model.groupDragIDs == ["b1", "p1"])
+        #expect(model.selectedSubjectIDs == ["b1", "p1"])
         #expect(model.beginGroupDrag(anchor: "p3") == ["p3"])
         #expect(model.groupDragIDs == ["p3"])
         #expect(model.selectedSubjectIDs == ["p3"])
@@ -1870,6 +1874,7 @@ struct EvidenceGraphModelTests {
         #expect(effect.moves == [
             EvidenceGraphModel.KeyEffect.SubjectMove(subjectID: "p1", fromX: 2, fromY: 3, deltaX: 1, deltaY: 0),
             EvidenceGraphModel.KeyEffect.SubjectMove(subjectID: "p2", fromX: 4, fromY: 3, deltaX: 1, deltaY: 0),
+            EvidenceGraphModel.KeyEffect.SubjectMove(subjectID: "b1", fromX: 3, fromY: 3, deltaX: 1, deltaY: 0),
         ])
         // Return and Space do nothing while Select is armed or several are selected.
         #expect(model.handleKey(.return, hasFocus: false) == EvidenceGraphModel.KeyEffect())
@@ -1902,9 +1907,22 @@ struct EvidenceGraphModelTests {
         await model.lastPositionWrite?.value
         #expect(store.subjectPositionsBySubject["p1"]?.gridX == 3)
         #expect(store.subjectPositionsBySubject["p2"]?.gridX == 5)
-        // The relationship stays on its cell.
+        // b1 was not selected, so the relationship stays on its cell.
         #expect(model.gridCell(for: "b1")?.x == 3)
         #expect(store.subjectPositionsBySubject["b1"]?.gridX == 3)
+    }
+
+    @Test func commitGroupDragMovesASelectedBridge() async {
+        let (store, model) = groupModel()
+        model.replacePrimarySelection(["p1", "b1"])
+        _ = model.beginGroupDrag(anchor: "p1")
+        let moved = model.commitGroupDrag(anchor: "p1", documentDelta: CGSize(width: 40, height: 0))
+        #expect(moved.map(\.subjectID) == ["p1", "b1"])
+        #expect(moved.map(\.gridX) == [3, 4])
+        await model.lastPositionWrite?.value
+        #expect(store.subjectPositionsBySubject["p1"]?.gridX == 3)
+        #expect(store.subjectPositionsBySubject["b1"]?.gridX == 4)
+        #expect(store.subjectPositionsBySubject["p2"]?.gridX == 4)
     }
 
     @Test func selectStaysAvailableWithoutAnArtifact() async {

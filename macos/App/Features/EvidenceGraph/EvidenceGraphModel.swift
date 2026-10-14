@@ -392,11 +392,14 @@ final class EvidenceGraphModel {
         }
     }
 
-    /// Replaces the selection with the person, event, and place cards among `ids`.
-    /// Bridge cards are not part of a rectangle selection.
+    /// Replaces the selection with the cards among `ids` that are on this graph,
+    /// including relationship bridges.
     func replacePrimarySelection(_ ids: Set<String>) {
-        let subjectIDs = Set((currentSnapshot()?.subjects ?? []).map(\.id))
-        selectedSubjectIDs = ids.intersection(subjectIDs)
+        let snapshot = currentSnapshot()
+        let cardIDs = Set(
+            (snapshot?.subjects ?? []).map(\.id) + (snapshot?.bridges ?? []).map(\.id)
+        )
+        selectedSubjectIDs = ids.intersection(cardIDs)
         if let activated = activatedSubjectID, !selectedSubjectIDs.contains(activated) {
             activatedSubjectID = nil
         }
@@ -467,7 +470,7 @@ final class EvidenceGraphModel {
             return KeyEffect(handled: true)
         case .arrow(let dx, let dy):
             guard allowsCardMoves, let snapshot = currentSnapshot() else { return KeyEffect() }
-            // A rectangle selects subjects only. A clicked bridge moves alone.
+            // Subjects first, then bridges, in snapshot order.
             let selected = selectedSubjectIDs
             var moves = snapshot.subjects
                 .filter { selected.contains($0.id) }
@@ -1014,8 +1017,8 @@ final class EvidenceGraphModel {
     }
 
     /// Starts a card drag. Keeps the selection when the anchor is a selected
-    /// subject, otherwise the anchor alone becomes the selection. Returns the
-    /// cards that move, anchor included.
+    /// card (a person, event, place, or bridge), otherwise the anchor alone
+    /// becomes the selection. Returns the cards that move, anchor included.
     @discardableResult
     func beginGroupDrag(anchor: String) -> Set<String> {
         let handle: QueryHandle<SourceGraphRows>? = session.queryHandle(graphKey)
@@ -1024,9 +1027,9 @@ final class EvidenceGraphModel {
             groupDragIDs = [anchor]
             return [anchor]
         }
-        let subjectIDs = snapshot.subjects.map(\.id)
-        if subjectIDs.contains(anchor), selectedSubjectIDs.contains(anchor) {
-            groupDragIDs = [anchor] + subjectIDs.filter {
+        let cardIDs = snapshot.subjects.map(\.id) + snapshot.bridges.map(\.id)
+        if cardIDs.contains(anchor), selectedSubjectIDs.contains(anchor) {
+            groupDragIDs = [anchor] + cardIDs.filter {
                 $0 != anchor && selectedSubjectIDs.contains($0)
             }
         } else {

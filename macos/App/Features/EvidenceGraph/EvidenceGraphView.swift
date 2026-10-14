@@ -209,23 +209,23 @@ private struct EvidenceGraphContent: View {
     }
 
     private var header: some View {
-        HStack(alignment: .center, spacing: PVSpacing.space5) {
-            Text(L10n.Workspace.evidenceGraphTitle)
-                .font(PVFont.display(size: PVTypeScale.h1, weight: PVFontWeight.medium))
-                .foregroundStyle(PVColor.textDisplay)
-            if !sourceTitle.isEmpty {
-                Text(verbatim: sourceTitle)
-                    .font(PVFont.mono(size: PVTypeScale.caption))
-                    .foregroundStyle(PVColor.textMuted)
-                    .lineLimit(1)
+        EvidenceGraphHeaderLayout(spacing: PVSpacing.space5) {
+            HStack(spacing: PVSpacing.space5) {
+                Text(L10n.Workspace.evidenceGraphTitle)
+                    .font(PVFont.display(size: PVTypeScale.h1, weight: PVFontWeight.medium))
+                    .foregroundStyle(PVColor.textDisplay)
+                    .fixedSize(horizontal: true, vertical: false)
+                if !sourceTitle.isEmpty {
+                    Text(verbatim: sourceTitle)
+                        .font(PVFont.mono(size: PVTypeScale.caption))
+                        .foregroundStyle(PVColor.textMuted)
+                        .lineLimit(1)
+                }
+                subjectCountLabel
+                    .fixedSize(horizontal: true, vertical: false)
+                Spacer(minLength: PVSpacing.space3)
             }
-            subjectCountLabel
-            Spacer(minLength: 0)
-            HStack(spacing: PVSpacing.space3) {
-                fileControls
-                promoteAllButton
-                jumpToSourcePageButton
-            }
+            headerActions
         }
         .padding(.horizontal, PVSpacing.space7)
         .padding(.vertical, PVSpacing.space5)
@@ -241,15 +241,31 @@ private struct EvidenceGraphContent: View {
         .foregroundStyle(PVColor.textFaint)
     }
 
-    /// The Source's files: pick one, open it in its own app. Absent until the
-    /// workspace loads, and when no Artifact has a file.
-    @ViewBuilder
-    private var fileControls: some View {
-        let rows = model.fileRows
-        if !rows.isEmpty {
-            fileSelect(rows)
-            openFileButton(rows)
+    /// File menu, then Open, Promote all, and Jump. The three buttons are
+    /// either their full labels or glyphs: there is no width where the words
+    /// truncate. The file menu stays a fixed-width select.
+    private var headerActions: some View {
+        HStack(spacing: PVSpacing.space3) {
+            if !model.fileRows.isEmpty {
+                fileSelect(model.fileRows)
+            }
+            ViewThatFits(in: .horizontal) {
+                headerButtons(iconOnly: false)
+                headerButtons(iconOnly: true)
+            }
         }
+    }
+
+    /// Open (when this Source has a file), Promote all, and Jump to Source page.
+    private func headerButtons(iconOnly: Bool) -> some View {
+        HStack(spacing: PVSpacing.space3) {
+            if !model.fileRows.isEmpty {
+                openFileButton(model.fileRows, iconOnly: iconOnly)
+            }
+            promoteAllButton(iconOnly: iconOnly)
+            jumpToSourcePageButton(iconOnly: iconOnly)
+        }
+        .fixedSize(horizontal: true, vertical: false)
     }
 
     private func fileSelect(_ rows: [EvidenceGraphFiles.Row]) -> some View {
@@ -282,14 +298,15 @@ private struct EvidenceGraphContent: View {
         .frame(width: 208)
     }
 
-    private func openFileButton(_ rows: [EvidenceGraphFiles.Row]) -> some View {
+    private func openFileButton(_ rows: [EvidenceGraphFiles.Row], iconOnly: Bool) -> some View {
         let resolved = model.resolvedFileArtifactID
         let filename = rows.first(where: { $0.id == resolved })?.displayFilename ?? ""
         return PVButton(
             L10n.EvidenceGraph.openFile,
             variant: .secondary,
             size: .sm,
-            icon: .externalLink
+            icon: .externalLink,
+            iconOnly: iconOnly
         ) {
             model.openSelectedFile()
         }
@@ -298,12 +315,13 @@ private struct EvidenceGraphContent: View {
         .accessibilityIdentifier("evidenceGraph.header.openFile")
     }
 
-    private var promoteAllButton: some View {
+    private func promoteAllButton(iconOnly: Bool) -> some View {
         PVButton(
             L10n.EvidenceGraph.promoteAll,
             variant: .secondary,
             size: .sm,
-            icon: .arrowUpRight
+            icon: .arrowUpRight,
+            iconOnly: iconOnly
         ) {
             if let location = model.promoteAllLocation() {
                 navigation.go(to: location)
@@ -313,13 +331,14 @@ private struct EvidenceGraphContent: View {
         .accessibilityIdentifier("evidenceGraph.header.promoteAll")
     }
 
-    private var jumpToSourcePageButton: some View {
+    private func jumpToSourcePageButton(iconOnly: Bool) -> some View {
         let title = sourceTitle.trimmingCharacters(in: .whitespacesAndNewlines)
         return PVButton(
             L10n.EvidenceGraph.jumpToSourcePage,
             variant: .secondary,
             size: .sm,
-            icon: .library
+            icon: .library,
+            iconOnly: iconOnly
         ) {
             navigation.go(to: model.sourcePageLocation(title: sourceTitle, ref: sourceRef))
         }
@@ -1057,5 +1076,60 @@ enum EvidenceGraphHitRefresh {
     ) -> String {
         let ids = observations.map(\.id).joined(separator: ",")
         return "\(id)@\(gridX),\(gridY):\(ids)"
+    }
+}
+
+/// Gives the trailing header cluster its full width when that fits beside the
+/// title, and the leftover width when it does not. The cluster is a
+/// `ViewThatFits`, so the leftover width selects icon buttons instead of
+/// letting the labels truncate.
+private struct EvidenceGraphHeaderLayout: Layout {
+    var spacing: CGFloat
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let split = split(proposal: proposal, subviews: subviews)
+        let width = proposal.width ?? (split.leading + spacing + split.trailing)
+        return CGSize(width: width, height: split.height)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        let split = split(
+            proposal: ProposedViewSize(width: bounds.width, height: bounds.height),
+            subviews: subviews
+        )
+        subviews[0].place(
+            at: CGPoint(x: bounds.minX, y: bounds.midY),
+            anchor: .leading,
+            proposal: ProposedViewSize(width: split.leading, height: bounds.height)
+        )
+        subviews[1].place(
+            at: CGPoint(x: bounds.maxX, y: bounds.midY),
+            anchor: .trailing,
+            proposal: ProposedViewSize(width: split.trailing, height: bounds.height)
+        )
+    }
+
+    private func split(proposal: ProposedViewSize, subviews: Subviews) -> (leading: CGFloat, trailing: CGFloat, height: CGFloat) {
+        let height = proposal.height
+        let leadingMin = subviews[0].sizeThatFits(ProposedViewSize(width: 0, height: height))
+        let trailingIdeal = subviews[1].sizeThatFits(ProposedViewSize(width: nil, height: height))
+        let leadingWidth: CGFloat
+        let trailingProposal: CGFloat
+        if let total = proposal.width {
+            let labelsFit = leadingMin.width + spacing + trailingIdeal.width <= total + 0.5
+            if labelsFit {
+                trailingProposal = trailingIdeal.width
+                leadingWidth = max(leadingMin.width, total - spacing - trailingIdeal.width)
+            } else {
+                leadingWidth = leadingMin.width
+                trailingProposal = max(0, total - spacing - leadingMin.width)
+            }
+        } else {
+            leadingWidth = subviews[0].sizeThatFits(ProposedViewSize(width: nil, height: height)).width
+            trailingProposal = trailingIdeal.width
+        }
+        let leadingSize = subviews[0].sizeThatFits(ProposedViewSize(width: leadingWidth, height: height))
+        let trailingSize = subviews[1].sizeThatFits(ProposedViewSize(width: trailingProposal, height: height))
+        return (leadingWidth, trailingSize.width, max(leadingSize.height, trailingSize.height, leadingMin.height))
     }
 }
