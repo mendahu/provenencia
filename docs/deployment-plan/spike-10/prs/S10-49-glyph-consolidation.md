@@ -11,7 +11,7 @@
 **Version bump:** none — Spike 10 PRs leave `VERSION` at 0.2.0, and the product bump is cut when a release ships ([`docs/versioning.md`](../../../versioning.md))
 **Skills to load:** [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md), [`add-swift-test`](../../../../.agents/skills/add-swift-test/SKILL.md)
 **Rules that bind:** `.cursor/rules/design-system-layers.mdc`, `.cursor/rules/macos-client.mdc`, `.cursor/rules/swift-tests.mdc`, `.cursor/rules/go-tests.mdc`
-**Context:** [glyph consolidation idea](../../../ideas/glyph-consolidation.md); [`S10-19-event-mark-sidebar.ship.md`](S10-19-event-mark-sidebar.ship.md) (MNT-1 / CON-2); [`macos/App/DesignSystem/Recipes/Marks/MARKS.md`](../../../../macos/App/DesignSystem/Recipes/Marks/MARKS.md); working rule "One Event mark"
+**Context:** [glyph consolidation idea](../../../ideas/archive/glyph-consolidation.md); [`S10-19-event-mark-sidebar.ship.md`](S10-19-event-mark-sidebar.ship.md) (MNT-1 / CON-2); [`macos/App/DesignSystem/Recipes/Marks/MARKS.md`](../../../../macos/App/DesignSystem/Recipes/Marks/MARKS.md); working rule "One Event mark"
 **Planned:** 2026-10-14 against `main` @ `e150a76a`
 **Review:** [`S10-49-glyph-consolidation.review.md`](S10-49-glyph-consolidation.review.md) — Fits with changes, Ready with changes (applied); 1 round
 
@@ -242,7 +242,7 @@ Do: run the repo gate.
 Check: `scripts/check-pr.sh` prints `check-pr: PASS`.
 
 **STEP-9 — Docs, the skill, and the idea**
-Files: `macos/App/DesignSystem/Recipes/Marks/MARKS.md`, `macos/App/DesignSystem/README.md`, `.agents/skills/add-seeded-vocabulary/SKILL.md`, `docs/ideas/glyph-consolidation.md`, `docs/ideas/README.md`, `docs/deployment-plan/spike-10/prs/S10-19-event-mark-sidebar.md`.
+Files: `macos/App/DesignSystem/Recipes/Marks/MARKS.md`, `macos/App/DesignSystem/README.md`, `.agents/skills/add-seeded-vocabulary/SKILL.md`, `docs/ideas/archive/glyph-consolidation.md`, `docs/ideas/README.md`, `docs/deployment-plan/spike-10/prs/S10-19-event-mark-sidebar.md`.
 Do:
 - `MARKS.md`: in the Families table, the `subject_*` Persistence cell becomes "Registry `IconSymbol` = `subject_<key>`; Swift maps with `PVMarkKey(subjectTypeKey:)`; `TestSwiftVocabularyMatchesGo` pins the cases". In **Glyph**, add "`PVThumbnail.Content`, the Properties type card, and the omnibar lead take a `PVGlyph` too."
 - DesignSystem `README.md`: on the Thumbnail row, append after its closing parenthesis "; content takes an image or a `PVGlyph` (S10-49)".
@@ -331,4 +331,4 @@ None.
 
 ## Landed
 
-Differences from this plan: AC-2.4's `rg` still prints the four `case subject... = "subject_..."` lines of the `PVMarkKey` enum, which define the raw values. `ConclusionDetailPage.swift` built its thumbnail with `.init(mark:label:)`, a caller section 4 did not list, and moved to `.init(glyph: .mark(mark), label:)`. `PVGlyphTests.swift` uses pbxproj IDs `AA...09E0` and `AA...09E1` because `03C0` and `03C1` were taken. STEP-9's `rg "ideas/glyph-consolidation" docs` still matches this plan and the two review logs, which name the old path as history. The manual check was not run by the implementer; it is for the reviewer.
+Differences from this plan: AC-2.4's `rg` still prints the four `case subject... = "subject_..."` lines of the `PVMarkKey` enum, which define the raw values. `ConclusionDetailPage.swift` built its thumbnail with `.init(mark:label:)`, a caller section 4 did not list, and moved to `.init(glyph: .mark(mark), label:)`. `PVGlyphTests.swift` uses pbxproj IDs `AA...09E0` and `AA...09E1` because `03C0` and `03C1` were taken. STEP-9's `rg "ideas/glyph-consolidation" docs` still matches this plan and the two review logs, which name the old path as history. The manual check was not run by the implementer; it is for the reviewer. The plan's Context link and STEP-9 Files line now name the idea at `docs/ideas/archive/`, because `check-plan-docs.py` rejects the old path once the file moves.
