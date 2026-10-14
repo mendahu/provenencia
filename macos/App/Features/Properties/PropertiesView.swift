@@ -167,7 +167,7 @@ private struct PropertiesContent: View {
                 selected: model.selectedTypeKey == nil,
                 bridge: false,
                 ink: PVColor.textPrimary,
-                mark: nil
+                glyph: .symbol(.grid)
             )
             ForEach(model.types) { type in
                 let presentation = model.snapshot.presentation(for: type)
@@ -178,7 +178,7 @@ private struct PropertiesContent: View {
                     selected: model.selectedTypeKey == type.key,
                     bridge: PropertiesTypeChrome.showsBridgeLabel(typeKey: type.key),
                     ink: PropertiesTypeChrome.ink(typeKey: type.key, presentation: presentation),
-                    mark: PVMarkKey(subjectTypeKey: type.key)
+                    glyph: PVMarkKey(subjectTypeKey: type.key).map(PVGlyph.mark) ?? .symbol(.grid)
                 )
             }
         }
@@ -194,21 +194,21 @@ private struct PropertiesContent: View {
         selected: Bool,
         bridge: Bool,
         ink: Color,
-        mark: PVMarkKey?
+        glyph: PVGlyph
     ) -> some View {
         Button {
             navigation.go(to: model.location(afterPressingType: key))
         } label: {
             VStack(alignment: .leading, spacing: 6) {
                 HStack(alignment: .top) {
-                    if let mark {
-                        PVMark(mark, size: 16)
+                    switch glyph {
+                    case .mark(let key):
+                        PVMark(key, size: 16)
                             .foregroundStyle(ink)
-                    } else {
-                        Image(systemName: "square.grid.2x2")
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundStyle(PVColor.textPrimary)
+                    case .symbol(let symbol):
+                        PVIcon(symbol, size: 14)
                             .frame(width: 16, height: 16)
+                            .foregroundStyle(ink)
                     }
                     Spacer(minLength: 0)
                     if bridge {
