@@ -72,6 +72,16 @@ final class SourcePageModel {
         set { context.toast = newValue }
     }
 
+    /// The content pane takes a file drop when no sheet is already up.
+    var acceptsArtifactPageDrop: Bool {
+        !artifacts.isAdding
+            && !artifacts.isAttaching
+            && !metadata.isAdding
+            && metadata.pendingDelete == nil
+            && notes.pendingDelete == nil
+            && pendingImpact == nil
+    }
+
     /// Loads the workspace and page vocabulary, then syncs section state
     /// (tests and previews; navigation warms the same keys via `PlaceRegistry`).
     func warmFromSession() async {

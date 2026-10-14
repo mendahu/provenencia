@@ -6774,18 +6774,6 @@
         }
       }
     },
-    "sources.page.addFile": {
-      "comment": "Button to attach a first file to a fileless Artifact",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Add file…"
-          }
-        }
-      }
-    },
     "sources.page.addFileConfirm": {
       "comment": "Confirm button on the Add File dialog",
       "extractionState": "manual",
@@ -6830,6 +6818,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "First attach only. Once this artifact has a file it keeps it — a better scan becomes a new artifact."
+          }
+        }
+      }
+    },
+    "sources.page.addFileToArtifact": {
+      "comment": "VoiceOver label for a fileless artifact preview; argument is the ART- ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add a file to %@"
           }
         }
       }
@@ -6894,6 +6894,30 @@
         }
       }
     },
+    "sources.page.artifactAddFileTip": {
+      "comment": "Tooltip on a fileless artifact preview that opens Add File",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add file"
+          }
+        }
+      }
+    },
+    "sources.page.artifactCardLabelRequired": {
+      "comment": "Validation on an artifact card while the label is empty",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "An artifact needs a label"
+          }
+        }
+      }
+    },
     "sources.page.artifactDescription": {
       "comment": "Field label for optional Artifact description",
       "extractionState": "manual",
@@ -6950,6 +6974,30 @@
           "stringUnit": {
             "state": "translated",
             "value": "Give the artifact a label."
+          }
+        }
+      }
+    },
+    "sources.page.artifactNoDescription": {
+      "comment": "Placeholder on an artifact card when the description is empty",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No description"
+          }
+        }
+      }
+    },
+    "sources.page.artifactOpenFileTip": {
+      "comment": "Tooltip on an artifact preview that opens the file in its default app",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open file"
           }
         }
       }
@@ -7914,6 +7962,30 @@
         }
       }
     },
+    "sources.page.dropHint": {
+      "comment": "Status shown while a file is dragged over the Source page",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Release to add an artifact with this file"
+          }
+        }
+      }
+    },
+    "sources.page.editArtifactLabel": {
+      "comment": "Tooltip and VoiceOver label for the pencil on an artifact card; argument is the ART- ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit label and description of %@"
+          }
+        }
+      }
+    },
     "sources.page.editDescription": {
       "comment": "Button to enter description edit mode",
       "extractionState": "manual",
@@ -8006,18 +8078,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Choose"
-          }
-        }
-      }
-    },
-    "sources.page.filelessHint": {
-      "comment": "Callout when an Artifact has no primary File",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Physical only — you have recorded the item without a scan. Attach a file when one exists; the artifact keeps its reference either way."
           }
         }
       }
@@ -8346,26 +8406,14 @@
         }
       }
     },
-    "sources.page.openFile": {
-      "comment": "Button to open an Artifact's primary File in an external app",
+    "sources.page.openArtifactFile": {
+      "comment": "VoiceOver label for an artifact preview; argument is the file name",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Open"
-          }
-        }
-      }
-    },
-    "sources.page.openFileCaption": {
-      "comment": "Caption under the Open file control",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Opens in the system's default app · the file is immutable once ingested"
+            "value": "Open %@ in its default app"
           }
         }
       }
@@ -8390,18 +8438,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "File"
-          }
-        }
-      }
-    },
-    "sources.page.primaryFileHeading": {
-      "comment": "Uppercase section label above an Artifact's primary File card",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Primary file"
           }
         }
       }
@@ -8653,7 +8689,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Use as thumbnail"
+            "value": "Set cover"
           }
         }
       }

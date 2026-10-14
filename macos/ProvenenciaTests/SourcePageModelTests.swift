@@ -923,7 +923,7 @@ struct SourcePageModelTests {
         #expect(model.metadata.editingFieldID == field.id)
     }
 
-    @Test func expandingArtifactCollapsesOther() async {
+    @Test func editingArtifactIsOneCardAtATime() async {
         let store = makeStore(
             artifacts: [
                 CatalogArtifact(
@@ -938,12 +938,82 @@ struct SourcePageModelTests {
         )
         let model = makeModel(store: store)
         await model.warmFromSession()
-        model.artifacts.toggleExpanded("a1")
-        #expect(model.artifacts.expandedIDs == ["a1"])
-        model.artifacts.toggleExpanded("a2")
-        #expect(model.artifacts.expandedIDs == ["a2"])
-        model.artifacts.toggleExpanded("a2")
-        #expect(model.artifacts.expandedIDs.isEmpty)
+        model.artifacts.beginEdit("a1")
+        #expect(model.artifacts.editingArtifactID == "a1")
+        model.artifacts.labels["a1"] = "Changed"
+        #expect(model.artifacts.canSaveFields("a1"))
+        model.artifacts.labels["a1"] = "   "
+        #expect(!model.artifacts.canSaveFields("a1"))
+        #expect(
+            model.artifacts.cardLabelError(id: "a1")
+                == L10n.string(L10n.Sources.artifactCardLabelRequired)
+        )
+        model.artifacts.beginEdit("a2")
+        #expect(model.artifacts.editingArtifactID == "a2")
+        #expect(model.artifacts.labels["a1"] == "Front")
+        model.artifacts.cancelFields(id: "a2")
+        #expect(model.artifacts.editingArtifactID == nil)
+        #expect(!model.artifacts.canSaveFields("a2"))
+    }
+
+    @Test func pageDropStagesFileWithoutCreating() async throws {
+        let url = try writeTempPNG()
+        let store = makeStore(
+            artifacts: [
+                CatalogArtifact(
+                    id: "a1", ref: "ART-AAAAA", sourceID: sourceID, fileID: "",
+                    label: "Front", description: "", file: nil
+                ),
+            ]
+        )
+        let model = makeModel(store: store)
+        await model.warmFromSession()
+        let before = model.artifacts.items.count
+        model.artifacts.beginEdit("a1")
+        model.artifacts.labels["a1"] = "Changed"
+        model.artifacts.stagePageDrop([url])
+        #expect(model.artifacts.isAdding)
+        #expect(model.artifacts.editingArtifactID == nil)
+        #expect(model.artifacts.labels["a1"] == "Front")
+        #expect(model.artifacts.draft.label.isEmpty)
+        #expect(model.artifacts.draft.description.isEmpty)
+        #expect(model.artifacts.draft.fileName == url.lastPathComponent)
+        #expect(model.artifacts.draft.filePath == url.path)
+        #expect(model.artifacts.draft.reject == nil)
+        #expect(model.artifacts.items.count == before)
+        #expect(store.artifactsBySource[sourceID]?.count == before)
+    }
+
+    @Test func pageDropOfTwoFilesOpensRejectCallout() async {
+        let store = makeStore(
+            artifacts: [
+                CatalogArtifact(
+                    id: "a1", ref: "ART-AAAAA", sourceID: sourceID, fileID: "",
+                    label: "Front", description: "", file: nil
+                ),
+            ]
+        )
+        let model = makeModel(store: store)
+        await model.warmFromSession()
+        let before = model.artifacts.items.count
+        model.artifacts.stagePageDrop([
+            URL(fileURLWithPath: "/tmp/recto.png"),
+            URL(fileURLWithPath: "/tmp/verso.png"),
+        ])
+        #expect(model.artifacts.isAdding)
+        #expect(model.artifacts.draft.label.isEmpty)
+        #expect(model.artifacts.draft.filePath == nil)
+        #expect(model.artifacts.draft.reject != nil)
+        #expect(!model.artifacts.canSubmitDraft)
+        #expect(model.artifacts.items.count == before)
+        #expect(store.artifactsBySource[sourceID]?.count == before)
+    }
+
+    private func writeTempPNG() throws -> URL {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("s10-18-\(UUID().uuidString).png")
+        try Data([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A]).write(to: url)
+        return url
     }
 
     @Test func askDeleteSourcePresentsAllowedImpact() async {

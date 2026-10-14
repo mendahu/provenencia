@@ -1,8 +1,8 @@
 import Foundation
 import Observation
 
-/// Artifacts accordion on the Source page: expand/collapse, per-artifact
-/// label/description edits, the Add-artifact dialog, and file attach/open.
+/// Artifacts on the Source page: one card in edit at a time, the Add-artifact
+/// dialog, and file attach/open.
 @MainActor
 @Observable
 final class SourceArtifactsSection {
@@ -23,13 +23,14 @@ final class SourceArtifactsSection {
         var reject: L10n.Errors.IngestCallout?
     }
 
-    var expandedIDs: Set<String> = []
-    /// Local edit buffers for expanded artifact identity fields, keyed by id.
+    /// The card whose label and description are fields. One at a time.
+    var editingArtifactID: String?
+    /// Local edit buffers for the card in edit, keyed by id.
     var labels: [String: String] = [:]
     var descriptions: [String: String] = [:]
-    /// Per-artifact validation for expanded edit fields.
+    /// Per-artifact validation for the card label.
     var fieldErrors: [String: String] = [:]
-    /// Artifact id currently saving label/description from the accordion.
+    /// Artifact id currently saving label/description from the card.
     private(set) var savingID: String?
 
     // MARK: Add dialog
@@ -86,25 +87,24 @@ final class SourceArtifactsSection {
                 descriptions[art.id] = art.description
             }
         }
-    }
-
-    // MARK: Accordion
-
-    func toggleExpanded(_ id: String) {
-        if expandedIDs.contains(id) {
-            expandedIDs.removeAll()
-        } else {
-            // Accordion: only one Artifact expanded at a time.
-            expandedIDs = [id]
-            if let art = items.first(where: { $0.id == id }) {
-                labels[id] = art.label
-                descriptions[id] = art.description
-                fieldErrors[id] = nil
-            }
+        if let id = editingArtifactID, !items.contains(where: { $0.id == id }) {
+            editingArtifactID = nil
         }
     }
 
-    // MARK: Expanded fields
+    // MARK: Card edit
+
+    /// Opens edit on one card and restores any other card to its stored text.
+    func beginEdit(_ id: String) {
+        guard let art = items.first(where: { $0.id == id }) else { return }
+        if let current = editingArtifactID, current != id {
+            cancelFields(id: current)
+        }
+        editingArtifactID = id
+        labels[id] = art.label
+        descriptions[id] = art.description
+        fieldErrors[id] = nil
+    }
 
     func fieldsDirty(_ id: String) -> Bool {
         guard let art = items.first(where: { $0.id == id }) else { return false }
@@ -114,15 +114,31 @@ final class SourceArtifactsSection {
     }
 
     func canSaveFields(_ id: String) -> Bool {
-        fieldsDirty(id) && savingID == nil
+        guard savingID == nil, fieldsDirty(id) else { return false }
+        let label = (labels[id] ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        return !label.isEmpty
+    }
+
+    /// Shown while the card is in edit and the label has no text.
+    func cardLabelError(id: String) -> String? {
+        guard editingArtifactID == id else { return fieldErrors[id] }
+        let label = (labels[id] ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        if label.isEmpty {
+            return L10n.string(L10n.Sources.artifactCardLabelRequired)
+        }
+        return fieldErrors[id]
     }
 
     func cancelFields(id: String) {
         guard savingID != id else { return }
-        guard let art = items.first(where: { $0.id == id }) else { return }
+        guard let art = items.first(where: { $0.id == id }) else {
+            if editingArtifactID == id { editingArtifactID = nil }
+            return
+        }
         labels[id] = art.label
         descriptions[id] = art.description
         fieldErrors[id] = nil
+        if editingArtifactID == id { editingArtifactID = nil }
     }
 
     func saveFields(id: String) async {
@@ -131,7 +147,7 @@ final class SourceArtifactsSection {
         let label = (labels[id] ?? art.label).trimmingCharacters(in: .whitespacesAndNewlines)
         let desc = (descriptions[id] ?? art.description).trimmingCharacters(in: .whitespacesAndNewlines)
         if label.isEmpty {
-            fieldErrors[id] = L10n.string(L10n.Sources.artifactLabelRequired)
+            fieldErrors[id] = L10n.string(L10n.Sources.artifactCardLabelRequired)
             return
         }
         fieldErrors[id] = nil
@@ -148,9 +164,20 @@ final class SourceArtifactsSection {
                 description: desc
             )
             replace(updated)
+            if editingArtifactID == id { editingArtifactID = nil }
         } catch {
             context.pageError = L10n.Errors.message(for: error)
         }
+    }
+
+    /// Opens Add Artifact with the dropped file staged. Nothing is stored until confirm.
+    func stagePageDrop(_ urls: [URL]) {
+        guard !urls.isEmpty, savingID == nil, !isSavingDraft else { return }
+        if let id = editingArtifactID {
+            cancelFields(id: id)
+        }
+        openAdd()
+        applyDroppedURLs(urls, into: .create)
     }
 
     // MARK: Add dialog

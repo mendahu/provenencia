@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// Individual Source page (S2-18 / S2-25): sticky identity header, Description +
-/// Credibility beside Metadata, Artifacts accordion, Notes. Section bodies live
+/// Credibility beside Metadata, artifact cards, Notes. Section bodies live
 /// in sibling `SourcePage*View` files; this shell owns cache sync, dialogs, and layout.
 struct SourcePageView: View {
     @Environment(WorkspaceSession.self) private var session
@@ -80,6 +80,8 @@ private struct SourcePageContent: View {
     @Bindable var model: SourcePageModel
     /// Metadata column height so the left column can stretch and pin Credibility.
     @State private var metadataColumnHeight: CGFloat = 0
+    /// True while a file drag is over the content pane.
+    @State private var pageFileDrag = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -114,6 +116,29 @@ private struct SourcePageContent: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(PVColor.surfacePage)
+        .overlay {
+            if showPageDropHighlight {
+                RoundedRectangle(cornerRadius: PVRadius.md, style: .continuous)
+                    .fill(PVColor.accentSoft.opacity(0.55))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: PVRadius.md, style: .continuous)
+                            .strokeBorder(PVColor.accent, lineWidth: 2)
+                    )
+                    .allowsHitTesting(false)
+            }
+        }
+        .overlay(alignment: .bottom) {
+            if showPageDropHighlight {
+                pageDropHint
+            }
+        }
+        .dropDestination(for: URL.self, action: { urls, _ in
+            guard model.acceptsArtifactPageDrop, !urls.isEmpty else { return false }
+            model.artifacts.stagePageDrop(urls)
+            return true
+        }, isTargeted: { targeted in
+            pageFileDrag = targeted
+        })
         .vocabularyToastOverlay($model.toast, identifier: "sources.page.toast")
         .pvFormDialog(
             isPresented: addArtifactPresented,
@@ -254,6 +279,32 @@ private struct SourcePageContent: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
         .onPreferenceChange(SourcePageOverviewHeightKey.self) { metadataColumnHeight = $0 }
+    }
+
+    private var showPageDropHighlight: Bool {
+        pageFileDrag && model.acceptsArtifactPageDrop
+    }
+
+    private var pageDropHint: some View {
+        HStack(spacing: PVSpacing.space4) {
+            PVIcon(.fileUp, size: 18)
+                .foregroundStyle(PVColor.accent)
+            Text(L10n.Sources.pageDropHint)
+                .font(PVFont.body(size: PVTypeScale.bodySmall, weight: PVFontWeight.semibold))
+                .foregroundStyle(PVColor.textPrimary)
+        }
+        .padding(.horizontal, PVSpacing.space7)
+        .padding(.vertical, PVSpacing.space5)
+        .background(PVColor.surfaceCard)
+        .clipShape(RoundedRectangle(cornerRadius: PVRadius.md, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: PVRadius.md, style: .continuous)
+                .strokeBorder(PVColor.accent, lineWidth: 1)
+        )
+        .pvShadow(PVElevation.lg)
+        .padding(.bottom, PVSpacing.space12)
+        .allowsHitTesting(false)
+        .accessibilityIdentifier("sources.page.dropHint")
     }
 
     private var addArtifactPresented: Binding<Bool> {

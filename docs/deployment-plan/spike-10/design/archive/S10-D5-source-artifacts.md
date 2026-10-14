@@ -1,13 +1,15 @@
 # S10-D5 — Source page, Artifacts
 
+**Landed 2026-10-14** in [#387](https://github.com/mendahu/provenencia/pull/387). The sections below are the original board prompt.
+
 **Kind:** Claude Design board (**rethink** of the artifact list; the rest of the Source page stays)
 **Spike:** Provenencia Spike 10 (dogfood UX)
 **View:** Source page — the content pane, and the artifact cards on it
 **Implements later as:** PR **S10-18**
 **Depends on:** —
-**Related:** [`../deployment-plan.md`](../deployment-plan.md) (S10-18). The Evidence graph is **[S10-D6](S10-D6-evidence-graph.md)** and ships in S10-20. Box-select, Unpromote, and the graph’s file select and Open button are that board.
-**Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)
-**Skill:** [`add-design-brief`](../../../../.cursor/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.cursor/skills/add-ui-component/SKILL.md)
+**Related:** [`../../deployment-plan.md`](../../deployment-plan.md) (S10-18). The Evidence graph is **[S10-D6](../S10-D6-evidence-graph.md)** and ships in S10-20. Box-select, Unpromote, and the graph’s file select and Open button are that board.
+**Design system layers:** [`docs/design-system-layers.md`](../../../../design-system-layers.md)
+**Skill:** [`add-design-brief`](../../../../../.cursor/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../../.cursor/skills/add-ui-component/SKILL.md)
 
 Paste this entire document into Claude Design as the requirements for one board. This file is the whole prompt.
 
@@ -167,5 +169,5 @@ This table is **binding**. Instance the Ship kit rows. Paths from `macos/App/` u
 ## 7. Handoff
 
 1. Archive this brief under `design/archive/` when the board is agreed.
-2. Record it in [`../completed.md`](../completed.md).
-3. Implement **S10-18** against this board. The Evidence graph is [S10-D6](S10-D6-evidence-graph.md) and is not this PR.
+2. Record it in [`../../completed.md`](../../completed.md).
+3. Implement **S10-18** against this board. The Evidence graph is [S10-D6](../S10-D6-evidence-graph.md) and is not this PR.
