@@ -82,10 +82,27 @@ final class NavigationHistoryStore {
         lastIssue = nil
     }
 
+    /// Write the visible list's top row onto the current entry. No persist:
+    /// the navigation that is about to move the stack writes the file once.
+    /// No-op unless the current entry is a list root.
+    func stampListScrollAnchor(_ anchor: String?) {
+        guard document.entries.indices.contains(document.index) else { return }
+        guard document.entries[document.index].isListRoot else { return }
+        let normalized = anchor?.isEmpty == false ? anchor : nil
+        guard document.entries[document.index].listScrollAnchor != normalized else { return }
+        document.entries[document.index].listScrollAnchor = normalized
+    }
+
     /// Push a committed navigation (truncates forward). Coalesces when identical to current.
+    /// A coalesced list visit copies `listScrollAnchor` onto the current entry, including nil.
     @discardableResult
     func go(to location: WorkspaceLocation) -> WorkspaceLocation {
         if location == current {
+            guard document.entries.indices.contains(document.index) else { return current }
+            if current.isListRoot, current.listScrollAnchor != location.listScrollAnchor {
+                document.entries[document.index].listScrollAnchor = location.listScrollAnchor
+                persist()
+            }
             return current
         }
         if document.index < document.entries.count - 1 {
@@ -114,6 +131,10 @@ final class NavigationHistoryStore {
         document.index += 1
         persist()
         return current
+    }
+
+    func contains(index: Int) -> Bool {
+        document.entries.indices.contains(index)
     }
 
     /// Jump without truncating (history jump menu).

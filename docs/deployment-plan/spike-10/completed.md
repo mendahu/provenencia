@@ -1,5 +1,9 @@
 # Spike 10 — completed
 
+## S10-40 — List scroll position
+
+**Landed 2026-10-14** in [#392](https://github.com/mendahu/provenencia/pull/392). People, Events, Places, and Sources remember the row at the top of the list on that history entry. Back, Forward, a jump, and relaunch return to it. Opening the list from the sidebar starts at the top. Changing Sources sort or type filter returns the list to the top. A row that is gone stays at the top.
+
 ## S10-18 — Artifact drop and cards
 
 **Landed 2026-10-14** in [#387](https://github.com/mendahu/provenencia/pull/387). Dropping a file on the Source page content pane opens Add Artifact with that file staged and the label empty. A rejected drop opens the same dialog on the existing callout and stores nothing. Artifacts are wrapping cards: a large preview, the ref, Cover when it applies, and Open or Add file, Use as thumbnail, and Delete. The pencil edits the label and description on the card.

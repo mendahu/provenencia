@@ -41,7 +41,8 @@ A stack entry must be enough to **restore** a view. MVP pieces:
 | --- | --- | --- |
 | Sidebar destination | Sources, Source fields, Source types, … | **Required** |
 | Deep location | Sources list vs Source page `id`/`ref`; selected field/type id; later File / Node / entity id | **Required** |
-| UI ephemera | List search query, scroll offset, focus, dirty form drafts | **Omit** |
+| UI ephemera | List search query, focus, dirty form drafts | **Omit** |
+| List scroll | Id of the top row on a Sources, People, Events, or Places list | **On the entry, ignored for identity.** Written when you leave the list, not on each scroll. A missing value opens at the top. |
 
 Push (or replace) when the user **commits** a navigation, including:
 
@@ -50,7 +51,7 @@ Push (or replace) when the user **commits** a navigation, including:
 - Changing the selected row in a master–detail table (Source fields, Source types, …) — treat selection like a browser **query string**: same destination, different deep location, new entry so Back can return with that row preselected
 - Any other `go(to:)` from chrome, toolbar breadcrumbs, or cross-links
 
-**Do not** push on every keystroke in a search field, every focus change, or every dirty form edit.
+**Do not** push on every keystroke in a search field, every focus change, every dirty form edit, or each scroll of a list. The top row is stored on the current entry when the next navigation leaves that list.
 
 **Same-entry coalescing** — navigating to a location identical to the current entry must not spam the stack (replace or no-op).
 
@@ -193,7 +194,7 @@ _None for navigation history behavior._
 - Edit undo/redo, audit “revert,” or time-travel through catalog versions
 - Browser-style tab strip / multiple concurrent location stacks per window
 - Cross-project merged history
-- Restoring list search queries or scroll offsets
+- Restoring list search queries
 - Short human project `ref` (`PRJ-…` or similar)
 
 ## Related docs

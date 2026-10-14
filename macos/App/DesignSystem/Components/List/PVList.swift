@@ -68,6 +68,7 @@ struct PVList<Item: Identifiable, Primary: View, Secondary: View>: View {
                         .id(item.id)
                 }
             }
+            .scrollTargetLayout()
             .onChange(of: focusIndex) { _, index in
                 guard items.indices.contains(index) else { return }
                 proxy.scrollTo(items[index].id)

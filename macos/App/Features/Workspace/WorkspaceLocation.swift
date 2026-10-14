@@ -63,12 +63,16 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
     /// Denormalized Source title for composer breadcrumbs (`Evidence graph for {source}`);
     /// ignored for navigation identity. Empty/legacy history falls back to the bare graph title.
     var sourceTitle: String?
+    /// Id of the row at the top of a list place (Sources, People, Events, Places).
+    /// Ignored for navigation identity, like `title` and `ref`. Written when leaving
+    /// the list. A missing key in older history files decodes as nil, which opens at the top.
+    var listScrollAnchor: String?
 
     enum CodingKeys: String, CodingKey {
         case section, sourceId, fieldId, typeId, subjectId, citationId, artifactId, observationId
         case connectFromSubjectId, connectToSubjectId, connectBridgeTypeKey
         case subjectTypeKey, propertyId, entityId
-        case sourceSurface, promoteAll, ref, title, sourceTitle
+        case sourceSurface, promoteAll, ref, title, sourceTitle, listScrollAnchor
     }
 
     init(
@@ -90,7 +94,8 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
         promoteAll: Bool = false,
         ref: String? = nil,
         title: String? = nil,
-        sourceTitle: String? = nil
+        sourceTitle: String? = nil,
+        listScrollAnchor: String? = nil
     ) {
         self.section = section
         self.sourceId = Self.nilIfEmpty(sourceId)
@@ -111,6 +116,7 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
         self.ref = Self.nilIfEmpty(ref)
         self.title = Self.nilIfEmpty(title)
         self.sourceTitle = Self.nilIfEmpty(sourceTitle)
+        self.listScrollAnchor = Self.nilIfEmpty(listScrollAnchor)
     }
 
     init(from decoder: Decoder) throws {
@@ -134,6 +140,7 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
         ref = Self.nilIfEmpty(try container.decodeIfPresent(String.self, forKey: .ref))
         title = Self.nilIfEmpty(try container.decodeIfPresent(String.self, forKey: .title))
         sourceTitle = Self.nilIfEmpty(try container.decodeIfPresent(String.self, forKey: .sourceTitle))
+        listScrollAnchor = Self.nilIfEmpty(try container.decodeIfPresent(String.self, forKey: .listScrollAnchor))
     }
 
     /// Section list root (no deep id).
@@ -156,7 +163,28 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
         WorkspaceLocation(section: .places, entityId: entityId, ref: ref, title: title)
     }
 
+    /// The Sources, People, Events, or Places list. Detail places are not lists.
+    var isListRoot: Bool {
+        switch section {
+        case .sources:
+            return sourceId == nil
+        case .persons, .events, .places:
+            return entityId == nil
+        case .sourceTypes, .metadata, .properties:
+            return false
+        }
+    }
+
+    /// Same place, with the list's top row replaced. Nil opens at the top.
+    /// Identity is unchanged, so `go(to:)` coalesces instead of pushing.
+    func withListScrollAnchor(_ anchor: String?) -> WorkspaceLocation {
+        var copy = self
+        copy.listScrollAnchor = Self.nilIfEmpty(anchor)
+        return copy
+    }
+
     /// Identity used for coalesce / equality of navigation — deep ids only.
+    /// `ref`, `title`, `sourceTitle`, and `listScrollAnchor` are not identity.
     static func == (lhs: WorkspaceLocation, rhs: WorkspaceLocation) -> Bool {
         lhs.section == rhs.section
             && lhs.sourceId == rhs.sourceId

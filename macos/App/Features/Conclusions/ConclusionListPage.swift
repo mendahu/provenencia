@@ -164,5 +164,20 @@ private struct ConclusionListBody<Kind: ConclusionListKind>: View {
                 )
             }
         }
+        .modifier(ListScrollAnchorModifier(
+            anchor: navigation.currentLocation.listScrollAnchor,
+            rowIDs: scrollRowIDs,
+            isLoaded: scrollIsLoaded
+        ))
+    }
+
+    private var scrollIsLoaded: Bool {
+        if case .loading = presentation { return false }
+        return true
+    }
+
+    private var scrollRowIDs: [String] {
+        guard case .rows(let rows, _) = presentation else { return [] }
+        return rows.compactMap { $0.id as? String }
     }
 }

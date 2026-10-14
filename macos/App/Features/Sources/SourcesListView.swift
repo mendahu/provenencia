@@ -124,6 +124,12 @@ private struct SourcesListContent: View {
                 model.syncCatalogCounts()
             }
         }
+        .onChange(of: model.sort) { _, _ in
+            navigation.go(to: navigation.currentLocation.withListScrollAnchor(nil))
+        }
+        .onChange(of: model.typeFilterID) { _, _ in
+            navigation.go(to: navigation.currentLocation.withListScrollAnchor(nil))
+        }
         .accessibilityIdentifier("sources")
     }
 
@@ -251,6 +257,7 @@ private struct SourcesListContent: View {
                         ForEach(model.visibleSources) { source in
                             if let progressHandle {
                                 SourcesSplitRowProgress(source: source, model: model, handle: progressHandle)
+                                    .id(source.id)
                             } else {
                                 SourcesSplitRow(
                                     source: source,
@@ -267,13 +274,20 @@ private struct SourcesListContent: View {
                                         }
                                     }
                                 )
+                                .id(source.id)
                             }
                         }
                     } header: {
                         captionBand
                     }
                 }
+                .scrollTargetLayout()
             }
+            .modifier(ListScrollAnchorModifier(
+                anchor: navigation.currentLocation.listScrollAnchor,
+                rowIDs: model.visibleSources.map(\.id),
+                isLoaded: true
+            ))
             .accessibilityElement(children: .contain)
             .accessibilityLabel(Text(L10n.Sources.listAccessibilityLabel))
             .accessibilityIdentifier("sources.list")
