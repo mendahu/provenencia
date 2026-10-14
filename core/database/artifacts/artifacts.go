@@ -135,18 +135,18 @@ func Create(tx *database.Tx, userID []byte, in CreateInput) (Artifact, []rowchan
 		fields["description"] = rowchange.FieldDiff{Old: nil, New: in.Description}
 	}
 	return Artifact{
-			ID:          append([]byte(nil), idBytes...),
-			Ref:         artRef,
-			SourceID:    append([]byte(nil), in.SourceID...),
-			FileID:      copyBlob(in.FileID),
-			Label:       in.Label,
-			Description: in.Description,
-		}, []rowchange.Change{{
-			EntityType: "artifact",
-			EntityID:   append([]byte(nil), idBytes...),
-			Action:     rowchange.ActionCreate,
-			Fields:     fields,
-		}}, nil
+		ID:          append([]byte(nil), idBytes...),
+		Ref:         artRef,
+		SourceID:    append([]byte(nil), in.SourceID...),
+		FileID:      copyBlob(in.FileID),
+		Label:       in.Label,
+		Description: in.Description,
+	}, []rowchange.Change{{
+		EntityType: "artifact",
+		EntityID:   append([]byte(nil), idBytes...),
+		Action:     rowchange.ActionCreate,
+		Fields:     fields,
+	}}, nil
 }
 
 // Update patches label, description, and/or first-attach file_id. The caller

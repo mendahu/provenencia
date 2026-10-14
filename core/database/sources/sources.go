@@ -142,18 +142,18 @@ func Create(tx *database.Tx, userID []byte, in CreateInput) (Source, []rowchange
 		fields["description"] = rowchange.FieldDiff{Old: nil, New: in.Description}
 	}
 	return Source{
-			ID:           append([]byte(nil), idBytes...),
-			Ref:          sourceRef,
-			SourceTypeID: append([]byte(nil), in.SourceTypeID...),
-			Title:        in.Title,
-			Description:  in.Description,
-			CoverMode:    CoverModeTypeIcon,
-		}, []rowchange.Change{{
-			EntityType: "source",
-			EntityID:   append([]byte(nil), idBytes...),
-			Action:     rowchange.ActionCreate,
-			Fields:     fields,
-		}}, nil
+		ID:           append([]byte(nil), idBytes...),
+		Ref:          sourceRef,
+		SourceTypeID: append([]byte(nil), in.SourceTypeID...),
+		Title:        in.Title,
+		Description:  in.Description,
+		CoverMode:    CoverModeTypeIcon,
+	}, []rowchange.Change{{
+		EntityType: "source",
+		EntityID:   append([]byte(nil), idBytes...),
+		Action:     rowchange.ActionCreate,
+		Fields:     fields,
+	}}, nil
 }
 
 // NormalizeCover checks a cover choice. Artifact mode ensures a thumbnail,

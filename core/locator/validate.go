@@ -23,8 +23,8 @@ const (
 )
 
 type document struct {
-	Version   int             `json:"version"`
-	Selectors []selectorRaw   `json:"selectors"`
+	Version   int           `json:"version"`
+	Selectors []selectorRaw `json:"selectors"`
 }
 
 type selectorRaw struct {

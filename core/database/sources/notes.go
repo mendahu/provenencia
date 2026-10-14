@@ -93,20 +93,20 @@ func AddNote(tx *database.Tx, userID, sourceID []byte, body string) (Note, []row
 		return Note{}, nil, mapConstraint(err)
 	}
 	return Note{
-			ID:        append([]byte(nil), idBytes...),
-			SourceID:  append([]byte(nil), sourceID...),
-			Body:      body,
-			CreatedAt: project.NowUTC(),
-		}, []rowchange.Change{{
-			EntityType: "source_note",
-			EntityID:   append([]byte(nil), idBytes...),
-			Action:     rowchange.ActionCreate,
-			Fields: map[string]rowchange.FieldDiff{
-				"id":        {Old: nil, New: id.String()},
-				"source_id": {Old: nil, New: uuidString(sourceID)},
-				"body":      {Old: nil, New: body},
-			},
-		}}, nil
+		ID:        append([]byte(nil), idBytes...),
+		SourceID:  append([]byte(nil), sourceID...),
+		Body:      body,
+		CreatedAt: project.NowUTC(),
+	}, []rowchange.Change{{
+		EntityType: "source_note",
+		EntityID:   append([]byte(nil), idBytes...),
+		Action:     rowchange.ActionCreate,
+		Fields: map[string]rowchange.FieldDiff{
+			"id":        {Old: nil, New: id.String()},
+			"source_id": {Old: nil, New: uuidString(sourceID)},
+			"body":      {Old: nil, New: body},
+		},
+	}}, nil
 }
 
 // UpdateNote changes body. An unchanged body returns no changes.

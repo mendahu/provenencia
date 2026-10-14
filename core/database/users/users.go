@@ -15,10 +15,10 @@ const (
 		ON CONFLICT(id) DO UPDATE SET
 			display_name = excluded.display_name,
 			ref = excluded.ref`
-	sqlLookup = `SELECT display_name, COALESCE(ref, '') FROM users WHERE id = ?`
-	sqlList   = `SELECT id, display_name, COALESCE(ref, '') FROM users ORDER BY display_name COLLATE NOCASE, id`
+	sqlLookup         = `SELECT display_name, COALESCE(ref, '') FROM users WHERE id = ?`
+	sqlList           = `SELECT id, display_name, COALESCE(ref, '') FROM users ORDER BY display_name COLLATE NOCASE, id`
 	sqlListMissingRef = `SELECT id, display_name FROM users WHERE ref IS NULL OR ref = ''`
-	sqlSetRef = `UPDATE users SET ref = ? WHERE id = ?`
+	sqlSetRef         = `UPDATE users SET ref = ? WHERE id = ?`
 )
 
 // User is one catalog contributor row.
