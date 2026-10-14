@@ -459,7 +459,6 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 | **Testable** | Sidebar, toolbar, an Event card, the Events list empty state, and an omnibar Event hit show the same Event mark. People and Places match between sidebar and card. Sources in the sidebar still uses its symbol. |
 | **Depends on** | S10-D16, S10-D7 |
 
-
 #### S10-49 — Glyph consolidation
 
 **Landed 2026-10-14** in [#394](https://github.com/mendahu/provenencia/pull/394). See [`completed.md`](completed.md).
@@ -470,6 +469,7 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 | **Out** | New marks. `ConclusionListKind.mark` and detail-view literals. Any visual change beyond the two empty states. |
 | **Testable** | An empty Source types list shows the tag symbol; an empty Metadata list shows the list symbol. Every other thumbnail, omnibar lead, and Properties card looks as before. |
 | **Depends on** | S10-19 |
+
 #### S10-20 — Open file and box-select
 
 **Brief:** [S10-D6](design/S10-D6-evidence-graph.md) (EG-1…EG-7). Unpromote is drawn on that board and ships in S10-44.

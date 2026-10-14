@@ -2,7 +2,7 @@
 
 ## S10-49 — Glyph consolidation
 
-**Landed 2026-10-14** in [#394](https://github.com/mendahu/provenencia/pull/394). One `PVMarkKey(subjectTypeKey:)` rule maps a subject type to its mark, and Go and Swift tests pin it to the registry's `IconSymbol`. Thumbnails, the omnibar lead, and the Properties type cards take one `PVGlyph` instead of a mark and a symbol. An empty Source types list now shows the tag symbol and an empty Metadata list the list symbol, matching their sidebar rows. Every other thumbnail looks as before.
+**Landed 2026-10-14** in [#394](https://github.com/mendahu/provenencia/pull/394). One `PVMarkKey(subjectTypeKey:)` rule maps a subject type to its mark, and Go and Swift tests pin it to the registry's `IconSymbol`. Thumbnails, the omnibar lead, and the Properties type cards take one `PVGlyph` instead of a mark and a symbol. An empty Source types list now shows the tag symbol and an empty Metadata list the list symbol, matching their sidebar rows. Every other thumbnail looks as before. Omnibar Source-type and Metadata leads match their sidebar icons, and Properties palette order and bridge labels read the registry presentation.
 
 ## S10-19 — Event mark and sidebar icons
 
