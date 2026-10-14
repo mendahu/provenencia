@@ -210,6 +210,7 @@ SLICE 5 — Artifacts and multi-select
   ✎ S10-D5 ──▶ S10-18  Page drop opens Add Artifact; artifact cards
   ✎ S10-D16 ──▶
   ✎ S10-D7 ──▶ S10-19  Event mark, then sidebar and toolbar. Does not wait on S10-18 — done, #393
+  S10-49  Glyph consolidation: one subject-mark rule, PVGlyph in thumbnails, omnibar, Properties (after S10-19)
   ✎ S10-D6 ──▶ S10-20  File select, Open, and box-select (after S10-01 and S10-03)
   Check: drop a file on the page and Add Artifact opens with that file
          chosen. Name it and confirm: the card is there. Cancel: it is not.
@@ -458,6 +459,17 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 | **Testable** | Sidebar, toolbar, an Event card, the Events list empty state, and an omnibar Event hit show the same Event mark. People and Places match between sidebar and card. Sources in the sidebar still uses its symbol. |
 | **Depends on** | S10-D16, S10-D7 |
 
+
+#### S10-49 — Glyph consolidation
+
+**Plan:** [`prs/S10-49-glyph-consolidation.md`](prs/S10-49-glyph-consolidation.md) — Planned. The S10-19 review follow-ups, in one PR (user, 2026-10-14).
+
+| | |
+| --- | --- |
+| **In** | One `PVMarkKey(subjectTypeKey:)` rule replaces the per-feature subject-type → mark switches and string keys, pinned to the registry's `IconSymbol` by a Go test. `PVThumbnail.Content`, the omnibar lead, and the Properties type card take a `PVGlyph`. The Source types and Metadata empty states use their sidebar glyph. The S10-19 section-glyph test is trimmed to literal keys. |
+| **Out** | New marks. `ConclusionListKind.mark` and detail-view literals. Any visual change beyond the two empty states. |
+| **Testable** | An empty Source types list shows the tag symbol; an empty Metadata list shows the list symbol. Every other thumbnail, omnibar lead, and Properties card looks as before. |
+| **Depends on** | S10-19 |
 #### S10-20 — Open file and box-select
 
 **Brief:** [S10-D6](design/S10-D6-evidence-graph.md) (EG-1…EG-7). Unpromote is drawn on that board and ships in S10-44.
