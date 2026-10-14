@@ -69,4 +69,4 @@ Lenses: conformance, user experience, security, performance. Scope `1984251c...d
 No Fix plan 2.
 
 ## Result
-Gate PASS · CI pending · open: none · follow-ups: UX-1, MNT-1, MNT-2, MNT-3, MNT-5, MNT-6, UX-3, UX-4, UX-5, SEC-2, SEC-3, PRF-2, PRF-3 · to user: —
+Gate PASS · CI green (`test` pass; `localizable` skipped on the ship-log commit) · open: none · follow-ups: UX-1, MNT-1, MNT-2, MNT-3, MNT-5, MNT-6, UX-3, UX-4, UX-5, SEC-2, SEC-3, PRF-2, PRF-3 · to user: —
