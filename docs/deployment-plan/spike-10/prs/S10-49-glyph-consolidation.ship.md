@@ -1,7 +1,7 @@
 # Ship log — S10-49 Glyph consolidation
 
 **Plan:** [`S10-49-glyph-consolidation.md`](S10-49-glyph-consolidation.md) · **Branch:** `s10-49-glyph-consolidation` · **PR:** #394
-**State:** ready
+**State:** fixing 1 (user-requested follow-ups)
 
 ## Before start
 
@@ -34,3 +34,48 @@ No Fix-now finding, so there is no Fix plan 1 and no round 2.
 
 ## Result
 Gate PASS at `2e3637a3`. CI: see the PR. Open: none. Follow-ups: MNT-1 (`PVThumbnail` private `State` with associated values). To user: the manual check in plan §10.
+
+## Fix round 1 — user-requested follow-ups (2026-10-14)
+
+After the PR was marked ready, the user asked to fold the follow-ups into this PR ("implement those follow-ups on this same PR"). That covers MNT-1, the omnibar symbol drift, and the per-type switches the archived idea lists as leftovers. The user's request approves the omnibar change, which is visible: Source-type hits with no icon key show the tag symbol, and Metadata field hits show the list symbol, matching their sidebar rows. `FakeStore.syntheticPresentation` stays: it is the test double that stands in for the Go registry, so its table is the fake's data, not a copy to remove.
+
+### Fix plan 1
+
+**F-1 — `PVThumbnail` decides its glyph once** (from MNT-1)
+Files: `macos/App/DesignSystem/Components/Thumbnail/PVThumbnail.swift`. Skill: `add-ui-component`.
+Do: give the private `State` associated values (`case mark(PVMarkKey)`, `case symbol(PVSymbol)`, plus the existing `image`, `empty`, `loading`). `state` maps `content.glyph` once. `body` and `accessibilityLabel` draw and label from the matched value, with no `if case … = content.glyph` re-match and no `state == .markGlyph` guard. Sizes, inks, the decorative rule, and the label order stay exactly as they are (D-4). `isFilled` stays true for image, mark, and symbol.
+Check: `rg -n "content\.glyph" macos/App/DesignSystem/Components/Thumbnail/PVThumbnail.swift` prints one line (the `state` mapping). Build succeeds. `ThumbnailCacheTests` pass.
+
+**F-2 — Omnibar lead symbols match the sidebar** (archived-idea leftover; user approved)
+Files: `macos/App/Features/Workspace/OmnibarHitPresentation.swift`, `macos/ProvenenciaTests/OmnibarResultsModelTests.swift`.
+Do: in `leadThumbnail(for:)`, `"source_type"` with an empty `iconKey` → `Content(glyph: WorkspaceSection.sourceTypes.glyph)`, and `"metadata_field"` → `Content(glyph: WorkspaceSection.metadata.glyph)`. A `source_type` hit with an icon key keeps its own mark and label.
+Failing test first: change the two expectations at `OmnibarResultsModelTests.swift:170–171` to `.symbol(.tag)` and `.symbol(.list)`, run them red, then fix.
+Check: `OmnibarResultsModelTests` pass.
+
+**F-3 — Properties reads palette order and bridge role from the presentation** (archived-idea leftover)
+Files: `macos/App/Features/Catalog/SubjectTypeChrome.swift`, `macos/App/Features/Properties/PropertiesSnapshot.swift`, `macos/App/Features/Properties/PropertiesView.swift`, plus tests in `macos/ProvenenciaTests/PropertiesModelTests.swift`.
+Do:
+- Delete `PropertiesTypeChrome.sortIndex`. `PropertiesSnapshot.typesInPaletteOrder` sorts by `presentationsByKey[key]?.paletteSort ?? Int.max`, then by key for ties.
+- Replace `showsBridgeLabel(typeKey:)` with `showsBridgeLabel(presentation: CatalogSubjectTypePresentation?) -> Bool`, true when `presentation?.role == "bridge"`.
+- `ink(typeKey:presentation:)` mutes on that same check. Its `typeKey` fallback, used when no presentation is loaded (`EvidenceSubjectKindStyle.forKind`), stays.
+- `PropertiesView.swift:179` passes `presentation`.
+
+Failing test first: a `PropertiesModelTests` case that builds a snapshot whose `paletteSort` order differs from alphabetical, and expects `typesInPaletteOrder` in palette order. Another case expects `showsBridgeLabel(presentation:)` true only for role `bridge`, so `source` (role `reification`) is false.
+Check: `rg -n "sortIndex|showsBridgeLabel\(typeKey" macos` prints nothing. `PropertiesModelTests` pass.
+
+**F-4 — Composer group order from the typed kind** (archived-idea leftover)
+Files: `macos/App/Features/CitationComposer/CitationComposerAuthoring.swift`.
+Do: `typeRank(_:)` returns `EvidencePrimaryKind(rawValue: key).flatMap { EvidencePrimaryKind.allCases.firstIndex(of: $0) } ?? EvidencePrimaryKind.allCases.count`. The order stays Person, Event, Place, then everything else.
+Check: build succeeds, and the composer tests pass.
+
+**F-5 — Docs**
+Files: `docs/ideas/archive/glyph-consolidation.md`, `docs/deployment-plan/spike-10/deployment-plan.md`, `docs/deployment-plan/spike-10/prs/S10-49-glyph-consolidation.md`, `docs/deployment-plan/spike-10/completed.md`.
+Do:
+- Archived idea: rewrite the two body sections in the past tense (MNT-3). Change the Leftovers section to say what F-1 to F-4 did. Keep one leftover: `FakeStore.syntheticPresentation` stays, as the Go registry's test double.
+- Map: put one blank line between the S10-49 table and `#### S10-20`, and drop the extra blank line above `#### S10-49` (CON-2).
+- Plan Landed note: add one line for this fix round.
+- `completed.md` S10-49 paragraph: add one sentence. Omnibar Source-type and Metadata leads match their sidebar icons, and Properties palette order and bridge labels read the registry presentation.
+
+Check: `python3 scripts/check-plan-docs.py docs/deployment-plan/spike-10/prs/S10-49-glyph-consolidation.md` reports no errors.
+
+Gate: `scripts/check-pr.sh` PASS.
