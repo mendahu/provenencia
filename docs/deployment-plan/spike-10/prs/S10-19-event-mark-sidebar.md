@@ -1,9 +1,9 @@
 # S10-19 — Event mark and sidebar icons
 
-**Status:** Planned
+**Status:** Landed in [#393](https://github.com/mendahu/provenencia/pull/393) (2026-10-14)
 **Spike / slice:** Spike 10 · Slice 5 — Artifacts and multi-select
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#s10-19--event-mark-and-sidebar-icons)
-**Brief:** [S10-D16](../design/S10-D16-event-mark.md) (EM-1 to EM-4) and [S10-D7](../design/S10-D7-sidebar-marks.md) (WS-1 to WS-5), both boards agreed 2026-10-14
+**Brief:** [S10-D16](../design/archive/S10-D16-event-mark.md) (EM-1 to EM-4) and [S10-D7](../design/archive/S10-D7-sidebar-marks.md) (WS-1 to WS-5), both boards agreed 2026-10-14
 **Board:** S10-D16 is the Claude Design project *Provenencia Design System*, id 0f6c1f29-8408-4735-b114-5ae4c4c18445 (https://claude.ai/design/p/0f6c1f29-8408-4735-b114-5ae4c4c18445). STEP-1 reads the Event asset from it. S10-D7 is the project *Main Application Layout*, id fb7b3e33-1683-4961-aec1-90e6e19f8214 (https://claude.ai/design/p/fb7b3e33-1683-4961-aec1-90e6e19f8214), file *Workspace Chrome.dc.html*, Part 3, Frames 12–16. §6 macOS describes every frame in words. The implementer needs the boards only for STEP-1.
 **Depends on:** S10-D16, S10-D7
 **Blocks:** —
@@ -381,3 +381,7 @@ None.
 
 **Title:** S10-19 — Event mark and sidebar icons
 **Body:** objective in one sentence; what shipped against US-1 to US-4; AC evidence (T-1 to T-3 and the manual check lines, each marked run or "not run — for the reviewer"); deviations from the plan; `Plan: docs/deployment-plan/spike-10/prs/S10-19-event-mark-sidebar.md`.
+
+## Landed
+
+No differences from this plan. The base had moved to `c13e3d9d` (S10-40 landed); the section 4 rows still held. The manual check was not run by the implementer; it is for the reviewer.

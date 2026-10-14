@@ -1,13 +1,15 @@
 # S10-D7 — Sidebar marks
 
+**Landed 2026-10-14** in [#393](https://github.com/mendahu/provenencia/pull/393). The sections below are the original board prompt.
+
 **Kind:** Claude Design board (**enhancement** of the workspace shell)
 **Spike:** Provenencia Spike 10 (dogfood UX)
 **View:** Workspace shell — sidebar and the toolbar section icon
 **Implements later as:** PR **S10-19**, together with [S10-D16](S10-D16-event-mark.md)
 **Depends on:** S10-D16 (the Event glyph this board instances)
-**Related:** [`../deployment-plan.md`](../deployment-plan.md) (S10-19). The Event artwork is drawn on the design-system board, **S10-D16**. List empty states for People, Events, and Places use the same marks in this PR. Later list briefs (S10-D9…D11) do not redraw that icon.
-**Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)
-**Skill:** [`add-design-brief`](../../../../.agents/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md)
+**Related:** [`../deployment-plan.md`](../../deployment-plan.md) (S10-19). The Event artwork is drawn on the design-system board, **S10-D16**. List empty states for People, Events, and Places use the same marks in this PR. Later list briefs (S10-D9…D11) do not redraw that icon.
+**Design system layers:** [`docs/design-system-layers.md`](../../../../design-system-layers.md)
+**Skill:** [`add-design-brief`](../../../../../.agents/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../../.agents/skills/add-ui-component/SKILL.md)
 
 Paste this entire document into Claude Design as the requirements for one board. This file is the whole prompt.
 
@@ -139,5 +141,5 @@ This table is **binding**. Instance the Ship kit rows. Paths from `macos/App/` u
 ## 7. Handoff
 
 1. Archive this brief under `design/archive/` when the board is agreed.
-2. Record it in [`../completed.md`](../completed.md).
+2. Record it in [`../completed.md`](../../completed.md).
 3. Implement **S10-19** against this board and [S10-D16](S10-D16-event-mark.md). Design the mark first. This board instances it.
