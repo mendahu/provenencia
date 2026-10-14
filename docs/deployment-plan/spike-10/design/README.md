@@ -10,9 +10,10 @@ Brief files are written **just before** the PR they gate, not up front. This ind
 
 | Step | View | Gates | Notes |
 | --- | --- | --- | --- |
-| S10-D5 | Source page — Artifacts | **S10-18** | Drop target and open-on-collapsed-row |
-| S10-D6 | Evidence graph | **S10-18** (header open) | Also specifies box-select, which ships in **S10-20**, and Unpromote on the promoted card, which ships in **S10-44**. Hit boxes, the tiled grid, canvas growth, and camera restore are not this board |
-| S10-D7 | Sidebar | **S10-19** | Subject marks for People, Events, Places, including the new Event mark. The toolbar section icon is the same slot and ships in S10-19 |
+| [S10-D5](S10-D5-source-artifacts.md) | Source page — Artifacts | **S10-18** | Page drop opens Add Artifact with the file chosen. Accordion becomes a card grid |
+| [S10-D6](S10-D6-evidence-graph.md) | Evidence graph | **S10-20** | File select and Open (system app), plus box-select. Also specifies Unpromote on the promoted card, which ships in **S10-44**. Hit boxes, the tiled grid, canvas growth, and camera restore are not this board |
+| [S10-D16](S10-D16-event-mark.md) | Design system — Event mark | **S10-19** | Replaces the `subject_event` hourglass. Design this before S10-D7. Cards, omnibar, Promote, and Properties pick up the asset with no board of their own |
+| [S10-D7](S10-D7-sidebar-marks.md) | Workspace shell | **S10-19** | Sidebar People, Events, and Places, and the toolbar section icon, instance the subject marks. Depends on S10-D16. The three list empty states use the same marks |
 | S10-D8 | Sources list | **S10-41** | The page: last updated, evidence-status filter, text search, persisted sort and filters. Session scroll ships in the same PR and has no chrome of its own. Persons, Events, and Places do not get those controls |
 | S10-D9 | Persons list | **S10-22** | Last updated, same cell as Events and Places. The existing thumb becomes a likeness crop in **S10-35**, then the preferred portrait in **S10-39** |
 | S10-D10 | Events list | **S10-22** | |
