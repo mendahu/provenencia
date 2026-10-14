@@ -1,7 +1,7 @@
 # Ship log — S10-49 Glyph consolidation
 
 **Plan:** [`S10-49-glyph-consolidation.md`](S10-49-glyph-consolidation.md) · **Branch:** `s10-49-glyph-consolidation` · **PR:** #394
-**State:** fixing 2
+**State:** ready
 
 ## Before start
 
@@ -97,3 +97,9 @@ Files: `core/database/subjectvocab/registry.go`, `core/database/subjectvocab/sub
 Failing test first: `TestAllTypesPaletteSortFollowsBoardOrder` *(new, table-driven)* in `subjectvocab_test.go`. Sorting `AllTypes()` by `PaletteSort` gives `person, event, place, relationship, participation, location, place_relationship, source`, and no two types share a `PaletteSort`. Run it red: today six types tie at 0.
 Do: in `registry.go`, set `PaletteSort: 3` on relationship, `4` on participation, `5` on location, `6` on place_relationship, and `7` on source. This matches the deleted `sortIndex` and `FakeStore.syntheticPresentation`. No migration: `PaletteSort` comes from the compiled seed, not a column. `PlaceableTypes()` keeps only roots, so it is unaffected. In `PropertiesModelTests`, add a case that ties two non-root types at the same `paletteSort` and expects the key tie-break, so the Swift sort's behaviour on ties is pinned.
 Check: `CGO_ENABLED=1 go test -tags fts5 ./core/database/subjectvocab/... ./api/ffi/...` passes. `PropertiesModelTests` pass. `scripts/check-pr.sh` PASS.
+
+## Round 2 — fix
+Head `d734c463`. Gate PASS, run by the orchestrator. F-6 is done. `TestAllTypesPaletteSortFollowsBoardOrder` was seen red first (six types tied at 0), then green. The registry sets `PaletteSort` 3–7 on the bridges and source. `PropertiesModelTests.typesInPaletteOrderBreaksTiesByKey` pins the Swift tie-break. Two review rounds are done, so there is no round 3.
+
+## Result (after the user-requested follow-ups)
+Gate PASS at `d734c463`. CI: see the PR. Open: none. Follow-ups: none from review. MNT-2 and the round-2 MNT notes are logged. To user: the manual check in plan §10, plus the Properties type strip order (Person, Event, Place, Relationship, Participation, Location, Place relationship, Source) and the omnibar Source-type and Metadata lead icons.
