@@ -8,7 +8,6 @@ enum PlacesList: ConclusionListKind {
     static func key(project: ProjectKey) -> CatalogQueryKey { .placesList(project: project) }
     static var title: LocalizedStringResource { L10n.Workspace.placesTitle }
     static var identifierRoot: String { "places" }
-    static var emptyIcon: PVSymbol { .mapPin }
     static var emptyTitle: LocalizedStringResource { L10n.Workspace.placesEmptyTitle }
     static var emptyMessage: LocalizedStringResource { L10n.Workspace.placesEmptyMessage }
     static func countMeta(_ count: Int) -> String { L10n.Workspace.placeCount(count) }

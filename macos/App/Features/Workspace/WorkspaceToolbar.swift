@@ -424,7 +424,7 @@ private struct HistoryJumpRow: Identifiable {
 
     var id: Int { index }
 
-    var icon: PVSymbol { location.section.icon }
+    var glyph: PVGlyph { location.section.glyph }
 
     var rootLabel: String {
         L10n.string(location.section.label)
@@ -532,7 +532,7 @@ private struct HistoryJumpMenuPanel: View {
                     onSelect(item.index)
                 } label: {
                     HStack(alignment: .center, spacing: PVSpacing.space5) {
-                        PVIcon(item.icon, size: 15)
+                        PVGlyphView(item.glyph, size: 15)
                             .foregroundStyle(PVColor.textSecondary)
                             .frame(width: 15)
                         HStack(alignment: .firstTextBaseline, spacing: PVSpacing.space3) {

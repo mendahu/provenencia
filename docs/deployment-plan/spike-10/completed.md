@@ -1,5 +1,9 @@
 # Spike 10 — completed
 
+## S10-19 — Event mark and sidebar icons
+
+**Landed 2026-10-14** in [#393](https://github.com/mendahu/provenencia/pull/393). The Event mark is a calendar, not an hourglass, on cards, omnibar hits, Promote, and Properties. The sidebar rows for Persons, Events, and Places draw the same marks as the cards, at 15pt and 16pt in the collapsed rail, in the row's ink. The Back and Forward history rows show the same marks beside their section, and an empty Persons, Events, or Places list shows its kind's mark. One `PVGlyph` value names a symbol or a mark, and the sidebar item, the history row, and the empty state carry it.
+
 ## S10-40 — List scroll position
 
 **Landed 2026-10-14** in [#392](https://github.com/mendahu/provenencia/pull/392). People, Events, Places, and Sources remember the row at the top of the list on that history entry. Back, Forward, a jump, and relaunch return to it. Opening the list from the sidebar starts at the top. Changing Sources sort or type filter returns the list to the top. A row that is gone stays at the top.

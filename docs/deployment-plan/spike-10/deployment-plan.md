@@ -109,7 +109,7 @@ These are the calls for this spike. The questions at the bottom are answered; no
 - **Enter follows the buttons on a single-line inline edit.** Save when that control is enabled. When it is not, Enter leaves the edit, the same as Cancel. Escape cancels. A multiline field still takes Enter as a newline. Landed in S10-08.
 - **The Sources list is one page.** Sort, type filter, evidence status, and text search persist per project and user and restore together when that place is opened again, including after relaunch. People, Events, and Places have none of those controls. Last updated on a Sources row uses the revision Sources already store. That cell, the filters, the search field, and the persisted settings are S10-41, from S10-D8. They are not a persistence PR ahead of the brief. List scroll is the history-entry anchor in S10-40.
 - **Last updated** is an audit scope, not a timestamp column. Sources already store `UpdatedRevision` (`scope_type = source`) and can show it once the row is designed. People, Events, and Places have no scope today (`canonical_entity` is `noScope` in `core/database/audit/scopes.go`). S10-21 adds a `canonical_entity` scope: Identity Claim writes, and Observation writes on a Subject that is a member, so editing evidence moves the handle's revision. Display is relative or absolute in the briefs; the value is the revision's time.
-- **One Event mark.** Sidebar People / Events / Places use SF Symbols (`person`, `calendar`, `mapPin` on `WorkspaceSection`). Cards, lists, omnibar hits, Promote, and Properties use `PVMark` (`subject_person`, `subject_event`, `subject_place`). The Event asset is the hourglass. S10-D16 replaces that asset with a calendar or datebook on the design-system board. S10-D7 instances the subject marks in the sidebar and the toolbar, which reads `WorkspaceSection.icon`, and in the three list empty states. Every existing `PVMark` call site picks up the new asset with no extra brief.
+- **One Event mark.** The Event mark is the S10-D16 calendar. Cards, lists, omnibar hits, Promote, Properties, the sidebar, the history menus, and the three list empty states draw `subject_person`, `subject_event`, and `subject_place` through `PVMark`. The shell reads `WorkspaceSection.glyph`. Landed in S10-19.
 - **Sex / gender styling** uses a seeded `gender` Property when the Person has one, otherwise `sex_at_birth`. The seed is `man`, `woman`, `non_binary` (labels Man, Woman, Non-binary). Researchers add further terms (`origin=user`), the same way they extend `role`. It is not product-locked, and there is no product `other` term. The page treatment recognizes the three seeded keys. A researcher-added term still counts as gender and wins over sex at birth; the brief draws that term without inventing a new color per key. Unknown, empty, and mixed (the reconciler already has a mixed state) stay neutral. `sex_at_birth` already appears as an ordinary field row when a record speaks to it (`PersonDetailContent`); this PR adds the page treatment and leaves that row in place.
 - **Composer performance** is already done. [#356](https://github.com/mendahu/provenencia/pull/356) builds a combo box's option list only while its menu is open, so a form of closed pickers does not lay out every choice. Checked 2026-10-12: a citation with 70 Observations opens quickly. No separate profile pass, and no split that shows the form while the file is still loading. S10-16 still has to stay comfortable at 20 Observations; that bar is the layout.
 - **List scroll is a field on the history entry.** Sources, People, Events, and Places store the id of the top row on that entry (`listScrollAnchor` in [`navigation-history.md`](../archive/spike-3/navigation-history.md)). It is ignored for identity, the same way `title` and `ref` are. The list reports the row as the researcher scrolls; the next Back, Forward, jump, or `go(to:)` writes it onto the entry being left, once. Showing that entry restores the row, including after relaunch, because history already restores the entry. A visit that does not pass an anchor (sidebar, omnibar) starts at the top and, when the place coalesces, clears the anchor on the current entry. Changing Sources sort or type filter on this visit clears the anchor and scrolls to the top. A row that is gone opens at the top. S10-41 does not add scroll. Status and search, when they land, clear the anchor the same way sort and type do.
@@ -145,8 +145,8 @@ These are the calls for this spike. The questions at the bottom are answered; no
 | **[S10-D4](design/archive/S10-D4-name-parts-modal.md)** | Name parts modal | **S10-17** | Split, fixed-width type control. Does not wait on S10-29 |
 | **[S10-D5](design/archive/S10-D5-source-artifacts.md)** | Source page — Artifacts | **S10-18** | Page drop opens Add Artifact. The list becomes cards |
 | **[S10-D6](design/S10-D6-evidence-graph.md)** | Evidence graph | **S10-20** file select, Open, and box-select | S10-44 Unpromote on the promoted card |
-| **[S10-D16](design/S10-D16-event-mark.md)** | Design system — Event mark | **S10-19** | The `subject_event` glyph. Sidebar placement is S10-D7 |
-| **[S10-D7](design/S10-D7-sidebar-marks.md)** | Workspace shell | **S10-19** | Sidebar and toolbar. Depends on S10-D16. Empty states use the same marks |
+| **[S10-D16](design/archive/S10-D16-event-mark.md)** | Design system — Event mark | **S10-19** | The `subject_event` glyph. Sidebar placement is S10-D7 |
+| **[S10-D7](design/archive/S10-D7-sidebar-marks.md)** | Workspace shell | **S10-19** | Sidebar and toolbar. Depends on S10-D16. Empty states use the same marks |
 | **S10-D8** | Sources list | **S10-41** | Last updated, evidence-status filter, text search, persisted sort and filters |
 | **S10-D9** | Persons list | **S10-22** | S10-35 fills the thumb with a likeness. S10-39 makes that thumb the preferred portrait |
 | **S10-D10** | Events list | **S10-22** | — |
@@ -209,7 +209,7 @@ SLICE 4 — Composer and the dialogs it opens
 SLICE 5 — Artifacts and multi-select
   ✎ S10-D5 ──▶ S10-18  Page drop opens Add Artifact; artifact cards
   ✎ S10-D16 ──▶
-  ✎ S10-D7 ──▶ S10-19  Event mark, then sidebar and toolbar. Does not wait on S10-18
+  ✎ S10-D7 ──▶ S10-19  Event mark, then sidebar and toolbar. Does not wait on S10-18 — done, #393
   ✎ S10-D6 ──▶ S10-20  File select, Open, and box-select (after S10-01 and S10-03)
   Check: drop a file on the page and Add Artifact opens with that file
          chosen. Name it and confirm: the card is there. Cancel: it is not.
@@ -447,9 +447,9 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 
 #### S10-19 — Event mark and sidebar icons
 
-**Briefs:** [S10-D16](design/S10-D16-event-mark.md) (the `subject_event` glyph) and [S10-D7](design/S10-D7-sidebar-marks.md) (sidebar, toolbar, empty states). Design the mark first.
+**Landed 2026-10-14** in [#393](https://github.com/mendahu/provenencia/pull/393). See [`completed.md`](completed.md).
 
-**Plan:** [`prs/S10-19-event-mark-sidebar.md`](prs/S10-19-event-mark-sidebar.md) — Planned. Both boards agreed 2026-10-14. The toolbar section icon is the Back / Forward history-menu rows.
+**Briefs:** [S10-D16](design/archive/S10-D16-event-mark.md) (the `subject_event` glyph) and [S10-D7](design/archive/S10-D7-sidebar-marks.md) (sidebar, toolbar, empty states).
 
 | | |
 | --- | --- |

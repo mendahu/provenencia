@@ -1,13 +1,15 @@
 # S10-D16 — Event mark
 
+**Landed 2026-10-14** in [#393](https://github.com/mendahu/provenencia/pull/393). The sections below are the original board prompt.
+
 **Kind:** Claude Design board (**rethink** of one kit mark)
 **Spike:** Provenencia Spike 10 (dogfood UX)
 **View:** Design system — the `subject_event` mark
 **Implements later as:** PR **S10-19**, together with [S10-D7](S10-D7-sidebar-marks.md)
 **Depends on:** —
-**Related:** [`../deployment-plan.md`](../deployment-plan.md) (S10-19). The sidebar, toolbar, and list empty states that use this mark are **S10-D7**. Cards, omnibar, Promote, and Properties already call `PVMark` and pick up the new artwork with no board of their own.
-**Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)
-**Skill:** [`add-design-brief`](../../../../.agents/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md)
+**Related:** [`../deployment-plan.md`](../../deployment-plan.md) (S10-19). The sidebar, toolbar, and list empty states that use this mark are **S10-D7**. Cards, omnibar, Promote, and Properties already call `PVMark` and pick up the new artwork with no board of their own.
+**Design system layers:** [`docs/design-system-layers.md`](../../../../design-system-layers.md)
+**Skill:** [`add-design-brief`](../../../../../.agents/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../../.agents/skills/add-ui-component/SKILL.md)
 
 Paste this entire document into Claude Design as the requirements for one board. This file is the whole prompt.
 
@@ -138,5 +140,5 @@ This table is **binding**. Paths from `macos/App/` unless noted.
 ## 7. Handoff
 
 1. Archive this brief under `design/archive/` when the board is agreed.
-2. Record it in [`../completed.md`](../completed.md).
+2. Record it in [`../completed.md`](../../completed.md).
 3. Implement **S10-19** against this board and [S10-D7](S10-D7-sidebar-marks.md). The shell instances this glyph. This board does not draw the shell.

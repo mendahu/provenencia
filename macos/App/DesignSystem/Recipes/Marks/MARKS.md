@@ -35,16 +35,17 @@ Mono band labels are composited in SwiftUI (Xcode’s SVG importer does not reso
 Fallback / new custom type default: `type_evidence` (`PVMarkKey.fallback` /
 `PVMarkKey.defaultTypeMark`).
 
-### `subject_*` (7)
+### `subject_*` (8)
 
 | Key | Role | Provenance |
 | --- | --- | --- |
 | `subject_person` | node | S6 Evidence graph board |
-| `subject_event` | node | S6 Evidence graph board |
+| `subject_event` | node | S10-D16 design-system board (calendar; replaced the S6 hourglass) |
 | `subject_place` | node | S6 Evidence graph board |
 | `subject_relationship` | bridge | S6 Evidence graph board |
 | `subject_participation` | bridge | S6 Evidence graph board |
 | `subject_location` | bridge | S6 Evidence graph board |
+| `subject_place_relationship` | bridge | S9-38 Place model |
 | `subject_source` | reification | S7-D2 Properties board, then Subject fields (`SourceMark`) |
 
 ## Tint / color
@@ -54,6 +55,8 @@ Assets are **monochrome templates**. Ink comes from SwiftUI environment /
 stays on the parent chrome (registry presentation tokens → `PVColor`) — never
 baked into mark assets. Do not enable multicolor “original” rendering.
 
+Beside SF Symbols in one column (sidebar, menus), a mark takes the same foreground as `PVIcon`, with no extra dim.
+
 ## Size
 
 | Preset | pt | Typical use |
@@ -62,6 +65,7 @@ baked into mark assets. Do not enable multicolor “original” rendering.
 | raw ~12–17 | — | Graph cards (~12–15), palette (~17), Properties strip (~14–16) |
 | `PVMarkSize.row` | 24 | List rows |
 | `PVMarkSize.tile` | 40 | Pickers / form tiles |
+| raw 15–16 / 20–26 | — | Shell chrome: sidebar row 15 (rail 16), history menu 15, empty state 26 (compact 20) |
 
 File mono labels show by default at ≥22pt (`showLabel:` overrides).
 
@@ -72,7 +76,12 @@ card title, Properties strip), pass `decorative: true`. When the mark is the
 sole affordance (picker cell), leave decorative false so `accessibilityName` is
 spoken.
 
+## Glyph
+
+`PVGlyph` names either a `PVSymbol` or a `PVMarkKey`; `PVGlyphView` draws it, decorative. A component whose icon slot can hold either takes a `PVGlyph` (`PVSidebarNav`, `PVEmptyState`).
+
 ## Board links (art SoT)
 
 - Evidence graph: https://claude.ai/design/p/2239e965-3b09-4c13-b85a-d54316ffd8fb?via=share
 - Properties, then Subject fields (source folio): https://claude.ai/design/p/6dceb4b9-d08a-40ad-a46f-430651ea9b3c?via=share
+- Design system (subject_event, S10-D16): https://claude.ai/design/p/0f6c1f29-8408-4735-b114-5ae4c4c18445
