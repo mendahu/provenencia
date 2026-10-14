@@ -223,27 +223,8 @@ private struct OmnibarHitRowView: View {
                 size: 40,
                 cornerRadius: PVRadius.sm
             )
-        case "person", "event", "place":
-            if let mark = OmnibarHitPresentation.leadMark(for: hit.kind) {
-                PVThumbnail(ConclusionListRow.thumbnail(mark: mark), size: 40)
-            }
-        case "source_type":
-            if hit.iconKey.isEmpty {
-                PVThumbnail(PVThumbnail.Content(glyph: .symbol(.library)), size: 40)
-            } else {
-                PVThumbnail(
-                    PVThumbnail.Content(
-                        glyph: .mark(PVMarkKey(catalogKey: hit.iconKey)),
-                        label: OmnibarHitPresentation.kindLabel(for: hit.kind)
-                    ),
-                    size: 40
-                )
-            }
         default:
-            PVThumbnail(
-                PVThumbnail.Content(glyph: .symbol(OmnibarHitPresentation.leadSymbol(for: hit.kind))),
-                size: 40
-            )
+            PVThumbnail(OmnibarHitPresentation.leadThumbnail(for: hit), size: 40)
         }
     }
 }

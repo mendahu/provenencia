@@ -96,22 +96,22 @@ enum OmnibarHitPresentation {
         }
     }
 
-    /// The list's subject mark, for the lead thumbnail. Nil for other kinds.
-    static func leadMark(for kind: String) -> PVMarkKey? {
-        switch kind {
-        case "person": .subjectPerson
-        case "event": .subjectEvent
-        case "place": .subjectPlace
-        default: nil
-        }
-    }
-
-    static func leadSymbol(for kind: String) -> PVSymbol {
-        switch kind {
-        case "source": .scrollText
-        case "source_type": .library
-        case "metadata_field": .tag
-        default: .search
+    /// The lead thumbnail for every kind but `source`, which the host draws
+    /// from the Source's own image.
+    static func leadThumbnail(for hit: CatalogSearchHit) -> PVThumbnail.Content {
+        switch hit.kind {
+        case "person", "event", "place":
+            return ConclusionListRow.thumbnail(mark: PVMarkKey(subjectTypeKey: hit.kind) ?? .fallback)
+        case "source_type":
+            if hit.iconKey.isEmpty { return PVThumbnail.Content(glyph: .symbol(.library)) }
+            return PVThumbnail.Content(
+                glyph: .mark(PVMarkKey(catalogKey: hit.iconKey)),
+                label: kindLabel(for: hit.kind)
+            )
+        case "metadata_field":
+            return PVThumbnail.Content(glyph: .symbol(.tag))
+        default:
+            return PVThumbnail.Content(glyph: .symbol(.search))
         }
     }
 }

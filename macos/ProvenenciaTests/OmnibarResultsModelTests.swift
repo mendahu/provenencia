@@ -162,11 +162,25 @@ struct OmnibarResultsModelTests {
                 == L10n.Workspace.omnibarMatchPlace(snippet: "Montreal")
         )
         #expect(L10n.string(OmnibarHitPresentation.kindLabel(for: "person")) == L10n.string(L10n.Workspace.omnibarKindPerson))
-        #expect(OmnibarHitPresentation.leadMark(for: "event") == .subjectEvent)
+        #expect(OmnibarHitPresentation.leadThumbnail(for: leadHit(kind: "event")).glyph == .mark(.subjectEvent))
+        #expect(OmnibarHitPresentation.leadThumbnail(for: leadHit(kind: "event")).label == nil)
+        let typeLead = OmnibarHitPresentation.leadThumbnail(for: leadHit(kind: "source_type", iconKey: "type_book"))
+        #expect(typeLead.glyph == .mark(.typeBook))
+        #expect(typeLead.label != nil)
+        #expect(OmnibarHitPresentation.leadThumbnail(for: leadHit(kind: "source_type")).glyph == .symbol(.library))
+        #expect(OmnibarHitPresentation.leadThumbnail(for: leadHit(kind: "metadata_field")).glyph == .symbol(.tag))
+        #expect(OmnibarHitPresentation.leadThumbnail(for: leadHit(kind: "widget")).glyph == .symbol(.search))
         #expect(OmnibarHitPresentation.refAccent(for: CatalogSearchHit(
             kind: "person", id: "p", ref: "PER-7KD45", title: "James Robins", subtitle: "",
             matchReason: "ref", location: .sectionRoot(.persons)
         )))
+    }
+
+    private func leadHit(kind: String, iconKey: String = "") -> CatalogSearchHit {
+        CatalogSearchHit(
+            kind: kind, id: "h", ref: "REF-AAAAA", title: "Title", subtitle: "",
+            matchReason: "title", location: .sectionRoot(.persons), iconKey: iconKey
+        )
     }
 
     @Test func activateCommitsNavigationAndClearsResults() {
