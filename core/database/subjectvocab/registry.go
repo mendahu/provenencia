@@ -99,7 +99,7 @@ var seedTypes = []seedType{
 		Key: "relationship", Label: "Relationship",
 		Description: "A general association when evidence is not a more specific event/context structure.",
 		RefPrefix:   "REL", CandidateRefPrefix: "CRL",
-		Role: RoleBridge, RequiresCitationAtCreate: true,
+		Role: RoleBridge, RequiresCitationAtCreate: true, PaletteSort: 3,
 		Presentation: presentation{
 			L10nKey: "subjectType.relationship", IconSymbol: "subject_relationship",
 			InkToken: "subjectPersonInk", TintToken: "subjectPersonTint",
@@ -110,7 +110,7 @@ var seedTypes = []seedType{
 		Key: "participation", Label: "Participation",
 		Description: "Association between a person and an event, including role.",
 		RefPrefix:   "PTN", CandidateRefPrefix: "CPA",
-		Role: RoleBridge, RequiresCitationAtCreate: true,
+		Role: RoleBridge, RequiresCitationAtCreate: true, PaletteSort: 4,
 		Presentation: presentation{
 			L10nKey: "subjectType.participation", IconSymbol: "subject_participation",
 			InkToken: "subjectEventInk", TintToken: "subjectEventTint",
@@ -121,7 +121,7 @@ var seedTypes = []seedType{
 		Key: "location", Label: "Location",
 		Description: "Association between an event and a place.",
 		RefPrefix:   "LOC", CandidateRefPrefix: "CLO",
-		Role: RoleBridge, RequiresCitationAtCreate: true,
+		Role: RoleBridge, RequiresCitationAtCreate: true, PaletteSort: 5,
 		Presentation: presentation{
 			L10nKey: "subjectType.location", IconSymbol: "subject_location",
 			InkToken: "subjectPlaceInk", TintToken: "subjectPlaceTint",
@@ -132,7 +132,7 @@ var seedTypes = []seedType{
 		Key: "place_relationship", Label: "Place relationship",
 		Description: "Association between two places: part-of or succession.",
 		RefPrefix:   "PLR", CandidateRefPrefix: "CLR",
-		Role: RoleBridge, RequiresCitationAtCreate: true,
+		Role: RoleBridge, RequiresCitationAtCreate: true, PaletteSort: 6,
 		Presentation: presentation{
 			L10nKey: "subjectType.place_relationship", IconSymbol: "subject_place_relationship",
 			InkToken: "subjectPlaceInk", TintToken: "subjectPlaceTint",
@@ -143,7 +143,7 @@ var seedTypes = []seedType{
 		Key: "source", Label: "Source",
 		Description: "A Source reified so other evidence can refer to or comment on it.",
 		RefPrefix:   "SRN", CandidateRefPrefix: "CSR",
-		Role: RoleReification,
+		Role: RoleReification, PaletteSort: 7,
 		Presentation: presentation{
 			L10nKey: "subjectType.source", IconSymbol: "subject_source",
 			InkToken: "subjectPersonInk", TintToken: "subjectPersonTint",

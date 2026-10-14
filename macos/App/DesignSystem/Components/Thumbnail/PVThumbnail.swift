@@ -13,21 +13,18 @@ struct PVThumbnail: View {
     /// feature decides which state each row needs.
     struct Content {
         var image: Image?
-        var mark: PVMarkKey?
-        var icon: PVSymbol?
+        var glyph: PVGlyph?
         var loading: Bool
         var label: LocalizedStringResource?
 
         init(
             image: Image? = nil,
-            mark: PVMarkKey? = nil,
-            icon: PVSymbol? = nil,
+            glyph: PVGlyph? = nil,
             loading: Bool = false,
             label: LocalizedStringResource? = nil
         ) {
             self.image = image
-            self.mark = mark
-            self.icon = icon
+            self.glyph = glyph
             self.loading = loading
             self.label = label
         }
@@ -37,8 +34,8 @@ struct PVThumbnail: View {
 
     private enum State {
         case image
-        case markGlyph
-        case glyph
+        case mark(PVMarkKey)
+        case symbol(PVSymbol)
         case empty
         case loading
     }
@@ -60,13 +57,18 @@ struct PVThumbnail: View {
     private var state: State {
         if content.loading { return .loading }
         if content.image != nil { return .image }
-        if content.mark != nil { return .markGlyph }
-        if content.icon != nil { return .glyph }
-        return .empty
+        switch content.glyph {
+        case .mark(let key)?: return .mark(key)
+        case .symbol(let icon)?: return .symbol(icon)
+        case nil: return .empty
+        }
     }
 
     private var isFilled: Bool {
-        state == .image || state == .markGlyph || state == .glyph
+        switch state {
+        case .image, .mark, .symbol: true
+        case .empty, .loading: false
+        }
     }
 
     var body: some View {
@@ -80,16 +82,12 @@ struct PVThumbnail: View {
                         .frame(width: size, height: size)
                         .clipped()
                 }
-            case .markGlyph:
-                if let key = content.mark {
-                    PVMark(key, size: size * 0.82, decorative: content.label == nil)
-                        .foregroundStyle(PVColor.textSecondary)
-                }
-            case .glyph:
-                if let icon = content.icon {
-                    PVIcon(icon, size: max(12, (size * 0.41).rounded()))
-                        .foregroundStyle(PVColor.textFaint)
-                }
+            case .mark(let key):
+                PVMark(key, size: size * 0.82, decorative: content.label == nil)
+                    .foregroundStyle(PVColor.textSecondary)
+            case .symbol(let icon):
+                PVIcon(icon, size: max(12, (size * 0.41).rounded()))
+                    .foregroundStyle(PVColor.textFaint)
             case .empty:
                 Text(verbatim: "—")
                     .font(PVFont.mono(size: max(11, (size * 0.3).rounded())))
@@ -119,12 +117,10 @@ struct PVThumbnail: View {
 
     private var accessibilityLabel: LocalizedStringResource {
         if let label = content.label { return label }
-        if let key = content.mark, state == .markGlyph {
-            return key.accessibilityName
-        }
         switch state {
+        case .mark(let key): return key.accessibilityName
         case .loading: return L10n.DesignSystem.thumbnailLoading
-        case .empty, .glyph, .image, .markGlyph: return L10n.DesignSystem.thumbnailEmpty
+        case .empty, .symbol, .image: return L10n.DesignSystem.thumbnailEmpty
         }
     }
 }
@@ -132,8 +128,8 @@ struct PVThumbnail: View {
 #Preview {
     HStack(spacing: PVSpacing.space6) {
         PVThumbnail(.empty)
-        PVThumbnail(PVThumbnail.Content(icon: .photo))
-        PVThumbnail(PVThumbnail.Content(mark: .filePDF))
+        PVThumbnail(PVThumbnail.Content(glyph: .symbol(.photo)))
+        PVThumbnail(PVThumbnail.Content(glyph: .mark(.filePDF)))
         PVThumbnail(PVThumbnail.Content(loading: true))
     }
     .padding(PVSpacing.space9)

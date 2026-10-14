@@ -27,7 +27,7 @@ enum ConclusionTitleSource: Equatable {
 ///   top-ranked value; disagreement is surfaced on the detail page.
 enum ConclusionListRow {
     static func thumbnail(mark: PVMarkKey) -> PVThumbnail.Content {
-        PVThumbnail.Content(mark: mark, label: nil)
+        PVThumbnail.Content(glyph: .mark(mark), label: nil)
     }
 
     /// The title, with a `+N` badge when other names survived. The badge keeps

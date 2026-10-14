@@ -21,6 +21,7 @@
 		A91600000000000000000004 /* PVDisclosureButtonTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A91600000000000000000003 /* PVDisclosureButtonTests.swift */; };
 		A91600000000000000000002 /* PVDisclosureButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = A91600000000000000000001 /* PVDisclosureButton.swift */; };
 		AA00000000000000000003B1 /* PVMark.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000003B0 /* PVMark.swift */; };
+		AA00000000000000000009E1 /* PVGlyphTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000009E0 /* PVGlyphTests.swift */; };
 		AA00000000000000000003B3 /* PVFileTypeGlyphTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000003B2 /* PVFileTypeGlyphTests.swift */; };
 		AA0000000000000000000301 /* PVThumbnail.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000300 /* PVThumbnail.swift */; };
 		A90900000000000000000004 /* PVListTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A90900000000000000000003 /* PVListTests.swift */; };
@@ -387,6 +388,7 @@
 		A91600000000000000000003 /* PVDisclosureButtonTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVDisclosureButtonTests.swift; sourceTree = "<group>"; };
 		A91600000000000000000001 /* PVDisclosureButton.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVDisclosureButton.swift; sourceTree = "<group>"; };
 		AA00000000000000000003B0 /* PVMark.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVMark.swift; sourceTree = "<group>"; };
+		AA00000000000000000009E0 /* PVGlyphTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVGlyphTests.swift; sourceTree = "<group>"; };
 		AA00000000000000000003B2 /* PVFileTypeGlyphTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVFileTypeGlyphTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000300 /* PVThumbnail.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVThumbnail.swift; sourceTree = "<group>"; };
 		A90900000000000000000003 /* PVListTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVListTests.swift; sourceTree = "<group>"; };
@@ -1274,6 +1276,7 @@
 				AA00000000000000000003D4 /* IngestMediaPolicyTests.swift */,
 				AA0000000000000000000394 /* ThumbnailCacheTests.swift */,
 				AA00000000000000000003B2 /* PVFileTypeGlyphTests.swift */,
+				AA00000000000000000009E0 /* PVGlyphTests.swift */,
 				AA0000000000000000000332 /* DateValueDraftTests.swift */,
 				AA00000000000000000004F2 /* DateValueTranscriptionMatchTests.swift */,
 				A70D0000000000000000000D /* NameValueDraftTests.swift */,
@@ -2155,6 +2158,7 @@
 				AA00000000000000000003D5 /* IngestMediaPolicyTests.swift in Sources */,
 				AA0000000000000000000395 /* ThumbnailCacheTests.swift in Sources */,
 				AA00000000000000000003B3 /* PVFileTypeGlyphTests.swift in Sources */,
+				AA00000000000000000009E1 /* PVGlyphTests.swift in Sources */,
 				AA0000000000000000000333 /* DateValueDraftTests.swift in Sources */,
 				AA00000000000000000004F3 /* DateValueTranscriptionMatchTests.swift in Sources */,
 				A70D0000000000000000000E /* NameValueDraftTests.swift in Sources */,

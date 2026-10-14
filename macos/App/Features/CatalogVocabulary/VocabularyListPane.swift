@@ -5,7 +5,7 @@ import SwiftUI
 struct VocabularyListStrings {
     /// Accessibility label for the table itself.
     let tableLabel: LocalizedStringResource
-    let emptyIcon: PVSymbol
+    let emptyGlyph: PVGlyph
     let emptyTitle: LocalizedStringResource
     let emptyBody: LocalizedStringResource
     let resultLine: (_ shown: Int, _ total: Int) -> String
@@ -63,7 +63,7 @@ struct VocabularyListPane<Row: CatalogVocabularyRow>: View {
                 .padding(PVSpacing.space9)
         } else if totalCount == 0 {
             PVEmptyState(
-                icon: strings.emptyIcon,
+                glyph: strings.emptyGlyph,
                 title: strings.emptyTitle,
                 message: L10n.string(strings.emptyBody)
             )

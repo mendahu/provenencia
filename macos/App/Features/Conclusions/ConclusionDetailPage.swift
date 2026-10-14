@@ -229,7 +229,7 @@ private struct ConclusionDetailHeader<Content: ConclusionDetailBody, Summary: Vi
 
     var body: some View {
         HStack(alignment: .top, spacing: PVSpacing.space7) {
-            PVThumbnail(.init(mark: mark, label: thumbnailLabel), size: 80)
+            PVThumbnail(.init(glyph: .mark(mark), label: thumbnailLabel), size: 80)
             VStack(alignment: .leading, spacing: PVSpacing.space4) {
                 title
                 summary(content)

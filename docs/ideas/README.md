@@ -28,7 +28,6 @@ Use this folder when something useful pops up mid-work and would otherwise get l
 - [`daitch-mokotoff.md`](daitch-mokotoff.md) — phonetic tier descoped from Spike 10 (S10-26)
 - [`name-matching-enhancements.md`](name-matching-enhancements.md) — leftovers after Spike 10 (known-as, concluded values, calibration, blocking)
 - [`share-packages.md`](share-packages.md)
-- [`glyph-consolidation.md`](glyph-consolidation.md) — move the older symbol-or-mark sites to `PVGlyph`, and one subject-type → mark mapping (from the S10-19 review)
 - [`artifact-pdf-thumbnails.md`](artifact-pdf-thumbnails.md)
 - [`identity-claim-review.md`](identity-claim-review.md)
 - [`place-gazetteer-service.md`](place-gazetteer-service.md)

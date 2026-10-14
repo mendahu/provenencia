@@ -256,7 +256,7 @@ struct CitationComposerEvidenceColumn: View {
         {
             content = PVThumbnail.Content(image: Image(nsImage: image))
         } else {
-            content = PVThumbnail.Content(mark: artifactMark(artifact))
+            content = PVThumbnail.Content(glyph: artifactMark(artifact).map(PVGlyph.mark))
         }
         return PVThumbnail(content, size: 48)
     }

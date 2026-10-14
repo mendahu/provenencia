@@ -26,7 +26,7 @@ struct SourceTypesListPane: View {
             onSortChange: { model.sortBy($0) },
             strings: VocabularyListStrings(
                 tableLabel: L10n.Workspace.sourceTypesTitle,
-                emptyIcon: .library,
+                emptyGlyph: WorkspaceSection.sourceTypes.glyph,
                 emptyTitle: L10n.SourceTypes.emptyProjectTitle,
                 emptyBody: L10n.SourceTypes.emptyProjectBody,
                 resultLine: { L10n.SourceTypes.resultLine(shown: $0, total: $1) }

@@ -50,7 +50,7 @@ struct CachedThumbnail: View {
                 image
                     .resizable()
                     .scaledToFill()
-            } else if let key = content.mark {
+            } else if case .mark(let key)? = content.glyph {
                 PVMark(key, size: Self.wellGlyph, showLabel: false, decorative: true)
                     .foregroundStyle(PVColor.textMuted)
             } else {
@@ -87,11 +87,11 @@ struct CachedThumbnail: View {
             mediaType: mediaType.isEmpty ? nil : mediaType,
             originalFilename: originalFilename.isEmpty ? nil : originalFilename
         )
-        return PVThumbnail.Content(mark: key, label: key.accessibilityName)
+        return PVThumbnail.Content(glyph: .mark(key), label: key.accessibilityName)
     }
 
     private func typeGlyphContent(_ key: PVMarkKey) -> PVThumbnail.Content {
-        PVThumbnail.Content(mark: key, label: key.accessibilityName)
+        PVThumbnail.Content(glyph: .mark(key), label: key.accessibilityName)
     }
 
     private func fallbackContent() -> PVThumbnail.Content {

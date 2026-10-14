@@ -167,7 +167,7 @@ struct CitationReadyBridge: Equatable {
     var reading: String?
     var kindLabel: String
     var pairHint: String
-    var markKey: String
+    var markKey: PVMarkKey
 }
 
 enum CitationPreview: Equatable {
@@ -189,7 +189,7 @@ struct CitationSavedLine: Identifiable, Equatable {
     var mono: Bool
     var body: String
     var negative: Bool
-    var markKey: String?
+    var markKey: PVMarkKey?
 
     /// Label and value as one phrase, the way a duplicate note names the copied line.
     var phrase: String {
@@ -360,7 +360,7 @@ enum CitationComposerAuthoring {
                         mono: false,
                         body: [phrase.label, phrase.value].filter { !$0.isEmpty }.joined(separator: " "),
                         negative: false,
-                        markKey: "subject_\(connection.bridgeTypeKey)"
+                        markKey: PVMarkKey(subjectTypeKey: connection.bridgeTypeKey) ?? .fallback
                     )
                 )
             }
@@ -397,12 +397,9 @@ enum CitationComposerAuthoring {
     }
 
     private static func typeRank(_ key: String) -> Int {
-        switch key {
-        case "person": 0
-        case "event": 1
-        case "place": 2
-        default: 3
-        }
+        EvidencePrimaryKind(rawValue: key)
+            .flatMap { EvidencePrimaryKind.allCases.firstIndex(of: $0) }
+            ?? EvidencePrimaryKind.allCases.count
     }
 
     private static func position(of citation: CatalogCitation) -> (page: Int, top: Double, ref: String) {
@@ -460,41 +457,36 @@ enum CitationComposerAuthoring {
             ),
             kindLabel: chrome.label,
             pairHint: chrome.hint,
-            markKey: chrome.mark
+            markKey: PVMarkKey(subjectTypeKey: rule.bridgeTypeKey) ?? .fallback
         )
     }
 
-    private static func kindChrome(_ rule: CatalogConnectRule) -> (label: String, hint: String, mark: String) {
+    private static func kindChrome(_ rule: CatalogConnectRule) -> (label: String, hint: String) {
         switch rule.bridgeTypeKey {
         case EvidenceBridgeKind.relationship.rawValue:
             return (
                 L10n.string(L10n.CitationComposer.bridgeKindRelationship),
-                L10n.string(L10n.CitationComposer.pairPersonPerson),
-                "subject_relationship"
+                L10n.string(L10n.CitationComposer.pairPersonPerson)
             )
         case EvidenceBridgeKind.participation.rawValue:
             return (
                 L10n.string(L10n.CitationComposer.bridgeKindParticipation),
-                L10n.string(L10n.CitationComposer.pairPersonEvent),
-                "subject_participation"
+                L10n.string(L10n.CitationComposer.pairPersonEvent)
             )
         case EvidenceBridgeKind.location.rawValue:
             return (
                 L10n.string(L10n.CitationComposer.bridgeKindLocation),
-                L10n.string(L10n.CitationComposer.pairEventPlace),
-                "subject_location"
+                L10n.string(L10n.CitationComposer.pairEventPlace)
             )
         case EvidenceBridgeKind.placeRelationship.rawValue:
             return (
                 L10n.string(L10n.CitationComposer.bridgeKindPlace),
-                L10n.string(L10n.CitationComposer.pairPlacePlace),
-                "subject_place_relationship"
+                L10n.string(L10n.CitationComposer.pairPlacePlace)
             )
         default:
             return (
                 L10n.string(L10n.CitationComposer.bridgeKindOther),
-                "",
-                "subject_\(rule.bridgeTypeKey)"
+                ""
             )
         }
     }

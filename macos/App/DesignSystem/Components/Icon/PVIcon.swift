@@ -55,6 +55,8 @@ enum PVSymbol: String {
     case dismiss = "xmark"
     case library = "books.vertical"
     case tag = "tag"
+    /// Lucide `layout-grid` — the Properties All card.
+    case grid = "square.grid.2x2"
     case list = "list.bullet"
     /// Subject types — kinds of thing a document can talk about (S5-D3 `shapes`).
     case shapes = "square.on.circle"

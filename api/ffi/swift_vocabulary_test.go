@@ -20,6 +20,7 @@ import (
 const (
 	swiftVocabulary = "../../macos/App/Platform/ConclusionVocabulary.swift"
 	swiftValueKinds = "../../macos/App/Platform/InterpretationValueKinds.swift"
+	swiftMarks      = "../../macos/App/DesignSystem/Recipes/Marks/PVMark.swift"
 )
 
 // swiftEnumBody returns the source between `enum <name>` and its closing
@@ -58,11 +59,24 @@ func sorted(in ...string) []string {
 }
 
 var (
-	wireCase   = regexp.MustCompile(`case "([a-z_]*)": self = `)
-	staticLet  = regexp.MustCompile(`static let \w+ = "([^"]*)"`)
-	rawCase    = regexp.MustCompile(`(?m)^\s+case (\w+)\s*$`)
-	unrecogniz = regexp.MustCompile(`case unrecognized\(String\)`)
+	wireCase    = regexp.MustCompile(`case "([a-z_]*)": self = `)
+	staticLet   = regexp.MustCompile(`static let \w+ = "([^"]*)"`)
+	rawCase     = regexp.MustCompile(`(?m)^\s+case (\w+)\s*$`)
+	unrecogniz  = regexp.MustCompile(`case unrecognized\(String\)`)
+	subjectMark = regexp.MustCompile(`case \w+ = "(subject_[a-z_]+)"`)
 )
+
+// subjectMarkSymbols is the sorted IconSymbol of every registry subject type;
+// Swift's PVMarkKey(subjectTypeKey:) builds "subject_<key>" and needs a case
+// for each.
+func subjectMarkSymbols() []string {
+	var out []string
+	for _, info := range subjectvocab.AllTypes() {
+		out = append(out, info.Presentation.IconSymbol)
+	}
+	sort.Strings(out)
+	return out
+}
 
 func TestSwiftVocabularyMatchesGo(t *testing.T) {
 	tests := []struct {
@@ -91,6 +105,10 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 			name: "value types", path: swiftValueKinds, enum: "PropertyValueType", re: rawCase,
 			want: sorted(properties.ValueTypeText, properties.ValueTypeInteger, properties.ValueTypeDate,
 				properties.ValueTypeName, properties.ValueTypeSubject, properties.ValueTypeTerm),
+		},
+		{
+			name: "subject marks", path: swiftMarks, enum: "PVMarkKey", re: subjectMark,
+			want: subjectMarkSymbols(),
 		},
 	}
 	for _, tt := range tests {

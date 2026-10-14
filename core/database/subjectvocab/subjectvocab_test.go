@@ -207,6 +207,9 @@ func TestSubjectVocab(t *testing.T) {
 					if info.Presentation.L10nKey == "" || info.Presentation.IconSymbol == "" {
 						t.Fatalf("missing presentation %+v", info)
 					}
+					if info.Presentation.IconSymbol != "subject_"+info.Key {
+						t.Fatalf("%s IconSymbol %q, want subject_%s (Swift maps marks by this rule)", info.Key, info.Presentation.IconSymbol, info.Key)
+					}
 				}
 				if !LockedBinding("participation", "person") {
 					t.Fatal("expected locked")
@@ -474,5 +477,33 @@ func TestInstallSeedsFuneralAndPallbearer(t *testing.T) {
 	pallbearer, err := propertyterms.Lookup(c, role.ID, "pallbearer", propertyterms.OriginProvenencia)
 	if err != nil || pallbearer.Label != "Pallbearer" {
 		t.Fatalf("pallbearer %+v %v", pallbearer, err)
+	}
+}
+
+func TestAllTypesPaletteSortFollowsBoardOrder(t *testing.T) {
+	want := []string{
+		"person", "event", "place", "relationship",
+		"participation", "location", "place_relationship", "source",
+	}
+	types := AllTypes()
+	byKey := map[string]int{}
+	seen := map[int]string{}
+	for _, ty := range types {
+		byKey[ty.Key] = ty.PaletteSort
+		if other, dup := seen[ty.PaletteSort]; dup {
+			t.Errorf("types %q and %q share PaletteSort %d", other, ty.Key, ty.PaletteSort)
+		}
+		seen[ty.PaletteSort] = ty.Key
+	}
+	if len(types) != len(want) {
+		t.Fatalf("AllTypes() has %d types, want %d", len(types), len(want))
+	}
+	for i := 1; i < len(want); i++ {
+		prev, cur := want[i-1], want[i]
+		t.Run(prev+" before "+cur, func(t *testing.T) {
+			if byKey[prev] >= byKey[cur] {
+				t.Errorf("PaletteSort %s=%d, %s=%d; want %s first", prev, byKey[prev], cur, byKey[cur], prev)
+			}
+		})
 	}
 }

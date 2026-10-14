@@ -72,6 +72,8 @@ update it in the same change as product bridges. Live Mac connect reads
 `listConnectRules` and does not fall back to that table. Term capabilities
 (birthday facets, tree-edge roles, …) are deferred until a later PR.
 
+A new subject type also adds a `subject_<key>` case to `PVMarkKey`, its `provenencia_subject_<key>` asset, and its `accessibilityName` with an `L10n.DesignSystem` string. `TestSwiftVocabularyMatchesGo` fails until the case exists.
+
 Uniqueness is **`UNIQUE (key, origin)`**. Lookup is always `(key, origin)`, never bare key. Domain FKs store vocabulary **`id`**, not key.
 
 ### Install semantics (pinned)
