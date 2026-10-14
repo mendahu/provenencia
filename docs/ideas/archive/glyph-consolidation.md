@@ -1,6 +1,6 @@
-# Glyph consolidation
+# Glyph consolidation (archived)
 
-**Status:** idea, 2026-10-14. Not scheduled. Raised in the S10-19 plan review ([`S10-19-event-mark-sidebar.review.md`](../deployment-plan/spike-10/prs/S10-19-event-mark-sidebar.review.md), M-3 and M-4).
+**Status:** **Done** in S10-49. The leftovers below are not scheduled. Raised in the S10-19 plan review ([`S10-19-event-mark-sidebar.review.md`](../../deployment-plan/spike-10/prs/S10-19-event-mark-sidebar.review.md), M-3 and M-4).
 
 S10-19 adds `PVGlyph` (an SF Symbol or a mark) and `PVGlyphView` in `macos/App/DesignSystem/Recipes/Marks/PVMark.swift`. The sidebar, the history menus, and `PVEmptyState` use it. Two clean-ups are left.
 
@@ -19,3 +19,8 @@ Moving them to `PVGlyph` leaves one shape for one concept. `PVThumbnail.Content`
 ## One subject-type → mark mapping
 
 The Go registry (`core/database/subjectvocab/registry.go`) declares `IconSymbol` (`subject_person`, `subject_event`, …) for every subject type. Swift receives it as `CatalogSubjectTypePresentation.iconSymbol`, and nothing reads it. Swift repeats the mapping by hand in `PropertiesTypeChrome.stripMarkKey(typeKey:)`, `OmnibarHitPresentation.leadMark(for:)`, `EvidencePrimaryKind.markKey` / `EvidenceBridgeKind.markKey`, the three `ConclusionListKind.mark` implementations, and the detail views. One `PVMarkKey(subjectTypeKey:)` would replace those switches, so a new subject type would get its mark from its registry entry. The workspace sidebar still needs a static mapping, because it draws before any catalog read.
+
+## Leftovers
+
+- The omnibar lead symbols for Source types (`.library`) and Metadata fields (`.tag`), which differ from their sidebar glyphs.
+- `PropertiesTypeChrome.sortIndex`, `showsBridgeLabel`, and `ink`, `CitationComposerAuthoring.typeRank`, and `FakeStore.syntheticPresentation`, which switch over type keys for data `CatalogSubjectTypePresentation` already carries.

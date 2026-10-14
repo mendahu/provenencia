@@ -10,7 +10,7 @@ Curated research artwork for Provenencia — not SF Symbols. One recipe:
 | --- | --- | --- |
 | `file_*` | MIME / extension stand-in when a File has no raster derivative | Resolved client-side via `PVFileTypeGlyph` |
 | `type_*` | What a **Source type** is as a record (register, reel, headstone, …) | `source_types.icon_key` |
-| `subject_*` | What a **node** is in the evidence graph / Properties | Registry `IconSymbol` (product-fixed) |
+| `subject_*` | What a **node** is in the evidence graph / Properties | Registry `IconSymbol` = `subject_<key>`; Swift maps with `PVMarkKey(subjectTypeKey:)`; `TestSwiftVocabularyMatchesGo` pins the cases |
 
 **Do not confuse** `type_*` with `subject_source`. `type_*` names a held Source type;
 `subject_source` is the reified source **kind** on the graph (folio mark from Subject
@@ -78,7 +78,7 @@ spoken.
 
 ## Glyph
 
-`PVGlyph` names either a `PVSymbol` or a `PVMarkKey`; `PVGlyphView` draws it, decorative. A component whose icon slot can hold either takes a `PVGlyph` (`PVSidebarNav`, `PVEmptyState`).
+`PVGlyph` names either a `PVSymbol` or a `PVMarkKey`; `PVGlyphView` draws it, decorative. A component whose icon slot can hold either takes a `PVGlyph` (`PVSidebarNav`, `PVEmptyState`). `PVThumbnail.Content`, the Properties type card, and the omnibar lead take a `PVGlyph` too.
 
 ## Board links (art SoT)
 
