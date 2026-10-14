@@ -392,6 +392,7 @@ private struct PendingNameSplit: Identifiable {
 
 /// Closed part-type select, wide enough for the longest label and stable across selections.
 private enum NamePartTypeColumn {
+    @MainActor
     static var width: CGFloat {
         let font = PVFont.nsBody(size: PVTypeScale.caption)
         let longest = NamePartType.selectOptions

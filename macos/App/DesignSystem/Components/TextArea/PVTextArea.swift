@@ -305,6 +305,7 @@ enum PVTextAreaTabRouting {
 final class PVTextAreaTabRouter: NSObject, NSTextViewDelegate {
     private weak var wrapped: NSTextViewDelegate?
 
+    @MainActor
     func attach(to textView: NSTextView) {
         if textView.delegate === self { return }
         wrapped = textView.delegate
