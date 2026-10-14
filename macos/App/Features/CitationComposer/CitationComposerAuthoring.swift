@@ -397,12 +397,9 @@ enum CitationComposerAuthoring {
     }
 
     private static func typeRank(_ key: String) -> Int {
-        switch key {
-        case "person": 0
-        case "event": 1
-        case "place": 2
-        default: 3
-        }
+        EvidencePrimaryKind(rawValue: key)
+            .flatMap { EvidencePrimaryKind.allCases.firstIndex(of: $0) }
+            ?? EvidencePrimaryKind.allCases.count
     }
 
     private static func position(of citation: CatalogCitation) -> (page: Int, top: Double, ref: String) {
