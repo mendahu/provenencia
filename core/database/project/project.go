@@ -25,7 +25,7 @@ const (
 			updated_at = excluded.updated_at,
 			updated_by = excluded.updated_by,
 			uuid = COALESCE(project.uuid, excluded.uuid)`
-	sqlGet = `SELECT label, created_at, updated_at, updated_by, uuid FROM project WHERE id = 1`
+	sqlGet             = `SELECT label, created_at, updated_at, updated_by, uuid FROM project WHERE id = 1`
 	sqlListMissingUUID = `SELECT 1 FROM project WHERE id = 1 AND (uuid IS NULL OR length(uuid) = 0)`
 	sqlSetUUID         = `UPDATE project SET uuid = ? WHERE id = 1 AND (uuid IS NULL OR length(uuid) = 0)`
 )

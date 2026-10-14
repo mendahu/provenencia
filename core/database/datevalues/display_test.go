@@ -29,7 +29,7 @@ func TestCompactDisplay(t *testing.T) {
 		{
 			name: "full day",
 			v: datevalues.Value{
-				Kind: datevalues.KindPoint,
+				Kind:      datevalues.KindPoint,
 				StartYear: &y, StartMonth: &m, StartDay: &d,
 			},
 			want: "1882-04-03",
@@ -52,7 +52,7 @@ func TestCompactDisplay(t *testing.T) {
 		{
 			name: "range",
 			v: datevalues.Value{
-				Kind: datevalues.KindRange,
+				Kind:      datevalues.KindRange,
 				StartYear: &y, EndYear: &y, EndMonth: &m, EndDay: &d,
 			},
 			want: "Between 1882 and 1882-04-03",
