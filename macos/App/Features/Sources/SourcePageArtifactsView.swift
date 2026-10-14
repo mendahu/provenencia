@@ -1,8 +1,12 @@
 import SwiftUI
 
-/// Artifacts accordion: list, expand/collapse detail, and the Add dialog form.
+/// Artifact cards: wrapping rows, on-card edit, and the Add dialog form.
 struct SourcePageArtifactsView: View {
     @Bindable var model: SourcePageModel
+
+    private var cardColumns: [GridItem] {
+        [GridItem(.adaptive(minimum: 300), spacing: PVSpacing.space7, alignment: .top)]
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: PVSpacing.space6) {
@@ -33,14 +37,10 @@ struct SourcePageArtifactsView: View {
                 }
                 .accessibilityIdentifier("sources.page.artifacts.empty")
             } else {
-                PVCard(elevated: true) {
-                    VStack(spacing: 0) {
-                        ForEach(model.artifacts.items, id: \.id) { art in
-                            artifactRow(art)
-                            if art.id != model.artifacts.items.last?.id {
-                                PVDivider()
-                            }
-                        }
+                LazyVGrid(columns: cardColumns, spacing: PVSpacing.space7) {
+                    ForEach(model.artifacts.items, id: \.id) { art in
+                        artifactCard(art)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                     }
                 }
                 .accessibilityIdentifier("sources.page.artifacts.list")
@@ -123,68 +123,179 @@ struct SourcePageArtifactsView: View {
         }
     }
 
-    private func artifactTypeIconKey(for art: CatalogArtifact) -> String? {
-        // File-bearing rows stay on raster → MIME; only fileless use type icon.
-        guard art.file == nil || art.fileID.isEmpty else { return nil }
-        return model.identity.types
-            .first { $0.id == model.source?.sourceTypeID }?
-            .iconKey
+    private func artifactCard(_ art: CatalogArtifact) -> some View {
+        let editing = model.artifacts.editingArtifactID == art.id
+        return PVCard(elevated: true, padding: 0) {
+            VStack(alignment: .leading, spacing: 0) {
+                previewWell(art)
+                VStack(alignment: .leading, spacing: PVSpacing.space4) {
+                    metaRow(art, editing: editing)
+                    if editing {
+                        editFields(art)
+                    } else {
+                        restingText(art)
+                    }
+                }
+                .padding(.horizontal, PVSpacing.space6)
+                .padding(.top, PVSpacing.space6)
+                .padding(.bottom, PVSpacing.space7)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+
+                footer(art, editing: editing)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        }
+        .accessibilityIdentifier("sources.page.artifact.\(art.id)")
     }
 
-    private func artifactRow(_ art: CatalogArtifact) -> some View {
-        let expanded = model.artifacts.expandedIDs.contains(art.id)
-        return VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: PVSpacing.space6) {
-                Button {
-                    model.artifacts.toggleExpanded(art.id)
-                } label: {
-                    HStack(spacing: PVSpacing.space6) {
-                        PVIcon(.chevronForward, size: 15)
-                            .foregroundStyle(PVColor.textMuted)
-                            .rotationEffect(.degrees(expanded ? 90 : 0))
-                            .frame(width: SourcePageLayout.artifactChevronWidth)
-                        CachedThumbnail(
-                            projectDir: model.pageProjectDir,
-                            relPath: art.thumbnailRelPath,
-                            mediaType: art.file?.mediaType ?? "",
-                            originalFilename: art.file?.originalFilename ?? "",
-                            typeIconKey: artifactTypeIconKey(for: art),
-                            size: SourcePageLayout.artifactRowThumbnailSize
-                        )
-                        HStack(spacing: PVSpacing.space4) {
-                            Text(art.label.isEmpty ? art.ref : art.label)
-                                .font(PVFont.body(size: PVTypeScale.bodySmall))
-                                .foregroundStyle(PVColor.textPrimary)
-                                .lineLimit(1)
-                            if model.artifacts.isCover(art) {
-                                PVBadge(L10n.Sources.coverBadge, tone: .accent)
-                                    .accessibilityIdentifier("sources.page.artifact.\(art.id).coverBadge")
-                            }
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .pvExpandedState(expanded)
-                .accessibilityIdentifier("sources.page.artifact.\(art.id)")
+    private func previewWell(_ art: CatalogArtifact) -> some View {
+        CachedThumbnail(
+            projectDir: model.pageProjectDir,
+            relPath: art.thumbnailRelPath,
+            mediaType: art.file?.mediaType ?? "",
+            originalFilename: art.file?.originalFilename ?? "",
+            typeIconKey: artifactTypeIconKey(for: art),
+            layout: .well
+        )
+        .frame(maxWidth: .infinity)
+        .aspectRatio(4.0 / 3.0, contentMode: .fit)
+        .background(PVColor.surfaceInset)
+        .clipped()
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(PVColor.borderSubtle)
+                .frame(height: 1)
+        }
+    }
 
-                // Fixed trailing: pin button (optional) then ART- ref so refs align.
-                Group {
-                    if model.artifacts.canUseAsThumbnail(art) {
-                        PVButton(
-                            L10n.Sources.useAsThumbnail,
-                            variant: .secondary,
-                            size: .sm,
-                            icon: .imageUp
-                        ) {
-                            Task { await model.artifacts.useAsThumbnail(art) }
-                        }
-                        .accessibilityIdentifier("sources.page.artifact.\(art.id).useAsThumbnail")
-                    }
+    private func metaRow(_ art: CatalogArtifact, editing: Bool) -> some View {
+        HStack(spacing: PVSpacing.space4) {
+            Text(verbatim: art.ref)
+                .font(PVFont.mono(size: PVTypeScale.caption))
+                .foregroundStyle(PVColor.textMuted)
+            if model.artifacts.isCover(art) {
+                PVBadge(L10n.Sources.coverBadge, tone: .accent, icon: .photo)
+                    .accessibilityIdentifier("sources.page.artifact.\(art.id).coverBadge")
+            }
+            Spacer(minLength: 0)
+            if !editing {
+                PVIconButton(
+                    .penLine,
+                    label: L10n.Sources.editArtifactLabel(ref: art.ref),
+                    size: .sm
+                ) {
+                    model.artifacts.beginEdit(art.id)
                 }
-                .frame(minWidth: SourcePageLayout.useAsThumbnailSlotWidth, alignment: .trailing)
+                .accessibilityIdentifier("sources.page.artifact.\(art.id).edit")
+            }
+        }
+        .frame(minHeight: 28)
+    }
 
+    private func restingText(_ art: CatalogArtifact) -> some View {
+        VStack(alignment: .leading, spacing: PVSpacing.space3) {
+            Text(verbatim: art.label.isEmpty ? art.ref : art.label)
+                .font(PVFont.body(size: PVTypeScale.body, weight: PVFontWeight.semibold))
+                .foregroundStyle(PVColor.textPrimary)
+                .lineLimit(2)
+            descriptionLine(art)
+        }
+    }
+
+    private func descriptionLine(_ art: CatalogArtifact) -> some View {
+        let minHeight = PVTypeScale.caption * PVLineHeight.normal * 3
+        let trimmed = art.description.trimmingCharacters(in: .whitespacesAndNewlines)
+        return Group {
+            if trimmed.isEmpty {
+                Text(L10n.Sources.artifactNoDescription)
+                    .font(PVFont.body(size: PVTypeScale.caption, italic: true))
+                    .foregroundStyle(PVColor.textFaint)
+            } else {
+                Text(verbatim: art.description)
+                    .font(PVFont.body(size: PVTypeScale.caption))
+                    .foregroundStyle(PVColor.textSecondary)
+                    .lineLimit(3)
+            }
+        }
+        .frame(maxWidth: .infinity, minHeight: minHeight, alignment: .topLeading)
+    }
+
+    private func editFields(_ art: CatalogArtifact) -> some View {
+        VStack(alignment: .leading, spacing: PVSpacing.space5) {
+            PVField(
+                label: L10n.Sources.artifactLabel,
+                error: model.artifacts.cardLabelError(id: art.id),
+                required: true
+            ) {
+                PVInput(
+                    text: labelBinding(art),
+                    size: .sm,
+                    isInvalid: model.artifacts.cardLabelError(id: art.id) != nil,
+                    activateOnAppear: true
+                )
+                .accessibilityIdentifier("sources.page.artifact.\(art.id).label")
+                .onSubmit { commitEdit(art) }
+            }
+            PVField(
+                label: L10n.Sources.artifactDescription,
+                hint: L10n.Sources.artifactDescriptionHint
+            ) {
+                PVTextArea(
+                    text: descriptionBinding(art),
+                    lineLimit: 3...8
+                )
+                .accessibilityIdentifier("sources.page.artifact.\(art.id).description")
+            }
+        }
+        .onExitCommand { model.artifacts.cancelFields(id: art.id) }
+        .background {
+            Button {
+                commitEdit(art)
+            } label: {
+                EmptyView()
+            }
+            .keyboardShortcut(.return, modifiers: .command)
+            .disabled(!model.artifacts.canSaveFields(art.id))
+            .accessibilityHidden(true)
+        }
+    }
+
+    private func footer(_ art: CatalogArtifact, editing: Bool) -> some View {
+        HStack(spacing: PVSpacing.space3) {
+            if editing {
+                PVButton(
+                    L10n.Sources.saveArtifact,
+                    variant: .primary,
+                    size: .sm,
+                    loading: model.artifacts.savingID == art.id
+                ) {
+                    commitEdit(art)
+                }
+                .disabled(!model.artifacts.canSaveFields(art.id))
+                .accessibilityIdentifier("sources.page.artifact.\(art.id).save")
+                PVButton(L10n.Sources.cancelEdit, variant: .ghost, size: .sm) {
+                    model.artifacts.cancelFields(id: art.id)
+                }
+                .accessibilityIdentifier("sources.page.artifact.\(art.id).cancel")
+            } else {
+                if hasFile(art) {
+                    PVButton(L10n.Sources.openFile, variant: .secondary, size: .sm, icon: .externalLink) {
+                        model.artifacts.open(art)
+                    }
+                    .accessibilityIdentifier("sources.page.artifact.\(art.id).open")
+                } else {
+                    PVButton(L10n.Sources.addFile, variant: .secondary, size: .sm, icon: .fileUp) {
+                        model.artifacts.openAttach(to: art.id)
+                    }
+                    .accessibilityIdentifier("sources.page.artifact.\(art.id).addFile")
+                }
+                if model.artifacts.canUseAsThumbnail(art) {
+                    PVButton(L10n.Sources.useAsThumbnail, variant: .ghost, size: .sm, icon: .imageUp) {
+                        Task { await model.artifacts.useAsThumbnail(art) }
+                    }
+                    .accessibilityIdentifier("sources.page.artifact.\(art.id).useAsThumbnail")
+                }
+                Spacer(minLength: 0)
                 PVIconButton(
                     .trash,
                     label: L10n.Sources.deleteArtifact,
@@ -194,50 +305,10 @@ struct SourcePageArtifactsView: View {
                     Task { await model.askDeleteArtifact(id: art.id) }
                 }
                 .accessibilityIdentifier("sources.page.artifact.\(art.id).delete")
-
-                Text(art.ref)
-                    .font(PVFont.mono(size: PVTypeScale.caption))
-                    .foregroundStyle(PVColor.textMuted)
-                    .frame(minWidth: SourcePageLayout.artifactRefMinWidth, alignment: .trailing)
-            }
-            .padding(.horizontal, PVSpacing.space6)
-            .padding(.vertical, PVSpacing.space5)
-
-            if expanded {
-                artifactDetail(art)
             }
         }
-    }
-
-    private func artifactDetail(_ art: CatalogArtifact) -> some View {
-        HStack(alignment: .top, spacing: PVSpacing.space8) {
-            SourcePageArtifactFieldsEditor(
-                artifact: art,
-                isSaving: model.artifacts.savingID == art.id,
-                fieldError: model.artifacts.fieldErrors[art.id],
-                onSave: { label, description in
-                    model.artifacts.labels[art.id] = label
-                    model.artifacts.descriptions[art.id] = description
-                    Task { await model.artifacts.saveFields(id: art.id) }
-                },
-                onCancel: {
-                    model.artifacts.cancelFields(id: art.id)
-                },
-                onClearFieldError: {
-                    if model.artifacts.fieldErrors[art.id] != nil {
-                        model.artifacts.fieldErrors[art.id] = nil
-                    }
-                }
-            )
-            .frame(minWidth: 280, maxWidth: .infinity, alignment: .leading)
-
-            artifactPrimaryFileColumn(art)
-                .frame(minWidth: 300, maxWidth: .infinity, alignment: .leading)
-        }
-        .padding(.top, PVSpacing.space7)
-        .padding(.trailing, PVSpacing.space8)
-        .padding(.bottom, PVSpacing.space8)
-        .padding(.leading, SourcePageLayout.artifactDetailLeading)
+        .padding(.horizontal, PVSpacing.space5)
+        .padding(.vertical, PVSpacing.space4)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(PVColor.surfaceSunken)
         .overlay(alignment: .top) {
@@ -247,144 +318,33 @@ struct SourcePageArtifactsView: View {
         }
     }
 
-    private func artifactPrimaryFileColumn(_ art: CatalogArtifact) -> some View {
-        VStack(alignment: .leading, spacing: PVSpacing.space4) {
-            Text(L10n.Sources.primaryFileHeading)
-                .font(PVFont.body(size: PVTypeScale.micro, weight: PVFontWeight.semibold))
-                .tracking(PVTypeScale.micro * PVTracking.caps)
-                .textCase(.uppercase)
-                .foregroundStyle(PVColor.textFaint)
-
-            if let file = art.file, !art.fileID.isEmpty {
-                PVCard(cornerRadius: PVRadius.sm, padding: PVSpacing.space6) {
-                    HStack(spacing: PVSpacing.space6) {
-                        CachedThumbnail(
-                            projectDir: model.pageProjectDir,
-                            relPath: art.thumbnailRelPath,
-                            mediaType: file.mediaType,
-                            originalFilename: file.originalFilename,
-                            size: 56
-                        )
-                        VStack(alignment: .leading, spacing: PVSpacing.space2) {
-                            Text(file.originalFilename)
-                                .font(PVFont.mono(size: PVTypeScale.caption))
-                                .foregroundStyle(PVColor.textPrimary)
-                                .lineLimit(2)
-                            Text(fileMetaLine(file))
-                                .font(PVFont.mono(size: PVTypeScale.micro))
-                                .foregroundStyle(PVColor.textMuted)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        PVButton(L10n.Sources.openFile, variant: .secondary, size: .sm, icon: .externalLink) {
-                            model.artifacts.open(art)
-                        }
-                        .accessibilityIdentifier("sources.page.artifact.\(art.id).open")
-                    }
-                }
-            } else {
-                PVCallout(
-                    tone: .neutral,
-                    message: L10n.string(L10n.Sources.filelessHint),
-                    compact: true
-                )
-                PVButton(L10n.Sources.addFile, variant: .primary, size: .sm, icon: .fileUp) {
-                    model.artifacts.openAttach(to: art.id)
-                }
-                .accessibilityIdentifier("sources.page.artifact.\(art.id).addFile")
-            }
-        }
+    private func labelBinding(_ art: CatalogArtifact) -> Binding<String> {
+        Binding(
+            get: { model.artifacts.labels[art.id] ?? art.label },
+            set: { model.artifacts.labels[art.id] = $0 }
+        )
     }
 
-    private func fileMetaLine(_ file: CatalogFileRef) -> String {
-        let size = ByteCountFormatter.string(fromByteCount: file.byteSize, countStyle: .file)
-        return "\(file.mediaType) · \(size)"
-    }
-}
-
-/// Expanded artifact label/description editor with local drafts.
-private struct SourcePageArtifactFieldsEditor: View {
-    let artifact: CatalogArtifact
-    let isSaving: Bool
-    let fieldError: String?
-    let onSave: (_ label: String, _ description: String) -> Void
-    let onCancel: () -> Void
-    let onClearFieldError: () -> Void
-
-    @State private var labelDraft = ""
-    @State private var descriptionDraft = ""
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: PVSpacing.space6) {
-            PVField(
-                label: L10n.Sources.artifactLabel,
-                hint: L10n.Sources.artifactLabelHint,
-                error: fieldError,
-                required: true
-            ) {
-                PVInput(
-                    text: $labelDraft,
-                    size: .sm,
-                    isInvalid: fieldError != nil
-                )
-                .onChange(of: labelDraft) { _, _ in onClearFieldError() }
-                .onSubmit { onSave(labelDraft, descriptionDraft) }
-            }
-
-            PVField(
-                label: L10n.Sources.artifactDescription,
-                hint: L10n.Sources.artifactDescriptionHint
-            ) {
-                PVTextArea(
-                    text: $descriptionDraft,
-                    lineLimit: 3...8
-                )
-                .accessibilityIdentifier("sources.page.artifact.\(artifact.id).description")
-                .onSubmit { onSave(labelDraft, descriptionDraft) }
-            }
-
-            HStack(spacing: PVSpacing.space4) {
-                PVInlineEditActions(
-                    isSaving: isSaving,
-                    saveLabel: L10n.Sources.saveArtifact,
-                    cancelLabel: L10n.Sources.cancelEdit,
-                    saveDisabled: !isDirty || isSaving || labelDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-                    showsCancel: isDirty,
-                    accessibilityIdentifierPrefix: "sources.page.artifact.\(artifact.id)",
-                    onSave: { onSave(labelDraft, descriptionDraft) },
-                    onCancel: {
-                        labelDraft = artifact.label
-                        descriptionDraft = artifact.description
-                        onCancel()
-                    }
-                )
-
-                if !isDirty {
-                    Text(L10n.Sources.noUnsavedChanges)
-                        .font(PVFont.body(size: PVTypeScale.caption, italic: true))
-                        .foregroundStyle(PVColor.textFaint)
-                }
-
-                Spacer(minLength: 0)
-            }
-        }
-        .onAppear { seedFromArtifact() }
-        .onChange(of: artifact.label) { _, _ in
-            if !isDirty { seedFromArtifact() }
-        }
-        .onChange(of: artifact.description) { _, _ in
-            if !isDirty { seedFromArtifact() }
-        }
+    private func descriptionBinding(_ art: CatalogArtifact) -> Binding<String> {
+        Binding(
+            get: { model.artifacts.descriptions[art.id] ?? art.description },
+            set: { model.artifacts.descriptions[art.id] = $0 }
+        )
     }
 
-    private var isDirty: Bool {
-        labelDraft.trimmingCharacters(in: .whitespacesAndNewlines)
-            != artifact.label.trimmingCharacters(in: .whitespacesAndNewlines)
-            || descriptionDraft.trimmingCharacters(in: .whitespacesAndNewlines)
-            != artifact.description.trimmingCharacters(in: .whitespacesAndNewlines)
+    private func commitEdit(_ art: CatalogArtifact) {
+        guard model.artifacts.canSaveFields(art.id) else { return }
+        Task { await model.artifacts.saveFields(id: art.id) }
     }
 
-    private func seedFromArtifact() {
-        labelDraft = artifact.label
-        descriptionDraft = artifact.description
+    private func hasFile(_ art: CatalogArtifact) -> Bool {
+        art.file != nil && !art.fileID.isEmpty
+    }
+
+    private func artifactTypeIconKey(for art: CatalogArtifact) -> String? {
+        guard art.file == nil || art.fileID.isEmpty else { return nil }
+        return model.identity.types
+            .first { $0.id == model.source?.sourceTypeID }?
+            .iconKey
     }
 }

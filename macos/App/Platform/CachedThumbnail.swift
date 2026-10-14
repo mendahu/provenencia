@@ -6,6 +6,15 @@ import SwiftUI
 ///
 /// Preference: raster → type icon → MIME glyph → empty.
 struct CachedThumbnail: View {
+    /// Square list tile, or a frame-filling well whose raster covers and whose glyph stays 56pt.
+    enum Layout {
+        case tile
+        case well
+    }
+
+    /// Glyph size inside a card well. The board draws the type or file mark at 56.
+    static let wellGlyph: CGFloat = 56
+
     let projectDir: String
     let relPath: String
     var mediaType: String = ""
@@ -14,14 +23,45 @@ struct CachedThumbnail: View {
     var typeIconKey: String? = nil
     var size: CGFloat = 44
     var cornerRadius: CGFloat = PVRadius.sm
+    var layout: Layout = .tile
 
     @State private var content: PVThumbnail.Content = .empty
 
     var body: some View {
-        PVThumbnail(content, size: size, cornerRadius: cornerRadius)
-            .task(id: taskID) {
-                await load()
+        Group {
+            switch layout {
+            case .tile:
+                PVThumbnail(content, size: size, cornerRadius: cornerRadius)
+            case .well:
+                wellBody
             }
+        }
+        .task(id: taskID) {
+            await load()
+        }
+    }
+
+    /// Fills the parent. A raster cover-crops. A mark or empty state stays centered, without tile chrome.
+    private var wellBody: some View {
+        ZStack {
+            if content.loading {
+                ProgressView()
+            } else if let image = content.image {
+                image
+                    .resizable()
+                    .scaledToFill()
+            } else if let key = content.mark {
+                PVMark(key, size: Self.wellGlyph, showLabel: false, decorative: true)
+                    .foregroundStyle(PVColor.textMuted)
+            } else {
+                Text(verbatim: "—")
+                    .font(PVFont.mono(size: PVTypeScale.caption))
+                    .foregroundStyle(PVColor.textFaint)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .clipped()
+        .accessibilityHidden(true)
     }
 
     private var taskID: String {
