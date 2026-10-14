@@ -28,7 +28,7 @@ struct MetadataListPane: View {
             onSortChange: { _ in model.toggleLabelSort() },
             strings: VocabularyListStrings(
                 tableLabel: L10n.Workspace.metadataTitle,
-                emptyIcon: .tag,
+                emptyGlyph: WorkspaceSection.metadata.glyph,
                 emptyTitle: L10n.Metadata.emptyProjectTitle,
                 emptyBody: L10n.Metadata.emptyProjectBody,
                 resultLine: { L10n.Metadata.resultLine(shown: $0, total: $1) }
