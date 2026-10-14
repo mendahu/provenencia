@@ -8,13 +8,14 @@ Closed spikes under [`archive/`](archive/) keep **themes and decisions**. PR ord
 
 ## How a spike is planned
 
-Two levels, two skills. The map is cut once and kept current. The plans are written one at a time, just before each PR, because earlier PRs move the code under later ones.
+Two levels of plan, plus briefs and a review for each. The map is cut once and kept current. The plans are written one at a time, just before each PR, because earlier PRs move the code under later ones.
 
 | Level | Skill | Output |
 | --- | --- | --- |
 | Spike or slice | [`plan-spike`](../../.agents/skills/plan-spike/SKILL.md) | `deployment-plan.md`: goal, working rules, **PR map**, slices, a short scope entry per PR. Feature design docs beside it |
 | One PR | [`plan-pr`](../../.agents/skills/plan-pr/SKILL.md) | `prs/S#-NN-<slug>.md`: the whole task for the implementing agent |
 | One view's chrome | [`add-design-brief`](../../.agents/skills/add-design-brief/SKILL.md) | `design/S#-D#-<slug>.md`, pasted into Claude Design. Gates the PR plan |
+| Any of the above | [`review-plan`](../../.agents/skills/review-plan/SKILL.md) | `<doc>.review.md` beside it: a maintainability review and a dry run by fresh agents, at most two rounds. `python3 scripts/check-plan-docs.py` first |
 
 ```text
 docs/deployment-plan/spike-N/
@@ -24,6 +25,7 @@ docs/deployment-plan/spike-N/
   completed.md          one short paragraph per landed PR
   design/               briefs (archive/ once the board is agreed)
   prs/                  PR plans
+  *.review.md           review-plan logs, beside the doc they review
 ```
 
 **PR status** is the same word in the map's Status column and the plan's header:
@@ -32,7 +34,7 @@ docs/deployment-plan/spike-N/
 | --- | --- |
 | `Scoped` | In the map with a scope entry. No plan yet |
 | `Blocked — on …` | A dependency, a board, or a re-plan is outstanding |
-| `Planned` | The plan passed the `plan-pr` gate. An agent can implement it |
+| `Planned` | The plan passed the `plan-pr` gate and `review-plan`. An agent can implement it |
 | `In progress` | A branch or PR is open |
 | `Landed #N` | Merged. `completed.md` has the paragraph; the plan has a Landed note with any deviation |
 | `Descoped (date)` | Not doing it. The map says where the idea went. The ID is not reused |

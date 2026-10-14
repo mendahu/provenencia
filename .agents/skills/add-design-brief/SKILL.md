@@ -42,6 +42,8 @@ Layers / implementing chrome: [`add-ui-component`](../add-ui-component/SKILL.md)
 - [ ] **UI building-block inventory** — situation → kit component (binding)
 - [ ] Explicit non-goals: no new kit primitive for one call site
 - [ ] Wired into spike design/README.md, deployment-plan.md (design track + checklist)
+- [ ] python3 scripts/check-plan-docs.py <brief> reports no errors
+- [ ] review-plan on the brief (inventory reuse, one interaction one kit piece); log beside it
 - [ ] Docs-only: no VERSION bump
 ```
 

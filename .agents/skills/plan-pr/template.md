@@ -23,8 +23,9 @@ planner; delete it from the finished plan.
 **Rules that bind:** `.cursor/rules/….mdc`, … | —
 **Context:** [feature doc §](../feature.md#section), [domain model §](../../../model.md#section), working rules: "rule name", …
 **Planned:** YYYY-MM-DD against `main` @ `abc1234`
+**Review:** [`S#-NN-slug.review.md`](S#-NN-slug.review.md) — verdict, rounds | — (not reviewed yet)
 
-<!-- Status Planned only after the self-review gate passes and Open questions is empty. -->
+<!-- Status Planned only after the self-review gate, check-plan-docs.py, and review-plan pass, and Open questions is empty. -->
 
 ### Implementer — read this first
 
@@ -92,6 +93,18 @@ planner; delete it from the finished plan.
 ## 6. Design
 
 <!-- Only the layers this PR touches; write "None —" for the rest. Short sketches for signatures, DDL, proto. Mark new names (new). -->
+
+### Codebase fit
+
+<!-- The reuse survey. Every new file, type, function, table, FFI method, component, L10n namespace, and test helper this PR adds is a row. Search before you write the row; name what you searched for. review-plan reads this table first. -->
+
+| New *(this PR adds)* | Kind | Closest existing | Why not reuse or extend it |
+| --- | --- | --- | --- |
+| `…` *(new)* | type / func / file / table / FFI / component / key / helper | `path` `Symbol` | … |
+
+**Builds on.** The patterns and registries this PR extends instead of adding its own: skill, registry, precedent.
+**Deletes.** Code, strings, tests, stubs, and docs this PR makes dead, and removes. | None — nothing becomes dead.
+**Next adds.** Later PRs in the map or ideas this shape makes easier, and how (a registry entry, a new case). | None named.
 
 ### Schema
 

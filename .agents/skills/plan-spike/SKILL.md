@@ -60,7 +60,7 @@ PR list before the goal and the working rules hold.
 - [ ] 4. Cut PRs: split rules below; IDs assigned; briefs identified
 - [ ] 5. Sequence: slices with a Check each; dependency graph
 - [ ] 6. Write the map from map-template.md
-- [ ] 7. Review gate (below)
+- [ ] 7. Review gate (below), then review-plan's map review
 - [ ] 8. Wire: spike README, deployment-plan/README.md, design/README.md, ideas and dogfood sources
 - [ ] 9. Report: the map, open product questions, which PR to plan first
 ```
@@ -114,6 +114,10 @@ Split rules:
 
 - **Combine** two notes only when they edit the same part of one view or the
   same comparer. Otherwise one note, one PR.
+- **Make the change easy first.** When the code a feature lands in needs
+  reshaping (a registry that should exist, logic in the wrong layer, a copy
+  about to become a third), cut a preparatory refactor PR ahead of the feature.
+  It is reviewed and landed on its own, and the feature PR stays simple.
 - **Engine before chrome.** A schema or core change the UI needs lands first,
   as its own PR, when the UI waits on a brief. A small engine change with no
   brief can ride with its UI.
@@ -171,6 +175,12 @@ spike.
 - [ ] Dependency graph and slice order agree
 - [ ] Every pulled-in dogfood note or idea is in "Where the notes went"
 ```
+
+Then run the **map review** in [`review-plan`](../review-plan/SKILL.md): a
+fresh maintainability reviewer looks for preparatory refactors the map is
+missing, two PRs building parallel mechanisms, a registry that is due, and a
+pattern change with no skill update. Answer each finding in
+`deployment-plan.review.md`. A preparatory PR it proposes is the user's call.
 
 ## 8. Wire
 

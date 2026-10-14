@@ -6,8 +6,9 @@ description: >-
   without making a product or architecture decision: objective, user stories
   with acceptance criteria, scope, verified current state, binding decisions
   and stack choices, layer-by-layer design, ordered steps, named tests,
-  definition of done, and stop conditions. Authors the gating Claude Design
-  brief through add-design-brief when the PR adds chrome. Use when the user
+  definition of done, and stop conditions. Surveys the codebase for reuse
+  first, then passes review-plan before the plan is Planned. Authors the gating
+  Claude Design brief through add-design-brief when the PR adds chrome. Use when the user
   asks to plan, spec, scope, or write up a single PR, to turn a PR map row
   into an implementation plan, to refresh a stale PR plan, or to hand a PR
   to an agent.
@@ -49,9 +50,10 @@ Template: [`template.md`](template.md). Copy it; keep every heading.
 - [ ] 4. Research the code: every touchpoint read, paths and symbols recorded, precedent found
 - [ ] 5. Decide: every choice the implementer would face is a Decision; product calls asked
 - [ ] 6. Write prs/S#-NN-<slug>.md from template.md, every heading kept
-- [ ] 7. Self-review gate (below) passes, including the cold read
-- [ ] 8. Wire: map row Plan link + status; scope entry matches; design/README if a brief
-- [ ] 9. Report to the user: status, decisions you made, anything you changed in the map
+- [ ] 7. Self-review gate (below) passes, including the cold read and check-plan-docs.py
+- [ ] 8. Review: review-plan loop; review log linked; no open blocking finding
+- [ ] 9. Wire: map row Plan link + status; scope entry matches; design/README if a brief
+- [ ] 10. Report to the user: status, verdict, decisions you made, To user items, map changes
 ```
 
 ## 1. Locate
@@ -111,6 +113,14 @@ This is most of the work. A plan built from the docs alone is a guess.
   and say which part to copy ("seed it the way `engagement` was seeded in
   #382: `subjectvocab` `seedTerms`, no migration"). A precedent saves the
   implementer more than any paragraph.
+- Do the **reuse survey** before you design anything. For each thing the PR
+  will add (file, type, function, table, FFI method, component, L10n namespace,
+  test helper), search for what already does that job, by behavior as well as
+  by name. Reuse beats extend; extend beats new. Ask the questions in
+  [`review-plan/maintainability.md`](../review-plan/maintainability.md) yourself
+  now: the registry that owns it, the layer that owns it, what it makes dead,
+  which later PR in the map touches it next. The answers fill **Codebase fit**.
+  The reviewer will ask the same questions; answer them first.
 - Load the **skills and rules** for the layers touched and note the rules that
   bind this PR. The implementer loads them too; name them in the header.
 
@@ -147,6 +157,11 @@ what happens on empty / failure / huge input.
 - **Product calls: ask the user.** Batch the questions; give a recommendation
   for each. Do not write the plan around an open product question. A spike-wide
   answer also goes into the map's **Working rules**.
+- **Patch or structure.** When a quick fix in one call site and a fix where the
+  concern lives both work, decide for the owning layer, registry, or shared
+  component, so every caller gains it. When that fix is bigger than this PR,
+  ask the user about a preparatory PR in the map (`plan-spike`) instead of
+  patching around it.
 - **Open questions** in the template must be empty before status `Planned`.
 
 A Decision is binding. The implementer may not reopen it. If it is wrong, they
@@ -210,6 +225,8 @@ Do not mark a plan `Planned` until each line is true. Fix the plan, not the gate
 - [ ] Stop conditions name concrete evidence, not "if something seems off"
 - [ ] Open questions is empty, or status is Draft / Blocked
 - [ ] Plan agrees with the map row and the working rules; any change was made in the map too
+- [ ] Codebase fit lists every new thing the PR adds, with the closest existing code; Deletes and Next adds are filled
+- [ ] python3 scripts/check-plan-docs.py <plan> reports no errors
 ```
 
 **Cold read.** Reread the plan as the implementer: you have this file, the
@@ -217,7 +234,19 @@ linked files, and the repo, and nothing from this conversation. At each step,
 ask "what would I have to choose here?" Each answer is a missing Decision or a
 missing path. Then ask "what would I be tempted to add?" Each answer is an Out line.
 
-## 8. Wire
+## 8. Review
+
+Run [`review-plan`](../review-plan/SKILL.md) on the plan: lint, then the
+maintainability and executability reviewers in fresh context, then at most two
+rounds. Answer every finding in the review log (`S#-NN-<slug>.review.md`) as
+Fixed, Declined with evidence, or To user. Link the log on the plan's
+**Review:** line.
+
+The plan is `Planned` only when no blocking finding is open and every To user
+item is answered. A **Reshape** verdict goes to the user before you rewrite the
+plan; it may change the map.
+
+## 9. Wire
 
 - Map row: **Plan** column links the file; **Status** is `Planned` or `Blocked — …`.
 - If planning changed scope, update the map's scope entry in the same commit
@@ -225,11 +254,12 @@ missing path. Then ask "what would I be tempted to add?" Each answer is an Out l
 - A brief written here goes in `design/README.md` **Scheduled**, per `add-design-brief`.
 - A spike-wide product answer goes in the map's **Working rules**.
 
-## 9. Report
+## 10. Report
 
-Tell the user, briefly: the plan path and status, the Decisions you made on your
-own (so they can veto them before an agent builds on them), any map change,
-and what blocks it if it is blocked.
+Tell the user, briefly: the plan path and status, the review verdict and the
+To user items, the Decisions you made on your own (so they can veto them
+before an agent builds on them), any map change, and what blocks it if it is
+blocked.
 
 ## Refresh an existing plan
 
@@ -239,7 +269,7 @@ When a dependency lands differently or `main` has moved a lot:
 2. Redo step 4 for every Current state row. Update the planning base.
 3. Recheck each Decision against the new code. A changed Decision is a change
    to tell the user about.
-4. Run the self-review gate again.
+4. Run the self-review gate and [`review-plan`](../review-plan/SKILL.md) again.
 
 ## After the PR lands
 
@@ -247,6 +277,8 @@ The implementer's DoD does this; check it was done:
 
 - Plan status `Landed in #N (YYYY-MM-DD)`. Add a short **Landed** note at the top
   that records only where the code differs from the plan. Later plans read it.
+- A deviation that a better plan would have avoided becomes a line in
+  `review-plan` **Known traps** (see "Learn from landings" there).
 - Map row status, `completed.md` entry, brief moved to `design/archive/`.
 
 At spike close, [`archive-docs`](../archive-docs/SKILL.md) deletes `prs/` with
