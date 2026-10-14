@@ -178,7 +178,7 @@ private struct PropertiesContent: View {
                     selected: model.selectedTypeKey == type.key,
                     bridge: PropertiesTypeChrome.showsBridgeLabel(typeKey: type.key),
                     ink: PropertiesTypeChrome.ink(typeKey: type.key, presentation: presentation),
-                    mark: PropertiesTypeChrome.stripMarkKey(typeKey: type.key)
+                    mark: PVMarkKey(subjectTypeKey: type.key)
                 )
             }
         }
@@ -602,7 +602,7 @@ private struct PropertiesContent: View {
         } label: {
             HStack(spacing: PVSpacing.space5) {
                 PVCheckboxMark(isChecked: bound, isLocked: locked)
-                if let mark = PropertiesTypeChrome.stripMarkKey(typeKey: type.key) {
+                if let mark = PVMarkKey(subjectTypeKey: type.key) {
                     PVMark(mark, size: 14)
                         .foregroundStyle(ink)
                 }
@@ -903,7 +903,7 @@ private struct PropertiesCreateHost: View {
         } label: {
             HStack(spacing: PVSpacing.space5) {
                 PVCheckboxMark(isChecked: on)
-                if let mark = PropertiesTypeChrome.stripMarkKey(typeKey: type.key) {
+                if let mark = PVMarkKey(subjectTypeKey: type.key) {
                     PVMark(mark, size: 14)
                         .foregroundStyle(ink)
                 }

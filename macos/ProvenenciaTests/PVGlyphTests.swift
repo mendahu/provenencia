@@ -21,4 +21,13 @@ struct PVGlyphTests {
             #expect(PVMarkKey(subjectTypeKey: key) == nil)
         }
     }
+
+    @Test func evidenceKindsAgreeWithTheSubjectRule() {
+        for kind in EvidencePrimaryKind.allCases {
+            #expect(kind.markKey == PVMarkKey(subjectTypeKey: kind.rawValue))
+        }
+        for kind in EvidenceBridgeKind.allCases {
+            #expect(kind.markKey == PVMarkKey(subjectTypeKey: kind.rawValue))
+        }
+    }
 }

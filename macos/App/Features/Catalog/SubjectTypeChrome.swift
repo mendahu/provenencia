@@ -17,21 +17,6 @@ enum PropertiesTypeChrome {
         }
     }
 
-    /// One curated mark per Subject type key (including distinct bridge marks).
-    static func stripMarkKey(typeKey: String) -> PVMarkKey? {
-        switch typeKey {
-        case "person": return .subjectPerson
-        case "event": return .subjectEvent
-        case "place": return .subjectPlace
-        case "relationship": return .subjectRelationship
-        case "participation": return .subjectParticipation
-        case "location": return .subjectLocation
-        case "place_relationship": return .subjectPlaceRelationship
-        case "source": return .subjectSource
-        default: return nil
-        }
-    }
-
     /// Micro-label “BRIDGE” on Relationship / Participation / Location strip cards.
     /// Source is a reification, not a bridge — do not label it as one.
     static func showsBridgeLabel(typeKey: String) -> Bool {

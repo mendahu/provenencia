@@ -674,7 +674,7 @@ struct CitationBridgeSentence: View {
     var body: some View {
         VStack(alignment: .leading, spacing: PVSpacing.space4) {
             HStack(spacing: PVSpacing.space3) {
-                PVMark(PVMarkKey(catalogKey: ready.markKey), size: 14, decorative: true)
+                PVMark(ready.markKey, size: 14, decorative: true)
                 Text(verbatim: ready.kindLabel)
                     .pvMicroCaps()
                     .foregroundStyle(PVColor.textSecondary)

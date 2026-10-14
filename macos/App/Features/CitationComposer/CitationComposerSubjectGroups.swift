@@ -93,7 +93,7 @@ struct CitationComposerObservationsColumn: View {
         PVCard(padding: 0) {
             VStack(alignment: .leading, spacing: 0) {
                 HStack(spacing: PVSpacing.space4) {
-                    PVMark(PVMarkKey(catalogKey: "subject_\(group.typeKey)"), size: 16, decorative: true)
+                    PVMark(PVMarkKey(subjectTypeKey: group.typeKey) ?? .fallback, size: 16, decorative: true)
                     Text(verbatim: group.name)
                         .font(PVFont.body(size: PVTypeScale.bodySmall, weight: PVFontWeight.semibold))
                         .foregroundStyle(PVColor.textPrimary)
@@ -139,7 +139,7 @@ struct CitationComposerObservationsColumn: View {
         return HStack(alignment: .firstTextBaseline, spacing: PVSpacing.space4) {
             Group {
                 if let markKey = line.markKey {
-                    PVMark(PVMarkKey(catalogKey: markKey), size: 14, decorative: true)
+                    PVMark(markKey, size: 14, decorative: true)
                 } else {
                     Color.clear
                 }
@@ -426,7 +426,7 @@ struct CitationComposerEditSheet: View {
                 .foregroundStyle(PVColor.textMuted)
             HStack(spacing: PVSpacing.space4) {
                 if let typeKey = subject?.typeKey {
-                    PVMark(PVMarkKey(catalogKey: "subject_\(typeKey)"), size: 14, decorative: true)
+                    PVMark(PVMarkKey(subjectTypeKey: typeKey) ?? .fallback, size: 14, decorative: true)
                 }
                 Text(verbatim: subject?.label ?? id)
                     .font(PVFont.body(size: PVTypeScale.bodySmall))
