@@ -4,7 +4,40 @@ Working notes for implementation milestones. These are stopping points, not a fu
 
 Authoritative domain and stack decisions remain in the sibling docs under [`docs/`](../). Unscheduled product ideas live in [`ideas/`](../ideas/) — a parking lot, not a spike queue. UX friction from dogfooding lives in [`docs/dogfood/ux.md`](../dogfood/ux.md) until something is pulled into a spike, and then it leaves that log.
 
-Closed spikes under [`archive/`](archive/) keep **themes and decisions**. PR order, checklists, and Claude Design briefs are git history — not duplicated here.
+Closed spikes under [`archive/`](archive/) keep **themes and decisions**. PR order, checklists, Claude Design briefs, and PR plans are git history — not duplicated here.
+
+## How a spike is planned
+
+Two levels, two skills. The map is cut once and kept current. The plans are written one at a time, just before each PR, because earlier PRs move the code under later ones.
+
+| Level | Skill | Output |
+| --- | --- | --- |
+| Spike or slice | [`plan-spike`](../../.cursor/skills/plan-spike/SKILL.md) | `deployment-plan.md`: goal, working rules, **PR map**, slices, a short scope entry per PR. Feature design docs beside it |
+| One PR | [`plan-pr`](../../.cursor/skills/plan-pr/SKILL.md) | `prs/S#-NN-<slug>.md`: the whole task for the implementing agent |
+| One view's chrome | [`add-design-brief`](../../.cursor/skills/add-design-brief/SKILL.md) | `design/S#-D#-<slug>.md`, pasted into Claude Design. Gates the PR plan |
+
+```text
+docs/deployment-plan/spike-N/
+  README.md             status, documents, not this spike
+  deployment-plan.md    the PR map
+  <feature>.md          one design doc per idea or cluster
+  completed.md          one short paragraph per landed PR
+  design/               briefs (archive/ once the board is agreed)
+  prs/                  PR plans
+```
+
+**PR status** is the same word in the map's Status column and the plan's header:
+
+| Status | Means |
+| --- | --- |
+| `Scoped` | In the map with a scope entry. No plan yet |
+| `Blocked — on …` | A dependency, a board, or a re-plan is outstanding |
+| `Planned` | The plan passed the `plan-pr` gate. An agent can implement it |
+| `In progress` | A branch or PR is open |
+| `Landed #N` | Merged. `completed.md` has the paragraph; the plan has a Landed note with any deviation |
+| `Descoped (date)` | Not doing it. The map says where the idea went. The ID is not reused |
+
+Spike 10 and earlier cut each PR as an In / Out / Testable table inside `deployment-plan.md`. A `plan-pr` plan for one of those PRs reads that table as its scope entry and adds `prs/` to that spike.
 
 ## Current
 

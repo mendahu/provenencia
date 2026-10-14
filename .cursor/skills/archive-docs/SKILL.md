@@ -42,7 +42,7 @@ Do **not** run this on an **open** spike (Spike 8 while it still has a plan).
 - [ ] Spike is actually done (or explicitly stopped). Honesty in the README.
 - [ ] Write/replace archive/spike-N/README.md as a **decisions** note (below)
 - [ ] Keep a file only if it is still a **live contract** (not “how we shipped”)
-- [ ] Delete: completed.md, deployment-plan.md, design/ (briefs + indexes),
+- [ ] Delete: completed.md, deployment-plan.md, design/ (briefs + indexes), prs/ (PR plans),
       dogfood how-tos, PR-sequence diagrams, suggested-PR-title tables
 - [ ] Distill shipped ideas that this spike finished (same keep/delete rules)
 - [ ] Grep inbound links; retarget to the README or the live domain doc
@@ -69,6 +69,7 @@ idea/spike essay and point there.
 - `completed.md` step write-ups
 - `deployment-plan.md` gates, ASCII PR trees, dogfood bars
 - `design/` and `design/archive/` Claude Design prompts
+- `prs/` PR plans (their Landed notes feed the decisions note first)
 - Per-PR “In / Out / Testable / Depends on” tables
 - Numbered leftover lists once every item is re-homed (one leftover table on
   the distilled note is enough)

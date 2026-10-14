@@ -25,7 +25,8 @@ Layers / implementing chrome: [`add-ui-component`](../add-ui-component/SKILL.md)
 | --- | --- |
 | New `S*-D*` brief / Claude Design board | **Yes** |
 | Amending an open brief’s Claude instructions or inventory | **Yes** |
-| Implementing the PR the brief gates | No — `add-ui-component` (+ feature skills) |
+| Planning the PR the brief gates | No — [`plan-pr`](../plan-pr/SKILL.md), which calls this skill when the PR adds chrome |
+| Implementing the PR the brief gates | No — the PR plan (`prs/`), `add-ui-component` (+ feature skills) |
 | Evaluating an existing `PV*` | No — `evaluate-ui-component` |
 
 ## Checklist
@@ -133,6 +134,7 @@ Match an open spike brief (rethink vs enhancement):
 ## After the board
 
 - Archive the brief under the **open** spike’s `design/archive/`; write `completed.md`
+- The PR plan (`prs/S#-NN-<slug>.md`, [`plan-pr`](../plan-pr/SKILL.md)) copies the requirement IDs and the inventory, then moves from `Blocked — on board` to `Planned`
 - Implement against the board + inventory (kit first)
 - Later briefs on the same surface **extend the new frames**, not the discarded ones
 
