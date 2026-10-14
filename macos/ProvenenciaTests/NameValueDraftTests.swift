@@ -137,6 +137,12 @@ struct NameFormSplitTests {
             Piece(value: "John", type: "given"),
             Piece(value: "Jr", type: "suffix"),
         ])
+        #expect(split("Smith, John, Jr.") == [
+            Piece(value: "Smith", type: "surname"),
+            Piece(value: "John", type: "given"),
+            Piece(value: "Jr.", type: "suffix"),
+        ])
+        #expect(split("John Smith,") == [Piece(value: "John Smith", type: "surname")])
     }
 
     @Test func lastWordIsTheSurnameWhenSeveralRemain() {
@@ -268,6 +274,57 @@ struct NameFormSplitTests {
             Issue.record("Add part should make the next Split ask")
             return
         }
+    }
+
+    @Test func removingAPartCountsAsHandEdited() {
+        var draft = splitFilled("John Smith")
+        draft.removePart(id: draft.parts[0].id)
+        #expect(draft.parts.map(\.value) == ["Smith"])
+        guard case .needsConfirm(let pending) = draft.splitFromForm() else {
+            Issue.record("Remove part should make the next Split ask")
+            return
+        }
+        #expect(draft.parts.map(\.value) == ["Smith"])
+        #expect(pending.map(\.value) == ["John", "Smith"])
+        draft.applySplit(pending)
+        #expect(draft.parts.map(\.value) == ["John", "Smith"])
+        #expect(!draft.partsHandEdited)
+    }
+
+    @Test func reorderingAPartCountsAsHandEdited() {
+        var draft = splitFilled("John Smith")
+        draft.movePart(at: 0, by: 1)
+        #expect(draft.parts.map(\.value) == ["Smith", "John"])
+        guard case .needsConfirm(let pending) = draft.splitFromForm() else {
+            Issue.record("Reorder should make the next Split ask")
+            return
+        }
+        #expect(draft.parts.map(\.value) == ["Smith", "John"])
+        draft.applySplit(pending)
+        #expect(draft.parts.map(\.value) == ["John", "Smith"])
+        #expect(!draft.partsHandEdited)
+    }
+
+    @Test func changingAPartTypeCountsAsHandEdited() {
+        var draft = splitFilled("John Smith")
+        draft.setPartType(id: draft.parts[0].id, type: "nick")
+        #expect(draft.parts[0].type == "nick")
+        guard case .needsConfirm(let pending) = draft.splitFromForm() else {
+            Issue.record("Type change should make the next Split ask")
+            return
+        }
+        #expect(draft.parts[0].type == "nick")
+        #expect(pending.map(\.type) == ["given", "surname"])
+        draft.applySplit(pending)
+        #expect(draft.parts.map(\.type) == ["given", "surname"])
+        #expect(!draft.partsHandEdited)
+    }
+
+    private func splitFilled(_ form: String) -> NameValueDraft {
+        var draft = NameValueDraft.empty()
+        draft.form = form
+        draft.fillEmptyPartsFromForm()
+        return draft
     }
 
     private struct Piece: Equatable {

@@ -1,5 +1,7 @@
 # S10-D4 — Name parts modal
 
+**Shipped behavior supersedes NP-3.** S10-17 landed with the spike working rule in [`../../deployment-plan.md`](../../deployment-plan.md): a compiled title list peels prefixes and suffixes when another word remains, one leftover word is a given name, and a comma after the surname break is not stored on a word. The sections below are the original board prompt.
+
 **Kind:** Claude Design board (**enhancement** of the name editor)
 **Spike:** Provenencia Spike 10 (dogfood UX)
 **View:** Name parts modal — the shared name editor form

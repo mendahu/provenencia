@@ -145,7 +145,6 @@ struct NameValueEditorForm: View {
 
     private var partHeader: some View {
         HStack(spacing: PVSpacing.space4) {
-            Color.clear.frame(width: 28)
             Color.clear.frame(width: 22)
             Text(L10n.NameValue.partValueLabel)
                 .font(PVFont.body(size: PVTypeScale.caption))
@@ -170,8 +169,6 @@ struct NameValueEditorForm: View {
         )
         return VStack(alignment: .leading, spacing: PVSpacing.space2) {
             HStack(spacing: PVSpacing.space4) {
-                PVReorderHandle()
-                    .frame(width: 28)
                 Text(verbatim: "\(index + 1)")
                     .font(PVFont.mono(size: PVTypeScale.micro))
                     .foregroundStyle(PVColor.textFaint)
@@ -229,7 +226,7 @@ struct NameValueEditorForm: View {
                 Text(verbatim: error)
                     .font(PVFont.body(size: PVTypeScale.caption))
                     .foregroundStyle(PVColor.danger)
-                    .padding(.leading, 66)
+                    .padding(.leading, 30)
                     .accessibilityIdentifier("\(accessibilityIdentifierPrefix).part.\(index).error")
             }
         }

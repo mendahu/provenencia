@@ -66,11 +66,6 @@ struct NameValueDraft: Equatable, Sendable {
         if parts.count != before { partsHandEdited = true }
     }
 
-    mutating func movePart(from source: IndexSet, to destination: Int) {
-        parts.move(fromOffsets: source, toOffset: destination)
-        partsHandEdited = true
-    }
-
     mutating func movePart(at index: Int, by delta: Int) {
         let next = index + delta
         guard parts.indices.contains(index), parts.indices.contains(next) else { return }
@@ -198,8 +193,12 @@ enum NameFormSplit {
         return result
     }
 
+    /// A comma stuck to a word (`John,`) is a separator, not part of the name.
     private static func words(in text: String) -> [String] {
-        text.split(whereSeparator: \.isWhitespace).map(String.init)
+        text.split(whereSeparator: \.isWhitespace).compactMap { token in
+            let stripped = token.trimmingCharacters(in: CharacterSet(charactersIn: ","))
+            return stripped.isEmpty ? nil : String(stripped)
+        }
     }
 
     /// Peel titles only while another word remains. One leftover word is given.
