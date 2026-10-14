@@ -305,7 +305,7 @@ private extension View {
     return VStack(spacing: PVSpacing.space8) {
         PVList(
             items: rows,
-            thumbnail: { _ in PVThumbnail.Content(mark: .subjectPerson) },
+            thumbnail: { _ in PVThumbnail.Content(glyph: .mark(.subjectPerson)) },
             meta: { $0.id },
             label: "Persons",
             itemAccessibilityLabel: { "\($0.title), \($0.id)" },

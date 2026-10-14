@@ -229,11 +229,11 @@ private struct OmnibarHitRowView: View {
             }
         case "source_type":
             if hit.iconKey.isEmpty {
-                PVThumbnail(PVThumbnail.Content(icon: .library), size: 40)
+                PVThumbnail(PVThumbnail.Content(glyph: .symbol(.library)), size: 40)
             } else {
                 PVThumbnail(
                     PVThumbnail.Content(
-                        mark: PVMarkKey(catalogKey: hit.iconKey),
+                        glyph: .mark(PVMarkKey(catalogKey: hit.iconKey)),
                         label: OmnibarHitPresentation.kindLabel(for: hit.kind)
                     ),
                     size: 40
@@ -241,7 +241,7 @@ private struct OmnibarHitRowView: View {
             }
         default:
             PVThumbnail(
-                PVThumbnail.Content(icon: OmnibarHitPresentation.leadSymbol(for: hit.kind)),
+                PVThumbnail.Content(glyph: .symbol(OmnibarHitPresentation.leadSymbol(for: hit.kind))),
                 size: 40
             )
         }

@@ -93,7 +93,7 @@ struct PVOmnibarHitRow<Lead: View>: View {
 #Preview {
     VStack(spacing: 0) {
         PVOmnibarHitRow(
-            lead: { PVThumbnail(PVThumbnail.Content(icon: .scrollText), size: 40) },
+            lead: { PVThumbnail(PVThumbnail.Content(glyph: .symbol(.scrollText)), size: 40) },
             title: "Ilminster parish register, 1841–1852",
             kindLabel: L10n.Workspace.omnibarKindSource,
             secondary: "Parish register",
@@ -103,7 +103,7 @@ struct PVOmnibarHitRow<Lead: View>: View {
             selected: true
         )
         PVOmnibarHitRow(
-            lead: { PVThumbnail(PVThumbnail.Content(icon: .library), size: 40) },
+            lead: { PVThumbnail(PVThumbnail.Content(glyph: .symbol(.library)), size: 40) },
             title: "Parish register",
             kindLabel: L10n.Workspace.omnibarKindType,
             secondary: "parish-register",

@@ -13,21 +13,18 @@ struct PVThumbnail: View {
     /// feature decides which state each row needs.
     struct Content {
         var image: Image?
-        var mark: PVMarkKey?
-        var icon: PVSymbol?
+        var glyph: PVGlyph?
         var loading: Bool
         var label: LocalizedStringResource?
 
         init(
             image: Image? = nil,
-            mark: PVMarkKey? = nil,
-            icon: PVSymbol? = nil,
+            glyph: PVGlyph? = nil,
             loading: Bool = false,
             label: LocalizedStringResource? = nil
         ) {
             self.image = image
-            self.mark = mark
-            self.icon = icon
+            self.glyph = glyph
             self.loading = loading
             self.label = label
         }
@@ -60,8 +57,11 @@ struct PVThumbnail: View {
     private var state: State {
         if content.loading { return .loading }
         if content.image != nil { return .image }
-        if content.mark != nil { return .markGlyph }
-        if content.icon != nil { return .glyph }
+        switch content.glyph {
+        case .mark?: return .markGlyph
+        case .symbol?: return .glyph
+        case nil: break
+        }
         return .empty
     }
 
@@ -81,12 +81,12 @@ struct PVThumbnail: View {
                         .clipped()
                 }
             case .markGlyph:
-                if let key = content.mark {
+                if case .mark(let key)? = content.glyph {
                     PVMark(key, size: size * 0.82, decorative: content.label == nil)
                         .foregroundStyle(PVColor.textSecondary)
                 }
             case .glyph:
-                if let icon = content.icon {
+                if case .symbol(let icon)? = content.glyph {
                     PVIcon(icon, size: max(12, (size * 0.41).rounded()))
                         .foregroundStyle(PVColor.textFaint)
                 }
@@ -119,7 +119,7 @@ struct PVThumbnail: View {
 
     private var accessibilityLabel: LocalizedStringResource {
         if let label = content.label { return label }
-        if let key = content.mark, state == .markGlyph {
+        if case .mark(let key)? = content.glyph, state == .markGlyph {
             return key.accessibilityName
         }
         switch state {
@@ -132,8 +132,8 @@ struct PVThumbnail: View {
 #Preview {
     HStack(spacing: PVSpacing.space6) {
         PVThumbnail(.empty)
-        PVThumbnail(PVThumbnail.Content(icon: .photo))
-        PVThumbnail(PVThumbnail.Content(mark: .filePDF))
+        PVThumbnail(PVThumbnail.Content(glyph: .symbol(.photo)))
+        PVThumbnail(PVThumbnail.Content(glyph: .mark(.filePDF)))
         PVThumbnail(PVThumbnail.Content(loading: true))
     }
     .padding(PVSpacing.space9)
