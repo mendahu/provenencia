@@ -1814,11 +1814,11 @@
 /* Begin PBXShellScriptBuildPhase section */
 		AA00000000000000000000C0 /* Build Go core */ = {
 			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
 			buildActionMask = 2147483647;
 			files = (
 			);
 			inputFileListPaths = (
-				"$(SRCROOT)/Core/go-sources.xcfilelist",
 			);
 			inputPaths = (
 			);

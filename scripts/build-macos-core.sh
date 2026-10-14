@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # Builds macos/Core/libprovenencia.dylib for the Xcode app target.
-# Xcode lists Go inputs in macos/Core/go-sources.xcfilelist — refresh that
-# file when adding/removing .go under api/ or core/ so the build phase re-runs.
+# Xcode runs this phase on every build (alwaysOutOfDate); the freshness check
+# below decides whether to rebuild, so there is no input list to maintain.
+# It looks at every file under api/ and core/, which covers go:embed assets
+# such as core/database/migrations/*.sql.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
@@ -12,7 +14,8 @@ out="macos/Core/libprovenencia.dylib"
 if [[ -f "$out" ]] \
   && [[ ! go.mod -nt "$out" ]] \
   && [[ ! go.sum -nt "$out" ]] \
-  && [[ -z "$(find api core -name '*.go' -newer "$out")" ]]; then
+  && [[ ! scripts/build-macos-core.sh -nt "$out" ]] \
+  && [[ -z "$(find api core -type f -newer "$out" -print -quit)" ]]; then
   exit 0
 fi
 

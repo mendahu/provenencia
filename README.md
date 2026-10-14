@@ -13,7 +13,7 @@ Before a PR leaves draft, `scripts/check-pr.sh` must print `check-pr: PASS`. It 
 1. Install Xcode (this repo was last built with Xcode 26; any current Xcode that can target macOS 14 is fine) and Go 1.27+.
 2. Open **[`macos/Provenencia.xcodeproj`](macos/Provenencia.xcodeproj)** (the file that ends in `.xcodeproj`). Do not open the `macos/App` folder; that is source, not the Xcode project. From Terminal: `open macos/Provenencia.xcodeproj`
 3. Select the **Provenencia** scheme and **My Mac**.
-4. Run (⌘R). The **Build Go core** phase runs [`scripts/build-macos-core.sh`](scripts/build-macos-core.sh) (skipped when the dylib is already newer than Go sources). First launch asks whether you already have a project. Creating one writes `identity.json`, `active-project.json`, and `{Name}.provenencia` under Documents. Opening an existing folder lists contributors so you can keep the same ID (new Mac) or add a new one. A later launch skips the picker if that active project is still on disk.
+4. Run (⌘R). The **Build Go core** phase runs [`scripts/build-macos-core.sh`](scripts/build-macos-core.sh) (it runs on every build and skips the Go build when the dylib is newer than `go.mod`, `go.sum`, the script, and every file under `api/` and `core/`). First launch asks whether you already have a project. Creating one writes `identity.json`, `active-project.json`, and `{Name}.provenencia` under Documents. Opening an existing folder lists contributors so you can keep the same ID (new Mac) or add a new one. A later launch skips the picker if that active project is still on disk.
 
 From the command line:
 
