@@ -1,5 +1,9 @@
 # Spike 10 — completed
 
+## S10-17 — Name parts split
+
+**Landed 2026-10-13** in [#385](https://github.com/mendahu/provenencia/pull/385). Split into parts sits beside the full form. Leaving that field fills parts only when the list is empty. Split refills, and asks before it replaces a hand edit. A comma makes the text before it one surname, and a later comma is not kept on the following word. Otherwise a compiled title list peels prefixes and suffixes when another word remains: one leftover word is a given name, and the last of two or more is the surname. The part-type column stays the width of Surname prefix. Up and down move a part; the row has no drag grip.
+
 ## S10-16 — Observation list rethink
 
 **Landed 2026-10-12** in [#384](https://github.com/mendahu/provenencia/pull/384). The citation composer is two columns: stepped artifact and citation over the file, and one authoring box over subject groups. A bridge is one write and is listed under both ends. Connect still opens that box with the ends filled and an empty role or type.

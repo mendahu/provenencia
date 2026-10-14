@@ -10,7 +10,6 @@ Brief files are written **just before** the PR they gate, not up front. This ind
 
 | Step | View | Gates | Notes |
 | --- | --- | --- | --- |
-| S10-D4 | Name parts modal | **S10-17** | Split, fixed-width type control. Does not wait on S10-29 |
 | S10-D5 | Source page — Artifacts | **S10-18** | Drop target and open-on-collapsed-row |
 | S10-D6 | Evidence graph | **S10-18** (header open) | Also specifies box-select, which ships in **S10-20**, and Unpromote on the promoted card, which ships in **S10-44**. Hit boxes, the tiled grid, canvas growth, and camera restore are not this board |
 | S10-D7 | Sidebar | **S10-19** | Subject marks for People, Events, Places, including the new Event mark. The toolbar section icon is the same slot and ships in S10-19 |
@@ -35,3 +34,4 @@ S10-D14, the zoomed-out card, was descoped 2026-10-11 with S10-46. The full card
 | Step | View | Gates | Notes |
 | --- | --- | --- | --- |
 | S10-D3 | Citation composer | **S10-16** | Done 2026-10-12. [S10-D3-citation-composer.md](archive/S10-D3-citation-composer.md) |
+| S10-D4 | Name parts modal | **S10-17** | Done 2026-10-13. [S10-D4-name-parts-modal.md](archive/S10-D4-name-parts-modal.md) |

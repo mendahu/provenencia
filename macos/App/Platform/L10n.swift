@@ -2532,7 +2532,7 @@ enum L10n {
         )
         static let partsEmptyHint = LocalizedStringResource(
             "nameValue.parts.empty.hint",
-            defaultValue: "Add parts only when the name segments cleanly and the segments matter to your research",
+            defaultValue: "Leaving the full form fills parts from it while this list is empty. Add parts only when the segments matter to your research",
             comment: "Empty-state hint when NameValue has no parts"
         )
         static let partsAdd = LocalizedStringResource(
@@ -2609,6 +2609,36 @@ enum L10n {
             "nameValue.part.type.undetermined",
             defaultValue: "Undetermined",
             comment: "NameValue part type: undetermined"
+        )
+        static let split = LocalizedStringResource(
+            "nameValue.split",
+            defaultValue: "Split into parts",
+            comment: "Button that fills NameValue parts from the full form"
+        )
+        static let splitConfirmTitle = LocalizedStringResource(
+            "nameValue.split.confirm.title",
+            defaultValue: "Replace the edited parts?",
+            comment: "Confirm title before Split replaces hand-edited name parts"
+        )
+        static let splitConfirmMessage = LocalizedStringResource(
+            "nameValue.split.confirm.message",
+            defaultValue: "Split rebuilds the parts from the full form, and the changes you made to them are not kept. Nothing is written to the catalog until you save.",
+            comment: "Confirm message before Split replaces hand-edited name parts"
+        )
+        static let splitConfirmPending = LocalizedStringResource(
+            "nameValue.split.confirm.pending",
+            defaultValue: "Parts after the split",
+            comment: "Heading on the parts Split would write"
+        )
+        static let splitConfirmReplace = LocalizedStringResource(
+            "nameValue.split.confirm.replace",
+            defaultValue: "Replace parts",
+            comment: "Confirm button that replaces hand-edited name parts"
+        )
+        static let splitConfirmKeep = LocalizedStringResource(
+            "nameValue.split.confirm.keep",
+            defaultValue: "Keep my parts",
+            comment: "Cancel button that keeps hand-edited name parts"
         )
         static let storedAs = LocalizedStringResource(
             "nameValue.storedAs",

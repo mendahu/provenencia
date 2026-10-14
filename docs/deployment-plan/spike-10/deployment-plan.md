@@ -96,7 +96,7 @@ These are the calls for this spike. The questions at the bottom are answered; no
 - **An adaptive choice field is not in this spike.** S10-14 and S10-D1 are descoped (2026-10-12). Term fields keep the control they have. The composer rethink does not swap a short list to radios or a long list to a combo box.
 - **A default role does not cover a repeated cluster.** S10-10 is descoped (2026-10-12). Prefilling `subject` or `part_of` on a generic new connection stays out. Placing a wedding, birth, or residence in one action, and pasting a cluster already on the canvas, are [`ideas/evidence-graph-structure-shortcuts.md`](../../ideas/evidence-graph-structure-shortcuts.md).
 - **Date prefill is silent.** First match in the transcription, current locale, Gregorian patterns a genealogist actually types (day month year, month day year, year alone, ISO). 80–90% is the bar. No "suggested" chrome, so the date modal does not need a brief. Year is focused even when the prefill is empty. Landed in S10-13.
-- **Name split does not clobber edits.** Blur of the full-form line fills parts only when the part list is empty. The Split button refills from the line; if any part was edited by hand, confirm before replacing. Guessing rules are the ones in the dogfood note (comma → surname first; otherwise last word is surname; leftovers are given).
+- **Name split does not clobber edits.** Blur of the full-form line fills parts only when the part list is empty. The Split button refills from the line; if any part was edited by hand, confirm before replacing. A comma means the text before it is one surname. A later comma is not kept on the following word. Otherwise a compiled title list peels prefixes and suffixes when another word remains, one leftover word is a given name, and the last of two or more leftovers is the surname.
 - **Outside click closes a sheet.** If the sheet is dirty, use the existing confirm (discard or keep editing) — the same idea as leaving the composer with unsaved work. A clean sheet closes. Read-only sheets close. This is behavior on the shared sheet presentation, not a new dialog style. Landed in S10-12.
 - **Graph camera is session state, not catalog state.** `GraphCanvasCamera` is explicitly not research data. Coming back from the composer, Back, or breadcrumbs restores magnification and content offset for that Source for the rest of the session. A persisted per-user table is out.
 - **Canvas grows.** `EvidenceGraphPlacement.contentSize` is a fixed 4000×4000 and placement clamps to `maxCell`. When a card's frame nears the document edge, grow the document (and the clamp) by a step. The grid is a tile, so growth does not allocate a larger bitmap. No new chrome.
@@ -141,7 +141,7 @@ These are the calls for this spike. The questions at the bottom are answered; no
 | --- | --- | --- | --- |
 | **S10-D1** | Adaptive choice field (kit board) | **S10-14**, descoped 2026-10-12 | — |
 | **S10-D3** | Citation composer | **S10-16**, done 2026-10-12 | — |
-| **S10-D4** | Name parts modal | **S10-17** | Split, fixed-width type control. Does not wait on S10-29 |
+| **[S10-D4](design/archive/S10-D4-name-parts-modal.md)** | Name parts modal | **S10-17** | Split, fixed-width type control. Does not wait on S10-29 |
 | **S10-D5** | Source page — Artifacts | **S10-18** | — |
 | **S10-D6** | Evidence graph | **S10-18** header open | S10-20 box-select. S10-44 Unpromote on the promoted card |
 | **S10-D7** | Sidebar | **S10-19** | Toolbar section icon ships in the same PR |
@@ -412,13 +412,15 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 
 #### S10-17 — Name parts split and type control
 
-**Brief:** S10-D4.
+**Landed 2026-10-13** in [#385](https://github.com/mendahu/provenencia/pull/385). See [`completed.md`](completed.md).
+
+**Brief:** [S10-D4](design/archive/S10-D4-name-parts-modal.md).
 
 | | |
 | --- | --- |
 | **In** | Per S10-D4 and the working rules: blur splits an empty part list; Split refills, confirming when a part was hand-edited. Type control has a stable width (sized for the longest label, not the selection) and stays a `PVSelect`. Same-letter keypress cycles matches. That cycle is fixed in `PVSelect` (`handleTriggerKey` / session), so every select gains it; the width fix stays on this field. Split rules stay the Western ones. |
 | **Out** | Profile-aware splitting. A combo box for part type. User-minted part types. |
-| **Testable** | `Smith, John Henry` → Surname, Given, Given. `John Henry Smith` → Given, Given, Surname. The type control does not resize. Blur with existing hand-edited parts does nothing. Split then asks. Pressing S moves from Surname prefix to Surname. |
+| **Testable** | `Smith, John Henry` → Surname, Given, Given. `John Henry Smith` → Given, Given, Surname. `John` → Given. `Dr. John Smith Jr.` → Prefix, Given, Surname, Suffix. The type control does not resize. Blur with existing hand-edited parts does nothing. Split then asks. Pressing S moves from Surname prefix to Surname. |
 | **Depends on** | S10-D4 |
 
 ### Slice 5 — Artifacts, marks, multi-select

@@ -12273,7 +12273,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Add parts only when the name segments cleanly and the segments matter to your research"
+            "value": "Leaving the full form fills parts from it while this list is empty. Add parts only when the segments matter to your research"
           }
         }
       }
@@ -12454,6 +12454,78 @@
           "stringUnit": {
             "state": "translated",
             "value": "Undetermined"
+          }
+        }
+      }
+    },
+    "nameValue.split": {
+      "comment": "Button that fills NameValue parts from the full form",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Split into parts"
+          }
+        }
+      }
+    },
+    "nameValue.split.confirm.keep": {
+      "comment": "Cancel button that keeps hand-edited name parts",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keep my parts"
+          }
+        }
+      }
+    },
+    "nameValue.split.confirm.message": {
+      "comment": "Confirm message before Split replaces hand-edited name parts",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Split rebuilds the parts from the full form, and the changes you made to them are not kept. Nothing is written to the catalog until you save."
+          }
+        }
+      }
+    },
+    "nameValue.split.confirm.pending": {
+      "comment": "Heading on the parts Split would write",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Parts after the split"
+          }
+        }
+      }
+    },
+    "nameValue.split.confirm.replace": {
+      "comment": "Confirm button that replaces hand-edited name parts",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Replace parts"
+          }
+        }
+      }
+    },
+    "nameValue.split.confirm.title": {
+      "comment": "Confirm title before Split replaces hand-edited name parts",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Replace the edited parts?"
           }
         }
       }
