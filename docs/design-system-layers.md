@@ -16,6 +16,8 @@ We follow Brad Frost’s **[components / recipes / snowflakes](https://bradfrost
 
 Every building block belongs in **exactly one** layer. Higher layers may compose lower ones; they must not reinvent them. Lower layers must not import higher ones (no catalog / genealogy types inside `Components/`).
 
+A Component may take recipe-layer artwork (a `PVMarkKey` or a `PVGlyph`) in its icon slot and draw it with `PVMark` or `PVGlyphView`. This is the one allowed exception to the rule above: `PVThumbnail`, `PVSidebarNav`, and `PVEmptyState` do it.
+
 **You stop at the highest layer you need.** Most call sites never touch all three:
 
 - A view can drop in a **component** directly (`.pvConfirm`, `PVButton`) with copy and slots filled at the call site.
