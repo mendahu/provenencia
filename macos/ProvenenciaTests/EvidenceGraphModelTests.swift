@@ -1338,10 +1338,11 @@ struct EvidenceGraphModelTests {
         model.selectSubject(id: "p1")
         let effect = model.handleKey(.arrow(dx: 1, dy: 0), hasFocus: false)
         #expect(effect.handled)
-        #expect(effect.moveSubjectID == "p1")
-        #expect(effect.moveFromX == 2)
-        #expect(effect.moveFromY == 3)
-        #expect(effect.moveDeltaX == 1)
+        #expect(effect.moves == [
+            EvidenceGraphModel.KeyEffect.SubjectMove(
+                subjectID: "p1", fromX: 2, fromY: 3, deltaX: 1, deltaY: 0
+            ),
+        ])
     }
 
     @Test func cardActionRoutesEdit() {
@@ -1723,5 +1724,114 @@ struct EvidenceGraphModelTests {
         #expect(model.fileOpenError == nil)
         #expect(model.resolvedFileArtifactID == "b")
         #expect(model.citationCount(for: "b") == 0)
+    }
+
+    // MARK: Box select and group move (S10-20)
+
+    /// Persons `p1` (2, 3), `p2` (4, 3), `p3` (8, 3) and a participation bridge `b1` between them.
+    private func groupModel() -> (FakeStore, EvidenceGraphModel) {
+        let store = makeStore()
+        func person(_ id: String) -> CatalogSubject {
+            CatalogSubject(
+                id: id, ref: "CPR-\(id)", sourceID: sourceID, subjectTypeID: personTypeID,
+                label: id, description: ""
+            )
+        }
+        let bridge = CatalogSubject(
+            id: "b1", ref: "CPA-1", sourceID: sourceID, subjectTypeID: "type-participation",
+            label: "", description: ""
+        )
+        let subjects = [person("p1"), person("p2"), person("p3"), bridge]
+        let positions = [
+            CatalogSubjectPosition(subjectID: "p1", gridX: 2, gridY: 3),
+            CatalogSubjectPosition(subjectID: "p2", gridX: 4, gridY: 3),
+            CatalogSubjectPosition(subjectID: "p3", gridX: 8, gridY: 3),
+            CatalogSubjectPosition(subjectID: "b1", gridX: 3, gridY: 3),
+        ]
+        store.subjectsBySource[sourceID] = subjects
+        for position in positions { store.subjectPositionsBySubject[position.subjectID] = position }
+        let model = makeModel(store: store)
+        seedFields(model.session, store: store)
+        model.session.setQueryValue(
+            CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID),
+            value: graphRows(
+                sourceId: sourceID,
+                subjects: subjects,
+                positions: positions,
+                types: store.subjectTypesByProject[projectDir] ?? []
+            )
+        )
+        return (store, model)
+    }
+
+    @Test func primarySelectionDropsBridges() {
+        let (_, model) = groupModel()
+        model.replacePrimarySelection(["p1", "b1"])
+        #expect(model.selectedSubjectIDs == ["p1"])
+        model.selectSubject(id: "b1")
+        #expect(model.selectedSubjectID == "b1")
+        model.replacePrimarySelection(["p1", "p2"])
+        #expect(model.selectedSubjectID == nil)
+        model.armedSelect = true
+        model.selectSubject(id: nil)
+        #expect(model.armedSelect)
+        #expect(model.selectedSubjectIDs.isEmpty)
+    }
+
+    @Test func groupDragKeepsTheSet() {
+        let (_, model) = groupModel()
+        model.replacePrimarySelection(["p1", "p2"])
+        #expect(model.beginGroupDrag(anchor: "p1") == ["p1", "p2"])
+        #expect(model.groupDragIDs == ["p1", "p2"])
+        #expect(model.selectedSubjectIDs == ["p1", "p2"])
+        #expect(model.beginGroupDrag(anchor: "p3") == ["p3"])
+        #expect(model.groupDragIDs == ["p3"])
+        #expect(model.selectedSubjectIDs == ["p3"])
+    }
+
+    @Test func arrowMovesEachSelectedSubject() {
+        let (_, model) = groupModel()
+        model.replacePrimarySelection(["p2", "p1", "b1"])
+        model.armedSelect = true
+        let effect = model.handleKey(.arrow(dx: 1, dy: 0), hasFocus: false)
+        #expect(effect.handled)
+        #expect(effect.moves == [
+            EvidenceGraphModel.KeyEffect.SubjectMove(subjectID: "p1", fromX: 2, fromY: 3, deltaX: 1, deltaY: 0),
+            EvidenceGraphModel.KeyEffect.SubjectMove(subjectID: "p2", fromX: 4, fromY: 3, deltaX: 1, deltaY: 0),
+        ])
+        // Return and Space do nothing while Select is armed or several are selected.
+        #expect(model.handleKey(.return, hasFocus: false) == EvidenceGraphModel.KeyEffect())
+        #expect(model.handleKey(.space, hasFocus: false) == EvidenceGraphModel.KeyEffect())
+    }
+
+    @Test func moveSubjectsPatchesEachCellAndPersistsInOrder() async {
+        let (store, model) = groupModel()
+        model.replacePrimarySelection(["p1", "p2"])
+        let effect = model.handleKey(.arrow(dx: 1, dy: 0), hasFocus: false)
+        model.moveSubjects(effect.moves)
+        await model.lastPositionWrite?.value
+        #expect(model.gridCell(for: "p1")?.x == 3)
+        #expect(model.gridCell(for: "p2")?.x == 5)
+        #expect(model.gridCell(for: "p3")?.x == 8)
+        #expect(store.subjectPositionsBySubject["p1"]?.gridX == 3)
+        #expect(store.subjectPositionsBySubject["p2"]?.gridX == 5)
+    }
+
+    @Test func commitGroupDragSnapsEachCard() async {
+        let (store, model) = groupModel()
+        model.replacePrimarySelection(["p1", "p2"])
+        _ = model.beginGroupDrag(anchor: "p1")
+        let moved = model.commitGroupDrag(anchor: "p1", documentDelta: CGSize(width: 40, height: 0))
+        #expect(moved.map(\.subjectID) == ["p1", "p2"])
+        #expect(moved.map(\.gridX) == [3, 5])
+        #expect(moved.map(\.gridY) == [3, 3])
+        #expect(model.lastPositionWrite != nil)
+        #expect(model.groupDragIDs.isEmpty)
+        await model.lastPositionWrite?.value
+        #expect(store.subjectPositionsBySubject["p1"]?.gridX == 3)
+        #expect(store.subjectPositionsBySubject["p2"]?.gridX == 5)
+        // The relationship stays on its cell.
+        #expect(model.gridCell(for: "b1")?.x == 3)
+        #expect(store.subjectPositionsBySubject["b1"]?.gridX == 3)
     }
 }

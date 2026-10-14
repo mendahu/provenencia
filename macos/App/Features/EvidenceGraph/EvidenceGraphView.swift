@@ -535,16 +535,8 @@ private struct EvidenceGraphContent: View {
         if effect.clearFocus {
             focus = nil
         }
-        if let subjectID = effect.moveSubjectID {
-            Task {
-                _ = await model.moveSubject(
-                    subjectID: subjectID,
-                    fromGridX: effect.moveFromX,
-                    fromGridY: effect.moveFromY,
-                    deltaX: effect.moveDeltaX,
-                    deltaY: effect.moveDeltaY
-                )
-            }
+        if !effect.moves.isEmpty {
+            model.moveSubjects(effect.moves)
         }
         return effect.handled ? .handled : .ignored
     }
@@ -769,14 +761,14 @@ private struct EvidenceGraphDocumentBody: View {
         pointer.onDeselect = {
             model.selectSubject(id: nil)
         }
+        pointer.onDragBegan = { id in
+            model.beginGroupDrag(anchor: id)
+        }
+        pointer.onMarqueeEnded = { ids in
+            model.replacePrimarySelection(ids)
+        }
         pointer.onDragEnded = { id, delta in
-            guard let cell = model.gridCell(for: id) else { return }
-            _ = model.commitDrag(
-                subjectID: id,
-                originGridX: cell.x,
-                originGridY: cell.y,
-                documentDelta: delta
-            )
+            _ = model.commitGroupDrag(anchor: id, documentDelta: delta)
         }
         pointer.onPlace = { point in
             model.beginCreate(at: point)
@@ -808,7 +800,7 @@ private struct EvidenceGraphDocumentBody: View {
                 } else {
                     model.clearHover()
                 }
-            case .idle:
+            case .idle, .selecting:
                 break
             }
         }
@@ -818,6 +810,8 @@ private struct EvidenceGraphDocumentBody: View {
         switch inputMode {
         case .idle:
             pointer.mode = .idle
+        case .selecting:
+            pointer.mode = .selecting
         case .placing:
             pointer.mode = .placing
             model.selectSubject(id: nil)
@@ -884,10 +878,10 @@ private struct EvidenceGraphDocumentBody: View {
         let pressed = pointer.pressedCardAction
         func state(_ id: String) -> EvidenceCanvasCard.State {
             EvidenceCanvasCard.State(
-                isSelected: model.selectedSubjectID == id,
+                isSelected: model.selectedSubjectIDs.contains(id),
                 isActivated: model.activatedSubjectID == id,
                 isConnectingFrom: model.connectOriginID == id,
-                isDragging: pointer.draggingItemID == id,
+                isDragging: pointer.draggingItemID == id || pointer.draggingPeerIDs.contains(id),
                 canCite: model.canCite,
                 hoveredActionID: hovered?.cardID == id ? hovered?.actionID : nil,
                 pressedActionID: pressed?.cardID == id ? pressed?.actionID : nil

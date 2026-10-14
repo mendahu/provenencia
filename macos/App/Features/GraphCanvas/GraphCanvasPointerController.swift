@@ -20,8 +20,11 @@ final class GraphCanvasPointerController {
     /// Mid-gesture card offsets (document space), keyed by hit target id.
     /// Changes on every pointer event during a drag.
     private(set) var offsets: [String: CGSize] = [:]
-    /// The item being dragged, if any. Changes only at drag start and end.
+    /// The item being dragged (the anchor), if any. Changes only at drag start and end.
     private(set) var draggingItemID: String?
+    /// Items that move with the anchor. Empty for a one-card drag. Changes only
+    /// at drag start and end.
+    private(set) var draggingPeerIDs: Set<String> = []
     /// Pointer is inside the document (hover for place/connect).
     private(set) var pointerInside = false
     /// Idle hover over a nested card action (`cardID`, `actionID`), for paint.
@@ -36,6 +39,8 @@ final class GraphCanvasPointerController {
     weak var viewport: GraphCanvasViewportController?
 
     var onSelect: ((String) -> Void)?
+    /// A card drag started on this id. Returns every id that moves, anchor included.
+    var onDragBegan: ((String) -> Set<String>)?
     var onDeselect: (() -> Void)?
     var onDragEnded: ((String, CGSize) -> Void)?
     /// An empty-canvas rectangle was released: ids of the hit targets it overlaps.
@@ -50,7 +55,7 @@ final class GraphCanvasPointerController {
     private enum Gesture {
         case none
         case pendingClick(start: CGPoint, targetID: String?, shiftDown: Bool)
-        case draggingCard(id: String, start: CGPoint)
+        case draggingCard(id: String, start: CGPoint, peers: Set<String>)
         /// Empty-canvas selection rectangle between two document points.
         case marquee(origin: CGPoint, current: CGPoint)
         /// Empty-canvas pan (idle only); `lastWindow` for incremental deltas.
@@ -77,8 +82,8 @@ final class GraphCanvasPointerController {
     /// already in progress does not jump.
     func shiftActiveDocumentOrigin(by delta: CGSize) {
         switch gesture {
-        case .draggingCard(let id, let start):
-            gesture = .draggingCard(id: id, start: shifted(start, by: delta))
+        case .draggingCard(let id, let start, let peers):
+            gesture = .draggingCard(id: id, start: shifted(start, by: delta), peers: peers)
         case .pendingClick(let start, let targetID, let shiftDown):
             gesture = .pendingClick(
                 start: shifted(start, by: delta),
@@ -159,14 +164,16 @@ final class GraphCanvasPointerController {
             let pointsAtCards = mode == .idle || mode == .selecting
             if pointsAtCards, let targetID {
                 pressedCardAction = nil
-                gesture = .draggingCard(id: targetID, start: start)
+                let peers = (onDragBegan?(targetID) ?? [targetID]).subtracting([targetID])
+                gesture = .draggingCard(id: targetID, start: start, peers: peers)
                 draggingItemID = targetID
+                draggingPeerIDs = peers
                 let offset = CGSize(
                     width: documentPoint.x - start.x,
                     height: documentPoint.y - start.y
                 )
                 setOffset(targetID, offset: offset)
-                onSelect?(targetID)
+                for peer in peers { setOffset(peer, offset: offset) }
             } else if pointsAtCards, targetID == nil {
                 if mode == .selecting || shiftDown {
                     // Select armed, or Shift held: draw a rectangle.
@@ -182,12 +189,13 @@ final class GraphCanvasPointerController {
                 gesture = .none
             }
 
-        case .draggingCard(let id, let start):
+        case .draggingCard(let id, let start, let peers):
             let offset = CGSize(
                 width: documentPoint.x - start.x,
                 height: documentPoint.y - start.y
             )
             setOffset(id, offset: offset)
+            for peer in peers { setOffset(peer, offset: offset) }
 
         case .none:
             break
@@ -242,13 +250,15 @@ final class GraphCanvasPointerController {
                 }
             }
 
-        case .draggingCard(let id, let start):
+        case .draggingCard(let id, let start, let peers):
             let delta = CGSize(
                 width: documentPoint.x - start.x,
                 height: documentPoint.y - start.y
             )
             clearOffset(id)
+            for peer in peers { clearOffset(peer) }
             draggingItemID = nil
+            draggingPeerIDs = []
             onDragEnded?(id, delta)
             gesture = .none
 

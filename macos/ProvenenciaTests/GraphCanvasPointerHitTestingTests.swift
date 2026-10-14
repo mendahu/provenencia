@@ -195,4 +195,35 @@ struct GraphCanvasPointerPressTests {
         pointer.shiftActiveDocumentOrigin(by: CGSize(width: 100, height: 0))
         #expect(pointer.marqueeRect == CGRect(x: 110, y: 10, width: 70, height: 80))
     }
+
+    @Test func dragPeersShareTheAnchorOffset() {
+        let pointer = marqueeController()
+        pointer.hitTargets.append(
+            GraphCanvasHitTarget(
+                id: "peer",
+                frame: CGRect(x: 400, y: 200, width: 100, height: 80),
+                acceptsConnect: true
+            )
+        )
+        var began: String?
+        pointer.onDragBegan = { id in
+            began = id
+            return [id, "peer"]
+        }
+        var ended: (String, CGSize)?
+        pointer.onDragEnded = { ended = ($0, $1) }
+        pointer.mouseDown(documentPoint: CGPoint(x: 220, y: 220), windowPoint: .zero)
+        pointer.mouseDragged(documentPoint: CGPoint(x: 260, y: 230), windowPoint: .zero)
+        #expect(began == "card")
+        #expect(pointer.draggingItemID == "card")
+        #expect(pointer.draggingPeerIDs == ["peer"])
+        #expect(pointer.offsets["card"] == CGSize(width: 40, height: 10))
+        #expect(pointer.offsets["peer"] == pointer.offsets["card"])
+        pointer.mouseUp(documentPoint: CGPoint(x: 260, y: 230), windowPoint: .zero)
+        #expect(pointer.offsets["card"] == nil)
+        #expect(pointer.offsets["peer"] == nil)
+        #expect(pointer.draggingPeerIDs.isEmpty)
+        #expect(ended?.0 == "card")
+        #expect(ended?.1 == CGSize(width: 40, height: 10))
+    }
 }
