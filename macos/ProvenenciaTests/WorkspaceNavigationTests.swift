@@ -14,6 +14,10 @@ struct WorkspaceNavigationTests {
         return dir.appendingPathComponent("history.json", isDirectory: false)
     }
 
+    private func entryCount(_ navigation: WorkspaceNavigation) -> Int {
+        navigation.backJumpItems(limit: 100).count + navigation.forwardJumpItems(limit: 100).count + 1
+    }
+
     private func attachedNavigation(fileURL: URL? = nil) throws -> (WorkspaceNavigation, URL) {
         let url = try fileURL ?? tempNavigationFile()
         let navigation = WorkspaceNavigation()
@@ -262,6 +266,9 @@ struct WorkspaceNavigationTests {
         let a = WorkspaceLocation(section: .sources, sourceId: "1", ref: "SRC-1", title: "Old")
         let b = WorkspaceLocation(section: .sources, sourceId: "1", ref: "SRC-2", title: "New")
         #expect(a == b)
+        var scrolled = WorkspaceLocation.sectionRoot(.persons)
+        scrolled.listScrollAnchor = "person-1"
+        #expect(scrolled == .sectionRoot(.persons))
         #expect(a != WorkspaceLocation(section: .sources, sourceId: "2"))
         #expect(
             WorkspaceLocation(section: .sources, sourceId: "1", sourceSurface: .page)
@@ -277,6 +284,99 @@ struct WorkspaceNavigationTests {
         #expect(location.sourceId == "src-legacy")
         #expect(location.sourceSurface == .page)
         #expect(location.title == "Deed")
+        #expect(location.listScrollAnchor == nil)
+    }
+
+    @Test func legacyHistoryMissingListScrollAnchorDecodesAsNil() throws {
+        let json = Data("""
+        {"v":1,"projectUuid":"\(projectUuid)","index":0,"entries":[{"section":"persons"}]}
+        """.utf8)
+        let document = try JSONDecoder().decode(NavigationHistoryDocument.self, from: json)
+        #expect(document.entries.count == 1)
+        #expect(document.entries[0].listScrollAnchor == nil)
+        #expect(document.entries[0] == .sectionRoot(.persons))
+    }
+
+    @Test func listScrollAnchorRoundTrips() throws {
+        var location = WorkspaceLocation.sectionRoot(.sources)
+        location.listScrollAnchor = "src-1"
+        let decoded = try JSONDecoder().decode(
+            WorkspaceLocation.self,
+            from: JSONEncoder().encode(location)
+        )
+        #expect(decoded.listScrollAnchor == "src-1")
+        #expect(decoded == location)
+    }
+
+    @Test func notingListScrollDoesNotPushHistory() throws {
+        let (navigation, _) = try attachedNavigation()
+        navigation.go(to: .sectionRoot(.persons))
+        let count = entryCount(navigation)
+        navigation.noteListScroll("person-1")
+        navigation.noteListScroll("person-2")
+        #expect(entryCount(navigation) == count)
+        #expect(!navigation.canGoForward)
+        #expect(navigation.currentLocation.listScrollAnchor == nil)
+    }
+
+    @Test func leavingAListStampsTheOutgoingEntry() throws {
+        let (navigation, url) = try attachedNavigation()
+        navigation.go(to: .sectionRoot(.persons))
+        navigation.noteListScroll("person-1")
+        navigation.go(to: .personDetail(entityId: "p1", ref: "PER-1", title: "Ada"))
+        #expect(navigation.currentLocation.listScrollAnchor == nil)
+
+        navigation.goBack()
+        #expect(navigation.currentLocation.section == .persons)
+        #expect(navigation.currentLocation.listScrollAnchor == "person-1")
+
+        navigation.goForward()
+        #expect(navigation.currentLocation.entityId == "p1")
+        navigation.goBack()
+        #expect(navigation.currentLocation.listScrollAnchor == "person-1")
+
+        let reloaded = WorkspaceNavigation()
+        reloaded.attachProject(uuid: projectUuid, fileURL: url)
+        #expect(reloaded.currentLocation.listScrollAnchor == "person-1")
+    }
+
+    @Test func forwardAndJumpRestoreTheStampedAnchor() throws {
+        let (navigation, _) = try attachedNavigation()
+        navigation.go(to: .sectionRoot(.persons))
+        navigation.noteListScroll("person-1")
+        navigation.goBack()
+        navigation.goForward()
+        #expect(navigation.currentLocation == .sectionRoot(.persons))
+        #expect(navigation.currentLocation.listScrollAnchor == "person-1")
+
+        navigation.noteListScroll("person-4")
+        navigation.go(to: .sectionRoot(.places))
+        let persons = try #require(
+            navigation.backJumpItems(limit: 15).first { $0.location.section == .persons }
+        )
+        navigation.go(toIndex: persons.index)
+        #expect(navigation.currentLocation == .sectionRoot(.persons))
+        #expect(navigation.currentLocation.listScrollAnchor == "person-4")
+    }
+
+    @Test func revisitingAListWithoutAnAnchorClearsItAndDoesNotPush() throws {
+        let (navigation, _) = try attachedNavigation()
+        navigation.go(to: .sectionRoot(.persons))
+        navigation.noteListScroll("person-1")
+        navigation.go(to: .personDetail(entityId: "p1", ref: "PER-1", title: "Ada"))
+        navigation.goBack()
+        #expect(navigation.currentLocation.listScrollAnchor == "person-1")
+        let count = entryCount(navigation)
+
+        navigation.go(to: .sectionRoot(.persons))
+        #expect(navigation.currentLocation.listScrollAnchor == nil)
+        #expect(entryCount(navigation) == count)
+        #expect(navigation.canGoForward)
+
+        navigation.goBack()
+        navigation.goForward()
+        #expect(navigation.currentLocation == .sectionRoot(.persons))
+        #expect(navigation.currentLocation.listScrollAnchor == nil)
     }
 
     @Test func goToGraphIsDistinctPlaceFromPage() throws {
