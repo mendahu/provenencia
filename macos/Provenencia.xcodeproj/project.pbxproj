@@ -54,6 +54,7 @@
 		AA0000000000000000000331 /* DateValueDraft.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000330 /* DateValueDraft.swift */; };
 		A70D00000000000000000002 /* NameValueDraft.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70D00000000000000000001 /* NameValueDraft.swift */; };
 		A70D00000000000000000004 /* NamePartType.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70D00000000000000000003 /* NamePartType.swift */; };
+		A70D00000000000000000012 /* NameTitleRegistry.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70D00000000000000000011 /* NameTitleRegistry.swift */; };
 		A70D00000000000000000006 /* NameValueEditorForm.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70D00000000000000000005 /* NameValueEditorForm.swift */; };
 		A70D00000000000000000008 /* NameValueFormDialog.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70D00000000000000000007 /* NameValueFormDialog.swift */; };
 		A70D0000000000000000000A /* NameValueHostControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = A70D00000000000000000009 /* NameValueHostControl.swift */; };
@@ -419,6 +420,7 @@
 		AA0000000000000000000330 /* DateValueDraft.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DateValueDraft.swift; sourceTree = "<group>"; };
 		A70D00000000000000000001 /* NameValueDraft.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NameValueDraft.swift; sourceTree = "<group>"; };
 		A70D00000000000000000003 /* NamePartType.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NamePartType.swift; sourceTree = "<group>"; };
+		A70D00000000000000000011 /* NameTitleRegistry.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NameTitleRegistry.swift; sourceTree = "<group>"; };
 		A70D00000000000000000005 /* NameValueEditorForm.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NameValueEditorForm.swift; sourceTree = "<group>"; };
 		A70D00000000000000000007 /* NameValueFormDialog.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NameValueFormDialog.swift; sourceTree = "<group>"; };
 		A70D00000000000000000009 /* NameValueHostControl.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NameValueHostControl.swift; sourceTree = "<group>"; };
@@ -1133,6 +1135,7 @@
 			children = (
 				A70D00000000000000000001 /* NameValueDraft.swift */,
 				A70D00000000000000000003 /* NamePartType.swift */,
+				A70D00000000000000000011 /* NameTitleRegistry.swift */,
 				A70D00000000000000000005 /* NameValueEditorForm.swift */,
 				A70D00000000000000000007 /* NameValueFormDialog.swift */,
 				A70D00000000000000000009 /* NameValueHostControl.swift */,
@@ -2034,6 +2037,7 @@
 				AA00000000000000000004F1 /* DateValueTranscriptionMatch.swift in Sources */,
 				A70D00000000000000000002 /* NameValueDraft.swift in Sources */,
 				A70D00000000000000000004 /* NamePartType.swift in Sources */,
+				A70D00000000000000000012 /* NameTitleRegistry.swift in Sources */,
 				A70D00000000000000000006 /* NameValueEditorForm.swift in Sources */,
 				A70D00000000000000000008 /* NameValueFormDialog.swift in Sources */,
 				A70D0000000000000000000A /* NameValueHostControl.swift in Sources */,

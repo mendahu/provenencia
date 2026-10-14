@@ -10,6 +10,7 @@ struct NameValueEditorForm: View {
     /// Host focus for the form field. The editor does not take focus on its own.
     var formFocus: PVInputFocus? = nil
     @State private var partValueToFocus: UUID?
+    @State private var pendingSplit: PendingNameSplit?
 
     private var typeOptions: [PVSelectOption] {
         NamePartType.selectOptions
@@ -24,6 +25,21 @@ struct NameValueEditorForm: View {
                 storedAsSection
             }
         }
+        .pvConfirm(
+            item: $pendingSplit,
+            copy: { _ in
+                PVConfirmCopy(
+                    title: L10n.string(L10n.NameValue.splitConfirmTitle),
+                    message: L10n.string(L10n.NameValue.splitConfirmMessage),
+                    confirm: L10n.NameValue.splitConfirmReplace,
+                    cancel: L10n.NameValue.splitConfirmKeep
+                )
+            },
+            tone: .irreversible,
+            accessibilityIdentifierPrefix: "\(accessibilityIdentifierPrefix).splitConfirm",
+            onConfirm: applyPendingSplit,
+            detail: splitConfirmDetail
+        )
     }
 
     private var formSection: some View {
@@ -36,15 +52,28 @@ struct NameValueEditorForm: View {
                     .font(PVFont.body(size: PVTypeScale.caption))
                     .foregroundStyle(PVColor.textFaint)
             }
-            PVInput(
-                text: formBinding,
-                size: .md,
-                prompt: L10n.NameValue.formPlaceholder,
-                isInvalid: draft.formError != nil,
-                focus: formFocus
-            )
-            .accessibilityIdentifier("\(accessibilityIdentifierPrefix).form")
-            .accessibilityHint(draft.formError.map { Text(verbatim: $0) } ?? Text(L10n.NameValue.formHint))
+            HStack(alignment: .center, spacing: PVSpacing.space4) {
+                PVInput(
+                    text: formBinding,
+                    size: .md,
+                    prompt: L10n.NameValue.formPlaceholder,
+                    isInvalid: draft.formError != nil,
+                    focus: formFocus,
+                    onBlur: fillEmptyPartsFromForm
+                )
+                .frame(maxWidth: .infinity)
+                .accessibilityIdentifier("\(accessibilityIdentifierPrefix).form")
+                .accessibilityHint(draft.formError.map { Text(verbatim: $0) } ?? Text(L10n.NameValue.formHint))
+                PVButton(
+                    L10n.NameValue.split,
+                    variant: .secondary,
+                    size: .md,
+                    action: splitFromForm
+                )
+                .disabled(!draft.canSplitForm)
+                .fixedSize(horizontal: true, vertical: false)
+                .accessibilityIdentifier("\(accessibilityIdentifierPrefix).split")
+            }
             if let error = draft.formError {
                 Text(verbatim: error)
                     .font(PVFont.body(size: PVTypeScale.caption))
@@ -125,7 +154,7 @@ struct NameValueEditorForm: View {
             Text(L10n.NameValue.partTypeLabel)
                 .font(PVFont.body(size: PVTypeScale.caption))
                 .foregroundStyle(PVColor.textSecondary)
-                .frame(width: 170, alignment: .leading)
+                .frame(width: NamePartTypeColumn.width, alignment: .leading)
             Color.clear.frame(width: 88)
         }
     }
@@ -159,11 +188,11 @@ struct NameValueEditorForm: View {
                     options: typeOptions,
                     size: .sm,
                     menuWidth: 190,
-                    fillsWidth: false,
+                    fillsWidth: true,
                     accessibilityLabel: L10n.NameValue.partTypeLabel,
                     accessibilityIdentifier: "\(accessibilityIdentifierPrefix).part.\(index).type"
                 )
-                .frame(width: 170)
+                .frame(width: NamePartTypeColumn.width)
                 HStack(spacing: 2) {
                     PVIconButton(
                         .sortAscending,
@@ -259,7 +288,10 @@ struct NameValueEditorForm: View {
             get: { draft.parts.indices.contains(index) ? draft.parts[index].value : "" },
             set: { next in
                 guard draft.parts.indices.contains(index) else { return }
-                draft.parts[index].value = next
+                let id = draft.parts[index].id
+                var nextDraft = draft
+                nextDraft.setPartValue(id: id, value: next)
+                draft = nextDraft
             }
         )
     }
@@ -269,9 +301,74 @@ struct NameValueEditorForm: View {
             get: { draft.parts.indices.contains(index) ? draft.parts[index].type : "" },
             set: { next in
                 guard draft.parts.indices.contains(index) else { return }
-                draft.parts[index].type = next
+                let id = draft.parts[index].id
+                var nextDraft = draft
+                nextDraft.setPartType(id: id, type: next)
+                draft = nextDraft
             }
         )
+    }
+
+    private func fillEmptyPartsFromForm() {
+        var next = draft
+        next.fillEmptyPartsFromForm()
+        draft = next
+    }
+
+    private func splitFromForm() {
+        var next = draft
+        switch next.splitFromForm() {
+        case .none:
+            break
+        case .applied:
+            draft = next
+        case .needsConfirm(let parts):
+            pendingSplit = PendingNameSplit(parts: parts)
+        }
+    }
+
+    private func applyPendingSplit() {
+        guard let pending = pendingSplit else { return }
+        var next = draft
+        next.applySplit(pending.parts)
+        draft = next
+        pendingSplit = nil
+    }
+
+    private func splitConfirmDetail(_ pending: PendingNameSplit) -> some View {
+        VStack(alignment: .leading, spacing: PVSpacing.space3) {
+            Text(L10n.NameValue.splitConfirmPending)
+                .font(PVFont.body(size: PVTypeScale.micro, weight: PVFontWeight.semibold))
+                .tracking(PVTypeScale.micro * PVTracking.caps)
+                .textCase(.uppercase)
+                .foregroundStyle(PVColor.textMuted)
+            VStack(alignment: .leading, spacing: PVSpacing.space2) {
+                ForEach(Array(pending.parts.enumerated()), id: \.element.id) { index, part in
+                    HStack(alignment: .firstTextBaseline, spacing: PVSpacing.space5) {
+                        Text(verbatim: "\(index + 1)")
+                            .font(PVFont.mono(size: PVTypeScale.micro))
+                            .foregroundStyle(PVColor.textFaint)
+                            .frame(width: 22, alignment: .trailing)
+                        Text(NamePartType.label(forRaw: part.type))
+                            .font(PVFont.body(size: PVTypeScale.caption))
+                            .foregroundStyle(PVColor.textMuted)
+                        Text(verbatim: part.value)
+                            .font(PVFont.body(size: PVTypeScale.bodySmall))
+                            .foregroundStyle(PVColor.textPrimary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(PVColor.surfaceSunken)
+            .clipShape(RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous)
+                    .stroke(PVColor.borderSubtle, lineWidth: 1)
+            )
+        }
     }
 
     private func moveAndAnnounce(at index: Int, by delta: Int) {
@@ -284,5 +381,25 @@ struct NameValueEditorForm: View {
             notification: .announcementRequested,
             userInfo: [.announcement: message, .priority: NSAccessibilityPriorityLevel.medium]
         )
+    }
+}
+
+/// Snapshot of the parts Split would write, so the confirm stays filled while it dismisses.
+private struct PendingNameSplit: Identifiable {
+    let id = UUID()
+    let parts: [NameValueDraft.Part]
+}
+
+/// Closed part-type select, wide enough for the longest label and stable across selections.
+private enum NamePartTypeColumn {
+    static var width: CGFloat {
+        let font = PVFont.nsBody(size: PVTypeScale.caption)
+        let longest = NamePartType.selectOptions
+            .map { ($0.label as NSString).size(withAttributes: [.font: font]).width }
+            .max() ?? 0
+        let trailing = PVInputChrome.horizontalInset
+            + PVSelectFieldChrome.chevronSize
+            + PVInputChrome.iconTextGap
+        return ceil(longest + PVInputChrome.horizontalInset + trailing + 2)
     }
 }

@@ -101,6 +101,7 @@ struct PVInput: View {
     private let activateOnAppear: Bool
     private let externalFocus: FocusState<Bool>.Binding?
     private let equalsFocus: PVInputFocus?
+    private let onBlur: (() -> Void)?
 
     @FocusState private var ownedFocus: Bool
 
@@ -115,7 +116,8 @@ struct PVInput: View {
         isInvalid: Bool = false,
         focused: FocusState<Bool>.Binding? = nil,
         focus: PVInputFocus? = nil,
-        activateOnAppear: Bool = false
+        activateOnAppear: Bool = false,
+        onBlur: (() -> Void)? = nil
     ) {
         self._text = text
         self.size = size
@@ -128,6 +130,7 @@ struct PVInput: View {
         self.activateOnAppear = activateOnAppear
         self.externalFocus = focused
         self.equalsFocus = focus
+        self.onBlur = onBlur
     }
 
     var body: some View {
@@ -177,6 +180,18 @@ struct PVInput: View {
             guard activateOnAppear, !isReadOnly else { return }
             focusField()
         }
+        .onChange(of: isFieldFocused) { wasFocused, focused in
+            if wasFocused, !focused {
+                onBlur?()
+            }
+        }
+    }
+
+    private var isFieldFocused: Bool {
+        if isReadOnly { return false }
+        if let equalsFocus { return equalsFocus.isActive() }
+        if let externalFocus { return externalFocus.wrappedValue }
+        return ownedFocus
     }
 
     /// Same-cycle focus is dropped while the field is inserted; the next turn

@@ -447,7 +447,7 @@ extension PVSelect where Row == PVSelectPlainRow {
     }
 }
 
-private enum PVSelectFieldChrome {
+enum PVSelectFieldChrome {
     static let chevronSize: CGFloat = 14
 }
 
