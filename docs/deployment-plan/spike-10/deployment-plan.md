@@ -448,6 +448,8 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 
 **Briefs:** [S10-D16](design/S10-D16-event-mark.md) (the `subject_event` glyph) and [S10-D7](design/S10-D7-sidebar-marks.md) (sidebar, toolbar, empty states). Design the mark first.
 
+**Plan:** [`prs/S10-19-event-mark-sidebar.md`](prs/S10-19-event-mark-sidebar.md) — Planned. Both boards agreed 2026-10-14. The toolbar section icon is the Back / Forward history-menu rows.
+
 | | |
 | --- | --- |
 | **In** | Per S10-D16 and S10-D7. A new `subject_event` mark (calendar / datebook — the kit board draws it). The key stays. Person and Place marks stay. Sidebar People, Events, and Places use those subject marks. The toolbar section icon uses that same source. List empty states for those three kinds use the mark. Cards, omnibar, Promote, and Properties already use `PVMark` and update with the asset. |
