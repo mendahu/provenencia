@@ -16,7 +16,7 @@ Usability fixes from [`docs/dogfood/ux.md`](../../dogfood/ux.md) after Spike 9, 
 
 1. **Composer stays usable at 20 Observations.** Saved rows scan. Adding an Observation is the same for a bridge and a plain Observation, and you are already looking at it, ready to type. A bridge between two subjects on this Source can be started here, and another after it, without a trip back to the Evidence graph. A saved row can be duplicated into a new unsaved form. Choosing a Citation does not start Auto Transcribe.
 2. **The Evidence graph holds a real Source.** The canvas grows before cards hit the edge. Pan and zoom survive a trip to the composer. The grid is a tile, so a zoomed-out or grown document does not turn the background into one giant bitmap. Zoomed-out edges stay legible. The card stays the full card at every zoom. Button hits match the buttons. A hotkey or toolbar control box-selects cards and moves them together.
-3. **Files.** A transcription that overflows shows a scrollbar. A file dropped on the Artifact section uploads. The file opens from the collapsed row and from the Evidence graph.
+3. **Files.** A transcription that overflows shows a scrollbar. A file dropped on the Source page opens Add Artifact with that file chosen; it is stored when the researcher names it and confirms. Artifacts are cards. The file opens from a card and from the Evidence graph.
 4. **Lists.** Sources, People, Events, and Places show when the row last changed. Leaving a list and coming back lands at the same scroll position. The Sources list remembers sort, type filter, evidence-status filter, and text search.
 5. **Entry defaults.** A date modal opens on Year and, when the transcription has a date, that date is already filled. A full name line can be split into parts. The name-part type control does not jump width and cycles same-letter matches.
 6. **Small chrome.** Create Source asks for the name first. Enter saves a Property title. Clicking outside a sheet closes it, and asks first when the sheet is dirty. Opening an existing project selects the oldest user, not "create a new user." Searching `marriage` ranks title-word hits above fuzzy name prefixes. People, Places, and Events use one mark each, and the Event mark is not an hourglass. A Person page shows sex or gender, with gender winning when both exist.
@@ -47,9 +47,9 @@ Usability fixes from [`docs/dogfood/ux.md`](../../dogfood/ux.md) after Spike 9, 
 | Create Source modal: Name first, then Type | S10-15 | — |
 | Rethink the Observation list + Add Observation focuses search | S10-16 | S10-D3 |
 | Auto-fill name parts + name part type dropdown | S10-17 | S10-D4 |
-| Drag files onto Artifacts + open the file without expanding | S10-18 | S10-D5, S10-D6 |
-| Rethink the Event icon + sidebar icons match Subject cards | S10-19 | S10-D7 |
-| Box-select and move multiple Subject cards | S10-20 | S10-D6 (already designed for S10-18) |
+| Drag a file onto the Source page + artifact cards | S10-18 | S10-D5 |
+| Rethink the Event icon + sidebar icons match Subject cards | S10-19 | S10-D16, S10-D7 |
+| File select and Open on the graph + box-select | S10-20 | S10-D6 |
 | Last updated on list views | S10-21, S10-22, S10-41 | S10-D8…D11 |
 | Show sex / gender on the Person detail page | S10-23 | S10-D12 |
 | Accent folding + spaced particles | S10-24 | — |
@@ -72,7 +72,7 @@ Usability fixes from [`docs/dogfood/ux.md`](../../dogfood/ux.md) after Spike 9, 
 | Sources list filters and text search | S10-41 | S10-D8 |
 | Promote target menu truncates a long title | S10-42 | — |
 | Combo box ranks a prefix above a mid-word match | S10-43 | — |
-| Unpromote on a promoted Subject card | S10-44 | S10-D6 (same board as S10-18) |
+| Unpromote on a promoted Subject card | S10-44 | S10-D6 (same board as S10-20) |
 | Seed Person property `interests` | S10-45 | — |
 
 **Left in the dogfood log**
@@ -109,16 +109,17 @@ These are the calls for this spike. The questions at the bottom are answered; no
 - **Enter follows the buttons on a single-line inline edit.** Save when that control is enabled. When it is not, Enter leaves the edit, the same as Cancel. Escape cancels. A multiline field still takes Enter as a newline. Landed in S10-08.
 - **The Sources list is one page.** Sort, type filter, evidence status, and text search persist per project and user and restore together when that place is opened again, including after relaunch. People, Events, and Places have none of those controls. Last updated on a Sources row uses the revision Sources already store. That cell, the filters, the search field, the persisted settings, and the session scroll are S10-41, from S10-D8. They are not a persistence PR ahead of the brief.
 - **Last updated** is an audit scope, not a timestamp column. Sources already store `UpdatedRevision` (`scope_type = source`) and can show it once the row is designed. People, Events, and Places have no scope today (`canonical_entity` is `noScope` in `core/database/audit/scopes.go`). S10-21 adds a `canonical_entity` scope: Identity Claim writes, and Observation writes on a Subject that is a member, so editing evidence moves the handle's revision. Display is relative or absolute in the briefs; the value is the revision's time.
-- **One Event mark.** Sidebar People / Events / Places use SF Symbols (`person`, `calendar`, `mapPin` on `WorkspaceSection`). Cards, lists, omnibar hits, Promote, and Properties use `PVMark` (`subject_person`, `subject_event`, `subject_place`). The Event asset is the hourglass. S10-D7 draws the new Event mark and switches the sidebar (and the toolbar, which reads `WorkspaceSection.icon`) to the subject marks. Every existing `PVMark` call site picks up the new asset with no extra brief. List empty states that still use `PVSymbol` for these three kinds switch in the same PR.
+- **One Event mark.** Sidebar People / Events / Places use SF Symbols (`person`, `calendar`, `mapPin` on `WorkspaceSection`). Cards, lists, omnibar hits, Promote, and Properties use `PVMark` (`subject_person`, `subject_event`, `subject_place`). The Event asset is the hourglass. S10-D16 replaces that asset with a calendar or datebook on the design-system board. S10-D7 instances the subject marks in the sidebar and the toolbar, which reads `WorkspaceSection.icon`, and in the three list empty states. Every existing `PVMark` call site picks up the new asset with no extra brief.
 - **Sex / gender styling** uses a seeded `gender` Property when the Person has one, otherwise `sex_at_birth`. The seed is `man`, `woman`, `non_binary` (labels Man, Woman, Non-binary). Researchers add further terms (`origin=user`), the same way they extend `role`. It is not product-locked, and there is no product `other` term. The page treatment recognizes the three seeded keys. A researcher-added term still counts as gender and wins over sex at birth; the brief draws that term without inventing a new color per key. Unknown, empty, and mixed (the reconciler already has a mixed state) stay neutral. `sex_at_birth` already appears as an ordinary field row when a record speaks to it (`PersonDetailContent`); this PR adds the page treatment and leaves that row in place.
 - **Composer performance** is already done. [#356](https://github.com/mendahu/provenencia/pull/356) builds a combo box's option list only while its menu is open, so a form of closed pickers does not lay out every choice. Checked 2026-10-12: a citation with 70 Observations opens quickly. No separate profile pass, and no split that shows the form while the file is still loading. S10-16 still has to stay comfortable at 20 Observations; that bar is the layout.
 - **List scroll is session state, like the graph camera.** Sources, People, Events, and Places remember content offset on the workspace session and restore it when that list place appears again (Back, Forward, breadcrumbs). It is not a navigation-history field ([`navigation-history.md`](../archive/spike-3/navigation-history.md) still omits scroll from the entry) and it does not survive relaunch. Sources scroll is restored in S10-41 after that PR has applied the persisted sort and filters, so the list is not put back on a differently ordered page. Changing sort or filter on that visit resets the offset to the top. People, Events, and Places have no sort; their scroll is S10-40.
 - **Sources evidence filters count primaries in one read.** A primary is a person, event, or place. Empty: no primaries. In progress: at least one primary has no accepted Identity Claim. Filed: at least one primary, and every primary has an accepted claim. Bridges are not a filter axis. The counts are one grouped query beside `sourcegraphprogress`, not a query per row. Text search filters the list already loaded, by title and ref, as you type. It is not the omnibar and not FTS. Status and query persist in the same per-project, per-user store as sort and type filter.
-- **Unpromote deletes the filing. It does not reject it.** The button is on a promoted primary card. Confirm always. The confirm names each bridge Subject on this Source (participation, relationship, location, place relationship) that has this Subject as an end and an accepted claim. One transaction deletes those claims and this Subject's claim, audited, through the write path. The Evidence cards stay; their footers show Promote again. The handle stays, even if it has no members left. Other members' claims are not rejected and not stripped. That review stays [`ideas/identity-claim-review.md`](../../ideas/identity-claim-review.md). A rejection ("not this entity") is that review's action, not this button.
+- **Unpromote deletes the filing. It does not reject it.** The button is on a promoted primary card, in the footer beside the control that opens the handle. Confirm always, tone irreversible, so the button is not a trash can. The confirm names each bridge Subject on this Source (participation, relationship, location, place relationship) that has this Subject as an end and an accepted claim. One transaction deletes those claims and this Subject's claim, audited, through the write path. The Evidence cards stay; their footers show Promote again. The handle stays, even if it has no members left. Other members' claims are not rejected and not stripped. That review stays [`ideas/identity-claim-review.md`](../../ideas/identity-claim-review.md). A rejection ("not this entity") is that review's action, not this button.
+- **Box-select is a marquee of subject cards.** Hold Shift and drag empty canvas, or arm Select on the palette (its help shows Shift). Person, event, and place cards that intersect the rectangle are selected. Empty-canvas drag still pans when that tool is disarmed and Shift is up. Bridge cards are not selected and do not move with the group. S10-D6 draws it; S10-20 ships it, together with a header select of the Source's files and an Open button that uses the system app.
 - **A long select label truncates inside the width it was given.** `PVSelect`'s closed label ellipsizes rather than growing the control. The Promote target column (`PromoteLayout.targetColumn`) stays put; `PromoteTargetMenuRow` already limits the menu title to one line. When the closed label is cut, help shows the full string. S10-17 still gives the name-part type control a stable width sized to its longest label. Those labels are short, so truncation does not replace that fix. Landed in S10-42.
 - **Combo box rank is three bands, then the original order.** In `PVComboBoxMatch`, a label that starts with the query ranks above a later word that starts with it (split on spaces and hyphens), which ranks above any other contains match, including a match only in the subtext. `par` lists *parent* above *grandparent*. This is the kit filter, not `core/search` (S10-06). Landed in S10-43.
 - **`interests` is prose, not a matcher feature.** Key `interests`, label Interests, `value_type = text`, cardinality `multiple`, bound to `person`, unlocked (the Properties page may unbind it). Same install rule as `engagement`: new catalogs only, no migration. It is not in a match profile and not on the Person header.
-- **Artifact drop already exists inside the Add dialogs** (`IngestFileDropRow` on create and attach). It does not exist on the Artifact section of the Source page. S10-18 adds the section target. Open File today is only in the expanded detail (`SourcePageArtifactsView.artifactPrimaryFileColumn`). The Evidence graph header has no open-file control.
+- **A drop on the Source page opens Add Artifact.** The drop target is the content pane (identity header and the scrolling column). One allowed file is staged in the dialog's file row; the label and description stay empty. The file is stored when the researcher types a label and confirms. A rejected drop opens that same dialog on the existing callout and stores nothing. The artifact accordion becomes wrapping rows of cards: large preview, label, description, and Open / Use as thumbnail / Delete. S10-D5, in S10-18. The graph header's file select and Open button are S10-D6, in S10-20: the select lists every artifact that has a file, and Open sends the chosen file to the system app. No files: both controls are absent. No in-app viewer window.
 - **Name part types stay a select.** The compiled list is unchanged by S10-29. It is still a fixed-width `PVSelect`. User-minted part types stay out. The Western split rules in S10-17 do not become profile-aware.
 - **Accent fold is matching only.** `wordSimilarity` scores a fold-only match at 0.95. `autoreconcile.NormalizeForm` and `sort_key` stay as they are, so José and Jose remain separate groupings on the Person page. Display never folds.
 - **Word tiers, top to bottom:** exact, abbreviation or nickname (just under exact), accent fold (0.95), then the existing near-spelling score. Daitch–Mokotoff, which would sit under near-spelling, is descoped ([`ideas/daitch-mokotoff.md`](../../ideas/daitch-mokotoff.md)). Spaced particles (`O`, `Mc`, `Mac`, `St`, `D`, `Fitz`, and the rest of that short list) rejoin with the next word before scoring. A lone initial (`O.`) does not rejoin.
@@ -142,9 +143,10 @@ These are the calls for this spike. The questions at the bottom are answered; no
 | **S10-D1** | Adaptive choice field (kit board) | **S10-14**, descoped 2026-10-12 | — |
 | **S10-D3** | Citation composer | **S10-16**, done 2026-10-12 | — |
 | **[S10-D4](design/archive/S10-D4-name-parts-modal.md)** | Name parts modal | **S10-17** | Split, fixed-width type control. Does not wait on S10-29 |
-| **S10-D5** | Source page — Artifacts | **S10-18** | — |
-| **S10-D6** | Evidence graph | **S10-18** header open | S10-20 box-select. S10-44 Unpromote on the promoted card |
-| **S10-D7** | Sidebar | **S10-19** | Toolbar section icon ships in the same PR |
+| **[S10-D5](design/S10-D5-source-artifacts.md)** | Source page — Artifacts | **S10-18** | Page drop opens Add Artifact. The list becomes cards |
+| **[S10-D6](design/S10-D6-evidence-graph.md)** | Evidence graph | **S10-20** file select, Open, and box-select | S10-44 Unpromote on the promoted card |
+| **[S10-D16](design/S10-D16-event-mark.md)** | Design system — Event mark | **S10-19** | The `subject_event` glyph. Sidebar placement is S10-D7 |
+| **[S10-D7](design/S10-D7-sidebar-marks.md)** | Workspace shell | **S10-19** | Sidebar and toolbar. Depends on S10-D16. Empty states use the same marks |
 | **S10-D8** | Sources list | **S10-41** | Last updated, evidence-status filter, text search, persisted sort and filters, session scroll |
 | **S10-D9** | Persons list | **S10-22** | S10-35 fills the thumb with a likeness. S10-39 makes that thumb the preferred portrait |
 | **S10-D10** | Events list | **S10-22** | — |
@@ -154,7 +156,7 @@ These are the calls for this spike. The questions at the bottom are answered; no
 | **S10-D14** | Evidence graph — zoomed-out card | **S10-46**, descoped 2026-10-11 | — |
 | **S10-D15** | Citation composer — depiction row | **S10-34** | — |
 
-S10-D6 is one board for the graph's new controls (open file, box-select, Unpromote). S10-01…S10-04 do not wait on it. S10-D14, the zoomed-out face, is descoped with S10-46 and is not drawn. S10-D1, the adaptive choice field, is descoped with S10-14 and is not drawn. Term fields keep the control they have. S10-D2 is not drawn: name-then-type on Create Source is a field swap, so S10-15 stands on its own. S10-D9…D11 are three briefs for the shared conclusion lists. Events and Places specify the same last-updated cell as Persons so `ConclusionListPage` does not grow three treatments. S10-D8 is the Sources list, a different page, and it gates S10-41. That board draws the same last-updated cell, the evidence-status filter, and text search. Sort, type, status, query, and session scroll ship from that one board. D9…D11 do not draw those controls, and S10-22 does not change the Sources list. Only the Persons list thumb becomes a likeness. S10-D6, S10-D9, and S10-D12 each cover a later PR on that same view, so those briefs are written with the later frame in them. The depiction row is its own brief, S10-D15, written just before S10-34. S10-D3 does not draw it. D12 includes the preferred-portrait control S10-39 fills, and D9 includes that crop as the list thumb. Whichever of D8 and D9 is designed first draws the last-updated cell; the other copies it.
+S10-D6 is one board for the graph's new controls (open file, box-select, Unpromote) and it gates S10-20. S10-18 does not wait on it. S10-01…S10-04 do not wait on it. S10-D14, the zoomed-out face, is descoped with S10-46 and is not drawn. S10-D1, the adaptive choice field, is descoped with S10-14 and is not drawn. Term fields keep the control they have. S10-D2 is not drawn: name-then-type on Create Source is a field swap, so S10-15 stands on its own. S10-D9…D11 are three briefs for the shared conclusion lists. Events and Places specify the same last-updated cell as Persons so `ConclusionListPage` does not grow three treatments. S10-D8 is the Sources list, a different page, and it gates S10-41. That board draws the same last-updated cell, the evidence-status filter, and text search. Sort, type, status, query, and session scroll ship from that one board. D9…D11 do not draw those controls, and S10-22 does not change the Sources list. Only the Persons list thumb becomes a likeness. S10-D6, S10-D9, and S10-D12 each cover a later PR on that same view, so those briefs are written with the later frame in them. The depiction row is its own brief, S10-D15, written just before S10-34. S10-D3 does not draw it. D12 includes the preferred-portrait control S10-39 fills, and D9 includes that crop as the list thumb. Whichever of D8 and D9 is designed first draws the last-updated cell; the other copies it.
 
 ## PR sequence
 
@@ -205,14 +207,16 @@ SLICE 4 — Composer and the dialogs it opens
          splits to Surname, Given. Pressing S twice reaches Surname.
 
 SLICE 5 — Artifacts and multi-select
-  ✎ S10-D5 ──▶
-  ✎ S10-D6 ──▶ S10-18  Drop on the Artifact section; open from the row and the graph
-  S10-19  Sidebar and Event mark (✎ S10-D7). Can start as soon as D7 is designed;
-          it does not wait on S10-18.
-  ✎ (S10-D6 already done) ──▶ S10-20  Box-select (after S10-01 and S10-03)
-  Check: drop a file on the section and it uploads. Open the file without
-         expanding. Draw a box, drag once, the group moves. Sidebar Event
-         matches the card.
+  ✎ S10-D5 ──▶ S10-18  Page drop opens Add Artifact; artifact cards
+  ✎ S10-D16 ──▶
+  ✎ S10-D7 ──▶ S10-19  Event mark, then sidebar and toolbar. Does not wait on S10-18
+  ✎ S10-D6 ──▶ S10-20  File select, Open, and box-select (after S10-01 and S10-03)
+  Check: drop a file on the page and Add Artifact opens with that file
+         chosen. Name it and confirm: the card is there. Cancel: it is not.
+         Open the file from the card. On the graph, pick a file and Open
+         sends it to the system app. A source with no file shows neither
+         control. Draw a box, drag once, the group moves. Sidebar
+         Event matches the card.
 
 SLICE 6 — Lists and the Person page
   S10-40  People, Events, and Places scroll restored when the list place appears
@@ -262,7 +266,7 @@ SLICE 9 — Seeded vocabulary
          couple. An existing catalog gains neither.
 
 SLICE 10 — Take a filing back
-  ✎ (S10-D6 already done) ──▶ S10-44  Unpromote on the promoted card
+  ✎ (S10-D6 already done for S10-20) ──▶ S10-44  Unpromote on the promoted card
   Check: confirm names the bridges. The card shows Promote again. The other
          person on that relationship stays promoted. The handle is still there.
 
@@ -276,10 +280,10 @@ S10-05…S10-13, S10-15, S10-19, S10-42, and S10-43 have no dependency on the gr
 ```text
 S10-01 hit boxes (done) ────────┐
 S10-02 zoom, tiled grid (done) ─┤
-S10-03 canvas grow (done) ──────┼──▶ S10-20 box-select
+S10-03 canvas grow (done) ──────┼──▶ S10-20 open file + box-select
 S10-04 camera (done)            │         ▲
                                 │         │
-S10-10 defaults — descoped      │    S10-D6 (also gates S10-18)
+S10-10 defaults — descoped      │    S10-D6 (gates S10-20, not S10-18)
 S10-11 perf — done, #356
 S10-14 choice — descoped. S10-D1 is not drawn.
 S10-D3 ──▶ S10-16 composer rethink
@@ -291,7 +295,9 @@ S10-48 canvas cover — descoped 2026-10-11
 S10-40 list scroll — People, Events, and Places. Sources scroll is S10-41.
 S10-21 scope ──▶ S10-22 last updated (D9…D11)
 S10-D8 ──▶ S10-41 Sources list (last updated, filters, persist, scroll)
-S10-D6 ──▶ S10-44 unpromote (button drawn with the open-file / box-select board)
+S10-D5 ──▶ S10-18 source page drop and artifact cards
+S10-D6 ──▶ S10-20 graph file select + Open, and box-select
+S10-D6 ──▶ S10-44 unpromote (button drawn on the S10-20 board)
 S10-D12 (gender + gallery + preferred portrait) ──▶ S10-23
 S10-D4 ──▶ S10-17 name parts
                  └──▶ S10-37 collation
@@ -425,37 +431,37 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 
 ### Slice 5 — Artifacts, marks, multi-select
 
-#### S10-18 — Artifact drop and open
+#### S10-18 — Artifact drop and cards
 
-**Briefs:** S10-D5 (Source page Artifacts) and S10-D6 (Evidence graph — header open, and box-select specified for S10-20).
+**Brief:** [S10-D5](design/S10-D5-source-artifacts.md).
 
 | | |
 | --- | --- |
-| **In** | Drop a file on the Source page Artifact section to upload, with a drop highlight. The collapsed artifact row opens the file (the expanded column keeps its button or the brief says it moves). The Evidence graph header offers the same open for the Source's file (cover, else the primary file the brief names). Reuse the existing ingest path (`applyDroppedURLs` / `artifacts.open`), not a second uploader. |
-| **Out** | Box-select (S10-20). Drop onto cards. A new Artifact model. |
-| **Testable** | Drop a PNG on the section: highlight, then the file is on the Source. Collapsed row opens it in one click. Graph header opens the same file. A fileless Source does not show a dead open button. |
-| **Depends on** | S10-D5, S10-D6 |
+| **In** | Per S10-D5. The Source page content pane highlights and accepts a drop. The drop opens Add Artifact with that file in the file row and the label empty (`IngestMediaPolicy` stages it; create runs on confirm). A rejected drop, including more than one file, opens the dialog on the existing callout and adds nothing. The accordion becomes wrapping rows of cards: large preview, label, description, ref, and Open / Use as thumbnail / Delete, with edit of the label and description on the card. |
+| **Out** | The Evidence graph, including header Open file, box-select, and Unpromote (S10-20 and S10-44, brief S10-D6). Storing the file on drop. Prefilling the label from the filename. Dropping on a card to attach. A new Artifact model. Keeping the expanding row. |
+| **Testable** | Drop a PNG on the metadata column: the pane highlights, Add Artifact opens, the file row shows the PNG, and the label is empty. Cancel: no new artifact. Enter a label and confirm: a card appears and the toast says it was created and ingested. Drop a zip, or two files: the dialog shows the ingest callout and the cards are unchanged. A card opens its file without expanding. A fileless card has no Open button. |
+| **Depends on** | S10-D5 |
 
 #### S10-19 — Event mark and sidebar icons
 
-**Brief:** S10-D7.
+**Briefs:** [S10-D16](design/S10-D16-event-mark.md) (the `subject_event` glyph) and [S10-D7](design/S10-D7-sidebar-marks.md) (sidebar, toolbar, empty states). Design the mark first.
 
 | | |
 | --- | --- |
-| **In** | A new `subject_event` mark (calendar / datebook — the board draws it). Sidebar People, Events, and Places use `PVMark` subject marks, not `person` / `calendar` / `mapPin`. The toolbar section icon uses that same source. List empty states for those three kinds use the mark. Person and Place marks stay. Cards, omnibar, Promote, and Properties already use `PVMark` and update with the asset. |
-| **Out** | A redraw of Person or Place marks. New sidebar rows. |
-| **Testable** | Sidebar, toolbar, an Event card, the Events list empty state, and an omnibar Event hit show the same Event mark. People and Places match between sidebar and card. |
-| **Depends on** | S10-D7 |
+| **In** | Per S10-D16 and S10-D7. A new `subject_event` mark (calendar / datebook — the kit board draws it). The key stays. Person and Place marks stay. Sidebar People, Events, and Places use those subject marks. The toolbar section icon uses that same source. List empty states for those three kinds use the mark. Cards, omnibar, Promote, and Properties already use `PVMark` and update with the asset. |
+| **Out** | A redraw of Person or Place marks. New sidebar rows. A local Event glyph on the sidebar board. A new empty-state component. |
+| **Testable** | Sidebar, toolbar, an Event card, the Events list empty state, and an omnibar Event hit show the same Event mark. People and Places match between sidebar and card. Sources in the sidebar still uses its symbol. |
+| **Depends on** | S10-D16, S10-D7 |
 
-#### S10-20 — Box-select
+#### S10-20 — Open file and box-select
 
-**Brief:** S10-D6, already designed before S10-18.
+**Brief:** [S10-D6](design/S10-D6-evidence-graph.md) (EG-1…EG-7). Unpromote is drawn on that board and ships in S10-44.
 
 | | |
 | --- | --- |
-| **In** | Hold the hotkey the brief names, then drag a rectangle. Every Subject card inside is selected. Dragging one moves the group; positions persist the way a single drag does today. A toolbar button arms the same mode and shows the hotkey. Escape or a second click of the button leaves the mode. |
-| **Out** | Selecting bridge cards, unless the brief includes them (default: Subject cards only, matching the note). An undo stack. |
-| **Testable** | Box three cards, drag one, all three land together and survive reload. The toolbar button works without the hotkey and its label or tooltip shows the key. |
+| **In** | Per S10-D6. The graph header shows a select of every artifact that has a file, and an Open button. The initial selection is the cover's file when that artifact has one, otherwise the first file. Open sends the selected file to the system app, the same path as the Source page. No files: both controls are absent. Hold Shift and drag on empty canvas, or arm Select on the palette (its help shows Shift) and drag. Person, event, and place cards whose frames intersect the rectangle are selected. Dragging one selected subject moves the group; each position persists the way a single drag does. Empty-canvas drag still pans when Select is disarmed and Shift is up. Escape or a second click of Select leaves the mode. |
+| **Out** | Unpromote (S10-44). An in-app viewer window. Selecting or moving bridge cards. An undo stack. Shift-click to add one card. |
+| **Testable** | Two files: the select lists both, and Open sends the chosen one to the system app. Changing the selection does not open it. A fileless artifact is not in the list. A Source with no file shows neither control. Box three subject cards with a bridge inside the rectangle: the bridge is not selected. Drag one subject, all three land together and survive reload. Without Select armed, dragging empty canvas still pans. Select works without holding Shift, and its help shows Shift. |
 | **Depends on** | S10-01, S10-03, S10-D6 |
 
 ### Slice 6 — Lists and the Person page
@@ -662,11 +668,11 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 
 #### S10-44 — Unpromote
 
-**Brief:** S10-D6, already designed before S10-18. This PR fills the button that board drew on the promoted card.
+**Brief:** [S10-D6](design/S10-D6-evidence-graph.md) (EG-8…EG-10), designed before S10-20. This PR fills the button that board drew on the promoted card.
 
 | | |
 | --- | --- |
-| **In** | Per the working rules and S10-D6: a promoted primary card offers Unpromote beside the control that opens the handle. Confirm always, with the existing confirm. The body names each bridge Subject on this Source whose accepted claim has this Subject as an end. Confirm deletes this Subject's Identity Claim and those bridge claims in one `writes.Run` transaction, audited. Cards stay on the graph and show Promote. The handle is not deleted. Other members' claims are left for the parked review. |
+| **In** | Per the working rules and S10-D6: a promoted primary card offers Unpromote in the footer, beside the control that opens the handle. Confirm always, tone irreversible. The body names each bridge Subject on this Source whose accepted claim has this Subject as an end. Confirm deletes this Subject's Identity Claim and those bridge claims in one `writes.Run` transaction, audited. Cards stay on the graph and show Promote. The handle is not deleted. Other members' claims are left for the parked review. |
 | **Out** | Rejecting the claim ("not this entity"). The weak-claim queue, re-pin, and accept-as-is ([`ideas/identity-claim-review.md`](../../ideas/identity-claim-review.md)). Deleting the Evidence cards. Deleting the handle. Unpromote from the Person, Event, or Place page. |
 | **Testable** | Unpromote a person who is in a filed relationship: the confirm names that relationship, both cards show Promote, the other person stays on their handle, and that handle still exists. Unpromote a person with no filed bridges: the confirm does not invent a bridge, and the card shows Promote. Cancel leaves the claim. |
 | **Depends on** | S10-D6 |
@@ -705,8 +711,8 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 - **`PVSelect` letter jump is one step.** `handleTriggerKey` sends `.character` once. Cycling is a session change for every select, not a name-modal special case. Width is the opposite: do not make every select as wide as its longest option.
 - **Growing the canvas moves clamps.** Landed in S10-03. A small graph still opens on 4000×4000, and `maxCell` for that board stays 96×98. A card near the edge extends the document. Stored card coordinates stay valid.
 - **Camera vs document size.** Landed in S10-04. Restoring an offset after the document grows clamps, and growth itself does not jump the view back to 1×.
-- **Drop on the section vs drop in the dialog.** The dialog row already highlights and ingests. The section target should call that ingest, not a parallel copy, including the reject callout for a bad type.
-- **Open file on the graph.** A Source can have several Artifacts. The brief picks which file the header opens (cover if set, otherwise the single file, otherwise no button or a menu — D6 decides; do not invent a menu in the PR if the brief says one file).
+- **Drop on the page vs drop in the dialog.** Both stage a file on the Add Artifact draft through `IngestMediaPolicy`. The page drop opens that dialog with the label empty. Confirm is what creates and ingests. A page drop must not create the artifact on release.
+- **Open file on the graph.** A select lists every artifact that has a file. Open sends the selected file to the system app, the same path as the Source page. No files: both controls are absent. No in-app viewer window. S10-D6, in S10-20.
 - **Audit scope fan-out.** An Observation on a shared member can touch one Source and one or more handles. Delete changes still need the parent FKs. Backfill is `INSERT OR IGNORE` in the migration, pattern `000036.sql`. `TestResolversCoverEveryEntityType` must stay green.
 - **Last updated is not create time.** UUIDv7 id is create order. The Sources "Updated" sort already uses the scope. The new cell must use that revision, not the id.
 - **Gender and sex at birth are different Properties.** Seeding gender does not relabel sex at birth. The page treatment is a reading of reconciled values, not a new truth write.
