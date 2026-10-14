@@ -176,7 +176,7 @@ private struct PropertiesContent: View {
                     title: Text(verbatim: type.label),
                     count: model.snapshot.propertyCount(forTypeID: type.id),
                     selected: model.selectedTypeKey == type.key,
-                    bridge: PropertiesTypeChrome.showsBridgeLabel(typeKey: type.key),
+                    bridge: PropertiesTypeChrome.showsBridgeLabel(presentation: presentation),
                     ink: PropertiesTypeChrome.ink(typeKey: type.key, presentation: presentation),
                     glyph: PVMarkKey(subjectTypeKey: type.key).map(PVGlyph.mark) ?? .symbol(.grid)
                 )

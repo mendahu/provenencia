@@ -3,32 +3,15 @@ import SwiftUI
 /// Strip / chip chrome for Subject types — TYPES + VT_COLOR tables shared by
 /// Properties, Evidence graph, and the composer.
 enum PropertiesTypeChrome {
-    static func sortIndex(_ key: String) -> Int {
-        switch key {
-        case "person": return 0
-        case "event": return 1
-        case "place": return 2
-        case "relationship": return 3
-        case "participation": return 4
-        case "location": return 5
-        case "place_relationship": return 6
-        case "source": return 7
-        default: return 99
-        }
-    }
-
     /// Micro-label “BRIDGE” on Relationship / Participation / Location strip cards.
     /// Source is a reification, not a bridge — do not label it as one.
-    static func showsBridgeLabel(typeKey: String) -> Bool {
-        switch typeKey {
-        case "relationship", "participation", "location", "place_relationship": return true
-        default: return false
-        }
+    static func showsBridgeLabel(presentation: CatalogSubjectTypePresentation?) -> Bool {
+        presentation?.role == "bridge"
     }
 
     static func ink(typeKey: String, presentation: CatalogSubjectTypePresentation?) -> Color {
         // Bridges stay muted; source (reification) and roots follow presentation / kind ink.
-        if showsBridgeLabel(typeKey: typeKey) { return PVColor.textMuted }
+        if showsBridgeLabel(presentation: presentation) { return PVColor.textMuted }
         switch presentation?.inkToken ?? "" {
         case "subjectPersonInk": return PVColor.subjectPersonInk
         case "subjectEventInk": return PVColor.subjectEventInk

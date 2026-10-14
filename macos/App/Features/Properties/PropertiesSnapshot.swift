@@ -15,10 +15,13 @@ struct PropertiesSnapshot: Sendable, Equatable {
         presentationsByKey: [:]
     )
 
-    /// Board TYPES order: Person → Event → Place → Relationship → Participation → Location → Source.
+    /// Registry palette order (`paletteSort`), key as the tie-break; types with
+    /// no loaded presentation sort last.
     var typesInPaletteOrder: [CatalogSubjectType] {
-        types.sorted {
-            PropertiesTypeChrome.sortIndex($0.key) < PropertiesTypeChrome.sortIndex($1.key)
+        types.sorted { lhs, rhs in
+            let a = presentationsByKey[lhs.key]?.paletteSort ?? Int.max
+            let b = presentationsByKey[rhs.key]?.paletteSort ?? Int.max
+            return a != b ? a < b : lhs.key < rhs.key
         }
     }
 

@@ -89,6 +89,34 @@ struct PropertiesModelTests {
         }
     }
 
+    private func presentation(_ key: String, role: String, sort: Int) -> CatalogSubjectTypePresentation {
+        CatalogSubjectTypePresentation(
+            typeKey: key, l10nKey: "subjectType.\(key)", iconSymbol: key, inkToken: "",
+            tintToken: "", chipToken: "", lineToken: "", edgeFromToken: "", edgeToToken: "",
+            role: role, placeable: role == "root", paletteSort: sort,
+            requiresCitationAtCreate: role == "bridge", label: key
+        )
+    }
+
+    @Test func typesInPaletteOrderFollowsPresentationSort() {
+        let person = personType()
+        let event = eventType()
+        let snapshot = PropertiesSnapshot(
+            properties: [], types: [person, event], propertiesByTypeID: [:],
+            presentationsByKey: [
+                "person": presentation("person", role: "root", sort: 5),
+                "event": presentation("event", role: "root", sort: 1),
+            ]
+        )
+        #expect(snapshot.typesInPaletteOrder.map(\.key) == ["event", "person"])
+    }
+
+    @Test func bridgeLabelFollowsPresentationRole() {
+        #expect(PropertiesTypeChrome.showsBridgeLabel(presentation: presentation("relationship", role: "bridge", sort: 3)))
+        #expect(!PropertiesTypeChrome.showsBridgeLabel(presentation: presentation("source", role: "reification", sort: 7)))
+        #expect(!PropertiesTypeChrome.showsBridgeLabel(presentation: nil))
+    }
+
     @Test func loadPopulatesSnapshot() async {
         let person = personType()
         let (model, session, _) = makeModel(
