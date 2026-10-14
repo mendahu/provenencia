@@ -246,7 +246,7 @@ final class EvidenceGraphModel {
             )
         }
         if !canCite {
-            disarm()
+            disarmCiteTools()
         }
         if let id = session.consumePendingGraphSelection(sourceID: sourceID) {
             selectedSubjectIDs = [id]
@@ -257,7 +257,7 @@ final class EvidenceGraphModel {
         let _: QueryHandle<[CatalogSource]> = session.query(sourcesListKey)
         _ = await session.readyValue(sourcesListKey) as [CatalogSource]?
         if !canCite {
-            disarm()
+            disarmCiteTools()
         }
     }
 
@@ -319,6 +319,7 @@ final class EvidenceGraphModel {
             disarm()
         } else {
             clearConnectState()
+            armedSelect = false
             armedKind = kind
             hoverGridX = nil
             hoverGridY = nil
@@ -339,6 +340,7 @@ final class EvidenceGraphModel {
             disarm()
         } else {
             armedKind = nil
+            armedSelect = false
             hoverGridX = nil
             hoverGridY = nil
             armedConnect = true
@@ -347,7 +349,25 @@ final class EvidenceGraphModel {
         }
     }
 
+    /// Arms or disarms Select. Available when the Source cannot be cited:
+    /// selecting cards writes nothing to the catalog. Arming it disarms Place and Connect.
+    func toggleSelect() {
+        if armedSelect {
+            armedSelect = false
+        } else {
+            disarmCiteTools()
+            armedSelect = true
+        }
+    }
+
+    /// Disarms every tool.
     func disarm() {
+        disarmCiteTools()
+        armedSelect = false
+    }
+
+    /// Disarms Place and Connect and leaves Select as it is.
+    func disarmCiteTools() {
         armedKind = nil
         hoverGridX = nil
         hoverGridY = nil
@@ -417,6 +437,10 @@ final class EvidenceGraphModel {
         case .escape:
             if armedConnect || armedKind != nil {
                 disarm()
+                return KeyEffect(handled: true)
+            }
+            if armedSelect {
+                armedSelect = false
                 return KeyEffect(handled: true)
             }
             if activatedSubjectID != nil {
@@ -1191,20 +1215,12 @@ final class EvidenceGraphModel {
         }
     }
 
-    func toolAccessibilityLabel(for kind: EvidencePrimaryKind, armed: Bool) -> String {
-        let name = L10n.string(toolName(for: kind))
+    /// Spoken label of a palette tool: `name, tool, on|off`.
+    func toolAccessibilityLabel(name: LocalizedStringResource, armed: Bool) -> String {
         let state = armed
             ? L10n.string(L10n.EvidenceGraph.toolOn)
             : L10n.string(L10n.EvidenceGraph.toolOff)
-        return "\(name), \(L10n.string(L10n.EvidenceGraph.toolRole)), \(state)"
-    }
-
-    func connectToolAccessibilityLabel(armed: Bool) -> String {
-        let name = L10n.string(L10n.EvidenceGraph.toolConnect)
-        let state = armed
-            ? L10n.string(L10n.EvidenceGraph.toolOn)
-            : L10n.string(L10n.EvidenceGraph.toolOff)
-        return "\(name), \(L10n.string(L10n.EvidenceGraph.toolRole)), \(state)"
+        return "\(L10n.string(name)), \(L10n.string(L10n.EvidenceGraph.toolRole)), \(state)"
     }
 
     func toolName(for kind: EvidencePrimaryKind) -> LocalizedStringResource {

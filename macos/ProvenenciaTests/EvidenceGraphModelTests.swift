@@ -1834,4 +1834,66 @@ struct EvidenceGraphModelTests {
         #expect(model.gridCell(for: "b1")?.x == 3)
         #expect(store.subjectPositionsBySubject["b1"]?.gridX == 3)
     }
+
+    @Test func selectStaysAvailableWithoutAnArtifact() async {
+        let store = makeStore()
+        store.sourcesByProject[projectDir] = [
+            CatalogSource(
+                id: sourceID,
+                ref: "SRC-1",
+                sourceTypeID: "type-book",
+                title: "Bare",
+                description: "",
+                hasArtifact: false
+            ),
+        ]
+        let model = makeModel(store: store)
+        model.session.setQueryValue(
+            CatalogQueryKey.sourcesList(project: model.session.projectKey),
+            value: store.sourcesByProject[projectDir] ?? []
+        )
+        await model.prepare()
+        #expect(model.canCite == false)
+        model.replacePrimarySelection([])
+        model.toggleSelect()
+        #expect(model.armedSelect)
+        #expect(model.inputMode == .selecting)
+        model.toggleArm(.person)
+        #expect(model.armedKind == nil)
+        #expect(model.armedSelect)
+
+        // The cards chosen before Escape stay chosen.
+        let (_, grouped) = groupModel()
+        grouped.replacePrimarySelection(["p1", "p2"])
+        grouped.toggleSelect()
+        let effect = grouped.handleKey(.escape, hasFocus: false)
+        #expect(effect.handled)
+        #expect(grouped.armedSelect == false)
+        #expect(grouped.selectedSubjectIDs == ["p1", "p2"])
+        #expect(L10n.string(L10n.EvidenceGraph.toolSelectHelp) == "Hold Shift to select")
+    }
+
+    @Test func selectAndTheCiteToolsDisarmEachOther() async {
+        let store = makeStore()
+        let model = makeModel(store: store)
+        await model.prepare()
+        model.toggleSelect()
+        model.toggleArm(.person)
+        #expect(model.armedSelect == false)
+        #expect(model.inputMode == .placing(.person))
+        model.toggleSelect()
+        #expect(model.armedKind == nil)
+        #expect(model.inputMode == .selecting)
+        model.toggleConnect()
+        #expect(model.armedSelect == false)
+        #expect(model.inputMode == .connecting)
+        model.toggleSelect()
+        #expect(model.armedConnect == false)
+        // Pressing Select again disarms it. Disarm clears it as well.
+        model.toggleSelect()
+        #expect(model.inputMode == .idle)
+        model.toggleSelect()
+        model.disarm()
+        #expect(model.armedSelect == false)
+    }
 }
