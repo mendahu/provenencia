@@ -1,6 +1,6 @@
 # App health review — criteria
 
-Detailed rubric for `.cursor/skills/review-app-health`. Read sections as needed while reviewing; do not dump this whole file into the user report.
+Detailed rubric for `.agents/skills/review-app-health`. Read sections as needed while reviewing; do not dump this whole file into the user report.
 
 ---
 
@@ -170,7 +170,7 @@ Fight the grain = debt.
 
 **Allow** — Non-copy data (user names, paths, refs, IDs); brand `Provenencia` in values; accessibility identifiers as dotted stable tokens; Generated protobuf.
 
-**Fix path** — `.cursor/skills/add-localized-string`.
+**Fix path** — `.agents/skills/add-localized-string`.
 
 ---
 
@@ -189,7 +189,7 @@ Agents treat project docs and Cursor guidance as truth. Stale guidance **amplifi
 
 **How to sample**
 
-1. List `.cursor/skills/*/SKILL.md` and `.cursor/rules/*.mdc`.
+1. List `.agents/skills/*/SKILL.md` and `.cursor/rules/*.mdc`.
 2. For each skill touched by recent product work (or a rotating sample), open linked paths and confirm they exist and still describe reality.
 3. Spot-check high-churn docs: `application-stack.md`, `macos-client-patterns.md`, active spike notes vs `Features/` and `core/`.
 
@@ -240,7 +240,7 @@ Catch LLM- and rush-driven UI debt against Frost layers (**design system / recip
 3. Spot-check high-churn UI for private `*Panel` / `*Sheet` / `*Row`; diff against nearest `PV*`.
 4. **Walk interactive chrome on sampled surfaces** (do this even when the named-type pass looks clean). For each control ask: which kit type already owns this interaction? If the code is a raw `Button` / `TextField` / overlay / `private func` that re-solves that contract, flag it—even when a sibling on the same strip already composes the kit.
 5. When the user named a host feature, open chrome it **embeds**, not only files under that feature folder.
-6. Ask: design system, recipe, or snowflake? If a third screen needed this tomorrow, compose or promote—don’t copy. For a single hot type, prefer [`.cursor/skills/evaluate-ui-component`](../evaluate-ui-component/SKILL.md) over expanding this whole-app pass.
+6. Ask: design system, recipe, or snowflake? If a third screen needed this tomorrow, compose or promote—don’t copy. For a single hot type, prefer [`.agents/skills/evaluate-ui-component`](../evaluate-ui-component/SKILL.md) over expanding this whole-app pass.
 
 **Provenencia notes**
 
@@ -263,7 +263,7 @@ the **catalog read cache**. Goal: one owner per concern; a parent machine instea
 of sibling ping-pong; caches that stay the single source of truth.
 
 Notes: [`docs/macos-client-patterns.md`](../../../docs/macos-client-patterns.md) § Workspace session;
-`.cursor/skills/add-workspace-place`; `macos/App/Features/Workspace/Session/`.
+`.agents/skills/add-workspace-place`; `macos/App/Features/Workspace/Session/`.
 
 **Look for**
 
@@ -341,7 +341,7 @@ It is easy to grow a second, quieter cache next to it.
 - Blessed cache path: warm in `.task` / `apply(location:)`; observe
   `@Bindable QueryHandle` in a child; patch when the save response is enough;
   invalidate on create/delete/ambiguous busts
-  (`.cursor/skills/add-workspace-place`).
+  (`.agents/skills/add-workspace-place`).
 - Do not demand a formal state-machine library. A small `enum Phase` on the
   parent model is the project grain (composer already does this).
 - Go catalog session (`catalogsession`) is a different lock—review under §3 / §5,

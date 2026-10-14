@@ -1,6 +1,6 @@
 # Catalog access serialization (archived)
 
-**Done.** Go holds one exclusive catalog session (`core/catalogsession`). Skill: [`use-catalog-session`](../../../.cursor/skills/use-catalog-session/SKILL.md).
+**Done.** Go holds one exclusive catalog session (`core/catalogsession`). Skill: [`use-catalog-session`](../../../.agents/skills/use-catalog-session/SKILL.md).
 
 ## Decisions
 

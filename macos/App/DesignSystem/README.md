@@ -46,8 +46,8 @@ at call sites — never a literal color, font, or number.
 
 **Layering (authoritative):** **Components / Recipes / Snowflakes** with **one
 folder per control** — see [`docs/design-system-layers.md`](../../../docs/design-system-layers.md).
-Classify before adding ([`add-ui-component`](../../../.cursor/skills/add-ui-component/SKILL.md));
-audit with [`evaluate-ui-component`](../../../.cursor/skills/evaluate-ui-component/SKILL.md).
+Classify before adding ([`add-ui-component`](../../../.agents/skills/add-ui-component/SKILL.md));
+audit with [`evaluate-ui-component`](../../../.agents/skills/evaluate-ui-component/SKILL.md).
 Do not fork a `PV*` for a slight variant; compose down. **No UI-category
 subfolders** (`Core`, `Forms`, `Feedback`, `Research`, …). **No loose `.swift`
 at a layer root.**

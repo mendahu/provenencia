@@ -70,7 +70,7 @@ App health review:
 | Imports / cycles | Inspect Go import graph for cross-domain edges; Swift feature→feature coupling |
 | Security (recent delta) | Optional: `/review-security` / security-review subagent for **branch/uncommitted** diffs—not a substitute for whole-app §2 |
 | Perf hotspots | Catalog session misuse, N+1 queries, SwiftUI `body` work, sync FFI on UI path, image/derivative work, search/FTS |
-| Docs / skills drift | Spot-check `.cursor/skills/`, `.cursor/rules/`, and key `docs/*.md` against the live tree; flag broken paths and contradicted “blessed” patterns |
+| Docs / skills drift | Spot-check `.agents/skills/`, `.cursor/rules/`, and key `docs/*.md` against the live tree; flag broken paths and contradicted “blessed” patterns |
 | Accessibility | Grep `.accessibilityIdentifier` / labels; sample interactive controls (esp. icon-only); compare to `docs/macos-client-patterns.md` §5 |
 | Component reuse | Inventory `DesignSystem/Components/**` by **what each control does** (icon action, selected toggle, field, chip, menu, confirm, …), then sample hot feature chrome the same way. Flag a rewrite when a surface implements that interaction by hand—named type or `private func`—instead of composing the kit type that already owns it. Follow chrome a host **embeds**, not only files under the feature folder. Deep dive on one named type → [`evaluate-ui-component`](../evaluate-ui-component/SKILL.md) (do not expand §12 into full per-type plans here) |
 | State ownership | Map `@State` / `@Observable` models / `QueryHandle`s in 2–3 hot trees (composer, graph, source page, onboarding). Flag sibling-to-sibling sync, shadow caches, and mutation paths that bypass `WorkspaceSession` |
@@ -99,8 +99,8 @@ Read [`criteria.md`](criteria.md) for the full rubric. In short:
 
 - Genealogy / SQLite / identity live in **Go**, not Swift views.
 - Mac UI: thin SwiftUI → model → `GenealogyStore` → FFI → core.
-- Catalog access: held session + queue (`.cursor/skills/use-catalog-session`), not open-per-RPC.
-- User copy: typed `L10n` + String Catalogs (`.cursor/skills/add-localized-string`).
+- Catalog access: held session + queue (`.agents/skills/use-catalog-session`), not open-per-RPC.
+- User copy: typed `L10n` + String Catalogs (`.agents/skills/add-localized-string`).
 - Errors: stable `apperr` / protobuf codes → `L10n.Errors.message`—do not match English Go strings in Swift.
 - Prefer product-named packages/folders over grab-bags (`Shared/`, `Common/`, `Utils/`).
 - Skills/rules/docs that agents follow must stay truthful; fix or archive drift, don’t leave lying guidance.

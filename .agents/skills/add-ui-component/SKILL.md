@@ -14,7 +14,7 @@ description: >-
 Provenencia UI is layered so LLM- and rush-driven forks don’t accumulate. Read
 [`docs/design-system-layers.md`](../../../docs/design-system-layers.md)
 for the full model. Kit conventions: [`macos/App/DesignSystem/README.md`](../../../macos/App/DesignSystem/README.md).
-macOS thin-client rules: [`.cursor/rules/macos-client.mdc`](../../rules/macos-client.mdc).
+macOS thin-client rules: [`.cursor/rules/macos-client.mdc`](../../../.cursor/rules/macos-client.mdc).
 
 ## Decision (do this first)
 

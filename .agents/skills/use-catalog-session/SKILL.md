@@ -55,7 +55,7 @@ func ListThings(in []byte) ([]byte, error) {
 
 - Do **not** `c.Close()` inside the callback — the session owns the handle.
 - Do **not** call `database.Open`, `onboarding.OpenCatalog`, or a leftover `openProjectCatalog`.
-- New catalog RPCs: still follow `.cursor/skills/add-ffi-handler/SKILL.md`, then this pattern.
+- New catalog RPCs: still follow `.agents/skills/add-ffi-handler/SKILL.md`, then this pattern.
 
 ## Lifecycle
 

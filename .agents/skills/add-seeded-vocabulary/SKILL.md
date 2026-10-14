@@ -107,7 +107,7 @@ core/catalogsession
 Complete uses **`createCatalog`** (create-then-close). Open / ProjectInfo /
 ListContributors and catalog FFI handlers use **`catalogsession.Do`** (or
 `withProjectCatalog` in handlers), not raw `database.Create`/`Open` and not
-open-per-call `OpenCatalog`. See `.cursor/skills/use-catalog-session/SKILL.md`.
+open-per-call `OpenCatalog`. See `.agents/skills/use-catalog-session/SKILL.md`.
 
 Do **not** scatter `*.Install` at each use-case.
 
@@ -120,8 +120,8 @@ open-time policy of its own. Mirror an existing domain (`subjectvocab` or
 
 Mirror Source / Subject types — do **not** build a generic multi-domain seed framework:
 
-1. Migration for definition tables (`origin`, `UNIQUE (key, origin)`). Follow `.cursor/skills/add-catalog-migration/SKILL.md`.
-2. Nested query package(s) under `core/database/<domain>/`. Follow `.cursor/skills/add-catalog-query/SKILL.md`.
+1. Migration for definition tables (`origin`, `UNIQUE (key, origin)`). Follow `.agents/skills/add-catalog-migration/SKILL.md`.
+2. Nested query package(s) under `core/database/<domain>/`. Follow `.agents/skills/add-catalog-query/SKILL.md`.
 3. Package owning the seed: `registry` lists + `Install(c) error` (or domain-specific name).
 4. Wire install into `createCatalog` in `ready.go` when create-time-only is correct for that domain.
 5. Document intended keys in `docs/seeded-vocabulary.md`; implement only the dogfood slice needed now.

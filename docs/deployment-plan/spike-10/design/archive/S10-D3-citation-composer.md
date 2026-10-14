@@ -7,7 +7,7 @@
 **Depends on:** —
 **Related:** [`../deployment-plan.md`](../deployment-plan.md) (S10-16). Depiction rows are **S10-D15**, a later board. Name parts are **S10-D4**. The date modal already shipped (S10-13).
 **Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)
-**Skill:** [`add-design-brief`](../../../../.cursor/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.cursor/skills/add-ui-component/SKILL.md)
+**Skill:** [`add-design-brief`](../../../../.agents/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md)
 
 Paste this entire document into Claude Design as the requirements for one board. This file is the whole prompt.
 

@@ -6,7 +6,7 @@ alwaysApply: false
 
 # Swift tests
 
-Follow the project skill `.cursor/skills/add-swift-test/SKILL.md`.
+Follow the project skill `.agents/skills/add-swift-test/SKILL.md`.
 
 - Files live in `macos/ProvenenciaTests/`, not next to app sources. Swift Testing (`@Test`, `#expect`), `@testable import Provenencia`.
 - Inject `FakeStore` and temp `OnboardingFolders`. No `GoStore`, dylib, or generated protobuf tests.

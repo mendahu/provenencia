@@ -51,7 +51,7 @@ What someone will ask about, and where it lives instead.
 
 One paragraph: what this spike pulls in (dogfood notes, [ideas](../../ideas/…), leftovers) and the PR rule (one note, one PR, unless two edit the same part of one view or the same comparer).
 
-**A brief covers one view.** A PR that changes chrome waits on a brief for each view it touches. Briefs and PR plans are written just before the PR ([`add-design-brief`](../../../.cursor/skills/add-design-brief/SKILL.md), [`plan-pr`](../../../.cursor/skills/plan-pr/SKILL.md)). A bugfix or a behavior change with no new chrome is not gated.
+**A brief covers one view.** A PR that changes chrome waits on a brief for each view it touches. Briefs and PR plans are written just before the PR ([`add-design-brief`](../../../.agents/skills/add-design-brief/SKILL.md), [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md)). A bugfix or a behavior change with no new chrome is not gated.
 
 ## Status
 
@@ -91,7 +91,7 @@ These are the calls for this spike. PR plans treat them as binding.
 | S#-02 | … | 1 | … | S#-D1 | S#-01, S#-D1 | [plan](prs/S#-02-slug.md) | Planned |
 | S#-03 | … | 2 | … | — | — | [plan](prs/S#-03-slug.md) | Landed [#N](https://github.com/mendahu/provenencia/pull/N) |
 | S#-04 | … | 2 | … | — | — | — | Descoped (date) → [idea](../../ideas/….md) |
-| S#-99 | Dogfood close / docs | — | Bar pass, [`archive-docs`](../../../.cursor/skills/archive-docs/SKILL.md) | — | all | — | Scoped |
+| S#-99 | Dogfood close / docs | — | Bar pass, [`archive-docs`](../../../.agents/skills/archive-docs/SKILL.md) | — | all | — | Scoped |
 
 <!-- Status words: Scoped, Blocked — on …, Planned, In progress, Landed #N, Descoped (date). See docs/deployment-plan/README.md. -->
 
@@ -130,7 +130,7 @@ S#-D1 ──▶ S#-02
 
 ## PR scopes
 
-Input to [`plan-pr`](../../../.cursor/skills/plan-pr/SKILL.md). Two to six lines each. Link, do not restate.
+Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Two to six lines each. Link, do not restate.
 
 ### Slice 1 — Name
 

@@ -6,4 +6,4 @@ The table and foreign-key list is [`catalogmodel`](../catalogmodel). This packag
 
 It does not decide what a surviving write touches. That registry is [`effects`](../effects). The two do not import each other.
 
-Policy: [`docs/catalog-deletes.md`](../../../docs/catalog-deletes.md). Adding a delete: [`.cursor/skills/add-catalog-delete`](../../../.cursor/skills/add-catalog-delete/SKILL.md). The map of the schema packages is in [`catalogmodel`](../catalogmodel/README.md).
+Policy: [`docs/catalog-deletes.md`](../../../docs/catalog-deletes.md). Adding a delete: [`.agents/skills/add-catalog-delete`](../../../.agents/skills/add-catalog-delete/SKILL.md). The map of the schema packages is in [`catalogmodel`](../catalogmodel/README.md).

@@ -12,9 +12,9 @@ Two levels, two skills. The map is cut once and kept current. The plans are writ
 
 | Level | Skill | Output |
 | --- | --- | --- |
-| Spike or slice | [`plan-spike`](../../.cursor/skills/plan-spike/SKILL.md) | `deployment-plan.md`: goal, working rules, **PR map**, slices, a short scope entry per PR. Feature design docs beside it |
-| One PR | [`plan-pr`](../../.cursor/skills/plan-pr/SKILL.md) | `prs/S#-NN-<slug>.md`: the whole task for the implementing agent |
-| One view's chrome | [`add-design-brief`](../../.cursor/skills/add-design-brief/SKILL.md) | `design/S#-D#-<slug>.md`, pasted into Claude Design. Gates the PR plan |
+| Spike or slice | [`plan-spike`](../../.agents/skills/plan-spike/SKILL.md) | `deployment-plan.md`: goal, working rules, **PR map**, slices, a short scope entry per PR. Feature design docs beside it |
+| One PR | [`plan-pr`](../../.agents/skills/plan-pr/SKILL.md) | `prs/S#-NN-<slug>.md`: the whole task for the implementing agent |
+| One view's chrome | [`add-design-brief`](../../.agents/skills/add-design-brief/SKILL.md) | `design/S#-D#-<slug>.md`, pasted into Claude Design. Gates the PR plan |
 
 ```text
 docs/deployment-plan/spike-N/
@@ -43,7 +43,7 @@ Spike 10 and earlier cut each PR as an In / Out / Testable table inside `deploym
 
 [Spike 10 — Dogfood UX](spike-10/) is open. Plan: [`spike-10/deployment-plan.md`](spike-10/deployment-plan.md). Briefs are authored just before the PR they gate.
 
-Ideas: [`ideas/`](../ideas/). Claude Design briefs: [`add-design-brief`](../../.cursor/skills/add-design-brief/SKILL.md).
+Ideas: [`ideas/`](../ideas/). Claude Design briefs: [`add-design-brief`](../../.agents/skills/add-design-brief/SKILL.md).
 
 ## Completed
 

@@ -55,7 +55,7 @@ Views may format strings and enable/disable buttons. They must not open `provene
 
 ### Catalog session (workspace)
 
-Go holds one exclusive catalog session per open project and serializes FFI ops ([`docs/ideas/archive/catalog-access-serialization.md`](ideas/archive/catalog-access-serialization.md), `.cursor/skills/use-catalog-session/SKILL.md`).
+Go holds one exclusive catalog session per open project and serializes FFI ops ([`docs/ideas/archive/catalog-access-serialization.md`](ideas/archive/catalog-access-serialization.md), `.agents/skills/use-catalog-session/SKILL.md`).
 
 - **Enter:** mount `WorkspaceView` and start catalog traffic (`CatalogCounts.refreshAll`, feature loads). First store call opens the session; do **not** gate content on badge refresh.
 - **Leave:** `WorkspaceView.onDisappear` calls `GenealogyStore.closeCatalogSession(projectDir:)`. Sign-out / project switch also close in Go.
@@ -140,7 +140,7 @@ fixes the one row the write returned.
 
 **Leave guard and row commits.** Places with unsaved drafts implement `WorkspaceLeaveGuard` and set `WorkspaceNavigation.leaveGuard` while they are on screen. `go(to:)`, `goBack()`, `goForward()`, and `go(toIndex:)` ask the guard; `fallbackToSectionRoot()` and `attachProject` do not. The citation composer holds when citation fields are dirty, an observation draft is open, or the edit dialog is dirty — then **Discard changes** resumes the held move and **Keep editing** cancels it. Observation, citation-field, and connection writes are separate store calls; nothing deletes an Observation because it was missing from a payload.
 
-Agent workflow: [`.cursor/skills/add-workspace-place/SKILL.md`](../.cursor/skills/add-workspace-place/SKILL.md). Design: [`ideas/archive/page-navigation-performance.md`](ideas/archive/page-navigation-performance.md).
+Agent workflow: [`.agents/skills/add-workspace-place/SKILL.md`](../.agents/skills/add-workspace-place/SKILL.md). Design: [`ideas/archive/page-navigation-performance.md`](ideas/archive/page-navigation-performance.md).
 
 ---
 
@@ -189,7 +189,7 @@ Previews (`#Preview`) are Storybook-like. They are not CI tests.
 
 User-facing Mac UI copy goes through typed `L10n` (`LocalizedStringResource` in [`macos/App/Platform/L10n.swift`](../macos/App/Platform/L10n.swift)). Views and models must not hard-code English (or raw catalog keys).
 
-Agent workflow: [`.cursor/skills/add-localized-string/SKILL.md`](../.cursor/skills/add-localized-string/SKILL.md). Enforcement when editing Mac UI: [`.cursor/rules/macos-l10n.mdc`](../.cursor/rules/macos-l10n.mdc).
+Agent workflow: [`.agents/skills/add-localized-string/SKILL.md`](../.agents/skills/add-localized-string/SKILL.md). Enforcement when editing Mac UI: [`.cursor/rules/macos-l10n.mdc`](../.cursor/rules/macos-l10n.mdc).
 
 - **Catalogs:** [`Localizable.xcstrings`](../macos/App/Resources/Localizable.xcstrings) for UI strings; [`InfoPlist.xcstrings`](../macos/App/Resources/InfoPlist.xcstrings) for Info.plist TCC/copy keys.
 - **Keys:** semantic dotted names (`onboarding.chooseFile.welcomeTitle`), with English in `defaultValue` and in the catalog.

@@ -7,7 +7,7 @@
 **Depends on:** S10-D16 (the Event glyph this board instances)
 **Related:** [`../deployment-plan.md`](../deployment-plan.md) (S10-19). The Event artwork is drawn on the design-system board, **S10-D16**. List empty states for People, Events, and Places use the same marks in this PR. Later list briefs (S10-D9…D11) do not redraw that icon.
 **Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)
-**Skill:** [`add-design-brief`](../../../../.cursor/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.cursor/skills/add-ui-component/SKILL.md)
+**Skill:** [`add-design-brief`](../../../../.agents/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md)
 
 Paste this entire document into Claude Design as the requirements for one board. This file is the whole prompt.
 

@@ -18,7 +18,7 @@ Do **not** add a private `SELECT 1 FROM … LIMIT 1` / `sqlInUse` next to `DELET
 Schema first: [`add-catalog-migration`](../add-catalog-migration/SKILL.md).
 Query package: [`add-catalog-query`](../add-catalog-query/SKILL.md).
 Locations: [`add-workspace-location`](../add-workspace-location/SKILL.md).
-Rule: [`.cursor/rules/catalog-deletes.mdc`](../../rules/catalog-deletes.mdc).
+Rule: [`.cursor/rules/catalog-deletes.mdc`](../../../.cursor/rules/catalog-deletes.mdc).
 
 ## What counts as official Delete
 

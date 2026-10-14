@@ -11,7 +11,7 @@ description: >-
 
 Shared cross-layer personal names live in **`core/database/namevalues`**, not in Source-only packages. Authoritative design: [`docs/structured-name-model.md`](../../../docs/structured-name-model.md).
 
-New **tables/columns** need a catalog migration first (`.cursor/skills/add-catalog-migration/SKILL.md`). Do not invent a second name representation.
+New **tables/columns** need a catalog migration first (`.agents/skills/add-catalog-migration/SKILL.md`). Do not invent a second name representation.
 
 ## Package
 

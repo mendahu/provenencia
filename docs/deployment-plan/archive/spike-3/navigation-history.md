@@ -117,7 +117,7 @@ Today `project` is a singleton bookkeeping row (`id = 1`, label + timestamps) wi
 | **Backfill** | On **Open** of an older catalog missing `uuid`, mint once and persist (heal path — same spirit as other Open-time backfills). |
 | **Immutability** | Never rewrite `uuid` after mint. Copying the whole `.provenencia` folder copies the UUID (two working copies on one Mac share one history file — acceptable; do not mint a new id on copy). |
 | **FFI / Swift** | Expose on `ProjectInfo` (or equivalent open payload) so the Mac client can open `navigation/{uuid}.json` without a second round trip. |
-| **Migration** | New `core/database/migrations/NNNNNN.sql` via [`add-catalog-migration`](../../../../.cursor/skills/add-catalog-migration/SKILL.md); domain helpers in `core/database/project`. |
+| **Migration** | New `core/database/migrations/NNNNNN.sql` via [`add-catalog-migration`](../../../../.agents/skills/add-catalog-migration/SKILL.md); domain helpers in `core/database/project`. |
 | **vs `active-project.json`** | Active project pointer stays **path-based** (which folder to open). History key is **catalog UUID** (which research document’s chrome state). |
 
 Example history document:
@@ -200,4 +200,4 @@ _None for navigation history behavior._
 
 - [`omnibar-search.md`](omnibar-search.md)
 - [`macos-client-patterns.md`](../../../macos-client-patterns.md)
-- [`add-workspace-location`](../../../../.cursor/skills/add-workspace-location/SKILL.md)
+- [`add-workspace-location`](../../../../.agents/skills/add-workspace-location/SKILL.md)

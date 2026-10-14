@@ -11,7 +11,7 @@ description: >-
 
 Shared cross-layer civil dates live in **`core/database/datevalues`**, not in Source-only packages. Authoritative design: [`docs/structured-date-model.md`](../../../docs/structured-date-model.md).
 
-New **columns** need a catalog migration first (`.cursor/skills/add-catalog-migration/SKILL.md`). Do not invent a second date representation.
+New **columns** need a catalog migration first (`.agents/skills/add-catalog-migration/SKILL.md`). Do not invent a second date representation.
 
 ## Package
 
