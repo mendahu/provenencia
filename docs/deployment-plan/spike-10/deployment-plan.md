@@ -148,9 +148,9 @@ These are the calls for this spike. The questions at the bottom are answered; no
 | **[S10-D16](design/archive/S10-D16-event-mark.md)** | Design system — Event mark | **S10-19** | The `subject_event` glyph. Sidebar placement is S10-D7 |
 | **[S10-D7](design/archive/S10-D7-sidebar-marks.md)** | Workspace shell | **S10-19** | Sidebar and toolbar. Depends on S10-D16. Empty states use the same marks |
 | **S10-D8** | Sources list | **S10-41** | Last updated, evidence-status filter, text search, persisted sort and filters |
-| [**S10-D9**](design/S10-D9-persons-list.md) | Persons list | **S10-22** | S10-35 fills the thumb with a likeness. S10-39 makes that thumb the preferred portrait |
-| [**S10-D10**](design/S10-D10-events-list.md) | Events list | **S10-22** | — |
-| [**S10-D11**](design/S10-D11-places-list.md) | Places list | **S10-22** | — |
+| [**S10-D9**](design/archive/S10-D9-persons-list.md) | Persons list | **S10-22** | S10-35 fills the thumb with a likeness. S10-39 makes that thumb the preferred portrait |
+| [**S10-D10**](design/archive/S10-D10-events-list.md) | Events list | **S10-22** | — |
+| [**S10-D11**](design/archive/S10-D11-places-list.md) | Places list | **S10-22** | — |
 | **S10-D12** | Person detail | **S10-23** | S10-35 gallery and S10-39 preferred portrait. Design both with the gender treatment, before S10-23 |
 | **S10-D13** | Promote page | **S10-36** | Evidence sheet shows two crops |
 | **S10-D14** | Evidence graph — zoomed-out card | **S10-46**, descoped 2026-10-11 | — |
@@ -222,7 +222,7 @@ SLICE 5 — Artifacts and multi-select
 SLICE 6 — Lists and the Person page
   S10-40  People, Events, Places, and Sources store the list's top row on the history entry — done, #392
   S10-21  canonical_entity audit scope + list revision reads — done, #398
-  ✎ S10-D9…D11 ──▶ S10-22  Last updated on People, Events, and Places
+  S10-22  Last updated on People, Events, and Places — done, #402
   ✎ S10-D8 ──▶ S10-41  Sources list: last updated, filters, search,
                        persisted sort and filters. Scroll is S10-40.
   ✎ S10-D12 ──▶ S10-23  Person page sex / gender. The board also draws the gallery S10-35 fills and the preferred portrait S10-39 fills.
@@ -512,7 +512,7 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 
 #### S10-22 — Last updated on People, Events, and Places
 
-**Plan:** [`prs/S10-22-list-last-updated.md`](prs/S10-22-list-last-updated.md) — Planned
+**Plan:** [`prs/S10-22-list-last-updated.md`](prs/S10-22-list-last-updated.md) — Landed #402
 
 **Briefs:** S10-D9 Persons, S10-D10 Events, S10-D11 Places. Design the three before the PR. Events and Places copy the Persons cell. The Sources list is a different page; its last-updated cell ships in S10-41 from S10-D8, using the same treatment.
 

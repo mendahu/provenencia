@@ -1,9 +1,9 @@
 # S10-22 — Last updated on People, Events, and Places
 
-**Status:** Planned
+**Status:** Landed in [#402](https://github.com/mendahu/provenencia/pull/402) (2026-10-15)
 **Spike / slice:** Spike 10 · Slice 6 — Lists and the Person page
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#s10-22--last-updated-on-people-events-and-places)
-**Brief:** [S10-D9](../design/S10-D9-persons-list.md) (PSL-1…PSL-6), [S10-D10](../design/S10-D10-events-list.md) (EVL-1…EVL-4), [S10-D11](../design/S10-D11-places-list.md) (PLL-1…PLL-4); boards agreed 2026-10-15
+**Brief:** [S10-D9](../design/archive/S10-D9-persons-list.md) (PSL-1…PSL-6), [S10-D10](../design/archive/S10-D10-events-list.md) (EVL-1…EVL-4), [S10-D11](../design/archive/S10-D11-places-list.md) (PLL-1…PLL-4); boards agreed 2026-10-15
 **Board:** Claude Design projects *Persons list* (id 5c00cb55-8261-4579-b0e6-bc571ab23f78, file *Persons List.dc.html*, frames 01–07; 08–09 are S10-35 and S10-39), *Events list* (id 2799d7a0-387e-4570-b138-fc387562ac91, file *Events List.dc.html*, the frames marked S10-D10), and *Places list* (id e8910bb1-f564-4d7a-b829-69de0e60af5a, file *Places List.dc.html*, frames S10-D11 A–D). §6 macOS describes every frame this PR ships in words. The implementer does not need the boards.
 **Depends on:** S10-21 (landed [#398](https://github.com/mendahu/provenencia/pull/398)), S10-D9, S10-D10, S10-D11
 **Blocks:** —

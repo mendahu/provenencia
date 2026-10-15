@@ -123,3 +123,7 @@
 ## S10-21 — Handle last-activity scope
 
 **Landed 2026-10-14** in [#398](https://github.com/mendahu/provenencia/pull/398). Every Person, Event, and Place handle has a last-activity revision (`canonical_entity` audit scope). It moves on the handle's own row, its claims and evidence pins, and Observations (with their date and name values and notes) on a member Subject; the Source's revision still moves too, and a promote still moves no Source. The People, Events, and Places list reads return `updated_revision` and `updated_at` on each row, and a migration backfills existing history. The row cell is S10-22.
+
+## S10-22 — Last updated on People, Events, and Places
+
+**Landed 2026-10-15** in [#402](https://github.com/mendahu/provenencia/pull/402). Each row on People, Events, and Places shows when the researcher last worked on it, in its own 136pt column before the ref: "Today, 3:15 PM", "Yesterday", or a short date, with the full stamp as hover help and a faint "—" when nothing is recorded. The spoken row label ends with "updated …" or "last updated unknown". A note-only Observation save now reports the Person's handle in `WriteEffects.handle_scopes`, so the three lists reload and the cell moves; detail pages are not refetched. `PVList` gained an optional detail column, and `LastUpdatedDisplay` is the shared cell value that S10-41 reuses for the Sources row.
