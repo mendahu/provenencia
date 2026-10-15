@@ -33,6 +33,26 @@ struct PVFormDialogCopy {
     }
 }
 
+/// Whether a mouse-down belongs to the sheet. A system open or save panel
+/// counts as inside: its clicks are not a click away from the form.
+enum PVFormDialogClick {
+    static func isInsideSheet(
+        eventWindow: NSWindow?,
+        sheet: NSWindow,
+        modalWindow: NSWindow?
+    ) -> Bool {
+        if modalWindow is NSSavePanel { return true }
+        guard let eventWindow else { return false }
+        if eventWindow.level.rawValue >= NSWindow.Level.popUpMenu.rawValue { return true }
+        var current: NSWindow? = eventWindow
+        while let window = current {
+            if window === sheet || window is NSSavePanel { return true }
+            current = window.parent
+        }
+        return false
+    }
+}
+
 /// What an outside click does. Running work is left alone. A dirty sheet
 /// asks before it closes. A clean or read-only sheet closes.
 enum PVFormDialogDismiss: Equatable {
@@ -326,21 +346,12 @@ private final class PVFormDialogOutsideClickView: NSView {
 
     private func handle(_ event: NSEvent) {
         guard isEnabled, let sheet = window else { return }
-        if Self.eventIsInsideSheet(event, sheet: sheet) { return }
+        if PVFormDialogClick.isInsideSheet(
+            eventWindow: event.window,
+            sheet: sheet,
+            modalWindow: NSApp.modalWindow
+        ) { return }
         onOutsideClick()
-    }
-
-    /// The sheet itself, a child popup (combo box, select menu), or a menu-level
-    /// window. Those clicks belong to the field, not to "outside."
-    static func eventIsInsideSheet(_ event: NSEvent, sheet: NSWindow) -> Bool {
-        guard let eventWindow = event.window else { return false }
-        if eventWindow.level.rawValue >= NSWindow.Level.popUpMenu.rawValue { return true }
-        var current: NSWindow? = eventWindow
-        while let window = current {
-            if window === sheet { return true }
-            current = window.parent
-        }
-        return false
     }
 }
 

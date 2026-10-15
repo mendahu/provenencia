@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import SwiftUI
 import Testing
@@ -81,6 +82,53 @@ struct PVFormDialogControlsTests {
         #expect(PVFormDialogControls.isConfirmDisabled(isRunning: false, confirmDisabled: true))
         #expect(PVFormDialogControls.isConfirmDisabled(isRunning: true, confirmDisabled: false))
         #expect(PVFormDialogControls.isConfirmDisabled(isRunning: true, confirmDisabled: true))
+    }
+}
+
+@Suite
+@MainActor
+struct PVFormDialogClickTests {
+    private func window() -> NSWindow {
+        NSWindow(
+            contentRect: CGRect(x: 0, y: 0, width: 200, height: 120),
+            styleMask: [.titled],
+            backing: .buffered,
+            defer: true
+        )
+    }
+
+    @Test func aClickOnTheSheetIsInside() {
+        let sheet = window()
+        #expect(PVFormDialogClick.isInsideSheet(eventWindow: sheet, sheet: sheet, modalWindow: nil))
+    }
+
+    @Test func aParentWindowClickIsOutside() {
+        let workspace = window()
+        let sheet = window()
+        workspace.addChildWindow(sheet, ordered: .above)
+        defer { workspace.removeChildWindow(sheet) }
+        #expect(!PVFormDialogClick.isInsideSheet(eventWindow: workspace, sheet: sheet, modalWindow: nil))
+    }
+
+    @Test func anOpenPanelModalCountsAsInside() {
+        let sheet = window()
+        let workspace = window()
+        let panel = NSOpenPanel()
+        #expect(PVFormDialogClick.isInsideSheet(eventWindow: nil, sheet: sheet, modalWindow: panel))
+        #expect(PVFormDialogClick.isInsideSheet(eventWindow: workspace, sheet: sheet, modalWindow: panel))
+    }
+
+    @Test func aSavePanelEventWindowIsInside() {
+        let sheet = window()
+        let panel = NSSavePanel()
+        #expect(PVFormDialogClick.isInsideSheet(eventWindow: panel, sheet: sheet, modalWindow: nil))
+    }
+
+    @Test func aPopUpMenuWindowIsInside() {
+        let sheet = window()
+        let menu = window()
+        menu.level = .popUpMenu
+        #expect(PVFormDialogClick.isInsideSheet(eventWindow: menu, sheet: sheet, modalWindow: nil))
     }
 }
 
