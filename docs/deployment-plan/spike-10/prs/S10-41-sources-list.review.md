@@ -64,6 +64,16 @@
 | M-5 | nit | `LastUpdatedDisplay` layer | **Fixed.** “— (Platform value)”. |
 | M-6 | nit | Three matchers; Properties empty state | **Logged.** |
 
+## Round 2 — executability (Sonnet): Ready with changes, no blockers
+
+| ID | Sev | Finding | Answer |
+| --- | --- | --- | --- |
+| X-1 | major | STEP-1 removes `UpdatedRevision` but `sourceProto` changes in STEP-2, so `./api/...` does not compile | **Fixed.** STEP-1 changes the one `sourceProto` line. |
+| X-2 | major | `GoStore.mapSourceGraphProgress` not assigned; Filed would never match in the app | **Fixed.** D-7 and STEP-4 name it. |
+| X-3 | major | The ref has no width rule | **Fixed.** D-10 `.fixedSize` on the ref; STEP-6 narrow check. |
+| X-4 | minor | Count line while counting or failed | **Fixed.** D-16, T-12, brief SRL-6. |
+| X-5 | minor | `source`-only subjects would create an all-zero entry | **Fixed.** D-5 loop rule; T-4 case. |
+
 ## To user
 
 1. **Move the cell view and the `LastUpdatedDisplay` mapping and join into S10-22** (plan M-1, M-10; brief M-1). Recommended if S10-22 has not built its cell yet: one sentence in S10-22 D-7 and D-8. The S10-41 plan already handles both cases (D-10 uses what S10-22 lands).
