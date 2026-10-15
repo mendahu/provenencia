@@ -33,7 +33,7 @@ type Revision struct {
 
 // Record allocates the next revision and inserts the transaction + changes on tx,
 // plus one scope row per id each effects.Scopes entry names in set. Record does
-// not resolve: the caller passes effects.Resolve of the same changes, so each
+// not resolve: the caller passes the resolved Set of the same changes, so each
 // scope path is walked once per write, and an empty Set stores no scope rows.
 // Every entity type in the change list
 // must name a non-None effect; an unknown type or a None row is invalid. Run
