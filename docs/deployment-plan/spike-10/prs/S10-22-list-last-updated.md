@@ -375,6 +375,8 @@ Files: `docs/macos-client-patterns.md` and `.agents/skills/add-workspace-place/S
 Check: `scripts/check-pr.sh` PASS.
 
 **STEP-19 — Activity is not evidence; one apply body** — built from the ship log's Fix plan R2 (D-25, D-26).
+Files: as Fix plan R2 lists. Do: D-25, D-26; T-18, T-19, T-20.
+Check: `scripts/check-pr.sh` PASS.
 
 Commits: one per behavior. The subject is one full imperative sentence that says what changed for the researcher, ending in a period, like the rest of `git log` ("Restore list scroll after the sort is applied."). No WIP commits.
 
