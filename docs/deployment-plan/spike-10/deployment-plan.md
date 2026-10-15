@@ -221,7 +221,7 @@ SLICE 5 — Artifacts and multi-select
 
 SLICE 6 — Lists and the Person page
   S10-40  People, Events, Places, and Sources store the list's top row on the history entry — done, #392
-  S10-21  canonical_entity audit scope + list revision reads
+  S10-21  canonical_entity audit scope + list revision reads — planned
   ✎ S10-D9…D11 ──▶ S10-22  Last updated on People, Events, and Places
   ✎ S10-D8 ──▶ S10-41  Sources list: last updated, filters, search,
                        persisted sort and filters. Scroll is S10-40.
@@ -498,6 +498,8 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 | **Depends on** | — |
 
 #### S10-21 — Handle last-activity scope
+
+**Plan:** [`prs/S10-21-handle-last-activity.md`](prs/S10-21-handle-last-activity.md) — Planned
 
 | | |
 | --- | --- |
