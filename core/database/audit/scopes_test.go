@@ -637,6 +637,9 @@ func TestLatestByScope(t *testing.T) {
 	if _, err := audit.LatestByScope(db, ""); !errors.Is(err, audit.ErrInvalid) {
 		t.Fatalf("empty scope type: %v", err)
 	}
+	if _, err := audit.LatestByScope(nil, audit.ScopeCanonicalEntity); !errors.Is(err, audit.ErrInvalid) {
+		t.Fatalf("nil querier: %v", err)
+	}
 }
 
 func writeFile(t *testing.T, path, body string) {
