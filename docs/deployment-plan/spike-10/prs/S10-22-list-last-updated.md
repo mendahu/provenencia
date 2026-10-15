@@ -24,7 +24,7 @@ Differences from this plan:
 - D-25 and T-18 named "positions" as a `CacheSource` table; it was `identity_claims` and `identity_claim_evidence` (positions are `None`). Those two kept the old path as `Source`, without `SourceScope`. `citation_notes` and `observation_notes` also lost `Source` (no evidence read loads them).
 - D-27 put `CitationSource` on `date_values` and `name_values` too, through `valueSource(col)`, so a value edit reloads that one Source's citation reads.
 - D-28 was rewritten after the R3 implementer stopped: rewriting the composer's location remounts it (`CitationComposerEntry.identityKey` includes the Artifact). `CitationComposerContext.applyWrite` reloads the Artifact list the composer shows instead.
-- `promote/bridges_test.go` resolves inline instead of calling `recordResolved`; `FakeStore.bumpSource` takes a required `evidence:`.
+- `core/database/promote/bridges_test.go` resolves inline instead of calling `recordResolved`; `FakeStore.bumpSource` takes a required `evidence:`.
 - The STEP-15 sweep still finds old symbol names in S10-21's landed plan, review, and ship logs; they are history and were left as written.
 - Not done here (follow-ups): writes that still return no `WriteEffects` (Source create/update/cover/delete, promote, Property writes); a visible list reloads in full when a handle's values change; a metadata value save reloads the visible `metadataFieldsList` (`COUNT(*)` per field); `Resolve` walks a shared path once per field; the time of day for older changes is hover-only.
 
