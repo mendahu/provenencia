@@ -65,8 +65,16 @@ final class GraphCanvasPointerController {
     private var gesture: Gesture = .none
     private var panCursorPushed = false
 
-    func setOffset(_ id: String, offset: CGSize) {
-        offsets[id] = offset
+    /// One dictionary write for the anchor and every card moving with it.
+    /// Assigning each id on its own notifies observers once per card.
+    private func replaceDragOffsets(anchor: String, peers: Set<String>, offset: CGSize) {
+        var next: [String: CGSize] = [:]
+        next.reserveCapacity(peers.count + 1)
+        next[anchor] = offset
+        for peer in peers {
+            next[peer] = offset
+        }
+        offsets = next
     }
 
     func clearOffset(_ id: String) {
@@ -172,8 +180,7 @@ final class GraphCanvasPointerController {
                     width: documentPoint.x - start.x,
                     height: documentPoint.y - start.y
                 )
-                setOffset(targetID, offset: offset)
-                for peer in peers { setOffset(peer, offset: offset) }
+                replaceDragOffsets(anchor: targetID, peers: peers, offset: offset)
             } else if pointsAtCards, targetID == nil {
                 if mode == .selecting || shiftDown {
                     // Select armed, or Shift held: draw a rectangle.
@@ -194,8 +201,7 @@ final class GraphCanvasPointerController {
                 width: documentPoint.x - start.x,
                 height: documentPoint.y - start.y
             )
-            setOffset(id, offset: offset)
-            for peer in peers { setOffset(peer, offset: offset) }
+            replaceDragOffsets(anchor: id, peers: peers, offset: offset)
 
         case .none:
             break

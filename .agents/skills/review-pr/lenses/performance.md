@@ -7,7 +7,8 @@ lists, the Evidence graph, caches, search, derivatives, the catalog session, or
 work that runs in a SwiftUI `body` or on the main actor.
 
 Say what grows and how fast. A finding without a size ("N Sources × M
-queries") is a guess.
+queries") is a guess. A layout pass that invalidates itself is the exception:
+the input can be one control, and the work does not stop.
 
 ## Read first
 
@@ -64,6 +65,33 @@ queries") is a guess.
 - Search: reprojecting FTS on every keystroke; a query per keystroke without
   the existing debounce.
 
+### SwiftUI layout
+
+Layout is a fixed point, and SwiftUI runs it on the main thread until the
+sizes agree. The parent proposes a size, the child reports one, and if that
+report changes the next proposal, layout runs again in the same turn. Nothing
+in the code looks like a loop. There is no `onChange`, timer, or growing
+collection. When the sizes never agree, pointer events do not get a turn, so
+pan, drag, and unrelated updates all hitch.
+
+- A choice that changes the space it is offered. `ViewThatFits`, or a custom
+  `Layout` that picks among children, inside a stack, spacer, or
+  `layoutPriority` that hands the chosen child the leftover width. The wide
+  form does not fit, so the narrow form is chosen; the narrow form leaves
+  room, so the wide form is offered again. `.fixedSize()` on the wide form
+  makes the disagreement permanent: the child reports its ideal width and
+  ignores the proposal.
+- A measurement taken under a different proposal than the one used to place
+  the view, then written back as the view's size. `Text`, and any view that
+  wraps, measured at width 0 reports the height of a full wrap. Using that
+  height as the placed height changes what the parent proposes next. An
+  unbounded ideal width does the same when the leftover width depends on the
+  width just reported.
+
+The choice has to come from a width the choice does not change: the
+container's own width, or an ideal width measured where it cannot affect the
+proposal.
+
 ### Graph and canvas
 
 - Per-card work that scales with every card on the Source (layout, hit
@@ -75,13 +103,13 @@ queries") is a guess.
 
 Small, bounded inputs (vocabulary lists, a handful of settings). One-time work
 on project open that the ledger already accepts. Speculative micro-optimizations
-are not findings.
+are not findings. A layout cycle is not a bounded input: it does not finish.
 
 ## Severity in this lens
 
 | Severity | Use when |
 | --- | --- |
-| **blocker** | Main-thread work that will hang on a real project; N+1 on a list that is already large in dogfood data; a cache bypass that reloads a whole list per edit on a common path |
+| **blocker** | Main-thread work that will hang on a real project; a layout cycle that does not settle, even on one control; N+1 on a list that is already large in dogfood data; a cache bypass that reloads a whole list per edit on a common path |
 | **major** | Work that grows faster than the input on a path researchers use daily; a missing index on a new list query |
 | **minor** | A measurable cost on a quiet path |
 | **nit** | — (performance needs a size, not taste) |
