@@ -11,7 +11,6 @@ import (
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
-	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjects"
@@ -280,7 +279,7 @@ func TestSources(t *testing.T) {
 				if err != nil || res.Revision == 0 || res.At == "" {
 					t.Fatalf("write %+v %v", res, err)
 				}
-				want := effects.Activity{Revision: res.Revision, At: res.At}
+				want := res.Activity
 				var queries int
 				c.Graph().SetQueryCounterForTest(func() { queries++ })
 				all, err := List(c)

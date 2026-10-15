@@ -21,7 +21,7 @@ entry of `effects.Scopes` (`core/database/effects/scopes.go`) names. `Record` do
 so a test that calls it resolves first (`effects.Resolve(tx, changes)`). The display cache reads
 the same `Scopes` list to keep last activity current. There are two scope types:
 
-- `source`, from `Set.Sources` ([`effects.Resolve`](../../../core/database/effects/resolve.go)): the Source
+- `source`, from `Set.SourceScopes` (the `Effect.SourceScope` path; `Effect.Source` is a different job, the Source's evidence: the Source graph, graph progress, citation counts and citations-by-artifact reads) ([`effects.Resolve`](../../../core/database/effects/resolve.go)): the Source
   row and everything under it (notes, metadata, layout, credibility, artifacts and their
   files, subjects, citations, observations, their notes and values).
 - `canonical_entity`, from `Set.HandleScopes` (the `Effect.HandleScope` path): work on a
@@ -41,14 +41,14 @@ An entity whose effect is `None` (`subject_position`, `file_derivative`) is not 
 An all-`None` list commits without a revision. In a mixed list, `Run` drops the `None`
 rows before `Record`, so they are stored with the revision and are not recorded.
 
-Source scopes come from the effect's `Source` path, not a hand resolver.
+Source scopes come from the effect's `SourceScope` path, not a hand resolver. Set `Source` too only when a Source-graph, progress, or citation read loads the table.
 
 | Row shape | Effect |
 | --- | --- |
-| Carries `source_id` | `Source: field("source_id")` |
-| Hangs off an artifact / citation / observation | `Source: up(...)` along that chain |
-| Referenced by another row (values, files) | `Source: chain(inbound(...), ...)` |
-| Vocabulary or conclusion layer | no `Source` path — a deliberate decision, not a default |
+| Carries `source_id` | `SourceScope: field("source_id")` |
+| Hangs off an artifact / citation / observation | `SourceScope: up(...)` along that chain |
+| Referenced by another row (values, files) | `SourceScope: chain(inbound(...), ...)` |
+| Vocabulary or conclusion layer | no `SourceScope` path — a deliberate decision, not a default |
 | Work on a handle (claim, pin, member evidence) | `HandleScope: ...` along the chain to the handle id |
 
 ## Write changes so they resolve
