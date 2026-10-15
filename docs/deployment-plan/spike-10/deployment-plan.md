@@ -108,7 +108,7 @@ These are the calls for this spike. The questions at the bottom are answered; no
 - **Oldest user** means the earliest UUIDv7 `users.id`, not the first row of `ORDER BY display_name`. If the signed-in install identity is already in the project, keep selecting that person. If the project has no users, stay on create-new.
 - **Enter follows the buttons on a single-line inline edit.** Save when that control is enabled. When it is not, Enter leaves the edit, the same as Cancel. Escape cancels. A multiline field still takes Enter as a newline. Landed in S10-08.
 - **The Sources list is one page.** Sort, type filter, evidence status, and text search persist per project and user and restore together when that place is opened again, including after relaunch. People, Events, and Places have none of those controls. Last updated on a Sources row uses the revision Sources already store. That cell, the filters, the search field, and the persisted settings are S10-41, from S10-D8. They are not a persistence PR ahead of the brief. List scroll is the history-entry anchor in S10-40.
-- **Last updated** is an audit scope, not a timestamp column. Sources already store `UpdatedRevision` (`scope_type = source`) and can show it once the row is designed. People, Events, and Places get a `canonical_entity` scope from S10-21, from `Effect.HandleScope` in `effects`. It moves on the handle's own row, its Identity Claims and evidence pins, and Observations (with their date and name values and notes) on a member Subject, so editing evidence moves the handle's revision. A property, term, citation, credibility, or Subject-label edit does not. Display is relative or absolute in the briefs; the value is the revision's time.
+- **Last updated** is an audit scope, not a timestamp column. Sources already store `UpdatedRevision` (`scope_type = source`) and can show it once the row is designed. People, Events, and Places get a `canonical_entity` scope from S10-21, from `Effect.HandleScope` in `effects`. It moves on the handle's own row, its Identity Claims and evidence pins, and Observations (with their date and name values and notes) on a member Subject, so editing evidence moves the handle's revision. A property, term, citation, credibility, or Subject-label edit does not. The value is the revision's time. It is its own fixed-width column between the row text and the ref: “Today, 3:15 PM”, “Yesterday”, then a short date, in the viewer's locale, with the full note-row stamp as help. No recorded revision reads “—”. S10-D9 draws it; S10-D10, S10-D11, and S10-D8 copy it (answered 2026-10-14).
 - **One Event mark.** The Event mark is the S10-D16 calendar. Cards, lists, omnibar hits, Promote, Properties, the sidebar, the history menus, and the three list empty states draw `subject_person`, `subject_event`, and `subject_place` through `PVMark`. The shell reads `WorkspaceSection.glyph`. Landed in S10-19.
 - **Sex / gender styling** uses a seeded `gender` Property when the Person has one, otherwise `sex_at_birth`. The seed is `man`, `woman`, `non_binary` (labels Man, Woman, Non-binary). Researchers add further terms (`origin=user`), the same way they extend `role`. It is not product-locked, and there is no product `other` term. The page treatment recognizes the three seeded keys. A researcher-added term still counts as gender and wins over sex at birth; the brief draws that term without inventing a new color per key. Unknown, empty, and mixed (the reconciler already has a mixed state) stay neutral. `sex_at_birth` already appears as an ordinary field row when a record speaks to it (`PersonDetailContent`); this PR adds the page treatment and leaves that row in place.
 - **Composer performance** is already done. [#356](https://github.com/mendahu/provenencia/pull/356) builds a combo box's option list only while its menu is open, so a form of closed pickers does not lay out every choice. Checked 2026-10-12: a citation with 70 Observations opens quickly. No separate profile pass, and no split that shows the form while the file is still loading. S10-16 still has to stay comfortable at 20 Observations; that bar is the layout.
@@ -148,9 +148,9 @@ These are the calls for this spike. The questions at the bottom are answered; no
 | **[S10-D16](design/archive/S10-D16-event-mark.md)** | Design system — Event mark | **S10-19** | The `subject_event` glyph. Sidebar placement is S10-D7 |
 | **[S10-D7](design/archive/S10-D7-sidebar-marks.md)** | Workspace shell | **S10-19** | Sidebar and toolbar. Depends on S10-D16. Empty states use the same marks |
 | **S10-D8** | Sources list | **S10-41** | Last updated, evidence-status filter, text search, persisted sort and filters |
-| **S10-D9** | Persons list | **S10-22** | S10-35 fills the thumb with a likeness. S10-39 makes that thumb the preferred portrait |
-| **S10-D10** | Events list | **S10-22** | — |
-| **S10-D11** | Places list | **S10-22** | — |
+| [**S10-D9**](design/S10-D9-persons-list.md) | Persons list | **S10-22** | S10-35 fills the thumb with a likeness. S10-39 makes that thumb the preferred portrait |
+| [**S10-D10**](design/S10-D10-events-list.md) | Events list | **S10-22** | — |
+| [**S10-D11**](design/S10-D11-places-list.md) | Places list | **S10-22** | — |
 | **S10-D12** | Person detail | **S10-23** | S10-35 gallery and S10-39 preferred portrait. Design both with the gender treatment, before S10-23 |
 | **S10-D13** | Promote page | **S10-36** | Evidence sheet shows two crops |
 | **S10-D14** | Evidence graph — zoomed-out card | **S10-46**, descoped 2026-10-11 | — |
@@ -511,6 +511,8 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 | **Depends on** | — |
 
 #### S10-22 — Last updated on People, Events, and Places
+
+**Plan:** [`prs/S10-22-list-last-updated.md`](prs/S10-22-list-last-updated.md) — Blocked — on board S10-D9, S10-D10, S10-D11
 
 **Briefs:** S10-D9 Persons, S10-D10 Events, S10-D11 Places. Design the three before the PR. Events and Places copy the Persons cell. The Sources list is a different page; its last-updated cell ships in S10-41 from S10-D8, using the same treatment.
 
