@@ -13,9 +13,9 @@
 | M-3 | major | `UserDefaults` contradicts the documented per-project home (JSON under Application Support, `navigation-history.md`, `add-workspace-location`) | **Fixed.** D-12: `sources-list/{projectKey}.json` keyed by user id; `InstallPaths.projectKey` extracted from `navigationFileName`. Option (a); the documented rule settles it, so not sent to the user. |
 | M-4 | minor | Four typed properties and a String struct; four identical `.onChange` handlers | **Fixed.** D-12, D-14, D-18: one typed `settings` value with field-by-field decoding, one save, one `.onChange(of: model.settings)`. |
 | M-5 | minor | `SourceEvidenceStatus` split across files; “missing means empty” written twice | **Fixed.** D-7: nested `SourcesModel.EvidenceStatus` with `label` and `init(_ progress:)`. |
-| M-6 | minor | FakeStore gets a fifth copy of the primary-kind list | **Fixed** for the new site (D-20, `primaryTypeKeys`). The four older sites stay; editing them is outside this PR. |
-| M-7 | minor | `refreshSourceGraphProgress(for:)` repeats a mutation list the registry has | **Declined for this PR.** The registry's `.sourceGraph` list also includes `.deletedSource`, which must not patch progress, so one shared list is not a drop-in. Logged for a later cleanup. |
-| M-8 | minor | A third text-matching rule | **Logged.** D-15 stays; unifying list filters and fixing Properties' accent miss is a later idea. |
+| M-6 | minor | FakeStore gets a fifth copy of the primary-kind list | **Fixed** for the new site (D-20, `primaryTypeKeys`). The four older sites stay; logged in [`ideas/shared-list-helpers.md`](../../../ideas/shared-list-helpers.md). |
+| M-7 | minor | `refreshSourceGraphProgress(for:)` repeats a mutation list the registry has | **Declined for this PR** (minor; D-8 is one case). Round 2 showed the round-1 reason was wrong: patching on `.deletedSource` is harmless (`Get` returns zeros, `isZero` removes the entry). Logged in [`ideas/shared-list-helpers.md`](../../../ideas/shared-list-helpers.md). |
+| M-8 | minor | A third text-matching rule | **Logged** in [`ideas/shared-list-helpers.md`](../../../ideas/shared-list-helpers.md). D-15 stays. |
 | M-9 | nit | Version field; speculative Next adds; duplicated FROM/JOIN | **Fixed.** No version field (D-12); Next adds trimmed; `sqlScopeRevisions` shared (D-1). |
 | M-10 | nit | Extract the cell in S10-22, not here | **To user** with M-1. D-10 extracts it in this PR and uses S10-22's version if it already exists. |
 
@@ -62,7 +62,7 @@
 | M-3 | minor | Name the loading view; no skeleton | **Fixed.** |
 | M-4 | nit | Search size vs the Properties precedent | **Fixed.** Regular size, stated. |
 | M-5 | nit | `LastUpdatedDisplay` layer | **Fixed.** “— (Platform value)”. |
-| M-6 | nit | Three matchers; Properties empty state | **Logged.** |
+| M-6 | nit | Three matchers; Properties empty state | **Logged** in [`ideas/shared-list-helpers.md`](../../../ideas/shared-list-helpers.md). |
 
 ## Round 2 — executability (Sonnet): Ready with changes, no blockers
 
@@ -74,10 +74,14 @@
 | X-4 | minor | Count line while counting or failed | **Fixed.** D-16, T-12, brief SRL-6. |
 | X-5 | minor | `source`-only subjects would create an all-zero entry | **Fixed.** D-5 loop rule; T-4 case. |
 
+## Round 2 — maintainability (Opus): Fits, no new blockers
+
+Disagreed with two round-1 answers: M-7's reason (corrected above) and “logged” items that were not written down (now in [`ideas/shared-list-helpers.md`](../../../ideas/shared-list-helpers.md), with the primary-kinds home in `subjecttypes` it also suggested). Its Q10 note is fixed: D-12 updates the `InstallPaths.identityDirectory` comment. Its Q6 note (after D-10, `ConclusionListRow.updatedColumn` and `labelWithUpdated` only forward) stands as is: they keep the Conclusion list call sites and `ConclusionListKind` unchanged.
+
 ## To user
 
 1. **Move the cell view and the `LastUpdatedDisplay` mapping and join into S10-22** (plan M-1, M-10; brief M-1). Recommended if S10-22 has not built its cell yet: one sentence in S10-22 D-7 and D-8. The S10-41 plan already handles both cases (D-10 uses what S10-22 lands).
 
 ## Verdict
 
-Round 1 had blockers, all fixed. Round 2 is pending: fresh reviewers check the answers above and raise only new blockers. The plan stays **Blocked — on S10-22 and board S10-D8**.
+Done after two rounds. Plan: maintainability **Fits**, executability **Ready** (round-2 findings fixed). Brief: Fits with changes and Ready with changes in round 1, all fixed. No open blocker. One To user item. The plan stays **Blocked — on S10-22 and board S10-D8**; when both land, refresh per plan-pr and mark it Planned.
