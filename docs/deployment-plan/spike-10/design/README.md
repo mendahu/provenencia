@@ -12,7 +12,7 @@ Brief files are written **just before** the PR they gate, not up front. This ind
 | --- | --- | --- | --- |
 | [S10-D6](S10-D6-evidence-graph.md) | Evidence graph | **S10-20** | File select and Open (system app), plus box-select. Board agreed 2026-10-14. Also specifies Unpromote on the promoted card, which ships in **S10-44**. Hit boxes, the tiled grid, canvas growth, and camera restore are not this board |
 | [S10-D8](S10-D8-sources-list.md) | Sources list | **S10-41** | Board agreed 2026-10-15. Status label “Fully promoted”; status chip uses the network icon. The page: last updated (copies the S10-D9 column), evidence-status select, search field, Clear filters empty state, persisted sort and filters. Scroll is S10-40 and has no chrome here. Persons, Events, and Places do not get those controls |
-| S10-D12 | Person detail | **S10-23** | Sex / gender (`man`, `woman`, `non_binary`, extensible), the likeness gallery **S10-35** fills, and the preferred-portrait control **S10-39** fills. Design all of that before S10-23 |
+| [S10-D12](S10-D12-person-detail.md) | Person detail | **S10-23** | Brief written 2026-10-15; board not agreed. Sex / gender Badge and thumb tint (four tints from existing tokens; sex at birth borrows and says “· at birth”), the likeness gallery **S10-35** fills, and the preferred-portrait control **S10-39** fills. The agreed board reaches the implementer as a Claude Design link |
 | S10-D13 | Promote page | **S10-36** | Evidence sheet shows two crops |
 | S10-D15 | Citation composer — depiction row | **S10-34** | Own board, written just before S10-34. After the observation-list rethink |
 
