@@ -244,7 +244,7 @@ final class WorkspaceSession {
     /// The Source whose graph progress a mutation moved, if it moved one.
     private func graphProgressSource(of mutation: CatalogMutation) -> String? {
         switch mutation {
-        case .mutatedSourceGraph(let id), .deletedSubject(let id):
+        case .mutatedSourceGraph(let id), .deletedSubject(let id), .promotedSubject(let id):
             return id
         default:
             return nil
