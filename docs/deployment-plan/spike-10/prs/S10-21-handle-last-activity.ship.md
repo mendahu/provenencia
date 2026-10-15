@@ -58,4 +58,4 @@ CON: clean — CON-1 and CON-2 resolved (`TestLatestByScope` nil case, `TestHand
 MNT: clean — MNT-1, MNT-2, MNT-3, and the routed §4.1 sentence resolved.
 
 ## Result
-Gate PASS · CI pending · open: none · follow-ups: none (MNT-4 rejected per D-6) · to user: —
+Gate PASS · CI green (Go tests, macOS tests, localizable) · open: none · follow-ups: none (MNT-4 rejected per D-6) · to user: —
