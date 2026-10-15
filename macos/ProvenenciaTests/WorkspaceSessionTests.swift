@@ -786,6 +786,30 @@ struct WorkspaceSessionTests {
         #expect(counts.isFetching)
     }
 
+    /// The composer's location cannot name its Artifact without remounting it,
+    /// so its write funnel reloads the Artifact list it shows (D-28).
+    @Test func composerWriteReloadsTheArtifactListItShows() async throws {
+        let store = FakeStore()
+        seedStore(store)
+        let session = makeSession(store: store)
+        let project = session.projectKey
+        let key = CatalogQueryKey.citationsByArtifact(project: project, artifactId: "a1")
+        session.setQueryValue(key, value: [CatalogListedCitation]())
+        session.apply(location: WorkspaceLocation(
+            section: .sources, sourceId: "s1", citationId: "c1", sourceSurface: .citationComposer, title: "Alpha"
+        ))
+        #expect(!session.visibleKeys.contains(key))
+        let context = CitationComposerContext(
+            store: store, session: session, userID: "u1", sourceID: "s1"
+        )
+        context.artifactID = "a1"
+
+        context.applyWrite(CatalogWriteEffects(sources: ["s1"], citationSources: ["s1"]))
+
+        let handle: QueryHandle<[CatalogListedCitation]> = try #require(session.queryHandle(key))
+        #expect(handle.isFetching)
+    }
+
     /// `usedBy` on the Properties inspector counts Observations, and it
     /// moves whenever a citation save creates or deletes one.
     @Test func applySavedCitationInvalidatesPropertiesUsedBy() async {

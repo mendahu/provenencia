@@ -66,8 +66,16 @@ final class CitationComposerContext {
         return memoVocabulary
     }
 
+    /// The one funnel for composer writes. The composer's location cannot name
+    /// its Artifact without remounting it, so the Artifact list it shows is not
+    /// counted as on screen; a citation write reloads it here (D-28).
     func applyWrite(_ effects: CatalogWriteEffects) {
         session.apply(effects)
+        if !effects.citationSources.isEmpty, let artifactID, !artifactID.isEmpty {
+            let _: QueryHandle<[CatalogListedCitation]> = session.query(
+                .citationsByArtifact(project: session.projectKey, artifactId: artifactID)
+            )
+        }
     }
 
     /// `nil` follows the citation open in the composer.
