@@ -429,6 +429,8 @@ struct CatalogPersonHeader: Sendable, Equatable, Identifiable {
     var nameValueCount: Int
     var birth: CatalogLifeFacts = CatalogLifeFacts()
     var death: CatalogLifeFacts = CatalogLifeFacts()
+    /// RFC3339 UTC time of the last revision that touched this Person; empty when unknown.
+    var updatedAt: String = ""
 
     var id: String { entity.id }
 }
@@ -454,6 +456,8 @@ struct CatalogEventHeader: Sendable, Equatable, Identifiable {
     var places: [CatalogHeaderPlace] = []
     /// The naming-matrix rule Go chose, and its parts.
     var title: CatalogEventTitle
+    /// RFC3339 UTC time of the last revision that touched this Event; empty when unknown.
+    var updatedAt: String = ""
 
     var id: String { entity.id }
 }
@@ -501,6 +505,8 @@ struct CatalogPlaceHeader: Sendable, Equatable, Identifiable {
     var contains: [CatalogPlaceRelationship] = []
     var predecessors: [CatalogPlaceRelationship] = []
     var successors: [CatalogPlaceRelationship] = []
+    /// RFC3339 UTC time of the last revision that touched this Place; empty when unknown.
+    var updatedAt: String = ""
 
     var id: String { entity.id }
 }

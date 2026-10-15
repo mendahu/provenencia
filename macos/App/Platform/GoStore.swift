@@ -1033,7 +1033,8 @@ struct GoStore: GenealogyStore {
             name: h.hasName ? mapNameValue(h.name) : nil,
             nameValueCount: Int(h.nameValueCount),
             birth: mapLifeFacts(h.birth),
-            death: mapLifeFacts(h.death)
+            death: mapLifeFacts(h.death),
+            updatedAt: h.updatedAt
         )
     }
 
@@ -1080,7 +1081,8 @@ struct GoStore: GenealogyStore {
             endDateCount: Int(h.endDateCount),
             subjects: h.subjects.map(mapEventSubject),
             places: h.places.map(mapHeaderPlace),
-            title: mapEventTitle(h.title)
+            title: mapEventTitle(h.title),
+            updatedAt: h.updatedAt
         )
     }
 
@@ -1096,7 +1098,8 @@ struct GoStore: GenealogyStore {
             partOf: h.partOf.map(mapPlaceRelationship),
             contains: h.contains.map(mapPlaceRelationship),
             predecessors: h.predecessors.map(mapPlaceRelationship),
-            successors: h.successors.map(mapPlaceRelationship)
+            successors: h.successors.map(mapPlaceRelationship),
+            updatedAt: h.updatedAt
         )
     }
 
