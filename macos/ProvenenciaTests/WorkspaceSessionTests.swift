@@ -640,6 +640,11 @@ struct WorkspaceSessionTests {
         #expect(peopleHandle.value?.isEmpty == true)
         #expect(!eventsHandle.isFetching && !placesHandle.isFetching)
         #expect(eventsHandle.value?.count == 1 && placesHandle.value?.count == 1)
+        // The stale Events list reloads on its next showing.
+        let _: QueryHandle<[CatalogEventHeader]> = session.query(events)
+        #expect(eventsHandle.isFetching)
+        await waitForFetchComplete(eventsHandle)
+        #expect(eventsHandle.value?.isEmpty == true)
     }
 
     /// `usedBy` on the Properties inspector counts Observations, and it
