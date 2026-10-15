@@ -147,7 +147,7 @@ These are the calls for this spike. The questions at the bottom are answered; no
 | **[S10-D6](design/S10-D6-evidence-graph.md)** | Evidence graph | **S10-20** file select, Open, and box-select | S10-44 Unpromote on the promoted card |
 | **[S10-D16](design/archive/S10-D16-event-mark.md)** | Design system — Event mark | **S10-19** | The `subject_event` glyph. Sidebar placement is S10-D7 |
 | **[S10-D7](design/archive/S10-D7-sidebar-marks.md)** | Workspace shell | **S10-19** | Sidebar and toolbar. Depends on S10-D16. Empty states use the same marks |
-| [**S10-D8**](design/S10-D8-sources-list.md) | Sources list | **S10-41** | Last updated, evidence-status filter, text search, persisted sort and filters |
+| [**S10-D8**](design/archive/S10-D8-sources-list.md) | Sources list | **S10-41** | Last updated, evidence-status filter, text search, persisted sort and filters |
 | [**S10-D9**](design/archive/S10-D9-persons-list.md) | Persons list | **S10-22** | S10-35 fills the thumb with a likeness. S10-39 makes that thumb the preferred portrait |
 | [**S10-D10**](design/archive/S10-D10-events-list.md) | Events list | **S10-22** | — |
 | [**S10-D11**](design/archive/S10-D11-places-list.md) | Places list | **S10-22** | — |
@@ -223,8 +223,7 @@ SLICE 6 — Lists and the Person page
   S10-40  People, Events, Places, and Sources store the list's top row on the history entry — done, #392
   S10-21  canonical_entity audit scope + list revision reads — done, #398
   S10-22  Last updated on People, Events, and Places — done, #402
-  ✎ S10-D8 ──▶ S10-41  Sources list: last updated, filters, search,
-                       persisted sort and filters. Scroll is S10-40.
+  S10-41  Sources list: last updated, filters, search, persisted sort and filters — done, #405
   ✎ S10-D12 ──▶ S10-23  Person page sex / gender. The board also draws the gallery S10-35 fills and the preferred portrait S10-39 fills.
   Check: edit a Source, leave, come back — the row's time moved, and sort,
          type, status, and search are still set. Scroll is the history entry's
@@ -525,9 +524,9 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 
 #### S10-41 — Sources list
 
-**Plan:** [`prs/S10-41-sources-list.md`](prs/S10-41-sources-list.md) — Planned
+**Plan:** [`prs/S10-41-sources-list.md`](prs/S10-41-sources-list.md) — Landed #405
 
-**Brief:** [S10-D8](design/S10-D8-sources-list.md), board agreed 2026-10-15. One board for the page. It does not add a cell, a filter, or a search field to Events, Places, or Persons.
+**Brief:** [S10-D8](design/archive/S10-D8-sources-list.md), board agreed 2026-10-15. One board for the page. It does not add a cell, a filter, or a search field to Events, Places, or Persons.
 
 | | |
 | --- | --- |

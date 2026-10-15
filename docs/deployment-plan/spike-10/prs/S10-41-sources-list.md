@@ -1,9 +1,9 @@
 # S10-41 — Sources list: last updated, status filter, search, saved settings
 
-**Status:** Planned
+**Status:** Landed in [#405](https://github.com/mendahu/provenencia/pull/405) (2026-10-15)
 **Spike / slice:** Spike 10 · Slice 6 — Lists and the Person page
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#s10-41--sources-list)
-**Brief:** [S10-D8](../design/S10-D8-sources-list.md) (SRL-1…SRL-10), board agreed 2026-10-15
+**Brief:** [S10-D8](../design/archive/S10-D8-sources-list.md) (SRL-1…SRL-10), board agreed 2026-10-15
 **Board:** Claude Design project *Sources list* (id 118d2eb7-3b46-4912-a688-09ec7b0070fa, file *S2-04 Sources list.dc.html*, section “S10-D8 enhancement” and frames S10-D8 1–8 with 7b). §6 macOS describes every frame this PR ships in words. The implementer does not need the board.
 **Depends on:** S10-22 (landed [#402](https://github.com/mendahu/provenencia/pull/402)), S10-D8 (board agreed 2026-10-15)
 **Blocks:** —
@@ -14,6 +14,13 @@
 **Context:** working rules "The Sources list is one page", "Last updated is an audit scope", "Sources evidence filters count primaries in one read", "List scroll is a field on the history entry"; [`navigation-history.md`](../../archive/spike-3/navigation-history.md); [`conclusion-layer-data-model.md`](../../../conclusion-layer-data-model.md) (Identity Claims, bridges); [S10-22 plan](S10-22-list-last-updated.md) Landed note, D-20, D-21
 **Planned:** 2026-10-15 against `main` @ `832ccc2`; refreshed 2026-10-15 against `main` @ `6f70bf4` after S10-22 landed; D-13 revised 2026-10-15 at `daf4e086` after the round-0 stop (project attached in `WorkspaceView.init`)
 **Review:** [`S10-41-sources-list.review.md`](S10-41-sources-list.review.md) — two rounds; Fits / Ready; one To user item
+
+## Landed
+
+Differences from this plan:
+- None in behavior. The STEP-6 `rg -n "updatedDetail|labelWithUpdated|updatedColumnWidth" macos/App` check still prints `L10n.Promote.updatedDetail` and `PromoteView`: an unrelated Promote string that shares the word. No Conclusion or Sources symbol remains.
+- The plan's `.onChange(of: model.settings)` replaces the sort and type handlers in STEP-3 rather than STEP-5, because the model change removed `model.sort` and `model.typeFilterID` from the view in the same commit.
+- `lastUpdated.a11y.join` was added with `PVLastUpdated` (STEP-4); the three status labels with the model (STEP-3); the other `sources.list` keys with the toolbar (STEP-5).
 
 ### Implementer — read this first
 
@@ -255,7 +262,7 @@ Do: D-18, D-19, and the rest of §6 Strings for `L10n.Sources` (`searchPrompt`, 
 Check: `python3 scripts/check-localizable-xcstrings.py` passes; manual check steps 2–6.
 
 **STEP-6 — Docs**
-Files: `docs/deployment-plan/spike-10/completed.md`, `deployment-plan.md` (S10-41 row and slice 6 line), this plan (status, Landed note), `design/S10-D8-sources-list.md` → `design/archive/`, `design/README.md`.
+Files: `docs/deployment-plan/spike-10/completed.md`, `deployment-plan.md` (S10-41 row and slice 6 line), this plan (status, Landed note), the S10-D8 brief → `design/archive/`, `design/README.md`.
 Do: per the Definition of done.
 Check: `python3 scripts/check-plan-docs.py docs/deployment-plan/spike-10/prs/S10-41-sources-list.md` reports no errors; links resolve.
 

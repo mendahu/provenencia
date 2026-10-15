@@ -1,6 +1,6 @@
 # Review — S10-41 Sources list
 
-**Documents:** [`S10-41-sources-list.md`](S10-41-sources-list.md) (plan), [`../design/S10-D8-sources-list.md`](../design/S10-D8-sources-list.md) (brief)
+**Documents:** [`S10-41-sources-list.md`](S10-41-sources-list.md) (plan), [`../design/S10-D8-sources-list.md`](../design/archive/S10-D8-sources-list.md) (brief)
 **Lint:** `python3 scripts/check-plan-docs.py` — 0 errors, 0 warnings on both after round 1.
 **Reviewers, round 1:** plan maintainability (Opus) — Fits with changes; plan executability (Sonnet) — Ready with changes; brief maintainability (Opus) — Fits with changes; brief executability (Sonnet) — Ready with changes.
 
