@@ -413,7 +413,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     }
 
     func addSourceNote(projectDir _: String, userID: String, sourceID: String, body: String) async throws
-        -> CatalogSourceNote
+        -> (CatalogSourceNote, CatalogWriteEffects)
     {
         return try withState {
             if let addSourceNoteError { throw addSourceNoteError }
@@ -430,13 +430,12 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 createdAt: formatter.string(from: Date())
             )
             notesBySource[sourceID, default: []].append(note)
-            bumpSource(sourceID)
-            return note
+            return (note, bumpSource(sourceID))
         }
     }
 
     func updateSourceNote(projectDir _: String, userID _: String, noteID: String, body: String) async throws
-        -> CatalogSourceNote
+        -> (CatalogSourceNote, CatalogWriteEffects)
     {
         return try withState {
             for (sourceID, notes) in notesBySource {
@@ -444,8 +443,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                     var copy = notes
                     copy[idx].body = body
                     notesBySource[sourceID] = copy
-                    bumpSource(sourceID)
-                    return copy[idx]
+                    return (copy[idx], bumpSource(sourceID))
                 }
             }
             throw StoreBoom.boom
@@ -465,12 +463,14 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         }
     }
 
-    func deleteSourceNote(projectDir _: String, userID _: String, noteID: String) async throws {
+    func deleteSourceNote(projectDir _: String, userID _: String, noteID: String) async throws -> CatalogWriteEffects {
         withState {
+            var effects = CatalogWriteEffects.empty
             for (sourceID, notes) in notesBySource where notes.contains(where: { $0.id == noteID }) {
                 notesBySource[sourceID] = notes.filter { $0.id != noteID }
-                bumpSource(sourceID)
+                effects = bumpSource(sourceID)
             }
+            return effects
         }
     }
 
@@ -480,7 +480,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         sourceID: String,
         fieldID: String,
         valueText: String
-    ) async throws -> CatalogMetadataEntry {
+    ) async throws -> (CatalogMetadataEntry, CatalogWriteEffects) {
         return try withState {
             if let setSourceMetadataError { throw setSourceMetadataError }
             var list = metadataBySource[sourceID] ?? []
@@ -505,15 +505,16 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 list.append(entry)
             }
             metadataBySource[sourceID] = list
-            bumpSource(sourceID)
-            return entry
+            return (entry, bumpSource(sourceID))
         }
     }
 
-    func clearSourceMetadata(projectDir _: String, userID _: String, sourceID: String, fieldID: String) async throws {
+    func clearSourceMetadata(
+        projectDir _: String, userID _: String, sourceID: String, fieldID: String
+    ) async throws -> CatalogWriteEffects {
         withState {
             var list = metadataBySource[sourceID] ?? []
-            guard let idx = list.firstIndex(where: { $0.field.id == fieldID }) else { return }
+            guard let idx = list.firstIndex(where: { $0.field.id == fieldID }) else { return .empty }
             if list[idx].suggested {
                 list[idx].valueText = ""
                 list[idx].hasValue = false
@@ -521,7 +522,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 list.remove(at: idx)
             }
             metadataBySource[sourceID] = list
-            bumpSource(sourceID)
+            return bumpSource(sourceID)
         }
     }
 
@@ -530,13 +531,12 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         userID _: String,
         sourceID: String,
         fieldID: String
-    ) async throws -> [CatalogMetadataEntry] {
+    ) async throws -> ([CatalogMetadataEntry], CatalogWriteEffects) {
         return withState {
             var list = metadataBySource[sourceID] ?? []
             list.removeAll { $0.field.id == fieldID && !$0.hasValue }
             metadataBySource[sourceID] = list
-            bumpSource(sourceID)
-            return list
+            return (list, bumpSource(sourceID))
         }
     }
 
@@ -545,7 +545,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         userID _: String,
         sourceID: String,
         fieldIDs: [String]
-    ) async throws -> [CatalogMetadataEntry] {
+    ) async throws -> ([CatalogMetadataEntry], CatalogWriteEffects) {
         return try withState {
             if let reorderSourceMetadataError { throw reorderSourceMetadataError }
             let current = metadataBySource[sourceID] ?? []
@@ -562,8 +562,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 next.append(entry)
             }
             metadataBySource[sourceID] = next
-            bumpSource(sourceID)
-            return next
+            return (next, bumpSource(sourceID))
         }
     }
 
@@ -574,7 +573,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         fileID: String,
         label: String,
         description: String
-    ) async throws -> CatalogArtifact {
+    ) async throws -> (CatalogArtifact, CatalogWriteEffects) {
         return withState {
             let art = CatalogArtifact(
                 id: UUID().uuidString.lowercased(),
@@ -586,8 +585,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 file: nil
             )
             artifactsBySource[sourceID, default: []].append(art)
-            bumpSource(sourceID)
-            return art
+            return (art, bumpSource(sourceID))
         }
     }
 
@@ -597,7 +595,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         artifactID: String,
         label: String,
         description: String
-    ) async throws -> CatalogArtifact {
+    ) async throws -> (CatalogArtifact, CatalogWriteEffects) {
         return try withState {
             for (sourceID, arts) in artifactsBySource {
                 if let idx = arts.firstIndex(where: { $0.id == artifactID }) {
@@ -605,21 +603,23 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                     copy[idx].label = label
                     copy[idx].description = description
                     artifactsBySource[sourceID] = copy
-                    bumpSource(sourceID)
-                    return copy[idx]
+                    return (copy[idx], bumpSource(sourceID))
                 }
             }
             throw StoreBoom.boom
         }
     }
 
-    func deleteArtifact(projectDir: String, userID _: String, artifactID: String) async throws {
+    func deleteArtifact(
+        projectDir: String, userID _: String, artifactID: String
+    ) async throws -> CatalogWriteEffects {
         withState {
             markCatalogSessionHeld(projectDir)
             deleteArtifactCalls += 1
+            var effects = CatalogWriteEffects.empty
             for (sourceID, arts) in artifactsBySource where arts.contains(where: { $0.id == artifactID }) {
                 artifactsBySource[sourceID] = arts.filter { $0.id != artifactID }
-                bumpSource(sourceID)
+                effects = bumpSource(sourceID)
             }
             for (project, var sources) in sourcesByProject {
                 for i in sources.indices where sources[i].primaryArtifactID == artifactID {
@@ -630,6 +630,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 sourcesByProject[project] = sources
             }
             citationsByID = citationsByID.filter { $0.value.artifactID != artifactID }
+            return effects
         }
     }
 
@@ -638,7 +639,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         userID _: String,
         artifactID: String,
         path: String
-    ) async throws -> (artifact: CatalogArtifact, file: CatalogFileRef, reused: Bool) {
+    ) async throws -> (artifact: CatalogArtifact, file: CatalogFileRef, reused: Bool, effects: CatalogWriteEffects) {
         return try withState {
             if let ingestArtifactFileError { throw ingestArtifactFileError }
             let filename = URL(fileURLWithPath: path).lastPathComponent
@@ -683,8 +684,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                         copy[idx].thumbnailRelPath = "objects/aa/bb/thumb-\(file.id.prefix(8))"
                     }
                     artifactsBySource[sourceID] = copy
-                    bumpSource(sourceID)
-                    return (copy[idx], file, false)
+                    return (copy[idx], file, false, bumpSource(sourceID))
                 }
             }
             throw StoreBoom.boom
@@ -710,7 +710,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         sourceID: String,
         gradeID: String,
         argument: String
-    ) async throws -> CatalogCredibilityAssessment {
+    ) async throws -> (CatalogCredibilityAssessment, CatalogWriteEffects) {
         let grades = try await listSourceCredibilityGrades(projectDir: projectDir)
         let grade = grades.first { $0.id == gradeID } ?? grades[1]
         return withState {
@@ -723,8 +723,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 argument: argument
             )
             credibilityBySource[sourceID] = assessment
-            bumpSource(sourceID)
-            return assessment
+            return (assessment, bumpSource(sourceID))
         }
     }
 
@@ -1276,7 +1275,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         label: String,
         description: String,
         placement: CatalogGridCell?
-    ) async throws -> CatalogSubject {
+    ) async throws -> (CatalogSubject, CatalogWriteEffects) {
         return withState {
             recordedCalls.append("createSubject typeID=\(subjectTypeID) placement=\(placement.map { "\($0.gridX),\($0.gridY)" } ?? "nil")")
             markCatalogSessionHeld(projectDir)
@@ -1289,7 +1288,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 description: description
             )
             subjectsBySource[sourceID, default: []].append(subject)
-            bumpSource(sourceID)
+            let effects = bumpSource(sourceID)
             if let placement {
                 subjectPositionsBySubject[subject.id] = CatalogSubjectPosition(
                     subjectID: subject.id,
@@ -1297,7 +1296,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                     gridY: placement.gridY
                 )
             }
-            return subject
+            return (subject, effects)
         }
     }
 
@@ -1307,7 +1306,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         subjectID: String,
         label: String,
         description: String
-    ) async throws -> CatalogSubject {
+    ) async throws -> (CatalogSubject, CatalogWriteEffects) {
         return try withState {
             recordedCalls.append("updateSubject id=\(subjectID) label=\(label)")
             markCatalogSessionHeld(projectDir)
@@ -1316,8 +1315,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 list[idx].label = label
                 list[idx].description = description
                 subjectsBySource[sourceID] = list
-                bumpSource(sourceID)
-                return list[idx]
+                return (list[idx], bumpSource(sourceID))
             }
             throw StoreBoom.boom
         }
@@ -1792,7 +1790,9 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         return CatalogConclusionDetail(entity: entity, fields: [field], memberCount: group.count)
     }
 
-    func deleteSubject(projectDir: String, userID _: String, subjectID: String) async throws {
+    func deleteSubject(
+        projectDir: String, userID _: String, subjectID: String
+    ) async throws -> CatalogWriteEffects {
         try withState {
             markCatalogSessionHeld(projectDir)
             recordedCalls.append("deleteSubject id=\(subjectID)")
@@ -1822,10 +1822,10 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 guard let idx = list.firstIndex(where: { $0.id == subjectID }) else { continue }
                 list.remove(at: idx)
                 subjectsBySource[sourceID] = list
-                bumpSource(sourceID)
+                let effects = bumpSource(sourceID)
                 subjectPositionsBySubject[subjectID] = nil
                 membershipBySubject[subjectID] = nil
-                return
+                return effects
             }
             throw StoreBoom.boom
         }
@@ -2208,7 +2208,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             let midY = Self.floorDiv(fromPos.gridY + toPos.gridY + 1, 2)
             return (rule, type.id, CatalogGridCell(gridX: midX, gridY: midY))
         }
-        let subject = try await createSubject(
+        let (subject, _) = try await createSubject(
             projectDir: projectDir,
             userID: userID,
             sourceID: sourceID,
@@ -3157,15 +3157,20 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     /// suspend take the lock separately for each synchronous stretch.
     /// Mirrors the engine's audit scopes: any write under a Source moves its
     /// "Updated" revision, not just edits to the Source row.
-    private func bumpSource(_ sourceID: String?) {
-        guard let sourceID else { return }
+    /// Returns the effects the engine would report for that write: the Source
+    /// and the new revision, or `.empty` when the Source is not in any list.
+    @discardableResult
+    private func bumpSource(_ sourceID: String?) -> CatalogWriteEffects {
+        guard let sourceID else { return .empty }
         for (project, var list) in sourcesByProject {
             guard let idx = list.firstIndex(where: { $0.id == sourceID }) else { continue }
-            list[idx].updated = CatalogActivity(revision: nextAuditRevision)
+            let activity = CatalogActivity(revision: nextAuditRevision, at: "2026-10-15T16:00:00Z")
+            list[idx].updated = activity
             nextAuditRevision += 1
             sourcesByProject[project] = list
-            return
+            return CatalogWriteEffects(sources: [sourceID], activity: activity)
         }
+        return .empty
     }
 
     private func owningSource(ofCitation citationID: String) -> String? {

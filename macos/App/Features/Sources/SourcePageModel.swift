@@ -186,7 +186,7 @@ final class SourcePageModel {
                 context.session.apply(.deletedSource(id: target.id))
                 return
             }
-            try await context.store.deleteArtifact(
+            let effects = try await context.store.deleteArtifact(
                 projectDir: context.projectDir,
                 userID: context.userID,
                 artifactID: target.id
@@ -212,7 +212,7 @@ final class SourcePageModel {
                 body: L10n.Sources.toastArtifactDeletedBody(ref: target.ref),
                 tone: .success
             )
-            context.notifyWorkspaceMutated()
+            context.applyWrite(effects)
         }
         return erasedSource && kind == "source"
     }

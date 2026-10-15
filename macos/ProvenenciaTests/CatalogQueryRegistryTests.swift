@@ -570,9 +570,9 @@ struct CatalogQueryRegistryTests {
         #expect(handle.value?.map(\.title) == ["New Row", "Alpha"])
     }
 
-    /// Work under a Source moves its "Updated" revision, but a canvas write
-    /// must not refetch the list: it goes stale and reloads on the next query.
-    @Test func applySourceGraphWriteStalesListUntilNextQuery() async {
+    /// Work under a Source moves its "Updated" revision. The write reports its
+    /// activity, so the cached row is patched in place: no reload, no stale mark.
+    @Test func applySourceWriteEffectsPatchesTheListRowWithoutReloading() async {
         let store = FakeStore()
         seedStore(store)
         let session = makeSession(store: store)
@@ -580,34 +580,60 @@ struct CatalogQueryRegistryTests {
 
         let handle: QueryHandle<[CatalogSource]> = session.query(key)
         await waitForFetchComplete(handle)
-        store.sourcesByProject[projectDir]?[0].updated = CatalogActivity(revision: 42)
         store.heldCatalogProjectDir = nil
 
-        session.apply(.savedCitation(sourceId: "s1"))
+        let activity = CatalogActivity(revision: 42, at: "2026-10-15T16:00:00Z")
+        session.apply(
+            CatalogWriteEffects(sources: ["s1"], activity: activity),
+            .mutatedSourceGraph(sourceId: "s1")
+        )
         await Task.yield()
+        #expect(handle.value?.first?.updated == activity)
+        #expect(!handle.isFetching)
         #expect(store.heldCatalogProjectDir == nil)
-        #expect(handle.value?.first?.updated.revision == 0)
 
+        // Not stale either: the next `query` is served from the patched value.
         let _: QueryHandle<[CatalogSource]> = session.query(key)
-        await waitForFetchComplete(handle)
-        #expect(handle.value?.first?.updated.revision == 42)
+        #expect(!handle.isFetching)
+        #expect(handle.value?.first?.updated == activity)
     }
 
-    @Test func sourceWritesMarkListStaleWithoutInvalidating() {
+    /// Writes under a Source report their activity in `WriteEffects`, so no
+    /// mutation reloads the Sources list; the row is patched instead.
+    @Test func sourceWritesDoNotInvalidateTheSourcesList() {
         let registry = CatalogQueryRegistry.standard
         let project = ProjectKey(projectDir: projectDir)
         let list = CatalogQueryInvalidation.key(.sourcesList(project: project))
         let writes: [CatalogMutation] = [
             .mutatedSourceWorkspace(sourceId: "s1"), .mutatedSourceMetadata(sourceId: "s1"),
             .mutatedSourceGraph(sourceId: "s1"), .deletedSubject(sourceId: "s1"),
-            .savedCitation(sourceId: "s1"),
+            .promotedSubject(sourceId: "s1"),
         ]
         for mutation in writes {
-            #expect(registry.staleMarks(by: mutation, project: project) == [list], "\(mutation)")
             #expect(!registry.invalidations(by: mutation, project: project).contains(list), "\(mutation)")
         }
-        // Conclusion-layer work does not move a Source's "Updated" revision.
-        #expect(registry.staleMarks(by: .promotedSubject(sourceId: "s1"), project: project).isEmpty)
+    }
+
+    /// T-17 (AC-2.14): Source-page and graph writes no longer ride the blanket
+    /// Conclusion triggers; their effects name the handles they moved.
+    @Test func blanketTriggersAreGone() {
+        let registry = CatalogQueryRegistry.standard
+        let project = ProjectKey(projectDir: projectDir)
+        #expect(!CatalogQueryRegistry.conclusionTriggers.contains(.mutatedSourceWorkspace))
+        #expect(!CatalogQueryRegistry.conclusionTriggers.contains(.deletedSubject))
+        let conclusionKeys: [CatalogQueryInvalidation] = [
+            .key(.personsList(project: project)), .key(.eventsList(project: project)),
+            .key(.placesList(project: project)), .allCached(.conclusionDetail),
+        ]
+        for mutation: CatalogMutation in [
+            .mutatedSourceWorkspace(sourceId: "s1"), .mutatedSourceMetadata(sourceId: "s1"),
+            .mutatedSourceGraph(sourceId: "s1"), .deletedSubject(sourceId: "s1"),
+        ] {
+            let invalidations = registry.invalidations(by: mutation, project: project)
+            for key in conclusionKeys {
+                #expect(!invalidations.contains(key), "\(mutation) \(key)")
+            }
+        }
     }
 
     @Test func applyFieldCRUDInvalidatesMetadataList() async {
@@ -792,11 +818,6 @@ struct CatalogQueryRegistryTests {
             )
         )
         #expect(
-            !registry.invalidations(by: .savedCitation(sourceId: "s1"), project: project).contains(
-                .key(.sourceGraphProgress(project: project))
-            )
-        )
-        #expect(
             !registry.invalidations(by: .mutatedSourceGraph(sourceId: "s1"), project: project).contains(
                 .key(.sourcesList(project: project))
             )
@@ -816,25 +837,13 @@ struct CatalogQueryRegistryTests {
             .key(.conclusionDetail(project: project, entityId: "e1")),
             .key(.conclusionDetail(project: project, entityId: "e2")),
         ])
-        #expect(registry.invalidations(by: .savedCitation(sourceId: "s1"), project: project) == [
-            .key(.sourceGraph(project: project, sourceId: "s1")),
-            .key(.citationCounts(project: project, sourceId: "s1")),
-            .key(.propertiesWorkspace(project: project)),
-            .allCached(.citationsByArtifact),
-            .key(.personsList(project: project)),
-            .key(.eventsList(project: project)),
-            .key(.placesList(project: project)),
-            .allCached(.conclusionDetail),
-        ])
+        // A Subject delete reports its handles in `WriteEffects`, so the lists
+        // and details are not named here.
         #expect(registry.invalidations(by: .deletedSubject(sourceId: "s1"), project: project) == [
             .key(.sourceGraph(project: project, sourceId: "s1")),
             .key(.citationCounts(project: project, sourceId: "s1")),
             .key(.propertiesWorkspace(project: project)),
             .allCached(.citationsByArtifact),
-            .key(.personsList(project: project)),
-            .key(.eventsList(project: project)),
-            .key(.placesList(project: project)),
-            .allCached(.conclusionDetail),
         ])
         // A Promote changes that Source's graph cards (their membership row)
         // and every Conclusion key.
@@ -857,7 +866,6 @@ struct CatalogQueryRegistryTests {
             .mutatedSourceWorkspace(sourceId: "s1"), .mutatedSourceMetadata(sourceId: "s1"),
             .mutatedSourceGraph(sourceId: "s1"),
             .deletedSubject(sourceId: "s1"),
-            .savedCitation(sourceId: "s1"),
             .promotedSubject(sourceId: "s1"),
             .createdPropertyTerm(propertyId: "p1"),
         ]
@@ -872,14 +880,10 @@ struct CatalogQueryRegistryTests {
                 .key(.confidenceGradesList(project: project))
             )
         })
-        // Writes that name their source stay narrow — except that a Source
-        // workspace write may be a credibility change, a Conclusion trigger.
+        // Writes that name their source stay narrow: a Source-page write reports
+        // its handles in `WriteEffects`, so the mutation names only the page.
         #expect(registry.invalidations(by: .mutatedSourceWorkspace(sourceId: "s1"), project: project) == [
             .key(.sourceWorkspace(project: project, sourceId: "s1")),
-            .key(.personsList(project: project)),
-            .key(.eventsList(project: project)),
-            .key(.placesList(project: project)),
-            .allCached(.conclusionDetail),
         ])
         // Every Conclusion trigger stales the Person, Event, and Place lists and
         // every cached detail; nothing else does.
@@ -891,10 +895,7 @@ struct CatalogQueryRegistryTests {
             #expect(invalidations.contains(.key(.placesList(project: project))) == isTrigger, "\(mutation)")
             #expect(invalidations.contains(.allCached(.conclusionDetail)) == isTrigger, "\(mutation)")
         }
-        #expect(CatalogQueryRegistry.conclusionTriggers == [
-            .savedCitation, .deletedSubject, .promotedSubject, .deletedSource, .mutatedSourceWorkspace,
-            .updatedProperty,
-        ])
+        #expect(CatalogQueryRegistry.conclusionTriggers == [.promotedSubject, .deletedSource, .updatedProperty])
         #expect(registry.invalidations(by: .mutatedSourceMetadata(sourceId: "s1"), project: project) == [
             .key(.metadataFieldsList(project: project)),
             .key(.sourceWorkspace(project: project, sourceId: "s1")),

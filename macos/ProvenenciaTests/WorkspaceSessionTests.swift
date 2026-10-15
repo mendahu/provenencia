@@ -420,7 +420,7 @@ struct WorkspaceSessionTests {
                 propertyValueType: "name"
             ),
         ]
-        session.apply(.savedCitation(sourceId: "s1"))
+        session.apply(CatalogWriteEffects(sources: ["s1"]))
         await waitForFetchComplete(handle)
         #expect(handle.value?.observations.count == 1)
     }
@@ -495,7 +495,7 @@ struct WorkspaceSessionTests {
                 propertyKey: "name", propertyLabel: "Name", propertyValueType: "name"
             ),
         ]
-        session.apply(.savedCitation(sourceId: "s1"))
+        session.apply(CatalogWriteEffects(handles: [first.entity.id, second.entity.id], sources: ["s1"]))
 
         // Off screen: dropped, so it reloads only when next visited.
         let evicted: QueryHandle<CatalogConclusionDetail>? = session.queryHandle(firstKey)
@@ -512,7 +512,7 @@ struct WorkspaceSessionTests {
 
         // Leaving for the list hides the second page too.
         session.apply(location: .sectionRoot(.persons))
-        session.apply(.savedCitation(sourceId: "s1"))
+        session.apply(CatalogWriteEffects(handles: [first.entity.id, second.entity.id], sources: ["s1"]))
         let hidden: QueryHandle<CatalogConclusionDetail>? = session.queryHandle(secondKey)
         #expect(hidden == nil)
         await waitForFetchComplete(list)
@@ -647,6 +647,68 @@ struct WorkspaceSessionTests {
         #expect(eventsHandle.value?.isEmpty == true)
     }
 
+    /// A Source-page write reports its effects: the Sources row is patched in
+    /// place, the three conclusion lists are neither reloaded nor stale unless
+    /// the write reports handles, and the page's own workspace follows the
+    /// mutation.
+    @Test func sourceWriteEffectsPatchSourcesAndLeaveListsAlone() async throws {
+        let store = FakeStore()
+        seedStore(store)
+        let session = makeSession(store: store)
+        let project = session.projectKey
+        let sources = CatalogQueryKey.sourcesList(project: project)
+        let people = CatalogQueryKey.personsList(project: project)
+        let events = CatalogQueryKey.eventsList(project: project)
+        let places = CatalogQueryKey.placesList(project: project)
+        let workspaceKey = CatalogQueryKey.sourceWorkspace(project: project, sourceId: "s1")
+        session.apply(location: WorkspaceLocation(section: .sources, sourceId: "s1", title: "Alpha"))
+        let workspace: QueryHandle<CatalogSourceWorkspace> = try #require(session.queryHandle(workspaceKey))
+        await waitForFetchComplete(workspace)
+        session.setQueryValue(sources, value: [
+            CatalogSource(id: "s1", ref: "SRC-1", sourceTypeID: "t1", title: "Alpha", description: ""),
+        ])
+        session.setQueryValue(people, value: [personHeader("e1", revision: 1)])
+        session.setQueryValue(events, value: [eventHeader("e1")])
+        session.setQueryValue(places, value: [placeHeader("e1")])
+        let sourcesHandle: QueryHandle<[CatalogSource]> = try #require(session.queryHandle(sources))
+        let peopleHandle: QueryHandle<[CatalogPersonHeader]> = try #require(session.queryHandle(people))
+        let eventsHandle: QueryHandle<[CatalogEventHeader]> = try #require(session.queryHandle(events))
+        let placesHandle: QueryHandle<[CatalogPlaceHeader]> = try #require(session.queryHandle(places))
+        func listsAreQuiet() -> Bool {
+            !sourcesHandle.isFetching && !peopleHandle.isFetching && !eventsHandle.isFetching
+                && !placesHandle.isFetching
+        }
+
+        // AC-2.11: a note. Sources row patched; the conclusion lists untouched
+        // and not stale; the page's workspace invalidated once.
+        let first = CatalogActivity(revision: 12, at: "2026-10-15T16:00:00Z")
+        session.apply(CatalogWriteEffects(sources: ["s1"], activity: first), .mutatedSourceWorkspace(sourceId: "s1"))
+        #expect(sourcesHandle.value?.first?.updated == first)
+        #expect(listsAreQuiet())
+        let _: QueryHandle<[CatalogPersonHeader]> = session.query(people)
+        let _: QueryHandle<[CatalogEventHeader]> = session.query(events)
+        let _: QueryHandle<[CatalogPlaceHeader]> = session.query(places)
+        let _: QueryHandle<[CatalogSource]> = session.query(sources)
+        #expect(listsAreQuiet())
+        #expect(workspace.isFetching)
+        await waitForFetchComplete(workspace)
+
+        // AC-2.12: a credibility change reports the handle. The hidden lists
+        // go stale and reload on their next `query`; the Sources row still patches.
+        let second = CatalogActivity(revision: 13, at: "2026-10-15T16:05:00Z")
+        session.apply(
+            CatalogWriteEffects(handles: ["e1"], sources: ["s1"], activity: second),
+            .mutatedSourceWorkspace(sourceId: "s1")
+        )
+        #expect(sourcesHandle.value?.first?.updated == second)
+        #expect(listsAreQuiet())
+        let _: QueryHandle<[CatalogPersonHeader]> = session.query(people)
+        #expect(peopleHandle.isFetching)
+        await waitForFetchComplete(peopleHandle)
+        let _: QueryHandle<[CatalogSource]> = session.query(sources)
+        #expect(!sourcesHandle.isFetching)
+    }
+
     /// `usedBy` on the Properties inspector counts Observations, and it
     /// moves whenever a citation save creates or deletes one.
     @Test func applySavedCitationInvalidatesPropertiesUsedBy() async {
@@ -670,7 +732,7 @@ struct WorkspaceSessionTests {
         #expect(fields.value?.properties.first?.usedBy == 2)
 
         store.propertiesByProject[projectDir]?[0].usedBy = 1
-        session.apply(.savedCitation(sourceId: "s1"))
+        session.apply(CatalogWriteEffects(sources: ["s1"]))
 
         let _: QueryHandle<PropertiesSnapshot> = session.query(fieldsKey)
         await waitForFetchComplete(fields)
@@ -809,7 +871,7 @@ struct WorkspaceSessionTests {
         #expect(store.getSourceGraphProgressCalls >= 1)
     }
 
-    @Test func applySavedCitationDoesNotRefetchSourcesList() async {
+    @Test func applySourceEffectsDoesNotRefetchSourcesList() async {
         let store = FakeStore()
         seedStore(store)
         store.graphProgressBySource["s1"] = SourceGraphProgress(
@@ -828,7 +890,7 @@ struct WorkspaceSessionTests {
         store.graphProgressBySource["s1"] = SourceGraphProgress(
             sourceId: "s1", subjectCount: 1, observationCount: 2
         )
-        session.apply(.savedCitation(sourceId: "s1"))
+        session.apply(CatalogWriteEffects(sources: ["s1"]))
         var waited: UInt64 = 0
         while waited < 2_000_000_000 {
             if progressHandle.value?["s1"]?.observationCount == 2 { break }

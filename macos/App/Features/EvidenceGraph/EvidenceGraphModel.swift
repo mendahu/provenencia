@@ -709,14 +709,14 @@ final class EvidenceGraphModel {
         labelError = nil
         createError = nil
         do {
-            _ = try await store.updateSubject(
+            let (_, effects) = try await store.updateSubject(
                 projectDir: session.projectKey.projectDir,
                 userID: userID,
                 subjectID: subjectID,
                 label: storedLabel,
                 description: draft.description.trimmingCharacters(in: .whitespacesAndNewlines)
             )
-            session.apply(.mutatedSourceGraph(sourceId: sourceID))
+            session.apply(effects, .mutatedSourceGraph(sourceId: sourceID))
             editingSubjectID = nil
             editingPrimaryKind = nil
             editingBridgeKind = nil
@@ -909,12 +909,12 @@ final class EvidenceGraphModel {
     @discardableResult
     func confirmPendingImpact() async -> Bool {
         return await deleteImpact.confirm { target in
-            try await store.deleteSubject(
+            let effects = try await store.deleteSubject(
                 projectDir: session.projectKey.projectDir,
                 userID: userID,
                 subjectID: target.id
             )
-            session.apply(.deletedSubject(sourceId: sourceID))
+            session.apply(effects, .deletedSubject(sourceId: sourceID))
             selectedSubjectIDs.remove(target.id)
             if activatedSubjectID == target.id {
                 activatedSubjectID = nil
@@ -960,7 +960,7 @@ final class EvidenceGraphModel {
         labelError = nil
         createError = nil
         do {
-            let created = try await store.createSubject(
+            let (created, effects) = try await store.createSubject(
                 projectDir: session.projectKey.projectDir,
                 userID: userID,
                 sourceID: sourceID,
@@ -969,7 +969,7 @@ final class EvidenceGraphModel {
                 description: draft.description.trimmingCharacters(in: .whitespacesAndNewlines),
                 placement: CatalogGridCell(gridX: pendingGridX, gridY: pendingGridY)
             )
-            session.apply(.mutatedSourceGraph(sourceId: sourceID))
+            session.apply(effects, .mutatedSourceGraph(sourceId: sourceID))
             isCreating = false
             disarm()
             return created.id

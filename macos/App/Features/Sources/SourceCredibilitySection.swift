@@ -74,7 +74,7 @@ final class SourceCredibilitySection {
         defer { isSaving = false }
         context.clearPageError()
         do {
-            let assessment = try await context.store.upsertSourceCredibilityAssessment(
+            let (assessment, effects) = try await context.store.upsertSourceCredibilityAssessment(
                 projectDir: context.projectDir,
                 userID: context.userID,
                 sourceID: context.sourceID,
@@ -82,7 +82,7 @@ final class SourceCredibilitySection {
                 argument: argument
             )
             context.workspace?.credibility = assessment
-            context.notifyWorkspaceMutated()
+            context.applyWrite(effects)
             resetDrafts()
         } catch {
             context.pageError = L10n.Errors.message(for: error)

@@ -39,10 +39,6 @@ enum CatalogMutation: Sendable, Equatable {
     /// so Observation `usedBy` and citation lists must reload.
     case deletedSubject(sourceId: String)
 
-    /// A Citation was created or updated for this Source (including cited-bridge),
-    /// or an Observation on it was written. Also moves each Property's `usedBy`.
-    case savedCitation(sourceId: String)
-
     /// A Subject on this Source was promoted (an Identity Claim filed it onto a
     /// handle), so its graph card's membership changed. The S9-04 card
     /// dispatches it after `promoteSubject` succeeds.
@@ -58,7 +54,7 @@ enum CatalogMutation: Sendable, Equatable {
 }
 
 /// Handles and Sources a write reported. The session drops those cached
-/// reads. A citation save uses this instead of `savedCitation`.
+/// reads and patches the rows whose last activity it moved.
 struct CatalogWriteEffects: Sendable, Equatable {
     var handles: [String] = []
     var sources: [String] = []
@@ -103,7 +99,6 @@ enum CatalogMutationKind: Hashable, Sendable {
     case mutatedSourceMetadata
     case mutatedSourceGraph
     case deletedSubject
-    case savedCitation
     case promotedSubject
     case createdProperty
     case updatedProperty
@@ -148,8 +143,6 @@ extension CatalogMutation {
             return .mutatedSourceGraph
         case .deletedSubject:
             return .deletedSubject
-        case .savedCitation:
-            return .savedCitation
         case .promotedSubject:
             return .promotedSubject
         case .createdProperty:

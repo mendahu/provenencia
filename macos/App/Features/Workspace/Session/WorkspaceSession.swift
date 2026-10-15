@@ -168,10 +168,7 @@ final class WorkspaceSession {
     /// and citation counts, and only the conclusion pages whose handles changed.
     func apply(_ effects: CatalogWriteEffects) {
         patchLastUpdated(effects)
-        apply(
-            invalidations: registry.invalidations(for: effects, project: projectKey),
-            stale: []
-        )
+        apply(invalidations: registry.invalidations(for: effects, project: projectKey))
         for sourceID in effects.touchedSources {
             refreshSourceGraphProgress(sourceId: sourceID)
         }
@@ -181,11 +178,32 @@ final class WorkspaceSession {
         if let source = mutation.patchedSource {
             patchUpdatedSource(source)
         }
-        apply(
-            invalidations: registry.invalidations(by: mutation, project: projectKey),
-            stale: registry.staleMarks(by: mutation, project: projectKey)
-        )
+        apply(invalidations: registry.invalidations(by: mutation, project: projectKey))
         refreshSourceGraphProgress(for: mutation)
+    }
+
+    /// A write that reports effects and still has a mutation naming keys the
+    /// effects cannot (the Source page's own workspace, the metadata field
+    /// list). One application, so a key both name is invalidated once, not
+    /// cancelled and restarted twice.
+    func apply(_ effects: CatalogWriteEffects, _ mutation: CatalogMutation) {
+        patchLastUpdated(effects)
+        var seen = Set<CatalogQueryInvalidation>()
+        let union = (
+            registry.invalidations(for: effects, project: projectKey)
+                + registry.invalidations(by: mutation, project: projectKey)
+        ).filter { seen.insert($0).inserted }
+        apply(invalidations: union)
+        if let source = mutation.patchedSource {
+            patchUpdatedSource(source)
+        }
+        var progressSources = effects.touchedSources
+        if let sourceID = graphProgressSource(of: mutation), !progressSources.contains(sourceID) {
+            progressSources.append(sourceID)
+        }
+        for sourceID in progressSources {
+            refreshSourceGraphProgress(sourceId: sourceID)
+        }
     }
 
     /// Moves the last-updated cell of every cached row the write reports, using
@@ -202,7 +220,7 @@ final class WorkspaceSession {
         }
     }
 
-    private func apply(invalidations: [CatalogQueryInvalidation], stale: [CatalogQueryInvalidation]) {
+    private func apply(invalidations: [CatalogQueryInvalidation]) {
         var keys: [CatalogQueryKey] = []
         for key in cachedKeys(for: invalidations) {
             switch visibleKeys.contains(key) ? CatalogHiddenPolicy.revalidate : registry.hiddenPolicy(key) {
@@ -221,11 +239,6 @@ final class WorkspaceSession {
         for key in keys {
             revalidate(key)
         }
-        // Stale-on-next-query only: the loaded value stays on screen and the
-        // next `query` (e.g. the Sources list reappearing) reloads it.
-        for key in cachedKeys(for: stale) where handles[key] != nil && !keys.contains(key) {
-            invalidatedKeys.insert(key)
-        }
     }
 
     private func cachedKeys(for invalidations: [CatalogQueryInvalidation]) -> [CatalogQueryKey] {
@@ -243,16 +256,21 @@ final class WorkspaceSession {
         return keys
     }
 
+    /// The Source whose graph progress a mutation moved, if it moved one.
+    private func graphProgressSource(of mutation: CatalogMutation) -> String? {
+        switch mutation {
+        case .mutatedSourceGraph(let id), .deletedSubject(let id):
+            return id
+        default:
+            return nil
+        }
+    }
+
     /// Surgical Get-one + map merge. Skips when the list never warmed the map.
     private func refreshSourceGraphProgress(for mutation: CatalogMutation) {
-        let sourceId: String
-        switch mutation {
-        case .mutatedSourceGraph(let id), .savedCitation(let id), .deletedSubject(let id):
-            sourceId = id
-        default:
-            return
+        if let sourceId = graphProgressSource(of: mutation) {
+            refreshSourceGraphProgress(sourceId: sourceId)
         }
-        refreshSourceGraphProgress(sourceId: sourceId)
     }
 
     private func refreshSourceGraphProgress(sourceId: String) {

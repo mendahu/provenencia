@@ -214,7 +214,7 @@ struct GoStore: GenealogyStore {
     }
 
     func addSourceNote(projectDir: String, userID: String, sourceID: String, body: String) async throws
-        -> CatalogSourceNote
+        -> (CatalogSourceNote, CatalogWriteEffects)
     {
         var req = Provenencia_Engine_V1_AddSourceNoteRequest()
         req.projectDir = projectDir
@@ -225,7 +225,7 @@ struct GoStore: GenealogyStore {
             method: CoreMethod.addSourceNote,
             request: req
         )
-        return Self.mapNote(resp.note)
+        return (Self.mapNote(resp.note), Self.mapWriteEffects(resp.effects))
     }
 
     func deleteSource(projectDir: String, userID: String, sourceID: String) async throws {
@@ -240,7 +240,7 @@ struct GoStore: GenealogyStore {
     }
 
     func updateSourceNote(projectDir: String, userID: String, noteID: String, body: String) async throws
-        -> CatalogSourceNote
+        -> (CatalogSourceNote, CatalogWriteEffects)
     {
         var req = Provenencia_Engine_V1_UpdateSourceNoteRequest()
         req.projectDir = projectDir
@@ -251,18 +251,19 @@ struct GoStore: GenealogyStore {
             method: CoreMethod.updateSourceNote,
             request: req
         )
-        return Self.mapNote(resp.note)
+        return (Self.mapNote(resp.note), Self.mapWriteEffects(resp.effects))
     }
 
-    func deleteSourceNote(projectDir: String, userID: String, noteID: String) async throws {
+    func deleteSourceNote(projectDir: String, userID: String, noteID: String) async throws -> CatalogWriteEffects {
         var req = Provenencia_Engine_V1_DeleteSourceNoteRequest()
         req.projectDir = projectDir
         req.userID = userID
         req.noteID = noteID
-        let _: Provenencia_Engine_V1_DeleteSourceNoteResponse = try await provenenciaCall(
+        let resp: Provenencia_Engine_V1_DeleteSourceNoteResponse = try await provenenciaCall(
             method: CoreMethod.deleteSourceNote,
             request: req
         )
+        return Self.mapWriteEffects(resp.effects)
     }
 
     func setSourceMetadata(
@@ -271,7 +272,7 @@ struct GoStore: GenealogyStore {
         sourceID: String,
         fieldID: String,
         valueText: String
-    ) async throws -> CatalogMetadataEntry {
+    ) async throws -> (CatalogMetadataEntry, CatalogWriteEffects) {
         var req = Provenencia_Engine_V1_SetSourceMetadataRequest()
         req.projectDir = projectDir
         req.userID = userID
@@ -282,19 +283,22 @@ struct GoStore: GenealogyStore {
             method: CoreMethod.setSourceMetadata,
             request: req
         )
-        return Self.mapMetadataEntry(resp.entry)
+        return (Self.mapMetadataEntry(resp.entry), Self.mapWriteEffects(resp.effects))
     }
 
-    func clearSourceMetadata(projectDir: String, userID: String, sourceID: String, fieldID: String) async throws {
+    func clearSourceMetadata(
+        projectDir: String, userID: String, sourceID: String, fieldID: String
+    ) async throws -> CatalogWriteEffects {
         var req = Provenencia_Engine_V1_ClearSourceMetadataRequest()
         req.projectDir = projectDir
         req.userID = userID
         req.sourceID = sourceID
         req.fieldID = fieldID
-        let _: Provenencia_Engine_V1_ClearSourceMetadataResponse = try await provenenciaCall(
+        let resp: Provenencia_Engine_V1_ClearSourceMetadataResponse = try await provenenciaCall(
             method: CoreMethod.clearSourceMetadata,
             request: req
         )
+        return Self.mapWriteEffects(resp.effects)
     }
 
     func dismissSourceMetadataSuggestion(
@@ -302,7 +306,7 @@ struct GoStore: GenealogyStore {
         userID: String,
         sourceID: String,
         fieldID: String
-    ) async throws -> [CatalogMetadataEntry] {
+    ) async throws -> ([CatalogMetadataEntry], CatalogWriteEffects) {
         var req = Provenencia_Engine_V1_DismissSourceMetadataSuggestionRequest()
         req.projectDir = projectDir
         req.userID = userID
@@ -312,7 +316,7 @@ struct GoStore: GenealogyStore {
             method: CoreMethod.dismissSourceMetadataSuggestion,
             request: req
         )
-        return resp.metadata.map(Self.mapMetadataEntry)
+        return (resp.metadata.map(Self.mapMetadataEntry), Self.mapWriteEffects(resp.effects))
     }
 
     func reorderSourceMetadata(
@@ -320,7 +324,7 @@ struct GoStore: GenealogyStore {
         userID: String,
         sourceID: String,
         fieldIDs: [String]
-    ) async throws -> [CatalogMetadataEntry] {
+    ) async throws -> ([CatalogMetadataEntry], CatalogWriteEffects) {
         var req = Provenencia_Engine_V1_ReorderSourceMetadataRequest()
         req.projectDir = projectDir
         req.userID = userID
@@ -330,7 +334,7 @@ struct GoStore: GenealogyStore {
             method: CoreMethod.reorderSourceMetadata,
             request: req
         )
-        return resp.metadata.map(Self.mapMetadataEntry)
+        return (resp.metadata.map(Self.mapMetadataEntry), Self.mapWriteEffects(resp.effects))
     }
 
     func createArtifact(
@@ -340,7 +344,7 @@ struct GoStore: GenealogyStore {
         fileID: String,
         label: String,
         description: String
-    ) async throws -> CatalogArtifact {
+    ) async throws -> (CatalogArtifact, CatalogWriteEffects) {
         var req = Provenencia_Engine_V1_CreateArtifactRequest()
         req.projectDir = projectDir
         req.userID = userID
@@ -352,7 +356,7 @@ struct GoStore: GenealogyStore {
             method: CoreMethod.createArtifact,
             request: req
         )
-        return Self.mapArtifact(resp.artifact)
+        return (Self.mapArtifact(resp.artifact), Self.mapWriteEffects(resp.effects))
     }
 
     func updateArtifact(
@@ -361,7 +365,7 @@ struct GoStore: GenealogyStore {
         artifactID: String,
         label: String,
         description: String
-    ) async throws -> CatalogArtifact {
+    ) async throws -> (CatalogArtifact, CatalogWriteEffects) {
         var req = Provenencia_Engine_V1_UpdateArtifactRequest()
         req.projectDir = projectDir
         req.userID = userID
@@ -372,18 +376,19 @@ struct GoStore: GenealogyStore {
             method: CoreMethod.updateArtifact,
             request: req
         )
-        return Self.mapArtifact(resp.artifact)
+        return (Self.mapArtifact(resp.artifact), Self.mapWriteEffects(resp.effects))
     }
 
-    func deleteArtifact(projectDir: String, userID: String, artifactID: String) async throws {
+    func deleteArtifact(projectDir: String, userID: String, artifactID: String) async throws -> CatalogWriteEffects {
         var req = Provenencia_Engine_V1_DeleteArtifactRequest()
         req.projectDir = projectDir
         req.userID = userID
         req.artifactID = artifactID
-        let _: Provenencia_Engine_V1_DeleteArtifactResponse = try await provenenciaCall(
+        let resp: Provenencia_Engine_V1_DeleteArtifactResponse = try await provenenciaCall(
             method: CoreMethod.deleteArtifact,
             request: req
         )
+        return Self.mapWriteEffects(resp.effects)
     }
 
     func ingestArtifactFile(
@@ -391,7 +396,7 @@ struct GoStore: GenealogyStore {
         userID: String,
         artifactID: String,
         path: String
-    ) async throws -> (artifact: CatalogArtifact, file: CatalogFileRef, reused: Bool) {
+    ) async throws -> (artifact: CatalogArtifact, file: CatalogFileRef, reused: Bool, effects: CatalogWriteEffects) {
         var req = Provenencia_Engine_V1_IngestArtifactFileRequest()
         req.projectDir = projectDir
         req.userID = userID
@@ -401,7 +406,10 @@ struct GoStore: GenealogyStore {
             method: CoreMethod.ingestArtifactFile,
             request: req
         )
-        return (Self.mapArtifact(resp.artifact), Self.mapFile(resp.file), resp.reused)
+        return (
+            Self.mapArtifact(resp.artifact), Self.mapFile(resp.file), resp.reused,
+            Self.mapWriteEffects(resp.effects)
+        )
     }
 
     func listSourceCredibilityGrades(projectDir: String) async throws -> [CatalogCredibilityGrade] {
@@ -420,7 +428,7 @@ struct GoStore: GenealogyStore {
         sourceID: String,
         gradeID: String,
         argument: String
-    ) async throws -> CatalogCredibilityAssessment {
+    ) async throws -> (CatalogCredibilityAssessment, CatalogWriteEffects) {
         var req = Provenencia_Engine_V1_UpsertSourceCredibilityAssessmentRequest()
         req.projectDir = projectDir
         req.userID = userID
@@ -431,7 +439,7 @@ struct GoStore: GenealogyStore {
             method: CoreMethod.upsertSourceCredibilityAssessment,
             request: req
         )
-        return Self.mapCredibility(resp.assessment)
+        return (Self.mapCredibility(resp.assessment), Self.mapWriteEffects(resp.effects))
     }
 
     func listSourceTypes(projectDir: String) async throws -> [CatalogSourceType] {
@@ -681,7 +689,7 @@ struct GoStore: GenealogyStore {
         label: String,
         description: String,
         placement: CatalogGridCell?
-    ) async throws -> CatalogSubject {
+    ) async throws -> (CatalogSubject, CatalogWriteEffects) {
         var req = Provenencia_Engine_V1_CreateSubjectRequest()
         req.projectDir = projectDir
         req.userID = userID
@@ -698,7 +706,7 @@ struct GoStore: GenealogyStore {
             method: CoreMethod.createSubject,
             request: req
         )
-        return Self.mapSubject(resp.subject)
+        return (Self.mapSubject(resp.subject), Self.mapWriteEffects(resp.effects))
     }
 
     func updateSubject(
@@ -707,7 +715,7 @@ struct GoStore: GenealogyStore {
         subjectID: String,
         label: String,
         description: String
-    ) async throws -> CatalogSubject {
+    ) async throws -> (CatalogSubject, CatalogWriteEffects) {
         var req = Provenencia_Engine_V1_UpdateSubjectRequest()
         req.projectDir = projectDir
         req.userID = userID
@@ -718,18 +726,19 @@ struct GoStore: GenealogyStore {
             method: CoreMethod.updateSubject,
             request: req
         )
-        return Self.mapSubject(resp.subject)
+        return (Self.mapSubject(resp.subject), Self.mapWriteEffects(resp.effects))
     }
 
-    func deleteSubject(projectDir: String, userID: String, subjectID: String) async throws {
+    func deleteSubject(projectDir: String, userID: String, subjectID: String) async throws -> CatalogWriteEffects {
         var req = Provenencia_Engine_V1_DeleteSubjectRequest()
         req.projectDir = projectDir
         req.userID = userID
         req.subjectID = subjectID
-        let _: Provenencia_Engine_V1_DeleteSubjectResponse = try await provenenciaCall(
+        let resp: Provenencia_Engine_V1_DeleteSubjectResponse = try await provenenciaCall(
             method: CoreMethod.deleteSubject,
             request: req
         )
+        return Self.mapWriteEffects(resp.effects)
     }
 
     func promoteSubject(

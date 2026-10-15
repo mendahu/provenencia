@@ -559,12 +559,12 @@ final class CitationComposerModel {
                 return
             }
             if target.kind == "subject" {
-                try await store.deleteSubject(
+                let effects = try await store.deleteSubject(
                     projectDir: session.projectKey.projectDir,
                     userID: userID,
                     subjectID: target.id
                 )
-                session.apply(.deletedSubject(sourceId: sourceID))
+                session.apply(effects, .deletedSubject(sourceId: sourceID))
                 await refreshCitationLines()
                 return
             }
@@ -781,7 +781,7 @@ final class CitationComposerModel {
         newSubjectDraft = draft
         let slot = EvidenceGraphPlacement.composerSlot(in: graphSnapshot, landingColumn: landingColumn)
         do {
-            let created = try await store.createSubject(
+            let (created, effects) = try await store.createSubject(
                 projectDir: session.projectKey.projectDir,
                 userID: userID,
                 sourceID: sourceID,
@@ -791,7 +791,7 @@ final class CitationComposerModel {
                 placement: slot.cell
             )
             landingColumn = slot.landingColumn
-            session.apply(.mutatedSourceGraph(sourceId: sourceID))
+            session.apply(effects, .mutatedSourceGraph(sourceId: sourceID))
             await context.waitForGraph()
             assignCreatedSubject(created.id, field: draft.field)
             newSubjectDraft = nil
