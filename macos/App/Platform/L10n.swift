@@ -8495,6 +8495,41 @@ enum L10n {
         }
     }
 
+    /// Day words and the stamp joiner `TimestampFormat` uses for every catalog timestamp.
+    enum Timestamp {
+        static func today(time: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "timestamp.today",
+                defaultValue: "Today, %@",
+                comment: "Relative timestamp for a time today; argument is the time of day"
+            ), time)
+        }
+
+        static func todayAt(time: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "timestamp.todayAt",
+                defaultValue: "Today at %@",
+                comment: "Spoken timestamp for a time today; argument is the time of day"
+            ), time)
+        }
+
+        static var yesterday: String {
+            L10n.string(LocalizedStringResource(
+                "timestamp.yesterday",
+                defaultValue: "Yesterday",
+                comment: "Relative and spoken timestamp for a time yesterday"
+            ))
+        }
+
+        static func stamp(date: String, time: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "timestamp.stamp",
+                defaultValue: "%1$@ · %2$@",
+                comment: "Full timestamp: date, then time with zone, joined by a middle dot"
+            ), date, time)
+        }
+    }
+
     enum Errors {
         static let catalogAlreadyExists = LocalizedStringResource(
             "error.catalog.already_exists",

@@ -16050,6 +16050,54 @@
         }
       }
     },
+    "timestamp.today": {
+      "comment": "Relative timestamp for a time today; argument is the time of day",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Today, %@"
+          }
+        }
+      }
+    },
+    "timestamp.todayAt": {
+      "comment": "Spoken timestamp for a time today; argument is the time of day",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Today at %@"
+          }
+        }
+      }
+    },
+    "timestamp.yesterday": {
+      "comment": "Relative and spoken timestamp for a time yesterday",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yesterday"
+          }
+        }
+      }
+    },
+    "timestamp.stamp": {
+      "comment": "Full timestamp: date, then time with zone, joined by a middle dot",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · %2$@"
+          }
+        }
+      }
+    },
     "conclusions.a11y.vital": {
       "comment": "VoiceOver for a Person header line; arguments are Born/Died, the date, and the place",
       "extractionState": "manual",
