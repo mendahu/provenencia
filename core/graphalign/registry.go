@@ -72,6 +72,17 @@ func DefaultConfig() Config {
 			"subject": 0.9,
 		},
 		UPrior: 0.1, // cold-start agreement rate among unrelated
+		// Keyed by EdgeSignature.ScaleKey. A missing entry is the zero
+		// scale: support is added even when the candidate's own properties
+		// contribute nothing, and a different neighbor is silence.
+		// part_of is one-to-many from the whole. Both ends require a property
+		// score that already clears the accept bar. Only the part cancels
+		// that score when the parent is a different handle: cancelling the
+		// whole while its part is still settling never lets the chain agree.
+		SignatureScale: map[string]SignatureScale{
+			"place_relationship|part_of|place||from": {MinNode: 2, ConflictFactor: 1},
+			"place_relationship|part_of|place||to":   {MinNode: 2},
+		},
 	}
 }
 
@@ -98,6 +109,10 @@ type Config struct {
 	UPrior             float64
 	// Names scores name values when set. Nil keeps match.ComparerFor.
 	Names *match.NameComparer
+	// SignatureScale is how one edge signature combines with the candidate's
+	// own property score. The walk looks a signature up and copies the
+	// numbers onto the fact. A missing key is the zero value.
+	SignatureScale map[string]SignatureScale
 }
 
 func (c Config) agreementWeight(p match.Property) float64 {
@@ -142,6 +157,20 @@ type Scale struct {
 	// agreement bonus, and lifts a lone exact agreement to the weak bar.
 	// A fixed Weight is not lifted.
 	Frequency bool
+}
+
+// SignatureScale is how one edge combines with the candidate's own property
+// score. The zero value adds support even when that score is nothing, and
+// leaves a mismatched neighbor silent.
+type SignatureScale struct {
+	// MinNode is the property score required before this signature's support
+	// and credit are added. Zero adds them even when the candidate's own
+	// properties contribute nothing.
+	MinNode float64
+	// ConflictFactor times the property score is subtracted when this
+	// candidate has a same-end neighbor under the signature and it is a
+	// different handle. Zero leaves a mismatch silent.
+	ConflictFactor float64
 }
 
 func logOdds(m, u float64) float64 {

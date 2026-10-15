@@ -42,19 +42,34 @@ func propertyPoints(ev *match.Evaluation, probe match.Values, cfg Config, stats 
 	return total
 }
 
-// EdgeFact is one mapped neighbor the candidate reaches through a
-// corresponding link. NeighborNode is that pair's property total.
+// EdgeFact is one mapped neighbor under a signature. A match carries the
+// fan-out and the neighbor's property total. A mismatch carries the
+// signature's conflict factor. MinNode, ConflictFactor, and Mismatch are
+// numbers copied from the signature scale; this type does not name a signature.
 type EdgeFact struct {
-	FanOut       float64
-	NeighborNode float64
+	FanOut         float64
+	NeighborNode   float64
+	MinNode        float64
+	ConflictFactor float64
+	Mismatch       bool
 }
 
-// EdgePoints sums Support(fan-out) + Credit(fan-out) × NeighborNode.
-// A negative property total subtracts. Fan-out at or below FanOutLowMax
-// uses the low pair.
-func EdgePoints(facts []EdgeFact, cfg Config) float64 {
+// EdgePoints sums support and credit, gated by the fact's scale. nodeScore
+// is the candidate's own property total. A mismatch subtracts
+// ConflictFactor × nodeScore. A match whose MinNode is above nodeScore adds
+// nothing. Otherwise Support(fan-out) + Credit(fan-out) × NeighborNode.
+// Fan-out at or below FanOutLowMax uses the low pair. A negative neighbor
+// total subtracts.
+func EdgePoints(facts []EdgeFact, nodeScore float64, cfg Config) float64 {
 	var total float64
 	for _, f := range facts {
+		if f.Mismatch {
+			total -= f.ConflictFactor * nodeScore
+			continue
+		}
+		if f.MinNode > 0 && nodeScore < f.MinNode {
+			continue
+		}
 		if f.FanOut <= cfg.FanOutLowMax {
 			total += cfg.EdgeSupportLow + cfg.NeighborCreditLow*f.NeighborNode
 		} else {
