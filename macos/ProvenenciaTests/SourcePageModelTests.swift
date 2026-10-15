@@ -1084,6 +1084,37 @@ struct SourcePageModelTests {
         #expect(model.source?.coverMode == "type_icon")
     }
 
+    /// Deleting a Source's only Artifact changes row fields the activity patch
+    /// cannot (`hasArtifact`, the cover), so the cached Sources row is refreshed
+    /// from the engine as Artifact create and attach do (D-26).
+    @Test func deleteOnlyArtifactClearsHasArtifactOnTheCachedRow() async {
+        let store = makeStore(
+            artifacts: [
+                CatalogArtifact(
+                    id: "a1", ref: "ART-AAAAA", sourceID: sourceID, fileID: "",
+                    label: "Scan", description: "", file: nil
+                ),
+            ]
+        )
+        let session = WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: store)
+        var row = CatalogSource(
+            id: sourceID, ref: "SRC-AAAAA", sourceTypeID: "t1",
+            title: "Family album", description: "Held by Mary"
+        )
+        row.hasArtifact = true
+        let listKey = CatalogQueryKey.sourcesList(project: session.projectKey)
+        session.setQueryValue(listKey, value: [row])
+        let model = SourcePageModel(
+            sourceID: sourceID, session: session, userID: userID,
+            sessionDisplayName: "Jake Robins", store: store
+        )
+        await model.warmFromSession()
+        await model.askDeleteArtifact(id: "a1")
+        _ = await model.confirmResourceDelete()
+        let list: QueryHandle<[CatalogSource]>? = session.queryHandle(listKey)
+        #expect(list?.value?.first?.hasArtifact == false)
+    }
+
     @Test func blockedArtifactDoesNotCallDelete() async {
         let store = makeStore(
             artifacts: [

@@ -213,6 +213,9 @@ final class SourcePageModel {
                 tone: .success
             )
             context.applyWrite(effects)
+            // The cover and `hasArtifact` on the Sources row change with the
+            // last Artifact, which the activity patch cannot carry.
+            await context.refreshCoverFromStore()
         }
         return erasedSource && kind == "source"
     }
