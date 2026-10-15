@@ -3,14 +3,30 @@ import SwiftUI
 /// The browse list for navigation targets — mirrors the design system's
 /// `components/PVList.jsx`. Homogeneous rows: an optional thumbnail slot, a
 /// title, an optional secondary line, a trailing mono reference, and a
-/// chevron. Rows are **buttons, not selection**: no selection model, no
-/// columns, no sort — only hover, a pressed tint, and keyboard focus. The
+/// chevron. One optional fixed-width text column (`detail`) sits before the
+/// ref, content-agnostic. Rows are **buttons, not selection**: no selection
+/// model, no sort — only hover, a pressed tint, and keyboard focus. The
 /// counterpart to `PVTable` (single-selection browse with columns).
 ///
 /// The list does not scroll itself; put it in the page's `ScrollView`. Rows
 /// are lazy, so hundreds stay cheap. Keyboard: the list is one focus stop;
 /// ↑ / ↓ move the focused row (⌥ jumps to the ends), Home / End, Page Up /
 /// Page Down move by ten, Return / Space activate.
+/// One cell of a `PVList` detail column. `help` is hover text; `nil` attaches none.
+struct PVListDetail {
+    var text: String
+    var help: String?
+    var icon: PVSymbol?
+    var faint: Bool = false
+}
+
+/// A fixed-width column before the ref. `content` returning `nil` leaves the
+/// cell empty at the same width.
+struct PVListDetailColumn<Item> {
+    var width: CGFloat
+    var content: (Item) -> PVListDetail?
+}
+
 struct PVList<Item: Identifiable, Primary: View, Secondary: View>: View {
     private let items: [Item]
     private let thumbnail: ((Item) -> PVThumbnail.Content)?
@@ -18,6 +34,7 @@ struct PVList<Item: Identifiable, Primary: View, Secondary: View>: View {
     private let primary: (Item) -> Primary
     private let secondary: (Item) -> Secondary
     private let meta: (Item) -> String?
+    private let detail: PVListDetailColumn<Item>?
     private let chevron: Bool
     private let density: PVListDensity
     private let label: LocalizedStringResource
@@ -33,6 +50,7 @@ struct PVList<Item: Identifiable, Primary: View, Secondary: View>: View {
         thumbnail: ((Item) -> PVThumbnail.Content)? = nil,
         thumbnailSize: CGFloat = 44,
         meta: @escaping (Item) -> String? = { _ in nil },
+        detail: PVListDetailColumn<Item>? = nil,
         chevron: Bool = true,
         density: PVListDensity = .comfortable,
         label: LocalizedStringResource,
@@ -48,6 +66,7 @@ struct PVList<Item: Identifiable, Primary: View, Secondary: View>: View {
         self.primary = primary
         self.secondary = secondary
         self.meta = meta
+        self.detail = detail
         self.chevron = chevron
         self.density = density
         self.label = label
@@ -100,6 +119,30 @@ struct PVList<Item: Identifiable, Primary: View, Secondary: View>: View {
         .accessibilityLabel(Text(label))
     }
 
+    @ViewBuilder
+    private func detailCell(_ detail: PVListDetail?) -> some View {
+        if let detail {
+            let color = detail.faint ? PVColor.textFaint : PVColor.textMuted
+            let cell = HStack(spacing: 6) {
+                if let icon = detail.icon {
+                    PVIcon(icon, size: 14)
+                }
+                Text(verbatim: detail.text)
+                    .font(PVFont.body(size: PVTypeScale.caption))
+                    .lineLimit(1)
+                    .fixedSize()
+            }
+            .foregroundStyle(color)
+            if let help = detail.help {
+                cell.help(help)
+            } else {
+                cell
+            }
+        } else {
+            Color.clear
+        }
+    }
+
     private func row(_ item: Item, index: Int) -> some View {
         Button {
             focusIndex = index
@@ -121,6 +164,11 @@ struct PVList<Item: Identifiable, Primary: View, Secondary: View>: View {
                         .lineLimit(1)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
+                if let detail {
+                    detailCell(detail.content(item))
+                        .frame(width: detail.width, alignment: .leading)
+                        .layoutPriority(1)
+                }
                 HStack(spacing: PVSpacing.space7) {
                     if let meta = meta(item) {
                         Text(verbatim: meta)
@@ -159,6 +207,7 @@ extension PVList where Secondary == EmptyView {
         thumbnail: ((Item) -> PVThumbnail.Content)? = nil,
         thumbnailSize: CGFloat = 44,
         meta: @escaping (Item) -> String? = { _ in nil },
+        detail: PVListDetailColumn<Item>? = nil,
         chevron: Bool = true,
         density: PVListDensity = .comfortable,
         label: LocalizedStringResource,
@@ -169,7 +218,7 @@ extension PVList where Secondary == EmptyView {
     ) {
         self.init(
             items: items, thumbnail: thumbnail, thumbnailSize: thumbnailSize, meta: meta,
-            chevron: chevron, density: density, label: label,
+            detail: detail, chevron: chevron, density: density, label: label,
             itemAccessibilityLabel: itemAccessibilityLabel,
             itemAccessibilityIdentifier: itemAccessibilityIdentifier,
             onActivate: onActivate, primary: primary, secondary: { _ in EmptyView() }
@@ -242,6 +291,8 @@ struct PVListSkeleton: View {
     var rows: Int = 5
     var thumbnailSize: CGFloat = 44
     var density: PVListDensity = .comfortable
+    /// Width of the list's detail column; draws a bar there before the ref bar.
+    var detailWidth: CGFloat?
 
     private static let titleWidths: [CGFloat] = [0.46, 0.32, 0.54, 0.38, 0.42]
 
@@ -256,6 +307,10 @@ struct PVListSkeleton: View {
                             bar(width: geometry.size.width * 0.62, height: 10)
                         }
                         .frame(maxHeight: .infinity, alignment: .center)
+                    }
+                    if let detailWidth {
+                        bar(width: 64, height: 10)
+                            .frame(width: detailWidth, alignment: .leading)
                     }
                     bar(width: 72, height: 10)
                 }
@@ -316,6 +371,34 @@ private extension View {
             }
         )
         PVListSkeleton(rows: 3)
+    }
+    .padding(PVSpacing.space9)
+    .frame(width: 640)
+    .background(PVColor.surfacePage)
+}
+
+#Preview("With detail column") {
+    struct Row: Identifiable {
+        let id: String
+        let title: String
+        let detail: PVListDetail?
+    }
+    let rows = [
+        Row(id: "PER-7KD45", title: "James Robins", detail: PVListDetail(text: "Yesterday", help: "Last updated", icon: .history)),
+        Row(id: "PER-2HT08", title: "Eliza Robins", detail: PVListDetail(text: "—", help: nil, icon: .history, faint: true)),
+        Row(id: "PER-9ZZ02", title: "PER-9ZZ02", detail: nil),
+    ]
+    return VStack(spacing: PVSpacing.space8) {
+        PVList(
+            items: rows,
+            meta: { $0.id },
+            detail: PVListDetailColumn(width: 136, content: { $0.detail }),
+            label: "Persons",
+            itemAccessibilityLabel: { "\($0.title), \($0.id)" },
+            onActivate: { _ in },
+            primary: { Text(verbatim: $0.title) }
+        )
+        PVListSkeleton(rows: 3, detailWidth: 136)
     }
     .padding(PVSpacing.space9)
     .frame(width: 640)
