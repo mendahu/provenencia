@@ -6474,6 +6474,10 @@ public nonisolated struct Provenencia_Engine_V1_SourceGraphProgress: Sendable {
 
   public var observationCount: Int32 = 0
 
+  public var primaryCount: Int32 = 0
+
+  public var filedCount: Int32 = 0
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -18394,7 +18398,7 @@ nonisolated extension Provenencia_Engine_V1_GetPropertiesWorkspaceResponse: Swif
 
 nonisolated extension Provenencia_Engine_V1_SourceGraphProgress: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".SourceGraphProgress"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}source_id\0\u{3}subject_count\0\u{3}observation_count\0\u{b}uncited_count\0\u{c}\u{4}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}source_id\0\u{3}subject_count\0\u{3}observation_count\0\u{4}\u{2}primary_count\0\u{3}filed_count\0\u{b}uncited_count\0\u{c}\u{4}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -18405,6 +18409,8 @@ nonisolated extension Provenencia_Engine_V1_SourceGraphProgress: SwiftProtobuf.M
       case 1: try { try decoder.decodeSingularStringField(value: &self.sourceID) }()
       case 2: try { try decoder.decodeSingularInt32Field(value: &self.subjectCount) }()
       case 3: try { try decoder.decodeSingularInt32Field(value: &self.observationCount) }()
+      case 5: try { try decoder.decodeSingularInt32Field(value: &self.primaryCount) }()
+      case 6: try { try decoder.decodeSingularInt32Field(value: &self.filedCount) }()
       default: break
       }
     }
@@ -18420,6 +18426,12 @@ nonisolated extension Provenencia_Engine_V1_SourceGraphProgress: SwiftProtobuf.M
     if self.observationCount != 0 {
       try visitor.visitSingularInt32Field(value: self.observationCount, fieldNumber: 3)
     }
+    if self.primaryCount != 0 {
+      try visitor.visitSingularInt32Field(value: self.primaryCount, fieldNumber: 5)
+    }
+    if self.filedCount != 0 {
+      try visitor.visitSingularInt32Field(value: self.filedCount, fieldNumber: 6)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -18427,6 +18439,8 @@ nonisolated extension Provenencia_Engine_V1_SourceGraphProgress: SwiftProtobuf.M
     if lhs.sourceID != rhs.sourceID {return false}
     if lhs.subjectCount != rhs.subjectCount {return false}
     if lhs.observationCount != rhs.observationCount {return false}
+    if lhs.primaryCount != rhs.primaryCount {return false}
+    if lhs.filedCount != rhs.filedCount {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
