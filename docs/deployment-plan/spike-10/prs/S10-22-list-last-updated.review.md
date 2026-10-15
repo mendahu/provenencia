@@ -79,3 +79,21 @@ The plan was amended for the user's rework (one timestamp formatter; surgical ca
 | M-10 | nit | `.shortDate` / `.longDate` have no caller | **Declined.** The user named short and long date as part of the API. |
 
 Lint after fixes: 0 errors.
+
+## Rework review — round 2 (2026-10-15)
+
+One fresh reviewer (executability + maintainability) checked the round-1 answers; they hold. New findings, all fixed in the plan:
+
+| ID | Severity | Finding | Answer |
+| --- | --- | --- | --- |
+| X-13 | blocker | STEP-12 deleted symbols `LastUpdatedDisplay` still used until STEP-13 | **Fixed.** STEP-12 is additive; STEP-13 deletes `LastUpdatedDisplay`, `boardStamp`, and the two keys. |
+| X-14 | blocker | STEP-11 renamed the header field without the three Kind files | **Fixed.** Added to STEP-11. |
+| M-11 | major | `patchCached` copied `setQueryValue`'s in-flight block | **Fixed.** Private `replaceValue(_:_:clearStale:)` shared by both (D-18). |
+| X-15 | minor | `Source.updated_at` mapped before it exists | **Fixed.** STEP-10 maps revision only; `handlers/sources.go` and the early return named. |
+| X-16 | minor | A third test uses `evictsWhenHidden` | **Fixed.** `hiddenPolicies` (D-19). |
+| X-17 | minor | `patchUpdatedSource`'s stale clear | **Fixed.** Kept after the workspace patch (D-18). |
+| M-12 | nit | Leftovers | **Fixed.** §1, Codebase fit, DoD, `Notify` parameter name, `lastUpdatedPatch(_ key:)`. |
+
+## Rework verdict
+
+Two rounds; no open blocker; the user answered M-5. The plan returns to the implementer.
