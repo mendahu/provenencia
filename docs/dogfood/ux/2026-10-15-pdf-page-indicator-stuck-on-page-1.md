@@ -7,6 +7,10 @@
 - **Consequence:** Using the polygon selector tool to create a citation region while looking at a later page attaches the citation to page 1 rather than the page actually being viewed.
 - **Wanted:** The page indicator tracks the visible page while scrolling, and polygon selections are attached to the page they were drawn on.
 
+## Related
+
+[Zooming the PDF viewer jumps back to page 1](2026-10-15-pdf-zoom-jumps-to-page-1.md) shares this root cause: the viewport re-syncs to the stale `model.page` on every update.
+
 ## Code notes (observed, not fixed)
 
 - `macos/App/Features/ArtifactViewer/ArtifactPDFViewport.swift` — the coordinator observes `.PDFViewPageChanged` / `.PDFViewVisiblePagesChanged`, but `pdfLayoutChanged(_:)` only re-lays out the region overlay and reports zoom via `onZoomChange`. There is no equivalent page callback, so `pdfView.currentPage` never flows back to the model when the user scrolls.
