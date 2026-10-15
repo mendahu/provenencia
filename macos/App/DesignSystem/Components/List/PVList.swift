@@ -12,21 +12,6 @@ import SwiftUI
 /// are lazy, so hundreds stay cheap. Keyboard: the list is one focus stop;
 /// ↑ / ↓ move the focused row (⌥ jumps to the ends), Home / End, Page Up /
 /// Page Down move by ten, Return / Space activate.
-/// One cell of a `PVList` detail column. `help` is hover text; `nil` attaches none.
-struct PVListDetail {
-    var text: String
-    var help: String?
-    var icon: PVSymbol?
-    var faint: Bool = false
-}
-
-/// A fixed-width column before the ref. `content` returning `nil` leaves the
-/// cell empty at the same width.
-struct PVListDetailColumn<Item> {
-    var width: CGFloat
-    var content: (Item) -> PVListDetail?
-}
-
 struct PVList<Item: Identifiable, Primary: View, Secondary: View>: View {
     private let items: [Item]
     private let thumbnail: ((Item) -> PVThumbnail.Content)?
@@ -224,6 +209,21 @@ extension PVList where Secondary == EmptyView {
             onActivate: onActivate, primary: primary, secondary: { _ in EmptyView() }
         )
     }
+}
+
+/// One cell of a `PVList` detail column. `help` is hover text; `nil` attaches none.
+struct PVListDetail {
+    var text: String
+    var help: String?
+    var icon: PVSymbol?
+    var faint: Bool = false
+}
+
+/// A fixed-width column before the ref. `content` returning `nil` leaves the
+/// cell empty at the same width.
+struct PVListDetailColumn<Item> {
+    var width: CGFloat
+    var content: (Item) -> PVListDetail?
 }
 
 /// Row padding: comfortable 11 / 16, compact 7 / 12 (the kit's `PAD`).
