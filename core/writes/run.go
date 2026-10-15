@@ -97,7 +97,7 @@ func Run[T any](c *database.Catalog, op Op, fn func(tx *database.Tx) (T, []rowch
 		return zero, Result{}, err
 	}
 	tx.RunAfterCommit()
-	commit := Result{Revision: rev, At: at, Effects: set}
+	commit := Result{Activity: effects.Activity{Revision: rev, At: at}, Effects: set}
 	if err := c.Notify(commit); err != nil {
 		// The commit has landed and Notify has already dropped every listener.
 		// Returning the error made the client retry a write that saved.

@@ -6,31 +6,24 @@ import (
 	"github.com/mendahu/provenencia/core/database/effects"
 )
 
-// Activity is a scope's newest audit revision and when it was recorded
-// (RFC3339 UTC). The zero value means no revision.
-type Activity struct {
-	Revision int64
-	At       string
-}
-
 // Activity returns the last activity of one scope id (a Source id for
 // effects.ScopeSource, a handle id for effects.ScopeCanonicalEntity). The first
 // read of a scope type loads every id's activity with one grouped query; a
 // commit keeps the loaded map current (OnCommit), so a list read never scans
 // the audit history. A nil Graph and an id with no revision give the zero
 // value. A type not in effects.Scopes is an error.
-func (g *Graph) Activity(scopeType string, id []byte) (Activity, error) {
+func (g *Graph) Activity(scopeType string, id []byte) (effects.Activity, error) {
 	if g == nil {
-		return Activity{}, nil
+		return effects.Activity{}, nil
 	}
 	if !knownScope(scopeType) {
-		return Activity{}, fmt.Errorf("graphcache: unknown scope type %q", scopeType)
+		return effects.Activity{}, fmt.Errorf("graphcache: unknown scope type %q", scopeType)
 	}
 	m, ok := g.activity[scopeType]
 	if !ok {
 		var err error
 		if m, err = g.loadActivity(scopeType); err != nil {
-			return Activity{}, err
+			return effects.Activity{}, err
 		}
 		g.activity[scopeType] = m
 	}
@@ -46,16 +39,16 @@ func knownScope(scopeType string) bool {
 	return false
 }
 
-func (g *Graph) loadActivity(scopeType string) (map[string]Activity, error) {
+func (g *Graph) loadActivity(scopeType string) (map[string]effects.Activity, error) {
 	rows, err := g.query(sqlActivityByScope, scopeType)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	out := map[string]Activity{}
+	out := map[string]effects.Activity{}
 	for rows.Next() {
 		var id []byte
-		var a Activity
+		var a effects.Activity
 		if err := rows.Scan(&id, &a.Revision, &a.At); err != nil {
 			return nil, err
 		}
@@ -77,7 +70,7 @@ func (g *Graph) applyActivity(c effects.Commit) {
 		}
 		for _, id := range sc.IDs(c.Effects) {
 			if c.Revision > m[string(id)].Revision {
-				m[string(id)] = Activity{Revision: c.Revision, At: c.At}
+				m[string(id)] = c.Activity
 			}
 		}
 	}

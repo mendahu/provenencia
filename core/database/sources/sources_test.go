@@ -11,7 +11,7 @@ import (
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
-	"github.com/mendahu/provenencia/core/database/graphcache"
+	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjects"
@@ -280,7 +280,7 @@ func TestSources(t *testing.T) {
 				if err != nil || res.Revision == 0 || res.At == "" {
 					t.Fatalf("write %+v %v", res, err)
 				}
-				want := graphcache.Activity{Revision: res.Revision, At: res.At}
+				want := effects.Activity{Revision: res.Revision, At: res.At}
 				var queries int
 				c.Graph().SetQueryCounterForTest(func() { queries++ })
 				all, err := List(c)
@@ -288,7 +288,7 @@ func TestSources(t *testing.T) {
 					t.Fatalf("List %+v %v, want %+v", all, err, want)
 				}
 				attached := Source{ID: src.ID}
-				if err := AttachLatestRevision(c, &attached); err != nil || attached.Updated != want {
+				if err := AttachActivity(c, &attached); err != nil || attached.Updated != want {
 					t.Fatalf("Attach %+v %v, want %+v", attached.Updated, err, want)
 				}
 				if queries != 0 {

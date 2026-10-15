@@ -62,7 +62,7 @@ func TestNodeAndKindAndVerify(t *testing.T) {
 	if _, err := g.Node(id); err != nil {
 		t.Fatal(err)
 	}
-	if err := g.OnCommit(effects.Commit{Revision: 1, Effects: effects.Set{Structure: true}}); err != nil {
+	if err := g.OnCommit(effects.Commit{Activity: effects.Activity{Revision: 1}, Effects: effects.Set{Structure: true}}); err != nil {
 		t.Fatal(err)
 	}
 	if g.LoadedForTest(id) {
@@ -88,7 +88,7 @@ func TestCommitInsertsANewHandleIntoALoadedKind(t *testing.T) {
 	if _, err := db.Exec(`INSERT INTO canonical_entities (id, subject_type_id, ref) VALUES (?, ?, 'PER-2')`, id, typeID); err != nil {
 		t.Fatal(err)
 	}
-	if err := g.OnCommit(effects.Commit{Revision: 1, Effects: effects.Set{Handles: [][]byte{id}}}); err != nil {
+	if err := g.OnCommit(effects.Commit{Activity: effects.Activity{Revision: 1}, Effects: effects.Set{Handles: [][]byte{id}}}); err != nil {
 		t.Fatal(err)
 	}
 	if !g.LoadedForTest(id) {
@@ -143,7 +143,7 @@ func TestCommitOfAnAssociationLoadsEndpoints(t *testing.T) {
 		t.Fatal(err)
 	}
 	g := c.Graph()
-	if err := g.OnCommit(effects.Commit{Revision: 1, Effects: effects.Set{Handles: [][]byte{assoc}}}); err != nil {
+	if err := g.OnCommit(effects.Commit{Activity: effects.Activity{Revision: 1}, Effects: effects.Set{Handles: [][]byte{assoc}}}); err != nil {
 		t.Fatal(err)
 	}
 	if !g.LoadedForTest(person) || !g.LoadedForTest(event) {
@@ -205,7 +205,7 @@ func TestCommitReloadsASharedEndpointOnce(t *testing.T) {
 	g := c.Graph()
 	var n int
 	g.SetQueryCounterForTest(func() { n++ })
-	if err := g.OnCommit(effects.Commit{Revision: 1, Effects: effects.Set{Handles: [][]byte{assocA, assocB}}}); err != nil {
+	if err := g.OnCommit(effects.Commit{Activity: effects.Activity{Revision: 1}, Effects: effects.Set{Handles: [][]byte{assocA, assocB}}}); err != nil {
 		t.Fatal(err)
 	}
 	if !g.LoadedForTest(person) || !g.LoadedForTest(eventA) || !g.LoadedForTest(eventB) {
@@ -322,7 +322,7 @@ func TestActivity(t *testing.T) {
 				seedActivity(t, db, 5, t5, effects.ScopeCanonicalEntity, h, other)
 				seedActivity(t, db, 6, t5, effects.ScopeSource, src)
 				got, err := g.Activity(effects.ScopeCanonicalEntity, h)
-				if err != nil || got != (graphcache.Activity{Revision: 5, At: t5}) {
+				if err != nil || got != (effects.Activity{Revision: 5, At: t5}) {
 					t.Fatalf("h %+v %v", got, err)
 				}
 				if *queries != 1 {
@@ -331,7 +331,7 @@ func TestActivity(t *testing.T) {
 				if got, _ := g.Activity(effects.ScopeCanonicalEntity, other); got.Revision != 5 {
 					t.Fatalf("other %+v", got)
 				}
-				if got, _ := g.Activity(effects.ScopeCanonicalEntity, src); got != (graphcache.Activity{}) {
+				if got, _ := g.Activity(effects.ScopeCanonicalEntity, src); got != (effects.Activity{}) {
 					t.Fatalf("a Source id under canonical_entity: %+v", got)
 				}
 				if *queries != 1 {
@@ -342,7 +342,7 @@ func TestActivity(t *testing.T) {
 		{
 			name: "an id with no scope row, a bad type, and a nil graph",
 			run: func(t *testing.T, g *graphcache.Graph, db *sql.DB, queries *int) {
-				if got, err := g.Activity(effects.ScopeSource, src); err != nil || got != (graphcache.Activity{}) {
+				if got, err := g.Activity(effects.ScopeSource, src); err != nil || got != (effects.Activity{}) {
 					t.Fatalf("no rows: %+v %v", got, err)
 				}
 				for _, bad := range []string{"", "mystery"} {
@@ -351,7 +351,7 @@ func TestActivity(t *testing.T) {
 					}
 				}
 				var none *graphcache.Graph
-				if got, err := none.Activity(effects.ScopeSource, src); err != nil || got != (graphcache.Activity{}) {
+				if got, err := none.Activity(effects.ScopeSource, src); err != nil || got != (effects.Activity{}) {
 					t.Fatalf("nil graph: %+v %v", got, err)
 				}
 			},
@@ -365,15 +365,15 @@ func TestActivity(t *testing.T) {
 				}
 				seedActivity(t, db, 7, t7, effects.ScopeCanonicalEntity, h)
 				before := *queries
-				commit := effects.Commit{Revision: 7, At: t7, Effects: effects.Set{HandleScopes: [][]byte{h}, Sources: [][]byte{src}}}
+				commit := effects.Commit{Activity: effects.Activity{Revision: 7, At: t7}, Effects: effects.Set{HandleScopes: [][]byte{h}, Sources: [][]byte{src}}}
 				if err := g.OnCommit(commit); err != nil {
 					t.Fatal(err)
 				}
 				got, _ := g.Activity(effects.ScopeCanonicalEntity, h)
-				if got != (graphcache.Activity{Revision: 7, At: t7}) {
+				if got != (effects.Activity{Revision: 7, At: t7}) {
 					t.Fatalf("after commit %+v", got)
 				}
-				if err := g.OnCommit(effects.Commit{Revision: 6, At: t5, Effects: effects.Set{HandleScopes: [][]byte{h}}}); err != nil {
+				if err := g.OnCommit(effects.Commit{Activity: effects.Activity{Revision: 6, At: t5}, Effects: effects.Set{HandleScopes: [][]byte{h}}}); err != nil {
 					t.Fatal(err)
 				}
 				if got, _ := g.Activity(effects.ScopeCanonicalEntity, h); got.Revision != 7 {

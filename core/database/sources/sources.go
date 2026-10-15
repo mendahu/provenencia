@@ -15,7 +15,6 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/deleteimpact"
 	"github.com/mendahu/provenencia/core/database/effects"
-	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/derivatives"
 	"github.com/mendahu/provenencia/core/ref"
 )
@@ -71,8 +70,8 @@ type Source struct {
 	PrimaryArtifactID []byte // nil when CoverModeTypeIcon
 	// Updated is the latest audit revision of any work scoped to this Source
 	// (its row, children, and evidence graph) and when it was recorded.
-	// Filled by List and by AttachLatestRevision; zero means unset.
-	Updated graphcache.Activity
+	// Filled by List and by AttachActivity; zero means unset.
+	Updated effects.Activity
 	// HasArtifact is true when at least one artifacts row exists for this Source.
 	// Filled by List only; other reads leave it false and callers query separately.
 	HasArtifact bool
@@ -390,8 +389,8 @@ func List(c *database.Catalog) ([]Source, error) {
 	return out, nil
 }
 
-// AttachLatestRevision sets Updated from the display cache's last activity.
-func AttachLatestRevision(c *database.Catalog, s *Source) error {
+// AttachActivity sets Updated from the display cache's last activity.
+func AttachActivity(c *database.Catalog, s *Source) error {
 	if s == nil || len(s.ID) != 16 {
 		return ErrInvalid
 	}

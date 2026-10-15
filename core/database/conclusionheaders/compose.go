@@ -199,7 +199,7 @@ func ListPersons(c *database.Catalog) ([]PersonHeader, error) {
 // return, after composing; the finished rows never hold it, because a note edit
 // moves the scope without dropping the cached row, and search composes the same
 // rows over a throwaway graph during a write.
-func handleActivity(c *database.Catalog, id []byte) (graphcache.Activity, error) {
+func handleActivity(c *database.Catalog, id []byte) (effects.Activity, error) {
 	return c.Graph().Activity(effects.ScopeCanonicalEntity, id)
 }
 

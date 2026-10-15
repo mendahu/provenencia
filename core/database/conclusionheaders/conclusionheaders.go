@@ -14,7 +14,7 @@ import (
 
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/datevalues"
-	"github.com/mendahu/provenencia/core/database/graphcache"
+	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/namevalues"
 )
 
@@ -39,7 +39,7 @@ type PersonHeader struct {
 	Death LifeFacts
 	// Updated is the handle's latest canonical_entity revision and its time.
 	// Filled by List only; zero means none.
-	Updated graphcache.Activity
+	Updated effects.Activity
 }
 
 // LifeFacts is a birth or a death composed from the canonical graph.

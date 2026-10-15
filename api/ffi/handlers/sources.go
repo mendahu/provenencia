@@ -6,8 +6,8 @@ import (
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/files"
-	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sourcemetadata"
 	"github.com/mendahu/provenencia/core/database/sources"
@@ -125,7 +125,7 @@ func CreateSource(in []byte) ([]byte, error) {
 		if err != nil {
 			return err
 		}
-		s.Updated = graphcache.Activity{Revision: res.Revision, At: res.At}
+		s.Updated = effects.Activity{Revision: res.Revision, At: res.At}
 		sp, err := enrichSourceProto(c, s)
 		if err != nil {
 			return err
