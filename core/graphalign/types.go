@@ -28,6 +28,19 @@ func (s EdgeSignature) Key() string {
 	return s.BridgeType + "|" + s.RoleOrType + "|" + s.NeighborKind + "|" + s.NeighborTypeTerm
 }
 
+// ScaleKey is the signature-scale lookup. A directed signature has one entry
+// per end, the same "|from" / "|to" suffix pairGroup uses. An undirected
+// signature is Key alone.
+func (s EdgeSignature) ScaleKey(fromEnd bool) string {
+	if !s.Directed {
+		return s.Key()
+	}
+	if fromEnd {
+		return s.Key() + "|from"
+	}
+	return s.Key() + "|to"
+}
+
 // Subject is one primary Subject on the Evidence layer.
 type Subject struct {
 	ID         []byte
