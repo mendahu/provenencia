@@ -31,8 +31,8 @@ struct CatalogQueryRegistry: Sendable {
     /// invalidates on this one set. A write that reports its handles (a
     /// citation, a credibility change, a Subject delete) invalidates through
     /// `invalidations(for:)` instead, and a note reports none, so a Source-page
-    /// write no longer reloads every list. A Property update, including a cardinality change,
-    /// rides `updatedProperty` (S9-37).
+    /// write no longer reloads every list. A Property update, including a
+    /// cardinality change, rides `updatedProperty` (S9-37).
     static let conclusionTriggers: Set<CatalogMutationKind> = [
         .promotedSubject, .deletedSource, .updatedProperty,
     ]
@@ -277,16 +277,23 @@ struct CatalogQueryRegistry: Sendable {
         }
     }
 
-    /// Cache effects of one write's reported handles and Sources. Handle scopes
-    /// invalidate nothing: they move through `lastUpdatedPatch`.
+    /// Cache effects of one write's reported handles and Sources. Each read
+    /// follows what feeds it: the Source graph per `sources`, the citation
+    /// reads per `citationSources`, the Properties workspace on `propertyUsage`,
+    /// vocabulary, or structure. Handle scopes invalidate nothing: they move
+    /// through `lastUpdatedPatch`.
     func invalidations(for effects: CatalogWriteEffects, project: ProjectKey) -> [CatalogQueryInvalidation] {
         var out: [CatalogQueryInvalidation] = []
         for sourceID in effects.sources {
             out.append(.key(.sourceGraph(project: project, sourceId: sourceID)))
+        }
+        for sourceID in effects.citationSources {
             out.append(.key(.citationCounts(project: project, sourceId: sourceID)))
         }
-        if !effects.sources.isEmpty {
+        if !effects.citationSources.isEmpty {
             out.append(.allCached(.citationsByArtifact))
+        }
+        if effects.propertyUsage {
             out.append(.key(.propertiesWorkspace(project: project)))
         }
         if effects.vocabulary || effects.structure {
@@ -304,6 +311,21 @@ struct CatalogQueryRegistry: Sendable {
             out.append(.key(.conclusionDetail(project: project, entityId: entityID)))
         }
         return out
+    }
+
+    /// The deduped union of what a write's effects reported and what its
+    /// mutation names, in that order, so a key both name is invalidated once.
+    func invalidations(
+        for effects: CatalogWriteEffects,
+        by mutation: CatalogMutation?,
+        project: ProjectKey
+    ) -> [CatalogQueryInvalidation] {
+        var all = invalidations(for: effects, project: project)
+        if let mutation {
+            all += invalidations(by: mutation, project: project)
+        }
+        var seen = Set<CatalogQueryInvalidation>()
+        return all.filter { seen.insert($0).inserted }
     }
 
     /// Resolves cache effects from registry `invalidateOn` tags + mutation payload.

@@ -825,6 +825,8 @@ struct CatalogQueryRegistryTests {
         #expect(registry.invalidations(for: CatalogWriteEffects(
             handles: ["e1"],
             sources: ["s1"],
+            citationSources: ["s1"],
+            propertyUsage: true,
             headerHandles: ["e2"]
         ), project: project) == [
             .key(.sourceGraph(project: project, sourceId: "s1")),
@@ -837,6 +839,13 @@ struct CatalogQueryRegistryTests {
             .key(.conclusionDetail(project: project, entityId: "e1")),
             .key(.conclusionDetail(project: project, entityId: "e2")),
         ])
+        // A key the effects and the mutation both name appears once.
+        let both = registry.invalidations(
+            for: CatalogWriteEffects(sources: ["s1"]),
+            by: .mutatedSourceGraph(sourceId: "s1"),
+            project: project
+        )
+        #expect(both.filter { $0 == .key(.sourceGraph(project: project, sourceId: "s1")) }.count == 1)
         // A Subject delete reports its handles in `WriteEffects`, so the lists
         // and details are not named here.
         #expect(registry.invalidations(by: .deletedSubject(sourceId: "s1"), project: project) == [

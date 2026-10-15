@@ -720,15 +720,6 @@ struct WorkspaceSessionTests {
         // The page has no value in the fake, so a reload shows as loading.
         #expect(detail.status == .loading)
         await waitForFetchComplete(detail)
-
-        // A key the effects and the mutation both name loads once, not twice.
-        let graphKey = CatalogQueryKey.sourceGraph(project: project, sourceId: "s1")
-        let graph: QueryHandle<SourceGraphRows> = session.query(graphKey)
-        await waitForFetchComplete(graph)
-        let before = store.listSubjectsCalls
-        session.apply(CatalogWriteEffects(sources: ["s1"]), .mutatedSourceGraph(sourceId: "s1"))
-        await waitForFetchComplete(graph)
-        #expect(store.listSubjectsCalls == before + 1)
     }
 
     /// A note moves the Source's last activity and nothing it reads as
@@ -765,6 +756,36 @@ struct WorkspaceSessionTests {
         #expect(!properties.isFetching && !graph.isFetching && !citations.isFetching)
     }
 
+    /// Each read follows only what feeds it (D-27): with the graph on screen, a
+    /// Subject create reloads the graph and nothing else, and an Observation
+    /// create also reloads the citation counts and the Properties `usedBy`.
+    @Test func eachReadFollowsOnlyWhatFeedsIt() async throws {
+        let store = FakeStore()
+        seedStore(store)
+        let session = makeSession(store: store)
+        let project = session.projectKey
+        session.apply(location: WorkspaceLocation(
+            section: .sources, sourceId: "s1", sourceSurface: .graph, title: "Alpha"
+        ))
+        let propertiesKey = CatalogQueryKey.propertiesWorkspace(project: project)
+        let countsKey = CatalogQueryKey.citationCounts(project: project, sourceId: "s1")
+        #expect(session.visibleKeys.contains(propertiesKey))
+        #expect(session.visibleKeys.contains(countsKey))
+        let properties: QueryHandle<PropertiesSnapshot> = session.query(propertiesKey)
+        let counts: QueryHandle<[String: Int]> = session.query(countsKey)
+        await waitForFetchComplete(properties)
+        await waitForFetchComplete(counts)
+
+        session.apply(CatalogWriteEffects(sources: ["s1"]))
+        #expect(!properties.isFetching && !counts.isFetching)
+
+        session.apply(CatalogWriteEffects(
+            sources: ["s1"], citationSources: ["s1"], propertyUsage: true
+        ))
+        #expect(properties.isFetching)
+        #expect(counts.isFetching)
+    }
+
     /// `usedBy` on the Properties inspector counts Observations, and it
     /// moves whenever a citation save creates or deletes one.
     @Test func applySavedCitationInvalidatesPropertiesUsedBy() async {
@@ -788,7 +809,7 @@ struct WorkspaceSessionTests {
         #expect(fields.value?.properties.first?.usedBy == 2)
 
         store.propertiesByProject[projectDir]?[0].usedBy = 1
-        session.apply(CatalogWriteEffects(sources: ["s1"]))
+        session.apply(CatalogWriteEffects(sources: ["s1"], citationSources: ["s1"], propertyUsage: true))
 
         let _: QueryHandle<PropertiesSnapshot> = session.query(fieldsKey)
         await waitForFetchComplete(fields)

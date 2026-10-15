@@ -4860,8 +4860,7 @@ func (x *DeleteCitationResponse) GetEffects() *WriteEffects {
 type WriteEffects struct {
 	state   protoimpl.MessageState `protogen:"open.v1"`
 	Handles []string               `protobuf:"bytes,1,rep,name=handles,proto3" json:"handles,omitempty"`
-	// Sources whose evidence changed: what the Source graph, graph progress,
-	// citation counts, and citations by artifact load.
+	// Sources whose graph changed: what the Source graph and graph progress load.
 	Sources       []string `protobuf:"bytes,2,rep,name=sources,proto3" json:"sources,omitempty"`
 	Vocabulary    bool     `protobuf:"varint,4,opt,name=vocabulary,proto3" json:"vocabulary,omitempty"`
 	Structure     bool     `protobuf:"varint,5,opt,name=structure,proto3" json:"structure,omitempty"`
@@ -4876,7 +4875,13 @@ type WriteEffects struct {
 	RevisionAt string `protobuf:"bytes,9,opt,name=revision_at,json=revisionAt,proto3" json:"revision_at,omitempty"`
 	// Sources whose last activity this write moved (the audit source scope).
 	// Swift patches the cached Sources list rows with (revision, revision_at).
-	SourceScopes  []string `protobuf:"bytes,10,rep,name=source_scopes,json=sourceScopes,proto3" json:"source_scopes,omitempty"`
+	SourceScopes []string `protobuf:"bytes,10,rep,name=source_scopes,json=sourceScopes,proto3" json:"source_scopes,omitempty"`
+	// Sources whose citation reads (citation counts, citations by artifact) this
+	// write moved.
+	CitationSources []string `protobuf:"bytes,11,rep,name=citation_sources,json=citationSources,proto3" json:"citation_sources,omitempty"`
+	// An Observation was created, deleted, or moved to another Property, so the
+	// Properties workspace's usedBy counts changed.
+	PropertyUsage bool `protobuf:"varint,12,opt,name=property_usage,json=propertyUsage,proto3" json:"property_usage,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -4972,6 +4977,20 @@ func (x *WriteEffects) GetSourceScopes() []string {
 		return x.SourceScopes
 	}
 	return nil
+}
+
+func (x *WriteEffects) GetCitationSources() []string {
+	if x != nil {
+		return x.CitationSources
+	}
+	return nil
+}
+
+func (x *WriteEffects) GetPropertyUsage() bool {
+	if x != nil {
+		return x.PropertyUsage
+	}
+	return false
 }
 
 type IngestArtifactFileRequest struct {
@@ -17421,7 +17440,7 @@ const file_engine_proto_rawDesc = "" +
 	"\vcitation_id\x18\x03 \x01(\tR\n" +
 	"citationId\"W\n" +
 	"\x16DeleteCitationResponse\x12=\n" +
-	"\aeffects\x18\x01 \x01(\v2#.provenencia.engine.v1.WriteEffectsR\aeffects\"\xb4\x02\n" +
+	"\aeffects\x18\x01 \x01(\v2#.provenencia.engine.v1.WriteEffectsR\aeffects\"\x86\x03\n" +
 	"\fWriteEffects\x12\x18\n" +
 	"\ahandles\x18\x01 \x03(\tR\ahandles\x12\x18\n" +
 	"\asources\x18\x02 \x03(\tR\asources\x12\x1e\n" +
@@ -17435,7 +17454,9 @@ const file_engine_proto_rawDesc = "" +
 	"\vrevision_at\x18\t \x01(\tR\n" +
 	"revisionAt\x12#\n" +
 	"\rsource_scopes\x18\n" +
-	" \x03(\tR\fsourceScopesJ\x04\b\x03\x10\x04\"\x8a\x01\n" +
+	" \x03(\tR\fsourceScopes\x12)\n" +
+	"\x10citation_sources\x18\v \x03(\tR\x0fcitationSources\x12%\n" +
+	"\x0eproperty_usage\x18\f \x01(\bR\rpropertyUsageJ\x04\b\x03\x10\x04\"\x8a\x01\n" +
 	"\x19IngestArtifactFileRequest\x12\x1f\n" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
 	"projectDir\x12\x17\n" +

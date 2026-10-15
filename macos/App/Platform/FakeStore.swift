@@ -430,7 +430,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 createdAt: formatter.string(from: Date())
             )
             notesBySource[sourceID, default: []].append(note)
-            return (note, bumpSource(sourceID))
+            return (note, bumpSource(sourceID, evidence: false))
         }
     }
 
@@ -443,7 +443,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                     var copy = notes
                     copy[idx].body = body
                     notesBySource[sourceID] = copy
-                    return (copy[idx], bumpSource(sourceID))
+                    return (copy[idx], bumpSource(sourceID, evidence: false))
                 }
             }
             throw StoreBoom.boom
@@ -468,7 +468,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             var effects = CatalogWriteEffects.empty
             for (sourceID, notes) in notesBySource where notes.contains(where: { $0.id == noteID }) {
                 notesBySource[sourceID] = notes.filter { $0.id != noteID }
-                effects = bumpSource(sourceID)
+                effects = bumpSource(sourceID, evidence: false)
             }
             return effects
         }
@@ -505,7 +505,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 list.append(entry)
             }
             metadataBySource[sourceID] = list
-            return (entry, bumpSource(sourceID))
+            return (entry, bumpSource(sourceID, evidence: false))
         }
     }
 
@@ -522,7 +522,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 list.remove(at: idx)
             }
             metadataBySource[sourceID] = list
-            return bumpSource(sourceID)
+            return bumpSource(sourceID, evidence: false)
         }
     }
 
@@ -536,7 +536,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             var list = metadataBySource[sourceID] ?? []
             list.removeAll { $0.field.id == fieldID && !$0.hasValue }
             metadataBySource[sourceID] = list
-            return (list, bumpSource(sourceID))
+            return (list, bumpSource(sourceID, evidence: false))
         }
     }
 
@@ -562,7 +562,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 next.append(entry)
             }
             metadataBySource[sourceID] = next
-            return (next, bumpSource(sourceID))
+            return (next, bumpSource(sourceID, evidence: false))
         }
     }
 
@@ -684,7 +684,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                         copy[idx].thumbnailRelPath = "objects/aa/bb/thumb-\(file.id.prefix(8))"
                     }
                     artifactsBySource[sourceID] = copy
-                    return (copy[idx], file, false, bumpSource(sourceID))
+                    return (copy[idx], file, false, bumpSource(sourceID, evidence: true))
                 }
             }
             throw StoreBoom.boom
@@ -723,7 +723,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 argument: argument
             )
             credibilityBySource[sourceID] = assessment
-            return (assessment, bumpSource(sourceID))
+            return (assessment, bumpSource(sourceID, evidence: false))
         }
     }
 
@@ -2258,7 +2258,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 }
             }
         }
-        return (subject, citation, observations, CatalogWriteEffects(sources: [sourceID]))
+        return (subject, citation, observations, CatalogWriteEffects(sources: [sourceID], citationSources: [sourceID], propertyUsage: true))
     }
 
     private static func floorDiv(_ a: Int64, _ b: Int64) -> Int64 {
@@ -2328,7 +2328,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             )
             let owner = owningSource(ofCitation: citation.id)
             bumpSource(owner, evidence: true)
-            return (citation, created, CatalogWriteEffects(sources: owner.map { [$0] } ?? []))
+            return (citation, created, CatalogWriteEffects(sources: owner.map { [$0] } ?? [], citationSources: owner.map { [$0] } ?? []))
         }
     }
 
@@ -2361,7 +2361,10 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             observations: drafts,
             allowEdgeRows: false
         )
-        return (written, CatalogWriteEffects(sources: withState { owningSource(ofCitation: citationID).map { [$0] } ?? [] }))
+        return (written, {
+            let owner = withState { owningSource(ofCitation: citationID).map { [$0] } ?? [] }
+            return CatalogWriteEffects(sources: owner, citationSources: owner, propertyUsage: true)
+        }())
     }
 
     private func addObservationsToCitation(
@@ -2411,7 +2414,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             citationsByID[citationID] = citation
             let owner = owningSource(ofCitation: citationID)
             bumpSource(owner, evidence: true)
-            return (citation, CatalogWriteEffects(sources: owner.map { [$0] } ?? []))
+            return (citation, CatalogWriteEffects(sources: owner.map { [$0] } ?? [], citationSources: owner.map { [$0] } ?? []))
         }
     }
 
@@ -2440,9 +2443,10 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 observationsBySource[sourceID] = list.map { $0.id == next.id ? next : $0 }
                 bumpSource(sourceID, evidence: true)
             }
-            return (next, CatalogWriteEffects(sources: observationsBySource.keys.filter { key in
+            let owners = observationsBySource.keys.filter { key in
                 observationsBySource[key]?.contains(where: { $0.id == next.id }) ?? false
-            }))
+            }
+            return (next, CatalogWriteEffects(sources: owners, citationSources: owners))
         }
     }
 
@@ -2462,7 +2466,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 bumpSource(sourceID, evidence: true)
             }
             pinsByObservation[observationID] = nil
-            return CatalogWriteEffects(sources: owners)
+            return CatalogWriteEffects(sources: owners, citationSources: owners, propertyUsage: true)
         }
     }
 
@@ -2486,7 +2490,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             citationsByID.removeValue(forKey: citationID)
             citationNotesByID.removeValue(forKey: citationID)
             bumpSource(owner, evidence: true)
-            return CatalogWriteEffects(sources: owner.map { [$0] } ?? [])
+            return CatalogWriteEffects(sources: owner.map { [$0] } ?? [], citationSources: owner.map { [$0] } ?? [])
         }
     }
 
@@ -3162,7 +3166,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     /// changes its evidence (artifacts, Subjects, Citations, Observations), or
     /// `.empty` when the Source is not in any list.
     @discardableResult
-    private func bumpSource(_ sourceID: String?, evidence: Bool = false) -> CatalogWriteEffects {
+    private func bumpSource(_ sourceID: String?, evidence: Bool) -> CatalogWriteEffects {
         guard let sourceID else { return .empty }
         for (project, var list) in sourcesByProject {
             guard let idx = list.firstIndex(where: { $0.id == sourceID }) else { continue }
@@ -3170,7 +3174,12 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             list[idx].updated = activity
             nextAuditRevision += 1
             sourcesByProject[project] = list
-            return CatalogWriteEffects(sources: evidence ? [sourceID] : [], sourceScopes: [sourceID], activity: activity)
+            return CatalogWriteEffects(
+                sources: evidence ? [sourceID] : [],
+                citationSources: evidence ? [sourceID] : [],
+                sourceScopes: [sourceID],
+                activity: activity
+            )
         }
         return .empty
     }

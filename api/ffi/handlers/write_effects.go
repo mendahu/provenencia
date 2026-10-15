@@ -8,15 +8,17 @@ import (
 func writeEffectsProto(res writes.Result) *engine.WriteEffects {
 	set := res.Effects
 	return &engine.WriteEffects{
-		Handles:       idStrings(set.Handles),
-		Sources:       idStrings(set.Sources),
-		SourceScopes:  idStrings(set.SourceScopes),
-		Vocabulary:    set.Vocabulary,
-		Structure:     set.Structure,
-		HeaderHandles: idStrings(set.HeaderDeps),
-		HandleScopes:  idStrings(set.HandleScopes),
-		Revision:      res.Revision,
-		RevisionAt:    res.At,
+		Handles:         idStrings(set.Handles),
+		Sources:         idStrings(set.Sources),
+		SourceScopes:    idStrings(set.SourceScopes),
+		CitationSources: idStrings(set.CitationSources),
+		PropertyUsage:   set.PropertyUsage,
+		Vocabulary:      set.Vocabulary,
+		Structure:       set.Structure,
+		HeaderHandles:   idStrings(set.HeaderDeps),
+		HandleScopes:    idStrings(set.HandleScopes),
+		Revision:        res.Revision,
+		RevisionAt:      res.At,
 	}
 }
 

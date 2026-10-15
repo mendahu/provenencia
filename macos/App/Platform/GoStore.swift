@@ -1668,6 +1668,8 @@ struct GoStore: GenealogyStore {
         CatalogWriteEffects(
             handles: effects.handles,
             sources: effects.sources,
+            citationSources: effects.citationSources,
+            propertyUsage: effects.propertyUsage,
             vocabulary: effects.vocabulary,
             structure: effects.structure,
             headerHandles: effects.headerHandles,

@@ -176,12 +176,7 @@ final class WorkspaceSession {
         if let source = mutation?.patchedSource {
             patchUpdatedSource(source)
         }
-        var invalidations = registry.invalidations(for: effects, project: projectKey)
-        if let mutation {
-            invalidations += registry.invalidations(by: mutation, project: projectKey)
-        }
-        var seen = Set<CatalogQueryInvalidation>()
-        apply(invalidations: invalidations.filter { seen.insert($0).inserted })
+        apply(invalidations: registry.invalidations(for: effects, by: mutation, project: projectKey))
         var progressSources = effects.sources
         if let mutation, let sourceID = graphProgressSource(of: mutation), !progressSources.contains(sourceID) {
             progressSources.append(sourceID)

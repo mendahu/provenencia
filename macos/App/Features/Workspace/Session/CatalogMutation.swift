@@ -57,10 +57,15 @@ enum CatalogMutation: Sendable, Equatable {
 /// reads and patches the rows whose last activity it moved.
 struct CatalogWriteEffects: Sendable, Equatable {
     var handles: [String] = []
-    /// Sources whose evidence changed: their graph, citation counts, and
-    /// citations by artifact. A note, metadata, or credibility change is not
-    /// evidence and is only in `sourceScopes`.
+    /// Sources whose graph changed (the Source graph and graph progress). A
+    /// note, metadata, or credibility change is only in `sourceScopes`.
     var sources: [String] = []
+    /// Sources whose citation reads moved: citation counts and citations by
+    /// artifact. A Subject edit is in `sources` and not here.
+    var citationSources: [String] = []
+    /// An Observation was created, deleted, or moved to another Property, so
+    /// the Properties workspace's `usedBy` counts changed.
+    var propertyUsage = false
     var vocabulary = false
     var structure = false
     var headerHandles: [String] = []

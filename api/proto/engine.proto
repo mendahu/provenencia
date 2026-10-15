@@ -594,8 +594,7 @@ message DeleteCitationResponse {
 // handles and Sources instead of a broad citation refetch.
 message WriteEffects {
   repeated string handles = 1;
-  // Sources whose evidence changed: what the Source graph, graph progress,
-  // citation counts, and citations by artifact load.
+  // Sources whose graph changed: what the Source graph and graph progress load.
   repeated string sources = 2;
   reserved 3;
   bool vocabulary = 4;
@@ -612,6 +611,12 @@ message WriteEffects {
   // Sources whose last activity this write moved (the audit source scope).
   // Swift patches the cached Sources list rows with (revision, revision_at).
   repeated string source_scopes = 10;
+  // Sources whose citation reads (citation counts, citations by artifact) this
+  // write moved.
+  repeated string citation_sources = 11;
+  // An Observation was created, deleted, or moved to another Property, so the
+  // Properties workspace's usedBy counts changed.
+  bool property_usage = 12;
 }
 
 message IngestArtifactFileRequest {

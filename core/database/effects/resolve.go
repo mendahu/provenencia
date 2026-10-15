@@ -90,6 +90,13 @@ func Resolve(tx *sql.Tx, changes []rowchange.Change) (Set, error) {
 		if err != nil {
 			return Set{}, err
 		}
+		set.CitationSources, err = appendPath(w, table, eff.CitationSource, set.CitationSources)
+		if err != nil {
+			return Set{}, err
+		}
+		if eff.usesProperty(ch) {
+			set.PropertyUsage = true
+		}
 		set.SourceScopes, err = appendPath(w, table, eff.SourceScope, set.SourceScopes)
 		if err != nil {
 			return Set{}, err
