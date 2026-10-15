@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/ref"
 )
@@ -416,7 +417,7 @@ func TestRecord(t *testing.T) {
 			run: func(t *testing.T, c *database.Catalog) {
 				tx := begin(t, c)
 				defer tx.Rollback()
-				_, err := recordResolved(t, tx, Revision{
+				_, err := Record(tx, Revision{
 					CreatedAt: fixedAt,
 					Changes: []rowchange.Change{{
 						EntityType: "  ",
@@ -424,7 +425,7 @@ func TestRecord(t *testing.T) {
 						Action:     rowchange.ActionCreate,
 						Fields:     map[string]rowchange.FieldDiff{},
 					}},
-				})
+				}, effects.Set{})
 				if !errors.Is(err, ErrInvalid) {
 					t.Fatalf("got %v", err)
 				}
