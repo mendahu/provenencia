@@ -327,7 +327,7 @@ CREATE TABLE audit_transaction_scopes (
 ) STRICT;
 ```
 
-Scopes are derived inside `audit.Record`, not passed by callers. `Record` stores one scope row per id each `scopeResolvers` entry resolves, through an effect path, which walks each change through its effect path using the change's own fields, the live row, or — for parents deleted in the same revision — the old values of that parent's delete change. `Record` rejects an entity type that is not a non-`None` effect, and a test fails if an audited type lacks one.
+Scopes are derived inside `audit.Record`, not passed by callers. `Record` stores one scope row per id each `scopeResolvers` entry resolves. Each resolver walks a change through its effect path using the change's own fields, the live row, or — for parents deleted in the same revision — the old values of that parent's delete change. `Record` rejects an entity type that is not a non-`None` effect, and a test fails if an audited type lacks one.
 
 There are two scope types, both from `scopeResolvers`:
 

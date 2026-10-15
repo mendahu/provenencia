@@ -9,7 +9,7 @@ alwaysApply: false
 Follow the project skill `.agents/skills/add-audit-scope/SKILL.md` and `docs/audit-revision-history.md` § 4.1.
 
 - Research writes call `audit.Record` inside their own tx. `Record` derives scopes; callers never pass them.
-- A new `EntityType` (or `rowFacet` entity type) needs a resolver in `core/database/audit/scopes.go` — `directSource`, a parent chain, or a deliberate `noScope`. `Record` rejects a missing one; `TestResolversCoverEveryEntityType` fails CI.
+- A new `EntityType` (or `rowFacet` entity type) needs a non-`None` entry in `core/database/effects/registry.go` (its `Source` / `HandleScope` paths). `Record` rejects a missing one; `TestResolversCoverEveryEntityType` fails CI.
 - Delete changes carry the parent FK (`source_id`, `artifact_id`, `citation_id`, …) in `DeletedRow`; the row is gone by `Record` time.
-- "Last activity under X" (Sources list "Updated", `updated_revision`) reads `audit_transaction_scopes`, never an `audit_changes` join on `entity_type`.
-- Conclusion-layer work (claims, pins, canonical entities, promote) carries no Source scope.
+- "Last activity under X" reads `audit_transaction_scopes`, never an `audit_changes` join on `entity_type`: the Sources list "Updated" (`updated_revision`, `scope_type = 'source'`) and Person / Event / Place last activity (`canonical_entity`, read with `audit.LatestByScope`).
+- Conclusion-layer work (claims, pins, promote) carries no Source scope; it stores a `canonical_entity` scope instead.
