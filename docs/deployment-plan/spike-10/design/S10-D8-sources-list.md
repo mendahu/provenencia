@@ -77,7 +77,7 @@ The researcher can find a Source quickly and see where each one stands. They can
 | Settings come back | Sort, type, status, and search are remembered for this project and this researcher. Leaving and coming back, or relaunching, shows the same four. A remembered value that no longer applies (a deleted type) reads as its default, silently. |
 | Filtering returns to the top | Changing the type, the status, the search, or the sort, or pressing Clear filters, scrolls the list to the top. Coming back with Back, Forward, or after relaunch returns to the row the researcher left; that restore already exists (S10-40) and is not redrawn. |
 | Nothing matches | When the filters hide every row, the list area shows one compact empty state with a Clear filters button. Clear filters resets type, status, and search. It does not change the sort. |
-| Counts can load after the rows | The rows and their times arrive together. The status counts can arrive a moment later. While they load with a status other than All set, the list area below the toolbar shows the same spinner as the first load, with no caption band and no empty state. If the counts fail to load with a status set, the list area shows the error callout the page uses for a failed load. With status All, rows show as usual and the graph zone shows its loading line. |
+| Counts can load after the rows | The rows and their times arrive together. The status comes from the Evidence graph counts the graph zone already shows, so it arrives when those counts do, a moment after the rows (today the graph zone shows a loading hairline then). While they load with a status other than All set, the list area below the toolbar shows the same spinner as the first load, with no caption band and no empty state. If the counts fail to load with a status set, the list area shows the error callout the page uses for a failed load. With status All, rows show as usual and the graph zone shows its loading line. |
 
 ### 2.1 What this board is not
 
@@ -113,7 +113,7 @@ The researcher can find a Source quickly and see where each one stands. They can
 | SRL-5 | Typing in search filters the rows on each keystroke: the trimmed query as one phrase, anywhere in the title or the ref, ignoring case and accents. Spaces alone are no search. Clearing the field shows the rows again. |
 | SRL-6 | Type, status, and search combine. The count line reads “{visible} of {total} sources” when any of them hides a row, and “{total} sources” otherwise. |
 | SRL-7 | When the filters hide every row, the list area shows a compact empty state: title “No matching sources”, message “Try another filter, or clear them to see every source.”, and a secondary Clear filters button. The button resets type to All types, status to All statuses, and search to empty. Sort is unchanged. The toolbar stays visible above it. |
-| SRL-8 | While the status counts load and a status other than All is set, the list area below the toolbar shows the first-load spinner, without the caption band. It never shows the SRL-7 empty state for a list that has not been counted yet. If the counts fail with a status set, the list area shows the page’s load-error callout. |
+| SRL-8 | While the Evidence graph counts load and a status other than All is set, the list area below the toolbar shows the first-load spinner, without the caption band. It never shows the SRL-7 empty state for a list that has not been counted yet. If the counts fail with a status set, the list area shows the page’s load-error callout. |
 | SRL-9 | Sort, type, status, and search persist per project and researcher, and restore when the Sources list is shown again, including after relaunch. A restored value that no longer applies reads as its default (a deleted type reads as All types), with no message. |
 | SRL-10 | Changing the type, status, search, or sort, or pressing Clear filters, on this visit scrolls the list to the top. Coming back to the list with Back, Forward, a history jump, or after relaunch returns to the row it was left on (S10-40, already shipped). |
 
@@ -143,14 +143,14 @@ This table is **binding**. Instance the Ship kit rows. Paths from `macos/App/` u
 | Sources list page | Snowflake | **Extend** | `Features/Sources/SourcesListView.swift` | Same page. The toolbar gains search and status; the filter-empty state changes (SRL-7); the spinner also covers counting (SRL-8). |
 | Split row | Snowflake | **Extend** | `Features/Sources/SourcesSplitRow.swift` | SRL-1, SRL-2. The column goes in the filing zone before the ref. The graph zone is unchanged. |
 | Last-updated cell | Component | **Extend** | `PVListDetailCell` *(extracted in S10-41)* from the detail cell S10-22 draws inside `PVList`, in `DesignSystem/Components/List/PVList.swift` | SRL-1, SRL-2. S10-22 draws the cell inline in the `PVList` row. S10-41 lifts it into one small view that `PVList` and `SourcesSplitRow` both instance. Not a Badge, not a Chip, not a second copy in the Sources feature. |
-| Last-updated text | Snowflake | Ship | `LastUpdatedDisplay` in `Platform/TimestampFormat.swift` (S10-22) | SRL-2. Text, help, spoken form, and the 136pt width. |
-| Search field | Component | Ship | `PVInput` with the search icon | SRL-3, SRL-5. As on the Properties page. Not a new search component. |
+| Last-updated text | — (Platform value) | Ship | `LastUpdatedDisplay` in `Platform/TimestampFormat.swift` (S10-22) | SRL-2. Text, help, spoken form, and the 136pt width. |
+| Search field | Component | Ship | `PVInput` with the search icon | SRL-3, SRL-5. The same composition as the Properties search field (`PVInput`, search icon), at the regular size of the neighboring selects, not the Properties page’s small size. Not a new search component. |
 | Type filter | Component | Ship | `PVSelect` | Unchanged options. |
 | Status select | Component | Ship | `PVSelect` | SRL-4. A second `PVSelect` beside the type filter. Not a segmented control, not chips. |
 | Sort | Component | Ship | `PVSelect` | Unchanged options. |
 | Count line | Snowflake | Ship | `SourcesListView` header | SRL-6. Existing “{visible} of {total} sources” string. |
 | Nothing matches | Component | **Extend** (copy and action) | `PVEmptyState`, compact, in `SourcesListView.listBody` | SRL-7. The state exists today for the type filter. It gets new copy (replacing “No sources for this type” / “Try another type, or choose All types.”) and a Clear filters `PVButton`, secondary, in its existing action slot. |
-| Counting | Snowflake | Ship | the first-load `ProgressView` in `SourcesListView` | SRL-8. Same spinner, now also shown while status counts load. |
+| Counting | Snowflake | Ship | the first-load `ProgressView` in `SourcesListView` | SRL-8. Same spinner, below the toolbar, while the Evidence graph counts load with a status set. Not a skeleton: do not draw a split-row skeleton. |
 | Evidence graph zone | Snowflake | Ship | `SourcesSplitRow` | Unchanged. No status badge here. |
 
 ### Explicit non-goals
