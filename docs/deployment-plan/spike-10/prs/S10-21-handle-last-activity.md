@@ -1,6 +1,6 @@
 # S10-21 — Handle last-activity scope
 
-**Status:** Planned
+**Status:** Landed in [#398](https://github.com/mendahu/provenencia/pull/398) (2026-10-14)
 **Spike / slice:** Spike 10 · Slice 6 — Lists and the Person page
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#s10-21--handle-last-activity-scope)
 **Brief:** — (no new chrome: an engine scope and list fields; the row cell is S10-22 from S10-D9, S10-D10, and S10-D11)
