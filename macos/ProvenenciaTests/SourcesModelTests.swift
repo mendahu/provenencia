@@ -452,12 +452,12 @@ struct SourcesModelTests {
         model.settings.query = "smith"
         #expect(model.visibleSources.map(\.id) == ["s1", "s2"])
         #expect(model.isFiltering)
-        #expect(model.countLine == "2 of 8 sources")
+        #expect(model.countLine(visibleCount: model.visibleSources.count) == "2 of 8 sources")
 
         model.settings.query = ""
         model.settings.typeFilterID = ""
         #expect(model.visibleSources.map(\.id).sorted() == ["s1", "s2", "s5"])
-        #expect(model.countLine == "3 of 8 sources")
+        #expect(model.countLine(visibleCount: model.visibleSources.count) == "3 of 8 sources")
 
         model.clearFilters()
         #expect(model.visibleSources.count == 8)
@@ -465,7 +465,7 @@ struct SourcesModelTests {
         #expect(model.settings.typeFilterID.isEmpty)
         #expect(model.settings.status == nil)
         #expect(model.settings.query.isEmpty)
-        #expect(model.countLine == "8 sources")
+        #expect(model.countLine(visibleCount: model.visibleSources.count) == "8 sources")
     }
 
     @Test func restoredTypeMissingFromTypesShowsEveryRow() async {
@@ -509,7 +509,7 @@ struct SourcesModelTests {
         )
         restored.settings.typeFilterID = "t1"
         #expect(restored.isAwaitingFilterData)
-        #expect(restored.countLine == L10n.Sources.countLine(total: 0))
+        #expect(restored.countLine(visibleCount: restored.visibleSources.count) == L10n.Sources.countLine(total: 0))
     }
 
     @Test func statusCountsFailureSurfacesAnErrorAndUnfilteredCount() async {
@@ -530,6 +530,6 @@ struct SourcesModelTests {
 
         model.settings.status = .filed
         #expect(model.statusCountsError != nil)
-        #expect(model.countLine == L10n.Sources.countLine(total: 2))
+        #expect(model.countLine(visibleCount: model.visibleSources.count) == L10n.Sources.countLine(total: 2))
     }
 }

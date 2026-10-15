@@ -121,17 +121,11 @@ final class SourcesModel {
     }
 
     func graphProgress(for sourceID: String) -> SourceGraphProgress? {
-        let handle: QueryHandle<[String: SourceGraphProgress]>? = session.queryHandle(
-            Self.sourceGraphProgressKey(for: session)
-        )
-        return handle?.value?[sourceID]
+        progressHandle?.value?[sourceID]
     }
 
     var graphCountsLoading: Bool {
-        let handle: QueryHandle<[String: SourceGraphProgress]>? = session.queryHandle(
-            Self.sourceGraphProgressKey(for: session)
-        )
-        guard let handle else { return true }
+        guard let handle = progressHandle else { return true }
         return handle.value == nil && handle.status != .ready
     }
 
@@ -139,13 +133,14 @@ final class SourcesModel {
         session.queryHandle(Self.sourceTypesListKey(for: session))
     }
 
+    private var progressHandle: QueryHandle<[String: SourceGraphProgress]>? {
+        session.queryHandle(Self.sourceGraphProgressKey(for: session))
+    }
+
     /// The progress handle's failure while a status filter needs its counts.
     var statusCountsError: Error? {
         guard settings.status != nil else { return nil }
-        let handle: QueryHandle<[String: SourceGraphProgress]>? = session.queryHandle(
-            Self.sourceGraphProgressKey(for: session)
-        )
-        guard let handle, handle.status == .error else { return nil }
+        guard let handle = progressHandle, handle.status == .error else { return nil }
         return handle.error
     }
 
@@ -221,7 +216,8 @@ final class SourcesModel {
             rows = rows.filter { $0.sourceTypeID == typeID }
         }
         if let status = settings.status {
-            rows = rows.filter { EvidenceStatus(graphProgress(for: $0.id)) == status }
+            let progress = progressHandle?.value
+            rows = rows.filter { EvidenceStatus(progress?[$0.id]) == status }
         }
         let query = trimmedQuery
         if !query.isEmpty {
@@ -267,11 +263,10 @@ final class SourcesModel {
         L10n.Sources.sortedBy(L10n.string(settings.sort.label).lowercased())
     }
 
-    var countLine: String {
+    func countLine(visibleCount visible: Int) -> String {
         if isAwaitingFilterData || statusCountsError != nil {
             return L10n.Sources.countLine(total: sources.count)
         }
-        let visible = visibleSources.count
         if !isFiltering || visible == sources.count {
             return L10n.Sources.countLine(total: sources.count)
         }
