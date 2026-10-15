@@ -110,6 +110,10 @@ func Resolve(tx *sql.Tx, changes []rowchange.Change) (Set, error) {
 		if err != nil {
 			return Set{}, err
 		}
+		set.HandleScopes, err = appendPath(w, table, eff.HandleScope, set.HandleScopes)
+		if err != nil {
+			return Set{}, err
+		}
 		if !eff.Structure.zero() {
 			ids, err := runPath(w, table, eff.Structure)
 			if err != nil {

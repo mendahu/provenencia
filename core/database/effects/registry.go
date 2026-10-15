@@ -27,6 +27,9 @@ type Set struct {
 	Handles      [][]byte
 	Sources      [][]byte
 	CacheSources [][]byte // Source graphs to drop; not an audit scope
+	// HandleScopes are the handles whose canonical_entity audit scope the
+	// batch moves (Effect.HandleScope); Handles is the recompute set.
+	HandleScopes [][]byte
 	Search       []SearchIDs
 	Vocabulary   bool
 	Structure    bool
