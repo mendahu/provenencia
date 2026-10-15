@@ -35,6 +35,17 @@ Run because round 1 had a blocker (X-1). One fresh reviewer checked every round-
 | X-8 | minor | "one parse per visible row" no longer true; cell and label each build the value | **Fixed.** §6 States says two builds per row and that a midnight mismatch for one render is accepted (D-9). |
 | X-9 | nit | D-4 did not say `var` | **Fixed.** D-4 reads `var updatedAt: String = ""`. |
 
+## Refresh — boards agreed (2026-10-15)
+
+The three agreed boards were folded in: a Lucide `history` icon in the column (`PVSymbol.history`), a 136pt column, “Last updated …” help, a faint dash for unknown, a 64pt skeleton bar. One fresh dry-run reviewer checked the changed parts against the code: no blockers, verdict Ready with changes.
+
+| ID | Severity | Finding | Answer |
+| --- | --- | --- | --- |
+| R-1 | minor | D-5 field list missed `isKnown` | **Fixed.** D-5 lists it. |
+| R-2 | minor | AC-1.5 did not say faint and icon like AC-1.4 | **Fixed.** AC-1.5 matches; T-5 checks `isKnown == false` for `"garbage"` too. |
+| R-3 | minor | No mechanism kept the column from shrinking | **Fixed.** D-7: `.fixedSize()` on the text, `layoutPriority(1)` on the column. |
+| R-4 | nit | STEP-5 said “width from the board” | **Fixed.** `columnWidth = 136`. |
+
 ## Verdict
 
-**Fits with changes, Ready with changes — all applied.** No open blocker, nothing to the user. The plan stays `Blocked — on board S10-D9, S10-D10, S10-D11`; its one open question is the board agreement (column width, frames).
+**Fits with changes, Ready with changes — all applied.** No open blocker, nothing to the user. After the refresh the plan is `Planned`: boards agreed 2026-10-15, no open question.
