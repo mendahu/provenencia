@@ -35,6 +35,9 @@ private struct GraphCanvasGridPatternRepresentable: NSViewRepresentable {
     }
 
     func updateNSView(_ view: GraphCanvasGridPatternView, context: Context) {
+        let spacingChanged = view.gridSpacing != gridSpacing
+        let magnificationChanged = abs(view.magnification - magnification) > 0.000_1
+        guard spacingChanged || magnificationChanged else { return }
         view.gridSpacing = gridSpacing
         view.magnification = magnification
         view.needsDisplay = true

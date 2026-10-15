@@ -78,6 +78,22 @@ struct CatalogArtifact: Sendable, Equatable {
     var file: CatalogFileRef?
     /// Thumbnail JPEG under `objects/…` (empty when fileless / non-image / skipped).
     var thumbnailRelPath: String = ""
+
+    /// The trimmed stored path when this Artifact has a file the system can open:
+    /// a file, a non-empty `fileID`, and a non-empty trimmed `relPath`.
+    var openableRelPath: String? {
+        guard let file, !fileID.isEmpty else { return nil }
+        let trimmed = file.relPath.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
+    }
+}
+
+extension CatalogSource {
+    /// The cover Artifact's id when the cover is a pinned Artifact. Nil otherwise.
+    var coverArtifactID: String? {
+        guard coverMode == "artifact", !primaryArtifactID.isEmpty else { return nil }
+        return primaryArtifactID
+    }
 }
 
 struct CatalogCredibilityGrade: Sendable, Equatable, Identifiable {

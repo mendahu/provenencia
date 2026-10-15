@@ -1338,10 +1338,11 @@ struct EvidenceGraphModelTests {
         model.selectSubject(id: "p1")
         let effect = model.handleKey(.arrow(dx: 1, dy: 0), hasFocus: false)
         #expect(effect.handled)
-        #expect(effect.moveSubjectID == "p1")
-        #expect(effect.moveFromX == 2)
-        #expect(effect.moveFromY == 3)
-        #expect(effect.moveDeltaX == 1)
+        #expect(effect.moves == [
+            EvidenceGraphModel.KeyEffect.SubjectMove(
+                subjectID: "p1", fromX: 2, fromY: 3, deltaX: 1, deltaY: 0
+            ),
+        ])
     }
 
     @Test func cardActionRoutesEdit() {
@@ -1618,5 +1619,371 @@ struct EvidenceGraphModelTests {
     @Test func openHandleHasNoPageYet() async {
         let (_, model) = await promotableModel()
         #expect(model.performCardAction(subjectID: "s-james", actionID: EvidenceSubjectCard.openHandleActionID) == nil)
+    }
+
+    // MARK: Open a file (S10-20)
+
+    private func artifact(
+        _ id: String,
+        label: String,
+        ref: String = "",
+        fileID: String? = nil,
+        relPath: String? = nil,
+        mediaType: String = "image/jpeg",
+        withFile: Bool = true
+    ) -> CatalogArtifact {
+        CatalogArtifact(
+            id: id,
+            ref: ref.isEmpty ? "ART-\(id.uppercased())" : ref,
+            sourceID: sourceID,
+            fileID: fileID ?? "file-\(id)",
+            label: label,
+            description: "",
+            file: withFile
+                ? CatalogFileRef(
+                    id: fileID ?? "file-\(id)",
+                    relPath: relPath ?? "objects/\(id).jpg",
+                    originalFilename: "\(id).jpg",
+                    mediaType: mediaType,
+                    byteSize: 4_200_000
+                )
+                : nil
+        )
+    }
+
+    @Test func fileBearingListKeepsCoverAndDropsFileless() {
+        let artifacts = [
+            artifact("a", label: "Page 1", ref: "ART-AAAA"),
+            artifact("b", label: "Page 2"),
+            artifact("c", label: "Loose note", withFile: false),
+            artifact("d", label: "", ref: "ART-7Q2KD"),
+            artifact("e", label: "No file id", fileID: ""),
+            artifact("f", label: "Blank path", relPath: "   "),
+        ]
+        let rows = EvidenceGraphFiles.fileBearing(artifacts, coverArtifactID: "a")
+        #expect(rows.map(\.id) == ["a", "b", "d"])
+        #expect(rows.last?.title == "ART-7Q2KD")
+        #expect(rows.map(\.titleIsRef) == [false, false, true])
+        #expect(rows.map(\.isCover) == [true, false, false])
+        #expect(EvidenceGraphFiles.initialID(in: rows, coverArtifactID: "a") == "a")
+        // A cover with no file falls back to the first row with one.
+        #expect(EvidenceGraphFiles.initialID(in: rows, coverArtifactID: "c") == "a")
+        #expect(EvidenceGraphFiles.initialID(in: [], coverArtifactID: nil) == nil)
+    }
+
+    @Test func fileKindTokenAndMissingCopy() {
+        #expect(EvidenceGraphFiles.kindToken(mediaType: "image/jpeg") == "JPEG")
+        #expect(EvidenceGraphFiles.kindToken(mediaType: "application/pdf")
+            == L10n.string(L10n.CitationComposer.artifactKindPDF))
+        #expect(EvidenceGraphFiles.kindToken(mediaType: "text/plain")
+            == L10n.string(L10n.CitationComposer.artifactKindUnknown))
+        #expect(
+            L10n.EvidenceGraph.fileNotFoundMessage(name: "Page 7", filename: "1881-peel-n-p7.jpg")
+                == "Page 7 points at 1881-peel-n-p7.jpg, which is no longer where Provenencia stored it."
+        )
+    }
+
+    @Test func resolvedFileFallsBackAndSelectFileClearsTheError() async {
+        let store = makeStore()
+        let model = makeModel(store: store)
+        await model.prepare()
+        let source = CatalogSource(
+            id: sourceID,
+            ref: "SRC-1",
+            sourceTypeID: "type-book",
+            title: "Census",
+            description: "",
+            coverMode: "artifact",
+            primaryArtifactID: "a",
+            hasArtifact: true
+        )
+        model.session.setQueryValue(
+            CatalogQueryKey.sourcesList(project: model.session.projectKey),
+            value: [source]
+        )
+        model.session.setQueryValue(
+            CatalogQueryKey.sourceWorkspace(project: model.session.projectKey, sourceId: sourceID),
+            value: CatalogSourceWorkspace(
+                source: source,
+                notes: [],
+                metadata: [],
+                artifacts: [
+                    artifact("b", label: "Page 2"),
+                    artifact("a", label: "Page 1"),
+                    artifact("c", label: "Loose note", withFile: false),
+                ],
+                credibility: nil
+            )
+        )
+        #expect(model.fileRows.map(\.id) == ["b", "a"])
+        #expect(model.resolvedFileArtifactID == "a")
+        model.selectedFileArtifactID = "missing"
+        #expect(model.resolvedFileArtifactID == "a")
+        model.fileOpenError = "File not found"
+        model.selectFile("b")
+        #expect(model.fileOpenError == nil)
+        #expect(model.resolvedFileArtifactID == "b")
+        #expect(model.citationCount(for: "b") == 0)
+    }
+
+    /// A model whose Source has the given file-bearing Artifacts. The project folder does
+    /// not exist, so every object is missing from disk.
+    private func fileModel(artifactIDs: [String]) async -> EvidenceGraphModel {
+        let store = makeStore()
+        let model = makeModel(store: store)
+        await model.prepare()
+        let source = CatalogSource(
+            id: sourceID,
+            ref: "SRC-1",
+            sourceTypeID: "type-book",
+            title: "Census",
+            description: "",
+            coverMode: "artifact",
+            primaryArtifactID: artifactIDs.first ?? "",
+            hasArtifact: true
+        )
+        model.session.setQueryValue(
+            CatalogQueryKey.sourcesList(project: model.session.projectKey),
+            value: [source]
+        )
+        model.session.setQueryValue(
+            CatalogQueryKey.sourceWorkspace(project: model.session.projectKey, sourceId: sourceID),
+            value: CatalogSourceWorkspace(
+                source: source,
+                notes: [],
+                metadata: [],
+                artifacts: artifactIDs.map { artifact($0, label: "Page \($0)") },
+                credibility: nil
+            )
+        )
+        return model
+    }
+
+    @Test func openSelectedFileReportsAMissingFileAndKeepsTheSelection() async {
+        let model = await fileModel(artifactIDs: ["a", "b"])
+        model.selectFile("b")
+        model.openSelectedFile()
+        #expect(
+            model.fileOpenError
+                == L10n.EvidenceGraph.fileNotFoundMessage(name: "Page b", filename: "b.jpg")
+        )
+        #expect(model.selectedFileArtifactID == "b")
+        #expect(model.resolvedFileArtifactID == "b")
+
+        model.selectFile("a")
+        #expect(model.fileOpenError == nil)
+        #expect(model.selectedFileArtifactID == "a")
+    }
+
+    @Test func armingAToolClearsTheMissingFileError() async {
+        let model = await fileModel(artifactIDs: ["a"])
+        func missingFileError() -> String? {
+            model.openSelectedFile()
+            return model.fileOpenError
+        }
+
+        #expect(missingFileError() != nil)
+        model.toggleArm(.person)
+        #expect(model.armedKind == .person)
+        #expect(model.fileOpenError == nil)
+
+        #expect(missingFileError() != nil)
+        model.toggleConnect()
+        #expect(model.armedConnect)
+        #expect(model.fileOpenError == nil)
+
+        #expect(missingFileError() != nil)
+        model.toggleSelect()
+        #expect(model.armedSelect)
+        #expect(model.fileOpenError == nil)
+    }
+
+    // MARK: Box select and group move (S10-20)
+
+    /// Persons `p1` (2, 3), `p2` (4, 3), `p3` (8, 3) and a participation bridge `b1` between them.
+    private func groupModel() -> (FakeStore, EvidenceGraphModel) {
+        let store = makeStore()
+        func person(_ id: String) -> CatalogSubject {
+            CatalogSubject(
+                id: id, ref: "CPR-\(id)", sourceID: sourceID, subjectTypeID: personTypeID,
+                label: id, description: ""
+            )
+        }
+        let bridge = CatalogSubject(
+            id: "b1", ref: "CPA-1", sourceID: sourceID, subjectTypeID: "type-participation",
+            label: "", description: ""
+        )
+        let subjects = [person("p1"), person("p2"), person("p3"), bridge]
+        let positions = [
+            CatalogSubjectPosition(subjectID: "p1", gridX: 2, gridY: 3),
+            CatalogSubjectPosition(subjectID: "p2", gridX: 4, gridY: 3),
+            CatalogSubjectPosition(subjectID: "p3", gridX: 8, gridY: 3),
+            CatalogSubjectPosition(subjectID: "b1", gridX: 3, gridY: 3),
+        ]
+        store.subjectsBySource[sourceID] = subjects
+        for position in positions { store.subjectPositionsBySubject[position.subjectID] = position }
+        let model = makeModel(store: store)
+        seedFields(model.session, store: store)
+        model.session.setQueryValue(
+            CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID),
+            value: graphRows(
+                sourceId: sourceID,
+                subjects: subjects,
+                positions: positions,
+                types: store.subjectTypesByProject[projectDir] ?? []
+            )
+        )
+        return (store, model)
+    }
+
+    @Test func rectangleSelectionKeepsBridges() {
+        let (_, model) = groupModel()
+        model.replacePrimarySelection(["p1", "b1"])
+        #expect(model.selectedSubjectIDs == ["p1", "b1"])
+        model.selectSubject(id: "b1")
+        #expect(model.selectedSubjectID == "b1")
+        model.replacePrimarySelection(["p1", "p2"])
+        #expect(model.selectedSubjectID == nil)
+        model.armedSelect = true
+        model.selectSubject(id: nil)
+        #expect(model.armedSelect)
+        #expect(model.selectedSubjectIDs.isEmpty)
+    }
+
+    @Test func groupDragKeepsTheSet() {
+        let (_, model) = groupModel()
+        model.replacePrimarySelection(["p1", "p2"])
+        #expect(model.beginGroupDrag(anchor: "p1") == ["p1", "p2"])
+        #expect(model.groupDragIDs == ["p1", "p2"])
+        #expect(model.selectedSubjectIDs == ["p1", "p2"])
+        model.replacePrimarySelection(["p1", "b1"])
+        #expect(model.beginGroupDrag(anchor: "b1") == ["b1", "p1"])
+        #expect(model.groupDragIDs == ["b1", "p1"])
+        #expect(model.selectedSubjectIDs == ["b1", "p1"])
+        #expect(model.beginGroupDrag(anchor: "p3") == ["p3"])
+        #expect(model.groupDragIDs == ["p3"])
+        #expect(model.selectedSubjectIDs == ["p3"])
+    }
+
+    @Test func arrowMovesEachSelectedSubject() {
+        let (_, model) = groupModel()
+        model.replacePrimarySelection(["p2", "p1", "b1"])
+        model.armedSelect = true
+        let effect = model.handleKey(.arrow(dx: 1, dy: 0), hasFocus: false)
+        #expect(effect.handled)
+        #expect(effect.moves == [
+            EvidenceGraphModel.KeyEffect.SubjectMove(subjectID: "p1", fromX: 2, fromY: 3, deltaX: 1, deltaY: 0),
+            EvidenceGraphModel.KeyEffect.SubjectMove(subjectID: "p2", fromX: 4, fromY: 3, deltaX: 1, deltaY: 0),
+            EvidenceGraphModel.KeyEffect.SubjectMove(subjectID: "b1", fromX: 3, fromY: 3, deltaX: 1, deltaY: 0),
+        ])
+        // Return and Space do nothing while Select is armed or several are selected.
+        #expect(model.handleKey(.return, hasFocus: false) == EvidenceGraphModel.KeyEffect())
+        #expect(model.handleKey(.space, hasFocus: false) == EvidenceGraphModel.KeyEffect())
+    }
+
+    @Test func moveSubjectsPatchesEachCellAndPersistsInOrder() async {
+        let (store, model) = groupModel()
+        model.replacePrimarySelection(["p1", "p2"])
+        let effect = model.handleKey(.arrow(dx: 1, dy: 0), hasFocus: false)
+        model.moveSubjects(effect.moves)
+        await model.lastPositionWrite?.value
+        #expect(model.gridCell(for: "p1")?.x == 3)
+        #expect(model.gridCell(for: "p2")?.x == 5)
+        #expect(model.gridCell(for: "p3")?.x == 8)
+        #expect(store.subjectPositionsBySubject["p1"]?.gridX == 3)
+        #expect(store.subjectPositionsBySubject["p2"]?.gridX == 5)
+    }
+
+    @Test func commitGroupDragSnapsEachCard() async {
+        let (store, model) = groupModel()
+        model.replacePrimarySelection(["p1", "p2"])
+        _ = model.beginGroupDrag(anchor: "p1")
+        let moved = model.commitGroupDrag(anchor: "p1", documentDelta: CGSize(width: 40, height: 0))
+        #expect(moved.map(\.subjectID) == ["p1", "p2"])
+        #expect(moved.map(\.gridX) == [3, 5])
+        #expect(moved.map(\.gridY) == [3, 3])
+        #expect(model.lastPositionWrite != nil)
+        #expect(model.groupDragIDs.isEmpty)
+        await model.lastPositionWrite?.value
+        #expect(store.subjectPositionsBySubject["p1"]?.gridX == 3)
+        #expect(store.subjectPositionsBySubject["p2"]?.gridX == 5)
+        // b1 was not selected, so the relationship stays on its cell.
+        #expect(model.gridCell(for: "b1")?.x == 3)
+        #expect(store.subjectPositionsBySubject["b1"]?.gridX == 3)
+    }
+
+    @Test func commitGroupDragMovesASelectedBridge() async {
+        let (store, model) = groupModel()
+        model.replacePrimarySelection(["p1", "b1"])
+        _ = model.beginGroupDrag(anchor: "p1")
+        let moved = model.commitGroupDrag(anchor: "p1", documentDelta: CGSize(width: 40, height: 0))
+        #expect(moved.map(\.subjectID) == ["p1", "b1"])
+        #expect(moved.map(\.gridX) == [3, 4])
+        await model.lastPositionWrite?.value
+        #expect(store.subjectPositionsBySubject["p1"]?.gridX == 3)
+        #expect(store.subjectPositionsBySubject["b1"]?.gridX == 4)
+        #expect(store.subjectPositionsBySubject["p2"]?.gridX == 4)
+    }
+
+    @Test func selectStaysAvailableWithoutAnArtifact() async {
+        let store = makeStore()
+        store.sourcesByProject[projectDir] = [
+            CatalogSource(
+                id: sourceID,
+                ref: "SRC-1",
+                sourceTypeID: "type-book",
+                title: "Bare",
+                description: "",
+                hasArtifact: false
+            ),
+        ]
+        let model = makeModel(store: store)
+        model.session.setQueryValue(
+            CatalogQueryKey.sourcesList(project: model.session.projectKey),
+            value: store.sourcesByProject[projectDir] ?? []
+        )
+        await model.prepare()
+        #expect(model.canCite == false)
+        model.replacePrimarySelection([])
+        model.toggleSelect()
+        #expect(model.armedSelect)
+        #expect(model.inputMode == .selecting)
+        model.toggleArm(.person)
+        #expect(model.armedKind == nil)
+        #expect(model.armedSelect)
+
+        // The cards chosen before Escape stay chosen.
+        let (_, grouped) = groupModel()
+        grouped.replacePrimarySelection(["p1", "p2"])
+        grouped.toggleSelect()
+        let effect = grouped.handleKey(.escape, hasFocus: false)
+        #expect(effect.handled)
+        #expect(grouped.armedSelect == false)
+        #expect(grouped.selectedSubjectIDs == ["p1", "p2"])
+        #expect(L10n.string(L10n.EvidenceGraph.toolSelectHelp) == "Hold Shift to select")
+    }
+
+    @Test func selectAndTheCiteToolsDisarmEachOther() async {
+        let store = makeStore()
+        let model = makeModel(store: store)
+        await model.prepare()
+        model.toggleSelect()
+        model.toggleArm(.person)
+        #expect(model.armedSelect == false)
+        #expect(model.inputMode == .placing(.person))
+        model.toggleSelect()
+        #expect(model.armedKind == nil)
+        #expect(model.inputMode == .selecting)
+        model.toggleConnect()
+        #expect(model.armedSelect == false)
+        #expect(model.inputMode == .connecting)
+        model.toggleSelect()
+        #expect(model.armedConnect == false)
+        // Pressing Select again disarms it. Disarm clears it as well.
+        model.toggleSelect()
+        #expect(model.inputMode == .idle)
+        model.toggleSelect()
+        model.disarm()
+        #expect(model.armedSelect == false)
     }
 }

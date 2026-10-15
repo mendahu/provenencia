@@ -24,6 +24,9 @@ enum GraphCanvasPointerToolMode: Equatable, Sendable {
     case idle
     case placing
     case connecting
+    /// Card click, drag, and hover match ``idle``; an empty-canvas drag draws a
+    /// selection rectangle instead of panning.
+    case selecting
 }
 
 /// Pure hit-test / click-vs-drag helpers (unit-tested).
@@ -55,6 +58,14 @@ enum GraphCanvasPointerHitTesting {
             }
         }
         return nil
+    }
+
+    /// Ids whose frame overlaps `rect`. A shared edge is not a hit.
+    static func idsIntersecting(
+        _ rect: CGRect,
+        in targets: [GraphCanvasHitTarget]
+    ) -> Set<String> {
+        Set(targets.filter { $0.frame.intersects(rect) }.map(\.id))
     }
 
     /// `true` when the pointer has moved at least `threshold` from `start`.

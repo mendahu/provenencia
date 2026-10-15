@@ -338,7 +338,8 @@ preferred height does not fit; scroll when neither side fits
 (`maxVisibleRows` × row height, default 10). The closed field is
 `PVInputChrome`. A full-width field takes the width it is offered. A
 fixed field hugs its label, and truncates when that offer is tighter.
-Help shows the full string.
+Help shows the full closed label, unless `closedHelp` is set: then help is
+that string (the Evidence graph's file select helps with the filename).
 
 **Empty / disabled.** Empty options cannot open. Disabled is opacity 0.45
 and ignores keys and pointer.

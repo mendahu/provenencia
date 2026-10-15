@@ -17,7 +17,7 @@ catalog types so geometry stays extractable (design note §13).
 | `GraphCanvasScrollView` | AppKit magnification bridge |
 | `GraphCanvasDocumentView` | Scroll document; owns mouse; hosts the base SwiftUI layer and the item layer; canvas accessibility group and rotors |
 | `GraphCanvasItemLayer` / `GraphCanvasItem` | One `NSHostingView` per item (card), positioned by AppKit; rebuilt only when the item's `Equatable` model changes |
-| `GraphCanvasPointerController` | Hit-test, select, drag, empty-canvas pan, place, connect |
+| `GraphCanvasPointerController` | Hit-test, select, drag (one card, or a group of peers that move with the anchor), empty-canvas pan, selection rectangle (marquee), place, connect |
 | `GraphCanvasHitTarget` / `GraphCanvasPointerHitTesting` | Document rects + pure helpers |
 | `GraphCanvasViewportController` | Pan deltas + live AppKit `convert` under cursor |
 | `GraphCanvasGridView` | Optional grid underlay: one repeated cell, not a document-sized bitmap |
@@ -30,7 +30,7 @@ Hosts supply product policy; GraphCanvas supplies plumbing.
 | Host must supply | Stays in the product folder |
 | --- | --- |
 | `hitTargets` (string ids + document rects) | Card chrome, palette, create dialogs |
-| Pointer `mode` + callbacks (select / drag end / place / connect) | Catalog / store / FFI / session queries |
+| Pointer `mode` + callbacks (select / drag began / drag end / marquee ended / place / connect) | Catalog / store / FFI / session queries |
 | Document `rootView` (paint-only SwiftUI base layer) | Honesty copy and product card content |
 | Items pushed to `graphCanvasItems` (id, origin, model, content, rotor entry) | Rotor names and labels (localized by the host) |
 | Magnification range + document size (host policy) | Auto-layout, virtualization, position tables |
@@ -54,7 +54,10 @@ start/end), never per drag frame.
 **Never read `GraphCanvasPointerController.offsets` in a view body** that does
 more than draw live geometry. Observation is per property: one read re-runs that
 body on every pointer event. Read `draggingItemID` (changes at drag start and end)
-to style the dragged item. The Evidence graph's edge layer is the only view that
+to style the dragged item. `draggingItemID` is the anchor, the card under the
+pointer. `draggingPeerIDs` is the rest of a group drag: `onDragBegan` returns every
+id that moves (anchor included), and each peer gets the anchor's offset. Read
+`draggingPeerIDs` the same way. The Evidence graph's edge layer is the only view that
 follows `offsets`.
 
 Item content keeps its own SwiftUI accessibility (label, actions, children). The
@@ -95,7 +98,8 @@ gesture locations into the hosted document correctly (design note §7.2).
 | Trackpad two-finger scroll | Pan |
 | Trackpad pinch | Zoom |
 | Mouse wheel | Zoom toward cursor (manual anchor; not `centeredAt:`) |
-| Click-drag on empty document | Pan (idle mode) |
+| Click-drag on empty document | Pan (idle mode, Shift up) |
+| Shift-drag on empty document, or any empty-document drag in `.selecting` mode | Marquee: a document-space rectangle. On release the pointer calls `onMarqueeEnded` with the ids of the hit targets it overlaps (a shared edge is not a hit). A drag that starts on a hit target never marquees |
 | Click / drag on hit targets | Product callbacks (select, move, place, connect) |
 
 Magnification range defaults are **zoom-out oriented** (`0.25` … `1.25`): overview of a

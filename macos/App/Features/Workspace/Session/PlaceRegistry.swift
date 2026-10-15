@@ -80,6 +80,8 @@ struct PlaceRegistry: Sendable {
                     .propertiesWorkspace(project: project),
                     .sourcesList(project: project),
                     .connectRules(project: project),
+                    .sourceWorkspace(project: project, sourceId: sourceId),
+                    .citationCounts(project: project, sourceId: sourceId),
                 ]
             },
             deepId: { $0.sourceId }

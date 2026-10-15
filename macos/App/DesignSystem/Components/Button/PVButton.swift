@@ -54,15 +54,21 @@ enum PVControlSize {
 struct PVButtonStyle: ButtonStyle {
     var variant: PVButtonVariant = .secondary
     var size: PVControlSize = .md
+    /// Square control: the label is the glyph, and the title is not drawn.
+    var iconOnly: Bool = false
 
     func makeBody(configuration: Configuration) -> some View {
-        PVButtonBody(configuration: configuration, variant: variant, size: size)
+        PVButtonBody(configuration: configuration, variant: variant, size: size, iconOnly: iconOnly)
     }
 }
 
 extension ButtonStyle where Self == PVButtonStyle {
-    static func pv(_ variant: PVButtonVariant = .secondary, size: PVControlSize = .md) -> PVButtonStyle {
-        PVButtonStyle(variant: variant, size: size)
+    static func pv(
+        _ variant: PVButtonVariant = .secondary,
+        size: PVControlSize = .md,
+        iconOnly: Bool = false
+    ) -> PVButtonStyle {
+        PVButtonStyle(variant: variant, size: size, iconOnly: iconOnly)
     }
 }
 
@@ -121,6 +127,10 @@ private struct PVMenuRowButtonBody: View {
 /// `loading`) — the web spec spins a `loader` glyph in place, but a native
 /// `ProgressView` reads better as a real AppKit spinner than an animated
 /// SF Symbol would.
+///
+/// `iconOnly` draws the same chrome as a square glyph button. The title is
+/// not shown; it is the accessibility label and the help tooltip, because
+/// `PVIcon` is hidden from assistive technologies. Pass an `icon`.
 struct PVButton: View {
     private let title: Text
     private let variant: PVButtonVariant
@@ -128,6 +138,7 @@ struct PVButton: View {
     private let icon: PVSymbol?
     private let iconRight: PVSymbol?
     private let loading: Bool
+    private let iconOnly: Bool
     private let action: () -> Void
 
     init(
@@ -137,6 +148,7 @@ struct PVButton: View {
         icon: PVSymbol? = nil,
         iconRight: PVSymbol? = nil,
         loading: Bool = false,
+        iconOnly: Bool = false,
         action: @escaping () -> Void
     ) {
         self.title = title.pvText
@@ -145,11 +157,12 @@ struct PVButton: View {
         self.icon = icon
         self.iconRight = iconRight
         self.loading = loading
+        self.iconOnly = iconOnly
         self.action = action
     }
 
     var body: some View {
-        Button(action: action) {
+        let control = Button(action: action) {
             HStack(spacing: PVSpacing.space3) {
                 if loading {
                     ProgressView()
@@ -157,14 +170,24 @@ struct PVButton: View {
                 } else if let icon {
                     PVIcon(icon, size: size.iconGlyphSize)
                 }
-                title
-                if let iconRight, !loading {
+                if !iconOnly {
+                    title
+                }
+                if let iconRight, !loading, !iconOnly {
                     PVIcon(iconRight, size: size.iconGlyphSize)
                 }
             }
         }
-        .buttonStyle(.pv(variant, size: size))
+        .buttonStyle(.pv(variant, size: size, iconOnly: iconOnly))
         .disabled(loading)
+
+        if iconOnly {
+            control
+                .accessibilityLabel(title)
+                .help(title)
+        } else {
+            control
+        }
     }
 }
 
@@ -215,6 +238,7 @@ private struct PVButtonBody: View {
     let configuration: ButtonStyleConfiguration
     let variant: PVButtonVariant
     let size: PVControlSize
+    var iconOnly: Bool = false
 
     /// Keyboard focus on the button this style is rendering. Unlike the
     /// system bordered styles, a custom `ButtonStyle` draws no focus
@@ -242,8 +266,8 @@ private struct PVButtonBody: View {
                 configuration.label
                     .font(size.buttonFont)
                     .foregroundStyle(palette.foreground)
-                    .padding(.horizontal, size.horizontalPadding)
-                    .frame(height: size.height)
+                    .padding(.horizontal, iconOnly ? 0 : size.horizontalPadding)
+                    .frame(width: iconOnly ? size.height : nil, height: size.height)
                     .background(
                         RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous)
                             .fill(showHover ? (palette.hoverBackground ?? palette.background) : palette.background)
@@ -272,6 +296,7 @@ private struct PVButtonBody: View {
         PVButton("Saving", variant: .primary, loading: true) {}
         PVButton("Delete field", variant: .danger, icon: .trash) {}
         PVButton("Reset search", variant: .link) {}
+        PVButton("Open", variant: .secondary, size: .sm, icon: .externalLink, iconOnly: true) {}
     }
     .padding(PVSpacing.space9)
     .background(PVColor.surfacePage)

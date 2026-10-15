@@ -77,7 +77,11 @@ final class GraphCanvasDocumentView: NSView {
 
     override func mouseDown(with event: NSEvent) {
         let doc = convert(event.locationInWindow, from: nil)
-        pointer.mouseDown(documentPoint: doc, windowPoint: event.locationInWindow)
+        pointer.mouseDown(
+            documentPoint: doc,
+            windowPoint: event.locationInWindow,
+            shiftDown: event.modifierFlags.contains(.shift)
+        )
     }
 
     override func mouseDragged(with event: NSEvent) {

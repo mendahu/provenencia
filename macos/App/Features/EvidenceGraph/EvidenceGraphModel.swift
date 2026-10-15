@@ -19,6 +19,9 @@ final class EvidenceGraphModel {
     var armedKind: EvidencePrimaryKind?
     /// Connect tool armed (mutually exclusive with `armedKind`).
     var armedConnect = false
+    /// Select tool armed: an empty-canvas drag draws a rectangle (exclusive with
+    /// Place and Connect). Shift-drag draws the same rectangle without it.
+    var armedSelect = false
     /// First primary chosen while connecting.
     var connectOriginID: String?
 
@@ -35,6 +38,9 @@ final class EvidenceGraphModel {
     /// Store write started by the latest `commitDrag`; tests await it instead of sleeping.
     @ObservationIgnored
     private(set) var lastPositionWrite: Task<Void, Never>?
+    /// Cards a drag in flight moves: the anchor first, then the other selected
+    /// subjects in snapshot order. Cleared when the drop commits.
+    private(set) var groupDragIDs: [String] = []
     @ObservationIgnored
     private var snapshotMemo: (
         rows: SourceGraphRows,
@@ -68,9 +74,20 @@ final class EvidenceGraphModel {
     var hoverGridY: Int64?
     /// Content-space point for the connect rubber-band (under cursor).
     var connectHoverPoint: CGPoint?
-    var selectedSubjectID: String?
+    /// Selected cards. A click or a rotor pick holds one; a rectangle holds several.
+    private(set) var selectedSubjectIDs: Set<String> = []
+    /// The only selected card, or nil when none or several are selected. Return,
+    /// Space, and the bridge highlight read this.
+    var selectedSubjectID: String? {
+        selectedSubjectIDs.count == 1 ? selectedSubjectIDs.first : nil
+    }
     /// Space/Return opened this card for inner controls (cleared on Esc / other select).
     var activatedSubjectID: String?
+    /// The Artifact file the header select shows. May name a file that is gone;
+    /// read ``resolvedFileArtifactID``.
+    var selectedFileArtifactID = ""
+    /// Set when Open could not find the selected file. Cleared by choosing a file.
+    var fileOpenError: String?
     /// Shown when drag / arrow persist fails after an optimistic patch.
     var toast: VocabularyToast?
     /// Canvas while a drag has carried a card past the resting document.
@@ -143,6 +160,14 @@ final class EvidenceGraphModel {
         CatalogQueryKey.connectRules(project: session.projectKey)
     }
 
+    private var workspaceKey: CatalogQueryKey {
+        CatalogQueryKey.sourceWorkspace(project: session.projectKey, sourceId: sourceID)
+    }
+
+    private var citationCountsKey: CatalogQueryKey {
+        CatalogQueryKey.citationCounts(project: session.projectKey, sourceId: sourceID)
+    }
+
     private var fieldsSnapshot: PropertiesSnapshot? {
         let handle: QueryHandle<PropertiesSnapshot>? = session.queryHandle(fieldsKey)
         return handle?.value
@@ -205,10 +230,14 @@ final class EvidenceGraphModel {
         let rules: QueryHandle<[CatalogConnectRule]> = session.query(connectRulesKey)
         let _: QueryHandle<PropertiesSnapshot> = session.query(fieldsKey)
         let _: QueryHandle<[CatalogSource]> = session.query(sourcesListKey)
+        let _: QueryHandle<CatalogSourceWorkspace> = session.query(workspaceKey)
+        let _: QueryHandle<[String: Int]> = session.query(citationCountsKey)
         _ = await session.readyValue(graphKey) as SourceGraphRows?
         _ = await session.readyValue(fieldsKey) as PropertiesSnapshot?
         _ = await session.readyValue(connectRulesKey) as [CatalogConnectRule]?
         _ = await session.readyValue(sourcesListKey) as [CatalogSource]?
+        _ = await session.readyValue(workspaceKey) as CatalogSourceWorkspace?
+        _ = await session.readyValue(citationCountsKey) as [String: Int]?
         if rules.status == .error, let message = connectRulesError {
             toast = VocabularyToast(
                 title: L10n.string(L10n.EvidenceGraph.connectRulesUnavailableTitle),
@@ -217,10 +246,10 @@ final class EvidenceGraphModel {
             )
         }
         if !canCite {
-            disarm()
+            disarmCiteTools()
         }
         if let id = session.consumePendingGraphSelection(sourceID: sourceID) {
-            selectedSubjectID = id
+            selectedSubjectIDs = [id]
         }
     }
 
@@ -228,7 +257,55 @@ final class EvidenceGraphModel {
         let _: QueryHandle<[CatalogSource]> = session.query(sourcesListKey)
         _ = await session.readyValue(sourcesListKey) as [CatalogSource]?
         if !canCite {
-            disarm()
+            disarmCiteTools()
+        }
+    }
+
+    // MARK: Files (S10-20)
+
+    /// This Source's Artifacts that have a file, in page order. Empty until the
+    /// workspace loads and when it fails to.
+    var fileRows: [EvidenceGraphFiles.Row] {
+        guard let handle: QueryHandle<CatalogSourceWorkspace> = session.queryHandle(workspaceKey),
+              handle.status == .ready,
+              let workspace = handle.value
+        else { return [] }
+        return EvidenceGraphFiles.fileBearing(
+            workspace.artifacts,
+            coverArtifactID: sourceRow?.coverArtifactID
+        )
+    }
+
+    /// The selected file when it is still listed, otherwise the cover or the first file.
+    var resolvedFileArtifactID: String {
+        let rows = fileRows
+        if rows.contains(where: { $0.id == selectedFileArtifactID }) {
+            return selectedFileArtifactID
+        }
+        return EvidenceGraphFiles.initialID(in: rows, coverArtifactID: sourceRow?.coverArtifactID) ?? ""
+    }
+
+    func citationCount(for artifactID: String) -> Int {
+        let handle: QueryHandle<[String: Int]>? = session.queryHandle(citationCountsKey)
+        return handle?.value?[artifactID] ?? 0
+    }
+
+    func selectFile(_ id: String) {
+        selectedFileArtifactID = id
+        fileOpenError = nil
+    }
+
+    /// Opens the selected file in its own app. Leaves the card selection and camera alone.
+    func openSelectedFile() {
+        let id = resolvedFileArtifactID
+        guard let row = fileRows.first(where: { $0.id == id }) else { return }
+        selectedFileArtifactID = id
+        fileOpenError = nil
+        if !ProjectFiles.openObject(projectDir: session.projectKey.projectDir, relPath: row.relPath) {
+            fileOpenError = L10n.EvidenceGraph.fileNotFoundMessage(
+                name: row.title,
+                filename: row.displayFilename
+            )
         }
     }
 
@@ -242,6 +319,8 @@ final class EvidenceGraphModel {
             disarm()
         } else {
             clearConnectState()
+            armedSelect = false
+            fileOpenError = nil
             armedKind = kind
             hoverGridX = nil
             hoverGridY = nil
@@ -262,6 +341,8 @@ final class EvidenceGraphModel {
             disarm()
         } else {
             armedKind = nil
+            armedSelect = false
+            fileOpenError = nil
             hoverGridX = nil
             hoverGridY = nil
             armedConnect = true
@@ -270,7 +351,26 @@ final class EvidenceGraphModel {
         }
     }
 
+    /// Arms or disarms Select. Available when the Source cannot be cited:
+    /// selecting cards writes nothing to the catalog. Arming it disarms Place and Connect.
+    func toggleSelect() {
+        if armedSelect {
+            armedSelect = false
+        } else {
+            disarmCiteTools()
+            fileOpenError = nil
+            armedSelect = true
+        }
+    }
+
+    /// Disarms every tool.
     func disarm() {
+        disarmCiteTools()
+        armedSelect = false
+    }
+
+    /// Disarms Place and Connect and leaves Select as it is.
+    func disarmCiteTools() {
         armedKind = nil
         hoverGridX = nil
         hoverGridY = nil
@@ -283,15 +383,30 @@ final class EvidenceGraphModel {
         connectHoverPoint = nil
     }
 
+    /// Replaces the selection with one card (a bridge is allowed), or empties it.
+    /// Leaves the Select tool as it was.
     func selectSubject(id: String?) {
-        selectedSubjectID = id
+        selectedSubjectIDs = id.map { [$0] } ?? []
         if activatedSubjectID != id {
             activatedSubjectID = nil
         }
     }
 
+    /// Replaces the selection with the cards among `ids` that are on this graph,
+    /// including relationship bridges.
+    func replacePrimarySelection(_ ids: Set<String>) {
+        let snapshot = currentSnapshot()
+        let cardIDs = Set(
+            (snapshot?.subjects ?? []).map(\.id) + (snapshot?.bridges ?? []).map(\.id)
+        )
+        selectedSubjectIDs = ids.intersection(cardIDs)
+        if let activated = activatedSubjectID, !selectedSubjectIDs.contains(activated) {
+            activatedSubjectID = nil
+        }
+    }
+
     func activateSubject(id: String) {
-        selectedSubjectID = id
+        selectedSubjectIDs = [id]
         activatedSubjectID = id
     }
 
@@ -309,11 +424,16 @@ final class EvidenceGraphModel {
     struct KeyEffect: Equatable {
         var handled = false
         var clearFocus = false
-        var moveSubjectID: String?
-        var moveFromX: Int64 = 0
-        var moveFromY: Int64 = 0
-        var moveDeltaX: Int64 = 0
-        var moveDeltaY: Int64 = 0
+        /// Cells to move, in snapshot subject order. Empty when nothing moves.
+        var moves: [SubjectMove] = []
+
+        struct SubjectMove: Equatable {
+            var subjectID: String
+            var fromX: Int64
+            var fromY: Int64
+            var deltaX: Int64
+            var deltaY: Int64
+        }
     }
 
     /// Keyboard policy for the graph. The view forwards `KeyPress` and applies focus.
@@ -325,11 +445,15 @@ final class EvidenceGraphModel {
                 disarm()
                 return KeyEffect(handled: true)
             }
+            if armedSelect {
+                armedSelect = false
+                return KeyEffect(handled: true)
+            }
             if activatedSubjectID != nil {
                 deactivateSubject()
                 return KeyEffect(handled: true)
             }
-            if selectedSubjectID != nil || hasFocus {
+            if !selectedSubjectIDs.isEmpty || hasFocus {
                 selectSubject(id: nil)
                 return KeyEffect(handled: true, clearFocus: true)
             }
@@ -345,17 +469,25 @@ final class EvidenceGraphModel {
             }
             return KeyEffect(handled: true)
         case .arrow(let dx, let dy):
-            guard inputMode == .idle, let selectedID = selectedSubjectID,
-                  let cell = gridCell(for: selectedID)
-            else { return KeyEffect() }
-            return KeyEffect(
-                handled: true,
-                moveSubjectID: selectedID,
-                moveFromX: cell.x,
-                moveFromY: cell.y,
-                moveDeltaX: dx,
-                moveDeltaY: dy
-            )
+            guard allowsCardMoves, let snapshot = currentSnapshot() else { return KeyEffect() }
+            // Subjects first, then bridges, in snapshot order.
+            let selected = selectedSubjectIDs
+            var moves = snapshot.subjects
+                .filter { selected.contains($0.id) }
+                .map {
+                    KeyEffect.SubjectMove(
+                        subjectID: $0.id, fromX: $0.gridX, fromY: $0.gridY, deltaX: dx, deltaY: dy
+                    )
+                }
+            moves += snapshot.bridges
+                .filter { selected.contains($0.id) }
+                .map {
+                    KeyEffect.SubjectMove(
+                        subjectID: $0.id, fromX: $0.gridX, fromY: $0.gridY, deltaX: dx, deltaY: dy
+                    )
+                }
+            guard !moves.isEmpty else { return KeyEffect() }
+            return KeyEffect(handled: true, moves: moves)
         }
     }
 
@@ -783,9 +915,7 @@ final class EvidenceGraphModel {
                 subjectID: target.id
             )
             session.apply(.deletedSubject(sourceId: sourceID))
-            if selectedSubjectID == target.id {
-                selectSubject(id: nil)
-            }
+            selectedSubjectIDs.remove(target.id)
             if activatedSubjectID == target.id {
                 activatedSubjectID = nil
             }
@@ -880,6 +1010,35 @@ final class EvidenceGraphModel {
         )
     }
 
+    /// Cards move (drag, arrow keys) while no sheet is up and no Place or
+    /// Connect tool is armed. Select armed still moves them.
+    private var allowsCardMoves: Bool {
+        inputMode == .idle || inputMode == .selecting
+    }
+
+    /// Starts a card drag. Keeps the selection when the anchor is a selected
+    /// card (a person, event, place, or bridge), otherwise the anchor alone
+    /// becomes the selection. Returns the cards that move, anchor included.
+    @discardableResult
+    func beginGroupDrag(anchor: String) -> Set<String> {
+        let handle: QueryHandle<SourceGraphRows>? = session.queryHandle(graphKey)
+        guard handle?.value != nil, let snapshot = currentSnapshot() else {
+            selectSubject(id: anchor)
+            groupDragIDs = [anchor]
+            return [anchor]
+        }
+        let cardIDs = snapshot.subjects.map(\.id) + snapshot.bridges.map(\.id)
+        if cardIDs.contains(anchor), selectedSubjectIDs.contains(anchor) {
+            groupDragIDs = [anchor] + cardIDs.filter {
+                $0 != anchor && selectedSubjectIDs.contains($0)
+            }
+        } else {
+            selectSubject(id: anchor)
+            groupDragIDs = [anchor]
+        }
+        return Set(groupDragIDs)
+    }
+
     /// Snaps a completed card drag. Patches the session cache **synchronously**
     /// so `@GestureState` can clear onto the new cell, then writes the store.
     @discardableResult
@@ -889,24 +1048,55 @@ final class EvidenceGraphModel {
         originGridY: Int64,
         documentDelta: CGSize
     ) -> (gridX: Int64, gridY: Int64)? {
-        guard inputMode == .idle else { return nil }
-        let origin = GraphCanvasGridMapping.contentPoint(gridX: originGridX, gridY: originGridY)
-        let dropped = CGPoint(
-            x: origin.x + documentDelta.width,
-            y: origin.y + documentDelta.height
+        guard allowsCardMoves else { return nil }
+        let snapped = snapAndPatch(
+            subjectID: subjectID,
+            originGridX: originGridX,
+            originGridY: originGridY,
+            documentDelta: documentDelta
         )
-        let cell = GraphCanvasGridMapping.gridCell(contentPoint: dropped)
-        let generation = bumpPositionGeneration(subjectID: subjectID)
-        applyPositionPatch(subjectID: subjectID, gridX: cell.gridX, gridY: cell.gridY)
-        lastPositionWrite = Task {
-            _ = await persistPositionOrRevert(
+        persistPositions([
+            PositionWrite(
                 subjectID: subjectID,
-                generation: generation,
-                gridX: cell.gridX,
-                gridY: cell.gridY
+                generation: snapped.generation,
+                gridX: snapped.gridX,
+                gridY: snapped.gridY
+            ),
+        ])
+        return (snapped.gridX, snapped.gridY)
+    }
+
+    /// Snaps a completed drag of the anchor and every card that moved with it,
+    /// each from its own cell by the same document delta. One write task
+    /// persists them in ``groupDragIDs`` order.
+    @discardableResult
+    func commitGroupDrag(
+        anchor: String,
+        documentDelta: CGSize
+    ) -> [(subjectID: String, gridX: Int64, gridY: Int64)] {
+        let ids = groupDragIDs.isEmpty ? [anchor] : groupDragIDs
+        groupDragIDs = []
+        guard allowsCardMoves else { return [] }
+        var writes: [PositionWrite] = []
+        for id in ids {
+            guard let cell = gridCell(for: id) else { continue }
+            let snapped = snapAndPatch(
+                subjectID: id,
+                originGridX: cell.x,
+                originGridY: cell.y,
+                documentDelta: documentDelta
+            )
+            writes.append(
+                PositionWrite(
+                    subjectID: id,
+                    generation: snapped.generation,
+                    gridX: snapped.gridX,
+                    gridY: snapped.gridY
+                )
             )
         }
-        return (cell.gridX, cell.gridY)
+        persistPositions(writes)
+        return writes.map { ($0.subjectID, $0.gridX, $0.gridY) }
     }
 
     @discardableResult
@@ -917,7 +1107,7 @@ final class EvidenceGraphModel {
         deltaX: Int64,
         deltaY: Int64
     ) async -> (gridX: Int64, gridY: Int64)? {
-        guard inputMode == .idle else { return nil }
+        guard allowsCardMoves else { return nil }
         let nextX = fromGridX + deltaX
         let nextY = fromGridY + deltaY
         let generation = bumpPositionGeneration(subjectID: subjectID)
@@ -929,6 +1119,28 @@ final class EvidenceGraphModel {
             gridY: nextY
         )
         return ok ? (nextX, nextY) : nil
+    }
+
+    /// Arrow-key move of every selected card by one cell step. Patches each
+    /// cell synchronously, then one task persists them in order.
+    func moveSubjects(_ moves: [KeyEffect.SubjectMove]) {
+        guard allowsCardMoves else { return }
+        var writes: [PositionWrite] = []
+        for move in moves {
+            let nextX = move.fromX + move.deltaX
+            let nextY = move.fromY + move.deltaY
+            let generation = bumpPositionGeneration(subjectID: move.subjectID)
+            applyPositionPatch(subjectID: move.subjectID, gridX: nextX, gridY: nextY)
+            writes.append(
+                PositionWrite(
+                    subjectID: move.subjectID,
+                    generation: generation,
+                    gridX: nextX,
+                    gridY: nextY
+                )
+            )
+        }
+        persistPositions(writes)
     }
 
     func ghostPlacedSubject() -> SourceGraphPlacedSubject? {
@@ -1009,20 +1221,12 @@ final class EvidenceGraphModel {
         }
     }
 
-    func toolAccessibilityLabel(for kind: EvidencePrimaryKind, armed: Bool) -> String {
-        let name = L10n.string(toolName(for: kind))
+    /// Spoken label of a palette tool: `name, tool, on|off`.
+    func toolAccessibilityLabel(name: LocalizedStringResource, armed: Bool) -> String {
         let state = armed
             ? L10n.string(L10n.EvidenceGraph.toolOn)
             : L10n.string(L10n.EvidenceGraph.toolOff)
-        return "\(name), \(L10n.string(L10n.EvidenceGraph.toolRole)), \(state)"
-    }
-
-    func connectToolAccessibilityLabel(armed: Bool) -> String {
-        let name = L10n.string(L10n.EvidenceGraph.toolConnect)
-        let state = armed
-            ? L10n.string(L10n.EvidenceGraph.toolOn)
-            : L10n.string(L10n.EvidenceGraph.toolOff)
-        return "\(name), \(L10n.string(L10n.EvidenceGraph.toolRole)), \(state)"
+        return "\(L10n.string(name)), \(L10n.string(L10n.EvidenceGraph.toolRole)), \(state)"
     }
 
     func toolName(for kind: EvidencePrimaryKind) -> LocalizedStringResource {
@@ -1087,6 +1291,46 @@ final class EvidenceGraphModel {
 
     private func primary(in snapshot: SourceGraphSnapshot?, id: String) -> SourceGraphPlacedSubject? {
         snapshot?.subjects.first { $0.id == id }
+    }
+
+    private struct PositionWrite {
+        var subjectID: String
+        var generation: Int
+        var gridX: Int64
+        var gridY: Int64
+    }
+
+    /// Drops a card at `origin + documentDelta`, snapped to the grid, and patches
+    /// the session cache. The store write is the caller's.
+    private func snapAndPatch(
+        subjectID: String,
+        originGridX: Int64,
+        originGridY: Int64,
+        documentDelta: CGSize
+    ) -> (gridX: Int64, gridY: Int64, generation: Int) {
+        let origin = GraphCanvasGridMapping.contentPoint(gridX: originGridX, gridY: originGridY)
+        let dropped = CGPoint(
+            x: origin.x + documentDelta.width,
+            y: origin.y + documentDelta.height
+        )
+        let cell = GraphCanvasGridMapping.gridCell(contentPoint: dropped)
+        let generation = bumpPositionGeneration(subjectID: subjectID)
+        applyPositionPatch(subjectID: subjectID, gridX: cell.gridX, gridY: cell.gridY)
+        return (cell.gridX, cell.gridY, generation)
+    }
+
+    /// One store task for a move: the writes persist in order.
+    private func persistPositions(_ writes: [PositionWrite]) {
+        lastPositionWrite = Task {
+            for write in writes {
+                _ = await persistPositionOrRevert(
+                    subjectID: write.subjectID,
+                    generation: write.generation,
+                    gridX: write.gridX,
+                    gridY: write.gridY
+                )
+            }
+        }
     }
 
     private func bumpPositionGeneration(subjectID: String) -> Int {

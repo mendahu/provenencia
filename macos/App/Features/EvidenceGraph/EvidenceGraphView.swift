@@ -209,68 +209,13 @@ private struct EvidenceGraphContent: View {
     }
 
     private var header: some View {
-        HStack(alignment: .center, spacing: PVSpacing.space5) {
-            Text(L10n.Workspace.evidenceGraphTitle)
-                .font(PVFont.display(size: PVTypeScale.h1, weight: PVFontWeight.medium))
-                .foregroundStyle(PVColor.textDisplay)
-            if !sourceTitle.isEmpty {
-                Text(verbatim: sourceTitle)
-                    .font(PVFont.mono(size: PVTypeScale.caption))
-                    .foregroundStyle(PVColor.textMuted)
-                    .lineLimit(1)
-            }
-            subjectCountLabel
-            Spacer(minLength: 0)
-            HStack(spacing: PVSpacing.space3) {
-                promoteAllButton
-                jumpToSourcePageButton
-            }
-        }
-        .padding(.horizontal, PVSpacing.space7)
-        .padding(.vertical, PVSpacing.space5)
-    }
-
-    private var subjectCountLabel: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 0) {
-            Text(verbatim: "(")
-            Text(verbatim: L10n.EvidenceGraph.subjectCount(count: subjects.count + bridges.count))
-            Text(verbatim: ")")
-        }
-        .font(PVFont.mono(size: PVTypeScale.caption))
-        .foregroundStyle(PVColor.textFaint)
-    }
-
-    private var promoteAllButton: some View {
-        PVButton(
-            L10n.EvidenceGraph.promoteAll,
-            variant: .secondary,
-            size: .sm,
-            icon: .arrowUpRight
-        ) {
-            if let location = model.promoteAllLocation() {
-                navigation.go(to: location)
-            }
-        }
-        .disabled(model.promoteAllLocation() == nil)
-        .accessibilityIdentifier("evidenceGraph.header.promoteAll")
-    }
-
-    private var jumpToSourcePageButton: some View {
-        let title = sourceTitle.trimmingCharacters(in: .whitespacesAndNewlines)
-        return PVButton(
-            L10n.EvidenceGraph.jumpToSourcePage,
-            variant: .secondary,
-            size: .sm,
-            icon: .library
-        ) {
-            navigation.go(to: model.sourcePageLocation(title: sourceTitle, ref: sourceRef))
-        }
-        .accessibilityLabel(
-            title.isEmpty
-                ? Text(L10n.EvidenceGraph.jumpToSourcePage)
-                : Text(verbatim: L10n.EvidenceGraph.jumpToSourcePageAccessibility(title: title))
+        EvidenceGraphHeader(
+            model: model,
+            navigation: navigation,
+            sourceTitle: sourceTitle,
+            sourceRef: sourceRef,
+            subjectCount: subjects.count + bridges.count
         )
-        .accessibilityIdentifier("evidenceGraph.header.jumpToSourcePage")
     }
 
     private var canvasPane: some View {
@@ -302,6 +247,17 @@ private struct EvidenceGraphContent: View {
                 if model.pendingImpact == nil, let deleteError = model.deleteError {
                     PVCallout(tone: .danger, message: deleteError)
                         .frame(width: 360, alignment: .trailing)
+                } else if model.pendingImpact == nil, model.deleteError == nil,
+                          let fileOpenError = model.fileOpenError,
+                          model.resolvedFileArtifactID == model.selectedFileArtifactID
+                {
+                    PVCallout(
+                        tone: .danger,
+                        title: L10n.EvidenceGraph.fileNotFoundTitle,
+                        message: fileOpenError
+                    )
+                    .frame(width: 360, alignment: .trailing)
+                    .accessibilityIdentifier("evidenceGraph.fileOpen.callout")
                 } else if !model.canCite {
                     noArtifactCallout
                         .frame(width: 360, alignment: .trailing)
@@ -466,18 +422,231 @@ private struct EvidenceGraphContent: View {
         if effect.clearFocus {
             focus = nil
         }
-        if let subjectID = effect.moveSubjectID {
-            Task {
-                _ = await model.moveSubject(
-                    subjectID: subjectID,
-                    fromGridX: effect.moveFromX,
-                    fromGridY: effect.moveFromY,
-                    deltaX: effect.moveDeltaX,
-                    deltaY: effect.moveDeltaY
-                )
-            }
+        if !effect.moves.isEmpty {
+            model.moveSubjects(effect.moves)
         }
         return effect.handled ? .handled : .ignored
+    }
+}
+
+// MARK: - Header
+
+/// Title and the trailing file controls. Open, Promote all, and Jump are
+/// either full labels or glyphs. The choice is the window width against the
+/// width of the full row, measured once off to the side. `ViewThatFits` is
+/// not used: its choice changes the width it is offered, so the row flips
+/// every pass and the canvas never gets a quiet layout.
+private struct EvidenceGraphHeader: View {
+    @Bindable var model: EvidenceGraphModel
+    let navigation: WorkspaceNavigation
+    let sourceTitle: String
+    let sourceRef: String?
+    let subjectCount: Int
+
+    @State private var headerWidth: CGFloat = 0
+    @State private var labeledWidth: CGFloat = 0
+
+    /// Full labels until the measured row is wider than the header.
+    private var iconOnly: Bool {
+        headerWidth > 1 && labeledWidth > headerWidth + 1
+    }
+
+    var body: some View {
+        HStack(alignment: .center, spacing: PVSpacing.space5) {
+            pageTitle
+                .fixedSize(horizontal: true, vertical: false)
+            if !sourceTitle.isEmpty {
+                sourceTitleText
+                    .lineLimit(1)
+                    .layoutPriority(-1)
+            }
+            subjectCountLabel
+                .fixedSize(horizontal: true, vertical: false)
+            Spacer(minLength: PVSpacing.space3)
+            actionCluster(iconOnly: iconOnly)
+        }
+        .background {
+            GeometryReader { proxy in
+                Color.clear.preference(key: EvidenceGraphHeaderWidthKey.self, value: proxy.size.width)
+            }
+        }
+        .background(alignment: .leading) {
+            labeledProbe
+        }
+        .padding(.horizontal, PVSpacing.space7)
+        .padding(.vertical, PVSpacing.space5)
+        .onPreferenceChange(EvidenceGraphHeaderWidthKey.self) { width in
+            guard width > 1, abs(width - headerWidth) > 0.5 else { return }
+            headerWidth = width
+        }
+        .onPreferenceChange(EvidenceGraphLabeledHeaderWidthKey.self) { width in
+            guard width > 1, abs(width - labeledWidth) > 0.5 else { return }
+            labeledWidth = width
+        }
+    }
+
+    /// The labeled row at its natural width, hidden. Its geometry is the
+    /// cutoff for `iconOnly` and does not depend on which buttons are showing.
+    private var labeledProbe: some View {
+        HStack(spacing: PVSpacing.space5) {
+            pageTitle
+            if !sourceTitle.isEmpty {
+                sourceTitleText
+                    .fixedSize(horizontal: true, vertical: false)
+            }
+            subjectCountLabel
+            Color.clear
+                .frame(width: PVSpacing.space3)
+                .accessibilityHidden(true)
+            actionCluster(iconOnly: false)
+        }
+        .fixedSize(horizontal: true, vertical: false)
+        .background {
+            GeometryReader { proxy in
+                Color.clear.preference(key: EvidenceGraphLabeledHeaderWidthKey.self, value: proxy.size.width)
+            }
+        }
+        .hidden()
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+
+    private var pageTitle: some View {
+        Text(L10n.Workspace.evidenceGraphTitle)
+            .font(PVFont.display(size: PVTypeScale.h1, weight: PVFontWeight.medium))
+            .foregroundStyle(PVColor.textDisplay)
+    }
+
+    private var sourceTitleText: some View {
+        Text(verbatim: sourceTitle)
+            .font(PVFont.mono(size: PVTypeScale.caption))
+            .foregroundStyle(PVColor.textMuted)
+    }
+
+    private var subjectCountLabel: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 0) {
+            Text(verbatim: "(")
+            Text(verbatim: L10n.EvidenceGraph.subjectCount(count: subjectCount))
+            Text(verbatim: ")")
+        }
+        .font(PVFont.mono(size: PVTypeScale.caption))
+        .foregroundStyle(PVColor.textFaint)
+    }
+
+    private func actionCluster(iconOnly: Bool) -> some View {
+        HStack(spacing: PVSpacing.space3) {
+            if !model.fileRows.isEmpty {
+                fileSelect(model.fileRows)
+            }
+            headerButtons(iconOnly: iconOnly)
+        }
+        .fixedSize(horizontal: true, vertical: false)
+    }
+
+    private func headerButtons(iconOnly: Bool) -> some View {
+        HStack(spacing: PVSpacing.space3) {
+            if !model.fileRows.isEmpty {
+                openFileButton(model.fileRows, iconOnly: iconOnly)
+            }
+            promoteAllButton(iconOnly: iconOnly)
+            jumpToSourcePageButton(iconOnly: iconOnly)
+        }
+    }
+
+    private func fileSelect(_ rows: [EvidenceGraphFiles.Row]) -> some View {
+        let resolved = model.resolvedFileArtifactID
+        let projectDir = model.session.projectKey.projectDir
+        return PVSelect(
+            selection: Binding(
+                get: { model.resolvedFileArtifactID },
+                set: { model.selectFile($0) }
+            ),
+            options: rows.map { PVSelectOption(value: $0.id, label: $0.title) },
+            size: .sm,
+            menuWidth: 360,
+            maxVisibleRows: 6,
+            rowHeight: 64,
+            accessibilityLabel: L10n.EvidenceGraph.artifactFile,
+            accessibilityIdentifier: "evidenceGraph.header.fileSelect",
+            closedHelp: rows.first(where: { $0.id == resolved })?.displayFilename
+        ) { option in
+            if let row = rows.first(where: { $0.id == option.id }) {
+                EvidenceGraphFileMenuRow(
+                    row: row,
+                    projectDir: projectDir,
+                    citationCount: model.citationCount(for: row.id)
+                )
+            } else {
+                Text(verbatim: option.label)
+            }
+        }
+        .frame(width: 208)
+    }
+
+    private func openFileButton(_ rows: [EvidenceGraphFiles.Row], iconOnly: Bool) -> some View {
+        let resolved = model.resolvedFileArtifactID
+        let filename = rows.first(where: { $0.id == resolved })?.displayFilename ?? ""
+        return PVButton(
+            L10n.EvidenceGraph.openFile,
+            variant: .secondary,
+            size: .sm,
+            icon: .externalLink,
+            iconOnly: iconOnly
+        ) {
+            model.openSelectedFile()
+        }
+        .help(Text(L10n.EvidenceGraph.openFileHelp))
+        .accessibilityLabel(Text(verbatim: L10n.EvidenceGraph.openFileAccessibility(filename: filename)))
+        .accessibilityIdentifier("evidenceGraph.header.openFile")
+    }
+
+    private func promoteAllButton(iconOnly: Bool) -> some View {
+        PVButton(
+            L10n.EvidenceGraph.promoteAll,
+            variant: .secondary,
+            size: .sm,
+            icon: .arrowUpRight,
+            iconOnly: iconOnly
+        ) {
+            if let location = model.promoteAllLocation() {
+                navigation.go(to: location)
+            }
+        }
+        .disabled(model.promoteAllLocation() == nil)
+        .accessibilityIdentifier("evidenceGraph.header.promoteAll")
+    }
+
+    private func jumpToSourcePageButton(iconOnly: Bool) -> some View {
+        let title = sourceTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        return PVButton(
+            L10n.EvidenceGraph.jumpToSourcePage,
+            variant: .secondary,
+            size: .sm,
+            icon: .library,
+            iconOnly: iconOnly
+        ) {
+            navigation.go(to: model.sourcePageLocation(title: sourceTitle, ref: sourceRef))
+        }
+        .accessibilityLabel(
+            title.isEmpty
+                ? Text(L10n.EvidenceGraph.jumpToSourcePage)
+                : Text(verbatim: L10n.EvidenceGraph.jumpToSourcePageAccessibility(title: title))
+        )
+        .accessibilityIdentifier("evidenceGraph.header.jumpToSourcePage")
+    }
+}
+
+private struct EvidenceGraphHeaderWidthKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
+    }
+}
+
+private struct EvidenceGraphLabeledHeaderWidthKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
     }
 }
 
@@ -506,6 +675,25 @@ private struct EvidenceGraphDragCanvasSize: View {
                     model.liveCanvas = nil
                 }
             }
+    }
+}
+
+/// The selection rectangle, in document space so it scales with zoom. This is
+/// the only reader of ``GraphCanvasPointerController/marqueeRect``: the document
+/// body must not follow a property that changes every pointer event.
+private struct EvidenceGraphMarquee: View {
+    @Bindable var pointer: GraphCanvasPointerController
+
+    var body: some View {
+        if let rect = pointer.marqueeRect {
+            Rectangle()
+                .fill(PVColor.accent.opacity(0.09))
+                .overlay(Rectangle().stroke(PVColor.accent, lineWidth: 1.5))
+                .frame(width: rect.width, height: rect.height)
+                .offset(x: rect.minX, y: rect.minY)
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
+        }
     }
 }
 
@@ -633,6 +821,8 @@ private struct EvidenceGraphDocumentBody: View {
                 emptyOverlay
             }
 
+            EvidenceGraphMarquee(pointer: pointer)
+
             EvidenceGraphDragCanvasSize(snapshot: snapshot, pointer: pointer, model: model)
         }
         .frame(width: contentSize.width, height: contentSize.height)
@@ -679,14 +869,14 @@ private struct EvidenceGraphDocumentBody: View {
         pointer.onDeselect = {
             model.selectSubject(id: nil)
         }
+        pointer.onDragBegan = { id in
+            model.beginGroupDrag(anchor: id)
+        }
+        pointer.onMarqueeEnded = { ids in
+            model.replacePrimarySelection(ids)
+        }
         pointer.onDragEnded = { id, delta in
-            guard let cell = model.gridCell(for: id) else { return }
-            _ = model.commitDrag(
-                subjectID: id,
-                originGridX: cell.x,
-                originGridY: cell.y,
-                documentDelta: delta
-            )
+            _ = model.commitGroupDrag(anchor: id, documentDelta: delta)
         }
         pointer.onPlace = { point in
             model.beginCreate(at: point)
@@ -718,7 +908,7 @@ private struct EvidenceGraphDocumentBody: View {
                 } else {
                     model.clearHover()
                 }
-            case .idle:
+            case .idle, .selecting:
                 break
             }
         }
@@ -728,6 +918,8 @@ private struct EvidenceGraphDocumentBody: View {
         switch inputMode {
         case .idle:
             pointer.mode = .idle
+        case .selecting:
+            pointer.mode = .selecting
         case .placing:
             pointer.mode = .placing
             model.selectSubject(id: nil)
@@ -794,10 +986,10 @@ private struct EvidenceGraphDocumentBody: View {
         let pressed = pointer.pressedCardAction
         func state(_ id: String) -> EvidenceCanvasCard.State {
             EvidenceCanvasCard.State(
-                isSelected: model.selectedSubjectID == id,
+                isSelected: model.selectedSubjectIDs.contains(id),
                 isActivated: model.activatedSubjectID == id,
                 isConnectingFrom: model.connectOriginID == id,
-                isDragging: pointer.draggingItemID == id,
+                isDragging: pointer.draggingItemID == id || pointer.draggingPeerIDs.contains(id),
                 canCite: model.canCite,
                 hoveredActionID: hovered?.cardID == id ? hovered?.actionID : nil,
                 pressedActionID: pressed?.cardID == id ? pressed?.actionID : nil
@@ -850,6 +1042,57 @@ private struct EvidenceGraphDocumentBody: View {
         )
         .frame(width: 420)
         .position(x: contentSize.width / 2, y: contentSize.height / 2)
+    }
+}
+
+/// One file in the header select's menu: thumbnail, title, Cover, then
+/// `filename · KIND · size` and the citation count.
+private struct EvidenceGraphFileMenuRow: View {
+    let row: EvidenceGraphFiles.Row
+    let projectDir: String
+    let citationCount: Int
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 10) {
+            CachedThumbnail(
+                projectDir: projectDir,
+                relPath: row.thumbnailRelPath,
+                mediaType: row.mediaType,
+                originalFilename: row.filename,
+                size: 48,
+                layout: .tile
+            )
+            VStack(alignment: .leading, spacing: 1) {
+                HStack(spacing: PVSpacing.space3) {
+                    Text(verbatim: row.title)
+                        .font(
+                            row.titleIsRef
+                                ? PVFont.mono(size: PVTypeScale.caption)
+                                : PVFont.body(size: PVTypeScale.caption)
+                        )
+                        .foregroundStyle(PVColor.textPrimary)
+                        .lineLimit(1)
+                    if row.isCover {
+                        Text(L10n.Sources.coverBadge)
+                            .pvMicroCaps()
+                            .foregroundStyle(PVColor.textMuted)
+                    }
+                }
+                Text(verbatim: L10n.EvidenceGraph.fileMeta(
+                    filename: row.displayFilename,
+                    kind: EvidenceGraphFiles.kindToken(mediaType: row.mediaType),
+                    size: IngestMediaPolicy.formatByteSize(row.byteSize)
+                ))
+                    .font(PVFont.mono(size: PVTypeScale.micro))
+                    .foregroundStyle(PVColor.textMuted)
+                    .lineLimit(1)
+                Text(verbatim: L10n.CitationComposer.artifactCitationCount(count: citationCount))
+                    .font(PVFont.mono(size: PVTypeScale.micro))
+                    .foregroundStyle(PVColor.textMuted)
+                    .lineLimit(1)
+            }
+        }
+        .padding(.vertical, PVSpacing.space2)
     }
 }
 

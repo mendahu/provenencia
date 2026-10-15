@@ -1,6 +1,6 @@
 # S10-20 — Open a file and box-select cards
 
-**Status:** Planned
+**Status:** Landed in [#396](https://github.com/mendahu/provenencia/pull/396) (2026-10-14)
 **Spike / slice:** Spike 10 · Slice 5 — Artifacts and multi-select
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#s10-20--open-file-and-box-select)
 **Brief:** [S10-D6](../design/S10-D6-evidence-graph.md) (EG-1…EG-7), board agreed 2026-10-14
@@ -360,3 +360,7 @@ None.
 
 **Title:** S10-20 — Open a file from the graph and box-select subject cards
 **Body:** objective in one sentence; what shipped against each US; AC evidence; deviations from the plan; manual check; `Plan: docs/deployment-plan/spike-10/prs/S10-20-open-file-box-select.md`.
+
+## Landed
+
+Differences from this plan: `PVSelect`'s `closedHelp` is the row's `displayFilename` (D-4) in every case, not the raw original filename D-3 names, so a row with no stored name still helps with the path's last component or the ref. `openSelectedFile()` also stores the resolved id in `selectedFileArtifactID`; without that, a researcher who never changed the select would not see the missing-file callout, whose guard compares the two. The arrow branch calls `moveSubjects` directly, not inside a `Task`, because it is not async and the patch has to land before the next key press reads the cells. `snapAndPatch` returns a non-optional tuple, since no case returned nil. `paletteTool`'s `icon` is a non-escaping `@ViewBuilder (Bool) -> some View`. The new pbxproj ids are `AA...0FE001` and `AA...0FE002`. The rectangle is a child of the base layer, so cards paint above it. The `evidenceGraph.palette.select` and `selectHelp` strings landed with STEP-2's other strings. The manual check was not run by the implementer; it is for the reviewer. The menu does not open the original object when `thumbnailRelPath` is empty; the user chose the MIME glyph over D-4's openable-path fallback. Arming Place, Connect, or Select clears the missing-file callout.

@@ -59,6 +59,7 @@ struct PVSelect<Row: View>: View {
     private let accessibilityLabelResource: LocalizedStringResource?
     private let accessibilitySpokenLabel: String?
     private let accessibilityIdentifier: String?
+    private let closedHelp: String?
     private let row: (PVSelectOption) -> Row
 
     @State private var session: PVSelectSession
@@ -86,6 +87,7 @@ struct PVSelect<Row: View>: View {
         accessibilityLabel: LocalizedStringResource? = nil,
         accessibilitySpokenLabel: String? = nil,
         accessibilityIdentifier: String? = nil,
+        closedHelp: String? = nil,
         @ViewBuilder row: @escaping (PVSelectOption) -> Row
     ) {
         self._selection = selection
@@ -104,6 +106,7 @@ struct PVSelect<Row: View>: View {
         self.accessibilityLabelResource = accessibilityLabel
         self.accessibilitySpokenLabel = accessibilitySpokenLabel
         self.accessibilityIdentifier = accessibilityIdentifier
+        self.closedHelp = closedHelp
         self.row = row
         self._session = State(initialValue: PVSelectSession(
             options: options,
@@ -379,7 +382,7 @@ struct PVSelect<Row: View>: View {
             .lineLimit(1)
             .truncationMode(.tail)
             .frame(minWidth: 0, alignment: .leading)
-            .help(Text(verbatim: triggerText))
+            .help(Text(verbatim: closedHelp ?? triggerText))
     }
 
     private var triggerBorder: some View {
@@ -422,7 +425,8 @@ extension PVSelect where Row == PVSelectPlainRow {
         isInvalid: Bool = false,
         accessibilityLabel: LocalizedStringResource? = nil,
         accessibilitySpokenLabel: String? = nil,
-        accessibilityIdentifier: String? = nil
+        accessibilityIdentifier: String? = nil,
+        closedHelp: String? = nil
     ) {
         self.init(
             selection: selection,
@@ -440,7 +444,8 @@ extension PVSelect where Row == PVSelectPlainRow {
             isInvalid: isInvalid,
             accessibilityLabel: accessibilityLabel,
             accessibilitySpokenLabel: accessibilitySpokenLabel,
-            accessibilityIdentifier: accessibilityIdentifier
+            accessibilityIdentifier: accessibilityIdentifier,
+            closedHelp: closedHelp
         ) { option in
             PVSelectPlainRow(text: option.label)
         }
