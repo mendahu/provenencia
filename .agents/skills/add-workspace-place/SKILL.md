@@ -60,9 +60,9 @@ handles; they do not own fetch-on-appear lifecycle.
 
 | Mechanism | Use when |
 | --- | --- |
-| **Patch** (`setQueryValue`, `.updatedSource`) | Overlay after a write that returned enough data. Always pair with `apply` so the registry still refetches. |
+| **Patch** (`patchCached`, `setQueryValue`, `.updatedSource`) | Overlay after a write that returned enough data. A write that reports its activity patches a list's last-updated cell through a `CatalogLastUpdatedPatch` declared on the list's registry row (`Spec.lastUpdated`); no refetch. For a change the write does not describe (a value, title, or membership), pair the patch with `apply` so the registry still refetches. |
 | **Invalidate + revalidate** (`session.apply`) | Default after a catalog write. `apply` marks keys stale and reloads any that are already warmed. Features do **not** `session.query` after `apply`. |
-| **Mark stale** (`markStaleOn`) | A write moves a value the current screen does not show, and refetching on every write is too costly (Sources list "Updated" order after a canvas write). `apply` flags the warmed key without a refetch; the next `query` / place visit reloads it, showing the cached frame meanwhile. |
+| **Mark stale** (`markStaleOn`, `whenHidden: .markStale`) | A write moves a value the current screen does not show, and refetching on every write is too costly. `apply` flags the warmed key without a refetch; the next `query` / place visit reloads it, showing the cached frame meanwhile. `whenHidden` (`.revalidate`, `.markStale`, `.evict`) sets what an invalidated key does when its place is not on screen. |
 | **Stale-while-revalidate** | Navigation reads — Back, sidebar return; show cached frame, `isFetching` while reloading. Not the only refresh path after a write. |
 
 Do **not** call `session.query()` from view `body` or from model computed properties
@@ -168,9 +168,10 @@ sync apply from history after list is ready; `fallbackToSectionRoot()` if deep i
 - Source type moved: `context.applySource(updated, typeChanged: true)` — patches the row, then refetches the page because the engine derives suggested rows from the type.
 - Metadata values: `context.notifyMetadataMutated()` (also busts the field list's `usedBy`).
 - Other page edits: `context.notifyWorkspaceMutated()` → bust `sourceWorkspace` key.
-- Any write under a Source moves its `updatedRevision` (engine audit scopes). `mutatedSourceWorkspace`, `mutatedSourceMetadata`, `mutatedSourceGraph`, `deletedSubject` and `savedCitation` **mark** `sourcesList` stale — do not add them to its `invalidateOn` (no list refetch per canvas write). A new Source child mutation joins that `markStaleOn` set.
+- Any write under a Source moves its `updated` activity (engine audit scopes). A write that returns `WriteEffects` carries its activity, and `apply(effects)` patches the Sources row in place. The mutation-path writes (`mutatedSourceWorkspace`, `mutatedSourceMetadata`, `mutatedSourceGraph`, `deletedSubject`, `savedCitation`) report none, so they **mark** `sourcesList` stale — do not add them to its `invalidateOn`. A new Source child mutation joins that `markStaleOn` set until it returns `WriteEffects`.
+- A new list with a last-updated cell: conform its row to `CatalogLastUpdatedRow` and add `lastUpdated: .rows(Row.self, scope: …)` to its registry row.
 - Vocabulary CRUD: registry `invalidateOn` + list patch where cheap. A patch is an
-  optimization on top of invalidation, never a substitute for it.
+  optimization on top of invalidation unless the write reported everything the patch needs (last-updated activity).
 
 ### 7. Tests
 
