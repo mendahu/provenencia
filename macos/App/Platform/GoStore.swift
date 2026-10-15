@@ -1659,7 +1659,8 @@ struct GoStore: GenealogyStore {
             cacheSources: effects.cacheSources,
             vocabulary: effects.vocabulary,
             structure: effects.structure,
-            headerHandles: effects.headerHandles
+            headerHandles: effects.headerHandles,
+            handleScopes: effects.handleScopes
         )
     }
 

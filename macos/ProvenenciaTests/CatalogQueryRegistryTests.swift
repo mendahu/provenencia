@@ -892,6 +892,23 @@ struct CatalogQueryRegistryTests {
         ])
     }
 
+    /// A scope move (a note save) changes a row's last-updated time, not what
+    /// the detail page shows, so the lists reload and the details do not.
+    @Test func handleScopesReloadListsNotDetails() {
+        let registry = CatalogQueryRegistry.standard
+        let project = ProjectKey(projectDir: projectDir)
+        let lists: [CatalogQueryInvalidation] = [
+            .key(.personsList(project: project)),
+            .key(.eventsList(project: project)),
+            .key(.placesList(project: project)),
+        ]
+        #expect(registry.invalidations(for: CatalogWriteEffects(handleScopes: ["e1"]), project: project) == lists)
+        #expect(registry.invalidations(
+            for: CatalogWriteEffects(handles: ["e1"], handleScopes: ["e1", "e2"]),
+            project: project
+        ) == lists + [.key(.conclusionDetail(project: project, entityId: "e1"))])
+    }
+
     /// Adding vocabulary no longer disturbs open Source pages: the page reads the
     /// shared lists, so there is nothing stale on it to refetch.
     @Test func addingVocabularyLeavesCachedSourcePagesAlone() async {

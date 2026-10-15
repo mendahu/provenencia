@@ -281,13 +281,13 @@ struct CatalogQueryRegistry: Sendable {
                 out.append(workspace)
             }
         }
-        if !effects.touchedHandles.isEmpty {
+        if !effects.touchedHandles.isEmpty || !effects.handleScopes.isEmpty {
             out.append(.key(.personsList(project: project)))
             out.append(.key(.eventsList(project: project)))
             out.append(.key(.placesList(project: project)))
-            for entityID in effects.touchedHandles {
-                out.append(.key(.conclusionDetail(project: project, entityId: entityID)))
-            }
+        }
+        for entityID in effects.touchedHandles {
+            out.append(.key(.conclusionDetail(project: project, entityId: entityID)))
         }
         return out
     }

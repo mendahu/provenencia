@@ -66,6 +66,9 @@ struct CatalogWriteEffects: Sendable, Equatable {
     var vocabulary = false
     var structure = false
     var headerHandles: [String] = []
+    /// Handles whose last-updated time this write moved. The lists reload for
+    /// them; `touchedHandles` (detail pages) does not include them.
+    var handleScopes: [String] = []
 
     static let empty = CatalogWriteEffects()
 
