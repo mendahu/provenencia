@@ -301,6 +301,23 @@ func TestHandlePaths(t *testing.T) {
 		}
 	})
 
+	t.Run("evidence pin reaches its handle", func(t *testing.T) {
+		pinID, err := uuid.NewV7()
+		if err != nil {
+			t.Fatal(err)
+		}
+		ch := rowchange.Change{
+			EntityType: "identity_claim_evidence", EntityID: pinID[:], Action: rowchange.ActionCreate,
+			Fields: map[string]rowchange.FieldDiff{
+				"identity_claim_id": {New: dashed(aliceRes.Claim.ID)},
+			},
+		}
+		got := mustHandleScopes(t, tx, ch)
+		if !idSet(got, aliceRes.Entity.ID) {
+			t.Fatalf("pin scoped %d handles", len(got))
+		}
+	})
+
 	t.Run("rejected member is not scoped", func(t *testing.T) {
 		if got := mustHandleScopes(t, tx, observationSubject(cara.ID)); len(got) != 0 {
 			t.Fatalf("rejected claim scoped %d handles", len(got))
