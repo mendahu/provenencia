@@ -15,6 +15,10 @@
 **Planned:** 2026-10-15 against `main` @ `360b405f` (boards folded in 2026-10-15)
 **Review:** [`S10-22-list-last-updated.review.md`](S10-22-list-last-updated.review.md) — Fits with changes, Ready with changes (applied); 2 rounds
 
+## Landed
+
+Differences from this plan: on current macOS the time separator before AM/PM is U+202F, so the cell reads `Today, 3:15 PM` with a narrow no-break space, and the tests normalize it to a plain space before comparing. `LastUpdatedDisplay` also conforms to `Equatable`. The yesterday test uses `if let` on `calendar.date(byAdding:)` instead of `!`. Section 11's risk mitigation was wrong: list specs set no `evictWhenHidden`, so a note save reloads every cached list at once, not on next show; reloading on show or patching rows in place is a follow-up. Review round 1 also moved `PVListDetail` and `PVListDetailColumn` below `PVList` so its header doc sits on the type.
+
 ### Implementer — read this first
 
 1. **This file is the whole task.** Read it top to bottom before you change code. Then read every file under **Current state** and load every skill under **Skills to load**.
