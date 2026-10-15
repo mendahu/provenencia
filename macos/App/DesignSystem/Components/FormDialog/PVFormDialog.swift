@@ -35,6 +35,7 @@ struct PVFormDialogCopy {
 
 /// Whether a mouse-down belongs to the sheet. A system open or save panel
 /// counts as inside: its clicks are not a click away from the form.
+@MainActor
 enum PVFormDialogClick {
     static func isInsideSheet(
         eventWindow: NSWindow?,
