@@ -18872,6 +18872,42 @@
           }
         }
       }
+    },
+    "sources.list.status.empty": {
+      "comment": "Sources evidence-status filter option: the Source's graph has no person, event, or place subjects",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Empty"
+          }
+        }
+      }
+    },
+    "sources.list.status.inProgress": {
+      "comment": "Sources evidence-status filter option: at least one person, event, or place on the graph is not promoted yet",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In progress"
+          }
+        }
+      }
+    },
+    "sources.list.status.fullyPromoted": {
+      "comment": "Sources evidence-status filter option: every person, event, and place on the graph is promoted",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fully promoted"
+          }
+        }
+      }
     }
   },
   "version": "1.1"

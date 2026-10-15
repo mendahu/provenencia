@@ -47,7 +47,8 @@ struct SourcesModelTests {
         store: FakeStore = FakeStore(),
         sources: [CatalogSource] = [],
         types: [CatalogSourceType] = [],
-        catalogCounts: CatalogCounts? = nil
+        catalogCounts: CatalogCounts? = nil,
+        settingsStore: SourcesListSettingsStore? = nil
     ) -> (SourcesModel, WorkspaceSession) {
         store.sourcesByProject[projectDir] = sources
         store.sourceTypesByProject[projectDir] = types
@@ -56,7 +57,8 @@ struct SourcesModelTests {
             session: session,
             userID: userID,
             store: store,
-            catalogCounts: catalogCounts
+            catalogCounts: catalogCounts,
+            settingsStore: settingsStore
         )
         return (model, session)
     }
@@ -85,6 +87,30 @@ struct SourcesModelTests {
             await waitForQuery(typesHandle)
         }
         model.syncCatalogCounts()
+    }
+
+    private func warmProgress(_ model: SourcesModel, session: WorkspaceSession) async {
+        if let handle: QueryHandle<[String: SourceGraphProgress]> = session.queryHandle(
+            SourcesModel.sourceGraphProgressKey(for: session)
+        ) {
+            await waitForQuery(handle)
+        }
+    }
+
+    private func progress(
+        _ id: String, primary: Int, filed: Int
+    ) -> SourceGraphProgress {
+        SourceGraphProgress(
+            sourceId: id, subjectCount: primary, observationCount: 0,
+            primaryCount: primary, filedCount: filed
+        )
+    }
+
+    private func tempSettingsFile() throws -> URL {
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("sources-settings-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        return dir.appendingPathComponent("settings.json", isDirectory: false)
     }
 
     @Test func sessionQueryPopulatesSourcesTypesAndPublishesCount() async {
@@ -144,7 +170,7 @@ struct SourcesModelTests {
             types: [photoType(), bookType()]
         )
         await warmLists(model, session: session)
-        model.typeFilterID = "t1"
+        model.settings.typeFilterID = "t1"
         #expect(model.visibleSources.map(\.id) == ["s3", "s1"])
     }
 
@@ -160,16 +186,16 @@ struct SourcesModelTests {
         await warmLists(model, session: session)
 
         // FakeStore + model: id DESC (s3 > s2 > s1).
-        model.sort = .added
+        model.settings.sort = .added
         #expect(model.visibleSources.map(\.id) == ["s3", "s2", "s1"])
 
-        model.sort = .updated
+        model.settings.sort = .updated
         #expect(model.visibleSources.map(\.id) == ["s2", "s3", "s1"])
 
-        model.sort = .az
+        model.settings.sort = .az
         #expect(model.visibleSources.map(\.title) == ["Alpha", "Bravo", "Charlie"])
 
-        model.sort = .za
+        model.settings.sort = .za
         #expect(model.visibleSources.map(\.title) == ["Charlie", "Bravo", "Alpha"])
     }
 
@@ -302,7 +328,7 @@ struct SourcesModelTests {
             types: [photoType()]
         )
         await warmLists(model, session: session)
-        model.sort = .updated
+        model.settings.sort = .updated
         #expect(model.visibleSources.map(\.id) == ["s2", "s1"])
 
         session.apply(CatalogWriteEffects(
@@ -354,5 +380,156 @@ struct SourcesModelTests {
                 countsLoading: false
             ) == "Open graph, 12 subjects, 48 observations"
         )
+    }
+
+    @Test func evidenceStatusFromCounts() {
+        #expect(SourcesModel.EvidenceStatus(nil) == .empty)
+        #expect(SourcesModel.EvidenceStatus(progress("s", primary: 0, filed: 0)) == .empty)
+        #expect(SourcesModel.EvidenceStatus(progress("s", primary: 2, filed: 1)) == .inProgress)
+        #expect(SourcesModel.EvidenceStatus(progress("s", primary: 2, filed: 2)) == .filed)
+    }
+
+    @Test func settingsRestoreOnNewModel() async throws {
+        let url = try tempSettingsFile()
+        let uuid = "00000000-0000-7000-8000-0000000000aa"
+        let storeA = try #require(SourcesListSettingsStore(projectUuid: uuid, userID: userID, fileURL: url))
+        let (a, _) = makeModel(types: [photoType()], settingsStore: storeA)
+        a.settings.sort = .az
+        a.settings.typeFilterID = "t1"
+        a.settings.status = .filed
+        a.settings.query = "smith"
+
+        let storeB = try #require(SourcesListSettingsStore(projectUuid: uuid, userID: userID, fileURL: url))
+        let (b, _) = makeModel(types: [photoType()], settingsStore: storeB)
+        #expect(b.settings == a.settings)
+        #expect(b.settings.sort == .az)
+        #expect(b.settings.status == .filed)
+    }
+
+    @Test func searchMatchesTitleAndRefIgnoringCaseAndAccents() async {
+        let (model, session) = makeModel(
+            sources: [
+                source(id: "s1", title: "Smith family Bible", typeID: "t1", ref: "SRC-1AAAA"),
+                source(id: "s2", title: "1851 census", typeID: "t1", ref: "SRC-4F2NP"),
+                source(id: "s3", title: "José Ruiz letter", typeID: "t1", ref: "SRC-3CCCC"),
+            ],
+            types: [photoType()]
+        )
+        await warmLists(model, session: session)
+
+        model.settings.query = "smith"
+        #expect(model.visibleSources.map(\.id) == ["s1"])
+        model.settings.query = "jose"
+        #expect(model.visibleSources.map(\.id) == ["s3"])
+        model.settings.query = "src-4f"
+        #expect(model.visibleSources.map(\.id) == ["s2"])
+        model.settings.query = "  "
+        #expect(model.visibleSources.count == 3)
+        #expect(!model.isFiltering)
+    }
+
+    @Test func filtersCombineAndClear() async {
+        let store = FakeStore()
+        var sources: [CatalogSource] = []
+        for index in 1 ... 8 {
+            let typeID = index <= 4 ? "t1" : "t2"
+            let title = index == 1 || index == 2 ? "Smith record \(index)" : "Other record \(index)"
+            sources.append(source(id: "s\(index)", title: title, typeID: typeID, ref: "SRC-0000\(index)"))
+        }
+        for id in ["s1", "s2", "s5"] {
+            store.graphProgressBySource[id] = progress(id, primary: 2, filed: 1)
+        }
+        store.graphProgressBySource["s3"] = progress("s3", primary: 1, filed: 1)
+        let (model, session) = makeModel(
+            store: store, sources: sources, types: [photoType(), bookType()]
+        )
+        await warmLists(model, session: session)
+        await warmProgress(model, session: session)
+
+        model.settings.sort = .az
+        model.settings.typeFilterID = "t1"
+        model.settings.status = .inProgress
+        model.settings.query = "smith"
+        #expect(model.visibleSources.map(\.id) == ["s1", "s2"])
+        #expect(model.isFiltering)
+        #expect(model.countLine == "2 of 8 sources")
+
+        model.settings.query = ""
+        model.settings.typeFilterID = ""
+        #expect(model.visibleSources.map(\.id).sorted() == ["s1", "s2", "s5"])
+        #expect(model.countLine == "3 of 8 sources")
+
+        model.clearFilters()
+        #expect(model.visibleSources.count == 8)
+        #expect(model.settings.sort == .az)
+        #expect(model.settings.typeFilterID.isEmpty)
+        #expect(model.settings.status == nil)
+        #expect(model.settings.query.isEmpty)
+        #expect(model.countLine == "8 sources")
+    }
+
+    @Test func restoredTypeMissingFromTypesShowsEveryRow() async {
+        let (model, session) = makeModel(
+            sources: [
+                source(id: "s1", title: "A", typeID: "t1"),
+                source(id: "s2", title: "B", typeID: "t1"),
+            ],
+            types: [photoType()]
+        )
+        await warmLists(model, session: session)
+        model.settings.typeFilterID = "deleted-type"
+        #expect(model.visibleSources.count == 2)
+        #expect(!model.isFiltering)
+        #expect(model.effectiveTypeFilterID.isEmpty)
+        #expect(model.settings.typeFilterID == "deleted-type")
+    }
+
+    @Test func statusFilterWaitsForCounts() async {
+        let store = FakeStore()
+        store.graphProgressBySource["s1"] = progress("s1", primary: 1, filed: 0)
+        let (model, session) = makeModel(
+            store: store,
+            sources: [
+                source(id: "s1", title: "A", typeID: "t1"),
+                source(id: "s2", title: "B", typeID: "t1"),
+            ],
+            types: [photoType()]
+        )
+        model.settings.status = .empty
+        #expect(model.isAwaitingFilterData)
+        await warmLists(model, session: session)
+        await warmProgress(model, session: session)
+        #expect(!model.isAwaitingFilterData)
+        #expect(model.visibleSources.map(\.id) == ["s2"])
+
+        let restored = SourcesModel(
+            session: makeSession(store: FakeStore()),
+            userID: userID,
+            store: FakeStore()
+        )
+        restored.settings.typeFilterID = "t1"
+        #expect(restored.isAwaitingFilterData)
+        #expect(restored.countLine == L10n.Sources.countLine(total: 0))
+    }
+
+    @Test func statusCountsFailureSurfacesAnErrorAndUnfilteredCount() async {
+        enum Boom: Error { case boom }
+        let store = FakeStore()
+        store.listSourceGraphProgressError = Boom.boom
+        let (model, session) = makeModel(
+            store: store,
+            sources: [
+                source(id: "s1", title: "A", typeID: "t1"),
+                source(id: "s2", title: "B", typeID: "t1"),
+            ],
+            types: [photoType()]
+        )
+        await warmLists(model, session: session)
+        await warmProgress(model, session: session)
+        #expect(model.statusCountsError == nil)
+
+        model.settings.status = .filed
+        #expect(model.statusCountsError != nil)
+        #expect(model.countLine == L10n.Sources.countLine(total: 2))
     }
 }

@@ -4727,6 +4727,24 @@ enum L10n {
             comment: "Sources sort option: reverse catalog order (stand-in until audit timestamps surface)"
         )
 
+        static let statusEmpty = LocalizedStringResource(
+            "sources.list.status.empty",
+            defaultValue: "Empty",
+            comment: "Sources evidence-status filter option: the Source's graph has no person, event, or place subjects"
+        )
+
+        static let statusInProgress = LocalizedStringResource(
+            "sources.list.status.inProgress",
+            defaultValue: "In progress",
+            comment: "Sources evidence-status filter option: at least one person, event, or place on the graph is not promoted yet"
+        )
+
+        static let statusFullyPromoted = LocalizedStringResource(
+            "sources.list.status.fullyPromoted",
+            defaultValue: "Fully promoted",
+            comment: "Sources evidence-status filter option: every person, event, and place on the graph is promoted"
+        )
+
         static let sortAZ = LocalizedStringResource(
             "sources.list.sort.az",
             defaultValue: "Alphabetical",

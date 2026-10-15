@@ -10,6 +10,7 @@ struct SourcesListView: View {
     init(
         session: WorkspaceSession,
         userID: String,
+        projectUuid: String,
         store: any GenealogyStore,
         catalogCounts: CatalogCounts? = nil
     ) {
@@ -18,7 +19,8 @@ struct SourcesListView: View {
                 session: session,
                 userID: userID,
                 store: store,
-                catalogCounts: catalogCounts
+                catalogCounts: catalogCounts,
+                settingsStore: SourcesListSettingsStore(projectUuid: projectUuid, userID: userID)
             )
         )
     }
@@ -124,10 +126,7 @@ private struct SourcesListContent: View {
                 model.syncCatalogCounts()
             }
         }
-        .onChange(of: model.sort) { _, _ in
-            navigation.go(to: navigation.currentLocation.withListScrollAnchor(nil))
-        }
-        .onChange(of: model.typeFilterID) { _, _ in
+        .onChange(of: model.settings) { _, _ in
             navigation.go(to: navigation.currentLocation.withListScrollAnchor(nil))
         }
         .accessibilityIdentifier("sources")
@@ -204,7 +203,10 @@ private struct SourcesListContent: View {
             )
         }
         return PVSelect(
-            selection: $model.typeFilterID,
+            selection: Binding(
+                get: { model.effectiveTypeFilterID },
+                set: { model.settings.typeFilterID = $0 }
+            ),
             options: options,
             icon: .filter,
             menuWidth: 220,
@@ -224,8 +226,8 @@ private struct SourcesListContent: View {
         }
         return PVSelect(
             selection: Binding(
-                get: { model.sort.rawValue },
-                set: { if let sort = SourcesModel.Sort(rawValue: $0) { model.sort = sort } }
+                get: { model.settings.sort.rawValue },
+                set: { if let sort = SourcesModel.Sort(rawValue: $0) { model.settings.sort = sort } }
             ),
             options: options,
             icon: .sort,
