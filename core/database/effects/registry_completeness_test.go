@@ -69,5 +69,10 @@ func TestGradeTablesHaveNoHandles(t *testing.T) {
 }
 
 func hasWork(e Effect) bool {
-	return !e.Source.zero() || !e.CacheSource.zero() || !e.Handles.zero() || !e.Structure.zero() || len(e.Search) > 0 || e.Vocabulary
+	for _, p := range e.paths() {
+		if !p.zero() {
+			return true
+		}
+	}
+	return len(e.Search) > 0 || e.Vocabulary
 }

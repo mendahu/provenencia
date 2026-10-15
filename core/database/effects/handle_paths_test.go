@@ -227,6 +227,9 @@ func TestHandlePaths(t *testing.T) {
 		if !idSet(got, bostonRes.Entity.ID, bobRes.Entity.ID, eveRes.Entity.ID) {
 			t.Fatalf("uncertain edit resolved %d handles", len(got))
 		}
+		if got := mustHandleScopes(t, tx, uncertain); len(got) != 0 {
+			t.Fatalf("uncertain edit scoped %d handles", len(got))
+		}
 	})
 
 	t.Run("accepted on old or new status", func(t *testing.T) {
@@ -271,6 +274,38 @@ func TestHandlePaths(t *testing.T) {
 			t.Fatalf("date value resolved %d handles", len(got))
 		}
 	})
+
+	t.Run("observation note reaches member handle", func(t *testing.T) {
+		noteID, err := uuid.NewV7()
+		if err != nil {
+			t.Fatal(err)
+		}
+		ch := rowchange.Change{
+			EntityType: "observation_note", EntityID: noteID[:], Action: rowchange.ActionCreate,
+			Fields: map[string]rowchange.FieldDiff{
+				"observation_id": {New: dashed(created.Observations[0].ID)},
+			},
+		}
+		got := mustHandleScopes(t, tx, ch)
+		if !idSet(got, bostonRes.Entity.ID) {
+			t.Fatalf("note scoped %d handles", len(got))
+		}
+	})
+
+	t.Run("subject move scopes both handles", func(t *testing.T) {
+		ch := observationSubject(bob.ID)
+		ch.Fields["subject_id"] = rowchange.FieldDiff{Old: dashed(alice.ID), New: dashed(bob.ID)}
+		got := mustHandleScopes(t, tx, ch)
+		if !idSet(got, aliceRes.Entity.ID, bobRes.Entity.ID) {
+			t.Fatalf("subject move scoped %d handles", len(got))
+		}
+	})
+
+	t.Run("rejected member is not scoped", func(t *testing.T) {
+		if got := mustHandleScopes(t, tx, observationSubject(cara.ID)); len(got) != 0 {
+			t.Fatalf("rejected claim scoped %d handles", len(got))
+		}
+	})
 }
 
 func dashed(id []byte) string {
@@ -293,6 +328,15 @@ func observationSubject(subjectID []byte) rowchange.Change {
 func mustHandles(t *testing.T, tx *sql.Tx, changes ...rowchange.Change) [][]byte {
 	t.Helper()
 	got, err := effects.Handles(tx, changes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return got
+}
+
+func mustHandleScopes(t *testing.T, tx *sql.Tx, changes ...rowchange.Change) [][]byte {
+	t.Helper()
+	got, err := effects.HandleScopes(tx, changes)
 	if err != nil {
 		t.Fatal(err)
 	}
