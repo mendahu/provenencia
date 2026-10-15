@@ -1,6 +1,6 @@
 # S10-22 — Last updated on People, Events, and Places
 
-**Status:** In progress
+**Status:** Landed in [#402](https://github.com/mendahu/provenencia/pull/402) (2026-10-15)
 **Spike / slice:** Spike 10 · Slice 6 — Lists and the Person page
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#s10-22--last-updated-on-people-events-and-places)
 **Brief:** [S10-D9](../design/archive/S10-D9-persons-list.md) (PSL-1…PSL-6), [S10-D10](../design/archive/S10-D10-events-list.md) (EVL-1…EVL-4), [S10-D11](../design/archive/S10-D11-places-list.md) (PLL-1…PLL-4); boards agreed 2026-10-15
@@ -14,6 +14,19 @@
 **Context:** [`core/database/effects/README.md`](../../../../core/database/effects/README.md), [S10-21 plan](S10-21-handle-last-activity.md), working rules "**Last updated** is an audit scope, not a timestamp column" and "**The Sources list is one page.**" in [`../deployment-plan.md`](../deployment-plan.md)
 **Planned:** 2026-10-15 against `main` @ `360b405f` (boards folded in 2026-10-15; rework amended 2026-10-15 against branch head `97a208b1`)
 **Review:** [`S10-22-list-last-updated.review.md`](S10-22-list-last-updated.review.md) — initial plan 2 rounds; boards refresh; rework 2 rounds, no open blocker
+
+## Landed
+
+Differences from this plan:
+- macOS puts U+202F before AM/PM; the cell reads `Today, 3:15 PM` with a narrow no-break space, and tests normalize it to a plain space before comparing.
+- `PVListDetail` and `PVListDetailColumn` sit below `PVList` so its header doc stays on the type.
+- D-23's `stale:` argument, `staleMarks(by:)`, and `markStaleOn` were deleted outright: D-24 removed their only user. The deduped union of effects and mutation invalidations lives in `CatalogQueryRegistry.invalidations(for:by:project:)`.
+- D-25 and T-18 named "positions" as a `CacheSource` table; it was `identity_claims` and `identity_claim_evidence` (positions are `None`). Those two kept the old path as `Source`, without `SourceScope`. `citation_notes` and `observation_notes` also lost `Source` (no evidence read loads them).
+- D-27 put `CitationSource` on `date_values` and `name_values` too, through `valueSource(col)`, so a value edit reloads that one Source's citation reads.
+- D-28 was rewritten after the R3 implementer stopped: rewriting the composer's location remounts it (`CitationComposerEntry.identityKey` includes the Artifact). `CitationComposerContext.applyWrite` reloads the Artifact list the composer shows instead.
+- `promote/bridges_test.go` resolves inline instead of calling `recordResolved`; `FakeStore.bumpSource` takes a required `evidence:`.
+- The STEP-15 sweep still finds old symbol names in S10-21's landed plan, review, and ship logs; they are history and were left as written.
+- Not done here (follow-ups): writes that still return no `WriteEffects` (Source create/update/cover/delete, promote, Property writes); a visible list reloads in full when a handle's values change; a metadata value save reloads the visible `metadataFieldsList` (`COUNT(*)` per field); `Resolve` walks a shared path once per field; the time of day for older changes is hover-only.
 
 ## Rework (2026-10-15)
 

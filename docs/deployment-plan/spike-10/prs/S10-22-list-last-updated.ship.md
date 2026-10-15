@@ -1,7 +1,7 @@
 # Ship log — S10-22 Last updated on People, Events, and Places
 
 **Plan:** [`S10-22-list-last-updated.md`](S10-22-list-last-updated.md) · **Branch:** `s10-22-list-last-updated` · **PR:** [#402](https://github.com/mendahu/provenencia/pull/402)
-**State:** fixing R3
+**State:** ready
 
 Base: `main` @ `832ccc22` (planning base `360b405f`; the only change since, #400, touches `PVFormDialog` and none of the plan's Current state files).
 
@@ -212,3 +212,7 @@ Files: `macos/App/Features/CitationComposer/CitationComposerContext.swift` (`app
 Failing test first: warm `citationsByArtifact(a1)`; composer place visible without `artifactId`; context `artifactID == "a1"`; `context.applyWrite(CatalogWriteEffects(sources: ["s1"], citationSources: ["s1"]))` → the `a1` list handle is fetching.
 Do: plan D-28 (rewritten).
 Check: the test passes; the composer tests pass; scripts/check-pr.sh PASS.
+R3-F2b done (`5659b414`, failing test first: `composerWriteReloadsTheArtifactListItShows`). Orchestrator checked: `selectedArtifactID` is `context.artifactID`, so the reload follows an Artifact switch. Orchestrator read the R3-F1 diff against D-27; it matches. Head `5659b414`. Gate PASS (orchestrator run against `0a1f566b`). R3 was not reviewed by a further round (the user approved round 3, then finish).
+
+## Result
+Gate PASS · CI: see PR · open blockers: none · follow-ups: writes still without `WriteEffects` (Source create/update/cover/delete, promote, Property writes); a visible list reloads in full when a handle's values change; metadata value save reloads visible `metadataFieldsList`; `Resolve` walks shared paths once per field; time of day only on hover (UX-1, round 1) · to user: §10 manual check (AC-1.7, AC-1.8, AC-2.4); R3 fixes had no independent review round.
