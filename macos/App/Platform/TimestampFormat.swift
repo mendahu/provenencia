@@ -62,13 +62,13 @@ enum TimestampFormat {
         let base = Date.FormatStyle(
             locale: context.locale, calendar: context.calendar, timeZone: context.calendar.timeZone
         )
-        let shortDate = date.formatted(base.day().month(.abbreviated).year())
-        let longDate = date.formatted(base.day().month(.wide).year())
+        func shortDate() -> String { date.formatted(base.day().month(.abbreviated).year()) }
+        func longDate() -> String { date.formatted(base.day().month(.wide).year()) }
         switch style {
         case .shortDate:
-            return shortDate
+            return shortDate()
         case .longDate:
-            return longDate
+            return longDate()
         case .dateTime:
             return date.formatted(Date.FormatStyle(
                 date: .abbreviated, time: .shortened,
@@ -76,20 +76,20 @@ enum TimestampFormat {
             ))
         case .stamp:
             return L10n.Timestamp.stamp(
-                date: date.formatted(base.day(.twoDigits).month(.abbreviated).year()),
+                date: shortDate(),
                 time: date.formatted(base.hour().minute().timeZone(.specificName(.short)))
             )
         case .relative:
             switch day(of: date, in: context) {
             case .today: return L10n.Timestamp.today(time: date.formatted(base.hour().minute()))
             case .yesterday: return L10n.Timestamp.yesterday
-            case .earlier: return shortDate
+            case .earlier: return shortDate()
             }
         case .spoken:
             switch day(of: date, in: context) {
             case .today: return L10n.Timestamp.todayAt(time: date.formatted(base.hour().minute()))
             case .yesterday: return L10n.Timestamp.yesterday
-            case .earlier: return longDate
+            case .earlier: return longDate()
             }
         }
     }

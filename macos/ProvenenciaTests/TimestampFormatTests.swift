@@ -36,6 +36,8 @@ struct TimestampFormatTests {
         ("2026-10-12T15:00:00Z", .dateTime, "en_US", "Oct 12, 2026 at 9:00 AM"),
         ("2026-10-12T15:00:00Z", .stamp, "en_US", "Oct 12, 2026 · 9:00 AM MDT"),
         ("2026-10-12T15:00:00Z", .stamp, "en_GB", "12 Oct 2026 · 09:00 GMT-6"),
+        ("2026-10-04T15:00:00Z", .stamp, "en_US", "Oct 4, 2026 · 9:00 AM MDT"),
+        ("2026-10-04T15:00:00Z", .stamp, "en_GB", "4 Oct 2026 · 09:00 GMT-6"),
         ("2026-10-14T21:15:00Z", .relative, "en_US", "Today, 3:15 PM"),
         ("2026-10-13T22:40:00Z", .relative, "en_US", "Yesterday"),
         ("2026-10-12T15:00:00Z", .relative, "en_US", "Oct 12, 2026"),
