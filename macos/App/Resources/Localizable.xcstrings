@@ -15990,6 +15990,66 @@
         }
       }
     },
+    "lastUpdated.today": {
+      "comment": "Last-updated cell for a change made today; argument is the time of day",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Today, %@"
+          }
+        }
+      }
+    },
+    "lastUpdated.yesterday": {
+      "comment": "Last-updated cell for a change made yesterday",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yesterday"
+          }
+        }
+      }
+    },
+    "lastUpdated.a11y.updated": {
+      "comment": "VoiceOver suffix of a list row; argument is the cell text (Today, 3:15 PM)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "updated %@"
+          }
+        }
+      }
+    },
+    "lastUpdated.a11y.unknown": {
+      "comment": "VoiceOver suffix of a list row with no recorded last-updated time",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "last updated unknown"
+          }
+        }
+      }
+    },
+    "lastUpdated.help": {
+      "comment": "Hover help of the last-updated cell; argument is the full date and time",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last updated %@"
+          }
+        }
+      }
+    },
     "conclusions.a11y.vital": {
       "comment": "VoiceOver for a Person header line; arguments are Born/Died, the date, and the place",
       "extractionState": "manual",

@@ -38,3 +38,40 @@ enum TimestampFormat {
         return date.formatted(date: .abbreviated, time: .shortened)
     }
 }
+
+/// One last-updated cell: the text a list row shows, its hover help, and its
+/// spoken form. Day words for today and yesterday, a short date otherwise, and
+/// a dash when the time is empty or unparseable.
+struct LastUpdatedDisplay: Equatable {
+    /// Width of the list column that holds the cell, icon included.
+    static let columnWidth: CGFloat = 136
+
+    let text: String
+    /// The full stamp; `nil` for the dash.
+    let help: String?
+    let spoken: String
+    /// `false` for the dash (no time recorded).
+    let isKnown: Bool
+
+    init(_ rfc3339: String, now: Date, calendar: Calendar = .current, locale: Locale = .current) {
+        guard let date = TimestampFormat.parse(rfc3339) else {
+            text = "—"
+            help = nil
+            spoken = L10n.LastUpdated.a11yUnknown
+            isKnown = false
+            return
+        }
+        let style = Date.FormatStyle(locale: locale, calendar: calendar, timeZone: calendar.timeZone)
+        if calendar.isDate(date, inSameDayAs: now) {
+            text = L10n.LastUpdated.today(time: date.formatted(style.hour().minute()))
+        } else if let yesterday = calendar.date(byAdding: .day, value: -1, to: now),
+                  calendar.isDate(date, inSameDayAs: yesterday) {
+            text = L10n.LastUpdated.yesterday
+        } else {
+            text = date.formatted(style.day().month(.abbreviated).year())
+        }
+        help = L10n.LastUpdated.help(stamp: TimestampFormat.boardStamp(rfc3339))
+        spoken = L10n.LastUpdated.a11yUpdated(text)
+        isKnown = true
+    }
+}
