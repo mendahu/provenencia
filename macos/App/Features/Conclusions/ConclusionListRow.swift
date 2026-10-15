@@ -61,6 +61,20 @@ enum ConclusionListRow {
         }
     }
 
+    /// The last-updated column: the history icon and the cell text, faint when
+    /// no time is recorded. `now` is read as each row builds (no timer).
+    static func updatedColumn<Kind: ConclusionListKind>(_: Kind.Type) -> PVListDetailColumn<Kind.Row> {
+        PVListDetailColumn(width: LastUpdatedDisplay.columnWidth) { row in
+            let display = LastUpdatedDisplay(Kind.updatedAt(row), now: Date())
+            return PVListDetail(text: display.text, help: display.help, icon: .history, faint: !display.isKnown)
+        }
+    }
+
+    /// A row's spoken label with its last-updated suffix.
+    static func labelWithUpdated(_ base: String, _ updated: LastUpdatedDisplay) -> String {
+        L10n.Conclusions.a11yList(base, rest: updated.spoken)
+    }
+
     static func accessibilityLabel(_ source: ConclusionTitleSource, ref: String) -> String {
         L10n.Workspace.personRowAccessibility(title: source.text, ref: ref)
     }

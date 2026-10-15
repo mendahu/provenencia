@@ -24,6 +24,21 @@ struct PersonsListTests {
         #expect(label == "James Robins, PER-7KD45")
     }
 
+    @Test func rowLabelEndsWithUpdated() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "America/Edmonton")!
+        let now = TimestampFormat.parse("2026-10-15T00:00:00Z")!
+        let base = "Robins, James, PER-7KD45, b. 1817"
+        func label(_ updatedAt: String) -> String {
+            ConclusionListRow.labelWithUpdated(
+                base,
+                LastUpdatedDisplay(updatedAt, now: now, calendar: calendar, locale: Locale(identifier: "en_US"))
+            )
+        }
+        #expect(label("2026-10-13T22:40:00Z") == "\(base), updated Yesterday")
+        #expect(label("") == "\(base), last updated unknown")
+    }
+
     @Test func presentationFollowsTheHandleState() {
         let rows = [header("PER-1", name: "A"), header("PER-2", name: "B")]
         let none: [CatalogPersonHeader]? = nil
