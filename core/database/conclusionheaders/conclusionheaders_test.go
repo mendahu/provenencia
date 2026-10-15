@@ -5,8 +5,10 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
+	"github.com/mendahu/provenencia/core/database/audit"
 	"github.com/mendahu/provenencia/core/database/autoreconciler"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/citations"
@@ -748,4 +750,95 @@ func runArtifactCreate(c *database.Catalog, userID []byte, in artifacts.CreateIn
 			return artifacts.Create(tx, userID, in)
 		})
 	return a, err
+}
+
+// TestListHeadersCarryUpdated checks the three lists return each handle's
+// newest canonical_entity revision and its time, read fresh from the scope
+// rows and not from the display cache.
+func TestListHeadersCarryUpdated(t *testing.T) {
+	f := newFixture(t)
+	db, err := f.c.DB()
+	must(t, err)
+	// A handle with no scope row, inserted before the graph is first loaded.
+	personType, err := subjecttypes.Lookup(f.c, "person", subjecttypes.OriginProvenencia)
+	must(t, err)
+	raw, err := uuid.NewV7()
+	must(t, err)
+	r, err := ref.Mint(personType.RefPrefix)
+	must(t, err)
+	_, err = db.Exec(`INSERT INTO canonical_entities (id, subject_type_id, ref) VALUES (?, ?, ?)`,
+		raw[:], personType.ID, r)
+	must(t, err)
+
+	bobSubject, bobObs, bob := f.person("Bob Smith")
+	_, _, ann := f.person("Ann Lee")
+	fire := f.event(observations.Input{PropertyID: f.prop("event_name").ID, ValueText: "Fire", HasText: true})
+	_, art := f.book("Gazetteer")
+	boston := f.place(art, "Boston")
+
+	at := func(rev int64) string {
+		t.Helper()
+		var s string
+		must(t, db.QueryRow(`SELECT created_at FROM audit_transactions WHERE revision = ?`, rev).Scan(&s))
+		return s
+	}
+	check := func(who string, got audit.Latest) {
+		t.Helper()
+		if got.Revision <= 0 || got.At == "" || got.At != at(got.Revision) {
+			t.Fatalf("%s updated %+v", who, got)
+		}
+	}
+	byID := map[string]audit.Latest{}
+	people := f.list()
+	for _, h := range people {
+		byID[string(h.Entity.ID)] = h.Updated
+	}
+	check("Bob", byID[string(bob)])
+	check("Ann", byID[string(ann)])
+	if got, ok := byID[string(raw[:])]; !ok || got != (audit.Latest{}) {
+		t.Fatalf("handle without scope rows: listed %v, updated %+v", ok, got)
+	}
+	evs, err := conclusionheaders.ListEvents(f.c)
+	must(t, err)
+	if len(evs) != 1 || string(evs[0].Entity.ID) != string(fire) {
+		t.Fatalf("events %+v", evs)
+	}
+	check("Fire", evs[0].Updated)
+	pls := f.places()
+	if len(pls) != 1 || string(pls[0].Entity.ID) != string(boston) {
+		t.Fatalf("places %+v", pls)
+	}
+	check("Boston", pls[0].Updated)
+
+	// A note moves the scope without dropping the cached display row.
+	annBefore := byID[string(ann)]
+	bobBefore := byID[string(bob)]
+	_, err = writes.Call(f.c, writes.Op{Action: "update_observation", UserID: userID}, func(tx *database.Tx) (observations.Listed, []rowchange.Change, error) {
+		return observations.Update(tx, userID, observations.Input{
+			ID: bobObs[0].ID, SubjectID: bobSubject.ID, PropertyID: f.name.ID,
+			Name: namevaluestest.Western("Bob Smith"), Notes: []string{"seen"},
+		})
+	})
+	must(t, err)
+	byID = map[string]audit.Latest{}
+	for _, h := range f.list() {
+		byID[string(h.Entity.ID)] = h.Updated
+	}
+	if got := byID[string(bob)]; got.Revision <= bobBefore.Revision {
+		t.Fatalf("Bob did not move: %+v → %+v", bobBefore, got)
+	} else {
+		check("Bob", got)
+	}
+	if got := byID[string(ann)]; got != annBefore {
+		t.Fatalf("Ann moved: %+v → %+v", annBefore, got)
+	}
+	if got := byID[string(raw[:])]; got != (audit.Latest{}) {
+		t.Fatalf("handle without scope rows updated %+v", got)
+	}
+
+	byIDs, err := conclusionheaders.PersonsByIDs(f.c, [][]byte{bob})
+	must(t, err)
+	if len(byIDs) != 1 || byIDs[0].Updated != (audit.Latest{}) {
+		t.Fatalf("PersonsByIDs %+v", byIDs)
+	}
 }

@@ -29,6 +29,7 @@ Use this folder when something useful pops up mid-work and would otherwise get l
 - [`name-matching-enhancements.md`](name-matching-enhancements.md) — leftovers after Spike 10 (known-as, concluded values, calibration, blocking)
 - [`share-packages.md`](share-packages.md)
 - [`artifact-pdf-thumbnails.md`](artifact-pdf-thumbnails.md)
+- [`large-jpeg-thumbnails.md`](large-jpeg-thumbnails.md) — JPEGs over the 64-megapixel decode budget save and keep the missing-image glyph
 - [`identity-claim-review.md`](identity-claim-review.md)
 - [`place-gazetteer-service.md`](place-gazetteer-service.md)
 - [`possible-values.md`](possible-values.md)

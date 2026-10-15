@@ -119,3 +119,7 @@
 ## S10-48 — Canvas cover
 
 **Descoped 2026-10-11** in [#367](https://github.com/mendahu/provenencia/pull/367). Subject and bridge cards are drawn in AppKit, and the first paint is fast enough that a loading cover is not needed. No `ProgressView` over the canvas.
+
+## S10-21 — Handle last-activity scope
+
+**Landed 2026-10-14** in [#398](https://github.com/mendahu/provenencia/pull/398). Every Person, Event, and Place handle has a last-activity revision (`canonical_entity` audit scope). It moves on the handle's own row, its claims and evidence pins, and Observations (with their date and name values and notes) on a member Subject; the Source's revision still moves too, and a promote still moves no Source. The People, Events, and Places list reads return `updated_revision` and `updated_at` on each row, and a migration backfills existing history. The row cell is S10-22.

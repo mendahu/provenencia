@@ -32,8 +32,10 @@ func ListPersonHeaders(in []byte) ([]byte, error) {
 
 func personHeaderProto(h conclusionheaders.PersonHeader) *engine.PersonHeader {
 	ph := &engine.PersonHeader{
-		Entity:         canonicalEntityProto(h.Entity),
-		NameValueCount: int32(h.NameValueCount),
+		Entity:          canonicalEntityProto(h.Entity),
+		NameValueCount:  int32(h.NameValueCount),
+		UpdatedRevision: h.Updated.Revision,
+		UpdatedAt:       h.Updated.At,
 	}
 	if h.Name != nil {
 		ph.Name = valuecodec.NameToProto(*h.Name)
@@ -90,13 +92,15 @@ func ListEventHeaders(in []byte) ([]byte, error) {
 
 func eventHeaderProto(h conclusionheaders.EventHeader) *engine.EventHeader {
 	eh := &engine.EventHeader{
-		Entity:         canonicalEntityProto(h.Entity),
-		EventName:      h.EventName,
-		EventNameCount: int32(h.EventNameCount),
-		EventTypeCount: int32(h.EventTypeCount),
-		DateCount:      int32(h.DateCount),
-		StartDateCount: int32(h.StartDateCount),
-		EndDateCount:   int32(h.EndDateCount),
+		Entity:          canonicalEntityProto(h.Entity),
+		EventName:       h.EventName,
+		EventNameCount:  int32(h.EventNameCount),
+		EventTypeCount:  int32(h.EventTypeCount),
+		DateCount:       int32(h.DateCount),
+		StartDateCount:  int32(h.StartDateCount),
+		EndDateCount:    int32(h.EndDateCount),
+		UpdatedRevision: h.Updated.Revision,
+		UpdatedAt:       h.Updated.At,
 	}
 	if h.EventType != nil {
 		eh.EventType = &engine.ConclusionTerm{
@@ -160,6 +164,8 @@ func placeHeaderProto(h conclusionheaders.PlaceHeader) *engine.PlaceHeader {
 		Kind:                 h.Kind,
 		Parents:              h.Parents,
 		ParentsAreCandidates: h.ParentsAreCandidates,
+		UpdatedRevision:      h.Updated.Revision,
+		UpdatedAt:            h.Updated.At,
 	}
 	if h.StartDate != nil {
 		ph.StartDate = valuecodec.DateToProto(*h.StartDate)

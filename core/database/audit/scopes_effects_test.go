@@ -7,11 +7,10 @@ import (
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/audit"
-	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 )
 
-// seenEffectsRevisions are audit transactions already compared to effects.Sources.
+// seenEffectsRevisions are audit transactions already compared to every scope resolver.
 // Each id is checked once, while the rows that write left behind still match
 // what Record resolved. A later delete must not replay an earlier update whose
 // foreign key was only on the live row.
@@ -61,16 +60,18 @@ func checkNewEffects(t *testing.T, c *database.Catalog) {
 		if err != nil {
 			t.Fatalf("revision %d: %v", r.revision, err)
 		}
-		want, err := loadSourceScopes(tx, r.id)
-		if err != nil {
-			t.Fatalf("revision %d: %v", r.revision, err)
-		}
-		got, err := effects.Sources(tx, changes)
-		if err != nil {
-			t.Fatalf("revision %d: %v", r.revision, err)
-		}
-		if !sameIDSet(got, want) {
-			t.Fatalf("revision %d: effects.Sources = %d ids, stored source scopes = %d", r.revision, len(got), len(want))
+		for _, sr := range audit.ScopeResolvers {
+			want, err := loadScopes(tx, r.id, sr.Type)
+			if err != nil {
+				t.Fatalf("revision %d: %v", r.revision, err)
+			}
+			got, err := sr.Resolve(tx, changes)
+			if err != nil {
+				t.Fatalf("revision %d: %v", r.revision, err)
+			}
+			if !sameIDSet(got, want) {
+				t.Fatalf("revision %d: %s resolver = %d ids, stored scopes = %d", r.revision, sr.Type, len(got), len(want))
+			}
 		}
 		seenEffectsRevisions[string(r.id)] = struct{}{}
 	}
@@ -99,9 +100,9 @@ func loadRevisionChanges(tx *sql.Tx, id []byte) ([]rowchange.Change, error) {
 	return out, rows.Err()
 }
 
-func loadSourceScopes(tx *sql.Tx, id []byte) ([][]byte, error) {
+func loadScopes(tx *sql.Tx, id []byte, scopeType string) ([][]byte, error) {
 	rows, err := tx.Query(`SELECT scope_id FROM audit_transaction_scopes
-		WHERE audit_transaction_id = ? AND scope_type = ?`, id, audit.ScopeSource)
+		WHERE audit_transaction_id = ? AND scope_type = ?`, id, scopeType)
 	if err != nil {
 		return nil, err
 	}

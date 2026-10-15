@@ -32,7 +32,8 @@ type Revision struct {
 }
 
 // Record allocates the next revision and inserts the transaction + changes on tx,
-// plus source scopes from effects.Sources. Every entity type in the change list
+// plus one scope row per id each scopeResolvers entry resolves (source and
+// canonical_entity). Every entity type in the change list
 // must name a non-None effect; an unknown type or a None row is invalid. Run
 // drops None rows from a mixed list before Record, so they commit with the
 // revision and are not recorded.
@@ -107,17 +108,15 @@ func Record(tx *sql.Tx, rev Revision) (int64, error) {
 		}
 	}
 
-	sourceIDs, err := effects.Sources(tx, rev.Changes)
-	if err != nil {
-		return 0, err
-	}
-	scopes := make([]Scope, 0, len(sourceIDs))
-	for _, id := range sourceIDs {
-		scopes = append(scopes, Scope{Type: ScopeSource, ID: id})
-	}
-	for _, s := range scopes {
-		if _, err := tx.Exec(sqlInsertScope, txID[:], s.Type, s.ID); err != nil {
+	for _, r := range scopeResolvers {
+		ids, err := r.Resolve(tx, rev.Changes)
+		if err != nil {
 			return 0, err
+		}
+		for _, id := range ids {
+			if _, err := tx.Exec(sqlInsertScope, txID[:], r.Type, id); err != nil {
+				return 0, err
+			}
 		}
 	}
 	return revision, nil

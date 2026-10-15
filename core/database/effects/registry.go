@@ -46,6 +46,9 @@ type Effect struct {
 	Source      Path
 	CacheSource Path // drops a loaded Source graph; audit still uses Source
 	Handles     Path
+	// HandleScope is the handles whose canonical_entity audit scope this
+	// change moves; Handles is the recompute set.
+	HandleScope Path
 	Search      []SearchDoc
 	Vocabulary  bool
 	Structure   Path
@@ -75,6 +78,15 @@ const (
 
 // membersOf is a subject to its accepted and provisional handles.
 var membersOf = across("identity_claims", "subject_id", "entity_id", "accepted", "provisional")
+
+// observationMembers is an Observation to the handles of its Subject.
+var observationMembers = from("subject_id", membersOf)
+
+// valueMembers is a value row to the handles of the Subjects whose
+// Observations hold it in col.
+func valueMembers(col string) Path {
+	return chain(inbound("observations", col), field("subject_id"), membersOf)
+}
 
 // observers is the handles whose members point at a subject.
 var observers = chain(
@@ -122,12 +134,17 @@ var registry = map[string]Effect{
 	},
 	"citation_notes": {Entity: "citation_note", Source: up("citation_id", "artifact_id", "source_id")},
 	"observations": {
-		Entity:  "observation",
-		Source:  up("citation_id", "artifact_id", "source_id"),
-		Handles: from("subject_id", membersOf),
+		Entity:      "observation",
+		Source:      up("citation_id", "artifact_id", "source_id"),
+		Handles:     observationMembers,
+		HandleScope: observationMembers,
 	},
-	"observation_notes": {Entity: "observation_note", Source: up("observation_id", "citation_id", "artifact_id", "source_id")},
-	"subjects":          {Entity: "subject", Source: field("source_id")},
+	"observation_notes": {
+		Entity:      "observation_note",
+		Source:      up("observation_id", "citation_id", "artifact_id", "source_id"),
+		HandleScope: chain(up("observation_id", "subject_id"), membersOf),
+	},
+	"subjects": {Entity: "subject", Source: field("source_id")},
 	"files": {
 		Entity: "file",
 		Source: chain(inbound("artifacts", "file_id"), field("source_id")),
@@ -139,11 +156,8 @@ var registry = map[string]Effect{
 			inbound("observations", "value_date_id"),
 			up("citation_id", "artifact_id", "source_id"),
 		),
-		Handles: chain(
-			inbound("observations", "value_date_id"),
-			field("subject_id"),
-			membersOf,
-		),
+		Handles:     valueMembers("value_date_id"),
+		HandleScope: valueMembers("value_date_id"),
 	},
 	"name_values": {
 		Entity: "name_value",
@@ -151,11 +165,8 @@ var registry = map[string]Effect{
 			inbound("observations", "value_name_id"),
 			up("citation_id", "artifact_id", "source_id"),
 		),
-		Handles: chain(
-			inbound("observations", "value_name_id"),
-			field("subject_id"),
-			membersOf,
-		),
+		Handles:     valueMembers("value_name_id"),
+		HandleScope: valueMembers("value_name_id"),
 	},
 	"source_types": {
 		Entity:     "source_type",
@@ -188,7 +199,7 @@ var registry = map[string]Effect{
 			onField("neutral", self()),
 		),
 	},
-	"canonical_entities": {Entity: "canonical_entity", Handles: self()},
+	"canonical_entities": {Entity: "canonical_entity", Handles: self(), HandleScope: self()},
 	"identity_claims": {
 		Entity:      "identity_claim",
 		CacheSource: from("subject_id", field("source_id")),
@@ -196,11 +207,13 @@ var registry = map[string]Effect{
 			field("entity_id"),
 			onStatus("accepted", from("subject_id", observers)),
 		),
+		HandleScope: field("entity_id"),
 	},
 	"identity_claim_evidence": {
 		Entity:      "identity_claim_evidence",
 		CacheSource: up("identity_claim_id", "subject_id", "source_id"),
 		Handles:     up("identity_claim_id", "entity_id"),
+		HandleScope: up("identity_claim_id", "entity_id"),
 	},
 
 	"source_credibility_grades":   {None: true},
@@ -257,14 +270,24 @@ func init() {
 	entityTable = byEntity
 }
 
+// paths lists every path field of the effect.
+func (e Effect) paths() []Path {
+	return []Path{e.Source, e.CacheSource, e.Handles, e.HandleScope, e.Structure}
+}
+
 func (e Effect) validate(table string) error {
 	if e.None {
-		if !e.Source.zero() || !e.CacheSource.zero() || !e.Handles.zero() || !e.Structure.zero() || len(e.Search) > 0 || e.Vocabulary {
+		for _, p := range e.paths() {
+			if !p.zero() {
+				return errf("%s: None entry still has effects", table)
+			}
+		}
+		if len(e.Search) > 0 || e.Vocabulary {
 			return errf("%s: None entry still has effects", table)
 		}
 		return nil
 	}
-	for _, p := range []Path{e.Source, e.CacheSource, e.Handles, e.Structure} {
+	for _, p := range e.paths() {
 		if p.zero() {
 			continue
 		}
