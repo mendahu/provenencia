@@ -407,3 +407,7 @@ None.
 
 **Title:** S10-21 — Handle last-activity scope
 **Body:** objective in one sentence; what shipped against US-1, US-2, US-3, and US-4; AC evidence (test names); deviations from the plan; manual check; `Plan: docs/deployment-plan/spike-10/prs/S10-21-handle-last-activity.md`.
+
+## Landed
+
+Differences from this plan: T-3 (`TestLatestByScope`) promotes a place Subject and edits its toponym, not a person's, because a toponym is not valid on a person. T-4 (`TestListHeadersCarryUpdated`) builds the Event from a single "Fire" `event_name` Observation, not the inputs `TestListEvents` passes for `fire`. The implementer set Status and the map row to Landed ahead of the merge. The manual check was not run by the implementer; it is for the reviewer. Review round 1 added: the unused `audit.Scope` type was deleted; `.cursor/rules/catalog-audit.mdc` and the audit doc's section 4.1 sentence now describe the effect-path resolvers and the handle scope; `TestLatestByScope` also checks a nil querier returns `ErrInvalid`; `TestHandlePaths` has an "evidence pin reaches its handle" subtest; `TestSourceScopes` uses the seed's `updateObservation`, `deleteObservation`, and `promote` helpers.
