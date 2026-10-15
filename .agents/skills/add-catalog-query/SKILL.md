@@ -40,7 +40,7 @@ Official **resource / vocab `Delete`**: follow `.agents/skills/add-catalog-delet
 - Domain validation sentinels stay in this package (`users.ErrInvalid`). Do **not** add them to `core/database/errors.go` (that file is lock/format/folder/closed only).
 - `database` must **not** import table packages (import cycle). Use-cases (`onboarding`, later FFI) import both.
 - `Delete` for a resource or vocab row calls `deleteimpact.Impact` in the same tx, then deletes the parent, then owned-outbound release. Facet/field deletes (notes, metadata clear) stay ordinary writes.
-- Research writes call `audit.Record` in the same tx. A new audited `EntityType` needs a non-`None` effect, and delete changes carry the parent FK — follow `.agents/skills/add-audit-scope/SKILL.md`. "Last activity" reads (`updated_revision`) use `audit_transaction_scopes`.
+- Research writes call `audit.Record` in the same tx. A new audited `EntityType` needs a non-`None` effect, and delete changes carry the parent FK — follow `.agents/skills/add-audit-scope/SKILL.md`. "Last activity" reads (`Updated`) come from the display cache, `Graph.Activity`, which loads `audit_transaction_scopes` once and follows commits.
 
 ## Tests
 

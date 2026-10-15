@@ -61,7 +61,7 @@ func UpsertSourceCredibilityAssessment(in []byte) ([]byte, error) {
 		} else if !errors.Is(err, sql.ErrNoRows) {
 			return err
 		}
-		a, _, err := writes.Run(c, writes.Op{Action: action, UserID: userID}, func(tx *database.Tx) (sourcecredibility.Assessment, []rowchange.Change, error) {
+		a, wrote, err := writes.Run(c, writes.Op{Action: action, UserID: userID}, func(tx *database.Tx) (sourcecredibility.Assessment, []rowchange.Change, error) {
 			return sourcecredibility.Upsert(tx, userID, sourcecredibility.UpsertInput{
 				SourceID:           sourceID,
 				CredibilityGradeID: gradeID,
@@ -75,7 +75,7 @@ func UpsertSourceCredibilityAssessment(in []byte) ([]byte, error) {
 		if err != nil {
 			return err
 		}
-		out = &engine.UpsertSourceCredibilityAssessmentResponse{Assessment: ap}
+		out = &engine.UpsertSourceCredibilityAssessmentResponse{Assessment: ap, Effects: writeEffectsProto(wrote)}
 		return nil
 	})
 	if err != nil {

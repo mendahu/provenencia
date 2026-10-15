@@ -12,11 +12,14 @@ import (
 // when it is new. Associations in the set drop their holders, then every
 // endpoint that was loaded or that the committed rows name is reloaded once.
 // Finished rows for those handles, and for whatever reads them, are dropped
-// after the reload. A read does not consult the audit log.
-func (g *Graph) OnCommit(rev int64, set effects.Set) error {
+// after the reload. Loaded last-activity maps move forward to the commit.
+// A read does not consult the audit log beyond the first Activity load.
+func (g *Graph) OnCommit(c effects.Commit) error {
 	if g == nil {
 		return nil
 	}
+	g.applyActivity(c)
+	set := c.Effects
 	if set.Vocabulary {
 		g.DropLabels()
 		g.vocabOK = false
@@ -27,7 +30,6 @@ func (g *Graph) OnCommit(rev int64, set effects.Set) error {
 		return g.verifyIfSet()
 	}
 	g.dropSources(set.Sources)
-	g.dropSources(set.CacheSources)
 	ids := uniqueIDs(set.Handles)
 	if len(ids) == 0 {
 		return g.verifyIfSet()

@@ -77,7 +77,7 @@ func Delete(c *database.Catalog, userID, id []byte) error {
     // owned outbound: snap, err := deleteimpact.SnapshotOwned(tx, kind, id) — missing parent is ErrInvalid
     // DELETE parent
     // deleteimpact.ReleaseSnapshot(tx, snap)
-    // audit.Record(Changes: append(released.Changes, parentChange)), searchindex.Delete / Reproject
+    // effects.Resolve then audit.Record(Changes: append(released.Changes, parentChange), set), searchindex.Delete / Reproject
     // handles come from effects.Handles on released.Changes
 }
 ```

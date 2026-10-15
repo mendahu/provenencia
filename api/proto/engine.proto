@@ -251,6 +251,8 @@ message Source {
   // Max audit_transactions.revision scoped to this Source (audit_transaction_scopes):
   // its row and any work under it. Sources list "Updated" sort.
   int64 updated_revision = 12;
+  // When that revision was recorded (RFC3339 UTC); empty when updated_revision is 0.
+  string updated_at = 13;
 }
 
 message SourceNote {
@@ -458,6 +460,7 @@ message AddSourceNoteRequest {
 
 message AddSourceNoteResponse {
   SourceNote note = 1;
+  WriteEffects effects = 2;
 }
 
 message UpdateSourceNoteRequest {
@@ -469,6 +472,7 @@ message UpdateSourceNoteRequest {
 
 message UpdateSourceNoteResponse {
   SourceNote note = 1;
+  WriteEffects effects = 2;
 }
 
 message DeleteSourceNoteRequest {
@@ -477,7 +481,9 @@ message DeleteSourceNoteRequest {
   string note_id = 3;
 }
 
-message DeleteSourceNoteResponse {}
+message DeleteSourceNoteResponse {
+  WriteEffects effects = 1;
+}
 
 message SetSourceMetadataRequest {
   string project_dir = 1;
@@ -493,6 +499,7 @@ message SetSourceMetadataRequest {
 // client can patch its list without refetching.
 message SetSourceMetadataResponse {
   MetadataWorkspaceEntry entry = 1;
+  WriteEffects effects = 2;
 }
 
 message ClearSourceMetadataRequest {
@@ -502,7 +509,9 @@ message ClearSourceMetadataRequest {
   string field_id = 4;
 }
 
-message ClearSourceMetadataResponse {}
+message ClearSourceMetadataResponse {
+  WriteEffects effects = 1;
+}
 
 // DismissSourceMetadataSuggestionRequest permanently hides an unfilled type
 // suggestion for this Source (source_metadata_layout.dismissed).
@@ -515,6 +524,7 @@ message DismissSourceMetadataSuggestionRequest {
 
 message DismissSourceMetadataSuggestionResponse {
   repeated MetadataWorkspaceEntry metadata = 1;
+  WriteEffects effects = 2;
 }
 
 // ReorderSourceMetadataRequest sets display order for the Source's visible
@@ -528,6 +538,7 @@ message ReorderSourceMetadataRequest {
 
 message ReorderSourceMetadataResponse {
   repeated MetadataWorkspaceEntry metadata = 1;
+  WriteEffects effects = 2;
 }
 
 message CreateArtifactRequest {
@@ -541,6 +552,7 @@ message CreateArtifactRequest {
 
 message CreateArtifactResponse {
   Artifact artifact = 1;
+  WriteEffects effects = 2;
 }
 
 // UpdateArtifactRequest patches label and/or description only.
@@ -555,6 +567,7 @@ message UpdateArtifactRequest {
 
 message UpdateArtifactResponse {
   Artifact artifact = 1;
+  WriteEffects effects = 2;
 }
 
 message DeleteArtifactRequest {
@@ -563,7 +576,9 @@ message DeleteArtifactRequest {
   string artifact_id = 3;
 }
 
-message DeleteArtifactResponse {}
+message DeleteArtifactResponse {
+  WriteEffects effects = 1;
+}
 
 message DeleteCitationRequest {
   string project_dir = 1;
@@ -579,11 +594,29 @@ message DeleteCitationResponse {
 // handles and Sources instead of a broad citation refetch.
 message WriteEffects {
   repeated string handles = 1;
+  // Sources whose graph changed: what the Source graph and graph progress load.
   repeated string sources = 2;
-  repeated string cache_sources = 3;
+  reserved 3;
   bool vocabulary = 4;
   bool structure = 5;
   repeated string header_handles = 6;
+  // Handles whose last-updated revision this write moved. Swift patches those
+  // rows in the cached People, Events, and Places lists with (revision,
+  // revision_at); it reloads nothing and leaves detail pages alone.
+  repeated string handle_scopes = 7;
+  // The write's own activity: its audit revision and when it was recorded
+  // (RFC3339 UTC). Zero and empty when the write recorded no revision.
+  int64 revision = 8;
+  string revision_at = 9;
+  // Sources whose last activity this write moved (the audit source scope).
+  // Swift patches the cached Sources list rows with (revision, revision_at).
+  repeated string source_scopes = 10;
+  // Sources whose citation reads (citation counts, citations by artifact) this
+  // write moved.
+  repeated string citation_sources = 11;
+  // An Observation was created, deleted, or moved to another Property, so the
+  // Properties workspace's usedBy counts changed.
+  bool property_usage = 12;
 }
 
 message IngestArtifactFileRequest {
@@ -597,6 +630,7 @@ message IngestArtifactFileResponse {
   Artifact artifact = 1;
   SourceFileRef file = 2;
   bool reused = 3;
+  WriteEffects effects = 4;
 }
 
 message ListSourceCredibilityGradesRequest {
@@ -619,6 +653,7 @@ message UpsertSourceCredibilityAssessmentRequest {
 
 message UpsertSourceCredibilityAssessmentResponse {
   SourceCredibilityAssessment assessment = 1;
+  WriteEffects effects = 2;
 }
 
 message ListSourceTypesRequest {
@@ -903,6 +938,7 @@ message CreateSubjectRequest {
 
 message CreateSubjectResponse {
   Subject subject = 1;
+  WriteEffects effects = 2;
 }
 
 message UpdateSubjectRequest {
@@ -915,6 +951,7 @@ message UpdateSubjectRequest {
 
 message UpdateSubjectResponse {
   Subject subject = 1;
+  WriteEffects effects = 2;
 }
 
 message DeleteSubjectRequest {
@@ -923,7 +960,9 @@ message DeleteSubjectRequest {
   string subject_id = 3;
 }
 
-message DeleteSubjectResponse {}
+message DeleteSubjectResponse {
+  WriteEffects effects = 1;
+}
 
 // CanonicalEntity is a Conclusion handle (PER-…, EVT-…, PLC-…).
 message CanonicalEntity {

@@ -61,6 +61,38 @@ enum ConclusionListRow {
         }
     }
 
+    /// Width of the last-updated column, icon included. Layout, not formatting.
+    static let updatedColumnWidth: CGFloat = 136
+
+    /// The last-updated column: the history icon and the cell text, faint when
+    /// no time is recorded. `now` is read as each row builds (no timer).
+    static func updatedColumn<Kind: ConclusionListKind>(_: Kind.Type) -> PVListDetailColumn<Kind.Row> {
+        PVListDetailColumn(width: updatedColumnWidth) { row in
+            updatedDetail(Kind.updatedAt(row), in: .current)
+        }
+    }
+
+    /// The cell: relative text with the full stamp as help, or a faint dash
+    /// when the time is empty or unparseable.
+    static func updatedDetail(_ updatedAt: String, in context: TimestampFormat.Context) -> PVListDetail {
+        let text = TimestampFormat.string(updatedAt, .relative, in: context)
+        return PVListDetail(
+            text: text ?? "—",
+            help: TimestampFormat.string(updatedAt, .stamp, in: context).map(L10n.LastUpdated.help(stamp:)),
+            icon: .history,
+            faint: text == nil
+        )
+    }
+
+    /// A row's spoken label with its last-updated suffix.
+    static func labelWithUpdated(_ base: String, updatedAt: String, in context: TimestampFormat.Context) -> String {
+        L10n.Conclusions.a11yList(
+            base,
+            rest: TimestampFormat.string(updatedAt, .spoken, in: context).map(L10n.LastUpdated.a11yUpdated)
+                ?? L10n.LastUpdated.a11yUnknown
+        )
+    }
+
     static func accessibilityLabel(_ source: ConclusionTitleSource, ref: String) -> String {
         L10n.Workspace.personRowAccessibility(title: source.text, ref: ref)
     }

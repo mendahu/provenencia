@@ -89,7 +89,7 @@ func CreateCitedBridge(in []byte) ([]byte, error) {
 		out = &engine.CreateCitedBridgeResponse{
 			Subject:  subjectProto(res.Subject),
 			Citation: citationProto(res.Citation),
-			Effects:  writeEffectsProto(wrote.Effects),
+			Effects:  writeEffectsProto(wrote),
 		}
 		for _, row := range listed {
 			if _, ok := keep[uuidString(row.ID)]; !ok {

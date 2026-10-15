@@ -12,34 +12,42 @@ enum CatalogQueryInvalidation: Hashable, Sendable {
     case allCached(CatalogQueryKey.Kind)
 }
 
+/// What an invalidation does to a cached key that is not on screen.
+enum CatalogHiddenPolicy: Sendable, Equatable {
+    /// Reload now (the default).
+    case revalidate
+    /// Keep the old value and reload on the next `query`; nothing fetches now.
+    case markStale
+    /// Drop the key; it loads fresh when next visited.
+    case evict
+}
+
 /// Declarative catalog read loaders and mutation invalidation map.
 struct CatalogQueryRegistry: Sendable {
     static let standard = CatalogQueryRegistry()
 
-    /// Writes that can change any Conclusion value (Spike 9 Q5). Every
-    /// Conclusion key — lists now, details from S9-15 — invalidates on this
-    /// one set, because Go's auto-reconciler cache recomputes on the same
-    /// writes and reloading from it is cheap. `mutatedSourceWorkspace` carries
-    /// credibility changes and over-busts on notes, artifacts, and metadata;
-    /// a Citation's certainty rides `savedCitation` (S9-14). A Property
-    /// update, including a cardinality change, rides `updatedProperty` (S9-37).
+    /// Writes that can change any Conclusion value and report no
+    /// `WriteEffects` (Spike 9 Q5). Every Conclusion key — lists and details —
+    /// invalidates on this one set. A write that reports its handles (a
+    /// citation, a credibility change, a Subject delete) invalidates through
+    /// `invalidations(for:)` instead, and a note reports none, so a Source-page
+    /// write no longer reloads every list. A Property update, including a
+    /// cardinality change, rides `updatedProperty` (S9-37).
     static let conclusionTriggers: Set<CatalogMutationKind> = [
-        .savedCitation, .deletedSubject, .promotedSubject, .deletedSource, .mutatedSourceWorkspace,
-        .updatedProperty,
+        .promotedSubject, .deletedSource, .updatedProperty,
     ]
 
     private struct Spec {
         let kind: CatalogQueryKey.Kind
         let stalePolicy: CatalogQueryStalePolicy
         let invalidateOn: Set<CatalogMutationKind>
-        /// Marked stale without a refetch: the next `query` (a place visit)
-        /// reloads it. For writes that move a value nobody is looking at yet.
-        var markStaleOn: Set<CatalogMutationKind> = []
-        /// An invalidated key that isn't on screen is evicted, not
-        /// revalidated, and reloads when next visited. The exception to
-        /// cache rule 2 for per-handle pages, so one trigger doesn't reload
-        /// every page the researcher has opened.
-        var evictWhenHidden = false
+        /// What an invalidated key that isn't on screen does. The exception
+        /// to cache rule 2 for lists and per-handle pages, so one trigger
+        /// doesn't reload every list or page the researcher has opened.
+        var whenHidden: CatalogHiddenPolicy = .revalidate
+        /// How a write that reports its activity moves this list's rows in
+        /// place (no load). `nil` for lists without a last-updated cell.
+        var lastUpdated: CatalogLastUpdatedPatch?
     }
 
     private let specs: [Spec] = [
@@ -47,13 +55,10 @@ struct CatalogQueryRegistry: Sendable {
             kind: .sourcesList,
             stalePolicy: .sessionFresh,
             invalidateOn: [.createdSource, .deletedSource],
-            // Work under a Source moves its "Updated" revision (engine audit
-            // scopes). Canvas writes must not refetch every row, so the list
-            // reloads on its next visit instead.
-            markStaleOn: [
-                .mutatedSourceWorkspace, .mutatedSourceMetadata, .mutatedSourceGraph,
-                .deletedSubject, .savedCitation,
-            ]
+            // Work under a Source reports its activity in `WriteEffects`, which
+            // patches the row through `lastUpdated`.
+            whenHidden: .markStale,
+            lastUpdated: .rows(CatalogSource.self, scope: .source)
         ),
         Spec(
             kind: .sourceTypesList,
@@ -115,22 +120,23 @@ struct CatalogQueryRegistry: Sendable {
         Spec(
             kind: .sourceGraph,
             stalePolicy: .sessionFresh,
-            invalidateOn: [.mutatedSourceGraph, .savedCitation, .deletedSubject, .deletedSource, .promotedSubject]
+            invalidateOn: [.mutatedSourceGraph, .deletedSubject, .deletedSource, .promotedSubject]
         ),
         Spec(
             kind: .citationCounts,
             stalePolicy: .sessionFresh,
-            invalidateOn: [.savedCitation, .deletedSubject]
+            invalidateOn: [.deletedSubject]
         ),
         Spec(
             kind: .propertiesWorkspace,
             stalePolicy: .sessionFresh,
             // `usedBy` counts Observations per property. Observation writes
-            // travel as `savedCitation`, same as the composer graph payload.
+            // report their Source in `WriteEffects`, which invalidates it.
             invalidateOn: [
                 .createdProperty, .updatedProperty, .deletedProperty,
-                .mutatedSubjectTypeProperties, .savedCitation, .deletedSubject,
-            ]
+                .mutatedSubjectTypeProperties, .deletedSubject,
+            ],
+            whenHidden: .markStale
         ),
         Spec(
             kind: .connectRules,
@@ -146,7 +152,8 @@ struct CatalogQueryRegistry: Sendable {
         Spec(
             kind: .citationsByArtifact,
             stalePolicy: .sessionFresh,
-            invalidateOn: [.savedCitation, .deletedSubject]
+            invalidateOn: [.deletedSubject],
+            whenHidden: .markStale
         ),
         Spec(
             kind: .sourceGraphProgress,
@@ -158,23 +165,29 @@ struct CatalogQueryRegistry: Sendable {
         Spec(
             kind: .personsList,
             stalePolicy: .sessionFresh,
-            invalidateOn: CatalogQueryRegistry.conclusionTriggers
+            invalidateOn: CatalogQueryRegistry.conclusionTriggers,
+            whenHidden: .markStale,
+            lastUpdated: .rows(CatalogPersonHeader.self, scope: .handle)
         ),
         Spec(
             kind: .eventsList,
             stalePolicy: .sessionFresh,
-            invalidateOn: CatalogQueryRegistry.conclusionTriggers
+            invalidateOn: CatalogQueryRegistry.conclusionTriggers,
+            whenHidden: .markStale,
+            lastUpdated: .rows(CatalogEventHeader.self, scope: .handle)
         ),
         Spec(
             kind: .placesList,
             stalePolicy: .sessionFresh,
-            invalidateOn: CatalogQueryRegistry.conclusionTriggers
+            invalidateOn: CatalogQueryRegistry.conclusionTriggers,
+            whenHidden: .markStale,
+            lastUpdated: .rows(CatalogPlaceHeader.self, scope: .handle)
         ),
         Spec(
             kind: .conclusionDetail,
             stalePolicy: .sessionFresh,
             invalidateOn: CatalogQueryRegistry.conclusionTriggers,
-            evictWhenHidden: true
+            whenHidden: .evict
         ),
     ]
 
@@ -264,15 +277,23 @@ struct CatalogQueryRegistry: Sendable {
         }
     }
 
-    /// Cache effects of one write's reported handles and Sources.
+    /// Cache effects of one write's reported handles and Sources. Each read
+    /// follows what feeds it: the Source graph per `sources`, the citation
+    /// reads per `citationSources`, the Properties workspace on `propertyUsage`,
+    /// vocabulary, or structure. Handle scopes invalidate nothing: they move
+    /// through `lastUpdatedPatch`.
     func invalidations(for effects: CatalogWriteEffects, project: ProjectKey) -> [CatalogQueryInvalidation] {
         var out: [CatalogQueryInvalidation] = []
-        for sourceID in effects.touchedSources {
+        for sourceID in effects.sources {
             out.append(.key(.sourceGraph(project: project, sourceId: sourceID)))
+        }
+        for sourceID in effects.citationSources {
             out.append(.key(.citationCounts(project: project, sourceId: sourceID)))
         }
-        if !effects.touchedSources.isEmpty {
+        if !effects.citationSources.isEmpty {
             out.append(.allCached(.citationsByArtifact))
+        }
+        if effects.propertyUsage {
             out.append(.key(.propertiesWorkspace(project: project)))
         }
         if effects.vocabulary || effects.structure {
@@ -285,11 +306,26 @@ struct CatalogQueryRegistry: Sendable {
             out.append(.key(.personsList(project: project)))
             out.append(.key(.eventsList(project: project)))
             out.append(.key(.placesList(project: project)))
-            for entityID in effects.touchedHandles {
-                out.append(.key(.conclusionDetail(project: project, entityId: entityID)))
-            }
+        }
+        for entityID in effects.touchedHandles {
+            out.append(.key(.conclusionDetail(project: project, entityId: entityID)))
         }
         return out
+    }
+
+    /// The deduped union of what a write's effects reported and what its
+    /// mutation names, in that order, so a key both name is invalidated once.
+    func invalidations(
+        for effects: CatalogWriteEffects,
+        by mutation: CatalogMutation?,
+        project: ProjectKey
+    ) -> [CatalogQueryInvalidation] {
+        var all = invalidations(for: effects, project: project)
+        if let mutation {
+            all += invalidations(by: mutation, project: project)
+        }
+        var seen = Set<CatalogQueryInvalidation>()
+        return all.filter { seen.insert($0).inserted }
     }
 
     /// Resolves cache effects from registry `invalidateOn` tags + mutation payload.
@@ -300,18 +336,16 @@ struct CatalogQueryRegistry: Sendable {
             .map { $0.kind.invalidation(project: project, mutation: mutation) }
     }
 
-    /// Keys a mutation leaves stale for their next `query`, without refetching now.
-    /// Whether an invalidated `key` is evicted while off screen (see `Spec`).
-    func evictsWhenHidden(_ key: CatalogQueryKey) -> Bool {
-        specs.first { $0.kind == key.kind }?.evictWhenHidden ?? false
+    /// What an invalidated `key` does while off screen (see `Spec`).
+    func hiddenPolicy(_ key: CatalogQueryKey) -> CatalogHiddenPolicy {
+        specs.first { $0.kind == key.kind }?.whenHidden ?? .revalidate
     }
 
-    func staleMarks(by mutation: CatalogMutation, project: ProjectKey) -> [CatalogQueryInvalidation] {
-        guard let mutationKind = mutation.invalidationKind else { return [] }
-        return specs
-            .filter { $0.markStaleOn.contains(mutationKind) }
-            .map { $0.kind.invalidation(project: project, mutation: mutation) }
+    /// How a write that reports its activity moves `key`'s rows in place.
+    func lastUpdatedPatch(_ key: CatalogQueryKey) -> CatalogLastUpdatedPatch? {
+        specs.first { $0.kind == key.kind }?.lastUpdated
     }
+
 }
 
 private extension CatalogQueryKey.Kind {
@@ -348,16 +382,15 @@ private extension CatalogQueryKey.Kind {
             }
         case .sourceGraph:
             switch mutation {
-            case .mutatedSourceGraph(let sourceId), .savedCitation(let sourceId),
-                 .deletedSubject(let sourceId), .deletedSource(let sourceId),
-                 .promotedSubject(let sourceId):
+            case .mutatedSourceGraph(let sourceId), .deletedSubject(let sourceId),
+                 .deletedSource(let sourceId), .promotedSubject(let sourceId):
                 return .key(.sourceGraph(project: project, sourceId: sourceId))
             default:
                 return .allCached(.sourceGraph)
             }
         case .citationCounts:
             switch mutation {
-            case .savedCitation(let sourceId), .deletedSubject(let sourceId):
+            case .deletedSubject(let sourceId):
                 return .key(.citationCounts(project: project, sourceId: sourceId))
             default:
                 return .allCached(.citationCounts)

@@ -22,7 +22,7 @@ struct SubjectStoreTests {
             ),
         ]
 
-        let created = try await store.createSubject(
+        let (created, _) = try await store.createSubject(
             projectDir: projectDir,
             userID: "user-1",
             sourceID: sourceID,
@@ -43,7 +43,7 @@ struct SubjectStoreTests {
 
     @Test func setPositionPersistsAcrossSessionCloseThenClear() async throws {
         let store = FakeStore()
-        let subject = try await store.createSubject(
+        let (subject, _) = try await store.createSubject(
             projectDir: projectDir,
             userID: "user-1",
             sourceID: sourceID,
@@ -96,7 +96,7 @@ struct SubjectStoreTests {
 
     @Test func promoteMintsHandleOnceThenRefuses() async throws {
         let store = storeWithPersonType()
-        let subject = try await store.createSubject(
+        let (subject, _) = try await store.createSubject(
             projectDir: projectDir, userID: "user-1", sourceID: sourceID,
             subjectTypeID: typeID, label: "James", description: "", placement: nil
         )
@@ -122,7 +122,7 @@ struct SubjectStoreTests {
             try await store.createSubject(
                 projectDir: projectDir, userID: "user-1", sourceID: sourceID,
                 subjectTypeID: type, label: "", description: "", placement: nil
-            )
+            ).0
         }
         let first = try await store.promoteSubject(projectDir: projectDir, userID: "user-1", subjectID: try await make(typeID).id)
         let second = try await make(typeID)
@@ -150,7 +150,7 @@ struct SubjectStoreTests {
 
     @Test func deletingPromotedSubjectNamesHandleThenClearsMembership() async throws {
         let store = storeWithPersonType()
-        let subject = try await store.createSubject(
+        let (subject, _) = try await store.createSubject(
             projectDir: projectDir, userID: "user-1", sourceID: sourceID,
             subjectTypeID: typeID, label: "James", description: "", placement: nil
         )
@@ -164,7 +164,7 @@ struct SubjectStoreTests {
         #expect(try await store.listSubjectMemberships(projectDir: projectDir, sourceID: sourceID).map(\.entity.ref)
             == [result.entity.ref])
 
-        try await store.deleteSubject(projectDir: projectDir, userID: "user-1", subjectID: subject.id)
+        _ = try await store.deleteSubject(projectDir: projectDir, userID: "user-1", subjectID: subject.id)
         #expect(store.membershipBySubject[subject.id] == nil)
         #expect(try await store.listSubjectMemberships(projectDir: projectDir, sourceID: sourceID).isEmpty)
     }

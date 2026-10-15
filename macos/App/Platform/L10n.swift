@@ -8451,6 +8451,69 @@ enum L10n {
         }
     }
 
+    /// Last-updated cell on a list row: the hover help and the spoken suffix.
+    /// The day words and the stamp are `L10n.Timestamp`.
+    enum LastUpdated {
+        static func a11yUpdated(_ text: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "lastUpdated.a11y.updated",
+                defaultValue: "updated %@",
+                comment: "VoiceOver suffix of a list row; argument is the spoken time (Today at 3:15 PM, Yesterday, October 12, 2026)"
+            ), text)
+        }
+
+        static var a11yUnknown: String {
+            L10n.string(LocalizedStringResource(
+                "lastUpdated.a11y.unknown",
+                defaultValue: "last updated unknown",
+                comment: "VoiceOver suffix of a list row with no recorded last-updated time"
+            ))
+        }
+
+        static func help(stamp: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "lastUpdated.help",
+                defaultValue: "Last updated %@",
+                comment: "Hover help of the last-updated cell; argument is the full date and time"
+            ), stamp)
+        }
+    }
+
+    /// Day words and the stamp joiner `TimestampFormat` uses for every catalog timestamp.
+    enum Timestamp {
+        static func today(time: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "timestamp.today",
+                defaultValue: "Today, %@",
+                comment: "Relative timestamp for a time today; argument is the time of day"
+            ), time)
+        }
+
+        static func todayAt(time: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "timestamp.todayAt",
+                defaultValue: "Today at %@",
+                comment: "Spoken timestamp for a time today; argument is the time of day"
+            ), time)
+        }
+
+        static var yesterday: String {
+            L10n.string(LocalizedStringResource(
+                "timestamp.yesterday",
+                defaultValue: "Yesterday",
+                comment: "Relative and spoken timestamp for a time yesterday"
+            ))
+        }
+
+        static func stamp(date: String, time: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "timestamp.stamp",
+                defaultValue: "%1$@ · %2$@",
+                comment: "Full timestamp: date, then time with zone, joined by a middle dot"
+            ), date, time)
+        }
+    }
+
     enum Errors {
         static let catalogAlreadyExists = LocalizedStringResource(
             "error.catalog.already_exists",

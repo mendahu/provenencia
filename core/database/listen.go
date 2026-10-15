@@ -7,7 +7,7 @@ import "github.com/mendahu/provenencia/core/database/effects"
 // listener when any OnCommit fails, so a partial notice does not stick.
 // The canonical graph registers itself when a catalog opens.
 type CommitListener interface {
-	OnCommit(rev int64, set effects.Set) error
+	OnCommit(c effects.Commit) error
 	Drop()
 }
 
@@ -23,7 +23,7 @@ func (c *Catalog) Listen(l CommitListener) {
 
 // Notify delivers a committed write. The first OnCommit error stops delivery
 // and Drop runs for every listener, including ones already notified.
-func (c *Catalog) Notify(rev int64, set effects.Set) error {
+func (c *Catalog) Notify(commit effects.Commit) error {
 	if c == nil {
 		return nil
 	}
@@ -31,7 +31,7 @@ func (c *Catalog) Notify(rev int64, set effects.Set) error {
 	ls := append([]CommitListener(nil), c.listeners...)
 	c.mu.Unlock()
 	for _, l := range ls {
-		if err := l.OnCommit(rev, set); err != nil {
+		if err := l.OnCommit(commit); err != nil {
 			for _, d := range ls {
 				d.Drop()
 			}

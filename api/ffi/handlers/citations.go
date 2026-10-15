@@ -45,7 +45,7 @@ func CreateCitationWithObservations(in []byte) ([]byte, error) {
 		}
 		out = &engine.CreateCitationWithObservationsResponse{
 			Citation: citationProto(res.Citation),
-			Effects:  writeEffectsProto(wrote.Effects),
+			Effects:  writeEffectsProto(wrote),
 		}
 		for _, o := range res.Observations {
 			out.Observations = append(out.Observations, observationProto(o))
@@ -162,7 +162,7 @@ func UpdateCitation(in []byte) ([]byte, error) {
 		}
 		out = &engine.UpdateCitationResponse{
 			Citation: citationProto(cit),
-			Effects:  writeEffectsProto(wrote.Effects),
+			Effects:  writeEffectsProto(wrote),
 		}
 		return nil
 	})
@@ -226,7 +226,7 @@ func DeleteCitation(in []byte) ([]byte, error) {
 		if err != nil {
 			return err
 		}
-		out = &engine.DeleteCitationResponse{Effects: writeEffectsProto(wrote.Effects)}
+		out = &engine.DeleteCitationResponse{Effects: writeEffectsProto(wrote)}
 		return nil
 	})
 	if err != nil {

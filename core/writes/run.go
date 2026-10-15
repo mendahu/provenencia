@@ -21,12 +21,10 @@ type Op struct {
 	UserID      []byte
 }
 
-// Result is the revision Run recorded and what the effects registry resolved.
-// Revision is zero when the closure changed nothing.
-type Result struct {
-	Revision int64
-	Effects  effects.Set
-}
+// Result is the commit Run recorded: its revision, when it was recorded, and
+// what the effects registry resolved. Revision is zero when the closure
+// changed nothing.
+type Result = effects.Commit
 
 // Run begins a transaction, runs fn, and on a non-empty change list records
 // audit, recomputes handles, reprojects search documents, commits, runs
@@ -67,17 +65,18 @@ func Run[T any](c *database.Catalog, op Op, fn func(tx *database.Tx) (T, []rowch
 		return zero, Result{}, err
 	}
 
+	set, err := effects.Resolve(tx.Tx, changes)
+	if err != nil {
+		return zero, Result{}, err
+	}
+	at := project.NowUTC()
 	rev, err := audit.Record(tx.Tx, audit.Revision{
 		UserID:      op.UserID,
 		ActionType:  op.Action,
 		Description: op.Description,
-		CreatedAt:   project.NowUTC(),
+		CreatedAt:   at,
 		Changes:     changes,
-	})
-	if err != nil {
-		return zero, Result{}, err
-	}
-	set, err := effects.Resolve(tx.Tx, changes)
+	}, set)
 	if err != nil {
 		return zero, Result{}, err
 	}
@@ -98,13 +97,14 @@ func Run[T any](c *database.Catalog, op Op, fn func(tx *database.Tx) (T, []rowch
 		return zero, Result{}, err
 	}
 	tx.RunAfterCommit()
-	if err := c.Notify(rev, set); err != nil {
+	commit := Result{Activity: effects.Activity{Revision: rev, At: at}, Effects: set}
+	if err := c.Notify(commit); err != nil {
 		// The commit has landed and Notify has already dropped every listener.
 		// Returning the error made the client retry a write that saved.
 		log.Printf("provenencia: listener after commit rev %d: %v", rev, err)
-		return value, Result{Revision: rev, Effects: set}, nil
+		return value, commit, nil
 	}
-	return value, Result{Revision: rev, Effects: set}, nil
+	return value, commit, nil
 }
 
 // Call is Run for a caller that does not need the revision. Tests use it.

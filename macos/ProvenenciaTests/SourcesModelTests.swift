@@ -35,7 +35,7 @@ struct SourcesModelTests {
             sourceTypeID: typeID,
             title: title,
             description: "",
-            updatedRevision: updatedRevision
+            updated: CatalogActivity(revision: updatedRevision)
         )
     }
 
@@ -290,6 +290,27 @@ struct SourcesModelTests {
 
         #expect(model.sources.first?.title == "Deed renamed")
         #expect(model.sources.first?.coverMode == "type_icon")
+    }
+
+    /// A write's activity moves the row in the Updated sort without a reload.
+    @Test func writeActivityMovesTheRowInTheUpdatedSort() async {
+        let (model, session) = makeModel(
+            sources: [
+                source(id: "s1", title: "Deed", typeID: "t1", updatedRevision: 5),
+                source(id: "s2", title: "Letter", typeID: "t1", updatedRevision: 9),
+            ],
+            types: [photoType()]
+        )
+        await warmLists(model, session: session)
+        model.sort = .updated
+        #expect(model.visibleSources.map(\.id) == ["s2", "s1"])
+
+        session.apply(CatalogWriteEffects(
+            sourceScopes: ["s1"],
+            activity: CatalogActivity(revision: 12, at: "2026-10-15T16:00:00Z")
+        ))
+
+        #expect(model.visibleSources.map(\.id) == ["s1", "s2"])
     }
 
     @Test func warmListQueriesLoadsGraphProgress() async {

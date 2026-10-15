@@ -50,6 +50,8 @@ protocol ConclusionListKind {
     static var mark: PVMarkKey { get }
 
     static func ref(_ row: Row) -> String
+    /// RFC3339 UTC time of the row's last revision; empty when unknown.
+    static func updatedAt(_ row: Row) -> String
     static func titleSource(_ row: Row) -> ConclusionTitleSource
     static func titleSource(_ row: Row, orders: NameFormatOrders) -> ConclusionTitleSource
     /// Names beyond the one shown. Zero omits the +N badge.
@@ -90,13 +92,19 @@ struct ConclusionListPage<Kind: ConclusionListKind>: View {
                 ConclusionListBody<Kind>(handle: handle)
             } else {
                 Self.page(meta: nil) {
-                    PVListSkeleton()
+                    Self.skeleton()
                 }
             }
         }
         .task {
             let _: QueryHandle<[Kind.Row]> = session.query(key)
         }
+    }
+
+    /// First-load placeholder with the last-updated column bar, so rows do not
+    /// shift when the times arrive.
+    static func skeleton() -> PVListSkeleton {
+        PVListSkeleton(detailWidth: ConclusionListRow.updatedColumnWidth)
     }
 
     /// Page chrome shared by every state: the section header over the body,
@@ -138,7 +146,7 @@ private struct ConclusionListBody<Kind: ConclusionListKind>: View {
         ConclusionListPage<Kind>.page(meta: headerMeta) {
             switch presentation {
             case .loading:
-                PVListSkeleton()
+                ConclusionListPage<Kind>.skeleton()
             case .empty:
                 PVEmptyState(
                     glyph: .mark(Kind.mark),
@@ -154,8 +162,15 @@ private struct ConclusionListBody<Kind: ConclusionListKind>: View {
                     items: rows,
                     thumbnail: { _ in ConclusionListRow.thumbnail(mark: Kind.mark) },
                     meta: { Kind.ref($0) },
+                    detail: ConclusionListRow.updatedColumn(Kind.self),
                     label: Kind.title,
-                    itemAccessibilityLabel: { Kind.accessibilityLabel($0, orders: session.nameFormat) },
+                    itemAccessibilityLabel: {
+                        ConclusionListRow.labelWithUpdated(
+                            Kind.accessibilityLabel($0, orders: session.nameFormat),
+                            updatedAt: Kind.updatedAt($0),
+                            in: .current
+                        )
+                    },
                     itemAccessibilityIdentifier: { "\(Kind.identifierRoot).row.\(Kind.ref($0))" },
                     onActivate: { navigation.go(to: Kind.location($0, orders: session.nameFormat)) },
                     primary: { ConclusionListRow.title(Kind.titleSource($0, orders: session.nameFormat), extraCount: Kind.extraCount($0)) },
