@@ -4776,6 +4776,9 @@ type WriteEffects struct {
 	Vocabulary    bool                   `protobuf:"varint,4,opt,name=vocabulary,proto3" json:"vocabulary,omitempty"`
 	Structure     bool                   `protobuf:"varint,5,opt,name=structure,proto3" json:"structure,omitempty"`
 	HeaderHandles []string               `protobuf:"bytes,6,rep,name=header_handles,json=headerHandles,proto3" json:"header_handles,omitempty"`
+	// Handles whose last-updated revision this write moved. Swift reloads the
+	// People, Events, and Places lists for them, not their detail pages.
+	HandleScopes  []string `protobuf:"bytes,7,rep,name=handle_scopes,json=handleScopes,proto3" json:"handle_scopes,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -4848,6 +4851,13 @@ func (x *WriteEffects) GetStructure() bool {
 func (x *WriteEffects) GetHeaderHandles() []string {
 	if x != nil {
 		return x.HeaderHandles
+	}
+	return nil
+}
+
+func (x *WriteEffects) GetHandleScopes() []string {
+	if x != nil {
+		return x.HandleScopes
 	}
 	return nil
 }
@@ -17247,7 +17257,7 @@ const file_engine_proto_rawDesc = "" +
 	"\vcitation_id\x18\x03 \x01(\tR\n" +
 	"citationId\"W\n" +
 	"\x16DeleteCitationResponse\x12=\n" +
-	"\aeffects\x18\x01 \x01(\v2#.provenencia.engine.v1.WriteEffectsR\aeffects\"\xcc\x01\n" +
+	"\aeffects\x18\x01 \x01(\v2#.provenencia.engine.v1.WriteEffectsR\aeffects\"\xf1\x01\n" +
 	"\fWriteEffects\x12\x18\n" +
 	"\ahandles\x18\x01 \x03(\tR\ahandles\x12\x18\n" +
 	"\asources\x18\x02 \x03(\tR\asources\x12#\n" +
@@ -17256,7 +17266,8 @@ const file_engine_proto_rawDesc = "" +
 	"vocabulary\x18\x04 \x01(\bR\n" +
 	"vocabulary\x12\x1c\n" +
 	"\tstructure\x18\x05 \x01(\bR\tstructure\x12%\n" +
-	"\x0eheader_handles\x18\x06 \x03(\tR\rheaderHandles\"\x8a\x01\n" +
+	"\x0eheader_handles\x18\x06 \x03(\tR\rheaderHandles\x12#\n" +
+	"\rhandle_scopes\x18\a \x03(\tR\fhandleScopes\"\x8a\x01\n" +
 	"\x19IngestArtifactFileRequest\x12\x1f\n" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
 	"projectDir\x12\x17\n" +

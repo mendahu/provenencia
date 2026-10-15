@@ -13,6 +13,7 @@ func writeEffectsProto(set effects.Set) *engine.WriteEffects {
 		Vocabulary:    set.Vocabulary,
 		Structure:     set.Structure,
 		HeaderHandles: idStrings(set.HeaderDeps),
+		HandleScopes:  idStrings(set.HandleScopes),
 	}
 }
 

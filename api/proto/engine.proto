@@ -584,6 +584,9 @@ message WriteEffects {
   bool vocabulary = 4;
   bool structure = 5;
   repeated string header_handles = 6;
+  // Handles whose last-updated revision this write moved. Swift reloads the
+  // People, Events, and Places lists for them, not their detail pages.
+  repeated string handle_scopes = 7;
 }
 
 message IngestArtifactFileRequest {

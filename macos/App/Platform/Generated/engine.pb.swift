@@ -2065,6 +2065,10 @@ public nonisolated struct Provenencia_Engine_V1_WriteEffects: Sendable {
 
   public var headerHandles: [String] = []
 
+  /// Handles whose last-updated revision this write moved. Swift reloads the
+  /// People, Events, and Places lists for them, not their detail pages.
+  public var handleScopes: [String] = []
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -9459,7 +9463,7 @@ nonisolated extension Provenencia_Engine_V1_DeleteCitationResponse: SwiftProtobu
 
 nonisolated extension Provenencia_Engine_V1_WriteEffects: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".WriteEffects"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}handles\0\u{1}sources\0\u{3}cache_sources\0\u{1}vocabulary\0\u{1}structure\0\u{3}header_handles\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}handles\0\u{1}sources\0\u{3}cache_sources\0\u{1}vocabulary\0\u{1}structure\0\u{3}header_handles\0\u{3}handle_scopes\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -9473,6 +9477,7 @@ nonisolated extension Provenencia_Engine_V1_WriteEffects: SwiftProtobuf.Message,
       case 4: try { try decoder.decodeSingularBoolField(value: &self.vocabulary) }()
       case 5: try { try decoder.decodeSingularBoolField(value: &self.structure) }()
       case 6: try { try decoder.decodeRepeatedStringField(value: &self.headerHandles) }()
+      case 7: try { try decoder.decodeRepeatedStringField(value: &self.handleScopes) }()
       default: break
       }
     }
@@ -9497,6 +9502,9 @@ nonisolated extension Provenencia_Engine_V1_WriteEffects: SwiftProtobuf.Message,
     if !self.headerHandles.isEmpty {
       try visitor.visitRepeatedStringField(value: self.headerHandles, fieldNumber: 6)
     }
+    if !self.handleScopes.isEmpty {
+      try visitor.visitRepeatedStringField(value: self.handleScopes, fieldNumber: 7)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -9507,6 +9515,7 @@ nonisolated extension Provenencia_Engine_V1_WriteEffects: SwiftProtobuf.Message,
     if lhs.vocabulary != rhs.vocabulary {return false}
     if lhs.structure != rhs.structure {return false}
     if lhs.headerHandles != rhs.headerHandles {return false}
+    if lhs.handleScopes != rhs.handleScopes {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
