@@ -8458,7 +8458,7 @@ enum L10n {
             L10n.format(LocalizedStringResource(
                 "lastUpdated.a11y.updated",
                 defaultValue: "updated %@",
-                comment: "VoiceOver suffix of a list row; argument is the cell text (Today, 3:15 PM)"
+                comment: "VoiceOver suffix of a list row; argument is the spoken time (Today at 3:15 PM, Yesterday, October 12, 2026)"
             ), text)
         }
 
