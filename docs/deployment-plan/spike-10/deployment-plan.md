@@ -525,7 +525,7 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 
 #### S10-41 — Sources list
 
-**Plan:** [`prs/S10-41-sources-list.md`](prs/S10-41-sources-list.md) — Blocked — on S10-22
+**Plan:** [`prs/S10-41-sources-list.md`](prs/S10-41-sources-list.md) — Draft (refreshed after S10-22; review pending)
 
 **Brief:** [S10-D8](design/S10-D8-sources-list.md), board agreed 2026-10-15. One board for the page. It does not add a cell, a filter, or a search field to Events, Places, or Persons.
 
@@ -534,7 +534,7 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 | **In** | Per the working rules and S10-D8. The row shows when the Source last changed. The time is `CatalogSource.updated` (revision and time), already read from the engine's last-activity cache and patched by S10-22; this PR draws it and moves the cell composition (`updatedDetail`, `labelWithUpdated`, `updatedColumnWidth`) from `ConclusionListRow` to one feature-neutral home that both the conclusion rows and `SourcesSplitRow` call, rather than copying it. Filter the list to empty, in progress, or filed, from one grouped count of primary subjects and their accepted claims, next to `sourcegraphprogress`. A text field filters the loaded rows by title and ref as you type. Sort, type filter, status, and query persist per project and user, and restore when the Sources place is shown again, including after relaunch (this is S10-09). Scroll is the history-entry anchor from S10-40 ([#392](https://github.com/mendahu/provenencia/pull/392)). This PR does not restore scroll. Changing status or search on that visit clears that anchor and scrolls to the top, the way sort and type already do. |
 | **Out** | The same filters, search, or last-updated work on People, Events, or Places (scroll there is S10-40; last updated there is S10-22). Omnibar search. A per-row count query. Hiding bridge subjects as their own status. |
 | **Testable** | A Source with no people, events, or places matches Empty and not the other two. A Source with one unpromoted person matches In progress. After that person is promoted, it matches Filed. Typing part of a title hides the other rows. Leave and come back: status, query, sort, and type filter are still set, and the row's time moved if the Source changed. Relaunch: those four settings are still set. A long list does not issue one count query per row. Scroll follows the history entry (S10-40). |
-| **Depends on** | S10-22 (`LastUpdatedDisplay` and the `PVList` detail cell), S10-D8 |
+| **Depends on** | S10-22 (landed [#402](https://github.com/mendahu/provenencia/pull/402)), S10-D8 (board agreed 2026-10-15) |
 
 #### S10-23 — Sex / gender on the Person page
 
