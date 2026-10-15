@@ -23,21 +23,9 @@ func errf(format string, args ...any) error {
 	return fmt.Errorf(format, args...)
 }
 
-// Sources resolves the Source ids a batch of changes touches. Column values
-// come from the diff when it has them, from the live row when it does not,
-// and from a delete's old fields only after the row is gone.
-func Sources(tx *sql.Tx, changes []rowchange.Change) ([][]byte, error) {
-	return resolve(tx, changes, func(e Effect) Path { return e.Source })
-}
-
 // Handles resolves handle ids.
 func Handles(tx *sql.Tx, changes []rowchange.Change) ([][]byte, error) {
 	return resolve(tx, changes, func(e Effect) Path { return e.Handles })
-}
-
-// HandleScopes resolves the handles whose canonical_entity audit scope a batch moves.
-func HandleScopes(tx *sql.Tx, changes []rowchange.Change) ([][]byte, error) {
-	return resolve(tx, changes, func(e Effect) Path { return e.HandleScope })
 }
 
 // WithoutNone drops changes whose effect is None. An unknown entity type is

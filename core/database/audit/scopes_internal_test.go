@@ -97,7 +97,7 @@ func TestRecordRejectsUnknownEntity(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() { _ = tx.Rollback() }()
-	_, err = Record(tx, Revision{ActionType: "x", CreatedAt: "2026-10-04T00:00:00Z", Changes: []rowchange.Change{{
+	_, err = recordResolved(t, tx, Revision{ActionType: "x", CreatedAt: "2026-10-04T00:00:00Z", Changes: []rowchange.Change{{
 		EntityType: "mystery", EntityID: []byte{9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9}, Action: rowchange.ActionCreate, Fields: map[string]rowchange.FieldDiff{},
 	}}})
 	if !errors.Is(err, ErrInvalid) {

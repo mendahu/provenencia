@@ -11,6 +11,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/audit"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/datevalues"
+	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/nameformats"
 	"github.com/mendahu/provenencia/core/database/namevalues"
@@ -204,7 +205,7 @@ func latestHandles(c *database.Catalog) (map[string]audit.Latest, error) {
 	if err != nil {
 		return nil, err
 	}
-	return audit.LatestByScope(db, audit.ScopeCanonicalEntity)
+	return audit.LatestByScope(db, effects.ScopeCanonicalEntity)
 }
 
 // PersonsByIDs returns the headers of the given unmerged Persons in list

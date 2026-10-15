@@ -13,10 +13,11 @@ import (
 // endpoint that was loaded or that the committed rows name is reloaded once.
 // Finished rows for those handles, and for whatever reads them, are dropped
 // after the reload. A read does not consult the audit log.
-func (g *Graph) OnCommit(rev int64, set effects.Set) error {
+func (g *Graph) OnCommit(c effects.Commit) error {
 	if g == nil {
 		return nil
 	}
+	set := c.Effects
 	if set.Vocabulary {
 		g.DropLabels()
 		g.vocabOK = false

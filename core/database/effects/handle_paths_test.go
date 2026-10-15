@@ -376,11 +376,11 @@ func mustHandles(t *testing.T, tx *sql.Tx, changes ...rowchange.Change) [][]byte
 
 func mustHandleScopes(t *testing.T, tx *sql.Tx, changes ...rowchange.Change) [][]byte {
 	t.Helper()
-	got, err := effects.HandleScopes(tx, changes)
+	set, err := effects.Resolve(tx, changes)
 	if err != nil {
 		t.Fatal(err)
 	}
-	return got
+	return set.HandleScopes
 }
 
 func idSet(got [][]byte, want ...[]byte) bool {

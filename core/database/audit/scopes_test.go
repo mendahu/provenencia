@@ -13,6 +13,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/audit"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/datevalues"
+	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/properties"
@@ -235,7 +236,7 @@ func (s scopeSeed) handleRevision(t *testing.T, id []byte) int64 {
 	if err != nil {
 		t.Fatal(err)
 	}
-	all, err := audit.LatestByScope(db, audit.ScopeCanonicalEntity)
+	all, err := audit.LatestByScope(db, effects.ScopeCanonicalEntity)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -615,7 +616,7 @@ func TestLatestByScope(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	got, err := audit.LatestByScope(db, audit.ScopeCanonicalEntity)
+	got, err := audit.LatestByScope(db, effects.ScopeCanonicalEntity)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -637,7 +638,7 @@ func TestLatestByScope(t *testing.T) {
 	if _, err := audit.LatestByScope(db, ""); !errors.Is(err, audit.ErrInvalid) {
 		t.Fatalf("empty scope type: %v", err)
 	}
-	if _, err := audit.LatestByScope(nil, audit.ScopeCanonicalEntity); !errors.Is(err, audit.ErrInvalid) {
+	if _, err := audit.LatestByScope(nil, effects.ScopeCanonicalEntity); !errors.Is(err, audit.ErrInvalid) {
 		t.Fatalf("nil querier: %v", err)
 	}
 }

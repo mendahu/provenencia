@@ -63,7 +63,7 @@ func TestRecord(t *testing.T) {
 			run: func(t *testing.T, c *database.Catalog) {
 				mustUser(t, c, userID)
 				tx := begin(t, c)
-				rev, err := Record(tx, Revision{
+				rev, err := recordResolved(t, tx, Revision{
 					UserID:     userID,
 					ActionType: "create_source",
 					CreatedAt:  fixedAt,
@@ -107,7 +107,7 @@ func TestRecord(t *testing.T) {
 			run: func(t *testing.T, c *database.Catalog) {
 				mustUser(t, c, userID)
 				tx := begin(t, c)
-				if _, err := Record(tx, Revision{
+				if _, err := recordResolved(t, tx, Revision{
 					UserID:     userID,
 					ActionType: "update_source",
 					CreatedAt:  fixedAt,
@@ -143,7 +143,7 @@ func TestRecord(t *testing.T) {
 			run: func(t *testing.T, c *database.Catalog) {
 				mustUser(t, c, userID)
 				tx := begin(t, c)
-				if _, err := Record(tx, Revision{
+				if _, err := recordResolved(t, tx, Revision{
 					UserID:     userID,
 					ActionType: "delete_source_note",
 					CreatedAt:  fixedAt,
@@ -182,7 +182,7 @@ func TestRecord(t *testing.T) {
 				otherID := []byte{2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2}
 
 				tx1 := begin(t, c)
-				r1, err := Record(tx1, Revision{
+				r1, err := recordResolved(t, tx1, Revision{
 					UserID:     userID,
 					ActionType: "create_source",
 					CreatedAt:  fixedAt,
@@ -212,7 +212,7 @@ func TestRecord(t *testing.T) {
 				}
 
 				tx2 := begin(t, c)
-				r2, err := Record(tx2, Revision{
+				r2, err := recordResolved(t, tx2, Revision{
 					UserID:     userID,
 					ActionType: "update_source",
 					CreatedAt:  fixedAt,
@@ -277,7 +277,7 @@ func TestRecord(t *testing.T) {
 			name: "null user_id allowed",
 			run: func(t *testing.T, c *database.Catalog) {
 				tx := begin(t, c)
-				if _, err := Record(tx, Revision{
+				if _, err := recordResolved(t, tx, Revision{
 					ActionType: "system_seed",
 					CreatedAt:  fixedAt,
 					Changes: []rowchange.Change{{
@@ -310,7 +310,7 @@ func TestRecord(t *testing.T) {
 			run: func(t *testing.T, c *database.Catalog) {
 				mustUser(t, c, userID)
 				tx := begin(t, c)
-				if _, err := Record(tx, Revision{
+				if _, err := recordResolved(t, tx, Revision{
 					UserID:     userID,
 					ActionType: "create_source",
 					CreatedAt:  fixedAt,
@@ -344,7 +344,7 @@ func TestRecord(t *testing.T) {
 			run: func(t *testing.T, c *database.Catalog) {
 				mustUser(t, c, userID)
 				tx := begin(t, c)
-				if _, err := Record(tx, Revision{
+				if _, err := recordResolved(t, tx, Revision{
 					UserID:     userID,
 					ActionType: "create_source",
 					CreatedAt:  fixedAt,
@@ -378,7 +378,7 @@ func TestRecord(t *testing.T) {
 			run: func(t *testing.T, c *database.Catalog) {
 				tx := begin(t, c)
 				defer tx.Rollback()
-				_, err := Record(tx, Revision{
+				_, err := recordResolved(t, tx, Revision{
 					CreatedAt: fixedAt,
 					Changes: []rowchange.Change{{
 						EntityType: "source",
@@ -397,7 +397,7 @@ func TestRecord(t *testing.T) {
 			run: func(t *testing.T, c *database.Catalog) {
 				tx := begin(t, c)
 				defer tx.Rollback()
-				_, err := Record(tx, Revision{
+				_, err := recordResolved(t, tx, Revision{
 					CreatedAt: fixedAt,
 					Changes: []rowchange.Change{{
 						EntityType: "source",
@@ -416,7 +416,7 @@ func TestRecord(t *testing.T) {
 			run: func(t *testing.T, c *database.Catalog) {
 				tx := begin(t, c)
 				defer tx.Rollback()
-				_, err := Record(tx, Revision{
+				_, err := recordResolved(t, tx, Revision{
 					CreatedAt: fixedAt,
 					Changes: []rowchange.Change{{
 						EntityType: "  ",
@@ -435,7 +435,7 @@ func TestRecord(t *testing.T) {
 			run: func(t *testing.T, c *database.Catalog) {
 				tx := begin(t, c)
 				defer tx.Rollback()
-				_, err := Record(tx, Revision{
+				_, err := recordResolved(t, tx, Revision{
 					CreatedAt: fixedAt,
 					Changes: []rowchange.Change{{
 						EntityType: "source",
@@ -454,14 +454,14 @@ func TestRecord(t *testing.T) {
 			run: func(t *testing.T, c *database.Catalog) {
 				tx := begin(t, c)
 				defer tx.Rollback()
-				_, err := Record(tx, Revision{
+				_, err := recordResolved(t, tx, Revision{
 					CreatedAt: fixedAt,
 					Changes:   nil,
 				})
 				if !errors.Is(err, ErrInvalid) {
 					t.Fatalf("got %v", err)
 				}
-				_, err = Record(tx, Revision{
+				_, err = recordResolved(t, tx, Revision{
 					CreatedAt: fixedAt,
 					Changes:   []rowchange.Change{},
 				})
@@ -475,7 +475,7 @@ func TestRecord(t *testing.T) {
 			run: func(t *testing.T, c *database.Catalog) {
 				tx := begin(t, c)
 				defer tx.Rollback()
-				_, err := Record(tx, Revision{
+				_, err := recordResolved(t, tx, Revision{
 					CreatedAt: "  ",
 					Changes: []rowchange.Change{{
 						EntityType: "source",
@@ -494,7 +494,7 @@ func TestRecord(t *testing.T) {
 			run: func(t *testing.T, c *database.Catalog) {
 				tx := begin(t, c)
 				defer tx.Rollback()
-				_, err := Record(tx, Revision{
+				_, err := recordResolved(t, tx, Revision{
 					UserID:    []byte{1, 2},
 					CreatedAt: fixedAt,
 					Changes: []rowchange.Change{{
@@ -512,7 +512,7 @@ func TestRecord(t *testing.T) {
 		{
 			name: "rejects nil tx",
 			run: func(t *testing.T, c *database.Catalog) {
-				_, err := Record(nil, Revision{
+				_, err := recordResolved(t, nil, Revision{
 					CreatedAt: fixedAt,
 					Changes: []rowchange.Change{{
 						EntityType: "source",

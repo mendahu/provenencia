@@ -61,7 +61,7 @@ func TestNodeAndKindAndVerify(t *testing.T) {
 	if _, err := g.Node(id); err != nil {
 		t.Fatal(err)
 	}
-	if err := g.OnCommit(1, effects.Set{Structure: true}); err != nil {
+	if err := g.OnCommit(effects.Commit{Revision: 1, Effects: effects.Set{Structure: true}}); err != nil {
 		t.Fatal(err)
 	}
 	if g.LoadedForTest(id) {
@@ -87,7 +87,7 @@ func TestCommitInsertsANewHandleIntoALoadedKind(t *testing.T) {
 	if _, err := db.Exec(`INSERT INTO canonical_entities (id, subject_type_id, ref) VALUES (?, ?, 'PER-2')`, id, typeID); err != nil {
 		t.Fatal(err)
 	}
-	if err := g.OnCommit(1, effects.Set{Handles: [][]byte{id}}); err != nil {
+	if err := g.OnCommit(effects.Commit{Revision: 1, Effects: effects.Set{Handles: [][]byte{id}}}); err != nil {
 		t.Fatal(err)
 	}
 	if !g.LoadedForTest(id) {
@@ -142,7 +142,7 @@ func TestCommitOfAnAssociationLoadsEndpoints(t *testing.T) {
 		t.Fatal(err)
 	}
 	g := c.Graph()
-	if err := g.OnCommit(1, effects.Set{Handles: [][]byte{assoc}}); err != nil {
+	if err := g.OnCommit(effects.Commit{Revision: 1, Effects: effects.Set{Handles: [][]byte{assoc}}}); err != nil {
 		t.Fatal(err)
 	}
 	if !g.LoadedForTest(person) || !g.LoadedForTest(event) {
@@ -204,7 +204,7 @@ func TestCommitReloadsASharedEndpointOnce(t *testing.T) {
 	g := c.Graph()
 	var n int
 	g.SetQueryCounterForTest(func() { n++ })
-	if err := g.OnCommit(1, effects.Set{Handles: [][]byte{assocA, assocB}}); err != nil {
+	if err := g.OnCommit(effects.Commit{Revision: 1, Effects: effects.Set{Handles: [][]byte{assocA, assocB}}}); err != nil {
 		t.Fatal(err)
 	}
 	if !g.LoadedForTest(person) || !g.LoadedForTest(eventA) || !g.LoadedForTest(eventB) {

@@ -1,33 +1,9 @@
 package audit
 
-import (
-	"database/sql"
-
-	"github.com/mendahu/provenencia/core/database/effects"
-	"github.com/mendahu/provenencia/core/database/rowchange"
-)
-
-// ScopeSource is the scope_type for work under a Source: its own row and
-// everything hanging off it (notes, metadata, credibility, artifacts, files,
-// subjects, citations, observations and their notes and values).
-const ScopeSource = "source"
-
-// ScopeCanonicalEntity is the scope_type for work on a Person, Event, or Place
-// handle: its row, its claims and pins, and evidence on a member Subject.
-const ScopeCanonicalEntity = "canonical_entity"
+import "database/sql"
 
 const sqlInsertScope = `INSERT OR IGNORE INTO audit_transaction_scopes (audit_transaction_id, scope_type, scope_id)
 	VALUES (?, ?, ?)`
-
-// scopeResolvers lists the scope types Record stores, one row each, and the
-// effect path that resolves the ids of a change list.
-var scopeResolvers = []struct {
-	Type    string
-	Resolve func(*sql.Tx, []rowchange.Change) ([][]byte, error)
-}{
-	{ScopeSource, effects.Sources},
-	{ScopeCanonicalEntity, effects.HandleScopes},
-}
 
 const sqlLatestByScope = `SELECT sc.scope_id, MAX(t.revision), t.created_at
 	FROM audit_transaction_scopes sc
