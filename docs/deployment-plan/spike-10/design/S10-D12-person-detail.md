@@ -74,11 +74,11 @@ The researcher can tell a person's gender (or, failing that, their recorded sex 
 | Sex at birth borrows a tint | Female uses the Woman tint. Male uses the Man tint. Intersex and any researcher-added sex-at-birth term use the other tint. The label always says it is sex at birth: “Female · at birth”. |
 | Neutral is the page as it is today | No gender and no sex at birth; a mixed value (two sources disagree and neither wins); Unknown or Indeterminate sex at birth. Neutral shows no mark and no tint. The Details row already says Mixed or Nothing recorded. |
 | Mixed gender does not fall back | A mixed gender is neutral. It does not drop to sex at birth, and it is not a blend of two tints. |
-| The mark carries the meaning | Colour is never the only signal. The mark's text names the value, and VoiceOver reads “Gender: Woman” or “Sex at birth: Female”. |
-| Tints come from the kit | Pick each tint (fill and line) from colours the design system already has. Do not add a palette colour. Do not use a status tone (success, warning, danger) or the Event or Place kind ink, which already mean something else. |
-| A likeness is a crop of a photo (S10-35) | Each likeness is a cropped region of a Citation's image, drawn by the researcher on one Source. A person can have many. They do not compete like two birth dates; every one is listed. |
+| The mark carries the meaning | Colour is never the only signal. The mark's text names the value, and VoiceOver reads it the way the Details row does: the field's label, then the value (“Gender, Woman”, “Sex at birth, Female”). |
+| Tints come from the kit | Each of the four tints is three colours, named like the kind colours: tint (the fill), line (the outline), and ink (the Badge text). Pick each from `PVColor` tokens the design system already has, and label every swatch with its token name. Do not add a palette colour. Do not use a status tone (success, warning, danger) or the Event or Place kind ink, which already mean something else. |
+| A likeness is a crop of a photo (S10-35) | Each likeness is a cropped region of a Citation's image, drawn by the researcher on one Source. It is a record of the person's `likeness` Property. A person can have many. They do not compete like two birth dates; every one is listed in the gallery, and `likeness` is not also a Details row. |
 | The earliest leads (S10-35) | With no portrait chosen, the header thumb shows the earliest likeness. No likeness: the person mark, as today. |
-| One likeness can be the portrait (S10-39) | The researcher marks one likeness as the portrait. It then leads the header thumb and the Persons list thumb. The others stay in the gallery. Clearing the mark returns to the earliest. It is a display choice, not evidence. |
+| One likeness can be the portrait (S10-39) | The researcher marks one likeness as the portrait. It then leads the header thumb and the Persons list thumb. The others stay in the gallery. Going back to the earliest is on the header thumb's menu. It is a display choice, not evidence. This is the same interaction as choosing a Source's cover on the Source page (S10-D5): a Badge on the chosen card, the button hidden there, a toast after choosing, and the revert on the header thumb. |
 | A crop may load or fail | While a crop loads, the tile shows the kit thumb's loading state. A crop that cannot be read shows the person mark, not an error. |
 
 ### 2.1 What this board is not
@@ -98,9 +98,9 @@ The researcher can tell a person's gender (or, failing that, their recorded sex 
 
 | | |
 | --- | --- |
-| Ships in **S10-23** | PDP-1…PDP-6. The mark, the thumb tint, the precedence, and the neutral cases. |
+| Ships in **S10-23** | PDP-1…PDP-6 and PDP-12. The mark, the thumb tint, the precedence, and the neutral cases. |
 | Ships in **S10-35** | PDP-7…PDP-9. The Likenesses section and the earliest likeness in the header thumb. |
-| Ships in **S10-39** | PDP-10…PDP-11. Marking and clearing the portrait. |
+| Ships in **S10-39** | PDP-10…PDP-11. Choosing the portrait, and going back to the earliest. |
 | Stays out | Event and Place pages. Editing values. A colour per added term. Promote. |
 
 ---
@@ -111,15 +111,16 @@ The researcher can tell a person's gender (or, failing that, their recorded sex 
 | --- | --- |
 | PDP-1 | A person whose gender has one value shows a Badge directly under the name, above the b. and d. lines, reading the term's label (“Woman”, “Man”, “Non-binary”, or the researcher's term). |
 | PDP-2 | A person with no gender value and one sex-at-birth value shows the same Badge reading “{label} · at birth” (“Female · at birth”). |
-| PDP-3 | The header thumb takes the value's tint: the fill behind the person mark and its outline. Four tints: Man, Woman, Non-binary, and other. Female and Male borrow Woman and Man. Intersex and any added term use other. The Badge uses the same tint's ink. |
+| PDP-3 | The header thumb takes the value's tint: the fill behind the person mark (tint) and its outline (line). Four tints: Man, Woman, Non-binary, and other. Female and Male borrow Woman and Man. Intersex and any added term use other. The Badge text uses the same tint's ink, on the kit's neutral Badge fill, with no icon. |
 | PDP-4 | Neutral shows no Badge and the thumb exactly as today: no gender and no sex at birth, a mixed gender, a mixed sex at birth with no gender, and Unknown or Indeterminate sex at birth. |
-| PDP-5 | The Badge reads to VoiceOver as “Gender: {label}” or “Sex at birth: {label}”. The thumb's spoken label is unchanged. The Badge has no hover help and is not a button. |
+| PDP-5 | The Badge reads to VoiceOver as the field's label, then the value: “Gender, Woman”, “Sex at birth, Female”, the same as its Details row. The thumb's spoken label is unchanged. The Badge has no hover help and is not a button. |
 | PDP-6 | Every Details row stays as it is, including Sex at birth and Gender. The Badge does not replace them. |
-| PDP-7 | (S10-35) A Likenesses section under Details: a SectionHeader with the count, then a wrapping grid of square crop tiles (kit Thumbnail, one size). Each tile has the Source title under it, one line, truncated, with the full title as help. Order: earliest first. No likeness: the section is absent. |
-| PDP-8 | (S10-35) Clicking a tile opens the Citation that holds that crop, the way a Why record does today. |
+| PDP-12 | Every frame that shows a tint labels its tint, line, and ink with the `PVColor` token names, so the implementer can copy them. |
+| PDP-7 | (S10-35) A Likenesses section under Details: a SectionHeader titled “Likenesses” with the count as its aside, then a wrapping grid of 96pt square crop tiles. Each tile is one record of the `likeness` field. Under it, the record's Source title, one line, truncated, with the full title as help. Order: earliest first. No likeness: the section is absent, and `likeness` is never a Details row. |
+| PDP-8 | (S10-35) Clicking a tile opens the Citation that holds that crop, the way a Why record does today. The tile is a plain button over the thumb with the kit focus ring, the same shell as the artifact card's preview on the Source page. |
 | PDP-9 | (S10-35) The header thumb shows the earliest likeness, filled to the square. With an image, the tint from PDP-3 is the thumb's outline only. Loading and unreadable crops follow the kit Thumbnail states. |
-| PDP-10 | (S10-39) Each tile has a ghost “Use as portrait” button. The chosen tile shows a “Portrait” Badge and its button reads “Clear portrait”. One portrait at most. |
-| PDP-11 | (S10-39) The portrait leads the header thumb. Clearing it returns the earliest likeness. The gallery order does not change when the portrait changes. |
+| PDP-10 | (S10-39) Each tile but the chosen one has a ghost “Use as portrait” button under its title. The chosen tile shows a “Portrait” Badge in the accent tone with the photo icon, like the Source page's Cover Badge, and no button. Choosing shows a success toast. One portrait at most. |
+| PDP-11 | (S10-39) The portrait leads the header thumb. The header thumb has a menu with “Use earliest likeness”, shown only while a portrait is chosen, like the Source page's revert on its cover. The gallery order does not change when the portrait changes. |
 
 ---
 
@@ -135,8 +136,9 @@ One Person page. The later frames add to it. Do not draw a second page.
 6. **Intersex at birth.** No gender, sex at birth Intersex. Badge “Intersex · at birth”, other tint.
 7. **Mixed gender.** Two Sources disagree on gender; sex at birth Female. No Badge, plain thumb. Details shows Gender with the Mixed badge.
 8. **Neither.** No gender, no sex at birth. The page as it is today.
+8b. **Unknown at birth.** No gender, sex at birth recorded only as Unknown. The page as it is today; the Sex at birth row reads its empty text.
 9. **Gallery (S10-35).** Woman from frame 1 with three likenesses. The header thumb shows the earliest crop with the Woman outline. The Likenesses section shows three tiles under Details.
-10. **Portrait (S10-39).** Frame 9 with the second tile chosen: its “Portrait” Badge and “Clear portrait”, and the header thumb now shows that crop. The tiles keep their order.
+10. **Portrait (S10-39).** Frame 9 with the second tile chosen: its “Portrait” Badge and no button, the toast, and the header thumb now shows that crop with its menu open on “Use earliest likeness”. The tiles keep their order.
 11. **Dark mode.** Frames 1, 4, and 9 in dark mode, so every tint reads on both surfaces.
 
 ---
@@ -148,15 +150,19 @@ This table is **binding**. Instance the Ship kit rows. Paths from `macos/App/` u
 | Building block | Layer | Status | Home | Notes |
 | --- | --- | --- | --- | --- |
 | Person page | Snowflake | **Extend** | `Features/Conclusions/PersonDetailView.swift` | The Person summary slot gains the Badge (PDP-1, PDP-2). |
-| Shared Conclusion page | Snowflake | **Extend** | `Features/Conclusions/ConclusionDetailPage.swift` | The header passes a kind's thumb tint to the thumb. Event and Place pass none. Later, a kind's sections below Details carry the Likenesses section. |
-| Header thumb | Component | **Extend** | `DesignSystem/Components/Thumbnail/PVThumbnail.swift` | PDP-3, PDP-9. An optional tint (fill and line) for the filled state. Content-agnostic: the thumb does not know about gender. |
+| Shared Conclusion page | Snowflake | **Extend** | `Features/Conclusions/ConclusionDetailPage.swift` | The header reads one thumb slot from the kind (colours now; the crop in S10-35). Event and Place pass none. The Likenesses section needs a slot below Details that today's relationship sections cannot hold; S10-35 adds it. |
+| Header thumb | Component | **Extend** | `DesignSystem/Components/Thumbnail/PVThumbnail.swift` | PDP-3, PDP-9. Optional colours (tint and line), framing like its size. Content-agnostic: the thumb does not know about gender. |
 | Gender / sex mark | Component | Ship | `PVBadge` (`DesignSystem/Components/Badge/PVBadge.swift`) | PDP-1, PDP-2. The text init with its `foreground` ink, the way a graph card shows its kind. Not a Chip: `PVChip` is a selectable control, and this mark is not pressed. |
 | Value → tint | Snowflake | New | beside `PersonDetailContent` in `Features/Conclusions/` | PDP-3, PDP-4. Reads the reconciled gender and sex-at-birth fields; picks Man, Woman, Non-binary, other, or neutral. Tints are existing `PVColor` tokens. Second call site: none; it is a feature snowflake on one page, not a kit primitive. |
 | Details rows | Snowflake | Ship | `ReconciledValueRow` | PDP-6. Unchanged. |
 | Section header | Component | Ship | `PVSectionHeader` | PDP-7. Title “Likenesses” with the count. |
-| Likeness tile | Component | Ship | `PVThumbnail` | PDP-7, PDP-9. Image, loading, and mark fallback states. |
-| Use as portrait | Component | Ship | `PVButton` ghost, small | PDP-10. Same shape as the Source page's “Use as thumbnail” on artifact cards (S10-D5). |
-| Portrait mark | Component | Ship | `PVBadge` | PDP-10. |
+| Likeness tile | Component | Ship | `CachedThumbnail` (`Platform/CachedThumbnail.swift`) over `PVThumbnail` | PDP-7, PDP-9. Loads the crop; image, loading, and mark fallback states. 96pt. |
+| Tile button and caption | Snowflake | Ship | the artifact card preview shell in `Features/Sources/SourcePageArtifactsView.swift` | PDP-7, PDP-8. Plain button, kit focus ring, help; caption is muted one-line text. Not a new card component. |
+| Tile data | Snowflake | Ship | `Features/Conclusions/ReconciliationRecord.swift` | PDP-7, PDP-8. Source title and Citation location per record, as the Why uses them. |
+| Use as portrait | Component | Ship | `PVButton` ghost, small | PDP-10. Same shape as the Source page's “Use as thumbnail” on artifact cards (S10-D5), hidden on the chosen tile. |
+| Portrait mark | Component | Ship | `PVBadge` accent, photo icon | PDP-10. Same as the Source page's Cover Badge. |
+| Chosen toast | Component | Ship | `PVToast` | PDP-10. Like the Source page's thumbnail-updated toast. |
+| Header thumb menu | Component | Ship | `PVContextMenu` | PDP-11. “Use earliest likeness”, like the Source page's cover revert. |
 
 ### Explicit non-goals
 
@@ -172,6 +178,6 @@ This table is **binding**. Instance the Ship kit rows. Paths from `macos/App/` u
 
 ## 7. Handoff
 
-1. When the board is agreed, record the Claude Design link and the four chosen tints (fill and line tokens for Man, Woman, Non-binary, other) on the **Board** line.
-2. Archive this brief under `design/archive/` and record it in [`../completed.md`](../completed.md).
-3. Implement **S10-23** against PDP-1…PDP-6. **S10-35** fills PDP-7…PDP-9 and **S10-39** fills PDP-10…PDP-11.
+1. When the board is agreed, record the Claude Design link and the four tints (tint, line, and ink token for Man, Woman, Non-binary, other) on the **Board** line.
+2. Implement **S10-23** against PDP-1…PDP-6 and PDP-12. **S10-35** fills PDP-7…PDP-9 and **S10-39** fills PDP-10…PDP-11.
+3. The brief stays in `design/` while S10-35 and S10-39 build on it. **S10-39** archives it under `design/archive/` and records it in [`../completed.md`](../completed.md).
