@@ -15990,30 +15990,6 @@
         }
       }
     },
-    "lastUpdated.today": {
-      "comment": "Last-updated cell for a change made today; argument is the time of day",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Today, %@"
-          }
-        }
-      }
-    },
-    "lastUpdated.yesterday": {
-      "comment": "Last-updated cell for a change made yesterday",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Yesterday"
-          }
-        }
-      }
-    },
     "lastUpdated.a11y.updated": {
       "comment": "VoiceOver suffix of a list row; argument is the cell text (Today, 3:15 PM)",
       "extractionState": "manual",

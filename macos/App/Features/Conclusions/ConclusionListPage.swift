@@ -104,7 +104,7 @@ struct ConclusionListPage<Kind: ConclusionListKind>: View {
     /// First-load placeholder with the last-updated column bar, so rows do not
     /// shift when the times arrive.
     static func skeleton() -> PVListSkeleton {
-        PVListSkeleton(detailWidth: LastUpdatedDisplay.columnWidth)
+        PVListSkeleton(detailWidth: ConclusionListRow.updatedColumnWidth)
     }
 
     /// Page chrome shared by every state: the section header over the body,
@@ -167,7 +167,8 @@ private struct ConclusionListBody<Kind: ConclusionListKind>: View {
                     itemAccessibilityLabel: {
                         ConclusionListRow.labelWithUpdated(
                             Kind.accessibilityLabel($0, orders: session.nameFormat),
-                            LastUpdatedDisplay(Kind.updatedAt($0), now: Date())
+                            updatedAt: Kind.updatedAt($0),
+                            in: .current
                         )
                     },
                     itemAccessibilityIdentifier: { "\(Kind.identifierRoot).row.\(Kind.ref($0))" },

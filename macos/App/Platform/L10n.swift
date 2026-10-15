@@ -8451,25 +8451,9 @@ enum L10n {
         }
     }
 
-    /// Last-updated time on a list row: the day words, the hover stamp, and
-    /// the spoken form. `LastUpdatedDisplay` composes them.
+    /// Last-updated cell on a list row: the hover help and the spoken suffix.
+    /// The day words and the stamp are `L10n.Timestamp`.
     enum LastUpdated {
-        static func today(time: String) -> String {
-            L10n.format(LocalizedStringResource(
-                "lastUpdated.today",
-                defaultValue: "Today, %@",
-                comment: "Last-updated cell for a change made today; argument is the time of day"
-            ), time)
-        }
-
-        static var yesterday: String {
-            L10n.string(LocalizedStringResource(
-                "lastUpdated.yesterday",
-                defaultValue: "Yesterday",
-                comment: "Last-updated cell for a change made yesterday"
-            ))
-        }
-
         static func a11yUpdated(_ text: String) -> String {
             L10n.format(LocalizedStringResource(
                 "lastUpdated.a11y.updated",
