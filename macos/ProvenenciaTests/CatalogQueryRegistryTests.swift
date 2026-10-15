@@ -414,12 +414,25 @@ struct CatalogQueryRegistryTests {
         #expect(store.heldCatalogProjectDir == projectDir)
     }
 
-    @Test func onlyConclusionDetailKeysEvictWhenHidden() {
+    @Test func hiddenPolicies() {
         let registry = CatalogQueryRegistry.standard
         let project = ProjectKey(projectDir: projectDir)
-        #expect(registry.evictsWhenHidden(.conclusionDetail(project: project, entityId: "e1")))
-        #expect(!registry.evictsWhenHidden(.personsList(project: project)))
-        #expect(!registry.evictsWhenHidden(.sourceWorkspace(project: project, sourceId: "s1")))
+        #expect(registry.hiddenPolicy(.conclusionDetail(project: project, entityId: "e1")) == .evict)
+        #expect(registry.hiddenPolicy(.personsList(project: project)) == .markStale)
+        #expect(registry.hiddenPolicy(.eventsList(project: project)) == .markStale)
+        #expect(registry.hiddenPolicy(.placesList(project: project)) == .markStale)
+        #expect(registry.hiddenPolicy(.sourcesList(project: project)) == .markStale)
+        #expect(registry.hiddenPolicy(.sourceWorkspace(project: project, sourceId: "s1")) == .revalidate)
+    }
+
+    @Test func lastUpdatedPatchesAreDeclaredOnTheFourLists() {
+        let registry = CatalogQueryRegistry.standard
+        let project = ProjectKey(projectDir: projectDir)
+        for key in [CatalogQueryKey.personsList(project: project), .eventsList(project: project), .placesList(project: project)] {
+            #expect(registry.lastUpdatedPatch(key)?.scope == .handle, "\(key)")
+        }
+        #expect(registry.lastUpdatedPatch(.sourcesList(project: project))?.scope == .source)
+        #expect(registry.lastUpdatedPatch(.sourceTypesList(project: project)) == nil)
     }
 
     @Test func conclusionDetailOfAnUnknownHandleIsCodedNotFound() async throws {
@@ -893,8 +906,9 @@ struct CatalogQueryRegistryTests {
     }
 
     /// A scope move (a note save) changes a row's last-updated time, not what
-    /// the detail page shows, so the lists reload and the details do not.
-    @Test func handleScopesReloadListsNotDetails() {
+    /// the lists or detail pages show, so it invalidates nothing; the session
+    /// patches the row from the write's activity.
+    @Test func handleScopesInvalidateNothing() {
         let registry = CatalogQueryRegistry.standard
         let project = ProjectKey(projectDir: projectDir)
         let lists: [CatalogQueryInvalidation] = [
@@ -902,7 +916,7 @@ struct CatalogQueryRegistryTests {
             .key(.eventsList(project: project)),
             .key(.placesList(project: project)),
         ]
-        #expect(registry.invalidations(for: CatalogWriteEffects(handleScopes: ["e1"]), project: project) == lists)
+        #expect(registry.invalidations(for: CatalogWriteEffects(handleScopes: ["e1"]), project: project).isEmpty)
         #expect(registry.invalidations(
             for: CatalogWriteEffects(handles: ["e1"], handleScopes: ["e1", "e2"]),
             project: project

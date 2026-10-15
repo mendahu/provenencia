@@ -425,9 +425,9 @@ struct WorkspaceSessionTests {
         #expect(handle.value?.observations.count == 1)
     }
 
-    /// Conclusion keys reload from Go's auto-reconciler cache on any trigger:
-    /// a Promote revalidates a warmed Persons list without a second query.
-    @Test func applyPromoteRevalidatesWarmedPersonsList() async throws {
+    /// A Promote leaves a Persons list that isn't on screen stale: the old rows
+    /// stay, nothing fetches, and the next `query` reloads from Go's cache.
+    @Test func applyPromoteMarksHiddenPersonsListStale() async throws {
         let store = FakeStore()
         seedStore(store)
         store.subjectTypesByProject[projectDir] = [
@@ -446,13 +446,17 @@ struct WorkspaceSessionTests {
 
         let promoted = try await store.promoteSubject(projectDir: projectDir, userID: "user-1", subjectID: "sub-1")
         session.apply(.promotedSubject(sourceId: "s1"))
+        #expect(!handle.isFetching)
+        #expect(handle.value?.isEmpty == true)
+
+        let _: QueryHandle<[CatalogPersonHeader]> = session.query(.personsList(project: session.projectKey))
         await waitForFetchComplete(handle)
         #expect(handle.value?.map(\.entity.ref) == [promoted.entity.ref])
     }
 
     /// The rule-2 exception (S9-15): a trigger evicts Conclusion detail
-    /// pages that aren't on screen, revalidates the one that is, and
-    /// revalidates list keys as usual.
+    /// pages that aren't on screen, revalidates the one that is, and marks the
+    /// Persons list (also off screen) stale until its next query.
     @Test func applyTriggerEvictsHiddenDetailPagesAndRevalidatesTheVisibleOne() async throws {
         let store = FakeStore()
         seedStore(store)
@@ -496,10 +500,14 @@ struct WorkspaceSessionTests {
         // Off screen: dropped, so it reloads only when next visited.
         let evicted: QueryHandle<CatalogConclusionDetail>? = session.queryHandle(firstKey)
         #expect(evicted == nil)
-        // On screen and lists: revalidated in place.
+        // On screen: revalidated in place.
         await waitForFetchComplete(secondHandle)
-        await waitForFetchComplete(list)
         #expect(secondHandle.value?.fields.first?.state == .single)
+        // The list is off screen: stale, not reloaded. The next query reloads it.
+        #expect(!list.isFetching)
+        #expect(list.value?.first?.name?.form != "Jim Robins")
+        let _: QueryHandle<[CatalogPersonHeader]> = session.query(.personsList(project: session.projectKey))
+        await waitForFetchComplete(list)
         #expect(list.value?.first?.name?.form == "Jim Robins")
 
         // Leaving for the list hides the second page too.
@@ -515,6 +523,123 @@ struct WorkspaceSessionTests {
         let reloaded: QueryHandle<CatalogConclusionDetail> = try #require(session.queryHandle(firstKey))
         await waitForFetchComplete(reloaded)
         #expect(reloaded.value?.entity == first.entity)
+    }
+
+    private func personHeader(_ id: String, revision: Int64, at: String = "") -> CatalogPersonHeader {
+        CatalogPersonHeader(
+            entity: CatalogCanonicalEntity(id: id, ref: "PER-\(id)", subjectTypeID: "t", label: ""),
+            name: nil,
+            nameValueCount: 0,
+            updated: CatalogActivity(revision: revision, at: at)
+        )
+    }
+
+    private func eventHeader(_ id: String) -> CatalogEventHeader {
+        CatalogEventHeader(
+            entity: CatalogCanonicalEntity(id: id, ref: "EVT-\(id)", subjectTypeID: "t", label: ""),
+            title: CatalogEventTitle(rule: .ref, ref: "EVT-\(id)")
+        )
+    }
+
+    private func placeHeader(_ id: String) -> CatalogPlaceHeader {
+        CatalogPlaceHeader(
+            entity: CatalogCanonicalEntity(id: id, ref: "PLC-\(id)", subjectTypeID: "t", label: "")
+        )
+    }
+
+    /// A write that reports its activity moves the cached rows it names, in
+    /// place: no list load starts, an older or empty activity moves nothing, and
+    /// a load already in flight is restarted so its old answer cannot win.
+    @Test func applyEffectsPatchesLastUpdatedInPlace() async throws {
+        let store = FakeStore()
+        seedStore(store)
+        let session = makeSession(store: store)
+        let people = CatalogQueryKey.personsList(project: session.projectKey)
+        let sources = CatalogQueryKey.sourcesList(project: session.projectKey)
+        let at = "2026-10-15T16:00:00Z"
+        session.setQueryValue(people, value: [personHeader("e1", revision: 10), personHeader("e2", revision: 9)])
+        session.setQueryValue(sources, value: [
+            CatalogSource(id: "s1", ref: "SRC-1", sourceTypeID: "t1", title: "Alpha", description: "",
+                          updated: CatalogActivity(revision: 5)),
+        ])
+        let list: QueryHandle<[CatalogPersonHeader]> = try #require(session.queryHandle(people))
+        let sourceList: QueryHandle<[CatalogSource]> = try #require(session.queryHandle(sources))
+
+        // AC-2.5: only e1 moves, and nothing loads.
+        session.apply(CatalogWriteEffects(handleScopes: ["e1"], activity: CatalogActivity(revision: 12, at: at)))
+        #expect(list.value?.map(\.updated) == [CatalogActivity(revision: 12, at: at), CatalogActivity(revision: 9)])
+        #expect(!list.isFetching)
+        // An older revision, and revision 0, change nothing.
+        session.apply(CatalogWriteEffects(handleScopes: ["e1"], activity: CatalogActivity(revision: 11, at: "x")))
+        session.apply(CatalogWriteEffects(handleScopes: ["e1", "e2"], activity: CatalogActivity()))
+        #expect(list.value?.map(\.updated) == [CatalogActivity(revision: 12, at: at), CatalogActivity(revision: 9)])
+
+        // AC-2.5b: a Source moves and the Sources list is neither loaded nor marked stale.
+        session.apply(CatalogWriteEffects(sources: ["s1"], activity: CatalogActivity(revision: 12, at: at)))
+        #expect(sourceList.value?.first?.updated == CatalogActivity(revision: 12, at: at))
+        #expect(!sourceList.isFetching)
+        let _: QueryHandle<[CatalogSource]> = session.query(sources)
+        await Task.yield()
+        #expect(!sourceList.isFetching)
+        #expect(sourceList.value?.first?.updated.revision == 12)
+
+        // AC-2.5c: a load in flight is cancelled and restarted.
+        session.invalidate(people)
+        let oldRows = [personHeader("e1", revision: 10)]
+        let slow = session.ensureQuery(people) {
+            try await Task.sleep(nanoseconds: 200_000_000)
+            return oldRows
+        }
+        #expect(slow.isFetching)
+        session.apply(CatalogWriteEffects(handleScopes: ["e2"], activity: CatalogActivity(revision: 20, at: at)))
+        #expect(list.value?.last?.updated == CatalogActivity(revision: 20, at: at))
+        #expect(list.isFetching)
+        try await Task.sleep(nanoseconds: 300_000_000)
+        await waitForFetchComplete(list)
+        // The restarted load answered from the store (empty), not the slow loader's old rows.
+        #expect(list.value?.isEmpty == true)
+    }
+
+    /// A write that changes list values reloads the list on screen and leaves
+    /// the others stale until they are shown.
+    @Test func hiddenListsGoStaleVisibleListReloads() async throws {
+        let store = FakeStore()
+        seedStore(store)
+        let session = makeSession(store: store)
+        let project = session.projectKey
+        let people = CatalogQueryKey.personsList(project: project)
+        let events = CatalogQueryKey.eventsList(project: project)
+        let places = CatalogQueryKey.placesList(project: project)
+        func seed() throws -> (QueryHandle<[CatalogPersonHeader]>, QueryHandle<[CatalogEventHeader]>, QueryHandle<[CatalogPlaceHeader]>) {
+            session.setQueryValue(people, value: [personHeader("e1", revision: 1)])
+            session.setQueryValue(events, value: [eventHeader("e1")])
+            session.setQueryValue(places, value: [placeHeader("e1")])
+            return (
+                try #require(session.queryHandle(people)),
+                try #require(session.queryHandle(events)),
+                try #require(session.queryHandle(places))
+            )
+        }
+
+        // AC-2.6: none on screen. Nothing loads; the old value shows; the next query reloads.
+        var (peopleHandle, eventsHandle, placesHandle) = try seed()
+        session.apply(CatalogWriteEffects(handles: ["e1"]))
+        #expect(!peopleHandle.isFetching && !eventsHandle.isFetching && !placesHandle.isFetching)
+        #expect(peopleHandle.value?.count == 1 && eventsHandle.value?.count == 1 && placesHandle.value?.count == 1)
+        let _: QueryHandle<[CatalogPersonHeader]> = session.query(people)
+        await waitForFetchComplete(peopleHandle)
+        #expect(peopleHandle.value?.isEmpty == true)
+
+        // AC-2.7: People on screen. It reloads now; Events and Places go stale.
+        session.apply(location: .sectionRoot(.persons))
+        await waitForFetchComplete(peopleHandle)
+        (peopleHandle, eventsHandle, placesHandle) = try seed()
+        session.apply(CatalogWriteEffects(handles: ["e1"]))
+        #expect(peopleHandle.isFetching)
+        await waitForFetchComplete(peopleHandle)
+        #expect(peopleHandle.value?.isEmpty == true)
+        #expect(!eventsHandle.isFetching && !placesHandle.isFetching)
+        #expect(eventsHandle.value?.count == 1 && placesHandle.value?.count == 1)
     }
 
     /// `usedBy` on the Properties inspector counts Observations, and it

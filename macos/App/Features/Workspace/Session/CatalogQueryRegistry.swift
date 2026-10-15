@@ -12,6 +12,16 @@ enum CatalogQueryInvalidation: Hashable, Sendable {
     case allCached(CatalogQueryKey.Kind)
 }
 
+/// What an invalidation does to a cached key that is not on screen.
+enum CatalogHiddenPolicy: Sendable, Equatable {
+    /// Reload now (the default).
+    case revalidate
+    /// Keep the old value and reload on the next `query`; nothing fetches now.
+    case markStale
+    /// Drop the key; it loads fresh when next visited.
+    case evict
+}
+
 /// Declarative catalog read loaders and mutation invalidation map.
 struct CatalogQueryRegistry: Sendable {
     static let standard = CatalogQueryRegistry()
@@ -35,11 +45,13 @@ struct CatalogQueryRegistry: Sendable {
         /// Marked stale without a refetch: the next `query` (a place visit)
         /// reloads it. For writes that move a value nobody is looking at yet.
         var markStaleOn: Set<CatalogMutationKind> = []
-        /// An invalidated key that isn't on screen is evicted, not
-        /// revalidated, and reloads when next visited. The exception to
-        /// cache rule 2 for per-handle pages, so one trigger doesn't reload
-        /// every page the researcher has opened.
-        var evictWhenHidden = false
+        /// What an invalidated key that isn't on screen does. The exception
+        /// to cache rule 2 for lists and per-handle pages, so one trigger
+        /// doesn't reload every list or page the researcher has opened.
+        var whenHidden: CatalogHiddenPolicy = .revalidate
+        /// How a write that reports its activity moves this list's rows in
+        /// place (no load). `nil` for lists without a last-updated cell.
+        var lastUpdated: CatalogLastUpdatedPatch?
     }
 
     private let specs: [Spec] = [
@@ -47,13 +59,15 @@ struct CatalogQueryRegistry: Sendable {
             kind: .sourcesList,
             stalePolicy: .sessionFresh,
             invalidateOn: [.createdSource, .deletedSource],
-            // Work under a Source moves its "Updated" revision (engine audit
-            // scopes). Canvas writes must not refetch every row, so the list
-            // reloads on its next visit instead.
+            // Mutation-path writes report no activity, so work under a Source
+            // marks the list stale instead; writes that return `WriteEffects`
+            // patch the row through `lastUpdated`.
             markStaleOn: [
                 .mutatedSourceWorkspace, .mutatedSourceMetadata, .mutatedSourceGraph,
                 .deletedSubject, .savedCitation,
-            ]
+            ],
+            whenHidden: .markStale,
+            lastUpdated: .rows(CatalogSource.self, scope: .source)
         ),
         Spec(
             kind: .sourceTypesList,
@@ -158,23 +172,29 @@ struct CatalogQueryRegistry: Sendable {
         Spec(
             kind: .personsList,
             stalePolicy: .sessionFresh,
-            invalidateOn: CatalogQueryRegistry.conclusionTriggers
+            invalidateOn: CatalogQueryRegistry.conclusionTriggers,
+            whenHidden: .markStale,
+            lastUpdated: .rows(CatalogPersonHeader.self, scope: .handle)
         ),
         Spec(
             kind: .eventsList,
             stalePolicy: .sessionFresh,
-            invalidateOn: CatalogQueryRegistry.conclusionTriggers
+            invalidateOn: CatalogQueryRegistry.conclusionTriggers,
+            whenHidden: .markStale,
+            lastUpdated: .rows(CatalogEventHeader.self, scope: .handle)
         ),
         Spec(
             kind: .placesList,
             stalePolicy: .sessionFresh,
-            invalidateOn: CatalogQueryRegistry.conclusionTriggers
+            invalidateOn: CatalogQueryRegistry.conclusionTriggers,
+            whenHidden: .markStale,
+            lastUpdated: .rows(CatalogPlaceHeader.self, scope: .handle)
         ),
         Spec(
             kind: .conclusionDetail,
             stalePolicy: .sessionFresh,
             invalidateOn: CatalogQueryRegistry.conclusionTriggers,
-            evictWhenHidden: true
+            whenHidden: .evict
         ),
     ]
 
@@ -264,7 +284,8 @@ struct CatalogQueryRegistry: Sendable {
         }
     }
 
-    /// Cache effects of one write's reported handles and Sources.
+    /// Cache effects of one write's reported handles and Sources. Handle scopes
+    /// invalidate nothing: they move through `lastUpdatedPatch`.
     func invalidations(for effects: CatalogWriteEffects, project: ProjectKey) -> [CatalogQueryInvalidation] {
         var out: [CatalogQueryInvalidation] = []
         for sourceID in effects.touchedSources {
@@ -281,7 +302,7 @@ struct CatalogQueryRegistry: Sendable {
                 out.append(workspace)
             }
         }
-        if !effects.touchedHandles.isEmpty || !effects.handleScopes.isEmpty {
+        if !effects.touchedHandles.isEmpty {
             out.append(.key(.personsList(project: project)))
             out.append(.key(.eventsList(project: project)))
             out.append(.key(.placesList(project: project)))
@@ -300,12 +321,17 @@ struct CatalogQueryRegistry: Sendable {
             .map { $0.kind.invalidation(project: project, mutation: mutation) }
     }
 
-    /// Keys a mutation leaves stale for their next `query`, without refetching now.
-    /// Whether an invalidated `key` is evicted while off screen (see `Spec`).
-    func evictsWhenHidden(_ key: CatalogQueryKey) -> Bool {
-        specs.first { $0.kind == key.kind }?.evictWhenHidden ?? false
+    /// What an invalidated `key` does while off screen (see `Spec`).
+    func hiddenPolicy(_ key: CatalogQueryKey) -> CatalogHiddenPolicy {
+        specs.first { $0.kind == key.kind }?.whenHidden ?? .revalidate
     }
 
+    /// How a write that reports its activity moves `key`'s rows in place.
+    func lastUpdatedPatch(_ key: CatalogQueryKey) -> CatalogLastUpdatedPatch? {
+        specs.first { $0.kind == key.kind }?.lastUpdated
+    }
+
+    /// Keys a mutation leaves stale for their next `query`, without refetching now.
     func staleMarks(by mutation: CatalogMutation, project: ProjectKey) -> [CatalogQueryInvalidation] {
         guard let mutationKind = mutation.invalidationKind else { return [] }
         return specs

@@ -101,17 +101,42 @@ final class WorkspaceSession {
     /// If a load was in flight, the patch wins immediately and that load is
     /// restarted so a later refetch is not dropped.
     func setQueryValue<Value>(_ key: CatalogQueryKey, value: Value) {
+        replaceValue(key, value, clearStale: true)
+    }
+
+    /// The one patch primitive: replaces the cached value now. An in-flight
+    /// load is cancelled and restarted, so an older response cannot overwrite
+    /// the patch. `clearStale` says whether the patch makes the key current.
+    private func replaceValue<Value>(_ key: CatalogQueryKey, _ value: Value, clearStale: Bool) {
         let hadInFlight = inFlight[key] != nil
         bumpGeneration(key)
         inFlight[key]?.task.cancel()
         inFlight[key] = nil
         let handle = typedHandle(for: key, as: Value.self)
         handle.applySuccess(value)
-        invalidatedKeys.remove(key)
+        if clearStale {
+            invalidatedKeys.remove(key)
+        }
         if hadInFlight {
             invalidatedKeys.insert(key)
             revalidate(key)
         }
+    }
+
+    /// Edits the cached value in place. `change` returns whether it changed
+    /// anything; nothing happens when it did not or the key has no value. The
+    /// stale flag is left as it was: a partial patch does not make the key current.
+    /// Returns whether a patch applied.
+    @discardableResult
+    func patchCached<Value>(
+        _ key: CatalogQueryKey,
+        as _: Value.Type,
+        _ change: (inout Value) -> Bool
+    ) -> Bool {
+        guard let handle: QueryHandle<Value> = queryHandle(key), var value = handle.value else { return false }
+        guard change(&value) else { return false }
+        replaceValue(key, value, clearStale: false)
+        return true
     }
 
     /// Resolves the place for `location` and starts loading its query keys (non-blocking).
@@ -142,11 +167,10 @@ final class WorkspaceSession {
     /// Drops the cached reads named by a write's effects: that Source's graph
     /// and citation counts, and only the conclusion pages whose handles changed.
     func apply(_ effects: CatalogWriteEffects) {
+        patchLastUpdated(effects)
         apply(
             invalidations: registry.invalidations(for: effects, project: projectKey),
-            stale: effects.touchedSources.isEmpty
-                ? []
-                : [.key(.sourcesList(project: projectKey))]
+            stale: []
         )
         for sourceID in effects.touchedSources {
             refreshSourceGraphProgress(sourceId: sourceID)
@@ -164,12 +188,30 @@ final class WorkspaceSession {
         refreshSourceGraphProgress(for: mutation)
     }
 
+    /// Moves the last-updated cell of every cached row the write reports, using
+    /// the write's own activity. Each list declares its patch in the registry.
+    /// No loader runs.
+    private func patchLastUpdated(_ effects: CatalogWriteEffects) {
+        guard effects.activity.revision > 0 else { return }
+        for key in Array(handles.keys) where key.project == projectKey {
+            guard let patch = registry.lastUpdatedPatch(key) else { continue }
+            let ids = Set(patch.scope == .handle ? effects.handleScopes : effects.sources)
+            if !ids.isEmpty {
+                patch.apply(self, key, ids, effects.activity)
+            }
+        }
+    }
+
     private func apply(invalidations: [CatalogQueryInvalidation], stale: [CatalogQueryInvalidation]) {
         var keys: [CatalogQueryKey] = []
         for key in cachedKeys(for: invalidations) {
-            if registry.evictsWhenHidden(key), !visibleKeys.contains(key) {
+            switch visibleKeys.contains(key) ? CatalogHiddenPolicy.revalidate : registry.hiddenPolicy(key) {
+            case .evict:
                 evict(key)
-            } else {
+            case .markStale:
+                // The old value stays; the next `query` reloads it.
+                if handles[key] != nil { invalidatedKeys.insert(key) }
+            case .revalidate:
                 keys.append(key)
             }
         }
@@ -368,21 +410,19 @@ final class WorkspaceSession {
 
     private func patchUpdatedSource(_ source: CatalogSource) {
         let listKey = CatalogQueryKey.sourcesList(project: projectKey)
-        if let listHandle: QueryHandle<[CatalogSource]> = queryHandle(listKey),
-           var sources = listHandle.value,
-           let index = sources.firstIndex(where: { $0.id == source.id }) {
+        // Leaves any stale flag on the list: other rows may still owe a reload.
+        patchCached(listKey, as: [CatalogSource].self) { sources in
+            guard let index = sources.firstIndex(where: { $0.id == source.id }) else { return false }
             sources[index] = source
-            listHandle.applySuccess(sources)
-            // Leave any stale flag: other rows may still owe a reload.
+            return true
         }
 
         let workspaceKey = CatalogQueryKey.sourceWorkspace(project: projectKey, sourceId: source.id)
-        if let workspaceHandle: QueryHandle<CatalogSourceWorkspace> = queryHandle(workspaceKey),
-           var workspace = workspaceHandle.value {
-            workspace.source = source
-            workspaceHandle.applySuccess(workspace)
-            invalidatedKeys.remove(workspaceKey)
+        let patched = patchCached(workspaceKey, as: CatalogSourceWorkspace.self) {
+            $0.source = source
+            return true
         }
+        if patched { invalidatedKeys.remove(workspaceKey) }  // that page is now current
     }
 
     private func typedHandle<Value>(for key: CatalogQueryKey, as type: Value.Type) -> QueryHandle<Value> {
