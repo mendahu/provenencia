@@ -89,3 +89,17 @@ Done after two rounds. Plan: maintainability **Fits**, executability **Ready** (
 ## Board agreed (2026-10-15)
 
 The S10-D8 board matches SRL-1…SRL-10 with two changes, both answered by the user: the third status is labelled “Fully promoted” (the enum case stays `filed`), and the status chip takes the `.network` icon, because a `PVSelect` without an icon draws the field trigger instead of the toolbar chip (the board's kit note, true in `PVSelect.swift`). Plan D-19, §6 frames and Strings, ACs, and the manual check updated. The plan is now blocked only on S10-22.
+
+## Refresh after S10-22 landed (2026-10-15)
+
+S10-22 ([#402](https://github.com/mendahu/provenencia/pull/402)) shipped the Sources time end to end (engine activity cache, `updated_at`, `CatalogSource.updated`, the session patch). The plan was refreshed against `main` @ `6f70bf4`: D-1 to D-4 and their steps and tests (T-1 to T-3) dropped; D-8 targets `graphProgressSource(of:)`; D-9 to D-11 move the cell composition out of `ConclusionListRow` (S10-22 D-21). One review round on the refresh.
+
+| ID | Sev | Finding | Answer |
+| --- | --- | --- | --- |
+| M-1 | major | The shared cell composition is a recipe, not `Platform` (`docs/design-system-layers.md` §2–3, `add-ui-component` step 3, `docs/macos-client-patterns.md`) | **Fixed.** D-10: `PVLastUpdated` in `DesignSystem/Recipes/LastUpdated/`, with a `#Preview`; its tests in `PVLastUpdatedTests.swift`. |
+| M-2 | major | The Sources row re-spells `PVList`'s column frame | **Fixed.** D-10: `PVListDetailCell(detail:width:)` owns the frame and priority. |
+| X-1 | major | STEP-3 uses status label keys STEP-5 adds | **Fixed.** The three label keys move to STEP-3. |
+| X-2 | major | `projectKey` "unchanged" vs "empty for whitespace" | **Fixed.** `projectKey` is a pure extraction; the store checks the trimmed key. |
+| X-3 | major | Status line failed `check-plan-docs.py` | **Fixed.** |
+
+Verdict: maintainability Fits with changes, executability Ready with changes; all fixed, no blocker. Status **Planned**.

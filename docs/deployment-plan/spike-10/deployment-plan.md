@@ -525,7 +525,7 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 
 #### S10-41 — Sources list
 
-**Plan:** [`prs/S10-41-sources-list.md`](prs/S10-41-sources-list.md) — Draft (refreshed after S10-22; review pending)
+**Plan:** [`prs/S10-41-sources-list.md`](prs/S10-41-sources-list.md) — Planned
 
 **Brief:** [S10-D8](design/S10-D8-sources-list.md), board agreed 2026-10-15. One board for the page. It does not add a cell, a filter, or a search field to Events, Places, or Persons.
 
