@@ -112,6 +112,9 @@ func TestListPersonHeaders(t *testing.T) {
 				if !strings.HasPrefix(h.Entity.GetRef(), "PER-") || h.GetNameValueCount() != 1 {
 					t.Fatalf("%+v", h)
 				}
+				if h.GetUpdatedRevision() <= 0 || h.GetUpdatedAt() == "" {
+					t.Fatalf("updated %d %q", h.GetUpdatedRevision(), h.GetUpdatedAt())
+				}
 				n := h.GetName()
 				if n.GetForm() != "James Jim Robins" || len(n.GetParts()) != 3 || n.GetParts()[2].GetType() != namevalues.PartTypeSurname {
 					t.Fatalf("name %+v", n)
@@ -170,6 +173,9 @@ func TestListEventHeaders(t *testing.T) {
 				h := resp.Headers[0]
 				if !strings.HasPrefix(h.Entity.GetRef(), "EVT-") || h.GetEventName() != "The Great Fire" || h.GetEventNameCount() != 1 {
 					t.Fatalf("%+v", h)
+				}
+				if h.GetUpdatedRevision() <= 0 || h.GetUpdatedAt() == "" {
+					t.Fatalf("updated %d %q", h.GetUpdatedRevision(), h.GetUpdatedAt())
 				}
 				if h.GetEventType().GetKey() != "birth" || h.GetEventType().GetLabel() != "Birth" || h.GetDate().GetStartYear() != 1849 {
 					t.Fatalf("type %v date %v", h.GetEventType(), h.GetDate())
@@ -279,6 +285,9 @@ func TestListPlaceHeaders(t *testing.T) {
 					resp.Headers[0].GetKind() != "" || len(resp.Headers[0].GetParents()) != 0 ||
 					resp.Headers[0].GetStartDate() != nil || resp.Headers[0].GetEndDate() != nil {
 					t.Fatalf("%+v", resp.Headers)
+				}
+				if h := resp.Headers[0]; h.GetUpdatedRevision() <= 0 || h.GetUpdatedAt() == "" {
+					t.Fatalf("updated %d %q", h.GetUpdatedRevision(), h.GetUpdatedAt())
 				}
 			},
 		},

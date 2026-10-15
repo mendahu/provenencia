@@ -1095,6 +1095,11 @@ message PersonHeader {
   int32 name_value_count = 3;
   LifeFacts birth = 4;
   LifeFacts death = 5;
+  // updated_revision is the latest canonical_entity audit revision (0 = none);
+  // updated_at is its RFC3339 UTC time, empty when 0. Filled on the
+  // List*Headers responses only.
+  int64 updated_revision = 6;
+  string updated_at = 7;
 }
 
 // ListPersonHeaders returns every unmerged Person in list order: by the title
@@ -1133,6 +1138,11 @@ message EventHeader {
   repeated HeaderPlace places = 13;
   // title is the naming-matrix rule Go chose and the parts it reads.
   EventTitle title = 14;
+  // updated_revision is the latest canonical_entity audit revision (0 = none);
+  // updated_at is its RFC3339 UTC time, empty when 0. Filled on the
+  // List*Headers responses only.
+  int64 updated_revision = 15;
+  string updated_at = 16;
 }
 
 // ListEventHeaders returns every unmerged Event in list order: dated
@@ -1176,6 +1186,11 @@ message PlaceHeader {
   repeated PlaceRelationship contains = 9;
   repeated PlaceRelationship predecessors = 10;
   repeated PlaceRelationship successors = 11;
+  // updated_revision is the latest canonical_entity audit revision (0 = none);
+  // updated_at is its RFC3339 UTC time, empty when 0. Filled on the
+  // List*Headers responses only.
+  int64 updated_revision = 12;
+  string updated_at = 13;
 }
 
 // ListPlaceHeaders returns every unmerged Place in list order: by the title
