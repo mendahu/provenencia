@@ -289,7 +289,8 @@ func (st *state) evaluate(a, b match.Values) match.Evaluation {
 func (st *state) scoreCandidate(subjectID []byte, h *Handle) scoredCand {
 	s := st.subjects[string(subjectID)]
 	ev := st.evaluate(s.Values, h.Values)
-	edge := EdgePoints(st.edgeFacts(subjectID, h.ID), st.cfg)
+	node := propertyPoints(&ev, s.Values, st.cfg, st.stats)
+	edge := EdgePoints(st.edgeFacts(subjectID, h.ID), node, st.cfg)
 	sc := ScoreCandidate(ev, s.Values, edge, s.Provenance, st.cfg, st.stats)
 	return scoredCand{
 		handleID: append([]byte(nil), h.ID...),
@@ -300,11 +301,14 @@ func (st *state) scoreCandidate(subjectID []byte, h *Handle) scoredCand {
 	}
 }
 
-// edgeFacts lists one fact per mapped layer neighbor whose handle the
-// candidate reaches through a canon edge with the same signature. The edge
-// that seeded the candidate is one of those neighbors, so it counts once.
-// NeighborNode is that pair's properties only, so a later hop cannot
-// inherit this neighbor's own links.
+// edgeFacts lists one fact per mapped layer neighbor. A canon edge that
+// corresponds and lands on that neighbor is support, with the signature
+// scale's MinNode copied on. A corresponding edge that lands on a different
+// handle is a mismatch, with ConflictFactor copied on. No same-end neighbor
+// is nothing: a missing neighbor is not a disagreement. The scale is looked
+// up by ScaleKey; a missing entry is the zero value. NeighborNode is
+// that pair's properties only, so a later hop cannot inherit this neighbor's
+// own links. A match and a mismatch for the same link record the match.
 func (st *state) edgeFacts(subjectID, handleID []byte) []EdgeFact {
 	var facts []EdgeFact
 	sk := string(subjectID)
@@ -314,15 +318,34 @@ func (st *state) edgeFacts(subjectID, handleID []byte) []EdgeFact {
 		if !ok {
 			continue
 		}
+		scale := st.cfg.SignatureScale[link.sig.ScaleKey(link.fromEnd)]
+		matched := false
+		other := false
 		for _, ce := range st.canonAdj[string(handleID)] {
-			if corresponds(link, ce) && bytes.Equal(ce.neighbor, hid) {
-				fan, ok := st.stats.FanOut[link.sig.Key()]
-				if !ok {
-					fan = st.cfg.FanOutUnknown
-				}
-				facts = append(facts, EdgeFact{FanOut: fan, NeighborNode: st.nodeScore(link.neighbor, hid)})
+			if !corresponds(link, ce) {
+				continue
+			}
+			if bytes.Equal(ce.neighbor, hid) {
+				matched = true
 				break
 			}
+			other = true
+		}
+		if matched {
+			fan, found := st.stats.FanOut[link.sig.Key()]
+			if !found {
+				fan = st.cfg.FanOutUnknown
+			}
+			facts = append(facts, EdgeFact{
+				FanOut: fan, NeighborNode: st.nodeScore(link.neighbor, hid),
+				MinNode: scale.MinNode,
+			})
+			continue
+		}
+		if other {
+			facts = append(facts, EdgeFact{
+				ConflictFactor: scale.ConflictFactor, Mismatch: true,
+			})
 		}
 	}
 	return facts
@@ -749,7 +772,8 @@ func (st *state) alikeNew(a, b *Subject) bool {
 		return false
 	}
 	ev := st.evaluate(a.Values, b.Values)
-	return ScoreCandidate(ev, a.Values, EdgePoints(facts, st.cfg), 1, st.cfg, st.stats).Score >= st.cfg.AcceptScore
+	node := propertyPoints(&ev, a.Values, st.cfg, st.stats)
+	return ScoreCandidate(ev, a.Values, EdgePoints(facts, node, st.cfg), 1, st.cfg, st.stats).Score >= st.cfg.AcceptScore
 }
 
 // newPairFacts compares the layer neighbors of two subjects. A signature only
@@ -799,7 +823,8 @@ func (st *state) newPairFacts(a, b []byte) ([]EdgeFact, bool) {
 		if !found {
 			fan = st.cfg.FanOutUnknown
 		}
-		facts = append(facts, EdgeFact{FanOut: fan, NeighborNode: best})
+		scale := st.cfg.SignatureScale[linkA.sig.ScaleKey(linkA.fromEnd)]
+		facts = append(facts, EdgeFact{FanOut: fan, NeighborNode: best, MinNode: scale.MinNode})
 	}
 	return facts, false
 }

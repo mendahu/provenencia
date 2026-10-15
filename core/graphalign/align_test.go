@@ -1321,6 +1321,79 @@ func TestPartOfChainIsStrongWithoutADecision(t *testing.T) {
 	}
 }
 
+func TestEdgePointsHonorsTheSignatureScale(t *testing.T) {
+	cfg := graphalign.DefaultConfig()
+	support := graphalign.EdgeFact{FanOut: 1, NeighborNode: 4, MinNode: 2}
+	if got := graphalign.EdgePoints([]graphalign.EdgeFact{support}, 0, cfg); got != 0 {
+		t.Fatalf("below MinNode: %.2f, want 0", got)
+	}
+	want := cfg.EdgeSupportLow + cfg.NeighborCreditLow*4
+	if got := graphalign.EdgePoints([]graphalign.EdgeFact{support}, 3, cfg); math.Abs(got-want) > 1e-9 {
+		t.Fatalf("at MinNode: %.2f, want %.2f", got, want)
+	}
+	mismatch := graphalign.EdgeFact{Mismatch: true, ConflictFactor: 1}
+	if got := graphalign.EdgePoints([]graphalign.EdgeFact{mismatch}, 3, cfg); math.Abs(got-(-3)) > 1e-9 {
+		t.Fatalf("mismatch: %.2f, want -3", got)
+	}
+	plain := graphalign.EdgeFact{FanOut: 1, NeighborNode: 4}
+	if got := graphalign.EdgePoints([]graphalign.EdgeFact{plain}, 0, cfg); math.Abs(got-want) > 1e-9 {
+		t.Fatalf("zero scale: %.2f, want %.2f", got, want)
+	}
+	silent := graphalign.EdgeFact{Mismatch: true}
+	if got := graphalign.EdgePoints([]graphalign.EdgeFact{silent}, 3, cfg); got != 0 {
+		t.Fatalf("zero conflict factor: %.2f, want 0", got)
+	}
+}
+
+func TestDefaultPartOfScale(t *testing.T) {
+	cfg := graphalign.DefaultConfig()
+	sig := partOfSig()
+	from, ok := cfg.SignatureScale[sig.ScaleKey(true)]
+	if !ok || from.MinNode != 2 || from.ConflictFactor != 1 {
+		t.Fatalf("part end %+v present=%v", from, ok)
+	}
+	to, ok := cfg.SignatureScale[sig.ScaleKey(false)]
+	if !ok || to.MinNode != 2 || to.ConflictFactor != 0 {
+		t.Fatalf("whole end %+v present=%v", to, ok)
+	}
+}
+
+func TestPartOfDoesNotFileADifferentToponym(t *testing.T) {
+	// Calgary and Edmonton are both part of Alberta. The shared parent must
+	// not file Calgary onto Edmonton: a different toponym adds nothing, and
+	// part_of only reinforces a property score that already cleared the bar.
+	sig := partOfSig()
+	child, parent := id("s-calgary"), id("s-alberta")
+	hSibling, hParent := id("h-edmonton"), id("h-alberta")
+	cn, cv := textProp("toponym", "Calgary")
+	sn, sv := textProp("toponym", "Edmonton")
+	pn, pv := textProp("toponym", "Alberta")
+	layer := graphalign.Layer{
+		Subjects: []graphalign.Subject{
+			{ID: child, Ref: "CPL-C", Kind: "place", Values: vals(cn, cv)},
+			{ID: parent, Ref: "CPL-A", Kind: "place", Values: vals(pn, pv)},
+		},
+		Bridges: []graphalign.Bridge{{A: child, B: parent, Signature: sig}},
+		Metas: []match.PropertyMeta{{
+			Property: cn, ValueType: properties.ValueTypeText, Cardinality: properties.CardinalityMultiple,
+		}},
+	}
+	canon := graphalign.Canon{
+		Handles: []graphalign.Handle{
+			{ID: hSibling, Ref: "PLC-E", Kind: "place", Values: vals(sn, sv)},
+			{ID: hParent, Ref: "PLC-A", Kind: "place", Values: vals(pn, pv)},
+		},
+		Edges: []graphalign.CanonEdge{{From: hSibling, To: hParent, Signature: sig}},
+	}
+	stats := graphalign.Stats{FanOut: map[string]float64{sig.Key(): 1}}
+	fixed := []graphalign.Fixed{{SubjectID: parent, HandleID: hParent}}
+	row := rowBySubject(graphalign.Align(layer, canon, stats, fixed, nil), child)
+	cfg := graphalign.DefaultConfig()
+	if row.Target == graphalign.TargetHandle || bytes.Equal(row.HandleID, hSibling) || row.Score >= cfg.AcceptScore {
+		t.Fatalf("calgary %+v, want it off Edmonton", row)
+	}
+}
+
 func TestPartOfBreaksASharedToponym(t *testing.T) {
 	// Both Springfields score the same on the name. PLC-A sorts first, and
 	// it is the one whose parent is not Illinois. The part-of link has to
@@ -1364,6 +1437,16 @@ func TestPartOfBreaksASharedToponym(t *testing.T) {
 	if parent.Target != graphalign.TargetHandle || !bytes.Equal(parent.HandleID, hIll) ||
 		parent.Assessment != graphalign.AssessStrong || parent.Score < cfg.StrongScore {
 		t.Fatalf("illinois %+v", parent)
+	}
+	var wrong *graphalign.Alternative
+	for i := range got.Alternatives {
+		if bytes.Equal(got.Alternatives[i].HandleID, hWrong) {
+			wrong = &got.Alternatives[i]
+			break
+		}
+	}
+	if wrong == nil || wrong.Score >= cfg.AcceptScore {
+		t.Fatalf("ohio springfield %+v, want it under the accept bar", got.Alternatives)
 	}
 }
 
