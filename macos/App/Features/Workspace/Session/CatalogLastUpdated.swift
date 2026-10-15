@@ -23,14 +23,14 @@ extension CatalogSource: CatalogLastUpdatedRow {}
 enum CatalogLastUpdatedScope: Sendable {
     /// `CatalogWriteEffects.handleScopes`: Person, Event, and Place handles.
     case handle
-    /// `CatalogWriteEffects.sources`.
+    /// `CatalogWriteEffects.sourceScopes`.
     case source
 
     /// The ids of a write's effects that name rows of this scope.
     func ids(in effects: CatalogWriteEffects) -> [String] {
         switch self {
         case .handle: effects.handleScopes
-        case .source: effects.sources
+        case .source: effects.sourceScopes
         }
     }
 }

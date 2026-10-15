@@ -584,7 +584,7 @@ struct CatalogQueryRegistryTests {
 
         let activity = CatalogActivity(revision: 42, at: "2026-10-15T16:00:00Z")
         session.apply(
-            CatalogWriteEffects(sources: ["s1"], activity: activity),
+            CatalogWriteEffects(sourceScopes: ["s1"], activity: activity),
             .mutatedSourceGraph(sourceId: "s1")
         )
         await Task.yield()
@@ -824,7 +824,7 @@ struct CatalogQueryRegistryTests {
         )
         #expect(registry.invalidations(for: CatalogWriteEffects(
             handles: ["e1"],
-            cacheSources: ["s1"],
+            sources: ["s1"],
             headerHandles: ["e2"]
         ), project: project) == [
             .key(.sourceGraph(project: project, sourceId: "s1")),

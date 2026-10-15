@@ -306,7 +306,7 @@ struct SourcesModelTests {
         #expect(model.visibleSources.map(\.id) == ["s2", "s1"])
 
         session.apply(CatalogWriteEffects(
-            sources: ["s1"],
+            sourceScopes: ["s1"],
             activity: CatalogActivity(revision: 12, at: "2026-10-15T16:00:00Z")
         ))
 

@@ -29,9 +29,9 @@ struct CatalogQueryRegistry: Sendable {
     /// Writes that can change any Conclusion value and report no
     /// `WriteEffects` (Spike 9 Q5). Every Conclusion key — lists and details —
     /// invalidates on this one set. A write that reports its handles (a
-    /// citation, a note, a credibility change, a Subject delete) invalidates
-    /// through `invalidations(for:)` instead, so a Source-page write no longer
-    /// reloads every list. A Property update, including a cardinality change,
+    /// citation, a credibility change, a Subject delete) invalidates through
+    /// `invalidations(for:)` instead, and a note reports none, so a Source-page
+    /// write no longer reloads every list. A Property update, including a cardinality change,
     /// rides `updatedProperty` (S9-37).
     static let conclusionTriggers: Set<CatalogMutationKind> = [
         .promotedSubject, .deletedSource, .updatedProperty,
@@ -135,7 +135,8 @@ struct CatalogQueryRegistry: Sendable {
             invalidateOn: [
                 .createdProperty, .updatedProperty, .deletedProperty,
                 .mutatedSubjectTypeProperties, .deletedSubject,
-            ]
+            ],
+            whenHidden: .markStale
         ),
         Spec(
             kind: .connectRules,
@@ -151,7 +152,8 @@ struct CatalogQueryRegistry: Sendable {
         Spec(
             kind: .citationsByArtifact,
             stalePolicy: .sessionFresh,
-            invalidateOn: [.deletedSubject]
+            invalidateOn: [.deletedSubject],
+            whenHidden: .markStale
         ),
         Spec(
             kind: .sourceGraphProgress,
@@ -279,11 +281,11 @@ struct CatalogQueryRegistry: Sendable {
     /// invalidate nothing: they move through `lastUpdatedPatch`.
     func invalidations(for effects: CatalogWriteEffects, project: ProjectKey) -> [CatalogQueryInvalidation] {
         var out: [CatalogQueryInvalidation] = []
-        for sourceID in effects.touchedSources {
+        for sourceID in effects.sources {
             out.append(.key(.sourceGraph(project: project, sourceId: sourceID)))
             out.append(.key(.citationCounts(project: project, sourceId: sourceID)))
         }
-        if !effects.touchedSources.isEmpty {
+        if !effects.sources.isEmpty {
             out.append(.allCached(.citationsByArtifact))
             out.append(.key(.propertiesWorkspace(project: project)))
         }

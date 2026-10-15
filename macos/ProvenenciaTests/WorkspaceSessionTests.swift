@@ -575,7 +575,7 @@ struct WorkspaceSessionTests {
         #expect(list.value?.map(\.updated) == [CatalogActivity(revision: 12, at: at), CatalogActivity(revision: 9)])
 
         // AC-2.5b: a Source moves and the Sources list is neither loaded nor marked stale.
-        session.apply(CatalogWriteEffects(sources: ["s1"], activity: CatalogActivity(revision: 12, at: at)))
+        session.apply(CatalogWriteEffects(sourceScopes: ["s1"], activity: CatalogActivity(revision: 12, at: at)))
         #expect(sourceList.value?.first?.updated == CatalogActivity(revision: 12, at: at))
         #expect(!sourceList.isFetching)
         let _: QueryHandle<[CatalogSource]> = session.query(sources)
@@ -682,7 +682,7 @@ struct WorkspaceSessionTests {
         // AC-2.11: a note. Sources row patched; the conclusion lists untouched
         // and not stale; the page's workspace invalidated once.
         let first = CatalogActivity(revision: 12, at: "2026-10-15T16:00:00Z")
-        session.apply(CatalogWriteEffects(sources: ["s1"], activity: first), .mutatedSourceWorkspace(sourceId: "s1"))
+        session.apply(CatalogWriteEffects(sourceScopes: ["s1"], activity: first), .mutatedSourceWorkspace(sourceId: "s1"))
         #expect(sourcesHandle.value?.first?.updated == first)
         #expect(listsAreQuiet())
         let _: QueryHandle<[CatalogPersonHeader]> = session.query(people)
@@ -697,7 +697,7 @@ struct WorkspaceSessionTests {
         // go stale and reload on their next `query`; the Sources row still patches.
         let second = CatalogActivity(revision: 13, at: "2026-10-15T16:05:00Z")
         session.apply(
-            CatalogWriteEffects(handles: ["e1"], sources: ["s1"], activity: second),
+            CatalogWriteEffects(handles: ["e1"], sourceScopes: ["s1"], activity: second),
             .mutatedSourceWorkspace(sourceId: "s1")
         )
         #expect(sourcesHandle.value?.first?.updated == second)
@@ -707,6 +707,62 @@ struct WorkspaceSessionTests {
         await waitForFetchComplete(peopleHandle)
         let _: QueryHandle<[CatalogSource]> = session.query(sources)
         #expect(!sourcesHandle.isFetching)
+
+        // AC-2.12, on screen: a Conclusion page showing the reported handle reloads.
+        session.apply(location: .personDetail(entityId: "e1", ref: "PER-e1", title: nil))
+        let detailKey = CatalogQueryKey.conclusionDetail(project: project, entityId: "e1")
+        let detail: QueryHandle<CatalogConclusionDetail> = try #require(session.queryHandle(detailKey))
+        await waitForFetchComplete(detail)
+        session.apply(
+            CatalogWriteEffects(handles: ["e1"], sourceScopes: ["s1"], activity: CatalogActivity(revision: 14, at: "2026-10-15T16:10:00Z")),
+            .mutatedSourceWorkspace(sourceId: "s1")
+        )
+        // The page has no value in the fake, so a reload shows as loading.
+        #expect(detail.status == .loading)
+        await waitForFetchComplete(detail)
+
+        // A key the effects and the mutation both name loads once, not twice.
+        let graphKey = CatalogQueryKey.sourceGraph(project: project, sourceId: "s1")
+        let graph: QueryHandle<SourceGraphRows> = session.query(graphKey)
+        await waitForFetchComplete(graph)
+        let before = store.listSubjectsCalls
+        session.apply(CatalogWriteEffects(sources: ["s1"]), .mutatedSourceGraph(sourceId: "s1"))
+        await waitForFetchComplete(graph)
+        #expect(store.listSubjectsCalls == before + 1)
+    }
+
+    /// A note moves the Source's last activity and nothing it reads as
+    /// evidence: the Properties workspace, the Source graph, and the citations
+    /// stay warm and current (D-25, D-26).
+    @Test func sourceNoteLeavesEvidenceReadsAlone() async throws {
+        let store = FakeStore()
+        seedStore(store)
+        let session = makeSession(store: store)
+        let project = session.projectKey
+        let sources = CatalogQueryKey.sourcesList(project: project)
+        let propertiesKey = CatalogQueryKey.propertiesWorkspace(project: project)
+        let graphKey = CatalogQueryKey.sourceGraph(project: project, sourceId: "s1")
+        let citationsKey = CatalogQueryKey.citationsByArtifact(project: project, artifactId: "a1")
+        session.setQueryValue(sources, value: [
+            CatalogSource(id: "s1", ref: "SRC-1", sourceTypeID: "t1", title: "Alpha", description: ""),
+        ])
+        session.setQueryValue(propertiesKey, value: PropertiesSnapshot.empty)
+        session.setQueryValue(graphKey, value: SourceGraphRows(sourceId: "s1"))
+        session.setQueryValue(citationsKey, value: [CatalogListedCitation]())
+        let activity = CatalogActivity(revision: 12, at: "2026-10-15T16:00:00Z")
+
+        session.apply(
+            CatalogWriteEffects(sourceScopes: ["s1"], activity: activity),
+            .mutatedSourceWorkspace(sourceId: "s1")
+        )
+
+        let list: QueryHandle<[CatalogSource]> = try #require(session.queryHandle(sources))
+        #expect(list.value?.first?.updated == activity)
+        // Nothing is fetching, and a `query` finds nothing stale to reload.
+        let properties: QueryHandle<PropertiesSnapshot> = session.query(propertiesKey)
+        let graph: QueryHandle<SourceGraphRows> = session.query(graphKey)
+        let citations: QueryHandle<[CatalogListedCitation]> = session.query(citationsKey)
+        #expect(!properties.isFetching && !graph.isFetching && !citations.isFetching)
     }
 
     /// `usedBy` on the Properties inspector counts Observations, and it

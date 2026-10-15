@@ -594,8 +594,10 @@ message DeleteCitationResponse {
 // handles and Sources instead of a broad citation refetch.
 message WriteEffects {
   repeated string handles = 1;
+  // Sources whose evidence changed: what the Source graph, graph progress,
+  // citation counts, and citations by artifact load.
   repeated string sources = 2;
-  repeated string cache_sources = 3;
+  reserved 3;
   bool vocabulary = 4;
   bool structure = 5;
   repeated string header_handles = 6;
@@ -607,6 +609,9 @@ message WriteEffects {
   // (RFC3339 UTC). Zero and empty when the write recorded no revision.
   int64 revision = 8;
   string revision_at = 9;
+  // Sources whose last activity this write moved (the audit source scope).
+  // Swift patches the cached Sources list rows with (revision, revision_at).
+  repeated string source_scopes = 10;
 }
 
 message IngestArtifactFileRequest {

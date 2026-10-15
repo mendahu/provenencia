@@ -2160,9 +2160,9 @@ public nonisolated struct Provenencia_Engine_V1_WriteEffects: Sendable {
 
   public var handles: [String] = []
 
+  /// Sources whose evidence changed: what the Source graph, graph progress,
+  /// citation counts, and citations by artifact load.
   public var sources: [String] = []
-
-  public var cacheSources: [String] = []
 
   public var vocabulary: Bool = false
 
@@ -2180,6 +2180,10 @@ public nonisolated struct Provenencia_Engine_V1_WriteEffects: Sendable {
   public var revision: Int64 = 0
 
   public var revisionAt: String = String()
+
+  /// Sources whose last activity this write moved (the audit source scope).
+  /// Swift patches the cached Sources list rows with (revision, revision_at).
+  public var sourceScopes: [String] = []
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -9833,7 +9837,7 @@ nonisolated extension Provenencia_Engine_V1_DeleteCitationResponse: SwiftProtobu
 
 nonisolated extension Provenencia_Engine_V1_WriteEffects: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".WriteEffects"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}handles\0\u{1}sources\0\u{3}cache_sources\0\u{1}vocabulary\0\u{1}structure\0\u{3}header_handles\0\u{3}handle_scopes\0\u{1}revision\0\u{3}revision_at\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}handles\0\u{1}sources\0\u{2}\u{2}vocabulary\0\u{1}structure\0\u{3}header_handles\0\u{3}handle_scopes\0\u{1}revision\0\u{3}revision_at\0\u{3}source_scopes\0\u{c}\u{3}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -9843,13 +9847,13 @@ nonisolated extension Provenencia_Engine_V1_WriteEffects: SwiftProtobuf.Message,
       switch fieldNumber {
       case 1: try { try decoder.decodeRepeatedStringField(value: &self.handles) }()
       case 2: try { try decoder.decodeRepeatedStringField(value: &self.sources) }()
-      case 3: try { try decoder.decodeRepeatedStringField(value: &self.cacheSources) }()
       case 4: try { try decoder.decodeSingularBoolField(value: &self.vocabulary) }()
       case 5: try { try decoder.decodeSingularBoolField(value: &self.structure) }()
       case 6: try { try decoder.decodeRepeatedStringField(value: &self.headerHandles) }()
       case 7: try { try decoder.decodeRepeatedStringField(value: &self.handleScopes) }()
       case 8: try { try decoder.decodeSingularInt64Field(value: &self.revision) }()
       case 9: try { try decoder.decodeSingularStringField(value: &self.revisionAt) }()
+      case 10: try { try decoder.decodeRepeatedStringField(value: &self.sourceScopes) }()
       default: break
       }
     }
@@ -9861,9 +9865,6 @@ nonisolated extension Provenencia_Engine_V1_WriteEffects: SwiftProtobuf.Message,
     }
     if !self.sources.isEmpty {
       try visitor.visitRepeatedStringField(value: self.sources, fieldNumber: 2)
-    }
-    if !self.cacheSources.isEmpty {
-      try visitor.visitRepeatedStringField(value: self.cacheSources, fieldNumber: 3)
     }
     if self.vocabulary != false {
       try visitor.visitSingularBoolField(value: self.vocabulary, fieldNumber: 4)
@@ -9883,19 +9884,22 @@ nonisolated extension Provenencia_Engine_V1_WriteEffects: SwiftProtobuf.Message,
     if !self.revisionAt.isEmpty {
       try visitor.visitSingularStringField(value: self.revisionAt, fieldNumber: 9)
     }
+    if !self.sourceScopes.isEmpty {
+      try visitor.visitRepeatedStringField(value: self.sourceScopes, fieldNumber: 10)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Provenencia_Engine_V1_WriteEffects, rhs: Provenencia_Engine_V1_WriteEffects) -> Bool {
     if lhs.handles != rhs.handles {return false}
     if lhs.sources != rhs.sources {return false}
-    if lhs.cacheSources != rhs.cacheSources {return false}
     if lhs.vocabulary != rhs.vocabulary {return false}
     if lhs.structure != rhs.structure {return false}
     if lhs.headerHandles != rhs.headerHandles {return false}
     if lhs.handleScopes != rhs.handleScopes {return false}
     if lhs.revision != rhs.revision {return false}
     if lhs.revisionAt != rhs.revisionAt {return false}
+    if lhs.sourceScopes != rhs.sourceScopes {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

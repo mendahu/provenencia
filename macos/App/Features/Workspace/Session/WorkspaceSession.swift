@@ -159,51 +159,41 @@ final class WorkspaceSession {
         }
     }
 
-    /// Patches the list row + cached page shell on identity/cover save, then
-    /// invalidates and revalidates whatever else the registry says the write
-    /// reached. Keys the registry evicts when hidden are dropped instead
-    /// unless on screen. Features only call `apply`; they do not query
-    /// afterward or tell sibling views to refresh.
-    /// Drops the cached reads named by a write's effects: that Source's graph
-    /// and citation counts, and only the conclusion pages whose handles changed.
-    func apply(_ effects: CatalogWriteEffects) {
+    /// The one application of a write. Patches in place first, with no load:
+    /// every cached row whose last activity the effects moved
+    /// (`patchLastUpdated`), then the mutation's enriched Source row and cached
+    /// page shell. Then it invalidates the deduped union of what the effects
+    /// reported (that Source's graph and citation reads, the Conclusions whose
+    /// handles changed) and what the mutation names (the Source page's own
+    /// workspace, the metadata field list), so a key both name is invalidated
+    /// once, not cancelled and restarted twice. Keys the registry evicts or
+    /// marks stale when hidden are not loaded unless on screen. Last, it
+    /// refreshes graph progress for the Sources the effects and the mutation
+    /// moved. Features only call `apply`; they do not query afterward or tell
+    /// sibling views to refresh.
+    func apply(_ effects: CatalogWriteEffects = .empty, _ mutation: CatalogMutation? = nil) {
         patchLastUpdated(effects)
-        apply(invalidations: registry.invalidations(for: effects, project: projectKey))
-        for sourceID in effects.touchedSources {
-            refreshSourceGraphProgress(sourceId: sourceID)
-        }
-    }
-
-    func apply(_ mutation: CatalogMutation) {
-        if let source = mutation.patchedSource {
+        if let source = mutation?.patchedSource {
             patchUpdatedSource(source)
         }
-        apply(invalidations: registry.invalidations(by: mutation, project: projectKey))
-        refreshSourceGraphProgress(for: mutation)
-    }
-
-    /// A write that reports effects and still has a mutation naming keys the
-    /// effects cannot (the Source page's own workspace, the metadata field
-    /// list). One application, so a key both name is invalidated once, not
-    /// cancelled and restarted twice.
-    func apply(_ effects: CatalogWriteEffects, _ mutation: CatalogMutation) {
-        patchLastUpdated(effects)
+        var invalidations = registry.invalidations(for: effects, project: projectKey)
+        if let mutation {
+            invalidations += registry.invalidations(by: mutation, project: projectKey)
+        }
         var seen = Set<CatalogQueryInvalidation>()
-        let union = (
-            registry.invalidations(for: effects, project: projectKey)
-                + registry.invalidations(by: mutation, project: projectKey)
-        ).filter { seen.insert($0).inserted }
-        apply(invalidations: union)
-        if let source = mutation.patchedSource {
-            patchUpdatedSource(source)
-        }
-        var progressSources = effects.touchedSources
-        if let sourceID = graphProgressSource(of: mutation), !progressSources.contains(sourceID) {
+        apply(invalidations: invalidations.filter { seen.insert($0).inserted })
+        var progressSources = effects.sources
+        if let mutation, let sourceID = graphProgressSource(of: mutation), !progressSources.contains(sourceID) {
             progressSources.append(sourceID)
         }
         for sourceID in progressSources {
             refreshSourceGraphProgress(sourceId: sourceID)
         }
+    }
+
+    /// A mutation with no reported effects.
+    func apply(_ mutation: CatalogMutation) {
+        apply(.empty, mutation)
     }
 
     /// Moves the last-updated cell of every cached row the write reports, using
@@ -267,12 +257,6 @@ final class WorkspaceSession {
     }
 
     /// Surgical Get-one + map merge. Skips when the list never warmed the map.
-    private func refreshSourceGraphProgress(for mutation: CatalogMutation) {
-        if let sourceId = graphProgressSource(of: mutation) {
-            refreshSourceGraphProgress(sourceId: sourceId)
-        }
-    }
-
     private func refreshSourceGraphProgress(sourceId: String) {
         let key = CatalogQueryKey.sourceGraphProgress(project: projectKey)
         let existing: QueryHandle<[String: SourceGraphProgress]>? = queryHandle(key)

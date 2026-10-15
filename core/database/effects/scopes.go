@@ -20,6 +20,6 @@ type Scope struct {
 
 // Scopes lists every audit scope type, in storage order.
 var Scopes = []Scope{
-	{ScopeSource, func(s Set) [][]byte { return s.Sources }},
+	{ScopeSource, func(s Set) [][]byte { return s.SourceScopes }},
 	{ScopeCanonicalEntity, func(s Set) [][]byte { return s.HandleScopes }},
 }

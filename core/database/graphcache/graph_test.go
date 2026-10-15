@@ -365,7 +365,7 @@ func TestActivity(t *testing.T) {
 				}
 				seedActivity(t, db, 7, t7, effects.ScopeCanonicalEntity, h)
 				before := *queries
-				commit := effects.Commit{Activity: effects.Activity{Revision: 7, At: t7}, Effects: effects.Set{HandleScopes: [][]byte{h}, Sources: [][]byte{src}}}
+				commit := effects.Commit{Activity: effects.Activity{Revision: 7, At: t7}, Effects: effects.Set{HandleScopes: [][]byte{h}, SourceScopes: [][]byte{src}}}
 				if err := g.OnCommit(commit); err != nil {
 					t.Fatal(err)
 				}

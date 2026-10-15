@@ -34,6 +34,7 @@ func TestSourceWritesReturnEffects(t *testing.T) {
 		name        string
 		run         func(t *testing.T) (effects *engine.WriteEffects, sourceID, handleID string)
 		wantHandles bool // the filed handle is in effects.handles
+		wantSources bool // the Source's evidence changed (effects.sources); a note moves only its activity
 	}{
 		{
 			name: "a note on a Source reports the Source and no handle",
@@ -95,6 +96,7 @@ func TestSourceWritesReturnEffects(t *testing.T) {
 				return resp.GetEffects(), sourceID, handleID
 			},
 			wantHandles: true,
+			wantSources: true,
 		},
 	}
 	for _, tt := range tests {
@@ -103,8 +105,11 @@ func TestSourceWritesReturnEffects(t *testing.T) {
 			if eff.GetRevision() <= 0 || eff.GetRevisionAt() == "" {
 				t.Fatalf("activity = %d %q", eff.GetRevision(), eff.GetRevisionAt())
 			}
-			if !contains(eff.GetSources(), sourceID) {
-				t.Fatalf("sources = %v, want %s", eff.GetSources(), sourceID)
+			if !contains(eff.GetSourceScopes(), sourceID) {
+				t.Fatalf("source_scopes = %v, want %s", eff.GetSourceScopes(), sourceID)
+			}
+			if got := contains(eff.GetSources(), sourceID); got != tt.wantSources {
+				t.Fatalf("sources = %v, Source %s in sources = %v, want %v", eff.GetSources(), sourceID, got, tt.wantSources)
 			}
 			if got := contains(eff.GetHandles(), handleID); got != tt.wantHandles {
 				t.Fatalf("handles = %v, handle %s in handles = %v, want %v", eff.GetHandles(), handleID, got, tt.wantHandles)

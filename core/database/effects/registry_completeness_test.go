@@ -76,3 +76,47 @@ func hasWork(e Effect) bool {
 	}
 	return len(e.Search) > 0 || e.Vocabulary
 }
+
+// TestSourceEvidenceIsNotActivity pins which tables move a Source's evidence
+// (Effect.Source: what the Source graph, graph progress, citation counts, and
+// citations by artifact load) and which move its last activity
+// (Effect.SourceScope: the audit source scope). Identity claims change the
+// evidence graph but have never been audited under a Source.
+func TestSourceEvidenceIsNotActivity(t *testing.T) {
+	tests := []struct {
+		table    string
+		evidence bool
+		activity bool
+	}{
+		{"sources", false, true},
+		{"source_notes", false, true},
+		{"source_metadata", false, true},
+		{"source_metadata_layout", false, true},
+		{"source_credibility_assessments", false, true},
+		{"files", false, true},
+		{"citation_notes", false, true},
+		{"observation_notes", false, true},
+		{"artifacts", true, true},
+		{"citations", true, true},
+		{"observations", true, true},
+		{"subjects", true, true},
+		{"date_values", true, true},
+		{"name_values", true, true},
+		{"identity_claims", true, false},
+		{"identity_claim_evidence", true, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.table, func(t *testing.T) {
+			eff, ok := registry[tt.table]
+			if !ok {
+				t.Fatalf("no entry for %s", tt.table)
+			}
+			if got := !eff.Source.zero(); got != tt.evidence {
+				t.Errorf("Source set = %v, want %v", got, tt.evidence)
+			}
+			if got := !eff.SourceScope.zero(); got != tt.activity {
+				t.Errorf("SourceScope set = %v, want %v", got, tt.activity)
+			}
+		})
+	}
+}

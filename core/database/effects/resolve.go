@@ -65,7 +65,7 @@ func AllNone(changes []rowchange.Change) (bool, error) {
 	return true, nil
 }
 
-// Resolve is the whole effect of a batch: sources, handles, search documents,
+// Resolve is the whole effect of a batch: evidence sources, source scopes, handles, search documents,
 // and whether vocabulary labels or structure changed.
 func Resolve(tx *sql.Tx, changes []rowchange.Change) (Set, error) {
 	if tx == nil {
@@ -90,7 +90,7 @@ func Resolve(tx *sql.Tx, changes []rowchange.Change) (Set, error) {
 		if err != nil {
 			return Set{}, err
 		}
-		set.CacheSources, err = appendPath(w, table, eff.CacheSource, set.CacheSources)
+		set.SourceScopes, err = appendPath(w, table, eff.SourceScope, set.SourceScopes)
 		if err != nil {
 			return Set{}, err
 		}

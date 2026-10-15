@@ -1668,11 +1668,11 @@ struct GoStore: GenealogyStore {
         CatalogWriteEffects(
             handles: effects.handles,
             sources: effects.sources,
-            cacheSources: effects.cacheSources,
             vocabulary: effects.vocabulary,
             structure: effects.structure,
             headerHandles: effects.headerHandles,
             handleScopes: effects.handleScopes,
+            sourceScopes: effects.sourceScopes,
             activity: CatalogActivity(revision: effects.revision, at: effects.revisionAt)
         )
     }

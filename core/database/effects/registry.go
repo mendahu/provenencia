@@ -24,9 +24,13 @@ type SearchIDs struct {
 // Set is what a batch of changes touches. Empty Handles or Search means that
 // job has nothing to do. Vocabulary and Structure are catalog-wide.
 type Set struct {
-	Handles      [][]byte
-	Sources      [][]byte
-	CacheSources [][]byte // Source graphs to drop; not an audit scope
+	Handles [][]byte
+	// Sources are the Sources whose evidence changed (Effect.Source): what
+	// the Source graph, graph progress, and citation reads load.
+	Sources [][]byte
+	// SourceScopes are the Sources whose last activity a change moves
+	// (Effect.SourceScope), the audit source scope.
+	SourceScopes [][]byte
 	// HandleScopes are the handles whose canonical_entity audit scope the
 	// batch moves (Effect.HandleScope); Handles is the recompute set.
 	HandleScopes [][]byte
@@ -45,9 +49,14 @@ type Set struct {
 // is unaffected. None is an explicit empty entry for a table outside the skip
 // bucket that has no effects.
 type Effect struct {
-	Entity      string
-	Source      Path
-	CacheSource Path // drops a loaded Source graph; audit still uses Source
+	Entity string
+	// Source is the Source whose evidence this change changes: the reads of
+	// the Source graph, graph progress, citation counts, and citations by
+	// artifact load the table. A table none of them load leaves it empty.
+	Source Path
+	// SourceScope is the Source whose last activity (audit source scope) this
+	// change moves.
+	SourceScope Path
 	Handles     Path
 	// HandleScope is the handles whose canonical_entity audit scope this
 	// change moves; Handles is the recompute set.
@@ -100,62 +109,69 @@ var observers = chain(
 
 var registry = map[string]Effect{
 	"sources": {
-		Entity: "source",
-		Source: self(),
-		Search: []SearchDoc{{Kind: DocSource, Path: self()}},
+		Entity:      "source",
+		SourceScope: self(),
+		Search:      []SearchDoc{{Kind: DocSource, Path: self()}},
 	},
 	"source_notes": {
-		Entity: "source_note",
-		Source: field("source_id"),
-		Search: []SearchDoc{{Kind: DocSource, Path: field("source_id")}},
+		Entity:      "source_note",
+		SourceScope: field("source_id"),
+		Search:      []SearchDoc{{Kind: DocSource, Path: field("source_id")}},
 	},
 	"source_metadata": {
-		Entity: "source_metadata",
-		Source: field("source_id"),
-		Search: []SearchDoc{{Kind: DocSource, Path: field("source_id")}},
+		Entity:      "source_metadata",
+		SourceScope: field("source_id"),
+		Search:      []SearchDoc{{Kind: DocSource, Path: field("source_id")}},
 	},
 	"source_credibility_assessments": {
-		Entity:  "source_credibility_assessment",
-		Source:  field("source_id"),
-		Handles: onField("credibility_grade_id", from("source_id", sqlPath(sqlHandlesForSource))),
-		Search:  []SearchDoc{{Kind: DocSource, Path: field("source_id")}},
+		Entity:      "source_credibility_assessment",
+		SourceScope: field("source_id"),
+		Handles:     onField("credibility_grade_id", from("source_id", sqlPath(sqlHandlesForSource))),
+		Search:      []SearchDoc{{Kind: DocSource, Path: field("source_id")}},
 	},
 	"source_metadata_layout": {
-		Entity: "source_metadata_layout",
-		Source: field("source_id"),
-		Search: []SearchDoc{{Kind: DocSource, Path: field("source_id")}},
+		Entity:      "source_metadata_layout",
+		SourceScope: field("source_id"),
+		Search:      []SearchDoc{{Kind: DocSource, Path: field("source_id")}},
 	},
 	"artifacts": {
-		Entity: "artifact",
-		Source: field("source_id"),
-		Search: []SearchDoc{{Kind: DocSource, Path: field("source_id")}},
+		Entity:      "artifact",
+		Source:      field("source_id"),
+		SourceScope: field("source_id"),
+		Search:      []SearchDoc{{Kind: DocSource, Path: field("source_id")}},
 	},
 	"citations": {
-		Entity:  "citation",
-		Source:  up("artifact_id", "source_id"),
-		Handles: onField("transcription_uncertain", sqlPath(sqlHandlesForCitation)),
+		Entity:      "citation",
+		Source:      up("artifact_id", "source_id"),
+		SourceScope: up("artifact_id", "source_id"),
+		Handles:     onField("transcription_uncertain", sqlPath(sqlHandlesForCitation)),
 	},
-	"citation_notes": {Entity: "citation_note", Source: up("citation_id", "artifact_id", "source_id")},
+	"citation_notes": {Entity: "citation_note", SourceScope: up("citation_id", "artifact_id", "source_id")},
 	"observations": {
 		Entity:      "observation",
 		Source:      up("citation_id", "artifact_id", "source_id"),
+		SourceScope: up("citation_id", "artifact_id", "source_id"),
 		Handles:     observationMembers,
 		HandleScope: observationMembers,
 	},
 	"observation_notes": {
 		Entity:      "observation_note",
-		Source:      up("observation_id", "citation_id", "artifact_id", "source_id"),
+		SourceScope: up("observation_id", "citation_id", "artifact_id", "source_id"),
 		HandleScope: chain(up("observation_id", "subject_id"), membersOf),
 	},
-	"subjects": {Entity: "subject", Source: field("source_id")},
+	"subjects": {Entity: "subject", Source: field("source_id"), SourceScope: field("source_id")},
 	"files": {
-		Entity: "file",
-		Source: chain(inbound("artifacts", "file_id"), field("source_id")),
-		Search: []SearchDoc{{Kind: DocSource, Path: chain(inbound("artifacts", "file_id"), field("source_id"))}},
+		Entity:      "file",
+		SourceScope: chain(inbound("artifacts", "file_id"), field("source_id")),
+		Search:      []SearchDoc{{Kind: DocSource, Path: chain(inbound("artifacts", "file_id"), field("source_id"))}},
 	},
 	"date_values": {
 		Entity: "date_value",
 		Source: chain(
+			inbound("observations", "value_date_id"),
+			up("citation_id", "artifact_id", "source_id"),
+		),
+		SourceScope: chain(
 			inbound("observations", "value_date_id"),
 			up("citation_id", "artifact_id", "source_id"),
 		),
@@ -165,6 +181,10 @@ var registry = map[string]Effect{
 	"name_values": {
 		Entity: "name_value",
 		Source: chain(
+			inbound("observations", "value_name_id"),
+			up("citation_id", "artifact_id", "source_id"),
+		),
+		SourceScope: chain(
 			inbound("observations", "value_name_id"),
 			up("citation_id", "artifact_id", "source_id"),
 		),
@@ -204,8 +224,8 @@ var registry = map[string]Effect{
 	},
 	"canonical_entities": {Entity: "canonical_entity", Handles: self(), HandleScope: self()},
 	"identity_claims": {
-		Entity:      "identity_claim",
-		CacheSource: from("subject_id", field("source_id")),
+		Entity: "identity_claim",
+		Source: from("subject_id", field("source_id")),
 		Handles: union(
 			field("entity_id"),
 			onStatus("accepted", from("subject_id", observers)),
@@ -214,7 +234,7 @@ var registry = map[string]Effect{
 	},
 	"identity_claim_evidence": {
 		Entity:      "identity_claim_evidence",
-		CacheSource: up("identity_claim_id", "subject_id", "source_id"),
+		Source:      up("identity_claim_id", "subject_id", "source_id"),
 		Handles:     up("identity_claim_id", "entity_id"),
 		HandleScope: up("identity_claim_id", "entity_id"),
 	},
@@ -275,7 +295,7 @@ func init() {
 
 // paths lists every path field of the effect.
 func (e Effect) paths() []Path {
-	return []Path{e.Source, e.CacheSource, e.Handles, e.HandleScope, e.Structure}
+	return []Path{e.Source, e.SourceScope, e.Handles, e.HandleScope, e.Structure}
 }
 
 func (e Effect) validate(table string) error {

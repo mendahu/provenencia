@@ -10,7 +10,7 @@ func writeEffectsProto(res writes.Result) *engine.WriteEffects {
 	return &engine.WriteEffects{
 		Handles:       idStrings(set.Handles),
 		Sources:       idStrings(set.Sources),
-		CacheSources:  idStrings(set.CacheSources),
+		SourceScopes:  idStrings(set.SourceScopes),
 		Vocabulary:    set.Vocabulary,
 		Structure:     set.Structure,
 		HeaderHandles: idStrings(set.HeaderDeps),

@@ -57,8 +57,10 @@ enum CatalogMutation: Sendable, Equatable {
 /// reads and patches the rows whose last activity it moved.
 struct CatalogWriteEffects: Sendable, Equatable {
     var handles: [String] = []
+    /// Sources whose evidence changed: their graph, citation counts, and
+    /// citations by artifact. A note, metadata, or credibility change is not
+    /// evidence and is only in `sourceScopes`.
     var sources: [String] = []
-    var cacheSources: [String] = []
     var vocabulary = false
     var structure = false
     var headerHandles: [String] = []
@@ -66,15 +68,13 @@ struct CatalogWriteEffects: Sendable, Equatable {
     /// those rows in the cached lists with `activity`; `touchedHandles` (detail
     /// pages) does not include them.
     var handleScopes: [String] = []
+    /// Sources whose last-updated time this write moved. The session patches
+    /// those rows in the cached Sources list with `activity`; it reloads nothing.
+    var sourceScopes: [String] = []
     /// The write's own audit revision and time; revision 0 when it recorded none.
     var activity = CatalogActivity()
 
     static let empty = CatalogWriteEffects()
-
-    var touchedSources: [String] {
-        var seen = Set<String>()
-        return (sources + cacheSources).filter { seen.insert($0).inserted && !$0.isEmpty }
-    }
 
     var touchedHandles: [String] {
         var seen = Set<String>()
