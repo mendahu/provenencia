@@ -147,7 +147,7 @@ These are the calls for this spike. The questions at the bottom are answered; no
 | **[S10-D6](design/S10-D6-evidence-graph.md)** | Evidence graph | **S10-20** file select, Open, and box-select | S10-44 Unpromote on the promoted card |
 | **[S10-D16](design/archive/S10-D16-event-mark.md)** | Design system — Event mark | **S10-19** | The `subject_event` glyph. Sidebar placement is S10-D7 |
 | **[S10-D7](design/archive/S10-D7-sidebar-marks.md)** | Workspace shell | **S10-19** | Sidebar and toolbar. Depends on S10-D16. Empty states use the same marks |
-| **S10-D8** | Sources list | **S10-41** | Last updated, evidence-status filter, text search, persisted sort and filters |
+| [**S10-D8**](design/S10-D8-sources-list.md) | Sources list | **S10-41** | Last updated, evidence-status filter, text search, persisted sort and filters |
 | [**S10-D9**](design/S10-D9-persons-list.md) | Persons list | **S10-22** | S10-35 fills the thumb with a likeness. S10-39 makes that thumb the preferred portrait |
 | [**S10-D10**](design/S10-D10-events-list.md) | Events list | **S10-22** | — |
 | [**S10-D11**](design/S10-D11-places-list.md) | Places list | **S10-22** | — |
@@ -296,7 +296,7 @@ S10-48 canvas cover — descoped 2026-10-11
 
 S10-40 list scroll — done, #392. People, Events, Places, and Sources, on the history entry.
 S10-21 scope ──▶ S10-22 last updated (D9…D11)
-S10-D8 ──▶ S10-41 Sources list (last updated, filters, persist)
+S10-22, S10-D8 ──▶ S10-41 Sources list (last updated, filters, persist)
 S10-D5 ──▶ S10-18 source page drop and artifact cards
 S10-D6 ──▶ S10-20 graph file select + Open, and box-select
 S10-D6 ──▶ S10-44 unpromote (button drawn on the S10-20 board)
@@ -525,14 +525,16 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 
 #### S10-41 — Sources list
 
-**Brief:** S10-D8, just before this PR. One board for the page. It does not add a cell, a filter, or a search field to Events, Places, or Persons.
+**Plan:** [`prs/S10-41-sources-list.md`](prs/S10-41-sources-list.md) — Blocked — on S10-22 and board S10-D8
+
+**Brief:** [S10-D8](design/S10-D8-sources-list.md), written 2026-10-15; board not agreed yet. One board for the page. It does not add a cell, a filter, or a search field to Events, Places, or Persons.
 
 | | |
 | --- | --- |
 | **In** | Per the working rules and S10-D8. The row shows when the Source last changed, from the existing `UpdatedRevision`. The time comes from `audit.LatestByScope(db, audit.ScopeSource)`, and this PR removes the `sources` scope reads it makes dead. Filter the list to empty, in progress, or filed, from one grouped count of primary subjects and their accepted claims, next to `sourcegraphprogress`. A text field filters the loaded rows by title and ref as you type. Sort, type filter, status, and query persist per project and user, and restore when the Sources place is shown again, including after relaunch (this is S10-09). Scroll is the history-entry anchor from S10-40 ([#392](https://github.com/mendahu/provenencia/pull/392)). This PR does not restore scroll. Changing status or search on that visit clears that anchor and scrolls to the top, the way sort and type already do. |
 | **Out** | The same filters, search, or last-updated work on People, Events, or Places (scroll there is S10-40; last updated there is S10-22). Omnibar search. A per-row count query. Hiding bridge subjects as their own status. |
 | **Testable** | A Source with no people, events, or places matches Empty and not the other two. A Source with one unpromoted person matches In progress. After that person is promoted, it matches Filed. Typing part of a title hides the other rows. Leave and come back: status, query, sort, and type filter are still set, and the row's time moved if the Source changed. Relaunch: those four settings are still set. A long list does not issue one count query per row. Scroll follows the history entry (S10-40). |
-| **Depends on** | S10-D8 |
+| **Depends on** | S10-22 (`LastUpdatedDisplay` and the `PVList` detail cell), S10-D8 |
 
 #### S10-23 — Sex / gender on the Person page
 

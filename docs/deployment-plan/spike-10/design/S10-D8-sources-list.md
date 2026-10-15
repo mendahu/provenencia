@@ -1,0 +1,171 @@
+# S10-D8 — Sources list
+
+**Kind:** Claude Design board (**enhancement** of the Sources list)
+**Spike:** Provenencia Spike 10 (dogfood UX)
+**View:** Sources list — the toolbar, the row, and the empty states
+**Implements later as:** PR **S10-41**
+**Depends on:** [S10-D9](S10-D9-persons-list.md) (the last-updated column this board copies)
+**Related:** [`../deployment-plan.md`](../deployment-plan.md) (S10-41; working rules "The Sources list is one page", "Last updated", "Sources evidence filters count primaries in one read", "List scroll is a field on the history entry"). Persons is **S10-D9**, Events is **S10-D10**, and Places is **S10-D11**; none of them get the toolbar controls drawn here.
+**Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)
+**Skill:** [`add-design-brief`](../../../../.agents/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md)
+
+Paste this entire document into Claude Design as the requirements for one board. This file is the whole prompt.
+
+### Claude Design — do this first (in order)
+
+Work **in place** on this board. Do not fork a parallel copy of the surface.
+- **Rethink** (this brief says replace): throw away the old frames. Do not keep a before/after to ship.
+- **Enhancement**: add to the existing frames. Do not start a second composer / graph / page.
+
+1. **Clear this board’s local design-system cache.** Claude Design keeps a stale pack; drawing against it invents local copies of kit controls.
+2. **Delete this board’s reference** to the design-system bundle.
+3. **Pull a fresh copy** of the Provenencia design system from the main project. Do not continue until the fetched kit lists current components. If the kit looks stale or empty, delete the cache and refetch. Do **not** draw a replacement kit locally.
+4. **Compose from that kit.** Instance existing components. Reach for a **bespoke / local** control only when the use is truly this domain. One call site is not a new design-system primitive.
+
+**Reach for (kit).** Instance these first. The **UI building-block inventory** later in this brief names the snowflakes and which kit piece each situation should use.
+
+| Situation | Use |
+| --- | --- |
+| Labeled value, textarea, or trailing control | Field + TextArea / Input |
+| Primary / secondary / ghost action | Button; icon-only → IconButton |
+| Choose one from a short list | Select |
+| Searchable pick | ComboBox |
+| Warning, error, or inline hint | Callout |
+| Page- or pane-level empty | EmptyState |
+| Confirm replace or destroy | Confirm (`item:` snapshot, not a Bool) |
+| Resource delete with inbound check | DeleteImpact recipe (S8-D9 / **S8-13**) — confirm if allowed, notice if blocked |
+| Short create / edit form | FormDialog |
+| Status / count / polarity mark | Badge; compact token → Chip |
+| Cover or file thumb | Thumbnail |
+| Grouping / raised or sunken row | Card |
+| Section title | SectionHeader |
+| Transient after-save notice | Toast |
+| Native menu of actions | ContextMenu |
+
+Do **not** invent a local Field, Button, Card, Select, Callout, or Confirm.
+
+### This brief is an enhancement
+
+Add to the Sources list that exists. Do not draw a second Sources page, and do not turn it into a table with column headers. Keep the page header (title, description, count line, Add Source), the toolbar band with the type filter and the sort, the caption band (“Source” | “Evidence graph”), the split row (filing zone | Evidence graph zone), the empty catalog state, and the load error.
+
+Copy the last-updated column from the agreed Persons board (S10-D9). Do not redesign it.
+
+---
+
+## 1. Objective
+
+The researcher can find a Source quickly and see where each one stands. They can narrow the list to Sources whose graph is empty, still in progress, or filed. They can type part of a title or ref to find one. Each row shows when they last worked on that Source. The list comes back the way they left it: the same sort, type, status, and search, including after relaunch.
+
+**What changes.** A last-updated column on each row. An evidence-status select and a search field in the toolbar. One empty state for “filters match nothing”, with a Clear filters button.
+
+**What stays.** The row’s thumb, title, type line, ref, and Evidence graph zone with its counts. The type filter and the sort, with their options. Row height, hover, focus, and keyboard. The page header and the count line. The empty catalog state. No sort, filter, or search appears on Persons, Events, or Places.
+
+---
+
+## 2. Domain facts
+
+| Fact | What it means on this board |
+| --- | --- |
+| The row is a split row | The filing zone (thumb 44pt, title over the type line, then the mono ref) opens the Source page. The Evidence graph zone (248pt) opens the graph and shows “N subjects · M observations”, or “Needs an artifact” when the Source has no artifact. A hairline divides the zones down the whole list. |
+| Last updated is the last work under this Source | It moves when the researcher edits the Source, its notes, metadata, credibility, artifacts, files, or anything on its Evidence graph (subjects, citations, observations). It is the time of that change. |
+| The cell is the Persons cell | A history icon, then “Today, 3:15 PM”, “Yesterday”, or a short date (“12 Oct 2026”) in the viewer’s locale. Caption size, muted, one line, not mono, not a badge. A fixed 136pt column, leading-aligned, vertically centered. Help is “Last updated 14 Oct 2026 · 3:15 PM MDT”. No recorded change: a faint “—” with no help. |
+| The column is in the filing zone | Between the title stack and the ref. The title and the type line truncate first; the column and the ref keep their width. The Evidence graph zone keeps its 248pt. The caption band has no label for the column; the help names it. |
+| Evidence status has three values | A primary is a person, event, or place on the Source’s graph. **Empty**: no primaries. **In progress**: at least one primary is not yet promoted. **Filed**: at least one primary, and every primary is promoted. Bridges (participation, relationship, location) are not counted. |
+| The status is a filter, not a mark | The row does not show a status badge. The Evidence graph zone already shows the counts. |
+| Search filters as you type | It matches part of the title or the ref (“SRC-4F”), ignoring case and accents. It is not the omnibar and does not search inside the Source. |
+| Filters combine | Type, status, and search all apply at once. The count line reads “12 of 40 sources” whenever any of them narrows the list. |
+| Settings come back | Sort, type, status, and search are remembered for this project and this researcher. Leaving and coming back, or relaunching, shows the same four. |
+| Filtering returns to the top | Changing the type, the status, the search, or the sort scrolls the list to the top. Coming back with Back, Forward, or after relaunch returns to the row the researcher left. |
+| Nothing matches | When the filters hide every row, the list area shows one compact empty state with a Clear filters button. Clear filters resets type, status, and search. It does not change the sort. |
+| Counts can load after the rows | The rows and their times arrive together. The status counts can arrive a moment later. While they load with a status other than All set, the list area shows the loading state, not the empty state. |
+
+### 2.1 What this board is not
+
+- A status badge or chip on the row.
+- A sort by status, or new sort options. Sort keeps Date added, Date updated, A–Z, Z–A.
+- A search inside Source content, metadata, notes, or transcriptions. That is the omnibar.
+- Saved views, several filter sets, or a filter sidebar.
+- A table with column headers, or a column chooser.
+- These controls on Persons, Events, or Places.
+- A “created” time, or who made the change.
+- A live clock that ticks “Today” into “Yesterday” while the list sits open.
+
+---
+
+## 3. Implementation gate
+
+| | |
+| --- | --- |
+| Ships in **S10-41** | SRL-1…SRL-10. |
+| Stays out | Status on the row. Omnibar search. Controls on the Conclusion lists. A new sort. Scroll restore (already shipped in S10-40). |
+
+---
+
+## 4. Requirements
+
+| ID | Requirement |
+| --- | --- |
+| SRL-1 | Each row has the S10-D9 last-updated column in the filing zone, after the title stack and before the ref: history icon, then the text, 136pt wide, caption, muted, one line. The title and type line truncate before the column or the ref shrink. The Evidence graph zone is unchanged. |
+| SRL-2 | The cell reads “Today, {time}”, “Yesterday”, or a short date, in the viewer’s locale and time zone. Hover help is “Last updated {full stamp}”. No recorded change: a faint “—”, no help. The filing zone’s spoken value ends with “updated {cell text}”, or “last updated unknown”. |
+| SRL-3 | The toolbar holds, left to right: the search field, the type filter, the evidence-status select, then the sort. All four are the regular control size the type filter and sort use today. The search field has a search icon and the prompt “Search title or ref”. It is the only control that grows; it stops at 280pt. |
+| SRL-4 | The status select has four options: “All statuses”, “Empty”, “In progress”, “Filed”. Its closed label is the option name. It is the same select as the type filter, without an icon. |
+| SRL-5 | Typing in search filters the rows on each keystroke by title and ref, ignoring case and accents. Clearing the field shows the rows again. |
+| SRL-6 | Type, status, and search combine. The count line reads “{visible} of {total} sources” when any of them hides a row, and “{total} sources” otherwise. |
+| SRL-7 | When the filters hide every row, the list area shows a compact empty state: title “No matching sources”, message “Try another filter, or clear them to see every source.”, and a secondary Clear filters button. The button resets type to All types, status to All statuses, and search to empty. Sort is unchanged. The toolbar stays visible above it. |
+| SRL-8 | While the status counts load and a status other than All is set, the list area shows the loading state. It never shows the SRL-7 empty state for a list that has not been counted yet. |
+| SRL-9 | Sort, type, status, and search persist per project and researcher, and restore when the Sources list is shown again, including after relaunch. A restored type that no longer exists reads as All types. |
+| SRL-10 | Changing the type, status, search, or sort on this visit scrolls the list to the top. Coming back to the list with Back, Forward, a history jump, or after relaunch returns to the row it was left on. |
+
+---
+
+## 5. Suggested frames
+
+One Sources list. Today in the frames is 14 Oct 2026, Mountain Time. Draw it with eight Sources of mixed types and covers.
+
+1. **Times.** No filters. Rows show “Today, 3:15 PM”, “Today, 9:02 AM”, “Yesterday”, “12 Oct 2026”, “3 Mar 2025”, and one faint “—”. The column lines up down the list. The count line reads “8 sources”.
+2. **Help.** Hover on “Yesterday”: the help reads “Last updated 13 Oct 2026 · 4:40 PM MDT”.
+3. **Status menu open.** The status select is open over the list with All statuses, Empty, In progress, Filed. All statuses is checked.
+4. **Filtered.** Status In progress and type Census. Three rows. The count line reads “3 of 8 sources”. Each row’s Evidence graph zone shows its counts as today.
+5. **Search.** “smith” in the search field. Two rows whose titles contain Smith. The count line reads “2 of 8 sources”.
+6. **Nothing matches.** Status Filed and “zzz” in search. The toolbar stays. The list area shows the compact empty state with the Clear filters button.
+7. **Counting.** Status Empty is set and the counts have not arrived: the list area shows the loading state.
+8. **Narrow window.** A long title and a long type label. The title and type line truncate. The column, the ref, and the 248pt Evidence graph zone keep their width. The search field has shrunk; the three selects keep their size.
+
+---
+
+## 6. UI building-block inventory
+
+This table is **binding**. Instance the Ship kit rows. Paths from `macos/App/` unless noted.
+
+| Building block | Layer | Status | Home | Notes |
+| --- | --- | --- | --- | --- |
+| Sources list page | Snowflake | **Extend** | `Features/Sources/SourcesListView.swift` | Same page. The toolbar gains search and status; the list area gains the SRL-7 and SRL-8 states. |
+| Split row | Snowflake | **Extend** | `Features/Sources/SourcesSplitRow.swift` | SRL-1, SRL-2. The column goes in the filing zone before the ref. The graph zone is unchanged. |
+| Last-updated cell | Component | **Extend** | the `PVList` detail cell from S10-22, in `DesignSystem/Components/List/PVList.swift` | SRL-1, SRL-2. The same cell the Persons, Events, and Places rows draw: one cell, two hosts. Not a Badge, not a Chip, not a second copy in the Sources feature. |
+| Last-updated text | Snowflake | Ship | `LastUpdatedDisplay` in `Platform/TimestampFormat.swift` (S10-22) | SRL-2. Text, help, spoken form, and the 136pt width. |
+| Search field | Component | Ship | `PVInput` with the search icon | SRL-3, SRL-5. As on the Properties page. Not a new search component. |
+| Type filter | Component | Ship | `PVSelect` | Unchanged options. |
+| Status select | Component | Ship | `PVSelect` | SRL-4. A second `PVSelect` beside the type filter. Not a segmented control, not chips. |
+| Sort | Component | Ship | `PVSelect` | Unchanged options. |
+| Count line | Snowflake | Ship | `SourcesListView` header | SRL-6. Existing “{visible} of {total} sources” string. |
+| Nothing matches | Component | Ship | `PVEmptyState`, compact | SRL-7. Uses its existing action slot for Clear filters (`PVButton`, secondary). New copy replaces “No sources for this type”. |
+| Counting | Snowflake | Ship | the list’s existing loading state | SRL-8. |
+| Evidence graph zone | Snowflake | Ship | `SourcesSplitRow` | Unchanged. No status badge here. |
+
+### Explicit non-goals
+
+| Do not add | Why |
+| --- | --- |
+| A status Badge or Chip on the row | Status is a filter. The graph zone already shows counts. |
+| A segmented control or chip row for status | Four options in a toolbar: the kit Select already does this, like the type filter. |
+| A search component | `PVInput` with the search icon is the kit search field. |
+| A second last-updated cell drawn for Sources | The cell is the S10-D9 cell. |
+| A filter bar or sidebar | The toolbar band already holds the filters. |
+
+---
+
+## 7. Handoff
+
+1. Archive this brief under `design/archive/` when the board is agreed.
+2. Record it in [`../completed.md`](../completed.md).
+3. Implement **S10-41** against SRL-1…SRL-10, after S10-22 lands.

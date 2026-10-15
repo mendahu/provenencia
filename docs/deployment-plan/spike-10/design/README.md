@@ -11,7 +11,7 @@ Brief files are written **just before** the PR they gate, not up front. This ind
 | Step | View | Gates | Notes |
 | --- | --- | --- | --- |
 | [S10-D6](S10-D6-evidence-graph.md) | Evidence graph | **S10-20** | File select and Open (system app), plus box-select. Board agreed 2026-10-14. Also specifies Unpromote on the promoted card, which ships in **S10-44**. Hit boxes, the tiled grid, canvas growth, and camera restore are not this board |
-| S10-D8 | Sources list | **S10-41** | The page: last updated, evidence-status filter, text search, persisted sort and filters. Session scroll ships in the same PR and has no chrome of its own. Persons, Events, and Places do not get those controls |
+| [S10-D8](S10-D8-sources-list.md) | Sources list | **S10-41** | Written 2026-10-15, board not agreed. The page: last updated (copies the S10-D9 column), evidence-status select, search field, Clear filters empty state, persisted sort and filters. Scroll is S10-40 and has no chrome here. Persons, Events, and Places do not get those controls |
 | [S10-D9](S10-D9-persons-list.md) | Persons list | **S10-22** | Board agreed 2026-10-15. Last updated in its own 136pt column with a history icon before the ref, same cell as Events and Places. The existing thumb becomes a likeness crop in **S10-35**, then the preferred portrait in **S10-39** |
 | [S10-D10](S10-D10-events-list.md) | Events list | **S10-22** | Board agreed 2026-10-15. Copies the S10-D9 column |
 | [S10-D11](S10-D11-places-list.md) | Places list | **S10-22** | Board agreed 2026-10-15. Copies the S10-D9 column |
