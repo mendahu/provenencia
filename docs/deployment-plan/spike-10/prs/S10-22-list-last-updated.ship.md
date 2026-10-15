@@ -203,3 +203,12 @@ Check: the test passes; the composer's existing tests pass.
 **R3-F3 — Small fixes** (MNT-9, MNT-10, CON-9, CON-10, MNT-12, MNT-13)
 Files: `macos/App/Features/Sources/SourcePageModel.swift` (delete: `context.session.apply(effects)` then `await context.refreshCoverFromStore()`, as create does; drop the hand-built cover fields the refresh replaces), T-20 asserts `getSourceWorkspaceCalls` rises by exactly one; `docs/audit-revision-history.md:334`; `CatalogQueryRegistry.swift` gains `invalidations(for effects:, by mutation:, project:)` returning the deduped union, `WorkspaceSession.apply` calls it, and `CatalogQueryRegistryTests` asserts a key named by both appears once (T-16's dedupe line goes); `FakeStore.bumpSource` takes a required `evidence:` and attach passes `true`; the `conclusionTriggers` comment rewrapped.
 Check: scripts/check-pr.sh PASS.
+
+## Rework — fix R3
+Head `8a449b09` (pushed). R3-F1 and R3-F3 done (failing tests first). R3-F2 **stopped** correctly: `CitationComposerEntry.identityKey` includes the Artifact, so replacing the composer's location remounts it and loses the draft. D-28 rewritten (orchestrator, 2026-10-15): the composer's write funnel reloads the Artifact list it shows.
+
+**R3-F2b — The composer reloads the list it shows** (UX-1)
+Files: `macos/App/Features/CitationComposer/CitationComposerContext.swift` (`applyWrite`), a composer or `WorkspaceSessionTests` test.
+Failing test first: warm `citationsByArtifact(a1)`; composer place visible without `artifactId`; context `artifactID == "a1"`; `context.applyWrite(CatalogWriteEffects(sources: ["s1"], citationSources: ["s1"]))` → the `a1` list handle is fetching.
+Do: plan D-28 (rewritten).
+Check: the test passes; the composer tests pass; scripts/check-pr.sh PASS.
