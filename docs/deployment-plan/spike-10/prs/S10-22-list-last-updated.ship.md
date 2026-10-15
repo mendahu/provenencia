@@ -1,7 +1,7 @@
 # Ship log — S10-22 Last updated on People, Events, and Places
 
 **Plan:** [`S10-22-list-last-updated.md`](S10-22-list-last-updated.md) · **Branch:** `s10-22-list-last-updated` · **PR:** [#402](https://github.com/mendahu/provenencia/pull/402)
-**State:** fix R2 done; awaiting user on a verification round
+**State:** fixing R3
 
 Base: `main` @ `832ccc22` (planning base `360b405f`; the only change since, #400, touches `PVFormDialog` and none of the plan's Current state files).
 
@@ -165,3 +165,41 @@ Check: scripts/check-pr.sh PASS.
 
 ## Rework — fix R2
 Head `e4d65431` (pushed). Gate PASS (orchestrator run against `0a1f566b`). R2-F1, R2-F2, R2-F3 done. Table classification (commit `e4d65431`, pinned by `TestSourceEvidenceIsNotActivity`): evidence `Source` on `artifacts`, `citations`, `observations`, `subjects`, `date_values`, `name_values`, `identity_claims`, `identity_claim_evidence` (the last two without `SourceScope`, as before); activity `SourceScope` only on `sources`, `source_notes`, `source_metadata`, `source_metadata_layout`, `source_credibility_assessments`, `files`, `citation_notes`, `observation_notes`. Deviations: `citation_notes` and `observation_notes` also lost `Source` (no evidence read loads them); `FakeStore.bumpSource` takes `evidence:`. Review cap reached: a further review round needs the user.
+
+## Rework — review round 3 (user approved, 2026-10-15)
+All five lenses, fresh. Scope `ede162cb...e4d65431` (Fix plan R2), base `0a1f566b`.
+Verdicts: CON Clean · MNT Changes needed · UX Changes needed · SEC Clean · PRF Changes needed. R2 Fix-now items all Resolved (PRF-4/MNT-6/CON-5, UX-3, MNT-7, MNT-8, CON-6 partly — see CON-9, CON-7).
+
+| ID | Lens | Severity | Title | Decision | Evidence / reason |
+| --- | --- | --- | --- | --- | --- |
+| PRF-5 | PRF | blocker | Subject create/rename reloads `propertiesWorkspace` (an Observation `COUNT(*)` per Property; visible on graph and composer) and citation reads that don't read Subjects — new against base | Fix now → R3-F1 (plan D-27) | Verified: `invalidations(for:)` keys all four reads on `effects.sources`; base `.mutatedSourceGraph` reloaded only `sourceGraph` |
+| UX-1 | UX | major | Composer opened from a graph card shows a stale Citation picker after saves: its `citationsByArtifact` key isn't visible (location has no `artifactId`) and is now `.markStale` | Fix now → R3-F2 (plan D-28) | Verified: `listedCitations` reads `queryHandle` only; `PlaceRegistry` lists the key only when `location.artifactId` is set. CON's "composer queries the key" is true only on selection |
+| MNT-9 | MNT | major | Artifact delete loads the Source workspace two or three times | Fix now → R3-F3 | Create already does `apply(effects)` then `refreshCoverFromStore()` |
+| MNT-10 | MNT | major | `docs/audit-revision-history.md:334` says the source scope comes from `Set.Sources` | Fix now → R3-F3 | `rg "Set\.Sources" docs` |
+| MNT-11 | MNT | minor | `date_values` / `name_values` chain pasted twice per entry | Fix now → R3-F1 (same file) | `registry.go` |
+| CON-9 | CON | minor | T-16's dedupe assertion cannot fail | Fix now → R3-F3 (union moves into the registry, tested there) | `ensureQuery` returns on in-flight |
+| CON-10 | CON | nit | FakeStore attach reports activity only | Fix now → R3-F3 (same helper as MNT-12) | `FakeStore.swift:687` |
+| MNT-12 | MNT | nit | `bumpSource(_:evidence:)` defaults silently | Fix now → R3-F3 | required argument |
+| MNT-13 | MNT | nit | Comment wrap | Fix now → R3-F3 | |
+| CON-11 | CON | nit | D-25/T-18 name positions; code (correctly) has `identity_claims` | Landed note | |
+| — | PRF | note | `Resolve` walks a shared path twice for `Source`/`SourceScope` | Logged | Per changed row, does not grow with the catalog |
+| — | PRF | note | Metadata value set reloads visible `metadataFieldsList` (`COUNT(*)` per field) | Follow-up idea (pre-existing, same shape as PRF-5) | |
+| — | SEC | — | No findings | — | — |
+
+### Fix plan R3 (user-approved round 3 findings; then finish)
+
+**R3-F1 — Each read follows only what feeds it** (PRF-5, MNT-11)
+Files: `core/database/effects/registry.go`, `resolve.go`, `README.md`, effects tests (`TestSourceEvidenceIsNotActivity`); `api/proto/engine.proto` (+ regenerate), `api/ffi/handlers/write_effects.go`, tests; `macos/App/Features/Workspace/Session/CatalogMutation.swift`, `CatalogQueryRegistry.swift`; `macos/App/Platform/GoStore.swift`, `FakeStore.swift`; tests.
+Failing test first: a `WorkspaceSessionTests` case — graph place visible (`propertiesWorkspace` visible), apply a Subject create's effects (`sources: ["s1"]`, no `citationSources`, no `propertyUsage`) → `propertiesWorkspace` and `citationCounts(s1)` not fetching; an Observation create (`citationSources`, `propertyUsage: true`) → both reload.
+Do: plan D-27; `valueSource(col)` helper used by both fields of `date_values` and `name_values`.
+Check: Go and Swift tests pass.
+
+**R3-F2 — The composer's location names the Artifact it shows** (UX-1)
+Files: `macos/App/Features/Workspace/WorkspaceNavigation.swift`, `macos/App/Features/CitationComposer/CitationComposerModel.swift` (and its view if it owns navigation), tests.
+Failing test first: warm `citationsByArtifact(a1)`; enter the composer place without `artifactId`; select `a1`; apply a citation write's effects → the key reloads (it is visible).
+Do: plan D-28.
+Check: the test passes; the composer's existing tests pass.
+
+**R3-F3 — Small fixes** (MNT-9, MNT-10, CON-9, CON-10, MNT-12, MNT-13)
+Files: `macos/App/Features/Sources/SourcePageModel.swift` (delete: `context.session.apply(effects)` then `await context.refreshCoverFromStore()`, as create does; drop the hand-built cover fields the refresh replaces), T-20 asserts `getSourceWorkspaceCalls` rises by exactly one; `docs/audit-revision-history.md:334`; `CatalogQueryRegistry.swift` gains `invalidations(for effects:, by mutation:, project:)` returning the deduped union, `WorkspaceSession.apply` calls it, and `CatalogQueryRegistryTests` asserts a key named by both appears once (T-16's dedupe line goes); `FakeStore.bumpSource` takes a required `evidence:` and attach passes `true`; the `conclusionTriggers` comment rewrapped.
+Check: scripts/check-pr.sh PASS.
