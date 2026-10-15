@@ -6559,25 +6559,25 @@
       }
     },
     "sources.list.noFilterMatchesMessage": {
-      "comment": "Empty-state body when the Sources type filter matches nothing",
+      "comment": "Empty-state body when the Sources type, status, and search filters match nothing",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Try another type, or choose All types."
+            "value": "Try another filter, or clear them to see every source."
           }
         }
       }
     },
     "sources.list.noFilterMatchesTitle": {
-      "comment": "Empty-state title when the Sources type filter matches nothing",
+      "comment": "Empty-state title when the Sources type, status, and search filters match nothing",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "No sources for this type"
+            "value": "No matching sources"
           }
         }
       }
@@ -6655,7 +6655,7 @@
       }
     },
     "sources.list.sort.updated": {
-      "comment": "Sources sort option: reverse catalog order (stand-in until audit timestamps surface)",
+      "comment": "Sources sort option: most recent work first (audit revision)",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -18917,6 +18917,54 @@
           "stringUnit": {
             "state": "translated",
             "value": "%1$@, %2$@"
+          }
+        }
+      }
+    },
+    "sources.list.searchPrompt": {
+      "comment": "Placeholder of the Sources list search field",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search title or ref"
+          }
+        }
+      }
+    },
+    "sources.list.statusMenu": {
+      "comment": "Accessibility label for the Sources evidence-status filter control",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Evidence status"
+          }
+        }
+      }
+    },
+    "sources.list.status.all": {
+      "comment": "Sources evidence-status filter menu: show every status",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All statuses"
+          }
+        }
+      }
+    },
+    "sources.list.clearFilters": {
+      "comment": "Button on the Sources empty filter result: reset type, status, and search",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clear filters"
           }
         }
       }

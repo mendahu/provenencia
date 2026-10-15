@@ -177,7 +177,9 @@ private struct SourcesListContent: View {
 
     private var toolbar: some View {
         HStack(spacing: PVSpacing.space5) {
+            searchField
             filterMenu
+            statusMenu
             sortMenu
             Spacer(minLength: 0)
         }
@@ -188,6 +190,42 @@ private struct SourcesListContent: View {
             PVDivider()
         }
         .zIndex(1)
+    }
+
+    private var searchField: some View {
+        PVInput(
+            text: $model.settings.query,
+            prompt: L10n.Sources.searchPrompt,
+            icon: .search
+        )
+        .frame(minWidth: 160, maxWidth: 280)
+        .accessibilityIdentifier("sources.search")
+    }
+
+    private var statusMenu: some View {
+        let options = [PVSelectOption(
+            value: "",
+            label: L10n.string(L10n.Sources.statusAll),
+            accessibilityIdentifier: "sources.status.all"
+        )] + SourcesModel.EvidenceStatus.allCases.map {
+            PVSelectOption(
+                value: $0.rawValue,
+                label: L10n.string($0.label),
+                accessibilityIdentifier: "sources.status.\($0.rawValue)"
+            )
+        }
+        return PVSelect(
+            selection: Binding(
+                get: { model.settings.status?.rawValue ?? "" },
+                set: { model.settings.status = SourcesModel.EvidenceStatus(rawValue: $0) }
+            ),
+            options: options,
+            icon: .network,
+            menuWidth: 220,
+            fillsWidth: false,
+            accessibilityLabel: L10n.Sources.statusMenu,
+            accessibilityIdentifier: "sources.status"
+        )
     }
 
     private var filterMenu: some View {
@@ -241,13 +279,28 @@ private struct SourcesListContent: View {
 
     @ViewBuilder
     private var listBody: some View {
-        if model.visibleSources.isEmpty {
+        if let statusError = model.statusCountsError {
+            PVCallout(tone: .danger, message: L10n.Errors.message(for: statusError))
+                .padding(.horizontal, PVSpacing.gutterPage)
+                .padding(.top, PVSpacing.space8)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                .accessibilityIdentifier("sources.statusError")
+        } else if model.isAwaitingFilterData {
+            ProgressView()
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+                .padding(.top, PVSpacing.space9)
+        } else if model.visibleSources.isEmpty {
             PVEmptyState(
                 icon: .filter,
                 title: L10n.Sources.noFilterMatchesTitle,
                 message: L10n.string(L10n.Sources.noFilterMatchesMessage),
                 compact: true
-            )
+            ) {
+                PVButton(L10n.Sources.clearFilters, variant: .secondary) {
+                    model.clearFilters()
+                }
+                .accessibilityIdentifier("sources.clearFilters")
+            }
             .padding(.horizontal, PVSpacing.gutterPage)
             .padding(.top, PVSpacing.space6)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)

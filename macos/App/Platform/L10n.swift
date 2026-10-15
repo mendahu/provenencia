@@ -4687,14 +4687,14 @@ enum L10n {
 
         static let noFilterMatchesTitle = LocalizedStringResource(
             "sources.list.noFilterMatchesTitle",
-            defaultValue: "No sources for this type",
-            comment: "Empty-state title when the Sources type filter matches nothing"
+            defaultValue: "No matching sources",
+            comment: "Empty-state title when the Sources type, status, and search filters match nothing"
         )
 
         static let noFilterMatchesMessage = LocalizedStringResource(
             "sources.list.noFilterMatchesMessage",
-            defaultValue: "Try another type, or choose All types.",
-            comment: "Empty-state body when the Sources type filter matches nothing"
+            defaultValue: "Try another filter, or clear them to see every source.",
+            comment: "Empty-state body when the Sources type, status, and search filters match nothing"
         )
 
         static let filterAllTypes = LocalizedStringResource(
@@ -4724,7 +4724,31 @@ enum L10n {
         static let sortUpdated = LocalizedStringResource(
             "sources.list.sort.updated",
             defaultValue: "Date updated",
-            comment: "Sources sort option: reverse catalog order (stand-in until audit timestamps surface)"
+            comment: "Sources sort option: most recent work first (audit revision)"
+        )
+
+        static let searchPrompt = LocalizedStringResource(
+            "sources.list.searchPrompt",
+            defaultValue: "Search title or ref",
+            comment: "Placeholder of the Sources list search field"
+        )
+
+        static let statusMenu = LocalizedStringResource(
+            "sources.list.statusMenu",
+            defaultValue: "Evidence status",
+            comment: "Accessibility label for the Sources evidence-status filter control"
+        )
+
+        static let statusAll = LocalizedStringResource(
+            "sources.list.status.all",
+            defaultValue: "All statuses",
+            comment: "Sources evidence-status filter menu: show every status"
+        )
+
+        static let clearFilters = LocalizedStringResource(
+            "sources.list.clearFilters",
+            defaultValue: "Clear filters",
+            comment: "Button on the Sources empty filter result: reset type, status, and search"
         )
 
         static let statusEmpty = LocalizedStringResource(
