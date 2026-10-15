@@ -1,6 +1,6 @@
 # S10-22 — Last updated on People, Events, and Places
 
-**Status:** Landed in [#402](https://github.com/mendahu/provenencia/pull/402) (2026-10-15)
+**Status:** In progress
 **Spike / slice:** Spike 10 · Slice 6 — Lists and the Person page
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#s10-22--last-updated-on-people-events-and-places)
 **Brief:** [S10-D9](../design/archive/S10-D9-persons-list.md) (PSL-1…PSL-6), [S10-D10](../design/archive/S10-D10-events-list.md) (EVL-1…EVL-4), [S10-D11](../design/archive/S10-D11-places-list.md) (PLL-1…PLL-4); boards agreed 2026-10-15
@@ -9,15 +9,20 @@
 **Blocks:** —
 **Branch:** `s10-22-list-last-updated`
 **Version bump:** none — Spike 10 PRs leave `VERSION` at 0.2.0, and the product bump is cut when a release ships ([`docs/versioning.md`](../../../versioning.md))
-**Skills to load:** [`add-ffi-handler`](../../../../.agents/skills/add-ffi-handler/SKILL.md), [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md), [`add-localized-string`](../../../../.agents/skills/add-localized-string/SKILL.md), [`add-swift-test`](../../../../.agents/skills/add-swift-test/SKILL.md), [`add-workspace-place`](../../../../.agents/skills/add-workspace-place/SKILL.md)
+**Skills to load:** [`add-audit-scope`](../../../../.agents/skills/add-audit-scope/SKILL.md), [`add-ffi-handler`](../../../../.agents/skills/add-ffi-handler/SKILL.md), [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md), [`add-localized-string`](../../../../.agents/skills/add-localized-string/SKILL.md), [`add-swift-test`](../../../../.agents/skills/add-swift-test/SKILL.md), [`add-workspace-place`](../../../../.agents/skills/add-workspace-place/SKILL.md)
 **Rules that bind:** `.cursor/rules/go-tests.mdc`, `.cursor/rules/design-system-layers.mdc`
 **Context:** [`core/database/effects/README.md`](../../../../core/database/effects/README.md), [S10-21 plan](S10-21-handle-last-activity.md), working rules "**Last updated** is an audit scope, not a timestamp column" and "**The Sources list is one page.**" in [`../deployment-plan.md`](../deployment-plan.md)
-**Planned:** 2026-10-15 against `main` @ `360b405f` (boards folded in 2026-10-15)
+**Planned:** 2026-10-15 against `main` @ `360b405f` (boards folded in 2026-10-15; rework amended 2026-10-15 against branch head `97a208b1`)
 **Review:** [`S10-22-list-last-updated.review.md`](S10-22-list-last-updated.review.md) — Fits with changes, Ready with changes (applied); 2 rounds
 
-## Landed
+## Rework (2026-10-15)
 
-Differences from this plan: on current macOS the time separator before AM/PM is U+202F, so the cell reads `Today, 3:15 PM` with a narrow no-break space, and the tests normalize it to a plain space before comparing. `LastUpdatedDisplay` also conforms to `Equatable`. The yesterday branch in `LastUpdatedDisplay` uses `if let` on `calendar.date(byAdding:)` instead of `!`. Section 11's risk mitigation was wrong: list specs set no `evictWhenHidden`, so a note save reloads every cached list at once, not on next show; reloading on show or patching rows in place is a follow-up. Review round 1 also moved `PVListDetail` and `PVListDetailColumn` below `PVList` so its header doc sits on the type.
+The user reviewed round 0 and asked for two refactors on this PR. They supersede the parts of the plan named here; the rest of the plan stands and is already built (STEP-1…STEP-8).
+
+1. **One timestamp formatter.** `LastUpdatedDisplay` was a second display path for timestamps beside `TimestampFormat`, shaped for one screen. Every catalog timestamp is now formatted by one function that takes the timestamp, a style, and a context (locale, calendar, now) and returns one line of text. It carries no styling. The list cell is composed by the row from that function. D-5, D-6, D-8, D-10, D-11 are rewritten; D-12 is new.
+2. **Surgical cache updates.** A note or Observation save no longer reloads the three lists. The write carries its revision time; the app patches `updatedAt` in place on the cached rows the write moved, and the engine's display cache patches its own last-activity map on commit, so a list load no longer runs a query over the whole audit history. Lists not on screen are marked stale instead of reloaded. D-3 is rewritten; D-13…D-17 are new. This also retires PRF-2 (scopes resolved twice per write).
+
+New work is STEP-9…STEP-15. The **Landed** note is written when the PR merges.
 
 ### Implementer — read this first
 
@@ -34,7 +39,7 @@ Differences from this plan: on current macOS the time separator before AM/PM is 
 
 ## 1. Objective
 
-Each row on the People, Events, and Places lists shows when the researcher last worked on that handle, in its own column before the ref: “Today, 3:15 PM”, “Yesterday”, or a short date, with the full stamp as help and “—” when nothing is recorded. The value is the `canonical_entity` revision time S10-21 already returns. A note-only Observation save now refreshes the lists, so the cell moves after every edit that moves the revision.
+Each row on the People, Events, and Places lists shows when the researcher last worked on that handle, in its own column before the ref: “Today, 3:15 PM”, “Yesterday”, or a short date, with the full stamp as help and “—” when nothing is recorded. The value is the `canonical_entity` revision time S10-21 already returns. A note or Observation save moves the cell by patching the cached rows in place; it does not reload the lists. Every catalog timestamp in the app is formatted by one function with named styles.
 
 **Why now.** S10-21 landed the engine fields (`updated_at` on `PersonHeader`, `EventHeader`, `PlaceHeader`). The rows do not show them, and the app drops them in `GoStore`.
 
@@ -62,20 +67,48 @@ Times below use `now` = 2026-10-14 18:00 in `America/Edmonton`, locale `en_US`.
 | AC | Given / when | Then |
 | --- | --- | --- |
 | AC-2.1 | Save only a note on an Observation of a Subject filed to Person *Bob* | The write reports Bob's handle in `WriteEffects.handle_scopes`. `handles` and `header_handles` are empty. |
-| AC-2.2 | `CatalogWriteEffects(handleScopes: ["e1"])` | Invalidations are the three list keys and nothing else (no `conclusionDetail`). |
-| AC-2.3 | `CatalogWriteEffects(handles: ["e1"], handleScopes: ["e1", "e2"])` | The three list keys once each, and `conclusionDetail` for `e1` only. |
+| AC-2.2 | `CatalogWriteEffects(handleScopes: ["e1"])` | `invalidations(for:)` is empty. |
+| AC-2.3 | `CatalogWriteEffects(handles: ["e1"], handleScopes: ["e1", "e2"])` | The three list keys once each, and `conclusionDetail` for `e1` only (from `handles`, as before S10-22). |
 | AC-2.4 | In the app: edit a note on Bob's Observation, then open People | Bob's cell reads `Today, {now}`. |
+| AC-2.5 | The People list is cached with *e1* (`updatedAt` `2026-10-14T10:00:00Z`) and *e2* (`2026-10-13T09:00:00Z`). Apply `CatalogWriteEffects(handleScopes: ["e1"], revisionAt: "2026-10-15T16:00:00Z")` | *e1* reads `2026-10-15T16:00:00Z`, *e2* is unchanged, no list load starts. Applying it again with `revisionAt: "2026-10-14T08:00:00Z"` changes nothing (older). Empty `revisionAt` changes nothing. |
+| AC-2.6 | The three lists are cached and none is on screen. Apply `CatalogWriteEffects(handles: ["e1"])` | No list load starts. Each list is marked stale; the next `query` of a list reloads it. |
+| AC-2.7 | The People list is on screen. Apply `CatalogWriteEffects(handles: ["e1"])` | People reloads now; Events and Places (hidden) are marked stale. |
+| AC-2.8 | A write commits at revision 42, time `T`, moving handle *H* | `writes.Result` has `Revision 42`, `At T`, equal to that `audit_transactions` row. `WriteEffects.revision` is 42 and `revision_at` is `T`. |
+| AC-2.9 | The engine has loaded last activity once (`ListPersons`). A note save on *H* commits | The next `ListPersons` returns *H*'s `Updated` equal to that commit's revision and time, and runs no `audit_transaction_scopes` query. A commit older than the cached revision does not move it. `Drop` clears the map; the next read loads it with one query. |
+| AC-2.10 | A write | `audit_transaction_scopes` rows equal `effects.Resolve`'s `Sources` and `HandleScopes` for that revision, and the scope paths are walked once per write. |
+
+**US-3.** As a contributor, every catalog timestamp in the app is formatted by one function with named styles, so a new screen asks for a style instead of adding a formatter.
+
+Context: `en_US` unless noted, a Gregorian calendar in `America/Edmonton`, `now` = 2026-10-14 18:00 local. `T` = `2026-10-12T15:00:00Z`.
+
+| AC | Given / when | Then |
+| --- | --- | --- |
+| AC-3.1 | `TimestampFormat.string(T, .shortDate, in:)` | `Oct 12, 2026`; `en_GB`: `12 Oct 2026`. |
+| AC-3.2 | `.longDate` | `October 12, 2026`. |
+| AC-3.3 | `.dateTime` | `Oct 12, 2026 at 9:00 AM` (the locale's own joiner). |
+| AC-3.4 | `.stamp` | `12 Oct 2026 · 9:00 AM MDT` (day two digits, `·` from L10n). |
+| AC-3.5 | `.relative` for today 15:15, yesterday 16:40, and `T` | `Today, 3:15 PM`; `Yesterday`; `Oct 12, 2026`. |
+| AC-3.6 | `.spoken` for the same three | `Today at 3:15 PM`; `Yesterday`; `October 12, 2026`. |
+| AC-3.7 | Any style with `""` or `"garbage"` | `nil`. |
+| AC-3.8 | The repo after this PR | `boardStamp`, `abbreviatedDateTime`, and `LastUpdatedDisplay` do not exist; `rg "\.formatted\(" macos/App` finds no catalog-timestamp formatting outside `TimestampFormat.swift`. |
 
 ## 3. Scope
 
 | In | Covered by |
 | --- | --- |
 | `effects.Set.HandleScopes` filled by `effects.Resolve` | STEP-1, AC-2.1 |
-| `WriteEffects.handle_scopes` on the wire, mapped in Swift, and invalidating the three lists | STEP-2, STEP-3, AC-2.1, AC-2.2, AC-2.3 |
+| `WriteEffects.handle_scopes` on the wire and mapped in Swift | STEP-2, STEP-3, AC-2.1 |
 | `updatedAt` on `CatalogPersonHeader`, `CatalogEventHeader`, `CatalogPlaceHeader`, mapped from the list responses | STEP-4, AC-1.1 |
 | Last-updated text, help, and em dash (PSL-2, PSL-3, PSL-4) | STEP-5, AC-1.1, AC-1.2, AC-1.3, AC-1.4, AC-1.5 |
 | `PVList` optional detail column and skeleton bar (PSL-1, PSL-5, PSL-6) | STEP-6, AC-1.8 |
-| The column on all three lists and the spoken suffix (PSL-6; EVL-1 to EVL-4; PLL-1 to PLL-4) | STEP-7, AC-1.6, AC-1.7 |
+| The column on all three lists and the spoken suffix (PSL-6; EVL-1 to EVL-4; PLL-1 to PLL-4) | STEP-7, STEP-13, AC-1.6, AC-1.7 |
+| Rework: scope list declared once in `effects`; scopes resolved once per write | STEP-9, AC-2.10 |
+| Rework: commit carries its time to listeners and the write result | STEP-9, AC-2.8 |
+| Rework: engine last-activity cache patched on commit | STEP-10, AC-2.9 |
+| Rework: `WriteEffects.revision` / `revision_at` | STEP-11, AC-2.8 |
+| Rework: one timestamp formatter; callers moved; old formatters deleted | STEP-12, AC-3.1, AC-3.2, AC-3.3, AC-3.4, AC-3.5, AC-3.6, AC-3.7, AC-3.8 |
+| Rework: the row composes the cell from the formatter | STEP-13, AC-1.1, AC-1.4, AC-1.6 |
+| Rework: app cache patches `updatedAt` in place; hidden lists marked stale | STEP-14, AC-2.2, AC-2.3, AC-2.5, AC-2.6, AC-2.7 |
 
 | Out | Home |
 | --- | --- |
@@ -85,7 +118,8 @@ Times below use `now` = 2026-10-14 18:00 in `America/Edmonton`, locale `en_US`.
 | Sort by last updated on People, Events, or Places | not planned (working rule "The Sources list is one page") |
 | Last updated on the Person, Event, or Place detail page | not planned |
 | A timer that re-renders “Today” into “Yesterday” while a list sits open | not planned (brief §2.1) |
-| `audit.Record` reusing `Set.HandleScopes` instead of resolving again | not planned: two reads of one path inside one write; no measured cost |
+| The Sources list reading its `UpdatedRevision` from the engine last-activity cache instead of its per-list SQL | S10-41 (it already rebuilds that row) |
+| Fetching only the changed rows when a recompute changes a list row's title or secondary line | Follow-up idea: a visible list still reloads in full when a handle's values change (pre-existing since S9) |
 | Fixture times in `FakeStore` or `PreviewFixtures` headers | not planned: previews and UI tests show the em dash |
 
 ## 4. Current state
@@ -108,6 +142,12 @@ Times below use `now` = 2026-10-14 18:00 in `America/Edmonton`, locale `en_US`.
 | List page | `macos/App/Features/Conclusions/ConclusionListPage.swift` `ConclusionListKind`, `ConclusionListBody` | Builds `PVList` with `meta: Kind.ref`, `itemAccessibilityLabel: Kind.accessibilityLabel(_:orders:)`. |
 | Kinds | `macos/App/Features/Conclusions/PersonsListView.swift` `PersonsList`, `EventsListView.swift` `EventsList`, `PlacesListView.swift` `PlacesList` | Conform to `ConclusionListKind`. |
 | Row helpers | `macos/App/Features/Conclusions/ConclusionListRow.swift` `ConclusionListRow` | `thumbnail(mark:)`, `title(_:extraCount:)`, `accessibilityLabel(_:ref:)`. |
+| Audit scopes | `core/database/audit/scopes.go` `ScopeSource`, `ScopeCanonicalEntity`, `scopeResolvers`, `Latest`, `LatestByScope`; `core/database/audit/audit.go` `Record` | `Record` walks `effects.Sources` and `effects.HandleScopes` itself, so `writes.Run` walks each scope path twice (here and in `Resolve`). `LatestByScope` groups every scope row of a type, joined to `audit_transactions`; its only non-test caller is `conclusionheaders.latestHandles`. `audit`'s internal test imports `core/database`, so a package `core/database` imports cannot import `audit`. |
+| Commit listeners | `core/database/listen.go` `CommitListener`, `Notify`; `core/writes/run.go` `Result`, `Run` | `OnCommit(rev int64, set effects.Set)`; the commit time (`project.NowUTC()` passed to `Record`) is not kept. `Result{Revision, Effects}`. |
+| Display cache | `core/database/graphcache/commit.go` `OnCommit`; `graph.go` `clear`, `Drop` | Patches handles, sources, labels on commit. Holds no last activity. |
+| List reads | `core/database/conclusionheaders/compose.go` `latestHandles`, `ListPersons`, `ListEvents`, `ListPlaces`, `PersonsByIDs` (and the event/place siblings) | Every list read runs `audit.LatestByScope` over the whole history. |
+| Timestamp callers | `macos/App/Features/Sources/SourcePageNotesView.swift` (`boardStamp`), `macos/App/Features/Onboarding/OnboardingProjectMetaLines.swift` `formatDate` (`abbreviatedDateTime`), `ConclusionListRow.updatedColumn` / `ConclusionListPage` (`LastUpdatedDisplay`) | Three formatting entry points with different inputs; only `LastUpdatedDisplay` takes locale and calendar. |
+| App cache | `macos/App/Features/Workspace/Session/WorkspaceSession.swift` `apply(_ effects:)`, `apply(invalidations:stale:)`, `patchUpdatedSource`, `visibleKeys`; `CatalogQueryRegistry.swift` `Spec.evictWhenHidden` | Invalidated keys that are cached and not evicted are revalidated at once, on or off screen. `patchUpdatedSource` is the existing in-place row patch. |
 | Tests | `core/database/effects/handle_paths_test.go` `TestHandlePaths` "observation note reaches member handle"; `macos/ProvenenciaTests/CatalogQueryRegistryTests.swift` (the `invalidations(for: CatalogWriteEffects(…))` expectation); `macos/ProvenenciaTests/TimestampFormatTests.swift`; `macos/ProvenenciaTests/PersonsListTests.swift`; `macos/ProvenenciaTests/PVListTests.swift` | Cover the paths, invalidation, stamp, labels, and keyboard as today. |
 
 **Precedent.** `header_handles` (field 6) was added to `WriteEffects` the same way: a field on `effects.Set`, one line in `writeEffectsProto`, one in `mapWriteEffects`, and a branch in `invalidations(for:)`. `header_handles` is filled from `Set.HeaderDeps`, which `writes.Run` computes after `Resolve`; `HandleScopes` instead comes out of `Resolve` (D-1). Copy the proto, mapper, and invalidation parts. The S10-21 plan added the header fields; this PR only reads them.
@@ -118,15 +158,22 @@ Times below use `now` = 2026-10-14 18:00 in `America/Edmonton`, locale `en_US`.
 | --- | --- | --- | --- |
 | D-1 | `effects.Set` gets `HandleScopes [][]byte` *(new)*, filled in `Resolve` with `appendPath(w, table, eff.HandleScope, set.HandleScopes)` beside `Handles`, with a field comment matching `Effect.HandleScope`'s. | The registry already owns the path; `Resolve` is "the whole effect of a batch". | Widening `observation_notes` `Handles` — that recomputes the reconciler for a note, which changes no value. Reading audit scopes back after commit — a second source of truth. |
 | D-2 | `WriteEffects.handle_scopes = 7` *(new)*; Swift `CatalogWriteEffects.handleScopes` *(new)*. One name at every layer, Go's `HandleScopes`. | Separate from `handles`: a scope move needs a list refetch, not a detail refetch. | Folding into `handles` — would refetch every open detail page on each note save. |
-| D-3 | `invalidations(for:)` adds the three list keys when `touchedHandles` or `handleScopes` is non-empty, once each, in the existing order. `conclusionDetail` stays per `touchedHandles` only. Shape: `if !effects.touchedHandles.isEmpty || !effects.handleScopes.isEmpty { append the three lists }`, then `for entityID in effects.touchedHandles { append conclusionDetail }`. `touchedHandles` does not change, so `WorkspaceSession.apply` and its other readers ignore scope handles. | The detail page does not show the time (§3 Out). | A separate list branch emitting duplicates. |
+| D-3 | `invalidations(for:)` reads `touchedHandles` only, as before S10-22: the three list keys and `conclusionDetail` per touched handle. `handleScopes` produce no invalidation; they move the time through D-16. `touchedHandles` does not change. | A scope move changes one field the write already knows (D-15). | Invalidating the lists on scope handles (round 0) — a full rebuild of three lists per note save, growing with the catalog. |
 | D-4 | Header models get `var updatedAt: String = ""` *(new)* only, as the last stored property. Not `updatedRevision`. | The row needs the time; empty means unknown. Nothing sorts by revision here. | Mapping both — a field with no reader. |
-| D-5 | `LastUpdatedDisplay` *(new)*, a `struct` in `macos/App/Platform/TimestampFormat.swift` with `let text: String`, `let help: String?`, `let spoken: String`, `let isKnown: Bool` (D-6), `static let columnWidth: CGFloat` (D-11), and `init(_ rfc3339: String, now: Date, calendar: Calendar = .current, locale: Locale = .current)`. It parses once with `TimestampFormat.parse`. Formats use `Date.FormatStyle(locale: locale, calendar: calendar, timeZone: calendar.timeZone)`. `calendar.isDate(date, inSameDayAs: now)` → text `L10n.LastUpdated.today(time:)` with that style's `.hour().minute()`; `calendar.isDate(date, inSameDayAs: calendar.date(byAdding: .day, value: -1, to: now)!)` → `L10n.LastUpdated.yesterday`; otherwise that style's `.day().month(.abbreviated).year()`. A future date on another day uses the date form. The brief's “12 Oct 2026” is the `en_GB` form; the viewer's locale decides the order (`Oct 12, 2026` in `en_US`). | Brief PSL-2, and the brief's inventory homes the text beside the note stamp. One value carries text, help, and spoken form, so S10-41's `SourcesSplitRow` (not a `PVList` row) calls it instead of copying rules out of `Features/Conclusions`. `now`, calendar, and locale are parameters so tests are deterministic. | Text in `TimestampFormat` with the dash, help, and suffix in `ConclusionListRow` — S10-41 would reach into another feature. `RelativeDateTimeFormatter` (“2 days ago”) — the user chose day words then a date. `DateFormatter.doesRelativeDateFormatting` — no time on today, wording varies by OS. |
-| D-6 | Empty or unparseable `rfc3339`: `text` is `"—"` (a glyph, not translated), `help` is `nil`, `spoken` is `L10n.LastUpdated.a11yUnknown`. Otherwise `help` is `L10n.LastUpdated.help(stamp: TimestampFormat.boardStamp(rfc3339))` (“Last updated 14 Oct 2026 · 3:15 PM MDT”) and `spoken` is `L10n.LastUpdated.a11yUpdated(text)`. `let isKnown: Bool` *(new)* is `false` for the dash. | PSL-3, PSL-4, PSL-6. The boards name the column in the help, since the column has no header. The note-row stamp already exists. | A new stamp format; an L10n key for a dash. |
+| D-5 | One formatter. In `macos/App/Platform/TimestampFormat.swift`, `enum TimestampFormat` keeps `parse` and gains `enum Style { case shortDate, longDate, dateTime, stamp, relative, spoken }` *(new)*, `struct Context { var locale: Locale; var calendar: Calendar; var now: Date; static var current: Context }` *(new; `calendar.timeZone` is the zone)*, `static func string(_ rfc3339: String, _ style: Style, in context: Context = .current) -> String?` *(new; `nil` when empty or unparseable)* and `static func string(_ date: Date, _ style: Style, in context: Context = .current) -> String` *(new)*. Every style formats through one `Date.FormatStyle(locale: context.locale, calendar: context.calendar, timeZone: context.calendar.timeZone)`. `shortDate` = `.day().month(.abbreviated).year()`; `longDate` = `.day().month(.wide).year()`; `dateTime` = `Date.FormatStyle(date: .abbreviated, time: .shortened, locale:, calendar:, timeZone:)`; `stamp` = `L10n.Timestamp.stamp(date:time:)` of `.day(.twoDigits).month(.abbreviated).year()` and `.hour().minute().timeZone(.specificName(.short))`; `relative` = `L10n.Timestamp.today(time:)` (`.hour().minute()`) when `isDate(_:inSameDayAs: now)`, `L10n.Timestamp.yesterday` when same day as `date(byAdding: .day, value: -1, to: now)`, else `shortDate`; `spoken` = the same tests with `L10n.Timestamp.todayAt(time:)`, `yesterday`, else `longDate`. Text only: no font, color, or view. | The user's call: one function taking the timestamp, the locale, and the display option, returning one line of text. Every style is testable with a fixed context. | `LastUpdatedDisplay` (round 0) — a second, screen-shaped display path beside the formatter. One function per style — the API grows with every style. A `View` — styling is the caller's. |
+| D-6 | The row composes the cell. `ConclusionListRow.updatedDetail(_ updatedAt: String, in context: TimestampFormat.Context) -> PVListDetail` *(new)*: `text` = `string(updatedAt, .relative, in:) ?? "—"`; `help` = `string(updatedAt, .stamp, in:).map(L10n.LastUpdated.help(stamp:))`; `icon` = `.history`; `faint` = the relative string is `nil`. `ConclusionListRow.labelWithUpdated(_ base: String, updatedAt: String, in context:) -> String` *(new signature)* = `L10n.Conclusions.a11yList(base, rest: string(updatedAt, .spoken, in:).map(L10n.LastUpdated.a11yUpdated) ?? L10n.LastUpdated.a11yUnknown)`. | The cell is this row's composition of shared pieces: formatter, L10n, kit slot. | Composition in `Platform/` — a feature's cell in the platform layer. |
 | D-7 | `PVListDetailColumn<Item>` *(new)* `struct { var width: CGFloat; var content: (Item) -> PVListDetail? }` and `PVListDetail` *(new)* `struct { var text: String; var help: String?; var icon: PVSymbol?; var faint: Bool = false }`, both in `PVList.swift`. Both `PVList` inits (the primary one and the `Secondary == EmptyView` one, which forwards) get `detail: PVListDetailColumn<Item>? = nil`, placed right after `meta`. When set, every row draws, between the text stack and the trailing ref, a column of `detail.width` holding an `HStack(spacing: 6)` of `PVIcon(icon, size: 14)` (when `icon` is set) and a one-line, caption, non-mono text with `.fixedSize()` (it never truncates; the column frame is fixed and keeps `layoutPriority(1)` like the trailing group, so the title stack gives way), leading-aligned and vertically centered; icon and text are `PVColor.textMuted`, or `PVColor.textFaint` when `faint`; `content` returning `nil` draws an empty column of that width. Help covers the icon and the text and is attached only when non-nil (`if let help { cell.help(help) } else { cell }` in a `@ViewBuilder`, never `.help(help ?? "")`). No `.accessibilityHidden`: the row is already `.accessibilityElement(children: .ignore)`. `PVListSkeleton` gets `detailWidth: CGFloat? = nil` *(new)* and, when set, draws a 64 × 10 bar, leading-aligned, in that column before the existing 72pt ref bar, which stays. | The brief marks the list row Extend. One parameter carries closure and width, so a width with no column cannot be written, and `Components/` holds no board value or time type. | Separate `detail` and `detailWidth` parameters with a default width. A view laid out beside `meta` from `Features/` — the row layout is private to `PVList`. Putting the time in `meta` — the user chose its own column. |
-| D-8 | `ConclusionListKind` gets a required `static func updatedAt(_ row: Row) -> String` *(new)*; each kind returns `header.updatedAt`. `ConclusionListRow.updatedColumn<Kind: ConclusionListKind>(_: Kind.Type) -> PVListDetailColumn<Kind.Row>` *(new)* returns width `LastUpdatedDisplay.columnWidth` and content `{ let d = LastUpdatedDisplay(Kind.updatedAt($0), now: Date()); return PVListDetail(text: d.text, help: d.help, icon: .history, faint: !d.isKnown) }`. `PVSymbol.history` *(new)* is `"clock.arrow.circlepath"`, doc comment “Lucide `history` — last updated on a list row”. `ConclusionListRow.labelWithUpdated(_ base: String, _ updated: LastUpdatedDisplay) -> String` *(new)* returns `L10n.Conclusions.a11yList(base, rest: updated.spoken)`. `ConclusionListBody` passes `detail: ConclusionListRow.updatedColumn(Kind.self)` and `itemAccessibilityLabel: { ConclusionListRow.labelWithUpdated(Kind.accessibilityLabel($0, orders: session.nameFormat), LastUpdatedDisplay(Kind.updatedAt($0), now: Date())) }`. `ConclusionListPage` gets `static func skeleton() -> PVListSkeleton` *(new)* returning `PVListSkeleton(detailWidth: LastUpdatedDisplay.columnWidth)`, used at both skeleton sites (`ConclusionListPage.body` fallback and the `.loading` case in `ConclusionListBody`). The Kinds' own `accessibilityLabel` stays without the suffix. | One place for three lists (Events and Places copy Persons); one skeleton builder so the two sites cannot drift. | Per-kind copies; an `accessibilityLabel(_ base: String, …)` overload beside the existing `accessibilityLabel(_:ref:)`, which means title and ref. |
+| D-8 | `ConclusionListKind` gets a required `static func updatedAt(_ row: Row) -> String` *(new)*; each kind returns `header.updatedAt`. `ConclusionListRow.updatedColumn<Kind: ConclusionListKind>(_: Kind.Type) -> PVListDetailColumn<Kind.Row>` returns width `ConclusionListRow.updatedColumnWidth` and content `{ updatedDetail(Kind.updatedAt($0), in: .current) }`. `PVSymbol.history` is `"clock.arrow.circlepath"`. `ConclusionListBody` passes `detail: ConclusionListRow.updatedColumn(Kind.self)` and `itemAccessibilityLabel: { ConclusionListRow.labelWithUpdated(Kind.accessibilityLabel($0, orders: session.nameFormat), updatedAt: Kind.updatedAt($0), in: .current) }`. `ConclusionListPage.skeleton()` returns `PVListSkeleton(detailWidth: ConclusionListRow.updatedColumnWidth)`, used at both skeleton sites. The Kinds' own `accessibilityLabel` stays without the suffix. | One place for three lists. | Per-kind copies; an `accessibilityLabel(_ base: String, …)` overload beside `accessibilityLabel(_:ref:)`. |
 | D-9 | `now` is `Date()` read when the row builds. No timer. | Brief §2.1. The list rebuilds on refetch and navigation. | `TimelineView` — an open list re-rendering every minute for a day boundary. |
-| D-10 | The spoken suffix is `LastUpdatedDisplay.spoken`, joined by the existing `L10n.Conclusions.a11yList` in `labelWithUpdated`. | PSL-6 wording, reused by S10-41. | A new joiner. |
-| D-11 | `LastUpdatedDisplay.columnWidth` *(new)* `= 136`, the agreed boards' width, icon included. It fits “Today, 12:59 PM”, “Yesterday”, “12 Oct 2026”, and “Sep 30, 2026”. | One width for three lists and the Sources row (PSL-1, EVL-1, PLL-1). | A width per kind; a constant in `Features/Conclusions` that S10-41 cannot reach. |
+| D-10 | The spoken suffix uses the `.spoken` style: `updated Yesterday`, `updated Today at 3:15 PM`, `updated October 12, 2026`; `last updated unknown` when there is no time. | VoiceOver reads a full month, not an abbreviation. | Reusing the visible `.relative` text. |
+| D-11 | `ConclusionListRow.updatedColumnWidth: CGFloat = 136` *(new)*, the agreed boards' width, icon included. | One width for three lists. The width is layout, not formatting, so it is not in `TimestampFormat`. | A width per kind. A constant in `Platform/`. S10-41 moves it beside the cell it shares when the Sources row adopts the cell. |
+| D-12 | Callers move to `TimestampFormat.string`: `SourcePageNotesView` uses `string(note.createdAt, .stamp) ?? note.createdAt`; `OnboardingProjectMetaLines.formatDate` uses `string(rfc3339, .dateTime) ?? rfc3339` (both keep today's raw fallback). `boardStamp`, `abbreviatedDateTime`, and `LastUpdatedDisplay` are deleted with their tests. New L10n namespace `L10n.Timestamp` *(new)*: `today(time:)` (key `timestamp.today`, "Today, %@"), `todayAt(time:)` (`timestamp.todayAt`, "Today at %@"), `yesterday` (`timestamp.yesterday`, "Yesterday"), `stamp(date:time:)` (`timestamp.stamp`, "%1$@ · %2$@"). `L10n.LastUpdated` keeps only `help(stamp:)`, `a11yUpdated(_:)`, `a11yUnknown`; keys `lastUpdated.today` and `lastUpdated.yesterday` are removed from `Localizable.xcstrings`. | Day words and the stamp joiner are date formatting, not last-updated copy. | Keeping `boardStamp` as a wrapper — two entry points. |
+| D-13 | The scope list is declared once in `core/database/effects/scopes.go` *(new)*: `const ScopeSource = "source"`, `const ScopeCanonicalEntity = "canonical_entity"`, and `var Scopes = []Scope{{ScopeSource, func(s Set) [][]byte { return s.Sources }}, {ScopeCanonicalEntity, func(s Set) [][]byte { return s.HandleScopes }}}` with `type Scope struct { Type string; IDs func(Set) [][]byte }`. `writes.Run` calls `effects.Resolve` before `audit.Record`; `audit.Record(tx, rev, set)` stores one scope row per id from each `effects.Scopes` entry's `IDs(set)` and no longer resolves. `audit.ScopeSource`, `audit.ScopeCanonicalEntity`, and `scopeResolvers` are deleted; callers use the `effects` constants. `effects.Sources` and `effects.HandleScopes` (the standalone resolvers) are deleted; tests read `effects.Resolve`. `effects.Handles` stays (`subjects.go` calls it). | One declared place maps a scope type to its ids; audit and the display cache both read it, and `effects` is the one package both may import. Each scope path is walked once per write (retires PRF-2). | Constants in `audit` — the display cache cannot import `audit` (import cycle through audit's internal test). Keeping `Record` resolving — two walks per write. |
+| D-14 | A commit carries its time. `core/database/listen.go` gains `type Commit struct { Revision int64; At string; Effects effects.Set }` *(new)*; `CommitListener.OnCommit(c Commit) error` and `Notify(c Commit)` replace the `(rev, set)` forms. `core/writes/run.go`: `type Result = database.Commit` (alias; `Revision` and `Effects` keep their names); `Run` keeps the `project.NowUTC()` it passes to `Record` as `At`. | The engine cache and the app need the time of the change; the write already has it. | `At` on `effects.Set` — the set says what changed, not when. A second struct beside `Result` — one concept. |
+| D-15 | The display cache holds last activity. `core/database/graphcache/activity.go` *(new)*: `type Activity struct { Revision int64; At string }` (the zero value is "no revision"), `func (g *Graph) Activity(scopeType string, id []byte) (Activity, error)` loads that scope type's map once with the grouped SQL moved from `audit.LatestByScope` (into `graphcache/sql.go`), then reads from memory. `OnCommit` runs, for each `effects.Scopes` entry whose map is loaded, `if c.Revision > cur.Revision { set Activity{c.Revision, c.At} }` for each id in `IDs(c.Effects)`, before the existing `Structure` early return. `clear()` empties the maps (so `Drop` and a structure change reload with one query). `conclusionheaders` reads `c.Graph().Activity(effects.ScopeCanonicalEntity, id)` per row; `latestHandles`, `audit.Latest`, and `audit.LatestByScope` are deleted; the `Updated` fields become `graphcache.Activity`. Update the comment that said the display cache never holds it. | A list load costs the rows it returns, not the audit history. The commit already knows exactly which ids moved and when. | Running the grouped query per list load (round 0) — grows with history. A new listener package — `core/database` imports it, so it hits the same import cycle; the graph is already the registered display cache. |
+| D-16 | The write carries its time to the app. `WriteEffects`: `int64 revision = 8; string revision_at = 9;` *(new)*. `writeEffectsProto(res writes.Result)` *(new signature)* sets them from `res.Revision` and `res.At`; its eight call sites pass `wrote` instead of `wrote.Effects`. Swift `CatalogWriteEffects` gains `var revision: Int64 = 0` and `var revisionAt: String = ""`, mapped in `mapWriteEffects`. | The app patches rows with the write's own time; no read. | A follow-up read of the moved rows — an FFI call per save. |
+| D-17 | The app cache patches last-updated rows in place. `macos/App/Features/Workspace/Session/CatalogLastUpdated.swift` *(new)*: `protocol CatalogLastUpdatedRow { var id: String { get }; var updatedAt: String { get set } }`, conformed by `CatalogPersonHeader`, `CatalogEventHeader`, `CatalogPlaceHeader`; `enum CatalogLastUpdatedScope { case handle }` (S10-41 adds `source`). `CatalogQueryRegistry.Spec` gains `var lastUpdated: CatalogLastUpdatedScope? = nil`; the three list specs set `.handle`; `func lastUpdatedScope(of kind: CatalogQueryKey.Kind) -> CatalogLastUpdatedScope?` *(new)*. `WorkspaceSession.apply(_ effects:)` first calls `patchLastUpdated(.handle, ids: effects.handleScopes, at: effects.revisionAt)` *(new, private)*: for each cached key of this project whose kind has that scope, a `switch key` maps it to its row type (as `warmQuery` does) and `patchRows(key, as:)` *(new, private)* sets `updatedAt = at` on rows whose `id` is in `ids` and whose `updatedAt < at` (both RFC3339 UTC at second precision from `project.NowUTC`, so string order is time order; `""` sorts first), then `applySuccess` only when a row changed, leaving stale flags as they are (as `patchUpdatedSource` does). Empty `ids` or `at` does nothing. No loader runs. | Cache infrastructure the next scope reuses: S10-41 adds a `source` case and one `switch` arm. | Invalidate and refetch (round 0). Fetching the moved rows by id — an FFI call and Go owns list order. |
+| D-18 | `CatalogQueryRegistry.Spec` gains `var staleWhenHidden = false` *(new)*, beside `evictWhenHidden`. In `WorkspaceSession.apply(invalidations:stale:)`, an invalidated, cached key that is not in `visibleKeys` and whose spec sets it is added to `invalidatedKeys` (stale) instead of revalidated; the next `query` reloads it while the old value shows. The three list specs set it. It covers the effects path and the mutation path (`conclusionTriggers`) alike. `WorkspaceSessionTests.applyPromoteRevalidatesWarmedPersonsList` keeps its name only if People is on screen in it; otherwise rename it `applyPromoteMarksHiddenPersonsListStale` and assert stale, then reload on the next `query`. | A save made from a Source page reloads no list until the researcher looks at one; at most the visible list reloads. | `evictWhenHidden` on lists — drops the value, so Back shows a skeleton and loses the S10-40 scroll anchor's rows until reload. |
 
 ## 6. Design
 
@@ -138,16 +185,23 @@ Times below use `now` = 2026-10-14 18:00 in `America/Edmonton`, locale `en_US`.
 | `WriteEffects.handle_scopes` *(new)* | proto field | `header_handles` | Different invalidation (D-2). |
 | `CatalogWriteEffects.handleScopes` *(new)* | field | `headerHandles` | Same as above. |
 | `updatedAt` on three header models *(new)* | field | `CatalogSource.updatedRevision` | Header models had no time; Sources stores a revision for sort. |
-| `LastUpdatedDisplay` *(new)* | struct | `TimestampFormat.boardStamp` | The text, help, spoken form, and width of one cell, shared by the three lists and S10-41's `SourcesSplitRow`. Lives beside the stamp it reuses. |
+| `TimestampFormat.Style`, `TimestampFormat.Context`, `TimestampFormat.string` *(new)* | enum / struct / func | `TimestampFormat.boardStamp`, `abbreviatedDateTime` | Replaces both; one entry point for every catalog timestamp. |
+| `L10n.Timestamp` *(new)* | L10n namespace | `L10n.LastUpdated` | Day words and the stamp joiner belong to date formatting, used by every style. |
+| `effects.Scopes`, `effects.Scope`, `effects.ScopeSource`, `effects.ScopeCanonicalEntity`, `effects/scopes.go` *(new)* | registry | `audit.scopeResolvers`, `audit.Scope*` | Moved, not copied: `audit` and `graphcache` both read it; `audit`'s copies are deleted. |
+| `database.Commit` *(new)* | type | `writes.Result` | `Result` becomes an alias of it. |
+| `graphcache.Activity`, `Graph.Activity`, `graphcache/activity.go` *(new)* | type / func / file | `audit.Latest`, `audit.LatestByScope` | Moved into the cache that patches it; the audit copies are deleted. |
+| `WriteEffects.revision`, `revision_at` *(new)* | proto fields | — | The write's own time; nothing carried it. |
+| `CatalogLastUpdatedRow`, `CatalogLastUpdatedScope`, `CatalogLastUpdated.swift`, `Spec.lastUpdated`, `lastUpdatedScope(of:)`, `patchLastUpdated`, `patchRows` *(new)* | protocol / enum / funcs | `WorkspaceSession.patchUpdatedSource` | That patch is one hard-coded row for one mutation; this is declared per spec and serves any list with a last-updated field. |
+| `Spec.staleWhenHidden` *(new)* | spec flag | `Spec.evictWhenHidden`, `markStaleOn` | Evict drops the value; `markStaleOn` is per mutation kind. This is per spec, for any invalidation, only when hidden. |
 | `L10n.LastUpdated` *(new)* | L10n namespace | `L10n.Conclusions` | Shared with the Sources row in S10-41, so not under Conclusions. |
 | `PVListDetail`, `PVListDetailColumn`, `PVList.detail`, `PVListSkeleton.detailWidth` *(new)* | component slot | `PVList.meta` | `meta` is the mono ref; the brief puts the time in its own column. |
 | `PVSymbol.history` *(new)* | icon case | `PVSymbol.refresh` (`arrow.clockwise`) | `refresh` means a moved Promote row; the boards draw Lucide `history`. |
-| `ConclusionListKind.updatedAt`, `ConclusionListRow.updatedColumn`, `ConclusionListRow.labelWithUpdated`, `ConclusionListPage.skeleton` *(new)* | protocol req / funcs | `ConclusionListRow.title(_:extraCount:)` | Same helper enum; maps the shared value to the kit slot. |
+| `ConclusionListKind.updatedAt`, `ConclusionListRow.updatedColumn`, `updatedDetail`, `labelWithUpdated`, `updatedColumnWidth`, `ConclusionListPage.skeleton` *(new)* | protocol req / funcs | `ConclusionListRow.title(_:extraCount:)` | Same helper enum; composes the formatter, L10n, and the kit slot. |
 | `api/ffi/handlers/write_effects_test.go` *(new)* | test file | `observations_test.go` | `writeEffectsProto` had no test. |
 
 **Builds on.** The effects registry (`registry.go`), the `WriteEffects` → `CatalogQueryRegistry` invalidation path, `TimestampFormat`, and `PVList`.
-**Deletes.** None — nothing becomes dead.
-**Next adds.** S10-41 builds `LastUpdatedDisplay` in `SourcesSplitRow` for the text, help, spoken form, and width. S10-35 fills the `PVList` thumbnail closure in `ConclusionListBody` with the likeness.
+**Deletes.** `LastUpdatedDisplay`, `TimestampFormat.boardStamp`, `TimestampFormat.abbreviatedDateTime` and their tests; `L10n.LastUpdated.today`, `.yesterday` and their catalog keys; `audit.scopeResolvers`, `audit.ScopeSource`, `audit.ScopeCanonicalEntity`, `audit.Latest`, `audit.LatestByScope` (tests move to `graphcache`); `effects.Sources`, `effects.HandleScopes` (standalone resolvers); `conclusionheaders.latestHandles`; the `handleScopes` branch in `invalidations(for:)`.
+**Next adds.** S10-41: the Sources row calls `TimestampFormat.string` and composes its cell the way `ConclusionListRow.updatedDetail` does; `CatalogLastUpdatedScope.source` and one `switch` arm patch the Sources list; `sources.List` reads `Graph.Activity(effects.ScopeSource, id)` instead of its per-list SQL. S10-35 fills the `PVList` thumbnail closure in `ConclusionListBody` with the likeness.
 
 ### Schema
 
@@ -185,7 +239,7 @@ L10n keys *(new)*, namespace `enum LastUpdated` in `macos/App/Platform/L10n.swif
 
 Accessors, in the style of `L10n.Conclusions.a11yList`: `static func today(time: String) -> String`, `static var yesterday: String`, `static func a11yUpdated(_ text: String) -> String`, `static var a11yUnknown: String`, `static func help(stamp: String) -> String`; each returns `String` through `L10n.string` / `L10n.format`.
 
-Removed: none.
+Rework (D-12): `L10n.Timestamp` *(new)* with `today(time:)`, `todayAt(time:)`, `yesterday`, `stamp(date:time:)`. Removed: `L10n.LastUpdated.today`, `.yesterday` and keys `lastUpdated.today`, `lastUpdated.yesterday`.
 
 ## 7. Steps
 
@@ -229,6 +283,41 @@ Files: `docs/deployment-plan/spike-10/completed.md`, `docs/deployment-plan/spike
 Do: per the Definition of done.
 Check: `python3 scripts/check-plan-docs.py` reports no errors; links resolve.
 
+**STEP-9 — Declare scopes once; resolve once per write; commit carries its time**
+Files: `core/database/effects/scopes.go` *(new)*, `core/database/effects/resolve.go`, `core/database/effects/README.md`, `core/database/effects/handle_paths_test.go`, `core/database/audit/scopes.go`, `core/database/audit/audit.go`, `core/database/audit/*_test.go`, `core/database/listen.go`, `core/writes/run.go`, `core/writes/run_test.go`, `core/database/graphcache/commit.go` (signature only), every `OnCommit(` / `Notify(` / `audit.Record(` / `audit.Scope` caller (`rg` them). Skill: `add-audit-scope`.
+Do: D-13, D-14. Add T-7, T-8. Update `add-audit-scope` if it names `scopeResolvers` or `audit.Scope*`.
+Check: `CGO_ENABLED=1 go test -tags fts5 ./core/... ./api/...` passes; `rg "scopeResolvers|audit\.Scope(Source|CanonicalEntity)|effects\.(Sources|HandleScopes)\(" core api` finds nothing.
+
+**STEP-10 — Engine last-activity cache**
+Files: `core/database/graphcache/activity.go` *(new)*, `graphcache/sql.go`, `graphcache/commit.go`, `graphcache/graph.go`, `graphcache/graph_test.go`, `core/database/conclusionheaders/compose.go`, `conclusionheaders.go`, `events.go`, `places.go`, `conclusionheaders_test.go`, `api/ffi/handlers` (header mapping, if it names `audit.Latest`), `core/database/audit/scopes.go`, `audit/scopes_test.go`.
+Do: D-15. Move `TestLatestByScope`'s cases into T-9.
+Check: `CGO_ENABLED=1 go test -tags fts5 ./core/... ./api/...` passes; `rg "LatestByScope|audit\.Latest" core api` finds nothing.
+
+**STEP-11 — Revision time on the wire**
+Files: `api/proto/engine.proto`, generated files, `api/ffi/handlers/write_effects.go`, its call sites, `write_effects_test.go`, `macos/App/Features/Workspace/Session/CatalogMutation.swift`, `macos/App/Platform/GoStore.swift` `mapWriteEffects`. Skill: `add-ffi-handler`.
+Do: D-16. Extend T-2. Run `./scripts/generate-proto.sh`.
+Check: Go tests pass; the app target builds.
+
+**STEP-12 — One timestamp formatter**
+Files: `macos/App/Platform/TimestampFormat.swift`, `macos/App/Platform/L10n.swift`, `macos/App/Resources/Localizable.xcstrings`, `macos/App/Features/Sources/SourcePageNotesView.swift`, `macos/App/Features/Onboarding/OnboardingProjectMetaLines.swift`, `macos/ProvenenciaTests/TimestampFormatTests.swift`. Skill: `add-localized-string`, `add-swift-test`.
+Do: D-5, D-12. Replace T-4 and T-5 with T-10. Delete the `boardStamp` and `abbreviatedDateTime` tests.
+Check: `python3 scripts/check-localizable-xcstrings.py` passes; `-only-testing:ProvenenciaTests/TimestampFormatTests` passes; AC-3.8's `rg` holds.
+
+**STEP-13 — The row composes the cell**
+Files: `macos/App/Features/Conclusions/ConclusionListRow.swift`, `ConclusionListPage.swift`, `macos/ProvenenciaTests/PersonsListTests.swift`.
+Do: D-6, D-8, D-10, D-11. Delete `LastUpdatedDisplay`. Rewrite T-6; add T-11.
+Check: `-only-testing:ProvenenciaTests/PersonsListTests` passes; `rg LastUpdatedDisplay macos` finds nothing.
+
+**STEP-14 — Patch in place; stale when hidden**
+Files: `macos/App/Features/Workspace/Session/CatalogLastUpdated.swift` *(new; add to the app target in `project.pbxproj`)*, `CatalogQueryRegistry.swift`, `WorkspaceSession.swift`, `macos/ProvenenciaTests/CatalogQueryRegistryTests.swift`, `macos/ProvenenciaTests/WorkspaceSessionTests.swift`. Skill: `add-workspace-place`. (new)
+Do: D-3, D-17, D-18. Rewrite T-3; add T-12, T-13.
+Check: `-only-testing:ProvenenciaTests/CatalogQueryRegistryTests -only-testing:ProvenenciaTests/WorkspaceSessionTests` passes.
+
+**STEP-15 — Docs for the rework**
+Files: `.agents/skills/add-workspace-place/SKILL.md` (patch-in-place via `lastUpdated`, `staleWhenHidden` beside `evictWhenHidden`), `docs/macos-client-patterns.md` (same, where it describes cache rules), `core/database/effects/README.md` (`Scopes`, `Resolve` once per write), `docs/audit-revision-history.md` §4.1 if it names `scopeResolvers` or `LatestByScope`, this plan's Landed note at merge.
+Do: per the Definition of done.
+Check: `python3 scripts/check-plan-docs.py` reports no errors; `scripts/check-pr.sh` PASS.
+
 Commits: one per behavior. The subject is one full imperative sentence that says what changed for the researcher, ending in a period, like the rest of `git log` ("Restore list scroll after the sort is applied."). No WIP commits.
 
 ## 8. Tests
@@ -236,13 +325,20 @@ Commits: one per behavior. The subject is one full imperative sentence that says
 | ID | Layer | File · test | Case: input → expected | Covers |
 | --- | --- | --- | --- | --- |
 | T-1 | Go | `core/database/effects/handle_paths_test.go` `TestHandlePaths` subtest "resolve reports note handle scopes" *(new)* | The `observation_note` create change from "observation note reaches member handle" → call `effects.Resolve(tx, []rowchange.Change{ch})` inline (no new helper); `.HandleScopes` is `{bostonRes.Entity.ID}`, `.Handles` is empty | AC-2.1, D-1 |
-| T-2 | Go | `api/ffi/handlers/write_effects_test.go` `TestWriteEffectsProto` *(new)*, table-driven | `Set{}` → all empty; `Set{HandleScopes: [id]}` → `HandleScopes == [uuid string]`, `Handles` empty; `Set{Handles: [a], HeaderDeps: [b]}` → `Handles [a]`, `HeaderHandles [b]`, `HandleScopes` empty | AC-2.1, D-2 |
-| T-3 | Swift | `CatalogQueryRegistryTests` `handleScopesReloadListsNotDetails` *(new)* | `handleScopes: ["e1"]` → `[personsList, eventsList, placesList]`; `handles: ["e1"], handleScopes: ["e1","e2"]` → the three lists then `conclusionDetail(e1)` | AC-2.2, AC-2.3, D-3 |
-| T-4 | Swift | `TimestampFormatTests` `lastUpdatedNamesTodayYesterdayThenDate` *(new)* | `LastUpdatedDisplay` with the AC-1.1, AC-1.2, AC-1.3 inputs, fixed `now`, a `Calendar(identifier: .gregorian)` whose `timeZone` is `America/Edmonton`, and locales `en_US` and `en_GB` → the `text` values in §2 | AC-1.1, AC-1.2, AC-1.3, D-5 |
-| T-5 | Swift | `TimestampFormatTests` `lastUpdatedUnknownIsDashWithoutHelp` *(new)* | `""` and `"garbage"` → text `—`, help `nil`, spoken `last updated unknown`; yesterday's input (Edmonton calendar) → `isKnown`, help starts `Last updated `, spoken `updated Yesterday`; `""` and `"garbage"` → `isKnown == false` | AC-1.4, AC-1.5, D-6 |
-| T-6 | Swift | `PersonsListTests` `rowLabelEndsWithUpdated` *(new)* | `ConclusionListRow.labelWithUpdated("Robins, James, PER-7KD45, b. 1817", LastUpdatedDisplay(yesterday, now:, calendar:, locale: en_US))` → ends `, updated Yesterday`; with `""` → ends `, last updated unknown` | AC-1.6, D-8, D-10 |
+| T-2 | Go | `api/ffi/handlers/write_effects_test.go` `TestWriteEffectsProto`, table-driven | `Result{}` → all empty, `Revision 0`, `RevisionAt ""`; `Result{Revision: 42, At: T, Effects: Set{HandleScopes: [id]}}` → `HandleScopes == [uuid string]`, `Revision 42`, `RevisionAt T`; `Set{Handles: [a], HeaderDeps: [b]}` → `Handles [a]`, `HeaderHandles [b]` | AC-2.1, AC-2.8, D-2, D-16 |
+| T-3 | Swift | `CatalogQueryRegistryTests` `handleScopesInvalidateNothing` *(rename of `handleScopesReloadListsNotDetails`)* | `handleScopes: ["e1"]` → `[]`; `handles: ["e1"], handleScopes: ["e1","e2"]` → the three lists then `conclusionDetail(e1)` | AC-2.2, AC-2.3, D-3 |
+| T-4 | — | (replaced by T-10) | — | D-5 |
+| T-5 | — | (replaced by T-10, T-11) | — | D-6 |
+| T-6 | Swift | `PersonsListTests` `rowLabelEndsWithUpdated` | `ConclusionListRow.labelWithUpdated("Robins, James, PER-7KD45, b. 1817", updatedAt: yesterday, in: edmonton en_US)` → ends `, updated Yesterday`; `T` → ends `, updated October 12, 2026`; `""` → ends `, last updated unknown` | AC-1.6, D-6, D-10 |
+| T-7 | Go | `core/writes/run_test.go` `TestRunReportsCommitTime` *(new)* | A write → `Result.At` equals the `audit_transactions.created_at` of `Result.Revision`; a listener registered with `Listen` receives the same `Commit` | AC-2.8, D-14 |
+| T-8 | Go | `core/database/audit` scope parity test (the existing one that compares stored scopes with the resolvers) | Stored scope rows equal `effects.Resolve(...).Sources` / `.HandleScopes` for the revision, for a note save, a member Observation delete, and a promote | AC-2.10, D-13 |
+| T-9 | Go | `core/database/graphcache/graph_test.go` `TestActivity` *(new)*, table-driven | First `Activity` read loads once (cases moved from `TestLatestByScope`: newest revision with its time, zero for no rows, empty scope type rejected); `OnCommit(Commit{Revision: 7, At: T, Effects: {HandleScopes: [h]}})` → `Activity(canonical_entity, h) == {7, T}` with no new query; an older commit leaves it; `Drop` then read → reloaded with one query | AC-2.9, D-15 |
+| T-10 | Swift | `TimestampFormatTests` `stylesFormatOneLine` *(new)*, parameterized | The AC-1.2 and AC-1.3 inputs through `.relative` (`Yesterday`; `Oct 12, 2026`, `en_GB` `12 Oct 2026`), and each AC-3.1, AC-3.2, AC-3.3, AC-3.4, AC-3.5, AC-3.6 input → its string (U+202F normalized to a space before comparing, as round 0 does); AC-3.7 inputs → `nil` | AC-1.2, AC-1.3, AC-3.1, AC-3.2, AC-3.3, AC-3.4, AC-3.5, AC-3.6, AC-3.7, D-5 |
+| T-11 | Swift | `PersonsListTests` `updatedDetailComposesTheCell` *(new)* | AC-1.1 input → text `Today, 3:15 PM`, help starts `Last updated `, not faint; `""` and `"garbage"` → text `—`, help `nil`, faint | AC-1.1, AC-1.4, AC-1.5, D-6 |
+| T-12 | Swift | `WorkspaceSessionTests` `applyEffectsPatchesLastUpdatedInPlace` *(new)* | AC-2.5 cases; the FakeStore records no `listPersonHeaders` call after the apply | AC-2.5, D-17 |
+| T-13 | Swift | `WorkspaceSessionTests` `hiddenListsGoStaleVisibleListReloads` *(new)* | AC-2.6 and AC-2.7 | AC-2.6, AC-2.7, D-18 |
 
-Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `CatalogQueryRegistryTests` (invalidation order), `TestHandlePaths`, and `PersonsListTests` (row labels).
+Must stay green: everything `scripts/check-pr.sh` runs. The rework is most likely to break `audit` scope tests, `graphcache` tests, `conclusionheaders` tests, and `WorkspaceSessionTests` (promote revalidation). Most likely to break: `CatalogQueryRegistryTests` (invalidation order), `TestHandlePaths`, and `PersonsListTests` (row labels).
 
 ## 9. Definition of done
 
@@ -257,7 +353,7 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `C
 - [ ] This plan: Status → Landed in #N (date); a Landed note lists every difference from the plan
 - [ ] deployment-plan.md: map row status; completed.md: one short paragraph of what shipped
 - [ ] Brief moved to design/archive/ and design/README.md updated (if gated)
-- [ ] Domain doc updated if a rule in docs/*.md changed: core/database/effects/README.md (Resolve returns HandleScopes); macos/App/DesignSystem/README.md (List row detail column)
+- [ ] Domain doc updated if a rule in docs/*.md changed: core/database/effects/README.md (Resolve returns HandleScopes; Scopes; one walk per write); macos/App/DesignSystem/README.md (List row detail column); add-workspace-place and docs/macos-client-patterns.md (patch in place, staleWhenHidden); add-audit-scope and docs/audit-revision-history.md where they name moved symbols
 - [ ] PR description: what shipped, AC evidence, deviations, manual check
 ```
 
@@ -269,12 +365,16 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `C
 4. Quit and reopen the project, open People: the loading skeleton shows a column bar, and rows do not shift when the times arrive (AC-1.8).
 5. Open a Source, edit only the note on an Observation of a Subject filed to a Person, save. Open People: that row reads `Today, {now}` (AC-2.4).
 6. Edit an Observation's value on an Event's member Subject. Open Events: that row moved.
+7. With People open in one window state, edit a note from a Source page and come back with Back: the row's time moved, and the list did not flash a skeleton (patched, not reloaded).
+8. A Source page note still shows its full stamp; the onboarding project card still shows its created and updated times.
+9. AC-3.8: `rg "LastUpdatedDisplay|boardStamp|abbreviatedDateTime" macos` finds nothing, and `rg "\.formatted\(" macos/App` lists no timestamp formatting outside `TimestampFormat.swift`.
 
 ## 11. Risks and stop conditions
 
 | Risk | Mitigation |
 | --- | --- |
-| Lists refetch on every composer note save | One read per list, only when a scope handle is reported; lists not on screen refetch on next show per their spec. |
+| A patched row and the engine disagree | Both take the same commit's revision and time; the app only moves a row forward (D-17); a stale-marked list reloads from the engine's cache on show (D-18). |
+| The scope move breaks audit history | T-8 checks stored scope rows against `Resolve` for each write shape. No migration: stored rows are unchanged. |
 | Locale strings differ from the examples | Tests pin locale and time zone (T-4). |
 | `PVList` change alters lists that do not pass `detail` | The column draws only when `detail` is set (D-7); the existing `#Preview` stays unchanged. |
 
@@ -284,7 +384,10 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `C
 - The agreed board places the time somewhere other than its own column before the ref, or changes PSL-2's wording.
 - `ListPersonHeaders`, `ListEventHeaders`, or `ListPlaceHeaders` return empty `updated_at` for a promoted handle in the manual check (S10-21 regression).
 - A note-only save in the app still leaves the row's time unchanged after step 5 of the manual check.
-- Field number 7 on `WriteEffects` is taken at your base.
+- Field number 7, 8, or 9 on `WriteEffects` is taken at your base.
+- Moving the scope list into `effects` or the activity map into `graphcache` still produces an import cycle.
+- `effects.Resolve` run before `audit.Record` resolves a different id set than it did after (T-8 fails on a delete).
+- A `graphcache` read path is reachable without the catalog session's serialization, so the activity map would need a lock the rest of `Graph` does not have.
 
 ## 12. Open questions
 

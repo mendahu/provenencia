@@ -1,7 +1,7 @@
 # Ship log — S10-22 Last updated on People, Events, and Places
 
 **Plan:** [`S10-22-list-last-updated.md`](S10-22-list-last-updated.md) · **Branch:** `s10-22-list-last-updated` · **PR:** [#402](https://github.com/mendahu/provenencia/pull/402)
-**State:** ready
+**State:** rework — implementing
 
 Base: `main` @ `832ccc22` (planning base `360b405f`; the only change since, #400, touches `PVFormDialog` and none of the plan's Current state files).
 
@@ -54,3 +54,11 @@ No new findings. Verdicts: CON Clean · MNT Clean · PRF Clean. No Fix plan 2.
 
 ## Result
 Gate PASS · CI pending · open: none · follow-ups: PRF-1 (reload hidden lists on show, or patch rows in place), PRF-2 (resolve handle scopes once per write), MNT-2 (inject calendar/locale into the help stamp, with S10-41), UX-1 (full stamp for keyboard/VoiceOver) · to user: CON-2 (run §10 manual check steps 2, 4, 5 for AC-1.7, AC-1.8, AC-2.4)
+
+## Rework — user direction (2026-10-15)
+
+After round 2 the user asked for two refactors on this PR and rated both problems as blockers the review should have caught:
+1. One timestamp formatter (timestamp, locale, display option → one line of text, no styling) instead of `LastUpdatedDisplay` beside `TimestampFormat`.
+2. Surgical cache updates: patch the moved rows' time from the write instead of reloading all three lists; cache infrastructure, not a one-off.
+
+Plan amended (D-3, D-5, D-6, D-8, D-10, D-11 rewritten; D-12…D-18 new; STEP-9…STEP-15; T-7…T-13). The engine side also keeps last activity in the display cache, patched on commit, so list loads stop scanning audit history, and resolves scopes once per write (retires PRF-2). Lenses tightened: maintainability Q14 (one mechanism per cross-cutting job), Q9 (patch what the write reported), "precedent is not a mitigation"; performance treats any common-path cost that grows with the catalog or its history as a blocker.
