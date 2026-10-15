@@ -25,6 +25,14 @@ enum CatalogLastUpdatedScope: Sendable {
     case handle
     /// `CatalogWriteEffects.sources`.
     case source
+
+    /// The ids of a write's effects that name rows of this scope.
+    func ids(in effects: CatalogWriteEffects) -> [String] {
+        switch self {
+        case .handle: effects.handleScopes
+        case .source: effects.sources
+        }
+    }
 }
 
 /// How one cached list moves a row's last activity when a write reports it.

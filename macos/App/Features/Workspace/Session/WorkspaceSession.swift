@@ -195,7 +195,7 @@ final class WorkspaceSession {
         guard effects.activity.revision > 0 else { return }
         for key in Array(handles.keys) where key.project == projectKey {
             guard let patch = registry.lastUpdatedPatch(key) else { continue }
-            let ids = Set(patch.scope == .handle ? effects.handleScopes : effects.sources)
+            let ids = Set(patch.scope.ids(in: effects))
             if !ids.isEmpty {
                 patch.apply(self, key, ids, effects.activity)
             }
