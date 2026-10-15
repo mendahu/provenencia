@@ -8472,6 +8472,14 @@ enum L10n {
     /// Last-updated cell on a list row: the hover help and the spoken suffix.
     /// The day words and the stamp are `L10n.Timestamp`.
     enum LastUpdated {
+        static func a11yJoin(_ base: String, _ updated: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "lastUpdated.a11y.join",
+                defaultValue: "%1$@, %2$@",
+                comment: "Joins a list row's spoken label and its last-updated phrase"
+            ), base, updated)
+        }
+
         static func a11yUpdated(_ text: String) -> String {
             L10n.format(LocalizedStringResource(
                 "lastUpdated.a11y.updated",

@@ -21,6 +21,7 @@
 		A91600000000000000000004 /* PVDisclosureButtonTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A91600000000000000000003 /* PVDisclosureButtonTests.swift */; };
 		A91600000000000000000002 /* PVDisclosureButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = A91600000000000000000001 /* PVDisclosureButton.swift */; };
 		AA00000000000000000003B1 /* PVMark.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000003B0 /* PVMark.swift */; };
+		AA1041000000000000000008 /* PVLastUpdated.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1041000000000000000007 /* PVLastUpdated.swift */; };
 		AA00000000000000000009E1 /* PVGlyphTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000009E0 /* PVGlyphTests.swift */; };
 		AA00000000000000000003B3 /* PVFileTypeGlyphTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000003B2 /* PVFileTypeGlyphTests.swift */; };
 		AA0000000000000000000301 /* PVThumbnail.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000300 /* PVThumbnail.swift */; };
@@ -260,6 +261,7 @@
 		A90800000000000000000006 /* WorkspaceSidebarSectionsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A90800000000000000000005 /* WorkspaceSidebarSectionsTests.swift */; };
 		A90800000000000000000004 /* WorkspaceSidebarSections.swift in Sources */ = {isa = PBXBuildFile; fileRef = A90800000000000000000003 /* WorkspaceSidebarSections.swift */; };
 		A90900000000000000000016 /* PersonsListTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A90900000000000000000015 /* PersonsListTests.swift */; };
+		AA1041000000000000000006 /* PVLastUpdatedTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1041000000000000000005 /* PVLastUpdatedTests.swift */; };
 		A90900000000000000000014 /* PersonsListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A90900000000000000000013 /* PersonsListView.swift */; };
 		A91C00000000000000000002 /* ConclusionListPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = A91C00000000000000000001 /* ConclusionListPage.swift */; };
 		A91C00000000000000000004 /* EventsListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A91C00000000000000000003 /* EventsListView.swift */; };
@@ -392,6 +394,7 @@
 		A91600000000000000000003 /* PVDisclosureButtonTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVDisclosureButtonTests.swift; sourceTree = "<group>"; };
 		A91600000000000000000001 /* PVDisclosureButton.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVDisclosureButton.swift; sourceTree = "<group>"; };
 		AA00000000000000000003B0 /* PVMark.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVMark.swift; sourceTree = "<group>"; };
+		AA1041000000000000000007 /* PVLastUpdated.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVLastUpdated.swift; sourceTree = "<group>"; };
 		AA00000000000000000009E0 /* PVGlyphTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVGlyphTests.swift; sourceTree = "<group>"; };
 		AA00000000000000000003B2 /* PVFileTypeGlyphTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVFileTypeGlyphTests.swift; sourceTree = "<group>"; };
 		AA0000000000000000000300 /* PVThumbnail.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVThumbnail.swift; sourceTree = "<group>"; };
@@ -678,6 +681,7 @@
 		A90800000000000000000005 /* WorkspaceSidebarSectionsTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkspaceSidebarSectionsTests.swift; sourceTree = "<group>"; };
 		A90800000000000000000003 /* WorkspaceSidebarSections.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkspaceSidebarSections.swift; sourceTree = "<group>"; };
 		A90900000000000000000015 /* PersonsListTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PersonsListTests.swift; sourceTree = "<group>"; };
+		AA1041000000000000000005 /* PVLastUpdatedTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PVLastUpdatedTests.swift; sourceTree = "<group>"; };
 		A90900000000000000000013 /* PersonsListView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PersonsListView.swift; sourceTree = "<group>"; };
 		A91C00000000000000000001 /* ConclusionListPage.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ConclusionListPage.swift; sourceTree = "<group>"; };
 		A91C00000000000000000003 /* EventsListView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EventsListView.swift; sourceTree = "<group>"; };
@@ -1293,6 +1297,7 @@
 				AA00000000000000000004F2 /* DateValueTranscriptionMatchTests.swift */,
 				A70D0000000000000000000D /* NameValueDraftTests.swift */,
 				A90900000000000000000015 /* PersonsListTests.swift */,
+				AA1041000000000000000005 /* PVLastUpdatedTests.swift */,
 				A91600000000000000000003 /* PVDisclosureButtonTests.swift */,
 				A91500000000000000000003 /* ReconciledValueDisplayTests.swift */,
 				A91600000000000000000033 /* PVSymbolTests.swift */,
@@ -1605,6 +1610,15 @@
 			path = ReorderableList;
 			sourceTree = "<group>";
 		};
+		AA1041000000000000000009 /* LastUpdated */ = {
+			isa = PBXGroup;
+			children = (
+				AA1041000000000000000007 /* PVLastUpdated.swift */,
+			);
+			name = LastUpdated;
+			path = LastUpdated;
+			sourceTree = "<group>";
+		};
 		D5C00000000000000000001F /* Marks */ = {
 			isa = PBXGroup;
 			children = (
@@ -1680,6 +1694,7 @@
 			isa = PBXGroup;
 			children = (
 				D5C00000000000000000001F /* Marks */,
+				AA1041000000000000000009 /* LastUpdated */,
 				D5C00000000000000000000A /* OmnibarHitRow */,
 				D5C000000000000000000022 /* DeleteImpact */,
 			);
@@ -2027,6 +2042,7 @@
 				AA0000000000000000000301 /* PVThumbnail.swift in Sources */,
 				A90900000000000000000002 /* PVList.swift in Sources */,
 				AA00000000000000000003B1 /* PVMark.swift in Sources */,
+				AA1041000000000000000008 /* PVLastUpdated.swift in Sources */,
 				AA000000000000000000031F /* PVReorderableList.swift in Sources */,
 				AA0000000000000000000305 /* PVFormDialog.swift in Sources */,
 				AA0000000000000000000501 /* PVPanel.swift in Sources */,
@@ -2179,6 +2195,7 @@
 				AA00000000000000000004F3 /* DateValueTranscriptionMatchTests.swift in Sources */,
 				A70D0000000000000000000E /* NameValueDraftTests.swift in Sources */,
 				A90900000000000000000016 /* PersonsListTests.swift in Sources */,
+				AA1041000000000000000006 /* PVLastUpdatedTests.swift in Sources */,
 				A91E00000000000000000002 /* PlacesListTests.swift in Sources */,
 				A91600000000000000000004 /* PVDisclosureButtonTests.swift in Sources */,
 				A91500000000000000000004 /* ReconciledValueDisplayTests.swift in Sources */,
