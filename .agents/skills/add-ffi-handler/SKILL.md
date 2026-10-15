@@ -51,6 +51,8 @@ User-visible handler failures must return `core/apperr` coded errors (sentinels 
 
 ## Catalog RPCs
 
+A handler that writes through `writes.Run` keeps the `writes.Result` it returns and puts `Effects: writeEffectsProto(wrote)` on its response, so the app patches and invalidates exactly what the write touched (`WriteEffects`, S10-22 D-22). A write that is not audited (a layout row) has no effects to return.
+
 Any handler that reads or mutates `provenencia.sqlite` must use **`withProjectCatalog`** (→ `catalogsession.Do`). Do **not** open-per-call with `database.Open` / `onboarding.OpenCatalog` / `defer Close`.
 
 Follow [`use-catalog-session`](../use-catalog-session/SKILL.md). Identity-only RPCs (install identity, active project file) do not need a catalog session.

@@ -84,7 +84,7 @@ Destination view  →  reads QueryHandle(s)  →  patches / invalidates on mutat
 
 1. The registry is the only loader. Features do not rebuild a `CatalogQueryKey` payload from `GenealogyStore`.
 2. `session.apply(mutation)` patches if the mutation says so, then invalidates and **revalidates every already-warmed key**. Features never `session.query` after `apply`.
-   A registry `markStaleOn` tag instead only flags a warmed key: no refetch now, the next `query` reloads it. `sourcesList` uses it for mutation-path writes under a Source, which report no `WriteEffects` and so no activity to patch.
+   A write that returns `WriteEffects` is applied with `apply(effects)`; one that also has a mutation naming keys the effects cannot (a Source page's own workspace, the metadata field list) is applied with `apply(effects, mutation)`, which patches the moved rows, unions the invalidations, and never invalidates a key twice. Every write under a Source returns its effects, so the Sources list and the Conclusion lists are patched or invalidated from `sources` and `handles`, never from a blanket mutation trigger.
    A registry `whenHidden` policy says what an invalidated key that isn't on screen does ("on screen" is the keys of the place from the last `apply(location:)`, `visibleKeys`): `.revalidate` (the default) reloads it now; `.markStale` keeps the old value and reloads on the next `query`; `.evict` drops the handle and cancels its load, so the next visit loads it afresh. The People, Events, Places, and Sources lists are `.markStale`; Conclusion detail keys are `.evict` (S9-15). One save made away from a list reloads no list until the researcher looks at one.
 3. `readyValue` waits out in-flight work, then returns `nil` if the key is still stale.
 4. `setQueryValue` and `patchCached` are overlays (optimistic drag, a list-row patch). A patch is never a substitute for invalidation **unless the write reported everything the patch needs**: a write that reports its activity (`WriteEffects.revision`, `revision_at`) moves a list's last-updated cell through a `CatalogLastUpdatedPatch` declared on that list's registry row, with no read. Invalidation stays for changes the client cannot know (a value, title, or membership changed). Patches go through `WorkspaceSession.patchCached`, so an in-flight load is cancelled and restarted and an older answer cannot overwrite the patch.
@@ -109,7 +109,7 @@ Destination view  →  reads QueryHandle(s)  →  patches / invalidates on mutat
 - Read display data via `session.queryHandle(_)`; observe with `@Bindable var handle: QueryHandle<…>` in a child view.
 - Never call `session.query()` from computed properties that `body` reads every frame.
 
-**Mutations:** patch list/detail synchronously when the save response is enough (`updatedSource`); `apply` invalidates+reloads on create/delete/ambiguous busts. Name mutations for the **read model** they change (`.mutatedSourceGraph`, `.savedCitation`), not the UI verb. Stale-while-revalidate is for **navigation reads**, not the only path after a write.
+**Mutations:** patch list/detail synchronously when the save response is enough (`updatedSource`); `apply` invalidates+reloads on create/delete/ambiguous busts. Name mutations for the **read model** they change (`.mutatedSourceGraph`), not the UI verb. Stale-while-revalidate is for **navigation reads**, not the only path after a write.
 
 **One cache owns each list.** A payload that duplicates another key's data has to
 be invalidated whenever that data changes anywhere, which is a bust with no
