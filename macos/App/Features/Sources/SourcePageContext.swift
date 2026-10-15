@@ -79,15 +79,17 @@ final class SourcePageContext {
         session.apply(typeChanged ? .changedSourceType(source) : .updatedSource(source))
     }
 
-    /// Busts the workspace cache after non-identity page edits.
-    func notifyWorkspaceMutated() {
-        session.apply(.mutatedSourceWorkspace(sourceId: sourceID))
+    /// Applies a non-identity page write (note, artifact, credibility): the
+    /// write's effects move the cached lists, and this page's workspace follows
+    /// the mutation.
+    func applyWrite(_ effects: CatalogWriteEffects) {
+        session.apply(effects, .mutatedSourceWorkspace(sourceId: sourceID))
     }
 
-    /// Busts the workspace cache plus the field list, whose `usedBy` counts move
-    /// with every metadata value written or cleared here.
-    func notifyMetadataMutated() {
-        session.apply(.mutatedSourceMetadata(sourceId: sourceID))
+    /// Same, plus the field list, whose `usedBy` counts move with every
+    /// metadata value written or cleared here.
+    func applyMetadataWrite(_ effects: CatalogWriteEffects) {
+        session.apply(effects, .mutatedSourceMetadata(sourceId: sourceID))
     }
 
     /// Reloads Source cover fields after Artifact create/ingest (raster may appear).

@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/audit"
+	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 )
 
@@ -60,17 +60,18 @@ func checkNewEffects(t *testing.T, c *database.Catalog) {
 		if err != nil {
 			t.Fatalf("revision %d: %v", r.revision, err)
 		}
-		for _, sr := range audit.ScopeResolvers {
-			want, err := loadScopes(tx, r.id, sr.Type)
+		set, err := effects.Resolve(tx, changes)
+		if err != nil {
+			t.Fatalf("revision %d: %v", r.revision, err)
+		}
+		for _, sc := range effects.Scopes {
+			want, err := loadScopes(tx, r.id, sc.Type)
 			if err != nil {
 				t.Fatalf("revision %d: %v", r.revision, err)
 			}
-			got, err := sr.Resolve(tx, changes)
-			if err != nil {
-				t.Fatalf("revision %d: %v", r.revision, err)
-			}
+			got := sc.IDs(set)
 			if !sameIDSet(got, want) {
-				t.Fatalf("revision %d: %s resolver = %d ids, stored scopes = %d", r.revision, sr.Type, len(got), len(want))
+				t.Fatalf("revision %d: %s resolver = %d ids, stored scopes = %d", r.revision, sc.Type, len(got), len(want))
 			}
 		}
 		seenEffectsRevisions[string(r.id)] = struct{}{}

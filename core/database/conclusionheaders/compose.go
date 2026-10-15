@@ -8,9 +8,9 @@ import (
 
 	"github.com/mendahu/provenencia/core/autoreconcile"
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/audit"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/datevalues"
+	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/nameformats"
 	"github.com/mendahu/provenencia/core/database/namevalues"
@@ -186,25 +186,21 @@ func ListPersons(c *database.Catalog) ([]PersonHeader, error) {
 	if err != nil {
 		return nil, err
 	}
-	latest, err := latestHandles(c)
-	if err != nil {
-		return nil, err
-	}
 	for i := range out {
-		out[i].Updated = latest[string(out[i].Entity.ID)]
+		if out[i].Updated, err = handleActivity(c, out[i].Entity.ID); err != nil {
+			return nil, err
+		}
 	}
 	return out, nil
 }
 
-// latestHandles reads every handle's newest canonical_entity revision. The
-// lists fill it onto the rows they return; the display cache never holds it,
-// because a note edit moves the scope without dropping the cached row.
-func latestHandles(c *database.Catalog) (map[string]audit.Latest, error) {
-	db, err := c.DB()
-	if err != nil {
-		return nil, err
-	}
-	return audit.LatestByScope(db, audit.ScopeCanonicalEntity)
+// handleActivity is a handle's newest canonical_entity revision, from the
+// display cache's last-activity map. The lists fill it onto the rows they
+// return, after composing; the finished rows never hold it, because a note edit
+// moves the scope without dropping the cached row, and search composes the same
+// rows over a throwaway graph during a write.
+func handleActivity(c *database.Catalog, id []byte) (effects.Activity, error) {
+	return c.Graph().Activity(effects.ScopeCanonicalEntity, id)
 }
 
 // PersonsByIDs returns the headers of the given unmerged Persons in list
@@ -256,12 +252,10 @@ func ListEvents(c *database.Catalog) ([]EventHeader, error) {
 	if err != nil {
 		return nil, err
 	}
-	latest, err := latestHandles(c)
-	if err != nil {
-		return nil, err
-	}
 	for i := range out {
-		out[i].Updated = latest[string(out[i].Entity.ID)]
+		if out[i].Updated, err = handleActivity(c, out[i].Entity.ID); err != nil {
+			return nil, err
+		}
 	}
 	return out, nil
 }
@@ -326,12 +320,10 @@ func ListPlaces(c *database.Catalog) ([]PlaceHeader, error) {
 	if err != nil {
 		return nil, err
 	}
-	latest, err := latestHandles(c)
-	if err != nil {
-		return nil, err
-	}
 	for i := range out {
-		out[i].Updated = latest[string(out[i].Entity.ID)]
+		if out[i].Updated, err = handleActivity(c, out[i].Entity.ID); err != nil {
+			return nil, err
+		}
 	}
 	return out, nil
 }

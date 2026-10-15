@@ -67,7 +67,7 @@ func UpdateObservation(in []byte) ([]byte, error) {
 		}
 		out = &engine.UpdateObservationResponse{
 			Observation: listedObservationProto(row),
-			Effects:     writeEffectsProto(wrote.Effects),
+			Effects:     writeEffectsProto(wrote),
 		}
 		return nil
 	})
@@ -100,7 +100,7 @@ func DeleteObservation(in []byte) ([]byte, error) {
 		if err != nil {
 			return err
 		}
-		out = &engine.DeleteObservationResponse{Effects: writeEffectsProto(wrote.Effects)}
+		out = &engine.DeleteObservationResponse{Effects: writeEffectsProto(wrote)}
 		return nil
 	})
 	if err != nil {
@@ -135,7 +135,7 @@ func AddObservationsToCitation(in []byte) ([]byte, error) {
 		if err != nil {
 			return err
 		}
-		out = &engine.AddObservationsToCitationResponse{Effects: writeEffectsProto(wrote.Effects)}
+		out = &engine.AddObservationsToCitationResponse{Effects: writeEffectsProto(wrote)}
 		for _, o := range rows {
 			out.Observations = append(out.Observations, observationProto(o))
 		}

@@ -84,6 +84,8 @@ enum PVSymbol: String {
     case layers = "square.3.layers.3d.down.right"
     /// Lucide `refresh-cw` — a suggested Promote row that moved.
     case refresh = "arrow.clockwise"
+    /// Lucide `history` — last updated on a list row.
+    case history = "clock.arrow.circlepath"
     case shieldCheck = "checkmark.shield.fill"
     case calendar = "calendar"
     case textType = "textformat"

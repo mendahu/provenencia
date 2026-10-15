@@ -391,10 +391,10 @@ private struct ThrowingStore: GenealogyStore {
         primaryArtifactID _: String
     ) async throws -> CatalogSource { throw StoreBoom.boom }
     func addSourceNote(projectDir _: String, userID _: String, sourceID _: String, body _: String) async throws
-        -> CatalogSourceNote { throw StoreBoom.boom }
+        -> (CatalogSourceNote, CatalogWriteEffects) { throw StoreBoom.boom }
     func updateSourceNote(projectDir _: String, userID _: String, noteID _: String, body _: String) async throws
-        -> CatalogSourceNote { throw StoreBoom.boom }
-    func deleteSourceNote(projectDir _: String, userID _: String, noteID _: String) async throws {
+        -> (CatalogSourceNote, CatalogWriteEffects) { throw StoreBoom.boom }
+    func deleteSourceNote(projectDir _: String, userID _: String, noteID _: String) async throws -> CatalogWriteEffects {
         throw StoreBoom.boom
     }
     func setSourceMetadata(
@@ -403,21 +403,21 @@ private struct ThrowingStore: GenealogyStore {
         sourceID _: String,
         fieldID _: String,
         valueText _: String
-    ) async throws -> CatalogMetadataEntry { throw StoreBoom.boom }
+    ) async throws -> (CatalogMetadataEntry, CatalogWriteEffects) { throw StoreBoom.boom }
     func clearSourceMetadata(projectDir _: String, userID _: String, sourceID _: String, fieldID _: String)
-        async throws { throw StoreBoom.boom }
+        async throws -> CatalogWriteEffects { throw StoreBoom.boom }
     func dismissSourceMetadataSuggestion(
         projectDir _: String,
         userID _: String,
         sourceID _: String,
         fieldID _: String
-    ) async throws -> [CatalogMetadataEntry] { throw StoreBoom.boom }
+    ) async throws -> ([CatalogMetadataEntry], CatalogWriteEffects) { throw StoreBoom.boom }
     func reorderSourceMetadata(
         projectDir _: String,
         userID _: String,
         sourceID _: String,
         fieldIDs _: [String]
-    ) async throws -> [CatalogMetadataEntry] { throw StoreBoom.boom }
+    ) async throws -> ([CatalogMetadataEntry], CatalogWriteEffects) { throw StoreBoom.boom }
     func createArtifact(
         projectDir _: String,
         userID _: String,
@@ -425,8 +425,8 @@ private struct ThrowingStore: GenealogyStore {
         fileID _: String,
         label _: String,
         description _: String
-    ) async throws -> CatalogArtifact { throw StoreBoom.boom }
-    func deleteArtifact(projectDir _: String, userID _: String, artifactID _: String) async throws {
+    ) async throws -> (CatalogArtifact, CatalogWriteEffects) { throw StoreBoom.boom }
+    func deleteArtifact(projectDir _: String, userID _: String, artifactID _: String) async throws -> CatalogWriteEffects {
         throw StoreBoom.boom
     }
     func updateArtifact(
@@ -435,13 +435,14 @@ private struct ThrowingStore: GenealogyStore {
         artifactID _: String,
         label _: String,
         description _: String
-    ) async throws -> CatalogArtifact { throw StoreBoom.boom }
+    ) async throws -> (CatalogArtifact, CatalogWriteEffects) { throw StoreBoom.boom }
     func ingestArtifactFile(
         projectDir _: String,
         userID _: String,
         artifactID _: String,
         path _: String
-    ) async throws -> (artifact: CatalogArtifact, file: CatalogFileRef, reused: Bool) { throw StoreBoom.boom }
+    ) async throws
+        -> (artifact: CatalogArtifact, file: CatalogFileRef, reused: Bool, effects: CatalogWriteEffects) { throw StoreBoom.boom }
     func listSourceCredibilityGrades(projectDir _: String) async throws -> [CatalogCredibilityGrade] {
         throw StoreBoom.boom
     }
@@ -451,7 +452,7 @@ private struct ThrowingStore: GenealogyStore {
         sourceID _: String,
         gradeID _: String,
         argument _: String
-    ) async throws -> CatalogCredibilityAssessment { throw StoreBoom.boom }
+    ) async throws -> (CatalogCredibilityAssessment, CatalogWriteEffects) { throw StoreBoom.boom }
     func listSourceTypes(projectDir _: String) async throws -> [CatalogSourceType] { throw StoreBoom.boom }
     func createSourceType(
         projectDir _: String,
@@ -529,14 +530,14 @@ private struct ThrowingStore: GenealogyStore {
         label _: String,
         description _: String,
         placement _: CatalogGridCell?
-    ) async throws -> CatalogSubject { throw StoreBoom.boom }
+    ) async throws -> (CatalogSubject, CatalogWriteEffects) { throw StoreBoom.boom }
     func updateSubject(
         projectDir _: String,
         userID _: String,
         subjectID _: String,
         label _: String,
         description _: String
-    ) async throws -> CatalogSubject { throw StoreBoom.boom }
+    ) async throws -> (CatalogSubject, CatalogWriteEffects) { throw StoreBoom.boom }
     func promoteSubject(
         projectDir _: String,
         userID _: String,
@@ -585,7 +586,7 @@ private struct ThrowingStore: GenealogyStore {
     func getConclusionDetail(projectDir _: String, entityID _: String) async throws -> CatalogConclusionDetail {
         throw StoreBoom.boom
     }
-    func deleteSubject(projectDir _: String, userID _: String, subjectID _: String) async throws {
+    func deleteSubject(projectDir _: String, userID _: String, subjectID _: String) async throws -> CatalogWriteEffects {
         throw StoreBoom.boom
     }
     func listSubjects(projectDir _: String, sourceID _: String) async throws -> [CatalogSubject] {

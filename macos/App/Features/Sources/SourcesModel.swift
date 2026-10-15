@@ -143,8 +143,8 @@ final class SourcesModel {
             rows = rows.sorted { $0.id > $1.id }
         case .updated:
             rows = rows.sorted {
-                if $0.updatedRevision != $1.updatedRevision {
-                    return $0.updatedRevision > $1.updatedRevision
+                if $0.updated.revision != $1.updated.revision {
+                    return $0.updated.revision > $1.updated.revision
                 }
                 return $0.id > $1.id
             }

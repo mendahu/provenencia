@@ -45,9 +45,9 @@ struct CatalogSource: Sendable, Equatable, Identifiable {
     /// Used by the Sources list Evidence graph gate — not cover presence.
     var hasArtifact: Bool = false
     /// Latest audit revision of any work scoped to this Source (its row, notes,
-    /// metadata, artifacts, Evidence graph). Sources list "Updated" sort; zero
-    /// means unset / unknown.
-    var updatedRevision: Int64 = 0
+    /// metadata, artifacts, Evidence graph) and when it was recorded. Sources
+    /// list "Updated" sort reads the revision; zero means unset / unknown.
+    var updated = CatalogActivity()
 }
 
 struct CatalogSourceNote: Sendable, Equatable {
@@ -429,6 +429,8 @@ struct CatalogPersonHeader: Sendable, Equatable, Identifiable {
     var nameValueCount: Int
     var birth: CatalogLifeFacts = CatalogLifeFacts()
     var death: CatalogLifeFacts = CatalogLifeFacts()
+    /// The last revision that touched this Person and when; revision 0 when unknown.
+    var updated = CatalogActivity()
 
     var id: String { entity.id }
 }
@@ -454,6 +456,8 @@ struct CatalogEventHeader: Sendable, Equatable, Identifiable {
     var places: [CatalogHeaderPlace] = []
     /// The naming-matrix rule Go chose, and its parts.
     var title: CatalogEventTitle
+    /// The last revision that touched this Event and when; revision 0 when unknown.
+    var updated = CatalogActivity()
 
     var id: String { entity.id }
 }
@@ -501,6 +505,8 @@ struct CatalogPlaceHeader: Sendable, Equatable, Identifiable {
     var contains: [CatalogPlaceRelationship] = []
     var predecessors: [CatalogPlaceRelationship] = []
     var successors: [CatalogPlaceRelationship] = []
+    /// The last revision that touched this Place and when; revision 0 when unknown.
+    var updated = CatalogActivity()
 
     var id: String { entity.id }
 }
@@ -954,10 +960,10 @@ protocol GenealogyStore: Sendable {
         primaryArtifactID: String
     ) async throws -> CatalogSource
     func addSourceNote(projectDir: String, userID: String, sourceID: String, body: String) async throws
-        -> CatalogSourceNote
+        -> (CatalogSourceNote, CatalogWriteEffects)
     func updateSourceNote(projectDir: String, userID: String, noteID: String, body: String) async throws
-        -> CatalogSourceNote
-    func deleteSourceNote(projectDir: String, userID: String, noteID: String) async throws
+        -> (CatalogSourceNote, CatalogWriteEffects)
+    func deleteSourceNote(projectDir: String, userID: String, noteID: String) async throws -> CatalogWriteEffects
     /// Returns the refreshed workspace entry so callers can patch without refetching.
     func setSourceMetadata(
         projectDir: String,
@@ -965,8 +971,10 @@ protocol GenealogyStore: Sendable {
         sourceID: String,
         fieldID: String,
         valueText: String
-    ) async throws -> CatalogMetadataEntry
-    func clearSourceMetadata(projectDir: String, userID: String, sourceID: String, fieldID: String) async throws
+    ) async throws -> (CatalogMetadataEntry, CatalogWriteEffects)
+    func clearSourceMetadata(
+        projectDir: String, userID: String, sourceID: String, fieldID: String
+    ) async throws -> CatalogWriteEffects
     /// Permanently dismiss an unfilled type suggestion for this Source.
     /// Returns the updated workspace metadata list.
     func dismissSourceMetadataSuggestion(
@@ -974,14 +982,14 @@ protocol GenealogyStore: Sendable {
         userID: String,
         sourceID: String,
         fieldID: String
-    ) async throws -> [CatalogMetadataEntry]
+    ) async throws -> ([CatalogMetadataEntry], CatalogWriteEffects)
     /// Persist display order for visible metadata rows (field ids in order).
     func reorderSourceMetadata(
         projectDir: String,
         userID: String,
         sourceID: String,
         fieldIDs: [String]
-    ) async throws -> [CatalogMetadataEntry]
+    ) async throws -> ([CatalogMetadataEntry], CatalogWriteEffects)
     func createArtifact(
         projectDir: String,
         userID: String,
@@ -989,21 +997,21 @@ protocol GenealogyStore: Sendable {
         fileID: String,
         label: String,
         description: String
-    ) async throws -> CatalogArtifact
-    func deleteArtifact(projectDir: String, userID: String, artifactID: String) async throws
+    ) async throws -> (CatalogArtifact, CatalogWriteEffects)
+    func deleteArtifact(projectDir: String, userID: String, artifactID: String) async throws -> CatalogWriteEffects
     func updateArtifact(
         projectDir: String,
         userID: String,
         artifactID: String,
         label: String,
         description: String
-    ) async throws -> CatalogArtifact
+    ) async throws -> (CatalogArtifact, CatalogWriteEffects)
     func ingestArtifactFile(
         projectDir: String,
         userID: String,
         artifactID: String,
         path: String
-    ) async throws -> (artifact: CatalogArtifact, file: CatalogFileRef, reused: Bool)
+    ) async throws -> (artifact: CatalogArtifact, file: CatalogFileRef, reused: Bool, effects: CatalogWriteEffects)
     func listSourceCredibilityGrades(projectDir: String) async throws -> [CatalogCredibilityGrade]
     func upsertSourceCredibilityAssessment(
         projectDir: String,
@@ -1011,7 +1019,7 @@ protocol GenealogyStore: Sendable {
         sourceID: String,
         gradeID: String,
         argument: String
-    ) async throws -> CatalogCredibilityAssessment
+    ) async throws -> (CatalogCredibilityAssessment, CatalogWriteEffects)
     func listSourceTypes(projectDir: String) async throws -> [CatalogSourceType]
     /// `key` is never accepted from the caller — the engine mints it as a
     /// kebab-case slug of `label`, the same rule `createMetadataField` uses.
@@ -1110,15 +1118,15 @@ protocol GenealogyStore: Sendable {
         label: String,
         description: String,
         placement: CatalogGridCell?
-    ) async throws -> CatalogSubject
+    ) async throws -> (CatalogSubject, CatalogWriteEffects)
     func updateSubject(
         projectDir: String,
         userID: String,
         subjectID: String,
         label: String,
         description: String
-    ) async throws -> CatalogSubject
-    func deleteSubject(projectDir: String, userID: String, subjectID: String) async throws
+    ) async throws -> (CatalogSubject, CatalogWriteEffects)
+    func deleteSubject(projectDir: String, userID: String, subjectID: String) async throws -> CatalogWriteEffects
     /// File an accepted claim for the Subject (one transaction): onto a new handle of its type when
     /// `entityID` is `nil`, else onto that existing handle (same type, unmerged; claim only).
     func promoteSubject(

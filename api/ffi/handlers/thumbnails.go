@@ -209,7 +209,7 @@ func sourceCoverThumbnails(c *database.Catalog, rows []sources.Source) (map[stri
 // lookup-only; generation belongs on EnsureFileThumbnail (and SetCover's
 // raster check).
 func enrichSourceProto(c *database.Catalog, s sources.Source) (*engine.Source, error) {
-	if err := sources.AttachLatestRevision(c, &s); err != nil {
+	if err := sources.AttachActivity(c, &s); err != nil {
 		return nil, err
 	}
 	sp := sourceProto(s)

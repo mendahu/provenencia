@@ -8,13 +8,13 @@ import (
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
-	"github.com/mendahu/provenencia/core/database/audit"
 	"github.com/mendahu/provenencia/core/database/autoreconciler"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/conclusiondetails"
 	"github.com/mendahu/provenencia/core/database/conclusionheaders"
 	"github.com/mendahu/provenencia/core/database/datevalues"
+	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/nameformats"
 	"github.com/mendahu/provenencia/core/database/namevalues"
@@ -782,20 +782,20 @@ func TestListHeadersCarryUpdated(t *testing.T) {
 		must(t, db.QueryRow(`SELECT created_at FROM audit_transactions WHERE revision = ?`, rev).Scan(&s))
 		return s
 	}
-	check := func(who string, got audit.Latest) {
+	check := func(who string, got effects.Activity) {
 		t.Helper()
 		if got.Revision <= 0 || got.At == "" || got.At != at(got.Revision) {
 			t.Fatalf("%s updated %+v", who, got)
 		}
 	}
-	byID := map[string]audit.Latest{}
+	byID := map[string]effects.Activity{}
 	people := f.list()
 	for _, h := range people {
 		byID[string(h.Entity.ID)] = h.Updated
 	}
 	check("Bob", byID[string(bob)])
 	check("Ann", byID[string(ann)])
-	if got, ok := byID[string(raw[:])]; !ok || got != (audit.Latest{}) {
+	if got, ok := byID[string(raw[:])]; !ok || got != (effects.Activity{}) {
 		t.Fatalf("handle without scope rows: listed %v, updated %+v", ok, got)
 	}
 	evs, err := conclusionheaders.ListEvents(f.c)
@@ -820,7 +820,7 @@ func TestListHeadersCarryUpdated(t *testing.T) {
 		})
 	})
 	must(t, err)
-	byID = map[string]audit.Latest{}
+	byID = map[string]effects.Activity{}
 	for _, h := range f.list() {
 		byID[string(h.Entity.ID)] = h.Updated
 	}
@@ -832,13 +832,13 @@ func TestListHeadersCarryUpdated(t *testing.T) {
 	if got := byID[string(ann)]; got != annBefore {
 		t.Fatalf("Ann moved: %+v → %+v", annBefore, got)
 	}
-	if got := byID[string(raw[:])]; got != (audit.Latest{}) {
+	if got := byID[string(raw[:])]; got != (effects.Activity{}) {
 		t.Fatalf("handle without scope rows updated %+v", got)
 	}
 
 	byIDs, err := conclusionheaders.PersonsByIDs(f.c, [][]byte{bob})
 	must(t, err)
-	if len(byIDs) != 1 || byIDs[0].Updated != (audit.Latest{}) {
+	if len(byIDs) != 1 || byIDs[0].Updated != (effects.Activity{}) {
 		t.Fatalf("PersonsByIDs %+v", byIDs)
 	}
 }

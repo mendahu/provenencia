@@ -1,6 +1,7 @@
 package effects
 
 import (
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
@@ -75,4 +76,78 @@ func hasWork(e Effect) bool {
 		}
 	}
 	return len(e.Search) > 0 || e.Vocabulary
+}
+
+// TestSourceEvidenceIsNotActivity pins which tables move a Source's evidence
+// (Effect.Source: what the Source graph, graph progress, citation counts, and
+// citations by artifact load) and which move its last activity
+// (Effect.SourceScope: the audit source scope). Identity claims change the
+// evidence graph but have never been audited under a Source.
+func TestSourceEvidenceIsNotActivity(t *testing.T) {
+	tests := []struct {
+		table    string
+		evidence bool
+		activity bool
+		citation bool // CitationSource: the citation reads load it
+	}{
+		{"sources", false, true, false},
+		{"source_notes", false, true, false},
+		{"source_metadata", false, true, false},
+		{"source_metadata_layout", false, true, false},
+		{"source_credibility_assessments", false, true, false},
+		{"files", false, true, false},
+		{"citation_notes", false, true, false},
+		{"observation_notes", false, true, false},
+		{"artifacts", true, true, true},
+		{"citations", true, true, true},
+		{"observations", true, true, true},
+		{"subjects", true, true, false},
+		{"date_values", true, true, true},
+		{"name_values", true, true, true},
+		{"identity_claims", true, false, false},
+		{"identity_claim_evidence", true, false, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.table, func(t *testing.T) {
+			eff, ok := registry[tt.table]
+			if !ok {
+				t.Fatalf("no entry for %s", tt.table)
+			}
+			if got := !eff.Source.zero(); got != tt.evidence {
+				t.Errorf("Source set = %v, want %v", got, tt.evidence)
+			}
+			if got := !eff.SourceScope.zero(); got != tt.activity {
+				t.Errorf("SourceScope set = %v, want %v", got, tt.activity)
+			}
+			if got := !eff.CitationSource.zero(); got != tt.citation {
+				t.Errorf("CitationSource set = %v, want %v", got, tt.citation)
+			}
+		})
+	}
+}
+
+// TestPropertyUsage pins when an Observation change moves the Properties
+// workspace's usedBy counts: a create, a delete, or a property_id edit.
+func TestPropertyUsage(t *testing.T) {
+	text := map[string]rowchange.FieldDiff{"value_text": {Old: "a", New: "b"}}
+	prop := map[string]rowchange.FieldDiff{"property_id": {Old: []byte{1}, New: []byte{2}}}
+	tests := []struct {
+		name  string
+		table string
+		ch    rowchange.Change
+		want  bool
+	}{
+		{"create", "observations", rowchange.Change{Action: rowchange.ActionCreate, Fields: text}, true},
+		{"delete", "observations", rowchange.Change{Action: rowchange.ActionDelete, Fields: text}, true},
+		{"text edit", "observations", rowchange.Change{Action: rowchange.ActionUpdate, Fields: text}, false},
+		{"property edit", "observations", rowchange.Change{Action: rowchange.ActionUpdate, Fields: prop}, true},
+		{"subject create", "subjects", rowchange.Change{Action: rowchange.ActionCreate, Fields: text}, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := registry[tt.table].usesProperty(tt.ch); got != tt.want {
+				t.Errorf("usesProperty = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }

@@ -2,6 +2,14 @@ package graphcache
 
 import "strings"
 
+// sqlActivityByScope is every id's newest revision of one scope type, with the
+// time of that revision (SQLite takes created_at from the MAX row).
+const sqlActivityByScope = `SELECT sc.scope_id, MAX(t.revision), t.created_at
+	FROM audit_transaction_scopes sc
+	JOIN audit_transactions t ON t.id = sc.audit_transaction_id
+	WHERE sc.scope_type = ?
+	GROUP BY sc.scope_id`
+
 func placeholders(n int) string {
 	if n <= 0 {
 		return ""

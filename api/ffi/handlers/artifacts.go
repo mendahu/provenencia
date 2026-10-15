@@ -33,7 +33,7 @@ func CreateArtifact(in []byte) ([]byte, error) {
 	}
 	var out *engine.CreateArtifactResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		a, _, err := writes.Run(c, writes.Op{Action: "create_artifact", UserID: userID},
+		a, wrote, err := writes.Run(c, writes.Op{Action: "create_artifact", UserID: userID},
 			func(tx *database.Tx) (artifacts.Artifact, []rowchange.Change, error) {
 				return artifacts.Create(tx, userID, artifacts.CreateInput{
 					SourceID:    sourceID,
@@ -49,7 +49,7 @@ func CreateArtifact(in []byte) ([]byte, error) {
 		if err != nil {
 			return err
 		}
-		out = &engine.CreateArtifactResponse{Artifact: ap}
+		out = &engine.CreateArtifactResponse{Artifact: ap, Effects: writeEffectsProto(wrote)}
 		return nil
 	})
 	if err != nil {
@@ -85,11 +85,12 @@ func UpdateArtifact(in []byte) ([]byte, error) {
 			Label:       req.GetLabel(),
 			Description: req.GetDescription(),
 		}
-		if _, _, err := writes.Run(c, writes.Op{Action: "update_artifact", UserID: userID},
+		_, wrote, err := writes.Run(c, writes.Op{Action: "update_artifact", UserID: userID},
 			func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
 				changes, err := artifacts.Update(tx, userID, updated)
 				return struct{}{}, changes, err
-			}); err != nil {
+			})
+		if err != nil {
 			return err
 		}
 		got, err := artifacts.Get(c, artifactID)
@@ -100,7 +101,7 @@ func UpdateArtifact(in []byte) ([]byte, error) {
 		if err != nil {
 			return err
 		}
-		out = &engine.UpdateArtifactResponse{Artifact: ap}
+		out = &engine.UpdateArtifactResponse{Artifact: ap, Effects: writeEffectsProto(wrote)}
 		return nil
 	})
 	if err != nil {
@@ -124,14 +125,15 @@ func DeleteArtifact(in []byte) ([]byte, error) {
 	}
 	var out *engine.DeleteArtifactResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		if _, _, err := writes.Run(c, writes.Op{Action: "delete_artifact", UserID: userID},
+		_, wrote, err := writes.Run(c, writes.Op{Action: "delete_artifact", UserID: userID},
 			func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
 				changes, err := artifacts.Delete(tx, c, userID, artifactID)
 				return struct{}{}, changes, err
-			}); err != nil {
+			})
+		if err != nil {
 			return err
 		}
-		out = &engine.DeleteArtifactResponse{}
+		out = &engine.DeleteArtifactResponse{Effects: writeEffectsProto(wrote)}
 		return nil
 	})
 	if err != nil {
@@ -174,11 +176,12 @@ func IngestArtifactFile(in []byte) ([]byte, error) {
 			Label:       prev.Label,
 			Description: prev.Description,
 		}
-		if _, _, err := writes.Run(c, writes.Op{Action: "update_artifact", UserID: userID},
+		_, wrote, err := writes.Run(c, writes.Op{Action: "update_artifact", UserID: userID},
 			func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
 				changes, err := artifacts.Update(tx, userID, updated)
 				return struct{}{}, changes, err
-			}); err != nil {
+			})
+		if err != nil {
 			return err
 		}
 		got, err := artifacts.Get(c, artifactID)
@@ -193,6 +196,7 @@ func IngestArtifactFile(in []byte) ([]byte, error) {
 			Artifact: ap,
 			File:     fileRefProto(res.File, res.RelPath),
 			Reused:   res.Reused,
+			Effects:  writeEffectsProto(wrote),
 		}
 		return nil
 	})

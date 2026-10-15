@@ -292,6 +292,29 @@ func TestHandlePaths(t *testing.T) {
 		}
 	})
 
+	t.Run("resolve reports note handle scopes", func(t *testing.T) {
+		noteID, err := uuid.NewV7()
+		if err != nil {
+			t.Fatal(err)
+		}
+		ch := rowchange.Change{
+			EntityType: "observation_note", EntityID: noteID[:], Action: rowchange.ActionCreate,
+			Fields: map[string]rowchange.FieldDiff{
+				"observation_id": {New: dashed(created.Observations[0].ID)},
+			},
+		}
+		set, err := effects.Resolve(tx, []rowchange.Change{ch})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !idSet(set.HandleScopes, bostonRes.Entity.ID) {
+			t.Fatalf("resolve scoped %d handles", len(set.HandleScopes))
+		}
+		if len(set.Handles) != 0 {
+			t.Fatalf("resolve reported %d recompute handles for a note", len(set.Handles))
+		}
+	})
+
 	t.Run("subject move scopes both handles", func(t *testing.T) {
 		ch := observationSubject(bob.ID)
 		ch.Fields["subject_id"] = rowchange.FieldDiff{Old: dashed(alice.ID), New: dashed(bob.ID)}
@@ -353,11 +376,11 @@ func mustHandles(t *testing.T, tx *sql.Tx, changes ...rowchange.Change) [][]byte
 
 func mustHandleScopes(t *testing.T, tx *sql.Tx, changes ...rowchange.Change) [][]byte {
 	t.Helper()
-	got, err := effects.HandleScopes(tx, changes)
+	set, err := effects.Resolve(tx, changes)
 	if err != nil {
 		t.Fatal(err)
 	}
-	return got
+	return set.HandleScopes
 }
 
 func idSet(got [][]byte, want ...[]byte) bool {

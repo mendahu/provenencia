@@ -24,6 +24,38 @@ struct PersonsListTests {
         #expect(label == "James Robins, PER-7KD45")
     }
 
+    private static let edmonton: TimestampFormat.Context = {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "America/Edmonton")!
+        // 2026-10-14 18:00 in Edmonton.
+        return TimestampFormat.Context(
+            locale: Locale(identifier: "en_US"), calendar: calendar, now: TimestampFormat.parse("2026-10-15T00:00:00Z")!
+        )
+    }()
+
+    @Test func rowLabelEndsWithUpdated() {
+        let base = "Robins, James, PER-7KD45, b. 1817"
+        func label(_ updatedAt: String) -> String {
+            ConclusionListRow.labelWithUpdated(base, updatedAt: updatedAt, in: Self.edmonton)
+        }
+        #expect(label("2026-10-13T22:40:00Z") == "\(base), updated Yesterday")
+        #expect(label("2026-10-12T15:00:00Z") == "\(base), updated October 12, 2026")
+        #expect(label("") == "\(base), last updated unknown")
+    }
+
+    @Test func updatedDetailComposesTheCell() {
+        let known = ConclusionListRow.updatedDetail("2026-10-14T21:15:00Z", in: Self.edmonton)
+        #expect(known.text.replacingOccurrences(of: "\u{202F}", with: " ") == "Today, 3:15 PM")
+        #expect(known.help?.hasPrefix("Last updated ") == true)
+        #expect(!known.faint)
+        for raw in ["", "garbage"] {
+            let unknown = ConclusionListRow.updatedDetail(raw, in: Self.edmonton)
+            #expect(unknown.text == "—")
+            #expect(unknown.help == nil)
+            #expect(unknown.faint)
+        }
+    }
+
     @Test func presentationFollowsTheHandleState() {
         let rows = [header("PER-1", name: "A"), header("PER-2", name: "B")]
         let none: [CatalogPersonHeader]? = nil

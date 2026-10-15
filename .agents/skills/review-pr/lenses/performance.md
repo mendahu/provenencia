@@ -7,7 +7,11 @@ lists, the Evidence graph, caches, search, derivatives, the catalog session, or
 work that runs in a SwiftUI `body` or on the main actor.
 
 Say what grows and how fast. A finding without a size ("N Sources × M
-queries") is a guess. A layout pass that invalidates itself is the exception:
+queries") is a guess. Two things always grow: the catalog (Sources,
+Subjects, handles, Observations) and its history (audit transactions and
+scope rows, revisions). Every project only gets bigger, so a cost that
+scales with either one on a path researchers use daily is a defect now,
+not when someone notices. A layout pass that invalidates itself is the exception:
 the input can be one control, and the work does not stop.
 
 ## Read first
@@ -32,7 +36,12 @@ the input can be one control, and the work does not stop.
 3. Ask where it runs: the main actor, a SwiftUI `body`, a background task, Go
    under the held catalog session.
 4. Compare with the neighbor that already does the same job; it is usually the
-   baseline to match.
+   baseline to match. If the neighbor has the same growth problem, the
+   neighbor is not a baseline: report both. Do not lower a severity because
+   the change follows, copies, or widens an existing pattern.
+5. For every write path, ask what the client does after it: patch the rows
+   the write reported, or reload. For every read path, ask whether it reads
+   rows it returns or scans everything to answer.
 
 ## Look for
 
@@ -46,6 +55,9 @@ the input can be one control, and the work does not stop.
 - Holding the catalog session or a lock across slow I/O (file reads, decodes).
 - Rebuilding a derived cache (`graphcache`, `autoreconciler`, `searchindex`)
   in full where an incremental update exists.
+- A read that aggregates history (audit transactions, scope rows, revisions)
+  on every list load or navigation, where a cache patched on commit would
+  answer from memory. One load per session is the most it should cost.
 - Copying large buffers; decoding a full image where a thumbnail exists.
 
 ### FFI and the Mac client
@@ -62,6 +74,11 @@ the input can be one control, and the work does not stop.
 - A cache bypassed: a destination that loads into local state instead of the
   warmed `QueryHandle`; an invalidate where a patch was enough, so a whole list
   reloads after one edit.
+- A write that reports what it changed, followed by a reload instead of a
+  patch. The write's own result (ids, revision, time, new value) is the
+  cheapest update there is.
+- Reloads of data that is not on screen. An invalidation should mark a
+  hidden value stale and let the next visit reload it, not rebuild it now.
 - Search: reprojecting FTS on every keystroke; a query per keystroke without
   the existing debounce.
 
@@ -109,9 +126,9 @@ are not findings. A layout cycle is not a bounded input: it does not finish.
 
 | Severity | Use when |
 | --- | --- |
-| **blocker** | Main-thread work that will hang on a real project; a layout cycle that does not settle, even on one control; N+1 on a list that is already large in dogfood data; a cache bypass that reloads a whole list per edit on a common path |
+| **blocker** | Main-thread work that will hang on a real project; a layout cycle that does not settle, even on one control; N+1 on a list that is already large in dogfood data; a cache bypass that reloads a whole list per edit on a common path; any per-edit, per-load, or per-navigation cost on a common path that grows with the catalog or its history, including one this change only adds a caller to or widens |
 | **major** | Work that grows faster than the input on a path researchers use daily; a missing index on a new list query |
-| **minor** | A measurable cost on a quiet path |
+| **minor** | A measurable cost on a quiet path that does not grow with the catalog or its history |
 | **nit** | — (performance needs a size, not taste) |
 
 ## Good finding shape

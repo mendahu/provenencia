@@ -16,6 +16,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/connect"
 	"github.com/mendahu/provenencia/core/database/datevalues"
+	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/project"
@@ -588,10 +589,15 @@ func TestBridgeSubjectDeleteReleasesPins(t *testing.T) {
 	if err != nil || !ok {
 		t.Fatalf("pin %v %v", err, ok)
 	}
-	if _, err := audit.Record(tx, audit.Revision{
+	rev := audit.Revision{
 		UserID: userID, ActionType: "pin_edge", CreatedAt: project.NowUTC(),
 		Changes: []rowchange.Change{change},
-	}); err != nil {
+	}
+	set, err := effects.Resolve(tx, rev.Changes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := audit.Record(tx, rev, set); err != nil {
 		t.Fatal(err)
 	}
 	if err := tx.Commit(); err != nil {

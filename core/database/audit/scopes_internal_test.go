@@ -99,7 +99,7 @@ func TestRecordRejectsUnknownEntity(t *testing.T) {
 	defer func() { _ = tx.Rollback() }()
 	_, err = Record(tx, Revision{ActionType: "x", CreatedAt: "2026-10-04T00:00:00Z", Changes: []rowchange.Change{{
 		EntityType: "mystery", EntityID: []byte{9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9}, Action: rowchange.ActionCreate, Fields: map[string]rowchange.FieldDiff{},
-	}}})
+	}}}, effects.Set{})
 	if !errors.Is(err, ErrInvalid) {
 		t.Fatalf("want ErrInvalid got %v", err)
 	}

@@ -103,7 +103,7 @@ private struct SourcePageNoteRow: View {
                     .font(PVFont.body(size: PVTypeScale.caption))
                     .foregroundStyle(PVColor.textSecondary)
                 if !note.createdAt.isEmpty {
-                    Text(TimestampFormat.boardStamp(note.createdAt))
+                    Text(TimestampFormat.string(note.createdAt, .stamp) ?? note.createdAt)
                         .font(PVFont.mono(size: PVTypeScale.micro))
                         .foregroundStyle(PVColor.textFaint)
                 }

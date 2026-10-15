@@ -15990,6 +15990,90 @@
         }
       }
     },
+    "lastUpdated.a11y.updated": {
+      "comment": "VoiceOver suffix of a list row; argument is the spoken time (Today at 3:15 PM, Yesterday, October 12, 2026)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "updated %@"
+          }
+        }
+      }
+    },
+    "lastUpdated.a11y.unknown": {
+      "comment": "VoiceOver suffix of a list row with no recorded last-updated time",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "last updated unknown"
+          }
+        }
+      }
+    },
+    "lastUpdated.help": {
+      "comment": "Hover help of the last-updated cell; argument is the full date and time",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last updated %@"
+          }
+        }
+      }
+    },
+    "timestamp.today": {
+      "comment": "Relative timestamp for a time today; argument is the time of day",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Today, %@"
+          }
+        }
+      }
+    },
+    "timestamp.todayAt": {
+      "comment": "Spoken timestamp for a time today; argument is the time of day",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Today at %@"
+          }
+        }
+      }
+    },
+    "timestamp.yesterday": {
+      "comment": "Relative and spoken timestamp for a time yesterday",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yesterday"
+          }
+        }
+      }
+    },
+    "timestamp.stamp": {
+      "comment": "Full timestamp: date, then time with zone, joined by a middle dot",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · %2$@"
+          }
+        }
+      }
+    },
     "conclusions.a11y.vital": {
       "comment": "VoiceOver for a Person header line; arguments are Born/Died, the date, and the place",
       "extractionState": "manual",

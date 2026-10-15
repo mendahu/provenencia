@@ -15,6 +15,7 @@ enum PersonsList: ConclusionListKind {
     static var mark: PVMarkKey { .subjectPerson }
 
     static func ref(_ header: CatalogPersonHeader) -> String { header.entity.ref }
+    static func updatedAt(_ header: CatalogPersonHeader) -> String { header.updated.at }
 
     static func titleSource(_ header: CatalogPersonHeader) -> ConclusionTitleSource {
         titleSource(header, orders: NameFormatOrders())

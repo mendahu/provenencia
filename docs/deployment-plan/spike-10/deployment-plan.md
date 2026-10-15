@@ -148,15 +148,15 @@ These are the calls for this spike. The questions at the bottom are answered; no
 | **[S10-D16](design/archive/S10-D16-event-mark.md)** | Design system — Event mark | **S10-19** | The `subject_event` glyph. Sidebar placement is S10-D7 |
 | **[S10-D7](design/archive/S10-D7-sidebar-marks.md)** | Workspace shell | **S10-19** | Sidebar and toolbar. Depends on S10-D16. Empty states use the same marks |
 | **S10-D8** | Sources list | **S10-41** | Last updated, evidence-status filter, text search, persisted sort and filters |
-| [**S10-D9**](design/S10-D9-persons-list.md) | Persons list | **S10-22** | S10-35 fills the thumb with a likeness. S10-39 makes that thumb the preferred portrait |
-| [**S10-D10**](design/S10-D10-events-list.md) | Events list | **S10-22** | — |
-| [**S10-D11**](design/S10-D11-places-list.md) | Places list | **S10-22** | — |
+| [**S10-D9**](design/archive/S10-D9-persons-list.md) | Persons list | **S10-22** | S10-35 fills the thumb with a likeness. S10-39 makes that thumb the preferred portrait |
+| [**S10-D10**](design/archive/S10-D10-events-list.md) | Events list | **S10-22** | — |
+| [**S10-D11**](design/archive/S10-D11-places-list.md) | Places list | **S10-22** | — |
 | **S10-D12** | Person detail | **S10-23** | S10-35 gallery and S10-39 preferred portrait. Design both with the gender treatment, before S10-23 |
 | **S10-D13** | Promote page | **S10-36** | Evidence sheet shows two crops |
 | **S10-D14** | Evidence graph — zoomed-out card | **S10-46**, descoped 2026-10-11 | — |
 | **S10-D15** | Citation composer — depiction row | **S10-34** | — |
 
-S10-D6 is one board for the graph's new controls (open file, box-select, Unpromote) and it gates S10-20. S10-18 does not wait on it. S10-01…S10-04 do not wait on it. S10-D14, the zoomed-out face, is descoped with S10-46 and is not drawn. S10-D1, the adaptive choice field, is descoped with S10-14 and is not drawn. Term fields keep the control they have. S10-D2 is not drawn: name-then-type on Create Source is a field swap, so S10-15 stands on its own. S10-D9…D11 are three briefs for the shared conclusion lists. Events and Places specify the same last-updated cell as Persons so `ConclusionListPage` does not grow three treatments. S10-D8 is the Sources list, a different page, and it gates S10-41. That board draws the same last-updated cell, the evidence-status filter, and text search. Sort, type, status, and query ship from that one board. List scroll is the history-entry anchor in S10-40, including Sources. D9…D11 do not draw those controls, and S10-22 does not change the Sources list. Only the Persons list thumb becomes a likeness. S10-D6, S10-D9, and S10-D12 each cover a later PR on that same view, so those briefs are written with the later frame in them. The depiction row is its own brief, S10-D15, written just before S10-34. S10-D3 does not draw it. D12 includes the preferred-portrait control S10-39 fills, and D9 includes that crop as the list thumb. Whichever of D8 and D9 is designed first draws the last-updated cell; the other copies it.
+S10-D6 is one board for the graph's new controls (open file, box-select, Unpromote) and it gates S10-20. S10-18 does not wait on it. S10-01…S10-04 do not wait on it. S10-D14, the zoomed-out face, is descoped with S10-46 and is not drawn. S10-D1, the adaptive choice field, is descoped with S10-14 and is not drawn. Term fields keep the control they have. S10-D2 is not drawn: name-then-type on Create Source is a field swap, so S10-15 stands on its own. S10-D9…D11 are three briefs for the shared conclusion lists. Events and Places specify the same last-updated cell as Persons so `ConclusionListPage` does not grow three treatments. S10-D8 is the Sources list, a different page, and it gates S10-41. That board draws the same last-updated cell, the evidence-status filter, and text search. Sort, type, status, and query ship from that one board. List scroll is the history-entry anchor in S10-40, including Sources. D9…D11 do not draw those controls. S10-22 changes no Sources-list chrome; it moves that list's cache and engine read onto the shared last-activity patch. Only the Persons list thumb becomes a likeness. S10-D6, S10-D9, and S10-D12 each cover a later PR on that same view, so those briefs are written with the later frame in them. The depiction row is its own brief, S10-D15, written just before S10-34. S10-D3 does not draw it. D12 includes the preferred-portrait control S10-39 fills, and D9 includes that crop as the list thumb. Whichever of D8 and D9 is designed first draws the last-updated cell; the other copies it.
 
 ## PR sequence
 
@@ -222,7 +222,7 @@ SLICE 5 — Artifacts and multi-select
 SLICE 6 — Lists and the Person page
   S10-40  People, Events, Places, and Sources store the list's top row on the history entry — done, #392
   S10-21  canonical_entity audit scope + list revision reads — done, #398
-  ✎ S10-D9…D11 ──▶ S10-22  Last updated on People, Events, and Places
+  S10-22  Last updated on People, Events, and Places — done, #402
   ✎ S10-D8 ──▶ S10-41  Sources list: last updated, filters, search,
                        persisted sort and filters. Scroll is S10-40.
   ✎ S10-D12 ──▶ S10-23  Person page sex / gender. The board also draws the gallery S10-35 fills and the preferred portrait S10-39 fills.
@@ -512,14 +512,14 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 
 #### S10-22 — Last updated on People, Events, and Places
 
-**Plan:** [`prs/S10-22-list-last-updated.md`](prs/S10-22-list-last-updated.md) — Planned
+**Plan:** [`prs/S10-22-list-last-updated.md`](prs/S10-22-list-last-updated.md) — Landed #402
 
 **Briefs:** S10-D9 Persons, S10-D10 Events, S10-D11 Places. Design the three before the PR. Events and Places copy the Persons cell. The Sources list is a different page; its last-updated cell ships in S10-41 from S10-D8, using the same treatment.
 
 | | |
 | --- | --- |
-| **In** | Each of these three list rows shows when it last changed, from the revision S10-21 returns. Empty or never-audited reads as the brief's empty. This PR does not add sort to these lists. A note-only Observation save reports no handles (`observation_notes` has no `Handles`), so `CatalogQueryRegistry` does not reload the lists. This PR reports `effects.HandleScopes` ids on `WriteEffects` and invalidates the three lists on them, so the cell moves. |
-| **Out** | The Sources list (S10-41). A new list layout beyond the cell the briefs add. |
+| **In** | Each of these three list rows shows when it last changed, from the revision S10-21 returns. Empty or never-audited reads as the brief's empty. This PR does not add sort to these lists. A note-only Observation save reports no handles (`observation_notes` has no `Handles`), so `CatalogQueryRegistry` does not reload the lists. This PR reports `effects.HandleScopes` ids and the write's own revision and time on `WriteEffects`, and the app patches the cached rows (People, Events, Places, and Sources) in place; it does not invalidate or reload them. Lists not on screen go stale and reload when shown. Source-page and graph writes (notes, metadata, artifacts, credibility, Subject create, update, and delete) return `WriteEffects` too, so a Source edit no longer reloads the lists. |
+| **Out** | The Sources list cell, filters, and search (S10-41). A new list layout beyond the cell the briefs add. |
 | **Testable** | People, Events, and Places show a time. Edit a member Observation: the Person row moves. Events and Places match the Persons cell. |
 | **Depends on** | S10-21, S10-D9, S10-D10, S10-D11 |
 
@@ -529,7 +529,7 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 
 | | |
 | --- | --- |
-| **In** | Per the working rules and S10-D8. The row shows when the Source last changed, from the existing `UpdatedRevision`. The time comes from `audit.LatestByScope(db, audit.ScopeSource)`, and this PR removes the `sources` scope reads it makes dead. Filter the list to empty, in progress, or filed, from one grouped count of primary subjects and their accepted claims, next to `sourcegraphprogress`. A text field filters the loaded rows by title and ref as you type. Sort, type filter, status, and query persist per project and user, and restore when the Sources place is shown again, including after relaunch (this is S10-09). Scroll is the history-entry anchor from S10-40 ([#392](https://github.com/mendahu/provenencia/pull/392)). This PR does not restore scroll. Changing status or search on that visit clears that anchor and scrolls to the top, the way sort and type already do. |
+| **In** | Per the working rules and S10-D8. The row shows when the Source last changed. The time is `CatalogSource.updated` (revision and time), already read from the engine's last-activity cache and patched by S10-22; this PR draws it and moves the cell composition (`updatedDetail`, `labelWithUpdated`, `updatedColumnWidth`) from `ConclusionListRow` to one feature-neutral home that both the conclusion rows and `SourcesSplitRow` call, rather than copying it. Filter the list to empty, in progress, or filed, from one grouped count of primary subjects and their accepted claims, next to `sourcegraphprogress`. A text field filters the loaded rows by title and ref as you type. Sort, type filter, status, and query persist per project and user, and restore when the Sources place is shown again, including after relaunch (this is S10-09). Scroll is the history-entry anchor from S10-40 ([#392](https://github.com/mendahu/provenencia/pull/392)). This PR does not restore scroll. Changing status or search on that visit clears that anchor and scrolls to the top, the way sort and type already do. |
 | **Out** | The same filters, search, or last-updated work on People, Events, or Places (scroll there is S10-40; last updated there is S10-22). Omnibar search. A per-row count query. Hiding bridge subjects as their own status. |
 | **Testable** | A Source with no people, events, or places matches Empty and not the other two. A Source with one unpromoted person matches In progress. After that person is promoted, it matches Filed. Typing part of a title hides the other rows. Leave and come back: status, query, sort, and type filter are still set, and the row's time moved if the Source changed. Relaunch: those four settings are still set. A long list does not issue one count query per row. Scroll follows the history entry (S10-40). |
 | **Depends on** | S10-D8 |

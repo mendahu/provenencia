@@ -260,6 +260,46 @@ func TestSources(t *testing.T) {
 			},
 		},
 		{
+			name: "list and attach read the activity cache",
+			run: func(t *testing.T, c *database.Catalog) {
+				mustUser(t, c)
+				typeID := mustType(t, c)
+				src, err := runCreate(c, userID, CreateInput{SourceTypeID: typeID, Title: "One"})
+				if err != nil {
+					t.Fatal(err)
+				}
+				if _, err := List(c); err != nil {
+					t.Fatal(err)
+				}
+				_, res, err := writes.Run(c, writes.Op{Action: "update_source", UserID: userID},
+					func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+						changes, err := Update(tx, userID, Source{ID: src.ID, Ref: src.Ref, SourceTypeID: typeID, Title: "Edited"})
+						return struct{}{}, changes, err
+					})
+				if err != nil || res.Revision == 0 || res.At == "" {
+					t.Fatalf("write %+v %v", res, err)
+				}
+				want := res.Activity
+				var queries int
+				c.Graph().SetQueryCounterForTest(func() { queries++ })
+				all, err := List(c)
+				if err != nil || len(all) != 1 || all[0].Updated != want {
+					t.Fatalf("List %+v %v, want %+v", all, err, want)
+				}
+				attached := Source{ID: src.ID}
+				if err := AttachActivity(c, &attached); err != nil || attached.Updated != want {
+					t.Fatalf("Attach %+v %v, want %+v", attached.Updated, err, want)
+				}
+				if queries != 0 {
+					t.Fatalf("%d scope queries after a write; the cache should have been patched", queries)
+				}
+				c.Graph().Drop()
+				if _, err := List(c); err != nil || queries != 1 {
+					t.Fatalf("after Drop: %v, %d queries, want 1", err, queries)
+				}
+			},
+		},
+		{
 			name: "list newest first by id with updated revision",
 			run: func(t *testing.T, c *database.Catalog) {
 				mustUser(t, c)
@@ -279,10 +319,10 @@ func TestSources(t *testing.T) {
 				if all[0].Title != "Newer" || all[1].Title != "Older" {
 					t.Fatalf("want newest-first got %+v %+v", all[0], all[1])
 				}
-				if all[0].UpdatedRevision <= 0 || all[1].UpdatedRevision <= 0 {
-					t.Fatalf("want create revisions got %d %d", all[0].UpdatedRevision, all[1].UpdatedRevision)
+				if all[0].Updated.Revision <= 0 || all[1].Updated.Revision <= 0 {
+					t.Fatalf("want create revisions got %d %d", all[0].Updated.Revision, all[1].Updated.Revision)
 				}
-				if all[0].UpdatedRevision <= all[1].UpdatedRevision {
+				if all[0].Updated.Revision <= all[1].Updated.Revision {
 					t.Fatalf("newer create should have higher revision: %+v", all)
 				}
 				if err := runUpdate(c, userID, Source{
@@ -307,8 +347,8 @@ func TestSources(t *testing.T) {
 				if older.ID == nil || newer.ID == nil {
 					t.Fatalf("missing rows %+v", all)
 				}
-				if older.UpdatedRevision <= newer.UpdatedRevision {
-					t.Fatalf("updated source should lead on revision: older=%d newer=%d", older.UpdatedRevision, newer.UpdatedRevision)
+				if older.Updated.Revision <= newer.Updated.Revision {
+					t.Fatalf("updated source should lead on revision: older=%d newer=%d", older.Updated.Revision, newer.Updated.Revision)
 				}
 				// Default list order is still create-time (id DESC), not updated.
 				if !bytes.Equal(all[0].ID, second.ID) || !bytes.Equal(all[1].ID, first.ID) {
