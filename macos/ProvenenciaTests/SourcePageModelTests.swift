@@ -1110,9 +1110,12 @@ struct SourcePageModelTests {
         )
         await model.warmFromSession()
         await model.askDeleteArtifact(id: "a1")
+        let workspaceReads = store.getSourceWorkspaceCalls
         _ = await model.confirmResourceDelete()
         let list: QueryHandle<[CatalogSource]>? = session.queryHandle(listKey)
         #expect(list?.value?.first?.hasArtifact == false)
+        // The refresh is the one read of the Source's workspace, as create does.
+        #expect(store.getSourceWorkspaceCalls == workspaceReads + 1)
     }
 
     @Test func blockedArtifactDoesNotCallDelete() async {

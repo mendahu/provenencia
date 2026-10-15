@@ -193,11 +193,6 @@ final class SourcePageModel {
             )
             if var workspace = context.workspace {
                 workspace.artifacts.removeAll { $0.id == target.id }
-                if workspace.source.primaryArtifactID == target.id {
-                    workspace.source.primaryArtifactID = ""
-                    workspace.source.coverMode = "type_icon"
-                    workspace.source.thumbnailRelPath = ""
-                }
                 apply(workspace)
                 context.session.setQueryValue(
                     CatalogQueryKey.sourceWorkspace(
@@ -212,9 +207,10 @@ final class SourcePageModel {
                 body: L10n.Sources.toastArtifactDeletedBody(ref: target.ref),
                 tone: .success
             )
-            context.applyWrite(effects)
-            // The cover and `hasArtifact` on the Sources row change with the
-            // last Artifact, which the activity patch cannot carry.
+            // The refresh below is the one read of the Source's workspace: it
+            // carries the cover and `hasArtifact`, which the activity patch
+            // cannot.
+            context.session.apply(effects)
             await context.refreshCoverFromStore()
         }
         return erasedSource && kind == "source"
