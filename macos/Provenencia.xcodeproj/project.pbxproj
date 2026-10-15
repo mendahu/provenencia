@@ -214,6 +214,7 @@
 		AA000000000000000000041A /* WorkspaceSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000419 /* WorkspaceSession.swift */; };
 		AA000000000000000000041C /* WorkspaceSessionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000041B /* WorkspaceSessionTests.swift */; };
 		AA000000000000000000041E /* CatalogMutation.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000041D /* CatalogMutation.swift */; };
+		AA00000000000000000FE004 /* CatalogLastUpdated.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00000000000000000FE003 /* CatalogLastUpdated.swift */; };
 		AA0000000000000000000420 /* CatalogQueryStalePolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000041F /* CatalogQueryStalePolicy.swift */; };
 		AA0000000000000000000422 /* CatalogQueryRegistry.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000421 /* CatalogQueryRegistry.swift */; };
 		AA0000000000000000000424 /* CatalogQueryRegistryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000423 /* CatalogQueryRegistryTests.swift */; };
@@ -598,6 +599,7 @@
 		AA0000000000000000000419 /* WorkspaceSession.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkspaceSession.swift; sourceTree = "<group>"; };
 		AA000000000000000000041B /* WorkspaceSessionTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkspaceSessionTests.swift; sourceTree = "<group>"; };
 		AA000000000000000000041D /* CatalogMutation.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CatalogMutation.swift; sourceTree = "<group>"; };
+		AA00000000000000000FE003 /* CatalogLastUpdated.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CatalogLastUpdated.swift; sourceTree = "<group>"; };
 		AA000000000000000000041F /* CatalogQueryStalePolicy.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CatalogQueryStalePolicy.swift; sourceTree = "<group>"; };
 		AA0000000000000000000421 /* CatalogQueryRegistry.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CatalogQueryRegistry.swift; sourceTree = "<group>"; };
 		AA0000000000000000000423 /* CatalogQueryRegistryTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CatalogQueryRegistryTests.swift; sourceTree = "<group>"; };
@@ -893,6 +895,7 @@
 				AA0000000000000000000417 /* QueryHandle.swift */,
 				AA0000000000000000000419 /* WorkspaceSession.swift */,
 				AA000000000000000000041D /* CatalogMutation.swift */,
+				AA00000000000000000FE003 /* CatalogLastUpdated.swift */,
 				AA000000000000000000041F /* CatalogQueryStalePolicy.swift */,
 				AA0000000000000000000421 /* CatalogQueryRegistry.swift */,
 				AA0000000000000000000425 /* PlaceID.swift */,
@@ -1912,6 +1915,7 @@
 				AA0000000000000000000418 /* QueryHandle.swift in Sources */,
 				AA000000000000000000041A /* WorkspaceSession.swift in Sources */,
 				AA000000000000000000041E /* CatalogMutation.swift in Sources */,
+				AA00000000000000000FE004 /* CatalogLastUpdated.swift in Sources */,
 				AA0000000000000000000420 /* CatalogQueryStalePolicy.swift in Sources */,
 				AA0000000000000000000422 /* CatalogQueryRegistry.swift in Sources */,
 				AA0000000000000000000426 /* PlaceID.swift in Sources */,

@@ -1004,6 +1004,9 @@ public nonisolated struct Provenencia_Engine_V1_Source: Sendable {
   /// its row and any work under it. Sources list "Updated" sort.
   public var updatedRevision: Int64 = 0
 
+  /// When that revision was recorded (RFC3339 UTC); empty when updated_revision is 0.
+  public var updatedAt: String = String()
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -2065,9 +2068,16 @@ public nonisolated struct Provenencia_Engine_V1_WriteEffects: Sendable {
 
   public var headerHandles: [String] = []
 
-  /// Handles whose last-updated revision this write moved. Swift reloads the
-  /// People, Events, and Places lists for them, not their detail pages.
+  /// Handles whose last-updated revision this write moved. Swift patches those
+  /// rows in the cached People, Events, and Places lists with (revision,
+  /// revision_at); it reloads nothing and leaves detail pages alone.
   public var handleScopes: [String] = []
+
+  /// The write's own activity: its audit revision and when it was recorded
+  /// (RFC3339 UTC). Zero and empty when the write recorded no revision.
+  public var revision: Int64 = 0
+
+  public var revisionAt: String = String()
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -5772,37 +5782,39 @@ public nonisolated struct Provenencia_Engine_V1_CreateCitationWithObservationsRe
   public init() {}
 }
 
-public nonisolated struct Provenencia_Engine_V1_CreateCitationWithObservationsResponse: Sendable {
+public nonisolated struct Provenencia_Engine_V1_CreateCitationWithObservationsResponse: @unchecked Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
   public var citation: Provenencia_Engine_V1_Citation {
-    get {_citation ?? Provenencia_Engine_V1_Citation()}
-    set {_citation = newValue}
+    get {_storage._citation ?? Provenencia_Engine_V1_Citation()}
+    set {_uniqueStorage()._citation = newValue}
   }
   /// Returns true if `citation` has been explicitly set.
-  public var hasCitation: Bool {self._citation != nil}
+  public var hasCitation: Bool {_storage._citation != nil}
   /// Clears the value of `citation`. Subsequent reads from it will return its default value.
-  public mutating func clearCitation() {self._citation = nil}
+  public mutating func clearCitation() {_uniqueStorage()._citation = nil}
 
-  public var observations: [Provenencia_Engine_V1_Observation] = []
+  public var observations: [Provenencia_Engine_V1_Observation] {
+    get {_storage._observations}
+    set {_uniqueStorage()._observations = newValue}
+  }
 
   public var effects: Provenencia_Engine_V1_WriteEffects {
-    get {_effects ?? Provenencia_Engine_V1_WriteEffects()}
-    set {_effects = newValue}
+    get {_storage._effects ?? Provenencia_Engine_V1_WriteEffects()}
+    set {_uniqueStorage()._effects = newValue}
   }
   /// Returns true if `effects` has been explicitly set.
-  public var hasEffects: Bool {self._effects != nil}
+  public var hasEffects: Bool {_storage._effects != nil}
   /// Clears the value of `effects`. Subsequent reads from it will return its default value.
-  public mutating func clearEffects() {self._effects = nil}
+  public mutating func clearEffects() {_uniqueStorage()._effects = nil}
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
 
-  fileprivate var _citation: Provenencia_Engine_V1_Citation? = nil
-  fileprivate var _effects: Provenencia_Engine_V1_WriteEffects? = nil
+  fileprivate var _storage = _StorageClass.defaultInstance
 }
 
 public nonisolated struct Provenencia_Engine_V1_AddObservationsToCitationRequest: Sendable {
@@ -6115,35 +6127,34 @@ public nonisolated struct Provenencia_Engine_V1_UpdateCitationRequest: Sendable 
   public init() {}
 }
 
-public nonisolated struct Provenencia_Engine_V1_UpdateCitationResponse: Sendable {
+public nonisolated struct Provenencia_Engine_V1_UpdateCitationResponse: @unchecked Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
   public var citation: Provenencia_Engine_V1_Citation {
-    get {_citation ?? Provenencia_Engine_V1_Citation()}
-    set {_citation = newValue}
+    get {_storage._citation ?? Provenencia_Engine_V1_Citation()}
+    set {_uniqueStorage()._citation = newValue}
   }
   /// Returns true if `citation` has been explicitly set.
-  public var hasCitation: Bool {self._citation != nil}
+  public var hasCitation: Bool {_storage._citation != nil}
   /// Clears the value of `citation`. Subsequent reads from it will return its default value.
-  public mutating func clearCitation() {self._citation = nil}
+  public mutating func clearCitation() {_uniqueStorage()._citation = nil}
 
   public var effects: Provenencia_Engine_V1_WriteEffects {
-    get {_effects ?? Provenencia_Engine_V1_WriteEffects()}
-    set {_effects = newValue}
+    get {_storage._effects ?? Provenencia_Engine_V1_WriteEffects()}
+    set {_uniqueStorage()._effects = newValue}
   }
   /// Returns true if `effects` has been explicitly set.
-  public var hasEffects: Bool {self._effects != nil}
+  public var hasEffects: Bool {_storage._effects != nil}
   /// Clears the value of `effects`. Subsequent reads from it will return its default value.
-  public mutating func clearEffects() {self._effects = nil}
+  public mutating func clearEffects() {_uniqueStorage()._effects = nil}
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
 
-  fileprivate var _citation: Provenencia_Engine_V1_Citation? = nil
-  fileprivate var _effects: Provenencia_Engine_V1_WriteEffects? = nil
+  fileprivate var _storage = _StorageClass.defaultInstance
 }
 
 public nonisolated struct Provenencia_Engine_V1_UpdateObservationRequest: Sendable {
@@ -7353,7 +7364,7 @@ nonisolated extension Provenencia_Engine_V1_GetProjectInfoResponse: SwiftProtobu
 
 nonisolated extension Provenencia_Engine_V1_Source: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".Source"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}ref\0\u{3}source_type_id\0\u{1}title\0\u{1}description\0\u{3}thumbnail_rel_path\0\u{3}thumbnail_media_type\0\u{3}thumbnail_original_filename\0\u{3}cover_mode\0\u{3}primary_artifact_id\0\u{3}has_artifact\0\u{3}updated_revision\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}ref\0\u{3}source_type_id\0\u{1}title\0\u{1}description\0\u{3}thumbnail_rel_path\0\u{3}thumbnail_media_type\0\u{3}thumbnail_original_filename\0\u{3}cover_mode\0\u{3}primary_artifact_id\0\u{3}has_artifact\0\u{3}updated_revision\0\u{3}updated_at\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -7373,6 +7384,7 @@ nonisolated extension Provenencia_Engine_V1_Source: SwiftProtobuf.Message, Swift
       case 10: try { try decoder.decodeSingularStringField(value: &self.primaryArtifactID) }()
       case 11: try { try decoder.decodeSingularBoolField(value: &self.hasArtifact_p) }()
       case 12: try { try decoder.decodeSingularInt64Field(value: &self.updatedRevision) }()
+      case 13: try { try decoder.decodeSingularStringField(value: &self.updatedAt) }()
       default: break
       }
     }
@@ -7415,6 +7427,9 @@ nonisolated extension Provenencia_Engine_V1_Source: SwiftProtobuf.Message, Swift
     if self.updatedRevision != 0 {
       try visitor.visitSingularInt64Field(value: self.updatedRevision, fieldNumber: 12)
     }
+    if !self.updatedAt.isEmpty {
+      try visitor.visitSingularStringField(value: self.updatedAt, fieldNumber: 13)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -7431,6 +7446,7 @@ nonisolated extension Provenencia_Engine_V1_Source: SwiftProtobuf.Message, Swift
     if lhs.primaryArtifactID != rhs.primaryArtifactID {return false}
     if lhs.hasArtifact_p != rhs.hasArtifact_p {return false}
     if lhs.updatedRevision != rhs.updatedRevision {return false}
+    if lhs.updatedAt != rhs.updatedAt {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -9463,7 +9479,7 @@ nonisolated extension Provenencia_Engine_V1_DeleteCitationResponse: SwiftProtobu
 
 nonisolated extension Provenencia_Engine_V1_WriteEffects: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".WriteEffects"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}handles\0\u{1}sources\0\u{3}cache_sources\0\u{1}vocabulary\0\u{1}structure\0\u{3}header_handles\0\u{3}handle_scopes\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}handles\0\u{1}sources\0\u{3}cache_sources\0\u{1}vocabulary\0\u{1}structure\0\u{3}header_handles\0\u{3}handle_scopes\0\u{1}revision\0\u{3}revision_at\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -9478,6 +9494,8 @@ nonisolated extension Provenencia_Engine_V1_WriteEffects: SwiftProtobuf.Message,
       case 5: try { try decoder.decodeSingularBoolField(value: &self.structure) }()
       case 6: try { try decoder.decodeRepeatedStringField(value: &self.headerHandles) }()
       case 7: try { try decoder.decodeRepeatedStringField(value: &self.handleScopes) }()
+      case 8: try { try decoder.decodeSingularInt64Field(value: &self.revision) }()
+      case 9: try { try decoder.decodeSingularStringField(value: &self.revisionAt) }()
       default: break
       }
     }
@@ -9505,6 +9523,12 @@ nonisolated extension Provenencia_Engine_V1_WriteEffects: SwiftProtobuf.Message,
     if !self.handleScopes.isEmpty {
       try visitor.visitRepeatedStringField(value: self.handleScopes, fieldNumber: 7)
     }
+    if self.revision != 0 {
+      try visitor.visitSingularInt64Field(value: self.revision, fieldNumber: 8)
+    }
+    if !self.revisionAt.isEmpty {
+      try visitor.visitSingularStringField(value: self.revisionAt, fieldNumber: 9)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -9516,6 +9540,8 @@ nonisolated extension Provenencia_Engine_V1_WriteEffects: SwiftProtobuf.Message,
     if lhs.structure != rhs.structure {return false}
     if lhs.headerHandles != rhs.headerHandles {return false}
     if lhs.handleScopes != rhs.handleScopes {return false}
+    if lhs.revision != rhs.revision {return false}
+    if lhs.revisionAt != rhs.revisionAt {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -16717,41 +16743,81 @@ nonisolated extension Provenencia_Engine_V1_CreateCitationWithObservationsRespon
   public static let protoMessageName: String = _protobuf_package + ".CreateCitationWithObservationsResponse"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}citation\0\u{1}observations\0\u{1}effects\0")
 
+  fileprivate class _StorageClass {
+    var _citation: Provenencia_Engine_V1_Citation? = nil
+    var _observations: [Provenencia_Engine_V1_Observation] = []
+    var _effects: Provenencia_Engine_V1_WriteEffects? = nil
+
+      // This property is used as the initial default value for new instances of the type.
+      // The type itself is protecting the reference to its storage via CoW semantics.
+      // This will force a copy to be made of this reference when the first mutation occurs;
+      // hence, it is safe to mark this as `nonisolated(unsafe)`.
+      static nonisolated(unsafe) let defaultInstance = _StorageClass()
+
+    private init() {}
+
+    init(copying source: _StorageClass) {
+      _citation = source._citation
+      _observations = source._observations
+      _effects = source._effects
+    }
+  }
+
+  fileprivate mutating func _uniqueStorage() -> _StorageClass {
+    if !isKnownUniquelyReferenced(&_storage) {
+      _storage = _StorageClass(copying: _storage)
+    }
+    return _storage
+  }
+
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularMessageField(value: &self._citation) }()
-      case 2: try { try decoder.decodeRepeatedMessageField(value: &self.observations) }()
-      case 3: try { try decoder.decodeSingularMessageField(value: &self._effects) }()
-      default: break
+    _ = _uniqueStorage()
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      while let fieldNumber = try decoder.nextFieldNumber() {
+        // The use of inline closures is to circumvent an issue where the compiler
+        // allocates stack space for every case branch when no optimizations are
+        // enabled. https://github.com/apple/swift-protobuf/issues/1034
+        switch fieldNumber {
+        case 1: try { try decoder.decodeSingularMessageField(value: &_storage._citation) }()
+        case 2: try { try decoder.decodeRepeatedMessageField(value: &_storage._observations) }()
+        case 3: try { try decoder.decodeSingularMessageField(value: &_storage._effects) }()
+        default: break
+        }
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    // The use of inline closures is to circumvent an issue where the compiler
-    // allocates stack space for every if/case branch local when no optimizations
-    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
-    // https://github.com/apple/swift-protobuf/issues/1182
-    try { if let v = self._citation {
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
-    } }()
-    if !self.observations.isEmpty {
-      try visitor.visitRepeatedMessageField(value: self.observations, fieldNumber: 2)
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every if/case branch local when no optimizations
+      // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+      // https://github.com/apple/swift-protobuf/issues/1182
+      try { if let v = _storage._citation {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
+      } }()
+      if !_storage._observations.isEmpty {
+        try visitor.visitRepeatedMessageField(value: _storage._observations, fieldNumber: 2)
+      }
+      try { if let v = _storage._effects {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
+      } }()
     }
-    try { if let v = self._effects {
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
-    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Provenencia_Engine_V1_CreateCitationWithObservationsResponse, rhs: Provenencia_Engine_V1_CreateCitationWithObservationsResponse) -> Bool {
-    if lhs._citation != rhs._citation {return false}
-    if lhs.observations != rhs.observations {return false}
-    if lhs._effects != rhs._effects {return false}
+    if lhs._storage !== rhs._storage {
+      let storagesAreEqual: Bool = withExtendedLifetime((lhs._storage, rhs._storage)) { (_args: (_StorageClass, _StorageClass)) in
+        let _storage = _args.0
+        let rhs_storage = _args.1
+        if _storage._citation != rhs_storage._citation {return false}
+        if _storage._observations != rhs_storage._observations {return false}
+        if _storage._effects != rhs_storage._effects {return false}
+        return true
+      }
+      if !storagesAreEqual {return false}
+    }
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -17459,36 +17525,74 @@ nonisolated extension Provenencia_Engine_V1_UpdateCitationResponse: SwiftProtobu
   public static let protoMessageName: String = _protobuf_package + ".UpdateCitationResponse"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}citation\0\u{1}effects\0")
 
+  fileprivate class _StorageClass {
+    var _citation: Provenencia_Engine_V1_Citation? = nil
+    var _effects: Provenencia_Engine_V1_WriteEffects? = nil
+
+      // This property is used as the initial default value for new instances of the type.
+      // The type itself is protecting the reference to its storage via CoW semantics.
+      // This will force a copy to be made of this reference when the first mutation occurs;
+      // hence, it is safe to mark this as `nonisolated(unsafe)`.
+      static nonisolated(unsafe) let defaultInstance = _StorageClass()
+
+    private init() {}
+
+    init(copying source: _StorageClass) {
+      _citation = source._citation
+      _effects = source._effects
+    }
+  }
+
+  fileprivate mutating func _uniqueStorage() -> _StorageClass {
+    if !isKnownUniquelyReferenced(&_storage) {
+      _storage = _StorageClass(copying: _storage)
+    }
+    return _storage
+  }
+
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularMessageField(value: &self._citation) }()
-      case 2: try { try decoder.decodeSingularMessageField(value: &self._effects) }()
-      default: break
+    _ = _uniqueStorage()
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      while let fieldNumber = try decoder.nextFieldNumber() {
+        // The use of inline closures is to circumvent an issue where the compiler
+        // allocates stack space for every case branch when no optimizations are
+        // enabled. https://github.com/apple/swift-protobuf/issues/1034
+        switch fieldNumber {
+        case 1: try { try decoder.decodeSingularMessageField(value: &_storage._citation) }()
+        case 2: try { try decoder.decodeSingularMessageField(value: &_storage._effects) }()
+        default: break
+        }
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    // The use of inline closures is to circumvent an issue where the compiler
-    // allocates stack space for every if/case branch local when no optimizations
-    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
-    // https://github.com/apple/swift-protobuf/issues/1182
-    try { if let v = self._citation {
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
-    } }()
-    try { if let v = self._effects {
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
-    } }()
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every if/case branch local when no optimizations
+      // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+      // https://github.com/apple/swift-protobuf/issues/1182
+      try { if let v = _storage._citation {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
+      } }()
+      try { if let v = _storage._effects {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+      } }()
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Provenencia_Engine_V1_UpdateCitationResponse, rhs: Provenencia_Engine_V1_UpdateCitationResponse) -> Bool {
-    if lhs._citation != rhs._citation {return false}
-    if lhs._effects != rhs._effects {return false}
+    if lhs._storage !== rhs._storage {
+      let storagesAreEqual: Bool = withExtendedLifetime((lhs._storage, rhs._storage)) { (_args: (_StorageClass, _StorageClass)) in
+        let _storage = _args.0
+        let rhs_storage = _args.1
+        if _storage._citation != rhs_storage._citation {return false}
+        if _storage._effects != rhs_storage._effects {return false}
+        return true
+      }
+      if !storagesAreEqual {return false}
+    }
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

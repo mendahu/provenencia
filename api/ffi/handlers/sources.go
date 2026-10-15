@@ -557,6 +557,7 @@ func sourceProto(s sources.Source) *engine.Source {
 		CoverMode:         s.CoverMode,
 		PrimaryArtifactId: uuidString(s.PrimaryArtifactID),
 		UpdatedRevision:   s.Updated.Revision,
+		UpdatedAt:         s.Updated.At,
 	}
 }
 

@@ -15,7 +15,7 @@ enum PlacesList: ConclusionListKind {
     static var mark: PVMarkKey { .subjectPlace }
 
     static func ref(_ header: CatalogPlaceHeader) -> String { header.entity.ref }
-    static func updatedAt(_ header: CatalogPlaceHeader) -> String { header.updatedAt }
+    static func updatedAt(_ header: CatalogPlaceHeader) -> String { header.updated.at }
 
     static func titleSource(_ header: CatalogPlaceHeader) -> ConclusionTitleSource {
         PlaceTitleDisplay.titleSource(header.titleParts)

@@ -251,6 +251,8 @@ message Source {
   // Max audit_transactions.revision scoped to this Source (audit_transaction_scopes):
   // its row and any work under it. Sources list "Updated" sort.
   int64 updated_revision = 12;
+  // When that revision was recorded (RFC3339 UTC); empty when updated_revision is 0.
+  string updated_at = 13;
 }
 
 message SourceNote {
@@ -584,9 +586,14 @@ message WriteEffects {
   bool vocabulary = 4;
   bool structure = 5;
   repeated string header_handles = 6;
-  // Handles whose last-updated revision this write moved. Swift reloads the
-  // People, Events, and Places lists for them, not their detail pages.
+  // Handles whose last-updated revision this write moved. Swift patches those
+  // rows in the cached People, Events, and Places lists with (revision,
+  // revision_at); it reloads nothing and leaves detail pages alone.
   repeated string handle_scopes = 7;
+  // The write's own activity: its audit revision and when it was recorded
+  // (RFC3339 UTC). Zero and empty when the write recorded no revision.
+  int64 revision = 8;
+  string revision_at = 9;
 }
 
 message IngestArtifactFileRequest {

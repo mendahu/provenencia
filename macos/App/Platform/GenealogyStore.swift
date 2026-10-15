@@ -45,9 +45,9 @@ struct CatalogSource: Sendable, Equatable, Identifiable {
     /// Used by the Sources list Evidence graph gate — not cover presence.
     var hasArtifact: Bool = false
     /// Latest audit revision of any work scoped to this Source (its row, notes,
-    /// metadata, artifacts, Evidence graph). Sources list "Updated" sort; zero
-    /// means unset / unknown.
-    var updatedRevision: Int64 = 0
+    /// metadata, artifacts, Evidence graph) and when it was recorded. Sources
+    /// list "Updated" sort reads the revision; zero means unset / unknown.
+    var updated = CatalogActivity()
 }
 
 struct CatalogSourceNote: Sendable, Equatable {
@@ -429,8 +429,8 @@ struct CatalogPersonHeader: Sendable, Equatable, Identifiable {
     var nameValueCount: Int
     var birth: CatalogLifeFacts = CatalogLifeFacts()
     var death: CatalogLifeFacts = CatalogLifeFacts()
-    /// RFC3339 UTC time of the last revision that touched this Person; empty when unknown.
-    var updatedAt: String = ""
+    /// The last revision that touched this Person and when; revision 0 when unknown.
+    var updated = CatalogActivity()
 
     var id: String { entity.id }
 }
@@ -456,8 +456,8 @@ struct CatalogEventHeader: Sendable, Equatable, Identifiable {
     var places: [CatalogHeaderPlace] = []
     /// The naming-matrix rule Go chose, and its parts.
     var title: CatalogEventTitle
-    /// RFC3339 UTC time of the last revision that touched this Event; empty when unknown.
-    var updatedAt: String = ""
+    /// The last revision that touched this Event and when; revision 0 when unknown.
+    var updated = CatalogActivity()
 
     var id: String { entity.id }
 }
@@ -505,8 +505,8 @@ struct CatalogPlaceHeader: Sendable, Equatable, Identifiable {
     var contains: [CatalogPlaceRelationship] = []
     var predecessors: [CatalogPlaceRelationship] = []
     var successors: [CatalogPlaceRelationship] = []
-    /// RFC3339 UTC time of the last revision that touched this Place; empty when unknown.
-    var updatedAt: String = ""
+    /// The last revision that touched this Place and when; revision 0 when unknown.
+    var updated = CatalogActivity()
 
     var id: String { entity.id }
 }

@@ -1796,8 +1796,10 @@ type Source struct {
 	// Max audit_transactions.revision scoped to this Source (audit_transaction_scopes):
 	// its row and any work under it. Sources list "Updated" sort.
 	UpdatedRevision int64 `protobuf:"varint,12,opt,name=updated_revision,json=updatedRevision,proto3" json:"updated_revision,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// When that revision was recorded (RFC3339 UTC); empty when updated_revision is 0.
+	UpdatedAt     string `protobuf:"bytes,13,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Source) Reset() {
@@ -1912,6 +1914,13 @@ func (x *Source) GetUpdatedRevision() int64 {
 		return x.UpdatedRevision
 	}
 	return 0
+}
+
+func (x *Source) GetUpdatedAt() string {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return ""
 }
 
 type SourceNote struct {
@@ -4776,9 +4785,14 @@ type WriteEffects struct {
 	Vocabulary    bool                   `protobuf:"varint,4,opt,name=vocabulary,proto3" json:"vocabulary,omitempty"`
 	Structure     bool                   `protobuf:"varint,5,opt,name=structure,proto3" json:"structure,omitempty"`
 	HeaderHandles []string               `protobuf:"bytes,6,rep,name=header_handles,json=headerHandles,proto3" json:"header_handles,omitempty"`
-	// Handles whose last-updated revision this write moved. Swift reloads the
-	// People, Events, and Places lists for them, not their detail pages.
-	HandleScopes  []string `protobuf:"bytes,7,rep,name=handle_scopes,json=handleScopes,proto3" json:"handle_scopes,omitempty"`
+	// Handles whose last-updated revision this write moved. Swift patches those
+	// rows in the cached People, Events, and Places lists with (revision,
+	// revision_at); it reloads nothing and leaves detail pages alone.
+	HandleScopes []string `protobuf:"bytes,7,rep,name=handle_scopes,json=handleScopes,proto3" json:"handle_scopes,omitempty"`
+	// The write's own activity: its audit revision and when it was recorded
+	// (RFC3339 UTC). Zero and empty when the write recorded no revision.
+	Revision      int64  `protobuf:"varint,8,opt,name=revision,proto3" json:"revision,omitempty"`
+	RevisionAt    string `protobuf:"bytes,9,opt,name=revision_at,json=revisionAt,proto3" json:"revision_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -4860,6 +4874,20 @@ func (x *WriteEffects) GetHandleScopes() []string {
 		return x.HandleScopes
 	}
 	return nil
+}
+
+func (x *WriteEffects) GetRevision() int64 {
+	if x != nil {
+		return x.Revision
+	}
+	return 0
+}
+
+func (x *WriteEffects) GetRevisionAt() string {
+	if x != nil {
+		return x.RevisionAt
+	}
+	return ""
 }
 
 type IngestArtifactFileRequest struct {
@@ -16988,7 +17016,7 @@ const file_engine_proto_rawDesc = "" +
 	"\x0eupdated_by_ref\x18\a \x01(\tR\fupdatedByRef\x12\x12\n" +
 	"\x04uuid\x18\b \x01(\tR\x04uuid\"V\n" +
 	"\x16GetProjectInfoResponse\x12<\n" +
-	"\aproject\x18\x01 \x01(\v2\".provenencia.engine.v1.ProjectInfoR\aproject\"\xc5\x03\n" +
+	"\aproject\x18\x01 \x01(\v2\".provenencia.engine.v1.ProjectInfoR\aproject\"\xe4\x03\n" +
 	"\x06Source\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x10\n" +
 	"\x03ref\x18\x02 \x01(\tR\x03ref\x12$\n" +
@@ -17003,7 +17031,9 @@ const file_engine_proto_rawDesc = "" +
 	"\x13primary_artifact_id\x18\n" +
 	" \x01(\tR\x11primaryArtifactId\x12!\n" +
 	"\fhas_artifact\x18\v \x01(\bR\vhasArtifact\x12)\n" +
-	"\x10updated_revision\x18\f \x01(\x03R\x0fupdatedRevision\"\x9c\x01\n" +
+	"\x10updated_revision\x18\f \x01(\x03R\x0fupdatedRevision\x12\x1d\n" +
+	"\n" +
+	"updated_at\x18\r \x01(\tR\tupdatedAt\"\x9c\x01\n" +
 	"\n" +
 	"SourceNote\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
@@ -17257,7 +17287,7 @@ const file_engine_proto_rawDesc = "" +
 	"\vcitation_id\x18\x03 \x01(\tR\n" +
 	"citationId\"W\n" +
 	"\x16DeleteCitationResponse\x12=\n" +
-	"\aeffects\x18\x01 \x01(\v2#.provenencia.engine.v1.WriteEffectsR\aeffects\"\xf1\x01\n" +
+	"\aeffects\x18\x01 \x01(\v2#.provenencia.engine.v1.WriteEffectsR\aeffects\"\xae\x02\n" +
 	"\fWriteEffects\x12\x18\n" +
 	"\ahandles\x18\x01 \x03(\tR\ahandles\x12\x18\n" +
 	"\asources\x18\x02 \x03(\tR\asources\x12#\n" +
@@ -17267,7 +17297,10 @@ const file_engine_proto_rawDesc = "" +
 	"vocabulary\x12\x1c\n" +
 	"\tstructure\x18\x05 \x01(\bR\tstructure\x12%\n" +
 	"\x0eheader_handles\x18\x06 \x03(\tR\rheaderHandles\x12#\n" +
-	"\rhandle_scopes\x18\a \x03(\tR\fhandleScopes\"\x8a\x01\n" +
+	"\rhandle_scopes\x18\a \x03(\tR\fhandleScopes\x12\x1a\n" +
+	"\brevision\x18\b \x01(\x03R\brevision\x12\x1f\n" +
+	"\vrevision_at\x18\t \x01(\tR\n" +
+	"revisionAt\"\x8a\x01\n" +
 	"\x19IngestArtifactFileRequest\x12\x1f\n" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
 	"projectDir\x12\x17\n" +

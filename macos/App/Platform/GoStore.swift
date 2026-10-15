@@ -1034,7 +1034,7 @@ struct GoStore: GenealogyStore {
             nameValueCount: Int(h.nameValueCount),
             birth: mapLifeFacts(h.birth),
             death: mapLifeFacts(h.death),
-            updatedAt: h.updatedAt
+            updated: CatalogActivity(revision: h.updatedRevision, at: h.updatedAt)
         )
     }
 
@@ -1082,7 +1082,7 @@ struct GoStore: GenealogyStore {
             subjects: h.subjects.map(mapEventSubject),
             places: h.places.map(mapHeaderPlace),
             title: mapEventTitle(h.title),
-            updatedAt: h.updatedAt
+            updated: CatalogActivity(revision: h.updatedRevision, at: h.updatedAt)
         )
     }
 
@@ -1099,7 +1099,7 @@ struct GoStore: GenealogyStore {
             contains: h.contains.map(mapPlaceRelationship),
             predecessors: h.predecessors.map(mapPlaceRelationship),
             successors: h.successors.map(mapPlaceRelationship),
-            updatedAt: h.updatedAt
+            updated: CatalogActivity(revision: h.updatedRevision, at: h.updatedAt)
         )
     }
 
@@ -1663,7 +1663,8 @@ struct GoStore: GenealogyStore {
             vocabulary: effects.vocabulary,
             structure: effects.structure,
             headerHandles: effects.headerHandles,
-            handleScopes: effects.handleScopes
+            handleScopes: effects.handleScopes,
+            activity: CatalogActivity(revision: effects.revision, at: effects.revisionAt)
         )
     }
 
@@ -1836,7 +1837,7 @@ struct GoStore: GenealogyStore {
             coverMode: s.coverMode.isEmpty ? "type_icon" : s.coverMode,
             primaryArtifactID: s.primaryArtifactID,
             hasArtifact: s.hasArtifact_p,
-            updatedRevision: s.updatedRevision
+            updated: CatalogActivity(revision: s.updatedRevision, at: s.updatedAt)
         )
     }
 

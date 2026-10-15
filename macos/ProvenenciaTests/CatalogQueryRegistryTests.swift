@@ -567,17 +567,17 @@ struct CatalogQueryRegistryTests {
 
         let handle: QueryHandle<[CatalogSource]> = session.query(key)
         await waitForFetchComplete(handle)
-        store.sourcesByProject[projectDir]?[0].updatedRevision = 42
+        store.sourcesByProject[projectDir]?[0].updated = CatalogActivity(revision: 42)
         store.heldCatalogProjectDir = nil
 
         session.apply(.savedCitation(sourceId: "s1"))
         await Task.yield()
         #expect(store.heldCatalogProjectDir == nil)
-        #expect(handle.value?.first?.updatedRevision == 0)
+        #expect(handle.value?.first?.updated.revision == 0)
 
         let _: QueryHandle<[CatalogSource]> = session.query(key)
         await waitForFetchComplete(handle)
-        #expect(handle.value?.first?.updatedRevision == 42)
+        #expect(handle.value?.first?.updated.revision == 42)
     }
 
     @Test func sourceWritesMarkListStaleWithoutInvalidating() {

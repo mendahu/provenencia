@@ -2,10 +2,11 @@ package handlers
 
 import (
 	"github.com/mendahu/provenencia/api/proto/engine"
-	"github.com/mendahu/provenencia/core/database/effects"
+	"github.com/mendahu/provenencia/core/writes"
 )
 
-func writeEffectsProto(set effects.Set) *engine.WriteEffects {
+func writeEffectsProto(res writes.Result) *engine.WriteEffects {
+	set := res.Effects
 	return &engine.WriteEffects{
 		Handles:       idStrings(set.Handles),
 		Sources:       idStrings(set.Sources),
@@ -14,6 +15,8 @@ func writeEffectsProto(set effects.Set) *engine.WriteEffects {
 		Structure:     set.Structure,
 		HeaderHandles: idStrings(set.HeaderDeps),
 		HandleScopes:  idStrings(set.HandleScopes),
+		Revision:      res.Revision,
+		RevisionAt:    res.At,
 	}
 }
 

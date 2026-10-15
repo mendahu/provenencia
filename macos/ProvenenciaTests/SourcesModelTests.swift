@@ -35,7 +35,7 @@ struct SourcesModelTests {
             sourceTypeID: typeID,
             title: title,
             description: "",
-            updatedRevision: updatedRevision
+            updated: CatalogActivity(revision: updatedRevision)
         )
     }
 

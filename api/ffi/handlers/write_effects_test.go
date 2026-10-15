@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/mendahu/provenencia/core/database/effects"
+	"github.com/mendahu/provenencia/core/writes"
 )
 
 func TestWriteEffectsProto(t *testing.T) {
@@ -22,23 +23,31 @@ func TestWriteEffectsProto(t *testing.T) {
 
 	tests := []struct {
 		name          string
-		set           effects.Set
+		res           writes.Result
 		handles       []string
 		headerHandles []string
 		handleScopes  []string
+		revision      int64
+		revisionAt    string
 	}{
 		{name: "empty set"},
-		{name: "handle scopes only", set: effects.Set{HandleScopes: [][]byte{a}}, handleScopes: []string{aStr}},
+		{
+			name:         "the write's activity and its handle scopes",
+			res:          writes.Result{Revision: 42, At: "2026-10-15T16:00:00Z", Effects: effects.Set{HandleScopes: [][]byte{a}}},
+			handleScopes: []string{aStr},
+			revision:     42,
+			revisionAt:   "2026-10-15T16:00:00Z",
+		},
 		{
 			name:          "handles and header deps stay apart",
-			set:           effects.Set{Handles: [][]byte{a}, HeaderDeps: [][]byte{b}},
+			res:           writes.Result{Effects: effects.Set{Handles: [][]byte{a}, HeaderDeps: [][]byte{b}}},
 			handles:       []string{aStr},
 			headerHandles: []string{bStr},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := writeEffectsProto(tt.set)
+			got := writeEffectsProto(tt.res)
 			if !reflect.DeepEqual(got.GetHandles(), tt.handles) {
 				t.Fatalf("Handles = %v, want %v", got.GetHandles(), tt.handles)
 			}
@@ -47,6 +56,9 @@ func TestWriteEffectsProto(t *testing.T) {
 			}
 			if !reflect.DeepEqual(got.GetHandleScopes(), tt.handleScopes) {
 				t.Fatalf("HandleScopes = %v, want %v", got.GetHandleScopes(), tt.handleScopes)
+			}
+			if got.GetRevision() != tt.revision || got.GetRevisionAt() != tt.revisionAt {
+				t.Fatalf("Revision = %d %q, want %d %q", got.GetRevision(), got.GetRevisionAt(), tt.revision, tt.revisionAt)
 			}
 		})
 	}

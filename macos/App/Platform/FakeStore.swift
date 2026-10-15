@@ -346,7 +346,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 sourceTypeID: sourceTypeID,
                 title: title,
                 description: description,
-                updatedRevision: rev
+                updated: CatalogActivity(revision: rev)
             )
             sourcesByProject[projectDir, default: []].append(source)
             return source
@@ -370,7 +370,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             list[idx].sourceTypeID = sourceTypeID
             list[idx].title = title
             list[idx].description = description
-            list[idx].updatedRevision = nextAuditRevision
+            list[idx].updated = CatalogActivity(revision: nextAuditRevision)
             nextAuditRevision += 1
             sourcesByProject[projectDir] = list
             return enrichCoverFields(list[idx])
@@ -405,7 +405,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             default:
                 throw StoreBoom.boom
             }
-            list[idx].updatedRevision = nextAuditRevision
+            list[idx].updated = CatalogActivity(revision: nextAuditRevision)
             nextAuditRevision += 1
             sourcesByProject[projectDir] = list
             return enrichCoverFields(list[idx])
@@ -3161,7 +3161,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         guard let sourceID else { return }
         for (project, var list) in sourcesByProject {
             guard let idx = list.firstIndex(where: { $0.id == sourceID }) else { continue }
-            list[idx].updatedRevision = nextAuditRevision
+            list[idx].updated = CatalogActivity(revision: nextAuditRevision)
             nextAuditRevision += 1
             sourcesByProject[project] = list
             return

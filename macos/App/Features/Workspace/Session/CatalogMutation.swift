@@ -66,9 +66,12 @@ struct CatalogWriteEffects: Sendable, Equatable {
     var vocabulary = false
     var structure = false
     var headerHandles: [String] = []
-    /// Handles whose last-updated time this write moved. The lists reload for
-    /// them; `touchedHandles` (detail pages) does not include them.
+    /// Handles whose last-updated time this write moved. The session patches
+    /// those rows in the cached lists with `activity`; `touchedHandles` (detail
+    /// pages) does not include them.
     var handleScopes: [String] = []
+    /// The write's own audit revision and time; revision 0 when it recorded none.
+    var activity = CatalogActivity()
 
     static let empty = CatalogWriteEffects()
 
