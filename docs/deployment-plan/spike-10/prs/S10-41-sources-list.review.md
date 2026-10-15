@@ -85,3 +85,7 @@ Disagreed with two round-1 answers: M-7's reason (corrected above) and “logged
 ## Verdict
 
 Done after two rounds. Plan: maintainability **Fits**, executability **Ready** (round-2 findings fixed). Brief: Fits with changes and Ready with changes in round 1, all fixed. No open blocker. One To user item. The plan stays **Blocked — on S10-22 and board S10-D8**; when both land, refresh per plan-pr and mark it Planned.
+
+## Board agreed (2026-10-15)
+
+The S10-D8 board matches SRL-1…SRL-10 with two changes, both answered by the user: the third status is labelled “Fully promoted” (the enum case stays `filed`), and the status chip takes the `.network` icon, because a `PVSelect` without an icon draws the field trigger instead of the toolbar chip (the board's kit note, true in `PVSelect.swift`). Plan D-19, §6 frames and Strings, ACs, and the manual check updated. The plan is now blocked only on S10-22.

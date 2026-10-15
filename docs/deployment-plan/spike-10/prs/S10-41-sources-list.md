@@ -1,11 +1,11 @@
 # S10-41 — Sources list: last updated, status filter, search, saved settings
 
-**Status:** Blocked — on S10-22 and board S10-D8
+**Status:** Blocked — on S10-22
 **Spike / slice:** Spike 10 · Slice 6 — Lists and the Person page
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#s10-41--sources-list)
-**Brief:** [S10-D8](../design/S10-D8-sources-list.md) (SRL-1…SRL-10), board not agreed yet
-**Board:** Claude Design project *Sources list* (project id and frame numbers recorded here when the board is agreed). §6 macOS describes every frame this PR ships in words. The implementer does not need the board.
-**Depends on:** S10-22 (in progress; adds `LastUpdatedDisplay`, `L10n.LastUpdated`, `PVSymbol.history`, and the `PVList` detail column), S10-D8
+**Brief:** [S10-D8](../design/S10-D8-sources-list.md) (SRL-1…SRL-10), board agreed 2026-10-15
+**Board:** Claude Design project *Sources list* (id 118d2eb7-3b46-4912-a688-09ec7b0070fa, file *S2-04 Sources list.dc.html*, section “S10-D8 enhancement” and frames S10-D8 1–8 with 7b). §6 macOS describes every frame this PR ships in words. The implementer does not need the board.
+**Depends on:** S10-22 (in progress; adds `LastUpdatedDisplay`, `L10n.LastUpdated`, `PVSymbol.history`, and the `PVList` detail column), S10-D8 (board agreed 2026-10-15)
 **Blocks:** —
 **Branch:** `s10-41-sources-list`
 **Version bump:** none — Spike 10 PRs leave `VERSION` at 0.2.0, and the product bump is cut when a release ships ([`docs/versioning.md`](../../../versioning.md))
@@ -51,9 +51,9 @@ The researcher can find a Source and see where it stands. Each Sources row shows
 
 | AC | Given / when | Then |
 | --- | --- | --- |
-| AC-2.1 | A Source with no person, event, or place subjects (a participation-only graph counts too) | Matches **Empty**, not In progress or Filed. |
+| AC-2.1 | A Source with no person, event, or place subjects (a participation-only graph counts too) | Matches **Empty**, not In progress or Fully promoted. |
 | AC-2.2 | A Source with one person subject and no accepted claim on it | Matches **In progress**. |
-| AC-2.3 | Promote that person (accepted Identity Claim) on the Promote page, return to Sources | The Source matches **Filed**, without relaunch. |
+| AC-2.3 | Promote that person (accepted Identity Claim) on the Promote page, return to Sources | The Source matches **Fully promoted**, without relaunch. |
 | AC-2.4 | A person with only a `provisional` claim | Counts as not filed: **In progress**. |
 | AC-2.5 | 200 Sources | `ListSourceGraphProgress` issues the same fixed number of queries as for 2 Sources (no per-row query). |
 | AC-2.6 | Status **Empty** set and the progress map not loaded yet | Below the toolbar, the first-load `ProgressView`, not the filter-empty state. If the progress load fails, a danger callout instead. |
@@ -73,7 +73,7 @@ The researcher can find a Source and see where it stands. Each Sources row shows
 
 | AC | Given / when | Then |
 | --- | --- | --- |
-| AC-4.1 | Set sort A–Z, type Census, status Filed, search `smith`; open a Source; press Back | All four are still set. |
+| AC-4.1 | Set sort A–Z, type Census, status Fully promoted, search `smith`; open a Source; press Back | All four are still set. |
 | AC-4.2 | Same settings; quit and relaunch | All four are still set. |
 | AC-4.3 | Saved type id was deleted since | Type reads All types; other settings restore. |
 | AC-4.4 | Two install users on one project, or one user on two projects | Each pair has its own settings. |
@@ -161,7 +161,7 @@ Verified at `832ccc2`. Rows marked **(S10-22)** describe what S10-22's plan adds
 | D-16 | `var isFiltering: Bool` *(new)*: `effectiveTypeFilterID` non-empty, or `settings.status` non-nil, or trimmed query non-empty. `countLine` uses the filtered form when `isFiltering` and `visible != total`; while `isAwaitingFilterData` or `statusCountsError != nil` it is the unfiltered `countLine(total:)`. `func clearFilters()` *(new)* sets `typeFilterID = ""`, `status = nil`, `query = ""` in one assignment to `settings`; sort unchanged. | SRL-6, SRL-7. | — |
 | D-17 | `var effectiveTypeFilterID: String` *(new)*: `settings.typeFilterID` when it is in `types`, else `""`. `var isAwaitingFilterData: Bool` *(new)*: (`settings.status != nil` and `graphCountsLoading`) or (`settings.typeFilterID` non-empty and the types handle has no value and is not `.error`). `var statusCountsError: Error?` *(new)*: the progress handle's `error` when `settings.status != nil` and the handle status is `.error`, else nil. `filterMenu`'s selection reads `effectiveTypeFilterID` and writes `settings.typeFilterID`. The stored id is overwritten only when the researcher changes the type or presses Clear filters. | AC-4.3 and SRL-8 without a flash of the empty state and without wiping a saved type while types load. | Ignoring the type until types load — the full list flashes, then narrows. Clearing an unknown id on load — a write the researcher did not make. |
 | D-18 | `SourcesListContent.listBody`, in order: `model.statusCountsError` → `PVCallout(tone: .danger, message: L10n.Errors.message(for: error))`, same padding and identifier pattern as `sources.loadError`, id `sources.statusError`; `model.isAwaitingFilterData` → the first-load `ProgressView`, no caption band; `visibleSources.isEmpty` → `PVEmptyState(icon: .filter, title: L10n.Sources.noFilterMatchesTitle, message: L10n.string(L10n.Sources.noFilterMatchesMessage), compact: true) { PVButton(L10n.Sources.clearFilters, variant: .secondary) { model.clearFilters() }.accessibilityIdentifier("sources.clearFilters") }`; else the list as today. The two `.onChange` handlers for `model.sort` and `model.typeFilterID` are replaced by one `.onChange(of: model.settings) { navigation.go(to: navigation.currentLocation.withListScrollAnchor(nil)) }`, which covers sort, type, status, search, and Clear filters. | SRL-7, SRL-8, SRL-10. | A separate “no search results” state — one state for every filter (brief). |
-| D-19 | Toolbar order: `searchField`, `filterMenu`, `statusMenu`, `sortMenu`, `Spacer(minLength: 0)`. `searchField` *(new)* is `PVInput(text: $model.settings.query, prompt: L10n.Sources.searchPrompt, icon: .search)` at the default `.md` size, `.frame(minWidth: 160, maxWidth: 280)`, identifier `sources.search`. `statusMenu` *(new)* is a `PVSelect` built like `sortMenu`: `selection: Binding(get: { model.settings.status?.rawValue ?? "" }, set: { model.settings.status = SourcesModel.EvidenceStatus(rawValue: $0) })`, options `""` → `L10n.string(L10n.Sources.statusAll)` then each case → `L10n.string($0.label)`, no `icon`, `menuWidth: 220`, `fillsWidth: false`, `accessibilityLabel: L10n.Sources.statusMenu`, identifiers `sources.status`, `sources.status.all`, `sources.status.<rawValue>`. | Brief SRL-3, SRL-4; the `sortMenu` binding shape. | A segmented control or chips (brief non-goal). |
+| D-19 | Toolbar order: `searchField`, `filterMenu`, `statusMenu`, `sortMenu`, `Spacer(minLength: 0)`. `searchField` *(new)* is `PVInput(text: $model.settings.query, prompt: L10n.Sources.searchPrompt, icon: .search)` at the default `.md` size, `.frame(minWidth: 160, maxWidth: 280)`, identifier `sources.search`. `statusMenu` *(new)* is a `PVSelect` built like `sortMenu`: `selection: Binding(get: { model.settings.status?.rawValue ?? "" }, set: { model.settings.status = SourcesModel.EvidenceStatus(rawValue: $0) })`, options `""` → `L10n.string(L10n.Sources.statusAll)` then each case → `L10n.string($0.label)`, `icon: .network` (the Evidence graph glyph; a `PVSelect` without an icon draws the field trigger, not the toolbar chip, `PVSelect.swift` `body`), `menuWidth: 220`, `fillsWidth: false`, `accessibilityLabel: L10n.Sources.statusMenu`, identifiers `sources.status`, `sources.status.all`, `sources.status.<rawValue>`. | Brief SRL-3, SRL-4; the `sortMenu` binding shape. | A segmented control or chips (brief non-goal). No icon — draws the field trigger beside two chips (board kit note). An iconless chip variant — a kit change for one call site. |
 | D-20 | `FakeStore` gets `private static let primaryTypeKeys: Set<String> = ["person", "event", "place"]` *(new)*. `graphProgress(for:projectDir:)` sets `primaryCount` to the subjects whose type key is in it (key only; the fake has no origin) and `filedCount` to 0, unless `graphProgressBySource` overrides. The four older literal sites in `FakeStore` are not changed. | One copy at the new site. | Editing the four older sites — outside this PR. |
 ## 6. Design
 
@@ -181,7 +181,7 @@ Verified at `832ccc2`. Rows marked **(S10-22)** describe what S10-22's plan adds
 | `SourcesListSettings`, `SourcesListSettingsStore`, `InstallPaths.sourcesListSettingsFile`, `InstallPaths.projectKey` *(new)* | struct / file / funcs | `NavigationHistoryStore`, `InstallPaths.navigationFile`, `navigationFileName` | Per-project JSON under Application Support, the documented home; `projectKey` is extracted from `navigationFileName`. |
 | `SourcesModel.settings`, `isFiltering`, `clearFilters`, `effectiveTypeFilterID`, `isAwaitingFilterData`, `statusCountsError` *(new)* | properties / funcs | `typeFilterID`, `sort`, `graphCountsLoading` | Same model; `settings` replaces `typeFilterID` and `sort`. |
 | `FakeStore.primaryTypeKeys` *(new)* | constant | four literal sites in `FakeStore` | One copy at the new site. |
-| `L10n.Sources.searchPrompt`, `statusAll`, `statusEmpty`, `statusInProgress`, `statusFiled`, `statusMenu`, `clearFilters` *(new)* | keys | `filterAllTypes`, `filterMenu` | Same namespace. |
+| `L10n.Sources.searchPrompt`, `statusAll`, `statusEmpty`, `statusInProgress`, `statusFullyPromoted`, `statusMenu`, `clearFilters` *(new)* | keys | `filterAllTypes`, `filterMenu` | Same namespace. |
 
 **Builds on.** `audit` scope reads (add-audit-scope), the `sourcegraphprogress` counts and their session cache key and patch path, `promote.PrimaryKind`, S10-22's `LastUpdatedDisplay` and `PVList` detail cell, the history file's Application Support home and project key, `PVInput` / `PVSelect` / `PVEmptyState`, the S10-40 anchor clearing.
 **Deletes.** `sources.sqlLatestRevision`; the correlated subquery in `sqlList`; `Source.UpdatedRevision`; `AttachLatestRevision`'s `> 0` shortcut; `CreateSource`'s `s.UpdatedRevision = res.Revision`; `sourcegraphprogress.sqlCountSubjectsBySource`, `sqlCountSubjectsOne`, `canvasTypeSQL`; `SourcesModel.typeFilterID` and `sort` as stored properties; the two `.onChange` handlers for sort and type; the `LastUpdatedDisplay` → `PVListDetail` mapping and the spoken join inside `ConclusionListRow` (moved to `Platform`); the `add-audit-scope` Read section's pointer to `sqlList` / `sqlLatestRevision`; the stale `sortUpdated` comment (“stand-in until audit timestamps surface”).
@@ -221,7 +221,7 @@ func LatestOf(q Querier, scopeType string, scopeID []byte) (Latest, error)
 | Settings | — | `macos/App/Features/Sources/SourcesListSettings.swift` *(new)*; `macos/App/Platform/InstallPaths.swift` | D-12. Add the new file to the App target and `macos/ProvenenciaTests/SourcesListSettingsTests.swift` to the test target in `project.pbxproj`, the four objects per file add-swift-test describes. |
 | Host | — | `WorkspaceDestinationHost.swift`, `WorkspaceNavigation.swift` | D-13. |
 
-Frames, in words (today 14 Oct 2026, Mountain Time; the board may adjust wording — see Stop conditions). **Times** — eight rows; in each filing zone, after the title over the type line, a 136pt column with the history icon and “Today, 3:15 PM”, “Today, 9:02 AM”, “Yesterday”, “12 Oct 2026”, “3 Mar 2025”, or a faint “—”, then the mono ref; the 248pt Evidence graph zone unchanged; count line “8 sources”. **Help** — “Last updated 13 Oct 2026 · 4:40 PM MDT” on hover. **Status menu** — All statuses, Empty, In progress, Filed; All checked. **Filtered** — In progress + Census → three rows, “3 of 8 sources”. **Search** — `smith` → two rows, “2 of 8 sources”. **Nothing matches** — toolbar stays; compact empty state “No matching sources” / “Try another filter, or clear them to see every source.” with a secondary Clear filters button. **Counting** — status set, counts not loaded → toolbar, then the first-load spinner, no caption band. **Counts failed** — status set, progress load errored → toolbar, then the danger callout. **Narrow** — title and type truncate; column, ref, graph zone, and the three selects keep width; search shrinks to its 160pt minimum.
+Frames, in words, from the agreed board (today 14 Oct 2026, Mountain Time; content host 1136px). **1 Times** — no filters, eight rows; in each filing zone the grid is thumb 44, title stack (flexible), the 136pt last-updated column (history icon 13pt, caption, muted), then the mono ref; “Today, 3:15 PM”, “Today, 9:02 AM”, “Yesterday”, “12 Oct 2026”, “3 Mar 2025”, and a faint “—” on the 1891 census, which has no revision; the 248pt Evidence graph zone with its count line is unchanged; count line “8 sources”. **2 Help** — hovering “Yesterday” shows “Last updated 13 Oct 2026 · 4:40 PM MDT” (native help on macOS). **3 Status menu** — the status chip (network icon) open over the list: All statuses (checked), Empty, In progress, Fully promoted. **4 Filtered** — In progress + Census schedule: three rows, graph zones show counts, “3 of 8 sources”. **5 Search** — `smith` matches two titles, “2 of 8 sources”. **6 Nothing matches** — Fully promoted + `zzz`: toolbar stays; compact `PVEmptyState` “No matching sources” / “Try another filter, or clear them to see every source.” with a secondary Clear filters button; count line “0 of 8 sources”. **7 Counting** — Empty set, counts not in: toolbar, then only the first-load spinner; no caption band, no empty state; count line “8 sources”. **7b Counts failed** — In progress set, counts unreadable: the page's load-error `PVCallout`. **8 Narrow** — 650px host: long title and type truncate; the 136pt column, the ref, and the 248pt graph zone hold; search is at its 160pt minimum; the three chips keep their size. Toolbar in every frame: search (280pt, shrinks to 160), type chip, status chip, sort chip, leading-aligned.
 
 States: empty catalog → unchanged `sources.empty`; load error → unchanged; counts error with a status set → `sources.statusError` callout (D-18); 1000 Sources → filtering and sorting are in-memory on the loaded array, one `LastUpdatedDisplay` per visible row in a `LazyVStack`. Accessibility: D-11; the search field's prompt is its label; the status select's `accessibilityLabel` is `L10n.Sources.statusMenu`.
 
@@ -235,10 +235,10 @@ L10n keys *(new)* in `L10n.Sources`, each with a `comment`, added to `Localizabl
 - `sources.list.status.all` = "All statuses"
 - `sources.list.status.empty` = "Empty"
 - `sources.list.status.inProgress` = "In progress"
-- `sources.list.status.filed` = "Filed"
+- `sources.list.status.fullyPromoted` = "Fully promoted" — every person, event, and place on the graph is promoted
 - `sources.list.clearFilters` = "Clear filters"
 
-`SourcesModel.EvidenceStatus.label` maps to the three status keys.
+`SourcesModel.EvidenceStatus.label` maps to the three status keys. The case stays `filed` (raw value `"filed"`, stored in settings); only its label reads “Fully promoted”.
 
 Changed: `sources.list.noFilterMatchesTitle` → "No matching sources"; `sources.list.noFilterMatchesMessage` → "Try another filter, or clear them to see every source."; both comments say they cover type, status, and search. `sources.list.sort.updated` comment → “Sources sort option: most recent work first (audit revision)”.
 
@@ -328,12 +328,12 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `c
 Use a project with at least eight Sources of two types: one with no subjects, one with an unpromoted person, one whose person is promoted, one with a note edited today.
 
 1. Open Sources. Each row shows the history icon and a time; the edited Source reads “Today,” and its time; hover shows “Last updated” and the full stamp (AC-1.1). A Source imported before scopes existed, if any, shows a faint “—”; VoiceOver on its filing zone ends “last updated unknown” (AC-1.2).
-2. Status → Empty: only the subject-less Source (AC-2.1). In progress: the unpromoted one (AC-2.2). Filed: the promoted one.
-3. Open the In progress Source's Promote page, file the person, go back to Sources (status still In progress): the Source is gone from the list; switch to Filed: it is there.
+2. Status → Empty: only the subject-less Source (AC-2.1). In progress: the unpromoted one (AC-2.2). Fully promoted: the promoted one.
+3. Open the In progress Source's Promote page, file the person, go back to Sources (status still In progress): the Source is gone from the list; switch to Fully promoted: it is there.
 4. Type part of a title, then part of a ref (AC-3.3), then a title without its accent (AC-3.2): rows narrow as you type; the count line reads “N of M sources”.
 5. Type `zzz`: the empty state shows Clear filters; press it: every row is back, the sort is unchanged.
 6. Scroll down, change status, then scroll down and type in search: each time the list jumps to the top (AC-4.5).
-7. Set sort A–Z, a type, Filed, and a query. Open a Source, press Back: all four are set. Quit and relaunch: all four are set.
+7. Set sort A–Z, a type, Fully promoted, and a query. Open a Source, press Back: all four are set. Quit and relaunch: all four are set.
 8. Edit a Source's note, open People, return to Sources: that row's time moved (AC-1.3). People shows no search, status, or type controls.
 9. In the diff, `sourcegraphprogress.List` runs a fixed set of grouped queries with no loop over Sources (AC-2.5).
 
