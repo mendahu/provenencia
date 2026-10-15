@@ -103,3 +103,15 @@ S10-22 ([#402](https://github.com/mendahu/provenencia/pull/402)) shipped the Sou
 | X-3 | major | Status line failed `check-plan-docs.py` | **Fixed.** |
 
 Verdict: maintainability Fits with changes, executability Ready with changes; all fixed, no blocker. Status **Planned**.
+
+## D-13 revision after the round-0 stop (2026-10-15)
+
+During ship-pr round 0, the implementer stopped on "`WorkspaceNavigation.projectUuid` is empty when the Sources list first mounts". `attachProject` ran only in `WorkspaceView.onAppear`, which comes after `WorkspaceDestinationHost` has built the seed Sources list. The user chose to attach the project in `WorkspaceView.init`. This revision rewrites D-13, adds a Project attach row to Current state and T-14, adds `WorkspaceView.swift` and `WorkspaceNavigationTests.swift` to STEP-3, and replaces the stop condition with two concrete ones. One reviewer in fresh context, limited to the diff: **Ready with changes**.
+
+| ID | Sev | Finding | Answer |
+| --- | --- | --- | --- |
+| F1 | major | If the attach runs after `onLocationCommit` is wired, every `WorkspaceView.init` starts session loads, throwaway re-inits included | **Fixed.** D-13 attaches before the hook is wired. `.onAppear` calls `session.apply(location: navigation.currentLocation)` in place of the attach. The rationale is corrected. |
+| F2 | minor | T-14 is under-specified (`.sourcesList` is not a location; `==` ignores the anchor; seeding is not stated) | **Fixed.** Seeding goes through `attachedNavigation()` + `go(to:)`, and the anchor is asserted explicitly. |
+| F3 | minor | The new stop conditions leave choices open | **Fixed.** Rephrased. The `print` is temporary and checked on both paths. |
+| F4 | nit | The `projectInfo` failure path, where the uuid is empty by design | **Fixed.** Covered in the Current state row. |
+| F5 | nit | When a throwaway store writes to disk | **Fixed.** Covered in the D-13 rationale. |
