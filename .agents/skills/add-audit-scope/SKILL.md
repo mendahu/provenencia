@@ -15,11 +15,17 @@ Every revision is tagged with the aggregates it worked on in `audit_transaction_
 is then one indexed `MAX(revision)`, which survives deletes. Design:
 [`docs/audit-revision-history.md`](../../../docs/audit-revision-history.md) § 4.1.
 
-Scopes are **derived inside `audit.Record`**, never passed by callers. `Record` stores
-source scopes from [`effects.Sources`](../../../core/database/effects/resolve.go). Today
-the only scope type is `source`: the Source row and everything under it (notes, metadata,
-layout, credibility, artifacts and their files, subjects, citations, observations, their notes
-and values).
+Scopes are **derived inside `audit.Record`**, never passed by callers. `Record` loops over
+`scopeResolvers` in `core/database/audit/scopes.go` and stores each id a resolver returns.
+There are two scope types:
+
+- `source`, from [`effects.Sources`](../../../core/database/effects/resolve.go): the Source
+  row and everything under it (notes, metadata, layout, credibility, artifacts and their
+  files, subjects, citations, observations, their notes and values).
+- `canonical_entity`, from `effects.HandleScopes` (the `Effect.HandleScope` path): work on a
+  Person, Event, or Place handle: its row, its claims and pins, and evidence on a member
+  Subject. It is separate from `Effect.Handles`, which is the recompute set and also fans out
+  on vocabulary, credibility, and uncertainty edits that are not work on the handle.
 
 ## New audited entity type (the common case)
 
@@ -41,6 +47,7 @@ Source scopes come from the effect's `Source` path, not a hand resolver.
 | Hangs off an artifact / citation / observation | `Source: up(...)` along that chain |
 | Referenced by another row (values, files) | `Source: chain(inbound(...), ...)` |
 | Vocabulary or conclusion layer | no `Source` path — a deliberate decision, not a default |
+| Work on a handle (claim, pin, member evidence) | `HandleScope: ...` along the chain to the handle id |
 
 ## Write changes so they resolve
 
@@ -62,22 +69,25 @@ JOIN audit_transactions t ON t.id = sc.audit_transaction_id
 WHERE sc.scope_type = 'source' AND sc.scope_id = ?
 ```
 
-See `sqlList` / `sqlLatestRevision` in `core/database/sources/sources.go`. Do **not** join
+See `sqlList` / `sqlLatestRevision` in `core/database/sources/sources.go`. For a list of
+many ids, `audit.LatestByScope(db, scopeType)` returns every id's latest revision and its time
+in one query. Do **not** join
 `audit_changes` on `entity_type = …` for this — it misses children and deletes.
 
 ## New scope type
 
-1. Add a const next to `ScopeSource` in `scopes.go`.
-2. Teach `Record` to store it from the effect set (one change may yield several scopes).
-   Revisit each effect that has no `Source` path on purpose.
-3. Read it with the query above.
+1. Add a const next to `ScopeSource` in `scopes.go`, and a row in `scopeResolvers`.
+2. Add an `Effect` path field (as `HandleScope` is), listed in `Effect.paths`, with a
+   resolver beside `effects.Sources`. One change may yield several scopes. Revisit each
+   effect that has no path on purpose.
+3. Read it with `audit.LatestByScope` for a list, or the query above for one aggregate.
 4. Backfill existing history with `INSERT OR IGNORE … SELECT` in the next migration
    ([`add-catalog-migration`](../add-catalog-migration/SKILL.md); `000036.sql` is the
    pattern). Per that skill, **no migration test** — test the effect path.
 
 ## Tests (table-driven)
 
-- Stored source scopes match `effects.Sources`:
+- Stored scopes of each type match their resolver (`audit.ScopeResolvers`):
   `core/database/audit/scopes_effects_test.go`.
 - End to end — real write path, then "only its owner's revision moved":
   `core/database/audit/scopes_test.go`.
@@ -89,4 +99,5 @@ See `sqlList` / `sqlLatestRevision` in `core/database/sources/sources.go`. Do **
 - Scope conclusion-layer work (identity claims, evidence pins, canonical entities, promote) to a
   Source — decided: it does not move a Source's "Updated" revision
 - Drop a parent id from a delete change to "keep the diff small"
-- Add a hand-written resolver map in `scopes.go`. A recorded entity is a non-`None` effect.
+- Add a hand-written resolver map in `scopes.go`. A recorded entity is a non-`None` effect
+  (`scopeResolvers` lists scope types, one row each; it is not an entity map).

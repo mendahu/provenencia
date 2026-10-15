@@ -12,6 +12,7 @@ package conclusionheaders
 import (
 	"database/sql"
 
+	"github.com/mendahu/provenencia/core/database/audit"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/namevalues"
@@ -36,6 +37,9 @@ type PersonHeader struct {
 	// death event. Places are folded location chains at the event's date.
 	Birth LifeFacts
 	Death LifeFacts
+	// Updated is the handle's latest canonical_entity revision and its time.
+	// Filled by List only; zero means none.
+	Updated audit.Latest
 }
 
 // LifeFacts is a birth or a death composed from the canonical graph.

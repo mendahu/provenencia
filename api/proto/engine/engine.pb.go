@@ -9130,8 +9130,13 @@ type PersonHeader struct {
 	NameValueCount int32                  `protobuf:"varint,3,opt,name=name_value_count,json=nameValueCount,proto3" json:"name_value_count,omitempty"`
 	Birth          *LifeFacts             `protobuf:"bytes,4,opt,name=birth,proto3" json:"birth,omitempty"`
 	Death          *LifeFacts             `protobuf:"bytes,5,opt,name=death,proto3" json:"death,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// updated_revision is the latest canonical_entity audit revision (0 = none);
+	// updated_at is its RFC3339 UTC time, empty when 0. Filled on the
+	// List*Headers responses only.
+	UpdatedRevision int64  `protobuf:"varint,6,opt,name=updated_revision,json=updatedRevision,proto3" json:"updated_revision,omitempty"`
+	UpdatedAt       string `protobuf:"bytes,7,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *PersonHeader) Reset() {
@@ -9197,6 +9202,20 @@ func (x *PersonHeader) GetDeath() *LifeFacts {
 		return x.Death
 	}
 	return nil
+}
+
+func (x *PersonHeader) GetUpdatedRevision() int64 {
+	if x != nil {
+		return x.UpdatedRevision
+	}
+	return 0
+}
+
+func (x *PersonHeader) GetUpdatedAt() string {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return ""
 }
 
 // ListPersonHeaders returns every unmerged Person in list order: by the title
@@ -9315,9 +9334,14 @@ type EventHeader struct {
 	Subjects []*EventSubject `protobuf:"bytes,12,rep,name=subjects,proto3" json:"subjects,omitempty"`
 	Places   []*HeaderPlace  `protobuf:"bytes,13,rep,name=places,proto3" json:"places,omitempty"`
 	// title is the naming-matrix rule Go chose and the parts it reads.
-	Title         *EventTitle `protobuf:"bytes,14,opt,name=title,proto3" json:"title,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Title *EventTitle `protobuf:"bytes,14,opt,name=title,proto3" json:"title,omitempty"`
+	// updated_revision is the latest canonical_entity audit revision (0 = none);
+	// updated_at is its RFC3339 UTC time, empty when 0. Filled on the
+	// List*Headers responses only.
+	UpdatedRevision int64  `protobuf:"varint,15,opt,name=updated_revision,json=updatedRevision,proto3" json:"updated_revision,omitempty"`
+	UpdatedAt       string `protobuf:"bytes,16,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *EventHeader) Reset() {
@@ -9446,6 +9470,20 @@ func (x *EventHeader) GetTitle() *EventTitle {
 		return x.Title
 	}
 	return nil
+}
+
+func (x *EventHeader) GetUpdatedRevision() int64 {
+	if x != nil {
+		return x.UpdatedRevision
+	}
+	return 0
+}
+
+func (x *EventHeader) GetUpdatedAt() string {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return ""
 }
 
 // ListEventHeaders returns every unmerged Event in list order: dated
@@ -9638,8 +9676,13 @@ type PlaceHeader struct {
 	Contains             []*PlaceRelationship   `protobuf:"bytes,9,rep,name=contains,proto3" json:"contains,omitempty"`
 	Predecessors         []*PlaceRelationship   `protobuf:"bytes,10,rep,name=predecessors,proto3" json:"predecessors,omitempty"`
 	Successors           []*PlaceRelationship   `protobuf:"bytes,11,rep,name=successors,proto3" json:"successors,omitempty"`
-	unknownFields        protoimpl.UnknownFields
-	sizeCache            protoimpl.SizeCache
+	// updated_revision is the latest canonical_entity audit revision (0 = none);
+	// updated_at is its RFC3339 UTC time, empty when 0. Filled on the
+	// List*Headers responses only.
+	UpdatedRevision int64  `protobuf:"varint,12,opt,name=updated_revision,json=updatedRevision,proto3" json:"updated_revision,omitempty"`
+	UpdatedAt       string `protobuf:"bytes,13,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *PlaceHeader) Reset() {
@@ -9747,6 +9790,20 @@ func (x *PlaceHeader) GetSuccessors() []*PlaceRelationship {
 		return x.Successors
 	}
 	return nil
+}
+
+func (x *PlaceHeader) GetUpdatedRevision() int64 {
+	if x != nil {
+		return x.UpdatedRevision
+	}
+	return 0
+}
+
+func (x *PlaceHeader) GetUpdatedAt() string {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return ""
 }
 
 // ListPlaceHeaders returns every unmerged Place in list order: by the title
@@ -17532,18 +17589,21 @@ const file_engine_proto_rawDesc = "" +
 	"\fEventSubject\x12>\n" +
 	"\x06entity\x18\x01 \x01(\v2&.provenencia.engine.v1.CanonicalEntityR\x06entity\x129\n" +
 	"\x04name\x18\x02 \x01(\v2%.provenencia.engine.v1.NameValueInputR\x04name\x12(\n" +
-	"\x10name_value_count\x18\x03 \x01(\x05R\x0enameValueCount\"\xa3\x02\n" +
+	"\x10name_value_count\x18\x03 \x01(\x05R\x0enameValueCount\"\xed\x02\n" +
 	"\fPersonHeader\x12>\n" +
 	"\x06entity\x18\x01 \x01(\v2&.provenencia.engine.v1.CanonicalEntityR\x06entity\x129\n" +
 	"\x04name\x18\x02 \x01(\v2%.provenencia.engine.v1.NameValueInputR\x04name\x12(\n" +
 	"\x10name_value_count\x18\x03 \x01(\x05R\x0enameValueCount\x126\n" +
 	"\x05birth\x18\x04 \x01(\v2 .provenencia.engine.v1.LifeFactsR\x05birth\x126\n" +
-	"\x05death\x18\x05 \x01(\v2 .provenencia.engine.v1.LifeFactsR\x05death\";\n" +
+	"\x05death\x18\x05 \x01(\v2 .provenencia.engine.v1.LifeFactsR\x05death\x12)\n" +
+	"\x10updated_revision\x18\x06 \x01(\x03R\x0fupdatedRevision\x12\x1d\n" +
+	"\n" +
+	"updated_at\x18\a \x01(\tR\tupdatedAt\";\n" +
 	"\x18ListPersonHeadersRequest\x12\x1f\n" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
 	"projectDir\"Z\n" +
 	"\x19ListPersonHeadersResponse\x12=\n" +
-	"\aheaders\x18\x01 \x03(\v2#.provenencia.engine.v1.PersonHeaderR\aheaders\"\xee\x05\n" +
+	"\aheaders\x18\x01 \x03(\v2#.provenencia.engine.v1.PersonHeaderR\aheaders\"\xb8\x06\n" +
 	"\vEventHeader\x12>\n" +
 	"\x06entity\x18\x01 \x01(\v2&.provenencia.engine.v1.CanonicalEntityR\x06entity\x12\x1d\n" +
 	"\n" +
@@ -17563,7 +17623,10 @@ const file_engine_proto_rawDesc = "" +
 	"\x0eend_date_count\x18\v \x01(\x05R\fendDateCount\x12?\n" +
 	"\bsubjects\x18\f \x03(\v2#.provenencia.engine.v1.EventSubjectR\bsubjects\x12:\n" +
 	"\x06places\x18\r \x03(\v2\".provenencia.engine.v1.HeaderPlaceR\x06places\x127\n" +
-	"\x05title\x18\x0e \x01(\v2!.provenencia.engine.v1.EventTitleR\x05title\":\n" +
+	"\x05title\x18\x0e \x01(\v2!.provenencia.engine.v1.EventTitleR\x05title\x12)\n" +
+	"\x10updated_revision\x18\x0f \x01(\x03R\x0fupdatedRevision\x12\x1d\n" +
+	"\n" +
+	"updated_at\x18\x10 \x01(\tR\tupdatedAt\":\n" +
 	"\x17ListEventHeadersRequest\x12\x1f\n" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
 	"projectDir\"X\n" +
@@ -17575,7 +17638,7 @@ const file_engine_proto_rawDesc = "" +
 	"\x04kind\x18\x03 \x01(\tR\x04kind\x12D\n" +
 	"\n" +
 	"start_date\x18\x04 \x01(\v2%.provenencia.engine.v1.DateValueInputR\tstartDate\x12@\n" +
-	"\bend_date\x18\x05 \x01(\v2%.provenencia.engine.v1.DateValueInputR\aendDate\"\xf0\x04\n" +
+	"\bend_date\x18\x05 \x01(\v2%.provenencia.engine.v1.DateValueInputR\aendDate\"\xba\x05\n" +
 	"\vPlaceHeader\x12>\n" +
 	"\x06entity\x18\x01 \x01(\v2&.provenencia.engine.v1.CanonicalEntityR\x06entity\x12\x14\n" +
 	"\x05names\x18\x02 \x03(\tR\x05names\x12D\n" +
@@ -17591,7 +17654,10 @@ const file_engine_proto_rawDesc = "" +
 	" \x03(\v2(.provenencia.engine.v1.PlaceRelationshipR\fpredecessors\x12H\n" +
 	"\n" +
 	"successors\x18\v \x03(\v2(.provenencia.engine.v1.PlaceRelationshipR\n" +
-	"successors\":\n" +
+	"successors\x12)\n" +
+	"\x10updated_revision\x18\f \x01(\x03R\x0fupdatedRevision\x12\x1d\n" +
+	"\n" +
+	"updated_at\x18\r \x01(\tR\tupdatedAt\":\n" +
 	"\x17ListPlaceHeadersRequest\x12\x1f\n" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
 	"projectDir\"X\n" +

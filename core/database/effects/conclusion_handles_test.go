@@ -261,6 +261,13 @@ func TestConclusionHandleSets(t *testing.T) {
 		}
 		want := append([][]byte{entity.ID}, obs...)
 		covers(got, want)
+		scoped := mustHandleScopes(t, tx.Tx, changes...)
+		if !idSet(scoped, entity.ID) {
+			t.Fatalf("claim scoped %d handles", len(scoped))
+		}
+		if idSet(scoped, adaPromoted.Entity.ID) {
+			t.Fatal("claim scope reached the observer handle")
+		}
 	})
 
 	t.Run("join covers the existing handle", func(t *testing.T) {
@@ -391,6 +398,9 @@ func TestConclusionHandleSets(t *testing.T) {
 		if !sameIDs(got, want) {
 			t.Fatalf("grade handles %d, source set %d", len(got), len(want))
 		}
+		if scoped := mustHandleScopes(t, tx.Tx, changes...); len(scoped) != 0 {
+			t.Fatalf("grade change scoped %d handles", len(scoped))
+		}
 	})
 
 	t.Run("argument only resolves no handles", func(t *testing.T) {
@@ -440,6 +450,17 @@ func TestConclusionHandleSets(t *testing.T) {
 		}
 		if !sameIDs(got, want) {
 			t.Fatalf("cardinality handles %d, property set %d", len(got), len(want))
+		}
+		scoped := mustHandleScopes(t, tx.Tx, rowchange.Change{
+			EntityType: "property",
+			EntityID:   append([]byte(nil), nameProp.ID...),
+			Action:     rowchange.ActionUpdate,
+			Fields: map[string]rowchange.FieldDiff{
+				"cardinality": {Old: properties.CardinalitySingle, New: properties.CardinalityMultiple},
+			},
+		})
+		if len(scoped) != 0 {
+			t.Fatalf("cardinality scoped %d handles", len(scoped))
 		}
 	})
 

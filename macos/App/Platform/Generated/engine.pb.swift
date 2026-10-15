@@ -3645,6 +3645,19 @@ public nonisolated struct Provenencia_Engine_V1_PersonHeader: @unchecked Sendabl
   /// Clears the value of `death`. Subsequent reads from it will return its default value.
   public mutating func clearDeath() {_uniqueStorage()._death = nil}
 
+  /// updated_revision is the latest canonical_entity audit revision (0 = none);
+  /// updated_at is its RFC3339 UTC time, empty when 0. Filled on the
+  /// List*Headers responses only.
+  public var updatedRevision: Int64 {
+    get {_storage._updatedRevision}
+    set {_uniqueStorage()._updatedRevision = newValue}
+  }
+
+  public var updatedAt: String {
+    get {_storage._updatedAt}
+    set {_uniqueStorage()._updatedAt = newValue}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -3788,6 +3801,19 @@ public nonisolated struct Provenencia_Engine_V1_EventHeader: @unchecked Sendable
   /// Clears the value of `title`. Subsequent reads from it will return its default value.
   public mutating func clearTitle() {_uniqueStorage()._title = nil}
 
+  /// updated_revision is the latest canonical_entity audit revision (0 = none);
+  /// updated_at is its RFC3339 UTC time, empty when 0. Filled on the
+  /// List*Headers responses only.
+  public var updatedRevision: Int64 {
+    get {_storage._updatedRevision}
+    set {_uniqueStorage()._updatedRevision = newValue}
+  }
+
+  public var updatedAt: String {
+    get {_storage._updatedAt}
+    set {_uniqueStorage()._updatedAt = newValue}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -3924,6 +3950,13 @@ public nonisolated struct Provenencia_Engine_V1_PlaceHeader: Sendable {
   public var predecessors: [Provenencia_Engine_V1_PlaceRelationship] = []
 
   public var successors: [Provenencia_Engine_V1_PlaceRelationship] = []
+
+  /// updated_revision is the latest canonical_entity audit revision (0 = none);
+  /// updated_at is its RFC3339 UTC time, empty when 0. Filled on the
+  /// List*Headers responses only.
+  public var updatedRevision: Int64 = 0
+
+  public var updatedAt: String = String()
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -12512,7 +12545,7 @@ nonisolated extension Provenencia_Engine_V1_EventSubject: SwiftProtobuf.Message,
 
 nonisolated extension Provenencia_Engine_V1_PersonHeader: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".PersonHeader"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}entity\0\u{1}name\0\u{3}name_value_count\0\u{1}birth\0\u{1}death\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}entity\0\u{1}name\0\u{3}name_value_count\0\u{1}birth\0\u{1}death\0\u{3}updated_revision\0\u{3}updated_at\0")
 
   fileprivate class _StorageClass {
     var _entity: Provenencia_Engine_V1_CanonicalEntity? = nil
@@ -12520,6 +12553,8 @@ nonisolated extension Provenencia_Engine_V1_PersonHeader: SwiftProtobuf.Message,
     var _nameValueCount: Int32 = 0
     var _birth: Provenencia_Engine_V1_LifeFacts? = nil
     var _death: Provenencia_Engine_V1_LifeFacts? = nil
+    var _updatedRevision: Int64 = 0
+    var _updatedAt: String = String()
 
       // This property is used as the initial default value for new instances of the type.
       // The type itself is protecting the reference to its storage via CoW semantics.
@@ -12535,6 +12570,8 @@ nonisolated extension Provenencia_Engine_V1_PersonHeader: SwiftProtobuf.Message,
       _nameValueCount = source._nameValueCount
       _birth = source._birth
       _death = source._death
+      _updatedRevision = source._updatedRevision
+      _updatedAt = source._updatedAt
     }
   }
 
@@ -12558,6 +12595,8 @@ nonisolated extension Provenencia_Engine_V1_PersonHeader: SwiftProtobuf.Message,
         case 3: try { try decoder.decodeSingularInt32Field(value: &_storage._nameValueCount) }()
         case 4: try { try decoder.decodeSingularMessageField(value: &_storage._birth) }()
         case 5: try { try decoder.decodeSingularMessageField(value: &_storage._death) }()
+        case 6: try { try decoder.decodeSingularInt64Field(value: &_storage._updatedRevision) }()
+        case 7: try { try decoder.decodeSingularStringField(value: &_storage._updatedAt) }()
         default: break
         }
       }
@@ -12585,6 +12624,12 @@ nonisolated extension Provenencia_Engine_V1_PersonHeader: SwiftProtobuf.Message,
       try { if let v = _storage._death {
         try visitor.visitSingularMessageField(value: v, fieldNumber: 5)
       } }()
+      if _storage._updatedRevision != 0 {
+        try visitor.visitSingularInt64Field(value: _storage._updatedRevision, fieldNumber: 6)
+      }
+      if !_storage._updatedAt.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._updatedAt, fieldNumber: 7)
+      }
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -12599,6 +12644,8 @@ nonisolated extension Provenencia_Engine_V1_PersonHeader: SwiftProtobuf.Message,
         if _storage._nameValueCount != rhs_storage._nameValueCount {return false}
         if _storage._birth != rhs_storage._birth {return false}
         if _storage._death != rhs_storage._death {return false}
+        if _storage._updatedRevision != rhs_storage._updatedRevision {return false}
+        if _storage._updatedAt != rhs_storage._updatedAt {return false}
         return true
       }
       if !storagesAreEqual {return false}
@@ -12670,7 +12717,7 @@ nonisolated extension Provenencia_Engine_V1_ListPersonHeadersResponse: SwiftProt
 
 nonisolated extension Provenencia_Engine_V1_EventHeader: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".EventHeader"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}entity\0\u{3}event_name\0\u{3}event_name_count\0\u{3}event_type\0\u{3}event_type_count\0\u{1}date\0\u{3}date_count\0\u{3}start_date\0\u{3}start_date_count\0\u{3}end_date\0\u{3}end_date_count\0\u{1}subjects\0\u{1}places\0\u{1}title\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}entity\0\u{3}event_name\0\u{3}event_name_count\0\u{3}event_type\0\u{3}event_type_count\0\u{1}date\0\u{3}date_count\0\u{3}start_date\0\u{3}start_date_count\0\u{3}end_date\0\u{3}end_date_count\0\u{1}subjects\0\u{1}places\0\u{1}title\0\u{3}updated_revision\0\u{3}updated_at\0")
 
   fileprivate class _StorageClass {
     var _entity: Provenencia_Engine_V1_CanonicalEntity? = nil
@@ -12687,6 +12734,8 @@ nonisolated extension Provenencia_Engine_V1_EventHeader: SwiftProtobuf.Message, 
     var _subjects: [Provenencia_Engine_V1_EventSubject] = []
     var _places: [Provenencia_Engine_V1_HeaderPlace] = []
     var _title: Provenencia_Engine_V1_EventTitle? = nil
+    var _updatedRevision: Int64 = 0
+    var _updatedAt: String = String()
 
       // This property is used as the initial default value for new instances of the type.
       // The type itself is protecting the reference to its storage via CoW semantics.
@@ -12711,6 +12760,8 @@ nonisolated extension Provenencia_Engine_V1_EventHeader: SwiftProtobuf.Message, 
       _subjects = source._subjects
       _places = source._places
       _title = source._title
+      _updatedRevision = source._updatedRevision
+      _updatedAt = source._updatedAt
     }
   }
 
@@ -12743,6 +12794,8 @@ nonisolated extension Provenencia_Engine_V1_EventHeader: SwiftProtobuf.Message, 
         case 12: try { try decoder.decodeRepeatedMessageField(value: &_storage._subjects) }()
         case 13: try { try decoder.decodeRepeatedMessageField(value: &_storage._places) }()
         case 14: try { try decoder.decodeSingularMessageField(value: &_storage._title) }()
+        case 15: try { try decoder.decodeSingularInt64Field(value: &_storage._updatedRevision) }()
+        case 16: try { try decoder.decodeSingularStringField(value: &_storage._updatedAt) }()
         default: break
         }
       }
@@ -12797,6 +12850,12 @@ nonisolated extension Provenencia_Engine_V1_EventHeader: SwiftProtobuf.Message, 
       try { if let v = _storage._title {
         try visitor.visitSingularMessageField(value: v, fieldNumber: 14)
       } }()
+      if _storage._updatedRevision != 0 {
+        try visitor.visitSingularInt64Field(value: _storage._updatedRevision, fieldNumber: 15)
+      }
+      if !_storage._updatedAt.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._updatedAt, fieldNumber: 16)
+      }
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -12820,6 +12879,8 @@ nonisolated extension Provenencia_Engine_V1_EventHeader: SwiftProtobuf.Message, 
         if _storage._subjects != rhs_storage._subjects {return false}
         if _storage._places != rhs_storage._places {return false}
         if _storage._title != rhs_storage._title {return false}
+        if _storage._updatedRevision != rhs_storage._updatedRevision {return false}
+        if _storage._updatedAt != rhs_storage._updatedAt {return false}
         return true
       }
       if !storagesAreEqual {return false}
@@ -12945,7 +13006,7 @@ nonisolated extension Provenencia_Engine_V1_PlaceRelationship: SwiftProtobuf.Mes
 
 nonisolated extension Provenencia_Engine_V1_PlaceHeader: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".PlaceHeader"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}entity\0\u{1}names\0\u{3}start_date\0\u{3}end_date\0\u{1}kind\0\u{1}parents\0\u{3}parents_are_candidates\0\u{3}part_of\0\u{1}contains\0\u{1}predecessors\0\u{1}successors\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}entity\0\u{1}names\0\u{3}start_date\0\u{3}end_date\0\u{1}kind\0\u{1}parents\0\u{3}parents_are_candidates\0\u{3}part_of\0\u{1}contains\0\u{1}predecessors\0\u{1}successors\0\u{3}updated_revision\0\u{3}updated_at\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -12964,6 +13025,8 @@ nonisolated extension Provenencia_Engine_V1_PlaceHeader: SwiftProtobuf.Message, 
       case 9: try { try decoder.decodeRepeatedMessageField(value: &self.contains) }()
       case 10: try { try decoder.decodeRepeatedMessageField(value: &self.predecessors) }()
       case 11: try { try decoder.decodeRepeatedMessageField(value: &self.successors) }()
+      case 12: try { try decoder.decodeSingularInt64Field(value: &self.updatedRevision) }()
+      case 13: try { try decoder.decodeSingularStringField(value: &self.updatedAt) }()
       default: break
       }
     }
@@ -13007,6 +13070,12 @@ nonisolated extension Provenencia_Engine_V1_PlaceHeader: SwiftProtobuf.Message, 
     if !self.successors.isEmpty {
       try visitor.visitRepeatedMessageField(value: self.successors, fieldNumber: 11)
     }
+    if self.updatedRevision != 0 {
+      try visitor.visitSingularInt64Field(value: self.updatedRevision, fieldNumber: 12)
+    }
+    if !self.updatedAt.isEmpty {
+      try visitor.visitSingularStringField(value: self.updatedAt, fieldNumber: 13)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -13022,6 +13091,8 @@ nonisolated extension Provenencia_Engine_V1_PlaceHeader: SwiftProtobuf.Message, 
     if lhs.contains != rhs.contains {return false}
     if lhs.predecessors != rhs.predecessors {return false}
     if lhs.successors != rhs.successors {return false}
+    if lhs.updatedRevision != rhs.updatedRevision {return false}
+    if lhs.updatedAt != rhs.updatedAt {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

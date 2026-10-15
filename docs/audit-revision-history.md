@@ -327,9 +327,14 @@ CREATE TABLE audit_transaction_scopes (
 ) STRICT;
 ```
 
-Scopes are derived inside `audit.Record`, not passed by callers. `Record` stores source scopes from `effects.Sources`, which walks each change through its effect path using the change's own fields, the live row, or — for parents deleted in the same revision — the old values of that parent's delete change. `Record` rejects an entity type that is not a non-`None` effect, and a test fails if an audited type lacks one.
+Scopes are derived inside `audit.Record`, not passed by callers. `Record` stores one scope row per id each `scopeResolvers` entry resolves. Each resolver walks a change through its effect path using the change's own fields, the live row, or — for parents deleted in the same revision — the old values of that parent's delete change. `Record` rejects an entity type that is not a non-`None` effect, and a test fails if an audited type lacks one.
 
-Today the only scope type is `source`: a Source's row and everything under it (notes, metadata, layout, credibility, artifacts and their files, subjects, citations, observations, their notes and values). It drives the Sources list "Updated" sort. Vocabulary and conclusion-layer changes (identity claims, evidence pins, canonical entities) carry no Source scope. A new scope type is one effect path plus a backfill migration.
+There are two scope types, both from `scopeResolvers`:
+
+- `source`, from `effects.Sources`: a Source's row and everything under it (notes, metadata, layout, credibility, artifacts and their files, subjects, citations, observations, their notes and values). It drives the Sources list "Updated" sort.
+- `canonical_entity`, from `effects.HandleScopes`: work on a Person, Event, or Place handle. It covers the handle's own row, its identity claims and evidence pins, and evidence on a member Subject (its Observations and their date and name values and notes). `audit.LatestByScope` reads it for the People, Events, and Places lists.
+
+Vocabulary and conclusion-layer changes (identity claims, evidence pins, canonical entities) still carry no Source scope; the handle scope is additional. A new scope type is one `scopeResolvers` row, one effect path field, and a backfill migration.
 
 ---
 

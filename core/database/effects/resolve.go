@@ -35,6 +35,11 @@ func Handles(tx *sql.Tx, changes []rowchange.Change) ([][]byte, error) {
 	return resolve(tx, changes, func(e Effect) Path { return e.Handles })
 }
 
+// HandleScopes resolves the handles whose canonical_entity audit scope a batch moves.
+func HandleScopes(tx *sql.Tx, changes []rowchange.Change) ([][]byte, error) {
+	return resolve(tx, changes, func(e Effect) Path { return e.HandleScope })
+}
+
 // WithoutNone drops changes whose effect is None. An unknown entity type is
 // an error. Run records and resolves the result, so a position written beside
 // an audited row is stored with that revision and is not recorded.

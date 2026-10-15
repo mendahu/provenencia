@@ -8,6 +8,7 @@ import (
 
 	"github.com/mendahu/provenencia/core/autoreconcile"
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/audit"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/graphcache"
@@ -181,7 +182,29 @@ func toponyms(n *graphcache.Node, propID []byte) []string {
 
 // ListPersons returns every unmerged Person's header in list order.
 func ListPersons(c *database.Catalog) ([]PersonHeader, error) {
-	return persons(c.Graph(), nil, true, true)
+	out, err := persons(c.Graph(), nil, true, true)
+	if err != nil {
+		return nil, err
+	}
+	latest, err := latestHandles(c)
+	if err != nil {
+		return nil, err
+	}
+	for i := range out {
+		out[i].Updated = latest[string(out[i].Entity.ID)]
+	}
+	return out, nil
+}
+
+// latestHandles reads every handle's newest canonical_entity revision. The
+// lists fill it onto the rows they return; the display cache never holds it,
+// because a note edit moves the scope without dropping the cached row.
+func latestHandles(c *database.Catalog) (map[string]audit.Latest, error) {
+	db, err := c.DB()
+	if err != nil {
+		return nil, err
+	}
+	return audit.LatestByScope(db, audit.ScopeCanonicalEntity)
 }
 
 // PersonsByIDs returns the headers of the given unmerged Persons in list
@@ -229,7 +252,18 @@ func persons(g *graphcache.Graph, ids [][]byte, all, store bool) ([]PersonHeader
 
 // ListEvents returns every unmerged Event's header in list order.
 func ListEvents(c *database.Catalog) ([]EventHeader, error) {
-	return events(c.Graph(), nil, true, true)
+	out, err := events(c.Graph(), nil, true, true)
+	if err != nil {
+		return nil, err
+	}
+	latest, err := latestHandles(c)
+	if err != nil {
+		return nil, err
+	}
+	for i := range out {
+		out[i].Updated = latest[string(out[i].Entity.ID)]
+	}
+	return out, nil
 }
 
 // EventsByIDs returns the headers of the given unmerged Events in list order.
@@ -288,7 +322,18 @@ func events(g *graphcache.Graph, ids [][]byte, all, store bool) ([]EventHeader, 
 
 // ListPlaces returns every unmerged Place's header in list order.
 func ListPlaces(c *database.Catalog) ([]PlaceHeader, error) {
-	return places(c.Graph(), nil, true, true)
+	out, err := places(c.Graph(), nil, true, true)
+	if err != nil {
+		return nil, err
+	}
+	latest, err := latestHandles(c)
+	if err != nil {
+		return nil, err
+	}
+	for i := range out {
+		out[i].Updated = latest[string(out[i].Entity.ID)]
+	}
+	return out, nil
 }
 
 // PlacesByIDs returns the headers of the given unmerged Places in list order.
