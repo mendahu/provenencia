@@ -29,13 +29,6 @@ var scopeResolvers = []struct {
 	{ScopeCanonicalEntity, effects.HandleScopes},
 }
 
-// Scope is one aggregate a revision touched. Record fills these from
-// scopeResolvers.
-type Scope struct {
-	Type string
-	ID   []byte
-}
-
 const sqlLatestByScope = `SELECT sc.scope_id, MAX(t.revision), t.created_at
 	FROM audit_transaction_scopes sc
 	JOIN audit_transactions t ON t.id = sc.audit_transaction_id
