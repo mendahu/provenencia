@@ -209,6 +209,25 @@ func (s scopeSeed) promote(t *testing.T, subject subjects.Subject) []byte {
 	return res.Entity.ID
 }
 
+func (s scopeSeed) updateObservation(t *testing.T, in observations.Input) {
+	t.Helper()
+	if _, err := writes.Call(s.c, writes.Op{Action: "update_observation", UserID: scopeUserID}, func(tx *database.Tx) (observations.Listed, []rowchange.Change, error) {
+		return observations.Update(tx, scopeUserID, in)
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func (s scopeSeed) deleteObservation(t *testing.T, id []byte) {
+	t.Helper()
+	if _, err := writes.Call(s.c, writes.Op{Action: "delete_observation", UserID: scopeUserID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+		changes, err := observations.Delete(tx, scopeUserID, id)
+		return struct{}{}, changes, err
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
+
 // handleRevision is the handle's latest canonical_entity revision, 0 for none.
 func (s scopeSeed) handleRevision(t *testing.T, id []byte) int64 {
 	t.Helper()
@@ -352,32 +371,18 @@ func TestSourceScopes(t *testing.T) {
 					added = got
 				})
 				s.bumpsA(t, func() {
-					if _, err := writes.Call(s.c, writes.Op{Action: "update_observation", UserID: scopeUserID}, func(tx *database.Tx) (observations.Listed, []rowchange.Change, error) {
-						return observations.Update(tx, scopeUserID, observations.Input{
-							ID: added[0].ID, SubjectID: s.place2.ID, PropertyID: s.toponymProp.ID,
-							ValueText: "Salem Town", HasText: true,
-						})
-					}); err != nil {
-						t.Fatal(err)
-					}
+					s.updateObservation(t, observations.Input{
+						ID: added[0].ID, SubjectID: s.place2.ID, PropertyID: s.toponymProp.ID,
+						ValueText: "Salem Town", HasText: true,
+					})
 				})
 				// Deleting an observation releases its notes first; the
 				// note's change resolves through the deleted observation.
 				s.bumpsA(t, func() {
-					if _, err := writes.Call(s.c, writes.Op{Action: "delete_observation", UserID: scopeUserID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
-						changes, err := observations.Delete(tx, scopeUserID, res.Observations[0].ID)
-						return struct{}{}, changes, err
-					}); err != nil {
-						t.Fatal(err)
-					}
+					s.deleteObservation(t, res.Observations[0].ID)
 				})
 				s.bumpsA(t, func() {
-					if _, err := writes.Call(s.c, writes.Op{Action: "delete_observation", UserID: scopeUserID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
-						changes, err := observations.Delete(tx, scopeUserID, added[0].ID)
-						return struct{}{}, changes, err
-					}); err != nil {
-						t.Fatal(err)
-					}
+					s.deleteObservation(t, added[0].ID)
 				})
 				s.bumpsA(t, func() {
 					if _, err := writes.Call(s.c, writes.Op{Action: "delete_citation", UserID: scopeUserID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
@@ -394,14 +399,10 @@ func TestSourceScopes(t *testing.T) {
 			run: func(t *testing.T, s scopeSeed) {
 				res := s.citation(t, citations.CreateInput{}, s.textObs(s.place, "Boston"))
 				s.bumpsA(t, func() {
-					if _, err := writes.Call(s.c, writes.Op{Action: "update_observation", UserID: scopeUserID}, func(tx *database.Tx) (observations.Listed, []rowchange.Change, error) {
-						return observations.Update(tx, scopeUserID, observations.Input{
-							ID: res.Observations[0].ID, SubjectID: s.place.ID, PropertyID: s.toponymProp.ID,
-							ValueText: "Boston", HasText: true, Polarity: observations.PolarityNegative,
-						})
-					}); err != nil {
-						t.Fatal(err)
-					}
+					s.updateObservation(t, observations.Input{
+						ID: res.Observations[0].ID, SubjectID: s.place.ID, PropertyID: s.toponymProp.ID,
+						ValueText: "Boston", HasText: true, Polarity: observations.PolarityNegative,
+					})
 				})
 			},
 		},
@@ -415,14 +416,10 @@ func TestSourceScopes(t *testing.T) {
 				})
 				year2 := 1843
 				s.bumpsA(t, func() {
-					if _, err := writes.Call(s.c, writes.Op{Action: "update_observation", UserID: scopeUserID}, func(tx *database.Tx) (observations.Listed, []rowchange.Change, error) {
-						return observations.Update(tx, scopeUserID, observations.Input{
-							ID: res.Observations[0].ID, SubjectID: s.event.ID, PropertyID: s.dateProp.ID,
-							Date: &datevalues.Value{Kind: datevalues.KindPoint, StartYear: &year2},
-						})
-					}); err != nil {
-						t.Fatal(err)
-					}
+					s.updateObservation(t, observations.Input{
+						ID: res.Observations[0].ID, SubjectID: s.event.ID, PropertyID: s.dateProp.ID,
+						Date: &datevalues.Value{Kind: datevalues.KindPoint, StartYear: &year2},
+					})
 				})
 			},
 		},
@@ -459,11 +456,7 @@ func TestSourceScopes(t *testing.T) {
 			name: "promote does not move the source",
 			run: func(t *testing.T, s scopeSeed) {
 				a0, b0 := s.sourceRevisions(t)
-				if _, err := writes.Call(s.c, writes.Op{Action: "promote_subject", UserID: scopeUserID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
-					return promote.Save(tx, scopeUserID, promote.Input{SubjectID: s.person.ID})
-				}); err != nil {
-					t.Fatal(err)
-				}
+				s.promote(t, s.person)
 				if s.latest(t) <= b0 {
 					t.Fatal("promote recorded no revision")
 				}
@@ -493,25 +486,6 @@ func (s scopeSeed) movesBoth(t *testing.T, handle []byte, act func()) {
 	}
 	if got := s.handleRevision(t, handle); got != want {
 		t.Fatalf("handle revision %d, want latest %d", got, want)
-	}
-}
-
-func (s scopeSeed) updateObservation(t *testing.T, in observations.Input) {
-	t.Helper()
-	if _, err := writes.Call(s.c, writes.Op{Action: "update_observation", UserID: scopeUserID}, func(tx *database.Tx) (observations.Listed, []rowchange.Change, error) {
-		return observations.Update(tx, scopeUserID, in)
-	}); err != nil {
-		t.Fatal(err)
-	}
-}
-
-func (s scopeSeed) deleteObservation(t *testing.T, id []byte) {
-	t.Helper()
-	if _, err := writes.Call(s.c, writes.Op{Action: "delete_observation", UserID: scopeUserID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
-		changes, err := observations.Delete(tx, scopeUserID, id)
-		return struct{}{}, changes, err
-	}); err != nil {
-		t.Fatal(err)
 	}
 }
 
