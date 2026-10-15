@@ -2,15 +2,12 @@ package audit_test
 
 import (
 	"bytes"
-	"errors"
 	"os"
 	"path/filepath"
 	"testing"
 
-	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
-	"github.com/mendahu/provenencia/core/database/audit"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/effects"
@@ -145,9 +142,9 @@ func (s scopeSeed) sourceRevisions(t *testing.T) (a, b int64) {
 	for _, src := range all {
 		switch {
 		case bytes.Equal(src.ID, s.a.ID):
-			a = src.UpdatedRevision
+			a = src.Updated.Revision
 		case bytes.Equal(src.ID, s.b.ID):
-			b = src.UpdatedRevision
+			b = src.Updated.Revision
 		}
 	}
 	return a, b
@@ -236,11 +233,14 @@ func (s scopeSeed) handleRevision(t *testing.T, id []byte) int64 {
 	if err != nil {
 		t.Fatal(err)
 	}
-	all, err := audit.LatestByScope(db, effects.ScopeCanonicalEntity)
-	if err != nil {
+	var rev int64
+	if err := db.QueryRow(`SELECT COALESCE(MAX(t.revision), 0)
+		FROM audit_transaction_scopes sc
+		JOIN audit_transactions t ON t.id = sc.audit_transaction_id
+		WHERE sc.scope_type = ? AND sc.scope_id = ?`, effects.ScopeCanonicalEntity, id).Scan(&rev); err != nil {
 		t.Fatal(err)
 	}
-	return all[string(id)].Revision
+	return rev
 }
 
 // TestSourceScopes drives real write paths and checks each one moves the
@@ -582,64 +582,6 @@ func TestHandleScopes(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.run(t, newScopeSeed(t))
 		})
-	}
-}
-
-// TestLatestByScope reads each handle's newest revision with its time, leaves
-// out a handle that has no scope row, and rejects a bad call.
-func TestLatestByScope(t *testing.T) {
-	s := newScopeSeed(t)
-	h := s.promote(t, s.place)
-	res := s.citation(t, citations.CreateInput{}, s.textObs(s.place, "Boston"))
-	s.updateObservation(t, observations.Input{
-		ID: res.Observations[0].ID, SubjectID: s.place.ID, PropertyID: s.toponymProp.ID,
-		ValueText: "Boston Town", HasText: true,
-	})
-	db, err := s.c.DB()
-	if err != nil {
-		t.Fatal(err)
-	}
-	personType, err := subjecttypes.Lookup(s.c, "person", subjecttypes.OriginProvenencia)
-	if err != nil {
-		t.Fatal(err)
-	}
-	raw, err := uuid.NewV7()
-	if err != nil {
-		t.Fatal(err)
-	}
-	r, err := ref.Mint(personType.RefPrefix)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := db.Exec(`INSERT INTO canonical_entities (id, subject_type_id, ref) VALUES (?, ?, ?)`,
-		raw[:], personType.ID, r); err != nil {
-		t.Fatal(err)
-	}
-
-	got, err := audit.LatestByScope(db, effects.ScopeCanonicalEntity)
-	if err != nil {
-		t.Fatal(err)
-	}
-	want := s.latest(t)
-	l, ok := got[string(h)]
-	if !ok || l.Revision != want {
-		t.Fatalf("handle latest %+v, want revision %d", l, want)
-	}
-	var at string
-	if err := db.QueryRow(`SELECT created_at FROM audit_transactions WHERE revision = ?`, want).Scan(&at); err != nil {
-		t.Fatal(err)
-	}
-	if l.At != at {
-		t.Fatalf("handle time %q, want %q", l.At, at)
-	}
-	if _, ok := got[string(raw[:])]; ok {
-		t.Fatal("handle with no scope row was listed")
-	}
-	if _, err := audit.LatestByScope(db, ""); !errors.Is(err, audit.ErrInvalid) {
-		t.Fatalf("empty scope type: %v", err)
-	}
-	if _, err := audit.LatestByScope(nil, effects.ScopeCanonicalEntity); !errors.Is(err, audit.ErrInvalid) {
-		t.Fatalf("nil querier: %v", err)
 	}
 }
 

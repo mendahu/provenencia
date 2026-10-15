@@ -14,6 +14,8 @@ import (
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/deleteimpact"
+	"github.com/mendahu/provenencia/core/database/effects"
+	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/derivatives"
 	"github.com/mendahu/provenencia/core/ref"
 )
@@ -42,26 +44,15 @@ const (
 	sqlGetByRef = `SELECT id, ref, source_type_id, title, COALESCE(description, ''),
 		cover_mode, primary_artifact_id
 		FROM sources WHERE ref = ?`
-	// Newest-first by UUIDv7 id (create time). updated_revision is the latest
-	// audit revision scoped to this Source: its own row and any work under it
-	// (notes, metadata, artifacts, files, the evidence graph). Used by the
-	// Sources list "Updated" sort.
+	// Newest-first by UUIDv7 id (create time). The Source's last activity is not
+	// here: List reads it from the display cache (Graph.Activity), so no list
+	// load scans the audit history.
 	// has_artifact gates the Evidence graph zone without a per-row query.
 	sqlList = `SELECT s.id, s.ref, s.source_type_id, s.title, COALESCE(s.description, ''),
 		s.cover_mode, s.primary_artifact_id,
-		COALESCE((
-			SELECT MAX(t.revision)
-			FROM audit_transaction_scopes sc
-			JOIN audit_transactions t ON t.id = sc.audit_transaction_id
-			WHERE sc.scope_type = 'source' AND sc.scope_id = s.id
-		), 0),
 		EXISTS (SELECT 1 FROM artifacts a WHERE a.source_id = s.id)
 		FROM sources s
 		ORDER BY s.id DESC`
-	sqlLatestRevision = `SELECT COALESCE(MAX(t.revision), 0)
-		FROM audit_transaction_scopes sc
-		JOIN audit_transactions t ON t.id = sc.audit_transaction_id
-		WHERE sc.scope_type = 'source' AND sc.scope_id = ?`
 	sqlCount            = `SELECT COUNT(*) FROM sources`
 	sqlDelete           = `DELETE FROM sources WHERE id = ?`
 	sqlTypeExists       = `SELECT 1 FROM source_types WHERE id = ?`
@@ -78,10 +69,10 @@ type Source struct {
 	Description       string
 	CoverMode         string
 	PrimaryArtifactID []byte // nil when CoverModeTypeIcon
-	// UpdatedRevision is the latest audit revision of any work scoped to this
-	// Source (its row, children, and evidence graph).
+	// Updated is the latest audit revision of any work scoped to this Source
+	// (its row, children, and evidence graph) and when it was recorded.
 	// Filled by List and by AttachLatestRevision; zero means unset.
-	UpdatedRevision int64
+	Updated graphcache.Activity
 	// HasArtifact is true when at least one artifacts row exists for this Source.
 	// Filled by List only; other reads leave it false and callers query separately.
 	HasArtifact bool
@@ -142,18 +133,18 @@ func Create(tx *database.Tx, userID []byte, in CreateInput) (Source, []rowchange
 		fields["description"] = rowchange.FieldDiff{Old: nil, New: in.Description}
 	}
 	return Source{
-		ID:           append([]byte(nil), idBytes...),
-		Ref:          sourceRef,
-		SourceTypeID: append([]byte(nil), in.SourceTypeID...),
-		Title:        in.Title,
-		Description:  in.Description,
-		CoverMode:    CoverModeTypeIcon,
-	}, []rowchange.Change{{
-		EntityType: "source",
-		EntityID:   append([]byte(nil), idBytes...),
-		Action:     rowchange.ActionCreate,
-		Fields:     fields,
-	}}, nil
+			ID:           append([]byte(nil), idBytes...),
+			Ref:          sourceRef,
+			SourceTypeID: append([]byte(nil), in.SourceTypeID...),
+			Title:        in.Title,
+			Description:  in.Description,
+			CoverMode:    CoverModeTypeIcon,
+		}, []rowchange.Change{{
+			EntityType: "source",
+			EntityID:   append([]byte(nil), idBytes...),
+			Action:     rowchange.ActionCreate,
+			Fields:     fields,
+		}}, nil
 }
 
 // NormalizeCover checks a cover choice. Artifact mode ensures a thumbnail,
@@ -366,8 +357,8 @@ func getByRef(c *database.Catalog, sourceRef string) (Source, error) {
 	return scanSource(db.QueryRow(sqlGetByRef, sourceRef))
 }
 
-// List returns Sources newest-first by UUIDv7 id, with UpdatedRevision and
-// HasArtifact filled from a single list query.
+// List returns Sources newest-first by UUIDv7 id, with HasArtifact filled from
+// a single list query and Updated read from the display cache.
 func List(c *database.Catalog) ([]Source, error) {
 	db, err := c.DB()
 	if err != nil {
@@ -386,27 +377,30 @@ func List(c *database.Catalog) ([]Source, error) {
 		}
 		out = append(out, s)
 	}
-	return out, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	// The scan is finished: the catalog has one connection, so the cache's
+	// first load cannot run while rows is open.
+	for i := range out {
+		if out[i].Updated, err = c.Graph().Activity(effects.ScopeSource, out[i].ID); err != nil {
+			return nil, err
+		}
+	}
+	return out, nil
 }
 
-// AttachLatestRevision sets UpdatedRevision from the Source's audit scope.
+// AttachLatestRevision sets Updated from the display cache's last activity.
 func AttachLatestRevision(c *database.Catalog, s *Source) error {
 	if s == nil || len(s.ID) != 16 {
 		return ErrInvalid
 	}
-	if s.UpdatedRevision > 0 {
+	if s.Updated.Revision > 0 {
 		return nil
 	}
-	db, err := c.DB()
-	if err != nil {
-		return err
-	}
-	var rev int64
-	if err := db.QueryRow(sqlLatestRevision, s.ID).Scan(&rev); err != nil {
-		return err
-	}
-	s.UpdatedRevision = rev
-	return nil
+	var err error
+	s.Updated, err = c.Graph().Activity(effects.ScopeSource, s.ID)
+	return err
 }
 
 // Count returns how many Sources are in the catalog — used by the workspace
@@ -445,7 +439,7 @@ func scanSourceList(row rowScanner) (Source, error) {
 	var primary []byte
 	if err := row.Scan(
 		&s.ID, &s.Ref, &s.SourceTypeID, &s.Title, &s.Description, &s.CoverMode, &primary,
-		&s.UpdatedRevision, &s.HasArtifact,
+		&s.HasArtifact,
 	); err != nil {
 		return Source{}, err
 	}

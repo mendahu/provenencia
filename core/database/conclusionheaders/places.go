@@ -3,9 +3,9 @@ package conclusionheaders
 import (
 	"time"
 
-	"github.com/mendahu/provenencia/core/database/audit"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/datevalues"
+	"github.com/mendahu/provenencia/core/database/graphcache"
 )
 
 // PlaceRelationshipKind is how a related Place appears on a Place detail.
@@ -46,7 +46,7 @@ type PlaceHeader struct {
 	Successors           []PlaceRelationship
 	// Updated is the handle's latest canonical_entity revision and its time.
 	// Filled by List only; zero means none.
-	Updated audit.Latest
+	Updated graphcache.Activity
 }
 
 // TodayDate is a Gregorian point for "today's chain" on Place rows.

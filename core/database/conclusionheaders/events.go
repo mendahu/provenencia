@@ -3,9 +3,9 @@ package conclusionheaders
 import (
 	"strings"
 
-	"github.com/mendahu/provenencia/core/database/audit"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/datevalues"
+	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/eventtitle"
 	"github.com/mendahu/provenencia/core/valuecodec"
@@ -40,7 +40,7 @@ type EventHeader struct {
 	Title eventtitle.Plan
 	// Updated is the handle's latest canonical_entity revision and its time.
 	// Filled by List only; zero means none.
-	Updated audit.Latest
+	Updated graphcache.Activity
 }
 
 // EventSubject is one person on an event through a subject-role participation.

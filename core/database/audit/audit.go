@@ -18,6 +18,8 @@ const (
 	sqlNextRevision = `SELECT COALESCE(MAX(revision), 0) + 1 FROM audit_transactions`
 	sqlInsertTx     = `INSERT INTO audit_transactions (id, revision, user_id, action_type, description, created_at)
 		VALUES (?, ?, ?, ?, ?, ?)`
+	sqlInsertScope = `INSERT OR IGNORE INTO audit_transaction_scopes (audit_transaction_id, scope_type, scope_id)
+		VALUES (?, ?, ?)`
 	sqlInsertChange = `INSERT INTO audit_changes (id, audit_transaction_id, entity_type, entity_id, action, changes_json)
 		VALUES (?, ?, ?, ?, ?, ?)`
 )

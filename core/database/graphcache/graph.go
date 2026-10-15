@@ -40,6 +40,10 @@ type Graph struct {
 	labelsOK bool
 	alt      Querier
 
+	// activity is last activity per scope type, then per scope id, loaded by
+	// the first Activity read of that type and patched by OnCommit.
+	activity map[string]map[string]Activity
+
 	// aliases are abbreviation and nickname tables for this open catalog.
 	// They are not graph nodes: Drop leaves them. Closing the catalog drops
 	// them with this graph. namealiases owns the concrete slice.
@@ -162,6 +166,7 @@ func (g *Graph) clear() {
 	g.sources = map[string]SourceGraph{}
 	g.labelsOK = false
 	g.labels = nil
+	g.activity = map[string]map[string]Activity{}
 	// Alias tables stay. They follow the catalog connection, not a rebuild.
 }
 
