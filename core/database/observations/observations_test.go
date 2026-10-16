@@ -2,6 +2,8 @@ package observations_test
 
 import (
 	"errors"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
@@ -570,6 +572,39 @@ func TestObservations(t *testing.T) {
 				}
 				if dates != 0 || names != 0 {
 					t.Fatalf("owned leftover dates=%d names=%d", dates, names)
+				}
+			},
+		},
+		{
+			name: "delete schedules no purge with nothing released",
+			run: func(t *testing.T) {
+				c, s := mustSeed(t)
+				res, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
+					return citations.CreateWithObservations(tx, userID, citations.CreateInput{
+						ArtifactID: s.artifact.ID, LocatorJSON: validLocator,
+					}, []observations.Input{{
+						SubjectID: s.place.ID, PropertyID: s.toponymProp.ID,
+						ValueText: "Boston", HasText: true,
+					}})
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				sentinel := filepath.Join(c.Dir(), "objects", "ab", "cd", "sentinel")
+				if err := os.MkdirAll(filepath.Dir(sentinel), 0o755); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.WriteFile(sentinel, []byte("keep"), 0o644); err != nil {
+					t.Fatal(err)
+				}
+				if _, err := writes.Call(c, writes.Op{Action: "delete_observation", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+					changes, err := observations.Delete(tx, userID, res.Observations[0].ID)
+					return struct{}{}, changes, err
+				}); err != nil {
+					t.Fatal(err)
+				}
+				if _, err := os.Stat(sentinel); err != nil {
+					t.Fatalf("sentinel object removed: %v", err)
 				}
 			},
 		},

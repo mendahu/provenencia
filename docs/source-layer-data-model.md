@@ -404,6 +404,8 @@ Derivative Files use the same content-addressed `files` store, but unlike primar
 
 Derivative generation and cache eviction do not need to create research audit events.
 
+Releasing a File removes only its own derivative links (`source_file_id`). A derived File is deleted when nothing points at it, so two Files that share a deduplicated thumbnail keep it until both are released.
+
 ---
 
 # 9. Audit and historical file versions

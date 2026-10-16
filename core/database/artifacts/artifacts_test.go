@@ -9,10 +9,12 @@ import (
 	"image/png"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/citations"
+	"github.com/mendahu/provenencia/core/database/filederivatives"
 	"github.com/mendahu/provenencia/core/database/files"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sources"
@@ -719,6 +721,133 @@ func TestArtifactDeletePurgesDisk(t *testing.T) {
 	})
 }
 
+// TestArtifactDeleteKeepsSharedThumbnail is AC-1.1 and AC-1.2: two Artifacts on
+// different Files whose thumbnails are one derived File keep that thumbnail
+// until the second Artifact goes.
+func TestArtifactDeleteKeepsSharedThumbnail(t *testing.T) {
+	userID := []byte{16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1}
+	c, err := database.Create(t.TempDir(), "t.provenencia")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	r, err := ref.Mint(ref.PrefixUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := users.Upsert(c, userID, "Jake", r); err != nil {
+		t.Fatal(err)
+	}
+	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{Key: "book", Origin: sourcetypes.OriginProvenencia, Label: "Book"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Family Bible"})
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	db, err := c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	insert := func(tx *sql.Tx, sum string) files.File {
+		t.Helper()
+		id, err := files.NewID()
+		if err != nil {
+			t.Fatal(err)
+		}
+		f := files.File{ID: id, ChecksumSHA256: sum, MediaType: "image/jpeg", ByteSize: 4}
+		if err := files.Insert(tx, f); err != nil {
+			t.Fatal(err)
+		}
+		rel, err := files.StorageRelPath(sum, "image/jpeg")
+		if err != nil {
+			t.Fatal(err)
+		}
+		path := filepath.Join(c.Dir(), filepath.FromSlash(rel))
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte("jpeg"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		return f
+	}
+	tx, err := db.Begin()
+	if err != nil {
+		t.Fatal(err)
+	}
+	fileA := insert(tx, strings.Repeat("a", 64))
+	fileB := insert(tx, strings.Repeat("b", 64))
+	thumb := insert(tx, strings.Repeat("d", 64))
+	for _, source := range []files.File{fileA, fileB} {
+		linkID, err := filederivatives.NewID()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := filederivatives.Insert(tx, filederivatives.Link{
+			ID: linkID, SourceFileID: source.ID, DerivedFileID: thumb.ID, DerivativeType: filederivatives.TypeThumbnail,
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		t.Fatal(err)
+	}
+	artOne, err := runCreate(c, userID, CreateInput{SourceID: src.ID, FileID: fileA.ID, Label: "One"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	artTwo, err := runCreate(c, userID, CreateInput{SourceID: src.ID, FileID: fileB.ID, Label: "Two"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	onDisk := func(f files.File) bool {
+		rel, err := files.StorageRelPath(f.ChecksumSHA256, f.MediaType)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, err = os.Stat(filepath.Join(c.Dir(), filepath.FromSlash(rel)))
+		return err == nil
+	}
+	rows := func(q string, args ...any) int {
+		t.Helper()
+		var n int
+		if err := db.QueryRow(q, args...).Scan(&n); err != nil {
+			t.Fatal(err)
+		}
+		return n
+	}
+
+	if err := runDelete(c, userID, artOne.ID); err != nil {
+		t.Fatal(err)
+	}
+	if rows(`SELECT COUNT(*) FROM files WHERE id = ?`, fileA.ID) != 0 || onDisk(fileA) {
+		t.Fatal("File A should be gone with its object")
+	}
+	if rows(`SELECT COUNT(*) FROM files WHERE id = ?`, thumb.ID) != 1 || !onDisk(thumb) {
+		t.Fatal("the shared thumbnail was released")
+	}
+	if rows(`SELECT COUNT(*) FROM file_derivatives WHERE source_file_id = ? AND derived_file_id = ?`, fileB.ID, thumb.ID) != 1 {
+		t.Fatal("the other Artifact lost its thumbnail link")
+	}
+
+	if err := runDelete(c, userID, artTwo.ID); err != nil {
+		t.Fatal(err)
+	}
+	if rows(`SELECT COUNT(*) FROM files`) != 0 || rows(`SELECT COUNT(*) FROM file_derivatives`) != 0 {
+		t.Fatal("rows left after the second delete")
+	}
+	for name, f := range map[string]files.File{"B": fileB, "thumbnail": thumb} {
+		if onDisk(f) {
+			t.Fatalf("object %s left on disk", name)
+		}
+	}
+}
+
 func runCreate(c *database.Catalog, userID []byte, in CreateInput) (Artifact, error) {
 	a, _, err := writes.Run(c, writes.Op{Action: "create_artifact", UserID: userID},
 		func(tx *database.Tx) (Artifact, []rowchange.Change, error) {
@@ -739,7 +868,7 @@ func runUpdate(c *database.Catalog, userID []byte, a Artifact) error {
 func runDelete(c *database.Catalog, userID, id []byte) error {
 	_, _, err := writes.Run(c, writes.Op{Action: "delete_artifact", UserID: userID},
 		func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
-			changes, err := Delete(tx, c, userID, id)
+			changes, err := Delete(tx, userID, id)
 			return struct{}{}, changes, err
 		})
 	return err

@@ -1,5 +1,9 @@
 # Spike 10 — completed
 
+## S10-55 — File release from the declared model
+
+**Landed 2026-10-16** in [#423](https://github.com/mendahu/provenencia/pull/423). Deleting one of two Artifacts whose Files share a deduplicated thumbnail keeps the thumbnail and its other link, and the thumbnail goes with the second Artifact. A File is deleted only when no declared foreign key into `files` points at it, and releasing one removes only its own thumbnail links. Owned releases (date and name values, Files) are read from the `BucketOwnedOutbound` foreign keys in `catalogmodel`, so the hand-kept list is gone and a new owned File pointer is two FK declarations. `ReleaseReplaced` releases a value an update swaps out. Every delete that releases owned rows (`artifacts`, `observations`, `subjects`, `sources`, `citations`, `metadatafields`) removes the freed objects after commit through `files.PurgeAfterCommit`, and the removal cannot leave the project's `objects/` folder through a symlink (`objectstore.RemoveObject`). No schema, FFI, or Swift change.
+
 ## S10-37 — Collation locale
 
 **Descoped 2026-10-16.** A project collation locale (default `en`, no picker) and `x/text/collate` sort order for name lists are in [`ideas/international-names.md`](../../ideas/international-names.md). Name lists keep their current `sort_key` order. Matching's accent fold (S10-24) does not change.

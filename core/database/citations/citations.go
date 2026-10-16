@@ -13,6 +13,7 @@ import (
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/deleteimpact"
+	"github.com/mendahu/provenencia/core/database/files"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/locator"
 	"github.com/mendahu/provenencia/core/ref"
@@ -371,20 +372,20 @@ func Update(tx *database.Tx, userID, citationID []byte, in CitationFieldsInput) 
 		return Citation{}, nil, err
 	}
 	return Citation{
-		ID:                     append([]byte(nil), citationID...),
-		Ref:                    prev.Ref,
-		ArtifactID:             append([]byte(nil), prev.ArtifactID...),
-		LocatorJSON:            in.LocatorJSON,
-		Transcription:          in.Transcription,
-		Label:                  in.Label,
-		TranscriptionUncertain: in.TranscriptionUncertain,
-		TranscriptionNote:      in.TranscriptionNote,
-	}, []rowchange.Change{{
-		EntityType: "citation",
-		EntityID:   append([]byte(nil), citationID...),
-		Action:     rowchange.ActionUpdate,
-		Fields:     fields,
-	}}, nil
+			ID:                     append([]byte(nil), citationID...),
+			Ref:                    prev.Ref,
+			ArtifactID:             append([]byte(nil), prev.ArtifactID...),
+			LocatorJSON:            in.LocatorJSON,
+			Transcription:          in.Transcription,
+			Label:                  in.Label,
+			TranscriptionUncertain: in.TranscriptionUncertain,
+			TranscriptionNote:      in.TranscriptionNote,
+		}, []rowchange.Change{{
+			EntityType: "citation",
+			EntityID:   append([]byte(nil), citationID...),
+			Action:     rowchange.ActionUpdate,
+			Fields:     fields,
+		}}, nil
 }
 
 func emptyAsNil(s string) any {
@@ -427,6 +428,7 @@ func Delete(tx *database.Tx, userID, id []byte) ([]rowchange.Change, error) {
 	if _, err := tx.Exec(sqlDelete, id); err != nil {
 		return nil, err
 	}
+	files.PurgeAfterCommit(tx, released.Objects)
 	fields := map[string]rowchange.FieldDiff{
 		"id":          {Old: uuidString(id), New: nil},
 		"ref":         {Old: prev.Ref, New: nil},

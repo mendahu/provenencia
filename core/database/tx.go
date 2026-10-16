@@ -15,7 +15,17 @@ var ErrWriteReentry = apperr.New(apperr.CodeWritesReentry, apperr.KindInternal)
 // Run commits and rolls back. A write function does not.
 type Tx struct {
 	*sql.Tx
-	after []func()
+	after   []func()
+	catalog *Catalog
+}
+
+// Catalog is the catalog this write began on. It is nil for a Tx built outside
+// BeginWrite.
+func (t *Tx) Catalog() *Catalog {
+	if t == nil {
+		return nil
+	}
+	return t.catalog
 }
 
 // AfterCommit registers work that runs only after Run commits. A rollback
@@ -62,7 +72,7 @@ func (c *Catalog) BeginWrite() (*Tx, error) {
 		c.EndWrite()
 		return nil, err
 	}
-	return &Tx{Tx: sqlTx}, nil
+	return &Tx{Tx: sqlTx, catalog: c}, nil
 }
 
 // EndWrite clears the busy flag. Run defers it so AfterCommit and listeners

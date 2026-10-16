@@ -626,7 +626,7 @@ func TestSnapshotOwnedThenRelease(t *testing.T) {
 	if _, err := tx.Exec(`DELETE FROM artifacts WHERE id = ?`, art1.ID); err != nil {
 		t.Fatal(err)
 	}
-	if err := deleteimpact.ReleaseSnapshot(tx, snap1); err != nil {
+	if _, err := deleteimpact.ReleaseSnapshot(tx, snap1); err != nil {
 		t.Fatal(err)
 	}
 	var left int
@@ -651,7 +651,7 @@ func TestSnapshotOwnedThenRelease(t *testing.T) {
 	if _, err := tx.Exec(`DELETE FROM artifacts WHERE id = ?`, art2.ID); err != nil {
 		t.Fatal(err)
 	}
-	if err := deleteimpact.ReleaseSnapshot(tx, snap2); err != nil {
+	if _, err := deleteimpact.ReleaseSnapshot(tx, snap2); err != nil {
 		t.Fatal(err)
 	}
 	if err := tx.QueryRow(`SELECT COUNT(*) FROM files WHERE id = ?`, fileA).Scan(&left); err != nil {

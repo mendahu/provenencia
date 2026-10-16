@@ -1,6 +1,6 @@
 # S10-55 — File release from the declared model
 
-**Status:** Planned
+**Status:** Landed in [#423](https://github.com/mendahu/provenencia/pull/423) (2026-10-16)
 **Spike / slice:** Spike 10 · Slice 8 — Likeness
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#s10-55--file-release-from-the-declared-model)
 **Brief:** — (no new chrome: an engine change to how deletes release Files)
@@ -14,6 +14,10 @@
 **Context:** [`docs/catalog-deletes.md`](../../../catalog-deletes.md), [`docs/source-layer-data-model.md`](../../../source-layer-data-model.md) §6–§8, [`core/database/deleteimpact/README.md`](../../../../core/database/deleteimpact/README.md), working rules "A File is released only when nothing points at it, and one purge removes its object" and "Deletes follow the evidence chain", map review [`../deployment-plan.review.md`](../deployment-plan.review.md) K-2, K-3
 **Planned:** 2026-10-16 against `main` @ `98819f86`
 **Review:** [`S10-55-file-release.review.md`](S10-55-file-release.review.md) — Fits with changes, Ready with changes (applied); 2 rounds
+
+## Landed
+
+Differences from this plan: the internal `releaseOwnedRow(tx, p, table, id)` of D-4 is two functions, `snapshotOwnedRow` and `releaseOwnedSnap`, because the caller deletes the parent between the snapshot and the release (T-5 calls them around its raw `DELETE`). `lookupParentColumn` was folded into `snapshotOwnedRow`. `artifacts.Delete` no longer takes the Catalog (user, 2026-10-16, overriding D-8): `Tx.Catalog()` serves the purge. `files.PurgeUnreferenced` removes bytes through the new `objectstore.RemoveObject`, which refuses a symlinked `objects/` folder or path component (review SEC-O1). `gofmt` was run on `core/database/artifacts/artifacts.go` and `core/database/citations/citations.go`, which already failed `scripts/check-pr.sh`'s gofmt check at the base; the change is formatting only. `.agents/skills/add-catalog-migration/SKILL.md` also carried the "release list" wording and was reworded with the STEP-7 docs. `docs/deployment-plan/spike-10/prs/S10-32-depiction-value-type.md` D-2 still says "release entry"; S10-32 owns that plan.
 
 ### Implementer — read this first
 

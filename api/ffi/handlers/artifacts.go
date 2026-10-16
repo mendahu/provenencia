@@ -127,7 +127,7 @@ func DeleteArtifact(in []byte) ([]byte, error) {
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
 		_, wrote, err := writes.Run(c, writes.Op{Action: "delete_artifact", UserID: userID},
 			func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
-				changes, err := artifacts.Delete(tx, c, userID, artifactID)
+				changes, err := artifacts.Delete(tx, userID, artifactID)
 				return struct{}{}, changes, err
 			})
 		if err != nil {
