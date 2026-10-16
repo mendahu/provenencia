@@ -323,6 +323,8 @@ So every property weight is a plain registry number. The labeler can fit them la
 
 A survey of comparison, normalization and dedupe code outside `core/match` (2026-10-16). Each layer has consumers beyond Promote, and several duplicates can retire.
 
+**Decided: all of this is Spike 11.** Dedupe happens as we go: the PR that lands a layer moves that layer's other callers onto it and deletes what it replaces. Nothing below is parked for later.
+
 | Layer | Consumers today, once moved | Future consumers (`docs/ideas/`) |
 |---|---|---|
 | 1 value compare | Promote, `Rank`, the reconciler's grouping and pins, place-chain date windows (`conclusionheaders`) | Term dedupe ("godfather" vs "god-father", `term-management.md`), gazetteer lookup, Daitch–Mokotoff tier, international names |
@@ -349,12 +351,12 @@ A survey of comparison, normalization and dedupe code outside `core/match` (2026
 | `autoreconciler.hasValue` (copy of `autoreconcile.carries`) | One function |
 | `Stats.ValueFreq`, `countNameWords` | Removed (frequency descoped) |
 
-**Leave alone for now:**
-- **Search's fuzzy ranker** (`jaroWinkler`, trigram shortlist). It ranks partial queries as they are typed, which is a different job. Share the normalization key now, so its Go rescoring folds accents like the FTS tokenizer already does, and revisit the ranker later.
-- **Swift filters** (combo box, list filters). They are UI-local, with different needs. One shared Swift normalize helper would be a separate small cleanup.
+**Lighter touch (still in scope):**
+- **Search's fuzzy ranker** (`jaroWinkler`, trigram shortlist). It ranks partial queries as they are typed, which is a different job, so it stays. Its Go rescoring moves onto the shared normalization key, so it folds accents like the FTS tokenizer already does.
+- **Swift filters** (combo box, list filters). They are UI-local, with different needs. They move onto one shared Swift normalize helper.
 - **`FakeStore`** clusters names by lowercase form, which contradicts Go's parts-only rule. Fix that when the reconciler moves, so Swift tests don't encode the wrong rule.
 
-**Found in passing:**
+**Found in passing (fixed in this spike):**
 - `match.indexAliases` doesn't normalize alias tokens. That's latent: only the lowercase product seed writes tables today. It matters once user or plugin tables exist; `Key` fixes it.
 - Text equality disagrees across six places (reconciler, match, search scoring, FTS, header sort, frequency stats). `Sainte-Anne` and `Sainte Anne` are equal in matching and distinct in reconciliation.
 

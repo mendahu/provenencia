@@ -4,13 +4,15 @@
 
 **Scoping (2026-10-16).** Requirements are being written; there is no PR map yet. Spike 10 is still open.
 
-This spike is entirely about the Promote flow's matching: making the algorithm graspable, cleanly layered and tunable, then building the test suite and calibration on top. The starting idea is [`ideas/matching-test-suite.md`](../../ideas/matching-test-suite.md).
+This spike is entirely about the Promote flow's matching: making the algorithm graspable, cleanly layered and tunable, then building the test suite and calibration on top.
+
+**Goal: one matching module the rest of the app borrows from.** Matching becomes powerful, robust and reusable, with one well-defined home for every comparison. Retiring the duplicate comparison, normalization and dedupe code around the app is part of this spike, not a follow-up: each PR that moves a layer also moves that layer's other callers onto it and deletes what it replaces. The inventory is [Reuse across the app](comparison-layers.md#reuse-across-the-app). The starting idea is [`ideas/matching-test-suite.md`](../../ideas/matching-test-suite.md).
 
 ## Documents
 
 | Doc | Role |
 | --- | --- |
-| [**Comparison layers**](comparison-layers.md) | Requirements for layers 1 (value comparison) and 2 (property comparison), and the rules every layer follows |
+| [**Comparison layers**](comparison-layers.md) | Requirements for layers 1–4 (value, property, Subject and entity comparison), the rules every layer follows, and the reuse and retirement inventory |
 
 ## Spike-wide principle: sparse data first
 
@@ -36,3 +38,4 @@ Three generations back, records thin out. Often all there is is a name and a bir
 - **Comparison layers make no workflow decisions.** Promote, the reconciler and others keep their own decision logic and compose the layers.
 - **Layer 3 compares the properties both Subjects have,** driven by a per-type registry. It returns two axes: **similarity** (0–1, are they alike) and **evidence** (points, how strong). No knockout flag: a decisive conflict is a large registry penalty.
 - **Similarity weighs a conflict by its penalty,** so a decisive conflict pulls similarity down as well as evidence.
+- **Dedupe is in scope.** Everything in the reuse inventory (other consumers, small widening changes, duplicates to retire, the lighter-touch items and the bugs found in passing) is Spike 11 work, split across PRs as each layer lands.
