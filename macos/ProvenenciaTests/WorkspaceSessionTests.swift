@@ -972,6 +972,35 @@ struct WorkspaceSessionTests {
         #expect(store.getSourceGraphProgressCalls >= 1)
     }
 
+    @Test func applyPromotedSubjectPatchesProgress() async {
+        let store = FakeStore()
+        seedStore(store)
+        store.graphProgressBySource["s1"] = SourceGraphProgress(
+            sourceId: "s1", subjectCount: 2, observationCount: 1, primaryCount: 2, filedCount: 0
+        )
+        let session = makeSession(store: store)
+        let progressHandle: QueryHandle<[String: SourceGraphProgress]> = session.query(
+            CatalogQueryKey.sourceGraphProgress(project: session.projectKey)
+        )
+        await waitForFetchComplete(progressHandle)
+        #expect(progressHandle.value?["s1"]?.filedCount == 0)
+        let callsBefore = store.getSourceGraphProgressCalls
+
+        store.graphProgressBySource["s1"] = SourceGraphProgress(
+            sourceId: "s1", subjectCount: 2, observationCount: 1, primaryCount: 2, filedCount: 2
+        )
+        session.apply(.promotedSubject(sourceId: "s1"))
+        var waited: UInt64 = 0
+        while waited < 2_000_000_000 {
+            if progressHandle.value?["s1"]?.filedCount == 2 { break }
+            await Task.yield()
+            try? await Task.sleep(nanoseconds: 10_000_000)
+            waited += 10_000_000
+        }
+        #expect(store.getSourceGraphProgressCalls == callsBefore + 1)
+        #expect(progressHandle.value?["s1"]?.filedCount == 2)
+    }
+
     @Test func applySourceEffectsDoesNotRefetchSourcesList() async {
         let store = FakeStore()
         seedStore(store)

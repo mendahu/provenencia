@@ -7,7 +7,7 @@ import Observation
 @MainActor
 @Observable
 final class SourcesModel {
-    enum Sort: String, CaseIterable, Identifiable {
+    enum Sort: String, CaseIterable, Identifiable, Codable {
         case added
         case updated
         case az
@@ -25,15 +25,45 @@ final class SourcesModel {
         }
     }
 
+    /// Where a Source's Evidence graph stands, from its primary and filed counts.
+    enum EvidenceStatus: String, CaseIterable, Identifiable, Codable {
+        case empty
+        case inProgress = "in_progress"
+        case filed
+
+        var id: String { rawValue }
+
+        var label: LocalizedStringResource {
+            switch self {
+            case .empty: L10n.Sources.statusEmpty
+            case .inProgress: L10n.Sources.statusInProgress
+            case .filed: L10n.Sources.statusFullyPromoted
+            }
+        }
+
+        /// A Source missing from the progress map has zero counts (Go omits it).
+        init(_ progress: SourceGraphProgress?) {
+            guard let progress, progress.primaryCount > 0 else {
+                self = .empty
+                return
+            }
+            self = progress.filedCount < progress.primaryCount ? .inProgress : .filed
+        }
+    }
+
     struct Draft: Equatable {
         var sourceTypeID: String
         var title: String
         var description: String
     }
 
-    /// `nil` / empty string means all types. Otherwise a `source_types.id`.
-    var typeFilterID = ""
-    var sort: Sort = .added
+    /// Sort, type (`source_types.id`, empty for all), evidence status, and
+    /// search. Saved per project and user whenever it changes.
+    var settings: SourcesListSettings {
+        didSet {
+            if settings != oldValue { settingsStore?.save(settings) }
+        }
+    }
 
     var isAdding = false
     var draft = Draft(sourceTypeID: "", title: "", description: "")
@@ -50,17 +80,21 @@ final class SourcesModel {
     private let store: any GenealogyStore
     private let session: WorkspaceSession
     private let catalogCounts: CatalogCounts?
+    private let settingsStore: SourcesListSettingsStore?
 
     init(
         session: WorkspaceSession,
         userID: String,
         store: any GenealogyStore,
-        catalogCounts: CatalogCounts? = nil
+        catalogCounts: CatalogCounts? = nil,
+        settingsStore: SourcesListSettingsStore? = nil
     ) {
         self.session = session
         self.userID = userID
         self.store = store
         self.catalogCounts = catalogCounts
+        self.settingsStore = settingsStore
+        self.settings = settingsStore?.load() ?? SourcesListSettings()
     }
 
     // MARK: Session handles
@@ -87,18 +121,61 @@ final class SourcesModel {
     }
 
     func graphProgress(for sourceID: String) -> SourceGraphProgress? {
-        let handle: QueryHandle<[String: SourceGraphProgress]>? = session.queryHandle(
-            Self.sourceGraphProgressKey(for: session)
-        )
-        return handle?.value?[sourceID]
+        progressHandle?.value?[sourceID]
     }
 
     var graphCountsLoading: Bool {
-        let handle: QueryHandle<[String: SourceGraphProgress]>? = session.queryHandle(
-            Self.sourceGraphProgressKey(for: session)
-        )
-        guard let handle else { return true }
+        guard let handle = progressHandle else { return true }
         return handle.value == nil && handle.status != .ready
+    }
+
+    private var typesHandle: QueryHandle<[CatalogSourceType]>? {
+        session.queryHandle(Self.sourceTypesListKey(for: session))
+    }
+
+    private var progressHandle: QueryHandle<[String: SourceGraphProgress]>? {
+        session.queryHandle(Self.sourceGraphProgressKey(for: session))
+    }
+
+    /// The progress handle's failure while a status filter needs its counts.
+    var statusCountsError: Error? {
+        guard settings.status != nil else { return nil }
+        guard let handle = progressHandle, handle.status == .error else { return nil }
+        return handle.error
+    }
+
+    /// A status or restored type is set and the data to apply it has not arrived.
+    var isAwaitingFilterData: Bool {
+        if settings.status != nil, graphCountsLoading { return true }
+        if !settings.typeFilterID.isEmpty {
+            guard let typesHandle else { return true }
+            return typesHandle.value == nil && typesHandle.status != .error
+        }
+        return false
+    }
+
+    /// The saved type id when it is still a Source type, else all types. The
+    /// stored id is left alone until the researcher changes the type.
+    var effectiveTypeFilterID: String {
+        types.contains { $0.id == settings.typeFilterID } ? settings.typeFilterID : ""
+    }
+
+    var isFiltering: Bool {
+        !effectiveTypeFilterID.isEmpty
+            || settings.status != nil
+            || !trimmedQuery.isEmpty
+    }
+
+    private var trimmedQuery: String {
+        settings.query.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    func clearFilters() {
+        var next = settings
+        next.typeFilterID = ""
+        next.status = nil
+        next.query = ""
+        settings = next
     }
 
     var sources: [CatalogSource] {
@@ -134,10 +211,21 @@ final class SourcesModel {
 
     var visibleSources: [CatalogSource] {
         var rows = sources
-        if !typeFilterID.isEmpty {
-            rows = rows.filter { $0.sourceTypeID == typeFilterID }
+        let typeID = effectiveTypeFilterID
+        if !typeID.isEmpty {
+            rows = rows.filter { $0.sourceTypeID == typeID }
         }
-        switch sort {
+        if let status = settings.status {
+            let progress = progressHandle?.value
+            rows = rows.filter { EvidenceStatus(progress?[$0.id]) == status }
+        }
+        let query = trimmedQuery
+        if !query.isEmpty {
+            rows = rows.filter {
+                $0.title.localizedStandardContains(query) || $0.ref.localizedStandardContains(query)
+            }
+        }
+        switch settings.sort {
         case .added:
             // UUIDv7 string form preserves create-time byte order (newest first).
             rows = rows.sorted { $0.id > $1.id }
@@ -163,20 +251,23 @@ final class SourcesModel {
     var isCatalogEmpty: Bool { sources.isEmpty }
 
     var filterLabel: String {
-        if typeFilterID.isEmpty {
+        let typeID = effectiveTypeFilterID
+        if typeID.isEmpty {
             return L10n.string(L10n.Sources.filterAllTypes)
         }
-        return types.first { $0.id == typeFilterID }?.label
+        return types.first { $0.id == typeID }?.label
             ?? L10n.string(L10n.Sources.filterAllTypes)
     }
 
     var sortControlLabel: String {
-        L10n.Sources.sortedBy(L10n.string(sort.label).lowercased())
+        L10n.Sources.sortedBy(L10n.string(settings.sort.label).lowercased())
     }
 
-    var countLine: String {
-        let visible = visibleSources.count
-        if visible == sources.count {
+    func countLine(visibleCount visible: Int) -> String {
+        if isAwaitingFilterData || statusCountsError != nil {
+            return L10n.Sources.countLine(total: sources.count)
+        }
+        if !isFiltering || visible == sources.count {
             return L10n.Sources.countLine(total: sources.count)
         }
         return L10n.Sources.countLineFiltered(visible: visible, total: sources.count)

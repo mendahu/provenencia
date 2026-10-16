@@ -2972,6 +2972,9 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         return false
     }
 
+    /// Subject type keys Promote starts from; the fake has no origin to check.
+    private static let primaryTypeKeys: Set<String> = ["person", "event", "place"]
+
     private func graphProgress(for sourceID: String, projectDir: String) -> SourceGraphProgress {
         if let override = graphProgressBySource[sourceID] {
             return override
@@ -2981,10 +2984,15 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         )
         let subjects = (subjectsBySource[sourceID] ?? []).filter { !sourceTypeIDs.contains($0.subjectTypeID) }
         let observations = observationsBySource[sourceID] ?? []
+        let primaryTypeIDs = Set(
+            (subjectTypesByProject[projectDir] ?? []).filter { Self.primaryTypeKeys.contains($0.key) }.map(\.id)
+        )
         return SourceGraphProgress(
             sourceId: sourceID,
             subjectCount: subjects.count,
-            observationCount: observations.count
+            observationCount: observations.count,
+            primaryCount: subjects.filter { primaryTypeIDs.contains($0.subjectTypeID) }.count,
+            filedCount: 0
         )
     }
 

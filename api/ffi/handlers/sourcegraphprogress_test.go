@@ -59,6 +59,10 @@ func TestListSourceGraphProgress(t *testing.T) {
 				if list.Rows[0].GetSubjectCount() != 1 || list.Rows[0].GetObservationCount() != 1 {
 					t.Fatalf("%+v", list.Rows[0])
 				}
+				// The fixture subject is a place: primary, not yet filed.
+				if list.Rows[0].GetPrimaryCount() != 1 || list.Rows[0].GetFiledCount() != 0 {
+					t.Fatalf("primary/filed %+v", list.Rows[0])
+				}
 			},
 		},
 	})
