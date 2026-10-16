@@ -31,7 +31,7 @@
 ## Landed
 
 Differences from this plan:
-- None in behavior. The seeded term keys, the `PersonGenderTreatment` file, and the `sexAtBirthBadge` copy landed together in the "Show a Person's gender" commit rather than one commit per step; the wire-vocabulary keys and their Go subtest are their own commit, and the thumb colours and tokens another.
+- None in behavior. STEP-2's header structs and treatment, STEP-3's copy, and STEP-4 landed in one commit; the term keys and their Go subtest are their own commit, and the thumb colours and tokens another.
 - The manual check (§10) was not run by the implementer.
 
 ## 1. Objective
