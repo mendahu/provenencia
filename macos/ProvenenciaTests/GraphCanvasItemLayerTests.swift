@@ -6,6 +6,15 @@ import Testing
 @Suite
 @MainActor
 struct GraphCanvasItemLayerTests {
+    private final class SizedView: NSView {
+        override var intrinsicContentSize: NSSize {
+            NSSize(
+                width: 100 + 2 * GraphCanvasItemLayer.paintOutset,
+                height: 40 + 2 * GraphCanvasItemLayer.paintOutset
+            )
+        }
+    }
+
     private final class BuildCounter {
         var counts: [String: Int] = [:]
     }
@@ -33,9 +42,9 @@ struct GraphCanvasItemLayerTests {
             isRaised: raised,
             rotor: rotor.map { GraphCanvasRotorEntry(rotor: $0, label: "\(id) label") },
             model: model,
-            content: {
+            makeView: {
                 counter?.counts[id, default: 0] += 1
-                return AnyView(Color.red.frame(width: 100, height: 40))
+                return SizedView()
             }
         )
     }
