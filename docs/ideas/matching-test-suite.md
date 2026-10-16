@@ -1,6 +1,6 @@
 # Matching test suite and labelled calibration
 
-**Status:** idea, not scheduled. Captured 2026-10-16 from a design conversation. It expands the **Calibration** bullet and the open question in [`name-matching-enhancements.md`](name-matching-enhancements.md). Model: [`promote-graph-alignment.md`](../promote-graph-alignment.md), [`matching.md`](../matching.md).
+**Status:** idea, not scheduled; likely the core of **Spike 11**, a large-scale matching refinement. Captured 2026-10-16 from a design conversation. It expands the **Calibration** bullet and the open question in [`name-matching-enhancements.md`](name-matching-enhancements.md). Model: [`promote-graph-alignment.md`](../promote-graph-alignment.md), [`matching.md`](../matching.md).
 
 ## The problem
 
@@ -9,6 +9,20 @@ Promote graph alignment works reasonably well, but the space of layouts is far t
 What makes this tractable is that `graphalign.Align(layer, canon, stats, fixed, cfg)` is pure and deterministic over plain structs. Almost all of the hard testing can happen without SQLite or the app.
 
 Today's tests are good but expensive. Each scenario is 50–120 lines of hand-built Go (`TestGracieObituaryGolden`), and most assert only a few targets. That cost per scenario is why coverage stays thin.
+
+## First: make the algorithm graspable
+
+Before building any of the tooling below, the algorithm itself has to be structurally sound and understood. Today it is too complex to hold on one page, and there is no shared abstraction to talk about it with. The test suite and the labeler only pay off if there are clear levers to pull, and if everyone means the same thing by "score", "support" or "band".
+
+This is a refinement pass. It may be only documentation and renames, or it may need code changes. To do:
+
+- **One-page model.** A single diagram and page covering the whole pipeline: pairwise comparison → property-only `Rank` → seed → best-first walk → one-hop refinement → bands and flags. Each stage gets one sentence on its input, its output, and the knobs that affect it.
+- **A shared vocabulary.** One glossary (similarity, points, weight, scale, support, credit, signature, fan-out, band, margin, anchor, …), with code, docs and UI copy renamed to match. Where two names mean one thing, or one name means two, fix it.
+- **A knob inventory.** Every tunable, its default, what it changes, and which tests pin it, across `core/match/registry.go`, `core/match/profiles.go`, `core/graphalign/registry.go` and `core/autoreconcile`. Find magic numbers living outside the registries and move them in.
+- **Are the levers right?** Check that the knobs are independent and cover the behaviors we actually want to tune. The learning step needs each row's score to break down cleanly into parts, each one a weight times an observed feature. If a stage can't be expressed that way, decide whether to restructure it or tune it by search.
+- **Known gaps.** List where the algorithm is "not quite there" today, from dogfood and from [`name-matching-enhancements.md`](name-matching-enhancements.md), so the refinement and the test suite aim at the same problems.
+
+Pieces 1 and 2 below can start alongside this, since goldens and invariants protect the refactor. Pieces 3–7 wait until the model and the knobs settle.
 
 ## Five pieces
 
@@ -176,6 +190,7 @@ The loop: label → fit proposes numbers → leftovers point at missing features
 
 Each phase is usable on its own. Rough sizes, not commitments.
 
+0. **Make the algorithm graspable** (docs first, then whatever code changes it turns up). The one-page model, glossary and renames, knob inventory, and lever review above. Phases 1–2 can run alongside it; the rest waits for it.
 1. **Scenario format and golden runner** (one PR). Parser for the text format into `Layer` / `Canon` / `Stats` / `fixed`, the table-driven test, `-update`. Port the obituary golden and a handful of `align_test.go` cases as proof. Leave the rest of the Go tests in place.
 2. **Invariant tests** (one PR). A random small-graph generator under `rapid`, plus the invariants in piece 2. Expect it to find a few real bugs; fix them in their own PRs.
 3. **World simulator** (one or two PRs). Truth generator (families, events, place hierarchy), Source renderer with noise knobs, and a writer to scenario files. The hard part; everything after it depends on it.
