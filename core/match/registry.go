@@ -221,6 +221,17 @@ var DefaultDates = DateComparer{
 	SpanFloor:        Set(0.2),  // never below; open spans (BEF, AFT, FROM)
 }
 
+// PeriodProperties are the Properties whose dates make a period: a thing's
+// start and end.
+type PeriodProperties struct{ Start, End Property }
+
+// DatePeriods maps a date Property to the start and end Properties that stand
+// for it when the other side has only a date (see poolPeriods). Another
+// pair of start and end dates with no date of its own is one more entry.
+var DatePeriods = map[Property]PeriodProperties{
+	product("date"): {Start: product("start_date"), End: product("end_date")},
+}
+
 // ---------------------------------------------------------------------------
 // Text, terms, integers
 

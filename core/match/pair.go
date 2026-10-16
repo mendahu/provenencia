@@ -75,7 +75,8 @@ func evaluate(probe, candidate Values, metas []PropertyMeta, names *NameComparer
 		if card == "" {
 			card = properties.CardinalitySingle
 		}
-		pr := compareProperty(m.ValueType, card, probe[m.Property], candidate[m.Property], names)
+		a, b := poolPeriods(m.Property, probe, candidate)
+		pr := compareProperty(m.ValueType, card, a, b, names)
 		sim, ok := pr.Similarity, pr.Comparable
 		pc := PropertyComparison{
 			Property:    m.Property,

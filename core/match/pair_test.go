@@ -1,9 +1,11 @@
 package match_test
 
 import (
+	"math"
 	"strings"
 	"testing"
 
+	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/match"
@@ -135,5 +137,30 @@ func TestEvaluateStrayName(t *testing.T) {
 	c := ev.Comparisons[0]
 	if c.Outcome != match.OutcomeConflict || !c.Comparable || c.Probe.Label != "James Robins" || c.Candidate.Label != "Mary Smith" {
 		t.Fatalf("%+v", c)
+	}
+}
+
+func TestEvaluateDatePeriod(t *testing.T) {
+	prop := func(k string) match.Property { return match.Property{Key: k, Origin: "provenencia"} }
+	year := func(y int) match.Value {
+		return match.Value{Date: &datevalues.Value{Kind: datevalues.KindPoint, StartYear: &y}}
+	}
+	metas := []match.PropertyMeta{
+		{Property: prop("date"), ValueType: properties.ValueTypeDate},
+		{Property: prop("start_date"), ValueType: properties.ValueTypeDate},
+		{Property: prop("end_date"), ValueType: properties.ValueTypeDate},
+	}
+	probe := match.Values{prop("date"): {year(1817)}}
+	cand := match.Values{prop("start_date"): {year(1815)}, prop("end_date"): {year(1820)}}
+	ev := match.Evaluate(probe, cand, metas)
+	if len(ev.Comparisons) != 3 {
+		t.Fatalf("%+v", ev.Comparisons)
+	}
+	c := ev.Comparisons[0]
+	if !c.Comparable || c.Outcome != match.OutcomePartial || math.Abs(c.Similarity-0.55) > 1e-9 {
+		t.Fatalf("date: %+v", c)
+	}
+	if ev.Comparisons[1].Comparable || ev.Comparisons[2].Comparable {
+		t.Fatalf("start and end: %+v", ev.Comparisons[1:])
 	}
 }

@@ -139,7 +139,8 @@ func Rank(p Profile, probe Values, candidates []Candidate, limit int) []Match {
 func Score(p Profile, probe Values, c Candidate) Match {
 	m := Match{EntityID: c.EntityID, Ref: c.Ref}
 	for _, f := range p.Features {
-		pr := pairValues(f.Comparer, f.Cardinality, probe[f.Property], c.Values[f.Property])
+		a, b := poolPeriods(f.Property, probe, c.Values)
+		pr := pairValues(f.Comparer, f.Cardinality, a, b)
 		if !pr.Comparable {
 			continue
 		}
