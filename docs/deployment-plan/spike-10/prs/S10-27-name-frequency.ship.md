@@ -1,7 +1,7 @@
 # Ship log — S10-27 Name frequency in this project
 
-**Plan:** [`S10-27-name-frequency.md`](S10-27-name-frequency.md) · **Branch:** `s10-27-name-frequency` · **PR:** pending
-**State:** fixing 1
+**Plan:** [`S10-27-name-frequency.md`](S10-27-name-frequency.md) · **Branch:** `s10-27-name-frequency` · **PR:** #409
+**State:** ready
 
 ## Round 0 — implement
 Head `67f9df9d`. Gate PASS (orchestrator re-ran). PR #409 (draft).
@@ -34,4 +34,11 @@ Files: `core/match/registry.go`.
 Failing test first: none (comment move).
 Do: move the "DefaultProfile is the shipped algorithm…" paragraph, including the sentence about the `MinScore` cut seeing the discounted score, above `func DefaultProfile`. Leave the one `ProfiledKinds` line above `ProfiledKinds`. Rewrap to the file's width.
 Check: `go doc ./core/match DefaultProfile` shows the paragraph; `scripts/check-pr.sh` PASS.
+## Round 1 — fix
+Head `9b9b979b`. Gate PASS. F-1 done (commit `a09a6da6`), F-2 done (commit `9b9b979b`). No F-# was Not reproduced.
 
+## Round 2 — review
+Maintainability only (the one lens with Fix-now findings), scope `67f9df9d...9b9b979b`. MNT-1, MNT-2 and MNT-3 resolved. No new findings. No Fix plan 2.
+
+## Result
+Gate PASS · CI pending · open: none · follow-ups: PRF-1 (blocker, deferred, to user), MNT-1 shared count source, CON-1, PRF-2, UX-1 · logged: MNT-4 · to user: PRF-1
