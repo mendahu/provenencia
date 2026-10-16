@@ -1,18 +1,18 @@
 # S10-50 — Promote sheet lines show the values they compared
 
-**Status:** Blocked — on S10-28 ([#411](https://github.com/mendahu/provenencia/pull/411)) merging into `main`
+**Status:** Planned
 **Spike / slice:** Spike 10 · Slice 7 — How names compare (no new chrome)
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#s10-50--promote-sheet-lines-show-the-values-they-compared)
 **Brief:** — (no new chrome: lines the sheet already draws gain their values and labels)
 **Board:** —
-**Depends on:** S10-28 ([#411](https://github.com/mendahu/provenencia/pull/411)), whose `ValueRef` and `withRowConflicts` this PR extends
+**Depends on:** S10-28 (landed [#411](https://github.com/mendahu/provenencia/pull/411)), whose `ValueRef` and `withRowConflicts` this PR extends
 **Blocks:** —
 **Branch:** `s10-50-promote-sheet-values`
 **Version bump:** none — Spike 10 PRs leave `VERSION` at 0.2.0 ([`docs/versioning.md`](../../../versioning.md))
 **Skills to load:** [`add-ffi-handler`](../../../../.agents/skills/add-ffi-handler/SKILL.md)
 **Rules that bind:** `.cursor/rules/go-tests.mdc`
 **Context:** [S10-28 ship log](S10-28-support-negatives.ship.md) round 2 (UX-3, CON-4), [S10-28 plan](S10-28-support-negatives.md) D-7, D-10 and its Landed note, [`docs/matching.md`](../../../matching.md) "Support weights and negatives"
-**Planned:** 2026-10-16 against `s10-28-support-negatives` @ `70521f33`, the head of open PR #411. That branch already records S10-28 as landed (its implementer wrote the docs ahead of the merge). Before you start: `gh pr view 411 --json state` must say `MERGED`; then branch from `main` and recheck every §4 row there
+**Planned:** 2026-10-16 against `main` @ `eb6aa5f` (S10-28 landed). First written against `s10-28-support-negatives` @ `70521f33` before the merge; `main`'s tree is identical to it, so §4 holds unchanged
 **Review:** [`S10-50-promote-sheet-values.review.md`](S10-50-promote-sheet-values.review.md) — 2 rounds: Fits with changes / Not ready, then Fits / Ready with changes; every finding answered; no open blocker
 
 ### Implementer — read this first
@@ -80,7 +80,7 @@ Every line on Promote's evidence sheet shows the two values it compared, in the 
 
 ## 4. Current state
 
-Verified on `s10-28-support-negatives` @ `70521f33`. Line numbers are approximate.
+Verified at `70521f33`, whose tree `main` @ `eb6aa5f` matches. Line numbers are approximate.
 
 | Area | Where | Today |
 | --- | --- | --- |
@@ -198,7 +198,7 @@ Check: `CGO_ENABLED=1 go test -tags fts5 ./api/ffi/handlers -run Promote` passes
 
 **STEP-7 — Docs.**
 Files: `docs/matching.md`, `docs/deployment-plan/spike-10/completed.md`, `docs/deployment-plan/spike-10/deployment-plan.md`, this plan.
-Do: In `docs/matching.md`, the "Reasons." bullet under "Support weights and negatives" says a `ValueRef` names a term by its label and carries a date, and that `attachExhibits` builds every Promote row's lines (a row with no exhibit gets one per comparison). In `completed.md`, add a `## S10-50 — Promote sheet lines show the values they compared` heading above `## S10-28` with one paragraph. In `deployment-plan.md`: the PR sequence line `S10-50  Promote sheet lines show the values they compared (…) (after S10-28)` (near line 243) ends `— done, #N`; the `#### S10-50` entry's `**Plan:**` line (near line 588) ends `— Landed #N` instead of `— Blocked — on S10-28`. This plan: Status `Landed in #N (date)` and a Landed note.
+Do: In `docs/matching.md`, the "Reasons." bullet under "Support weights and negatives" says a `ValueRef` names a term by its label and carries a date, and that `attachExhibits` builds every Promote row's lines (a row with no exhibit gets one per comparison). In `completed.md`, add a `## S10-50 — Promote sheet lines show the values they compared` heading above `## S10-28` with one paragraph. In `deployment-plan.md`: the PR sequence line `S10-50  Promote sheet lines show the values they compared (…) (after S10-28)` (near line 243) ends `— done, #N`; the `#### S10-50` entry's `**Plan:**` line (near line 588) ends `— Landed #N` instead of `— Planned`. This plan: Status `Landed in #N (date)` and a Landed note.
 Check: `python3 scripts/check-plan-docs.py docs/deployment-plan/spike-10/prs/S10-50-promote-sheet-values.md` reports no errors.
 
 Commits: one per behavior. The subject is one full imperative sentence that says what changed for the researcher, ending in a period, like the rest of `git log` ("Restore list scroll after the sort is applied."). No WIP commits.
@@ -255,7 +255,7 @@ Must stay green: everything `scripts/check-pr.sh` runs. The expected updates are
 
 **Stop and report if:**
 
-- On `main` after #411 merges, `withRowConflicts`, `ValueRef`, `pairValues`, or the FFI branch no longer match §4.
+- `withRowConflicts`, `ValueRef`, `pairValues`, or the FFI branch no longer match §4.
 - `BenchmarkPairValues/plain` reports more than 0 allocs/op after STEP-1.
 - A test not named in STEP-3, STEP-4, or STEP-6 needs a changed expected label or display to pass; name it and its old and new values.
 - T-8's or T-9's fixture (a provisional-only claim) still yields an exhibit, or yields no row comparisons; report what `acceptedMembers` and `Row.Comparisons` hold.

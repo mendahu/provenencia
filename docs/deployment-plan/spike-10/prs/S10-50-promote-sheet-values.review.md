@@ -10,7 +10,7 @@ None.
 - Term labels reach every `ValueRef`, so `Rank` / ForSubject reasons name terms by label too (D-1).
 - A no-exhibit row's `agree` lines are no longer drawn as checked, disabled pins, and their values join the drafted argument (D-7).
 - The PR also moves `conclusiondetails.termLabels` and `handlers.loadTermInfo` onto the new `Vocabulary.TermsByID` (D-2), beyond the two files the S10-28 follow-up named.
-- The plan is stacked on the S10-28 branch and stays Blocked until #411 merges.
+- Written stacked on the S10-28 branch; refreshed to Planned after #411 merged (2026-10-16). `main` @ `eb6aa5f` has the same tree as the planning base, so no Current state row or Decision changed.
 - A no-exhibit row drops its blank `unknown` lines, matching exhibit rows (D-6, X-12).
 
 ## Round 1
