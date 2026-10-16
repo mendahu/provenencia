@@ -12,7 +12,7 @@ The small S9-10 fixes already shipped: hyphens as word breaks, adjacent-letter s
 ## Scoring
 
 - **Concluded values first.** Once Reconciliation Claims ship, a concluded value should dominate and the other groupings should count less. Spike 10 weighs by share of support only.
-- **Calibration.** Weights and minimum scores are hand-set. A labelled fixture of known-same and known-different pairs (common names, generations, spelling drift) would tune them. Later, accepted and rejected claims are labels. Fellegi–Sunter learns per-feature agree/disagree weights from that shape.
+- **Calibration.** Weights and minimum scores are hand-set. A labelled fixture of known-same and known-different pairs (common names, generations, spelling drift) would tune them. Later, accepted and rejected claims are labels. Fellegi–Sunter learns per-feature agree/disagree weights from that shape. The plan for this is [`matching-test-suite.md`](matching-test-suite.md).
 - **Researcher-defined properties.** `ComparerFor` exists. Default profiles only list product properties. A profile could include user properties (occupation, residence text) at a modest default weight, or let a project opt them in.
 
 ## Engine
@@ -23,4 +23,4 @@ The small S9-10 fixes already shipped: hyphens as word breaks, adjacent-letter s
 
 ## Open
 
-- What a labelled evaluation set looks like before real projects exist: synthetic records, or a curated public-domain sample.
+- What a labelled evaluation set looks like before real projects exist: synthetic records, or a curated public-domain sample. [`matching-test-suite.md`](matching-test-suite.md) proposes synthetic records from a simulated world, labelled by hand.
