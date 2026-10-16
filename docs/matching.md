@@ -30,7 +30,7 @@ handles ┘                    └── Feature: Property · Comparer · Weight
 ```
 
 - **Probe:** the thing being matched, as `match.Values` (Property → values).
-  - `ForSubject` reads an Interpretation Subject's positive Observations.
+  - `ForSubject` reads an Interpretation Subject's Observations, negative ones marked; only a positive value earns credit.
   - `ForEntity` reads a handle's auto-reconciled values from the cache, at every rank.
 - **Candidates:** the unmerged handles of the probe's Subject type, with their cached auto-reconciled values at every rank. The probe's own handle is never a candidate.
 - **Pure core:** `core/match` has no catalog access. It can be tested with literal values, and can run anywhere a probe and candidates can be built.
@@ -113,8 +113,9 @@ Every weight and affinity is a `NameComparer` field.
 **Support weights and negatives.** A handle's cached values carry the support the auto-reconciler counted (`support`, `against`, `reason`), and a Subject's Observations carry a polarity. `pairValues` (`pairs.go`) decides which value on each side speaks for a Feature, and both `Score` and `Evaluate` read their pair through it.
 - **Weight.** A value's effective support is `support − against` (at least 1 for a displayed `kept` value, at least 0 for any other). The **leaders** are the displayed values with the highest effective support, or when none is displayed, the values that share the highest. A value's weight is its effective support over the leaders', at most 1. A neutral, `denied`, or `provisional` value, or one with no support left, never votes. Two equally supported names both lead, so a maiden and a married name each match in full.
 - **Contradictions.** A negative Observation that is `autoreconcile.Compatible` with a leader on the other side contradicts it. A value compatible with a `denied` value that nothing else on that side backs contradicts it. When both sides have leaders and every comparable leader pair scores 0, that is a contradiction, so a minority that agrees does not rescue a mismatch. A negative never raises a score; a probe with only negatives has nothing to compare and the Feature is skipped.
+- **Multiple cardinality.** A Feature whose Property is `multiple` (a Place's toponyms) gives every voting value full weight and skips the leader rule, so a handle's minority toponym still matches. A negative or a `denied` value still contradicts.
 - **Credit.** Otherwise the best `similarity × weight × weight × (1 − discount)` among voting pairs, reported as `similarity × weights`. A handle or probe with no cache evidence weighs every value 1 and scores as before.
-- **Reasons.** `Reason` and `PropertyComparison` carry `Probe` and `Candidate` (`ValueRef`: label, negative flag, and the Observation id of a probe value).
+- **Reasons.** `Reason` and `PropertyComparison` carry `Probe` and `Candidate` (`ValueRef`: label, negative flag, and the Observation id of a probe value). On the Promote sheet a row-level conflict no exhibit shows is added as a line that cannot be pinned, and a negative probe reads "not <value>".
 
 | Probe | Handle values (support) | Result |
 | --- | --- | --- |

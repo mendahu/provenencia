@@ -262,7 +262,7 @@ func EntitiesValues(q Querier, entityIDs [][]byte, profile match.Profile) (map[s
 		return nil, err
 	}
 	err = sqlbatch.Each(ids, func(batch [][]byte) error {
-		rows, err := q.Query(sqlEntityValues+` AND e.id IN (`+database.SQLInPlaceholders(len(batch))+`) ORDER BY r.entity_id`,
+		rows, err := q.Query(sqlEntityValues+` AND e.id IN (`+database.SQLInPlaceholders(len(batch))+`) ORDER BY r.entity_id, r.rank`,
 			database.BlobArgs(batch)...)
 		if err != nil {
 			return err

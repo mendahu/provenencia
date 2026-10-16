@@ -19,6 +19,9 @@
 - `Values.HasPositive` lives in `core/match/pairs.go` with the other new `Value` methods, not in `match.go`.
 - The plan's T-1 row for AC-2.5 is a separate test, `TestPairValuesAgainstReducesSupport`; the minority-weight and order cases are `TestPairValuesOrderIndependent` and the T-1 table.
 - Test helpers (`cachedPerson`, `cached`, `kept`, `negative`, `negated`, `addCachedTerm`) are test-only.
+- The plain path calls `Label` once for the reported pair, so a name without `Form` or a date allocates there.
+- F-1, a user-approved amendment to D-4 (ship log, CON-1): `Feature.Cardinality` and `pairValues(cmp, card, …)`; a multiple Property's voting values all lead at weight 1 and R3 is skipped. The toponym Feature is `multiple`, and `TestDefaultProfileCardinality` in `core/database/subjectvocab` keeps Features and the vocabulary together.
+- F-2, a user-approved amendment to D-10 (ship log, UX-1): Promote's sheet shows a row-level conflict as an unpinnable line (`withRowConflicts`), with a proto field `incoming_negative` and the string `promote.sheet.negatedValue`.
 - `BenchmarkPairValues/plain` uses `TermComparer`; a text comparer allocates on its own. `BenchmarkProposeColdHub` did not move (about 535-575 ms/op before and after).
 
 ### Implementer — read this first
