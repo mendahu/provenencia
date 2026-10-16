@@ -67,7 +67,7 @@ const (
 	// Observations of many Subjects, positive and negative, terms by key; the
 	// caller closes the IN list and orders by o.id.
 	sqlSubjectsValues = `SELECT o.subject_id, p.key, p.origin, o.value_text, o.value_integer,
-			o.value_date_id, o.value_name_id, t.key, COALESCE(t.neutral, 0), o.id, o.polarity
+			o.value_date_id, o.value_name_id, t.key, COALESCE(t.neutral, 0), COALESCE(t.label, ''), o.id, o.polarity
 		FROM observations o
 		JOIN properties p ON p.id = o.property_id
 		LEFT JOIN property_terms t ON t.id = o.value_term_id
@@ -75,7 +75,7 @@ const (
 
 	// Cached auto-reconciled values (every rank) of unmerged handles, terms by key.
 	sqlEntityValues = `SELECT r.entity_id, e.ref, p.key, p.origin, r.value_text, r.value_integer,
-			r.value_date, r.value_name, t.key, COALESCE(t.neutral, 0),
+			r.value_date, r.value_name, t.key, COALESCE(t.neutral, 0), COALESCE(t.label, ''),
 			r.support, r.against, r.rank, r.reason
 		FROM auto_reconciler_values r
 		JOIN canonical_entities e ON e.id = r.entity_id
@@ -305,17 +305,18 @@ func SubjectsValues(q Querier, subjectIDs [][]byte, profile match.Profile) (map[
 			text, termKey sql.NullString
 			integer       sql.NullInt64
 			neutral       bool
+			termLabel     string
 			observationID []byte
 			polarity      string
 		)
-		if err := rows.Scan(&subjectID, &p.prop.Key, &p.prop.Origin, &text, &integer, &p.dateID, &p.nameID, &termKey, &neutral, &observationID, &polarity); err != nil {
+		if err := rows.Scan(&subjectID, &p.prop.Key, &p.prop.Origin, &text, &integer, &p.dateID, &p.nameID, &termKey, &neutral, &termLabel, &observationID, &polarity); err != nil {
 			return err
 		}
 		if !wanted[p.prop] {
 			return nil
 		}
 		p.subject = string(subjectID)
-		p.v = match.Value{Text: text.String, HasText: text.Valid, Integer: integer.Int64, HasInteger: integer.Valid, Term: termKey.String, Neutral: neutral,
+		p.v = match.Value{Text: text.String, HasText: text.Valid, Integer: integer.Int64, HasInteger: integer.Valid, Term: termKey.String, Neutral: neutral, TermLabel: termLabel,
 			Negative: polarity == observations.PolarityNegative, ObservationID: observationID}
 		all = append(all, p)
 		if len(p.dateID) > 0 {
@@ -383,17 +384,18 @@ func scanEntityValues(rows *sql.Rows, profile match.Profile, namePattern string)
 			integer            sql.NullInt64
 			dateBlob, nameBlob []byte
 			neutral            bool
+			termLabel          string
 			support, against   int
 			rank               int
 			reason             string
 		)
-		if err := rows.Scan(&entityID, &ref, &prop.Key, &prop.Origin, &text, &integer, &dateBlob, &nameBlob, &termKey, &neutral, &support, &against, &rank, &reason); err != nil {
+		if err := rows.Scan(&entityID, &ref, &prop.Key, &prop.Origin, &text, &integer, &dateBlob, &nameBlob, &termKey, &neutral, &termLabel, &support, &against, &rank, &reason); err != nil {
 			return nil, err
 		}
 		if !wanted[prop] {
 			continue
 		}
-		v := match.Value{Text: text.String, HasText: text.Valid, Integer: integer.Int64, HasInteger: integer.Valid, Term: termKey.String, Neutral: neutral}
+		v := match.Value{Text: text.String, HasText: text.Valid, Integer: integer.Int64, HasInteger: integer.Valid, Term: termKey.String, Neutral: neutral, TermLabel: termLabel}
 		v.SetEvidence(support, against, rank, reason)
 		if dateBlob != nil {
 			d, err := valuecodec.UnmarshalDate(dateBlob)

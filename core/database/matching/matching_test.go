@@ -474,7 +474,7 @@ func TestForSubjectJudgesAgainstTheMajority(t *testing.T) {
 	res, err := matching.ForSubject(f.db, female.ID, matching.Options{})
 	must(t, err)
 	r := sexReason(t, res, h.Entity.Ref)
-	if r.Contribution != -2 || r.Probe.Label != "female" || r.Candidate.Label != "male" {
+	if r.Contribution != -2 || r.Probe.Label != "Female" || r.Candidate.Label != "Male" {
 		t.Fatalf("one dissenting reading: %+v", r)
 	}
 
@@ -492,7 +492,7 @@ func TestForSubjectJudgesAgainstTheMajority(t *testing.T) {
 		res, err := matching.ForSubject(f.db, male.ID, matching.Options{})
 		must(t, err)
 		r := sexReason(t, res, d.Entity.Ref)
-		if r.Contribution != -2 || r.Probe.Label != "male" || r.Candidate.Label != "male" {
+		if r.Contribution != -2 || r.Probe.Label != "Male" || r.Candidate.Label != "Male" {
 			t.Fatalf("%+v", r)
 		}
 	})
@@ -524,4 +524,39 @@ func TestSubjectsValuesNegatives(t *testing.T) {
 	if len(res.Matches) != 0 {
 		t.Fatalf("a Subject with only a negative ranks nothing: %+v", res.Matches)
 	}
+}
+
+func TestValuesCarryTermLabel(t *testing.T) {
+	f := newFixture(t)
+	profile, _ := match.DefaultProfile("person")
+	sex := match.Property{Key: "sex_at_birth", Origin: "provenencia"}
+	check := func(what string, vs []match.Value) {
+		t.Helper()
+		if len(vs) != 1 || vs[0].Term != "male" || vs[0].TermLabel != "Male" {
+			t.Fatalf("%s: %+v", what, vs)
+		}
+	}
+
+	s := f.subject("person", termed("sex_at_birth", "male"))
+	got, err := matching.SubjectsValues(f.db, [][]byte{s.ID}, profile)
+	must(t, err)
+	check("SubjectsValues", got[string(s.ID)][sex])
+
+	h := f.handle("person", named("Mary Robins"), termed("sex_at_birth", "male"))
+	cands, err := matching.CandidatesOfType(f.db, "person", "provenencia", profile)
+	must(t, err)
+	var found bool
+	for _, c := range cands {
+		if c.Ref == h.Entity.Ref {
+			found = true
+			check("CandidatesOfType", c.Values[sex])
+		}
+	}
+	if !found {
+		t.Fatalf("handle %s missing from candidates", h.Entity.Ref)
+	}
+
+	ev, err := matching.EntitiesValues(f.db, [][]byte{h.Entity.ID}, profile)
+	must(t, err)
+	check("EntitiesValues", ev[string(h.Entity.ID)][sex])
 }
