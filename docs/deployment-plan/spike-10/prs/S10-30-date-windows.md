@@ -1,6 +1,6 @@
 # S10-30 — Date windows in matching
 
-**Status:** Planned
+**Status:** Landed in #415 (2026-10-16)
 **Spike / slice:** Spike 10 · Slice 7 — How names compare (no new chrome)
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#s10-30--date-windows-in-matching)
 **Brief:** — (no new chrome: the score changes, no view does)

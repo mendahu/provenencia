@@ -1,5 +1,9 @@
 # Spike 10 — completed
 
+## S10-30 — Date windows in matching
+
+**Landed 2026-10-16** in [#415](https://github.com/mendahu/provenencia/pull/415). Dates compare by the days they cover. December 1817 against January 1818 scores 0.777 instead of reading as a year apart (0.533), while two points in one calendar year keep their tiers and two whole years apart keep their score; a month-level range keeps its months, so a September date no longer sits inside March to June (0.734). The cutoff still counts civil years and the fall-off counts days, from a new `autoreconcile.DateEnds` that gives each end of a date its day span. An Event's `date` now compares with another Event's `start_date` and `end_date` as a period, at the `date` weight, only when exactly one side has a `date` and no start or end. A birth on `14 MAY 1817` against a year-only `1818` now scores 7.0, not 7.2. Julian dates and double dating stay out. No view changed.
+
 ## S10-50 — Promote sheet lines show the values they compared
 
 **Landed 2026-10-16** in [#413](https://github.com/mendahu/provenencia/pull/413). A term on a Promote sheet line reads as its label (`Male`, `Two-Spirit`), not its key, and a name with parts and no `Form` shows its parts. A row with no exhibit, such as one fixed to a handle whose only member claim is provisional, now shows each comparison that spoke with its two values and dates, never pinned. `match.Value.TermLabel` and `ValueRef.Date` carry the label and date; `graphcache.Vocabulary.TermsByID` replaces three hand-built term maps; the FFI sends `Row.Exhibits` only and `graphalign.Comparison.Pinned` is gone.
