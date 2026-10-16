@@ -12,7 +12,7 @@ This spike is entirely about the Promote flow's matching: making the algorithm g
 
 | Doc | Role |
 | --- | --- |
-| [**Comparison layers**](comparison-layers.md) | Requirements for layers 1–4 (value, property, Subject and entity comparison), the rules every layer follows, and the reuse and retirement inventory |
+| [**Comparison layers**](comparison-layers.md) | Requirements for layers 1–6 (value, property, Subject, entity and segment comparison, graph alignment), the lifespan check, the rules every layer follows, and the reuse and retirement inventory |
 
 ## Spike-wide principle: sparse data first
 
@@ -33,9 +33,11 @@ Three generations back, records thin out. Often all there is is a name and a bir
 - **Frequency weighting is descoped entirely,** for names, event types and toponyms. Property weights are plain registry numbers. Generic properties (event type) get a low weight; places get their strength from relationships.
 - **The entity profile is strict:** only the reconciled conclusion. Real alternates (maiden names) belong in the conclusion. The profile builder is its own package, `core/subjectprofile`.
 - **Layer 3 is Subject comparison:** one Subject against one Subject. It combines property comparisons and holds the ones that span properties.
-- **Layer 4 is entity comparison against the reconciled conclusion,** not each member. The conclusion becomes a Subject-shaped profile (concluded values positive, denied values negative), then layer 3 runs. Support weighting is outsourced to the reconciler. Graph alignment is layer 5.
+- **Layer 4 is entity comparison against the reconciled conclusion,** not each member. The conclusion becomes a Subject-shaped profile (concluded values positive, denied values negative), then layer 3 runs. Support weighting is outsourced to the reconciler.
 - **`Contains` scores below 1, and `Near` has a minimum similarity** per type, in layer 1.
 - **Comparison layers make no workflow decisions.** Promote, the reconciler and others keep their own decision logic and compose the layers.
 - **Layer 3 compares the properties both Subjects have,** driven by a per-type registry. It returns two axes: **similarity** (0–1, are they alike) and **evidence** (points, how strong). No knockout flag: a decisive conflict is a large registry penalty.
 - **Similarity weighs a conflict by its penalty,** so a decisive conflict pulls similarity down as well as evidence.
 - **Dedupe is in scope.** Everything in the reuse inventory (other consumers, small widening changes, duplicates to retire, the lighter-touch items and the bugs found in passing) is Spike 11 work, split across PRs as each layer lands.
+- **Layer 5 is segment comparison** (primary – bridge – primary, one hop, pure) and **layer 6 is graph alignment** (the walk and every decision). Bridge cardinality is declared in the registry; a conflict through a one-cardinality bridge subtracts; segment evidence includes the neighbor's match.
+- **Lifespan (draft):** the profile builder derives a time window from direct neighbors' dates by registry rules, and Subject comparison treats an impossible overlap as a conflict.

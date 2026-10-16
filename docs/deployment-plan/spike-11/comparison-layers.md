@@ -24,7 +24,8 @@ Packages: layer 1 is **value compare** (`core/valuecompare`), and layer 2 is **p
 | 2 | **Property comparison** | Do these two Subjects agree on one property? | This doc |
 | 3 | **Subject comparison** | How alike are these two Subjects on their own values? | Later. Combines property comparisons and holds comparisons that span properties |
 | 4 | **Entity comparison** | Does this Subject belong with this entity? | Decided in shape (§ Entities): subject comparison against the entity's reconciled conclusion |
-| 5 | Candidate scoring and graph alignment | Which handle is this Subject? | Later (`Rank`, link points, `Align`) |
+| 5 | **Segment comparison** | Does this neighbor, through this bridge, line up? | Decided in shape (§ Segments) |
+| 6 | **Graph alignment** | Which handle is each Subject on the layer? | Later: the walk and every decision (`Align`) |
 
 Layers 1–3 are **discrete**: one thing against one thing. An entity is a group of Subjects, so comparing against one is one-to-many. Layer 4 turns that back into one-to-one by comparing against the group's conclusion.
 
@@ -282,6 +283,45 @@ This is the feature vector the matching test suite's fit needs: one outcome, rel
 
 **Registry shape,** per Subject type and property: agree weight and conflict penalty. They are separate on purpose: event type has a low agree weight and a very large conflict penalty. Comparisons that span properties are entries too, with their own weights. Numbers above are today's where they exist and placeholders otherwise.
 
+## Segments (layer 5) and graph alignment (layer 6)
+
+**Decided (2026-10-16): two layers.** Comparing a segment is a pure, one-hop comparison. Walking the graph and deciding is its own logic layer.
+
+**A segment** is two primary Subjects joined by a bridge: primary – bridge – primary. Segment comparison compares a segment on the layer with one in the research graph:
+- **The neighbor** by entity comparison (layer 4).
+- **The bridge** by Subject comparison on the bridge's own properties (role, relationship term, dates), plus direction: a parent maps to a parent, and a term and its inverse correspond with the ends swapped. This replaces exact signature equality (`corresponds`).
+- **Output:** outcome (match, partial, conflict, unknown), similarity, evidence, detail. No walking, no decisions.
+
+**A segment behaves like a property whose value is a neighbor,** with the same cardinality rule as property comparison:
+
+| Bridge cardinality | Neighbor matches | Neighbor differs | No corresponding link |
+|---|---|---|---|
+| One (subject of a birth) | strong support | **conflict: subtracts evidence** | unknown |
+| Many (parent of, residence) | support | unknown | unknown |
+
+**Decided:**
+- **Cardinality is declared on the bridge type in the registry,** replacing fan-out measured from the catalog (the same kind of statistic as the descoped frequency). More thought on its shape to come.
+- **A conflict through a one-cardinality bridge subtracts evidence.**
+- **Segment evidence includes how well the neighbor itself matched** (today's credit).
+
+**Graph alignment (layer 6)** holds everything that searches or decides: seeding and candidates (with the property-only fallback), listing segments around candidate pairs, one-to-one, propagation (each accepted pair becomes an anchor), conflicts, and chains. It replaces the three walk-like passes today (walk, fallback re-walk, refinement) with one defined procedure. **Chains come from the walk:** an accepted pair is an anchor whose own segments then count, so a double or triple segment match is several well-supported Subjects, not a multiplied score.
+
+### Lifespan: a derived property (draft)
+
+Dates on a Subject's neighbors constrain each other. An entity that died before the Subject was born is not that Subject, even when neither side has the other's event.
+
+- **The subject profile builder derives a time window** per Subject or entity from its own dates and its **direct** neighbors' dates, by registry rules keyed on bridge type. For example:
+  - subject of a birth at D: born at D;
+  - subject of a death at D: died by D;
+  - subject of a marriage at D: alive, roughly 14 or older;
+  - parent of someone born at D: born about 12–60 years earlier (narrower for mothers);
+  - residence at D: alive at D.
+
+  Maximum lifespan, minimum and maximum parent ages are registry numbers. A person has a lifespan; an event its date; a place its period.
+- **Subject comparison compares the windows** as a registry-declared special case, using value compare's date relations. `Different` (impossible together: died before born, or a 140-year span) is a conflict. `Overlaps` or `Contains` is consistent.
+- **Weighted as a conflict detector:** large conflict penalty, near-zero agree weight, because the dates it reads are already counted through their own segments.
+- **Bounded by construction:** rules read direct neighbors only, so nothing recurses across the tree. Both sides' windows can be built before alignment, once each. Two-hop rules (a grandchild's birth) would be explicit registry entries, later if ever.
+
 ## Entities: compare against the conclusion
 
 **Decided (2026-10-16):** a Subject is compared with an entity's **reconciled values**, not with each member.
@@ -378,4 +418,6 @@ A survey of comparison, normalization and dedupe code outside `core/match` (2026
 
 ## Open questions
 
+- **How far neighbor credit travels.** Today credit stops at one hop to avoid circular evidence (A supports B supports A). Start with one hop plus chains from the walk, or allow damped multi-hop credit with cycles blocked? Goldens where a triple chain should win will show whether one hop under-rewards chains.
+- **Bridge cardinality's shape** in the registry (more thoughts to come).
 - **The reconciler's grouping rules.** Which relations make two values "show once" is the reconciler's call (rule 7), designed with its own PR. Today's disagreements to resolve there: `Montréal` / `Montreal` and `Jim` / `James` agree in matching but don't group or pin; `J. Robins` / `James Robins` groups but only scores partial.
