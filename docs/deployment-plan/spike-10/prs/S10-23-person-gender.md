@@ -1,6 +1,6 @@
 # S10-23 — Sex / gender on the Person page
 
-**Status:** Blocked — on review round 2
+**Status:** Planned
 **Spike / slice:** Spike 10 · Slice 6 — Lists and the Person page
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#s10-23--sex--gender-on-the-person-page)
 **Brief:** [S10-D12](../design/S10-D12-person-detail.md) (PDP-1 to PDP-6 and PDP-12 ship here), board agreed 2026-10-16
@@ -70,14 +70,14 @@ The researcher can see a person's gender at a glance on the Person page, or, whe
 
 | In | Covered by |
 | --- | --- |
-| Read the treatment from the detail's fields: precedence, family, text (PDP-1, PDP-2, PDP-3, PDP-4) | STEP-1, STEP-2, AC-1.1, AC-2.1 |
-| Typed seeded term keys in `ConclusionVocabulary.swift` and their Go drift subtest | STEP-1, T-7 |
-| `PVThumbnail` optional colours on the mark and symbol states (PDP-3, inventory Extend) | STEP-3 |
+| Read the treatment from the detail's fields: precedence, family, text (PDP-1, PDP-2, PDP-3, PDP-4) | STEP-2, STEP-3, AC-1.1, AC-2.1 |
+| Typed seeded term keys in `ConclusionVocabulary.swift` and their Go drift subtest | STEP-2, T-7 |
+| `PVThumbnail` optional colours on the mark and symbol states (PDP-3, inventory Extend) | STEP-1 |
 | Header thumb reads one `thumbnail` slot from the kind's content, and one `badge` slot above the title (inventory Extend) | STEP-4, T-6 |
 | Header thumb is 120pt on every Conclusion page (board 2a; answered 2026-10-16) | STEP-4, §10 step 5 |
-| Two `PVColor` aliases for the woman family over existing `PVPalette` steps (answered 2026-10-16) | STEP-3 |
+| Two `PVColor` aliases for the woman family over existing `PVPalette` steps (answered 2026-10-16) | STEP-1 |
 | Badge above the name on the Person page, with its spoken label (PDP-1, PDP-2, PDP-5) | STEP-4, AC-3.1, AC-3.2 |
-| Copy: “{value} · at birth” | STEP-2 |
+| Copy: “{value} · at birth” | STEP-3 |
 | Details rows unchanged (PDP-6) | AC-2.6, T-6 |
 
 | Out | Home |
@@ -94,7 +94,7 @@ The researcher can see a person's gender at a glance on the Person page, or, whe
 
 ## 4. Current state
 
-Verified at `daf4e08`.
+Verified at `1fc683b`.
 
 | Area | Where | Today |
 | --- | --- | --- |
@@ -130,7 +130,7 @@ Verified at `daf4e08`.
 | D-9 | `text` is `ReconciledValueDisplay.string(for:)` of the displayed value. `badge.text`: gender → `text`; sex at birth → `L10n.Conclusions.sexAtBirthBadge(text)` *(new)* = “%@ · at birth”. `badge.accessibilityLabel` = `L10n.Conclusions.a11yList(fieldLabel, rest: text)`, where `fieldLabel` is the field's `label`. `badge.ink` = `family.ink`. | One source of the value and of the Property name, the same ones the Details row uses (review M-4). | New “Gender: %@” keys — a second way to speak a field. |
 | D-10 | `SeededPropertyKey.gender = "gender"` *(new)*. Term keys go in `ConclusionVocabulary.swift` as `enum SeededGenderTerm { static let man, woman, nonBinary }` and `enum SeededSexAtBirthTerm { static let female, male }` *(new)*. `TestSwiftVocabularyMatchesGo` gains subtest "seeded term keys are seeded" *(new)*: it installs the seed, looks up each Property by key, then each term with `propertyterms.Lookup(c, propertyID, key, properties.OriginProvenencia)`. | The file's rule and drift test cover every wire value (review M-3). | Private constants in the treatment — a renamed seed term would silently fall to `.other`. |
 | D-12 | The header thumb is 120pt on every Conclusion page: `ConclusionDetailHeader` passes `size: 120`. The other header spacing stays. | Board 2a draws 120pt; the user chose one size for Person, Event, and Place (answered 2026-10-16). | 120pt for Person only — a per-kind size in the slot for one difference. |
-| D-13 | `PVColor.personWomanTint` *(new)* = `Color.pvDynamic(light: PVPalette.plum100, dark: PVPalette.plum900)` and `PVColor.personWomanInk` *(new)* = `Color.pvDynamic(light: PVPalette.plum700, dark: PVPalette.plum300)`, under a `// Person treatment (S10-23)` comment in `PVColor.swift`. No new `PVPalette` entry. | The board's woman pairs have no token; aliases keep feature code on `PVColor` (answered 2026-10-16). | `PVPalette` in feature code; `recordMarriageSoft` — a different dark step than the board. |
+| D-13 | `PVColor.personWomanTint` *(new)* = `Color.pvDynamic(light: PVPalette.plum100, dark: PVPalette.plum900)` and `PVColor.personWomanInk` *(new)* = `Color.pvDynamic(light: PVPalette.plum700, dark: PVPalette.plum300)`, under `// MARK: Person gender treatment (S10-D12)` in `PVColor.swift`, each with a doc comment naming board S10-D12 and its CSS name (`--person-woman-tint`, `--person-woman-ink`). No new `PVPalette` entry. The design-system project's `tokens/colors.css` gains the same two names; that is a user step, outside the repo (DoD). | The board's woman pairs have no token; aliases keep feature code on `PVColor` (answered 2026-10-16). | `PVPalette` in feature code; `recordMarriageSoft` — a different dark step than the board. |
 | D-11 | `xcodebuild`, the Swift tests, and the manual check run on a Mac. On a machine without them, the implementer runs the Go checks, stops before STEP-3, and reports which checks did not run. | Precedent: S10-41 §11. | Claiming a Swift check that was not run. |
 
 ## 6. Design
@@ -153,7 +153,7 @@ Searched: `gender`, `sexAtBirth`, `Tint`, `tint`, `Colors` under `macos/App`; `P
 
 **Builds on.** `ConclusionDetailBody` defaults, `PVBadge` ink override, existing `PVColor` and `PVPalette` steps, `ReconciledValueDisplay.string(for:)`, `a11yList`, the wire-vocabulary drift test, the reconciler's neutral-term rule.
 **Deletes.** None — nothing becomes dead.
-**Next adds.** S10-35 adds the crop to `ConclusionDetailThumbnail`, renders the header thumb through `CachedThumbnail` with a `colors` pass-through, and draws `colors.line` on the image state. S10-39 changes which crop `ConclusionDetailThumbnail` carries. Neither adds a protocol member for the thumb.
+**Next adds.** S10-35 moves `mark` and `thumbnailLabel` from the `ConclusionDetailPage` init into `ConclusionDetailThumbnail`, so each kind's content supplies its whole thumb (a likeness must not be spoken as “No likeness recorded”), adds the crop to `ConclusionDetailThumbnail`, renders the header thumb through `CachedThumbnail` with a `colors` pass-through, and draws `colors.line` on the image state. S10-39 changes which crop `ConclusionDetailThumbnail` carries. Neither adds a protocol member for the thumb.
 
 ### Schema
 
@@ -188,25 +188,25 @@ L10n key *(new)* in `L10n.Conclusions`: `sexAtBirthBadge(_:)` → `conclusions.s
 
 ## 7. Steps
 
-**STEP-1 — The rule and its keys**
-Files: `macos/App/Platform/ConclusionVocabulary.swift`, `api/ffi/swift_vocabulary_test.go`, `macos/App/Features/Conclusions/PersonGenderTreatment.swift` *(new)*, `macos/ProvenenciaTests/PersonGenderTreatmentTests.swift` *(new)*, `macos/Provenencia.xcodeproj/project.pbxproj`. Skill: `add-swift-test`.
-Do: D-10 keys and subtest; `PersonGenderTreatment` per D-2, D-3, D-5 with the colours from the brief's Board line; register both new files in the project (app target and test target, per `add-swift-test`).
+**STEP-1 — Kit: thumb colours and tokens**
+Files: `macos/App/DesignSystem/Components/Thumbnail/PVThumbnail.swift`, `macos/App/DesignSystem/Tokens/PVColor.swift`. Skill: `add-ui-component`.
+Do: D-6, D-13. Add a `#Preview` case with `colors:` on a mark if the file has a preview block.
+Check: the app builds; every existing `PVThumbnail(` call site compiles unchanged.
+
+**STEP-2 — Header slot types, the rule, and its keys**
+Files: `macos/App/Features/Conclusions/ConclusionDetailPage.swift` (declare `ConclusionDetailThumbnail` and `ConclusionDetailBadge` only; the protocol members and drawing come in STEP-4), `macos/App/Platform/ConclusionVocabulary.swift`, `api/ffi/swift_vocabulary_test.go`, `macos/App/Features/Conclusions/PersonGenderTreatment.swift` *(new)*, `macos/ProvenenciaTests/PersonGenderTreatmentTests.swift` *(new)*, `macos/Provenencia.xcodeproj/project.pbxproj`. Skill: `add-swift-test`.
+Do: the two structs from D-7 and D-8; D-10 keys and subtest; `PersonGenderTreatment` per D-2, D-3, D-5 with the colours in D-5; register both new files in the project (app target and test target, per `add-swift-test`).
 Check: `CGO_ENABLED=1 go test -tags fts5 ./api/ffi/...` passes; T-1, T-2, T-3, T-4 pass in `xcodebuild test`.
 
-**STEP-2 — Copy**
+**STEP-3 — Copy**
 Files: `macos/App/Platform/L10n.swift`, `macos/App/Resources/Localizable.xcstrings`, `PersonGenderTreatment.swift`. Skill: `add-localized-string`.
 Do: the §6 Strings key; `badge` per D-9.
 Check: T-5 passes.
 
-**STEP-3 — Thumb colours and tokens**
-Files: `macos/App/DesignSystem/Components/Thumbnail/PVThumbnail.swift`, `macos/App/DesignSystem/Tokens/PVColor.swift`. Skill: `add-ui-component`.
-Do: D-6, D-13. Add a `#Preview` case with `colors:` on a mark if the file has a preview block.
-Check: the app builds; `git diff --stat -- macos/App` lists only files named in STEP-1 to STEP-4.
-
 **STEP-4 — Shared header and Badge**
 Files: `ConclusionDetailPage.swift`, `PersonDetailContent.swift`.
-Do: D-7, D-8, D-12; `PersonDetailContent.treatment`, `thumbnail`, and `badge`.
-Check: T-6 passes; manual check §10 steps 1 to 5.
+Do: the protocol members and header drawing from D-7, D-8, D-12; `PersonDetailContent.treatment`, `thumbnail`, and `badge`.
+Check: T-6 passes; `git diff --stat 1fc683b -- macos/App` lists only files named in STEP-1 to STEP-4; manual check §10 steps 1 to 5.
 
 **STEP-5 — Docs**
 Files: `completed.md` (one paragraph), `deployment-plan.md` (S10-23 entry: **Status:** `Landed #N`, and the PR sequence line "— done, #N"), this plan (status + Landed note), `design/README.md` (S10-D12 row in **Scheduled**: add “PDP-1 to PDP-6 shipped in S10-23 (#N)”). The brief stays in `design/`; S10-39 archives it.
@@ -243,6 +243,7 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `P
 - [ ] deployment-plan.md: map row status; completed.md: one short paragraph of what shipped
 - [ ] Brief moved to design/archive/ and design/README.md updated (if gated) — here: brief stays in design/ until S10-39; README row notes PDP-1 to PDP-6 shipped
 - [ ] Domain doc updated if a rule in docs/*.md changed: none (seeded-vocabulary.md §3.9 already describes gender)
+- [ ] PR description asks the user to add `--person-woman-tint` and `--person-woman-ink` to the Claude Design system's `tokens/colors.css` (D-13; `macos/App/DesignSystem/README.md` § Provenance)
 - [ ] PR description: what shipped, AC evidence, deviations, manual check
 ```
 

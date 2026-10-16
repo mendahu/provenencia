@@ -1,10 +1,11 @@
 # Review — S10-23 Sex / gender on the Person page (with brief S10-D12)
 
-**Verdict:** Fits with changes — Not ready (round 1, on the draft blocked on its board). Every finding is answered; round 2 runs when the S10-D12 board is agreed and the colour tokens are in D-5.
-**Rounds:** 1. **Reviewers:** maintainability (Opus), executability (Sonnet). Both reviewed the plan and the brief together.
+**Verdict:** Fits with changes — Ready with changes, all answered. No open blocker.
+**Rounds:** 2 (round 1 on the draft, round 2 after the board was agreed on 2026-10-16 and the plan refreshed against `1fc683b`). **Reviewers:** maintainability (Opus), executability (Sonnet). Both reviewed the plan and the brief together.
 
 ## To user
-- None open. The colour tokens and the board link are the plan's Open questions, answered by the agreed board.
+- Answered 2026-10-16: non-binary is lapis (`info*` tokens), not the board's copper (the Event ink); the woman pair is two new `PVColor` aliases; the header thumb is 120pt on Person, Event, and Place.
+- Open, for the user outside the repo: add `--person-woman-tint` and `--person-woman-ink` to the Claude Design system's `tokens/colors.css` (M-11).
 
 ## Writer's own calls
 - **Badge, not Chip** (D-8). The user picked "Chip + thumb tint". `PVChip` is a selectable control in this kit; the display-only pill is `PVBadge`, and it draws its text uppercase.
@@ -91,3 +92,33 @@
 - The no-op Stop line was removed.
 - STEP-6 names the README row and the map wording.
 - Brief frame 8b draws Unknown at birth.
+
+## Round 2
+
+### X-17 · blocker · STEP-1 and STEP-2 cannot compile before STEP-3 and STEP-4
+**Answer:** Fixed. The steps were reordered: STEP-1 now does the kit work (`PVThumbnail.Colors`, the D-13 tokens). STEP-2 declares `ConclusionDetailThumbnail` and `ConclusionDetailBadge` beside the rule and its keys. STEP-4 adds the protocol members and the drawing.
+
+### X-18 · major · Ambiguous planning base; §4 stale
+**Answer:** Fixed. §4 is now "Verified at `1fc683b`", and the Implementer block names `1fc683b`. The STEP-4 diff check runs against `1fc683b`.
+
+### X-19 · minor · Status disagrees with the map and the log
+**Answer:** Fixed. The plan and the map now both say Planned, and this log carries the round-2 verdict.
+
+### X-20 · nit · STEP-1 points at the brief for colours
+**Answer:** Fixed. The step now says "the colours in D-5".
+
+### M-10 · major · The header thumb takes its settings from two places
+**Answer:** Fixed as a doc line. §6 Next adds now says that S10-35 moves `mark` and `thumbnailLabel` into `ConclusionDetailThumbnail`. Nothing here shows a likeness, so the label stays correct in this PR.
+
+### M-11 · major · New tokens are Swift-only
+**Answer:** Fixed:
+- D-13 now adds the tokens under a `// MARK:` with doc comments naming board S10-D12 and the CSS names.
+- The brief's §7 handoff now includes adding them to `tokens/colors.css`.
+- A DoD line asks the user to do that, because the design-system project is outside the repo.
+- The `subject*Band` tokens have the same Swift-only gap; that is logged here and is not this PR.
+
+### M-12 · major · The brief's inventory and non-goals contradict D-13
+**Answer:** Fixed. The brief's "Value → tint" row, §2 tints fact, and non-goals row now allow the two woman aliases.
+
+### M-13 · nit · Comment style
+**Answer:** Fixed. D-13 now uses `// MARK: Person gender treatment (S10-D12)`.

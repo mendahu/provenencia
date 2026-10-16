@@ -75,7 +75,7 @@ The researcher can tell a person's gender (or, failing that, their recorded sex 
 | Neutral is the page as it is today | No gender and no sex at birth; a mixed value (two sources disagree and neither wins); Unknown or Indeterminate sex at birth. Neutral shows no mark and no tint. The Details row already says Mixed or Nothing recorded. |
 | Mixed gender does not fall back | A mixed gender is neutral. It does not drop to sex at birth, and it is not a blend of two tints. |
 | The mark carries the meaning | Colour is never the only signal. The mark's text names the value, and VoiceOver reads it the way the Details row does: the field's label, then the value (“Gender, Woman”, “Sex at birth, Female”). |
-| Tints come from the kit | Each of the four tints is three colours, named like the kind colours: tint (the fill), line (the outline), and ink (the Badge text). Pick each from `PVColor` tokens the design system already has, and label every swatch with its token name. Do not add a palette colour. Do not use a status tone (success, warning, danger) or the Event or Place kind ink, which already mean something else. |
+| Tints come from the kit | Each of the four tints is three colours, named like the kind colours: tint (the fill), line (the outline), and ink (the Badge text). Pick each from `PVColor` tokens the design system already has, and label every swatch with its token name. Do not add a palette colour. (Agreed board: the woman pair became two aliases of existing plum steps, `--person-woman-tint` and `--person-woman-ink`.) Do not use a status tone (success, warning, danger) or the Event or Place kind ink, which already mean something else. |
 | A likeness is a crop of a photo (S10-35) | Each likeness is a cropped region of a Citation's image, drawn by the researcher on one Source. It is a record of the person's `likeness` Property. A person can have many. They do not compete like two birth dates; every one is listed in the gallery, and `likeness` is not also a Details row. |
 | The earliest leads (S10-35) | With no portrait chosen, the header thumb shows the earliest likeness. No likeness: the person mark, as today. |
 | One likeness can be the portrait (S10-39) | The researcher marks one likeness as the portrait. It then leads the header thumb and the Persons list thumb. The others stay in the gallery. Going back to the earliest is on the header thumb's menu. It is a display choice, not evidence. This is the same interaction as choosing a Source's cover on the Source page (S10-D5): a Badge on the chosen card, the button hidden there, a toast after choosing, and the revert on the header thumb. |
@@ -153,7 +153,7 @@ This table is **binding**. Instance the Ship kit rows. Paths from `macos/App/` u
 | Shared Conclusion page | Snowflake | **Extend** | `Features/Conclusions/ConclusionDetailPage.swift` | The header reads one thumb slot (colours now; the crop in S10-35) and one badge slot above the title from the kind, and draws the thumb at 120pt for every kind. Event and Place pass none. The Likenesses section needs a slot below Details that today's relationship sections cannot hold; S10-35 adds it. |
 | Header thumb | Component | **Extend** | `DesignSystem/Components/Thumbnail/PVThumbnail.swift` | PDP-3, PDP-9. Optional colours (tint and line), framing like its size. Content-agnostic: the thumb does not know about gender. |
 | Gender / sex mark | Component | Ship | `PVBadge` (`DesignSystem/Components/Badge/PVBadge.swift`) | PDP-1, PDP-2. The text init with its `foreground` ink, the way a graph card shows its kind. Not a Chip: `PVChip` is a selectable control, and this mark is not pressed. |
-| Value → tint | Snowflake | New | beside `PersonDetailContent` in `Features/Conclusions/` | PDP-3, PDP-4. Reads the reconciled gender and sex-at-birth fields; picks Man, Woman, Non-binary, other, or neutral. Tints are existing `PVColor` tokens. Second call site: none; it is a feature snowflake on one page, not a kit primitive. |
+| Value → tint | Snowflake | New | beside `PersonDetailContent` in `Features/Conclusions/` | PDP-3, PDP-4. Reads the reconciled gender and sex-at-birth fields; picks Man, Woman, Non-binary, other, or neutral. Tints are existing tokens, plus `PVColor.personWomanTint` / `personWomanInk` (aliases of plum steps; S10-23 D-13). Second call site: none; it is a feature snowflake on one page, not a kit primitive. |
 | Details rows | Snowflake | Ship | `ReconciledValueRow` | PDP-6. Unchanged. |
 | Section header | Component | Ship | `PVSectionHeader` | PDP-7. Title “Likenesses” with the count. |
 | Likeness tile | Component | Ship | `CachedThumbnail` (`Platform/CachedThumbnail.swift`) over `PVThumbnail` | PDP-7, PDP-9. Loads the crop; image, loading, and mark fallback states. 96pt. |
@@ -168,7 +168,7 @@ This table is **binding**. Instance the Ship kit rows. Paths from `macos/App/` u
 
 | Do not add | Why |
 | --- | --- |
-| A gender kit component, chip, or token family | One Person page reads two fields. The Badge and existing colours cover it. |
+| A gender kit component, chip, a new palette colour, or a token per added term | One Person page reads two fields. The Badge, existing colours, and the two woman aliases cover it. |
 | A new palette colour, or a colour per added term | Extra terms share the other tint. |
 | A Chip for the mark | Chips are selectable. This mark is display only. |
 | An image viewer or lightbox | A tile opens the Citation. |
@@ -178,6 +178,6 @@ This table is **binding**. Instance the Ship kit rows. Paths from `macos/App/` u
 
 ## 7. Handoff
 
-1. When the board is agreed, record the Claude Design link and the four tints (tint, line, and ink token for Man, Woman, Non-binary, other) on the **Board** line.
+1. When the board is agreed, record the Claude Design link and the four tints (tint, line, and ink token for Man, Woman, Non-binary, other) on the **Board** line. Add `--person-woman-tint` and `--person-woman-ink` to the design-system project's the design-system project's colors file (`tokens` folder, `colors.css`) so later boards can name them.
 2. Implement **S10-23** against PDP-1…PDP-6 and PDP-12. **S10-35** fills PDP-7…PDP-9 and **S10-39** fills PDP-10…PDP-11.
 3. The brief stays in `design/` while S10-35 and S10-39 build on it. **S10-39** archives it under `design/archive/` and records it in [`../completed.md`](../completed.md).
