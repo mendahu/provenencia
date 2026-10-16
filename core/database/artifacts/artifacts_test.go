@@ -868,7 +868,7 @@ func runUpdate(c *database.Catalog, userID []byte, a Artifact) error {
 func runDelete(c *database.Catalog, userID, id []byte) error {
 	_, _, err := writes.Run(c, writes.Op{Action: "delete_artifact", UserID: userID},
 		func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
-			changes, err := Delete(tx, c, userID, id)
+			changes, err := Delete(tx, userID, id)
 			return struct{}{}, changes, err
 		})
 	return err

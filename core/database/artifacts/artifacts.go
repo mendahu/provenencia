@@ -218,8 +218,8 @@ func Update(tx *database.Tx, userID []byte, a Artifact) ([]rowchange.Change, err
 // ifUnused (snapshot file_id before DELETE). Orphan object bytes are unlinked
 // from AfterCommit, after Run commits, so a rollback leaves the files in place.
 // Cover SET NULL is SQLite's job. The caller records the returned changes.
-func Delete(tx *database.Tx, c *database.Catalog, userID, id []byte) ([]rowchange.Change, error) {
-	if tx == nil || c == nil || len(id) != 16 {
+func Delete(tx *database.Tx, userID, id []byte) ([]rowchange.Change, error) {
+	if tx == nil || len(id) != 16 {
 		return nil, ErrInvalid
 	}
 	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
