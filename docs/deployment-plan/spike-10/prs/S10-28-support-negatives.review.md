@@ -3,8 +3,8 @@
 **Plan:** [`S10-28-support-negatives.md`](S10-28-support-negatives.md)
 **Lint:** `python3 scripts/check-plan-docs.py` — 0 errors, 0 warnings, run after the round-1 fixes
 **Round 1:** maintainability reviewer: Fits with changes. Executability reviewer: Not ready (two blockers). Both reviewed against `a4e9de4` with S10-27's plan as the assumed base.
-**Round 2:** not run. It waits for S10-27's code to land, because several Current state rows (marked **S10-27**) describe a plan, not code. The plan stays `Blocked — on S10-27`; no blocker from round 1 is open.
-**Verdict:** Fixed in the plan. Not `Planned` yet, only because of the dependency.
+**Round 2:** run 2026-10-16 after S10-27 landed (#409) and the plan's Current state was redone against `6577a43`. Maintainability: no new blocker, two majors (Fits with changes). Executability: two blockers, one major (Not ready). All answered below.
+**Verdict:** Planned. No open blocker. Nothing for the user.
 
 ## Maintainability
 
@@ -34,3 +34,19 @@
 | X-9 | minor | Label fallbacks, `Negative` flag, command forms | **Fixed.** D-7 (`Label` rules, `ValueRef.Negative`); the same `CGO_ENABLED=1 go test -tags fts5` form in every check; D-7 sets the fields from the `PairResult` |
 | X-10 | minor | Weighted credits feed the scale floor | **Fixed.** D-9 states it; T-8 has the case |
 | X-11 | nit | Doc drift | **Fixed.** DoD |
+
+## Round 2
+
+Round-1 answers were checked by both reviewers: M-1, M-2, M-4, M-6, M-7, X-1, X-2, X-5 confirmed fixed; the M-3 and M-5 declines confirmed as backed by evidence. Every Current state line number was re-checked against the landed code.
+
+| ID | Severity | Finding | Answer |
+| --- | --- | --- | --- |
+| R2-M1 | major | D-3 drops a handle's only displayed value when `against ≥ support`, or a concluded value with support 0, so the feature is skipped | **Fixed.** D-2, D-3: a `kept` value is floored at effective support 1 and always votes; other values floor at 0. AC-1.10, T-1 |
+| R2-M2 | major | `pairValues` sorts and builds labels per candidate per Feature; no cost bound | **Fixed.** D-4 cost bound: plain values run today's `best` loop with no sort, no `Label`, no allocation; leaders in one pass otherwise; `Label` only for the reported pair and ties. T-10 (`BenchmarkPairValues`), the cold-hub benchmark in the DoD and Stop conditions |
+| R2-M3 | minor | `ORDER BY o.id` belongs in the `sqlbatch.Query` tail; AC-3.3 needs a final tie-break | **Fixed.** D-8 names the `) ORDER BY o.id` tail and adds `r.rank` to the entity-value orders; D-4's tie-break ends at `Rank` or `ObservationID`, then input order |
+| R2-M4 | minor | `Similarity` is now weighted; `Pinned` goes false for a minority match | **Fixed.** D-9 says both |
+| R2-M5 | minor | Header and log still say round 2 pending; line drift | **Fixed.** This section; `comparerDiscount` 257, `rank` 159 |
+| X-12 | blocker | AC-2.5 "probe male +0.5" contradicts R3 | **Fixed.** With effective supports 1 and 2 the consensus is female, so probe male is a contradiction (−2); AC-2.5 and T-1 say so. A weight example R3 does not preempt is in T-1 (`Robins` 3 / `Robbins` 1, similarity 0.857) |
+| X-13 | blocker | `Auto()` and `Compatible` never match a term across the two loaders: `handleValues` sets a catalog id, the other loaders set only the key | **Fixed.** D-5: `Auto()` keys a term by `Term`, ignoring the catalog id. AC-2.8 and a T-8 case cover the Promote path. Exhibits are unaffected when both sides carry the key, as they do today |
+| X-14 | major | T-6's `denied` case inserts the wrong row | **Fixed.** T-6: update the male row to `denied`, insert a `kept` female so it is the only leader |
+| X-15 | minor | T-8 floor case has no fixture; `ForEntity` probe weighting unstated; sort tie; negative zero | **Fixed.** The floor case moved to T-9 (`ScoreSimilarity` table). D-3 says the `ForEntity` probe is weighted. D-4 and D-8 end the tie-break at `Rank` or `ObservationID`. T-4 compares with `== 0` |
