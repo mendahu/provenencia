@@ -348,7 +348,7 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `T
 - `releaseSubjectClaims`, `bridgesTouching`, `paintFooter`, or `GraphCanvasDocumentView.hitTest` no longer does what §4 says.
 - `identityclaims` or `promote` importing `deleteimpact` makes an import cycle (`go build ./core/...` fails with "import cycle not allowed").
 - `newBridgeWorld` cannot file the household's bridges (T-1 (a) setup has an unfiled son-of after promoting both ends).
-- `NSImage(systemSymbolName:)` is nil for `arrow.turn.right.up` or `arrow.uturn.down` on the CI macOS image, or the SF Symbols app lists either as available only after macOS 14.0 (the deployment target).
+- `NSImage(systemSymbolName:)` is nil for `arrow.turn.right.up` or `arrow.uturn.down` on the CI macOS image. (Both are macOS 11+, confirmed by the user 2026-10-16.)
 - `measuredLayoutMatchesThePaint` cannot pass without changing the unpromoted footer's full-width band (Out).
 - Setting `toolTip` on `GraphCanvasDocumentView` shows no tooltip in the manual check.
 - After step 4 of §10 the Person page of James's former handle still shows James as a member, or the People list does not refresh (`session.apply(effects)` missed a key).
