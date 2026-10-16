@@ -136,64 +136,84 @@ func attachExhibits(q Querier, g *graphcache.Graph, layer graphalign.Layer, prop
 			plan.neighbors = append(plan.neighbors, neighborPair{neighbor: n, sides: sides})
 		}
 	}
-	if len(want) == 0 {
-		return nil
-	}
-	obs, err := loadExhibitObservations(q, want)
-	if err != nil {
-		return err
-	}
-	bySubject := map[string][]exhibitObs{}
-	for _, o := range obs {
-		bySubject[string(o.subjectID)] = append(bySubject[string(o.subjectID)], o)
-	}
-	collect := func(ids [][]byte) []exhibitObs {
-		var out []exhibitObs
-		for _, id := range ids {
-			out = append(out, bySubject[string(id)]...)
+	if len(want) > 0 {
+		obs, err := loadExhibitObservations(q, want)
+		if err != nil {
+			return err
 		}
-		return out
-	}
+		bySubject := map[string][]exhibitObs{}
+		for _, o := range obs {
+			bySubject[string(o.subjectID)] = append(bySubject[string(o.subjectID)], o)
+		}
+		collect := func(ids [][]byte) []exhibitObs {
+			var out []exhibitObs
+			for _, id := range ids {
+				out = append(out, bySubject[string(id)]...)
+			}
+			return out
+		}
 
-	for _, plan := range plans {
-		r := &prop.Rows[plan.idx]
-		exhibits := pairExhibits(bySubject[string(r.SubjectID)], nil, collect(plan.own), cfg, stats)
-		for _, np := range plan.neighbors {
-			exhibits = append(exhibits, pairExhibits(bySubject[string(np.neighbor)], np.neighbor, collect(np.sides), cfg, stats)...)
+		for _, plan := range plans {
+			r := &prop.Rows[plan.idx]
+			exhibits := pairExhibits(bySubject[string(r.SubjectID)], nil, collect(plan.own), cfg, stats)
+			for _, np := range plan.neighbors {
+				exhibits = append(exhibits, pairExhibits(bySubject[string(np.neighbor)], np.neighbor, collect(np.sides), cfg, stats)...)
+			}
+			r.Exhibits = exhibits
 		}
-		r.Exhibits = withRowConflicts(exhibits, r.Comparisons)
+	}
+	for i := range prop.Rows {
+		r := &prop.Rows[i]
+		r.Exhibits = withRowLines(r.Exhibits, r.Comparisons)
 	}
 	return nil
 }
 
-// withRowConflicts adds a line for each Property the row judges a conflict
-// that the own-record exhibits do not already show as one: the majority
-// disagreeing with a minority value, or a negative Observation, which the
-// member picker never pairs. The line carries no Observation, so it cannot be
-// pinned.
-func withRowConflicts(exhibits []graphalign.Exhibit, comparisons []graphalign.Comparison) []graphalign.Exhibit {
+// withRowLines completes a row's sheet lines from its comparisons. A row with
+// no exhibit gets a line per comparison that spoke, so the sheet still shows
+// the two values behind each outcome. A row with exhibits gets a line for each
+// Property the row judges a conflict that the own-record exhibits do not
+// already show as one: the majority disagreeing with a minority value, or a
+// negative Observation, which the member picker never pairs. These lines
+// carry no Observation, so they cannot be pinned.
+func withRowLines(exhibits []graphalign.Exhibit, comparisons []graphalign.Comparison) []graphalign.Exhibit {
+	none := len(exhibits) == 0
 	for _, c := range comparisons {
-		if c.Outcome != match.OutcomeConflict {
-			continue
+		if none {
+			if c.Outcome == match.OutcomeUnknown {
+				continue
+			}
+		} else {
+			if c.Outcome != match.OutcomeConflict {
+				continue
+			}
+			shown := false
+			for _, ex := range exhibits {
+				shown = shown || len(ex.GroupSubjectID) == 0 && ex.Property == c.Property && ex.Outcome == match.OutcomeConflict
+			}
+			if shown {
+				continue
+			}
 		}
-		shown := false
-		for _, ex := range exhibits {
-			shown = shown || len(ex.GroupSubjectID) == 0 && ex.Property == c.Property && ex.Outcome == match.OutcomeConflict
-		}
-		if shown {
-			continue
-		}
-		exhibits = append(exhibits, graphalign.Exhibit{
-			Property:         c.Property,
-			Outcome:          c.Outcome,
-			ValueType:        c.ValueType,
-			Weight:           c.Weight,
-			IncomingDisplay:  c.Probe.Label,
-			IncomingNegative: c.Probe.Negative,
-			MemberDisplay:    c.Candidate.Label,
-		})
+		exhibits = append(exhibits, refLine(c))
 	}
 	return exhibits
+}
+
+// refLine is the sheet line for one row comparison: its two values and dates,
+// with no Observation behind either.
+func refLine(c graphalign.Comparison) graphalign.Exhibit {
+	return graphalign.Exhibit{
+		Property:         c.Property,
+		Outcome:          c.Outcome,
+		ValueType:        c.ValueType,
+		Weight:           c.Weight,
+		IncomingDisplay:  c.Probe.Label,
+		IncomingDate:     cloneDate(c.Probe.Date),
+		IncomingNegative: c.Probe.Negative,
+		MemberDisplay:    c.Candidate.Label,
+		MemberDate:       cloneDate(c.Candidate.Date),
+	}
 }
 
 // pairExhibits pairs each incoming record with the closest record on the

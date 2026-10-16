@@ -1198,3 +1198,109 @@ func TestExhibitNameWithoutForm(t *testing.T) {
 		t.Fatalf("no name exhibit in %+v", row.Exhibits)
 	}
 }
+
+// provisionalOnly leaves a handle with no accepted member claim, so Propose
+// builds no exhibits for a row fixed to it.
+func (f *fixture) provisionalOnly(entityID []byte) {
+	f.t.Helper()
+	db, err := f.c.DB()
+	must(f.t, err)
+	_, err = db.Exec(`UPDATE identity_claims SET status = 'provisional' WHERE entity_id = ?`, entityID)
+	must(f.t, err)
+	f.c.Graph().Drop()
+}
+
+// A row with no exhibit still shows the two values behind each outcome.
+func TestProposeRowWithoutExhibitsShowsValues(t *testing.T) {
+	f := newFixture(t)
+	sex := func(src sources.Source, art artifacts.Artifact) subjects.Subject {
+		s := f.person(src, art, "Mary Smith")
+		f.cite(art, s, observations.Input{PropertyID: f.prop("sex_at_birth").ID, ValueTermID: f.term("sex_at_birth", "female").ID})
+		return s
+	}
+	handle := f.promote(sex(f.source, f.artifact)).Entity.ID
+	f.provisionalOnly(handle)
+
+	src, art := f.newSource("Register")
+	incoming := sex(src, art)
+	row := rowFor(f.propose(src.ID, []graphalign.Fixed{{SubjectID: incoming.ID, HandleID: handle}}), incoming.ID)
+
+	var want int
+	for _, c := range row.Comparisons {
+		if c.Outcome != match.OutcomeUnknown {
+			want++
+		}
+	}
+	if want != 2 || len(row.Exhibits) != want {
+		t.Fatalf("%d exhibits for %d spoken comparisons: %+v", len(row.Exhibits), want, row.Exhibits)
+	}
+	shown := map[string][2]string{}
+	for _, ex := range row.Exhibits {
+		if ex.Pinned || len(ex.IncomingObservationID) != 0 || len(ex.MemberObservationID) != 0 || len(ex.GroupSubjectID) != 0 {
+			t.Fatalf("a ref line is never pinned or tied to an Observation: %+v", ex)
+		}
+		if got := comparisonOutcome(t, row, ex.Property.Key); got != ex.Outcome {
+			t.Fatalf("%s line outcome %s, comparison %s", ex.Property.Key, ex.Outcome, got)
+		}
+		shown[ex.Property.Key] = [2]string{ex.IncomingDisplay, ex.MemberDisplay}
+	}
+	if shown["name"] != [2]string{"Mary Smith", "Mary Smith"} || shown["sex_at_birth"] != [2]string{"Female", "Female"} {
+		t.Fatalf("values %v", shown)
+	}
+	if _, ok := shown["gender"]; ok {
+		t.Fatalf("an unknown comparison has no line: %v", shown)
+	}
+}
+
+func birthEvent(f *fixture, src sources.Source, art artifacts.Artifact, year int, polarity string) subjects.Subject {
+	b := f.bare(src, "event")
+	f.cite(art, b,
+		observations.Input{PropertyID: f.prop("event_type").ID, ValueTermID: f.term("event_type", "birth").ID},
+		observations.Input{PropertyID: f.prop("date").ID, Polarity: polarity,
+			Date: &datevalues.Value{Kind: datevalues.KindPoint, Calendar: "gregorian", StartYear: &year}},
+	)
+	return b
+}
+
+func dateLine(t *testing.T, row graphalign.Row) graphalign.Exhibit {
+	t.Helper()
+	for _, ex := range row.Exhibits {
+		if ex.Property.Key == "date" && len(ex.GroupSubjectID) == 0 {
+			return ex
+		}
+	}
+	t.Fatalf("no date line in %+v", row.Exhibits)
+	return graphalign.Exhibit{}
+}
+
+func TestProposeEventWithoutExhibitsShowsDates(t *testing.T) {
+	f := newFixture(t)
+	handle := f.promote(birthEvent(f, f.source, f.artifact, 1890, "")).Entity.ID
+	f.provisionalOnly(handle)
+
+	src, art := f.newSource("Obituary")
+	incoming := birthEvent(f, src, art, 1890, "")
+	row := rowFor(f.propose(src.ID, []graphalign.Fixed{{SubjectID: incoming.ID, HandleID: handle}}), incoming.ID)
+	ex := dateLine(t, row)
+	if ex.IncomingDate == nil || ex.MemberDate == nil || ex.Pinned {
+		t.Fatalf("date line %+v", ex)
+	}
+	for _, e := range row.Exhibits {
+		if e.Property.Key == "event_type" && (e.IncomingDisplay != "Birth" || e.MemberDisplay != "Birth") {
+			t.Fatalf("event_type line %+v", e)
+		}
+	}
+}
+
+func TestProposeNegativeDateConflictLine(t *testing.T) {
+	f := newFixture(t)
+	handle := f.promote(birthEvent(f, f.source, f.artifact, 1890, "")).Entity.ID
+
+	src, art := f.newSource("Obituary")
+	incoming := birthEvent(f, src, art, 1890, observations.PolarityNegative)
+	row := rowFor(f.propose(src.ID, []graphalign.Fixed{{SubjectID: incoming.ID, HandleID: handle}}), incoming.ID)
+	ex := dateLine(t, row)
+	if ex.Outcome != match.OutcomeConflict || !ex.IncomingNegative || ex.IncomingDate == nil || ex.MemberDate == nil {
+		t.Fatalf("date line %+v", ex)
+	}
+}
