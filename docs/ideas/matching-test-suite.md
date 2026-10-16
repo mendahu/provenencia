@@ -2,6 +2,8 @@
 
 **Status:** idea, not scheduled; likely the core of **Spike 11**, a large-scale matching refinement. Captured 2026-10-16 from a design conversation. It expands the **Calibration** bullet and the open question in [`name-matching-enhancements.md`](name-matching-enhancements.md). Model: [`promote-graph-alignment.md`](../promote-graph-alignment.md), [`matching.md`](../matching.md).
 
+Spike 11 scoping has started. Layers 1–2 of the comparison stack (part of "make the algorithm graspable") are in [`deployment-plan/spike-11/comparison-layers.md`](../deployment-plan/spike-11/comparison-layers.md).
+
 ## The problem
 
 Promote graph alignment works reasonably well, but the space of layouts is far too large for manual QA. One change to the walk or to a registry number can move rows anywhere: names against dates, edge fan-outs, directed signatures, orphans, contested handles, decided rows. We need to change the algorithm with confidence, and to tune its numbers from evidence rather than by hand.

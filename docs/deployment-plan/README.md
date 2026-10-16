@@ -47,6 +47,8 @@ Spike 10 and earlier cut each PR as an In / Out / Testable table inside `deploym
 
 [Spike 10 — Dogfood UX](spike-10/) is open. Plan: [`spike-10/deployment-plan.md`](spike-10/deployment-plan.md). Briefs are authored just before the PR they gate.
 
+[Spike 11 — Promote matching refinement](spike-11/) is being scoped: requirements only, no PR map yet.
+
 Ideas: [`ideas/`](../ideas/). Claude Design briefs: [`add-design-brief`](../../.agents/skills/add-design-brief/SKILL.md).
 
 ## Completed
