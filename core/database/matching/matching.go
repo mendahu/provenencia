@@ -156,9 +156,6 @@ func start(q Querier, typeSQL string, id []byte, opts Options) ([]byte, Result, 
 	return typeID, res, p, nil
 }
 
-// nameProperty is the product name Property, the one the frequency count reads.
-var nameProperty = match.Property{Key: "name", Origin: match.OriginProvenencia}
-
 func rank(q Querier, res Result, typeID []byte, probe match.Values, profile match.Profile, exclude [][]byte, opts Options) (Result, error) {
 	if len(probe) == 0 {
 		return res, nil
@@ -168,22 +165,7 @@ func rank(q Querier, res Result, typeID []byte, probe match.Values, profile matc
 		return Result{}, err
 	}
 	// Count before the exclude filter: kept reuses candidates' backing array.
-	var people [][]namevalues.Value
-	hasName := false
-	for _, f := range profile.Features {
-		hasName = hasName || f.Property == nameProperty
-	}
-	if hasName {
-		for _, c := range candidates {
-			var handle []namevalues.Value
-			for _, v := range c.Values[nameProperty] {
-				if v.Name != nil {
-					handle = append(handle, *v.Name)
-				}
-			}
-			people = append(people, handle)
-		}
-	}
+	people, hasName := candidateNames(profile, candidates)
 	kept := candidates[:0]
 	for _, c := range candidates {
 		if !containsID(exclude, c.EntityID) {
@@ -208,8 +190,38 @@ func rank(q Querier, res Result, typeID []byte, probe match.Values, profile matc
 	return res, nil
 }
 
+// candidateNames collects each candidate's names from the Properties of the
+// profile's name Features, found the way Profile.WithNameComparer finds them.
+// hasName is false when the profile has no name Feature.
+func candidateNames(profile match.Profile, candidates []match.Candidate) (people [][]namevalues.Value, hasName bool) {
+	var props []match.Property
+	for _, f := range profile.Features {
+		if _, ok := f.Comparer.(match.NameComparer); ok {
+			props = append(props, f.Property)
+		}
+	}
+	if len(props) == 0 {
+		return nil, false
+	}
+	for _, c := range candidates {
+		var handle []namevalues.Value
+		for _, prop := range props {
+			for _, v := range c.Values[prop] {
+				if v.Name != nil {
+					handle = append(handle, *v.Name)
+				}
+			}
+		}
+		people = append(people, handle)
+	}
+	return people, true
+}
+
 // loadCandidates reads every unmerged handle of the type with a cached value
 // for a profile Property: one query. The blocking seam — narrow it here.
+// rank takes its name-word counts from this set, so blocking must count a
+// separate, unnarrowed population of the type's handles; otherwise a narrowed
+// set would shift every name's frequency and the scores with it.
 func loadCandidates(q Querier, typeID []byte, profile match.Profile) ([]match.Candidate, error) {
 	loaded, err := nameformats.Load(q)
 	if err != nil {
