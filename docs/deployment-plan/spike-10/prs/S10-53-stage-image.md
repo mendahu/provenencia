@@ -1,6 +1,6 @@
 # S10-53 — Stage a client image
 
-**Status:** Blocked — on S10-55
+**Status:** Blocked — on S10-55; needs re-plan for the requirements below
 **Spike / slice:** Spike 10 · Slice 8 — Likeness
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#s10-53--stage-a-client-image)
 **Brief:** — (no new chrome: an engine API with no caller until S10-32)
@@ -14,6 +14,13 @@
 **Context:** [depictions and likenesses](../depictions-and-likenesses.md) "The image", [`docs/source-layer-data-model.md`](../../../source-layer-data-model.md) §6, [`.agents/skills/review-pr/lenses/security.md`](../../../../.agents/skills/review-pr/lenses/security.md) trust boundaries, working rule "The client renders the image; Go validates it and stores its own copy", map review [`../deployment-plan.review.md`](../deployment-plan.review.md) K-4, K-5
 **Planned:** 2026-10-16 against `main` @ `98819f86`, with [S10-55](S10-55-file-release.md) as planned
 **Review:** [`S10-53-stage-image.review.md`](S10-53-stage-image.review.md) — Fits, Ready with changes (applied); 2 rounds
+
+### Requirements added after planning (user, 2026-10-16, from S10-55's review)
+
+This plan must go back through `plan-pr` and `review-plan` to fold these in before it is Planned again.
+
+1. **Releases schedule their own purge** (S10-55 MNT-1). Today each releasing delete (`artifacts`, `observations`, `subjects`, `sources`, `citations`, `metadatafields`) pairs `deleteimpact.ReleaseFacets` / `ReleaseSnapshot` with its own `files.PurgeAfterCommit` call, and nothing checks the pairing. `database.Tx` now carries its catalog (`Tx.Catalog()`), which removes the reason S10-55 D-1 kept the purge out of `deleteimpact`. S10-53 makes the release entry points take the `*database.Tx` and schedule the purge themselves, so callers no longer pass `Released.Objects`, and `ReleaseReplaced` (S10-32's update path) gets the same.
+2. **A delete cannot race an import of the same bytes** (S10-55 SEC-O2). A delete's after-commit purge can remove an object that an `ingest.File` or `StageImage` running at the same time has just written or reused but not yet committed a row for. When ingest's rollback and `Discard` move onto `files.PurgeUnreferenced`, S10-53 closes this window (for example, by doing the object write and the purge's row check under one lock, or by re-verifying the object inside the write before it commits) and pins it with a test.
 
 ### Implementer — read this first
 
