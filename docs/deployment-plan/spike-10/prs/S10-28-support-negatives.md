@@ -1,18 +1,18 @@
 # S10-28 — Support, negatives, and which values matched
 
-**Status:** Blocked — on S10-27
+**Status:** Planned
 **Spike / slice:** Spike 10 · Slice 7 — How names compare (no new chrome)
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#s10-28--support-negatives-and-which-values-matched)
 **Brief:** — (no new chrome: the score and its reasons change, no view does)
 **Board:** —
-**Depends on:** S10-24 (landed [#378](https://github.com/mendahu/provenencia/pull/378)); sequenced after S10-27 ([plan](S10-27-name-frequency.md), in implementation), whose pair-selection seam this PR extends
+**Depends on:** S10-24 (landed [#378](https://github.com/mendahu/provenencia/pull/378)); S10-27 (landed [#409](https://github.com/mendahu/provenencia/pull/409)), whose pair-selection seam this PR extends
 **Blocks:** —
 **Branch:** `s10-28-support-negatives`
 **Version bump:** none — Spike 10 PRs leave `VERSION` at 0.2.0, and the product bump is cut when a release ships ([`docs/versioning.md`](../../../versioning.md))
 **Skills to load:** —
 **Rules that bind:** `.cursor/rules/go-tests.mdc`
-**Context:** [`name-matching-enhancements.md`](../name-matching-enhancements.md), [`docs/conclusion-reconciliation.md`](../../../conclusion-reconciliation.md) §4–§6, [`docs/matching.md`](../../../matching.md), [S10-27 plan](S10-27-name-frequency.md) D-8 and D-9, working rule "Support weighting and negatives land together" in [`../deployment-plan.md`](../deployment-plan.md)
-**Planned:** 2026-10-16 against `main` @ `a4e9de4` plus the S10-27 plan as merged. S10-27 code has not landed. Redo §4 on landing (see Stop conditions)
+**Context:** [`name-matching-enhancements.md`](../name-matching-enhancements.md), [`docs/conclusion-reconciliation.md`](../../../conclusion-reconciliation.md) §4–§6, [`docs/matching.md`](../../../matching.md), [S10-27 plan](S10-27-name-frequency.md) D-8 and D-9 and its Landed note, working rule "Support weighting and negatives land together" in [`../deployment-plan.md`](../deployment-plan.md)
+**Planned:** 2026-10-16 against `main` @ `6577a43` (S10-27 landed). First written against `a4e9de4` while S10-27 was in implementation; §4 was redone on landing
 **Review:** [`S10-28-support-negatives.review.md`](S10-28-support-negatives.review.md) — round 1 of 2: Fits with changes / Not ready; every finding answered; round 2 pending S10-27's landing
 
 ### Implementer — read this first
@@ -98,25 +98,26 @@ A handle's values count in proportion to how well supported they are, and a nega
 
 ## 4. Current state
 
-Verified at `a4e9de4` (S10-27's plan merged, no S10-27 code). Rows marked **S10-27** describe that plan's design, not code on `main`. Check them on landing.
+Verified at `6577a43`, with S10-27 landed ([#409](https://github.com/mendahu/provenencia/pull/409)). Line numbers are at that commit.
 
 | Area | Where | Today |
 | --- | --- | --- |
-| Pair selection | `core/match/match.go` `best` (two callers: `Score` line 114, `compareProperty` in `pair.go` line 95) | The highest similarity over every comparable pair. Two values of any support count alike. **S10-27** changes it to pick by `similarity × (1 − discount)` and return `(similarity, discount, ok)` (S10-27 D-9) |
-| Scoring | `core/match/match.go` `Score`, `Reason`, `Rank` | `Contribution = Weight × Similarity`, or `−Contradiction` at similarity 0. `Reason` has `Property`, `Similarity`, `Contribution`. **S10-27** adds `Reason.Discount` |
-| Pairwise evaluation | `core/match/pair.go` `evaluate`, `compareProperty`, `PropertyComparison` | A comparable zero is a conflict (single) or unknown (multiple). **S10-27** adds `PropertyComparison.Discount` |
+| Pair selection | `core/match/match.go` `best` (line 136; two callers: `Score` line 118, `compareProperty` in `pair.go` line 100) | Picks the comparable pair with the highest `similarity × (1 − discount)` and returns `(similarity, discount, ok)`, with discount 0 when similarity is 0. It reads each pair through `CompareDiscount`. Two values of any support count alike |
+| Scoring | `core/match/match.go` `Score`, `Reason`, `Rank` | `Contribution = Weight × Similarity × (1 − Discount)`, or `−Contradiction` at similarity 0. `Reason` has `Property`, `Similarity`, `Discount`, `Contribution` |
+| Pairwise evaluation | `core/match/pair.go` `evaluate`, `compareProperty`, `PropertyComparison` | `PropertyComparison` has `Similarity`, `Discount`, `Comparable`. A comparable zero is a conflict (single) or unknown (multiple) |
 | Value shape | `core/match/match.go` `Value` | No support, no reason, no polarity, no label |
+| Discount seam | `core/match/compare.go` `DiscountComparer`, `CompareDiscount`; `core/match/names.go` `NameComparer.CompareDiscount` | `CompareDiscount` returns a plain `Comparer`'s result with discount 0 |
 | Same-value test | `core/autoreconcile/modules.go` `Compatible(valueType, a, b)`; `core/database/promotealign/exhibits.go` `exhibitCompatible`, `exhibitAuto` | The test the reconciler uses to deny and to count `against`; Promote's agreement test. `exhibitAuto` adapts a `match.Value` to it. `core/match/words.go` already imports `autoreconcile` |
 | Handle cache | `auto_reconciler_values` (`support`, `against`, `reason`, `rank`, all but `rank` NOT NULL or defaulted); `core/autoreconcile/autoreconcile.go` `Reason*` constants and `ReconciledValue.Displayed` | One row per distinct value. `support` is distinct Sources, `against` is negative Observations that counted against the value, `reason` is `kept`, `outvoted`, `weak`, `denied`, or `provisional`. `Displayed` is `reason == kept` |
-| Matching loader | `core/database/matching/matching.go` `sqlEntityValues`, `scanEntityValues` | Selects none of `support`, `against`, `reason`. Rows come `ORDER BY e.ref, r.entity_id` with no order within a handle |
-| Subject loader | `core/database/matching/matching.go` `sqlSubjectsValues` (`WHERE o.polarity = 'positive'`), `SubjectsValues`; callers `loadSubjectValues`, `core/database/promotealign/layer.go` line 48 | Negatives never load. No `ORDER BY` |
-| Promote's handle values | `core/database/graphcache/graph.go` `Value` (`Support`, `Against`, `Reason`, `Rank`); `core/database/graphcache/load.go` selects all three; `core/database/promotealign/canon.go` `handleValues` | The graph row has them; `handleValues` copies none |
-| Readers of `Values` that would misread a negative | `core/graphalign/score.go` `uFor`; `core/graphalign/align.go` `subjectHasValues`; `core/database/promotealign/canon.go` line 80 (`len(s.Values) == 0`); `core/database/matching/matching.go` `rank` (`len(probe) == 0`) | Each treats any value as a value. `exhibits.go` and `terms.go` already filter `polarity = 'positive'` in SQL |
+| Matching loader | `core/database/matching/matching.go` `sqlEntityValues`, `scanEntityValues`, `rank` (line 160), `candidateNames` | Selects none of `support`, `against`, `reason`. Rows come `ORDER BY e.ref, r.entity_id` with no order within a handle. `rank` returns early on `len(probe) == 0`; since S10-27 it also counts name words over the candidates it loaded |
+| Subject loader | `core/database/matching/matching.go` `sqlSubjectsValues` (line 72, `WHERE o.polarity = 'positive'`), `SubjectsValues`; callers `loadSubjectValues`, `core/database/promotealign/layer.go` line 48 | Negatives never load. No `ORDER BY` |
+| Promote's handle values | `core/database/graphcache/graph.go` `Value` (`Support`, `Against`, `Reason`, `Rank`); `core/database/graphcache/load.go` selects all three; `core/database/promotealign/canon.go` `handleValues` (line 245) | The graph row has them; `handleValues` copies none |
+| Readers of `Values` that would misread a negative | `core/graphalign/score.go` `uFor` (line 145); `core/graphalign/align.go` `subjectHasValues` (line 972); `core/database/promotealign/canon.go` line 80 (`len(s.Values) == 0`); `core/database/matching/matching.go` `rank` line 160 (`len(probe) == 0`) | Each treats any value as a value. `exhibits.go` and `terms.go` already filter `polarity = 'positive'` in SQL |
 | Subject-versus-Subject checks | `core/graphalign/align.go` lines 774, 854, 865 call `evaluate` on two Subjects | Both sides hold Subject values, so both can now carry negatives |
-| Exhibit chooser | `core/database/promotealign/exhibits.go` (loop at lines 195–225) | Compares an incoming Observation with member Observations, by raw similarity, and pins on `agree`. **S10-27** changes it to `s × (1 − d)` |
-| Tests | `core/match/match_test.go`, `core/match/pair_test.go`, `core/database/matching/matching_test.go` (`newFixture`, `handle`, `termed`, `named`), `core/database/promotealign/promotealign_test.go`, `bench_test.go` `bulkCanon` | Green at the base. `matching_test.go` is package `matching_test` and cannot call `bulkCanon` |
+| Exhibit chooser | `core/database/promotealign/exhibits.go` (loop at lines 195–225, `comparerDiscount` at line 255, `exhibitAuto` at line 268) | Compares an incoming Observation with member Observations by `s × (1 − d)` since S10-27, and pins on `agree` |
+| Tests | `core/match/match_test.go`, `core/match/pair_test.go`, `core/database/matching/matching_test.go` (`newFixture`, `handle`, `termed`, `named`), `core/database/promotealign/promotealign_test.go`, `bench_test.go` `bulkCanon` | Green at the base. `matching_test.go` is package `matching_test` and cannot call `bulkCanon`. S10-27 re-based absolute scores in `TestForSubjectPersons`, `TestForSubjectComparesNameParts`, and `TestForEntityMergeHints` (11.0 → 10.5, 10.0 → 9.7): they now assert discounted numbers |
 
-**Precedent.** S10-27 put a per-pair factor behind one seam (its D-8, D-9): `best` selects and reports the pair, and `Score` and `compareProperty` call it. Copy that. Exhibits are not a third caller: they pick a member Observation with their own loop, and neither plan changes that (D-10).
+**Precedent.** S10-27 (landed) put a per-pair factor behind one seam: `best` selects and reports the pair, and `Score` and `compareProperty` call it. Copy that. Exhibits are not a third caller: they pick a member Observation with their own loop, and neither plan changes that (D-10).
 
 ## 5. Decisions
 
@@ -145,7 +146,7 @@ Verified at `a4e9de4` (S10-27's plan merged, no S10-27 code). Rows marked **S10-
 | `Value.Counted`, `Support`, `Against`, `Reason`, `Denied`, `Negative`, `ObservationID`, `Value.SetEvidence`, `Value.Label`, `Value.Auto`, `Values.HasPositive` *(new)* | fields, methods | `graphcache.Value` `Support`, `Against`, `Reason`; `exhibitAuto` | `graphcache.Value` is the cache row; `match.Value` is the shape comparers read. `exhibitAuto` moves, it is not copied |
 | `Reason.Probe`, `Reason.Candidate`, `PropertyComparison.Probe`, `PropertyComparison.Candidate` *(new)* | fields | `Reason.Property` | See D-7 |
 
-**Builds on.** The cache columns the auto-reconciler already fills; `graphcache.Value`; `autoreconcile.Compatible` and the `Reason*` constants; the pair-selection seam S10-27 creates.
+**Builds on.** The cache columns the auto-reconciler already fills; `graphcache.Value`; `autoreconcile.Compatible` and the `Reason*` constants; the pair-selection seam S10-27 created.
 **Deletes.** `match.best`. `exhibitAuto` in `exhibits.go` (it moves to `match.Value.Auto`).
 **Next adds.** A concluded value (Reconciliation Claims) becomes another input to the weight in `pairValues`, and an explicit `Counted` stops a concluded value with support 0 from reading as unknown. A reason sentence for Promote reads `Reason.Probe` and `Reason.Candidate` and adds no data.
 
@@ -158,7 +159,7 @@ None — no catalog change. The columns read exist in `auto_reconciler_values`.
 | Package | Change |
 | --- | --- |
 | `core/match` `match.go` | `Value` gains the fields of the Codebase-fit row. `Reason` gains `Probe`, `Candidate`. `Score` calls `pairValues`; `best` is deleted. `Values.HasPositive` |
-| `core/match` `pairs.go` *(new)* | `ValueRef`, `PairResult`, `pairValues`, `Value.SetEvidence`, `Value.Label`, `Value.Auto` (D-1 through D-8) |
+| `core/match` `pairs.go` *(new)* | `ValueRef`, `PairResult`, `pairValues` (reads each pair through `CompareDiscount`), `Value.SetEvidence`, `Value.Label`, `Value.Auto` (D-1 through D-8) |
 | `core/match` `pair.go` | `compareProperty` calls `pairValues`; `PropertyComparison` gains `Probe`, `Candidate` |
 | `core/database/matching` `matching.go` | `sqlEntityValues` selects `r.support, r.against, r.reason`; `scanEntityValues` calls `SetEvidence`. `sqlSubjectsValues` selects `o.id, o.polarity` without the positive filter and orders by `o.id`; `SubjectsValues` sets `Negative` and `ObservationID`. `rank` returns early when `!probe.HasPositive()` |
 | `core/database/promotealign` `canon.go` | `handleValues` calls `SetEvidence`. The line-80 gate uses `HasPositive` |
@@ -233,7 +234,7 @@ Must stay green: everything `scripts/check-pr.sh` runs. A pre-existing test whos
 - [ ] Version bump: none
 - [ ] This plan: Status → Landed in #N (date); a Landed note lists every difference from the plan
 - [ ] deployment-plan.md: S10-28 Plan line status; the S10-28 "Depends on" reads "S10-24; sequenced after S10-27"; the S10-28 "In" says "relative to the best-supported value"; completed.md: one short paragraph of what shipped
-- [ ] docs/matching.md: the file table lists `pairs.go` and the new `match.go` and `pair.go` roles; a section on support weights and negatives with the stray-name and one-female examples; the "Not yet handled" bullet no longer names support weighting (leave the other items in that bullet as they are, and rebase over S10-27's edit to the same bullet)
+- [ ] docs/matching.md: the file table lists `pairs.go` and the new `match.go` and `pair.go` roles; a section on support weights and negatives with the stray-name and one-female examples; the "Not yet handled" bullet no longer names support weighting (leave the other items in that bullet as they are)
 - [ ] name-matching-enhancements.md: "Weigh values by support" and "Negative evidence" say they landed in S10-28 and quote the leader-relative rule
 - [ ] PR description: what shipped, AC evidence, deviations, manual check
 ```
@@ -250,16 +251,15 @@ The slice has no new chrome, so the check is a catalog run, not a screen.
 
 | Risk | Mitigation |
 | --- | --- |
-| S10-27 lands differently from its plan, so `best`, `Reason`, `PropertyComparison`, or `exhibits.go` differ from §4 | §4 marks every S10-27 row. The first action is to redo them against the landed code |
+| S10-27's re-based test numbers move again when a fixture handle holds values of unequal support | Stop-and-report rule below; no existing expectation is edited in this PR |
 | A mixed handle that was a clean match before drops in Promote | Intended (US-1, AC-1.4). T-4 and T-8 assert it |
 | A name seen on one Source against a different name on five loses its name credit (a married name against a maiden name, probe on the married name) | Intended: R3 judges against the consensus, so that match is a contradiction in Promote's scale and zero in `Rank`. Equal support keeps both names (AC-1.5). Known-as handling is later ([`docs/ideas/name-matching-enhancements.md`](../../../ideas/name-matching-enhancements.md)) |
-| Real handles now load real `support`, so existing numeric expectations could move | Stop-and-report rule below; no existing expectation is edited in this PR |
 | A negative-only Subject reaches a reader that treats any value as a value | D-6 names the four readers; T-7 asserts the `ForSubject` case |
 | A Promote row reads conflict while its exhibit lines show an agreeing pair | Accepted (D-10) |
 
 **Stop and report if:**
 
-- S10-27 has not landed, or `best` is not the single pair-selection seam §4 describes. Redo §4 and tell the user what moved.
+- `best` is no longer the single pair-selection seam §4 describes (callers `Score` and `compareProperty` only). Redo §4 and tell the user what moved.
 - Any existing test in `core/match`, `core/database/matching`, `core/database/promotealign`, or `core/graphalign` needs a changed expected value to pass.
 - `auto_reconciler_values` does not fill `support`, `against`, and `reason` for a Property this plan scores (a constant 0 for every row).
 - A caller of `best` exists outside `Score` and `compareProperty`.

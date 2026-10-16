@@ -573,7 +573,7 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 
 #### S10-28 — Support, negatives, and which values matched
 
-**Plan:** [`prs/S10-28-support-negatives.md`](prs/S10-28-support-negatives.md) — Blocked — on S10-27
+**Plan:** [`prs/S10-28-support-negatives.md`](prs/S10-28-support-negatives.md) — Planned
 
 | | |
 | --- | --- |
