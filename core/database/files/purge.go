@@ -3,10 +3,9 @@ package files
 import (
 	"database/sql"
 	"errors"
-	"os"
-	"path/filepath"
 
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/objectstore"
 )
 
 // Object is the checksum and media type of a files row: enough for
@@ -35,7 +34,7 @@ func PurgeUnreferenced(c *database.Catalog, objs []Object) {
 		if err != nil {
 			continue
 		}
-		_ = os.Remove(filepath.Join(c.Dir(), filepath.FromSlash(rel)))
+		_ = objectstore.RemoveObject(c.Dir(), rel)
 	}
 }
 
