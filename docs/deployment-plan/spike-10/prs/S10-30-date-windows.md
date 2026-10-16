@@ -15,6 +15,14 @@
 **Planned:** 2026-10-16 against `main` @ `536d278` (S10-28 landed in #411, S10-50 in #413). First written against `ff14e3f` while S10-28 was in implementation; §4 and the pooling decisions were redone on landing
 **Review:** [`S10-30-date-windows.review.md`](S10-30-date-windows.review.md) — 3 rounds: Fits with changes / Not ready, then Fits with changes / Ready with changes, then a refresh review after S10-28 landed; every finding answered; no open blocker
 
+**Landed:** The code matches the plan except for these.
+- Test helpers `denied`, `year` and `span2` sit beside the plan's named ones.
+- Extra tests `TestPoolPeriodsKeepsNonVoting` and `TestPoolPeriodsMonthsAndDays`.
+- `BenchmarkPoolPeriods` has extra "both dated" and "neither dated" cases; the "pooling" case allocates 6 times per op.
+- T-7 calls `Evaluate` where AC-4.7 names `EvaluateWithNames`; both reach the same `evaluate` path.
+- The AC-1.6 rows live in `TestDateComparerScores`; `TestDateComparerABT` is the new ABT test.
+- A day without a month is kept on `DateEnd` (review round 1, CON-1), with `TestDateComparerDayWithoutMonth`.
+
 ### Implementer — read this first
 
 1. **This file is the whole task.** Read it top to bottom before you change code. Then read every file under **Current state** and load every skill under **Skills to load**.
