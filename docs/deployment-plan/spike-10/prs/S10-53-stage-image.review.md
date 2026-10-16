@@ -14,12 +14,12 @@ None.
 - D-4: the codec moves to `core/raster`.
 - D-8: only PNG and JPEG are accepted for staging.
 - D-9: Go downscales anything over 2048 on the long edge.
-- S10-53 now depends on S10-51, so the two run in sequence.
+- S10-53 now depends on S10-55, so the two run in sequence.
 
 ## Round 1
 
-### M-1 · blocker · `Discard` copies S10-51's purge
-**Answer:** Fixed. D-11 calls `files.PurgeUnreferenced`, and the header and map now depend on S10-51.
+### M-1 · blocker · `Discard` copies S10-55's purge
+**Answer:** Fixed. D-11 calls `files.PurgeUnreferenced`, and the header and map now depend on S10-55.
 
 ### M-2 · major · The tx checksum lookup is inline SQL in `ingest`
 **Answer:** Fixed. D-7 adds `files.LookupByChecksumTx` (`add-catalog-query`). The inline `lookupFile` by id is logged in Out.
@@ -108,7 +108,7 @@ None.
 **Answer:** Fixed. T-4 loops over `stageFormats`.
 
 ### M-13 · minor · `ingest.File`'s rollback is a second remover
-**Answer:** Fixed. D-2 moves it onto `files.PurgeUnreferenced`, and S10-51 D-1's doc line now names the purge as the only remover.
+**Answer:** Fixed. D-2 moves it onto `files.PurgeUnreferenced`, and S10-55 D-1's doc line now names the purge as the only remover.
 
 ### M-14 · nit · `objectstore` package doc
 **Answer:** Fixed in D-6.

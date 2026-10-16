@@ -1,4 +1,4 @@
-# Review — S10-51 File release from the declared model
+# Review — S10-55 File release from the declared model
 
 **Verdict:** Fits with changes — Ready with changes (all applied).
 **Rounds:** 2. **Reviewers:** maintainability (opus), executability (sonnet)

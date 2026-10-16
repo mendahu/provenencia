@@ -22,7 +22,7 @@ None. The shape follows the user's answers of 2026-10-16: the value is its own r
 ## Round 1
 
 ### M-1 · blocker · Value-row release on update becomes three mechanisms in `updateOne`
-**Answer:** Fixed. D-9 adds `releaseReplacedValue`, used for date, name, and depiction values; `releaseDateValue`, `releaseNameValue`, and their four SQL constants are deleted. S10-51's Out row now points here. A Stop condition guards the date and name update tests.
+**Answer:** Fixed. D-9 adds `releaseReplacedValue`, used for date, name, and depiction values; `releaseDateValue`, `releaseNameValue`, and their four SQL constants are deleted. S10-55's Out row now points here. A Stop condition guards the date and name update tests.
 
 ### M-2 · major · AC-2.5 / T-9 test a Subject delete that refuses
 **Answer:** Fixed with X-1. AC-2.5 and T-9 (`TestDeleteSubjectWithLikeness`) expect `ErrInUse`, then success after `observations.Delete`. §4 and D-10 say `eraseObservation` never sees a likeness today.

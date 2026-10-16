@@ -60,7 +60,7 @@ Usability fixes from [`docs/dogfood/ux.md`](../../dogfood/ux.md) after Spike 9, 
 | Name patterns: schema, Western seed, loaders | S10-29 | — |
 | Date windows in matching | S10-30 | — |
 | Related event types + place chains | S10-31 | — |
-| File release from the declared model; one object purge | S10-51 | — |
+| File release from the declared model; one object purge | S10-55 | — |
 | Stage a client image: shared ingest checks, bounded decode, PNG re-encode | S10-53 | — |
 | Depiction value (region + image) + `likeness` | S10-32 | — |
 | Depiction values over the FFI | S10-54 | — |
@@ -136,7 +136,7 @@ These are the calls for this spike. The questions at the bottom are answered; no
 - **Birth and baptism partly match, and so do death and burial.** A small term-affinity table, same shape as name-role affinity. Place comparison walks `part_of` (already shipped) so York and Toronto can relate. Flat toponym text stays the strong match.
 - **A depiction's value is its own row: region plus image.** New Observation `value_type = depiction`. Like a date or a name, the Observation owns one `depiction_values` row (`observations.value_depiction_id`), released with it. The row holds the region and the image. The region is a locator document on the Citation's Artifact (page and polygon, normalized to that page), checked by one named `core/locator` rule: a region is required, and its Artifact and page are the Citation's. The image is `depiction_values.image_file_id` → `files`, audited with the value. Lineage is region → Citation → Artifact → File; Go derives the source File that way and never takes a File id from the client. A Citation on an Artifact with no File cannot hold a depiction. `file_derivatives` stays disposable thumbnails only ([`source-layer-data-model.md`](../../source-layer-data-model.md) §8), so a purge can never delete evidence (answered 2026-10-16). The Citation is the photo or the page; a group photo is one Citation with one likeness Observation per face. Its transcription may be empty. Place, event, and signature keys wait. Promote's evidence sheet shows the two images and pins the two Observations. Design: [depictions and likenesses](depictions-and-likenesses.md). Replaces "A depiction's value is its Citation" (2026-10-16).
 - **The client renders the image; Go validates it and stores its own copy.** The composer crops an image Artifact by pixels and draws a PDF region with PDFKit, writes a PNG to a temporary file, and sends its path, as Artifact import does: bytes never cross the FFI. Client bytes are untrusted (user, 2026-10-16). Go stages the image before the write (S10-53): the open-and-check step `core/ingest` uses for every import (absolute path, no symlink, regular file, size cap), then one bounded decode shared with thumbnails (`core/raster` format allowlist and pixel budget (moved from `core/derivatives/raster` in S10-53)), then its own PNG re-encode of the polygon's bounding box, scaled down to at most 2048 on the long edge. The client's bytes are never stored. No decode runs inside the catalog write. Inside the write, the staged image becomes a `files` row in the same transaction as its Observation; a failed write discards the staged object, so it leaves no File. A region edit stores a new image and releases the old one when unused.
-- **A File is released only when nothing points at it, and one purge removes its object.** Today `deleteimpact.CountFilePointers` counts only `artifacts.file_id`, owned-file releases are hand-coded per table, and only Artifact delete removes objects from disk (`artifacts.purgeReleasedObjects`). S10-51 counts every `catalogmodel` FK into `files` (except a thumbnail's own source link), walks `ownedReleases` `Then` generically, and moves collect-and-purge into one shared after-commit step that Artifact delete also uses. After it, a new owned file pointer is one `catalogmodel` FK and one `ownedReleases` entry, with no `deleteimpact` code.
+- **A File is released only when nothing points at it, and one purge removes its object.** Today `deleteimpact.CountFilePointers` counts only `artifacts.file_id`, owned-file releases are hand-coded per table, and only Artifact delete removes objects from disk (`artifacts.purgeReleasedObjects`). S10-55 counts every `catalogmodel` FK into `files` (except a thumbnail's own source link), walks `ownedReleases` `Then` generically, and moves collect-and-purge into one shared after-commit step that Artifact delete also uses. After it, a new owned file pointer is one `catalogmodel` FK and one `ownedReleases` entry, with no `deleteimpact` code.
 - **Deletes follow the evidence chain.** Deleting a depiction Observation releases its value row and the image File when unused, and the shared purge removes the object. A Citation still cannot be deleted while it has Observations, and an Artifact while it has Citations, so when a Citation goes, every image made from it has gone. An image is never an Artifact: it is not listed, opened, or deleted as one.
 - **`likeness` is new catalogs only.** Install seeds it; no migration seeds it and open does not heal. Researchers cannot create a depiction Property (registry-only, like `term`). A later one-off CLI, outside this map, brings the dogfood projects up to date (answered 2026-10-16).
 - **A gallery is the reconciled likeness values.** `depiction` has an auto-reconciler module like every value type (S10-52). The value's key is its image File, so the same pixels drawn twice are one value; a stronger negative Observation denies it, and a provisional member's image does not show. `likeness` is `multiple`, so every distinct image survives. An image carried only by weak evidence is cached as `weak` and still shows in the gallery (answered 2026-10-16). The Person page has no Likeness field row; S10-35 draws the gallery from the cache.
@@ -259,7 +259,7 @@ SLICE 7 — How names compare (no new chrome)
          not a year.
 
 SLICE 8 — Likeness
-  S10-51  File release from the declared model; one object purge
+  S10-55  File release from the declared model; one object purge
   S10-53  Stage a client image: shared ingest checks, bounded decode, PNG re-encode
   S10-32  Depiction value (region + image File) + likeness on person (engine)
   S10-54  Depiction values over the FFI: draft input, image path in responses
@@ -288,7 +288,7 @@ SLICE 10 — Take a filing back
 S10-99 — Dogfood close / docs
 ```
 
-S10-05…S10-13, S10-15, S10-19, S10-42, and S10-43 have no dependency on the graph slice. S10-24, S10-29, S10-30, S10-31, S10-32, S10-38, S10-45, and S10-51 to S10-54 have no dependency on the dogfood slices. They are ordered here so review stays one stream. Parallel PRs are fine when **Depends on** allows it. S10-D4 does not wait on S10-29.
+S10-05…S10-13, S10-15, S10-19, S10-42, and S10-43 have no dependency on the graph slice. S10-24, S10-29, S10-30, S10-31, S10-32, S10-38, S10-45, and S10-52 to S10-55 have no dependency on the dogfood slices. They are ordered here so review stays one stream. Parallel PRs are fine when **Depends on** allows it. S10-D4 does not wait on S10-29.
 
 ### Dependencies at a glance
 
@@ -321,7 +321,7 @@ S10-24 fold ──▶ S10-25 tables
 S10-26 phonetic — descoped 2026-10-12. See ideas/daitch-mokotoff.md.
 S10-28 support + negatives (after S10-24, so fixtures settle once) ──▶ S10-50 sheet values
 
-S10-51 file release ──▶ S10-53 image staging ──▶ S10-32 depiction value ──▶ S10-52 reconciler ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) ──▶ S10-39 preferred
+S10-55 file release ──▶ S10-53 image staging ──▶ S10-32 depiction value ──▶ S10-52 reconciler ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) ──▶ S10-39 preferred
                                   └──▶ S10-54 FFI ──▶ S10-34 composer row (after S10-16; ✎ S10-D15)
                                               └──▶ S10-36 Promote images (✎ S10-D13)
 S10-33 crop cache — descoped 2026-10-16
@@ -643,9 +643,9 @@ S10-33 crop cache — descoped 2026-10-16
 
 ### Slice 8 — Likeness
 
-#### S10-51 — File release from the declared model
+#### S10-55 — File release from the declared model
 
-**Plan:** [`prs/S10-51-file-release.md`](prs/S10-51-file-release.md) — Planned
+**Plan:** [`prs/S10-55-file-release.md`](prs/S10-55-file-release.md) — Planned
 
 | | |
 | --- | --- |
@@ -656,25 +656,25 @@ S10-33 crop cache — descoped 2026-10-16
 
 #### S10-53 — Stage a client image
 
-**Plan:** [`prs/S10-53-stage-image.md`](prs/S10-53-stage-image.md) — Blocked — on S10-51
+**Plan:** [`prs/S10-53-stage-image.md`](prs/S10-53-stage-image.md) — Blocked — on S10-55
 
 | | |
 | --- | --- |
-| **In** | Preparatory, engine only. Extract the open-and-check step from `ingest.File` (absolute path, no symlink, regular file, size cap) so it and image staging share one copy. Move `core/derivatives/raster` to `core/raster`, the one bounded image codec (format allowlist, pixel budget), shared by thumbnails and a new PNG encoder; one object-store byte write in `core/objectstore`. A two-phase API in `core/ingest` (not `core/derivatives`: the image is not a disposable derivative): before a write, `ingest.StageImage` checks, decodes under the existing decode semaphore, scales to at most 2048 on the long edge, re-encodes PNG, and writes the object; inside the write, the staged image inserts its `files` row (audited `create_file`) or reuses an existing one; on failure, `Discard` hands its object to S10-51's purge. Working rule "The client renders the image…". No FFI. |
+| **In** | Preparatory, engine only. Extract the open-and-check step from `ingest.File` (absolute path, no symlink, regular file, size cap) so it and image staging share one copy. Move `core/derivatives/raster` to `core/raster`, the one bounded image codec (format allowlist, pixel budget), shared by thumbnails and a new PNG encoder; one object-store byte write in `core/objectstore`. A two-phase API in `core/ingest` (not `core/derivatives`: the image is not a disposable derivative): before a write, `ingest.StageImage` checks, decodes under the existing decode semaphore, scales to at most 2048 on the long edge, re-encodes PNG, and writes the object; inside the write, the staged image inserts its `files` row (audited `create_file`) or reuses an existing one; on failure, `Discard` hands its object to S10-55's purge. Working rule "The client renders the image…". No FFI. |
 | **Out** | Who calls it (S10-32). Auditing thumbnails. A Go PDF renderer. |
 | **Testable** | A symlink, a directory, an empty file, a file over the cap, a non-image, a decompression bomb past the pixel budget, and a polyglot whose sniff is not an allowed raster are refused before any write. A valid 4000-pixel JPEG crop is stored as a PNG at most 2048 on its long edge, and the stored bytes are not the input bytes. A discarded stage leaves no object. `ingest.File` and thumbnails behave as before. |
-| **Depends on** | S10-51 (its purge removes a discarded stage's object) |
+| **Depends on** | S10-55 (its purge removes a discarded stage's object) |
 
 #### S10-32 — Depiction value
 
-**Plan:** [`prs/S10-32-depiction-value-type.md`](prs/S10-32-depiction-value-type.md) — Blocked — on S10-51, S10-53
+**Plan:** [`prs/S10-32-depiction-value-type.md`](prs/S10-32-depiction-value-type.md) — Blocked — on S10-55, S10-53
 
 | | |
 | --- | --- |
-| **In** | Engine only. `value_type = depiction` (a DDL migration widens the `properties.value_type` CHECK). `depiction_values` (region locator, `image_file_id`) owned by `observations.value_depiction_id`, registered as owned-outbound FKs in `catalogmodel` (no `deleteimpact` code after S10-51), audited like a date value. One core entry point (`ingest.StageDepictions`) stages every depiction input through S10-53 before the caller's write, and the Observation write inserts the staged File; a region edit replaces the image. The `core/locator` depiction rule. Seed `likeness` on `person`, cardinality multiple, through Install only, new catalogs only. Researchers cannot create a depiction Property. Until S10-52, the auto-reconciler's loader skips depiction Observations, so a likeness on a member cannot break recompute. Working rules "A depiction's value is its own row…", "Deletes follow the evidence chain", "`likeness` is new catalogs only". |
+| **In** | Engine only. `value_type = depiction` (a DDL migration widens the `properties.value_type` CHECK). `depiction_values` (region locator, `image_file_id`) owned by `observations.value_depiction_id`, registered as owned-outbound FKs in `catalogmodel` (no `deleteimpact` code after S10-55), audited like a date value. One core entry point (`ingest.StageDepictions`) stages every depiction input through S10-53 before the caller's write, and the Observation write inserts the staged File; a region edit replaces the image. The `core/locator` depiction rule. Seed `likeness` on `person`, cardinality multiple, through Install only, new catalogs only. Researchers cannot create a depiction Property. Until S10-52, the auto-reconciler's loader skips depiction Observations, so a likeness on a member cannot break recompute. Working rules "A depiction's value is its own row…", "Deletes follow the evidence chain", "`likeness` is new catalogs only". |
 | **Out** | The FFI shape (S10-54). Reconciling depictions (S10-52). The composer row (S10-34). Place, event, and signature keys. |
 | **Testable** | A likeness on a Citation with an empty transcription saves with its region and image File. A refused crop writes nothing and leaves no object. A region on another page or Artifact, or a Citation on a fileless Artifact, is refused. Editing the region stores a new image and releases the old one. Deleting the Observation releases its value and image; the Citation then deletes. A new catalog has `likeness`; an older one does not. |
-| **Depends on** | S10-51, S10-53 |
+| **Depends on** | S10-55, S10-53 |
 
 #### S10-54 — Depiction values over the FFI
 
@@ -852,7 +852,7 @@ Everything else in **Working rules** is decided for planning. Correct any of the
 | S10-23 | None. The gender section is already [`docs/seeded-vocabulary.md`](../../seeded-vocabulary.md) §3.9 (landed with S10-38 and S10-45). Do not rewrite §3.7. |
 | S10-25, S10-32 | Seeded vocabulary: abbreviation and nickname tables, `likeness` / `depiction`. |
 | S10-32 | [`interpretation-layer-data-model.md`](../../interpretation-layer-data-model.md): the `depiction` value type and `depiction_values`. |
-| S10-51 | [`source-layer-data-model.md`](../../source-layer-data-model.md): a File is released when no declared pointer remains. [`add-catalog-delete`](../../../.agents/skills/add-catalog-delete/SKILL.md): file pointers and nested releases come from `catalogmodel` and `ownedReleases`; one purge. |
+| S10-55 | [`source-layer-data-model.md`](../../source-layer-data-model.md): a File is released when no declared pointer remains. [`add-catalog-delete`](../../../.agents/skills/add-catalog-delete/SKILL.md): file pointers and nested releases come from `catalogmodel` and `ownedReleases`; one purge. |
 | S10-53 | [`source-layer-data-model.md`](../../source-layer-data-model.md) §6: a File can hold an app-rendered image Go re-encoded; the `core/ingest` package doc. |
 | S10-32 | [`add-audit-scope`](../../../.agents/skills/add-audit-scope/SKILL.md): a depiction value and its image `files` row are audited; thumbnails stay `None`. [`add-seeded-vocabulary`](../../../.agents/skills/add-seeded-vocabulary/SKILL.md): `term` and `depiction` are the registry-only value types. |
 | S10-52 | [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md) §7: the `depiction` module. |

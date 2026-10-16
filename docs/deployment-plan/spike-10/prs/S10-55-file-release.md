@@ -1,19 +1,19 @@
-# S10-51 — File release from the declared model
+# S10-55 — File release from the declared model
 
 **Status:** Planned
 **Spike / slice:** Spike 10 · Slice 8 — Likeness
-**Map row:** [`../deployment-plan.md`](../deployment-plan.md#s10-51--file-release-from-the-declared-model)
+**Map row:** [`../deployment-plan.md`](../deployment-plan.md#s10-55--file-release-from-the-declared-model)
 **Brief:** — (no new chrome: an engine change to how deletes release Files)
 **Board:** —
 **Depends on:** —
 **Blocks:** S10-53, S10-32
-**Branch:** `s10-51-file-release`
+**Branch:** `s10-55-file-release`
 **Version bump:** none — Spike 10 PRs leave `VERSION` at 0.2.0, and the product bump is cut when a release ships ([`docs/versioning.md`](../../../versioning.md))
 **Skills to load:** [`add-catalog-delete`](../../../../.agents/skills/add-catalog-delete/SKILL.md), [`add-catalog-model`](../../../../.agents/skills/add-catalog-model/SKILL.md)
 **Rules that bind:** `.cursor/rules/catalog-deletes.mdc`, `.cursor/rules/catalog-model.mdc`, `.cursor/rules/go-tests.mdc`
 **Context:** [`docs/catalog-deletes.md`](../../../catalog-deletes.md), [`docs/source-layer-data-model.md`](../../../source-layer-data-model.md) §6–§8, [`core/database/deleteimpact/README.md`](../../../../core/database/deleteimpact/README.md), working rules "A File is released only when nothing points at it, and one purge removes its object" and "Deletes follow the evidence chain", map review [`../deployment-plan.review.md`](../deployment-plan.review.md) K-2, K-3
 **Planned:** 2026-10-16 against `main` @ `98819f86`
-**Review:** [`S10-51-file-release.review.md`](S10-51-file-release.review.md) — Fits with changes, Ready with changes (applied); 2 rounds
+**Review:** [`S10-55-file-release.review.md`](S10-55-file-release.review.md) — Fits with changes, Ready with changes (applied); 2 rounds
 
 ### Implementer — read this first
 
@@ -216,8 +216,8 @@ Do:
 - `add-catalog-model` skill: an owned-outbound row table registers `PK`.
 - `source-layer-data-model.md` §8: releasing a File removes only its own derivative links; a derived File is deleted when nothing points at it.
 - `.agents/skills/add-catalog-model/SKILL.md` lines that say an owned-outbound FK needs "a release entry", is "on the release list", or that "owned releases" are dropped (around lines 25, 41, 51): an owned-outbound FK is the whole registration; `deleteimpact` derives the release. `.agents/skills/add-catalog-delete/SKILL.md` around lines 30 and 46: same wording. `.cursor/rules/catalog-migrations.mdc` line 15 and `.cursor/rules/catalog-deletes.mdc` line 11: same, and the delete order ends `ReleaseSnapshot` → `files.PurgeAfterCommit`. `docs/catalog-deletes.md` lines 9, 10, 15, and 96: drop `CollectFileObjects` and the per-entry `always`/`ifUnused` wording; add `files.PurgeAfterCommit` to the order.
-- `deployment-plan.md`: the S10-51 scope row ("walks `ownedReleases` `Then` generically" → "derives owned releases from `catalogmodel`"), the S10-51 "Docs to update" row (drop "and `ownedReleases`"); in the working rule that begins "A File is released only when nothing points at it", replace "walks `ownedReleases` `Then` generically" with "derives owned releases from `catalogmodel`", and "one `catalogmodel` FK and one `ownedReleases` entry" with "two `catalogmodel` FK declarations"; the S10-51 **Plan:** line's "— Planned" becomes "— Landed #N", and " — done, #N" is appended to its SLICE 8 line (as `S10-50  … — done, #413`). `completed.md`: a `## S10-51 — File release from the declared model` section above the current first section, in the shape of the `S10-50` section.
-Check: `python3 scripts/check-plan-docs.py docs/deployment-plan/spike-10/prs/S10-51-file-release.md` passes; `grep -rn -i "release list\|release entry\|ownedReleases\|CollectFileObjects" core docs .agents .cursor` matches nothing outside this plan, `docs/deployment-plan/spike-10/*.review.md`, and `docs/deployment-plan/archive/`.
+- `deployment-plan.md`: the S10-55 scope row ("walks `ownedReleases` `Then` generically" → "derives owned releases from `catalogmodel`"), the S10-55 "Docs to update" row (drop "and `ownedReleases`"); in the working rule that begins "A File is released only when nothing points at it", replace "walks `ownedReleases` `Then` generically" with "derives owned releases from `catalogmodel`", and "one `catalogmodel` FK and one `ownedReleases` entry" with "two `catalogmodel` FK declarations"; the S10-55 **Plan:** line's "— Planned" becomes "— Landed #N", and " — done, #N" is appended to its SLICE 8 line (as `S10-50  … — done, #413`). `completed.md`: a `## S10-55 — File release from the declared model` section above the current first section, in the shape of the `S10-50` section.
+Check: `python3 scripts/check-plan-docs.py docs/deployment-plan/spike-10/prs/S10-55-file-release.md` passes; `grep -rn -i "release list\|release entry\|ownedReleases\|CollectFileObjects" core docs .agents .cursor` matches nothing outside this plan, `docs/deployment-plan/spike-10/*.review.md`, and `docs/deployment-plan/archive/`.
 
 Commits: one per behavior. The subject is one full imperative sentence that says what changed for the researcher, ending in a period, like the rest of `git log` ("Restore list scroll after the sort is applied."). No WIP commits.
 
@@ -286,5 +286,5 @@ None.
 
 ## 13. PR
 
-**Title:** S10-51 — File release from the declared model
-**Body:** objective in one sentence; what shipped against each US; AC evidence; deviations from the plan; manual check; `Plan: docs/deployment-plan/spike-10/prs/S10-51-file-release.md`.
+**Title:** S10-55 — File release from the declared model
+**Body:** objective in one sentence; what shipped against each US; AC evidence; deviations from the plan; manual check; `Plan: docs/deployment-plan/spike-10/prs/S10-55-file-release.md`.

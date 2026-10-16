@@ -1,18 +1,18 @@
 # S10-53 — Stage a client image
 
-**Status:** Blocked — on S10-51
+**Status:** Blocked — on S10-55
 **Spike / slice:** Spike 10 · Slice 8 — Likeness
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#s10-53--stage-a-client-image)
 **Brief:** — (no new chrome: an engine API with no caller until S10-32)
 **Board:** —
-**Depends on:** S10-51 (`files.PurgeUnreferenced`; not landed)
+**Depends on:** S10-55 (`files.PurgeUnreferenced`; not landed)
 **Blocks:** S10-32
 **Branch:** `s10-53-stage-image`
 **Version bump:** none — Spike 10 PRs leave `VERSION` at 0.2.0, and the product bump is cut when a release ships ([`docs/versioning.md`](../../../versioning.md))
 **Skills to load:** [`add-catalog-query`](../../../../.agents/skills/add-catalog-query/SKILL.md)
 **Rules that bind:** `.cursor/rules/catalog-queries.mdc`, `.cursor/rules/go-tests.mdc`
 **Context:** [depictions and likenesses](../depictions-and-likenesses.md) "The image", [`docs/source-layer-data-model.md`](../../../source-layer-data-model.md) §6, [`.agents/skills/review-pr/lenses/security.md`](../../../../.agents/skills/review-pr/lenses/security.md) trust boundaries, working rule "The client renders the image; Go validates it and stores its own copy", map review [`../deployment-plan.review.md`](../deployment-plan.review.md) K-4, K-5
-**Planned:** 2026-10-16 against `main` @ `98819f86`, with [S10-51](S10-51-file-release.md) as planned
+**Planned:** 2026-10-16 against `main` @ `98819f86`, with [S10-55](S10-55-file-release.md) as planned
 **Review:** [`S10-53-stage-image.review.md`](S10-53-stage-image.review.md) — Fits, Ready with changes (applied); 2 rounds
 
 ### Implementer — read this first
@@ -103,7 +103,7 @@ Go can accept an image the Mac app rendered and store it safely as a File. The a
 | Byte write | `core/derivatives/ensure.go` `writeObjectIfAbsent`, `sha256Hex`; `core/derivatives/sync_unix.go`, `sync_other.go` `syncDir` | Match by checksum, `os.CreateTemp(dir, ".deriv-*")`, write, sync, close, rename, re-match on a rename failure, `syncDir`. |
 | Object store | `core/objectstore/objectstore.go` `MatchesChecksum` | Only verification lives here. |
 | Files queries | `core/database/files/files.go` `sqlLookupChecksum`, `scanFile`, `isLowerHex`, `LookupByChecksum(c, …)`, `Insert(tx, f)`, `IsUniqueConflict` | No `*sql.Tx` checksum lookup. Convention elsewhere: `properties.LookupTx(tx *sql.Tx, …)`. |
-| Purge | [S10-51](S10-51-file-release.md) D-1 `files.PurgeUnreferenced(c, objs []files.Object)` | Not landed. Removes an object whose checksum no `files` row names. |
+| Purge | [S10-55](S10-55-file-release.md) D-1 `files.PurgeUnreferenced(c, objs []files.Object)` | Not landed. Removes an object whose checksum no `files` row names. |
 | Security lens | `.agents/skills/review-pr/lenses/security.md` trust table | "Ingest: `core/ingest` …" (no decode); "Derivatives: `core/derivatives` (thumbnails, crops) — Image and PDF bytes decoded in-process". |
 | Tests | `core/ingest/file_test.go` `TestFile` (helpers `mustUser`, `writeTemp`, `auditCount` are closures inside it), `TestMapOpenErr`; `core/ingest/file_unix_test.go`; `core/derivatives/raster/raster_test.go` `TestEncodeJPEGRejects`, `TestEncodeJPEGAtBudgetBoundaries`, `TestSupported`, `TestEncodeJPEGOptionsAndTransform`; `core/derivatives/thumbnail_test.go` | — |
 
@@ -123,7 +123,7 @@ Go can accept an image the Mac app rendered and store it safely as a File. The a
 | D-8 | `stageFormats = []string{"png", "jpeg"}` *(new, unexported)* in `stage.go` is the staged decode allowlist and replaces the import sniff policy for staging. It must stay inside `mediatypes.Allowed` (T-4 checks `image/png` and `image/jpeg`). | The decode allowlist is stricter than the import policy today; the test keeps a future widening from admitting a type imports refuse (review M-7). | Also running `mediatypes.Resolve` — redundant once the bytes are decoded and re-encoded. |
 | D-9 | `StageImage(c *database.Catalog, absPath string) (*StagedImage, error)`, never called inside `writes.Run`: `c.DB()` (as `File` does), trim the path, `openChecked(absPath, maxImageBytes)`; take the slot; `io.ReadAll(io.LimitReader(f, maxImageBytes+1))`, more than the cap → `ErrTooLarge`; `raster.EncodePNG(raw, raster.Options{MaxEdge: 2048, Formats: stageFormats})`; release the slot; `raster.ErrUnsupportedFormat`, `raster.ErrTooLarge`, or any decode error → `ErrUnsupportedImage`; SHA-256 of the PNG; `files.StorageRelPath(checksum, "image/png")`; `objectstore.WriteIfAbsent(filepath.Join(c.Dir(), filepath.FromSlash(rel)), png)` gives `wrote`; `files.LookupByChecksum(c, checksum)` (`sql.ErrNoRows` means none). Any error after `WriteIfAbsent` reports `wrote` true (including its own error) builds the `StagedImage`, calls its `Discard`, and returns `(nil, err)`, so a failed stage leaves no object. | Every decode and disk write happens before the caller's write. The client sends PNG (S10-34); JPEG is accepted so an image Artifact's pixels can be passed through. | Accepting every raster format — more decoders on an untrusted path for no caller. |
 | D-10 | `type StagedImage struct { c *database.Catalog; checksum string; byteSize int64; wrote bool; file files.File; haveFile bool }`. `StageImage` sets `file`/`haveFile` when a row already exists. `(*StagedImage).InsertTx(tx *sql.Tx) (files.File, []rowchange.Change, error)` (a `*sql.Tx`, because S10-32 calls it from `observations.resolveValue`, which holds one): if `haveFile`, return `file` and no change; else `files.LookupByChecksumTx(tx, checksum)` → found: cache it and return it, no change; else `id, err := files.NewID()` then `insertFile(tx, files.File{ID: id, ChecksumSHA256: checksum, MediaType: "image/png", ByteSize: byteSize})` → cache it (`haveFile = true`) and return it with its change. `errChecksumTaken` from `insertFile` is returned as is. | The caller's write carries the row and its audit; a second `InsertTx` on the same stage is free. | Inserting in its own `writes.Run` — a crash between writes would leave an unreferenced File. |
-| D-11 | `(*StagedImage).Discard()`: if `wrote`, `files.PurgeUnreferenced(s.c, []files.Object{{ChecksumSHA256: s.checksum, MediaType: "image/png"}})`; otherwise nothing. Safe to call more than once and after a commit (a row then names the checksum, so the purge keeps it). The calling pattern is `s, err := ingest.StageImage(c, path); if err != nil {…}; defer s.Discard()`. | One rule for "never remove bytes a row still names": S10-51's purge (review M-1, M-9). | A second remove-if-unreferenced in `ingest`. |
+| D-11 | `(*StagedImage).Discard()`: if `wrote`, `files.PurgeUnreferenced(s.c, []files.Object{{ChecksumSHA256: s.checksum, MediaType: "image/png"}})`; otherwise nothing. Safe to call more than once and after a commit (a row then names the checksum, so the purge keeps it). The calling pattern is `s, err := ingest.StageImage(c, path); if err != nil {…}; defer s.Discard()`. | One rule for "never remove bytes a row still names": S10-55's purge (review M-1, M-9). | A second remove-if-unreferenced in `ingest`. |
 | D-12 | `ErrUnsupportedImage = apperr.New(apperr.CodeIngestUnsupportedImage, apperr.KindUser)` *(new)*; `CodeIngestUnsupportedImage = "ingest.unsupported_image"` *(new)* after `CodeIngestMissing`. Tests compare errors with `errors.Is` (`ingest.ErrTooLarge` and `raster.ErrTooLarge` are different errors). | One user-facing reason for "not a PNG or JPEG we can safely decode". | Reusing `ErrUnsupportedType` — it means a disallowed import media type, with its own help text. |
 
 ## 6. Design
@@ -140,7 +140,7 @@ Go can accept an image the Mac app rendered and store it safely as a File. The a
 | `files.LookupByChecksumTx` *(new)* | func | `files.LookupByChecksum`, `properties.LookupTx` | Same query on a transaction. |
 | `core/ingest/stage_test.go` *(new)*, package-level `stageUser`, `stageWrite` helpers | test helpers | the closures inside `TestFile` | `file_test.go` stays unedited (AC-3.1). |
 
-**Builds on.** `ingest.File`, `raster`'s allowlist and budget, `objectstore`, S10-51's `files.PurgeUnreferenced`, `writes.Run` change lists.
+**Builds on.** `ingest.File`, `raster`'s allowlist and budget, `objectstore`, S10-55's `files.PurgeUnreferenced`, `writes.Run` change lists.
 **Deletes.** The inline checks and change map in `ingest.File`, the inline decode in `EncodeJPEG`, `core/derivatives/raster` (moved), `derivatives.decodeSem` / `decodeSlots` / `writeObjectIfAbsent`, `core/ingest/sync_*.go`, `core/derivatives/sync_*.go`.
 **Next adds.** S10-32 calls `StageImage` per depiction input before its write with `defer s.Discard()`, and `InsertTx` inside it. A later signature or place picture uses the same calls.
 
@@ -273,7 +273,7 @@ None in the app — nothing calls `StageImage` until S10-32 and S10-54. Instead,
 
 | Risk | Mitigation |
 | --- | --- |
-| S10-51 lands with a different `files.PurgeUnreferenced` shape | This plan waits on S10-51; refresh D-11 against its Landed note. |
+| S10-55 lands with a different `files.PurgeUnreferenced` shape | This plan waits on S10-55; refresh D-11 against its Landed note. |
 | Moving the decode slot changes thumbnail concurrency | `raster.Slot` keeps `decodeSlots`' size; T-6 keeps the thumbnail tests. |
 | Two stages of the same pixels, one discarded before the other commits | `catalogsession.Do` runs a project's operations one at a time, so FFI callers cannot interleave; `ingest.File` has the same theoretical exposure today. Accepted. |
 | `golang.org/x/image` decoders on an untrusted path | D-4 and D-8 refuse every format but PNG and JPEG before a full decode. |
@@ -283,7 +283,7 @@ None in the app — nothing calls `StageImage` until S10-32 and S10-54. Instead,
 - An existing test in `core/ingest` needs an edit to pass after STEP-1, or a raster or thumbnail test needs more than an import-path edit after STEP-2.
 - `image.DecodeConfig` allocates the declared pixels for any format (check with the 100000 × 100000 header in T-1).
 - `files.LookupByChecksum` blocks when `Discard` runs after a failed `writes.Run` returns.
-- `files.PurgeUnreferenced` is not in `core/database/files` when you start (S10-51 has not landed).
+- `files.PurgeUnreferenced` is not in `core/database/files` when you start (S10-55 has not landed).
 
 ## 12. Open questions
 
