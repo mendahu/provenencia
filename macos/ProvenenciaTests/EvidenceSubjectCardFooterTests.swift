@@ -90,6 +90,31 @@ struct EvidenceSubjectCardFooterTests {
             let ids = EvidenceSubjectCard.actionTargets(for: other, canCite: true).map(\.id)
             #expect(!ids.contains(EvidenceSubjectCard.unpromoteActionID))
         }
+
+        // A filed bridge card has no Unpromote square either.
+        let bridge = SourceGraphPlacedBridge(
+            subject: CatalogSubject(id: "b1", ref: "REL-3RN7K", sourceID: "x", subjectTypeID: "t", label: "", description: ""),
+            kind: .relationship,
+            typeLabel: "Relationship",
+            gridX: 5,
+            gridY: 5,
+            isCited: true,
+            observations: [
+                CatalogObservation(
+                    id: "o1", ref: "OBS-1", citationID: "c", subjectID: "b1", propertyID: "p1",
+                    polarity: "positive", valueText: "Value 1", valueInteger: nil, valueDateID: "", valueNameID: "",
+                    valueSubjectID: "", valueTermID: "", propertyKey: "k1", propertyLabel: "Prop 1", propertyValueType: "text"
+                ),
+            ],
+            membership: CatalogSubjectMembership(
+                subjectID: "b1", claimID: "cb1",
+                entity: CatalogCanonicalEntity(id: "eb1", ref: "REL-7KD45", subjectTypeID: "t", label: ""),
+                kind: "relationship"
+            )
+        )
+        let snapshot = SourceGraphSnapshot(sourceId: "x", bridges: [bridge])
+        let bridgeIDs = EvidenceBridgeCard.actionTargets(for: bridge, in: snapshot, canCite: true).map(\.id)
+        #expect(!bridgeIDs.contains(EvidenceSubjectCard.unpromoteActionID))
     }
 
     @Test func membershipSwapsPromoteForOpenHandle() {

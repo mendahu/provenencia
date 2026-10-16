@@ -691,14 +691,16 @@ private extension EvidenceCardView {
             painter.fill(parts.hairline, style.line)
             let unpromoteDown = pressed == EvidenceSubjectCard.unpromoteActionID
             if unpromoteDown || hovered == EvidenceSubjectCard.unpromoteActionID {
+                let side = PVControlSize.sm.height
                 painter.fillRound(
-                    CGRect(x: parts.slot.midX - 11, y: parts.slot.midY - 11, width: 22, height: 22),
+                    CGRect(x: parts.slot.midX - side / 2, y: parts.slot.midY - side / 2, width: side, height: side),
                     radius: PVRadius.sm, style.ink.opacity(unpromoteDown ? 0.18 : 0.10)
                 )
             }
+            let glyph = PVControlSize.sm.iconGlyphSize
             painter.symbol(
                 PVSymbol.unpromote.rawValue,
-                in: CGRect(x: parts.slot.midX - 6.5, y: parts.slot.midY - 6.5, width: 13, height: 13),
+                in: CGRect(x: parts.slot.midX - glyph / 2, y: parts.slot.midY - glyph / 2, width: glyph, height: glyph),
                 style.ink
             )
         } else {
