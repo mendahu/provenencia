@@ -37,6 +37,9 @@ type Value struct {
 	Integer    int64
 	HasInteger bool
 	Term       string
+	// TermLabel is the term's catalog label, for showing the value; empty
+	// when the loader had none. Comparers never read it.
+	TermLabel string
 	// TermID is the catalog term id when known. Comparers compare terms by
 	// key; Promote's exhibits pass the id to autoreconcile.Compatible, which
 	// falls back to the key when it is empty.

@@ -22,6 +22,9 @@ type ValueRef struct {
 	// for a cached handle value, which is a cluster of Observations.
 	ObservationID []byte
 	Negative      bool
+	// Date is the value's structured date, for a client to format; nil for
+	// any other value type.
+	Date *datevalues.Value
 }
 
 // PairResult is the outcome of comparing two sides' values of one Property.
@@ -108,6 +111,9 @@ func (v Value) Label() string {
 	case v.Date != nil:
 		return datevalues.CompactDisplay(*v.Date)
 	case v.Term != "":
+		if v.TermLabel != "" {
+			return v.TermLabel
+		}
 		return v.Term
 	case v.HasInteger:
 		return strconv.FormatInt(v.Integer, 10)
@@ -115,8 +121,17 @@ func (v Value) Label() string {
 	return v.Text
 }
 
+// sortKey is the value as a stable ordering key: a term's key, so renaming
+// its label does not change which pair a Reason names; Label otherwise.
+func (v Value) sortKey() string {
+	if v.Name == nil && v.Date == nil && v.Term != "" {
+		return v.Term
+	}
+	return v.Label()
+}
+
 func (v Value) ref() ValueRef {
-	return ValueRef{Label: v.Label(), ObservationID: v.ObservationID, Negative: v.Negative}
+	return ValueRef{Label: v.Label(), ObservationID: v.ObservationID, Negative: v.Negative, Date: v.Date}
 }
 
 func compatible(a, b Value) bool {
@@ -225,7 +240,7 @@ func order(vs []Value, info []voteInfo, i, j int) int {
 		}
 		return 1
 	}
-	if c := strings.Compare(vs[i].Label(), vs[j].Label()); c != 0 {
+	if c := strings.Compare(vs[i].sortKey(), vs[j].sortKey()); c != 0 {
 		return c
 	}
 	if vs[i].Counted && vs[j].Counted {

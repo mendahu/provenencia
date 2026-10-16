@@ -1,6 +1,6 @@
 # S10-50 — Promote sheet lines show the values they compared
 
-**Status:** Planned
+**Status:** Landed in #413 (2026-10-16)
 **Spike / slice:** Spike 10 · Slice 7 — How names compare (no new chrome)
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#s10-50--promote-sheet-lines-show-the-values-they-compared)
 **Brief:** — (no new chrome: lines the sheet already draws gain their values and labels)
@@ -14,6 +14,9 @@
 **Context:** [S10-28 ship log](S10-28-support-negatives.ship.md) round 2 (UX-3, CON-4), [S10-28 plan](S10-28-support-negatives.md) D-7, D-10 and its Landed note, [`docs/matching.md`](../../../matching.md) "Support weights and negatives"
 **Planned:** 2026-10-16 against `main` @ `eb6aa5f` (S10-28 landed). First written against `s10-28-support-negatives` @ `70521f33` before the merge; `main`'s tree is identical to it, so §4 holds unchanged
 **Review:** [`S10-50-promote-sheet-values.review.md`](S10-50-promote-sheet-values.review.md) — 2 rounds: Fits with changes / Not ready, then Fits / Ready with changes; every finding answered; no open blocker
+
+**Landed:** The code matches the plan except for this.
+- `TestExhibitNameWithoutForm` blanks `name_values.form` by SQL after the names are filed, because the name writers reject an empty Form; the plan's fixture could not be built through them.
 
 ### Implementer — read this first
 

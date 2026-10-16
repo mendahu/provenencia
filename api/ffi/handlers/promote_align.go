@@ -123,43 +123,30 @@ func proposalProto(c *database.Catalog, prop graphalign.Proposal) (*engine.Propo
 			row.ViaBridgeType = r.Via.Signature.BridgeType
 			row.ViaRole = r.Via.Signature.RoleOrType
 		}
-		if len(r.Exhibits) > 0 {
-			for _, ex := range r.Exhibits {
-				cmp := &engine.PromoteGraphAlignmentComparison{
-					PropertyKey:           ex.Property.Key,
-					PropertyOrigin:        ex.Property.Origin,
-					Outcome:               string(ex.Outcome),
-					ValueType:             ex.ValueType,
-					Pinned:                ex.Pinned,
-					Weight:                ex.Weight,
-					GroupSubjectId:        uuidString(ex.GroupSubjectID),
-					IncomingObservationId: uuidString(ex.IncomingObservationID),
-					IncomingDisplay:       ex.IncomingDisplay,
-					IncomingNegative:      ex.IncomingNegative,
-					IncomingSource:        ex.IncomingSource,
-					MemberObservationId:   uuidString(ex.MemberObservationID),
-					MemberDisplay:         ex.MemberDisplay,
-					MemberSource:          ex.MemberSource,
-				}
-				if ex.IncomingDate != nil {
-					cmp.IncomingDate = valuecodec.DateToProto(*ex.IncomingDate)
-				}
-				if ex.MemberDate != nil {
-					cmp.MemberDate = valuecodec.DateToProto(*ex.MemberDate)
-				}
-				row.Comparisons = append(row.Comparisons, cmp)
+		for _, ex := range r.Exhibits {
+			cmp := &engine.PromoteGraphAlignmentComparison{
+				PropertyKey:           ex.Property.Key,
+				PropertyOrigin:        ex.Property.Origin,
+				Outcome:               string(ex.Outcome),
+				ValueType:             ex.ValueType,
+				Pinned:                ex.Pinned,
+				Weight:                ex.Weight,
+				GroupSubjectId:        uuidString(ex.GroupSubjectID),
+				IncomingObservationId: uuidString(ex.IncomingObservationID),
+				IncomingDisplay:       ex.IncomingDisplay,
+				IncomingNegative:      ex.IncomingNegative,
+				IncomingSource:        ex.IncomingSource,
+				MemberObservationId:   uuidString(ex.MemberObservationID),
+				MemberDisplay:         ex.MemberDisplay,
+				MemberSource:          ex.MemberSource,
 			}
-		} else {
-			for _, c := range r.Comparisons {
-				row.Comparisons = append(row.Comparisons, &engine.PromoteGraphAlignmentComparison{
-					PropertyKey:    c.Property.Key,
-					PropertyOrigin: c.Property.Origin,
-					Outcome:        string(c.Outcome),
-					ValueType:      c.ValueType,
-					Pinned:         c.Pinned,
-					Weight:         c.Weight,
-				})
+			if ex.IncomingDate != nil {
+				cmp.IncomingDate = valuecodec.DateToProto(*ex.IncomingDate)
 			}
+			if ex.MemberDate != nil {
+				cmp.MemberDate = valuecodec.DateToProto(*ex.MemberDate)
+			}
+			row.Comparisons = append(row.Comparisons, cmp)
 		}
 		for _, a := range r.Alternatives {
 			alt := &engine.PromoteGraphAlignmentAlternative{

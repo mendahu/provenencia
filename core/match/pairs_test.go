@@ -6,6 +6,7 @@ import (
 
 	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/namevalues"
+	"github.com/mendahu/provenencia/core/database/properties"
 )
 
 // cached is a handle value as the cache loader fills it.
@@ -185,6 +186,7 @@ func TestValueLabel(t *testing.T) {
 	}{
 		{text("York"), "York"},
 		{term("male"), "male"},
+		{Value{Term: "two-spirit", TermLabel: "Two-Spirit"}, "Two-Spirit"},
 		{integer(42), "42"},
 		{Value{Date: &d}, "1890"},
 		{name("James Robins"), "James Robins"},
@@ -262,4 +264,23 @@ func TestPairValuesMultiple(t *testing.T) {
 			t.Errorf("got %+v", got)
 		}
 	})
+}
+
+func TestOrderIgnoresTermLabel(t *testing.T) {
+	vs := []Value{{Term: "a", TermLabel: "Zed"}, {Term: "b", TermLabel: "Alpha"}}
+	info := []voteInfo{{eff: 1}, {eff: 1}}
+	if got := order(vs, info, 0, 1); got >= 0 {
+		t.Errorf("order(a, b) = %d, want negative", got)
+	}
+	if got := order(vs, info, 1, 0); got <= 0 {
+		t.Errorf("order(b, a) = %d, want positive", got)
+	}
+}
+
+func TestPairValuesRefDate(t *testing.T) {
+	probe, cand := date(1890, nil, nil), date(1890, nil, nil)
+	r := pairValues(ComparerFor(properties.ValueTypeDate), "", []Value{probe}, []Value{cand})
+	if r.Probe.Date != probe.Date || r.Candidate.Date != cand.Date || r.Probe.Date == nil {
+		t.Errorf("refs = %+v / %+v, want the input date pointers", r.Probe, r.Candidate)
+	}
 }

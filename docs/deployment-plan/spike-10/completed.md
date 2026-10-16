@@ -1,5 +1,9 @@
 # Spike 10 — completed
 
+## S10-50 — Promote sheet lines show the values they compared
+
+**Landed 2026-10-16** in [#413](https://github.com/mendahu/provenencia/pull/413). A term on a Promote sheet line reads as its label (`Male`, `Two-Spirit`), not its key, and a name with parts and no `Form` shows its parts. A row with no exhibit, such as one fixed to a handle whose only member claim is provisional, now shows each comparison that spoke with its two values and dates, never pinned. `match.Value.TermLabel` and `ValueRef.Date` carry the label and date; `graphcache.Vocabulary.TermsByID` replaces three hand-built term maps; the FFI sends `Row.Exhibits` only and `graphalign.Comparison.Pinned` is gone.
+
 ## S10-28 — Support, negatives, and which values matched
 
 **Landed 2026-10-16** in [#411](https://github.com/mendahu/provenencia/pull/411). A handle's cached values count in proportion to their effective support (support minus the negatives against it) over the leading value's, so one stray "female" among three "male" Sources contradicts a female Subject and one "James Robins" on a handle that is mostly "Mary Smith" is not a name match. Equally supported values both lead. Negative Observations now load: one that is compatible with a leading value on the other side is a contradiction, as is a value the reconciler `denied`. Promote reads the same weights from the graph cache, so such a row reads as a conflict. Each `Reason` and `PropertyComparison` names the probe value and the candidate value. A multiple-cardinality Property (a Place's toponyms) gives every displayed value full weight, so a handle's minority toponym still matches. On the Promote sheet a row-level conflict shows as an unpinnable line when no exhibit shows it, and a negative Observation reads "not <value>". No catalog change; Promote's exhibit chooser keeps its own member picker.

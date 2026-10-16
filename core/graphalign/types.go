@@ -124,13 +124,12 @@ const (
 	AssessNone   Assessment = "none"
 )
 
-// Comparison is one Property outcome on the chosen (or top) candidate,
-// suitable for drafting pins later (S9-43).
+// Comparison is one Property outcome on the chosen (or top) candidate: an
+// input to the score. Pins come from Exhibit, which pairs Observations.
 type Comparison struct {
 	Property  match.Property
 	Outcome   match.Outcome
 	ValueType string
-	Pinned    bool // drafted true when the values are the same; a partial resemblance stays unpinned
 	// Weight is the points this outcome added (negative for a conflict).
 	Weight float64
 	// Probe and Candidate are the two values behind the outcome; a conflict

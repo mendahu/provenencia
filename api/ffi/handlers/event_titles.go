@@ -59,7 +59,7 @@ func ListSourceEventTitles(in []byte) ([]byte, error) {
 		if err != nil {
 			return err
 		}
-		terms, err := loadTermInfo(c)
+		vocab, err := c.Graph().Vocabulary()
 		if err != nil {
 			return err
 		}
@@ -68,7 +68,7 @@ func ListSourceEventTitles(in []byte) ([]byte, error) {
 			keys[id] = info.Key
 		}
 		termLookup := map[string]struct{ Key, Label string }{}
-		for id, info := range terms {
+		for id, info := range vocab.TermsByID() {
 			termLookup[id] = struct{ Key, Label string }{Key: info.Key, Label: info.Label}
 		}
 		for _, t := range sourceeventtitles.FromStored(sg, keys, termLookup) {

@@ -253,7 +253,7 @@ func TestSpellingVariantIsAWeakerTextMatch(t *testing.T) {
 		if c.Property.Key != "toponym" {
 			continue
 		}
-		if c.Outcome != match.OutcomePartial || c.Pinned {
+		if c.Outcome != match.OutcomePartial {
 			t.Fatalf("comparison %+v", c)
 		}
 		partial = true

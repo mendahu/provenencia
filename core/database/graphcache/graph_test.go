@@ -416,3 +416,20 @@ func TestActivity(t *testing.T) {
 		})
 	}
 }
+
+func TestTermsByID(t *testing.T) {
+	v := graphcache.Vocabulary{Terms: []graphcache.VocabTerm{
+		{ID: []byte("id-a"), PropertyKey: "sex_at_birth", Key: "male", Label: "Male"},
+		{ID: []byte("id-b"), PropertyKey: "sex_at_birth", Key: "unknown", Label: "Unknown", Neutral: true},
+	}}
+	got := v.TermsByID()
+	if len(got) != 2 {
+		t.Fatalf("len = %d, want 2", len(got))
+	}
+	if a := got["id-a"]; a.Key != "male" || a.Label != "Male" || a.Neutral {
+		t.Errorf("id-a = %+v", a)
+	}
+	if b := got["id-b"]; b.Key != "unknown" || b.Label != "Unknown" || !b.Neutral {
+		t.Errorf("id-b = %+v", b)
+	}
+}

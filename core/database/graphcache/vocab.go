@@ -30,6 +30,15 @@ type VocabTerm struct {
 	Neutral     bool // no evidence either way (property_terms.neutral)
 }
 
+// TermsByID maps each term's id (as a string) to the term.
+func (v Vocabulary) TermsByID() map[string]VocabTerm {
+	out := make(map[string]VocabTerm, len(v.Terms))
+	for _, t := range v.Terms {
+		out[string(t.ID)] = t
+	}
+	return out
+}
+
 // VocabType is one subject type.
 type VocabType struct {
 	ID     []byte
