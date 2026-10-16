@@ -2,7 +2,7 @@
 
 ## Status
 
-**Open.** Slice 1 (the Evidence graph) is done. Usability fixes from dogfooding Spike 9, plus depictions, international names, and name-matching, are still ahead. One PR per change unless two notes share a view or a comparer. Requirements and order: [`deployment-plan.md`](deployment-plan.md). Briefs (authored just before the PR they gate): [`design/`](design/). Finished steps: [`completed.md`](completed.md).
+**Open.** Slices 1–7 and Slice 9 are done; S10-31 and S10-37 were descoped 2026-10-16. Depictions (Slice 8) and Unpromote (S10-44) are still ahead. One PR per change unless two notes share a view or a comparer. Requirements and order: [`deployment-plan.md`](deployment-plan.md). Briefs (authored just before the PR they gate): [`design/`](design/). Finished steps: [`completed.md`](completed.md).
 
 Spike 9 shipped Promote and the Conclusion pages. This spike makes that app easier to enter, makes names match across accents and abbreviations, and lets a photograph be evidence.
 

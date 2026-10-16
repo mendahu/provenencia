@@ -45,13 +45,13 @@ What's in place:
 
 1. Accent folding in matching's word comparison, with the 0.95 folded-match tier. S10-24 did this. It needs no cache change.
 2. Name format profiles carry role maps and weights. S10-29 did this for `western`. Further profiles are unscheduled.
-3. Locale collation for sorted lists. The locale is a project setting, default `en`, with no picker. A picker is later.
+3. Locale collation for sorted lists. Descoped with S10-37 (2026-10-16); the setting and the picker are in [`ideas/international-names.md`](../../ideas/international-names.md).
 4. Nickname tables. Daitch–Mokotoff was descoped (S10-26). Transliteration is later.
 
 ## Decisions
 
 - **Accent variants match in suggestions only.** On a Person's page they stay separate groupings. Manual reconciliation merges them; the auto-reconciler may add a rule later.
 - **Types are data.** Names in different formats compare word by word, and mismatched types discount rather than block. This shipped in S9-10.
-- **The project picks the sorting locale.** This spike stores it and does not offer a control.
+- **The project picks the sorting locale.** Not built: S10-37 was descoped 2026-10-16.
 
-Spanish dual surnames, a patronymic part, the father's-handle link, a collation picker, and a viewer's own locale are in [`ideas/international-names.md`](../../ideas/international-names.md).
+Spanish dual surnames, a patronymic part, the father's-handle link, the collation locale and its picker, and a viewer's own locale are in [`ideas/international-names.md`](../../ideas/international-names.md).
