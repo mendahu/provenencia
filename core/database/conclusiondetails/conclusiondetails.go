@@ -282,16 +282,12 @@ func loadProperties(g *graphcache.Graph, q Querier, entityID, subjectTypeID []by
 	return fields, byProp, nil
 }
 
-type termName struct {
-	key   string
-	label string
-}
-
 func attachValues(g *graphcache.Graph, n *graphcache.Node, byProp map[string]*Field) error {
-	labels, err := termLabels(g)
+	vocab, err := g.Vocabulary()
 	if err != nil {
 		return err
 	}
+	terms := vocab.TermsByID()
 	for prop, ranks := range n.Values {
 		f, ok := byProp[prop]
 		if !ok {
@@ -305,8 +301,8 @@ func attachValues(g *graphcache.Graph, n *graphcache.Node, byProp map[string]*Fi
 			v.Value.Text, v.Value.HasText = rank.Text, rank.HasText
 			v.Value.Integer, v.Value.HasInteger = rank.Integer, rank.HasInteger
 			v.Value.TermID = append([]byte(nil), rank.TermID...)
-			if name, ok := labels[string(rank.TermID)]; ok {
-				v.Value.TermKey, v.Value.TermLabel = name.key, name.label
+			if name, ok := terms[string(rank.TermID)]; ok {
+				v.Value.TermKey, v.Value.TermLabel = name.Key, name.Label
 			}
 			if len(rank.Date) > 0 {
 				d, err := valuecodec.UnmarshalDate(rank.Date)
@@ -326,18 +322,6 @@ func attachValues(g *graphcache.Graph, n *graphcache.Node, byProp map[string]*Fi
 		}
 	}
 	return nil
-}
-
-func termLabels(g *graphcache.Graph) (map[string]termName, error) {
-	v, err := g.Vocabulary()
-	if err != nil {
-		return nil, err
-	}
-	out := map[string]termName{}
-	for _, t := range v.Terms {
-		out[string(t.ID)] = termName{key: t.Key, label: t.Label}
-	}
-	return out, nil
 }
 
 func loadOutcomes(q Querier, entityID []byte, byProp map[string]*Field) error {
