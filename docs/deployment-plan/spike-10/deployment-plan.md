@@ -667,11 +667,11 @@ S10-33 crop cache — descoped 2026-10-16
 
 #### S10-32 — Depiction value
 
-**Plan:** [`prs/S10-32-depiction-value-type.md`](prs/S10-32-depiction-value-type.md) — Blocked — re-plan (the plan's reconciler half moves to S10-52)
+**Plan:** [`prs/S10-32-depiction-value-type.md`](prs/S10-32-depiction-value-type.md) — Blocked — on S10-51, S10-53
 
 | | |
 | --- | --- |
-| **In** | Engine only. `value_type = depiction` (a DDL migration widens the `properties.value_type` CHECK). `depiction_values` (region locator, `image_file_id`) owned by `observations.value_depiction_id`, registered in `catalogmodel` and `ownedReleases` (no `deleteimpact` code after S10-51), audited like a date value. One core entry point stages every depiction input through S10-53 and then runs the Observation write; a region edit replaces the image. The `core/locator` depiction rule. Seed `likeness` on `person`, cardinality multiple, through Install only, new catalogs only. Researchers cannot create a depiction Property. Swift value-type label (the vocabulary parity test ties it to the Go constant). Working rules "A depiction's value is its own row…", "Deletes follow the evidence chain", "`likeness` is new catalogs only". |
+| **In** | Engine only. `value_type = depiction` (a DDL migration widens the `properties.value_type` CHECK). `depiction_values` (region locator, `image_file_id`) owned by `observations.value_depiction_id`, registered as owned-outbound FKs in `catalogmodel` (no `deleteimpact` code after S10-51), audited like a date value. One core entry point stages every depiction input through S10-53 and then runs the Observation write; a region edit replaces the image. The `core/locator` depiction rule. Seed `likeness` on `person`, cardinality multiple, through Install only, new catalogs only. Researchers cannot create a depiction Property. Until S10-52, the auto-reconciler's loader skips depiction Observations, so a likeness on a member cannot break recompute. Working rules "A depiction's value is its own row…", "Deletes follow the evidence chain", "`likeness` is new catalogs only". |
 | **Out** | The FFI shape (S10-54). Reconciling depictions (S10-52). The composer row (S10-34). Place, event, and signature keys. |
 | **Testable** | A likeness on a Citation with an empty transcription saves with its region and image File. A refused crop writes nothing and leaves no object. A region on another page or Artifact, or a Citation on a fileless Artifact, is refused. Editing the region stores a new image and releases the old one. Deleting the Observation releases its value and image; the Citation then deletes. A new catalog has `likeness`; an older one does not. |
 | **Depends on** | S10-51, S10-53 |
@@ -680,7 +680,7 @@ S10-33 crop cache — descoped 2026-10-16
 
 | | |
 | --- | --- |
-| **In** | `engine.proto`: a depiction value input on `ObservationDraft` (region locator and the crop's absolute path) and the saved value on `Observation` (region and the image's object path). Every handler that writes Observations (`citations`, `observations`, `connect`) calls S10-32's core entry point; no handler stages an image itself. Swift store types carry the value; no chrome. |
+| **In** | `engine.proto`: a depiction value input on `ObservationDraft` (region locator and the crop's absolute path) and the saved value on `Observation` (region and the image's object path). Every handler that writes Observations (`citations`, `observations`, `connect`) calls S10-32's core entry point; no handler stages an image itself. Swift store types carry the value; Swift `PropertyValueType.depiction` and its *Depiction* label, with the vocabulary parity test's entry; the source graph's depiction region. No chrome. |
 | **Out** | The composer row and rendering (S10-34). Promote's exhibit images (S10-36). |
 | **Testable** | A save through the FFI with a crop path stores the image and returns its path. A path to a symlink is refused with the ingest error code. Reading the Citation's Observations returns the region and image path. |
 | **Depends on** | S10-32 |
@@ -689,7 +689,7 @@ S10-33 crop cache — descoped 2026-10-16
 
 | | |
 | --- | --- |
-| **In** | A `depiction` key module in `core/autoreconcile`, keyed by the value's image File, so the same pixels are one value. `knownValueType` becomes `moduleFor(vt) != nil`, `carries` is exported as `Carries`, and the loader's `hasValue` copy is deleted, so the depiction case is added in two places, not four. The loader fills it; `auto_reconciler_values` stores it in a new column; the graph cache mirrors it so `Verify` covers it; `CacheVersion` bumps. The Person field list skips depiction fields. Working rule "A gallery is the reconciled likeness values". The reconciler half of the current [S10-32 plan](prs/S10-32-depiction-value-type.md) (its D-7, D-12 to D-14) is the starting point, re-keyed from the Citation to the image. |
+| **In** | A `depiction` key module in `core/autoreconcile`, keyed by the value's image File, so the same pixels are one value. `knownValueType` becomes `moduleFor(vt) != nil`, `carries` is exported as `Carries`, and the loader's `hasValue` copy is deleted, so the depiction case is added in two places, not four. The loader fills it; `auto_reconciler_values` stores it in a new column; the graph cache mirrors it so `Verify` covers it; `CacheVersion` bumps. The Person field list skips depiction fields. Working rule "A gallery is the reconciled likeness values". Deletes S10-32's loader skip (its D-11). The reconciler half of the first S10-32 plan (its D-7, D-12 to D-14, in `git show 5a1a8cda:docs/deployment-plan/spike-10/prs/S10-32-depiction-value-type.md`) is the starting point, re-keyed from the Citation to the image. |
 | **Out** | Drawing the gallery (S10-35). A Reconciliation Claim on a depiction. |
 | **Testable** | Two likenesses of one person on two Sources are two `kept` values. A stronger negative on the same image denies it; a provisional member's image is `provisional`; a low-trust Source's image is `weak` and still stored. Rebuild equals upkeep, and `Verify` passes on a loaded node. |
 | **Depends on** | S10-32 |

@@ -112,3 +112,8 @@ None.
 
 ### M-14 · nit · `objectstore` package doc
 **Answer:** Fixed in D-6.
+
+## After S10-32's plan
+
+### From S10-32 · `InsertTx` takes a `*sql.Tx`
+**Answer:** Fixed. S10-32 inserts the staged File from `observations.resolveValue`, which holds a `*sql.Tx` (as does every Observation write below the handler). D-2's `insertFile` and D-10's `InsertTx` now take `*sql.Tx`; `ingest.File` passes `tx.Tx`. Nothing in `ingest` needed the wrapper.
