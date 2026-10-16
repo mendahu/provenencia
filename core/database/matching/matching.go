@@ -156,6 +156,9 @@ func start(q Querier, typeSQL string, id []byte, opts Options) ([]byte, Result, 
 	return typeID, res, p, nil
 }
 
+// nameProperty is the product name Property, the one the frequency count reads.
+var nameProperty = match.Property{Key: "name", Origin: match.OriginProvenencia}
+
 func rank(q Querier, res Result, typeID []byte, probe match.Values, profile match.Profile, exclude [][]byte, opts Options) (Result, error) {
 	if len(probe) == 0 {
 		return res, nil
@@ -163,6 +166,23 @@ func rank(q Querier, res Result, typeID []byte, probe match.Values, profile matc
 	candidates, err := loadCandidates(q, typeID, profile)
 	if err != nil {
 		return Result{}, err
+	}
+	// Count before the exclude filter: kept reuses candidates' backing array.
+	var people [][]namevalues.Value
+	hasName := false
+	for _, f := range profile.Features {
+		hasName = hasName || f.Property == nameProperty
+	}
+	if hasName {
+		for _, c := range candidates {
+			var handle []namevalues.Value
+			for _, v := range c.Values[nameProperty] {
+				if v.Name != nil {
+					handle = append(handle, *v.Name)
+				}
+			}
+			people = append(people, handle)
+		}
 	}
 	kept := candidates[:0]
 	for _, c := range candidates {
@@ -178,6 +198,10 @@ func rank(q Querier, res Result, typeID []byte, probe match.Values, profile matc
 	names, err := namealiases.Comparer(nil, q, loaded.Comparer())
 	if err != nil {
 		return Result{}, err
+	}
+	if hasName {
+		counts := names.CountWords(people)
+		names.Frequency = &counts
 	}
 	profile = profile.WithNameComparer(names)
 	res.Matches = match.Rank(profile, probe, kept, opts.Limit)

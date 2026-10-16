@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"math"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
@@ -182,8 +183,11 @@ func TestForSubjectPersons(t *testing.T) {
 		t.Fatalf("%+v", res)
 	}
 	// Fixture names are typed (given, surname), so a surname weighs more than a given name.
-	// A sex mismatch subtracts 2, so the female James stays in the list at 8.
-	want := fmt.Sprintf("[%s=11.0 %s=9.1 %s=8.0 %s=6.0]", exact.Entity.Ref, variant.Entity.Ref, female.Entity.Ref, surname.Entity.Ref)
+	// A sex mismatch subtracts 2, so the female James stays in the list at 7.5.
+	// The name points are discounted by how common the words are among the
+	// filed people (Robins on three of five, James on three): 0.2 ln(3)/ln(100)
+	// is about 5%, so the exact name earns 9.5, not 10.
+	want := fmt.Sprintf("[%s=10.5 %s=8.8 %s=7.5 %s=5.7]", exact.Entity.Ref, variant.Entity.Ref, female.Entity.Ref, surname.Entity.Ref)
 	if refs(res.Matches) != want {
 		t.Fatalf("got %s, want %s", refs(res.Matches), want)
 	}
@@ -204,7 +208,7 @@ func TestForSubjectPersons(t *testing.T) {
 		p = p.With(match.Feature{Property: match.Property{Key: "sex_at_birth", Origin: "provenencia"}, Comparer: match.TermComparer{}, Weight: 1})
 		res, err := matching.ForSubject(f.db, james.ID, matching.Options{Profile: &p})
 		must(t, err)
-		if len(res.Matches) != 4 || res.Matches[1].Ref != female.Entity.Ref || res.Matches[1].Score != 10 {
+		if len(res.Matches) != 4 || res.Matches[1].Ref != female.Entity.Ref || math.Abs(res.Matches[1].Score-9.52) > 0.01 {
 			t.Fatalf("female James should rank once sex no longer contradicts: %s", refs(res.Matches))
 		}
 	})
@@ -216,7 +220,7 @@ func TestForSubjectPersons(t *testing.T) {
 		must(t, err)
 		res, err := matching.ForSubject(f.db, james.ID, matching.Options{})
 		must(t, err)
-		if want := fmt.Sprintf("[%s=9.1 %s=8.0 %s=6.0]", variant.Entity.Ref, female.Entity.Ref, surname.Entity.Ref); refs(res.Matches) != want {
+		if want := fmt.Sprintf("[%s=8.8 %s=7.5 %s=5.7]", variant.Entity.Ref, female.Entity.Ref, surname.Entity.Ref); refs(res.Matches) != want {
 			t.Fatalf("got %s, want %s", refs(res.Matches), want)
 		}
 	})
@@ -252,7 +256,7 @@ func TestForSubjectComparesNameParts(t *testing.T) {
 
 	res, err := matching.ForSubject(f.db, f.subject("person", namedParts("ROBINS, Jas.", "James", "Robins")).ID, matching.Options{})
 	must(t, err)
-	if want := fmt.Sprintf("[%s=10.0 %s=6.0]", same.Entity.Ref, sibling.Entity.Ref); refs(res.Matches) != want {
+	if want := fmt.Sprintf("[%s=9.7 %s=5.8]", same.Entity.Ref, sibling.Entity.Ref); refs(res.Matches) != want {
 		t.Fatalf("got %s, want %s", refs(res.Matches), want)
 	}
 }
@@ -288,7 +292,8 @@ func TestForEntityMergeHints(t *testing.T) {
 	f.handle("person", named("Ada Lovelace"))
 	res, err := matching.ForEntity(f.db, a.Entity.ID, matching.Options{})
 	must(t, err)
-	if want := fmt.Sprintf("[%s=10.0]", b.Entity.Ref); refs(res.Matches) != want {
+	// Robins is on two of three filed people, so the exact name earns 9.7.
+	if want := fmt.Sprintf("[%s=9.7]", b.Entity.Ref); refs(res.Matches) != want {
 		t.Fatalf("got %s, want %s (never itself)", refs(res.Matches), want)
 	}
 }
@@ -350,6 +355,61 @@ func TestForSubjectQueryCountIsConstant(t *testing.T) {
 	must(t, err)
 	if many != one {
 		t.Fatalf("queries: %d for 1 handle, %d for 51", one, many)
+	}
+}
+
+// sixty files 60 people named John <Surname>: 30 Smith, 1 Quirk, 29 others.
+func (f *fixture) sixty() {
+	f.t.Helper()
+	for i := 0; i < 30; i++ {
+		f.handle("person", named("John Smith"))
+	}
+	f.handle("person", named("John Quirk"))
+	for i := 1; i <= 29; i++ {
+		f.handle("person", named(fmt.Sprintf("John Surname%02d", i)))
+	}
+}
+
+func topScore(t *testing.T, f *fixture, form string) float64 {
+	t.Helper()
+	res, err := matching.ForSubject(f.db, f.subject("person", named(form)).ID, matching.Options{})
+	must(t, err)
+	if len(res.Matches) == 0 {
+		t.Fatalf("%s: no matches", form)
+	}
+	return res.Matches[0].Score
+}
+
+func TestForSubjectRanksRareSurnameFirst(t *testing.T) {
+	f := newFixture(t)
+	f.sixty()
+	smith, quirk := topScore(t, f, "John Smith"), topScore(t, f, "John Quirk")
+	if quirk <= smith {
+		t.Fatalf("quirk %.3f, smith %.3f", quirk, smith)
+	}
+	if smith >= 10 {
+		t.Fatalf("a common name kept every point: %.3f", smith)
+	}
+}
+
+func TestRankSkipsCountsWithoutANameFeature(t *testing.T) {
+	f := newFixture(t)
+	f.handle("place", toponym("York"))
+	s := f.subject("place", toponym("York"))
+	one, err := matching.ForSubjectQueryCount(f.db, s.ID)
+	must(t, err)
+	for i := 0; i < 20; i++ {
+		f.handle("place", toponym("York"))
+	}
+	many, err := matching.ForSubjectQueryCount(f.db, s.ID)
+	must(t, err)
+	if one != many {
+		t.Fatalf("queries: %d then %d", one, many)
+	}
+	res, err := matching.ForSubject(f.db, s.ID, matching.Options{})
+	must(t, err)
+	if len(res.Matches) == 0 || res.Matches[0].Score != 10 {
+		t.Fatalf("%v", refs(res.Matches))
 	}
 }
 
