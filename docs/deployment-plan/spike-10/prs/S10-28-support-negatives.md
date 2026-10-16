@@ -140,7 +140,7 @@ Verified at `6577a43`, with S10-27 landed ([#409](https://github.com/mendahu/pro
 | D-7 | `Reason` and `PropertyComparison` each gain `Probe` and `Candidate`, both `ValueRef{Label string; ObservationID []byte; Negative bool}`, set from the `PairResult`. `Value.Label()` is the text; the term key; the integer in decimal; `datevalues.CompactDisplay` for a date; for a name its `Form`, else its part values joined by spaces. Only a probe value loaded from an Observation has an id. | "Names the two values (or their ids)" with no schema change. A candidate value is a cache cluster, which has no single Observation. Embedding `PairResult` would rename S10-27's `Reason.Similarity` and `Reason.Discount` fields. | Candidate Observation ids from `auto_reconciler_outcomes` — a second query per candidate |
 | D-8 | `Value.SetEvidence(support, against, rank int, reason string)` *(new)* sets `Counted`, `Support`, `Against`, `Rank`, `Reason`, and `Denied` (`reason == autoreconcile.ReasonDenied`). `scanEntityValues` and `handleValues` both call it. `scanEntityValues` selects `r.support, r.against, r.rank, r.reason`, and the three entity-value queries order by `r.rank` last (`ORDER BY e.ref, r.entity_id, r.rank`; `ORDER BY r.rank` for one handle; `ORDER BY r.entity_id, r.rank` for a batch). `SubjectsValues` drops the positive filter, selects `o.id` and `o.polarity`, passes `) ORDER BY o.id` as the `sqlbatch.Query` tail (order holds within a batch, and one Subject's rows share a batch), and sets `Negative` and `ObservationID`. | One place maps the cache columns to the fields. The loaders are the only places the data enters. | Copying the mapping into both loaders — the near-copy the review found |
 | D-9 | `Rank`'s `MinScore` cut and Promote's scales are unchanged. A contradiction reaches them as similarity 0. A weighted credit below 1 reaches `ApplyScale` as it is, so a minority exact match (0.2, 0.5) is a partial at or above the scale's floor and a conflict below it. `PropertyComparison.Similarity` is now `similarity × weightA × weightB`, so `Pinned` (outcome `agree`) is false for a minority exact match. | Nothing downstream needs to know why. A probe that matches only a minority is weaker evidence, and the name scale's 0.75 floor says how weak is too weak. | A new outcome — no consumer would read it |
-| D-10 | `exhibits.go` keeps its own member picker. A Promote row can read conflict while an exhibit line shows an agreeing pinned pair for a minority value. | Exhibits compare an incoming Observation with member Observations, which carry no support; the cache cluster does. | Wiring `pairValues` into the exhibit loop — S10-27 already reshaped it, and the sheet's job is to show each pair |
+| D-10 | `exhibits.go` keeps its own member picker. A Promote row can read conflict while an exhibit line shows an agreeing pinned pair for a minority value; the sheet also shows the row's conflict as a line beside it. | Exhibits compare an incoming Observation with member Observations, which carry no support; the cache cluster does. | Wiring `pairValues` into the exhibit loop — S10-27 already reshaped it, and the sheet's job is to show each pair. Amended 2026-10-16 in the ship log (UX-1, user decision). |
 | D-11 | The file is `core/match/pairs.go` *(new)*. | `pair.go` is pairwise evaluation; this is pair selection. | `support.go` — names the input, not the job |
 
 ## 6. Design
@@ -180,7 +180,7 @@ None — no message changes.
 
 ### macOS
 
-None — no view changes. A Promote row can move from agree to conflict when a handle's majority disagrees with the incoming Subject; no copy, state, or layout changes.
+A Promote row can move from agree to conflict when a handle's majority disagrees with the incoming Subject. The sheet then shows a conflict line (and the callout) for the Property: a row-level conflict with no conflicting exhibit gets an unpinnable line, and an incoming negative Observation reads "not <value>" (`L10n.Promote.negatedValue`). No layout change. Amended 2026-10-16 in the ship log (UX-1, user decision).
 
 ### Strings
 
@@ -255,8 +255,8 @@ Must stay green: everything `scripts/check-pr.sh` runs. A pre-existing test whos
 The slice has no new chrome, so the check is a catalog run, not a screen.
 
 1. Run `CGO_ENABLED=1 go test -tags fts5 -run 'TestScoreSupport|TestProposeJudgesAgainstTheMajority' -v ./core/match ./core/database/promotealign`. See the stray-name case score 0 against a mostly-Mary-Smith handle, and the Promote name comparison read as a conflict.
-2. In a project where one handle has `male` on three Sources and `female` on one, add a Subject whose Observation says female and open Promote. The suggestion's sex comparison reads as a conflict.
-3. Add a negative Observation "sex at birth: male" to a Subject whose handle is male on most Sources. Promote reads the sex comparison as a conflict.
+2. In a project where one handle has `male` on three Sources and `female` on one, add a Subject whose Observation says female and open Promote. The suggestion's sex comparison reads as a conflict, and the sheet shows a conflict line and the callout.
+3. Add a negative Observation "sex at birth: male" to a Subject whose handle is male on most Sources. Promote reads the sex comparison as a conflict, and the sheet shows a conflict line reading "not male" that cannot be pinned.
 
 ## 11. Risks and stop conditions
 
@@ -266,7 +266,7 @@ The slice has no new chrome, so the check is a catalog run, not a screen.
 | A mixed handle that was a clean match before drops in Promote | Intended (US-1, AC-1.4). T-4 and T-8 assert it |
 | A name seen on one Source against a different name on five loses its name credit (a married name against a maiden name, probe on the married name) | Intended: R3 judges against the consensus, so that match is a contradiction in Promote's scale and zero in `Rank`. Equal support keeps both names (AC-1.5). Known-as handling is later ([`docs/ideas/name-matching-enhancements.md`](../../../ideas/name-matching-enhancements.md)) |
 | A negative-only Subject reaches a reader that treats any value as a value | D-6 names the four readers; T-7 asserts the `ForSubject` case |
-| A Promote row reads conflict while its exhibit lines show an agreeing pair | Accepted (D-10) |
+| A Promote row reads conflict while its exhibit lines show an agreeing pair | Accepted (D-10); the conflict line now appears beside the agreeing pair |
 | `pairValues` runs for every candidate and every Feature | D-4's cost bound and T-10; the cold-hub benchmark is reported |
 
 **Stop and report if:**

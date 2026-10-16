@@ -827,6 +827,7 @@ struct GoStore: GenealogyStore {
                             date: c.hasIncomingDate ? Self.mapDateValue(c.incomingDate) : nil,
                             fallback: c.incomingDisplay
                         ),
+                        incomingNegative: c.incomingNegative,
                         incomingSource: c.incomingSource,
                         memberObservationID: c.memberObservationID,
                         memberDisplay: ComparisonValueDisplay.string(

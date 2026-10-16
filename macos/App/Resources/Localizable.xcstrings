@@ -16713,6 +16713,18 @@
         }
       }
     },
+    "promote.sheet.negatedValue": {
+      "comment": "An incoming value a record denies, on the evidence sheet; %@ = the value it says the subject is not",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "not %@"
+          }
+        }
+      }
+    },
     "promote.sheet.pinLine": {
       "comment": "VoiceOver label for one pin box; 1 = property, 2 = this source's value, 3 = the matched record's value",
       "extractionState": "manual",
