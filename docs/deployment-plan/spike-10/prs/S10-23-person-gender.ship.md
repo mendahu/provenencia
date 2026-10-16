@@ -1,7 +1,7 @@
 # Ship log — S10-23 Sex / gender on the Person page
 
 **Plan:** [`S10-23-person-gender.md`](S10-23-person-gender.md) · **Branch:** `s10-23-person-gender` · **PR:** #407
-**State:** review 2
+**State:** ready
 
 Base: `main` @ `cd370713` (plan Planned against `1fc683b`; no `macos/`, `core/`, or `api/` changes since).
 
@@ -43,3 +43,9 @@ Check: `CGO_ENABLED=1 go test -tags fts5 ./api/ffi -run TestSwiftVocabularyMatch
 
 ## Round 1 — fix
 Head `d553d4c5`. Orchestrator gate PASS. F-1, F-2, F-3 done. Optional F-3 scan (every `Seeded…Term` has a table row) not added.
+
+## Round 2 — review
+Head `d553d4c5`, scope `c563a5ff...d553d4c5`. Maintainability: MNT-1 and MNT-2 resolved, no new findings. Conformance: CON-2 resolved, no new findings; CON-1 still open for the user.
+
+## Result
+Gate PASS · CI see PR · open: none in code · follow-ups: UX-1 (long researcher-term label in the Badge), UX-2, MNT-3 · to user: CON-1 (run the plan's §10 manual check, including VoiceOver on the Badge and the 120pt header at `widthContentMax`; if VoiceOver reads the raw uppercase text, add `.accessibilityElement(children: .ignore)` before `.accessibilityLabel` at `ConclusionDetailPage.swift:258`).
