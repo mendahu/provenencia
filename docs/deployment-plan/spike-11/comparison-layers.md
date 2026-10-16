@@ -249,7 +249,9 @@ This is the feature vector the matching test suite's fit needs: one outcome, rel
 **Requirements (2026-10-16):**
 - **Compare the properties both Subjects have.** If both have a name, compare names. A property on one side only is unknown and neither helps nor hurts.
 - **Registry-driven.** One registry defines every Subject type, its properties, and how each one counts in a Subject comparison. Layer 3 has the most levers of any comparison layer, and all of them live there.
-- **Comparisons that span properties are special cases, declared in the registry.** The known one: an event's `date` against another's `start_date` + `end_date`, read as one period.
+- **Comparisons that span properties are special cases, declared in the registry.** Two known ones:
+  - an event's `date` against another's `start_date` + `end_date`, read as one period;
+  - a person's **sex at birth and gender, compared as one pair**: both sides' sex and gender values are pooled into one direct comparison, so a Subject recording only gender still meets an entity recording only sex at birth.
 - **Useful whatever the size.** A Subject with three or four properties against an entity with four or five does happen, and the comparison should get full value from it. In practice most Subjects carry one or two properties, so its *effective* job will be mostly agreement plus ruling out the obvious (names nothing alike, different event types). That is an outcome of the weights, not a separate job. Relationships are not compared here; graph alignment does that, and it does most of the positive work.
 - **Agreement and amount of evidence are different.** Two people whose names match exactly, and two whose names *and* genders match, both agree perfectly, but the second has more points of connection and is the better match. One 0–1 number can't say both.
 
