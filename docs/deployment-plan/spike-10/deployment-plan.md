@@ -144,7 +144,7 @@ These are the calls for this spike. The questions at the bottom are answered; no
 | **S10-D3** | Citation composer | **S10-16**, done 2026-10-12 | — |
 | **[S10-D4](design/archive/S10-D4-name-parts-modal.md)** | Name parts modal | **S10-17** | Split, fixed-width type control. Does not wait on S10-29 |
 | **[S10-D5](design/archive/S10-D5-source-artifacts.md)** | Source page — Artifacts | **S10-18** | Page drop opens Add Artifact. The list becomes cards |
-| **[S10-D6](design/S10-D6-evidence-graph.md)** | Evidence graph | **S10-20** file select, Open, and box-select | S10-44 Unpromote on the promoted card |
+| **[S10-D6](design/archive/S10-D6-evidence-graph.md)** | Evidence graph | **S10-20** file select, Open, and box-select | S10-44 Unpromote on the promoted card |
 | **[S10-D16](design/archive/S10-D16-event-mark.md)** | Design system — Event mark | **S10-19** | The `subject_event` glyph. Sidebar placement is S10-D7 |
 | **[S10-D7](design/archive/S10-D7-sidebar-marks.md)** | Workspace shell | **S10-19** | Sidebar and toolbar. Depends on S10-D16. Empty states use the same marks |
 | [**S10-D8**](design/archive/S10-D8-sources-list.md) | Sources list | **S10-41** | Last updated, evidence-status filter, text search, persisted sort and filters |
@@ -268,7 +268,7 @@ SLICE 9 — Seeded vocabulary
          couple. An existing catalog gains neither.
 
 SLICE 10 — Take a filing back
-  ✎ (S10-D6 already done for S10-20) ──▶ S10-44  Unpromote on the promoted card
+  S10-44  Unpromote on the promoted card — done, #418
   Check: confirm names the bridges. The card shows Promote again. The other
          person on that relationship stays promoted. The handle is still there.
 
@@ -475,7 +475,7 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 **Landed 2026-10-14** in [#396](https://github.com/mendahu/provenencia/pull/396). See [`completed.md`](completed.md).
 
 **Plan:** [`prs/S10-20-open-file-box-select.md`](prs/S10-20-open-file-box-select.md) — Landed
-**Brief:** [S10-D6](design/S10-D6-evidence-graph.md) (EG-1…EG-7). Unpromote is drawn on that board and ships in S10-44.
+**Brief:** [S10-D6](design/archive/S10-D6-evidence-graph.md) (EG-1…EG-7). Unpromote is drawn on that board and ships in S10-44.
 
 | | |
 | --- | --- |
@@ -715,9 +715,9 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 
 #### S10-44 — Unpromote
 
-**Brief:** [S10-D6](design/S10-D6-evidence-graph.md) (EG-8…EG-10), designed before S10-20. This PR fills the button that board drew on the promoted card.
+**Brief:** [S10-D6](design/archive/S10-D6-evidence-graph.md) (EG-8…EG-10), designed before S10-20. This PR fills the button that board drew on the promoted card.
 
-**Plan:** [`prs/S10-44-unpromote.md`](prs/S10-44-unpromote.md) — Planned
+**Plan:** [`prs/S10-44-unpromote.md`](prs/S10-44-unpromote.md) — Landed #418
 
 | | |
 | --- | --- |

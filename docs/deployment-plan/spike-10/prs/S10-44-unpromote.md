@@ -1,9 +1,9 @@
 # S10-44 — Unpromote a filed card
 
-**Status:** Planned
+**Status:** Landed in [#418](https://github.com/mendahu/provenencia/pull/418) (2026-10-16)
 **Spike / slice:** Spike 10 · Slice 10 — Take a filing back
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#s10-44--unpromote)
-**Brief:** [S10-D6](../design/S10-D6-evidence-graph.md) (EG-8…EG-10), board agreed 2026-10-14
+**Brief:** [S10-D6](../design/archive/S10-D6-evidence-graph.md) (EG-8…EG-10), board agreed 2026-10-14
 **Board:** Frames 10–13 of the S10-D6 pass in the Claude Design export *Evidence graph canvas.dc.html*. §6 macOS describes each frame this PR ships. The implementer does not need the export.
 **Depends on:** S10-D6, S10-20 (landed [#396](https://github.com/mendahu/provenencia/pull/396))
 **Blocks:** —
@@ -11,9 +11,13 @@
 **Version bump:** none — Spike 10 PRs leave `VERSION` at 0.2.0, and the product bump is cut when a release ships ([`docs/versioning.md`](../../../versioning.md))
 **Skills to load:** [`add-ffi-handler`](../../../../.agents/skills/add-ffi-handler/SKILL.md), [`use-catalog-session`](../../../../.agents/skills/use-catalog-session/SKILL.md), [`add-audit-scope`](../../../../.agents/skills/add-audit-scope/SKILL.md), [`add-catalog-delete`](../../../../.agents/skills/add-catalog-delete/SKILL.md), [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md), [`add-localized-string`](../../../../.agents/skills/add-localized-string/SKILL.md), [`add-swift-test`](../../../../.agents/skills/add-swift-test/SKILL.md)
 **Rules that bind:** `.cursor/rules/catalog-audit.mdc`, `.cursor/rules/catalog-deletes.mdc`, `.cursor/rules/catalog-session.mdc`, `.cursor/rules/ffi-handlers.mdc`, `.cursor/rules/go-tests.mdc`, `.cursor/rules/design-system-layers.mdc`, `.cursor/rules/macos-client.mdc`, `.cursor/rules/macos-l10n.mdc`, `.cursor/rules/swift-tests.mdc`
-**Context:** working rule "Unpromote deletes the filing. It does not reject it.", [S10-D6](../design/S10-D6-evidence-graph.md) §2 rows "The footer is one height" through "Card delete is a different control" and EG-8…EG-10, [`conclusion-layer-data-model.md` §5 and §5.2](../../../conclusion-layer-data-model.md), dogfood bar item 9 in [`../deployment-plan.md`](../deployment-plan.md)
+**Context:** working rule "Unpromote deletes the filing. It does not reject it.", [S10-D6](../design/archive/S10-D6-evidence-graph.md) §2 rows "The footer is one height" through "Card delete is a different control" and EG-8…EG-10, [`conclusion-layer-data-model.md` §5 and §5.2](../../../conclusion-layer-data-model.md), dogfood bar item 9 in [`../deployment-plan.md`](../deployment-plan.md)
 **Planned:** 2026-10-16 against `main` @ `4ea7483`
 **Review:** [`S10-44-unpromote.review.md`](S10-44-unpromote.review.md) — Fits with changes, Ready with changes (applied); 2 rounds
+
+## Landed
+
+Differences from this plan: `L10n.EvidenceGraph.unpromoteConfirmTitle(name:)` returns a `String` through `L10n.format` (catalog format `Unpromote %1$@?`), because `L10n.string` cannot resolve an interpolated `LocalizedStringResource`; the confirm passes it straight to `PVConfirmCopy.title`. `api/libprovenencia/call_test.go` used method 100 as its "unknown method" and now uses 101. `FakeStore.unpromoteSubject` sets `effects.sources` itself, so the graph refreshes when the Source is not in `sourcesByProject`. The SwiftUI twin's `.accessibilityAction` for Unpromote is always present and does nothing for an unpromoted card (the guard is inside the action). Go tests: T-1 is split into one subtest per case in `TestUnpromote`; (c) uses a relationship whose other end is unpromoted. STEP-9's file list now names the brief at its archive path, because the checker rejects the old path once the file has moved. The manual check (section 10) was not run by the implementer. The implementer set Status and the map row to Landed ahead of the merge.
 
 ### Implementer — read this first
 
@@ -283,7 +287,7 @@ Do: Run the gate. Run the manual check in §10.
 Check: `scripts/check-pr.sh` prints `check-pr: PASS`.
 
 **STEP-9 — Docs**
-Files: `docs/conclusion-layer-data-model.md` §5.2, `docs/catalog-deletes.md` item 9, `core/database/deleteimpact/README.md`, `docs/deployment-plan/spike-10/completed.md`, `docs/deployment-plan/spike-10/deployment-plan.md` (the S10-44 entry's Plan line and status), this plan (status, Landed note), `docs/deployment-plan/spike-10/design/S10-D6-evidence-graph.md` → `docs/deployment-plan/spike-10/design/archive/`, `docs/deployment-plan/spike-10/design/README.md`.
+Files: `docs/conclusion-layer-data-model.md` §5.2, `docs/catalog-deletes.md` item 9, `core/database/deleteimpact/README.md`, `docs/deployment-plan/spike-10/completed.md`, `docs/deployment-plan/spike-10/deployment-plan.md` (the S10-44 entry's Plan line and status), this plan (status, Landed note), `docs/deployment-plan/spike-10/design/archive/S10-D6-evidence-graph.md` (moved from `design/`), `docs/deployment-plan/spike-10/design/README.md`.
 Do: In §5.2 add: "Unpromote on the Evidence graph deletes a primary Subject's accepted claim and, in the same revision, the accepted claims of the bridges on that Source that have it as an end. It does not reject, and it deletes no handle." Do not describe the review queue. In `docs/catalog-deletes.md` item 9 and the `deleteimpact` README add: "`ReleaseClaim` is the one claim removal (pins first, audited). Subject delete and Unpromote both call it." The rest per the Definition of done.
 Check: `python3 scripts/check-plan-docs.py docs/deployment-plan/spike-10/prs/S10-44-unpromote.md` reports no errors; links resolve.
 

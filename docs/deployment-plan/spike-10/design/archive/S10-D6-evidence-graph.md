@@ -5,9 +5,9 @@
 **View:** Evidence graph — header, palette, and the subject-card footer
 **Implements later as:** PR **S10-20** (header file select, Open, and box-select). The same board specifies Unpromote, which ships in **S10-44**.
 **Depends on:** —
-**Related:** [`../deployment-plan.md`](../deployment-plan.md) (S10-20, S10-44). Dropping a file on the Source page is **[S10-D5](archive/S10-D5-source-artifacts.md)** and ships in S10-18. Hit boxes, the tiled grid, canvas growth, and the camera already shipped (S10-01…S10-04) and are not this board.
-**Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)
-**Skill:** [`add-design-brief`](../../../../.agents/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md)
+**Related:** [`../deployment-plan.md`](../../deployment-plan.md) (S10-20, S10-44). Dropping a file on the Source page is **[S10-D5](S10-D5-source-artifacts.md)** and ships in S10-18. Hit boxes, the tiled grid, canvas growth, and the camera already shipped (S10-01…S10-04) and are not this board.
+**Design system layers:** [`docs/design-system-layers.md`](../../../../design-system-layers.md)
+**Skill:** [`add-design-brief`](../../../../../.agents/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../../.agents/skills/add-ui-component/SKILL.md)
 
 Paste this entire document into Claude Design as the requirements for one board. This file is the whole prompt.
 
@@ -185,5 +185,5 @@ This table is **binding**. Instance the Ship kit rows. Paths from `macos/App/` u
 ## 7. Handoff
 
 1. Archive this brief under `design/archive/` when the board is agreed.
-2. Record it in [`../completed.md`](../completed.md).
-3. Implement **S10-20** against EG-1…EG-7. Implement **S10-44** against EG-8…EG-10. The Source page drop is [S10-D5](archive/S10-D5-source-artifacts.md).
+2. Record it in [`../completed.md`](../../completed.md).
+3. Implement **S10-20** against EG-1…EG-7. Implement **S10-44** against EG-8…EG-10. The Source page drop is [S10-D5](S10-D5-source-artifacts.md).

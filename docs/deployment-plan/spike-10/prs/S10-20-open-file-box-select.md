@@ -3,7 +3,7 @@
 **Status:** Landed in [#396](https://github.com/mendahu/provenencia/pull/396) (2026-10-14)
 **Spike / slice:** Spike 10 · Slice 5 — Artifacts and multi-select
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#s10-20--open-file-and-box-select)
-**Brief:** [S10-D6](../design/S10-D6-evidence-graph.md) (EG-1…EG-7), board agreed 2026-10-14
+**Brief:** [S10-D6](../design/archive/S10-D6-evidence-graph.md) (EG-1…EG-7), board agreed 2026-10-14
 **Board:** The agreed frames are the S10-D6 pass in the Claude Design export *Evidence graph canvas.dc.html*. §6 macOS describes every frame this PR ships. The implementer does not need the export.
 **Depends on:** S10-01 (landed [#361](https://github.com/mendahu/provenencia/pull/361)), S10-03 (landed [#363](https://github.com/mendahu/provenencia/pull/363)), S10-D6
 **Blocks:** —
@@ -11,7 +11,7 @@
 **Version bump:** none — Spike 10 PRs leave `VERSION` at 0.2.0, and the product bump is cut when a release ships ([`docs/versioning.md`](../../../versioning.md))
 **Skills to load:** [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md), [`add-localized-string`](../../../../.agents/skills/add-localized-string/SKILL.md), [`add-swift-test`](../../../../.agents/skills/add-swift-test/SKILL.md), [`add-workspace-place`](../../../../.agents/skills/add-workspace-place/SKILL.md)
 **Rules that bind:** `.cursor/rules/design-system-layers.mdc`, `.cursor/rules/macos-client.mdc`, `.cursor/rules/macos-l10n.mdc`, `.cursor/rules/swift-tests.mdc`, `.cursor/rules/workspace-navigation.mdc`
-**Context:** working rules "Box-select is a marquee of subject cards" and "A drop on the Source page opens Add Artifact" (the graph header sentence), [S10-D6](../design/S10-D6-evidence-graph.md) EG-1…EG-7, dogfood bar items 2 and 3 in [`../deployment-plan.md`](../deployment-plan.md)
+**Context:** working rules "Box-select is a marquee of subject cards" and "A drop on the Source page opens Add Artifact" (the graph header sentence), [S10-D6](../design/archive/S10-D6-evidence-graph.md) EG-1…EG-7, dogfood bar items 2 and 3 in [`../deployment-plan.md`](../deployment-plan.md)
 **Planned:** 2026-10-14 against `main` @ `48d4b41e`
 **Review:** [`S10-20-open-file-box-select.review.md`](S10-20-open-file-box-select.review.md) — Fits with changes, Ready with changes (applied); 2 rounds
 
@@ -282,7 +282,7 @@ Check: `-only-testing:ProvenenciaTests/EvidenceGraphModelTests` passes.
 
 **STEP-6 — Docs**
 Files: `docs/deployment-plan/spike-10/completed.md`, `docs/deployment-plan/spike-10/deployment-plan.md`, this plan.
-Do: Per the Definition of done. Leave [S10-D6](../design/S10-D6-evidence-graph.md) in `design/`. S10-44 still uses it. Do not archive it in this PR.
+Do: Per the Definition of done. Leave [S10-D6](../design/archive/S10-D6-evidence-graph.md) in `design/`. S10-44 still uses it. Do not archive it in this PR.
 Check: links in the map row and `completed.md` resolve.
 
 Commits: one per behavior. The subject is one full imperative sentence that says what changed for the researcher, ending in a period, like the rest of `git log` ("Restore list scroll after the sort is applied."). No WIP commits. Suggested split: the file select and Open; the rectangle and group move; the palette Select. Docs ride with the last commit.
