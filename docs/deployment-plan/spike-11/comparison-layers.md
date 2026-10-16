@@ -276,6 +276,8 @@ This is the feature vector the matching test suite's fit needs: one outcome, rel
 | Event types agree, nothing else | 1.0 | 0.5 |
 | Birth vs death, nothing else | 0 | −20 (effectively never recovers) |
 
+**Decided (2026-10-16): a conflict weighs its penalty in similarity.** A property counts with its agree weight when it agrees and its conflict penalty when it conflicts. Otherwise a birth vs death with matching dates would read as very similar (event type's agree weight is only 0.5) while evidence reads −20. With penalties, that pair reads about 0.09, and the two axes agree.
+
 **Registry shape,** per Subject type and property: agree weight and conflict penalty. They are separate on purpose: event type has a low agree weight and a very large conflict penalty. Comparisons that span properties are entries too, with their own weights. Numbers above are today's where they exist and placeholders otherwise.
 
 ## Entities: compare against the conclusion
@@ -333,5 +335,4 @@ So every property weight is a plain registry number. The labeler can fit them la
 
 ## Open questions
 
-- **How a conflict weighs in similarity.** If similarity weights each property by its agree weight, a birth vs death with matching dates still reads as very similar (event type's agree weight is only 0.5), while evidence reads −20. Proposal: a property counts with its agree weight when it agrees and its conflict penalty when it conflicts, so the same pair reads about 0.09.
 - **The reconciler's grouping rules.** Which relations make two values "show once" is the reconciler's call (rule 7), designed with its own PR. Today's disagreements to resolve there: `Montréal` / `Montreal` and `Jim` / `James` agree in matching but don't group or pin; `J. Robins` / `James Robins` groups but only scores partial.

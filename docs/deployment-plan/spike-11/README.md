@@ -12,6 +12,16 @@ This spike is entirely about the Promote flow's matching: making the algorithm g
 | --- | --- |
 | [**Comparison layers**](comparison-layers.md) | Requirements for layers 1 (value comparison) and 2 (property comparison), and the rules every layer follows |
 
+## Spike-wide principle: sparse data first
+
+Three generations back, records thin out. Often all there is is a name and a birth date. The algorithm has to work well on a small set of key information: get the **core properties** and the **core relationships** right, and everything else reinforces them.
+
+- **Core:** a person's name and sex; an event's type and date; a place's name; and the links that carry most identity: subject of a birth, parent / child, spouse, place part of place.
+- **Note:** a person's birth date is not a person property. It lives on the birth event, through a link. So the most common sparse case, "same name, same birth date", spans Subject comparison (the name) *and* graph alignment (one low-fan-out link to a matching birth). Both halves must be solid on their own.
+- **Weights:** core properties and links carry most of the weight. Secondary properties get small agree weights. They raise a match, but a match never depends on them, and they never outweigh a core conflict.
+- **Effort:** the core comparers (names, dates) and the single-link case get the most tests, the most labeler time and the first tuning.
+- **Tests:** the test suite has a **sparse tier**: goldens and simulated cases with only a name and a birth date (or less), reported as their own scoreboard row. Sparsity is a simulator noise setting: drop properties. Invariant: adding an agreeing secondary property never lowers a score, and never turns a core conflict into a match.
+
 ## Decided so far
 
 - **Matching is a stack of pure layers.** Each takes only what it needs; a rule that needs more moves up a layer.
@@ -25,3 +35,4 @@ This spike is entirely about the Promote flow's matching: making the algorithm g
 - **`Contains` scores below 1, and `Near` has a minimum similarity** per type, in layer 1.
 - **Comparison layers make no workflow decisions.** Promote, the reconciler and others keep their own decision logic and compose the layers.
 - **Layer 3 compares the properties both Subjects have,** driven by a per-type registry. It returns two axes: **similarity** (0–1, are they alike) and **evidence** (points, how strong). No knockout flag: a decisive conflict is a large registry penalty.
+- **Similarity weighs a conflict by its penalty,** so a decisive conflict pulls similarity down as well as evidence.
