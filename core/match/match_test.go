@@ -341,3 +341,21 @@ func TestScoreSupport(t *testing.T) {
 		t.Errorf("AC-1.6: %+v", r)
 	}
 }
+
+// A multiple-cardinality Feature keeps every displayed value as a leader, so
+// a handle's minority toponym still matches in full.
+func TestScoreMultipleToponyms(t *testing.T) {
+	p, _ := DefaultProfile("place")
+	york, eboracum := text("York"), text("Eboracum")
+	york.SetEvidence(3, 0, 1, "kept")
+	eboracum.SetEvidence(1, 0, 2, "kept")
+	cand := Candidate{EntityID: []byte("PLC-A"), Ref: "PLC-A", Values: Values{product("toponym"): {york, eboracum}}}
+	probe := Values{product("toponym"): {text("Eboracum")}}
+
+	if r := reasonFor(t, Score(p, probe, cand), "toponym"); r.Contribution != 10 || r.Candidate.Label != "Eboracum" {
+		t.Errorf("minority toponym: %+v", r)
+	}
+	if got := Rank(p, probe, []Candidate{cand}, 10); len(got) != 1 || got[0].Ref != "PLC-A" {
+		t.Errorf("Rank = %+v", got)
+	}
+}

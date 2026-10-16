@@ -168,8 +168,10 @@ type voteInfo struct {
 }
 
 // weigh finds a side's voting values, its leaders, and each value's weight:
-// effective support over the leaders' (D-3), at most 1.
-func weigh(vs []Value) []voteInfo {
+// effective support over the leaders' (D-3), at most 1. A multiple-cardinality
+// Property keeps every voting value as a leader of weight 1: support does not
+// rank values that are all meant to stand.
+func weigh(vs []Value, card string) []voteInfo {
 	info := make([]voteInfo, len(vs))
 	var top, topShown int
 	anyShown := false
@@ -184,6 +186,14 @@ func weigh(vs []Value) []voteInfo {
 			anyShown = true
 			topShown = max(topShown, e)
 		}
+	}
+	if card == properties.CardinalityMultiple {
+		for i := range info {
+			if info[i].voting {
+				info[i].leader, info[i].weight = true, 1
+			}
+		}
+		return info
 	}
 	leaderEff := top
 	if anyShown {
@@ -262,13 +272,14 @@ func (s *pairSet) before(i, j int) bool {
 // pairValues compares a probe's values of a Property with a candidate's. In
 // order: a negative that is compatible with a leader, a value compatible with
 // a denied value nothing else on that side supports, or leaders that all
-// disagree, is a contradiction; otherwise the best weighted resemblance
+// disagree (not on a multiple-cardinality Property, where R3 is skipped), is
+// a contradiction; otherwise the best weighted resemblance
 // among voting pairs speaks, and with none the result is not comparable.
-func pairValues(cmp Comparer, probe, candidate []Value) PairResult {
+func pairValues(cmp Comparer, card string, probe, candidate []Value) PairResult {
 	if plainValues(probe) && plainValues(candidate) {
 		return plainPair(cmp, probe, candidate)
 	}
-	s := &pairSet{probe: probe, cand: candidate, pinfo: weigh(probe), cinfo: weigh(candidate)}
+	s := &pairSet{probe: probe, cand: candidate, pinfo: weigh(probe, card), cinfo: weigh(candidate, card)}
 
 	// R1: a negative against a leader on the other side.
 	for i := range probe {
@@ -341,7 +352,7 @@ func pairValues(cmp Comparer, probe, candidate []Value) PairResult {
 			}
 		}
 	}
-	if leaderComparable && !leaderPositive {
+	if leaderComparable && !leaderPositive && card != properties.CardinalityMultiple {
 		return leaders.contradiction()
 	}
 	if !credit.found {

@@ -1122,3 +1122,25 @@ func TestProposeJudgesAgainstTheMajority(t *testing.T) {
 		}
 	})
 }
+
+// A Place handle keeps every toponym it was read as; the minority one still
+// agrees, because a multiple-cardinality Property weighs no value down.
+func TestProposeMultipleToponyms(t *testing.T) {
+	f := newFixture(t)
+	handle := f.promote(f.place(f.source, f.artifact, "York")).Entity.ID
+	db, err := f.c.DB()
+	must(t, err)
+	_, err = db.Exec(`UPDATE auto_reconciler_values SET support = 5 WHERE entity_id = ? AND property_id = ? AND rank = 1`, handle, f.prop("toponym").ID)
+	must(t, err)
+	_, err = db.Exec(`INSERT INTO auto_reconciler_values (entity_id, property_id, rank, value_text, support, against, reason)
+		VALUES (?, ?, 2, 'Eboracum', 1, 0, 'kept')`, handle, f.prop("toponym").ID)
+	must(t, err)
+	f.c.Graph().Drop()
+
+	src, art := f.newSource("Roman itinerary")
+	incoming := f.place(src, art, "Eboracum")
+	row := rowFor(f.propose(src.ID, []graphalign.Fixed{{SubjectID: incoming.ID, HandleID: handle}}), incoming.ID)
+	if got := comparisonOutcome(t, row, "toponym"); got != match.OutcomeAgree {
+		t.Fatalf("toponym comparison %s, want agree", got)
+	}
+}

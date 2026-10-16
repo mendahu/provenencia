@@ -75,7 +75,7 @@ func evaluate(probe, candidate Values, metas []PropertyMeta, names *NameComparer
 		if card == "" {
 			card = properties.CardinalitySingle
 		}
-		pr := compareProperty(m.ValueType, probe[m.Property], candidate[m.Property], names)
+		pr := compareProperty(m.ValueType, card, probe[m.Property], candidate[m.Property], names)
 		sim, ok := pr.Similarity, pr.Comparable
 		pc := PropertyComparison{
 			Property:    m.Property,
@@ -93,7 +93,7 @@ func evaluate(probe, candidate Values, metas []PropertyMeta, names *NameComparer
 	return out
 }
 
-func compareProperty(valueType string, a, b []Value, names *NameComparer) PairResult {
+func compareProperty(valueType, card string, a, b []Value, names *NameComparer) PairResult {
 	var cmp Comparer
 	if valueType == properties.ValueTypeName && names != nil {
 		cmp = *names
@@ -103,7 +103,7 @@ func compareProperty(valueType string, a, b []Value, names *NameComparer) PairRe
 	if cmp == nil {
 		return PairResult{}
 	}
-	return pairValues(cmp, a, b)
+	return pairValues(cmp, card, a, b)
 }
 
 // outcomeAtFloor is the outcome a scale with this floor would give.
