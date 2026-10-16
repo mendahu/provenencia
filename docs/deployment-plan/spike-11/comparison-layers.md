@@ -20,7 +20,7 @@ We want a stack of layers. Each layer is pure, has one job, and gives the layer 
 |---|---|---|---|
 | 1 | **Value comparison** | How do these two values relate? | This doc |
 | 2 | **Property comparison** | Given everything each side holds for one property, do they agree? | This doc |
-| 3 | Evidence weighting | How much is that agreement worth, given this catalog? | Later. Frequency moves here (§ Frequency) |
+| 3 | **Subject comparison** (tentative) | How alike are these two Subjects on their own values? | Later. Combines property comparisons, holds comparisons that span properties, and weights each by how informative it is (frequency moves here, § Frequency) |
 | 4 | Candidate scoring and graph alignment | Which handle is this Subject? | Later (`Rank`, link points, `Align`) |
 
 ## Rules for every layer
@@ -60,7 +60,7 @@ type Result struct {
 | Negative polarity, denied, provisional, support counts | **No → layer 2** | Context about the value on its side, not about the value |
 | Cardinality (single or multiple) | **No → layer 2** | A property fact |
 | Word or value frequency in the catalog | **No → layer 3** | Changes *how informative* a match is, not how alike |
-| Another property (an event's `start_date` when comparing `date`) | **No → layer 2** | Spans properties |
+| Another property (an event's `start_date` when comparing `date`) | **No → layer 3** | Spans properties, so it is a Subject-level comparison |
 
 **A test for the boundary:** would two researchers with the same rules but different catalogs expect a different answer? If yes, the input belongs higher up.
 
@@ -101,7 +101,7 @@ Today every comparer returns 0–1, but the numbers mean different things by typ
 | `Equivalent` | The same value written another way: accent fold, alias or nickname, abbreviation | yes |
 | `Contains` | One side is more specific and fits inside the other: `J.` vs `James`, `1817` vs `3 Mar 1817`, `Robins` vs `James Robins`, `BEF 1820` vs `1815` | **no**: `Detail` says which side is the broader one |
 | `Overlaps` | Each side has something the other lacks, but they share some: overlapping date ranges, text sharing some words | yes |
-| `Near` | Separate values that are close: a spelling variant, dates within tolerance, integers within tolerance | yes |
+| `Near` | Separate values that are close: a spelling variant, dates within tolerance, integers within tolerance. Requires at least the type's **minimum similarity** (`Rules`); below it the pair is `Different` | yes |
 | `Different` | No match | yes |
 | `Unknown` | Nothing to compare | yes |
 
@@ -114,6 +114,11 @@ Proposed relation per value type. Every cell is a proposal to confirm; the name 
 | text | same words | folded words | all of one side's words in the other | some words shared | one-word spelling variant | nothing shared |
 | term | same key | — (later: a term-affinity table, e.g. birth / baptism → `Near`) | — | — | — | different key |
 | integer | equal | — | — | — | within tolerance | beyond tolerance |
+
+**Decided (2026-10-16):**
+- **`Contains` scores below 1.** `Robins` vs `James Robins` is no longer a perfect match. How far below 1 is a tuning question.
+- **`Near` has a minimum similarity per type.** It lives in layer 1's `Rules`, because "near or different" is layer 1's call. Layer 2 then needs no floors.
+- **One `Contains`, two causes.** Less precise (`1817` vs `3 Mar 1817`, `J.` vs `James`) and less complete (`Robins` vs `James Robins`) are both `Contains`. `Detail.Cause` tells them apart (`precision`, `missing_part`), so callers that care can treat them differently. This is a recommendation; confirm.
 
 **Parts combine by one rule.** Names and text are made of parts. Each part pair gets its own relation and similarity. The value's relation is the weakest relation among the parts both sides carry, and parts on one side only make it `Contains`. Its similarity is the weighted mean of the part similarities. The weights come from `Rules`, e.g. name roles from the name pattern.
 
@@ -145,7 +150,7 @@ type PartMatch struct {
 }
 ```
 
-- **`Cause` is a shared vocabulary of codes:** `exact`, `case`, `fold`, `alias`, `abbreviation`, `initial`, `spelling`, `contained`, `overlap`, `gap`, `beyond_tolerance`, `generation_conflict`, `empty`, `phrase_only`. UI copy, reason codes and labeler features are all keyed on these.
+- **`Cause` is a shared vocabulary of codes:** `exact`, `case`, `fold`, `alias`, `abbreviation`, `initial`, `spelling`, `precision`, `missing_part`, `overlap`, `gap`, `beyond_tolerance`, `generation_conflict`, `empty`, `phrase_only`. UI copy, reason codes and labeler features are all keyed on these.
 - **`Parts` is what layer 3 needs for frequency.** Today the name discount needs to know which words paired. Layer 1 exposes them, and layer 3 looks up how common they are.
 - **No strings to parse.** The display text is for showing; logic reads the codes.
 
@@ -209,7 +214,7 @@ func CompareProperty(a, b Side, meta PropertyMeta, rules Rules) PropertyResult
 | `Unknown`, or no voting values | unknown | unknown |
 | A negative matches a leader | conflict, cause `negative` | conflict, cause `negative` |
 
-This replaces Promote's per-type floors (`core/graphalign/registry.go`). Whether a `Near` ever counts as conflict for a type (e.g. a name typo far from the floor) is an open question below, not a floor.
+This replaces Promote's per-type floors (`core/graphalign/registry.go`). A spelling variant too far apart never reaches layer 2 as `Near`: layer 1's minimum similarity has already made it `Different`.
 
 ### Output
 
@@ -241,7 +246,7 @@ This is the feature vector the matching test suite's fit needs: one outcome, rel
 
 - `NameComparer` loses `Frequency` and the discount. `DiscountComparer` is retired.
 - Today there are two versions of one idea: `u` from `Stats.ValueFreq` for text and terms, and word counts from `Stats.Words` for names. Layer 3 unifies them into one weight from frequency. It reads layer 1's `Parts` to know which words or values matched.
-- Layer 3's own design is next. This doc only fixes that layers 1 and 2 don't read catalog statistics.
+- Layer 3 (Subject comparison) is the tentative home. Its design comes later. This doc only fixes that layers 1 and 2 don't read catalog statistics.
 
 ## What moves where in today's code
 
@@ -252,7 +257,7 @@ This is the feature vector the matching test suite's fit needs: one outcome, rel
 | `TermComparer`'s neutral check | Layer 2, step 1 |
 | `autoreconcile.SpellingSimilarity`, `NormalizeForm`, `IsInitial` | Layer 1 |
 | `pairValues`, leaders, negatives, multiple cardinality (`pairs.go`) | Layer 2 |
-| `poolPeriods` (`periods.go`) | Layer 2 or a layer between 2 and 3 (open) |
+| `poolPeriods` (`periods.go`) | Layer 3 (spans properties) |
 | Promote's scale floors and outcome logic (`ApplyScale`) | Layer 2's outcome table |
 | Promote's scale weights, contradiction, frequency weights (`resolvedScale`) | Layer 3 |
 | `autoreconcile.Compatible` | Reads layer 1's relation (goal; open below) |
@@ -261,9 +266,14 @@ This is the feature vector the matching test suite's fit needs: one outcome, rel
 ## Open questions
 
 - **Package names and homes.** E.g. `core/compare` (layer 1) and `core/evidence` or `core/propcompare` (layer 2), or sub-packages of `core/match`.
-- **Similarity of `Contains`.** `Robins` vs `James Robins` scores 1 today. Under this contract it is `Contains` and below 1. Do we accept that change, and how far below 1?
-- **`Near` on names.** A spelling variant is partial today when it clears the 0.75 floor, and a conflict below. With no floor, does a weak `Near` stay partial, or does layer 2 need a minimum similarity per relation?
-- **Precision as its own relation.** `1817` vs `3 Mar 1817` is `Contains`. Is "less precise" different enough from "less complete" (`Robins` vs `James Robins`) to deserve its own relation?
-- **Cross-property comparisons.** Is the date / start-and-end pooling a layer-2 property comparison with several properties per side, or a separate "feature" layer?
-- **Reconciliation convergence.** `Compatible` compares terms by ID and text by exact lowercase. Moving it onto layer 1 changes some groupings. Which ones, and is that wanted? This may be its own PR with its own review.
+- **Minimum similarity values.** One per value type, starting from today's floors (name 0.75, spelling `FuzzyFloor` 0.8).
+- **Reconciliation grouping policy.** Today two pieces of code answer "is this the same value?", and they disagree:
+
+  | Pair | Matching | `Compatible` (grouping, pins) |
+  |---|---|---|
+  | `Montréal` vs `Montreal` | 0.95, agree | different: two competing spellings on the place, and the Promote line can't be pinned |
+  | `Jim` vs `James` | 0.98, agree | different: can't be pinned |
+  | `J. Robins` vs `James Robins` | 0.8, partial | same: grouped into one name |
+
+  With one layer-1 comparison there are **two policies**. Promote agreement and pins follow layer 2's outcome. Reconciler grouping picks which relations mean "show once". **Recommendation:** group on `Same` and `Contains`, not `Equivalent`, so spellings and nicknames stay visible as evidence while still counting as agreement in matching. This changes some groupings (terms by ID vs key, text folding), so it may be its own PR with its own review.
 - **Where support weights act.** Layer 2 reports them; layer 3 uses them (today credit is similarity × weight × weight). Confirm that split.

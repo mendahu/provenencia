@@ -18,3 +18,5 @@ This spike is entirely about the Promote flow's matching: making the algorithm g
 - **Layer 1 compares two values** of one type and returns a normalized result (relation + similarity) plus structured reasoning.
 - **Layer 2 compares one property** across both sides' value sets, with their context (negatives, cardinality, reconciler standing, neutral terms).
 - **Frequency weighting is not a comparison.** It moves above layer 2.
+- **Layer 3 is Subject comparison (tentative).** It combines property comparisons and holds the ones that span properties. Graph alignment is layer 4.
+- **`Contains` scores below 1, and `Near` has a minimum similarity** per type, in layer 1.
