@@ -6,6 +6,7 @@ import Testing
 /// S9-D8 footer: one fixed 44pt slot on primary cards — Promote until the
 /// subject has an accepted Identity Claim, then the membership row.
 @Suite
+@MainActor
 struct EvidenceSubjectCardFooterTests {
     private let membership = CatalogSubjectMembership(
         subjectID: "s1",
