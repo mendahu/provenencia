@@ -1,7 +1,7 @@
 # Review — S10-50 Promote sheet lines show the values they compared
 
-**Verdict:** round 1: Fits with changes — Not ready
-**Rounds:** 1 (round 2 pending). **Reviewers:** maintainability (Opus), executability (Sonnet)
+**Verdict:** Fits — Ready with changes (all answered; no open blocker)
+**Rounds:** 2. **Reviewers:** maintainability (Opus), executability (Sonnet)
 
 ## To user
 None.
@@ -11,6 +11,7 @@ None.
 - A no-exhibit row's `agree` lines are no longer drawn as checked, disabled pins, and their values join the drafted argument (D-7).
 - The PR also moves `conclusiondetails.termLabels` and `handlers.loadTermInfo` onto the new `Vocabulary.TermsByID` (D-2), beyond the two files the S10-28 follow-up named.
 - The plan is stacked on the S10-28 branch and stays Blocked until #411 merges.
+- A no-exhibit row drops its blank `unknown` lines, matching exhibit rows (D-6, X-12).
 
 ## Round 1
 
@@ -64,3 +65,24 @@ Its only production reader is the FFI branch D-7 deleted.
 
 ### X-10 · minor · T-2 helper signature
 **Answer:** Fixed — T-3 (renumbered) calls `pairValues(ComparerFor(properties.ValueTypeDate), "", …)`.
+
+## Round 2
+
+### Maintainability — Fits
+All round-1 answers (M-1 to M-6) verified. No new blockers.
+**Logged:** `promotealign/canon.go` `propertyByID` and `api/ffi/handlers/source_read.go` `loadPropertyInfo` copy an id → property map over `Vocabulary.Properties`; a later `PropertiesByID` would follow `TermsByID`. Not widened by this PR; candidate idea note.
+
+### X-11 · blocker · `event_titles.go` also calls `loadTermInfo`
+**Answer:** Fixed — verified `api/ffi/handlers/event_titles.go:62`. D-2 says how it reads `TermsByID()` and keeps `FromStored`'s signature; `source_read.go` keeps the nil-graph guard inline; STEP-2 lists the file.
+
+### X-12 · major · Unknown comparisons would still be blank lines
+**Answer:** Fixed — verified `pairExhibits` skips `OutcomeUnknown` (`exhibits.go:252`). D-6 makes a line only for non-unknown comparisons on a no-exhibit row; AC-2.1 and T-8 say `gender` has no line; a Risks row records it.
+
+### X-13 · minor · Test value updates loose
+**Answer:** Fixed — STEP-3, STEP-4, STEP-6 and §4 give each line and its new values.
+
+### X-14 · minor · Map edits ambiguous
+**Answer:** Fixed — STEP-7 names both map lines.
+
+### X-15 · minor · T-11 handle id and duplicate titles
+**Answer:** Fixed — T-11 takes the id from `promoteOK(…).Entity.GetId()` and notes titles are not unique.
