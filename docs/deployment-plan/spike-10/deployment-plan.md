@@ -646,6 +646,8 @@ S10-33 crop cache — descoped 2026-10-16
 
 #### S10-51 — File release from the declared model
 
+**Plan:** [`prs/S10-51-file-release.md`](prs/S10-51-file-release.md) — Draft
+
 | | |
 | --- | --- |
 | **In** | Preparatory, engine only. `CountFilePointers` sums every `catalogmodel.FKs` entry into `files`, except `file_derivatives.source_file_id`. Release walks `ownedReleases` `Then` from the snapshot generically instead of the hand-coded `files` / `date_values` / `name_values` cases. Releasing a File deletes only the links of that File's own thumbnails, not another File's link to a shared derived File. `ReleaseSnapshot` reports the objects it released, and one shared after-commit purge (rechecking the checksum, as today) removes them; Artifact delete moves onto it. Working rule "A File is released only when nothing points at it…". Update [`add-catalog-delete`](../../../.agents/skills/add-catalog-delete/SKILL.md). |
