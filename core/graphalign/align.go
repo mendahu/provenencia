@@ -889,6 +889,8 @@ func comparisonsFrom(ev match.Evaluation, probe match.Values, cfg Config, stats 
 			ValueType: pc.ValueType,
 			Pinned:    outcome == match.OutcomeAgree,
 			Weight:    weight,
+			Probe:     pc.Probe,
+			Candidate: pc.Candidate,
 		})
 	}
 	return out

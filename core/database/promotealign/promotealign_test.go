@@ -1073,6 +1073,18 @@ func comparisonOutcome(t *testing.T, row graphalign.Row, key string) match.Outco
 	return ""
 }
 
+// conflictExhibit is the row's own-group conflict line for a Property.
+func conflictExhibit(t *testing.T, row graphalign.Row, key string) graphalign.Exhibit {
+	t.Helper()
+	for _, e := range row.Exhibits {
+		if e.Property.Key == key && e.Outcome == match.OutcomeConflict && len(e.GroupSubjectID) == 0 {
+			return e
+		}
+	}
+	t.Fatalf("no %s conflict exhibit in %+v", key, row.Exhibits)
+	return graphalign.Exhibit{}
+}
+
 func TestProposeJudgesAgainstTheMajority(t *testing.T) {
 	t.Run("a stray name", func(t *testing.T) {
 		f := newFixture(t)
@@ -1093,6 +1105,10 @@ func TestProposeJudgesAgainstTheMajority(t *testing.T) {
 		row := rowFor(f.propose(src.ID, []graphalign.Fixed{{SubjectID: incoming.ID, HandleID: handle}}), incoming.ID)
 		if got := comparisonOutcome(t, row, "name"); got != match.OutcomeConflict {
 			t.Fatalf("name comparison %s, want conflict", got)
+		}
+		ex := conflictExhibit(t, row, "name")
+		if ex.Pinned || ex.IncomingNegative || ex.IncomingDisplay != "James Robins" {
+			t.Fatalf("name conflict exhibit %+v", ex)
 		}
 	})
 
@@ -1119,6 +1135,17 @@ func TestProposeJudgesAgainstTheMajority(t *testing.T) {
 		row := rowFor(f.propose(src.ID, []graphalign.Fixed{{SubjectID: incoming.ID, HandleID: handle}}), incoming.ID)
 		if got := comparisonOutcome(t, row, "sex_at_birth"); got != match.OutcomeConflict {
 			t.Fatalf("sex comparison %s, want conflict", got)
+		}
+		ex := conflictExhibit(t, row, "sex_at_birth")
+		if ex.Pinned || len(ex.IncomingObservationID) != 0 || !ex.IncomingNegative || ex.IncomingDisplay != "male" || ex.MemberDisplay != "male" {
+			t.Fatalf("sex conflict exhibit %+v", ex)
+		}
+		hasName := false
+		for _, e := range row.Exhibits {
+			hasName = hasName || e.Property.Key == "name"
+		}
+		if !hasName {
+			t.Fatalf("expected the agreeing name exhibit beside the conflict: %+v", row.Exhibits)
 		}
 	})
 }

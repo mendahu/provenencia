@@ -4609,6 +4609,9 @@ public nonisolated struct Provenencia_Engine_V1_PromoteGraphAlignmentComparison:
   /// Clears the value of `memberDate`. Subsequent reads from it will return its default value.
   public mutating func clearMemberDate() {self._memberDate = nil}
 
+  /// The incoming value is a negative Observation: shown as "not <value>".
+  public var incomingNegative: Bool = false
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -14436,7 +14439,7 @@ nonisolated extension Provenencia_Engine_V1_PromoteGraphAlignmentFixed: SwiftPro
 
 nonisolated extension Provenencia_Engine_V1_PromoteGraphAlignmentComparison: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".PromoteGraphAlignmentComparison"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}property_key\0\u{3}property_origin\0\u{1}outcome\0\u{3}value_type\0\u{1}pinned\0\u{1}weight\0\u{4}\u{2}incoming_observation_id\0\u{3}incoming_display\0\u{3}incoming_source\0\u{3}member_observation_id\0\u{3}member_display\0\u{3}member_source\0\u{3}group_subject_id\0\u{3}incoming_date\0\u{3}member_date\0\u{c}\u{7}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}property_key\0\u{3}property_origin\0\u{1}outcome\0\u{3}value_type\0\u{1}pinned\0\u{1}weight\0\u{4}\u{2}incoming_observation_id\0\u{3}incoming_display\0\u{3}incoming_source\0\u{3}member_observation_id\0\u{3}member_display\0\u{3}member_source\0\u{3}group_subject_id\0\u{3}incoming_date\0\u{3}member_date\0\u{3}incoming_negative\0\u{c}\u{7}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -14459,6 +14462,7 @@ nonisolated extension Provenencia_Engine_V1_PromoteGraphAlignmentComparison: Swi
       case 14: try { try decoder.decodeSingularStringField(value: &self.groupSubjectID) }()
       case 15: try { try decoder.decodeSingularMessageField(value: &self._incomingDate) }()
       case 16: try { try decoder.decodeSingularMessageField(value: &self._memberDate) }()
+      case 17: try { try decoder.decodeSingularBoolField(value: &self.incomingNegative) }()
       default: break
       }
     }
@@ -14514,6 +14518,9 @@ nonisolated extension Provenencia_Engine_V1_PromoteGraphAlignmentComparison: Swi
     try { if let v = self._memberDate {
       try visitor.visitSingularMessageField(value: v, fieldNumber: 16)
     } }()
+    if self.incomingNegative != false {
+      try visitor.visitSingularBoolField(value: self.incomingNegative, fieldNumber: 17)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -14533,6 +14540,7 @@ nonisolated extension Provenencia_Engine_V1_PromoteGraphAlignmentComparison: Swi
     if lhs.memberSource != rhs.memberSource {return false}
     if lhs._incomingDate != rhs._incomingDate {return false}
     if lhs._memberDate != rhs._memberDate {return false}
+    if lhs.incomingNegative != rhs.incomingNegative {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

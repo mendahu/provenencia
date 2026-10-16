@@ -135,6 +135,7 @@ func proposalProto(c *database.Catalog, prop graphalign.Proposal) (*engine.Propo
 					GroupSubjectId:        uuidString(ex.GroupSubjectID),
 					IncomingObservationId: uuidString(ex.IncomingObservationID),
 					IncomingDisplay:       ex.IncomingDisplay,
+					IncomingNegative:      ex.IncomingNegative,
 					IncomingSource:        ex.IncomingSource,
 					MemberObservationId:   uuidString(ex.MemberObservationID),
 					MemberDisplay:         ex.MemberDisplay,
