@@ -1,7 +1,7 @@
 # Review — S10-32 Depiction value and `likeness` on Person
 
 **Verdict:** Fits with changes — Ready with changes (all applied)
-**Rounds on this shape:** 1, round 2 pending. **Reviewers:** maintainability (opus), executability (sonnet)
+**Rounds on this shape:** 2. **Reviewers:** maintainability (opus), executability (sonnet)
 
 This log reviews the shape planned after the Slice 8 re-cut: an owned `depiction_values` row (region plus a staged image File). The earlier shape (the value is the Citation, with a reconciler module) is kept below under "Earlier shape (superseded)".
 
@@ -13,7 +13,7 @@ None. The shape follows the user's answers of 2026-10-16: the value is its own r
 
 - D-3: researcher Create uses an allow-list, `researcherCreatable`, the same list as Swift's.
 - D-5: a depiction shows one page; a Citation with two page selectors cannot hold one, and the region need not lie inside the Citation's own region.
-- D-7: callers stage with `StageDepictions` before `writes.Run`; the staged image rides in `Input.Depiction`, so no write signature changes.
+- D-7: callers stage with `ingest.StageDepictions` before `writes.Run`; the staged image rides in `Input.Depiction` behind `observations.StagedFile`, so no write signature changes and no `core/database` package imports `ingest`.
 - D-9: date and name updates move onto `releaseReplacedValue` with depictions (one release path on update).
 - D-11: the auto-reconciler skips depiction Observations until S10-52; `CacheVersion` is not bumped.
 - Out: a Citation locator edit after a likeness is saved is not kept in step; the stored image stays a true copy.
@@ -89,6 +89,24 @@ None. The shape follows the user's answers of 2026-10-16: the value is its own r
 
 ### X-15 · minor · Map row and plan disagree on staging
 **Answer:** Fixed in the map now: the S10-32 row says staging happens before the caller's write.
+
+## Round 2
+
+Both reviewers accepted every round-1 answer.
+
+### M-10 · blocker · Image staging in a query package that would import a use-case package
+`.agents/skills/add-catalog-query/SKILL.md` "Do not": put ingest in the query package; `core/ingest` imports `core/writes`, and no `core/database` package imports either today.
+**Answer:** Fixed. D-7: `observations` declares `StagedFile` (only `InsertTx`) and `DepictionInput.Image`; `StageDepictions` moves to `core/ingest/depictions.go`, so `ingest` imports `observations`. AC-1.7 is `Image == nil`. The map's S10-32 row names `ingest.StageDepictions`. The Stop condition checks that no `core/database` package imports `ingest` or `writes`. Declined in part: `ImagePath` stays on `DepictionInput` as a plain string the write never reads; moving it out would need a second slice parallel to `inputs` in every handler (S10-54).
+
+
+### X-16 · major · A test crop could equal the Artifact's own File
+**Answer:** Fixed. STEP-6's `crop` takes a gray shade and `fileArtifact` uses red, so a staged crop never equals the Artifact's File; AC-2.4 reuses one size and shade on purpose.
+
+### X-17 · minor · STEP-6's check skips the `api` edit
+**Answer:** Fixed. STEP-6 also tests `./api/ffi/handlers/...`.
+
+### X-18 · minor · Undeclared fields and signatures
+**Answer:** Fixed. D-8 lists the three new `resolvedValue` fields; T-10 passes an `at` label to `assertUpkeepEqualsRebuild` and names the `files` columns.
 
 ## Earlier shape (superseded)
 
