@@ -65,7 +65,7 @@ type Result struct {
 | A term's neutral flag (sex `unknown`) | **No → layer 2** | "Is this value evidence?" is a property-level decision |
 | Negative polarity, denied, provisional, support counts | **No → layer 2** | Context about the value on its side, not about the value |
 | Cardinality (single or multiple) | **No → layer 2** | A property fact |
-| Word or value frequency in the catalog | **No** (name frequency descoped, § Frequency) | Changes *how informative* a match is, not how alike |
+| Word or value frequency in the catalog | **No** (descoped, § Frequency) | Changes *how informative* a match is, not how alike |
 | Another property (an event's `start_date` when comparing `date`) | **No → layer 3** | Spans properties, so it is a Subject-level comparison |
 
 **A test for the boundary:** would two researchers with the same rules but different catalogs expect a different answer? If yes, the input belongs higher up.
@@ -274,7 +274,12 @@ This is the feature vector the matching test suite's fit needs: one outcome, rel
 **Decided (2026-10-16): name frequency is descoped.** "Common names count for less" is a subjective weighting. The one place it could matter is Subject-to-entity matching, and there the other properties and the graph (dates, sex, relationships, neighbors) already tell look-alikes apart. It adds noise and a tunable without earning its place.
 
 - Remove `NameComparer.Frequency`, the discount, `DiscountComparer`, `CompareDiscount` and `Stats.Words` (shipped in S10-27).
-- Open: the frequency weights on other properties (below).
+
+**Decided (2026-10-16): all value-frequency weighting is descoped.** Promote also weights event types and toponyms from how common the value is in the catalog (`ln(m/u)` from `Stats.ValueFreq`, lifted to 2). Catalog frequency is the wrong reason for a weight:
+- **Event type** carries little weight because it is generic, not because the catalog holds many births. "Both are births" says nothing specific about which birth. That is a fixed registry weight for the property.
+- **Toponyms** match often. Their real weight comes from the place's relationships (`part_of`, the events located there), which graph alignment already scores.
+
+So every property weight is a plain registry number. The labeler can fit them later. Remove `Stats.ValueFreq`, the `m` / `u` priors (`MPrior`, `UPrior`), the frequency scales and their lift to the accept bar. The toponym agreement bonus existed to work around the frequency weight; re-set it as a plain weight if still needed.
 
 ## What moves where in today's code
 
@@ -288,12 +293,11 @@ This is the feature vector the matching test suite's fit needs: one outcome, rel
 | `pairValues`' leaders and support weights | Gone: the entity profile (layer 4) contains only the conclusion |
 | `poolPeriods` (`periods.go`) | Layer 3 (spans properties) |
 | Promote's scale floors and outcome logic (`ApplyScale`) | Layer 2's outcome table |
-| Promote's scale weights and contradiction (`resolvedScale`) | Layer 3. The frequency weights in it are open (below) |
+| Promote's scale weights and contradiction (`resolvedScale`) | Layer 3, as plain registry weights. Its frequency weights are removed |
 | `autoreconcile.Compatible` and grouping | Stays in the reconciler as its own decision logic, built on value compare (and property compare where it helps) instead of its own key rules |
 | `match.Value`'s reconciler fields (`Support`, `Against`, `Reason`, `Denied`) | The profile builder package. `Negative` stays as layer 2 polarity |
 
 ## Open questions
 
 - **The reconciler's grouping rules.** Which relations make two values "show once" is the reconciler's call (rule 7), designed with its own PR. Today's disagreements to resolve there: `Montréal` / `Montreal` and `Jim` / `James` agree in matching but don't group or pin; `J. Robins` / `James Robins` groups but only scores partial.
-- **Frequency weights on other properties.** Promote also derives event-type and toponym weights from how common the value is (`ln(m/u)` from `Stats.ValueFreq`, lifted to 2). It's the same idea as name frequency. Descope it too, and use plain registry weights that the labeler can fit later?
 - **The profile builder's package name.**
