@@ -20,6 +20,10 @@ struct PersonDetailContent: ConclusionDetailBody {
     var members: String
     var vitals: [Vital]
     var rows: [ReconciledValueRowModel]
+    /// Nil when gender and sex at birth give nothing to show (S10-23).
+    var treatment: PersonGenderTreatment?
+    var thumbnail: ConclusionDetailThumbnail { .init(colors: treatment?.thumbnailColors) }
+    var badge: ConclusionDetailBadge? { treatment?.badge }
 
     init(
         detail: CatalogConclusionDetail,
@@ -38,6 +42,7 @@ struct PersonDetailContent: ConclusionDetailBody {
             Self.vital(L10n.Conclusions.personDiedAbbr, spoken: L10n.Conclusions.a11yDied, facts: header?.death, locale: locale),
         ]
         rows = Self.rows(detail.fields, header: header, locale: locale, orders: orders)
+        treatment = PersonGenderTreatment.read(detail.fields)
     }
 
     /// A Person always shows its name and four life rows, stated empty when

@@ -50,6 +50,20 @@ struct ConclusionDetailSection: Equatable, Identifiable {
     var omittedCount: Int = 0
 }
 
+/// What the header thumb takes from a kind. One slot, so a later PR adds to
+/// this struct instead of adding another protocol member (S10-23, S10-35).
+struct ConclusionDetailThumbnail: Equatable {
+    var colors: PVThumbnail.Colors? = nil
+}
+
+/// The Badge a kind may draw above the title: data, so Event and Place stay
+/// free of view generics.
+struct ConclusionDetailBadge: Equatable {
+    var text: String
+    var ink: Color
+    var accessibilityLabel: String
+}
+
 /// The fields a Conclusion detail page lays out. Each kind owns how it
 /// fills them (mark, title, the line under the title, and the rows). The
 /// page only places them. Giving a kind its own page later does not need a
@@ -61,10 +75,14 @@ protocol ConclusionDetailBody: Equatable {
     var members: String { get }
     var rows: [ReconciledValueRowModel] { get }
     var sections: [ConclusionDetailSection] { get }
+    var thumbnail: ConclusionDetailThumbnail { get }
+    var badge: ConclusionDetailBadge? { get }
 }
 
 extension ConclusionDetailBody {
     var sections: [ConclusionDetailSection] { [] }
+    var thumbnail: ConclusionDetailThumbnail { .init() }
+    var badge: ConclusionDetailBadge? { nil }
 }
 
 /// Shared Conclusion detail chrome (S9-24). A view, not a place: the caller
@@ -220,7 +238,7 @@ private struct ConclusionDetailRelationshipSection: View {
     }
 }
 
-/// Thumbnail slot · title and the kind's summary · ref and member count.
+/// Thumbnail slot · badge, title and the kind's summary · ref and member count.
 private struct ConclusionDetailHeader<Content: ConclusionDetailBody, Summary: View>: View {
     let content: Content
     let mark: PVMarkKey
@@ -229,8 +247,16 @@ private struct ConclusionDetailHeader<Content: ConclusionDetailBody, Summary: Vi
 
     var body: some View {
         HStack(alignment: .top, spacing: PVSpacing.space7) {
-            PVThumbnail(.init(glyph: .mark(mark), label: thumbnailLabel), size: 80)
+            PVThumbnail(
+                .init(glyph: .mark(mark), label: thumbnailLabel),
+                size: 120,
+                colors: content.thumbnail.colors
+            )
             VStack(alignment: .leading, spacing: PVSpacing.space4) {
+                if let badge = content.badge {
+                    PVBadge(text: badge.text, tone: .neutral, subtle: false, foreground: badge.ink)
+                        .accessibilityLabel(badge.accessibilityLabel)
+                }
                 title
                 summary(content)
             }

@@ -62,6 +62,26 @@ struct PersonDetailTests {
         #expect(content.rows[5].lead == nil && content.rows[5].emptyText == "Nothing recorded" && content.rows[5].records.count == 1)
     }
 
+    @Test func treatmentRidesOnContentAndRowsStay() {
+        let woman = CatalogConclusionValue.term(id: "t", key: "woman", label: "Woman")
+        let gender = D.field(
+            "single", key: "gender", label: "Gender", valueType: "term",
+            [D.value(1, "kept", woman)], outcomes: [D.outcome("g", "kept", recorded: woman)]
+        )
+        let content = PersonDetailContent(detail: detail(extra: [gender]))
+        #expect(content.treatment?.family == .woman)
+        #expect(content.thumbnail.colors != nil)
+        #expect(content.badge?.text == "Woman")
+        #expect(content.rows.map(\.label).contains("Gender"))
+        let plain = PersonDetailContent(detail: detail())
+        #expect(plain.treatment == nil && plain.thumbnail == .init() && plain.badge == nil)
+        #expect(plain.rows.map(\.label) == ["Name", "Birth date", "Birth place", "Death date", "Death place"])
+        let event = EventDetailContent(detail: detail())
+        #expect(event.thumbnail == .init() && event.badge == nil)
+        let place = PlaceDetailContent(detail: detail())
+        #expect(place.thumbnail == .init() && place.badge == nil)
+    }
+
     @Test func aMergedNameRowCarriesItsStateAndWhy() {
         let row = PersonDetailContent(detail: detail()).rows[0]
         #expect(row.lead == "James Robins" && row.style == .text)
