@@ -633,7 +633,7 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 
 #### S10-32 — Depiction value type
 
-**Plan:** [`prs/S10-32-depiction-value-type.md`](prs/S10-32-depiction-value-type.md) — Draft
+**Plan:** [`prs/S10-32-depiction-value-type.md`](prs/S10-32-depiction-value-type.md) — Planned
 
 | | |
 | --- | --- |
@@ -668,7 +668,7 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 
 | | |
 | --- | --- |
-| **In** | Person detail shows every likeness crop for the handle: its cached `likeness` values (`auto_reconciler_values.value_citation_id`, from S10-32) with reason `kept` or `weak`, so provisional members and denied crops are already out. Persons list lead thumb shows the earliest likeness when a crop exists, and the placeholder when it does not. Events and Places lists stay on the placeholder. |
+| **In** | Person detail shows every likeness crop for the handle: its cached `likeness` values (`auto_reconciler_values.value_citation_id`, from S10-32) with reason `kept` or `weak`, so provisional members and denied crops are already out. That admit rule is one named `autoreconcile.Reason` method beside `Displayed` (`kept` or `weak`: a weak photo does not contradict another photo), which S10-39's thumb fallback reuses; not a `reason IN (…)` literal in a new SQL read. Persons list lead thumb shows the earliest likeness when a crop exists, and the placeholder when it does not. Events and Places lists stay on the placeholder. |
 | **Out** | Marking a preferred portrait (S10-39 fills that frame on the same boards). Place and event galleries. |
 | **Testable** | Two faces of one person both appear on the page. The Persons list shows the earliest crop. A person with no likeness keeps the placeholder. Purging the cache and reopening regenerates it. |
 | **Depends on** | S10-23, S10-33, S10-D12, S10-D9 |

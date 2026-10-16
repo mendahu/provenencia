@@ -1,11 +1,14 @@
 # Review — S10-32 Depiction value type and `likeness` on Person
 
 **Verdict:** Fits with changes — Ready with changes (all applied)
-**Rounds:** 1 (no blocker, so no round 2). **Reviewers:** maintainability (opus), executability (sonnet)
+**Rounds:** 2. Round 1 reviewed the first shape (the loader skipped depictions). The user then asked for a shape that keeps every value type reconciled; the plan was re-planned with a `depiction` module, and round 2 reviewed it in full. **Reviewers:** maintainability (opus), executability (sonnet)
 
 ## To user
 
-None. The one product call came up during planning and was answered on 2026-10-16: `likeness` is new catalogs only, and a later one-off CLI updates the dogfood projects (working rule "`likeness` is new catalogs only").
+None open. Answered 2026-10-16:
+- `likeness` is new catalogs only; a later one-off CLI updates the dogfood projects (working rule "`likeness` is new catalogs only").
+- Depictions are reconciled, not skipped (the user questioned the exclusion).
+- The gallery shows `weak` crops (working rule "A gallery is the reconciled likeness values").
 
 ## Writer's own calls
 
@@ -13,7 +16,9 @@ None. The one product call came up during planning and was answered on 2026-10-1
 - D-4: a depiction needs no region, page, or Artifact file.
 - D-5: negative likenesses are not special-cased.
 - D-6: researchers cannot create a depiction Property.
-- D-7: the autoreconciler loader skips depictions, so the Person page lists no empty Likeness field.
+- D-7: `depiction` has a key module keyed by the Citation id, not by File plus locator.
+- D-12: the cache column has no FK, and `CacheVersion` is bumped to 15 although no catalog holds a depiction yet.
+- D-14: the Person field list skips depictions until S10-35 draws the gallery.
 - D-8: Promote alignment is not changed; T-6 pins that no likeness line is shown until S10-36.
 - D-9: the `likeness` binding is locked, at sort order 4.
 - D-10: no pill colour for `depiction`.
@@ -51,3 +56,53 @@ None. The one product call came up during planning and was answered on 2026-10-1
 
 ### X-6 · nit · The Swift doc comment goes stale
 **Answer:** Fixed. D-10 updates the `SubjectPropertyValueType` doc comment.
+
+## Round 2 (reconciled shape)
+
+### M-5 · major · The loader's `hasValue` is a copy of `autoreconcile.carries`
+**Answer:** Fixed. D-7 exports `Carries`. D-12 has `load` call it and deletes `hasValue`. Codebase fit and **Deletes** list both.
+
+### M-6 · major · The gallery's "kept or weak" rule lives only in prose
+**Answer:** Fixed, by changing the map. The S10-35 row now binds the rule to one `autoreconcile.Reason` method beside `Displayed`, which S10-39 reuses, and the Out row points there. This PR adds no method with no caller.
+
+### M-7 · minor · `knownValueType` is a third hand-kept list
+**Answer:** Fixed. `knownValueType(vt)` is `moduleFor(vt) != nil`. Declined: an exported `properties.ValueTypes` slice. It reaches beyond this PR's layers, and Out logs it.
+
+### M-8 · minor · Stale doc and code comments
+**Answer:** Fixed. STEP-9 adds the "Read-side tolerance" clause. D-14 updates the `attachValues` comment, and D-7 updates the package doc.
+
+### M-9 · nit · The loader branches on value type
+**Answer:** Fixed. `sqlLoadCandidates` selects `CASE WHEN p.value_type = 'depiction' THEN c.id END` (D-12).
+
+### M-10 · nit · Bookkeeping
+**Answer:** Fixed. D-12 to D-14 follow D-11, and this log restates the writer's calls.
+
+### X-1 · major · T-5's `Verify` is vacuous
+**Answer:** Fixed. T-5 loads `Graph().Node(h)` before the last write and again before `Verify`, and asserts the node's likeness `CitationID`s.
+
+### X-2 · major · T-5 lifecycle and setups
+**Answer:** Fixed. Each subtest gets its own fixture. B is filed only by `identityclaims.Create` in AC-2.4. AC-2.3 gives the `promote.Input` for `c`. `f.credibility` is wrapped in `must`, and rows are looked up by `ValueCitationID`.
+
+### X-3 · minor · STEP-6 bundles five changes
+**Answer:** Fixed. STEP-6 is the cache and graph mirror; STEP-7 is the Person field skip and the Promote guard. There are now 9 steps.
+
+### X-4 · minor · T-11 does not exercise version 14
+**Answer:** Fixed. T-11 adds `14` to the stale-version list.
+
+### X-5 · minor · T-1 overlaps an existing row
+**Answer:** Fixed. T-1 extends "create refuses term value type" into a loop and adds an Upsert row.
+
+### X-6 · minor · Small choices in T-12, T-6, and T-2 to T-4
+**Answer:** Fixed. T-12 is its own function, using `properties.Lookup`. T-6 spells out `srcB, artB`. T-2 to T-4 are table rows.
+
+### X-7 · minor · Docs and log drift
+**Answer:** Fixed. STEP-9 covers line 891. This log and the header are current. The draft PR is opened before STEP-9.
+
+### X-8 · minor · The DoD box off macOS
+**Answer:** Fixed. The DoD line says how to report it.
+
+### X-9 · minor · No old catalog for manual check 4
+**Answer:** Fixed. The check builds `main` at the Planned commit first, or reports itself as not run.
+
+### X-10 · nit · Others
+**Answer:** Fixed: `canSubmitCreate`; STEP-4 to STEP-6 land together; Out names the proto comment and the inspector note. The `.contains(.term)` edit stays, because the old line no longer compiles.
