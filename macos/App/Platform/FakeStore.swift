@@ -1410,10 +1410,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 membershipBySubject[id] = nil
                 claimBySubject[id] = nil
             }
-            var effects = bumpSource(sourceID, evidence: true)
-            effects.sources = [sourceID]
-            effects.handles = removed
-            return effects
+            return CatalogWriteEffects(handles: removed, sources: [sourceID], handleScopes: removed)
         }
     }
 

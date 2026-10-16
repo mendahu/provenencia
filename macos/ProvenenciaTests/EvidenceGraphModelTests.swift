@@ -1691,6 +1691,22 @@ struct EvidenceGraphModelTests {
         #expect(ids == ["s-john", "s-mary", "s-census", "b3-spouse"])
     }
 
+    @Test func fakeUnpromoteReportsTheEnginesEffects() async throws {
+        let (store, _) = await householdModel()
+        let removed = ["s-james", "b1-sonof", "b2-part"].compactMap { store.membershipBySubject[$0]?.entity.id }
+        #expect(removed.count == 3)
+        store.sourcesByProject[projectDir] = [
+            CatalogSource(
+                id: sourceID, ref: "SRC-1", sourceTypeID: "type-book", title: "Household", description: "",
+                hasArtifact: true
+            ),
+        ]
+        let before = store.sourcesByProject
+        let effects = try await store.unpromoteSubject(projectDir: projectDir, userID: "user-1", subjectID: "s-james")
+        #expect(effects == CatalogWriteEffects(handles: removed, sources: [sourceID], handleScopes: removed))
+        #expect(store.sourcesByProject == before)
+    }
+
     @Test func unpromoteFailureStaysInConfirm() async {
         let (store, model) = await householdModel()
         let failure = CoreInvokeError.coded(status: 1, code: "internal.unknown", kind: .internal, params: [])
