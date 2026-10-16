@@ -562,7 +562,7 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 
 #### S10-27 — Name frequency
 
-**Plan:** [`prs/S10-27-name-frequency.md`](prs/S10-27-name-frequency.md) — Draft
+**Plan:** [`prs/S10-27-name-frequency.md`](prs/S10-27-name-frequency.md) — Planned
 
 | | |
 | --- | --- |
