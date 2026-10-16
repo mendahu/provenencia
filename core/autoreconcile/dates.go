@@ -81,6 +81,85 @@ func DateBounds(d datevalues.Value) (lo, hi *int, ok bool) {
 	return lo, hi, true
 }
 
+// DateEnd is one end of a date as written, for comparing dates by the days
+// they cover. Month and Day are 0 when the end does not name them. Lo and Hi
+// are its inclusive proleptic day numbers; From and To place it on a line of
+// years, where a bound on day d of year y covers [y + (d-1)/n, y + d/n) with
+// n the days in y, so a whole year is [y, y+1). An open end has Open set and
+// every other field zero.
+type DateEnd struct {
+	Year, Month, Day int
+	Lo, Hi           int
+	From, To         float64
+	Open             bool
+}
+
+// DateEnds returns the first and last end of d. A point has the same end
+// twice, BEF an open first end, AFT an open last end; a range has its start
+// bound first and its end bound last (swapped when the start begins after the
+// end finishes), and an open end on a side with no year. ok is false when d
+// has no year to place, or a month or day that does not exist. Civil
+// components are read as Gregorian, as DateBounds does.
+func DateEnds(d datevalues.Value) (first, last DateEnd, ok bool) {
+	if d.Kind == datevalues.KindRange {
+		if d.StartYear == nil && d.EndYear == nil {
+			return DateEnd{}, DateEnd{}, false
+		}
+		first, last = DateEnd{Open: true}, DateEnd{Open: true}
+		if d.StartYear != nil {
+			if first, ok = boundEnd(d.StartYear, d.StartMonth, d.StartDay); !ok {
+				return DateEnd{}, DateEnd{}, false
+			}
+		}
+		if d.EndYear != nil {
+			if last, ok = boundEnd(d.EndYear, d.EndMonth, d.EndDay); !ok {
+				return DateEnd{}, DateEnd{}, false
+			}
+		}
+		if !first.Open && !last.Open && first.Lo > last.Hi {
+			first, last = last, first
+		}
+		return first, last, true
+	}
+	y, m, day := d.StartYear, d.StartMonth, d.StartDay
+	if y == nil {
+		y, m, day = d.EndYear, d.EndMonth, d.EndDay
+	}
+	e, ok := boundEnd(y, m, day)
+	if !ok {
+		return DateEnd{}, DateEnd{}, false
+	}
+	first, last = e, e
+	switch d.Qualifier {
+	case datevalues.QualifierBEF:
+		first = DateEnd{Open: true}
+	case datevalues.QualifierAFT:
+		last = DateEnd{Open: true}
+	}
+	return first, last, true
+}
+
+// boundEnd is the end one bound covers at its precision.
+func boundEnd(year, month, day *int) (DateEnd, bool) {
+	lo, hi, _, ok := spanOf(year, month, day, nil, nil, nil, nil)
+	if !ok {
+		return DateEnd{}, false
+	}
+	y := *year
+	e := DateEnd{Year: y, Lo: lo, Hi: hi}
+	if month != nil {
+		e.Month = *month
+		if day != nil {
+			e.Day = *day
+		}
+	}
+	jan1 := daysFromCivil(y, 1, 1)
+	n := float64(daysFromCivil(y+1, 1, 1) - jan1)
+	e.From = float64(y) + float64(lo-jan1)/n
+	e.To = float64(y) + float64(hi-jan1+1)/n
+	return e, true
+}
+
 // Window is an inclusive proleptic-day span. A nil bound is open.
 // A fully open window is "always" (no place period, undated place).
 type Window struct {
