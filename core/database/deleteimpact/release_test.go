@@ -320,6 +320,9 @@ func TestReleaseReportsReleasedObjects(t *testing.T) {
 				if n := countRows(t, tx, `SELECT COUNT(*) FROM files`); n != 2 {
 					t.Fatalf("files changed: %d", n)
 				}
+				if n := countRows(t, tx, `SELECT COUNT(*) FROM file_derivatives`); n != 1 {
+					t.Fatalf("file_derivatives changed: %d", n)
+				}
 			}
 		})
 	}
