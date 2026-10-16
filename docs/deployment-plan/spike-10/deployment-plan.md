@@ -600,6 +600,8 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 
 #### S10-30 — Date windows in matching
 
+**Plan:** [`prs/S10-30-date-windows.md`](prs/S10-30-date-windows.md) — Blocked — on S10-28
+
 | | |
 | --- | --- |
 | **In** | `DateComparer` measures spans and gaps from the date windows in days. December 1817 vs January 1818 outranks a same-year pair only when the days say so — it stops counting as "a year apart" while May vs September stays a same-year partial. A range uses its months and days. ABT doubles tolerance only for two points. `date` may overlap `start_date` / `end_date` by window. |
