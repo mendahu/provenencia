@@ -7,8 +7,6 @@ import (
 	"bytes"
 	"database/sql"
 	"errors"
-	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/google/uuid"
@@ -272,31 +270,17 @@ func Delete(tx *database.Tx, c *database.Catalog, userID, id []byte) ([]rowchang
 	if existing.Description != "" {
 		fields["description"] = rowchange.FieldDiff{Old: existing.Description, New: nil}
 	}
-	tx.AfterCommit(func() { purgeReleasedObjects(c, objects) })
+	purge := make([]files.Object, 0, len(objects))
+	for _, o := range objects {
+		purge = append(purge, files.Object{ChecksumSHA256: o.ChecksumSHA256, MediaType: o.MediaType})
+	}
+	files.PurgeAfterCommit(tx, purge)
 	return []rowchange.Change{{
 		EntityType: "artifact",
 		EntityID:   append([]byte(nil), id...),
 		Action:     rowchange.ActionDelete,
 		Fields:     fields,
 	}}, nil
-}
-
-// purgeReleasedObjects unlinks objects/ for collected files whose catalog row
-// is gone. Best-effort after COMMIT: a crash leaves orphan bytes, not a live
-// pointer at a missing object. Shared checksums stay on disk.
-func purgeReleasedObjects(c *database.Catalog, objects []deleteimpact.FileObject) {
-	for _, obj := range objects {
-		if _, err := files.LookupByChecksum(c, obj.ChecksumSHA256); err == nil {
-			continue
-		} else if !errors.Is(err, sql.ErrNoRows) {
-			continue
-		}
-		rel, err := files.StorageRelPath(obj.ChecksumSHA256, obj.MediaType)
-		if err != nil {
-			continue
-		}
-		_ = os.Remove(filepath.Join(c.Dir(), filepath.FromSlash(rel)))
-	}
 }
 
 // Get returns an Artifact by id, or sql.ErrNoRows.
