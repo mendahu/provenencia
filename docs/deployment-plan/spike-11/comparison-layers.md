@@ -306,19 +306,19 @@ This is the feature vector the matching test suite's fit needs: one outcome, rel
 
 **Graph alignment (layer 6)** holds everything that searches or decides: seeding and candidates (with the property-only fallback), listing segments around candidate pairs, one-to-one, propagation (each accepted pair becomes an anchor), conflicts, and chains. It replaces the three walk-like passes today (walk, fallback re-walk, refinement) with one defined procedure. **Chains come from the walk:** an accepted pair is an anchor whose own segments then count, so a double or triple segment match is several well-supported Subjects, not a multiplied score.
 
-### Lifespan: a derived property (draft)
+### Lifespan: a derived property for people
 
-Dates on a Subject's neighbors constrain each other. An entity that died before the Subject was born is not that Subject, even when neither side has the other's event.
+**Decided (2026-10-16): lifespan applies to people only.** Person matching is the chief job, and events and places differ enough that a lifespan wouldn't help them. Dates on a person's neighbors constrain each other. An entity that died before the Subject was born is not that Subject, even when neither side has the other's event.
 
-- **The subject profile builder derives a time window** per Subject or entity from its own dates and its **direct** neighbors' dates, by registry rules keyed on bridge type. For example:
+- **The subject profile builder derives a lifespan** for a person Subject or person entity from its **direct** neighbors' dates, by registry rules keyed on bridge type. For example:
   - subject of a birth at D: born at D;
   - subject of a death at D: died by D;
   - subject of a marriage at D: alive, roughly 14 or older;
   - parent of someone born at D: born about 12–60 years earlier (narrower for mothers);
   - residence at D: alive at D.
 
-  Maximum lifespan, minimum and maximum parent ages are registry numbers. A person has a lifespan; an event its date; a place its period.
-- **Subject comparison compares the windows** as a registry-declared special case, using value compare's date relations. `Different` (impossible together: died before born, or a 140-year span) is a conflict. `Overlaps` or `Contains` is consistent.
+  Maximum lifespan, minimum and maximum parent ages are registry numbers.
+- **Subject comparison compares the lifespans** as a registry-declared special case for people, using value compare's date relations. `Different` (impossible together: died before born, or a 140-year span) is a conflict. `Overlaps` or `Contains` is consistent.
 - **Weighted as a conflict detector:** large conflict penalty, near-zero agree weight, because the dates it reads are already counted through their own segments.
 - **Bounded by construction:** rules read direct neighbors only, so nothing recurses across the tree. Both sides' windows can be built before alignment, once each. Two-hop rules (a grandchild's birth) would be explicit registry entries, later if ever.
 

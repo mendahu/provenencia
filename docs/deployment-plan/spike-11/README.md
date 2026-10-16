@@ -40,4 +40,4 @@ Three generations back, records thin out. Often all there is is a name and a bir
 - **Similarity weighs a conflict by its penalty,** so a decisive conflict pulls similarity down as well as evidence.
 - **Dedupe is in scope.** Everything in the reuse inventory (other consumers, small widening changes, duplicates to retire, the lighter-touch items and the bugs found in passing) is Spike 11 work, split across PRs as each layer lands.
 - **Layer 5 is segment comparison** (primary – bridge – primary, one hop, pure) and **layer 6 is graph alignment** (the walk and every decision). Bridge cardinality is declared in the registry; a conflict through a one-cardinality bridge subtracts; segment evidence includes the neighbor's match.
-- **Lifespan (draft):** the profile builder derives a time window from direct neighbors' dates by registry rules, and Subject comparison treats an impossible overlap as a conflict.
+- **Lifespan, for people only:** the profile builder derives a person's lifespan from direct neighbors' dates by registry rules, and Subject comparison treats an impossible overlap as a conflict.
