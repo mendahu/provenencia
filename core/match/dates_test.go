@@ -85,6 +85,27 @@ func TestDateComparerScores(t *testing.T) {
 	}
 }
 
+func TestDateComparerDayWithoutMonth(t *testing.T) {
+	dayOnly := func(y, d int) Value {
+		return Value{Date: &datevalues.Value{Kind: datevalues.KindPoint, StartYear: &y, StartDay: &d}}
+	}
+	tests := []struct {
+		name string
+		a, b Value
+	}{
+		{"different days, no month", dayOnly(1817, 14), dayOnly(1817, 20)},
+		{"a day with no month against the year", dayOnly(1817, 14), date(1817, nil, nil)},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, ok := DateComparer{}.Compare(tt.a, tt.b)
+			if !ok || !approx(0.8)(got) {
+				t.Fatalf("got %v %v, want 0.8", got, ok)
+			}
+		})
+	}
+}
+
 func TestDateComparerABT(t *testing.T) {
 	about := func(y int) Value {
 		return Value{Date: &datevalues.Value{Kind: datevalues.KindPoint, Qualifier: datevalues.QualifierABT, StartYear: ip(y)}}

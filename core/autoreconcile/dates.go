@@ -149,9 +149,9 @@ func boundEnd(year, month, day *int) (DateEnd, bool) {
 	e := DateEnd{Year: y, Lo: lo, Hi: hi}
 	if month != nil {
 		e.Month = *month
-		if day != nil {
-			e.Day = *day
-		}
+	}
+	if day != nil {
+		e.Day = *day
 	}
 	jan1 := daysFromCivil(y, 1, 1)
 	n := float64(daysFromCivil(y+1, 1, 1) - jan1)
