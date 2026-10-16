@@ -13,7 +13,7 @@
 **Rules that bind:** `.cursor/rules/go-tests.mdc`
 **Context:** [`name-matching-enhancements.md`](../name-matching-enhancements.md), [`docs/conclusion-reconciliation.md`](../../../conclusion-reconciliation.md) §4–§6, [`docs/matching.md`](../../../matching.md), [S10-27 plan](S10-27-name-frequency.md) D-8 and D-9, working rule "Support weighting and negatives land together" in [`../deployment-plan.md`](../deployment-plan.md)
 **Planned:** 2026-10-16 against `main` @ `a4e9de4` plus the S10-27 plan as merged. S10-27 code has not landed. Redo §4 on landing (see Stop conditions)
-**Review:** — (not reviewed yet)
+**Review:** [`S10-28-support-negatives.review.md`](S10-28-support-negatives.review.md) — round 1 of 2: Fits with changes / Not ready; every finding answered; round 2 pending S10-27's landing
 
 ### Implementer — read this first
 
@@ -35,7 +35,7 @@ A handle's values count in proportion to how well supported they are, and a nega
 
 **Why now.** Slice 7 makes names compare the way records are written. S10-24, S10-25, and S10-27 changed what a name word is worth. This PR changes which of a handle's values are allowed to speak. It follows S10-27 so fixtures settle against frequency-weighted scores once.
 
-**What stays.** A handle with one value, or with values of equal support, scores exactly as before. The auto-reconciler, the cache, and every Promote view are untouched. No catalog change: the cache already stores `support`, `against`, and a `denied` reason on every value, and the matcher never read them.
+**What stays.** A handle with one value, or with values of equal support, scores exactly as before. The auto-reconciler, the cache, and every Promote view are untouched. No catalog change: the cache already stores `support`, `against`, and a `reason` on every value, and the matcher never read them. Promote's exhibit chooser keeps its own member picker (D-10).
 
 ## 2. User stories
 
@@ -44,40 +44,44 @@ A handle's values count in proportion to how well supported they are, and a nega
 | AC | Given / when | Then |
 | --- | --- | --- |
 | AC-1.1 | Probe `sex_at_birth` female. Handle values male (support 3), female (support 1). Person profile | Contribution −2. The reason names `female` and `male` |
-| AC-1.2 | Probe male, the same handle | Contribution +1. Reason names `male` and `male` |
+| AC-1.2 | Probe male, the same handle | Contribution +1. The reason names `male` and `male` |
 | AC-1.3 | Probe female. Handle values male (support 2), female (support 2) | Contribution +1: both values lead, so the match stands |
-| AC-1.4 | Probe `James Robins`. Handle names `Mary Smith` (support 5), `James Robins` (support 1) | Name similarity 0, contribution 0 (the name feature has no contradiction points). The reason names `James Robins` and `Mary Smith`. Not 10 |
+| AC-1.4 | Probe `James Robins`. Handle names `Mary Smith` (support 5), `James Robins` (support 1) | Name similarity 0. `Rank` contribution 0, because the name feature has no contradiction points; Promote's name scale scores it a conflict (−3). The reason names `James Robins` and `Mary Smith`. Not 10 |
 | AC-1.5 | Probe `Mary Jones`. Handle names `Mary Smith` (support 1), `Mary Jones` (support 1) | Name similarity 1, contribution 10: equal support keeps both names in full |
-| AC-1.6 | Probe `Robbins`. Handle names `Robins` (support 3), `Robbins` (support 1) | Name similarity 0.857, with the pair `Robbins` and `Robins`, not 1 |
-| AC-1.7 | Values with support 0 (unknown) | Every weight is 1 and scores equal today's |
+| AC-1.6 | Probe `Robbins`. Handle names `Robins` (support 3), `Robbins` (support 1) | Name similarity 0.857, the pair `Robbins` and `Robins`, not 1 |
+| AC-1.7 | Values loaded without cache evidence (`Counted` false) | Every weight is 1 and scores equal today's |
+| AC-1.8 | Probe male. Handle values male (support 1, reason `kept`), female (support 3, reason `weak`) | Contribution +1. Probe female: −2. The displayed value leads, as on the Person page |
+| AC-1.9 | Handle values `unknown` (neutral term, support 5), male (support 1). Probe female | Contribution −2: the neutral value never leads |
 
 **US-2.** As a researcher, when a Subject carries a negative Observation ("not male", "not born in York") or the handle carries evidence against one of its values, I see that count as a contradiction.
 
 | AC | Given / when | Then |
 | --- | --- | --- |
-| AC-2.1 | Probe has a negative `sex_at_birth` male Observation. Handle male (support 3), female (support 1) | Contribution −2. The reason names the negative value and `male` |
-| AC-2.2 | The same negative probe against a handle that is female (support 3), male (support 1) | No contradiction: the negative matches only a minority value. The feature scores from the probe's positives, or is not comparable when the probe has none |
-| AC-2.3 | A negative probe value matches a candidate value | The negative never adds credit |
-| AC-2.4 | Candidate value `male` is `denied`, or has `against` ≥ `support`. Probe male | Contribution −2: the probe asserts a value the handle's evidence refutes. The reason names the two |
-| AC-2.5 | Candidate values male (support 3, against 2), female (support 2, against 0). Probe female | Both values lead after the reduction (1 and 2 → weights 0.5 and 1 for male and female). Probe female scores +1 |
+| AC-2.1 | Probe has a negative `sex_at_birth` male Observation. Handle male (support 3), female (support 1) | Contribution −2. The reason names the negative `male` and `male` |
+| AC-2.2 | The same negative probe against a handle that is female (support 3), male (support 1) | No contradiction, no credit. With no positive value on the probe, the feature is not comparable and is skipped |
+| AC-2.3 | A probe has a positive female and a negative male. Handle male (support 3), female (support 1) | Contribution −2 (the negative matches the leader; the positive does not rescue it) |
+| AC-2.4 | Candidate value male has reason `denied`. Probe male | Contribution −2: the probe asserts a value the handle's evidence refutes. The reason names the two |
+| AC-2.5 | Candidate values male (support 3, against 2), female (support 2, against 0). Probe female, then probe male | Female leads (effective 2); male weighs 0.5. Probe female: +1. Probe male: similarity 0.5, contribution +0.5 |
 | AC-2.6 | `SubjectsValues` for a Subject with one positive and one negative Observation | Both come back; the negative has `Negative` set and its Observation id |
+| AC-2.7 | A Subject that has only a negative Observation on a profile Property, ranked with `ForSubject` | The feature is skipped, and a probe whose profile Properties hold only negatives ranks nothing |
 
 **US-3.** As a contributor, when I read a `Reason`, I can tell which two values produced it.
 
 | AC | Given / when | Then |
 | --- | --- | --- |
-| AC-3.1 | Any credited or contradicted reason | `Reason.Probe` and `Reason.Candidate` carry the value's label; the probe's carries its Observation id when it has one |
+| AC-3.1 | Any credited or contradicted reason | `Reason.Probe` and `Reason.Candidate` carry the label, the negative flag, and for a probe value its Observation id |
 | AC-3.2 | `EvaluateWithNames` for the stray-name case of AC-1.4 | The comparison is a conflict, not an agree |
+| AC-3.3 | The same Subject and handle scored twice, rows read in a different order | The same pair is reported |
 
 ## 3. Scope
 
 | In | Covered by |
 | --- | --- |
-| Weight each value by its support relative to the leading value on its side, after subtracting `against` | STEP-1, STEP-2, AC-1.1, AC-1.2, AC-1.3, AC-1.4, AC-1.5, AC-1.6, AC-1.7, AC-2.5 |
-| Judge contradictions against the leading values of each side | STEP-2, AC-1.1, AC-1.3, AC-1.4 |
-| Load negative Observations of a Subject; score a negative that matches a leading value as a contradiction | STEP-3, AC-2.1, AC-2.2, AC-2.3, AC-2.6 |
-| Load `support`, `against`, and `denied` from the handle cache, for both the matching loader and Promote's graph loader | STEP-3, STEP-4, AC-2.4, AC-2.5 |
-| `Reason` names the probe value and the candidate value | STEP-1, STEP-2, AC-3.1 |
+| Weight each value by its effective support relative to the leading value on its side | STEP-1, STEP-2, AC-1.1, AC-1.2, AC-1.3, AC-1.4, AC-1.5, AC-1.6, AC-1.7, AC-1.8, AC-1.9, AC-2.5 |
+| Judge contradictions against the leading values of each side | STEP-1, AC-1.1, AC-1.3, AC-1.4, AC-1.8, AC-1.9 |
+| Load negative Observations of a Subject; score a negative that matches a leading value as a contradiction | STEP-3, AC-2.1, AC-2.2, AC-2.3, AC-2.6, AC-2.7 |
+| Load `support`, `against`, and `reason` from the handle cache, for the matching loader and Promote's graph loader | STEP-3, STEP-4, AC-2.4, AC-2.5 |
+| `Reason` and `PropertyComparison` name the probe value and the candidate value | STEP-2, AC-3.1, AC-3.2, AC-3.3 |
 | Docs: `matching.md`, the spike design note, the map, `completed.md` | STEP-5 |
 
 | Out | Home |
@@ -85,44 +89,50 @@ A handle's values count in proportion to how well supported they are, and a nega
 | A concluded value dominating the others (Reconciliation Claims) | [`docs/ideas/name-matching-enhancements.md`](../../../ideas/name-matching-enhancements.md) |
 | Remembering a rejected claim | same idea note |
 | A Promote layout for the reason text, or a sentence built from the pair | S10-36 covers crops only; not planned |
+| Support weights in Promote's exhibit chooser (`exhibits.go` keeps picking members by similarity) | not planned (D-10) |
 | A support weight on the incoming Subject's own values (each Observation counts 1) | not planned |
 | Claim confidence or Source credibility as a weight | not planned: the spike decided "share of support, not rank and not claim confidence" |
 | Changing the auto-reconciler, its cache, or `against` counting | not planned |
+| Unifying `Value.Label` with the exhibit display chain | not planned: exhibits resolve term labels from the catalog (D-7) |
 | A migration | not planned |
 
 ## 4. Current state
 
-Verified at `a4e9de4` (S10-27's plan merged, no S10-27 code). Rows marked **S10-27** describe the plan's design, not code on `main`. Check them on landing.
+Verified at `a4e9de4` (S10-27's plan merged, no S10-27 code). Rows marked **S10-27** describe that plan's design, not code on `main`. Check them on landing.
 
 | Area | Where | Today |
 | --- | --- | --- |
-| Pair selection | `core/match/match.go` `best` | The highest similarity over every comparable pair. Two values of any support count alike. **S10-27** changes it to pick by `similarity × (1 − discount)` and return `(similarity, discount, ok)` (S10-27 D-9) |
+| Pair selection | `core/match/match.go` `best` (two callers: `Score` line 114, `compareProperty` in `pair.go` line 95) | The highest similarity over every comparable pair. Two values of any support count alike. **S10-27** changes it to pick by `similarity × (1 − discount)` and return `(similarity, discount, ok)` (S10-27 D-9) |
 | Scoring | `core/match/match.go` `Score`, `Reason`, `Rank` | `Contribution = Weight × Similarity`, or `−Contradiction` at similarity 0. `Reason` has `Property`, `Similarity`, `Contribution`. **S10-27** adds `Reason.Discount` |
-| Pairwise evaluation | `core/match/pair.go` `evaluate`, `compareProperty`, `PropertyComparison` | Calls `best`. A comparable zero is a conflict (single) or unknown (multiple). **S10-27** adds `PropertyComparison.Discount` |
-| Value shape | `core/match/match.go` `Value` | No support, no polarity, no label |
-| Comparers | `core/match/compare.go` `Comparer`; **S10-27** `DiscountComparer`, `CompareDiscount` | `TermComparer` returns 0 for two different terms and not comparable for a neutral one |
-| Handle cache | `auto_reconciler_values` (`support`, `against`, `reason`, `rank`); `core/database/autoreconciler/autoreconciler.go` | One row per distinct value. `support` is distinct Sources, `against` is negatives that counted against the value, `reason` is `kept`, `outvoted`, `weak`, `denied`, or `provisional` |
-| Matching loader | `core/database/matching/matching.go` `sqlEntityValues`, `scanEntityValues` | Selects neither `support`, `against`, nor `reason` |
-| Subject loader | `core/database/matching/matching.go` `sqlSubjectsValues`, `SubjectsValues` | `WHERE o.polarity = 'positive'`: negatives never load. Shared by `ForSubject` and `core/database/promotealign/layer.go` |
-| Promote's handle values | `core/database/graphcache/graph.go` `Value` (`Support`, `Against`, `Reason`); `core/database/promotealign/canon.go` `handleValues` | The graph row has all three; `handleValues` copies none of them |
-| Readers of `Values` that would see a negative | `core/graphalign/score.go` `uFor`; `core/graphalign/align.go` `subjectHasValues` | Both iterate every value of a Property. `exhibits.go` and `terms.go` already filter `polarity = 'positive'` in SQL |
-| Tests | `core/match/match_test.go`, `core/match/pair_test.go`, `core/database/matching/matching_test.go` (`newFixture`, `handle`, `termed`, `named`) | Green at the base |
+| Pairwise evaluation | `core/match/pair.go` `evaluate`, `compareProperty`, `PropertyComparison` | A comparable zero is a conflict (single) or unknown (multiple). **S10-27** adds `PropertyComparison.Discount` |
+| Value shape | `core/match/match.go` `Value` | No support, no reason, no polarity, no label |
+| Same-value test | `core/autoreconcile/modules.go` `Compatible(valueType, a, b)`; `core/database/promotealign/exhibits.go` `exhibitCompatible`, `exhibitAuto` | The test the reconciler uses to deny and to count `against`; Promote's agreement test. `exhibitAuto` adapts a `match.Value` to it. `core/match/words.go` already imports `autoreconcile` |
+| Handle cache | `auto_reconciler_values` (`support`, `against`, `reason`, `rank`, all but `rank` NOT NULL or defaulted); `core/autoreconcile/autoreconcile.go` `Reason*` constants and `ReconciledValue.Displayed` | One row per distinct value. `support` is distinct Sources, `against` is negative Observations that counted against the value, `reason` is `kept`, `outvoted`, `weak`, `denied`, or `provisional`. `Displayed` is `reason == kept` |
+| Matching loader | `core/database/matching/matching.go` `sqlEntityValues`, `scanEntityValues` | Selects none of `support`, `against`, `reason`. Rows come `ORDER BY e.ref, r.entity_id` with no order within a handle |
+| Subject loader | `core/database/matching/matching.go` `sqlSubjectsValues` (`WHERE o.polarity = 'positive'`), `SubjectsValues`; callers `loadSubjectValues`, `core/database/promotealign/layer.go` line 48 | Negatives never load. No `ORDER BY` |
+| Promote's handle values | `core/database/graphcache/graph.go` `Value` (`Support`, `Against`, `Reason`, `Rank`); `core/database/graphcache/load.go` selects all three; `core/database/promotealign/canon.go` `handleValues` | The graph row has them; `handleValues` copies none |
+| Readers of `Values` that would misread a negative | `core/graphalign/score.go` `uFor`; `core/graphalign/align.go` `subjectHasValues`; `core/database/promotealign/canon.go` line 80 (`len(s.Values) == 0`); `core/database/matching/matching.go` `rank` (`len(probe) == 0`) | Each treats any value as a value. `exhibits.go` and `terms.go` already filter `polarity = 'positive'` in SQL |
+| Subject-versus-Subject checks | `core/graphalign/align.go` lines 774, 854, 865 call `evaluate` on two Subjects | Both sides hold Subject values, so both can now carry negatives |
+| Exhibit chooser | `core/database/promotealign/exhibits.go` (loop at lines 195–225) | Compares an incoming Observation with member Observations, by raw similarity, and pins on `agree`. **S10-27** changes it to `s × (1 − d)` |
+| Tests | `core/match/match_test.go`, `core/match/pair_test.go`, `core/database/matching/matching_test.go` (`newFixture`, `handle`, `termed`, `named`), `core/database/promotealign/promotealign_test.go`, `bench_test.go` `bulkCanon` | Green at the base. `matching_test.go` is package `matching_test` and cannot call `bulkCanon` |
 
-**Precedent.** S10-27 added a per-pair factor to `best`, `Score`, and `Evaluate` through one seam (its D-8, D-9). Copy that: one function selects and reports the pair, and `Score`, `compareProperty`, and the exhibit chooser all call it. Do not copy its optional-interface plumbing: this PR needs none.
+**Precedent.** S10-27 put a per-pair factor behind one seam (its D-8, D-9): `best` selects and reports the pair, and `Score` and `compareProperty` call it. Copy that. Exhibits are not a third caller: they pick a member Observation with their own loop, and neither plan changes that (D-10).
 
 ## 5. Decisions
 
 | ID | Decision | Why | Rejected |
 | --- | --- | --- | --- |
-| D-1 | A value's weight is its effective support divided by the highest effective support among the standing values on its side (D-3). The leading value weighs 1. User answer 2026-10-16. | A stray one-of-five weighs 0.2. Two equally supported names (a maiden and a married name) both weigh 1, so a probe that matches either is a full match. | Share of the total — two equal names would each weigh 0.5, so a probe matching either would score a half match |
-| D-2 | A candidate value is **disputed** when its reason is `denied`, or when `support > 0` and `against ≥ support`. A disputed value casts no credit, and a probe that asserts it contradicts. A value with `against < support` stays standing with effective support `support − against`. User answer 2026-10-16. | The reconciler already decided that a stronger negative refutes a `denied` value. `against` is the count of negatives that did not win but still count. | Reading only the incoming Subject's negatives — leaves the evidence the reconciler already cached unused |
-| D-3 | Effective support is `support − against` when `support > 0`, else 1 (unknown). A standing value is one that is not disputed. Weights are computed per side, for the Subject probe and for the handle candidate alike. A Subject's own values all weigh 1. | A handle probe (merge hints) has the same stray-reading problem as a handle candidate. Support 0 means the loader did not know, so scores equal today's (AC-1.7). | Weighting only the candidate — makes `ForEntity` asymmetric |
-| D-4 | One function, `pairValues(cmp Comparer, probe, candidate []Value) PairResult`, returns the similarity, the discount, whether the pair is comparable, and the two values that produced it. `best` is deleted. Its rules, in order: **R1** a negative probe value that matches a leading candidate value is a contradiction. **R2** a probe value that matches a disputed value, with no standing value matching it, is a contradiction. **R3** when the leading values of both sides are all comparable and every leader pair has similarity 0, that is a contradiction. Otherwise the credit is the maximum of `similarity × weightA × weightB × (1 − discount)` over standing positive pairs, reported with similarity `similarity × weightA × weightB`. A contradiction reports similarity 0. | One rule picks the pair everywhere, which is also what S10-27 asked of `best`. R3 is "judge against the consensus": a minority that agrees does not rescue a mismatch. | Keeping `best` and adding a second function — two selection rules for `Score`, `Evaluate`, and exhibits to choose between |
-| D-5 | "Matches" for R1 and R2 means similarity ≥ `SameValue` = 0.95 (a `const` in `registry.go` beside `AliasCredit`). Text, terms, and integers return 0 or 1, dates reach it only on an exact match, and names reach it on an exact or accent-fold match. | A negative says "not exactly this". A near-spelling or a partial date is not that value. | A setting — a threshold with one caller; a const is enough until a second appears |
-| D-6 | Negative values ride in `Values` with `Value.Negative` set. Only `pairValues` consumes them. The two readers in §4 (`uFor`, `subjectHasValues`) skip a negative value. | `Values` is the type every caller already passes. A separate negatives map would need a new parameter on `Rank`, `Evaluate`, and `Align`. | A parallel `Negatives` map — touches five signatures |
-| D-7 | `Reason` gains `Probe` and `Candidate`, both `ValueRef{Label string; ObservationID []byte}`. `Value.Label()` is the label: the text, the term key, the integer, `datevalues.CompactDisplay`, or the name's `Form`. Only a loaded probe Observation has an id. | "Names the two values (or their ids)" with no schema change. A candidate value is a cache cluster, which has no single Observation. | Candidate Observation ids from `auto_reconciler_outcomes` — a second query per candidate for an id that does not name a value |
-| D-8 | `scanEntityValues` selects `support`, `against`, `reason` and sets `Value.Support`, `Value.Against`, `Value.Denied = reason == 'denied'`. `handleValues` in `canon.go` copies the same three from `graphcache.Value`. `SubjectsValues` drops the `polarity = 'positive'` filter, selects `o.polarity` and `o.id`, and sets `Negative` and `ObservationID`. | The loaders are the only places the data enters. The columns and the graph fields exist. | A second loader for negatives — a second query per read |
-| D-9 | `Rank`'s `MinScore` cut and Promote's scales are unchanged. A contradiction reaches them as similarity 0, which both already treat as a conflict. | Nothing downstream needs to know why. | A new outcome — no consumer would read it |
+| D-1 | A value's weight is its effective support divided by the leaders' effective support (D-3). A leader weighs 1. User answer 2026-10-16. | A stray one-of-five weighs 0.2. Two equally supported names (a maiden and a married name) both lead, so a probe that matches either is a full match. | Share of the total — two equal names would each weigh 0.5 |
+| D-2 | A candidate value whose reason is `denied` has weight 0, never leads, and a probe value that is Compatible with it is a contradiction (R2). `against` reduces effective support by that count, floored at 0. A value at 0 has weight 0, never leads, and does not contradict. A `kept` value with `against ≥ support` is therefore not a contradiction: the reconciler displays it. User answer 2026-10-16, narrowed to the stated wording. | The reconciler already decided that a stronger negative refutes a `denied` value. `against` counts negative Observations and `support` counts distinct Sources; the PR offsets one for one by decision and does not convert. | Treating `against ≥ support` as disputed — contradicts a value the Person page shows |
+| D-3 | **Definitions.** `Counted` is true on values a cache loader fills; every other value has weight 1. Effective support is `max(Support − Against, 0)` when `Counted`, else 1. A **voting** value is positive, not `denied`, not `provisional`, not `Neutral`, and has effective support above 0. The **leaders** of a side are the voting values with reason `kept` (or not `Counted`) that share the highest effective support; when none is `kept`, the voting values that share it. A voting value's weight is `min(1, effective ÷ leader effective)`. Negative values are never voting. | Leaders follow what the reconciler displays, so Promote agrees with the Person page. A neutral or provisional value never decides a match. | Leaders by raw support — three weak readings could outrank one strong displayed value |
+| D-4 | One function, `pairValues(cmp Comparer, probe, candidate []Value) PairResult`, replaces `best`. Rules in order. **R1** a negative value on one side that is Compatible (D-5) with a leader on the other is a contradiction, naming the pair. **R2** a positive value on one side that is Compatible with a `denied` value on the other, when no voting value on that other side is Compatible with it, is a contradiction. **R3** when both sides have leaders, at least one leader pair is comparable, and every comparable leader pair has similarity 0, that is a contradiction. Otherwise the credit is the highest `similarity × weightA × weightB × (1 − discount)` over comparable voting positive pairs, reported with similarity `similarity × weightA × weightB`. With no comparable voting pair the result is not comparable. A contradiction has similarity 0, discount 0, and is comparable. Negative values take part only in R1. A negative against a negative is ignored. The reported pair for equal keys is the first in this order: each side sorted by displayed first, then effective support descending, then `Label` ascending; probe value first, then candidate value. | One rule picks the pair everywhere. R3 judges against the consensus, so a minority that agrees does not rescue a mismatch. AC-2.2 follows from R1 alone: the probe has no positive value, so no leader pair exists on its side. No default profile Feature has cardinality `multiple` today, and `outcomeAtFloor` already reads a zero on a multiple Property as unknown. | Keeping `best` and adding a second function — two selection rules |
+| D-5 | "Compatible" is `autoreconcile.Compatible`. The value type is read from the fields a `Value` sets: `Name` → `name`, `Date` → `date`, `Term` non-empty → `term`, `HasInteger` → `integer`, `HasText` → `text`. `exhibitAuto` moves to `match.Value.Auto()`, and `exhibits.go` calls it. There is no similarity threshold. | The reconciler's own test decides what a negative counts against, including folds (`J. Robins` against `James Robins`). Two tests for "the same value" would drift as dates and names are tuned. | A `SameValue` similarity constant — disagrees with the reconciler both ways (a nickname scores 0.98; an initial scores under 0.95) |
+| D-6 | Negative values ride in `Values` with `Value.Negative` set. `Values.HasPositive()` *(new)* reports whether any value is positive. `uFor` skips negatives. `subjectHasValues`, the `canon.go` gate, and the `rank` early return use `HasPositive`. | `Values` is the type every caller already passes. A parallel map would need a new parameter on `Rank`, `Evaluate`, and `Align`. | A parallel `Negatives` map — touches five signatures |
+| D-7 | `Reason` and `PropertyComparison` each gain `Probe` and `Candidate`, both `ValueRef{Label string; ObservationID []byte; Negative bool}`, set from the `PairResult`. `Value.Label()` is the text; the term key; the integer in decimal; `datevalues.CompactDisplay` for a date; for a name its `Form`, else its part values joined by spaces. Only a probe value loaded from an Observation has an id. | "Names the two values (or their ids)" with no schema change. A candidate value is a cache cluster, which has no single Observation. Embedding `PairResult` would rename S10-27's `Reason.Similarity` and `Reason.Discount` fields. | Candidate Observation ids from `auto_reconciler_outcomes` — a second query per candidate |
+| D-8 | `Value.SetEvidence(support, against int, reason string)` *(new)* sets `Counted`, `Support`, `Against`, `Reason`, and `Denied` (`reason == autoreconcile.ReasonDenied`). `scanEntityValues` and `handleValues` both call it. `scanEntityValues` selects `r.support, r.against, r.reason`. `SubjectsValues` drops the positive filter, selects `o.id` and `o.polarity`, orders rows by `o.id`, and sets `Negative` and `ObservationID`. | One place maps the cache columns to the fields. The loaders are the only places the data enters. | Copying the mapping into both loaders — the near-copy the review found |
+| D-9 | `Rank`'s `MinScore` cut and Promote's scales are unchanged. A contradiction reaches them as similarity 0. A weighted credit below 1 reaches `ApplyScale` as it is, so a minority exact match (0.2, 0.5) is a partial under the scale's floor or a conflict below it. | Nothing downstream needs to know why. A probe that matches only a minority is weaker evidence, and the name scale's 0.75 floor says how weak is too weak. | A new outcome — no consumer would read it |
+| D-10 | `exhibits.go` keeps its own member picker. A Promote row can read conflict while an exhibit line shows an agreeing pinned pair for a minority value. | Exhibits compare an incoming Observation with member Observations, which carry no support; the cache cluster does. | Wiring `pairValues` into the exhibit loop — S10-27 already reshaped it, and the sheet's job is to show each pair |
+| D-11 | The file is `core/match/pairs.go` *(new)*. | `pair.go` is pairwise evaluation; this is pair selection. | `support.go` — names the input, not the job |
 
 ## 6. Design
 
@@ -130,15 +140,14 @@ Verified at `a4e9de4` (S10-27's plan merged, no S10-27 code). Rows marked **S10-
 
 | New *(this PR adds)* | Kind | Closest existing | Why not reuse or extend it |
 | --- | --- | --- | --- |
-| `core/match/support.go` *(new)* | file | `core/match/match.go` `best` | The weights, the rules, and `PairResult` outgrow a ten-line helper. `best` is deleted |
-| `match.PairResult`, `match.ValueRef`, `pairValues` *(new)* | type, type, func | S10-27 plan D-8 `CompareDiscount`, S10-27 `best` | The result is more than a triple now; the helper replaces `best` |
-| `Value.Support`, `Against`, `Denied`, `Negative`, `ObservationID`, `Value.Label` *(new)* | fields, method | `graphcache.Value` `Support`, `Against`, `Reason` | The cache row type belongs to `graphcache`; `match.Value` is the shape comparers read |
-| `Reason.Probe`, `Reason.Candidate` *(new)* | fields | `Reason.Property` | See D-7 |
-| `SameValue` *(new)* | const | `AliasCredit` in `registry.go` | See D-5 |
+| `core/match/pairs.go` *(new)* | file | `core/match/match.go` `best` | The weights, the three rules, and `PairResult` outgrow a ten-line helper. `best` is deleted |
+| `match.PairResult`, `match.ValueRef`, `pairValues` *(new)* | type, type, func | S10-27 D-8 `CompareDiscount`, S10-27 `best` | The result is more than a triple now |
+| `Value.Counted`, `Support`, `Against`, `Reason`, `Denied`, `Negative`, `ObservationID`, `Value.SetEvidence`, `Value.Label`, `Value.Auto`, `Values.HasPositive` *(new)* | fields, methods | `graphcache.Value` `Support`, `Against`, `Reason`; `exhibitAuto` | `graphcache.Value` is the cache row; `match.Value` is the shape comparers read. `exhibitAuto` moves, it is not copied |
+| `Reason.Probe`, `Reason.Candidate`, `PropertyComparison.Probe`, `PropertyComparison.Candidate` *(new)* | fields | `Reason.Property` | See D-7 |
 
-**Builds on.** The cache columns the auto-reconciler already fills; `graphcache.Value`; the pair-selection seam S10-27 creates.
-**Deletes.** `match.best`. Its two callers (`Score`, `compareProperty`) call `pairValues`.
-**Next adds.** A concluded value (Reconciliation Claims) becomes another input to the weight in `pairValues`. A reason sentence for Promote reads `Reason.Probe` and `Reason.Candidate` and adds no data.
+**Builds on.** The cache columns the auto-reconciler already fills; `graphcache.Value`; `autoreconcile.Compatible` and the `Reason*` constants; the pair-selection seam S10-27 creates.
+**Deletes.** `match.best`. `exhibitAuto` in `exhibits.go` (it moves to `match.Value.Auto`).
+**Next adds.** A concluded value (Reconciliation Claims) becomes another input to the weight in `pairValues`, and an explicit `Counted` stops a concluded value with support 0 from reading as unknown. A reason sentence for Promote reads `Reason.Probe` and `Reason.Candidate` and adds no data.
 
 ### Schema
 
@@ -148,13 +157,13 @@ None — no catalog change. The columns read exist in `auto_reconciler_values`.
 
 | Package | Change |
 | --- | --- |
-| `core/match` `match.go` | `Value` gains `Support`, `Against int`, `Denied`, `Negative bool`, `ObservationID []byte`. `Reason` gains `Probe`, `Candidate ValueRef`. `Score` calls `pairValues`; `best` is deleted |
-| `core/match` `support.go` *(new)* | `ValueRef`, `PairResult`, `pairValues`, `Value.Label` (D-1, D-2, D-3, D-4, D-5, D-6, D-7) |
-| `core/match` `pair.go` | `compareProperty` calls `pairValues`; `PropertyComparison` gains `Probe`, `Candidate ValueRef` |
-| `core/match` `registry.go` | `const SameValue = 0.95` |
-| `core/database/matching` `matching.go` | `sqlEntityValues` selects `r.support, r.against, r.reason`; `scanEntityValues` sets the three. `sqlSubjectsValues` selects `o.id, o.polarity` without the positive filter; `SubjectsValues` sets `Negative` and `ObservationID` |
-| `core/database/promotealign` `canon.go` | `handleValues` copies `Support`, `Against`, and `Denied` from the graph row |
-| `core/graphalign` | `uFor` and `subjectHasValues` skip `Negative` values |
+| `core/match` `match.go` | `Value` gains the fields of the Codebase-fit row. `Reason` gains `Probe`, `Candidate`. `Score` calls `pairValues`; `best` is deleted. `Values.HasPositive` |
+| `core/match` `pairs.go` *(new)* | `ValueRef`, `PairResult`, `pairValues`, `Value.SetEvidence`, `Value.Label`, `Value.Auto` (D-1 through D-8) |
+| `core/match` `pair.go` | `compareProperty` calls `pairValues`; `PropertyComparison` gains `Probe`, `Candidate` |
+| `core/database/matching` `matching.go` | `sqlEntityValues` selects `r.support, r.against, r.reason`; `scanEntityValues` calls `SetEvidence`. `sqlSubjectsValues` selects `o.id, o.polarity` without the positive filter and orders by `o.id`; `SubjectsValues` sets `Negative` and `ObservationID`. `rank` returns early when `!probe.HasPositive()` |
+| `core/database/promotealign` `canon.go` | `handleValues` calls `SetEvidence`. The line-80 gate uses `HasPositive` |
+| `core/database/promotealign` `exhibits.go` | `exhibitAuto` is replaced by `match.Value.Auto()` at its call sites. No other change |
+| `core/graphalign` | `uFor` skips `Negative` values. `subjectHasValues` uses `HasPositive` |
 
 ### FFI
 
@@ -171,24 +180,24 @@ None — no user-facing copy.
 ## 7. Steps
 
 **STEP-1 — Value shape and the pair function.**
-Files: `core/match/match.go`, `core/match/support.go` *(new)*, `core/match/support_test.go` *(new)*.
-Do: the `Value` fields, `ValueRef`, `PairResult`, `Value.Label`, and `pairValues` with D-1, D-2, D-3, D-4, D-5. Keep `best` until STEP-2.
-Check: `CGO_ENABLED=1 go test -tags fts5 ./core/match -run 'TestPairValues|TestValueLabel'` passes (T-1, T-2, T-3).
+Files: `core/match/match.go`, `core/match/pairs.go` *(new)*, `core/match/pairs_test.go` *(new)*.
+Do: the `Value` fields and methods, `ValueRef`, `PairResult`, and `pairValues` with D-1 through D-5 and D-11. Keep `best` until STEP-2.
+Check: `CGO_ENABLED=1 go test -tags fts5 ./core/match -run 'TestPairValues|TestValueLabel|TestSetEvidence'` passes (T-1, T-2, T-3).
 
 **STEP-2 — Use it in Score and Evaluate.**
-Files: `core/match/match.go`, `core/match/pair.go`, `core/match/registry.go`, `core/match/match_test.go`, `core/match/pair_test.go`.
-Do: `Score` and `compareProperty` call `pairValues`; delete `best`; `Reason` and `PropertyComparison` carry the pair (D-7); add `SameValue`.
-Check: `go test -tags fts5 ./core/match` passes, with every existing case unchanged (T-4, T-5).
+Files: `core/match/match.go`, `core/match/pair.go`, `core/match/match_test.go`, `core/match/pair_test.go`.
+Do: `Score` and `compareProperty` call `pairValues`; delete `best`; `Reason` and `PropertyComparison` carry the pair (D-7).
+Check: `CGO_ENABLED=1 go test -tags fts5 ./core/match` passes, with every existing case unchanged (T-4, T-5).
 
-**STEP-3 — Load support, against, denied, and negatives.**
+**STEP-3 — Load support, against, reason, and negatives.**
 Files: `core/database/matching/matching.go`, `core/database/matching/matching_test.go`.
-Do: D-8 for `scanEntityValues` and `SubjectsValues`.
-Check: `go test -tags fts5 ./core/database/matching` passes, including `TestForSubjectQueryCountIsConstant` (T-6, T-7).
+Do: D-8 for `scanEntityValues` and `SubjectsValues`; the `rank` early return (D-6).
+Check: `CGO_ENABLED=1 go test -tags fts5 ./core/database/matching` passes, including `TestForSubjectQueryCountIsConstant` (T-6, T-7).
 
-**STEP-4 — Promote's handle values and the two readers.**
-Files: `core/database/promotealign/canon.go`, `core/graphalign/score.go`, `core/graphalign/align.go`, `core/database/promotealign/promotealign_test.go`.
-Do: `handleValues` copies the three fields; `uFor` and `subjectHasValues` skip `Negative`.
-Check: `go test -tags fts5 ./core/graphalign ./core/database/promotealign` passes (T-8).
+**STEP-4 — Promote's handle values, the readers, and the moved adapter.**
+Files: `core/database/promotealign/canon.go`, `core/database/promotealign/exhibits.go`, `core/graphalign/score.go`, `core/graphalign/align.go`, `core/database/promotealign/promotealign_test.go`.
+Do: `handleValues` calls `SetEvidence`; the readers in D-6; `exhibitAuto` → `Value.Auto`.
+Check: `CGO_ENABLED=1 go test -tags fts5 ./core/graphalign ./core/database/promotealign` passes (T-8).
 
 **STEP-5 — Docs.**
 Files: `docs/matching.md`, `docs/deployment-plan/spike-10/name-matching-enhancements.md`, `docs/deployment-plan/spike-10/deployment-plan.md`, `docs/deployment-plan/spike-10/completed.md`, this plan.
@@ -201,18 +210,16 @@ Commits: one per behavior. The subject is one full imperative sentence that says
 
 | ID | Layer | File · test | Case: input → expected | Covers |
 | --- | --- | --- | --- | --- |
-| T-1 | Go | `core/match/support_test.go` `TestPairValues` *(new)* | Table-driven with hand-built `Value`s and `TermComparer`. Handle male 3 / female 1: probe female → similarity 0, pair (`female`, `male`); probe male → 1. Male 2 / female 2: probe female → 1. Support 0 on both → equals the old best. Male 3 against 2 and female 2: probe female → 1 | AC-1.1, AC-1.2, AC-1.3, AC-1.7, AC-2.5, D-1, D-3, D-4 |
-| T-2 | Go | same file `TestPairValuesNegatives` *(new)* | Negative male vs leader male → contradiction. Negative male vs minority male → no contradiction, no credit. `Denied` male, probe male → contradiction. `Against ≥ Support` same. A negative never raises similarity | AC-2.1, AC-2.2, AC-2.3, AC-2.4, D-2, D-5 |
-| T-3 | Go | `core/match/support_test.go` `TestValueLabel` *(new)* | Text, term, integer, date, and name values each give their label | AC-3.1, D-7 |
-| T-4 | Go | `core/match/match_test.go` `TestScoreSupport` *(new)* | `DefaultProfile("person")`. Probe `James Robins`, handle `Mary Smith` 5 / `James Robins` 1 → name similarity 0, contribution 0, reason pair (`James Robins`, `Mary Smith`). Probe `Mary Jones`, handle `Mary Smith` 1 / `Mary Jones` 1 → 10. Probe `Robbins`, handle `Robins` 3 / `Robbins` 1 → similarity 0.857. Sex cases of AC-1.1 and AC-1.2 → −2 and +1 | AC-1.1, AC-1.2, AC-1.3, AC-1.4, AC-1.5, AC-1.6, AC-3.1 |
+| T-1 | Go | `core/match/pairs_test.go` `TestPairValues` *(new)* | Table-driven with hand-built `Value`s and `TermComparer`. Male 3 / female 1: probe female → similarity 0, pair (`female`, `male`); probe male → 1. Male 2 / female 2: probe female → 1. Male 1 `kept` / female 3 `weak`: probe female → 0, probe male → 1. `unknown` neutral 5 / male 1: probe female → 0. Male (3, against 2) / female 2: probe female → 1, probe male → 0.5. Values with `Counted` false → equals the old best. Equal keys reported in the D-4 order, whatever the input order | AC-1.1, AC-1.2, AC-1.3, AC-1.7, AC-1.8, AC-1.9, AC-2.5, AC-3.3, D-1, D-3, D-4 |
+| T-2 | Go | same file `TestPairValuesNegatives` *(new)* | Negative male vs leader male → contradiction. Negative male vs minority male → no contradiction, no credit. Negative male alone vs female-led handle → not comparable. Positive female plus negative male vs male leader → contradiction. `Denied` male, probe male → contradiction. A value at effective 0 with `kept` → no credit, no contradiction. A negative never raises similarity. `Compatible` folds: negative `J. Robins` vs leader `James Robins` → contradiction | AC-2.1, AC-2.2, AC-2.3, AC-2.4, D-2, D-4, D-5 |
+| T-3 | Go | same file `TestValueLabel`, `TestSetEvidence` *(new)* | Text, term, integer, date, a name with a form, and a parts-only name each give their label. `SetEvidence` sets `Counted` and `Denied` from `denied` only | AC-3.1, D-7, D-8 |
+| T-4 | Go | `core/match/match_test.go` `TestScoreSupport` *(new)* | `DefaultProfile("person")`. Probe `James Robins`, handle `Mary Smith` 5 / `James Robins` 1 → name similarity 0, contribution equal to 0, reason pair (`James Robins`, `Mary Smith`). Probe `Mary Jones`, handle `Mary Smith` 1 / `Mary Jones` 1 → 10. Probe `Robbins`, handle `Robins` 3 / `Robbins` 1 → similarity 0.857. The sex cases of AC-1.1 and AC-1.2 → −2 and +1 | AC-1.1, AC-1.2, AC-1.4, AC-1.5, AC-1.6, AC-3.1 |
 | T-5 | Go | `core/match/pair_test.go` `TestEvaluateStrayName` *(new)* | `EvaluateWithNames` for the stray-name case → `conflict`, with the pair on the comparison | AC-3.2 |
-| T-6 | Go | `core/database/matching/matching_test.go` `TestScanEntityValuesSupport` *(new)* | A handle whose cache rows are inserted by SQL: male support 3, female support 1 (reason `kept`), a `denied` row. `ForSubject` for a female Subject gets −2 from sex; reasons name the pair | AC-1.1, AC-2.4, D-8 |
-| T-7 | Go | same file `TestSubjectsValuesNegatives` *(new)* | A Subject with a positive and a negative sex Observation → both values, the negative with `Negative` and its Observation id. `TestForSubjectQueryCountIsConstant` still holds | AC-2.1, AC-2.6, D-8 |
-| T-8 | Go | `core/database/promotealign/promotealign_test.go` `TestProposeJudgesAgainstTheMajority` *(new)* | A handle with cache rows `Mary Smith` support 5 and `James Robins` support 1; an incoming `James Robins`. The name comparison is a conflict, not an agree | AC-3.2, D-8 |
+| T-6 | Go | `core/database/matching/matching_test.go` `TestForSubjectJudgesAgainstTheMajority` *(new)* | `f.handle("person", named("Mary Robins"), termed("sex_at_birth", "male"))`; then by SQL: `UPDATE auto_reconciler_values SET support = 3` for the handle's sex row, and `INSERT INTO auto_reconciler_values (entity_id, property_id, rank, value_term_id, support, against, reason) VALUES (…, 2, <female term id>, 1, 0, 'kept')`. `ForSubject` for a Subject `Mary Robins`, female → the sex reason contribution is −2 and names `female` and `male`. A second case inserts the extra row with reason `denied` and a male Subject → −2 | AC-1.1, AC-2.4, D-8 |
+| T-7 | Go | same file `TestSubjectsValuesNegatives` *(new)* | A Subject with a positive and a negative sex Observation (`observations.Input{Polarity: observations.PolarityNegative}`) → both values, the negative with `Negative` and its Observation id, in `o.id` order. A Subject with only the negative → `ForSubject` returns no matches. `TestForSubjectQueryCountIsConstant` still holds | AC-2.1, AC-2.6, AC-2.7, D-8 |
+| T-8 | Go | `core/database/promotealign/promotealign_test.go` `TestProposeJudgesAgainstTheMajority` *(new)* | Promote a `Mary Smith` person; by SQL set its name row's support to 5 and insert a second name row (rank 2, `value_name` from `valuecodec.MarshalName`, support 1, reason `kept`) for `James Robins`; call `f.c.Graph().Drop()`; an incoming `James Robins` → the name comparison is a conflict, not an agree. A weighted 0.5 credit (AC-2.5 shape on a name) is a partial only when it clears the 0.75 floor, and a conflict below it | AC-3.2, D-9 |
 
-Fixture note: a handle's cache rows with chosen `support` are inserted with SQL into `auto_reconciler_values`, using the column list of the insert in `core/database/promotealign/bench_test.go` `bulkCanon` plus `support`, `against`, `reason`.
-
-Must stay green: everything `scripts/check-pr.sh` runs. The suites most likely to break are `core/match` (name invariants) and `core/database/promotealign` (weights asserted as numbers).
+Must stay green: everything `scripts/check-pr.sh` runs. A pre-existing test whose expected number changes is a stop-and-report, not an edit (see Stop conditions).
 
 ## 9. Definition of done
 
@@ -220,12 +227,13 @@ Must stay green: everything `scripts/check-pr.sh` runs. The suites most likely t
 - [ ] Every AC in §2 is true: test name or manual check line for each
 - [ ] Every T-# in §8 exists and passes
 - [ ] scripts/check-pr.sh prints check-pr: PASS (gofmt, go vet, go test, Xcode tests, catalog and plan-doc checks); on a host with no xcodebuild, the Go and plan-doc steps pass and the Xcode step is reported as not run
+- [ ] No pre-existing test needed a changed expectation; if one did, the work stopped and reported
 - [ ] No Out line was implemented; no code outside §4 / §6 was refactored
 - [ ] No new user-facing copy; no Swift change
 - [ ] Version bump: none
 - [ ] This plan: Status → Landed in #N (date); a Landed note lists every difference from the plan
-- [ ] deployment-plan.md: S10-28 Plan line status; completed.md: one short paragraph of what shipped
-- [ ] docs/matching.md: a section on support weights and negatives with the stray-name and one-female examples; the "Not yet handled" bullet no longer names support weighting (leave the other items in that bullet as they are)
+- [ ] deployment-plan.md: S10-28 Plan line status; the S10-28 "Depends on" reads "S10-24; sequenced after S10-27"; the S10-28 "In" says "relative to the best-supported value"; completed.md: one short paragraph of what shipped
+- [ ] docs/matching.md: the file table lists `pairs.go` and the new `match.go` and `pair.go` roles; a section on support weights and negatives with the stray-name and one-female examples; the "Not yet handled" bullet no longer names support weighting (leave the other items in that bullet as they are, and rebase over S10-27's edit to the same bullet)
 - [ ] name-matching-enhancements.md: "Weigh values by support" and "Negative evidence" say they landed in S10-28 and quote the leader-relative rule
 - [ ] PR description: what shipped, AC evidence, deviations, manual check
 ```
@@ -234,7 +242,7 @@ Must stay green: everything `scripts/check-pr.sh` runs. The suites most likely t
 
 The slice has no new chrome, so the check is a catalog run, not a screen.
 
-1. Run `go test -tags fts5 -run 'TestScoreSupport|TestProposeJudgesAgainstTheMajority' -v ./core/match ./core/database/promotealign`. See the stray-name case score 0 against a mostly-Mary-Smith handle, and the Promote name comparison read as a conflict.
+1. Run `CGO_ENABLED=1 go test -tags fts5 -run 'TestScoreSupport|TestProposeJudgesAgainstTheMajority' -v ./core/match ./core/database/promotealign`. See the stray-name case score 0 against a mostly-Mary-Smith handle, and the Promote name comparison read as a conflict.
 2. In a project where one handle has `male` on three Sources and `female` on one, add a Subject whose Observation says female and open Promote. The suggestion's sex comparison reads as a conflict.
 3. Add a negative Observation "sex at birth: male" to a Subject whose handle is male on most Sources. Promote reads the sex comparison as a conflict.
 
@@ -242,18 +250,21 @@ The slice has no new chrome, so the check is a catalog run, not a screen.
 
 | Risk | Mitigation |
 | --- | --- |
-| S10-27 lands differently from its plan, so `best`, `Reason`, or `PropertyComparison` differ from §4 | §4 marks every S10-27 row. The first action is to redo them against the landed code |
-| A mixed handle that was a clean match before drops in Promote | Intended (US-1, AC-1.4). The fixtures that assert it are T-4 and T-8 |
-| A name with two real aliases of unequal support loses recall | The weaker alias weighs support ÷ leader support and still credits. Recorded in the spike note as the cost of "share of support" |
-| A negative Observation on a Property with `Contradiction` 0 (names in `DefaultProfile`) scores nothing | Intended: the contradiction points belong to the profile. Promote's name scale has −3 |
+| S10-27 lands differently from its plan, so `best`, `Reason`, `PropertyComparison`, or `exhibits.go` differ from §4 | §4 marks every S10-27 row. The first action is to redo them against the landed code |
+| A mixed handle that was a clean match before drops in Promote | Intended (US-1, AC-1.4). T-4 and T-8 assert it |
+| A name seen on one Source against a different name on five loses its name credit (a married name against a maiden name, probe on the married name) | Intended: R3 judges against the consensus, so that match is a contradiction in Promote's scale and zero in `Rank`. Equal support keeps both names (AC-1.5). Known-as handling is later ([`docs/ideas/name-matching-enhancements.md`](../../../ideas/name-matching-enhancements.md)) |
+| Real handles now load real `support`, so existing numeric expectations could move | Stop-and-report rule below; no existing expectation is edited in this PR |
+| A negative-only Subject reaches a reader that treats any value as a value | D-6 names the four readers; T-7 asserts the `ForSubject` case |
+| A Promote row reads conflict while its exhibit lines show an agreeing pair | Accepted (D-10) |
 
 **Stop and report if:**
 
 - S10-27 has not landed, or `best` is not the single pair-selection seam §4 describes. Redo §4 and tell the user what moved.
-- Any existing `core/match` case changes value when every `Value.Support` is 0.
-- `auto_reconciler_values` does not fill `support` and `against` for a Property this plan scores (a table of NULL or constant 0 for every row).
+- Any existing test in `core/match`, `core/database/matching`, `core/database/promotealign`, or `core/graphalign` needs a changed expected value to pass.
+- `auto_reconciler_values` does not fill `support`, `against`, and `reason` for a Property this plan scores (a constant 0 for every row).
 - A caller of `best` exists outside `Score` and `compareProperty`.
-- `SubjectsValues` has a caller that cannot tolerate a negative value in its result.
+- `SubjectsValues` has a caller outside `loadSubjectValues` and `layer.go` that cannot tolerate a negative value.
+- `autoreconcile.Compatible` cannot be called from `core/match` without an import cycle.
 
 ## 12. Open questions
 
