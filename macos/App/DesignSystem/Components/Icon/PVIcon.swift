@@ -93,6 +93,10 @@ enum PVSymbol: String {
     case trash = "trash"
     case plug = "powerplug.fill"
     case externalLink = "arrow.up.right.square"
+    /// Promote: file a Subject on a handle.
+    case promote = "arrow.turn.right.up"
+    /// Unpromote: take a filing back (S10-44).
+    case unpromote = "arrow.uturn.down"
     /// Lucide `arrow-up-right` — jump out of a blocker row.
     case arrowUpRight = "arrow.up.right"
     case fileUp = "doc.badge.plus"
