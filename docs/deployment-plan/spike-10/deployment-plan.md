@@ -259,7 +259,7 @@ SLICE 7 — How names compare (no new chrome)  (done 2026-10-16)
          not a year.
 
 SLICE 8 — Likeness
-  S10-55  File release from the declared model; one object purge
+  S10-55  File release from the declared model; one object purge — done, #423
   S10-53  Stage a client image: shared ingest checks, bounded decode, PNG re-encode
   S10-32  Depiction value (region + image File) + likeness on person (engine)
   S10-54  Depiction values over the FFI: draft input, image path in responses
@@ -640,7 +640,7 @@ S10-33 crop cache — descoped 2026-10-16
 
 #### S10-55 — File release from the declared model
 
-**Plan:** [`prs/S10-55-file-release.md`](prs/S10-55-file-release.md) — Planned
+**Plan:** [`prs/S10-55-file-release.md`](prs/S10-55-file-release.md) — Landed #423
 
 | | |
 | --- | --- |
