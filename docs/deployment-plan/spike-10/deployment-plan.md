@@ -577,10 +577,10 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 
 | | |
 | --- | --- |
-| **In** | A candidate value counts in proportion to its share of support, so one stray name or one dissenting sex term cannot score as the consensus. Negative Observations load and score as contradictions. Each reason names the two values (or their ids) that produced it. |
+| **In** | A candidate value counts in proportion to its support relative to the best-supported value, so one stray name or one dissenting sex term cannot score as the consensus. Negative Observations load and score as contradictions. Each reason names the two values (or their ids) that produced it. |
 | **Out** | Concluded values first. Remembering a rejected claim. A new Promote layout for the reason text (S10-36 covers crops only). |
 | **Testable** | One female among several males still contradicts. One James Robins on a handle that is otherwise Mary Smith does not score as a full name match. A reason identifies the pair. |
-| **Depends on** | S10-24 |
+| **Depends on** | S10-24; sequenced after S10-27 |
 
 #### S10-29 — Name patterns from the catalog
 
