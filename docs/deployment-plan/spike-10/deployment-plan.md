@@ -645,7 +645,7 @@ S10-33 crop cache — descoped 2026-10-16
 
 #### S10-51 — File release from the declared model
 
-**Plan:** [`prs/S10-51-file-release.md`](prs/S10-51-file-release.md) — Draft
+**Plan:** [`prs/S10-51-file-release.md`](prs/S10-51-file-release.md) — Planned
 
 | | |
 | --- | --- |
@@ -656,7 +656,7 @@ S10-33 crop cache — descoped 2026-10-16
 
 #### S10-53 — Stage a client image
 
-**Plan:** [`prs/S10-53-stage-image.md`](prs/S10-53-stage-image.md) — Draft
+**Plan:** [`prs/S10-53-stage-image.md`](prs/S10-53-stage-image.md) — Blocked — on S10-51
 
 | | |
 | --- | --- |

@@ -1,7 +1,7 @@
 # Review — S10-51 File release from the declared model
 
-**Verdict:** round 1: Fits with changes — Ready with changes (all applied). Round 2 pending.
-**Rounds:** 1 so far. **Reviewers:** maintainability (opus), executability (sonnet)
+**Verdict:** Fits with changes — Ready with changes (all applied).
+**Rounds:** 2. **Reviewers:** maintainability (opus), executability (sonnet)
 
 ## To user
 
@@ -64,3 +64,31 @@ None.
 
 ### X-8 · nit · Checks that cannot run here
 **Answer:** Fixed. STEP-7's check now has a `grep`. The manual check already says what to report without a Mac.
+
+## Round 2
+
+### X-9 · blocker · T-1 cannot compile once `deleteimpact` imports `files`
+**Answer:** Fixed. T-1 moves to `core/database/files/purge_test.go`, which is `package files_test`.
+
+### X-10 · blocker · `releaseFile` cannot count from a test FK slice
+**Answer:** Fixed. D-2 defines `ownedPlan{pointers, edges, pks}`. `releaseFile` and `countFilePointers` take the plan.
+
+### X-11 · blocker · STEP-3 needs a type STEP-4 creates
+**Answer:** Fixed. STEP-2 adds `ownedPlan` with `pointers` only, STEP-3 passes it, and STEP-4 fills `edges` and `pks`.
+
+### X-12 · major · T-5's entry point is unnamed
+**Answer:** Fixed. D-4 names `releaseOwnedRow(tx, p, table, id)`. The test tables now include `test_parent`, and `lookupParentColumn` reads the table's `PK`.
+
+### X-13 · major · STEP-7's grep fails
+**Answer:** Fixed. STEP-7 names each map row and doc line, and widens the grep (see M-9).
+
+### X-14 · minor · Small choices
+**Answer:** Fixed: T-1's `MkdirAll`; T-8 uses `toponymProp` with `writes.Call`; `observations.Delete` discards its return until STEP-5.
+
+AC-2.5's evidence is partial in this PR. T-8 shows only that an empty purge is harmless; S10-32's T-8 and T-9 are the first tests that release a File through observations and subjects. The S10-44 import note is a Risks row.
+
+### M-9 · major · Skill and rule lines this PR makes false
+**Answer:** Fixed. STEP-7 adds `.cursor/rules/catalog-migrations.mdc` and `catalog-deletes.mdc`, the add-catalog-model and add-catalog-delete lines, and `docs/catalog-deletes.md` lines 9, 10, 15, and 96. The grep is widened to `release list`, `release entry`, `ownedReleases`, and `CollectFileObjects`.
+
+### M-10 · minor · The precedent row overstates `inboundEdgeList`
+**Answer:** Fixed. §4 names `inboundEdgeList` as the `sync.OnceValue` shape and `tableByKind` as the read-from-the-model precedent.

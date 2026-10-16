@@ -1,7 +1,7 @@
 # Review — S10-53 Stage a client image
 
-**Verdict:** round 1: Fits with changes — Ready with changes (all applied). Round 2 pending.
-**Rounds:** 1 so far. **Reviewers:** maintainability (opus), executability (sonnet)
+**Verdict:** Fits — Ready with changes (all applied).
+**Rounds:** 2. **Reviewers:** maintainability (opus), executability (sonnet)
 
 ## To user
 
@@ -74,3 +74,41 @@ None.
 
 ### X-10 · nit · Fixtures
 **Answer:** Fixed. The test cap override replaces the 32 MiB fixture, and AC-1.2 and STEP-5 require real TIFF, GIF, and BMP encodings.
+
+## Round 2
+
+### X-11 · blocker · STEP-7's grep cannot pass, and an idea file's link breaks
+**Answer:** Fixed. STEP-7 adds `docs/ideas/large-jpeg-thumbnails.md` with the new path and the ImageIO note (M-10), and the grep is narrowed to `core`, `.agents`, and `docs/ideas`.
+
+### X-12 · major · Error precedence in STEP-1
+**Answer:** Fixed. D-2 keeps `c.DB()`, the trim, and `RequireUserID` in `File`, in today's order, and D-9 has `StageImage` call `c.DB()` first.
+
+### X-13 · major · A failure after the object write leaves an orphan
+**Answer:** Fixed. D-9 has `StageImage` discard its own object on any error after `WriteIfAbsent` reports `wrote`.
+
+### X-14 · minor · `WriteIfAbsent` details
+**Answer:** Fixed in D-6: the `.write-*` temp prefix, its own `sha256Hex`, and the `SyncDir` error ignored as today. M-14's package doc change is in the same decision.
+
+### X-15 · minor · T-7 and T-8 setup
+**Answer:** Fixed. The `Op.Action` is named, T-7 reads the changes from `InsertTx`'s return, T-8 makes the existing File by staging and committing, and D-10 uses `files.NewID()`'s two returns.
+
+### X-16 · minor · STEP-2 and D-4 wording
+**Answer:** Fixed. `raster_test.go` moves unchanged and is then extended, and D-4 keeps the security paragraph.
+
+### X-17 · minor · Two concurrent stages
+**Answer:** Accepted as a Risks row. `catalogsession.Do` serializes a project's operations.
+
+### M-10 · major · Grep and idea link
+**Answer:** Fixed with X-11.
+
+### M-11 · major · The codec leaves the security routing table
+**Answer:** Fixed. STEP-7 adds `core/raster` to the Security row of the ship-pr routing table.
+
+### M-12 · minor · T-4 restates the rule instead of enforcing it
+**Answer:** Fixed. T-4 loops over `stageFormats`.
+
+### M-13 · minor · `ingest.File`'s rollback is a second remover
+**Answer:** Fixed. D-2 moves it onto `files.PurgeUnreferenced`, and S10-51 D-1's doc line now names the purge as the only remover.
+
+### M-14 · nit · `objectstore` package doc
+**Answer:** Fixed in D-6.
