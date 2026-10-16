@@ -67,8 +67,8 @@ struct EvidenceCanvasCardContent {
     /// AppKit-drawn subject or bridge card. Records the measured hit layout
     /// before the canvas sizes the view, so edges and pointer targets exist
     /// for the opening batch.
-    func appKitView(for card: EvidenceCanvasCard) -> NSView {
-        let view = EvidenceAppKitCard(card: card, actions: accessibilityActions(for: card))
+    func cardView(for card: EvidenceCanvasCard) -> NSView {
+        let view = EvidenceCardView(card: card, actions: accessibilityActions(for: card))
         layouts.record(view.layout, for: card.id)
         return view
     }

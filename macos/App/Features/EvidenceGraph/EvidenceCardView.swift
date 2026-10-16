@@ -6,7 +6,7 @@ import SwiftUI
 /// The canvas hosts one of these instead of an `NSHostingView`. Text measurement
 /// here is also the hit layout edges and the pointer read, so a wrapped title
 /// or value moves its band with the paint. The placement ghost stays SwiftUI.
-final class EvidenceAppKitCard: NSView {
+final class EvidenceCardView: NSView {
     let layout: EvidenceCardLayout
     private let card: EvidenceCanvasCard
 
@@ -239,7 +239,7 @@ private func continuous(_ rect: CGRect, radius: CGFloat) -> NSBezierPath {
 
 // MARK: - Layout and paint
 
-private extension EvidenceAppKitCard {
+private extension EvidenceCardView {
     static func subject(
         _ placed: SourceGraphPlacedSubject,
         presentation: CatalogSubjectTypePresentation?,
@@ -711,7 +711,7 @@ private extension EvidenceAppKitCard {
 
 // MARK: - Text measurement
 
-private extension EvidenceAppKitCard {
+private extension EvidenceCardView {
     static var subjectValueWidth: CGFloat {
         EvidenceSubjectCard.width - EvidenceCitedPropertyMarks.leadingInset(shell: EvidenceSubjectCard.shellPaddingX) - EvidenceSubjectCard.shellPaddingX - 20
     }

@@ -1074,7 +1074,7 @@ private struct EvidenceGraphDocumentBody: View {
                 ),
                 model: card,
                 content: { content.view(for: card) },
-                appKitView: { content.appKitView(for: card) }
+                appKitView: { content.cardView(for: card) }
             )
         })
     }
