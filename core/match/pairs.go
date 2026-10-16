@@ -45,8 +45,8 @@ func (v *Value) SetEvidence(support, against, rank int, reason string) {
 	v.Support = support
 	v.Against = against
 	v.Rank = rank
-	v.Reason = reason
-	v.Denied = reason == string(autoreconcile.ReasonDenied)
+	v.Reason = autoreconcile.Reason(reason)
+	v.Denied = v.Reason == autoreconcile.ReasonDenied
 }
 
 // HasPositive reports whether any value is positive.
@@ -132,19 +132,19 @@ func (v Value) effective() int {
 		return 1
 	}
 	floor := 0
-	if v.Reason == string(autoreconcile.ReasonKept) {
+	if v.Reason.Displayed() {
 		floor = 1
 	}
 	return max(v.Support-v.Against, floor)
 }
 
 func (v Value) displayed() bool {
-	return !v.Counted || v.Reason == string(autoreconcile.ReasonKept)
+	return !v.Counted || v.Reason.Displayed()
 }
 
 // votes is whether the value may speak: positive, standing, evidence-bearing.
 func (v Value) votes() bool {
-	return !v.Negative && !v.Denied && v.Reason != string(autoreconcile.ReasonProvisional) &&
+	return !v.Negative && !v.Denied && v.Reason != autoreconcile.ReasonProvisional &&
 		!v.Neutral && v.effective() > 0
 }
 

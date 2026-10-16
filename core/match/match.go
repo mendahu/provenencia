@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"sort"
 
+	"github.com/mendahu/provenencia/core/autoreconcile"
 	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/namevalues"
 )
@@ -55,9 +56,9 @@ type Value struct {
 	// Support is the distinct Sources behind a cached value; Against the
 	// negative Observations that counted against it; Rank its order on the
 	// handle; Reason the auto-reconciler's verdict (kept, outvoted, weak,
-	// denied, provisional). Denied is Reason == denied. Set with SetEvidence.
+	// denied, provisional), not a match.Reason. Denied is Reason == denied. Set with SetEvidence.
 	Support, Against, Rank int
-	Reason                 string
+	Reason                 autoreconcile.Reason
 	Denied                 bool
 	// Negative marks a negative Observation: it never speaks for a match, it
 	// counts against a value it is compatible with. ObservationID is the
