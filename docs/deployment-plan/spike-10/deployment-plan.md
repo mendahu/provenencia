@@ -562,6 +562,8 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 
 #### S10-27 — Name frequency
 
+**Plan:** [`prs/S10-27-name-frequency.md`](prs/S10-27-name-frequency.md) — Draft
+
 | | |
 | --- | --- |
 | **In** | Weight a name word by its inverse frequency among name words in this project, so a shared rare surname outranks a shared Smith. Computed at score time from the catalog (or a small derived count rebuilt with the search index — the PR picks one and tests it). A project with one household does not zero out every name. |
