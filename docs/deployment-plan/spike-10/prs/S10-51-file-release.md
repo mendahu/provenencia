@@ -72,7 +72,7 @@ A stored File is deleted only when nothing in the catalog still points at it, an
 | Out | Home |
 | --- | --- |
 | The depiction value, its FKs, and its update call | S10-32 |
-| Moving `core/database/observations/update.go` `releaseDateValue` / `releaseNameValue` onto `ReleaseReplaced` | Not planned; they also emit `date_value` / `name_value` audit changes the shared release does not |
+| Moving `core/database/observations/update.go` `releaseDateValue` / `releaseNameValue` onto `ReleaseReplaced` | S10-32 (its D-9 `releaseReplacedValue` writes the audit change and calls `ReleaseReplaced`) |
 | `Impact(KindFile)` inbound edges from the declared pointer set | The next PR that adds a File delete; no File delete exists today |
 | Staging a client image | S10-53 |
 | Auditing File or thumbnail rows on release | Not planned; releases stay unaudited as today |
