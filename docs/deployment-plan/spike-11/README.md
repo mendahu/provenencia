@@ -18,7 +18,8 @@ This spike is entirely about the Promote flow's matching: making the algorithm g
 - **Packages:** value compare (`core/valuecompare`) and property compare (`core/propertycompare`).
 - **Layer 1 compares two values** of one type and returns a normalized result (relation + similarity) plus structured reasoning.
 - **Layer 2 compares one property** between two Subjects, with only what a Subject can say about itself: negatives, neutral terms, cardinality, missing values. No support or standing.
-- **Frequency weighting is not a comparison.** It moves above layer 2.
+- **Frequency weighting is not a comparison,** and name frequency is descoped.
+- **The entity profile is strict:** only the reconciled conclusion. Real alternates (maiden names) belong in the conclusion. The profile builder is its own package.
 - **Layer 3 is Subject comparison:** one Subject against one Subject. It combines property comparisons and holds the ones that span properties.
 - **Layer 4 is entity comparison against the reconciled conclusion,** not each member. The conclusion becomes a Subject-shaped profile (concluded values positive, denied values negative), then layer 3 runs. Support weighting is outsourced to the reconciler. Graph alignment is layer 5.
 - **`Contains` scores below 1, and `Near` has a minimum similarity** per type, in layer 1.

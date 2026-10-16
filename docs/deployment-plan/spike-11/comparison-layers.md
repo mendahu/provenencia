@@ -22,7 +22,7 @@ Packages: layer 1 is **value compare** (`core/valuecompare`), and layer 2 is **p
 |---|---|---|---|
 | 1 | **Value comparison** | How do these two values relate? | This doc |
 | 2 | **Property comparison** | Do these two Subjects agree on one property? | This doc |
-| 3 | **Subject comparison** | How alike are these two Subjects on their own values? | Later. Combines property comparisons, holds comparisons that span properties, and weights each by how informative it is (frequency, § Frequency) |
+| 3 | **Subject comparison** | How alike are these two Subjects on their own values? | Later. Combines property comparisons and holds comparisons that span properties |
 | 4 | **Entity comparison** | Does this Subject belong with this entity? | Decided in shape (§ Entities): subject comparison against the entity's reconciled conclusion |
 | 5 | Candidate scoring and graph alignment | Which handle is this Subject? | Later (`Rank`, link points, `Align`) |
 
@@ -65,7 +65,7 @@ type Result struct {
 | A term's neutral flag (sex `unknown`) | **No → layer 2** | "Is this value evidence?" is a property-level decision |
 | Negative polarity, denied, provisional, support counts | **No → layer 2** | Context about the value on its side, not about the value |
 | Cardinality (single or multiple) | **No → layer 2** | A property fact |
-| Word or value frequency in the catalog | **No → layer 3** | Changes *how informative* a match is, not how alike |
+| Word or value frequency in the catalog | **No** (name frequency descoped, § Frequency) | Changes *how informative* a match is, not how alike |
 | Another property (an event's `start_date` when comparing `date`) | **No → layer 3** | Spans properties, so it is a Subject-level comparison |
 
 **A test for the boundary:** would two researchers with the same rules but different catalogs expect a different answer? If yes, the input belongs higher up.
@@ -158,7 +158,7 @@ type PartMatch struct {
 ```
 
 - **`Cause` is a shared vocabulary of codes:** `exact`, `case`, `fold`, `alias`, `abbreviation`, `initial`, `spelling`, `precision`, `missing_part`, `overlap`, `gap`, `beyond_tolerance`, `generation_conflict`, `empty`, `phrase_only`. UI copy, reason codes and labeler features are all keyed on these.
-- **`Parts` is what layer 3 needs for frequency.** Today the name discount needs to know which words paired. Layer 1 exposes them, and layer 3 looks up how common they are.
+- **`Parts` explains the match.** Which words or ends paired is what the UI shows and what the labeler records as features.
 - **No strings to parse.** The display text is for showing; logic reads the codes.
 
 ### Purity requirements
@@ -261,36 +261,39 @@ This is the feature vector the matching test suite's fit needs: one outcome, rel
 |---|---|
 | The concluded value (several when tied leaders show together, or when the property is multi-valued) | positive |
 | A value the researcher denied | negative |
-| Outvoted, weak, provisional | left out (open below) |
+| Outvoted, weak, provisional | left out |
 
-**Still needed above the comparison.** The reconciler weighs a group's *own* members. It doesn't say how common a value is across the *catalog*. A reconciled "John Smith" matching a Subject's "John Smith" is weaker evidence than a rare name matching, so frequency weighting (§ Frequency) still applies in layers 3–4.
+**The profile is strict (decided 2026-10-16).** Only the conclusion goes in. An outvoted value is, by the group's own judgment, not true. A real alternate, such as a maiden name, belongs in the conclusion: the auto-reconciler flags it, or the researcher records a Reconciliation Claim. Maiden names are not built yet, but that is the intended path. If a true value is missing from the conclusion, that is a reconciliation fix, not a matching rule. A single name mismatch is also weighed alongside sex, dates, relationships and the rest of the graph above this layer, so it doesn't decide a match alone.
 
-## Frequency moves to layer 3
+**The profile builder is its own package** (name to choose, e.g. `core/entityprofile`). It turns reconciler output into a profile and compares nothing.
 
-**Decided:** frequency is not a comparison. It's about how informative a match is, which depends on the catalog.
+## Frequency
 
-- `NameComparer` loses `Frequency` and the discount. `DiscountComparer` is retired.
-- Today there are two versions of one idea: `u` from `Stats.ValueFreq` for text and terms, and word counts from `Stats.Words` for names. Layer 3 unifies them into one weight from frequency. It reads layer 1's `Parts` to know which words or values matched.
-- Layer 3 (Subject comparison) is the tentative home. Its design comes later. This doc only fixes that layers 1 and 2 don't read catalog statistics.
+**Decided:** frequency is not a comparison. Layers 1 and 2 never read catalog statistics.
+
+**Decided (2026-10-16): name frequency is descoped.** "Common names count for less" is a subjective weighting. The one place it could matter is Subject-to-entity matching, and there the other properties and the graph (dates, sex, relationships, neighbors) already tell look-alikes apart. It adds noise and a tunable without earning its place.
+
+- Remove `NameComparer.Frequency`, the discount, `DiscountComparer`, `CompareDiscount` and `Stats.Words` (shipped in S10-27).
+- Open: the frequency weights on other properties (below).
 
 ## What moves where in today's code
 
 | Today | Goes to |
 |---|---|
 | `match.Comparer`, `ComparerFor`, the five comparers | Layer 1, returning `Result` + `Detail` |
-| `NameComparer.Frequency`, `DiscountComparer`, `CompareDiscount` | Layer 3 |
+| `NameComparer.Frequency`, `DiscountComparer`, `CompareDiscount`, `Stats.Words` | Removed (name frequency descoped) |
 | `TermComparer`'s neutral check | Layer 2, step 1 |
 | `autoreconcile.SpellingSimilarity`, `NormalizeForm`, `IsInitial` | Layer 1 |
 | `pairValues`' negatives and multiple cardinality (`pairs.go`) | Layer 2 |
 | `pairValues`' leaders and support weights | Gone: the entity profile (layer 4) contains only the conclusion |
 | `poolPeriods` (`periods.go`) | Layer 3 (spans properties) |
 | Promote's scale floors and outcome logic (`ApplyScale`) | Layer 2's outcome table |
-| Promote's scale weights, contradiction, frequency weights (`resolvedScale`) | Layer 3 |
+| Promote's scale weights and contradiction (`resolvedScale`) | Layer 3. The frequency weights in it are open (below) |
 | `autoreconcile.Compatible` and grouping | Stays in the reconciler as its own decision logic, built on value compare (and property compare where it helps) instead of its own key rules |
-| `match.Value`'s reconciler fields (`Support`, `Against`, `Reason`, `Denied`) | Layer 4's profile builder. `Negative` stays as layer 2 polarity |
+| `match.Value`'s reconciler fields (`Support`, `Against`, `Reason`, `Denied`) | The profile builder package. `Negative` stays as layer 2 polarity |
 
 ## Open questions
 
 - **The reconciler's grouping rules.** Which relations make two values "show once" is the reconciler's call (rule 7), designed with its own PR. Today's disagreements to resolve there: `Montréal` / `Montreal` and `Jim` / `James` agree in matching but don't group or pin; `J. Robins` / `James Robins` groups but only scores partial.
-- **Non-concluded values in the profile.** An entity with a maiden and a married name concludes one of them. Leaving the other out means a Subject recording the maiden name conflicts. Options: leave it out (strict), or include outvoted values that nobody denied, so a match on one softens the result to partial.
-- **Where the profile builder lives.** It reads reconciler output, so probably beside the reconciler or the catalog adapter, not in a comparison package.
+- **Frequency weights on other properties.** Promote also derives event-type and toponym weights from how common the value is (`ln(m/u)` from `Stats.ValueFreq`, lifted to 2). It's the same idea as name frequency. Descope it too, and use plain registry weights that the labeler can fit later?
+- **The profile builder's package name.**
