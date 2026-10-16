@@ -120,6 +120,9 @@ struct EvidenceCanvasCardContent {
                 navigation.go(to: location)
             }
         }
+        .accessibilityAction(named: Text(L10n.EvidenceGraph.unpromote)) {
+            if placed.membership != nil { model.beginUnpromote(subjectID: placed.id) }
+        }
         .accessibilityAction(named: Text(verbatim: card.text.deleteActionName)) {
             Task { await model.beginDelete(subjectID: placed.id) }
         }
@@ -168,12 +171,23 @@ struct EvidenceCanvasCardContent {
     }
 
     private func accessibilityActions(for card: EvidenceCanvasCard) -> [NSAccessibilityCustomAction] {
+        namedActions(for: card).map { name, run in
+            NSAccessibilityCustomAction(name: name) {
+                run()
+                return true
+            }
+        }
+    }
+
+    /// The card's VoiceOver actions, in order. The live card maps these to
+    /// custom actions; tests read them here.
+    func namedActions(for card: EvidenceCanvasCard) -> [(name: String, run: () -> Void)] {
         let model = model
         let navigation = navigation
         func go(_ location: WorkspaceLocation?) {
             if let location { navigation.go(to: location) }
         }
-        var named: [(String, () -> Void)] = []
+        var named: [(name: String, run: () -> Void)] = []
         switch card.placed {
         case .subject(let placed, _):
             named.append((L10n.string(L10n.EvidenceGraph.editAccessibility), {
@@ -187,6 +201,11 @@ struct EvidenceCanvasCardContent {
                     go(placed.membership == nil
                         ? model.promoteLocation(for: placed.id)
                         : model.openHandle(subjectID: placed.id))
+                }))
+            }
+            if placed.membership != nil {
+                named.append((L10n.string(L10n.EvidenceGraph.unpromote), {
+                    model.beginUnpromote(subjectID: placed.id)
                 }))
             }
             named.append((card.text.deleteActionName, {
@@ -211,12 +230,7 @@ struct EvidenceCanvasCardContent {
                 Task { await model.beginDelete(subjectID: placed.id) }
             }))
         }
-        return named.map { name, run in
-            NSAccessibilityCustomAction(name: name) {
-                run()
-                return true
-            }
-        }
+        return named
     }
 
     private static func addPropertyActionName(canCite: Bool) -> LocalizedStringResource {

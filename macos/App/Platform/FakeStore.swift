@@ -1411,6 +1411,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 claimBySubject[id] = nil
             }
             var effects = bumpSource(sourceID, evidence: true)
+            effects.sources = [sourceID]
             effects.handles = removed
             return effects
         }

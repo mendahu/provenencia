@@ -196,6 +196,53 @@ private struct EvidenceGraphContent: View {
                 navigation.go(to: location)
             }
         )
+        .pvConfirm(
+            item: $model.pendingUnpromote,
+            copy: { item in
+                PVConfirmCopy(
+                    title: L10n.EvidenceGraph.unpromoteConfirmTitle(name: item.name),
+                    message: L10n.string(L10n.EvidenceGraph.unpromoteConfirmMessage),
+                    confirm: L10n.EvidenceGraph.unpromote,
+                    cancel: L10n.EvidenceGraph.unpromoteKeep
+                )
+            },
+            tone: .irreversible,
+            isRunning: model.isUnpromoting,
+            accessibilityIdentifierPrefix: "evidenceGraph.unpromote",
+            onConfirm: { Task { await model.confirmUnpromote() } },
+            detail: unpromoteDetail
+        )
+    }
+
+    /// The bridges that come off with the filing, then a write error. Nothing
+    /// when there are neither.
+    @ViewBuilder
+    private func unpromoteDetail(_ item: EvidenceGraphModel.PendingUnpromote) -> some View {
+        if !item.bridges.isEmpty || item.error != nil {
+            VStack(alignment: .leading, spacing: PVSpacing.space3) {
+                if !item.bridges.isEmpty {
+                    Text(L10n.EvidenceGraph.unpromoteConfirmBridgesHeader)
+                        .font(PVFont.body(size: PVTypeScale.micro, weight: PVFontWeight.semibold))
+                        .tracking(PVTypeScale.micro * PVTracking.caps)
+                        .textCase(.uppercase)
+                        .foregroundStyle(PVColor.textMuted)
+                    VStack(alignment: .leading, spacing: PVSpacing.space2) {
+                        ForEach(Array(item.bridges.enumerated()), id: \.offset) { _, sentence in
+                            Text(verbatim: sentence)
+                                .font(PVFont.body(size: PVTypeScale.bodySmall))
+                                .foregroundStyle(PVColor.textPrimary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                    }
+                    Text(L10n.EvidenceGraph.unpromoteConfirmBridgesNote)
+                        .font(PVFont.body(size: PVTypeScale.caption))
+                        .foregroundStyle(PVColor.textSecondary)
+                }
+                if let error = item.error {
+                    PVCallout(tone: .danger, message: error)
+                }
+            }
+        }
     }
 
     private var accessibilityGraphLabel: Text {
