@@ -657,9 +657,11 @@ S10-33 crop cache — descoped 2026-10-16
 
 #### S10-53 — Stage a client image
 
+**Plan:** [`prs/S10-53-stage-image.md`](prs/S10-53-stage-image.md) — Draft
+
 | | |
 | --- | --- |
-| **In** | Preparatory, engine only. Extract the open-and-check step from `ingest.File` (absolute path, no symlink, regular file, size cap) so it and image staging share one copy. Extract one bounded decode (format allowlist, pixel budget) from `raster.EncodeJPEG`, shared by it and a new PNG encoder. A two-phase API: before a write, `derivatives.StageImage` checks, decodes under the existing decode semaphore, scales to at most 2048 on the long edge, re-encodes PNG, and writes the object; inside the write, the staged image inserts its `files` row (audited `create_file`) or reuses an existing one; on failure, `Discard` removes an object it wrote. Working rule "The client renders the image…". No FFI. |
+| **In** | Preparatory, engine only. Extract the open-and-check step from `ingest.File` (absolute path, no symlink, regular file, size cap) so it and image staging share one copy. Extract one bounded decode (format allowlist, pixel budget) from `raster.EncodeJPEG`, shared by it and a new PNG encoder. A two-phase API in `core/ingest` (not `core/derivatives`: the image is not a disposable derivative): before a write, `ingest.StageImage` checks, decodes under the existing decode semaphore, scales to at most 2048 on the long edge, re-encodes PNG, and writes the object; inside the write, the staged image inserts its `files` row (audited `create_file`) or reuses an existing one; on failure, `Discard` removes an object it wrote. Working rule "The client renders the image…". No FFI. |
 | **Out** | Who calls it (S10-32). Auditing thumbnails. A Go PDF renderer. |
 | **Testable** | A symlink, a directory, an empty file, a file over the cap, a non-image, a decompression bomb past the pixel budget, and a polyglot whose sniff is not an allowed raster are refused before any write. A valid 4000-pixel JPEG crop is stored as a PNG at most 2048 on its long edge, and the stored bytes are not the input bytes. A discarded stage leaves no object. `ingest.File` and thumbnails behave as before. |
 | **Depends on** | — |
@@ -852,7 +854,7 @@ Everything else in **Working rules** is decided for planning. Correct any of the
 | S10-25, S10-32 | Seeded vocabulary: abbreviation and nickname tables, `likeness` / `depiction`. |
 | S10-32 | [`interpretation-layer-data-model.md`](../../interpretation-layer-data-model.md): the `depiction` value type and `depiction_values`. |
 | S10-51 | [`source-layer-data-model.md`](../../source-layer-data-model.md): a File is released when no declared pointer remains. [`add-catalog-delete`](../../../.agents/skills/add-catalog-delete/SKILL.md): file pointers and nested releases come from `catalogmodel` and `ownedReleases`; one purge. |
-| S10-53 | `core/derivatives` package doc: it also stages validated client images, which are not disposable derivatives. |
+| S10-53 | [`source-layer-data-model.md`](../../source-layer-data-model.md) §6: a File can hold an app-rendered image Go re-encoded; the `core/ingest` package doc. |
 | S10-32 | [`add-audit-scope`](../../../.agents/skills/add-audit-scope/SKILL.md): a depiction value and its image `files` row are audited; thumbnails stay `None`. [`add-seeded-vocabulary`](../../../.agents/skills/add-seeded-vocabulary/SKILL.md): `term` and `depiction` are the registry-only value types. |
 | S10-52 | [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md) §7: the `depiction` module. |
 | S10-29 | [`docs/matching.md`](../../matching.md) and [`docs/structured-name-model.md`](../../structured-name-model.md): the Western profile is installed; roles and weights are catalog rows. |
