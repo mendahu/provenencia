@@ -1,6 +1,6 @@
 # International names — later
 
-**Status:** idea, not scheduled. Spike 10 takes accent folding in matching (not display, not the auto-reconciler), spaced particles, a short nickname table, and collation with a default locale and no picker. Daitch–Mokotoff was descoped (S10-26); the design is [`daitch-mokotoff.md`](daitch-mokotoff.md). S10-29 installed the Western name-format profile and reads it from the catalog. Spanish dual surnames and a `patronymic` part are unscheduled again, below. Design: [`spike-10/international-names.md`](../deployment-plan/spike-10/international-names.md). Abbreviations, project name frequency, and the rest of the matcher are in [`name-matching-enhancements.md`](name-matching-enhancements.md) for the leftovers, and in that same spike for what it builds.
+**Status:** idea, not scheduled. Spike 10 takes accent folding in matching (not display, not the auto-reconciler), spaced particles, and a short nickname table. Collation was descoped (S10-37, 2026-10-16) and is below. Daitch–Mokotoff was descoped (S10-26); the design is [`daitch-mokotoff.md`](daitch-mokotoff.md). S10-29 installed the Western name-format profile and reads it from the catalog. Spanish dual surnames and a `patronymic` part are unscheduled again, below. Design: [`spike-10/international-names.md`](../deployment-plan/spike-10/international-names.md). Abbreviations, project name frequency, and the rest of the matcher are in [`name-matching-enhancements.md`](name-matching-enhancements.md) for the leftovers, and in that same spike for what it builds.
 
 ## Scripts and sound
 
@@ -29,4 +29,5 @@ S10-29 seeds `western` only. Both surname words keep the single family weight. S
 
 - **Per-person name format.** A Reconciliation Claim on `name_format`. Until that exists, every name uses the project default profile. Each name already may carry its own pattern once a loader sets `Value.NamePattern`.
 - **Accent merging on the Person page.** José and Jose match in suggestions and stay separate groupings. An auto-reconciler rule that folds them is later, and it is manual reconciliation until then.
-- **Collation picker.** The project has a locale setting (default `en`) and no control. A viewer who wants a locale other than the project's (a shared tree read abroad) is the same gap.
+- **Collation locale.** A project setting (default `en`) whose locale orders name lists through `golang.org/x/text/collate`, so accented and unaccented names sort in that locale's order. Comparison fold is not the sort, and the match score does not change. Descoped from S10-37 (2026-10-16); nothing stores a locale today.
+- **Collation picker.** A control for that setting. A viewer who wants a locale other than the project's (a shared tree read abroad) is the same gap.

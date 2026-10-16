@@ -6,7 +6,7 @@ Usability fixes from [`docs/dogfood/ux.md`](../../dogfood/ux.md) after Spike 9, 
 
 ## Status
 
-**Open.** Slice 1 is done (2026-10-11). S10-01…S10-04 landed in [#361](https://github.com/mendahu/provenencia/pull/361)–[#364](https://github.com/mendahu/provenencia/pull/364). S10-05, S10-07, S10-08, S10-12, S10-13, S10-15, S10-42, and S10-43 landed in [#368](https://github.com/mendahu/provenencia/pull/368), [#369](https://github.com/mendahu/provenencia/pull/369), [#370](https://github.com/mendahu/provenencia/pull/370), [#371](https://github.com/mendahu/provenencia/pull/371), [#372](https://github.com/mendahu/provenencia/pull/372), [#375](https://github.com/mendahu/provenencia/pull/375), [#373](https://github.com/mendahu/provenencia/pull/373), and [#374](https://github.com/mendahu/provenencia/pull/374) (2026-10-12). S10-46, S10-47, and S10-48 were descoped in [#367](https://github.com/mendahu/provenencia/pull/367). S10-06 was descoped in [#368](https://github.com/mendahu/provenencia/pull/368): searching `marriage` already lists a title that contains the word ahead of a fuzzy name. S10-10 was descoped in [#370](https://github.com/mendahu/provenencia/pull/370): a common cluster belongs in [`ideas/evidence-graph-structure-shortcuts.md`](../../ideas/evidence-graph-structure-shortcuts.md), which covers more than a default role. S10-11 was already done in [#356](https://github.com/mendahu/provenencia/pull/356): a citation with 70 Observations opens quickly. S10-14 and S10-D1 were descoped in [#370](https://github.com/mendahu/provenencia/pull/370): an adaptive choice field is not a priority for this spike. S10-26 was descoped 2026-10-12: Daitch–Mokotoff is [`ideas/daitch-mokotoff.md`](../../ideas/daitch-mokotoff.md). Later landings go in [`completed.md`](completed.md).
+**Open.** Slice 1 is done (2026-10-11). S10-01…S10-04 landed in [#361](https://github.com/mendahu/provenencia/pull/361)–[#364](https://github.com/mendahu/provenencia/pull/364). S10-05, S10-07, S10-08, S10-12, S10-13, S10-15, S10-42, and S10-43 landed in [#368](https://github.com/mendahu/provenencia/pull/368), [#369](https://github.com/mendahu/provenencia/pull/369), [#370](https://github.com/mendahu/provenencia/pull/370), [#371](https://github.com/mendahu/provenencia/pull/371), [#372](https://github.com/mendahu/provenencia/pull/372), [#375](https://github.com/mendahu/provenencia/pull/375), [#373](https://github.com/mendahu/provenencia/pull/373), and [#374](https://github.com/mendahu/provenencia/pull/374) (2026-10-12). S10-46, S10-47, and S10-48 were descoped in [#367](https://github.com/mendahu/provenencia/pull/367). S10-06 was descoped in [#368](https://github.com/mendahu/provenencia/pull/368): searching `marriage` already lists a title that contains the word ahead of a fuzzy name. S10-10 was descoped in [#370](https://github.com/mendahu/provenencia/pull/370): a common cluster belongs in [`ideas/evidence-graph-structure-shortcuts.md`](../../ideas/evidence-graph-structure-shortcuts.md), which covers more than a default role. S10-11 was already done in [#356](https://github.com/mendahu/provenencia/pull/356): a citation with 70 Observations opens quickly. S10-14 and S10-D1 were descoped in [#370](https://github.com/mendahu/provenencia/pull/370): an adaptive choice field is not a priority for this spike. S10-26 was descoped 2026-10-12: Daitch–Mokotoff is [`ideas/daitch-mokotoff.md`](../../ideas/daitch-mokotoff.md). S10-38 and S10-45 landed together in [#382](https://github.com/mendahu/provenencia/pull/382) (2026-10-12), so Slice 9 is done. S10-31 and S10-37 were descoped 2026-10-16, which closes Slice 7: related events and place chains are in [`ideas/name-matching-enhancements.md`](../../ideas/name-matching-enhancements.md), and the collation locale is in [`ideas/international-names.md`](../../ideas/international-names.md). Later landings go in [`completed.md`](completed.md).
 
 > **Goal of this spike:** the annoyances logged while entering real research are gone, and the app still behaves the way Spike 8 and Spike 9 decided.
 
@@ -59,14 +59,14 @@ Usability fixes from [`docs/dogfood/ux.md`](../../dogfood/ux.md) after Spike 9, 
 | Support weighting + negative evidence | S10-28 | — |
 | Name patterns: schema, Western seed, loaders | S10-29 | — |
 | Date windows in matching | S10-30 | — |
-| Related event types + place chains | S10-31 | — |
+| Related event types + place chains | S10-31, descoped 2026-10-16 | — |
 | Depiction value type + `likeness` | S10-32 | — |
 | Crop cache | S10-33 | — |
 | Composer depiction row | S10-34 | S10-D15 |
 | Person gallery + list thumb | S10-35 | S10-D12, S10-D9 |
 | Preferred portrait | S10-39 | S10-D12, S10-D9 (same boards as S10-35) |
 | Promote compares two crops | S10-36 | S10-D13 |
-| Project collation locale (no picker) | S10-37 | — |
+| Project collation locale (no picker) | S10-37, descoped 2026-10-16 | — |
 | Seed event type `engagement`; couple title like marriage | S10-38 | — |
 | List scroll on the history entry | S10-40 | — |
 | Sources list filters and text search | S10-41 | S10-D8 |
@@ -234,7 +234,7 @@ SLICE 6 — Lists and the Person page
          Source drops out. A Person with gender shows gender; one with only
          sex at birth shows that; unknown is neutral.
 
-SLICE 7 — How names compare (no new chrome)
+SLICE 7 — How names compare (no new chrome)  (done 2026-10-16)
   S10-24  Accent fold (0.95) and spaced particles — done, #378
   S10-25  Abbreviation and nickname tables — done, #379
   S10-26  Daitch–Mokotoff below near-spelling — descoped. See ideas/daitch-mokotoff.md.
@@ -242,8 +242,8 @@ SLICE 7 — How names compare (no new chrome)
   S10-28  Support-weighted scores, negative evidence, reasons name the pair — done, #411
   S10-50  Promote sheet lines show the values they compared (term labels; rows with no exhibit) (after S10-28) — done, #413
   S10-30  Date windows, ABT-on-spans, date vs start/end — done, #415
-  S10-31  Birth~baptism, death~burial, place part_of
-  S10-37  Collation locale on name ordering (after S10-29)
+  S10-31  Birth~baptism, death~burial, place part_of — descoped. See ideas/name-matching-enhancements.md.
+  S10-37  Collation locale on name ordering — descoped. See ideas/international-names.md.
   Check: José suggests Jose and the Person page still shows both spellings.
          Jas. Smith suggests James Smith. One female among many males does not
          cancel the contradiction. December 1817 vs January 1818 is days apart,
@@ -261,9 +261,9 @@ SLICE 8 — Likeness
          the other faces stay. Promote shows the two pictures. Clearing the
          cache does not lose the Citation.
 
-SLICE 9 — Seeded vocabulary
-  S10-38  Seed engagement; two subjects title "Engagement of A and B"
-  S10-45  Seed Person property interests (text, multiple, unlocked)
+SLICE 9 — Seeded vocabulary  (done 2026-10-12)
+  S10-38  Seed engagement; two subjects title "Engagement of A and B" — done, #382
+  S10-45  Seed Person property interests (text, multiple, unlocked) — done, #382
   Check: a new catalog lists Engagement and Interests. Two people title as a
          couple. An existing catalog gains neither.
 
@@ -275,7 +275,7 @@ SLICE 10 — Take a filing back
 S10-99 — Dogfood close / docs
 ```
 
-S10-05…S10-13, S10-15, S10-19, S10-42, and S10-43 have no dependency on the graph slice. S10-24, S10-29, S10-30, S10-31, S10-32, S10-38, and S10-45 have no dependency on the dogfood slices. They are ordered here so review stays one stream. Parallel PRs are fine when **Depends on** allows it. S10-D4 does not wait on S10-29.
+S10-05…S10-13, S10-15, S10-19, S10-42, and S10-43 have no dependency on the graph slice. S10-24, S10-29, S10-30, S10-32, S10-38, and S10-45 have no dependency on the dogfood slices. They are ordered here so review stays one stream. Parallel PRs are fine when **Depends on** allows it. S10-D4 does not wait on S10-29.
 
 ### Dependencies at a glance
 
@@ -302,7 +302,7 @@ S10-D6 ──▶ S10-20 graph file select + Open, and box-select
 S10-D6 ──▶ S10-44 unpromote (button drawn on the S10-20 board)
 S10-D12 (gender + gallery + preferred portrait) ──▶ S10-23
 S10-D4 ──▶ S10-17 name parts
-                 └──▶ S10-37 collation
+                 └──▶ S10-37 collation — descoped 2026-10-16
 
 S10-24 fold ──▶ S10-25 tables
 S10-26 phonetic — descoped 2026-10-12. See ideas/daitch-mokotoff.md.
@@ -611,21 +611,11 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 
 #### S10-31 — Related events and place chains
 
-| | |
-| --- | --- |
-| **In** | Term affinity: birth~baptism and death~burial score a partial, not a contradiction and not a full match. Place comparison can credit a `part_of` chain (York contained in Toronto, or the reverse) as a partial. An equal toponym stays the full score. |
-| **Out** | A general gazetteer. Place renames beyond the chain the catalog already has (`succeeded_by` may be read the same way if the chain composer already exposes it; the PR says which). |
-| **Testable** | Birth vs baptism scores between 0 and 1. Birth vs death still contradicts. A place and its parent score a partial; two unrelated places do not. |
-| **Depends on** | — |
+**Descoped 2026-10-16.** Birth~baptism and death~burial term affinity, and crediting a `part_of` place chain as a partial, are in [`ideas/name-matching-enhancements.md`](../../ideas/name-matching-enhancements.md).
 
 #### S10-37 — Collation locale
 
-| | |
-| --- | --- |
-| **In** | Project setting for the collation locale, default `en`. Name sort order (list `sort_key` consumers that order names, and Sources A–Z if it sorts text) uses `golang.org/x/text/collate` for that locale. Comparison fold is not the sort. |
-| **Out** | A control to change the locale. Swedish or Spanish tailoring beyond what CLDR does for the default locale. |
-| **Testable** | With the default locale, accented and unaccented names sort in that locale's order, and the match score is unchanged. |
-| **Depends on** | S10-29 |
+**Descoped 2026-10-16.** A project collation locale and `x/text/collate` sort order are in [`ideas/international-names.md`](../../ideas/international-names.md), with the picker. Name lists keep their current `sort_key` order. Matching's accent fold (S10-24) is unchanged.
 
 ### Slice 8 — Likeness
 
@@ -695,21 +685,11 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 
 #### S10-38 — Seed event type `engagement`
 
-| | |
-| --- | --- |
-| **In** | Add `engagement` / Engagement to `subjectvocab` `seedTerms` for `event_type`, beside `marriage`. Install on catalog create only ([`add-seeded-vocabulary`](../../../.agents/skills/add-seeded-vocabulary/SKILL.md)). [`docs/seeded-vocabulary.md`](../../seeded-vocabulary.md) §3.4 lists the key. `eventtitle.Choose` titles every event type from the subject count: one subject is *{Type} of {A}*, two are *{Type} of {A} and {B}*, and three or more are *{Type} of {A} et al.* The two-subject template is that shape in `EventTitleDisplay` and in the search-index title, so a marriage still reads *Marriage of A and B* and an engagement reads *Engagement of A and B*. Follow [`add-localized-string`](../../../.agents/skills/add-localized-string/SKILL.md) for the template. No new chrome, so no brief. |
-| **Out** | A migration that inserts the term into existing catalogs. Those projects get the term by hand. Matching affinity with marriage. A new role. Three or more subjects (still *et al.*). |
-| **Testable** | A catalog created after this PR offers Engagement. Two subjects title *Engagement of A and B* on the list, the page, and in search. A marriage of two still titles *Marriage of A and B*. Three subjects of an engagement title *Engagement of A et al.* Opening an older catalog does not add the term. |
-| **Depends on** | — |
+**Landed 2026-10-12** in [#382](https://github.com/mendahu/provenencia/pull/382). See [`completed.md`](completed.md).
 
 #### S10-45 — Seed `interests` on Person
 
-| | |
-| --- | --- |
-| **In** | Add `interests` / Interests to the person property seed: `value_type = text`, cardinality `multiple`, bound to `person`, unlocked ([`add-seeded-vocabulary`](../../../.agents/skills/add-seeded-vocabulary/SKILL.md)). Install on catalog create only. [`docs/seeded-vocabulary.md`](../../seeded-vocabulary.md) §3.2 and §3.3 list the key. No new chrome, so no brief. The composer and the Person page show it the way they show any other text property. |
-| **Out** | A migration that inserts the property into existing catalogs. A match feature. A header line. A term list. Locking the binding. |
-| **Testable** | A catalog created after this PR offers Interests on a Person, accepts more than one value, and lets the Properties page unbind it. Opening an older catalog does not add the property. |
-| **Depends on** | — |
+**Landed 2026-10-12** in [#382](https://github.com/mendahu/provenencia/pull/382). See [`completed.md`](completed.md).
 
 ### Slice 10 — Take a filing back
 

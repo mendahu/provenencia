@@ -25,7 +25,7 @@ What this spike builds is below. Accents are in [`international-names.md`](inter
 
   S10-28 weighs each value by its effective support relative to the best-supported value on its side (a leader weighs 1), and judges contradictions against the leaders. A concluded value dominating the rest waits on Reconciliation Claims ([`ideas/name-matching-enhancements.md`](../../ideas/name-matching-enhancements.md)).
 - **Negative evidence (S9-14; landed in S10-28).** Negative Observations load, and one that is compatible with a leading value on the other side counts as a contradiction.
-- **Event types and places relate.** Birth vs baptism, death vs burial should partly match. That's a term-affinity table, the same pattern as name roles. Place comparison can use the `part_of` chain already shipped. Flat text stays the strong match.
+- **Event types and places relate (descoped with S10-31, 2026-10-16).** Birth vs baptism, death vs burial should partly match. That's a term-affinity table, the same pattern as name roles. Place comparison can use the `part_of` chain already shipped. Flat text stays the strong match. Now in [`ideas/name-matching-enhancements.md`](../../ideas/name-matching-enhancements.md).
 - **Date precision below the year (S9-21; landed in S10-30).** Spans and gaps are now measured in days from the stored windows:
   - December 1817 vs January 1818 scores 0.777, above May vs September of the same year (0.6).
   - "BET MAR 1817 AND JUN 1817" against a later month scores 0.734, because the range keeps its months and days.
