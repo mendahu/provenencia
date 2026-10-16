@@ -244,6 +244,40 @@ This is the feature vector the matching test suite's fit needs: one outcome, rel
   - on a multiple-value property, adding a different value never makes it conflict.
 - **Exact tables** for the Subject-level cases in today's `pairs_test.go` (negatives, cardinality, neutral terms), ported to the new types. The support and standing cases move to layer 4's tests.
 
+## Layer 3: Subject comparison (draft)
+
+**Requirements (2026-10-16):**
+- **Compare the properties both Subjects have.** If both have a name, compare names. A property on one side only is unknown and neither helps nor hurts.
+- **Registry-driven.** One registry defines every Subject type, its properties, and how each one counts in a Subject comparison. Layer 3 has the most levers of any comparison layer, and all of them live there.
+- **Comparisons that span properties are special cases, declared in the registry.** The known one: an event's `date` against another's `start_date` + `end_date`, read as one period.
+- **Mostly a knockout layer.** Subjects often have one or two properties, so Subject comparison gives little positive evidence. Its main job is ruling out the obvious: names nothing alike, different event types, different places. Relationships are not compared here; graph alignment does that, and that's where most positive evidence comes from.
+- **Agreement and amount of evidence are different.** Two people whose names match exactly, and two whose names *and* genders match, both agree perfectly, but the second has more points of connection and is the better match. One 0–1 number can't say both.
+
+**Options for the result:**
+
+| Option | Name agrees | Name + gender agree | Catch |
+|---|---|---|---|
+| A. Agreement only: weighted mean over the properties compared | 1.0 | 1.0 | Can't tell the two apart |
+| B. Evidence points: sum of agree weights, minus conflict penalties | 2.5 | 3.1 | Not 0–1; meaning depends on the weights |
+| C. B squashed to 0–1 with a logistic curve | ~0.92 | ~0.96 | Means "confidence", not "similarity"; needs calibration |
+| D. Agreement × coverage of the type's properties | lower | higher | Punishes a sparse Subject as if missing were disagreeing |
+
+**Recommendation:** return A and B together, plus a verdict.
+- **Verdict:** `excluded` when a property the registry marks as a knockout conflicts (birth vs death), otherwise `compatible`. Callers drop excluded candidates cheaply, with the reason.
+- **Agreement (0–1):** is anything wrong? Explanation and triage.
+- **Evidence (points):** how much supports it. The main currency, because graph alignment adds relationship points on top, so both must be points.
+- **Confidence (C) is applied at the top of the stack, to the total of properties + links.** The labeler's ordered logistic regression is what fits it ([`ideas/matching-test-suite.md`](../../ideas/matching-test-suite.md)).
+
+| Case | Verdict | Agreement | Evidence |
+|---|---|---|---|
+| Name agrees | compatible | 1.0 | 2.5 |
+| Name + gender agree | compatible | 1.0 | 3.1 |
+| Name agrees, sex conflicts | compatible | 0.81 | 1.5 |
+| Event types agree, nothing else | compatible | 1.0 | 0.5 |
+| Birth vs death | excluded | — | — |
+
+**Registry shape,** per Subject type and property: agree weight, conflict penalty, knockout yes/no. The agree weight and conflict penalty are separate on purpose: event type has a low agree weight and a knockout conflict. Comparisons that span properties are entries too, with their own weights. Numbers above are today's where they exist and placeholders otherwise.
+
 ## Entities: compare against the conclusion
 
 **Decided (2026-10-16):** a Subject is compared with an entity's **reconciled values**, not with each member.
@@ -265,7 +299,7 @@ This is the feature vector the matching test suite's fit needs: one outcome, rel
 
 **The profile is strict (decided 2026-10-16).** Only the conclusion goes in. An outvoted value is, by the group's own judgment, not true. A real alternate, such as a maiden name, belongs in the conclusion: the auto-reconciler flags it, or the researcher records a Reconciliation Claim. Maiden names are not built yet, but that is the intended path. If a true value is missing from the conclusion, that is a reconciliation fix, not a matching rule. A single name mismatch is also weighed alongside sex, dates, relationships and the rest of the graph above this layer, so it doesn't decide a match alone.
 
-**The profile builder is its own package** (name to choose, e.g. `core/entityprofile`). It turns reconciler output into a profile and compares nothing.
+**The profile builder is its own package: subject profile builder** (`core/subjectprofilebuilder`; the shorter `core/subjectprofile` with a `Build` function is the Go-idiomatic alternative). It turns reconciler output into a Subject-shaped profile and compares nothing.
 
 ## Frequency
 
@@ -300,4 +334,3 @@ So every property weight is a plain registry number. The labeler can fit them la
 ## Open questions
 
 - **The reconciler's grouping rules.** Which relations make two values "show once" is the reconciler's call (rule 7), designed with its own PR. Today's disagreements to resolve there: `Montréal` / `Montreal` and `Jim` / `James` agree in matching but don't group or pin; `J. Robins` / `James Robins` groups but only scores partial.
-- **The profile builder's package name.**
