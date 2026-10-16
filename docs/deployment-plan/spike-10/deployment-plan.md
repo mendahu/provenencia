@@ -240,6 +240,7 @@ SLICE 7 — How names compare (no new chrome)
   S10-26  Daitch–Mokotoff below near-spelling — descoped. See ideas/daitch-mokotoff.md.
   S10-27  Project name-frequency weights — done, #409
   S10-28  Support-weighted scores, negative evidence, reasons name the pair — done, #411
+  S10-50  Promote sheet lines show the values they compared (term labels; rows with no exhibit) (after S10-28)
   S10-30  Date windows, ABT-on-spans, date vs start/end
   S10-31  Birth~baptism, death~burial, place part_of
   S10-37  Collation locale on name ordering (after S10-29)
@@ -305,7 +306,7 @@ S10-D4 ──▶ S10-17 name parts
 
 S10-24 fold ──▶ S10-25 tables
 S10-26 phonetic — descoped 2026-10-12. See ideas/daitch-mokotoff.md.
-S10-28 support + negatives (after S10-24, so fixtures settle once)
+S10-28 support + negatives (after S10-24, so fixtures settle once) ──▶ S10-50 sheet values
 
 S10-32 depiction type ──▶ S10-33 crop cache ──▶ S10-34 composer row (after S10-16; ✎ S10-D15)
                       └──▶ S10-36 Promote crops
@@ -581,6 +582,17 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 | **Out** | Concluded values first. Remembering a rejected claim. A new Promote layout for the reason text (S10-36 covers crops only). |
 | **Testable** | One female among several males still contradicts. One James Robins on a handle that is otherwise Mary Smith does not score as a full name match. A reason identifies the pair. |
 | **Depends on** | S10-24; sequenced after S10-27 |
+
+#### S10-50 — Promote sheet lines show the values they compared
+
+**Plan:** [`prs/S10-50-promote-sheet-values.md`](prs/S10-50-promote-sheet-values.md) — Blocked — on S10-28
+
+| | |
+| --- | --- |
+| **In** | A term on a Promote sheet line reads as its label, not its key. A row with no exhibit shows each comparison with its two values and dates. Every row's lines are built in Go; the FFI sends one list. From the S10-28 review (UX-3, CON-4). |
+| **Out** | New lines for non-conflict comparisons on a row that has exhibits. Any Swift change. |
+| **Testable** | A negative "sex at birth: male" conflict line reads "not Male" against "Male". A handle with no accepted member shows both values on every line. |
+| **Depends on** | S10-28 |
 
 #### S10-29 — Name patterns from the catalog
 
