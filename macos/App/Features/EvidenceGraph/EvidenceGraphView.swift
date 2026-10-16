@@ -872,7 +872,6 @@ private struct EvidenceGraphDocumentBody: View {
             EvidenceGraphDragCanvasSize(snapshot: snapshot, pointer: pointer, model: model)
         }
         .frame(width: contentSize.width, height: contentSize.height)
-        .coordinateSpace(name: EvidenceSubjectCard.documentCoordinateSpace)
         .onAppear { wirePointer() }
         .onChange(of: inputMode) { _, _ in
             syncPointerMode()

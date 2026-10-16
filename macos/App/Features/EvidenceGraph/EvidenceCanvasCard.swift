@@ -4,7 +4,7 @@ import SwiftUI
 /// Everything one graph card draws, as a value.
 ///
 /// The graph pushes cards to ``GraphCanvasItemLayer`` as ``GraphCanvasItem``s
-/// with this as their model, and AppKit rebuilds a card's hosting view only when
+/// with this as their model, and AppKit rebuilds a card's view only when
 /// its model changes. Drag position is not part of it: AppKit moves the view.
 struct EvidenceCanvasCard: Equatable {
     enum Placed: Equatable {
@@ -73,120 +73,21 @@ struct EvidenceCanvasCard: Equatable {
     }
 }
 
-/// Builds a card's hosted view: paint, measured layout, and its VoiceOver actions.
-///
-/// Holds references only (the model, navigation, and layout store), so item
-/// content closures never capture a SwiftUI view's state.
+/// Builds a card's view and its VoiceOver actions. Holds references only (the
+/// model, navigation, and layout store).
 @MainActor
 struct EvidenceCanvasCardContent {
     let model: EvidenceGraphModel
     let navigation: WorkspaceNavigation
     let layouts: EvidenceCardLayoutStore
 
-    /// AppKit-drawn subject or bridge card. Records the measured hit layout
+    /// The subject or bridge card's view. Records the measured hit layout
     /// before the canvas sizes the view, so edges and pointer targets exist
     /// for the opening batch.
     func cardView(for card: EvidenceCanvasCard) -> NSView {
         let view = EvidenceCardView(card: card, actions: accessibilityActions(for: card))
         layouts.record(view.layout, for: card.id)
         return view
-    }
-
-    func view(for card: EvidenceCanvasCard) -> AnyView {
-        switch card.placed {
-        case .subject(let placed, let presentation):
-            AnyView(subject(placed, presentation: presentation, card: card))
-        case .bridge(let placed):
-            AnyView(bridge(placed, card: card))
-        }
-    }
-
-    private func subject(
-        _ placed: SourceGraphPlacedSubject,
-        presentation: CatalogSubjectTypePresentation?,
-        card: EvidenceCanvasCard
-    ) -> some View {
-        let model = model
-        let navigation = navigation
-        let layouts = layouts
-        return EvidenceSubjectCard(
-            placed: placed,
-            text: card.text,
-            presentation: presentation,
-            isSelected: card.state.isSelected,
-            isActivated: card.state.isActivated,
-            isConnectingFrom: card.state.isConnectingFrom,
-            canCite: card.state.canCite,
-            isDragging: card.state.isDragging,
-            hoveredActionID: card.state.hoveredActionID,
-            pressedActionID: card.state.pressedActionID,
-            nameOrders: card.nameOrders,
-            onLayout: { layouts.record($0, for: placed.id) }
-        )
-        .accessibilityAction(named: Text(L10n.EvidenceGraph.editAccessibility)) {
-            model.beginEdit(subjectID: placed.id)
-        }
-        .accessibilityAction(named: Text(Self.addPropertyActionName(canCite: card.state.canCite))) {
-            if let location = model.composerLocation(for: placed.id) {
-                navigation.go(to: location)
-            }
-        }
-        .accessibilityAction(named: Text(verbatim: card.text.footerActionName ?? "")) {
-            if let location = placed.membership == nil
-                ? model.promoteLocation(for: placed.id)
-                : model.openHandle(subjectID: placed.id)
-            {
-                navigation.go(to: location)
-            }
-        }
-        .accessibilityAction(named: Text(L10n.EvidenceGraph.unpromote)) {
-            if placed.membership != nil { model.beginUnpromote(subjectID: placed.id) }
-        }
-        .accessibilityAction(named: Text(verbatim: card.text.deleteActionName)) {
-            Task { await model.beginDelete(subjectID: placed.id) }
-        }
-        .accessibilityAction(named: Text(L10n.EvidenceGraph.editPropertyAccessibility)) {
-            if let observation = placed.observations.first,
-               let location = model.composerLocation(
-                   forObservationID: observation.id,
-                   subjectID: placed.id
-               )
-            {
-                navigation.go(to: location)
-            }
-        }
-    }
-
-    private func bridge(_ placed: SourceGraphPlacedBridge, card: EvidenceCanvasCard) -> some View {
-        let model = model
-        let navigation = navigation
-        let layouts = layouts
-        return EvidenceBridgeCard(
-            placed: placed,
-            text: card.text,
-            isSelected: card.state.isSelected,
-            isActivated: card.state.isActivated,
-            isDragging: card.state.isDragging,
-            hoveredActionID: card.state.hoveredActionID,
-            canCite: card.state.canCite,
-            onLayout: { layouts.record($0, for: placed.id) }
-        )
-        .accessibilityAction(named: Text(L10n.EvidenceGraph.editAccessibility)) {
-            model.beginEdit(subjectID: placed.id)
-        }
-        .accessibilityAction(named: Text(L10n.EvidenceGraph.editCitationAccessibility)) {
-            if let location = model.composerLocationForBridgeCitation(subjectID: placed.id) {
-                navigation.go(to: location)
-            }
-        }
-        .accessibilityAction(named: Text(Self.addPropertyActionName(canCite: card.state.canCite))) {
-            if let location = model.composerLocation(for: placed.id) {
-                navigation.go(to: location)
-            }
-        }
-        .accessibilityAction(named: Text(verbatim: card.text.deleteActionName)) {
-            Task { await model.beginDelete(subjectID: placed.id) }
-        }
     }
 
     private func accessibilityActions(for card: EvidenceCanvasCard) -> [NSAccessibilityCustomAction] {

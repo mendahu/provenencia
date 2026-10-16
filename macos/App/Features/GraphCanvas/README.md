@@ -16,7 +16,7 @@ catalog types so geometry stays extractable (design note §13).
 | `GraphCanvasGridMapping` | Grid cell ↔ content point (snap unit) |
 | `GraphCanvasScrollView` | AppKit magnification bridge |
 | `GraphCanvasDocumentView` | Scroll document; owns mouse; hosts the base SwiftUI layer and the item layer; canvas accessibility group and rotors |
-| `GraphCanvasItemLayer` / `GraphCanvasItem` | One `NSHostingView` per item (card), positioned by AppKit; rebuilt only when the item's `Equatable` model changes |
+| `GraphCanvasItemLayer` / `GraphCanvasItem` | One `NSView` per item, built by the host (`makeView`), positioned by AppKit; rebuilt only when the item's `Equatable` model changes |
 | `GraphCanvasPointerController` | Hit-test, select, drag (one card, or a group of peers that move with the anchor), empty-canvas pan, selection rectangle (marquee), place, connect |
 | `GraphCanvasHitTarget` / `GraphCanvasPointerHitTesting` | Document rects + pure helpers |
 | `GraphCanvasViewportController` | Pan deltas + live AppKit `convert` under cursor |
@@ -32,7 +32,7 @@ Hosts supply product policy; GraphCanvas supplies plumbing.
 | `hitTargets` (string ids + document rects) | Card chrome, palette, create dialogs |
 | Pointer `mode` + callbacks (select / drag began / drag end / marquee ended / place / connect) | Catalog / store / FFI / session queries |
 | Document `rootView` (paint-only SwiftUI base layer) | Honesty copy and product card content |
-| Items pushed to `graphCanvasItems` (id, origin, model, content, rotor entry) | Rotor names and labels (localized by the host) |
+| Items pushed to `graphCanvasItems` (id, origin, model, `makeView`, rotor entry) | Rotor names and labels (localized by the host) |
 | Magnification range + document size (host policy) | Auto-layout, virtualization, position tables |
 
 **Transfers to a future tree / workflow host:** scroll shell, pointer controller + hit targets, viewport convert, optional grid and edge helpers.
@@ -45,7 +45,7 @@ Audit bar: zero Evidence / catalog / store types under `GraphCanvas/`.
 
 Cards are not part of the host's SwiftUI document. The host pushes them to the
 `graphCanvasItems` environment value (`GraphCanvasItemLayer.update(_:)`), and
-each becomes its own `NSHostingView` above the base layer. A card drag moves that
+each becomes its own `NSView` above the base layer. A card drag moves that
 one view's frame from `GraphCanvasDocumentView.mouseDragged` — no SwiftUI runs per
 pointer event. An item's view is rebuilt only when its `model` changes, so push
 every item whenever anything they draw changes (selection, hover, data, drag
@@ -60,10 +60,10 @@ id that moves (anchor included), and each peer gets the anchor's offset. Read
 `draggingPeerIDs` the same way. The Evidence graph's edge layer is the only view that
 follows `offsets`.
 
-Item content keeps its own SwiftUI accessibility (label, actions, children). The
+Items set their own AppKit accessibility (label, custom actions). The
 document view is the canvas's accessibility group and serves document-level
-VoiceOver rotors (`NSAccessibilityCustomRotor`) built from items' `rotor` entries;
-SwiftUI `accessibilityRotor` cannot reach into separate hosting views.
+VoiceOver rotors (`NSAccessibilityCustomRotor`) built from items' `rotor` entries,
+because items are separate views.
 
 ## Pointer ownership
 
@@ -73,9 +73,9 @@ callbacks on `GraphCanvasPointerController`.
 
 **Derive hit rects from measured paint, not constants.** A host's rects must
 come from the laid-out views they cover, or they drift as text wraps. The
-Evidence graph tags actionable pieces with `.evidenceCardHitRegion(_:)`, each
-card reports an `EvidenceCardLayout`, and hit targets / edge anchors are built
-from it (constants only before the first report). Verify against drawn pixels,
+Evidence graph's `EvidenceCardView` measures its pieces into an `EvidenceCardLayout`
+and paints from the same measurement; hit targets and edge anchors are built from
+it (constants only before a card is built). Verify against drawn pixels,
 not `fittingSize`, which over-reports wrapped text. Do not attach SwiftUI
 `DragGesture` / `.onTapGesture` / `.focusable()` to cards — that fought
 first-responder and cancelled mid-drag under magnification.
