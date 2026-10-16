@@ -41,17 +41,23 @@ struct EvidenceCardLayoutTests {
         )
     }
 
+    /// Renders `view` in an offscreen window and returns its bitmap.
+    private func bitmap(of view: EvidenceCardView) throws -> NSBitmapImageRep {
+        let window = NSWindow(contentRect: CGRect(origin: .zero, size: view.intrinsicContentSize), styleMask: [], backing: .buffered, defer: false)
+        view.frame = window.contentView!.bounds
+        window.contentView = view
+        let rep = try #require(view.bitmapImageRepForCachingDisplay(in: view.bounds))
+        view.cacheDisplay(in: view.bounds, to: rep)
+        return rep
+    }
+
     /// Builds the live card and returns the layout it measured plus the height
     /// actually drawn: card-body rows (alpha > 0.5; uncited cards paint at 0.76,
     /// shadows stay under ~0.1) down the centre column. (Not
     /// `fittingSize` — AppKit's ideal size over-reports wrapped text by ~4pt.)
     private func measure(_ card: EvidenceCanvasCard) throws -> (EvidenceCardLayout, CGFloat) {
         let view = EvidenceCardView(card: card, actions: [])
-        let window = NSWindow(contentRect: CGRect(origin: .zero, size: view.intrinsicContentSize), styleMask: [], backing: .buffered, defer: false)
-        view.frame = window.contentView!.bounds
-        window.contentView = view
-        let rep = try #require(view.bitmapImageRepForCachingDisplay(in: view.bounds))
-        view.cacheDisplay(in: view.bounds, to: rep)
+        let rep = try bitmap(of: view)
         let x = rep.pixelsWide / 2
         var top = -1
         var bottom = -1
@@ -170,6 +176,31 @@ struct EvidenceCardLayoutTests {
         #expect(ghost.layout == live.layout)
     }
 
+    @Test func ghostPaintsAtGhostOpacity() throws {
+        /// The card fill's alpha: the most common alpha down the centre column
+        /// among painted pixels (text over the fill and shadow edges are rarer).
+        func bodyAlpha(_ view: EvidenceCardView) throws -> CGFloat {
+            let rep = try bitmap(of: view)
+            let x = rep.pixelsWide / 2
+            var counts: [Int: Int] = [:]
+            for y in 0..<rep.pixelsHigh {
+                let a = rep.colorAt(x: x, y: y)?.alphaComponent ?? 0
+                if a > 0.3 { counts[Int((a * 255).rounded()), default: 0] += 1 }
+            }
+            return CGFloat(counts.max { $0.value < $1.value }?.key ?? 0) / 255
+        }
+        let p = placed(rows: 0)
+        let ghost = try bodyAlpha(EvidenceCardView(ghostOf: .ghost(p, presentation: nil)))
+        let live = try bodyAlpha(EvidenceCardView(
+            card: EvidenceCanvasCard(placed: .subject(p, nil), text: EvidenceCardText(subject: p), state: .resting),
+            actions: []
+        ))
+        #expect(live > 0)
+        // Fill, shadow and text composite, so the ratio is only near 0.62 / 0.76; a ghost
+        // painted at the live card's 0.76 gives 1.0.
+        #expect(abs(ghost / live - 0.62 / 0.76) < 0.06)
+    }
+
     @Test func ghostCardIsNotAnAccessibilityElement() {
         let p = placed(rows: 0)
         let ghost = EvidenceCardView(ghostOf: .ghost(p, presentation: nil))
@@ -178,7 +209,10 @@ struct EvidenceCardLayoutTests {
         #expect(ghost.accessibilityIdentifier().isEmpty)
         #expect((ghost.accessibilityCustomActions() ?? []).isEmpty)
 
-        let live = EvidenceCardView(card: .ghost(p, presentation: nil), actions: [])
+        let live = EvidenceCardView(
+            card: EvidenceCanvasCard(placed: .subject(p, nil), text: EvidenceCardText(subject: p), state: .resting),
+            actions: []
+        )
         #expect(live.isAccessibilityElement())
         #expect(live.accessibilityIdentifier() == "evidenceGraph.subject.s")
     }
