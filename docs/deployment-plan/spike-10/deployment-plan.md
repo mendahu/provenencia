@@ -131,6 +131,7 @@ These are the calls for this spike. The questions at the bottom are answered; no
 - **Dates in matching use the windows S9-21 already stores.** Spans and gaps are days. ABT doubles tolerance only when both dates are points. An event `date` can overlap `start_date` / `end_date`. Calendars and double dating stay out.
 - **Birth and baptism partly match, and so do death and burial.** A small term-affinity table, same shape as name-role affinity. Place comparison walks `part_of` (already shipped) so York and Toronto can relate. Flat toponym text stays the strong match.
 - **A depiction's value is its Citation.** New Observation `value_type = depiction`. No image column and no copied bytes. `likeness` is the seeded person Property of that type, cardinality many (a gallery). Place, event, and signature keys wait. Empty transcription is valid. The crop is a bounding-box JPEG, longest edge 512, cached by File plus locator, minted when the Observation is saved. The composer draws a PDF crop with PDFKit. A missing cache is filled the next time a client can open that Artifact. Two Citations with the same pixels may share bytes; the derivative rows stay separate. Promote's evidence sheet shows the two crops and pins the two Observations.
+- **`likeness` is new catalogs only.** Install seeds it; no migration seeds it and open does not heal. Researchers cannot create a depiction Property (registry-only, like `term`). A later one-off CLI, outside this map, brings the dogfood projects up to date (answered 2026-10-16).
 - **A preferred portrait is a display pointer, not a claim.** One likeness Observation on that person. The gallery still lists every crop. The Person page lead and the Persons list thumb use the chosen crop. With no choice, both use the earliest likeness. Deleting that likeness clears the pointer and the thumb falls back. The choice is made on the Person page. Promote does not pick a portrait.
 - **`engagement` titles like any other event.** Key `engagement`, label Engagement, next to `marriage` in `subjectvocab` `seedTerms`. New catalogs get it from Install. Existing catalogs are not migrated; the term is added there by hand. Titles follow the subject count for every event type: one subject is *{Type} of {A}*, two are *{Type} of {A} and {B}*, and three or more are *{Type} of {A} et al.* A marriage of two still reads *Marriage of A and B*. An engagement of two reads *Engagement of A and B*.
 
@@ -631,9 +632,11 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 
 #### S10-32 — Depiction value type
 
+**Plan:** [`prs/S10-32-depiction-value-type.md`](prs/S10-32-depiction-value-type.md) — Draft
+
 | | |
 | --- | --- |
-| **In** | `value_type = depiction`. The value is the Observation's own Citation (artifact, page, region). No image column. Seed `likeness` on `person`, cardinality many. Empty transcription stays valid. Install path only ([`add-seeded-vocabulary`](../../../.agents/skills/add-seeded-vocabulary/SKILL.md)). |
+| **In** | `value_type = depiction`. The value is the Observation's own Citation (artifact, page, region). No image column. A DDL-only migration widens the `properties.value_type` CHECK. Seed `likeness` on `person`, cardinality many, through Install only ([`add-seeded-vocabulary`](../../../.agents/skills/add-seeded-vocabulary/SKILL.md)); new catalogs only. Empty transcription stays valid. The autoreconciler leaves depictions out, so likenesses never collapse. |
 | **Out** | Place, event, and signature keys. The preferred-portrait pointer (S10-39). The crop bytes (S10-33). |
 | **Testable** | A likeness Observation stores no raster. Two likenesses on one person both remain (they do not collapse the way two birth dates can). A Citation with an empty transcription and a region saves. |
 | **Depends on** | — |
