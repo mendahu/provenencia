@@ -16,6 +16,8 @@ We want a stack of layers. Each layer is pure, has one job, and gives the layer 
 
 ## The layers
 
+Packages: layer 1 is **value compare** (`core/valuecompare`), and layer 2 is **property compare** (`core/propertycompare`). Go package names can't have spaces, so the folders are written as one word.
+
 | # | Layer | Question it answers | Status |
 |---|---|---|---|
 | 1 | **Value comparison** | How do these two values relate? | This doc |
@@ -31,6 +33,7 @@ We want a stack of layers. Each layer is pure, has one job, and gives the layer 
 4. **Output is the explanation.** A layer's result carries enough structure that the layer above can explain itself without redoing the work, and the UI can word it without parsing strings.
 5. **One registry per layer.** Every tunable a layer reads lives in that layer's registry. The registry is passed in, so tests can override it.
 6. **Tested at its own level.** Each layer has exact-value tables and property-based invariants that need nothing above it. A layer's package builds and tests with no build tags and no database.
+7. **Single-purpose and composable.** A comparison layer answers one question and makes no workflow decision. Each workflow (Promote, reconciliation, merge hints, search) keeps its own decision logic and composes the layers it needs. For example, the reconciler can run value compare across five Subjects' values for one property, then apply its own rules to decide what the entity shows. Reconciling uses comparison, but it is not comparison.
 
 ## Layer 1: Value comparison
 
@@ -38,7 +41,7 @@ We want a stack of layers. Each layer is pure, has one job, and gives the layer 
 
 ```go
 // Compare relates two values of one value type under the given rules.
-func Compare(a, b Value, rules Rules) (Result, Detail)
+func Compare(a, b Value, rules Rules) (Result, Detail) // valuecompare.Compare
 
 type Result struct {
     Relation   Relation // what kind of match: same, contains, near, different, …
@@ -116,15 +119,16 @@ Proposed relation per value type. Every cell is a proposal to confirm; the name 
 | integer | equal | — | — | — | within tolerance | beyond tolerance |
 
 **Decided (2026-10-16):**
+- **Minimum similarities start from today's floors:** name 0.75, spelling variant 0.8 (`FuzzyFloor`). Types with no floor today get one when their comparer moves.
 - **`Contains` scores below 1.** `Robins` vs `James Robins` is no longer a perfect match. How far below 1 is a tuning question.
 - **`Near` has a minimum similarity per type.** It lives in layer 1's `Rules`, because "near or different" is layer 1's call. Layer 2 then needs no floors.
-- **One `Contains`, two causes.** Less precise (`1817` vs `3 Mar 1817`, `J.` vs `James`) and less complete (`Robins` vs `James Robins`) are both `Contains`. `Detail.Cause` tells them apart (`precision`, `missing_part`), so callers that care can treat them differently. This is a recommendation; confirm.
+- **One `Contains`, two causes.** Less precise (`1817` vs `3 Mar 1817`, `J.` vs `James`) and less complete (`Robins` vs `James Robins`) are both `Contains`. `Detail.Cause` tells them apart (`precision`, `missing_part`), so callers that care can treat them differently.
 
 **Parts combine by one rule.** Names and text are made of parts. Each part pair gets its own relation and similarity. The value's relation is the weakest relation among the parts both sides carry, and parts on one side only make it `Contains`. Its similarity is the weighted mean of the part similarities. The weights come from `Rules`, e.g. name roles from the name pattern.
 
 **Why the relation matters above layer 1:**
 - **Promote floors disappear.** Layer 2 reads agree, partial or conflict straight from the relation (§ Layer 2), not from a per-type cutoff on the number.
-- **Reconciliation can share the unit.** `autoreconcile.Compatible` ("every unit both carry is equal, or one folds into the other") reads as relation ∈ {`Same`, `Equivalent`, `Contains`}. Having `Same` and `Equivalent` as separate relations lets reconciliation decide whether `José` and `Jose` group, without a second comparer.
+- **Reconciliation can build on it.** The reconciler keeps its own grouping logic (rule 7), but bases it on value compare's relations instead of a second comparer. Because `Same` and `Equivalent` are separate relations, the reconciler can decide for itself whether `José` and `Jose` show as one value.
 - **The UI gets words for free.** "Same name", "same name, different spelling", "less specific date" map to relations, not numbers.
 
 ### Detail
@@ -183,7 +187,7 @@ type PartMatch struct {
 ```go
 // CompareProperty judges whether two sides agree on one property,
 // from every value each side holds.
-func CompareProperty(a, b Side, meta PropertyMeta, rules Rules) PropertyResult
+func Compare(a, b Side, meta PropertyMeta, rules Rules) PropertyResult // propertycompare.Compare
 ```
 
 - **`Side`** is a value set. Each value carries its context:
@@ -260,20 +264,10 @@ This is the feature vector the matching test suite's fit needs: one outcome, rel
 | `poolPeriods` (`periods.go`) | Layer 3 (spans properties) |
 | Promote's scale floors and outcome logic (`ApplyScale`) | Layer 2's outcome table |
 | Promote's scale weights, contradiction, frequency weights (`resolvedScale`) | Layer 3 |
-| `autoreconcile.Compatible` | Reads layer 1's relation (goal; open below) |
+| `autoreconcile.Compatible` and grouping | Stays in the reconciler as its own decision logic, built on value compare (and property compare where it helps) instead of its own key rules |
 | `match.Value`'s reconciler fields (`Support`, `Against`, `Reason`, `Denied`, `Negative`) | Layer 2's `Side` context |
 
 ## Open questions
 
-- **Package names and homes.** E.g. `core/compare` (layer 1) and `core/evidence` or `core/propcompare` (layer 2), or sub-packages of `core/match`.
-- **Minimum similarity values.** One per value type, starting from today's floors (name 0.75, spelling `FuzzyFloor` 0.8).
-- **Reconciliation grouping policy.** Today two pieces of code answer "is this the same value?", and they disagree:
-
-  | Pair | Matching | `Compatible` (grouping, pins) |
-  |---|---|---|
-  | `Montréal` vs `Montreal` | 0.95, agree | different: two competing spellings on the place, and the Promote line can't be pinned |
-  | `Jim` vs `James` | 0.98, agree | different: can't be pinned |
-  | `J. Robins` vs `James Robins` | 0.8, partial | same: grouped into one name |
-
-  With one layer-1 comparison there are **two policies**. Promote agreement and pins follow layer 2's outcome. Reconciler grouping picks which relations mean "show once". **Recommendation:** group on `Same` and `Contains`, not `Equivalent`, so spellings and nicknames stay visible as evidence while still counting as agreement in matching. This changes some groupings (terms by ID vs key, text folding), so it may be its own PR with its own review.
+- **The reconciler's grouping rules.** Which relations make two values "show once" is the reconciler's call (rule 7), designed with its own PR. Today's disagreements to resolve there: `Montréal` / `Montreal` and `Jim` / `James` agree in matching but don't group or pin; `J. Robins` / `James Robins` groups but only scores partial.
 - **Where support weights act.** Layer 2 reports them; layer 3 uses them (today credit is similarity × weight × weight). Confirm that split.
