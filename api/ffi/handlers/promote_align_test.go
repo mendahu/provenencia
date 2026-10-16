@@ -102,7 +102,7 @@ func TestProposeNegativeConflictLine(t *testing.T) {
 	for _, row := range resp.GetRows() {
 		for _, c := range row.GetComparisons() {
 			if c.GetPropertyKey() == "sex_at_birth" && c.GetOutcome() == "conflict" {
-				if !c.GetIncomingNegative() || c.GetPinned() || c.GetIncomingObservationId() != "" || c.GetIncomingDisplay() != "male" {
+				if !c.GetIncomingNegative() || c.GetPinned() || c.GetIncomingObservationId() != "" || c.GetIncomingDisplay() != "Male" {
 					t.Fatalf("conflict line %+v", c)
 				}
 				return
@@ -132,4 +132,51 @@ func TestProposePromoteGraphAlignment(t *testing.T) {
 			want: &engine.ProposePromoteGraphAlignmentResponse{},
 		},
 	})
+}
+
+// A row whose handle has no accepted member claim has no exhibits, yet every
+// comparison line reaches the response with the two values it compared.
+func TestProposeRowWithoutExhibitsSendsValues(t *testing.T) {
+	dir, userID, _, typeID := subjectFixture(t)
+	_, handleSubject := personOnNewSource(t, dir, userID, typeID, "female", observations.PolarityPositive)
+	handle := promoteOK(t, &engine.PromoteSubjectRequest{ProjectDir: dir, UserId: userID, SubjectId: handleSubject})
+	entityID := uuid.MustParse(handle.Entity.GetId())
+	if err := withProjectCatalog(dir, func(c *database.Catalog) error {
+		db, err := c.DB()
+		if err != nil {
+			return err
+		}
+		if _, err := db.Exec(`UPDATE identity_claims SET status = 'provisional' WHERE entity_id = ?`, entityID[:]); err != nil {
+			return err
+		}
+		c.Graph().Drop()
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	sourceID, incoming := personOnNewSource(t, dir, userID, typeID, "female", observations.PolarityPositive)
+
+	out, err := ProposePromoteGraphAlignment(marshalProto(t, &engine.ProposePromoteGraphAlignmentRequest{
+		ProjectDir: dir, SourceId: sourceID,
+		Fixed: []*engine.PromoteGraphAlignmentFixed{{SubjectId: incoming, HandleId: handle.Entity.GetId()}},
+	}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var resp engine.ProposePromoteGraphAlignmentResponse
+	if err := proto.Unmarshal(out, &resp); err != nil {
+		t.Fatal(err)
+	}
+	shown := map[string][2]string{}
+	for _, row := range resp.GetRows() {
+		for _, c := range row.GetComparisons() {
+			if c.GetIncomingDisplay() == "" || c.GetMemberDisplay() == "" {
+				t.Fatalf("a line without both values: %+v", c)
+			}
+			shown[c.GetPropertyKey()] = [2]string{c.GetIncomingDisplay(), c.GetMemberDisplay()}
+		}
+	}
+	if shown["name"] != [2]string{"Mary Smith", "Mary Smith"} || shown["sex_at_birth"] != [2]string{"Female", "Female"} {
+		t.Fatalf("lines %v", shown)
+	}
 }

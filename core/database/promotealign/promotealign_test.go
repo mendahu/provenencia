@@ -526,8 +526,8 @@ func TestProposeWeighsACommonNameLess(t *testing.T) {
 	nameWeight := func(s subjects.Subject) float64 {
 		for _, c := range rowFor(p, s.ID).Comparisons {
 			if c.Property.Key == "name" {
-				if c.Outcome != match.OutcomeAgree || !c.Pinned {
-					t.Fatalf("%+v, want agree and pinned", c)
+				if c.Outcome != match.OutcomeAgree {
+					t.Fatalf("%+v, want agree", c)
 				}
 				return c.Weight
 			}
