@@ -21,9 +21,12 @@ Packages: layer 1 is **value compare** (`core/valuecompare`), and layer 2 is **p
 | # | Layer | Question it answers | Status |
 |---|---|---|---|
 | 1 | **Value comparison** | How do these two values relate? | This doc |
-| 2 | **Property comparison** | Given everything each side holds for one property, do they agree? | This doc |
-| 3 | **Subject comparison** (tentative) | How alike are these two Subjects on their own values? | Later. Combines property comparisons, holds comparisons that span properties, and weights each by how informative it is (frequency moves here, § Frequency) |
-| 4 | Candidate scoring and graph alignment | Which handle is this Subject? | Later (`Rank`, link points, `Align`) |
+| 2 | **Property comparison** | Do these two Subjects agree on one property? | This doc |
+| 3 | **Subject comparison** | How alike are these two Subjects on their own values? | Later. Combines property comparisons, holds comparisons that span properties, and weights each by how informative it is (frequency, § Frequency) |
+| 4 | **Entity comparison** | Does this Subject belong with this entity? | Decided in shape (§ Entities): subject comparison against the entity's reconciled conclusion |
+| 5 | Candidate scoring and graph alignment | Which handle is this Subject? | Later (`Rank`, link points, `Align`) |
+
+Layers 1–3 are **discrete**: one thing against one thing. An entity is a group of Subjects, so comparing against one is one-to-many. Layer 4 turns that back into one-to-one by comparing against the group's conclusion.
 
 ## Rules for every layer
 
@@ -185,28 +188,26 @@ type PartMatch struct {
 ### Contract
 
 ```go
-// CompareProperty judges whether two sides agree on one property,
-// from every value each side holds.
+// Compare judges whether two Subjects agree on one property,
+// from every value each one holds for it.
 func Compare(a, b Side, meta PropertyMeta, rules Rules) PropertyResult // propertycompare.Compare
 ```
 
-- **`Side`** is a value set. Each value carries its context:
+- **`Side`** is one Subject's values for the property. Each value carries only what a Subject can say about itself:
   - polarity (positive or negative);
-  - standing from the reconciler (kept, outvoted, weak, denied, provisional);
-  - support and against counts;
   - for a term, its neutral flag.
+- **No reconciler context.** Support counts and standing (kept, outvoted, denied…) describe an entity's group, not a Subject. They never reach layer 2. Layer 4 translates them before comparing (§ Entities).
 - **`PropertyMeta`:** value type and cardinality.
 - **No points, no catalog statistics.** Layer 2 says *whether* the sides agree and *which values spoke*, not how much it's worth.
 
 ### What it does, in order
 
-1. **Drop non-evidence.** Remove neutral, denied, provisional and unsupported values, and record each one with its reason.
-2. **Find the leaders.** Work out each value's standing on its side: the leaders, and each value's share of support (today's `pairValues` rules).
-3. **Compare pairs.** Run layer 1 on every voting pair.
-4. **Choose the pair that speaks.** By default, the best pair among the leaders.
-5. **Apply negatives.** A negative value whose relation to a leader on the other side is `Same`, `Equivalent` or `Contains` contradicts it. A value matching a denied value that nothing else on its side backs also contradicts.
-6. **Apply cardinality.** On a multiple-value property, a difference is not a conflict, and every voting value has full weight.
-7. **Decide the outcome** from the relation (below).
+1. **Drop non-evidence.** Remove neutral values, and record each one with its reason.
+2. **Compare pairs.** Run layer 1 on every pair of positive values.
+3. **Choose the pair that speaks:** the best pair.
+4. **Apply negatives.** A negative value whose relation to a positive value on the other side is `Same`, `Equivalent` or `Contains` contradicts it.
+5. **Apply cardinality.** On a multiple-value property, a difference is not a conflict.
+6. **Decide the outcome** from the relation (below).
 
 ### Outcome from relation
 
@@ -216,7 +217,7 @@ func Compare(a, b Side, meta PropertyMeta, rules Rules) PropertyResult // proper
 | `Contains`, `Overlaps`, `Near` | partial | partial |
 | `Different` | conflict | unknown |
 | `Unknown`, or no voting values | unknown | unknown |
-| A negative matches a leader | conflict, cause `negative` | conflict, cause `negative` |
+| A negative matches a positive value on the other side | conflict, cause `negative` | conflict, cause `negative` |
 
 This replaces Promote's per-type floors (`core/graphalign/registry.go`). A spelling variant too far apart never reaches layer 2 as `Near`: layer 1's minimum similarity has already made it `Different`.
 
@@ -225,14 +226,13 @@ This replaces Promote's per-type floors (`core/graphalign/registry.go`). A spell
 ```go
 type PropertyResult struct {
     Outcome  Outcome          // agree, partial, conflict, unknown
-    Cause    OutcomeCause     // relation, negative, denied, no_values, …
+    Cause    OutcomeCause     // relation, negative, no_values, …
     Pair     *SpokenPair      // the two values that spoke, their layer-1 Result and Detail
-    Weights  ValueWeights     // each side's share of support for the speaking values
     Excluded []ExcludedValue  // values dropped in step 1, with the reason
 }
 ```
 
-This is the feature vector the matching test suite's fit needs: one outcome, relation and similarity per property, plus the weights. Layer 3 turns it into points.
+This is the feature vector the matching test suite's fit needs: one outcome, relation and similarity per property. Layer 3 turns it into points.
 
 ### Tests
 
@@ -242,7 +242,28 @@ This is the feature vector the matching test suite's fit needs: one outcome, rel
   - value order on either side doesn't matter;
   - swapping sides gives the same outcome;
   - on a multiple-value property, adding a different value never makes it conflict.
-- **Exact tables** for today's `pairs_test.go` cases, ported to the new types.
+- **Exact tables** for the Subject-level cases in today's `pairs_test.go` (negatives, cardinality, neutral terms), ported to the new types. The support and standing cases move to layer 4's tests.
+
+## Entities: compare against the conclusion
+
+**Decided (2026-10-16):** a Subject is compared with an entity's **reconciled values**, not with each member.
+
+**Why.** An Identity Claim says "this Subject belongs in this group". The group's values are its conclusion, reconciled by the auto-reconciler or overridden by the researcher. Both kinds of decision matter. A conclusion the researcher hasn't overridden is taken as the conclusion. Whether a Subject joins the group is judged against what the group concludes.
+
+**What that buys.**
+- **Weighting by support is outsourced.** Which value an entity holds, and how strongly its members back it, is the reconciler's job, already done. Matching doesn't re-weigh members.
+- **One comparison per candidate,** not one per member.
+- **Layer 4 is thin.** It builds a Subject-shaped **profile** from the conclusion, then runs layer 3 against it. No new comparison logic.
+
+**The profile.** The reconciler's standing is translated into concepts layer 2 already has, so layer 2 stays free of standing:
+
+| Reconciled value | In the profile |
+|---|---|
+| The concluded value (several when tied leaders show together, or when the property is multi-valued) | positive |
+| A value the researcher denied | negative |
+| Outvoted, weak, provisional | left out (open below) |
+
+**Still needed above the comparison.** The reconciler weighs a group's *own* members. It doesn't say how common a value is across the *catalog*. A reconciled "John Smith" matching a Subject's "John Smith" is weaker evidence than a rare name matching, so frequency weighting (§ Frequency) still applies in layers 3–4.
 
 ## Frequency moves to layer 3
 
@@ -260,14 +281,16 @@ This is the feature vector the matching test suite's fit needs: one outcome, rel
 | `NameComparer.Frequency`, `DiscountComparer`, `CompareDiscount` | Layer 3 |
 | `TermComparer`'s neutral check | Layer 2, step 1 |
 | `autoreconcile.SpellingSimilarity`, `NormalizeForm`, `IsInitial` | Layer 1 |
-| `pairValues`, leaders, negatives, multiple cardinality (`pairs.go`) | Layer 2 |
+| `pairValues`' negatives and multiple cardinality (`pairs.go`) | Layer 2 |
+| `pairValues`' leaders and support weights | Gone: the entity profile (layer 4) contains only the conclusion |
 | `poolPeriods` (`periods.go`) | Layer 3 (spans properties) |
 | Promote's scale floors and outcome logic (`ApplyScale`) | Layer 2's outcome table |
 | Promote's scale weights, contradiction, frequency weights (`resolvedScale`) | Layer 3 |
 | `autoreconcile.Compatible` and grouping | Stays in the reconciler as its own decision logic, built on value compare (and property compare where it helps) instead of its own key rules |
-| `match.Value`'s reconciler fields (`Support`, `Against`, `Reason`, `Denied`, `Negative`) | Layer 2's `Side` context |
+| `match.Value`'s reconciler fields (`Support`, `Against`, `Reason`, `Denied`) | Layer 4's profile builder. `Negative` stays as layer 2 polarity |
 
 ## Open questions
 
 - **The reconciler's grouping rules.** Which relations make two values "show once" is the reconciler's call (rule 7), designed with its own PR. Today's disagreements to resolve there: `Montréal` / `Montreal` and `Jim` / `James` agree in matching but don't group or pin; `J. Robins` / `James Robins` groups but only scores partial.
-- **Where support weights act.** Layer 2 reports them; layer 3 uses them (today credit is similarity × weight × weight). Confirm that split.
+- **Non-concluded values in the profile.** An entity with a maiden and a married name concludes one of them. Leaving the other out means a Subject recording the maiden name conflicts. Options: leave it out (strict), or include outvoted values that nobody denied, so a match on one softens the result to partial.
+- **Where the profile builder lives.** It reads reconciler output, so probably beside the reconciler or the catalog adapter, not in a comparison package.

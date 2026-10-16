@@ -17,8 +17,9 @@ This spike is entirely about the Promote flow's matching: making the algorithm g
 - **Matching is a stack of pure layers.** Each takes only what it needs; a rule that needs more moves up a layer.
 - **Packages:** value compare (`core/valuecompare`) and property compare (`core/propertycompare`).
 - **Layer 1 compares two values** of one type and returns a normalized result (relation + similarity) plus structured reasoning.
-- **Layer 2 compares one property** across both sides' value sets, with their context (negatives, cardinality, reconciler standing, neutral terms).
+- **Layer 2 compares one property** between two Subjects, with only what a Subject can say about itself: negatives, neutral terms, cardinality, missing values. No support or standing.
 - **Frequency weighting is not a comparison.** It moves above layer 2.
-- **Layer 3 is Subject comparison (tentative).** It combines property comparisons and holds the ones that span properties. Graph alignment is layer 4.
+- **Layer 3 is Subject comparison:** one Subject against one Subject. It combines property comparisons and holds the ones that span properties.
+- **Layer 4 is entity comparison against the reconciled conclusion,** not each member. The conclusion becomes a Subject-shaped profile (concluded values positive, denied values negative), then layer 3 runs. Support weighting is outsourced to the reconciler. Graph alignment is layer 5.
 - **`Contains` scores below 1, and `Near` has a minimum similarity** per type, in layer 1.
 - **Comparison layers make no workflow decisions.** Promote, the reconciler and others keep their own decision logic and compose the layers.
