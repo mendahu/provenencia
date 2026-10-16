@@ -1,7 +1,7 @@
 # Ship log — S10-30 Date windows in matching
 
 **Plan:** [`S10-30-date-windows.md`](S10-30-date-windows.md) · **Branch:** `s10-30-date-windows` · **PR:** #415
-**State:** fixing 1
+**State:** ready
 
 ## Round 0 — implement
 Head `ba22f75b`. Gate PASS (orchestrator run, against `4ea7483b`). Report deviations:
@@ -52,3 +52,12 @@ Check: `scripts/check-plan-docs.py` clean; `scripts/check-pr.sh` PASS.
 Files: `docs/deployment-plan/spike-10/name-matching-enhancements.md` (lines 29-31).
 Do: rewrite the "Date precision below the year" body so it no longer says spans are counted in whole years in the present tense: say spans and gaps are now measured in days from the stored windows, with the landed figures (December 1817 vs January 1818 0.777; "BET MAR 1817 AND JUN 1817" against a later month 0.734, per AC-1/AC-2). Keep the "S9-21 stored the windows" line accurate.
 Check: `scripts/check-pr.sh` PASS.
+
+## Round 1 — fix
+Head `2b58f8b6`. Gate PASS (orchestrator run, against `4ea7483b`). F-1 done (`TestDateComparerDayWithoutMonth` red first, then green; a separate function because the table's `date()` helper cannot build a day without a month); F-2 done; F-3 done. `DateEnd` doc comment left as is (already says Month and Day are 0 when not named).
+
+## Round 2 — review
+Scope `81de1124...2b58f8b6`, Conformance only (the one lens with Fix-now findings). Verdict clean: CON-1, CON-2, CON-3 resolved; `endFields` now carries a day without a month into a pooled value, as stored. One wording nit logged: the enhancements note says "against a later month" where AC-2.2's comparand is the day 14 SEP 1817. No blocker, so no Fix plan 2.
+
+## Result
+Gate PASS · CI see PR #415 · open: none · follow-ups: MNT-1, UX-1, SEC-1, PRF-1 · to user: —
