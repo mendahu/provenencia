@@ -319,6 +319,45 @@ This is the feature vector the matching test suite's fit needs: one outcome, rel
 
 So every property weight is a plain registry number. The labeler can fit them later. Remove `Stats.ValueFreq`, the `m` / `u` priors (`MPrior`, `UPrior`), the frequency scales and their lift to the accept bar. The toponym agreement bonus existed to work around the frequency weight; re-set it as a plain weight if still needed.
 
+## Reuse across the app
+
+A survey of comparison, normalization and dedupe code outside `core/match` (2026-10-16). Each layer has consumers beyond Promote, and several duplicates can retire.
+
+| Layer | Consumers today, once moved | Future consumers (`docs/ideas/`) |
+|---|---|---|
+| 1 value compare | Promote, `Rank`, the reconciler's grouping and pins, place-chain date windows (`conclusionheaders`) | Term dedupe ("godfather" vs "god-father", `term-management.md`), gazetteer lookup, Daitch–Mokotoff tier, international names |
+| 2 property compare | Promote sheet exhibits (replacing `pairExhibits`), reconciler checks | Whether provisional values count (`possible-values.md`) |
+| 3 subject compare | Duplicate New rows (`alikeNew`), merge hints (entity vs entity = two profiles) | Gazetteer place matching, duplicate Subjects while entering a Source |
+| 4 entity compare | Promote candidates, Subject suggestions (`matching.ForSubject`) | Weak-claim review (`identity-claim-review.md`), share-package import (`share-packages.md`) |
+
+**Small changes that widen reach:**
+- **A normalized key per value type** beside `Compare`: `valuecompare.Key(v, level)`, where `level` is `Same` or `Equivalent`. Two values have the same key exactly when `Compare` says that relation. One function then serves reconciler grouping, search index dedupe, term dedupe and sort-independent equality, instead of the six text rules there are today.
+- **Leave-one-out profiles:** `subjectprofile.Build(entity, Excluding(member))`. "Does this member still fit the rest?" is the weak-claim review, and costs one option.
+- **Profiles on both sides:** because a profile is Subject-shaped, entity-vs-entity (merge hints) is layer 3 on two profiles, with no new code.
+- **The date window primitives** (`Overlaps`, `Contains`, `Intersect`, `HoldsAt`) move into value compare's date module, so place chains and reconciliation use the same day-precision rules as matching.
+
+**Duplicates to retire:**
+
+| Duplicate | Replaced by |
+|---|---|
+| `autoreconcile` `textKey`, `termKey`, `dateKey`, `subsumes` / `partFits`, `IsInitial`, `SpellingSimilarity`, `EditDistance`, `NormalizeForm`, `DateEnds` and windows | Value compare (the reconciler imports it) |
+| `autoreconcile.Compatible` | Value compare's relation, under the reconciler's own grouping policy (rule 7) |
+| `promotealign.pairExhibits` (its own pairing; ignores negatives and cardinality) | Property compare's speaking pair |
+| `match/pairs.go` leaders and weighting (`weigh`, `pairValues`) | The strict profile; negatives and cardinality move to property compare |
+| `graphalign` `alikeNew`, `pairNode` (property part) | Subject compare |
+| `conclusionheaders` `laterStart` / `earlierEnd` (year only, while reconciliation uses days) | Value compare's date windows |
+| `autoreconciler.hasValue` (copy of `autoreconcile.carries`) | One function |
+| `Stats.ValueFreq`, `countNameWords` | Removed (frequency descoped) |
+
+**Leave alone for now:**
+- **Search's fuzzy ranker** (`jaroWinkler`, trigram shortlist). It ranks partial queries as they are typed, which is a different job. Share the normalization key now, so its Go rescoring folds accents like the FTS tokenizer already does, and revisit the ranker later.
+- **Swift filters** (combo box, list filters). They are UI-local, with different needs. One shared Swift normalize helper would be a separate small cleanup.
+- **`FakeStore`** clusters names by lowercase form, which contradicts Go's parts-only rule. Fix that when the reconciler moves, so Swift tests don't encode the wrong rule.
+
+**Found in passing:**
+- `match.indexAliases` doesn't normalize alias tokens. That's latent: only the lowercase product seed writes tables today. It matters once user or plugin tables exist; `Key` fixes it.
+- Text equality disagrees across six places (reconciler, match, search scoring, FTS, header sort, frequency stats). `Sainte-Anne` and `Sainte Anne` are equal in matching and distinct in reconciliation.
+
 ## What moves where in today's code
 
 | Today | Goes to |
