@@ -19,8 +19,8 @@ A group photo is the case that hurts. One Artifact, several faces. The researche
 
 **`depiction` is a value type with its own value row.** A depiction is stored the way a date or a name is: the Observation owns one `depiction_values` row (`observations.value_depiction_id`). The row holds two things:
 
-- **The region**: page and polygon on the Citation's Artifact, validated by `core/locator`. It records where the picture came from, so the original stays the evidence and the face can be shown in place, re-extracted, or checked.
-- **The image**: a File holding the extracted picture. It is a `depiction` derivative of the Artifact's File, recorded in `file_derivatives`, so the lineage from the original scan is explicit.
+- **The region**: a locator document (page and polygon) on the Citation's Artifact. It records where the picture came from, so the original stays the evidence and the face can be shown in place, re-extracted, or checked.
+- **The image**: a File holding the extracted picture (`image_file_id`). Its lineage is explicit through the chain: region → Citation → Artifact → the Artifact's File. It is not a row in `file_derivatives`: those are thumbnails, reproducible and disposable ([`source-layer-data-model.md`](../../source-layer-data-model.md) §8), and the image is evidence that a purge must never touch.
 
 **The Citation is the photo, not the face.** A Citation on a photograph cites the photo or the page, with a transcription when there is one (*Wedding party, 1902*), or none. Each face is a likeness Observation on that Citation with its own region and image. A group photo is one Citation with one likeness per person, the same way one passage yields several names.
 
@@ -30,9 +30,8 @@ A group photo is the case that hurts. One Artifact, several faces. The researche
 Photograph Source
   Artifact: wedding.jpg            (File F)
   Citation: the photo              transcription "Wedding party, 1902" or empty
-    Observation  N1 -- likeness --> depiction value: region R1, image C1
-    Observation  N2 -- likeness --> depiction value: region R2, image C2
-  file_derivatives: F → C1 (depiction), F → C2 (depiction)
+    Observation  N1 -- likeness --> depiction value: region R1 on F, image File C1
+    Observation  N2 -- likeness --> depiction value: region R2 on F, image File C2
 ```
 
 Several likenesses of one person are a gallery. They do not compete the way two birth dates do. The auto-reconciler reconciles them like any value (one image is one value; negatives, provisional members, and weak evidence apply), and `multiple` keeps every distinct one.
@@ -45,11 +44,11 @@ On promote, a likeness lines up like a name: Promote's evidence sheet ([`promote
 
 **The client extracts; Go stores its own copy.** The composer already has the Artifact open, so it renders the crop: a pixel crop for an image, and PDFKit drawing the page region for a PDF. Go has no PDF engine and does not grow one. The client sends the crop the way Artifact import sends a file: as a path to a file it wrote, never as bytes over the FFI.
 
-**Client bytes are untrusted** (user, 2026-10-16). The crop goes through every protection a file import has: an absolute path, no symlinks, a regular file, a size cap, and the content sniff and allowlist. Go then decodes it with the raster package's format allowlist and pixel budget, checks the longest edge, and stores **its own re-encoded image**, not the client's bytes.
+**Client bytes are untrusted** (user, 2026-10-16). Go stages the crop before the catalog write: the same open-and-check step every file import uses (an absolute path, no symlinks, a regular file, a size cap), then the same bounded decode thumbnails use (format allowlist, pixel budget), then **its own re-encoded image**. The client's bytes are never stored, and no decode runs while the catalog write is open.
 
-**Format:** the polygon's bounding box, PNG, longest edge at most 2048. A transparent polygon mask is later; the polygon itself is kept in the region.
+**Format:** the polygon's bounding box, PNG, scaled down to at most 2048 on the long edge. A transparent polygon mask is later; the polygon itself is kept in the region.
 
-**Lifetime follows the evidence chain.** The image is stored in the same write as its Observation, so a failed save leaves no file behind. A region edit stores a new image; the old one is released when nothing else points at it. Deleting the Observation releases its value row, its derivative link, and the image File when unused. A Citation cannot be deleted while it has Observations, so by the time a Citation goes, every image made from it has gone. Identical pixels share one stored File (the store is content-addressed); the value rows and derivative links stay separate.
+**Lifetime follows the evidence chain.** The image is stored in the same write as its Observation, so a failed save leaves no file behind. A region edit stores a new image; the old one is released when nothing else points at it. Deleting the Observation releases its value row and the image File when unused; one shared purge removes the object from disk. A Citation cannot be deleted while it has Observations, so by the time a Citation goes, every image made from it has gone. Identical pixels share one stored File (the store is content-addressed); the value rows stay separate.
 
 Person page:
 
@@ -67,7 +66,7 @@ One read, then a handful of small images. No crop cache, and no "fill it in the 
 | **Value type, not only a property key** | `likeness` still needs somewhere to put the picture. Existing value types are text-like or structured scalars. |
 | **The value is an owned row: region plus image** | Every value type stores its value; a depiction is no exception. The region keeps the original as the evidence. The image is what every reader shows. (Replaces "The Citation is the value", 2026-10-16.) |
 | **The Citation is the photo; each face is an Observation** | One photo, many faces, like one passage with many names. (Replaces "several Citations on one Artifact".) |
-| **The image is a derivative of the Artifact's File** | `file_derivatives` already records lineage from an original; many depictions per File, released when nothing points at them. (Replaces the crop cache keyed by File plus locator.) |
+| **The image is the value's own File, not a derivative row** | Lineage is explicit through region → Citation → Artifact → File. `file_derivatives` stays reproducible, disposable thumbnails, so a purge can never delete evidence (answered 2026-10-16). (Replaces the crop cache keyed by File plus locator.) |
 | **The client renders; Go validates and re-encodes** | The document is open in the composer. Go does not grow a PDF engine, and does not store bytes it did not produce. |
 | **Gallery, not a single concluded face** | Photos accumulate. `likeness` is cardinality `multiple`, so the auto-reconciler keeps every distinct image; a Reconciliation Claim stays for values that compete. |
 | **Preferred portrait is a display pointer** | One likeness leads the page and the list. The others stay in the gallery. It is not a Reconciliation Claim. |
