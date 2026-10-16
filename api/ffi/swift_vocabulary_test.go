@@ -11,6 +11,7 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/properties"
+	"github.com/mendahu/provenencia/core/database/propertyterms"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 )
 
@@ -41,6 +42,21 @@ func swiftEnumBody(t *testing.T, path, name string) string {
 		t.Fatalf("%s: enum %s does not close", path, name)
 	}
 	return src[start : start+end]
+}
+
+// installedCatalog is a fresh catalog with the seeded vocabulary installed,
+// closed when the test ends.
+func installedCatalog(t *testing.T) *database.Catalog {
+	t.Helper()
+	c, err := database.Create(t.TempDir(), "t.provenencia")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = c.Close() })
+	if err := subjectvocab.Install(c); err != nil {
+		t.Fatal(err)
+	}
+	return c
 }
 
 func matches(re *regexp.Regexp, body string) []string {
@@ -131,17 +147,31 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 		if len(keys) == 0 {
 			t.Fatal("no keys read")
 		}
-		c, err := database.Create(t.TempDir(), "t.provenencia")
-		if err != nil {
-			t.Fatal(err)
-		}
-		t.Cleanup(func() { _ = c.Close() })
-		if err := subjectvocab.Install(c); err != nil {
-			t.Fatal(err)
-		}
+		c := installedCatalog(t)
 		for _, key := range keys {
 			if _, err := properties.Lookup(c, key, properties.OriginProvenencia); err != nil {
 				t.Errorf("Swift names %q, which is not a seeded Property: %v", key, err)
+			}
+		}
+	})
+	t.Run("seeded term keys are seeded", func(t *testing.T) {
+		c := installedCatalog(t)
+		for _, tc := range []struct{ enum, property string }{
+			{"SeededGenderTerm", "gender"},
+			{"SeededSexAtBirthTerm", "sex_at_birth"},
+		} {
+			keys := matches(staticLet, swiftEnumBody(t, swiftVocabulary, tc.enum))
+			if len(keys) == 0 {
+				t.Fatalf("%s: no keys read", tc.enum)
+			}
+			prop, err := properties.Lookup(c, tc.property, properties.OriginProvenencia)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, key := range keys {
+				if _, err := propertyterms.Lookup(c, prop.ID, key, properties.OriginProvenencia); err != nil {
+					t.Errorf("Swift names %s term %q, which is not seeded: %v", tc.property, key, err)
+				}
 			}
 		}
 	})

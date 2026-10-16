@@ -8484,6 +8484,14 @@ enum L10n {
             ), word, date, place)
         }
 
+        static func sexAtBirthBadge(_ value: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.sexAtBirthBadge",
+                defaultValue: "%@ · at birth",
+                comment: "Person page badge when only sex at birth is recorded; argument is the term label"
+            ), value)
+        }
+
         static func a11yRef(_ ref: String) -> String {
             L10n.format(LocalizedStringResource(
                 "conclusions.a11y.ref",

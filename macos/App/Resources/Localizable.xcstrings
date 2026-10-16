@@ -16098,6 +16098,18 @@
         }
       }
     },
+    "conclusions.sexAtBirthBadge": {
+      "comment": "Person page badge when only sex at birth is recorded; argument is the term label",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · at birth"
+          }
+        }
+      }
+    },
     "conclusions.person.name": {
       "comment": "Row label on a Person page",
       "extractionState": "manual",

@@ -224,7 +224,7 @@ SLICE 6 — Lists and the Person page
   S10-21  canonical_entity audit scope + list revision reads — done, #398
   S10-22  Last updated on People, Events, and Places — done, #402
   S10-41  Sources list: last updated, filters, search, persisted sort and filters — done, #405
-  ✎ S10-D12 ──▶ S10-23  Person page sex / gender — planned. The board also draws the gallery S10-35 fills and the preferred portrait S10-39 fills.
+  S10-23  Person page sex / gender — done, #407. The board also draws the gallery S10-35 fills and the preferred portrait S10-39 fills.
   Check: edit a Source, leave, come back — the row's time moved, and sort,
          type, status, and search are still set. Scroll is the history entry's
          top row (S10-40): Back, Forward, a jump, and relaunch restore it; a
@@ -537,7 +537,7 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 
 #### S10-23 — Sex / gender on the Person page
 
-**Brief:** [S10-D12](design/S10-D12-person-detail.md). **Plan:** [`prs/S10-23-person-gender.md`](prs/S10-23-person-gender.md). **Status:** Planned.
+**Brief:** [S10-D12](design/S10-D12-person-detail.md). **Plan:** [`prs/S10-23-person-gender.md`](prs/S10-23-person-gender.md). **Status:** Landed [#407](https://github.com/mendahu/provenencia/pull/407).
 
 | | |
 | --- | --- |

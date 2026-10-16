@@ -32,6 +32,14 @@ struct PVThumbnail: View {
         static let empty = Content()
     }
 
+    /// A tint and line a feature lays under a mark or symbol (the Person
+    /// page's gender treatment, S10-23). Framing like `size`, so it is an init
+    /// parameter, not part of `Content`.
+    struct Colors: Equatable {
+        var tint: Color
+        var line: Color
+    }
+
     private enum State {
         case image
         case mark(PVMarkKey)
@@ -43,15 +51,26 @@ struct PVThumbnail: View {
     private let content: Content
     private let size: CGFloat
     private let cornerRadius: CGFloat
+    private let colors: Colors?
 
     init(
         _ content: Content = .empty,
         size: CGFloat = 44,
-        cornerRadius: CGFloat = PVRadius.sm
+        cornerRadius: CGFloat = PVRadius.sm,
+        colors: Colors? = nil
     ) {
         self.content = content
         self.size = size
         self.cornerRadius = cornerRadius
+        self.colors = colors
+    }
+
+    /// Colours apply to the mark and symbol states only.
+    private var activeColors: Colors? {
+        switch state {
+        case .mark, .symbol: colors
+        case .image, .empty, .loading: nil
+        }
     }
 
     private var state: State {
@@ -105,11 +124,11 @@ struct PVThumbnail: View {
             }
         }
         .frame(width: size, height: size)
-        .background(isFilled ? PVColor.surfaceInset : PVColor.surfaceSunken)
+        .background(activeColors?.tint ?? (isFilled ? PVColor.surfaceInset : PVColor.surfaceSunken))
         .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                .strokeBorder(isFilled ? PVColor.borderDefault : PVColor.borderSubtle, lineWidth: 1)
+                .strokeBorder(activeColors?.line ?? (isFilled ? PVColor.borderDefault : PVColor.borderSubtle), lineWidth: 1)
         )
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text(accessibilityLabel))
@@ -130,6 +149,10 @@ struct PVThumbnail: View {
         PVThumbnail(.empty)
         PVThumbnail(PVThumbnail.Content(glyph: .symbol(.photo)))
         PVThumbnail(PVThumbnail.Content(glyph: .mark(.filePDF)))
+        PVThumbnail(
+            PVThumbnail.Content(glyph: .mark(.filePDF)),
+            colors: .init(tint: PVColor.personWomanTint, line: PVColor.lineMaternal)
+        )
         PVThumbnail(PVThumbnail.Content(loading: true))
     }
     .padding(PVSpacing.space9)

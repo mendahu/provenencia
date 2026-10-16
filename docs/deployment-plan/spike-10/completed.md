@@ -1,5 +1,9 @@
 # Spike 10 — completed
 
+## S10-23 — Sex / gender on the Person page
+
+**Landed 2026-10-16** in [#407](https://github.com/mendahu/provenencia/pull/407). The Person page shows a Badge above the name: the gender when the Person has one value, else the sex at birth worded “Male · at birth”. The header thumb takes the family's tint and line: man, woman, non-binary (lapis), or other for any researcher term and for Intersex. Mixed, unknown, indeterminate, and empty values show no Badge and a plain thumb, and a disagreeing gender does not fall back to sex at birth. VoiceOver reads the Badge as “Gender, Woman” or “Sex at birth, Male”. The header thumb is 120pt on Person, Event, and Place pages. The Details rows are unchanged.
+
 ## S10-20 — Open file and box-select
 
 **Landed 2026-10-14** in [#396](https://github.com/mendahu/provenencia/pull/396). The Evidence graph header has a 208pt select of the Source's files and an Open button that sends the chosen one to the system app. The cover is chosen first when it has a file, and a missing file shows a "File not found" callout until you pick another file or arm a tool. A file with no thumbnail shows its type glyph in the menu. A Source with no file shows neither control. Hold Shift and drag on empty canvas, or arm Select on the palette (help: Hold Shift to select), to draw a rectangle. The person, event, and place cards it touches are selected and the relationship cards are not. Dragging one selected card, or pressing an arrow key, moves the whole group. Empty-canvas drag still pans with Select disarmed and Shift up.
