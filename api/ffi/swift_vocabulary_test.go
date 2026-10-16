@@ -44,6 +44,21 @@ func swiftEnumBody(t *testing.T, path, name string) string {
 	return src[start : start+end]
 }
 
+// installedCatalog is a fresh catalog with the seeded vocabulary installed,
+// closed when the test ends.
+func installedCatalog(t *testing.T) *database.Catalog {
+	t.Helper()
+	c, err := database.Create(t.TempDir(), "t.provenencia")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = c.Close() })
+	if err := subjectvocab.Install(c); err != nil {
+		t.Fatal(err)
+	}
+	return c
+}
+
 func matches(re *regexp.Regexp, body string) []string {
 	var out []string
 	for _, m := range re.FindAllStringSubmatch(body, -1) {
@@ -132,14 +147,7 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 		if len(keys) == 0 {
 			t.Fatal("no keys read")
 		}
-		c, err := database.Create(t.TempDir(), "t.provenencia")
-		if err != nil {
-			t.Fatal(err)
-		}
-		t.Cleanup(func() { _ = c.Close() })
-		if err := subjectvocab.Install(c); err != nil {
-			t.Fatal(err)
-		}
+		c := installedCatalog(t)
 		for _, key := range keys {
 			if _, err := properties.Lookup(c, key, properties.OriginProvenencia); err != nil {
 				t.Errorf("Swift names %q, which is not a seeded Property: %v", key, err)
@@ -147,14 +155,7 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 		}
 	})
 	t.Run("seeded term keys are seeded", func(t *testing.T) {
-		c, err := database.Create(t.TempDir(), "t.provenencia")
-		if err != nil {
-			t.Fatal(err)
-		}
-		t.Cleanup(func() { _ = c.Close() })
-		if err := subjectvocab.Install(c); err != nil {
-			t.Fatal(err)
-		}
+		c := installedCatalog(t)
 		for _, tc := range []struct{ enum, property string }{
 			{"SeededGenderTerm", "gender"},
 			{"SeededSexAtBirthTerm", "sex_at_birth"},
