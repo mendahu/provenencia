@@ -855,10 +855,11 @@ private struct EvidenceGraphDocumentBody: View {
 
             if let ghost = model.ghostPlacedSubject() {
                 let center = EvidenceSubjectCard.contentCenter(gridX: ghost.gridX, gridY: ghost.gridY)
-                EvidenceSubjectCard.ghost(
-                    placed: ghost,
-                    presentation: model.presentation(for: ghost.kind.rawValue)
-                )
+                EvidenceGhostCard(card: .ghost(ghost, presentation: model.presentation(for: ghost.kind.rawValue)))
+                    .id(ghost.kind.rawValue)
+                    .fixedSize()
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
                     .position(CGPoint(x: center.x - canvas.origin.x, y: center.y - canvas.origin.y))
             }
 
@@ -1211,4 +1212,13 @@ enum EvidenceGraphHitRefresh {
         let ids = observations.map(\.id).joined(separator: ",")
         return "\(id)@\(gridX),\(gridY):\(ids)"
     }
+}
+
+/// The placement ghost: the live card, built in its ghost mode. The look
+/// depends only on the armed kind, so SwiftUI never needs to update it.
+private struct EvidenceGhostCard: NSViewRepresentable {
+    let card: EvidenceCanvasCard
+
+    func makeNSView(context: Context) -> EvidenceCardView { EvidenceCardView(ghostOf: card) }
+    func updateNSView(_ view: EvidenceCardView, context: Context) {}
 }

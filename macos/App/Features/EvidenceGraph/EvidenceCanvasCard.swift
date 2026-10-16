@@ -21,6 +21,25 @@ struct EvidenceCanvasCard: Equatable {
         var canCite: Bool
         var hoveredActionID: String?
         var pressedActionID: String?
+
+        /// A card nobody is touching.
+        static let resting = State(
+            isSelected: false, isActivated: false, isConnectingFrom: false, isDragging: false,
+            canCite: true, hoveredActionID: nil, pressedActionID: nil
+        )
+    }
+
+    /// The placement ghost's card: an unfiled, resting subject card.
+    @MainActor
+    static func ghost(
+        _ placed: SourceGraphPlacedSubject,
+        presentation: CatalogSubjectTypePresentation?
+    ) -> EvidenceCanvasCard {
+        EvidenceCanvasCard(
+            placed: .subject(placed, presentation),
+            text: EvidenceCardText(subject: placed),
+            state: .resting
+        )
     }
 
     var placed: Placed

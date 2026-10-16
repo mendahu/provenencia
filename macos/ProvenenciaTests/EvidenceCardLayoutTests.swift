@@ -177,4 +177,27 @@ struct EvidenceCardLayoutTests {
         #expect(abs(add.frame.minY - (frame.minY + addPaint.minY)) < 0.5)
         #expect(abs(add.frame.maxY - frame.maxY) < 0.5)
     }
+
+    @Test func ghostCardMatchesTheLiveLayout() {
+        let p = placed(rows: 0)
+        let ghost = EvidenceCardView(ghostOf: .ghost(p, presentation: nil))
+        let live = EvidenceCardView(
+            card: EvidenceCanvasCard(placed: .subject(p, nil), text: EvidenceCardText(subject: p), state: .resting),
+            actions: []
+        )
+        #expect(ghost.layout == live.layout)
+    }
+
+    @Test func ghostCardIsNotAnAccessibilityElement() {
+        let p = placed(rows: 0)
+        let ghost = EvidenceCardView(ghostOf: .ghost(p, presentation: nil))
+        #expect(!ghost.isAccessibilityElement())
+        #expect((ghost.accessibilityLabel() ?? "").isEmpty)
+        #expect(ghost.accessibilityIdentifier().isEmpty)
+        #expect((ghost.accessibilityCustomActions() ?? []).isEmpty)
+
+        let live = EvidenceCardView(card: .ghost(p, presentation: nil), actions: [])
+        #expect(live.isAccessibilityElement())
+        #expect(live.accessibilityIdentifier() == "evidenceGraph.subject.s")
+    }
 }

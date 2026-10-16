@@ -5,13 +5,25 @@ import SwiftUI
 ///
 /// The canvas hosts one of these instead of an `NSHostingView`. Text measurement
 /// here is also the hit layout edges and the pointer read, so a wrapped title
-/// or value moves its band with the paint. The placement ghost stays SwiftUI.
+/// or value moves its band with the paint. The placement ghost is this view built with ``init(ghostOf:)``.
 final class EvidenceCardView: NSView {
     let layout: EvidenceCardLayout
     private let card: EvidenceCanvasCard
+    private let isGhost: Bool
 
-    init(card: EvidenceCanvasCard, actions: [NSAccessibilityCustomAction]) {
+    convenience init(card: EvidenceCanvasCard, actions: [NSAccessibilityCustomAction]) {
+        self.init(card: card, actions: actions, isGhost: false)
+    }
+
+    /// The placement ghost: the same paint at 62% opacity, with no VoiceOver
+    /// element and no actions.
+    convenience init(ghostOf card: EvidenceCanvasCard) {
+        self.init(card: card, actions: [], isGhost: true)
+    }
+
+    private init(card: EvidenceCanvasCard, actions: [NSAccessibilityCustomAction], isGhost: Bool) {
         self.card = card
+        self.isGhost = isGhost
         self.layout = Self.measure(card)
         let outset = GraphCanvasItemLayer.paintOutset
         super.init(frame: NSRect(
@@ -19,14 +31,18 @@ final class EvidenceCardView: NSView {
             width: layout.size.width + outset * 2,
             height: layout.size.height + outset * 2
         ))
-        setAccessibilityElement(true)
-        setAccessibilityRole(.group)
-        setAccessibilityLabel(card.text.accessibilityLabel)
-        let prefix = card.isBridge ? "evidenceGraph.bridge." : "evidenceGraph.subject."
-        setAccessibilityIdentifier(prefix + card.id)
-        setAccessibilityCustomActions(actions)
-        if card.state.isSelected || card.state.isActivated || card.state.isConnectingFrom {
-            setAccessibilitySelected(true)
+        if isGhost {
+            setAccessibilityElement(false)
+        } else {
+            setAccessibilityElement(true)
+            setAccessibilityRole(.group)
+            setAccessibilityLabel(card.text.accessibilityLabel)
+            let prefix = card.isBridge ? "evidenceGraph.bridge." : "evidenceGraph.subject."
+            setAccessibilityIdentifier(prefix + card.id)
+            setAccessibilityCustomActions(actions)
+            if card.state.isSelected || card.state.isActivated || card.state.isConnectingFrom {
+                setAccessibilitySelected(true)
+            }
         }
     }
 
@@ -67,6 +83,7 @@ final class EvidenceCardView: NSView {
 
     override func draw(_ dirtyRect: NSRect) {
         let alpha: CGFloat = {
+            if isGhost { return 0.62 }
             if card.state.isDragging { return 0.92 }
             if case .subject(let placed, _) = card.placed, !placed.isCited { return 0.76 }
             return 1
