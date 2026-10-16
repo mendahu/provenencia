@@ -1,6 +1,6 @@
 # Name matching — later
 
-**Status:** idea, not scheduled. Spike 10 takes abbreviations, project-only name frequency, spaced particles, support-weighted scores, negative observations as contradictions, reasons that name the two values, date windows in the comparer, and birth~baptism / death~burial plus place chains. Daitch–Mokotoff was descoped (S10-26); the design is [`daitch-mokotoff.md`](daitch-mokotoff.md). Design: [`spike-10/name-matching-enhancements.md`](../deployment-plan/spike-10/name-matching-enhancements.md).
+**Status:** idea, not scheduled. Spike 10 takes abbreviations, project-only name frequency, spaced particles, support-weighted scores, negative observations as contradictions, reasons that name the two values, and date windows in the comparer. Birth~baptism / death~burial and place chains were descoped (S10-31, 2026-10-16) and are below. Daitch–Mokotoff was descoped (S10-26); the design is [`daitch-mokotoff.md`](daitch-mokotoff.md). Design: [`spike-10/name-matching-enhancements.md`](../deployment-plan/spike-10/name-matching-enhancements.md).
 
 The small S9-10 fixes already shipped: hyphens as word breaks, adjacent-letter swaps, short-name insertions, date spans and before/after bounds, explicit zero settings, initials not hiding a surname conflict.
 
@@ -14,6 +14,11 @@ The small S9-10 fixes already shipped: hyphens as word breaks, adjacent-letter s
 - **Concluded values first.** Once Reconciliation Claims ship, a concluded value should dominate and the other groupings should count less. Spike 10 weighs by share of support only.
 - **Calibration.** Weights and minimum scores are hand-set. A labelled fixture of known-same and known-different pairs (common names, generations, spelling drift) would tune them. Later, accepted and rejected claims are labels. Fellegi–Sunter learns per-feature agree/disagree weights from that shape. The plan for this is [`matching-test-suite.md`](matching-test-suite.md).
 - **Researcher-defined properties.** `ComparerFor` exists. Default profiles only list product properties. A profile could include user properties (occupation, residence text) at a modest default weight, or let a project opt them in.
+
+## Events and places
+
+- **Related event types.** Birth vs baptism and death vs burial should score a partial, not a contradiction and not a full match. Birth vs death still contradicts. A term-affinity table, the same pattern as name roles. Descoped from S10-31 (2026-10-16).
+- **Place chains.** A place and its `part_of` parent (York in Toronto, or the reverse) should score a partial; two unrelated places do not. An equal toponym stays the full score. `succeeded_by` could be read the same way. Not a general gazetteer. Descoped from S10-31.
 
 ## Engine
 

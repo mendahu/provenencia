@@ -1,5 +1,21 @@
 # Spike 10 — completed
 
+## S10-37 — Collation locale
+
+**Descoped 2026-10-16.** A project collation locale (default `en`, no picker) and `x/text/collate` sort order for name lists are in [`ideas/international-names.md`](../../ideas/international-names.md). Name lists keep their current `sort_key` order. Matching's accent fold (S10-24) does not change.
+
+## S10-31 — Related events and place chains
+
+**Descoped 2026-10-16.** Birth~baptism and death~burial term affinity, and crediting a `part_of` place chain as a partial, are in [`ideas/name-matching-enhancements.md`](../../ideas/name-matching-enhancements.md).
+
+## S10-45 — Seed `interests` on Person
+
+**Landed 2026-10-12** in [#382](https://github.com/mendahu/provenencia/pull/382), with S10-38. A new catalog's Person properties include Interests: text, more than one value, bound to `person` and unlocked, so the Properties page can unbind it. Install writes it on catalog create only; opening an older catalog does not add it. [`docs/seeded-vocabulary.md`](../../seeded-vocabulary.md) §3.2 and §3.3 list the key.
+
+## S10-38 — Seed event type `engagement`
+
+**Landed 2026-10-12** in [#382](https://github.com/mendahu/provenencia/pull/382). A new catalog's event types include Engagement, beside Marriage. Two subjects title *Engagement of A and B* on the list, the page, and in search, the same couple rule a marriage uses; three or more read *Engagement of A et al.* Install writes the term on catalog create only; no migration adds it to an older catalog. The same PR seeded the `travel` event type and the `gender` Property with its terms, which S10-23 used. [`docs/seeded-vocabulary.md`](../../seeded-vocabulary.md) §3.4 lists the key.
+
 ## S10-30 — Date windows in matching
 
 **Landed 2026-10-16** in [#415](https://github.com/mendahu/provenencia/pull/415). Dates compare by the days they cover. December 1817 against January 1818 scores 0.777 instead of reading as a year apart (0.533), while two points in one calendar year keep their tiers and two whole years apart keep their score; a month-level range keeps its months, so a September date no longer sits inside March to June (0.734). The cutoff still counts civil years and the fall-off counts days, from a new `autoreconcile.DateEnds` that gives each end of a date its day span. An Event's `date` now compares with another Event's `start_date` and `end_date` as a period, at the `date` weight, only when exactly one side has a `date` and no start or end. A birth on `14 MAY 1817` against a year-only `1818` now scores 7.0, not 7.2. Julian dates and double dating stay out. No view changed.
