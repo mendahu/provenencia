@@ -600,7 +600,7 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 
 #### S10-30 — Date windows in matching
 
-**Plan:** [`prs/S10-30-date-windows.md`](prs/S10-30-date-windows.md) — Blocked — on S10-28
+**Plan:** [`prs/S10-30-date-windows.md`](prs/S10-30-date-windows.md) — Planned
 
 | | |
 | --- | --- |

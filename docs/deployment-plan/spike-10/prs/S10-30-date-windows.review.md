@@ -4,7 +4,8 @@
 **Lint:** `python3 scripts/check-plan-docs.py` — run after each round's fixes
 **Round 1:** maintainability reviewer: Fits with changes (two blockers). Executability reviewer: Not ready (two blockers). Both reviewed against `ff14e3f` with S10-28's plan as the assumed base for the rows marked **S10-28**.
 **Round 2:** maintainability: Fits with changes, no blocker, two majors. Executability: Ready with changes, no blocker, three majors. Both confirmed every round-1 answer and re-derived the arithmetic; all 29 rows of `TestDateComparerScores`, the ladder, and the invariants hold under the new math, and no pre-existing test other than the two named in AC-5.4 changes.
-**Verdict:** Fixed in the plan. No blocker is open. The plan stays `Blocked — on S10-28`: S10-28's code has not landed, and the rows marked **S10-28** need a redo on landing.
+**Refresh (S10-28 landed):** the rows marked **S10-28** were redone against `536d278`. `pairValues` takes a cardinality (S10-28 amendment F-1) and the cache-evidence helpers exist, so D-7 now names `Value.votes`, `weigh`, and `order` instead of the plan's wording; S10-50 gave every Promote row a sheet line per comparison, so the Out line and the Risks row about "no exhibit line" changed. Reviewed again below.
+**Verdict:** Planned if the refresh review below has no open blocker.
 
 ## Maintainability
 
