@@ -512,6 +512,25 @@ func TestHandleScopes(t *testing.T) {
 			},
 		},
 		{
+			name: "unpromote moves the handle, not the source",
+			run: func(t *testing.T, s scopeSeed) {
+				h := s.promote(t, s.person)
+				a0, b0 := s.sourceRevisions(t)
+				if _, err := writes.Call(s.c, writes.Op{Action: "unpromote_subject", UserID: scopeUserID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+					changes, err := promote.Unpromote(tx, scopeUserID, s.person.ID)
+					return struct{}{}, changes, err
+				}); err != nil {
+					t.Fatal(err)
+				}
+				if got, want := s.handleRevision(t, h), s.latest(t); got != want {
+					t.Fatalf("handle revision %d, want latest %d", got, want)
+				}
+				if a1, b1 := s.sourceRevisions(t); a1 != a0 || b1 != b0 {
+					t.Fatalf("unpromote moved the sources (%d,%d) → (%d,%d)", a0, b0, a1, b1)
+				}
+			},
+		},
+		{
 			name: "member observation add, edit, note, delete",
 			run: func(t *testing.T, s scopeSeed) {
 				h := s.promote(t, s.place)
