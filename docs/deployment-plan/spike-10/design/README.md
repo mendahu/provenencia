@@ -11,7 +11,7 @@ Brief files are written **just before** the PR they gate, not up front. This ind
 | Step | View | Gates | Notes |
 | --- | --- | --- | --- |
 | [S10-D6](S10-D6-evidence-graph.md) | Evidence graph | **S10-20** | File select and Open (system app), plus box-select. Board agreed 2026-10-14. Also specifies Unpromote on the promoted card, which ships in **S10-44**. Hit boxes, the tiled grid, canvas growth, and camera restore are not this board |
-| [S10-D12](S10-D12-person-detail.md) | Person detail | **S10-23** | Brief written 2026-10-15; board not agreed. Sex / gender Badge and thumb tint (four tints from existing tokens; sex at birth borrows and says “· at birth”), the likeness gallery **S10-35** fills, and the preferred-portrait control **S10-39** fills. The agreed board reaches the implementer as a Claude Design link |
+| [S10-D12](S10-D12-person-detail.md) | Person detail | **S10-23** | Board agreed 2026-10-16. Sex / gender Badge as an eyebrow above the name, 120pt header thumb on every Conclusion page, four tints (non-binary is lapis, not the board's copper), sex at birth borrows and says “· at birth”. The likeness gallery **S10-35** fills and the preferred-portrait control **S10-39** fills stay in this brief; **S10-39** archives it |
 | S10-D13 | Promote page | **S10-36** | Evidence sheet shows two crops |
 | S10-D15 | Citation composer — depiction row | **S10-34** | Own board, written just before S10-34. After the observation-list rethink |
 

@@ -4,7 +4,7 @@
 **Spike:** Provenencia Spike 10 (dogfood UX)
 **View:** Person detail — the header and a new likeness section
 **Implements later as:** PR **S10-23** (the sex / gender treatment). The same board draws the likeness gallery, which ships in **S10-35**, and the preferred-portrait control, which ships in **S10-39**.
-**Board:** not drawn yet. When it is agreed, record here the Claude Design link the implementer opens (answered 2026-10-15: the board reaches the implementer as a Claude Design link).
+**Board:** agreed 2026-10-16 — Claude Design project *Person Detail*, file *Person Detail.dc.html*, turn 2 “S10-D12”, frames 2a–2l (exported by the user). Changes from this brief, all answered by the user on 2026-10-16: the Badge is an eyebrow **above** the name, inside the thumb's height (the board's placement study, option E); the header thumb is **120pt** on every Conclusion page (Person, Event, Place); non-binary is **lapis** (`PVColor.infoSoft` / `info` / `infoForeground`), not the board's copper, which is the Event kind ink; the woman tint and ink become two new `PVColor` aliases of existing palette steps. Tints (tint / line / ink): Man `accentSoft` / `accentLine` / `accentSoftForeground`; Woman `personWomanTint` (plum100, dark plum900) / `lineMaternal` / `personWomanInk` (plum700, dark plum300); Non-binary `infoSoft` / `info` / `infoForeground`; other `surfaceSunken` / `borderInked` / `textPrimary`. The S10-23 plan describes every frame it ships in words.
 **Depends on:** the agreed S10-D9 Persons board (the likeness thumb and the preferred portrait as the list thumb).
 **Related:** [`../deployment-plan.md`](../deployment-plan.md) (S10-23, S10-35, S10-39; working rules "Sex / gender styling", "A preferred portrait is a display pointer, not a claim", "A depiction's value is its Citation"; gotchas "Gender and sex at birth are different Properties", "Gallery and gender share a page"). [`../depictions-and-likenesses.md`](../depictions-and-likenesses.md). [`docs/seeded-vocabulary.md`](../../../seeded-vocabulary.md) §3.7 and §3.9. The page itself is the S9-D5 board (`ConclusionDetailPage`). The preferred portrait as the Persons list thumb is S10-D9 (PSL-8); it has no control there.
 **Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)
@@ -47,7 +47,7 @@ Do **not** invent a local Field, Button, Card, Select, Callout, or Confirm.
 
 ### This brief is an enhancement
 
-Add to the Person page frames. Do not draw a second Person page. Keep the header (80pt thumb, display name, the b. and d. lines, the ref and member count at the right), the Details section with its rows, their badges and Why disclosures, the loading and error states, and the refreshing spinner in the Details header.
+Add to the Person page frames. Do not draw a second Person page. Keep the header (the thumb, display name, the b. and d. lines, the ref and member count at the right), the Details section with its rows, their badges and Why disclosures, the loading and error states, and the refreshing spinner in the Details header.
 
 S10-23 builds the sex / gender treatment. Draw the likeness gallery and the preferred-portrait control on this same page anyway. S10-35 and S10-39 fill those frames. They do not get another board.
 
@@ -57,7 +57,7 @@ S10-23 builds the sex / gender treatment. Draw the likeness gallery and the pref
 
 The researcher can tell a person's gender (or, failing that, their recorded sex at birth) at a glance on the Person page, without reading the Details rows. Later, the same page shows every face found for that person, and lets the researcher pick the one that leads.
 
-**What changes.** A small labeled mark under the name says the gender or the sex at birth, and the header thumb takes a soft tint for it. Later, a Likenesses section lists every crop, and one crop can be marked as the portrait.
+**What changes.** A small labeled mark above the name says the gender or the sex at birth, and the header thumb takes a soft tint for it. Later, a Likenesses section lists every crop, and one crop can be marked as the portrait.
 
 **What stays.** The name, the b. and d. lines, the ref and member count, every Details row (including the Sex at birth row and, when recorded, the Gender row, each with its badge and Why), the order of the rows, the loading and error states, and the Event and Place pages, which get none of this.
 
@@ -109,7 +109,7 @@ The researcher can tell a person's gender (or, failing that, their recorded sex 
 
 | ID | Requirement |
 | --- | --- |
-| PDP-1 | A person whose gender has one value shows a Badge directly under the name, above the b. and d. lines, reading the term's label (“Woman”, “Man”, “Non-binary”, or the researcher's term). |
+| PDP-1 | A person whose gender has one value shows a Badge as an eyebrow directly above the name (agreed board), reading the term's label (“Woman”, “Man”, “Non-binary”, or the researcher's term). |
 | PDP-2 | A person with no gender value and one sex-at-birth value shows the same Badge reading “{label} · at birth” (“Female · at birth”). |
 | PDP-3 | The header thumb takes the value's tint: the fill behind the person mark (tint) and its outline (line). Four tints: Man, Woman, Non-binary, and other. Female and Male borrow Woman and Man. Intersex and any added term use other. The Badge text uses the same tint's ink, on the kit's neutral Badge fill, with no icon. |
 | PDP-4 | Neutral shows no Badge and the thumb exactly as today: no gender and no sex at birth, a mixed gender, a mixed sex at birth with no gender, and Unknown or Indeterminate sex at birth. |
@@ -149,8 +149,8 @@ This table is **binding**. Instance the Ship kit rows. Paths from `macos/App/` u
 
 | Building block | Layer | Status | Home | Notes |
 | --- | --- | --- | --- | --- |
-| Person page | Snowflake | **Extend** | `Features/Conclusions/PersonDetailView.swift` | The Person summary slot gains the Badge (PDP-1, PDP-2). |
-| Shared Conclusion page | Snowflake | **Extend** | `Features/Conclusions/ConclusionDetailPage.swift` | The header reads one thumb slot from the kind (colours now; the crop in S10-35). Event and Place pass none. The Likenesses section needs a slot below Details that today's relationship sections cannot hold; S10-35 adds it. |
+| Person page | Snowflake | Ship | `Features/Conclusions/PersonDetailView.swift` | Unchanged; the Person content supplies the Badge through the shared header's badge slot (PDP-1, PDP-2). |
+| Shared Conclusion page | Snowflake | **Extend** | `Features/Conclusions/ConclusionDetailPage.swift` | The header reads one thumb slot (colours now; the crop in S10-35) and one badge slot above the title from the kind, and draws the thumb at 120pt for every kind. Event and Place pass none. The Likenesses section needs a slot below Details that today's relationship sections cannot hold; S10-35 adds it. |
 | Header thumb | Component | **Extend** | `DesignSystem/Components/Thumbnail/PVThumbnail.swift` | PDP-3, PDP-9. Optional colours (tint and line), framing like its size. Content-agnostic: the thumb does not know about gender. |
 | Gender / sex mark | Component | Ship | `PVBadge` (`DesignSystem/Components/Badge/PVBadge.swift`) | PDP-1, PDP-2. The text init with its `foreground` ink, the way a graph card shows its kind. Not a Chip: `PVChip` is a selectable control, and this mark is not pressed. |
 | Value → tint | Snowflake | New | beside `PersonDetailContent` in `Features/Conclusions/` | PDP-3, PDP-4. Reads the reconciled gender and sex-at-birth fields; picks Man, Woman, Non-binary, other, or neutral. Tints are existing `PVColor` tokens. Second call site: none; it is a feature snowflake on one page, not a kit primitive. |
