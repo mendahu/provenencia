@@ -33,22 +33,18 @@ func TestDeletableKindsResolve(t *testing.T) {
 }
 
 // TestResourceAndOwnedHonesty checks delete policy against the catalog model.
-// A resource foreign key must have a list probe, and an owned-outbound
-// foreign key must be on its parent's release list. Whether the model matches
-// SQLite is catalogmodel.TestPragmaHonesty.
+// A resource foreign key must have a list probe. An owned-outbound foreign key
+// needs no check here: the release is derived from the model itself
+// (TestOwnedPlanShapes). Whether the model matches SQLite is
+// catalogmodel.TestPragmaHonesty.
 func TestResourceAndOwnedHonesty(t *testing.T) {
 	resourceVias := resourceInboundVias()
-	owned := ownedColumns()
 	for _, fk := range catalogmodel.FKs {
 		key := fk.From + "." + fk.Column
 		switch fk.Bucket {
 		case catalogmodel.BucketResource:
 			if !resourceVias[key] {
 				t.Errorf("resource FK %s has no list probe", key)
-			}
-		case catalogmodel.BucketOwnedOutbound:
-			if !owned[key] {
-				t.Errorf("owned-outbound FK %s missing from release list", key)
 			}
 		}
 	}
@@ -166,4 +162,96 @@ func TestFacetReleaseHonesty(t *testing.T) {
 			t.Errorf("named facet release %s needs Count, List, and Child", via)
 		}
 	}
+}
+
+// checkOwnedPlan returns what is wrong with an owned-outbound declaration that
+// the derived release would trust: every owned edge's From is a table with a
+// Kind, a row child reached by another owned edge, or file_derivatives; every
+// row child has a PK; no owned edge leads back to a table it came from.
+func checkOwnedPlan(p *ownedPlan, tables []catalogmodel.Table) []string {
+	var problems []string
+	kinded := map[string]bool{}
+	for _, t := range tables {
+		if t.Kind != "" {
+			kinded[t.Name] = true
+		}
+	}
+	rowChild := map[string]bool{}
+	for _, edges := range p.edges {
+		for _, e := range edges {
+			if e.To != "files" {
+				rowChild[e.To] = true
+			}
+		}
+	}
+	for from, edges := range p.edges {
+		if !kinded[from] && !rowChild[from] && from != "file_derivatives" {
+			problems = append(problems, from+" owns children but has no Kind and no owning edge")
+		}
+		for _, e := range edges {
+			if e.To == "files" {
+				continue
+			}
+			if p.pks[e.To] == "" {
+				problems = append(problems, e.To+" is an owned row child with no PK")
+			}
+			if reaches(p, e.To, from, map[string]bool{}) {
+				problems = append(problems, from+" -> "+e.To+" cycles")
+			}
+		}
+	}
+	return problems
+}
+
+func reaches(p *ownedPlan, from, target string, seen map[string]bool) bool {
+	if seen[from] {
+		return false
+	}
+	seen[from] = true
+	for _, e := range p.edges[from] {
+		if e.To == target || reaches(p, e.To, target, seen) {
+			return true
+		}
+	}
+	return false
+}
+
+func TestOwnedPlanShapes(t *testing.T) {
+	if problems := checkOwnedPlan(productionPlan(), catalogmodel.Tables); len(problems) > 0 {
+		t.Fatalf("production plan: %v", problems)
+	}
+	owned := func(from, col, to string) catalogmodel.FK {
+		return catalogmodel.FK{From: from, Column: col, To: to, Bucket: catalogmodel.BucketOwnedOutbound}
+	}
+	tables := []catalogmodel.Table{
+		{Name: "test_parent", PK: "id", Kind: "test_parent"},
+		{Name: "test_values", Bucket: catalogmodel.BucketOwnedOutbound},
+	}
+	t.Run("a row child with no PK fails", func(t *testing.T) {
+		p := ownedPlanFrom([]catalogmodel.FK{owned("test_parent", "value_id", "test_values"), owned("test_values", "file_id", "files")}, tables)
+		if len(checkOwnedPlan(p, tables)) == 0 {
+			t.Fatal("expected a problem")
+		}
+	})
+	t.Run("a row child with a PK passes", func(t *testing.T) {
+		withPK := []catalogmodel.Table{tables[0], {Name: "test_values", PK: "id", Bucket: catalogmodel.BucketOwnedOutbound}}
+		p := ownedPlanFrom([]catalogmodel.FK{owned("test_parent", "value_id", "test_values"), owned("test_values", "file_id", "files")}, withPK)
+		if problems := checkOwnedPlan(p, withPK); len(problems) > 0 {
+			t.Fatalf("%v", problems)
+		}
+	})
+	t.Run("a cycle fails", func(t *testing.T) {
+		cyc := []catalogmodel.Table{tables[0], {Name: "test_values", PK: "id", Bucket: catalogmodel.BucketOwnedOutbound}}
+		p := ownedPlanFrom([]catalogmodel.FK{owned("test_parent", "value_id", "test_values"), owned("test_values", "parent_id", "test_parent")}, cyc)
+		if len(checkOwnedPlan(p, cyc)) == 0 {
+			t.Fatal("expected a problem")
+		}
+	})
+	t.Run("an unowned origin fails", func(t *testing.T) {
+		bare := []catalogmodel.Table{{Name: "stray", PK: "id"}}
+		p := ownedPlanFrom([]catalogmodel.FK{owned("stray", "file_id", "files")}, bare)
+		if len(checkOwnedPlan(p, bare)) == 0 {
+			t.Fatal("expected a problem")
+		}
+	})
 }

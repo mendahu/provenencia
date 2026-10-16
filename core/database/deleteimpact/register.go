@@ -17,26 +17,28 @@ type inboundEdge struct {
 	List   func(tx *sql.Tx, parentID []byte, limit int) ([]probeRow, error)
 }
 
-type ownedRelease struct {
-	Parent catalogmodel.Kind
-	Column string
-	Child  string
-	Mode   string // always | ifUnused
-	Then   []ownedRelease
-}
-
 // ownedPlan is what a delete needs to know about owned children, read from the
-// declared catalog model: which foreign keys count as pointers at a File, and
-// (once STEP-4 fills them) which owned edges hang off each table.
+// declared catalog model: which foreign keys count as pointers at a File, which
+// owned-outbound edges hang off each table, and each table's primary key.
 type ownedPlan struct {
 	pointers []catalogmodel.FK
+	edges    map[string][]catalogmodel.FK
+	pks      map[string]string
 }
 
 // ownedPlanFrom derives the plan from a foreign-key and table list. Production
 // passes the declared model; tests pass their own slices.
 func ownedPlanFrom(fks []catalogmodel.FK, tables []catalogmodel.Table) *ownedPlan {
-	p := &ownedPlan{}
+	p := &ownedPlan{edges: map[string][]catalogmodel.FK{}, pks: map[string]string{}}
+	for _, t := range tables {
+		if t.Name != "" && t.PK != "" {
+			p.pks[t.Name] = t.PK
+		}
+	}
 	for _, fk := range fks {
+		if fk.Bucket == catalogmodel.BucketOwnedOutbound {
+			p.edges[fk.From] = append(p.edges[fk.From], fk)
+		}
 		// A File's own thumbnail links belong to it; they do not keep it.
 		if fk.To == "files" && !(fk.From == "file_derivatives" && fk.Column == "source_file_id") {
 			p.pointers = append(p.pointers, fk)
@@ -95,18 +97,6 @@ var originRules = []originRule{
 	{Kind: catalogmodel.KindPropertyTerm, OriginSQL: `SELECT origin FROM property_terms WHERE id = ?`, PluginNever: true, SeededLocked: true},
 	{Kind: catalogmodel.KindSubjectType, OriginSQL: `SELECT origin FROM subject_types WHERE id = ?`, PluginNever: true},
 	{Kind: catalogmodel.KindCredibilityGrade, OriginSQL: `SELECT origin FROM source_credibility_grades WHERE id = ?`, PluginNever: true, SeededLocked: true},
-}
-
-var ownedReleases = []ownedRelease{
-	{Parent: catalogmodel.KindObservation, Column: "observations.value_date_id", Child: "date_values", Mode: "always"},
-	{Parent: catalogmodel.KindObservation, Column: "observations.value_name_id", Child: "name_values", Mode: "always"},
-	{
-		Parent: catalogmodel.KindArtifact, Column: "artifacts.file_id", Child: "files", Mode: "ifUnused",
-		Then: []ownedRelease{
-			{Parent: catalogmodel.KindFile, Column: "file_derivatives.source_file_id", Child: "file_derivatives", Mode: "always"},
-			{Parent: catalogmodel.KindFile, Column: "file_derivatives.derived_file_id", Child: "file_derivatives", Mode: "always"},
-		},
-	},
 }
 
 func isDeletableTable(t catalogmodel.Table) bool {
@@ -193,16 +183,6 @@ func originRuleFor(kind catalogmodel.Kind) (originRule, bool) {
 	return originRule{}, false
 }
 
-func ownedFor(kind catalogmodel.Kind) []ownedRelease {
-	var out []ownedRelease
-	for _, r := range ownedReleases {
-		if r.Parent == kind {
-			out = append(out, r)
-		}
-	}
-	return out
-}
-
 func resourceInboundVias() map[string]bool {
 	out := map[string]bool{}
 	for _, e := range inboundEdges() {
@@ -210,18 +190,5 @@ func resourceInboundVias() map[string]bool {
 			out[e.Via] = true
 		}
 	}
-	return out
-}
-
-func ownedColumns() map[string]bool {
-	out := map[string]bool{}
-	var walk func([]ownedRelease)
-	walk = func(rs []ownedRelease) {
-		for _, r := range rs {
-			out[r.Column] = true
-			walk(r.Then)
-		}
-	}
-	walk(ownedReleases)
 	return out
 }

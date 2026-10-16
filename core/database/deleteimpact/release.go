@@ -8,12 +8,23 @@ import (
 	"github.com/mendahu/provenencia/core/database/files"
 )
 
-// OwnedSnapshot is owned-outbound child IDs captured while the parent still
-// exists. ReleaseSnapshot walks those IDs after DELETE (looking up
-// artifacts.file_id after erase is a no-op).
+// OwnedSnapshot is the owned-outbound child ids captured while the parent still
+// exists, read from the declared catalog model. ReleaseSnapshot walks them after
+// the parent DELETE (looking up artifacts.file_id after the erase finds nothing).
 type OwnedSnapshot struct {
-	kind catalogmodel.Kind
-	cols map[string][]byte
+	root *rowSnap
+}
+
+// rowSnap is one row's owned children: each declared owned FK that held a
+// value, with the child row's own snapshot when the child is a row, not a File.
+type rowSnap struct {
+	items []snapItem
+}
+
+type snapItem struct {
+	edge    catalogmodel.FK
+	childID []byte
+	sub     *rowSnap // nil for a File child
 }
 
 // SnapshotOwned reads owned-outbound columns on the live parent row.
@@ -34,20 +45,11 @@ func SnapshotOwned(tx *sql.Tx, kind catalogmodel.Kind, id []byte) (OwnedSnapshot
 	if err != nil {
 		return OwnedSnapshot{}, err
 	}
-	snap := OwnedSnapshot{kind: kind, cols: map[string][]byte{}}
-	for _, rel := range ownedFor(kind) {
-		switch rel.Child {
-		case "files", "date_values", "name_values":
-			childID, err := lookupParentColumn(tx, rel.Column, id)
-			if err != nil {
-				return OwnedSnapshot{}, err
-			}
-			if len(childID) == 16 {
-				snap.cols[rel.Column] = childID
-			}
-		}
+	root, err := snapshotOwnedRow(tx, productionPlan(), spec.Name, id)
+	if err != nil {
+		return OwnedSnapshot{}, err
 	}
-	return snap, nil
+	return OwnedSnapshot{root: root}, nil
 }
 
 // ReleaseSnapshot deletes owned-outbound children from a pre-DELETE snapshot
@@ -56,15 +58,7 @@ func ReleaseSnapshot(tx *sql.Tx, snap OwnedSnapshot) ([]files.Object, error) {
 	if tx == nil {
 		return nil, ErrInvalid
 	}
-	var out []files.Object
-	for _, rel := range ownedFor(snap.kind) {
-		objs, err := releaseFromSnapshot(tx, rel, snap)
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, objs...)
-	}
-	return out, nil
+	return releaseOwnedSnap(tx, productionPlan(), snap.root)
 }
 
 // ReleaseOwned snapshots then releases. Call it only while the parent row
@@ -77,39 +71,126 @@ func ReleaseOwned(tx *sql.Tx, kind catalogmodel.Kind, id []byte) ([]files.Object
 	return ReleaseSnapshot(tx, snap)
 }
 
-func releaseFromSnapshot(tx *sql.Tx, rel ownedRelease, snap OwnedSnapshot) ([]files.Object, error) {
-	switch rel.Child {
-	case "date_values", "name_values":
-		childID := snap.cols[rel.Column]
-		if len(childID) != 16 {
-			return nil, nil
-		}
-		return nil, deleteValueRow(tx, rel.Child, childID)
-	case "files":
-		fileID := snap.cols[rel.Column]
-		if len(fileID) != 16 {
-			return nil, nil
-		}
-		return releaseFile(tx, productionPlan(), fileID)
-	default:
-		return nil, nil
-	}
+// ReleaseReplaced releases the old child of an owned FK after an update has
+// pointed the parent at a new one. column is "table.column" of a declared
+// owned-outbound FK. The child is a row (deleted by its PK, its own children
+// released after it) or a File (deleted when nothing else points at it). Call
+// it after the parent row already holds the new value. An empty oldID is a
+// no-op; a column that is not an owned FK is ErrInvalid.
+func ReleaseReplaced(tx *sql.Tx, column string, oldID []byte) ([]files.Object, error) {
+	return releaseReplaced(tx, productionPlan(), column, oldID)
 }
 
-func lookupParentColumn(tx *sql.Tx, column string, parentID []byte) ([]byte, error) {
+func releaseReplaced(tx *sql.Tx, p *ownedPlan, column string, oldID []byte) ([]files.Object, error) {
+	if tx == nil {
+		return nil, ErrInvalid
+	}
 	table, col, ok := splitColumn(column)
 	if !ok {
 		return nil, ErrInvalid
 	}
-	var id []byte
-	err := tx.QueryRow(fmt.Sprintf(`SELECT %s FROM %s WHERE id = ?`, col, table), parentID).Scan(&id)
-	if err == sql.ErrNoRows {
+	var edge *catalogmodel.FK
+	for i := range p.edges[table] {
+		if p.edges[table][i].Column == col {
+			edge = &p.edges[table][i]
+			break
+		}
+	}
+	if edge == nil {
+		return nil, ErrInvalid
+	}
+	if len(oldID) == 0 {
 		return nil, nil
 	}
+	if len(oldID) != 16 {
+		return nil, ErrInvalid
+	}
+	item, err := snapshotEdgeChild(tx, p, *edge, oldID)
+	if err != nil || item == nil {
+		return nil, err
+	}
+	return releaseSnapItem(tx, p, *item)
+}
+
+// snapshotOwnedRow reads the owned columns of the row in table whose key is id.
+// It deletes nothing; the caller deletes the row, then calls releaseOwnedSnap.
+// A row that is gone, and a NULL column, are skipped.
+func snapshotOwnedRow(tx *sql.Tx, p *ownedPlan, table string, id []byte) (*rowSnap, error) {
+	snap := &rowSnap{}
+	pk := p.pks[table]
+	if len(p.edges[table]) > 0 && pk == "" {
+		return nil, fmt.Errorf("deleteimpact: %s owns children but declares no PK", table)
+	}
+	for _, edge := range p.edges[table] {
+		var childID []byte
+		err := tx.QueryRow(
+			fmt.Sprintf(`SELECT %s FROM %s WHERE %s = ?`, edge.Column, table, pk), id,
+		).Scan(&childID)
+		if err == sql.ErrNoRows {
+			return snap, nil
+		}
+		if err != nil {
+			return nil, err
+		}
+		if len(childID) != 16 {
+			continue
+		}
+		item, err := snapshotEdgeChild(tx, p, edge, append([]byte(nil), childID...))
+		if err != nil {
+			return nil, err
+		}
+		if item != nil {
+			snap.items = append(snap.items, *item)
+		}
+	}
+	return snap, nil
+}
+
+// snapshotEdgeChild captures one child. A File child needs no further reading;
+// a row child is snapshotted for its own owned edges while it still exists.
+func snapshotEdgeChild(tx *sql.Tx, p *ownedPlan, edge catalogmodel.FK, childID []byte) (*snapItem, error) {
+	item := &snapItem{edge: edge, childID: childID}
+	if edge.To == "files" {
+		return item, nil
+	}
+	if p.pks[edge.To] == "" {
+		return nil, fmt.Errorf("deleteimpact: owned child %s declares no PK", edge.To)
+	}
+	sub, err := snapshotOwnedRow(tx, p, edge.To, childID)
 	if err != nil {
 		return nil, err
 	}
-	return append([]byte(nil), id...), nil
+	item.sub = sub
+	return item, nil
+}
+
+// releaseOwnedSnap releases every child a snapshot captured, in edge order,
+// after the parent row is gone.
+func releaseOwnedSnap(tx *sql.Tx, p *ownedPlan, snap *rowSnap) ([]files.Object, error) {
+	if snap == nil {
+		return nil, nil
+	}
+	var out []files.Object
+	for _, item := range snap.items {
+		objs, err := releaseSnapItem(tx, p, item)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, objs...)
+	}
+	return out, nil
+}
+
+func releaseSnapItem(tx *sql.Tx, p *ownedPlan, item snapItem) ([]files.Object, error) {
+	if item.edge.To == "files" {
+		return releaseFile(tx, p, item.childID)
+	}
+	if _, err := tx.Exec(
+		fmt.Sprintf(`DELETE FROM %s WHERE %s = ?`, item.edge.To, p.pks[item.edge.To]), item.childID,
+	); err != nil {
+		return nil, err
+	}
+	return releaseOwnedSnap(tx, p, item.sub)
 }
 
 func splitColumn(column string) (table, col string, ok bool) {
@@ -119,14 +200,6 @@ func splitColumn(column string) (table, col string, ok bool) {
 		}
 	}
 	return "", "", false
-}
-
-func deleteValueRow(tx *sql.Tx, table string, id []byte) error {
-	if len(id) != 16 {
-		return nil
-	}
-	_, err := tx.Exec(fmt.Sprintf(`DELETE FROM %s WHERE id = ?`, table), id)
-	return err
 }
 
 // CountFilePointers counts the rows that still point at a File through any

@@ -432,3 +432,156 @@ func testCatalogInternal(t *testing.T) *database.Catalog {
 	t.Cleanup(func() { _ = c.Close() })
 	return c
 }
+
+// ownedPlanFixture is a plan over two temp tables, test_parent.value_id ->
+// test_values.file_id -> files, declared as owned-outbound on top of the
+// production model. It never touches catalogmodel's own slices.
+type ownedPlanFixture struct {
+	t    *testing.T
+	tx   *sql.Tx
+	plan *ownedPlan
+}
+
+func newOwnedPlanFixture(t *testing.T) *ownedPlanFixture {
+	t.Helper()
+	c := testCatalogInternal(t)
+	db, err := c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	tx, err := db.Begin()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = tx.Rollback() })
+	for _, ddl := range []string{
+		`CREATE TABLE test_parent (id BLOB PRIMARY KEY, value_id BLOB)`,
+		`CREATE TABLE test_values (id BLOB PRIMARY KEY, file_id BLOB)`,
+	} {
+		if _, err := tx.Exec(ddl); err != nil {
+			t.Fatal(err)
+		}
+	}
+	fks := append(append([]catalogmodel.FK(nil), catalogmodel.FKs...),
+		catalogmodel.FK{From: "test_parent", Column: "value_id", To: "test_values", OnDelete: "NO ACTION", Bucket: catalogmodel.BucketOwnedOutbound},
+		catalogmodel.FK{From: "test_values", Column: "file_id", To: "files", OnDelete: "NO ACTION", Bucket: catalogmodel.BucketOwnedOutbound},
+	)
+	tables := append(append([]catalogmodel.Table(nil), catalogmodel.Tables...),
+		catalogmodel.Table{Name: "test_parent", PK: "id"},
+		catalogmodel.Table{Name: "test_values", PK: "id", Bucket: catalogmodel.BucketOwnedOutbound},
+	)
+	return &ownedPlanFixture{t: t, tx: tx, plan: ownedPlanFrom(fks, tables)}
+}
+
+func (f *ownedPlanFixture) value(file []byte) []byte {
+	f.t.Helper()
+	id := newFileID(f.t)
+	if _, err := f.tx.Exec(`INSERT INTO test_values (id, file_id) VALUES (?, ?)`, id, file); err != nil {
+		f.t.Fatal(err)
+	}
+	return id
+}
+
+func (f *ownedPlanFixture) parent(value []byte) []byte {
+	f.t.Helper()
+	id := newFileID(f.t)
+	if _, err := f.tx.Exec(`INSERT INTO test_parent (id, value_id) VALUES (?, ?)`, id, value); err != nil {
+		f.t.Fatal(err)
+	}
+	return id
+}
+
+// drop deletes a parent the way a delete does: snapshot, DELETE, release.
+func (f *ownedPlanFixture) drop(parent []byte) []files.Object {
+	f.t.Helper()
+	snap, err := snapshotOwnedRow(f.tx, f.plan, "test_parent", parent)
+	if err != nil {
+		f.t.Fatal(err)
+	}
+	if _, err := f.tx.Exec(`DELETE FROM test_parent WHERE id = ?`, parent); err != nil {
+		f.t.Fatal(err)
+	}
+	objs, err := releaseOwnedSnap(f.tx, f.plan, snap)
+	if err != nil {
+		f.t.Fatal(err)
+	}
+	return objs
+}
+
+func (f *ownedPlanFixture) has(table string, id []byte) bool {
+	f.t.Helper()
+	return countRows(f.t, f.tx, `SELECT COUNT(*) FROM `+table+` WHERE id = ?`, id) == 1
+}
+
+func TestOwnedPlanRelease(t *testing.T) {
+	sum := func(c string) string { return strings.Repeat(c, 64) }
+	tests := []struct {
+		name string
+		run  func(t *testing.T, f *ownedPlanFixture)
+	}{
+		{"releasing a parent deletes its value row and its unused File", func(t *testing.T, f *ownedPlanFixture) {
+			file := fileFixture(t, f.tx, sum("1"))
+			val := f.value(file)
+			objs := f.drop(f.parent(val))
+			if len(objs) != 1 || objs[0].ChecksumSHA256 != sum("1") {
+				t.Fatalf("objects %+v", objs)
+			}
+			if f.has("test_values", val) || f.has("files", file) {
+				t.Fatal("value row or File left")
+			}
+		}},
+		{"a File shared through two value rows stays until both parents go", func(t *testing.T, f *ownedPlanFixture) {
+			file := fileFixture(t, f.tx, sum("2"))
+			v1, v2 := f.value(file), f.value(file)
+			p1, p2 := f.parent(v1), f.parent(v2)
+			if objs := f.drop(p1); len(objs) != 0 {
+				t.Fatalf("first release reported %+v", objs)
+			}
+			if f.has("test_values", v1) || !f.has("files", file) || !f.has("test_values", v2) {
+				t.Fatal("first release left the wrong rows")
+			}
+			if objs := f.drop(p2); len(objs) != 1 {
+				t.Fatalf("second release reported %+v", objs)
+			}
+			if f.has("files", file) {
+				t.Fatal("File left after both parents")
+			}
+		}},
+		{"a replaced value row and its unused File go, the new ones stay", func(t *testing.T, f *ownedPlanFixture) {
+			oldFile := fileFixture(t, f.tx, sum("3"))
+			newFile := fileFixture(t, f.tx, sum("4"))
+			oldVal, newVal := f.value(oldFile), f.value(newFile)
+			parent := f.parent(oldVal)
+			if _, err := f.tx.Exec(`UPDATE test_parent SET value_id = ? WHERE id = ?`, newVal, parent); err != nil {
+				t.Fatal(err)
+			}
+			objs, err := releaseReplaced(f.tx, f.plan, "test_parent.value_id", oldVal)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(objs) != 1 || objs[0].ChecksumSHA256 != sum("3") {
+				t.Fatalf("objects %+v", objs)
+			}
+			if f.has("test_values", oldVal) || f.has("files", oldFile) {
+				t.Fatal("old rows left")
+			}
+			if !f.has("test_values", newVal) || !f.has("files", newFile) {
+				t.Fatal("new rows removed")
+			}
+			if objs, err := releaseReplaced(f.tx, f.plan, "test_parent.value_id", nil); err != nil || len(objs) != 0 {
+				t.Fatalf("empty old id %v %v", objs, err)
+			}
+			if _, err := releaseReplaced(f.tx, f.plan, "test_parent.nope", oldVal); !errors.Is(err, ErrInvalid) {
+				t.Fatalf("unknown column %v", err)
+			}
+		}},
+		{"a NULL value column releases nothing", func(t *testing.T, f *ownedPlanFixture) {
+			if objs := f.drop(f.parent(nil)); len(objs) != 0 {
+				t.Fatalf("objects %+v", objs)
+			}
+		}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) { tt.run(t, newOwnedPlanFixture(t)) })
+	}
+}
