@@ -1,5 +1,9 @@
 # Spike 10 — completed
 
+## S10-28 — Support, negatives, and which values matched
+
+**Landed 2026-10-16** in [#411](https://github.com/mendahu/provenencia/pull/411). A handle's cached values count in proportion to their effective support (support minus the negatives against it) over the leading value's, so one stray "female" among three "male" Sources contradicts a female Subject and one "James Robins" on a handle that is mostly "Mary Smith" is not a name match. Equally supported values both lead. Negative Observations now load: one that is compatible with a leading value on the other side is a contradiction, as is a value the reconciler `denied`. Promote reads the same weights from the graph cache, so such a row reads as a conflict. Each `Reason` and `PropertyComparison` names the probe value and the candidate value. No catalog change and no view change; Promote's exhibit chooser keeps its own member picker.
+
 ## S10-27 — Name frequency
 
 **Landed 2026-10-16** in [#409](https://github.com/mendahu/provenencia/pull/409). A name word common among the project's filed people earns up to 20% fewer points. A word costs `0.2 × ln(df) / ln(pop)`, with `pop` at least 100 people, so `John Smith` vs `John Smith` scores 8.64 and `John Quirk` vs `John Quirk` 9.60 at weight 10. Similarity is untouched: an identical name is still `agree` and pins in Promote. Promote counts Person handles' names once into `Stats.Words` and drops them on a handle commit; merge hints and Subject suggestions count the candidates they loaded. A candidate that only a common surname supported can now fall under `MinScore`. A bare `NameComparer{}` has no counts and scores as before.

@@ -1,6 +1,6 @@
 # S10-28 — Support, negatives, and which values matched
 
-**Status:** Planned
+**Status:** Landed in #411 (2026-10-16)
 **Spike / slice:** Spike 10 · Slice 7 — How names compare (no new chrome)
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#s10-28--support-negatives-and-which-values-matched)
 **Brief:** — (no new chrome: the score and its reasons change, no view does)
@@ -14,6 +14,12 @@
 **Context:** [`name-matching-enhancements.md`](../name-matching-enhancements.md), [`docs/conclusion-reconciliation.md`](../../../conclusion-reconciliation.md) §4–§6, [`docs/matching.md`](../../../matching.md), [S10-27 plan](S10-27-name-frequency.md) D-8 and D-9 and its Landed note, working rule "Support weighting and negatives land together" in [`../deployment-plan.md`](../deployment-plan.md)
 **Planned:** 2026-10-16 against `main` @ `6577a43` (S10-27 landed). First written against `a4e9de4` while S10-27 was in implementation; §4 was redone on landing
 **Review:** [`S10-28-support-negatives.review.md`](S10-28-support-negatives.review.md) — 2 rounds: Fits with changes / Not ready, then Fits with changes / Not ready; every finding answered; no open blocker
+
+**Landed:** The code matches the plan except for these.
+- `Values.HasPositive` lives in `core/match/pairs.go` with the other new `Value` methods, not in `match.go`.
+- The plan's T-1 row for AC-2.5 is a separate test, `TestPairValuesAgainstReducesSupport`; the minority-weight and order cases are `TestPairValuesOrderIndependent` and the T-1 table.
+- Test helpers (`cachedPerson`, `cached`, `kept`, `negative`, `negated`, `addCachedTerm`) are test-only.
+- `BenchmarkPairValues/plain` uses `TermComparer`; a text comparer allocates on its own. `BenchmarkProposeColdHub` did not move (about 535-575 ms/op before and after).
 
 ### Implementer — read this first
 
