@@ -573,6 +573,8 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 
 #### S10-28 — Support, negatives, and which values matched
 
+**Plan:** [`prs/S10-28-support-negatives.md`](prs/S10-28-support-negatives.md) — Planned
+
 | | |
 | --- | --- |
 | **In** | A candidate value counts in proportion to its share of support, so one stray name or one dissenting sex term cannot score as the consensus. Negative Observations load and score as contradictions. Each reason names the two values (or their ids) that produced it. |
