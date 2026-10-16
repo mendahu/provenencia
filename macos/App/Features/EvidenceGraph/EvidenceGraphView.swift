@@ -222,9 +222,7 @@ private struct EvidenceGraphContent: View {
             VStack(alignment: .leading, spacing: PVSpacing.space3) {
                 if !item.bridges.isEmpty {
                     Text(L10n.EvidenceGraph.unpromoteConfirmBridgesHeader)
-                        .font(PVFont.body(size: PVTypeScale.micro, weight: PVFontWeight.semibold))
-                        .tracking(PVTypeScale.micro * PVTracking.caps)
-                        .textCase(.uppercase)
+                        .pvMicroCaps()
                         .foregroundStyle(PVColor.textMuted)
                     VStack(alignment: .leading, spacing: PVSpacing.space2) {
                         ForEach(Array(item.bridges.enumerated()), id: \.offset) { _, sentence in
