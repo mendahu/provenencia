@@ -1,7 +1,7 @@
 # Ship log — S10-55 File release from the declared model
 
 **Plan:** [`S10-55-file-release.md`](S10-55-file-release.md) · **Branch:** `s10-55-file-release` · **PR:** #423
-**State:** fixing 1
+**State:** ready
 
 ## Round 0 — implement
 Head `6d5a2589`. Gate PASS (orchestrator run). Report deviations:
@@ -85,3 +85,22 @@ This plan must go back through `plan-pr` and `review-plan` to fold these in befo
 
 Set the plan's **Status** line to `Blocked — on S10-55; needs re-plan for the requirements below`. In `deployment-plan.md`, the S10-53 **Plan:** line gets the same status text, and its **In** cell ends with: " Also, from S10-55's review (user, 2026-10-16): release entry points schedule their own purge through `Tx.Catalog()`, and a delete cannot race an import of the same bytes."
 Check: `python3 scripts/check-plan-docs.py docs/deployment-plan/spike-10/prs/S10-53-stage-image.md docs/deployment-plan/spike-10/prs/S10-55-file-release.md` passes; scripts/check-pr.sh PASS.
+
+## Round 1 — fix
+Head `d5dd1f87`. Gate PASS (orchestrator run). F-1 to F-5 done. Deviation: F-2's committing write returns one `subject_position` create change (a table with no audit scope) because `writes.Run` rolls back an empty change list. Landed note and `completed.md` updated for F-4.
+
+## Round 2 — review
+Lenses: CON, MNT, SEC (the lenses with fixes). Scope `6d5a2589...d5dd1f87`.
+
+| ID | Lens | Severity | Title | Decision | Evidence / reason |
+| --- | --- | --- | --- | --- | --- |
+| — | CON | — | F-1 to F-4 and CON-3 resolved; F-5 done | — | tests run green at `d5dd1f87` |
+| — | MNT | — | MNT-2 resolved; MNT-1 carried into S10-53 | — | — |
+| MNT-R2-1 | MNT | minor (not raised) | `"objects"` folder name now spelled in four places | Logged | tidy when S10-53 adds the object write to `core/objectstore` |
+| — | SEC | — | SEC-O1 resolved by `RemoveObject` | — | `TestRemoveObject` six cases |
+| SEC-R2-1 | SEC | minor (not raised) | Gap between `Lstat(objects)` and `OpenRoot` | Follow-up | open root at the project folder, then `Root.OpenRoot("objects")` |
+
+No new blockers → no Fix plan 2.
+
+## Result
+Gate PASS · CI see PR #423 · open: none · follow-ups: SEC-R2-1; MNT-1 and SEC-O2 are S10-53 requirements · logged: MNT-R2-1, MNT-3, MNT-4 · to user: — (user decisions recorded above)
