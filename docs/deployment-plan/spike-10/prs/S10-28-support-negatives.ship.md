@@ -1,7 +1,7 @@
 # Ship log — S10-28 Support, negatives, and which values matched
 
 **Plan:** [`S10-28-support-negatives.md`](S10-28-support-negatives.md) · **Branch:** `s10-28-support-negatives` · **PR:** #411
-**State:** fixing 1
+**State:** ready
 
 ## Round 0 — implement
 Head `c81aa7ad`. Gate PASS (orchestrator run, against `ff14e3ff`). Report deviations:
@@ -72,3 +72,19 @@ Check: scripts/check-pr.sh PASS (plan-docs).
 Files: `core/database/matching/matching.go:265`.
 Do: `) ORDER BY r.entity_id, r.rank`.
 Check: `go test ./core/database/matching` passes.
+
+## Round 1 — fix
+Head `ab0950e1`. Gate PASS (orchestrator run). F-1 to F-5 done. Deviations: F-2's majority (stray-name) case already had a `conflict` exhibit from `pairExhibits`, so only the negative case adds a row-level line; D-4 row text also names the new `pairValues(cmp, card, probe, candidate)` signature; the profile/vocabulary drift test lives in `subjectvocab` (internal; its registry is unexported); F-2 plan edits cover §6 macOS, Manual check 2–3, D-10 and its Risks row.
+
+## Round 2 — review
+Scope `c81aa7ad...ab0950e1`. Lenses: CON, MNT, UX (the lenses with a Fix-now finding). Verdicts: all clean. CON-1, CON-2, MNT-1, MNT-2, UX-1 resolved. No new blocker.
+
+| ID | Lens | Severity | Title | Decision | Evidence / reason |
+| --- | --- | --- | --- | --- | --- |
+| UX-3 | UX | minor | The row-level conflict line shows a term's key (`male`), not its label (`Male`); `match.Value.Label()` returns `v.Term` | Follow-up | round 2 adds blockers only; carry the term label on `ValueRef` or resolve it like `exhibits.go:449` |
+| CON-4 | CON→UX | minor | Rows with no exhibits still send conflict comparisons with no values or `incoming_negative` (`promote_align.go:152`) | Follow-up | predates the PR |
+| CON-5 | CON→MNT | minor | `TestPairValuesMultiple` "no shared value" case does not prove R3 is skipped (similarity 0 either way) | Follow-up | test strength only |
+| MNT-6 | MNT | nit | Duplicate doc comment above `autoreconcile.Reason.Displayed`; `ReconciledValue.Displayed` lost its comment | Logged | |
+
+## Result
+Gate PASS (`ab0950e1`) · CI pending · open: none · follow-ups: MNT-1 (rename `Value.Reason`, move `conclusiondetails`/`conclusionheaders`/`canon.go:237` onto `Reason.Displayed`), MNT-3, MNT-4, UX-2, UX-3, CON-4, CON-5, PRF-1 · to user: CON-1, UX-1 (answered 2026-10-16)
