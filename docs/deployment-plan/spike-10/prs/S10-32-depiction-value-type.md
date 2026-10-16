@@ -1,6 +1,8 @@
 # S10-32 — Depiction value type and `likeness` on Person
 
-**Status:** Planned
+**Status:** Blocked — re-plan
+> **Re-plan (2026-10-16).** Slice 8 was re-cut: a depiction's value is now an owned `depiction_values` row (region plus a validated image File), not the Observation's own Citation. See the working rules "A depiction's value is its own row" and "The client renders the image" in [`../deployment-plan.md`](../deployment-plan.md). This plan's reconciler half (D-7, D-12 to D-14, STEP-5 to STEP-7) moves to S10-52, re-keyed to the image File. The rest is re-planned with `plan-pr` after S10-51. Do not implement this version.
+
 **Spike / slice:** Spike 10 · Slice 8 — Likeness
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#s10-32--depiction-value-type)
 **Brief:** — (no new chrome: an engine value type and a seeded Property; the Properties page only gains one value-type label in an existing pill, and the composer row is S10-34 from S10-D15)

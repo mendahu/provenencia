@@ -60,8 +60,10 @@ Usability fixes from [`docs/dogfood/ux.md`](../../dogfood/ux.md) after Spike 9, 
 | Name patterns: schema, Western seed, loaders | S10-29 | — |
 | Date windows in matching | S10-30 | — |
 | Related event types + place chains | S10-31 | — |
-| Depiction value type + `likeness` | S10-32 | — |
-| Crop cache | S10-33 | — |
+| Many derivatives per File; release counts every pointer | S10-51 | — |
+| Depiction value (region + image) + `likeness` | S10-32 | — |
+| Depiction auto-reconciler module | S10-52 | — |
+| Crop cache | S10-33, descoped 2026-10-16 (the image is the value, S10-32) | — |
 | Composer depiction row | S10-34 | S10-D15 |
 | Person gallery + list thumb | S10-35 | S10-D12, S10-D9 |
 | Preferred portrait | S10-39 | S10-D12, S10-D9 (same boards as S10-35) |
@@ -130,9 +132,12 @@ These are the calls for this spike. The questions at the bottom are answered; no
 - **Collation is a project setting with no picker.** Default locale `en`. Name ordering uses `golang.org/x/text/collate`. Changing the locale in the UI waits for a settings place.
 - **Dates in matching use the windows S9-21 already stores.** Spans and gaps are days. ABT doubles tolerance only when both dates are points. An event `date` can overlap `start_date` / `end_date`. Calendars and double dating stay out.
 - **Birth and baptism partly match, and so do death and burial.** A small term-affinity table, same shape as name-role affinity. Place comparison walks `part_of` (already shipped) so York and Toronto can relate. Flat toponym text stays the strong match.
-- **A depiction's value is its Citation.** New Observation `value_type = depiction`. No image column and no copied bytes. `likeness` is the seeded person Property of that type, cardinality many (a gallery). Place, event, and signature keys wait. Empty transcription is valid. The crop is a bounding-box JPEG, longest edge 512, cached by File plus locator, minted when the Observation is saved. The composer draws a PDF crop with PDFKit. A missing cache is filled the next time a client can open that Artifact. Two Citations with the same pixels may share bytes; the derivative rows stay separate. Promote's evidence sheet shows the two crops and pins the two Observations.
+- **A depiction's value is its own row: region plus image.** New Observation `value_type = depiction`. Like a date or a name, the Observation owns one `depiction_values` row (`observations.value_depiction_id`), released with it. The row holds the region (page and polygon on the Citation's Artifact, normalized to that page, validated by `core/locator`) and the image: a File that is a `depiction` derivative of the Artifact's File in `file_derivatives`. The Citation is the photo or the page; a group photo is one Citation with one likeness Observation per face. Its transcription may be empty. Place, event, and signature keys wait. Promote's evidence sheet shows the two images and pins the two Observations. Design: [depictions and likenesses](depictions-and-likenesses.md). Replaces "A depiction's value is its Citation" (2026-10-16).
+- **The client renders the image; Go validates it and stores its own copy.** The composer crops an image Artifact by pixels and draws a PDF region with PDFKit, writes a PNG to a temporary file, and sends its path, as Artifact import does: bytes never cross the FFI. Client bytes are untrusted (user, 2026-10-16). The crop goes through every `core/ingest` protection (absolute path, no symlink, regular file, size cap, sniff and allowlist), then the `core/derivatives/raster` format allowlist and pixel budget. Go stores its own re-encoded PNG, the polygon's bounding box, longest edge at most 2048, not the client's bytes. The image is stored in the same write as its Observation, so a failed save leaves no File. A region edit stores a new image and releases the old one when unused.
+- **Derivatives hold many images per File, and a File is released only when nothing points at it.** `file_derivatives` keeps one `thumbnail` per File and any number of `depiction` rows. A File is deleted only when no Artifact, derivative link, or depiction value points at it; today's release counts only `artifacts.file_id`, and deleting one source can drop a derived File another source shares. S10-51 fixes that first.
+- **Deletes follow the evidence chain.** Deleting a depiction Observation releases its value row, its derivative link, and the image File when unused. A Citation still cannot be deleted while it has Observations, and an Artifact while it has Citations, so when a Citation goes, every image made from it has gone. An image is never an Artifact: it is not listed, opened, or deleted as one.
 - **`likeness` is new catalogs only.** Install seeds it; no migration seeds it and open does not heal. Researchers cannot create a depiction Property (registry-only, like `term`). A later one-off CLI, outside this map, brings the dogfood projects up to date (answered 2026-10-16).
-- **A gallery is the reconciled likeness values.** `depiction` has an auto-reconciler module like every value type: the value is the Citation, so one Citation is one crop, a stronger negative Observation denies it, and a provisional member's crop does not show. `likeness` is `multiple`, so every distinct crop survives. A crop carried only by weak evidence is cached as `weak` and still shows in the gallery (answered 2026-10-16). The Person page has no Likeness field row; S10-35 draws the gallery from the cache.
+- **A gallery is the reconciled likeness values.** `depiction` has an auto-reconciler module like every value type (S10-52). The value's key is its image File, so the same pixels drawn twice are one value; a stronger negative Observation denies it, and a provisional member's image does not show. `likeness` is `multiple`, so every distinct image survives. An image carried only by weak evidence is cached as `weak` and still shows in the gallery (answered 2026-10-16). The Person page has no Likeness field row; S10-35 draws the gallery from the cache.
 - **A preferred portrait is a display pointer, not a claim.** One likeness Observation on that person. The gallery still lists every crop. The Person page lead and the Persons list thumb use the chosen crop. With no choice, both use the earliest likeness. Deleting that likeness clears the pointer and the thumb falls back. The choice is made on the Person page. Promote does not pick a portrait.
 - **`engagement` titles like any other event.** Key `engagement`, label Engagement, next to `marriage` in `subjectvocab` `seedTerms`. New catalogs get it from Install. Existing catalogs are not migrated; the term is added there by hand. Titles follow the subject count for every event type: one subject is *{Type} of {A}*, two are *{Type} of {A} and {B}*, and three or more are *{Type} of {A} et al.* A marriage of two still reads *Marriage of A and B*. An engagement of two reads *Engagement of A and B*.
 
@@ -252,16 +257,18 @@ SLICE 7 — How names compare (no new chrome)
          not a year.
 
 SLICE 8 — Likeness
-  S10-32  depiction value type + likeness on person
-  S10-33  Crop cache (File + locator), minted on save
-  ✎ S10-D15 ──▶ S10-34  Composer depiction row (after S10-16)
+  S10-51  Derivatives hold many images per File; release counts every pointer
+  S10-32  Depiction value (region + validated image) + likeness on person
+  S10-52  Depiction auto-reconciler module; cache stores the image
+  S10-33  Crop cache — descoped 2026-10-16. The image is the value (S10-32).
+  ✎ S10-D15 ──▶ S10-34  Composer depiction row: draw, render, save (after S10-16)
   ✎ S10-D13 ──▶ S10-36  Promote evidence sheet shows the two crops
   S10-35  Person gallery + Persons list thumb (S10-D12 and S10-D9 already designed)
   S10-39  Preferred portrait leads the page and the list (same boards)
   Check: a group photo yields one crop per face. The Person page shows the
          gallery. Mark one face: it leads the page and the People list, and
-         the other faces stay. Promote shows the two pictures. Clearing the
-         cache does not lose the Citation.
+         the other faces stay. Promote shows the two pictures. Deleting a
+         likeness removes its image; the photo's Citation stays.
 
 SLICE 9 — Seeded vocabulary
   S10-38  Seed engagement; two subjects title "Engagement of A and B"
@@ -277,7 +284,7 @@ SLICE 10 — Take a filing back
 S10-99 — Dogfood close / docs
 ```
 
-S10-05…S10-13, S10-15, S10-19, S10-42, and S10-43 have no dependency on the graph slice. S10-24, S10-29, S10-30, S10-31, S10-32, S10-38, and S10-45 have no dependency on the dogfood slices. They are ordered here so review stays one stream. Parallel PRs are fine when **Depends on** allows it. S10-D4 does not wait on S10-29.
+S10-05…S10-13, S10-15, S10-19, S10-42, and S10-43 have no dependency on the graph slice. S10-24, S10-29, S10-30, S10-31, S10-32, S10-38, S10-45, S10-51, and S10-52 have no dependency on the dogfood slices. They are ordered here so review stays one stream. Parallel PRs are fine when **Depends on** allows it. S10-D4 does not wait on S10-29.
 
 ### Dependencies at a glance
 
@@ -310,9 +317,10 @@ S10-24 fold ──▶ S10-25 tables
 S10-26 phonetic — descoped 2026-10-12. See ideas/daitch-mokotoff.md.
 S10-28 support + negatives (after S10-24, so fixtures settle once) ──▶ S10-50 sheet values
 
-S10-32 depiction type ──▶ S10-33 crop cache ──▶ S10-34 composer row (after S10-16; ✎ S10-D15)
-                      └──▶ S10-36 Promote crops
-S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) ──▶ S10-39 preferred
+S10-51 derivatives ──▶ S10-32 depiction value ──▶ S10-52 reconciler ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) ──▶ S10-39 preferred
+                                             ├──▶ S10-34 composer row (after S10-16; ✎ S10-D15)
+                                             └──▶ S10-36 Promote images (✎ S10-D13)
+S10-33 crop cache — descoped 2026-10-16
 ```
 
 ---
@@ -631,25 +639,38 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 
 ### Slice 8 — Likeness
 
-#### S10-32 — Depiction value type
-
-**Plan:** [`prs/S10-32-depiction-value-type.md`](prs/S10-32-depiction-value-type.md) — Planned
+#### S10-51 — Derivatives hold many images per File
 
 | | |
 | --- | --- |
-| **In** | `value_type = depiction`. The value is the Observation's own Citation (artifact, page, region). No image column. A DDL-only migration widens the `properties.value_type` CHECK. Seed `likeness` on `person`, cardinality many, through Install only ([`add-seeded-vocabulary`](../../../.agents/skills/add-seeded-vocabulary/SKILL.md)); new catalogs only. Empty transcription stays valid. The auto-reconciler gets a `depiction` module keyed by the Citation, and its cache stores the value as `value_citation_id`, so likenesses never collapse and negatives, provisional members, and weak evidence apply as they do to names. |
-| **Out** | Place, event, and signature keys. The preferred-portrait pointer (S10-39). The crop bytes (S10-33). |
-| **Testable** | A likeness Observation stores no raster. Two likenesses on one person both remain (they do not collapse the way two birth dates can). A Citation with an empty transcription and a region saves. |
+| **In** | Preparatory, engine only. `file_derivatives` allows any number of `depiction` rows per source File and still one `thumbnail`. The File release counts every pointer (Artifacts, derivative links, and the slot S10-32 adds), so a derived File another source shares is not deleted. `core/derivatives` gains the store-a-validated-image path S10-32 calls: a client file by path through `core/ingest`'s protections, decoded within the `raster` allowlist and pixel budget, re-encoded as PNG, longest edge at most 2048, stored as a derivative of a given source File inside the caller's write. Working rules "The client renders the image…" and "Derivatives hold many images…". No new FFI method. |
+| **Out** | The depiction value and its write path (S10-32). Auditing thumbnails. |
+| **Testable** | Two depiction derivatives of one File both stay; a second thumbnail is still refused. Deleting one of two Artifacts whose Files share a derived image keeps the image. A symlink, an oversized file, a non-image, a decompression bomb past the pixel budget, and an image over 2048 on its long edge are refused; a valid crop is stored as Go's re-encoded PNG, not the input bytes. |
 | **Depends on** | — |
+
+#### S10-32 — Depiction value
+
+**Plan:** [`prs/S10-32-depiction-value-type.md`](prs/S10-32-depiction-value-type.md) — Blocked — re-plan (the plan's reconciler half moves to S10-52)
+
+| | |
+| --- | --- |
+| **In** | `value_type = depiction` (a DDL migration widens the `properties.value_type` CHECK). `depiction_values` (region, image File, derivative link) owned by `observations.value_depiction_id`, released with the Observation and audited like a date value. The Observation write takes the region and the client crop's path and stores the image through S10-51 in the same write; a region edit replaces the image. Seed `likeness` on `person`, cardinality multiple, through Install only, new catalogs only. Researchers cannot create a depiction Property. Swift value-type label. Working rules "A depiction's value is its own row…", "Deletes follow the evidence chain", "`likeness` is new catalogs only". |
+| **Out** | Place, event, and signature keys. Reconciling depictions (S10-52). The composer row (S10-34). The preferred-portrait pointer (S10-39). |
+| **Testable** | A likeness on a Citation with an empty transcription saves with its region and image; the image is a `depiction` derivative of the Artifact's File. A save whose crop is refused writes nothing. Editing the region stores a new image and releases the old one. Deleting the Observation releases its value and image; the Citation then deletes. A new catalog has `likeness`; an older one does not. |
+| **Depends on** | S10-51 |
+
+#### S10-52 — Depiction auto-reconciler module
+
+| | |
+| --- | --- |
+| **In** | A `depiction` key module in `core/autoreconcile`, keyed by the value's image File, so the same pixels are one value. The loader fills it; `auto_reconciler_values` stores it in a new column; the graph cache mirrors it so `Verify` covers it; `CacheVersion` bumps. The Person field list skips depiction fields. Working rule "A gallery is the reconciled likeness values". The reconciler half of the current [S10-32 plan](prs/S10-32-depiction-value-type.md) (its D-7, D-12 to D-14) is the starting point, re-keyed from the Citation to the image. |
+| **Out** | Drawing the gallery (S10-35). A Reconciliation Claim on a depiction. |
+| **Testable** | Two likenesses of one person on two Sources are two `kept` values. A stronger negative on the same image denies it; a provisional member's image is `provisional`; a low-trust Source's image is `weak` and still stored. Rebuild equals upkeep, and `Verify` passes on a loaded node. |
+| **Depends on** | S10-32 |
 
 #### S10-33 — Crop cache
 
-| | |
-| --- | --- |
-| **In** | Cache key is File plus locator, not the one-thumbnail-per-File unique key. Bounding-box JPEG, longest edge 512. Mint when the depiction Observation is saved. PDF: the composer asks PDFKit to draw the locator. A JPEG is clipped the same way. Disposable, not audited, not an Artifact. A changed polygon invalidates that entry. A missing cache is filled the next time a client that can open the Artifact draws it. Same pixels may share the stored file; derivative rows stay separate. |
-| **Out** | A transparent polygon mask. A PDF engine in Go. |
-| **Testable** | Saving a likeness writes a crop. Deleting the crop row leaves the Citation. Editing the polygon produces a new crop. Two Citations on the same pixels do not duplicate the blob if the PR shares it. |
-| **Depends on** | S10-32 |
+**Descoped 2026-10-16.** The image is the depiction's value, stored as a `depiction` derivative File when the Observation is saved (S10-32, through S10-51). There is no disposable cache to fill or purge.
 
 #### S10-34 — Composer depiction row
 
@@ -657,10 +678,10 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 
 | | |
 | --- | --- |
-| **In** | Per S10-D15: pick the region, leave transcription empty, save a likeness (or another depiction property, if the board shows only likeness). The row uses the authoring place and focus rules from S10-16. |
+| **In** | Per S10-D15: draw the region on the photo, leave transcription empty, save a likeness (or another depiction property, if the board shows only likeness). The composer renders the crop (pixel crop for an image, PDFKit for a PDF page region), writes a PNG to a temporary file, and saves with its path (working rule "The client renders the image…"). The row shows the saved image. The row uses the authoring place and focus rules from S10-16. |
 | **Out** | The observation-list rethink (S10-16). Gallery (S10-35). |
-| **Testable** | Draw a face on a group photo, add a likeness, save. The row shows the crop. Transcription can be empty. |
-| **Depends on** | S10-16, S10-33, S10-D15 |
+| **Testable** | Draw two faces on one group photo Citation, add a likeness for each, save. Each row shows its image. The same works on a PDF page. Transcription can be empty. |
+| **Depends on** | S10-16, S10-32, S10-D15 |
 
 #### S10-35 — Person gallery and list thumb
 
@@ -668,10 +689,10 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 
 | | |
 | --- | --- |
-| **In** | Person detail shows every likeness crop for the handle: its cached `likeness` values (`auto_reconciler_values.value_citation_id`, from S10-32) with reason `kept` or `weak`, so provisional members and denied crops are already out. That admit rule is one named `autoreconcile.Reason` method beside `Displayed` (`kept` or `weak`: a weak photo does not contradict another photo), which S10-39's thumb fallback reuses; not a `reason IN (…)` literal in a new SQL read. Persons list lead thumb shows the earliest likeness when a crop exists, and the placeholder when it does not. Events and Places lists stay on the placeholder. |
+| **In** | Person detail shows every likeness crop for the handle: its cached `likeness` values (the image File column S10-52 adds to `auto_reconciler_values`) with reason `kept` or `weak`, so provisional members and denied crops are already out. That admit rule is one named `autoreconcile.Reason` method beside `Displayed` (`kept` or `weak`: a weak photo does not contradict another photo), which S10-39's thumb fallback reuses; not a `reason IN (…)` literal in a new SQL read. Persons list lead thumb shows the earliest likeness when a crop exists, and the placeholder when it does not. Events and Places lists stay on the placeholder. |
 | **Out** | Marking a preferred portrait (S10-39 fills that frame on the same boards). Place and event galleries. |
-| **Testable** | Two faces of one person both appear on the page. The Persons list shows the earliest crop. A person with no likeness keeps the placeholder. Purging the cache and reopening regenerates it. |
-| **Depends on** | S10-23, S10-33, S10-D12, S10-D9 |
+| **Testable** | Two faces of one person both appear on the page. The Persons list shows the earliest crop. A person with no likeness keeps the placeholder. |
+| **Depends on** | S10-23, S10-52, S10-D12, S10-D9 |
 
 #### S10-39 — Preferred portrait
 
@@ -690,10 +711,10 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 
 | | |
 | --- | --- |
-| **In** | On the Promote evidence sheet, a likeness comparison shows the two crops. Pinning pins the two Observations. It does not create a picture and does not write a transcription. |
+| **In** | On the Promote evidence sheet, a likeness comparison shows the two images. Pinning pins the two Observations. It does not create a picture and does not write a transcription. |
 | **Out** | A new Promote flow. Picking a preferred portrait. |
-| **Testable** | Two people with a likeness: the sheet shows both crops. Pinning writes the same kind of pin a name pin writes. |
-| **Depends on** | S10-33, S10-D13 |
+| **Testable** | Two people with a likeness: the sheet shows both images. Pinning writes the same kind of pin a name pin writes. |
+| **Depends on** | S10-32, S10-D13 |
 
 ### Slice 9 — Seeded vocabulary
 
@@ -748,7 +769,7 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 | Support weighting and negative evidence | Concluded-value priority, memory of a rejected claim |
 | Western profile, project-default pattern, catalog roles and weights | Per-person `name_format` claim, Spanish dual surnames, `patronymic`, `maternal_surname` |
 | Date windows in the comparer, birth~baptism, place chains | Calendars and double dating |
-| `depiction` + `likeness` gallery, bounding-box crop, one preferred portrait | Place/event keys, transparent polygon, Go PDF |
+| `depiction` value (region + validated image) + `likeness` gallery, one preferred portrait | Place/event keys, transparent polygon, Go PDF, a crop cache |
 | Session camera | A saved camera table |
 | Seeded `part_of` stays as it is | A new place-relationship term. Prefilling `subject` or `part_of` on a generic new connection (S10-10, descoped) |
 | `gender` seeded as `man`, `woman`, `non_binary`, plus researcher terms | Treating `sex_at_birth` as gender. A locked term list. |
@@ -772,7 +793,7 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 - **Outside click and macOS sheets.** AppKit sheets do not dismiss on an outside click. This is a product behavior on our presenters. Do not bolt a scrim onto `PVConfirm` (design-system rule: no dimming scrim; the window owns chrome).
 - **Folding is not reconciliation.** A test that José and Jose become one auto-reconciled name is a bug. Matching suggestions may still rank them together.
 - **`name_format_profiles` is in the catalog** (S10-29). Matching and display read the default profile's rows. A catalog with no default still uses the built-in Western pattern.
-- **Depiction is not a file.** Delete and Impact stay on the Citation and the Artifact. The crop cache is disposable. A polygon edit must not leave the old crop as if it were the current face.
+- **A depiction image is a File, not an Artifact.** It never appears in the Artifact list, the graph's file select, or a Source cover, and is never opened or deleted as one. Readers that list Files through `artifacts.file_id` stay correct; a reader that walks `file_derivatives` must filter on `derivative_type = 'thumbnail'` where it means thumbnails (`searchindex` already does). A region edit must not leave the old image as if it were the current face.
 - **Gallery and gender share a page.** S10-23 ships the gender treatment inside frames that already reserve the gallery and the preferred-portrait control. S10-35 fills the gallery. S10-39 fills the control. Designing the gender page without those frames means a second Person-detail brief, which this plan does not allow.
 - **Frequency on a tiny project.** Inverse frequency with one of each name is a flat weight. The scorer needs a floor so the first Smith is not treated as rare forever, and so an empty project still matches.
 - **Do not backfill `engagement` or `interests`.** Seeded terms and properties are Install data. A migration `INSERT` would put them in catalogs the researcher already has, and this spike does not do that. Add them on those projects by hand.
@@ -804,6 +825,9 @@ Everything else in **Working rules** is decided for planning. Correct any of the
 | S10-21 | [`docs/audit-revision-history.md`](../../audit-revision-history.md) §4.1: `canonical_entity` is a scope. The catalog-audit rule's "conclusion layer carries no Source scope" stays true; the handle scope is additional. |
 | S10-23 | None. The gender section is already [`docs/seeded-vocabulary.md`](../../seeded-vocabulary.md) §3.9 (landed with S10-38 and S10-45). Do not rewrite §3.7. |
 | S10-25, S10-32 | Seeded vocabulary: abbreviation and nickname tables, `likeness` / `depiction`. |
+| S10-32 | [`interpretation-layer-data-model.md`](../../interpretation-layer-data-model.md): the `depiction` value type and `depiction_values`. |
+| S10-51 | [`source-layer-data-model.md`](../../source-layer-data-model.md): `file_derivatives` holds many `depiction` rows per File; release counts every pointer. |
+| S10-52 | [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md) §7: the `depiction` module. |
 | S10-29 | [`docs/matching.md`](../../matching.md) and [`docs/structured-name-model.md`](../../structured-name-model.md): the Western profile is installed; roles and weights are catalog rows. |
 | S10-38 | [`docs/seeded-vocabulary.md`](../../seeded-vocabulary.md) §3.4: `engagement`. Two subjects of any event type title as *{Type} of {A} and {B}*. No migration. |
 | S10-40 | [`navigation-history.md`](../archive/spike-3/navigation-history.md): list scroll is a field on the entry, ignored for identity, written when you leave the list. |
