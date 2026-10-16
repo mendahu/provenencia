@@ -20,14 +20,14 @@ struct EvidenceCardLayout: Equatable, Sendable {
         CGRect(origin: origin, size: size)
     }
 
-    /// Document-space hit band for a tagged region: full card width, at the
+    /// Document-space hit band for a region: full card width, at the
     /// region's painted top and height. `nil` when the region is not painted.
     func band(_ id: String, origin: CGPoint) -> CGRect? {
         guard let rect = regions[id] else { return nil }
         return CGRect(x: origin.x, y: origin.y + rect.minY, width: size.width, height: rect.height)
     }
 
-    /// Document-space hit centered on a tagged control. Grows to `minSize` on
+    /// Document-space hit centered on a control. Grows to `minSize` on
     /// each axis when the painted piece is smaller than the hit. `nil` when
     /// the region is not painted.
     func centeredHit(_ id: String, origin: CGPoint, minSize: CGFloat) -> CGRect? {
@@ -43,7 +43,7 @@ struct EvidenceCardLayout: Equatable, Sendable {
         )
     }
 
-    /// Ids of tagged regions whose id starts with `prefix` (e.g. property rows).
+    /// Ids of regions whose id starts with `prefix` (e.g. property rows).
     func regionIDs(withPrefix prefix: String) -> [String] {
         regions.keys.filter { $0.hasPrefix(prefix) }.sorted()
     }
@@ -51,7 +51,7 @@ struct EvidenceCardLayout: Equatable, Sendable {
 
 /// Latest measured layout per card id for one graph. Hit targets, edges and
 /// the connect rubber band read it; the row-height constants are only the
-/// first-frame fallback before a card has reported.
+/// first-frame fallback before its view is built.
 @MainActor
 @Observable
 final class EvidenceCardLayoutStore {

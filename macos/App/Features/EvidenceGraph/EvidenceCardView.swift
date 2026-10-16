@@ -3,7 +3,7 @@ import SwiftUI
 
 /// Subject and bridge cards drawn in AppKit.
 ///
-/// The canvas hosts one of these instead of an `NSHostingView`. Text measurement
+/// The canvas hosts one of these per card. Text measurement
 /// here is also the hit layout edges and the pointer read, so a wrapped title
 /// or value moves its band with the paint. The placement ghost is this view built with ``init(ghostOf:)``.
 final class EvidenceCardView: NSView {
