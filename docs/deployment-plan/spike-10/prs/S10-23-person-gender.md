@@ -1,6 +1,6 @@
 # S10-23 — Sex / gender on the Person page
 
-**Status:** Planned
+**Status:** Landed in [#407](https://github.com/mendahu/provenencia/pull/407) (2026-10-16)
 **Spike / slice:** Spike 10 · Slice 6 — Lists and the Person page
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#s10-23--sex--gender-on-the-person-page)
 **Brief:** [S10-D12](../design/S10-D12-person-detail.md) (PDP-1 to PDP-6 and PDP-12 ship here), board agreed 2026-10-16
@@ -27,6 +27,12 @@
 8. **Docs-only lines in the DoD are part of the PR.** Do not skip them.
 
 ---
+
+## Landed
+
+Differences from this plan:
+- None in behavior. The seeded term keys, the `PersonGenderTreatment` file, and the `sexAtBirthBadge` copy landed together in the "Show a Person's gender" commit rather than one commit per step; the wire-vocabulary keys and their Go subtest are their own commit, and the thumb colours and tokens another.
+- The manual check (§10) was not run by the implementer.
 
 ## 1. Objective
 
