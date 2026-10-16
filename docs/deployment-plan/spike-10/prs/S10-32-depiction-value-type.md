@@ -1,6 +1,6 @@
 # S10-32 — Depiction value type and `likeness` on Person
 
-**Status:** Draft
+**Status:** Planned
 **Spike / slice:** Spike 10 · Slice 8 — Likeness
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#s10-32--depiction-value-type)
 **Brief:** — (no new chrome: an engine value type and a seeded Property; the Properties page only gains one value-type label in an existing pill, and the composer row is S10-34 from S10-D15)
@@ -13,7 +13,7 @@
 **Rules that bind:** `.cursor/rules/catalog-migrations.mdc`, `.cursor/rules/seeded-vocabulary.mdc`, `.cursor/rules/go-tests.mdc`, `.cursor/rules/macos-l10n.mdc`, `.cursor/rules/swift-tests.mdc`
 **Context:** [depictions and likenesses](../depictions-and-likenesses.md) ("Shape", "Settled"), [`docs/interpretation-layer-data-model.md`](../../../interpretation-layer-data-model.md) (Properties `value_type`, Observation value population), [`docs/seeded-vocabulary.md`](../../../seeded-vocabulary.md) §3.2–3.3, working rules "A depiction's value is its Citation" and "`likeness` is new catalogs only"
 **Planned:** 2026-10-16 against `main` @ `536d278d`
-**Review:** — (not reviewed yet)
+**Review:** [`S10-32-depiction-value-type.review.md`](S10-32-depiction-value-type.review.md) — Fits with changes, Ready with changes (applied); 1 round
 
 ### Implementer — read this first
 
@@ -65,7 +65,7 @@ A photograph can be evidence whose value is the picture. This PR adds the Observ
 | AC-3.2 | `ListProperties` on a new catalog | 22 Properties. One is `likeness` with value type `depiction` and cardinality `multiple`. |
 | AC-3.3 | A catalog created before this PR is opened | The migration widens the CHECK. No `likeness` row is added. |
 | AC-3.4 | Researcher Create Property with value type `depiction` | Refused with `properties.ErrInvalid`, the same as `term`. |
-| AC-3.5 | Properties page, Person, on a new catalog | The Likeness row's value-type pill reads *Depiction*. Create Property's value-type menu does not offer it. |
+| AC-3.5 | Properties page, Person, on a new catalog | The Likeness row's pill shows the raw key `depiction`, and VoiceOver reads it as *Depiction*. Create Property's value-type chips do not offer it. |
 
 ## 3. Scope
 
@@ -78,8 +78,9 @@ A photograph can be evidence whose value is the picture. This PR adds the Observ
 | Autoreconciler leaves depiction Properties out, so two likenesses never collapse and recompute does not fail | STEP-5, AC-2.1, AC-2.2, AC-2.3 |
 | Promote alignment shows no depiction line (guarded by test) | STEP-5, AC-2.4 |
 | Seed `likeness` (depiction, multiple) bound to `person`, locked, at Install | STEP-3, AC-3.1, AC-3.2 |
-| Swift `PropertyValueType.depiction` and the *Depiction* value-type label | STEP-6, AC-3.5 |
-| Domain docs and the seeded-vocabulary skill list the new type | STEP-7 |
+| Swift `PropertyValueType.depiction` and the *Depiction* value-type label; `label` and `researcherCreatable` read the typed enum | STEP-6, AC-3.5 |
+| `properties.registryOnly` names the registry-only types once | STEP-2, AC-3.4 |
+| Domain docs (including the reconciliation docs) and the seeded-vocabulary skill list the new type | STEP-7 |
 
 | Out | Home |
 | --- | --- |
@@ -91,7 +92,9 @@ A photograph can be evidence whose value is the picture. This PR adds the Observ
 | Promote comparing two crops | S10-36 |
 | `likeness` in existing catalogs | Later one-off CLI for the dogfood projects (user, 2026-10-16); not in the map |
 | A graph-card or composer rendering for a saved likeness | S10-34 |
-| A value-type pill colour for `depiction` | Not planned; it takes the existing default |
+| A value-type pill colour for `depiction`, and moving `PropertiesTypeChrome.valueTypeForeground` onto the typed enum | Not planned; it takes the existing default |
+| Moving `CitationObservationValue`'s value-type switches onto the typed enum | S10-34, which adds the depiction case there |
+| A parity subtest that Swift `researcherCreatable` matches Go | Logged in the review log (M-3); not planned |
 | Requiring a region or an Artifact file on a depiction | Not planned (D-4) |
 
 ## 4. Current state
@@ -101,12 +104,13 @@ A photograph can be evidence whose value is the picture. This PR adds the Observ
 | Schema | `core/database/migrations/000024.sql` | Rebuilt `properties` with `CHECK (value_type IN ('text','integer','date','name','subject','term'))`. |
 | Schema | `core/database/migrations/000043.sql` | Added `cardinality TEXT NOT NULL DEFAULT 'single' CHECK (cardinality IN ('single','multiple'))` to `properties` by `ALTER`. No later migration touches the `properties` DDL. The latest file is `000051.sql`. |
 | Migrate runner | `core/database/migrate.go` | Runs each step with `db.Exec` outside a transaction, so `PRAGMA foreign_keys=OFF` works, as `000024.sql` and `000030.sql` use it. |
-| Properties | `core/database/properties/properties.go` constants `ValueTypeText`…`ValueTypeTerm`, `valueTypeOK`, `Create` | Six value types. `Upsert` and `Create` reject anything else as `ErrInvalid`. `Create` refuses `ValueTypeTerm` for researchers. |
+| Properties | `core/database/properties/properties.go` constants `ValueTypeText` through `ValueTypeTerm`, `valueTypeOK`, `Create` | Six value types. `Upsert` and `Create` reject anything else as `ErrInvalid`. `Create` refuses `ValueTypeTerm` for researchers with an inline `if valueType == ValueTypeTerm`. |
 | Observation write | `core/database/observations/observations.go` `resolveValue`, `hasOtherScalars`, `insertOne` | One `case` per value type; `default` is `ErrInvalid`. `hasOtherScalars(in, keep)` reports any value field other than `keep`. |
 | Observation update | `core/database/observations/update.go` `updateOne` | Calls `resolveValue(tx, prop.ValueType, in, &prev)` and writes every value column from the result. |
 | Citation | `core/database/citations/citations.go` `CreateWithObservations`, `normalizeCreateInput` | Transcription is trimmed and stored NULL when empty. Only the locator is validated (`core/locator` `Validate`). |
 | Autoreconciler | `core/database/autoreconciler/autoreconciler.go` `sqlLoadCandidates`, `load`, `recomputeBatch` | Loads every Observation on accepted and provisional members, grouped by (handle, Property). `hasValue` drops a candidate with no value, but the group still exists, and `recomputeBatch` calls `autoreconcile.Reconcile(g.valueType, g.candidates, nil, g.cardinality)`, which returns `ErrUnknownValueType` for a type outside `knownValueType`. A likeness on a member would fail every recompute of that handle. |
 | Reconcile | `core/autoreconcile/autoreconcile.go` `knownValueType`, `Reconcile` | Closed set of six types. |
+| Reconcile docs | `docs/conclusion-reconciliation.md` §1 ("Every value type needs an auto-reconciler."), §5, §7 table; `docs/conclusion-layer-data-model.md` ("Exactly one value representation must be populated") | True for six types; D-7 makes depiction the exception. |
 | Person page fields | `core/database/conclusiondetails/conclusiondetails.go` `sqlPropertyIDs` | Lists a handle's fields from `auto_reconciler_outcomes`. A Property with no outcome row is not listed. |
 | Promote exhibits | `core/database/promotealign/exhibits.go` `pairExhibits`, `exhibitCompatible`, `comparerDiscount` | `match.ComparerFor("depiction")` is nil and `autoreconcile.Compatible` is false for an unknown type, so no pair is chosen and no exhibit is written. No test covers it. |
 | Matching | `core/match/compare.go` `ComparerFor`; `core/database/matching/matching.go` | Values are read per match-profile Property; `likeness` is in no profile. |
@@ -114,7 +118,8 @@ A photograph can be evidence whose value is the picture. This PR adds the Observ
 | Seed | `core/database/subjectvocab/registry.go` `seedProperties`, `seedBindings` | 21 Properties. Person bindings: `name` 0 (locked), `sex_at_birth` 1, `gender` 2, `interests` 3. |
 | Swift value types | `macos/App/Platform/InterpretationValueKinds.swift` `PropertyValueType` | Six raw cases. |
 | Swift parity test | `api/ffi/swift_vocabulary_test.go` `TestSwiftVocabularyMatchesGo` "value types" | Compares those raw cases with the six Go constants. |
-| Properties page | `macos/App/Features/Properties/PropertiesModel.swift` `SubjectPropertyValueType.label`, `researcherCreatable` | `label` maps six types; `default` returns *Text*. A likeness pill would read *Text*. `researcherCreatable` is text, integer, date, name, subject. |
+| Properties page | `macos/App/Features/Properties/PropertiesModel.swift` `SubjectPropertyValueType.label`, `researcherCreatable` | `label(_ valueType: String)` switches on raw strings; `default` returns *Text*. `researcherCreatable` is `[String]` text, integer, date, name, subject, read at `PropertiesModel.swift` (`canSubmit` and `submitCreate`) and `PropertiesView.swift` (the value-type chips). The doc comment above says only `term` is registry-only. |
+| Pill | `macos/App/Features/Properties/PropertiesSnapshot.swift` `PropertiesValueTypePill` | Shows `Text(verbatim: valueType)`, the raw key. Its `accessibilityLabel`, and the row's accessibility string in `PropertiesView.swift`, use `SubjectPropertyValueType.label`, so VoiceOver would say *Text* for a likeness. |
 | Pill colour | `macos/App/Features/Catalog/SubjectTypeChrome.swift` `PropertiesTypeChrome.valueTypeForeground` | `default` is `PVColor.textSecondary`. |
 | Composer | `macos/App/Features/CitationComposer/CitationComposerVocabulary.swift` `supportedValueTypes` | text, integer, date, term, name. The property menu filters on it, so `likeness` is not offered. |
 | L10n | `macos/App/Platform/L10n.swift` `L10n.Properties.valueTypeTerm` (`properties.valueType.term`) | One key per value type. |
@@ -131,11 +136,11 @@ A photograph can be evidence whose value is the picture. This PR adds the Observ
 | D-3 | `likeness` is new catalogs only. Install seeds it; the migration does not; open does not heal. | User, 2026-10-16. A later one-off CLI updates the dogfood projects. `add-catalog-migration` "Do not" forbids seeds in SQL. | Seeding it in `000052.sql` — user declined. |
 | D-4 | A depiction Observation does not require a region, a page, or a file on the Artifact. | A single portrait is the whole frame. The Citation can move to another Artifact later, so a file check at insert would not hold. S10-33 and S10-35 handle an Artifact they cannot draw. | Requiring a `region` selector — because "the whole frame can be a depiction" ([depictions and likenesses](../depictions-and-likenesses.md)). |
 | D-5 | Polarity is not special-cased. A negative likeness saves like any negative Observation. | No rule says otherwise. What a gallery shows is S10-35's call. | Refusing negative depictions — no source asks for it. |
-| D-6 | Researcher Create refuses `depiction`, next to `term`, with `ErrInvalid`. Swift `researcherCreatable` stays unchanged. | Place, event, and signature keys wait (map Out). A user depiction Property would have no composer row and no gallery. | Allowing it — the user chose new-catalogs-only and a CLI instead (2026-10-16). |
+| D-6 | Researcher Create refuses `depiction`, like `term`, with `ErrInvalid`. The rule is named once: `func registryOnly(valueType string) bool` *(new)*, unexported, beside `valueTypeOK`, true for `ValueTypeTerm` and `ValueTypeDepiction`; `Create` calls it in place of the inline `term` check. Swift `researcherCreatable` keeps the same five types. | Place, event, and signature keys wait (map Out). A user depiction Property would have no composer row and no gallery. | Allowing it — the user chose new-catalogs-only and a CLI instead (2026-10-16). |
 | D-7 | The autoreconciler loads no depiction Observation: `sqlLoadCandidates` adds `AND p.value_type <> 'depiction'`. `autoreconcile.knownValueType` stays six types. | A gallery is not reconciled ("Gallery, not a single concluded face"). Filtering at the load keeps `Reconcile` a closed set and means no group exists to fail. With no outcome rows the Person page lists no empty Likeness field, so `conclusiondetails` needs no change. | Adding a no-op module to `autoreconcile` — because a type that never yields values has no reason to enter `Reconcile`. Skipping in `recomputeBatch` — because `load` would still build the group. |
 | D-8 | Promote alignment is not changed. T-6 pins today's behavior: no likeness exhibit. | `pairExhibits` already drops it (§4). S10-36 adds the crop comparison. | Adding a `depiction` skip in `pairExhibits` — because the code path already skips it. |
 | D-9 | Seed row: `{Key: "likeness", Label: "Likeness", Description: "A picture of this person. The value is the Citation: its Artifact, page, and region. More than one is allowed.", ValueType: properties.ValueTypeDepiction, Cardinality: properties.CardinalityMultiple}`, after `interests`. Binding `{TypeKey: "person", PropertyKey: "likeness", SortOrder: 4, Locked: true}`. | Locked because S10-35's gallery and S10-39's pointer key into that slot, like `name` and `toponym`. | Unlocked like `interests` — because unbinding it would orphan the gallery. |
-| D-10 | Swift: add `case depiction` to `PropertyValueType`. `SubjectPropertyValueType.label` maps `"depiction"` to `L10n.Properties.valueTypeDepiction` (key `properties.valueType.depiction`, value *Depiction*). `valueTypeForeground` is not changed. | Without the label the pill reads *Text*. A pill colour is a design call with no brief. | A new colour case — no board draws it. |
+| D-10 | Swift: add `case depiction` to `PropertyValueType` after `term`. `SubjectPropertyValueType.label(_ valueType: String)` resolves `PropertyValueType(rawValue:)` and switches over the enum with no `default`, so a future case fails to compile until it has a label; `.depiction` returns `L10n.Properties.valueTypeDepiction` (key `properties.valueType.depiction`, value *Depiction*); an unknown raw string still returns `L10n.Properties.valueTypeText`. `researcherCreatable` becomes `[PropertyValueType]` `[.text, .integer, .date, .name, .subject]`; `canSubmit` and `submitCreate` test `researcherCreatable.contains { $0.rawValue == draft.valueType }`, and the chips iterate `researcherCreatable.map(\.rawValue)`. The doc comment says `term` and `depiction` are registry-only. `valueTypeForeground` is not changed. | Without the label VoiceOver says *Text*. `.cursor/rules/macos-client.mdc` says views use the typed `PropertyValueType` cases. A pill colour is a design call with no brief. | Adding one more string `case` — because the string `default` is what mislabels a new type. A new colour case — no board draws it. |
 | D-11 | The `TestSwiftVocabularyMatchesGo` "value types" want list adds `properties.ValueTypeDepiction`. | The Swift enum and Go must agree. | — |
 
 ## 6. Design
@@ -146,11 +151,13 @@ A photograph can be evidence whose value is the picture. This PR adds the Observ
 | --- | --- | --- | --- |
 | `core/database/migrations/000052.sql` *(new)* | migration | `core/database/migrations/000024.sql` | Extends that shape. A shipped migration is never edited. |
 | `properties.ValueTypeDepiction` *(new)* | const | `properties.ValueTypeTerm` | Extends the same constant block and `valueTypeOK`. |
+| `properties.registryOnly` *(new)* | func | the inline `valueType == ValueTypeTerm` check in `properties.Create` | Replaces it, so the next registry-only type is one entry. |
 | `case properties.ValueTypeDepiction` in `resolveValue` *(new)* | switch case | `case properties.ValueTypeSubject` | Extends the one switch every write uses. |
 | `AND p.value_type <> 'depiction'` in `sqlLoadCandidates` *(new)* | SQL filter | `WHERE ic.status IN (…)` in the same query | Extends the one loader both upkeep and `Rebuild` use. |
 | `likeness` row and binding *(new)* | seed rows | `interests` in `seedProperties` / `seedBindings` | Registry entries. No new Install code. |
 | `PropertyValueType.depiction` *(new)* | Swift case | `PropertyValueType.term` | Extends the enum the parity test reads. |
 | `L10n.Properties.valueTypeDepiction` *(new)* | L10n key | `L10n.Properties.valueTypeTerm` | One key per value type, same namespace. |
+| Typed `label` / `researcherCreatable` | Swift refactor in place | `SubjectPropertyValueType` string switch | Same type, read through `PropertyValueType`; no new type. |
 | Tests T-1 through T-9 | subtests / test funcs | `TestObservations`, `TestMultipleCardinalityKeepsDistinctValues`, `TestInstallSeedsEngagementTravelInterestsAndGender` | Each extends the suite and fixture that already covers that layer. No new helper. |
 
 **Builds on.** `add-catalog-migration` rebuild pattern (`000024.sql`); `add-seeded-vocabulary` registry (`subjectvocab` `seedProperties` / `seedBindings`); the registry-only refusal in `properties.Create`; `TestSwiftVocabularyMatchesGo` parity.
@@ -198,7 +205,7 @@ PRAGMA foreign_keys=ON;
 
 | Package | Change |
 | --- | --- |
-| `core/database/properties` | `ValueTypeDepiction = "depiction"` *(new)*. `valueTypeOK` accepts it. `Create` refuses `ValueTypeTerm` or `ValueTypeDepiction` with `ErrInvalid`; update its doc comment to name both. |
+| `core/database/properties` | `ValueTypeDepiction = "depiction"` *(new)*. `valueTypeOK` accepts it. `registryOnly` *(new)* per D-6; `Create` refuses when it is true, with `ErrInvalid`; its doc comment names both types. |
 | `core/database/observations` | `resolveValue`: `case properties.ValueTypeDepiction` per D-2. No change to `insertOne`, `updateOne`, or the SQL. |
 | `core/database/autoreconciler` | `sqlLoadCandidates`: `AND p.value_type <> 'depiction'` after the status filter, with a one-line comment that a gallery is not reconciled (D-7). |
 | `core/database/subjectvocab` | `seedProperties` and `seedBindings` rows per D-9. |
@@ -214,13 +221,13 @@ None — value types travel as strings, and a draft with no value fields already
 | Building block | Component | Home | Notes |
 | --- | --- | --- | --- |
 | Value-type enum | `PropertyValueType` | `macos/App/Platform/InterpretationValueKinds.swift` | `case depiction` after `term`. |
-| Value-type label | `SubjectPropertyValueType.label` | `macos/App/Features/Properties/PropertiesModel.swift` | `case "depiction": return L10n.Properties.valueTypeDepiction`. `researcherCreatable` unchanged. |
+| Value-type label and creatable list | `SubjectPropertyValueType` | `macos/App/Features/Properties/PropertiesModel.swift`, `macos/App/Features/Properties/PropertiesView.swift` | Per D-10. |
 
-States: none new. The Properties page row and pill already exist. Accessibility: the pill's `accessibilityLabel` already reads `SubjectPropertyValueType.label`, so it says *Depiction*.
+States: none new. The Properties page row and pill already exist; the pill shows the raw key `depiction`. Accessibility: the pill's `accessibilityLabel` reads `SubjectPropertyValueType.label`, so it says *Depiction*.
 
 ### Strings
 
-L10n key *(new)*: `L10n.Properties.valueTypeDepiction` = "Depiction" (`properties.valueType.depiction`, comment "Property value type label: depiction (registry-only)"), beside `valueTypeTerm`, with its `Localizable.xcstrings` entry. Removed: none.
+L10n key *(new)*: `L10n.Properties.valueTypeDepiction` = "Depiction" (`properties.valueType.depiction`, comment "Property value type label: depiction (registry-only)"), beside `valueTypeTerm`, with its `Localizable.xcstrings` entry: copy the `properties.valueType.term` block (`extractionState` `manual`, `en` `stringUnit` `translated`) and insert it after `properties.valueType.date`. Removed: none.
 
 ## 7. Steps
 
@@ -236,7 +243,7 @@ Check: `CGO_ENABLED=1 go test -tags fts5 ./core/database/properties/...` passes.
 
 **STEP-3 — Seed `likeness`**
 Files: `core/database/subjectvocab/registry.go`, `core/database/subjectvocab/subjectvocab_test.go`, `api/ffi/handlers/subject_defs_test.go`. Skill: `add-seeded-vocabulary`.
-Do: D-9. Add T-7. In T-8 change the expected count from 21 to 22 and assert the `likeness` row.
+Do: D-9. Add T-7. In T-8 change `len(resp.Properties) != 21` to 22, and add a `foundLikeness` flag beside `foundInterests`.
 Check: `CGO_ENABLED=1 go test -tags fts5 ./core/database/subjectvocab/... ./api/ffi/handlers/...` passes.
 
 **STEP-4 — Write a depiction Observation**
@@ -246,17 +253,24 @@ Check: `CGO_ENABLED=1 go test -tags fts5 ./core/database/observations/... ./core
 
 **STEP-5 — Keep depictions out of reconciliation**
 Files: `core/database/autoreconciler/autoreconciler.go`, `core/database/autoreconciler/autoreconciler_test.go`, `core/database/promotealign/promotealign_test.go`.
-Do: D-7. Add T-5 with the autoreconciler `newFixture` (`f.cite`, `f.promote`, `f.join`, `f.rows`, `f.outcomes`, `f.assertUpkeepEqualsRebuild`). Add T-6 with the promotealign `newFixture` (`f.person`, `f.cite`, `f.prop("likeness")`, `f.promote`, `f.propose`, `rowFor`) for D-8.
+Do: D-7. In the autoreconciler `newFixture`, add `"likeness"` to the `for _, k := range []string{"name", "sex_at_birth", "event_type", "date", "toponym"}` loop. Add T-5 with `f.cite`, `nameIn`, `f.promote`, `f.join`, `f.rows`, `f.outcomes`, and `f.assertUpkeepEqualsRebuild`; `f.cite` uses the fixture's page `locator`. Add T-6 with the promotealign `newFixture` (`f.person`, `f.cite`, `f.prop("likeness")`, `f.promote`, `f.propose`, `rowFor`) for D-8.
 Check: `CGO_ENABLED=1 go test -tags fts5 ./core/database/autoreconciler/... ./core/database/promotealign/...` passes.
 
 **STEP-6 — Swift value type and label**
-Files: `macos/App/Platform/InterpretationValueKinds.swift`, `macos/App/Features/Properties/PropertiesModel.swift`, `macos/App/Platform/L10n.swift`, `macos/App/Resources/Localizable.xcstrings`, `api/ffi/swift_vocabulary_test.go`, `macos/ProvenenciaTests/PropertiesModelTests.swift`. Skills: `add-localized-string`, `add-swift-test`.
-Do: D-10 and D-11. Add T-9.
-Check: `CGO_ENABLED=1 go test -tags fts5 ./api/ffi/...` passes; `python3 scripts/check-localizable-xcstrings.py` passes; `xcodebuild test` (ProvenenciaTests) passes.
+Files: `macos/App/Platform/InterpretationValueKinds.swift`, `macos/App/Features/Properties/PropertiesModel.swift`, `macos/App/Features/Properties/PropertiesView.swift`, `macos/App/Platform/L10n.swift`, `macos/App/Resources/Localizable.xcstrings`, `api/ffi/swift_vocabulary_test.go`, `macos/ProvenenciaTests/PropertiesModelTests.swift`. Skills: `add-localized-string`, `add-swift-test`.
+Do: D-10 and D-11. Change `PropertiesModelTests.swift`'s `#expect(!(SubjectPropertyValueType.researcherCreatable.contains("term")))` to `.contains(.term)`. Add T-9.
+Check: `CGO_ENABLED=1 go test -tags fts5 ./api/ffi/...` passes (it reads the Swift enum); `python3 scripts/check-localizable-xcstrings.py` passes; `xcodebuild test` (ProvenenciaTests) passes. `xcodebuild` runs on macOS only: on another host, report the Xcode check and T-9 as not run, and the PR description says so.
 
 **STEP-7 — Docs**
-Files: `docs/interpretation-layer-data-model.md`, `docs/seeded-vocabulary.md`, `.agents/skills/add-seeded-vocabulary/SKILL.md`, `docs/deployment-plan/spike-10/completed.md`, `docs/deployment-plan/spike-10/deployment-plan.md`, this plan.
-Do: in `interpretation-layer-data-model.md`, add `'depiction'` to the `properties` DDL sketch and the product value-type list; state that a depiction populates no value column and its value is `citation_id`, as the one exception to "exactly one value representation"; add `depiction` beside `term` in "Who may create". In `seeded-vocabulary.md` §3.2 add the `likeness  depiction  …; cardinality multiple; locked on person; new catalogs only` row, and in §3.3 `person  likeness  # depiction; multiple; locked`. In the skill, add `depiction` to the value-type line and to the registry-only sentence. Then the Definition of done lines.
+Files: `docs/interpretation-layer-data-model.md`, `docs/conclusion-reconciliation.md`, `docs/conclusion-layer-data-model.md`, `docs/seeded-vocabulary.md`, `.agents/skills/add-seeded-vocabulary/SKILL.md`, `docs/deployment-plan/spike-10/completed.md`, `docs/deployment-plan/spike-10/deployment-plan.md`, this plan.
+Do:
+- `interpretation-layer-data-model.md`: add `'depiction'` after `'term'` in the `properties` DDL sketch. The product value-type sentence lists `depiction` last. Below the `term` paragraph add: "`value_type = 'depiction'` means the Observation's value is its own Citation (`citation_id`): the Artifact, page, and region. No value column is set. It is the one exception to the value population rule below. `likeness` on `person` is the seeded depiction Property." In "Who may create", name `term` and `depiction` as registry-only. After "Value population (application invariant): exactly one value representation must be populated" add "(none for `depiction`, whose value is `citation_id`)".
+- `conclusion-reconciliation.md`: §1 "Every value type needs an auto-reconciler." becomes "Every value type except `depiction` needs an auto-reconciler. Depictions form a gallery and are not reconciled; the loader leaves them out." §5 "One pipeline for every value type." becomes "One pipeline for every reconciled value type." Add a last row to the §7 table: Value type **depiction**; Same value "not reconciled: the loader skips it (a gallery)"; Fold, Merge, and No evidence each "—".
+- `conclusion-layer-data-model.md`: after the sentence that begins "Exactly one value representation must be populated" add "A `depiction` Property never reaches a Reconciliation Claim."
+- `seeded-vocabulary.md` §3.2: after the `interests` line add a line: key `likeness`, value_type `depiction`, note "the Citation is the picture; cardinality multiple; locked on person; new catalogs only (S10-32)", aligned to the block's columns. §3.3: after `person  interests` add `person          likeness            # depiction; multiple; locked`.
+- `.agents/skills/add-seeded-vocabulary/SKILL.md`: the value-type line adds **`depiction`** after **`term`**, and the next sentence reads "**`value_type = term` and `depiction` Properties are Install/registry only**".
+- `deployment-plan.md`: the S10-32 **Plan:** line reads "— Landed #N"; the SLICE 8 line `S10-32  depiction value type + likeness on person` gains "— done, #N".
+- `completed.md`: a `## S10-32 — Depiction value type` section at the top, in the S10-50 shape: "**Landed** (date) in (PR link)." then two or three sentences of what shipped.
 Check: `python3 scripts/check-plan-docs.py docs/deployment-plan/spike-10/prs/S10-32-depiction-value-type.md` passes; links resolve.
 
 Commits: one per behavior. The subject is one full imperative sentence that says what changed for the researcher, ending in a period, like the rest of `git log` ("Restore list scroll after the sort is applied."). No WIP commits.
@@ -265,15 +279,15 @@ Commits: one per behavior. The subject is one full imperative sentence that says
 
 | ID | Layer | File · test | Case: input → expected | Covers |
 | --- | --- | --- | --- | --- |
-| T-1 | Go | `core/database/properties/properties_test.go` `TestProperties` subtest "depiction is registry-only" *(new)* | `Upsert` `{Key:"portrait", Origin:"provenencia", ValueType:"depiction"}` → ok; `Create(…, "Portrait", "depiction", "", "")` → `ErrInvalid` | AC-3.4, D-6 |
-| T-2 | Go | `core/database/observations/observations_test.go` `TestObservations` subtest "likeness saves with no value and no transcription" *(new)* | AC-1.1 locator, transcription `""`, likeness Observation with no value → saved; citation transcription NULL; all six value columns NULL; `files` and `file_derivatives` counts unchanged | AC-1.1, AC-1.2, D-4 |
-| T-3 | Go | same file, subtest "likeness refuses a value" *(new)*, table-driven | `HasText` "seated man, left" → `ErrInvalid`; `ValueTermID` female → `ErrInvalid`; nothing written | AC-1.3, AC-1.4, D-2 |
+| T-1 | Go | `core/database/properties/properties_test.go` `TestProperties` subtest "depiction is registry-only" *(new)*, table-driven over `term` and `depiction` | `Upsert` `{Key:"portrait", Origin:"provenencia", ValueType:"depiction"}` → ok; `Create(tx, userID, "Portrait", vt, "", "")` → `ErrInvalid` for both | AC-3.4, D-6 |
+| T-2 | Go | `core/database/observations/observations_test.go` `TestObservations` subtest "likeness saves with no value and no transcription" *(new)* | `mustSeed`'s `seed.artifact` and `seed.person`; `citations.CreateWithObservations` through `writes.Run` with the AC-1.1 locator, transcription `""`, one likeness Input with no value → saved; raw `SELECT` on `c.DB()`: citation `transcription IS NULL`, the six value columns NULL; `SELECT COUNT(*) FROM files` and `FROM file_derivatives` equal before and after | AC-1.1, AC-1.2, D-4 |
+| T-3 | Go | same file, subtest "likeness refuses a value" *(new)*, table-driven | `HasText` "seated man, left" → `ErrInvalid`; `ValueTermID` `seed.femaleTerm` → `ErrInvalid`; `SELECT COUNT(*)` of `citations` and `observations` equal before and after | AC-1.3, AC-1.4, D-2 |
 | T-4 | Go | same file, subtest "likeness update keeps no value" *(new)* | update the T-2 Observation with no value fields → saved; value columns NULL | AC-1.5 |
-| T-5 | Go | `core/database/autoreconciler/autoreconciler_test.go` `TestDepictionIsNotReconciled` *(new)* | `newFixture`; Ann on `f.source` and on `f.newSource("Album")`, each with a likeness and Ann on the first with name *Ann Smith*; promote, join → no row for `f.props["likeness"]` in `f.rows()` or outcomes; both likenesses in `ListBySubject`; name row `kept`, support 1; `f.assertUpkeepEqualsRebuild` | AC-2.1, AC-2.2, AC-2.3, D-7 |
-| T-6 | Go | `core/database/promotealign/promotealign_test.go` `TestProposeShowsNoLikenessExhibit` *(new)* | two Persons on different Sources, same `name`, one likeness each, one promoted → the proposal's exhibits have a `name` line and none for `likeness` | AC-2.4, D-8 |
+| T-5 | Go | `core/database/autoreconciler/autoreconciler_test.go` `TestDepictionIsNotReconciled` *(new)* | `newFixture`; Subjects `a := f.subject("person")` and `b := f.subjectOn(f.newSource("Album"), "person")`; `f.cite(nameIn(a, f.props["name"], "given=Ann|surname=Smith"), observations.Input{SubjectID: a.ID, PropertyID: f.props["likeness"].ID})` and `f.cite(observations.Input{SubjectID: b.ID, PropertyID: f.props["likeness"].ID})`; promote, join → no row for `f.props["likeness"]` in `f.rows()` or outcomes; both likenesses in `ListBySubject`; name row `kept`, support 1; `f.assertUpkeepEqualsRebuild` | AC-2.1, AC-2.2, AC-2.3, D-7 |
+| T-6 | Go | `core/database/promotealign/promotealign_test.go` `TestProposeShowsNoLikenessExhibit` *(new)* | `aPerson := f.person(f.source, f.artifact, "Gracie")` plus `f.cite(f.artifact, aPerson, observations.Input{SubjectID: aPerson.ID, PropertyID: f.prop("likeness").ID})`; promote it; the same on `f.newSource("Album")`; `f.propose(srcB.ID, nil)` → `rowFor(got, bPerson.ID).Exhibits` has a `name` line and none with `Property.Key == "likeness"`. A comment says S10-36 replaces this assertion with the crop comparison | AC-2.4, D-8 |
 | T-7 | Go | `core/database/subjectvocab/subjectvocab_test.go` `TestInstallSeedsLikeness` *(new)* | `Install` → `likeness` is depiction, multiple, label *Likeness*; person binding sort 4; `LockedBinding("person","likeness")` | AC-3.1, D-9 |
 | T-8 | Go | `api/ffi/handlers/subject_defs_test.go` `TestListProperties` | new catalog → 22 Properties; `likeness` depiction multiple | AC-3.2 |
-| T-9 | Swift | `macos/ProvenenciaTests/PropertiesModelTests.swift` `depictionLabelIsNotCreatable` *(new)* | `SubjectPropertyValueType.label("depiction")` is `L10n.Properties.valueTypeDepiction`; `researcherCreatable` lacks `"depiction"` | AC-3.5, D-10 |
+| T-9 | Swift | `macos/ProvenenciaTests/PropertiesModelTests.swift` `depictionLabelIsNotCreatable` *(new)* | `L10n.string(SubjectPropertyValueType.label("depiction")) == "Depiction"`; `L10n.string(SubjectPropertyValueType.label("unknown")) == "Text"`; `!SubjectPropertyValueType.researcherCreatable.contains(.depiction)` | AC-3.5, D-10 |
 
 Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `TestSwiftVocabularyMatchesGo` (until D-11), `TestListProperties` (count), `catalogmodel.TestPragmaHonesty` and the schema hash (STEP-1), `TestRebuildEqualsUpkeep_Scenarios` and `TestRebuildEqualsUpkeep_SeededSequences`.
 
@@ -292,14 +306,14 @@ AC-3.3 has no test: migrations are not tested directly (`add-catalog-migration`)
 - [ ] This plan: Status → Landed in #N (date); a Landed note lists every difference from the plan
 - [ ] deployment-plan.md: S10-32 status and SLICE 8 line; completed.md: one short paragraph of what shipped
 - [ ] Brief moved to design/archive/ and design/README.md updated (if gated) — not gated
-- [ ] Domain doc updated: interpretation-layer-data-model.md (value types, value population), seeded-vocabulary.md §3.2–3.3, add-seeded-vocabulary skill
+- [ ] Domain doc updated: interpretation-layer-data-model.md (value types, value population), conclusion-reconciliation.md §1, §5, §7, conclusion-layer-data-model.md, seeded-vocabulary.md §3.2–3.3, add-seeded-vocabulary skill
 - [ ] PR description: what shipped, AC evidence, deviations, manual check
 ```
 
 ## 10. Manual check
 
-1. Create a new project. Open **Properties**, select **Person**. A **Likeness** row is listed; its value-type pill reads *Depiction*, it allows more than one value, and its binding cannot be removed. (AC-3.1, AC-3.5)
-2. Click **Create property**. The value-type menu lists Text, Integer, Date, Name, and Subject, and not Depiction. (AC-3.5)
+1. Create a new project. Open **Properties**, select **Person**. A **Likeness** row is listed; its value-type pill shows `depiction` and VoiceOver reads it as *Depiction*, it allows more than one value, and its binding cannot be removed. (AC-3.1, AC-3.5)
+2. Click **Create property**. The value-type chips are text, integer, date, name, and subject, and not depiction. (AC-3.5)
 3. Open a Source with a Person, open the composer, add an Observation on the Person. The Property menu does not list Likeness. (S10-34 adds it.)
 4. Open a project created before this build. It opens. **Properties → Person** has no Likeness row. (AC-3.3)
 
