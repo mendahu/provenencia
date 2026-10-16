@@ -273,7 +273,7 @@ SLICE 10 — Take a filing back
          person on that relationship stays promoted. The handle is still there.
 
 SLICE 11 — One card drawing
-  S10-51  Draw Evidence cards in one place (ghost and layout tests on the AppKit card)
+  S10-51  Draw Evidence cards in one place (ghost and layout tests on the AppKit card) — done, #421
   Check: the graph, the placement ghost, and VoiceOver look and act as before.
 
 S10-99 — Dogfood close / docs
@@ -737,7 +737,7 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 
 **Brief:** — (no new chrome)
 
-**Plan:** [`prs/S10-51-one-card-drawing.md`](prs/S10-51-one-card-drawing.md) — Planned, stacked on #418
+**Plan:** [`prs/S10-51-one-card-drawing.md`](prs/S10-51-one-card-drawing.md) — Landed #421, stacked on #418
 
 | | |
 | --- | --- |

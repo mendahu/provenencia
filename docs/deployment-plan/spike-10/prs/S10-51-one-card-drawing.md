@@ -1,6 +1,6 @@
 # S10-51 — Draw Evidence cards in one place
 
-**Status:** Planned
+**Status:** Landed in [#421](https://github.com/mendahu/provenencia/pull/421) (2026-10-16)
 **Spike / slice:** Spike 10 · Slice 11 — One card drawing
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#s10-51--draw-evidence-cards-in-one-place)
 **Brief:** — (no new chrome: the ghost and every card look as they do today)
@@ -14,6 +14,10 @@
 **Context:** [`macos/App/Features/GraphCanvas/README.md`](../../../../macos/App/Features/GraphCanvas/README.md), working rules "The full card stays at every zoom." and "Every card is mounted.", [#367](https://github.com/mendahu/provenencia/pull/367) (cards drawn in AppKit), S10-44 ship log follow-ups MNT-3, MNT-4, UX-2, CON-4 ([`S10-44-unpromote.ship.md`](S10-44-unpromote.ship.md))
 **Planned:** 2026-10-16 against `s10-44-unpromote` @ `2768698` (`main` @ `98819f8` plus #418)
 **Review:** [`S10-51-one-card-drawing.review.md`](S10-51-one-card-drawing.review.md) — Fits, Ready with changes (applied); 2 rounds
+
+## Landed
+
+Differences from this plan: `L10n.EvidenceGraph.promoteHelp(kind:)` and `citedValueUnavailable` and their `Localizable.xcstrings` entries are deleted (the deleted SwiftUI card was their only reader, and the live card never showed them), where §6 Strings said no key would go unused; the user decided this at the stop condition. `@MainActor` was added to `EvidenceBridgeEdgeSummaryTests`, `EvidenceSubjectCardFooterTests`, `GraphCanvasEdgeGeometryTests` and `SourceGraphSnapshotTests`, because the card enums are now main-actor and those suites called them from nonisolated tests. The §4 row for the live card names its file without a path, because the checker rejects the old path once the file is renamed. T-1 and T-2 were written together with the code. The manual check (section 10) was not run by the implementer. The implementer set Status and the map row to Landed ahead of the merge.
 
 ### Implementer — read this first
 
