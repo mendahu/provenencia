@@ -96,6 +96,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var updateSourceError: Error?
     /// When set, `reorderSourceMetadata` throws (optimistic move should revert).
     var reorderSourceMetadataError: Error?
+    /// When set, `unpromoteSubject` throws (the Unpromote confirm shows the error).
+    var unpromoteSubjectError: Error?
     /// When set, `setSubjectPosition` throws (Evidence graph drag should revert).
     var setSubjectPositionError: Error?
     /// When true, each `setSubjectPosition` suspends until `releaseSetSubjectPosition()`
@@ -1380,6 +1382,37 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             )
             claimBySubject[subjectID] = claim
             return CatalogPromoteResult(entity: entity, claim: claim)
+        }
+    }
+
+    /// Removes the Subject's filing, and the filing of every Subject on its Source that has a membership
+    /// and an Observation naming it as its value (the engine's rule for bridge ends). Handles stay.
+    func unpromoteSubject(
+        projectDir: String,
+        userID _: String,
+        subjectID: String
+    ) async throws -> CatalogWriteEffects {
+        try withState {
+            markCatalogSessionHeld(projectDir)
+            recordedCalls.append("unpromoteSubject id=\(subjectID)")
+            if let unpromoteSubjectError { throw unpromoteSubjectError }
+            guard let sourceID = subjectsBySource.first(where: { $0.value.contains { $0.id == subjectID } })?.key else {
+                throw CoreInvokeError.coded(status: 1, code: "promote.invalid", kind: .user, params: [])
+            }
+            guard membershipBySubject[subjectID] != nil else { return .empty }
+            let ends = (observationsBySource[sourceID] ?? [])
+                .filter { $0.valueSubjectID == subjectID }
+                .map(\.subjectID)
+            var removed: [String] = []
+            for id in [subjectID] + ends {
+                guard let membership = membershipBySubject[id] else { continue }
+                removed.append(membership.entity.id)
+                membershipBySubject[id] = nil
+                claimBySubject[id] = nil
+            }
+            var effects = bumpSource(sourceID, evidence: true)
+            effects.handles = removed
+            return effects
         }
     }
 

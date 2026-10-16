@@ -1139,6 +1139,10 @@ protocol GenealogyStore: Sendable {
         confidenceGradeID: String?,
         argument: String
     ) async throws -> CatalogPromoteResult
+    /// Take a primary Subject's filing back: its accepted claim and, in the same write, the accepted
+    /// claims of the bridges on its Source that have it as an end. No handle is deleted. A Subject with
+    /// no accepted claim writes nothing.
+    func unpromoteSubject(projectDir: String, userID: String, subjectID: String) async throws -> CatalogWriteEffects
     /// Propose a handle, New, or Skip for every primary Subject on one Source (graph alignment).
     func proposePromoteGraphAlignment(
         projectDir: String,
