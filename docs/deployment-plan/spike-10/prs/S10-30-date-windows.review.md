@@ -5,7 +5,8 @@
 **Round 1:** maintainability reviewer: Fits with changes (two blockers). Executability reviewer: Not ready (two blockers). Both reviewed against `ff14e3f` with S10-28's plan as the assumed base for the rows marked **S10-28**.
 **Round 2:** maintainability: Fits with changes, no blocker, two majors. Executability: Ready with changes, no blocker, three majors. Both confirmed every round-1 answer and re-derived the arithmetic; all 29 rows of `TestDateComparerScores`, the ladder, and the invariants hold under the new math, and no pre-existing test other than the two named in AC-5.4 changes.
 **Refresh (S10-28 landed):** the rows marked **S10-28** were redone against `536d278`. `pairValues` takes a cardinality (S10-28 amendment F-1) and the cache-evidence helpers exist, so D-7 now names `Value.votes`, `weigh`, and `order` instead of the plan's wording; S10-50 gave every Promote row a sheet line per comparison, so the Out line and the Risks row about "no exhibit line" changed. Reviewed again below.
-**Verdict:** Planned if the refresh review below has no open blocker.
+**Refresh review:** maintainability: Fits with changes (no blocker, one major). Executability: Ready with changes (no blocker, two majors). All answered below.
+**Verdict:** Planned. No blocker is open. Nothing for the user.
 
 ## Maintainability
 
@@ -47,3 +48,17 @@
 | R2-X2 | major | How an open source end (`BEF 1815` as a start), "start later than end", and the built `Value`'s calendar are decided | **Fixed.** D-7: an open source end counts as absent; later means start first end `Lo` after end last end `Hi`; `Calendar` is `gregorian`. AC-4.11, T-5 rows |
 | R2-M4 / R2-X6 | minor | A range with neither year is not ok; the generator already draws inverted ranges | **Fixed.** D-2 and T-1; T-4 says what the generator adds |
 | R2-X5 | minor | `boundEnd` has no signature | **Fixed.** D-2 gives it and says it calls the existing `spanOf` |
+
+## Refresh (S10-28 and S10-50 landed)
+
+Both reviewers re-checked every §4 row against `536d278` and confirmed the line numbers, the arithmetic, that no test other than the two in AC-5.4 moves, and that S10-50's sheet lines read the comparison's `ValueRef`s.
+
+| ID | Severity | Finding | Answer |
+| --- | --- | --- | --- |
+| RF-M1 | major | The Promote sheet adds a line per comparison only when the row has no exhibits, or for a conflict; an Event row nearly always has an `event_type` exhibit, so a partial period score gets no date line | **Fixed.** The Out row, the Risks row, and Manual check 3 say a line appears for a conflict or when the row has no other exhibit |
+| RF-X1 | major | `poolPeriods` cannot call `weigh` without a cardinality | **Fixed.** D-7: `firstLeader` calls `weigh(vs, properties.CardinalitySingle)`; STEP-3 says so; the gate over `Value.votes` allocates nothing |
+| RF-X2 / RF-m1 | major | D-7 "replaces positive values" contradicts the gate and would delete a `Denied` value that R2 reads | **Fixed.** D-7 appends the period and removes nothing; T-5 asserts the non-voting values stay in their original order |
+| RF-X3 | minor | The gate is asymmetric between the two sides | **Fixed.** D-7 and T-5 use "voting" on both sides; a provisional or `Denied` start on the dated side does not block pooling |
+| RF-X4 | minor | Line numbers; `cachedPerson` is the wrong helper | **Fixed.** §4 and AC-5.4 name lines 168, 180, 185 and 264, 274 and the right helpers |
+| RF-m3 | minor | The built period `Value` is under-specified | **Fixed.** D-7 names `Kind`, `Qualifier`, nil month and day, and `Calendar`; T-6 asserts the labels `Between 1815 and 1820` and `After 1815` and a non-nil `Date` |
+| RF-m4 | minor | Promote's frequency scale reads the raw probe values | **Fixed.** Risks row: a pooled probe side takes the default date weight, accepted |
