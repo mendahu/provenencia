@@ -1061,3 +1061,64 @@ func (f *fixture) join(s subjects.Subject, entityID []byte) {
 	})
 	must(f.t, err)
 }
+
+func comparisonOutcome(t *testing.T, row graphalign.Row, key string) match.Outcome {
+	t.Helper()
+	for _, c := range row.Comparisons {
+		if c.Property.Key == key {
+			return c.Outcome
+		}
+	}
+	t.Fatalf("no %s comparison in %+v", key, row.Comparisons)
+	return ""
+}
+
+func TestProposeJudgesAgainstTheMajority(t *testing.T) {
+	t.Run("a stray name", func(t *testing.T) {
+		f := newFixture(t)
+		handle := f.promote(f.person(f.source, f.artifact, "Mary Smith")).Entity.ID
+		blob, err := valuecodec.MarshalName(*namevaluestest.Western("James Robins"))
+		must(t, err)
+		db, err := f.c.DB()
+		must(t, err)
+		_, err = db.Exec(`UPDATE auto_reconciler_values SET support = 5 WHERE entity_id = ? AND property_id = ? AND rank = 1`, handle, f.prop("name").ID)
+		must(t, err)
+		_, err = db.Exec(`INSERT INTO auto_reconciler_values (entity_id, property_id, rank, value_name, support, against, reason)
+			VALUES (?, ?, 2, ?, 1, 0, 'kept')`, handle, f.prop("name").ID, blob)
+		must(t, err)
+		f.c.Graph().Drop()
+
+		src, art := f.newSource("Register")
+		incoming := f.person(src, art, "James Robins")
+		row := rowFor(f.propose(src.ID, []graphalign.Fixed{{SubjectID: incoming.ID, HandleID: handle}}), incoming.ID)
+		if got := comparisonOutcome(t, row, "name"); got != match.OutcomeConflict {
+			t.Fatalf("name comparison %s, want conflict", got)
+		}
+	})
+
+	t.Run("a negative Observation", func(t *testing.T) {
+		f := newFixture(t)
+		sex := func(src sources.Source, art artifacts.Artifact, key string) subjects.Subject {
+			s := f.person(src, art, "Mary Smith")
+			f.cite(art, s, observations.Input{PropertyID: f.prop("sex_at_birth").ID, ValueTermID: f.term("sex_at_birth", key).ID})
+			return s
+		}
+		handle := f.promote(sex(f.source, f.artifact, "male")).Entity.ID
+		db, err := f.c.DB()
+		must(t, err)
+		_, err = db.Exec(`UPDATE auto_reconciler_values SET support = 3 WHERE entity_id = ? AND property_id = ?`, handle, f.prop("sex_at_birth").ID)
+		must(t, err)
+		f.c.Graph().Drop()
+
+		src, art := f.newSource("Census")
+		incoming := f.person(src, art, "Mary Smith")
+		f.cite(art, incoming, observations.Input{
+			PropertyID: f.prop("sex_at_birth").ID, ValueTermID: f.term("sex_at_birth", "male").ID,
+			Polarity: observations.PolarityNegative,
+		})
+		row := rowFor(f.propose(src.ID, []graphalign.Fixed{{SubjectID: incoming.ID, HandleID: handle}}), incoming.ID)
+		if got := comparisonOutcome(t, row, "sex_at_birth"); got != match.OutcomeConflict {
+			t.Fatalf("sex comparison %s, want conflict", got)
+		}
+	})
+}

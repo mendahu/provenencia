@@ -262,18 +262,7 @@ func comparerDiscount(cmp match.Comparer, a, b match.Value) (similarity, discoun
 }
 
 func exhibitCompatible(valueType string, a, b match.Value) bool {
-	return autoreconcile.Compatible(valueType, exhibitAuto(a), exhibitAuto(b))
-}
-
-func exhibitAuto(v match.Value) autoreconcile.Value {
-	termID := append([]byte(nil), v.TermID...)
-	if len(termID) == 0 && v.Term != "" {
-		termID = []byte(v.Term)
-	}
-	return autoreconcile.Value{
-		Text: v.Text, HasText: v.HasText, Integer: v.Integer, HasInteger: v.HasInteger,
-		TermKey: v.Term, TermID: termID, Neutral: v.Neutral, Date: v.Date, Name: v.Name,
-	}
+	return autoreconcile.Compatible(valueType, a.Auto(), b.Auto())
 }
 
 // acceptedMembers maps each handle to its accepted member Subjects, in claim

@@ -970,12 +970,7 @@ func (st *state) alternative(sc scoredCand, probe match.Values) Alternative {
 }
 
 func subjectHasValues(s *Subject) bool {
-	for _, vs := range s.Values {
-		if len(vs) > 0 {
-			return true
-		}
-	}
-	return false
+	return s.Values.HasPositive()
 }
 
 func (st *state) band(score float64) Assessment {
