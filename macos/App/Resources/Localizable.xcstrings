@@ -10778,18 +10778,6 @@
         }
       }
     },
-    "evidenceGraph.subject.citedValueUnavailable": {
-      "comment": "Placeholder when a cited Observation has no displayable value summary yet",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "—"
-          }
-        }
-      }
-    },
     "evidenceGraph.noArtifact.title": {
       "comment": "Title on the graph-wide No-Artifact warning callout",
       "extractionState": "manual",
@@ -14596,42 +14584,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Promote %1$@, %2$@"
-          }
-        }
-      }
-    },
-    "evidenceGraph.subject.promoteHelp.person": {
-      "comment": "Tooltip on the Promote footer button",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Promote to a person"
-          }
-        }
-      }
-    },
-    "evidenceGraph.subject.promoteHelp.event": {
-      "comment": "Tooltip on the Promote footer button",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Promote to an event"
-          }
-        }
-      }
-    },
-    "evidenceGraph.subject.promoteHelp.place": {
-      "comment": "Tooltip on the Promote footer button",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Promote to a place"
           }
         }
       }

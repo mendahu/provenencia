@@ -1737,29 +1737,6 @@ enum L10n {
             ), label, ref)
         }
 
-        static func promoteHelp(kind: EvidencePrimaryKind) -> LocalizedStringResource {
-            switch kind {
-            case .person:
-                LocalizedStringResource(
-                    "evidenceGraph.subject.promoteHelp.person",
-                    defaultValue: "Promote to a person",
-                    comment: "Tooltip on the Promote footer button"
-                )
-            case .event:
-                LocalizedStringResource(
-                    "evidenceGraph.subject.promoteHelp.event",
-                    defaultValue: "Promote to an event",
-                    comment: "Tooltip on the Promote footer button"
-                )
-            case .place:
-                LocalizedStringResource(
-                    "evidenceGraph.subject.promoteHelp.place",
-                    defaultValue: "Promote to a place",
-                    comment: "Tooltip on the Promote footer button"
-                )
-            }
-        }
-
         static func openHandlePage(kind: EvidencePrimaryKind) -> LocalizedStringResource {
             switch kind {
             case .person:
@@ -1905,12 +1882,6 @@ enum L10n {
             "evidenceGraph.legend.conflict",
             defaultValue: "Conflict — competing values",
             comment: "Canvas legend line for the ochre conflict bracket"
-        )
-
-        static let citedValueUnavailable = LocalizedStringResource(
-            "evidenceGraph.subject.citedValueUnavailable",
-            defaultValue: "—",
-            comment: "Placeholder when a cited Observation has no displayable value summary yet"
         )
 
         static let noArtifactTitle = LocalizedStringResource(
