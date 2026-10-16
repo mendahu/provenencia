@@ -272,6 +272,10 @@ SLICE 10 — Take a filing back
   Check: confirm names the bridges. The card shows Promote again. The other
          person on that relationship stays promoted. The handle is still there.
 
+SLICE 11 — One card drawing
+  S10-51  Draw Evidence cards in one place (ghost and layout tests on the AppKit card)
+  Check: the graph, the placement ghost, and VoiceOver look and act as before.
+
 S10-99 — Dogfood close / docs
 ```
 
@@ -300,6 +304,7 @@ S10-22, S10-D8 ──▶ S10-41 Sources list (last updated, filters, persist)
 S10-D5 ──▶ S10-18 source page drop and artifact cards
 S10-D6 ──▶ S10-20 graph file select + Open, and box-select
 S10-D6 ──▶ S10-44 unpromote (button drawn on the S10-20 board)
+S10-44 ──▶ S10-51 one card drawing (no brief)
 S10-D12 (gender + gallery + preferred portrait) ──▶ S10-23
 S10-D4 ──▶ S10-17 name parts
                  └──▶ S10-37 collation
@@ -725,6 +730,21 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 | **Out** | Rejecting the claim ("not this entity"). The weak-claim queue, re-pin, and accept-as-is ([`ideas/identity-claim-review.md`](../../ideas/identity-claim-review.md)). Deleting the Evidence cards. Deleting the handle. Unpromote from the Person, Event, or Place page. |
 | **Testable** | Unpromote a person who is in a filed relationship: the confirm names that relationship, both cards show Promote, the other person stays on their handle, and that handle still exists. Unpromote a person with no filed bridges: the confirm does not invent a bridge, and the card shows Promote. Cancel leaves the claim. |
 | **Depends on** | S10-D6 |
+
+### Slice 11 — One card drawing
+
+#### S10-51 — Draw Evidence cards in one place
+
+**Brief:** — (no new chrome)
+
+**Plan:** [`prs/S10-51-one-card-drawing.md`](prs/S10-51-one-card-drawing.md) — Blocked on #418
+
+| | |
+| --- | --- |
+| **In** | The placement ghost is drawn by `EvidenceAppKitCard`. `EvidenceCardLayoutTests` measure and render the AppKit card. `GraphCanvasItem` builds one `NSView`. The SwiftUI card views, their layout reporting, and their accessibility chain are deleted. S10-44 follow-ups MNT-3, MNT-4, UX-2, CON-4. |
+| **Out** | The constant-based first-frame geometry. Moving the ghost to where the card lands. Drawing the base layer in AppKit. The other S10-44 follow-ups. |
+| **Testable** | Every card, the ghost, and VoiceOver look and act as before. The layout tests fail if the live card's paint and its hit layout disagree. |
+| **Depends on** | S10-44 |
 
 ### S10-99 — Dogfood close / docs
 
