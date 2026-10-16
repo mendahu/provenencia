@@ -46,6 +46,25 @@ struct EvidenceSubjectCard: View {
     static let promoteActionID = "promote"
     /// Footer on a promoted card: open the handle's page.
     static let openHandleActionID = "openHandle"
+    /// Icon button at the trailing edge of a promoted card's footer: take the filing back.
+    static let unpromoteActionID = "unpromote"
+    /// Width of the Unpromote square; also the footer height, so it is square.
+    static let unpromoteSlotWidth: CGFloat = 36
+
+    /// Where a promoted footer's pieces sit inside `footer`: the handle row, the
+    /// 1pt hairline, and the Unpromote slot. Paint, regions, and hits all read this.
+    static func promotedFooterParts(footer: CGRect) -> (handle: CGRect, hairline: CGRect, slot: CGRect) {
+        let slot = CGRect(
+            x: footer.maxX - unpromoteSlotWidth, y: footer.minY,
+            width: unpromoteSlotWidth, height: footer.height
+        )
+        let hairline = CGRect(x: slot.minX - 1, y: footer.minY + 8, width: 1, height: footer.height - 16)
+        let handle = CGRect(
+            x: footer.minX, y: footer.minY,
+            width: hairline.minX - footer.minX, height: footer.height
+        )
+        return (handle, hairline, slot)
+    }
 
     static func editPropertyActionID(observationID: String) -> String {
         "editProperty.\(observationID)"
@@ -149,12 +168,13 @@ struct EvidenceSubjectCard: View {
         }
 
         // Promote needs no Artifact, so it ignores `canCite`.
-        actions.append(
-            GraphCanvasActionTarget(
-                id: placed.membership == nil ? promoteActionID : openHandleActionID,
-                frame: footerFrame(cardFrame: frame)
-            )
-        )
+        if placed.membership == nil {
+            actions.append(GraphCanvasActionTarget(id: promoteActionID, frame: footerFrame(cardFrame: frame)))
+        } else {
+            let parts = promotedFooterParts(footer: footerFrame(cardFrame: frame))
+            actions.append(GraphCanvasActionTarget(id: openHandleActionID, frame: parts.handle))
+            actions.append(unpromoteTarget(frame: parts.slot))
+        }
         return actions
     }
 
@@ -191,11 +211,26 @@ struct EvidenceSubjectCard: View {
         if canCite, let band = layout.band(addPropertyActionID, origin: origin) {
             actions.append(GraphCanvasActionTarget(id: addPropertyActionID, frame: band))
         }
-        let footerID = placed.membership == nil ? promoteActionID : openHandleActionID
-        if let band = layout.band(footerID, origin: origin) {
-            actions.append(GraphCanvasActionTarget(id: footerID, frame: band))
+        if placed.membership == nil {
+            if let band = layout.band(promoteActionID, origin: origin) {
+                actions.append(GraphCanvasActionTarget(id: promoteActionID, frame: band))
+            }
+        } else {
+            // The handle row and the Unpromote square are the painted rects, not the full-width band.
+            if let handle = layout.centeredHit(openHandleActionID, origin: origin, minSize: 0) {
+                actions.append(GraphCanvasActionTarget(id: openHandleActionID, frame: handle))
+            }
+            if let slot = layout.centeredHit(unpromoteActionID, origin: origin, minSize: 0) {
+                actions.append(unpromoteTarget(frame: slot))
+            }
         }
         return actions
+    }
+
+    private static func unpromoteTarget(frame: CGRect) -> GraphCanvasActionTarget {
+        GraphCanvasActionTarget(
+            id: unpromoteActionID, frame: frame, help: L10n.string(L10n.EvidenceGraph.unpromote)
+        )
     }
 
     /// Footer hit / paint rect: full card width × ``footerHeight``, bottom-anchored.
@@ -570,7 +605,7 @@ private struct EvidenceSubjectCardChrome: View {
         HStack(spacing: 0) {
             Button {} label: {
                 HStack(spacing: PVSpacing.space3) {
-                    PVIcon(.arrowUpRight, size: PVControlSize.sm.iconGlyphSize)
+                    PVIcon(.promote, size: PVControlSize.sm.iconGlyphSize)
                     Text(L10n.EvidenceGraph.promote)
                 }
             }
@@ -595,6 +630,21 @@ private struct EvidenceSubjectCardChrome: View {
     /// Observation rows by shape — outline mono ref, no micro-caps label,
     /// disclosure chevron — while keeping the card's colour identity.
     private func membershipRow(_ membership: CatalogSubjectMembership) -> some View {
+        HStack(spacing: 0) {
+            handleRow(membership)
+            Rectangle().fill(style.line).frame(width: 1, height: 20)
+            PVIconButton(.unpromote, label: L10n.EvidenceGraph.unpromote, size: .sm, action: {})
+                .allowsHitTesting(false)
+                .frame(width: EvidenceSubjectCard.unpromoteSlotWidth, height: EvidenceSubjectCard.footerHeight)
+                .evidenceCardHitRegion(EvidenceSubjectCard.unpromoteActionID)
+                .accessibilityHidden(true)
+        }
+        .frame(maxWidth: .infinity, minHeight: EvidenceSubjectCard.footerHeight,
+               maxHeight: EvidenceSubjectCard.footerHeight, alignment: .leading)
+        .background(style.band)
+    }
+
+    private func handleRow(_ membership: CatalogSubjectMembership) -> some View {
         let hovered = hoveredActionID == EvidenceSubjectCard.openHandleActionID
         let pressed = pressedActionID == EvidenceSubjectCard.openHandleActionID
         return HStack(spacing: 8) {

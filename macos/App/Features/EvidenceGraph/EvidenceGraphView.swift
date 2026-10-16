@@ -605,7 +605,7 @@ private struct EvidenceGraphHeader: View {
             L10n.EvidenceGraph.promoteAll,
             variant: .secondary,
             size: .sm,
-            icon: .arrowUpRight,
+            icon: .promote,
             iconOnly: iconOnly
         ) {
             if let location = model.promoteAllLocation() {
@@ -950,7 +950,7 @@ private struct EvidenceGraphDocumentBody: View {
                         canCite: model.canCite,
                         layout: cardLayouts.layout(for: placed.id)
                     ).map { action in
-                        GraphCanvasActionTarget(id: action.id, frame: inDocument(action.frame))
+                        action.mapFrame(inDocument)
                     }
                 )
             )
@@ -971,7 +971,7 @@ private struct EvidenceGraphDocumentBody: View {
                         canCite: model.canCite,
                         layout: cardLayouts.layout(for: placed.id)
                     ).map { action in
-                        GraphCanvasActionTarget(id: action.id, frame: inDocument(action.frame))
+                        action.mapFrame(inDocument)
                     }
                 )
             )

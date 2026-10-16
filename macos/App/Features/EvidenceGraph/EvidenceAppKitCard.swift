@@ -297,11 +297,7 @@ private extension EvidenceAppKitCard {
             addRect = CGRect(x: 0, y: y, width: width, height: addPropertyRowHeight)
             regions[EvidenceSubjectCard.addPropertyActionID] = addRect
             y += addPropertyRowHeight + EvidenceSubjectCard.stackHairline
-            let footerID = placed.membership == nil
-                ? EvidenceSubjectCard.promoteActionID : EvidenceSubjectCard.openHandleActionID
-            footerRect = CGRect(x: 0, y: y, width: width, height: EvidenceSubjectCard.footerHeight)
-            regions[footerID] = footerRect
-            y += EvidenceSubjectCard.footerHeight
+            footerRect = recordFooter(placed: placed, y: &y, width: width, regions: &regions)
         } else {
             y += EvidenceSubjectCard.headerToBodyGap
             addRect = CGRect(x: 0, y: y, width: width, height: EvidenceSubjectCard.addPropertyQuietHeight)
@@ -310,11 +306,7 @@ private extension EvidenceAppKitCard {
                 + EvidenceSubjectCard.headerToBodyGap
                 + EvidenceSubjectCard.uncitedFooterTopMargin
                 + EvidenceSubjectCard.uncitedFooterRule
-            let footerID = placed.membership == nil
-                ? EvidenceSubjectCard.promoteActionID : EvidenceSubjectCard.openHandleActionID
-            footerRect = CGRect(x: 0, y: y, width: width, height: EvidenceSubjectCard.footerHeight)
-            regions[footerID] = footerRect
-            y += EvidenceSubjectCard.footerHeight
+            footerRect = recordFooter(placed: placed, y: &y, width: width, regions: &regions)
         }
 
         paintSubjectShell(placed: placed, style: style, selected: selected, dragging: state.isDragging, height: y, painter: painter)
@@ -632,6 +624,28 @@ private extension EvidenceAppKitCard {
         )
     }
 
+    /// Records the footer's hit regions at `y` and advances `y` past it. An
+    /// unpromoted card records Promote over the whole footer; a promoted one
+    /// records the handle row and the Unpromote square from the same parts the
+    /// paint reads. Returns the whole footer rect.
+    private static func recordFooter(
+        placed: SourceGraphPlacedSubject,
+        y: inout CGFloat,
+        width: CGFloat,
+        regions: inout [String: CGRect]
+    ) -> CGRect {
+        let footer = CGRect(x: 0, y: y, width: width, height: EvidenceSubjectCard.footerHeight)
+        y += EvidenceSubjectCard.footerHeight
+        if placed.membership == nil {
+            regions[EvidenceSubjectCard.promoteActionID] = footer
+        } else {
+            let parts = EvidenceSubjectCard.promotedFooterParts(footer: footer)
+            regions[EvidenceSubjectCard.openHandleActionID] = parts.handle
+            regions[EvidenceSubjectCard.unpromoteActionID] = parts.slot
+        }
+        return footer
+    }
+
     static func paintFooter(
         _ rect: CGRect,
         placed: SourceGraphPlacedSubject,
@@ -644,18 +658,32 @@ private extension EvidenceAppKitCard {
         guard let painter else { return }
         painter.fill(rect, style.band)
         if let membership = placed.membership {
+            let parts = EvidenceSubjectCard.promotedFooterParts(footer: rect)
             let down = pressed == EvidenceSubjectCard.openHandleActionID
             let hot = hovered == EvidenceSubjectCard.openHandleActionID
-            if hot || down { painter.fill(rect, style.ink.opacity(down ? 0.18 : 0.10)) }
+            if hot || down { painter.fill(parts.handle, style.ink.opacity(down ? 0.18 : 0.10)) }
             painter.text(membership.entity.ref, in: CGRect(x: EvidenceSubjectCard.shellPaddingX, y: rect.midY - 7, width: 72, height: 14), font: mono(10), color: style.ink, lines: 1)
             let stored = EvidenceSubjectCard.membershipName(membership, orders: orders)
             let name = stored ?? L10n.string(L10n.EvidenceGraph.openHandlePage(kind: placed.kind))
             painter.text(
                 name,
-                in: CGRect(x: EvidenceSubjectCard.shellPaddingX + 78, y: rect.midY - 8, width: rect.width - 120, height: 16),
+                in: CGRect(x: EvidenceSubjectCard.shellPaddingX + 78, y: rect.midY - 8, width: parts.handle.width - 120, height: 16),
                 font: PVFont.nsBody(size: 12.5, italic: stored == nil), color: style.ink, lines: 1
             )
-            painter.symbol(PVSymbol.chevronForward.rawValue, in: CGRect(x: rect.maxX - 27, y: rect.midY - 7, width: 14, height: 14), style.ink)
+            painter.symbol(PVSymbol.chevronForward.rawValue, in: CGRect(x: parts.handle.maxX - 27, y: rect.midY - 7, width: 14, height: 14), style.ink)
+            painter.fill(parts.hairline, style.line)
+            let unpromoteDown = pressed == EvidenceSubjectCard.unpromoteActionID
+            if unpromoteDown || hovered == EvidenceSubjectCard.unpromoteActionID {
+                painter.fillRound(
+                    CGRect(x: parts.slot.midX - 11, y: parts.slot.midY - 11, width: 22, height: 22),
+                    radius: PVRadius.sm, style.ink.opacity(unpromoteDown ? 0.18 : 0.10)
+                )
+            }
+            painter.symbol(
+                PVSymbol.unpromote.rawValue,
+                in: CGRect(x: parts.slot.midX - 6.5, y: parts.slot.midY - 6.5, width: 13, height: 13),
+                style.ink
+            )
         } else {
             let hot = hovered == EvidenceSubjectCard.promoteActionID
                 || pressed == EvidenceSubjectCard.promoteActionID
@@ -668,7 +696,7 @@ private extension EvidenceAppKitCard {
             let icon: CGFloat = 13
             let x = EvidenceSubjectCard.shellPaddingX
             painter.symbol(
-                PVSymbol.arrowUpRight.rawValue,
+                PVSymbol.promote.rawValue,
                 in: CGRect(x: x, y: rect.midY - icon / 2, width: icon, height: icon),
                 PVColor.textSecondary
             )

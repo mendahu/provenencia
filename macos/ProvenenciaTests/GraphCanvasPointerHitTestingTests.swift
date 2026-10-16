@@ -119,6 +119,33 @@ struct GraphCanvasPointerPressTests {
         #expect(pointer.pressedCardAction == nil)
     }
 
+    @Test func hoverExposesTargetHelp() {
+        let pointer = GraphCanvasPointerController()
+        pointer.hitTargets = [
+            GraphCanvasHitTarget(
+                id: "card",
+                frame: CGRect(x: 0, y: 0, width: 100, height: 100),
+                acceptsConnect: true,
+                actions: [
+                    GraphCanvasActionTarget(id: "unpromote", frame: CGRect(x: 60, y: 60, width: 36, height: 36), help: "Unpromote"),
+                    GraphCanvasActionTarget(id: "openHandle", frame: CGRect(x: 0, y: 60, width: 59, height: 36)),
+                ]
+            ),
+        ]
+        pointer.mouseMoved(documentPoint: CGPoint(x: 70, y: 70))
+        #expect(pointer.hoveredHelp == "Unpromote")
+        pointer.mouseMoved(documentPoint: CGPoint(x: 10, y: 70))
+        #expect(pointer.hoveredHelp == nil)
+        pointer.mouseMoved(documentPoint: CGPoint(x: 70, y: 70))
+        pointer.mouseExited()
+        #expect(pointer.hoveredHelp == nil)
+
+        let moved = GraphCanvasActionTarget(id: "a", frame: .zero, help: "Help")
+            .mapFrame { $0.offsetBy(dx: 5, dy: 6) }
+        #expect(moved.frame == CGRect(x: 5, y: 6, width: 0, height: 0))
+        #expect(moved.help == "Help")
+    }
+
     // MARK: Marquee (S10-20)
 
     private func marqueeController(mode: GraphCanvasPointerToolMode = .idle) -> GraphCanvasPointerController {

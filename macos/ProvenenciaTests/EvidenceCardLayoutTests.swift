@@ -21,7 +21,8 @@ struct EvidenceCardLayoutTests {
         label: String = "James Robins",
         description: String = "",
         value: String = "Value",
-        promoted: Bool = false
+        promoted: Bool = false,
+        handleName: String? = nil
     ) -> SourceGraphPlacedSubject {
         SourceGraphPlacedSubject(
             subject: CatalogSubject(id: "s", ref: "CPR-2AB91", sourceID: "x", subjectTypeID: "t", label: label, description: description),
@@ -34,7 +35,8 @@ struct EvidenceCardLayoutTests {
             membership: promoted ? CatalogSubjectMembership(
                 subjectID: "s", claimID: "c",
                 entity: CatalogCanonicalEntity(id: "e", ref: "PER-7KD45", subjectTypeID: "t", label: ""),
-                kind: "person"
+                kind: "person",
+                name: handleName.map { CatalogNameValue(form: $0) }
             ) : nil
         )
     }
@@ -82,7 +84,7 @@ struct EvidenceCardLayoutTests {
         }
     }
 
-    static let cases: [String] = ["uncited", "uncited+description", "cited1", "cited3", "cited3+promoted",
+    static let cases: [String] = ["uncited", "uncited+description", "cited1", "cited3", "cited3+promoted", "longHandleName+promoted",
                                   "longTitle", "wrappedValues", "longDescription"]
 
     private func fixture(_ name: String) -> SourceGraphPlacedSubject {
@@ -92,6 +94,8 @@ struct EvidenceCardLayoutTests {
         case "cited1": placed(rows: 1)
         case "cited3": placed(rows: 3)
         case "cited3+promoted": placed(rows: 3, promoted: true)
+        case "longHandleName+promoted":
+            placed(rows: 1, promoted: true, handleName: "James Alexander Robins of Wellington North Township")
         case "longTitle": placed(rows: 1, label: "James Alexander Robins of Wellington North Township")
         case "wrappedValues": placed(rows: 2, value: "Agricultural labourer and part-time blacksmith of the township")
         default: placed(rows: 1, description: "Son, age 14, line 13, listed under his father with a note in the margin about schooling")
@@ -107,6 +111,19 @@ struct EvidenceCardLayoutTests {
 
         // Footer: 36pt, flush with the painted bottom, and its hit band is exactly that.
         let footerID = card.membership == nil ? EvidenceSubjectCard.promoteActionID : EvidenceSubjectCard.openHandleActionID
+        if card.membership != nil {
+            // The handle row and the Unpromote square are the footer's two painted pieces.
+            let slot = try #require(layout.regions[EvidenceSubjectCard.unpromoteActionID])
+            #expect(abs(slot.width - 36) < 0.5 && abs(slot.height - 36) < 0.5)
+            #expect(abs(slot.maxX - layout.size.width) < 0.5)
+            #expect(abs(slot.maxY - layout.size.height) < 0.5)
+            let handle = try #require(layout.regions[EvidenceSubjectCard.openHandleActionID])
+            let parts = EvidenceSubjectCard.promotedFooterParts(
+                footer: CGRect(x: 0, y: slot.minY, width: layout.size.width, height: EvidenceSubjectCard.footerHeight)
+            )
+            #expect(abs(handle.minX - parts.handle.minX) < 0.5 && abs(handle.width - parts.handle.width) < 0.5)
+            #expect(handle.maxX <= slot.minX)
+        }
         let footer = try #require(layout.regions[footerID])
         #expect(abs(footer.height - EvidenceSubjectCard.footerHeight) < 0.5)
         #expect(abs(footer.maxY - layout.size.height) < 0.5)
@@ -116,6 +133,9 @@ struct EvidenceCardLayoutTests {
         let footerHit = try #require(targets.first { $0.id == footerID })
         #expect(abs(footerHit.frame.maxY - frame.maxY) < 0.5)
         #expect(abs(footerHit.frame.height - EvidenceSubjectCard.footerHeight) < 0.5)
+        if card.membership != nil {
+            #expect(targets.contains { $0.id == EvidenceSubjectCard.unpromoteActionID })
+        }
 
         // Every property row has a hit band on its painted row; bands never overlap.
         for observation in card.observations {

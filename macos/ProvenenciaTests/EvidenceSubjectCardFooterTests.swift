@@ -71,6 +71,27 @@ struct EvidenceSubjectCardFooterTests {
         #expect(add.map { !$0.frame.intersects(promote?.frame ?? .zero) } == true)
     }
 
+    @Test func promotedFooterSplitsHandleAndUnpromote() throws {
+        let card = placed(cited: true, promoted: true)
+        let frame = EvidenceSubjectCard.edgeFrame(for: card)
+        let targets = EvidenceSubjectCard.actionTargets(for: card, canCite: true, layout: nil)
+        let handle = try #require(targets.first { $0.id == EvidenceSubjectCard.openHandleActionID })
+        let unpromote = try #require(targets.first { $0.id == EvidenceSubjectCard.unpromoteActionID })
+        #expect(!handle.frame.intersects(unpromote.frame))
+        #expect(handle.frame.height == 36 && unpromote.frame.height == 36)
+        #expect(handle.frame.maxY == frame.maxY && unpromote.frame.maxY == frame.maxY)
+        #expect(unpromote.frame.width == 36)
+        #expect(unpromote.frame.maxX == frame.maxX)
+        #expect(handle.frame.width + 1 + unpromote.frame.width == EvidenceSubjectCard.width)
+        #expect(unpromote.help == "Unpromote")
+        #expect(handle.help == nil)
+
+        for other in [placed(cited: true, promoted: false), placed(cited: false, promoted: false)] {
+            let ids = EvidenceSubjectCard.actionTargets(for: other, canCite: true).map(\.id)
+            #expect(!ids.contains(EvidenceSubjectCard.unpromoteActionID))
+        }
+    }
+
     @Test func membershipSwapsPromoteForOpenHandle() {
         let card = placed(cited: true, promoted: true)
         let ids = EvidenceSubjectCard.actionTargets(for: card, canCite: true).map(\.id)

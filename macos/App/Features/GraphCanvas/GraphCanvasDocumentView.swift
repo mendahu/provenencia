@@ -101,6 +101,7 @@ final class GraphCanvasDocumentView: NSView {
     override func mouseMoved(with event: NSEvent) {
         let doc = convert(event.locationInWindow, from: nil)
         pointer.mouseMoved(documentPoint: doc)
+        syncToolTip()
     }
 
     override func mouseEntered(with event: NSEvent) {
@@ -109,6 +110,14 @@ final class GraphCanvasDocumentView: NSView {
 
     override func mouseExited(with event: NSEvent) {
         pointer.mouseExited()
+        syncToolTip()
+    }
+
+    /// The view owns the mouse (`hitTest` returns self), so the hovered
+    /// action's help is this view's tool tip; set only when it changes.
+    private func syncToolTip() {
+        let help = pointer.hoveredHelp
+        if toolTip != help { toolTip = help }
     }
 
     // MARK: - Accessibility
