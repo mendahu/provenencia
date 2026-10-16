@@ -59,6 +59,38 @@ func PromoteSubject(in []byte) ([]byte, error) {
 	return proto.Marshal(out)
 }
 
+func UnpromoteSubject(in []byte) ([]byte, error) {
+	var req engine.UnpromoteSubjectRequest
+	if err := proto.Unmarshal(in, &req); err != nil {
+		return nil, unmarshalErr("unpromote_subject", err)
+	}
+	userID, err := parseUserID(req.GetUserId())
+	if err != nil {
+		return nil, err
+	}
+	subjectID, err := parseID(req.GetSubjectId())
+	if err != nil {
+		return nil, err
+	}
+	var out *engine.UnpromoteSubjectResponse
+	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
+		_, wrote, err := writes.Run(c, writes.Op{Action: "unpromote_subject", UserID: userID},
+			func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+				changes, err := promote.Unpromote(tx, userID, subjectID)
+				return struct{}{}, changes, err
+			})
+		if err != nil {
+			return err
+		}
+		out = &engine.UnpromoteSubjectResponse{Effects: writeEffectsProto(wrote)}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return proto.Marshal(out)
+}
+
 func ListClaimConfidenceGrades(in []byte) ([]byte, error) {
 	var req engine.ListClaimConfidenceGradesRequest
 	if err := proto.Unmarshal(in, &req); err != nil {

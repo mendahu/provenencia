@@ -3,6 +3,7 @@ import Testing
 @testable import Provenencia
 
 @Suite
+@MainActor
 struct EvidenceBridgeEdgeSummaryTests {
     private func observation(
         propertyKey: String,

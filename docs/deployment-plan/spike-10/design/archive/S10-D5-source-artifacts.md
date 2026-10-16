@@ -7,7 +7,7 @@
 **View:** Source page — the content pane, and the artifact cards on it
 **Implements later as:** PR **S10-18**
 **Depends on:** —
-**Related:** [`../../deployment-plan.md`](../../deployment-plan.md) (S10-18). The Evidence graph is **[S10-D6](../S10-D6-evidence-graph.md)** and ships in S10-20. Box-select, Unpromote, and the graph’s file select and Open button are that board.
+**Related:** [`../../deployment-plan.md`](../../deployment-plan.md) (S10-18). The Evidence graph is **[S10-D6](S10-D6-evidence-graph.md)** and ships in S10-20. Box-select, Unpromote, and the graph’s file select and Open button are that board.
 **Design system layers:** [`docs/design-system-layers.md`](../../../../design-system-layers.md)
 **Skill:** [`add-design-brief`](../../../../../.agents/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../../.agents/skills/add-ui-component/SKILL.md)
 
@@ -170,4 +170,4 @@ This table is **binding**. Instance the Ship kit rows. Paths from `macos/App/` u
 
 1. Archive this brief under `design/archive/` when the board is agreed.
 2. Record it in [`../../completed.md`](../../completed.md).
-3. Implement **S10-18** against this board. The Evidence graph is [S10-D6](../S10-D6-evidence-graph.md) and is not this PR.
+3. Implement **S10-18** against this board. The Evidence graph is [S10-D6](S10-D6-evidence-graph.md) and is not this PR.

@@ -4,7 +4,7 @@ import SwiftUI
 /// Everything one graph card draws, as a value.
 ///
 /// The graph pushes cards to ``GraphCanvasItemLayer`` as ``GraphCanvasItem``s
-/// with this as their model, and AppKit rebuilds a card's hosting view only when
+/// with this as their model, and AppKit rebuilds a card's view only when
 /// its model changes. Drag position is not part of it: AppKit moves the view.
 struct EvidenceCanvasCard: Equatable {
     enum Placed: Equatable {
@@ -21,6 +21,25 @@ struct EvidenceCanvasCard: Equatable {
         var canCite: Bool
         var hoveredActionID: String?
         var pressedActionID: String?
+
+        /// A card nobody is touching.
+        static let resting = State(
+            isSelected: false, isActivated: false, isConnectingFrom: false, isDragging: false,
+            canCite: true, hoveredActionID: nil, pressedActionID: nil
+        )
+    }
+
+    /// The placement ghost's card: an unfiled, resting subject card.
+    @MainActor
+    static func ghost(
+        _ placed: SourceGraphPlacedSubject,
+        presentation: CatalogSubjectTypePresentation?
+    ) -> EvidenceCanvasCard {
+        EvidenceCanvasCard(
+            placed: .subject(placed, presentation),
+            text: EvidenceCardText(subject: placed),
+            state: .resting
+        )
     }
 
     var placed: Placed
@@ -54,126 +73,41 @@ struct EvidenceCanvasCard: Equatable {
     }
 }
 
-/// Builds a card's hosted view: paint, measured layout, and its VoiceOver actions.
-///
-/// Holds references only (the model, navigation, and layout store), so item
-/// content closures never capture a SwiftUI view's state.
+/// Builds a card's view and its VoiceOver actions. Holds references only (the
+/// model, navigation, and layout store).
 @MainActor
 struct EvidenceCanvasCardContent {
     let model: EvidenceGraphModel
     let navigation: WorkspaceNavigation
     let layouts: EvidenceCardLayoutStore
 
-    /// AppKit-drawn subject or bridge card. Records the measured hit layout
+    /// The subject or bridge card's view. Records the measured hit layout
     /// before the canvas sizes the view, so edges and pointer targets exist
     /// for the opening batch.
-    func appKitView(for card: EvidenceCanvasCard) -> NSView {
-        let view = EvidenceAppKitCard(card: card, actions: accessibilityActions(for: card))
+    func cardView(for card: EvidenceCanvasCard) -> NSView {
+        let view = EvidenceCardView(card: card, actions: accessibilityActions(for: card))
         layouts.record(view.layout, for: card.id)
         return view
     }
 
-    func view(for card: EvidenceCanvasCard) -> AnyView {
-        switch card.placed {
-        case .subject(let placed, let presentation):
-            AnyView(subject(placed, presentation: presentation, card: card))
-        case .bridge(let placed):
-            AnyView(bridge(placed, card: card))
-        }
-    }
-
-    private func subject(
-        _ placed: SourceGraphPlacedSubject,
-        presentation: CatalogSubjectTypePresentation?,
-        card: EvidenceCanvasCard
-    ) -> some View {
-        let model = model
-        let navigation = navigation
-        let layouts = layouts
-        return EvidenceSubjectCard(
-            placed: placed,
-            text: card.text,
-            presentation: presentation,
-            isSelected: card.state.isSelected,
-            isActivated: card.state.isActivated,
-            isConnectingFrom: card.state.isConnectingFrom,
-            canCite: card.state.canCite,
-            isDragging: card.state.isDragging,
-            hoveredActionID: card.state.hoveredActionID,
-            pressedActionID: card.state.pressedActionID,
-            nameOrders: card.nameOrders,
-            onLayout: { layouts.record($0, for: placed.id) }
-        )
-        .accessibilityAction(named: Text(L10n.EvidenceGraph.editAccessibility)) {
-            model.beginEdit(subjectID: placed.id)
-        }
-        .accessibilityAction(named: Text(Self.addPropertyActionName(canCite: card.state.canCite))) {
-            if let location = model.composerLocation(for: placed.id) {
-                navigation.go(to: location)
-            }
-        }
-        .accessibilityAction(named: Text(verbatim: card.text.footerActionName ?? "")) {
-            if let location = placed.membership == nil
-                ? model.promoteLocation(for: placed.id)
-                : model.openHandle(subjectID: placed.id)
-            {
-                navigation.go(to: location)
-            }
-        }
-        .accessibilityAction(named: Text(verbatim: card.text.deleteActionName)) {
-            Task { await model.beginDelete(subjectID: placed.id) }
-        }
-        .accessibilityAction(named: Text(L10n.EvidenceGraph.editPropertyAccessibility)) {
-            if let observation = placed.observations.first,
-               let location = model.composerLocation(
-                   forObservationID: observation.id,
-                   subjectID: placed.id
-               )
-            {
-                navigation.go(to: location)
-            }
-        }
-    }
-
-    private func bridge(_ placed: SourceGraphPlacedBridge, card: EvidenceCanvasCard) -> some View {
-        let model = model
-        let navigation = navigation
-        let layouts = layouts
-        return EvidenceBridgeCard(
-            placed: placed,
-            text: card.text,
-            isSelected: card.state.isSelected,
-            isActivated: card.state.isActivated,
-            isDragging: card.state.isDragging,
-            hoveredActionID: card.state.hoveredActionID,
-            canCite: card.state.canCite,
-            onLayout: { layouts.record($0, for: placed.id) }
-        )
-        .accessibilityAction(named: Text(L10n.EvidenceGraph.editAccessibility)) {
-            model.beginEdit(subjectID: placed.id)
-        }
-        .accessibilityAction(named: Text(L10n.EvidenceGraph.editCitationAccessibility)) {
-            if let location = model.composerLocationForBridgeCitation(subjectID: placed.id) {
-                navigation.go(to: location)
-            }
-        }
-        .accessibilityAction(named: Text(Self.addPropertyActionName(canCite: card.state.canCite))) {
-            if let location = model.composerLocation(for: placed.id) {
-                navigation.go(to: location)
-            }
-        }
-        .accessibilityAction(named: Text(verbatim: card.text.deleteActionName)) {
-            Task { await model.beginDelete(subjectID: placed.id) }
-        }
-    }
-
     private func accessibilityActions(for card: EvidenceCanvasCard) -> [NSAccessibilityCustomAction] {
+        namedActions(for: card).map { name, run in
+            NSAccessibilityCustomAction(name: name) {
+                run()
+                return true
+            }
+        }
+    }
+
+    /// The card's VoiceOver actions, in order. The live card maps these to
+    /// custom actions; tests read them here.
+    func namedActions(for card: EvidenceCanvasCard) -> [(name: String, run: () -> Void)] {
         let model = model
         let navigation = navigation
         func go(_ location: WorkspaceLocation?) {
             if let location { navigation.go(to: location) }
         }
-        var named: [(String, () -> Void)] = []
+        var named: [(name: String, run: () -> Void)] = []
         switch card.placed {
         case .subject(let placed, _):
             named.append((L10n.string(L10n.EvidenceGraph.editAccessibility), {
@@ -187,6 +121,11 @@ struct EvidenceCanvasCardContent {
                     go(placed.membership == nil
                         ? model.promoteLocation(for: placed.id)
                         : model.openHandle(subjectID: placed.id))
+                }))
+            }
+            if placed.membership != nil {
+                named.append((L10n.string(L10n.EvidenceGraph.unpromote), {
+                    model.beginUnpromote(subjectID: placed.id)
                 }))
             }
             named.append((card.text.deleteActionName, {
@@ -211,12 +150,7 @@ struct EvidenceCanvasCardContent {
                 Task { await model.beginDelete(subjectID: placed.id) }
             }))
         }
-        return named.map { name, run in
-            NSAccessibilityCustomAction(name: name) {
-                run()
-                return true
-            }
-        }
+        return named
     }
 
     private static func addPropertyActionName(canCite: Bool) -> LocalizedStringResource {

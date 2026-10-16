@@ -196,6 +196,51 @@ private struct EvidenceGraphContent: View {
                 navigation.go(to: location)
             }
         )
+        .pvConfirm(
+            item: $model.pendingUnpromote,
+            copy: { item in
+                PVConfirmCopy(
+                    title: L10n.EvidenceGraph.unpromoteConfirmTitle(name: item.name),
+                    message: L10n.string(L10n.EvidenceGraph.unpromoteConfirmMessage),
+                    confirm: L10n.EvidenceGraph.unpromote,
+                    cancel: L10n.EvidenceGraph.unpromoteKeep
+                )
+            },
+            tone: .irreversible,
+            isRunning: model.isUnpromoting,
+            accessibilityIdentifierPrefix: "evidenceGraph.unpromote",
+            onConfirm: { Task { await model.confirmUnpromote() } },
+            detail: unpromoteDetail
+        )
+    }
+
+    /// The bridges that come off with the filing, then a write error. Nothing
+    /// when there are neither.
+    @ViewBuilder
+    private func unpromoteDetail(_ item: EvidenceGraphModel.PendingUnpromote) -> some View {
+        if !item.bridges.isEmpty || item.error != nil {
+            VStack(alignment: .leading, spacing: PVSpacing.space3) {
+                if !item.bridges.isEmpty {
+                    Text(L10n.EvidenceGraph.unpromoteConfirmBridgesHeader)
+                        .pvMicroCaps()
+                        .foregroundStyle(PVColor.textMuted)
+                    VStack(alignment: .leading, spacing: PVSpacing.space2) {
+                        ForEach(Array(item.bridges.enumerated()), id: \.offset) { _, sentence in
+                            Text(verbatim: sentence)
+                                .font(PVFont.body(size: PVTypeScale.bodySmall))
+                                .foregroundStyle(PVColor.textPrimary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                    }
+                    Text(L10n.EvidenceGraph.unpromoteConfirmBridgesNote)
+                        .font(PVFont.body(size: PVTypeScale.caption))
+                        .foregroundStyle(PVColor.textSecondary)
+                }
+                if let error = item.error {
+                    PVCallout(tone: .danger, message: error)
+                }
+            }
+        }
     }
 
     private var accessibilityGraphLabel: Text {
@@ -605,7 +650,7 @@ private struct EvidenceGraphHeader: View {
             L10n.EvidenceGraph.promoteAll,
             variant: .secondary,
             size: .sm,
-            icon: .arrowUpRight,
+            icon: .promote,
             iconOnly: iconOnly
         ) {
             if let location = model.promoteAllLocation() {
@@ -810,10 +855,11 @@ private struct EvidenceGraphDocumentBody: View {
 
             if let ghost = model.ghostPlacedSubject() {
                 let center = EvidenceSubjectCard.contentCenter(gridX: ghost.gridX, gridY: ghost.gridY)
-                EvidenceSubjectCard.ghost(
-                    placed: ghost,
-                    presentation: model.presentation(for: ghost.kind.rawValue)
-                )
+                EvidenceGhostCard(card: .ghost(ghost, presentation: model.presentation(for: ghost.kind.rawValue)))
+                    .id(ghost.kind.rawValue)
+                    .fixedSize()
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
                     .position(CGPoint(x: center.x - canvas.origin.x, y: center.y - canvas.origin.y))
             }
 
@@ -826,7 +872,6 @@ private struct EvidenceGraphDocumentBody: View {
             EvidenceGraphDragCanvasSize(snapshot: snapshot, pointer: pointer, model: model)
         }
         .frame(width: contentSize.width, height: contentSize.height)
-        .coordinateSpace(name: EvidenceSubjectCard.documentCoordinateSpace)
         .onAppear { wirePointer() }
         .onChange(of: inputMode) { _, _ in
             syncPointerMode()
@@ -950,7 +995,7 @@ private struct EvidenceGraphDocumentBody: View {
                         canCite: model.canCite,
                         layout: cardLayouts.layout(for: placed.id)
                     ).map { action in
-                        GraphCanvasActionTarget(id: action.id, frame: inDocument(action.frame))
+                        action.mapFrame(inDocument)
                     }
                 )
             )
@@ -971,7 +1016,7 @@ private struct EvidenceGraphDocumentBody: View {
                         canCite: model.canCite,
                         layout: cardLayouts.layout(for: placed.id)
                     ).map { action in
-                        GraphCanvasActionTarget(id: action.id, frame: inDocument(action.frame))
+                        action.mapFrame(inDocument)
                     }
                 )
             )
@@ -1028,8 +1073,7 @@ private struct EvidenceGraphDocumentBody: View {
                     label: card.text.accessibilityLabel
                 ),
                 model: card,
-                content: { content.view(for: card) },
-                appKitView: { content.appKitView(for: card) }
+                makeView: { content.cardView(for: card) }
             )
         })
     }
@@ -1166,4 +1210,13 @@ enum EvidenceGraphHitRefresh {
         let ids = observations.map(\.id).joined(separator: ",")
         return "\(id)@\(gridX),\(gridY):\(ids)"
     }
+}
+
+/// The placement ghost: the live card, built in its ghost mode. The look
+/// depends only on the armed kind, so SwiftUI never needs to update it.
+private struct EvidenceGhostCard: NSViewRepresentable {
+    let card: EvidenceCanvasCard
+
+    func makeNSView(context: Context) -> EvidenceCardView { EvidenceCardView(ghostOf: card) }
+    func updateNSView(_ view: EvidenceCardView, context: Context) {}
 }

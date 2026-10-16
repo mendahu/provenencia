@@ -741,6 +741,18 @@ struct GoStore: GenealogyStore {
         return Self.mapWriteEffects(resp.effects)
     }
 
+    func unpromoteSubject(projectDir: String, userID: String, subjectID: String) async throws -> CatalogWriteEffects {
+        var req = Provenencia_Engine_V1_UnpromoteSubjectRequest()
+        req.projectDir = projectDir
+        req.userID = userID
+        req.subjectID = subjectID
+        let resp: Provenencia_Engine_V1_UnpromoteSubjectResponse = try await provenenciaCall(
+            method: CoreMethod.unpromoteSubject,
+            request: req
+        )
+        return Self.mapWriteEffects(resp.effects)
+    }
+
     func promoteSubject(
         projectDir: String,
         userID: String,

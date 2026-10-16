@@ -10778,18 +10778,6 @@
         }
       }
     },
-    "evidenceGraph.subject.citedValueUnavailable": {
-      "comment": "Placeholder when a cited Observation has no displayable value summary yet",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "—"
-          }
-        }
-      }
-    },
     "evidenceGraph.noArtifact.title": {
       "comment": "Title on the graph-wide No-Artifact warning callout",
       "extractionState": "manual",
@@ -14516,6 +14504,78 @@
         }
       }
     },
+    "evidenceGraph.subject.unpromote": {
+      "comment": "Footer icon button's tooltip and VoiceOver action on a promoted card, and the confirm button, that takes its filing back",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unpromote"
+          }
+        }
+      }
+    },
+    "evidenceGraph.subject.unpromoteKeep": {
+      "comment": "Cancel button of the Unpromote confirm",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keep filing"
+          }
+        }
+      }
+    },
+    "evidenceGraph.subject.unpromoteConfirmTitle": {
+      "comment": "Title of the Unpromote confirm; argument is the subject's name",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unpromote %1$@?"
+          }
+        }
+      }
+    },
+    "evidenceGraph.subject.unpromoteConfirmMessage": {
+      "comment": "Message of the Unpromote confirm",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This filing is removed. The cards stay on the graph, and the handle stays."
+          }
+        }
+      }
+    },
+    "evidenceGraph.subject.unpromoteConfirmBridgesHeader": {
+      "comment": "Header over the relationships, participations, and locations the Unpromote confirm lists",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Also unfiled"
+          }
+        }
+      }
+    },
+    "evidenceGraph.subject.unpromoteConfirmBridgesNote": {
+      "comment": "Note under the list in the Unpromote confirm",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The other end of each stays filed."
+          }
+        }
+      }
+    },
     "evidenceGraph.subject.promoteAccessibility": {
       "comment": "VoiceOver for the Promote footer; arguments are the subject label and its candidate ref",
       "extractionState": "manual",
@@ -14524,42 +14584,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Promote %1$@, %2$@"
-          }
-        }
-      }
-    },
-    "evidenceGraph.subject.promoteHelp.person": {
-      "comment": "Tooltip on the Promote footer button",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Promote to a person"
-          }
-        }
-      }
-    },
-    "evidenceGraph.subject.promoteHelp.event": {
-      "comment": "Tooltip on the Promote footer button",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Promote to an event"
-          }
-        }
-      }
-    },
-    "evidenceGraph.subject.promoteHelp.place": {
-      "comment": "Tooltip on the Promote footer button",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Promote to a place"
           }
         }
       }

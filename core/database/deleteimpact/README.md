@@ -1,6 +1,6 @@
 # deleteimpact
 
-Official resource and vocab deletes. `Impact` reports whether a row may be erased and what an erase would take with it. `ReleaseFacets` removes audited facet rows before the parent `DELETE` and returns the [`rowchange`](../rowchange) values the revision stores. Owned outbound and connection facets are released on that same delete.
+Official resource and vocab deletes. `Impact` reports whether a row may be erased and what an erase would take with it. `ReleaseFacets` removes audited facet rows before the parent `DELETE` and returns the [`rowchange`](../rowchange) values the revision stores. Owned outbound and connection facets are released on that same delete. `ReleaseClaim` is the one claim removal (pins first, audited). Subject delete and Unpromote both call it.
 
 The table and foreign-key list is [`catalogmodel`](../catalogmodel). This package adds the delete policy the schema does not store: which kinds have a delete lookup, which foreign keys have a list probe, which cascades official deletes release and audit, and which origins are locked.
 

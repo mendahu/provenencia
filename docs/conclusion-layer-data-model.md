@@ -249,6 +249,8 @@ The same review applies when a pinned Observation is deleted or its value change
 
 **Weak claims (review alert, future UI).** A claim is surfaced for review when it is accepted, has **zero pins**, and its handle has **more than one** accepted member — it explains membership with no confirmed comparison. A handle's only member (a grounding claim, §5.1) is not flagged. No column stores this; it is a query over `identity_claims` and `identity_claim_evidence`. The audit history of `identity_claim_evidence` (removals are recorded under the claim's id) says *why* a claim is weak: never pinned, or evidence removed when an Observation or member was deleted. The alert offers the same three actions as above — re-pin against a remaining member, accept as-is, or reject — and never acts on its own. Planned with claim management, which is unscheduled; see [`ideas/identity-claim-review.md`](ideas/identity-claim-review.md). Spike 10 is the dogfood UX cleanup.
 
+Unpromote on the Evidence graph deletes a primary Subject's accepted claim and, in the same revision, the accepted claims of the bridges on that Source that have it as an end. It does not reject, and it deletes no handle.
+
 ## 5.3 Promote
 
 The researcher files an Evidence graph's Subjects onto handles from one page. This is the Promote that shipped. The design (graph alignment, scoring, the page) is [`promote-graph-alignment.md`](promote-graph-alignment.md); this section holds the model rules. The schema doesn't require the page: accepting a claim with an empty exhibit stays valid, and that claim may show as undocumented. The product proposes; it never blocks an accept.

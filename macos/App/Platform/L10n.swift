@@ -1691,35 +1691,50 @@ enum L10n {
             comment: "Footer button on an unpromoted primary card that creates its Person, Event or Place"
         )
 
+        static let unpromote = LocalizedStringResource(
+            "evidenceGraph.subject.unpromote",
+            defaultValue: "Unpromote",
+            comment: "Footer icon button's tooltip and VoiceOver action on a promoted card, and the confirm button, that takes its filing back"
+        )
+
+        static let unpromoteKeep = LocalizedStringResource(
+            "evidenceGraph.subject.unpromoteKeep",
+            defaultValue: "Keep filing",
+            comment: "Cancel button of the Unpromote confirm"
+        )
+
+        static func unpromoteConfirmTitle(name: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "evidenceGraph.subject.unpromoteConfirmTitle",
+                defaultValue: "Unpromote %1$@?",
+                comment: "Title of the Unpromote confirm; argument is the subject's name"
+            ), name)
+        }
+
+        static let unpromoteConfirmMessage = LocalizedStringResource(
+            "evidenceGraph.subject.unpromoteConfirmMessage",
+            defaultValue: "This filing is removed. The cards stay on the graph, and the handle stays.",
+            comment: "Message of the Unpromote confirm"
+        )
+
+        static let unpromoteConfirmBridgesHeader = LocalizedStringResource(
+            "evidenceGraph.subject.unpromoteConfirmBridgesHeader",
+            defaultValue: "Also unfiled",
+            comment: "Header over the relationships, participations, and locations the Unpromote confirm lists"
+        )
+
+        static let unpromoteConfirmBridgesNote = LocalizedStringResource(
+            "evidenceGraph.subject.unpromoteConfirmBridgesNote",
+            defaultValue: "The other end of each stays filed.",
+            comment: "Note under the list in the Unpromote confirm"
+        )
+
         static func promoteAccessibility(label: String, ref: String) -> String {
             return L10n.format(LocalizedStringResource(
                 "evidenceGraph.subject.promoteAccessibility",
                 defaultValue: "Promote %1$@, %2$@",
                 comment: "VoiceOver for the Promote footer; arguments are the subject label and its candidate ref"
             ), label, ref)
-        }
-
-        static func promoteHelp(kind: EvidencePrimaryKind) -> LocalizedStringResource {
-            switch kind {
-            case .person:
-                LocalizedStringResource(
-                    "evidenceGraph.subject.promoteHelp.person",
-                    defaultValue: "Promote to a person",
-                    comment: "Tooltip on the Promote footer button"
-                )
-            case .event:
-                LocalizedStringResource(
-                    "evidenceGraph.subject.promoteHelp.event",
-                    defaultValue: "Promote to an event",
-                    comment: "Tooltip on the Promote footer button"
-                )
-            case .place:
-                LocalizedStringResource(
-                    "evidenceGraph.subject.promoteHelp.place",
-                    defaultValue: "Promote to a place",
-                    comment: "Tooltip on the Promote footer button"
-                )
-            }
         }
 
         static func openHandlePage(kind: EvidencePrimaryKind) -> LocalizedStringResource {
@@ -1867,12 +1882,6 @@ enum L10n {
             "evidenceGraph.legend.conflict",
             defaultValue: "Conflict — competing values",
             comment: "Canvas legend line for the ochre conflict bracket"
-        )
-
-        static let citedValueUnavailable = LocalizedStringResource(
-            "evidenceGraph.subject.citedValueUnavailable",
-            defaultValue: "—",
-            comment: "Placeholder when a cited Observation has no displayable value summary yet"
         )
 
         static let noArtifactTitle = LocalizedStringResource(

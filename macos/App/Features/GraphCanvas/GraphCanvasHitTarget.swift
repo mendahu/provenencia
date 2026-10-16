@@ -5,6 +5,16 @@ import Foundation
 struct GraphCanvasActionTarget: Equatable, Sendable, Identifiable {
     var id: String
     var frame: CGRect
+    /// Tool-tip text shown while the pointer is over this action; nil shows none.
+    var help: String? = nil
+
+    /// A copy with only `frame` transformed (e.g. into document space), so
+    /// every other field survives the mapping.
+    func mapFrame(_ transform: (CGRect) -> CGRect) -> GraphCanvasActionTarget {
+        var copy = self
+        copy.frame = transform(frame)
+        return copy
+    }
 }
 
 /// Document-space hit rect for AppKit pointer routing (product-agnostic).

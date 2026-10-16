@@ -187,53 +187,72 @@ func buildFacetReleases() []facetRelease {
 // --- Conclusion releases ----------------------------------------------------
 
 func releaseSubjectClaims(tx *sql.Tx, subjectID []byte) (Released, error) {
-	rows, err := tx.Query(`SELECT id, subject_id, entity_id, subject_type_id, status,
-		confidence_grade_id, argument FROM identity_claims WHERE subject_id = ? ORDER BY id`, subjectID)
+	rows, err := tx.Query(`SELECT id FROM identity_claims WHERE subject_id = ? ORDER BY id`, subjectID)
 	if err != nil {
 		return Released{}, err
 	}
-	type claim struct {
-		id, subjectID, entityID, typeID, gradeID []byte
-		status                                   string
-		argument                                 sql.NullString
-	}
-	var claims []claim
+	var ids [][]byte
 	for rows.Next() {
-		var c claim
-		if err := rows.Scan(&c.id, &c.subjectID, &c.entityID, &c.typeID, &c.status, &c.gradeID, &c.argument); err != nil {
+		var id []byte
+		if err := rows.Scan(&id); err != nil {
 			rows.Close()
 			return Released{}, err
 		}
-		claims = append(claims, c)
+		ids = append(ids, id)
 	}
 	if err := rows.Close(); err != nil {
 		return Released{}, err
 	}
 	var out Released
-	for _, c := range claims {
-		pins, err := ReleaseFacets(tx, catalogmodel.KindIdentityClaim, c.id)
+	for _, id := range ids {
+		r, err := ReleaseClaim(tx, id)
 		if err != nil {
 			return Released{}, err
 		}
-		out.merge(pins)
-		if _, err := tx.Exec(`DELETE FROM identity_claims WHERE id = ?`, c.id); err != nil {
-			return Released{}, err
-		}
-		out.Changes = append(out.Changes, rowchange.Change{
-			EntityType: "identity_claim",
-			EntityID:   c.id,
-			Action:     rowchange.ActionDelete,
-			Fields: rowchange.DeletedRow(map[string]any{
-				"id":                  uuidJSON(c.id),
-				"subject_id":          uuidJSON(c.subjectID),
-				"entity_id":           uuidJSON(c.entityID),
-				"subject_type_id":     uuidJSON(c.typeID),
-				"status":              c.status,
-				"confidence_grade_id": uuidJSON(c.gradeID),
-				"argument":            nullStringJSON(c.argument),
-			}),
-		})
+		out.merge(r)
 	}
+	return out, nil
+}
+
+// ReleaseClaim removes one identity claim, audited: its pins first (through
+// ReleaseFacets), then the row, then the claim's own delete change carrying the
+// fields the effects registry resolves a ghost row from. It is the one claim
+// removal; Subject delete and Unpromote both call it. Does not commit.
+func ReleaseClaim(tx *sql.Tx, claimID []byte) (Released, error) {
+	if tx == nil || len(claimID) != 16 {
+		return Released{}, ErrInvalid
+	}
+	var (
+		id, subjectID, entityID, typeID, gradeID []byte
+		status                                   string
+		argument                                 sql.NullString
+	)
+	if err := tx.QueryRow(`SELECT id, subject_id, entity_id, subject_type_id, status,
+		confidence_grade_id, argument FROM identity_claims WHERE id = ?`, claimID).
+		Scan(&id, &subjectID, &entityID, &typeID, &status, &gradeID, &argument); err != nil {
+		return Released{}, err
+	}
+	out, err := ReleaseFacets(tx, catalogmodel.KindIdentityClaim, id)
+	if err != nil {
+		return Released{}, err
+	}
+	if _, err := tx.Exec(`DELETE FROM identity_claims WHERE id = ?`, id); err != nil {
+		return Released{}, err
+	}
+	out.Changes = append(out.Changes, rowchange.Change{
+		EntityType: "identity_claim",
+		EntityID:   id,
+		Action:     rowchange.ActionDelete,
+		Fields: rowchange.DeletedRow(map[string]any{
+			"id":                  uuidJSON(id),
+			"subject_id":          uuidJSON(subjectID),
+			"entity_id":           uuidJSON(entityID),
+			"subject_type_id":     uuidJSON(typeID),
+			"status":              status,
+			"confidence_grade_id": uuidJSON(gradeID),
+			"argument":            nullStringJSON(argument),
+		}),
+	})
 	return out, nil
 }
 

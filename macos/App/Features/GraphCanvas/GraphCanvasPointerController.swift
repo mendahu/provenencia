@@ -29,6 +29,15 @@ final class GraphCanvasPointerController {
     private(set) var pointerInside = false
     /// Idle hover over a nested card action (`cardID`, `actionID`), for paint.
     private(set) var hoveredCardAction: (cardID: String, actionID: String)?
+    /// Tool-tip text of the hovered nested card action; nil when none is hovered
+    /// or the action has no help. Reads ``hoveredCardAction``, so every path that
+    /// clears hover clears it.
+    var hoveredHelp: String? {
+        guard let hovered = hoveredCardAction,
+              let target = hitTargets.first(where: { $0.id == hovered.cardID })
+        else { return nil }
+        return target.actions.first(where: { $0.id == hovered.actionID })?.help
+    }
     /// Idle press held on a nested card action, for pressed paint. Cleared on
     /// release and when the press becomes a card drag.
     private(set) var pressedCardAction: (cardID: String, actionID: String)?

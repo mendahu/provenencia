@@ -589,6 +589,9 @@ private struct ThrowingStore: GenealogyStore {
     func deleteSubject(projectDir _: String, userID _: String, subjectID _: String) async throws -> CatalogWriteEffects {
         throw StoreBoom.boom
     }
+    func unpromoteSubject(projectDir _: String, userID _: String, subjectID _: String) async throws -> CatalogWriteEffects {
+        throw StoreBoom.boom
+    }
     func listSubjects(projectDir _: String, sourceID _: String) async throws -> [CatalogSubject] {
         throw StoreBoom.boom
     }

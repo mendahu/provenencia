@@ -10,7 +10,16 @@ final class EvidenceGraphModel {
         var description: String = ""
     }
 
-    /// Snapshot of the subject a v1 Promote confirm names (`.pvConfirm(item:)`).
+    /// What the Unpromote confirm names: the subject, and the bridge sentences
+    /// that come off with it. Built fresh on open, so `error` starts nil.
+    struct PendingUnpromote: Identifiable, Equatable {
+        /// The subject's id.
+        let id: String
+        let name: String
+        let bridges: [String]
+        var error: String?
+    }
+
     let sourceID: String
     let session: WorkspaceSession
     let store: any GenealogyStore
@@ -50,6 +59,9 @@ final class EvidenceGraphModel {
         value: SourceGraphSnapshot,
         text: EvidenceGraphText
     )?
+    /// Subject whose filing the Unpromote confirm names (`.pvConfirm(item:)`).
+    var pendingUnpromote: PendingUnpromote?
+    var isUnpromoting = false
     /// Subject pending DeleteImpact confirm or notice.
     let deleteImpact = DeleteImpactFlow()
     var pendingImpact: PVDeleteImpactRequest? {
@@ -508,6 +520,9 @@ final class EvidenceGraphModel {
             return promoteLocation(for: subjectID)
         case EvidenceSubjectCard.openHandleActionID:
             return openHandle(subjectID: subjectID)
+        case EvidenceSubjectCard.unpromoteActionID:
+            beginUnpromote(subjectID: subjectID)
+            return nil
         default:
             guard let observationID = EvidenceSubjectCard.observationID(fromEditPropertyAction: actionID)
             else { return nil }
@@ -874,6 +889,47 @@ final class EvidenceGraphModel {
             sourceTitle: resolvedSourceTitle(),
             mapAll: true
         )
+    }
+
+    // MARK: Unpromote (S10-44)
+
+    /// Opens the Unpromote confirm for a promoted primary. The bridge list is
+    /// the inverse of Promote's forecast, read from the same snapshot fields:
+    /// filed bridges that have this subject as an end. The engine recomputes
+    /// the authoritative set in the write. Does nothing otherwise.
+    func beginUnpromote(subjectID: String) {
+        guard let snapshot = currentSnapshot(),
+              let placed = primary(in: snapshot, id: subjectID),
+              placed.membership != nil
+        else { return }
+        let bridges = snapshot.bridges
+            .filter { ($0.endpointAID == subjectID || $0.endpointBID == subjectID) && $0.membership != nil }
+            .sorted { $0.id < $1.id }
+            .map { EvidenceBridgeEdgeSummary.sentence(for: $0, in: snapshot, orders: session.nameFormat) }
+        pendingUnpromote = PendingUnpromote(
+            id: placed.id,
+            name: placed.displayName(orders: session.nameFormat),
+            bridges: bridges
+        )
+    }
+
+    /// Writes the Unpromote. Success refreshes through the write's effects and
+    /// closes the confirm; a failure stays in the confirm as its error.
+    func confirmUnpromote() async {
+        guard let pending = pendingUnpromote, !isUnpromoting else { return }
+        isUnpromoting = true
+        defer { isUnpromoting = false }
+        do {
+            let effects = try await store.unpromoteSubject(
+                projectDir: session.projectKey.projectDir,
+                userID: userID,
+                subjectID: pending.id
+            )
+            session.apply(effects)
+            pendingUnpromote = nil
+        } catch {
+            pendingUnpromote?.error = L10n.Errors.message(for: error)
+        }
     }
 
     /// Location of a promoted subject's handle page. Persons, Events, and

@@ -1,14 +1,9 @@
 import SwiftUI
 
-/// Primary subject card on the Evidence graph (S6-02 / S7-09 / board chrome).
-///
-/// Paint-only: AppKit ``GraphCanvasPointerController`` owns select / drag /
-/// nested action hits (edit, delete, property edit, Add property).
-/// Accessibility remains the keyboard path.
-struct EvidenceSubjectCard: View {
-    /// Must match the name on the Evidence graph document `ZStack`.
-    static let documentCoordinateSpace = "evidenceGraphDocument"
-
+/// Geometry, action ids and VoiceOver copy for a primary subject card.
+/// ``EvidenceCardView`` paints the card; hit targets and edges read these.
+@MainActor
+enum EvidenceSubjectCard {
     /// Fixed card width — keep in sync with content centering / offset.
     nonisolated static let width: CGFloat = 264
     /// Top of the card sits this far above the grid center (layout + edges share it).
@@ -19,7 +14,6 @@ struct EvidenceSubjectCard: View {
     /// Horizontal / top padding on the card shell (matches board).
     nonisolated static let shellPaddingX: CGFloat = 13
     static let shellPaddingTop: CGFloat = 11
-    static let shellPaddingBottom: CGFloat = 12
     static let headerHeight: CGFloat = 28
     static let headerToBodyGap: CGFloat = 9
     /// Ruled property / Add-property stack (board: 1px kind-line hairlines).
@@ -29,9 +23,6 @@ struct EvidenceSubjectCard: View {
     /// S9-D8 footer slot: Promote (unpromoted) or the membership row
     /// (promoted). Both are this height, so promoting never moves an edge.
     static let footerHeight: CGFloat = 36
-    /// Horizontal inset for the ghost Promote: 8pt less than the card's padding,
-    /// so the borderless button's label lines up with the content above (S9-D8 rev 1).
-    static let promoteInset: CGFloat = shellPaddingX - 8
     /// Uncited cards: the footer sits this far below the quiet Add property
     /// row (on top of the stack gap), under a 1pt dashed rule.
     static let uncitedFooterTopMargin: CGFloat = 2
@@ -46,6 +37,25 @@ struct EvidenceSubjectCard: View {
     static let promoteActionID = "promote"
     /// Footer on a promoted card: open the handle's page.
     static let openHandleActionID = "openHandle"
+    /// Icon button at the trailing edge of a promoted card's footer: take the filing back.
+    static let unpromoteActionID = "unpromote"
+    /// Width of the Unpromote square; also the footer height, so it is square.
+    static let unpromoteSlotWidth: CGFloat = 36
+
+    /// Where a promoted footer's pieces sit inside `footer`: the handle row, the
+    /// 1pt hairline, and the Unpromote slot. Paint, regions, and hits all read this.
+    static func promotedFooterParts(footer: CGRect) -> (handle: CGRect, hairline: CGRect, slot: CGRect) {
+        let slot = CGRect(
+            x: footer.maxX - unpromoteSlotWidth, y: footer.minY,
+            width: unpromoteSlotWidth, height: footer.height
+        )
+        let hairline = CGRect(x: slot.minX - 1, y: footer.minY + 8, width: 1, height: footer.height - 16)
+        let handle = CGRect(
+            x: footer.minX, y: footer.minY,
+            width: hairline.minX - footer.minX, height: footer.height
+        )
+        return (handle, hairline, slot)
+    }
 
     static func editPropertyActionID(observationID: String) -> String {
         "editProperty.\(observationID)"
@@ -149,12 +159,13 @@ struct EvidenceSubjectCard: View {
         }
 
         // Promote needs no Artifact, so it ignores `canCite`.
-        actions.append(
-            GraphCanvasActionTarget(
-                id: placed.membership == nil ? promoteActionID : openHandleActionID,
-                frame: footerFrame(cardFrame: frame)
-            )
-        )
+        if placed.membership == nil {
+            actions.append(GraphCanvasActionTarget(id: promoteActionID, frame: footerFrame(cardFrame: frame)))
+        } else {
+            let parts = promotedFooterParts(footer: footerFrame(cardFrame: frame))
+            actions.append(GraphCanvasActionTarget(id: openHandleActionID, frame: parts.handle))
+            actions.append(unpromoteTarget(frame: parts.slot))
+        }
         return actions
     }
 
@@ -191,11 +202,26 @@ struct EvidenceSubjectCard: View {
         if canCite, let band = layout.band(addPropertyActionID, origin: origin) {
             actions.append(GraphCanvasActionTarget(id: addPropertyActionID, frame: band))
         }
-        let footerID = placed.membership == nil ? promoteActionID : openHandleActionID
-        if let band = layout.band(footerID, origin: origin) {
-            actions.append(GraphCanvasActionTarget(id: footerID, frame: band))
+        if placed.membership == nil {
+            if let band = layout.band(promoteActionID, origin: origin) {
+                actions.append(GraphCanvasActionTarget(id: promoteActionID, frame: band))
+            }
+        } else {
+            // The handle row and the Unpromote square are the painted rects, not the full-width band.
+            if let handle = layout.centeredHit(openHandleActionID, origin: origin, minSize: 0) {
+                actions.append(GraphCanvasActionTarget(id: openHandleActionID, frame: handle))
+            }
+            if let slot = layout.centeredHit(unpromoteActionID, origin: origin, minSize: 0) {
+                actions.append(unpromoteTarget(frame: slot))
+            }
         }
         return actions
+    }
+
+    private static func unpromoteTarget(frame: CGRect) -> GraphCanvasActionTarget {
+        GraphCanvasActionTarget(
+            id: unpromoteActionID, frame: frame, help: L10n.string(L10n.EvidenceGraph.unpromote)
+        )
     }
 
     /// Footer hit / paint rect: full card width × ``footerHeight``, bottom-anchored.
@@ -249,72 +275,6 @@ struct EvidenceSubjectCard: View {
             y += 18 + headerToBodyGap
         }
         return y
-    }
-
-    let placed: SourceGraphPlacedSubject
-    /// Copy formatted with the graph snapshot (``EvidenceGraphText``).
-    let text: EvidenceCardText
-    /// Registry presentation when available (S7-09).
-    var presentation: CatalogSubjectTypePresentation?
-    /// Current target — click, rotor, and VoiceOver share this look.
-    var isSelected: Bool
-    /// Space/Return opened the card for inner controls.
-    var isActivated: Bool
-    /// Connect tool: this card is origin A waiting for B.
-    var isConnectingFrom: Bool = false
-    /// When false, Add property paints disabled (No-Artifact gate).
-    var canCite: Bool = true
-    /// Being dragged: lifted paint. AppKit moves the card's view; the card
-    /// never offsets itself.
-    var isDragging: Bool = false
-    /// Nested action id currently under the pointer (idle hover), if any.
-    var hoveredActionID: String? = nil
-    /// Nested action id held down by the pointer, if any (pressed paint).
-    var pressedActionID: String? = nil
-    /// Default profile orders. Empty keeps stored part order on the membership name.
-    var nameOrders: NameFormatOrders = NameFormatOrders()
-    /// Receives the painted layout (card size + tagged hit regions) for hit targets and edges.
-    var onLayout: ((EvidenceCardLayout) -> Void)? = nil
-
-    var body: some View {
-        EvidenceSubjectCardChrome(
-            placed: placed,
-            presentation: presentation,
-            isSelected: isSelected || isConnectingFrom,
-            isActivated: isActivated,
-            isDragging: isDragging,
-            isConnectingFrom: isConnectingFrom,
-            canCite: canCite,
-            hoveredActionID: hoveredActionID,
-            pressedActionID: pressedActionID,
-            nameOrders: nameOrders
-        )
-        .reportsEvidenceCardLayout(onLayout)
-        .opacity(ghostOpacity)
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel(Text(verbatim: text.accessibilityLabel))
-        .accessibilityAddTraits((isSelected || isActivated) ? .isSelected : [])
-        .accessibilityIdentifier("evidenceGraph.subject.\(placed.id)")
-    }
-
-    /// Non-interactive placement preview while a tool is armed.
-    static func ghost(
-        placed: SourceGraphPlacedSubject,
-        presentation: CatalogSubjectTypePresentation? = nil
-    ) -> some View {
-        EvidenceSubjectCardChrome(
-            placed: placed,
-            presentation: presentation,
-            isSelected: false,
-            isActivated: false,
-            isDragging: false,
-            isConnectingFrom: false,
-            canCite: true,
-            hoveredActionID: nil,
-            pressedActionID: nil
-        )
-        .opacity(0.62)
-        .accessibilityHidden(true)
     }
 
     /// Content-space center for a placed (or ghost) card.
@@ -374,358 +334,6 @@ struct EvidenceSubjectCard: View {
         guard let name = membership.name else { return nil }
         let text = NameValueDisplay.string(for: name, style: .natural, orders: orders)
         return text.isEmpty ? nil : text
-    }
-
-    private var ghostOpacity: Double {
-        if isDragging { return 0.92 }
-        return placed.isCited ? 1 : 0.76
-    }
-}
-
-/// Visual shell shared by live cards and the placement ghost.
-private struct EvidenceSubjectCardChrome: View {
-    let placed: SourceGraphPlacedSubject
-    var presentation: CatalogSubjectTypePresentation?
-    var isSelected: Bool
-    var isActivated: Bool
-    var isDragging: Bool
-    var isConnectingFrom: Bool
-    var canCite: Bool
-    var hoveredActionID: String?
-    var pressedActionID: String?
-    var nameOrders: NameFormatOrders = NameFormatOrders()
-
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    private var style: EvidenceSubjectKindStyle {
-        EvidenceSubjectKindStyle.resolve(typeKey: placed.kind.rawValue, presentation: presentation)
-    }
-
-    private var showsSelectionChrome: Bool {
-        isSelected || isActivated || isDragging || isConnectingFrom
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: EvidenceSubjectCard.headerToBodyGap) {
-            headerRow
-            if isConnectingFrom {
-                Text(L10n.EvidenceGraph.connectingFrom)
-                    .font(PVFont.mono(size: 11))
-                    .foregroundStyle(PVColor.accent)
-            } else if let description = nonEmptyDescription {
-                Text(verbatim: description)
-                    .font(PVFont.body(size: 12.5))
-                    .italic()
-                    .foregroundStyle(PVColor.textSecondary)
-                    .lineLimit(3)
-                    .multilineTextAlignment(.leading)
-            }
-            if placed.isCited {
-                citedPropertyStack
-            } else {
-                addPropertyQuietRow
-                uncitedFooter
-            }
-        }
-        .padding(.horizontal, EvidenceSubjectCard.shellPaddingX)
-        .padding(.top, EvidenceSubjectCard.shellPaddingTop)
-        .frame(width: EvidenceSubjectCard.width, alignment: .leading)
-        .background(cardBackground)
-        .overlay(cardBorder)
-        .clipShape(RoundedRectangle(cornerRadius: PVRadius.md, style: .continuous))
-        .shadow(
-            color: showsSelectionChrome
-                ? Color.black.opacity(0.1)
-                : (placed.isCited ? Color.black.opacity(0.06) : .clear),
-            radius: isDragging ? 10 : 6,
-            y: isDragging ? 4 : 2
-        )
-        .background(selectionHalo)
-    }
-
-    private var headerRow: some View {
-        HStack(alignment: .center, spacing: 10) {
-            iconChip
-            VStack(alignment: .leading, spacing: 2) {
-                Text(verbatim: displayLabel)
-                    .font(PVFont.display(size: 16, weight: PVFontWeight.medium))
-                    .foregroundStyle(placed.isCited ? PVColor.textPrimary : PVColor.textSecondary)
-                    .lineLimit(2)
-                    .multilineTextAlignment(.leading)
-                Text(verbatim: typeLine)
-                    .font(PVFont.mono(size: 10))
-                    .tracking(0.6)
-                    .textCase(.uppercase)
-                    .foregroundStyle(style.ink)
-                    .lineLimit(1)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            HStack(spacing: 6) {
-                PVIcon(.penLine, size: 12)
-                    .foregroundStyle(PVColor.textMuted)
-                PVIcon(.trash, size: 12)
-                    .foregroundStyle(
-                        hoveredActionID == EvidenceSubjectCard.deleteActionID
-                            ? PVColor.danger
-                            : PVColor.textMuted
-                    )
-            }
-            .frame(height: EvidenceSubjectCard.headerHeight, alignment: .top)
-        }
-    }
-
-    /// Full-bleed ruled stack: kind-line hairlines between tint rows (board).
-    private var citedPropertyStack: some View {
-        EvidenceCitedPropertyStack(
-            observations: placed.observations,
-            style: style,
-            hoveredActionID: hoveredActionID,
-            nameOrders: nameOrders
-        ) {
-            // The footer is the stack's last row, one hairline below Add property.
-            VStack(spacing: EvidenceSubjectCard.stackHairline) {
-                addPropertyStackRow
-                cardFooter
-            }
-        }
-        .padding(.top, EvidenceSubjectCard.stackHairline)
-        .background(style.line)
-        .clipShape(
-            UnevenRoundedRectangle(
-                bottomLeadingRadius: PVRadius.md,
-                bottomTrailingRadius: PVRadius.md,
-                style: .continuous
-            )
-        )
-        .padding(.horizontal, -EvidenceSubjectCard.shellPaddingX)
-    }
-
-    private var addPropertyStackRow: some View {
-        let hovered = hoveredActionID == EvidenceSubjectCard.addPropertyActionID
-        return HStack(spacing: 6) {
-            PVIcon(.plus, size: 12)
-            Text(L10n.EvidenceGraph.addProperty)
-                .font(PVFont.body(size: 12))
-        }
-        .foregroundStyle(
-            canCite
-                ? (hovered ? PVColor.textPrimary : PVColor.textMuted)
-                : PVColor.textFaint
-        )
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, EvidenceSubjectCard.shellPaddingX)
-        .padding(.top, 9)
-        .padding(.bottom, 11)
-        .background(hovered && canCite ? style.chip : style.tint)
-        .evidenceCardHitRegion(EvidenceSubjectCard.addPropertyActionID)
-        .accessibilityHidden(true)
-    }
-
-    private var addPropertyQuietRow: some View {
-        let hovered = hoveredActionID == EvidenceSubjectCard.addPropertyActionID
-        return HStack(spacing: 6) {
-            PVIcon(.plus, size: 12)
-            Text(L10n.EvidenceGraph.addProperty)
-                .font(PVFont.body(size: 12))
-        }
-        .foregroundStyle(
-            canCite
-                ? (hovered ? PVColor.textPrimary : PVColor.textMuted)
-                : PVColor.textFaint
-        )
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .frame(height: EvidenceSubjectCard.addPropertyQuietHeight, alignment: .topLeading)
-        .evidenceCardHitRegion(EvidenceSubjectCard.addPropertyActionID)
-        .accessibilityHidden(true)
-    }
-
-    // MARK: Footer (S9-D8)
-
-    /// Uncited: the footer bleeds to the card edges under a 1pt kind-line rule
-    /// (cited cards get the same rule from the ruled stack's hairline).
-    private var uncitedFooter: some View {
-        VStack(spacing: 0) {
-            Rectangle()
-                .fill(style.line)
-                .frame(height: EvidenceSubjectCard.uncitedFooterRule)
-            cardFooter
-        }
-        .padding(.top, EvidenceSubjectCard.uncitedFooterTopMargin)
-        .padding(.horizontal, -EvidenceSubjectCard.shellPaddingX)
-    }
-
-    /// One fixed slot: Promote until the subject has an accepted Identity
-    /// Claim, then the membership row. Paint only — AppKit owns the hits.
-    @ViewBuilder
-    private var cardFooter: some View {
-        if let membership = placed.membership {
-            membershipRow(membership)
-        } else {
-            promoteFooter
-        }
-    }
-
-    /// Kit ghost Button on the kind band: still an action on this subject.
-    private var promoteFooter: some View {
-        HStack(spacing: 0) {
-            Button {} label: {
-                HStack(spacing: PVSpacing.space3) {
-                    PVIcon(.arrowUpRight, size: PVControlSize.sm.iconGlyphSize)
-                    Text(L10n.EvidenceGraph.promote)
-                }
-            }
-            .buttonStyle(.pv(.ghost, size: .sm))
-            .pvHostInteraction(
-                hovered: hoveredActionID == EvidenceSubjectCard.promoteActionID,
-                pressed: pressedActionID == EvidenceSubjectCard.promoteActionID
-            )
-            .allowsHitTesting(false)
-            .help(Text(L10n.EvidenceGraph.promoteHelp(kind: placed.kind)))
-            Spacer(minLength: 0)
-        }
-        .padding(.horizontal, EvidenceSubjectCard.promoteInset)
-        .frame(maxWidth: .infinity, minHeight: EvidenceSubjectCard.footerHeight,
-               maxHeight: EvidenceSubjectCard.footerHeight, alignment: .leading)
-        .background(style.band)
-        .evidenceCardHitRegion(EvidenceSubjectCard.promoteActionID)
-        .accessibilityHidden(true)
-    }
-
-    /// Conclusion link on the kind band (S9-D8 rev 1 / rev 2). Told apart from the
-    /// Observation rows by shape — outline mono ref, no micro-caps label,
-    /// disclosure chevron — while keeping the card's colour identity.
-    private func membershipRow(_ membership: CatalogSubjectMembership) -> some View {
-        let hovered = hoveredActionID == EvidenceSubjectCard.openHandleActionID
-        let pressed = pressedActionID == EvidenceSubjectCard.openHandleActionID
-        return HStack(spacing: 8) {
-            PVBadge(text: membership.entity.ref, tone: .neutral, subtle: true, foreground: style.ink)
-            // The handle's auto-reconciled name (S9-09) in the slot the link copy holds
-            // until a name exists — same slot, so promoting never relayouts.
-            Group {
-                if let name = EvidenceSubjectCard.membershipName(membership, orders: nameOrders) {
-                    Text(verbatim: name)
-                } else {
-                    Text(L10n.EvidenceGraph.openHandlePage(kind: placed.kind)).italic()
-                }
-            }
-            .font(PVFont.body(size: 12.5))
-            .foregroundStyle(style.ink)
-            .lineLimit(1)
-            .truncationMode(.tail)
-            Spacer(minLength: 0)
-            PVIcon(.chevronForward, size: 14)
-                .foregroundStyle(style.ink)
-        }
-        .scaleEffect(pressed && !reduceMotion ? PVMotion.pressScale : 1)
-        .padding(.horizontal, EvidenceSubjectCard.shellPaddingX)
-        .frame(maxWidth: .infinity, minHeight: EvidenceSubjectCard.footerHeight,
-               maxHeight: EvidenceSubjectCard.footerHeight, alignment: .leading)
-        .background {
-            // Kind band, mixed with kind ink at 10% (hover) / 18% (pressed).
-            // One always-present layer; only its opacity follows the state.
-            style.ink
-                .opacity(pressed ? 0.18 : (hovered ? 0.10 : 0))
-                .background(style.band)
-        }
-        .pvAnimation(PVMotion.instantStandard, value: pressed)
-        .pvAnimation(PVMotion.instantStandard, value: hovered)
-        .evidenceCardHitRegion(EvidenceSubjectCard.openHandleActionID)
-        .accessibilityHidden(true)
-    }
-
-    private var displayLabel: String {
-        let trimmed = placed.subject.label.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty ? placed.typeLabel : trimmed
-    }
-
-    private var typeLine: String {
-        let ref = placed.subject.ref.trimmingCharacters(in: .whitespacesAndNewlines)
-        if ref.isEmpty { return placed.typeLabel }
-        return "\(placed.typeLabel) · \(ref)"
-    }
-
-    private var nonEmptyDescription: String? {
-        let trimmed = placed.subject.description.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty ? nil : trimmed
-    }
-
-    private var iconChip: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 4, style: .continuous)
-                .fill(style.chip)
-            RoundedRectangle(cornerRadius: 4, style: .continuous)
-                .strokeBorder(
-                    placed.isCited ? style.line : PVColor.borderDefault,
-                    style: StrokeStyle(
-                        lineWidth: 1,
-                        dash: placed.isCited ? [] : [3, 2]
-                    )
-                )
-            PVMark(placed.kind.markKey, size: 15)
-                .foregroundStyle(style.ink)
-        }
-        .frame(width: 28, height: 28)
-        // Badge overlays the chip; do not use ZStack alignment or the mark shifts.
-        .overlay(alignment: .bottomLeading) {
-            citationBadge
-                .offset(x: -5, y: 5)
-        }
-    }
-
-    /// Board: 14pt circular notification-dot on the mark corner.
-    /// Cited = kind-ink fill + chip check; uncited = surface fill + circle-dashed.
-    private var citationBadge: some View {
-        ZStack {
-            Circle()
-                .fill(placed.isCited ? style.ink : PVColor.surfaceCard)
-            Circle()
-                .strokeBorder(style.tint, lineWidth: 1.5)
-            if placed.isCited {
-                PVIcon(.check, size: 9)
-                    .foregroundStyle(style.chip)
-            } else {
-                PVIcon(.circleDashed, size: 12)
-                    .foregroundStyle(PVColor.evidenceUndocumented)
-            }
-        }
-        .frame(width: 14, height: 14)
-        .accessibilityHidden(true)
-    }
-
-    private var cardBackground: some View {
-        RoundedRectangle(cornerRadius: PVRadius.md, style: .continuous)
-            .fill(placed.isCited ? style.tint : PVColor.surfaceCard)
-            .overlay {
-                if !placed.isCited {
-                    RoundedRectangle(cornerRadius: PVRadius.md, style: .continuous)
-                        .fill(style.tint.opacity(0.38))
-                }
-            }
-    }
-
-    private var cardBorder: some View {
-        RoundedRectangle(cornerRadius: PVRadius.md, style: .continuous)
-            .strokeBorder(
-                borderColor,
-                style: StrokeStyle(
-                    lineWidth: showsSelectionChrome ? 1.5 : 1,
-                    dash: (placed.isCited || showsSelectionChrome) ? [] : [4, 3]
-                )
-            )
-    }
-
-    private var borderColor: Color {
-        if showsSelectionChrome { return PVColor.accent }
-        return placed.isCited ? style.line : PVColor.borderDefault
-    }
-
-    @ViewBuilder
-    private var selectionHalo: some View {
-        if showsSelectionChrome {
-            RoundedRectangle(cornerRadius: PVRadius.md + 2, style: .continuous)
-                .fill(PVColor.graphRing)
-                .padding(-3)
-        }
     }
 }
 

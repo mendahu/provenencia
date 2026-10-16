@@ -138,14 +138,16 @@ struct EvidenceGraphModelTests {
         subjects: [CatalogSubject],
         positions: [CatalogSubjectPosition],
         types: [CatalogSubjectType] = [],
-        observations: [CatalogObservation] = []
+        observations: [CatalogObservation] = [],
+        memberships: [CatalogSubjectMembership] = []
     ) -> SourceGraphRows {
         _ = types
         return SourceGraphRows(
             sourceId: sourceId,
             subjects: subjects,
             positions: positions,
-            observations: observations
+            observations: observations,
+            memberships: memberships
         )
     }
 
@@ -1508,6 +1510,214 @@ struct EvidenceGraphModelTests {
         #expect(title(label: "James", observations: [name("o1", form: "  ")]) == "James")
         #expect(title(label: "James", observations: []) == "James")
         #expect(title(label: " ", observations: []) == "CPR-2AB91")
+    }
+
+    // MARK: Unpromote (S10-44)
+
+    private func handleMembership(_ subjectID: String, ref: String, typeID: String, kind: String) -> CatalogSubjectMembership {
+        CatalogSubjectMembership(
+            subjectID: subjectID,
+            claimID: "claim-\(subjectID)",
+            entity: CatalogCanonicalEntity(id: "ent-\(subjectID)", ref: ref, subjectTypeID: typeID, label: ""),
+            kind: kind
+        )
+    }
+
+    private func edgeObservation(_ id: String, bridge: String, key: String, value: String) -> CatalogObservation {
+        CatalogObservation(
+            id: id, ref: "OBS-\(id)", citationID: "c-1", subjectID: bridge, propertyID: "p-\(key)",
+            polarity: "positive", valueText: "", valueInteger: nil, valueDateID: "", valueNameID: "",
+            valueSubjectID: value, valueTermID: "", propertyKey: key, propertyLabel: key,
+            propertyValueType: "subject"
+        )
+    }
+
+    /// The household of D-17: James, John, Mary, the 1881 census event; son-of
+    /// (James-John), participation (James in the event), and spouse (John-Mary),
+    /// every Subject filed except, with `fileSonOf: false`, the son-of bridge.
+    private func householdModel(fileSonOf: Bool = true) async -> (FakeStore, EvidenceGraphModel) {
+        let store = makeStore()
+        func subject(_ id: String, _ prefix: String, _ typeID: String, _ label: String, x: Int64, y: Int64) -> CatalogSubject {
+            store.subjectPositionsBySubject[id] = CatalogSubjectPosition(subjectID: id, gridX: x, gridY: y)
+            return CatalogSubject(
+                id: id, ref: "\(prefix)-\(id)", sourceID: sourceID, subjectTypeID: typeID, label: label, description: ""
+            )
+        }
+        let subjects = [
+            subject("s-james", "CPR", personTypeID, "James Robins", x: 0, y: 0),
+            subject("s-john", "CPR", personTypeID, "John Robins", x: 3, y: 0),
+            subject("s-mary", "CPR", personTypeID, "Mary Smith", x: 6, y: 0),
+            subject("s-census", "CEV", "type-event", "1881 census", x: 3, y: 3),
+            subject("b1-sonof", "CRL", "type-relationship", "", x: 1, y: 1),
+            subject("b2-part", "CPA", "type-participation", "", x: 1, y: 3),
+            subject("b3-spouse", "CRL", "type-relationship", "", x: 4, y: 1),
+        ]
+        store.subjectsBySource[sourceID] = subjects
+        let observations = [
+            edgeObservation("e1", bridge: "b1-sonof", key: "person", value: "s-james"),
+            edgeObservation("e2", bridge: "b1-sonof", key: "related_to", value: "s-john"),
+            edgeObservation("e3", bridge: "b2-part", key: "person", value: "s-james"),
+            edgeObservation("e4", bridge: "b2-part", key: "event", value: "s-census"),
+            edgeObservation("e5", bridge: "b3-spouse", key: "person", value: "s-john"),
+            edgeObservation("e6", bridge: "b3-spouse", key: "related_to", value: "s-mary"),
+        ]
+        store.observationsBySource[sourceID] = observations
+        var memberships = [
+            handleMembership("s-james", ref: "PER-4M2QX", typeID: personTypeID, kind: "person"),
+            handleMembership("s-john", ref: "PER-7KD45", typeID: personTypeID, kind: "person"),
+            handleMembership("s-mary", ref: "PER-9TT3B", typeID: personTypeID, kind: "person"),
+            handleMembership("s-census", ref: "EVT-2WQ8C", typeID: "type-event", kind: "event"),
+            handleMembership("b2-part", ref: "CPA-5RN7K", typeID: "type-participation", kind: "participation"),
+            handleMembership("b3-spouse", ref: "REL-6HX2D", typeID: "type-relationship", kind: "relationship"),
+        ]
+        if fileSonOf {
+            memberships.append(handleMembership("b1-sonof", ref: "REL-3AB91", typeID: "type-relationship", kind: "relationship"))
+        }
+        for m in memberships { store.membershipBySubject[m.subjectID] = m }
+        let model = makeModel(store: store)
+        await model.prepare()
+        model.session.setQueryValue(
+            CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID),
+            value: graphRows(
+                sourceId: sourceID,
+                subjects: subjects,
+                positions: subjects.compactMap { store.subjectPositionsBySubject[$0.id] },
+                observations: observations,
+                memberships: memberships
+            )
+        )
+        return (store, model)
+    }
+
+    private var sonOfSentence: String {
+        L10n.EvidenceGraph.bridgeSummaryRelationshipFallback(person: "James Robins", related: "John Robins")
+    }
+
+    private var participationSentence: String {
+        L10n.EvidenceGraph.bridgeSummaryParticipationFallback(person: "James Robins", event: "1881 census")
+    }
+
+    private func placedSubject(_ model: EvidenceGraphModel, _ id: String) -> SourceGraphPlacedSubject? {
+        let key = CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID)
+        let handle: QueryHandle<SourceGraphRows>? = model.session.queryHandle(key)
+        let snapshot = SourceGraphSnapshot.build(
+            rows: handle?.value ?? SourceGraphRows(sourceId: sourceID),
+            types: model.session.queryHandle(CatalogQueryKey.propertiesWorkspace(project: model.session.projectKey)).flatMap { (h: QueryHandle<PropertiesSnapshot>) in h.value?.types } ?? [],
+            rules: CatalogConnectRule.productMatrix
+        )
+        return snapshot.subjects.first { $0.id == id }
+    }
+
+    @Test func unpromoteVoiceOverActionFollowsFooterAction() async throws {
+        let (_, model) = await householdModel()
+        let content = EvidenceCanvasCardContent(model: model, navigation: WorkspaceNavigation(), layouts: EvidenceCardLayoutStore())
+        func card(_ placed: SourceGraphPlacedSubject) -> EvidenceCanvasCard {
+            EvidenceCanvasCard(
+                placed: .subject(placed, nil),
+                text: EvidenceCardText(subject: placed),
+                state: .init(
+                    isSelected: false, isActivated: false, isConnectingFrom: false, isDragging: false,
+                    canCite: true, hoveredActionID: nil, pressedActionID: nil
+                )
+            )
+        }
+        let james = try #require(placedSubject(model, "s-james"))
+        let filed = card(james)
+        let names = content.namedActions(for: filed).map(\.name)
+        let footer = try #require(filed.text.footerActionName)
+        let index = try #require(names.firstIndex(of: footer))
+        #expect(names[index + 1] == "Unpromote")
+        let action = try #require(content.namedActions(for: filed).first { $0.name == "Unpromote" })
+        action.run()
+        #expect(model.pendingUnpromote?.id == "s-james")
+
+        var unfiled = james
+        unfiled.membership = nil
+        #expect(!content.namedActions(for: card(unfiled)).map(\.name).contains("Unpromote"))
+    }
+
+    @Test func unpromoteActionOpensConfirmNamingBridges() async {
+        let (store, model) = await householdModel()
+        store.recordedCalls = []
+        let location = model.performCardAction(subjectID: "s-james", actionID: EvidenceSubjectCard.unpromoteActionID)
+        #expect(location == nil)
+        #expect(!store.recordedCalls.contains { $0.hasPrefix("unpromoteSubject") })
+        #expect(model.pendingUnpromote?.name == "James Robins")
+        #expect(model.pendingUnpromote?.bridges == [sonOfSentence, participationSentence])
+        #expect(model.pendingUnpromote?.error == nil)
+
+        let (_, unfiledSonOf) = await householdModel(fileSonOf: false)
+        unfiledSonOf.beginUnpromote(subjectID: "s-james")
+        #expect(unfiledSonOf.pendingUnpromote?.bridges == [participationSentence])
+    }
+
+    @Test func unpromoteWithNoBridgesHasEmptyDetail() async throws {
+        let (store, model) = await promotableModel()
+        _ = try await store.promoteSubject(projectDir: projectDir, userID: "user-1", subjectID: "s-james")
+        model.session.apply(.promotedSubject(sourceId: sourceID))
+        let key = CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID)
+        let loaded = await waitUntil {
+            let handle: QueryHandle<SourceGraphRows>? = model.session.queryHandle(key)
+            return handle?.value?.memberships.first?.subjectID == "s-james"
+        }
+        #expect(loaded)
+        model.beginUnpromote(subjectID: "s-james")
+        #expect(model.pendingUnpromote?.bridges == [])
+
+        let (_, unfiled) = await promotableModel()
+        unfiled.beginUnpromote(subjectID: "s-james")
+        #expect(unfiled.pendingUnpromote == nil)
+    }
+
+    @Test func confirmUnpromoteRefreshesToPromote() async {
+        let (store, model) = await householdModel()
+        model.beginUnpromote(subjectID: "s-james")
+        model.pendingUnpromote = nil
+        #expect(!store.recordedCalls.contains { $0.hasPrefix("unpromoteSubject") })
+
+        model.beginUnpromote(subjectID: "s-james")
+        await model.confirmUnpromote()
+        #expect(store.recordedCalls.contains("unpromoteSubject id=s-james"))
+        #expect(model.pendingUnpromote == nil)
+        let key = CatalogQueryKey.sourceGraph(project: model.session.projectKey, sourceId: sourceID)
+        let refreshed = await waitUntil {
+            let handle: QueryHandle<SourceGraphRows>? = model.session.queryHandle(key)
+            let ids = Set(handle?.value?.memberships.map(\.subjectID) ?? [])
+            return !ids.contains("s-james")
+        }
+        #expect(refreshed)
+        let handle: QueryHandle<SourceGraphRows>? = model.session.queryHandle(key)
+        let ids = Set(handle?.value?.memberships.map(\.subjectID) ?? [])
+        #expect(ids == ["s-john", "s-mary", "s-census", "b3-spouse"])
+    }
+
+    @Test func fakeUnpromoteReportsTheEnginesEffects() async throws {
+        let (store, _) = await householdModel()
+        let removed = ["s-james", "b1-sonof", "b2-part"].compactMap { store.membershipBySubject[$0]?.entity.id }
+        #expect(removed.count == 3)
+        store.sourcesByProject[projectDir] = [
+            CatalogSource(
+                id: sourceID, ref: "SRC-1", sourceTypeID: "type-book", title: "Household", description: "",
+                hasArtifact: true
+            ),
+        ]
+        let before = store.sourcesByProject
+        let effects = try await store.unpromoteSubject(projectDir: projectDir, userID: "user-1", subjectID: "s-james")
+        #expect(effects == CatalogWriteEffects(handles: removed, sources: [sourceID], handleScopes: removed))
+        #expect(store.sourcesByProject == before)
+    }
+
+    @Test func unpromoteFailureStaysInConfirm() async {
+        let (store, model) = await householdModel()
+        let failure = CoreInvokeError.coded(status: 1, code: "internal.unknown", kind: .internal, params: [])
+        store.unpromoteSubjectError = failure
+        model.beginUnpromote(subjectID: "s-james")
+        await model.confirmUnpromote()
+        #expect(model.pendingUnpromote != nil)
+        #expect(model.pendingUnpromote?.error == L10n.Errors.message(for: failure))
+        #expect(!model.isUnpromoting)
+        model.beginUnpromote(subjectID: "s-james")
+        #expect(model.pendingUnpromote?.error == nil)
     }
 
     /// Files s-james the way the Promote place does: write, then invalidate.

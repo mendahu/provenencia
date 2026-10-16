@@ -21,7 +21,8 @@ struct EvidenceCardLayoutTests {
         label: String = "James Robins",
         description: String = "",
         value: String = "Value",
-        promoted: Bool = false
+        promoted: Bool = false,
+        handleName: String? = nil
     ) -> SourceGraphPlacedSubject {
         SourceGraphPlacedSubject(
             subject: CatalogSubject(id: "s", ref: "CPR-2AB91", sourceID: "x", subjectTypeID: "t", label: label, description: description),
@@ -34,37 +35,29 @@ struct EvidenceCardLayoutTests {
             membership: promoted ? CatalogSubjectMembership(
                 subjectID: "s", claimID: "c",
                 entity: CatalogCanonicalEntity(id: "e", ref: "PER-7KD45", subjectTypeID: "t", label: ""),
-                kind: "person"
+                kind: "person",
+                name: handleName.map { CatalogNameValue(form: $0) }
             ) : nil
         )
     }
 
-    /// Hosts a card offscreen and returns the layout it reports plus the height
+    /// Renders `view` in an offscreen window and returns its bitmap.
+    private func bitmap(of view: EvidenceCardView) throws -> NSBitmapImageRep {
+        let window = NSWindow(contentRect: CGRect(origin: .zero, size: view.intrinsicContentSize), styleMask: [], backing: .buffered, defer: false)
+        view.frame = window.contentView!.bounds
+        window.contentView = view
+        let rep = try #require(view.bitmapImageRepForCachingDisplay(in: view.bounds))
+        view.cacheDisplay(in: view.bounds, to: rep)
+        return rep
+    }
+
+    /// Builds the live card and returns the layout it measured plus the height
     /// actually drawn: card-body rows (alpha > 0.5; uncited cards paint at 0.76,
     /// shadows stay under ~0.1) down the centre column. (Not
     /// `fittingSize` — AppKit's ideal size over-reports wrapped text by ~4pt.)
-    private func measure<V: View>(_ make: (@escaping (EvidenceCardLayout) -> Void) -> V) async throws -> (EvidenceCardLayout, CGFloat) {
-        var reported: EvidenceCardLayout?
-        let host = NSHostingView(rootView: make { reported = $0 })
-        let window = NSWindow(contentRect: CGRect(x: 0, y: 0, width: 400, height: 900), styleMask: [], backing: .buffered, defer: false)
-        window.contentView = host
-        host.frame = CGRect(x: 0, y: 0, width: 400, height: 700)
-        // Settle until the reported layout stops changing.
-        var last: EvidenceCardLayout?
-        var stablePasses = 0
-        let deadline = ContinuousClock.now + .seconds(2)
-        while stablePasses < 3, ContinuousClock.now < deadline {
-            host.layoutSubtreeIfNeeded()
-            try await Task.sleep(for: .milliseconds(5))
-            if let reported, reported == last {
-                stablePasses += 1
-            } else {
-                stablePasses = 0
-                last = reported
-            }
-        }
-        let rep = try #require(host.bitmapImageRepForCachingDisplay(in: host.bounds))
-        host.cacheDisplay(in: host.bounds, to: rep)
+    private func measure(_ card: EvidenceCanvasCard) throws -> (EvidenceCardLayout, CGFloat) {
+        let view = EvidenceCardView(card: card, actions: [])
+        let rep = try bitmap(of: view)
         let x = rep.pixelsWide / 2
         var top = -1
         var bottom = -1
@@ -72,17 +65,15 @@ struct EvidenceCardLayoutTests {
             if top < 0 { top = y }
             bottom = y
         }
-        let scale = CGFloat(rep.pixelsHigh) / host.bounds.height
-        return (try #require(reported), CGFloat(bottom - top + 1) / scale)
+        let scale = CGFloat(rep.pixelsHigh) / view.bounds.height
+        return (view.layout, CGFloat(bottom - top + 1) / scale)
     }
 
-    private func measureSubject(_ p: SourceGraphPlacedSubject) async throws -> (EvidenceCardLayout, CGFloat) {
-        try await measure { report in
-            EvidenceSubjectCard(placed: p, text: EvidenceCardText(subject: p), isSelected: false, isActivated: false, onLayout: report)
-        }
+    private func measureSubject(_ p: SourceGraphPlacedSubject) throws -> (EvidenceCardLayout, CGFloat) {
+        try measure(EvidenceCanvasCard(placed: .subject(p, nil), text: EvidenceCardText(subject: p), state: .resting))
     }
 
-    static let cases: [String] = ["uncited", "uncited+description", "cited1", "cited3", "cited3+promoted",
+    static let cases: [String] = ["uncited", "uncited+description", "cited1", "cited3", "cited3+promoted", "longHandleName+promoted",
                                   "longTitle", "wrappedValues", "longDescription"]
 
     private func fixture(_ name: String) -> SourceGraphPlacedSubject {
@@ -92,6 +83,8 @@ struct EvidenceCardLayoutTests {
         case "cited1": placed(rows: 1)
         case "cited3": placed(rows: 3)
         case "cited3+promoted": placed(rows: 3, promoted: true)
+        case "longHandleName+promoted":
+            placed(rows: 1, promoted: true, handleName: "James Alexander Robins of Wellington North Township")
         case "longTitle": placed(rows: 1, label: "James Alexander Robins of Wellington North Township")
         case "wrappedValues": placed(rows: 2, value: "Agricultural labourer and part-time blacksmith of the township")
         default: placed(rows: 1, description: "Son, age 14, line 13, listed under his father with a note in the margin about schooling")
@@ -99,14 +92,27 @@ struct EvidenceCardLayoutTests {
     }
 
     @Test(arguments: cases)
-    func measuredLayoutMatchesThePaint(name: String) async throws {
+    func measuredLayoutMatchesThePaint(name: String) throws {
         let card = fixture(name)
-        let (layout, drawn) = try await measureSubject(card)
+        let (layout, drawn) = try measureSubject(card)
         #expect(abs(layout.size.height - drawn) < 0.5)
         #expect(EvidenceSubjectCard.edgeFrame(for: card, layout: layout).height == layout.size.height)
 
         // Footer: 36pt, flush with the painted bottom, and its hit band is exactly that.
         let footerID = card.membership == nil ? EvidenceSubjectCard.promoteActionID : EvidenceSubjectCard.openHandleActionID
+        if card.membership != nil {
+            // The handle row and the Unpromote square are the footer's two painted pieces.
+            let slot = try #require(layout.regions[EvidenceSubjectCard.unpromoteActionID])
+            #expect(abs(slot.width - 36) < 0.5 && abs(slot.height - 36) < 0.5)
+            #expect(abs(slot.maxX - layout.size.width) < 0.5)
+            #expect(abs(slot.maxY - layout.size.height) < 0.5)
+            let handle = try #require(layout.regions[EvidenceSubjectCard.openHandleActionID])
+            let parts = EvidenceSubjectCard.promotedFooterParts(
+                footer: CGRect(x: 0, y: slot.minY, width: layout.size.width, height: EvidenceSubjectCard.footerHeight)
+            )
+            #expect(abs(handle.minX - parts.handle.minX) < 0.5 && abs(handle.width - parts.handle.width) < 0.5)
+            #expect(handle.maxX <= slot.minX)
+        }
         let footer = try #require(layout.regions[footerID])
         #expect(abs(footer.height - EvidenceSubjectCard.footerHeight) < 0.5)
         #expect(abs(footer.maxY - layout.size.height) < 0.5)
@@ -116,6 +122,9 @@ struct EvidenceCardLayoutTests {
         let footerHit = try #require(targets.first { $0.id == footerID })
         #expect(abs(footerHit.frame.maxY - frame.maxY) < 0.5)
         #expect(abs(footerHit.frame.height - EvidenceSubjectCard.footerHeight) < 0.5)
+        if card.membership != nil {
+            #expect(targets.contains { $0.id == EvidenceSubjectCard.unpromoteActionID })
+        }
 
         // Every property row has a hit band on its painted row; bands never overlap.
         for observation in card.observations {
@@ -133,7 +142,7 @@ struct EvidenceCardLayoutTests {
         }
     }
 
-    @Test func bridgeTargetsFollowThePaint() async throws {
+    @Test func bridgeTargetsFollowThePaint() throws {
         let bridge = SourceGraphPlacedBridge(
             subject: CatalogSubject(id: "b", ref: "CPA-3RN7K", sourceID: "x", subjectTypeID: "t", label: "", description: ""),
             kind: .participation,
@@ -144,10 +153,9 @@ struct EvidenceCardLayoutTests {
             observations: [observation(0), observation(1)]
         )
         let snapshot = SourceGraphSnapshot(sourceId: "x", bridges: [bridge])
-        let (layout, drawn) = try await measure { report in
-            EvidenceBridgeCard(placed: bridge, text: EvidenceCardText(bridge: bridge, in: snapshot), isSelected: false, isActivated: false,
-                               canCite: true, onLayout: report)
-        }
+        let (layout, drawn) = try measure(
+            EvidenceCanvasCard(placed: .bridge(bridge), text: EvidenceCardText(bridge: bridge, in: snapshot), state: .resting)
+        )
         #expect(abs(layout.size.height - drawn) < 0.5)
         let frame = EvidenceBridgeCard.contentFrame(for: bridge, in: snapshot, layout: layout)
         #expect(frame.height == layout.size.height)
@@ -156,5 +164,56 @@ struct EvidenceCardLayoutTests {
         let addPaint = try #require(layout.regions[EvidenceSubjectCard.addPropertyActionID])
         #expect(abs(add.frame.minY - (frame.minY + addPaint.minY)) < 0.5)
         #expect(abs(add.frame.maxY - frame.maxY) < 0.5)
+    }
+
+    @Test func ghostCardMatchesTheLiveLayout() {
+        let p = placed(rows: 0)
+        let ghost = EvidenceCardView(ghostOf: .ghost(p, presentation: nil))
+        let live = EvidenceCardView(
+            card: EvidenceCanvasCard(placed: .subject(p, nil), text: EvidenceCardText(subject: p), state: .resting),
+            actions: []
+        )
+        #expect(ghost.layout == live.layout)
+    }
+
+    @Test func ghostPaintsAtGhostOpacity() throws {
+        /// The card fill's alpha: the most common alpha down the centre column
+        /// among painted pixels (text over the fill and shadow edges are rarer).
+        func bodyAlpha(_ view: EvidenceCardView) throws -> CGFloat {
+            let rep = try bitmap(of: view)
+            let x = rep.pixelsWide / 2
+            var counts: [Int: Int] = [:]
+            for y in 0..<rep.pixelsHigh {
+                let a = rep.colorAt(x: x, y: y)?.alphaComponent ?? 0
+                if a > 0.3 { counts[Int((a * 255).rounded()), default: 0] += 1 }
+            }
+            return CGFloat(counts.max { $0.value < $1.value }?.key ?? 0) / 255
+        }
+        let p = placed(rows: 0)
+        let ghost = try bodyAlpha(EvidenceCardView(ghostOf: .ghost(p, presentation: nil)))
+        let live = try bodyAlpha(EvidenceCardView(
+            card: EvidenceCanvasCard(placed: .subject(p, nil), text: EvidenceCardText(subject: p), state: .resting),
+            actions: []
+        ))
+        #expect(live > 0)
+        // Fill, shadow and text composite, so the ratio is only near 0.62 / 0.76; a ghost
+        // painted at the live card's 0.76 gives 1.0.
+        #expect(abs(ghost / live - 0.62 / 0.76) < 0.06)
+    }
+
+    @Test func ghostCardIsNotAnAccessibilityElement() {
+        let p = placed(rows: 0)
+        let ghost = EvidenceCardView(ghostOf: .ghost(p, presentation: nil))
+        #expect(!ghost.isAccessibilityElement())
+        #expect((ghost.accessibilityLabel() ?? "").isEmpty)
+        #expect(ghost.accessibilityIdentifier().isEmpty)
+        #expect((ghost.accessibilityCustomActions() ?? []).isEmpty)
+
+        let live = EvidenceCardView(
+            card: EvidenceCanvasCard(placed: .subject(p, nil), text: EvidenceCardText(subject: p), state: .resting),
+            actions: []
+        )
+        #expect(live.isAccessibilityElement())
+        #expect(live.accessibilityIdentifier() == "evidenceGraph.subject.s")
     }
 }

@@ -3,15 +3,27 @@ import SwiftUI
 
 /// Subject and bridge cards drawn in AppKit.
 ///
-/// The canvas hosts one of these instead of an `NSHostingView`. Text measurement
+/// The canvas hosts one of these per card. Text measurement
 /// here is also the hit layout edges and the pointer read, so a wrapped title
-/// or value moves its band with the paint. The placement ghost stays SwiftUI.
-final class EvidenceAppKitCard: NSView {
+/// or value moves its band with the paint. The placement ghost is this view built with ``init(ghostOf:)``.
+final class EvidenceCardView: NSView {
     let layout: EvidenceCardLayout
     private let card: EvidenceCanvasCard
+    private let isGhost: Bool
 
-    init(card: EvidenceCanvasCard, actions: [NSAccessibilityCustomAction]) {
+    convenience init(card: EvidenceCanvasCard, actions: [NSAccessibilityCustomAction]) {
+        self.init(card: card, actions: actions, isGhost: false)
+    }
+
+    /// The placement ghost: the same paint at 62% opacity, with no VoiceOver
+    /// element and no actions.
+    convenience init(ghostOf card: EvidenceCanvasCard) {
+        self.init(card: card, actions: [], isGhost: true)
+    }
+
+    private init(card: EvidenceCanvasCard, actions: [NSAccessibilityCustomAction], isGhost: Bool) {
         self.card = card
+        self.isGhost = isGhost
         self.layout = Self.measure(card)
         let outset = GraphCanvasItemLayer.paintOutset
         super.init(frame: NSRect(
@@ -19,14 +31,18 @@ final class EvidenceAppKitCard: NSView {
             width: layout.size.width + outset * 2,
             height: layout.size.height + outset * 2
         ))
-        setAccessibilityElement(true)
-        setAccessibilityRole(.group)
-        setAccessibilityLabel(card.text.accessibilityLabel)
-        let prefix = card.isBridge ? "evidenceGraph.bridge." : "evidenceGraph.subject."
-        setAccessibilityIdentifier(prefix + card.id)
-        setAccessibilityCustomActions(actions)
-        if card.state.isSelected || card.state.isActivated || card.state.isConnectingFrom {
-            setAccessibilitySelected(true)
+        if isGhost {
+            setAccessibilityElement(false)
+        } else {
+            setAccessibilityElement(true)
+            setAccessibilityRole(.group)
+            setAccessibilityLabel(card.text.accessibilityLabel)
+            let prefix = card.isBridge ? "evidenceGraph.bridge." : "evidenceGraph.subject."
+            setAccessibilityIdentifier(prefix + card.id)
+            setAccessibilityCustomActions(actions)
+            if card.state.isSelected || card.state.isActivated || card.state.isConnectingFrom {
+                setAccessibilitySelected(true)
+            }
         }
     }
 
@@ -67,6 +83,7 @@ final class EvidenceAppKitCard: NSView {
 
     override func draw(_ dirtyRect: NSRect) {
         let alpha: CGFloat = {
+            if isGhost { return 0.62 }
             if card.state.isDragging { return 0.92 }
             if case .subject(let placed, _) = card.placed, !placed.isCited { return 0.76 }
             return 1
@@ -239,7 +256,7 @@ private func continuous(_ rect: CGRect, radius: CGFloat) -> NSBezierPath {
 
 // MARK: - Layout and paint
 
-private extension EvidenceAppKitCard {
+private extension EvidenceCardView {
     static func subject(
         _ placed: SourceGraphPlacedSubject,
         presentation: CatalogSubjectTypePresentation?,
@@ -297,11 +314,7 @@ private extension EvidenceAppKitCard {
             addRect = CGRect(x: 0, y: y, width: width, height: addPropertyRowHeight)
             regions[EvidenceSubjectCard.addPropertyActionID] = addRect
             y += addPropertyRowHeight + EvidenceSubjectCard.stackHairline
-            let footerID = placed.membership == nil
-                ? EvidenceSubjectCard.promoteActionID : EvidenceSubjectCard.openHandleActionID
-            footerRect = CGRect(x: 0, y: y, width: width, height: EvidenceSubjectCard.footerHeight)
-            regions[footerID] = footerRect
-            y += EvidenceSubjectCard.footerHeight
+            footerRect = recordFooter(placed: placed, y: &y, width: width, regions: &regions)
         } else {
             y += EvidenceSubjectCard.headerToBodyGap
             addRect = CGRect(x: 0, y: y, width: width, height: EvidenceSubjectCard.addPropertyQuietHeight)
@@ -310,11 +323,7 @@ private extension EvidenceAppKitCard {
                 + EvidenceSubjectCard.headerToBodyGap
                 + EvidenceSubjectCard.uncitedFooterTopMargin
                 + EvidenceSubjectCard.uncitedFooterRule
-            let footerID = placed.membership == nil
-                ? EvidenceSubjectCard.promoteActionID : EvidenceSubjectCard.openHandleActionID
-            footerRect = CGRect(x: 0, y: y, width: width, height: EvidenceSubjectCard.footerHeight)
-            regions[footerID] = footerRect
-            y += EvidenceSubjectCard.footerHeight
+            footerRect = recordFooter(placed: placed, y: &y, width: width, regions: &regions)
         }
 
         paintSubjectShell(placed: placed, style: style, selected: selected, dragging: state.isDragging, height: y, painter: painter)
@@ -632,6 +641,28 @@ private extension EvidenceAppKitCard {
         )
     }
 
+    /// Records the footer's hit regions at `y` and advances `y` past it. An
+    /// unpromoted card records Promote over the whole footer; a promoted one
+    /// records the handle row and the Unpromote square from the same parts the
+    /// paint reads. Returns the whole footer rect.
+    private static func recordFooter(
+        placed: SourceGraphPlacedSubject,
+        y: inout CGFloat,
+        width: CGFloat,
+        regions: inout [String: CGRect]
+    ) -> CGRect {
+        let footer = CGRect(x: 0, y: y, width: width, height: EvidenceSubjectCard.footerHeight)
+        y += EvidenceSubjectCard.footerHeight
+        if placed.membership == nil {
+            regions[EvidenceSubjectCard.promoteActionID] = footer
+        } else {
+            let parts = EvidenceSubjectCard.promotedFooterParts(footer: footer)
+            regions[EvidenceSubjectCard.openHandleActionID] = parts.handle
+            regions[EvidenceSubjectCard.unpromoteActionID] = parts.slot
+        }
+        return footer
+    }
+
     static func paintFooter(
         _ rect: CGRect,
         placed: SourceGraphPlacedSubject,
@@ -644,18 +675,34 @@ private extension EvidenceAppKitCard {
         guard let painter else { return }
         painter.fill(rect, style.band)
         if let membership = placed.membership {
+            let parts = EvidenceSubjectCard.promotedFooterParts(footer: rect)
             let down = pressed == EvidenceSubjectCard.openHandleActionID
             let hot = hovered == EvidenceSubjectCard.openHandleActionID
-            if hot || down { painter.fill(rect, style.ink.opacity(down ? 0.18 : 0.10)) }
+            if hot || down { painter.fill(parts.handle, style.ink.opacity(down ? 0.18 : 0.10)) }
             painter.text(membership.entity.ref, in: CGRect(x: EvidenceSubjectCard.shellPaddingX, y: rect.midY - 7, width: 72, height: 14), font: mono(10), color: style.ink, lines: 1)
             let stored = EvidenceSubjectCard.membershipName(membership, orders: orders)
             let name = stored ?? L10n.string(L10n.EvidenceGraph.openHandlePage(kind: placed.kind))
             painter.text(
                 name,
-                in: CGRect(x: EvidenceSubjectCard.shellPaddingX + 78, y: rect.midY - 8, width: rect.width - 120, height: 16),
+                in: CGRect(x: EvidenceSubjectCard.shellPaddingX + 78, y: rect.midY - 8, width: parts.handle.width - 120, height: 16),
                 font: PVFont.nsBody(size: 12.5, italic: stored == nil), color: style.ink, lines: 1
             )
-            painter.symbol(PVSymbol.chevronForward.rawValue, in: CGRect(x: rect.maxX - 27, y: rect.midY - 7, width: 14, height: 14), style.ink)
+            painter.symbol(PVSymbol.chevronForward.rawValue, in: CGRect(x: parts.handle.maxX - 27, y: rect.midY - 7, width: 14, height: 14), style.ink)
+            painter.fill(parts.hairline, style.line)
+            let unpromoteDown = pressed == EvidenceSubjectCard.unpromoteActionID
+            if unpromoteDown || hovered == EvidenceSubjectCard.unpromoteActionID {
+                let side = PVControlSize.sm.height
+                painter.fillRound(
+                    CGRect(x: parts.slot.midX - side / 2, y: parts.slot.midY - side / 2, width: side, height: side),
+                    radius: PVRadius.sm, style.ink.opacity(unpromoteDown ? 0.18 : 0.10)
+                )
+            }
+            let glyph = PVControlSize.sm.iconGlyphSize
+            painter.symbol(
+                PVSymbol.unpromote.rawValue,
+                in: CGRect(x: parts.slot.midX - glyph / 2, y: parts.slot.midY - glyph / 2, width: glyph, height: glyph),
+                style.ink
+            )
         } else {
             let hot = hovered == EvidenceSubjectCard.promoteActionID
                 || pressed == EvidenceSubjectCard.promoteActionID
@@ -668,7 +715,7 @@ private extension EvidenceAppKitCard {
             let icon: CGFloat = 13
             let x = EvidenceSubjectCard.shellPaddingX
             painter.symbol(
-                PVSymbol.arrowUpRight.rawValue,
+                PVSymbol.promote.rawValue,
                 in: CGRect(x: x, y: rect.midY - icon / 2, width: icon, height: icon),
                 PVColor.textSecondary
             )
@@ -683,7 +730,7 @@ private extension EvidenceAppKitCard {
 
 // MARK: - Text measurement
 
-private extension EvidenceAppKitCard {
+private extension EvidenceCardView {
     static var subjectValueWidth: CGFloat {
         EvidenceSubjectCard.width - EvidenceCitedPropertyMarks.leadingInset(shell: EvidenceSubjectCard.shellPaddingX) - EvidenceSubjectCard.shellPaddingX - 20
     }
