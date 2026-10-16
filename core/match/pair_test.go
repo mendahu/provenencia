@@ -1,8 +1,10 @@
 package match_test
 
 import (
+	"strings"
 	"testing"
 
+	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/match"
 )
@@ -111,5 +113,27 @@ func TestEvaluateTextResemblance(t *testing.T) {
 	ev = match.Evaluate(text("York"), text("Toronto"), multi)
 	if ev.Comparisons[0].Outcome != match.OutcomeUnknown {
 		t.Fatalf("multiple different text: %+v", ev.Comparisons[0])
+	}
+}
+
+func TestEvaluateStrayName(t *testing.T) {
+	prop := match.Property{Key: "name", Origin: "provenencia"}
+	meta := []match.PropertyMeta{{Property: prop, ValueType: properties.ValueTypeName}}
+	named := func(form string, support int) match.Value {
+		v := match.Value{Name: &namevalues.Value{Form: form, Parts: []namevalues.Part{
+			{Idx: 0, Value: strings.Fields(form)[0], Type: namevalues.PartTypeGiven},
+			{Idx: 1, Value: strings.Fields(form)[1], Type: namevalues.PartTypeSurname},
+		}}}
+		if support > 0 {
+			v.SetEvidence(support, 0, 1, "kept")
+		}
+		return v
+	}
+	probe := match.Values{prop: {named("James Robins", 0)}}
+	handle := match.Values{prop: {named("Mary Smith", 5), named("James Robins", 1)}}
+	ev := match.EvaluateWithNames(probe, handle, meta, nil)
+	c := ev.Comparisons[0]
+	if c.Outcome != match.OutcomeConflict || !c.Comparable || c.Probe.Label != "James Robins" || c.Candidate.Label != "Mary Smith" {
+		t.Fatalf("%+v", c)
 	}
 }
