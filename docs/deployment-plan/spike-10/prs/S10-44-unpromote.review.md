@@ -1,7 +1,7 @@
 # Review — S10-44 Unpromote a filed card
 
-**Verdict:** round 1: Fits with changes — Not ready (fixes applied); round 2 pending
-**Rounds:** 1. **Reviewers:** maintainability (opus), executability (sonnet)
+**Verdict:** Fits with changes — Ready with changes once Q-1 is answered (round 2 fixes applied)
+**Rounds:** 2. **Reviewers:** maintainability (opus), executability (sonnet)
 
 ## To user
 - **Q-1 (from X-1).** Which SF Symbol is the unlink icon? The planner could not check SF Symbols from a Linux container. Recommendation: confirm on a Mac which slashed-link symbol resolves, and write it into D-15. If none exists, a custom glyph is a design call. The plan stays Draft until this is answered.
@@ -39,7 +39,7 @@
 **Answer:** Fixed — the type is now `EvidenceGraphModel.PendingUnpromote` with `var error`. `unpromoteError` and the clearing rule are gone.
 
 ### M-8 · nit · Codebase fit omits the precedent for D-7
-**Answer:** Fixed — `PromoteModel.BridgeFact` is named in §4, D-7, and Builds on.
+**Answer:** Fixed — named in §4, D-7, and Builds on. Round 2 corrected the type to `PromoteFlow.BridgeFact` (`PromoteFlow.swift`), built in `PromoteModel.swift`.
 
 ### X-1 · blocker · Q-1 is open, so STEP-5 and D-15 cannot be done
 **Answer:** To user — see To user. Status stays Draft.
@@ -79,3 +79,53 @@
 
 ### X-13 · minor · Temptations
 **Answer:** Fixed — new Out lines: help on other canvas targets, and teaching `FakeStore.promoteSubject` to file bridges.
+
+## Round 2
+
+### M-9 · blocker · The new `help` field is dropped in `publishHitTargets`
+**Answer:** Fixed — D-13 adds `GraphCanvasActionTarget.mapFrame(_:)`, which `EvidenceGraphView.publishHitTargets()` uses at both rebuild sites. `EvidenceGraphView.swift` is in STEP-6, and T-13 asserts `mapFrame` keeps `help`.
+
+### M-10 · blocker · `hoveredHelp` stored beside `hoveredCardAction`
+**Answer:** Fixed — `hoveredHelp` is computed from `hoveredCardAction` and `hitTargets` (D-13). It was also raised as X-23.
+
+### M-11 · blocker · A names-only action list is a third copy that drives nothing
+**Answer:** Fixed — D-14 lifts the existing `named` list into `EvidenceCanvasCardContent.namedActions(for:)`, adds Unpromote there once, and T-7 reads that list. The SwiftUI twin chain gets the action by hand, the reviewer's fallback, because replacing that chain is wider than this PR.
+
+### Not raised: the twin's dead `.help(promoteHelp(kind:))`
+**Answer:** Logged — it is the obvious first user of the `help` slot, but Out here ("Help text on any canvas target other than Unpromote").
+
+### X-14 · blocker · Q-1 unresolved
+**Answer:** To user (same as X-1).
+
+### X-15 · blocker · A cross-Source bridge cannot be built through the product
+**Answer:** Fixed — `connect` refuses it, so AC-3.3 and T-1 (d) now call `UnfileBridgesTx` with another Source id directly (D-18). The Source filter is a guard.
+
+### X-16 · major · `ThrowingStore` conforms to `GenealogyStore`
+**Answer:** Fixed — `OnboardingModelTests.swift` is in STEP-4, with a throwing stub and no protocol default.
+
+### X-17 · major · `bridgeWorld.join` takes no pairs
+**Answer:** Fixed — T-2 copies `TestSavePins`'s first subtest (`newPinFixture`, `promote.Save` with `Pairs`). AC-3.2 is reworded to that fixture.
+
+### X-18 · major · `StoreBoom` is private
+**Answer:** Fixed — T-11 throws `CoreInvokeError.coded(status: 1, code: "internal.unknown", …)`, the file's own error.
+
+### X-19 · major · The `pvConfirm` title is not a `String`
+**Answer:** Fixed — the title is wrapped in `L10n.string(…)`.
+
+### X-20 · major · No way to set the handle name in the layout fixture
+**Answer:** Fixed — `placed(...)` gains `handleName:` (`CatalogNameValue(form:)`). T-6 says what it proves for AC-1.2.
+
+### X-21 · major · The action-names helper lacks inputs
+**Answer:** Fixed — superseded by M-11. `namedActions(for:)` takes the whole `EvidenceCanvasCard`.
+
+### X-22 · minor · `recordFooter` signature
+**Answer:** Fixed — the full signature is in D-10.
+
+### X-23 · minor · Stale `hoveredHelp`
+**Answer:** Fixed — computed (M-10).
+
+### X-24 · minor · Fixture ordering
+**Answer:** Fixed — D-17 fixes the bridge ids so son-of sorts first.
+
+### X-25 · minor · Twin hairline background
+**Answer:** Fixed — `.background(style.band)` is on the whole `HStack`.

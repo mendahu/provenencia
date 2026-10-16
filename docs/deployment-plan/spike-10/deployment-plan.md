@@ -717,7 +717,7 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 
 **Brief:** [S10-D6](design/S10-D6-evidence-graph.md) (EG-8…EG-10), designed before S10-20. This PR fills the button that board drew on the promoted card.
 
-**Plan:** [`prs/S10-44-unpromote.md`](prs/S10-44-unpromote.md) — Draft (open question Q-1: the unlink SF Symbol)
+**Plan:** [`prs/S10-44-unpromote.md`](prs/S10-44-unpromote.md) — Draft, reviewed (2 rounds); waits on Q-1, the unlink SF Symbol
 
 | | |
 | --- | --- |
