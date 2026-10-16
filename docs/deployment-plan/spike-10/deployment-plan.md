@@ -241,7 +241,7 @@ SLICE 7 — How names compare (no new chrome)
   S10-27  Project name-frequency weights — done, #409
   S10-28  Support-weighted scores, negative evidence, reasons name the pair — done, #411
   S10-50  Promote sheet lines show the values they compared (term labels; rows with no exhibit) (after S10-28) — done, #413
-  S10-30  Date windows, ABT-on-spans, date vs start/end
+  S10-30  Date windows, ABT-on-spans, date vs start/end — done, #415
   S10-31  Birth~baptism, death~burial, place part_of
   S10-37  Collation locale on name ordering (after S10-29)
   Check: José suggests Jose and the Person page still shows both spellings.
@@ -600,14 +600,14 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 
 #### S10-30 — Date windows in matching
 
-**Plan:** [`prs/S10-30-date-windows.md`](prs/S10-30-date-windows.md) — Planned
+**Plan:** [`prs/S10-30-date-windows.md`](prs/S10-30-date-windows.md) — Landed #415
 
 | | |
 | --- | --- |
 | **In** | `DateComparer` measures spans and gaps from the date windows in days. December 1817 vs January 1818 outranks a same-year pair only when the days say so — it stops counting as "a year apart" while May vs September stays a same-year partial. A range uses its months and days. ABT doubles tolerance only for two points. `date` may overlap `start_date` / `end_date` by window. |
 | **Out** | Julian vs Gregorian. Double dating (1717/18). |
 | **Testable** | The December/January pair scores above the old year-apart figure and below an exact day. `ABT 1817` vs a range uses the normal tolerance. A point date overlaps a start/end span that contains it. |
-| **Depends on** | — |
+| **Depends on** | S9-21, S10-28 |
 
 #### S10-31 — Related events and place chains
 

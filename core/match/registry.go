@@ -197,11 +197,14 @@ var BuiltinNamePatterns = NamePatternSet{
 // ---------------------------------------------------------------------------
 // Dates
 
-// DefaultDates: how two dates compare as spans of years.
+// DefaultDates: how two dates compare by the days they cover. Tolerance and
+// the cutoff count civil years; gaps and widths are measured in years from
+// each date's day window, so the fall-off counts days.
 var DefaultDates = DateComparer{
 	// Years apart that still resemble; beyond is a disagreement.
 	Tolerance: Set(2),
-	// ABT on either point multiplies the tolerance.
+	// ABT on either point multiplies the tolerance; on a range or bound it
+	// does not (only two points widen it).
 	ApproxToleranceFactor: Set(2),
 
 	// Two points in the same year (identical dates are always 1):
@@ -212,10 +215,21 @@ var DefaultDates = DateComparer{
 	// Points years apart fall off linearly from this, within the tolerance.
 	YearsApartFrom: Set(0.8),
 
-	// A range or bound on either side, overlapping: judged by the wider span.
-	SpanOneYear:      Set(0.8),  // a one-year span
+	// A range or bound on either side, sharing a day: judged by the wider span.
+	SpanOneYear:      Set(0.8),  // a span of a year or less
 	SpanPerExtraYear: Set(0.05), // less for each extra year of width
 	SpanFloor:        Set(0.2),  // never below; open spans (BEF, AFT, FROM)
+}
+
+// PeriodProperties are the Properties whose dates make a period: a thing's
+// start and end.
+type PeriodProperties struct{ Start, End Property }
+
+// DatePeriods maps a date Property to the start and end Properties that stand
+// for it when the other side has only a date (see poolPeriods). Another
+// pair of start and end dates with no date of its own is one more entry.
+var DatePeriods = map[Property]PeriodProperties{
+	product("date"): {Start: product("start_date"), End: product("end_date")},
 }
 
 // ---------------------------------------------------------------------------

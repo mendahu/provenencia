@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/namevalues"
 )
 
@@ -177,12 +178,12 @@ func TestRankEventsAndPlaces(t *testing.T) {
 	probe := event("", "birth", date(1817, ip(5), ip(14))).Values
 	got := Rank(ev, probe, []Candidate{
 		event("EVT-A", "birth", date(1817, ip(5), ip(14))), // 4 + 6
-		event("EVT-B", "birth", date(1818, nil, nil)),      // 4 + 6 × 0.533
+		event("EVT-B", "birth", date(1818, nil, nil)),      // 4 + 6 × 0.498
 		event("EVT-C", "birth", Value{}),                   // type alone: 4, below
 		event("EVT-D", "death", date(1817, ip(5), ip(14))), // −6 + 6 = 0
 		event("EVT-E", "birth", date(1900, nil, nil)),      // 4 − 4 = 0
 	}, 0)
-	if want := "[EVT-A=10.0 EVT-B=7.2]"; refs(got) != want {
+	if want := "[EVT-A=10.0 EVT-B=7.0]"; refs(got) != want {
 		t.Fatalf("events: got %s, want %s", refs(got), want)
 	}
 
@@ -358,4 +359,71 @@ func TestScoreMultipleToponyms(t *testing.T) {
 	if got := Rank(p, probe, []Candidate{cand}, 10); len(got) != 1 || got[0].Ref != "PLC-A" {
 		t.Errorf("Rank = %+v", got)
 	}
+}
+
+func TestScoreDatePeriod(t *testing.T) {
+	ev, _ := DefaultProfile("event")
+	period := Candidate{Ref: "EVT-P", Values: Values{pStart: {year(1815)}, pEnd: {year(1820)}}}
+	dated := func(y int) Candidate { return Candidate{Ref: "EVT-D", Values: Values{pDate: {year(y)}}} }
+	reasonFor := func(m Match, p Property) (Reason, bool) {
+		for _, r := range m.Reasons {
+			if r.Property == p {
+				return r, true
+			}
+		}
+		return Reason{}, false
+	}
+
+	t.Run("a date inside a period", func(t *testing.T) {
+		m := Score(ev, Values{pDate: {year(1817)}}, period)
+		r, ok := reasonFor(m, pDate)
+		if !ok || !approx(0.55)(r.Similarity) || !approx(3.3)(r.Contribution) || len(m.Reasons) != 1 {
+			t.Fatalf("%+v", m.Reasons)
+		}
+		if r.Probe.Label != "1817" || r.Candidate.Label != "Between 1815 and 1820" || r.Candidate.Date == nil {
+			t.Fatalf("labels %+v", r)
+		}
+	})
+	t.Run("swapped", func(t *testing.T) {
+		m := Score(ev, period.Values, dated(1817))
+		r, ok := reasonFor(m, pDate)
+		if !ok || !approx(3.3)(r.Contribution) || r.Probe.Label != "Between 1815 and 1820" || r.Candidate.Label != "1817" {
+			t.Fatalf("%+v", m.Reasons)
+		}
+	})
+	t.Run("a date beyond the tolerance", func(t *testing.T) {
+		m := Score(ev, Values{pDate: {year(1823)}}, period)
+		if r, ok := reasonFor(m, pDate); !ok || r.Contribution != -4 {
+			t.Fatalf("%+v", m.Reasons)
+		}
+	})
+	t.Run("only a start", func(t *testing.T) {
+		m := Score(ev, Values{pDate: {year(1817)}}, Candidate{Values: Values{pStart: {year(1815)}}})
+		r, ok := reasonFor(m, pDate)
+		if !ok || !approx(0.2)(r.Similarity) || r.Candidate.Label != "After 1815" {
+			t.Fatalf("%+v", m.Reasons)
+		}
+	})
+	t.Run("both with a date", func(t *testing.T) {
+		m := Score(ev, Values{pDate: {year(1817)}}, dated(1817))
+		if r, ok := reasonFor(m, pDate); !ok || r.Similarity != 1 || r.Candidate.Date.Kind == datevalues.KindRange {
+			t.Fatalf("%+v", m.Reasons)
+		}
+	})
+	t.Run("start and end only", func(t *testing.T) {
+		m := Score(ev, period.Values, period)
+		if _, ok := reasonFor(m, pDate); ok || len(m.Reasons) != 2 {
+			t.Fatalf("%+v", m.Reasons)
+		}
+		if m.Reasons[0].Property != pStart || m.Reasons[1].Property != pEnd {
+			t.Fatalf("%+v", m.Reasons)
+		}
+	})
+	t.Run("a date, a start, and an end against a start and an end", func(t *testing.T) {
+		probe := Values{pDate: {year(1817)}, pStart: {year(1815)}, pEnd: {year(1820)}}
+		m := Score(ev, probe, period)
+		if _, ok := reasonFor(m, pDate); ok || len(m.Reasons) != 2 {
+			t.Fatalf("%+v", m.Reasons)
+		}
+	})
 }
