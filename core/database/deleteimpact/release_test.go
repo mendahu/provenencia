@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/filederivatives"
+	"github.com/mendahu/provenencia/core/database/files"
 )
 
 func TestCountFilePointersIfUnused(t *testing.T) {
@@ -92,7 +93,7 @@ func TestCountFilePointersIfUnused(t *testing.T) {
 	if _, err := tx.Exec(`DELETE FROM artifacts WHERE id = ?`, art3); err != nil {
 		t.Fatal(err)
 	}
-	if err := releaseFileIfUnused(tx, fileB); err != nil {
+	if _, err := releaseFile(tx, productionPlan(), fileB); err != nil {
 		t.Fatal(err)
 	}
 	var left int
@@ -169,71 +170,158 @@ func TestListedSnippet(t *testing.T) {
 	}
 }
 
-func TestCollectFileObjects(t *testing.T) {
-	c := testCatalogInternal(t)
-	typeID := insertSourceType(t, c, "book", "Book")
-	srcID := insertSource(t, c, typeID, "SRC-BBBBB", "Census")
-	db, err := c.DB()
-	if err != nil {
-		t.Fatal(err)
-	}
+// fileFixture inserts a File with the given checksum and returns its id.
+func fileFixture(t *testing.T, tx *sql.Tx, sum string) []byte {
+	t.Helper()
+	id := newFileID(t)
+	insertFile(t, tx, id, sum, sum[:4]+".jpg", 4)
+	return id
+}
 
-	tx, err := db.Begin()
-	if err != nil {
-		t.Fatal(err)
-	}
-	empty, err := CollectFileObjects(tx, OwnedSnapshot{cols: map[string][]byte{}})
-	if err != nil || len(empty) != 0 {
-		t.Fatalf("fileless %d %v", len(empty), err)
-	}
-	if err := tx.Rollback(); err != nil {
-		t.Fatal(err)
-	}
-
-	fileID := newFileID(t)
-	derivID := newFileID(t)
-	linkID := newFileID(t)
-	const sumPri = "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
-	const sumDer = "1111111111111111111111111111111111111111111111111111111111111111"
-	tx, err = db.Begin()
-	if err != nil {
-		t.Fatal(err)
-	}
-	insertFile(t, tx, fileID, sumPri, "scan.jpg", 8)
-	insertFile(t, tx, derivID, sumDer, "scan-thumb.jpg", 2)
+func linkThumbnail(t *testing.T, tx *sql.Tx, source, derived []byte) {
+	t.Helper()
 	if err := filederivatives.Insert(tx, filederivatives.Link{
-		ID: linkID, SourceFileID: fileID, DerivedFileID: derivID, DerivativeType: filederivatives.TypeThumbnail,
+		ID: newFileID(t), SourceFileID: source, DerivedFileID: derived, DerivativeType: filederivatives.TypeThumbnail,
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if err := tx.Commit(); err != nil {
-		t.Fatal(err)
-	}
-	artID := insertArtifact(t, c, srcID, fileID, "ART-DDDDD", "Scan")
+}
 
-	tx, err = db.Begin()
-	if err != nil {
-		t.Fatal(err)
-	}
+// deleteArtifact deletes an Artifact row the way artifacts.Delete does:
+// snapshot, DELETE, release.
+func deleteArtifact(t *testing.T, tx *sql.Tx, artID []byte) []files.Object {
+	t.Helper()
 	snap, err := SnapshotOwned(tx, catalogmodel.KindArtifact, artID)
 	if err != nil {
 		t.Fatal(err)
 	}
-	got, err := CollectFileObjects(tx, snap)
+	if _, err := tx.Exec(`DELETE FROM artifacts WHERE id = ?`, artID); err != nil {
+		t.Fatal(err)
+	}
+	objs, err := ReleaseSnapshot(tx, snap)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := tx.Rollback(); err != nil {
+	return objs
+}
+
+func countRows(t *testing.T, tx *sql.Tx, query string, args ...any) int {
+	t.Helper()
+	var n int
+	if err := tx.QueryRow(query, args...).Scan(&n); err != nil {
 		t.Fatal(err)
 	}
-	if len(got) != 2 {
-		t.Fatalf("objects %d", len(got))
+	return n
+}
+
+func TestReleaseKeepsSharedDerived(t *testing.T) {
+	c := testCatalogInternal(t)
+	typeID := insertSourceType(t, c, "book", "Book")
+	srcID := insertSource(t, c, typeID, "SRC-CCCCC", "Deed")
+	db, err := c.DB()
+	if err != nil {
+		t.Fatal(err)
 	}
-	if got[0].ChecksumSHA256 != sumPri || got[0].MediaType != "image/jpeg" {
-		t.Fatalf("primary %+v", got[0])
+	tx, err := db.Begin()
+	if err != nil {
+		t.Fatal(err)
 	}
-	if got[1].ChecksumSHA256 != sumDer || got[1].MediaType != "image/jpeg" {
-		t.Fatalf("derived %+v", got[1])
+	defer func() { _ = tx.Rollback() }()
+	sumA := strings.Repeat("a1", 32)
+	fileA := fileFixture(t, tx, sumA)
+	fileB := fileFixture(t, tx, strings.Repeat("b1", 32))
+	shared := fileFixture(t, tx, strings.Repeat("d1", 32))
+	linkThumbnail(t, tx, fileA, shared)
+	linkThumbnail(t, tx, fileB, shared)
+	if err := tx.Commit(); err != nil {
+		t.Fatal(err)
+	}
+	artA := insertArtifact(t, c, srcID, fileA, "ART-AAAAA", "A")
+	insertArtifact(t, c, srcID, fileB, "ART-BBBBB", "B")
+
+	tx, err = db.Begin()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = tx.Rollback() }()
+	objs := deleteArtifact(t, tx, artA)
+	if len(objs) != 1 || objs[0].ChecksumSHA256 != sumA {
+		t.Fatalf("objects %+v", objs)
+	}
+	if n := countRows(t, tx, `SELECT COUNT(*) FROM files WHERE id = ?`, fileA); n != 0 {
+		t.Fatalf("A left %d", n)
+	}
+	if n := countRows(t, tx, `SELECT COUNT(*) FROM file_derivatives WHERE source_file_id = ?`, fileA); n != 0 {
+		t.Fatalf("A link left %d", n)
+	}
+	if n := countRows(t, tx, `SELECT COUNT(*) FROM files WHERE id = ?`, shared); n != 1 {
+		t.Fatalf("shared thumbnail deleted")
+	}
+	if n := countRows(t, tx, `SELECT COUNT(*) FROM file_derivatives WHERE source_file_id = ? AND derived_file_id = ?`, fileB, shared); n != 1 {
+		t.Fatalf("B link gone")
+	}
+}
+
+func TestReleaseReportsReleasedObjects(t *testing.T) {
+	sumA := strings.Repeat("a2", 32)
+	sumT := strings.Repeat("c2", 32)
+	tests := []struct {
+		name      string
+		withFile  bool
+		withThumb bool
+		extra     bool // a second Artifact on the same File
+		want      []string
+	}{
+		{name: "lone artifact with thumbnail", withFile: true, withThumb: true, want: []string{sumA, sumT}},
+		{name: "second artifact keeps the file", withFile: true, withThumb: true, extra: true, want: nil},
+		{name: "fileless artifact", want: nil},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := testCatalogInternal(t)
+			typeID := insertSourceType(t, c, "book", "Book")
+			srcID := insertSource(t, c, typeID, "SRC-DDDDD", "Deed")
+			db, err := c.DB()
+			if err != nil {
+				t.Fatal(err)
+			}
+			tx, err := db.Begin()
+			if err != nil {
+				t.Fatal(err)
+			}
+			var fileID []byte
+			if tt.withFile {
+				fileID = fileFixture(t, tx, sumA)
+				if tt.withThumb {
+					linkThumbnail(t, tx, fileID, fileFixture(t, tx, sumT))
+				}
+			}
+			if err := tx.Commit(); err != nil {
+				t.Fatal(err)
+			}
+			art := insertArtifact(t, c, srcID, fileID, "ART-AAAAA", "A")
+			if tt.extra {
+				insertArtifact(t, c, srcID, fileID, "ART-BBBBB", "B")
+			}
+			tx, err = db.Begin()
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer func() { _ = tx.Rollback() }()
+			got := deleteArtifact(t, tx, art)
+			var sums []string
+			for _, o := range got {
+				sums = append(sums, o.ChecksumSHA256)
+			}
+			if strings.Join(sums, ",") != strings.Join(tt.want, ",") {
+				t.Fatalf("objects %v want %v", sums, tt.want)
+			}
+			if tt.extra {
+				if n := countRows(t, tx, `SELECT COUNT(*) FROM files`); n != 2 {
+					t.Fatalf("files changed: %d", n)
+				}
+			}
+		})
 	}
 }
 
@@ -254,7 +342,7 @@ func TestSnapshotOwnedRequiresParent(t *testing.T) {
 	if _, err := SnapshotOwned(tx, catalogmodel.KindArtifact, missing); !errors.Is(err, ErrInvalid) {
 		t.Fatalf("snapshot missing parent %v", err)
 	}
-	if err := ReleaseOwned(tx, catalogmodel.KindArtifact, missing); !errors.Is(err, ErrInvalid) {
+	if _, err := ReleaseOwned(tx, catalogmodel.KindArtifact, missing); !errors.Is(err, ErrInvalid) {
 		t.Fatalf("release missing parent %v", err)
 	}
 }

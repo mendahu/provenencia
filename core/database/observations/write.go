@@ -104,7 +104,7 @@ func Delete(tx *database.Tx, userID, id []byte) ([]rowchange.Change, error) {
 	if _, err := tx.Exec(sqlDeleteObservationByID, id); err != nil {
 		return nil, err
 	}
-	if err := deleteimpact.ReleaseSnapshot(tx.Tx, snap); err != nil {
+	if _, err := deleteimpact.ReleaseSnapshot(tx.Tx, snap); err != nil {
 		return nil, err
 	}
 	return append(released.Changes, rowchange.Change{

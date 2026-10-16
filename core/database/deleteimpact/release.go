@@ -3,7 +3,9 @@ package deleteimpact
 import (
 	"database/sql"
 	"fmt"
+
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
+	"github.com/mendahu/provenencia/core/database/files"
 )
 
 // OwnedSnapshot is owned-outbound child IDs captured while the parent still
@@ -12,28 +14,6 @@ import (
 type OwnedSnapshot struct {
 	kind catalogmodel.Kind
 	cols map[string][]byte
-}
-
-// FileObject is checksum + media_type for a files row (enough for StorageRelPath).
-// Collect these before ReleaseSnapshot; after COMMIT the writer unlinks objects/
-// only when LookupByChecksum is gone.
-type FileObject struct {
-	ChecksumSHA256 string
-	MediaType      string
-}
-
-// CollectFileObjects reads the primary file and its derivatives from a snapshot
-// while those rows still exist. deleteimpact stays SQL-only; disk unlink is the
-// writer's job after COMMIT.
-func CollectFileObjects(tx *sql.Tx, snap OwnedSnapshot) ([]FileObject, error) {
-	if tx == nil {
-		return nil, ErrInvalid
-	}
-	fileID := snap.cols["artifacts.file_id"]
-	if len(fileID) != 16 {
-		return nil, nil
-	}
-	return collectFileObjectsFromID(tx, fileID, map[string]bool{})
 }
 
 // SnapshotOwned reads owned-outbound columns on the live parent row.
@@ -70,47 +50,49 @@ func SnapshotOwned(tx *sql.Tx, kind catalogmodel.Kind, id []byte) (OwnedSnapshot
 	return snap, nil
 }
 
-// ReleaseSnapshot deletes owned-outbound children from a pre-DELETE snapshot.
-func ReleaseSnapshot(tx *sql.Tx, snap OwnedSnapshot) error {
+// ReleaseSnapshot deletes owned-outbound children from a pre-DELETE snapshot
+// and returns the objects of the Files it released, in release order.
+func ReleaseSnapshot(tx *sql.Tx, snap OwnedSnapshot) ([]files.Object, error) {
 	if tx == nil {
-		return ErrInvalid
+		return nil, ErrInvalid
 	}
+	var out []files.Object
 	for _, rel := range ownedFor(snap.kind) {
-		if err := releaseFromSnapshot(tx, rel, snap); err != nil {
-			return err
+		objs, err := releaseFromSnapshot(tx, rel, snap)
+		if err != nil {
+			return nil, err
 		}
+		out = append(out, objs...)
 	}
-	return nil
+	return out, nil
 }
 
 // ReleaseOwned snapshots then releases. Call it only while the parent row
 // still exists; after DELETE use a SnapshotOwned taken beforehand.
-func ReleaseOwned(tx *sql.Tx, kind catalogmodel.Kind, id []byte) error {
+func ReleaseOwned(tx *sql.Tx, kind catalogmodel.Kind, id []byte) ([]files.Object, error) {
 	snap, err := SnapshotOwned(tx, kind, id)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	return ReleaseSnapshot(tx, snap)
 }
 
-func releaseFromSnapshot(tx *sql.Tx, rel ownedRelease, snap OwnedSnapshot) error {
+func releaseFromSnapshot(tx *sql.Tx, rel ownedRelease, snap OwnedSnapshot) ([]files.Object, error) {
 	switch rel.Child {
 	case "date_values", "name_values":
 		childID := snap.cols[rel.Column]
 		if len(childID) != 16 {
-			return nil
+			return nil, nil
 		}
-		return deleteValueRow(tx, rel.Child, childID)
+		return nil, deleteValueRow(tx, rel.Child, childID)
 	case "files":
 		fileID := snap.cols[rel.Column]
 		if len(fileID) != 16 {
-			return nil
+			return nil, nil
 		}
-		return releaseFileIfUnused(tx, fileID)
-	case "file_derivatives":
-		return nil
+		return releaseFile(tx, productionPlan(), fileID)
 	default:
-		return nil
+		return nil, nil
 	}
 }
 
@@ -170,66 +152,56 @@ func countFilePointers(tx *sql.Tx, p *ownedPlan, fileID []byte) (int, error) {
 	return total, nil
 }
 
-func releaseFileIfUnused(tx *sql.Tx, fileID []byte) error {
-	n, err := countFilePointers(tx, productionPlan(), fileID)
+// releaseFile deletes a File nothing points at, along with its own derivative
+// links, then releases each File it derived the same way. It returns the
+// objects of every File it deleted, the File's own first. A File another
+// source's link still names keeps a nonzero pointer count and stays.
+func releaseFile(tx *sql.Tx, p *ownedPlan, fileID []byte) ([]files.Object, error) {
+	n, err := countFilePointers(tx, p, fileID)
 	if err != nil || n > 0 {
-		return err
+		return nil, err
 	}
 	derived, err := listDerivedFileIDs(tx, fileID)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	if err := releaseFileDerivatives(tx, fileID); err != nil {
-		return err
+	obj, found, err := lookupFileObject(tx, fileID)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := tx.Exec(`DELETE FROM file_derivatives WHERE source_file_id = ?`, fileID); err != nil {
+		return nil, err
 	}
 	if _, err := tx.Exec(`DELETE FROM files WHERE id = ?`, fileID); err != nil {
-		return err
-	}
-	for _, derivedID := range derived {
-		if err := releaseFileIfUnused(tx, derivedID); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func collectFileObjectsFromID(tx *sql.Tx, fileID []byte, seen map[string]bool) ([]FileObject, error) {
-	obj, err := lookupFileObject(tx, fileID)
-	if err != nil {
 		return nil, err
 	}
-	var out []FileObject
-	if obj.ChecksumSHA256 != "" && !seen[obj.ChecksumSHA256] {
-		seen[obj.ChecksumSHA256] = true
+	var out []files.Object
+	if found {
 		out = append(out, obj)
 	}
-	derived, err := listDerivedFileIDs(tx, fileID)
-	if err != nil {
-		return nil, err
-	}
 	for _, derivedID := range derived {
-		nested, err := collectFileObjectsFromID(tx, derivedID, seen)
+		objs, err := releaseFile(tx, p, derivedID)
 		if err != nil {
 			return nil, err
 		}
-		out = append(out, nested...)
+		out = append(out, objs...)
 	}
 	return out, nil
 }
 
-func lookupFileObject(tx *sql.Tx, fileID []byte) (FileObject, error) {
+func lookupFileObject(tx *sql.Tx, fileID []byte) (files.Object, bool, error) {
 	var checksum, media string
 	err := tx.QueryRow(
 		`SELECT checksum_sha256, COALESCE(media_type, '') FROM files WHERE id = ?`,
 		fileID,
 	).Scan(&checksum, &media)
 	if err == sql.ErrNoRows {
-		return FileObject{}, nil
+		return files.Object{}, false, nil
 	}
 	if err != nil {
-		return FileObject{}, err
+		return files.Object{}, false, err
 	}
-	return FileObject{ChecksumSHA256: checksum, MediaType: media}, nil
+	return files.Object{ChecksumSHA256: checksum, MediaType: media}, true, nil
 }
 
 func listDerivedFileIDs(tx *sql.Tx, fileID []byte) ([][]byte, error) {
@@ -252,12 +224,4 @@ func listDerivedFileIDs(tx *sql.Tx, fileID []byte) ([][]byte, error) {
 		}
 	}
 	return out, rows.Err()
-}
-
-func releaseFileDerivatives(tx *sql.Tx, fileID []byte) error {
-	_, err := tx.Exec(
-		`DELETE FROM file_derivatives WHERE source_file_id = ? OR derived_file_id = ?`,
-		fileID, fileID,
-	)
-	return err
 }

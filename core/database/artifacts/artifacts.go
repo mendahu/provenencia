@@ -247,14 +247,11 @@ func Delete(tx *database.Tx, c *database.Catalog, userID, id []byte) ([]rowchang
 	if err != nil {
 		return nil, err
 	}
-	objects, err := deleteimpact.CollectFileObjects(tx.Tx, snap)
-	if err != nil {
-		return nil, err
-	}
 	if _, err := tx.Exec(sqlDelete, id); err != nil {
 		return nil, err
 	}
-	if err := deleteimpact.ReleaseSnapshot(tx.Tx, snap); err != nil {
+	objects, err := deleteimpact.ReleaseSnapshot(tx.Tx, snap)
+	if err != nil {
 		return nil, err
 	}
 
@@ -270,11 +267,7 @@ func Delete(tx *database.Tx, c *database.Catalog, userID, id []byte) ([]rowchang
 	if existing.Description != "" {
 		fields["description"] = rowchange.FieldDiff{Old: existing.Description, New: nil}
 	}
-	purge := make([]files.Object, 0, len(objects))
-	for _, o := range objects {
-		purge = append(purge, files.Object{ChecksumSHA256: o.ChecksumSHA256, MediaType: o.MediaType})
-	}
-	files.PurgeAfterCommit(tx, purge)
+	files.PurgeAfterCommit(tx, objects)
 	return []rowchange.Change{{
 		EntityType: "artifact",
 		EntityID:   append([]byte(nil), id...),

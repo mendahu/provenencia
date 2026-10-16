@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
+	"github.com/mendahu/provenencia/core/database/files"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 
 	"github.com/mendahu/provenencia/core/apperr"
@@ -27,10 +28,14 @@ type Released struct {
 	// effects.Handles on these changes, including through ghosts when a claim
 	// row is already gone.
 	Changes []rowchange.Change
+	// Objects are the stored bytes of Files the release deleted. The delete
+	// passes them to files.PurgeAfterCommit.
+	Objects []files.Object
 }
 
 func (r *Released) merge(o Released) {
 	r.Changes = append(r.Changes, o.Changes...)
+	r.Objects = append(r.Objects, o.Objects...)
 }
 
 type facetRelease struct {
@@ -348,9 +353,11 @@ func eraseObservation(tx *sql.Tx, id []byte) (Released, error) {
 	if _, err := tx.Exec(`DELETE FROM observations WHERE id = ?`, id); err != nil {
 		return Released{}, err
 	}
-	if err := ReleaseSnapshot(tx, snap); err != nil {
+	objects, err := ReleaseSnapshot(tx, snap)
+	if err != nil {
 		return Released{}, err
 	}
+	out.Objects = append(out.Objects, objects...)
 	var integerJSON any
 	if integer.Valid {
 		integerJSON = integer.Int64
