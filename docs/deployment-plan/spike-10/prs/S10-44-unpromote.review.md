@@ -4,7 +4,7 @@
 **Rounds:** 2. **Reviewers:** maintainability (opus), executability (sonnet)
 
 ## To user
-- **Q-1 answered 2026-10-16.** The icons are a pair of opposites: Promote uses `arrow.trianglehead.pull` and Unpromote uses `arrow.trianglehead.branch` (D-15). The Promote footer and Promote all move to the pull arrow. The brief (S10-D6 EG-8 and inventory) and the working rule now say the same. Availability on macOS 14.0 is a stop condition, because it cannot be checked off a Mac.
+- **Q-1 answered 2026-10-16.** The icons are a pair of opposites: Promote uses `arrow.turn.right.up` and Unpromote uses `arrow.uturn.down` (D-15). The Promote footer and Promote all move to the turn-up arrow. The brief (S10-D6 EG-8 and inventory) and the working rule now say the same. A first pair (`arrow.trianglehead.pull` / `.branch`) was dropped because it needs macOS 15, as the user confirmed. Availability on macOS 14.0 stays a stop condition.
 
 ## Writer's own calls
 - No preview RPC: the confirm's bridge list comes from the client snapshot (D-7), and the engine recomputes the set in the write (D-3).
