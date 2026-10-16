@@ -24,6 +24,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/namealiases"
 	"github.com/mendahu/provenencia/core/database/nameformats"
 	"github.com/mendahu/provenencia/core/database/namevalues"
+	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/sqlbatch"
 	"github.com/mendahu/provenencia/core/match"
 	"github.com/mendahu/provenencia/core/valuecodec"
@@ -63,24 +64,26 @@ const (
 	sqlOwnHandle = `SELECT entity_id FROM identity_claims
 		WHERE subject_id = ? AND status = 'accepted'`
 
-	// Positive Observations of many Subjects, terms by key; the caller closes the IN list.
+	// Observations of many Subjects, positive and negative, terms by key; the
+	// caller closes the IN list and orders by o.id.
 	sqlSubjectsValues = `SELECT o.subject_id, p.key, p.origin, o.value_text, o.value_integer,
-			o.value_date_id, o.value_name_id, t.key, COALESCE(t.neutral, 0)
+			o.value_date_id, o.value_name_id, t.key, COALESCE(t.neutral, 0), o.id, o.polarity
 		FROM observations o
 		JOIN properties p ON p.id = o.property_id
 		LEFT JOIN property_terms t ON t.id = o.value_term_id
-		WHERE o.polarity = 'positive' AND o.subject_id IN (`
+		WHERE o.subject_id IN (`
 
 	// Cached auto-reconciled values (every rank) of unmerged handles, terms by key.
 	sqlEntityValues = `SELECT r.entity_id, e.ref, p.key, p.origin, r.value_text, r.value_integer,
-			r.value_date, r.value_name, t.key, COALESCE(t.neutral, 0)
+			r.value_date, r.value_name, t.key, COALESCE(t.neutral, 0),
+			r.support, r.against, r.rank, r.reason
 		FROM auto_reconciler_values r
 		JOIN canonical_entities e ON e.id = r.entity_id
 		JOIN properties p ON p.id = r.property_id
 		LEFT JOIN property_terms t ON t.id = r.value_term_id
 		WHERE e.merged_into_id IS NULL`
-	sqlEntityValuesOfType = sqlEntityValues + ` AND e.subject_type_id = ? ORDER BY e.ref, r.entity_id`
-	sqlEntityValuesOfOne  = sqlEntityValues + ` AND e.id = ?`
+	sqlEntityValuesOfType = sqlEntityValues + ` AND e.subject_type_id = ? ORDER BY e.ref, r.entity_id, r.rank`
+	sqlEntityValuesOfOne  = sqlEntityValues + ` AND e.id = ? ORDER BY r.rank`
 )
 
 // ForSubject ranks the handles an Interpretation Subject could be filed
@@ -157,7 +160,7 @@ func start(q Querier, typeSQL string, id []byte, opts Options) ([]byte, Result, 
 }
 
 func rank(q Querier, res Result, typeID []byte, probe match.Values, profile match.Profile, exclude [][]byte, opts Options) (Result, error) {
-	if len(probe) == 0 {
+	if !probe.HasPositive() {
 		return res, nil
 	}
 	candidates, err := loadCandidates(q, typeID, profile)
@@ -259,7 +262,7 @@ func EntitiesValues(q Querier, entityIDs [][]byte, profile match.Profile) (map[s
 		return nil, err
 	}
 	err = sqlbatch.Each(ids, func(batch [][]byte) error {
-		rows, err := q.Query(sqlEntityValues+` AND e.id IN (`+database.SQLInPlaceholders(len(batch))+`) ORDER BY r.entity_id`,
+		rows, err := q.Query(sqlEntityValues+` AND e.id IN (`+database.SQLInPlaceholders(len(batch))+`) ORDER BY r.entity_id, r.rank`,
 			database.BlobArgs(batch)...)
 		if err != nil {
 			return err
@@ -279,8 +282,8 @@ func EntitiesValues(q Querier, entityIDs [][]byte, profile match.Profile) (map[s
 	return out, nil
 }
 
-// SubjectsValues reads many Subjects' positive Observations for the
-// profile's Properties: one query per IN batch, plus one date and one name
+// SubjectsValues reads many Subjects' Observations, negative ones marked, for
+// the profile's Properties: one query per IN batch, plus one date and one name
 // lookup for all of them. A Subject with none is absent.
 func SubjectsValues(q Querier, subjectIDs [][]byte, profile match.Profile) (map[string]match.Values, error) {
 	wanted := propertySet(profile)
@@ -295,22 +298,25 @@ func SubjectsValues(q Querier, subjectIDs [][]byte, profile match.Profile) (map[
 		dateIDs, nameIDs [][]byte
 	)
 	ids := database.UniqueBlobIDs(subjectIDs)
-	err := sqlbatch.Query(q, sqlSubjectsValues, `)`, nil, ids, func(rows *sql.Rows) error {
+	err := sqlbatch.Query(q, sqlSubjectsValues, `) ORDER BY o.id`, nil, ids, func(rows *sql.Rows) error {
 		var (
 			p             pending
 			subjectID     []byte
 			text, termKey sql.NullString
 			integer       sql.NullInt64
 			neutral       bool
+			observationID []byte
+			polarity      string
 		)
-		if err := rows.Scan(&subjectID, &p.prop.Key, &p.prop.Origin, &text, &integer, &p.dateID, &p.nameID, &termKey, &neutral); err != nil {
+		if err := rows.Scan(&subjectID, &p.prop.Key, &p.prop.Origin, &text, &integer, &p.dateID, &p.nameID, &termKey, &neutral, &observationID, &polarity); err != nil {
 			return err
 		}
 		if !wanted[p.prop] {
 			return nil
 		}
 		p.subject = string(subjectID)
-		p.v = match.Value{Text: text.String, HasText: text.Valid, Integer: integer.Int64, HasInteger: integer.Valid, Term: termKey.String, Neutral: neutral}
+		p.v = match.Value{Text: text.String, HasText: text.Valid, Integer: integer.Int64, HasInteger: integer.Valid, Term: termKey.String, Neutral: neutral,
+			Negative: polarity == observations.PolarityNegative, ObservationID: observationID}
 		all = append(all, p)
 		if len(p.dateID) > 0 {
 			dateIDs = append(dateIDs, p.dateID)
@@ -352,7 +358,7 @@ func SubjectsValues(q Querier, subjectIDs [][]byte, profile match.Profile) (map[
 	return out, nil
 }
 
-// loadSubjectValues reads the Subject's positive Observations for the
+// loadSubjectValues reads the Subject's Observations for the
 // profile's Properties.
 func loadSubjectValues(q Querier, subjectID []byte, profile match.Profile) (match.Values, error) {
 	vals, err := SubjectsValues(q, [][]byte{subjectID}, profile)
@@ -377,14 +383,18 @@ func scanEntityValues(rows *sql.Rows, profile match.Profile, namePattern string)
 			integer            sql.NullInt64
 			dateBlob, nameBlob []byte
 			neutral            bool
+			support, against   int
+			rank               int
+			reason             string
 		)
-		if err := rows.Scan(&entityID, &ref, &prop.Key, &prop.Origin, &text, &integer, &dateBlob, &nameBlob, &termKey, &neutral); err != nil {
+		if err := rows.Scan(&entityID, &ref, &prop.Key, &prop.Origin, &text, &integer, &dateBlob, &nameBlob, &termKey, &neutral, &support, &against, &rank, &reason); err != nil {
 			return nil, err
 		}
 		if !wanted[prop] {
 			continue
 		}
 		v := match.Value{Text: text.String, HasText: text.Valid, Integer: integer.Int64, HasInteger: integer.Valid, Term: termKey.String, Neutral: neutral}
+		v.SetEvidence(support, against, rank, reason)
 		if dateBlob != nil {
 			d, err := valuecodec.UnmarshalDate(dateBlob)
 			if err != nil {

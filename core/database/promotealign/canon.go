@@ -77,7 +77,7 @@ func loadCanon(g *graphcache.Graph, q Querier, layer graphalign.Layer, fixed []g
 	}
 	ranked := map[string][]match.Candidate{}
 	for _, s := range layer.Subjects {
-		if fixedSubjects[string(s.ID)] || len(s.Values) == 0 {
+		if fixedSubjects[string(s.ID)] || !s.Values.HasPositive() {
 			continue
 		}
 		profile, ok := match.DefaultProfile(s.Kind)
@@ -275,6 +275,7 @@ func handleValues(props map[string]match.Property, neutral map[string]bool, n *g
 				v.Name = &name
 				v.NamePattern = namePattern
 			}
+			v.SetEvidence(row.Support, row.Against, row.Rank, row.Reason)
 			vals = append(vals, v)
 		}
 		out[prop] = vals

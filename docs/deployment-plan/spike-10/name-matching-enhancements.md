@@ -19,12 +19,12 @@ What this spike builds is below. Accents are in [`international-names.md`](inter
 
 ## The scoring model
 
-- **Weigh values by support.** Each feature takes the *best* pair across all values, so:
+- **Weigh values by support (landed in S10-28).** Each feature takes the *best* pair across all values, so:
   - A handle with conflicting values escapes contradictions. One "female" observation among several "male" ones cancels the −8, so a mixed handle scored above a clean one.
   - A stray grouping counts fully: one "James Robins" observation on a handle that's mostly "Mary Smith" scores a full match.
 
-  Weigh each candidate value by its share of support, and judge contradictions against the consensus value. A concluded value dominating the rest waits on Reconciliation Claims ([`ideas/name-matching-enhancements.md`](../../ideas/name-matching-enhancements.md)).
-- **Negative evidence (S9-14).** Only positive observations are loaded. A negative observation ("not born in York") should become a contradiction.
+  S10-28 weighs each value by its effective support relative to the best-supported value on its side (a leader weighs 1), and judges contradictions against the leaders. A concluded value dominating the rest waits on Reconciliation Claims ([`ideas/name-matching-enhancements.md`](../../ideas/name-matching-enhancements.md)).
+- **Negative evidence (S9-14; landed in S10-28).** Negative Observations load, and one that is compatible with a leading value on the other side counts as a contradiction.
 - **Event types and places relate.** Birth vs baptism, death vs burial should partly match. That's a term-affinity table, the same pattern as name roles. Place comparison can use the `part_of` chain already shipped. Flat text stays the strong match.
 - **Date precision below the year (S9-21).** Spans and gaps are counted in whole years:
   - December 1817 vs January 1818 is "a year apart" (0.53), lower than May vs September of the same year (0.6).

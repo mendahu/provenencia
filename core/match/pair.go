@@ -32,7 +32,8 @@ type PropertyComparison struct {
 	Outcome     Outcome
 	ValueType   string
 	Cardinality string
-	// Similarity is the comparer result, 0…1, when Comparable.
+	// Similarity is the comparer result times both values' support weights,
+	// 0…1, when Comparable; a minority value that matches exactly is below 1.
 	// Comparable is false when either side has nothing the comparer can judge.
 	Similarity float64
 	// Discount is the share of points the matched values' frequency in the
@@ -40,6 +41,8 @@ type PropertyComparison struct {
 	// 1 − Discount; the outcome never reads it.
 	Discount   float64
 	Comparable bool
+	// Probe and Candidate are the two values behind the result.
+	Probe, Candidate ValueRef
 }
 
 // Evaluation is the pairwise result for every Property listed in metas.
@@ -72,14 +75,17 @@ func evaluate(probe, candidate Values, metas []PropertyMeta, names *NameComparer
 		if card == "" {
 			card = properties.CardinalitySingle
 		}
-		sim, discount, ok := compareProperty(m.ValueType, probe[m.Property], candidate[m.Property], names)
+		pr := compareProperty(m.ValueType, card, probe[m.Property], candidate[m.Property], names)
+		sim, ok := pr.Similarity, pr.Comparable
 		pc := PropertyComparison{
 			Property:    m.Property,
 			ValueType:   m.ValueType,
 			Cardinality: card,
 			Similarity:  sim,
-			Discount:    discount,
+			Discount:    pr.Discount,
 			Comparable:  ok,
+			Probe:       pr.Probe,
+			Candidate:   pr.Candidate,
 			Outcome:     outcomeAtFloor(sim, ok, card, 0),
 		}
 		out.Comparisons = append(out.Comparisons, pc)
@@ -87,7 +93,7 @@ func evaluate(probe, candidate Values, metas []PropertyMeta, names *NameComparer
 	return out
 }
 
-func compareProperty(valueType string, a, b []Value, names *NameComparer) (float64, float64, bool) {
+func compareProperty(valueType, card string, a, b []Value, names *NameComparer) PairResult {
 	var cmp Comparer
 	if valueType == properties.ValueTypeName && names != nil {
 		cmp = *names
@@ -95,9 +101,9 @@ func compareProperty(valueType string, a, b []Value, names *NameComparer) (float
 		cmp = ComparerFor(valueType)
 	}
 	if cmp == nil {
-		return 0, 0, false
+		return PairResult{}
 	}
-	return best(cmp, a, b)
+	return pairValues(cmp, card, a, b)
 }
 
 // outcomeAtFloor is the outcome a scale with this floor would give.

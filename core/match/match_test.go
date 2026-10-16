@@ -3,6 +3,7 @@ package match
 import (
 	"fmt"
 	"math"
+	"sort"
 	"strings"
 	"testing"
 
@@ -270,4 +271,91 @@ func TestDiscountedScoring(t *testing.T) {
 			t.Fatalf("returned %d", len(got))
 		}
 	})
+}
+
+// cachedPerson is a handle whose values carry cache support, in rank order.
+func cachedPerson(ref string, names map[string]int, sex map[string]int) Candidate {
+	v := Values{}
+	for _, f := range sortedKeys(names) {
+		n := name(f)
+		n.SetEvidence(names[f], 0, len(v[product("name")])+1, "kept")
+		v[product("name")] = append(v[product("name")], n)
+	}
+	for _, k := range sortedKeys(sex) {
+		t := term(k)
+		t.SetEvidence(sex[k], 0, len(v[product("sex_at_birth")])+1, "kept")
+		v[product("sex_at_birth")] = append(v[product("sex_at_birth")], t)
+	}
+	return Candidate{EntityID: []byte(ref), Ref: ref, Values: v}
+}
+
+func sortedKeys(m map[string]int) []string {
+	var out []string
+	for k := range m {
+		out = append(out, k)
+	}
+	sort.Strings(out)
+	return out
+}
+
+func reasonFor(t *testing.T, m Match, key string) Reason {
+	t.Helper()
+	for _, r := range m.Reasons {
+		if r.Property.Key == key {
+			return r
+		}
+	}
+	t.Fatalf("no %s reason in %+v", key, m.Reasons)
+	return Reason{}
+}
+
+func TestScoreSupport(t *testing.T) {
+	p, _ := DefaultProfile("person")
+	sexProbe := func(k string) Values { return Values{product("sex_at_birth"): {term(k)}} }
+	handle := cachedPerson("PER-A", nil, map[string]int{"male": 3, "female": 1})
+
+	if r := reasonFor(t, Score(p, sexProbe("female"), handle), "sex_at_birth"); r.Contribution != -2 || r.Probe.Label != "female" || r.Candidate.Label != "male" {
+		t.Errorf("AC-1.1: %+v", r)
+	}
+	if r := reasonFor(t, Score(p, sexProbe("male"), handle), "sex_at_birth"); r.Contribution != 1 || r.Probe.Label != "male" || r.Candidate.Label != "male" {
+		t.Errorf("AC-1.2: %+v", r)
+	}
+
+	stray := cachedPerson("PER-B", map[string]int{"Mary Smith": 5, "James Robins": 1}, nil)
+	probe := Values{product("name"): {name("James Robins")}}
+	r := reasonFor(t, Score(p, probe, stray), "name")
+	if r.Similarity != 0 || r.Contribution != 0 || r.Probe.Label != "James Robins" || r.Candidate.Label != "Mary Smith" {
+		t.Errorf("AC-1.4: %+v", r)
+	}
+
+	equal := cachedPerson("PER-C", map[string]int{"Mary Smith": 1, "Mary Jones": 1}, nil)
+	probe = Values{product("name"): {name("Mary Jones")}}
+	if r := reasonFor(t, Score(p, probe, equal), "name"); r.Contribution != 10 {
+		t.Errorf("AC-1.5: %+v", r)
+	}
+
+	near := cachedPerson("PER-D", map[string]int{"Robins": 3, "Robbins": 1}, nil)
+	probe = Values{product("name"): {name("Robbins")}}
+	r = reasonFor(t, Score(p, probe, near), "name")
+	if !approx(0.857)(math.Round(r.Similarity*1000)/1000) || r.Probe.Label != "Robbins" || r.Candidate.Label != "Robins" {
+		t.Errorf("AC-1.6: %+v", r)
+	}
+}
+
+// A multiple-cardinality Feature keeps every displayed value as a leader, so
+// a handle's minority toponym still matches in full.
+func TestScoreMultipleToponyms(t *testing.T) {
+	p, _ := DefaultProfile("place")
+	york, eboracum := text("York"), text("Eboracum")
+	york.SetEvidence(3, 0, 1, "kept")
+	eboracum.SetEvidence(1, 0, 2, "kept")
+	cand := Candidate{EntityID: []byte("PLC-A"), Ref: "PLC-A", Values: Values{product("toponym"): {york, eboracum}}}
+	probe := Values{product("toponym"): {text("Eboracum")}}
+
+	if r := reasonFor(t, Score(p, probe, cand), "toponym"); r.Contribution != 10 || r.Candidate.Label != "Eboracum" {
+		t.Errorf("minority toponym: %+v", r)
+	}
+	if got := Rank(p, probe, []Candidate{cand}, 10); len(got) != 1 || got[0].Ref != "PLC-A" {
+		t.Errorf("Rank = %+v", got)
+	}
 }

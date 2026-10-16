@@ -143,7 +143,11 @@ type ReconciledValue struct {
 }
 
 // Displayed reports whether the value is one of the displayed values.
-func (c ReconciledValue) Displayed() bool { return c.Reason == ReasonKept }
+// Displayed reports whether the verdict is a displayed value: the one rule
+// the matcher and the reconciler share.
+func (r Reason) Displayed() bool { return r == ReasonKept }
+
+func (c ReconciledValue) Displayed() bool { return c.Reason.Displayed() }
 
 // Outcome is what happened to one candidate.
 type Outcome struct {

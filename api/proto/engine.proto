@@ -1371,6 +1371,8 @@ message PromoteGraphAlignmentComparison {
   // fallback.
   DateValueInput incoming_date = 15;
   DateValueInput member_date = 16;
+  // The incoming value is a negative Observation: shown as "not <value>".
+  bool incoming_negative = 17;
 }
 
 message PromoteGraphAlignmentAlternative {

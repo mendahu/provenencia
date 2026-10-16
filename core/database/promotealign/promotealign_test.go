@@ -1061,3 +1061,113 @@ func (f *fixture) join(s subjects.Subject, entityID []byte) {
 	})
 	must(f.t, err)
 }
+
+func comparisonOutcome(t *testing.T, row graphalign.Row, key string) match.Outcome {
+	t.Helper()
+	for _, c := range row.Comparisons {
+		if c.Property.Key == key {
+			return c.Outcome
+		}
+	}
+	t.Fatalf("no %s comparison in %+v", key, row.Comparisons)
+	return ""
+}
+
+// conflictExhibit is the row's own-group conflict line for a Property.
+func conflictExhibit(t *testing.T, row graphalign.Row, key string) graphalign.Exhibit {
+	t.Helper()
+	for _, e := range row.Exhibits {
+		if e.Property.Key == key && e.Outcome == match.OutcomeConflict && len(e.GroupSubjectID) == 0 {
+			return e
+		}
+	}
+	t.Fatalf("no %s conflict exhibit in %+v", key, row.Exhibits)
+	return graphalign.Exhibit{}
+}
+
+func TestProposeJudgesAgainstTheMajority(t *testing.T) {
+	t.Run("a stray name", func(t *testing.T) {
+		f := newFixture(t)
+		handle := f.promote(f.person(f.source, f.artifact, "Mary Smith")).Entity.ID
+		blob, err := valuecodec.MarshalName(*namevaluestest.Western("James Robins"))
+		must(t, err)
+		db, err := f.c.DB()
+		must(t, err)
+		_, err = db.Exec(`UPDATE auto_reconciler_values SET support = 5 WHERE entity_id = ? AND property_id = ? AND rank = 1`, handle, f.prop("name").ID)
+		must(t, err)
+		_, err = db.Exec(`INSERT INTO auto_reconciler_values (entity_id, property_id, rank, value_name, support, against, reason)
+			VALUES (?, ?, 2, ?, 1, 0, 'kept')`, handle, f.prop("name").ID, blob)
+		must(t, err)
+		f.c.Graph().Drop()
+
+		src, art := f.newSource("Register")
+		incoming := f.person(src, art, "James Robins")
+		row := rowFor(f.propose(src.ID, []graphalign.Fixed{{SubjectID: incoming.ID, HandleID: handle}}), incoming.ID)
+		if got := comparisonOutcome(t, row, "name"); got != match.OutcomeConflict {
+			t.Fatalf("name comparison %s, want conflict", got)
+		}
+		ex := conflictExhibit(t, row, "name")
+		if ex.Pinned || ex.IncomingNegative || ex.IncomingDisplay != "James Robins" {
+			t.Fatalf("name conflict exhibit %+v", ex)
+		}
+	})
+
+	t.Run("a negative Observation", func(t *testing.T) {
+		f := newFixture(t)
+		sex := func(src sources.Source, art artifacts.Artifact, key string) subjects.Subject {
+			s := f.person(src, art, "Mary Smith")
+			f.cite(art, s, observations.Input{PropertyID: f.prop("sex_at_birth").ID, ValueTermID: f.term("sex_at_birth", key).ID})
+			return s
+		}
+		handle := f.promote(sex(f.source, f.artifact, "male")).Entity.ID
+		db, err := f.c.DB()
+		must(t, err)
+		_, err = db.Exec(`UPDATE auto_reconciler_values SET support = 3 WHERE entity_id = ? AND property_id = ?`, handle, f.prop("sex_at_birth").ID)
+		must(t, err)
+		f.c.Graph().Drop()
+
+		src, art := f.newSource("Census")
+		incoming := f.person(src, art, "Mary Smith")
+		f.cite(art, incoming, observations.Input{
+			PropertyID: f.prop("sex_at_birth").ID, ValueTermID: f.term("sex_at_birth", "male").ID,
+			Polarity: observations.PolarityNegative,
+		})
+		row := rowFor(f.propose(src.ID, []graphalign.Fixed{{SubjectID: incoming.ID, HandleID: handle}}), incoming.ID)
+		if got := comparisonOutcome(t, row, "sex_at_birth"); got != match.OutcomeConflict {
+			t.Fatalf("sex comparison %s, want conflict", got)
+		}
+		ex := conflictExhibit(t, row, "sex_at_birth")
+		if ex.Pinned || len(ex.IncomingObservationID) != 0 || !ex.IncomingNegative || ex.IncomingDisplay != "male" || ex.MemberDisplay != "male" {
+			t.Fatalf("sex conflict exhibit %+v", ex)
+		}
+		hasName := false
+		for _, e := range row.Exhibits {
+			hasName = hasName || e.Property.Key == "name"
+		}
+		if !hasName {
+			t.Fatalf("expected the agreeing name exhibit beside the conflict: %+v", row.Exhibits)
+		}
+	})
+}
+
+// A Place handle keeps every toponym it was read as; the minority one still
+// agrees, because a multiple-cardinality Property weighs no value down.
+func TestProposeMultipleToponyms(t *testing.T) {
+	f := newFixture(t)
+	handle := f.promote(f.place(f.source, f.artifact, "York")).Entity.ID
+	db, err := f.c.DB()
+	must(t, err)
+	_, err = db.Exec(`UPDATE auto_reconciler_values SET support = 5 WHERE entity_id = ? AND property_id = ? AND rank = 1`, handle, f.prop("toponym").ID)
+	must(t, err)
+	_, err = db.Exec(`INSERT INTO auto_reconciler_values (entity_id, property_id, rank, value_text, support, against, reason)
+		VALUES (?, ?, 2, 'Eboracum', 1, 0, 'kept')`, handle, f.prop("toponym").ID)
+	must(t, err)
+	f.c.Graph().Drop()
+
+	src, art := f.newSource("Roman itinerary")
+	incoming := f.place(src, art, "Eboracum")
+	row := rowFor(f.propose(src.ID, []graphalign.Fixed{{SubjectID: incoming.ID, HandleID: handle}}), incoming.ID)
+	if got := comparisonOutcome(t, row, "toponym"); got != match.OutcomeAgree {
+		t.Fatalf("toponym comparison %s, want agree", got)
+	}
+}

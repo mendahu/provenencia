@@ -247,6 +247,8 @@ struct CatalogPromoteGraphAlignmentComparison: Sendable, Equatable, Identifiable
     var groupSubjectID: String = ""
     var incomingObservationID: String = ""
     var incomingDisplay: String = ""
+    /// The incoming value is a negative Observation: shown as "not <value>".
+    var incomingNegative: Bool = false
     var incomingSource: String = ""
     var memberObservationID: String = ""
     var memberDisplay: String = ""

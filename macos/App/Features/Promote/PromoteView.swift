@@ -787,7 +787,7 @@ private struct PromoteEvidenceSheet: View {
                 isChecked: pin(line.id),
                 isDisabled: line.incomingObservationID.isEmpty || line.outcome == "unknown",
                 accessibilitySpokenLabel: L10n.Promote.pinLine(
-                    property: compared(line), here: line.incomingDisplay, there: line.memberDisplay
+                    property: compared(line), here: incomingText(line), there: line.memberDisplay
                 )
             )
             .accessibilityIdentifier("promote.sheet.pin.\(line.id)")
@@ -795,7 +795,7 @@ private struct PromoteEvidenceSheet: View {
             Text(verbatim: compared(line))
                 .font(PVFont.body(size: PVTypeScale.caption, weight: PVFontWeight.medium))
                 .frame(width: 150, alignment: .leading)
-            Text(verbatim: line.incomingDisplay)
+            Text(verbatim: incomingText(line))
                 .font(PVFont.body(size: PVTypeScale.caption))
                 .frame(maxWidth: .infinity, alignment: .leading)
             VStack(alignment: .leading, spacing: 2) {
@@ -845,6 +845,10 @@ private struct PromoteEvidenceSheet: View {
             let name = neighbor?.name ?? L10n.string(L10n.Promote.sheetNeighbor)
             return ExhibitGroup(id: key, title: L10n.Promote.through(name), ref: neighbor?.ref ?? "", lines: lines[key] ?? [])
         }
+    }
+
+    private func incomingText(_ line: CatalogPromoteGraphAlignmentComparison) -> String {
+        line.incomingNegative ? L10n.Promote.negatedValue(line.incomingDisplay) : line.incomingDisplay
     }
 
     private func compared(_ line: CatalogPromoteGraphAlignmentComparison) -> String {

@@ -151,6 +151,9 @@ func uFor(stats Stats, propertyKey string, vals []match.Value) float64 {
 		return 0
 	}
 	for _, v := range vals {
+		if v.Negative {
+			continue
+		}
 		k := valueKey(v)
 		if k == "" {
 			continue

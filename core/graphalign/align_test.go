@@ -1652,3 +1652,25 @@ func TestScoreSimilarityDiscount(t *testing.T) {
 		})
 	}
 }
+
+func TestScoreSimilarityWeightedCredit(t *testing.T) {
+	cfg := graphalign.DefaultConfig()
+	nameProp := match.Property{Key: "name", Origin: "provenencia"}
+	for _, tt := range []struct {
+		name       string
+		similarity float64
+		outcome    match.Outcome
+		points     float64
+	}{
+		{"a minority exact match is a conflict", 0.5, match.OutcomeConflict, -3},
+		{"a heavier minority is partial", 0.8, match.OutcomePartial, 2.0},
+		{"the leader is an agreement", 1, match.OutcomeAgree, 2.5},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			outcome, points := graphalign.ScoreSimilarity(tt.similarity, 0, true, properties.CardinalitySingle, nameProp, properties.ValueTypeName, nil, cfg, graphalign.Stats{})
+			if outcome != tt.outcome || math.Abs(points-tt.points) > 1e-9 {
+				t.Fatalf("got %v %.4f, want %v %.4f", outcome, points, tt.outcome, tt.points)
+			}
+		})
+	}
+}

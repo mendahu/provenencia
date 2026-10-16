@@ -10961,10 +10961,12 @@ type PromoteGraphAlignmentComparison struct {
 	// Structured dates, when the comparison is a date. The client formats
 	// these for the user's locale. The display strings stay the portable
 	// fallback.
-	IncomingDate  *DateValueInput `protobuf:"bytes,15,opt,name=incoming_date,json=incomingDate,proto3" json:"incoming_date,omitempty"`
-	MemberDate    *DateValueInput `protobuf:"bytes,16,opt,name=member_date,json=memberDate,proto3" json:"member_date,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	IncomingDate *DateValueInput `protobuf:"bytes,15,opt,name=incoming_date,json=incomingDate,proto3" json:"incoming_date,omitempty"`
+	MemberDate   *DateValueInput `protobuf:"bytes,16,opt,name=member_date,json=memberDate,proto3" json:"member_date,omitempty"`
+	// The incoming value is a negative Observation: shown as "not <value>".
+	IncomingNegative bool `protobuf:"varint,17,opt,name=incoming_negative,json=incomingNegative,proto3" json:"incoming_negative,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *PromoteGraphAlignmentComparison) Reset() {
@@ -11100,6 +11102,13 @@ func (x *PromoteGraphAlignmentComparison) GetMemberDate() *DateValueInput {
 		return x.MemberDate
 	}
 	return nil
+}
+
+func (x *PromoteGraphAlignmentComparison) GetIncomingNegative() bool {
+	if x != nil {
+		return x.IncomingNegative
+	}
+	return false
 }
 
 type PromoteGraphAlignmentAlternative struct {
@@ -17959,7 +17968,7 @@ const file_engine_proto_rawDesc = "" +
 	"\n" +
 	"subject_id\x18\x01 \x01(\tR\tsubjectId\x12\x1b\n" +
 	"\thandle_id\x18\x02 \x01(\tR\bhandleId\x12\x16\n" +
-	"\x06target\x18\x03 \x01(\tR\x06target\"\xa6\x05\n" +
+	"\x06target\x18\x03 \x01(\tR\x06target\"\xd3\x05\n" +
 	"\x1fPromoteGraphAlignmentComparison\x12!\n" +
 	"\fproperty_key\x18\x01 \x01(\tR\vpropertyKey\x12'\n" +
 	"\x0fproperty_origin\x18\x02 \x01(\tR\x0epropertyOrigin\x12\x18\n" +
@@ -17978,7 +17987,8 @@ const file_engine_proto_rawDesc = "" +
 	"\rmember_source\x18\r \x01(\tR\fmemberSource\x12J\n" +
 	"\rincoming_date\x18\x0f \x01(\v2%.provenencia.engine.v1.DateValueInputR\fincomingDate\x12F\n" +
 	"\vmember_date\x18\x10 \x01(\v2%.provenencia.engine.v1.DateValueInputR\n" +
-	"memberDateJ\x04\b\a\x10\b\"\x8a\x04\n" +
+	"memberDate\x12+\n" +
+	"\x11incoming_negative\x18\x11 \x01(\bR\x10incomingNegativeJ\x04\b\a\x10\b\"\x8a\x04\n" +
 	" PromoteGraphAlignmentAlternative\x12\x1b\n" +
 	"\thandle_id\x18\x01 \x01(\tR\bhandleId\x12\x1d\n" +
 	"\n" +

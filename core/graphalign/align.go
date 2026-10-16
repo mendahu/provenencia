@@ -889,6 +889,8 @@ func comparisonsFrom(ev match.Evaluation, probe match.Values, cfg Config, stats 
 			ValueType: pc.ValueType,
 			Pinned:    outcome == match.OutcomeAgree,
 			Weight:    weight,
+			Probe:     pc.Probe,
+			Candidate: pc.Candidate,
 		})
 	}
 	return out
@@ -970,12 +972,7 @@ func (st *state) alternative(sc scoredCand, probe match.Values) Alternative {
 }
 
 func subjectHasValues(s *Subject) bool {
-	for _, vs := range s.Values {
-		if len(vs) > 0 {
-			return true
-		}
-	}
-	return false
+	return s.Values.HasPositive()
 }
 
 func (st *state) band(score float64) Assessment {

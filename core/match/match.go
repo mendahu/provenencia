@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"sort"
 
+	"github.com/mendahu/provenencia/core/autoreconcile"
 	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/namevalues"
 )
@@ -48,6 +49,22 @@ type Value struct {
 	// NamePattern is the name pattern key for Name (its Person's name
 	// format, once loaders supply it); empty uses the comparer's pattern.
 	NamePattern string
+
+	// Counted is true on values a cache loader filled with the evidence
+	// below; every other value weighs 1.
+	Counted bool
+	// Support is the distinct Sources behind a cached value; Against the
+	// negative Observations that counted against it; Rank its order on the
+	// handle; Reason the auto-reconciler's verdict (kept, outvoted, weak,
+	// denied, provisional), not a match.Reason. Denied is Reason == denied. Set with SetEvidence.
+	Support, Against, Rank int
+	Reason                 autoreconcile.Reason
+	Denied                 bool
+	// Negative marks a negative Observation: it never speaks for a match, it
+	// counts against a value it is compatible with. ObservationID is the
+	// Observation a probe value was loaded from.
+	Negative      bool
+	ObservationID []byte
 }
 
 // Values are a thing's values, every Property it has, each possibly several
@@ -65,12 +82,16 @@ type Candidate struct {
 // name, born the same year") and for tuning.
 type Reason struct {
 	Property Property
-	// Similarity is the best resemblance between any probe value and any
-	// candidate value, 0…1.
+	// Similarity is the best resemblance between a probe value and a
+	// candidate value, times both values' weights (a value is weighed by its
+	// support against the leading value), 0…1; 0 is a contradiction.
 	Similarity float64
 	// Discount is the share of points the matched values' frequency in the
 	// project cost, 0…1; 0 when the values clearly disagree.
 	Discount float64
+	// Probe and Candidate are the two values that produced the Similarity,
+	// or the contradiction.
+	Probe, Candidate ValueRef
 	// Contribution is what the Feature added to the score: Weight ×
 	// Similarity × (1 − Discount), or −Contradiction when the values clearly
 	// disagree.
@@ -115,11 +136,12 @@ func Rank(p Profile, probe Values, candidates []Candidate, limit int) []Match {
 func Score(p Profile, probe Values, c Candidate) Match {
 	m := Match{EntityID: c.EntityID, Ref: c.Ref}
 	for _, f := range p.Features {
-		sim, discount, ok := best(f.Comparer, probe[f.Property], c.Values[f.Property])
-		if !ok {
+		pr := pairValues(f.Comparer, f.Cardinality, probe[f.Property], c.Values[f.Property])
+		if !pr.Comparable {
 			continue
 		}
-		r := Reason{Property: f.Property, Similarity: sim, Discount: discount, Contribution: f.Weight * sim * (1 - discount)}
+		sim := pr.Similarity
+		r := Reason{Property: f.Property, Similarity: sim, Discount: pr.Discount, Probe: pr.Probe, Candidate: pr.Candidate, Contribution: f.Weight * sim * (1 - pr.Discount)}
 		if sim == 0 {
 			r.Contribution = -f.Contradiction
 		}
@@ -127,27 +149,4 @@ func Score(p Profile, probe Values, c Candidate) Match {
 		m.Reasons = append(m.Reasons, r)
 	}
 	return m
-}
-
-// best is the comparable pair with the highest similarity × (1 − discount),
-// reporting that pair's similarity and discount; ok is false when no pair is
-// comparable (a side is empty, or only neutral values). When every pair has
-// similarity 0 the discount is 0.
-func best(cmp Comparer, a, b []Value) (similarity, discount float64, ok bool) {
-	var top float64
-	for _, x := range a {
-		for _, y := range b {
-			s, d, comparable := CompareDiscount(cmp, x, y)
-			if !comparable {
-				continue
-			}
-			if p := s * (1 - d); !ok || p > top {
-				top, similarity, discount, ok = p, s, d, true
-			}
-		}
-	}
-	if similarity == 0 {
-		discount = 0
-	}
-	return similarity, discount, ok
 }

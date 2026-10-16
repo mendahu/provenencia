@@ -163,9 +163,39 @@ func attachExhibits(q Querier, g *graphcache.Graph, layer graphalign.Layer, prop
 		for _, np := range plan.neighbors {
 			exhibits = append(exhibits, pairExhibits(bySubject[string(np.neighbor)], np.neighbor, collect(np.sides), cfg, stats)...)
 		}
-		r.Exhibits = exhibits
+		r.Exhibits = withRowConflicts(exhibits, r.Comparisons)
 	}
 	return nil
+}
+
+// withRowConflicts adds a line for each Property the row judges a conflict
+// that the own-record exhibits do not already show as one: the majority
+// disagreeing with a minority value, or a negative Observation, which the
+// member picker never pairs. The line carries no Observation, so it cannot be
+// pinned.
+func withRowConflicts(exhibits []graphalign.Exhibit, comparisons []graphalign.Comparison) []graphalign.Exhibit {
+	for _, c := range comparisons {
+		if c.Outcome != match.OutcomeConflict {
+			continue
+		}
+		shown := false
+		for _, ex := range exhibits {
+			shown = shown || len(ex.GroupSubjectID) == 0 && ex.Property == c.Property && ex.Outcome == match.OutcomeConflict
+		}
+		if shown {
+			continue
+		}
+		exhibits = append(exhibits, graphalign.Exhibit{
+			Property:         c.Property,
+			Outcome:          c.Outcome,
+			ValueType:        c.ValueType,
+			Weight:           c.Weight,
+			IncomingDisplay:  c.Probe.Label,
+			IncomingNegative: c.Probe.Negative,
+			MemberDisplay:    c.Candidate.Label,
+		})
+	}
+	return exhibits
 }
 
 // pairExhibits pairs each incoming record with the closest record on the
@@ -262,18 +292,7 @@ func comparerDiscount(cmp match.Comparer, a, b match.Value) (similarity, discoun
 }
 
 func exhibitCompatible(valueType string, a, b match.Value) bool {
-	return autoreconcile.Compatible(valueType, exhibitAuto(a), exhibitAuto(b))
-}
-
-func exhibitAuto(v match.Value) autoreconcile.Value {
-	termID := append([]byte(nil), v.TermID...)
-	if len(termID) == 0 && v.Term != "" {
-		termID = []byte(v.Term)
-	}
-	return autoreconcile.Value{
-		Text: v.Text, HasText: v.HasText, Integer: v.Integer, HasInteger: v.HasInteger,
-		TermKey: v.Term, TermID: termID, Neutral: v.Neutral, Date: v.Date, Name: v.Name,
-	}
+	return autoreconcile.Compatible(valueType, a.Auto(), b.Auto())
 }
 
 // acceptedMembers maps each handle to its accepted member Subjects, in claim
