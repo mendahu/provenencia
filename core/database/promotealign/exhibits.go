@@ -2,7 +2,6 @@ package promotealign
 
 import (
 	"database/sql"
-	"strconv"
 
 	"github.com/mendahu/provenencia/core/autoreconcile"
 	"github.com/mendahu/provenencia/core/connectrules"
@@ -23,7 +22,6 @@ type exhibitObs struct {
 	prop        match.Property
 	valueType   string
 	cardinality string
-	display     string
 	source      string
 	value       match.Value
 }
@@ -262,11 +260,11 @@ func pairExhibits(incoming []exhibitObs, neighbor []byte, memberObs []exhibitObs
 			Weight:                weight,
 			GroupSubjectID:        append([]byte(nil), neighbor...),
 			IncomingObservationID: append([]byte(nil), in.id...),
-			IncomingDisplay:       in.display,
+			IncomingDisplay:       in.value.Label(),
 			IncomingSource:        in.source,
 			IncomingDate:          cloneDate(in.value.Date),
 			MemberObservationID:   append([]byte(nil), chosen.id...),
-			MemberDisplay:         chosen.display,
+			MemberDisplay:         chosen.value.Label(),
 			MemberSource:          chosen.source,
 			MemberDate:            cloneDate(chosen.value.Date),
 		})
@@ -385,7 +383,6 @@ func loadExhibitObservations(q Querier, subjectIDs [][]byte) ([]exhibitObs, erro
 	type pending struct {
 		o              exhibitObs
 		dateID, nameID []byte
-		termLabel      string
 	}
 	var all []pending
 	var dateIDs, nameIDs [][]byte
@@ -405,8 +402,8 @@ func loadExhibitObservations(q Querier, subjectIDs [][]byte) ([]exhibitObs, erro
 			Text: text.String, HasText: text.Valid,
 			Integer: integer.Int64, HasInteger: integer.Valid,
 			Term: term.String, Neutral: p.o.value.Neutral,
+			TermLabel: termLabel.String,
 		}
-		p.termLabel = termLabel.String
 		all = append(all, p)
 		if len(p.dateID) > 0 {
 			dateIDs = append(dateIDs, p.dateID)
@@ -436,21 +433,10 @@ func loadExhibitObservations(q Querier, subjectIDs [][]byte) ([]exhibitObs, erro
 	for _, p := range all {
 		if d, ok := dates[string(p.dateID)]; ok {
 			p.o.value.Date = &d
-			p.o.display = datevalues.CompactDisplay(d)
 		}
 		if n, ok := names[string(p.nameID)]; ok {
 			p.o.value.Name = &n
 			p.o.value.NamePattern = loaded.Key
-			p.o.display = n.Form
-		}
-		if p.o.display == "" && p.o.value.HasText {
-			p.o.display = p.o.value.Text
-		}
-		if p.o.display == "" && p.termLabel != "" {
-			p.o.display = p.termLabel
-		}
-		if p.o.display == "" && p.o.value.HasInteger {
-			p.o.display = strconv.FormatInt(p.o.value.Integer, 10)
 		}
 		out = append(out, p.o)
 	}

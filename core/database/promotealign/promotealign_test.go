@@ -1137,7 +1137,7 @@ func TestProposeJudgesAgainstTheMajority(t *testing.T) {
 			t.Fatalf("sex comparison %s, want conflict", got)
 		}
 		ex := conflictExhibit(t, row, "sex_at_birth")
-		if ex.Pinned || len(ex.IncomingObservationID) != 0 || !ex.IncomingNegative || ex.IncomingDisplay != "male" || ex.MemberDisplay != "male" {
+		if ex.Pinned || len(ex.IncomingObservationID) != 0 || !ex.IncomingNegative || ex.IncomingDisplay != "Male" || ex.MemberDisplay != "Male" {
 			t.Fatalf("sex conflict exhibit %+v", ex)
 		}
 		hasName := false
@@ -1169,5 +1169,32 @@ func TestProposeMultipleToponyms(t *testing.T) {
 	row := rowFor(f.propose(src.ID, []graphalign.Fixed{{SubjectID: incoming.ID, HandleID: handle}}), incoming.ID)
 	if got := comparisonOutcome(t, row, "toponym"); got != match.OutcomeAgree {
 		t.Fatalf("toponym comparison %s, want agree", got)
+	}
+}
+
+// A name Observation with parts and no Form still shows on the sheet. The
+// writers require a Form, so the fixture blanks it after the names are filed.
+func TestExhibitNameWithoutForm(t *testing.T) {
+	f := newFixture(t)
+	handle := f.promote(f.person(f.source, f.artifact, "Mary Smith")).Entity.ID
+	src, art := f.newSource("Register")
+	incoming := f.person(src, art, "Mary Smith")
+	db, err := f.c.DB()
+	must(t, err)
+	_, err = db.Exec(`UPDATE name_values SET form = ''`)
+	must(t, err)
+
+	row := rowFor(f.propose(src.ID, []graphalign.Fixed{{SubjectID: incoming.ID, HandleID: handle}}), incoming.ID)
+	var found bool
+	for _, ex := range row.Exhibits {
+		if ex.Property.Key == "name" && len(ex.IncomingObservationID) > 0 {
+			found = true
+			if ex.IncomingDisplay != "Mary Smith" || ex.MemberDisplay != "Mary Smith" {
+				t.Fatalf("name exhibit %+v", ex)
+			}
+		}
+	}
+	if !found {
+		t.Fatalf("no name exhibit in %+v", row.Exhibits)
 	}
 }
