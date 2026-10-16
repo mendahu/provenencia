@@ -109,6 +109,7 @@ enum Method {
   METHOD_PROPOSE_PROMOTE_GRAPH_ALIGNMENT = 97;
   METHOD_APPLY_PROMOTE_GRAPH_ALIGNMENT = 98;
   METHOD_GET_NAME_FORMAT = 99;
+  METHOD_UNPROMOTE_SUBJECT = 100;
 }
 
 message PingRequest {
@@ -1016,6 +1017,19 @@ message PromoteSubjectRequest {
 message PromoteSubjectResponse {
   CanonicalEntity entity = 1;
   IdentityClaim claim = 2;
+}
+
+// UnpromoteSubject deletes a primary Subject's accepted claim and, in the same
+// revision, the accepted claims of the bridges on its Source that have it as an
+// end. No handle is deleted. A Subject with no accepted claim writes nothing.
+message UnpromoteSubjectRequest {
+  string project_dir = 1;
+  string user_id = 2;
+  string subject_id = 3;
+}
+
+message UnpromoteSubjectResponse {
+  WriteEffects effects = 1;
 }
 
 // SubjectMembership is a view of one Subject's accepted Identity Claim: the
