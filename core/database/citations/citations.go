@@ -372,20 +372,20 @@ func Update(tx *database.Tx, userID, citationID []byte, in CitationFieldsInput) 
 		return Citation{}, nil, err
 	}
 	return Citation{
-		ID:                     append([]byte(nil), citationID...),
-		Ref:                    prev.Ref,
-		ArtifactID:             append([]byte(nil), prev.ArtifactID...),
-		LocatorJSON:            in.LocatorJSON,
-		Transcription:          in.Transcription,
-		Label:                  in.Label,
-		TranscriptionUncertain: in.TranscriptionUncertain,
-		TranscriptionNote:      in.TranscriptionNote,
-	}, []rowchange.Change{{
-		EntityType: "citation",
-		EntityID:   append([]byte(nil), citationID...),
-		Action:     rowchange.ActionUpdate,
-		Fields:     fields,
-	}}, nil
+			ID:                     append([]byte(nil), citationID...),
+			Ref:                    prev.Ref,
+			ArtifactID:             append([]byte(nil), prev.ArtifactID...),
+			LocatorJSON:            in.LocatorJSON,
+			Transcription:          in.Transcription,
+			Label:                  in.Label,
+			TranscriptionUncertain: in.TranscriptionUncertain,
+			TranscriptionNote:      in.TranscriptionNote,
+		}, []rowchange.Change{{
+			EntityType: "citation",
+			EntityID:   append([]byte(nil), citationID...),
+			Action:     rowchange.ActionUpdate,
+			Fields:     fields,
+		}}, nil
 }
 
 func emptyAsNil(s string) any {
