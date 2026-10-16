@@ -1,10 +1,10 @@
 # Review — S10-44 Unpromote a filed card
 
-**Verdict:** Fits with changes — Ready with changes once Q-1 is answered (round 2 fixes applied)
+**Verdict:** Fits with changes — Ready with changes (applied); Q-1 answered
 **Rounds:** 2. **Reviewers:** maintainability (opus), executability (sonnet)
 
 ## To user
-- **Q-1 (from X-1).** Which SF Symbol is the unlink icon? The planner could not check SF Symbols from a Linux container. Recommendation: confirm on a Mac which slashed-link symbol resolves, and write it into D-15. If none exists, a custom glyph is a design call. The plan stays Draft until this is answered.
+- **Q-1 answered 2026-10-16.** The icons are a pair of opposites: Promote uses `arrow.trianglehead.pull` and Unpromote uses `arrow.trianglehead.branch` (D-15). The Promote footer and Promote all move to the pull arrow. The brief (S10-D6 EG-8 and inventory) and the working rule now say the same. Availability on macOS 14.0 is a stop condition, because it cannot be checked off a Mac.
 
 ## Writer's own calls
 - No preview RPC: the confirm's bridge list comes from the client snapshot (D-7), and the engine recomputes the set in the write (D-3).
