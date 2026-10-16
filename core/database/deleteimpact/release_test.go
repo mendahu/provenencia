@@ -111,6 +111,48 @@ func TestCountFilePointersIfUnused(t *testing.T) {
 	if err := tx.Commit(); err != nil {
 		t.Fatal(err)
 	}
+
+	// A File is a pointer target through derived_file_id, not source_file_id.
+	other := newFileID(t)
+	const sumOther = "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+	otherDeriv := newFileID(t)
+	const sumOtherDeriv = "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+	tx, err = db.Begin()
+	if err != nil {
+		t.Fatal(err)
+	}
+	insertFile(t, tx, other, sumOther, "o.jpg", 4)
+	insertFile(t, tx, otherDeriv, sumOtherDeriv, "o-thumb.jpg", 2)
+	if err := filederivatives.Insert(tx, filederivatives.Link{
+		ID: newFileID(t), SourceFileID: other, DerivedFileID: otherDeriv, DerivativeType: filederivatives.TypeThumbnail,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if n, err := CountFilePointers(tx, otherDeriv); err != nil || n != 1 {
+		t.Fatalf("derived end %d %v", n, err)
+	}
+	if n, err := CountFilePointers(tx, other); err != nil || n != 0 {
+		t.Fatalf("source end %d %v", n, err)
+	}
+
+	// A table the test declares as pointing at files counts too.
+	if _, err := tx.Exec(`CREATE TABLE test_values (id BLOB PRIMARY KEY, file_id BLOB)`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := tx.Exec(`INSERT INTO test_values (id, file_id) VALUES (?, ?)`, newFileID(t), other); err != nil {
+		t.Fatal(err)
+	}
+	testFKs := append(append([]catalogmodel.FK(nil), catalogmodel.FKs...),
+		catalogmodel.FK{From: "test_values", Column: "file_id", To: "files", OnDelete: "NO ACTION", Bucket: catalogmodel.BucketOwnedOutbound})
+	if n, err := countFilePointers(tx, ownedPlanFrom(testFKs, catalogmodel.Tables), other); err != nil || n != 1 {
+		t.Fatalf("test table pointer %d %v", n, err)
+	}
+	if n, err := countFilePointers(tx, ownedPlanFrom(catalogmodel.FKs, catalogmodel.Tables), other); err != nil || n != 0 {
+		t.Fatalf("production plan ignores the test table %d %v", n, err)
+	}
+	if err := tx.Rollback(); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestListedSnippet(t *testing.T) {

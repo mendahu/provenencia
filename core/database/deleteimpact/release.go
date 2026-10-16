@@ -147,21 +147,31 @@ func deleteValueRow(tx *sql.Tx, table string, id []byte) error {
 	return err
 }
 
-// CountFilePointers is the ifUnused walker: remaining artifacts.file_id rows
-// that still name this file. Derivatives are released after the last artifact.
+// CountFilePointers counts the rows that still point at a File through any
+// declared foreign key into files, except the File's own thumbnail links
+// (file_derivatives.source_file_id). A File with a nonzero count is in use.
 func CountFilePointers(tx *sql.Tx, fileID []byte) (int, error) {
+	return countFilePointers(tx, productionPlan(), fileID)
+}
+
+func countFilePointers(tx *sql.Tx, p *ownedPlan, fileID []byte) (int, error) {
 	if tx == nil || len(fileID) != 16 {
 		return 0, ErrInvalid
 	}
-	var n int
-	if err := tx.QueryRow(`SELECT COUNT(*) FROM artifacts WHERE file_id = ?`, fileID).Scan(&n); err != nil {
-		return 0, err
+	total := 0
+	for _, fk := range p.pointers {
+		var n int
+		q := fmt.Sprintf(`SELECT COUNT(*) FROM %s WHERE %s = ?`, fk.From, fk.Column)
+		if err := tx.QueryRow(q, fileID).Scan(&n); err != nil {
+			return 0, err
+		}
+		total += n
 	}
-	return n, nil
+	return total, nil
 }
 
 func releaseFileIfUnused(tx *sql.Tx, fileID []byte) error {
-	n, err := CountFilePointers(tx, fileID)
+	n, err := countFilePointers(tx, productionPlan(), fileID)
 	if err != nil || n > 0 {
 		return err
 	}

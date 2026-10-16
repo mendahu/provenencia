@@ -25,6 +25,31 @@ type ownedRelease struct {
 	Then   []ownedRelease
 }
 
+// ownedPlan is what a delete needs to know about owned children, read from the
+// declared catalog model: which foreign keys count as pointers at a File, and
+// (once STEP-4 fills them) which owned edges hang off each table.
+type ownedPlan struct {
+	pointers []catalogmodel.FK
+}
+
+// ownedPlanFrom derives the plan from a foreign-key and table list. Production
+// passes the declared model; tests pass their own slices.
+func ownedPlanFrom(fks []catalogmodel.FK, tables []catalogmodel.Table) *ownedPlan {
+	p := &ownedPlan{}
+	for _, fk := range fks {
+		// A File's own thumbnail links belong to it; they do not keep it.
+		if fk.To == "files" && !(fk.From == "file_derivatives" && fk.Column == "source_file_id") {
+			p.pointers = append(p.pointers, fk)
+		}
+	}
+	return p
+}
+
+// productionPlan is the plan for the declared model, derived once.
+var productionPlan = sync.OnceValue(func() *ownedPlan {
+	return ownedPlanFrom(catalogmodel.FKs, catalogmodel.Tables)
+})
+
 type originRule struct {
 	Kind         catalogmodel.Kind
 	OriginSQL    string
