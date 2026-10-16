@@ -9,7 +9,9 @@ struct CatalogActivity: Sendable, Equatable {
 }
 
 /// A cached list row that carries its handle's or Source's last activity.
-protocol CatalogLastUpdatedRow {
+/// `Sendable` so `CatalogLastUpdatedPatch.rows` can capture `Row.Type` in its
+/// `@Sendable` closure.
+protocol CatalogLastUpdatedRow: Sendable {
     var id: String { get }
     var updated: CatalogActivity { get set }
 }
