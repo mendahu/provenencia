@@ -240,7 +240,7 @@ SLICE 7 — How names compare (no new chrome)
   S10-26  Daitch–Mokotoff below near-spelling — descoped. See ideas/daitch-mokotoff.md.
   S10-27  Project name-frequency weights — done, #409
   S10-28  Support-weighted scores, negative evidence, reasons name the pair — done, #411
-  S10-50  Promote sheet lines show the values they compared (term labels; rows with no exhibit) (after S10-28)
+  S10-50  Promote sheet lines show the values they compared (term labels; rows with no exhibit) (after S10-28) — done, #413
   S10-30  Date windows, ABT-on-spans, date vs start/end
   S10-31  Birth~baptism, death~burial, place part_of
   S10-37  Collation locale on name ordering (after S10-29)
@@ -585,7 +585,7 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 
 #### S10-50 — Promote sheet lines show the values they compared
 
-**Plan:** [`prs/S10-50-promote-sheet-values.md`](prs/S10-50-promote-sheet-values.md) — Planned
+**Plan:** [`prs/S10-50-promote-sheet-values.md`](prs/S10-50-promote-sheet-values.md) — Landed #413
 
 | | |
 | --- | --- |
