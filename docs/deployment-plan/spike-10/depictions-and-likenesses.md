@@ -53,13 +53,12 @@ Spike 10 saves the bounding box of the polygon as a JPEG, longest edge 512. A tr
 Person page, cache present:
 
 ```text
-accepted identity claims for the person
-  → depiction Observations on those member subjects
-  → each Observation's Citation
+the person's cached likeness values (auto_reconciler_values, kept or weak)
+  → each value's Citation (value_citation_id)
   → crop cached for that File and locator
 ```
 
-That is one join, then a handful of small rasters. The slow path is a missing cache, not the query.
+The auto-reconciler already chose those values from the accepted and provisional members' depiction Observations, with the same evidence rules as a name. That is one read, then a handful of small rasters. The slow path is a missing cache, not the query.
 
 ## Settled (do not reopen)
 
@@ -70,7 +69,7 @@ That is one join, then a handful of small rasters. The slow path is a missing ca
 | **Crop is a derivative cache** | Person page stays fast. Evidence stays the Artifact plus the polygon. |
 | **Cache key is File + locator** | One File has many regions. The current one-type-per-File unique key cannot hold them. |
 | **Composer draws the PDF crop** | The document is open. Go does not grow a PDF engine for this. |
-| **Gallery, not a single concluded face** | Photos accumulate. Reconciliation stays for values that compete. |
+| **Gallery, not a single concluded face** | Photos accumulate. `likeness` is cardinality `multiple`, so the auto-reconciler keeps every distinct crop; a Reconciliation Claim stays for values that compete. |
 | **Preferred portrait is a display pointer** | One likeness leads the page and the list. The others stay in the gallery. It is not a Reconciliation Claim. |
 
 ## Later
