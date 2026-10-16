@@ -125,6 +125,12 @@ enum PVColor {
     static let lineMaternal = Color.pvDynamic(light: PVPalette.plum500, dark: PVPalette.hex("#C08FB2"))
     static let lineInferred = Color.pvDynamic(light: PVPalette.paper400, dark: PVPalette.paper600)
 
+    // MARK: Person gender treatment (S10-D12)
+    /// Woman family fill on the Person header thumb (board S10-D12, `--person-woman-tint`).
+    static let personWomanTint = Color.pvDynamic(light: PVPalette.plum100, dark: PVPalette.plum900)
+    /// Woman family ink on the Person header Badge (board S10-D12, `--person-woman-ink`).
+    static let personWomanInk = Color.pvDynamic(light: PVPalette.plum700, dark: PVPalette.plum300)
+
     // MARK: Evidence graph subject kinds (S6-D1 / S6-02 / S7 board)
     // Person = iron, Event = copper, Place = verdigris.
     // Fill/border are board hexes (OKLab blends of family steps). Ink = 700 light /
