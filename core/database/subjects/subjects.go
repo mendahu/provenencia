@@ -16,6 +16,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/autoreconciler"
 	"github.com/mendahu/provenencia/core/database/conclusionheaders"
 	"github.com/mendahu/provenencia/core/database/deleteimpact"
+	"github.com/mendahu/provenencia/core/database/files"
 	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/subjectpositions"
 	"github.com/mendahu/provenencia/core/ref"
@@ -254,6 +255,7 @@ func Delete(tx *database.Tx, userID, id []byte) ([]rowchange.Change, error) {
 	if _, err := tx.Exec(sqlDelete, id); err != nil {
 		return nil, err
 	}
+	files.PurgeAfterCommit(tx, released.Objects)
 	releasedHandles, err := effects.Handles(tx.Tx, released.Changes)
 	if err != nil {
 		return nil, err

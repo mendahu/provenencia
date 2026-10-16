@@ -11,6 +11,7 @@ import (
 	"github.com/mendahu/provenencia/core/connectrules"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/deleteimpact"
+	"github.com/mendahu/provenencia/core/database/files"
 )
 
 // Update rewrites one Observation. Edge rows are always locked, including no-ops.
@@ -104,9 +105,11 @@ func Delete(tx *database.Tx, userID, id []byte) ([]rowchange.Change, error) {
 	if _, err := tx.Exec(sqlDeleteObservationByID, id); err != nil {
 		return nil, err
 	}
-	if _, err := deleteimpact.ReleaseSnapshot(tx.Tx, snap); err != nil {
+	owned, err := deleteimpact.ReleaseSnapshot(tx.Tx, snap)
+	if err != nil {
 		return nil, err
 	}
+	files.PurgeAfterCommit(tx, append(released.Objects, owned...))
 	return append(released.Changes, rowchange.Change{
 		EntityType: "observation",
 		EntityID:   append([]byte(nil), id...),

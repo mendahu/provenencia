@@ -13,6 +13,7 @@ import (
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/deleteimpact"
+	"github.com/mendahu/provenencia/core/database/files"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/locator"
 	"github.com/mendahu/provenencia/core/ref"
@@ -427,6 +428,7 @@ func Delete(tx *database.Tx, userID, id []byte) ([]rowchange.Change, error) {
 	if _, err := tx.Exec(sqlDelete, id); err != nil {
 		return nil, err
 	}
+	files.PurgeAfterCommit(tx, released.Objects)
 	fields := map[string]rowchange.FieldDiff{
 		"id":          {Old: uuidString(id), New: nil},
 		"ref":         {Old: prev.Ref, New: nil},
