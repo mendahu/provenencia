@@ -16359,6 +16359,8 @@ type SourceGraphProgress struct {
 	SourceId         string                 `protobuf:"bytes,1,opt,name=source_id,json=sourceId,proto3" json:"source_id,omitempty"`
 	SubjectCount     int32                  `protobuf:"varint,2,opt,name=subject_count,json=subjectCount,proto3" json:"subject_count,omitempty"`
 	ObservationCount int32                  `protobuf:"varint,3,opt,name=observation_count,json=observationCount,proto3" json:"observation_count,omitempty"`
+	PrimaryCount     int32                  `protobuf:"varint,5,opt,name=primary_count,json=primaryCount,proto3" json:"primary_count,omitempty"`
+	FiledCount       int32                  `protobuf:"varint,6,opt,name=filed_count,json=filedCount,proto3" json:"filed_count,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -16410,6 +16412,20 @@ func (x *SourceGraphProgress) GetSubjectCount() int32 {
 func (x *SourceGraphProgress) GetObservationCount() int32 {
 	if x != nil {
 		return x.ObservationCount
+	}
+	return 0
+}
+
+func (x *SourceGraphProgress) GetPrimaryCount() int32 {
+	if x != nil {
+		return x.PrimaryCount
+	}
+	return 0
+}
+
+func (x *SourceGraphProgress) GetFiledCount() int32 {
+	if x != nil {
+		return x.FiledCount
 	}
 	return 0
 }
@@ -18414,11 +18430,14 @@ const file_engine_proto_rawDesc = "" +
 	"properties\x18\x01 \x03(\v2\x1f.provenencia.engine.v1.PropertyR\n" +
 	"properties\x128\n" +
 	"\x05types\x18\x02 \x03(\v2\".provenencia.engine.v1.SubjectTypeR\x05types\x12I\n" +
-	"\x06groups\x18\x03 \x03(\v21.provenencia.engine.v1.SubjectTypePropertiesGroupR\x06groups\"\x99\x01\n" +
+	"\x06groups\x18\x03 \x03(\v21.provenencia.engine.v1.SubjectTypePropertiesGroupR\x06groups\"\xdf\x01\n" +
 	"\x13SourceGraphProgress\x12\x1b\n" +
 	"\tsource_id\x18\x01 \x01(\tR\bsourceId\x12#\n" +
 	"\rsubject_count\x18\x02 \x01(\x05R\fsubjectCount\x12+\n" +
-	"\x11observation_count\x18\x03 \x01(\x05R\x10observationCountJ\x04\b\x04\x10\x05R\runcited_count\"A\n" +
+	"\x11observation_count\x18\x03 \x01(\x05R\x10observationCount\x12#\n" +
+	"\rprimary_count\x18\x05 \x01(\x05R\fprimaryCount\x12\x1f\n" +
+	"\vfiled_count\x18\x06 \x01(\x05R\n" +
+	"filedCountJ\x04\b\x04\x10\x05R\runcited_count\"A\n" +
 	"\x1eListSourceGraphProgressRequest\x12\x1f\n" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
 	"projectDir\"a\n" +

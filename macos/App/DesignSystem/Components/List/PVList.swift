@@ -104,30 +104,6 @@ struct PVList<Item: Identifiable, Primary: View, Secondary: View>: View {
         .accessibilityLabel(Text(label))
     }
 
-    @ViewBuilder
-    private func detailCell(_ detail: PVListDetail?) -> some View {
-        if let detail {
-            let color = detail.faint ? PVColor.textFaint : PVColor.textMuted
-            let cell = HStack(spacing: 6) {
-                if let icon = detail.icon {
-                    PVIcon(icon, size: 14)
-                }
-                Text(verbatim: detail.text)
-                    .font(PVFont.body(size: PVTypeScale.caption))
-                    .lineLimit(1)
-                    .fixedSize()
-            }
-            .foregroundStyle(color)
-            if let help = detail.help {
-                cell.help(help)
-            } else {
-                cell
-            }
-        } else {
-            Color.clear
-        }
-    }
-
     private func row(_ item: Item, index: Int) -> some View {
         Button {
             focusIndex = index
@@ -150,9 +126,7 @@ struct PVList<Item: Identifiable, Primary: View, Secondary: View>: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 if let detail {
-                    detailCell(detail.content(item))
-                        .frame(width: detail.width, alignment: .leading)
-                        .layoutPriority(1)
+                    PVListDetailCell(detail: detail.content(item), width: detail.width)
                 }
                 HStack(spacing: PVSpacing.space7) {
                     if let meta = meta(item) {
@@ -217,6 +191,44 @@ struct PVListDetail {
     var help: String?
     var icon: PVSymbol?
     var faint: Bool = false
+}
+
+/// One cell of a `PVList` detail column, framed to its column width. A `nil`
+/// detail leaves the cell empty at the same width. Rows that are not a
+/// `PVList` row (the Sources split row) draw the same cell.
+struct PVListDetailCell: View {
+    let detail: PVListDetail?
+    let width: CGFloat
+
+    var body: some View {
+        content
+            .frame(width: width, alignment: .leading)
+            .layoutPriority(1)
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        if let detail {
+            let color = detail.faint ? PVColor.textFaint : PVColor.textMuted
+            let cell = HStack(spacing: 6) {
+                if let icon = detail.icon {
+                    PVIcon(icon, size: 14)
+                }
+                Text(verbatim: detail.text)
+                    .font(PVFont.body(size: PVTypeScale.caption))
+                    .lineLimit(1)
+                    .fixedSize()
+            }
+            .foregroundStyle(color)
+            if let help = detail.help {
+                cell.help(help)
+            } else {
+                cell
+            }
+        } else {
+            Color.clear
+        }
+    }
 }
 
 /// A fixed-width column before the ref. `content` returning `nil` leaves the

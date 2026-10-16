@@ -36,6 +36,8 @@ struct SourcesSplitRow: View {
     var onOpenPage: () -> Void
     var onOpenGraph: () -> Void
 
+    private var updatedAt: String { source.updated.at }
+
     var body: some View {
         SourcesSplitLayout.columns {
             pageZone
@@ -70,10 +72,15 @@ struct SourcesSplitRow: View {
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
+                PVListDetailCell(
+                    detail: PVLastUpdated.detail(updatedAt, in: .current),
+                    width: PVLastUpdated.columnWidth
+                )
                 Text(source.ref)
                     .font(PVFont.mono(size: PVTypeScale.micro))
                     .foregroundStyle(PVColor.textMuted)
                     .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
             }
             // Design: 13px 16px 13px 32px — page gutter on the leading edge.
             .padding(.leading, PVSpacing.gutterPage)
@@ -84,7 +91,11 @@ struct SourcesSplitRow: View {
         }
         .buttonStyle(SourcesSplitZoneButtonStyle(emphasizeOnHover: false))
         .accessibilityLabel(Text(L10n.Sources.openSourcePage))
-        .accessibilityValue(Text(verbatim: "\(source.title), \(source.ref)"))
+        .accessibilityValue(Text(verbatim: PVLastUpdated.label(
+            "\(source.title), \(source.ref)",
+            updatedAt: updatedAt,
+            in: .current
+        )))
         .accessibilityIdentifier("sources.row.\(source.id).page")
     }
 

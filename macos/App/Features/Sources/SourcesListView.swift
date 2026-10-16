@@ -10,6 +10,7 @@ struct SourcesListView: View {
     init(
         session: WorkspaceSession,
         userID: String,
+        projectUuid: String,
         store: any GenealogyStore,
         catalogCounts: CatalogCounts? = nil
     ) {
@@ -18,7 +19,8 @@ struct SourcesListView: View {
                 session: session,
                 userID: userID,
                 store: store,
-                catalogCounts: catalogCounts
+                catalogCounts: catalogCounts,
+                settingsStore: SourcesListSettingsStore(projectUuid: projectUuid, userID: userID)
             )
         )
     }
@@ -59,8 +61,9 @@ private struct SourcesListContent: View {
     @Bindable var model: SourcesModel
 
     var body: some View {
-        VStack(spacing: 0) {
-            header
+        let rows = model.visibleSources
+        return VStack(spacing: 0) {
+            header(visibleCount: rows.count)
             PVDivider()
             if sourcesHandle.status == .loading && model.sources.isEmpty && model.loadError == nil {
                 ProgressView()
@@ -76,7 +79,7 @@ private struct SourcesListContent: View {
                 emptyState
             } else {
                 toolbar
-                listBody
+                listBody(rows: rows)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -124,10 +127,7 @@ private struct SourcesListContent: View {
                 model.syncCatalogCounts()
             }
         }
-        .onChange(of: model.sort) { _, _ in
-            navigation.go(to: navigation.currentLocation.withListScrollAnchor(nil))
-        }
-        .onChange(of: model.typeFilterID) { _, _ in
+        .onChange(of: model.settings) { _, _ in
             navigation.go(to: navigation.currentLocation.withListScrollAnchor(nil))
         }
         .accessibilityIdentifier("sources")
@@ -146,7 +146,7 @@ private struct SourcesListContent: View {
         )
     }
 
-    private var header: some View {
+    private func header(visibleCount: Int) -> some View {
         HStack(alignment: .bottom, spacing: PVSpacing.space8) {
             VStack(alignment: .leading, spacing: PVSpacing.space2) {
                 Text(L10n.Workspace.sourcesTitle)
@@ -160,7 +160,7 @@ private struct SourcesListContent: View {
             Spacer(minLength: PVSpacing.space6)
             HStack(spacing: PVSpacing.space6) {
                 if !model.isCatalogEmpty {
-                    Text(model.countLine)
+                    Text(model.countLine(visibleCount: visibleCount))
                         .font(PVFont.mono(size: PVTypeScale.micro))
                         .foregroundStyle(PVColor.textMuted)
                         .accessibilityIdentifier("sources.countLine")
@@ -178,7 +178,9 @@ private struct SourcesListContent: View {
 
     private var toolbar: some View {
         HStack(spacing: PVSpacing.space5) {
+            searchField
             filterMenu
+            statusMenu
             sortMenu
             Spacer(minLength: 0)
         }
@@ -189,6 +191,42 @@ private struct SourcesListContent: View {
             PVDivider()
         }
         .zIndex(1)
+    }
+
+    private var searchField: some View {
+        PVInput(
+            text: $model.settings.query,
+            prompt: L10n.Sources.searchPrompt,
+            icon: .search
+        )
+        .frame(minWidth: 160, maxWidth: 280)
+        .accessibilityIdentifier("sources.search")
+    }
+
+    private var statusMenu: some View {
+        let options = [PVSelectOption(
+            value: "",
+            label: L10n.string(L10n.Sources.statusAll),
+            accessibilityIdentifier: "sources.status.all"
+        )] + SourcesModel.EvidenceStatus.allCases.map {
+            PVSelectOption(
+                value: $0.rawValue,
+                label: L10n.string($0.label),
+                accessibilityIdentifier: "sources.status.\($0.rawValue)"
+            )
+        }
+        return PVSelect(
+            selection: Binding(
+                get: { model.settings.status?.rawValue ?? "" },
+                set: { model.settings.status = SourcesModel.EvidenceStatus(rawValue: $0) }
+            ),
+            options: options,
+            icon: .network,
+            menuWidth: 220,
+            fillsWidth: false,
+            accessibilityLabel: L10n.Sources.statusMenu,
+            accessibilityIdentifier: "sources.status"
+        )
     }
 
     private var filterMenu: some View {
@@ -204,7 +242,10 @@ private struct SourcesListContent: View {
             )
         }
         return PVSelect(
-            selection: $model.typeFilterID,
+            selection: Binding(
+                get: { model.effectiveTypeFilterID },
+                set: { model.settings.typeFilterID = $0 }
+            ),
             options: options,
             icon: .filter,
             menuWidth: 220,
@@ -224,8 +265,8 @@ private struct SourcesListContent: View {
         }
         return PVSelect(
             selection: Binding(
-                get: { model.sort.rawValue },
-                set: { if let sort = SourcesModel.Sort(rawValue: $0) { model.sort = sort } }
+                get: { model.settings.sort.rawValue },
+                set: { if let sort = SourcesModel.Sort(rawValue: $0) { model.settings.sort = sort } }
             ),
             options: options,
             icon: .sort,
@@ -238,14 +279,29 @@ private struct SourcesListContent: View {
     }
 
     @ViewBuilder
-    private var listBody: some View {
-        if model.visibleSources.isEmpty {
+    private func listBody(rows: [CatalogSource]) -> some View {
+        if let statusError = model.statusCountsError {
+            PVCallout(tone: .danger, message: L10n.Errors.message(for: statusError))
+                .padding(.horizontal, PVSpacing.gutterPage)
+                .padding(.top, PVSpacing.space8)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                .accessibilityIdentifier("sources.statusError")
+        } else if model.isAwaitingFilterData {
+            ProgressView()
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+                .padding(.top, PVSpacing.space9)
+        } else if rows.isEmpty {
             PVEmptyState(
                 icon: .filter,
                 title: L10n.Sources.noFilterMatchesTitle,
                 message: L10n.string(L10n.Sources.noFilterMatchesMessage),
                 compact: true
-            )
+            ) {
+                PVButton(L10n.Sources.clearFilters, variant: .secondary) {
+                    model.clearFilters()
+                }
+                .accessibilityIdentifier("sources.clearFilters")
+            }
             .padding(.horizontal, PVSpacing.gutterPage)
             .padding(.top, PVSpacing.space6)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -254,7 +310,7 @@ private struct SourcesListContent: View {
             ScrollView {
                 LazyVStack(spacing: 0, pinnedViews: [.sectionHeaders]) {
                     Section {
-                        ForEach(model.visibleSources) { source in
+                        ForEach(rows) { source in
                             if let progressHandle {
                                 SourcesSplitRowProgress(source: source, model: model, handle: progressHandle)
                                     .id(source.id)
@@ -285,7 +341,7 @@ private struct SourcesListContent: View {
             }
             .modifier(ListScrollAnchorModifier(
                 anchor: navigation.currentLocation.listScrollAnchor,
-                rowIDs: model.visibleSources.map(\.id),
+                rowIDs: rows.map(\.id),
                 isLoaded: true
             ))
             .accessibilityElement(children: .contain)

@@ -40,7 +40,7 @@ final class WorkspaceNavigation {
     private(set) var heldNavigation: PendingNavigation?
 
     private var history: NavigationHistoryStore?
-    private var projectUuid: String = ""
+    private(set) var projectUuid: String = ""
     /// Top row the visible list last reported. Stamped onto the outgoing entry
     /// on the next Back, Forward, jump, or `go(to:)`. Scrolling does not write
     /// the history file.

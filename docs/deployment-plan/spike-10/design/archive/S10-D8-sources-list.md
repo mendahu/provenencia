@@ -5,10 +5,10 @@
 **View:** Sources list — the toolbar, the row, and the empty states
 **Implements later as:** PR **S10-41**
 **Board:** agreed 2026-10-15 — Claude Design project *Sources list* (id 118d2eb7-3b46-4912-a688-09ec7b0070fa), file *S2-04 Sources list.dc.html*, section “S10-D8 enhancement”, frames 1–8 and 7b. Two changes from this brief, both answered by the user on 2026-10-15: the third status reads “Fully promoted”, and the status select takes the Evidence graph (network) icon so it draws as a toolbar chip.
-**Depends on:** the agreed S10-D9 Persons board (the last-updated column this board copies). This brief restates that cell in full; where the S10-D9 file and this brief differ, this brief, the working rule “Last updated”, and the [S10-22 plan](../prs/S10-22-list-last-updated.md) D-5, D-6, D-11 describe the agreed board.
-**Related:** [`../deployment-plan.md`](../deployment-plan.md) (S10-41; working rules "The Sources list is one page", "Last updated", "Sources evidence filters count primaries in one read", "List scroll is a field on the history entry"). Persons is **S10-D9**, Events is **S10-D10**, and Places is **S10-D11**; none of them get the toolbar controls drawn here.
-**Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)
-**Skill:** [`add-design-brief`](../../../../.agents/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md)
+**Depends on:** the agreed S10-D9 Persons board (the last-updated column this board copies). This brief restates that cell in full; where the S10-D9 file and this brief differ, this brief, the working rule “Last updated”, and the [S10-22 plan](../../prs/S10-22-list-last-updated.md) D-5, D-6, D-11 describe the agreed board.
+**Related:** [`../deployment-plan.md`](../../deployment-plan.md) (S10-41; working rules "The Sources list is one page", "Last updated", "Sources evidence filters count primaries in one read", "List scroll is a field on the history entry"). Persons is **S10-D9**, Events is **S10-D10**, and Places is **S10-D11**; none of them get the toolbar controls drawn here.
+**Design system layers:** [`docs/design-system-layers.md`](../../../../design-system-layers.md)
+**Skill:** [`add-design-brief`](../../../../../.agents/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../../.agents/skills/add-ui-component/SKILL.md)
 
 Paste this entire document into Claude Design as the requirements for one board. This file is the whole prompt.
 
@@ -169,5 +169,5 @@ This table is **binding**. Instance the Ship kit rows. Paths from `macos/App/` u
 ## 7. Handoff
 
 1. Archive this brief under `design/archive/` when the board is agreed.
-2. Record it in [`../completed.md`](../completed.md).
+2. Record it in [`../completed.md`](../../completed.md).
 3. Implement **S10-41** against SRL-1…SRL-10 (SRL-10 in part, §3), after S10-22 lands.

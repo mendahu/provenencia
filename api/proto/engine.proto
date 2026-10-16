@@ -1922,6 +1922,8 @@ message SourceGraphProgress {
   int32 observation_count = 3;
   reserved 4;
   reserved "uncited_count";
+  int32 primary_count = 5;
+  int32 filed_count = 6;
 }
 
 message ListSourceGraphProgressRequest {

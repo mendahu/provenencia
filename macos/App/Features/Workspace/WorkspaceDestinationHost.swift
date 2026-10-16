@@ -16,6 +16,7 @@ struct WorkspaceDestinationHost: View {
             SourcesListView(
                 session: session,
                 userID: userID,
+                projectUuid: navigation.projectUuid,
                 store: store,
                 catalogCounts: catalogCounts
             )
