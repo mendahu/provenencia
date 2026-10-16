@@ -41,32 +41,17 @@ struct EvidenceCardLayoutTests {
         )
     }
 
-    /// Hosts a card offscreen and returns the layout it reports plus the height
+    /// Builds the live card and returns the layout it measured plus the height
     /// actually drawn: card-body rows (alpha > 0.5; uncited cards paint at 0.76,
     /// shadows stay under ~0.1) down the centre column. (Not
     /// `fittingSize` — AppKit's ideal size over-reports wrapped text by ~4pt.)
-    private func measure<V: View>(_ make: (@escaping (EvidenceCardLayout) -> Void) -> V) async throws -> (EvidenceCardLayout, CGFloat) {
-        var reported: EvidenceCardLayout?
-        let host = NSHostingView(rootView: make { reported = $0 })
-        let window = NSWindow(contentRect: CGRect(x: 0, y: 0, width: 400, height: 900), styleMask: [], backing: .buffered, defer: false)
-        window.contentView = host
-        host.frame = CGRect(x: 0, y: 0, width: 400, height: 700)
-        // Settle until the reported layout stops changing.
-        var last: EvidenceCardLayout?
-        var stablePasses = 0
-        let deadline = ContinuousClock.now + .seconds(2)
-        while stablePasses < 3, ContinuousClock.now < deadline {
-            host.layoutSubtreeIfNeeded()
-            try await Task.sleep(for: .milliseconds(5))
-            if let reported, reported == last {
-                stablePasses += 1
-            } else {
-                stablePasses = 0
-                last = reported
-            }
-        }
-        let rep = try #require(host.bitmapImageRepForCachingDisplay(in: host.bounds))
-        host.cacheDisplay(in: host.bounds, to: rep)
+    private func measure(_ card: EvidenceCanvasCard) throws -> (EvidenceCardLayout, CGFloat) {
+        let view = EvidenceCardView(card: card, actions: [])
+        let window = NSWindow(contentRect: CGRect(origin: .zero, size: view.intrinsicContentSize), styleMask: [], backing: .buffered, defer: false)
+        view.frame = window.contentView!.bounds
+        window.contentView = view
+        let rep = try #require(view.bitmapImageRepForCachingDisplay(in: view.bounds))
+        view.cacheDisplay(in: view.bounds, to: rep)
         let x = rep.pixelsWide / 2
         var top = -1
         var bottom = -1
@@ -74,14 +59,12 @@ struct EvidenceCardLayoutTests {
             if top < 0 { top = y }
             bottom = y
         }
-        let scale = CGFloat(rep.pixelsHigh) / host.bounds.height
-        return (try #require(reported), CGFloat(bottom - top + 1) / scale)
+        let scale = CGFloat(rep.pixelsHigh) / view.bounds.height
+        return (view.layout, CGFloat(bottom - top + 1) / scale)
     }
 
-    private func measureSubject(_ p: SourceGraphPlacedSubject) async throws -> (EvidenceCardLayout, CGFloat) {
-        try await measure { report in
-            EvidenceSubjectCard(placed: p, text: EvidenceCardText(subject: p), isSelected: false, isActivated: false, onLayout: report)
-        }
+    private func measureSubject(_ p: SourceGraphPlacedSubject) throws -> (EvidenceCardLayout, CGFloat) {
+        try measure(EvidenceCanvasCard(placed: .subject(p, nil), text: EvidenceCardText(subject: p), state: .resting))
     }
 
     static let cases: [String] = ["uncited", "uncited+description", "cited1", "cited3", "cited3+promoted", "longHandleName+promoted",
@@ -103,9 +86,9 @@ struct EvidenceCardLayoutTests {
     }
 
     @Test(arguments: cases)
-    func measuredLayoutMatchesThePaint(name: String) async throws {
+    func measuredLayoutMatchesThePaint(name: String) throws {
         let card = fixture(name)
-        let (layout, drawn) = try await measureSubject(card)
+        let (layout, drawn) = try measureSubject(card)
         #expect(abs(layout.size.height - drawn) < 0.5)
         #expect(EvidenceSubjectCard.edgeFrame(for: card, layout: layout).height == layout.size.height)
 
@@ -153,7 +136,7 @@ struct EvidenceCardLayoutTests {
         }
     }
 
-    @Test func bridgeTargetsFollowThePaint() async throws {
+    @Test func bridgeTargetsFollowThePaint() throws {
         let bridge = SourceGraphPlacedBridge(
             subject: CatalogSubject(id: "b", ref: "CPA-3RN7K", sourceID: "x", subjectTypeID: "t", label: "", description: ""),
             kind: .participation,
@@ -164,10 +147,9 @@ struct EvidenceCardLayoutTests {
             observations: [observation(0), observation(1)]
         )
         let snapshot = SourceGraphSnapshot(sourceId: "x", bridges: [bridge])
-        let (layout, drawn) = try await measure { report in
-            EvidenceBridgeCard(placed: bridge, text: EvidenceCardText(bridge: bridge, in: snapshot), isSelected: false, isActivated: false,
-                               canCite: true, onLayout: report)
-        }
+        let (layout, drawn) = try measure(
+            EvidenceCanvasCard(placed: .bridge(bridge), text: EvidenceCardText(bridge: bridge, in: snapshot), state: .resting)
+        )
         #expect(abs(layout.size.height - drawn) < 0.5)
         let frame = EvidenceBridgeCard.contentFrame(for: bridge, in: snapshot, layout: layout)
         #expect(frame.height == layout.size.height)
