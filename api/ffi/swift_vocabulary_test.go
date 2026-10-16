@@ -11,6 +11,7 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/properties"
+	"github.com/mendahu/provenencia/core/database/propertyterms"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 )
 
@@ -142,6 +143,34 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 		for _, key := range keys {
 			if _, err := properties.Lookup(c, key, properties.OriginProvenencia); err != nil {
 				t.Errorf("Swift names %q, which is not a seeded Property: %v", key, err)
+			}
+		}
+	})
+	t.Run("seeded term keys are seeded", func(t *testing.T) {
+		c, err := database.Create(t.TempDir(), "t.provenencia")
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() { _ = c.Close() })
+		if err := subjectvocab.Install(c); err != nil {
+			t.Fatal(err)
+		}
+		for _, tc := range []struct{ enum, property string }{
+			{"SeededGenderTerm", "gender"},
+			{"SeededSexAtBirthTerm", "sex_at_birth"},
+		} {
+			keys := matches(staticLet, swiftEnumBody(t, swiftVocabulary, tc.enum))
+			if len(keys) == 0 {
+				t.Fatalf("%s: no keys read", tc.enum)
+			}
+			prop, err := properties.Lookup(c, tc.property, properties.OriginProvenencia)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, key := range keys {
+				if _, err := propertyterms.Lookup(c, prop.ID, key, properties.OriginProvenencia); err != nil {
+					t.Errorf("Swift names %s term %q, which is not seeded: %v", tc.property, key, err)
+				}
 			}
 		}
 	})
