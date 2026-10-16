@@ -12,6 +12,24 @@ type Comparer interface {
 	Compare(a, b Value) (similarity float64, comparable bool)
 }
 
+// DiscountComparer is a Comparer that also reports the share of points the
+// match should lose (0…1) for how common the matched values are. Only names
+// have one today; Score and Evaluate read it through CompareDiscount.
+type DiscountComparer interface {
+	Comparer
+	CompareDiscount(a, b Value) (similarity, discount float64, comparable bool)
+}
+
+// CompareDiscount compares with cmp and returns its discount; a plain
+// Comparer has discount 0.
+func CompareDiscount(cmp Comparer, a, b Value) (similarity, discount float64, comparable bool) {
+	if d, ok := cmp.(DiscountComparer); ok {
+		return d.CompareDiscount(a, b)
+	}
+	similarity, comparable = cmp.Compare(a, b)
+	return similarity, 0, comparable
+}
+
 // ComparerFor is the registry's Comparer for a Property's value type, so a
 // profile can weigh any Property, including researcher-defined ones. nil for
 // value types that are not compared (subject).

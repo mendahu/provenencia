@@ -35,6 +35,10 @@ type PropertyComparison struct {
 	// Similarity is the comparer result, 0…1, when Comparable.
 	// Comparable is false when either side has nothing the comparer can judge.
 	Similarity float64
+	// Discount is the share of points the matched values' frequency in the
+	// project cost, 0…1. Promote's scale multiplies positive points by
+	// 1 − Discount; the outcome never reads it.
+	Discount   float64
 	Comparable bool
 }
 
@@ -68,12 +72,13 @@ func evaluate(probe, candidate Values, metas []PropertyMeta, names *NameComparer
 		if card == "" {
 			card = properties.CardinalitySingle
 		}
-		sim, ok := compareProperty(m.ValueType, probe[m.Property], candidate[m.Property], names)
+		sim, discount, ok := compareProperty(m.ValueType, probe[m.Property], candidate[m.Property], names)
 		pc := PropertyComparison{
 			Property:    m.Property,
 			ValueType:   m.ValueType,
 			Cardinality: card,
 			Similarity:  sim,
+			Discount:    discount,
 			Comparable:  ok,
 			Outcome:     outcomeAtFloor(sim, ok, card, 0),
 		}
@@ -82,7 +87,7 @@ func evaluate(probe, candidate Values, metas []PropertyMeta, names *NameComparer
 	return out
 }
 
-func compareProperty(valueType string, a, b []Value, names *NameComparer) (float64, bool) {
+func compareProperty(valueType string, a, b []Value, names *NameComparer) (float64, float64, bool) {
 	var cmp Comparer
 	if valueType == properties.ValueTypeName && names != nil {
 		cmp = *names
@@ -90,7 +95,7 @@ func compareProperty(valueType string, a, b []Value, names *NameComparer) (float
 		cmp = ComparerFor(valueType)
 	}
 	if cmp == nil {
-		return 0, false
+		return 0, 0, false
 	}
 	return best(cmp, a, b)
 }

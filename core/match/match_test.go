@@ -218,3 +218,56 @@ func TestEvaluateNeutralTermIsNotComparable(t *testing.T) {
 		t.Fatalf("female vs male: comparable=%v outcome=%s, want a conflict", c.Comparable, c.Outcome)
 	}
 }
+
+func TestDiscountedScoring(t *testing.T) {
+	prof, _ := DefaultProfile("person")
+	names := NameComparer{Frequency: counts100()}
+	prof = prof.WithNameComparer(names)
+	probe := func(f string) Values { return Values{product("name"): {name(f)}} }
+	cand := func(f string) Candidate { return Candidate{Ref: f, Values: probe(f)} }
+
+	for _, tt := range []struct {
+		form     string
+		score    float64
+		discount float64
+	}{{"John Quirk", 9.60, 0.040}, {"John Smith", 8.64, 0.136}} {
+		t.Run(tt.form, func(t *testing.T) {
+			got := Rank(prof, probe(tt.form), []Candidate{cand(tt.form)}, 0)
+			if len(got) != 1 {
+				t.Fatalf("got %d matches", len(got))
+			}
+			r := got[0].Reasons[0]
+			if math.Abs(got[0].Score-tt.score) > 0.005 || math.Abs(r.Discount-tt.discount) > 0.0005 || r.Similarity != 1 {
+				t.Fatalf("score %.3f discount %.4f similarity %v", got[0].Score, r.Discount, r.Similarity)
+			}
+		})
+	}
+
+	t.Run("evaluate still agrees and reports the discount", func(t *testing.T) {
+		metas := []PropertyMeta{{Property: product("name"), ValueType: "name"}}
+		ev := EvaluateWithNames(probe("John Smith"), probe("John Smith"), metas, &names)
+		pc := ev.Comparisons[0]
+		if pc.Outcome != OutcomeAgree || math.Abs(pc.Discount-0.136) > 0.0005 {
+			t.Fatalf("%+v", pc)
+		}
+	})
+
+	t.Run("a contradiction is not discounted", func(t *testing.T) {
+		p := Profile{Features: []Feature{{Property: product("name"), Comparer: names, Weight: 10, Contradiction: 2}}}
+		m := Score(p, probe("John Smith"), cand("Mary Jones"))
+		if r := m.Reasons[0]; r.Contribution != -2 || r.Discount != 0 {
+			t.Fatalf("%+v", r)
+		}
+	})
+
+	t.Run("the cut sees the discounted score", func(t *testing.T) {
+		p := Profile{MinScore: 3, Features: []Feature{{Property: product("name"), Comparer: names, Weight: 3.2}}}
+		m := Score(p, probe("John Smith"), cand("John Smith"))
+		if math.Abs(m.Score-2.765) > 0.005 {
+			t.Fatalf("score %.3f", m.Score)
+		}
+		if got := Rank(p, probe("John Smith"), []Candidate{cand("John Smith")}, 0); len(got) != 0 {
+			t.Fatalf("returned %d", len(got))
+		}
+	})
+}

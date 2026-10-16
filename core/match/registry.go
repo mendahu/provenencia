@@ -146,6 +146,15 @@ var DefaultNames = NameComparer{
 	// Both names carry generation words (Jr., Sr.) and share none.
 	SuffixConflict: Set(0.3),
 
+	// No counts: Promote and merge hints supply the project's own.
+	Frequency: &noWordCounts,
+	// The most a word on every filed person costs, as a share of points: an
+	// identical, fully common name keeps 0.8 of them.
+	FrequencyDiscount: Set(0.2),
+	// Counts are read against at least this many people, so a small project's
+	// discount stays small.
+	FrequencyMinPeople: Set(100),
+
 	Words: DefaultWordRules,
 }
 
@@ -236,7 +245,9 @@ const DefaultSuggestionLimit = 10
 //
 // The weights are points. As a guide: a candidate worth showing scores at
 // least MinScore; the same name alone clears it, a shared surname alone
-// clears it barely. A sex or gender mismatch narrows the score; it does not hide
+// clears it barely. The cut sees the discounted score: a name word common in
+// the project's own people earns up to FrequencyDiscount fewer points, so a
+// common surname alone can fall under it. A sex or gender mismatch narrows the score; it does not hide
 // a name that otherwise cleared MinScore.
 // ProfiledKinds are the subject type keys DefaultProfile knows.
 func ProfiledKinds() []string {
