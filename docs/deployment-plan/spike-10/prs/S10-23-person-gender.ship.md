@@ -1,7 +1,7 @@
 # Ship log — S10-23 Sex / gender on the Person page
 
 **Plan:** [`S10-23-person-gender.md`](S10-23-person-gender.md) · **Branch:** `s10-23-person-gender` · **PR:** #407
-**State:** fixing 1
+**State:** review 2
 
 Base: `main` @ `cd370713` (plan Planned against `1fc683b`; no `macos/`, `core/`, or `api/` changes since).
 
@@ -40,3 +40,6 @@ Files: `api/ffi/swift_vocabulary_test.go`.
 Failing test first: not applicable; behaviour is unchanged. `TestSwiftVocabularyMatchesGo` stays green.
 Do: extract the `database.Create` + `t.Cleanup` + `subjectvocab.Install` block into one `installedCatalog(t)` helper beside `swiftEnumBody`, used by "seeded Property keys are seeded" and "seeded term keys are seeded". Optionally fail when an `enum Seeded\w+Term` in `ConclusionVocabulary.swift` has no row in the term table.
 Check: `CGO_ENABLED=1 go test -tags fts5 ./api/ffi -run TestSwiftVocabularyMatchesGo` passes; scripts/check-pr.sh PASS.
+
+## Round 1 — fix
+Head `d553d4c5`. Orchestrator gate PASS. F-1, F-2, F-3 done. Optional F-3 scan (every `Seeded…Term` has a table row) not added.
