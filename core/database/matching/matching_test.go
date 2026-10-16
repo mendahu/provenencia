@@ -420,3 +420,108 @@ func runArtifactCreate(c *database.Catalog, userID []byte, in artifacts.CreateIn
 		})
 	return a, err
 }
+
+// negated files the value as a negative Observation ("not male").
+func negated(v value) value {
+	return func(f *fixture, s subjects.Subject) observations.Input {
+		in := v(f, s)
+		in.Polarity = observations.PolarityNegative
+		return in
+	}
+}
+
+// addCachedTerm gives a handle another cached term row, as the reconciler
+// would have written it.
+func (f *fixture) addCachedTerm(entityID []byte, prop string, rank int, key string, support int, reason string) {
+	f.t.Helper()
+	term, err := propertyterms.Lookup(f.c, f.props[prop].ID, key, propertyterms.OriginProvenencia)
+	must(f.t, err)
+	_, err = f.db.Exec(`INSERT INTO auto_reconciler_values (entity_id, property_id, rank, value_term_id, support, against, reason)
+		VALUES (?, ?, ?, ?, ?, 0, ?)`, entityID, f.props[prop].ID, rank, term.ID, support, reason)
+	must(f.t, err)
+}
+
+func (f *fixture) setCachedTerm(entityID []byte, prop string, support int, reason string) {
+	f.t.Helper()
+	_, err := f.db.Exec(`UPDATE auto_reconciler_values SET support = ?, reason = ? WHERE entity_id = ? AND property_id = ? AND rank = 1`,
+		support, reason, entityID, f.props[prop].ID)
+	must(f.t, err)
+}
+
+func sexReason(t *testing.T, res matching.Result, ref string) match.Reason {
+	t.Helper()
+	for _, m := range res.Matches {
+		if m.Ref != ref {
+			continue
+		}
+		for _, r := range m.Reasons {
+			if r.Property.Key == "sex_at_birth" {
+				return r
+			}
+		}
+	}
+	t.Fatalf("no sex reason for %s in %+v", ref, res.Matches)
+	return match.Reason{}
+}
+
+func TestForSubjectJudgesAgainstTheMajority(t *testing.T) {
+	f := newFixture(t)
+	h := f.handle("person", named("Mary Robins"), termed("sex_at_birth", "male"))
+	f.setCachedTerm(h.Entity.ID, "sex_at_birth", 3, "kept")
+	f.addCachedTerm(h.Entity.ID, "sex_at_birth", 2, "female", 1, "kept")
+
+	female := f.subject("person", named("Mary Robins"), termed("sex_at_birth", "female"))
+	res, err := matching.ForSubject(f.db, female.ID, matching.Options{})
+	must(t, err)
+	r := sexReason(t, res, h.Entity.Ref)
+	if r.Contribution != -2 || r.Probe.Label != "female" || r.Candidate.Label != "male" {
+		t.Fatalf("one dissenting reading: %+v", r)
+	}
+
+	male := f.subject("person", named("Mary Robins"), termed("sex_at_birth", "male"))
+	res, err = matching.ForSubject(f.db, male.ID, matching.Options{})
+	must(t, err)
+	if r := sexReason(t, res, h.Entity.Ref); r.Contribution != 1 {
+		t.Fatalf("the majority matches: %+v", r)
+	}
+
+	t.Run("a denied value", func(t *testing.T) {
+		d := f.handle("person", named("Mary Robins"), termed("sex_at_birth", "male"))
+		f.setCachedTerm(d.Entity.ID, "sex_at_birth", 3, "denied")
+		f.addCachedTerm(d.Entity.ID, "sex_at_birth", 2, "female", 1, "kept")
+		res, err := matching.ForSubject(f.db, male.ID, matching.Options{})
+		must(t, err)
+		r := sexReason(t, res, d.Entity.Ref)
+		if r.Contribution != -2 || r.Probe.Label != "male" || r.Candidate.Label != "male" {
+			t.Fatalf("%+v", r)
+		}
+	})
+}
+
+func TestSubjectsValuesNegatives(t *testing.T) {
+	f := newFixture(t)
+	profile, _ := match.DefaultProfile("person")
+	both := f.subject("person", named("Mary Robins"), termed("sex_at_birth", "female"), negated(termed("sex_at_birth", "male")))
+	only := f.subject("person", negated(termed("sex_at_birth", "male")))
+
+	got, err := matching.SubjectsValues(f.db, [][]byte{both.ID, only.ID}, profile)
+	must(t, err)
+	sex := match.Property{Key: "sex_at_birth", Origin: "provenencia"}
+	vs := got[string(both.ID)][sex]
+	if len(vs) != 2 || vs[0].Negative || vs[0].Term != "female" || !vs[1].Negative || vs[1].Term != "male" || len(vs[1].ObservationID) != 16 {
+		t.Fatalf("%+v", vs)
+	}
+	if string(vs[0].ObservationID) >= string(vs[1].ObservationID) {
+		t.Fatalf("not in Observation id order: %x then %x", vs[0].ObservationID, vs[1].ObservationID)
+	}
+	if o := got[string(only.ID)][sex]; len(o) != 1 || !o[0].Negative {
+		t.Fatalf("%+v", o)
+	}
+
+	f.handle("person", named("Mary Robins"), termed("sex_at_birth", "male"))
+	res, err := matching.ForSubject(f.db, only.ID, matching.Options{})
+	must(t, err)
+	if len(res.Matches) != 0 {
+		t.Fatalf("a Subject with only a negative ranks nothing: %+v", res.Matches)
+	}
+}
