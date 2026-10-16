@@ -1,81 +1,79 @@
 # Depictions and likenesses
 
-**Status:** pulled into [Spike 10](deployment-plan.md). The PR split and the calls for this spike are there. This note stays the design.
+**Status:** pulled into [Spike 10](deployment-plan.md). The PR split and the calls for this spike are there. This note stays the design. Reshaped 2026-10-16: a depiction is an owned value row holding the region and an extracted image, not a pointer back to the Citation.
 
-A photograph of a person, a house, a gravestone, or a wedding should be citable evidence whose value is the picture. Today a Citation can already draw a polygon around that region, and the composer still expects the region to become text.
+A photograph of a person, a house, a gravestone, or a wedding should be citable evidence whose value is the picture. Today a Citation can already draw a polygon around a region, and the composer still expects the Citation to become text.
 
 ## Problem
 
 The evidence chain is Source → Artifact → Citation → Observation.
 
 - The Artifact holds the scan or born-digital image ([`source-layer-data-model.md`](../../source-layer-data-model.md)).
-- The Citation locator can be `artifact`, optional `page`, and a `region` polygon ([`interpretation-layer-data-model.md`](../../interpretation-layer-data-model.md) §3). That polygon is the crop: a face, a house, a seal.
+- The Citation locator can be `artifact`, optional `page`, and a `region` polygon ([`interpretation-layer-data-model.md`](../../interpretation-layer-data-model.md) §3).
 - `transcription` is the reading of words or speech. It is nullable. The composer treats a Citation as something to transcribe.
 - Observation values are `text`, `integer`, `date`, `name`, `subject`, or `term`. None of them is a picture.
 
-A group photo is the case that hurts. One Artifact, several faces. Each face is a polygon. The researcher wants those crops on the person, not a sentence that describes the face. A `likeness` property key alone still has to store one of the existing value types, so it would be a caption.
+A group photo is the case that hurts. One Artifact, several faces. The researcher wants those faces on the people, not a sentence that describes each face. A `likeness` property key alone still has to store one of the existing value types, so it would be a caption.
 
 ## Shape
 
-**`depiction` is a value type.** The Observation does not gain an image column and does not copy file bytes. Its value is its own Citation: the Artifact plus the locator. The UI renders that region. Empty `transcription` is valid. Optional `description` can still say “seated man, left.”
+**`depiction` is a value type with its own value row.** A depiction is stored the way a date or a name is: the Observation owns one `depiction_values` row (`observations.value_depiction_id`). The row holds two things:
 
-**`likeness` is the seeded person property of that type.** That key is what puts a portrait on a person. Place, event, and signature keys are later ([`ideas/depictions-and-likenesses.md`](../../ideas/depictions-and-likenesses.md)). Rendering, empty transcription, and side-by-side comparison hang off the value type. The key decides where it shows up.
+- **The region**: a locator document (page and polygon) on the Citation's Artifact. It records where the picture came from, so the original stays the evidence and the face can be shown in place, re-extracted, or checked.
+- **The image**: a File holding the extracted picture (`image_file_id`). Its lineage is explicit through the chain: region → Citation → Artifact → the Artifact's File. It is not a row in `file_derivatives`: those are thumbnails, reproducible and disposable ([`source-layer-data-model.md`](../../source-layer-data-model.md) §8), and the image is evidence that a purge must never touch.
+
+**The Citation is the photo, not the face.** A Citation on a photograph cites the photo or the page, with a transcription when there is one (*Wedding party, 1902*), or none. Each face is a likeness Observation on that Citation with its own region and image. A group photo is one Citation with one likeness per person, the same way one passage yields several names.
+
+**`likeness` is the seeded person property of that type**, cardinality `multiple`. That key is what puts a portrait on a person. Place, event, and signature keys are later ([`ideas/depictions-and-likenesses.md`](../../ideas/depictions-and-likenesses.md)). Rendering, the image, and side-by-side comparison hang off the value type. The key decides where it shows up.
 
 ```text
 Photograph Source
-  Artifact: scan.jpg
-  Citation: polygon around one face
-    transcription empty
-  Observation
-    person subject N1 -- likeness --> this Citation's region
+  Artifact: wedding.jpg            (File F)
+  Citation: the photo              transcription "Wedding party, 1902" or empty
+    Observation  N1 -- likeness --> depiction value: region R1 on F, image File C1
+    Observation  N2 -- likeness --> depiction value: region R2 on F, image File C2
 ```
 
-A group photo is several Citations on one Artifact, one likeness Observation per person. The whole frame can be a depiction of the event.
+Several likenesses of one person are a gallery. They do not compete the way two birth dates do. The auto-reconciler reconciles them like any value (one image is one value; negatives, provisional members, and weak evidence apply), and `multiple` keeps every distinct one.
 
-Several likenesses of one person are a gallery. They do not compete the way two birth dates do, and they do not need a Reconciliation Claim to be useful.
+One of them can be the preferred portrait. That is a display pointer on the person, not a claim: the gallery still holds every likeness. The Person page lead and the Persons list thumb use that image. With no choice, both use the earliest likeness. Removing the chosen likeness clears the pointer and the thumb falls back. The choice is made on the Person page.
 
-One of them can be the preferred portrait. That is a display pointer on the person, not a claim: the gallery still holds every likeness. The Person page lead and the Persons list thumb use that crop. With no choice, both use the earliest likeness. Removing the chosen likeness clears the pointer and the thumb falls back. The choice is made on the Person page.
+On promote, a likeness lines up like a name: Promote's evidence sheet ([`promote-graph-alignment.md`](../../promote-graph-alignment.md)) shows the two images as one comparison, and pinning it pins the two Observations that already exist. It does not create a picture and it does not write a transcription.
 
-On promote, a likeness lines up like a name: Promote's evidence sheet ([`promote-graph-alignment.md`](../../promote-graph-alignment.md)) shows the two crops as one comparison, and pinning it pins the two Observations that already exist. It does not create a picture and it does not write a transcription.
+## The image
 
-## Crop cache
+**The client extracts; Go stores its own copy.** The composer already has the Artifact open, so it renders the crop: a pixel crop for an image, and PDFKit drawing the page region for a PDF. Go has no PDF engine and does not grow one. The client sends the crop the way Artifact import sends a file: as a path to a file it wrote, never as bytes over the FFI.
 
-The person page finds pictures through the evidence chain, then shows a small raster. It should not open the original scan and reapply the polygon on every visit.
+**Client bytes are untrusted** (user, 2026-10-16). Go stages the crop before the catalog write: the same open-and-check step every file import uses (an absolute path, no symlinks, a regular file, a size cap), then the same bounded decode thumbnails use (format allowlist, pixel budget), then **its own re-encoded image**. The client's bytes are never stored, and no decode runs while the catalog write is open.
 
-`file_derivatives` today is one row per source File and derivative type (`UNIQUE (source_file_id, derivative_type)` — one `thumbnail` per File). A photograph has many polygons, so a crop cannot use that key. The cache key is the **File plus the locator**.
+**Format:** the polygon's bounding box, PNG, scaled down to at most 2048 on the long edge. A transparent polygon mask is later; the polygon itself is kept in the region.
 
-Same content-addressed `files` store. Disposable, not audited, not an Artifact, not the Observation’s value. Purge it and the Citation still names the face. If the polygon changes, that cache entry is stale and a new crop is generated. Two Citations with the same pixels can share the stored bytes. The derivative rows stay separate.
+**Lifetime follows the evidence chain.** The image is stored in the same write as its Observation, so a failed save leaves no file behind. A region edit stores a new image; the old one is released when nothing else points at it. Deleting the Observation releases its value row and the image File when unused; one shared purge removes the object from disk. A Citation cannot be deleted while it has Observations, so by the time a Citation goes, every image made from it has gone. Identical pixels share one stored File (the store is content-addressed); the value rows stay separate.
 
-Mint the crop when the depiction Observation is saved. The composer is the right moment for a PDF: the document is already open. `PDFView` is a live view, not a bitmap, so save asks PDFKit to draw the locator into an image at a fixed size. That does not require a PDF renderer in the Go core. A JPEG scan can be clipped the same way, in the composer or in Go. A missing cache is filled the next time a client that can open that Artifact draws it again.
-
-Spike 10 saves the bounding box of the polygon as a JPEG, longest edge 512. A transparent polygon crop is later ([`ideas/depictions-and-likenesses.md`](../../ideas/depictions-and-likenesses.md)).
-
-Person page, cache present:
+Person page:
 
 ```text
-accepted identity claims for the person
-  → depiction Observations on those member subjects
-  → each Observation's Citation
-  → crop cached for that File and locator
+the person's cached likeness values (auto_reconciler_values, kept or weak)
+  → each value's image File
 ```
 
-That is one join, then a handful of small rasters. The slow path is a missing cache, not the query.
+One read, then a handful of small images. No crop cache, and no "fill it in the next time a client can open the Artifact."
 
 ## Settled (do not reopen)
 
 | Call | Why |
 | --- | --- |
 | **Value type, not only a property key** | `likeness` still needs somewhere to put the picture. Existing value types are text-like or structured scalars. |
-| **The Citation is the value** | The locator is already the crop. Copying bytes onto the Observation makes a second original. |
-| **Crop is a derivative cache** | Person page stays fast. Evidence stays the Artifact plus the polygon. |
-| **Cache key is File + locator** | One File has many regions. The current one-type-per-File unique key cannot hold them. |
-| **Composer draws the PDF crop** | The document is open. Go does not grow a PDF engine for this. |
-| **Gallery, not a single concluded face** | Photos accumulate. Reconciliation stays for values that compete. |
+| **The value is an owned row: region plus image** | Every value type stores its value; a depiction is no exception. The region keeps the original as the evidence. The image is what every reader shows. (Replaces "The Citation is the value", 2026-10-16.) |
+| **The Citation is the photo; each face is an Observation** | One photo, many faces, like one passage with many names. (Replaces "several Citations on one Artifact".) |
+| **The image is the value's own File, not a derivative row** | Lineage is explicit through region → Citation → Artifact → File. `file_derivatives` stays reproducible, disposable thumbnails, so a purge can never delete evidence (answered 2026-10-16). (Replaces the crop cache keyed by File plus locator.) |
+| **The client renders; Go validates and re-encodes** | The document is open in the composer. Go does not grow a PDF engine, and does not store bytes it did not produce. |
+| **Gallery, not a single concluded face** | Photos accumulate. `likeness` is cardinality `multiple`, so the auto-reconciler keeps every distinct image; a Reconciliation Claim stays for values that compete. |
 | **Preferred portrait is a display pointer** | One likeness leads the page and the list. The others stay in the gallery. It is not a Reconciliation Claim. |
 
 ## Later
 
-Place and event keys, signatures, a transparent polygon, and the Windows PDF draw are in [`ideas/depictions-and-likenesses.md`](../../ideas/depictions-and-likenesses.md).
+Place and event keys, signatures, a transparent polygon, and a Windows PDF draw are in [`ideas/depictions-and-likenesses.md`](../../ideas/depictions-and-likenesses.md).
 
 ## Explicitly out of this note
 
@@ -88,3 +86,4 @@ Place and event keys, signatures, a transparent polygon, and the Windows PDF dra
 - [`interpretation-layer-data-model.md`](../../interpretation-layer-data-model.md) — Citations, locators, Observation value types
 - [`source-layer-data-model.md`](../../source-layer-data-model.md) — `files`, `file_derivatives`
 - [`conclusion-layer-data-model.md`](../../conclusion-layer-data-model.md) — members and Reconciliation, when a likeness is shown on a person
+- [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md) — value-type modules
