@@ -26,13 +26,13 @@ What this spike builds is below. Accents are in [`international-names.md`](inter
   S10-28 weighs each value by its effective support relative to the best-supported value on its side (a leader weighs 1), and judges contradictions against the leaders. A concluded value dominating the rest waits on Reconciliation Claims ([`ideas/name-matching-enhancements.md`](../../ideas/name-matching-enhancements.md)).
 - **Negative evidence (S9-14; landed in S10-28).** Negative Observations load, and one that is compatible with a leading value on the other side counts as a contradiction.
 - **Event types and places relate.** Birth vs baptism, death vs burial should partly match. That's a term-affinity table, the same pattern as name roles. Place comparison can use the `part_of` chain already shipped. Flat text stays the strong match.
-- **Date precision below the year (S9-21).** Spans and gaps are counted in whole years:
+- **Date precision below the year (S9-21; landed in S10-30).** Spans and gaps are counted in whole years:
   - December 1817 vs January 1818 is "a year apart" (0.53), lower than May vs September of the same year (0.6).
   - Ranges ignore their months and days: "BET MAR 1817 AND JUN 1817" reads as all of 1817.
 
   S9-21 stored the windows. This spike measures spans and gaps in days from them.
-- **ABT on spans.** "About" doubles the tolerance only when both dates are points. "ABT 1817" against a range or bound uses the normal tolerance.
-- **Cross-property dates.** An event's `date` can overlap another's `start_date` / `end_date` by window. Calendars, double dating, and researcher-defined property weights are later ([`ideas/name-matching-enhancements.md`](../../ideas/name-matching-enhancements.md)).
+- **ABT on spans (landed in S10-30).** "About" doubles the tolerance only when both dates are points. "ABT 1817" against a range or bound uses the normal tolerance.
+- **Cross-property dates (landed in S10-30).** An event's `date` can overlap another's `start_date` / `end_date` by window. Calendars, double dating, and researcher-defined property weights are later ([`ideas/name-matching-enhancements.md`](../../ideas/name-matching-enhancements.md)).
 
 ## The engine
 
