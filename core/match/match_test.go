@@ -177,12 +177,12 @@ func TestRankEventsAndPlaces(t *testing.T) {
 	probe := event("", "birth", date(1817, ip(5), ip(14))).Values
 	got := Rank(ev, probe, []Candidate{
 		event("EVT-A", "birth", date(1817, ip(5), ip(14))), // 4 + 6
-		event("EVT-B", "birth", date(1818, nil, nil)),      // 4 + 6 × 0.533
+		event("EVT-B", "birth", date(1818, nil, nil)),      // 4 + 6 × 0.498
 		event("EVT-C", "birth", Value{}),                   // type alone: 4, below
 		event("EVT-D", "death", date(1817, ip(5), ip(14))), // −6 + 6 = 0
 		event("EVT-E", "birth", date(1900, nil, nil)),      // 4 − 4 = 0
 	}, 0)
-	if want := "[EVT-A=10.0 EVT-B=7.2]"; refs(got) != want {
+	if want := "[EVT-A=10.0 EVT-B=7.0]"; refs(got) != want {
 		t.Fatalf("events: got %s, want %s", refs(got), want)
 	}
 

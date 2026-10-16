@@ -271,7 +271,7 @@ func TestForSubjectEventsAndPlaces(t *testing.T) {
 	birth := f.subject("event", termed("event_type", "birth"), dated(1817, ip(5), ip(14)))
 	res, err := matching.ForSubject(f.db, birth.ID, matching.Options{})
 	must(t, err)
-	if want := fmt.Sprintf("[%s=10.0 %s=7.2]", sameDay.Entity.Ref, nextYear.Entity.Ref); refs(res.Matches) != want {
+	if want := fmt.Sprintf("[%s=10.0 %s=7.0]", sameDay.Entity.Ref, nextYear.Entity.Ref); refs(res.Matches) != want {
 		t.Fatalf("events: got %s, want %s", refs(res.Matches), want)
 	}
 

@@ -13,6 +13,11 @@ func span(lo, hi *int) Value {
 	return Value{Date: &datevalues.Value{Kind: datevalues.KindRange, StartYear: lo, EndYear: hi}}
 }
 
+// span2 is BET month1 year1 AND month2 year2.
+func span2(y1, m1, y2, m2 int) Value {
+	return Value{Date: &datevalues.Value{Kind: datevalues.KindRange, StartYear: &y1, StartMonth: &m1, EndYear: &y2, EndMonth: &m2}}
+}
+
 func bound(q string, y int) Value {
 	return Value{Date: &datevalues.Value{Kind: datevalues.KindPoint, Qualifier: q, StartYear: &y}}
 }
@@ -56,6 +61,14 @@ func TestDateComparerScores(t *testing.T) {
 		{"before vs before, different years", DateComparer{}, bound("BEF", 1800), bound("BEF", 1810), 0.2, true},
 		{"tolerance zero", DateComparer{Tolerance: Set(0)}, date(1817, nil, nil), date(1818, nil, nil), 0, true},
 		{"inverted range reads as its years", DateComparer{}, span(ip(1820), ip(1815)), span(ip(1815), ip(1820)), 1, true},
+		{"either side of a new year", DateComparer{}, date(1817, ip(12), nil), date(1818, ip(1), nil), 0.8 * (1 - (31.0/365)/3), true},
+		{"either side of a new year, tolerance zero", DateComparer{Tolerance: Set(0)}, date(1817, ip(12), nil), date(1818, ip(1), nil), 0, true},
+		{"a month against a year", DateComparer{}, date(1817, ip(12), nil), date(1818, nil, nil), 0.8 * (1 - (1.5-349.5/365)/3), true},
+		{"a day against the next year", DateComparer{}, date(1817, ip(5), ip(14)), date(1818, nil, nil), 0.8 * (1 - (1+(1-133.5/365)-0.5)/3), true},
+		{"a day against the year after next", DateComparer{}, date(1817, ip(5), ip(14)), date(1819, nil, nil), 0.8 * (1 - (2+(1-133.5/365)-0.5)/3), true},
+		{"a day against three years on", DateComparer{}, date(1817, ip(5), ip(14)), date(1820, nil, nil), 0, true},
+		{"months range contains the day", DateComparer{}, span2(1817, 3, 1817, 6), date(1817, ip(5), ip(14)), 0.8, true},
+		{"months range, a later month", DateComparer{}, span2(1817, 3, 1817, 6), date(1817, ip(9), ip(14)), 0.8 * (1 - (90.5/365)/3), true},
 		{"empty range", DateComparer{}, span(nil, nil), date(1818, nil, nil), 0, false},
 		{"phrase only", DateComparer{}, Value{Date: &datevalues.Value{Phrase: "spring"}}, date(1817, nil, nil), 0, false},
 	}
@@ -67,6 +80,48 @@ func TestDateComparerScores(t *testing.T) {
 			}
 			if back, _ := tt.cmp.Compare(tt.b, tt.a); !approx(got)(back) {
 				t.Fatalf("not symmetric: %v then %v", got, back)
+			}
+		})
+	}
+}
+
+func TestDateComparerABT(t *testing.T) {
+	about := func(y int) Value {
+		return Value{Date: &datevalues.Value{Kind: datevalues.KindPoint, Qualifier: datevalues.QualifierABT, StartYear: ip(y)}}
+	}
+	tests := []struct {
+		name string
+		a, b Value
+		want float64
+	}{
+		{"about against a range three years on", about(1817), span(ip(1820), ip(1821)), 0},
+		{"two points double the tolerance", about(1817), about(1820), 0.8 * (1 - 3.0/5)},
+		{"about against a bound it overlaps", about(1817), bound("BEF", 1820), 0.2},
+		{"about against a bound two years off", about(1817), bound("BEF", 1815), 0.2 * (1 - 2.0/3)},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, ok := DateComparer{}.Compare(tt.a, tt.b)
+			if !ok || !approx(tt.want)(got) {
+				t.Fatalf("got %v %v, want %v", got, ok, tt.want)
+			}
+		})
+	}
+}
+
+func BenchmarkDateComparer(b *testing.B) {
+	pairs := map[string][2]Value{
+		"points":       {date(1817, ip(5), ip(14)), date(1818, ip(1), nil)},
+		"point, range": {date(1817, ip(9), ip(14)), span2(1817, 3, 1817, 6)},
+		"range, range": {span2(1815, 3, 1817, 6), span2(1818, 1, 1819, 2)},
+		"bound, point": {bound("BEF", 1820), date(1817, nil, nil)},
+		"same year":    {date(1817, ip(5), nil), date(1817, ip(9), nil)},
+	}
+	for name, p := range pairs {
+		b.Run(name, func(b *testing.B) {
+			b.ReportAllocs()
+			for i := 0; i < b.N; i++ {
+				DateComparer{}.Compare(p[0], p[1])
 			}
 		})
 	}
@@ -112,11 +167,31 @@ func TestDateComparerInvariants(t *testing.T) {
 		}
 		return ip(lo + rng.Intn(n))
 	}
+	// opt2 draws a value with probability 1/2.
+	opt2 := func(rng *rand.Rand, lo, n int) *int {
+		if rng.Intn(2) == 0 {
+			return nil
+		}
+		return ip(lo + rng.Intn(n))
+	}
 	for _, seed := range []int64{1, 2, 3, 4} {
 		rng := rand.New(rand.NewSource(seed))
 		gen := func() Value {
 			if rng.Intn(3) == 0 {
-				return span(opt(rng, 1810, 10), opt(rng, 1815, 10))
+				r := span(opt(rng, 1810, 10), opt(rng, 1815, 10))
+				if r.Date.StartYear != nil {
+					r.Date.StartMonth = opt2(rng, 1, 12)
+					if r.Date.StartMonth != nil {
+						r.Date.StartDay = opt2(rng, 1, 28)
+					}
+				}
+				if r.Date.EndYear != nil {
+					r.Date.EndMonth = opt2(rng, 1, 12)
+					if r.Date.EndMonth != nil {
+						r.Date.EndDay = opt2(rng, 1, 28)
+					}
+				}
+				return r
 			}
 			d := &datevalues.Value{Kind: datevalues.KindPoint, Qualifier: quals[rng.Intn(len(quals))], StartYear: opt(rng, 1810, 15)}
 			if d.StartYear != nil {

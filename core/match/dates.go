@@ -1,23 +1,32 @@
 package match
 
-import "github.com/mendahu/provenencia/core/database/datevalues"
+import (
+	"github.com/mendahu/provenencia/core/autoreconcile"
+	"github.com/mendahu/provenencia/core/database/datevalues"
+)
 
-// DateComparer compares dates as spans of years. Settings default to
-// DefaultDates (registry.go), where each one is described.
+// DateComparer compares dates by the days they cover. Settings default to
+// DefaultDates (registry.go), where each one is described. Tolerance counts
+// civil years: the cutoff reads the year numbers of the two dates. The
+// fall-off inside it counts days, as a gap between the dates' centres in
+// years, so December 1817 and January 1818 are a month apart, not a year.
 //
 //   - Identical dates score 1 at any precision ("1817" against "1817",
 //     "BEF 1820" against "BEF 1820"); only differing precision costs.
-//   - Two exact points (or ABT points) compare by year, refined by month and
-//     day: MissingDay, MissingMonth, OtherDay, OtherMonth within the same
-//     year; years apart fall off linearly from YearsApartFrom within
-//     Tolerance; beyond it is a disagreement (0). ABT on either side
-//     multiplies the tolerance by ApproxToleranceFactor.
+//   - Two exact points (or ABT points) in one civil year take a tier by month
+//     and day: MissingDay, MissingMonth, OtherDay, OtherMonth. In different
+//     years they fall off linearly from YearsApartFrom within Tolerance;
+//     beyond it is a disagreement (0). ABT on either side multiplies the
+//     tolerance by ApproxToleranceFactor. The score is not continuous at the
+//     year boundary: 31 December against 1 January is about 0.799, two days
+//     in one month 0.7.
 //   - When either side is a range (FROM / TO / BET) or a bound (BEF, AFT),
-//     overlapping spans are consistent, judged by the wider span:
-//     SpanOneYear, less SpanPerExtraYear per extra year, never below
-//     SpanFloor; an open span (BEF, AFT, FROM without TO) is SpanFloor. Spans
-//     apart fall off from that within Tolerance; beyond it is a disagreement.
-//     "BEF 1820" against 1823 is 3 years apart, not an approximate match.
+//     dates sharing a day are consistent, judged by the wider span:
+//     SpanOneYear, less SpanPerExtraYear per extra year (a span under a year
+//     counts as one), never below SpanFloor; an open span (BEF, AFT, FROM
+//     without TO) is SpanFloor. Dates apart fall off from that within
+//     Tolerance; beyond it is a disagreement. "BEF 1820" against 1823 is 3
+//     years apart, not an approximate match.
 //
 // A date with no year (a phrase) is not comparable.
 type DateComparer struct {
@@ -51,83 +60,67 @@ func (c DateComparer) resolve() dateRules {
 	}
 }
 
-// yearSpan is a date's years, lo…hi; an open end is unbounded (BEF, AFT,
-// FROM without TO). point marks an exact or ABT point, whose month and day
-// refine the comparison.
-type yearSpan struct {
-	lo, hi         int
-	openLo, openHi bool
-	point, approx  bool
-	month, day     *int
+// dateSpan is a date's first and last end. An open end is unbounded (BEF,
+// AFT, FROM without TO). point marks an exact or ABT point, whose month and
+// day refine the comparison. It has no pointer fields, so == means equal by
+// value.
+type dateSpan struct {
+	first, last   autoreconcile.DateEnd
+	point, approx bool
 }
 
-func spanOf(d *datevalues.Value) (yearSpan, bool) {
-	if d.Kind == datevalues.KindRange {
-		if d.StartYear == nil && d.EndYear == nil {
-			return yearSpan{}, false
-		}
-		s := yearSpan{openLo: d.StartYear == nil, openHi: d.EndYear == nil}
-		if d.StartYear != nil {
-			s.lo = *d.StartYear
-		}
-		if d.EndYear != nil {
-			s.hi = *d.EndYear
-		}
-		if !s.openLo && !s.openHi && s.lo > s.hi {
-			s.lo, s.hi = s.hi, s.lo // an inverted range reads as its years
-		}
-		return s, true
+func spanOf(d *datevalues.Value) (dateSpan, bool) {
+	first, last, ok := autoreconcile.DateEnds(*d)
+	if !ok {
+		return dateSpan{}, false
 	}
-	y, m, day := d.StartYear, d.StartMonth, d.StartDay
-	if y == nil {
-		y, m, day = d.EndYear, d.EndMonth, d.EndDay
+	s := dateSpan{first: first, last: last}
+	if d.Kind != datevalues.KindRange && d.Qualifier != datevalues.QualifierBEF && d.Qualifier != datevalues.QualifierAFT {
+		s.point, s.approx = true, d.Qualifier != ""
 	}
-	if y == nil {
-		return yearSpan{}, false
-	}
-	switch d.Qualifier {
-	case datevalues.QualifierBEF:
-		return yearSpan{hi: *y, openLo: true}, true
-	case datevalues.QualifierAFT:
-		return yearSpan{lo: *y, openHi: true}, true
-	}
-	return yearSpan{lo: *y, hi: *y, point: true, approx: d.Qualifier != "", month: m, day: day}, true
+	return s, true
 }
 
-// spanScore is what overlapping spans are worth, judged by the wider one.
-func (r dateRules) spanScore(a, b yearSpan) float64 {
-	width := func(s yearSpan) (int, bool) {
-		if s.openLo || s.openHi {
-			return 0, false
-		}
-		return s.hi - s.lo + 1, true
+func centre(e autoreconcile.DateEnd) float64 { return (e.From + e.To) / 2 }
+
+// width is the years a closed span covers; ok is false for an open span.
+func (s dateSpan) width() (float64, bool) {
+	if s.first.Open || s.last.Open {
+		return 0, false
 	}
-	wa, okA := width(a)
-	wb, okB := width(b)
+	return s.last.To - s.first.From, true
+}
+
+// shares reports whether two spans have a day in common. An open end reaches
+// past every date.
+func shares(a, b dateSpan) bool {
+	return (a.last.Open || b.first.Open || b.first.Lo <= a.last.Hi) &&
+		(b.last.Open || a.first.Open || a.first.Lo <= b.last.Hi)
+}
+
+// spanScore is what overlapping spans are worth, judged by the wider one; a
+// span under a year counts as one year.
+func (r dateRules) spanScore(a, b dateSpan) float64 {
+	wa, okA := a.width()
+	wb, okB := b.width()
 	if !okA || !okB {
 		return r.spanFloor
 	}
-	w := max(wa, wb)
-	return max(r.spanOne-r.spanStep*float64(w-1), r.spanFloor)
+	w := max(wa, wb, 1)
+	return max(r.spanOne-r.spanStep*(w-1), r.spanFloor)
 }
 
-// sameOptional: both missing, or both present and equal.
-func sameOptional(a, b *int) bool {
-	if a == nil || b == nil {
-		return a == nil && b == nil
+// apart is the gap between two spans that share no day: the later one's first
+// end less the earlier one's last end, as civil years and as years between
+// their centres. Both are 0 when the spans share a day.
+func apart(a, b dateSpan) (years int, gap float64) {
+	if shares(a, b) {
+		return 0, 0
 	}
-	return *a == *b
-}
-
-// yearsApart is the gap between two spans, 0 when they overlap.
-func yearsApart(a, b yearSpan) int {
-	switch {
-	case !a.openHi && !b.openLo && a.hi < b.lo:
-		return b.lo - a.hi
-	case !b.openHi && !a.openLo && b.hi < a.lo:
-		return a.lo - b.hi
+	if !a.last.Open && !b.first.Open && a.last.Hi < b.first.Lo {
+		return b.first.Year - a.last.Year, centre(b.first) - centre(a.last)
 	}
-	return 0
+	return a.first.Year - b.last.Year, centre(a.first) - centre(b.last)
 }
 
 func (c DateComparer) Compare(a, b Value) (float64, bool) {
@@ -141,34 +134,39 @@ func (c DateComparer) Compare(a, b Value) (float64, bool) {
 	}
 	r := c.resolve()
 	tol := r.tol
-	gap := yearsApart(sa, sb)
 
 	if !sa.point || !sb.point {
 		if sa == sb {
 			return 1, true
 		}
-		if gap > tol {
+		years, gap := apart(sa, sb)
+		if years > tol {
 			return 0, true
 		}
-		return r.spanScore(sa, sb) * (1 - float64(gap)/float64(tol+1)), true
+		return r.spanScore(sa, sb) * (1 - gap/float64(tol+1)), true
 	}
 	if sa.approx || sb.approx {
 		tol *= r.approx
 	}
-	sameMonth := sa.month != nil && sb.month != nil && *sa.month == *sb.month
-	switch {
-	case gap == 0 && sameOptional(sa.month, sb.month) && sameOptional(sa.day, sb.day):
-		return 1, true
-	case gap == 0 && sameMonth && sa.day != nil && sb.day != nil:
-		return r.otherDay, true
-	case gap == 0 && sameMonth:
-		return r.missingDay, true
-	case gap == 0 && sa.month != nil && sb.month != nil:
-		return r.otherMonth, true
-	case gap == 0:
-		return r.missingMonth, true
-	case gap <= tol:
-		return r.apartFrom * (1 - float64(gap)/float64(tol+1)), true
+	ea, eb := sa.first, sb.first
+	if ea.Year != eb.Year {
+		years := max(ea.Year-eb.Year, eb.Year-ea.Year)
+		if years > tol {
+			return 0, true
+		}
+		gap := max(centre(ea)-centre(eb), centre(eb)-centre(ea))
+		return r.apartFrom * (1 - gap/float64(tol+1)), true
 	}
-	return 0, true
+	sameMonth := ea.Month != 0 && ea.Month == eb.Month
+	switch {
+	case ea.Month == eb.Month && ea.Day == eb.Day:
+		return 1, true
+	case sameMonth && ea.Day != 0 && eb.Day != 0:
+		return r.otherDay, true
+	case sameMonth:
+		return r.missingDay, true
+	case ea.Month != 0 && eb.Month != 0:
+		return r.otherMonth, true
+	}
+	return r.missingMonth, true
 }
