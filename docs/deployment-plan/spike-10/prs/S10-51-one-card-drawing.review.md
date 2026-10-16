@@ -74,3 +74,6 @@ Maintainability: all five answers resolved; no new blockers; verdict **Fits**. N
 
 ### X-4 · nit · Ghost frame includes the outset
 Logged; manual check 2 covers it.
+
+## After review
+- 2026-10-16: the user chose to ship S10-51 stacked on #418. Status → Planned; the branch is cut from `s10-44-unpromote` and the PR is based on it. No Decision, Scope or AC changed.

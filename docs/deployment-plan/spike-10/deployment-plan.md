@@ -737,7 +737,7 @@ S10-33 ──▶ S10-35 gallery (after S10-23; briefs D12 and D9 already drawn) 
 
 **Brief:** — (no new chrome)
 
-**Plan:** [`prs/S10-51-one-card-drawing.md`](prs/S10-51-one-card-drawing.md) — Blocked on #418
+**Plan:** [`prs/S10-51-one-card-drawing.md`](prs/S10-51-one-card-drawing.md) — Planned, stacked on #418
 
 | | |
 | --- | --- |

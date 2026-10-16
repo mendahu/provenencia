@@ -1,13 +1,13 @@
 # S10-51 — Draw Evidence cards in one place
 
-**Status:** Blocked — on S10-44 ([#418](https://github.com/mendahu/provenencia/pull/418)) merging
+**Status:** Planned
 **Spike / slice:** Spike 10 · Slice 11 — One card drawing
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#s10-51--draw-evidence-cards-in-one-place)
 **Brief:** — (no new chrome: the ghost and every card look as they do today)
 **Board:** —
 **Depends on:** S10-44 ([#418](https://github.com/mendahu/provenencia/pull/418), ready, not merged)
 **Blocks:** —
-**Branch:** `s10-51-one-card-drawing`, cut from `main` after #418 merges
+**Branch:** `s10-51-one-card-drawing`, cut from `s10-44-unpromote` @ `1c489b80`; the PR's base is `s10-44-unpromote` until #418 merges
 **Version bump:** none — Spike 10 PRs leave `VERSION` at 0.2.0, and the product bump is cut when a release ships ([`docs/versioning.md`](../../../versioning.md))
 **Skills to load:** [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md), [`add-swift-test`](../../../../.agents/skills/add-swift-test/SKILL.md)
 **Rules that bind:** `.cursor/rules/design-system-layers.mdc`, `.cursor/rules/macos-client.mdc`, `.cursor/rules/swift-tests.mdc`
@@ -278,7 +278,7 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `G
 
 **Stop and report if:**
 
-- #418 has not merged into `main`, or merged with changes to `EvidenceSubjectCard.swift`, `EvidenceAppKitCard.swift` or `EvidenceCanvasCard.swift` that make a §4 row untrue.
+- `s10-44-unpromote` (or `main`, once #418 merges) has changes to `EvidenceSubjectCard.swift`, `EvidenceAppKitCard.swift` or `EvidenceCanvasCard.swift` after `1c489b80` that make a §4 row untrue.
 - After STEP-3, any `measuredLayoutMatchesThePaint` case or `bridgeTargetsFollowThePaint` fails on `EvidenceCardView`. Report the case, the layout and drawn heights, and the region that disagrees.
 - Making `EvidenceSubjectCard` or `EvidenceBridgeCard` an `@MainActor enum` breaks a caller that needs a non-isolated member beyond those already `nonisolated`.
 - A `L10n.EvidenceGraph` key becomes unused after STEP-5.
