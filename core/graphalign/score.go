@@ -35,7 +35,7 @@ func propertyPoints(ev *match.Evaluation, probe match.Values, cfg Config, stats 
 	var total float64
 	for i := range ev.Comparisons {
 		pc := &ev.Comparisons[i]
-		outcome, points := ScoreSimilarity(pc.Similarity, pc.Comparable, pc.Cardinality, pc.Property, pc.ValueType, probe[pc.Property], cfg, stats)
+		outcome, points := ScoreSimilarity(pc.Similarity, pc.Discount, pc.Comparable, pc.Cardinality, pc.Property, pc.ValueType, probe[pc.Property], cfg, stats)
 		pc.Outcome = outcome
 		total += points
 	}
@@ -81,9 +81,15 @@ func EdgePoints(facts []EdgeFact, nodeScore float64, cfg Config) float64 {
 
 // ScoreSimilarity looks up the scale for a property and applies it. The
 // scale is registry data; this function does not name a property or a value
-// type beyond using them as lookup keys.
-func ScoreSimilarity(similarity float64, comparable bool, cardinality string, property match.Property, valueType string, vals []match.Value, cfg Config, stats Stats) (match.Outcome, float64) {
-	return ApplyScale(similarity, comparable, cardinality, cfg.resolvedScale(property, valueType, vals, stats))
+// type beyond using them as lookup keys. Positive points are multiplied by
+// 1 − discount, the share the matched values' frequency in the project costs.
+// The outcome never reads the discount, and a conflict is not scaled.
+func ScoreSimilarity(similarity, discount float64, comparable bool, cardinality string, property match.Property, valueType string, vals []match.Value, cfg Config, stats Stats) (match.Outcome, float64) {
+	outcome, points := ApplyScale(similarity, comparable, cardinality, cfg.resolvedScale(property, valueType, vals, stats))
+	if points > 0 {
+		points *= 1 - discount
+	}
+	return outcome, points
 }
 
 // ApplyScale turns one similarity into an outcome and points. It has no

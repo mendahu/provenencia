@@ -1629,3 +1629,26 @@ func TestUnknownSexIsNoEvidence(t *testing.T) {
 		}
 	}
 }
+
+func TestScoreSimilarityDiscount(t *testing.T) {
+	cfg := graphalign.DefaultConfig()
+	nameProp := match.Property{Key: "name", Origin: "provenencia"}
+	for _, tt := range []struct {
+		name       string
+		similarity float64
+		discount   float64
+		outcome    match.Outcome
+		points     float64
+	}{
+		{"common name stays agree", 1, 0.136, match.OutcomeAgree, 2.16},
+		{"no discount", 1, 0, match.OutcomeAgree, 2.5},
+		{"a conflict is not scaled", 0, 0.5, match.OutcomeConflict, -3},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			outcome, points := graphalign.ScoreSimilarity(tt.similarity, tt.discount, true, properties.CardinalitySingle, nameProp, properties.ValueTypeName, nil, cfg, graphalign.Stats{})
+			if outcome != tt.outcome || math.Abs(points-tt.points) > 1e-9 {
+				t.Fatalf("got %v %.4f, want %v %.4f", outcome, points, tt.outcome, tt.points)
+			}
+		})
+	}
+}

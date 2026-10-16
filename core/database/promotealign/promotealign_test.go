@@ -3,6 +3,7 @@ package promotealign_test
 import (
 	"bytes"
 	"fmt"
+	"reflect"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
@@ -28,6 +29,7 @@ import (
 	"github.com/mendahu/provenencia/core/graphalign"
 	"github.com/mendahu/provenencia/core/match"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/valuecodec"
 	"github.com/mendahu/provenencia/core/writes"
 )
 
@@ -451,6 +453,92 @@ func TestStatsCacheInvalidatesOnWrite(t *testing.T) {
 	got := f.propose(f.source.ID, nil)
 	if len(got.Rows) != 1 {
 		t.Fatalf("rows %d", len(got.Rows))
+	}
+
+	// Name counts are read once between handle commits, then recounted.
+	f.promote(f.person(f.source, f.artifact, "Ada Smith"))
+	read := func() graphalign.Stats {
+		st, err := promotealign.LoadStatsForTest(f.c)
+		must(t, err)
+		return st
+	}
+	first, again := read(), read()
+	if reflect.ValueOf(first.Words.Words).Pointer() != reflect.ValueOf(again.Words.Words).Pointer() {
+		t.Fatal("two reads with no commit between them counted twice")
+	}
+	f.promote(f.person(f.source, f.artifact, "Bob Smith"))
+	if after := read(); after.Words.Words["smith"] != first.Words.Words["smith"]+1 {
+		t.Fatalf("smith %d after a handle commit, was %d", after.Words.Words["smith"], first.Words.Words["smith"])
+	}
+}
+
+// sixty files 60 people named John <Surname>: 30 Smith, 1 Quirk, 29 others.
+func (f *fixture) sixty() {
+	f.t.Helper()
+	for i := 0; i < 30; i++ {
+		f.promote(f.person(f.source, f.artifact, "John Smith"))
+	}
+	f.promote(f.person(f.source, f.artifact, "John Quirk"))
+	for i := 1; i <= 29; i++ {
+		f.promote(f.person(f.source, f.artifact, fmt.Sprintf("John Surname%02d", i)))
+	}
+}
+
+func TestStatsCountsNameWords(t *testing.T) {
+	f := newFixture(t)
+	db, err := f.c.DB()
+	must(t, err)
+	both := f.promote(f.person(f.source, f.artifact, "John Smith")).Entity.ID
+	f.promote(f.person(f.source, f.artifact, "José Smith"))
+	merged := f.promote(f.person(f.source, f.artifact, "Jane Smith")).Entity.ID
+	// A second reconciled value on the first handle that also spells Smith.
+	blob, err := valuecodec.MarshalName(*namevaluestest.Western("J. Smith"))
+	must(t, err)
+	_, err = db.Exec(`INSERT INTO auto_reconciler_values (entity_id, property_id, rank, value_name, support, against, reason)
+		VALUES (?, ?, 2, ?, 1, 0, 'kept')`, both, f.prop("name").ID, blob)
+	must(t, err)
+	_, err = db.Exec(`UPDATE canonical_entities SET merged_into_id = ? WHERE id = ?`, both, merged)
+	must(t, err)
+	f.c.Graph().Drop()
+
+	st, err := promotealign.LoadStatsForTest(f.c)
+	must(t, err)
+	if st.Words.People != 2 || st.Words.Words["smith"] != 2 || st.Words.Words["john"] != 1 || st.Words.Words["jose"] != 1 {
+		t.Fatalf("counts %+v", st.Words)
+	}
+	if _, ok := st.Words.Words["jane"]; ok {
+		t.Fatalf("a merged handle was counted: %+v", st.Words)
+	}
+	if _, ok := st.Words.Words["j"]; ok {
+		t.Fatalf("an initial was counted: %+v", st.Words)
+	}
+}
+
+// Two names that agree and pin, one common in the project and one rare: the
+// common one earns fewer points. Similarity and pinning do not move.
+func TestProposeWeighsACommonNameLess(t *testing.T) {
+	f := newFixture(t)
+	f.sixty()
+	src, art := f.newSource("Register")
+	smith := f.person(src, art, "John Smith")
+	quirk := f.person(src, art, "John Quirk")
+	p := f.propose(src.ID, nil)
+	nameWeight := func(s subjects.Subject) float64 {
+		for _, c := range rowFor(p, s.ID).Comparisons {
+			if c.Property.Key == "name" {
+				if c.Outcome != match.OutcomeAgree || !c.Pinned {
+					t.Fatalf("%+v, want agree and pinned", c)
+				}
+				return c.Weight
+			}
+		}
+		t.Fatal("no name comparison")
+		return 0
+	}
+	q, sm := nameWeight(quirk), nameWeight(smith)
+	t.Logf("name weight: quirk %.3f, smith %.3f", q, sm)
+	if q <= sm {
+		t.Fatalf("quirk %.3f, smith %.3f", q, sm)
 	}
 }
 

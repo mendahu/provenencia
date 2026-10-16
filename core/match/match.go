@@ -68,8 +68,12 @@ type Reason struct {
 	// Similarity is the best resemblance between any probe value and any
 	// candidate value, 0…1.
 	Similarity float64
+	// Discount is the share of points the matched values' frequency in the
+	// project cost, 0…1; 0 when the values clearly disagree.
+	Discount float64
 	// Contribution is what the Feature added to the score: Weight ×
-	// Similarity, or −Contradiction when the values clearly disagree.
+	// Similarity × (1 − Discount), or −Contradiction when the values clearly
+	// disagree.
 	Contribution float64
 }
 
@@ -111,11 +115,11 @@ func Rank(p Profile, probe Values, candidates []Candidate, limit int) []Match {
 func Score(p Profile, probe Values, c Candidate) Match {
 	m := Match{EntityID: c.EntityID, Ref: c.Ref}
 	for _, f := range p.Features {
-		sim, ok := best(f.Comparer, probe[f.Property], c.Values[f.Property])
+		sim, discount, ok := best(f.Comparer, probe[f.Property], c.Values[f.Property])
 		if !ok {
 			continue
 		}
-		r := Reason{Property: f.Property, Similarity: sim, Contribution: f.Weight * sim}
+		r := Reason{Property: f.Property, Similarity: sim, Discount: discount, Contribution: f.Weight * sim * (1 - discount)}
 		if sim == 0 {
 			r.Contribution = -f.Contradiction
 		}
@@ -125,23 +129,25 @@ func Score(p Profile, probe Values, c Candidate) Match {
 	return m
 }
 
-// best is the highest similarity over every comparable pair; ok is false
-// when no pair is comparable (a side is empty, or only neutral values).
-func best(cmp Comparer, a, b []Value) (float64, bool) {
-	var (
-		top float64
-		ok  bool
-	)
+// best is the comparable pair with the highest similarity × (1 − discount),
+// reporting that pair's similarity and discount; ok is false when no pair is
+// comparable (a side is empty, or only neutral values). When every pair has
+// similarity 0 the discount is 0.
+func best(cmp Comparer, a, b []Value) (similarity, discount float64, ok bool) {
+	var top float64
 	for _, x := range a {
 		for _, y := range b {
-			s, comparable := cmp.Compare(x, y)
+			s, d, comparable := CompareDiscount(cmp, x, y)
 			if !comparable {
 				continue
 			}
-			if !ok || s > top {
-				top, ok = s, true
+			if p := s * (1 - d); !ok || p > top {
+				top, similarity, discount, ok = p, s, d, true
 			}
 		}
 	}
-	return top, ok
+	if similarity == 0 {
+		discount = 0
+	}
+	return similarity, discount, ok
 }

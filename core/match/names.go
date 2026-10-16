@@ -99,12 +99,30 @@ type NameComparer struct {
 	// and share none.
 	SuffixConflict *float64
 
+	// Frequency is how common each word is among the project's filed people
+	// (Promote and merge hints supply it; see CountWords). It scales points,
+	// never similarity: an identical name is still 1. FrequencyDiscount is
+	// the most a word on every person can cost, as a share of points.
+	// FrequencyMinPeople is the least population the counts are read against,
+	// so a small project's first shared surname is not rare forever.
+	Frequency          *WordCounts
+	FrequencyDiscount  *float64
+	FrequencyMinPeople *int
+
 	Words WordRules
 }
 
 func (c NameComparer) Compare(a, b Value) (float64, bool) {
+	s, _, ok := c.CompareDiscount(a, b)
+	return s, ok
+}
+
+// CompareDiscount is Compare plus the share of points the matched words'
+// frequency costs (0 with no counts). It makes NameComparer a
+// DiscountComparer.
+func (c NameComparer) CompareDiscount(a, b Value) (similarity, discount float64, comparable bool) {
 	if a.Name == nil || b.Name == nil {
-		return 0, false
+		return 0, 0, false
 	}
 	return c.compareNames(a.Name, c.pattern(a.NamePattern), b.Name, c.pattern(b.NamePattern))
 }
@@ -186,12 +204,16 @@ func (c NameComparer) affinity(a, b NameRole) float64 {
 //     "James" alone is weak, though a surname can change at marriage.
 //   - When both carry generation words (Jr., Sr.) and share none, the score
 //     is scaled by SuffixConflict: likely father and son.
-func (c NameComparer) compareNames(a *namevalues.Value, pa NamePattern, b *namevalues.Value, pb NamePattern) (float64, bool) {
+//
+// The discount is separate from the score: the role-weighted mean of how
+// common the paired words are in the project (see discount). It never lowers
+// the similarity.
+func (c NameComparer) compareNames(a *namevalues.Value, pa NamePattern, b *namevalues.Value, pb NamePattern) (float64, float64, bool) {
 	r := c.Words.resolve(true)
 	wa, ga := nameWords(a, pa, r.particles)
 	wb, gb := nameWords(b, pb, r.particles)
 	if len(wa) == 0 || len(wb) == 0 {
-		return 0, false
+		return 0, 0, false
 	}
 	earned := make([][]float64, len(wa))
 	for i, x := range wa {
@@ -204,7 +226,7 @@ func (c NameComparer) compareNames(a *namevalues.Value, pa NamePattern, b *namev
 	totalEarned, usedA, usedB := bestAssignment(earned)
 	total := countedWeight(wa, usedA, usedB) + countedWeight(wb, usedB, usedA)
 	if total == 0 {
-		return 0, false
+		return 0, 0, false
 	}
 	s := totalEarned / total
 	if familyConflict(wa, wb, r) {
@@ -213,7 +235,7 @@ func (c NameComparer) compareNames(a *namevalues.Value, pa NamePattern, b *namev
 	if len(ga) > 0 && len(gb) > 0 && !sharesAny(ga, gb) {
 		s *= setting(c.SuffixConflict, *DefaultNames.SuffixConflict)
 	}
-	return math.Min(s, 1), true
+	return math.Min(s, 1), c.discount(wa, usedA, wb, usedB, r), true
 }
 
 // countedWeight is the weight of words that bear on the score. Paired words

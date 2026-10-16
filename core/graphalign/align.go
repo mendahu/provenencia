@@ -882,7 +882,7 @@ func strongestAgreement(cs []Comparison) match.Property {
 func comparisonsFrom(ev match.Evaluation, probe match.Values, cfg Config, stats Stats) []Comparison {
 	out := make([]Comparison, 0, len(ev.Comparisons))
 	for _, pc := range ev.Comparisons {
-		outcome, weight := ScoreSimilarity(pc.Similarity, pc.Comparable, pc.Cardinality, pc.Property, pc.ValueType, probe[pc.Property], cfg, stats)
+		outcome, weight := ScoreSimilarity(pc.Similarity, pc.Discount, pc.Comparable, pc.Cardinality, pc.Property, pc.ValueType, probe[pc.Property], cfg, stats)
 		out = append(out, Comparison{
 			Property:  pc.Property,
 			Outcome:   outcome,

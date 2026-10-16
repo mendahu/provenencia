@@ -1,5 +1,9 @@
 # Spike 10 — completed
 
+## S10-27 — Name frequency
+
+**Landed 2026-10-16** in [#409](https://github.com/mendahu/provenencia/pull/409). A name word common among the project's filed people earns up to 20% fewer points. A word costs `0.2 × ln(df) / ln(pop)`, with `pop` at least 100 people, so `John Smith` vs `John Smith` scores 8.64 and `John Quirk` vs `John Quirk` 9.60 at weight 10. Similarity is untouched: an identical name is still `agree` and pins in Promote. Promote counts Person handles' names once into `Stats.Words` and drops them on a handle commit; merge hints and Subject suggestions count the candidates they loaded. A candidate that only a common surname supported can now fall under `MinScore`. A bare `NameComparer{}` has no counts and scores as before.
+
 ## S10-23 — Sex / gender on the Person page
 
 **Landed 2026-10-16** in [#407](https://github.com/mendahu/provenencia/pull/407). The Person page shows a Badge above the name: the gender when the Person has one value, else the sex at birth worded “Male · at birth”. The header thumb takes the family's tint and line: man, woman, non-binary (lapis), or other for any researcher term and for Intersex. Mixed, unknown, indeterminate, and empty values show no Badge and a plain thumb, and a disagreeing gender does not fall back to sex at birth. VoiceOver reads the Badge as “Gender, Woman” or “Sex at birth, Male”. The header thumb is 120pt on Person, Event, and Place pages. The Details rows are unchanged.

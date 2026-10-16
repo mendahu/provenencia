@@ -184,7 +184,7 @@ func pairExhibits(incoming []exhibitObs, neighbor []byte, memberObs []exhibitObs
 			cmp = *cfg.Names
 		}
 		var chosen *exhibitObs
-		var sim float64
+		var sim, discount float64
 		var comparable bool
 		pinned := false
 		for i := range memberObs {
@@ -195,16 +195,16 @@ func pairExhibits(incoming []exhibitObs, neighbor []byte, memberObs []exhibitObs
 			if exhibitCompatible(in.valueType, in.value, mem.value) {
 				chosen = mem
 				pinned = true
-				sim, comparable = comparerSimilarity(cmp, in.value, mem.value)
+				sim, discount, comparable = comparerDiscount(cmp, in.value, mem.value)
 				break
 			}
-			s, ok := comparerSimilarity(cmp, in.value, mem.value)
+			s, d, ok := comparerDiscount(cmp, in.value, mem.value)
 			if !ok {
 				continue
 			}
-			if chosen == nil || s > sim {
+			if chosen == nil || s*(1-d) > sim*(1-discount) {
 				chosen = mem
-				sim = s
+				sim, discount = s, d
 				comparable = true
 			}
 		}
@@ -218,7 +218,7 @@ func pairExhibits(incoming []exhibitObs, neighbor []byte, memberObs []exhibitObs
 		if card == "" {
 			card = properties.CardinalitySingle
 		}
-		outcome, weight := graphalign.ScoreSimilarity(sim, comparable, card, in.prop, in.valueType, []match.Value{in.value}, cfg, stats)
+		outcome, weight := graphalign.ScoreSimilarity(sim, discount, comparable, card, in.prop, in.valueType, []match.Value{in.value}, cfg, stats)
 		if outcome == match.OutcomeUnknown {
 			continue
 		}
@@ -252,11 +252,13 @@ func cloneDate(d *datevalues.Value) *datevalues.Value {
 	return &c
 }
 
-func comparerSimilarity(cmp match.Comparer, a, b match.Value) (float64, bool) {
+// comparerDiscount is the comparer's similarity and the share of points the
+// matched values' frequency costs.
+func comparerDiscount(cmp match.Comparer, a, b match.Value) (similarity, discount float64, comparable bool) {
 	if cmp == nil {
-		return 0, false
+		return 0, 0, false
 	}
-	return cmp.Compare(a, b)
+	return match.CompareDiscount(cmp, a, b)
 }
 
 func exhibitCompatible(valueType string, a, b match.Value) bool {

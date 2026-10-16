@@ -1,6 +1,6 @@
 # S10-27 — Name frequency in this project
 
-**Status:** Planned
+**Status:** Landed in #409 (2026-10-16)
 **Spike / slice:** Spike 10 · Slice 7 — How names compare (no new chrome)
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#s10-27--name-frequency)
 **Brief:** — (no new chrome: the score changes, no view does)
@@ -14,6 +14,11 @@
 **Context:** [`name-matching-enhancements.md`](../name-matching-enhancements.md), [`docs/matching.md`](../../../matching.md), [`docs/promote-graph-alignment.md`](../../../promote-graph-alignment.md) §6, working rules "Name frequency is this project's inverse frequency" and "Accent fold is matching only" in [`../deployment-plan.md`](../deployment-plan.md)
 **Planned:** 2026-10-16 against `main` @ `1fc683b`
 **Review:** [`S10-27-name-frequency.review.md`](S10-27-name-frequency.review.md) — Fits with changes / Ready with changes, 1 round, no open blocker
+
+**Landed:** The code matches the plan except for three things.
+- Existing `core/database/matching` tests (`TestForSubjectPersons`, `TestForSubjectComparesNameParts`, `TestForEntityMergeHints`) assert absolute scores on fixtures where a surname sits on several filed handles. `rank` counts the candidates it loaded (D-3), so their expected numbers dropped by the small discount (11.0 became 10.5, 10.0 became 9.7). The plan's "Frequency is empty in every existing fixture" holds for `core/match` and `promotealign` only.
+- T-8 recounts after a new handle commit, not a rename.
+- T-11 checks a place Subject's query count stays constant and its score is undiscounted; `Frequency` is not exposed to a test.
 
 ### Implementer — read this first
 

@@ -68,12 +68,13 @@ func Propose(c *database.Catalog, sourceID []byte, fixed []graphalign.Fixed) (gr
 	if err != nil {
 		return graphalign.Proposal{}, 0, err
 	}
-	canon, err := loadCanon(c.Graph(), q, layer, anchors, names, loaded.Key)
+	// Stats first: seed ranking in loadCanon reads the name counts.
+	stats, err := loadStats(c)
 	if err != nil {
 		return graphalign.Proposal{}, 0, err
 	}
-
-	stats, err := loadStats(c)
+	names.Frequency = &stats.Words
+	canon, err := loadCanon(c.Graph(), q, layer, anchors, names, loaded.Key)
 	if err != nil {
 		return graphalign.Proposal{}, 0, err
 	}

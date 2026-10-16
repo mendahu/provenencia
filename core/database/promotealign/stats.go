@@ -1,11 +1,15 @@
 package promotealign
 
 import (
+	"bytes"
+
 	"github.com/mendahu/provenencia/core/connectrules"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/graphcache"
+	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/graphalign"
 	"github.com/mendahu/provenencia/core/match"
+	"github.com/mendahu/provenencia/core/valuecodec"
 )
 
 // loadStats returns this catalog's scan. A commit that names handles drops it.
@@ -42,6 +46,8 @@ func cloneStats(s graphalign.Stats) graphalign.Stats {
 	for k, v := range s.FanOut {
 		out.FanOut[k] = v
 	}
+	// Words is never mutated after it is counted, so copies share its map.
+	out.Words = s.Words
 	return out
 }
 
@@ -111,6 +117,12 @@ func computeStats(g *graphcache.Graph, q Querier) (graphalign.Stats, error) {
 		st.ValueFreq[c.prop][c.key] = c.n / den
 	}
 
+	words, err := countNameWords(q)
+	if err != nil {
+		return graphalign.Stats{}, err
+	}
+	st.Words = words
+
 	kin, err := loadKinship(g)
 	if err != nil {
 		return graphalign.Stats{}, err
@@ -127,6 +139,47 @@ func computeStats(g *graphcache.Graph, q Querier) (graphalign.Stats, error) {
 		}
 	}
 	return st, nil
+}
+
+// sqlNameWords reads every reconciled name value of an unmerged Person
+// handle, at every rank. Rows of one handle are adjacent.
+const sqlNameWords = `SELECT r.entity_id, r.value_name
+	FROM auto_reconciler_values r
+	JOIN properties p ON p.id = r.property_id AND p.key = 'name' AND p.origin = 'provenencia'
+	JOIN canonical_entities e ON e.id = r.entity_id AND e.merged_into_id IS NULL
+	JOIN subject_types st ON st.id = e.subject_type_id AND st.key = 'person' AND st.origin = 'provenencia'
+	WHERE r.value_name IS NOT NULL
+	ORDER BY r.entity_id`
+
+// countNameWords counts, per word, the filed people who carry it. A handle
+// counts once however many name values it holds.
+func countNameWords(q Querier) (match.WordCounts, error) {
+	rows, err := q.Query(sqlNameWords)
+	if err != nil {
+		return match.WordCounts{}, err
+	}
+	defer rows.Close()
+	var people [][]namevalues.Value
+	var last []byte
+	for rows.Next() {
+		var id, blob []byte
+		if err := rows.Scan(&id, &blob); err != nil {
+			return match.WordCounts{}, err
+		}
+		n, err := valuecodec.UnmarshalName(blob)
+		if err != nil {
+			return match.WordCounts{}, err
+		}
+		if people == nil || !bytes.Equal(id, last) {
+			people = append(people, nil)
+			last = id
+		}
+		people[len(people)-1] = append(people[len(people)-1], n)
+	}
+	if err := rows.Err(); err != nil {
+		return match.WordCounts{}, err
+	}
+	return match.DefaultNames.CountWords(people), nil
 }
 
 // sqlFanOut averages, per (disambiguation term, neighbor type term), how many

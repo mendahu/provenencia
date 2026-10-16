@@ -42,10 +42,10 @@ For each Feature in the Profile:
 
 1. Its Comparer judges every pair of probe and candidate values for that Property. The Feature takes the best similarity, from 0 to 1.
 2. If no pair is comparable, the Feature is skipped: it neither helps nor hurts. A pair is not comparable when either side has no value, or the value is neutral (sex `unknown`, or a date with only a phrase).
-3. If the similarity is above 0, the Feature adds `Weight × similarity`.
+3. If the similarity is above 0, the Feature adds `Weight × similarity × (1 − discount)`. The discount is 0 for every comparer except names, which discount a word common in the project's own people (below).
 4. If the similarity is exactly 0 (a clear disagreement), the Feature subtracts `Contradiction`.
 
-A candidate is returned when its total reaches `MinScore`. Results are sorted by score, then by ref. Every match carries its **reasons**: each Feature's similarity and contribution, for explaining it in the UI ("same name, born the same year") and for tuning.
+A candidate is returned when its total reaches `MinScore`, after the discount: a name that only a very common surname supports can fall under the bar. Results are sorted by score, then by ref. Every match carries its **reasons**: each Feature's similarity and contribution, for explaining it in the UI ("same name, born the same year") and for tuning.
 
 ## Comparers
 
@@ -97,6 +97,16 @@ A candidate is returned when its total reaches `MinScore`. Results are sorted by
   - A lone character in an uncased script (蒋, 王) is a whole word.
 - **No parts:** nothing to compare. `form` is not a match input.
 
+**Name frequency.** A shared surname that is rare among the researcher's filed people counts for more than a shared common one. The comparer scales **points**, never similarity: an identical name is still 1, `agree`, and pinned in Promote.
+- **Counts.** A word's count is how many unmerged Person handles carry it in a reconciled name value, once per handle however many values spell it. The key is the comparison token after the comparer's particles and folds (`José` and `Jose` are one key). Initials are not counted, every part word is, whatever its role. Promote reads the counts once into `graphalign.Stats.Words` and drops them with the rest of the stats on a handle commit. Merge hints and Subject suggestions (`core/database/matching`) count the candidates they loaded. A bare `NameComparer{}` or `DefaultNames` has no counts, so it scores as before.
+- **Discount.** A word costs `FrequencyDiscount × ln(df) / ln(pop)` (0.2 at most). `df` is its count, capped at `pop`; `pop` is the larger of the people counted and `FrequencyMinPeople` (100), so a small project's first shared surname stays cheap. A word on one handle, an initial, and an empty project cost nothing. A pair of names pays the role-weighted mean of the discounts of the words the best pairing matched, on both sides.
+- **Where it applies.** `Score` multiplies a positive contribution by `1 − discount`. A contradiction is not scaled. Promote's fixed name scale multiplies its points the same way and keeps the outcome and the pin.
+
+| Pair (100 people; `smith` on 40, `quirk` on 1, `john` on 10) | Similarity | Discount | Name points (weight 10) |
+| --- | --- | --- | --- |
+| John Quirk vs John Quirk | 1 | 0.040 | 9.60 |
+| John Smith vs John Smith | 1 | 0.136 | 8.64 |
+
 Every weight and affinity is a `NameComparer` field.
 
 Worked examples:
@@ -129,7 +139,7 @@ When a seed finds a bug, shrink it into an exact-score case.
 
 Not yet handled:
 - **Daitch–Mokotoff:** [`ideas/daitch-mokotoff.md`](ideas/daitch-mokotoff.md). Descoped from Spike 10 (S10-26). Spanish dual surnames, a patronymic part, other patterns, transliteration, Beider–Morse, and calendars: [`ideas/international-names.md`](ideas/international-names.md).
-- **Abbreviations, project name frequency, support weighting, date windows, event and place affinity:** Spike 10, [`deployment-plan/spike-10/name-matching-enhancements.md`](deployment-plan/spike-10/name-matching-enhancements.md). Known-as, concluded values, calibration, and rejected-claim memory: [`ideas/name-matching-enhancements.md`](ideas/name-matching-enhancements.md).
+- **Abbreviations, support weighting, date windows, event and place affinity:** Spike 10, [`deployment-plan/spike-10/name-matching-enhancements.md`](deployment-plan/spike-10/name-matching-enhancements.md). Known-as, concluded values, calibration, and rejected-claim memory: [`ideas/name-matching-enhancements.md`](ideas/name-matching-enhancements.md).
 
 **Resolution uses the same parts.** The reconciler (`core/autoreconcile/names.go`) and `NameComparer` both ignore `form`. A name with no parts is no evidence there and not comparable here. The People list also ignores `form`: it orders by the profile's sorted part order. The cache name `sort_key` is still the normalized form. That column is not a match and not the list order.
 
@@ -182,5 +192,5 @@ Worked examples:
   - a Feature in the profile;
   - the adapter putting those values into the probe and the candidates.
   Signals reached through edges (a Person's birth year through its birth event, its family) are **not** matching Features: Promote graph alignment compares neighbors directly, over the canonical graph (S9-28), with its own weights (S9-41).
-- **Blocking:** candidates are currently every handle of the type with a cached profile value, read in one query (constant query count, but linear rows). When catalogs outgrow that, narrow candidates in `loadCandidates` (and in promotealign's `loadCanon`, which reads the same set from the graph with `g.Kind`) using the handle search index (S9-34a: `catalog_search_docs` kinds `person` / `event` / `place`, kept current by the cache's upkeep). Scoring does not change.
+- **Blocking:** candidates are currently every handle of the type with a cached profile value, read in one query (constant query count, but linear rows). When catalogs outgrow that, narrow candidates in `loadCandidates` (and in promotealign's `loadCanon`, which reads the same set from the graph with `g.Kind`) using the handle search index (S9-34a: `catalog_search_docs` kinds `person` / `event` / `place`, kept current by the cache's upkeep). `rank` takes its name-word counts from the set `loadCandidates` returns, so blocking must count a separate, unnarrowed population of the type's handles. Scoring does not change only if blocking does that.
 - **Merge hints:** `matching.ForEntity(handle)` ranks the other handles of the same type. A merge-hint surface needs only to shape that result.
