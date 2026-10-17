@@ -529,3 +529,20 @@ func runArtifactCreate(c *database.Catalog, userID []byte, in artifacts.CreateIn
 		})
 	return a, err
 }
+
+// TestHandleKindsArePrimaryKinds keeps the registry's Handle flags in step with
+// the primary kinds in vocabkey, the one list the rest of the app reads.
+func TestHandleKindsArePrimaryKinds(t *testing.T) {
+	var got []string
+	for _, s := range Registry {
+		if s.Handle {
+			got = append(got, s.Kind)
+		}
+	}
+	want := vocabkey.PrimaryKinds()
+	sort.Strings(got)
+	sort.Strings(want)
+	if fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Fatalf("Handle kinds = %v, want vocabkey.PrimaryKinds() = %v", got, want)
+	}
+}
