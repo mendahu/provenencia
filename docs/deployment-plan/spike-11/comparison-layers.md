@@ -22,10 +22,10 @@ Packages: layer 1 is **value compare** (`core/valuecompare`), and layer 2 is **p
 |---|---|---|---|
 | 1 | **Value comparison** | How do these two values relate? | This doc |
 | 2 | **Property comparison** | Do these two Subjects agree on one property? | This doc |
-| 3 | **Subject comparison** | How alike are these two Subjects on their own values? | Later. Combines property comparisons and holds comparisons that span properties |
+| 3 | **Subject comparison** | How alike are these two Subjects on their own values? | Decided in shape (§ Layer 3) |
 | 4 | **Entity comparison** | Does this Subject belong with this entity? | Decided in shape (§ Entities): subject comparison against the entity's reconciled conclusion |
 | 5 | **Segment comparison** | Does this neighbor, through this bridge, line up? | Decided in shape (§ Segments) |
-| 6 | **Graph alignment** | Which handle is each Subject on the layer? | Later: the walk and every decision (`Align`) |
+| 6 | **Graph alignment** | Which handle is each Subject on the layer? | Decided in shape (§ Layer 6 procedure) |
 
 Layers 1–3 are **discrete**: one thing against one thing. An entity is a group of Subjects, so comparing against one is one-to-many. Layer 4 turns that back into one-to-one by comparing against the group's conclusion.
 
