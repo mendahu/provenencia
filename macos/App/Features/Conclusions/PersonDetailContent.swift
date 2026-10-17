@@ -22,8 +22,30 @@ struct PersonDetailContent: ConclusionDetailBody {
     var rows: [ReconciledValueRowModel]
     /// Nil when gender and sex at birth give nothing to show (S10-23).
     var treatment: PersonGenderTreatment?
-    var thumbnail: ConclusionDetailThumbnail { .init(colors: treatment?.thumbnailColors) }
+    /// The `objects/…` path of the likeness the Person header leads with; "" for none.
+    var likenessImageRelPath: String
+    /// The gallery, earliest recorded first.
+    var likenesses: [ConclusionDetailLikeness]
+    var thumbnail: ConclusionDetailThumbnail {
+        .init(
+            mark: .subjectPerson,
+            label: L10n.Conclusions.personNoLikeness,
+            imageRelPath: likenessImageRelPath,
+            imageLabel: leadLabel,
+            colors: treatment?.thumbnailColors
+        )
+    }
     var badge: ConclusionDetailBadge? { treatment?.badge }
+
+    /// Spoken label of the header thumb while it shows the lead likeness: the
+    /// gallery tile with that image gives its Source; nil when there is none.
+    private var leadLabel: String? {
+        guard !likenessImageRelPath.isEmpty else { return nil }
+        if let tile = likenesses.first(where: { $0.imageRelPath == likenessImageRelPath }) {
+            return L10n.Conclusions.likenessLabel(tile.sourceTitle)
+        }
+        return L10n.string(L10n.Conclusions.personLikenessThumb)
+    }
 
     init(
         detail: CatalogConclusionDetail,
@@ -43,6 +65,15 @@ struct PersonDetailContent: ConclusionDetailBody {
         ]
         rows = Self.rows(detail.fields, header: header, locale: locale, orders: orders)
         treatment = PersonGenderTreatment.read(detail.fields)
+        likenessImageRelPath = header?.likenessImageRelPath ?? ""
+        likenesses = detail.likenesses.map {
+            ConclusionDetailLikeness(
+                id: $0.record.observationID,
+                imageRelPath: $0.imageRelPath,
+                sourceTitle: ReconciliationRecord.sourceTitle(for: $0.record),
+                location: ReconciliationRecord.composerLocation(for: $0.record)
+            )
+        }
     }
 
     /// A Person always shows its name and four life rows, stated empty when

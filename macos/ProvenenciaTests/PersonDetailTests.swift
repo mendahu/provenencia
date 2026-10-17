@@ -74,12 +74,51 @@ struct PersonDetailTests {
         #expect(content.badge?.text == "Woman")
         #expect(content.rows.map(\.label).contains("Gender"))
         let plain = PersonDetailContent(detail: detail())
-        #expect(plain.treatment == nil && plain.thumbnail == .init() && plain.badge == nil)
+        #expect(plain.treatment == nil && plain.badge == nil)
+        #expect(plain.thumbnail == .init(mark: .subjectPerson, label: L10n.Conclusions.personNoLikeness))
         #expect(plain.rows.map(\.label) == ["Name", "Birth date", "Birth place", "Death date", "Death place"])
         let event = EventDetailContent(detail: detail())
-        #expect(event.thumbnail == .init() && event.badge == nil)
+        #expect(event.thumbnail == .init(mark: .subjectEvent, label: L10n.Conclusions.eventNoImage) && event.badge == nil)
         let place = PlaceDetailContent(detail: detail())
-        #expect(place.thumbnail == .init() && place.badge == nil)
+        #expect(place.thumbnail == .init(mark: .subjectPlace, label: L10n.Conclusions.placeNoImage) && place.badge == nil)
+    }
+
+    private func likeness(_ id: String, path: String, title: String) -> CatalogLikeness {
+        CatalogLikeness(imageRelPath: path, record: D.outcome(id, "kept", title: title))
+    }
+
+    @Test func headerThumbIsTheLeadLikeness() {
+        let woman = CatalogConclusionValue.term(id: "t", key: "woman", label: "Woman")
+        let gender = D.field(
+            "single", key: "gender", label: "Gender", valueType: "term",
+            [D.value(1, "kept", woman)], outcomes: [D.outcome("g", "kept", recorded: woman)]
+        )
+        var header = CatalogPersonHeader(
+            entity: CatalogCanonicalEntity(id: "e1", ref: "PER-7KD45", subjectTypeID: "t", label: ""),
+            name: nil, nameValueCount: 0
+        )
+        header.likenessImageRelPath = "objects/ab/cd.png"
+        var source = detail(extra: [gender], header: header)
+        source.likenesses = [likeness("a", path: "objects/ab/cd.png", title: "Register")]
+        let thumb = PersonDetailContent(detail: source).thumbnail
+        #expect(thumb.imageRelPath == "objects/ab/cd.png")
+        #expect(thumb.imageLabel == "Likeness from Register")
+        #expect(thumb.colors != nil)
+        #expect(thumb.mark == .subjectPerson)
+    }
+
+    @Test func likenessesBecomeTilesEarliestFirst() {
+        var source = detail()
+        var second = likeness("b", path: "objects/ef/01.png", title: "")
+        second.record.observationRef = "OBS-2"
+        source.likenesses = [likeness("a", path: "objects/ab/cd.png", title: "Register"), second]
+        let content = PersonDetailContent(detail: source)
+        #expect(content.likenesses.map(\.id) == ["a", "b"])
+        #expect(content.likenesses.map(\.sourceTitle) == ["Register", "OBS-2"])
+        let first = content.likenesses[0].location
+        #expect(first.citationId == "cit-a" && first.observationId == "a" && first.sourceSurface == .citationComposer)
+        #expect(PersonDetailContent(detail: detail()).likenesses.isEmpty)
+        #expect(EventDetailContent(detail: detail()).likenesses.isEmpty)
     }
 
     @Test func aMergedNameRowCarriesItsStateAndWhy() {

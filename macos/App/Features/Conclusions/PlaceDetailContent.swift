@@ -16,6 +16,7 @@ struct PlaceDetailContent: ConclusionDetailBody {
     var chainIsRecorded: Bool
     var rows: [ReconciledValueRowModel]
     var sections: [ConclusionDetailSection]
+    var thumbnail: ConclusionDetailThumbnail { .init(mark: .subjectPlace, label: L10n.Conclusions.placeNoImage) }
 
     init(detail: CatalogConclusionDetail, locale: Locale = .autoupdatingCurrent) {
         let toponym = detail.fields.first { $0.propertyKey == SeededPropertyKey.toponym }
