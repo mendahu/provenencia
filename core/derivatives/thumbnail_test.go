@@ -286,6 +286,31 @@ func TestEnsureThumbnailRejectsUnsafeSources(t *testing.T) {
 			wantIs: ErrCorruptObject,
 		},
 		{
+			name: "object is a symlink to an outside file with the same bytes",
+			srcID: func(t *testing.T) []byte {
+				data := bombPNG(t, 5, 5)
+				id := installSourceFile(t, c, data, "image/png", "link.png")
+				sum := sha256.Sum256(data)
+				rel, err := files.StorageRelPath(hex.EncodeToString(sum[:]), "image/png")
+				if err != nil {
+					t.Fatal(err)
+				}
+				objPath := filepath.Join(c.Dir(), filepath.FromSlash(rel))
+				outside := filepath.Join(t.TempDir(), "outside.png")
+				if err := os.WriteFile(outside, data, 0o644); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.Remove(objPath); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.Symlink(outside, objPath); err != nil {
+					t.Fatal(err)
+				}
+				return id
+			},
+			wantIs: ErrCorruptObject,
+		},
+		{
 			name: "pixel bomb png over decode budget",
 			srcID: func(t *testing.T) []byte {
 				return installSourceFile(t, c, bombPNG(t, 100000, 100000), "image/png", "bomb.png")

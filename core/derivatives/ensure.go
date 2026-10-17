@@ -7,8 +7,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"io"
-	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/google/uuid"
@@ -114,8 +112,7 @@ func Ensure(c *database.Catalog, sourceFileID []byte, spec Spec) (Result, error)
 	if err != nil {
 		return Result{}, err
 	}
-	objPath := filepath.Join(c.Dir(), filepath.FromSlash(rel))
-	derivedJPEG, err := generate(objPath, src.ChecksumSHA256, spec.Raster)
+	derivedJPEG, err := generate(c.Dir(), rel, src.ChecksumSHA256, spec.Raster)
 	if err != nil {
 		return Result{}, err
 	}
@@ -193,10 +190,10 @@ func Ensure(c *database.Catalog, sourceFileID []byte, spec Spec) (Result, error)
 // generate reads the source object (bounded and checksum-verified) and
 // encodes the derivative JPEG. It holds a raster.Slot for the whole
 // read+decode+encode section to bound peak memory across goroutines.
-func generate(objPath, wantChecksum string, opts raster.Options) ([]byte, error) {
+func generate(projectDir, rel, wantChecksum string, opts raster.Options) ([]byte, error) {
 	defer raster.Slot()()
 
-	raw, err := readSourceObject(objPath, wantChecksum)
+	raw, err := readSourceObject(projectDir, rel, wantChecksum)
 	if err != nil {
 		return nil, err
 	}
@@ -210,11 +207,16 @@ func generate(objPath, wantChecksum string, opts raster.Options) ([]byte, error)
 	return derivedJPEG, nil
 }
 
-// readSourceObject reads at most maxSourceBytes from objPath and verifies
-// the bytes against the catalog checksum before they reach any decoder.
-func readSourceObject(objPath, wantChecksum string) ([]byte, error) {
-	f, err := os.Open(objPath)
+// readSourceObject reads at most maxSourceBytes from the object at rel and
+// verifies the bytes against the catalog checksum before they reach any
+// decoder. An object that is not a regular file, or a symlinked objects
+// folder, is ErrCorruptObject.
+func readSourceObject(projectDir, rel, wantChecksum string) ([]byte, error) {
+	f, err := objectstore.OpenObject(projectDir, rel)
 	if err != nil {
+		if errors.Is(err, objectstore.ErrNotRegular) || errors.Is(err, objectstore.ErrUnsafeObjects) {
+			return nil, ErrCorruptObject
+		}
 		return nil, err
 	}
 	defer f.Close()
