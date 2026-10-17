@@ -2,7 +2,6 @@ package autoreconcile
 
 import (
 	"github.com/mendahu/provenencia/core/datevalue"
-	"github.com/mendahu/provenencia/core/valuecompare"
 )
 
 // The date module (conclusion-reconciliation.md §7.1). A date is a window
@@ -82,47 +81,6 @@ func DateBounds(d datevalue.Value) (lo, hi *int, ok bool) {
 		hi = &v
 	}
 	return lo, hi, true
-}
-
-// WindowOfDate is DateBounds as a Window. ok is false when d has no year.
-func WindowOfDate(d datevalue.Value) (valuecompare.Window, bool) {
-	lo, hi, ok := DateBounds(d)
-	if !ok {
-		return valuecompare.Window{}, false
-	}
-	return valuecompare.Window{Lo: lo, Hi: hi}, true
-}
-
-// PeriodWindow is a Place's existence span from optional start and end
-// dates. Missing sides are open; both missing is Always.
-func PeriodWindow(start, end *datevalue.Value) valuecompare.Window {
-	w := valuecompare.Always()
-	if start != nil {
-		if sw, ok := WindowOfDate(*start); ok {
-			w.Lo = sw.Lo
-		}
-	}
-	if end != nil {
-		if ew, ok := WindowOfDate(*end); ok {
-			w.Hi = ew.Hi
-		}
-	}
-	return w
-}
-
-// LinkMembership is when a hierarchical place relationship holds.
-// An undated link (nil start and end) holds on the overlap of the two
-// places' periods. A dated link holds inside its own span and both periods.
-func LinkMembership(linkStart, linkEnd *datevalue.Value, fromPeriod, toPeriod valuecompare.Window) (valuecompare.Window, bool) {
-	base, ok := fromPeriod.Intersect(toPeriod)
-	if !ok {
-		return valuecompare.Window{}, false
-	}
-	if linkStart == nil && linkEnd == nil {
-		return base, true
-	}
-	link := PeriodWindow(linkStart, linkEnd)
-	return base.Intersect(link)
 }
 
 func (w dateWindow) contains(inner dateWindow) bool {
