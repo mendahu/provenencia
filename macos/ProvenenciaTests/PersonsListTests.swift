@@ -21,6 +21,18 @@ struct PersonsListTests {
         #expect(EventsList.thumbnailRelPath(event) == "")
     }
 
+    private func listThumb<K: ConclusionListKind>(_: K.Type, _ row: K.Row) -> String {
+        K.thumbnailRelPath(row)
+    }
+
+    @Test func listThumbDispatchesThroughTheKind() {
+        var withLikeness = header("PER-1", name: "A")
+        withLikeness.likenessImageRelPath = "objects/ab/cd.png"
+        #expect(listThumb(PersonsList.self, withLikeness) == "objects/ab/cd.png")
+        let event = CatalogEventHeader(entity: CatalogCanonicalEntity(id: "e", ref: "EVT-1", subjectTypeID: "t", label: ""), title: CatalogEventTitle(rule: .ref, ref: "EVT-1"))
+        #expect(listThumb(EventsList.self, event) == "")
+    }
+
     @Test func titleSourceFallsBackNameThenLabelThenRef() {
         #expect(PersonHeaderDisplay.titleSource(header("PER-1", name: "James Robins", label: "Grandpa")) == .name("James Robins"))
         #expect(PersonHeaderDisplay.titleSource(header("PER-2", label: " Unknown father ")) == .label("Unknown father"))
