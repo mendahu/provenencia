@@ -203,9 +203,9 @@ Commits: one per behavior. The subject is one full imperative sentence that says
 
 | ID | Layer | File · test | Case: input → expected | Covers |
 | --- | --- | --- | --- | --- |
-| T-1 | Go | `core/datevalue/display_test.go` (new, moved) | Today's cases unchanged: `BEF 2001-03-31` → `Before 2001-03-31` | AC-2.2, D-7 |
+| T-1 | Go | `core/datevalue/display_test.go` *(new)*, moved | Today's cases unchanged: `BEF 2001-03-31` → `Before 2001-03-31` | AC-2.2, D-7 |
 | T-2 | Go | `core/datevalue/validate_test.go` `TestValidate` *(new)* | Point with month 13 → `ErrInvalid`; range with start after end → `ErrInvalid`; point `ABT 1817` → nil; empty value → `ErrInvalid` | AC-1.2, D-3 |
-| T-3 | Go | `core/namevalue/registry_test.go` (new, moved) | Today's cases unchanged | AC-1.2, D-7 |
+| T-3 | Go | `core/namevalue/registry_test.go` *(new)*, moved | Today's cases unchanged | AC-1.2, D-7 |
 | T-4 | Go | `core/namevalue/validate_test.go` `TestValidate` *(new)* | Unknown part type → `ErrInvalid`; form and parts empty → `ErrInvalid`; `Western("James Robins")`'s parts → nil | AC-1.2, D-3 |
 | T-5 | Go | the existing `core/database/datevalues` and `namevalues` tests | Unchanged except types and imports | AC-2.1 |
 
