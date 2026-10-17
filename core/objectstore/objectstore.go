@@ -16,31 +16,6 @@ import (
 	"github.com/mendahu/provenencia/core/objectpath"
 )
 
-// MatchesChecksum reports whether objPath is a regular file whose SHA-256
-// equals wantChecksum (lowercase hex). Missing paths return (false, nil).
-func MatchesChecksum(objPath, wantChecksum string) (bool, error) {
-	f, err := os.Open(objPath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return false, nil
-		}
-		return false, err
-	}
-	defer f.Close()
-	st, err := f.Stat()
-	if err != nil {
-		return false, err
-	}
-	if !st.Mode().IsRegular() {
-		return false, nil
-	}
-	h := sha256.New()
-	if _, err := io.Copy(h, f); err != nil {
-		return false, err
-	}
-	return hex.EncodeToString(h.Sum(nil)) == wantChecksum, nil
-}
-
 // ErrNotRegular means an object path is a symlink, FIFO, folder, or device
 // instead of a regular file.
 var ErrNotRegular = errors.New("objectstore: object is not a regular file")
@@ -217,6 +192,81 @@ func installTemp(root *os.Root, tmp, inner, checksum string) (wrote bool, err er
 		return true, err
 	}
 	return true, nil
+}
+
+// Temp is a streamed object being written inside projectDir/objects. Install
+// moves it into place; Discard removes it. Callers never see its path.
+type Temp struct {
+	root         *os.Root
+	f            *os.File
+	name         string
+	closed, done bool
+}
+
+// CreateTemp creates a temp file at the top of projectDir/objects (making the
+// folder when absent). A symlinked objects folder is ErrUnsafeObjects. Finish
+// with Install or Discard; either releases the handle on the folder.
+func CreateTemp(projectDir, prefix string) (*Temp, error) {
+	root, err := openObjectsRoot(projectDir, true)
+	if err != nil {
+		return nil, err
+	}
+	f, name, err := createTempIn(root, prefix)
+	if err != nil {
+		_ = root.Close()
+		return nil, err
+	}
+	return &Temp{root: root, f: f, name: name}, nil
+}
+
+// Write appends p to the temp file.
+func (t *Temp) Write(p []byte) (int, error) { return t.f.Write(p) }
+
+// Close syncs and closes the temp file. A second call returns nil. The handle
+// on the objects folder stays open until Install or Discard.
+func (t *Temp) Close() error {
+	if t.closed {
+		return nil
+	}
+	t.closed = true
+	if err := t.f.Sync(); err != nil {
+		_ = t.f.Close()
+		return err
+	}
+	return t.f.Close()
+}
+
+// Install moves the temp file to rel (slash-separated, starting with objects/)
+// unless a file there already matches checksum. wrote is true when this call
+// left new bytes at rel. The temp is gone afterward.
+func (t *Temp) Install(rel, checksum string) (wrote bool, err error) {
+	inner, err := innerPath(rel)
+	if err != nil {
+		return false, err
+	}
+	if !t.closed {
+		t.closed = true
+		_ = t.f.Close()
+	}
+	wrote, err = installTemp(t.root, t.name, inner, checksum)
+	_ = t.root.Close()
+	t.done = true
+	return wrote, err
+}
+
+// Discard removes the temp file without installing it. It does nothing after
+// Install or an earlier Discard.
+func (t *Temp) Discard() {
+	if t.done {
+		return
+	}
+	if !t.closed {
+		t.closed = true
+		_ = t.f.Close()
+	}
+	_ = t.root.Remove(t.name)
+	_ = t.root.Close()
+	t.done = true
 }
 
 // WriteIfAbsent writes data at rel under projectDir unless a file there already

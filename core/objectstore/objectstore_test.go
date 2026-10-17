@@ -361,3 +361,116 @@ func TestOpenObject(t *testing.T) {
 		})
 	}
 }
+
+func TestTemp(t *testing.T) {
+	data := []byte("streamed bytes")
+	sum := sha256.Sum256(data)
+	checksum := hex.EncodeToString(sum[:])
+	const rel = "objects/ab/cd/obj.png"
+
+	newTemp := func(t *testing.T, project string) *objectstore.Temp {
+		t.Helper()
+		tmp, err := objectstore.CreateTemp(project, ".ingest-")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := tmp.Write(data); err != nil {
+			t.Fatal(err)
+		}
+		if err := tmp.Close(); err != nil {
+			t.Fatal(err)
+		}
+		return tmp
+	}
+	noTemps := func(t *testing.T, project string) {
+		t.Helper()
+		entries, err := os.ReadDir(filepath.Join(project, "objects"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, e := range entries {
+			if strings.HasPrefix(e.Name(), ".ingest-") {
+				t.Fatalf("temp %s left behind", e.Name())
+			}
+		}
+	}
+	readObject := func(project string) (string, error) {
+		b, err := os.ReadFile(filepath.Join(project, filepath.FromSlash(rel)))
+		return string(b), err
+	}
+
+	t.Run("install at a fresh path", func(t *testing.T) {
+		project := t.TempDir()
+		wrote, err := newTemp(t, project).Install(rel, checksum)
+		if err != nil || !wrote {
+			t.Fatalf("wrote=%v err=%v", wrote, err)
+		}
+		if got, err := readObject(project); err != nil || got != string(data) {
+			t.Fatalf("object = %q, %v", got, err)
+		}
+		noTemps(t, project)
+	})
+
+	t.Run("same bytes already stored", func(t *testing.T) {
+		project := t.TempDir()
+		if _, err := newTemp(t, project).Install(rel, checksum); err != nil {
+			t.Fatal(err)
+		}
+		wrote, err := newTemp(t, project).Install(rel, checksum)
+		if err != nil || wrote {
+			t.Fatalf("wrote=%v err=%v", wrote, err)
+		}
+		noTemps(t, project)
+	})
+
+	t.Run("discard without install", func(t *testing.T) {
+		project := t.TempDir()
+		newTemp(t, project).Discard()
+		noTemps(t, project)
+		if _, err := os.Lstat(filepath.Join(project, filepath.FromSlash(rel))); err == nil {
+			t.Fatal("object exists")
+		}
+	})
+
+	t.Run("discard after install does nothing", func(t *testing.T) {
+		project := t.TempDir()
+		tmp := newTemp(t, project)
+		if _, err := tmp.Install(rel, checksum); err != nil {
+			t.Fatal(err)
+		}
+		tmp.Discard()
+		if got, err := readObject(project); err != nil || got != string(data) {
+			t.Fatalf("object = %q, %v", got, err)
+		}
+	})
+
+	t.Run("objects subfolder symlinked outside", func(t *testing.T) {
+		project, out := t.TempDir(), t.TempDir()
+		if err := os.MkdirAll(filepath.Join(project, "objects"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Symlink(out, filepath.Join(project, "objects", "ab")); err != nil {
+			t.Fatal(err)
+		}
+		if wrote, err := newTemp(t, project).Install(rel, checksum); err == nil || wrote {
+			t.Fatalf("wrote=%v err=%v", wrote, err)
+		}
+		noTemps(t, project)
+		if entries, _ := os.ReadDir(out); len(entries) != 0 {
+			t.Fatalf("outside folder holds %d entries", len(entries))
+		}
+	})
+
+	t.Run("objects folder symlinked outside", func(t *testing.T) {
+		project, out := t.TempDir(), t.TempDir()
+		if err := os.Symlink(out, filepath.Join(project, "objects")); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := objectstore.CreateTemp(project, ".ingest-"); !errors.Is(err, objectstore.ErrUnsafeObjects) {
+			t.Fatalf("err %v, want ErrUnsafeObjects", err)
+		}
+		if entries, _ := os.ReadDir(out); len(entries) != 0 {
+			t.Fatalf("outside folder holds %d entries", len(entries))
+		}
+	})
+}

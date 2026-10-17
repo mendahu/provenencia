@@ -161,39 +161,35 @@ func File(c *database.Catalog, absPath string, userID []byte) (Result, error) {
 	}
 	defer src.Close()
 
-	objectsDir := filepath.Join(c.Dir(), "objects")
-	tmpPath, checksum, byteSize, sniffed, err := streamSource(src, objectsDir)
+	tmp, checksum, byteSize, sniffed, err := streamSource(src, c.Dir())
 	if err != nil {
 		return Result{}, err
 	}
+	defer tmp.Discard()
 
 	filename := sanitizeFilename(filepath.Base(absPath))
 	mediaType, reason, ok := mediatypes.Resolve(sniffed, filename)
 	if !ok {
-		_ = os.Remove(tmpPath)
 		return Result{}, errForReject(reason, sniffed)
 	}
 
 	relPath, err := files.StorageRelPath(checksum, mediaType)
 	if err != nil {
-		_ = os.Remove(tmpPath)
 		return Result{}, err
 	}
-	objPath := filepath.Join(c.Dir(), filepath.FromSlash(relPath))
 
 	// LookupByChecksum uses another pool connection and deadlocks while a Run
 	// transaction is open. Reuse is decided here, before create_file's Run.
 	if existing, err := files.LookupByChecksum(c, checksum); err == nil {
-		if _, err := installObject(tmpPath, objPath, checksum); err != nil {
+		if _, err := tmp.Install(relPath, checksum); err != nil {
 			return Result{}, err
 		}
 		return reuseFile(c, existing, relPath, filename, userID)
 	} else if !errors.Is(err, sql.ErrNoRows) {
-		_ = os.Remove(tmpPath)
 		return Result{}, err
 	}
 
-	wrote, err := installObject(tmpPath, objPath, checksum)
+	wrote, err := tmp.Install(relPath, checksum)
 	if err != nil {
 		return Result{}, err
 	}
@@ -326,24 +322,19 @@ func (s *sniffBuf) Write(p []byte) (int, error) {
 	return len(p), nil
 }
 
-func streamSource(src *os.File, objectsDir string) (tmpPath, checksum string, byteSize int64, mediaType string, err error) {
-	if err := os.MkdirAll(objectsDir, 0o755); err != nil {
-		return "", "", 0, "", err
-	}
-	tmp, err := os.CreateTemp(objectsDir, ".ingest-*")
+func streamSource(src *os.File, projectDir string) (t *objectstore.Temp, checksum string, byteSize int64, mediaType string, err error) {
+	t, err = objectstore.CreateTemp(projectDir, ".ingest-")
 	if err != nil {
-		return "", "", 0, "", err
+		return nil, "", 0, "", err
 	}
-	tmpPath = tmp.Name()
-	fail := func(e error) (string, string, int64, string, error) {
-		_ = tmp.Close()
-		_ = os.Remove(tmpPath)
-		return "", "", 0, "", e
+	fail := func(e error) (*objectstore.Temp, string, int64, string, error) {
+		t.Discard()
+		return nil, "", 0, "", e
 	}
 
 	h := sha256.New()
 	sniff := &sniffBuf{}
-	mw := io.MultiWriter(tmp, h, sniff)
+	mw := io.MultiWriter(t, h, sniff)
 	n, err := io.Copy(mw, io.LimitReader(src, maxBytes+1))
 	if err != nil {
 		return fail(err)
@@ -351,52 +342,15 @@ func streamSource(src *os.File, objectsDir string) (tmpPath, checksum string, by
 	if n > maxBytes {
 		return fail(ErrTooLarge.WithParams(formatByteSize(n)))
 	}
-	if err := tmp.Sync(); err != nil {
+	if err := t.Close(); err != nil {
 		return fail(err)
 	}
-	if err := tmp.Close(); err != nil {
-		_ = os.Remove(tmpPath)
-		return "", "", 0, "", err
-	}
 	if n == 0 {
-		_ = os.Remove(tmpPath)
-		return "", "", 0, "", ErrEmpty
+		return fail(ErrEmpty)
 	}
 	mediaType = http.DetectContentType(sniff.buf)
 	checksum = hex.EncodeToString(h.Sum(nil))
-	return tmpPath, checksum, n, mediaType, nil
-}
-
-// installObject places tmpPath at objPath when missing or content mismatches.
-// Always consumes/removes tmpPath. wrote is true when this call left new bytes at objPath.
-func installObject(tmpPath, objPath, checksum string) (wrote bool, err error) {
-	defer func() { _ = os.Remove(tmpPath) }()
-
-	match, err := objectstore.MatchesChecksum(objPath, checksum)
-	if err != nil {
-		return false, err
-	}
-	if match {
-		return false, nil
-	}
-	if err := os.MkdirAll(filepath.Dir(objPath), 0o755); err != nil {
-		return false, err
-	}
-	_ = os.Remove(objPath)
-	if err := os.Rename(tmpPath, objPath); err != nil {
-		match, matchErr := objectstore.MatchesChecksum(objPath, checksum)
-		if matchErr != nil {
-			return false, matchErr
-		}
-		if match {
-			return false, nil
-		}
-		return false, err
-	}
-	if err := objectstore.SyncDir(filepath.Dir(objPath)); err != nil {
-		return true, err
-	}
-	return true, nil
+	return t, checksum, n, mediaType, nil
 }
 
 func mapOpenErr(err error) error {
