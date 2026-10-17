@@ -1,7 +1,7 @@
 # Review — S10-34 Composer depiction row
 
-**Verdict:** round 1: Fits with changes — Not ready → every finding Fixed below. Round 2 runs once the S10-D15 board is agreed and §6 macOS describes its frames.
-**Rounds:** 1. **Reviewers:** maintainability (Opus), executability (Sonnet)
+**Verdict:** round 1: Fits with changes — Not ready; round 2: Fits with changes — Ready with changes → all applied. Planned 2026-10-17.
+**Rounds:** 2. **Reviewers:** maintainability (Opus), executability (Sonnet)
 
 ## To user
 - None open. The four product calls were asked before writing and are recorded in D-8, D-9, D-10 and the **Board** line: redraw on edit, the PDF page rule, Duplicate copies the region, and the board link comes from the user.
@@ -106,3 +106,57 @@
 
 ### X-18 · minor · Docs step detail
 **Answer:** Fixed — STEP-10 gives the section and the bullet text.
+
+## Round 2 — after the board was agreed (2026-10-17)
+
+Board: Claude Design *Citation Composer*, section "Depiction row", frames D1a–D10 and D5c, checked frame by frame against an export. §6 "Frames" added; D-19 (caption), D-20 (save-error Callout), D-21 (depiction copy) added. Verdicts: maintainability Fits with changes; executability Ready with changes. Every round-1 answer was confirmed applied.
+
+### M-13 · blocker · `regionHidden` is a stored flag that goes stale after a redraw
+**Answer:** Fixed — D-2: computed `!valueDepictionID.isEmpty && !hasRegion`; D-15, D-19, and the Save gate read it; T-21 checks it turns false after a commit.
+
+### M-14 · major · D-20 makes two error styles and "Not saved" twice
+**Answer:** Fixed — D-20: the bridge Callouts get the same title, `performCommit`'s fallbacks use `observationSaveFailed`, and the `rowStateError` comment is updated.
+
+### M-15 · major · Depiction copy beside the functions that own it
+**Answer:** Fixed — D-21: `duplicateOrigin(line:)` owns the note, `unsavedSummary`'s holds-leave arm owns the leave message, and `editSheetSubtitle` owns the subtitle.
+
+### M-16 · minor · "Redrawn" defined twice
+**Answer:** Fixed — `isDepictionRedrawn` (D-9) is used by D-9 and D-19.
+
+### X-19 · major · Drawing mode leaves most of the screen undefined
+**Answer:** Fixed — D-7 lists every disabled control and the guarded model actions; STEP-4 names the files; T-20 checks the guards.
+
+### X-20 · major · The needs-page Callout does not unblock Draw
+**Answer:** Fixed — D-8 and §6 Strings: the copy says to set and save the page. This is a deviation from the board's copy and is listed to the user.
+
+### X-21 · major · D9a copy is not what the app shows
+**Answer:** Fixed — D-20 keeps the mapped error string and states that the board's frame is shorter.
+
+### X-22 · major · A 32pt tile does not keep the line height
+**Answer:** Fixed — D-13: depiction lines use `space1` vertical padding, about 36pt, as drawn.
+
+### X-23 · major · Render failure and order in the two save paths
+**Answer:** Fixed — D-6: render first, a named catch, and the edit-session error path.
+
+### X-24 · major · FakeStore cannot prove T-16
+**Answer:** Fixed — D-16 records ` valueDepictionID=<sent id>`; T-16 checks it.
+
+### X-25 · minor · `kind: .validation` does not exist
+**Answer:** Fixed — `.user`.
+
+### X-26 · minor · The new focus signature breaks a test
+**Answer:** Fixed — D-11: default parameters, `isDepiction(propertyID:)`, and the call-site count corrected in §4.
+
+### X-27 · minor · `base(of:)` needs an arm
+**Answer:** Fixed — D-7.
+
+### X-28 · minor · `regionHidden` after a redraw
+**Answer:** Fixed — see M-13.
+
+### X-29 · minor · Escape wiring
+**Answer:** Fixed — D-7: Cancel carries `.cancelAction` while drawing; drawing closes the find row.
+
+### X-30 · minor · Smaller gaps
+**Answer:** Fixed — D-14 gives the NSImage and the 96pt size. D-1 sets `depictionCapabilities` from the selected Artifact's media type, so loading does not change the list. D-13 gives the label sources and the nil fallback. The D8c fixture has no region. D4 was already handled.
+
+**Status:** no open blocker after round 2; the plan is `Planned`.
