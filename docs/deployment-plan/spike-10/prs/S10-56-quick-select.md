@@ -13,7 +13,7 @@
 **Rules that bind:** `.cursor/rules/macos-client.mdc`, `.cursor/rules/swift-tests.mdc`, `.cursor/rules/design-system-layers.mdc`
 **Context:** working rule "Box-select is a marquee of subject cards." in [`../deployment-plan.md`](../deployment-plan.md#working-rules), [S10-20 plan](S10-20-open-file-box-select.md), [`macos/App/Features/GraphCanvas/README.md`](../../../../macos/App/Features/GraphCanvas/README.md) (GraphCanvas stays free of Evidence types)
 **Planned:** 2026-10-17 against `main` @ `1c99ef4`
-**Review:** — (not reviewed yet)
+**Review:** [`S10-56-quick-select.review.md`](S10-56-quick-select.review.md) — Fits with changes, Ready with changes (applied); round 2 pending
 
 ### Implementer — read this first
 
@@ -48,6 +48,7 @@ Multi-select on the Evidence graph is slow to use: the researcher clicks Select,
 | AC-1.4 | Select armed from the palette. Press and release Shift. | `armedSelect` is still `true`; `inputMode == .selecting` throughout. |
 | AC-1.5 | Shift held, then the window resigns key (Cmd-Tab away) with Shift still down, then Shift released in the other app. | On resign, `inputMode == .idle`; returning to the window does not leave Select stuck on. |
 | AC-1.6 | The omnibar (or any `NSText` field editor) is first responder. Type a capital letter. | Select does not paint armed; `inputMode` is unchanged. |
+| AC-1.7 | The omnibar is first responder. Shift-click a card on the canvas. | The card toggles, and Select paints armed while Shift stays down. |
 
 **US-2.** As a researcher, when I arm Select on the palette and draw one rectangle, Select disarms on release, so that the next empty-canvas drag pans.
 
@@ -82,7 +83,7 @@ Multi-select on the Evidence graph is slow to use: the researcher clicks Select,
 | In | Covered by |
 | --- | --- |
 | Shift held engages Select; release disengages; Place and Connect win | STEP-1, STEP-3, STEP-4, AC-1.1, AC-1.2, AC-1.3, AC-1.4 |
-| Shift state clears when the window resigns key; ignored while an `NSText` is first responder | STEP-3, AC-1.5, AC-1.6 |
+| Shift state clears when the window resigns key; ignored while an `NSText` is first responder, until a Shift-press on the canvas | STEP-3, AC-1.5, AC-1.6, AC-1.7 |
 | Palette Select paints armed while Shift engages it | STEP-4, AC-1.1 |
 | A rectangle release disarms palette-armed Select, whatever it caught | STEP-1, STEP-2, AC-2.1, AC-2.2 |
 | Shift-click on a card toggles it in the selection (bridges included); skips the card action | STEP-1, STEP-2, AC-3.1, AC-3.2, AC-3.3, AC-3.4, AC-3.5, AC-3.7 |
@@ -97,6 +98,7 @@ Multi-select on the Evidence graph is slow to use: the researcher clicks Select,
 | A keyboard / VoiceOver way to add one card to the selection | dogfood log |
 | New copy, a new palette hint, or a banner while Shift is held | not planned |
 | Shift engaging Select on any canvas other than the Evidence graph | not planned (no other host today) |
+| A shared "window event watch" helper for local monitor + resign-key observer (`PVComboBox`, `PVContextMenu`, this PR) | logged in the review log for a design-system hardening pass; not planned in Spike 10 |
 
 ## 4. Current state
 
@@ -127,9 +129,10 @@ All product calls (D-4, D-5, D-6, D-7) were answered by the user on 2026-10-17.
 | D-5 | Every rectangle release sets `armedSelect = false`, including one that caught nothing. Plain clicks (card or empty canvas) with Select armed do not disarm. | User answer: one rectangle per arm. A click is not a rectangle. | Disarm only when the rectangle selected something. |
 | D-6 | Shift-click on a card (bridge included) toggles it: in the selection → removed, not in → added. On a nested action zone, Shift-click toggles and does not call `onCardAction`. The pointer calls a new `onToggleSelect: ((String) -> Void)?` *(new)* instead of `onSelect`. | User answer (toggle). Skipping the action keeps Shift-click one meaning. | Add-only. Running the action as well — a Shift-click on the pencil would open the edit sheet mid-selection. |
 | D-7 | A click on empty canvas clears the selection whether or not Shift is down (pointer still calls `onDeselect`). | User requirement 4, stated without exception. | Finder's "Shift-click empty keeps the selection". |
-| D-8 | Model methods: `toggleSubjectInSelection(id:)` *(new)* and `finishRectangleSelection(_ ids: Set<String>, additive: Bool)` *(new)*. `finishRectangleSelection` computes `additive ? selectedSubjectIDs.union(ids) : ids`, passes it to the existing `replacePrimarySelection(_:)` (which filters to cards on the graph and clears a stale activation), then sets `armedSelect = false`. `toggleSubjectInSelection` builds the toggled set and passes it to `replacePrimarySelection(_:)` too. `setShiftSelectHeld(_ held: Bool)` *(new)* writes `shiftSelectHeld` only when it changes. | One filter and one activation rule for every selection path; `replacePrimarySelection` already owns both. | Duplicating the snapshot filter in each new method. |
-| D-9 | The palette reads `armed: model.isSelectEngaged` *(new)*, `var isSelectEngaged: Bool { inputMode == .selecting }` in `EvidenceCanvasInputMode.swift`. | One source for what Select means; lights for Shift and for the palette alike, and not while Place or Connect is armed. While a sheet is up the button reads unarmed, which matches the canvas being idle then. | Reading `armedSelect || shiftSelectHeld` in the palette — duplicates `inputMode`'s precedence. |
+| D-8 | Model methods: `toggleSubjectInSelection(id:)` *(new)* and `finishRectangleSelection(_ ids: Set<String>, additive: Bool)` *(new)*. `finishRectangleSelection` computes `additive ? selectedSubjectIDs.union(ids) : ids`, passes it to the existing `replacePrimarySelection(_:)` (which filters to cards on the graph and clears a stale activation), then sets `armedSelect = false`. `toggleSubjectInSelection` builds the toggled set and passes it to `replacePrimarySelection(_:)` too. `setShiftSelectHeld(_ held: Bool)` *(new)* assigns `shiftSelectHeld` plainly; the pointer's `setShiftHeld(_:)` is the one place that dedupes (T-5). | One filter and one activation rule for every selection path; `replacePrimarySelection` already owns both. | Duplicating the snapshot filter in each new method. |
+| D-9 | The palette reads `armed: model.inputMode == .selecting`, inline like its siblings (`armed: model.armedConnect`, `armed: model.armedKind == kind`). | `inputMode` is the one precedence source; the button lights for Shift and for the palette alike, and not while Place or Connect is armed. While a sheet is up the button reads unarmed, which matches the canvas being idle then. | Reading `armedSelect || shiftSelectHeld` in the palette — duplicates `inputMode`'s precedence. A named wrapper (`inputMode == .selecting`) — one caller, no policy. |
 | D-10 | Tests: pointer behavior in `GraphCanvasPointerHitTestingTests` (Swift Testing, pure controller); model behavior in `EvidenceGraphModelTests` on `groupModel()`. The monitor itself is checked manually (§10). | Matches S10-20's split; an `NSEvent` monitor cannot be driven from unit tests without synthesizing events. | XCUITest — not used in this repo. |
+| D-11 | Press-time Shift (`shiftDown` in `Gesture.pendingClick`) stays the only signal for pointer behavior (marquee, additive, toggle), and it is not guarded by text focus: a Shift-press on the canvas is canvas intent. `GraphCanvasDocumentView.mouseDown` calls `pointer.setShiftHeld(event.modifierFlags.contains(.shift))` before `pointer.mouseDown(…)`, so the held state (paint) agrees with the press even when a text field kept focus; the next `flagsChanged` reports through D-2's guard again. | Without it, with the omnibar focused, a Shift-drag draws a rectangle while Select stays dark (the canvas never takes first responder). Guarding the press too would make Shift-click silently fail after typing in the omnibar. | Applying the `NSText` guard to `mouseDown` — breaks Shift-click after the omnibar. Dropping the guard — capitals typed in the omnibar flash Select. |
 
 ## 6. Design
 
@@ -139,15 +142,14 @@ All product calls (D-4, D-5, D-6, D-7) were answered by the user on 2026-10-17.
 | --- | --- | --- | --- |
 | `GraphCanvasPointerController.onToggleSelect` *(new)* | callback | `onSelect` | `onSelect` means "replace with this one"; the host must tell the two apart. Searched `onSelect`, `toggle` in `GraphCanvas/`. |
 | `GraphCanvasPointerController.setShiftHeld(_:)`, `shiftHeld` *(new, private(set))*, `onShiftHeldChanged` *(new)* | func / property / callback | `setPointerInside(_:)` | Same shape (pointer-level state set by the document view); a separate flag because it is a different input. |
-| `GraphCanvasDocumentView` flags monitor *(new private members `flagsMonitor`, `resignKeyObserver`; new `static func reportedShift(_:textHasFocus:)`)* | private / func | `PVFormDialogOutsideClickView.installMonitor()` | Copies that pattern; no shared helper exists for local monitors (searched `addLocalMonitorForEvents`: 8 call sites in 6 files, each private). |
+| `GraphCanvasDocumentView` flags monitor *(new private members `flagsMonitor`, `resignKeyObserver`; new `static func reportedShift(_:textHasFocus:)`)* | private / func | `PVComboBox.startWatching(parent:)` (local monitor + `didResignKeyNotification` observer), `PVFormDialogOutsideClickView.installMonitor()` (`nonisolated(unsafe)` token, `deinit`) | Copies that pairing; no shared helper exists (searched `addLocalMonitorForEvents`: 9 call sites in `macos/App`, each private). This is the third monitor + resign-key copy; a shared window-event watch is the Out line below. |
 | `EvidenceGraphModel.shiftSelectHeld`, `setShiftSelectHeld(_:)` *(new)* | property / func | `armedSelect` | See D-1. |
 | `EvidenceGraphModel.toggleSubjectInSelection(id:)` *(new)* | func | `replacePrimarySelection(_:)` | Wraps it (D-8). |
 | `EvidenceGraphModel.finishRectangleSelection(_:additive:)` *(new)* | func | `replacePrimarySelection(_:)` | Wraps it and adds the disarm (D-5, D-8). |
-| `EvidenceGraphModel.isSelectEngaged` *(new)* | computed | `inputMode` | Reads it (D-9). |
 
 **Builds on.** The S10-20 pointer-callback → model-method wiring in `EvidenceGraphView.wirePointer()`; `inputMode` precedence in `EvidenceCanvasInputMode.swift`; `replacePrimarySelection` as the single selection writer.
 **Deletes.** The view's `onMarqueeEnded` closure that calls `replacePrimarySelection` directly is replaced by one that calls `finishRectangleSelection`. Nothing else becomes dead.
-**Next adds.** A future canvas host (family tree in `macos/App/Features/GraphCanvas/README.md`) gets Shift tracking and Shift-click toggle by wiring `onShiftHeldChanged` and `onToggleSelect`.
+**Next adds.** A future canvas host (family tree in `macos/App/Features/GraphCanvas/README.md`) gets the Shift signal and the Shift-click toggle by wiring `onShiftHeldChanged` and `onToggleSelect`; it supplies its own engage precedence, as `EvidenceCanvasInputMode.swift` does here.
 
 ### Schema
 
@@ -186,6 +188,7 @@ private enum Gesture {
 
 **`GraphCanvasDocumentView`** (`macos/App/Features/GraphCanvas/GraphCanvasDocumentView.swift`)
 
+- `mouseDown(with:)`: before `pointer.mouseDown(…)`, call `pointer.setShiftHeld(event.modifierFlags.contains(.shift))` (D-11).
 - `viewDidMoveToWindow()`: after `updateTrackingAreas()`, call `installShiftTracking()` *(new, private)* when `window != nil`, else `removeShiftTracking()` *(new, private)*.
 - Stored tokens: `nonisolated(unsafe) private var flagsMonitor: Any?` and `nonisolated(unsafe) private var resignKeyObserver: Any?`, the same annotation `PVFormDialogOutsideClickView.monitor` uses, because `deinit` touches them.
 - `installShiftTracking()`: call `removeShiftTracking()` first. Seed the state: `pointer.setShiftHeld(Self.reportedShift(NSEvent.modifierFlags, textHasFocus: window?.firstResponder is NSText))`, so Shift already held when the graph appears engages Select. Then `flagsMonitor = NSEvent.addLocalMonitorForEvents(matching: [.flagsChanged]) { [weak self] event in … }`; in the handler, `MainActor.assumeIsolated`, ignore events whose `event.window !== self?.window`, then `pointer.setShiftHeld(Self.reportedShift(event.modifierFlags, textHasFocus: self.window?.firstResponder is NSText))`; return the event. Then `resignKeyObserver = NotificationCenter.default.addObserver(forName: NSWindow.didResignKeyNotification, object: window, queue: .main) { [weak self] _ in MainActor.assumeIsolated { self?.pointer.setShiftHeld(false) } }` (block form; the token is what `removeObserver` takes).
@@ -205,9 +208,9 @@ func finishRectangleSelection(_ ids: Set<String>, additive: Bool)  // (new) D-4,
 
 Update the `armedSelect` doc comment: "Select tool armed from the palette: an empty-canvas drag draws a rectangle, and its release disarms it (exclusive with Place and Connect). Holding Shift engages the same mode without arming it."
 
-**`EvidenceCanvasInputMode.swift`**: `return (armedSelect || shiftSelectHeld) ? .selecting : .idle`; add `var isSelectEngaged: Bool { inputMode == .selecting }` in the same extension. Update the `.selecting` case comment: "Select armed or Shift held: an empty-canvas drag draws a rectangle."
+**`EvidenceCanvasInputMode.swift`**: `return (armedSelect || shiftSelectHeld) ? .selecting : .idle`. Update the `.selecting` case comment: "Select armed or Shift held: an empty-canvas drag draws a rectangle."
 
-**`EvidenceGraphPalette.swift` `selectTool`**: `armed: model.isSelectEngaged`.
+**`EvidenceGraphPalette.swift` `selectTool`**: `armed: model.inputMode == .selecting`.
 
 **`EvidenceGraphView.wirePointer()`**:
 
@@ -240,17 +243,17 @@ Check: `-only-testing:ProvenenciaTests/EvidenceGraphModelTests` passes.
 
 **STEP-3 — Shift engages Select**
 Files: `macos/App/Features/EvidenceGraph/EvidenceGraphModel.swift`, `macos/App/Features/EvidenceGraph/EvidenceCanvasInputMode.swift`, `macos/App/Features/GraphCanvas/GraphCanvasDocumentView.swift`, `macos/App/Features/EvidenceGraph/EvidenceGraphView.swift`, `macos/ProvenenciaTests/EvidenceGraphModelTests.swift`.
-Do: `shiftSelectHeld`, `setShiftSelectHeld(_:)`, the `inputMode` change, `isSelectEngaged`, the document view monitor (§6), and `onShiftHeldChanged` wiring. Add T-8, T-9.
-Check: `-only-testing:ProvenenciaTests/EvidenceGraphModelTests` and `-only-testing:ProvenenciaTests/GraphCanvasPointerHitTestingTests` pass; in the running app, §10 steps 1, 9, and 10 behave as written.
+Do: `shiftSelectHeld`, `setShiftSelectHeld(_:)`, the `inputMode` change, the document view monitor (§6), and `onShiftHeldChanged` wiring. Add T-8, T-9.
+Check: `-only-testing:ProvenenciaTests/EvidenceGraphModelTests` and `-only-testing:ProvenenciaTests/GraphCanvasPointerHitTestingTests` pass; in the running app, §10 steps 1, 9, 10, and 11 behave as written.
 
 **STEP-4 — Palette paints Select while Shift engages it**
 Files: `macos/App/Features/EvidenceGraph/EvidenceGraphPalette.swift`. Skill: `add-ui-component` (no new component; confirm `paletteTool` is reused as is).
-Do: `armed: model.isSelectEngaged`.
+Do: `armed: model.inputMode == .selecting`.
 Check: build succeeds; manual check §10 step 1.
 
 **STEP-5 — Docs**
 Files: `docs/deployment-plan/spike-10/deployment-plan.md` (working rule "Box-select is a marquee of subject cards.", S10-56 map row and scope entry status), `docs/deployment-plan/spike-10/completed.md`, `macos/App/Features/GraphCanvas/README.md`, this plan (status, Landed note).
-Do: per the Definition of done. In the working rule, replace the three sentences from "Hold Shift and drag empty canvas" through "Bridge cards are not selected and do not move with the group." with: "Holding Shift engages Select and lights its palette button; releasing Shift returns to pan. Select armed on the palette (its help is “Hold Shift to select”) disarms when its rectangle is released. Person, event, place, and bridge cards that intersect the rectangle are selected; a Shift rectangle adds to the selection, a plain one replaces it. Shift-click adds or removes one card. Empty-canvas drag pans when Select is disarmed and Shift is up; a click on empty canvas clears the selection." (The bridge sentence is already false at the base: `replacePrimarySelection` keeps bridges, `rectangleSelectionKeepsBridges`.) In the GraphCanvas README: the `GraphCanvasPointerController` row in the type table gains "Shift tracking, Shift-click toggle"; the "Shift-drag on empty document" row says the pointer calls `onMarqueeEnded` with the ids of the hit targets it overlaps and whether Shift was down at press (additive); add a row "Shift-click on a hit target | `onToggleSelect` (no `onSelect`, no card action)" and a row "Shift key | Document view reports it through `onShiftHeldChanged` (local `flagsChanged` monitor; `false` while a text field has focus or the window is not key)". The "Click / drag on hit targets" row stays.
+Do: per the Definition of done. In the working rule, replace the three sentences from "Hold Shift and drag empty canvas" through "Bridge cards are not selected and do not move with the group." with: "Holding Shift engages Select and lights its palette button; releasing Shift returns to pan. Select armed on the palette (its help is “Hold Shift to select”) disarms when its rectangle is released. Person, event, place, and bridge cards that intersect the rectangle are selected; a Shift rectangle adds to the selection, a plain one replaces it. Shift-click adds or removes one card. Empty-canvas drag pans when Select is disarmed and Shift is up; a click on empty canvas clears the selection." (The bridge sentence is already false at the base: `replacePrimarySelection` keeps bridges, `rectangleSelectionKeepsBridges`.) In the GraphCanvas README: the `GraphCanvasPointerController` row in the type table gains "Shift tracking, Shift-click toggle"; the "Shift-drag on empty document" row says the pointer calls `onMarqueeEnded` with the ids of the hit targets it overlaps and whether Shift was down at press (additive); add a row "Shift-click on a hit target | `onToggleSelect` (no `onSelect`, no card action)" and a row "Shift key | Document view reports it through `onShiftHeldChanged` (local `flagsChanged` monitor; `false` while a text field has focus or the window is not key)". The "Click / drag on hit targets" row stays. In "Reuse contract", the callbacks cell becomes "select / toggle select / drag began / drag end / marquee ended (ids, additive) / Shift held changed / place / connect", and add one sentence under the table: "The document view reports Shift through `onShiftHeldChanged`; the host decides what it engages."
 Check: `python3 scripts/check-plan-docs.py docs/deployment-plan/spike-10/prs/S10-56-quick-select.md` reports no errors.
 
 Host: the Swift checks and §10 need macOS with Xcode (`scripts/check-pr.sh` runs `xcode-test` on macOS only). On a host without `xcodebuild`, report each Swift check and each §10 step as not run, with the reason; never as passed.
@@ -268,7 +271,7 @@ Commits: one per behavior. The subject is one full imperative sentence that says
 | T-5 | Swift | `…` `shiftHeldReportsOnlyChanges` *(new)* | `setShiftHeld(true)` twice, `setShiftHeld(false)` → `onShiftHeldChanged` receives `[true, false]`; `shiftHeld == false`. | AC-1.1, AC-1.2, D-2 |
 | T-6 | Swift | `EvidenceGraphModelTests.swift` `shiftClickTogglesCardsInTheSelection` *(new)* | `groupModel()`; `selectSubject(id: "p1")`; toggle `p2` → `{p1,p2}`; toggle `b1` → `{p1,p2,b1}`; toggle `p1` → `{p2,b1}`; toggle `"ghost"` → unchanged. `activateSubject(id: "p3")`, toggle `p3` → empty and `activatedSubjectID == nil`. Then `replacePrimarySelection(["p1","p2"])`, `beginGroupDrag(anchor: "p1") == ["p1","p2"]`. | AC-3.1, AC-3.2, AC-3.3, AC-3.4, AC-3.7, D-8 |
 | T-7 | Swift | `…` `rectangleReplacesOrAddsAndDisarmsSelect` *(new)* | `groupModel()`; `toggleSelect()`; `finishRectangleSelection(["p1","p2"], additive: false)` → `{p1,p2}`, `armedSelect == false`. `selectSubject(id: "p3")`; `finishRectangleSelection(["p1"], additive: true)` → `{p1,p3}`. `toggleSelect()`; `finishRectangleSelection([], additive: false)` → empty, `armedSelect == false`. `toggleSelect()`; `selectSubject(id: "p1")`; `selectSubject(id: nil)` → `armedSelect == true`. | AC-2.1, AC-2.2, AC-2.3, AC-2.4, D-4, D-5 |
-| T-8 | Swift | `EvidenceGraphModelTests.swift` `shiftEngagesSelectWithoutArmingIt` *(new)* | Same setup as `selectAndTheCiteToolsDisarmEachOther` (`makeModel(store: makeStore())`, `await prepare()`). After `toggleSelect()` and `finishRectangleSelection([], additive: false)` with Shift held → `armedSelect == false`, `inputMode == .selecting`; Shift false → `.idle`. `setShiftSelectHeld(true)` → `inputMode == .selecting`, `isSelectEngaged`, `armedSelect == false`; `setShiftSelectHeld(false)` → `.idle`. `toggleArm(.person)`; Shift true → `.placing(.person)`, `isSelectEngaged == false`. `disarm()`; `toggleSelect()`; Shift true then false → `armedSelect`, `.selecting`. | AC-1.1, AC-1.2, AC-1.3, AC-1.4, D-1, D-9 |
+| T-8 | Swift | `EvidenceGraphModelTests.swift` `shiftEngagesSelectWithoutArmingIt` *(new)* | Same setup as `selectAndTheCiteToolsDisarmEachOther` (`makeModel(store: makeStore())`, `await prepare()`). After `toggleSelect()` and `finishRectangleSelection([], additive: false)` with Shift held → `armedSelect == false`, `inputMode == .selecting`; Shift false → `.idle`. `setShiftSelectHeld(true)` → `inputMode == .selecting`, `armedSelect == false`; `setShiftSelectHeld(false)` → `.idle`. `toggleArm(.person)`; Shift true → `.placing(.person)`, Select not lit (`inputMode != .selecting`). `disarm()`; `toggleSelect()`; Shift true then false → `armedSelect`, `.selecting`. | AC-1.1, AC-1.2, AC-1.3, AC-1.4, D-1, D-9 |
 | T-9 | Swift | `GraphCanvasPointerHitTestingTests.swift` `shiftReportIgnoresTextFocus` *(new)* | `GraphCanvasDocumentView.reportedShift([.shift], textHasFocus: false)` → `true`; `([.shift], true)` → `false`; `([], false)` → `false`; `([.shift, .command], false)` → `true`. | AC-1.6, D-2 |
 
 Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `GraphCanvasPointerHitTestingTests` (marquee closure arity), `EvidenceGraphModelTests` `selectStaysAvailableWithoutAnArtifact` and `selectAndTheCiteToolsDisarmEachOther` (they read `inputMode`).
@@ -304,6 +307,7 @@ Use a Source with an artifact and at least three person cards and one relationsh
 8. Click empty canvas (with and without Shift): selection clears. (AC-4.1, AC-4.2)
 9. Hold Shift, Cmd-Tab to another app, release Shift there, come back: Select is dark. (AC-1.5)
 10. Click in the omnibar and type a capital letter: Select stays dark. (AC-1.6)
+11. With the omnibar still focused, hold Shift and click a card: it toggles and Select lights; release Shift: Select goes dark. (AC-1.7)
 
 ## 11. Risks and stop conditions
 
