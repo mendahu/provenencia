@@ -96,7 +96,7 @@ Layer 1 of the matching stack gets its package and its contract: `core/valuecomp
 | One repo-walking guard: purity and numeric literals over a list of layer packages | STEP-6, AC-3.1, AC-3.2 |
 | The knob-inventory drift guard | STEP-7, AC-3.3 – AC-3.5 |
 | The matching skill `add-match-rule`, first version, with its Cursor rule and a row in `plan-pr`'s "Touches" table | STEP-8 |
-| Docs: map, scope entries for S11-02, S11-03, S11-10; the inventory's lead paragraph; the cause list; the two docs that name the moved helpers | STEP-10 |
+| Docs: map row; the inventory's lead paragraph; the cause list; the three docs that name the moved helpers | STEP-10 |
 
 | Out | Home |
 | --- | --- |
@@ -288,7 +288,7 @@ Check: `scripts/check-pr.sh` prints `check-pr: PASS`.
 
 **STEP-10 — Docs**
 Files: `docs/deployment-plan/spike-11/deployment-plan.md`, `docs/deployment-plan/spike-11/completed.md`, this plan, `docs/matching-model.md`, `docs/deployment-plan/spike-11/comparison-layers.md`, `docs/conclusion-reconciliation.md`, `docs/ideas/daitch-mokotoff.md`.
-Do: per the Definition of done, and: in the map's S11-02 scope entry, replace the typed-keys sentence with "The four word helpers (`NormalizeForm`, `IsInitial`, `EditDistance`, `SpellingSimilarity`) move in from `core/autoreconcile`."; in S11-03's, replace "`SpellingSimilarity`, `EditDistance`, `NormalizeForm` and `IsInitial` move in from `core/autoreconcile`." with "Builds on S11-02's word helpers; adds initials and aliases to word similarity."; in S11-10's, add "Registry keys are `core/vocabkey` constants used directly as typed `SubjectType` / `PropertyKey` keys; no re-declared key constants." In `matching-model.md`'s inventory lead paragraph, replace "of the planned registry" with "of the registry, `core/matchregistry`" and add "`TestKnobInventoryMatchesRegistry` enforces it; rows whose layer has not landed are listed in its `notYetBuilt`." In `comparison-layers.md` §Detail's cause list, add `no_match`, `order`, `unsupported`. In `conclusion-reconciliation.md` L166, name `valuecompare.SpellingSimilarity`. In `daitch-mokotoff.md` L5, say `core/autoreconcile/spelling.go`'s helpers moved to value compare in S11-02 and `wordSimilarity` / `DefaultWordRules` follow in S11-03 / S11-05; in L19, link `core/valuecompare/words.go` (new). In `comparison-layers.md` L410, add "(moved to `core/valuecompare` and `core/matchregistry` in S11-02)" after the `autoreconcile/spelling.go` mention. In the map's S11-06 scope entry, add: "Decide whether the reconciler keeps importing `matchregistry` for its spelling rules or its caller passes them in (S11-02 D-8)."
+Do: per the Definition of done (the map's scope entries for S11-02, S11-03, S11-06 and S11-10 were updated with this plan), and: in `matching-model.md`'s inventory lead paragraph, replace "of the planned registry" with "of the registry, `core/matchregistry`" and add "`TestKnobInventoryMatchesRegistry` enforces it; rows whose layer has not landed are listed in its `notYetBuilt`." In `comparison-layers.md` §Detail's cause list, add `no_match`, `order`, `unsupported`. In `conclusion-reconciliation.md` L166, name `valuecompare.SpellingSimilarity`. In `daitch-mokotoff.md` L5, say `core/autoreconcile/spelling.go`'s helpers moved to value compare in S11-02 and `wordSimilarity` / `DefaultWordRules` follow in S11-03 / S11-05; in L19, link `core/valuecompare/words.go` (new). In `comparison-layers.md` L410, add "(moved to `core/valuecompare` and `core/matchregistry` in S11-02)" after the `autoreconcile/spelling.go` mention.
 Check: `python3 scripts/check-plan-docs.py docs/deployment-plan/spike-11/prs/S11-02-value-compare-core.md` reports no errors; `rg -n 'autoreconcile/spelling.go' docs --glob '!docs/deployment-plan/archive/**' --glob '!docs/deployment-plan/spike-10/**'` prints only `docs/deployment-plan/spike-11/comparison-layers.md` L410 (now marked as moved) and files under `docs/deployment-plan/spike-11/prs/`.
 
 Commits: one per behavior (D-18). The subject is one full imperative sentence that says what changed, ending in a period, like the rest of `git log` ("Move the word helpers into value compare."). No WIP commits.
@@ -327,7 +327,7 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `c
 - [ ] This plan: Status → Landed in #N (date); a Landed note lists every difference from the plan
 - [ ] deployment-plan.md: map row status; completed.md: one short paragraph of what shipped
 - [ ] Brief moved to design/archive/ and design/README.md updated (if gated) — not gated
-- [ ] Domain doc updated if a rule in docs/*.md changed: matching-model.md inventory paragraph, conclusion-reconciliation.md L166, comparison-layers.md cause list, ideas/daitch-mokotoff.md link; map scope entries for S11-02, S11-03, S11-10 (STEP-10)
+- [ ] Domain doc updated if a rule in docs/*.md changed: matching-model.md inventory paragraph, conclusion-reconciliation.md L166, comparison-layers.md cause list, ideas/daitch-mokotoff.md link (STEP-10)
 - [ ] PR description: what shipped, AC evidence, deviations, manual check
 ```
 
