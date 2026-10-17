@@ -1,6 +1,6 @@
 # International names — later
 
-**Status:** idea, not scheduled. Spike 10 takes accent folding in matching (not display, not the auto-reconciler), spaced particles, and a short nickname table. Collation was descoped (S10-37, 2026-10-16) and is below. Daitch–Mokotoff was descoped (S10-26); the design is [`daitch-mokotoff.md`](daitch-mokotoff.md). S10-29 installed the Western name-format profile and reads it from the catalog. Spanish dual surnames and a `patronymic` part are unscheduled again, below. Design: [`spike-10/international-names.md`](../deployment-plan/spike-10/international-names.md). Abbreviations, project name frequency, and the rest of the matcher are in [`name-matching-enhancements.md`](archive/name-matching-enhancements.md) for the leftovers, and in that same spike for what it builds.
+**Status:** idea, not scheduled. Spike 10 shipped accent folding in matching, spaced particles, nickname tables, and the Western profile ([decisions](../deployment-plan/archive/spike-10/)). Daitch–Mokotoff: [`daitch-mokotoff.md`](daitch-mokotoff.md).
 
 ## Scripts and sound
 

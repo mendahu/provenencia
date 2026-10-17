@@ -46,7 +46,7 @@ Copy the stub. Surface + what got in the way is enough. A wanted fix is optional
 - **Date:** 2026-09-24
 - **Where:** Evidence graph
 - **Annoyance:** A real census page can put dozens of Subjects and hundreds of Observations on one canvas. Nothing is wrong with the model — it just gets hard to see the household you care about.
-- **Wanted:** Layers or filters when a Source actually hurts. Descoped from [Spike 10](../deployment-plan/spike-10/) on 2026-10-08. Canvas growth and box-select are in that spike; hiding part of a Source is not.
+- **Wanted:** Layers or filters when a Source actually hurts. Descoped from [Spike 10](../deployment-plan/archive/spike-10/) on 2026-10-08. Canvas growth and box-select shipped in that spike; hiding part of a Source did not.
 
 ### Automatic structure from the Artifact (beyond transcription)
 

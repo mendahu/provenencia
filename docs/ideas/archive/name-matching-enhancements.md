@@ -1,6 +1,6 @@
 # Name matching — later (archived)
 
-**Not a backlog.** Spike 10's matcher leftovers ([`spike-10/name-matching-enhancements.md`](../../deployment-plan/spike-10/name-matching-enhancements.md)). Each item was closed or moved on 2026-10-17, while scoping [Spike 11](../../deployment-plan/spike-11/).
+**Not a backlog.** Spike 10's matcher leftovers ([Spike 10](../../deployment-plan/archive/spike-10/)). Each item was closed or moved on 2026-10-17, while scoping [Spike 11](../../deployment-plan/spike-11/).
 
 | Item | Where it went |
 | --- | --- |

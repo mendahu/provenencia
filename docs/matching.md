@@ -75,7 +75,7 @@ Promote's exhibit chooser keeps its own member picker, so a row can read conflic
 
 Not yet handled:
 - **Daitch–Mokotoff:** [`ideas/daitch-mokotoff.md`](ideas/daitch-mokotoff.md). Descoped from Spike 10 (S10-26). Spanish dual surnames, a patronymic part, other patterns, transliteration, Beider–Morse, and calendars: [`ideas/international-names.md`](ideas/international-names.md).
-- **Abbreviations, event and place affinity:** Spike 10, [`deployment-plan/spike-10/name-matching-enhancements.md`](deployment-plan/spike-10/name-matching-enhancements.md). Known-as, concluded values, calibration, and rejected-claim memory: [`ideas/archive/name-matching-enhancements.md`](ideas/archive/name-matching-enhancements.md).
+- **Known-as:** [`ideas/international-names.md`](ideas/international-names.md). **Calibration:** [`ideas/matching-test-suite.md`](ideas/matching-test-suite.md). **Rejected-claim memory:** [`ideas/identity-claim-review.md`](ideas/identity-claim-review.md). **Concluded values first, place chains:** Spike 11.
 
 **Resolution uses the same parts.** The reconciler (`core/autoreconcile/names.go`) and value compare both ignore `form`. A name with no parts is no evidence there and not comparable here. The People list also ignores `form`: it orders by the profile's sorted part order. The cache name `sort_key` is still the normalized form. That column is not a match and not the list order.
 
