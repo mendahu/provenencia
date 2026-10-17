@@ -42,6 +42,7 @@ var (
 	ErrSymlink               = apperr.New(apperr.CodeIngestSymlink, apperr.KindUser)
 	ErrMissing               = apperr.New(apperr.CodeIngestMissing, apperr.KindUser)
 	ErrUnsupportedImage      = apperr.New(apperr.CodeIngestUnsupportedImage, apperr.KindUser)
+	ErrUnsafeObjects         = apperr.New(apperr.CodeIngestUnsafeObjects, apperr.KindUser)
 )
 
 // MaxBytes is the largest source file ingest accepts (512 MiB).
@@ -163,7 +164,7 @@ func File(c *database.Catalog, absPath string, userID []byte) (Result, error) {
 
 	tmp, checksum, byteSize, sniffed, err := streamSource(src, c.Dir())
 	if err != nil {
-		return Result{}, err
+		return Result{}, mapObjectsErr(err)
 	}
 	defer tmp.Discard()
 
@@ -182,7 +183,7 @@ func File(c *database.Catalog, absPath string, userID []byte) (Result, error) {
 	// transaction is open. Reuse is decided here, before create_file's Run.
 	if existing, err := files.LookupByChecksum(c, checksum); err == nil {
 		if _, err := tmp.Install(relPath, checksum); err != nil {
-			return Result{}, err
+			return Result{}, mapObjectsErr(err)
 		}
 		return reuseFile(c, existing, relPath, filename, userID)
 	} else if !errors.Is(err, sql.ErrNoRows) {
@@ -191,7 +192,7 @@ func File(c *database.Catalog, absPath string, userID []byte) (Result, error) {
 
 	wrote, err := tmp.Install(relPath, checksum)
 	if err != nil {
-		return Result{}, err
+		return Result{}, mapObjectsErr(err)
 	}
 
 	id, err := files.NewID()
@@ -320,6 +321,15 @@ func (s *sniffBuf) Write(p []byte) (int, error) {
 		s.buf = append(s.buf, p[:need]...)
 	}
 	return len(p), nil
+}
+
+// mapObjectsErr turns the object store's symlinked-objects error into the
+// ingest error the researcher sees; any other error passes through.
+func mapObjectsErr(err error) error {
+	if errors.Is(err, objectstore.ErrUnsafeObjects) {
+		return ErrUnsafeObjects
+	}
+	return err
 }
 
 func streamSource(src *os.File, projectDir string) (t *objectstore.Temp, checksum string, byteSize int64, mediaType string, err error) {

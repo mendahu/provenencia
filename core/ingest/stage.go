@@ -113,7 +113,7 @@ func (s *StagedImage) InsertTx(tx *sql.Tx) (files.File, []rowchange.Change, erro
 	wrote, err := objectstore.WriteIfAbsent(s.c.Dir(), s.rel, s.checksum, s.png)
 	s.wrote = s.wrote || wrote
 	if err != nil {
-		return files.File{}, nil, err
+		return files.File{}, nil, mapObjectsErr(err)
 	}
 	s.file, s.haveFile = file, true
 	return file, changes, nil
