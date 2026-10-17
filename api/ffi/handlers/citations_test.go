@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"testing"
@@ -188,6 +189,14 @@ func saveLikeness(t *testing.T, dir, userID, artifactID, personID, likenessID, c
 	return &created
 }
 
+// sameLikeness asserts a read row carries the depiction id and value the save returned.
+func sameLikeness(t *testing.T, got, saved *engine.Observation) {
+	t.Helper()
+	if got.GetValueDepictionId() != saved.GetValueDepictionId() || !proto.Equal(got.GetDepiction(), saved.GetDepiction()) {
+		t.Fatalf("read %+v, saved %+v", got, saved)
+	}
+}
+
 // checkSavedLikeness asserts the AC-1.1 shape of one saved likeness row.
 func checkSavedLikeness(t *testing.T, dir string, row *engine.Observation) {
 	t.Helper()
@@ -317,6 +326,7 @@ func TestLikenessReadHidesDamagedValue(t *testing.T) {
 }
 
 func TestCreateCitationWithObservations(t *testing.T) {
+	var objectsBefore []string
 	runRPC(t, CreateCitationWithObservations, []rpcTest{
 		{name: "bad proto", raw: []byte{0xff}, wantErr: true},
 		{
@@ -375,6 +385,7 @@ func TestCreateCitationWithObservations(t *testing.T) {
 			name: "saves a likeness and returns its image path",
 			reqFn: func(t *testing.T) proto.Message {
 				dir, userID, _, artifactID, personID, likenessID := likenessFixture(t)
+				objectsBefore = objectRelPaths(t, dir)
 				return &engine.CreateCitationWithObservationsRequest{
 					ProjectDir: dir, UserId: userID, ArtifactId: artifactID, LocatorJson: likenessLocatorJSON,
 					Observations: []*engine.ObservationDraft{likenessDraft(personID, likenessID, likenessRegionJSON, writeCrop(t, 300, 200, 128))},
@@ -390,12 +401,10 @@ func TestCreateCitationWithObservations(t *testing.T) {
 				}
 				dir := req.(*engine.CreateCitationWithObservationsRequest).ProjectDir
 				checkSavedLikeness(t, dir, created.Observations[0])
-				found := false
-				for _, p := range objectRelPaths(t, dir) {
-					found = found || p == created.Observations[0].GetDepiction().GetImageRelPath()
-				}
-				if !found {
-					t.Fatalf("stored image missing from %v", objectRelPaths(t, dir))
+				want := append(append([]string{}, objectsBefore...), created.Observations[0].GetDepiction().GetImageRelPath())
+				sort.Strings(want)
+				if got := objectRelPaths(t, dir); !slices.Equal(got, want) {
+					t.Fatalf("objects %v, want %v", got, want)
 				}
 			},
 		},
@@ -522,13 +531,14 @@ func TestAddObservationsToCitation(t *testing.T) {
 }
 
 func TestListObservationsBySource(t *testing.T) {
+	var saved *engine.CreateCitationWithObservationsResponse
 	runRPC(t, ListObservationsBySource, []rpcTest{
 		{name: "bad proto", raw: []byte{0xff}, wantErr: true},
 		{
 			name: "returns a likeness",
 			reqFn: func(t *testing.T) proto.Message {
 				dir, userID, sourceID, artifactID, personID, likenessID := likenessFixture(t)
-				saveLikeness(t, dir, userID, artifactID, personID, likenessID, writeCrop(t, 300, 200, 128))
+				saved = saveLikeness(t, dir, userID, artifactID, personID, likenessID, writeCrop(t, 300, 200, 128))
 				return &engine.ListObservationsBySourceRequest{ProjectDir: dir, SourceId: sourceID}
 			},
 			after: func(t *testing.T, out []byte, req proto.Message) {
@@ -541,6 +551,7 @@ func TestListObservationsBySource(t *testing.T) {
 				}
 				dir := req.(*engine.ListObservationsBySourceRequest).ProjectDir
 				checkSavedLikeness(t, dir, list.Observations[0])
+				sameLikeness(t, list.Observations[0], saved.Observations[0])
 				if err := catalogsession.Do(dir, func(c *database.Catalog) error { return c.Graph().Verify() }); err != nil {
 					t.Fatal(err)
 				}
@@ -779,13 +790,14 @@ func TestListCitationsByArtifact(t *testing.T) {
 }
 
 func TestGetCitation(t *testing.T) {
+	var saved *engine.CreateCitationWithObservationsResponse
 	runRPC(t, GetCitation, []rpcTest{
 		{name: "bad proto", raw: []byte{0xff}, wantErr: true},
 		{
 			name: "returns a likeness",
 			reqFn: func(t *testing.T) proto.Message {
 				dir, userID, _, artifactID, personID, likenessID := likenessFixture(t)
-				saved := saveLikeness(t, dir, userID, artifactID, personID, likenessID, writeCrop(t, 300, 200, 128))
+				saved = saveLikeness(t, dir, userID, artifactID, personID, likenessID, writeCrop(t, 300, 200, 128))
 				return &engine.GetCitationRequest{ProjectDir: dir, CitationId: saved.Citation.GetId()}
 			},
 			after: func(t *testing.T, out []byte, req proto.Message) {
@@ -797,6 +809,7 @@ func TestGetCitation(t *testing.T) {
 					t.Fatalf("%+v", got.Observations)
 				}
 				checkSavedLikeness(t, req.(*engine.GetCitationRequest).ProjectDir, got.Observations[0])
+				sameLikeness(t, got.Observations[0], saved.Observations[0])
 			},
 		},
 		{
