@@ -4,7 +4,7 @@
 // Candidates are handles of the same Subject type.
 //
 // The algorithm is data. A Profile lists, for one Subject type, the Features
-// that count: which Property, how its values are compared (a Comparer), how
+// that count: which Property, how its values are compared (its value type), how
 // much a resemblance adds (Weight), and how much a clear disagreement takes
 // away (Contradiction). Scores are additive, so the weights read as points:
 // "a matching name is worth 10, a different sex at birth costs 2". Default
@@ -21,6 +21,7 @@ import (
 	"github.com/mendahu/provenencia/core/autoreconcile"
 	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/namevalue"
+	"github.com/mendahu/provenencia/core/valuecompare"
 )
 
 // Property names one Property by its vocabulary identity.
@@ -29,7 +30,7 @@ type Property struct {
 	Origin string
 }
 
-// Value is one value of a Property, in the shape comparers read. Terms are
+// Value is one value of a Property, in the shape value compare reads. Terms are
 // carried by key (sex_at_birth "male"), so profiles can name them.
 type Value struct {
 	Text       string
@@ -38,9 +39,9 @@ type Value struct {
 	HasInteger bool
 	Term       string
 	// TermLabel is the term's catalog label, for showing the value; empty
-	// when the loader had none. Comparers never read it.
+	// when the loader had none. Value compare never reads it.
 	TermLabel string
-	// TermID is the catalog term id when known. Comparers compare terms by
+	// TermID is the catalog term id when known. Value compare reads terms by
 	// key; Promote's exhibits pass the id to autoreconcile.Compatible, which
 	// falls back to the key when it is empty.
 	TermID []byte
@@ -50,7 +51,7 @@ type Value struct {
 	Date    *datevalue.Value
 	Name    *namevalue.Value
 	// NamePattern is the name pattern key for Name (its Person's name
-	// format, once loaders supply it); empty uses the comparer's pattern.
+	// format, once loaders supply it); empty reads Rules.Names.Western.
 	NamePattern string
 
 	// Counted is true on values a cache loader filled with the evidence
@@ -89,15 +90,11 @@ type Reason struct {
 	// candidate value, times both values' weights (a value is weighed by its
 	// support against the leading value), 0…1; 0 is a contradiction.
 	Similarity float64
-	// Discount is the share of points the matched values' frequency in the
-	// project cost, 0…1; 0 when the values clearly disagree.
-	Discount float64
 	// Probe and Candidate are the two values that produced the Similarity,
 	// or the contradiction.
 	Probe, Candidate ValueRef
 	// Contribution is what the Feature added to the score: Weight ×
-	// Similarity × (1 − Discount), or −Contradiction when the values clearly
-	// disagree.
+	// Similarity, or −Contradiction when the values clearly disagree.
 	Contribution float64
 }
 
@@ -111,10 +108,10 @@ type Match struct {
 
 // Rank scores every candidate against the probe and returns those reaching
 // p.MinScore, best first (score, then ref). limit <= 0 returns them all.
-func Rank(p Profile, probe Values, candidates []Candidate, limit int) []Match {
+func Rank(p Profile, rules valuecompare.Rules, probe Values, candidates []Candidate, limit int) []Match {
 	var out []Match
 	for _, c := range candidates {
-		m := Score(p, probe, c)
+		m := Score(p, rules, probe, c)
 		if m.Score >= p.MinScore && len(m.Reasons) > 0 {
 			out = append(out, m)
 		}
@@ -135,17 +132,17 @@ func Rank(p Profile, probe Values, candidates []Candidate, limit int) []Match {
 }
 
 // Score is one candidate's score and its reasons, whatever the threshold.
-// A Feature counts only when both sides have a value the comparer can judge.
-func Score(p Profile, probe Values, c Candidate) Match {
+// A Feature counts only when both sides have a value value compare can judge.
+func Score(p Profile, rules valuecompare.Rules, probe Values, c Candidate) Match {
 	m := Match{EntityID: c.EntityID, Ref: c.Ref}
 	for _, f := range p.Features {
 		a, b := poolPeriods(f.Property, probe, c.Values)
-		pr := pairValues(f.Comparer, f.Cardinality, a, b)
+		pr := pairValues(rules, f.ValueType, f.Cardinality, a, b)
 		if !pr.Comparable {
 			continue
 		}
 		sim := pr.Similarity
-		r := Reason{Property: f.Property, Similarity: sim, Discount: pr.Discount, Probe: pr.Probe, Candidate: pr.Candidate, Contribution: f.Weight * sim * (1 - pr.Discount)}
+		r := Reason{Property: f.Property, Similarity: sim, Probe: pr.Probe, Candidate: pr.Candidate, Contribution: f.Weight * sim}
 		if sim == 0 {
 			r.Contribution = -f.Contradiction
 		}

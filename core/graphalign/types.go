@@ -89,10 +89,6 @@ type Stats struct {
 	ValueFreq map[string]map[string]float64
 	// FanOut[signature.Key()] is the typical neighbor count for that edge.
 	FanOut map[string]float64
-	// Words is how common each name word is among the project's filed
-	// people. Promote hands it to the name comparer, which scales points by
-	// it. The map is shared between copies and never mutated.
-	Words match.WordCounts
 }
 
 // Fixed is a decided or already-promoted row Align holds as given. Target
