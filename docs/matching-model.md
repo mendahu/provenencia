@@ -25,7 +25,7 @@ matchregistry ──────────────────────
 | 5 | Segment compare | `core/segmentcompare` | A segment on the layer and a segment in the research graph | An outcome, a similarity, evidence, and a detail | `segment`, `subject` |
 | 6 | Graph alignment | `core/graphalign` | The layer's Subjects and the research graph's handles | Rows: target, band, contested mark, reasons, alternatives | `alignment`, `segment`, `subject` |
 
-The subject profile builder sits beside layer 4. It turns the reconciler's conclusion into a Subject-shaped profile and compares nothing. 
+The subject profile builder sits beside layer 4. It turns the reconciler's conclusion into a Subject-shaped profile and compares nothing.
 Layer 6 decides what to compare (shortlisting), in what order (one best-first queue), and what to place (the accept bar); a row's band comes from its evidence. See the reasoning in [`comparison-layers.md`](deployment-plan/spike-11/comparison-layers.md#layer-6-procedure).
 
 ## Worked example
