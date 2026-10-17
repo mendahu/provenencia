@@ -15,6 +15,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/conclusiondetails"
 	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/database/observations"
+	"github.com/mendahu/provenencia/core/database/observations/observationstest"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/rowchange"
@@ -223,6 +224,27 @@ func TestForEntityFieldsFollowTheRecords(t *testing.T) {
 	g := f.promote(b, nil)
 	if d := f.detail(g); len(d.Fields) != 1 {
 		t.Fatalf("no sex recorded: %+v", d.Fields)
+	}
+}
+
+// The Person page lists no depiction field before the gallery exists (S10-35).
+func TestForEntityLikenessHasNoField(t *testing.T) {
+	f := newFixture(t)
+	src := f.source("Register")
+	a := f.personOn(src)
+	f.cite(a, f.nameIn(a, "given=James|surname=Robins"))
+	likeness, err := properties.Lookup(f.c, "likeness", properties.OriginProvenencia)
+	must(t, err)
+	art := observationstest.FileArtifact(t, f.c, userID, src.ID)
+	_, _, err = observationstest.SaveCitation(f.c, userID, art, observations.Input{
+		SubjectID: a.ID, PropertyID: likeness.ID,
+		Depiction: &observations.DepictionInput{RegionJSON: observationstest.LikenessRegion, ImagePath: observationstest.Crop(t, 40, 30, 100)},
+	})
+	must(t, err)
+	h := f.promote(a, nil)
+	d := f.detail(h)
+	if len(d.Fields) != 1 || d.Fields[0].PropertyKey != "name" {
+		t.Fatalf("fields %+v", d.Fields)
 	}
 }
 
