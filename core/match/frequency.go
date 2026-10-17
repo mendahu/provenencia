@@ -4,7 +4,7 @@ import (
 	"math"
 
 	"github.com/mendahu/provenencia/core/autoreconcile"
-	"github.com/mendahu/provenencia/core/database/namevalues"
+	"github.com/mendahu/provenencia/core/namevalue"
 )
 
 // WordCounts is how common each name word is among a project's filed people:
@@ -25,7 +25,7 @@ var noWordCounts WordCounts
 // do not. Keys are comparison tokens: split with the comparer's particles,
 // then folded with its folds, so José and Jose share one key. Lookup in
 // discount reads the same keys.
-func (c NameComparer) CountWords(people [][]namevalues.Value) WordCounts {
+func (c NameComparer) CountWords(people [][]namevalue.Value) WordCounts {
 	r := c.Words.resolve(false)
 	out := WordCounts{Words: map[string]int{}}
 	for _, handle := range people {

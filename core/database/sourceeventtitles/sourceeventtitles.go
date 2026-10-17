@@ -18,6 +18,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/eventtitle"
 	"github.com/mendahu/provenencia/core/hops"
+	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/valuecodec"
 )
 
@@ -152,7 +153,7 @@ func FromStored(sg graphcache.SourceGraph, propKey map[string]string, terms map[
 	for i, e := range sg.EventPlaces {
 		places[i] = canonicalgraph.Edge{From: e.From, To: e.To, ToRef: e.ToRef}
 	}
-	names := map[string]namevalues.Value{}
+	names := map[string]namevalue.Value{}
 	for _, o := range sg.Observations {
 		if len(o.Name) == 0 || len(o.NameID) == 0 {
 			continue
@@ -166,7 +167,7 @@ func FromStored(sg graphcache.SourceGraph, propKey map[string]string, terms map[
 	return assemble(events, first, people, places, names)
 }
 
-func assemble(events []titledEvent, first map[string]naming, people, places []canonicalgraph.Edge, names map[string]namevalues.Value) []Title {
+func assemble(events []titledEvent, first map[string]naming, people, places []canonicalgraph.Edge, names map[string]namevalue.Value) []Title {
 	peopleOf := map[string][]eventtitle.Subject{}
 	seen := map[string]bool{}
 	for _, e := range people {

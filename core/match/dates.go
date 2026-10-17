@@ -2,7 +2,7 @@ package match
 
 import (
 	"github.com/mendahu/provenencia/core/autoreconcile"
-	"github.com/mendahu/provenencia/core/database/datevalues"
+	"github.com/mendahu/provenencia/core/datevalue"
 )
 
 // DateComparer compares dates by the days they cover. Settings default to
@@ -69,13 +69,13 @@ type dateSpan struct {
 	point, approx bool
 }
 
-func spanOf(d *datevalues.Value) (dateSpan, bool) {
+func spanOf(d *datevalue.Value) (dateSpan, bool) {
 	first, last, ok := autoreconcile.DateEnds(*d)
 	if !ok {
 		return dateSpan{}, false
 	}
 	s := dateSpan{first: first, last: last}
-	if d.Kind != datevalues.KindRange && d.Qualifier != datevalues.QualifierBEF && d.Qualifier != datevalues.QualifierAFT {
+	if d.Kind != datevalue.KindRange && d.Qualifier != datevalue.QualifierBEF && d.Qualifier != datevalue.QualifierAFT {
 		s.point, s.approx = true, d.Qualifier != ""
 	}
 	return s, true

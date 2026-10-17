@@ -7,8 +7,8 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/mendahu/provenencia/core/database/namevalues/namevaluestest"
 	"github.com/mendahu/provenencia/core/database/promotealign"
+	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
 	"github.com/mendahu/provenencia/core/valuecodec"
 )
 
@@ -201,7 +201,7 @@ func BenchmarkLoadStatsNames(b *testing.B) {
 		id := benchID(100 + i)
 		_, err := ent.Exec(id, personT, fmt.Sprintf("PER-%05d", i))
 		must(b, err)
-		blob, err := valuecodec.MarshalName(*namevaluestest.Western(fmt.Sprintf("Given%d Surname%d", i%500, i%2000)))
+		blob, err := valuecodec.MarshalName(*namevaluetest.Western(fmt.Sprintf("Given%d Surname%d", i%500, i%2000)))
 		must(b, err)
 		_, err = val.Exec(id, nameP, blob)
 		must(b, err)

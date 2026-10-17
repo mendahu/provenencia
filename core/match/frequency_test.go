@@ -4,7 +4,7 @@ import (
 	"math"
 	"testing"
 
-	"github.com/mendahu/provenencia/core/database/namevalues"
+	"github.com/mendahu/provenencia/core/namevalue"
 )
 
 // counts100 are the counts of AC-1.1: 100 people; smith on 40, quirk on 1,
@@ -14,9 +14,9 @@ func counts100() *WordCounts {
 }
 
 func TestCountNameWords(t *testing.T) {
-	val := func(form string) namevalues.Value { return *name(form).Name }
+	val := func(form string) namevalue.Value { return *name(form).Name }
 	t.Run("one count per handle per word, folded, no initials", func(t *testing.T) {
-		got := NameComparer{}.CountWords([][]namevalues.Value{
+		got := NameComparer{}.CountWords([][]namevalue.Value{
 			{val("José Smith"), val("Smith")},
 			{val("Jose Smith"), val("J.")},
 			{val("J.")},
@@ -30,7 +30,7 @@ func TestCountNameWords(t *testing.T) {
 	})
 	t.Run("a comparer with its own folds keys by them", func(t *testing.T) {
 		c := NameComparer{Words: WordRules{Folds: Set(map[rune]string{'ø': "oe"})}}
-		got := c.CountWords([][]namevalues.Value{{val("Søren Smith")}})
+		got := c.CountWords([][]namevalue.Value{{val("Søren Smith")}})
 		if got.Words["soeren"] != 1 {
 			t.Fatalf("got %+v", got)
 		}

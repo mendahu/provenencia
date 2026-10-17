@@ -3,8 +3,9 @@ package observations
 import (
 	"bytes"
 	"database/sql"
-	"github.com/mendahu/provenencia/core/database/rowchange"
 	"strings"
+
+	"github.com/mendahu/provenencia/core/database/rowchange"
 
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/database"

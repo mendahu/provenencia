@@ -9,7 +9,6 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/citations"
-	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
@@ -21,6 +20,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
+	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/ingest"
 	"github.com/mendahu/provenencia/core/ref"
 	"github.com/mendahu/provenencia/core/writes"
@@ -413,13 +413,13 @@ func TestSourceScopes(t *testing.T) {
 				year := 1842
 				res := s.citation(t, citations.CreateInput{}, observations.Input{
 					SubjectID: s.event.ID, PropertyID: s.dateProp.ID,
-					Date: &datevalues.Value{Kind: datevalues.KindPoint, StartYear: &year},
+					Date: &datevalue.Value{Kind: datevalue.KindPoint, StartYear: &year},
 				})
 				year2 := 1843
 				s.bumpsA(t, func() {
 					s.updateObservation(t, observations.Input{
 						ID: res.Observations[0].ID, SubjectID: s.event.ID, PropertyID: s.dateProp.ID,
-						Date: &datevalues.Value{Kind: datevalues.KindPoint, StartYear: &year2},
+						Date: &datevalue.Value{Kind: datevalue.KindPoint, StartYear: &year2},
 					})
 				})
 			},
@@ -559,14 +559,14 @@ func TestHandleScopes(t *testing.T) {
 				s.movesBoth(t, h, func() {
 					res = s.citation(t, citations.CreateInput{}, observations.Input{
 						SubjectID: s.event.ID, PropertyID: s.dateProp.ID,
-						Date: &datevalues.Value{Kind: datevalues.KindPoint, StartYear: &year},
+						Date: &datevalue.Value{Kind: datevalue.KindPoint, StartYear: &year},
 					})
 				})
 				year2 := 1843
 				s.movesBoth(t, h, func() {
 					s.updateObservation(t, observations.Input{
 						ID: res.Observations[0].ID, SubjectID: s.event.ID, PropertyID: s.dateProp.ID,
-						Date: &datevalues.Value{Kind: datevalues.KindPoint, StartYear: &year2},
+						Date: &datevalue.Value{Kind: datevalue.KindPoint, StartYear: &year2},
 					})
 				})
 			},

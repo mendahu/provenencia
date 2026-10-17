@@ -9,13 +9,14 @@ import (
 	"github.com/mendahu/provenencia/core/autoreconcile"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
-	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/nameformats"
-	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/database/properties"
+	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/hops"
+	"github.com/mendahu/provenencia/core/namevalue"
+	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/valuecodec"
 )
 
@@ -124,7 +125,7 @@ func follow(g *graphcache.Graph, id []byte, hop hops.Hop) ([]graphcache.Link, er
 	return g.Follow(id, hop)
 }
 
-func keptName(n *graphcache.Node, propID []byte) (*namevalues.Value, int, error) {
+func keptName(n *graphcache.Node, propID []byte) (*namevalue.Value, int, error) {
 	rows := kept(n, propID)
 	row, ok := rank1(rows)
 	if !ok || len(row.Name) == 0 {
@@ -155,7 +156,7 @@ func keptTerm(n *graphcache.Node, propID []byte) (id []byte, key string, nkept i
 	return append([]byte(nil), row.TermID...), row.TermKey, len(rows)
 }
 
-func keptDateAt(n *graphcache.Node, propID []byte) (*datevalues.Value, int, string, bool, error) {
+func keptDateAt(n *graphcache.Node, propID []byte) (*datevalue.Value, int, string, bool, error) {
 	rows := kept(n, propID)
 	row, ok := rank1(rows)
 	if !ok {
@@ -165,7 +166,7 @@ func keptDateAt(n *graphcache.Node, propID []byte) (*datevalues.Value, int, stri
 	if err != nil || date == nil {
 		return nil, len(rows), "", false, err
 	}
-	key, ok := autoreconcile.SortKey(properties.ValueTypeDate, autoreconcile.Value{Date: date})
+	key, ok := autoreconcile.SortKey(propertymeta.ValueTypeDate, autoreconcile.Value{Date: date})
 	return date, len(rows), key, ok, nil
 }
 
@@ -503,7 +504,7 @@ func onePerson(v vocab, n *graphcache.Node, g *graphcache.Graph, pg *placeGraph)
 
 type lifePick struct {
 	event *graphcache.Node
-	date  *datevalues.Value
+	date  *datevalue.Value
 	count int
 	sort  string
 	ok    bool
@@ -718,11 +719,11 @@ func eventKeyOf(h EventHeader) eventKey {
 	return eventKey{ref: strings.ToLower(h.Entity.Ref)}
 }
 
-func dateSort(v *datevalues.Value) (string, bool) {
+func dateSort(v *datevalue.Value) (string, bool) {
 	if v == nil {
 		return "", false
 	}
-	return autoreconcile.SortKey(properties.ValueTypeDate, autoreconcile.Value{Date: v})
+	return autoreconcile.SortKey(propertymeta.ValueTypeDate, autoreconcile.Value{Date: v})
 }
 
 func eventPlaces(g *graphcache.Graph, v vocab, pg *placeGraph, ev *graphcache.Node) ([]HeaderPlace, error) {
@@ -756,7 +757,7 @@ func eventPlaces(g *graphcache.Graph, v vocab, pg *placeGraph, ev *graphcache.No
 	return pg.FoldLocations(raw, at), nil
 }
 
-func eventWhen(v vocab, ev *graphcache.Node) (*datevalues.Value, error) {
+func eventWhen(v vocab, ev *graphcache.Node) (*datevalue.Value, error) {
 	date, _, _, _, err := keptDateAt(ev, v.prop("date"))
 	if err != nil {
 		return nil, err

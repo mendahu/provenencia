@@ -29,9 +29,9 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/mendahu/provenencia/core/database/datevalues"
-	"github.com/mendahu/provenencia/core/database/namevalues"
-	"github.com/mendahu/provenencia/core/database/properties"
+	"github.com/mendahu/provenencia/core/datevalue"
+	"github.com/mendahu/provenencia/core/namevalue"
+	"github.com/mendahu/provenencia/core/propertymeta"
 )
 
 // State describes how a Property's candidates reconciled.
@@ -63,7 +63,7 @@ const (
 
 var (
 	// ErrUnknownValueType is returned for a value type outside the closed
-	// properties.ValueType* set.
+	// propertymeta.ValueType* set.
 	ErrUnknownValueType = errors.New("resolve: unknown value type")
 	// ErrValueMismatch is returned when a candidate or concluded value does
 	// not carry the field its value type needs.
@@ -82,8 +82,8 @@ type Value struct {
 	Neutral    bool   // the term is no evidence either way (its catalog flag)
 	SubjectID  []byte // the cited subject
 	EntityID   []byte // that subject's accepted handle, when the loader resolved one
-	Date       *datevalues.Value
-	Name       *namevalues.Value
+	Date       *datevalue.Value
+	Name       *namevalue.Value
 }
 
 // Candidate is one member Observation's value for the Property, with the
@@ -192,7 +192,7 @@ func (r Result) State() State {
 	case len(shown) == 0:
 		return StateEmpty
 	case len(shown) > 1:
-		if r.cardinality == properties.CardinalityMultiple {
+		if r.cardinality == propertymeta.CardinalityMultiple {
 			return StateMultiple
 		}
 		return StateMixed
@@ -212,7 +212,7 @@ func Reconcile(valueType string, candidates []Candidate, concluded *Value, cardi
 		return Result{}, fmt.Errorf("%w: %q", ErrUnknownValueType, valueType)
 	}
 	switch cardinality {
-	case properties.CardinalitySingle, properties.CardinalityMultiple:
+	case propertymeta.CardinalitySingle, propertymeta.CardinalityMultiple:
 	default:
 		return Result{}, fmt.Errorf("%w: %q", ErrUnknownValueType, cardinality)
 	}
@@ -229,8 +229,8 @@ func Reconcile(valueType string, candidates []Candidate, concluded *Value, cardi
 
 func knownValueType(vt string) bool {
 	switch vt {
-	case properties.ValueTypeText, properties.ValueTypeInteger, properties.ValueTypeDate,
-		properties.ValueTypeName, properties.ValueTypeSubject, properties.ValueTypeTerm:
+	case propertymeta.ValueTypeText, propertymeta.ValueTypeInteger, propertymeta.ValueTypeDate,
+		propertymeta.ValueTypeName, propertymeta.ValueTypeSubject, propertymeta.ValueTypeTerm:
 		return true
 	default:
 		return false
@@ -242,17 +242,17 @@ func knownValueType(vt string) bool {
 // becomes no evidence in the pipeline.
 func carries(valueType string, v Value) bool {
 	switch valueType {
-	case properties.ValueTypeText:
+	case propertymeta.ValueTypeText:
 		return v.HasText
-	case properties.ValueTypeInteger:
+	case propertymeta.ValueTypeInteger:
 		return v.HasInteger
-	case properties.ValueTypeTerm:
+	case propertymeta.ValueTypeTerm:
 		return len(v.TermID) > 0
-	case properties.ValueTypeSubject:
+	case propertymeta.ValueTypeSubject:
 		return len(v.SubjectID) > 0
-	case properties.ValueTypeName:
+	case propertymeta.ValueTypeName:
 		return v.Name != nil
-	case properties.ValueTypeDate:
+	case propertymeta.ValueTypeDate:
 		return v.Date != nil
 	}
 	return false
@@ -264,23 +264,23 @@ func carries(valueType string, v Value) bool {
 // Terms have no sort key here (ok = false): they sort by label.
 func SortKey(valueType string, v Value) (key string, ok bool) {
 	switch valueType {
-	case properties.ValueTypeName:
+	case propertymeta.ValueTypeName:
 		if v.Name == nil {
 			return "", false
 		}
 		return NormalizeForm(v.Name.Form), true
-	case properties.ValueTypeText:
+	case propertymeta.ValueTypeText:
 		if !v.HasText {
 			return "", false
 		}
 		return strings.ToLower(strings.TrimSpace(v.Text)), true
-	case properties.ValueTypeInteger:
+	case propertymeta.ValueTypeInteger:
 		if !v.HasInteger {
 			return "", false
 		}
 		// Offset into uint64 so byte order matches numeric order, negatives included.
 		return fmt.Sprintf("%020d", uint64(v.Integer)^(1<<63)), true
-	case properties.ValueTypeDate:
+	case propertymeta.ValueTypeDate:
 		if v.Date == nil {
 			return "", false
 		}
@@ -323,7 +323,7 @@ func NormalizeForm(form string) string {
 
 // dateKey matches on every structured field. Containment and overlap are
 // dateModule.fold, not this key.
-func dateKey(d *datevalues.Value) string {
+func dateKey(d *datevalue.Value) string {
 	parts := []string{
 		d.Kind, d.Qualifier, d.Calendar,
 		optInt(d.StartYear), optInt(d.StartMonth), optInt(d.StartDay),

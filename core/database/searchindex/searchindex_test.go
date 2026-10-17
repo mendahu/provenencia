@@ -5,8 +5,8 @@ import (
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/conclusionheaders"
-	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/eventtitle"
+	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/objectpath"
 )
 
@@ -114,8 +114,8 @@ func TestEventMatchTitleCoupleUsesTypeWord(t *testing.T) {
 					Parts: eventtitle.Parts{
 						TypeLabel: tt.label,
 						Subjects: []eventtitle.Subject{
-							{Name: &namevalues.Value{Form: "James"}},
-							{Name: &namevalues.Value{Form: "Mary"}},
+							{Name: &namevalue.Value{Form: "James"}},
+							{Name: &namevalue.Value{Form: "Mary"}},
 						},
 					},
 				},

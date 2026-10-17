@@ -236,7 +236,18 @@ Gate PASS · CI <green> · open: none · follow-ups: MNT-3, UX-5 · to user: —
 - Needs you: To user items, each with your recommendation. "Nothing."
 - Follow-ups: one line each, with a suggested home.
 - Manual check: the plan's §10 steps.
+- Build: open this checkout's Xcode project, then ⌘R:
 ```
+
+End the report with the build command for the checkout the branch is in
+(a worktree's own path when you worked in one), in its own `bash` block so
+the user can run it:
+
+````markdown
+```bash
+open /absolute/path/to/checkout/macos/Provenencia.xcodeproj
+```
+````
 
 If the loop stopped early, say where, why, and what you need.
 

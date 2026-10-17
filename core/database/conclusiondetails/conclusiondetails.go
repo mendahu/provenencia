@@ -24,7 +24,9 @@ import (
 	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/namevalues"
-	"github.com/mendahu/provenencia/core/database/properties"
+	"github.com/mendahu/provenencia/core/datevalue"
+	"github.com/mendahu/provenencia/core/namevalue"
+	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/valuecodec"
 )
 
@@ -45,8 +47,8 @@ type Value struct {
 	TermID     []byte
 	TermKey    string
 	TermLabel  string
-	Date       *datevalues.Value
-	Name       *namevalues.Value
+	Date       *datevalue.Value
+	Name       *namevalue.Value
 }
 
 // ReconciledValue is one auto-reconciled value of a Property.
@@ -215,7 +217,7 @@ func state(values []ReconciledValue, cardinality string) autoreconcile.State {
 	case len(shown) == 0:
 		return autoreconcile.StateEmpty
 	case len(shown) > 1:
-		if cardinality == properties.CardinalityMultiple {
+		if cardinality == propertymeta.CardinalityMultiple {
 			return autoreconcile.StateMultiple
 		}
 		return autoreconcile.StateMixed
@@ -252,7 +254,7 @@ func loadProperties(g *graphcache.Graph, q Querier, entityID, subjectTypeID []by
 			return nil, nil, err
 		}
 		p, ok := props[string(id)]
-		if !ok || p.ValueType == properties.ValueTypeSubject {
+		if !ok || p.ValueType == propertymeta.ValueTypeSubject {
 			continue
 		}
 		f := &Field{

@@ -16,9 +16,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/connect"
-	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/files"
-	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
@@ -29,8 +27,11 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
+	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/ingest"
 	"github.com/mendahu/provenencia/core/locator"
+	"github.com/mendahu/provenencia/core/namevalue"
+	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/ref"
 	"github.com/mendahu/provenencia/core/writes"
 )
@@ -230,7 +231,7 @@ func TestObservations(t *testing.T) {
 			run: func(t *testing.T) {
 				c, s := mustSeed(t)
 				unbound, err := writes.Call(c, writes.Op{Action: "create_property", UserID: userID}, func(tx *database.Tx) (properties.Property, []rowchange.Change, error) {
-					return properties.Create(tx, userID, "Nickname", properties.ValueTypeText, "", "")
+					return properties.Create(tx, userID, "Nickname", propertymeta.ValueTypeText, "", "")
 				})
 				if err != nil {
 					t.Fatal(err)
@@ -293,9 +294,9 @@ func TestObservations(t *testing.T) {
 				cit := mustCitation(t, c, s,
 					observations.Input{
 						SubjectID: s.person.ID, PropertyID: s.nameProp.ID,
-						Name: &namevalues.Value{
+						Name: &namevalue.Value{
 							Form: "Ada Lovelace",
-							Parts: []namevalues.Part{
+							Parts: []namevalue.Part{
 								{Idx: 0, Value: "Ada", Type: "given"},
 								{Idx: 1, Value: "Lovelace", Type: "surname"},
 							},
@@ -303,8 +304,8 @@ func TestObservations(t *testing.T) {
 					},
 					observations.Input{
 						SubjectID: s.event.ID, PropertyID: s.dateProp.ID,
-						Date: &datevalues.Value{
-							Kind: datevalues.KindPoint, Qualifier: datevalues.QualifierABT,
+						Date: &datevalue.Value{
+							Kind: datevalue.KindPoint, Qualifier: datevalue.QualifierABT,
 							Calendar: "gregorian", StartYear: &y, StartMonth: &m,
 						},
 					},
@@ -374,7 +375,7 @@ func TestObservations(t *testing.T) {
 						ArtifactID: s.artifact.ID, LocatorJSON: validLocator,
 					}, []observations.Input{{
 						SubjectID: s.event.ID, PropertyID: s.dateProp.ID,
-						Date: &datevalues.Value{Kind: datevalues.KindPoint, StartYear: &year},
+						Date: &datevalue.Value{Kind: datevalue.KindPoint, StartYear: &year},
 					}})
 				})
 				if err != nil {
@@ -384,7 +385,7 @@ func TestObservations(t *testing.T) {
 				got, err := writes.Call(c, writes.Op{Action: "update_observation", UserID: userID}, func(tx *database.Tx) (observations.Listed, []rowchange.Change, error) {
 					return observations.Update(tx, userID, observations.Input{
 						ID: res.Observations[0].ID, SubjectID: s.event.ID, PropertyID: s.dateProp.ID,
-						Date: &datevalues.Value{Kind: datevalues.KindPoint, StartYear: &year2},
+						Date: &datevalue.Value{Kind: datevalue.KindPoint, StartYear: &year2},
 					})
 				})
 				if err != nil {
@@ -408,7 +409,7 @@ func TestObservations(t *testing.T) {
 						ArtifactID: s.artifact.ID, LocatorJSON: validLocator,
 					}, []observations.Input{{
 						SubjectID: s.event.ID, PropertyID: s.dateProp.ID,
-						Date: &datevalues.Value{Kind: datevalues.KindPoint, StartYear: &year},
+						Date: &datevalue.Value{Kind: datevalue.KindPoint, StartYear: &year},
 					}})
 				})
 				if err != nil {
@@ -438,7 +439,7 @@ func TestObservations(t *testing.T) {
 						ArtifactID: s.artifact.ID, LocatorJSON: validLocator,
 					}, []observations.Input{{
 						SubjectID: s.person.ID, PropertyID: s.nameProp.ID,
-						Name: &namevalues.Value{Form: "Ada Lovelace"},
+						Name: &namevalue.Value{Form: "Ada Lovelace"},
 					}})
 				})
 				if err != nil {
@@ -545,11 +546,11 @@ func TestObservations(t *testing.T) {
 					}, []observations.Input{
 						{
 							SubjectID: s.event.ID, PropertyID: s.dateProp.ID,
-							Date: &datevalues.Value{Kind: datevalues.KindPoint, StartYear: &year},
+							Date: &datevalue.Value{Kind: datevalue.KindPoint, StartYear: &year},
 						},
 						{
 							SubjectID: s.person.ID, PropertyID: s.nameProp.ID,
-							Name: &namevalues.Value{Form: "Ada"},
+							Name: &namevalue.Value{Form: "Ada"},
 						},
 					})
 				})
@@ -596,7 +597,7 @@ func TestObservations(t *testing.T) {
 				year := 1844
 				res, _, err := saveCitation(c, userID, s.artifact, observations.Input{
 					SubjectID: s.event.ID, PropertyID: s.dateProp.ID,
-					Date: &datevalues.Value{Kind: datevalues.KindPoint, StartYear: &year},
+					Date: &datevalue.Value{Kind: datevalue.KindPoint, StartYear: &year},
 				})
 				if err != nil {
 					t.Fatal(err)
@@ -1090,7 +1091,7 @@ func TestObservations(t *testing.T) {
 				c, s := mustSeed(t)
 				art := fileArtifact(t, c, userID, s.source.ID)
 				res, _, err := saveCitation(c, userID, art, observations.Input{
-					SubjectID: s.person.ID, PropertyID: s.nameProp.ID, Name: &namevalues.Value{Form: "Ada"},
+					SubjectID: s.person.ID, PropertyID: s.nameProp.ID, Name: &namevalue.Value{Form: "Ada"},
 				})
 				if err != nil {
 					t.Fatal(err)
@@ -1119,7 +1120,7 @@ func TestObservations(t *testing.T) {
 				}
 
 				changes, err = updateObservation(c, userID, observations.Input{
-					ID: obs.ID, SubjectID: s.person.ID, PropertyID: s.nameProp.ID, Name: &namevalues.Value{Form: "Ada"},
+					ID: obs.ID, SubjectID: s.person.ID, PropertyID: s.nameProp.ID, Name: &namevalue.Value{Form: "Ada"},
 				})
 				if err != nil {
 					t.Fatal(err)

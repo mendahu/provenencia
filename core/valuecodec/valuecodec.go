@@ -11,12 +11,12 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"github.com/mendahu/provenencia/api/proto/engine"
-	"github.com/mendahu/provenencia/core/database/datevalues"
-	"github.com/mendahu/provenencia/core/database/namevalues"
+	"github.com/mendahu/provenencia/core/datevalue"
+	"github.com/mendahu/provenencia/core/namevalue"
 )
 
 // DateToProto carries a DateValue's components into its message.
-func DateToProto(v datevalues.Value) *engine.DateValueInput {
+func DateToProto(v datevalue.Value) *engine.DateValueInput {
 	return &engine.DateValueInput{
 		Kind:             v.Kind,
 		Qualifier:        v.Qualifier,
@@ -43,8 +43,8 @@ func DateToProto(v datevalues.Value) *engine.DateValueInput {
 
 // DateFromProto is the inverse of DateToProto. Unset components stay nil
 // (unknown, never zero).
-func DateFromProto(d *engine.DateValueInput) datevalues.Value {
-	return datevalues.Value{
+func DateFromProto(d *engine.DateValueInput) datevalue.Value {
+	return datevalue.Value{
 		Kind:             d.GetKind(),
 		Qualifier:        d.GetQualifier(),
 		Calendar:         d.GetCalendar(),
@@ -69,7 +69,7 @@ func DateFromProto(d *engine.DateValueInput) datevalues.Value {
 }
 
 // NameToProto carries a NameValue's form and ordered parts into its message.
-func NameToProto(v namevalues.Value) *engine.NameValueInput {
+func NameToProto(v namevalue.Value) *engine.NameValueInput {
 	out := &engine.NameValueInput{Form: v.Form}
 	for _, p := range v.Parts {
 		out.Parts = append(out.Parts, &engine.NameValuePartInput{Value: p.Value, Type: p.Type})
@@ -79,10 +79,10 @@ func NameToProto(v namevalues.Value) *engine.NameValueInput {
 
 // NameFromProto is the inverse of NameToProto. Text is trimmed and parts are
 // indexed in message order.
-func NameFromProto(n *engine.NameValueInput) namevalues.Value {
-	v := namevalues.Value{Form: strings.TrimSpace(n.GetForm())}
+func NameFromProto(n *engine.NameValueInput) namevalue.Value {
+	v := namevalue.Value{Form: strings.TrimSpace(n.GetForm())}
 	for i, p := range n.GetParts() {
-		v.Parts = append(v.Parts, namevalues.Part{
+		v.Parts = append(v.Parts, namevalue.Part{
 			Idx:   i,
 			Value: strings.TrimSpace(p.GetValue()),
 			Type:  strings.TrimSpace(p.GetType()),
@@ -92,25 +92,25 @@ func NameFromProto(n *engine.NameValueInput) namevalues.Value {
 }
 
 // MarshalDate encodes a DateValue as its protobuf message bytes.
-func MarshalDate(v datevalues.Value) ([]byte, error) { return proto.Marshal(DateToProto(v)) }
+func MarshalDate(v datevalue.Value) ([]byte, error) { return proto.Marshal(DateToProto(v)) }
 
 // UnmarshalDate decodes MarshalDate output.
-func UnmarshalDate(b []byte) (datevalues.Value, error) {
+func UnmarshalDate(b []byte) (datevalue.Value, error) {
 	var d engine.DateValueInput
 	if err := proto.Unmarshal(b, &d); err != nil {
-		return datevalues.Value{}, err
+		return datevalue.Value{}, err
 	}
 	return DateFromProto(&d), nil
 }
 
 // MarshalName encodes a NameValue as its protobuf message bytes.
-func MarshalName(v namevalues.Value) ([]byte, error) { return proto.Marshal(NameToProto(v)) }
+func MarshalName(v namevalue.Value) ([]byte, error) { return proto.Marshal(NameToProto(v)) }
 
 // UnmarshalName decodes MarshalName output.
-func UnmarshalName(b []byte) (namevalues.Value, error) {
+func UnmarshalName(b []byte) (namevalue.Value, error) {
 	var n engine.NameValueInput
 	if err := proto.Unmarshal(b, &n); err != nil {
-		return namevalues.Value{}, err
+		return namevalue.Value{}, err
 	}
 	return NameFromProto(&n), nil
 }

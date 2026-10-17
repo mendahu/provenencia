@@ -6,8 +6,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/match"
+	"github.com/mendahu/provenencia/core/namevalue"
 )
 
 // seedPart is one display-order row. Idx is the position within Style.
@@ -45,27 +45,27 @@ var seedProfiles = []seedProfile{
 		Description: "GEDCOM-aligned spoken/display order",
 		Default:     true,
 		Parts: []seedPart{
-			{StyleNatural, namevalues.PartTypePrefix, ""},
-			{StyleNatural, namevalues.PartTypeGiven, ""},
-			{StyleNatural, namevalues.PartTypeNick, ""},
-			{StyleNatural, namevalues.PartTypeSurnamePrefix, ""},
-			{StyleNatural, namevalues.PartTypeSurname, ""},
-			{StyleNatural, namevalues.PartTypeSuffix, ""},
-			{StyleSorted, namevalues.PartTypeSurnamePrefix, ""},
-			{StyleSorted, namevalues.PartTypeSurname, ", "},
-			{StyleSorted, namevalues.PartTypePrefix, ""},
-			{StyleSorted, namevalues.PartTypeGiven, ""},
-			{StyleSorted, namevalues.PartTypeNick, ""},
-			{StyleSorted, namevalues.PartTypeSuffix, ""},
+			{StyleNatural, namevalue.PartTypePrefix, ""},
+			{StyleNatural, namevalue.PartTypeGiven, ""},
+			{StyleNatural, namevalue.PartTypeNick, ""},
+			{StyleNatural, namevalue.PartTypeSurnamePrefix, ""},
+			{StyleNatural, namevalue.PartTypeSurname, ""},
+			{StyleNatural, namevalue.PartTypeSuffix, ""},
+			{StyleSorted, namevalue.PartTypeSurnamePrefix, ""},
+			{StyleSorted, namevalue.PartTypeSurname, ", "},
+			{StyleSorted, namevalue.PartTypePrefix, ""},
+			{StyleSorted, namevalue.PartTypeGiven, ""},
+			{StyleSorted, namevalue.PartTypeNick, ""},
+			{StyleSorted, namevalue.PartTypeSuffix, ""},
 		},
 		Roles: []seedRole{
-			{namevalues.PartTypeSurname, match.RoleFamily},
-			{namevalues.PartTypeGiven, match.RoleGiven},
-			{namevalues.PartTypeNick, match.RoleNick},
-			{namevalues.PartTypeSuffix, match.RoleGeneration},
-			{namevalues.PartTypePrefix, match.RoleIgnored},
-			{namevalues.PartTypeSurnamePrefix, match.RoleIgnored},
-			{namevalues.PartTypeUndetermined, match.RoleUntyped},
+			{namevalue.PartTypeSurname, match.RoleFamily},
+			{namevalue.PartTypeGiven, match.RoleGiven},
+			{namevalue.PartTypeNick, match.RoleNick},
+			{namevalue.PartTypeSuffix, match.RoleGeneration},
+			{namevalue.PartTypePrefix, match.RoleIgnored},
+			{namevalue.PartTypeSurnamePrefix, match.RoleIgnored},
+			{namevalue.PartTypeUndetermined, match.RoleUntyped},
 		},
 		Weights: []seedWeight{
 			{"family", 1.5},
@@ -95,7 +95,7 @@ func Install(c *database.Catalog) error {
 	defaults := 0
 	for _, profile := range seedProfiles {
 		if profile.Default {
-			for _, pt := range namevalues.PartTypes() {
+			for _, pt := range namevalue.PartTypes() {
 				if !profile.hasRole(pt.Key) {
 					return errors.New("nameformats: default profile has no role for " + pt.Key)
 				}

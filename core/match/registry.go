@@ -2,8 +2,8 @@ package match
 
 import (
 	"github.com/mendahu/provenencia/core/autoreconcile"
-	"github.com/mendahu/provenencia/core/database/namevalues"
-	"github.com/mendahu/provenencia/core/database/properties"
+	"github.com/mendahu/provenencia/core/namevalue"
+	"github.com/mendahu/provenencia/core/propertymeta"
 )
 
 // The registry: every number the matching algorithm uses, every built-in name
@@ -169,14 +169,14 @@ const WesternPattern = "western"
 var WesternNamePattern = NamePattern{
 	Key: WesternPattern,
 	PartRoles: map[string]NameRole{
-		namevalues.PartTypeSurname:       RoleFamily,
-		namevalues.PartTypeGiven:         RoleGiven,
-		namevalues.PartTypeNick:          RoleNick,
-		namevalues.PartTypeSuffix:        RoleGeneration,
-		namevalues.PartTypePrefix:        RoleIgnored,
-		namevalues.PartTypeSurnamePrefix: RoleIgnored,
-		namevalues.PartTypeUndetermined:  RoleUntyped,
-		"":                               RoleUntyped,
+		namevalue.PartTypeSurname:       RoleFamily,
+		namevalue.PartTypeGiven:         RoleGiven,
+		namevalue.PartTypeNick:          RoleNick,
+		namevalue.PartTypeSuffix:        RoleGeneration,
+		namevalue.PartTypePrefix:        RoleIgnored,
+		namevalue.PartTypeSurnamePrefix: RoleIgnored,
+		namevalue.PartTypeUndetermined:  RoleUntyped,
+		"":                              RoleUntyped,
 	},
 	// What a matched word of each role earns and an unmatched one costs.
 	Weights: NameWeights{
@@ -299,7 +299,7 @@ func DefaultProfile(kind string) (Profile, bool) {
 		return Profile{
 			Kind: "place",
 			Features: []Feature{
-				{Property: product("toponym"), Comparer: DefaultText, Weight: 10, Cardinality: properties.CardinalityMultiple},
+				{Property: product("toponym"), Comparer: DefaultText, Weight: 10, Cardinality: propertymeta.CardinalityMultiple},
 			},
 			MinScore: 3,
 		}, true

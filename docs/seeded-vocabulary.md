@@ -500,7 +500,7 @@ Schema: [`structured-name-model.md`](structured-name-model.md).
 
 ## 4.1 Name part `type` product set
 
-GEDCOM-aligned **product keys** (compiled registry in `core/database/namevalues`, not catalog rows). UI picks from this set with localized labels. Empty type on a part remains allowed (untyped). Unknown non-empty keys are refused on Insert.
+GEDCOM-aligned **product keys** (compiled registry in `core/namevalue`, not catalog rows). UI picks from this set with localized labels. Empty type on a part remains allowed (untyped). Unknown non-empty keys are refused on Insert.
 
 User-minted part types (DB vocabulary, Property-terms-shaped) are **TBD** — do not invent free-text types in the editor.
 

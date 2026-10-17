@@ -8,13 +8,13 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/citations"
-	"github.com/mendahu/provenencia/core/database/namevalues/namevaluestest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/subjects"
+	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
 	"github.com/mendahu/provenencia/core/writes"
 	"google.golang.org/protobuf/proto"
 )
@@ -67,7 +67,7 @@ func personOnNewSource(t *testing.T, dir, userID, typeID, sexKey, polarity strin
 			return citations.CreateWithObservations(tx, uid[:], citations.CreateInput{
 				ArtifactID: art.ID, LocatorJSON: `{"version":1,"selectors":[{"type":"page","artifact_page":1}]}`,
 			}, []observations.Input{
-				{SubjectID: s.ID, PropertyID: name.ID, Name: namevaluestest.Western("Mary Smith")},
+				{SubjectID: s.ID, PropertyID: name.ID, Name: namevaluetest.Western("Mary Smith")},
 				{SubjectID: s.ID, PropertyID: sex.ID, ValueTermID: term.ID, Polarity: polarity},
 			})
 		})

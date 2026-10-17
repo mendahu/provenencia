@@ -7,9 +7,9 @@ import (
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/conclusionheaders"
-	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/sqlbatch"
+	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/eventtitle"
 	"github.com/mendahu/provenencia/core/valuecodec"
 )
@@ -324,7 +324,7 @@ func personLifeMatch(h conclusionheaders.PersonHeader) []string {
 	var out []string
 	for _, life := range []conclusionheaders.LifeFacts{h.Birth, h.Death} {
 		if life.Date != nil {
-			if s := datevalues.CompactDisplay(*life.Date); s != "" {
+			if s := datevalue.CompactDisplay(*life.Date); s != "" {
 				out = append(out, s)
 			}
 		}
@@ -338,11 +338,11 @@ func personLifeMatch(h conclusionheaders.PersonHeader) []string {
 
 func eventMatchSecondary(h conclusionheaders.EventHeader) []string {
 	var out []string
-	for _, d := range []*datevalues.Value{h.Date, h.StartDate, h.EndDate} {
+	for _, d := range []*datevalue.Value{h.Date, h.StartDate, h.EndDate} {
 		if d == nil {
 			continue
 		}
-		if s := datevalues.CompactDisplay(*d); s != "" {
+		if s := datevalue.CompactDisplay(*d); s != "" {
 			out = append(out, s)
 		}
 	}

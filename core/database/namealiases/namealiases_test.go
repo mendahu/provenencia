@@ -7,8 +7,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/match"
+	"github.com/mendahu/provenencia/core/namevalue"
 )
 
 func TestInstallAndLoad(t *testing.T) {
@@ -311,7 +311,7 @@ func setsWithAll(table match.AliasTable, tokens ...string) int {
 }
 
 func given(text string) match.Value {
-	return match.Value{Name: &namevalues.Value{Parts: []namevalues.Part{{
-		Value: text, Type: namevalues.PartTypeGiven,
+	return match.Value{Name: &namevalue.Value{Parts: []namevalue.Part{{
+		Value: text, Type: namevalue.PartTypeGiven,
 	}}}}
 }

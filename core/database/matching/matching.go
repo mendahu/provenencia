@@ -27,6 +27,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/sqlbatch"
 	"github.com/mendahu/provenencia/core/match"
+	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/valuecodec"
 )
 
@@ -196,7 +197,7 @@ func rank(q Querier, res Result, typeID []byte, probe match.Values, profile matc
 // candidateNames collects each candidate's names from the Properties of the
 // profile's name Features, found the way Profile.WithNameComparer finds them.
 // hasName is false when the profile has no name Feature.
-func candidateNames(profile match.Profile, candidates []match.Candidate) (people [][]namevalues.Value, hasName bool) {
+func candidateNames(profile match.Profile, candidates []match.Candidate) (people [][]namevalue.Value, hasName bool) {
 	var props []match.Property
 	for _, f := range profile.Features {
 		if _, ok := f.Comparer.(match.NameComparer); ok {
@@ -207,7 +208,7 @@ func candidateNames(profile match.Profile, candidates []match.Candidate) (people
 		return nil, false
 	}
 	for _, c := range candidates {
-		var handle []namevalues.Value
+		var handle []namevalue.Value
 		for _, prop := range props {
 			for _, v := range c.Values[prop] {
 				if v.Name != nil {

@@ -1,6 +1,6 @@
 ---
-description: Shared genealogical name_values live in core/database/namevalues
-globs: core/database/namevalues/**,docs/structured-name-model.md
+description: Shared genealogical name_values: pure type in core/namevalue, queries in core/database/namevalues
+globs: core/namevalue/**,core/database/namevalues/**,docs/structured-name-model.md
 alwaysApply: false
 ---
 
@@ -8,8 +8,8 @@ alwaysApply: false
 
 Follow the project skill `.agents/skills/add-name-value/SKILL.md`. Design notes: `docs/structured-name-model.md`.
 
-- Use `namevalues.Insert` / `Lookup`; required `form`; optional ordered parts.
-- Part `type` empty or a product registry key (`PartTypes` / `KnownPartType`); Insert rejects unknown keys. No free-text types in UI.
+- Types, `Validate` and the part-type registry live in `core/namevalue`; use `namevalues.Insert` / `Lookup` for storage; required `form`; optional ordered parts.
+- Part `type` empty or a product registry key (`PartTypes` / `KnownPartType`); `Validate` (and Insert) rejects unknown keys. No free-text types in UI.
 - Do not close `type` in DDL; user-minted part-type tables are a later PR.
 - Schema changes go through catalog migrations; do not invent a parallel name store.
 - Format profiles (`name_format_*`) are separate — not this package.

@@ -26,6 +26,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
+	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/ref"
 	"github.com/mendahu/provenencia/core/writes"
 )
@@ -147,7 +148,7 @@ func TestImpactGates(t *testing.T) {
 	t.Run("property with term row inbound", func(t *testing.T) {
 		propID, err := properties.Upsert(c, properties.Property{
 			Key: "custom_event", Origin: properties.OriginUser,
-			Label: "Custom Event", ValueType: properties.ValueTypeTerm,
+			Label: "Custom Event", ValueType: propertymeta.ValueTypeTerm,
 		})
 		if err != nil {
 			t.Fatal(err)
@@ -454,7 +455,7 @@ func TestImpactCitationAndSubject(t *testing.T) {
 
 	t.Run("user role property on person is inbound not a facet", func(t *testing.T) {
 		userRole, err := writes.Call(c, writes.Op{Action: "create_property", UserID: userID}, func(tx *database.Tx) (properties.Property, []rowchange.Change, error) {
-			return properties.Create(tx, userID, "Role", properties.ValueTypeText, "", "")
+			return properties.Create(tx, userID, "Role", propertymeta.ValueTypeText, "", "")
 		})
 		if err != nil {
 			t.Fatal(err)

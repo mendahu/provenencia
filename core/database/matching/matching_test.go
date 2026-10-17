@@ -10,11 +10,8 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/citations"
-	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/matching"
 	"github.com/mendahu/provenencia/core/database/nameformats"
-	"github.com/mendahu/provenencia/core/database/namevalues"
-	"github.com/mendahu/provenencia/core/database/namevalues/namevaluestest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/properties"
@@ -26,7 +23,10 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
+	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/match"
+	"github.com/mendahu/provenencia/core/namevalue"
+	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
 	"github.com/mendahu/provenencia/core/ref"
 	"github.com/mendahu/provenencia/core/writes"
 )
@@ -93,7 +93,7 @@ type value func(f *fixture, s subjects.Subject) observations.Input
 
 func named(form string) value {
 	return func(f *fixture, s subjects.Subject) observations.Input {
-		return observations.Input{SubjectID: s.ID, PropertyID: f.props["name"].ID, Name: namevaluestest.Western(form)}
+		return observations.Input{SubjectID: s.ID, PropertyID: f.props["name"].ID, Name: namevaluetest.Western(form)}
 	}
 }
 
@@ -101,8 +101,8 @@ func named(form string) value {
 // parts say which word is which.
 func namedParts(form, given, surname string) value {
 	return func(f *fixture, s subjects.Subject) observations.Input {
-		return observations.Input{SubjectID: s.ID, PropertyID: f.props["name"].ID, Name: &namevalues.Value{Form: form, Parts: []namevalues.Part{
-			{Idx: 0, Value: given, Type: namevalues.PartTypeGiven}, {Idx: 1, Value: surname, Type: namevalues.PartTypeSurname},
+		return observations.Input{SubjectID: s.ID, PropertyID: f.props["name"].ID, Name: &namevalue.Value{Form: form, Parts: []namevalue.Part{
+			{Idx: 0, Value: given, Type: namevalue.PartTypeGiven}, {Idx: 1, Value: surname, Type: namevalue.PartTypeSurname},
 		}}}
 	}
 }
@@ -117,8 +117,8 @@ func termed(prop, key string) value {
 
 func dated(y int, m, d *int) value {
 	return func(f *fixture, s subjects.Subject) observations.Input {
-		return observations.Input{SubjectID: s.ID, PropertyID: f.props["date"].ID, Date: &datevalues.Value{
-			Kind: datevalues.KindPoint, Calendar: "gregorian", StartYear: ip(y), StartMonth: m, StartDay: d,
+		return observations.Input{SubjectID: s.ID, PropertyID: f.props["date"].ID, Date: &datevalue.Value{
+			Kind: datevalue.KindPoint, Calendar: "gregorian", StartYear: ip(y), StartMonth: m, StartDay: d,
 		}}
 	}
 }
