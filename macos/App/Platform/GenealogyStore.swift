@@ -448,6 +448,9 @@ struct CatalogPersonHeader: Sendable, Equatable, Identifiable {
     var death: CatalogLifeFacts = CatalogLifeFacts()
     /// The last revision that touched this Person and when; revision 0 when unknown.
     var updated = CatalogActivity()
+    /// The `objects/…` path of the likeness the Person leads with; "" when none.
+    /// Filled by the Person list and the detail reads only.
+    var likenessImageRelPath: String = ""
 
     var id: String { entity.id }
 }
@@ -604,6 +607,15 @@ struct CatalogConclusionField: Sendable, Equatable, Identifiable {
 
 /// One handle's detail (S9-15), composed by Go from the auto-reconciler cache.
 /// Generic over kind: Person, Event and Place pages all read it.
+/// One likeness a Person page's gallery shows: its image and the record (its
+/// earliest Observation) the tile opens.
+struct CatalogLikeness: Sendable, Equatable, Identifiable {
+    var imageRelPath: String
+    var record: CatalogReconcilerOutcome
+
+    var id: String { record.observationID }
+}
+
 struct CatalogConclusionDetail: Sendable, Equatable {
     var entity: CatalogCanonicalEntity
     var fields: [CatalogConclusionField]
@@ -612,6 +624,8 @@ struct CatalogConclusionDetail: Sendable, Equatable {
     /// The handle's header for its kind, read in the same call, so a page
     /// has one load, one error, and one consistent read.
     var header: CatalogConclusionHeader?
+    /// The handle's likenesses, earliest recorded first.
+    var likenesses: [CatalogLikeness] = []
 
     var personHeader: CatalogPersonHeader? {
         if case .person(let header) = header { header } else { nil }

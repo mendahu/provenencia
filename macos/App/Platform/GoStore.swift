@@ -1056,7 +1056,8 @@ struct GoStore: GenealogyStore {
             nameValueCount: Int(h.nameValueCount),
             birth: mapLifeFacts(h.birth),
             death: mapLifeFacts(h.death),
-            updated: CatalogActivity(revision: h.updatedRevision, at: h.updatedAt)
+            updated: CatalogActivity(revision: h.updatedRevision, at: h.updatedAt),
+            likenessImageRelPath: h.likenessImageRelPath
         )
     }
 
@@ -1164,33 +1165,38 @@ struct GoStore: GenealogyStore {
                             value: Self.mapConclusionValue(v.value)
                         )
                     },
-                    outcomes: f.outcomes.map { o in
-                        CatalogReconcilerOutcome(
-                            observationID: o.observationID,
-                            observationRef: o.observationRef,
-                            reason: ReconcilerReason(wire: o.reason),
-                            valueRank: o.valueRank > 0 ? Int(o.valueRank) : nil,
-                            deniedByObservationID: o.deniedByObservationID,
-                            recorded: Self.mapConclusionValue(o.recorded),
-                            subjectID: o.subjectID,
-                            subjectRef: o.subjectRef,
-                            citationID: o.citationID,
-                            artifactID: o.artifactID,
-                            sourceID: o.sourceID,
-                            sourceTitle: o.sourceTitle,
-                            credibilityKey: o.credibilityKey,
-                            transcriptionUncertain: o.transcriptionUncertain,
-                            claimConfidenceKey: o.claimConfidenceKey,
-                            credibilityOffset: Int(o.credibilityOffset),
-                            claimConfidenceOffset: Int(o.claimConfidenceOffset),
-                            voteSupport: Int(o.voteSupport),
-                            voteTotal: Int(o.voteTotal)
-                        )
-                    }
+                    outcomes: f.outcomes.map(Self.mapReconcilerOutcome)
                 )
             },
             memberCount: Int(resp.memberCount),
-            header: Self.mapConclusionHeader(resp.header)
+            header: Self.mapConclusionHeader(resp.header),
+            likenesses: resp.likenesses.map {
+                CatalogLikeness(imageRelPath: $0.imageRelPath, record: Self.mapReconcilerOutcome($0.record))
+            }
+        )
+    }
+
+    private static func mapReconcilerOutcome(_ o: Provenencia_Engine_V1_ReconcilerOutcomeDetail) -> CatalogReconcilerOutcome {
+        CatalogReconcilerOutcome(
+            observationID: o.observationID,
+            observationRef: o.observationRef,
+            reason: ReconcilerReason(wire: o.reason),
+            valueRank: o.valueRank > 0 ? Int(o.valueRank) : nil,
+            deniedByObservationID: o.deniedByObservationID,
+            recorded: mapConclusionValue(o.recorded),
+            subjectID: o.subjectID,
+            subjectRef: o.subjectRef,
+            citationID: o.citationID,
+            artifactID: o.artifactID,
+            sourceID: o.sourceID,
+            sourceTitle: o.sourceTitle,
+            credibilityKey: o.credibilityKey,
+            transcriptionUncertain: o.transcriptionUncertain,
+            claimConfidenceKey: o.claimConfidenceKey,
+            credibilityOffset: Int(o.credibilityOffset),
+            claimConfidenceOffset: Int(o.claimConfidenceOffset),
+            voteSupport: Int(o.voteSupport),
+            voteTotal: Int(o.voteTotal)
         )
     }
 
