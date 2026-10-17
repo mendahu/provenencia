@@ -1,7 +1,7 @@
 # Review — S11-02 Value compare core and match registry
 
-**Verdict:** Fits with changes — Ready with changes (round 1)
-**Rounds:** 1. **Reviewers:** maintainability (Opus), executability (Sonnet)
+**Verdict:** Fits with changes — Ready with changes; every finding fixed or declined, no blocker open
+**Rounds:** 2. **Reviewers:** maintainability (Opus), executability (Sonnet)
 
 ## To user
 - None.
@@ -72,3 +72,18 @@
 **Answer:** Fixed. D-17's "adding a comparer" now says to add the new type to T-3's expected `ComparerTypes()` list.
 
 Logged, not raised: the `Key` row could also name `autoreconcile` `textKey` / `termKey` (S11-06 moves them); two word-similarity functions exist until S11-05, as "Build, then migrate" allows.
+
+### X-10 · major · Step (3) similarity contradicts the word table for single-letter accent pairs
+**Answer:** Fixed. D-7 step (3) scores positions as 1 or `FoldCredit` without the word table, so `É` / `E` is `Equivalent` at `FoldCredit`; the initial rule applies only in step (4).
+
+### X-11 · minor · D-10 mixes `var value` and `Default()` calls
+**Answer:** Fixed. Every knob reads `value.…`, and the shared backing slice and map are noted.
+
+### X-12 · minor · The `EditDistance` rewrite has no replacement
+**Answer:** Fixed. D-8 gives the `pi`, `pj` form of the swap branch.
+
+### X-13 · minor · The moved tests are not "unchanged"
+**Answer:** Fixed. D-9 says they are external tests with qualified calls.
+
+### X-14 · minor · Header state; checks that need a Mac
+**Answer:** Fixed. The header is now `Planned` and links this log. The Mac-only gate is declined as in X-6.
