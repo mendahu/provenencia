@@ -216,6 +216,7 @@ func attachLikenesses(c *database.Catalog, d conclusiondetails.Detail, lead []by
 			ImageRelPath: paths[string(l.ImageFileID)],
 			Record:       reconcilerOutcomeProto(l.Record),
 			Preferred:    l.Preferred,
+			Leads:        l.Leads,
 		})
 	}
 	return nil
