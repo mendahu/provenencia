@@ -714,6 +714,8 @@ S10-33 crop cache — descoped 2026-10-16
 
 #### S10-52 — Depiction auto-reconciler module
 
+**Plan:** [`prs/S10-52-depiction-reconciler.md`](prs/S10-52-depiction-reconciler.md) — Draft
+
 | | |
 | --- | --- |
 | **In** | A `depiction` key module in `core/autoreconcile`, keyed by the value's image File, so the same pixels are one value. `knownValueType` becomes `moduleFor(vt) != nil`, `carries` is exported as `Carries`, and the loader's `hasValue` copy is deleted, so the depiction case is added in two places, not four. The loader fills it; `auto_reconciler_values` stores it in a new column; the graph cache mirrors it so `Verify` covers it; `CacheVersion` bumps. The Person field list skips depiction fields. Working rule "A gallery is the reconciled likeness values". Deletes S10-32's loader skip (its D-11). The reconciler half of the first S10-32 plan (its D-7, D-12 to D-14, in `git show 5a1a8cda:docs/deployment-plan/spike-10/prs/S10-32-depiction-value-type.md`) is the starting point, re-keyed from the Citation to the image. |
