@@ -1,6 +1,7 @@
 package valuecompare_test
 
 import (
+	"fmt"
 	"math"
 	"math/rand"
 	"slices"
@@ -101,14 +102,14 @@ func variantText(rng *rand.Rand, s string) string {
 
 // Name parts come from pools per part code (the codes of nv).
 var namePools = map[string][]string{
-	"g":  {"James", "Jim", "Mary", "William", "Johann", "Johan", "José", "Jose", "Maria Luisa", "浩", "J.", "K.", "W", "M."},
+	"g":  {"James", "Jim", "Mary", "William", "Johann", "Johan", "Jon", "John", "José", "Jose", "Maria Luisa", "浩", "J.", "K.", "W", "M."},
 	"n":  {"Jim", "Bill", "Polly"},
 	"s":  {"Robins", "Robbins", "Smith", "Smyth", "Silva Costa", "Costa", "Gogh", "Núñez", "Nunez", "蒋"},
 	"sp": {"van", "von", "de"},
 	"x":  {"Jr.", "Sr.", "III"},
 	"p":  {"Rev.", "Dr."},
 	"u":  {"Kendall"},
-	"_":  {"Robins", "James"},
+	"_":  {"Robins", "Robbins", "Smith", "James"},
 }
 
 var namePoolCodes = []string{"g", "g", "g", "n", "s", "s", "sp", "x", "p", "u", "_"}
@@ -212,6 +213,38 @@ func contractPairs(typ string, seed int64) []samplePair {
 	return pairs
 }
 
+// mirrored reports whether b is a's detail from the other side: the same
+// pairs with A and B exchanged, and OnlyA and OnlyB exchanged, in any order.
+func mirrored(a, b valuecompare.Detail) bool {
+	flip := func(parts []valuecompare.PartMatch) []string {
+		out := make([]string, len(parts))
+		for i, p := range parts {
+			out[i] = fmt.Sprintf("%v|%v|%s|%.9f|%s", p.B, p.A, p.Relation, p.Similarity, p.Cause)
+		}
+		slices.Sort(out)
+		return out
+	}
+	same := func(parts []valuecompare.PartMatch) []string {
+		out := make([]string, len(parts))
+		for i, p := range parts {
+			out[i] = fmt.Sprintf("%v|%v|%s|%.9f|%s", p.A, p.B, p.Relation, p.Similarity, p.Cause)
+		}
+		slices.Sort(out)
+		return out
+	}
+	sortedParts := func(parts []valuecompare.Part) []string {
+		out := make([]string, len(parts))
+		for i, p := range parts {
+			out[i] = fmt.Sprintf("%v", p)
+		}
+		slices.Sort(out)
+		return out
+	}
+	return slices.Equal(flip(a.Parts), same(b.Parts)) &&
+		slices.Equal(sortedParts(a.OnlyA), sortedParts(b.OnlyB)) &&
+		slices.Equal(sortedParts(a.OnlyB), sortedParts(b.OnlyA))
+}
+
 func near(a, b float64) bool { return math.Abs(a-b) < 1e-9 }
 
 func TestComparerContract(t *testing.T) {
@@ -267,6 +300,13 @@ func TestComparerContract(t *testing.T) {
 					swapped, swappedDet := valuecompare.Compare(p.b, p.a, rules)
 					if swapped.Relation != res.Relation || !near(swapped.Similarity, res.Similarity) {
 						t.Fatalf("%s: swapped %+v, want %+v", label(), swapped, res)
+					}
+					// Names keep the same pairs from both sides; text alignment is not mirrored.
+					if swappedDet.Cause != det.Cause {
+						t.Fatalf("%s: swapped cause %q, want %q", label(), swappedDet.Cause, det.Cause)
+					}
+					if typ == propertymeta.ValueTypeName && !mirrored(det, swappedDet) {
+						t.Fatalf("%s: swapped parts %+v, want the mirror of %+v", label(), swappedDet, det)
 					}
 					if res.Relation == valuecompare.Contains && swappedDet.Broader == det.Broader {
 						t.Fatalf("%s: Broader %q did not flip", label(), det.Broader)

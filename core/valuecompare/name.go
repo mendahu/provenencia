@@ -210,14 +210,26 @@ func (n name) compare(a, b Value, r Rules) (Result, Detail) {
 	det := Detail{OnlyA: la.parts, OnlyB: lb.parts}
 	var contributors []contributor
 	var pairWeight []float64
-	for _, p := range pairing {
+	// Parts list the pairs in A's order; the contributors take the canonical
+	// side's order, so the cause does not depend on which side is A.
+	pairContributors := make([]contributor, len(pairing))
+	for k, p := range pairing {
 		x, y := wa[p.a], wb[p.b]
 		c, sim := n.pair(x, y, r)
-		contributors = append(contributors, c)
+		pairContributors[k] = c
 		det.Parts = append(det.Parts, PartMatch{
 			A: x.part(), B: y.part(), Relation: c.rel, Similarity: sim, Cause: c.why,
 		})
 		pairWeight = append(pairWeight, x.weight+y.weight)
+	}
+	canonical := func(p wordPairing) int {
+		if swapped {
+			return p.b
+		}
+		return p.a
+	}
+	for _, k := range sortedBy(len(pairing), func(i int) int { return canonical(pairing[i]) }) {
+		contributors = append(contributors, pairContributors[k])
 	}
 	for _, t := range genPairs {
 		contributors = append(contributors, contributor{rel: Same, why: CauseExact})
@@ -264,6 +276,16 @@ func (n name) compare(a, b Value, r Rules) (Result, Detail) {
 		return Result{Relation: Different}, det
 	}
 	return Result{Relation: weakest.rel, Similarity: similarity}, det
+}
+
+// sortedBy is 0…n-1 ordered by key(i).
+func sortedBy(n int, key func(int) int) []int {
+	order := make([]int, n)
+	for i := range order {
+		order[i] = i
+	}
+	sort.Slice(order, func(i, j int) bool { return key(order[i]) < key(order[j]) })
+	return order
 }
 
 // pair is what a word pair says about the relation and the similarity it
