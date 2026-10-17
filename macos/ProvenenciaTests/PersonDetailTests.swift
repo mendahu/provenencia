@@ -126,27 +126,35 @@ struct PersonDetailTests {
     }
 
     @Test func portraitFlagsFollowThePreferredLikeness() {
-        var chosen = likeness("b", path: "objects/ef/01.png", title: "Census")
-        chosen.preferred = true
-        var header = CatalogPersonHeader(
-            entity: CatalogCanonicalEntity(id: "e1", ref: "PER-7KD45", subjectTypeID: "t", label: ""),
-            name: nil, nameValueCount: 0
-        )
-        header.likenessImageRelPath = "objects/ef/01.png"
-        var source = detail(header: header)
-        source.likenesses = [likeness("a", path: "objects/ab/cd.png", title: "Register"), chosen]
-        let content = PersonDetailContent(detail: source)
-        #expect(content.likenesses.map(\.isPortrait) == [false, true])
-        #expect(content.thumbnail.isPortrait)
-        #expect(content.thumbnail.imageLabel == "Likeness from Census")
+        func content(preferred: String?, lead: String) -> PersonDetailContent {
+            var header = CatalogPersonHeader(
+                entity: CatalogCanonicalEntity(id: "e1", ref: "PER-7KD45", subjectTypeID: "t", label: ""),
+                name: nil, nameValueCount: 0
+            )
+            header.likenessImageRelPath = lead == "a" ? "objects/ab/cd.png" : "objects/ef/01.png"
+            var a = likeness("a", path: "objects/ab/cd.png", title: "Register")
+            var b = likeness("b", path: "objects/ef/01.png", title: "Census")
+            a.preferred = preferred == "a"
+            b.preferred = preferred == "b"
+            a.leads = lead == "a"
+            b.leads = lead == "b"
+            var source = detail(header: header)
+            source.likenesses = [a, b]
+            return PersonDetailContent(detail: source)
+        }
+        let neither = content(preferred: nil, lead: "a")
+        #expect(neither.likenesses.map(\.isPortrait) == [true, false])
+        #expect(!neither.thumbnail.offersEarliest)
 
-        header.likenessImageRelPath = "objects/ab/cd.png"
-        source = detail(header: header)
-        source.likenesses = [likeness("a", path: "objects/ab/cd.png", title: "Register"), likeness("b", path: "objects/ef/01.png", title: "Census")]
-        let neither = PersonDetailContent(detail: source)
-        #expect(neither.likenesses.map(\.isPortrait) == [false, false])
-        #expect(!neither.thumbnail.isPortrait)
-        #expect(!EventDetailContent(detail: detail()).thumbnail.isPortrait)
+        let chosen = content(preferred: "b", lead: "b")
+        #expect(chosen.likenesses.map(\.isPortrait) == [false, true])
+        #expect(chosen.thumbnail.offersEarliest)
+        #expect(chosen.thumbnail.imageLabel == "Likeness from Census")
+
+        let earliest = content(preferred: "a", lead: "a")
+        #expect(earliest.likenesses.map(\.isPortrait) == [true, false])
+        #expect(!earliest.thumbnail.offersEarliest)
+        #expect(!EventDetailContent(detail: detail()).thumbnail.offersEarliest)
     }
 
     @MainActor

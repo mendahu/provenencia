@@ -61,8 +61,9 @@ struct ConclusionDetailThumbnail: Equatable {
     /// Spoken label while the image shows.
     var imageLabel: String? = nil
     var colors: PVThumbnail.Colors? = nil
-    /// The thumb shows a chosen portrait, so its menu offers the earliest (S10-39).
-    var isPortrait: Bool = false
+    /// The header leads with a likeness other than the earliest, so its menu
+    /// offers the earliest (S10-39, user 2026-10-17).
+    var offersEarliest: Bool = false
 }
 
 /// One likeness tile under Details: the image, its Source's title, and the
@@ -72,7 +73,8 @@ struct ConclusionDetailLikeness: Equatable, Identifiable {
     var imageRelPath: String
     var sourceTitle: String
     var location: WorkspaceLocation
-    /// The Person's chosen portrait (S10-39); at most one tile.
+    /// The tile the header leads with wears the Portrait Badge (S10-39, user
+    /// 2026-10-17); exactly one tile.
     var isPortrait: Bool = false
 }
 
@@ -363,8 +365,8 @@ private struct ConclusionDetailHeader<Content: ConclusionDetailBody, Summary: Vi
     @State private var portraitMenu = PVContextMenuState()
     @State private var portraitKeyboard = PVContextMenuKeyboard.inactive
 
-    /// PDP-11: the menu exists only while a portrait is chosen.
-    private var showsPortraitMenu: Bool { portrait != nil && content.thumbnail.isPortrait }
+    /// PDP-11: the menu exists only while the lead is not the earliest.
+    private var showsPortraitMenu: Bool { portrait != nil && content.thumbnail.offersEarliest }
 
     var body: some View {
         HStack(alignment: .top, spacing: PVSpacing.space7) {

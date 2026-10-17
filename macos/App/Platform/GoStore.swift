@@ -1192,7 +1192,8 @@ struct GoStore: GenealogyStore {
                 CatalogLikeness(
                     imageRelPath: $0.imageRelPath,
                     record: Self.mapReconcilerOutcome($0.record),
-                    preferred: $0.preferred
+                    preferred: $0.preferred,
+                    leads: $0.leads
                 )
             }
         )

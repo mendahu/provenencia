@@ -34,7 +34,7 @@ struct PersonDetailContent: ConclusionDetailBody {
             imageRelPath: likenessImageRelPath,
             imageLabel: leadLabel,
             colors: treatment?.thumbnailColors,
-            isPortrait: likenesses.contains(where: \.isPortrait)
+            offersEarliest: likenesses.first.map { !$0.isPortrait } ?? false
         )
     }
     var badge: ConclusionDetailBadge? { treatment?.badge }
@@ -74,7 +74,7 @@ struct PersonDetailContent: ConclusionDetailBody {
                 imageRelPath: $0.imageRelPath,
                 sourceTitle: ReconciliationRecord.sourceTitle(for: $0.record),
                 location: ReconciliationRecord.composerLocation(for: $0.record),
-                isPortrait: $0.preferred
+                isPortrait: $0.leads
             )
         }
     }

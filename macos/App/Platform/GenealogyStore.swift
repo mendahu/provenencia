@@ -612,6 +612,9 @@ struct CatalogLikeness: Sendable, Equatable, Identifiable {
     var record: CatalogReconcilerOutcome
     /// True for the likeness chosen as the Person's portrait (S10-39); at most one.
     var preferred: Bool = false
+    /// True for the likeness the Person's header leads with: the preferred one,
+    /// else the earliest; exactly one in a gallery.
+    var leads: Bool = false
 
     var id: String { record.observationID }
 }
