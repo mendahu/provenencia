@@ -378,3 +378,4 @@ Differences from the plan:
 - `core/matchregistry/value.go` names the old sources as "the reconciler's old spelling floor" and "old short-word minimum" instead of the deleted constant names, so STEP-2's `rg SpellingFloor|SpellingShortMin core` check prints nothing.
 - `daitch-mokotoff.md` L5 says "the spelling helpers that lived in `core/autoreconcile`" instead of naming `spelling.go`, so STEP-10's `rg` check prints only the allowed files.
 - The STEP-6 and STEP-7 deliberate failures needed `-tags fts5`: with a `core/database` import in `core/propertymeta`, the test binary panics at init without it, so the `pure` failure shows with the tag.
+- Four current-state and stop-condition lines drop the backticks around the deleted `core/autoreconcile/spelling.go` so `check-plan-docs` passes, as the S11-22 plan did.
