@@ -1727,6 +1727,24 @@ message NameValueInput {
   repeated NameValuePartInput parts = 2;
 }
 
+// DepictionValueInput is a depiction to save: a region locator on the
+// Citation's page and the absolute path of the PNG or JPEG the app rendered
+// from that region. Go checks and re-encodes it; the file's bytes are never
+// stored and never cross the FFI.
+message DepictionValueInput {
+  string region_json = 1;
+  string image_path = 2;
+}
+
+// DepictionValue is a saved depiction: its region locator and the objects/…
+// path, relative to the project folder, of the PNG Go stored. Either is empty
+// when the stored half is not one Go would show (a region not on the
+// Citation's page, an image that is not a stored PNG).
+message DepictionValue {
+  string region_json = 1;
+  string image_rel_path = 2;
+}
+
 // Citation is one citations row.
 message Citation {
   string id = 1;
@@ -1758,6 +1776,9 @@ message Observation {
   string property_key = 15;
   string property_label = 16;
   string property_value_type = 17;
+  string value_depiction_id = 18;
+  // Response data; never read from a request.
+  DepictionValue depiction = 19;
 }
 
 // ObservationDraft is one Observation insert payload (create or append).
@@ -1775,6 +1796,7 @@ message ObservationDraft {
   string value_subject_id = 10;
   string value_term_id = 11;
   repeated string notes = 12;
+  DepictionValueInput depiction = 13;
 }
 
 message CreateCitationWithObservationsRequest {
@@ -1905,6 +1927,9 @@ message UpdateObservationRequest {
   string project_dir = 1;
   string user_id = 2;
   Observation observation = 3;
+  // A new region and its crop for the depiction Observation. Unset keeps the
+  // value named by observation.value_depiction_id.
+  DepictionValueInput depiction_input = 4;
 }
 message UpdateObservationResponse {
   Observation observation = 1;

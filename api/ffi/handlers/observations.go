@@ -5,8 +5,10 @@ import (
 
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/files"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/rowchange"
+	"github.com/mendahu/provenencia/core/ingest"
 	"github.com/mendahu/provenencia/core/valuecodec"
 	"github.com/mendahu/provenencia/core/writes"
 	"google.golang.org/protobuf/proto"
@@ -56,8 +58,14 @@ func UpdateObservation(in []byte) ([]byte, error) {
 	if len(input.ID) != 16 {
 		return nil, observations.ErrInvalid
 	}
+	input.Depiction = depictionInput(req.GetDepictionInput())
 	var out *engine.UpdateObservationResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
+		discard, err := ingest.StageDepictions(c, []observations.Input{input})
+		if err != nil {
+			return err
+		}
+		defer discard()
 		row, wrote, err := writes.Run(c, writes.Op{Action: "update_observation", UserID: userID},
 			func(tx *database.Tx) (observations.Listed, []rowchange.Change, error) {
 				return observations.Update(tx, userID, input)
@@ -65,8 +73,12 @@ func UpdateObservation(in []byte) ([]byte, error) {
 		if err != nil {
 			return err
 		}
+		protos, err := listedProtos(c, []observations.Listed{row})
+		if err != nil {
+			return err
+		}
 		out = &engine.UpdateObservationResponse{
-			Observation: listedObservationProto(row),
+			Observation: protos[0],
 			Effects:     writeEffectsProto(wrote),
 		}
 		return nil
@@ -128,6 +140,11 @@ func AddObservationsToCitation(in []byte) ([]byte, error) {
 	}
 	var out *engine.AddObservationsToCitationResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
+		discard, err := ingest.StageDepictions(c, inputs)
+		if err != nil {
+			return err
+		}
+		defer discard()
 		rows, wrote, err := writes.Run(c, writes.Op{Action: "add_observations", UserID: userID},
 			func(tx *database.Tx) ([]observations.Observation, []rowchange.Change, error) {
 				return observations.AddToCitation(tx, userID, citationID, inputs)
@@ -135,31 +152,17 @@ func AddObservationsToCitation(in []byte) ([]byte, error) {
 		if err != nil {
 			return err
 		}
-		out = &engine.AddObservationsToCitationResponse{Effects: writeEffectsProto(wrote)}
-		for _, o := range rows {
-			out.Observations = append(out.Observations, observationProto(o))
+		listed, err := listedWritten(c, citationID, rows)
+		if err != nil {
+			return err
 		}
+		out = &engine.AddObservationsToCitationResponse{Effects: writeEffectsProto(wrote), Observations: listed}
 		return nil
 	})
 	if err != nil {
 		return nil, err
 	}
 	return proto.Marshal(out)
-}
-
-func observationsToInputs(rows []*engine.Observation) ([]observations.Input, error) {
-	if len(rows) == 0 {
-		return nil, nil
-	}
-	out := make([]observations.Input, 0, len(rows))
-	for _, row := range rows {
-		in, err := observationToInput(row)
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, in)
-	}
-	return out, nil
 }
 
 func observationToInput(o *engine.Observation) (observations.Input, error) {
@@ -189,6 +192,11 @@ func observationToInput(o *engine.Observation) (observations.Input, error) {
 	if err := valueInput(&in, o.GetValueText(), o.ValueInteger, o.GetDate(), o.GetValueDateId(), o.GetName(), o.GetValueNameId(), o.GetValueSubjectId(), o.GetValueTermId()); err != nil {
 		return observations.Input{}, err
 	}
+	depictionID, err := optionalID(o.GetValueDepictionId())
+	if err != nil {
+		return observations.Input{}, err
+	}
+	in.ValueDepictionID = depictionID
 	return in, nil
 }
 
@@ -254,7 +262,21 @@ func observationDraftToInputAllowEmptySubject(d *engine.ObservationDraft) (obser
 	if err := valueInput(&in, d.GetValueText(), d.ValueInteger, d.GetDate(), d.GetValueDateId(), d.GetName(), d.GetValueNameId(), d.GetValueSubjectId(), d.GetValueTermId()); err != nil {
 		return observations.Input{}, err
 	}
+	in.Depiction = depictionInput(d.GetDepiction())
 	return in, nil
+}
+
+// depictionInput maps the client's depiction (a region and the path of the
+// image it rendered) for the write. It checks nothing: the write and staging
+// refuse every wrong mix.
+func depictionInput(d *engine.DepictionValueInput) *observations.DepictionInput {
+	if d == nil {
+		return nil
+	}
+	return &observations.DepictionInput{
+		RegionJSON: strings.TrimSpace(d.GetRegionJson()),
+		ImagePath:  strings.TrimSpace(d.GetImagePath()),
+	}
 }
 
 func valueInput(
@@ -318,22 +340,25 @@ func optionalID(s string) ([]byte, error) {
 
 func observationProto(o observations.Observation) *engine.Observation {
 	return &engine.Observation{
-		Id:             uuidString(o.ID),
-		Ref:            o.Ref,
-		CitationId:     uuidString(o.CitationID),
-		SubjectId:      uuidString(o.SubjectID),
-		PropertyId:     uuidString(o.PropertyID),
-		Polarity:       o.Polarity,
-		ValueText:      o.ValueText,
-		ValueInteger:   optionalInt64(o.HasInteger, o.ValueInteger),
-		ValueDateId:    uuidString(o.ValueDateID),
-		ValueNameId:    uuidString(o.ValueNameID),
-		ValueSubjectId: uuidString(o.ValueSubjectID),
-		ValueTermId:    uuidString(o.ValueTermID),
+		Id:               uuidString(o.ID),
+		Ref:              o.Ref,
+		CitationId:       uuidString(o.CitationID),
+		SubjectId:        uuidString(o.SubjectID),
+		PropertyId:       uuidString(o.PropertyID),
+		Polarity:         o.Polarity,
+		ValueText:        o.ValueText,
+		ValueInteger:     optionalInt64(o.HasInteger, o.ValueInteger),
+		ValueDateId:      uuidString(o.ValueDateID),
+		ValueNameId:      uuidString(o.ValueNameID),
+		ValueSubjectId:   uuidString(o.ValueSubjectID),
+		ValueTermId:      uuidString(o.ValueTermID),
+		ValueDepictionId: uuidString(o.ValueDepictionID),
 	}
 }
 
-func listedObservationProto(l observations.Listed) *engine.Observation {
+// listedObservationProto projects one listed row; call through listedProtos,
+// which resolves the depiction image paths it needs.
+func listedObservationProto(l observations.Listed, paths map[string]string) *engine.Observation {
 	o := observationProto(l.Observation)
 	o.PropertyKey = l.PropertyKey
 	o.PropertyLabel = l.PropertyLabel
@@ -346,7 +371,60 @@ func listedObservationProto(l observations.Listed) *engine.Observation {
 	} else if l.ValueNameForm != "" {
 		o.Name = &engine.NameValueInput{Form: l.ValueNameForm}
 	}
+	if l.Depiction != nil {
+		o.Depiction = &engine.DepictionValue{
+			RegionJson:   l.Depiction.RegionJSON,
+			ImageRelPath: paths[string(l.Depiction.ImageFileID)],
+		}
+	}
 	return o
+}
+
+// listedProtos projects listed rows to response protos, in order, resolving
+// every depiction image path in one query.
+func listedProtos(c *database.Catalog, rows []observations.Listed) ([]*engine.Observation, error) {
+	paths, err := depictionPaths(c, rows)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]*engine.Observation, 0, len(rows))
+	for _, l := range rows {
+		out = append(out, listedObservationProto(l, paths))
+	}
+	return out, nil
+}
+
+// depictionPaths resolves the objects/… path of each listed row's depiction
+// image in one query. An image Readable emptied is not looked up, and an id
+// with no derivable path reads as an empty path: the region still shows.
+func depictionPaths(c *database.Catalog, rows []observations.Listed) (map[string]string, error) {
+	var ids [][]byte
+	for _, l := range rows {
+		if l.Depiction != nil && len(l.Depiction.ImageFileID) > 0 {
+			ids = append(ids, l.Depiction.ImageFileID)
+		}
+	}
+	return files.RelPaths(c, ids)
+}
+
+// listedWritten returns the Observations just written to a Citation as listed
+// rows, in the order they were written.
+func listedWritten(c *database.Catalog, citationID []byte, written []observations.Observation) ([]*engine.Observation, error) {
+	listed, err := observations.ListByCitation(c, citationID)
+	if err != nil {
+		return nil, err
+	}
+	byID := make(map[string]observations.Listed, len(listed))
+	for _, l := range listed {
+		byID[uuidString(l.ID)] = l
+	}
+	rows := make([]observations.Listed, 0, len(written))
+	for _, o := range written {
+		if l, ok := byID[uuidString(o.ID)]; ok {
+			rows = append(rows, l)
+		}
+	}
+	return listedProtos(c, rows)
 }
 
 func optionalInt64(has bool, v int64) *int64 {

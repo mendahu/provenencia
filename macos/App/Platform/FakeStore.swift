@@ -2452,7 +2452,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     func updateObservation(
         projectDir: String,
         userID _: String,
-        observation: CatalogObservation
+        observation: CatalogObservation,
+        depictionInput _: CatalogDepictionValueInput?
     ) async throws -> (CatalogObservation, CatalogWriteEffects) {
         return try withState {
             recordedCalls.append("updateObservation id=\(observation.id)")

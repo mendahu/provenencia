@@ -5,6 +5,7 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/rowchange"
+	"github.com/mendahu/provenencia/core/ingest"
 	"github.com/mendahu/provenencia/core/writes"
 	"google.golang.org/protobuf/proto"
 )
@@ -28,6 +29,11 @@ func CreateCitationWithObservations(in []byte) ([]byte, error) {
 	}
 	var out *engine.CreateCitationWithObservationsResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
+		discard, err := ingest.StageDepictions(c, inputs)
+		if err != nil {
+			return err
+		}
+		defer discard()
 		res, wrote, err := writes.Run(c, writes.Op{Action: "create_citation_with_observations", UserID: userID},
 			func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
 				return citations.CreateWithObservations(tx, userID, citations.CreateInput{
@@ -43,12 +49,14 @@ func CreateCitationWithObservations(in []byte) ([]byte, error) {
 		if err != nil {
 			return err
 		}
-		out = &engine.CreateCitationWithObservationsResponse{
-			Citation: citationProto(res.Citation),
-			Effects:  writeEffectsProto(wrote),
+		listed, err := listedWritten(c, res.Citation.ID, res.Observations)
+		if err != nil {
+			return err
 		}
-		for _, o := range res.Observations {
-			out.Observations = append(out.Observations, observationProto(o))
+		out = &engine.CreateCitationWithObservationsResponse{
+			Citation:     citationProto(res.Citation),
+			Effects:      writeEffectsProto(wrote),
+			Observations: listed,
 		}
 		return nil
 	})

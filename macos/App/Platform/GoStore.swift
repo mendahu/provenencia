@@ -1639,12 +1639,15 @@ struct GoStore: GenealogyStore {
     func updateObservation(
         projectDir: String,
         userID: String,
-        observation: CatalogObservation
+        observation: CatalogObservation,
+        depictionInput: CatalogDepictionValueInput?
     ) async throws -> (CatalogObservation, CatalogWriteEffects) {
-        var req = Provenencia_Engine_V1_UpdateObservationRequest()
-        req.projectDir = projectDir
-        req.userID = userID
-        req.observation = Self.mapCatalogObservation(observation)
+        let req = Self.updateObservationRequest(
+            projectDir: projectDir,
+            userID: userID,
+            observation: observation,
+            depictionInput: depictionInput
+        )
         let resp: Provenencia_Engine_V1_UpdateObservationResponse = try await provenenciaCall(
             method: CoreMethod.updateObservation,
             request: req
@@ -2039,7 +2042,30 @@ struct GoStore: GenealogyStore {
         )
     }
 
-    private static func mapObservation(_ o: Provenencia_Engine_V1_Observation) -> CatalogObservation {
+    static func updateObservationRequest(
+        projectDir: String,
+        userID: String,
+        observation: CatalogObservation,
+        depictionInput: CatalogDepictionValueInput?
+    ) -> Provenencia_Engine_V1_UpdateObservationRequest {
+        var req = Provenencia_Engine_V1_UpdateObservationRequest()
+        req.projectDir = projectDir
+        req.userID = userID
+        req.observation = Self.mapCatalogObservation(observation)
+        if let depictionInput {
+            req.depictionInput = Self.mapDepictionInput(depictionInput)
+        }
+        return req
+    }
+
+    private static func mapDepictionInput(_ d: CatalogDepictionValueInput) -> Provenencia_Engine_V1_DepictionValueInput {
+        var p = Provenencia_Engine_V1_DepictionValueInput()
+        p.regionJson = d.regionJSON
+        p.imagePath = d.imagePath
+        return p
+    }
+
+    static func mapObservation(_ o: Provenencia_Engine_V1_Observation) -> CatalogObservation {
         CatalogObservation(
             id: o.id,
             ref: o.ref,
@@ -2058,7 +2084,11 @@ struct GoStore: GenealogyStore {
             valueTermID: o.valueTermID,
             propertyKey: o.propertyKey,
             propertyLabel: o.propertyLabel,
-            propertyValueType: o.propertyValueType
+            propertyValueType: o.propertyValueType,
+            valueDepictionID: o.valueDepictionID,
+            depiction: o.hasDepiction
+                ? CatalogDepictionValue(regionJSON: o.depiction.regionJson, imageRelPath: o.depiction.imageRelPath)
+                : nil
         )
     }
 
@@ -2095,10 +2125,11 @@ struct GoStore: GenealogyStore {
         msg.propertyKey = o.propertyKey
         msg.propertyLabel = o.propertyLabel
         msg.propertyValueType = o.propertyValueType
+        msg.valueDepictionID = o.valueDepictionID
         return msg
     }
 
-    private static func mapObservationDraft(_ d: CatalogObservationDraft) -> Provenencia_Engine_V1_ObservationDraft {
+    static func mapObservationDraft(_ d: CatalogObservationDraft) -> Provenencia_Engine_V1_ObservationDraft {
         var o = Provenencia_Engine_V1_ObservationDraft()
         o.subjectID = d.subjectID
         o.propertyID = d.propertyID
@@ -2126,6 +2157,9 @@ struct GoStore: GenealogyStore {
         o.valueSubjectID = d.valueSubjectID
         o.valueTermID = d.valueTermID
         o.notes = d.notes
+        if let depiction = d.depiction {
+            o.depiction = Self.mapDepictionInput(depiction)
+        }
         return o
     }
 

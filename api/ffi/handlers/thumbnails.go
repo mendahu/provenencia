@@ -182,7 +182,7 @@ func sourceCoverThumbnails(c *database.Catalog, rows []sources.Source) (map[stri
 			derived = append(derived, link.DerivedFileID)
 		}
 	}
-	byFile, err := files.LookupMany(c, derived)
+	paths, err := files.RelPaths(c, derived)
 	if err != nil {
 		return nil, err
 	}
@@ -191,12 +191,8 @@ func sourceCoverThumbnails(c *database.Catalog, rows []sources.Source) (map[stri
 		if !ok {
 			continue
 		}
-		f, ok := byFile[string(link.DerivedFileID)]
+		rel, ok := paths[string(link.DerivedFileID)]
 		if !ok {
-			continue
-		}
-		rel, err := files.StorageRelPath(f.ChecksumSHA256, f.MediaType)
-		if err != nil {
 			continue
 		}
 		out[string(item.sourceID)] = rel

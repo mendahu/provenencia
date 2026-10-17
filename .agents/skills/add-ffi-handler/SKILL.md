@@ -59,6 +59,10 @@ Follow [`use-catalog-session`](../use-catalog-session/SKILL.md). Identity-only R
 
 Resource / vocab **Delete** RPCs: preview is `GetDeleteImpact` (report proto). The writer re-runs Impact as a safety net; refuse is a generic `*.in_use` / extra-gate code — do not attach the report to `Error` or stuff refs into `apperr` params. Follow [`add-catalog-delete`](../add-catalog-delete/SKILL.md) and [`docs/catalog-deletes.md`](../../../docs/catalog-deletes.md). Do not add a second inbound count in the handler.
 
+## Files from the client, paths to the client
+
+A request names a client file by its absolute path, never as bytes. The handler stages it inside `withProjectCatalog`, before `writes.Run`, and defers the discard: `ingest.StageDepictions(c, inputs)` for depictions, `ingest.File` for Artifacts. Examples: `IngestArtifactFile` (one file, one path back) and `CreateCitationWithObservations` (drafts that carry a depiction path). Never take a File id from the client, and never read a saved `objects/…` path from a request: a response message holds saved data and a request holds only the input. Return `objects/…` paths through `files.RelPaths` (many Files, one query) or `files.StorageRelPath` (one).
+
 ## Do not
 
 - Grow `dispatch.go` with unmarshal or domain logic (unknown-method → `apperr` is OK)
