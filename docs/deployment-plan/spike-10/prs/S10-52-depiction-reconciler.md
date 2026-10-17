@@ -1,6 +1,6 @@
 # S10-52 — Depiction auto-reconciler module
 
-**Status:** Planned
+**Status:** Landed in [#437](https://github.com/mendahu/provenencia/pull/437) (2026-10-17)
 **Spike / slice:** Spike 10 · Slice 8 — Likeness
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#s10-52--depiction-auto-reconciler-module)
 **Brief:** — (no new chrome: an engine module, a cache column, and a skip in the Person field read)
@@ -27,6 +27,10 @@
 8. **Docs-only lines in the DoD are part of the PR.** Do not skip them.
 
 ---
+
+## Landed
+
+D-11 applied: S11-22 landed in #434 before this PR merged, so the merge from `main` spells every value-type and cardinality constant `propertymeta.*`, and the date and name value types are `core/datevalue` and `core/namevalue`. Otherwise no differences from this plan beyond test shape: T-3's cases share a small `world` struct and a `finish` helper (upkeep equals rebuild, the loaded node's `likeness` image ids, `Verify`) in `TestDepictionsReconcileByImage`. The manual check on a Mac (open a dogfood project on the branch build; the Person page shows the same fields as on `main`) was not run.
 
 ## 1. Objective
 
