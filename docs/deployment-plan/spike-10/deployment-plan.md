@@ -266,7 +266,7 @@ SLICE 8 — Likeness
   S10-53  Stage a client image: shared ingest checks, bounded decode, PNG re-encode — done, #424
   S10-56  Object store stays inside objects/; deletes prune empty folders — done, #425
   S10-32  Depiction value (region + image File) + likeness on person (engine) — done, #430
-  S10-54  Depiction values over the FFI: draft input, image path in responses
+  S10-54  Depiction values over the FFI: draft input, image path in responses — done, #433
   S10-52  Depiction auto-reconciler module; cache stores the image
   S10-33  Crop cache — descoped 2026-10-16. The image is the value (S10-32).
   ✎ S10-D15 ──▶ S10-34  Composer depiction row: draw, render, save (after S10-16)
@@ -703,7 +703,7 @@ S10-33 crop cache — descoped 2026-10-16
 
 #### S10-54 — Depiction values over the FFI
 
-**Plan:** [`prs/S10-54-depiction-ffi.md`](prs/S10-54-depiction-ffi.md) — Planned
+**Plan:** [`prs/S10-54-depiction-ffi.md`](prs/S10-54-depiction-ffi.md) — Landed #433
 
 | | |
 | --- | --- |

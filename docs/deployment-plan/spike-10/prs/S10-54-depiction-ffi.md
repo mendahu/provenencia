@@ -1,6 +1,6 @@
 # S10-54 — Depiction values over the FFI
 
-**Status:** Planned
+**Status:** Landed in [#433](https://github.com/mendahu/provenencia/pull/433) (2026-10-17)
 **Spike / slice:** Spike 10 · Slice 8 — Likeness
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#s10-54--depiction-values-over-the-ffi)
 **Brief:** — (no new chrome: proto fields, handler wiring, Swift store types, a value-type label, and two error strings)
@@ -16,6 +16,10 @@
 **Review:** [`S10-54-depiction-ffi.review.md`](S10-54-depiction-ffi.review.md) — Fits with changes, Not ready → changes applied; 1 round. Refresh after S10-32 landed: 2 rounds, Fits — Ready
 
 > **Refreshed after S10-32 landed.** Every name this plan marks *(S10-32)* was checked against `main` @ `233e87ad`. The one change S10-32's Landed note makes to this plan: every reader that returns a stored depiction goes through `depictionvalues.Readable`, which empties a region that is not valid on the Citation's page and an image File that is not `image/png`. D-4, D-6, AC-2.3, and T-12 carry that.
+
+## Landed
+
+Differences from this plan: the test file gained helpers beside the three the plan names (`likenessDraft`, `saveLikeness`, `checkSavedLikeness`, and a second region constant `likenessRegion2JSON`); `TestUpdateObservation` shares a `saved` row across its likeness rows; `mapObservation` and `mapObservationDraft` lost `private` as D-7 says, and `mapCatalogObservation` stays private; `T-1` inserts its two Files with one transaction and checks `RelPaths` against `StorageRelPath` of each. The manual check on a Mac (the Properties pill reads *Depiction* with VoiceOver; the composer still offers no Likeness; covers and Artifact thumbnails unchanged) was not run; the Xcode tests pass in `scripts/check-pr.sh`.
 
 ### Implementer — read this first
 
