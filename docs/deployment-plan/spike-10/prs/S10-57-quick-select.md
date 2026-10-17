@@ -1,6 +1,6 @@
 # S10-57 — Hold Shift to select; Select disarms after one rectangle
 
-**Status:** Planned
+**Status:** Landed in #428 (2026-10-17)
 **Spike / slice:** Spike 10 · Slice 5 — Artifacts and multi-select
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#s10-57--hold-shift-to-select)
 **Brief:** — (no new chrome: the palette Select button, its armed paint, its help, and the rectangle already exist from S10-D6; this PR changes when they show and what a click does)
