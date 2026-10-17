@@ -17,7 +17,7 @@ Maintainability: **Fits with changes**. Executability: **Not ready** (X-1).
 | X-6 | minor | pbxproj ids; `evaluate-ui-component` missing from Skills to load | **Fixed.** D-9 names `A90A…05` / `A90A…06`; skill added to the header |
 | X-7 | minor | Review log missing | **Fixed.** This file |
 | X-8 | info | protoc, Xcode, S10-35 code not available here | Expected; the Machines line and status `Blocked — on S10-35` cover it |
-| M-1 | major | Fourth hand-rolled menu keyboard reset; the kit should own it | **To user.** Recommendation: keep D-13's copy (now with `itemTitles`) and queue the kit change as a follow-up; it touches the Sources and composer features, outside a Person PR. Out line added; follow-up task queued |
+| M-1 | major | Fourth hand-rolled menu keyboard reset; the kit should own it | **Fixed (user, 2026-10-17: consolidate in this PR).** D-16 and STEP-8: `PVContextMenuKeyboard.opened(titles:)` and `pvContextMenu(…, keyboardTitles:)`; the Source cover and composer clear menus drop their resets; `PVSelect` keeps its seeded highlight. T-8 and §10 step 6 |
 | M-2 | major | "Which likeness does this Observation name" decided in two places | **Fixed.** D-2 adds `likenesses.ByObservation`; `ForEntities` and D-3 both call it |
 | M-3 | minor | Write tested in another package to avoid a fixture copy | **Declined for this PR.** The shared fixture touches S10-35's tests and other packages; Out line and follow-up task. D-14 keeps the tests beside the fixture |
 | M-4 | minor | Fifth private `nullBlob` | **Declined for this PR.** Out line and follow-up task for `database.NullBlob` |
@@ -36,4 +36,4 @@ Fresh executability reviewer on the plan and this log. Every round-1 answer hold
 
 ## Verdict
 
-Maintainability **Fits with changes** (applied). Executability **Ready with changes** (applied). No open blocker. To user: M-1 (recommendation: keep the copy here, kit change as a follow-up). Status stays `Blocked — on S10-35 landing` until §4's (S10-35) rows are redone against its Landed note.
+Maintainability **Fits with changes** (applied). Executability **Ready with changes** (applied). No open blocker. M-1 was answered by the user: consolidated in this PR (D-16). Status stays `Blocked — on S10-35 landing` until §4's (S10-35) rows are redone against its Landed note.
