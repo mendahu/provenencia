@@ -33,6 +33,7 @@ const (
 	CodeWritesReentry                 = "writes.reentry"
 	CodeDateValuesInvalid             = "datevalues.invalid"
 	CodeNameValuesInvalid             = "namevalues.invalid"
+	CodeDepictionValuesInvalid        = "depictionvalues.invalid"
 	CodeLocatorInvalid                = "locator.invalid"
 	CodeCitationsInvalid              = "citations.invalid"
 	CodeCitationsInUse                = "citations.in_use"
