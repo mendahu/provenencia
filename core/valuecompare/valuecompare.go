@@ -7,7 +7,11 @@
 // a level exactly when Compare relates them at that level.
 package valuecompare
 
-import "sort"
+import (
+	"sort"
+
+	"github.com/mendahu/provenencia/core/propertymeta"
+)
 
 // Relation is how two values relate.
 type Relation string
@@ -126,7 +130,10 @@ type comparer interface {
 }
 
 // comparers are the supported value types.
-var comparers = map[string]comparer{}
+var comparers = map[string]comparer{
+	propertymeta.ValueTypeTerm:    term{},
+	propertymeta.ValueTypeInteger: integer{},
+}
 
 // Compare relates a to b under rules. Values of different types, and types
 // without a comparer, are Unknown with cause unsupported.
