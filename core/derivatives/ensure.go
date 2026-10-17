@@ -127,7 +127,7 @@ func Ensure(c *database.Catalog, sourceFileID []byte, spec Spec) (Result, error)
 		return Result{}, err
 	}
 	derivedPath := filepath.Join(c.Dir(), filepath.FromSlash(derivedRel))
-	if err := writeObjectIfAbsent(derivedPath, derivedJPEG); err != nil {
+	if _, err := objectstore.WriteIfAbsent(derivedPath, checksum, derivedJPEG); err != nil {
 		return Result{}, err
 	}
 
@@ -338,50 +338,6 @@ func reprojectSourcesForNewThumbnail(c *database.Catalog, sourceFileID []byte, d
 			return err
 		}
 	}
-	return nil
-}
-
-func writeObjectIfAbsent(objPath string, data []byte) error {
-	if match, err := objectstore.MatchesChecksum(objPath, sha256Hex(data)); err != nil {
-		return err
-	} else if match {
-		return nil
-	}
-	if err := os.MkdirAll(filepath.Dir(objPath), 0o755); err != nil {
-		return err
-	}
-	tmp, err := os.CreateTemp(filepath.Dir(objPath), ".deriv-*")
-	if err != nil {
-		return err
-	}
-	tmpName := tmp.Name()
-	ok := false
-	defer func() {
-		if !ok {
-			_ = os.Remove(tmpName)
-		}
-	}()
-	if _, err := tmp.Write(data); err != nil {
-		_ = tmp.Close()
-		return err
-	}
-	if err := tmp.Sync(); err != nil {
-		_ = tmp.Close()
-		return err
-	}
-	if err := tmp.Close(); err != nil {
-		return err
-	}
-	if err := os.Rename(tmpName, objPath); err != nil {
-		if match, statErr := objectstore.MatchesChecksum(objPath, sha256Hex(data)); statErr == nil && match {
-			_ = os.Remove(tmpName)
-			ok = true
-			return nil
-		}
-		return err
-	}
-	_ = syncDir(filepath.Dir(objPath))
-	ok = true
 	return nil
 }
 

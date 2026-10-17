@@ -1,4 +1,4 @@
-// Package objectstore verifies and removes content-addressed object files on disk.
+// Package objectstore verifies, writes, and removes content-addressed object files on disk.
 package objectstore
 
 import (
@@ -66,4 +66,55 @@ func RemoveObject(projectDir, rel string) error {
 		return err
 	}
 	return nil
+}
+
+// WriteIfAbsent writes data at objPath unless a file there already matches
+// checksum (lowercase hex SHA-256 of data). It writes a temp file, syncs it, and
+// renames it into place, so a reader never sees a partial object. wrote is true
+// when this call left new bytes at objPath. A checksum that does not match data
+// is an error and nothing is written. A directory-sync error is ignored.
+func WriteIfAbsent(objPath, checksum string, data []byte) (wrote bool, err error) {
+	sum := sha256.Sum256(data)
+	if hex.EncodeToString(sum[:]) != checksum {
+		return false, fmt.Errorf("objectstore: data does not match checksum %s", checksum)
+	}
+	if match, err := MatchesChecksum(objPath, checksum); err != nil {
+		return false, err
+	} else if match {
+		return false, nil
+	}
+	if err := os.MkdirAll(filepath.Dir(objPath), 0o755); err != nil {
+		return false, err
+	}
+	tmp, err := os.CreateTemp(filepath.Dir(objPath), ".write-*")
+	if err != nil {
+		return false, err
+	}
+	tmpName := tmp.Name()
+	done := false
+	defer func() {
+		if !done {
+			_ = os.Remove(tmpName)
+		}
+	}()
+	if _, err := tmp.Write(data); err != nil {
+		_ = tmp.Close()
+		return false, err
+	}
+	if err := tmp.Sync(); err != nil {
+		_ = tmp.Close()
+		return false, err
+	}
+	if err := tmp.Close(); err != nil {
+		return false, err
+	}
+	if err := os.Rename(tmpName, objPath); err != nil {
+		if match, statErr := MatchesChecksum(objPath, checksum); statErr == nil && match {
+			return false, nil
+		}
+		return false, err
+	}
+	done = true
+	_ = SyncDir(filepath.Dir(objPath))
+	return true, nil
 }

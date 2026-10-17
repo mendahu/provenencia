@@ -1,6 +1,8 @@
 package objectstore_test
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"os"
 	"path/filepath"
 	"strings"
@@ -129,5 +131,47 @@ func TestRemoveObject(t *testing.T) {
 				t.Fatal("object still exists")
 			}
 		})
+	}
+}
+
+func TestWriteIfAbsent(t *testing.T) {
+	data := []byte("object bytes")
+	sum := sha256.Sum256(data)
+	checksum := hex.EncodeToString(sum[:])
+	path := filepath.Join(t.TempDir(), "objects", "ab", "cd", "obj.png")
+
+	wrote, err := objectstore.WriteIfAbsent(path, checksum, data)
+	if err != nil || !wrote {
+		t.Fatalf("absent: wrote=%v err=%v", wrote, err)
+	}
+	if got, _ := os.ReadFile(path); string(got) != string(data) {
+		t.Fatalf("content = %q", got)
+	}
+
+	wrote, err = objectstore.WriteIfAbsent(path, checksum, data)
+	if err != nil || wrote {
+		t.Fatalf("same bytes again: wrote=%v err=%v", wrote, err)
+	}
+
+	if err := os.WriteFile(path, []byte("other"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	wrote, err = objectstore.WriteIfAbsent(path, checksum, data)
+	if err != nil || !wrote {
+		t.Fatalf("different file: wrote=%v err=%v", wrote, err)
+	}
+	if got, _ := os.ReadFile(path); string(got) != string(data) {
+		t.Fatalf("content after replace = %q", got)
+	}
+
+	other := filepath.Join(t.TempDir(), "objects", "x.png")
+	if wrote, err := objectstore.WriteIfAbsent(other, strings.Repeat("0", 64), data); err == nil || wrote {
+		t.Fatalf("mismatched checksum: wrote=%v err=%v", wrote, err)
+	}
+	if _, err := os.Lstat(other); err == nil {
+		t.Fatal("mismatched checksum left a file")
+	}
+	if _, err := os.Lstat(filepath.Dir(other)); err == nil {
+		t.Fatal("mismatched checksum created the directory")
 	}
 }

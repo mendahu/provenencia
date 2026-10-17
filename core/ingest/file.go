@@ -390,7 +390,7 @@ func installObject(tmpPath, objPath, checksum string) (wrote bool, err error) {
 		}
 		return false, err
 	}
-	if err := syncDir(filepath.Dir(objPath)); err != nil {
+	if err := objectstore.SyncDir(filepath.Dir(objPath)); err != nil {
 		return true, err
 	}
 	return true, nil
