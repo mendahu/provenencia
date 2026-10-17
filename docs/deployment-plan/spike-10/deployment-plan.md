@@ -821,6 +821,8 @@ S10-33 crop cache — descoped 2026-10-16
 
 ### S10-99 — Dogfood close / docs
 
+**Plan:** [`prs/S10-99-dogfood-close.md`](prs/S10-99-dogfood-close.md) — Planned
+
 | | |
 | --- | --- |
 | **In** | Pulled notes already left [`docs/dogfood/ux.md`](../../dogfood/ux.md). Do not copy them back. Distill this spike with [`archive-docs`](../../../.agents/skills/archive-docs/SKILL.md) when the bar above is true. The three idea notes live in this folder; the close distill keeps their decisions and drops the PR sequence. |
