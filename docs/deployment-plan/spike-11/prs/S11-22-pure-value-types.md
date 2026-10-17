@@ -1,6 +1,6 @@
 # S11-22 — Pure value types
 
-**Status:** Planned
+**Status:** Landed in [#434](https://github.com/mendahu/provenencia/pull/434) (2026-10-17)
 **Spike / slice:** Spike 11 · Slice 1 — Graspable model and pure foundations
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no new chrome: a Go package move)
@@ -262,3 +262,10 @@ None.
 
 **Title:** S11-22 — Pure value types
 **Body:** objective in one sentence; what shipped against each US; AC evidence; deviations from the plan; manual check; `Plan: docs/deployment-plan/spike-11/prs/S11-22-pure-value-types.md`.
+
+## Landed
+
+Differences from the plan:
+
+- Three file paths in §4 Current state (`display.go`, `registry.go`, `namevaluestest.go` under the old packages) are plain text, not code spans, because the plan-docs check rejects paths that no longer exist.
+- The code is otherwise as planned; `ValueTypeDepiction` moved with the other value types per the Amended line.
