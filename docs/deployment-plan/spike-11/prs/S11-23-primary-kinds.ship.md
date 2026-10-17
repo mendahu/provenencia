@@ -56,5 +56,8 @@ Head `48bfef56`. Gate PASS (orchestrator run). F-1 to F-4 done. F-4 guard confir
 Lenses: CON, MNT (the lenses with Fix-now findings). Scope `6eeecbaf...48bfef56`.
 CON: CON-1, CON-2a, CON-2b resolved; no new findings. MNT: MNT-1, MNT-2 resolved; no new findings. No blockers, so no Fix plan 2.
 
+## Main merge
+Merged `origin/main` @ `b578a47e` (S10-52, #437, which adds migration `000053`) so the app opens a catalog at the current format. Clean merge. The gate then failed `go-vet`: S10-52's `conclusiondetails_test.go:238` used `properties.OriginProvenencia`, which this PR deletes (D-5). One-item gate fix `cdf9e205` reads `vocabkey.OriginProvenencia`. Gate PASS (orchestrator run).
+
 ## Result
 Gate PASS · CI pending · open: none · follow-ups: CON-3/MNT-4 (typed Property key list, S11-02), MNT-log-1 (`observations.go` value-type literals), MNT-log-2 (per-kind header switches in FFI handlers) · to user: —
