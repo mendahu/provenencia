@@ -141,42 +141,129 @@ func TestWriteIfAbsent(t *testing.T) {
 	data := []byte("object bytes")
 	sum := sha256.Sum256(data)
 	checksum := hex.EncodeToString(sum[:])
-	path := filepath.Join(t.TempDir(), "objects", "ab", "cd", "obj.png")
+	const rel = "objects/ab/cd/obj.png"
 
-	wrote, err := objectstore.WriteIfAbsent(path, checksum, data)
-	if err != nil || !wrote {
-		t.Fatalf("absent: wrote=%v err=%v", wrote, err)
-	}
-	if got, _ := os.ReadFile(path); string(got) != string(data) {
-		t.Fatalf("content = %q", got)
-	}
-
-	wrote, err = objectstore.WriteIfAbsent(path, checksum, data)
-	if err != nil || wrote {
-		t.Fatalf("same bytes again: wrote=%v err=%v", wrote, err)
-	}
-
-	if err := os.WriteFile(path, []byte("other"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	wrote, err = objectstore.WriteIfAbsent(path, checksum, data)
-	if err != nil || !wrote {
-		t.Fatalf("different file: wrote=%v err=%v", wrote, err)
-	}
-	if got, _ := os.ReadFile(path); string(got) != string(data) {
-		t.Fatalf("content after replace = %q", got)
+	noTemps := func(t *testing.T, project string) {
+		t.Helper()
+		entries, err := os.ReadDir(filepath.Join(project, "objects"))
+		if err != nil {
+			return
+		}
+		for _, e := range entries {
+			if strings.HasPrefix(e.Name(), ".write-") {
+				t.Fatalf("temp %s left behind", e.Name())
+			}
+		}
 	}
 
-	other := filepath.Join(t.TempDir(), "objects", "x.png")
-	if wrote, err := objectstore.WriteIfAbsent(other, strings.Repeat("0", 64), data); err == nil || wrote {
-		t.Fatalf("mismatched checksum: wrote=%v err=%v", wrote, err)
-	}
-	if _, err := os.Lstat(other); err == nil {
-		t.Fatal("mismatched checksum left a file")
-	}
-	if _, err := os.Lstat(filepath.Dir(other)); err == nil {
-		t.Fatal("mismatched checksum created the directory")
-	}
+	t.Run("write, repeat, and replace", func(t *testing.T) {
+		project := t.TempDir()
+		path := filepath.Join(project, filepath.FromSlash(rel))
+
+		wrote, err := objectstore.WriteIfAbsent(project, rel, checksum, data)
+		if err != nil || !wrote {
+			t.Fatalf("absent: wrote=%v err=%v", wrote, err)
+		}
+		if got, _ := os.ReadFile(path); string(got) != string(data) {
+			t.Fatalf("content = %q", got)
+		}
+
+		wrote, err = objectstore.WriteIfAbsent(project, rel, checksum, data)
+		if err != nil || wrote {
+			t.Fatalf("same bytes again: wrote=%v err=%v", wrote, err)
+		}
+
+		if err := os.WriteFile(path, []byte("other"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		wrote, err = objectstore.WriteIfAbsent(project, rel, checksum, data)
+		if err != nil || !wrote {
+			t.Fatalf("different file: wrote=%v err=%v", wrote, err)
+		}
+		if got, _ := os.ReadFile(path); string(got) != string(data) {
+			t.Fatalf("content after replace = %q", got)
+		}
+		noTemps(t, project)
+	})
+
+	t.Run("mismatched checksum writes nothing", func(t *testing.T) {
+		project := t.TempDir()
+		if wrote, err := objectstore.WriteIfAbsent(project, "objects/x.png", strings.Repeat("0", 64), data); err == nil || wrote {
+			t.Fatalf("wrote=%v err=%v", wrote, err)
+		}
+		if _, err := os.Lstat(filepath.Join(project, "objects")); err == nil {
+			t.Fatal("mismatched checksum created objects/")
+		}
+	})
+
+	t.Run("creates objects when absent", func(t *testing.T) {
+		project := t.TempDir()
+		wrote, err := objectstore.WriteIfAbsent(project, rel, checksum, data)
+		if err != nil || !wrote {
+			t.Fatalf("wrote=%v err=%v", wrote, err)
+		}
+		noTemps(t, project)
+	})
+
+	t.Run("objects subfolder symlinked outside", func(t *testing.T) {
+		project, out := t.TempDir(), t.TempDir()
+		if err := os.MkdirAll(filepath.Join(project, "objects"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Symlink(out, filepath.Join(project, "objects", "ab")); err != nil {
+			t.Fatal(err)
+		}
+		if wrote, err := objectstore.WriteIfAbsent(project, rel, checksum, data); err == nil || wrote {
+			t.Fatalf("wrote=%v err=%v", wrote, err)
+		}
+		if entries, _ := os.ReadDir(out); len(entries) != 0 {
+			t.Fatalf("outside folder holds %d entries", len(entries))
+		}
+		noTemps(t, project)
+	})
+
+	t.Run("objects folder symlinked outside", func(t *testing.T) {
+		project, out := t.TempDir(), t.TempDir()
+		if err := os.Symlink(out, filepath.Join(project, "objects")); err != nil {
+			t.Fatal(err)
+		}
+		if wrote, err := objectstore.WriteIfAbsent(project, rel, checksum, data); !errors.Is(err, objectstore.ErrUnsafeObjects) || wrote {
+			t.Fatalf("wrote=%v err=%v", wrote, err)
+		}
+		if entries, _ := os.ReadDir(out); len(entries) != 0 {
+			t.Fatalf("outside folder holds %d entries", len(entries))
+		}
+	})
+
+	t.Run("object path symlinked to an outside file", func(t *testing.T) {
+		project, out := t.TempDir(), t.TempDir()
+		outside := filepath.Join(out, "secret.png")
+		if err := os.WriteFile(outside, data, 0o644); err != nil {
+			t.Fatal(err)
+		}
+		link := filepath.Join(project, filepath.FromSlash(rel))
+		if err := os.MkdirAll(filepath.Dir(link), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Symlink(outside, link); err != nil {
+			t.Fatal(err)
+		}
+		wrote, err := objectstore.WriteIfAbsent(project, rel, checksum, data)
+		if err != nil || !wrote {
+			t.Fatalf("wrote=%v err=%v", wrote, err)
+		}
+		st, err := os.Lstat(link)
+		if err != nil || !st.Mode().IsRegular() {
+			t.Fatalf("object path is not a regular file: %v %v", st, err)
+		}
+		if got, _ := os.ReadFile(link); string(got) != string(data) {
+			t.Fatalf("content = %q", got)
+		}
+		if got, _ := os.ReadFile(outside); string(got) != string(data) {
+			t.Fatalf("outside file changed: %q", got)
+		}
+		noTemps(t, project)
+	})
 }
 
 func TestOpenObject(t *testing.T) {

@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"io"
-	"path/filepath"
 	"strings"
 
 	"github.com/mendahu/provenencia/core/database"
@@ -111,7 +110,7 @@ func (s *StagedImage) InsertTx(tx *sql.Tx) (files.File, []rowchange.Change, erro
 	default:
 		return files.File{}, nil, err
 	}
-	wrote, err := objectstore.WriteIfAbsent(filepath.Join(s.c.Dir(), filepath.FromSlash(s.rel)), s.checksum, s.png)
+	wrote, err := objectstore.WriteIfAbsent(s.c.Dir(), s.rel, s.checksum, s.png)
 	s.wrote = s.wrote || wrote
 	if err != nil {
 		return files.File{}, nil, err

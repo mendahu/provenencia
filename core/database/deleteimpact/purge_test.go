@@ -103,7 +103,7 @@ func TestReleaseSchedulesPurge(t *testing.T) {
 				t.Fatal(err)
 			}
 			objPath := filepath.Join(c.Dir(), filepath.FromSlash(rel))
-			if _, err := objectstore.WriteIfAbsent(objPath, checksum, data); err != nil {
+			if _, err := objectstore.WriteIfAbsent(c.Dir(), rel, checksum, data); err != nil {
 				t.Fatal(err)
 			}
 			fileID, err := files.NewID()

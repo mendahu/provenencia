@@ -2,6 +2,7 @@
 package objectstore
 
 import (
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -166,53 +167,105 @@ func RemoveObject(projectDir, rel string) error {
 	return nil
 }
 
-// WriteIfAbsent writes data at objPath unless a file there already matches
-// checksum (lowercase hex SHA-256 of data). It writes a temp file, syncs it, and
-// renames it into place, so a reader never sees a partial object. wrote is true
-// when this call left new bytes at objPath. A checksum that does not match data
-// is an error and nothing is written. A directory-sync error is ignored.
-func WriteIfAbsent(objPath, checksum string, data []byte) (wrote bool, err error) {
-	sum := sha256.Sum256(data)
-	if hex.EncodeToString(sum[:]) != checksum {
-		return false, fmt.Errorf("objectstore: data does not match checksum %s", checksum)
+// createTempIn creates an exclusive temp file named prefix plus 16 random hex
+// characters at the top of root. It returns the file and its root-relative name.
+func createTempIn(root *os.Root, prefix string) (*os.File, string, error) {
+	var lastErr error
+	for range 10 {
+		var b [8]byte
+		if _, err := rand.Read(b[:]); err != nil {
+			return nil, "", err
+		}
+		name := prefix + hex.EncodeToString(b[:])
+		f, err := root.OpenFile(name, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0o600)
+		if err == nil {
+			return f, name, nil
+		}
+		if !errors.Is(err, fs.ErrExist) {
+			return nil, "", err
+		}
+		lastErr = err
 	}
-	if match, err := MatchesChecksum(objPath, checksum); err != nil {
+	return nil, "", lastErr
+}
+
+// installTemp moves the finished temp file tmp to inner under root unless inner
+// already matches checksum. It always removes tmp on return. A symlink or other
+// non-matching entry at inner is replaced, never followed. wrote is true when
+// this call left new bytes at inner; a directory-sync error comes back with it.
+func installTemp(root *os.Root, tmp, inner, checksum string) (wrote bool, err error) {
+	defer func() { _ = root.Remove(tmp) }()
+
+	if match, err := matches(root, inner, checksum); err != nil {
 		return false, err
 	} else if match {
 		return false, nil
 	}
-	if err := os.MkdirAll(filepath.Dir(objPath), 0o755); err != nil {
+	if err := root.MkdirAll(filepath.Dir(inner), 0o755); err != nil {
 		return false, err
 	}
-	tmp, err := os.CreateTemp(filepath.Dir(objPath), ".write-*")
-	if err != nil {
+	if err := root.Remove(inner); err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return false, err
 	}
-	tmpName := tmp.Name()
-	done := false
-	defer func() {
-		if !done {
-			_ = os.Remove(tmpName)
-		}
-	}()
-	if _, err := tmp.Write(data); err != nil {
-		_ = tmp.Close()
-		return false, err
-	}
-	if err := tmp.Sync(); err != nil {
-		_ = tmp.Close()
-		return false, err
-	}
-	if err := tmp.Close(); err != nil {
-		return false, err
-	}
-	if err := os.Rename(tmpName, objPath); err != nil {
-		if match, statErr := MatchesChecksum(objPath, checksum); statErr == nil && match {
+	if err := root.Rename(tmp, inner); err != nil {
+		if match, matchErr := matches(root, inner, checksum); matchErr == nil && match {
 			return false, nil
 		}
 		return false, err
 	}
-	done = true
-	_ = SyncDir(filepath.Dir(objPath))
+	if err := syncDirIn(root, filepath.Dir(inner)); err != nil {
+		return true, err
+	}
 	return true, nil
+}
+
+// WriteIfAbsent writes data at rel under projectDir unless a file there already
+// matches checksum (lowercase hex SHA-256 of data). rel is the slash-separated
+// path from the project folder and must start with objects/. It writes a temp
+// file, syncs it, and renames it into place, so a reader never sees a partial
+// object; every step stays inside projectDir/objects. wrote is true when this
+// call left new bytes at rel. A checksum that does not match data is an error
+// and nothing is written. A directory-sync error is ignored.
+func WriteIfAbsent(projectDir, rel, checksum string, data []byte) (wrote bool, err error) {
+	sum := sha256.Sum256(data)
+	if hex.EncodeToString(sum[:]) != checksum {
+		return false, fmt.Errorf("objectstore: data does not match checksum %s", checksum)
+	}
+	inner, err := innerPath(rel)
+	if err != nil {
+		return false, err
+	}
+	root, err := openObjectsRoot(projectDir, true)
+	if err != nil {
+		return false, err
+	}
+	defer root.Close()
+	if match, err := matches(root, inner, checksum); err != nil {
+		return false, err
+	} else if match {
+		return false, nil
+	}
+	tmp, name, err := createTempIn(root, ".write-")
+	if err != nil {
+		return false, err
+	}
+	if _, err := tmp.Write(data); err != nil {
+		_ = tmp.Close()
+		_ = root.Remove(name)
+		return false, err
+	}
+	if err := tmp.Sync(); err != nil {
+		_ = tmp.Close()
+		_ = root.Remove(name)
+		return false, err
+	}
+	if err := tmp.Close(); err != nil {
+		_ = root.Remove(name)
+		return false, err
+	}
+	wrote, err = installTemp(root, name, inner, checksum)
+	if wrote {
+		return true, nil
+	}
+	return false, err
 }

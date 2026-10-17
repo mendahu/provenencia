@@ -126,8 +126,7 @@ func Ensure(c *database.Catalog, sourceFileID []byte, spec Spec) (Result, error)
 	if err != nil {
 		return Result{}, err
 	}
-	derivedPath := filepath.Join(c.Dir(), filepath.FromSlash(derivedRel))
-	if _, err := objectstore.WriteIfAbsent(derivedPath, checksum, derivedJPEG); err != nil {
+	if _, err := objectstore.WriteIfAbsent(c.Dir(), derivedRel, checksum, derivedJPEG); err != nil {
 		return Result{}, err
 	}
 
