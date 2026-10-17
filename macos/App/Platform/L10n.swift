@@ -6394,6 +6394,11 @@ enum L10n {
             defaultValue: "Subject",
             comment: "Property value type label: subject"
         )
+        static let valueTypeDepiction = LocalizedStringResource(
+            "properties.valueType.depiction",
+            defaultValue: "Depiction",
+            comment: "Property value type label: depiction (registry-only)"
+        )
         static let valueTypeTerm = LocalizedStringResource(
             "properties.valueType.term",
             defaultValue: "Term",
@@ -9239,6 +9244,16 @@ enum L10n {
             defaultValue: "Invalid date value.",
             comment: "FFI error datevalues.invalid"
         )
+        static let depictionValuesInvalid = LocalizedStringResource(
+            "error.depictionvalues.invalid",
+            defaultValue: "Invalid depiction value.",
+            comment: "FFI error depictionvalues.invalid"
+        )
+        static let ingestUnsupportedImage = LocalizedStringResource(
+            "error.ingest.unsupported_image",
+            defaultValue: "The picture of that region couldn’t be read.",
+            comment: "FFI error ingest.unsupported_image (a depiction crop Go could not decode)"
+        )
         static let nameValuesInvalid = LocalizedStringResource(
             "error.namevalues.invalid",
             defaultValue: "Invalid name value.",
@@ -9390,6 +9405,8 @@ enum L10n {
                 return L10n.string(ingestSymlinkHelp)
             case "ingest.missing":
                 return L10n.string(ingestMissingHelp)
+            case "ingest.unsupported_image":
+                return L10n.string(ingestUnsupportedImage)
             case "sourcetypes.invalid":
                 return L10n.string(sourceTypesInvalid)
             case "sourcetypes.in_use":
@@ -9448,6 +9465,8 @@ enum L10n {
                 return L10n.string(dateValuesInvalid)
             case "namevalues.invalid":
                 return L10n.string(nameValuesInvalid)
+            case "depictionvalues.invalid":
+                return L10n.string(depictionValuesInvalid)
             case "deleteimpact.invalid":
                 return L10n.string(deleteImpactInvalid)
             case "filederivatives.invalid":

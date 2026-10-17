@@ -2,20 +2,12 @@ import Foundation
 import Observation
 
 /// Researcher-creatable Property value types (S7-05). Schema also has `term`
-/// (registry-only) — never offered here.
+/// and `depiction` (registry-only) — never offered here.
 enum SubjectPropertyValueType {
     static let researcherCreatable = ["text", "integer", "date", "name", "subject"]
 
     static func label(_ valueType: String) -> LocalizedStringResource {
-        switch valueType {
-        case "text": return L10n.Properties.valueTypeText
-        case "integer": return L10n.Properties.valueTypeInteger
-        case "date": return L10n.Properties.valueTypeDate
-        case "name": return L10n.Properties.valueTypeName
-        case "subject": return L10n.Properties.valueTypeSubject
-        case "term": return L10n.Properties.valueTypeTerm
-        default: return L10n.Properties.valueTypeText
-        }
+        PropertyValueType(rawValue: valueType)?.label ?? L10n.Properties.valueTypeText
     }
 }
 

@@ -651,7 +651,7 @@ struct CatalogProperty: Sendable, Equatable, Identifiable {
     var origin: String
     var label: String
     var description: String
-    /// text | integer | date | name | subject | term
+    /// text | integer | date | name | subject | term | depiction
     var valueType: String
     /// single | multiple. Empty input is treated as single.
     var cardinality: String = "single"

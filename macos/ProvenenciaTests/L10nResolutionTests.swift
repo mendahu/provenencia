@@ -79,4 +79,14 @@ struct L10nResolutionTests {
         }
         #expect(ContinuousClock.now - start < .milliseconds(250))
     }
+
+    @Test func depictionSaveErrorsHaveCopy() {
+        let unknown = L10n.Errors.message(code: "internal.unknown")
+        let image = L10n.Errors.message(code: "ingest.unsupported_image")
+        let invalid = L10n.Errors.message(code: "depictionvalues.invalid")
+        #expect(image == "The picture of that region couldn’t be read.")
+        #expect(invalid == "Invalid depiction value.")
+        #expect(image != unknown)
+        #expect(invalid != unknown)
+    }
 }
