@@ -92,10 +92,10 @@ A candidate is returned when its total reaches `MinScore`, after the discount: a
 - **Generations:** when both names carry suffixes and share none (Jr. vs Sr.), the score is scaled by `SuffixConflict` (0.3).
 - **Words** match when equal (1), as an abbreviation or nickname (0.98), as a fold-only pair (0.95), as an initial and the word it begins (0.5), or as a near spelling at or above `FuzzyFloor` (0.8, edit-distance ratio). Near spelling compares the folded words, so an accent plus a typo does not pay for the accent twice.
   - Abbreviation and nickname tables are catalog rows. Install writes the seed from `productAliasTables` in `core/match/registry.go`. Scoring reads the catalog and no other list. Opening a project loads those rows once onto the catalog graph and keeps them until the project closes. `namealiases.Invalidate` reloads them after a table changes. An empty catalog makes no abbreviation or nickname hits. Every installed table is consulted. Origin (`provenencia`, `user`, `plugin:<id>`) records who contributed the table and does not turn it off. A pair hits when both tokens share one set and both words' roles are allowed. Product tables allow given, nick, and untyped, so two surnames do not. Free text does not use these tables. `Jas.` vs `James` and `Jim` vs `James` are 0.98. `Jas.` vs `Jim` is not one set, so it falls through to fold and edit distance. Adding a set extends comparison; the scorer does not name the words. The nickname sets are one canonical name and its direct nicknames, from [carltonnorthern/nicknames](https://github.com/carltonnorthern/nicknames) (Apache 2.0; license and credit in `core/match/third_party/nicknames/`). A shared nickname does not merge two canonical names: Chris matches Christine, and Chris matches Christopher, and Tina does not match Christopher.
-  - Folding is NFD, drop combining marks, then the replacements in `LetterFolds` (`core/match/registry.go`). Adding a letter extends comparison; the fold does not name the letters. An empty map still drops combining marks, so `José` vs `Jose` is 0.95. `José` vs `José` stays 1. Display, `NormalizeForm`, and `sort_key` do not fold, so the Person page still keeps both spellings.
+  - Folding is NFD, drop combining marks, then the replacements in `value.Words.Folds` (`core/matchregistry/value.go`). Adding a letter extends comparison; the fold does not name the letters. An empty map still drops combining marks, so `José` vs `Jose` is 0.95. `José` vs `José` stays 1. Display, `NormalizeForm`, and `sort_key` do not fold, so the Person page still keeps both spellings.
   - A swap of two adjacent letters counts as one edit (Robnis ~ Robins).
   - Words of three or more letters may also differ by one added or dropped letter (Ann ~ Anne, Jon ~ John: 0.75). A substituted letter in a short word is a different name (Mary ≠ Mark).
-- **Normalization:** dashes and slashes separate words (Smith-Jones ~ Smith Jones). Apostrophes join (O'Brien ~ OBrien). A word in `SpacedParticles` (`core/match/registry.go`) rejoins with the next word (`O Brien` ~ `O'Brien`). A lone initial with a period (`O.`) does not rejoin. Adding a word to that list extends comparison; the splitter does not name the words.
+- **Normalization:** dashes and slashes separate words (Smith-Jones ~ Smith Jones). Apostrophes join (O'Brien ~ OBrien). A word in `value.Words.Particles` (`core/matchregistry/value.go`) rejoins with the next word (`O Brien` ~ `O'Brien`). A lone initial with a period (`O.`) does not rejoin. Adding a word to that list extends comparison; the splitter does not name the words.
 - **Surname conflict:** an initial doesn't count as resembling a surname, so "S." doesn't hide a Smith/Robins conflict.
   - An initial is a lone cased letter ("J").
   - A lone character in an uncased script (蒋, 王) is a whole word.
@@ -168,7 +168,7 @@ Not yet handled:
 
 ## Default profiles
 
-These live in [`core/match/registry.go`](../core/match/registry.go), with every other tunable number.
+These live in [`core/match/registry.go`](../core/match/registry.go). The value-section numbers (words, text, integers) live in [`core/matchregistry`](../core/matchregistry); the rest stay in `registry.go` until their layer lands.
 
 | Kind | Features (Weight / Contradiction) | MinScore |
 | --- | --- | --- |
@@ -183,7 +183,7 @@ Worked examples:
 ## Configuring
 
 - **Per call:** `matching.Options{Profile: &p}` replaces the default profile. `Profile.With(feature)` copies a default and replaces or adds one Feature.
-- **One registry:** [`core/match/registry.go`](../core/match/registry.go) holds everything:
+- **One registry:** [`core/match/registry.go`](../core/match/registry.go) holds the following; the word, text and integer numbers are read from [`core/matchregistry`](../core/matchregistry) (`value`):
   - word rules (`DefaultWordRules`)
   - name affinities and conflict factors (`DefaultNames`)
   - name patterns (`WesternNamePattern`, `BuiltinNamePatterns`)

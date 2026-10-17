@@ -3,15 +3,13 @@ package match
 import (
 	"sort"
 	"strings"
-	"unicode"
 
-	"github.com/mendahu/provenencia/core/autoreconcile"
-	"golang.org/x/text/unicode/norm"
+	"github.com/mendahu/provenencia/core/valuecompare"
 )
 
 // foldOnly is a match that exists only after accent and letter folding.
 // An exact word still scores 1.
-const foldOnly = 0.95
+var foldOnly = value.Words.FoldCredit
 
 // Word-level comparison shared by NameComparer and TextComparer: splitting,
 // word similarity (initials, spelling variants), and best one-to-one pairing.
@@ -102,86 +100,6 @@ func aliasHit(x, y string, roleX, roleY NameRole, sets []aliasSet) bool {
 	return false
 }
 
-func splitWords(s string, particles map[string]bool) []string {
-	raw := rawTokens(s)
-	var out []string
-	for i := 0; i < len(raw); i++ {
-		if i+1 < len(raw) && spacedParticle(raw[i], particles) {
-			if n := autoreconcile.NormalizeForm(raw[i] + raw[i+1]); n != "" {
-				out = append(out, n)
-			}
-			i++
-			continue
-		}
-		if n := autoreconcile.NormalizeForm(raw[i]); n != "" {
-			out = append(out, n)
-		}
-	}
-	return out
-}
-
-// rawTokens splits on whitespace and on the dash and slash breaks
-// NormalizeForm uses, and keeps other punctuation so a period initial
-// can be told from a particle.
-func rawTokens(s string) []string {
-	var b strings.Builder
-	var out []string
-	flush := func() {
-		if b.Len() == 0 {
-			return
-		}
-		out = append(out, b.String())
-		b.Reset()
-	}
-	for _, r := range s {
-		if unicode.Is(unicode.Pd, r) || r == '/' || unicode.IsSpace(r) {
-			flush()
-			continue
-		}
-		b.WriteRune(r)
-	}
-	flush()
-	return out
-}
-
-func spacedParticle(raw string, particles map[string]bool) bool {
-	if periodInitial(raw) {
-		return false
-	}
-	return particles[autoreconcile.NormalizeForm(raw)]
-}
-
-// periodInitial is a lone cased letter written with a period ("O.").
-func periodInitial(raw string) bool {
-	if !strings.ContainsRune(raw, '.') {
-		return false
-	}
-	var letters []rune
-	for _, r := range raw {
-		if unicode.IsLetter(r) {
-			letters = append(letters, r)
-		}
-	}
-	return len(letters) == 1 && unicode.ToUpper(letters[0]) != unicode.ToLower(letters[0])
-}
-
-// foldWord drops accents, then applies folds. The word is already the
-// normalized comparison token. A nil or empty map still strips accents.
-func foldWord(s string, folds map[rune]string) string {
-	var b strings.Builder
-	for _, r := range norm.NFD.String(s) {
-		if unicode.Is(unicode.Mn, r) {
-			continue
-		}
-		if repl, ok := folds[r]; ok {
-			b.WriteString(repl)
-			continue
-		}
-		b.WriteRune(r)
-	}
-	return b.String()
-}
-
 // TextResemblance is how close two free-text strings are for scoring when
 // they are not the same value. 1 is the same normalized form. A single-word
 // spelling variant is the edit-distance ratio: Rank's Partial cap on every
@@ -200,7 +118,7 @@ func TextResemblance(a, b string) float64 {
 // of words the two forms have in common (wordDice). Empty forms are not
 // comparable.
 func compareForms(a, b string, partial float64, r wordRules) (float64, bool) {
-	wa, wb := splitWords(a, r.particles), splitWords(b, r.particles)
+	wa, wb := valuecompare.SplitWords(a, r.particles), valuecompare.SplitWords(b, r.particles)
 	if len(wa) == 0 || len(wb) == 0 {
 		return 0, false
 	}
@@ -229,7 +147,7 @@ func wordSimilarity(x, y string, roleX, roleY NameRole, r wordRules) float64 {
 	if x == y {
 		return 1
 	}
-	if autoreconcile.IsInitial(x) || autoreconcile.IsInitial(y) {
+	if valuecompare.IsInitial(x) || valuecompare.IsInitial(y) {
 		if r.initials && []rune(x)[0] == []rune(y)[0] {
 			return r.initialCredit
 		}
@@ -238,11 +156,11 @@ func wordSimilarity(x, y string, roleX, roleY NameRole, r wordRules) float64 {
 	if aliasHit(x, y, roleX, roleY, r.aliases) {
 		return AliasCredit
 	}
-	fx, fy := foldWord(x, r.folds), foldWord(y, r.folds)
+	fx, fy := valuecompare.FoldWord(x, r.folds), valuecompare.FoldWord(y, r.folds)
 	if fx == fy {
 		return foldOnly
 	}
-	return autoreconcile.SpellingSimilarity(fx, fy, r.floor, r.shortMin)
+	return valuecompare.SpellingSimilarity(fx, fy, r.floor, r.shortMin)
 }
 
 // wordDice is the Dice overlap of two unweighted word lists under their best

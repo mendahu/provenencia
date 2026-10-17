@@ -56,7 +56,7 @@ Gracie Gates appears on a Source with a name and a birth on 1 May 1901. The rese
 | **`Unknown`** | Nothing to compare |
 | **similarity** | How alike two things are, from 0 to 1; 1 is `Same` and 0 is `Different` |
 | **detail** | The structured reasoning behind a result: which parts paired, which were left over, the cause |
-| **cause** | A code from a shared vocabulary (`exact`, `fold`, `alias`, `initial`, `spelling`, `precision`, `missing_part`, and so on) naming the rule that decided a relation or outcome |
+| **cause** | A code from a shared vocabulary (`exact`, `fold`, `alias`, `initial`, `spelling`, `precision`, `missing_part`, `too_long`, and so on) naming the rule that decided a relation or outcome |
 | **value ref** | An opaque reference a caller attaches to a value (an Observation id); the layers hand it back and never read it |
 | **key** | A normalized form of a value; two values have the same key exactly when they are `Same` (or `Equivalent`, at that level) |
 | **property comparison** | Layer 2: whether two Subjects agree on one property, from every value each holds |
@@ -110,7 +110,7 @@ Both vocabularies are in the code for several PRs. These old words go.
 
 ## Knob inventory
 
-Keys are dotted paths of the planned registry: `section.Group.Field`. A Capitalized part is a registry field. A lowercase part is a typed map key: a Subject kind, a property key, a derived property (`lifespan`), or a bridge or participation key; a pair compared together is keyed by its lead property (`sex_at_birth` covers `gender`). The `evidence` section is the claim evidence sheet's line policy ([`claim-evidence.md`](deployment-plan/spike-11/claim-evidence.md)), not evidence points; the Promote evidence sheet reads it, no comparison layer does. The Go registry is the only source of a current value. Start is the value a knob started with. The registry's drift guard compares keys only: every registry field has a row, and every row is a field. Tuning a knob is one edit, in the registry.
+Keys are dotted paths of the registry, `core/matchregistry`: `section.Group.Field`. A Capitalized part is a registry field. A lowercase part is a typed map key: a Subject kind, a property key, a derived property (`lifespan`), or a bridge or participation key; a pair compared together is keyed by its lead property (`sex_at_birth` covers `gender`). The `evidence` section is the claim evidence sheet's line policy ([`claim-evidence.md`](deployment-plan/spike-11/claim-evidence.md)), not evidence points; the Promote evidence sheet reads it, no comparison layer does. The Go registry is the only source of a current value. Start is the value a knob started with. The registry's drift guard compares keys only: every registry field has a row, and every row is a field. `TestKnobInventoryMatchesRegistry` enforces it; rows whose layer has not landed are listed in its `notYetBuilt`. Tuning a knob is one edit, in the registry.
 
 | Key | Start | Source | Changes |
 | --- | --- | --- | --- |
@@ -120,9 +120,11 @@ Keys are dotted paths of the planned registry: `section.Group.Field`. A Capitali
 | `value.Words.AliasCredit` | 0.98 | `match.AliasCredit` | Nickname or abbreviation hit |
 | `value.Words.FoldCredit` | 0.95 | `match` `foldOnly` | Pair equal only after folding accents |
 | `value.Words.MaxExactPairing` | 12 | `match.MaxExactPairing` | Words above this pair greedily |
+| `value.Words.MaxSpellingLength` | 32 | estimate | Longest word, in runes, that may pair as a spelling variant |
 | `value.Words.Particles` | `o`, `mc`, `mac`, `st`, `d`, `fitz` | `match.SpacedParticles` | Words that rejoin the next word |
 | `value.Words.Folds` | today's map | `match.LetterFolds` | Letters replaced when folding |
 | `value.Text.Partial` | 0.7 | `DefaultText.Partial` | Cap for text that shares only some words |
+| `value.Text.MaxWords` | 64 | estimate | Most words either side may have for the alignment to run; beyond it `too_long` |
 | `value.Names.NearMinimum` | 0.75 | `graphalign` name `PropertyScale.Floor` | Below this a name pair is `Different` |
 | `value.Names.UntypedAffinity` | 0.8 | `DefaultNames.UntypedAffinity` | Typed word against an untyped one |
 | `value.Names.NickAffinity` | 0.9 | `DefaultNames.NickAffinity` | Nickname against a given name |

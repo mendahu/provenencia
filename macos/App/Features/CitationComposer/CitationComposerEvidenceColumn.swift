@@ -125,7 +125,7 @@ struct CitationComposerEvidenceColumn: View {
             menuWidth: 480,
             maxVisibleRows: 6,
             rowHeight: 84,
-            isDisabled: model.isTranscribing,
+            isDisabled: model.isTranscribing || model.isDrawingDepiction,
             accessibilityLabel: L10n.CitationComposer.citationEyebrow,
             accessibilityIdentifier: "citationComposer.citationSelect"
         ) { option in
@@ -154,7 +154,7 @@ struct CitationComposerEvidenceColumn: View {
             menuWidth: 360,
             maxVisibleRows: 6,
             rowHeight: 64,
-            isDisabled: model.isTranscribing || model.artifacts.isEmpty,
+            isDisabled: model.isTranscribing || model.isDrawingDepiction || model.artifacts.isEmpty,
             accessibilityLabel: L10n.CitationComposer.artifactEyebrow,
             accessibilityIdentifier: "citationComposer.artifactSelect"
         ) { option in
@@ -308,7 +308,7 @@ struct CitationComposerEvidenceColumn: View {
             ) {
                 model.requestPasteTranscription()
             }
-            .disabled(!model.canPasteTranscription || model.isTranscribing)
+            .disabled(!model.canPasteTranscription || model.isTranscribing || model.isDrawingDepiction)
         } else if model.artifactViewer.kind == .image {
             PVButton(
                 L10n.CitationComposer.autoTranscribe,
@@ -319,7 +319,7 @@ struct CitationComposerEvidenceColumn: View {
             ) {
                 model.requestAutoTranscribe()
             }
-            .disabled(!model.canAutoTranscribe || model.isTranscribing)
+            .disabled(!model.canAutoTranscribe || model.isTranscribing || model.isDrawingDepiction)
         }
     }
 
@@ -335,7 +335,7 @@ struct CitationComposerEvidenceColumn: View {
                 ) {
                     Task { await model.askDeleteCitation() }
                 }
-                .disabled(model.isTranscribing)
+                .disabled(model.isTranscribing || model.isDrawingDepiction)
                 .accessibilityLabel(Text(verbatim: L10n.CitationComposer.deleteCitationAccessibility(ref: model.activeCitationRef)))
             }
             PVButton(
@@ -352,7 +352,7 @@ struct CitationComposerEvidenceColumn: View {
     }
 
     private var canSaveCitation: Bool {
-        !model.fields.isSaving && !model.isTranscribing
+        !model.fields.isSaving && !model.isTranscribing && !model.isDrawingDepiction
             && (model.fields.isDirty || model.activeCitationID == nil)
     }
 

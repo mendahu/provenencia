@@ -29,6 +29,8 @@ core/database/namevalues/    # queries
 
 Types and checks: `namevalue.Value`, `namevalue.Validate(v)`. Call sites for storage: `namevalues.Insert(c, v)` / `namevalues.Lookup(c, id)`. Minted id is UUIDv7 BLOB. Domain errors: `namevalue.ErrInvalid` (`namevalues.invalid`). Matching layers import `core/namevalue`, never `core/database/namevalues`.
 
+`TestLayerPackages` in `core/matchregistry/guard_test.go` keeps this package pure; a new pure value package adds a row.
+
 ## Model (authoritative)
 
 Every NameValue is **one** personal-name assertion.

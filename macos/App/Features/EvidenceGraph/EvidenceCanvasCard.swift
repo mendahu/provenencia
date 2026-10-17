@@ -47,6 +47,9 @@ struct EvidenceCanvasCard: Equatable {
     var state: State
     /// Default profile orders. Empty keeps stored part order.
     var nameOrders: NameFormatOrders = NameFormatOrders()
+    /// The open project's folder, where a likeness row's image lives. Empty
+    /// paints the placeholder (the ghost).
+    var projectDir: String = ""
 
     var id: String {
         switch placed {

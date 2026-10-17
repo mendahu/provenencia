@@ -19,6 +19,18 @@ struct ObservationRowValues: Equatable {
     var valueSubjectID: String = ""
     var dateDraft: DateValueDraft = .empty()
     var nameDraft: NameValueDraft = .empty()
+    var depictionDraft: DepictionValueDraft = .empty()
+
+    /// Resets every value field; subject, property, and polarity stay.
+    mutating func clearValue() {
+        valueText = ""
+        valueIntegerText = ""
+        valueTermID = ""
+        valueSubjectID = ""
+        dateDraft = .empty()
+        nameDraft = .empty()
+        depictionDraft = .empty()
+    }
 }
 
 struct ObservationRow: Identifiable, Equatable {
@@ -75,6 +87,11 @@ struct ObservationRow: Identifiable, Equatable {
         set { values.nameDraft = newValue }
     }
 
+    var depictionDraft: DepictionValueDraft {
+        get { values.depictionDraft }
+        set { values.depictionDraft = newValue }
+    }
+
     var isEmptyDraft: Bool {
         baseline == nil
             && values.propertyID.isEmpty
@@ -84,6 +101,7 @@ struct ObservationRow: Identifiable, Equatable {
             && values.valueSubjectID.isEmpty
             && values.dateDraft == .empty()
             && values.nameDraft == .empty()
+            && values.depictionDraft == .empty()
     }
 
     var canSave: Bool {
@@ -151,7 +169,8 @@ struct ObservationRow: Identifiable, Equatable {
             valueTermID: observation.valueTermID,
             valueSubjectID: observation.valueSubjectID,
             dateDraft: observation.date.map(DateValueDraft.init(from:)) ?? .empty(),
-            nameDraft: NameValueDraft(from: observation)
+            nameDraft: NameValueDraft(from: observation),
+            depictionDraft: DepictionValueDraft(from: observation)
         )
         if values.valueText.isEmpty, !observation.nameForm.isEmpty {
             values.valueText = observation.nameForm
@@ -174,7 +193,8 @@ struct ObservationRow: Identifiable, Equatable {
             valueTermID: values.valueTermID,
             valueSubjectID: values.valueSubjectID,
             dateDraft: values.dateDraft,
-            nameDraft: values.nameDraft
+            nameDraft: values.nameDraft,
+            depictionDraft: values.depictionDraft
         )
     }
 
@@ -225,7 +245,8 @@ struct ObservationRow: Identifiable, Equatable {
                 valueTermID: draft.valueTermID,
                 propertyKey: property.key,
                 propertyLabel: property.label,
-                propertyValueType: property.valueType
+                propertyValueType: property.valueType,
+                valueDepictionID: values.depictionDraft.valueDepictionID
             ),
             nil
         )
@@ -256,12 +277,23 @@ final class CitationObservationRows {
         focusedID = row.id
     }
 
-    func commit(rowID: UUID, citation: CitationFieldsDraft.Values) async {
+    /// `depictionInput` is a new region and image for a depiction Observation;
+    /// nil keeps the saved one.
+    func commit(
+        rowID: UUID,
+        citation: CitationFieldsDraft.Values,
+        depictionInput: CatalogDepictionValueInput? = nil
+    ) async {
         guard let context, let index = rows.firstIndex(where: { $0.id == rowID }) else { return }
         if case .saving = rows[index].state { return }
         guard rows[index].canSave else { return }
         rows[index].state = .saving
-        await performCommit(rowID: rowID, context: context, citation: citation)
+        await performCommit(
+            rowID: rowID,
+            context: context,
+            citation: citation,
+            depictionInput: depictionInput
+        )
     }
 
     func revert(rowID: UUID) {
@@ -280,25 +312,10 @@ final class CitationObservationRows {
         await performDelete(rowID: rowID, context: context)
     }
 
-    func applySubject(rowID: UUID, subjectID: String, vocabulary: CitationComposerVocabulary) {
-        mutate(rowID) { row in
-            row.subjectID = subjectID
-            let allowed = Set(vocabulary.propertyOptions(forSubjectID: subjectID).map(\.id))
-            if !allowed.contains(row.propertyID) {
-                row.propertyID = ""
-                clearValue(&row)
-                row.propertyError = L10n.string(L10n.CitationComposer.propertyRequiredAfterSubject)
-            } else {
-                row.propertyError = nil
-            }
-            row.deriveState()
-        }
-    }
-
     func applyProperty(rowID: UUID, propertyID: String) {
         mutate(rowID) { row in
             row.propertyID = propertyID
-            clearValue(&row)
+            row.values.clearValue()
             row.propertyError = propertyID.isEmpty
                 ? L10n.string(L10n.CitationComposer.dialogPropertyRequired)
                 : nil
@@ -379,7 +396,8 @@ final class CitationObservationRows {
     private func performCommit(
         rowID: UUID,
         context: CitationComposerContext,
-        citation: CitationFieldsDraft.Values
+        citation: CitationFieldsDraft.Values,
+        depictionInput: CatalogDepictionValueInput?
     ) async {
         guard let index = rows.firstIndex(where: { $0.id == rowID }) else { return }
         let row = rows[index]
@@ -392,7 +410,8 @@ final class CitationObservationRows {
             markError(rowID: rowID, message: draftError)
             return
         }
-        guard let draft = draftOrNil else { return }
+        guard var draft = draftOrNil else { return }
+        draft.depiction = depictionInput
         do {
             let citationID = try await context.ensureCitationID(citation)
             if row.persistedID == nil {
@@ -405,7 +424,7 @@ final class CitationObservationRows {
                 if let saved = written.0.first {
                     markSaved(rowID: rowID, id: saved.id, ref: saved.ref)
                 } else {
-                    markError(rowID: rowID, message: L10n.string(L10n.CitationComposer.rowStateError))
+                    markError(rowID: rowID, message: L10n.string(L10n.CitationComposer.observationSaveFailed))
                 }
                 context.applyWrite(written.1)
             } else {
@@ -419,12 +438,13 @@ final class CitationObservationRows {
                     let written = try await context.store.updateObservation(
                         projectDir: context.projectDir,
                         userID: context.userID,
-                        observation: observation
+                        observation: observation,
+                        depictionInput: depictionInput
                     )
                     markSaved(rowID: rowID, id: written.0.id, ref: written.0.ref)
                     context.applyWrite(written.1)
                 } else {
-                    markError(rowID: rowID, message: L10n.string(L10n.CitationComposer.rowStateError))
+                    markError(rowID: rowID, message: L10n.string(L10n.CitationComposer.observationSaveFailed))
                 }
             }
         } catch is CitationComposerNeedArtifact {
@@ -455,14 +475,5 @@ final class CitationObservationRows {
         guard let index = rows.firstIndex(where: { $0.id == rowID }) else { return }
         body(&rows[index])
         focusedID = rowID
-    }
-
-    private func clearValue(_ row: inout ObservationRow) {
-        row.valueText = ""
-        row.valueIntegerText = ""
-        row.valueTermID = ""
-        row.valueSubjectID = ""
-        row.dateDraft = .empty()
-        row.nameDraft = .empty()
     }
 }

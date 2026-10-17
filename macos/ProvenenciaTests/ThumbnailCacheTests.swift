@@ -66,6 +66,25 @@ struct ThumbnailCacheTests {
         #expect(cache.entryCount == 1)
     }
 
+    @Test func cachedImageIsAMissUntilLoaded() async throws {
+        let cache = ThumbnailCache()
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("thumb-cache-\(UUID().uuidString)", isDirectory: true)
+        let objectDir = dir.appendingPathComponent("objects/aa/bb", isDirectory: true)
+        try FileManager.default.createDirectory(at: objectDir, withIntermediateDirectories: true)
+        let png = Data(base64Encoded:
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
+        )!
+        try png.write(to: objectDir.appendingPathComponent("thumb.png"))
+
+        #expect(cache.cachedImage(projectDir: dir.path, relPath: "objects/aa/bb/thumb.png") == nil)
+        #expect(cache.entryCount == 0)
+        let loaded = await cache.image(projectDir: dir.path, relPath: "objects/aa/bb/thumb.png")
+        let hit = cache.cachedImage(projectDir: dir.path, relPath: "objects/aa/bb/thumb.png")
+        #expect(hit != nil)
+        #expect(hit === loaded)
+    }
+
     @Test func coalescesInflightLoads() async throws {
         let cache = ThumbnailCache()
         let dir = FileManager.default.temporaryDirectory

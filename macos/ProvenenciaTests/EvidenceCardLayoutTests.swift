@@ -166,6 +166,26 @@ struct EvidenceCardLayoutTests {
         #expect(abs(add.frame.maxY - frame.maxY) < 0.5)
     }
 
+    @Test func likenessRowIsTallEnoughForItsThumbnail() throws {
+        var likeness = observation(0, value: "")
+        likeness.valueText = ""
+        likeness.propertyLabel = "Likeness"
+        likeness.depiction = CatalogDepictionValue(regionJSON: "{}", imageRelPath: "objects/aa/bb/face.png")
+        var p = placed(rows: 0)
+        p.isCited = true
+        p.observations = [likeness]
+        let (layout, drawn) = try measureSubject(p)
+        let rect = try #require(layout.regions[EvidenceSubjectCard.editPropertyActionID(observationID: likeness.id)])
+        #expect(rect.height >= 9 + 3 + 32 + 16)
+        #expect(rect.height > EvidenceSubjectCard.propertyRowHeight)
+        #expect(abs(layout.size.height - drawn) < 0.5)
+        let targets = EvidenceSubjectCard.actionTargets(for: p, canCite: true, layout: layout)
+        let hit = try #require(targets.first { $0.id == EvidenceSubjectCard.editPropertyActionID(observationID: likeness.id) })
+        let frame = EvidenceSubjectCard.edgeFrame(for: p, layout: layout)
+        #expect(abs(hit.frame.height - rect.height) < 0.5)
+        #expect(abs(hit.frame.minY - (frame.minY + rect.minY)) < 0.5)
+    }
+
     @Test func ghostCardMatchesTheLiveLayout() {
         let p = placed(rows: 0)
         let ghost = EvidenceCardView(ghostOf: .ghost(p, presentation: nil))

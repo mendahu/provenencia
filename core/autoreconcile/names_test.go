@@ -9,6 +9,7 @@ import (
 
 	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/propertymeta"
+	"github.com/mendahu/provenencia/core/valuecompare"
 )
 
 // nm builds a name candidate from "type=value" parts separated by "|", with a
@@ -467,12 +468,12 @@ func TestReconcileNamesInvariants(t *testing.T) {
 			had := map[string]bool{}
 			for _, c := range in {
 				for _, p := range c.Value.Name.Parts {
-					had[p.Type+"="+NormalizeForm(p.Value)] = true
+					had[p.Type+"="+valuecompare.NormalizeForm(p.Value)] = true
 				}
 			}
 			for _, c := range got.Values {
 				for _, p := range c.Value.Name.Parts {
-					if !had[p.Type+"="+NormalizeForm(p.Value)] {
+					if !had[p.Type+"="+valuecompare.NormalizeForm(p.Value)] {
 						t.Fatalf("%s: invented part %s=%s", where, p.Type, p.Value)
 					}
 				}
@@ -521,14 +522,6 @@ func specs(r Result) []string {
 		out = append(out, fmt.Sprint(shape(r)[i], signatureOf(c.Value.Name)))
 	}
 	return out
-}
-
-func TestIsInitial(t *testing.T) {
-	for w, want := range map[string]bool{"j": true, "J": true, "é": true, "jo": false, "蒋": false, "": false, "1": false} {
-		if IsInitial(w) != want {
-			t.Errorf("IsInitial(%q) = %v", w, !want)
-		}
-	}
 }
 
 // BenchmarkReconcileNames: one handle with 200 name candidates, the shape a
